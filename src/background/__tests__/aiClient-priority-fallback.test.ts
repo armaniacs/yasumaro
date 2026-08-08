@@ -42,6 +42,14 @@ vi.mock('../../utils/promptSanitizer.js', () => ({
   }))
 }));
 
+// Mock BuiltInAIClient for built-in-ai provider tests
+const mocks = vi.hoisted(() => ({
+  BuiltInAIClient: vi.fn(),
+}));
+vi.mock('../builtInAIClient.js', () => ({
+  BuiltInAIClient: mocks.BuiltInAIClient,
+}));
+
 describe('AIClient: 優先度フォールバック', () => {
   let aiClient: AIClient;
   const mockGetSettings = storage.getSettings as ReturnType<typeof vi.fn>;
@@ -216,32 +224,30 @@ describe('AIClient: built-in-ai スロットのディスパッチ', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.BuiltInAIClient.mockImplementation(function () {
+      return { summarize: vi.fn() };
+    });
   });
 
-  it('1位が built-in-ai の場合、registerBuiltInAiService で登録した AIService に委譲する', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
+  it('1位が built-in-ai の場合、BuiltInAiProvider に委譲する', async () => {
     mockGetSettings.mockResolvedValue({
       ai_provider_priority_list: [{ provider: 'built-in-ai' }],
       summary_min_length: 10,
     });
 
-    const builtInAiService = {
-      generateSummary: vi.fn().mockResolvedValue({ summary: '端末内で生成された十分な長さの要約です。', success: true }),
-      getSupportedModes: vi.fn().mockReturnValue(['local_only']),
-    };
+    const builtInAiClient = { summarize: vi.fn().mockResolvedValue({ summary: '端末内で生成された十分な長さの要約です。', success: true }) };
+    mocks.BuiltInAIClient.mockImplementation(function () { return builtInAiClient; });
 
     aiClient = new AIClient();
-    aiClient.registerBuiltInAiService(builtInAiService);
 
     const result = await aiClient.generateSummary('some content to summarize');
 
-    expect(builtInAiService.generateSummary).toHaveBeenCalledWith('some content to summarize', { traceId: '' });
+    expect(builtInAiClient.summarize).toHaveBeenCalledWith('some content to summarize');
     expect(result.success).toBe(true);
     expect(result.summary).toBe('端末内で生成された十分な長さの要約です。');
   });
 
   it('built-in-ai が失敗した場合、2位の外部プロバイダーへフォールバックする', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
     mockGetSettings.mockResolvedValue({
       ai_provider_priority_list: [
         { provider: 'built-in-ai' },
@@ -253,19 +259,16 @@ describe('AIClient: built-in-ai スロットのディスパッチ', () => {
       openai_2_model: 'gpt-4o-mini',
     });
 
+    const builtInAiClient = { summarize: vi.fn().mockRejectedValue(new Error('Built-in AI is currently unavailable')) };
+    mocks.BuiltInAIClient.mockImplementation(function () { return builtInAiClient; });
+
     // @ts-expect-error - vi.fn() type narrowing issue
     fetchWithRetry.mockResolvedValue({
       ok: true,
       json: async () => ({ choices: [{ message: { content: 'これは十分な長さの要約結果です。' } }] }),
     });
 
-    const builtInAiService = {
-      generateSummary: vi.fn().mockRejectedValue(new Error('Built-in AI is currently unavailable')),
-      getSupportedModes: vi.fn().mockReturnValue(['local_only']),
-    };
-
     aiClient = new AIClient();
-    aiClient.registerBuiltInAiService(builtInAiService);
 
     const result = await aiClient.generateSummary('some content to summarize');
 
@@ -276,7 +279,6 @@ describe('AIClient: built-in-ai スロットのディスパッチ', () => {
   it('built-in-ai が success:false を返した場合（例外なし）、2位へフォールバックする', async () => {
     // This tests the Edge bug scenario where BuiltInAIClient returns success:false
     // without throwing an exception.
-    // @ts-expect-error - vi.fn() type narrowing issue
     mockGetSettings.mockResolvedValue({
       ai_provider_priority_list: [
         { provider: 'built-in-ai' },
@@ -288,54 +290,51 @@ describe('AIClient: built-in-ai スロットのディスパッチ', () => {
       openai_2_model: 'gpt-4o-mini',
     });
 
+    const builtInAiClient = { summarize: vi.fn().mockResolvedValue({ summary: '', success: false, error: 'Built-in AI is currently downloadable' }) };
+    mocks.BuiltInAIClient.mockImplementation(function () { return builtInAiClient; });
+
     // @ts-expect-error - vi.fn() type narrowing issue
     fetchWithRetry.mockResolvedValue({
       ok: true,
       json: async () => ({ choices: [{ message: { content: 'これは十分な長さの要約結果です。' } }] }),
     });
 
-    const builtInAiService = {
-      generateSummary: vi.fn().mockResolvedValue({ summary: '', success: false, error: 'Built-in AI is currently downloadable' }),
-      getSupportedModes: vi.fn().mockReturnValue(['local_only']),
-    };
-
     aiClient = new AIClient();
-    aiClient.registerBuiltInAiService(builtInAiService);
 
     const result = await aiClient.generateSummary('some content to summarize');
 
     expect(result.success).toBe(true);
     expect(result.summary).toContain('十分な長さの要約結果');
-    expect(builtInAiService.generateSummary).toHaveBeenCalled();
+    expect(builtInAiClient.summarize).toHaveBeenCalled();
   });
 
-  it('registerBuiltInAiService を呼んでいない場合、built-in-ai スロットは未知プロバイダーとして扱われる', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
+  it('registerBuiltInAiService を呼んでいない場合、built-in-ai スロットは Strategy として動作する', async () => {
     mockGetSettings.mockResolvedValue({
       ai_provider_priority_list: [{ provider: 'built-in-ai' }],
       summary_min_length: 10,
     });
 
+    const builtInAiClient = { summarize: vi.fn().mockResolvedValue({ summary: 'Built-in AI result', success: true }) };
+    mocks.BuiltInAIClient.mockImplementation(function () { return builtInAiClient; });
+
     aiClient = new AIClient();
 
     const result = await aiClient.generateSummary('some content to summarize');
 
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    expect(result.summary).toBe('Built-in AI result');
+    expect(builtInAiClient.summarize).toHaveBeenCalledWith('some content to summarize');
   });
 
   it('testConnection: built-in-ai スロットが成功した場合、success として報告する', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
     mockGetSettings.mockResolvedValue({
       ai_provider_priority_list: [{ provider: 'built-in-ai' }],
     });
 
-    const builtInAiService = {
-      generateSummary: vi.fn().mockResolvedValue({ summary: 'ok', success: true }),
-      getSupportedModes: vi.fn().mockReturnValue(['local_only']),
-    };
+    const builtInAiClient = { summarize: vi.fn().mockResolvedValue({ summary: 'ok', success: true }) };
+    mocks.BuiltInAIClient.mockImplementation(function () { return builtInAiClient; });
 
     aiClient = new AIClient();
-    aiClient.registerBuiltInAiService(builtInAiService);
 
     const result = await aiClient.testConnection();
 
@@ -348,18 +347,14 @@ describe('AIClient: built-in-ai スロットのディスパッチ', () => {
   it('testConnection: built-in-ai が success:false を返した場合（例外なし）、failure として報告する', async () => {
     // This is the Edge bug scenario: BuiltInAIClient returns { success: false, error: '...' }
     // without throwing. The test must detect this as a failure.
-    // @ts-expect-error - vi.fn() type narrowing issue
     mockGetSettings.mockResolvedValue({
       ai_provider_priority_list: [{ provider: 'built-in-ai' }],
     });
 
-    const builtInAiService = {
-      generateSummary: vi.fn().mockResolvedValue({ summary: '', success: false, error: 'Built-in AI is currently downloadable' }),
-      getSupportedModes: vi.fn().mockReturnValue(['local_only']),
-    };
+    const builtInAiClient = { summarize: vi.fn().mockResolvedValue({ summary: '', success: false, error: 'Built-in AI is currently downloadable' }) };
+    mocks.BuiltInAIClient.mockImplementation(function () { return builtInAiClient; });
 
     aiClient = new AIClient();
-    aiClient.registerBuiltInAiService(builtInAiService);
 
     const result = await aiClient.testConnection();
 
@@ -370,18 +365,14 @@ describe('AIClient: built-in-ai スロットのディスパッチ', () => {
   });
 
   it('testConnection: built-in-ai が空の要約を返した場合、failure として報告する', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
     mockGetSettings.mockResolvedValue({
       ai_provider_priority_list: [{ provider: 'built-in-ai' }],
     });
 
-    const builtInAiService = {
-      generateSummary: vi.fn().mockResolvedValue({ summary: '', success: true }),
-      getSupportedModes: vi.fn().mockReturnValue(['local_only']),
-    };
+    const builtInAiClient = { summarize: vi.fn().mockResolvedValue({ summary: '', success: true }) };
+    mocks.BuiltInAIClient.mockImplementation(function () { return builtInAiClient; });
 
     aiClient = new AIClient();
-    aiClient.registerBuiltInAiService(builtInAiService);
 
     const result = await aiClient.testConnection();
 
@@ -391,18 +382,14 @@ describe('AIClient: built-in-ai スロットのディスパッチ', () => {
   });
 
   it('testConnection: built-in-ai が失敗した場合、failure として報告する', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
     mockGetSettings.mockResolvedValue({
       ai_provider_priority_list: [{ provider: 'built-in-ai' }],
     });
 
-    const builtInAiService = {
-      generateSummary: vi.fn().mockRejectedValue(new Error('Built-in AI is currently unavailable')),
-      getSupportedModes: vi.fn().mockReturnValue(['local_only']),
-    };
+    const builtInAiClient = { summarize: vi.fn().mockRejectedValue(new Error('Built-in AI is currently unavailable')) };
+    mocks.BuiltInAIClient.mockImplementation(function () { return builtInAiClient; });
 
     aiClient = new AIClient();
-    aiClient.registerBuiltInAiService(builtInAiService);
 
     const result = await aiClient.testConnection();
 
@@ -411,17 +398,20 @@ describe('AIClient: built-in-ai スロットのディスパッチ', () => {
     expect(result.providers[0].message).toContain('unavailable');
   });
 
-  it('testConnection: registerBuiltInAiService 未登録の場合、Unknown provider として報告する', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
+  it('testConnection: BuiltInAIClient が利用不可の場合、failure として報告する', async () => {
     mockGetSettings.mockResolvedValue({
       ai_provider_priority_list: [{ provider: 'built-in-ai' }],
     });
+
+    const builtInAiClient = { summarize: vi.fn().mockResolvedValue({ summary: '', success: false, error: 'Built-in AI is currently unavailable' }) };
+    mocks.BuiltInAIClient.mockImplementation(function () { return builtInAiClient; });
 
     aiClient = new AIClient();
 
     const result = await aiClient.testConnection();
 
     expect(result.success).toBe(false);
-    expect(result.providers[0].message).toContain('Unknown provider');
+    expect(result.providers[0]).toMatchObject({ provider: 'built-in-ai', success: false });
+    expect(result.providers[0].message).toContain('unavailable');
   });
 });

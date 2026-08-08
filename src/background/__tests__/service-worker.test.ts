@@ -201,9 +201,8 @@ vi.mock('../headerDetector.js', () => ({
         static initialize = vi.fn();
     }
 }));
-vi.mock('../../utils/storageUrls.js', () => ({
-    setUrlContent: vi.fn().mockResolvedValue(undefined),
-    setUrlCleansedReason: vi.fn().mockResolvedValue(undefined),
+vi.mock('../../utils/storage/savedUrlStore.js', () => ({
+    updateSavedUrlEntry: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('../../utils/permissionManager.js', () => ({
     cleanupOldDeniedEntries: vi.fn().mockResolvedValue(undefined),
@@ -253,7 +252,7 @@ import { RecordingLogic } from '../recordingLogic.js';
 import * as fetchUtils from '../../utils/fetch.js';
 import * as headerDetector from '../headerDetector.js';
 import * as sessionAlarmsManager from '../sessionAlarmsManager.js';
-import * as storageUrls from '../../utils/storageUrls.js';
+import * as savedUrlStore from '../../utils/storage/savedUrlStore.js';
 import * as permissionManager from '../../utils/permissionManager.js';
 import { logError, logWarn, ErrorCode } from '../../utils/logger.js';
 import { resetVisitRateLimiter } from '../handlers/messageHandlers.js';
@@ -1917,7 +1916,7 @@ describe('service-worker handlers', () => {
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
-        it('should call setUrlCleansedReason with "both" when both hard and keyword are present', async () => {
+        it('should call updateSavedUrlEntry with cleansedReason "both" when both hard and keyword are present', async () => {
             const sendResponse = vi.fn();
             const message: ContentCleansingExecutedMessage = {
                 type: 'CONTENT_CLEANSING_EXECUTED',
@@ -1927,10 +1926,18 @@ describe('service-worker handlers', () => {
 
             await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
 
-            expect(storageUrls.setUrlCleansedReason).toHaveBeenCalledWith('https://example.com', 'both');
+            expect(savedUrlStore.updateSavedUrlEntry).toHaveBeenCalledWith(
+                'https://example.com',
+                expect.any(Function)
+            );
+            // Verify the updater sets cleansedReason to 'both'
+            const calls = (savedUrlStore.updateSavedUrlEntry as vi.Mock).mock.calls;
+            const updater = calls[calls.length - 1][1] as (entry: any) => any;
+            const result = updater({ url: 'https://example.com', timestamp: 0 });
+            expect(result.cleansedReason).toBe('both');
         });
 
-        it('should call setUrlCleansedReason with "hard" when only hard strip has removals', async () => {
+        it('should call updateSavedUrlEntry with cleansedReason "hard" when only hard strip has removals', async () => {
             const sendResponse = vi.fn();
             const message: ContentCleansingExecutedMessage = {
                 type: 'CONTENT_CLEANSING_EXECUTED',
@@ -1940,10 +1947,17 @@ describe('service-worker handlers', () => {
 
             await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
 
-            expect(storageUrls.setUrlCleansedReason).toHaveBeenCalledWith('https://example.com', 'hard');
+            expect(savedUrlStore.updateSavedUrlEntry).toHaveBeenCalledWith(
+                'https://example.com',
+                expect.any(Function)
+            );
+            const calls = (savedUrlStore.updateSavedUrlEntry as vi.Mock).mock.calls;
+            const updater = calls[calls.length - 1][1] as (entry: any) => any;
+            const result = updater({ url: 'https://example.com', timestamp: 0 });
+            expect(result.cleansedReason).toBe('hard');
         });
 
-        it('should call setUrlCleansedReason with "keyword" when only keyword strip has removals', async () => {
+        it('should call updateSavedUrlEntry with cleansedReason "keyword" when only keyword strip has removals', async () => {
             const sendResponse = vi.fn();
             const message: ContentCleansingExecutedMessage = {
                 type: 'CONTENT_CLEANSING_EXECUTED',
@@ -1953,7 +1967,14 @@ describe('service-worker handlers', () => {
 
             await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
 
-            expect(storageUrls.setUrlCleansedReason).toHaveBeenCalledWith('https://example.com', 'keyword');
+            expect(savedUrlStore.updateSavedUrlEntry).toHaveBeenCalledWith(
+                'https://example.com',
+                expect.any(Function)
+            );
+            const calls = (savedUrlStore.updateSavedUrlEntry as vi.Mock).mock.calls;
+            const updater = calls[calls.length - 1][1] as (entry: any) => any;
+            const result = updater({ url: 'https://example.com', timestamp: 0 });
+            expect(result.cleansedReason).toBe('keyword');
         });
 
         it('should not call setUrlCleansedReason when totalRemoved is 0', async () => {
@@ -1966,11 +1987,11 @@ describe('service-worker handlers', () => {
 
             await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
 
-            expect(storageUrls.setUrlCleansedReason).not.toHaveBeenCalled();
+            expect(savedUrlStore.updateSavedUrlEntry).not.toHaveBeenCalled();
             expect(sendResponse).toHaveBeenCalledWith({ success: true });
         });
 
-        it('should not call setUrlCleansedReason when sender.tab.url is missing', async () => {
+        it('should not call updateSavedUrlEntry when sender.tab.url is missing', async () => {
             const sendResponse = vi.fn();
             const message: ContentCleansingExecutedMessage = {
                 type: 'CONTENT_CLEANSING_EXECUTED',
@@ -1980,7 +2001,7 @@ describe('service-worker handlers', () => {
 
             await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
 
-            expect(storageUrls.setUrlCleansedReason).not.toHaveBeenCalled();
+            expect(savedUrlStore.updateSavedUrlEntry).not.toHaveBeenCalled();
         });
     });
 
