@@ -1,13 +1,9 @@
 import { getSettings, StorageKeys, Settings, ProviderSlot } from '../utils/storage.js';
 import { resolveModelKey } from '../utils/aiModelKey.js';
-import { GeminiProvider, OpenAIProvider, AIProviderStrategy, AISummaryResult } from './ai/providers/index.js';
+import { GeminiProvider, OpenAIProvider, BuiltInAiProvider, AIProviderStrategy, AISummaryResult } from './ai/providers/index.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { recordAuditLog } from '../utils/auditLog.js';
-import type { AIService } from './ai/AIService.js';
-
-/** Provider identifier reserved for Chrome Built-in AI, dispatched to an injected AIService. */
-const BUILT_IN_AI_PROVIDER_ID = 'built-in-ai';
 
 export interface AIProviderFactory {
     (settings: Settings): AIProviderStrategy;
@@ -28,12 +24,12 @@ interface ProviderTestResult {
         response?: string;
         /** Error message if the test failed. */
         error?: string;
-        /** Availability status for Built-in AI. */
-        availability?: string;
-        /** Whether the summary was non-empty (actual content check). */
+        /** Whether the response was non-empty. */
         hasContent?: boolean;
         /** HTTP status code if applicable (remote providers). */
         statusCode?: number;
+        /** Availability status for Built-in AI. */
+        availability?: string;
     };
 }
 
@@ -60,10 +56,6 @@ export interface AiTestProgress {
  * Human-readable labels for AI provider identifiers.
  * Single source of truth is src/utils/aiProviderLabels.ts; re-exported here
  * for backward compatibility with existing importers.
- * Note: 'built-in-ai' is display-only here — it is not registered in
- * AIClient.providers (Strategy pattern). Built-in AI is dispatched to
- * LocalAIService via FallbackAIService, not through AIClient. See
- * dev-docs/2026-07-28-built-in-ai-provider-integration-design.md.
  */
 export { PROVIDER_LABELS } from '../utils/aiProviderLabels.js';
 
@@ -87,28 +79,11 @@ export class AIClient {
      * 進行中のPromiseを再利用する（FinOptimization: 不要なAPIコスト防止）。
      */
     private inFlightSummaryRequests: Map<string, Promise<AISummaryResult>>;
-    /**
-     * built-in-ai スロット用に登録された AIService（未登録の場合は null）。
-     * Strategy パターン（AIProviderStrategy）とは別経路で、優先度リストの
-     * built-in-ai スロットを検出した際にここへ委譲する。
-     * 詳細: dev-docs/2026-07-28-built-in-ai-provider-integration-design.md
-     */
-    private builtInAiService: AIService | null;
 
     constructor() {
         this.providers = new Map();
         this.inFlightSummaryRequests = new Map();
-        this.builtInAiService = null;
         this.registerDefaultProviders();
-    }
-
-    /**
-     * built-in-ai スロット用の AIService を登録する。
-     * FallbackAIService/AIClient のいずれからも独立した委譲経路であり、
-     * providers Map（Strategy登録）には加えない。
-     */
-    registerBuiltInAiService(service: AIService): void {
-        this.builtInAiService = service;
     }
 
     /**
@@ -121,6 +96,7 @@ export class AIClient {
         this.registerProvider('lm-studio', (settings: Settings) => new OpenAIProvider(settings, 'lm-studio'));
         this.registerProvider('ollama', (settings: Settings) => new OpenAIProvider(settings, 'ollama'));
         this.registerProvider('openai-compatible', (settings: Settings) => new OpenAIProvider(settings, 'openai-compatible'));
+        this.registerProvider('built-in-ai', (settings: Settings) => new BuiltInAiProvider(settings));
     }
 
     /**
@@ -165,72 +141,6 @@ export class AIClient {
         return requestPromise;
     }
 
-    private async generateSummaryInternal(
-        content: string,
-        tagSummaryMode: boolean,
-        url: string,
-        traceId: string = ''
-    ): Promise<AISummaryResult> {
-        const settings = await getSettings();
-        const minLength = (settings[StorageKeys.SUMMARY_MIN_LENGTH] as number) || 0;
-        const slots = this.resolveProviderSlots(settings);
-
-        let lastResult: AISummaryResult = {
-            success: false,
-            summary: "Error: AI provider configuration is missing. Please check your settings."
-        };
-
-        for (const slot of slots) {
-            if (slot.provider === BUILT_IN_AI_PROVIDER_ID) {
-                if (!this.builtInAiService) {
-                    addLog(LogType.ERROR, `Unknown AI Provider: ${slot.provider}`, { traceId });
-                    continue;
-                }
-
-                void recordAuditLog({ provider: slot.provider, url });
-
-                try {
-                    const result = await this.builtInAiService.generateSummary(content, { traceId });
-                    // Check both the success flag (from LocalAIService/BuiltInAIClient) and content length.
-                    // BuiltInAIClient returns success:false without throwing when the model is
-                    // 'downloadable' — we must not treat that as a valid summary.
-                    if (result.success !== false && result.summary.length >= minLength) {
-                        return { success: true, summary: result.summary, sentTokens: result.sentTokens, receivedTokens: result.receivedTokens, providerName: result.providerName, modelName: result.modelName };
-                    }
-                    lastResult = { success: false, summary: result.summary || result.error || 'Built-in AI returned no content' };
-                } catch (error: unknown) {
-                    addLog(LogType.ERROR, `Generate summary failed: ${errorMessage(error)}`, { traceId });
-                    lastResult = { success: false, summary: "Error: Failed to generate summary. Please try again." };
-                }
-                continue;
-            }
-
-            const factory = this.providers.get(slot.provider);
-            if (!factory) {
-                addLog(LogType.ERROR, `Unknown AI Provider: ${slot.provider}`, { traceId });
-                continue;
-            }
-
-            const effectiveSettings = this.applySlotModel(settings, slot);
-
-            void recordAuditLog({ provider: slot.provider, url });
-
-            try {
-                const providerInstance = factory(effectiveSettings);
-                const result = await providerInstance.generateSummary(content, tagSummaryMode, traceId);
-                if (result.success && result.summary.length >= minLength) {
-                    return result;
-                }
-                lastResult = result;
-            } catch (error: unknown) {
-                addLog(LogType.ERROR, `Generate summary failed: ${errorMessage(error)}`, { traceId });
-                lastResult = { success: false, summary: "Error: Failed to generate summary. Please try again." };
-            }
-        }
-
-        return lastResult;
-    }
-
     /** Maximum number of provider slots to process in testConnection/generateSummary */
     private static readonly MAX_PROVIDERS = 10;
 
@@ -270,6 +180,63 @@ export class AIClient {
     }
 
     /**
+     * スロットに対して要約を生成する共通処理
+     * generateSummary と testConnection から呼び出される
+     */
+    private async processSummarySlot(
+        slot: ProviderSlot,
+        settings: Settings,
+        content: string,
+        tagSummaryMode: boolean,
+        traceId: string,
+        url: string
+    ): Promise<AISummaryResult> {
+        const factory = this.providers.get(slot.provider);
+        if (!factory) {
+            addLog(LogType.ERROR, `Unknown AI Provider: ${slot.provider}`, { traceId });
+            return { success: false, summary: "Error: AI provider configuration is missing. Please check your settings." };
+        }
+
+        const effectiveSettings = this.applySlotModel(settings, slot);
+        void recordAuditLog({ provider: slot.provider, url });
+
+        try {
+            const providerInstance = factory(effectiveSettings);
+            const result = await providerInstance.generateSummary(content, tagSummaryMode, traceId);
+            return result;
+        } catch (error: unknown) {
+            addLog(LogType.ERROR, `Generate summary failed: ${errorMessage(error)}`, { traceId });
+            return { success: false, summary: "Error: Failed to generate summary. Please try again." };
+        }
+    }
+
+    private async generateSummaryInternal(
+        content: string,
+        tagSummaryMode: boolean,
+        url: string,
+        traceId: string = ''
+    ): Promise<AISummaryResult> {
+        const settings = await getSettings();
+        const minLength = (settings[StorageKeys.SUMMARY_MIN_LENGTH] as number) || 0;
+        const slots = this.resolveProviderSlots(settings);
+
+        let lastResult: AISummaryResult = {
+            success: false,
+            summary: "Error: AI provider configuration is missing. Please check your settings."
+        };
+
+        for (const slot of slots) {
+            const result = await this.processSummarySlot(slot, settings, content, tagSummaryMode, traceId, url);
+            if (result.success && result.summary.length >= minLength) {
+                return result;
+            }
+            lastResult = result;
+        }
+
+        return lastResult;
+    }
+
+    /**
      * 接続テストを実行する
      * 優先度リストの全プロバイダをテストし、各プロバイダの結果を返す
      * 例外の有無だけでなく、実際のレスポンス内容も検証する。
@@ -293,80 +260,6 @@ export class AIClient {
                 // that omit it keep their progress shape unchanged.
                 ...(runId !== undefined ? { runId } : {}),
             });
-
-            if (slot.provider === BUILT_IN_AI_PROVIDER_ID) {
-                // Note: for built-in-ai, `effectiveModel` reflects only the
-                // user-specified slot.model (there is no built-in-ai_model key).
-                // The actual model used at request time is resolved internally
-                // by LocalAIService (availability/modelName), so the displayed
-                // model may not equal the executed one. Display is informational.
-                if (!this.builtInAiService) {
-                    providerResults.push({
-                        provider: slot.provider,
-                        model: effectiveModel,
-                        success: false,
-                        message: `Unknown provider: ${slot.provider}`,
-                        elapsedMs: performance.now() - slotStart,
-                        debug: { error: 'Built-in AI service is not registered' },
-                    });
-                    continue;
-                }
-
-                const testPrompt = 'Connection test.';
-                try {
-                    const result = await this.builtInAiService.generateSummary(testPrompt);
-                    const hasContent = result.summary.length > 0;
-                    const isSuccess = result.success !== false && hasContent;
-
-                    if (isSuccess) {
-                        providerResults.push({
-                            provider: slot.provider,
-                            model: effectiveModel,
-                            success: true,
-                            message: 'ok',
-                            elapsedMs: performance.now() - slotStart,
-                            debug: {
-                                prompt: testPrompt,
-                                response: result.summary,
-                                hasContent: true,
-                            },
-                        });
-                        anySuccess = true;
-                    } else {
-                        const errorMsg = result.error || (hasContent ? 'Summary was empty' : 'Provider reported failure');
-                        providerResults.push({
-                            provider: slot.provider,
-                            model: effectiveModel,
-                            success: false,
-                            message: errorMsg,
-                            elapsedMs: performance.now() - slotStart,
-                            debug: {
-                                prompt: testPrompt,
-                                response: result.summary || undefined,
-                                error: result.error,
-                                hasContent: false,
-                            },
-                        });
-                        addLog(LogType.WARN, `Connection test for ${slot.provider} succeeded without exception but returned no content: ${errorMsg}`);
-                    }
-                } catch (error: unknown) {
-                    const msg = errorMessage(error);
-                    addLog(LogType.ERROR, `Connection test failed for ${slot.provider}: ${msg}`);
-                    providerResults.push({
-                        provider: slot.provider,
-                        model: effectiveModel,
-                        success: false,
-                        message: msg,
-                        elapsedMs: performance.now() - slotStart,
-                        debug: {
-                            prompt: testPrompt,
-                            error: msg,
-                            hasContent: false,
-                        },
-                    });
-                }
-                continue;
-            }
 
             const factory = this.providers.get(slot.provider);
             if (!factory) {
@@ -421,5 +314,4 @@ export class AIClient {
             providers: providerResults,
         };
     }
-
 }
