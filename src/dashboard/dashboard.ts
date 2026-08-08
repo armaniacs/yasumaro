@@ -24,12 +24,31 @@ import {
 // Re-exported for existing importers (notably the dashboard tests), which
 // referenced this helper from dashboard.ts before it moved to markdownExport.ts.
 export { toMarkdownTemplateEntryData };
+import { tryGetRegistry } from './panels/registryContext.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
 import type { DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { saveDashboardSettings } from './settingsPipeline.js';
 import { generateReviewSummary } from './reviewSummaryHandler.js';
 import { formatProviderHeadline, formatProviderDetailLines } from './aiTestResultView.js';
+
+/**
+ * Switch to a panel.
+ *
+ * Prefers the NavigationRegistry, falling back to clicking the sidebar button
+ * when the registry is not up yet: entrypoints/options/main.ts imports this
+ * module before src/dashboard/main.ts, so at initDashboard() time the panels
+ * may not be registered. The click path reaches the same handler that
+ * DashboardBootstrapper wires onto the sidebar.
+ */
+function navigateToPanel(panelId: string): void {
+  const registry = tryGetRegistry();
+  if (registry) {
+    registry.navigate(panelId);
+    return;
+  }
+  document.querySelector<HTMLButtonElement>(`.sidebar-nav-btn[data-panel="${panelId}"]`)?.click();
+}
 
 function openSettingsPanel(section: string): void {
   const panelMap: Record<string, string> = {
@@ -41,10 +60,7 @@ function openSettingsPanel(section: string): void {
   const panelId = panelMap[section];
   if (!panelId) return;
 
-  const navBtn = document.querySelector<HTMLButtonElement>(`.sidebar-nav-btn[data-panel="${panelId}"]`);
-  if (navBtn) {
-    navBtn.click();
-  }
+  navigateToPanel(panelId);
 
   if (section === 'obsidian') {
     const details = document.getElementById('obsidianSettingsDetails') as HTMLDetailsElement | null;
@@ -807,8 +823,7 @@ export async function initDashboard(): Promise<void> {
 
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('tab') === 'history') {
-    const historyBtn = document.querySelector('[data-panel="panel-sqlite-history"]') as HTMLButtonElement;
-    if (historyBtn) historyBtn.click();
+    navigateToPanel('panel-sqlite-history');
   }
 
   const section = urlParams.get('section');
