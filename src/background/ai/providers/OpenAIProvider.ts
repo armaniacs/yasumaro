@@ -3,8 +3,8 @@
  * OpenAI互換APIを使用するAIプロバイダー
  */
 
-import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult } from './ProviderStrategy.js';
-import { fetchWithRetry, validateUrlForAIRequests, CONNECTION_TEST_CACHE_MODE } from '../../../utils/fetch.js';
+import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
+import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
@@ -204,22 +204,31 @@ export class OpenAIProvider extends AIProviderStrategy {
         }
 
         const trimmedBaseUrl = this.baseUrl.replace(/\/$/, '');
-        const url = `${trimmedBaseUrl}/models`;
+        // モデル一覧(GET /models)ではなく実際に推論を走らせる。メタデータ取得では
+        // APIキーの有効性やモデル名の妥当性、実際の応答内容が検証できないため。
+        const url = `${trimmedBaseUrl}/chat/completions`;
 
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
         if (this.apiKey) {
             headers['Authorization'] = `Bearer ${this.apiKey}`;
         }
 
+        const payload = {
+            model: this.model,
+            messages: [{ role: 'user', content: CONNECTION_TEST_PROMPT }],
+            max_tokens: 16,
+            temperature: 0,
+        };
+
         try {
             const allowedUrls = await this._getAllowedUrls();
 
             const response = await fetchWithRetry(url, {
-                method: 'GET',
+                method: 'POST',
                 headers,
+                body: JSON.stringify(payload),
                 allowedUrls,
-                timeoutMs: this.timeoutMs,
-                cache: CONNECTION_TEST_CACHE_MODE
+                timeoutMs: this.timeoutMs
             }, {
                 maxRetryCount: 1,
                 initialDelayMs: 500,
@@ -227,21 +236,48 @@ export class OpenAIProvider extends AIProviderStrategy {
                 maxDelayMs: 3000
             });
 
-            if (response.ok) {
+            if (!response.ok) {
+                // 共通HTTPステータスマッピング（エンドポイントは診断用に残す）
+                const mapped = this.mapConnectionError(response.status, 'OpenAI');
                 return {
-                    success: true,
-                    message: 'Connected to AI API.',
-                    debug: { prompt: `GET ${url}`, response: `HTTP ${response.status} OK`, hasContent: true },
+                    ...mapped,
+                    debug: {
+                        ...mapped.debug,
+                        prompt: CONNECTION_TEST_PROMPT,
+                        endpoint: `POST ${url}`,
+                        statusCode: response.status,
+                    },
                 };
             }
 
-            // 共通HTTPステータスマッピング
-            return this.mapConnectionError(response.status, 'OpenAI');
+            const data = await response.json() as OpenAIApiResponse;
+            const text = data.choices?.[0]?.message?.content ?? '';
+            const hasContent = text.trim().length > 0;
+
+            return {
+                success: hasContent,
+                message: hasContent ? 'Connected to AI API.' : 'Response contained no content.',
+                debug: {
+                    prompt: CONNECTION_TEST_PROMPT,
+                    response: hasContent ? text : undefined,
+                    endpoint: `POST ${url}`,
+                    modelName: this.model,
+                    statusCode: response.status,
+                    hasContent,
+                    ...(data.usage?.prompt_tokens !== undefined ? { sentTokens: data.usage.prompt_tokens } : {}),
+                    ...(data.usage?.completion_tokens !== undefined ? { receivedTokens: data.usage.completion_tokens } : {}),
+                    ...(hasContent ? {} : { error: 'choices[0].message.content was empty' }),
+                },
+            };
         } catch (e: unknown) {
             const msg = errorMessage(e);
             const errorName = e instanceof Error ? e.name : undefined;
             // 共通エラーパース
-            return this.parseAndMapFetchError(msg, 'OpenAI', errorName);
+            const mapped = this.parseAndMapFetchError(msg, 'OpenAI', errorName);
+            return {
+                ...mapped,
+                debug: { ...mapped.debug, prompt: CONNECTION_TEST_PROMPT, endpoint: `POST ${url}` },
+            };
         }
     }
 

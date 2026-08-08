@@ -314,7 +314,11 @@ describe('OpenAIProvider', () => {
 
     describe('testConnection', () => {
         test('baseUrl 未設定でもデフォルトURLでテストする', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({ ok: true });
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                status: 200,
+                json: async () => ({ choices: [{ message: { content: 'OK' } }] }),
+            });
 
             const p = new OpenAIProvider({ ...baseSettings, openai_base_url: '' });
             const result = await p.testConnection();
@@ -322,7 +326,11 @@ describe('OpenAIProvider', () => {
         });
 
         test('接続成功時', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({ ok: true });
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                status: 200,
+                json: async () => ({ choices: [{ message: { content: 'OK' } }] }),
+            });
 
             const p = new OpenAIProvider(baseSettings);
             const result = await p.testConnection();

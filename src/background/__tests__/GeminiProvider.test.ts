@@ -327,7 +327,11 @@ describe('GeminiProvider', () => {
 
         test('接続成功時', async () => {
             (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
-            (fetchWithRetry as vi.Mock).mockResolvedValue({ ok: true });
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                status: 200,
+                json: async () => ({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] }),
+            });
 
             const provider = new GeminiProvider(baseSettings);
             const result = await provider.testConnection();
@@ -427,7 +431,8 @@ describe('GeminiProvider', () => {
         test('testConnection が設定された API バージョンを使用する', async () => {
             (fetchWithRetry as vi.Mock).mockResolvedValue({
                 ok: true,
-                json: async () => ({ models: [{ name: 'models/gemini-3.1-flash-lite' }] })
+                status: 200,
+                json: async () => ({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] })
             });
 
             const provider = new GeminiProvider({
@@ -437,8 +442,9 @@ describe('GeminiProvider', () => {
 
             await provider.testConnection();
 
+            // 接続テストは実際に推論を走らせるため :generateContent を叩く
             const url = (fetchWithRetry as vi.Mock).mock.calls[0][0];
-            expect(url).toBe('https://generativelanguage.googleapis.com/v1/models');
+            expect(url).toBe('https://generativelanguage.googleapis.com/v1/models/gemini-3.1-flash-lite:generateContent');
         });
 
         test('gemini_api_version 設定で API URL のバージョンを上書きする', async () => {

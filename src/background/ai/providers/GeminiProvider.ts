@@ -3,8 +3,8 @@
  * Google Gemini APIを使用するAIプロバイダー
  */
 
-import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult } from './ProviderStrategy.js';
-import { fetchWithRetry, validateUrlForAIRequests, CONNECTION_TEST_CACHE_MODE } from '../../../utils/fetch.js';
+import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
+import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
@@ -135,7 +135,10 @@ export class GeminiProvider extends AIProviderStrategy {
             };
         }
 
-        const testUrl = `https://generativelanguage.googleapis.com/${this._getApiVersion()}/models`;
+        // モデル一覧(GET /models)ではなく実際に推論を走らせる。メタデータ取得では
+        // APIキーの有効性やモデル名の妥当性、実際の応答内容が検証できないため。
+        const cleanModelName = this.model.replace(/^models\//, '');
+        const testUrl = `https://generativelanguage.googleapis.com/${this._getApiVersion()}/models/${cleanModelName}:generateContent`;
 
         // BaseUrl SSRF対策 - テストURLの検証
         try {
@@ -149,17 +152,25 @@ export class GeminiProvider extends AIProviderStrategy {
             };
         }
 
+        const payload = {
+            contents: [{ parts: [{ text: CONNECTION_TEST_PROMPT }] }],
+            generationConfig: { maxOutputTokens: 16, temperature: 0 },
+        };
+
         try {
             const allowedUrls = await this._getAllowedUrls();
 
             const response = await fetchWithRetry(
                 testUrl,
                 {
-                    method: 'GET',
-                    headers: { 'x-goog-api-key': this.apiKey },
+                    method: 'POST',
+                    headers: {
+                        'x-goog-api-key': this.apiKey,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload),
                     allowedUrls,
-                    timeoutMs: this.timeoutMs,
-                    cache: CONNECTION_TEST_CACHE_MODE
+                    timeoutMs: this.timeoutMs
                 },
                 {
                     maxRetryCount: 1,
@@ -169,21 +180,47 @@ export class GeminiProvider extends AIProviderStrategy {
                 }
             );
 
-            if (response.ok) {
+            if (!response.ok) {
+                const mapped = this.mapConnectionError(response.status, 'Gemini');
                 return {
-                    success: true,
-                    message: 'Connected to Gemini API.',
-                    debug: { prompt: `GET ${testUrl}`, response: `HTTP ${response.status} OK`, hasContent: true },
+                    ...mapped,
+                    debug: {
+                        ...mapped.debug,
+                        prompt: CONNECTION_TEST_PROMPT,
+                        endpoint: `POST ${testUrl}`,
+                        statusCode: response.status,
+                    },
                 };
             }
 
-            // 共通HTTPステータスマッピング
-            return this.mapConnectionError(response.status, 'Gemini');
+            const data = await response.json() as GeminiApiResponse;
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+            const hasContent = text.trim().length > 0;
+
+            return {
+                success: hasContent,
+                message: hasContent ? 'Connected to Gemini API.' : 'Response contained no content.',
+                debug: {
+                    prompt: CONNECTION_TEST_PROMPT,
+                    response: hasContent ? text : undefined,
+                    endpoint: `POST ${testUrl}`,
+                    modelName: cleanModelName,
+                    statusCode: response.status,
+                    hasContent,
+                    ...(data.usageMetadata?.promptTokenCount !== undefined ? { sentTokens: data.usageMetadata.promptTokenCount } : {}),
+                    ...(data.usageMetadata?.candidatesTokenCount !== undefined ? { receivedTokens: data.usageMetadata.candidatesTokenCount } : {}),
+                    ...(hasContent ? {} : { error: 'candidates[0].content.parts[0].text was empty' }),
+                },
+            };
         } catch (e: unknown) {
             const msg = errorMessage(e);
             const errorName = e instanceof Error ? e.name : undefined;
             // 共通エラーパース
-            return this.parseAndMapFetchError(msg, 'Gemini', errorName);
+            const mapped = this.parseAndMapFetchError(msg, 'Gemini', errorName);
+            return {
+                ...mapped,
+                debug: { ...mapped.debug, prompt: CONNECTION_TEST_PROMPT, endpoint: `POST ${testUrl}` },
+            };
         }
     }
 

@@ -24,8 +24,25 @@ export interface AIProviderConnectionResult {
         statusCode?: number;
         /** Whether the response was non-empty. */
         hasContent?: boolean;
+        /** 実際にリクエストを送った先のエンドポイント。 */
+        endpoint?: string;
+        /** 応答したモデル名（プロバイダが返した実際の値）。 */
+        modelName?: string;
+        /** 送信トークン数（プロバイダが返した場合）。 */
+        sentTokens?: number;
+        /** 受信トークン数（プロバイダが返した場合）。 */
+        receivedTokens?: number;
     };
 }
+
+/**
+ * 接続テストで送る短いプロンプト。
+ *
+ * 疎通確認が目的なので、モデルに負荷をかけず応答が一意に近い形になるものを使う。
+ * GET /models のようなメタデータ取得ではなく実際に推論を走らせることで、
+ * APIキーの有効性・モデル名の妥当性・実際の応答内容まで一度に検証できる。
+ */
+export const CONNECTION_TEST_PROMPT = 'Reply with the single word: OK';
 
 export interface AISummaryResult {
     success: boolean;
