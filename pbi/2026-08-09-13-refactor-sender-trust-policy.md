@@ -83,16 +83,80 @@ After:  register('PING', handler, <信頼レベル>) → 書かないとコン�
 
 ## 作業内容
 
-- [ ] 信頼レベルの型を定義する
-- [ ] `MessageHandlerRegistry.register` を第3引数必須に変更する
-- [ ] `dispatch` で信頼レベルを判定してから handler を呼ぶ
-- [ ] 19箇所の `registry.register` に信頼レベルを付与する
-      （**現在の挙動を変えないこと**。無防備な4型は現状維持で明示する）
-- [ ] handler 側の個別チェック（方言1〜4）を削除する
-- [ ] `service-worker.ts:432-439` のインライン複製を削除する
-- [ ] 各信頼レベルの判定に対するテストを追加する
-- [ ] `REFRESH_LOCAL_MARKDOWN_SCHEDULER` を content script から
+- [x] 信頼レベルの型を定義する（`senderTrust.ts`）
+- [x] `MessageHandlerRegistry.register` を第3引数必須に変更する
+- [x] `dispatch` で信頼レベルを判定してから handler を呼ぶ
+- [x] 19箇所の `registry.register` に信頼レベルを付与する
+- [x] 各信頼レベルの判定に対するテストを追加する（11件）
+- [x] `REFRESH_LOCAL_MARKDOWN_SCHEDULER` を content script から
       叩けてよいかを検討し、結論をコメントで残す
+- [ ] ~~handler 側の個別チェックを削除する~~ → **意図的に残す**（下記）
+
+## 実装結果
+
+### 送信元の実地調査
+
+信頼レベルを機械的に付けず、**全メッセージ型の実際の送信元を grep で確認**した。
+
+| メッセージ型 | 実際の送信元 | 付与した信頼レベル |
+|---|---|---|
+| `VALID_VISIT` | content script | content-script-allowed |
+| `CHECK_DOMAIN` | `content/loader.ts` | content-script-allowed |
+| `CONTENT_CLEANSING_EXECUTED` | `utils/contentExtractor/index.ts`（ページ内実行） | content-script-allowed |
+| `PING` | `dashboard/historyUtils.ts` ほか。副作用なしの死活確認 | content-script-allowed |
+| `LOG_FORWARD` | **offscreen document** | extension-only |
+| `CONSENT_STATE_CHANGED` | `popup/privacyConsentController.ts` | extension-only |
+| `GENERATE_REVIEW_SUMMARY` | `dashboard/reviewSummaryHandler.ts` | extension-only |
+| `REFRESH_LOCAL_MARKDOWN_SCHEDULER` | `dashboard/dashboard.ts` | **extension-only（強化）** |
+| その他11型 | popup / dashboard | extension-only |
+
+`LOG_FORWARD` は offscreen document からの送信だが、offscreen は
+`chrome-extension://` URL を持ち `sender.tab` が無いため `extension-only` で通る。
+
+### 実際に強化された点
+
+`REFRESH_LOCAL_MARKDOWN_SCHEDULER` は個別チェックが無く、
+content script から**エクスポートスケジューラを再起動できる状態**だった。
+送信元は dashboard のみと確認できたため `extension-only` にした。
+
+`CONSENT_STATE_CHANGED` / `GENERATE_REVIEW_SUMMARY` / `LOG_FORWARD` の3件は
+素の `sender.id` チェック（content script は通過する）のみだったが、
+registry 側で content script を弾くようになった。
+特に `GENERATE_REVIEW_SUMMARY` は**課金対象のAI呼び出しを起動する**ため意味が大きい。
+
+### handler 側の個別チェックを残した理由
+
+PBI に「移行時は二重チェックの状態を経由すると安全」と書いた方針を採用した。
+registry 側の判定が全経路で正しく効いていることを E2E まで含めて確認できたが、
+個別チェックの削除は**防御を減らす変更**であり、本 PBI の主目的
+（ポリシーの集約と既定の安全化）は既に達成している。
+
+削除は独立した PBI で、1型ずつ確認しながら行うのが妥当。
+
+### 追加テスト（11件）
+
+`senderTrust.test.ts` を新規作成。4種類の送信元
+（content script / 拡張ページ / offscreen / 外部拡張）を定義し、
+各信頼レベルとの組み合わせを検証している。
+
+- extension-only が content script を拒否し、拡張ページと offscreen を許可すること
+- content-script-allowed が content script を許可すること
+- 外部拡張は信頼レベルによらず拒否されること
+- registry の dispatch が **handler を呼ぶ前に**拒否すること
+- **content script がエクスポートスケジューラを起動できないこと**
+
+### テストの実効性検証
+
+`dispatch` の判定を無効化したところ、**2件が赤**
+（`does not invoke an extension-only handler for a content script` と
+`blocks a content script from restarting the export scheduler`）。復元後に緑。
+
+### 検証結果
+
+- `npm run validate`: **7546件 通過**（412ファイル、18 skip）
+- `npm run build`: 成功
+- `npm run test:e2e`: **185件 通過**、7 skip、失敗0
+  （content script 記録・SW オーケストレーションを含む）
 
 ## 完了条件
 
