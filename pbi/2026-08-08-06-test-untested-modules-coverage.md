@@ -110,13 +110,43 @@ Scenario: 既存テストが全てパスする
 
 ## 受け入れ基準
 
-- [ ] 既存テストのカバー範囲を調査し、不足範囲を特定（重複テストを作らない）
-- [ ] `src/background/__tests__/recordingCache.test.ts` を新規作成
-- [ ] VULN-014（API キー redaction）のテストを含む
-- [ ] TTL 期限切れ・キャッシュ無効化のテストを含む
-- [ ] session storage 永続化・復元のテストを含む
-- [ ] `createManualRecordHandler` / `createSaveRecordHandler` の `isSecureUrl` チェックのテストを追加
-- [ ] `npm run validate` が成功する
+- [x] 既存テストのカバー範囲を調査し、不足範囲を特定（重複テストを作らない）
+- [x] `src/background/__tests__/recordingCache-session.test.ts` を新規作成（17件）
+- [x] VULN-014（API キー redaction）のテストを含む — **永続化の境界**で検証
+- [x] TTL 期限切れ・キャッシュ無効化のテストを含む
+- [x] session storage 永続化・復元のテストを含む
+- [x] `createManualRecordHandler` / `createSaveRecordHandler` の `isSecureUrl` チェックのテストを追加（14件）
+- [x] `npm run validate` が成功する（7470 tests pass）
+
+### 調査結果の訂正（2026-08-08）
+
+**レビュー時の「`recordingCache.ts` はテスト0」は誤りだった。** ファイル名一致（`find src -name "*recordingCache*"`）で判定したためで、実際には別名のテストからカバーされていた。
+
+| 既存テスト | カバー範囲 |
+|---|---|
+| `recordingLogic-cache.test.ts` | `getSettingsWithCache` / `invalidateSettingsCache` / 設定キャッシュのTTL・バージョン（22件） |
+| `recordingLogic-redact.test.ts` | `redactSettingsApiKeys` 単体（VULN-014、3件） |
+| `headerDetector.test.ts` | privacyCache への書き込み・LRU退避 |
+| `integration-recording.test.ts` | `getCacheState` 経由の統合 |
+
+**実際に未カバーだった領域**（今回追加した箇所）:
+
+1. **session storage への永続化と復元の往復** — `loadCacheFromSession` / `scheduleCacheSave` は既存テストで一度も検証されていなかった
+2. **VULN-014 が「永続化の境界」で効いていること** — 既存テストは `redactSettingsApiKeys` を単体で呼ぶだけで、`saveCacheToSession` が実際にそれを通しているかは未検証だった
+3. **復元時のTTL判定** — 期限切れキャッシュを復元しないこと
+4. **URLキャッシュのTTL・無効化**
+5. **privacy キャッシュの session storage フォールバック**（SW再起動からの復帰）
+
+### テストが本当に欠陥を捕まえることの確認
+
+書いたテストが素通りしないことを、**意図的に実装を壊して確認した**。
+
+| 壊した箇所 | 結果 |
+|---|---|
+| `saveCacheToSession` の `redactSettingsApiKeys()` を外す | VULN-014 テストが失敗（session に平文APIキーが書かれることを検出） |
+| `createManualRecordHandler` の `isSecureUrl` チェックを無効化 | URLスキームのテスト5件が失敗 |
+
+いずれも復旧済み。
 
 ## テスト戦略
 
