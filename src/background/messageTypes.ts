@@ -6,7 +6,11 @@
  */
 
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
-import type { AiTestProgress } from './aiClient.js';
+// Imported from ai/AIService.js rather than aiClient.js: this module is pulled
+// in by every layer (popup, dashboard, content, offscreen), and reaching
+// through aiClient.js would drag the whole provider Strategy graph along with
+// it. AIService.ts is types-only.
+import type { AiTestProgress } from './ai/AIService.js';
 
 // ============================================================================
 // Protocol version
@@ -202,6 +206,12 @@ export interface AiTestProgressMessage {
 export const VALID_MESSAGE_TYPES = [
     'VALID_VISIT',
     'CHECK_DOMAIN',
+    // GET_CONTENT is delivered to the CONTENT SCRIPT via chrome.tabs.sendMessage
+    // (src/content/extractor.ts), not to the Service Worker — no
+    // registry.register('GET_CONTENT', ...) exists and none is needed. It stays
+    // in this list (and in ExtensionMessage) so the popup senders and the
+    // content-script receiver share one typed contract; the SW's dispatcher
+    // simply never sees it.
     'GET_CONTENT',
     'FETCH_URL',
     'MANUAL_RECORD',

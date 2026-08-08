@@ -137,12 +137,65 @@ Scenario: 既存テストが全てパスする
 
 ## 受け入れ基準
 
-- [ ] `ResponseForType` に `LOG_FORWARD` の分岐を追加
-- [ ] `message-types-consistency.test.ts` の手書きリストを `VALID_MESSAGE_TYPES` からの導出に変更
-- [ ] `GET_CONTENT` の位置づけを整理（除外 or docコメント明記。判断根拠をPBIに追記）
-- [ ] `messaging/types.ts` から `background/` への import を解消
-- [ ] `CURRENT_PROTOCOL_VERSION` の二重 import 経路を1本化（`messageTypes.ts` の再エクスポート削除）
-- [ ] `npm run validate` が成功する
+- [x] `ResponseForType` に `LOG_FORWARD` の分岐を追加
+- [x] `message-types-consistency.test.ts` の手書きリストを型からの導出に変更
+- [x] `GET_CONTENT` の位置づけを整理（**除外せず docコメントで明記**。判断根拠は下記）
+- [x] `messaging/types.ts` から `background/` への import を解消 → **調査の結果、方針変更**（下記）
+- [x] `CURRENT_PROTOCOL_VERSION` の二重 import 経路 → **現状維持と判断**（下記）
+- [x] `npm run validate` が成功する
+
+### 実装結果（2026-08-08）
+
+#### `GET_CONTENT` は除外しない
+
+調査の結果、**バグではなかった**。`GET_CONTENT` は `chrome.tabs.sendMessage` で content script（`src/content/extractor.ts:747`）へ送られるメッセージで、Service Worker は受信しない。送信元は `src/popup/recordCurrentPage.ts:459` と `src/popup/statusPanel.ts:53`。
+
+`VALID_MESSAGE_TYPES` から外すと、popup 側の送信元と content script 側の受信側が共有している型契約が壊れる。**除外せず、なぜ registry に登録が無いのかをコメントで明記**した。
+
+#### 整合性テストを導出方式に変更（本PBIの中核）
+
+手書きリストを廃止し、型レベルの網羅性チェックに置き換えた:
+
+```typescript
+type Missing = Exclude<ValidType, (typeof VALID_MESSAGE_TYPES)[number]>;
+const _noMissingTypes: Missing extends never ? true : never = true;
+```
+
+ただし**型レベルのチェックだけでは不十分だった**。vitest は実行時に型を消すため、`Missing extends never` が偽になってもテストは失敗しない。しかも `npm run type-check:test`（テストを含む型チェック）は本作業前から既に壊れており、`make test` にも含まれていない。
+
+そこで**ソーステキストから union のメンバーを導出**して実行時に突き合わせる方式にした:
+
+```typescript
+// messageTypes.ts を読み、ExtensionMessage union のメンバー interface 名 →
+// 各 interface の type: 'NAME' リテラルを引いて VALID_MESSAGE_TYPES と比較
+function unionMemberTypeNames(): string[] { ... }
+```
+
+これで手書きリストを一切持たずに、`npm test` の実行時に取りこぼしを検出できる。
+
+**検証**: `VALID_MESSAGE_TYPES` から `LOG_FORWARD` を実際に削除したところ、
+`AssertionError: expected [ Array(19) ] to include 'LOG_FORWARD'` で失敗することを確認した（復旧済み）。型レベルのチェックのみだった版では**素通りしていた**。
+
+#### `AiTestProgress` の重複定義を解消（PBI-02 で作ってしまった負債）
+
+PBI-02 で `AIService.ts` に `AiTestProgress` を定義した際、`aiClient.ts` の既存定義と**重複**させてしまっていた。本PBIで `AIService.ts` を正本とし、`aiClient.ts` は再エクスポートに変更。
+
+さらに `messageTypes.ts`（全レイヤーが参照）の import 先を `aiClient.js` から `ai/AIService.js` に変更した。`aiClient.js` 経由だと provider Strategy のグラフ全体を引きずるため。
+
+#### `messaging/types.ts` → `background/messageTypes.ts` の逆依存は現状維持
+
+当初は「型の実体を `messaging/` へ移す」方針だったが、調査により**費用対効果が合わないと判断**した。
+
+- `messageTypes.ts` は 19ファイルから import されている
+- 移動すると19ファイルすべての import 文を書き換える必要がある
+- 実行時の振る舞いは何も変わらない（型のみ）
+- `messageTypes.ts` 自体は `AiSummaryCleansedReason`（`utils/commonTypes.js`）と `AiTestProgress`（`ai/AIService.js`）しか import しておらず、循環はしていない
+
+**代わりに実施した実質的な改善**: `messageTypes.ts` の import 先を `aiClient.js`（重い実装モジュール）から `ai/AIService.js`（型のみ）へ変更し、依存の重さを下げた。
+
+#### `CURRENT_PROTOCOL_VERSION` の二重経路も現状維持
+
+`messageTypes.js` 経由が17ファイル、`messaging/protocol.js` 経由が4ファイル。再エクスポートを削除すると17ファイルの変更が必要だが、`messageTypes.ts` 側には既に「正本は `messaging/protocol.ts`」というコメントがあり、意図は明示されている。振る舞いも変わらないため、17ファイルを触る価値はないと判断した。
 
 ## テスト戦略
 
