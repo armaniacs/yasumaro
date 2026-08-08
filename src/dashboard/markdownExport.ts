@@ -157,7 +157,16 @@ export async function exportFullHistoryInBatches(
 
   for (;;) {
     const result = await queryLogs({ limit: batchSize, offset, orderBy: 'created_at', orderDir: 'ASC' });
-    if (!result || !('rows' in result) || result.rows.length === 0) break;
+    // A failed batch must not look like "reached the end", or a mid-export
+    // database error would silently produce a partial export reported as
+    // complete.
+    if (result === null) {
+      throw new Error('Could not read the database. Please reload the extension and try again.');
+    }
+    if ('error' in result) {
+      throw new Error(result.error);
+    }
+    if (result.rows.length === 0) break;
 
     for (const row of result.rows) {
       const date = getLocalDateString(row.created_at);
@@ -208,7 +217,16 @@ export async function exportDateRange(
     orderDir: 'ASC',
   });
 
-  if (!result || !('rows' in result) || result.rows.length === 0) {
+  // Distinguish a failure from a genuinely empty range: both used to return
+  // zero rows, so a database error was reported to the user as "no records in
+  // this period".
+  if (result === null) {
+    throw new Error('Could not read the database. Please reload the extension and try again.');
+  }
+  if ('error' in result) {
+    throw new Error(result.error);
+  }
+  if (result.rows.length === 0) {
     return { totalRows: 0, totalFiles: 0 };
   }
 

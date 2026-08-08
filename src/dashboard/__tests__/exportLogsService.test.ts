@@ -251,4 +251,49 @@ describe('exportLogsService', () => {
       spy.mockRestore();
     });
   });
+
+  /**
+   * These exporters hand their result straight to a download. Before this
+   * suite existed, a database failure produced an empty file plus an
+   * "export completed" status message, because queryAllData turned every
+   * failure into an empty row list.
+   */
+  describe('failure paths', () => {
+    it('exportMarkdown rejects when the query reports an error', async () => {
+      mockQueryLogs.mockResolvedValue({ error: 'Storage quota exceeded.' });
+      await expect(exportMarkdown()).rejects.toThrow('Storage quota exceeded.');
+    });
+
+    it('exportCsv rejects when the query reports an error', async () => {
+      mockQueryLogs.mockResolvedValue({ error: 'Database connection lost.' });
+      await expect(exportCsv()).rejects.toThrow('Database connection lost.');
+    });
+
+    it('exportJson rejects when the query reports an error', async () => {
+      mockQueryLogs.mockResolvedValue({ error: 'Database connection lost.' });
+      await expect(exportJson()).rejects.toThrow('Database connection lost.');
+    });
+
+    it('rejects when the query returns null', async () => {
+      mockQueryLogs.mockResolvedValue(null);
+      await expect(exportJson()).rejects.toThrow(/could not read the database/i);
+    });
+
+    it('rejects rather than silently truncating when the history exceeds the limit', async () => {
+      // total far exceeds the rows actually returned: the file would have been
+      // written with only the first page and reported as a complete export.
+      mockQueryLogs.mockResolvedValue({ rows: SAMPLE_ROWS, total: 25000 });
+      await expect(exportJson()).rejects.toThrow(/25000/);
+    });
+
+    it('still exports normally when the row count matches the total', async () => {
+      mockQueryLogs.mockResolvedValue({ rows: SAMPLE_ROWS, total: SAMPLE_ROWS.length });
+      await expect(exportJson()).resolves.toBeInstanceOf(Blob);
+    });
+
+    it('treats a genuinely empty database as success, not an error', async () => {
+      mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
+      await expect(exportJson()).resolves.toBeInstanceOf(Blob);
+    });
+  });
 });

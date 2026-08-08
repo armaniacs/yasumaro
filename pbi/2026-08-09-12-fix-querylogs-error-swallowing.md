@@ -115,14 +115,64 @@ PBI-07 で修正したページングと同種の前提である。
 
 ## 作業内容
 
-- [ ] `exportLogsService.queryAllData` がエラー時に**throw する**ようにする
+- [x] `exportLogsService.queryAllData` がエラー時に**throw する**ようにする
       （`exportLogsPanel` の既存 `try/catch` が初めて機能するようになる）
-- [ ] 併せて `total > rows.length` のとき**切り捨てが起きたことを伝える**
-- [ ] `tagClusterPanel.loadRowsWithRetry` の `?? []` を除去し、
+- [x] 併せて `total > rows.length` のとき**切り捨てが起きたことを伝える**
+- [x] `tagClusterPanel.loadRowsWithRetry` の `?? []` を除去し、
       失敗時は `null` を返してリトライが働くようにする
-- [ ] `markdownExport` の2箇所で、エラーと0件を区別する
-- [ ] `exportLogsService` の**失敗経路テストを新規追加**する（現在0件）
-- [ ] `tagClusterPanel` の**リトライが実際に走ることを検証するテスト**を追加する
+- [x] `markdownExport` の2箇所で、エラーと0件を区別する
+- [x] `exportLogsService` の**失敗経路テストを新規追加**する（現在0件）
+- [x] `tagClusterPanel` の**リトライが実際に走ることを検証するテスト**を追加する
+
+## 実装結果
+
+### 変更点
+
+| ファイル | 変更 |
+|---|---|
+| `exportLogsService.ts` | `queryAllData` が null / `{error}` / 件数超過で throw。`EXPORT_ROW_LIMIT` を定数化 |
+| `tagClusterPanel.ts` | 失敗時に `null` を返しリトライを機能させる |
+| `markdownExport.ts` (2箇所) | エラーと0件を区別。バッチ途中の失敗が「終端」に見えないようにする |
+| `exportLogsPanel.ts` | `${err}` → `${errorMessage(err)}`（`Error:` 接頭辞の混入を除去） |
+
+### 追加テスト（11件）
+
+**`exportLogsService.test.ts` に「failure paths」を新設（7件）**
+起票時に指摘したとおり、このファイルには `error` という語が1度も無かった。
+
+- markdown / csv / json の3経路がそれぞれ error を伝播すること
+- null 戻り値でも throw すること
+- `total > rows.length` のとき切り捨てを報告すること
+- 件数が一致するときは正常にエクスポートすること
+- **空DBは成功として扱うこと**（エラーと空を混同しない回帰防止）
+
+**`tagClusterPanel-retry.test.ts` を新規作成（4件）**
+
+結果だけを見るとリトライ有無を区別できない（どちらも空）ため、
+**`queryLogs` の呼び出し回数**を数える方式にした。
+
+### テストの実効性検証（必須手順）
+
+両方について「修正を戻す → 赤 → 復元 → 緑」を実施。
+
+| 対象 | 戻したときの結果 |
+|---|---|
+| `tagClusterPanel` の `?? []` を復元 | **3件が赤**（成功経路の1件は正しく緑のまま） |
+| `queryAllData` の `: []` を復元 | **5件が赤** |
+
+### 判明した事実: 自分が前 PBI で書いたテストがバグを固定していた
+
+`markdownExport.test.ts` に
+`treats a query error as an empty result rather than throwing`
+というテストが存在した。PBI-09 で私が書いたもので、**バグの挙動を仕様として固定**していた。
+
+`surfaces a query error instead of reporting an empty range` に置き換え、
+null 経路の検証も追加した。
+
+### 検証結果
+
+- `src/dashboard/` 全体: **1595件 全通過**（88ファイル）
+- `npm run type-check`: 通過
 
 ## 完了条件
 
