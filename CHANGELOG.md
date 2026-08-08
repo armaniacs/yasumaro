@@ -33,6 +33,57 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.7.26] - 2026-08-09
+
+This release immediately addresses review feedback from the previous release.
+
+リポジトリ全体を対象とした2回目のアーキテクチャレビューの指摘を PBI 6件として文書化し、実装したもの。
+**DB障害がユーザーに一切通知されない**という一連の欠陥（エラー情報が生成元から表示先まで届かない）を修正した。
+
+### Fixed
+
+- **SQLite の具体的なエラー文言が画面に届かない問題を修正**
+  `deps.lastError` が値型だったため、Service Worker の配線はモジュール読み込み時の `null` を
+  スナップショットしていた。`categorizeError()` が用意した「容量超過」「DB接続が失われた」
+  「タイムアウト」という文言は15箇所の分岐すべてで汎用文言に化けており、一度も表示されていなかった
+- **DB障害時にエクスポートが「完了」と表示される問題を修正**
+  `queryLogs` の失敗を呼び出し側が空配列に潰していたため、ユーザーは空のファイルを
+  ダウンロードしたうえで成功メッセージを受け取っていた。パネルの `try/catch` は
+  `queryLogs` が内部で例外を握るため到達不能だった
+- **Tag Cluster のリトライが機能していない問題を修正**
+  `?? []` が `null` を非 null に変換していたため、`retryWithExponentialBackoff` が
+  1回目で成功扱いになり `maxAttempts: 4` が効いていなかった
+- **1万件を超えるエクスポートが無言で切り捨てられる問題を修正**
+  `total` と取得件数を照合せず、超過分が警告なく欠落していた
+
+### Security
+
+- 送信元認可ポリシーを `MessageHandlerRegistry` に集約し、登録時の信頼レベル指定を必須化
+  （指定しないとコンパイルが通らないため、既定が暗黙の「content script 許可」だった状態を解消）
+- `REFRESH_LOCAL_MARKDOWN_SCHEDULER` は個別チェックが無く content script から
+  エクスポートスケジューラを起動できたため `extension-only` に強化
+- `CONSENT_STATE_CHANGED` / `GENERATE_REVIEW_SUMMARY` / `LOG_FORWARD` は
+  content script が通過する検査のみだったため強化（`GENERATE_REVIEW_SUMMARY` は課金対象のAI呼び出しを起動する）
+
+### Refactor
+
+- dashboard SQLite ハンドラの依存組み立てを本番とテストで共有（`createSqliteClientDeps`）。
+  従来はテスト専用 wrapper が migration / confirmToken / backfill / cleanup をスタブ化しており、
+  本番の実処理が一度もテストされていなかった
+- `src/offscreen/sqlite.ts`（全 export が `@deprecated` の再エクスポート層）を削除
+
+### Tests
+
+- 上記すべてについて「修正を戻すとテストが落ちる」ことを確認した回帰テストを追加（計42件）
+- `offscreen.test.ts` の `vi.mock` を本番の import 先に合わせて分割し、
+  未到達だった経路が検証されるようになった（offscreen: 152 → 175件）
+- テスト総数: 7507 → 7546
+
+### Docs
+
+- 調査の結果 markdownFormatter と obsidianFormatter のサニタイズ差異は
+  ADR 2026-07-22 に照らして**意図的かつ正しい**と判明したため、対応不要の根拠を PBI に記録
+
 ## [6.7.25] - 2026-08-09
 
 アーキテクチャレビュー（コードベース全体スキャン）で検出した指摘を PBI 8件として文書化し、順に実装したもの。**履歴が1000件を超えると古い記録に到達できなくなる実害のあるバグ**を含む。
