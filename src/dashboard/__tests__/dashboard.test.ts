@@ -215,9 +215,9 @@ import {
 } from '../dashboard.js';
 
 describe('dashboard.ts exports', () => {
-    it('exports initDashboard', () => {
+    it('exports initDashboard', async () => {
         expect(typeof initDashboard).toBe('function');
-        expect(() => initDashboard()).not.toThrow();
+        await expect(initDashboard()).resolves.toBeUndefined();
     });
 
     it('exports createConnectionStatusElement', () => {
