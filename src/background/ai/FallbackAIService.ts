@@ -1,4 +1,11 @@
-import { type AIService, type AISummaryOptions, type AISummaryResult, type AISummaryMode } from './AIService.js';
+import {
+  type AIService,
+  type AISummaryOptions,
+  type AISummaryResult,
+  type AISummaryMode,
+  type AiTestProgress,
+  type AiConnectionTestResult,
+} from './AIService.js';
 
 interface FallbackConfig {
   local: AIService;
@@ -35,5 +42,17 @@ export class FallbackAIService implements AIService {
     const localModes = this.config.local.getSupportedModes();
     const remoteModes = this.config.remote.getSupportedModes();
     return [...new Set([...localModes, ...remoteModes])];
+  }
+
+  /**
+   * Delegate to the remote service: the connection-test UI exists to validate
+   * remote provider credentials and model names, which is what users configure.
+   * On-device availability is surfaced separately by the diagnostics panel.
+   */
+  async testConnection(
+    onProgress?: (progress: AiTestProgress) => void,
+    runId?: string,
+  ): Promise<AiConnectionTestResult> {
+    return this.config.remote.testConnection(onProgress, runId);
   }
 }

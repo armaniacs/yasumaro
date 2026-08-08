@@ -320,7 +320,7 @@ registry.register('CHECK_DOMAIN', handleCheckDomain);
 
 export const handleTestConnections = createTestConnectionsHandler({
   testObsidian: () => obsidian.testConnection(),
-  testAi: () => aiClient.testConnection(),
+  testAi: () => aiService.testConnection(),
 });
 registry.register('TEST_CONNECTIONS', handleTestConnections);
 
@@ -331,7 +331,7 @@ registry.register('TEST_OBSIDIAN', handleTestObsidian);
 
 export const handleTestAi = createTestAiHandler({
   clearSettingsCache: () => clearSettingsCache(),
-  testConnection: (onProgress, runId) => aiClient.testConnection(onProgress, runId),
+  testConnection: (onProgress, runId) => aiService.testConnection(onProgress, runId),
   notifyProgress: notifyAiTestProgress,
 });
 registry.register('TEST_AI', handleTestAi);

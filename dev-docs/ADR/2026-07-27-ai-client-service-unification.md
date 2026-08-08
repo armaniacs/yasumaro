@@ -41,10 +41,11 @@ Checking Team レビュー（`plans/2026-07-23-1038-review-fix-0723.md`）で、
 - `src/background/privacyPipeline.ts`
 - `src/background/recordingLogic.ts`
 
-### グループC: `aiClient.ts` から表示用の定数・型のみ import（2ファイル）
+### グループC: `aiClient.ts` から表示用の定数・型のみ import（3ファイル）
 
 - `src/dashboard/dashboard.ts`：`PROVIDER_LABELS`, `MultiProviderTestResult`
 - `src/dashboard/panels/diagnostic/diagnosticsPanel.ts`：`PROVIDER_LABELS`
+- `src/dashboard/aiTestResultView.ts`：`PROVIDER_LABELS`（2026-08-08 追記。接続テスト結果の表示整形を共通化した際に追加）
 
 これらは Strategy の実装詳細ではなく単なる定数・型のため、`aiClient.ts` から読み込み続けて問題ない。
 
@@ -63,6 +64,36 @@ Checking Team レビュー（`plans/2026-07-23-1038-review-fix-0723.md`）で、
 3. **回帰リスクが大きい**: テストで `AIClient` をモックしている箇所が多く、移行には広範なテスト更新が必要となる。
 
 **今後の方針**: `reviewSummaryGenerator.ts` の `AIClient` 直接利用を解消する場合は、別PBIとして `AIService` インスタンスの注入経路を設計・実装する。
+
+## 追記（2026-08-08）: `AIService.testConnection` の追加
+
+本ADRは「`aiClient.ts` への新規の直接依存は原則禁止」と定めたが、**この方針は構造的に守れない状態だった**。
+
+`AIService` インターフェースには `generateSummary` と `getSupportedModes` しか無く、**接続テストの入口が存在しなかった**。そのため `service-worker.ts` は接続テストだけ抽象を迂回して `aiClient` を直接参照せざるを得なかった。
+
+```typescript
+// 修正前 — 要約は aiService、接続テストは aiClient と2経路に分かれていた
+testAi: () => aiClient.testConnection(),
+testConnection: (onProgress, runId) => aiClient.testConnection(onProgress, runId),
+```
+
+これは呼び出し側の規律の問題ではなく**抽象の欠落**である。実際、2経路が独立して育った結果、Gemini の thinking トークンバグ（commit `69c90c0`）は接続テストと本番要約の両方に別々の修正を要した。
+
+### 決定
+
+`AIService` に `testConnection(onProgress?, runId?)` を追加し、3実装すべてに実装した。
+
+| 実装 | 振る舞い |
+|---|---|
+| `RemoteAIService` | `aiClient.testConnection` へ委譲 |
+| `LocalAIService` | オンデバイスモデルの availability を返す（到達先が無いため「接続」= モデル利用可否） |
+| `FallbackAIService` | remote へ委譲（接続テストUIはリモート設定の検証が目的） |
+
+これにより `service-worker.ts` の `aiClient` 参照は**インスタンス生成のみ**（グループAの配線用途）に限定され、ADR の意図が型で担保されるようになった。
+
+### 同時に修正した実バグ
+
+`RemoteAIService.generateSummary` が `success` / `error` を転送していなかった。`FallbackAIService` の `auto` 分岐は `localResult.success === false` で判定するため、remote 結果は常に `success: undefined` として読まれていた（`undefined === false` は `false`）。転送するよう修正済み。
 
 ## 今後の方針
 
