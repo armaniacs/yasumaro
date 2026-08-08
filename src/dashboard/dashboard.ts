@@ -13,14 +13,20 @@ import { getPluralKey } from '../utils/i18nPlural.js';
 import { AIProviderElements, updateAIProviderVisibilityMulti } from './settings/aiProvider.js';
 import { updateProviderSettingsLayout } from './aiProviderLayoutManager.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
-import { queryLogs, type BrowsingLogEntry } from './dashboardSqliteService.js';
-import { getPlatformOs } from '../utils/deviceUtils.js';
+import {
+  loadExportConfig,
+  exportFullHistoryInBatches,
+  exportDateRange,
+  chromeDownloadPort,
+  toMarkdownTemplateEntryData,
+  type ExportResult,
+} from './markdownExport.js';
+// Re-exported for existing importers (notably the dashboard tests), which
+// referenced this helper from dashboard.ts before it moved to markdownExport.ts.
+export { toMarkdownTemplateEntryData };
 import { initTrancoConsentPanel } from './trancoConsent.js';
 import type { DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
-import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
-import { renderFileTemplate, getActiveTemplate, getHostname } from '../utils/markdownTemplateUtils.js';
-import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';
 import { saveDashboardSettings } from './settingsPipeline.js';
 import { generateReviewSummary } from './reviewSummaryHandler.js';
 import { formatProviderHeadline, formatProviderDetailLines } from './aiTestResultView.js';
@@ -610,35 +616,6 @@ export async function handleTestLocalMarkdown(): Promise<void> {
  * Convert a single browsing log entry into template entry data
  * VULN-020 fix: sanitize title and URL to prevent Markdown injection
  */
-export function toMarkdownTemplateEntryData(entry: { title?: string | null; url: string; summary?: string | null; tags?: string | null; created_at: number }): MarkdownTemplateEntryData {
-  const timestamp = new Date(entry.created_at).toLocaleTimeString('ja-JP', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-  // VULN-017: title is placed inside `[title](url)`; escape link-breakout chars
-  // so a `](url)` suffix cannot close the wrapper.
-  const title = sanitizeForMarkdownLinkText(entry.title || entry.url || 'Untitled');
-  const url = sanitizeUrlForMarkdownTarget(entry.url);
-  const summary = sanitizeForObsidian((entry.summary || 'Summary not available.').replace(/\n+/g, ' ').replace(/  +/g, ' ').trim());
-  const tagsList = entry.tags
-    ? entry.tags.split(',').map(t => t.trim()).filter(Boolean).map(t => `#${sanitizeForObsidian(t)}`)
-    : [];
-  const tags = tagsList.length > 0 ? tagsList.join(' ') + ' ' : '';
-  const domain = getHostname(url);
-  return { timestamp, title, url, summary, tags, domain };
-}
-
-/**
- * Get local date string (YYYY-MM-DD) from timestamp
- */
-function getLocalDateString(timestamp: number): string {
-  const d = new Date(timestamp);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 /**
  * Options for exportLocalMarkdownCore, parameterizing the three near-identical
  * local Markdown export handlers (M15).
@@ -653,92 +630,10 @@ interface LocalMarkdownExportOptions {
 }
 
 /**
- * Shared implementation behind handleManualLocalMarkdownExport(),
- * handleExportLocalMarkdown(), and handleHistoryExportLocalMarkdown().
- * Queries SQLite for the given (or full) date range, groups results by
- * local date, and downloads one Markdown file per date.
+ * DOM shell around the export logic in markdownExport.ts: reads the form,
+ * drives the button/status elements, and delegates the actual querying,
+ * grouping and rendering.
  */
-/** Batch size for paginated full-history export (desktop). */
-const EXPORT_BATCH_SIZE_DESKTOP = 1000;
-/** Smaller batch size on mobile to reduce peak memory usage. */
-const EXPORT_BATCH_SIZE_MOBILE = 500;
-
-function getExportBatchSize(): number {
-  const os = getPlatformOs();
-  return os === 'android' || os === 'ios' ? EXPORT_BATCH_SIZE_MOBILE : EXPORT_BATCH_SIZE_DESKTOP;
-}
-
-/**
- * Downloads one Markdown file for the given date's entries.
- */
-async function downloadDateMarkdown(
-  exportPath: string,
-  date: string,
-  entries: BrowsingLogEntry[],
-  template: MarkdownExportTemplate
-): Promise<void> {
-  const entryData = entries.map(toMarkdownTemplateEntryData);
-  const content = renderFileTemplate(template, entryData, date);
-
-  const blob = new Blob([content], { type: 'text/markdown' });
-  const blobUrl = URL.createObjectURL(blob);
-
-  await chrome.downloads.download({
-    url: blobUrl,
-    filename: `${exportPath}/${date}.md`,
-    saveAs: false,
-    conflictAction: 'overwrite'
-  });
-
-  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-}
-
-/**
- * Streams the full history in batches (ordered by created_at ASC), grouping
- * consecutive rows by local date and downloading one file per date as soon
- * as the date changes. This keeps at most one batch + one date's worth of
- * rows in memory at a time, instead of materializing the entire history.
- * Returns the total row count and file count exported.
- */
-async function exportFullHistoryInBatches(
-  exportPath: string,
-  template: MarkdownExportTemplate
-): Promise<{ totalRows: number; totalFiles: number }> {
-  const batchSize = getExportBatchSize();
-  let offset = 0;
-  let totalRows = 0;
-  let totalFiles = 0;
-  let pendingDate: string | null = null;
-  let pendingEntries: BrowsingLogEntry[] = [];
-
-  for (;;) {
-    const result = await queryLogs({ limit: batchSize, offset, orderBy: 'created_at', orderDir: 'ASC' });
-    if (!result || !('rows' in result) || result.rows.length === 0) break;
-
-    for (const row of result.rows) {
-      const date = getLocalDateString(row.created_at);
-      if (pendingDate !== null && date !== pendingDate) {
-        await downloadDateMarkdown(exportPath, pendingDate, pendingEntries, template);
-        totalFiles++;
-        pendingEntries = [];
-      }
-      pendingDate = date;
-      pendingEntries.push(row);
-    }
-
-    totalRows += result.rows.length;
-    if (result.rows.length < batchSize) break;
-    offset += batchSize;
-  }
-
-  if (pendingDate !== null && pendingEntries.length > 0) {
-    await downloadDateMarkdown(exportPath, pendingDate, pendingEntries, template);
-    totalFiles++;
-  }
-
-  return { totalRows, totalFiles };
-}
-
 async function exportLocalMarkdownCore(options: LocalMarkdownExportOptions): Promise<void> {
   const exportBtn = document.getElementById(options.exportBtnId) as HTMLButtonElement | null;
   const statusEl = document.getElementById(options.statusElId) as HTMLElement | null;
@@ -750,66 +645,31 @@ async function exportLocalMarkdownCore(options: LocalMarkdownExportOptions): Pro
   statusEl.className = '';
 
   try {
-    const settings = await getSettings();
-    const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
-    const templates = (settings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] as MarkdownExportTemplate[]) || [];
-    const activeTemplateId = settings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] as string | undefined;
-    const activeTemplate = getActiveTemplate(templates, activeTemplateId);
+    const config = await loadExportConfig();
 
     statusEl.textContent = getMessage('searching') || 'Searching...';
 
+    let result: ExportResult;
     if (!options.dateRange) {
       // Full-history export: stream in batches to bound peak memory usage.
-      const { totalRows, totalFiles } = await exportFullHistoryInBatches(exportPath, activeTemplate);
-      if (totalRows === 0) {
-        statusEl.textContent = options.emptyMessage;
-        statusEl.className = 'error';
-        return;
-      }
-      statusEl.textContent = `${totalRows}件の記録を${totalFiles}ファイルにエクスポートしました。`;
-      statusEl.className = 'success';
-      return;
+      result = await exportFullHistoryInBatches(config, chromeDownloadPort);
+    } else {
+      const startDateInput = document.getElementById(options.dateRange.startDateId) as HTMLInputElement | null;
+      const endDateInput = document.getElementById(options.dateRange.endDateId) as HTMLInputElement | null;
+
+      const startDate = startDateInput?.value || new Date().toISOString().split('T')[0]!;
+      const endDate = endDateInput?.value || startDate;
+
+      result = await exportDateRange(config, startDate, endDate, chromeDownloadPort);
     }
 
-    const startDateInput = document.getElementById(options.dateRange.startDateId) as HTMLInputElement | null;
-    const endDateInput = document.getElementById(options.dateRange.endDateId) as HTMLInputElement | null;
-
-    // Parse date range (YYYY-MM-DD format from date input)
-    const startDate = startDateInput?.value || new Date().toISOString().split('T')[0];
-    const endDate = endDateInput?.value || startDate;
-
-    // Create timestamps at start of start date and end of end date in local timezone
-    const since = new Date(startDate + 'T00:00:00').getTime();
-    const until = new Date(endDate + 'T23:59:59').getTime();
-
-    const result = await queryLogs({ since, until, limit: 10000, orderBy: 'created_at', orderDir: 'ASC' });
-
-    if (!result || !('rows' in result) || result.rows.length === 0) {
+    if (result.totalRows === 0) {
       statusEl.textContent = options.emptyMessage;
       statusEl.className = 'error';
       return;
     }
 
-    const { rows } = result;
-
-    // Group entries by local date
-    const entriesByDate = new Map<string, typeof rows>();
-    for (const row of rows) {
-      const date = getLocalDateString(row.created_at);
-      if (!entriesByDate.has(date)) {
-        entriesByDate.set(date, []);
-      }
-      entriesByDate.get(date)!.push(row);
-    }
-
-    // Generate markdown for each date
-    let totalFiles = 0;
-    for (const [date, entries] of entriesByDate) {
-      await downloadDateMarkdown(exportPath, date, entries, activeTemplate);
-      totalFiles++;
-    }
-
-    statusEl.textContent = `${rows.length}件の記録を${totalFiles}ファイルにエクスポートしました。`;
+    statusEl.textContent = `${result.totalRows}件の記録を${result.totalFiles}ファイルにエクスポートしました。`;
     statusEl.className = 'success';
   } catch (e) {
     statusEl.textContent = `エクスポートに失敗しました: ${e instanceof Error ? e.message : String(e)}`;
