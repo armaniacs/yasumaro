@@ -400,7 +400,7 @@ const _dashboardSqliteHandler = createDashboardSqliteHandler({
   purgeOldRecords: (days, max) => sqliteClient.purgeOldRecords(days, max),
   purgeContent: (days, max, includeStarred) => sqliteClient.purgeContent(days, max, includeStarred),
   backupDb: () => sqliteClient.backupDb(),
-  lastError: sqliteClient.lastError,
+  lastError: () => sqliteClient.lastError,
   runMigration: async () => {
     await chrome.storage.local.remove([
       'yasumaro_migration_status',
