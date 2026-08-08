@@ -17,7 +17,7 @@ import { logSanitize, logDebug } from '../logger.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import { cleanseAISummaryContent, countAISummaryTargets, type AiSummaryCleanseOptions, type AiSummaryCleanseResult } from '../aiSummaryCleaner/index.js';
 import { deduplicateContent } from '../contentDeduplicator.js';
-import type { ExtractResult } from './types.js';
+import type { ExtractResult, AiSummaryCleanseRunResult } from './types.js';
 import { findMainContentCandidates } from './scoring.js';
 import { extractTextFromElement } from './textExtraction.js';
 import { matchWhitelistAdapter, extractWhitelistedContent } from './whitelistAdapters.js';
@@ -34,6 +34,49 @@ export { calculateTextScore } from './scoring.js';
  */
 function getByteSize(str: string): number {
     return new TextEncoder().encode(str).length;
+}
+
+/**
+ * AI要約クレンジングを実行し、結果を集約する
+ * 3つの重複ブロック（cleanseEnabled有無、候補の有無）から抽出
+ * @param clone - クレンジング対象のクローン要素
+ * @param options - AI要約クレンジングオプション
+ * @param originalBytes - クレンジング前のバイト数
+ * @returns 実行結果（バイト数、理由、要素数、フォールバック用テキスト）
+ */
+function runAiSummaryCleanse(
+    clone: Element,
+    options: AiSummaryCleanseOptions,
+    originalBytes: number
+): AiSummaryCleanseRunResult {
+    const preCleanseText = clone.textContent || '';
+    const aiSummaryCleanseResult = cleanseAISummaryContent(clone, options);
+    const cleansedBytes = getByteSize(clone.textContent || '');
+
+    let reason: ExtractResult['aiSummaryCleansedReason'] = 'none';
+    let reasons: string[] = [];
+    let elements = 0;
+
+    if (aiSummaryCleanseResult.totalRemoved > 0) {
+        const removedTypes: string[] = [];
+        if (aiSummaryCleanseResult.altRemoved > 0) removedTypes.push('alt');
+        if (aiSummaryCleanseResult.metadataRemoved > 0) removedTypes.push('metadata');
+        if (aiSummaryCleanseResult.adsRemoved > 0) removedTypes.push('ads');
+        if (aiSummaryCleanseResult.navRemoved > 0) removedTypes.push('nav');
+        if (aiSummaryCleanseResult.socialRemoved > 0) removedTypes.push('social');
+        if (aiSummaryCleanseResult.deepRemoved > 0) removedTypes.push('deep');
+
+        if (removedTypes.length === 1) {
+            reason = removedTypes[0] as ExtractResult['aiSummaryCleansedReason'];
+        } else if (removedTypes.length > 1) {
+            reason = 'multiple';
+            reasons = removedTypes;
+        }
+
+        elements = aiSummaryCleanseResult.totalRemoved;
+    }
+
+    return { originalBytes, cleansedBytes, reason, reasons, elements, preCleanseText };
 }
 
 /**
@@ -190,82 +233,24 @@ export function extractMainContent(
                 // AI要約クレンジングを実行（cleanseEnabledとは独立して動作）
                 logDebug('AI Summary Cleansing check', { aiSummaryCleanseEnabled, altEnabled, metadataEnabled, adsEnabled, navEnabled, socialEnabled });
                 if (aiSummaryCleanseEnabled) {
-                    // AI要約クレンジング**前**のバイト数を計算（テキストベース）
-                    // Content Cleansing後のcloneの状態がAI要約クレンジングの開始点
-                    aiSummaryOriginalBytes = cleansedBytes;
-
-                    // フォールバック用にAI要約クレンジング前のテキストを保存（textContent で生テキスト取得）
-                    preAiCleanseText = clone.textContent || '';
-
-                    // AI要約クレンジングを実行
-                    const aiSummaryCleanseResult: AiSummaryCleanseResult = cleanseAISummaryContent(clone, {
-                        altEnabled,
-                        metadataEnabled,
-                        adsEnabled,
-                        navEnabled,
-                        socialEnabled,
-                        deepEnabled,
-                        jsonLdEnabled,
-                        lazyLoadEnabled,
-                        skipLinkEnabled,
-                        cardEnabled,
-                        linkDensityEnabled,
-                        // NEW: 6つの新しいオプション
-                        fixedEnabled,
-                        recommendEnabled,
-                        paginationEnabled,
-                        snsPromoEnabled,
-                        popupEnabled,
-                        platformEnabled,
-                        // NEW: 9つの追加オプション
-                        textDensityEnabled,
-                        shortSeqEnabled,
-                        symbolLineEnabled,
-                        linkParaEnabled,
-                        enhancedHiddenEnabled,
-                        emptyElemEnabled,
-                        jpLayoutEnabled,
-                        jpNavigationEnabled,
-                        authorEnabled,
-                        affiliateEnabled,
-                        speechBubbleEnabled,
-                        newsMediaEnabled,
-                        ecSiteEnabled,
-                        qaSiteEnabled,
-                        videoSiteEnabled,
-                        // Threshold settings
-                        linkRatioThreshold,
-                        shortTextThreshold,
-                        shortSeqCount,
-                        linkParaThreshold,
-                        // Custom patterns
+                    const aiSummaryOptions = {
+                        altEnabled, metadataEnabled, adsEnabled, navEnabled, socialEnabled, deepEnabled,
+                        jsonLdEnabled, lazyLoadEnabled, skipLinkEnabled, cardEnabled, linkDensityEnabled,
+                        fixedEnabled, recommendEnabled, paginationEnabled, snsPromoEnabled, popupEnabled,
+                        platformEnabled, textDensityEnabled, shortSeqEnabled, symbolLineEnabled,
+                        linkParaEnabled, enhancedHiddenEnabled, emptyElemEnabled, jpLayoutEnabled,
+                        jpNavigationEnabled, authorEnabled, affiliateEnabled, speechBubbleEnabled,
+                        newsMediaEnabled, ecSiteEnabled, qaSiteEnabled, videoSiteEnabled,
+                        linkRatioThreshold, shortTextThreshold, shortSeqCount, linkParaThreshold,
                         customPatterns,
-                    });
-
-                    logDebug('AI Summary Cleansing result', aiSummaryCleanseResult);
-
-                    // AI要約クレンジング**後**のバイト数を計算（textContentベースで統一）
-                    aiSummaryCleansedBytes = getByteSize(clone.textContent || '');
-
-                    if (aiSummaryCleanseResult.totalRemoved > 0) {
-                        // AI要約クレンジング理由を決定
-                        const removedTypes: string[] = [];
-                        if (aiSummaryCleanseResult.altRemoved > 0) removedTypes.push('alt');
-                        if (aiSummaryCleanseResult.metadataRemoved > 0) removedTypes.push('metadata');
-                        if (aiSummaryCleanseResult.adsRemoved > 0) removedTypes.push('ads');
-                        if (aiSummaryCleanseResult.navRemoved > 0) removedTypes.push('nav');
-                        if (aiSummaryCleanseResult.socialRemoved > 0) removedTypes.push('social');
-                        if (aiSummaryCleanseResult.deepRemoved > 0) removedTypes.push('deep');
-
-                        if (removedTypes.length === 1) {
-                            aiSummaryCleansedReason = removedTypes[0] as ExtractResult['aiSummaryCleansedReason'];
-                        } else if (removedTypes.length > 1) {
-                            aiSummaryCleansedReason = 'multiple';
-                            aiSummaryCleansedReasons = removedTypes;
-                        }
-
-                        aiSummaryCleansedElements = aiSummaryCleanseResult.totalRemoved;
-                    }
+                    };
+                    const aiSummaryRunResult = runAiSummaryCleanse(clone, aiSummaryOptions, cleansedBytes);
+                    aiSummaryOriginalBytes = aiSummaryRunResult.originalBytes;
+                    aiSummaryCleansedBytes = aiSummaryRunResult.cleansedBytes;
+                    aiSummaryCleansedReason = aiSummaryRunResult.reason;
+                    aiSummaryCleansedReasons = aiSummaryRunResult.reasons.length > 0 ? aiSummaryRunResult.reasons : undefined;
+                    aiSummaryCleansedElements = aiSummaryRunResult.elements;
+                    preAiCleanseText = aiSummaryRunResult.preCleanseText;
                 }
             } else {
                 targetElement = candidates[0];
@@ -279,76 +264,24 @@ export function extractMainContent(
                     // DOMを直接操作しないようにクローンを作成
                     const clone = candidates[0].cloneNode(true) as Element;
 
-                    // AI要約クレンジング**前**のバイト数を計算
-                    aiSummaryOriginalBytes = cleansedBytes;
-
-                    // フォールバック用にAI要約クレンジング前のテキストを保存
-                    preAiCleanseText = clone.textContent || '';
-
-                    // AI要約クレンジングを実行
-                    const aiSummaryCleanseResult: AiSummaryCleanseResult = cleanseAISummaryContent(clone, {
-                        altEnabled,
-                        metadataEnabled,
-                        adsEnabled,
-                        navEnabled,
-                        socialEnabled,
-                        deepEnabled,
-                        jsonLdEnabled,
-                        lazyLoadEnabled,
-                        skipLinkEnabled,
-                        cardEnabled,
-                        linkDensityEnabled,
-                        fixedEnabled,
-                        recommendEnabled,
-                        paginationEnabled,
-                        snsPromoEnabled,
-                        popupEnabled,
-                        platformEnabled,
-                        textDensityEnabled,
-                        shortSeqEnabled,
-                        symbolLineEnabled,
-                        linkParaEnabled,
-                        enhancedHiddenEnabled,
-                        emptyElemEnabled,
-                        jpLayoutEnabled,
-                        jpNavigationEnabled,
-                        authorEnabled,
-                        affiliateEnabled,
-                        speechBubbleEnabled,
-                        newsMediaEnabled,
-                        ecSiteEnabled,
-                        qaSiteEnabled,
-                        videoSiteEnabled,
-                        linkRatioThreshold,
-                        shortTextThreshold,
-                        shortSeqCount,
-                        linkParaThreshold,
+                    const aiSummaryOptions = {
+                        altEnabled, metadataEnabled, adsEnabled, navEnabled, socialEnabled, deepEnabled,
+                        jsonLdEnabled, lazyLoadEnabled, skipLinkEnabled, cardEnabled, linkDensityEnabled,
+                        fixedEnabled, recommendEnabled, paginationEnabled, snsPromoEnabled, popupEnabled,
+                        platformEnabled, textDensityEnabled, shortSeqEnabled, symbolLineEnabled,
+                        linkParaEnabled, enhancedHiddenEnabled, emptyElemEnabled, jpLayoutEnabled,
+                        jpNavigationEnabled, authorEnabled, affiliateEnabled, speechBubbleEnabled,
+                        newsMediaEnabled, ecSiteEnabled, qaSiteEnabled, videoSiteEnabled,
+                        linkRatioThreshold, shortTextThreshold, shortSeqCount, linkParaThreshold,
                         customPatterns,
-                    });
-
-                    logDebug('AI Summary Cleansing result (cleanseEnabled=false)', aiSummaryCleanseResult);
-
-                    // AI要約クレンジング**後**のバイト数を計算
-                    aiSummaryCleansedBytes = getByteSize(clone.textContent || '');
-
-                    if (aiSummaryCleanseResult.totalRemoved > 0) {
-                        const removedTypes: string[] = [];
-                        if (aiSummaryCleanseResult.altRemoved > 0) removedTypes.push('alt');
-                        if (aiSummaryCleanseResult.metadataRemoved > 0) removedTypes.push('metadata');
-                        if (aiSummaryCleanseResult.adsRemoved > 0) removedTypes.push('ads');
-                        if (aiSummaryCleanseResult.navRemoved > 0) removedTypes.push('nav');
-                        if (aiSummaryCleanseResult.socialRemoved > 0) removedTypes.push('social');
-                        if (aiSummaryCleanseResult.deepRemoved > 0) removedTypes.push('deep');
-
-                        if (removedTypes.length === 1) {
-                            aiSummaryCleansedReason = removedTypes[0] as ExtractResult['aiSummaryCleansedReason'];
-                        } else if (removedTypes.length > 1) {
-                            aiSummaryCleansedReason = 'multiple';
-                            aiSummaryCleansedReasons = removedTypes;
-                        }
-
-                        aiSummaryCleansedElements = aiSummaryCleanseResult.totalRemoved;
-                    }
+                    };
+                    const aiSummaryRunResult = runAiSummaryCleanse(clone, aiSummaryOptions, cleansedBytes);
+                    aiSummaryOriginalBytes = aiSummaryRunResult.originalBytes;
+                    aiSummaryCleansedBytes = aiSummaryRunResult.cleansedBytes;
+                    aiSummaryCleansedReason = aiSummaryRunResult.reason;
+                    aiSummaryCleansedReasons = aiSummaryRunResult.reasons.length > 0 ? aiSummaryRunResult.reasons : undefined;
+                    aiSummaryCleansedElements = aiSummaryRunResult.elements;
+                    preAiCleanseText = aiSummaryRunResult.preCleanseText;
 
                     // クレンジング後のクローンからテキストを抽出
                     targetElement = clone;
@@ -429,84 +362,24 @@ export function extractMainContent(
 
                 // AI要約クレンジングを実行
                 if (aiSummaryCleanseEnabled) {
-                    // AI要約クレンジング**前**のバイト数を計算（テキストベース）
-                    // Content Cleansing後のcloneの状態がAI要約クレンジングの開始点
-                    aiSummaryOriginalBytes = cleansedBytes;
-
-                    // フォールバック用にAI要約クレンジング前のテキストを保存
-                    preAiCleanseText = clone.textContent || '';
-
-                    // AI要約クレンジングを実行
-
-                    // AI要約クレンジングを実行
-                    const aiSummaryCleanseResult: AiSummaryCleanseResult = cleanseAISummaryContent(clone, {
-                        altEnabled,
-                        metadataEnabled,
-                        adsEnabled,
-                        navEnabled,
-                        socialEnabled,
-                        deepEnabled,
-                        jsonLdEnabled,
-                        lazyLoadEnabled,
-                        skipLinkEnabled,
-                        cardEnabled,
-                        linkDensityEnabled,
-                        // NEW: 6つの新しいオプション
-                        fixedEnabled,
-                        recommendEnabled,
-                        paginationEnabled,
-                        snsPromoEnabled,
-                        popupEnabled,
-                        platformEnabled,
-                        // NEW: 9つの追加オプション
-                        textDensityEnabled,
-                        shortSeqEnabled,
-                        symbolLineEnabled,
-                        linkParaEnabled,
-                        enhancedHiddenEnabled,
-                        emptyElemEnabled,
-                        jpLayoutEnabled,
-                        jpNavigationEnabled,
-                        authorEnabled,
-                        affiliateEnabled,
-                        speechBubbleEnabled,
-                        newsMediaEnabled,
-                        ecSiteEnabled,
-                        qaSiteEnabled,
-                        videoSiteEnabled,
-                        // Threshold settings
-                        linkRatioThreshold,
-                        shortTextThreshold,
-                        shortSeqCount,
-                        linkParaThreshold,
-                        // Custom patterns
+                    const aiSummaryOptions = {
+                        altEnabled, metadataEnabled, adsEnabled, navEnabled, socialEnabled, deepEnabled,
+                        jsonLdEnabled, lazyLoadEnabled, skipLinkEnabled, cardEnabled, linkDensityEnabled,
+                        fixedEnabled, recommendEnabled, paginationEnabled, snsPromoEnabled, popupEnabled,
+                        platformEnabled, textDensityEnabled, shortSeqEnabled, symbolLineEnabled,
+                        linkParaEnabled, enhancedHiddenEnabled, emptyElemEnabled, jpLayoutEnabled,
+                        jpNavigationEnabled, authorEnabled, affiliateEnabled, speechBubbleEnabled,
+                        newsMediaEnabled, ecSiteEnabled, qaSiteEnabled, videoSiteEnabled,
+                        linkRatioThreshold, shortTextThreshold, shortSeqCount, linkParaThreshold,
                         customPatterns,
-                    });
-
-                    logDebug('AI Summary Cleansing result', aiSummaryCleanseResult);
-
-                    // AI要約クレンジング**後**のバイト数を計算（textContentベースで統一）
-                    aiSummaryCleansedBytes = getByteSize(clone.textContent || '');
-
-                    if (aiSummaryCleanseResult.totalRemoved > 0) {
-                        // AI要約クレンジング理由を決定
-                        const removedTypes: string[] = [];
-                        if (aiSummaryCleanseResult.altRemoved > 0) removedTypes.push('alt');
-                        if (aiSummaryCleanseResult.metadataRemoved > 0) removedTypes.push('metadata');
-                        if (aiSummaryCleanseResult.adsRemoved > 0) removedTypes.push('ads');
-                        if (aiSummaryCleanseResult.navRemoved > 0) removedTypes.push('nav');
-                        if (aiSummaryCleanseResult.socialRemoved > 0) removedTypes.push('social');
-                        if (aiSummaryCleanseResult.deepRemoved > 0) removedTypes.push('deep');
-
-                        if (removedTypes.length === 1) {
-                            aiSummaryCleansedReason = removedTypes[0] as ExtractResult['aiSummaryCleansedReason'];
-                        } else if (removedTypes.length > 1) {
-                            aiSummaryCleansedReason = 'multiple';
-                            aiSummaryCleansedReasons = removedTypes;
-                        }
-
-                        aiSummaryCleansedElements = aiSummaryCleanseResult.totalRemoved;
-                    }
+                    };
+                    const aiSummaryRunResult = runAiSummaryCleanse(clone, aiSummaryOptions, cleansedBytes);
+                    aiSummaryOriginalBytes = aiSummaryRunResult.originalBytes;
+                    aiSummaryCleansedBytes = aiSummaryRunResult.cleansedBytes;
+                    aiSummaryCleansedReason = aiSummaryRunResult.reason;
+                    aiSummaryCleansedReasons = aiSummaryRunResult.reasons.length > 0 ? aiSummaryRunResult.reasons : undefined;
+                    aiSummaryCleansedElements = aiSummaryRunResult.elements;
+                    preAiCleanseText = aiSummaryRunResult.preCleanseText;
                 }
 
                 content = extractTextFromElement(clone);

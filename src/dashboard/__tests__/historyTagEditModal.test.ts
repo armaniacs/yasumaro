@@ -20,7 +20,7 @@ vi.mock('../../utils/storage.js', () => ({
   getSettings: vi.fn().mockResolvedValue({}),
 }));
 
-vi.mock('../../utils/storageUrls.js', () => ({
+vi.mock('../../utils/storage/savedUrlStore.js', () => ({
   setUrlTags: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -366,7 +366,7 @@ describe('historyTagEditModal', () => {
 
   describe('saveTagEdits', () => {
     it('should return early when editingUrl is null', async () => {
-      const { setUrlTags } = await import('../../utils/storageUrls.js');
+      const { setUrlTags } = await import('../../utils/storage/savedUrlStore.js');
       const { saveTagEdits } = await import('../historyTagEditModal.js');
       const state = { editingUrl: null };
       const onSaved = vi.fn();
@@ -376,7 +376,7 @@ describe('historyTagEditModal', () => {
     });
 
     it('should call setUrlTags with correct args', async () => {
-      const { setUrlTags } = await import('../../utils/storageUrls.js');
+      const { setUrlTags } = await import('../../utils/storage/savedUrlStore.js');
       const { saveTagEdits } = await import('../historyTagEditModal.js');
       const state = {
         editingUrl: 'https://example.com',
@@ -431,7 +431,7 @@ describe('historyTagEditModal', () => {
     });
 
     it('should handle errors and call alert', async () => {
-      const { setUrlTags } = await import('../../utils/storageUrls.js');
+      const { setUrlTags } = await import('../../utils/storage/savedUrlStore.js');
       setUrlTags.mockRejectedValueOnce(new Error('Save failed'));
       vi.spyOn(console, 'error').mockImplementation(() => {});
       vi.stubGlobal('alert', vi.fn());
@@ -514,7 +514,7 @@ describe('historyTagEditModal', () => {
     });
 
     it('should call saveTagEdits when saveTagEditsBtn is clicked', async () => {
-      const { setUrlTags } = await import('../../utils/storageUrls.js');
+      const { setUrlTags } = await import('../../utils/storage/savedUrlStore.js');
       const { initTagEditModal } = await import('../historyTagEditModal.js');
       const state = {
         editingUrl: 'https://example.com',

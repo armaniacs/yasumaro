@@ -9,7 +9,7 @@ import { logDebug, logWarn, logError, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { createErrorResponse } from '../../utils/errorMessages.js';
 import { StorageKeys } from '../../utils/storage.js';
-import { setUrlCleansedReason } from '../../utils/storageUrls.js';
+import { updateSavedUrlEntry } from '../../utils/storage/savedUrlStore.js';
 import { stripPiiFromMaskedItems } from '../../utils/piiStripper.js';
 import { encodeUrlSafeBase64 } from './urlNotificationHandlers.js';
 import { NotificationHelper } from '../notificationHelper.js';
@@ -543,7 +543,7 @@ export function createContentCleansingExecutedHandler(deps: ContentCleansingExec
       } else if (!hardEnabled && keywordEnabled) {
         cleansedReason = 'keyword';
       }
-      await setUrlCleansedReason(sender.tab.url, cleansedReason);
+      await updateSavedUrlEntry(sender.tab.url, (entry) => ({ ...entry, cleansedReason }));
     }
 
     sendResponse({ success: true });

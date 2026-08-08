@@ -10,34 +10,7 @@ import { enqueuePendingWrite } from '../../pendingChromeStorageQueue.js';
 import type { RecordType, AiSummaryCleansedReason } from '../../../utils/commonTypes.js';
 import type { SavedUrlEntry } from '../../../utils/urlEntry.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
-import {
-  setUrlRecordType,
-  setUrlMaskedCount,
-  setUrlTags,
-  setUrlContent,
-  setUrlAiSummary,
-  setUrlSentTokens,
-  setUrlReceivedTokens,
-  setUrlOriginalTokens,
-  setUrlCleansedTokens,
-  setUrlPageBytes,
-  setUrlCandidateBytes,
-  setUrlOriginalBytes,
-  setUrlCleansedBytes,
-  setUrlAiSummaryOriginalBytes,
-  setUrlAiSummaryCleansedBytes,
-  setUrlAiSummaryCleansedElements,
-  setUrlAiSummaryCleansedReason,
-  setUrlAiSummaryCleansedReasons,
-  setUrlAiProvider,
-  setUrlAiModel,
-  setUrlPrivacyMode,
-  setUrlAiDuration,
-  setUrlObsidianDuration,
-  setUrlExtractedSentencesBytes,
-  setUrlExtractedSentencesOriginalBytes,
-  setUrlFallbackTriggered
-} from '../../../utils/storageUrls.js';
+import { updateSavedUrlEntry, setUrlTags, addUrlTag, removeUrlTag } from '../../../utils/storage/savedUrlStore.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 
 /**
@@ -118,102 +91,105 @@ export const saveMetadataStep: PipelineStepFunction = async (
 
   // Save record type
   const resolvedRecordType: RecordType = (recordType as RecordType) ?? 'auto';
-  await save('recordType', setUrlRecordType(url, resolvedRecordType));
+  await save('recordType', updateSavedUrlEntry(url, (entry) => ({ ...entry, recordType: resolvedRecordType })));
 
   // Save masked count
   const resolvedMaskedCount = precomputedMaskedCount ?? privacyResult?.maskedCount ?? 0;
   if (resolvedMaskedCount > 0) {
-    await save('maskedCount', setUrlMaskedCount(url, resolvedMaskedCount));
+    await save('maskedCount', updateSavedUrlEntry(url, (entry) => ({ ...entry, maskedCount: resolvedMaskedCount })));
   }
 
   // Save content
   if (content) {
-    await save('content', setUrlContent(url, content));
+    await save('content', updateSavedUrlEntry(url, (entry) => ({ ...entry, content })));
   }
 
   // Save tags
   if (privacyResult?.tags && privacyResult.tags.length > 0) {
-    await save('tags', setUrlTags(url, privacyResult.tags));
+    await save('tags', addUrlTag(url, privacyResult.tags[0]));
+    for (let i = 1; i < privacyResult.tags.length; i++) {
+      await save(`tags-${i}`, addUrlTag(url, privacyResult.tags[i]));
+    }
     addLog(LogType.INFO, 'Tags saved', { url, tags: privacyResult.tags, traceId: context.traceId });
   }
 
   // Save AI summary
   if (privacyResult?.summary) {
-    await save('aiSummary', setUrlAiSummary(url, privacyResult.summary));
+    await save('aiSummary', updateSavedUrlEntry(url, (entry) => ({ ...entry, aiSummary: privacyResult.summary })));
     addLog(LogType.INFO, 'AI summary saved', { url, traceId: context.traceId });
   }
 
   // Save tokens
   if (privacyResult?.originalTokens !== undefined) {
-    await save('originalTokens', setUrlOriginalTokens(url, privacyResult.originalTokens));
+    await save('originalTokens', updateSavedUrlEntry(url, (entry) => ({ ...entry, originalTokens: privacyResult.originalTokens })));
   }
   if (privacyResult?.cleansedTokens !== undefined) {
-    await save('cleansedTokens', setUrlCleansedTokens(url, privacyResult.cleansedTokens));
+    await save('cleansedTokens', updateSavedUrlEntry(url, (entry) => ({ ...entry, cleansedTokens: privacyResult.cleansedTokens })));
   }
 
   // Save bytes
   if (pageBytes !== undefined) {
-    await save('pageBytes', setUrlPageBytes(url, pageBytes));
+    await save('pageBytes', updateSavedUrlEntry(url, (entry) => ({ ...entry, pageBytes })));
   }
   if (candidateBytes !== undefined) {
-    await save('candidateBytes', setUrlCandidateBytes(url, candidateBytes));
+    await save('candidateBytes', updateSavedUrlEntry(url, (entry) => ({ ...entry, candidateBytes })));
   }
   if (originalBytes !== undefined) {
-    await save('originalBytes', setUrlOriginalBytes(url, originalBytes));
+    await save('originalBytes', updateSavedUrlEntry(url, (entry) => ({ ...entry, originalBytes })));
   }
   if (cleansedBytes !== undefined) {
-    await save('cleansedBytes', setUrlCleansedBytes(url, cleansedBytes));
+    await save('cleansedBytes', updateSavedUrlEntry(url, (entry) => ({ ...entry, cleansedBytes })));
   }
   if (aiSummaryOriginalBytes !== undefined) {
-    await save('aiSummaryOriginalBytes', setUrlAiSummaryOriginalBytes(url, aiSummaryOriginalBytes));
+    await save('aiSummaryOriginalBytes', updateSavedUrlEntry(url, (entry) => ({ ...entry, aiSummaryOriginalBytes })));
   }
   if (aiSummaryCleansedBytes !== undefined) {
-    await save('aiSummaryCleansedBytes', setUrlAiSummaryCleansedBytes(url, aiSummaryCleansedBytes));
+    await save('aiSummaryCleansedBytes', updateSavedUrlEntry(url, (entry) => ({ ...entry, aiSummaryCleansedBytes })));
   }
   if (aiSummaryCleansedElements !== undefined) {
-    await save('aiSummaryCleansedElements', setUrlAiSummaryCleansedElements(url, aiSummaryCleansedElements));
+    await save('aiSummaryCleansedElements', updateSavedUrlEntry(url, (entry) => ({ ...entry, aiSummaryCleansedElements })));
   }
   if (aiSummaryCleansedReason !== undefined) {
-    await save('aiSummaryCleansedReason', setUrlAiSummaryCleansedReason(url, aiSummaryCleansedReason as AiSummaryCleansedReason));
+    await save('aiSummaryCleansedReason', updateSavedUrlEntry(url, (entry) => ({ ...entry, aiSummaryCleansedReason: aiSummaryCleansedReason as AiSummaryCleansedReason })));
   }
   if (aiSummaryCleansedReasons !== undefined && aiSummaryCleansedReasons.length > 0) {
-    await save('aiSummaryCleansedReasons', setUrlAiSummaryCleansedReasons(url, aiSummaryCleansedReasons));
+    await save('aiSummaryCleansedReasons', updateSavedUrlEntry(url, (entry) => ({ ...entry, aiSummaryCleansedReasons })));
   }
-  await save('fallbackTriggered', setUrlFallbackTriggered(url, !!fallbackTriggered));
+  await save('fallbackTriggered', updateSavedUrlEntry(url, (entry) => ({ ...entry, fallbackTriggered: !!fallbackTriggered })));
 
   // Save AI token counts from PrivacyPipeline result (new: tokens were lost during C3 refactoring)
   if (privacyResult?.sentTokens !== undefined) {
-    await save('sentTokens', setUrlSentTokens(url, privacyResult.sentTokens));
+    await save('sentTokens', updateSavedUrlEntry(url, (entry) => ({ ...entry, sentTokens: privacyResult.sentTokens })));
   }
   if (privacyResult?.receivedTokens !== undefined) {
-    await save('receivedTokens', setUrlReceivedTokens(url, privacyResult.receivedTokens));
+    await save('receivedTokens', updateSavedUrlEntry(url, (entry) => ({ ...entry, receivedTokens: privacyResult.receivedTokens })));
   }
   if (privacyResult?.providerName !== undefined) {
-    await save('aiProvider', setUrlAiProvider(url, privacyResult.providerName));
+    await save('aiProvider', updateSavedUrlEntry(url, (entry) => ({ ...entry, aiProvider: privacyResult.providerName })));
   }
   if (privacyResult?.modelName !== undefined) {
-    await save('aiModel', setUrlAiModel(url, privacyResult.modelName));
+    await save('aiModel', updateSavedUrlEntry(url, (entry) => ({ ...entry, aiModel: privacyResult.modelName })));
   }
   if (privacyResult?.mode !== undefined) {
-    await save('privacyMode', setUrlPrivacyMode(url, privacyResult.mode));
+    await save('privacyMode', updateSavedUrlEntry(url, (entry) => ({ ...entry, privacyMode: privacyResult.mode })));
   }
 
   // Save L0 extracted sentences bytes (if L0 extraction was used)
   if (extractedSentencesBytes !== undefined) {
-    await save('extractedSentencesBytes', setUrlExtractedSentencesBytes(url, extractedSentencesBytes));
+    await save('extractedSentencesBytes', updateSavedUrlEntry(url, (entry) => ({ ...entry, extractedSentencesBytes })));
   }
   if (extractedSentencesOriginalBytes !== undefined) {
-    await save('extractedSentencesOriginalBytes', setUrlExtractedSentencesOriginalBytes(url, extractedSentencesOriginalBytes));
+    await save('extractedSentencesOriginalBytes', updateSavedUrlEntry(url, (entry) => ({ ...entry, extractedSentencesOriginalBytes })));
   }
 
   // Save AI processing duration
   if (aiDuration !== undefined) {
-    await save('aiDuration', setUrlAiDuration(url, aiDuration));
+    await save('aiDuration', updateSavedUrlEntry(url, (entry) => ({ ...entry, aiDuration })));
   }
 
   // Save Obsidian save duration
   if (obsidianDuration !== undefined) {
-    await save('obsidianDuration', setUrlObsidianDuration(url, obsidianDuration));
+    await save('obsidianDuration', updateSavedUrlEntry(url, (entry) => ({ ...entry, obsidianDuration })));
   }
 
   // Log summary

@@ -21,41 +21,13 @@ export {
     addSavedUrl,
     removeSavedUrl,
     isUrlSaved,
-    getSavedUrlCount
-} from './storage/savedUrlStore.js';
-
-// URLメタデータ設定機能
-export {
-    setUrlRecordType,
-    setUrlContent,
-    setUrlCleansedReason,
-    setUrlMaskedCount,
+    getSavedUrlCount,
+    updateSavedUrlEntry,
+    mergeSavedUrlEntry,
     setUrlTags,
     addUrlTag,
-    removeUrlTag,
-    setUrlAiSummary,
-    setUrlSentTokens,
-    setUrlReceivedTokens,
-    setUrlOriginalTokens,
-    setUrlCleansedTokens,
-    setUrlPageBytes,
-    setUrlCandidateBytes,
-    setUrlOriginalBytes,
-    setUrlCleansedBytes,
-    setUrlAiSummaryOriginalBytes,
-    setUrlAiSummaryCleansedBytes,
-    setUrlAiSummaryCleansedElements,
-    setUrlAiSummaryCleansedReason,
-    setUrlAiSummaryCleansedReasons,
-    setUrlAiProvider,
-    setUrlAiModel,
-    setUrlPrivacyMode,
-    setUrlAiDuration,
-    setUrlObsidianDuration,
-    setUrlExtractedSentencesBytes,
-    setUrlExtractedSentencesOriginalBytes,
-    setUrlFallbackTriggered
-} from './urlMetadata.js';
+    removeUrlTag
+} from './storage/savedUrlStore.js';
 
 // 許可URL管理機能
 export {
