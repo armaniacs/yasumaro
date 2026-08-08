@@ -42,7 +42,7 @@ vi.mock('../../dashboard/obsidianFormatter.js', () => ({
   }),
 }));
 
-import { handleDashboardSqlite } from '../handlers/dashboardSqliteHandlers.js';
+import { dispatchDashboardSqlite } from '../handlers/__tests__/dashboardSqliteTestHarness.js';
 import { ObsidianClient } from '../obsidianClient.js';
 import { formatEntriesToMarkdown } from '../../dashboard/obsidianFormatter.js';
 import { logError, logInfo } from '../../utils/logger.js';
@@ -82,7 +82,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   });
 
   it('returns error when ids is empty array', async () => {
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', ids: [] },
       mockSqliteClient as any
     );
@@ -94,7 +94,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     // Intentionally malformed payload — verifies the runtime Array.isArray
     // guard, which is reachable in practice via the chrome.runtime.onMessage
     // wire (see the cast in service-worker.ts).
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', ids: 'not-an-array' } as any,
       mockSqliteClient as any
     );
@@ -103,7 +103,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   });
 
   it('returns error when ids is undefined', async () => {
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian' } as any,
       mockSqliteClient as any
     );
@@ -114,7 +114,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   it('returns error when Obsidian API key is not configured', async () => {
     setupSettings({ obsidian_api_key: '' });
 
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', ids: [1, 2] },
       mockSqliteClient as any
     );
@@ -125,7 +125,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   it('returns error when Obsidian API key is too short', async () => {
     setupSettings({ obsidian_api_key: 'short' });
 
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', ids: [1, 2] },
       mockSqliteClient as any
     );
@@ -138,7 +138,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     const mockEntries = [{ id: 1, url: 'https://a.com', title: 'Page A', summary: 'Summary A' }];
     mockSqliteClient.query.mockResolvedValue({ rows: mockEntries, total: 1 });
 
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', ids: [1, 2] },
       mockSqliteClient as any
     );
@@ -154,7 +154,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       total: 0,
     });
 
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', ids: [1, 2] },
       mockSqliteClient as any
     );
@@ -174,7 +174,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     ];
     mockSqliteClient.query.mockResolvedValue({ rows: mockEntries, total: 2 });
 
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', ids: [1, 2] },
       mockSqliteClient as any
     );
@@ -197,7 +197,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     // The appendToDailyNote is shared via class field
     (instance.appendToDailyNote as any).mockRejectedValueOnce(new Error('Connection refused'));
 
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', ids: [1] },
       mockSqliteClient as any
     );
@@ -216,7 +216,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     // Mock returns all entries; handler passes IDs to SQL layer
     mockSqliteClient.query.mockResolvedValue({ rows: allEntries, total: 50 });
 
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', ids: [5, 25, 45] },
       mockSqliteClient as any
     );
@@ -235,7 +235,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       total: 1,
     });
 
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', ids: [1, 999] },
       mockSqliteClient as any
     );
@@ -256,7 +256,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     it('rejects ids array with more than 100 elements', async () => {
       const hugeIds = Array.from({ length: 101 }, (_, i) => i + 1);
 
-      const result = await handleDashboardSqlite(
+      const result = await dispatchDashboardSqlite(
         { subtype: 'append_to_obsidian', ids: hugeIds },
         mockSqliteClient as any
       );
@@ -269,7 +269,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       const mockEntries = ids.map(id => ({ id, url: `https://p${id}.com`, title: `Page ${id}` }));
       mockSqliteClient.query.mockResolvedValue({ rows: mockEntries, total: 100 });
 
-      const result = await handleDashboardSqlite(
+      const result = await dispatchDashboardSqlite(
         { subtype: 'append_to_obsidian', ids },
         mockSqliteClient as any
       );
@@ -278,7 +278,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     });
 
     it('rejects ids array containing non-number elements', async () => {
-      const result = await handleDashboardSqlite(
+      const result = await dispatchDashboardSqlite(
         { subtype: 'append_to_obsidian', ids: [1, 'a', 3] } as any,
         mockSqliteClient as any
       );
@@ -287,7 +287,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     });
 
     it('rejects ids array containing NaN', async () => {
-      const result = await handleDashboardSqlite(
+      const result = await dispatchDashboardSqlite(
         { subtype: 'append_to_obsidian', ids: [NaN] },
         mockSqliteClient as any
       );
@@ -295,7 +295,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     });
 
     it('rejects ids array containing Infinity', async () => {
-      const result = await handleDashboardSqlite(
+      const result = await dispatchDashboardSqlite(
         { subtype: 'append_to_obsidian', ids: [Infinity] },
         mockSqliteClient as any
       );
@@ -317,11 +317,10 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
         created_at: Date.now(),
       }));
 
-      const result = await handleDashboardSqlite(
+      const result = await dispatchDashboardSqlite(
         { subtype: 'import', rows: hugeRows, confirmToken: 'test-token' },
         mockSqliteClient as any,
-        undefined,
-        'test-token'
+        { getConfirmToken: async () => 'test-token' }
       );
 
       expect(result).toEqual({ success: false, error: 'Maximum 5000 rows allowed' });
@@ -334,11 +333,10 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       }));
       mockSqliteClient.insert.mockResolvedValue(true);
 
-      const result = await handleDashboardSqlite(
+      const result = await dispatchDashboardSqlite(
         { subtype: 'import', rows, confirmToken: 'test-token' },
         mockSqliteClient as any,
-        undefined,
-        'test-token'
+        { getConfirmToken: async () => 'test-token' }
       );
 
       expect(result.success).toBe(true);

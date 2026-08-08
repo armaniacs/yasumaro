@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleDashboardSqlite } from '../handlers/dashboardSqliteHandlers.js';
+import { dispatchDashboardSqlite } from '../handlers/__tests__/dashboardSqliteTestHarness.js';
 import { SqliteClient } from '../sqliteClient.js';
 
 describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
@@ -13,43 +13,42 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
   });
 
   it('rejects clear_all without confirmToken', async () => {
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'clear_all' },
       sqliteClient,
-      undefined,
-      VALID_TOKEN
+      { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toEqual({ success: false, error: expect.stringContaining('token') });
     expect((sqliteClient.clearAll as unknown as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
   });
 
   it('rejects clear_all with invalid confirmToken', async () => {
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'clear_all', confirmToken: INVALID_TOKEN },
       sqliteClient,
-      undefined,
-      VALID_TOKEN
+      { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toEqual({ success: false, error: expect.stringContaining('token') });
   });
 
   it('accepts clear_all with valid confirmToken', async () => {
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'clear_all', confirmToken: VALID_TOKEN },
       sqliteClient,
-      undefined,
-      VALID_TOKEN
+      { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toEqual({ success: true });
     expect((sqliteClient.clearAll as unknown as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
   });
 
   it('rejects migrate without confirmToken', async () => {
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'migrate' },
       sqliteClient,
-      async () => ({ success: true, count: 0, read: 0, inserted: 0 }),
-      VALID_TOKEN
+      {
+        runMigration: async () => ({ success: true, count: 0, read: 0, inserted: 0 }),
+        getConfirmToken: async () => VALID_TOKEN,
+      }
     );
     expect(result).toEqual({ success: false, error: expect.stringContaining('token') });
   });
@@ -59,7 +58,7 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
     (sqliteClient as unknown as { runOpfsSpike: ReturnType<typeof vi.fn> }).runOpfsSpike =
       vi.fn().mockResolvedValue(report);
 
-    const result = await handleDashboardSqlite({ subtype: 'opfs_spike' }, sqliteClient);
+    const result = await dispatchDashboardSqlite({ subtype: 'opfs_spike' }, sqliteClient);
 
     expect((sqliteClient as unknown as { runOpfsSpike: ReturnType<typeof vi.fn> }).runOpfsSpike).toHaveBeenCalled();
     expect(result).toEqual({ success: true, report });
@@ -69,18 +68,17 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
     (sqliteClient as unknown as { runOpfsSpike: ReturnType<typeof vi.fn> }).runOpfsSpike =
       vi.fn().mockResolvedValue(null);
 
-    const result = await handleDashboardSqlite({ subtype: 'opfs_spike' }, sqliteClient);
+    const result = await dispatchDashboardSqlite({ subtype: 'opfs_spike' }, sqliteClient);
 
     expect(result).toEqual({ success: false, error: expect.stringContaining('spike') });
   });
 
   it('allows query without confirmToken (read-only)', async () => {
     (sqliteClient as unknown as { query: ReturnType<typeof vi.fn> }).query = vi.fn().mockResolvedValue({ rows: [], total: 0 });
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'query' },
       sqliteClient,
-      undefined,
-      VALID_TOKEN
+      { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toMatchObject({ success: true });
   });
@@ -92,11 +90,10 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
     const rows = [{ id: 1, url: 'https://a.com', title: 'kddi', rank: -1 }];
     (sqliteClient as unknown as { search: ReturnType<typeof vi.fn> }).search =
       vi.fn().mockResolvedValue({ rows, total: 1 });
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'search', query: 'kddi' },
       sqliteClient,
-      undefined,
-      VALID_TOKEN
+      { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toEqual({ success: true, rows, total: 1 });
   });
@@ -104,11 +101,10 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
   it('returns success:false when search yields null', async () => {
     (sqliteClient as unknown as { search: ReturnType<typeof vi.fn> }).search =
       vi.fn().mockResolvedValue(null);
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'search', query: 'kddi' },
       sqliteClient,
-      undefined,
-      VALID_TOKEN
+      { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toMatchObject({ success: false });
   });
@@ -124,11 +120,10 @@ describe('restore_db subtype', () => {
   });
 
   it('rejects without a valid confirmToken', async () => {
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'restore_db', data: 'AQID' },
       sqliteClient,
-      undefined,
-      VALID_TOKEN
+      { getConfirmToken: async () => VALID_TOKEN }
     );
 
     expect(result).toEqual({ success: false, error: expect.stringContaining('token') });
@@ -136,11 +131,10 @@ describe('restore_db subtype', () => {
   });
 
   it('calls sqliteClient.restoreDb with the provided bytes when token matches', async () => {
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'restore_db', data: 'AQID', confirmToken: VALID_TOKEN },
       sqliteClient,
-      undefined,
-      VALID_TOKEN
+      { getConfirmToken: async () => VALID_TOKEN }
     );
 
     expect(result).toEqual({ success: true });
@@ -150,11 +144,10 @@ describe('restore_db subtype', () => {
   it('returns failure when restoreDb resolves false', async () => {
     (sqliteClient as unknown as { restoreDb: ReturnType<typeof vi.fn> }).restoreDb = vi.fn().mockResolvedValue(false);
 
-    const result = await handleDashboardSqlite(
+    const result = await dispatchDashboardSqlite(
       { subtype: 'restore_db', data: 'AQID', confirmToken: VALID_TOKEN },
       sqliteClient,
-      undefined,
-      VALID_TOKEN
+      { getConfirmToken: async () => VALID_TOKEN }
     );
 
     expect(result).toEqual({ success: false, error: 'Restore failed' });

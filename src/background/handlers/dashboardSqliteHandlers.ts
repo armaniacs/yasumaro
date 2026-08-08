@@ -402,27 +402,3 @@ export function createSqliteClientDeps(
   };
 }
 
-/**
- * Test entry point.
- *
- * Shares createSqliteClientDeps with the Service Worker so the SqliteClient-backed
- * half of the wiring is identical in both. The four Service-Worker-owned
- * operations still default to stubs here; tests that care about them pass real
- * implementations.
- */
-export async function handleDashboardSqlite(
-    payload: DashboardSqliteRequest & { confirmToken?: string },
-    sqliteClient: import('../sqliteClient.js').SqliteClient,
-    runMigration?: () => Promise<{ success: boolean; count: number; read?: number; inserted?: number; error?: string }>,
-    validConfirmToken?: string,
-    runBackfill?: () => Promise<{ updated: number; total: number }>,
-    runCleanup?: () => Promise<{ removed: string[]; totalBytes: number }>,
-): Promise<unknown> {
-  const handler = createDashboardSqliteHandler(createSqliteClientDeps(sqliteClient, {
-    runMigration: runMigration ?? (async () => ({ success: false, error: 'Migration not available', count: 0 })),
-    getConfirmToken: async () => validConfirmToken ?? '',
-    runBackfill: runBackfill ?? (async () => { throw new Error('Backfill not available'); }),
-    runCleanup: runCleanup ?? (async () => { throw new Error('Cleanup not available'); }),
-  }));
-  return handler(payload);
-}
