@@ -422,15 +422,9 @@ const _dashboardSqliteHandler = createDashboardSqliteHandler(
   }),
 );
 
-export const handleDashboardSqlite = ((message: Record<string, unknown>, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void): void => {
-  if (sender.tab && (!sender.url || !sender.url.startsWith('chrome-extension://'))) {
-    sendResponse({ success: false, error: 'DASHBOARD_SQLITE is not allowed from content scripts' });
-    return;
-  }
-  if (sender.id !== chrome.runtime.id) {
-    sendResponse({ success: false, error: 'DASHBOARD_SQLITE is not allowed from external extensions' });
-    return;
-  }
+// Sender authorization is enforced by the registry ('extension-only'), which
+// rejects content scripts and external extensions before dispatch.
+export const handleDashboardSqlite = ((message: Record<string, unknown>, _sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void): void => {
   void (async () => {
     try {
       const result = await _dashboardSqliteHandler(

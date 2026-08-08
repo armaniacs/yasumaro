@@ -28,6 +28,7 @@ vi.mock('../../../utils/logger.js', () => ({
 import { createManualRecordHandler, createSaveRecordHandler } from '../messageHandlers.js';
 import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from '../messageHandlers.js';
 import type { ManualRecordMessage, SaveRecordMessage } from '../../messageTypes.js';
+import { MessageHandlerRegistry } from '../MessageHandlerRegistry.js';
 
 /** Sender representing an extension page (popup/dashboard), which is allowed. */
 const EXTENSION_SENDER = { id: 'test-extension-id' } as chrome.runtime.MessageSender;
@@ -117,15 +118,26 @@ describe('createManualRecordHandler — VULN-004 URL scheme validation', () => {
     expect(deps.setUrlContent).not.toHaveBeenCalled();
   });
 
+  /**
+   * Sender authorization moved from the handler body to the registry, so this
+   * dispatches through the registry rather than calling the handler directly —
+   * calling it directly would bypass the layer that now enforces the rule.
+   */
   it('rejects a content script sender (extension-page-only operation)', async () => {
     const deps = makeManualDeps();
-    const handler = createManualRecordHandler(deps);
+    const registry = new MessageHandlerRegistry('test-extension-id');
     const sendResponse = vi.fn();
 
-    await handler(manualMessage('https://example.com'), CONTENT_SCRIPT_SENDER, sendResponse);
+    registry.register('MANUAL_RECORD', createManualRecordHandler(deps), 'extension-only');
+    registry.dispatch('MANUAL_RECORD', manualMessage('https://example.com'), CONTENT_SCRIPT_SENDER, sendResponse);
+    await Promise.resolve();
 
     expect(deps.isRecordingAllowed).not.toHaveBeenCalled();
     expect(deps.setUrlContent).not.toHaveBeenCalled();
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: 'MANUAL_RECORD is not allowed from content scripts',
+    });
   });
 
   it('refuses to record without privacy consent', async () => {
@@ -158,15 +170,22 @@ describe('createSaveRecordHandler — VULN-004 URL scheme validation', () => {
     expect(deps.setUrlContent).not.toHaveBeenCalled();
   });
 
+  /** Dispatched through the registry — see the MANUAL_RECORD case above. */
   it('rejects a content script sender', async () => {
     const deps = makeSaveDeps();
-    const handler = createSaveRecordHandler(deps);
+    const registry = new MessageHandlerRegistry('test-extension-id');
     const sendResponse = vi.fn();
 
-    await handler(saveMessage('https://example.com'), CONTENT_SCRIPT_SENDER, sendResponse);
+    registry.register('SAVE_RECORD', createSaveRecordHandler(deps), 'extension-only');
+    registry.dispatch('SAVE_RECORD', saveMessage('https://example.com'), CONTENT_SCRIPT_SENDER, sendResponse);
+    await Promise.resolve();
 
     expect(deps.isRecordingAllowed).not.toHaveBeenCalled();
     expect(deps.setUrlContent).not.toHaveBeenCalled();
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: 'SAVE_RECORD is not allowed from content scripts',
+    });
   });
 
   it('refuses to record without privacy consent', async () => {
