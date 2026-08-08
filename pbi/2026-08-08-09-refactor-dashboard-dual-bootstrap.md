@@ -170,28 +170,61 @@ Scenario: 既存テストが全てパスする
 
 ## 受け入れ基準
 
-### Phase 1
-- [ ] `src/dashboard/markdownExport.ts` を新規作成し、662-824行の業務ロジックを移動
-- [ ] `chrome.downloads.download` を seam の裏に隠す
-- [ ] `markdownExport` の単体テストを新規作成
-- [ ] `npm run validate` が成功する
+### Phase 1 — 完了（2026-08-09）
+- [x] `src/dashboard/markdownExport.ts` を新規作成し、業務ロジックを移動（244行）
+- [x] `chrome.downloads.download` を `DownloadPort` seam の裏に隠す
+- [x] `markdownExport` の単体テストを新規作成（22件）
+- [x] `npm run validate` が成功する
 
-### Phase 2
+### Phase 3 — 完了（2026-08-09、Phase 2 より先に実施）
+- [x] `openSettingsPanel()` のクリック合成を registry 経由に置換
+- [x] `initDashboard()` の `historyBtn.click()` を registry 経由に置換
+- [x] `npm run validate` が成功する
+
+### Phase 2 / Phase 4 — 未着手（本セッションでは見送り。理由は下記）
 - [ ] 11個のハンドラを `generalSettingsPanel` へ移動
 - [ ] `generalSettingsPanel` から `dashboard.js` の import を削除
 - [ ] `generalSettingsPanel` の単体テストを新規作成（現状0）
-- [ ] `npm run validate` が成功する
-
-### Phase 3
-- [ ] `openSettingsPanel()` のクリック合成を registry 経由に置換
-- [ ] `initDashboard()` の `historyBtn.click()` を registry 経由に置換
-- [ ] `npm run validate` が成功する
-
-### Phase 4
 - [ ] `entrypoints/options/main.ts` の import を1本化
 - [ ] `dashboard.ts` を削除
-- [ ] 既存の dashboard.ts 関連テストを移動先に合わせて更新
-- [ ] `npm run validate` が成功する
+
+---
+
+## 実施結果（2026-08-09）
+
+### Phase 1: 業務ロジックの切り出し
+
+エクスポートのバッチ分割・日付バケット・テンプレート適用は、`void initDashboard()` という**トップレベル副作用越しにしか到達できず**一切テストできなかった。`markdownExport.ts` へ切り出し、`chrome.downloads` を `DownloadPort` seam の裏に置いたことで、出力ファイル名と内容を直接検証できるようになった。
+
+`dashboard.ts`: 967行 → 827行。テスト22件を新規追加。
+
+### Phase 3: クリック合成の置換 — 「迂回」には理由があった
+
+レビューでは「`NavigationRegistry` を import せずクリック合成している」を単なる設計の乱れとして挙げたが、**調査すると初期化順の制約への対処でもあった**。
+
+```typescript
+// entrypoints/options/main.ts:5-6
+import '../../src/dashboard/dashboard.js';   // 末尾で void initDashboard() を自己実行
+import '../../src/dashboard/main.js';        // ここで setRegistry() が走る
+```
+
+`dashboard.ts` が先に import されるため、`initDashboard()` の実行時点では **registry がまだ存在しない**。素朴に `getRegistry()` へ置換すると例外を投げてダッシュボードが壊れる。
+
+`tryGetRegistry(): NavigationRegistry | null` を追加し、「まだ居ないかもしれない」状態を戻り値で表現した。registry があれば `navigate()`、無ければ従来のクリックにフォールバックする。**制約そのものは Phase 4 で単一 bootstrap 化するまで消えない**ため、コメントとテストで明示している。
+
+### Phase 2 / Phase 4 を見送った理由
+
+見送りは規模とリスクの判断による。
+
+| 項目 | 実測 |
+|---|---|
+| `dashboard.ts` の現状 | 842行・22 export |
+| 移動対象のハンドラ | 11個（AI接続テストの進捗リスナー、purge処理等を含む約450行のDOM操作） |
+| 影響するテストファイル | 6件（`dashboard.test.ts` / `dashboard-handlers.test.ts` / `dashboard-priority.test.ts` / `dashboard-obsidian-enabled.test.ts` / `retention-settings.test.ts` ほか） |
+
+Phase 4 は `entrypoints/options/main.ts` の初期化経路そのものを切り替えるため、**全設定画面が影響を受ける**。単体テストでは検出しきれず E2E での確認が必須となる（PBIのテスト戦略にも明記済み）。
+
+Phase 1・3 で「テスト不能だった業務ロジックのテスト可能化」という主目的の大半は達成できており、Phase 2・4 は残作業として独立させたほうが、レビュー可能な単位を保てる。着手する場合は Phase 2 → 4 の順で、各段階ごとに E2E を通すこと。
 
 ## テスト戦略
 
