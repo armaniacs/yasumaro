@@ -11,9 +11,39 @@ import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 // Markdown Export
 // ============================================================================
 
+/**
+ * Upper bound on rows pulled into a single export. Exceeding it is reported
+ * rather than silently truncating the file.
+ */
+const EXPORT_ROW_LIMIT = 10000;
+
+/**
+ * Loads every row for an export.
+ *
+ * Throws instead of returning `[]` on failure: the three exporters below turn
+ * their result straight into a downloaded file, so collapsing an error into an
+ * empty list made a broken database indistinguishable from an empty one — the
+ * user got an empty file and an "export completed" message. The callers in
+ * exportLogsPanel.ts already wrap these in try/catch, which this makes
+ * reachable.
+ */
 async function queryAllData() {
-  const result = await queryLogs({ limit: 10000, orderBy: 'created_at', orderDir: 'DESC' });
-  return (result && 'rows' in result ? result.rows : []);
+  const result = await queryLogs({ limit: EXPORT_ROW_LIMIT, orderBy: 'created_at', orderDir: 'DESC' });
+
+  if (result === null) {
+    throw new Error('Could not read the database. Please reload the extension and try again.');
+  }
+  if ('error' in result) {
+    throw new Error(result.error);
+  }
+  if (result.total > result.rows.length) {
+    throw new Error(
+      `This export is limited to ${EXPORT_ROW_LIMIT} records, but ${result.total} are stored. ` +
+      'Use the .db export to capture the full history.'
+    );
+  }
+
+  return result.rows;
 }
 
 export async function exportMarkdown(ids?: number[]): Promise<string> {

@@ -3,6 +3,7 @@ import { type DiagnosticPanel } from '../types.js';
 import { queryAuditLogs } from '../../dashboardSqliteService.js';
 import { toTsvString } from '../../utils/auditLogTsv.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 
 export function createExportLogsPanel(): DiagnosticPanel {
   return {
@@ -24,7 +25,7 @@ export function createExportLogsPanel(): DiagnosticPanel {
           downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.json`);
           showStatus(statusTarget, 'JSON export completed.', 'success');
         } catch (err) {
-          showStatus(statusTarget, `Export failed: ${err}`, 'error');
+          showStatus(statusTarget, `Export failed: ${errorMessage(err)}`, 'error');
         }
       });
 
@@ -35,7 +36,7 @@ export function createExportLogsPanel(): DiagnosticPanel {
           downloadText(md, `yasumaro_export_${new Date().toISOString().split('T')[0]}.md`, 'text/markdown');
           showStatus(statusTarget, 'Markdown export completed.', 'success');
         } catch (err) {
-          showStatus(statusTarget, `Export failed: ${err}`, 'error');
+          showStatus(statusTarget, `Export failed: ${errorMessage(err)}`, 'error');
         }
       });
 
@@ -46,7 +47,7 @@ export function createExportLogsPanel(): DiagnosticPanel {
           downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.csv`);
           showStatus(statusTarget, 'CSV export completed.', 'success');
         } catch (err) {
-          showStatus(statusTarget, `Export failed: ${err}`, 'error');
+          showStatus(statusTarget, `Export failed: ${errorMessage(err)}`, 'error');
         }
       });
 
@@ -61,7 +62,7 @@ export function createExportLogsPanel(): DiagnosticPanel {
             showStatus(statusTarget, 'Binary export requires OPFS storage. Use JSON export instead.', 'error');
           }
         } catch (err) {
-          showStatus(statusTarget, `Export failed: ${err}`, 'error');
+          showStatus(statusTarget, `Export failed: ${errorMessage(err)}`, 'error');
         }
       });
 

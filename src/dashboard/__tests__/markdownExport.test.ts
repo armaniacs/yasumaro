@@ -201,13 +201,24 @@ describe('exportDateRange', () => {
     expect(dl.calls).toHaveLength(0);
   });
 
-  it('treats a query error as an empty result rather than throwing', async () => {
+  it('surfaces a query error instead of reporting an empty range', async () => {
     mockQueryLogs.mockResolvedValue({ error: 'db unavailable' });
     const dl = makeDownloadSpy();
 
-    const result = await exportDateRange(config, '2026-08-01', '2026-08-02', dl.port);
+    await expect(
+      exportDateRange(config, '2026-08-01', '2026-08-02', dl.port)
+    ).rejects.toThrow('db unavailable');
+    expect(dl.calls).toHaveLength(0);
+  });
 
-    expect(result).toEqual({ totalRows: 0, totalFiles: 0 });
+  it('surfaces a null query result instead of reporting an empty range', async () => {
+    mockQueryLogs.mockResolvedValue(null);
+    const dl = makeDownloadSpy();
+
+    await expect(
+      exportDateRange(config, '2026-08-01', '2026-08-02', dl.port)
+    ).rejects.toThrow(/could not read the database/i);
+    expect(dl.calls).toHaveLength(0);
   });
 });
 
