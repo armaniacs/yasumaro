@@ -25,13 +25,32 @@ export class BuiltInAiProvider extends AIProviderStrategy {
      */
     async generateSummary(content: string, _tagSummaryMode?: boolean, _traceId?: string): Promise<AISummaryResult> {
         try {
-            const result = await this.builtInAiClient.summarize(content);
+            // Prompt-injection guard. The model runs on-device so nothing leaves
+            // the machine, but an injected instruction can still poison the
+            // summary that gets written into the user's Obsidian vault.
+            const { blocked, sanitized } = this.sanitizeContent(content, 'built-in-ai', _traceId ?? '');
+            if (blocked) {
+                return {
+                    success: false,
+                    summary: 'Error: Content blocked due to potential prompt injection.',
+                };
+            }
+
+            // checkPreFlight() is intentionally skipped: it enforces monthly
+            // spend limits, usage warnings and rate limits, all of which exist
+            // to protect against paid-API cost. On-device inference has no such
+            // cost and no server-side rate limit.
+            // getMaxTokens() is likewise skipped: BuiltInAIClient.summarize()
+            // takes no token budget parameter.
+            const result = await this.builtInAiClient.summarize(sanitized);
             if (!result.success) {
                 return {
                     success: false,
                     summary: result.error || 'Built-in AI returned no content',
                 };
             }
+
+            await this.recordUsageIfPresent(result.sentTokens, result.receivedTokens);
 
             return {
                 success: true,

@@ -163,19 +163,8 @@ export class OpenAIProvider extends AIProviderStrategy {
                 initialDelayMs: 1000,
                 backoffMultiplier: 2,
                 maxDelayMs: 60000,
-                shouldRetry: (error: Error, attempt: number, response: Response | null, method?: string) => {
-                    if (response?.status === 429) return false;
-                    if (response && response.status >= 500) {
-                        return !['POST', 'PUT', 'PATCH'].includes(method?.toUpperCase() ?? 'POST');
-                    }
-                    if (error.name === 'AbortError' || error.message.includes('timed out')) {
-                        return attempt <= 1;
-                    }
-                    if (error.name === 'NetworkError' || error.message.includes('NetworkError') || error.message.includes('fetch failed')) {
-                        return true;
-                    }
-                    return false;
-                }
+                shouldRetry: (error, attempt, response, method) =>
+                    this.shouldRetrySummaryRequest(error, attempt, response, method)
             });
 
             if (!response.ok) {
@@ -305,10 +294,8 @@ export class OpenAIProvider extends AIProviderStrategy {
         const sentTokens = data.usage?.prompt_tokens;
         const receivedTokens = data.usage?.completion_tokens;
 
-        // トークン使用量を記録（成功時のみ）
-        if (sentTokens !== undefined || receivedTokens !== undefined) {
-            await recordUsage(sentTokens ?? 0, receivedTokens ?? 0);
-        }
+        // トークン使用量を記録（成功時のみ、かつ数値が得られた場合のみ）
+        await this.recordUsageIfPresent(sentTokens, receivedTokens);
 
         return { success: true, summary: content, sentTokens, receivedTokens, providerName: this.providerName, modelName: this.model };
     }

@@ -115,7 +115,9 @@ export class GeminiProvider extends AIProviderStrategy {
                 maxRetryCount: 3,
                 initialDelayMs: 1000,
                 backoffMultiplier: 2,
-                maxDelayMs: 60000
+                maxDelayMs: 60000,
+                shouldRetry: (error, attempt, response, method) =>
+                    this.shouldRetrySummaryRequest(error, attempt, response, method)
             });
 
             if (!response.ok) {
@@ -347,11 +349,12 @@ export class GeminiProvider extends AIProviderStrategy {
             }
             return { success: false, summary: "Error: AI returned an empty response.", error };
         }
-        const sentTokens = data.usageMetadata?.promptTokenCount || 0;
-        const receivedTokens = data.usageMetadata?.candidatesTokenCount || 0;
+        const sentTokens = data.usageMetadata?.promptTokenCount;
+        const receivedTokens = data.usageMetadata?.candidatesTokenCount;
 
-        // トークン使用量を記録
-        await recordUsage(sentTokens, receivedTokens);
+        // トークン使用量を記録（数値が得られた場合のみ。
+        // 以前は || 0 で丸めて必ず記録し、統計に誤った 0 が混入していた）
+        await this.recordUsageIfPresent(sentTokens, receivedTokens);
 
         return { success: true, summary, sentTokens, receivedTokens, providerName: this.getName(), modelName: this.model };
     }
