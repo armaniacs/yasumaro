@@ -4,7 +4,7 @@
  */
 
 import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult } from './ProviderStrategy.js';
-import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.js';
+import { fetchWithRetry, validateUrlForAIRequests, CONNECTION_TEST_CACHE_MODE } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
@@ -218,7 +218,8 @@ export class OpenAIProvider extends AIProviderStrategy {
                 method: 'GET',
                 headers,
                 allowedUrls,
-                timeoutMs: this.timeoutMs
+                timeoutMs: this.timeoutMs,
+                cache: CONNECTION_TEST_CACHE_MODE
             }, {
                 maxRetryCount: 1,
                 initialDelayMs: 500,

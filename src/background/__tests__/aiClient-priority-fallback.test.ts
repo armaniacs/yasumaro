@@ -7,6 +7,7 @@ import * as fetchModule from '../../utils/fetch.js';
 const { fetchWithRetry } = vi.mocked(fetchModule);
 
 vi.mock('../../utils/fetch.js', () => ({
+    CONNECTION_TEST_CACHE_MODE: 'no-store',
   fetchWithRetry: vi.fn(),
   validateUrlForAIRequests: vi.fn(),
 }));

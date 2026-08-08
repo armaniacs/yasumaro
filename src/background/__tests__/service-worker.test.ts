@@ -196,6 +196,7 @@ vi.mock('../pipeline/RecordingPipeline.js', () => ({
     })
 }));
 vi.mock('../../utils/fetch.js', () => ({
+    CONNECTION_TEST_CACHE_MODE: 'no-store',
     validateUrlForFilterImport: vi.fn(),
     fetchWithTimeout: vi.fn(),
     isPrivateIpAddress: vi.fn(() => false),

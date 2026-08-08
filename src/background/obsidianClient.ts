@@ -5,7 +5,7 @@ import { Mutex } from '../utils/Mutex.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { redactSensitiveData } from '../utils/redaction.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { fetchWithTimeout } from '../utils/fetch.js';
+import { fetchWithTimeout, CONNECTION_TEST_CACHE_MODE } from '../utils/fetch.js';
 
 /**
  * Problem #2: HTTPヘッダーの固定部分を定数化
@@ -382,7 +382,8 @@ export class ObsidianClient {
                 method: 'GET',
                 headers,
                 skipCspValidation: true,
-                allowedUrls: null
+                allowedUrls: null,
+                cache: CONNECTION_TEST_CACHE_MODE
             }, FETCH_TIMEOUT_MS);
 
             if (response.ok) {

@@ -57,6 +57,7 @@ vi.mock('../../utils/urlUtils.js', () => ({
 }));
 
 vi.mock('../../utils/fetch.js', () => ({
+    CONNECTION_TEST_CACHE_MODE: 'no-store',
   isPrivateIpAddress: vi.fn(() => false),
 }));
 

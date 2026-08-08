@@ -10,6 +10,7 @@ import { addLog, LogType } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { StorageKeys, getSettings, saveSettings } from '../../utils/storage.js';
 import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../../utils/markdownSanitizer.js';
+import { CONNECTION_TEST_CACHE_MODE } from '../../utils/fetch.js';
 import type { Settings } from '../../utils/storage/types.js';
 
 const GIST_API_BASE = 'https://api.github.com';
@@ -134,6 +135,7 @@ export class GistSyncTarget implements SyncTarget {
           'User-Agent': 'yasumaro-extension',
           Accept: 'application/vnd.github.v3+json',
         },
+        cache: CONNECTION_TEST_CACHE_MODE,
       });
 
       if (response.ok) {

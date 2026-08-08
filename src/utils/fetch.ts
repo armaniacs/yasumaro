@@ -27,6 +27,22 @@ const BLOCKED_PATTERNS = [
 const MIN_TIMEOUT_MS = 100;      // 最小100ms
 const MAX_TIMEOUT_MS = 300000;   // 最大5分
 
+/**
+ * 接続テスト用の fetch キャッシュポリシー。
+ *
+ * 接続テストは「今この瞬間その API へ到達できるか」を確かめる機能なので、
+ * ブラウザの HTTP キャッシュに当たってはならない。指定しないと
+ * GET /models や GET /user などの冪等な GET がキャッシュヒットし、
+ * ネットワーク往復なしで応答が返る。その結果、
+ *
+ * - 所要時間が 0.0 秒と表示され計測値として意味をなさない
+ * - API キー失効後やオフラインでも「接続成功」を返しうる
+ *
+ * という二重の問題が生じる。後者はテスト結果そのものが信頼できない
+ * ことを意味するため、接続テストの fetch では必ずこれを渡す。
+ */
+export const CONNECTION_TEST_CACHE_MODE: RequestCache = 'no-store';
+
 interface ValidateUrlOptions {
   requireValidProtocol?: boolean;
   blockLocalhost?: boolean;
