@@ -14,6 +14,14 @@
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
 | ✅ [2026-08-08-01-refactor-recording-logic-split.md](2026-08-08-01-refactor-recording-logic-split.md) | 🟡中 | 🟡軽微 | 🔧 | RecordingLogic（541行）をRecordingCache(395行)/RecordingValidator(71行)/RecordingLogic(248行)に分割。後方互換ラッパー維持。全7556テスト合格 |
+| ⬜ [2026-08-08-02-refactor-ai-service-test-connection.md](2026-08-08-02-refactor-ai-service-test-connection.md) | 🟢低 | 🟡軽微 | 🔧 | AIServiceにtestConnectionが無くADR 2026-07-27の「aiClient直接依存禁止」が構造的に守れない。RemoteAIServiceのsuccess/error欠落バグも同時修正 |
+| ⬜ [2026-08-08-03-refactor-panel-contract-cleanup.md](2026-08-08-03-refactor-panel-contract-cleanup.md) | 🟢低 | 🟢なし | 🔧 | Panel抽象の死んだメンバを削除（refresh()は呼び出し0件・5パネルが空実装）。registryのキャストをcategory narrowingへ |
+| ⬜ [2026-08-08-04-refactor-messaging-layer-consolidation.md](2026-08-08-04-refactor-messaging-layer-consolidation.md) | 🟡中 | 🟡軽微 | 🔧 | messaging層の逆依存解消・ResponseForTypeのLOG_FORWARD欠落・整合性テストの手書き複製を導出型へ |
+| ⬜ [2026-08-08-05-refactor-ai-provider-asymmetry.md](2026-08-08-05-refactor-ai-provider-asymmetry.md) | 🟡中 | 🔴あり | 🔧 | provider間の非対称解消（Geminiが429でリトライ/使用量0記録/BuiltInAiがsanitizeContent未通過・テスト0） |
+| ⬜ [2026-08-08-06-test-untested-modules-coverage.md](2026-08-08-06-test-untested-modules-coverage.md) | 🟡中 | 🟢なし | 🔧 | recordingCache(395行)がテスト0・messageHandlers(732行)は17ファクトリ中1つのみテスト。VULN-014とisSecureUrl中心に追加 |
+| ⬜ [2026-08-08-07-fix-sqlite-history-pagination.md](2026-08-08-07-fix-sqlite-history-pagination.md) | 🟡中 | 🔴あり | 🔧 | **実害**: 履歴1000件超の51ページ目以降が閲覧不能。queryLogsがlimit:1000/offset:0固定でクライアント側slice |
+| ⬜ [2026-08-08-08-refactor-dead-code-and-seam-bypass.md](2026-08-08-08-refactor-dead-code-and-seam-bypass.md) | 🟢低 | 🟢なし | 🔧 | createBackgroundServicesが本番未使用（テストのみ）・popup残骸テスト・chrome.i18n直接呼び出し8件のseam迂回 |
+| ⬜ [2026-08-08-09-refactor-dashboard-dual-bootstrap.md](2026-08-08-09-refactor-dashboard-dual-bootstrap.md) | 🔴高 | 🔴あり | 🔧 | dashboard.ts(967行)とmain.tsの二重ブートストラップ解消。panel層が旧god moduleから11ハンドラを逆輸入している |
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
 | 🔶 [2026-08-07-08-refactor-ai-client-service-unification.md](2026-08-07-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合（modelName型ドリフトは解消済み。AIClient削除は中核パスの高リスクのため保留） |
 | 🔶 [2026-08-07-13-refactor-service-wiring-backend-consolidation.md](2026-08-07-13-refactor-service-wiring-backend-consolidation.md) | 🟡中 | 🟡軽微 | 🔧 | サービス配線・StorageBackend・プロバイダ設定表示・エラー処理の統合候補（エラー処理イディオムは解消済み。他は調査により実重複でない/高リスクと判断し保留）
