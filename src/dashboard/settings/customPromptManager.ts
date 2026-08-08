@@ -4,7 +4,7 @@
  * Handles the prompt editor and list in the popup UI
  */
 
-import { Settings, StorageKeys, saveSettings } from '../utils/storage.js';
+import { Settings, StorageKeys, saveSettings } from '../../utils/storage.js';
 import {
     CustomPrompt,
     createPrompt,
@@ -17,11 +17,11 @@ import {
     PRESET_PROMPTS,
     getPresetPrompt,
     getPromptDisplayName
-} from '../utils/customPromptUtils.js';
-import { getMessage } from '../utils/i18n.js';
-import { applyI18n } from '../utils/i18n-dom.js';
-import { escapeHtml } from './errorUtils.js';
-import { showStatus } from './settingsUiHelper.js';
+} from '../../utils/customPromptUtils.js';
+import { getMessage } from '../../utils/i18n.js';
+import { applyI18n } from '../../utils/i18n-dom.js';
+import { escapeHtml } from '../../popup/errorUtils.js';
+import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
 // Prompt ID prefix constants
 const PROMPT_ID = {
@@ -159,12 +159,12 @@ function renderPromptList(): void {
 
 /**
  * Create HTML for a preset prompt item
- * @param {import('../utils/customPromptUtils.js').PresetPrompt} preset - The preset prompt to render
+ * @param {import('../../utils/customPromptUtils.js').PresetPrompt} preset - The preset prompt to render
  * @param {string} locale - Locale ('ja' or 'en')
  * @returns {string} HTML string
  */
 function createPresetPromptItem(
-    preset: import('../utils/customPromptUtils.js').PresetPrompt,
+    preset: import('../../utils/customPromptUtils.js').PresetPrompt,
     locale: string,
     activePromptId?: string
 ): string {

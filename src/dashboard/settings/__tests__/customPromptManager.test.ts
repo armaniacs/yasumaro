@@ -6,14 +6,14 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = vi.fn() as any;
 }
 
-vi.mock('../../utils/storage.js', () => ({
+vi.mock('../../../utils/storage.js', () => ({
   StorageKeys: {
     CUSTOM_PROMPTS: 'custom_prompts',
   },
   saveSettings: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../utils/customPromptUtils.js', () => ({
+vi.mock('../../../utils/customPromptUtils.js', () => ({
   createPrompt: vi.fn((data) => ({
     ...data,
     id: `test_prompt_${Date.now()}`,
@@ -54,7 +54,7 @@ vi.mock('../../utils/customPromptUtils.js', () => ({
   ),
 }));
 
-vi.mock('../../utils/i18n.js', () => ({
+vi.mock('../../../utils/i18n.js', () => ({
   applyI18n: vi.fn(),
   getMessage: vi.fn((key) => {
     const messages = {
@@ -78,7 +78,7 @@ vi.mock('../../utils/i18n.js', () => ({
   }),
 }));
 
-vi.mock('../errorUtils.js', () => ({
+vi.mock('../../../popup/errorUtils.js', () => ({
   escapeHtml: vi.fn((s) => String(s)),
 }));
 
@@ -254,7 +254,7 @@ describe('customPromptManager', () => {
   describe('handleSavePrompt', () => {
     it('should create a new prompt when save is clicked with valid data', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../utils/storage.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
 
       const settings = { custom_prompts: [] };
       initCustomPromptManager(settings);
@@ -286,7 +286,7 @@ describe('customPromptManager', () => {
 
     it('should update an existing prompt when editingPromptId is set', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../utils/storage.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
 
       const existingPrompt = createTestPrompt({ id: 'existing_id' });
       const settings = { custom_prompts: [existingPrompt] };
@@ -324,7 +324,7 @@ describe('customPromptManager', () => {
 
     it('should show error when name is empty', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../utils/storage.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
 
       const settings = { custom_prompts: [] };
       initCustomPromptManager(settings);
@@ -344,11 +344,11 @@ describe('customPromptManager', () => {
     });
 
     it('should show error when validation fails', async () => {
-      const { validatePrompt } = await import('../../utils/customPromptUtils.js');
+      const { validatePrompt } = await import('../../../utils/customPromptUtils.js');
       validatePrompt.mockReturnValueOnce({ valid: false, error: 'Invalid prompt content' });
 
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../utils/storage.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
 
       const settings = { custom_prompts: [] };
       initCustomPromptManager(settings);
@@ -376,7 +376,7 @@ describe('customPromptManager', () => {
       systemInput.remove();
 
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../utils/storage.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
 
       const settings = { custom_prompts: [] };
       initCustomPromptManager(settings);
@@ -447,7 +447,7 @@ describe('customPromptManager', () => {
       (global.confirm as vi.Mock).mockReturnValueOnce(true);
 
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../utils/storage.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
 
       const prompts = [createTestPrompt({ id: 'delete_test_1' })];
       const settings = { custom_prompts: prompts };
@@ -465,7 +465,7 @@ describe('customPromptManager', () => {
       (global.confirm as vi.Mock).mockReturnValueOnce(false);
 
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../utils/storage.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
 
       const prompts = [createTestPrompt({ id: 'delete_test_2' })];
       const settings = { custom_prompts: prompts };
@@ -491,7 +491,7 @@ describe('customPromptManager', () => {
   describe('handleActivatePrompt', () => {
     it('should activate default prompt by deactivating all custom prompts', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../utils/storage.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
 
       const prompts = [createTestPrompt({ isActive: true })];
       const settings = { custom_prompts: prompts };
@@ -509,7 +509,7 @@ describe('customPromptManager', () => {
 
     it('should activate a custom prompt', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../utils/storage.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
 
       const prompts = [
         createTestPrompt({ id: 'p1', name: 'Prompt 1', isActive: true }),
@@ -529,8 +529,8 @@ describe('customPromptManager', () => {
 
     it('should activate preset prompt when activate button is clicked', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../utils/storage.js');
-      const { getPresetPrompt } = await import('../../utils/customPromptUtils.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
+      const { getPresetPrompt } = await import('../../../utils/customPromptUtils.js');
 
       const settings = { custom_prompts: [] };
       initCustomPromptManager(settings);
@@ -551,7 +551,7 @@ describe('customPromptManager', () => {
 
     it('should upsert existing preset entry instead of duplicating', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../utils/storage.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
 
       const existingEntry = createTestPrompt({
         id: '__preset__concise',
@@ -675,7 +675,7 @@ describe('customPromptManager', () => {
   describe('showStatus', () => {
     it('should show success status message after creating a prompt', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../utils/storage.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
 
       initCustomPromptManager({ custom_prompts: [] });
 

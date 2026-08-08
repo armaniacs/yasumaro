@@ -37,14 +37,14 @@ const mockStorageKeys = vi.hoisted(() => ({
   AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD: 'ai_summary_cleansing_body_protection_threshold',
 }));
 
-vi.mock('../../utils/storage.js', () => ({
+vi.mock('../../../utils/storage.js', () => ({
   StorageKeys: mockStorageKeys,
   DEFAULT_SETTINGS: {},
   getSettings: vi.fn(),
   saveSettings: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger.js', () => ({
   logError: vi.fn(),
   ErrorCode: {
     STORAGE_WRITE_FAILURE: 'STRG_WR_001',
@@ -52,8 +52,8 @@ vi.mock('../../utils/logger.js', () => ({
   },
 }));
 
-import * as storage from '../../utils/storage.js';
-import { logError } from '../../utils/logger.js';
+import * as storage from '../../../utils/storage.js';
+import { logError } from '../../../utils/logger.js';
 import {
   getAiSummaryCleansingSettings,
   saveAiSummaryCleansingSettings,

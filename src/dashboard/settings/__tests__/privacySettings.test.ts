@@ -38,7 +38,7 @@ const mockSaveSettings = vi.fn();
 const mockShowStatus = vi.fn();
 const mockGetMessage = vi.fn((key: string) => key);
 
-vi.mock('../../utils/storage.js', () => ({
+vi.mock('../../../utils/storage.js', () => ({
   StorageKeys: {
     PRIVACY_MODE: 'privacy_mode',
     PII_CONFIRMATION_UI: 'pii_confirmation_ui',
@@ -48,16 +48,16 @@ vi.mock('../../utils/storage.js', () => ({
   saveSettings: (...args: any[]) => mockSaveSettings(...args),
 }));
 
-vi.mock('../settingsUiHelper.js', () => ({
+vi.mock('../../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: (...args: any[]) => mockShowStatus(...args),
 }));
 
-vi.mock('../../utils/i18n.js', () => ({
+vi.mock('../../../utils/i18n.js', () => ({
   getMessage: (...args: any[]) => mockGetMessage(...args),
 }));
 
 const mockSanitizeRegex = vi.fn();
-vi.mock('../../utils/piiSanitizer.js', () => ({
+vi.mock('../../../utils/piiSanitizer.js', () => ({
   sanitizeRegex: (...args: any[]) => mockSanitizeRegex(...args),
 }));
 

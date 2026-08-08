@@ -11,7 +11,7 @@ import {
 } from '../utils/modelsDevApi.js';
 import { StorageKeys, saveSettings, getSettings } from '../utils/storage.js';
 import { applyI18n } from '../utils/i18n-dom.js';
-import { focusTrapManager } from '../popup/utils/focusTrap.js';
+import { focusTrapManager } from '../utils/ui/focusTrap.js';
 
 interface DialogOptions {
     onSave?: (providerId: string, baseUrl: string, apiKey: string, model: string) => void;

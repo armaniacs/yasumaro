@@ -1,6 +1,6 @@
 import { getSettings, saveSettings } from '../utils/storage.js';
 import { StorageKeys } from '../utils/storage/types.js';
-import { focusTrapManager } from './utils/focusTrap.js';
+import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { getMessage } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';

@@ -37,7 +37,7 @@ vi.mock('../../utils/storage.js', () => ({
 }));
 
 // Mock settingsUiHelper
-vi.mock('../popup/settingsUiHelper.js', () => ({
+vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: vi.fn(),
 }));
 

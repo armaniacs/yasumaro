@@ -6,7 +6,7 @@
 
 import { vi } from 'vitest';;
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../logger.js', () => ({
   logInfo: vi.fn(),
   logDebug: vi.fn(),
   logError: vi.fn(),

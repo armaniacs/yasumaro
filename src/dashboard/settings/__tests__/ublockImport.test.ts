@@ -8,7 +8,7 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock dependencies (must be defined before imports)
-vi.mock('../../utils/storage.js', () => {
+vi.mock('../../../utils/storage.js', () => {
   const mockGetSettings = vi.fn(() => Promise.resolve({
     obsidian_api_key: '',
     obsidian_port: '27123',
@@ -54,7 +54,7 @@ vi.mock('../../utils/storage.js', () => {
   };
 });
 
-vi.mock('../settingsUiHelper.js', () => ({
+vi.mock('../../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: vi.fn(),
 }));
 
@@ -185,7 +185,7 @@ describe('ublockImport/index.js - UI Component Tests', () => {
     let mockGetSettings, mockSaveSettings;
 
     beforeAll(async () => {
-      const storage = await import('../../utils/storage.js');
+      const storage = await import('../../../utils/storage.js');
       mockGetSettings = storage.getSettings;
       mockSaveSettings = storage.saveSettings;
     });
@@ -212,7 +212,7 @@ describe('ublockImport/index.js - UI Component Tests', () => {
 
       await deleteSource(1, renderCallback);
 
-      const { saveSettings } = await import('../../utils/storage.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
       expect(saveSettings).toHaveBeenCalled();
       expect(renderCallback).toHaveBeenCalled();
     });
@@ -223,7 +223,7 @@ describe('ublockImport/index.js - UI Component Tests', () => {
 
       await deleteSource(999, renderCallback);
 
-      const { saveSettings } = await import('../../utils/storage.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
       expect(saveSettings).not.toHaveBeenCalled();
     });
   });
@@ -235,7 +235,7 @@ describe('ublockImport/index.js - UI Component Tests', () => {
     let mockGetSettings;
 
     beforeAll(async () => {
-      const storage = await import('../../utils/storage.js');
+      const storage = await import('../../../utils/storage.js');
       mockGetSettings = storage.getSettings;
     });
 
@@ -306,9 +306,9 @@ describe('ublockImport/index.js - UI Component Tests', () => {
     let mockGetSettings, mockShowStatus;
 
     beforeAll(async () => {
-      const storage = await import('../../utils/storage.js');
+      const storage = await import('../../../utils/storage.js');
       mockGetSettings = storage.getSettings;
-      const helper = await import('../settingsUiHelper.js');
+      const helper = await import('../../../utils/ui/settingsUiHelper.js');
       mockShowStatus = helper.showStatus;
     });
 

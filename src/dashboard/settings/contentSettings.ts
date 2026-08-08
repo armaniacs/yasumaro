@@ -3,11 +3,11 @@
  * Content cleansing settings functionality for the dashboard UI.
  */
 
-import { StorageKeys, saveSettings, getSettings } from '../utils/storage.js';
-import { errorMessage } from '../utils/errorUtils.js';
-import { showStatus } from './settingsUiHelper.js';
-import { getMessage } from '../utils/i18n.js';
-import { logError, ErrorCode } from '../utils/logger.js';
+import { StorageKeys, saveSettings, getSettings } from '../../utils/storage.js';
+import { errorMessage } from '../../utils/errorUtils.js';
+import { showStatus } from '../../utils/ui/settingsUiHelper.js';
+import { getMessage } from '../../utils/i18n.js';
+import { logError, ErrorCode } from '../../utils/logger.js';
 
 // デフォルトキーワードリスト
 const DEFAULT_KEYWORDS = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'];

@@ -5,7 +5,7 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = vi.fn() as any;
 }
 
-vi.mock('../../utils/storage.js', () => ({
+vi.mock('../../../utils/storage.js', () => ({
   StorageKeys: {
     CUSTOM_PROMPTS: 'custom_prompts',
   },
@@ -35,7 +35,7 @@ const mockSetActivePrompt = vi.fn((prompts, id) =>
 );
 const mockValidatePrompt = vi.fn().mockReturnValue({ valid: true });
 
-vi.mock('../../utils/customPromptUtils.js', () => ({
+vi.mock('../../../utils/customPromptUtils.js', () => ({
   createPrompt: mockCreatePrompt,
   updatePrompt: mockUpdatePrompt,
   deletePrompt: mockDeletePrompt,
@@ -59,7 +59,7 @@ vi.mock('../../utils/customPromptUtils.js', () => ({
   ),
 }));
 
-vi.mock('../../utils/i18n.js', () => ({
+vi.mock('../../../utils/i18n.js', () => ({
   applyI18n: vi.fn(),
   getMessage: vi.fn((key: string) => {
     const messages: Record<string, string> = {
@@ -83,7 +83,7 @@ vi.mock('../../utils/i18n.js', () => ({
   }),
 }));
 
-vi.mock('../errorUtils.js', () => ({
+vi.mock('../../../popup/errorUtils.js', () => ({
   escapeHtml: vi.fn((s: string) => String(s)),
 }));
 
@@ -184,8 +184,8 @@ describe('customPromptManager - r2 missed branches', () => {
   describe('handleActivatePrompt edge cases', () => {
     it('should do nothing when preset is not found', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../utils/storage.js');
-      const { getPresetPrompt } = await import('../../utils/customPromptUtils.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
+      const { getPresetPrompt } = await import('../../../utils/customPromptUtils.js');
       (getPresetPrompt as any).mockReturnValueOnce(undefined);
 
       const settings = { custom_prompts: [] };
@@ -223,7 +223,7 @@ describe('customPromptManager - r2 missed branches', () => {
 
   describe('handleDuplicatePrompt edge cases', () => {
     it('should show error when preset not found for duplication', async () => {
-      const { getPresetPrompt } = await import('../../utils/customPromptUtils.js');
+      const { getPresetPrompt } = await import('../../../utils/customPromptUtils.js');
       (getPresetPrompt as any).mockImplementation((id: string) => {
         if (id === 'concise') return undefined;
         return { id: 'default', name: 'Default', nameJa: '\u30c7\u30d5\u30a9\u30eb\u30c8', userPrompt: 'Default prompt', systemPrompt: '' };
@@ -374,7 +374,7 @@ describe('customPromptManager - r2 missed branches', () => {
     it('should return early when promptProviderSelect is missing', async () => {
       document.getElementById('promptProvider')!.remove();
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../utils/storage.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
       initCustomPromptManager({ custom_prompts: [] });
 
       document.getElementById('savePromptBtn')!.click();
@@ -385,7 +385,7 @@ describe('customPromptManager - r2 missed branches', () => {
     it('should handle editingPromptIdInput being absent', async () => {
       document.getElementById('editingPromptId')!.remove();
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../utils/storage.js');
+      const { saveSettings } = await import('../../../utils/storage.js');
       initCustomPromptManager({ custom_prompts: [] });
 
       const nameInput = document.getElementById('promptName') as HTMLInputElement;
@@ -423,7 +423,7 @@ describe('customPromptManager - r2 missed branches', () => {
 
   describe('createDefaultPromptItem locale branch', () => {
     it('should render default with English locale when getMessage returns undefined', async () => {
-      const { getMessage } = await import('../../utils/i18n.js');
+      const { getMessage } = await import('../../../utils/i18n.js');
       (getMessage as any).mockImplementation((key: string) => {
         if (key === 'locale') return undefined;
         if (key === 'defaultPrompt') return 'Default';
@@ -444,7 +444,7 @@ describe('customPromptManager - r2 missed branches', () => {
     });
 
     it('should render default with Japanese locale via getMessage', async () => {
-      const { getMessage } = await import('../../utils/i18n.js');
+      const { getMessage } = await import('../../../utils/i18n.js');
       (getMessage as any).mockImplementation((key: string) => {
         if (key === 'locale') return 'ja';
         if (key === 'defaultPrompt') return '\u30c7\u30d5\u30a9\u30eb\u30c8';

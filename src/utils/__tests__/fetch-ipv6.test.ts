@@ -4,7 +4,7 @@
  * DomainLogicExpert & RedTeam指摘: IPv6 fe80::/10検知ロジック欠陥の修正検証
  */
 
-import { isPrivateIpAddress } from '../fetch';
+import { isPrivateIpAddress } from '../fetch.js';
 
 describe('IPv6プライベートアドレス検知', () => {
   describe('ループバックアドレス', () => {

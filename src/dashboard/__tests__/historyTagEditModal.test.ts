@@ -5,7 +5,7 @@ vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key) => key),
 }));
 
-vi.mock('../../popup/utils/focusTrap.js', () => ({
+vi.mock('../../utils/ui/focusTrap.js', () => ({
   focusTrapManager: {
     trap: vi.fn().mockReturnValue('trap-id'),
     release: vi.fn(),
@@ -94,7 +94,7 @@ describe('historyTagEditModal', () => {
     });
 
     it('should set focus trap on modal', async () => {
-      const { focusTrapManager } = await import('../../popup/utils/focusTrap.js');
+      const { focusTrapManager } = await import('../../utils/ui/focusTrap.js');
       const { openTagEditModal } = await import('../historyTagEditModal.js');
       const modal = document.createElement('div');
       const state = { editingUrl: null, editingTags: [] as string[], tagEditTrapId: null };
@@ -104,7 +104,7 @@ describe('historyTagEditModal', () => {
     });
 
     it('should not set focus trap when modal is null', async () => {
-      const { focusTrapManager } = await import('../../popup/utils/focusTrap.js');
+      const { focusTrapManager } = await import('../../utils/ui/focusTrap.js');
       const { openTagEditModal } = await import('../historyTagEditModal.js');
       const state = { editingUrl: null, editingTags: [] as string[], tagEditTrapId: null };
       openTagEditModal(state as any, { tagEditUrl: null, tagEditModal: null } as any, 'https://example.com', []);
@@ -123,7 +123,7 @@ describe('historyTagEditModal', () => {
     });
 
     it('should release focus trap when trapId exists', async () => {
-      const { focusTrapManager } = await import('../../popup/utils/focusTrap.js');
+      const { focusTrapManager } = await import('../../utils/ui/focusTrap.js');
       const { closeTagEditModal } = await import('../historyTagEditModal.js');
       const state = { editingUrl: 'url', editingTags: ['t'], tagEditTrapId: 'trap-id' };
       closeTagEditModal(state as any, { tagEditModal: null } as any);
@@ -132,7 +132,7 @@ describe('historyTagEditModal', () => {
     });
 
     it('should not release focus trap when trapId is null', async () => {
-      const { focusTrapManager } = await import('../../popup/utils/focusTrap.js');
+      const { focusTrapManager } = await import('../../utils/ui/focusTrap.js');
       const { closeTagEditModal } = await import('../historyTagEditModal.js');
       const state = { editingUrl: 'url', editingTags: ['t'], tagEditTrapId: null };
       closeTagEditModal(state as any, { tagEditModal: null } as any);

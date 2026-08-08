@@ -12,26 +12,26 @@ import { vi } from 'vitest';;
 
 describe('TrustDatabase - Phase 1 - Module Loading', () => {
   it('should trustDb module be loadable', async () => {
-    const trustDbModule = await import('../trustDb/trustDb');
+    const trustDbModule = await import('../trustDb/trustDb.js');
     expect(trustDbModule).toBeDefined();
     expect(typeof trustDbModule.getTrustDb).toBe('function');
   });
 
   it('should trustDbSchema module be loadable', async () => {
-    const schemaModule = await import('../trustDb/trustDbSchema');
+    const schemaModule = await import('../trustDb/trustDbSchema.js');
     expect(schemaModule).toBeDefined();
     expect(schemaModule.DomainTrustLevel).toBeDefined();
     expect(schemaModule.DomainTrustLevel.TRUSTED).toBe('trusted');
   });
 
   it('should bloomFilter module be loadable', async () => {
-    const bloomFilterModule = await import('../trustDb/bloomFilter');
+    const bloomFilterModule = await import('../trustDb/bloomFilter.js');
     expect(bloomFilterModule).toBeDefined();
     expect(typeof bloomFilterModule.createBloomFilter).toBe('function');
   });
 
   it('should trancoUpdater module be loadable', async () => {
-    const updaterModule = await import('../trustDb/trancoUpdater');
+    const updaterModule = await import('../trustDb/trancoUpdater.js');
     expect(updaterModule).toBeDefined();
     expect(typeof updaterModule.getTrancoUpdater).toBe('function');
     expect(updaterModule.SAFETY_MODE_TO_TRANCO_TIER).toBeDefined();
@@ -55,7 +55,7 @@ describe('DOMAIN_REGEX trailing dot fix', () => {
 
 describe('addUserTld / addJpAnchorTld parity', () => {
   it('addUserTld rejects invalid TLD', async () => {
-    const trustDbModule = await import('../trustDb/trustDb');
+    const trustDbModule = await import('../trustDb/trustDb.js');
     const db = trustDbModule.getTrustDb();
     await db.initialize();
     const r = await db.addUserTld('invalid!tld');
@@ -63,7 +63,7 @@ describe('addUserTld / addJpAnchorTld parity', () => {
   });
 
   it('addJpAnchorTld rejects same invalid TLD', async () => {
-    const trustDbModule = await import('../trustDb/trustDb');
+    const trustDbModule = await import('../trustDb/trustDb.js');
     const db = trustDbModule.getTrustDb();
     await db.initialize();
     const r = await db.addJpAnchorTld('invalid!tld');
@@ -73,7 +73,7 @@ describe('addUserTld / addJpAnchorTld parity', () => {
 
 describe('createBloomFilterFromPresets refactoring validation', () => {
   it('should flatten SENSITIVE_DOMAINS_PRESETS correctly', async () => {
-    const trustDbModule = await import('../trustDb/trustDb');
+    const trustDbModule = await import('../trustDb/trustDb.js');
     const db = trustDbModule.getTrustDb();
 
     // Access private method via prototype for testing
@@ -105,7 +105,7 @@ describe('createBloomFilterFromPresets refactoring validation', () => {
   });
 
   it('should verify bloomFilter data contains all preset domains', async () => {
-    const trustDbModule = await import('../trustDb/trustDb');
+    const trustDbModule = await import('../trustDb/trustDb.js');
     const db = trustDbModule.getTrustDb();
 
     await db.initialize();
@@ -115,7 +115,7 @@ describe('createBloomFilterFromPresets refactoring validation', () => {
     const bloomFilterData = database?.bloomFilter;
     expect(bloomFilterData).toBeDefined();
 
-    const bloomFilterModule = await import('../trustDb/bloomFilter');
+    const bloomFilterModule = await import('../trustDb/bloomFilter.js');
     const bloom = bloomFilterModule.bloomFilterFromData(bloomFilterData!);
 
     // Verify that each preset domain is in the Bloom filter

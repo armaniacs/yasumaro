@@ -8,7 +8,7 @@
 
 import { getSettings, saveSettingsWithAllowedUrls, StorageKeys } from '../utils/storage.js';
 import { extractSettingsFromInputs, extractLocalMarkdownExportTiming } from '../utils/settingsFormBinding.js';
-import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, ErrorPair } from '../popup/settings/fieldValidation.js';
+import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, ErrorPair } from './settings/fieldValidation.js';
 import { getMessage } from '../utils/i18n.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 

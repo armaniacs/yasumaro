@@ -4,7 +4,7 @@
  */
 
 import { getMessage } from '../utils/i18n.js';
-import { showStatus } from '../popup/settingsUiHelper.js';
+import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import {
   setMasterPassword,
   verifyMasterPassword,
@@ -19,7 +19,7 @@ import {
   updatePasswordStrengthDisplay
 } from '../utils/masterPasswordUiCore.js';
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../utils/rateLimiter.js';
-import { focusTrapManager } from '../popup/utils/focusTrap.js';
+import { focusTrapManager } from '../utils/ui/focusTrap.js';
 
 // DOM Elements
 const masterPasswordEnabled = document.getElementById('masterPasswordEnabled') as HTMLInputElement | null;

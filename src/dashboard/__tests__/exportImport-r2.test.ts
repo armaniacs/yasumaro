@@ -18,30 +18,30 @@ vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => `i18n_${key}`),
 }));
 
-vi.mock('../../popup/settingsUiHelper.js', () => ({
+vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: vi.fn(),
 }));
 
-vi.mock('../../popup/utils/focusTrap.js', () => ({
+vi.mock('../../utils/ui/focusTrap.js', () => ({
   focusTrapManager: {
     trap: vi.fn().mockReturnValue('trap-id'),
     release: vi.fn(),
   },
 }));
 
-vi.mock('../../popup/domainFilter.js', () => ({
+vi.mock('../settings/domainFilter.js', () => ({
   loadDomainSettings: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../popup/privacySettings.js', () => ({
+vi.mock('../settings/privacySettings.js', () => ({
   loadPrivacySettings: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../popup/contentSettings.js', () => ({
+vi.mock('../settings/contentSettings.js', () => ({
   loadContentSettings: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../popup/trustSettings.js', () => ({
+vi.mock('../settings/trustSettings.js', () => ({
   loadTrustSettings: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -82,8 +82,8 @@ async function getFreshModule() {
 }
 
 const { getSettings } = await import('../../utils/storage.js');
-const { showStatus } = await import('../../popup/settingsUiHelper.js');
-const { focusTrapManager } = await import('../../popup/utils/focusTrap.js');
+const { showStatus } = await import('../../utils/ui/settingsUiHelper.js');
+const { focusTrapManager } = await import('../../utils/ui/focusTrap.js');
 const { showPasswordAuthModal } = await import('../masterPassword.js');
 const { importSettings } = await import('../../utils/settingsExportImport.js');
 const { importFromJson } = await import('../importLogsService.js');

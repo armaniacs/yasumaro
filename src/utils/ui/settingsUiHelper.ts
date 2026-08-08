@@ -1,7 +1,7 @@
 export {
   loadSettingsToInputs,
   extractSettingsFromInputs,
-} from '../utils/settingsFormBinding.js';
+} from '../settingsFormBinding.js';
 
 export function showStatus(elementOrId: string | HTMLElement, message: string, type: 'success' | 'error'): void {
   const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;

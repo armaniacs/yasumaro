@@ -26,7 +26,7 @@ vi.mock('../../utils/i18n.js', () => ({
     getMessage: vi.fn((key: string) => key),
 }));
 
-vi.mock('../../popup/settingsUiHelper.js', () => ({
+vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
     showStatus: vi.fn(),
 }));
 
@@ -45,7 +45,7 @@ vi.mock('../../utils/storage.js', () => ({
 // Import after mocks
 import { initTrancoConsentPanel } from '../trancoConsent.js';
 import { getSettings, saveSettingsWithAllowedUrls } from '../../utils/storage.js';
-import { showStatus } from '../../popup/settingsUiHelper.js';
+import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
 const mockedGetSettings = getSettings as ReturnType<typeof vi.fn>;
 const mockedSaveSettings = saveSettingsWithAllowedUrls as ReturnType<typeof vi.fn>;

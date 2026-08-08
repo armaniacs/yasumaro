@@ -3,7 +3,7 @@
  * 許可URLリスト構築のテスト
  */
 
-import { buildAllowedUrls, StorageKeys, computeUrlsHash, isDomainInWhitelist } from '../../utils/storage.js';
+import { buildAllowedUrls, StorageKeys, computeUrlsHash, isDomainInWhitelist } from '../storage.js';
 
 // Mock chrome API
 const mockChrome = {

@@ -3,7 +3,7 @@
  * pendingStorage モジュールのテスト
  */
 
-import { addPendingPage, getPendingPages, removePendingPages, clearExpiredPages, migrateLegacyPendingPagesKey } from '../pendingStorage';
+import { addPendingPage, getPendingPages, removePendingPages, clearExpiredPages, migrateLegacyPendingPagesKey } from '../pendingStorage.js';
 
 vi.mock('../logger.js', () => ({
     logInfo: vi.fn().mockResolvedValue(undefined),

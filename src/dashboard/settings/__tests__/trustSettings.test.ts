@@ -9,9 +9,9 @@
 import { vi } from 'vitest';;
 
 // Mock dependencies - all at top level
-vi.mock('../../utils/trustDb/trustDbSchema.js', () => ({}));
+vi.mock('../../../utils/trustDb/trustDbSchema.js', () => ({}));
 
-vi.mock('../../utils/storage.js', () => ({
+vi.mock('../../../utils/storage.js', () => ({
   StorageKeys: {
     PERMISSION_NOTIFY_THRESHOLD: 'permission_notify_threshold',
   },
@@ -36,7 +36,7 @@ const mockRemoveSensitiveDomain = vi.fn(() => Promise.resolve());
 const mockAddToWhitelist = vi.fn(() => Promise.resolve({ success: true }));
 const mockRemoveFromWhitelist = vi.fn(() => Promise.resolve());
 
-vi.mock('../../utils/trustDb/trustDb.js', () => ({
+vi.mock('../../../utils/trustDb/trustDb.js', () => ({
   getTrustDb: vi.fn(() => ({
     initialize: mockInitialize,
     getDatabase: mockGetDatabase,
@@ -55,7 +55,7 @@ vi.mock('../../utils/trustDb/trustDb.js', () => ({
 const mockIsUpdateInProgress = vi.fn(() => false);
 const mockUpdateTrancoList = vi.fn(() => Promise.resolve({ success: true, domainsCount: 10000 }));
 
-vi.mock('../../utils/trustDb/trancoUpdater.js', () => ({
+vi.mock('../../../utils/trustDb/trancoUpdater.js', () => ({
   getTrancoUpdater: vi.fn(() => ({
     isUpdateInProgress: mockIsUpdateInProgress,
     updateTrancoList: mockUpdateTrancoList,
@@ -66,14 +66,14 @@ const mockLogInfo = vi.fn();
 const mockLogWarn = vi.fn();
 const mockLogError = vi.fn();
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger.js', () => ({
   logInfo: mockLogInfo,
   logWarn: mockLogWarn,
   logError: mockLogError,
   ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
 }));
 
-vi.mock('../../utils/i18n.js', () => ({
+vi.mock('../../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => {
     const msgs: Record<string, string> = {
       trancoUpdating: 'Updating...',
@@ -106,7 +106,7 @@ const mockGetAlertConfig = vi.fn(() => Promise.resolve({
 }));
 const mockSaveAlertSettings = vi.fn(() => Promise.resolve());
 
-vi.mock('../../utils/trustChecker.js', () => ({
+vi.mock('../../../utils/trustChecker.js', () => ({
   getTrustChecker: vi.fn(() => ({
     getAlertConfig: mockGetAlertConfig,
     saveAlertSettings: mockSaveAlertSettings,
@@ -119,7 +119,7 @@ const mockRemoveDeniedDomain = vi.fn(() => Promise.resolve());
 const mockRecordDomainDismissal = vi.fn(() => Promise.resolve());
 const mockIsHostPermitted = vi.fn(() => Promise.resolve(false));
 
-vi.mock('../../utils/permissionManager.js', () => ({
+vi.mock('../../../utils/permissionManager.js', () => ({
   getFrequentDeniedDomains: mockGetFrequentDeniedDomains,
   requestPermission: mockRequestPermission,
   removeDeniedDomain: mockRemoveDeniedDomain,

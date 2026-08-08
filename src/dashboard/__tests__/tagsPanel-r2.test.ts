@@ -34,7 +34,7 @@ vi.mock('../../utils/storage.js', () => ({
   },
 }));
 
-vi.mock('../../popup/settingsUiHelper.js', () => ({
+vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: vi.fn(),
 }));
 
@@ -44,7 +44,7 @@ vi.mock('../../utils/tagUtils.js', () => ({
 
 import { initTagsPanel } from '../tagsPanel.js';
 import { getSettings, saveSettingsWithAllowedUrls } from '../../utils/storage.js';
-import { showStatus } from '../../popup/settingsUiHelper.js';
+import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
 function fullDom(): void {
   document.body.innerHTML = `

@@ -5,7 +5,7 @@ import { describe, it, test, expect, vi, beforeEach, afterEach } from 'vitest';
  * Red Team指摘: エラー時に生テキストが返される問題の修正検証
  */
 
-import { sanitizeRegex, MAX_INPUT_SIZE, MAX_OUTPUT_SIZE } from '../piiSanitizer';
+import { sanitizeRegex, MAX_INPUT_SIZE, MAX_OUTPUT_SIZE } from '../piiSanitizer.js';
 
 describe('PIIサニタイザ - セキュリティテスト', () => {
   describe('エラーハンドリングの安全性', () => {

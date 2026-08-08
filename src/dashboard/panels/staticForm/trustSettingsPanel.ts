@@ -1,5 +1,5 @@
 import { type StaticFormPanel } from '../types.js';
-import { init as initTrustSettings, loadTrustSettings } from '../../../popup/trustSettings.js';
+import { init as initTrustSettings, loadTrustSettings } from '../../settings/trustSettings.js';
 
 export function createTrustSettingsPanel(): StaticFormPanel {
   return {

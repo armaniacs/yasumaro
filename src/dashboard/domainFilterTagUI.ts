@@ -1,6 +1,6 @@
 import { getMessage } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
-import { loadDomainSettings } from '../popup/domainFilter.js';
+import { loadDomainSettings } from './settings/domainFilter.js';
 
 /**
  * Initialize the domain filter tag UI in settings panel

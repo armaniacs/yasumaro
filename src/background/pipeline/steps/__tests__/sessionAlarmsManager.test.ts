@@ -75,7 +75,7 @@ async function loadFreshModule() {
   vi.resetModules();
   setupChromeAlarms();
   setupStorageMocks();
-  const mod = await import('../../../../background/sessionAlarmsManager.js');
+  const mod = await import('../../../sessionAlarmsManager.js');
   return mod;
 }
 

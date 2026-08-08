@@ -3,11 +3,11 @@
  * uBlockインポートモジュール - ソース管理機能
  */
 
-import { parseUblockFilterListWithErrors, isValidString } from '../../utils/ublockParser/index.js';
-import { StorageKeys, saveSettings, getSettings } from '../../utils/storage.js';
-import { showStatus } from '../settingsUiHelper.js';
+import { parseUblockFilterListWithErrors, isValidString } from '../../../utils/ublockParser/index.js';
+import { StorageKeys, saveSettings, getSettings } from '../../../utils/storage.js';
+import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { rebuildRulesFromSources } from './rulesBuilder.js';
-import type { Source, UblockRules } from '../../utils/types.js';
+import type { Source, UblockRules } from '../../../utils/types.js';
 
 interface ReloadResult {
   sources: Source[];

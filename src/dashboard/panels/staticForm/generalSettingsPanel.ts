@@ -11,8 +11,8 @@ import {
   getAiProviderElements, syncStatusToTop,
 } from '../../dashboard.js';
 import { updateProviderSettingsLayout, hideAllProviderSettings } from '../../aiProviderLayoutManager.js';
-import { setupAIProviderChangeListener, updateAIProviderVisibilityMulti } from '../../../popup/settings/aiProvider.js';
-import { setupAllFieldValidations, setupObsidianHostValidation, setupGeminiApiVersionValidation } from '../../../popup/settings/fieldValidation.js';
+import { setupAIProviderChangeListener, updateAIProviderVisibilityMulti } from '../../settings/aiProvider.js';
+import { setupAllFieldValidations, setupObsidianHostValidation, setupGeminiApiVersionValidation } from '../../settings/fieldValidation.js';
 import { initOnboardingWizard } from '../../../popup/onboardingWizard.js';
 import { ModelsDevDialog } from '../../models-dev-dialog.js';
 
