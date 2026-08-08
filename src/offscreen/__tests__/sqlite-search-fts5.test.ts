@@ -95,7 +95,7 @@ beforeEach(async () => {
   vi.stubGlobal('Worker', FakeWorker);
 
   // Import fresh module after stubs are in place
-  const mod = await import('../sqlite.js');
+  const mod = await import('./sqliteTestApi.js');
   resetForTesting = mod._resetForTesting;
 });
 
@@ -110,7 +110,7 @@ afterEach(() => {
 
 describe('search() — OPFS worker SEARCH proxy (FTS5)', () => {
   it('routes search() to the worker SEARCH message and returns rank-bearing rows', async () => {
-    const mod = await import('../sqlite.js');
+    const mod = await import('./sqliteTestApi.js');
 
     const initOk = await mod.init();
     expect(initOk).toBe(true);
@@ -137,7 +137,7 @@ describe('search() — OPFS worker SEARCH proxy (FTS5)', () => {
   });
 
   it('fts5Available is true after OPFS worker initialises', async () => {
-    const mod = await import('../sqlite.js');
+    const mod = await import('./sqliteTestApi.js');
     await mod.init();
 
     // getStatus exposes fts5 flag

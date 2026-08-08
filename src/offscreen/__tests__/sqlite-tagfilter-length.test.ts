@@ -50,7 +50,7 @@ describe('FTS5 tagFilter query length limit', () => {
       configurable: true,
     });
 
-    const mod = await import('../sqlite.js');
+    const mod = await import('./sqliteTestApi.js');
     resetForTesting = mod._resetForTesting;
   });
 
@@ -60,7 +60,7 @@ describe('FTS5 tagFilter query length limit', () => {
   });
 
   it('truncates tagFilter longer than FTS_QUERY_MAX_LENGTH', async () => {
-    const mod = await import('../sqlite.js');
+    const mod = await import('./sqliteTestApi.js');
     await mod.init();
 
     // Build a tag longer than the limit
@@ -79,7 +79,7 @@ describe('FTS5 tagFilter query length limit', () => {
   });
 
   it('passes through tagFilter shorter than limit unchanged', async () => {
-    const mod = await import('../sqlite.js');
+    const mod = await import('./sqliteTestApi.js');
     await mod.init();
 
     const shortTag = 'javascript';

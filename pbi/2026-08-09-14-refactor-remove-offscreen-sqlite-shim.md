@@ -57,11 +57,58 @@ src/offscreen/offscreen.ts:31:} from './sqlite.js';
 
 ## 作業内容
 
-- [ ] `offscreen.ts:10-31` の import を4モジュールからの直接 import に置き換える
-- [ ] `init` の呼び出しを `engine.init()` に置き換える
-- [ ] `_resetForTesting` の参照を確認し、`engine.resetForTesting()` に置き換える
-- [ ] `src/offscreen/sqlite.ts` を削除する
-- [ ] テストが `sqlite.js` を参照していないか確認する
+- [x] `offscreen.ts:10-31` の import を4モジュールからの直接 import に置き換える
+- [x] `init` の呼び出しを `engine.init()` に置き換える
+- [x] `_resetForTesting` の参照を確認し、`engine.resetForTesting()` に置き換える
+- [x] `src/offscreen/sqlite.ts` を削除する
+- [x] テストが `sqlite.js` を参照していないか確認する
+
+## 実装結果
+
+### 起票時の調査漏れ（重要な訂正）
+
+PBI 起票時に「importer は `offscreen.ts:31` の1箇所のみ」と書いたが、**誤りだった**。
+
+静的 import（`from './sqlite.js'`）しか grep していなかったため、
+**動的 import（`await import('../sqlite.js')`）を見落としていた**。
+実際にはテスト6ファイル・計21箇所から参照されていた：
+
+| ファイル | 参照数 |
+|---|---|
+| `offscreen.test.ts` | 5 |
+| `sqlite-auditLog.test.ts` | 4 |
+| `sqlite-query-limit-cap.test.ts` | 4 |
+| `sqlite-search-fts5.test.ts` | 3 |
+| `sqlite-tagfilter-length.test.ts` | 3 |
+| `sqlite-migration-errors.test.ts` | 2 |
+
+**教訓**: 削除前の到達性確認では、静的・動的の**両方**の import 構文を検索すること。
+
+### 対応
+
+テスト群は「init → 書き込み → 読み出し → reset」という DB ライフサイクル全体を
+駆動するため、4モジュールを個別 import させるより1つのハンドルを渡す方が読みやすい。
+そこで `src/offscreen/__tests__/sqliteTestApi.ts` を新設し、**テスト配下に閉じた**
+集約層とした。
+
+本番コード（`offscreen.ts`）は各モジュールから直接 import する形になり、
+当初の目的（間接層の除去・非推奨注記の解消）は達成している。
+
+### 副次的な改善
+
+`offscreen.test.ts` の `vi.mock` は旧 shim 1つを差し替えていたが、
+本番の import 先に合わせて `sqliteEngineContext` / `recordsRepo` /
+`dbMaintenance` / `auditLogRepo` の**4つに分割**した。
+
+その結果、**ルータが実際に解決する import グラフを検証する**形になり、
+offscreen のテスト数が **152 → 175（+23）** に増えた。
+（従来は shim をまとめてモックしていたため、到達していない経路があった）
+
+### 検証結果
+
+- `src/offscreen/` テスト: **175件 全通過**（23ファイル）
+- `npm run type-check`: 通過
+- `npm run build`: 成功（`Σ Total size: 6.76 MB`）
 
 ## 完了条件
 

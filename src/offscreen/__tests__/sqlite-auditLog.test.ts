@@ -75,7 +75,7 @@ beforeEach(async () => {
 
   vi.stubGlobal('Worker', FakeWorker);
 
-  const mod = await import('../sqlite.js');
+  const mod = await import('./sqliteTestApi.js');
   resetForTesting = mod._resetForTesting;
 });
 
@@ -86,7 +86,7 @@ afterEach(() => {
 
 describe('audit_log', () => {
   it('inserts an audit log entry and returns its id', async () => {
-    const mod = await import('../sqlite.js');
+    const mod = await import('./sqliteTestApi.js');
 
     await mod.init();
     const result = await mod.insertAuditLog({ provider: 'gemini', url: 'https://example.com/page', created_at: 1700000000000 });
@@ -97,7 +97,7 @@ describe('audit_log', () => {
   });
 
   it('queries audit log entries ordered by created_at DESC', async () => {
-    const mod = await import('../sqlite.js');
+    const mod = await import('./sqliteTestApi.js');
 
     await mod.init();
     await mod.insertAuditLog({ provider: 'gemini', url: 'https://example.com/a', created_at: 1000 });
@@ -113,7 +113,7 @@ describe('audit_log', () => {
   });
 
   it('respects limit and offset', async () => {
-    const mod = await import('../sqlite.js');
+    const mod = await import('./sqliteTestApi.js');
 
     await mod.init();
     await mod.insertAuditLog({ provider: 'gemini', url: 'https://example.com/a', created_at: 1000 });
