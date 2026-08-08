@@ -13,7 +13,7 @@ import {
   exportSimpleFormat,
   buildUblockFormat,
   copyToClipboard
-} from '../../dashboard/settings/ublockImport/uiRenderer.js';
+} from '../uiRenderer.js';
 
 describe('ublockImport - UIRenderer Module', () => {
   // ============================================================================

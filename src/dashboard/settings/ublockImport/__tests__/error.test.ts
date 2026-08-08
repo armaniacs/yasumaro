@@ -6,13 +6,13 @@
  */
 
 
-import { fetchFromUrl, isValidUrl } from '../../dashboard/settings/ublockImport/index.js';
-import * as loggerModule from '../../utils/logger.js';
+import { fetchFromUrl, isValidUrl } from '../index.js';
+import * as loggerModule from '../../../../utils/logger.js';
 
 const { addLog, LogType } = vi.mocked(loggerModule);
 
 // Mock the logger module
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../../../utils/logger.js', () => ({
   addLog: vi.fn(),
   LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO' }
 }));

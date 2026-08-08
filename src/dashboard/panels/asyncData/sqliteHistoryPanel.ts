@@ -6,6 +6,7 @@ import {
   getSqliteStatus,
   appendToLogs,
 } from '../../dashboardSqliteService.js';
+import { getMessageOr } from '../../../utils/i18n.js';
 import { getSavedUrlEntries } from '../../../utils/storageUrls.js';
 import type { SavedUrlEntry } from '../../../utils/storageUrls.js';
 import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
@@ -40,7 +41,7 @@ const PAGE_SIZE = 20;
 const TAG_FILTER_FETCH_LIMIT = 5000;
 
 function t(key: string, substitutions?: string | string[]): string {
-  return chrome.i18n.getMessage(key, substitutions as string | string[]) || key;
+  return getMessageOr(key, key, substitutions);
 }
 
 interface SqliteHistoryState {

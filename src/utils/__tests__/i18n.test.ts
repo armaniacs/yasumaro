@@ -6,7 +6,7 @@
  */
 
 import { vi } from 'vitest';
-import { getMessage, getUserLocale, isRTL } from '../i18n.js';
+import { getMessage, getMessageOr, getUserLocale, isRTL } from '../i18n.js';
 import { applyI18n, translatePageTitle, setHtmlLangAndDir } from '../i18n-dom.js';
 
 describe('i18n', () => {
@@ -374,6 +374,34 @@ describe('i18n', () => {
 
       // Should preserve the original fallback text, not overwrite with empty string
       expect(div.textContent).toBe('Fallback text');
+    });
+  });
+
+  describe('getMessageOr', () => {
+    it('returns the translation when the key exists', () => {
+      expect(getMessageOr('testKey', 'fallback')).toBe('Test Message');
+    });
+
+    it('returns the fallback when the key is missing', () => {
+      // getMessage() returns "" here; callers used to reach past this module
+      // for `chrome.i18n.getMessage(key) || fallback` because of that.
+      expect(getMessage('missingKey')).toBe('');
+      expect(getMessageOr('missingKey', 'fallback')).toBe('fallback');
+    });
+
+    it('supports passing the key itself as the fallback', () => {
+      // Surfaces the missing translation instead of rendering blank UI.
+      expect(getMessageOr('missingKey', 'missingKey')).toBe('missingKey');
+    });
+
+    it('forwards substitutions to chrome.i18n', () => {
+      getMessageOr('testWithArgs', 'fallback', ['Yasu']);
+      expect(chrome.i18n.getMessage).toHaveBeenCalledWith('testWithArgs', ['Yasu']);
+    });
+
+    it('does not pass substitutions when none are given', () => {
+      getMessageOr('testKey', 'fallback');
+      expect(chrome.i18n.getMessage).toHaveBeenCalledWith('testKey');
     });
   });
 });

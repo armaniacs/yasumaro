@@ -49,3 +49,27 @@ export function getMessage(
 
   return message;
 }
+
+/**
+ * Get a translated message, falling back to `fallback` when the key has no
+ * translation.
+ *
+ * getMessage() returns "" for a missing key, which is why callers kept reaching
+ * past this module for the raw `chrome.i18n.getMessage(key) || fallback`
+ * idiom. Expressing that idiom here keeps them behind the seam.
+ *
+ * @param key - Translation key
+ * @param fallback - Text to use when the key is missing. Pass the key itself to
+ *                   surface the missing translation instead of blank UI.
+ * @param substitutions - Optional substitution parameters
+ */
+export function getMessageOr(
+  key: string,
+  fallback: string,
+  substitutions?: string | Array<string | number>
+): string {
+  const message = substitutions !== undefined
+    ? chrome.i18n.getMessage(key, substitutions as string | string[])
+    : chrome.i18n.getMessage(key);
+  return message || fallback;
+}
