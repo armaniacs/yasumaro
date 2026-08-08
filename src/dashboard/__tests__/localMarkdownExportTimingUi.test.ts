@@ -4,7 +4,7 @@
  */
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { extractLocalMarkdownExportTiming, loadLocalMarkdownExportTiming } from '../dashboard.js';
+import { extractLocalMarkdownExportTiming, loadLocalMarkdownExportTiming } from '../../utils/settingsFormBinding.js';
 
 function renderRadios(): void {
   document.body.innerHTML = `

@@ -70,3 +70,26 @@ export function extractSettingsFromInputs(container: HTMLElement): Record<string
 
   return settings;
 }
+
+/**
+ * Read the LOCAL_MARKDOWN_EXPORT_TIMING radio group's checked value.
+ */
+export function extractLocalMarkdownExportTiming(): string | undefined {
+  const radios = document.querySelectorAll<HTMLInputElement>('input[name="localMarkdownExportTiming"]');
+  if (!radios.length) return undefined;
+  for (const radio of radios) {
+    if (radio.checked) return radio.value;
+  }
+  return undefined;
+}
+
+/**
+ * Apply a LOCAL_MARKDOWN_EXPORT_TIMING value to the radio group.
+ */
+export function loadLocalMarkdownExportTiming(timing: string | undefined): void {
+  const radios = document.querySelectorAll<HTMLInputElement>('input[name="localMarkdownExportTiming"]');
+  if (!radios.length) return;
+  for (const radio of radios) {
+    radio.checked = radio.value === timing;
+  }
+}

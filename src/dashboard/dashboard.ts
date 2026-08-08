@@ -4,9 +4,8 @@
  * popup.ts の設定ロジックを流用し、フルページダッシュボードとして動作する
  */
 
-import { StorageKeys, getSettings, saveSettingsWithAllowedUrls, ProviderSlot } from '../utils/storage.js';
-import { loadSettingsToInputs, extractSettingsFromInputs } from '../utils/settingsFormBinding.js';
-import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, ErrorPair } from '../popup/settings/fieldValidation.js';
+import { StorageKeys, getSettings, ProviderSlot } from '../utils/storage.js';
+import { loadSettingsToInputs, extractSettingsFromInputs, extractLocalMarkdownExportTiming, loadLocalMarkdownExportTiming } from '../utils/settingsFormBinding.js';
 import { getMessage } from '../utils/i18n.js';
 import { type MultiProviderTestResult, type AiTestProgress, PROVIDER_LABELS } from '../background/aiClient.js';
 import { AI_TEST_PROGRESS_MESSAGE_TYPE, type AiTestProgressMessage } from '../background/aiTestProgressNotifier.js';
@@ -19,10 +18,11 @@ import { getPlatformOs } from '../utils/deviceUtils.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
 import type { DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
-import { showConfirmDialog } from './utils/confirmDialog.js';
 import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
 import { renderFileTemplate, getActiveTemplate, getHostname } from '../utils/markdownTemplateUtils.js';
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';
+import { saveDashboardSettings } from './settingsPipeline.js';
+import { generateReviewSummary } from './reviewSummaryHandler.js';
 
 function openSettingsPanel(section: string): void {
   const panelMap: Record<string, string> = {
@@ -54,31 +54,6 @@ function openSettingsPanel(section: string): void {
 }
 
 const SETTINGS_FORM_SELECTOR = '#panel-general';
-
-/**
- * Read the LOCAL_MARKDOWN_EXPORT_TIMING radio group's checked value.
- * Returns undefined when no radio is checked (should not happen once
- * loadLocalMarkdownExportTiming has run, but guards against a blank DOM).
- */
-export function extractLocalMarkdownExportTiming(): string | undefined {
-  const radios = document.querySelectorAll('input[name="localMarkdownExportTiming"]') as NodeListOf<HTMLInputElement>;
-  if (!radios.length) return undefined;
-  for (const radio of radios) {
-    if (radio.checked) return radio.value;
-  }
-  return undefined;
-}
-
-/**
- * Apply a LOCAL_MARKDOWN_EXPORT_TIMING value to the radio group.
- */
-export function loadLocalMarkdownExportTiming(timing: string | undefined): void {
-  const radios = document.querySelectorAll('input[name="localMarkdownExportTiming"]') as NodeListOf<HTMLInputElement>;
-  if (!radios.length) return;
-  for (const radio of radios) {
-    radio.checked = radio.value === timing;
-  }
-}
 
 /**
  * Ask the Service Worker to re-read LOCAL_MARKDOWN_EXPORT_TIMING and
@@ -293,80 +268,20 @@ export async function handleSaveOnly(): Promise<void> {
   statusDiv.textContent = '';
   statusDiv.className = '';
 
-  const protocolInput = document.getElementById('protocol') as HTMLInputElement | null;
-  const portInput = document.getElementById('port') as HTMLInputElement | null;
-  const obsidianHostInput = document.getElementById('obsidianHost') as HTMLInputElement | null;
-  const geminiApiVersionInput = document.getElementById('geminiApiVersion') as HTMLInputElement | null;
-  const minVisitDurationInput = document.getElementById('minVisitDuration') as HTMLInputElement | null;
-  const minScrollDepthInput = document.getElementById('minScrollDepth') as HTMLInputElement | null;
-  const maxTokensPerPromptInput = document.getElementById('maxTokensPerPrompt') as HTMLInputElement | null;
-  const errorPairs: ErrorPair[] = [
-    [protocolInput, 'protocolError'],
-    [portInput, 'portError'],
-    [obsidianHostInput, 'obsidianHostError'],
-    [geminiApiVersionInput, 'geminiApiVersionError'],
-    [minVisitDurationInput, 'minVisitDurationError'],
-    [minScrollDepthInput, 'minScrollDepthError'],
-    [maxTokensPerPromptInput, 'maxTokensError'],
-  ];
-  clearAllFieldErrors(errorPairs);
+  const result = await saveDashboardSettings({
+    onSuccess: () => {
+      statusDiv.textContent = getMessage('saveSuccess') || '設定を保存しました。';
+      statusDiv.className = 'success';
+      refreshLocalMarkdownScheduler();
+      syncStatusToTop();
+    },
+  });
 
-  if (!validateAllFields(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, maxTokensPerPromptInput)) {
-    return;
+  if (!result.success) {
+    statusDiv.textContent = getMessage('saveError') || '設定の保存に失敗しました。';
+    statusDiv.className = 'error';
+    syncStatusToTop();
   }
-
-  if (obsidianHostInput && !validateObsidianHost(obsidianHostInput)) {
-    return;
-  }
-
-  if (geminiApiVersionInput && !validateGeminiApiVersion(geminiApiVersionInput)) {
-    return;
-  }
-
-  // HTTP プロトコルが選択されている場合、確認ダイアログを表示
-  const protocolValue = protocolInput?.value?.trim().toLowerCase();
-  if (protocolValue === 'http') {
-    const confirmed = await showConfirmDialog({
-      title: getMessage('warningTitle') || 'Warning',
-      message: getMessage('confirmProtocolHttp'),
-      confirmLabel: getMessage('save') || 'Save',
-      cancelLabel: getMessage('cancel') || 'Cancel'
-    });
-    if (!confirmed) {
-      return;
-    }
-  }
-
-  const newSettings = extractSettingsFromInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body);
-  const timing = extractLocalMarkdownExportTiming();
-  if (timing) newSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = timing;
-
-  // Convert retention select values: "" → null, numeric string → number
-  const retentionDaysRaw = newSettings[StorageKeys.SQLITE_RETENTION_DAYS];
-  newSettings[StorageKeys.SQLITE_RETENTION_DAYS] =
-    retentionDaysRaw === '' || retentionDaysRaw === undefined ? null : Number(retentionDaysRaw);
-  const maxRecordsRaw = newSettings[StorageKeys.SQLITE_MAX_RECORDS];
-  newSettings[StorageKeys.SQLITE_MAX_RECORDS] =
-    maxRecordsRaw === '' || maxRecordsRaw === undefined ? null : Number(maxRecordsRaw);
-
-  // Content retention (PBI-3) — same null handling as SQLITE_RETENTION
-  const contentDaysRaw = newSettings[StorageKeys.CONTENT_RETENTION_DAYS];
-  newSettings[StorageKeys.CONTENT_RETENTION_DAYS] =
-    contentDaysRaw === '' || contentDaysRaw === undefined ? null : Number(contentDaysRaw);
-  const contentMaxRaw = newSettings[StorageKeys.CONTENT_MAX_RECORDS];
-  newSettings[StorageKeys.CONTENT_MAX_RECORDS] =
-    contentMaxRaw === '' || contentMaxRaw === undefined ? null : Number(contentMaxRaw);
-
-  const currentSettings = await getSettings();
-  const mergedSettings = { ...currentSettings, ...newSettings };
-  // Add provider priority slots
-  mergedSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectProviderPrioritySlots();
-  await saveSettingsWithAllowedUrls(mergedSettings);
-  refreshLocalMarkdownScheduler();
-
-  statusDiv.textContent = getMessage('saveSuccess') || '設定を保存しました。';
-  statusDiv.className = 'success';
-  syncStatusToTop();
 }
 
 export async function handleTestObsidian(): Promise<void> {
@@ -557,12 +472,17 @@ export async function handleTestAi(): Promise<void> {
     testAiBtn.disabled = true;
     if (testAiBtnTop) testAiBtnTop.disabled = true;
     try {
-      const newSettings = extractSettingsFromInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body);
-      const timing = extractLocalMarkdownExportTiming();
-      if (timing) newSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = timing;
-      const currentSettings = await getSettings();
-      const mergedSettings = { ...currentSettings, ...newSettings };
-      await saveSettingsWithAllowedUrls(mergedSettings);
+      const saveResult = await saveDashboardSettings({
+        formSelector: SETTINGS_FORM_SELECTOR,
+        includeTiming: true,
+      });
+      if (!saveResult.success) {
+        statusDiv.textContent = getMessage('saveError') || '設定の保存に失敗しました。';
+        statusDiv.className = 'error';
+        syncStatusToTop();
+        return;
+      }
+
       refreshLocalMarkdownScheduler();
 
       const aiResult = await testAiConnection(runId);
@@ -649,16 +569,21 @@ export async function handleTestLocalMarkdown(): Promise<void> {
   testLocalMarkdownBtn.disabled = true;
   try {
     // Save current settings first
-    const newSettings = extractSettingsFromInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body);
-    const timing = extractLocalMarkdownExportTiming();
-    if (timing) newSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = timing;
-    const currentSettings = await getSettings();
-    const mergedSettings = { ...currentSettings, ...newSettings };
-    await saveSettingsWithAllowedUrls(mergedSettings);
+    const saveResult = await saveDashboardSettings({
+      formSelector: SETTINGS_FORM_SELECTOR,
+      includeTiming: true,
+    });
+    if (!saveResult.success) {
+      statusTopDiv.textContent = getMessage('saveError') || '設定の保存に失敗しました。';
+      statusTopDiv.className = 'error';
+      return;
+    }
+
     refreshLocalMarkdownScheduler();
 
     // Check if enabled
-    const localExportEnabled = mergedSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED];
+    const settings = await getSettings();
+    const localExportEnabled = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED];
     if (!localExportEnabled) {
       statusTopDiv.textContent = getMessage('testLocalMarkdownDisabled') || 'ローカルMarkdown書き出しが無効です。まず有効にしてください。';
       statusTopDiv.className = 'error';
@@ -672,7 +597,7 @@ export async function handleTestLocalMarkdown(): Promise<void> {
     const testContent = `# ${date}\n\n- ${time} [Yasumaro Test](https://example.com)\n    - This is a test entry for local Markdown export. If you can see this file, the export is working correctly!`;
 
     // Download test file
-    const exportPath = (mergedSettings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
+    const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
     const blob = new Blob([testContent], { type: 'text/markdown' });
     const blobUrl = URL.createObjectURL(blob);
 
@@ -938,59 +863,13 @@ export async function handleExportLocalMarkdown(): Promise<void> {
 export async function handleGenerateWeeklySummary(): Promise<void> {
   const btn = document.getElementById('generateWeeklySummaryBtn') as HTMLButtonElement | null;
   const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement | null;
-  if (!btn || !statusEl) return;
-
-  btn.disabled = true;
-  statusEl.textContent = chrome.i18n.getMessage('testingConnection') || '生成中...';
-  statusEl.className = '';
-
-  try {
-    const response = await chrome.runtime.sendMessage({
-      type: 'GENERATE_REVIEW_SUMMARY',
-      protocolVersion: CURRENT_PROTOCOL_VERSION,
-      payload: { periodType: 'weekly' },
-    }) as { success: boolean; generated?: boolean };
-    if (!response.success) throw new Error('GENERATE_REVIEW_SUMMARY failed');
-    const success = Boolean(response.generated);
-    statusEl.textContent = chrome.i18n.getMessage(
-      success ? 'reviewSummaryGenerated' : 'reviewSummarySkipped'
-    ) || (success ? 'Summary generated.' : 'No history for the target period.');
-    statusEl.className = success ? 'success' : 'info';
-  } catch (_e) {
-    statusEl.textContent = chrome.i18n.getMessage('reviewSummaryFailed') || 'Failed to generate summary.';
-    statusEl.className = 'error';
-  } finally {
-    btn.disabled = false;
-  }
+  await generateReviewSummary({ button: btn, statusElement: statusEl, periodType: 'weekly' });
 }
 
 export async function handleGenerateMonthlySummary(): Promise<void> {
   const btn = document.getElementById('generateMonthlySummaryBtn') as HTMLButtonElement | null;
   const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement | null;
-  if (!btn || !statusEl) return;
-
-  btn.disabled = true;
-  statusEl.textContent = chrome.i18n.getMessage('testingConnection') || '生成中...';
-  statusEl.className = '';
-
-  try {
-    const response = await chrome.runtime.sendMessage({
-      type: 'GENERATE_REVIEW_SUMMARY',
-      protocolVersion: CURRENT_PROTOCOL_VERSION,
-      payload: { periodType: 'monthly' },
-    }) as { success: boolean; generated?: boolean };
-    if (!response.success) throw new Error('GENERATE_REVIEW_SUMMARY failed');
-    const success = Boolean(response.generated);
-    statusEl.textContent = chrome.i18n.getMessage(
-      success ? 'reviewSummaryGenerated' : 'reviewSummarySkipped'
-    ) || (success ? 'Summary generated.' : 'No history for the target period.');
-    statusEl.className = success ? 'success' : 'info';
-  } catch (_e) {
-    statusEl.textContent = chrome.i18n.getMessage('reviewSummaryFailed') || 'Failed to generate summary.';
-    statusEl.className = 'error';
-  } finally {
-    btn.disabled = false;
-  }
+  await generateReviewSummary({ button: btn, statusElement: statusEl, periodType: 'monthly' });
 }
 
 /**
