@@ -32,7 +32,18 @@ export interface DashboardSqliteHandlerDeps {
   purgeOldRecords: (days?: number, max?: number) => Promise<{ purged: number } | null>;
   purgeContent: (days?: number, max?: number, includeStarred?: boolean) => Promise<{ purged: number } | null>;
   backupDb: () => Promise<Uint8Array | null>;
-  lastError: string | null;
+  /**
+   * Reads the client's most recent categorized error.
+   *
+   * This MUST stay a getter rather than a plain value. It was previously
+   * typed `string | null`, which meant the production wiring evaluated
+   * `sqliteClient.lastError` once at module-load time — when it is always the
+   * initial `null` — so every `deps.lastError() || '...'` fallback below
+   * permanently took the generic branch and `categorizeError()`'s specific
+   * messages (quota exceeded / connection lost / timed out) never reached the
+   * dashboard.
+   */
+  lastError: () => string | null;
   runMigration: () => Promise<{ success: boolean; count: number; read?: number; inserted?: number; error?: string }>;
   getConfirmToken: () => Promise<string>;
   runBackfill: () => Promise<{ updated: number; total: number }>;
@@ -87,7 +98,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
             tagFilter: payload.tagFilter,
           });
           if (result === null) {
-            return { success: false, error: deps.lastError || 'Query failed' };
+            return { success: false, error: deps.lastError() || 'Query failed' };
           }
           return { success: true, rows: result.rows, total: result.total };
         }
@@ -98,21 +109,21 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
             payload.offset ?? 0,
           );
           if (result === null) {
-            return { success: false, error: deps.lastError || 'Search failed' };
+            return { success: false, error: deps.lastError() || 'Search failed' };
           }
           return { success: true, rows: result.rows, total: result.total };
         }
         case 'toggle_star': {
           const result = await deps.toggleStar(payload.id);
           if (!result) {
-            return { success: false, error: deps.lastError || 'Toggle star failed' };
+            return { success: false, error: deps.lastError() || 'Toggle star failed' };
           }
           return result;
         }
         case 'delete': {
           const ok = await deps.delete(payload.id);
           if (!ok) {
-            return { success: false, error: deps.lastError || 'Delete failed' };
+            return { success: false, error: deps.lastError() || 'Delete failed' };
           }
           return { success: true };
         }
@@ -124,21 +135,21 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           }
           const ok = await deps.update(payload.id, changes);
           if (!ok) {
-            return { success: false, error: deps.lastError || 'Update failed' };
+            return { success: false, error: deps.lastError() || 'Update failed' };
           }
           return { success: true };
         }
         case 'get_count': {
           const count = await deps.getCount();
           if (count === null) {
-            return { success: false, error: deps.lastError || 'Get count failed' };
+            return { success: false, error: deps.lastError() || 'Get count failed' };
           }
           return { success: true, count };
         }
         case 'clear_all': {
           const ok = await deps.clearAll();
           if (!ok) {
-            return { success: false, error: deps.lastError || 'Clear all failed' };
+            return { success: false, error: deps.lastError() || 'Clear all failed' };
           }
           return { success: true };
         }
@@ -177,8 +188,11 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
               }
             }
           }
-          if (deps.lastError && inserted === 0) {
-            return { success: false, error: deps.lastError };
+          // Read once: a second call could observe a different value if another
+          // operation completed in between.
+          const importError = deps.lastError();
+          if (importError && inserted === 0) {
+            return { success: false, error: importError };
           }
           return { success: true, inserted, skipped, total: rows.length };
         }
@@ -201,14 +215,14 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           if (status) {
             return { success: true, ...status };
           }
-          return { success: false, error: deps.lastError || 'Status check failed' };
+          return { success: false, error: deps.lastError() || 'Status check failed' };
         }
         case 'opfs_spike': {
           const report = await deps.runOpfsSpike();
           if (report) {
             return { success: true, report };
           }
-          return { success: false, error: deps.lastError || 'OPFS spike failed' };
+          return { success: false, error: deps.lastError() || 'OPFS spike failed' };
         }
         case 'append_to_obsidian': {
           const ids = payload.ids;
@@ -267,7 +281,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
             max  !== null ? Number(max)  : undefined,
           );
           if (purgedResult === null) {
-            return { success: false, error: deps.lastError || 'Purge failed' };
+            return { success: false, error: deps.lastError() || 'Purge failed' };
           }
           return { success: true, purged: purgedResult.purged, skipped: false };
         }
@@ -277,7 +291,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
             offset: payload.offset,
           });
           if (result === null) {
-            return { success: false, error: deps.lastError || 'Audit log query failed' };
+            return { success: false, error: deps.lastError() || 'Audit log query failed' };
           }
           return { success: true, rows: result.rows, total: result.total };
         }
@@ -295,7 +309,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
             includeStarred,
           );
           if (contentResult === null) {
-            return { success: false, error: deps.lastError || 'Content purge failed' };
+            return { success: false, error: deps.lastError() || 'Content purge failed' };
           }
           return { success: true, purged: contentResult.purged, skipped: false };
         }
@@ -304,7 +318,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           if (data) {
             return { success: true, data: bytesToBase64(data) };
           }
-          return { success: false, error: deps.lastError || 'Backup failed' };
+          return { success: false, error: deps.lastError() || 'Backup failed' };
         }
         case 'backfill_metadata': {
           try {
@@ -362,7 +376,7 @@ export async function handleDashboardSqlite(
     purgeOldRecords: (days, max) => sqliteClient.purgeOldRecords(days, max),
     purgeContent: (days, max, includeStarred) => sqliteClient.purgeContent(days, max, includeStarred),
     backupDb: () => sqliteClient.backupDb(),
-    lastError: sqliteClient.lastError ?? null,
+    lastError: () => sqliteClient.lastError ?? null,
     runMigration: runMigration ?? (async () => ({ success: false, error: 'Migration not available', count: 0 })),
     getConfirmToken: async () => validConfirmToken ?? '',
     runBackfill: runBackfill ?? (async () => { throw new Error('Backfill not available'); }),
