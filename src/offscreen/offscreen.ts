@@ -7,28 +7,31 @@
  * See dev-docs/2026-07-28-built-in-ai-provider-integration-design.md for the rationale.
  */
 
+import { engine } from './sqliteEngineContext.js';
 import {
-  init as sqliteInit,
   insert as sqliteInsert,
   insertBatch as sqliteInsertBatch,
   query as sqliteQuery,
   search as sqliteSearch,
-  sqliteHealthCheck,
   update as sqliteUpdate,
   hardDelete as sqliteHardDelete,
   toggleStar as sqliteToggleStar,
   getCount as sqliteGetCount,
   getStatus as sqliteGetStatus,
   serialize as sqliteSerialize,
+  clearAll as sqliteClearAll,
+} from './recordsRepo.js';
+import {
+  sqliteHealthCheck,
   backupDb as sqliteBackupDb,
   restoreDb as sqliteRestoreDb,
-  clearAll as sqliteClearAll,
   purgeOldRecords as sqlitePurgeOldRecords,
   purgeContent as sqlitePurgeContent,
+} from './dbMaintenance.js';
+import {
   insertAuditLog as sqliteInsertAuditLog,
   queryAuditLog as sqliteQueryAuditLog,
-  _resetForTesting as sqliteResetForTesting,
-} from './sqlite.js';
+} from './auditLogRepo.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 import { forwardWarn, forwardError } from './offscreenLogger.js';
@@ -69,7 +72,7 @@ const MAX_BATCH_TOTAL_BYTES = 20 * 1024 * 1024; // 20MB of summary text across t
 
 // For testing only - reset SQLite state
 export const _resetSqliteForTesting = (): void => {
-    sqliteResetForTesting();
+    engine.resetForTesting();
 };
 
 // Helper: extract BrowsingLogRecord fields from an untrusted payload.
@@ -126,7 +129,7 @@ async function handleSqliteMessage(
             break;
         }
         case 'SQLITE_INIT': {
-            const ok = await sqliteInit();
+            const ok = await engine.init();
             sendResponse({ success: ok, initialized: ok });
             break;
         }

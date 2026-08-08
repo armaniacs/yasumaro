@@ -2,8 +2,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { handleOffscreenMessage } from '../offscreen.js';
 
-vi.mock('../sqlite.js', () => ({
-    init: vi.fn().mockResolvedValue({ success: true }),
+// offscreen.ts imports each operation from the module that owns it, so the
+// mocks have to be split the same way — mocking a single aggregate would not
+// intercept the imports the router actually resolves.
+vi.mock('../sqliteEngineContext.js', () => ({
+    engine: {
+        init: vi.fn().mockResolvedValue(true),
+        resetForTesting: vi.fn(),
+    },
+}));
+
+vi.mock('../recordsRepo.js', () => ({
     insert: vi.fn(),
     insertBatch: vi.fn(),
     query: vi.fn(),
@@ -14,11 +23,20 @@ vi.mock('../sqlite.js', () => ({
     getCount: vi.fn(),
     getStatus: vi.fn(),
     serialize: vi.fn(),
+    clearAll: vi.fn(),
+}));
+
+vi.mock('../dbMaintenance.js', () => ({
     backupDb: vi.fn(),
     restoreDb: vi.fn(),
-    clearAll: vi.fn(),
     purgeOldRecords: vi.fn(),
-    _resetForTesting: vi.fn(),
+    purgeContent: vi.fn(),
+    sqliteHealthCheck: vi.fn(),
+}));
+
+vi.mock('../auditLogRepo.js', () => ({
+    insertAuditLog: vi.fn(),
+    queryAuditLog: vi.fn(),
 }));
 
 const noop = () => {};
@@ -106,7 +124,7 @@ describe('handleOffscreenMessage - SQLITE_BACKUP', () => {
     });
 
     it('converts Uint8Array to number[] so Chrome message passing serializes it correctly', async () => {
-        const { backupDb } = await import('../sqlite.js');
+        const { backupDb } = await import('../dbMaintenance.js');
         const mockData = new Uint8Array([83, 81, 76, 105, 116, 101]); // "SQLite" bytes
         vi.mocked(backupDb).mockResolvedValue({ success: true, data: mockData });
 
@@ -126,7 +144,7 @@ describe('handleOffscreenMessage - SQLITE_BACKUP', () => {
     });
 
     it('passes through failure response unchanged', async () => {
-        const { backupDb } = await import('../sqlite.js');
+        const { backupDb } = await import('../dbMaintenance.js');
         vi.mocked(backupDb).mockResolvedValue({ success: false, error: 'OPFS unavailable' });
 
         const responses: unknown[] = [];
@@ -155,7 +173,7 @@ describe('handleOffscreenMessage - SQLITE_RESTORE', () => {
     });
 
     it('converts number[] back to Uint8Array and calls restoreDb', async () => {
-        const { restoreDb } = await import('../sqlite.js');
+        const { restoreDb } = await import('../dbMaintenance.js');
         vi.mocked(restoreDb).mockResolvedValue({ success: true });
 
         const responses: unknown[] = [];
@@ -173,7 +191,7 @@ describe('handleOffscreenMessage - SQLITE_RESTORE', () => {
     });
 
     it('passes through failure response unchanged', async () => {
-        const { restoreDb } = await import('../sqlite.js');
+        const { restoreDb } = await import('../dbMaintenance.js');
         vi.mocked(restoreDb).mockResolvedValue({ success: false, error: 'restore failed' });
 
         const responses: unknown[] = [];

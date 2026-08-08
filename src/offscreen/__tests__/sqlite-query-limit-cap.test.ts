@@ -57,7 +57,7 @@ describe('Query limit hard cap (M13)', () => {
       configurable: true,
     });
 
-    const mod = await import('../sqlite.js');
+    const mod = await import('./sqliteTestApi.js');
     resetForTesting = mod._resetForTesting;
   });
 
@@ -67,7 +67,7 @@ describe('Query limit hard cap (M13)', () => {
   });
 
   it('clamps query() limit above the hard cap', async () => {
-    const mod = await import('../sqlite.js');
+    const mod = await import('./sqliteTestApi.js');
     await mod.init();
 
     workerMessages.length = 0;
@@ -80,7 +80,7 @@ describe('Query limit hard cap (M13)', () => {
   });
 
   it('leaves query() limit under the hard cap unchanged', async () => {
-    const mod = await import('../sqlite.js');
+    const mod = await import('./sqliteTestApi.js');
     await mod.init();
 
     workerMessages.length = 0;
@@ -93,7 +93,7 @@ describe('Query limit hard cap (M13)', () => {
   });
 
   it('clamps search() limit above the hard cap', async () => {
-    const mod = await import('../sqlite.js');
+    const mod = await import('./sqliteTestApi.js');
     await mod.init();
 
     workerMessages.length = 0;

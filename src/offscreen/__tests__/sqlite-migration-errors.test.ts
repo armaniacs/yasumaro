@@ -87,7 +87,7 @@ describe('ALTER TABLE migration error handling', () => {
       // For non-ALTER calls (SCHEMA_SQL, PRAGMA, etc.), succeed
     });
 
-    const { init, _resetForTesting } = await import('../sqlite.js');
+    const { init, _resetForTesting } = await import('./sqliteTestApi.js');
 
     // Reset module state
     _resetForTesting?.();
@@ -114,7 +114,7 @@ describe('ALTER TABLE migration error handling', () => {
       }
     });
 
-    const { init, _resetForTesting } = await import('../sqlite.js');
+    const { init, _resetForTesting } = await import('./sqliteTestApi.js');
     _resetForTesting?.();
 
     warnSpy.mockClear();
