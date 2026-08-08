@@ -297,6 +297,7 @@ export type ResponseForType<T extends ExtensionMessage['type']> =
   T extends 'CONSENT_STATE_CHANGED' ? { success: true } :
   T extends 'GENERATE_REVIEW_SUMMARY' ? { success: true; generated: boolean } :
   T extends 'DASHBOARD_SQLITE' ? Record<string, unknown> :
+  T extends 'LOG_FORWARD' ? { success: true } :
   SuccessResponse;
 
 /**

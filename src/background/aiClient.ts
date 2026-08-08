@@ -39,18 +39,16 @@ export interface MultiProviderTestResult {
     providers: ProviderTestResult[];
 }
 
-/** Progress notification emitted when testConnection() starts testing one provider slot. */
-export interface AiTestProgress {
-    /** Correlation id so a receiver (e.g. multiple Dashboard tabs) only renders
-     * progress belonging to its own test run. Omitted for single-run callers. */
-    runId?: string;
-    provider: string;
-    model?: string;
-    /** 0-based index of the slot currently being tested. */
-    index: number;
-    /** Total number of slots in the priority list. */
-    total: number;
-}
+/**
+ * Progress notification emitted when testConnection() starts testing one
+ * provider slot.
+ *
+ * Single source of truth is `ai/AIService.ts`, which owns the AIService
+ * contract that testConnection belongs to. Re-exported here for the existing
+ * importers of this module.
+ */
+import type { AiTestProgress } from './ai/AIService.js';
+export type { AiTestProgress };
 
 /**
  * Human-readable labels for AI provider identifiers.
