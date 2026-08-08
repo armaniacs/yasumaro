@@ -1,6 +1,6 @@
 import { type StaticFormPanel } from '../types.js';
 import { getSettings } from '../../../utils/storage.js';
-import { init as initContentSettings, loadContentSettings } from '../../../popup/contentSettings.js';
+import { init as initContentSettings, loadContentSettings } from '../../settings/contentSettings.js';
 
 export function createContentSettingsPanel(): StaticFormPanel {
   return {

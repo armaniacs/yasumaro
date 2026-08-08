@@ -6,8 +6,8 @@
 import type { Settings } from '../utils/storage.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../utils/i18n.js';
-import { showStatus } from '../popup/settingsUiHelper.js';
-import { focusTrapManager } from '../popup/utils/focusTrap.js';
+import { showStatus } from '../utils/ui/settingsUiHelper.js';
+import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { showPasswordAuthModal } from './masterPassword.js';
 import { importSettings } from '../utils/settingsExportImport.js';
 import type { SettingsExportData } from '../utils/settingsExportImport.js';
@@ -17,10 +17,10 @@ import {
   applyImportedSettings,
 } from '../utils/settingsExportImportUiCore.js';
 import type { ExportContext, ImportContext } from '../utils/settingsExportImportUiCore.js';
-import { loadDomainSettings } from '../popup/domainFilter.js';
-import { loadPrivacySettings } from '../popup/privacySettings.js';
-import { loadContentSettings } from '../popup/contentSettings.js';
-import { loadTrustSettings } from '../popup/trustSettings.js';
+import { loadDomainSettings } from './settings/domainFilter.js';
+import { loadPrivacySettings } from './settings/privacySettings.js';
+import { loadContentSettings } from './settings/contentSettings.js';
+import { loadTrustSettings } from './settings/trustSettings.js';
 import { importFromJson } from './importLogsService.js';
 
 // DOM Elements

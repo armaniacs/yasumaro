@@ -13,22 +13,22 @@ vi.stubGlobal('chrome', {
 });
 
 vi.mock('../../utils/i18n.js', () => ({ getMessage: vi.fn((k: string) => k) }));
-vi.mock('../../popup/domainFilter.js', () => ({ init: vi.fn() }));
-vi.mock('../../popup/privacySettings.js', () => ({ init: vi.fn() }));
-vi.mock('../../popup/contentSettings.js', () => ({ init: vi.fn() }));
-vi.mock('../../popup/trustSettings.js', () => ({ init: vi.fn(), loadTrustSettings: vi.fn() }));
-vi.mock('../../popup/customPromptManager.js', () => ({ initCustomPromptManager: vi.fn() }));
-vi.mock('../../popup/aiSummaryCleansingSettingsV2.js', () => ({
+vi.mock('../settings/domainFilter.js', () => ({ init: vi.fn() }));
+vi.mock('../settings/privacySettings.js', () => ({ init: vi.fn() }));
+vi.mock('../settings/contentSettings.js', () => ({ init: vi.fn() }));
+vi.mock('../settings/trustSettings.js', () => ({ init: vi.fn(), loadTrustSettings: vi.fn() }));
+vi.mock('../settings/customPromptManager.js', () => ({ initCustomPromptManager: vi.fn() }));
+vi.mock('../settings/aiSummaryCleansingSettingsV2.js', () => ({
     getAiSummaryCleansingSettings: vi.fn().mockResolvedValue({}),
     applyAiSummaryCleansingSettingsToUI: vi.fn(),
     setupAiSummaryCleansingEventListeners: vi.fn(),
 }));
-vi.mock('../../popup/settings/aiProvider.js', () => ({
+vi.mock('../settings/aiProvider.js', () => ({
     setupAIProviderChangeListener: vi.fn(),
     updateAIProviderVisibility: vi.fn(),
     updateAIProviderVisibilityMulti: vi.fn(),
 }));
-vi.mock('../../popup/settings/fieldValidation.js', () => ({
+vi.mock('../settings/fieldValidation.js', () => ({
     clearAllFieldErrors: vi.fn(),
     validateAllFields: vi.fn().mockReturnValue(true),
     setupAllFieldValidations: vi.fn(),
@@ -37,7 +37,7 @@ vi.mock('../../popup/privacyConsent.js', () => ({
     getPrivacyConsent: vi.fn().mockResolvedValue(null),
     withdrawPrivacyConsent: vi.fn(),
 }));
-vi.mock('../../dashboard/cspSettings.js', () => ({ CSPSettings: class { load = vi.fn(); } }));
+vi.mock('../cspSettings.js', () => ({ CSPSettings: class { load = vi.fn(); } }));
 
 const { mockGetSettings, mockSaveSettings } = vi.hoisted(() => ({
     mockGetSettings: vi.fn(),

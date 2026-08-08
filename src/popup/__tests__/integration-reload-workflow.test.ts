@@ -4,7 +4,7 @@
  */
 
 import { parseUblockFilterListWithErrors } from '../../utils/ublockParser/index.js';
-import { rebuildRulesFromSources } from '../ublockImport/index.js';
+import { rebuildRulesFromSources } from '../../dashboard/settings/ublockImport/index.js';
 import { StorageKeys } from '../../utils/storage.js';
 
 // モックの設定

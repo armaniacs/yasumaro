@@ -3,12 +3,12 @@
  * Privacy settings functionality for the popup UI.
  */
 
-import { StorageKeys, saveSettings, getSettings } from '../utils/storage.js';
-import { errorMessage } from '../utils/errorUtils.js';
-import { addLog, LogType } from '../utils/logger.js';
-import { showStatus } from './settingsUiHelper.js';
-import { getMessage } from '../utils/i18n.js';
-import { sanitizeRegex } from '../utils/piiSanitizer.js';
+import { StorageKeys, saveSettings, getSettings } from '../../utils/storage.js';
+import { errorMessage } from '../../utils/errorUtils.js';
+import { addLog, LogType } from '../../utils/logger.js';
+import { showStatus } from '../../utils/ui/settingsUiHelper.js';
+import { getMessage } from '../../utils/i18n.js';
+import { sanitizeRegex } from '../../utils/piiSanitizer.js';
 
 /** Fixed dummy text used to preview PII masking behavior (M4). Never sent anywhere. */
 const PII_SAMPLE_TEXT = 'Contact John Smith at john.smith@example.com or 090-1234-5678.';

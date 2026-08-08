@@ -17,7 +17,7 @@ const mockGetSettings = vi.fn(() => Promise.resolve({
 }));
 const mockSaveSettings = vi.fn(() => Promise.resolve());
 
-vi.mock('../../utils/storage.js', () => ({
+vi.mock('../../../utils/storage.js', () => ({
   StorageKeys: {
     DOMAIN_FILTER_MODE: 'domain_filter_mode',
     DOMAIN_WHITELIST: 'domain_whitelist',
@@ -34,7 +34,7 @@ const mockParseDomainList = vi.fn((text: string) =>
 );
 const mockValidateDomainList = vi.fn(() => [] as string[]);
 
-vi.mock('../../utils/domainUtils.js', () => ({
+vi.mock('../../../utils/domainUtils.js', () => ({
   extractDomain: vi.fn(),
   parseDomainList: mockParseDomainList,
   validateDomainList: mockValidateDomainList,
@@ -50,23 +50,23 @@ vi.mock('../ublockImport/index.js', () => ({
 
 const mockAddLog = vi.fn();
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger.js', () => ({
   addLog: mockAddLog,
   LogType: { ERROR: 'ERROR', INFO: 'INFO' },
 }));
 
-vi.mock('../tabUtils.js', () => ({
+vi.mock('../../../popup/tabUtils.js', () => ({
   getCurrentTab: vi.fn(),
   isRecordable: vi.fn(),
 }));
 
 const mockShowStatus = vi.fn();
 
-vi.mock('../settingsUiHelper.js', () => ({
+vi.mock('../../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: mockShowStatus,
 }));
 
-vi.mock('../../utils/i18n.js', () => ({
+vi.mock('../../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => {
     const msgs: Record<string, string> = {
       whitelistLabel: 'Whitelist (1 domain per line)',

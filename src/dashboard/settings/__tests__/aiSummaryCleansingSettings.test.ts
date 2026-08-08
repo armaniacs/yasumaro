@@ -5,7 +5,7 @@
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 
-vi.mock('../../utils/storage.js', () => ({
+vi.mock('../../../utils/storage.js', () => ({
     StorageKeys: {
         AI_SUMMARY_CLEANSING_ENABLED: 'ai_summary_cleansing_enabled',
         AI_SUMMARY_CLEANSING_ALT: 'ai_summary_cleansing_alt',
@@ -25,7 +25,7 @@ vi.mock('../../utils/storage.js', () => ({
     saveSettings: vi.fn(() => Promise.resolve()),
 }));
 
-import * as storage from '../../utils/storage.js';
+import * as storage from '../../../utils/storage.js';
 import {
     getAiSummaryCleansingSettings,
     saveAiSummaryCleansingSettings,

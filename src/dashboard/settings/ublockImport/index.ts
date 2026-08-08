@@ -4,16 +4,16 @@
  */
 
 import { readFile } from './fileReader.js';
-import { errorMessage } from '../../utils/errorUtils.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 import { fetchFromUrl } from './urlFetcher.js';
 import { isValidUrl } from './validation.js';
 import { rebuildRulesFromSources, previewUblockFilter } from './rulesBuilder.js';
 import { loadAndDisplaySources, deleteSource, reloadSource, saveUblockSettings } from './sourceManager.js';
 import { renderSourceList, updatePreviewUI, hidePreview, clearInput, exportSimpleFormat, copyToClipboard } from './uiRenderer.js';
-import { showStatus } from '../settingsUiHelper.js';
-import { LogType, addLog } from '../../utils/logger.js';
-import { StorageKeys, getSettings, saveSettings } from '../../utils/storage.js';
-import { getMessage } from '../../utils/i18n.js';
+import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
+import { LogType, addLog } from '../../../utils/logger.js';
+import { StorageKeys, getSettings, saveSettings } from '../../../utils/storage.js';
+import { getMessage } from '../../../utils/i18n.js';
 
 // グローバル状態
 let dropZoneActive = false;

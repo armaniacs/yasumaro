@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { NavigationRegistry } from '../NavigationRegistry';
-import { type AsyncDataPanel, type StaticFormPanel } from '../types';
+import { NavigationRegistry } from '../NavigationRegistry.js';
+import { type AsyncDataPanel, type StaticFormPanel } from '../types.js';
 
 function mockAsyncPanel(overrides?: Partial<AsyncDataPanel>): AsyncDataPanel {
   return {

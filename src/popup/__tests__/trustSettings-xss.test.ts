@@ -10,7 +10,7 @@
  */
 
 import { describe, test, expect, jest } from 'vitest';
-import { renderJpAnchorList, renderSensitiveList } from '../trustSettings.js';
+import { renderJpAnchorList, renderSensitiveList } from '../../dashboard/settings/trustSettings.js';
 
 // Mock chrome API
 global.chrome = {

@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../../../popup/privacySettings.js', () => ({
+vi.mock('../../../settings/privacySettings.js', () => ({
   init: vi.fn(),
   loadPrivacySettings: vi.fn(),
 }));

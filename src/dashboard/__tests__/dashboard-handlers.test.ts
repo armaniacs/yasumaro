@@ -160,13 +160,13 @@ vi.mock('../../utils/storage.js', () => ({
     },
 }));
 
-vi.mock('../../popup/settingsUiHelper.js', () => ({
+vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
     loadSettingsToInputs: vi.fn(),
     extractSettingsFromInputs: vi.fn().mockReturnValue({}),
     showStatus: vi.fn(),
 }));
 
-vi.mock('../../popup/settings/fieldValidation.js', () => ({
+vi.mock('../settings/fieldValidation.js', () => ({
     clearAllFieldErrors: vi.fn(),
     validateAllFields: vi.fn().mockReturnValue(true),
     validateObsidianHost: vi.fn().mockReturnValue(true),
@@ -175,7 +175,7 @@ vi.mock('../../popup/settings/fieldValidation.js', () => ({
     ErrorPair: class {},
 }));
 
-vi.mock('../../popup/settings/aiProvider.js', () => ({
+vi.mock('../settings/aiProvider.js', () => ({
     setupAIProviderChangeListener: vi.fn(),
     updateAIProviderVisibility: vi.fn(),
     updateAIProviderVisibilityMulti: vi.fn(),
@@ -189,7 +189,7 @@ vi.mock('../../utils/storageUrls.js', () => ({
     }),
 }));
 
-vi.mock('../../popup/utils/focusTrap.js', () => ({
+vi.mock('../../utils/ui/focusTrap.js', () => ({
     focusTrapManager: {
         trap: vi.fn().mockReturnValue('trap-id'),
         release: vi.fn(),
@@ -205,20 +205,20 @@ vi.mock('../../utils/i18n.js', () => ({
     getMessage: vi.fn((key: string) => key),
 }));
 
-vi.mock('../../popup/aiSummaryCleansingSettingsV2.js', () => ({
+vi.mock('../settings/aiSummaryCleansingSettingsV2.js', () => ({
     getAiSummaryCleansingSettings: vi.fn().mockResolvedValue({}),
     applyAiSummaryCleansingSettingsToUI: vi.fn(),
     setupAiSummaryCleansingEventListeners: vi.fn(),
 }));
 
-vi.mock('../../popup/domainFilter.js', () => ({ init: vi.fn() }));
-vi.mock('../../popup/privacySettings.js', () => ({ init: vi.fn() }));
-vi.mock('../../popup/contentSettings.js', () => ({ init: vi.fn() }));
-vi.mock('../../popup/trustSettings.js', () => ({
+vi.mock('../settings/domainFilter.js', () => ({ init: vi.fn() }));
+vi.mock('../settings/privacySettings.js', () => ({ init: vi.fn() }));
+vi.mock('../settings/contentSettings.js', () => ({ init: vi.fn() }));
+vi.mock('../settings/trustSettings.js', () => ({
     init: vi.fn(),
     loadTrustSettings: vi.fn(),
 }));
-vi.mock('../../popup/customPromptManager.js', () => ({ initCustomPromptManager: vi.fn() }));
+vi.mock('../settings/customPromptManager.js', () => ({ initCustomPromptManager: vi.fn() }));
 
 // Same-directory mocks (relative from __tests__ to parent src/dashboard/)
 vi.mock('../historyPanel.js', () => ({ initHistoryPanel: vi.fn().mockResolvedValue(undefined) }));
@@ -298,7 +298,7 @@ describe('handleSaveOnly', () => {
     });
 
     it('saves settings and shows success', async () => {
-        const helper = await mocked('../../popup/settingsUiHelper.js');
+        const helper = await mocked('../../utils/ui/settingsUiHelper.js');
         helper.extractSettingsFromInputs.mockReturnValueOnce({ obsidian_protocol: 'https' });
         lastSavedSettings = null;
 
@@ -318,7 +318,7 @@ describe('handleSaveOnly', () => {
     });
 
     it('returns early when validation fails', async () => {
-        const fv = await mocked('../../popup/settings/fieldValidation.js');
+        const fv = await mocked('../settings/fieldValidation.js');
         fv.validateAllFields.mockReturnValueOnce(false);
         lastSavedSettings = null;
         await handleSaveOnly();

@@ -4,7 +4,7 @@
  */
 
 
-import { addLog, getLogs, clearLogs, flushLogs } from '../logger';
+import { addLog, getLogs, clearLogs, flushLogs } from '../logger.js';
 
 describe('Logger - 深度制限と循環参照検出', () => {
     beforeEach(async () => {

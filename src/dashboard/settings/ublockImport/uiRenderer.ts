@@ -4,8 +4,8 @@
  */
 
 import { isValidUrl } from './validation.js';
-import { getMessage } from '../../utils/i18n.js';
-import { getPluralKey } from '../../utils/i18nPlural.js';
+import { getMessage } from '../../../utils/i18n.js';
+import { getPluralKey } from '../../../utils/i18nPlural.js';
 
 interface Source {
   url: string;

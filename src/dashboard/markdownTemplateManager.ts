@@ -17,7 +17,7 @@ import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils
 import { getMessage } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { escapeHtml } from '../popup/errorUtils.js';
-import { showStatus } from '../popup/settingsUiHelper.js';
+import { showStatus } from '../utils/ui/settingsUiHelper.js';
 
 /** ライブプレビュー用のサンプルエントリ */
 const SAMPLE_ENTRIES: MarkdownTemplateEntryData[] = [

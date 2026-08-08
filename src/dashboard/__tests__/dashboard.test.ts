@@ -118,27 +118,27 @@ vi.mock('../utils/storage.js', () => ({
     },
 }));
 
-vi.mock('../popup/settingsUiHelper.js', () => ({
+vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
     loadSettingsToInputs: vi.fn(),
     extractSettingsFromInputs: vi.fn().mockReturnValue({}),
     showStatus: vi.fn(),
 }));
 
-vi.mock('../popup/settings/fieldValidation.js', () => ({
+vi.mock('../settings/fieldValidation.js', () => ({
     clearAllFieldErrors: vi.fn(),
     validateAllFields: vi.fn().mockReturnValue(true),
     setupAllFieldValidations: vi.fn().mockReturnValue([]),
     ErrorPair: class {},
 }));
 
-vi.mock('../popup/settings/aiProvider.js', () => ({
+vi.mock('../settings/aiProvider.js', () => ({
     setupAIProviderChangeListener: vi.fn(),
     updateAIProviderVisibility: vi.fn(),
     updateAIProviderVisibilityMulti: vi.fn(),
     AIProviderElements: {},
 }));
 
-vi.mock('../popup/utils/focusTrap.js', () => ({
+vi.mock('../../utils/ui/focusTrap.js', () => ({
     focusTrapManager: {
         trap: vi.fn().mockReturnValue('trap-id'),
         release: vi.fn(),
@@ -155,20 +155,20 @@ vi.mock('../constants/appConstants.js', () => ({
     },
 }));
 
-vi.mock('../popup/aiSummaryCleansingSettingsV2.js', () => ({
+vi.mock('../settings/aiSummaryCleansingSettingsV2.js', () => ({
     getAiSummaryCleansingSettings: vi.fn().mockResolvedValue({}),
     applyAiSummaryCleansingSettingsToUI: vi.fn(),
     setupAiSummaryCleansingEventListeners: vi.fn(),
 }));
 
-vi.mock('../popup/domainFilter.js', () => ({ init: vi.fn() }));
-vi.mock('../popup/privacySettings.js', () => ({ init: vi.fn() }));
-vi.mock('../popup/contentSettings.js', () => ({ init: vi.fn() }));
-vi.mock('../popup/trustSettings.js', () => ({
+vi.mock('../settings/domainFilter.js', () => ({ init: vi.fn() }));
+vi.mock('../settings/privacySettings.js', () => ({ init: vi.fn() }));
+vi.mock('../settings/contentSettings.js', () => ({ init: vi.fn() }));
+vi.mock('../settings/trustSettings.js', () => ({
     init: vi.fn(),
     loadTrustSettings: vi.fn(),
 }));
-vi.mock('../popup/customPromptManager.js', () => ({ initCustomPromptManager: vi.fn() }));
+vi.mock('../settings/customPromptManager.js', () => ({ initCustomPromptManager: vi.fn() }));
 vi.mock('../../utils/i18n.js', () => ({ getMessage: vi.fn((key: string) => key) }));
 vi.mock('./historyPanel.js', () => ({ initHistoryPanel: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./models-dev-dialog.js', () => ({
@@ -196,7 +196,7 @@ vi.mock('./tagsPanel.js', () => ({
 vi.mock('./trancoConsent.js', () => ({
     initTrancoConsentPanel: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('../popup/privacyConsent.js', () => ({
+vi.mock('../../popup/privacyConsent.js', () => ({
     getPrivacyConsent: vi.fn().mockResolvedValue({ hasConsented: false }),
     withdrawPrivacyConsent: vi.fn().mockResolvedValue(undefined),
 }));

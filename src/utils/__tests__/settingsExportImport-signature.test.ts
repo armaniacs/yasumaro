@@ -128,7 +128,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         const settingsExportImport = await import('../settingsExportImport.js');
 
         // 【モック設定】computeHMACが同じ署名を返す
-        const cryptoModule = await import('../../utils/crypto/index.js');
+        const cryptoModule = await import('../crypto/index.js');
         vi.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue(mockSignature);
 
         const result = await settingsExportImport.importSettings(jsonData);
@@ -184,7 +184,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         const settingsExportImport = await import('../settingsExportImport.js');
 
         // 【モック設定】computeHMACが元の署名と異なる値を返す
-        const cryptoModule = await import('../../utils/crypto/index.js');
+        const cryptoModule = await import('../crypto/index.js');
         vi.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue('original-signature');
 
         const result = await settingsExportImport.importSettings(jsonData);
@@ -241,7 +241,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         const settingsExportImport = await import('../settingsExportImport.js');
 
         // 【モック設定】computeHMACが改ざん後のデータから異なる署名を返す
-        const cryptoModule = await import('../../utils/crypto/index.js');
+        const cryptoModule = await import('../crypto/index.js');
         vi.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue('tampered-data-signature');
 
         const result = await settingsExportImport.importSettings(jsonData);
@@ -379,7 +379,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         const settingsExportImport = await import('../settingsExportImport.js');
 
         // 【モック設定】computeHMACが同じ署名を返す
-        const cryptoModule = await import('../../utils/crypto/index.js');
+        const cryptoModule = await import('../crypto/index.js');
         vi.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue(mockSignature);
 
         const result = await settingsExportImport.importSettings(jsonData);
@@ -437,7 +437,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
 
         // 【モック設定】computeHMACが一貫して同じ署名を返す
         let callCount = 0;
-        const cryptoModule = await import('../../utils/crypto/index.js');
+        const cryptoModule = await import('../crypto/index.js');
         vi.spyOn(cryptoModule, 'computeHMAC').mockImplementation(async () => {
             callCount++;
             return expectedSignature;

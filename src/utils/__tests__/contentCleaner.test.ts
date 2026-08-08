@@ -958,7 +958,7 @@ import {
     cleanseContent,
     countCleanseTargets,
     type AttributeSelector
-} from '../contentCleaner';
+} from '../contentCleaner.js';
 
 describe('isHardStripTarget', () => {
     let dom: JSDOM;

@@ -16,7 +16,7 @@ import {
     focusTrapManager,
     trapFocus,
     releaseFocusTrap
-} from '../utils/focusTrap.js';
+} from '../focusTrap.js';
 
 describe('focusTrap', () => {
     let manager: FocusTrapManager;

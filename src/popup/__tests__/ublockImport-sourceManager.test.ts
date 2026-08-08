@@ -11,7 +11,7 @@ import {
   deleteSource,
   reloadSource,
   saveUblockSettings
-} from '../ublockImport/sourceManager.js';
+} from '../../dashboard/settings/ublockImport/sourceManager.js';
 import { RecordingCache } from '../../background/recordingCache.js';
 
 // 【重要】storage.tsのcachedSettingsを直接クリアするためのユーティリティ

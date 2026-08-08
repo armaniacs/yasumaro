@@ -3,7 +3,7 @@
 // ============================================================================
 
 import { getMessage } from '../utils/i18n.js';
-import { showStatus } from '../popup/settingsUiHelper.js';
+import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { getSettings, saveSettingsWithAllowedUrls, StorageKeys } from '../utils/storage.js';
 
 interface TrancoConsentState {

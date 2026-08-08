@@ -5,11 +5,11 @@ vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key) => `i18n_${key}`),
 }));
 
-vi.mock('../../popup/settingsUiHelper.js', () => ({
+vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: vi.fn(),
 }));
 
-vi.mock('../../popup/utils/focusTrap.js', () => ({
+vi.mock('../../utils/ui/focusTrap.js', () => ({
   focusTrapManager: {
     trap: vi.fn().mockReturnValue('trap-id'),
     release: vi.fn(),

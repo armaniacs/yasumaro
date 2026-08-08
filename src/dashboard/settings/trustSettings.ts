@@ -4,16 +4,16 @@
  * Dashboard TrustパネルのUIロジック
  */
 
-import type { TrancoTier, SafetyMode } from '../utils/trustDb/trustDbSchema.js';
-import { errorMessage } from '../utils/errorUtils.js';
-import { StorageKeys } from '../utils/storage.js';
-import { getTrustDb } from '../utils/trustDb/trustDb.js';
-import { getTrancoUpdater } from '../utils/trustDb/trancoUpdater.js';
-import { logInfo, logError, ErrorCode } from '../utils/logger.js';
-import { getMessage } from '../utils/i18n.js';
-import { getPluralKey } from '../utils/i18nPlural.js';
-import { getTrustChecker } from '../utils/trustChecker.js';
-import { showStatus } from './settingsUiHelper.js';
+import type { TrancoTier, SafetyMode } from '../../utils/trustDb/trustDbSchema.js';
+import { errorMessage } from '../../utils/errorUtils.js';
+import { StorageKeys } from '../../utils/storage.js';
+import { getTrustDb } from '../../utils/trustDb/trustDb.js';
+import { getTrancoUpdater } from '../../utils/trustDb/trancoUpdater.js';
+import { logInfo, logError, ErrorCode } from '../../utils/logger.js';
+import { getMessage } from '../../utils/i18n.js';
+import { getPluralKey } from '../../utils/i18nPlural.js';
+import { getTrustChecker } from '../../utils/trustChecker.js';
+import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
 // ============================================================================
 // DOM Elements
@@ -517,7 +517,7 @@ export function init(): void {
   }
 
   document.getElementById('dismissAllPermissions')?.addEventListener('click', async () => {
-    const { recordDomainDismissal } = await import('../utils/permissionManager.js');
+    const { recordDomainDismissal } = await import('../../utils/permissionManager.js');
     const denied = await renderPermissionSuggestList();
     for (const { domain } of denied) {
       await recordDomainDismissal(domain);
@@ -544,7 +544,7 @@ export async function renderPermissionSuggestList(): Promise<{ domain: string; c
 
   const threshold = thresholdInput ? parseInt(thresholdInput.value, 10) : 3;
   const { getFrequentDeniedDomains, requestPermission, removeDeniedDomain, recordDomainDismissal, isHostPermitted } =
-    await import('../utils/permissionManager.js');
+    await import('../../utils/permissionManager.js');
 
   const denied = await getFrequentDeniedDomains(threshold);
   if (denied.length > 0) {

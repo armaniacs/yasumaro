@@ -4,7 +4,7 @@
  */
 
 import { getMessage } from '../utils/i18n.js';
-import { showStatus } from '../popup/settingsUiHelper.js';
+import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { getSettings, saveSettingsWithAllowedUrls, StorageKeys } from '../utils/storage.js';
 import { DEFAULT_CATEGORIES } from '../utils/tagUtils.js';
 import type { TagCategory, TagNormalizationEntry } from '../utils/types.js';

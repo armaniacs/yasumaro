@@ -197,7 +197,7 @@ describe('migration', () => {
       // 【テスト内容】: 保存された旧形式ルールを取得し、新形式に変換して保存する処理をテスト
       // 【期待される動作】: StorageKeys.UBLOCK_RULES経由で旧形式を取得し、新形式で保存する
 
-      const { StorageKeys } = await import('../storage');
+      const { StorageKeys } = await import('../storage.js');
 
       const oldUblockRules = {
         blockRules: [
@@ -239,7 +239,7 @@ describe('migration', () => {
       // 【テスト内容】: すでに新形式のルールが保存されている場合はマイグレーションをスキップする処理をテスト
       // 【期待される動作】: ルールが新形式の場合、getのみ実行され、setされずにfalseが返される
 
-      const { StorageKeys } = await import('../storage');
+      const { StorageKeys } = await import('../storage.js');
 
       const newUblockRules = {
         blockDomains: ['example.com'],
@@ -265,7 +265,7 @@ describe('migration', () => {
       // 【テスト内容】: ストレージにuBlockルールが保存されていないケースをテスト
       // 【期待される動作】: getが実行され、setされずにfalseが返される
 
-      const { StorageKeys } = await import('../storage');
+      const { StorageKeys } = await import('../storage.js');
 
     // @ts-expect-error - vi.fn() type narrowing issue
   
@@ -288,14 +288,14 @@ describe('migration rollback integrity', () => {
     (global as any).chrome.storage.local.get.mockResolvedValue({});
     (global as any).chrome.storage.local.set.mockResolvedValue(undefined);
 
-    const { restoreFromMigrationBackup } = await import('../migration');
+    const { restoreFromMigrationBackup } = await import('../migration.js');
     await expect(restoreFromMigrationBackup('test_key')).rejects.toThrow();
   });
 
   it('restoreFromMigrationBackup validates checksum', async () => {
     // 正しいバックアップデータ
     const validData = { blockRules: ['example.com'], exceptionRules: [] };
-    const { computeChecksum } = await import('../migration');
+    const { computeChecksum } = await import('../migration.js');
     const checksum = computeChecksum(validData);
 
     (global as any).chrome.storage.local.get.mockResolvedValue({
@@ -306,7 +306,7 @@ describe('migration rollback integrity', () => {
       }
     });
 
-    const { restoreFromMigrationBackup } = await import('../migration');
+    const { restoreFromMigrationBackup } = await import('../migration.js');
     const result = await restoreFromMigrationBackup('test_key');
     expect(result).toBe(true);
   });
@@ -323,7 +323,7 @@ describe('migration rollback integrity', () => {
       }
     });
 
-    const { restoreFromMigrationBackup } = await import('../migration');
+    const { restoreFromMigrationBackup } = await import('../migration.js');
     await expect(restoreFromMigrationBackup('test_key')).rejects.toThrow('data integrity check failed');
   });
 });
@@ -468,7 +468,7 @@ describe('initializeTrancoVersion', () => {
 
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    const { initializeTrancoVersion } = await import('../migration');
+    const { initializeTrancoVersion } = await import('../migration.js');
     await initializeTrancoVersion();
 
     expect(consoleSpy).toHaveBeenCalledWith(

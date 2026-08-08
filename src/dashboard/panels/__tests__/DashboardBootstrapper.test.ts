@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NavigationRegistry } from '../NavigationRegistry';
-import { DashboardBootstrapper } from '../DashboardBootstrapper';
-import { type StaticFormPanel } from '../types';
+import { NavigationRegistry } from '../NavigationRegistry.js';
+import { DashboardBootstrapper } from '../DashboardBootstrapper.js';
+import { type StaticFormPanel } from '../types.js';
 
 describe('DashboardBootstrapper', () => {
   let registry: NavigationRegistry;

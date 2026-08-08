@@ -1,6 +1,6 @@
 import { type StaticFormPanel } from '../types.js';
 import { getSettings } from '../../../utils/storage.js';
-import { initCustomPromptManager } from '../../../popup/customPromptManager.js';
+import { initCustomPromptManager } from '../../settings/customPromptManager.js';
 
 export function createPromptSettingsPanel(): StaticFormPanel {
   return {

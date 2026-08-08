@@ -4,7 +4,7 @@ import {
   getAiSummaryCleansingSettings, applyAiSummaryCleansingSettingsToUI,
   setupAiSummaryCleansingEventListeners, saveAiSummaryCleansingSettings,
   getAiSummaryCleansingSettingsFromUI,
-} from '../../../popup/aiSummaryCleansingSettingsV2.js';
+} from '../../settings/aiSummaryCleansingSettingsV2.js';
 import { getSavedUrlEntries } from '../../../utils/storageUrls.js';
 import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from '../../cleansingStatsView.js';
 

@@ -16,7 +16,7 @@ const mockShowStatus = vi.hoisted(() => vi.fn());
 const mockLogError = vi.hoisted(() => vi.fn());
 const mockGetMessage = vi.hoisted(() => vi.fn());
 
-vi.mock('../../utils/storage.js', () => ({
+vi.mock('../../../utils/storage.js', () => ({
   getSettings: mockGetSettings,
   saveSettings: mockSaveSettings,
   StorageKeys: {
@@ -29,15 +29,15 @@ vi.mock('../../utils/storage.js', () => ({
   },
 }));
 
-vi.mock('../settingsUiHelper.js', () => ({
+vi.mock('../../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: mockShowStatus,
 }));
 
-vi.mock('../../utils/i18n.js', () => ({
+vi.mock('../../../utils/i18n.js', () => ({
   getMessage: mockGetMessage,
 }));
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger.js', () => ({
   logError: mockLogError,
   ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
 }));

@@ -2,7 +2,7 @@ import { exportJson, exportCsv, exportMarkdown, exportDb, downloadText, download
 import { type DiagnosticPanel } from '../types.js';
 import { queryAuditLogs } from '../../dashboardSqliteService.js';
 import { toTsvString } from '../asyncData/auditLogPanel.js';
-import { showStatus } from '../../../popup/settingsUiHelper.js';
+import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 
 export function createExportLogsPanel(): DiagnosticPanel {
   return {

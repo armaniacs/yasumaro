@@ -16,7 +16,7 @@ vi.mock('../../utils/i18n.js', () => ({
   }),
 }));
 
-vi.mock('../../popup/domainFilter.js', () => ({
+vi.mock('../settings/domainFilter.js', () => ({
   loadDomainSettings: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -56,7 +56,7 @@ describe('initDomainFilterTagUI', () => {
     it('returns early when radio elements are missing from DOM', async () => {
       const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
       await initDomainFilterTagUI();
-      const { loadDomainSettings } = await import('../../popup/domainFilter.js');
+      const { loadDomainSettings } = await import('../settings/domainFilter.js');
       expect(loadDomainSettings).not.toHaveBeenCalled();
     });
   });
@@ -69,7 +69,7 @@ describe('initDomainFilterTagUI', () => {
     it('loads domain settings via loadDomainSettings', async () => {
       const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
       await initDomainFilterTagUI();
-      const { loadDomainSettings } = await import('../../popup/domainFilter.js');
+      const { loadDomainSettings } = await import('../settings/domainFilter.js');
       expect(loadDomainSettings).toHaveBeenCalledTimes(1);
     });
 

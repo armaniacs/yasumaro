@@ -3,13 +3,13 @@
  * Domain filter settings functionality for the popup UI.
  */
 
-import { StorageKeys, getSettings, saveSettings } from '../utils/storage.js';
-import { errorMessage } from '../utils/errorUtils.js';
-import { parseDomainList, validateDomainList } from '../utils/domainUtils.js';
+import { StorageKeys, getSettings, saveSettings } from '../../utils/storage.js';
+import { errorMessage } from '../../utils/errorUtils.js';
+import { parseDomainList, validateDomainList } from '../../utils/domainUtils.js';
 import { init as initUblockImport, handleSaveUblockSettings } from './ublockImport/index.js';
-import { addLog, LogType } from '../utils/logger.js';
-import { showStatus } from './settingsUiHelper.js';
-import { getMessage } from '../utils/i18n.js';
+import { addLog, LogType } from '../../utils/logger.js';
+import { showStatus } from '../../utils/ui/settingsUiHelper.js';
+import { getMessage } from '../../utils/i18n.js';
 
 // Elements
 const generalTabBtn = document.getElementById('generalTab');

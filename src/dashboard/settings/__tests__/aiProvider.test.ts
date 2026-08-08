@@ -8,11 +8,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
     updateAIProviderVisibility,
     setupAIProviderChangeListener
-} from '../settings/aiProvider.js';
-import { AIProviderElements } from '../settings/aiProvider.js';
+} from '../aiProvider.js';
+import { AIProviderElements } from '../aiProvider.js';
 
 // Mock logger to prevent console output during tests
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger.js', () => ({
     logWarn: vi.fn(),
 }));
 
