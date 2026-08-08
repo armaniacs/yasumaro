@@ -30,6 +30,15 @@ import {
 
 const PAGE_SIZE = 20;
 
+/**
+ * Fetch window used only when a tag filter is active.
+ *
+ * Tag matching runs client-side (see filterRowsByTag), so the rows have to be
+ * in memory before they can be filtered and counted. This caps how far back
+ * tag filtering can see; the non-tag path pages in SQL and has no such cap.
+ */
+const TAG_FILTER_FETCH_LIMIT = 5000;
+
 function t(key: string, substitutions?: string | string[]): string {
   return chrome.i18n.getMessage(key, substitutions as string | string[]) || key;
 }
@@ -439,9 +448,19 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       if (options.search) {
         result = await searchLogs(options.search, limit, offset);
       } else {
+        // Tag filtering still happens client-side (filterRowsByTag), so that
+        // path has to over-fetch. Everything else pages in SQL: fetching a
+        // fixed first 1000 rows made every page past the 50th unreachable
+        // once the history grew beyond 1000 records.
+        //
+        // The tag filter is deliberately NOT pushed down to the server: the
+        // SQL side matches tags via FTS5 trigram MATCH, which needs >= 3
+        // characters and has no LIKE fallback on that path, so short tags
+        // (e.g. "AI") would silently return nothing.
+        const useServerPaging = !activeTagFilter;
         result = await queryLogs({
-          limit: 1000,
-          offset: 0,
+          limit: useServerPaging ? limit : TAG_FILTER_FETCH_LIMIT,
+          offset: useServerPaging ? offset : 0,
           since: options.since,
           until: options.until,
           orderBy: 'created_at',
@@ -478,12 +497,10 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
               total: filteredRows.length,
             };
           }
-        } else if (result && !('error' in result)) {
-          result = {
-            rows: result.rows.slice(offset, offset + limit),
-            total: result.total,
-          };
         }
+        // No client-side slice in the non-tag path: SQL already applied
+        // LIMIT/OFFSET, so slicing again would drop every row past the first
+        // page.
       }
 
       if (result === null) {
