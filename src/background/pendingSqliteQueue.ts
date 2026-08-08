@@ -4,14 +4,11 @@
  * offscreen document was unreachable) so they aren't silently lost. Queued
  * records are retried on the next flush (Service Worker startup) instead
  * of being dropped (M14).
- *
- * Queue storage/enqueue mechanics are shared via StorageBackedQueue (PBI-09);
- * the batch-insert flush logic is specific to SQLite records.
  */
 
 import { addLog, LogType } from '../utils/logger.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
-import { StorageBackedQueue } from './storageBackedQueue.js';
+import { PersistentRetryQueue, ChromeStorageAdapter } from './persistentRetryQueue.js';
 
 export const PENDING_SQLITE_RECORDS_KEY = 'pending_sqlite_records';
 
@@ -26,11 +23,12 @@ interface SqliteClientLike {
 /** Number of records to insert in a single offscreen round-trip. */
 const BATCH_SIZE = 50;
 
-const queue = new StorageBackedQueue<BrowsingLogRecord>(
-  PENDING_SQLITE_RECORDS_KEY,
-  MAX_PENDING_RECORDS,
-  'pendingSqliteQueue',
-);
+const adapter = new ChromeStorageAdapter();
+const queue = new PersistentRetryQueue<BrowsingLogRecord>(adapter, {
+  storageKey: PENDING_SQLITE_RECORDS_KEY,
+  maxSize: MAX_PENDING_RECORDS,
+  logLabel: 'pendingSqliteQueue',
+});
 
 /**
  * Queue a record that failed to insert into SQLite. Best-effort: a queue
@@ -38,7 +36,7 @@ const queue = new StorageBackedQueue<BrowsingLogRecord>(
  * insert failure.
  */
 export async function enqueuePendingRecord(record: BrowsingLogRecord): Promise<void> {
-  await queue.enqueue(record, { url: record.url });
+  await queue.enqueue(record);
 }
 
 /**

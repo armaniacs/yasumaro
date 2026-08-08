@@ -50,6 +50,33 @@ All notable changes to this project will be documented in this file.
 - `contentCleaner.test.ts` — noscriptタグ、`hidden`属性、`display:none`要素の除去テストを追加
 - 全テスト通過、TypeScript 型チェック正常、ビルド成功
 
+## [6.7.20] - 2026-08-08（ deepening リファクタリング）
+
+コードベースの重複除去と single responsibility の深化。3つの deepening candidate（D/E/F）を完了。
+
+### Refactor / リファクタ
+
+- **キュー統合** — `PersistentRetryQueue<T>` を新設し `pendingChromeStorageQueue` / `pendingSqliteQueue` / `offlineNetworkQueue` の重複する load/save/enqueue ロジックを共通化。ストレージは `ChromeStorageAdapter` で抽象化し、各キューはドメイン固有の flush 戦略だけを保持
+  - `src/background/persistentRetryQueue.ts` — 深いキュー模块（TTL, retry count, per-cycle cap, payload check）を所有
+  - `src/background/queueStorageAdapter.ts` — `QueueStorageAdapter` インターフェース + `ChromeStorageAdapter` 実装
+  - `src/background/storageBackedQueue.ts` — shallow wrapper のため削除
+- **ダッシュボード設定保存パイプラインの統合** — `handleSaveOnly` / `handleTestAi` / `handleTestLocalMarkdown` の重複する read→merge→save→refresh を `saveDashboardSettings()` に統合
+  - `src/dashboard/settingsPipeline.ts` — バリデーション + merge + persist + refresh を 1 関数に
+  - dashboard.ts の validation インポート（popup 漏洩）を削除
+- **Review Summary ハンドラの統合** — `handleGenerateWeeklySummary` と `handleGenerateMonthlySummary` の重複を `generateReviewSummary({ periodType })` に置換
+  - `src/dashboard/reviewSummaryHandler.ts` — period-agnostic な summary 生成ハンドラ
+- **Form Binding の適切な配置** — `extractLocalMarkdownExportTiming` / `loadLocalMarkdownExportTiming` を `dashboard.ts` から `src/utils/settingsFormBinding.ts` に移動
+- **AIService wiring の一元化** — `createBackgroundServices.ts` / `service-worker.ts` / `ServiceWorkerContext.ts` の 3 箇所に分散していた `LocalAIService` + `RemoteAIService` + `FallbackAIService` の初期化を `createAIService()` に統合
+  - `src/background/ai/aiServiceFactory.ts` — composition root を 1 箇所に
+- **Auto Fallback バグ修正** — `FallbackAIService` の `auto` モードが `LocalAIService` の `{ success: false }` を検出せず remote にフォールバックしない不具合を修正
+  - 例外 + `success === false` の両方をフォールバック条件に追加
+
+### Tests / テスト
+
+- `FallbackAIService.test.ts` — `success:false` フォールバックテストを追加
+- `localMarkdownExportTimingUi.test.ts` — インポート元を `dashboard.js` → `settingsFormBinding.js` に変更
+- 全 7555 単体テスト通過、TypeScript 型チェック正常
+
 ## [6.7.19] - 2026-08-07
 
 コードレビューで発見された ~2,800 行の重複コードの解消。6 PBIs を TDD で実装し、約 30 コミットで収束。
