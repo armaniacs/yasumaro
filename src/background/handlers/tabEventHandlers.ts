@@ -6,7 +6,7 @@
  */
 import { BADGE_COLORS } from '../../constants/appConstants.js';
 import { HeaderDetector } from '../headerDetector.js';
-import { RecordingLogic } from '../recordingLogic.js';
+import { RecordingCache } from '../recordingCache.js';
 import { TabCache } from '../tabCache.js';
 import { logError, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
@@ -42,7 +42,7 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
                 return;
             }
             const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
-            const privacyInfo = RecordingLogic.cacheState.privacyCache?.get(normalizedUrl);
+            const privacyInfo = RecordingCache.getPrivacyCache()?.get(normalizedUrl);
             if (privacyInfo?.isPrivate) {
                 chrome.action.setBadgeText({ text: '!' });
                 chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string });
@@ -67,7 +67,7 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
         // ページ遷移完了時は自動保存バッジをクリア（新しいページのため）
         ctx.autoSavedBadgeTabs.delete(tabId);
         const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
-        const privacyInfo = RecordingLogic.cacheState.privacyCache?.get(normalizedUrl);
+        const privacyInfo = RecordingCache.getPrivacyCache()?.get(normalizedUrl);
         if (privacyInfo?.isPrivate) {
             chrome.action.setBadgeText({ text: '!', tabId });
             chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string, tabId });

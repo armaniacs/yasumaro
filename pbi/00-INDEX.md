@@ -13,6 +13,7 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
+| ✅ [2026-08-08-01-refactor-recording-logic-split.md](2026-08-08-01-refactor-recording-logic-split.md) | 🟡中 | 🟡軽微 | 🔧 | RecordingLogic（541行）をRecordingCache(395行)/RecordingValidator(71行)/RecordingLogic(248行)に分割。後方互換ラッパー維持。全7556テスト合格 |
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
 | 🔶 [2026-08-07-08-refactor-ai-client-service-unification.md](2026-08-07-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合（modelName型ドリフトは解消済み。AIClient削除は中核パスの高リスクのため保留） |
 | 🔶 [2026-08-07-13-refactor-service-wiring-backend-consolidation.md](2026-08-07-13-refactor-service-wiring-backend-consolidation.md) | 🟡中 | 🟡軽微 | 🔧 | サービス配線・StorageBackend・プロバイダ設定表示・エラー処理の統合候補（エラー処理イディオムは解消済み。他は調査により実重複でない/高リスクと判断し保留）
@@ -259,5 +260,6 @@
 | 状態 | 件数 |
 |---|---|
 | ⬜ 未着手 | 1（✨機能追加 0 / 🔧非機能追加 1） |
+| ✅ 完了 | 1（2026-08-08-01 RecordingLogic 分割） |
 | 🔶 部分実装 | 2（2026-08-07-08 AIレイヤー統合 / 2026-08-07-13 サービス配線・StorageBackend） |
 | アーカイブ済み | 210 |

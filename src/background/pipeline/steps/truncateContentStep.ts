@@ -4,22 +4,8 @@
  */
 
 import { addLog, LogType } from '../../../utils/logger.js';
-import { MAX_RECORD_SIZE } from '../types.js';
+import { MAX_RECORD_SIZE, truncateContentSize } from '../../recordingValidator.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
-
-// Import truncateContentSize from pipeline utils (copy from recordingLogic to avoid circular dependency)
-function truncateContentSize(content: string, maxSize: number = MAX_RECORD_SIZE): string {
-  const encoder = new TextEncoder();
-  const encoded = encoder.encode(content);
-
-  if (encoded.length <= maxSize) {
-    return content;
-  }
-
-  const truncated = encoded.slice(0, maxSize);
-  const decoder = new TextDecoder('utf-8', { fatal: false });
-  return decoder.decode(truncated);
-}
 
 /**
  * Truncate content if it exceeds maximum size

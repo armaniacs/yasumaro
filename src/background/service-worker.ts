@@ -2,6 +2,7 @@ import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import { notifyAiTestProgress } from './aiTestProgressNotifier.js';
 import { createAIService } from './ai/aiServiceFactory.js';
+import { RecordingCache } from './recordingCache.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { getTabCacheInstance } from './tabCacheFactory.js';
 import { HeaderDetector } from './headerDetector.js';
@@ -260,7 +261,7 @@ const _manualRecordDeps: ManualRecordHandlerDeps = {
   isRecordingAllowed: () => hasPrivacyConsent(),
   checkRateLimit: (sender: import('./rateLimiter.js').MessageSenderLike | undefined, settings: Record<string, unknown>) => rateLimiter.check(sender, settings),
   fetchContent: (url: string) => manualContentFetcher.fetchContent(url),
-  getPrivacyInfoWithCache: (url: string) => recordingLogic.getPrivacyInfoWithCache(url),
+  getPrivacyInfoWithCache: (url: string) => RecordingCache.getPrivacyInfoWithCache(url),
   obsidian,
   aiService,
   sqliteClient,
@@ -272,7 +273,7 @@ const _manualRecordDeps: ManualRecordHandlerDeps = {
 
 const _saveRecordDeps: SaveRecordHandlerDeps = {
   isRecordingAllowed: () => hasPrivacyConsent(),
-  getPrivacyInfoWithCache: (url: string) => recordingLogic.getPrivacyInfoWithCache(url),
+  getPrivacyInfoWithCache: (url: string) => RecordingCache.getPrivacyInfoWithCache(url),
   obsidian,
   aiService,
   sqliteClient,
@@ -336,7 +337,7 @@ export const handleTestAi = createTestAiHandler({
 registry.register('TEST_AI', handleTestAi);
 
 export const handleGetPrivacyCache = createGetPrivacyCacheHandler({
-  getPrivacyCache: () => RecordingLogic.cacheState.privacyCache,
+  getPrivacyCache: () => RecordingCache.getPrivacyCache(),
 });
 registry.register('GET_PRIVACY_CACHE', handleGetPrivacyCache);
 
@@ -589,7 +590,7 @@ const _contextClickHandler = createContextClickHandler({
       isRecordingAllowed: () => hasPrivacyConsent(),
       checkRateLimit: (sender, settings) => rateLimiter.check(sender, settings),
       fetchContent: (url) => manualContentFetcher.fetchContent(url),
-      getPrivacyInfoWithCache: (url) => recordingLogic.getPrivacyInfoWithCache(url),
+      getPrivacyInfoWithCache: (url) => RecordingCache.getPrivacyInfoWithCache(url),
       obsidian,
       aiService,
       sqliteClient,

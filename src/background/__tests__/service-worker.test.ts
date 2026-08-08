@@ -141,6 +141,33 @@ vi.mock('../recordingLogic.js', () => ({
         }
     }
 }));
+vi.mock('../recordingCache.js', () => ({
+    RecordingCache: class {
+        static cacheState = {
+            settingsCache: null,
+            cacheTimestamp: null,
+            cacheVersion: 0,
+            urlCache: null,
+            urlCacheTimestamp: null,
+            privacyCache: null,
+            privacyCacheTimestamp: null,
+        };
+        static getCacheState() { return RecordingCache.cacheState; }
+        static resetCacheState() {}
+        static getPrivacyCache() { return RecordingCache.cacheState.privacyCache; }
+        static setPrivacyCacheEntry() {}
+        static getPrivacyCacheSize() { return 0; }
+        static isPrivacyCacheInitialized() { return false; }
+        static getSettingsWithCache() { return Promise.resolve({}); }
+        static getSavedUrlsWithCache() { return Promise.resolve(new Map()); }
+        static getPrivacyInfoWithCache() { return Promise.resolve(null); }
+        static invalidateSettingsCache = vi.fn();
+        static invalidateUrlCache = vi.fn();
+        static invalidatePrivacyCache = vi.fn();
+        static loadCacheFromSession = vi.fn().mockResolvedValue(undefined);
+        static scheduleCacheSave = vi.fn();
+    }
+}));
 vi.mock('../tabCache.js', () => ({
     TabCache: class {
         add = vi.fn();
@@ -248,6 +275,7 @@ import * as storage from '../../utils/storage.js';
 import * as domainUtils from '../../utils/domainUtils.js';
 import * as privacyPipeline from '../privacyPipeline.js';
 import * as pendingStorage from '../../utils/pendingStorage.js';
+import { RecordingCache } from '../recordingCache.js';
 import { RecordingLogic } from '../recordingLogic.js';
 import * as fetchUtils from '../../utils/fetch.js';
 import * as headerDetector from '../headerDetector.js';
@@ -327,8 +355,8 @@ describe('service-worker handlers', () => {
             }
         }
 
-        // Reset RecordingLogic cache state
-        RecordingLogic.cacheState = {
+        // Reset RecordingCache cache state
+        RecordingCache.cacheState = {
             settingsCache: null,
             cacheTimestamp: null,
             cacheVersion: 0,
@@ -470,7 +498,7 @@ describe('service-worker handlers', () => {
             const message = { type: 'GET_PRIVACY_CACHE' };
 
             // Set up privacy cache
-            RecordingLogic.cacheState.privacyCache = new Map([['https://example.com', { isPrivate: false }]]);
+            RecordingCache.cacheState.privacyCache = new Map([['https://example.com', { isPrivate: false }]]);
 
             handler(message, {} as any, sendResponse);
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -484,7 +512,7 @@ describe('service-worker handlers', () => {
             const message = { type: 'GET_PRIVACY_CACHE' };
 
             // Clear privacy cache
-            RecordingLogic.cacheState.privacyCache = null;
+            RecordingCache.cacheState.privacyCache = null;
 
             handler(message, {} as any, sendResponse);
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -597,7 +625,7 @@ describe('service-worker handlers', () => {
             const handler = serviceWorker.createMessageHandler();
             const sendResponse = vi.fn();
             const message: GetPrivacyCacheMessage = { type: 'GET_PRIVACY_CACHE' };
-            RecordingLogic.cacheState.privacyCache = new Map([['https://example.com', { isPrivate: true }]]);
+            RecordingCache.cacheState.privacyCache = new Map([['https://example.com', { isPrivate: true }]]);
 
             handler(message, {} as any, sendResponse);
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -609,7 +637,7 @@ describe('service-worker handlers', () => {
             const handler = serviceWorker.createMessageHandler();
             const sendResponse = vi.fn();
             const message: GetPrivacyCacheMessage = { type: 'GET_PRIVACY_CACHE' };
-            RecordingLogic.cacheState.privacyCache = null;
+            RecordingCache.cacheState.privacyCache = null;
 
             handler(message, {} as any, sendResponse);
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -835,7 +863,7 @@ describe('service-worker handlers', () => {
         it('should show warning badge for private page', async () => {
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://private.com');
-            RecordingLogic.cacheState.privacyCache = new Map([['https://private.com', { isPrivate: true }]]);
+            RecordingCache.cacheState.privacyCache = new Map([['https://private.com', { isPrivate: true }]]);
             mockGet.mockResolvedValueOnce({ id: 3, url: 'https://private.com' } as chrome.tabs.Tab);
 
             await serviceWorker.handleTabActivated({ tabId: 3 });
@@ -846,7 +874,7 @@ describe('service-worker handlers', () => {
         it('should clear badge for non-private page', async () => {
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://public.com');
-            RecordingLogic.cacheState.privacyCache = new Map([['https://public.com', { isPrivate: false }]]);
+            RecordingCache.cacheState.privacyCache = new Map([['https://public.com', { isPrivate: false }]]);
             mockGet.mockResolvedValueOnce({ id: 4, url: 'https://public.com' } as chrome.tabs.Tab);
 
             await serviceWorker.handleTabActivated({ tabId: 4 });
@@ -862,7 +890,7 @@ describe('service-worker handlers', () => {
         it('should clear badge when privacy cache is empty', async () => {
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://example.com');
-            RecordingLogic.cacheState.privacyCache = null;
+            RecordingCache.cacheState.privacyCache = null;
             mockGet.mockResolvedValueOnce({ id: 5, url: 'https://example.com' } as chrome.tabs.Tab);
 
             await serviceWorker.handleTabActivated({ tabId: 5 });
@@ -888,7 +916,7 @@ describe('service-worker handlers', () => {
         it('should clear auto-saved badge and show warning for private page', async () => {
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://private.com');
-            RecordingLogic.cacheState.privacyCache = new Map([['https://private.com', { isPrivate: true }]]);
+            RecordingCache.cacheState.privacyCache = new Map([['https://private.com', { isPrivate: true }]]);
 
             await serviceWorker.handleTabUpdated(1, { status: 'complete' }, { url: 'https://private.com' });
             expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '!', tabId: 1 });
@@ -898,7 +926,7 @@ describe('service-worker handlers', () => {
         it('should clear badge for non-private page', async () => {
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://public.com');
-            RecordingLogic.cacheState.privacyCache = new Map([['https://public.com', { isPrivate: false }]]);
+            RecordingCache.cacheState.privacyCache = new Map([['https://public.com', { isPrivate: false }]]);
 
             await serviceWorker.handleTabUpdated(1, { status: 'complete' }, { url: 'https://public.com' });
             expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '', tabId: 1 });
@@ -907,7 +935,7 @@ describe('service-worker handlers', () => {
         it('should clear badge when privacy cache is empty', async () => {
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://example.com');
-            RecordingLogic.cacheState.privacyCache = null;
+            RecordingCache.cacheState.privacyCache = null;
 
             await serviceWorker.handleTabUpdated(1, { status: 'complete' }, { url: 'https://example.com' });
             expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '', tabId: 1 });
@@ -922,18 +950,18 @@ describe('service-worker handlers', () => {
         it('should log install reason', async () => {
             await serviceWorker.handleInstalled({ reason: 'install' });
             // Should not throw
-            expect(RecordingLogic.invalidateSettingsCache).not.toHaveBeenCalled();
+            expect(RecordingCache.invalidateSettingsCache).not.toHaveBeenCalled();
         });
 
         it('should invalidate cache and update domain filter on update', async () => {
             await serviceWorker.handleInstalled({ reason: 'update', previousVersion: '1.0.0' });
-            expect(RecordingLogic.invalidateSettingsCache).toHaveBeenCalled();
+            expect(RecordingCache.invalidateSettingsCache).toHaveBeenCalled();
             expect(storage.updateDomainFilterCache).toHaveBeenCalled();
         });
 
         it('should do nothing for unknown install reason', async () => {
             await serviceWorker.handleInstalled({ reason: 'chrome_update' });
-            expect(RecordingLogic.invalidateSettingsCache).not.toHaveBeenCalled();
+            expect(RecordingCache.invalidateSettingsCache).not.toHaveBeenCalled();
             expect(storage.updateDomainFilterCache).not.toHaveBeenCalled();
         });
 
@@ -967,7 +995,7 @@ describe('service-worker handlers', () => {
 
         it('should rehydrate caches on first startup', async () => {
             await serviceWorker.handleStartup();
-            expect(RecordingLogic.invalidateSettingsCache).toHaveBeenCalled();
+            expect(RecordingCache.invalidateSettingsCache).toHaveBeenCalled();
             expect(storage.updateDomainFilterCache).toHaveBeenCalled();
             expect(permissionManager.cleanupOldDeniedEntries).toHaveBeenCalledWith(90);
             expect(permissionManager.cleanupDismissedEntries).toHaveBeenCalledWith(7);
@@ -979,7 +1007,7 @@ describe('service-worker handlers', () => {
             vi.clearAllMocks();
             // Second call should skip
             await serviceWorker.handleStartup();
-            expect(RecordingLogic.invalidateSettingsCache).not.toHaveBeenCalled();
+            expect(RecordingCache.invalidateSettingsCache).not.toHaveBeenCalled();
         });
     });
 
@@ -2125,7 +2153,7 @@ describe('service-worker handlers', () => {
         });
 
         it('should return cache entries when cache exists', async () => {
-            RecordingLogic.cacheState.privacyCache = new Map([['https://example.com', { isPrivate: false }]]);
+            RecordingCache.cacheState.privacyCache = new Map([['https://example.com', { isPrivate: false }]]);
 
             const sendResponse = vi.fn();
             const message: GetPrivacyCacheMessage = { type: 'GET_PRIVACY_CACHE' };
@@ -2138,7 +2166,7 @@ describe('service-worker handlers', () => {
         });
 
         it('should return empty array when cache is null', async () => {
-            RecordingLogic.cacheState.privacyCache = null;
+            RecordingCache.cacheState.privacyCache = null;
 
             const sendResponse = vi.fn();
             const message: GetPrivacyCacheMessage = { type: 'GET_PRIVACY_CACHE' };

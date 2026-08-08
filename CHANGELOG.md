@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.22` リリース。
+> - 現時点では `v6.7.23` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,25 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.23] - 2026-08-08
+
+RecordingLogic ゴッドモジュール（541行）を3モジュールに分割する deepening リファクタリング。
+
+### Refactor / リファクタ
+
+- **RecordingLogic の分割** — キャッシュ・検証・オーケストレーションの4関心事を3モジュールに分離
+  - `src/background/recordingCache.ts`（395行）— settings/URL/privacy キャッシュ管理（TTL・永続化・VULN-014 redaction）
+  - `src/background/recordingValidator.ts`（71行）— URL検証（SSRF保護）+ コンテンツ切り詰め（64KB、UTF-8安全）
+  - `src/background/recordingLogic.ts`（248行）— 記録オーケストレーション + 後方互換 static ラッパー
+- **呼び出し元の更新** — `headerDetector.ts` / `tabEventHandlers.ts` / `lifecycleHandlers.ts` / `service-worker.ts` を `RecordingCache` の accessor メソッド経由に移行
+- **`truncateContentStep.ts` のローカルコピー削除** — `RecordingValidator.truncateContentSize()` を直接使用する形に統合
+
+### Tests / テスト
+
+- 全 7556 単体テスト通過、TypeScript 型チェック正常
+- `service-worker.test.ts` / `lifecycleHandlers-pendingQueue.test.ts` のモックを `RecordingCache` ベースに更新
+- 後方互換ラッパーにより既存テストの大部分は修正不要
 
 ## [6.7.22] - 2026-08-08
 
