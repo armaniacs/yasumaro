@@ -1,5 +1,6 @@
 // src/background/__tests__/recordingLogic.test.ts
 import { RecordingLogic } from '../recordingLogic.js';
+import { RecordingCache } from '../recordingCache.js';
 import * as storage from '../../utils/storage.js';
 import * as domainUtils from '../../utils/domainUtils.js';
 import * as privacy from '../privacyPipeline.js';
@@ -33,7 +34,7 @@ describe('RecordingLogic', () => {
     }
 
     // Problem #7: URLキャッシュを初期化
-    RecordingLogic.cacheState = {
+    Object.assign(RecordingCache.getCacheState(), {
       settingsCache: null,
       cacheTimestamp: null,
       cacheVersion: 0,
@@ -41,7 +42,7 @@ describe('RecordingLogic', () => {
       urlCacheTimestamp: null,
       privacyCache: null,
       privacyCacheTimestamp: null
-    };
+    });
 
     // storageのデフォルトモック
     // @ts-expect-error - vi.fn() type narrowing issue
@@ -330,7 +331,7 @@ describe('RecordingLogic', () => {
   describe('Privacy Cache', () => {
     beforeEach(() => {
       // キャッシュをクリア
-      RecordingLogic.invalidatePrivacyCache();
+      RecordingCache.invalidatePrivacyCache();
     });
 
     test('getPrivacyInfoWithCache - キャッシュヒット時にPrivacyInfoを返す', async () => {
@@ -342,14 +343,14 @@ describe('RecordingLogic', () => {
       };
 
       // キャッシュに手動で追加
-      RecordingLogic.cacheState.privacyCache = new Map([[url, mockInfo]]);
-      RecordingLogic.cacheState.privacyCacheTimestamp = Date.now();
+      RecordingCache.getCacheState().privacyCache = new Map([[url, mockInfo]]);
+      RecordingCache.getCacheState().privacyCacheTimestamp = Date.now();
 
       const obsidian = {} as any;
       const aiClient = {} as any;
       const logic = new RecordingLogic(obsidian, aiClient);
 
-      const result = await logic.getPrivacyInfoWithCache(url);
+      const result = await RecordingCache.getPrivacyInfoWithCache(url);
 
       expect(result).toEqual(mockInfo);
     });
@@ -357,13 +358,13 @@ describe('RecordingLogic', () => {
     test('getPrivacyInfoWithCache - キャッシュミス時にnullを返す', async () => {
       const url = 'https://example.com/unknown';
 
-      RecordingLogic.cacheState.privacyCache = new Map();
+      RecordingCache.getCacheState().privacyCache = new Map();
 
       const obsidian = {} as any;
       const aiClient = {} as any;
       const logic = new RecordingLogic(obsidian, aiClient);
 
-      const result = await logic.getPrivacyInfoWithCache(url);
+      const result = await RecordingCache.getPrivacyInfoWithCache(url);
 
       expect(result).toBeNull();
     });
@@ -377,39 +378,39 @@ describe('RecordingLogic', () => {
         timestamp: oldTimestamp
       };
 
-      RecordingLogic.cacheState.privacyCache = new Map([[url, mockInfo]]);
-      RecordingLogic.cacheState.privacyCacheTimestamp = oldTimestamp;
+      RecordingCache.getCacheState().privacyCache = new Map([[url, mockInfo]]);
+      RecordingCache.getCacheState().privacyCacheTimestamp = oldTimestamp;
 
       const obsidian = {} as any;
       const aiClient = {} as any;
       const logic = new RecordingLogic(obsidian, aiClient);
 
-      const result = await logic.getPrivacyInfoWithCache(url);
+      const result = await RecordingCache.getPrivacyInfoWithCache(url);
 
       expect(result).toBeNull();
     });
 
     test('invalidatePrivacyCache - キャッシュを無効化できる', () => {
-      RecordingLogic.cacheState.privacyCache = new Map([['test', {} as any]]);
-      RecordingLogic.cacheState.privacyCacheTimestamp = Date.now();
+      RecordingCache.getCacheState().privacyCache = new Map([['test', {} as any]]);
+      RecordingCache.getCacheState().privacyCacheTimestamp = Date.now();
 
-      RecordingLogic.invalidatePrivacyCache();
+      RecordingCache.invalidatePrivacyCache();
 
-      expect(RecordingLogic.cacheState.privacyCache).toBeNull();
-      expect(RecordingLogic.cacheState.privacyCacheTimestamp).toBeNull();
+      expect(RecordingCache.getCacheState().privacyCache).toBeNull();
+      expect(RecordingCache.getCacheState().privacyCacheTimestamp).toBeNull();
     });
   });
 
   describe('Privacy Check Integration', () => {
     beforeEach(() => {
-      RecordingLogic.invalidatePrivacyCache();
+      RecordingCache.invalidatePrivacyCache();
       // 既存のmock setup
       vi.clearAllMocks();
       if (!chrome.notifications) {
         chrome.notifications = { create: vi.fn() };
       }
 
-      RecordingLogic.cacheState = {
+      Object.assign(RecordingCache.getCacheState(), {
         settingsCache: null,
         cacheTimestamp: null,
         cacheVersion: 0,
@@ -417,7 +418,7 @@ describe('RecordingLogic', () => {
         urlCacheTimestamp: null,
         privacyCache: null,
         privacyCacheTimestamp: null
-      };
+      });
 
       // @ts-expect-error - vi.fn() type narrowing issue
       storage.getSettings.mockResolvedValue({
@@ -448,7 +449,7 @@ describe('RecordingLogic', () => {
       };
 
       // キャッシュに追加
-      RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
+      RecordingCache.getCacheState().privacyCache = new Map([[url, mockPrivacyInfo]]);
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
@@ -473,7 +474,7 @@ describe('RecordingLogic', () => {
         timestamp: Date.now()
       };
 
-      RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
+      RecordingCache.getCacheState().privacyCache = new Map([[url, mockPrivacyInfo]]);
 
       const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
@@ -496,7 +497,7 @@ describe('RecordingLogic', () => {
     test('キャッシュミス時は通常通り保存を続行する', async () => {
       const url = 'https://example.com/unknown';
 
-      RecordingLogic.cacheState.privacyCache = new Map();
+      RecordingCache.getCacheState().privacyCache = new Map();
 
       const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
@@ -518,9 +519,9 @@ describe('RecordingLogic', () => {
 
   describe('Privacy Integration (Full Flow)', () => {
     beforeEach(() => {
-      RecordingLogic.invalidatePrivacyCache();
-      RecordingLogic.invalidateSettingsCache();
-      RecordingLogic.invalidateUrlCache();
+      RecordingCache.invalidatePrivacyCache();
+      RecordingCache.invalidateSettingsCache();
+      RecordingCache.invalidateUrlCache();
 
       // 既存のmock setup
       vi.clearAllMocks();
@@ -552,7 +553,7 @@ describe('RecordingLogic', () => {
       const url = 'https://bank.example.com/account';
 
       // ヘッダー検出をシミュレート
-      RecordingLogic.cacheState.privacyCache = new Map([
+      RecordingCache.getCacheState().privacyCache = new Map([
         [url, {
           isPrivate: true,
           reason: 'cache-control' as const,
@@ -579,7 +580,7 @@ describe('RecordingLogic', () => {
     test('プライベートページ → 警告 → 強制保存 → 保存される', async () => {
       const url = 'https://bank.example.com/account';
 
-      RecordingLogic.cacheState.privacyCache = new Map([
+      RecordingCache.getCacheState().privacyCache = new Map([
         [url, {
           isPrivate: true,
           reason: 'set-cookie' as const,
@@ -609,7 +610,7 @@ describe('RecordingLogic', () => {
     test('通常ページ → 警告なし → 保存される', async () => {
       const url = 'https://public.example.com/article';
 
-      RecordingLogic.cacheState.privacyCache = new Map([
+      RecordingCache.getCacheState().privacyCache = new Map([
         [url, {
           isPrivate: false,
           timestamp: Date.now()
@@ -636,7 +637,7 @@ describe('RecordingLogic', () => {
     test('キャッシュなし(ヘッダー未取得) → 保存継続', async () => {
       const url = 'https://unknown.example.com/page';
 
-      RecordingLogic.cacheState.privacyCache = new Map();
+      RecordingCache.getCacheState().privacyCache = new Map();
 
       const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
@@ -658,9 +659,9 @@ describe('RecordingLogic', () => {
 
   describe('requireConfirmation', () => {
     beforeEach(() => {
-      RecordingLogic.invalidatePrivacyCache();
-      RecordingLogic.invalidateSettingsCache();
-      RecordingLogic.invalidateUrlCache();
+      RecordingCache.invalidatePrivacyCache();
+      RecordingCache.invalidateSettingsCache();
+      RecordingCache.invalidateUrlCache();
 
       // Chrome notifications APIが存在する場合のみモック
       if (!chrome.notifications) {
@@ -668,7 +669,7 @@ describe('RecordingLogic', () => {
       }
 
       // Reset cache state
-      RecordingLogic.cacheState = {
+      Object.assign(RecordingCache.getCacheState(), {
         settingsCache: null,
         cacheTimestamp: null,
         cacheVersion: 0,
@@ -676,7 +677,7 @@ describe('RecordingLogic', () => {
         urlCacheTimestamp: null,
         privacyCache: null,
         privacyCacheTimestamp: null
-      };
+      });
 
       vi.clearAllMocks();
 
@@ -711,7 +712,7 @@ describe('RecordingLogic', () => {
       };
 
       // キャッシュに追加
-      RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
+      RecordingCache.getCacheState().privacyCache = new Map([[url, mockPrivacyInfo]]);
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
@@ -760,7 +761,7 @@ describe('RecordingLogic', () => {
       };
 
       // キャッシュに追加
-      RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
+      RecordingCache.getCacheState().privacyCache = new Map([[url, mockPrivacyInfo]]);
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
@@ -799,7 +800,7 @@ describe('RecordingLogic', () => {
       };
 
       // キャッシュに追加
-      RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
+      RecordingCache.getCacheState().privacyCache = new Map([[url, mockPrivacyInfo]]);
 
       const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
@@ -828,15 +829,15 @@ describe('RecordingLogic', () => {
 
   describe('record - pending page on auto recording', () => {
     beforeEach(() => {
-      RecordingLogic.invalidatePrivacyCache();
-      RecordingLogic.invalidateSettingsCache();
-      RecordingLogic.invalidateUrlCache();
+      RecordingCache.invalidatePrivacyCache();
+      RecordingCache.invalidateSettingsCache();
+      RecordingCache.invalidateUrlCache();
 
       if (!chrome.notifications) {
         chrome.notifications = { create: vi.fn() };
       }
 
-      RecordingLogic.cacheState = {
+      Object.assign(RecordingCache.getCacheState(), {
         settingsCache: null,
         cacheTimestamp: null,
         cacheVersion: 0,
@@ -844,7 +845,7 @@ describe('RecordingLogic', () => {
         urlCacheTimestamp: null,
         privacyCache: null,
         privacyCacheTimestamp: null
-      };
+      });
 
       vi.clearAllMocks();
 
@@ -884,7 +885,7 @@ describe('RecordingLogic', () => {
       };
 
       // Setup privacy cache to return private page
-      RecordingLogic.cacheState.privacyCache = new Map([[url, privateInfo]]);
+      RecordingCache.getCacheState().privacyCache = new Map([[url, privateInfo]]);
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
@@ -916,15 +917,15 @@ describe('RecordingLogic', () => {
 
   describe('headerValue handling', () => {
     beforeEach(() => {
-      RecordingLogic.invalidatePrivacyCache();
-      RecordingLogic.invalidateSettingsCache();
-      RecordingLogic.invalidateUrlCache();
+      RecordingCache.invalidatePrivacyCache();
+      RecordingCache.invalidateSettingsCache();
+      RecordingCache.invalidateUrlCache();
 
       if (!chrome.notifications) {
         chrome.notifications = { create: vi.fn() };
       }
 
-      RecordingLogic.cacheState = {
+      Object.assign(RecordingCache.getCacheState(), {
         settingsCache: null,
         cacheTimestamp: null,
         cacheVersion: 0,
@@ -932,7 +933,7 @@ describe('RecordingLogic', () => {
         urlCacheTimestamp: null,
         privacyCache: null,
         privacyCacheTimestamp: null
-      };
+      });
 
       vi.clearAllMocks();
 
@@ -966,7 +967,7 @@ describe('RecordingLogic', () => {
         timestamp: Date.now()
       };
 
-      RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
+      RecordingCache.getCacheState().privacyCache = new Map([[url, mockPrivacyInfo]]);
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
@@ -1001,7 +1002,7 @@ describe('RecordingLogic', () => {
         timestamp: Date.now()
       };
 
-      RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
+      RecordingCache.getCacheState().privacyCache = new Map([[url, mockPrivacyInfo]]);
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
@@ -1036,7 +1037,7 @@ describe('RecordingLogic', () => {
         timestamp: Date.now()
       };
 
-      RecordingLogic.cacheState.privacyCache = new Map([[url, mockPrivacyInfo]]);
+      RecordingCache.getCacheState().privacyCache = new Map([[url, mockPrivacyInfo]]);
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
@@ -1068,7 +1069,7 @@ describe('RecordingLogic', () => {
 
     test('authorization reason の場合は headerValue が [REDACTED] でマスクされる', async () => {
       const url = 'https://api.example.com/data';
-      RecordingLogic.cacheState.privacyCache = new Map([[url, {
+      RecordingCache.getCacheState().privacyCache = new Map([[url, {
         isPrivate: true,
         reason: 'authorization' as const,
         timestamp: Date.now()
@@ -1097,7 +1098,7 @@ describe('RecordingLogic', () => {
     test('cache-control reason の場合は headerValue がそのまま保存される', async () => {
       const url = 'https://example.com/private';
       const cacheControlValue = 'private, no-store';
-      RecordingLogic.cacheState.privacyCache = new Map([[url, {
+      RecordingCache.getCacheState().privacyCache = new Map([[url, {
         isPrivate: true,
         reason: 'cache-control' as const,
         timestamp: Date.now()
@@ -1126,7 +1127,7 @@ describe('RecordingLogic', () => {
     test('set-cookie reason の場合は headerValue がそのまま保存される', async () => {
       const url = 'https://example.com/cookie';
       const cookieValue = 'session=abc; HttpOnly; Secure';
-      RecordingLogic.cacheState.privacyCache = new Map([[url, {
+      RecordingCache.getCacheState().privacyCache = new Map([[url, {
         isPrivate: true,
         reason: 'set-cookie' as const,
         timestamp: Date.now()

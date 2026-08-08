@@ -6,6 +6,7 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { RecordingLogic } from '../recordingLogic.ts';
+import { RecordingCache } from '../recordingCache.ts';
 import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps } from '../../utils/storage.ts';
 import { PrivacyPipeline } from '../privacyPipeline.ts';
 import { NotificationHelper } from '../notificationHelper.ts';
@@ -90,13 +91,13 @@ describe('RecordingLogic: データ整合性（P0）', () => {
     vi.clearAllMocks();
 
     // Problem #7: URLキャッシュを初期化
-    RecordingLogic.cacheState = {
+    Object.assign(RecordingCache.getCacheState(), {
       settingsCache: null,
       cacheTimestamp: null,
       cacheVersion: 0,
       urlCache: null,
       urlCacheTimestamp: null
-    };
+    });
 
     // デフォルトモック
     getSettings.mockResolvedValue({

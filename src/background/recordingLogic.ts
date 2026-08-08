@@ -25,9 +25,6 @@ export { SETTINGS_CACHE_TTL } from './recordingCache.js';
 export { redactSettingsApiKeys } from './recordingCache.js';
 export { truncateContentSize, isValidFetchUrl, MAX_RECORD_SIZE } from './recordingValidator.js';
 
-import type { Settings } from '../utils/storage.js';
-import type { PrivacyInfo } from '../utils/privacyChecker.js';
-
 /**
  * Recording data input for the pipeline.
  */
@@ -60,72 +57,8 @@ export interface RecordingData {
 /**
  * Recording orchestration.
  * Manages per-URL mutex and delegates to RecordingPipeline.
- *
- * Backward-compatible static methods delegate to RecordingCache.
  */
 export class RecordingLogic {
-  // =========================================================================
-  // Backward-compatible static accessors (delegate to RecordingCache)
-  // =========================================================================
-
-  /** @deprecated Use RecordingCache.getCacheState() or specific accessors instead */
-  static get cacheState() {
-    return RecordingCache.getCacheState() as {
-      settingsCache: Settings | null;
-      cacheTimestamp: number | null;
-      cacheVersion: number;
-      urlCache: Map<string, number> | null;
-      urlCacheTimestamp: number | null;
-      privacyCache: Map<string, PrivacyInfo> | null;
-      privacyCacheTimestamp: number | null;
-    };
-  }
-
-  /** @deprecated Use RecordingCache.resetCacheState() instead */
-  static set cacheState(value: {
-    settingsCache: Settings | null;
-    cacheTimestamp: number | null;
-    cacheVersion: number;
-    urlCache: Map<string, number> | null;
-    urlCacheTimestamp: number | null;
-    privacyCache?: Map<string, PrivacyInfo> | null;
-    privacyCacheTimestamp?: number | null;
-  }) {
-    const cs = RecordingCache.getCacheState();
-    cs.settingsCache = value.settingsCache;
-    cs.cacheTimestamp = value.cacheTimestamp;
-    cs.cacheVersion = value.cacheVersion;
-    cs.urlCache = value.urlCache;
-    cs.urlCacheTimestamp = value.urlCacheTimestamp;
-    if (value.privacyCache !== undefined) cs.privacyCache = value.privacyCache;
-    if (value.privacyCacheTimestamp !== undefined) cs.privacyCacheTimestamp = value.privacyCacheTimestamp;
-  }
-
-  /** @deprecated Use RecordingCache.invalidateSettingsCache() instead */
-  static invalidateSettingsCache(): void {
-    RecordingCache.invalidateSettingsCache();
-  }
-
-  /** @deprecated Use RecordingCache.invalidateUrlCache() instead */
-  static invalidateUrlCache(): void {
-    RecordingCache.invalidateUrlCache();
-  }
-
-  /** @deprecated Use RecordingCache.invalidatePrivacyCache() instead */
-  static async invalidatePrivacyCache(): Promise<void> {
-    await RecordingCache.invalidatePrivacyCache();
-  }
-
-  /** @deprecated Use RecordingCache.loadCacheFromSession() instead */
-  static async loadCacheFromSession(): Promise<void> {
-    await RecordingCache.loadCacheFromSession();
-  }
-
-  /** @deprecated Use RecordingCache.scheduleCacheSave() instead */
-  static scheduleCacheSave(): void {
-    RecordingCache.scheduleCacheSave();
-  }
-
   // =========================================================================
   // Instance methods
   // =========================================================================
@@ -172,34 +105,6 @@ export class RecordingLogic {
   // =========================================================================
   // Instance methods (recording orchestration)
   // =========================================================================
-
-  /**
-   * @deprecated Use RecordingCache.getSettingsWithCache() instead
-   */
-  async getSettingsWithCache(): Promise<Settings> {
-    return RecordingCache.getSettingsWithCache();
-  }
-
-  /**
-   * @deprecated Use RecordingCache.getSavedUrlsWithCache() instead
-   */
-  async getSavedUrlsWithCache(): Promise<Map<string, number>> {
-    return RecordingCache.getSavedUrlsWithCache();
-  }
-
-  /**
-   * @deprecated Use RecordingCache.getPrivacyInfoWithCache() instead
-   */
-  async getPrivacyInfoWithCache(url: string): Promise<PrivacyInfo | null> {
-    return RecordingCache.getPrivacyInfoWithCache(url);
-  }
-
-  /**
-   * @deprecated No-op after simplification
-   */
-  invalidateInstanceCache(): void {
-    // no-op
-  }
 
   /**
    * Retry an Obsidian write for an offline-queued job.

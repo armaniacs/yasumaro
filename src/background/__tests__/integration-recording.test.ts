@@ -1,5 +1,6 @@
 // src/background/__tests__/integration-recording.test.js
 import { RecordingLogic } from '../recordingLogic.js';
+import { RecordingCache } from '../recordingCache.js';
 
 import * as storage from '../../utils/storage.js';
 import * as storageUrls from '../../utils/storageUrls.js';
@@ -38,7 +39,7 @@ beforeEach(() => {
   storageUrls.setSavedUrlsWithTimestamps.mockResolvedValue();
 
   // Problem #7: URLキャッシュを初期化
-  RecordingLogic.cacheState = {
+  Object.assign(RecordingCache.getCacheState(), {
     settingsCache: null,
     cacheTimestamp: null,
     cacheVersion: 0,
@@ -46,7 +47,7 @@ beforeEach(() => {
     urlCacheTimestamp: null,
     privacyCache: null,
     privacyCacheTimestamp: null
-  };
+  });
 
   storage.StorageKeys = {
     PRIVACY_MODE: 'PRIVACY_MODE',

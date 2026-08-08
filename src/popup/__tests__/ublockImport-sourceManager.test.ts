@@ -12,7 +12,7 @@ import {
   reloadSource,
   saveUblockSettings
 } from '../ublockImport/sourceManager.js';
-import { RecordingLogic } from '../../background/recordingLogic.js';
+import { RecordingCache } from '../../background/recordingCache.js';
 
 // 【重要】storage.tsのcachedSettingsを直接クリアするためのユーティリティ
 // storage.tsのキャッシュは1秒間有効で、テスト間でリセットされない可能性がある
@@ -21,9 +21,9 @@ const DISABLE_CACHE_IN_TESTS = async () => {
   // より直接的なアプローチ: clearSettingsCache後に待機して確実にクリアする
   clearSettingsCache();
 
-  // RecordingLogicのstaticキャッシュもクリア
-  RecordingLogic.invalidateSettingsCache();
-  RecordingLogic.invalidateUrlCache();
+  // RecordingCacheのstaticキャッシュもクリア
+  RecordingCache.invalidateSettingsCache();
+  RecordingCache.invalidateUrlCache();
 };
 
 // =============================================================================
@@ -180,8 +180,8 @@ describe('ublockImport - SourceManager Module', () => {
     // 【重要】storage.tsのキャッシュをクリア（各テスト終了時）
     // storage.test.tsと同じパターン
     clearSettingsCache();
-    RecordingLogic.invalidateSettingsCache();
-    RecordingLogic.invalidateUrlCache();
+    RecordingCache.invalidateSettingsCache();
+    RecordingCache.invalidateUrlCache();
 
     // jest.setup.js の localStorage をクリアして状態をリセット
     Object.keys(localStorage).forEach(key => delete localStorage[key]);
