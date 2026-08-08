@@ -33,6 +33,41 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.7.27] - 2026-08-09
+
+This release immediately addresses review feedback from the previous release.
+
+[6.7.26](#6726---2026-08-09) で「別PBI推奨」として残した2件の後始末。
+どちらもコードの削除であり、ユーザーに見える振る舞いの変更はない。
+
+### Security
+
+- 送信元認可の判定を `checkSenderTrust` の**1箇所に集約**した
+  （[6.7.26](#6726---2026-08-09) では registry と handler の二重で判定していた）
+- 削除にあたり、**全19メッセージ型 × 3種類の送信元**（content script /
+  拡張ページ / 外部拡張）の判定を固定する網羅テスト59件を先に用意した。
+  登録表は `service-worker.ts` から抽出して突き合わせるため、
+  以後の変更で信頼レベルが緩めば必ず検知される
+- DASHBOARD_SQLITE の Red Team 対応テストを、ソーステキストの文字列照合から
+  **実際に dispatch して全20 subtype の拒否を確認する**形に書き換えた。
+  ガードの実装位置に依存しない検証になっている
+
+### Refactor
+
+- 本番から呼ばれていなかったテスト専用 wrapper `handleDashboardSqlite` を削除し、
+  72箇所を `__tests__` 配下のハーネス経由に移行。
+  意味の読めない位置引数（`(payload, client, undefined, TOKEN, undefined, cleanup)`）が
+  名前付き上書きになった
+- handler 側の個別認可チェック13箇所と `rejectContentScriptSender` を削除。
+  VULN-004/009/018/019/020 の背景コメントは残し、強制箇所への参照を追記
+
+### Tests
+
+- テスト総数: 7546 → 7605（+59）
+- 認可を検証していた直接呼び出しテスト6件は、削除せず registry 経由に移行
+  （単に消すと認可のカバレッジが失われるため）
+- 移行したテストの件数とアサーション内容は不変であることを確認
+
 ## [6.7.26] - 2026-08-09
 
 This release immediately addresses review feedback from the previous release.
