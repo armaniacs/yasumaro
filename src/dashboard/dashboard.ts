@@ -23,6 +23,7 @@ import { renderFileTemplate, getActiveTemplate, getHostname } from '../utils/mar
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';
 import { saveDashboardSettings } from './settingsPipeline.js';
 import { generateReviewSummary } from './reviewSummaryHandler.js';
+import { formatProviderHeadline, formatProviderDetailLines } from './aiTestResultView.js';
 
 function openSettingsPanel(section: string): void {
   const panelMap: Record<string, string> = {
@@ -506,34 +507,19 @@ export async function handleTestAi(): Promise<void> {
         container.appendChild(statusEl);
         statusDiv.appendChild(container);
 
-        const providerLabels: Record<string, string> = PROVIDER_LABELS;
-
         for (const provider of aiResult.providers) {
           const row = document.createElement('div');
           row.className = 'diag-indent';
-          const label = providerLabels[provider.provider] || provider.provider;
-          const modelInfo = provider.model ? ` (${provider.model})` : '';
-          const durationSeconds = (provider.elapsedMs / 1000).toFixed(1);
-          const durationInfo = ` (${getMessage('aiProviderTestDuration', { seconds: durationSeconds }) || `${durationSeconds}s`})`;
-          row.textContent = `${provider.success ? '✓' : '✗'} ${label}${modelInfo}: ${provider.message}${durationInfo}`;
+          row.textContent = formatProviderHeadline(provider);
           row.classList.add(provider.success ? 'diag-success' : 'diag-error');
           statusDiv.appendChild(row);
 
-          // Show debug details if available
-          if (provider.debug) {
-            const debugRow = document.createElement('div');
-            debugRow.className = 'diag-indent ai-debug-details';
-
-            const details: string[] = [];
-            if (provider.debug.prompt) details.push(`Prompt: ${provider.debug.prompt}`);
-            if (provider.debug.response) details.push(`Response: ${provider.debug.response}`);
-            if (provider.debug.error) details.push(`Error: ${provider.debug.error}`);
-            if (provider.debug.availability) details.push(`Availability: ${provider.debug.availability}`);
-            if (provider.debug.hasContent !== undefined) details.push(`Has content: ${provider.debug.hasContent}`);
-            if (provider.debug.statusCode !== undefined) details.push(`Status: ${provider.debug.statusCode}`);
-
-            debugRow.textContent = details.join(' | ');
-            statusDiv.appendChild(debugRow);
+          // 何を送って何が返ったかを1行ずつ表示する
+          for (const line of formatProviderDetailLines(provider)) {
+            const detailRow = document.createElement('div');
+            detailRow.className = 'diag-indent ai-debug-details';
+            detailRow.textContent = line;
+            statusDiv.appendChild(detailRow);
           }
         }
       } else {

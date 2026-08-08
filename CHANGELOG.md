@@ -37,7 +37,7 @@ All notable changes to this project will be documented in this file.
 
 前日から続く deepening リファクタリングの第3弾。アーキテクチャレビュー（コードベース全体スキャン）で検出した「配置と実態の乖離」「層をまたぐ依存」「テストできない計算」の3点を解消。本番未使用コードの削除を含め、差し引き約4,700行を削減。
 
-あわせて、接続テストがHTTPキャッシュに当たり実際の到達性を検証できていなかった不具合を修正した（APIキー失効後やオフラインでも「接続成功」を返しうる状態だった）。
+あわせて、AI接続テストが実際にはAIへ問い合わせておらず（モデル一覧の取得のみ）疎通確認として不十分だった不具合を修正し、送受信内容を画面に表示するようにした。
 
 ### Removed / 削除
 
@@ -68,15 +68,22 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed / 修正
 
-- **接続テストがHTTPキャッシュに当たり、実際の到達性を検証できていなかった問題を修正** — 接続テストの GET リクエスト（OpenAI互換 `/models`、Gemini `/v1beta/models`、Obsidian root、GitHub Gist `/user`）に `cache` 指定が無く、`fetch` の既定値（`'default'`）でブラウザのHTTPキャッシュを使っていた。キャッシュヒット時はネットワーク往復が発生しないため、所要時間が「0.0秒」と表示されるだけでなく、**APIキー失効後やオフラインでも「接続成功」を返しうる**状態だった（テスト結果そのものが信頼できない）
-  - `src/utils/fetch.ts` に `CONNECTION_TEST_CACHE_MODE`（`'no-store'`）を追加し、接続テストを行う4経路すべてに適用
-  - 「今この瞬間その API へ到達できるか」を確かめる機能である以上、キャッシュを使ってはならないという意図をコメントで明示
-  - 回帰テスト `connectionTest-no-cache.test.ts` を追加。`fetch` に渡る `cache` を直接検証するため、将来指定が外れた場合に必ず失敗する（実際に指定を外して落ちることを確認済み）
+- **AI接続テストが実際にはAIへ問い合わせておらず、疎通確認として不十分だった問題を修正** — OpenAI互換・Gemini の接続テストは `GET /models`（モデル一覧の取得）を叩くだけで、実際に推論を走らせていなかった。そのため以下が検証できていなかった
+  - APIキーが**推論に対して**有効か（モデル一覧の取得だけ通るケースを見逃す）
+  - 設定したモデル名が実在し、実際に使えるか
+  - 応答が実際に本文を含むか
+  - また軽量なメタデータ取得のため数十msで完了し、表示側の `toFixed(1)` による丸めで「0.0秒」と表示されていた（Built-in AI のみ実推論のため 1.2秒 で、この非対称が混乱の原因だった）
+  - **修正**: 全プロバイダで短いプロンプト（`Reply with the single word: OK`、`max_tokens: 16`）を実際に送る方式に統一。OpenAI互換は `POST /chat/completions`、Gemini は `POST /models/{model}:generateContent` を使う。応答本文が空の場合は成功扱いにしない
+- **AI接続テストで送受信した内容を画面に表示するようにした** — 何を送って何が返ったのかが分からず、失敗時の切り分けができなかった。送信先エンドポイント・送信内容・受信内容・モデル名・トークン数・HTTPステータスを表示する
+  - 表示整形を `src/dashboard/aiTestResultView.ts` に純関数として切り出した（「初期設定」画面と「診断」画面で同じ整形ロジックが重複していたため一本化）
+- **所要時間の表示が1秒未満で意味をなさなかった問題を修正** — 常に `(elapsedMs/1000).toFixed(1)` としていたため、50ms未満がすべて「0.0秒」になっていた。1秒未満はミリ秒（例: `42ms`）で表示する
+- **Obsidian / GitHub Gist の接続テストがHTTPキャッシュに当たりうる問題を修正** — これらは性質上 GET のままなので、`src/utils/fetch.ts` に `CONNECTION_TEST_CACHE_MODE`（`'no-store'`）を追加して適用した。キャッシュヒット時はネットワーク往復が発生せず、APIキー失効後やオフラインでも「接続成功」を返しうるため
 - **`initDashboard` の名前衝突を修正** — 即時実行される `(async function initDashboard())` と、同名の no-op な `export function initDashboard()` が同一ファイル内で衝突していた。テストから `initDashboard` を import すると実際のブートストラップ処理ではなく no-op を掴むため、テストが何も検証していない状態だった。即時実行IIFEを `export async function` 化し、テストも実処理の完了を検証する形に更新
 
 ### Tests / テスト
 
-- 全 7,401 単体テスト通過（402ファイル）、TypeScript 型チェック正常
+- 全 7,419 単体テスト通過（403ファイル）、TypeScript 型チェック正常
+- 接続テストの回帰テストを追加。`connectionTest-real-inference.test.ts` は「GETでのメタデータ取得に戻っていないこと」と送受信内容の記録を固定し、`aiTestResultView.test.ts` は「1秒未満が 0.0秒 に丸められないこと」を固定する
 - 履歴パネルの純関数に対する新規テスト15件を追加。DBモックも jsdom も使わず 268ms で完走する（従来の同種テストは DBモック3種 + jsdom + マイクロタスク待ちを要していた）
 - デッドコード削除に伴い、使われていないコードを検証していたテスト7ファイルを削除
 

@@ -7,7 +7,7 @@
  */
 
 import { Settings, StorageKeys } from '../../../utils/storage.js';
-import { AIProviderStrategy, AISummaryResult, AIProviderConnectionResult } from './ProviderStrategy.js';
+import { AIProviderStrategy, AISummaryResult, AIProviderConnectionResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
 import { BuiltInAIClient } from '../../builtInAIClient.js';
 import { addLog, LogType } from '../../../utils/logger.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
@@ -55,14 +55,15 @@ export class BuiltInAiProvider extends AIProviderStrategy {
      */
     async testConnection(): Promise<AIProviderConnectionResult> {
         try {
-            const result = await this.builtInAiClient.summarize('Connection test.');
+            const result = await this.builtInAiClient.summarize(CONNECTION_TEST_PROMPT);
             if (result.success && result.summary && result.summary.length > 0) {
                 return {
                     success: true,
                     message: 'ok',
                     debug: {
-                        prompt: 'Connection test.',
+                        prompt: CONNECTION_TEST_PROMPT,
                         response: result.summary,
+                        endpoint: 'on-device (Built-in AI)',
                         hasContent: true,
                     },
                 };
@@ -73,8 +74,9 @@ export class BuiltInAiProvider extends AIProviderStrategy {
                 success: false,
                 message: errorMsg,
                 debug: {
-                    prompt: 'Connection test.',
+                    prompt: CONNECTION_TEST_PROMPT,
                     response: result.summary || undefined,
+                    endpoint: 'on-device (Built-in AI)',
                     error: result.error,
                     hasContent: false,
                 },
@@ -86,7 +88,8 @@ export class BuiltInAiProvider extends AIProviderStrategy {
                 success: false,
                 message: msg,
                 debug: {
-                    prompt: 'Connection test.',
+                    prompt: CONNECTION_TEST_PROMPT,
+                    endpoint: 'on-device (Built-in AI)',
                     error: msg,
                     hasContent: false,
                 },
