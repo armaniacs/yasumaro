@@ -1,6 +1,7 @@
 // src/background/__tests__/recordingLogic-whitelist-bypass.test.ts
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RecordingLogic } from '../recordingLogic.js';
+import { RecordingCache } from '../recordingCache.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIClient } from '../aiClient.js';
 import { StorageKeys } from '../../utils/storage.js';
@@ -25,9 +26,9 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // キャッシュクリア
-    RecordingLogic.invalidateSettingsCache();
-    RecordingLogic.invalidatePrivacyCache();
-    RecordingLogic.invalidateUrlCache();
+    RecordingCache.invalidateSettingsCache();
+    RecordingCache.invalidatePrivacyCache();
+    RecordingCache.invalidateUrlCache();
 
     // PrivacyPipelineのモック - use function() for constructor compatibility
     // @ts-expect-error - vi.fn() type narrowing issue
@@ -110,8 +111,8 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
       reason: 'cache-control' as const,
       timestamp: Date.now()
     };
-    RecordingLogic.cacheState.privacyCache = new Map();
-    RecordingLogic.cacheState.privacyCache.set('https://bank.example.com/page', privacyInfo);
+    RecordingCache.getCacheState().privacyCache = new Map();
+    RecordingCache.getCacheState().privacyCache.set('https://bank.example.com/page', privacyInfo);
 
     isDomainAllowed.mockResolvedValue(true);
 
@@ -144,8 +145,8 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
       reason: 'set-cookie' as const,
       timestamp: Date.now()
     };
-    RecordingLogic.cacheState.privacyCache = new Map();
-    RecordingLogic.cacheState.privacyCache.set('https://wiki.confluence.example.com/page', privacyInfo);
+    RecordingCache.getCacheState().privacyCache = new Map();
+    RecordingCache.getCacheState().privacyCache.set('https://wiki.confluence.example.com/page', privacyInfo);
 
     // ドメインフィルター: 許可
     // @ts-expect-error - vi.fn() type narrowing issue
@@ -186,8 +187,8 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
       reason: 'authorization' as const,
       timestamp: Date.now()
     };
-    RecordingLogic.cacheState.privacyCache = new Map();
-    RecordingLogic.cacheState.privacyCache.set('https://example.com/page', privacyInfo);
+    RecordingCache.getCacheState().privacyCache = new Map();
+    RecordingCache.getCacheState().privacyCache.set('https://example.com/page', privacyInfo);
 
     // ドメインフィルター: 許可
     // @ts-expect-error - vi.fn() type narrowing issue

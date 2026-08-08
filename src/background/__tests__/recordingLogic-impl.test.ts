@@ -135,6 +135,7 @@ vi.mock('../../utils/storageUrls.js', () => ({
 
 // ─── Imports (after mocks) ──────────────────────────────────────────────────
 import { RecordingLogic, isValidFetchUrl, truncateContentSize } from '../recordingLogic.js';
+import { RecordingCache } from '../recordingCache.js';
 import { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
 import { PrivacyPipeline } from '../privacyPipeline.js';
 import * as storage from '../../utils/storage.js';
@@ -151,7 +152,7 @@ const mockLogger = vi.mocked(loggerModule);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function resetCacheState() {
-  RecordingLogic.cacheState = {
+  Object.assign(RecordingCache.getCacheState(), {
     settingsCache: null,
     cacheTimestamp: null,
     cacheVersion: 0,
@@ -159,7 +160,7 @@ function resetCacheState() {
     urlCacheTimestamp: null,
     privacyCache: null,
     privacyCacheTimestamp: null,
-  };
+  });
 }
 
 function makeMockObsidian() {

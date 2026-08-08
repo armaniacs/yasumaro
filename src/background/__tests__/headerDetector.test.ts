@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'vitest';
 import { HeaderDetector, sessionCacheKeysToEvict } from '../headerDetector.js';
-import { RecordingLogic } from '../recordingLogic.js';
+import { RecordingCache } from '../recordingCache.js';
 import { checkPrivacy } from '../../utils/privacyChecker.js';
 import { ErrorCode } from '../../utils/logger.js';
 
@@ -39,7 +39,7 @@ import { logError } from '../../utils/logger.js';
 
 describe('HeaderDetector', () => {
   beforeEach(() => {
-    RecordingLogic.invalidatePrivacyCache();
+    RecordingCache.invalidatePrivacyCache();
   });
 
   describe('cachePrivacyInfo', () => {
@@ -53,8 +53,8 @@ describe('HeaderDetector', () => {
 
       HeaderDetector['cachePrivacyInfo'](url, info);
 
-      expect(RecordingLogic.cacheState.privacyCache).not.toBeNull();
-      expect(RecordingLogic.cacheState.privacyCache?.get(url)).toEqual(info);
+      expect(RecordingCache.getCacheState().privacyCache).not.toBeNull();
+      expect(RecordingCache.getCacheState().privacyCache?.get(url)).toEqual(info);
     });
 
     test('キャッシュサイズが100を超えたら最も古いエントリを削除する', () => {
@@ -66,7 +66,7 @@ describe('HeaderDetector', () => {
         });
       }
 
-      expect(RecordingLogic.cacheState.privacyCache?.size).toBe(100);
+      expect(RecordingCache.getCacheState().privacyCache?.size).toBe(100);
 
       // 101個目を追加
       HeaderDetector['cachePrivacyInfo']('https://example.com/test100', {
@@ -76,11 +76,11 @@ describe('HeaderDetector', () => {
       });
 
       // サイズは100のまま（最も古いエントリが削除される）
-      expect(RecordingLogic.cacheState.privacyCache?.size).toBe(100);
+      expect(RecordingCache.getCacheState().privacyCache?.size).toBe(100);
       // 最古のエントリ(test0)が削除されている
-      expect(RecordingLogic.cacheState.privacyCache?.has('https://example.com/test0')).toBe(false);
+      expect(RecordingCache.getCacheState().privacyCache?.has('https://example.com/test0')).toBe(false);
       // 最新のエントリ(test100)は存在する
-      expect(RecordingLogic.cacheState.privacyCache?.has('https://example.com/test100')).toBe(true);
+      expect(RecordingCache.getCacheState().privacyCache?.has('https://example.com/test100')).toBe(true);
     });
   });
 
@@ -109,7 +109,7 @@ describe('HeaderDetector', () => {
 
       HeaderDetector['onHeadersReceived'](details);
 
-      const cached = RecordingLogic.cacheState.privacyCache?.get('https://example.com/page');
+      const cached = RecordingCache.getCacheState().privacyCache?.get('https://example.com/page');
       expect(cached).toBeDefined();
       expect(cached?.isPrivate).toBe(true);
       expect(cached?.reason).toBe('cache-control');
@@ -126,7 +126,7 @@ describe('HeaderDetector', () => {
 
       HeaderDetector['onHeadersReceived'](details);
 
-      expect(RecordingLogic.cacheState.privacyCache?.has('https://example.com/iframe')).toBeFalsy();
+      expect(RecordingCache.getCacheState().privacyCache?.has('https://example.com/iframe')).toBeFalsy();
     });
 
     test('非HTMLリソースは無視する', () => {
@@ -141,7 +141,7 @@ describe('HeaderDetector', () => {
 
       HeaderDetector['onHeadersReceived'](details);
 
-      expect(RecordingLogic.cacheState.privacyCache?.has('https://example.com/image.png')).toBeFalsy();
+      expect(RecordingCache.getCacheState().privacyCache?.has('https://example.com/image.png')).toBeFalsy();
     });
 
     test('Content-Typeがない場合もスキップする', () => {
@@ -153,7 +153,7 @@ describe('HeaderDetector', () => {
 
       HeaderDetector['onHeadersReceived'](details);
 
-       expect(RecordingLogic.cacheState.privacyCache?.has('https://example.com/noct')).toBeFalsy();
+       expect(RecordingCache.getCacheState().privacyCache?.has('https://example.com/noct')).toBeFalsy();
      });
 
     test('should handle errors in onHeadersReceived gracefully', () => {
@@ -256,7 +256,7 @@ describe('HeaderDetector', () => {
 
   describe('evictOldestEntry', () => {
     test('キャッシュが空の場合は何もしない', async () => {
-      RecordingLogic.invalidatePrivacyCache();
+      RecordingCache.invalidatePrivacyCache();
       await HeaderDetector['evictOldestEntry']();
       // エラーなく完了
     });

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { formatTimeAgo, checkPageStatus } from '../statusChecker.js';
-import { RecordingLogic } from '../../background/recordingLogic.js';
+import { RecordingCache } from '../../background/recordingCache.js';
 import * as storage from '../../utils/storage.js';
 
 // Mock chrome runtime for privacy cache
@@ -145,7 +145,7 @@ describe('formatTimeAgo', () => {
 describe('checkPageStatus', () => {
   beforeEach(() => {
     // Reset caches
-    RecordingLogic.cacheState.privacyCache = new Map();
+    RecordingCache.getCacheState().privacyCache = new Map();
 
     // Mock chrome.runtime.sendMessage for privacy cache
     mockChromeRuntime.sendMessage.mockResolvedValue({
