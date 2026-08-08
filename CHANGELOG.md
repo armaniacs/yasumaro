@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.23` リリース。
+> - 現時点では `v6.7.24` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,47 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.24] - 2026-08-08
+
+前日から続く deepening リファクタリングの第3弾。アーキテクチャレビュー（コードベース全体スキャン）で検出した「配置と実態の乖離」「層をまたぐ依存」「テストできない計算」の3点を解消。本番未使用コードの削除を含め、差し引き約4,700行を削減。
+
+### Removed / 削除
+
+- **本番未使用のデッドモジュール5件を削除（本番1,010行 + テスト3,915行）** — WXTエントリポイントからの推移的import追跡（到達性解析）により、本番コードから一切参照されず、テストのみが検証し続けている状態を検出。いずれも後継実装への移行時の削除漏れ
+  - `src/popup/masterPasswordUi.ts` → `utils/masterPasswordUiCore.ts` + `dashboard/masterPassword.ts` へ移行済み
+  - `src/popup/settingsExportImportUi.ts` → `utils/settingsExportImportUiCore.ts` + `dashboard/exportImport.ts` へ移行済み
+  - `src/popup/settings/settingsSaver.ts` → `dashboard/settingsPipeline.ts` へ移行済み
+  - `src/popup/settingsForm.ts` → `utils/settingsFormBinding.ts` へ移行済み
+  - `src/popup/ublockExport.ts` — 呼び出し元・対応するUIボタンともに存在せず到達不能
+
+### Refactor / リファクタ
+
+- **dashboard 専用の設定モジュールを `src/dashboard/settings/` へ移動（16ファイル 4,227行）** — `src/popup/` 配下にありながら popup UI からは到達不能で、実際には options(dashboard) からのみ使われていたモジュール群。`entrypoints/popup/index.html` には対応する設定フォームのDOM自体が存在せず、popup 文脈ではバインド対象すら無い状態だった。「popup」という名前が実態と食い違い、設定機能を追うのに popup と dashboard を往復する必要があった（locality の問題）
+  - `trustSettings` / `aiSummaryCleansingSettingsV2` / `customPromptManager` / `domainFilter` / `contentSettings` / `privacySettings` / `settings/aiProvider` / `settings/fieldValidation` / `ublockImport/*`
+  - 汎用UIヘルパー2件（`settingsUiHelper` / `focusTrap`）は popup・dashboard 双方が使う真の共有物のため `src/utils/ui/` へ
+- **全層が参照する共有物を background 層から中立な位置へ移動** — `src/utils/` は本来 leaf であるべきだが、上位層への依存が発生していた
+  - `CURRENT_PROTOCOL_VERSION` → `src/messaging/protocol.ts`（新設）。`utils/retryHelper` / `utils/contentExtractor` / `utils/storage/encryptionSession` / `offscreen/offscreenLogger` の4箇所が、この定数1つのためだけに `background/messageTypes.js` を import していた。`background/messageTypes.ts` からは後方互換のため再エクスポート
+  - `Mutex` → `src/utils/Mutex.ts`。chrome API 依存ゼロの純粋なユーティリティ（145行）で、background 4箇所と offscreen 1箇所から使われる真の共有物だった
+  - これにより `utils/` → `background/` の実行時依存は `auditLog.ts` の1件のみに（`content/` の2件は type-only import）
+- **`RecordingLogic` の deprecated shim を削除** — 6.7.23 の分割時に後方互換用として残した static/instance 委譲メソッド10件。本番呼び出し元は既に `RecordingCache` 直接参照へ移行済みで、参照は10テストファイルのみだったため、テストを移行してから削除（95行削減）
+- **`crypto/index.ts` を責務ごとに3ファイルへ分割（815行）** — 汎用暗号プリミティブ・HMAC鍵管理・暗号化エンベロープ形式という無関係な3責務が同居していた
+  - `crypto/primitives.ts` — AES-GCM/PBKDF2 プリミティブ（chrome.storage 副作用なし）
+  - `crypto/hmacKeyStore.ts` — HMAC署名鍵の生成・ラップ・永続化（chrome.storage 副作用あり）
+  - `crypto/envelope.ts` — バージョン付き暗号化エンベロープ形式
+  - `crypto/index.ts` は re-export barrel として残し、既存26箇所の import 経路は変更不要
+- **履歴パネルの計算部分を純関数として切り出す** — `createSqliteHistoryPanel()` は約930行のクロージャで state と DOM を共有しており、個々の計算を単体検証する seam が無かった。引数のみに依存する4関数を `sqliteHistoryQuery.ts` へ抽出（`buildEnrichmentKey` / `enrichEntryWithChromeStorage` / `filterRowsByTag` / `dateRangeFromSelectedDate`）
+  - 副次効果として、chrome.storage 補完キーの生成がキャッシュ構築側と参照側で二重定義されていたのを一本化（書式のずれは補完が黙って効かなくなる類のバグ源）
+
+### Fixed / 修正
+
+- **`initDashboard` の名前衝突を修正** — 即時実行される `(async function initDashboard())` と、同名の no-op な `export function initDashboard()` が同一ファイル内で衝突していた。テストから `initDashboard` を import すると実際のブートストラップ処理ではなく no-op を掴むため、テストが何も検証していない状態だった。即時実行IIFEを `export async function` 化し、テストも実処理の完了を検証する形に更新
+
+### Tests / テスト
+
+- 全 7,398 単体テスト通過（401ファイル）、TypeScript 型チェック正常
+- 履歴パネルの純関数に対する新規テスト15件を追加。DBモックも jsdom も使わず 268ms で完走する（従来の同種テストは DBモック3種 + jsdom + マイクロタスク待ちを要していた）
+- デッドコード削除に伴い、使われていないコードを検証していたテスト7ファイルを削除
 
 ## [6.7.23] - 2026-08-08
 
