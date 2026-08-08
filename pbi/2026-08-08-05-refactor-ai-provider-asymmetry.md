@@ -140,14 +140,46 @@ Scenario: 既存テストが全てパスする
 
 ## 受け入れ基準
 
-- [ ] リトライ述語を `ProviderStrategy` に移し、OpenAI / Gemini 両者が利用
-- [ ] 使用量記録を `ProviderStrategy` に移し、両者が同じ条件で記録
-- [ ] `BuiltInAiProvider` が `sanitizeContent()` を通る
-- [ ] `BuiltInAiProvider` が `checkPreFlight()` / `getMaxTokens()` を通す or 通さない理由をコメントで明記
-- [ ] `BuiltInAiProvider` の単体テストを新規作成（現状0）
-- [ ] Gemini のリトライ抑止を検証する単体テストを追加
-- [ ] 使用量記録の条件を検証する単体テストを追加
-- [ ] `npm run validate` が成功する
+- [x] リトライ述語を `ProviderStrategy.shouldRetrySummaryRequest` に移し、OpenAI / Gemini 両者が利用
+- [x] 使用量記録を `ProviderStrategy.recordUsageIfPresent` に移し、両者が同じ条件で記録
+- [x] `BuiltInAiProvider` が `sanitizeContent()` を通る
+- [x] `BuiltInAiProvider` が `checkPreFlight()` / `getMaxTokens()` を通さない理由をコメントで明記
+- [x] `BuiltInAiProvider` の単体テストを新規作成（12件、現状0だった）
+- [x] Gemini のリトライ抑止を検証する単体テストを追加（`providerParity.test.ts`）
+- [x] 使用量記録の条件を検証する単体テストを追加
+- [x] `npm run validate` が成功する（7496 tests pass）
+
+### 実装結果（2026-08-08）
+
+#### 1. リトライ述語の共通化
+
+`ProviderStrategy.shouldRetrySummaryRequest()` として基底クラスへ。OpenAI が持っていた述語をそのまま採用（429 抑止・非冪等5xx 抑止）。**Gemini の挙動が変わる**: 429 でリトライしなくなった。
+
+#### 2. 使用量記録の共通化
+
+`ProviderStrategy.recordUsageIfPresent()`。トークン数が両方 `undefined` なら記録しない（OpenAI 側の挙動を正とする）。**Gemini の挙動が変わる**: `usageMetadata` 欠落時に `recordUsage(0, 0)` を記録しなくなった。
+
+#### 3. BuiltInAiProvider
+
+- `sanitizeContent()` を通すようにした。オンデバイス実行でも、注入された指示が要約を汚染して Obsidian に書き込まれるリスクは残るため
+- `checkPreFlight()` は**意図的に通さない**。月次上限・使用量警告・レート制限はいずれも有料APIのコスト保護が目的で、オンデバイスには該当しない（コード内コメントに明記）
+- `getMaxTokens()` も**通さない**。`BuiltInAIClient.summarize()` がトークン上限引数を取らないため
+- 使用量記録を追加（従来は一切記録していなかった）
+
+### テストが本当に欠陥を捕まえることの確認
+
+`GeminiProvider` から `shouldRetry` を再び外したところ、`providerParity.test.ts` の Gemini 系4件が失敗することを確認した（復旧済み）。
+
+### 補足: フルテスト実行時の失敗について
+
+作業中、フルスイート実行で `recordingLogic-impl.test.ts` と `RecordingPipeline.test.ts` が失敗する事象があったが、**本変更とは無関係**だった。
+
+- 個別実行では両ファイルとも成功（46件）
+- `src/background/` 全体（114ファイル）でも成功
+- 失敗時の実行は `setup` だけで 1037秒（通常 30秒）かかっており、マシン負荷によるワーカータイムアウト
+- `failureMessages` が空（アサーション失敗ではない）
+
+クリーンな状態で再実行し、407ファイル7496件すべて成功することを確認済み。
 
 ## テスト戦略
 

@@ -5,7 +5,7 @@
 
 import { Settings, StorageKeys } from '../../../utils/storage.js';
 import { validateMaxTokens } from '../../../utils/aiLimits.js';
-import { checkHardLimit, checkRateLimit, checkUsageWarning, getRateLimitMessage } from '../../../utils/aiUsageTracker.js';
+import { checkHardLimit, checkRateLimit, checkUsageWarning, getRateLimitMessage, recordUsage } from '../../../utils/aiUsageTracker.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { addLog, LogType } from '../../../utils/logger.js';
 
@@ -286,5 +286,50 @@ export abstract class AIProviderStrategy {
 
         // 3. デフォルト値
         return validateMaxTokens(1000, providerId);
+    }
+
+    /**
+     * 要約リクエストの共通リトライ方針。
+     *
+     * 全プロバイダーで同じ挙動にするために基底クラスへ寄せた。
+     * 以前は OpenAIProvider だけがこの述語を渡し、GeminiProvider は
+     * デフォルトを継承していたため、同じ「AI要約」でありながら
+     * Gemini だけが 429（レート制限）でもリトライしていた。
+     *
+     * - 429: リトライしない（制限を悪化させるだけ）
+     * - 非冪等メソッドの 5xx: リトライしない（二重送信のリスク）
+     * - タイムアウト: 1回だけリトライ
+     * - ネットワークエラー: リトライする
+     */
+    protected shouldRetrySummaryRequest(
+        error: Error,
+        attempt: number,
+        response: Response | null,
+        method?: string,
+    ): boolean {
+        if (response?.status === 429) return false;
+        if (response && response.status >= 500) {
+            return !['POST', 'PUT', 'PATCH'].includes(method?.toUpperCase() ?? 'POST');
+        }
+        if (error.name === 'AbortError' || error.message.includes('timed out')) {
+            return attempt <= 1;
+        }
+        if (error.name === 'NetworkError' || error.message.includes('NetworkError') || error.message.includes('fetch failed')) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * トークン使用量の記録。
+     *
+     * プロバイダーが使用量を返さなかった場合は「記録しない」。
+     * 以前 GeminiProvider は `|| 0` で 0 に丸めて必ず記録していたため、
+     * 「0トークン使った」という誤った事実が統計に混入していた。
+     * トークン数不明は 0 ではないので、OpenAI 側の挙動を正とする。
+     */
+    protected async recordUsageIfPresent(sentTokens?: number, receivedTokens?: number): Promise<void> {
+        if (sentTokens === undefined && receivedTokens === undefined) return;
+        await recordUsage(sentTokens ?? 0, receivedTokens ?? 0);
     }
 }
