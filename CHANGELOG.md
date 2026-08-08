@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.21` リリース。
+> - 現時点では `v6.7.22` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -33,24 +33,24 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
-## [6.7.21] - 2026-08-08
+## [6.7.22] - 2026-08-08
 
-自治体サイト等で `<script>` タグ以外の形（`hidden`/`display:none` 要素内への平文埋め込み）で本文に混入するJS/jQueryコードを、コンテンツ抽出・Content Cleansingの両段階で除去できるようにするバグ修正。
+前日リリースに続く deepening リファクタリングの追加分。AI プロバイダー層とURLメタデータ管理の重複をさらに解消。
 
-### Fixed / 修正
+### Refactor / リファクタ
 
-- **本文抽出時にJSコードが混入する不具合を修正** — `https://ginzan.city.oda.lg.jp/`（石見銀山世界遺産センター）等の自治体CMSサイトで、`hidden` 属性や `display:none` の要素内に平文で埋め込まれたjQueryコード（ドロップダウンメニュー制御、iOS拡大防止等の実装コード）がAIへの送信データに混入し、無関係な要約が生成される問題を修正
-  - `src/utils/contentExtractor/classifier.ts` — テキスト抽出の除外対象タグ（`EXCLUDED_TAGS`）に `script` / `style` / `noscript` / `template` を追加
-  - `src/utils/contentCleaner.ts` — Content Cleansing の Hard Strip 対象タグに `noscript` を追加。さらに `[hidden]` / `[aria-hidden="true"]` / `display:none` の非表示要素を削除するロジックを新設し、正規の `<script>` タグ以外の形で埋め込まれたコード片も除去可能に
+- **built-in-ai をファーストクラスの provider strategy に昇格** — `AIClient` から `registerBuiltInAiService()` の特殊経路を廃止し、`BuiltInAiProvider`（`AIProviderStrategy` 実装）として `ollama` / `openai-compatible` と同列の providers map に登録。`generateSummary` / `testConnection` の重複を `processSummarySlot()` に抽出
+  - `src/background/ai/providers/BuiltInAiProvider.ts` — 新設
+  - `src/background/ai/providers/index.ts` / `src/background/aiClient.ts` — 特殊経路の除去と providers map への統合
+- **`urlMetadata.ts` を `savedUrlStore.ts` に統合** — 機能が完全に上位互換だった `urlMetadata.ts`（558行）を削除し、`mergeSavedUrlEntry()` updater パターンを `savedUrlStore.ts` に追加。呼び出し元（`messageHandlers.ts` / `saveMetadataStep.ts` / `historyTagEditModal.ts`）を更新
+- **`contentExtractor` の cleanse 処理を重複除去** — 3箇所に分散していた cleanse ブロックを `runAiSummaryCleanse()` ヘルパーに抽出、`AiSummaryCleanseRunResult` 型を新設
 
 ### Tests / テスト
 
-- `classifier.test.ts` — script/style/noscript タグの除外テストを追加
-- `textExtraction.test.ts` — 自治体CMSサイトを模した再現ケース（本文中へのscriptタグ混入、noscript混入、style混入）の回帰テストを追加
-- `contentCleaner.test.ts` — noscriptタグ、`hidden`属性、`display:none`要素の除去テストを追加
-- 全テスト通過、TypeScript 型チェック正常、ビルド成功
+- `BuiltInAiProvider` の dispatch 経路テストを更新
+- `urlMetadata` 関連呼び出し元のテスト・モックを `savedUrlStore` ベースに更新
 
-## [6.7.20] - 2026-08-08（ deepening リファクタリング）
+## [6.7.21] - 2026-08-08（deepening リファクタリング）
 
 コードベースの重複除去と single responsibility の深化。3つの deepening candidate（D/E/F）を完了。
 
@@ -76,6 +76,23 @@ All notable changes to this project will be documented in this file.
 - `FallbackAIService.test.ts` — `success:false` フォールバックテストを追加
 - `localMarkdownExportTimingUi.test.ts` — インポート元を `dashboard.js` → `settingsFormBinding.js` に変更
 - 全 7555 単体テスト通過、TypeScript 型チェック正常
+
+## [6.7.20] - 2026-08-08
+
+自治体サイト等で `<script>` タグ以外の形（`hidden`/`display:none` 要素内への平文埋め込み）で本文に混入するJS/jQueryコードを、コンテンツ抽出・Content Cleansingの両段階で除去できるようにするバグ修正。
+
+### Fixed / 修正
+
+- **本文抽出時にJSコードが混入する不具合を修正** — `https://ginzan.city.oda.lg.jp/`（石見銀山世界遺産センター）等の自治体CMSサイトで、`hidden` 属性や `display:none` の要素内に平文で埋め込まれたjQueryコード（ドロップダウンメニュー制御、iOS拡大防止等の実装コード）がAIへの送信データに混入し、無関係な要約が生成される問題を修正
+  - `src/utils/contentExtractor/classifier.ts` — テキスト抽出の除外対象タグ（`EXCLUDED_TAGS`）に `script` / `style` / `noscript` / `template` を追加
+  - `src/utils/contentCleaner.ts` — Content Cleansing の Hard Strip 対象タグに `noscript` を追加。さらに `[hidden]` / `[aria-hidden="true"]` / `display:none` の非表示要素を削除するロジックを新設し、正規の `<script>` タグ以外の形で埋め込まれたコード片も除去可能に
+
+### Tests / テスト
+
+- `classifier.test.ts` — script/style/noscript タグの除外テストを追加
+- `textExtraction.test.ts` — 自治体CMSサイトを模した再現ケース（本文中へのscriptタグ混入、noscript混入、style混入）の回帰テストを追加
+- `contentCleaner.test.ts` — noscriptタグ、`hidden`属性、`display:none`要素の除去テストを追加
+- 全テスト通過、TypeScript 型チェック正常、ビルド成功
 
 ## [6.7.19] - 2026-08-07
 
