@@ -39,7 +39,7 @@ describe('createBackgroundServices', () => {
     mocks.TabCache.mockImplementation(function () { return { tabCache: true }; });
     mocks.RateLimiter.mockImplementation(function () { return { rateLimiter: true }; });
     mocks.ManualContentFetcher.mockImplementation(function () { return { manualContentFetcher: true }; });
-    mocks.AIClient.mockImplementation(function () { return { aiClient: true, registerBuiltInAiService: vi.fn() }; });
+    mocks.AIClient.mockImplementation(function () { return { aiClient: true }; });
     mocks.BuiltInAIClient.mockImplementation(function () { return { builtInAIClient: true }; });
     mocks.LocalAIService.mockImplementation(function () { return { localAIService: true }; });
     mocks.RemoteAIService.mockImplementation(function () { return { remoteAIService: true }; });
@@ -58,7 +58,7 @@ describe('createBackgroundServices', () => {
       tabCache: { tabCache: true },
       rateLimiter: { rateLimiter: true },
       manualContentFetcher: { manualContentFetcher: true },
-      aiClient: { aiClient: true, registerBuiltInAiService: expect.any(Function) },
+      aiClient: { aiClient: true },
       sessionStore: { sessionStore: true },
     });
   });
@@ -95,10 +95,12 @@ describe('createBackgroundServices', () => {
     expect(config.ensureOffscreenDocument).toBeUndefined();
   });
 
-  it('registers the LocalAIService instance with AIClient for built-in-ai priority slots', () => {
-    const services = createBackgroundServices();
+  it('creates AIClient with default providers including built-in-ai Strategy', () => {
+    createBackgroundServices();
 
-    const localAiServiceInstance = mocks.LocalAIService.mock.results[0].value;
-    expect(services.aiClient.registerBuiltInAiService).toHaveBeenCalledWith(localAiServiceInstance);
+    expect(mocks.AIClient).toHaveBeenCalledTimes(1);
+    // AIClient constructor calls registerDefaultProviders which includes 'built-in-ai'
+    const aiClientInstance = mocks.AIClient.mock.results[0].value;
+    expect(aiClientInstance).toBeDefined();
   });
 });

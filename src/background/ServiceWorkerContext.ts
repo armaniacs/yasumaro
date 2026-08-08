@@ -20,7 +20,7 @@ import { AIClient } from './aiClient.js';
 import { SqliteClient } from './sqliteClient.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { PrivacyPipeline } from './privacyPipeline.js';
-import { RemoteAIService } from './ai/RemoteAIService.js';
+import { createAIService } from './ai/aiServiceFactory.js';
 import type { AIService } from './ai/AIService.js';
 
 export interface ServiceWorkerDependencies {
@@ -113,8 +113,7 @@ export class ServiceWorkerContext {
      */
     getRecordingLogic(): RecordingLogic {
         if (!this.dependencies.recordingLogic) {
-            const aiService = this.dependencies.aiService
-                ?? new RemoteAIService({ aiClient: this.dependencies.aiClient || this.getAIClient() });
+            const aiService = this.dependencies.aiService ?? createAIService();
             this.dependencies.recordingLogic = new RecordingLogic(
                 this.dependencies.obsidianClient || this.getObsidianClient(),
                 aiService,

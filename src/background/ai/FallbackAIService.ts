@@ -19,9 +19,13 @@ export class FallbackAIService implements AIService {
       return this.config.remote.generateSummary(content, options);
     }
 
-    // mode === 'auto': try local, fall back to remote
+    // mode === 'auto': try local, fall back to remote on failure
     try {
-      return await this.config.local.generateSummary(content, options);
+      const localResult = await this.config.local.generateSummary(content, options);
+      if (localResult.success === false) {
+        return this.config.remote.generateSummary(content, options);
+      }
+      return localResult;
     } catch {
       return this.config.remote.generateSummary(content, options);
     }
