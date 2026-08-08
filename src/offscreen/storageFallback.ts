@@ -4,7 +4,7 @@
  * Provides the same CRUD interface as sqlite.ts but uses linear search instead of FTS5.
  */
 
-import { Mutex } from '../background/Mutex.js';
+import { Mutex } from '../utils/Mutex.js';
 import { UPDATABLE_FIELDS, buildInsertRecordFields } from './schema.js';
 import type { BrowsingLogRecord, QueryOptions, SearchResult } from '../utils/sqlite-types.js';
 

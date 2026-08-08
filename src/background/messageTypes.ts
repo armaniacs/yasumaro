@@ -14,9 +14,12 @@ import type { AiTestProgress } from './aiClient.js';
 
 /**
  * Current Content-SW message protocol version.
- * Bump this when the message schema changes in a backward-incompatible way.
+ *
+ * 正本は src/messaging/protocol.ts。全レイヤーが参照する定数のため、
+ * background 層ではなく中立な位置に置いている。
+ * ここでは後方互換のために再エクスポートする。
  */
-export const CURRENT_PROTOCOL_VERSION = 1;
+export { CURRENT_PROTOCOL_VERSION } from '../messaging/protocol.js';
 
 // ============================================================================
 // Reusable payload fragments

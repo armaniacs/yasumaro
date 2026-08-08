@@ -13,7 +13,7 @@ import type { SqliteClient } from './sqliteClient.js';
 import type { RecordingResult } from '../messaging/types.js';
 import { createRecordingPipeline } from './pipeline/RecordingPipeline.js';
 import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
-import { Mutex } from './Mutex.js';
+import { Mutex } from '../utils/Mutex.js';
 import { formatMarkdownStep } from './pipeline/steps/formatMarkdownStep.js';
 import { saveToObsidianStep } from './pipeline/steps/saveToObsidianStep.js';
 import type { RecordingContext } from './pipeline/types.js';

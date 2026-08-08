@@ -4,7 +4,7 @@
  * ブルーチーム報告 P0: Mutexにキュー上限を追加
  */
 
-import { Mutex } from '../Mutex.js';
+import { Mutex } from '../../utils/Mutex.js';
 import { addLog, LogType } from '../../utils/logger.js';
 
 vi.mock('../../utils/logger.js', () => ({

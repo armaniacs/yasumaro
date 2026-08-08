@@ -1,7 +1,7 @@
 import { getSettings, StorageKeys, Settings } from '../utils/storage.js';
 import { buildDailyNotePath } from '../utils/dailyNotePathBuilder.js';
 import { NoteSectionEditor } from './noteSectionEditor.js';
-import { Mutex } from './Mutex.js';
+import { Mutex } from '../utils/Mutex.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { redactSensitiveData } from '../utils/redaction.js';
 import { errorMessage } from '../utils/errorUtils.js';
