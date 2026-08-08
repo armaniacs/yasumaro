@@ -270,6 +270,75 @@ export async function getSavedUrlCount(): Promise<number> {
     return currentUrls.size;
 }
 
+/**
+ * Merge a patch into a SavedUrlEntry, preserving fields not present in the patch.
+ * Used to rebuild entries while keeping existing metadata.
+ */
+export function mergeSavedUrlEntry(
+    current: SavedUrlEntry,
+    patch: Partial<SavedUrlEntry>
+): SavedUrlEntry {
+    return { ...current, ...patch };
+}
+
+/**
+ * Deep-update a single SavedUrlEntry by URL using an updater closure.
+ * Lock, merge, and LRU semantics are concentrated here.
+ * @param url - URL to update
+ * @param updater - function that receives the current entry and returns the updated entry
+ */
+export async function updateSavedUrlEntry(
+    url: string,
+    updater: (entry: SavedUrlEntry) => SavedUrlEntry
+): Promise<void> {
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx >= 0) {
+            const updatedEntries = [...entries];
+            updatedEntries[idx] = updater(updatedEntries[idx]);
+            return updatedEntries;
+        }
+        return entries;
+    });
+}
+
+/**
+ * Set tags for a URL entry.
+ */
+export async function setUrlTags(url: string, tags: string[]): Promise<void> {
+    await updateSavedUrlEntry(url, (entry) => ({
+        ...entry,
+        tags: tags.length > 0 ? tags : undefined
+    }));
+    // Note: warning for URL not found is not logged here to keep updateSavedUrlEntry generic.
+    // The caller can check existence beforehand if needed.
+}
+
+/**
+ * Add a tag to a URL entry.
+ */
+export async function addUrlTag(url: string, tag: string): Promise<void> {
+    await updateSavedUrlEntry(url, (entry) => {
+        const currentTags = entry.tags || [];
+        if (!currentTags.includes(tag)) {
+            return { ...entry, tags: [...currentTags, tag] };
+        }
+        return entry;
+    });
+}
+
+/**
+ * Remove a tag from a URL entry.
+ */
+export async function removeUrlTag(url: string, tag: string): Promise<void> {
+    await updateSavedUrlEntry(url, (entry) => {
+        if (!entry.tags) return entry;
+        const filtered = entry.tags.filter(t => t !== tag);
+        return { ...entry, tags: filtered.length > 0 ? filtered : undefined };
+    });
+}
+
 // ============================================================================
 // Legacy Storage Cleanup (quota recovery)
 // ============================================================================

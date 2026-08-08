@@ -2,7 +2,7 @@ import { getMessage } from '../utils/i18n.js';
 import { focusTrapManager } from '../popup/utils/focusTrap.js';
 import { getAllCategories } from '../utils/tagUtils.js';
 import { getSettings } from '../utils/storage.js';
-import { setUrlTags } from '../utils/storageUrls.js';
+import { setUrlTags } from '../utils/storage/savedUrlStore.js';
 import type { HistoryPanelState, TagEditElements } from './historyState.js';
 
 export function openTagEditModal(

@@ -17,6 +17,18 @@ export type CleanseCallback = (result: CleanseResult | null) => void;
 export type FallbackReason = 'short_content' | 'over_cleansed';
 
 /**
+ * AI要約クレンジング実行結果
+ */
+export interface AiSummaryCleanseRunResult {
+    originalBytes: number;     // AI要約クレンジング前のバイト数
+    cleansedBytes: number;     // AI要約クレンジング後のバイト数
+    reason: ExtractResult['aiSummaryCleansedReason'];  // 実行理由
+    reasons: string[];         // 複数理由の詳細リスト
+    elements: number;          // 削除した要素数
+    preCleanseText: string;    // クレンジング前のテキスト（フォールバック用）
+}
+
+/**
  * 抽出結果の型（コンテンツのみ、またはコンテンツとクレンジング情報）
  */
 export interface ExtractResult {

@@ -57,22 +57,10 @@ import {
     isUrlSaved,
     getSavedUrlCount,
     computeUrlsHash,
+    updateSavedUrlEntry,
     setUrlTags,
     addUrlTag,
-    removeUrlTag,
-    setUrlAiSummary,
-    setUrlSentTokens,
-    setUrlReceivedTokens,
-    setUrlOriginalTokens,
-    setUrlCleansedTokens,
-    setUrlPageBytes,
-    setUrlCandidateBytes,
-    setUrlOriginalBytes,
-    setUrlCleansedBytes,
-    setUrlContent,
-    setUrlRecordType,
-    setUrlCleansedReason,
-    setUrlMaskedCount
+    removeUrlTag
 } from '../storageUrls.js';
 
 describe('storageUrls exports', () => {
@@ -218,7 +206,7 @@ describe('storageUrls exports', () => {
         });
     });
 
-    describe('setUrl* メタデータ関数群', () => {
+    describe('updateSavedUrlEntry メタデータ更新', () => {
         const testUrl = 'https://example.com/page';
 
         beforeEach(() => {
@@ -227,73 +215,73 @@ describe('storageUrls exports', () => {
             ];
         });
 
-        test('setUrlAiSummary', async () => {
-            await setUrlAiSummary(testUrl, 'Summary text');
+        test('updateSavedUrlEntry で aiSummary を設定する', async () => {
+            await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, aiSummary: 'Summary text' }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].aiSummary).toBe('Summary text');
         });
 
-        test('setUrlSentTokens', async () => {
-            await setUrlSentTokens(testUrl, 150);
+        test('updateSavedUrlEntry で sentTokens を設定する', async () => {
+            await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, sentTokens: 150 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].sentTokens).toBe(150);
         });
 
-        test('setUrlReceivedTokens', async () => {
-            await setUrlReceivedTokens(testUrl, 300);
+        test('updateSavedUrlEntry で receivedTokens を設定する', async () => {
+            await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, receivedTokens: 300 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].receivedTokens).toBe(300);
         });
 
-        test('setUrlOriginalTokens', async () => {
-            await setUrlOriginalTokens(testUrl, 500);
+        test('updateSavedUrlEntry で originalTokens を設定する', async () => {
+            await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, originalTokens: 500 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].originalTokens).toBe(500);
         });
 
-        test('setUrlCleansedTokens', async () => {
-            await setUrlCleansedTokens(testUrl, 200);
+        test('updateSavedUrlEntry で cleansedTokens を設定する', async () => {
+            await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, cleansedTokens: 200 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].cleansedTokens).toBe(200);
         });
 
-        test('setUrlPageBytes', async () => {
-            await setUrlPageBytes(testUrl, 10240);
+        test('updateSavedUrlEntry で pageBytes を設定する', async () => {
+            await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, pageBytes: 10240 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].pageBytes).toBe(10240);
         });
 
-        test('setUrlCandidateBytes', async () => {
-            await setUrlCandidateBytes(testUrl, 8192);
+        test('updateSavedUrlEntry で candidateBytes を設定する', async () => {
+            await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, candidateBytes: 8192 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].candidateBytes).toBe(8192);
         });
 
-        test('setUrlOriginalBytes', async () => {
-            await setUrlOriginalBytes(testUrl, 4096);
+        test('updateSavedUrlEntry で originalBytes を設定する', async () => {
+            await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, originalBytes: 4096 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].originalBytes).toBe(4096);
         });
 
-        test('setUrlCleansedBytes', async () => {
-            await setUrlCleansedBytes(testUrl, 2048);
+        test('updateSavedUrlEntry で cleansedBytes を設定する', async () => {
+            await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, cleansedBytes: 2048 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].cleansedBytes).toBe(2048);
         });
 
-        test('setUrlContent', async () => {
-            await setUrlContent(testUrl, 'Page content');
+        test('updateSavedUrlEntry で content を設定する', async () => {
+            await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, content: 'Page content' }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].content).toBe('Page content');
         });
 
-        test('setUrlRecordType', async () => {
-            await setUrlRecordType(testUrl, 'manual');
+        test('updateSavedUrlEntry で recordType を設定する', async () => {
+            await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, recordType: 'manual' }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].recordType).toBe('manual');
         });
 
-        test('setUrlCleansedReason', async () => {
-            await setUrlCleansedReason(testUrl, 'hard');
+        test('updateSavedUrlEntry で cleansedReason を設定する', async () => {
+            await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, cleansedReason: 'hard' }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].cleansedReason).toBe('hard');
         });
 
-        test('setUrlMaskedCount', async () => {
-            await setUrlMaskedCount(testUrl, 5);
+        test('updateSavedUrlEntry で maskedCount を設定する', async () => {
+            await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, maskedCount: 5 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].maskedCount).toBe(5);
         });
 
         test('存在しないURLでは変更しない', async () => {
-            await setUrlAiSummary('https://nonexistent.com', 'Summary');
+            await updateSavedUrlEntry('https://nonexistent.com', (entry) => ({ ...entry, aiSummary: 'Summary' }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].aiSummary).toBeUndefined();
         });
     });
