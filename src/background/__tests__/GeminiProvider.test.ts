@@ -240,7 +240,7 @@ describe('GeminiProvider', () => {
             expect(result.error).toContain('candidates is missing or empty');
         });
 
-        test('parts[0].text がない場合はスキーマエラー', async () => {
+        test('parts に本文が無い場合は空応答として失敗させる', async () => {
             (fetchWithRetry as vi.Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
@@ -252,8 +252,28 @@ describe('GeminiProvider', () => {
             const result = await provider.generateSummary('content');
 
             expect(result.success).toBe(false);
-            expect(result.summary).toContain('Error: Invalid API response format');
-            expect(result.error).toContain('parts[0].text is not a string');
+            expect(result.summary).toContain('empty response');
+            expect(result.error).toContain('no text');
+        });
+
+        test('MAX_TOKENS で本文が空なら設定変更を促すメッセージにする', async () => {
+            // Gemini 2.5系以降は thinking が maxOutputTokens を消費するため、
+            // 枠が足りないと本文が空のまま MAX_TOKENS で返る
+            (fetchWithRetry as vi.Mock).mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    candidates: [{ content: { parts: [] }, finishReason: 'MAX_TOKENS' }],
+                    usageMetadata: { promptTokenCount: 7, thoughtsTokenCount: 1000 }
+                })
+            });
+
+            const provider = new GeminiProvider(baseSettings);
+            const result = await provider.generateSummary('content');
+
+            expect(result.success).toBe(false);
+            expect(result.summary).toContain('max tokens');
+            expect(result.error).toContain('finishReason=MAX_TOKENS');
+            expect(result.error).toContain('thoughtsTokens=1000');
         });
 
         test('モデル名から models/ プレフィックスを除去する', async () => {

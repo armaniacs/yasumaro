@@ -78,11 +78,15 @@ All notable changes to this project will be documented in this file.
   - 表示整形を `src/dashboard/aiTestResultView.ts` に純関数として切り出した（「初期設定」画面と「診断」画面で同じ整形ロジックが重複していたため一本化）
 - **所要時間の表示が1秒未満で意味をなさなかった問題を修正** — 常に `(elapsedMs/1000).toFixed(1)` としていたため、50ms未満がすべて「0.0秒」になっていた。1秒未満はミリ秒（例: `42ms`）で表示する
 - **Obsidian / GitHub Gist の接続テストがHTTPキャッシュに当たりうる問題を修正** — これらは性質上 GET のままなので、`src/utils/fetch.ts` に `CONNECTION_TEST_CACHE_MODE`（`'no-store'`）を追加して適用した。キャッシュヒット時はネットワーク往復が発生せず、APIキー失効後やオフラインでも「接続成功」を返しうるため
+- **Gemini で thinking がトークン枠を使い切り、要約・接続テストが空応答になる問題を修正** — Gemini 2.5系以降は thinking（推論）がデフォルト有効で、**思考トークンが `maxOutputTokens` に加算される**。そのため枠が小さいと思考だけで使い切り、本文が空のまま `finishReason=MAX_TOKENS` で返る。`MAX_TOKENS_PER_PROMPT` の既定値は 1000 なので、接続テストだけでなく通常の要約でもこれに該当しうる状態だった
+  - 要約・接続テストの双方で `thinkingConfig: { thinkingBudget: 0 }` を指定し、トークン枠をすべて本文に使うようにした（要約タスクに思考は不要）
+  - 応答が複数 `parts` に分割される場合に先頭要素しか読んでいなかったため、全 `parts` を結合するようにした
+  - 空応答時のエラー内容を `finishReason` / `blockReason` / `thoughtsTokenCount` から組み立てるようにした。従来は「Invalid API response format」で原因が分からなかったが、`MAX_TOKENS` なら設定変更を促し、`SAFETY` ならフィルタによるブロックと判別できる
 - **`initDashboard` の名前衝突を修正** — 即時実行される `(async function initDashboard())` と、同名の no-op な `export function initDashboard()` が同一ファイル内で衝突していた。テストから `initDashboard` を import すると実際のブートストラップ処理ではなく no-op を掴むため、テストが何も検証していない状態だった。即時実行IIFEを `export async function` 化し、テストも実処理の完了を検証する形に更新
 
 ### Tests / テスト
 
-- 全 7,419 単体テスト通過（403ファイル）、TypeScript 型チェック正常
+- 全 7,424 単体テスト通過（403ファイル）、TypeScript 型チェック正常
 - 接続テストの回帰テストを追加。`connectionTest-real-inference.test.ts` は「GETでのメタデータ取得に戻っていないこと」と送受信内容の記録を固定し、`aiTestResultView.test.ts` は「1秒未満が 0.0秒 に丸められないこと」を固定する
 - 履歴パネルの純関数に対する新規テスト15件を追加。DBモックも jsdom も使わず 268ms で完走する（従来の同種テストは DBモック3種 + jsdom + マイクロタスク待ちを要していた）
 - デッドコード削除に伴い、使われていないコードを検証していたテスト7ファイルを削除

@@ -169,5 +169,52 @@ describe('AI接続テストは実際に推論を走らせる', () => {
       expect(result.success).toBe(false);
       expect(result.debug?.hasContent).toBe(false);
     });
+
+    it('thinkingを無効化して送る（思考がトークン枠を食い潰すのを防ぐ）', async () => {
+      await new GeminiProvider(geminiSettings).testConnection();
+
+      const body = JSON.parse(String(firstCall().init.body));
+      expect(body.generationConfig.thinkingConfig.thinkingBudget).toBe(0);
+      // 思考が入っても本文が残る余裕を持たせる
+      expect(body.generationConfig.maxOutputTokens).toBeGreaterThanOrEqual(256);
+    });
+
+    it('MAX_TOKENSで本文が空な場合、原因が分かるメッセージを返す', async () => {
+      // Gemini 2.5系以降の thinking がトークン枠を使い切ったケース
+      mockedFetchWithRetry.mockResolvedValue(jsonResponse({
+        candidates: [{ content: { parts: [] }, finishReason: 'MAX_TOKENS' }],
+        usageMetadata: { promptTokenCount: 7, thoughtsTokenCount: 1000 },
+      }));
+
+      const result = await new GeminiProvider(geminiSettings).testConnection();
+
+      expect(result.success).toBe(false);
+      // 「応答が空」で終わらせず、切り詰められたことを伝える
+      expect(result.message).toContain('MAX_TOKENS');
+      expect(result.debug?.error).toContain('thoughtsTokens=1000');
+      expect(result.debug?.error).toContain('thinking consumed the output budget');
+    });
+
+    it('複数partsに分かれた応答を結合する', async () => {
+      mockedFetchWithRetry.mockResolvedValue(jsonResponse({
+        candidates: [{ content: { parts: [{ text: 'O' }, { text: 'K' }] } }],
+      }));
+
+      const result = await new GeminiProvider(geminiSettings).testConnection();
+
+      expect(result.success).toBe(true);
+      expect(result.debug?.response).toBe('OK');
+    });
+
+    it('セーフティフィルタでブロックされた場合はその旨を返す', async () => {
+      mockedFetchWithRetry.mockResolvedValue(jsonResponse({
+        candidates: [{ content: { parts: [] }, finishReason: 'SAFETY' }],
+      }));
+
+      const result = await new GeminiProvider(geminiSettings).testConnection();
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('SAFETY');
+    });
   });
 });
