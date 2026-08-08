@@ -954,7 +954,7 @@ export function setHtmlLangDir(): void {
 // Dashboard Initialization
 // ============================================================================
 
-(async function initDashboard(): Promise<void> {
+export async function initDashboard(): Promise<void> {
   console.log('[Dashboard] Starting initialization...');
 
   try { setHtmlLangDir(); } catch (e) { console.error('[Dashboard] setHtmlLangDir error:', e); }
@@ -975,9 +975,7 @@ export function setHtmlLangDir(): void {
   try { await initTrancoConsentPanel(); } catch (e) { console.error('[Dashboard] initTrancoConsentPanel error:', e); }
 
   console.log('[Dashboard] Initialization complete');
-})();
-
-export function initDashboard(): void {
-  // Can be called in tests to initialize dashboard
 }
+
+void initDashboard();
 
