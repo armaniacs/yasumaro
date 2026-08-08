@@ -59,8 +59,18 @@ describe('createBackgroundServices', () => {
       rateLimiter: { rateLimiter: true },
       manualContentFetcher: { manualContentFetcher: true },
       aiClient: { aiClient: true },
+      aiService: { fallbackAIService: true },
       sessionStore: { sessionStore: true },
     });
+  });
+
+  it('exposes the AIService, not just the raw AIClient', () => {
+    // The AIService composition used to be built and discarded, leaving
+    // callers with only the raw AIClient — the dependency ADR 2026-07-27 asks
+    // new code to avoid.
+    const services = createBackgroundServices();
+
+    expect(services.aiService).toEqual({ fallbackAIService: true });
   });
 
   it('shares a single SessionStore instance with TabCache and RateLimiter', () => {

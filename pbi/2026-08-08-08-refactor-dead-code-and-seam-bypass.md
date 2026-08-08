@@ -114,13 +114,51 @@ Scenario: 既存テストが全てパスする
 
 ## 受け入れ基準
 
-- [ ] `createBackgroundServices.ts` と `__tests__/createBackgroundServices.test.ts` を削除
-- [ ] PBI `2026-08-07-13` に削除の経緯と再挑戦時の設計注意を追記
-- [ ] `src/popup/__tests__/ublockImport-*.test.ts` の import 先を確認し、重複なら削除（現役なら残す判断を記録）
-- [ ] `src/utils/i18n.ts::getMessage` と `chrome.i18n.getMessage` の挙動差を確認
-- [ ] dashboard 配下の `chrome.i18n.getMessage` 直接呼び出しを共有 seam へ置換
-- [ ] `sqliteHistoryPanel.ts` の独自 `t()` ラッパーを共有 seam へ置換
-- [ ] `npm run validate` が成功する
+- [x] `createBackgroundServices.ts` の扱いを判断 → **削除せず設計欠陥を修正**（下記）
+- [x] `src/popup/__tests__/ublockImport-*.test.ts` の import 先を確認 → **残骸ではなく現役だった**。移動で対応（下記）
+- [x] `src/utils/i18n.ts::getMessage` と `chrome.i18n.getMessage` の挙動差を確認 → **等価でなかった**（下記）
+- [x] dashboard 配下の `chrome.i18n.getMessage` 直接呼び出しを共有 seam へ置換
+- [x] `sqliteHistoryPanel.ts` の独自 `t()` ラッパーを共有 seam へ置換
+- [x] `npm run validate` が成功する
+
+### 実装結果（2026-08-09）— レビュー時の判断を3点とも訂正
+
+#### 1. `createBackgroundServices.ts` は削除しない
+
+当初「テストのためだけに存在する→純減」と判断したが、**削除は誤り**だった。
+
+このモジュールは PBI `2026-08-07-13`（サービス配線の一元化）の成果物で、service-worker.ts の配線重複を解消するための設計そのものである。削除すると**重複は残したまま設計だけを捨てる**ことになる。
+
+代わりに、使い物にならなくしていた実際の欠陥を修正した:
+
+- `BackgroundServices` が `aiClient` を返すのに `aiService` を返していなかった（31行目でローカルに作って捨てていた）
+- そのため利用者は生の `AIClient` しか取り出せず、これは ADR 2026-07-27 が「新規コードは避けよ」としている依存そのものだった
+- `aiService` を戻り値に追加し、なぜ本番未使用なのかをファイル冒頭コメントに明記
+
+#### 2. popup 配下の ublockImport テストは残骸ではなかった
+
+7ファイルすべてが `../../dashboard/settings/ublockImport/`（**移動先**）を import していた。つまり実装は移動済みだがテストだけ旧ディレクトリに取り残されていた**現役のテスト**である。削除していたら 2,152行のテストを失っていた。
+
+| 対応 | 件数 |
+|---|---|
+| 移動先の `__tests__/` へ移動（import パス修正） | 6件（error / fileReader / rulesBuilder / sourceManager / uiRenderer / xss） |
+| 削除 | 1件（validation） |
+
+`validation` のみ移動先の `validation.test.ts` と重複していた。しかも**移動先の方が網羅的**（IPv6・ラベル長・制御文字を含む84行 vs 旧113行）だったため、旧側を削除した。
+
+#### 3. i18n の共有 seam は drop-in replacement ではなかった
+
+`utils/i18n.ts::getMessage` はキー未定義時に `""` を返すが、直接呼び出していた8ファイルはすべて `chrome.i18n.getMessage(key) || fallback` の形で**フォールバックを期待**していた。機械的に置換すると、翻訳漏れが空白UIになる回帰を生む。
+
+そこで seam 側に不足していた機能を追加した:
+
+```typescript
+export function getMessageOr(key: string, fallback: string, substitutions?): string
+```
+
+これで「キーが無ければフォールバック」というイディオムが seam の内側で表現できる。`sqliteHistoryPanel.ts` / `cleansingStatsView.ts` / `confirmDialog.ts` の独自 `t()` はこれに置き換えた（いずれも挙動を変えずに済む形）。
+
+残る `chrome.i18n` 直接呼び出しは、単純な `|| fallback` に収まらない箇所（`reviewSummaryHandler.ts` 等の個別文言フォールバック）であり、無理に寄せると可読性が下がるため据え置いた。
 
 ## テスト戦略
 

@@ -6,7 +6,7 @@
  * jsdom環境でのモックを使用します
  */
 
-import { readFile } from '../../dashboard/settings/ublockImport/fileReader.js';
+import { readFile } from '../fileReader.js';
 
 describe('ublockImport - FileReader Module', () => {
   // jsdom環境でFileReaderが使用可能かを確認

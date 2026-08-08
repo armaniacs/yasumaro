@@ -1,8 +1,9 @@
 import type { SavedUrlEntry } from '../utils/storageUrls.js';
 import { CLEANSING_GRAPH_COLORS_LIGHT, CLEANSING_GRAPH_COLORS_DARK } from '../constants/appConstants.js';
+import { getMessageOr } from '../utils/i18n.js';
 
 function t(key: string): string {
-  return chrome.i18n.getMessage(key) || key;
+  return getMessageOr(key, key);
 }
 
 /**

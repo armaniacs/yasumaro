@@ -7,7 +7,7 @@
 import {
   rebuildRulesFromSources,
   previewUblockFilter
-} from '../../dashboard/settings/ublockImport/index.js';
+} from '../index.js';
 
 describe('ublockImport - RulesBuilder Module', () => {
   // ============================================================================

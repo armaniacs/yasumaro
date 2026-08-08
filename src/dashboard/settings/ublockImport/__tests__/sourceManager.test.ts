@@ -5,14 +5,14 @@
  * @vitest-environment jsdom
  */
 
-import { StorageKeys, clearSettingsCache, getSettings } from '../../utils/storage.js';
+import { StorageKeys, clearSettingsCache, getSettings } from '../../../../utils/storage.js';
 import {
   loadAndDisplaySources,
   deleteSource,
   reloadSource,
   saveUblockSettings
-} from '../../dashboard/settings/ublockImport/sourceManager.js';
-import { RecordingCache } from '../../background/recordingCache.js';
+} from '../sourceManager.js';
+import { RecordingCache } from '../../../../background/recordingCache.js';
 
 // 【重要】storage.tsのcachedSettingsを直接クリアするためのユーティリティ
 // storage.tsのキャッシュは1秒間有効で、テスト間でリセットされない可能性がある

@@ -1,3 +1,5 @@
+import { getMessageOr } from '../../utils/i18n.js';
+
 export interface ConfirmDialogOptions {
   title: string;
   message: string;
@@ -23,10 +25,7 @@ function t(key: string, fallback: string, substitutions?: string | string[]): st
     subs = substitutions;
   }
 
-  const message = subs !== undefined
-    ? chrome.i18n.getMessage(key, subs)
-    : chrome.i18n.getMessage(key);
-  return message || fallback;
+  return getMessageOr(key, fallback, subs);
 }
 
 function trapFocus(event: KeyboardEvent, dialog: HTMLElement): void {
