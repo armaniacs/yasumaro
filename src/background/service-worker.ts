@@ -70,7 +70,7 @@ import type {
     ManualRecordHandlerDeps,
     SaveRecordHandlerDeps,
 } from './handlers/messageHandlers.js';
-import { createDashboardSqliteHandler } from './handlers/dashboardSqliteHandlers.js';
+import { createDashboardSqliteHandler, createSqliteClientDeps } from './handlers/dashboardSqliteHandlers.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
 import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
 import { createOfflineQueueProcessor } from './offlineQueueProcessor.js';
@@ -385,48 +385,31 @@ registry.register('GENERATE_REVIEW_SUMMARY', handleGenerateReviewSummary);
 export const handleLogForward = createLogForwardHandler();
 registry.register('LOG_FORWARD', handleLogForward);
 
-const _dashboardSqliteHandler = createDashboardSqliteHandler({
-  query: (params) => sqliteClient.query(params as any),
-  search: (query, limit, offset) => sqliteClient.search(query, limit, offset),
-  toggleStar: (id) => sqliteClient.toggleStar(id),
-  delete: (id) => sqliteClient.delete(id),
-  update: (id, changes) => sqliteClient.update(id, changes),
-  getCount: () => sqliteClient.getCount(),
-  clearAll: () => sqliteClient.clearAll(),
-  insert: (record) => sqliteClient.insert(record as any),
-  restoreDb: (data) => sqliteClient.restoreDb(data),
-  getStatus: () => sqliteClient.getStatus(),
-  runOpfsSpike: () => sqliteClient.runOpfsSpike() as Promise<Record<string, unknown> | null>,
-  purgeOldRecords: (days, max) => sqliteClient.purgeOldRecords(days, max),
-  purgeContent: (days, max, includeStarred) => sqliteClient.purgeContent(days, max, includeStarred),
-  backupDb: () => sqliteClient.backupDb(),
-  lastError: () => sqliteClient.lastError,
-  runMigration: async () => {
-    await chrome.storage.local.remove([
-      'yasumaro_migration_status',
-      'yasumaro_migration_progress',
-    ]);
-    const beforeCount = await sqliteClient.getCount();
-    await migrationService.run();
-    const afterCount = await sqliteClient.getCount();
-    return {
-      success: true,
-      count: afterCount ?? 0,
-      read: 0,
-      inserted: Math.max(0, (afterCount ?? 0) - (beforeCount ?? 0)),
-    };
-  },
-  getConfirmToken: () => ensureConfirmToken(),
-  runBackfill: () => migrationService.backfillDiagnosticMetadata(),
-  runCleanup: () => migrationService.cleanupLegacyStorage(),
-  getSettings: () => getSettings(),
-  formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
-  queryAuditLog: (options) => sqliteClient.queryAuditLog(options),
-  appendToDailyNote: async (markdown) => {
-    const obsidianClient = new ObsidianClient();
-    await obsidianClient.appendToDailyNote(markdown);
-  },
-});
+// The SqliteClient-backed half of these dependencies is shared with the tests
+// via createSqliteClientDeps, so both go through one wiring. Only the four
+// operations the Service Worker owns are supplied here.
+const _dashboardSqliteHandler = createDashboardSqliteHandler(
+  createSqliteClientDeps(sqliteClient, {
+    runMigration: async () => {
+      await chrome.storage.local.remove([
+        'yasumaro_migration_status',
+        'yasumaro_migration_progress',
+      ]);
+      const beforeCount = await sqliteClient.getCount();
+      await migrationService.run();
+      const afterCount = await sqliteClient.getCount();
+      return {
+        success: true,
+        count: afterCount ?? 0,
+        read: 0,
+        inserted: Math.max(0, (afterCount ?? 0) - (beforeCount ?? 0)),
+      };
+    },
+    getConfirmToken: () => ensureConfirmToken(),
+    runBackfill: () => migrationService.backfillDiagnosticMetadata(),
+    runCleanup: () => migrationService.cleanupLegacyStorage(),
+  }),
+);
 
 export const handleDashboardSqlite = ((message: Record<string, unknown>, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void): void => {
   if (sender.tab && (!sender.url || !sender.url.startsWith('chrome-extension://'))) {
