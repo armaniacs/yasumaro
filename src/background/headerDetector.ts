@@ -1,5 +1,5 @@
 import { checkPrivacy, PrivacyInfo } from '../utils/privacyChecker.js';
-import { RecordingLogic } from './recordingLogic.js';
+import { RecordingCache } from './recordingCache.js';
 import { logInfo, logDebug, logError, ErrorCode } from '../utils/logger.js';
 import { hashUrl } from '../utils/crypto/index.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
@@ -123,7 +123,7 @@ export class HeaderDetector {
         // バッジ更新失敗は無視（非重要なUI操作）
       });
 
-      const cacheSize = RecordingLogic.cacheState.privacyCache?.size || 0;
+      const cacheSize = RecordingCache.getPrivacyCacheSize();
       (async () => {
         const urlHash = await hashUrl(details.url);
         await logDebug('Privacy info cached', { urlHash, isPrivate: privacyInfo.isPrivate, cacheSize, source: 'headerDetector' });
@@ -147,20 +147,15 @@ export class HeaderDetector {
    * キャッシュサイズが上限を超えたら最も古いエントリを削除
    */
   private static async cachePrivacyInfo(url: string, info: PrivacyInfo, tabId?: number): Promise<void> {
-    if (!RecordingLogic.cacheState.privacyCache) {
-      RecordingLogic.cacheState.privacyCache = new Map();
-      RecordingLogic.cacheState.privacyCacheTimestamp = Date.now();
-    }
-
     // キャッシュサイズ制限チェック
-    if (RecordingLogic.cacheState.privacyCache.size >= MAX_CACHE_SIZE) {
+    if (RecordingCache.getPrivacyCacheSize() >= MAX_CACHE_SIZE) {
       HeaderDetector.evictOldestEntry();
     }
 
     // URL正規化してインメモリキャッシュに保存
     const normalizedUrl = HeaderDetector.normalizeUrl(url);
-    RecordingLogic.cacheState.privacyCache.set(normalizedUrl, info);
-    RecordingLogic.scheduleCacheSave();
+    RecordingCache.setPrivacyCacheEntry(normalizedUrl, info);
+    RecordingCache.scheduleCacheSave();
 
     // Service Worker 再起動後もプライバシー情報を失わないよう session storage にも保存
     // chrome.storage.session はブラウザセッション中は永続 (SW 再起動をまたいでも保持される)
@@ -213,7 +208,7 @@ export class HeaderDetector {
    * 最も古いキャッシュエントリを削除する（LRU実装）
    */
   private static async evictOldestEntry(): Promise<void> {
-    const cache = RecordingLogic.cacheState.privacyCache;
+    const cache = RecordingCache.getPrivacyCache();
     if (!cache || cache.size === 0) {
       return;
     }

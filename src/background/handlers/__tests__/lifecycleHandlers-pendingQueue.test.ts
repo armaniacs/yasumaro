@@ -7,8 +7,8 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-vi.mock('../../recordingLogic.js', () => ({
-  RecordingLogic: {
+vi.mock('../../recordingCache.js', () => ({
+  RecordingCache: {
     invalidateSettingsCache: vi.fn(),
     loadCacheFromSession: vi.fn().mockResolvedValue(undefined),
   },
@@ -46,7 +46,7 @@ vi.mock('../../pendingSqliteQueue.js', () => ({
 }));
 
 import { createLifecycleHandlers, restoreRecordingCacheOnWake } from '../lifecycleHandlers.js';
-import { RecordingLogic } from '../../recordingLogic.js';
+import { RecordingCache } from '../../recordingCache.js';
 
 describe('handleStartup — pending SQLite queue flush (M14)', () => {
   beforeEach(() => {
@@ -87,6 +87,6 @@ describe('restoreRecordingCacheOnWake — SW wake-up cache rehydration', () => {
   it('restores the recording cache from session storage', async () => {
     await restoreRecordingCacheOnWake();
 
-    expect(RecordingLogic.loadCacheFromSession).toHaveBeenCalledTimes(1);
+    expect(RecordingCache.loadCacheFromSession).toHaveBeenCalledTimes(1);
   });
 });

@@ -4,7 +4,7 @@
  * Extracted from service-worker.ts for modularization (PBI-26).
  * Handles install, update, and startup lifecycle events.
  */
-import { RecordingLogic } from '../recordingLogic.js';
+import { RecordingCache } from '../recordingCache.js';
 import { getSettings, updateDomainFilterCache } from '../../utils/storage.js';
 import { migrateLegacyPrivacyConsent } from '../../popup/privacyConsent.js';
 import { cleanupOldDeniedEntries, cleanupDismissedEntries } from '../../utils/permissionManager.js';
@@ -33,7 +33,7 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
             logInfo(`Service Worker updated from ${details.previousVersion}`, {}, 'service-worker');
 
             // 更新時はキャッシュをクリアして再初期化
-            RecordingLogic.invalidateSettingsCache();
+            RecordingCache.invalidateSettingsCache();
             const settings = await getSettings();
             await updateDomainFilterCache(settings);
 
@@ -86,13 +86,13 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
 
         try {
             // 関連キャッシュを無効化して再読み込みを強制
-            RecordingLogic.invalidateSettingsCache();
+            RecordingCache.invalidateSettingsCache();
             const settings = await getSettings();
             await updateDomainFilterCache(settings);
             ctx.isCacheInitialized.value = true;
 
             // Reload recording cache from session
-            await RecordingLogic.loadCacheFromSession();
+            await RecordingCache.loadCacheFromSession();
 
             // Reload rate limiter from session
             await ctx.rateLimiter.reload();
@@ -134,5 +134,5 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
  * service-worker.ts invokes this at module scope to rehydrate the cache.
  */
 export async function restoreRecordingCacheOnWake(): Promise<void> {
-    await RecordingLogic.loadCacheFromSession();
+    await RecordingCache.loadCacheFromSession();
 }
