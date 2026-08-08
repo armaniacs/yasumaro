@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.24` リリース。
+> - 現時点では `v6.7.25` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,51 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.25] - 2026-08-09
+
+アーキテクチャレビュー（コードベース全体スキャン）で検出した指摘を PBI 8件として文書化し、順に実装したもの。**履歴が1000件を超えると古い記録に到達できなくなる実害のあるバグ**を含む。
+
+レビュー時の判断のうち5点は、実装前の調査で誤りと判明したため訂正した（詳細は各 PBI に記録）。
+
+### Fixed / 修正
+
+- **履歴が1000件を超えると51ページ目以降が閲覧できない問題を修正** — 履歴パネルの `fetchData` は `queryLogs` を `limit: 1000, offset: 0` で固定呼び出しし、ページングを取得後のクライアント側 `slice` で行っていた。1ページ20件のため**1001件目以降に到達できず**、しかも総件数はDB上の値を表示するため、ページネーションUIは開いても空になるページを表示し続けていた
+  - SQLite 側は `LIMIT`/`OFFSET` を実装済みだったため、タグ絞り込みが無い場合はサーバ側ページングに委ねる形へ変更
+  - タグ絞り込み時はクライアント側フィルタを維持した。サーバ側 `tagFilter` は FTS5 の trigram MATCH で、3文字未満のタグにフォールバックが無いため（「AI」等の短いタグが無言で0件になる）。両者は等価ではないと確認したうえでの判断
+- **`RemoteAIService` が `success` / `error` を転送していなかった問題を修正** — `FallbackAIService` の `auto` 分岐は `localResult.success === false` で判定するが、remote 結果は常に `undefined` として読まれるため（`undefined === false` は `false`）、**リモートAIが失敗しても失敗として扱われなかった**
+- **Gemini がレート制限(429)でリトライしていた問題を修正** — OpenAI互換は429と非冪等5xxを抑止するリトライ述語を渡していたが、Gemini は渡しておらずデフォルトを継承していた。同じ「AI要約」で挙動が分かれ、Gemini だけが制限を悪化させる方向に動いていた
+- **Gemini が使用量不明時に「0トークン使用」を記録していた問題を修正** — `usageMetadata` 欠落時に `|| 0` で丸めて必ず記録していた。「トークン数不明」は「0トークン使った」ではないため、記録しない OpenAI 側の挙動に統一
+- **Built-in AI がプロンプトインジェクション検査を通っていなかった問題を修正** — `BuiltInAiProvider` は基底クラスの `sanitizeContent()` を呼んでおらず、レジストリの契約を満たすためだけに継承している状態だった。オンデバイス実行のため外部送信は無いが、注入された指示が要約を汚染して Obsidian に書き込まれる経路は残っていた
+
+### Refactor / リファクタ
+
+- **`AIService` に `testConnection` を追加し、抽象の穴を閉じた** — ADR 2026-07-27 は「`aiClient` への新規直接依存は原則禁止」と定めたが、`AIService` に接続テストの入口が無く、service-worker は要約と接続テストで2経路を使い分けざるを得なかった。規律の問題ではなく抽象の欠落であり、2経路が独立して育った結果、6.7.24 の Gemini thinking バグは両方に別々の修正を要した
+- **AI プロバイダー間の非対称な振る舞いを基底クラスへ集約** — リトライ述語（`shouldRetrySummaryRequest`）と使用量記録（`recordUsageIfPresent`）を `ProviderStrategy` へ
+- **Markdown エクスポートの業務ロジックを `markdownExport.ts` へ切り出した** — バッチ分割・日付バケット・テンプレート適用が `dashboard.ts` の中にあり、`void initDashboard()` というトップレベル副作用越しにしか到達できず一切テストできなかった。`chrome.downloads` を `DownloadPort` seam の裏に置き、出力内容を直接検証できるようにした（`dashboard.ts` 967行 → 842行）
+- **パネル遷移をクリック合成から `NavigationRegistry` 経由に変更** — ただし `dashboard.ts` は `main.ts` より先に import され自己実行するため、その時点では registry が未登録という初期化順の制約がある。`tryGetRegistry()` でこれを戻り値として表現し、未登録時は従来のクリックにフォールバックする
+- **Panel 契約の `refresh()` を optional 化** — フレームワークからの呼び出しは0件だが、14実装中8件は設定の再読み込み等の実処理を持っていた。必須要求を外すことで、契約を満たすためだけの空実装6件を削除しつつ実装は保持
+- **`NavigationRegistry` のキャストを `category` による narrowing へ** — 判別共用体を `panel as {...}` で剥がしていたため型安全が効いていなかった。パネル種別の追加時に網羅性チェックが働くようになる
+- **メッセージ型の整合性テストをソース導出方式へ** — チェック対象をテスト内に手書きで複製していたため、`LOG_FORWARD` 追加時に更新が漏れ「整合性を守るはずのテストが最新の型を見落とす」状態だった。型レベルのチェックだけでは vitest が型を消すため不十分で、`messageTypes.ts` のソースから union メンバーを導出して突き合わせる形にした
+- **`utils/i18n.ts` に `getMessageOr` を追加** — 共有 seam の `getMessage` はキー未定義時に空文字を返すため、`|| fallback` を期待する呼び出し元8件を機械的に置換すると翻訳漏れが空白UIになる回帰を生む。seam 側に不足機能を足し、独自ラッパー3件をその上に載せ替えた
+
+### Tests / テスト
+
+- 全 7,507 単体テスト通過（408ファイル）、TypeScript 型チェック正常。6.7.24 比 +83件
+- 追加した回帰テストは、**実装を意図的に壊して失敗することを確認**したうえで採用している
+  - ページング: 2ページ目で「DBが20件返しているのに `No records found.`」を再現。当初のテストは1ページ目のみ検証しており `slice(0,20)` が恒等変換になるため素通りしていた
+  - VULN-014: `saveCacheToSession` の redaction を外すと session storage に平文APIキーが書かれることを検出
+  - VULN-004: `isSecureUrl` チェックを無効化するとURLスキームのテスト5件が失敗
+  - メッセージ型: `VALID_MESSAGE_TYPES` から `LOG_FORWARD` を削除すると失敗
+- `recordingCache.ts` の session storage 永続化・復元の往復、TTL判定、privacy キャッシュのSW再起動復帰を検証（17件）
+- `messageHandlers.ts` は732行17ファクトリに対し専用テストが1ファクトリ分しか無かったため、記録系2ハンドラのセキュリティ境界を追加（14件）
+- `BuiltInAiProvider` のテストを新規作成（12件、従来0件）
+- `markdownExport` のテストを新規作成（22件）
+
+### Docs / ドキュメント
+
+- アーキテクチャレビューの指摘を PBI 8件（`pbi/2026-08-08-02`〜`09`）として文書化。各PBIに調査で判明した訂正内容と、見送った項目の理由を記録
+- ADR 2026-07-27 に `AIService.testConnection` 追加の経緯を追記
 
 ## [6.7.24] - 2026-08-08
 
