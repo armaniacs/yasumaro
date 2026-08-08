@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { toTsvString } from '../panels/asyncData/auditLogPanel.js';
+import { toTsvString } from '../utils/auditLogTsv.js';
 
 describe('toTsvString', () => {
   it('produces correct header and data rows', () => {

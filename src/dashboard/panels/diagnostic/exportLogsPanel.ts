@@ -1,7 +1,7 @@
 import { exportJson, exportCsv, exportMarkdown, exportDb, downloadText, downloadBlob } from '../../exportLogsService.js';
 import { type DiagnosticPanel } from '../types.js';
 import { queryAuditLogs } from '../../dashboardSqliteService.js';
-import { toTsvString } from '../asyncData/auditLogPanel.js';
+import { toTsvString } from '../../utils/auditLogTsv.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 
 export function createExportLogsPanel(): DiagnosticPanel {
@@ -91,9 +91,6 @@ export function createExportLogsPanel(): DiagnosticPanel {
           }
         });
       }
-    },
-    async refresh() {
-      // no dynamic data to refresh
     },
   };
 }

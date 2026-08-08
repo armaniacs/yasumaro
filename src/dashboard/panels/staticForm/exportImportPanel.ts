@@ -12,6 +12,5 @@ export function createExportImportPanel(): StaticFormPanel {
       initEncryptedBackupPanel();
       await initGistSettings();
     },
-    async refresh() {},
   };
 }

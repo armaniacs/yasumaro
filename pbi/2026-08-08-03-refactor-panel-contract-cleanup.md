@@ -76,7 +76,7 @@ navigateTyped  ← 未使用
 |---|---|
 | `refresh()` | `StaticFormPanel` / `DiagnosticPanel` から削除。5件の空実装も削除。**実装のある `refresh()` は残す**（後述） |
 | `NavigationRegistry` のキャスト | `switch (panel.category)` による narrowing に置換 |
-| `navigateTyped` / `PanelInitMap` | 実際の遷移経路で採用する（型付きの意図を活かす方向。削除ではなく利用） |
+| `navigateTyped` / `PanelInitMap` | **調査の結果、既に適切に使われていた。変更不要**（下記参照） |
 | `auditLogPanel.ts` | `src/dashboard/utils/auditLogTsv.ts` へ移動し実態に合わせて改名 |
 | `registryContext.ts` | 本PBIでは変更しない（実需あり） |
 
@@ -109,13 +109,41 @@ Scenario: 既存テストが全てパスする
 
 ## 受け入れ基準
 
-- [ ] `refresh()` を `StaticFormPanel` / `DiagnosticPanel` の必須要求から外す
-- [ ] 空実装の `async refresh() {}` を削除（実体のある実装は保持）
-- [ ] `NavigationRegistry` のキャスト4箇所を `category` narrowing に置換
-- [ ] `navigateTyped` を実遷移経路で採用（または未採用の理由をPBIに記録）
-- [ ] `auditLogPanel.ts` を `src/dashboard/utils/` へ移動・改名
-- [ ] `NavigationRegistry` の narrowing を検証する単体テストを追加
-- [ ] `npm run validate` が成功する
+- [x] `refresh()` を `StaticFormPanel` / `DiagnosticPanel` の必須要求から外す（optional 化）
+- [x] 空実装の `async refresh() {}` を削除（実体のある実装は保持）
+- [x] `NavigationRegistry` のキャスト4箇所を `category` narrowing に置換
+- [x] `navigateTyped` の採用状況を調査 → **既に適切に使われており変更不要**（下記参照）
+- [x] `auditLogPanel.ts` を `src/dashboard/utils/auditLogTsv.ts` へ移動・改名
+- [x] `NavigationRegistry` の narrowing を検証する単体テストを追加（4件）
+- [x] `npm run validate` が成功する
+
+### 実装結果（2026-08-08）
+
+#### `refresh()` は「削除」ではなく「optional 化」にした
+
+レビュー時点では「呼び出し0件だから削除」と判断していたが、**実装を確認したところ14件中8件は実体のある処理を持っていた**（設定の再読み込み、診断の再収集など）。
+
+| 種別 | 件数 | 対応 |
+|---|---|---|
+| 実体のある実装 | 8件 | **保持**（`domainFilterPanel`, `contentSettingsPanel`, `privacySettingsPanel`, `aiSummaryCleansingPanel`, `trustSettingsPanel`, `generalSettingsPanel`, `cspSettingsPanel`, `diagnosticsPanel`） |
+| 空実装 | 6件 | **削除**（`recordingConditionsPanel`, `exportImportPanel`, `tagsSettingsPanel`, `promptSettingsPanel`, `markdownTemplatePanel`, `exportLogsPanel`） |
+
+interface から必須要求を外す（`refresh?()`）ことで、空実装6件が消え、実体のある8件は残る。
+「契約が実態より広い」という問題は解消しつつ、動いているコードは壊さない。
+
+**削除テストの再評価**: 当初「削除すれば純減」と判断したが、これは誤りだった。8件の実装を消せば機能が失われる。正しくは「必須要求の削除は純減、実装の削除は機能の喪失」。
+
+#### `navigateTyped` は既に適切に使われていた
+
+レビューでは「定義のみで未使用」としたが、**これは誤り**。実際の呼び出し状況:
+
+| 呼び出し元 | 使用API | 理由 |
+|---|---|---|
+| `tagClusterPanel.ts:140` | `navigateTyped('panel-sqlite-history', { searchTag: tag })` | パネルIDが静的に決まるため型付き可能 |
+| `DashboardBootstrapper.ts:53` | `navigate(panelId)` | `data-panel` 属性から実行時に取得。**型付け不可能** |
+| `DashboardBootstrapper.ts:92` | `navigate(defaultPanelId)` | 呼び出し側から文字列で渡される。**型付け不可能** |
+
+型付けできる箇所では既に `navigateTyped` が使われている。残る2箇所は実行時の文字列を扱うため型付けできない。**変更不要**。
 
 ## テスト戦略
 

@@ -10,6 +10,5 @@ export function createPromptSettingsPanel(): StaticFormPanel {
       const settings = await getSettings();
       initCustomPromptManager(settings);
     },
-    async refresh() {},
   };
 }

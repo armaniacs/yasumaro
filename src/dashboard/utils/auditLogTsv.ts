@@ -1,4 +1,11 @@
-
+/**
+ * auditLogTsv.ts
+ * Serialize audit log rows to TSV for the diagnostics export.
+ *
+ * Previously lived at panels/asyncData/auditLogPanel.ts, which implied it was
+ * a Panel — it never implemented the Panel contract and was not registered in
+ * the NavigationRegistry. It is a pure formatter, so it belongs in utils.
+ */
 
 interface AuditLogEntry {
   id: number;
@@ -25,4 +32,3 @@ export function toTsvString(rows: AuditLogEntry[]): string {
   );
   return header + '\n' + lines.join('\n') + '\n';
 }
-
