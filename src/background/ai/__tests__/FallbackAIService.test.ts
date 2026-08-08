@@ -6,6 +6,7 @@ function mockAIService(results: Partial<AISummaryResult>): AIService {
   return {
     generateSummary: vi.fn().mockResolvedValue({ summary: 'test', ...results }),
     getSupportedModes: vi.fn().mockReturnValue(['full_pipeline']),
+    testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok', providers: [] }),
   };
 }
 
@@ -25,6 +26,7 @@ describe('FallbackAIService', () => {
     const local: AIService = {
       generateSummary: vi.fn().mockRejectedValue(new Error('unavailable')),
       getSupportedModes: vi.fn().mockReturnValue([]),
+      testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok', providers: [] }),
     };
     const remote = mockAIService({ summary: 'remote fallback' });
     const fallback = new FallbackAIService({ local, remote });
@@ -47,6 +49,7 @@ describe('FallbackAIService', () => {
     const local: AIService = {
       generateSummary: vi.fn().mockResolvedValue({ summary: 'local failed', success: false }),
       getSupportedModes: vi.fn().mockReturnValue(['local_only']),
+      testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok', providers: [] }),
     };
     const remote = mockAIService({ summary: 'remote fallback' });
     const fallback = new FallbackAIService({ local, remote });
@@ -61,13 +64,31 @@ describe('FallbackAIService', () => {
     const local: AIService = {
       generateSummary: vi.fn().mockRejectedValue(new Error('local down')),
       getSupportedModes: vi.fn().mockReturnValue([]),
+      testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok', providers: [] }),
     };
     const remote: AIService = {
       generateSummary: vi.fn().mockRejectedValue(new Error('remote down')),
       getSupportedModes: vi.fn().mockReturnValue([]),
+      testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok', providers: [] }),
     };
     const fallback = new FallbackAIService({ local, remote });
     await expect(fallback.generateSummary('test', { mode: 'auto' })).rejects.toThrow();
+  });
+
+  test('testConnection delegates to remote, not local', async () => {
+    const local = mockAIService({});
+    const remote = mockAIService({});
+    (remote.testConnection as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true, message: 'remote reachable', providers: [],
+    });
+    const fallback = new FallbackAIService({ local, remote });
+    const onProgress = vi.fn();
+
+    const result = await fallback.testConnection(onProgress, 'run-9');
+
+    expect(remote.testConnection).toHaveBeenCalledWith(onProgress, 'run-9');
+    expect(local.testConnection).not.toHaveBeenCalled();
+    expect(result.message).toBe('remote reachable');
   });
 
   test('getSupportedModes returns union of both', () => {

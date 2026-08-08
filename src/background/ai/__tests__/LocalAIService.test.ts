@@ -92,4 +92,45 @@ describe('LocalAIService', () => {
     expect(result.sentTokens).toBeUndefined();
     expect(result.receivedTokens).toBeUndefined();
   });
+
+  describe('testConnection', () => {
+    it('succeeds when the on-device model is available', async () => {
+      const getAvailability = vi.fn().mockResolvedValue('available');
+      const service = new LocalAIService({ localAiClient: { summarize: vi.fn(), getAvailability } });
+
+      const result = await service.testConnection();
+
+      expect(result.success).toBe(true);
+      expect(result.providers[0]?.debug?.availability).toBe('available');
+    });
+
+    it('fails when the model is not available, reporting the status', async () => {
+      const getAvailability = vi.fn().mockResolvedValue('downloadable');
+      const service = new LocalAIService({ localAiClient: { summarize: vi.fn(), getAvailability } });
+
+      const result = await service.testConnection();
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('downloadable');
+    });
+
+    it('fails gracefully when the client cannot report availability', async () => {
+      const service = new LocalAIService({ localAiClient: { summarize: vi.fn() } });
+
+      const result = await service.testConnection();
+
+      expect(result.success).toBe(false);
+      expect(result.providers).toEqual([]);
+    });
+
+    it('turns a thrown availability error into a failed result', async () => {
+      const getAvailability = vi.fn().mockRejectedValue(new Error('no LanguageModel'));
+      const service = new LocalAIService({ localAiClient: { summarize: vi.fn(), getAvailability } });
+
+      const result = await service.testConnection();
+
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('no LanguageModel');
+    });
+  });
 });

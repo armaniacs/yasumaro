@@ -1,4 +1,11 @@
-import { type AIService, type AISummaryOptions, type AISummaryResult, type AISummaryMode } from './AIService.js';
+import {
+  type AIService,
+  type AISummaryOptions,
+  type AISummaryResult,
+  type AISummaryMode,
+  type AiTestProgress,
+  type AiConnectionTestResult,
+} from './AIService.js';
 
 /** Provider identifier reported for history entries produced via this service. */
 const LOCAL_AI_PROVIDER_NAME = 'built-in-ai';
@@ -16,6 +23,8 @@ interface LocalAiSummarizeResult {
 interface LocalAIServiceConfig {
   localAiClient: {
     summarize(content: string): Promise<LocalAiSummarizeResult>;
+    /** Availability of the on-device model, e.g. 'available' / 'unavailable'. */
+    getAvailability?(): Promise<string>;
   };
 }
 
@@ -37,5 +46,47 @@ export class LocalAIService implements AIService {
 
   getSupportedModes(): AISummaryMode[] {
     return ['local_only'];
+  }
+
+  /**
+   * Report whether the on-device model is usable. There is no endpoint to
+   * reach, so "connection" here means model availability.
+   */
+  async testConnection(
+    _onProgress?: (progress: AiTestProgress) => void,
+    _runId?: string,
+  ): Promise<AiConnectionTestResult> {
+    const startedAt = Date.now();
+    if (!this.config.localAiClient.getAvailability) {
+      return {
+        success: false,
+        message: 'Local AI client does not report availability.',
+        providers: [],
+      };
+    }
+
+    try {
+      const availability = await this.config.localAiClient.getAvailability();
+      const success = availability === 'available';
+      return {
+        success,
+        message: success
+          ? 'On-device model is available.'
+          : `On-device model is not available (${availability}).`,
+        providers: [{
+          provider: LOCAL_AI_PROVIDER_NAME,
+          success,
+          message: `availability=${availability}`,
+          elapsedMs: Date.now() - startedAt,
+          debug: { availability },
+        }],
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error),
+        providers: [],
+      };
+    }
   }
 }
