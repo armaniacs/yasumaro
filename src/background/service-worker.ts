@@ -1,10 +1,7 @@
 import { ObsidianClient } from './obsidianClient.js';
 import { AIClient } from './aiClient.js';
 import { notifyAiTestProgress } from './aiTestProgressNotifier.js';
-import { FallbackAIService } from './ai/FallbackAIService.js';
-import { RemoteAIService } from './ai/RemoteAIService.js';
-import { LocalAIService } from './ai/LocalAIService.js';
-import { BuiltInAIClient } from './builtInAIClient.js';
+import { createAIService } from './ai/aiServiceFactory.js';
 import { RecordingLogic } from './recordingLogic.js';
 import { getTabCacheInstance } from './tabCacheFactory.js';
 import { HeaderDetector } from './headerDetector.js';
@@ -33,6 +30,7 @@ import { createErrorResponse } from '../utils/errorMessages.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { NotificationHelper } from './notificationHelper.js';
 import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
+import { updateSavedUrlEntry } from '../utils/storage/savedUrlStore.js';
 
 import { updateActivity, initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
 import { handleDailyPurgeAlarm } from './dailyPurgeHandler.js';
@@ -181,15 +179,7 @@ export async function ensureConfirmToken(): Promise<string> {
 // Initialize clients
 const obsidian = new ObsidianClient();
 const aiClient = new AIClient();
-const builtInAiClient = new BuiltInAIClient();
-const localAiService = new LocalAIService({ localAiClient: builtInAiClient });
-// 優先度リストの built-in-ai スロットは AIClient 内で localAiService に委譲される
-// (RemoteAIService → AIClient 経由、Strategy 登録とは別経路)。
-aiClient.registerBuiltInAiService(localAiService);
-const aiService = new FallbackAIService({
-  local: localAiService,
-  remote: new RemoteAIService({ aiClient }),
-});
+const aiService = createAIService({ aiClient });
 const sqliteClient = getSharedSqliteClient();
 const recordingLogic = new RecordingLogic(obsidian, aiService, undefined, sqliteClient);
 const migrationService = new MigrationService(sqliteClient);
@@ -276,8 +266,7 @@ const _manualRecordDeps: ManualRecordHandlerDeps = {
   sqliteClient,
   getSettings: () => getSettings(),
   setUrlContent: async (url: string, content: string) => {
-    const { setUrlContent: setUrl } = await import('../utils/storageUrls.js');
-    await setUrl(url, content);
+    await updateSavedUrlEntry(url, (entry) => ({ ...entry, content }));
   },
 };
 
@@ -289,8 +278,7 @@ const _saveRecordDeps: SaveRecordHandlerDeps = {
   sqliteClient,
   getSettings: () => getSettings(),
   setUrlContent: async (url: string, content: string) => {
-    const { setUrlContent: setUrl } = await import('../utils/storageUrls.js');
-    await setUrl(url, content);
+    await updateSavedUrlEntry(url, (entry) => ({ ...entry, content }));
   },
 };
 
@@ -607,8 +595,7 @@ const _contextClickHandler = createContextClickHandler({
       sqliteClient,
       getSettings: () => getSettings(),
       setUrlContent: async (url, content) => {
-        const { setUrlContent: setUrl } = await import('../utils/storageUrls.js');
-        await setUrl(url, content);
+        await updateSavedUrlEntry(url, (entry) => ({ ...entry, content }));
       },
     });
     await handler(message, sender, sendResponse);

@@ -43,6 +43,20 @@ describe('FallbackAIService', () => {
     expect(local.generateSummary).not.toHaveBeenCalled();
   });
 
+  test('falls back to remote when local returns success:false', async () => {
+    const local: AIService = {
+      generateSummary: vi.fn().mockResolvedValue({ summary: 'local failed', success: false }),
+      getSupportedModes: vi.fn().mockReturnValue(['local_only']),
+    };
+    const remote = mockAIService({ summary: 'remote fallback' });
+    const fallback = new FallbackAIService({ local, remote });
+
+    const result = await fallback.generateSummary('test content', { mode: 'auto' });
+    expect(result.summary).toBe('remote fallback');
+    expect(local.generateSummary).toHaveBeenCalledTimes(1);
+    expect(remote.generateSummary).toHaveBeenCalledTimes(1);
+  });
+
   test('errors when both fail', async () => {
     const local: AIService = {
       generateSummary: vi.fn().mockRejectedValue(new Error('local down')),
