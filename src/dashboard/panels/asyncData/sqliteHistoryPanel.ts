@@ -21,6 +21,12 @@ import { getRegistry } from '../registryContext.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
 import { shouldFallbackToTextSearch } from '../../historyFilters.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
+import {
+  buildEnrichmentKey,
+  enrichEntryWithChromeStorage,
+  filterRowsByTag,
+  dateRangeFromSelectedDate,
+} from './sqliteHistoryQuery.js';
 
 const PAGE_SIZE = 20;
 
@@ -200,8 +206,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       const entries = await getSavedUrlEntries();
       const map = new Map<string, SavedUrlEntry>();
       for (const entry of entries) {
-        const key = `${entry.url}|${Math.floor(entry.timestamp / 60000)}`;
-        map.set(key, entry);
+        map.set(buildEnrichmentKey(entry.url, entry.timestamp), entry);
       }
       chromeStorageCache = { map, builtAt: now };
       return map;
@@ -215,48 +220,8 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     chromeStorageCache = null;
   }
 
-  function enrichEntryWithChromeStorage(
-    entry: BrowsingLogEntry,
-    storageMap: Map<string, SavedUrlEntry>
-  ): BrowsingLogEntry {
-    if (entry.sent_tokens != null || entry.received_tokens != null ||
-        entry.page_bytes != null || entry.ai_provider != null) {
-      return entry;
-    }
-
-    const key = `${entry.url}|${Math.floor(entry.created_at / 60000)}`;
-    const storageEntry = storageMap.get(key);
-    if (!storageEntry) {
-      return entry;
-    }
-
-    return {
-      ...entry,
-      content: entry.content ?? storageEntry.content ?? null,
-      masked_count: entry.masked_count ?? storageEntry.maskedCount ?? null,
-      cleansed_reason: entry.cleansed_reason ?? storageEntry.cleansedReason ?? null,
-      ai_provider: entry.ai_provider ?? storageEntry.aiProvider ?? null,
-      ai_model: entry.ai_model ?? storageEntry.aiModel ?? null,
-      ai_duration_ms: entry.ai_duration_ms ?? storageEntry.aiDuration ?? null,
-      obsidian_duration_ms: entry.obsidian_duration_ms ?? storageEntry.obsidianDuration ?? null,
-      sent_tokens: entry.sent_tokens ?? storageEntry.sentTokens ?? null,
-      received_tokens: entry.received_tokens ?? storageEntry.receivedTokens ?? null,
-      original_tokens: entry.original_tokens ?? storageEntry.originalTokens ?? null,
-      cleansed_tokens: entry.cleansed_tokens ?? storageEntry.cleansedTokens ?? null,
-      page_bytes: entry.page_bytes ?? storageEntry.pageBytes ?? null,
-      candidate_bytes: entry.candidate_bytes ?? storageEntry.candidateBytes ?? null,
-      original_bytes: entry.original_bytes ?? storageEntry.originalBytes ?? null,
-      cleansed_bytes: entry.cleansed_bytes ?? storageEntry.cleansedBytes ?? null,
-      ai_summary_original_bytes: entry.ai_summary_original_bytes ?? storageEntry.aiSummaryOriginalBytes ?? null,
-      ai_summary_cleansed_bytes: entry.ai_summary_cleansed_bytes ?? storageEntry.aiSummaryCleansedBytes ?? null,
-      fallback_triggered: entry.fallback_triggered ?? (storageEntry.fallbackTriggered ? 1 : 0),
-    };
-  }
-
   function dateRangeFromSelected(): { since?: number; until?: number } {
-    if (!state.selectedDate) return {};
-    const date = new Date(state.selectedDate + 'T00:00:00');
-    return { since: date.getTime(), until: date.getTime() + 86400000 - 1 };
+    return dateRangeFromSelectedDate(state.selectedDate);
   }
 
   function isPanelMounted(): boolean {
@@ -484,13 +449,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         });
 
         if (result && !('error' in result) && activeTagFilter) {
-          const filteredRows = result.rows.filter(row => {
-            const tagsString = row.tags || '';
-            if (typeof tagsString === 'string') {
-              return tagsString.split(',').some(tag => tag.trim().includes(activeTagFilter));
-            }
-            return false;
-          });
+          const filteredRows = filterRowsByTag(result.rows, activeTagFilter);
 
           // Tag Cluster navigation that matched nothing → fall back to a
           // full-text search for the same term so the user still lands on
