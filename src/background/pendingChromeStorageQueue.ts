@@ -4,13 +4,10 @@
  * transient storage error) so they aren't silently lost. Queued writes are
  * retried on the next flush (Service Worker startup / offline-network-retry
  * alarm) instead of being dropped (PBI-13 legacy dual-write path).
- *
- * Queue storage/enqueue mechanics are shared via StorageBackedQueue (PBI-09),
- * mirroring pendingSqliteQueue.ts's design for the chrome.storage side.
  */
 
 import { addLog, LogType } from '../utils/logger.js';
-import { StorageBackedQueue } from './storageBackedQueue.js';
+import { PersistentRetryQueue, ChromeStorageAdapter } from './persistentRetryQueue.js';
 
 export const PENDING_CHROME_STORAGE_KEY = 'pending_chrome_storage_writes';
 
@@ -23,11 +20,12 @@ export interface PendingChromeStorageWrite {
   id?: number;
 }
 
-const queue = new StorageBackedQueue<PendingChromeStorageWrite>(
-  PENDING_CHROME_STORAGE_KEY,
-  MAX_PENDING_WRITES,
-  'pendingChromeStorageQueue',
-);
+const adapter = new ChromeStorageAdapter();
+const queue = new PersistentRetryQueue<PendingChromeStorageWrite>(adapter, {
+  storageKey: PENDING_CHROME_STORAGE_KEY,
+  maxSize: MAX_PENDING_WRITES,
+  logLabel: 'pendingChromeStorageQueue',
+});
 
 /**
  * Queue a chrome.storage.local write that failed. Best-effort: a queue
@@ -35,7 +33,7 @@ const queue = new StorageBackedQueue<PendingChromeStorageWrite>(
  * write failure.
  */
 export async function enqueuePendingWrite(write: PendingChromeStorageWrite): Promise<void> {
-  await queue.enqueue(write, { key: write.key });
+  await queue.enqueue(write);
 }
 
 /**

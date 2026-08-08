@@ -1,24 +1,31 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { StorageBackedQueue } from '../storageBackedQueue.js';
+import { PersistentRetryQueue, ChromeStorageAdapter } from '../persistentRetryQueue.js';
 
-describe('StorageBackedQueue', () => {
+describe('StorageBackedQueue (PersistentRetryQueue)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    // Reset chrome.storage.local between tests.
+  });
+
+  it('loads an empty queue when nothing is stored', async () => {
+    const stored: Record<string, unknown> = {};
     vi.stubGlobal('chrome', {
       storage: {
         local: {
           async get(key: string) {
-            return { [key]: undefined };
+            return { [key]: stored[key] };
           },
-          async set() {},
+          async set(obj: Record<string, unknown>) {
+            Object.assign(stored, obj);
+          },
         },
       },
     });
-  });
-
-  it('loads an empty queue when nothing is stored', async () => {
-    const q = new StorageBackedQueue<string>('test_key', 5, 'testQueue');
+    const adapter = new ChromeStorageAdapter();
+    const q = new PersistentRetryQueue<string>(adapter, {
+      storageKey: 'test_key',
+      maxSize: 5,
+      logLabel: 'testQueue',
+    });
     expect(await q.load()).toEqual([]);
   });
 
@@ -36,7 +43,12 @@ describe('StorageBackedQueue', () => {
         },
       },
     });
-    const q = new StorageBackedQueue<number>('test_key', 3, 'testQueue');
+    const adapter = new ChromeStorageAdapter();
+    const q = new PersistentRetryQueue<number>(adapter, {
+      storageKey: 'test_key',
+      maxSize: 3,
+      logLabel: 'testQueue',
+    });
     for (let i = 1; i <= 5; i++) {
       await q.enqueue(i);
     }
@@ -58,7 +70,12 @@ describe('StorageBackedQueue', () => {
         },
       },
     });
-    const q = new StorageBackedQueue<number>('test_key', 5, 'testQueue');
+    const adapter = new ChromeStorageAdapter();
+    const q = new PersistentRetryQueue<number>(adapter, {
+      storageKey: 'test_key',
+      maxSize: 5,
+      logLabel: 'testQueue',
+    });
     // Item 2 fails; others succeed.
     const stillPending = await q.flush(async (item) => item !== 2);
     expect(stillPending).toEqual([2]);
@@ -79,7 +96,12 @@ describe('StorageBackedQueue', () => {
         },
       },
     });
-    const q = new StorageBackedQueue<string>('test_key', 5, 'testQueue');
+    const adapter = new ChromeStorageAdapter();
+    const q = new PersistentRetryQueue<string>(adapter, {
+      storageKey: 'test_key',
+      maxSize: 5,
+      logLabel: 'testQueue',
+    });
     const stillPending = await q.flush(async (item) => {
       if (item === 'a') throw new Error('boom');
       return true;
