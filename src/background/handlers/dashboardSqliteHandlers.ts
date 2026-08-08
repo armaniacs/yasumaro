@@ -350,18 +350,32 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
 }
 
 /**
- * Backward-compatible wrapper for tests.
- * Use createDashboardSqliteHandler for new code.
+ * The operations this handler needs that a SqliteClient can supply.
+ *
+ * Everything outside this set (migration, confirm tokens, backfill, cleanup)
+ * is owned by the Service Worker and has to be passed in separately.
  */
-export async function handleDashboardSqlite(
-    payload: DashboardSqliteRequest & { confirmToken?: string },
-    sqliteClient: import('../sqliteClient.js').SqliteClient,
-    runMigration?: () => Promise<{ success: boolean; count: number; read?: number; inserted?: number; error?: string }>,
-    validConfirmToken?: string,
-    runBackfill?: () => Promise<{ updated: number; total: number }>,
-    runCleanup?: () => Promise<{ removed: string[]; totalBytes: number }>,
-): Promise<unknown> {
-  const handler = createDashboardSqliteHandler({
+export interface SqliteClientBackedDeps {
+  runMigration: DashboardSqliteHandlerDeps['runMigration'];
+  getConfirmToken: DashboardSqliteHandlerDeps['getConfirmToken'];
+  runBackfill: DashboardSqliteHandlerDeps['runBackfill'];
+  runCleanup: DashboardSqliteHandlerDeps['runCleanup'];
+}
+
+/**
+ * Builds the handler's dependencies from a SqliteClient.
+ *
+ * Both the Service Worker and the tests go through this, so there is one
+ * answer to "how is this handler wired". Previously the two were assembled
+ * independently and had drifted: the test-only wrapper stubbed migration,
+ * confirm-token, backfill and cleanup, so the Service Worker's real
+ * implementations of those four were never exercised by any test.
+ */
+export function createSqliteClientDeps(
+  sqliteClient: import('../sqliteClient.js').SqliteClient,
+  serviceWorkerDeps: SqliteClientBackedDeps,
+): DashboardSqliteHandlerDeps {
+  return {
     query: (params) => sqliteClient.query(params),
     search: (query, limit, offset) => sqliteClient.search(query, limit, offset),
     toggleStar: (id) => sqliteClient.toggleStar(id),
@@ -377,10 +391,6 @@ export async function handleDashboardSqlite(
     purgeContent: (days, max, includeStarred) => sqliteClient.purgeContent(days, max, includeStarred),
     backupDb: () => sqliteClient.backupDb(),
     lastError: () => sqliteClient.lastError ?? null,
-    runMigration: runMigration ?? (async () => ({ success: false, error: 'Migration not available', count: 0 })),
-    getConfirmToken: async () => validConfirmToken ?? '',
-    runBackfill: runBackfill ?? (async () => { throw new Error('Backfill not available'); }),
-    runCleanup: runCleanup ?? (async () => { throw new Error('Cleanup not available'); }),
     getSettings: () => getSettings(),
     formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
     queryAuditLog: (options) => sqliteClient.queryAuditLog(options),
@@ -388,6 +398,31 @@ export async function handleDashboardSqlite(
       const obsidianClient = new ObsidianClient();
       await obsidianClient.appendToDailyNote(markdown);
     },
-  });
+    ...serviceWorkerDeps,
+  };
+}
+
+/**
+ * Test entry point.
+ *
+ * Shares createSqliteClientDeps with the Service Worker so the SqliteClient-backed
+ * half of the wiring is identical in both. The four Service-Worker-owned
+ * operations still default to stubs here; tests that care about them pass real
+ * implementations.
+ */
+export async function handleDashboardSqlite(
+    payload: DashboardSqliteRequest & { confirmToken?: string },
+    sqliteClient: import('../sqliteClient.js').SqliteClient,
+    runMigration?: () => Promise<{ success: boolean; count: number; read?: number; inserted?: number; error?: string }>,
+    validConfirmToken?: string,
+    runBackfill?: () => Promise<{ updated: number; total: number }>,
+    runCleanup?: () => Promise<{ removed: string[]; totalBytes: number }>,
+): Promise<unknown> {
+  const handler = createDashboardSqliteHandler(createSqliteClientDeps(sqliteClient, {
+    runMigration: runMigration ?? (async () => ({ success: false, error: 'Migration not available', count: 0 })),
+    getConfirmToken: async () => validConfirmToken ?? '',
+    runBackfill: runBackfill ?? (async () => { throw new Error('Backfill not available'); }),
+    runCleanup: runCleanup ?? (async () => { throw new Error('Cleanup not available'); }),
+  }));
   return handler(payload);
 }

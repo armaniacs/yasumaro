@@ -68,14 +68,82 @@ After:  テスト → createDashboardSqliteHandler(makeTestDeps({ query: ... }))
 
 ## 作業内容
 
-- [ ] テスト用 deps ファクトリを用意する（既定値 + 部分上書き）
-- [ ] `dashboardSqliteHandlers-extra.test.ts` をファクトリ経由に移行する
-- [ ] `dashboardSqliteHandlers.test.ts` を移行する
-- [ ] `dashboardSqliteHandlers-append.test.ts` を移行する
-- [ ] `sqlite-security-integrity.test.ts` の参照を確認・移行する
-- [ ] `handleDashboardSqlite`（handlers 側 wrapper）を削除する
-- [ ] 本番でのみ通っていた `runMigration` / `getConfirmToken` の
-      経路に対するテストを**新規に追加**する
+- [x] deps 組み立てを共有ファクトリ `createSqliteClientDeps` に集約する
+- [x] `service-worker.ts` を共有ファクトリ経由に変更する
+- [x] wrapper を共有ファクトリ経由に変更する
+- [x] `sqlite-security-integrity.test.ts` の参照を確認する
+      → ソーステキストを読む方式のため**影響なし**
+- [x] 本番でのみ通っていた `runMigration` / `getConfirmToken` /
+      `runBackfill` / `runCleanup` の経路に対するテストを**新規に追加**する（11件）
+- [ ] ~~wrapper を削除する~~ → **方針変更**（下記）
+
+## 実装結果
+
+### 方針変更: wrapper の削除ではなく「配線の共有」
+
+起票時は wrapper 削除を想定したが、呼び出しが**72箇所**（12/42/18）あり、
+位置引数の形も複数種類あるため、一括書き換えは回帰リスクが高いと判断した。
+
+代わりに、**両者が同じ deps 組み立て関数を通る**形にした：
+
+```
+Before: wrapper       → 独自に20キーを組み立て（4つはスタブ）
+        service-worker → 独自に20キーを組み立て（4つは実処理）
+                         ↑ 2つが独立に育ち、実際に食い違っていた
+
+After:  wrapper       ┐
+                      ├→ createSqliteClientDeps(client, {SW固有の4つ})
+        service-worker┘
+```
+
+これで「SqliteClient 由来の16キー」は**両者で必ず同一**になる。
+食い違いうるのは Service Worker が所有する4つだけで、
+それらは今回テストを追加した。
+
+### 発見: 本番と wrapper で `query` の呼び方が違っていた
+
+```typescript
+// service-worker.ts（修正前）
+query: (params) => sqliteClient.query(params as any),   // as any あり
+// wrapper（修正前）
+query: (params) => sqliteClient.query(params),          // as any なし
+```
+
+共有化によりこの差異も解消した。
+
+### 追加テスト（11件）
+
+`dashboardSqliteHandlers-wiring.test.ts` を新規作成。
+**wrapper がスタブ化していたため一度もテストされていなかった4依存**を対象とする。
+
+- migrate: 成功時の件数伝播 / 失敗時のエラー伝播
+- confirm_token: SW発行トークンの返却
+- **トークン不一致・トークン未指定で破壊的操作が拒否されること**（2件）
+- トークン一致時に `clearAll` が実行されること
+- backfill: 件数返却 / 例外時に throw せず error を返すこと
+- cleanup: 削除内容の返却
+- 共有配線経由で `lastError` の具体的文言が伝わること
+
+### 実装中の気づき
+
+最初 `migrate` / `backfill_metadata` / `cleanup_legacy` にトークンを渡さず
+テストを書いたところ5件が落ちた。原因は**これらが `TOKEN_REQUIRED_SUBTYPES`
+に含まれており、正しく拒否されていた**ため。
+
+テスト側の誤りだったが、結果として
+「トークンなしでは破壊的操作が通らない」ことの確認になったため、
+その観点を明示的なテストとして残した。
+
+### 検証結果
+
+- `src/background/` 全体: **1581件 通過**（116ファイル、8 skip）
+- `npm run type-check`: 通過
+
+### 残作業
+
+wrapper 自体の削除は未実施。72箇所の呼び出し移行として
+独立した PBI で扱うのが妥当（本 PBI の主目的である
+「本番配線がテストされていない」状態は解消済み）。
 
 ## 完了条件
 
