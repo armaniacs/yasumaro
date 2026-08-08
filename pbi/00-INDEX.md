@@ -25,6 +25,12 @@
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
 | 🔶 [2026-08-07-08-refactor-ai-client-service-unification.md](2026-08-07-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合（modelName型ドリフトは解消済み。AIClient削除は中核パスの高リスクのため保留） |
 | 🔶 [2026-08-07-13-refactor-service-wiring-backend-consolidation.md](2026-08-07-13-refactor-service-wiring-backend-consolidation.md) | 🟡中 | 🟡軽微 | 🔧 | サービス配線・StorageBackend・プロバイダ設定表示・エラー処理の統合候補（エラー処理イディオムは解消済み。他は調査により実重複でない/高リスクと判断し保留）
+| ⬜ [2026-08-09-10-fix-dashboard-sqlite-lasterror-snapshot.md](2026-08-09-10-fix-dashboard-sqlite-lasterror-snapshot.md) | 🟢低 | 🟡軽微 | 🔧 | **実害修正**: deps.lastErrorが起動時nullで凍結され、15箇所の具体的エラー文言が一度も表示されていない |
+| ⬜ [2026-08-09-11-refactor-dashboard-sqlite-dual-wiring.md](2026-08-09-11-refactor-dashboard-sqlite-dual-wiring.md) | 🟡中 | 🟡軽微 | 🔧 | テスト専用wrapperが本番と別配線。migration/confirmTokenの本番経路が未テスト |
+| ⬜ [2026-08-09-12-fix-querylogs-error-swallowing.md](2026-08-09-12-fix-querylogs-error-swallowing.md) | 🟡中 | 🟡軽微 | 🔧 | **実害修正**: DB障害時に空ファイルをDLして「completed」表示。tagClusterのリトライも無効化されている |
+| ⬜ [2026-08-09-13-refactor-sender-trust-policy.md](2026-08-09-13-refactor-sender-trust-policy.md) | 🟡中 | 🔴あり | 🔧 | 送信元認可が19handlerに4方言で散在。registryに集約し既定を安全側にする |
+| ⬜ [2026-08-09-14-refactor-remove-offscreen-sqlite-shim.md](2026-08-09-14-refactor-remove-offscreen-sqlite-shim.md) | 🟢低 | 🟢なし | 🔧 | 全export非推奨の再エクスポート層。唯一のimport元が本番ルータ自身 |
+| ✅ [2026-08-09-15-investigate-markdown-sanitizer-divergence.md](2026-08-09-15-investigate-markdown-sanitizer-divergence.md) | 🟢低 | 🟢なし | 🔍 | 調査完了・**対応不要**。ADRが用途別使い分けを定めており、リンク構文を組まない側は現状が正しい |
 
 ---
 > 2026-08-04-01〜05 は Checking Team レビュー（v6.7.12 AI接続テスト進捗表示）の残存指摘対応として実装・アーカイブ済み。詳細はアーカイブ欄参照。
