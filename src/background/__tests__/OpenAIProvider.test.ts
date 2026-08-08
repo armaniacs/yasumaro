@@ -9,6 +9,7 @@ Object.defineProperty(global, 'crypto', { value: crypto });
 
 // fetch モック
 vi.mock('../../utils/fetch.js', () => ({
+    CONNECTION_TEST_CACHE_MODE: 'no-store',
     fetchWithRetry: vi.fn(),
     validateUrlForAIRequests: vi.fn()
 }));

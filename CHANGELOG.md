@@ -37,6 +37,8 @@ All notable changes to this project will be documented in this file.
 
 前日から続く deepening リファクタリングの第3弾。アーキテクチャレビュー（コードベース全体スキャン）で検出した「配置と実態の乖離」「層をまたぐ依存」「テストできない計算」の3点を解消。本番未使用コードの削除を含め、差し引き約4,700行を削減。
 
+あわせて、接続テストがHTTPキャッシュに当たり実際の到達性を検証できていなかった不具合を修正した（APIキー失効後やオフラインでも「接続成功」を返しうる状態だった）。
+
 ### Removed / 削除
 
 - **本番未使用のデッドモジュール5件を削除（本番1,010行 + テスト3,915行）** — WXTエントリポイントからの推移的import追跡（到達性解析）により、本番コードから一切参照されず、テストのみが検証し続けている状態を検出。いずれも後継実装への移行時の削除漏れ
@@ -66,11 +68,15 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed / 修正
 
+- **接続テストがHTTPキャッシュに当たり、実際の到達性を検証できていなかった問題を修正** — 接続テストの GET リクエスト（OpenAI互換 `/models`、Gemini `/v1beta/models`、Obsidian root、GitHub Gist `/user`）に `cache` 指定が無く、`fetch` の既定値（`'default'`）でブラウザのHTTPキャッシュを使っていた。キャッシュヒット時はネットワーク往復が発生しないため、所要時間が「0.0秒」と表示されるだけでなく、**APIキー失効後やオフラインでも「接続成功」を返しうる**状態だった（テスト結果そのものが信頼できない）
+  - `src/utils/fetch.ts` に `CONNECTION_TEST_CACHE_MODE`（`'no-store'`）を追加し、接続テストを行う4経路すべてに適用
+  - 「今この瞬間その API へ到達できるか」を確かめる機能である以上、キャッシュを使ってはならないという意図をコメントで明示
+  - 回帰テスト `connectionTest-no-cache.test.ts` を追加。`fetch` に渡る `cache` を直接検証するため、将来指定が外れた場合に必ず失敗する（実際に指定を外して落ちることを確認済み）
 - **`initDashboard` の名前衝突を修正** — 即時実行される `(async function initDashboard())` と、同名の no-op な `export function initDashboard()` が同一ファイル内で衝突していた。テストから `initDashboard` を import すると実際のブートストラップ処理ではなく no-op を掴むため、テストが何も検証していない状態だった。即時実行IIFEを `export async function` 化し、テストも実処理の完了を検証する形に更新
 
 ### Tests / テスト
 
-- 全 7,398 単体テスト通過（401ファイル）、TypeScript 型チェック正常
+- 全 7,401 単体テスト通過（402ファイル）、TypeScript 型チェック正常
 - 履歴パネルの純関数に対する新規テスト15件を追加。DBモックも jsdom も使わず 268ms で完走する（従来の同種テストは DBモック3種 + jsdom + マイクロタスク待ちを要していた）
 - デッドコード削除に伴い、使われていないコードを検証していたテスト7ファイルを削除
 
