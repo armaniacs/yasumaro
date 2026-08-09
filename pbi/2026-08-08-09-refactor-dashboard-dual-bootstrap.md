@@ -6,6 +6,12 @@
 **副作用**: 🔴あり（Dashboard 全体の初期化経路の変更。全設定画面の回帰リスク）
 **種別**: 🔧非機能追加（refactor）
 
+> ⚠️ **本PBIの残作業（Phase 2 / Phase 4）は
+> `pbi/2026-08-09-24-refactor-dashboard-reverse-dependency.md` に引き継いだ。**
+> Phase 1・3 は完了済み。**本PBIを新たに着手しないこと。**
+> PBI-24 は本PBI執筆後の変化（dashboard.ts 967→842行、markdownExport.ts 分離済み、
+> クリック合成のフォールバック降格）を反映した最新の実測値で書かれている。
+
 ---
 
 ## 背景

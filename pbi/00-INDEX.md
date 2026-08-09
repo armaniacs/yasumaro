@@ -33,8 +33,13 @@
 | ✅ [2026-08-09-17-refactor-remove-per-handler-sender-guards.md](2026-08-09-17-refactor-remove-per-handler-sender-guards.md) | 🟡中 | 🔴あり | 🔧 | 認可判定を1箇所に集約。削除前に全19型×3送信元の網羅テスト59件を用意。security-integrityをソース照合から振る舞い検証へ |
 | ✅ [2026-08-09-14-refactor-remove-offscreen-sqlite-shim.md](2026-08-09-14-refactor-remove-offscreen-sqlite-shim.md) | 🟢低 | 🟢なし | 🔧 | 非推奨再エクスポート層を削除。vi.mockを本番の import 先に合わせ offscreen テストが152→175件に |
 | ✅ [2026-08-09-15-investigate-markdown-sanitizer-divergence.md](2026-08-09-15-investigate-markdown-sanitizer-divergence.md) | 🟢低 | 🟢なし | 🔍 | 調査完了・**対応不要**。ADRが用途別使い分けを定めており、リンク構文を組まない側は現状が正しい |
-| ⬜ [2026-08-09-18-refactor-cleansing-rule-table.md](2026-08-09-18-refactor-cleansing-rule-table.md) | 🔴大 | 🔴あり | 🔧 | **実害修正**: 32ルール中15件がcount経路で黙って捨てられ、既定ONの2件を含むため全ユーザーで過少表示。ルール表に集約しcountをstrip由来にして二重実装を解消 |
-| ⬜ [2026-08-09-19-refactor-sqlite-read-result-union.md](2026-08-09-19-refactor-sqlite-read-result-union.md) | 🔴大 | 🟡あり | 🔧 | **実害修正**: DB障害が「データがありません」と表示される問題（v6.7.26で3件修正した形の4件目）。読み取り系6関数をCallResult貫通にし、共有可変lastError経由と文字列照合retryを廃止 |
+| ✅ [2026-08-09-18-refactor-cleansing-rule-table.md](2026-08-09-18-refactor-cleansing-rule-table.md) | 🔴大 | 🔴あり | 🔧 | **実害修正**: 32ルール中15件がcount経路で黙って捨てられていた問題。ルール表に集約しcountをstrip由来に。既定設定で表示件数 4→6 に是正。countTargets.ts(497行)を削除 |
+| ✅ [2026-08-09-19-refactor-sqlite-read-result-union.md](2026-08-09-19-refactor-sqlite-read-result-union.md) | 🔴大 | 🟡あり | 🔧 | **実害修正**: DB障害が「データがありません」と表示される問題（v6.7.26で3件修正した形の4件目）。読み取り系4関数をCallResult貫通にし、retriableフラグで文字列照合retryを廃止 |
+| ⬜ [2026-08-09-20-refactor-cleansing-rule-single-source.md](2026-08-09-20-refactor-cleansing-rule-single-source.md) | 🔴大 | 🟡軽微 | 🔧 | ルール宣言が10層に散在し、既定値が3表で7ルール食い違う（うちCategory A/Bはマイグレーションと対の意図的差分）。「新規ユーザー既定値」と「未指定時フォールバック」を分離し表から導出 |
+| ⬜ [2026-08-09-21-refactor-sqlite-write-result-union.md](2026-08-09-21-refactor-sqlite-write-result-union.md) | 🟡中 | 🟡軽微 | 🔧 | **実害修正**: 削除・スター操作の失敗時に画面が完全無反応（`if (ok)`にelseが無い）。変更系をCallResult化し共有可変lastErrorを削除。PBI-19の残り半分 |
+| ⬜ [2026-08-09-22-refactor-shallow-static-form-panels.md](2026-08-09-22-refactor-shallow-static-form-panels.md) | 🟢小 | 🟢なし | 🔧 | init関数を転送するだけのStaticFormPanel 9件(133行)を宣言表+アダプタへ集約。9件はテスト0件のため手動確認が必須 |
+| ⬜ [2026-08-09-23-refactor-sqlite-transport-layers.md](2026-08-09-23-refactor-sqlite-transport-layers.md) | 🔴大 | 🔴あり | 🔧 | **Epic 8pt・要シニア相談**: 1操作に6層1400行。Phase1(型二重化解消/2pt)・Phase2(失敗表現統一/3pt)・Phase3(宣言表/3pt)。業務ロジックを持つ7caseは機械化しない |
+| ⬜ [2026-08-09-24-refactor-dashboard-reverse-dependency.md](2026-08-09-24-refactor-dashboard-reverse-dependency.md) | 🔴大 | 🔴あり | 🔧 | panel層→dashboard.ts(842行)の逆依存と二重bootstrapを解消。**PBI 2026-08-08-09のPhase2/4を最新実測値で切り出したもの**（重複実施しないこと） |
 
 ---
 > 2026-08-04-01〜05 は Checking Team レビュー（v6.7.12 AI接続テスト進捗表示）の残存指摘対応として実装・アーカイブ済み。詳細はアーカイブ欄参照。
@@ -277,15 +282,36 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 3（✨機能追加 0 / 🔧非機能追加 3） |
-| ✅ 完了 | 15 |
-| 🔶 部分実装 | 3（2026-08-07-08 AIレイヤー統合 / 2026-08-07-13 サービス配線・StorageBackend / 2026-08-08-09 dashboard二重bootstrap） |
+| ⬜ 未着手 | 6（✨機能追加 0 / 🔧非機能追加 6） |
+| ✅ 完了 | 17 |
+| 🔶 部分実装 | 3（2026-08-07-08 AIレイヤー統合 / 2026-08-07-13 サービス配線・StorageBackend / 2026-08-08-09 dashboard二重bootstrap → **2026-08-09-24 に引き継ぎ**） |
 | アーカイブ済み | 210 |
 
 未着手の内訳:
 
-| PBI | 内容 |
-|---|---|
-| 2026-08-01-17 | 暗号化キーの chrome.storage.session 移行 |
-| 2026-08-09-18 | クレンジングルール表への集約（先に実施） |
-| 2026-08-09-19 | SQLite 読み取り系の Result 貫通 |
+| PBI | 内容 | 実施順 |
+|---|---|---|
+| 2026-08-01-17 | 暗号化キーの chrome.storage.session 移行 | 独立 |
+| 2026-08-09-20 | クレンジングルール宣言の単一ソース化 | **1番目** |
+| 2026-08-09-21 | SQLite 変更系の Result 貫通・lastError 削除 | **2番目** |
+| 2026-08-09-22 | 単純委譲パネル9件の宣言表化 | **3番目** |
+| 2026-08-09-23 | SQLite トランスポート層の削減（Epic） | **4番目**・21が前提 |
+| 2026-08-09-24 | dashboard.ts への逆依存解消 | **5番目**・22の後が望ましい |
+
+### 2026-08-09 アーキテクチャレビュー由来（20〜24）の実施順と依存
+
+アーキテクチャレビュー（候補01→03→04→02→05）に対応する。
+
+```
+20（候補01・ルール宣言）      ← 18の続き。独立して着手可
+  ↓
+21（候補03・変更系Result）    ← 19の続き。19完了済みが前提
+  ↓
+22（候補04・浅いパネル）      ← 独立。小さいので箸休めに良い
+  ↓
+23（候補02・トランスポート）  ← 21が前提。Epic。Phase1だけでも可
+  ↓
+24（候補05・逆依存）          ← 22の後が望ましい。PBI-09の後継
+```
+
+各PBIに実装計画が対応する（`dev-docs/plans/2026-08-09-pbi{20..24}-*-plan.md`）。
