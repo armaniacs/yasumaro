@@ -411,7 +411,10 @@ export async function backfillMetadata(): Promise<ServiceResult<{ updated: numbe
  */
 export async function backupDb(): Promise<ServiceResult<Uint8Array>> {
   try {
-    const response = await sendDashboardMessage({ subtype: 'backup_db' });
+    const response = await sendDashboardMessage(
+      { subtype: 'backup_db' },
+      { requireConfirmToken: true },
+    );
     if (response.success && response.data) {
       return { data: base64ToBytes(response.data as string) };
     }
