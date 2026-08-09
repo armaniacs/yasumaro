@@ -230,20 +230,22 @@ export async function updateLog(id: number, changes: Record<string, unknown>): P
  * Force re-run the chrome.storage → SQLite migration.
  * Returns the SQLite record count after migration, or null on failure.
  */
-export async function migrateLogs(): Promise<{ count: number; read: number; inserted: number } | null> {
+export async function migrateLogs(): Promise<ServiceResult<{ count: number; read: number; inserted: number }>> {
   try {
     const response = await sendDashboardMessage({ subtype: 'migrate' }, { requireConfirmToken: true });
     if (response.success) {
       return {
-        count: Number(response.count || 0),
-        read: Number(response.read || 0),
-        inserted: Number(response.inserted || 0),
+        data: {
+          count: Number(response.count || 0),
+          read: Number(response.read || 0),
+          inserted: Number(response.inserted || 0),
+        },
       };
     }
-    return null;
+    return { error: String(response.error || 'Migration failed') };
   } catch (error) {
-    console.error('migrateLogs failed:', error);
-    return null;
+    console.error('migrateLogs failed:', errorMessage(error));
+    return { error: errorMessage(error) };
   }
 }
 
@@ -259,16 +261,16 @@ export interface OpfsSpikeReportView {
  * Run the OPFS feasibility spike (PBI-10) and return its structured report.
  * Used by the diagnostics panel for manual verification in real Chrome.
  */
-export async function runOpfsSpike(): Promise<OpfsSpikeReportView | null> {
+export async function runOpfsSpike(): Promise<ServiceResult<OpfsSpikeReportView>> {
   try {
     const response = await sendDashboardMessage({ subtype: 'opfs_spike' });
     if (response.success && response.report) {
-      return response.report as OpfsSpikeReportView;
+      return { data: response.report as OpfsSpikeReportView };
     }
-    return null;
+    return { error: response.success ? 'OPFS spike returned no report' : String(response.error || 'OPFS spike failed') };
   } catch (error) {
-    console.error('runOpfsSpike failed:', error);
-    return null;
+    console.error('runOpfsSpike failed:', errorMessage(error));
+    return { error: errorMessage(error) };
   }
 }
 
@@ -358,7 +360,7 @@ export async function getSqliteStatus(): Promise<{
  * Explicitly clean up legacy chrome.storage keys.
  * This is a destructive operation - only call after user confirmation.
  */
-export async function cleanupLegacyStorage(): Promise<{ removed: string[]; totalBytes: number } | null> {
+export async function cleanupLegacyStorage(): Promise<ServiceResult<{ removed: string[]; totalBytes: number }>> {
   try {
     const response = await sendDashboardMessage(
       { subtype: 'cleanup_legacy' },
@@ -366,14 +368,16 @@ export async function cleanupLegacyStorage(): Promise<{ removed: string[]; total
     );
     if (response.success) {
       return {
-        removed: Array.isArray(response.removed) ? response.removed : [],
-        totalBytes: Number(response.totalBytes || 0),
+        data: {
+          removed: Array.isArray(response.removed) ? response.removed : [],
+          totalBytes: Number(response.totalBytes || 0),
+        },
       };
     }
-    return null;
+    return { error: String(response.error || 'Cleanup failed') };
   } catch (error) {
-    console.error('cleanupLegacyStorage failed:', error);
-    return null;
+    console.error('cleanupLegacyStorage failed:', errorMessage(error));
+    return { error: errorMessage(error) };
   }
 }
 
@@ -381,7 +385,7 @@ export async function cleanupLegacyStorage(): Promise<{ removed: string[]; total
  * Backfill diagnostic metadata for already-migrated SQLite entries
  * that are missing metric fields (sent_tokens, page_bytes, etc.).
  */
-export async function backfillMetadata(): Promise<{ updated: number; total: number } | null> {
+export async function backfillMetadata(): Promise<ServiceResult<{ updated: number; total: number }>> {
   try {
     const response = await sendDashboardMessage(
       { subtype: 'backfill_metadata' },
@@ -389,14 +393,16 @@ export async function backfillMetadata(): Promise<{ updated: number; total: numb
     );
     if (response.success) {
       return {
-        updated: Number(response.updated || 0),
-        total: Number(response.total || 0),
+        data: {
+          updated: Number(response.updated || 0),
+          total: Number(response.total || 0),
+        },
       };
     }
-    return null;
+    return { error: String(response.error || 'Backfill failed') };
   } catch (error) {
-    console.error('backfillMetadata failed:', error);
-    return null;
+    console.error('backfillMetadata failed:', errorMessage(error));
+    return { error: errorMessage(error) };
   }
 }
 

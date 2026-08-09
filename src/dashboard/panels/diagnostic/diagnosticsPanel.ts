@@ -531,8 +531,9 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
         opfsSpikeResult.className = 'diag-result';
 
         try {
-          const report = await runOpfsSpike();
-          if (report) {
+          const result = await runOpfsSpike();
+          if ('data' in result) {
+            const report = result.data;
             const header = `${report.passed ? '✓' : '✗'} strategy=${report.strategy} (${report.durationMs}ms)`;
             const lines = report.steps.map(s => `  ${s.ok ? '✓' : '✗'} ${s.name}${s.detail ? ` — ${s.detail}` : ''}`);
             opfsSpikeResult.textContent = [header, ...lines].join('\n');
@@ -540,7 +541,7 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
               ? `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`
               : `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
           } else {
-            opfsSpikeResult.textContent = '✗ OPFS spike returned no report.';
+            opfsSpikeResult.textContent = `✗ OPFS spike failed: ${result.error}`;
             opfsSpikeResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
           }
         } catch {
@@ -568,11 +569,11 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
 
         try {
           const result = await migrateLogs();
-          if (result) {
-            migrateResult.textContent = `✓ ${getMessage('diagMigrateDone') || 'Conversion complete.'} read=${result.read} inserted=${result.inserted} total=${result.count}`;
+          if ('data' in result) {
+            migrateResult.textContent = `✓ ${getMessage('diagMigrateDone') || 'Conversion complete.'} read=${result.data.read} inserted=${result.data.inserted} total=${result.data.count}`;
             migrateResult.style.color = `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`;
           } else {
-            migrateResult.textContent = `✗ ${getMessage('diagMigrateFailed') || 'Conversion failed.'}`;
+            migrateResult.textContent = `✗ ${getMessage('diagMigrateFailed') || 'Conversion failed.'}: ${result.error}`;
             migrateResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
           }
         } catch {
@@ -592,11 +593,11 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
 
         try {
           const result = await backfillMetadata();
-          if (result) {
-            backfillResult.textContent = `✓ ${getMessage('diagBackfillDone') || 'Backfill complete.'} updated=${result.updated}/${result.total}`;
+          if ('data' in result) {
+            backfillResult.textContent = `✓ ${getMessage('diagBackfillDone') || 'Backfill complete.'} updated=${result.data.updated}/${result.data.total}`;
             backfillResult.style.color = `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`;
           } else {
-            backfillResult.textContent = `✗ ${getMessage('diagBackfillFailed') || 'Backfill failed.'}`;
+            backfillResult.textContent = `✗ ${getMessage('diagBackfillFailed') || 'Backfill failed.'}: ${result.error}`;
             backfillResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
           }
         } catch {
@@ -624,11 +625,11 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
 
         try {
           const result = await cleanupLegacyStorage();
-          if (result) {
-            cleanupResult.textContent = `✓ ${getMessage('diagCleanupDone') || 'Cleanup complete.'} removed=${result.removed.length} keys, ${result.totalBytes} bytes freed`;
+          if ('data' in result) {
+            cleanupResult.textContent = `✓ ${getMessage('diagCleanupDone') || 'Cleanup complete.'} removed=${result.data.removed.length} keys, ${result.data.totalBytes} bytes freed`;
             cleanupResult.style.color = `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`;
           } else {
-            cleanupResult.textContent = `✗ ${getMessage('diagCleanupFailed') || 'Cleanup failed.'}`;
+            cleanupResult.textContent = `✗ ${getMessage('diagCleanupFailed') || 'Cleanup failed.'}: ${result.error}`;
             cleanupResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
           }
         } catch {
