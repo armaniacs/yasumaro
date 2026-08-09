@@ -287,13 +287,17 @@ export class SqliteClient {
     return result.success;
   }
 
-  async insert(record: BrowsingLogRecord, traceId: string = ''): Promise<{ id: number } | null> {
-    const result = await this.call<{ id: number }>(
+  async insertResult(record: BrowsingLogRecord, traceId: string = ''): Promise<CallResult<{ id: number }>> {
+    return this.call<{ id: number }>(
       'SQLITE_INSERT',
       record as unknown as Record<string, unknown>,
       (res) => ({ id: Number(res.id) }),
       traceId,
     );
+  }
+
+  async insert(record: BrowsingLogRecord, traceId: string = ''): Promise<{ id: number } | null> {
+    const result = await this.insertResult(record, traceId);
     return result.success ? result.data : null;
   }
 
@@ -346,22 +350,34 @@ export class SqliteClient {
     return result.success ? result.data : null;
   }
 
+  async updateResult(id: number, changes: Partial<Record<string, unknown>>, traceId: string = ''): Promise<CallResult<void>> {
+    return this.call('SQLITE_UPDATE', { id, ...changes }, undefined, traceId);
+  }
+
   async update(id: number, changes: Partial<Record<string, unknown>>, traceId: string = ''): Promise<boolean> {
-    const result = await this.call('SQLITE_UPDATE', { id, ...changes }, undefined, traceId);
+    const result = await this.updateResult(id, changes, traceId);
     return result.success;
+  }
+
+  async deleteResult(id: number): Promise<CallResult<void>> {
+    return this.call('SQLITE_DELETE', { id });
   }
 
   async delete(id: number): Promise<boolean> {
-    const result = await this.call('SQLITE_DELETE', { id });
+    const result = await this.deleteResult(id);
     return result.success;
   }
 
-  async toggleStar(id: number): Promise<{ is_starred: number } | null> {
-    const result = await this.call<{ is_starred: number }>(
+  async toggleStarResult(id: number): Promise<CallResult<{ is_starred: number }>> {
+    return this.call<{ is_starred: number }>(
       'SQLITE_TOGGLE_STAR',
       { id },
       (res) => ({ is_starred: Number(res.is_starred) }),
     );
+  }
+
+  async toggleStar(id: number): Promise<{ is_starred: number } | null> {
+    const result = await this.toggleStarResult(id);
     return result.success ? result.data : null;
   }
 
@@ -396,8 +412,12 @@ export class SqliteClient {
     return result.success ? result.data : null;
   }
 
+  async restoreDbResult(data: Uint8Array): Promise<CallResult<void>> {
+    return this.call('SQLITE_RESTORE', { data: Array.from(data) });
+  }
+
   async restoreDb(data: Uint8Array): Promise<boolean> {
-    const result = await this.call('SQLITE_RESTORE', { data: Array.from(data) });
+    const result = await this.restoreDbResult(data);
     return result.success;
   }
 
@@ -429,8 +449,12 @@ export class SqliteClient {
     };
   }
 
+  async clearAllResult(): Promise<CallResult<void>> {
+    return this.call('SQLITE_CLEAR_ALL');
+  }
+
   async clearAll(): Promise<boolean> {
-    const result = await this.call('SQLITE_CLEAR_ALL');
+    const result = await this.clearAllResult();
     return result.success;
   }
 
@@ -444,22 +468,42 @@ export class SqliteClient {
     return result.success;
   }
 
-  async runOpfsSpike(): Promise<OpfsSpikeReport | null> {
-    const result = await this.call<OpfsSpikeReport>(
+  async runOpfsSpikeResult(): Promise<CallResult<OpfsSpikeReport>> {
+    return this.call<OpfsSpikeReport>(
       'SQLITE_OPFS_SPIKE',
       {},
       (res) => res.report as OpfsSpikeReport,
     );
+  }
+
+  async runOpfsSpike(): Promise<OpfsSpikeReport | null> {
+    const result = await this.runOpfsSpikeResult();
     return result.success ? result.data : null;
   }
 
-  async purgeOldRecords(retentionDays?: number, maxRecords?: number): Promise<{ purged: number } | null> {
-    const result = await this.call<{ purged: number }>(
+  async purgeOldRecordsResult(retentionDays?: number, maxRecords?: number): Promise<CallResult<{ purged: number }>> {
+    return this.call<{ purged: number }>(
       'SQLITE_PURGE',
       { retentionDays, maxRecords },
       (res) => ({ purged: Number(res.purged || 0) }),
     );
+  }
+
+  async purgeOldRecords(retentionDays?: number, maxRecords?: number): Promise<{ purged: number } | null> {
+    const result = await this.purgeOldRecordsResult(retentionDays, maxRecords);
     return result.success ? result.data : null;
+  }
+
+  async purgeContentResult(
+    retentionDays?: number,
+    maxRecords?: number,
+    includeStarred?: boolean,
+  ): Promise<CallResult<{ purged: number }>> {
+    return this.call<{ purged: number }>(
+      'CONTENT_PURGE',
+      { retentionDays, maxRecords, includeStarred },
+      (res) => ({ purged: Number(res.purged || 0) }),
+    );
   }
 
   async purgeContent(
@@ -467,11 +511,7 @@ export class SqliteClient {
     maxRecords?: number,
     includeStarred?: boolean,
   ): Promise<{ purged: number } | null> {
-    const result = await this.call<{ purged: number }>(
-      'CONTENT_PURGE',
-      { retentionDays, maxRecords, includeStarred },
-      (res) => ({ purged: Number(res.purged || 0) }),
-    );
+    const result = await this.purgeContentResult(retentionDays, maxRecords, includeStarred);
     return result.success ? result.data : null;
   }
 
