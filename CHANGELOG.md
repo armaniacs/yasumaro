@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.25` リリース。
+> - 現時点では `v6.7.28` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,47 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.28] - 2026-08-09
+
+This release is a hotfix for a content extraction crash on pages containing SVG.
+
+SVG を含むページ（Google 検索結果、Zenn の記事など）で自動保存が失敗する不具合の修正。
+あわせて、その失敗が「プライベートページが検出されました」と誤って表示される問題も直した。
+
+### Fixed
+
+- **SVG を含むページで記録が失敗する問題を修正**
+  `Element.className` は HTML 要素では文字列だが、SVG 要素では `SVGAnimatedString`
+  オブジェクトになる。`(el.className || '').toLowerCase()` は空文字にフォールバックせず
+  `TypeError: (e.className || "").toLowerCase is not a function` で落ちていた。
+  SVG/MathML に対応した `getClassNameString` / `getLowerClassName` を新設し、
+  クラス名を文字列前提で読んでいた6箇所を置き換えた
+  - 例外の発生源: `contentExtractor/classifier.ts` の除外判定・アジアコンテンツ判定
+  - 同じ形で落ちる潜在バグ: `aiSummaryCleaner/helpers.ts` の広告・ポップアップ・
+    プラットフォームノイズ判定
+  - 例外にはならないが誤判定していた箇所: `aiSummaryCleaner/readabilityScore.ts` は
+    SVG に対して `"[object SVGAnimatedString]"` を照合しており、`ad` パターンに誤マッチしていた
+- **記録エラーが「プライベートページが検出されました」と表示される問題を修正**
+  popup が pending ページの理由を区別せず、1件なら無条件でプライベートページ
+  ダイアログを表示していた。`pipeline-error` などの失敗も同じ UI に流れ込み、
+  エラーに対して無意味な「ドメイン全体を許可して保存」が提示されていた。
+  理由を検出系（`cache-control` / `set-cookie` / `authorization`）と
+  失敗系（`pipeline-error` / `obsidian-write-failed` / `local-ai-unavailable`）に
+  型で分離し、失敗系には「記録に失敗しました」＋「再試行」の専用ダイアログを出すようにした。
+  未知の理由は失敗側に倒し、誤ってホワイトリスト提案が出ないようにしている
+
+### Changed
+
+- 再試行は `force: false` の通常経路を通すため、プライバシー検出は引き続き有効
+- `renderPendingReason` を `dashboard/historyFilters.ts` から `utils/pendingStorage.ts` へ移動
+  （popup からも使うため）。既存の import 位置は再エクスポートで維持
+
+### Tests
+
+- テスト総数: 7605 → 7680（+75）
+- SVG 要素に対する回帰テストを classifier・aiSummaryCleaner・新ヘルパーに追加
+- ダイアログ分岐は両方向を固定（失敗系3種で失敗ダイアログのみ、検出系3種で従来ダイアログのみ）
 
 ## [6.7.27] - 2026-08-09
 

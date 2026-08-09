@@ -1,3 +1,5 @@
+import { getClassNameString } from '../elementClassName.js';
+
 // 本文らしさスコアを計算する
 export function calculateReadabilityScore(element: Element): number {
     let score = 0;
@@ -13,7 +15,7 @@ export function calculateReadabilityScore(element: Element): number {
     score += element.querySelectorAll('h1,h2,h3,h4,h5,h6').length * 50;
 
     // class/id名によるスコア補正
-    const identifier = `${element.className} ${element.id}`.toLowerCase();
+    const identifier = `${getClassNameString(element)} ${element.id}`.toLowerCase();
     
     const positivePatterns = ['article', 'content', 'body', 'text', 'post', 'story', 'main', 'entry'];
     const negativePatterns = ['nav', 'menu', 'sidebar', 'footer', 'comment', 'ad', 'banner', 'widget'];

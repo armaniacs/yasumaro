@@ -1466,6 +1466,23 @@
   "pendingReasonLocalAiUnavailable": {
     "message": "ローカルAI利用不可"
   },
+  "recordingFailedDialogTitle": {
+    "message": "記録に失敗しました"
+  },
+  "recordingFailedDialogMessage": {
+    "message": "$REASON$ のため、このページを保存できませんでした。ページはあとで再試行できるよう保留されています。\n\nURL:\n$URL$",
+    "placeholders": {
+      "reason": {
+        "content": "$1"
+      },
+      "url": {
+        "content": "$2"
+      }
+    }
+  },
+  "recordingFailedRetry": {
+    "message": "再試行"
+  },
   "pendingDeleteForever": {
     "message": "🗑 完全削除"
   },

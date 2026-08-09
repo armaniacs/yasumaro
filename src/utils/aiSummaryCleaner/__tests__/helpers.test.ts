@@ -96,6 +96,28 @@ describe('aiSummaryCleaner/helpers', () => {
     });
   });
 
+  describe('SVG elements', () => {
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+
+    it('does not throw for SVG elements whose className is an SVGAnimatedString', () => {
+      const svg = document.createElementNS(SVG_NS, 'svg');
+      svg.setAttribute('class', 'ad-banner');
+      expect(() => isLikelyAd(svg)).not.toThrow();
+      expect(() => isLikelyPopup(svg)).not.toThrow();
+      expect(() => isPlatformNoise(svg)).not.toThrow();
+    });
+
+    it('matches SVG class names the same way as HTML class names', () => {
+      const svg = document.createElementNS(SVG_NS, 'svg');
+      svg.setAttribute('class', 'ad-banner');
+      expect(isLikelyAd(svg)).toBe(true);
+
+      const overlay = document.createElementNS(SVG_NS, 'svg');
+      overlay.setAttribute('class', 'overlay');
+      expect(isLikelyPopup(overlay)).toBe(true);
+    });
+  });
+
   describe('isLikelyAd', () => {
     it('detects ad in class name', () => {
       const el = document.createElement('div');

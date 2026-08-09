@@ -1,12 +1,62 @@
 import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 import { hashUrl } from './crypto/index.js';
+import { getMessage } from './i18n.js';
+
+/**
+ * Reasons a page was held back because it looks private.
+ * These are user decisions: the page was detected, not failed, so the user
+ * chooses whether to save it and whether to trust the domain or path.
+ */
+export type PrivacyPendingReason = 'cache-control' | 'set-cookie' | 'authorization';
+
+/**
+ * Reasons a page was held back because recording failed.
+ * These are faults, not user decisions: retrying is the only meaningful action,
+ * and whitelisting the domain would not help.
+ */
+export type ErrorPendingReason = 'pipeline-error' | 'obsidian-write-failed' | 'local-ai-unavailable';
+
+export type PendingReason = PrivacyPendingReason | ErrorPendingReason;
+
+const PRIVACY_PENDING_REASONS: ReadonlySet<string> = new Set<PrivacyPendingReason>([
+  'cache-control',
+  'set-cookie',
+  'authorization'
+]);
+
+/**
+ * True when the pending page was withheld by privacy detection rather than by a failure.
+ * Callers use this to decide whether to offer "save / trust domain" or "retry".
+ */
+export function isPrivacyPendingReason(reason: string): reason is PrivacyPendingReason {
+  return PRIVACY_PENDING_REASONS.has(reason);
+}
+
+const PENDING_REASON_MESSAGE_KEYS: Readonly<Record<PendingReason, string>> = {
+  'cache-control': 'pendingReasonCache',
+  'set-cookie': 'pendingReasonCookie',
+  'authorization': 'pendingReasonAuth',
+  'pipeline-error': 'pendingReasonPipelineError',
+  'obsidian-write-failed': 'pendingReasonObsidianWriteFailed',
+  'local-ai-unavailable': 'pendingReasonLocalAiUnavailable'
+};
+
+/**
+ * Localized label for a pending reason. Unknown reasons fall through to the raw
+ * value so a newly added reason degrades to something readable instead of blank.
+ */
+export function renderPendingReason(reason: string): string {
+  const key = PENDING_REASON_MESSAGE_KEYS[reason as PendingReason];
+  if (!key) return reason;
+  return getMessage(key) || reason;
+}
 
 export interface PendingPage {
   url: string;
   title: string;
   timestamp: number;
-  reason: 'cache-control' | 'set-cookie' | 'authorization' | 'pipeline-error' | 'obsidian-write-failed' | 'local-ai-unavailable';
+  reason: PendingReason;
   headerValue?: string;
   expiry: number;
   errorMessage?: string;
