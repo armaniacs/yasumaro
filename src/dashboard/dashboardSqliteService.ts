@@ -154,30 +154,40 @@ export async function searchLogs(
 
 /**
  * Toggle the star status of a log entry.
+ *
+ * Returns the reason on failure rather than null: the caller renders it, and
+ * a bare null left the UI silent — pressing the star simply did nothing when
+ * the database was unavailable (PBI-21).
  */
-export async function toggleStar(id: number): Promise<{ is_starred: number } | null> {
+export async function toggleStar(id: number): Promise<{ is_starred: number } | { error: string }> {
   try {
     const response = await sendDashboardMessage({ subtype: 'toggle_star', id }, { requireConfirmToken: true });
     if (response.success) {
       return { is_starred: Number(response.is_starred) };
     }
-    return null;
+    return { error: String(response.error || 'Toggle star failed') };
   } catch (error) {
-    console.error('toggleStar failed:', error);
-    return null;
+    console.error('toggleStar failed:', errorMessage(error));
+    return { error: errorMessage(error) };
   }
 }
 
 /**
  * Soft-delete a log entry.
+ *
+ * See toggleStar: the failure reason travels to the caller so the UI can
+ * show it instead of appearing to ignore the click.
  */
-export async function deleteLog(id: number): Promise<boolean> {
+export async function deleteLog(id: number): Promise<{ ok: true } | { error: string }> {
   try {
     const response = await sendDashboardMessage({ subtype: 'delete', id }, { requireConfirmToken: true });
-    return response.success === true;
+    if (response.success) {
+      return { ok: true };
+    }
+    return { error: String(response.error || 'Delete failed') };
   } catch (error) {
-    console.error('deleteLog failed:', error);
-    return false;
+    console.error('deleteLog failed:', errorMessage(error));
+    return { error: errorMessage(error) };
   }
 }
 
