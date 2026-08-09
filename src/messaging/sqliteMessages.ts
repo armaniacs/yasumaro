@@ -32,10 +32,15 @@ export type SqliteMessage =
   | { type: 'CONTENT_PURGE'; payload?: { retentionDays?: number; maxRecords?: number; includeStarred?: boolean }; traceId?: string }
   | { type: 'SQLITE_OPFS_SPIKE'; payload?: never; traceId?: string };
 
-export type SqliteMessageType = SqliteMessage['type'];
-
-/** SqliteMessage として扱う type の一覧。offscreen.ts の送信元検証で使用する。 */
-export const SQLITE_MESSAGE_TYPES: readonly SqliteMessageType[] = [
+/**
+ * SqliteMessage として扱う type の一覧。offscreen.ts の送信元検証で使用する。
+ *
+ * This array is the single source: SqliteMessageType is derived from it.
+ * The reverse direction is impossible — types are erased at runtime and the
+ * sender check needs actual values — so the array is what gets written by
+ * hand, and the union below is checked against it rather than duplicating it.
+ */
+export const SQLITE_MESSAGE_TYPES = [
   'SQLITE_HEALTH_CHECK',
   'SQLITE_INIT',
   'SQLITE_INSERT',
@@ -56,7 +61,22 @@ export const SQLITE_MESSAGE_TYPES: readonly SqliteMessageType[] = [
   'SQLITE_PURGE',
   'CONTENT_PURGE',
   'SQLITE_OPFS_SPIKE',
-];
+] as const;
+
+export type SqliteMessageType = typeof SQLITE_MESSAGE_TYPES[number];
+
+/**
+ * Fails to compile when the union and the array drift apart in either
+ * direction: a variant whose type is absent from the array (offscreen.ts
+ * would reject that message at runtime), or an array entry with no variant
+ * (a type nothing can actually construct).
+ */
+type _UnionCoversArray = SqliteMessageType extends SqliteMessage['type'] ? true : never;
+type _ArrayCoversUnion = SqliteMessage['type'] extends SqliteMessageType ? true : never;
+const _assertUnionCoversArray: _UnionCoversArray = true;
+const _assertArrayCoversUnion: _ArrayCoversUnion = true;
+void _assertUnionCoversArray;
+void _assertArrayCoversUnion;
 
 /** message.type が SqliteMessage の既知の type と一致するか判定する型ガード。 */
 export function isSqliteMessageType(type: unknown): type is SqliteMessageType {
