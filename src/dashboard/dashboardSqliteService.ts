@@ -423,16 +423,19 @@ export async function backupDb(): Promise<Uint8Array | { error: string } | null>
  * Restore the entire history database from a binary snapshot.
  * Requires a confirmation token (destructive operation).
  */
-export async function restoreDb(data: Uint8Array): Promise<boolean> {
+export async function restoreDb(data: Uint8Array): Promise<ServiceResult<void>> {
   try {
     const response = await sendDashboardMessage(
       { subtype: 'restore_db', data: bytesToBase64(data) },
       { requireConfirmToken: true }
     );
-    return Boolean(response.success);
+    if (response.success) {
+      return { data: undefined };
+    }
+    return { error: String(response.error || 'Restore failed') };
   } catch (error) {
-    console.error('restoreDb failed:', error);
-    return false;
+    console.error('restoreDb failed:', errorMessage(error));
+    return { error: errorMessage(error) };
   }
 }
 

@@ -250,10 +250,10 @@ describe('dashboardSqliteService — additional exports', () => {
   });
 
   describe('restoreDb', () => {
-    it('returns true on success', async () => {
+    it('returns the success side on success', async () => {
       givenResponse({ success: true });
       const result = await restoreDb(new Uint8Array([1, 2, 3]));
-      expect(result).toBe(true);
+      expect(result).toEqual({ data: undefined });
     });
 
     it('sends data as base64 in payload', async () => {
@@ -266,16 +266,16 @@ describe('dashboardSqliteService — additional exports', () => {
       );
     });
 
-    it('returns false on failed response', async () => {
-      givenResponse({ success: false });
+    it('carries the reason from a failed response', async () => {
+      givenResponse({ success: false, error: 'Corrupt backup file' });
       const result = await restoreDb(new Uint8Array([]));
-      expect(result).toBe(false);
+      expect(result).toEqual({ error: 'Corrupt backup file' });
     });
 
-    it('returns false on rejection', async () => {
+    it('carries the reason on rejection', async () => {
       givenLastError('Failed');
       const result = await restoreDb(new Uint8Array([]));
-      expect(result).toBe(false);
+      expect(result).toEqual({ error: expect.stringContaining('Failed') });
     });
   });
 

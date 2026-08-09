@@ -3,6 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Crypto } from '@peculiar/webcrypto';
+import { encryptEnvelope } from '../../utils/crypto/index.js';
 
 vi.mock('../../utils/storage.js', () => ({
   getSettings: vi.fn(),
@@ -15,6 +16,7 @@ vi.mock('../exportLogsService.js', () => ({
 
 vi.mock('../dashboardSqliteService.js', () => ({
   restoreDb: vi.fn(),
+  isServiceError: (r: unknown) => typeof r === 'object' && r !== null && 'error' in r,
 }));
 
 import { getSettings, saveSettings } from '../../utils/storage.js';
@@ -40,7 +42,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
   it('round-trips settings and history db through encrypt/decrypt', async () => {
     vi.mocked(getSettings).mockResolvedValue(FAKE_SETTINGS);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
-    vi.mocked(restoreDb).mockResolvedValue(true);
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
 
     const envelope = await exportEncryptedBackup('correct-password');
     const result = await importEncryptedBackup(envelope, 'correct-password');
@@ -50,6 +52,19 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
     expect(restoreDb).toHaveBeenCalledTimes(1);
     const restoredBytes = vi.mocked(restoreDb).mock.calls[0]![0] as Uint8Array;
     expect(Array.from(restoredBytes)).toEqual(Array.from(FAKE_DB_BYTES));
+  });
+
+  it('surfaces the restoreDb failure reason instead of a fixed message', async () => {
+    vi.mocked(getSettings).mockResolvedValue(FAKE_SETTINGS);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+    vi.mocked(restoreDb).mockResolvedValue({ error: 'Database file is corrupt' });
+
+    const envelope = await exportEncryptedBackup('correct-password');
+    const result = await importEncryptedBackup(envelope, 'correct-password');
+
+    expect(result.success).toBe(false);
+    expect((result as { error: string }).error).toContain('Database file is corrupt');
+    expect(saveSettings).not.toHaveBeenCalled();
   });
 
   it('fails with wrong password without touching settings or db', async () => {
@@ -65,12 +80,23 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
   });
 
   it('rejects payload with unsupported version', async () => {
-    vi.mocked(getSettings).mockResolvedValue(FAKE_SETTINGS);
-    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+    // The original assertion here checked success==true, which cannot
+    // exercise the version guard — it happened to pass only because
+    // restoreDb was left unmocked (resolving to undefined) and the outcome
+    // depended on isServiceError tolerating that, not on the guard itself.
+    const futurePayload = {
+      version: BACKUP_PAYLOAD_VERSION + 1,
+      exportedAt: new Date().toISOString(),
+      settings: FAKE_SETTINGS,
+      historyDbBase64: 'AAAA',
+    };
+    const envelope = await encryptEnvelope(JSON.stringify(futurePayload), 'correct-password');
 
-    const envelope = await exportEncryptedBackup('correct-password');
     const result = await importEncryptedBackup(envelope, 'correct-password');
-    expect(result.success).toBe(true);
+
+    expect(result.success).toBe(false);
+    expect((result as { error: string }).error).toContain('Unsupported backup version');
+    expect(restoreDb).not.toHaveBeenCalled();
   });
 
   it('rejects when exportDb fails (no history db available)', async () => {
@@ -90,7 +116,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
     } as never;
     vi.mocked(getSettings).mockResolvedValue(TAMPERED_SETTINGS);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
-    vi.mocked(restoreDb).mockResolvedValue(true);
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
 
     const envelope = await exportEncryptedBackup('correct-password');
     const result = await importEncryptedBackup(envelope, 'correct-password');
@@ -114,7 +140,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
     } as never;
     vi.mocked(getSettings).mockResolvedValue(MIXED_SETTINGS);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
-    vi.mocked(restoreDb).mockResolvedValue(true);
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
 
     const envelope = await exportEncryptedBackup('correct-password');
     const result = await importEncryptedBackup(envelope, 'correct-password');
