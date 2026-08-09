@@ -315,14 +315,83 @@ grep -n "state.error" src/dashboard/panels/asyncData/sqliteHistoryPanel.ts
 
 ---
 
+## 実装後の追記
+
+### 副次的に発見した実害: スター操作は成功時も失敗扱いだった
+
+`toggle_star` ハンドラの成功レスポンスが `return result` で、
+**`success` フィールドを含んでいなかった**（`{ is_starred: 0 }` のみ）。
+
+dashboard 側 `dashboardSqliteService.ts:161` は `if (response.success)` で
+判定するため、`response.success` は常に `undefined`（falsy）となり、
+**スター操作は成功しても `toggleStar()` が `null` を返していた**とみられる。
+`sqliteHistoryPanel` の `handleToggleStar` は `if (result)` なので、
+成功時ですら画面に反映されない状態だった。
+
+既存テストがこの形（`expect(result).toEqual({ is_starred: 0 })`）を
+仕様として固定しており、`dashboardSqliteService.test.ts` 側は
+モックが人為的に正しい形（`success` 込み）を与えていたため、
+どちらの層のユニットテストでも検知できていなかった。
+
+`CallResult` 化に伴い `{ success: true, ...result.data }` を返す形に
+是正した。本PBIの受け入れ基準「スター付けの失敗が利用者に伝わる」を
+満たすには、そもそも成功パスが動いている必要があるため範囲内として扱った。
+
+### 対象範囲の判断
+
+`dashboardSqliteService.ts` のシグネチャ変更は
+**`deleteLog` / `toggleStar` の2関数に限定した**。
+`lastError` 削除はハンドラ層で完結するため、`clearAllLogs` / `importLogs` /
+`restoreDb` 等の他関数を Result 化する必然性がなく、
+それらの呼び出し元（`privacySettingsPanel` / `importLogsService` /
+`encryptedBackupService`）は既に固定文言のエラー表示を持っている。
+
+`updateLog` は本番の呼び出し元が存在しない（テストのみ）ため触れていない。
+
+### `status` ケースの扱い
+
+`getStatus` は計画どおり `CallResult` 化の対象外とした
+（失敗時も `initError` を成功値に載せて返す意図的な設計のため）。
+ハンドラの `null` 分岐は、実 `SqliteClient` では到達しないが
+型が `| null` を含むため防御的コードとして残し、
+フォールバック文言を固定文字列にした。
+
+これに伴い `dashboardSqliteHandlers-lastError.test.ts` の
+「status パスで最新のエラーを報告する」テストは意味を失うため、
+「`getStatus` が `null` を返しても共有状態を読まない」ことの確認に書き換えた。
+
+### テスト側の対応
+
+- テストハーネス（`dashboardSqliteTestHarness.ts`）の `RESULT_METHOD_SOURCES` に
+  変更系9メソッドを追加した。`delete`/`update`/`clearAll`/`restoreDb` は
+  失敗時に `false` を返すため、`false` を失敗とみなすかのフラグを
+  メソッドごとに持たせている（読み取り系は `null` のみが失敗）
+- 実 `SqliteClient` インスタンスを使う `dashboardSqliteHandlers.test.ts` は、
+  プロトタイプに実装済みの `*Result` があるとアダプタが導出をスキップするため、
+  `clearAllResult` / `restoreDbResult` / `runOpfsSpikeResult` を直接スタブする
+  形に書き換えた（PBI-19 の同種対応を踏襲）
+- `reviewSummaryGenerator-extra.test.ts` のモッククラスに、
+  既存の `mockQuery` から `CallResult` を導出する `queryResult` を追加した
+- `import` ケースのテストで `insert` が `false` を返すモックがあったが、
+  `insert()` の実際の戻り値型は `{ id: number } | null` であり `false` は
+  発生しない。型に合わせて `null` に修正した
+
+### 検証結果
+
+- `npm run validate`（type-check + vitest）: **7,697 件通過**（PBI-20完了時 7,690 から +7）
+- `npm run build`: 成功
+- `npm run test:e2e`: **185 件通過・7 件スキップ**（既存ベースラインと同一）
+
+---
+
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `grep -rn "lastError" src --include='*.ts' | grep -v chrome.runtime` が
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `grep -rn "lastError" src --include='*.ts' | grep -v chrome.runtime` が
       SqliteClient 関連で0件
-- [ ] `npm run validate` / `npm run build` / `npm run test:e2e` が通る
+- [x] `npm run validate` / `npm run build` / `npm run test:e2e` が通る
 - [ ] コードレビュー完了
-- [ ] CHANGELOG.md に「削除・スター操作の失敗が表示されるようになった」旨を記載
+- [x] CHANGELOG.md に「削除・スター操作の失敗が表示されるようになった」旨を記載
 
 ---
 
