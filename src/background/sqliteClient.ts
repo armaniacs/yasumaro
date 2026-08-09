@@ -41,22 +41,65 @@ interface OffscreenResponse {
   [key: string]: unknown;
 }
 
-type CallResult<T> = { success: true; data: T } | { success: false; error: string };
+/**
+ * What kind of failure this was.
+ *
+ * The raw input is still a string — Chrome extension APIs report errors as
+ * messages, not typed exceptions (ADR 2026-07-13, assumption G). What changed
+ * is that the classification survives: it used to be folded straight into an
+ * English sentence and discarded, so callers wanting to know "is this worth
+ * retrying?" had to pattern-match the prose back out again.
+ */
+export type SqliteErrorKind =
+  | 'timeout'         // request timed out; the DB may still be initializing
+  | 'offscreen_lost'  // offscreen document went away
+  | 'quota'           // storage quota exceeded
+  | 'sqlite_error'    // SQLite itself reported a problem
+  | 'unknown';
 
-function categorizeError(msg: string): string {
+export interface SqliteError {
+  kind: SqliteErrorKind;
+  /** User-facing message. Unchanged from the pre-classification wording. */
+  message: string;
+  /**
+   * Whether retrying the same call could plausibly succeed.
+   *
+   * Only timeouts qualify: the offscreen document plus WASM load can outrun
+   * the first query after the dashboard opens. Quota and SQLite errors are
+   * deterministic, and a lost offscreen document needs a reload, so retrying
+   * those just delays the error the user needs to see.
+   */
+  retriable: boolean;
+}
+
+export type CallResult<T> = { success: true; data: T } | { success: false; error: SqliteError };
+
+export function categorizeError(msg: string): SqliteError {
   if (msg.includes('timed out') || msg.includes('Timeout')) {
-    return 'SQLite request timed out. The database may still be initializing.';
+    return {
+      kind: 'timeout',
+      message: 'SQLite request timed out. The database may still be initializing.',
+      retriable: true,
+    };
   }
   if (msg.includes('offscreen') || msg.includes('offscreenDocument')) {
-    return 'Database connection lost. Please reload the extension.';
+    return {
+      kind: 'offscreen_lost',
+      message: 'Database connection lost. Please reload the extension.',
+      retriable: false,
+    };
   }
   if (msg.includes('quota') || msg.includes('QuotaExceededError')) {
-    return 'Storage quota exceeded. Some older records may have been removed.';
+    return {
+      kind: 'quota',
+      message: 'Storage quota exceeded. Some older records may have been removed.',
+      retriable: false,
+    };
   }
   if (msg.includes('SQLITE_') || msg.includes('disk I/O')) {
-    return `Database error: ${msg}`;
+    return { kind: 'sqlite_error', message: `Database error: ${msg}`, retriable: false };
   }
-  return `Unexpected error: ${msg}`;
+  return { kind: 'unknown', message: `Unexpected error: ${msg}`, retriable: false };
 }
 
 // ============================================================================
@@ -74,8 +117,24 @@ export class SqliteClient {
    */
   private readonly requestQueue: Mutex;
 
-  /** Last categorized error from call(). Read by dashboard handlers. */
-  lastError: string | null = null;
+  /**
+   * Last categorized error from call().
+   *
+   * This is shared mutable state: it describes "the most recent failure by
+   * anyone", not "why *your* call failed". Reading it after a call can observe
+   * a different operation's error, or null, if another operation completed in
+   * between — the read is outside the request Mutex.
+   *
+   * Read-path methods therefore return their error in CallResult instead. This
+   * field remains for the write-path handlers and for diagnostic logging,
+   * which only need a best-effort "what went wrong recently".
+   */
+  lastErrorDetail: SqliteError | null = null;
+
+  /** Backwards-compatible view of {@link lastErrorDetail} for existing readers. */
+  get lastError(): string | null {
+    return this.lastErrorDetail?.message ?? null;
+  }
 
   /** Per-message timeout, shortened on mobile (see MESSAGE_TIMEOUT_MS_MOBILE). */
   private readonly messageTimeoutMs: number;
@@ -208,18 +267,18 @@ export class SqliteClient {
         const msg = String(res?.error || `${type} failed`);
         recordSqliteFailure(type, msg);
         logError('SQLite Client: call failed', { error: msg, traceId }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
-        this.lastError = categorizeError(msg);
-        return { success: false, error: this.lastError };
+        this.lastErrorDetail = categorizeError(msg);
+        return { success: false, error: this.lastErrorDetail };
       }
       recordSqliteSuccess();
-      this.lastError = null;
+      this.lastErrorDetail = null;
       return { success: true, data: transform ? transform(res) : (res as unknown as T) };
     } catch (error) {
       const msg = errorMessage(error);
       recordSqliteFailure(type, msg);
       logError('SQLite Client: call failed', { error: msg, traceId }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
-      this.lastError = categorizeError(msg);
-      return { success: false, error: this.lastError };
+      this.lastErrorDetail = categorizeError(msg);
+      return { success: false, error: this.lastErrorDetail };
     }
   }
 
@@ -247,8 +306,16 @@ export class SqliteClient {
     return result.success ? result.data : null;
   }
 
-  async query<T = BrowsingLogRecord>(options: QueryOptions = {}): Promise<{ rows: T[]; total: number } | null> {
-    const result = await this.call<{ rows: T[]; total: number }>(
+  // --------------------------------------------------------------------------
+  // Read path
+  //
+  // These return CallResult so the failure reason travels with the call that
+  // produced it. The `null`-returning variants below are kept for callers that
+  // genuinely only need "did it work", and are defined in terms of these.
+  // --------------------------------------------------------------------------
+
+  async queryResult<T = BrowsingLogRecord>(options: QueryOptions = {}): Promise<CallResult<{ rows: T[]; total: number }>> {
+    return this.call<{ rows: T[]; total: number }>(
       'SQLITE_QUERY',
       options as unknown as Record<string, unknown>,
       (res) => ({
@@ -256,11 +323,15 @@ export class SqliteClient {
         total: Number(res.total || 0),
       }),
     );
+  }
+
+  async query<T = BrowsingLogRecord>(options: QueryOptions = {}): Promise<{ rows: T[]; total: number } | null> {
+    const result = await this.queryResult<T>(options);
     return result.success ? result.data : null;
   }
 
-  async search(query: string, limit = 50, offset = 0): Promise<{ rows: SearchResult[]; total: number } | null> {
-    const result = await this.call<{ rows: SearchResult[]; total: number }>(
+  async searchResult(query: string, limit = 50, offset = 0): Promise<CallResult<{ rows: SearchResult[]; total: number }>> {
+    return this.call<{ rows: SearchResult[]; total: number }>(
       'SQLITE_SEARCH',
       { query, limit, offset },
       (res) => ({
@@ -268,6 +339,10 @@ export class SqliteClient {
         total: Number(res.total || 0),
       }),
     );
+  }
+
+  async search(query: string, limit = 50, offset = 0): Promise<{ rows: SearchResult[]; total: number } | null> {
+    const result = await this.searchResult(query, limit, offset);
     return result.success ? result.data : null;
   }
 
@@ -290,8 +365,12 @@ export class SqliteClient {
     return result.success ? result.data : null;
   }
 
+  async getCountResult(): Promise<CallResult<number>> {
+    return this.call<number>('SQLITE_COUNT', {}, (res) => Number(res.count));
+  }
+
   async getCount(): Promise<number | null> {
-    const result = await this.call<number>('SQLITE_COUNT', {}, (res) => Number(res.count));
+    const result = await this.getCountResult();
     return result.success ? result.data : null;
   }
 
@@ -304,12 +383,16 @@ export class SqliteClient {
     return result.success ? result.data : null;
   }
 
-  async backupDb(): Promise<Uint8Array | null> {
-    const result = await this.call<Uint8Array>(
+  async backupDbResult(): Promise<CallResult<Uint8Array>> {
+    return this.call<Uint8Array>(
       'SQLITE_BACKUP',
       {},
       (res) => new Uint8Array(res.data as number[]),
     );
+  }
+
+  async backupDb(): Promise<Uint8Array | null> {
+    const result = await this.backupDbResult();
     return result.success ? result.data : null;
   }
 
@@ -341,7 +424,7 @@ export class SqliteClient {
       path: '',
       fallback: false,
       fts5: false,
-      initError: result.error || 'Unknown error',
+      initError: result.error.message || 'Unknown error',
       compileOptionsSource: undefined,
     };
   }
@@ -401,8 +484,8 @@ export class SqliteClient {
     return result.success ? result.data : null;
   }
 
-  async queryAuditLog(options: { limit?: number; offset?: number } = {}): Promise<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number } | null> {
-    const result = await this.call<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>(
+  async queryAuditLogResult(options: { limit?: number; offset?: number } = {}): Promise<CallResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>> {
+    return this.call<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>(
       'SQLITE_AUDIT_LOG_QUERY',
       options as unknown as Record<string, unknown>,
       (res) => ({
@@ -410,6 +493,10 @@ export class SqliteClient {
         total: Number(res.total || 0),
       }),
     );
+  }
+
+  async queryAuditLog(options: { limit?: number; offset?: number } = {}): Promise<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number } | null> {
+    const result = await this.queryAuditLogResult(options);
     return result.success ? result.data : null;
   }
 }
