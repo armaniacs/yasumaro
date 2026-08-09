@@ -3125,6 +3125,84 @@
   "historyAiSummaryCleansedReasonDeep": {
     "message": "Deep"
   },
+  "historyAiSummaryCleansedReasonJsonLd": {
+    "message": "JSON-LD"
+  },
+  "historyAiSummaryCleansedReasonLazyLoad": {
+    "message": "Lazy-loaded content"
+  },
+  "historyAiSummaryCleansedReasonSkipLink": {
+    "message": "Skip links"
+  },
+  "historyAiSummaryCleansedReasonCard": {
+    "message": "Cards"
+  },
+  "historyAiSummaryCleansedReasonLinkDensity": {
+    "message": "Link-dense blocks"
+  },
+  "historyAiSummaryCleansedReasonFixed": {
+    "message": "Fixed elements"
+  },
+  "historyAiSummaryCleansedReasonRecommend": {
+    "message": "Recommendations"
+  },
+  "historyAiSummaryCleansedReasonPagination": {
+    "message": "Pagination"
+  },
+  "historyAiSummaryCleansedReasonSnsPromo": {
+    "message": "Social promos"
+  },
+  "historyAiSummaryCleansedReasonPopup": {
+    "message": "Popups"
+  },
+  "historyAiSummaryCleansedReasonPlatform": {
+    "message": "Platform noise"
+  },
+  "historyAiSummaryCleansedReasonTextDensity": {
+    "message": "Text density"
+  },
+  "historyAiSummaryCleansedReasonShortSeq": {
+    "message": "Short-text runs"
+  },
+  "historyAiSummaryCleansedReasonSymbolLine": {
+    "message": "Symbol lines"
+  },
+  "historyAiSummaryCleansedReasonLinkPara": {
+    "message": "Link-only paragraphs"
+  },
+  "historyAiSummaryCleansedReasonEnhancedHidden": {
+    "message": "Hidden elements"
+  },
+  "historyAiSummaryCleansedReasonEmptyElem": {
+    "message": "Empty elements"
+  },
+  "historyAiSummaryCleansedReasonJpLayout": {
+    "message": "JP layout"
+  },
+  "historyAiSummaryCleansedReasonJpNavigation": {
+    "message": "JP navigation"
+  },
+  "historyAiSummaryCleansedReasonAuthor": {
+    "message": "Author info"
+  },
+  "historyAiSummaryCleansedReasonAffiliate": {
+    "message": "Affiliate links"
+  },
+  "historyAiSummaryCleansedReasonSpeechBubble": {
+    "message": "Speech bubbles"
+  },
+  "historyAiSummaryCleansedReasonNewsMedia": {
+    "message": "News media"
+  },
+  "historyAiSummaryCleansedReasonEcSite": {
+    "message": "E-commerce"
+  },
+  "historyAiSummaryCleansedReasonQaSite": {
+    "message": "Q&A sites"
+  },
+  "historyAiSummaryCleansedReasonVideoSite": {
+    "message": "Video platforms"
+  },
   "historyAiSummaryCleansedReasonMultiple": {
     "message": "Multiple"
   },
