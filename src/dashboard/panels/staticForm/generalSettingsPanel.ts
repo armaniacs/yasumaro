@@ -5,9 +5,11 @@ import { getMessage } from '../../../utils/i18n.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import {
   loadGeneralSettings,
-  handleSaveOnly, handleTestObsidian, handleTestAi, handleTestLocalMarkdown,
   handlePurgeNow, handleContentPurgeNow,
-} from '../../dashboard.js';
+} from '../../generalSettings/settingsForm.js';
+import {
+  handleSaveOnly, handleTestObsidian, handleTestAi, handleTestLocalMarkdown,
+} from '../../generalSettings/connectionTests.js';
 import { handleManualLocalMarkdownExport } from '../../localMarkdownExport.js';
 import { generateReviewSummary } from '../../reviewSummaryHandler.js';
 import { syncStatusToTop } from '../../statusView.js';

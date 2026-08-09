@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { collectProviderPrioritySlots, applyProviderPrioritySlots } from '../dashboard.js';
+import { collectProviderPrioritySlots, applyProviderPrioritySlots } from '../generalSettings/settingsForm.js';
 
 const ALL_OPTIONS = `
   <option value="">未設定</option>

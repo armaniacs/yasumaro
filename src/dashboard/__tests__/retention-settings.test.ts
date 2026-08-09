@@ -59,7 +59,7 @@ vi.mock('../../utils/storage.js', async (importOriginal) => {
 
 import {
     loadGeneralSettings,
-} from '../dashboard.js';
+} from '../generalSettings/settingsForm.js';
 import { StorageKeys } from '../../utils/storage.js';
 
 function buildRetentionDom() {

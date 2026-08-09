@@ -8,12 +8,14 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach, mocked } from 'vitest';
+import { loadGeneralSettings } from '../generalSettings/settingsForm.js';
+// Save and the connection tests moved out of dashboard.ts (PBI-24): they are
+// driven only by the general settings panel.
 import {
-    loadGeneralSettings,
     handleSaveOnly,
     handleTestObsidian,
     handleTestAi,
-} from '../dashboard.js';
+} from '../generalSettings/connectionTests.js';
 // Moved out of dashboard.ts (PBI-24): shared by the general settings panel
 // and the Export Logs / History panels, so it is not panel-local.
 import {
