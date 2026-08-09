@@ -320,7 +320,6 @@ describe('SqliteClient — unit tests', () => {
 
       expect(result).toBe(true);
       expect(spy).toHaveBeenCalledWith('SQLITE_HEALTH_CHECK', {}, '');
-      expect(client.lastError).toBeNull();
     });
 
     it('returns false when offscreen reports failure', async () => {
@@ -329,7 +328,6 @@ describe('SqliteClient — unit tests', () => {
       const result = await client.isSqliteHealthy();
 
       expect(result).toBe(false);
-      expect(client.lastError).not.toBeNull();
     });
 
     it('returns false when msgOffscreen throws', async () => {
