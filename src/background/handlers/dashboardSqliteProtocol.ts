@@ -78,6 +78,18 @@ export const MODAL_REQUIRED_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new 
 interface DashboardSqliteFailure {
   success: false;
   error: string;
+  /**
+   * Whether retrying the same request could plausibly succeed.
+   *
+   * Set from the SQLite error classification on the read path, where the cause
+   * is known. The dashboard previously inferred this by string-matching the
+   * message for 'Query failed' — a fallback phrase that only appeared when no
+   * specific error was available, so the retry had all but stopped firing once
+   * error messages became more specific.
+   *
+   * Absent on write-path failures, which are not retried.
+   */
+  retriable?: boolean;
 }
 
 export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
