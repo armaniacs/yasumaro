@@ -111,41 +111,57 @@ describe('dashboardSqliteService', () => {
       expect(result).toEqual({ is_starred: 1 });
     });
 
-    it('returns null on failed response', async () => {
+    // Failures carry their reason instead of collapsing to null: the panel
+    // renders it, and a bare null made a failed toggle look like a no-op.
+    it('surfaces the failure reason instead of null', async () => {
+      givenResponse({ success: false, error: 'Storage quota exceeded.' });
+
+      const result = await toggleStar(42);
+      expect(result).toEqual({ error: 'Storage quota exceeded.' });
+    });
+
+    it('falls back to a generic message when the failure has no error text', async () => {
       givenResponse({ success: false });
 
       const result = await toggleStar(42);
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: 'Toggle star failed' });
     });
 
-    it('returns null on rejection', async () => {
+    it('surfaces the reason on rejection', async () => {
       givenLastError('Timeout');
 
       const result = await toggleStar(42);
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: 'Timeout' });
     });
   });
 
   describe('deleteLog', () => {
-    it('returns true on success', async () => {
+    it('returns ok on success', async () => {
       givenResponse({ success: true });
 
       const result = await deleteLog(42);
-      expect(result).toBe(true);
+      expect(result).toEqual({ ok: true });
     });
 
-    it('returns false on failed response', async () => {
+    it('surfaces the failure reason instead of false', async () => {
+      givenResponse({ success: false, error: 'Storage quota exceeded.' });
+
+      const result = await deleteLog(42);
+      expect(result).toEqual({ error: 'Storage quota exceeded.' });
+    });
+
+    it('falls back to a generic message when the failure has no error text', async () => {
       givenResponse({ success: false });
 
       const result = await deleteLog(42);
-      expect(result).toBe(false);
+      expect(result).toEqual({ error: 'Delete failed' });
     });
 
-    it('returns false on rejection', async () => {
+    it('surfaces the reason on rejection', async () => {
       givenLastError('Timeout');
 
       const result = await deleteLog(42);
-      expect(result).toBe(false);
+      expect(result).toEqual({ error: 'Timeout' });
     });
   });
 

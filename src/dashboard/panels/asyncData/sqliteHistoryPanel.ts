@@ -240,11 +240,17 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
 
   async function handleToggleStar(id: number): Promise<void> {
     const result = await toggleStar(id);
-    if (result) {
-      const entry = state.entries.find(e => e.id === id);
-      if (entry) entry.is_starred = result.is_starred;
+    if ('error' in result) {
+      // Without this the click looked ignored: a failed toggle left the star
+      // unchanged and showed nothing at all (PBI-21).
+      state.error = result.error;
       refresh();
+      return;
     }
+    const entry = state.entries.find(e => e.id === id);
+    if (entry) entry.is_starred = result.is_starred;
+    state.error = null;
+    refresh();
   }
 
   async function handleDelete(id: number): Promise<void> {
@@ -256,13 +262,19 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       dangerous: true,
     });
     if (!confirmed) return;
-    const ok = await deleteLog(id);
-    if (ok) {
-      state.entries = state.entries.filter(e => e.id !== id);
-      state.total = Math.max(0, state.total - 1);
-      state.selectedIds.delete(id);
+    const result = await deleteLog(id);
+    if ('error' in result) {
+      // The entry stays in the list — removing it would claim a delete that
+      // did not happen.
+      state.error = result.error;
       refresh();
+      return;
     }
+    state.entries = state.entries.filter(e => e.id !== id);
+    state.total = Math.max(0, state.total - 1);
+    state.selectedIds.delete(id);
+    state.error = null;
+    refresh();
   }
 
   function createCopyButton(entry: BrowsingLogEntry): HTMLButtonElement {
