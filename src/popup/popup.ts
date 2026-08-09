@@ -12,8 +12,8 @@ import { init as initNavigation } from './navigation.js';
 import { initPrivacyConsent, setupPrivacyConsentListeners } from './privacyConsentController.js';
 import { initTrancoUpdateNotification } from './trancoNotification.js';
 import { loadPendingPages } from './pendingPages.js';
-import { getPendingPages } from '../utils/pendingStorage.js';
-import { showPrivatePageDialog } from './privatePageDialog.js';
+import { getPendingPages, isPrivacyPendingReason, renderPendingReason } from '../utils/pendingStorage.js';
+import { showPrivatePageDialog, showRecordingFailedDialog } from './privatePageDialog.js';
 import { getPrivacyConsent } from './privacyConsent.js';
 import { hasCompletedWizard, initOnboardingWizard } from './onboardingWizard.js';
 
@@ -79,7 +79,12 @@ export async function initPopup(): Promise<void> {
         const pending = await getPendingPages();
         if (pending.length === 1) {
             const page = pending[0];
-            showPrivatePageDialog(page.url, page.reason, page.headerValue || '');
+            // Privacy detections ask the user to decide; failures only offer a retry.
+            if (isPrivacyPendingReason(page.reason)) {
+                showPrivatePageDialog(page.url, page.reason, page.headerValue || '');
+            } else {
+                showRecordingFailedDialog(page.url, renderPendingReason(page.reason));
+            }
         }
     } catch (error) {
         logError('[Popup] Error in pending pages handling', { cause: error }, ErrorCode.INTERNAL_ERROR);

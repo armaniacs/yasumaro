@@ -4,6 +4,7 @@
  */
 
 import { escapeCssSelector } from '../cssUtils.js';
+import { getLowerClassName } from '../elementClassName.js';
 import { isBodyProtected } from './bodyProtection.js';
 
 /**
@@ -60,7 +61,7 @@ export function isFixedOrSticky(elem: Element): boolean {
  * 「 ad 」は単語境界レベルでマッチし、header/loaded 等の誤マッチを防ぐ
  */
 export function isLikelyAd(elem: Element): boolean {
-    const className = (elem.className || '').toLowerCase();
+    const className = getLowerClassName(elem);
     const id = (elem.id || '').toLowerCase();
     const text = (elem.textContent || '').toLowerCase();
     // \bはハイフンを認識しないため、CSSクラス向けに (^|[-_\s])ad([-_\s]|$) を使用
@@ -74,7 +75,7 @@ export function isLikelyAd(elem: Element): boolean {
  * 要素がポップアップかどうかを判定
  */
 export function isLikelyPopup(elem: Element): boolean {
-    const className = (elem.className || '').toLowerCase();
+    const className = getLowerClassName(elem);
     const id = (elem.id || '').toLowerCase();
     const style = elem.getAttribute('style') || '';
     return className.includes('popup') || className.includes('modal') ||
@@ -89,7 +90,7 @@ export function isLikelyPopup(elem: Element): boolean {
  * 「 ad 」は単語境界レベルでマッチし、header/loaded 等の誤マッチを防ぐ
  */
 export function isPlatformNoise(elem: Element): boolean {
-    const className = (elem.className || '').toLowerCase();
+    const className = getLowerClassName(elem);
     const id = (elem.id || '').toLowerCase();
     // \bはハイフンを認識しないため、CSSクラス向けに (^|[-_\s])ad([-_\s]|$) を使用
     const AD_WORD_RE = /(^|[-_\s])ad([-_\s]|$)/;

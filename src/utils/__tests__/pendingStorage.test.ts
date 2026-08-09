@@ -3,7 +3,11 @@
  * pendingStorage モジュールのテスト
  */
 
-import { addPendingPage, getPendingPages, removePendingPages, clearExpiredPages, migrateLegacyPendingPagesKey } from '../pendingStorage.js';
+import { addPendingPage, getPendingPages, removePendingPages, clearExpiredPages, migrateLegacyPendingPagesKey, isPrivacyPendingReason, renderPendingReason } from '../pendingStorage.js';
+
+vi.mock('../i18n.js', () => ({
+    getMessage: vi.fn((key: string) => `i18n_${key}`),
+}));
 
 vi.mock('../logger.js', () => ({
     logInfo: vi.fn().mockResolvedValue(undefined),
@@ -63,6 +67,45 @@ const mockChrome = {
 };
 
 global.chrome = mockChrome as unknown as typeof chrome;
+
+describe('pending reason classification', () => {
+    it.each([
+        'cache-control',
+        'set-cookie',
+        'authorization'
+    ])('treats %s as a privacy detection', (reason) => {
+        expect(isPrivacyPendingReason(reason)).toBe(true);
+    });
+
+    it.each([
+        'pipeline-error',
+        'obsidian-write-failed',
+        'local-ai-unavailable'
+    ])('treats %s as a failure, not a privacy detection', (reason) => {
+        expect(isPrivacyPendingReason(reason)).toBe(false);
+    });
+
+    it('treats an unknown reason as a failure so it never reaches the whitelist prompt', () => {
+        expect(isPrivacyPendingReason('something-new')).toBe(false);
+    });
+});
+
+describe('renderPendingReason', () => {
+    it.each([
+        ['cache-control', 'i18n_pendingReasonCache'],
+        ['set-cookie', 'i18n_pendingReasonCookie'],
+        ['authorization', 'i18n_pendingReasonAuth'],
+        ['pipeline-error', 'i18n_pendingReasonPipelineError'],
+        ['obsidian-write-failed', 'i18n_pendingReasonObsidianWriteFailed'],
+        ['local-ai-unavailable', 'i18n_pendingReasonLocalAiUnavailable']
+    ])('localizes %s', (reason, expected) => {
+        expect(renderPendingReason(reason)).toBe(expected);
+    });
+
+    it('falls back to the raw reason when unknown', () => {
+        expect(renderPendingReason('unknown')).toBe('unknown');
+    });
+});
 
 describe('pendingStorage', () => {
     beforeEach(() => {

@@ -104,6 +104,15 @@ describe('contentExtractor/classifier', () => {
       expect(isExcludedElement(el)).toBe(true);
     });
 
+    it('handles SVG elements whose className is an SVGAnimatedString', () => {
+      document.body.innerHTML = '<svg class="icon-nav"><path class="stroke"></path></svg>';
+      const svg = document.querySelector('svg')!;
+      const path = document.querySelector('path')!;
+      expect(() => isExcludedElement(svg)).not.toThrow();
+      expect(isExcludedElement(svg)).toBe(true);
+      expect(isExcludedElement(path)).toBe(false);
+    });
+
     it('excludes elements with role="navigation"', () => {
       document.body.innerHTML = '<div role="navigation">Nav</div>';
       const el = document.querySelector('[role="navigation"]')!;

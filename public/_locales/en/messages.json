@@ -1526,6 +1526,23 @@
   "pendingReasonLocalAiUnavailable": {
     "message": "Local AI unavailable"
   },
+  "recordingFailedDialogTitle": {
+    "message": "Recording Failed"
+  },
+  "recordingFailedDialogMessage": {
+    "message": "This page could not be saved because of $REASON$. It has been kept so you can retry later.\n\nURL:\n$URL$",
+    "placeholders": {
+      "reason": {
+        "content": "$1"
+      },
+      "url": {
+        "content": "$2"
+      }
+    }
+  },
+  "recordingFailedRetry": {
+    "message": "Retry"
+  },
   "pendingDeleteForever": {
     "message": "🗑 Delete Forever"
   },

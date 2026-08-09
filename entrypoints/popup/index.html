@@ -248,6 +248,21 @@
     </div>
   </dialog>
 
+  <!-- Recording Failure Dialog (pipeline / write / local AI errors) -->
+  <dialog id="recording-failed-dialog" class="private-page-dialog">
+    <div class="dialog-content">
+      <div class="dialog-header">
+        <img src="../icons/icon48.png" width="24" height="24" alt="Yasumaro" class="dialog-logo">
+        <h3 id="recording-failed-title" data-i18n="recordingFailedDialogTitle">Recording Failed</h3>
+      </div>
+      <p id="recording-failed-message" class="dialog-message"></p>
+      <div class="dialog-buttons">
+        <button id="recording-failed-dismiss" type="button" class="btn-cancel" data-i18n="cancel">Cancel</button>
+        <button id="recording-failed-retry" type="button" class="btn-confirm" data-i18n="recordingFailedRetry">Retry</button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Privacy Consent Modal -->
   <dialog id="privacyConsentModal" class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="privacyConsentTitle">
     <div class="modal-content privacy-consent-content">

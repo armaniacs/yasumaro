@@ -3,6 +3,8 @@
  * 要素の除外判定・アジアコンテンツ判定に使用する定数と述語関数
  */
 
+import { getLowerClassName } from '../elementClassName.js';
+
 /**
  * 除外するセクメンタルコンテンツのロール属性
  * HTMLテキスト抽出の際、ナビゲーションやバナー等の補助的UI要素を除外するために使用
@@ -120,7 +122,7 @@ export function isExcludedElement(element: Element): boolean {
     }
 
     // クラス名パターンで除外
-    const classes = element.className.toLowerCase();
+    const classes = getLowerClassName(element);
     for (const pattern of EXCLUDED_CLASS_PATTERNS) {
         if (classes.includes(pattern)) {
             return true;
@@ -139,7 +141,7 @@ export function isAsianContentElement(element: Element): boolean {
     // Check if DOM is available (for Node.js/test environments)
     if (typeof document === 'undefined') return false;
     
-    const classes = (element.className || '').toLowerCase();
+    const classes = getLowerClassName(element);
     const id = (element.id || '').toLowerCase();
 
     // Check by class name

@@ -22,7 +22,28 @@ function showPrivatePageDialog(url: string, reason: string, headerValue: string)
   dialog?.showModal();
 }
 
-async function recordWithForce(): Promise<void> {
+/**
+ * Shows the failure dialog for pages that were withheld by an error rather than
+ * by privacy detection. Only retrying makes sense here, so no whitelist options
+ * are offered.
+ */
+function showRecordingFailedDialog(url: string, reasonLabel: string): void {
+  const dialog = document.getElementById('recording-failed-dialog') as HTMLDialogElement;
+  const messageEl = document.getElementById('recording-failed-message');
+
+  if (messageEl) {
+    messageEl.textContent = chrome.i18n.getMessage('recordingFailedDialogMessage', [reasonLabel, url]);
+  }
+
+  dialog?.showModal();
+}
+
+/**
+ * Re-sends the pending page to the background worker.
+ * @param force bypasses privacy detection; used only when the user explicitly
+ *              chose to save a page that was flagged as private.
+ */
+async function recordPendingSave(force: boolean): Promise<void> {
   if (!currentPendingSave) return;
 
   const response = await chrome.runtime.sendMessage({
@@ -31,7 +52,7 @@ async function recordWithForce(): Promise<void> {
       title: currentPendingSave.title,
       url: currentPendingSave.url,
       content: currentPendingSave.content,
-      force: true
+      force
     }
   });
 
@@ -50,6 +71,10 @@ async function recordWithForce(): Promise<void> {
   }
 
   currentPendingSave = null;
+}
+
+async function recordWithForce(): Promise<void> {
+  await recordPendingSave(true);
 }
 
 document.getElementById('dialog-cancel')?.addEventListener('click', () => {
@@ -100,4 +125,20 @@ document.getElementById('dialog-save-path')?.addEventListener('click', async () 
   }
 });
 
-export { showPrivatePageDialog };
+document.getElementById('recording-failed-dismiss')?.addEventListener('click', () => {
+  const dialog = document.getElementById('recording-failed-dialog') as HTMLDialogElement;
+  dialog?.close();
+  currentPendingSave = null;
+});
+
+document.getElementById('recording-failed-retry')?.addEventListener('click', async () => {
+  const dialog = document.getElementById('recording-failed-dialog') as HTMLDialogElement;
+  dialog?.close();
+
+  if (currentPendingSave) {
+    // Not a privacy decision: retry the normal path so detection still applies.
+    await recordPendingSave(false);
+  }
+});
+
+export { showPrivatePageDialog, showRecordingFailedDialog };

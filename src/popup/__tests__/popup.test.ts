@@ -68,14 +68,21 @@ vi.mock('../trancoNotification.js', () => ({
 }));
 
 // Mock pendingStorage
-vi.mock('../../utils/pendingStorage.js', () => ({
-    getPendingPages: vi.fn(() => Promise.resolve([])),
-    removePendingPages: vi.fn(() => Promise.resolve()),
-}));
+vi.mock('../../utils/pendingStorage.js', async (importOriginal) => {
+    // Keep the real reason-classification helpers so the dialog routing under
+    // test is the real one; only the storage access is mocked.
+    const actual = await importOriginal<typeof import('../../utils/pendingStorage.js')>();
+    return {
+        ...actual,
+        getPendingPages: vi.fn(() => Promise.resolve([])),
+        removePendingPages: vi.fn(() => Promise.resolve()),
+    };
+});
 
 // Mock privatePageDialog
 vi.mock('../privatePageDialog.js', () => ({
     showPrivatePageDialog: vi.fn(),
+    showRecordingFailedDialog: vi.fn(),
 }));
 
 // Mock privacyConsent
@@ -164,7 +171,7 @@ describe('initPopup coverage', () => {
     it('covers normal flow including pending page dialog (one pending page)', async () => {
         const { getPendingPages } = await import('../../utils/pendingStorage.js');
         vi.mocked(getPendingPages).mockResolvedValue([
-            { url: 'https://example.com', reason: 'private', headerValue: 'Cache-Control: private' }
+            { url: 'https://example.com', reason: 'cache-control', headerValue: 'Cache-Control: private' }
         ]);
         await initPopup();
         await new Promise(r => setTimeout(r, 50));
@@ -174,22 +181,22 @@ describe('initPopup coverage', () => {
         const { getPendingPages } = await import('../../utils/pendingStorage.js');
         const { showPrivatePageDialog } = await import('../privatePageDialog.js');
         vi.mocked(getPendingPages).mockResolvedValue([
-            { url: 'https://example.com', reason: 'private', headerValue: 'Cache-Control: private' }
+            { url: 'https://example.com', reason: 'cache-control', headerValue: 'Cache-Control: private' }
         ]);
         await initPopup();
         await new Promise(r => setTimeout(r, 50));
-        expect(showPrivatePageDialog).toHaveBeenCalledWith('https://example.com', 'private', 'Cache-Control: private');
+        expect(showPrivatePageDialog).toHaveBeenCalledWith('https://example.com', 'cache-control', 'Cache-Control: private');
     });
 
     it('shows private page dialog with empty headerValue fallback', async () => {
         const { getPendingPages } = await import('../../utils/pendingStorage.js');
         const { showPrivatePageDialog } = await import('../privatePageDialog.js');
         vi.mocked(getPendingPages).mockResolvedValue([
-            { url: 'https://example.com', reason: 'private', headerValue: undefined }
+            { url: 'https://example.com', reason: 'cache-control', headerValue: undefined }
         ]);
         await initPopup();
         await new Promise(r => setTimeout(r, 50));
-        expect(showPrivatePageDialog).toHaveBeenCalledWith('https://example.com', 'private', '');
+        expect(showPrivatePageDialog).toHaveBeenCalledWith('https://example.com', 'cache-control', '');
     });
 
     it('does not show dialog when no pending pages exist', async () => {
@@ -205,12 +212,48 @@ describe('initPopup coverage', () => {
         const { getPendingPages } = await import('../../utils/pendingStorage.js');
         const { showPrivatePageDialog } = await import('../privatePageDialog.js');
         vi.mocked(getPendingPages).mockResolvedValue([
-            { url: 'https://example.com', reason: 'private' },
-            { url: 'https://example.org', reason: 'private' }
+            { url: 'https://example.com', reason: 'cache-control' },
+            { url: 'https://example.org', reason: 'cache-control' }
         ]);
         await initPopup();
         await new Promise(r => setTimeout(r, 50));
         expect(showPrivatePageDialog).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        'pipeline-error',
+        'obsidian-write-failed',
+        'local-ai-unavailable'
+    ] as const)('shows the failure dialog, not the private page dialog, for %s', async (reason) => {
+        const { getPendingPages } = await import('../../utils/pendingStorage.js');
+        const { showPrivatePageDialog, showRecordingFailedDialog } = await import('../privatePageDialog.js');
+        vi.mocked(showPrivatePageDialog).mockClear();
+        vi.mocked(showRecordingFailedDialog).mockClear();
+        vi.mocked(getPendingPages).mockResolvedValue([
+            { url: 'https://example.com', reason }
+        ]);
+        await initPopup();
+        await new Promise(r => setTimeout(r, 50));
+        expect(showPrivatePageDialog).not.toHaveBeenCalled();
+        expect(showRecordingFailedDialog).toHaveBeenCalledWith('https://example.com', expect.any(String));
+    });
+
+    it.each([
+        'cache-control',
+        'set-cookie',
+        'authorization'
+    ] as const)('shows the private page dialog, not the failure dialog, for %s', async (reason) => {
+        const { getPendingPages } = await import('../../utils/pendingStorage.js');
+        const { showPrivatePageDialog, showRecordingFailedDialog } = await import('../privatePageDialog.js');
+        vi.mocked(showPrivatePageDialog).mockClear();
+        vi.mocked(showRecordingFailedDialog).mockClear();
+        vi.mocked(getPendingPages).mockResolvedValue([
+            { url: 'https://example.com', reason }
+        ]);
+        await initPopup();
+        await new Promise(r => setTimeout(r, 50));
+        expect(showRecordingFailedDialog).not.toHaveBeenCalled();
+        expect(showPrivatePageDialog).toHaveBeenCalled();
     });
 
     it('catches error in initNavigation', async () => {

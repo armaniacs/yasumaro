@@ -72,17 +72,11 @@ function matchesFilterType(entry: SavedUrlEntry, activeFilter: FilterType): bool
   return true;
 }
 
-export function renderPendingReason(reason: string): string {
-  switch (reason) {
-    case 'cache-control': return getMessage('pendingReasonCache') || 'Cache-Control ヘッダー';
-    case 'set-cookie':    return getMessage('pendingReasonCookie') || 'Set-Cookie ヘッダー';
-    case 'authorization': return getMessage('pendingReasonAuth') || 'Authorization ヘッダー';
-    case 'pipeline-error': return getMessage('pendingReasonPipelineError') || '記録処理エラー';
-    case 'obsidian-write-failed': return getMessage('pendingReasonObsidianWriteFailed') || 'Obsidian書き込み失敗';
-    case 'local-ai-unavailable': return getMessage('pendingReasonLocalAiUnavailable') || 'ローカルAI利用不可';
-    default:              return reason;
-  }
-}
+/**
+ * Re-exported so the dashboard keeps a single import site while the reason
+ * table itself lives next to the PendingPage type it describes.
+ */
+export { renderPendingReason } from '../utils/pendingStorage.js';
 
 export function updateTagFilterIndicator(state: HistoryPanelState, onClear: () => void): void {
   const existingIndicator = document.getElementById('tagFilterIndicator');
