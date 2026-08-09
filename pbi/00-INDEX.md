@@ -2,64 +2,79 @@
 
 `pbi/` 配下のPBI実装状況一覧。新規PBI作成時・実装完了時はこの表を更新すること。
 
-凡例: ⬜ 未着手 / 🔶 部分実装（一部基準のみ満たす） / 実装完了したPBIは `dev-docs/archived/pbi/` へ移動する
+**`pbi/` には未完了のPBIだけを置く。** 完了したものは `dev-docs/archived/pbi/` へ移動し、
+このINDEXの表からは削除して「アーカイブ履歴」に1行残す。
+
+凡例: ⬜ 未着手 / 🔶 部分実装（一部基準のみ満たす）
 難易度: 🟢低（1pt目安） / 🟡中（2pt目安） / 🔴高（3pt以上目安） — 各PBI内「見積もり」セクションのポイントに基づく
 副作用: 🔴あり（既存機能・既存ユーザーに実害の可能性） / 🟡軽微（コスト増や要検証点はあるが致命的でない） / 🟢なし（安全に対処可能）
 種別: ✨機能追加（feat、ユーザーに見える新機能） / 🔧非機能追加（fix/refactor、バグ修正・内部改善・性能改善など機能追加を伴わないもの）
 
 ---
 
-## 未着手 ⬜ / 部分実装 🔶
+## 進行中 ⬜ 未着手 / 🔶 部分実装
+
+`pbi/` に残っているのは**未完了のPBIのみ**。完了したものは `dev-docs/archived/pbi/` にある。
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| ✅ [2026-08-08-01-refactor-recording-logic-split.md](2026-08-08-01-refactor-recording-logic-split.md) | 🟡中 | 🟡軽微 | 🔧 | RecordingLogic（541行）をRecordingCache(395行)/RecordingValidator(71行)/RecordingLogic(248行)に分割。後方互換ラッパー維持。全7556テスト合格 |
-| ✅ [2026-08-08-02-refactor-ai-service-test-connection.md](2026-08-08-02-refactor-ai-service-test-connection.md) | 🟢低 | 🟡軽微 | 🔧 | AIServiceにtestConnectionを追加しADR 2026-07-27の方針を型で担保。RemoteAIServiceのsuccess/error欠落バグも修正 |
-| ✅ [2026-08-08-03-refactor-panel-contract-cleanup.md](2026-08-08-03-refactor-panel-contract-cleanup.md) | 🟢低 | 🟢なし | 🔧 | refresh()をoptional化（14実装中8件は実処理を持つため削除は誤りと判明）。registryのキャストをcategory narrowingへ |
-| ✅ [2026-08-08-04-refactor-messaging-layer-consolidation.md](2026-08-08-04-refactor-messaging-layer-consolidation.md) | 🟡中 | 🟡軽微 | 🔧 | 整合性テストの手書きリストをソース導出方式へ。ResponseForTypeのLOG_FORWARD欠落・AiTestProgress重複定義も解消 |
-| ✅ [2026-08-08-05-refactor-ai-provider-asymmetry.md](2026-08-08-05-refactor-ai-provider-asymmetry.md) | 🟡中 | 🔴あり | 🔧 | provider間の非対称解消（Geminiの429リトライ・使用量0記録・BuiltInAiのsanitizeContent未通過）。BuiltInAiテスト12件追加 |
-| ✅ [2026-08-08-06-test-untested-modules-coverage.md](2026-08-08-06-test-untested-modules-coverage.md) | 🟡中 | 🟢なし | 🔧 | recordingCacheのsession永続化・VULN-014の永続化境界・記録系ハンドラのVULN-004にテスト追加（31件） |
-| ✅ [2026-08-08-07-fix-sqlite-history-pagination.md](2026-08-08-07-fix-sqlite-history-pagination.md) | 🟡中 | 🔴あり | 🔧 | **実害修正**: 履歴1000件超の51ページ目以降が閲覧不能だった問題。サーバ側ページングへ移行 |
-| ✅ [2026-08-08-08-refactor-dead-code-and-seam-bypass.md](2026-08-08-08-refactor-dead-code-and-seam-bypass.md) | 🟢低 | 🟢なし | 🔧 | 死蔵判定を3点とも訂正（createBackgroundServicesは欠陥修正・popupテストは現役で移動・i18nは非等価のためseam補強） |
-| 🔶 [2026-08-08-09-refactor-dashboard-dual-bootstrap.md](2026-08-08-09-refactor-dashboard-dual-bootstrap.md) | 🔴高 | 🔴あり | 🔧 | Phase1(エクスポート業務ロジック切り出し)・Phase3(registry経由化)完了。Phase2/4(逆依存解消・単一bootstrap化)は規模とE2E必須のため残 |
-| ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
-| 🔶 [2026-08-07-08-refactor-ai-client-service-unification.md](2026-08-07-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合（modelName型ドリフトは解消済み。AIClient削除は中核パスの高リスクのため保留） |
-| 🔶 [2026-08-07-13-refactor-service-wiring-backend-consolidation.md](2026-08-07-13-refactor-service-wiring-backend-consolidation.md) | 🟡中 | 🟡軽微 | 🔧 | サービス配線・StorageBackend・プロバイダ設定表示・エラー処理の統合候補（エラー処理イディオムは解消済み。他は調査により実重複でない/高リスクと判断し保留）
-| ✅ [2026-08-09-10-fix-dashboard-sqlite-lasterror-snapshot.md](2026-08-09-10-fix-dashboard-sqlite-lasterror-snapshot.md) | 🟢低 | 🟡軽微 | 🔧 | **実害修正**: deps.lastErrorが起動時nullで凍結され、15箇所の具体的エラー文言が一度も表示されていなかった問題をgetter化で解消 |
-| ✅ [2026-08-09-11-refactor-dashboard-sqlite-dual-wiring.md](2026-08-09-11-refactor-dashboard-sqlite-dual-wiring.md) | 🟡中 | 🟡軽微 | 🔧 | createSqliteClientDepsで本番/テストの配線を共有化。未テストだったSW所有4依存にテスト追加（wrapper削除は 2026-08-09-16 で完了） |
-| ✅ [2026-08-09-12-fix-querylogs-error-swallowing.md](2026-08-09-12-fix-querylogs-error-swallowing.md) | 🟡中 | 🟡軽微 | 🔧 | **実害修正**: DB障害時に空ファイルをDLし「completed」表示していた問題。tagClusterのリトライ無効化・1万件超の無言切り捨ても修正 |
-| ✅ [2026-08-09-13-refactor-sender-trust-policy.md](2026-08-09-13-refactor-sender-trust-policy.md) | 🟡中 | 🔴あり | 🔧 | registryに信頼レベルを必須化。無防備だったREFRESH_LOCAL_MARKDOWN_SCHEDULER等を強化（個別チェック削除は 2026-08-09-17 で完了） |
-| ✅ [2026-08-09-16-refactor-remove-dashboard-sqlite-test-wrapper.md](2026-08-09-16-refactor-remove-dashboard-sqlite-test-wrapper.md) | 🟡中 | 🟢なし | 🔧 | 本番未使用のテスト専用wrapperを削除し72箇所をハーネス経由へ移行。位置引数を名前付き上書きに |
-| ✅ [2026-08-09-17-refactor-remove-per-handler-sender-guards.md](2026-08-09-17-refactor-remove-per-handler-sender-guards.md) | 🟡中 | 🔴あり | 🔧 | 認可判定を1箇所に集約。削除前に全19型×3送信元の網羅テスト59件を用意。security-integrityをソース照合から振る舞い検証へ |
-| ✅ [2026-08-09-14-refactor-remove-offscreen-sqlite-shim.md](2026-08-09-14-refactor-remove-offscreen-sqlite-shim.md) | 🟢低 | 🟢なし | 🔧 | 非推奨再エクスポート層を削除。vi.mockを本番の import 先に合わせ offscreen テストが152→175件に |
-| ✅ [2026-08-09-15-investigate-markdown-sanitizer-divergence.md](2026-08-09-15-investigate-markdown-sanitizer-divergence.md) | 🟢低 | 🟢なし | 🔍 | 調査完了・**対応不要**。ADRが用途別使い分けを定めており、リンク構文を組まない側は現状が正しい |
-| ✅ [2026-08-09-18-refactor-cleansing-rule-table.md](2026-08-09-18-refactor-cleansing-rule-table.md) | 🔴大 | 🔴あり | 🔧 | **実害修正**: 32ルール中15件がcount経路で黙って捨てられていた問題。ルール表に集約しcountをstrip由来に。既定設定で表示件数 4→6 に是正。countTargets.ts(497行)を削除 |
-| ✅ [2026-08-09-19-refactor-sqlite-read-result-union.md](2026-08-09-19-refactor-sqlite-read-result-union.md) | 🔴大 | 🟡あり | 🔧 | **実害修正**: DB障害が「データがありません」と表示される問題（v6.7.26で3件修正した形の4件目）。読み取り系4関数をCallResult貫通にし、retriableフラグで文字列照合retryを廃止 |
 | ⬜ [2026-08-09-20-refactor-cleansing-rule-single-source.md](2026-08-09-20-refactor-cleansing-rule-single-source.md) | 🔴大 | 🟡軽微 | 🔧 | ルール宣言が10層に散在し、既定値が3表で7ルール食い違う（うちCategory A/Bはマイグレーションと対の意図的差分）。「新規ユーザー既定値」と「未指定時フォールバック」を分離し表から導出 |
 | ⬜ [2026-08-09-21-refactor-sqlite-write-result-union.md](2026-08-09-21-refactor-sqlite-write-result-union.md) | 🟡中 | 🟡軽微 | 🔧 | **実害修正**: 削除・スター操作の失敗時に画面が完全無反応（`if (ok)`にelseが無い）。変更系をCallResult化し共有可変lastErrorを削除。PBI-19の残り半分 |
 | ⬜ [2026-08-09-22-refactor-shallow-static-form-panels.md](2026-08-09-22-refactor-shallow-static-form-panels.md) | 🟢小 | 🟢なし | 🔧 | init関数を転送するだけのStaticFormPanel 9件(133行)を宣言表+アダプタへ集約。9件はテスト0件のため手動確認が必須 |
 | ⬜ [2026-08-09-23-refactor-sqlite-transport-layers.md](2026-08-09-23-refactor-sqlite-transport-layers.md) | 🔴大 | 🔴あり | 🔧 | **Epic 8pt・要シニア相談**: 1操作に6層1400行。Phase1(型二重化解消/2pt)・Phase2(失敗表現統一/3pt)・Phase3(宣言表/3pt)。業務ロジックを持つ7caseは機械化しない |
 | ⬜ [2026-08-09-24-refactor-dashboard-reverse-dependency.md](2026-08-09-24-refactor-dashboard-reverse-dependency.md) | 🔴大 | 🔴あり | 🔧 | panel層→dashboard.ts(842行)の逆依存と二重bootstrapを解消。**PBI 2026-08-08-09のPhase2/4を最新実測値で切り出したもの**（重複実施しないこと） |
-
----
-> 2026-08-04-01〜05 は Checking Team レビュー（v6.7.12 AI接続テスト進捗表示）の残存指摘対応として実装・アーカイブ済み。詳細はアーカイブ欄参照。
-> 2026-08-06-01 は Tag Cluster タグ未マッチ時全文検索フォールバック機能として v6.7.17 で実装・アーカイブ済み。
-
----
-> 2026-08-02-01〜05 はテストカバレッジ拡充（prompt injection マトリクス / optimistic lock ストレス / privacy pipeline PII リーク / Obsidian APIキー漏洩防止 / SQLite unique 制約）として実装・アーカイブ済み。詳細はアーカイブ欄参照。
+| ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
+| 🔶 [2026-08-07-08-refactor-ai-client-service-unification.md](2026-08-07-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合（modelName型ドリフトは解消済み。AIClient削除は中核パスの高リスクのため保留） |
+| 🔶 [2026-08-07-13-refactor-service-wiring-backend-consolidation.md](2026-08-07-13-refactor-service-wiring-backend-consolidation.md) | 🟡中 | 🟡軽微 | 🔧 | サービス配線・StorageBackend・プロバイダ設定表示・エラー処理の統合候補（エラー処理イディオムは解消済み。他は調査により実重複でない/高リスクと判断し保留） |
+| 🔶 [2026-08-08-09-refactor-dashboard-dual-bootstrap.md](2026-08-08-09-refactor-dashboard-dual-bootstrap.md) | 🔴高 | 🔴あり | 🔧 | Phase1(エクスポート業務ロジック切り出し)・Phase3(registry経由化)完了。**残るPhase2/4は 2026-08-09-24 へ引き継ぎ済み**（本PBIは新規着手しない） |
 
 ---
 
-## アーカイブ
+## 運用ルール
 
-完了済みPBIは `dev-docs/archived/pbi/` へ移動する。
-新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成してください（`type`は`feat`/`fix`/`refactor`/`doc`のいずれか。ファイル名の種別がそのまま機能追加/非機能追加の判定基準になる）。
+- 新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成する
+  （`type` は `feat` / `fix` / `refactor` / `doc` / `test` / `investigate`。
+  ファイル名の種別がそのまま機能追加/非機能追加の判定基準になる）
+- 実装計画は `dev-docs/plans/YYYY-MM-DD-pbiNN-<slug>-plan.md` として作成する
+- **完了したPBIは `dev-docs/archived/pbi/` へ、対応する実装計画は
+  `dev-docs/archived/plans/` へ `git mv` で移動する**
+- 移動したらこのINDEXの表から行を削除し、下の「アーカイブ履歴」に1行追記する
 
 ---
 
-## アーカイブ
+## アーカイブ履歴
 
-完了済みPBIは [dev-docs/archived/pbi/](../../dev-docs/archived/pbi/) に移動する。
+完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
+その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-09 セッションでアーカイブ済み（17件）
+
+アーキテクチャレビュー2026-08-08・2026-08-09の指摘対応。いずれもコード上で完了を確認済み。
+
+- 2026-08-08-01-refactor-recording-logic-split.md (RecordingLogic 541行を RecordingCache/RecordingValidator/RecordingLogic に分割)
+- 2026-08-08-02-refactor-ai-service-test-connection.md (AIServiceにtestConnectionを追加。RemoteAIServiceのsuccess/error欠落バグも修正)
+- 2026-08-08-03-refactor-panel-contract-cleanup.md (refresh()をoptional化。14実装中8件は実処理を持つため削除は誤りと判明)
+- 2026-08-08-04-refactor-messaging-layer-consolidation.md (整合性テストの手書きリストをソース導出方式へ)
+- 2026-08-08-05-refactor-ai-provider-asymmetry.md (Geminiの429リトライ・使用量0記録・BuiltInAiのsanitizeContent未通過を解消)
+- 2026-08-08-06-test-untested-modules-coverage.md (recordingCache・VULN-014/004にテスト31件追加)
+- 2026-08-08-07-fix-sqlite-history-pagination.md (**実害修正**: 履歴1000件超の51ページ目以降が閲覧不能。サーバ側ページングへ)
+- 2026-08-08-08-refactor-dead-code-and-seam-bypass.md (死蔵判定を3点とも訂正。i18nは非等価のためseam補強)
+- 2026-08-09-10-fix-dashboard-sqlite-lasterror-snapshot.md (**実害修正**: deps.lastErrorが起動時nullで凍結され15箇所のエラー文言が未表示だった問題をgetter化で解消)
+- 2026-08-09-11-refactor-dashboard-sqlite-dual-wiring.md (createSqliteClientDepsで本番/テストの配線を共有化)
+- 2026-08-09-12-fix-querylogs-error-swallowing.md (**実害修正**: DB障害時に空ファイルをDLし「completed」表示していた問題)
+- 2026-08-09-13-refactor-sender-trust-policy.md (registryに信頼レベルを必須化。無防備だったハンドラを強化)
+- 2026-08-09-14-refactor-remove-offscreen-sqlite-shim.md (非推奨再エクスポート層を削除。offscreenテストが152→175件に)
+- 2026-08-09-15-investigate-markdown-sanitizer-divergence.md (調査完了・**対応不要**。ADRが用途別使い分けを定めており現状が正しい)
+- 2026-08-09-16-refactor-remove-dashboard-sqlite-test-wrapper.md (本番未使用のテスト専用wrapperを削除し72箇所をハーネス経由へ)
+- 2026-08-09-17-refactor-remove-per-handler-sender-guards.md (認可判定を1箇所に集約。削除前に全19型×3送信元の網羅テスト59件を用意)
+- 2026-08-09-18-refactor-cleansing-rule-table.md (**実害修正**: 32ルール中15件がcount経路で捨てられていた問題。既定設定で表示件数 4→6 に是正。countTargets.ts 497行を削除)
+- 2026-08-09-19-refactor-sqlite-read-result-union.md (**実害修正**: DB障害が「データがありません」と表示される問題。読み取り系4関数をCallResult貫通に)
+
+**同セッションでアーカイブした実装計画（dev-docs/archived/plans/）9件**:
+2026-07-27-pbi11 / pbi13 / pbi15 / pbi24 / pbi26 / pbi27 / pbi29-36-35 / pbi34 の各計画と
+2026-07-26-chrome-built-in-ai-provider-plan.md。いずれも対応PBIがアーカイブ済み。
+
+---
 
 ### 2026-08-07 セッションでアーカイブ済み
 
@@ -87,7 +102,7 @@
 - 2026-08-02-04-fix-obsidian-api-key-leakage-prevention.md (Obsidian APIキー漏洩防止のクライアントレベル検証。ヘッダーへの正当な配置と、ログへの生キー非出力を `obsidianClient-api-key-leak.test.ts` に追加。npm run validate成功)
 - 2026-08-02-05-fix-sqlite-unique-constraint-validation.md (SQLiteの(url, created_at) unique制約検証。重複INSERTが静かに無視され、同一URL別タイムスタンプが保持されることを `recordsRepo-unique-constraint.test.ts` に追加。npm run validate成功)
 
-### 2026-08-02 セッションでアーカイブ済み
+### 2026-08-02 セッションでアーカイブ済み（機能追加分）
 
 - 2026-08-02-01-feat-builtin-ai-diagnostics.md (診断パネルにブラウザ内蔵AI診断セクションを追加。builtInAiDiagnosticsService + diagnosticsPanelに診断表示・モデルダウンロード導線を実装。npm run validate成功)
 
@@ -283,9 +298,10 @@
 | 状態 | 件数 |
 |---|---|
 | ⬜ 未着手 | 6（✨機能追加 0 / 🔧非機能追加 6） |
-| ✅ 完了 | 17 |
 | 🔶 部分実装 | 3（2026-08-07-08 AIレイヤー統合 / 2026-08-07-13 サービス配線・StorageBackend / 2026-08-08-09 dashboard二重bootstrap → **2026-08-09-24 に引き継ぎ**） |
-| アーカイブ済み | 210 |
+| **`pbi/` 残存合計** | **9** |
+| アーカイブ済みPBI | 238 |
+| アーカイブ済み実装計画 | 99 |
 
 未着手の内訳:
 

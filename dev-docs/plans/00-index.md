@@ -11,9 +11,11 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 - 更新 2026-07-06（#03・#05・#01実装完了を反映、Phase 1完了、関連設計ドキュメント一覧を拡充）
 - 更新 2026-07-06（git logに基づき #06, #10, #11実装状況を確認・更新予定）
 - 更新 2026-07-11（完了済みPBI/plan/specファイルをarchiveへ再整理。`pbi/archive/`, `docs/superpowers/archive/`, `dev-docs/specs/archive-old/` を新設）
-- 更新 2026-07-27（非機能PBIセクションを修正。PBI-13, 15, 24, 26, 27, 29/35/36, 34は完了またはADR記録済みでアーカイブ済み。未着手PBIはpbi/00-INDEX.mdのPBI-11, 30, 31, 32）
+- 更新 2026-07-27（非機能PBIセクションを修正。PBI-13, 15, 24, 26, 27, 29/35/36, 34は完了またはADR記録済みでアーカイブ済み）
+- 更新 2026-08-09（完了PBIに対応する実装計画9件を `dev-docs/archived/plans/` へ移動。「現在の実装計画」セクションを新設し、残存ファイルを一覧化）
 
-全ての完了済み計画ファイルは `dev-docs/plans/archive-old/` に移動しました。
+完了済み計画ファイルの移動先は `dev-docs/archived/plans/`。
+（古い記述にある `dev-docs/plans/archive-old/` は現存しない）
 
 ## DEV-86 追加機能候補 PBI（実装順提案）
 
@@ -105,27 +107,30 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 - [2026-07-05-02-feat-encrypted-backup-design.md](archive-old/2026-07-05-02-feat-encrypted-backup-design.md) — #10の暗号化バックアップ設計。ステータス: 設計済み、実装未着手
 - [docs/superpowers/specs/2026-07-05-weekly-monthly-local-summary-design.md](../superpowers/archive/specs/2026-07-05-weekly-monthly-local-summary-design.md) — #01の週次/月次サマリ設計。ステータス: 設計済み、実装完了
 
-## 非機能PBI 実装計画（2026-07-27作成）— 現在の状態
+## 非機能PBI 実装計画（2026-07-27作成）— アーカイブ済み
 
-Checking Team レビューから起票した非機能PBIについて、2026-07-27以降の作業を経て、**以下のPBIは完了またはADR記録済みとしてアーカイブ済み**です。各計画ファイルは履歴参考として残存していますが、新規着手は不要です。
+Checking Team レビューから起票した非機能PBI（PBI-13 / 15 / 24 / 26 / 27 / 29・35・36 / 34）は
+すべて完了またはADR記録済みで、**PBI・実装計画とも 2026-08-09 にアーカイブへ移動した**。
 
-| 対象PBI | 計画ファイル | 現在の状態 |
-|---------|-------------|-----------|
-| PBI-13 | [2026-07-27-pbi13-legacy-dual-write-default-plan.md](2026-07-27-pbi13-legacy-dual-write-default-plan.md) | ✅ 完了。`pendingChromeStorageQueue.ts`を実装。デフォルト変更は影響範囲が大きいためADRで見送り。 |
-| PBI-15 | [2026-07-27-pbi15-settings-migration-non-destructive-plan.md](2026-07-27-pbi15-settings-migration-non-destructive-plan.md) | ✅ 完了。 |
-| PBI-24 | [2026-07-27-pbi24-utils-subdirectory-split-plan.md](2026-07-27-pbi24-utils-subdirectory-split-plan.md) | ✅ 完了（cryptoグループまで）。残りグループは任意としアーカイブ。 |
-| PBI-26 | [2026-07-27-pbi26-ai-client-service-unification-plan.md](2026-07-27-pbi26-ai-client-service-unification-plan.md) | ✅ ADR記録済み。実質的なコード変更は最小。 |
-| PBI-27 | [2026-07-27-pbi27-popup-dashboard-settings-duplication-plan.md](2026-07-27-pbi27-popup-dashboard-settings-duplication-plan.md) | ✅ 完了。popupの重複設定UIを削除しdashboardに一本化。 |
-| PBI-29/35/36 | [2026-07-27-pbi29-36-35-service-worker-refactor-plan.md](2026-07-27-pbi29-36-35-service-worker-refactor-plan.md) | ✅ 完了。service-worker.tsのGod File分割・状態永続化・シングルトンDI化。 |
-| PBI-34 | [2026-07-27-pbi34-extractor-pagestate-encapsulation-plan.md](2026-07-27-pbi34-extractor-pagestate-encapsulation-plan.md) | ✅ 完了。 |
+- PBI: `dev-docs/archived/pbi/`
+- 実装計画: `dev-docs/archived/plans/2026-07-27-pbi*.md`
 
-### 未着手PBI
+同様に PBI-11（constant-time compare 検証）・PBI-30/31/32（Chrome Built-in AI）も
+実装・クローズ済みでアーカイブされている。
+`2026-07-26-chrome-built-in-ai-provider-plan.md` も同時にアーカイブした。
 
-現時点で未着手のPBIは[pbi/00-INDEX.md](../../pbi/00-INDEX.md)が正です。以下に概要を記載します。
+## 現在の実装計画
 
-| PBI | ファイル | 種別 | 状態 | 備考 |
-|-----|---------|------|------|------|
-| PBI-11 | [pbi/2026-07-25-11-fix-verify-constant-time-compare.md](../../pbi/2026-07-25-11-fix-verify-constant-time-compare.md) | fix | ⬜ 未着手 | 実ブラウザ計測は人間作業必須 |
-| PBI-30 | [pbi/2026-07-26-30-feat-chrome-built-in-ai-oss-research.md](../../pbi/2026-07-26-30-feat-chrome-built-in-ai-oss-research.md) | feat | ⬜ 未着手 | Chrome Built-in AI調査 |
-| PBI-31 | [pbi/2026-07-26-31-feat-built-in-ai-provider-integration-design.md](../../pbi/2026-07-26-31-feat-built-in-ai-provider-integration-design.md) | feat | ⬜ 未着手 | 設計ドキュメントは作成済み |
-| PBI-32 | [pbi/2026-07-26-32-feat-built-in-ai-provider-implementation.md](../../pbi/2026-07-26-32-feat-built-in-ai-provider-implementation.md) | feat | ⬜ 未着手 | Epic級（13pt）。PBI-30,31の後 |
+`dev-docs/plans/` に残っているのは**未完了PBIの実装計画と、恒常的な運用ドキュメント**のみ。
+
+| ファイル | 対象 | 状態 |
+|---------|------|------|
+| [2026-08-09-pbi20-cleansing-rule-single-source-plan.md](2026-08-09-pbi20-cleansing-rule-single-source-plan.md) | PBI 2026-08-09-20 | ⬜ 未着手（実施順1） |
+| [2026-08-09-pbi21-sqlite-write-result-union-plan.md](2026-08-09-pbi21-sqlite-write-result-union-plan.md) | PBI 2026-08-09-21 | ⬜ 未着手（実施順2） |
+| [2026-08-09-pbi22-shallow-static-form-panels-plan.md](2026-08-09-pbi22-shallow-static-form-panels-plan.md) | PBI 2026-08-09-22 | ⬜ 未着手（実施順3） |
+| [2026-08-09-pbi23-sqlite-transport-layers-plan.md](2026-08-09-pbi23-sqlite-transport-layers-plan.md) | PBI 2026-08-09-23 | ⬜ 未着手（実施順4・Epic） |
+| [2026-08-09-pbi24-dashboard-reverse-dependency-plan.md](2026-08-09-pbi24-dashboard-reverse-dependency-plan.md) | PBI 2026-08-09-24 | ⬜ 未着手（実施順5） |
+| [2026-06-29-maintenance-plan.md](2026-06-29-maintenance-plan.md) | 定期メンテナンス | 📌 恒常ドキュメント |
+| [verified-crx-upload.md](verified-crx-upload.md) | CWS検証済みCRXアップロード | 📌 恒常ドキュメント |
+
+未完了PBIの一覧は [pbi/00-INDEX.md](../../pbi/00-INDEX.md) が正。
