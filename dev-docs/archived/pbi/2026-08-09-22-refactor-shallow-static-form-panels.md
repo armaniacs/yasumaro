@@ -292,13 +292,62 @@ PBI 2026-08-08-03 で「`refresh` は optional。持たないパネルは宣言�
 
 ---
 
+## 実装後の追記
+
+### 実測は計画どおり（9件・133行）
+
+Step 0 で9ファイルすべてを読み、計画の対応表と一致することを確認した。
+`prompt` / `markdownTemplate` の2件のみ `getSettings()` を必要とし、
+`csp` / `content` / `trust` / `domain` の4件のみ `refresh` を持つ。
+`content` と `domain` は mount と refresh で**別の関数**を呼ぶ
+（`init*` がフォームを組み立て、`load*` が永続値を読み直す）。
+
+結果: `staticForm/` が12ファイル → 5ファイル
+（アダプタ・宣言表・固有処理を持つ3件）。
+
+### テストの副作用: jsdom が必要だった
+
+`staticPanels.ts` が import する init 関数群のうち、
+`exportImport.ts` → `masterPassword.ts` が**モジュールレベルで
+`document.getElementById` を呼んでいる**ため、
+宣言表を import するだけで `ReferenceError: document is not defined` になった。
+
+これは本PBIが持ち込んだ問題ではなく、**旧9ファイルにテストが1件も
+無かったため今まで露見していなかった既存の設計**である。
+テストに `@vitest-environment jsdom` を指定して解決した。
+
+### id検証テストの有効性を変異テストで確認
+
+`panel-tags` を `panel-taggs` に1文字変えて実行し、
+`id` と `data-panel` の2アサーションが確実に落ちることを確認した。
+このタイポは本番では無言で失敗する（`NavigationRegistry.navigate()` の
+throw を `DashboardBootstrapper.wireSidebar` が catch するため、
+該当タブだけ「押しても何も起きない」状態になる）ので、
+機械的な検出手段を用意する価値が高い。
+
+### 手動確認は未実施
+
+実装者（AIエージェント）の環境では Chrome で options 画面を開けないため、
+DoD の手動確認項目は**未実施のまま残している**。
+id・data-panel の対応、`category`、`mount` の存在、`refresh` を持つ4件の
+特定は自動テストで担保したが、「実際に各タブを開いて中身が描画されるか」は
+別途人手での確認が必要。
+
+### 検証結果
+
+- `npm run validate`（type-check + vitest）: **7,711 件通過**（PBI-21完了時 7,697 から +14）
+- `npm run build`: 成功
+- `npm run test:e2e`: **185 件通過・7 件スキップ**（既存ベースラインと同一）
+
+---
+
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] アダプタの単体テストが追加されている
-- [ ] パネルidとHTMLの対応を検証するテストが追加されている
-- [ ] `npm run validate` / `npm run build` が通る
-- [ ] **手動確認**: options 画面で9タブすべてを開いて表示を確認
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] アダプタの単体テストが追加されている
+- [x] パネルidとHTMLの対応を検証するテストが追加されている
+- [x] `npm run validate` / `npm run build` が通る
+- [ ] **手動確認**: options 画面で9タブすべてを開いて表示を確認（実装者の環境では未実施）
 - [ ] コードレビュー完了
 
 ---

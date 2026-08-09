@@ -49,6 +49,13 @@ All notable changes to this project will be documented in this file.
 
 ### Refactor
 
+- 設定パネルのうち「既存の init 関数を呼ぶだけ」だった9件（タグ／記録条件／
+  プロンプト／Markdownテンプレート／CSP／コンテンツ／エクスポート・インポート／
+  信頼済みドメイン／ドメインフィルタ）を、9つのファイルから1つの宣言表に集約した
+  - 9件中7件は Panel 契約が渡す `container` を使っておらず、ラップ先の init 関数が
+    自前で DOM を取りに行っていた。契約が宣言されているだけで機能していない状態だった
+  - 固有処理を持つ3件（一般設定・プライバシー・AI要約クレンジング）は個別ファイルのまま
+  - `staticForm/` が12ファイルから5ファイルになった
 - SQLite の変更系操作（削除・更新・スター・全消去・インポート・リストア・
   パージ）のエラー理由を、共有された可変フィールド `lastError` ではなく
   各呼び出しの戻り値（`CallResult`）で運ぶようにした。これにより
@@ -76,7 +83,9 @@ All notable changes to this project will be documented in this file.
 
 ### Tests
 
-- テスト総数: 7680 → 7697（+17）
+- テスト総数: 7680 → 7711（+31）
+- 設定パネル: アダプタの単体テスト、9件のidが実際の `options/index.html` の
+  `id` と `data-panel` の両方に存在することの検証（対象9件は元々テスト0件だった）
 - クレンジングルール関連: ルール表の既定値整合性テスト、content script 経路での
   32ルール往復テスト、`DEFAULT_CLEANSING_CONFIG` の完全性テスト、
   AI要約クレンジング設定の HTML id 網羅テスト（実際の `options/index.html` と照合）
