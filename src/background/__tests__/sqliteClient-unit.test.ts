@@ -338,4 +338,54 @@ describe('SqliteClient — unit tests', () => {
       expect(result).toBe(false);
     });
   });
+
+  /**
+   * PBI-21: each call's failure reason must belong to that call.
+   *
+   * These used to be routed through a single `lastError` field on the client,
+   * so a caller reading it after its own call could observe whichever
+   * operation happened to fail most recently instead. The field is gone; the
+   * reason now travels in the CallResult, which makes the mix-up structurally
+   * impossible. These lock that in.
+   */
+  describe('concurrent failures keep their own reason', () => {
+    it('gives each concurrent call the error from its own operation', async () => {
+      // The slower call fails first-in/last-out, so a shared "most recent
+      // failure" slot would hand the wrong reason to at least one of them.
+      vi.spyOn(client, 'msgOffscreen').mockImplementation(async (type: string) => {
+        if (type === 'SQLITE_DELETE') {
+          await new Promise(resolve => setTimeout(resolve, 20));
+          throw new Error('quota exceeded');
+        }
+        throw new Error('request timed out');
+      });
+
+      const [deleteResult, clearResult] = await Promise.all([
+        client.deleteResult(1),
+        client.clearAllResult(),
+      ]);
+
+      expect(deleteResult.success).toBe(false);
+      expect(clearResult.success).toBe(false);
+      if (!deleteResult.success && !clearResult.success) {
+        expect(deleteResult.error.kind).toBe('quota');
+        expect(clearResult.error.kind).toBe('timeout');
+      }
+    });
+
+    it('does not let a later failure overwrite an earlier success', async () => {
+      vi.spyOn(client, 'msgOffscreen').mockImplementation(async (type: string) => {
+        if (type === 'SQLITE_TOGGLE_STAR') return { success: true, is_starred: 1 };
+        throw new Error('quota exceeded');
+      });
+
+      const [toggleResult, deleteResult] = await Promise.all([
+        client.toggleStarResult(1),
+        client.deleteResult(2),
+      ]);
+
+      expect(toggleResult).toEqual({ success: true, data: { is_starred: 1 } });
+      expect(deleteResult.success).toBe(false);
+    });
+  });
 });
