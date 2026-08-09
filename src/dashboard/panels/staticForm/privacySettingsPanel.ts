@@ -36,11 +36,12 @@ export function createPrivacySettingsPanel(): StaticFormPanel {
 
           // データ削除→同意撤回の順で行う。同意撤回だけ成功しデータが
           // 残る不整合（GDPR Art.7の実効性を損なう）を避けるため。
-          const { clearAllLogs } = await import('../../dashboardSqliteService.js');
-          const dataDeleted = await clearAllLogs();
-          if (!dataDeleted) {
+          const { clearAllLogs, isServiceError } = await import('../../dashboardSqliteService.js');
+          const deleteResult = await clearAllLogs();
+          if (isServiceError(deleteResult)) {
             if (statusEl) {
-              statusEl.textContent = chrome.i18n.getMessage('withdrawConsentDataDeleteFailed') || 'Failed to delete recorded data. Your consent status was not changed.';
+              const base = chrome.i18n.getMessage('withdrawConsentDataDeleteFailed') || 'Failed to delete recorded data. Your consent status was not changed.';
+              statusEl.textContent = `${base} (${deleteResult.error})`;
               statusEl.style.color = 'var(--color-error)';
             }
             return;
@@ -68,11 +69,14 @@ export function createPrivacySettingsPanel(): StaticFormPanel {
         if (!confirmed) return;
         try {
           await chrome.storage.local.clear();
-          const { clearAllLogs } = await import('../../dashboardSqliteService.js');
+          const { clearAllLogs, isServiceError } = await import('../../dashboardSqliteService.js');
           const sqliteResult = await clearAllLogs();
-          if (!sqliteResult) {
+          if (isServiceError(sqliteResult)) {
             const statusEl2 = container.querySelector('#deleteAllDataStatus') as HTMLElement | null;
-            if (statusEl2) statusEl2.textContent = chrome.i18n.getMessage('deleteAllDataFailed') || 'Failed to clear browsing logs. Please try again.';
+            if (statusEl2) {
+              const base = chrome.i18n.getMessage('deleteAllDataFailed') || 'Failed to clear browsing logs. Please try again.';
+              statusEl2.textContent = `${base} (${sqliteResult.error})`;
+            }
             return;
           }
           const statusEl2 = container.querySelector('#deleteAllDataStatus') as HTMLElement | null;
