@@ -153,6 +153,22 @@ if (attempt === 0 && response.error && String(response.error).includes('Query fa
 > これは診断パネルが「初期化に失敗した」状態を**表示するため**の意図的な設計と読める。
 > 実装時に判断すること。
 
+> 【実装後の判断】**`getSqliteStatus` / `getCount` を対象から外した。**
+>
+> - `getStatus`: `sqliteClient.ts:418-429` が失敗時にも
+>   `{ initialized: false, ..., initError }` を組み立てて返しており、
+>   「初期化に失敗した」こと自体が診断パネルの表示内容である。
+>   `CallResult` 化すると呼び出し側が失敗として扱い、表示すべき情報が消える。
+> - `getLogCount`: 唯一の呼び出し元 `diagnosticsPanel.ts:203` が
+>   `urlCount >= 0 ? String(urlCount) : 'Unavailable'` と `-1` を正しく区別済み。
+>   変更しても得るものがない。
+>
+> 結果、dashboard 側の実質的な移行対象は
+> `queryLogs` / `searchLogs` / `queryAuditLogs` / `backupDb` の4関数。
+> SqliteClient 側は `queryResult` / `searchResult` / `getCountResult` /
+> `backupDbResult` / `queryAuditLogResult` の5メソッドを追加した
+> （`getCountResult` は handler 経由で使用）。
+
 ---
 
 ## 目的
@@ -246,6 +262,17 @@ if (result !== null) {
 > 【訂正】設計対話の途中で「独自 retry を削除し `retry.ts` に寄せればよい」と
 > 推奨したが、この非互換を見落としていた。`retry.ts` にそのまま寄せることはできない。
 
+> 【実装後の訂正】このリスクは**実際には発現しなかった**。
+> 全4箇所の利用状況を確認した結果:
+> - `tagClusterPanel.ts:158` — thunk 内で `'error' in queryResult` を判定し
+>   `null` に正規化済み（2026-08-09-12 の修正による）
+> - `sqliteHistoryPanel.ts:1039` — thunk が `state.error ? null : true` を返す
+> - `diagnosticsPanel.ts:214` — `getSqliteStatus` を渡すが、同関数は決定7の
+>   個別判断により**対象外**とした（下記）
+>
+> いずれも `{error}` をそのまま `retryWithExponentialBackoff` に渡していない。
+> `retry.ts` は無変更で済んだ。
+
 ### 3. ADR 2026-07-13 仮定G との関係
 
 同 ADR は「Chrome Extension API のエラーは型付き例外ではなく文字列メッセージ。
@@ -261,6 +288,36 @@ if (result !== null) {
 `lastError` は変更系9箇所と診断ログ2箇所
 （`reviewSummaryGenerator.ts:191, 260`）が使用中のため**残す**。
 将来的な削除は変更系の移行後。
+
+> 【実装後】内部状態を `lastErrorDetail: SqliteError | null` に一本化し、
+> `lastError` は `lastErrorDetail?.message ?? null` を返す getter として残した。
+> 事実の二重化を避けつつ、既存11箇所の読み手を無変更にするため。
+
+### 5. 実装後の追記: 後方互換のとり方
+
+既存6メソッドのシグネチャは**変更していない**。
+`queryResult` 等を新設し、既存の `query` はそれを呼んで `null` に畳む形にした。
+`query` は `recordingLogic` など読み取り以外の利用者も持つため、
+全利用者を巻き込まずに済む。
+
+### 6. 実装後の追記: テスト側の対応
+
+テストは `SqliteClient` を手書きモックしており、`query` は定義するが
+`queryResult` は定義しない。23件が失敗したため、
+テストハーネス（`dashboardSqliteTestHarness.ts`）に
+**旧形式モックから `*Result` を導出するアダプタ**を追加した。
+`null` → `lastError` を載せた失敗、という変換になるので、
+移行したアサーションの意味が保たれる。
+
+このアダプタは以下の2点に注意して実装した:
+- **呼び出し時に解決する**: 複数のテストがオブジェクト生成後に
+  `client.query = vi.fn()` と差し替えるため、構築時のスナップショットでは追随できない
+- **その場で拡張する**: テストが同じ参照に対して spy アサーションを行うため、
+  コピーを返すと乖離する
+
+実 `SqliteClient` を使う2テストのみ、`queryResult`/`searchResult` を
+直接スタブするよう変更した（プロトタイプに実メソッドが存在し、
+アダプタが導出をスキップするため）。
 
 ---
 
