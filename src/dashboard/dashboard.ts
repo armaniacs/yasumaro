@@ -6,6 +6,10 @@
  * generalSettings/ and localMarkdownExport.ts (PBI 2026-08-09-24); what
  * remains is page-level initialization: language direction, deep links
  * (?tab= / ?section=), and the export buttons that sit outside any panel.
+ *
+ * This module is imported by src/dashboard/main.ts, which owns the single
+ * bootstrap. It must not import from panels/ — the panel registry is not
+ * built until main.ts constructs it.
  */
 
 import { toMarkdownTemplateEntryData } from './markdownExport.js';
@@ -16,38 +20,45 @@ import {
   handleExportLocalMarkdown,
   handleHistoryExportLocalMarkdown,
 } from './localMarkdownExport.js';
-import { tryGetRegistry } from './panels/registryContext.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
 
-/**
- * Switch to a panel.
- *
- * Prefers the NavigationRegistry, falling back to clicking the sidebar button
- * when the registry is not up yet: entrypoints/options/main.ts imports this
- * module before src/dashboard/main.ts, so at initDashboard() time the panels
- * may not be registered. The click path reaches the same handler that
- * DashboardBootstrapper wires onto the sidebar.
- */
-function navigateToPanel(panelId: string): void {
-  const registry = tryGetRegistry();
-  if (registry) {
-    registry.navigate(panelId);
-    return;
-  }
-  document.querySelector<HTMLButtonElement>(`.sidebar-nav-btn[data-panel="${panelId}"]`)?.click();
-}
+const DEFAULT_PANEL_ID = 'panel-general';
 
-function openSettingsPanel(section: string): void {
-  const panelMap: Record<string, string> = {
+/**
+ * Which panel the page should open on, from ?tab= / ?section=.
+ *
+ * Returned rather than navigated to: main.ts hands this to
+ * DashboardBootstrapper.start(), so the deep link and the default go through
+ * the same single navigation instead of one overwriting the other.
+ */
+export function resolveInitialPanelId(search: string = window.location.search): string {
+  const urlParams = new URLSearchParams(search);
+
+  if (urlParams.get('tab') === 'history') {
+    return 'panel-sqlite-history';
+  }
+
+  const sectionPanelMap: Record<string, string> = {
     obsidian: 'panel-general',
     'ai-provider': 'panel-general',
     general: 'panel-general',
   };
+  const section = urlParams.get('section');
+  if (section && sectionPanelMap[section]) {
+    return sectionPanelMap[section];
+  }
 
-  const panelId = panelMap[section];
-  if (!panelId) return;
+  return DEFAULT_PANEL_ID;
+}
 
-  navigateToPanel(panelId);
+/**
+ * Scroll to / expand the part of the general panel named by ?section=.
+ *
+ * Separate from resolveInitialPanelId because it must run after the panel has
+ * mounted — the elements it reaches for do not exist before then.
+ */
+export function applySectionDeepLink(search: string = window.location.search): void {
+  const section = new URLSearchParams(search).get('section');
 
   if (section === 'obsidian') {
     const details = document.getElementById('obsidianSettingsDetails') as HTMLDetailsElement | null;
@@ -56,16 +67,9 @@ function openSettingsPanel(section: string): void {
       details.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   } else if (section === 'ai-provider') {
-    const aiSection = document.getElementById('aiProviderSection');
-    if (aiSection) {
-      aiSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    document.getElementById('aiProviderSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
-
-// ============================================================================
-// Initialization
-// ============================================================================
 
 export function setHtmlLangDir(): void {
   const locale = chrome.i18n.getUILanguage();
@@ -75,20 +79,11 @@ export function setHtmlLangDir(): void {
   document.documentElement.dir = rtlLanguages.includes(langCode) ? 'rtl' : 'ltr';
 }
 
+/** Page-level wiring that does not depend on any panel being mounted. */
 export async function initDashboard(): Promise<void> {
   console.log('[Dashboard] Starting initialization...');
 
   try { setHtmlLangDir(); } catch (e) { console.error('[Dashboard] setHtmlLangDir error:', e); }
-
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('tab') === 'history') {
-    navigateToPanel('panel-sqlite-history');
-  }
-
-  const section = urlParams.get('section');
-  if (section) {
-    openSettingsPanel(section);
-  }
 
   document.getElementById('historyExportLocalMarkdownBtn')?.addEventListener('click', handleHistoryExportLocalMarkdown);
   document.getElementById('exportLocalMarkdownBtn')?.addEventListener('click', handleExportLocalMarkdown);
@@ -96,5 +91,3 @@ export async function initDashboard(): Promise<void> {
 
   console.log('[Dashboard] Initialization complete');
 }
-
-void initDashboard();

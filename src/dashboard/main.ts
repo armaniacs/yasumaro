@@ -11,6 +11,7 @@ import { createPrivacySettingsPanel } from './panels/staticForm/privacySettingsP
 import { createAiSummaryCleansingPanel } from './panels/staticForm/aiSummaryCleansingPanel.js';
 import { STATIC_FORM_PANELS } from './panels/staticForm/staticPanels.js';
 import { setRegistry } from './panels/registryContext.js';
+import { initDashboard, resolveInitialPanelId, applySectionDeepLink } from './dashboard.js';
 
 const registry = new NavigationRegistry();
 setRegistry(registry);
@@ -36,5 +37,9 @@ if (sidebar) {
   bootstrapper.wireSidebar(sidebar);
 }
 
-// Start with default panel
-bootstrapper.start('panel-general');
+// The deep link decides the starting panel, so start() runs once rather than
+// navigating to the default and then being corrected.
+bootstrapper.start(resolveInitialPanelId());
+applySectionDeepLink();
+
+void initDashboard();
