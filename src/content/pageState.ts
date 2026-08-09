@@ -7,6 +7,7 @@
  */
 
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
+import { CLEANSING_RULES } from '../utils/aiSummaryCleaner/rules.js';
 
 // 【設定定数】: デフォルト値の定義
 const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
@@ -63,43 +64,25 @@ export interface CleansingConfig {
     contentDedupThreshold: number;
 }
 
+/**
+ * Rule-flag defaults for the placeholder config used before loadSettings()
+ * resolves. init() always awaits loadSettings() before anything can read
+ * cleansingConfig for a real extraction, so this only needs to match
+ * `defaultEnabled` (the "no value specified yet" fallback), not the
+ * new-user storage default — see pbi/2026-08-09-20.
+ */
+const CLEANSING_RULE_PLACEHOLDER_DEFAULTS = Object.fromEntries(
+    CLEANSING_RULES.map(rule => [
+        `aiSummaryCleansing${rule.key.charAt(0).toUpperCase()}${rule.key.slice(1)}`,
+        rule.defaultEnabled,
+    ]),
+) as Record<string, boolean>;
+
 export const DEFAULT_CLEANSING_CONFIG: CleansingConfig = {
     contentStripHardEnabled: true,
     contentStripKeywordEnabled: true,
     contentStripKeywords: ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'],
     aiSummaryCleansingEnabled: true,
-    aiSummaryCleansingAlt: true,
-    aiSummaryCleansingMetadata: true,
-    aiSummaryCleansingAds: true,
-    aiSummaryCleansingNav: true,
-    aiSummaryCleansingSocial: true,
-    aiSummaryCleansingDeep: false,
-    aiSummaryCleansingJsonLd: false,
-    aiSummaryCleansingLazyLoad: false,
-    aiSummaryCleansingSkipLink: false,
-    aiSummaryCleansingCard: false,
-    aiSummaryCleansingLinkDensity: false,
-    aiSummaryCleansingFixed: false,
-    aiSummaryCleansingRecommend: true,
-    aiSummaryCleansingPagination: false,
-    aiSummaryCleansingSnsPromo: false,
-    aiSummaryCleansingPopup: true,
-    aiSummaryCleansingPlatform: false,
-    aiSummaryCleansingTextDensity: false,
-    aiSummaryCleansingShortSeq: false,
-    aiSummaryCleansingSymbolLine: false,
-    aiSummaryCleansingLinkPara: false,
-    aiSummaryCleansingEnhancedHidden: false,
-    aiSummaryCleansingEmptyElem: false,
-    aiSummaryCleansingJpLayout: false,
-    aiSummaryCleansingJpNavigation: false,
-    aiSummaryCleansingAuthor: false,
-    aiSummaryCleansingAffiliate: false,
-    aiSummaryCleansingSpeechBubble: false,
-    aiSummaryCleansingNewsMedia: true,
-    aiSummaryCleansingEcSite: true,
-    aiSummaryCleansingQaSite: true,
-    aiSummaryCleansingVideoSite: true,
     whitelistExtractionEnabled: true,
     aiSummaryCleansingLinkRatioThreshold: 70,
     aiSummaryCleansingShortTextThreshold: 30,
@@ -110,7 +93,14 @@ export const DEFAULT_CLEANSING_CONFIG: CleansingConfig = {
     aiSummaryCleansingFallbackMinBytes: 300,
     contentDedupEnabled: true,
     contentDedupThreshold: 0.7,
-};
+    // The 32 rule flags are derived below rather than listed individually —
+    // see CLEANSING_RULE_PLACEHOLDER_DEFAULTS above. Completeness (every
+    // CleansingConfig rule property present) is checked at runtime by
+    // pageState.test.ts rather than statically: the derived object's type
+    // is a plain Record<string, boolean>, which TypeScript cannot narrow
+    // back to the named union of 32 specific keys.
+    ...CLEANSING_RULE_PLACEHOLDER_DEFAULTS,
+} as unknown as CleansingConfig;
 
 export class PageState {
     // 【訪問状態】: スクロール深度や訪問時間の監視に使用
