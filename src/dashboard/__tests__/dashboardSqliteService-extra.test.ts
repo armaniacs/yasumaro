@@ -291,19 +291,19 @@ describe('dashboardSqliteService — additional exports', () => {
     it('returns inserted/skipped/total on success', async () => {
       givenResponse({ success: true, inserted: 2, skipped: 0, total: 2 });
       const result = await importLogs(sampleRows);
-      expect(result).toEqual({ inserted: 2, skipped: 0, total: 2 });
+      expect(result).toEqual({ data: { inserted: 2, skipped: 0, total: 2 } });
     });
 
-    it('returns null on failed response', async () => {
+    it('carries the reason from a failed response', async () => {
       givenResponse({ success: false, error: 'Import failed' });
       const result = await importLogs(sampleRows);
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: 'Import failed' });
     });
 
-    it('returns null on rejection', async () => {
+    it('carries the reason on rejection', async () => {
       givenLastError('Failed');
       const result = await importLogs(sampleRows);
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: expect.stringContaining('Failed') });
     });
   });
 
@@ -311,31 +311,31 @@ describe('dashboardSqliteService — additional exports', () => {
     it('returns success with appended count', async () => {
       givenResponse({ success: true, appended: 5 });
       const result = await appendToLogs([1, 2, 3, 4, 5]);
-      expect(result).toEqual({ success: true, appended: 5 });
+      expect(result).toEqual({ data: { appended: 5 } });
     });
 
     it('returns success with ids.length fallback when appended missing', async () => {
       givenResponse({ success: true });
       const result = await appendToLogs([1, 2, 3]);
-      expect(result).toEqual({ success: true, appended: 3 });
+      expect(result).toEqual({ data: { appended: 3 } });
     });
 
-    it('returns error object when response is failure', async () => {
+    it('carries the reason when response is failure', async () => {
       givenResponse({ success: false, error: 'Obsidian not configured' });
       const result = await appendToLogs([1]);
-      expect(result).toEqual({ success: false, error: 'Obsidian not configured' });
+      expect(result).toEqual({ error: 'Obsidian not configured' });
     });
 
-    it('returns default error message when no error in response', async () => {
+    it('falls back to a fixed message when no error in response', async () => {
       givenResponse({ success: false });
       const result = await appendToLogs([1]);
-      expect(result).toEqual({ success: false, error: 'Append failed' });
+      expect(result).toEqual({ error: 'Append failed' });
     });
 
-    it('returns null on rejection', async () => {
+    it('carries the reason on rejection', async () => {
       givenLastError('Failed');
       const result = await appendToLogs([1]);
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: expect.stringContaining('Failed') });
     });
   });
 });

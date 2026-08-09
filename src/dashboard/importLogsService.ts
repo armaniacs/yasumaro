@@ -57,17 +57,27 @@ export async function importFromJson(
   const BATCH_SIZE = 200;
   let inserted = 0;
   let skipped = 0;
+  // Distinct reasons across batches, not just the last one: a large import
+  // spans many batches and different batches can fail for different reasons.
+  const batchErrors = new Set<string>();
 
   for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
     const batch = validRows.slice(i, i + BATCH_SIZE);
     const result = await importLogs(batch);
-    if (result) {
-      inserted += result.inserted;
-      skipped += result.skipped;
+    if ('data' in result) {
+      inserted += result.data.inserted;
+      skipped += result.data.skipped;
     } else {
       skipped += batch.length;
+      batchErrors.add(result.error);
     }
     onProgress?.(Math.min(i + BATCH_SIZE, validRows.length), validRows.length);
+  }
+
+  if (batchErrors.size > 0 && inserted === 0) {
+    // Every batch failed the same way: surfacing that reason beats reporting
+    // "0 inserted" and leaving the user to guess why.
+    return { error: Array.from(batchErrors).join('; ') };
   }
 
   return { inserted, skipped, total: validRows.length };

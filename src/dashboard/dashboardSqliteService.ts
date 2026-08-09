@@ -455,7 +455,7 @@ export async function importLogs(rows: Array<{
   url: string; title?: string; summary?: string; tags?: string;
   created_at: number; domain?: string; visit_duration?: number;
   scroll_ratio?: number; is_starred?: number; is_deleted?: number;
-}>): Promise<{ inserted: number; skipped: number; total: number } | null> {
+}>): Promise<ServiceResult<{ inserted: number; skipped: number; total: number }>> {
   try {
     const response = await sendDashboardMessage(
       { subtype: 'import', rows },
@@ -463,15 +463,17 @@ export async function importLogs(rows: Array<{
     );
     if (response.success) {
       return {
-        inserted: Number(response.inserted || 0),
-        skipped: Number(response.skipped || 0),
-        total: Number(response.total || 0),
+        data: {
+          inserted: Number(response.inserted || 0),
+          skipped: Number(response.skipped || 0),
+          total: Number(response.total || 0),
+        },
       };
     }
-    return null;
+    return { error: String(response.error || 'Import failed') };
   } catch (error) {
-    console.error('importLogs failed:', error);
-    return null;
+    console.error('importLogs failed:', errorMessage(error));
+    return { error: errorMessage(error) };
   }
 }
 
@@ -479,16 +481,16 @@ export async function importLogs(rows: Array<{
  * Append selected log entries to Obsidian daily note.
  * Read-only on SQLite — no confirm token needed.
  */
-export async function appendToLogs(ids: number[]): Promise<{ success: boolean; appended?: number; error?: string } | null> {
+export async function appendToLogs(ids: number[]): Promise<ServiceResult<{ appended: number }>> {
   try {
     const response = await sendDashboardMessage({ subtype: 'append_to_obsidian', ids });
     if (response.success) {
-      return { success: true, appended: Number(response.appended || ids.length) };
+      return { data: { appended: Number(response.appended || ids.length) } };
     }
-    return { success: false, error: response.error ? String(response.error) : 'Append failed' };
+    return { error: response.error ? String(response.error) : 'Append failed' };
   } catch (error) {
-    console.error('appendToLogs failed:', error);
-    return null;
+    console.error('appendToLogs failed:', errorMessage(error));
+    return { error: errorMessage(error) };
   }
 }
 
