@@ -83,7 +83,9 @@ describe('handleDashboardSqlite — query', () => {
     const mock = createMockSqliteClient();
     mock.query.mockResolvedValue(null);
     const result = await dispatchDashboardSqlite({ subtype: 'query' }, mock as any);
-    expect(result).toEqual({ success: false, error: 'Query failed' });
+    // retriable accompanies read-path failures so the dashboard can decide
+    // whether waiting for initialization is worth another attempt.
+    expect(result).toEqual({ success: false, error: 'Query failed', retriable: false });
   });
 });
 
@@ -180,7 +182,7 @@ describe('handleDashboardSqlite — get_count', () => {
     const mock = createMockSqliteClient();
     mock.getCount.mockResolvedValue(null);
     const result = await dispatchDashboardSqlite({ subtype: 'get_count' }, mock as any);
-    expect(result).toEqual({ success: false, error: 'Get count failed' });
+    expect(result).toEqual({ success: false, error: 'Get count failed', retriable: false });
   });
 });
 
@@ -363,7 +365,7 @@ describe('handleDashboardSqlite — backup_db', () => {
     const mock = createMockSqliteClient();
     mock.backupDb.mockResolvedValue(null);
     const result = await dispatchDashboardSqlite({ subtype: 'backup_db', confirmToken: VALID_TOKEN }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
-    expect(result).toEqual({ success: false, error: 'Backup failed' });
+    expect(result).toEqual({ success: false, error: 'Backup failed', retriable: false });
   });
 });
 

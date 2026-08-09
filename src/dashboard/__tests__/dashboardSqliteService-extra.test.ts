@@ -216,16 +216,24 @@ describe('dashboardSqliteService — additional exports', () => {
       expect(result).toEqual(new Uint8Array([1, 2, 3]));
     });
 
-    it('returns null when response has no data', async () => {
+    it('reports an error when a successful response carries no data', async () => {
+      // Returning null here would let the caller offer the user an empty file
+      // as a completed backup.
       givenResponse({ success: true });
       const result = await backupDb();
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: 'Backup returned no data' });
     });
 
-    it('returns null on failed response', async () => {
+    it('surfaces the failure reason instead of collapsing it to null', async () => {
+      givenResponse({ success: false, error: 'Storage quota exceeded.' });
+      const result = await backupDb();
+      expect(result).toEqual({ error: 'Storage quota exceeded.' });
+    });
+
+    it('falls back to a generic message when the failure has no error text', async () => {
       givenResponse({ success: false });
       const result = await backupDb();
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: 'Backup failed' });
     });
 
     it('returns null on rejection', async () => {
