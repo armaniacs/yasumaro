@@ -341,17 +341,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     const ids = Array.from(state.selectedIds);
     const result = await appendToLogs(ids);
 
-    if (result === null) {
-      chrome.notifications?.create({
-        type: 'basic',
-        iconUrl: chrome.runtime.getURL('/icons/icon48.png'),
-        title: t('historyAppendToObsidian'),
-        message: t('historyAppendObsidianNotConfigured'),
-      });
-      return;
-    }
-
-    if (result.success) {
+    if ('data' in result) {
       state.selectedIds.clear();
       refresh();
       chrome.notifications?.create({
@@ -360,14 +350,18 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         title: t('historyAppendToObsidian'),
         message: t(getPluralKey('historyAppendSuccess', ids.length), [String(ids.length)]),
       });
-    } else {
-      chrome.notifications?.create({
-        type: 'basic',
-        iconUrl: chrome.runtime.getURL('/icons/icon48.png'),
-        title: t('historyAppendToObsidian'),
-        message: t('historyAppendFailed'),
-      });
+      return;
     }
+
+    // "Obsidian not configured" used to be the only failure message shown,
+    // covering both that case and every other reason alike; the reason from
+    // the response is now available and worth showing instead of guessing.
+    chrome.notifications?.create({
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('/icons/icon48.png'),
+      title: t('historyAppendToObsidian'),
+      message: `${t('historyAppendFailed')}: ${result.error}`,
+    });
   }
 
   function handleSearch(query: string): void {

@@ -330,7 +330,7 @@ describe('appendToLogs', () => {
 
     const result = await appendToLogs([]);
 
-    expect(result).toEqual({ success: false, error: 'No IDs provided' });
+    expect(result).toEqual({ error: 'No IDs provided' });
   });
 
   it('sends correct message payload with ids', async () => {
@@ -350,7 +350,7 @@ describe('appendToLogs', () => {
 
     const result = await appendToLogs([10, 20, 30, 40, 50]);
 
-    expect(result).toEqual({ success: true, appended: 5 });
+    expect(result).toEqual({ data: { appended: 5 } });
   });
 
   it('falls back to ids.length when appended count not provided', async () => {
@@ -358,7 +358,7 @@ describe('appendToLogs', () => {
 
     const result = await appendToLogs([1, 2]);
 
-    expect(result).toEqual({ success: true, appended: 2 });
+    expect(result).toEqual({ data: { appended: 2 } });
   });
 
   it('returns error result on SW failure response', async () => {
@@ -366,7 +366,7 @@ describe('appendToLogs', () => {
 
     const result = await appendToLogs([1]);
 
-    expect(result).toEqual({ success: false, error: 'Obsidian connection refused' });
+    expect(result).toEqual({ error: 'Obsidian connection refused' });
   });
 
   it('returns generic error when SW response has no error message', async () => {
@@ -374,14 +374,16 @@ describe('appendToLogs', () => {
 
     const result = await appendToLogs([1]);
 
-    expect(result).toEqual({ success: false, error: 'Append failed' });
+    expect(result).toEqual({ error: 'Append failed' });
   });
 
-  it('returns null on exception (SW rejection)', async () => {
+  it('carries the reason on exception (SW rejection)', async () => {
+    // Used to collapse to null, which is why the panel showed a fixed
+    // "Obsidian not configured" message for every kind of failure.
     givenLastError('Service worker unavailable');
 
     const result = await appendToLogs([1]);
 
-    expect(result).toBeNull();
+    expect(result).toEqual({ error: expect.stringContaining('Service worker unavailable') });
   });
 });

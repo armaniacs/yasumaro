@@ -45,7 +45,7 @@ describe('importFromJson', () => {
   });
 
   it('imports valid rows and filters out invalid ones', async () => {
-    vi.mocked(importLogs).mockResolvedValue({ inserted: 2, skipped: 0, total: 2 });
+    vi.mocked(importLogs).mockResolvedValue({ data: { inserted: 2, skipped: 0, total: 2 } });
     const { importFromJson } = await import('../importLogsService.js');
     const json = JSON.stringify({
       rows: [
@@ -63,7 +63,7 @@ describe('importFromJson', () => {
   });
 
   it('calls onProgress callback with current and total', async () => {
-    vi.mocked(importLogs).mockResolvedValue({ inserted: 10, skipped: 0, total: 10 });
+    vi.mocked(importLogs).mockResolvedValue({ data: { inserted: 10, skipped: 0, total: 10 } });
     const { importFromJson } = await import('../importLogsService.js');
     const onProgress = vi.fn();
     const rows = Array.from({ length: 250 }, (_, i) => ({
@@ -78,10 +78,10 @@ describe('importFromJson', () => {
     expect(onProgress).toHaveBeenNthCalledWith(2, 250, 250);
   });
 
-  it('handle batch where importLogs returns null and counts skipped', async () => {
+  it('handle batch where importLogs fails and counts skipped', async () => {
     vi.mocked(importLogs)
-      .mockResolvedValueOnce({ inserted: 2, skipped: 0, total: 2 })
-      .mockResolvedValueOnce(null);
+      .mockResolvedValueOnce({ data: { inserted: 2, skipped: 0, total: 2 } })
+      .mockResolvedValueOnce({ error: 'Batch too large' });
     const { importFromJson } = await import('../importLogsService.js');
     const rows = Array.from({ length: 250 }, (_, i) => ({
       url: `https://example${i}.com`,
@@ -90,5 +90,31 @@ describe('importFromJson', () => {
     const json = JSON.stringify({ rows });
     const result = await importFromJson(json);
     expect(result).toEqual({ inserted: 2, skipped: 50, total: 250 });
+  });
+
+  it('surfaces the reason when every batch fails', async () => {
+    // Nothing was inserted, so "0 inserted, N skipped" would leave the user
+    // guessing why — the collected batch reasons replace it.
+    vi.mocked(importLogs).mockResolvedValue({ error: 'Database is locked' });
+    const { importFromJson } = await import('../importLogsService.js');
+    const json = JSON.stringify({
+      rows: [{ url: 'https://example.com', created_at: 1000 }],
+    });
+    const result = await importFromJson(json);
+    expect(result).toEqual({ error: 'Database is locked' });
+  });
+
+  it('joins distinct reasons across multiple failed batches', async () => {
+    vi.mocked(importLogs)
+      .mockResolvedValueOnce({ error: 'Database is locked' })
+      .mockResolvedValueOnce({ error: 'Batch too large' });
+    const { importFromJson } = await import('../importLogsService.js');
+    const rows = Array.from({ length: 250 }, (_, i) => ({
+      url: `https://example${i}.com`,
+      created_at: 1000 + i,
+    }));
+    const json = JSON.stringify({ rows });
+    const result = await importFromJson(json);
+    expect(result).toEqual({ error: 'Database is locked; Batch too large' });
   });
 });
