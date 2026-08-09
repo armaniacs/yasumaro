@@ -1,67 +1,53 @@
 /**
  * AI要約クリーニング — メインエントリーポイント
- * 各_strip関数を統合し、オプションに基づいてクレンジングを実行する
+ * ルール表 (rules.ts) を走査してクレンジングを実行する
  *
- * 【リファクタリング履歴】: 単一ファイル（2103行）からモジュール分割へ実装
- * 新しいモジュール構成:
+ * 【モジュール構成】
  * - types.ts          - 型定義（AiSummaryCleanseOptions, AiSummaryCleanseResult）
  * - patterns.ts       - パターン定数（AD_CLASS_PATTERNS等）
  * - helpers.ts        - ヘルパー関数（buildClassIdSelectors等）
- * - stripCore.ts      - コア11個の_strip関数
- * - stripExtended.ts  - 拡張15個の_strip関数
- * - countTargets.ts   - カウント専用関数
+ * - rules.ts          - ルール表（単一の情報源）
+ * - stripCore.ts      - コアの_strip関数
+ * - stripExtended.ts  - 拡張の_strip関数
  * - index.ts          - オーケストレーター（このファイル）+ 再エクスポート
  */
 
 import { logDebug } from '../logger.js';
-import type { AiSummaryCleanseOptions, AiSummaryCleanseResult } from './types.js';
+import type { AiSummaryCleanseOptions, AiSummaryCleanseResult, CleansingRemovalCounts } from './types.js';
 import { markBodyElements, unmarkBodyElements } from './bodyProtection.js';
+import { CLEANSING_RULES, isRuleEnabled, resolveThresholds } from './rules.js';
 
-// コア_strip関数
-import {
-    stripAltAttributes,
-    stripMetadataElements,
-    stripAdElements,
-    stripNavElements,
-    stripLegalTextNodes,
-    stripHighLinkDensityElements,
-    stripSocialElements,
-    stripJsonLdScripts,
-    stripLazyLoadElements,
-    stripSkipLinks,
-    stripCardElements,
-    stripDeepElements,
-} from './stripCore.js';
+// 型とルール表を再エクスポート
+export type { AiSummaryCleanseOptions, AiSummaryCleanseResult, CleansingRemovalCounts } from './types.js';
+export { CLEANSING_RULES, CLEANSING_RULE_KEYS, isRuleEnabled, resolveThresholds } from './rules.js';
+export type { CleansingRule, CleansingThresholds } from './rules.js';
 
-// 拡張_strip関数
-import {
-    stripFixedElements,
-    stripRecommendSections,
-    stripPaginationElements,
-    stripSnsPromoElements,
-    stripPopupElements,
-    stripPlatformNoise,
-    stripTextDensityElements,
-    stripShortSequenceElements,
-    stripSymbolLineElements,
-    stripLinkOnlyParagraphs,
-    stripEnhancedHiddenElements,
-    stripEmptyElements,
-    stripJPLayoutPatterns,
-    stripJPNavigationPatterns,
-    stripAuthorMetaElements,
-    stripAffiliateElements,
-    stripSpeechBubbles,
-    stripNewsMediaPatterns,
-    stripEcSitePatterns,
-    stripQaSitePatterns,
-    stripVideoSitePatterns,
-} from './stripExtended.js';
+/**
+ * Projects the keyed removal map onto the flat `xRemoved` fields.
+ *
+ * The map is the source of truth. These fields exist because callers and
+ * tests read them by name; nothing computes them independently, so they
+ * cannot drift from the map the way the old parallel implementations did.
+ */
+function buildCleanseResult(
+    removed: CleansingRemovalCounts,
+    bytesBefore: number,
+    bytesAfter: number,
+): AiSummaryCleanseResult {
+    const totalRemoved = Object.values(removed).reduce((sum, n) => sum + n, 0);
+    const flat: Record<string, number> = {};
+    for (const [key, count] of Object.entries(removed)) {
+        flat[`${key}Removed`] = count;
+    }
 
-// 型とパターンを再エクスポート
-export type { AiSummaryCleanseOptions, AiSummaryCleanseResult } from './types.js';
-export { countAISummaryTargets } from './countTargets.js';
-
+    return {
+        removed,
+        ...flat,
+        totalRemoved,
+        bytesBefore,
+        bytesAfter,
+    } as AiSummaryCleanseResult;
+}
 
 /**
  * DOMからAI要約に不要な要素を削除する
@@ -73,228 +59,27 @@ export function cleanseAISummaryContent(
     element: Element,
     options: AiSummaryCleanseOptions = {}
 ): AiSummaryCleanseResult {
-    const {
-        altEnabled = true,
-        metadataEnabled = true,
-        adsEnabled = true,
-        navEnabled = true,
-        socialEnabled = true,
-        deepEnabled = false,
-        jsonLdEnabled = false,
-        lazyLoadEnabled = false,
-        skipLinkEnabled = false,
-        cardEnabled = false,
-        linkDensityEnabled = false,
-        // NEW: 6 つの新しいオプション
-        fixedEnabled = false,
-        recommendEnabled = true,
-        paginationEnabled = false,
-        snsPromoEnabled = false,
-        popupEnabled = true,
-        platformEnabled = false,
-        // NEW: 9 つの追加オプション
-        textDensityEnabled = false,
-        shortSeqEnabled = false,
-        symbolLineEnabled = false,
-        linkParaEnabled = false,
-        enhancedHiddenEnabled = false,
-        emptyElemEnabled = false,
-        jpLayoutEnabled = false,
-        jpNavigationEnabled = false,
-        authorEnabled = false,
-        // Category A: WordPress Theme Specific Patterns
-        affiliateEnabled = false,
-        speechBubbleEnabled = false,
-        // Category B: Site-Type Specific Patterns (News/EC/QA/Video)
-        newsMediaEnabled = false,
-        ecSiteEnabled = false,
-        qaSiteEnabled = false,
-        videoSiteEnabled = false,
-        // Body protection options
-        bodyProtectionEnabled = true,
-        bodyProtectionThreshold = 200,
-        // Threshold settings
-        linkRatioThreshold = 70,
-        shortTextThreshold = 30,
-        shortSeqCount = 5,
-        linkParaThreshold = 50,
-        // Custom patterns
-        customPatterns = [],
-    } = options;
+    const { bodyProtectionEnabled = true, bodyProtectionThreshold = 200 } = options;
+    const thresholds = resolveThresholds(options);
 
     const bytesBefore = new Blob([element.outerHTML || '']).size;
-
-    let altRemoved = 0;
-    let metadataRemoved = 0;
-    let adsRemoved = 0;
-    let navRemoved = 0;
-    let socialRemoved = 0;
-    let deepRemoved = 0;
-    let jsonLdRemoved = 0;
-    let lazyLoadRemoved = 0;
-    let skipLinkRemoved = 0;
-    let cardRemoved = 0;
-    let linkDensityRemoved = 0;
-    // NEW: 6 つの新しいオプション
-    let fixedRemoved = 0;
-    let recommendRemoved = 0;
-    let paginationRemoved = 0;
-    let snsPromoRemoved = 0;
-    let popupRemoved = 0;
-    let platformRemoved = 0;
-    // NEW: 9 つの追加オプション
-    let textDensityRemoved = 0;
-    let shortSeqRemoved = 0;
-    let symbolLineRemoved = 0;
-    let linkParaRemoved = 0;
-    let enhancedHiddenRemoved = 0;
-    let emptyElemRemoved = 0;
-    let jpLayoutRemoved = 0;
-    let jpNavigationRemoved = 0;
-    let authorRemoved = 0;
-    let affiliateRemoved = 0;
-    let speechBubbleRemoved = 0;
-    let newsMediaRemoved = 0;
-    let ecSiteRemoved = 0;
-    let qaSiteRemoved = 0;
-    let videoSiteRemoved = 0;
 
     // Step 1: 本文要素にマーキング（本文保護が有効な場合）
     if (bodyProtectionEnabled) {
         markBodyElements(element, bodyProtectionThreshold);
     }
 
-    if (altEnabled) {
-        altRemoved = stripAltAttributes(element);
-    }
-
-    if (metadataEnabled) {
-        metadataRemoved = stripMetadataElements(element);
-    }
-
-    if (adsEnabled) {
-        adsRemoved = stripAdElements(element);
-    }
-
-    if (navEnabled) {
-        navRemoved = stripNavElements(element);
-        navRemoved += stripLegalTextNodes(element);
-    }
-
-    if (socialEnabled) {
-        socialRemoved = stripSocialElements(element);
-    }
-
-    if (deepEnabled) {
-        deepRemoved = stripDeepElements(element);
-    }
-
-    if (jsonLdEnabled) {
-        jsonLdRemoved = stripJsonLdScripts(element);
-    }
-
-    if (lazyLoadEnabled) {
-        lazyLoadRemoved = stripLazyLoadElements(element);
-    }
-
-    if (skipLinkEnabled) {
-        skipLinkRemoved = stripSkipLinks(element);
-    }
-
-    if (cardEnabled) {
-        cardRemoved = stripCardElements(element);
-    }
-
-    if (linkDensityEnabled) {
-        linkDensityRemoved = stripHighLinkDensityElements(element);
-    }
-
-    // NEW: 6つの新しいクレンジングオプション
-    if (fixedEnabled) {
-        fixedRemoved = stripFixedElements(element);
-    }
-
-    if (recommendEnabled) {
-        recommendRemoved = stripRecommendSections(element);
-    }
-
-    if (paginationEnabled) {
-        paginationRemoved = stripPaginationElements(element);
-    }
-
-    if (snsPromoEnabled) {
-        snsPromoRemoved = stripSnsPromoElements(element);
-    }
-
-    if (popupEnabled) {
-        popupRemoved = stripPopupElements(element);
-    }
-
-    if (platformEnabled) {
-        platformRemoved = stripPlatformNoise(element);
-    }
-
-    // NEW: 9つの追加クレンジングオプション
-    if (textDensityEnabled) {
-        textDensityRemoved = stripTextDensityElements(element, linkRatioThreshold);
-    }
-
-    if (shortSeqEnabled) {
-        shortSeqRemoved = stripShortSequenceElements(element, shortTextThreshold, shortSeqCount);
-    }
-
-    if (symbolLineEnabled) {
-        symbolLineRemoved = stripSymbolLineElements(element);
-    }
-
-    if (linkParaEnabled) {
-        linkParaRemoved = stripLinkOnlyParagraphs(element, linkParaThreshold);
-    }
-
-    if (enhancedHiddenEnabled) {
-        enhancedHiddenRemoved = stripEnhancedHiddenElements(element);
-    }
-
-    if (emptyElemEnabled) {
-        emptyElemRemoved = stripEmptyElements(element);
-    }
-
-    if (jpLayoutEnabled) {
-        jpLayoutRemoved = stripJPLayoutPatterns(element, customPatterns);
-    }
-
-    if (jpNavigationEnabled) {
-        jpNavigationRemoved = stripJPNavigationPatterns(element);
-    }
-
-    if (authorEnabled) {
-        authorRemoved = stripAuthorMetaElements(element);
-    }
-
-    // Category A: WordPress Theme Specific Patterns
-    if (affiliateEnabled) {
-        affiliateRemoved = stripAffiliateElements(element);
-    }
-
-    if (speechBubbleEnabled) {
-        speechBubbleRemoved = stripSpeechBubbles(element);
-    }
-
-    // Category B: Site-Type Specific Patterns (News/EC/QA/Video)
-    if (newsMediaEnabled) {
-        newsMediaRemoved = stripNewsMediaPatterns(element);
-    }
-
-    if (ecSiteEnabled) {
-        ecSiteRemoved = stripEcSitePatterns(element);
-    }
-
-    if (qaSiteEnabled) {
-        qaSiteRemoved = stripQaSitePatterns(element);
-    }
-
-    if (videoSiteEnabled) {
-        videoSiteRemoved = stripVideoSitePatterns(element);
+    // Step 2: ルール表の順にクレンジングを実行
+    //
+    // Disabled rules are recorded as 0 rather than omitted: callers read the
+    // flat `xRemoved` fields and compare them numerically, so a missing key
+    // would surface as `undefined` and break arithmetic. "Did not run" and
+    // "removed nothing" are both zero removals from the caller's point of view.
+    const removed: CleansingRemovalCounts = {};
+    for (const rule of CLEANSING_RULES) {
+        removed[rule.key] = isRuleEnabled(rule, options)
+            ? rule.strip(element, thresholds)
+            : 0;
     }
 
     // Step 3: マーカーを除去（本文保護が有効な場合）
@@ -303,100 +88,40 @@ export function cleanseAISummaryContent(
     }
 
     const bytesAfter = new Blob([element.outerHTML || '']).size;
-
-    const total = altRemoved + metadataRemoved + adsRemoved + navRemoved +
-        socialRemoved + deepRemoved + jsonLdRemoved + lazyLoadRemoved +
-        skipLinkRemoved + cardRemoved + linkDensityRemoved +
-        fixedRemoved + recommendRemoved + paginationRemoved +
-        snsPromoRemoved + popupRemoved + platformRemoved +
-        textDensityRemoved + shortSeqRemoved + symbolLineRemoved +
-        linkParaRemoved + enhancedHiddenRemoved + emptyElemRemoved +
-        jpLayoutRemoved + jpNavigationRemoved + authorRemoved +
-        affiliateRemoved + speechBubbleRemoved +
-        newsMediaRemoved + ecSiteRemoved + qaSiteRemoved + videoSiteRemoved;
+    const result = buildCleanseResult(removed, bytesBefore, bytesAfter);
 
     logDebug('AI Summary Cleansing executed', {
-        totalRemoved: total,
+        totalRemoved: result.totalRemoved,
         bytesBefore,
         bytesAfter,
         compressionRatio: bytesBefore > 0
             ? ((bytesBefore - bytesAfter) / bytesBefore * 100).toFixed(1) + '%'
             : '0%',
-        breakdown: {
-            alt: altRemoved,
-            metadata: metadataRemoved,
-            ads: adsRemoved,
-            nav: navRemoved,
-            social: socialRemoved,
-            deep: deepRemoved,
-            jsonLd: jsonLdRemoved,
-            lazyLoad: lazyLoadRemoved,
-            skipLink: skipLinkRemoved,
-            card: cardRemoved,
-            linkDensity: linkDensityRemoved,
-            // NEW: 6 options
-            fixed: fixedRemoved,
-            recommend: recommendRemoved,
-            pagination: paginationRemoved,
-            snsPromo: snsPromoRemoved,
-            popup: popupRemoved,
-            platform: platformRemoved,
-            // NEW: 9 options
-            textDensity: textDensityRemoved,
-            shortSeq: shortSeqRemoved,
-            symbolLine: symbolLineRemoved,
-            linkPara: linkParaRemoved,
-            enhancedHidden: enhancedHiddenRemoved,
-            emptyElem: emptyElemRemoved,
-            jpLayout: jpLayoutRemoved,
-            jpNavigation: jpNavigationRemoved,
-            author: authorRemoved,
-            affiliate: affiliateRemoved,
-            speechBubble: speechBubbleRemoved,
-            newsMedia: newsMediaRemoved,
-            ecSite: ecSiteRemoved,
-            qaSite: qaSiteRemoved,
-            videoSite: videoSiteRemoved,
-        }
+        breakdown: removed,
     }, 'aiSummaryCleaner');
 
-    return {
-        altRemoved,
-        metadataRemoved,
-        adsRemoved,
-        navRemoved,
-        socialRemoved,
-        deepRemoved,
-        jsonLdRemoved,
-        lazyLoadRemoved,
-        skipLinkRemoved,
-        cardRemoved,
-        linkDensityRemoved,
-        // NEW: 6 options
-        fixedRemoved,
-        recommendRemoved,
-        paginationRemoved,
-        snsPromoRemoved,
-        popupRemoved,
-        platformRemoved,
-        // NEW: 9 options
-        textDensityRemoved,
-        shortSeqRemoved,
-        symbolLineRemoved,
-        linkParaRemoved,
-        enhancedHiddenRemoved,
-        emptyElemRemoved,
-        jpLayoutRemoved,
-        jpNavigationRemoved,
-        authorRemoved,
-        affiliateRemoved,
-        speechBubbleRemoved,
-        newsMediaRemoved,
-        ecSiteRemoved,
-        qaSiteRemoved,
-        videoSiteRemoved,
-        totalRemoved: total,
-        bytesBefore,
-        bytesAfter
-    };
+    return result;
+}
+
+/**
+ * DOMのAI要約クレンジング対象要素数をカウントする（削除は行わない）
+ *
+ * Counting runs the real strip functions over a throwaway clone rather than
+ * reimplementing the matching logic. The previous hand-written counter drifted
+ * from the strips it mirrored — on identical input it reported 25 where the
+ * strips removed 14, because it matched on different selectors — and silently
+ * ignored 15 of the 32 rules entirely.
+ *
+ * The clone is discarded, so the caller's DOM is untouched.
+ *
+ * @param element - カウント対象のルート要素
+ * @param options - クレンジングオプション
+ * @returns カウント結果（削除は行わない）
+ */
+export function countAISummaryTargets(
+    element: Element,
+    options: AiSummaryCleanseOptions = {}
+): AiSummaryCleanseResult {
+    const clone = element.cloneNode(true) as Element;
+    return cleanseAISummaryContent(clone, options);
 }

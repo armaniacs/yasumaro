@@ -59,9 +59,24 @@ export interface AiSummaryCleanseOptions {
 }
 
 /**
+ * ルールごとの削除数。キーは CLEANSING_RULES の `key`。
+ *
+ * Every rule that ran has an entry, so "absent" means "did not run" rather
+ * than being indistinguishable from "removed nothing". The flat `xRemoved`
+ * fields below are derived from this map and kept for existing readers.
+ */
+export type CleansingRemovalCounts = Record<string, number>;
+
+/**
  * AI要約クレンジング結果
+ *
+ * `removed` is the source of truth; the individual `xRemoved` fields are
+ * projections of it. They stay because callers and tests read them by name,
+ * but nothing writes them independently — see buildCleanseResult().
  */
 export interface AiSummaryCleanseResult {
+    /** ルールキー → 削除数。実行したルールのみを含む。 */
+    removed: CleansingRemovalCounts;
     altRemoved: number;             // 画像alt属性削除数
     metadataRemoved: number;        // メタデータ削除数
     adsRemoved: number;             // 広告関連要素削除数
