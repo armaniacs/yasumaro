@@ -7,17 +7,9 @@ import { createTagClusterPanel } from './panels/asyncData/tagClusterPanel.js';
 import { createHistoryPanel } from './panels/asyncData/historyPanel.js';
 import { createSqliteHistoryPanel } from './panels/asyncData/sqliteHistoryPanel.js';
 import { createGeneralSettingsPanel } from './panels/staticForm/generalSettingsPanel.js';
-import { createDomainFilterPanel } from './panels/staticForm/domainFilterPanel.js';
-import { createPromptSettingsPanel } from './panels/staticForm/promptSettingsPanel.js';
-import { createMarkdownTemplatePanel } from './panels/staticForm/markdownTemplatePanel.js';
 import { createPrivacySettingsPanel } from './panels/staticForm/privacySettingsPanel.js';
-import { createContentSettingsPanel } from './panels/staticForm/contentSettingsPanel.js';
 import { createAiSummaryCleansingPanel } from './panels/staticForm/aiSummaryCleansingPanel.js';
-import { createTrustSettingsPanel } from './panels/staticForm/trustSettingsPanel.js';
-import { createCspSettingsPanel } from './panels/staticForm/cspSettingsPanel.js';
-import { createTagsSettingsPanel } from './panels/staticForm/tagsSettingsPanel.js';
-import { createRecordingConditionsPanel } from './panels/staticForm/recordingConditionsPanel.js';
-import { createExportImportPanel } from './panels/staticForm/exportImportPanel.js';
+import { STATIC_FORM_PANELS } from './panels/staticForm/staticPanels.js';
 import { setRegistry } from './panels/registryContext.js';
 
 const registry = new NavigationRegistry();
@@ -31,19 +23,12 @@ bootstrapper.registerPanels([
   createTagClusterPanel(),
   createHistoryPanel(),
   createSqliteHistoryPanel(),
-  // StaticFormPanels
+  // StaticFormPanels that carry logic of their own
   createGeneralSettingsPanel(),
-  createDomainFilterPanel(),
-  createPromptSettingsPanel(),
-  createMarkdownTemplatePanel(),
   createPrivacySettingsPanel(),
-  createContentSettingsPanel(),
   createAiSummaryCleansingPanel(),
-  createTrustSettingsPanel(),
-  createCspSettingsPanel(),
-  createTagsSettingsPanel(),
-  createRecordingConditionsPanel(),
-  createExportImportPanel(),
+  // StaticFormPanels that only forward to an init function
+  ...STATIC_FORM_PANELS,
 ]);
 
 const sidebar = document.getElementById('sidebar');
