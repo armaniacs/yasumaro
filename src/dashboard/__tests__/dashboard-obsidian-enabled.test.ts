@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   loadGeneralSettings,
-} from '../dashboard.js';
+} from '../generalSettings/settingsForm.js';
 import { extractSettingsFromInputs } from '../../utils/settingsFormBinding.js';
 
 vi.stubGlobal('chrome', {

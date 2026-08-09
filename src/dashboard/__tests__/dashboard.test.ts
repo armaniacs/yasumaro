@@ -204,12 +204,15 @@ vi.mock('../../popup/privacyConsent.js', () => ({
 // Import after mocks
 import {
     initDashboard,
-    createConnectionStatusElement,
     setHtmlLangDir,
-    testObsidianConnection,
-    testAiConnection,
     toMarkdownTemplateEntryData,
 } from '../dashboard.js';
+// Connection tests moved out of dashboard.ts (PBI-24).
+import {
+    createConnectionStatusElement,
+    testObsidianConnection,
+    testAiConnection,
+} from '../generalSettings/connectionTests.js';
 
 describe('dashboard.ts exports', () => {
     it('exports initDashboard', async () => {
