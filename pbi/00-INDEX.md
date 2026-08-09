@@ -21,7 +21,6 @@
 | 🔶 [2026-08-09-23-refactor-sqlite-transport-layers.md](2026-08-09-23-refactor-sqlite-transport-layers.md) | 🔴大 | 🔴あり | 🔧 | **Epic 8pt**: Phase1(型二重化解消/2pt)・Phase2(失敗表現統一/3pt)完了。Phase3(宣言表/3pt)は confirmToken のセキュリティ経路に触れるため**要シニア相談・未着手**。判断材料をPBI内に記録済み |
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
 | 🔶 [2026-08-07-08-refactor-ai-client-service-unification.md](2026-08-07-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合（modelName型ドリフトは解消済み。AIClient削除は中核パスの高リスクのため保留） |
-| 🔶 [2026-08-07-13-refactor-service-wiring-backend-consolidation.md](2026-08-07-13-refactor-service-wiring-backend-consolidation.md) | 🟡中 | 🟡軽微 | 🔧 | サービス配線・StorageBackend・プロバイダ設定表示・エラー処理の統合候補（エラー処理イディオムは解消済み。他は調査により実重複でない/高リスクと判断し保留） |
 
 ---
 
@@ -73,6 +72,10 @@
 
 - 2026-08-09-24-refactor-dashboard-reverse-dependency.md (panel層→dashboard.tsの逆依存と二重bootstrapを解消。dashboard.ts 1000行超→93行。借り手が1人しかいない関数を共有モジュールに置く形をやめ、generalSettings/connectionTests.ts・settingsForm.ts と panel 側へ再配置。**計画のRed前提は誤りだった**: testDir/vitest.setup.ts が chrome を全体モックするため「import すると初期化が落ちる」は起きず、import グラフをソース文字列で検証する形に書き換えた。ディープリンクは start() へ渡す形になり click 合成フォールバックが不要に。テスト7711→7727)
 - 2026-08-08-09-refactor-dashboard-dual-bootstrap.md (Phase1/3は先行セッションで完了、残る Phase2/4 を 2026-08-09-24 が実施したため完了扱い)
+
+### 2026-08-10 セッションでアーカイブ済み（1件）
+
+- 2026-08-07-13-refactor-service-wiring-backend-consolidation.md (サービス配線・StorageBackend・プロバイダ設定表示・エラー処理の統合候補。調査結果「実重複でない/高リスク」と判断し対応不要でクローズ)
 
 **同セッションでアーカイブした実装計画（dev-docs/archived/plans/）10件**:
 2026-07-27-pbi11 / pbi13 / pbi15 / pbi24 / pbi26 / pbi27 / pbi29-36-35 / pbi34 の各計画と
@@ -302,9 +305,9 @@
 | 状態 | 件数 |
 |---|---|
 | ⬜ 未着手 | 1（✨機能追加 0 / 🔧非機能追加 1） |
-| 🔶 部分実装 | 3（2026-08-07-08 AIレイヤー統合 / 2026-08-07-13 サービス配線・StorageBackend / 2026-08-09-23 SQLiteトランスポート層 Phase1・2完了） |
-| **`pbi/` 残存合計** | **4** |
-| アーカイブ済みPBI | 243 |
+| 🔶 部分実装 | 2（2026-08-07-08 AIレイヤー統合 / 2026-08-09-23 SQLiteトランスポート層 Phase1・2完了） |
+| **`pbi/` 残存合計** | **3** |
+| アーカイブ済みPBI | 244 |
 | アーカイブ済み実装計画 | 103 |
 
 未着手の内訳:
@@ -313,13 +316,12 @@
 |---|---|---|
 | 2026-08-01-17 | 暗号化キーの chrome.storage.session 移行 | 独立 |
 
-部分実装の内訳（PBI-23）:
+部分実装の内訳:
 
-| Phase | 状態 | 備考 |
+| PBI | 内容 | 状態 |
 |---|---|---|
-| Phase 1（型二重化解消・2pt） | ✅ 完了 | 双方向の故意破壊で検出を確認済み |
-| Phase 2（失敗表現統一・3pt） | ✅ 完了 | 11関数を ServiceResult へ統一。過程で実害3件を発見・修正 |
-| Phase 3（宣言表・3pt） | ⬜ 未着手 | confirmToken のセキュリティ経路に触れるため**要シニア相談**。判断材料をPBI本文に記録済み |
+| 2026-08-07-08（AIレイヤー統合） | modelName型ドリフト解消済み。AIClient削除は中核パスの高リスクのため保留 | 🔶 |
+| 2026-08-09-23（SQLiteトランスポート層） | Phase1/2完了、Phase3（宣言表）は要シニア相談で未着手 | 🔶 |
 
 ### 2026-08-09 アーキテクチャレビュー由来（20〜24）の実施順と依存
 
