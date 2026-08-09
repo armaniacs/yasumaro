@@ -396,7 +396,7 @@ export function createSqliteClientDeps(
 ): DashboardSqliteHandlerDeps {
   return {
     // Every *Result variant keeps the failure reason attached to the call
-    // that produced it, instead of routing it through sqliteClient.lastError.
+    // that produced it, rather than routing it through shared client state.
     query: (params) => sqliteClient.queryResult(params),
     search: (query, limit, offset) => sqliteClient.searchResult(query, limit, offset),
     toggleStar: (id) => sqliteClient.toggleStarResult(id),

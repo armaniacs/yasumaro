@@ -117,25 +117,6 @@ export class SqliteClient {
    */
   private readonly requestQueue: Mutex;
 
-  /**
-   * Last categorized error from call().
-   *
-   * This is shared mutable state: it describes "the most recent failure by
-   * anyone", not "why *your* call failed". Reading it after a call can observe
-   * a different operation's error, or null, if another operation completed in
-   * between — the read is outside the request Mutex.
-   *
-   * Read-path methods therefore return their error in CallResult instead. This
-   * field remains for the write-path handlers and for diagnostic logging,
-   * which only need a best-effort "what went wrong recently".
-   */
-  lastErrorDetail: SqliteError | null = null;
-
-  /** Backwards-compatible view of {@link lastErrorDetail} for existing readers. */
-  get lastError(): string | null {
-    return this.lastErrorDetail?.message ?? null;
-  }
-
   /** Per-message timeout, shortened on mobile (see MESSAGE_TIMEOUT_MS_MOBILE). */
   private readonly messageTimeoutMs: number;
 
@@ -267,18 +248,15 @@ export class SqliteClient {
         const msg = String(res?.error || `${type} failed`);
         recordSqliteFailure(type, msg);
         logError('SQLite Client: call failed', { error: msg, traceId }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
-        this.lastErrorDetail = categorizeError(msg);
-        return { success: false, error: this.lastErrorDetail };
+        return { success: false, error: categorizeError(msg) };
       }
       recordSqliteSuccess();
-      this.lastErrorDetail = null;
       return { success: true, data: transform ? transform(res) : (res as unknown as T) };
     } catch (error) {
       const msg = errorMessage(error);
       recordSqliteFailure(type, msg);
       logError('SQLite Client: call failed', { error: msg, traceId }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
-      this.lastErrorDetail = categorizeError(msg);
-      return { success: false, error: this.lastErrorDetail };
+      return { success: false, error: categorizeError(msg) };
     }
   }
 
