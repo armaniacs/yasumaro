@@ -48,19 +48,19 @@ describe('dashboardSqliteService — additional exports', () => {
     it('returns count, read, inserted on success', async () => {
       givenResponse({ success: true, count: 30, read: 35, inserted: 30 });
       const result = await migrateLogs();
-      expect(result).toEqual({ count: 30, read: 35, inserted: 30 });
+      expect(result).toEqual({ data: { count: 30, read: 35, inserted: 30 } });
     });
 
-    it('returns null on failed response', async () => {
+    it('carries the reason from a failed response', async () => {
       givenResponse({ success: false, error: 'Migration failed' });
       const result = await migrateLogs();
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: 'Migration failed' });
     });
 
-    it('returns null on rejection', async () => {
+    it('carries the reason on rejection', async () => {
       givenLastError('Connection failed');
       const result = await migrateLogs();
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: expect.stringContaining('Connection failed') });
     });
   });
 
@@ -69,25 +69,25 @@ describe('dashboardSqliteService — additional exports', () => {
       const report = { strategy: 'opfs-async-main', steps: [], passed: true, durationMs: 5 };
       givenResponse({ success: true, report });
       const result = await runOpfsSpike();
-      expect(result).toEqual(report);
+      expect(result).toEqual({ data: report });
     });
 
-    it('returns null when response has no report', async () => {
+    it('reports a failure when the response has no report', async () => {
       givenResponse({ success: true });
       const result = await runOpfsSpike();
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: 'OPFS spike returned no report' });
     });
 
-    it('returns null on failed response', async () => {
-      givenResponse({ success: false });
+    it('carries the reason from a failed response', async () => {
+      givenResponse({ success: false, error: 'Worker crashed' });
       const result = await runOpfsSpike();
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: 'Worker crashed' });
     });
 
-    it('returns null on rejection', async () => {
+    it('carries the reason on rejection', async () => {
       givenLastError('Timeout');
       const result = await runOpfsSpike();
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: expect.stringContaining('Timeout') });
     });
   });
 
@@ -173,25 +173,25 @@ describe('dashboardSqliteService — additional exports', () => {
     it('returns removed keys and bytes on success', async () => {
       givenResponse({ success: true, removed: ['old_key_1', 'old_key_2'], totalBytes: 1024 });
       const result = await cleanupLegacyStorage();
-      expect(result).toEqual({ removed: ['old_key_1', 'old_key_2'], totalBytes: 1024 });
+      expect(result).toEqual({ data: { removed: ['old_key_1', 'old_key_2'], totalBytes: 1024 } });
     });
 
     it('handles missing response fields', async () => {
       givenResponse({ success: true });
       const result = await cleanupLegacyStorage();
-      expect(result).toEqual({ removed: [], totalBytes: 0 });
+      expect(result).toEqual({ data: { removed: [], totalBytes: 0 } });
     });
 
-    it('returns null on failed response', async () => {
-      givenResponse({ success: false });
+    it('carries the reason from a failed response', async () => {
+      givenResponse({ success: false, error: 'Permission denied' });
       const result = await cleanupLegacyStorage();
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: 'Permission denied' });
     });
 
-    it('returns null on rejection', async () => {
+    it('carries the reason on rejection', async () => {
       givenLastError('Failed');
       const result = await cleanupLegacyStorage();
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: expect.stringContaining('Failed') });
     });
   });
 
@@ -199,19 +199,19 @@ describe('dashboardSqliteService — additional exports', () => {
     it('returns updated and total counts on success', async () => {
       givenResponse({ success: true, updated: 5, total: 10 });
       const result = await backfillMetadata();
-      expect(result).toEqual({ updated: 5, total: 10 });
+      expect(result).toEqual({ data: { updated: 5, total: 10 } });
     });
 
-    it('returns null on failed response', async () => {
-      givenResponse({ success: false });
+    it('carries the reason from a failed response', async () => {
+      givenResponse({ success: false, error: 'Backfill query failed' });
       const result = await backfillMetadata();
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: 'Backfill query failed' });
     });
 
-    it('returns null on rejection', async () => {
+    it('carries the reason on rejection', async () => {
       givenLastError('Failed');
       const result = await backfillMetadata();
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: expect.stringContaining('Failed') });
     });
   });
 
