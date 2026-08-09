@@ -18,6 +18,7 @@
  */
 
 import type { AiSummaryCleanseOptions } from './types.js';
+import { StorageKeys } from '../storage/types.js';
 import {
     stripAltAttributes,
     stripMetadataElements,
@@ -82,12 +83,27 @@ export const THRESHOLD_DEFAULTS: CleansingThresholds = {
  * `key` is the stable identifier used for the option name (`${key}Enabled`),
  * the result map key, the persisted reason value, and the i18n message key.
  * Deriving all four from one string is what keeps the layers in step.
+ *
+ * `newUserDefault` and `defaultEnabled` look redundant but are not: they
+ * answer different questions and legitimately differ for the 7 rules whose
+ * rollout was staged (Category A `jpLayout`, Category B `newsMedia`/`ecSite`/
+ * `qaSite`/`videoSite`, plus `deep`/`linkDensity`). `migration.ts` writes
+ * `false` for those keys into an *existing* user's storage so their behaviour
+ * does not change on update, while a *fresh install* gets `newUserDefault`
+ * from DEFAULT_SETTINGS. `defaultEnabled` is the value used only when a
+ * caller — a test, or countAISummaryTargets — omits the flag entirely; that
+ * has no relationship to whether the user is new or existing, so it is not
+ * safe to collapse the two into one field.
  */
 export interface CleansingRule {
     /** Stable identifier. Drives option name, result key, reason and label. */
     key: string;
-    /** Whether the rule runs when the caller does not specify it. */
+    /** Value used when a caller (a test, countAISummaryTargets) omits the flag. */
     defaultEnabled: boolean;
+    /** chrome.storage key. Must match the value already in StorageKeys. */
+    storageKey: string;
+    /** DEFAULT_SETTINGS value for a fresh install (storage empty). */
+    newUserDefault: boolean;
     /** Removes matching content and returns how many elements it removed. */
     strip: (element: Element, thresholds: CleansingThresholds) => number;
 }
@@ -101,40 +117,47 @@ export interface CleansingRule {
  * dispatch sequence exactly.
  */
 export const CLEANSING_RULES: readonly CleansingRule[] = [
-    { key: 'alt', defaultEnabled: true, strip: (el) => stripAltAttributes(el) },
-    { key: 'metadata', defaultEnabled: true, strip: (el) => stripMetadataElements(el) },
-    { key: 'ads', defaultEnabled: true, strip: (el) => stripAdElements(el) },
+    { key: 'alt', defaultEnabled: true, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_ALT, newUserDefault: true, strip: (el) => stripAltAttributes(el) },
+    { key: 'metadata', defaultEnabled: true, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_METADATA, newUserDefault: true, strip: (el) => stripMetadataElements(el) },
+    { key: 'ads', defaultEnabled: true, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_ADS, newUserDefault: true, strip: (el) => stripAdElements(el) },
     // nav folds in legal text nodes: both are "site chrome", and they were
     // summed into a single counter before this table existed.
-    { key: 'nav', defaultEnabled: true, strip: (el) => stripNavElements(el) + stripLegalTextNodes(el) },
-    { key: 'social', defaultEnabled: true, strip: (el) => stripSocialElements(el) },
-    { key: 'deep', defaultEnabled: false, strip: (el) => stripDeepElements(el) },
-    { key: 'jsonLd', defaultEnabled: false, strip: (el) => stripJsonLdScripts(el) },
-    { key: 'lazyLoad', defaultEnabled: false, strip: (el) => stripLazyLoadElements(el) },
-    { key: 'skipLink', defaultEnabled: false, strip: (el) => stripSkipLinks(el) },
-    { key: 'card', defaultEnabled: false, strip: (el) => stripCardElements(el) },
-    { key: 'linkDensity', defaultEnabled: false, strip: (el) => stripHighLinkDensityElements(el) },
-    { key: 'fixed', defaultEnabled: false, strip: (el) => stripFixedElements(el) },
-    { key: 'recommend', defaultEnabled: true, strip: (el) => stripRecommendSections(el) },
-    { key: 'pagination', defaultEnabled: false, strip: (el) => stripPaginationElements(el) },
-    { key: 'snsPromo', defaultEnabled: false, strip: (el) => stripSnsPromoElements(el) },
-    { key: 'popup', defaultEnabled: true, strip: (el) => stripPopupElements(el) },
-    { key: 'platform', defaultEnabled: false, strip: (el) => stripPlatformNoise(el) },
-    { key: 'textDensity', defaultEnabled: false, strip: (el, t) => stripTextDensityElements(el, t.linkRatioThreshold) },
-    { key: 'shortSeq', defaultEnabled: false, strip: (el, t) => stripShortSequenceElements(el, t.shortTextThreshold, t.shortSeqCount) },
-    { key: 'symbolLine', defaultEnabled: false, strip: (el) => stripSymbolLineElements(el) },
-    { key: 'linkPara', defaultEnabled: false, strip: (el, t) => stripLinkOnlyParagraphs(el, t.linkParaThreshold) },
-    { key: 'enhancedHidden', defaultEnabled: false, strip: (el) => stripEnhancedHiddenElements(el) },
-    { key: 'emptyElem', defaultEnabled: false, strip: (el) => stripEmptyElements(el) },
-    { key: 'jpLayout', defaultEnabled: false, strip: (el, t) => stripJPLayoutPatterns(el, t.customPatterns) },
-    { key: 'jpNavigation', defaultEnabled: false, strip: (el) => stripJPNavigationPatterns(el) },
-    { key: 'author', defaultEnabled: false, strip: (el) => stripAuthorMetaElements(el) },
-    { key: 'affiliate', defaultEnabled: false, strip: (el) => stripAffiliateElements(el) },
-    { key: 'speechBubble', defaultEnabled: false, strip: (el) => stripSpeechBubbles(el) },
-    { key: 'newsMedia', defaultEnabled: false, strip: (el) => stripNewsMediaPatterns(el) },
-    { key: 'ecSite', defaultEnabled: false, strip: (el) => stripEcSitePatterns(el) },
-    { key: 'qaSite', defaultEnabled: false, strip: (el) => stripQaSitePatterns(el) },
-    { key: 'videoSite', defaultEnabled: false, strip: (el) => stripVideoSitePatterns(el) },
+    { key: 'nav', defaultEnabled: true, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_NAV, newUserDefault: true, strip: (el) => stripNavElements(el) + stripLegalTextNodes(el) },
+    { key: 'social', defaultEnabled: true, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL, newUserDefault: true, strip: (el) => stripSocialElements(el) },
+    // newUserDefault:true has no migration pinning existing users to false
+    // (unlike jpLayout/newsMedia below) — see pbi/2026-08-09-20 "落とし穴".
+    { key: 'deep', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_DEEP, newUserDefault: true, strip: (el) => stripDeepElements(el) },
+    { key: 'jsonLd', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD, newUserDefault: false, strip: (el) => stripJsonLdScripts(el) },
+    { key: 'lazyLoad', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD, newUserDefault: false, strip: (el) => stripLazyLoadElements(el) },
+    { key: 'skipLink', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK, newUserDefault: false, strip: (el) => stripSkipLinks(el) },
+    { key: 'card', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_CARD, newUserDefault: false, strip: (el) => stripCardElements(el) },
+    // Same staged-rollout shape as deep: no migration exists for this key.
+    { key: 'linkDensity', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY, newUserDefault: true, strip: (el) => stripHighLinkDensityElements(el) },
+    { key: 'fixed', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_FIXED, newUserDefault: false, strip: (el) => stripFixedElements(el) },
+    { key: 'recommend', defaultEnabled: true, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_RECOMMEND, newUserDefault: true, strip: (el) => stripRecommendSections(el) },
+    { key: 'pagination', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION, newUserDefault: false, strip: (el) => stripPaginationElements(el) },
+    { key: 'snsPromo', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO, newUserDefault: false, strip: (el) => stripSnsPromoElements(el) },
+    { key: 'popup', defaultEnabled: true, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_POPUP, newUserDefault: true, strip: (el) => stripPopupElements(el) },
+    { key: 'platform', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM, newUserDefault: false, strip: (el) => stripPlatformNoise(el) },
+    { key: 'textDensity', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY, newUserDefault: false, strip: (el, t) => stripTextDensityElements(el, t.linkRatioThreshold) },
+    { key: 'shortSeq', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ, newUserDefault: false, strip: (el, t) => stripShortSequenceElements(el, t.shortTextThreshold, t.shortSeqCount) },
+    { key: 'symbolLine', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SYMBOL_LINE, newUserDefault: false, strip: (el) => stripSymbolLineElements(el) },
+    { key: 'linkPara', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA, newUserDefault: false, strip: (el, t) => stripLinkOnlyParagraphs(el, t.linkParaThreshold) },
+    { key: 'enhancedHidden', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN, newUserDefault: false, strip: (el) => stripEnhancedHiddenElements(el) },
+    { key: 'emptyElem', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM, newUserDefault: false, strip: (el) => stripEmptyElements(el) },
+    // Category A: migrateJpLayoutDefault() pins existing users to false so
+    // this staged true only reaches fresh installs.
+    { key: 'jpLayout', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT, newUserDefault: true, strip: (el, t) => stripJPLayoutPatterns(el, t.customPatterns) },
+    { key: 'jpNavigation', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION, newUserDefault: false, strip: (el) => stripJPNavigationPatterns(el) },
+    { key: 'author', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR, newUserDefault: false, strip: (el) => stripAuthorMetaElements(el) },
+    { key: 'affiliate', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_AFFILIATE, newUserDefault: false, strip: (el) => stripAffiliateElements(el) },
+    { key: 'speechBubble', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE, newUserDefault: false, strip: (el) => stripSpeechBubbles(el) },
+    // Category B: migrateCategoryBDefault() pins existing users to false so
+    // this staged true only reaches fresh installs (all 4 below).
+    { key: 'newsMedia', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_NEWS_MEDIA, newUserDefault: true, strip: (el) => stripNewsMediaPatterns(el) },
+    { key: 'ecSite', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_EC_SITE, newUserDefault: true, strip: (el) => stripEcSitePatterns(el) },
+    { key: 'qaSite', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_QA_SITE, newUserDefault: true, strip: (el) => stripQaSitePatterns(el) },
+    { key: 'videoSite', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE, newUserDefault: true, strip: (el) => stripVideoSitePatterns(el) },
 ] as const;
 
 /** Every rule key, in execution order. */
