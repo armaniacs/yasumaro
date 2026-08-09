@@ -6,6 +6,8 @@
  * tests create a fresh instance per case instead of resetting globals.
  */
 
+import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
+
 // 【設定定数】: デフォルト値の定義
 const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
 const DEFAULT_MIN_SCROLL_DEPTH = 50;   // パーセンテージ
@@ -143,7 +145,7 @@ export class PageState {
         aiSummaryOriginalBytes: number;
         aiSummaryCleansedBytes: number;
         aiSummaryCleansedElements: number;
-        aiSummaryCleansedReason: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none';
+        aiSummaryCleansedReason: AiSummaryCleansedReason;
         aiSummaryCleansedReasons?: string[];
     } = {
         aiSummaryOriginalBytes: 0,

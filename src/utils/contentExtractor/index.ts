@@ -16,6 +16,7 @@ import { cleanseContent, countCleanseTargets, type CleanseOptions, type CleanseR
 import { logSanitize, logDebug } from '../logger.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../messaging/protocol.js';
 import { cleanseAISummaryContent, countAISummaryTargets, type AiSummaryCleanseOptions, type AiSummaryCleanseResult } from '../aiSummaryCleaner/index.js';
+import { deriveCleansedReason } from './cleansedReason.js';
 import { deduplicateContent } from '../contentDeduplicator.js';
 import type { ExtractResult, AiSummaryCleanseRunResult } from './types.js';
 import { findMainContentCandidates } from './scoring.js';
@@ -53,28 +54,10 @@ function runAiSummaryCleanse(
     const aiSummaryCleanseResult = cleanseAISummaryContent(clone, options);
     const cleansedBytes = getByteSize(clone.textContent || '');
 
-    let reason: ExtractResult['aiSummaryCleansedReason'] = 'none';
-    let reasons: string[] = [];
-    let elements = 0;
-
-    if (aiSummaryCleanseResult.totalRemoved > 0) {
-        const removedTypes: string[] = [];
-        if (aiSummaryCleanseResult.altRemoved > 0) removedTypes.push('alt');
-        if (aiSummaryCleanseResult.metadataRemoved > 0) removedTypes.push('metadata');
-        if (aiSummaryCleanseResult.adsRemoved > 0) removedTypes.push('ads');
-        if (aiSummaryCleanseResult.navRemoved > 0) removedTypes.push('nav');
-        if (aiSummaryCleanseResult.socialRemoved > 0) removedTypes.push('social');
-        if (aiSummaryCleanseResult.deepRemoved > 0) removedTypes.push('deep');
-
-        if (removedTypes.length === 1) {
-            reason = removedTypes[0] as ExtractResult['aiSummaryCleansedReason'];
-        } else if (removedTypes.length > 1) {
-            reason = 'multiple';
-            reasons = removedTypes;
-        }
-
-        elements = aiSummaryCleanseResult.totalRemoved;
-    }
+    // Reasons come from the rule table via the removal map, so every rule that
+    // ran can become a reason. This block used to list only 6 of the 32 rules.
+    const { reason, reasons } = deriveCleansedReason(aiSummaryCleanseResult);
+    const elements = aiSummaryCleanseResult.totalRemoved > 0 ? aiSummaryCleanseResult.totalRemoved : 0;
 
     return { originalBytes, cleansedBytes, reason, reasons, elements, preCleanseText };
 }
@@ -518,43 +501,10 @@ export function extractMainContent(
             });
             aiSummaryCleansedElements = aiSummaryCountResult.totalRemoved;
             // カウント結果に応じて理由を設定（0件の場合は'none'のまま）
-            if (aiSummaryCountResult.totalRemoved > 0) {
-                if (aiSummaryCleansedReason === 'none') {
-                    const removedTypes: string[] = [];
-                    if (aiSummaryCountResult.altRemoved > 0) removedTypes.push('alt');
-                    if (aiSummaryCountResult.metadataRemoved > 0) removedTypes.push('metadata');
-                    if (aiSummaryCountResult.adsRemoved > 0) removedTypes.push('ads');
-                    if (aiSummaryCountResult.navRemoved > 0) removedTypes.push('nav');
-                    if (aiSummaryCountResult.socialRemoved > 0) removedTypes.push('social');
-                    if (aiSummaryCountResult.deepRemoved > 0) removedTypes.push('deep');
-                    if (aiSummaryCountResult.jsonLdRemoved! > 0) removedTypes.push('jsonLd');
-                    if (aiSummaryCountResult.lazyLoadRemoved! > 0) removedTypes.push('lazyLoad');
-                    if (aiSummaryCountResult.skipLinkRemoved! > 0) removedTypes.push('skipLink');
-                    if (aiSummaryCountResult.cardRemoved! > 0) removedTypes.push('card');
-                    if (aiSummaryCountResult.linkDensityRemoved! > 0) removedTypes.push('linkDensity');
-                    if (aiSummaryCountResult.fixedRemoved! > 0) removedTypes.push('fixed');
-                    if (aiSummaryCountResult.recommendRemoved! > 0) removedTypes.push('recommend');
-                    if (aiSummaryCountResult.paginationRemoved! > 0) removedTypes.push('pagination');
-                    if (aiSummaryCountResult.snsPromoRemoved! > 0) removedTypes.push('snsPromo');
-                    if (aiSummaryCountResult.popupRemoved! > 0) removedTypes.push('popup');
-                    if (aiSummaryCountResult.platformRemoved! > 0) removedTypes.push('platform');
-                    if (aiSummaryCountResult.textDensityRemoved! > 0) removedTypes.push('textDensity');
-                    if (aiSummaryCountResult.shortSeqRemoved! > 0) removedTypes.push('shortSeq');
-                    if (aiSummaryCountResult.symbolLineRemoved! > 0) removedTypes.push('symbolLine');
-                    if (aiSummaryCountResult.linkParaRemoved! > 0) removedTypes.push('linkPara');
-                    if (aiSummaryCountResult.enhancedHiddenRemoved! > 0) removedTypes.push('enhancedHidden');
-                    if (aiSummaryCountResult.emptyElemRemoved! > 0) removedTypes.push('emptyElem');
-                    if (aiSummaryCountResult.jpLayoutRemoved! > 0) removedTypes.push('jpLayout');
-                    if (aiSummaryCountResult.jpNavigationRemoved! > 0) removedTypes.push('jpNavigation');
-                    if (aiSummaryCountResult.authorRemoved! > 0) removedTypes.push('author');
-
-                    if (removedTypes.length === 1) {
-                        aiSummaryCleansedReason = removedTypes[0] as ExtractResult['aiSummaryCleansedReason'];
-                    } else if (removedTypes.length > 1) {
-                        aiSummaryCleansedReason = 'multiple';
-                        aiSummaryCleansedReasons = removedTypes;
-                    }
-                }
+            if (aiSummaryCountResult.totalRemoved > 0 && aiSummaryCleansedReason === 'none') {
+                const derived = deriveCleansedReason(aiSummaryCountResult);
+                aiSummaryCleansedReason = derived.reason;
+                aiSummaryCleansedReasons = derived.reasons.length > 0 ? derived.reasons : undefined;
             }
         }
         

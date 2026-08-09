@@ -8,6 +8,7 @@
  * @param {CleanseResult | null} result - クレンジング結果
  */
 import type { CleanseResult } from '../contentCleaner.js';
+import type { AiSummaryCleansedReason } from '../commonTypes.js';
 
 export type CleanseCallback = (result: CleanseResult | null) => void;
 
@@ -44,7 +45,7 @@ export interface ExtractResult {
     aiSummaryOriginalBytes?: number;  // AI要約クレンジング前のバイト数
     aiSummaryCleansedBytes?: number;  // AI要約クレンジング後のバイト数
     aiSummaryCleansedElements?: number;  // AI要約クレンジングで削除した要素数
-    aiSummaryCleansedReason?: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none';  // AI要約クレンジング実行理由
+    aiSummaryCleansedReason?: AiSummaryCleansedReason;  // AI要約クレンジング実行理由
     aiSummaryCleansedReasons?: string[];  // 複数理由の詳細リスト（multiple時）
     fallbackTriggered?: boolean;          // フォールバックが発動したか
     fallbackReason?: FallbackReason;      // フォールバック発動理由（triggered 時のみ）
