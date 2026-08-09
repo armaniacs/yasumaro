@@ -14,6 +14,7 @@ import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStat
 import { extractMainContent } from '../utils/contentExtractor/index.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
 import { PageState, DEFAULT_CLEANSING_CONFIG, type CleansingConfig } from './pageState.js';
+import { CLEANSING_RULES } from '../utils/aiSummaryCleaner/rules.js';
 
 // Type-only import to establish graphify edge between content script and
 // the service worker's message type definitions (PBI-02-3).
@@ -183,42 +184,20 @@ function loadSettings(): Promise<void> {
                 pageState.minScrollDepth = Number.isNaN(parsedDepth) ? DEFAULT_MIN_SCROLL_DEPTH : parsedDepth;
             }
             // クレンジング設定を一括読み込み
+            // The 32 per-rule keys are derived from CLEANSING_RULES rather than
+            // listed here individually — see pbi/2026-08-09-20. Non-rule flags
+            // (hard/keyword strip, whitelist extraction, dedup) stay explicit.
+            const cleansingRuleKeys: Array<[StorageKey, keyof CleansingConfig]> = CLEANSING_RULES.map(
+                (rule) => [
+                    rule.storageKey as StorageKey,
+                    `aiSummaryCleansing${rule.key.charAt(0).toUpperCase()}${rule.key.slice(1)}` as keyof CleansingConfig,
+                ],
+            );
             const booleanKeys: Array<[StorageKey, keyof CleansingConfig]> = [
                 [StorageKeys.CONTENT_STRIP_HARD_ENABLED, 'contentStripHardEnabled'],
                 [StorageKeys.CONTENT_STRIP_KEYWORD_ENABLED, 'contentStripKeywordEnabled'],
                 [StorageKeys.AI_SUMMARY_CLEANSING_ENABLED, 'aiSummaryCleansingEnabled'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_ALT, 'aiSummaryCleansingAlt'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_METADATA, 'aiSummaryCleansingMetadata'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_ADS, 'aiSummaryCleansingAds'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_NAV, 'aiSummaryCleansingNav'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL, 'aiSummaryCleansingSocial'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_DEEP, 'aiSummaryCleansingDeep'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD, 'aiSummaryCleansingJsonLd'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD, 'aiSummaryCleansingLazyLoad'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK, 'aiSummaryCleansingSkipLink'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_CARD, 'aiSummaryCleansingCard'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY, 'aiSummaryCleansingLinkDensity'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_FIXED, 'aiSummaryCleansingFixed'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_RECOMMEND, 'aiSummaryCleansingRecommend'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION, 'aiSummaryCleansingPagination'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO, 'aiSummaryCleansingSnsPromo'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_POPUP, 'aiSummaryCleansingPopup'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM, 'aiSummaryCleansingPlatform'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY, 'aiSummaryCleansingTextDensity'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ, 'aiSummaryCleansingShortSeq'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_SYMBOL_LINE, 'aiSummaryCleansingSymbolLine'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA, 'aiSummaryCleansingLinkPara'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN, 'aiSummaryCleansingEnhancedHidden'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM, 'aiSummaryCleansingEmptyElem'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT, 'aiSummaryCleansingJpLayout'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION, 'aiSummaryCleansingJpNavigation'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR, 'aiSummaryCleansingAuthor'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_AFFILIATE, 'aiSummaryCleansingAffiliate'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE, 'aiSummaryCleansingSpeechBubble'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_NEWS_MEDIA, 'aiSummaryCleansingNewsMedia'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_EC_SITE, 'aiSummaryCleansingEcSite'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_QA_SITE, 'aiSummaryCleansingQaSite'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE, 'aiSummaryCleansingVideoSite'],
+                ...cleansingRuleKeys,
                 [StorageKeys.WHITELIST_EXTRACTION_ENABLED, 'whitelistExtractionEnabled'],
                 [StorageKeys.CONTENT_DEDUP_ENABLED, 'contentDedupEnabled'],
             ];

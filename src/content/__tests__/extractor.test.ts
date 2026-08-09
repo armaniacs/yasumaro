@@ -77,6 +77,7 @@ import {
     getPageStateForTesting,
     showPrivacyConfirmDialog,
 } from '../extractor.js';
+import { CLEANSING_RULES } from '../../utils/aiSummaryCleaner/rules.js';
 
 describe('shouldRecordVisit', () => {
     it('returns true when both duration and scroll meet thresholds', () => {
@@ -377,6 +378,32 @@ describe('loadSettings - error handling', () => {
         );
         document.body.innerHTML = '';
         await expect(init()).resolves.not.toThrow();
+    });
+
+    it('loads every cleansing rule flag from its CLEANSING_RULES storageKey', async () => {
+        // Guards the derived booleanKeys mapping in extractor.ts (PBI-20):
+        // each rule's storageKey must round-trip into the matching
+        // aiSummaryCleansing<Key> property on CleansingConfig.
+        const stored: Record<string, unknown> = {};
+        for (const rule of CLEANSING_RULES) {
+            // Flip every flag away from its own default so a no-op mapping
+            // (derived key pointing at the wrong property) would be caught.
+            stored[rule.storageKey] = !rule.defaultEnabled;
+        }
+        (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockImplementation(
+            (_keys: unknown, callback?: (result: Record<string, unknown>) => void) => {
+                if (typeof callback === 'function') callback({ settings: stored });
+                return Promise.resolve({ settings: stored });
+            }
+        );
+        document.body.innerHTML = '';
+        await init();
+
+        const config = getPageStateForTesting().cleansingConfig as unknown as Record<string, boolean>;
+        for (const rule of CLEANSING_RULES) {
+            const prop = `aiSummaryCleansing${rule.key.charAt(0).toUpperCase()}${rule.key.slice(1)}`;
+            expect(config[prop], `${rule.key} -> ${prop}`).toBe(!rule.defaultEnabled);
+        }
     });
 });
 
