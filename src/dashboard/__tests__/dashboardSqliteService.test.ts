@@ -108,7 +108,7 @@ describe('dashboardSqliteService', () => {
       givenResponse({ success: true, is_starred: 1 });
 
       const result = await toggleStar(42);
-      expect(result).toEqual({ is_starred: 1 });
+      expect(result).toEqual({ data: { is_starred: 1 } });
     });
 
     // Failures carry their reason instead of collapsing to null: the panel
@@ -140,7 +140,7 @@ describe('dashboardSqliteService', () => {
       givenResponse({ success: true });
 
       const result = await deleteLog(42);
-      expect(result).toEqual({ ok: true });
+      expect(result).toEqual({ data: undefined });
     });
 
     it('surfaces the failure reason instead of false', async () => {
@@ -166,18 +166,18 @@ describe('dashboardSqliteService', () => {
   });
 
   describe('updateLog', () => {
-    it('returns true on success', async () => {
+    it('returns the success side on success', async () => {
       givenResponse({ success: true });
 
       const result = await updateLog(1, { title: 'Updated' });
-      expect(result).toBe(true);
+      expect(result).toEqual({ data: undefined });
     });
 
-    it('returns false on rejection', async () => {
+    it('surfaces the reason on rejection', async () => {
       givenLastError('Timeout');
 
       const result = await updateLog(1, {});
-      expect(result).toBe(false);
+      expect(result).toEqual({ error: 'Timeout' });
     });
   });
 
