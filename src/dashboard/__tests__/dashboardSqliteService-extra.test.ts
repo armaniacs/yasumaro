@@ -92,22 +92,28 @@ describe('dashboardSqliteService — additional exports', () => {
   });
 
   describe('clearAllLogs', () => {
-    it('returns true on success', async () => {
+    it('returns the success side on success', async () => {
       givenResponse({ success: true });
       const result = await clearAllLogs();
-      expect(result).toBe(true);
+      expect(result).toEqual({ data: undefined });
     });
 
-    it('returns false on failed response', async () => {
+    it('carries the reason from a failed response', async () => {
+      givenResponse({ success: false, error: 'Database is locked' });
+      const result = await clearAllLogs();
+      expect(result).toEqual({ error: 'Database is locked' });
+    });
+
+    it('falls back to a fixed message when the response omits the reason', async () => {
       givenResponse({ success: false });
       const result = await clearAllLogs();
-      expect(result).toBe(false);
+      expect(result).toEqual({ error: 'Clear all failed' });
     });
 
-    it('returns false on rejection', async () => {
+    it('carries the reason on rejection', async () => {
       givenLastError('Timeout');
       const result = await clearAllLogs();
-      expect(result).toBe(false);
+      expect(result).toEqual({ error: expect.stringContaining('Timeout') });
     });
   });
 

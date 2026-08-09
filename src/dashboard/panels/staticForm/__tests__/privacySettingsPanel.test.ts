@@ -36,6 +36,9 @@ vi.mock('../../../utils/confirmDialog.js', () => ({
 const mockClearAllLogs = vi.fn();
 vi.mock('../../../dashboardSqliteService.js', () => ({
   clearAllLogs: (...args: unknown[]) => mockClearAllLogs(...args),
+  // Mirrors the real narrowing helper: the panel imports it alongside
+  // clearAllLogs to tell the failure side of ServiceResult apart.
+  isServiceError: (r: unknown) => typeof r === 'object' && r !== null && 'error' in r,
 }));
 
 import { createPrivacySettingsPanel } from '../privacySettingsPanel.js';
@@ -81,7 +84,7 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
 
   it('確認後、SQLite削除→同意撤回の順で実行される', async () => {
     mockShowConfirmDialog.mockResolvedValue(true);
-    mockClearAllLogs.mockResolvedValue(true);
+    mockClearAllLogs.mockResolvedValue({ data: undefined });
     mockWithdrawPrivacyConsent.mockResolvedValue({ withdrawalDate: '2026-07-26T00:00:00.000Z' });
 
     const panel = createPrivacySettingsPanel();
@@ -103,7 +106,7 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
 
   it('SQLite削除が失敗した場合、同意撤回は呼ばれない（不整合防止）', async () => {
     mockShowConfirmDialog.mockResolvedValue(true);
-    mockClearAllLogs.mockResolvedValue(false);
+    mockClearAllLogs.mockResolvedValue({ error: 'Database is locked' });
 
     const panel = createPrivacySettingsPanel();
     const container = buildContainer();
@@ -118,5 +121,25 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
 
     const statusEl = container.querySelector('#withdrawConsentStatus') as HTMLElement;
     expect(statusEl.textContent).toContain('withdrawConsentDataDeleteFailed');
+    // The reason is what tells the user whether retrying is worth it; the
+    // boolean the function used to return could not carry it.
+    expect(statusEl.textContent).toContain('Database is locked');
+  });
+
+  it('全データ削除の失敗理由が画面に出る', async () => {
+    mockShowConfirmDialog.mockResolvedValue(true);
+    mockClearAllLogs.mockResolvedValue({ error: 'Disk is full' });
+
+    const panel = createPrivacySettingsPanel();
+    const container = buildContainer();
+    await panel.mount(container);
+
+    const btn = container.querySelector('#btnDeleteAllData') as HTMLButtonElement;
+    btn.dispatchEvent(new Event('click'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const statusEl = container.querySelector('#deleteAllDataStatus') as HTMLElement;
+    expect(statusEl.textContent).toContain('deleteAllDataFailed');
+    expect(statusEl.textContent).toContain('Disk is full');
   });
 });

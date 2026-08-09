@@ -12,6 +12,25 @@ const DASHBOARD_SQLITE_TIMEOUT = 10000;
 const CONFIRM_TOKEN_KEY = 'dashboardSqliteConfirmToken';
 
 /**
+ * The uniform failure shape for this module.
+ *
+ * The same "it failed" used to arrive as `null`, `false`, `-1` or `{error}`
+ * depending on which function you happened to call, so every call site had to
+ * remember a different idiom — and the three silent shapes carried no reason
+ * to show the user.
+ *
+ * The success side is `{ data }` rather than `{ ok: true, data }` to match the
+ * `{ ... } | { error }` functions that PBI-19/21 already migrated; adding an
+ * `ok` discriminant here would have made a third idiom instead of removing one.
+ */
+export type ServiceResult<T> = { data: T } | { error: string };
+
+/** Narrowing helper so call sites do not each re-derive the check. */
+export function isServiceError<T>(result: ServiceResult<T>): result is { error: string } {
+  return 'error' in result;
+}
+
+/**
  * Send a DASHBOARD_SQLITE message to the service worker.
  */
 async function getConfirmToken(): Promise<string | null> {
@@ -250,13 +269,16 @@ export async function runOpfsSpike(): Promise<OpfsSpikeReportView | null> {
   }
 }
 
-export async function clearAllLogs(): Promise<boolean> {
+export async function clearAllLogs(): Promise<ServiceResult<void>> {
   try {
     const response = await sendDashboardMessage({ subtype: 'clear_all' }, { requireConfirmToken: true });
-    return response.success === true;
+    if (response.success === true) {
+      return { data: undefined };
+    }
+    return { error: String(response.error || 'Clear all failed') };
   } catch (error) {
-    console.error('clearAllLogs failed:', error);
-    return false;
+    console.error('clearAllLogs failed:', errorMessage(error));
+    return { error: errorMessage(error) };
   }
 }
 
