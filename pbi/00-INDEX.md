@@ -18,7 +18,7 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| ⬜ [2026-08-09-23-refactor-sqlite-transport-layers.md](2026-08-09-23-refactor-sqlite-transport-layers.md) | 🔴大 | 🔴あり | 🔧 | **Epic 8pt・要シニア相談**: 1操作に6層1400行。Phase1(型二重化解消/2pt)・Phase2(失敗表現統一/3pt)・Phase3(宣言表/3pt)。業務ロジックを持つ7caseは機械化しない |
+| 🔶 [2026-08-09-23-refactor-sqlite-transport-layers.md](2026-08-09-23-refactor-sqlite-transport-layers.md) | 🔴大 | 🔴あり | 🔧 | **Epic 8pt**: Phase1(型二重化解消/2pt)・Phase2(失敗表現統一/3pt)完了。Phase3(宣言表/3pt)は confirmToken のセキュリティ経路に触れるため**要シニア相談・未着手**。判断材料をPBI内に記録済み |
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
 | 🔶 [2026-08-07-08-refactor-ai-client-service-unification.md](2026-08-07-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合（modelName型ドリフトは解消済み。AIClient削除は中核パスの高リスクのため保留） |
 | 🔶 [2026-08-07-13-refactor-service-wiring-backend-consolidation.md](2026-08-07-13-refactor-service-wiring-backend-consolidation.md) | 🟡中 | 🟡軽微 | 🔧 | サービス配線・StorageBackend・プロバイダ設定表示・エラー処理の統合候補（エラー処理イディオムは解消済み。他は調査により実重複でない/高リスクと判断し保留） |
@@ -301,8 +301,8 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 2（✨機能追加 0 / 🔧非機能追加 2） |
-| 🔶 部分実装 | 2（2026-08-07-08 AIレイヤー統合 / 2026-08-07-13 サービス配線・StorageBackend） |
+| ⬜ 未着手 | 1（✨機能追加 0 / 🔧非機能追加 1） |
+| 🔶 部分実装 | 3（2026-08-07-08 AIレイヤー統合 / 2026-08-07-13 サービス配線・StorageBackend / 2026-08-09-23 SQLiteトランスポート層 Phase1・2完了） |
 | **`pbi/` 残存合計** | **4** |
 | アーカイブ済みPBI | 243 |
 | アーカイブ済み実装計画 | 103 |
@@ -312,7 +312,14 @@
 | PBI | 内容 | 実施順 |
 |---|---|---|
 | 2026-08-01-17 | 暗号化キーの chrome.storage.session 移行 | 独立 |
-| 2026-08-09-23 | SQLite トランスポート層の削減（Epic） | **次**（20〜22・24は完了）・要シニア相談 |
+
+部分実装の内訳（PBI-23）:
+
+| Phase | 状態 | 備考 |
+|---|---|---|
+| Phase 1（型二重化解消・2pt） | ✅ 完了 | 双方向の故意破壊で検出を確認済み |
+| Phase 2（失敗表現統一・3pt） | ✅ 完了 | 11関数を ServiceResult へ統一。過程で実害3件を発見・修正 |
+| Phase 3（宣言表・3pt） | ⬜ 未着手 | confirmToken のセキュリティ経路に触れるため**要シニア相談**。判断材料をPBI本文に記録済み |
 
 ### 2026-08-09 アーキテクチャレビュー由来（20〜24）の実施順と依存
 
@@ -328,8 +335,7 @@
 24（候補05・逆依存）          ← PBI-09の後継。✅ 完了（アーカイブ済み）
   ↓
 23（候補02・トランスポート）  ← 21が前提（完了済み）。**唯一の残件**。
-                                 Epic 8pt・要シニア相談。
-                                 Phase1（型二重化解消・2pt）だけでも単独マージ可
+                                 Phase1・2は完了。Phase3のみ要シニア相談で未着手
 ```
 
 23 の実装計画は `dev-docs/plans/2026-08-09-pbi23-sqlite-transport-layers-plan.md`。

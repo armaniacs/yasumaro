@@ -5,6 +5,9 @@
 **見積もり**: 🔴大（8pt目安 / Epic規模）
 **副作用**: 🔴あり（confirmToken によるセキュリティ経路に触れる）
 **種別**: ♻️リファクタリング（refactor）
+**進捗（2026-08-10）**: 🔶 部分実装。Phase 1（2pt）・Phase 2（3pt）完了。
+Phase 3（3pt・要シニア相談）は着手せず、下記「Phase 3 着手前の判断材料」に
+実測結果のみ記録した。
 
 > ⚠️ **Epic規模（8pt）。着手前に必ずシニアと設計を相談すること。**
 > Phase 1 のみ単独実施も可能な設計にしてある。
@@ -314,13 +317,57 @@ grep -rn "deleteLog\|updateLog\|clearAllLogs\|toggleStar\|importLogs\|restoreDb"
 
 ---
 
+## Phase 3 着手前の判断材料（2026-08-10 実測）
+
+Phase 1・2 実施の過程でわかったことをここに残す。
+Phase 3 に着手するシニアはこれを起点にしてよい。
+
+### Phase 1・2 で確定したこと
+
+- `SQLITE_MESSAGE_TYPES` は配列を単一ソースとし、型を導出する形に変更済み。
+  union と配列が片方向にでもずれるとコンパイルエラーになる表明を追加した
+  （`sqliteMessages.ts` 末尾の `_UnionCoversArray` / `_ArrayCoversUnion`）。
+  実際に配列から1件落として「型チェックもテスト71件も通る」ことを
+  確認したうえで直しており、Phase 3 で操作表を作る際もこの二重チェック
+  パターンを踏襲できる。
+- `dashboardSqliteService.ts` の11関数すべてが `ServiceResult<T>` を返す。
+  `getLogCount`（-1）と `getSqliteStatus`（診断情報オブジェクト）は
+  計画どおり対象外のまま残した。
+- 移行中に3件の実害を発見・修正済み（詳細は CHANGELOG）:
+  `backupDb` の catch 節が理由を捨てて null を返していた／
+  `importLogs` のバッチ失敗理由が全て捨てられていた／
+  `appendToLogs` の catch 節が「Obsidian未設定」固定文言に丸められ、
+  実際の失敗理由（SW未応答など）を隠していた。
+
+### Phase 3 に持ち越す実測値
+
+- ハンドラの22 case のうち「転送のみ」10件・「業務ロジックあり」7件・
+  「注意が必要」1件（`update`）という計画の分類は、Phase 1・2 の作業中に
+  該当コードを読み直した範囲では変わっていない。
+- `TOKEN_REQUIRED_SUBTYPES` の10件（`toggle_star` `update` `delete` `migrate`
+  `backfill_metadata` `cleanup_legacy` `clear_all` `import` `restore_db`
+  `backup_db`）は現行のまま。Phase 2 では触れていない。
+- confirmToken のセキュリティテストは4ファイル。Phase 2 の変更はいずれも
+  `dashboardSqliteService.ts` より上の層（呼び出し元の理由表示）に閉じており、
+  トークン検証そのものには触れていない。
+
+### 未着手の理由
+
+Phase 3 は「操作の宣言表を作り `requiresToken` を必須プロパティにする」という
+セキュリティ経路そのものの変更であり、本PBIの計画書が明示的に
+「要シニア相談」「最もリスクが高い」と位置づけている。この作業を行った
+セッションにはシニアと直接相談する手段がなかったため、計画の指示に従い
+Phase 3 には着手していない。
+
+---
+
 ## Definition of Done
 
-- [ ] 実施した Phase の受け入れ基準をすべて満たす
-- [ ] confirmToken のセキュリティテスト4ファイルが通る
-- [ ] `npm run validate` / `npm run build` / `npm run test:e2e` が通る
-- [ ] コードレビュー完了（**セキュリティ経路のため必須**）
-- [ ] CHANGELOG.md に記載
+- [x] 実施した Phase（1・2）の受け入れ基準をすべて満たす。Phase 3 は未着手
+- [x] confirmToken のセキュリティテスト4ファイルが通る（Phase 2 の変更後も変わらず通過）
+- [x] `npm run validate` / `npm run build` / `npm run test:e2e` が通る
+- [ ] コードレビュー完了（**セキュリティ経路のため必須**）— Phase 3 着手時に改めて必要
+- [x] CHANGELOG.md に記載
 
 ---
 
