@@ -16,6 +16,7 @@ import { cleanseContent, countCleanseTargets, type CleanseOptions, type CleanseR
 import { logSanitize, logDebug } from '../logger.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../messaging/protocol.js';
 import { cleanseAISummaryContent, countAISummaryTargets, type AiSummaryCleanseOptions, type AiSummaryCleanseResult } from '../aiSummaryCleaner/index.js';
+import { THRESHOLD_DEFAULTS } from '../aiSummaryCleaner/rules.js';
 import { deriveCleansedReason } from './cleansedReason.js';
 import { deduplicateContent } from '../contentDeduplicator.js';
 import type { ExtractResult, AiSummaryCleanseRunResult } from './types.js';
@@ -88,7 +89,20 @@ export function extractMainContent(
 ): ExtractResult | string {
     let content = '';
     const { cleanseEnabled = false, hardStripEnabled = true, keywordStripEnabled = true, keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'], returnInfo = false } = cleanseOptions;
-    const { aiSummaryCleanseEnabled = false, altEnabled = true, metadataEnabled = true, adsEnabled = true, navEnabled = true, socialEnabled = true, deepEnabled = false, jsonLdEnabled = false, lazyLoadEnabled = false, skipLinkEnabled = false, cardEnabled = false, linkDensityEnabled = false, fixedEnabled = false, recommendEnabled = true, paginationEnabled = false, snsPromoEnabled = false, popupEnabled = true, platformEnabled = false, textDensityEnabled = false, shortSeqEnabled = false, symbolLineEnabled = false, linkParaEnabled = false, enhancedHiddenEnabled = false, emptyElemEnabled = false, jpLayoutEnabled = false, jpNavigationEnabled = false, authorEnabled = false, affiliateEnabled = false, speechBubbleEnabled = false, newsMediaEnabled = false, ecSiteEnabled = false, qaSiteEnabled = false, videoSiteEnabled = false, linkRatioThreshold = 70, shortTextThreshold = 30, shortSeqCount = 5, linkParaThreshold = 50, customPatterns = [], fallbackRatio = 0.20, fallbackMinBytes = 300 } = aiSummaryCleanseOptions;
+    const { aiSummaryCleanseEnabled = false, fallbackRatio = 0.20, fallbackMinBytes = 300 } = aiSummaryCleanseOptions;
+    // Defaults for the 32 per-rule flags + thresholds come from CLEANSING_RULES /
+    // THRESHOLD_DEFAULTS via isRuleEnabled()/resolveThresholds(), which
+    // cleanseAISummaryContent already applies — so the options object built
+    // here only needs to carry the caller's overrides through unchanged. This
+    // replaces a 37-name destructure that had to restate every rule's default.
+    const resolvedAiSummaryOptions: AiSummaryCleanseOptions = {
+        ...aiSummaryCleanseOptions,
+        linkRatioThreshold: aiSummaryCleanseOptions.linkRatioThreshold ?? THRESHOLD_DEFAULTS.linkRatioThreshold,
+        shortTextThreshold: aiSummaryCleanseOptions.shortTextThreshold ?? THRESHOLD_DEFAULTS.shortTextThreshold,
+        shortSeqCount: aiSummaryCleanseOptions.shortSeqCount ?? THRESHOLD_DEFAULTS.shortSeqCount,
+        linkParaThreshold: aiSummaryCleanseOptions.linkParaThreshold ?? THRESHOLD_DEFAULTS.linkParaThreshold,
+        customPatterns: aiSummaryCleanseOptions.customPatterns ?? THRESHOLD_DEFAULTS.customPatterns,
+    };
     let cleansedReason: ExtractResult['cleansedReason'] = 'none';
     let hardStripRemoved = 0;
     let keywordStripRemoved = 0;
@@ -214,20 +228,9 @@ export function extractMainContent(
                 targetElement = clone;
 
                 // AI要約クレンジングを実行（cleanseEnabledとは独立して動作）
-                logDebug('AI Summary Cleansing check', { aiSummaryCleanseEnabled, altEnabled, metadataEnabled, adsEnabled, navEnabled, socialEnabled });
+                logDebug('AI Summary Cleansing check', { aiSummaryCleanseEnabled, ...resolvedAiSummaryOptions });
                 if (aiSummaryCleanseEnabled) {
-                    const aiSummaryOptions = {
-                        altEnabled, metadataEnabled, adsEnabled, navEnabled, socialEnabled, deepEnabled,
-                        jsonLdEnabled, lazyLoadEnabled, skipLinkEnabled, cardEnabled, linkDensityEnabled,
-                        fixedEnabled, recommendEnabled, paginationEnabled, snsPromoEnabled, popupEnabled,
-                        platformEnabled, textDensityEnabled, shortSeqEnabled, symbolLineEnabled,
-                        linkParaEnabled, enhancedHiddenEnabled, emptyElemEnabled, jpLayoutEnabled,
-                        jpNavigationEnabled, authorEnabled, affiliateEnabled, speechBubbleEnabled,
-                        newsMediaEnabled, ecSiteEnabled, qaSiteEnabled, videoSiteEnabled,
-                        linkRatioThreshold, shortTextThreshold, shortSeqCount, linkParaThreshold,
-                        customPatterns,
-                    };
-                    const aiSummaryRunResult = runAiSummaryCleanse(clone, aiSummaryOptions, cleansedBytes);
+                    const aiSummaryRunResult = runAiSummaryCleanse(clone, resolvedAiSummaryOptions, cleansedBytes);
                     aiSummaryOriginalBytes = aiSummaryRunResult.originalBytes;
                     aiSummaryCleansedBytes = aiSummaryRunResult.cleansedBytes;
                     aiSummaryCleansedReason = aiSummaryRunResult.reason;
@@ -247,18 +250,7 @@ export function extractMainContent(
                     // DOMを直接操作しないようにクローンを作成
                     const clone = candidates[0].cloneNode(true) as Element;
 
-                    const aiSummaryOptions = {
-                        altEnabled, metadataEnabled, adsEnabled, navEnabled, socialEnabled, deepEnabled,
-                        jsonLdEnabled, lazyLoadEnabled, skipLinkEnabled, cardEnabled, linkDensityEnabled,
-                        fixedEnabled, recommendEnabled, paginationEnabled, snsPromoEnabled, popupEnabled,
-                        platformEnabled, textDensityEnabled, shortSeqEnabled, symbolLineEnabled,
-                        linkParaEnabled, enhancedHiddenEnabled, emptyElemEnabled, jpLayoutEnabled,
-                        jpNavigationEnabled, authorEnabled, affiliateEnabled, speechBubbleEnabled,
-                        newsMediaEnabled, ecSiteEnabled, qaSiteEnabled, videoSiteEnabled,
-                        linkRatioThreshold, shortTextThreshold, shortSeqCount, linkParaThreshold,
-                        customPatterns,
-                    };
-                    const aiSummaryRunResult = runAiSummaryCleanse(clone, aiSummaryOptions, cleansedBytes);
+                    const aiSummaryRunResult = runAiSummaryCleanse(clone, resolvedAiSummaryOptions, cleansedBytes);
                     aiSummaryOriginalBytes = aiSummaryRunResult.originalBytes;
                     aiSummaryCleansedBytes = aiSummaryRunResult.cleansedBytes;
                     aiSummaryCleansedReason = aiSummaryRunResult.reason;
@@ -345,18 +337,7 @@ export function extractMainContent(
 
                 // AI要約クレンジングを実行
                 if (aiSummaryCleanseEnabled) {
-                    const aiSummaryOptions = {
-                        altEnabled, metadataEnabled, adsEnabled, navEnabled, socialEnabled, deepEnabled,
-                        jsonLdEnabled, lazyLoadEnabled, skipLinkEnabled, cardEnabled, linkDensityEnabled,
-                        fixedEnabled, recommendEnabled, paginationEnabled, snsPromoEnabled, popupEnabled,
-                        platformEnabled, textDensityEnabled, shortSeqEnabled, symbolLineEnabled,
-                        linkParaEnabled, enhancedHiddenEnabled, emptyElemEnabled, jpLayoutEnabled,
-                        jpNavigationEnabled, authorEnabled, affiliateEnabled, speechBubbleEnabled,
-                        newsMediaEnabled, ecSiteEnabled, qaSiteEnabled, videoSiteEnabled,
-                        linkRatioThreshold, shortTextThreshold, shortSeqCount, linkParaThreshold,
-                        customPatterns,
-                    };
-                    const aiSummaryRunResult = runAiSummaryCleanse(clone, aiSummaryOptions, cleansedBytes);
+                    const aiSummaryRunResult = runAiSummaryCleanse(clone, resolvedAiSummaryOptions, cleansedBytes);
                     aiSummaryOriginalBytes = aiSummaryRunResult.originalBytes;
                     aiSummaryCleansedBytes = aiSummaryRunResult.cleansedBytes;
                     aiSummaryCleansedReason = aiSummaryRunResult.reason;
@@ -463,42 +444,7 @@ export function extractMainContent(
         // body全体をスキャンして対象候補数をカウント（削除はしない）
         // ただしフォールバック発動時は実際の処理が行われなかったためカウント対象外とする
         if (!fallbackTriggered && aiSummaryCleanseEnabled && document.body) {
-            const aiSummaryCountResult = countAISummaryTargets(document.body, {
-                altEnabled,
-                metadataEnabled,
-                adsEnabled,
-                navEnabled,
-                socialEnabled,
-                deepEnabled,
-                jsonLdEnabled,
-                lazyLoadEnabled,
-                skipLinkEnabled,
-                cardEnabled,
-                linkDensityEnabled,
-                // NEW
-                fixedEnabled,
-                recommendEnabled,
-                paginationEnabled,
-                snsPromoEnabled,
-                popupEnabled,
-                platformEnabled,
-                // NEW: 9つの追加オプション
-                textDensityEnabled,
-                shortSeqEnabled,
-                symbolLineEnabled,
-                linkParaEnabled,
-                enhancedHiddenEnabled,
-                emptyElemEnabled,
-                jpLayoutEnabled,
-                jpNavigationEnabled,
-                authorEnabled,
-                affiliateEnabled,
-                speechBubbleEnabled,
-                newsMediaEnabled,
-                ecSiteEnabled,
-                qaSiteEnabled,
-                videoSiteEnabled,
-            });
+            const aiSummaryCountResult = countAISummaryTargets(document.body, resolvedAiSummaryOptions);
             aiSummaryCleansedElements = aiSummaryCountResult.totalRemoved;
             // カウント結果に応じて理由を設定（0件の場合は'none'のまま）
             if (aiSummaryCountResult.totalRemoved > 0 && aiSummaryCleansedReason === 'none') {
