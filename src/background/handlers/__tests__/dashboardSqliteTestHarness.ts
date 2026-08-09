@@ -38,12 +38,26 @@ function defaultServiceWorkerDeps(): SqliteClientBackedDeps {
  */
 const RESULT_METHOD_SOURCES = [
   // [Result method, plain method, message used when the plain method returns
-  //  null and no lastError is set — the wording the handler used to supply]
-  ['queryResult', 'query', 'Query failed'],
-  ['searchResult', 'search', 'Search failed'],
-  ['getCountResult', 'getCount', 'Get count failed'],
-  ['backupDbResult', 'backupDb', 'Backup failed'],
-  ['queryAuditLogResult', 'queryAuditLog', 'Audit log query failed'],
+  //  null and no lastError is set — the wording the handler used to supply,
+  //  treatFalseAsFailure — true for methods whose plain form returns boolean
+  //  (false means failure there, whereas read-path methods never return
+  //  false as a legitimate value)]
+  ['queryResult', 'query', 'Query failed', false],
+  ['searchResult', 'search', 'Search failed', false],
+  ['getCountResult', 'getCount', 'Get count failed', false],
+  ['backupDbResult', 'backupDb', 'Backup failed', false],
+  ['queryAuditLogResult', 'queryAuditLog', 'Audit log query failed', false],
+  // Write-path additions (PBI-21): the plain method returns false/null on
+  // failure, same shape as the read-path methods above.
+  ['deleteResult', 'delete', 'Delete failed', true],
+  ['updateResult', 'update', 'Update failed', true],
+  ['toggleStarResult', 'toggleStar', 'Toggle star failed', false],
+  ['clearAllResult', 'clearAll', 'Clear all failed', true],
+  ['insertResult', 'insert', 'Insert failed', false],
+  ['restoreDbResult', 'restoreDb', 'Restore failed', true],
+  ['purgeOldRecordsResult', 'purgeOldRecords', 'Purge failed', false],
+  ['purgeContentResult', 'purgeContent', 'Content purge failed', false],
+  ['runOpfsSpikeResult', 'runOpfsSpike', 'OPFS spike failed', false],
 ] as const;
 
 type LooseClient = Record<string, unknown>;
@@ -54,7 +68,7 @@ export function withDerivedResultMethods(sqliteClient: Partial<SqliteClient>): P
   // Augment in place rather than returning a copy: tests hold a reference to
   // the object they built and both assert on its spies and reassign its
   // methods afterwards, so a copy would silently diverge from what they see.
-  for (const [resultName, plainName, fallbackMessage] of RESULT_METHOD_SOURCES) {
+  for (const [resultName, plainName, fallbackMessage, treatFalseAsFailure] of RESULT_METHOD_SOURCES) {
     if (typeof loose[resultName] === 'function') continue;
 
     loose[resultName] = async (...args: unknown[]) => {
@@ -66,7 +80,8 @@ export function withDerivedResultMethods(sqliteClient: Partial<SqliteClient>): P
         return { success: false, error: { kind: 'unknown', message: fallbackMessage, retriable: false } };
       }
       const data = await (plain as (...a: unknown[]) => Promise<unknown>).apply(sqliteClient, args);
-      if (data === null || data === undefined) {
+      const isFailure = data === null || data === undefined || (treatFalseAsFailure && data === false);
+      if (isFailure) {
         const message = (loose.lastError as string | undefined) || fallbackMessage;
         return { success: false, error: { kind: 'unknown', message, retriable: false } };
       }

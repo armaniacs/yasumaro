@@ -16,46 +16,37 @@ const MAX_APPEND_IDS = 100;
 const MAX_IMPORT_ROWS = 5000;
 
 /**
- * Read-path results carry their own failure reason.
- *
- * The write path still reports failure as `null` and the handler falls back to
- * `deps.lastError()`. That is shared mutable state on SqliteClient describing
- * "the most recent failure by anyone", so it can attribute another operation's
- * error — or none at all — to this call. Read results are what the user sees
- * as data, so they take the reason with them instead.
+ * Every result the SqliteClient-backed deps return carries its own failure
+ * reason. The call that produced the failure is the only place that knows
+ * why it failed, so the reason travels with the return value instead of
+ * being read back out of shared state afterward.
  */
 export type DepsResult<T> = { success: true; data: T } | { success: false; error: SqliteError };
 
 export interface DashboardSqliteHandlerDeps {
   query: (params: Record<string, unknown>) => Promise<DepsResult<{ rows: unknown[]; total: number }>>;
   search: (query: string, limit: number, offset: number) => Promise<DepsResult<{ rows: unknown[]; total: number }>>;
-  toggleStar: (id: number) => Promise<unknown>;
-  delete: (id: number) => Promise<boolean>;
-  update: (id: number, changes: Record<string, unknown>) => Promise<boolean>;
+  toggleStar: (id: number) => Promise<DepsResult<{ is_starred: number }>>;
+  delete: (id: number) => Promise<DepsResult<void>>;
+  update: (id: number, changes: Record<string, unknown>) => Promise<DepsResult<void>>;
   getCount: () => Promise<DepsResult<number>>;
-  clearAll: () => Promise<boolean>;
-  insert: (record: Record<string, unknown>) => Promise<{ id: number } | null>;
+  clearAll: () => Promise<DepsResult<void>>;
+  insert: (record: Record<string, unknown>) => Promise<DepsResult<{ id: number }>>;
   getSettings: () => Promise<Record<string, unknown>>;
   formatEntriesToMarkdown: (entries: BrowsingLogEntry[]) => string | null;
   appendToDailyNote: (markdown: string) => Promise<void>;
-  restoreDb: (data: Uint8Array) => Promise<boolean>;
-  getStatus: () => Promise<Record<string, unknown> | null>;
-  runOpfsSpike: () => Promise<Record<string, unknown> | null>;
-  purgeOldRecords: (days?: number, max?: number) => Promise<{ purged: number } | null>;
-  purgeContent: (days?: number, max?: number, includeStarred?: boolean) => Promise<{ purged: number } | null>;
-  backupDb: () => Promise<DepsResult<Uint8Array>>;
+  restoreDb: (data: Uint8Array) => Promise<DepsResult<void>>;
   /**
-   * Reads the client's most recent categorized error.
-   *
-   * This MUST stay a getter rather than a plain value. It was previously
-   * typed `string | null`, which meant the production wiring evaluated
-   * `sqliteClient.lastError` once at module-load time — when it is always the
-   * initial `null` — so every `deps.lastError() || '...'` fallback below
-   * permanently took the generic branch and `categorizeError()`'s specific
-   * messages (quota exceeded / connection lost / timed out) never reached the
-   * dashboard.
+   * Deliberately not a DepsResult: getStatus() reports initialization
+   * failure inside its success value (as `initError`) so the diagnostics
+   * panel can display it, rather than as a DepsResult failure — see
+   * SqliteClient.getStatus().
    */
-  lastError: () => string | null;
+  getStatus: () => Promise<Record<string, unknown> | null>;
+  runOpfsSpike: () => Promise<DepsResult<Record<string, unknown>>>;
+  purgeOldRecords: (days?: number, max?: number) => Promise<DepsResult<{ purged: number }>>;
+  purgeContent: (days?: number, max?: number, includeStarred?: boolean) => Promise<DepsResult<{ purged: number }>>;
+  backupDb: () => Promise<DepsResult<Uint8Array>>;
   runMigration: () => Promise<{ success: boolean; count: number; read?: number; inserted?: number; error?: string }>;
   getConfirmToken: () => Promise<string>;
   runBackfill: () => Promise<{ updated: number; total: number }>;
@@ -127,15 +118,15 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
         }
         case 'toggle_star': {
           const result = await deps.toggleStar(payload.id);
-          if (!result) {
-            return { success: false, error: deps.lastError() || 'Toggle star failed' };
+          if (!result.success) {
+            return { success: false, error: result.error.message, retriable: result.error.retriable };
           }
-          return result;
+          return { success: true, ...result.data };
         }
         case 'delete': {
-          const ok = await deps.delete(payload.id);
-          if (!ok) {
-            return { success: false, error: deps.lastError() || 'Delete failed' };
+          const result = await deps.delete(payload.id);
+          if (!result.success) {
+            return { success: false, error: result.error.message, retriable: result.error.retriable };
           }
           return { success: true };
         }
@@ -145,9 +136,9 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           if (invalidKeys.length > 0) {
             return { success: false, error: `Invalid update fields: ${invalidKeys.join(', ')}` };
           }
-          const ok = await deps.update(payload.id, changes);
-          if (!ok) {
-            return { success: false, error: deps.lastError() || 'Update failed' };
+          const result = await deps.update(payload.id, changes);
+          if (!result.success) {
+            return { success: false, error: result.error.message, retriable: result.error.retriable };
           }
           return { success: true };
         }
@@ -159,9 +150,9 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           return { success: true, count: result.data };
         }
         case 'clear_all': {
-          const ok = await deps.clearAll();
-          if (!ok) {
-            return { success: false, error: deps.lastError() || 'Clear all failed' };
+          const result = await deps.clearAll();
+          if (!result.success) {
+            return { success: false, error: result.error.message, retriable: result.error.retriable };
           }
           return { success: true };
         }
@@ -177,6 +168,10 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           const BATCH = 50;
           let inserted = 0;
           let skipped = 0;
+          // Kept in a local instead of shared state: the reason belongs to
+          // this call, not to whatever else on the client failed most
+          // recently — see the module doc comment.
+          let lastInsertError: SqliteError | null = null;
           for (let i = 0; i < rows.length; i += BATCH) {
             const batch = rows.slice(i, i + BATCH);
             for (const row of batch) {
@@ -193,18 +188,19 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
                   is_starred: row.is_starred ?? 0,
                   is_deleted: row.is_deleted ?? 0,
                 });
-                if (result) inserted++;
-                else skipped++;
+                if (result.success) {
+                  inserted++;
+                } else {
+                  skipped++;
+                  lastInsertError = result.error;
+                }
               } catch {
                 skipped++;
               }
             }
           }
-          // Read once: a second call could observe a different value if another
-          // operation completed in between.
-          const importError = deps.lastError();
-          if (importError && inserted === 0) {
-            return { success: false, error: importError };
+          if (lastInsertError && inserted === 0) {
+            return { success: false, error: lastInsertError.message };
           }
           return { success: true, inserted, skipped, total: rows.length };
         }
@@ -219,22 +215,28 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           if (data.length > MAX_RESTORE_BASE64_LENGTH) {
             return { success: false, error: `Restore data exceeds maximum size (${Math.round(data.length / 1024 / 1024)}MB > 100MB)` };
           }
-          const restored = await deps.restoreDb(base64ToBytes(data));
-          return restored ? { success: true } : { success: false, error: 'Restore failed' };
+          const result = await deps.restoreDb(base64ToBytes(data));
+          if (!result.success) {
+            return { success: false, error: result.error.message, retriable: result.error.retriable };
+          }
+          return { success: true };
         }
         case 'status': {
           const status = await deps.getStatus();
           if (status) {
             return { success: true, ...status };
           }
-          return { success: false, error: deps.lastError() || 'Status check failed' };
+          // Unreachable via a real SqliteClient (getStatus() always resolves
+          // to an object, even on failure — see its doc comment), but the
+          // type keeps `| null` since deps.getStatus is not a DepsResult.
+          return { success: false, error: 'Status check failed' };
         }
         case 'opfs_spike': {
-          const report = await deps.runOpfsSpike();
-          if (report) {
-            return { success: true, report };
+          const result = await deps.runOpfsSpike();
+          if (!result.success) {
+            return { success: false, error: result.error.message, retriable: result.error.retriable };
           }
-          return { success: false, error: deps.lastError() || 'OPFS spike failed' };
+          return { success: true, report: result.data };
         }
         case 'append_to_obsidian': {
           const ids = payload.ids;
@@ -293,14 +295,14 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           if (days === null && max === null) {
             return { success: true, purged: 0, skipped: true };
           }
-          const purgedResult = await deps.purgeOldRecords(
+          const result = await deps.purgeOldRecords(
             days !== null ? Number(days) : undefined,
             max  !== null ? Number(max)  : undefined,
           );
-          if (purgedResult === null) {
-            return { success: false, error: deps.lastError() || 'Purge failed' };
+          if (!result.success) {
+            return { success: false, error: result.error.message, retriable: result.error.retriable };
           }
-          return { success: true, purged: purgedResult.purged, skipped: false };
+          return { success: true, purged: result.data.purged, skipped: false };
         }
         case 'audit_log_query': {
           const result = await deps.queryAuditLog({
@@ -320,15 +322,15 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           if (contentDays === null && contentMax === null) {
             return { success: true, purged: 0, skipped: true };
           }
-          const contentResult = await deps.purgeContent(
+          const result = await deps.purgeContent(
             contentDays !== null ? Number(contentDays) : undefined,
             contentMax  !== null ? Number(contentMax)  : undefined,
             includeStarred,
           );
-          if (contentResult === null) {
-            return { success: false, error: deps.lastError() || 'Content purge failed' };
+          if (!result.success) {
+            return { success: false, error: result.error.message, retriable: result.error.retriable };
           }
-          return { success: true, purged: contentResult.purged, skipped: false };
+          return { success: true, purged: result.data.purged, skipped: false };
         }
         case 'backup_db': {
           const result = await deps.backupDb();
@@ -393,23 +395,24 @@ export function createSqliteClientDeps(
   serviceWorkerDeps: SqliteClientBackedDeps,
 ): DashboardSqliteHandlerDeps {
   return {
-    // Read path: the *Result variants keep the failure reason attached to the
-    // call that produced it, instead of routing it through sqliteClient.lastError.
+    // Every *Result variant keeps the failure reason attached to the call
+    // that produced it, instead of routing it through sqliteClient.lastError.
     query: (params) => sqliteClient.queryResult(params),
     search: (query, limit, offset) => sqliteClient.searchResult(query, limit, offset),
-    toggleStar: (id) => sqliteClient.toggleStar(id),
-    delete: (id) => sqliteClient.delete(id),
-    update: (id, changes) => sqliteClient.update(id, changes),
+    toggleStar: (id) => sqliteClient.toggleStarResult(id),
+    delete: (id) => sqliteClient.deleteResult(id),
+    update: (id, changes) => sqliteClient.updateResult(id, changes),
     getCount: () => sqliteClient.getCountResult(),
-    clearAll: () => sqliteClient.clearAll(),
-    insert: (record) => sqliteClient.insert(record as any),
-    restoreDb: (data) => sqliteClient.restoreDb(data),
+    clearAll: () => sqliteClient.clearAllResult(),
+    insert: (record) => sqliteClient.insertResult(record as any),
+    restoreDb: (data) => sqliteClient.restoreDbResult(data),
+    // Deliberately not *Result: getStatus() reports initialization failure
+    // inside its success value so the diagnostics panel can display it.
     getStatus: () => sqliteClient.getStatus(),
-    runOpfsSpike: () => sqliteClient.runOpfsSpike() as Promise<Record<string, unknown> | null>,
-    purgeOldRecords: (days, max) => sqliteClient.purgeOldRecords(days, max),
-    purgeContent: (days, max, includeStarred) => sqliteClient.purgeContent(days, max, includeStarred),
+    runOpfsSpike: () => sqliteClient.runOpfsSpikeResult() as Promise<DepsResult<Record<string, unknown>>>,
+    purgeOldRecords: (days, max) => sqliteClient.purgeOldRecordsResult(days, max),
+    purgeContent: (days, max, includeStarred) => sqliteClient.purgeContentResult(days, max, includeStarred),
     backupDb: () => sqliteClient.backupDbResult(),
-    lastError: () => sqliteClient.lastError ?? null,
     getSettings: () => getSettings(),
     formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
     queryAuditLog: (options) => sqliteClient.queryAuditLogResult(options),
