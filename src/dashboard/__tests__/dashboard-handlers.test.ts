@@ -180,6 +180,10 @@ vi.mock('../settings/aiProvider.js', () => ({
     updateAIProviderVisibility: vi.fn(),
     updateAIProviderVisibilityMulti: vi.fn(),
     AIProviderElements: {},
+    // Moved here from dashboard.ts alongside AIProviderElements (PBI-24).
+    getAiProviderElements: vi.fn(() => ({
+        select: document.getElementById('aiProvider'),
+    })),
 }));
 
 vi.mock('../../utils/storageUrls.js', () => ({

@@ -10,7 +10,8 @@ import { getMessage } from '../utils/i18n.js';
 import { type MultiProviderTestResult, type AiTestProgress, PROVIDER_LABELS } from '../background/aiClient.js';
 import { AI_TEST_PROGRESS_MESSAGE_TYPE, type AiTestProgressMessage } from '../background/aiTestProgressNotifier.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
-import { AIProviderElements, updateAIProviderVisibilityMulti } from './settings/aiProvider.js';
+import { getAiProviderElements, updateAIProviderVisibilityMulti } from './settings/aiProvider.js';
+import { syncStatusToTop } from './statusView.js';
 import { updateProviderSettingsLayout } from './aiProviderLayoutManager.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import {
@@ -93,32 +94,6 @@ function refreshLocalMarkdownScheduler(): void {
   } catch {
     // sendMessage can throw synchronously (e.g. extension context invalidated).
   }
-}
-
-/**
- * Sync status display between top and bottom status divs.
- * Copies the content and class from the bottom status div to the top status div.
- */
-export function syncStatusToTop(): void {
-  const statusDiv = document.getElementById('status') as HTMLElement | null;
-  const statusTopDiv = document.getElementById('statusTop') as HTMLElement | null;
-  if (statusTopDiv && statusDiv) {
-    statusTopDiv.innerHTML = statusDiv.innerHTML;
-    statusTopDiv.className = statusDiv.className;
-  }
-}
-
-export function getAiProviderElements(): AIProviderElements {
-  return {
-    select: document.getElementById('aiProvider') as HTMLSelectElement,
-    geminiSettings: document.getElementById('geminiSettings') as HTMLElement,
-    openaiSettings: document.getElementById('openaiSettings') as HTMLElement,
-    openai2Settings: document.getElementById('openai2Settings') as HTMLElement,
-    lmStudioSettings: (document.getElementById('lm-studioSettings') as HTMLElement) ?? undefined,
-    ollamaSettings: (document.getElementById('ollamaSettings') as HTMLElement) ?? undefined,
-    openaiCompatibleSettings: (document.getElementById('openai-compatibleSettings') as HTMLElement) ?? undefined,
-    builtInAiSettings: (document.getElementById('built-in-aiSettings') as HTMLElement) ?? undefined
-  };
 }
 
 /**

@@ -8,10 +8,10 @@ import {
   handleSaveOnly, handleTestObsidian, handleTestAi, handleTestLocalMarkdown,
   handlePurgeNow, handleContentPurgeNow, handleManualLocalMarkdownExport,
   handleGenerateWeeklySummary, handleGenerateMonthlySummary,
-  getAiProviderElements, syncStatusToTop,
 } from '../../dashboard.js';
+import { syncStatusToTop } from '../../statusView.js';
 import { updateProviderSettingsLayout, hideAllProviderSettings } from '../../aiProviderLayoutManager.js';
-import { setupAIProviderChangeListener, updateAIProviderVisibilityMulti } from '../../settings/aiProvider.js';
+import { getAiProviderElements, setupAIProviderChangeListener, updateAIProviderVisibilityMulti } from '../../settings/aiProvider.js';
 import { setupAllFieldValidations, setupObsidianHostValidation, setupGeminiApiVersionValidation } from '../../settings/fieldValidation.js';
 import { initOnboardingWizard } from '../../../popup/onboardingWizard.js';
 import { ModelsDevDialog } from '../../models-dev-dialog.js';
