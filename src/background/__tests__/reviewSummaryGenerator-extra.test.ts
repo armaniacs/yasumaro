@@ -31,6 +31,15 @@ vi.mock('../aiClient.js', () => ({
 vi.mock('../sqliteClient.js', () => {
   class MockSqliteClient {
     query = mockQuery;
+    // Derived from mockQuery so the existing `mockQuery.mockResolvedValue(...)`
+    // setups in this file keep working: production reads through queryResult
+    // to keep each failure's reason attached to its own call (PBI-19/21).
+    queryResult = async (...args: unknown[]) => {
+      const data = await mockQuery(...args);
+      return data == null
+        ? { success: false, error: { kind: 'unknown', message: 'Query failed', retriable: false } }
+        : { success: true, data };
+    };
   }
   return {
     SqliteClient: MockSqliteClient,
