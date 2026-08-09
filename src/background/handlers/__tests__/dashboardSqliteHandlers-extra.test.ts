@@ -94,7 +94,10 @@ describe('handleDashboardSqlite — toggle_star', () => {
     const mock = createMockSqliteClient();
     mock.toggleStar.mockResolvedValue({ is_starred: 0 });
     const result = await dispatchDashboardSqlite({ subtype: 'toggle_star', id: 5, ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
-    expect(result).toEqual({ is_starred: 0 });
+    // Previously this response omitted `success`, so the dashboard's
+    // `if (response.success)` check always took the failure branch even
+    // when the star actually toggled — see PBI-21.
+    expect(result).toEqual({ success: true, is_starred: 0 });
     expect(mock.toggleStar).toHaveBeenCalledWith(5);
   });
 
@@ -102,7 +105,7 @@ describe('handleDashboardSqlite — toggle_star', () => {
     const mock = createMockSqliteClient();
     mock.toggleStar.mockResolvedValue(null);
     const result = await dispatchDashboardSqlite({ subtype: 'toggle_star', id: 5, ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
-    expect(result).toEqual({ success: false, error: 'Toggle star failed' });
+    expect(result).toEqual({ success: false, error: 'Toggle star failed', retriable: false });
   });
 });
 
@@ -119,7 +122,7 @@ describe('handleDashboardSqlite — delete', () => {
     const mock = createMockSqliteClient();
     mock.delete.mockResolvedValue(false);
     const result = await dispatchDashboardSqlite({ subtype: 'delete', id: 3, ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
-    expect(result).toEqual({ success: false, error: 'Delete failed' });
+    expect(result).toEqual({ success: false, error: 'Delete failed', retriable: false });
   });
 });
 
@@ -166,7 +169,7 @@ describe('handleDashboardSqlite — update', () => {
       mock as any,
       { getConfirmToken: async () => VALID_TOKEN }
     );
-    expect(result).toEqual({ success: false, error: 'Update failed' });
+    expect(result).toEqual({ success: false, error: 'Update failed', retriable: false });
   });
 });
 
@@ -243,7 +246,9 @@ describe('handleDashboardSqlite — import', () => {
 
   it('increments skipped counter when insert fails', async () => {
     const mock = createMockSqliteClient();
-    mock.insert.mockResolvedValueOnce(false).mockResolvedValueOnce(false).mockResolvedValue(true);
+    // insert()'s real return type is `{ id: number } | null` — null is the
+    // only failure value it can actually produce (see SqliteClient.insert).
+    mock.insert.mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValue({ id: 1 });
     const rows = [
       { url: 'https://fail1.com', created_at: Date.now() },
       { url: 'https://fail2.com', created_at: Date.now() },
@@ -296,7 +301,7 @@ describe('handleDashboardSqlite — purge_now', () => {
     mock.purgeOldRecords.mockResolvedValue(null);
     vi.mocked(getSettings).mockResolvedValue({ sqlite_retention_days: 30 } as any);
     const result = await dispatchDashboardSqlite({ subtype: 'purge_now' }, mock as any);
-    expect(result).toEqual({ success: false, error: 'Purge failed' });
+    expect(result).toEqual({ success: false, error: 'Purge failed', retriable: false });
   });
 
   it('purges with only days configured', async () => {
@@ -341,7 +346,7 @@ describe('handleDashboardSqlite — content_purge_now', () => {
     mock.purgeContent.mockResolvedValue(null);
     vi.mocked(getSettings).mockResolvedValue({ content_retention_days: 7 } as any);
     const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now' }, mock as any);
-    expect(result).toEqual({ success: false, error: 'Content purge failed' });
+    expect(result).toEqual({ success: false, error: 'Content purge failed', retriable: false });
   });
 });
 

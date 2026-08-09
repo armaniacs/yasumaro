@@ -135,21 +135,20 @@ describe('dashboard SQLite handler — read-path error propagation', () => {
   });
 
   /**
-   * `status` deliberately stays on the lastError convention: getStatus reports
-   * initialization failures inside its success value (as `initError`) so the
-   * diagnostics panel can display them, so it is not part of the read-path
-   * migration. This keeps that path covered.
+   * `getStatus` deliberately stays outside the CallResult migration: it
+   * reports initialization failures inside its success value (as
+   * `initError`) so the diagnostics panel can display them — see
+   * SqliteClient.getStatus(). A real SqliteClient never resolves it to
+   * `null`; this only exercises the handler's defensive fallback for the
+   * type's `| null`, and confirms it no longer reads shared state to build
+   * the message (PBI-21 removed `lastError` from the deps entirely).
    */
-  it('reports the newest error across successive failures (status path)', async () => {
-    const { deps, setLastError } = makeDeps();
+  it('falls back to a fixed message if getStatus ever resolves to null', async () => {
+    const { deps } = makeDeps();
     const handler = createDashboardSqliteHandler(deps);
 
-    setLastError(QUOTA_MESSAGE);
     (deps.getStatus as ReturnType<typeof vi.fn>).mockResolvedValue(null);
-    expect(await handler({ subtype: 'status' })).toEqual({ success: false, error: QUOTA_MESSAGE });
-
-    setLastError(TIMEOUT_MESSAGE);
-    expect(await handler({ subtype: 'status' })).toEqual({ success: false, error: TIMEOUT_MESSAGE });
+    expect(await handler({ subtype: 'status' })).toEqual({ success: false, error: 'Status check failed' });
   });
 
   it('propagates the categorized message for search failures', async () => {
