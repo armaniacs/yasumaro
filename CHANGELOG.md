@@ -33,6 +33,33 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [Unreleased]
+
+### Refactor
+
+- クレンジングルールの宣言（既定値・storage キー・HTML id）を `CLEANSING_RULES` 表からの
+  導出に集約した。従来は同じ32ルールの一覧が10層に手書きされており、うち3表（
+  `storage/defaults.ts` / `rules.ts` / `content/pageState.ts`）で既定値が7ルール食い違っていた
+  - 「新規ユーザー既定値」（`newUserDefault`）と「未指定時フォールバック」（`defaultEnabled`）を
+    別概念として表に持たせた。`deep` / `linkDensity` / `jpLayout` / `newsMedia` / `ecSite` /
+    `qaSite` / `videoSite` の7ルールは、新規ユーザーには有効・既存ユーザーには
+    `migration.ts` が明示的に無効化する段階的ロールアウトの対象で、この2値は意図的に異なる
+  - `content/extractor.ts` の46行のキー一覧、`contentExtractor/index.ts` の37名分割代入と
+    3箇所で完全一致していた32行のオプション組み立て、`dashboard/settings/aiSummaryCleansingSettingsV2.ts`
+    の5箇所（取得・保存・UI反映・UI読み取り・チェックボックス活性/非活性）を、
+    いずれも表からの導出に置き換えた
+  - `getAiSummaryCleansingSettings` / `getAiSummaryCleansingSettingsFromUI` の
+    未指定時フォールバックが `enhancedHidden` / `emptyElem` の2ルールで表の既定値
+    （`false`）と食い違っていたことが判明し是正した。`getSettings()` は常にキーを
+    埋めるため通常経路での実害はない
+
+### Tests
+
+- テスト総数: 7680 → 7690（+10）
+- 新規: ルール表の既定値整合性テスト、content script 経路での32ルール往復テスト、
+  `DEFAULT_CLEANSING_CONFIG` の完全性テスト、AI要約クレンジング設定の
+  HTML id 網羅テスト（実際の `options/index.html` と照合）
+
 ## [6.7.28] - 2026-08-09
 
 This release is a hotfix for a content extraction crash on pages containing SVG.

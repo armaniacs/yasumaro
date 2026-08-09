@@ -296,12 +296,74 @@ grep -n "^export async function migrate" src/utils/migration.ts
 
 ---
 
+## 実装後の追記
+
+### Step構成の変更: 想定より広い範囲を導出に置き換えた
+
+計画（`dev-docs/plans/2026-08-09-pbi20-cleansing-rule-single-source-plan.md`）の
+Step 2〜7 に沿って実施。実装順にコミットした:
+
+1. `rules.ts` に `storageKey` / `newUserDefault` を追加（既存の `defaultEnabled` は維持）
+2. `storage/defaults.ts` の32行を `CLEANSING_RULES` からの導出に置換
+3. `content/extractor.ts` の `booleanKeys`（46行）を導出に置換
+4. `content/pageState.ts` の `DEFAULT_CLEANSING_CONFIG`（32行）を導出に置換
+5. `contentExtractor/index.ts` の37名分割代入＋3箇所の32行転記＋32件転記（計106行超）を解消
+6. `dashboard/settings/aiSummaryCleansingSettingsV2.ts` — **計画は3箇所を想定していたが実際は5箇所**
+   （get/save/apply/UI取得に加え、`updateAiSummaryCleansingCheckboxStates` の disable 切替と
+   `setupAiSummaryCleansingEventListeners` のイベント登録用ID配列も同型の32行重複だった）
+
+### 「新規ユーザー既定値」と「未指定時フォールバック」、実際にどちらが使われたか
+
+各層を実装する過程で、どちらの概念を使うべきかを実測で判断する必要が生じた:
+
+| 層 | 使った概念 | 根拠 |
+|---|---|---|
+| `storage/defaults.ts` | `newUserDefault` | 新規インストールの既定値そのもの |
+| `content/pageState.ts` の `DEFAULT_CLEANSING_CONFIG` | `defaultEnabled` | `init()` が必ず `loadSettings()` を await してから他処理に進むため、実際の抽出処理には使われない「未読み込み時の暫定値」 |
+| `aiSummaryCleansingSettingsV2.ts` の `getAiSummaryCleansingSettings`（storage読み） | `defaultEnabled` | `getSettings()` が絶対にキーを埋めるため通常発火しないが、意味としては「未指定時」 |
+| `aiSummaryCleansingSettingsV2.ts` の `getAiSummaryCleansingSettingsFromUI`（DOM読み） | `newUserDefault` | チェックボックスが存在しない＝そのUIをまだ描画していない状態で、新規ユーザーの初期表示に近い |
+
+**発見**: `getAiSummaryCleansingSettings` の `enhancedHiddenEnabled` / `emptyElemEnabled` の
+未指定時フォールバックが `?? true` になっており、`CLEANSING_RULES.defaultEnabled`
+（および `DEFAULT_SETTINGS`）の `false` と食い違っていた。既存テスト
+（`aiSummaryCleansingSettings-extra.test.ts`）がこの誤った値を仕様として固定していたため、
+テストごと正しい値に修正した。通常経路（`getSettings()` が必ずキーを埋める）では発火しない
+ため利用者への実害はないが、テストで初めて可視化できた不整合だった。
+
+### `htmlId` は `rules.ts` に持たせず、dashboard専用ファイル内に閉じた
+
+`rules.ts` は content script にもバンドルされる（`extractor.ts` / `pageState.ts` /
+`contentExtractor/index.ts` が import している）ため、dashboard の DOM id という
+無関係な関心事を持ち込まないと判断。`aiSummaryCleansingSettingsV2.ts` 内に
+`ruleHtmlId()` / `ruleOptionKey()` の2関数を新設し、そこに閉じた。
+
+### テスト新規追加
+
+- `src/utils/aiSummaryCleaner/__tests__/ruleDefaultsConsistency.test.ts`
+  （`storageKey`・`newUserDefault` の網羅性と一致を検証）
+- `src/content/__tests__/extractor.test.ts` に往復テストを追加
+  （32ルール全件が正しい `CleansingConfig` プロパティへ書き込まれることを確認）
+- `src/content/__tests__/pageState.test.ts` に `DEFAULT_CLEANSING_CONFIG` の完全性テストを追加
+  （`as unknown as CleansingConfig` という型アサーションを使ったため、実行時保証が必要だった）
+- `src/dashboard/settings/__tests__/aiSummaryCleansingSettingsV2-ruleDerivation.test.ts`（新規）
+  — 32ルールすべての HTML id が実際の `entrypoints/options/index.html` に存在することを検証、
+  および get/apply/read/disable の往復が全ルールで正しいことを検証
+
+### 検証結果
+
+- `npm run type-check`: 成功
+- `npm run validate`（type-check + vitest）: **7,690 件通過**（新規追加分含む）
+- `npm run build`: 成功
+- `npm run test:e2e`: **185 件通過・7 件スキップ**（既存ベースラインと同一）
+
+---
+
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既定値の一致テストが追加され、意図的な差分は明示的に記述されている
-- [ ] `npm run validate` が通る
-- [ ] `npm run build` が通る
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既定値の一致テストが追加され、意図的な差分は明示的に記述されている
+- [x] `npm run validate` が通る
+- [x] `npm run build` が通る
 - [ ] コードレビュー完了
 - [ ] CHANGELOG.md に記載（既定値の是正がある場合は利用者向けに明記）
 
