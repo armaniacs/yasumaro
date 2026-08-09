@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { countAISummaryTargets } from '../countTargets.js';
+import { countAISummaryTargets } from '../index.js';
 
 describe('countAISummaryTargets — jpLayoutEnabled (Category A)', () => {
   beforeEach(() => {
