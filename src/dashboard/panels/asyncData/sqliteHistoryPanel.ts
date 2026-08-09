@@ -248,7 +248,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       return;
     }
     const entry = state.entries.find(e => e.id === id);
-    if (entry) entry.is_starred = result.is_starred;
+    if (entry) entry.is_starred = result.data.is_starred;
     state.error = null;
     refresh();
   }

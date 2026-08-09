@@ -178,11 +178,11 @@ export async function searchLogs(
  * a bare null left the UI silent — pressing the star simply did nothing when
  * the database was unavailable (PBI-21).
  */
-export async function toggleStar(id: number): Promise<{ is_starred: number } | { error: string }> {
+export async function toggleStar(id: number): Promise<ServiceResult<{ is_starred: number }>> {
   try {
     const response = await sendDashboardMessage({ subtype: 'toggle_star', id }, { requireConfirmToken: true });
     if (response.success) {
-      return { is_starred: Number(response.is_starred) };
+      return { data: { is_starred: Number(response.is_starred) } };
     }
     return { error: String(response.error || 'Toggle star failed') };
   } catch (error) {
@@ -197,11 +197,11 @@ export async function toggleStar(id: number): Promise<{ is_starred: number } | {
  * See toggleStar: the failure reason travels to the caller so the UI can
  * show it instead of appearing to ignore the click.
  */
-export async function deleteLog(id: number): Promise<{ ok: true } | { error: string }> {
+export async function deleteLog(id: number): Promise<ServiceResult<void>> {
   try {
     const response = await sendDashboardMessage({ subtype: 'delete', id }, { requireConfirmToken: true });
     if (response.success) {
-      return { ok: true };
+      return { data: undefined };
     }
     return { error: String(response.error || 'Delete failed') };
   } catch (error) {
@@ -213,13 +213,16 @@ export async function deleteLog(id: number): Promise<{ ok: true } | { error: str
 /**
  * Update a log entry's fields.
  */
-export async function updateLog(id: number, changes: Record<string, unknown>): Promise<boolean> {
+export async function updateLog(id: number, changes: Record<string, unknown>): Promise<ServiceResult<void>> {
   try {
     const response = await sendDashboardMessage({ subtype: 'update', id, changes }, { requireConfirmToken: true });
-    return response.success === true;
+    if (response.success === true) {
+      return { data: undefined };
+    }
+    return { error: String(response.error || 'Update failed') };
   } catch (error) {
-    console.error('updateLog failed:', error);
-    return false;
+    console.error('updateLog failed:', errorMessage(error));
+    return { error: errorMessage(error) };
   }
 }
 
