@@ -95,8 +95,11 @@ export async function queryLogs(options: {
       if (response.success) {
         return { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) };
       }
-      // On first failure, wait briefly for SQLite to initialize and retry
-      if (attempt === 0 && response.error && String(response.error).includes('Query failed')) {
+      // Retry only when the service worker says the failure is transient.
+      // This used to match the message text for 'Query failed', which is the
+      // fallback wording used when no specific error was available — so the
+      // retry stopped firing as soon as errors became specific.
+      if (attempt === 0 && response.retriable) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         continue;
       }
@@ -129,7 +132,9 @@ export async function searchLogs(
       if (response.success) {
         return { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) };
       }
-      if (attempt === 0 && response.error && String(response.error).includes('Search failed')) {
+      // See queryLogs: retriability now comes from the service worker's
+      // error classification rather than the wording of the message.
+      if (attempt === 0 && response.retriable) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         continue;
       }
@@ -363,15 +368,21 @@ export async function backfillMetadata(): Promise<{ updated: number; total: numb
 /**
  * バイナリ .db バックアップを取得
  */
-export async function backupDb(): Promise<Uint8Array | null> {
+export async function backupDb(): Promise<Uint8Array | { error: string } | null> {
   try {
     const response = await sendDashboardMessage({ subtype: 'backup_db' });
     if (response.success && response.data) {
       return base64ToBytes(response.data as string);
     }
-    return null;
+    // A failed backup must not look like "nothing to back up" — the caller
+    // would otherwise offer the user an empty or missing file as success.
+    const message = response.success
+      ? 'Backup returned no data'
+      : String(response.error || 'Backup failed');
+    console.warn('backupDb failed:', message);
+    return { error: message };
   } catch (error) {
-    console.error('backupDb failed:', error);
+    console.error('backupDb failed:', errorMessage(error));
     return null;
   }
 }
@@ -443,7 +454,7 @@ export async function appendToLogs(ids: number[]): Promise<{ success: boolean; a
  */
 export async function queryAuditLogs(
   options: { limit?: number; offset?: number } = {}
-): Promise<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number } | null> {
+): Promise<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number } | { error: string } | null> {
   try {
     const response = await sendDashboardMessage({ subtype: 'audit_log_query', ...options });
     if (response.success) {
@@ -452,10 +463,12 @@ export async function queryAuditLogs(
         total: Number(response.total || 0),
       };
     }
+    // Return the reason rather than null: a caller that cannot tell "failed"
+    // from "empty" reports a broken database as "no data".
     console.warn('queryAuditLogs failed:', String(response.error || 'Unknown error'));
-    return null;
+    return { error: String(response.error || 'Audit log query failed') };
   } catch (error) {
-    console.error('queryAuditLogs failed:', error);
+    console.error('queryAuditLogs failed:', errorMessage(error));
     return null;
   }
 }

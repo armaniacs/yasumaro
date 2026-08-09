@@ -76,7 +76,18 @@ export function createExportLogsPanel(): DiagnosticPanel {
           if (auditStatusEl) auditStatusEl.textContent = '取得中...';
           try {
             const result = await queryAuditLogs({ limit: 100000, offset: 0 });
-            const rows = result?.rows ?? [];
+            // Distinguish "could not read" from "nothing stored": reporting a
+            // failed database read as an empty log tells the user their audit
+            // history is empty when it may not be.
+            if (result === null) {
+              if (auditStatusEl) auditStatusEl.textContent = 'エラー: 監査ログを読み取れませんでした';
+              return;
+            }
+            if ('error' in result) {
+              if (auditStatusEl) auditStatusEl.textContent = `エラー: ${result.error}`;
+              return;
+            }
+            const rows = result.rows;
             if (rows.length === 0) {
               if (auditStatusEl) auditStatusEl.textContent = 'データがありません';
               return;

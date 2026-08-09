@@ -123,7 +123,12 @@ export async function exportJson(): Promise<Blob> {
 
 export async function exportDb(): Promise<Blob | null> {
   const data = await backupDb();
-  if (!data) return null;
+  if (data === null) return null;
+  // Surface the reason instead of returning null: the caller reports null as
+  // a generic failure, which hides quota and connection errors from the user.
+  if ('error' in data) {
+    throw new Error(data.error);
+  }
   // Uint8Array を Blob に変換
   return new Blob([new Uint8Array(data)], { type: 'application/x-sqlite3' });
 }
