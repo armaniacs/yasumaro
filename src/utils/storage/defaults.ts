@@ -7,6 +7,17 @@
 import { StorageKeys } from './types.js';
 import type { Settings } from './types.js';
 import type { DeepReadonly } from '../typeUtils.js';
+import { CLEANSING_RULES } from '../aiSummaryCleaner/rules.js';
+
+/**
+ * Cleansing rule defaults, derived from CLEANSING_RULES instead of restated.
+ *
+ * Before this, the same 32 defaults were hand-copied here and had already
+ * drifted from the rule table on 7 rules — see pbi/2026-08-09-20.
+ */
+const CLEANSING_RULE_DEFAULTS = Object.fromEntries(
+    CLEANSING_RULES.map(rule => [rule.storageKey, rule.newUserDefault]),
+) as Record<string, boolean>;
 
 export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.OBSIDIAN_API_KEY]: '',
@@ -99,39 +110,9 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.SKIP_AI_RATE_LIMIT_MAX]: 5,
     [StorageKeys.SKIP_AI_RATE_LIMIT_WINDOW_MS]: 60000,
     [StorageKeys.AI_SUMMARY_CLEANSING_ENABLED]: true,
-    [StorageKeys.AI_SUMMARY_CLEANSING_ALT]: true,
-    [StorageKeys.AI_SUMMARY_CLEANSING_METADATA]: true,
-    [StorageKeys.AI_SUMMARY_CLEANSING_ADS]: true,
-    [StorageKeys.AI_SUMMARY_CLEANSING_NAV]: true,
-    [StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL]: true,
-    [StorageKeys.AI_SUMMARY_CLEANSING_DEEP]: true,
-    [StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY]: true,
-    [StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_CARD]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_FIXED]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_RECOMMEND]: true,
-    [StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_POPUP]: true,
-    [StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_SYMBOL_LINE]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT]: true,  // Category A: default true for new users (existing users migrated to false)
-    [StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_AFFILIATE]: false,
-    [StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE]: false,
-    // Category B: Site-Type Specific Patterns — default true for new users (existing users migrated to false)
-    [StorageKeys.AI_SUMMARY_CLEANSING_NEWS_MEDIA]: true,
-    [StorageKeys.AI_SUMMARY_CLEANSING_EC_SITE]: true,
-    [StorageKeys.AI_SUMMARY_CLEANSING_QA_SITE]: true,
-    [StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE]: true,
+    // The 32 per-rule enable flags are derived from CLEANSING_RULES (see
+    // CLEANSING_RULE_DEFAULTS above) rather than listed here individually.
+    ...CLEANSING_RULE_DEFAULTS,
     [StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]: 70,
     [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]: 30,
     [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]: 5,
