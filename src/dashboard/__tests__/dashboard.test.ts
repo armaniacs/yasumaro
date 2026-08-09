@@ -208,8 +208,6 @@ import {
     setHtmlLangDir,
     testObsidianConnection,
     testAiConnection,
-    handleGenerateWeeklySummary,
-    handleGenerateMonthlySummary,
     toMarkdownTemplateEntryData,
 } from '../dashboard.js';
 
@@ -425,89 +423,10 @@ describe('testAiConnection', () => {
     });
 });
 
-describe('handleGenerateWeeklySummary', () => {
-    beforeEach(() => {
-        document.body.innerHTML = `
-            <button id="generateWeeklySummaryBtn"></button>
-            <button id="generateMonthlySummaryBtn"></button>
-            <div id="reviewSummaryStatus"></div>
-        `;
-    });
-
-    it('sends GENERATE_REVIEW_SUMMARY with periodType weekly', async () => {
-        const sendMessage = vi.fn().mockResolvedValue({ success: true, generated: true });
-        vi.stubGlobal('chrome', {
-            ...chrome,
-            runtime: { sendMessage },
-            i18n: { getMessage: vi.fn(() => '') },
-        });
-
-        await handleGenerateWeeklySummary();
-
-        expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
-            type: 'GENERATE_REVIEW_SUMMARY',
-            payload: { periodType: 'weekly' },
-        }));
-        const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement;
-        expect(statusEl.className).toBe('success');
-    });
-
-    it('shows info status when no entries were found', async () => {
-        const sendMessage = vi.fn().mockResolvedValue({ success: true, generated: false });
-        vi.stubGlobal('chrome', {
-            ...chrome,
-            runtime: { sendMessage },
-            i18n: { getMessage: vi.fn(() => '') },
-        });
-
-        await handleGenerateWeeklySummary();
-
-        const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement;
-        expect(statusEl.className).toBe('info');
-    });
-
-    it('shows error status when the service worker call fails', async () => {
-        const sendMessage = vi.fn().mockResolvedValue({ success: false, error: 'SQLite query failed' });
-        vi.stubGlobal('chrome', {
-            ...chrome,
-            runtime: { sendMessage },
-            i18n: { getMessage: vi.fn(() => '') },
-        });
-
-        await handleGenerateWeeklySummary();
-
-        const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement;
-        expect(statusEl.className).toBe('error');
-    });
-});
-
-describe('handleGenerateMonthlySummary', () => {
-    beforeEach(() => {
-        document.body.innerHTML = `
-            <button id="generateWeeklySummaryBtn"></button>
-            <button id="generateMonthlySummaryBtn"></button>
-            <div id="reviewSummaryStatus"></div>
-        `;
-    });
-
-    it('sends GENERATE_REVIEW_SUMMARY with periodType monthly', async () => {
-        const sendMessage = vi.fn().mockResolvedValue({ success: true, generated: true });
-        vi.stubGlobal('chrome', {
-            ...chrome,
-            runtime: { sendMessage },
-            i18n: { getMessage: vi.fn(() => '') },
-        });
-
-        await handleGenerateMonthlySummary();
-
-        expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
-            type: 'GENERATE_REVIEW_SUMMARY',
-            payload: { periodType: 'monthly' },
-        }));
-        const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement;
-        expect(statusEl.className).toBe('success');
-    });
-});
+// handleGenerateWeeklySummary / handleGenerateMonthlySummary moved into
+// generalSettingsPanel as private helpers (PBI-24). What these tests actually
+// exercised is generateReviewSummary — now covered directly in
+// __tests__/reviewSummaryHandler.test.ts.
 
 // getAiProviderElements moved to settings/aiProvider.ts alongside the
 // AIProviderElements type it returns (PBI-24); its tests moved with it to

@@ -13,10 +13,14 @@ import {
     handleSaveOnly,
     handleTestObsidian,
     handleTestAi,
+} from '../dashboard.js';
+// Moved out of dashboard.ts (PBI-24): shared by the general settings panel
+// and the Export Logs / History panels, so it is not panel-local.
+import {
     handleManualLocalMarkdownExport,
     handleExportLocalMarkdown,
     handleHistoryExportLocalMarkdown,
-} from '../dashboard.js';
+} from '../localMarkdownExport.js';
 import { saveSettingsWithAllowedUrls } from '../../utils/storage.js';
 import { resetPlatformOsCache } from '../../utils/deviceUtils.js';
 

@@ -6,15 +6,32 @@ import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import {
   loadGeneralSettings,
   handleSaveOnly, handleTestObsidian, handleTestAi, handleTestLocalMarkdown,
-  handlePurgeNow, handleContentPurgeNow, handleManualLocalMarkdownExport,
-  handleGenerateWeeklySummary, handleGenerateMonthlySummary,
+  handlePurgeNow, handleContentPurgeNow,
 } from '../../dashboard.js';
+import { handleManualLocalMarkdownExport } from '../../localMarkdownExport.js';
+import { generateReviewSummary } from '../../reviewSummaryHandler.js';
 import { syncStatusToTop } from '../../statusView.js';
 import { updateProviderSettingsLayout, hideAllProviderSettings } from '../../aiProviderLayoutManager.js';
 import { getAiProviderElements, setupAIProviderChangeListener, updateAIProviderVisibilityMulti } from '../../settings/aiProvider.js';
 import { setupAllFieldValidations, setupObsidianHostValidation, setupGeminiApiVersionValidation } from '../../settings/fieldValidation.js';
 import { initOnboardingWizard } from '../../../popup/onboardingWizard.js';
 import { ModelsDevDialog } from '../../models-dev-dialog.js';
+
+/**
+ * Review summary buttons live only on this panel, so their handlers do too.
+ * Both are thin shells over generateReviewSummary.
+ */
+async function handleGenerateWeeklySummary(): Promise<void> {
+  const btn = document.getElementById('generateWeeklySummaryBtn') as HTMLButtonElement | null;
+  const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement | null;
+  await generateReviewSummary({ button: btn, statusElement: statusEl, periodType: 'weekly' });
+}
+
+async function handleGenerateMonthlySummary(): Promise<void> {
+  const btn = document.getElementById('generateMonthlySummaryBtn') as HTMLButtonElement | null;
+  const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement | null;
+  await generateReviewSummary({ button: btn, statusElement: statusEl, periodType: 'monthly' });
+}
 
 export function createGeneralSettingsPanel(): StaticFormPanel {
   let panelContainer: HTMLElement | null = null;

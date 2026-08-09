@@ -14,17 +14,14 @@ import { getAiProviderElements, updateAIProviderVisibilityMulti } from './settin
 import { syncStatusToTop } from './statusView.js';
 import { updateProviderSettingsLayout } from './aiProviderLayoutManager.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
-import {
-  loadExportConfig,
-  exportFullHistoryInBatches,
-  exportDateRange,
-  chromeDownloadPort,
-  toMarkdownTemplateEntryData,
-  type ExportResult,
-} from './markdownExport.js';
+import { toMarkdownTemplateEntryData } from './markdownExport.js';
 // Re-exported for existing importers (notably the dashboard tests), which
 // referenced this helper from dashboard.ts before it moved to markdownExport.ts.
 export { toMarkdownTemplateEntryData };
+import {
+  handleExportLocalMarkdown,
+  handleHistoryExportLocalMarkdown,
+} from './localMarkdownExport.js';
 import { tryGetRegistry } from './panels/registryContext.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
 import type { DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
@@ -601,124 +598,6 @@ export async function handleTestLocalMarkdown(): Promise<void> {
   } finally {
     testLocalMarkdownBtn.disabled = false;
   }
-}
-
-/**
- * Convert a single browsing log entry into template entry data
- * VULN-020 fix: sanitize title and URL to prevent Markdown injection
- */
-/**
- * Options for exportLocalMarkdownCore, parameterizing the three near-identical
- * local Markdown export handlers (M15).
- */
-interface LocalMarkdownExportOptions {
-  /** Element IDs for the date-range inputs, or null for a full-history export (no range). */
-  dateRange: { startDateId: string; endDateId: string } | null;
-  exportBtnId: string;
-  statusElId: string;
-  /** Status message shown when the query returns zero rows. */
-  emptyMessage: string;
-}
-
-/**
- * DOM shell around the export logic in markdownExport.ts: reads the form,
- * drives the button/status elements, and delegates the actual querying,
- * grouping and rendering.
- */
-async function exportLocalMarkdownCore(options: LocalMarkdownExportOptions): Promise<void> {
-  const exportBtn = document.getElementById(options.exportBtnId) as HTMLButtonElement | null;
-  const statusEl = document.getElementById(options.statusElId) as HTMLElement | null;
-
-  if (!exportBtn || !statusEl) return;
-
-  exportBtn.disabled = true;
-  statusEl.textContent = '';
-  statusEl.className = '';
-
-  try {
-    const config = await loadExportConfig();
-
-    statusEl.textContent = getMessage('searching') || 'Searching...';
-
-    let result: ExportResult;
-    if (!options.dateRange) {
-      // Full-history export: stream in batches to bound peak memory usage.
-      result = await exportFullHistoryInBatches(config, chromeDownloadPort);
-    } else {
-      const startDateInput = document.getElementById(options.dateRange.startDateId) as HTMLInputElement | null;
-      const endDateInput = document.getElementById(options.dateRange.endDateId) as HTMLInputElement | null;
-
-      const startDate = startDateInput?.value || new Date().toISOString().split('T')[0]!;
-      const endDate = endDateInput?.value || startDate;
-
-      result = await exportDateRange(config, startDate, endDate, chromeDownloadPort);
-    }
-
-    if (result.totalRows === 0) {
-      statusEl.textContent = options.emptyMessage;
-      statusEl.className = 'error';
-      return;
-    }
-
-    statusEl.textContent = `${result.totalRows}件の記録を${result.totalFiles}ファイルにエクスポートしました。`;
-    statusEl.className = 'success';
-  } catch (e) {
-    statusEl.textContent = `エクスポートに失敗しました: ${e instanceof Error ? e.message : String(e)}`;
-    statusEl.className = 'error';
-  } finally {
-    exportBtn.disabled = false;
-  }
-}
-
-/**
- * Handle manual local markdown export with date range
- */
-export async function handleManualLocalMarkdownExport(): Promise<void> {
-  return exportLocalMarkdownCore({
-    dateRange: { startDateId: 'localExportStartDate', endDateId: 'localExportEndDate' },
-    exportBtnId: 'localExportManualBtn',
-    statusElId: 'localExportManualStatus',
-    emptyMessage: '指定期間に記録がありません。',
-  });
-}
-
-/**
- * Handle local markdown export from Export Logs panel (date range)
- */
-export async function handleExportLocalMarkdown(): Promise<void> {
-  return exportLocalMarkdownCore({
-    dateRange: { startDateId: 'exportLocalStartDate', endDateId: 'exportLocalEndDate' },
-    exportBtnId: 'exportLocalMarkdownBtn',
-    statusElId: 'exportLocalMarkdownStatus',
-    emptyMessage: '指定期間に記録がありません。',
-  });
-}
-
-/**
- * Handle review summary manual generation
- */
-export async function handleGenerateWeeklySummary(): Promise<void> {
-  const btn = document.getElementById('generateWeeklySummaryBtn') as HTMLButtonElement | null;
-  const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement | null;
-  await generateReviewSummary({ button: btn, statusElement: statusEl, periodType: 'weekly' });
-}
-
-export async function handleGenerateMonthlySummary(): Promise<void> {
-  const btn = document.getElementById('generateMonthlySummaryBtn') as HTMLButtonElement | null;
-  const statusEl = document.getElementById('reviewSummaryStatus') as HTMLElement | null;
-  await generateReviewSummary({ button: btn, statusElement: statusEl, periodType: 'monthly' });
-}
-
-/**
- * Handle local markdown export from History panel (all records)
- */
-export async function handleHistoryExportLocalMarkdown(): Promise<void> {
-  return exportLocalMarkdownCore({
-    dateRange: null,
-    exportBtnId: 'historyExportLocalMarkdownBtn',
-    statusElId: 'historyExportLocalMarkdownStatus',
-    emptyMessage: 'エクスポートする記録がありません。',
-  });
 }
 
 export async function handlePurgeNow(): Promise<void> {
