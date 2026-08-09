@@ -219,7 +219,7 @@ describe('dashboardSqliteService — additional exports', () => {
     it('returns Uint8Array from response data', async () => {
       givenResponse({ success: true, data: 'AQID' });
       const result = await backupDb();
-      expect(result).toEqual(new Uint8Array([1, 2, 3]));
+      expect(result).toEqual({ data: new Uint8Array([1, 2, 3]) });
     });
 
     it('reports an error when a successful response carries no data', async () => {
@@ -242,10 +242,13 @@ describe('dashboardSqliteService — additional exports', () => {
       expect(result).toEqual({ error: 'Backup failed' });
     });
 
-    it('returns null on rejection', async () => {
+    it('carries the reason on rejection', async () => {
+      // The catch branch used to swallow the reason into a bare null; a
+      // rejection is exactly the case exportLogsService needs to distinguish
+      // from "nothing to back up".
       givenLastError('Failed');
       const result = await backupDb();
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: expect.stringContaining('Failed') });
     });
   });
 

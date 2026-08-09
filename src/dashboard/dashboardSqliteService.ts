@@ -409,11 +409,11 @@ export async function backfillMetadata(): Promise<ServiceResult<{ updated: numbe
 /**
  * バイナリ .db バックアップを取得
  */
-export async function backupDb(): Promise<Uint8Array | { error: string } | null> {
+export async function backupDb(): Promise<ServiceResult<Uint8Array>> {
   try {
     const response = await sendDashboardMessage({ subtype: 'backup_db' });
     if (response.success && response.data) {
-      return base64ToBytes(response.data as string);
+      return { data: base64ToBytes(response.data as string) };
     }
     // A failed backup must not look like "nothing to back up" — the caller
     // would otherwise offer the user an empty or missing file as success.
@@ -424,7 +424,7 @@ export async function backupDb(): Promise<Uint8Array | { error: string } | null>
     return { error: message };
   } catch (error) {
     console.error('backupDb failed:', errorMessage(error));
-    return null;
+    return { error: errorMessage(error) };
   }
 }
 
