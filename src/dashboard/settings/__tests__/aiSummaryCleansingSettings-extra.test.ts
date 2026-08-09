@@ -192,8 +192,13 @@ describe('getAiSummaryCleansingSettings — extra defaults', () => {
     expect(s.shortSeqEnabled).toBe(false);
     expect(s.symbolLineEnabled).toBe(false);
     expect(s.linkParaEnabled).toBe(false);
-    expect(s.enhancedHiddenEnabled).toBe(true);
-    expect(s.emptyElemEnabled).toBe(true);
+    // Was asserted as `true` before PBI-20: CLEANSING_RULES.defaultEnabled
+    // (and DEFAULT_SETTINGS) have always said `false` for both; the old
+    // hand-written fallback in this file had drifted to `true` without
+    // effect in production, since getSettings() always merges
+    // DEFAULT_SETTINGS and never actually omits these keys.
+    expect(s.enhancedHiddenEnabled).toBe(false);
+    expect(s.emptyElemEnabled).toBe(false);
     expect(s.jpLayoutEnabled).toBe(false);
     expect(s.jpNavigationEnabled).toBe(false);
     expect(s.authorEnabled).toBe(false);
