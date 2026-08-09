@@ -208,7 +208,6 @@ import {
     setHtmlLangDir,
     testObsidianConnection,
     testAiConnection,
-    getAiProviderElements,
     handleGenerateWeeklySummary,
     handleGenerateMonthlySummary,
     toMarkdownTemplateEntryData,
@@ -510,23 +509,9 @@ describe('handleGenerateMonthlySummary', () => {
     });
 });
 
-describe('getAiProviderElements', () => {
-    it('returns AI provider elements object', () => {
-        const elements = getAiProviderElements();
-
-        expect(elements).toHaveProperty('select');
-        expect(elements).toHaveProperty('geminiSettings');
-        expect(elements).toHaveProperty('openaiSettings');
-        expect(elements).toHaveProperty('openai2Settings');
-    });
-
-    it('returns select element as HTMLSelectElement', () => {
-        const elements = getAiProviderElements();
-
-        // The select element may be null in jsdom, just verify it's either a select or null
-        expect(elements.select === null || elements.select instanceof HTMLSelectElement).toBe(true);
-    });
-});
+// getAiProviderElements moved to settings/aiProvider.ts alongside the
+// AIProviderElements type it returns (PBI-24); its tests moved with it to
+// settings/__tests__/aiProvider.test.ts.
 
 describe('toMarkdownTemplateEntryData (最終レビュー Fix 2 / Fix 3)', () => {
     it('カンマ区切りの tags を分割し、#プレフィックス+末尾スペース付きの形式に変換する', () => {

@@ -22,6 +22,26 @@ export interface AIProviderElements {
 }
 
 /**
+ * Collects the provider settings elements from the options page.
+ *
+ * Lives beside AIProviderElements and the functions that consume it, rather
+ * than in dashboard.ts: keeping it there is what forced the panel layer to
+ * import from the module it was meant to replace (PBI 2026-08-09-24).
+ */
+export function getAiProviderElements(): AIProviderElements {
+    return {
+        select: document.getElementById('aiProvider') as HTMLSelectElement,
+        geminiSettings: document.getElementById('geminiSettings') as HTMLElement,
+        openaiSettings: document.getElementById('openaiSettings') as HTMLElement,
+        openai2Settings: document.getElementById('openai2Settings') as HTMLElement,
+        lmStudioSettings: (document.getElementById('lm-studioSettings') as HTMLElement) ?? undefined,
+        ollamaSettings: (document.getElementById('ollamaSettings') as HTMLElement) ?? undefined,
+        openaiCompatibleSettings: (document.getElementById('openai-compatibleSettings') as HTMLElement) ?? undefined,
+        builtInAiSettings: (document.getElementById('built-in-aiSettings') as HTMLElement) ?? undefined
+    };
+}
+
+/**
  * AIプロバイダーとそのAPI URLのマッピング
  * built-in-ai はネットワークアクセスもホスト権限も不要なため含めない
  */

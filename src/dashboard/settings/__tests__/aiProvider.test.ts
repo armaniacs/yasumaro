@@ -7,7 +7,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
     updateAIProviderVisibility,
-    setupAIProviderChangeListener
+    setupAIProviderChangeListener,
+    getAiProviderElements
 } from '../aiProvider.js';
 import { AIProviderElements } from '../aiProvider.js';
 
@@ -256,6 +257,27 @@ describe('popup/settings/aiProvider', () => {
 
             expect(elements.ollamaSettings).toBeDefined();
             expect(elements.ollamaSettings.style.display).toBe('block');
+        });
+    });
+
+    // Moved here from dashboard/__tests__/dashboard.test.ts with the function
+    // itself (PBI-24): it belongs beside the AIProviderElements type it
+    // returns, not in the god module the panel layer had to import from.
+    describe('getAiProviderElements', () => {
+        it('returns AI provider elements object', () => {
+            const elements = getAiProviderElements();
+
+            expect(elements).toHaveProperty('select');
+            expect(elements).toHaveProperty('geminiSettings');
+            expect(elements).toHaveProperty('openaiSettings');
+            expect(elements).toHaveProperty('openai2Settings');
+        });
+
+        it('returns select element as HTMLSelectElement', () => {
+            const elements = getAiProviderElements();
+
+            // The select element may be null in jsdom, just verify it's either a select or null
+            expect(elements.select === null || elements.select instanceof HTMLSelectElement).toBe(true);
         });
     });
 });
