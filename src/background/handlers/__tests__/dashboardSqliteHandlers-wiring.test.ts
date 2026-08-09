@@ -27,9 +27,10 @@ vi.mock('../../../utils/storage.js', () => ({
 import { createDashboardSqliteHandler, createSqliteClientDeps } from '../dashboardSqliteHandlers.js';
 import type { SqliteClientBackedDeps } from '../dashboardSqliteHandlers.js';
 import type { SqliteClient } from '../../sqliteClient.js';
+import { withDerivedResultMethods } from './dashboardSqliteTestHarness.js';
 
 function makeSqliteClient(overrides: Record<string, unknown> = {}) {
-  return {
+  const base = {
     query: vi.fn().mockResolvedValue({ rows: [], total: 0 }),
     search: vi.fn().mockResolvedValue({ rows: [], total: 0 }),
     toggleStar: vi.fn().mockResolvedValue({ is_starred: 1 }),
@@ -48,6 +49,10 @@ function makeSqliteClient(overrides: Record<string, unknown> = {}) {
     lastError: null,
     ...overrides,
   } as unknown as SqliteClient;
+
+  // The read path calls the *Result variants; derive them from the plain
+  // methods this factory mocks, exactly as the shared harness does.
+  return withDerivedResultMethods(base) as SqliteClient;
 }
 
 const TOKEN = 'test-confirm-token';
@@ -199,6 +204,7 @@ describe('dashboard SQLite wiring — Service-Worker-owned dependencies', () => 
       expect(await handler({ subtype: 'query' })).toEqual({
         success: false,
         error: 'Storage quota exceeded.',
+        retriable: false,
       });
     });
   });

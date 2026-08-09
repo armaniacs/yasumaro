@@ -74,7 +74,10 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
   });
 
   it('allows query without confirmToken (read-only)', async () => {
-    (sqliteClient as unknown as { query: ReturnType<typeof vi.fn> }).query = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+    // Stub queryResult, not query: the read path calls the Result variant so
+    // each failure's reason stays attached to the call that produced it.
+    (sqliteClient as unknown as { queryResult: ReturnType<typeof vi.fn> }).queryResult =
+      vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
     const result = await dispatchDashboardSqlite(
       { subtype: 'query' },
       sqliteClient,
@@ -84,12 +87,12 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
   });
 
   it('wraps search results with success:true (regression: dashboard search showed load error)', async () => {
-    // sqliteClient.search resolves to { rows, total } with NO success field.
-    // The handler must add success:true so the dashboard service does not treat
-    // a valid result as a failure ("データの読み込みに失敗しました").
+    // searchResult resolves to a CallResult carrying { rows, total }. The
+    // handler must unwrap it and add success:true so the dashboard service does
+    // not treat a valid result as a failure ("データの読み込みに失敗しました").
     const rows = [{ id: 1, url: 'https://a.com', title: 'kddi', rank: -1 }];
-    (sqliteClient as unknown as { search: ReturnType<typeof vi.fn> }).search =
-      vi.fn().mockResolvedValue({ rows, total: 1 });
+    (sqliteClient as unknown as { searchResult: ReturnType<typeof vi.fn> }).searchResult =
+      vi.fn().mockResolvedValue({ success: true, data: { rows, total: 1 } });
     const result = await dispatchDashboardSqlite(
       { subtype: 'search', query: 'kddi' },
       sqliteClient,
