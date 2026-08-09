@@ -5,7 +5,7 @@
 
 import { getSettings, saveSettings } from '../utils/storage.js';
 import { exportDb } from './exportLogsService.js';
-import { restoreDb } from './dashboardSqliteService.js';
+import { restoreDb, isServiceError } from './dashboardSqliteService.js';
 import { encryptEnvelope, decryptEnvelope, isEncryptionEnvelope } from '../utils/crypto/index.js';
 import type { EncryptionEnvelope } from '../utils/crypto/index.js';
 import type { Settings } from '../utils/storage/types.js';
@@ -92,8 +92,8 @@ export async function importEncryptedBackup(
 
   const dbBytes = base64ToBytes(payload.historyDbBase64);
   const restored = await restoreDb(dbBytes);
-  if (!restored) {
-    return { success: false, error: 'Failed to restore history database' };
+  if (isServiceError(restored)) {
+    return { success: false, error: `Failed to restore history database: ${restored.error}` };
   }
 
   const { sanitized, skippedKeys } = validateRestorableSettings(
