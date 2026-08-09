@@ -3028,6 +3028,84 @@
   "historyAiSummaryCleansedReasonDeep": {
     "message": "ディープ"
   },
+  "historyAiSummaryCleansedReasonJsonLd": {
+    "message": "JSON-LD"
+  },
+  "historyAiSummaryCleansedReasonLazyLoad": {
+    "message": "遅延読み込み"
+  },
+  "historyAiSummaryCleansedReasonSkipLink": {
+    "message": "スキップリンク"
+  },
+  "historyAiSummaryCleansedReasonCard": {
+    "message": "カード型要素"
+  },
+  "historyAiSummaryCleansedReasonLinkDensity": {
+    "message": "リンク密度"
+  },
+  "historyAiSummaryCleansedReasonFixed": {
+    "message": "固定要素"
+  },
+  "historyAiSummaryCleansedReasonRecommend": {
+    "message": "おすすめ"
+  },
+  "historyAiSummaryCleansedReasonPagination": {
+    "message": "ページネーション"
+  },
+  "historyAiSummaryCleansedReasonSnsPromo": {
+    "message": "SNSプロモ"
+  },
+  "historyAiSummaryCleansedReasonPopup": {
+    "message": "ポップアップ"
+  },
+  "historyAiSummaryCleansedReasonPlatform": {
+    "message": "プラットフォームノイズ"
+  },
+  "historyAiSummaryCleansedReasonTextDensity": {
+    "message": "テキスト密度"
+  },
+  "historyAiSummaryCleansedReasonShortSeq": {
+    "message": "短文の連続"
+  },
+  "historyAiSummaryCleansedReasonSymbolLine": {
+    "message": "記号行"
+  },
+  "historyAiSummaryCleansedReasonLinkPara": {
+    "message": "リンクのみ段落"
+  },
+  "historyAiSummaryCleansedReasonEnhancedHidden": {
+    "message": "非表示要素"
+  },
+  "historyAiSummaryCleansedReasonEmptyElem": {
+    "message": "空要素"
+  },
+  "historyAiSummaryCleansedReasonJpLayout": {
+    "message": "JPレイアウト"
+  },
+  "historyAiSummaryCleansedReasonJpNavigation": {
+    "message": "JPナビゲーション"
+  },
+  "historyAiSummaryCleansedReasonAuthor": {
+    "message": "執筆者情報"
+  },
+  "historyAiSummaryCleansedReasonAffiliate": {
+    "message": "アフィリエイト"
+  },
+  "historyAiSummaryCleansedReasonSpeechBubble": {
+    "message": "吹き出し"
+  },
+  "historyAiSummaryCleansedReasonNewsMedia": {
+    "message": "ニュースメディア"
+  },
+  "historyAiSummaryCleansedReasonEcSite": {
+    "message": "EC・通販"
+  },
+  "historyAiSummaryCleansedReasonQaSite": {
+    "message": "Q&A"
+  },
+  "historyAiSummaryCleansedReasonVideoSite": {
+    "message": "動画プラットフォーム"
+  },
   "historyAiSummaryCleansedReasonMultiple": {
     "message": "複数"
   },
