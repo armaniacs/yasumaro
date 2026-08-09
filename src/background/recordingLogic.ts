@@ -6,7 +6,7 @@
  * Validation/truncation extracted to RecordingValidator.
  */
 
-import type { RecordType } from '../utils/commonTypes.js';
+import type { RecordType, AiSummaryCleansedReason } from '../utils/commonTypes.js';
 import { ObsidianClient } from './obsidianClient.js';
 import type { AIService } from './ai/AIService.js';
 import type { SqliteClient } from './sqliteClient.js';
@@ -48,7 +48,7 @@ export interface RecordingData {
   aiSummaryOriginalBytes?: number;
   aiSummaryCleansedBytes?: number;
   aiSummaryCleansedElements?: number;
-  aiSummaryCleansedReason?: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none';
+  aiSummaryCleansedReason?: AiSummaryCleansedReason;
   aiSummaryCleansedReasons?: string[];
   fallbackTriggered?: boolean;
   precomputedMaskedCount?: number;

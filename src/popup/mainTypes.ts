@@ -1,5 +1,6 @@
 import type { MaskedItem } from '../messaging/types.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
+import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 
 export interface ContentResponse {
   content: string;
@@ -19,7 +20,7 @@ export interface ContentResponse {
     aiSummaryOriginalBytes: number;
     aiSummaryCleansedBytes: number;
     aiSummaryCleansedElements: number;
-    aiSummaryCleansedReason: 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep' | 'multiple' | 'none';
+    aiSummaryCleansedReason: AiSummaryCleansedReason;
     aiSummaryCleansedReasons?: string[];
   };
 }

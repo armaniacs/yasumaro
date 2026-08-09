@@ -1,4 +1,5 @@
 import { getMessage } from '../utils/i18n.js';
+import { buildRuleLabelMap } from '../utils/aiSummaryCleaner/ruleLabels.js';
 import { removeSavedUrl } from '../utils/storageUrls.js';
 import type { SavedUrlEntry } from '../utils/storageUrls.js';
 import { makeCleansingProgressBar } from './cleansingStatsView.js';
@@ -225,14 +226,10 @@ export function makeHistoryEntryRow(
       cleansingParts.push(`${aiSummaryCleansedElements}要素削除`);
     }
     if (aiSummaryCleansedReason !== undefined && aiSummaryCleansedReason !== 'none') {
-      const labelMap: Record<string, string> = {
-        alt:      getMessage('historyAiSummaryCleansedReasonAlt') || '画像alt属性',
-        metadata: getMessage('historyAiSummaryCleansedReasonMetadata') || 'メタデータ',
-        ads:      getMessage('historyAiSummaryCleansedReasonAds') || '広告',
-        nav:      getMessage('historyAiSummaryCleansedReasonNav') || 'ナビゲーション',
-        social:   getMessage('historyAiSummaryCleansedReasonSocial') || 'ソーシャル',
-        deep:     getMessage('historyAiSummaryCleansedReasonDeep') || 'ディープ',
-      };
+      // Derived from CLEANSING_RULES so every rule has a label. The
+      // hand-written map this replaced covered only 6 of the 32 rules, so
+      // reasons like 'popup' surfaced as raw English keys.
+      const labelMap = buildRuleLabelMap(getMessage);
       let reasonText = '';
       if (aiSummaryCleansedReason === 'multiple') {
         reasonText = aiSummaryCleansedReasons && aiSummaryCleansedReasons.length > 0
