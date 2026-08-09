@@ -19,11 +19,9 @@
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
 | ⬜ [2026-08-09-23-refactor-sqlite-transport-layers.md](2026-08-09-23-refactor-sqlite-transport-layers.md) | 🔴大 | 🔴あり | 🔧 | **Epic 8pt・要シニア相談**: 1操作に6層1400行。Phase1(型二重化解消/2pt)・Phase2(失敗表現統一/3pt)・Phase3(宣言表/3pt)。業務ロジックを持つ7caseは機械化しない |
-| ⬜ [2026-08-09-24-refactor-dashboard-reverse-dependency.md](2026-08-09-24-refactor-dashboard-reverse-dependency.md) | 🔴大 | 🔴あり | 🔧 | panel層→dashboard.ts(842行)の逆依存と二重bootstrapを解消。**PBI 2026-08-08-09のPhase2/4を最新実測値で切り出したもの**（重複実施しないこと） |
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
 | 🔶 [2026-08-07-08-refactor-ai-client-service-unification.md](2026-08-07-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合（modelName型ドリフトは解消済み。AIClient削除は中核パスの高リスクのため保留） |
 | 🔶 [2026-08-07-13-refactor-service-wiring-backend-consolidation.md](2026-08-07-13-refactor-service-wiring-backend-consolidation.md) | 🟡中 | 🟡軽微 | 🔧 | サービス配線・StorageBackend・プロバイダ設定表示・エラー処理の統合候補（エラー処理イディオムは解消済み。他は調査により実重複でない/高リスクと判断し保留） |
-| 🔶 [2026-08-08-09-refactor-dashboard-dual-bootstrap.md](2026-08-08-09-refactor-dashboard-dual-bootstrap.md) | 🔴高 | 🔴あり | 🔧 | Phase1(エクスポート業務ロジック切り出し)・Phase3(registry経由化)完了。**残るPhase2/4は 2026-08-09-24 へ引き継ぎ済み**（本PBIは新規着手しない） |
 
 ---
 
@@ -67,13 +65,16 @@
 - 2026-08-09-18-refactor-cleansing-rule-table.md (**実害修正**: 32ルール中15件がcount経路で捨てられていた問題。既定設定で表示件数 4→6 に是正。countTargets.ts 497行を削除)
 - 2026-08-09-19-refactor-sqlite-read-result-union.md (**実害修正**: DB障害が「データがありません」と表示される問題。読み取り系4関数をCallResult貫通に)
 
-### 2026-08-09〜10 セッションでアーカイブ済み（3件）
+### 2026-08-09〜10 セッションでアーカイブ済み（5件）
 
 - 2026-08-09-20-refactor-cleansing-rule-single-source.md (ルール宣言が10層に散在し既定値が7ルール食い違っていた問題。「新規ユーザー既定値」と「未指定時フォールバック」を分離しCLEANSING_RULES表から導出。実装中にenhancedHidden/emptyElemの追加の食い違いを発見・是正。実装計画は3箇所想定だったが実際は5箇所[aiSummaryCleansingSettingsV2.ts]。テスト7680→7690)
 - 2026-08-09-21-refactor-sqlite-write-result-union.md (**実害修正**: 削除・スター操作の失敗時に画面が完全無反応だった問題。変更系9メソッドをCallResult化し共有可変lastErrorを完全削除。実装中に「toggle_starの成功レスポンスがsuccessを欠きスター操作が成功時も失敗扱いだった」実害を追加発見・是正。テスト7690→7697)
 - 2026-08-09-22-refactor-shallow-static-form-panels.md (init関数を転送するだけの9ファイル133行を宣言表+アダプタへ集約。staticForm/が12→5ファイルに。id検証テストは変異テストで有効性確認済み。**DoDの手動確認[9タブをChromeで開く]は実装者環境で未実施**。テスト7697→7711)
 
-**同セッションでアーカイブした実装計画（dev-docs/archived/plans/）9件**:
+- 2026-08-09-24-refactor-dashboard-reverse-dependency.md (panel層→dashboard.tsの逆依存と二重bootstrapを解消。dashboard.ts 1000行超→93行。借り手が1人しかいない関数を共有モジュールに置く形をやめ、generalSettings/connectionTests.ts・settingsForm.ts と panel 側へ再配置。**計画のRed前提は誤りだった**: testDir/vitest.setup.ts が chrome を全体モックするため「import すると初期化が落ちる」は起きず、import グラフをソース文字列で検証する形に書き換えた。ディープリンクは start() へ渡す形になり click 合成フォールバックが不要に。テスト7711→7727)
+- 2026-08-08-09-refactor-dashboard-dual-bootstrap.md (Phase1/3は先行セッションで完了、残る Phase2/4 を 2026-08-09-24 が実施したため完了扱い)
+
+**同セッションでアーカイブした実装計画（dev-docs/archived/plans/）10件**:
 2026-07-27-pbi11 / pbi13 / pbi15 / pbi24 / pbi26 / pbi27 / pbi29-36-35 / pbi34 の各計画と
 2026-07-26-chrome-built-in-ai-provider-plan.md。いずれも対応PBIがアーカイブ済み。
 
@@ -300,19 +301,18 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 3（✨機能追加 0 / 🔧非機能追加 3） |
-| 🔶 部分実装 | 3（2026-08-07-08 AIレイヤー統合 / 2026-08-07-13 サービス配線・StorageBackend / 2026-08-08-09 dashboard二重bootstrap → **2026-08-09-24 に引き継ぎ**） |
-| **`pbi/` 残存合計** | **6** |
-| アーカイブ済みPBI | 241 |
-| アーカイブ済み実装計画 | 102 |
+| ⬜ 未着手 | 2（✨機能追加 0 / 🔧非機能追加 2） |
+| 🔶 部分実装 | 2（2026-08-07-08 AIレイヤー統合 / 2026-08-07-13 サービス配線・StorageBackend） |
+| **`pbi/` 残存合計** | **4** |
+| アーカイブ済みPBI | 243 |
+| アーカイブ済み実装計画 | 103 |
 
 未着手の内訳:
 
 | PBI | 内容 | 実施順 |
 |---|---|---|
 | 2026-08-01-17 | 暗号化キーの chrome.storage.session 移行 | 独立 |
-| 2026-08-09-23 | SQLite トランスポート層の削減（Epic） | **4番目**（20〜22は完了）・要シニア相談 |
-| 2026-08-09-24 | dashboard.ts への逆依存解消 | **5番目**・22完了により着手しやすい |
+| 2026-08-09-23 | SQLite トランスポート層の削減（Epic） | **次**（20〜22・24は完了）・要シニア相談 |
 
 ### 2026-08-09 アーキテクチャレビュー由来（20〜24）の実施順と依存
 
@@ -325,11 +325,12 @@
   ↓
 22（候補04・浅いパネル）      ← ✅ 完了（アーカイブ済み）
   ↓
-23（候補02・トランスポート）  ← 21が前提（完了済み）。Epic 8pt・要シニア相談。
-                                 Phase1（型二重化解消・2pt）だけでも単独マージ可
+24（候補05・逆依存）          ← PBI-09の後継。✅ 完了（アーカイブ済み）
   ↓
-24（候補05・逆依存）          ← 22完了により着手しやすい。PBI-09の後継
+23（候補02・トランスポート）  ← 21が前提（完了済み）。**唯一の残件**。
+                                 Epic 8pt・要シニア相談。
+                                 Phase1（型二重化解消・2pt）だけでも単独マージ可
 ```
 
-23・24 の実装計画は `dev-docs/plans/2026-08-09-pbi{23,24}-*-plan.md`。
-20〜22 の実装計画は完了に伴い `dev-docs/archived/plans/` へ移動済み。
+23 の実装計画は `dev-docs/plans/2026-08-09-pbi23-sqlite-transport-layers-plan.md`。
+20〜22・24 の実装計画は完了に伴い `dev-docs/archived/plans/` へ移動済み。
