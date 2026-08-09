@@ -33,6 +33,8 @@
 | ✅ [2026-08-09-17-refactor-remove-per-handler-sender-guards.md](2026-08-09-17-refactor-remove-per-handler-sender-guards.md) | 🟡中 | 🔴あり | 🔧 | 認可判定を1箇所に集約。削除前に全19型×3送信元の網羅テスト59件を用意。security-integrityをソース照合から振る舞い検証へ |
 | ✅ [2026-08-09-14-refactor-remove-offscreen-sqlite-shim.md](2026-08-09-14-refactor-remove-offscreen-sqlite-shim.md) | 🟢低 | 🟢なし | 🔧 | 非推奨再エクスポート層を削除。vi.mockを本番の import 先に合わせ offscreen テストが152→175件に |
 | ✅ [2026-08-09-15-investigate-markdown-sanitizer-divergence.md](2026-08-09-15-investigate-markdown-sanitizer-divergence.md) | 🟢低 | 🟢なし | 🔍 | 調査完了・**対応不要**。ADRが用途別使い分けを定めており、リンク構文を組まない側は現状が正しい |
+| ⬜ [2026-08-09-18-refactor-cleansing-rule-table.md](2026-08-09-18-refactor-cleansing-rule-table.md) | 🔴大 | 🔴あり | 🔧 | **実害修正**: 32ルール中15件がcount経路で黙って捨てられ、既定ONの2件を含むため全ユーザーで過少表示。ルール表に集約しcountをstrip由来にして二重実装を解消 |
+| ⬜ [2026-08-09-19-refactor-sqlite-read-result-union.md](2026-08-09-19-refactor-sqlite-read-result-union.md) | 🔴大 | 🟡あり | 🔧 | **実害修正**: DB障害が「データがありません」と表示される問題（v6.7.26で3件修正した形の4件目）。読み取り系6関数をCallResult貫通にし、共有可変lastError経由と文字列照合retryを廃止 |
 
 ---
 > 2026-08-04-01〜05 は Checking Team レビュー（v6.7.12 AI接続テスト進捗表示）の残存指摘対応として実装・アーカイブ済み。詳細はアーカイブ欄参照。
@@ -275,7 +277,15 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 1（✨機能追加 0 / 🔧非機能追加 1） |
-| ✅ 完了 | 1（2026-08-08-01 RecordingLogic 分割） |
-| 🔶 部分実装 | 2（2026-08-07-08 AIレイヤー統合 / 2026-08-07-13 サービス配線・StorageBackend） |
+| ⬜ 未着手 | 3（✨機能追加 0 / 🔧非機能追加 3） |
+| ✅ 完了 | 15 |
+| 🔶 部分実装 | 3（2026-08-07-08 AIレイヤー統合 / 2026-08-07-13 サービス配線・StorageBackend / 2026-08-08-09 dashboard二重bootstrap） |
 | アーカイブ済み | 210 |
+
+未着手の内訳:
+
+| PBI | 内容 |
+|---|---|
+| 2026-08-01-17 | 暗号化キーの chrome.storage.session 移行 |
+| 2026-08-09-18 | クレンジングルール表への集約（先に実施） |
+| 2026-08-09-19 | SQLite 読み取り系の Result 貫通 |
