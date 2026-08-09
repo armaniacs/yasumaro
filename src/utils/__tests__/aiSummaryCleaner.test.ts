@@ -374,22 +374,26 @@ describe('aiSummaryCleaner', () => {
             expect(element.innerHTML).toBe(htmlBefore);
         });
 
-        test('bytesBefore と bytesAfter は 0 を返す', () => {
+        test('bytesBefore / bytesAfter はクローン上の実測値を返す', () => {
             const element = document.getElementById('content')!;
             const result = countAISummaryTargets(element);
 
-            expect(result.bytesBefore).toBe(0);
-            expect(result.bytesAfter).toBe(0);
+            // Counting now runs the real strips over a throwaway clone, so the
+            // byte figures are measured rather than stubbed to 0 as they were
+            // when counting had its own traversal that never removed anything.
+            expect(result.bytesBefore).toBeGreaterThan(0);
+            expect(result.bytesAfter).toBeLessThanOrEqual(result.bytesBefore);
         });
 
         test('totalRemoved が各カウントの合計と一致する', () => {
             const element = document.getElementById('content')!;
             const result = countAISummaryTargets(element);
 
-            expect(result.totalRemoved).toBe(
-                result.altRemoved + result.metadataRemoved + result.adsRemoved +
-                result.navRemoved + result.socialRemoved + result.deepRemoved
-            );
+            // Sum over the keyed map rather than a hand-listed subset: the
+            // old version added only 6 of the 32 rules, so it silently
+            // tolerated rules whose counts were never produced.
+            const sum = Object.values(result.removed).reduce((a, b) => a + b, 0);
+            expect(result.totalRemoved).toBe(sum);
         });
 
         test('ディープクレンジングカウント', () => {

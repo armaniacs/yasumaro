@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { countAISummaryTargets } from '../countTargets.js';
+import { countAISummaryTargets } from '../index.js';
 
 describe('countAISummaryTargets - card detection', () => {
   it('counts card elements when cardEnabled is true', () => {

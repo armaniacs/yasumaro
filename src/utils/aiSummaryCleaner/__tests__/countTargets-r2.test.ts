@@ -7,7 +7,7 @@
  * and the total sum calculation.
  */
 import { describe, it, expect } from 'vitest';
-import { countAISummaryTargets } from '../countTargets.js';
+import { countAISummaryTargets } from '../index.js';
 
 describe('countAISummaryTargets - R2 all option branches', () => {
   it('counts alt attributes when altEnabled is true', () => {
