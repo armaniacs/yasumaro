@@ -113,12 +113,12 @@ export async function queryLogs(options: {
   orderBy?: string;
   orderDir?: 'ASC' | 'DESC';
   tagFilter?: string;
-} = {}): Promise<{ rows: BrowsingLogEntry[]; total: number } | { error: string } | null> {
+} = {}): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await sendDashboardMessage({ subtype: 'query', ...options });
       if (response.success) {
-        return { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) };
+        return { data: { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) } };
       }
       // Retry only when the service worker says the failure is transient.
       // This used to match the message text for 'Query failed', which is the
@@ -136,7 +136,7 @@ export async function queryLogs(options: {
         continue;
       }
       console.error('queryLogs failed:', errorMessage(error));
-      return null;
+      return { error: errorMessage(error) };
     }
   }
   return { error: 'Query failed' };
@@ -150,12 +150,12 @@ export async function searchLogs(
   query: string,
   limit = 50,
   offset = 0
-): Promise<{ rows: BrowsingLogEntry[]; total: number } | { error: string } | null> {
+): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const response = await sendDashboardMessage({ subtype: 'search', query, limit, offset });
       if (response.success) {
-        return { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) };
+        return { data: { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) } };
       }
       // See queryLogs: retriability now comes from the service worker's
       // error classification rather than the wording of the message.
@@ -171,7 +171,7 @@ export async function searchLogs(
         continue;
       }
       console.error('searchLogs failed:', errorMessage(error));
-      return null;
+      return { error: errorMessage(error) };
     }
   }
   return { error: 'Search failed' };
@@ -295,17 +295,17 @@ export async function clearAllLogs(): Promise<ServiceResult<void>> {
 
 /**
  * Get total record count.
- * Returns -1 on error to distinguish from a legitimate count of 0.
+ * Returns a ServiceResult so a failure is distinguishable from a count of 0.
  */
-export async function getLogCount(): Promise<number> {
+export async function getLogCount(): Promise<ServiceResult<number>> {
   try {
     const response = await sendDashboardMessage({ subtype: 'get_count' });
     if (response.success) {
-      return Number(response.count || 0);
+      return { data: Number(response.count || 0) };
     }
-    return -1;
-  } catch {
-    return -1;
+    return { error: String(response.error || 'Get count failed') };
+  } catch (error) {
+    return { error: errorMessage(error) };
   }
 }
 
@@ -538,13 +538,15 @@ export async function appendToLogs(ids: number[]): Promise<ServiceResult<{ appen
  */
 export async function queryAuditLogs(
   options: { limit?: number; offset?: number } = {}
-): Promise<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number } | { error: string } | null> {
+): Promise<ServiceResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>> {
   try {
     const response = await sendDashboardMessage({ subtype: 'audit_log_query', ...options });
     if (response.success) {
       return {
-        rows: (response.rows || []) as Array<{ id: number; provider: string; url: string; created_at: number }>,
-        total: Number(response.total || 0),
+        data: {
+          rows: (response.rows || []) as Array<{ id: number; provider: string; url: string; created_at: number }>,
+          total: Number(response.total || 0),
+        },
       };
     }
     // Return the reason rather than null: a caller that cannot tell "failed"
@@ -553,6 +555,6 @@ export async function queryAuditLogs(
     return { error: String(response.error || 'Audit log query failed') };
   } catch (error) {
     console.error('queryAuditLogs failed:', errorMessage(error));
-    return null;
+    return { error: errorMessage(error) };
   }
 }

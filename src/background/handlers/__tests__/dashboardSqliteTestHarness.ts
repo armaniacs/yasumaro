@@ -9,6 +9,10 @@
  *
  * This goes through the production `createSqliteClientDeps`, so tests still
  * exercise the same SqliteClient-backed wiring the Service Worker uses.
+ *
+ * PBI-02: the SqliteClient no longer exposes `null`/boolean-returning wrappers,
+ * so tests supply the `*Result` methods directly (no more synthesizing them
+ * from plain methods via a RESULT_METHOD_SOURCES table).
  */
 
 import { createDashboardSqliteHandler, createSqliteClientDeps } from '../dashboardSqliteHandlers.js';
@@ -27,72 +31,6 @@ function defaultServiceWorkerDeps(): SqliteClientBackedDeps {
 }
 
 /**
- * Read-path methods, and the `null`-returning method each one is derived from.
- *
- * Tests mock SqliteClient by hand, so they supply the plain methods
- * (`query`, `getCount`, ...). Production reads through the `*Result` variants
- * to keep each failure's reason attached to its own call. Where a test has
- * mocked only the plain method, synthesize the Result form from it: `null`
- * becomes a failure carrying `lastError` — which is exactly what the handler
- * used to consult, so migrated assertions keep their meaning.
- */
-const RESULT_METHOD_SOURCES = [
-  // [Result method, plain method, message used when the plain method returns
-  //  null and no lastError is set — the wording the handler used to supply,
-  //  treatFalseAsFailure — true for methods whose plain form returns boolean
-  //  (false means failure there, whereas read-path methods never return
-  //  false as a legitimate value)]
-  ['queryResult', 'query', 'Query failed', false],
-  ['searchResult', 'search', 'Search failed', false],
-  ['getCountResult', 'getCount', 'Get count failed', false],
-  ['backupDbResult', 'backupDb', 'Backup failed', false],
-  ['queryAuditLogResult', 'queryAuditLog', 'Audit log query failed', false],
-  // Write-path additions (PBI-21): the plain method returns false/null on
-  // failure, same shape as the read-path methods above.
-  ['deleteResult', 'delete', 'Delete failed', true],
-  ['updateResult', 'update', 'Update failed', true],
-  ['toggleStarResult', 'toggleStar', 'Toggle star failed', false],
-  ['clearAllResult', 'clearAll', 'Clear all failed', true],
-  ['insertResult', 'insert', 'Insert failed', false],
-  ['restoreDbResult', 'restoreDb', 'Restore failed', true],
-  ['purgeOldRecordsResult', 'purgeOldRecords', 'Purge failed', false],
-  ['purgeContentResult', 'purgeContent', 'Content purge failed', false],
-  ['runOpfsSpikeResult', 'runOpfsSpike', 'OPFS spike failed', false],
-] as const;
-
-type LooseClient = Record<string, unknown>;
-
-export function withDerivedResultMethods(sqliteClient: Partial<SqliteClient>): Partial<SqliteClient> {
-  const loose = sqliteClient as LooseClient;
-
-  // Augment in place rather than returning a copy: tests hold a reference to
-  // the object they built and both assert on its spies and reassign its
-  // methods afterwards, so a copy would silently diverge from what they see.
-  for (const [resultName, plainName, fallbackMessage, treatFalseAsFailure] of RESULT_METHOD_SOURCES) {
-    if (typeof loose[resultName] === 'function') continue;
-
-    loose[resultName] = async (...args: unknown[]) => {
-      // Resolve the plain method and lastError at call time, not build time:
-      // several tests swap in a fresh vi.fn() (or set lastError) after the
-      // client object exists, and a snapshot would miss those.
-      const plain = loose[plainName];
-      if (typeof plain !== 'function') {
-        return { success: false, error: { kind: 'unknown', message: fallbackMessage, retriable: false } };
-      }
-      const data = await (plain as (...a: unknown[]) => Promise<unknown>).apply(sqliteClient, args);
-      const isFailure = data === null || data === undefined || (treatFalseAsFailure && data === false);
-      if (isFailure) {
-        const message = (loose.lastError as string | undefined) || fallbackMessage;
-        return { success: false, error: { kind: 'unknown', message, retriable: false } };
-      }
-      return { success: true, data };
-    };
-  }
-
-  return sqliteClient;
-}
-
-/**
  * Builds a handler bound to `sqliteClient`.
  *
  * @param overrides the Service-Worker-owned dependencies a test cares about;
@@ -103,7 +41,7 @@ export function makeDashboardSqliteHandler(
   overrides: Partial<SqliteClientBackedDeps> = {},
 ): (payload: DashboardSqliteRequest & { confirmToken?: string }) => Promise<unknown> {
   return createDashboardSqliteHandler(
-    createSqliteClientDeps(withDerivedResultMethods(sqliteClient) as SqliteClient, {
+    createSqliteClientDeps(sqliteClient as SqliteClient, {
       ...defaultServiceWorkerDeps(),
       ...overrides,
     }),

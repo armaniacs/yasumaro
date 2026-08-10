@@ -16,7 +16,6 @@ export const PENDING_SQLITE_RECORDS_KEY = 'pending_sqlite_records';
 const MAX_PENDING_RECORDS = 500;
 
 interface SqliteClientLike {
-  insert(record: BrowsingLogRecord): Promise<{ id: number } | null>;
   insertBatch(records: BrowsingLogRecord[]): Promise<{ count: number } | null>;
 }
 

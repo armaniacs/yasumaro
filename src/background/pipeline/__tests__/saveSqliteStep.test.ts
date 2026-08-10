@@ -11,8 +11,8 @@ import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 
 function makeMockSqlite(overrides: Partial<SqliteClient> = {}): SqliteClient {
   return {
-    insert: vi.fn().mockResolvedValue({ id: 1 }),
-    update: vi.fn().mockResolvedValue(true),
+    insertResult: vi.fn().mockResolvedValue({ success: true, data: { id: 1 } }),
+    updateResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
     ...overrides,
   } as unknown as SqliteClient;
 }
@@ -22,7 +22,7 @@ describe('saveSqliteStep', () => {
     vi.clearAllMocks();
   });
 
-  it('calls insert and update directly (no optimistic lock)', async () => {
+  it('calls insertResult and updateResult directly (no optimistic lock)', async () => {
     const mockSqlite = makeMockSqlite();
 
     await saveSqliteStep({
@@ -32,8 +32,8 @@ describe('saveSqliteStep', () => {
       obsidianSynced: true,
     });
 
-    expect(mockSqlite.insert).toHaveBeenCalled();
-    expect(mockSqlite.update).toHaveBeenCalled();
+    expect(mockSqlite.insertResult).toHaveBeenCalled();
+    expect(mockSqlite.updateResult).toHaveBeenCalled();
   });
 
   it('does not write to old chrome.storage.savedUrlsWithTimestamps', async () => {
@@ -63,11 +63,11 @@ describe('saveSqliteStep', () => {
       sqliteClient: mockSqlite,
     });
 
-    expect(mockSqlite.insert).toHaveBeenCalled();
-    expect(mockSqlite.update).not.toHaveBeenCalled();
+    expect(mockSqlite.insertResult).toHaveBeenCalled();
+    expect(mockSqlite.updateResult).not.toHaveBeenCalled();
   });
 
-  it('calls update with obsidian_synced=1 when obsidianSynced is true', async () => {
+  it('calls updateResult with obsidian_synced=1 when obsidianSynced is true', async () => {
     const mockSqlite = makeMockSqlite();
 
     await saveSqliteStep({
@@ -77,10 +77,10 @@ describe('saveSqliteStep', () => {
       obsidianSynced: true,
     });
 
-    expect(mockSqlite.update).toHaveBeenCalledWith(1, { obsidian_synced: 1 }, undefined);
+    expect(mockSqlite.updateResult).toHaveBeenCalledWith(1, { obsidian_synced: 1 }, undefined);
   });
 
-  it('calls update with obsidian_synced=0 when obsidianSynced is false', async () => {
+  it('calls updateResult with obsidian_synced=0 when obsidianSynced is false', async () => {
     const mockSqlite = makeMockSqlite();
 
     await saveSqliteStep({
@@ -90,12 +90,15 @@ describe('saveSqliteStep', () => {
       obsidianSynced: false,
     });
 
-    expect(mockSqlite.update).toHaveBeenCalledWith(1, { obsidian_synced: 0 }, undefined);
+    expect(mockSqlite.updateResult).toHaveBeenCalledWith(1, { obsidian_synced: 0 }, undefined);
   });
 
-  it('throws when insert returns null', async () => {
+  it('throws when insertResult fails', async () => {
     const mockSqlite = makeMockSqlite({
-      insert: vi.fn().mockResolvedValue(null),
+      insertResult: vi.fn().mockResolvedValue({
+        success: false,
+        error: { kind: 'sqlite_error', message: 'mock failure', retriable: false },
+      }),
     });
 
     await expect(
@@ -104,15 +107,18 @@ describe('saveSqliteStep', () => {
         record: { url: 'https://x.com', created_at: 100 },
         sqliteClient: mockSqlite,
       })
-    ).rejects.toThrow('SQLite insert returned null');
+    ).rejects.toThrow('SQLite insert failed');
 
-    expect(mockSqlite.insert).toHaveBeenCalled();
-    expect(mockSqlite.update).not.toHaveBeenCalled();
+    expect(mockSqlite.insertResult).toHaveBeenCalled();
+    expect(mockSqlite.updateResult).not.toHaveBeenCalled();
   });
 
-  it('does not call update when insert returns null', async () => {
+  it('does not call updateResult when insertResult fails', async () => {
     const mockSqlite = makeMockSqlite({
-      insert: vi.fn().mockResolvedValue(null),
+      insertResult: vi.fn().mockResolvedValue({
+        success: false,
+        error: { kind: 'sqlite_error', message: 'mock failure', retriable: false },
+      }),
     });
 
     await expect(
@@ -124,7 +130,7 @@ describe('saveSqliteStep', () => {
       })
     ).rejects.toThrow();
 
-    expect(mockSqlite.update).not.toHaveBeenCalled();
+    expect(mockSqlite.updateResult).not.toHaveBeenCalled();
   });
 });
 
@@ -133,10 +139,10 @@ describe('saveSqliteStep — diagnostic metadata', () => {
     vi.clearAllMocks();
   });
 
-  it('passes full diagnostic metadata to insert', async () => {
-    const mockInsert = vi.fn().mockResolvedValue({ id: 42 });
-    const mockUpdate = vi.fn().mockResolvedValue(undefined);
-    const mockClient = { insert: mockInsert, update: mockUpdate } as unknown as SqliteClient;
+  it('passes full diagnostic metadata to insertResult', async () => {
+    const mockInsert = vi.fn().mockResolvedValue({ success: true, data: { id: 42 } });
+    const mockUpdate = vi.fn().mockResolvedValue({ success: true, data: undefined });
+    const mockClient = { insertResult: mockInsert, updateResult: mockUpdate } as unknown as SqliteClient;
 
     const record: BrowsingLogRecord = {
       url: 'https://example.com/page',

@@ -5,11 +5,13 @@ import {
   deleteLog,
   getSqliteStatus,
   appendToLogs,
+  isServiceError,
 } from '../../dashboardSqliteService.js';
 import { getMessageOr } from '../../../utils/i18n.js';
 import { getSavedUrlEntries } from '../../../utils/storageUrls.js';
 import type { SavedUrlEntry } from '../../../utils/storageUrls.js';
 import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
+import type { ServiceResult } from '../../dashboardSqliteService.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
@@ -448,7 +450,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       const limit = PAGE_SIZE;
       const offset = page * limit;
 
-      let result: { rows: BrowsingLogEntry[]; total: number } | { error: string } | null;
+      let result: ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>;
 
       const activeTagFilter = options.tagFilter !== undefined ? options.tagFilter : state.activeTagFilter;
 
@@ -474,8 +476,8 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
           orderDir: 'DESC',
         });
 
-        if (result && !('error' in result) && activeTagFilter) {
-          const filteredRows = filterRowsByTag(result.rows, activeTagFilter);
+        if (!isServiceError(result) && activeTagFilter) {
+          const filteredRows = filterRowsByTag(result.data.rows, activeTagFilter);
 
           // Tag Cluster navigation that matched nothing → fall back to a
           // full-text search for the same term so the user still lands on
@@ -487,21 +489,23 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
           );
           if (fallbackTerm) {
             const searchResult = await searchLogs(fallbackTerm, limit, offset);
-            if (searchResult && !('error' in searchResult)) {
-              result = { rows: searchResult.rows, total: searchResult.total };
+            if (!isServiceError(searchResult)) {
+              result = { data: { rows: searchResult.data.rows, total: searchResult.data.total } };
               state.searchQuery = fallbackTerm;
               // Only surface the notice when the fallback actually returned
               // rows; a zero-hit fallback stays a plain empty state.
-              state.pendingTagFallback = searchResult.total > 0
-                ? { tag: activeTagFilter, fallbackTo: fallbackTerm, matched: searchResult.total }
+              state.pendingTagFallback = searchResult.data.total > 0
+                ? { tag: activeTagFilter, fallbackTo: fallbackTerm, matched: searchResult.data.total }
                 : null;
             } else {
               state.pendingTagFallback = null;
             }
           } else {
             result = {
-              rows: filteredRows.slice(offset, offset + limit),
-              total: filteredRows.length,
+              data: {
+                rows: filteredRows.slice(offset, offset + limit),
+                total: filteredRows.length,
+              },
             };
           }
         }
@@ -510,17 +514,13 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         // page.
       }
 
-      if (result === null) {
+      if (isServiceError(result)) {
         state.error = t('historyLoadError');
         state.entries = [];
         state.total = 0;
-      } else if ('error' in result) {
-        state.error = result.error;
-        state.entries = [];
-        state.total = 0;
       } else {
-        state.entries = result.rows;
-        state.total = result.total;
+        state.entries = result.data.rows;
+        state.total = result.data.total;
         state.selectedIds.clear();
       }
     } catch (err) {

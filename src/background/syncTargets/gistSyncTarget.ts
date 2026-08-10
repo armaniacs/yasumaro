@@ -58,7 +58,7 @@ export class GistSyncTarget implements SyncTarget {
         await saveSettings({ [StorageKeys.GIST_ID]: newGistId } as Partial<Settings> as Settings);
       }
 
-      await this.sqliteClient.update(logId, { gist_synced: 1 });
+      await this.sqliteClient.updateResult(logId, { gist_synced: 1 });
       addLog(LogType.INFO, 'GistSync: synced', { url, logId });
       return { success: true };
     } catch (error) {
@@ -83,7 +83,7 @@ export class GistSyncTarget implements SyncTarget {
       let totalSynced = 0;
 
         for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-            const result = await this.sqliteClient.query({
+            const result = await this.sqliteClient.queryResult({
                 limit: BATCH_SIZE,
                 offset: 0,
                 orderBy: 'created_at',
@@ -91,12 +91,15 @@ export class GistSyncTarget implements SyncTarget {
                 gistSynced: 0,
             });
 
-            if (!result || !result.rows || result.rows.length === 0) {
+            if (!result.success) {
+                throw new Error(`Gist sync query failed: ${result.error.message}`);
+            }
+            if (result.data.rows.length === 0) {
                 break;
             }
 
             let batchSynced = 0;
-            for (const row of result.rows) {
+            for (const row of result.data.rows) {
                 if (row.id === undefined) continue;
                 const syncResult = await this.sync(row.id, row.url, row.title ?? null, row.summary ?? null);
                 if (syncResult.success) {
@@ -112,11 +115,11 @@ export class GistSyncTarget implements SyncTarget {
       }
 
       return totalSynced;
-    } catch (error) {
+      } catch (error) {
       addLog(LogType.WARN, 'GistSync: batch failed', {
         error: errorMessage(error),
       });
-      return 0;
+      throw error;
     }
   }
 

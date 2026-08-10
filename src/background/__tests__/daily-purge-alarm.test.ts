@@ -8,8 +8,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── mocks ────────────────────────────────────────────────────────────────────
 
-const mockPurgeOldRecords = vi.fn<() => Promise<{ purged: number } | null>>()
-    .mockResolvedValue({ purged: 0 });
+import type { CallResult } from '../sqliteClient.js';
+
+type PurgeResult = CallResult<{ purged: number }>;
+
+const mockPurgeOldRecords = vi.fn<() => Promise<PurgeResult>>()
+    .mockResolvedValue({ success: true, data: { purged: 0 } });
 
 const { mockGetSettings } = vi.hoisted(() => ({
     mockGetSettings: vi.fn(),
@@ -39,6 +43,7 @@ vi.mock('../../utils/errorUtils.js', () => ({
 // ── import target ─────────────────────────────────────────────────────────────
 
 import { handleDailyPurgeAlarm } from '../dailyPurgeHandler.js';
+import { logInfo } from '../../utils/logger.js';
 
 // ── tests ─────────────────────────────────────────────────────────────────────
 
@@ -91,5 +96,32 @@ describe('handleDailyPurgeAlarm', () => {
         await handleDailyPurgeAlarm(purgeOldRecords);
 
         expect(purgeOldRecords).toHaveBeenCalledWith(90, 10000);
+    });
+
+    it('logs the purged count when purge succeeds', async () => {
+        mockGetSettings.mockResolvedValue({
+            sqlite_retention_days: 30,
+            sqlite_max_records: null,
+        });
+        mockPurgeOldRecords.mockResolvedValue({ success: true, data: { purged: 5 } });
+
+        await handleDailyPurgeAlarm(purgeOldRecords);
+
+        expect(logInfo).toHaveBeenCalledWith('daily-purge completed', { purged: 5 }, 'dailyPurgeHandler');
+    });
+
+    it('logs -1 when purge fails instead of hiding the failure as 0 purged', async () => {
+        mockGetSettings.mockResolvedValue({
+            sqlite_retention_days: 30,
+            sqlite_max_records: null,
+        });
+        mockPurgeOldRecords.mockResolvedValue({
+            success: false,
+            error: { kind: 'sqlite_error', message: 'disk I/O error', retriable: false },
+        });
+
+        await handleDailyPurgeAlarm(purgeOldRecords);
+
+        expect(logInfo).toHaveBeenCalledWith('daily-purge completed', { purged: -1 }, 'dailyPurgeHandler');
     });
 });

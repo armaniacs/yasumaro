@@ -82,3 +82,85 @@ void _assertArrayCoversUnion;
 export function isSqliteMessageType(type: unknown): type is SqliteMessageType {
   return typeof type === 'string' && (SQLITE_MESSAGE_TYPES as readonly string[]).includes(type);
 }
+
+// ============================================================================
+// Typed response surface (PBI-04)
+//
+// The offscreen document returns a discriminated shape per operation. Centralizing
+// these types here (the single source for the SW↔offscreen protocol) lets the
+// Service Worker's SqliteClient decode responses without the loose
+// `[key: string]: unknown` bag it previously re-derived in every call site.
+// ============================================================================
+
+import type { OpfsSpikeReport } from '../offscreen/opfsSpike.js';
+
+/** The failure shape every operation can return. */
+export type OffscreenFailure = { success: false; error: string };
+
+/** Health check / init: success is a boolean, not a discriminant. */
+export type OffscreenHealthResponse =
+  | { success: boolean; initialized?: boolean }
+  | OffscreenFailure;
+
+/** INSERT / AUDIT_LOG_INSERT: returns the new row id. */
+export type OffscreenInsertResponse = { success: true; id: number } | OffscreenFailure;
+
+/** INSERT_BATCH / COUNT: returns a count. */
+export type OffscreenCountResponse = { success: true; count: number } | OffscreenFailure;
+
+/** QUERY / SEARCH / AUDIT_LOG_QUERY: returns rows + total. */
+export type OffscreenQueryResponse = {
+  success: true;
+  rows: unknown[];
+  total: number;
+} | OffscreenFailure;
+
+/** UPDATE / DELETE / CLEAR_ALL / RESTORE: success with no payload. */
+export type OffscreenWriteResponse = { success: true } | OffscreenFailure;
+
+/** TOGGLE_STAR: returns the new star state. */
+export type OffscreenToggleStarResponse = { success: true; is_starred: number } | OffscreenFailure;
+
+/** STATUS: diagnostic info, present even on a partially-initialized DB. */
+export type OffscreenStatusResponse = {
+  success: true;
+  initialized: boolean;
+  path: string;
+  fallback: boolean;
+  fts5?: boolean;
+  initError?: string;
+  compileOptions?: string[];
+  compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback';
+  opfsMigrationV2Done?: boolean;
+  opfsMigrationV2LastAttemptedAt?: string | null;
+  opfsMigrationV2CompletedAt?: string | null;
+  opfsMigrationV2RecordCount?: number;
+} | OffscreenFailure;
+
+export type OffscreenStatusData = Extract<OffscreenStatusResponse, { success: true }>;
+
+/** EXPORT / BACKUP: binary data as a JSON-safe number array. */
+export type OffscreenBinaryResponse = { success: true; data: number[] } | OffscreenFailure;
+
+/** PURGE: number of records removed. */
+export type OffscreenPurgeResponse = { success: true; purged: number } | OffscreenFailure;
+
+/** CONTENT_PURGE: removed count plus whether any were skipped. */
+export type OffscreenContentPurgeResponse = { success: true; purged: number } | OffscreenFailure;
+
+/** OPFS_SPIKE: the structured feasibility report. */
+export type OffscreenOpfsSpikeResponse = { success: true; report: OpfsSpikeReport } | OffscreenFailure;
+
+/** Every response the offscreen document can send back to the Service Worker. */
+export type OffscreenResponse =
+  | OffscreenHealthResponse
+  | OffscreenInsertResponse
+  | OffscreenCountResponse
+  | OffscreenQueryResponse
+  | OffscreenWriteResponse
+  | OffscreenToggleStarResponse
+  | OffscreenStatusResponse
+  | OffscreenBinaryResponse
+  | OffscreenPurgeResponse
+  | OffscreenContentPurgeResponse
+  | OffscreenOpfsSpikeResponse;

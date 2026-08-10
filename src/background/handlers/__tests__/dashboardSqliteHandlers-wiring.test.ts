@@ -27,32 +27,28 @@ vi.mock('../../../utils/storage.js', () => ({
 import { createDashboardSqliteHandler, createSqliteClientDeps } from '../dashboardSqliteHandlers.js';
 import type { SqliteClientBackedDeps } from '../dashboardSqliteHandlers.js';
 import type { SqliteClient } from '../../sqliteClient.js';
-import { withDerivedResultMethods } from './dashboardSqliteTestHarness.js';
 
 function makeSqliteClient(overrides: Record<string, unknown> = {}) {
   const base = {
-    query: vi.fn().mockResolvedValue({ rows: [], total: 0 }),
-    search: vi.fn().mockResolvedValue({ rows: [], total: 0 }),
-    toggleStar: vi.fn().mockResolvedValue({ is_starred: 1 }),
-    delete: vi.fn().mockResolvedValue(true),
-    update: vi.fn().mockResolvedValue(true),
-    getCount: vi.fn().mockResolvedValue(7),
-    clearAll: vi.fn().mockResolvedValue(true),
-    insert: vi.fn().mockResolvedValue({ id: 1 }),
-    restoreDb: vi.fn().mockResolvedValue(true),
+    queryResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
+    searchResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
+    toggleStarResult: vi.fn().mockResolvedValue({ success: true, data: { is_starred: 1 } }),
+    deleteResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+    updateResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+    getCountResult: vi.fn().mockResolvedValue({ success: true, data: 7 }),
+    clearAllResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+    insertResult: vi.fn().mockResolvedValue({ success: true, data: { id: 1 } }),
+    restoreDbResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
     getStatus: vi.fn().mockResolvedValue({ initialized: true }),
-    runOpfsSpike: vi.fn().mockResolvedValue({}),
-    purgeOldRecords: vi.fn().mockResolvedValue({ purged: 0 }),
-    purgeContent: vi.fn().mockResolvedValue({ purged: 0 }),
-    backupDb: vi.fn().mockResolvedValue(new Uint8Array([1])),
-    queryAuditLog: vi.fn().mockResolvedValue({ rows: [], total: 0 }),
-    lastError: null,
+    runOpfsSpikeResult: vi.fn().mockResolvedValue({ success: true, data: {} }),
+    purgeOldRecordsResult: vi.fn().mockResolvedValue({ success: true, data: { purged: 0 } }),
+    purgeContentResult: vi.fn().mockResolvedValue({ success: true, data: { purged: 0 } }),
+    backupDbResult: vi.fn().mockResolvedValue({ success: true, data: new Uint8Array([1]) }),
+    queryAuditLogResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
     ...overrides,
   } as unknown as SqliteClient;
 
-  // The read path calls the *Result variants; derive them from the plain
-  // methods this factory mocks, exactly as the shared harness does.
-  return withDerivedResultMethods(base) as SqliteClient;
+  return base;
 }
 
 const TOKEN = 'test-confirm-token';
@@ -122,7 +118,7 @@ describe('dashboard SQLite wiring — Service-Worker-owned dependencies', () => 
       const result = await handler({ subtype: 'clear_all', confirmToken: 'wrong-token' });
 
       expect(result).toEqual({ success: false, error: 'Confirmation token mismatch' });
-      expect(client.clearAll).not.toHaveBeenCalled();
+      expect(client.clearAllResult).not.toHaveBeenCalled();
     });
 
     it('rejects a destructive subtype when no token is supplied', async () => {
@@ -135,7 +131,7 @@ describe('dashboard SQLite wiring — Service-Worker-owned dependencies', () => 
         success: false,
         error: 'Confirmation token mismatch',
       });
-      expect(client.clearAll).not.toHaveBeenCalled();
+      expect(client.clearAllResult).not.toHaveBeenCalled();
     });
 
     it('allows a destructive subtype when the token matches', async () => {
@@ -145,7 +141,7 @@ describe('dashboard SQLite wiring — Service-Worker-owned dependencies', () => 
       );
 
       expect(await handler({ subtype: 'clear_all', confirmToken: TOKEN })).toEqual({ success: true });
-      expect(client.clearAll).toHaveBeenCalledTimes(1);
+      expect(client.clearAllResult).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -191,13 +187,15 @@ describe('dashboard SQLite wiring — Service-Worker-owned dependencies', () => 
       const handler = createDashboardSqliteHandler(createSqliteClientDeps(client, makeServiceWorkerDeps()));
 
       expect(await handler({ subtype: 'get_count' })).toEqual({ success: true, count: 7 });
-      expect(client.getCount).toHaveBeenCalledTimes(1);
+      expect(client.getCountResult).toHaveBeenCalledTimes(1);
     });
 
     it('surfaces the categorized client error through the shared wiring', async () => {
       const client = makeSqliteClient({
-        query: vi.fn().mockResolvedValue(null),
-        lastError: 'Storage quota exceeded.',
+        queryResult: vi.fn().mockResolvedValue({
+          success: false,
+          error: { kind: 'quota', message: 'Storage quota exceeded.', retriable: false },
+        }),
       });
       const handler = createDashboardSqliteHandler(createSqliteClientDeps(client, makeServiceWorkerDeps()));
 

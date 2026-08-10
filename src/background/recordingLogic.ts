@@ -11,8 +11,7 @@ import { ObsidianClient } from './obsidianClient.js';
 import type { AIService } from './ai/AIService.js';
 import type { SqliteClient } from './sqliteClient.js';
 import type { RecordingResult } from '../messaging/types.js';
-import { createRecordingPipeline } from './pipeline/RecordingPipeline.js';
-import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
+import { createRecordingPipeline, buildRecordingPipelineDeps } from './pipeline/RecordingPipeline.js';
 import { Mutex } from '../utils/Mutex.js';
 import { formatMarkdownStep } from './pipeline/steps/formatMarkdownStep.js';
 import { saveToObsidianStep } from './pipeline/steps/saveToObsidianStep.js';
@@ -133,13 +132,12 @@ export class RecordingLogic {
 
   async record(data: RecordingData): Promise<RecordingResult> {
     return RecordingLogic.withUrlRecordMutex(data.url, async () => {
-      const pipeline = createRecordingPipeline({
+      const pipeline = createRecordingPipeline(buildRecordingPipelineDeps({
         getPrivacyInfoWithCache: (url: string) => RecordingCache.getPrivacyInfoWithCache(url),
         obsidian: this.obsidian,
         aiService: this.aiService,
         sqliteClient: this.sqliteClient,
-        offlineNetworkQueue: sharedOfflineNetworkQueue,
-      });
+      }));
 
       const settings = await RecordingCache.getSettingsWithCache();
       return await pipeline.execute(data, settings);
