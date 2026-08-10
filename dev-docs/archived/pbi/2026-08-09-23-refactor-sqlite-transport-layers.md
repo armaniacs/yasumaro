@@ -5,9 +5,10 @@
 **見積もり**: 🔴大（8pt目安 / Epic規模）
 **副作用**: 🔴あり（confirmToken によるセキュリティ経路に触れる）
 **種別**: ♻️リファクタリング（refactor）
-**進捗（2026-08-10）**: 🔶 部分実装。Phase 1（2pt）・Phase 2（3pt）完了。
-Phase 3（3pt・要シニア相談）は着手せず、下記「Phase 3 着手前の判断材料」に
-実測結果のみ記録した。
+**進捗（2026-08-10）**: ✅ 完了。Phase 1（2pt）・Phase 2（3pt）・Phase 3（3pt）すべて実施。
+Phase 3 はシニア相談（`dev-docs/archived/plans/2026-08-09-pbi23-phase3-senior-consultation.md`）を経て、
+`tokenExempt` 免除リスト方式（fail-safe 単一ソース化）で実装。トークン要否を
+`messaging/sqliteOperationSecurity.ts` に一元化し、送受信のドリフトを構造的に排除した。
 
 > ⚠️ **Epic規模（8pt）。着手前に必ずシニアと設計を相談すること。**
 > Phase 1 のみ単独実施も可能な設計にしてある。
@@ -215,7 +216,7 @@ Phase ごとに「その Phase の受け入れ基準を検証するテスト」�
 Phase 3 は着手前にシニアと相談する。
 
 詳細は実装計画:
-`dev-docs/plans/2026-08-09-pbi23-sqlite-transport-layers-plan.md`
+`dev-docs/archived/plans/2026-08-09-pbi23-sqlite-transport-layers-plan.md`
 
 ---
 
@@ -363,10 +364,13 @@ Phase 3 には着手していない。
 
 ## Definition of Done
 
-- [x] 実施した Phase（1・2）の受け入れ基準をすべて満たす。Phase 3 は未着手
-- [x] confirmToken のセキュリティテスト4ファイルが通る（Phase 2 の変更後も変わらず通過）
-- [x] `npm run validate` / `npm run build` / `npm run test:e2e` が通る
-- [ ] コードレビュー完了（**セキュリティ経路のため必須**）— Phase 3 着手時に改めて必要
+- [x] Phase 1（型二重化解消）の受け入れ基準を満たす
+- [x] Phase 2（失敗表現の ServiceResult 統一）の受け入れ基準を満たす
+- [x] Phase 3（tokenExempt 方式の単一ソース化）の受け入れ基準を満たす
+- [x] confirmToken のセキュリティテストが通る（データ駆動 it.each + 許可リスト整合性テストを追加）
+- [x] `npm run validate` / `npm run build` が通る（426ファイル・7750テスト）
+- [x] シニア相談実施（`dev-docs/archived/plans/2026-08-09-pbi23-phase3-senior-consultation.md`）— 配置 B・fail-safe 設計・生成粒度を決定
+- [ ] コードレビュー完了（**セキュリティ経路のため必須**）— アーカイブ前の最終レビューで実施
 - [x] CHANGELOG.md に記載
 
 ---
