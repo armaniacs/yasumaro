@@ -18,7 +18,6 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| 🔶 [2026-08-09-23-refactor-sqlite-transport-layers.md](2026-08-09-23-refactor-sqlite-transport-layers.md) | 🔴大 | 🔴あり | 🔧 | **Epic 8pt**: Phase1(型二重化解消/2pt)・Phase2(失敗表現統一/3pt)完了。Phase3(宣言表/3pt)は confirmToken のセキュリティ経路に触れるため**要シニア相談・未着手**。判断材料をPBI内に記録済み |
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
 | 🔶 [2026-08-07-08-refactor-ai-client-service-unification.md](2026-08-07-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合（modelName型ドリフトは解消済み。AIClient削除は中核パスの高リスクのため保留） |
 
@@ -73,9 +72,10 @@
 - 2026-08-09-24-refactor-dashboard-reverse-dependency.md (panel層→dashboard.tsの逆依存と二重bootstrapを解消。dashboard.ts 1000行超→93行。借り手が1人しかいない関数を共有モジュールに置く形をやめ、generalSettings/connectionTests.ts・settingsForm.ts と panel 側へ再配置。**計画のRed前提は誤りだった**: testDir/vitest.setup.ts が chrome を全体モックするため「import すると初期化が落ちる」は起きず、import グラフをソース文字列で検証する形に書き換えた。ディープリンクは start() へ渡す形になり click 合成フォールバックが不要に。テスト7711→7727)
 - 2026-08-08-09-refactor-dashboard-dual-bootstrap.md (Phase1/3は先行セッションで完了、残る Phase2/4 を 2026-08-09-24 が実施したため完了扱い)
 
-### 2026-08-10 セッションでアーカイブ済み（1件）
+### 2026-08-10 セッションでアーカイブ済み（2件）
 
 - 2026-08-07-13-refactor-service-wiring-backend-consolidation.md (サービス配線・StorageBackend・プロバイダ設定表示・エラー処理の統合候補。調査結果「実重複でない/高リスク」と判断し対応不要でクローズ)
+- 2026-08-09-23-refactor-sqlite-transport-layers.md (**Epic 8pt・全Phase完了**)。Phase1(型二重化解消)・Phase2(失敗表現のServiceResult統一)・Phase3(confirmToken要否の単一ソース化)を実施。Phase3 はシニア相談を経て `tokenExempt` 免除リスト方式（fail-safe）で実装。旧実装でトークン不要だった破壊的操作3件（append_to_obsidian/purge_now/content_purge_now）を要トークン化。トークン要否を `messaging/sqliteOperationSecurity.ts` に一元化し送受信ドリフトを排除。**このセッションでアーカイブした実装計画**: `2026-08-09-pbi23-sqlite-transport-layers-plan.md` / `2026-08-09-pbi23-phase3-senior-consultation.md`
 
 **同セッションでアーカイブした実装計画（dev-docs/archived/plans/）10件**:
 2026-07-27-pbi11 / pbi13 / pbi15 / pbi24 / pbi26 / pbi27 / pbi29-36-35 / pbi34 の各計画と
@@ -305,10 +305,10 @@
 | 状態 | 件数 |
 |---|---|
 | ⬜ 未着手 | 1（✨機能追加 0 / 🔧非機能追加 1） |
-| 🔶 部分実装 | 2（2026-08-07-08 AIレイヤー統合 / 2026-08-09-23 SQLiteトランスポート層 Phase1・2完了） |
-| **`pbi/` 残存合計** | **3** |
-| アーカイブ済みPBI | 244 |
-| アーカイブ済み実装計画 | 103 |
+| 🔶 部分実装 | 1（2026-08-07-08 AIレイヤー統合） |
+| **`pbi/` 残存合計** | **2** |
+| アーカイブ済みPBI | 245 |
+| アーカイブ済み実装計画 | 105 |
 
 未着手の内訳:
 
@@ -321,7 +321,6 @@
 | PBI | 内容 | 状態 |
 |---|---|---|
 | 2026-08-07-08（AIレイヤー統合） | modelName型ドリフト解消済み。AIClient削除は中核パスの高リスクのため保留 | 🔶 |
-| 2026-08-09-23（SQLiteトランスポート層） | Phase1/2完了、Phase3（宣言表）は要シニア相談で未着手 | 🔶 |
 
 ### 2026-08-09 アーキテクチャレビュー由来（20〜24）の実施順と依存
 
@@ -336,9 +335,7 @@
   ↓
 24（候補05・逆依存）          ← PBI-09の後継。✅ 完了（アーカイブ済み）
   ↓
-23（候補02・トランスポート）  ← 21が前提（完了済み）。**唯一の残件**。
-                                 Phase1・2は完了。Phase3のみ要シニア相談で未着手
+23（候補02・トランスポート）  ← 21が前提。✅ 全Phase完了（アーカイブ済み）
 ```
 
-23 の実装計画は `dev-docs/plans/2026-08-09-pbi23-sqlite-transport-layers-plan.md`。
-20〜22・24 の実装計画は完了に伴い `dev-docs/archived/plans/` へ移動済み。
+20〜24 の実装計画は完了に伴い `dev-docs/archived/plans/` へ移動済み。
