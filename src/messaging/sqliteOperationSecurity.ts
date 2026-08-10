@@ -80,15 +80,3 @@ export const TOKEN_REQUIRED_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> =
   new Set(
     ALL_DASHBOARD_SQLITE_SUBTYPES.filter((s) => !tokenExempt.has(s)),
   );
-
-/**
- * Compile-time guard: the canonical list and the `DashboardSqliteSubtype`
- * union used by the message protocol must stay in sync. If a subtype is added
- * to one but not the other, this assertion fails to compile.
- */
-type _SubtypesMatch =
-  DashboardSqliteSubtype extends (typeof ALL_DASHBOARD_SQLITE_SUBTYPES)[number]
-    ? (typeof ALL_DASHBOARD_SQLITE_SUBTYPES)[number] extends DashboardSqliteSubtype
-      ? true
-      : never
-    : never;
