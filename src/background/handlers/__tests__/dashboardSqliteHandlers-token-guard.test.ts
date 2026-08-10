@@ -32,6 +32,9 @@ const DEPS_MOCKS: Partial<Record<DashboardSqliteSubtype, () => unknown>> = {
   backup_db: () => ({ success: true, data: new Uint8Array() }),
   restore_db: () => ({ success: true, data: undefined }),
   import: () => ({ success: true, data: { id: 1 } }),
+  append_to_obsidian: () => ({ success: true, data: { rows: [], total: 0 } }),
+  purge_now: () => ({ success: true, data: { purged: 0 } }),
+  content_purge_now: () => ({ success: true, data: { purged: 0 } }),
 };
 
 // Map subtypes to the SqliteClient method the handler would call.
@@ -46,6 +49,9 @@ const DEPS_METHOD: Partial<Record<DashboardSqliteSubtype, string>> = {
   backup_db: 'backupDbResult',
   restore_db: 'restoreDbResult',
   import: 'insertResult',
+  append_to_obsidian: 'queryResult',
+  purge_now: 'purgeOldRecordsResult',
+  content_purge_now: 'purgeContentResult',
 };
 
 describe('dashboardSqliteHandlers — token guard (data-driven)', () => {

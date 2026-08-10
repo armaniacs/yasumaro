@@ -63,6 +63,21 @@ export type DashboardSqliteRequest =
   | { subtype: 'content_purge_now' }
   | { subtype: 'audit_log_query'; limit?: number; offset?: number };
 
+/**
+ * Compile-time guard that every subtype in the request union also exists in the
+ * canonical `ALL_DASHBOARD_SQLITE_SUBTYPES` list (messaging/). If a new subtype
+ * is added here but not there, it would fall outside the derived
+ * `TOKEN_REQUIRED_SUBTYPES` and silently skip the confirmToken gate — a
+ * fail-open security hole. This makes that impossible: the `const` assignment
+ * fails to type-check whenever `_UnionCovered` is not `true`.
+ */
+type _AssertUnionSubtypesCovered<T extends true> = T;
+type _UnionCovered =
+  _AssertUnionSubtypesCovered<
+    DashboardSqliteRequest['subtype'] extends DashboardSqliteSubtype ? true : never
+  >;
+const _unionCoveredCheck: _UnionCovered = true;
+
 /** Subtypes whose confirmation UI is a full modal dialog (vs. inline confirm). */
 export const MODAL_REQUIRED_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new Set([
   'delete', 'migrate', 'cleanup_legacy', 'clear_all',

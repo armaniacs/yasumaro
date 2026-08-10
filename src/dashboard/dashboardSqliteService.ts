@@ -64,14 +64,13 @@ async function withConfirmToken<T extends DashboardSqliteRequest>(payload: T): P
 
 async function sendDashboardMessage<T extends DashboardSqliteRequest>(
   payload: T,
-  options: { requireConfirmToken?: boolean } = {}
 ): Promise<DashboardSqliteResponseFor<T['subtype']>> {
   // Fail-safe default: a token is required unless the operation is explicitly
   // in the read-only exempt set (single-sourced in messaging/). A forgotten or
   // new operation therefore fails closed (over-rejects) rather than silently
-  // skipping the guard. The explicit option is retained only for tests.
-  const requireConfirmToken =
-    options.requireConfirmToken ?? !tokenExempt.has(payload.subtype);
+  // skipping the guard. The receiver enforces this independently, so the sender
+  // only decides whether to fetch and attach the token.
+  const requireConfirmToken = !tokenExempt.has(payload.subtype);
   const messagePayload = requireConfirmToken
     ? await withConfirmToken(payload)
     : payload;
