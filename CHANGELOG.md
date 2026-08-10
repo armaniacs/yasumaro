@@ -55,6 +55,25 @@ All notable changes to this project will be documented in this file.
   Service Worker の応答に `success` フィールドが欠けており、
   ダッシュボード側の成功判定が常に失敗側に倒れていた。
   上記の修正作業中に判明したもの
+- **`.db` バックアップが常に失敗する問題を修正**
+  受信側ゲートは `backup_db` を要トークン扱い（v6.5.17 で追加済み）なのに、
+  送信側 `backupDb()` が `requireConfirmToken` を送っていなかったため、
+  `exportDb()`（バイナリ `.db` エクスポート）は常に "Confirmation token mismatch"
+  で reject され、全履歴のバックアップが一切出力できなかった。
+  送信側のトークン添付を単一ソース導出に乗せて解消（PBI 2026-08-09-23 Phase 3）
+
+### Security
+
+- 破壊的操作のうち、従来 confirmToken が要求されていなかった3件
+  （Obsidian への追記 `append_to_obsidian` / 履歴パージ `purge_now` /
+  コンテンツパージ `content_purge_now`）を**要トークン化**した。
+  いずれもデータを書き換える・消す操作なのに旧実装ではトークン不要で、
+  confirmToken を要求していた操作一覧に漏れていた（過小保護）。
+  要否を単一ソース導出にしたことで、この種の「漏れ」が構造的に起きなくなった
+  - パージ2件（`settingsForm.ts`）は直接 `chrome.runtime.sendMessage` していたため、
+    `dashboardSqliteService` のトークン添付関数経由に変更
+  - これらを要求トークンに含めない裏経路（`diagnosticsPanel` の `status` 等）が
+    無いことを確認済み
 
 ### Refactor
 
@@ -71,9 +90,9 @@ All notable changes to this project will be documented in this file.
   失敗理由を画面に表示できるようにした
   （並行して見つかった実害は Fixed を参照）
   - SQLite 操作を追加するたびに6ファイル・6層を手で編集する
-    構造そのもの（トランスポート層の宣言表化）は Phase 3 として
-    未着手。confirmToken のセキュリティ経路に触れるためシニア
-    レビューを要する。判断材料は PBI 2026-08-09-23 に記録した
+    構造のうち、confirmToken 要否の単一ソース化（Phase 3）まで
+    完了した。詳しくは下記「Refactor」のトークン単一ソース化を参照
+    （PBI 2026-08-09-23）
 - 設定パネルが、画面を持たない `dashboard.ts` から自分の画面の振る舞いを
   借りていた依存関係を解消した。`dashboard.ts` は1000行超から93行になり、
   ページ全体の初期化だけを担うようになった
@@ -121,10 +140,21 @@ All notable changes to this project will be documented in this file.
     未指定時フォールバックが `enhancedHidden` / `emptyElem` の2ルールで表の既定値
     （`false`）と食い違っていたことが判明し是正した。`getSettings()` は常にキーを
     埋めるため通常経路での実害はない
+- DASHBOARD_SQLITE 操作の confirmToken 要否を単一ソース化した（PBI 2026-08-09-23 Phase 3）。
+  従来は受信側ゲート（`TOKEN_REQUIRED_SUBTYPES`）と送信側の `requireConfirmToken` フラグが
+  別モジュールに手書きで二重保持され、片方だけを更新しても検出されなかった
+  - `src/messaging/sqliteOperationSecurity.ts`（新設・共有層）に免除リスト
+    `tokenExempt`（読み取り専用 op のみ）を置き、要トークン集合をそこから導出
+  - **fail-safe 設計**: デフォルトを要トークンにし、「書き忘れ・新規 op」は過剰拒否側に
+    倒れる。不安全化は小さな読み取り専用リストの意図的拡張のみに限定される
+  - 受信側ゲートと送信側（`dashboardSqliteService.ts`）が同一ソースから導出するため、
+    送受信のドリフトが構造的に起きない
+  - `DashboardSqliteRequest` union と `ALL_DASHBOARD_SQLITE_SUBTYPES` の乖離を
+    コンパイル時表明で強制（union に新 subtype を足して配列を忘れると build が落ちる）
 
 ### Tests
 
-- テスト総数: 7680 → 7711（+31）
+- テスト総数: 7711 → 7750（+39）
 - 設定パネル: アダプタの単体テスト、9件のidが実際の `options/index.html` の
   `id` と `data-panel` の両方に存在することの検証（対象9件は元々テスト0件だった）
 - クレンジングルール関連: ルール表の既定値整合性テスト、content script 経路での
@@ -132,6 +162,10 @@ All notable changes to this project will be documented in this file.
   AI要約クレンジング設定の HTML id 網羅テスト（実際の `options/index.html` と照合）
 - SQLite 変更系: 削除・スター失敗時にエラーが表示されエントリが残ることの回帰テスト、
   遅延の異なる2つの失敗を並行実行し各々が自分の理由を受け取ることの検証
+- トークンガード（Phase 3）: 要トークン操作全13件を導出集合からイテレートし
+  「トークン無しで拒否され、ハンドラ本体に到達しない」ことを検証するデータ駆動テスト、
+  免除リスト整合性テスト（`tokenExempt ⊆ READ_ONLY_OPS`）を追加。
+  これらは実装を意図的に壊す（`requiresToken: false` にする等）と失敗することを確認済み
 
 ## [6.7.28] - 2026-08-09
 
