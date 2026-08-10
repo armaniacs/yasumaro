@@ -2,13 +2,14 @@ import { getSettings, StorageKeys } from '../utils/storage.js';
 import { cleanupExpiredSettingsBackups } from '../utils/storage/settingsStore.js';
 import { logInfo, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import type { CallResult } from './sqliteClient.js';
 
-type PurgeFn = (retentionDays?: number, maxRecords?: number) => Promise<{ purged: number } | null>;
+type PurgeFn = (retentionDays?: number, maxRecords?: number) => Promise<CallResult<{ purged: number }>>;
 type ContentPurgeFn = (
   retentionDays?: number,
   maxRecords?: number,
   includeStarred?: boolean,
-) => Promise<{ purged: number } | null>;
+) => Promise<CallResult<{ purged: number }>>;
 
 /**
  * Runs the daily SQLite purge according to user retention settings.
@@ -30,7 +31,9 @@ export async function handleDailyPurgeAlarm(
                 days  !== null ? days  : undefined,
                 max   !== null ? max   : undefined,
             );
-            logInfo('daily-purge completed', { purged: result?.purged ?? 0 }, 'dailyPurgeHandler');
+            // A failed purge must not be logged as "0 purged" — that hides a
+            // retention failure (PBI-02).
+            logInfo('daily-purge completed', { purged: result.success ? result.data.purged : -1 }, 'dailyPurgeHandler');
         }
 
         // Content-level purge (PBI-3)
@@ -46,7 +49,7 @@ export async function handleDailyPurgeAlarm(
                     includeStarred,
                 );
                 logInfo('daily-content-purge completed', {
-                    purged: result?.purged ?? 0,
+                    purged: result.success ? result.data.purged : -1,
                 }, 'dailyPurgeHandler');
             }
         }

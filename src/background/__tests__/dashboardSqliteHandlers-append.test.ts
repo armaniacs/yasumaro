@@ -53,16 +53,21 @@ import { getSettings } from '../../utils/storage.js';
 // Helper to create a mock SqliteClient
 function createMockSqliteClient(rows: unknown[] = []) {
   return {
-    query: vi.fn().mockResolvedValue({ rows, total: rows.length }),
-    search: vi.fn().mockResolvedValue({ rows: [], total: 0 }),
-    toggleStar: vi.fn().mockResolvedValue({ is_starred: 1 }),
-    delete: vi.fn().mockResolvedValue(true),
-    update: vi.fn().mockResolvedValue(true),
-    insert: vi.fn().mockResolvedValue(true),
-    getCount: vi.fn().mockResolvedValue(0),
-    clearAll: vi.fn().mockResolvedValue(true),
+    queryResult: vi.fn().mockResolvedValue({ success: true, data: { rows, total: rows.length } }),
+    searchResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
+    toggleStarResult: vi.fn().mockResolvedValue({ success: true, data: { is_starred: 1 } }),
+    deleteResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+    updateResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+    insertResult: vi.fn().mockResolvedValue({ success: true, data: { id: 1 } }),
+    getCountResult: vi.fn().mockResolvedValue({ success: true, data: 0 }),
+    clearAllResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
     getStatus: vi.fn().mockResolvedValue({ initialized: true }),
-    runOpfsSpike: vi.fn().mockResolvedValue({ success: true }),
+    runOpfsSpikeResult: vi.fn().mockResolvedValue({ success: true, data: {} }),
+    restoreDbResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+    backupDbResult: vi.fn().mockResolvedValue({ success: true, data: new Uint8Array() }),
+    purgeOldRecordsResult: vi.fn().mockResolvedValue({ success: true, data: { purged: 0 } }),
+    purgeContentResult: vi.fn().mockResolvedValue({ success: true, data: { purged: 0 } }),
+    queryAuditLogResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
   };
 }
 
@@ -143,7 +148,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   it('proceeds even when OBSIDIAN_ENABLED is false (manual append ignores the flag)', async () => {
     setupSettings({ obsidian_enabled: false, obsidian_api_key: 'valid-api-key-123456' });
     const mockEntries = [{ id: 1, url: 'https://a.com', title: 'Page A', summary: 'Summary A' }];
-    mockSqliteClient.query.mockResolvedValue({ rows: mockEntries, total: 1 });
+    mockSqliteClient.queryResult.mockResolvedValue({ success: true, data: { rows: mockEntries, total: 1 } });
 
     const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [1, 2] },
@@ -157,9 +162,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
 
   it('returns error when no matching entries found', async () => {
     setupSettings({ obsidian_api_key: 'valid-api-key-123456' });
-    mockSqliteClient.query.mockResolvedValue({
-      rows: [],
-      total: 0,
+    mockSqliteClient.queryResult.mockResolvedValue({
+      success: true,
+      data: { rows: [], total: 0 },
     });
 
     const result = await dispatchDashboardSqlite(
@@ -170,7 +175,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
 
     expect(result).toEqual({ success: false, error: 'No matching entries found' });
     // Verify the query was called with the targeted ids
-    expect(mockSqliteClient.query).toHaveBeenCalledWith(
+    expect(mockSqliteClient.queryResult).toHaveBeenCalledWith(
       expect.objectContaining({ ids: [1, 2] })
     );
   });
@@ -181,7 +186,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       { id: 1, url: 'https://a.com', title: 'Page A', summary: 'Summary A' },
       { id: 2, url: 'https://b.com', title: 'Page B', summary: 'Summary B' },
     ];
-    mockSqliteClient.query.mockResolvedValue({ rows: mockEntries, total: 2 });
+    mockSqliteClient.queryResult.mockResolvedValue({ success: true, data: { rows: mockEntries, total: 2 } });
 
     const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [1, 2] },
@@ -196,9 +201,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
 
   it('returns error when Obsidian append fails', async () => {
     setupSettings({ obsidian_api_key: 'valid-api-key-123456' });
-    mockSqliteClient.query.mockResolvedValue({
-      rows: [{ id: 1, url: 'https://a.com', title: 'Page A' }],
-      total: 1,
+    mockSqliteClient.queryResult.mockResolvedValue({
+      success: true,
+      data: { rows: [{ id: 1, url: 'https://a.com', title: 'Page A' }], total: 1 },
     });
 
     // Get the mock from the ObsidianClient class prototype
@@ -225,7 +230,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       title: `Page ${i + 1}`,
     }));
     // Mock returns all entries; handler passes IDs to SQL layer
-    mockSqliteClient.query.mockResolvedValue({ rows: allEntries, total: 50 });
+    mockSqliteClient.queryResult.mockResolvedValue({ success: true, data: { rows: allEntries, total: 50 } });
 
     const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [5, 25, 45] },
@@ -234,7 +239,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     );
 
     expect(result).toEqual({ success: true, appended: 50 }); // all returned from mock
-    expect(mockSqliteClient.query).toHaveBeenCalledWith(
+    expect(mockSqliteClient.queryResult).toHaveBeenCalledWith(
       expect.objectContaining({ ids: [5, 25, 45] })
     );
   });
@@ -242,9 +247,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   it('handles mixed valid and invalid IDs', async () => {
     setupSettings({ obsidian_api_key: 'valid-api-key-123456' });
     // SQL handles filtering; mock returns all matching entries
-    mockSqliteClient.query.mockResolvedValue({
-      rows: [{ id: 1, url: 'https://a.com', title: 'Exists' }],
-      total: 1,
+    mockSqliteClient.queryResult.mockResolvedValue({
+      success: true,
+      data: { rows: [{ id: 1, url: 'https://a.com', title: 'Exists' }], total: 1 },
     });
 
     const result = await dispatchDashboardSqlite(
@@ -254,7 +259,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     );
 
     expect(result).toEqual({ success: true, appended: 1 });
-    expect(mockSqliteClient.query).toHaveBeenCalledWith(
+    expect(mockSqliteClient.queryResult).toHaveBeenCalledWith(
       expect.objectContaining({ ids: [1, 999] })
     );
   });
@@ -281,7 +286,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     it('accepts ids array with exactly 100 elements', async () => {
       const ids = Array.from({ length: 100 }, (_, i) => i + 1);
       const mockEntries = ids.map(id => ({ id, url: `https://p${id}.com`, title: `Page ${id}` }));
-      mockSqliteClient.query.mockResolvedValue({ rows: mockEntries, total: 100 });
+      mockSqliteClient.queryResult.mockResolvedValue({ success: true, data: { rows: mockEntries, total: 100 } });
 
       const result = await dispatchDashboardSqlite(
         { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids },
@@ -349,7 +354,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
         url: `https://e${i}.com`,
         created_at: Date.now(),
       }));
-      mockSqliteClient.insert.mockResolvedValue(true);
+      mockSqliteClient.insertResult.mockResolvedValue({ success: true, data: { id: 1 } });
 
       const result = await dispatchDashboardSqlite(
         { subtype: 'import', rows, confirmToken: 'test-token' },

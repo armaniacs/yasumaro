@@ -19,6 +19,9 @@ const mockGetSqliteStatus = vi.fn();
 vi.mock('../../../dashboardSqliteService.js', () => ({
   queryLogs: (...args: unknown[]) => mockQueryLogs(...args),
   getSqliteStatus: (...args: unknown[]) => mockGetSqliteStatus(...args),
+  // Mirrors the real narrowing helper: the panel imports it alongside the
+  // query functions to tell the failure side of ServiceResult apart.
+  isServiceError: (result: object) => 'error' in result,
 }));
 
 // Keep the backoff instant so the retries do not slow the suite down.
@@ -77,19 +80,22 @@ describe('tag cluster panel — query retry', () => {
     expect(mockQueryLogs.mock.calls.length).toBeGreaterThan(1);
   });
 
-  it('retries when the query returns null', async () => {
-    mockQueryLogs.mockResolvedValue(null);
+  it('retries when the database is not initialized', async () => {
+    mockGetSqliteStatus.mockResolvedValue({ initialized: false });
 
     const panel = mountPanel();
     await panel.loadData();
 
-    expect(mockQueryLogs.mock.calls.length).toBeGreaterThan(1);
+    // The not-initialized guard returns null before querying, so the backoff
+    // must retry instead of treating the first null as success.
+    expect(mockGetSqliteStatus.mock.calls.length).toBeGreaterThan(1);
+    expect(mockQueryLogs).not.toHaveBeenCalled();
   });
 
   it('stops as soon as a query succeeds', async () => {
     mockQueryLogs
       .mockResolvedValueOnce({ error: 'transient' })
-      .mockResolvedValueOnce({ rows: [], total: 0 });
+      .mockResolvedValueOnce({ data: { rows: [], total: 0 } });
 
     const panel = mountPanel();
     await panel.loadData();
@@ -98,7 +104,7 @@ describe('tag cluster panel — query retry', () => {
   });
 
   it('does not retry when the first query succeeds', async () => {
-    mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
+    mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 
     const panel = mountPanel();
     await panel.loadData();

@@ -25,6 +25,9 @@ vi.mock('../../../dashboardSqliteService.js', () => ({
   deleteLog: vi.fn(),
   getSqliteStatus: vi.fn().mockResolvedValue({ initialized: true, fallback: false }),
   appendToLogs: vi.fn(),
+  // Mirrors the real narrowing helper: the panel imports it alongside the
+  // query functions to tell the failure side of ServiceResult apart.
+  isServiceError: (result: object) => 'error' in result,
 }));
 
 vi.mock('../../../../utils/storageUrls.js', () => ({
@@ -79,8 +82,8 @@ function lastQueryOptions(): { limit?: number; offset?: number; tagFilter?: stri
 beforeEach(() => {
   document.body.innerHTML = '';
   vi.clearAllMocks();
-  mockedDb.queryLogs.mockResolvedValue({ rows: [], total: 0 });
-  mockedDb.searchLogs.mockResolvedValue({ rows: [], total: 0 });
+  mockedDb.queryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+  mockedDb.searchLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 });
 
 afterEach(() => {
@@ -113,8 +116,10 @@ describe('createSqliteHistoryPanel — server-side pagination', () => {
     const panel = makePanel(container);
 
     mockedDb.queryLogs.mockResolvedValue({
-      rows: Array.from({ length: PAGE_SIZE }, (_, i) => makeRow(i)),
-      total: 5000,
+      data: {
+        rows: Array.from({ length: PAGE_SIZE }, (_, i) => makeRow(i)),
+        total: 5000,
+      },
     });
 
     await panel.loadData();
@@ -139,15 +144,17 @@ describe('createSqliteHistoryPanel — server-side pagination', () => {
     const panel = makePanel(container);
 
     mockedDb.queryLogs.mockResolvedValue({
-      rows: Array.from({ length: PAGE_SIZE }, (_, i) => makeRow(i)),
-      total: 5000,
+      data: {
+        rows: Array.from({ length: PAGE_SIZE }, (_, i) => makeRow(i)),
+        total: 5000,
+      },
     });
     await panel.loadData();
     await flush();
 
     // Second page: SQL already applied OFFSET, so these are the rows to show.
     const secondPageRows = Array.from({ length: PAGE_SIZE }, (_, i) => makeRow(1200 + i));
-    mockedDb.queryLogs.mockResolvedValue({ rows: secondPageRows, total: 5000 });
+    mockedDb.queryLogs.mockResolvedValue({ data: { rows: secondPageRows, total: 5000 } });
 
     const next = document.querySelector('[data-page="next"]') as HTMLButtonElement | null;
     next!.click();
@@ -165,8 +172,10 @@ describe('createSqliteHistoryPanel — server-side pagination', () => {
     const panel = makePanel(container);
 
     mockedDb.queryLogs.mockResolvedValue({
-      rows: [makeRow(1, '#AI'), makeRow(2, '#other')],
-      total: 2,
+      data: {
+        rows: [makeRow(1, '#AI'), makeRow(2, '#other')],
+        total: 2,
+      },
     });
 
     panel.onActivate?.({ searchTag: 'AI' });

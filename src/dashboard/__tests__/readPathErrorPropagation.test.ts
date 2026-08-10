@@ -75,7 +75,7 @@ describe('read path surfaces the failure reason', () => {
   it('still distinguishes a genuinely empty result from a failure', async () => {
     givenResponse({ success: true, rows: [], total: 0 });
 
-    expect(await queryLogs({ limit: 10 })).toEqual({ rows: [], total: 0 });
+    expect(await queryLogs({ limit: 10 })).toEqual({ data: { rows: [], total: 0 } });
   });
 });
 
@@ -89,7 +89,7 @@ describe('retry follows the retriable flag, not the message text', () => {
     const result = await queryLogs({ limit: 10 });
 
     expect(sendMessage).toHaveBeenCalledTimes(2);
-    expect(result).toEqual({ rows: [{ id: 1 }], total: 1 });
+    expect(result).toEqual({ data: { rows: [{ id: 1 }], total: 1 } });
   });
 
   it('does not retry a deterministic failure', async () => {

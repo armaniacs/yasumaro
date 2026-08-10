@@ -18,6 +18,9 @@ vi.mock('../../../dashboardSqliteService.js', () => ({
   deleteLog: vi.fn(),
   getSqliteStatus: vi.fn().mockResolvedValue({ initialized: true, fallback: false }),
   appendToLogs: vi.fn(),
+  // Mirrors the real narrowing helper: the panel imports it alongside the
+  // query functions to tell the failure side of ServiceResult apart.
+  isServiceError: (result: object) => 'error' in result,
 }));
 
 vi.mock('../../../../utils/storageUrls.js', () => ({
@@ -63,8 +66,8 @@ async function flush(): Promise<void> {
 beforeEach(() => {
   document.body.innerHTML = '';
   vi.clearAllMocks();
-  mockedDb.queryLogs.mockResolvedValue({ rows: [], total: 0 });
-  mockedDb.searchLogs.mockResolvedValue({ rows: [], total: 0 });
+  mockedDb.queryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+  mockedDb.searchLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 });
 
 afterEach(() => {
@@ -79,12 +82,14 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
 
     // queryLogs returns rows that do NOT carry the "教育" tag.
     mockedDb.queryLogs.mockResolvedValue({
-      rows: [makeRow(1, 'tech'), makeRow(2, 'business')],
-      total: 2,
+      data: {
+        rows: [makeRow(1, 'tech'), makeRow(2, 'business')],
+        total: 2,
+      },
     });
     // Full-text search for "教育" finds 54 rows.
     const searchRows = Array.from({ length: 54 }, (_, i) => makeRow(i + 10, ''));
-    mockedDb.searchLogs.mockResolvedValue({ rows: searchRows, total: 54 });
+    mockedDb.searchLogs.mockResolvedValue({ data: { rows: searchRows, total: 54 } });
 
     panel.onActivate?.({ searchTag: '教育' });
     await flush();
@@ -102,8 +107,10 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
     const panel = makePanel(container);
 
     mockedDb.queryLogs.mockResolvedValue({
-      rows: [makeRow(1, 'tech'), makeRow(2, 'tech')],
-      total: 2,
+      data: {
+        rows: [makeRow(1, 'tech'), makeRow(2, 'tech')],
+        total: 2,
+      },
     });
 
     panel.onActivate?.({ searchTag: 'tech' });
@@ -119,12 +126,16 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
     const panel = makePanel(container);
 
     mockedDb.queryLogs.mockResolvedValue({
-      rows: [makeRow(1, 'tech')],
-      total: 1,
+      data: {
+        rows: [makeRow(1, 'tech')],
+        total: 1,
+      },
     });
     mockedDb.searchLogs.mockResolvedValue({
-      rows: [makeRow(99, '')],
-      total: 10,
+      data: {
+        rows: [makeRow(99, '')],
+        total: 10,
+      },
     });
 
     panel.onActivate?.({ searchTag: 'tech' });
@@ -138,8 +149,8 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
     document.body.appendChild(container);
     const panel = makePanel(container);
 
-    mockedDb.queryLogs.mockResolvedValue({ rows: [], total: 0 });
-    mockedDb.searchLogs.mockResolvedValue({ rows: [], total: 0 });
+    mockedDb.queryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+    mockedDb.searchLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 
     panel.onActivate?.({ searchDomain: 'example.com' });
     await flush();
@@ -156,8 +167,8 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
     const panel = makePanel(container);
 
     // No tag match and no full-text match either.
-    mockedDb.queryLogs.mockResolvedValue({ rows: [], total: 0 });
-    mockedDb.searchLogs.mockResolvedValue({ rows: [], total: 0 });
+    mockedDb.queryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+    mockedDb.searchLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 
     panel.onActivate?.({ searchTag: 'nonexistent' });
     await flush();

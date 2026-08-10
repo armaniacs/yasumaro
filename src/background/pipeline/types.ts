@@ -100,6 +100,12 @@ export interface RecordingContext {
 }
 
 /**
+ * Job type for the offline retry queue.
+ * Determines which retry handler processes the job when connectivity returns.
+ */
+export type OfflineJobKind = 'ai_summary' | 'obsidian_sync';
+
+/**
  * Pipeline step interface
  */
 export interface PipelineStep {
@@ -109,6 +115,15 @@ export interface PipelineStep {
   errorStrategy: ErrorStrategy;
   /** Maximum retry attempts (for RETRY strategy) */
   maxRetries?: number;
+  /**
+   * When present, the step is eligible for offline retry.
+   * The `jobKind` routes the retry to the correct handler
+   * (AI summarization vs Obsidian sync).
+   *
+   * Presence/absence acts as the enabled flag — no separate boolean needed.
+   * This replaces the former string-comparison-based dispatch in enqueueOfflineJob.
+   */
+  offlineRetry?: { jobKind: OfflineJobKind };
   /** Execute the step */
   execute(context: RecordingContext): Promise<RecordingContext>;
 }

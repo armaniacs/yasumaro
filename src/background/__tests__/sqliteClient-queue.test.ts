@@ -84,8 +84,8 @@ describe('SqliteClient — request queue (M7)', () => {
   });
 
   it('does not send a second message until the first has settled', async () => {
-    const p1 = client.query({ limit: 1 });
-    const p2 = client.query({ limit: 2 });
+    const p1 = client.queryResult({ limit: 1 });
+    const p2 = client.queryResult({ limit: 2 });
 
     // Only the first request should have reached sendMessage so far
     await vi.waitFor(() => expect(pendingCallbacks.length).toBe(1));

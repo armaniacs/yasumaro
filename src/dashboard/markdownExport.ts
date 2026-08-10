@@ -160,15 +160,12 @@ export async function exportFullHistoryInBatches(
     // A failed batch must not look like "reached the end", or a mid-export
     // database error would silently produce a partial export reported as
     // complete.
-    if (result === null) {
-      throw new Error('Could not read the database. Please reload the extension and try again.');
-    }
     if ('error' in result) {
       throw new Error(result.error);
     }
-    if (result.rows.length === 0) break;
+    if (result.data.rows.length === 0) break;
 
-    for (const row of result.rows) {
+    for (const row of result.data.rows) {
       const date = getLocalDateString(row.created_at);
       if (pendingDate !== null && date !== pendingDate) {
         await flush(pendingDate, pendingEntries);
@@ -178,8 +175,8 @@ export async function exportFullHistoryInBatches(
       pendingEntries.push(row);
     }
 
-    totalRows += result.rows.length;
-    if (result.rows.length < batchSize) break;
+    totalRows += result.data.rows.length;
+    if (result.data.rows.length < batchSize) break;
     offset += batchSize;
   }
 
@@ -220,17 +217,14 @@ export async function exportDateRange(
   // Distinguish a failure from a genuinely empty range: both used to return
   // zero rows, so a database error was reported to the user as "no records in
   // this period".
-  if (result === null) {
-    throw new Error('Could not read the database. Please reload the extension and try again.');
-  }
   if ('error' in result) {
     throw new Error(result.error);
   }
-  if (result.rows.length === 0) {
+  if (result.data.rows.length === 0) {
     return { totalRows: 0, totalFiles: 0 };
   }
 
-  const entriesByDate = groupEntriesByLocalDate(result.rows);
+  const entriesByDate = groupEntriesByLocalDate(result.data.rows);
   let totalFiles = 0;
   for (const [date, entries] of entriesByDate) {
     await download(
@@ -240,7 +234,7 @@ export async function exportDateRange(
     totalFiles++;
   }
 
-  return { totalRows: result.rows.length, totalFiles };
+  return { totalRows: result.data.rows.length, totalFiles };
 }
 
 /**
