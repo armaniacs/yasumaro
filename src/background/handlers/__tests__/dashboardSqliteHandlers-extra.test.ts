@@ -283,7 +283,7 @@ describe('handleDashboardSqlite — purge_now', () => {
       sqlite_retention_days: 30,
       sqlite_max_records: 5000,
     } as any);
-    const result = await dispatchDashboardSqlite({ subtype: 'purge_now' }, mock as any);
+    const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 7, skipped: false });
     expect(mock.purgeOldRecords).toHaveBeenCalledWith(30, 5000);
   });
@@ -291,7 +291,7 @@ describe('handleDashboardSqlite — purge_now', () => {
   it('skips when both settings are null', async () => {
     const mock = createMockSqliteClient();
     vi.mocked(getSettings).mockResolvedValue({} as any);
-    const result = await dispatchDashboardSqlite({ subtype: 'purge_now' }, mock as any);
+    const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 0, skipped: true });
     expect(mock.purgeOldRecords).not.toHaveBeenCalled();
   });
@@ -300,21 +300,21 @@ describe('handleDashboardSqlite — purge_now', () => {
     const mock = createMockSqliteClient();
     mock.purgeOldRecords.mockResolvedValue(null);
     vi.mocked(getSettings).mockResolvedValue({ sqlite_retention_days: 30 } as any);
-    const result = await dispatchDashboardSqlite({ subtype: 'purge_now' }, mock as any);
+    const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Purge failed', retriable: false });
   });
 
   it('purges with only days configured', async () => {
     const mock = createMockSqliteClient();
     vi.mocked(getSettings).mockResolvedValue({ sqlite_retention_days: 60 } as any);
-    await dispatchDashboardSqlite({ subtype: 'purge_now' }, mock as any);
+    await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(mock.purgeOldRecords).toHaveBeenCalledWith(60, undefined);
   });
 
   it('purges with only max configured', async () => {
     const mock = createMockSqliteClient();
     vi.mocked(getSettings).mockResolvedValue({ sqlite_max_records: 10000 } as any);
-    await dispatchDashboardSqlite({ subtype: 'purge_now' }, mock as any);
+    await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(mock.purgeOldRecords).toHaveBeenCalledWith(undefined, 10000);
   });
 });
@@ -328,7 +328,7 @@ describe('handleDashboardSqlite — content_purge_now', () => {
       content_max_records: 1000,
       content_purge_include_starred: true,
     } as any);
-    const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now' }, mock as any);
+    const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 3, skipped: false });
     expect(mock.purgeContent).toHaveBeenCalledWith(14, 1000, true);
   });
@@ -336,7 +336,7 @@ describe('handleDashboardSqlite — content_purge_now', () => {
   it('skips when both content settings are null', async () => {
     const mock = createMockSqliteClient();
     vi.mocked(getSettings).mockResolvedValue({} as any);
-    const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now' }, mock as any);
+    const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 0, skipped: true });
     expect(mock.purgeContent).not.toHaveBeenCalled();
   });
@@ -345,7 +345,7 @@ describe('handleDashboardSqlite — content_purge_now', () => {
     const mock = createMockSqliteClient();
     mock.purgeContent.mockResolvedValue(null);
     vi.mocked(getSettings).mockResolvedValue({ content_retention_days: 7 } as any);
-    const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now' }, mock as any);
+    const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Content purge failed', retriable: false });
   });
 });
