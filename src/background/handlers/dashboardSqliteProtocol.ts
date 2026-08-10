@@ -12,6 +12,10 @@
 
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 import type { OpfsSpikeReport } from '../../offscreen/opfsSpike.js';
+import type { DashboardSqliteSubtype } from '../../messaging/sqliteOperationSecurity.js';
+
+export type { DashboardSqliteSubtype } from '../../messaging/sqliteOperationSecurity.js';
+export { TOKEN_REQUIRED_SUBTYPES } from '../../messaging/sqliteOperationSecurity.js';
 
 // ============================================================================
 // Requests (subtype -> payload shape, excluding confirmToken which is
@@ -58,13 +62,6 @@ export type DashboardSqliteRequest =
   | { subtype: 'purge_now' }
   | { subtype: 'content_purge_now' }
   | { subtype: 'audit_log_query'; limit?: number; offset?: number };
-
-export type DashboardSqliteSubtype = DashboardSqliteRequest['subtype'];
-
-/** Subtypes that require a valid confirmToken (destructive/mutating operations). */
-export const TOKEN_REQUIRED_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new Set([
-  'toggle_star', 'update', 'delete', 'migrate', 'backfill_metadata', 'cleanup_legacy', 'clear_all', 'import', 'restore_db', 'backup_db',
-]);
 
 /** Subtypes whose confirmation UI is a full modal dialog (vs. inline confirm). */
 export const MODAL_REQUIRED_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new Set([

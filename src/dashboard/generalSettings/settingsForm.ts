@@ -14,8 +14,7 @@ import { getMessage } from '../../utils/i18n.js';
 import { getPluralKey } from '../../utils/i18nPlural.js';
 import { getAiProviderElements, updateAIProviderVisibilityMulti } from '../settings/aiProvider.js';
 import { updateProviderSettingsLayout } from '../aiProviderLayoutManager.js';
-import type { DashboardSqliteResponseFor } from '../../background/handlers/dashboardSqliteProtocol.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
+import { purgeOldRecordsNow, purgeContentNow, isServiceError } from '../dashboardSqliteService.js';
 
 const SETTINGS_FORM_SELECTOR = '#panel-general';
 
@@ -137,18 +136,14 @@ export async function handlePurgeNow(): Promise<void> {
   purgeNowBtn.disabled = true;
   statusEl.textContent = '';
   try {
-    const result = await chrome.runtime.sendMessage({
-      type: 'DASHBOARD_SQLITE',
-      protocolVersion: CURRENT_PROTOCOL_VERSION,
-      payload: { subtype: 'purge_now' },
-    }) as DashboardSqliteResponseFor<'purge_now'> | undefined;
+    const result = await purgeOldRecordsNow();
 
-    if (result?.success && result.skipped) {
+    if (isServiceError(result)) {
+      statusEl.textContent = result.error || 'Error';
+    } else if (result.data.skipped) {
       statusEl.textContent = getMessage('purgeNowSkipped') || '保持ポリシーが未設定のため、削除をスキップしました';
-    } else if (result?.success) {
-      statusEl.textContent = getMessage(getPluralKey('purgeNowSuccess', result.purged), [String(result.purged)]) || `${result.purged} 件を削除しました`;
     } else {
-      statusEl.textContent = result?.success === false ? result.error : 'Error';
+      statusEl.textContent = getMessage(getPluralKey('purgeNowSuccess', result.data.purged), [String(result.data.purged)]) || `${result.data.purged} 件を削除しました`;
     }
   } finally {
     purgeNowBtn.disabled = false;
@@ -163,18 +158,14 @@ export async function handleContentPurgeNow(): Promise<void> {
   contentPurgeNowBtn.disabled = true;
   statusEl.textContent = '';
   try {
-    const result = await chrome.runtime.sendMessage({
-      type: 'DASHBOARD_SQLITE',
-      protocolVersion: CURRENT_PROTOCOL_VERSION,
-      payload: { subtype: 'content_purge_now' },
-    }) as DashboardSqliteResponseFor<'content_purge_now'> | undefined;
+    const result = await purgeContentNow();
 
-    if (result?.success && result.skipped) {
+    if (isServiceError(result)) {
+      statusEl.textContent = result.error || 'Error';
+    } else if (result.data.skipped) {
       statusEl.textContent = getMessage('contentPurgeNowSkipped') || 'コンテンツ保持ポリシーが未設定のため、削除をスキップしました';
-    } else if (result?.success) {
-      statusEl.textContent = getMessage(getPluralKey('contentPurgeNowSuccess', result.purged), [String(result.purged)]) || `${result.purged} 件の content を削除しました`;
     } else {
-      statusEl.textContent = result?.success === false ? result.error : 'Error';
+      statusEl.textContent = getMessage(getPluralKey('contentPurgeNowSuccess', result.data.purged), [String(result.data.purged)]) || `${result.data.purged} 件の content を削除しました`;
     }
   } finally {
     contentPurgeNowBtn.disabled = false;

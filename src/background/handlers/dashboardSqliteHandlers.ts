@@ -4,7 +4,7 @@ import { StorageKeys, getSettings } from '../../utils/storage.js';
 import { formatEntriesToMarkdown } from '../../dashboard/obsidianFormatter.js';
 import { ObsidianClient } from '../obsidianClient.js';
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
-import { TOKEN_REQUIRED_SUBTYPES, MODAL_REQUIRED_SUBTYPES } from './dashboardSqliteProtocol.js';
+import { TOKEN_REQUIRED_SUBTYPES } from './dashboardSqliteProtocol.js';
 import type { DashboardSqliteRequest } from './dashboardSqliteProtocol.js';
 import { bytesToBase64, base64ToBytes } from '../../utils/crypto/index.js';
 import type { SqliteError } from '../sqliteClient.js';

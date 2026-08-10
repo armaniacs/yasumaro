@@ -6,6 +6,7 @@
 
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
+import { tokenExempt } from '../messaging/sqliteOperationSecurity.js';
 import { bytesToBase64, base64ToBytes } from '../utils/crypto/index.js';
 
 const DASHBOARD_SQLITE_TIMEOUT = 10000;
@@ -65,7 +66,13 @@ async function sendDashboardMessage<T extends DashboardSqliteRequest>(
   payload: T,
   options: { requireConfirmToken?: boolean } = {}
 ): Promise<DashboardSqliteResponseFor<T['subtype']>> {
-  const messagePayload = options.requireConfirmToken
+  // Fail-safe default: a token is required unless the operation is explicitly
+  // in the read-only exempt set (single-sourced in messaging/). A forgotten or
+  // new operation therefore fails closed (over-rejects) rather than silently
+  // skipping the guard. The explicit option is retained only for tests.
+  const requireConfirmToken =
+    options.requireConfirmToken ?? !tokenExempt.has(payload.subtype);
+  const messagePayload = requireConfirmToken
     ? await withConfirmToken(payload)
     : payload;
 
@@ -180,7 +187,7 @@ export async function searchLogs(
  */
 export async function toggleStar(id: number): Promise<ServiceResult<{ is_starred: number }>> {
   try {
-    const response = await sendDashboardMessage({ subtype: 'toggle_star', id }, { requireConfirmToken: true });
+    const response = await sendDashboardMessage({ subtype: 'toggle_star', id });
     if (response.success) {
       return { data: { is_starred: Number(response.is_starred) } };
     }
@@ -199,7 +206,7 @@ export async function toggleStar(id: number): Promise<ServiceResult<{ is_starred
  */
 export async function deleteLog(id: number): Promise<ServiceResult<void>> {
   try {
-    const response = await sendDashboardMessage({ subtype: 'delete', id }, { requireConfirmToken: true });
+    const response = await sendDashboardMessage({ subtype: 'delete', id });
     if (response.success) {
       return { data: undefined };
     }
@@ -215,7 +222,7 @@ export async function deleteLog(id: number): Promise<ServiceResult<void>> {
  */
 export async function updateLog(id: number, changes: Record<string, unknown>): Promise<ServiceResult<void>> {
   try {
-    const response = await sendDashboardMessage({ subtype: 'update', id, changes }, { requireConfirmToken: true });
+    const response = await sendDashboardMessage({ subtype: 'update', id, changes });
     if (response.success === true) {
       return { data: undefined };
     }
@@ -232,7 +239,7 @@ export async function updateLog(id: number, changes: Record<string, unknown>): P
  */
 export async function migrateLogs(): Promise<ServiceResult<{ count: number; read: number; inserted: number }>> {
   try {
-    const response = await sendDashboardMessage({ subtype: 'migrate' }, { requireConfirmToken: true });
+    const response = await sendDashboardMessage({ subtype: 'migrate' });
     if (response.success) {
       return {
         data: {
@@ -276,7 +283,7 @@ export async function runOpfsSpike(): Promise<ServiceResult<OpfsSpikeReportView>
 
 export async function clearAllLogs(): Promise<ServiceResult<void>> {
   try {
-    const response = await sendDashboardMessage({ subtype: 'clear_all' }, { requireConfirmToken: true });
+    const response = await sendDashboardMessage({ subtype: 'clear_all' });
     if (response.success === true) {
       return { data: undefined };
     }
@@ -363,8 +370,7 @@ export async function getSqliteStatus(): Promise<{
 export async function cleanupLegacyStorage(): Promise<ServiceResult<{ removed: string[]; totalBytes: number }>> {
   try {
     const response = await sendDashboardMessage(
-      { subtype: 'cleanup_legacy' },
-      { requireConfirmToken: true }
+      { subtype: 'cleanup_legacy' }
     );
     if (response.success) {
       return {
@@ -388,8 +394,7 @@ export async function cleanupLegacyStorage(): Promise<ServiceResult<{ removed: s
 export async function backfillMetadata(): Promise<ServiceResult<{ updated: number; total: number }>> {
   try {
     const response = await sendDashboardMessage(
-      { subtype: 'backfill_metadata' },
-      { requireConfirmToken: true }
+      { subtype: 'backfill_metadata' }
     );
     if (response.success) {
       return {
@@ -413,7 +418,6 @@ export async function backupDb(): Promise<ServiceResult<Uint8Array>> {
   try {
     const response = await sendDashboardMessage(
       { subtype: 'backup_db' },
-      { requireConfirmToken: true },
     );
     if (response.success && response.data) {
       return { data: base64ToBytes(response.data as string) };
@@ -438,8 +442,7 @@ export async function backupDb(): Promise<ServiceResult<Uint8Array>> {
 export async function restoreDb(data: Uint8Array): Promise<ServiceResult<void>> {
   try {
     const response = await sendDashboardMessage(
-      { subtype: 'restore_db', data: bytesToBase64(data) },
-      { requireConfirmToken: true }
+      { subtype: 'restore_db', data: bytesToBase64(data) }
     );
     if (response.success) {
       return { data: undefined };
@@ -461,8 +464,7 @@ export async function importLogs(rows: Array<{
 }>): Promise<ServiceResult<{ inserted: number; skipped: number; total: number }>> {
   try {
     const response = await sendDashboardMessage(
-      { subtype: 'import', rows },
-      { requireConfirmToken: true }
+      { subtype: 'import', rows }
     );
     if (response.success) {
       return {
@@ -481,8 +483,42 @@ export async function importLogs(rows: Array<{
 }
 
 /**
+ * Run a manual retention purge of old browsing-log records.
+ * Destructive — the confirmToken is attached by the sender's fail-safe default.
+ */
+export async function purgeOldRecordsNow(): Promise<ServiceResult<{ purged: number; skipped: boolean }>> {
+  try {
+    const response = await sendDashboardMessage({ subtype: 'purge_now' });
+    if (response.success) {
+      return { data: { purged: Number(response.purged || 0), skipped: Boolean(response.skipped) } };
+    }
+    return { error: String(response.error || 'Purge failed') };
+  } catch (error) {
+    console.error('purgeOldRecordsNow failed:', errorMessage(error));
+    return { error: errorMessage(error) };
+  }
+}
+
+/**
+ * Run a manual content purge of stored page content.
+ * Destructive — the confirmToken is attached by the sender's fail-safe default.
+ */
+export async function purgeContentNow(): Promise<ServiceResult<{ purged: number; skipped: boolean }>> {
+  try {
+    const response = await sendDashboardMessage({ subtype: 'content_purge_now' });
+    if (response.success) {
+      return { data: { purged: Number(response.purged || 0), skipped: Boolean(response.skipped) } };
+    }
+    return { error: String(response.error || 'Content purge failed') };
+  } catch (error) {
+    console.error('purgeContentNow failed:', errorMessage(error));
+    return { error: errorMessage(error) };
+  }
+}
+
+/**
  * Append selected log entries to Obsidian daily note.
- * Read-only on SQLite — no confirm token needed.
+ * Writes to Obsidian — the confirmToken is attached by the sender's fail-safe default.
  */
 export async function appendToLogs(ids: number[]): Promise<ServiceResult<{ appended: number }>> {
   try {

@@ -43,6 +43,8 @@ vi.mock('../../dashboard/obsidianFormatter.js', () => ({
 }));
 
 import { dispatchDashboardSqlite } from '../handlers/__tests__/dashboardSqliteTestHarness.js';
+
+const APPEND_TOKEN = 'test-token';
 import { ObsidianClient } from '../obsidianClient.js';
 import { formatEntriesToMarkdown } from '../../dashboard/obsidianFormatter.js';
 import { logError, logInfo } from '../../utils/logger.js';
@@ -83,8 +85,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
 
   it('returns error when ids is empty array', async () => {
     const result = await dispatchDashboardSqlite(
-      { subtype: 'append_to_obsidian', ids: [] },
-      mockSqliteClient as any
+      { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [] },
+      mockSqliteClient as any,
+      { getConfirmToken: async () => APPEND_TOKEN }
     );
 
     expect(result).toEqual({ success: false, error: 'No IDs provided' });
@@ -95,8 +98,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     // guard, which is reachable in practice via the chrome.runtime.onMessage
     // wire (see the cast in service-worker.ts).
     const result = await dispatchDashboardSqlite(
-      { subtype: 'append_to_obsidian', ids: 'not-an-array' } as any,
-      mockSqliteClient as any
+      { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: 'not-an-array' } as any,
+      mockSqliteClient as any,
+      { getConfirmToken: async () => APPEND_TOKEN }
     );
 
     expect(result).toEqual({ success: false, error: 'No IDs provided' });
@@ -104,8 +108,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
 
   it('returns error when ids is undefined', async () => {
     const result = await dispatchDashboardSqlite(
-      { subtype: 'append_to_obsidian' } as any,
-      mockSqliteClient as any
+      { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN } as any,
+      mockSqliteClient as any,
+      { getConfirmToken: async () => APPEND_TOKEN }
     );
 
     expect(result).toEqual({ success: false, error: 'No IDs provided' });
@@ -115,8 +120,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     setupSettings({ obsidian_api_key: '' });
 
     const result = await dispatchDashboardSqlite(
-      { subtype: 'append_to_obsidian', ids: [1, 2] },
-      mockSqliteClient as any
+      { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [1, 2] },
+      mockSqliteClient as any,
+      { getConfirmToken: async () => APPEND_TOKEN }
     );
 
     expect(result).toEqual({ success: false, error: 'Obsidian API key not configured' });
@@ -126,8 +132,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     setupSettings({ obsidian_api_key: 'short' });
 
     const result = await dispatchDashboardSqlite(
-      { subtype: 'append_to_obsidian', ids: [1, 2] },
-      mockSqliteClient as any
+      { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [1, 2] },
+      mockSqliteClient as any,
+      { getConfirmToken: async () => APPEND_TOKEN }
     );
 
     expect(result).toEqual({ success: false, error: 'Obsidian API key not configured' });
@@ -139,8 +146,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     mockSqliteClient.query.mockResolvedValue({ rows: mockEntries, total: 1 });
 
     const result = await dispatchDashboardSqlite(
-      { subtype: 'append_to_obsidian', ids: [1, 2] },
-      mockSqliteClient as any
+      { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [1, 2] },
+      mockSqliteClient as any,
+      { getConfirmToken: async () => APPEND_TOKEN }
     );
 
     // Should reach ObsidianClient, not be blocked by the flag
@@ -155,8 +163,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     });
 
     const result = await dispatchDashboardSqlite(
-      { subtype: 'append_to_obsidian', ids: [1, 2] },
-      mockSqliteClient as any
+      { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [1, 2] },
+      mockSqliteClient as any,
+      { getConfirmToken: async () => APPEND_TOKEN }
     );
 
     expect(result).toEqual({ success: false, error: 'No matching entries found' });
@@ -175,8 +184,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     mockSqliteClient.query.mockResolvedValue({ rows: mockEntries, total: 2 });
 
     const result = await dispatchDashboardSqlite(
-      { subtype: 'append_to_obsidian', ids: [1, 2] },
-      mockSqliteClient as any
+      { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [1, 2] },
+      mockSqliteClient as any,
+      { getConfirmToken: async () => APPEND_TOKEN }
     );
 
     expect(result).toEqual({ success: true, appended: 2 });
@@ -198,8 +208,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     (instance.appendToDailyNote as any).mockRejectedValueOnce(new Error('Connection refused'));
 
     const result = await dispatchDashboardSqlite(
-      { subtype: 'append_to_obsidian', ids: [1] },
-      mockSqliteClient as any
+      { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [1] },
+      mockSqliteClient as any,
+      { getConfirmToken: async () => APPEND_TOKEN }
     );
 
     expect(result).toEqual({ success: false, error: 'Connection refused' });
@@ -217,8 +228,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     mockSqliteClient.query.mockResolvedValue({ rows: allEntries, total: 50 });
 
     const result = await dispatchDashboardSqlite(
-      { subtype: 'append_to_obsidian', ids: [5, 25, 45] },
-      mockSqliteClient as any
+      { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [5, 25, 45] },
+      mockSqliteClient as any,
+      { getConfirmToken: async () => APPEND_TOKEN }
     );
 
     expect(result).toEqual({ success: true, appended: 50 }); // all returned from mock
@@ -236,8 +248,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     });
 
     const result = await dispatchDashboardSqlite(
-      { subtype: 'append_to_obsidian', ids: [1, 999] },
-      mockSqliteClient as any
+      { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [1, 999] },
+      mockSqliteClient as any,
+      { getConfirmToken: async () => APPEND_TOKEN }
     );
 
     expect(result).toEqual({ success: true, appended: 1 });
@@ -257,8 +270,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       const hugeIds = Array.from({ length: 101 }, (_, i) => i + 1);
 
       const result = await dispatchDashboardSqlite(
-        { subtype: 'append_to_obsidian', ids: hugeIds },
-        mockSqliteClient as any
+        { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: hugeIds },
+        mockSqliteClient as any,
+        { getConfirmToken: async () => APPEND_TOKEN }
       );
 
       expect(result).toEqual({ success: false, error: 'Maximum 100 IDs allowed' });
@@ -270,8 +284,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       mockSqliteClient.query.mockResolvedValue({ rows: mockEntries, total: 100 });
 
       const result = await dispatchDashboardSqlite(
-        { subtype: 'append_to_obsidian', ids },
-        mockSqliteClient as any
+        { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids },
+        mockSqliteClient as any,
+        { getConfirmToken: async () => APPEND_TOKEN }
       );
 
       expect(result).toEqual({ success: true, appended: 100 });
@@ -279,8 +294,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
 
     it('rejects ids array containing non-number elements', async () => {
       const result = await dispatchDashboardSqlite(
-        { subtype: 'append_to_obsidian', ids: [1, 'a', 3] } as any,
-        mockSqliteClient as any
+        { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [1, 'a', 3] } as any,
+        mockSqliteClient as any,
+        { getConfirmToken: async () => APPEND_TOKEN }
       );
 
       expect(result).toEqual({ success: false, error: 'All IDs must be finite numbers' });
@@ -288,16 +304,18 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
 
     it('rejects ids array containing NaN', async () => {
       const result = await dispatchDashboardSqlite(
-        { subtype: 'append_to_obsidian', ids: [NaN] },
-        mockSqliteClient as any
+        { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [NaN] },
+        mockSqliteClient as any,
+        { getConfirmToken: async () => APPEND_TOKEN }
       );
       expect(result).toEqual({ success: false, error: 'All IDs must be finite numbers' });
     });
 
     it('rejects ids array containing Infinity', async () => {
       const result = await dispatchDashboardSqlite(
-        { subtype: 'append_to_obsidian', ids: [Infinity] },
-        mockSqliteClient as any
+        { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [Infinity] },
+        mockSqliteClient as any,
+        { getConfirmToken: async () => APPEND_TOKEN }
       );
 
       expect(result).toEqual({ success: false, error: 'All IDs must be finite numbers' });
