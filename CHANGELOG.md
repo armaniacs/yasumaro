@@ -37,6 +37,15 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+（次のリリースに向けての変更をここに記載）
+
+## [6.7.29] - 2026-08-10
+
+PBI 2026-08-09-23（SQLite トランスポート層削減）の Phase 3 を完了。
+confirmToken 要否を単一ソース化し、破壊的操作のトークン保護を強化した。
+
+### Fixed
+
 - **暗号化バックアップ復元・一括インポート・Obsidian追記の失敗理由が
   すべて null や固定文言に丸められていた問題を修正**
   `backupDb` は例外を捕まえた際に理由を捨てて null を返しており、
