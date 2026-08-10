@@ -191,6 +191,7 @@ vi.mock('../pipeline/RecordingPipeline.js', () => ({
     createRecordingPipeline: vi.fn().mockReturnValue({
         execute: vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' }),
     }),
+    buildRecordingPipelineDeps: vi.fn().mockImplementation((deps: unknown) => deps),
     RecordingPipeline: vi.fn().mockImplementation(function(this: any) {
         this.execute = vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' });
     })

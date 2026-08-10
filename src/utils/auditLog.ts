@@ -36,6 +36,6 @@ export async function recordAuditLog({ provider, url }: { provider: string; url:
  * Retrieve audit log entries, most recent first.
  */
 export async function getAuditLogs({ limit = 100, offset = 0 }: { limit?: number; offset?: number } = {}): Promise<{ rows: AuditLogEntry[]; total: number }> {
-  const result = await sqliteClient.queryAuditLog({ limit, offset });
-  return result ?? { rows: [], total: 0 };
+  const result = await sqliteClient.queryAuditLogResult({ limit, offset });
+  return result.success ? result.data : { rows: [], total: 0 };
 }

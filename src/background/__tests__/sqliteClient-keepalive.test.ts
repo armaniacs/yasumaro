@@ -67,13 +67,13 @@ describe('SqliteClient — keepAlive / reconnect (M12)', () => {
   it('retries once and succeeds after a connection error', async () => {
     setupFlakyChromeMock();
 
-    const result = await client.query({ limit: 1 });
+    const result = await client.queryResult({ limit: 1 });
 
-    expect(result).toEqual({ rows: [], total: 0 });
+    expect(result).toEqual({ success: true, data: { rows: [], total: 0 } });
     expect(sendMessageCallCount).toBe(2);
   });
 
-  it('gives up and returns null after the retry also fails', async () => {
+  it('gives up and returns failure result after the retry also fails', async () => {
     (globalThis as any).chrome = {
       offscreen: {
         hasDocument: vi.fn().mockResolvedValue(true),
@@ -90,9 +90,9 @@ describe('SqliteClient — keepAlive / reconnect (M12)', () => {
       },
     };
 
-    const result = await client.query({ limit: 1 });
+    const result = await client.queryResult({ limit: 1 });
 
-    expect(result).toBeNull();
+    expect(result).toEqual({ success: false, error: expect.anything() });
     expect(sendMessageCallCount).toBe(2);
   });
 });

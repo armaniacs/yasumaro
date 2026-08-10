@@ -17,6 +17,9 @@ vi.mock('../../../dashboardSqliteService.js', () => ({
   deleteLog: vi.fn(),
   getSqliteStatus: vi.fn().mockResolvedValue({ initialized: true, fallback: false }),
   appendToLogs: vi.fn(),
+  // Mirrors the real narrowing helper: the panel imports it alongside the
+  // query functions to tell the failure side of ServiceResult apart.
+  isServiceError: (r: unknown) => typeof r === 'object' && r !== null && 'error' in r,
 }));
 
 vi.mock('../../../../utils/storageUrls.js', () => ({
@@ -72,8 +75,8 @@ function errorText(): string {
 beforeEach(() => {
   document.body.innerHTML = '';
   vi.clearAllMocks();
-  mockedDb.queryLogs.mockResolvedValue({ rows: [makeRow(1)], total: 1 });
-  mockedDb.searchLogs.mockResolvedValue({ rows: [], total: 0 });
+  mockedDb.queryLogs.mockResolvedValue({ data: { rows: [makeRow(1)], total: 1 } });
+  mockedDb.searchLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 });
 
 afterEach(() => {
@@ -122,7 +125,7 @@ describe('変更系の失敗が利用者に伝わる', () => {
     await flush();
 
     mockedConfirmDialog.showConfirmDialog.mockResolvedValue(true);
-    mockedDb.deleteLog.mockResolvedValue({ ok: true });
+    mockedDb.deleteLog.mockResolvedValue({ data: undefined });
 
     document.querySelector<HTMLButtonElement>('[data-action="delete"]')?.click();
     await flush();

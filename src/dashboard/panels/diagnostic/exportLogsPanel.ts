@@ -79,15 +79,11 @@ export function createExportLogsPanel(): DiagnosticPanel {
             // Distinguish "could not read" from "nothing stored": reporting a
             // failed database read as an empty log tells the user their audit
             // history is empty when it may not be.
-            if (result === null) {
-              if (auditStatusEl) auditStatusEl.textContent = 'エラー: 監査ログを読み取れませんでした';
-              return;
-            }
             if ('error' in result) {
               if (auditStatusEl) auditStatusEl.textContent = `エラー: ${result.error}`;
               return;
             }
-            const rows = result.rows;
+            const rows = result.data.rows;
             if (rows.length === 0) {
               if (auditStatusEl) auditStatusEl.textContent = 'データがありません';
               return;

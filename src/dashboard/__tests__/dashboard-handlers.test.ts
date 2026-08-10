@@ -768,7 +768,7 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
     });
 
     it('handleManualLocalMarkdownExport queries by date range and shows date-range empty message', async () => {
-        mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
+        mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 
         await handleManualLocalMarkdownExport();
 
@@ -781,7 +781,7 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
     });
 
     it('handleExportLocalMarkdown uses its own DOM element IDs and date-range query', async () => {
-        mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
+        mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 
         await handleExportLocalMarkdown();
 
@@ -792,7 +792,7 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
     });
 
     it('handleHistoryExportLocalMarkdown queries full history in batches (no date range) and shows its own empty message', async () => {
-        mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
+        mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 
         await handleHistoryExportLocalMarkdown();
 
@@ -802,12 +802,14 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
 
     it('downloads one file per distinct date and reports the count', async () => {
         mockQueryLogs.mockResolvedValue({
-            rows: [
-                { id: 1, url: 'https://example.com/1', title: 'A', summary: 'S1', created_at: new Date(2026, 0, 1, 9, 0, 0).getTime() },
-                { id: 2, url: 'https://example.com/2', title: 'B', summary: 'S2', created_at: new Date(2026, 0, 2, 9, 0, 0).getTime() },
-                { id: 3, url: 'https://example.com/3', title: 'C', summary: 'S3', created_at: new Date(2026, 0, 2, 15, 0, 0).getTime() },
-            ],
-            total: 3,
+            data: {
+                rows: [
+                    { id: 1, url: 'https://example.com/1', title: 'A', summary: 'S1', created_at: new Date(2026, 0, 1, 9, 0, 0).getTime() },
+                    { id: 2, url: 'https://example.com/2', title: 'B', summary: 'S2', created_at: new Date(2026, 0, 2, 9, 0, 0).getTime() },
+                    { id: 3, url: 'https://example.com/3', title: 'C', summary: 'S3', created_at: new Date(2026, 0, 2, 15, 0, 0).getTime() },
+                ],
+                total: 3,
+            },
         });
 
         await handleHistoryExportLocalMarkdown();
@@ -818,8 +820,8 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
         );
     });
 
-    it('shows an error message and re-enables the button when queryLogs rejects', async () => {
-        mockQueryLogs.mockRejectedValue(new Error('boom'));
+    it('shows an error message and re-enables the button when queryLogs reports an error', async () => {
+        mockQueryLogs.mockResolvedValue({ error: 'boom' });
         const btn = document.getElementById('historyExportLocalMarkdownBtn') as HTMLButtonElement;
 
         await handleHistoryExportLocalMarkdown();
@@ -836,8 +838,8 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
         const firstBatch = Array.from({ length: 1000 }, (_, i) => makeRow(i, new Date(2026, 0, 1, 0, 0, i)));
         const secondBatch = [makeRow(1000, new Date(2026, 0, 1, 0, 20, 0))];
         mockQueryLogs
-            .mockResolvedValueOnce({ rows: firstBatch, total: 1001 })
-            .mockResolvedValueOnce({ rows: secondBatch, total: 1001 });
+            .mockResolvedValueOnce({ data: { rows: firstBatch, total: 1001 } })
+            .mockResolvedValueOnce({ data: { rows: secondBatch, total: 1001 } });
 
         await handleHistoryExportLocalMarkdown();
 
@@ -852,8 +854,8 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
     it('stops paging as soon as a page returns exactly a full batch followed by an empty page', async () => {
         const fullBatch = Array.from({ length: 1000 }, (_, i) => makeRow(i, new Date(2026, 0, 1, 0, 0, i)));
         mockQueryLogs
-            .mockResolvedValueOnce({ rows: fullBatch, total: 1000 })
-            .mockResolvedValueOnce({ rows: [], total: 1000 });
+            .mockResolvedValueOnce({ data: { rows: fullBatch, total: 1000 } })
+            .mockResolvedValueOnce({ data: { rows: [], total: 1000 } });
 
         await handleHistoryExportLocalMarkdown();
 
@@ -881,8 +883,8 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
             makeRow(502, new Date(2026, 0, 3, 9, 0, 0)),
         ];
         mockQueryLogs
-            .mockResolvedValueOnce({ rows: batch1, total: 502 })
-            .mockResolvedValueOnce({ rows: batch2, total: 502 });
+            .mockResolvedValueOnce({ data: { rows: batch1, total: 502 } })
+            .mockResolvedValueOnce({ data: { rows: batch2, total: 502 } });
 
         await handleHistoryExportLocalMarkdown();
 
@@ -899,7 +901,7 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
             value: 'Mozilla/5.0 (Linux; Android 14)',
             configurable: true,
         });
-        mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
+        mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 
         await handleHistoryExportLocalMarkdown();
 

@@ -30,20 +30,17 @@ const EXPORT_ROW_LIMIT = 10000;
 async function queryAllData() {
   const result = await queryLogs({ limit: EXPORT_ROW_LIMIT, orderBy: 'created_at', orderDir: 'DESC' });
 
-  if (result === null) {
-    throw new Error('Could not read the database. Please reload the extension and try again.');
-  }
   if ('error' in result) {
     throw new Error(result.error);
   }
-  if (result.total > result.rows.length) {
+  if (result.data.total > result.data.rows.length) {
     throw new Error(
-      `This export is limited to ${EXPORT_ROW_LIMIT} records, but ${result.total} are stored. ` +
+      `This export is limited to ${EXPORT_ROW_LIMIT} records, but ${result.data.total} are stored. ` +
       'Use the .db export to capture the full history.'
     );
   }
 
-  return result.rows;
+  return result.data.rows;
 }
 
 export async function exportMarkdown(ids?: number[]): Promise<string> {

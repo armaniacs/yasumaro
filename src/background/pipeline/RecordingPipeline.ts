@@ -35,7 +35,7 @@
 
 import { addLog, LogType, logError, ErrorCode } from '../../utils/logger.js';
 import { addPendingPage } from '../../utils/pendingStorage.js';
-import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError } from './types.js';
+import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError, type OfflineJobKind } from './types.js';
 import {
   truncateContentStep,
   checkDomainFilterStep,
@@ -61,7 +61,7 @@ import type { AIService } from '../ai/AIService.js';
 import type { SqliteClient } from '../sqliteClient.js';
 import { mapToBrowsingLogRecord } from './mappers/BrowsingLogRecordMapper.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
-import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
+import { sharedOfflineNetworkQueue, type OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 
 /**
  * Dependencies required to build a RecordingPipeline instance.
@@ -86,6 +86,23 @@ export function createRecordingPipeline(deps: RecordingPipelineDeps): RecordingP
     deps.sqliteClient,
     deps.offlineNetworkQueue
   );
+}
+
+/**
+ * Build the pipeline deps shared by every recording caller, wiring the
+ * shared offline network queue singleton.
+ *
+ * Previously each caller (messageHandlers manual/save, recordingLogic) rebuilt
+ * the same 5-field deps object inline, so adding or renaming a pipeline
+ * dependency meant editing several call sites.
+ */
+export function buildRecordingPipelineDeps(
+  deps: Pick<RecordingPipelineDeps, 'getPrivacyInfoWithCache' | 'obsidian' | 'aiService' | 'sqliteClient'>,
+): RecordingPipelineDeps {
+  return {
+    ...deps,
+    offlineNetworkQueue: sharedOfflineNetworkQueue,
+  };
 }
 
 /**
@@ -154,12 +171,14 @@ export class RecordingPipeline {
         name: 'privacyPipeline',
         errorStrategy: ErrorStrategy.RETRY,
         maxRetries: 3,
+        offlineRetry: { jobKind: 'ai_summary' },
         execute: processPrivacyPipelineStep
       },
       {
         name: 'extractSentences',
         errorStrategy: ErrorStrategy.RETRY,
         maxRetries: 3,
+        offlineRetry: { jobKind: 'ai_summary' },
         execute: extractSentencesStep
       },
       {
@@ -170,6 +189,7 @@ export class RecordingPipeline {
       {
         name: 'saveObsidian',
         errorStrategy: ErrorStrategy.BEST_EFFORT,
+        offlineRetry: { jobKind: 'obsidian_sync' },
         execute: this.createSaveToObsidianStep()
       },
       {
@@ -361,10 +381,15 @@ export class RecordingPipeline {
     context: RecordingContext,
     error: unknown
   ): Promise<void> {
-    const type = stepName === 'saveObsidian' ? 'obsidian_sync' : 'ai_summary';
-    if (stepName !== 'saveObsidian' && stepName !== 'extractSentences' && stepName !== 'privacyPipeline') {
+    // Resolve offline retry policy from the step's metadata instead of
+    // comparing step names — the former string-list approach silently broke
+    // when a step was renamed or a new retryable step was added.
+    const step = this.steps.find(s => s.name === stepName);
+    if (!step?.offlineRetry) {
       return;
     }
+
+    const type: OfflineJobKind = step.offlineRetry.jobKind;
 
     const payload = {
       title: context.data.title,

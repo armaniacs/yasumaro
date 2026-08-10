@@ -126,6 +126,7 @@ vi.mock('../pipeline/RecordingPipeline.ts', () => {
   return {
     RecordingPipeline,
     createRecordingPipeline: vi.fn().mockImplementation(() => new RecordingPipeline()),
+    buildRecordingPipelineDeps: vi.fn().mockImplementation((deps: unknown) => deps),
   };
 });
 

@@ -32,8 +32,13 @@ describe('SqliteClient audit log methods', () => {
   });
 
   it('queryAuditLog sends SQLITE_AUDIT_LOG_QUERY and returns rows', async () => {
-    const result = await client.queryAuditLog({ limit: 10, offset: 0 });
-    expect(result?.rows).toHaveLength(1);
-    expect(result?.total).toBe(1);
+    const result = await client.queryAuditLogResult({ limit: 10, offset: 0 });
+    expect(result).toEqual({
+      success: true,
+      data: {
+        rows: [{ id: 1, provider: 'gemini', url: 'https://example.com', created_at: 1000 }],
+        total: 1,
+      },
+    });
   });
 });

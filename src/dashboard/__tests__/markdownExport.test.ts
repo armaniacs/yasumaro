@@ -173,8 +173,7 @@ describe('loadExportConfig', () => {
 describe('exportDateRange', () => {
   it('writes one file per date and reports the counts', async () => {
     mockQueryLogs.mockResolvedValue({
-      rows: [row(1, '2026-08-01'), row(2, '2026-08-01'), row(3, '2026-08-02')],
-      total: 3,
+      data: { rows: [row(1, '2026-08-01'), row(2, '2026-08-01'), row(3, '2026-08-02')], total: 3 },
     });
     const dl = makeDownloadSpy();
 
@@ -192,7 +191,7 @@ describe('exportDateRange', () => {
   });
 
   it('reports zero and writes nothing when the range is empty', async () => {
-    mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
+    mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
     const dl = makeDownloadSpy();
 
     const result = await exportDateRange(config, '2026-08-01', '2026-08-02', dl.port);
@@ -211,13 +210,13 @@ describe('exportDateRange', () => {
     expect(dl.calls).toHaveLength(0);
   });
 
-  it('surfaces a null query result instead of reporting an empty range', async () => {
-    mockQueryLogs.mockResolvedValue(null);
+  it('surfaces a query error instead of an empty range', async () => {
+    mockQueryLogs.mockResolvedValue({ error: 'Storage quota exceeded.' });
     const dl = makeDownloadSpy();
 
     await expect(
       exportDateRange(config, '2026-08-01', '2026-08-02', dl.port)
-    ).rejects.toThrow(/could not read the database/i);
+    ).rejects.toThrow('Storage quota exceeded.');
     expect(dl.calls).toHaveLength(0);
   });
 });
@@ -228,8 +227,8 @@ describe('exportFullHistoryInBatches', () => {
     const firstBatch = Array.from({ length: EXPORT_BATCH_SIZE_MOBILE }, (_, i) => row(i, '2026-08-01'));
     const lastBatch = [row(9001, '2026-08-02')];
     mockQueryLogs
-      .mockResolvedValueOnce({ rows: firstBatch, total: 501 })
-      .mockResolvedValueOnce({ rows: lastBatch, total: 501 });
+      .mockResolvedValueOnce({ data: { rows: firstBatch, total: 501 } })
+      .mockResolvedValueOnce({ data: { rows: lastBatch, total: 501 } });
     const dl = makeDownloadSpy();
 
     const result = await exportFullHistoryInBatches(config, dl.port);
@@ -242,8 +241,7 @@ describe('exportFullHistoryInBatches', () => {
 
   it('flushes a date as soon as the date changes, not at the end', async () => {
     mockQueryLogs.mockResolvedValueOnce({
-      rows: [row(1, '2026-08-01'), row(2, '2026-08-02'), row(3, '2026-08-03')],
-      total: 3,
+      data: { rows: [row(1, '2026-08-01'), row(2, '2026-08-02'), row(3, '2026-08-03')], total: 3 },
     });
     const dl = makeDownloadSpy();
 
@@ -258,7 +256,7 @@ describe('exportFullHistoryInBatches', () => {
   });
 
   it('writes nothing for an empty history', async () => {
-    mockQueryLogs.mockResolvedValueOnce({ rows: [], total: 0 });
+    mockQueryLogs.mockResolvedValueOnce({ data: { rows: [], total: 0 } });
     const dl = makeDownloadSpy();
 
     const result = await exportFullHistoryInBatches(config, dl.port);

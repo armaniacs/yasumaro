@@ -9,10 +9,8 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
 
   beforeEach(() => {
     sqliteClient = new SqliteClient();
-    // Stub clearAllResult, not clearAll: the handler calls the Result
-    // variant, and a real SqliteClient already has that method on its
-    // prototype, so the test harness's derive-from-plain-method adapter
-    // skips it — see dashboardSqliteTestHarness.ts.
+    // Stub clearAllResult, not clearAll: the handler calls the Result variant
+    // whose failure reason travels with the call — see dashboardSqliteTestHarness.ts.
     (sqliteClient as unknown as { clearAllResult: ReturnType<typeof vi.fn> }).clearAllResult =
       vi.fn().mockResolvedValue({ success: true, data: undefined });
   });
@@ -58,7 +56,7 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
     expect(result).toEqual({ success: false, error: expect.stringContaining('token') });
   });
 
-  it('routes opfs_spike to sqliteClient.runOpfsSpike and returns the report', async () => {
+  it('routes opfs_spike to sqliteClient.runOpfsSpikeResult and returns the report', async () => {
     const report = { strategy: 'opfs-async-main', steps: [], passed: true, durationMs: 5 };
     // Stub runOpfsSpikeResult, not runOpfsSpike — see the clearAllResult
     // comment above.
@@ -108,9 +106,9 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
     expect(result).toEqual({ success: true, rows, total: 1 });
   });
 
-  it('returns success:false when search yields null', async () => {
-    (sqliteClient as unknown as { search: ReturnType<typeof vi.fn> }).search =
-      vi.fn().mockResolvedValue(null);
+  it('returns success:false when search yields an error', async () => {
+    (sqliteClient as unknown as { searchResult: ReturnType<typeof vi.fn> }).searchResult =
+      vi.fn().mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Search failed', retriable: false } });
     const result = await dispatchDashboardSqlite(
       { subtype: 'search', query: 'kddi' },
       sqliteClient,
@@ -142,7 +140,7 @@ describe('restore_db subtype', () => {
     expect((sqliteClient as unknown as { restoreDbResult: ReturnType<typeof vi.fn> }).restoreDbResult).not.toHaveBeenCalled();
   });
 
-  it('calls sqliteClient.restoreDb with the provided bytes when token matches', async () => {
+  it('calls sqliteClient.restoreDbResult with the provided bytes when token matches', async () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'restore_db', data: 'AQID', confirmToken: VALID_TOKEN },
       sqliteClient,

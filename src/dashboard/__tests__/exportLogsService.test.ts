@@ -104,7 +104,7 @@ describe('exportLogsService', () => {
 
   describe('exportMarkdown', () => {
     it('exports all rows as markdown frontmatter entries', async () => {
-      mockQueryLogs.mockResolvedValue({ rows: SAMPLE_ROWS, total: 2 });
+      mockQueryLogs.mockResolvedValue({ data: { rows: SAMPLE_ROWS, total: 2 } });
 
       const result = await exportMarkdown();
 
@@ -117,7 +117,7 @@ describe('exportLogsService', () => {
     });
 
     it('filters by ids when specified', async () => {
-      mockQueryLogs.mockResolvedValue({ rows: SAMPLE_ROWS, total: 2 });
+      mockQueryLogs.mockResolvedValue({ data: { rows: SAMPLE_ROWS, total: 2 } });
 
       const result = await exportMarkdown([1]);
 
@@ -126,7 +126,7 @@ describe('exportLogsService', () => {
     });
 
     it('returns empty string when no data', async () => {
-      mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
+      mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 
       const result = await exportMarkdown();
       expect(result).toBe('');
@@ -134,7 +134,7 @@ describe('exportLogsService', () => {
 
     it('handles malformed tags gracefully', async () => {
       const badRow = { ...SAMPLE_ROWS[0], tags: '{invalid}' };
-      mockQueryLogs.mockResolvedValue({ rows: [badRow], total: 1 });
+      mockQueryLogs.mockResolvedValue({ data: { rows: [badRow], total: 1 } });
 
       const result = await exportMarkdown();
       expect(result).toContain('tags: []');
@@ -142,7 +142,7 @@ describe('exportLogsService', () => {
 
     it('escapes double quotes in title', async () => {
       const rowWithQuotes = { ...SAMPLE_ROWS[0], title: 'Page "Special" Title' };
-      mockQueryLogs.mockResolvedValue({ rows: [rowWithQuotes], total: 1 });
+      mockQueryLogs.mockResolvedValue({ data: { rows: [rowWithQuotes], total: 1 } });
 
       const result = await exportMarkdown([1]);
       expect(result).toContain('\\"');
@@ -155,7 +155,7 @@ describe('exportLogsService', () => {
 
   describe('exportCsv', () => {
     it('generates CSV with BOM and headers', async () => {
-      mockQueryLogs.mockResolvedValue({ rows: SAMPLE_ROWS, total: 2 });
+      mockQueryLogs.mockResolvedValue({ data: { rows: SAMPLE_ROWS, total: 2 } });
 
       const blob = await exportCsv();
       const text = await blob.text();
@@ -168,7 +168,7 @@ describe('exportLogsService', () => {
     });
 
     it('returns empty CSV when no data', async () => {
-      mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
+      mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 
       const blob = await exportCsv();
       const text = await blob.text();
@@ -178,7 +178,7 @@ describe('exportLogsService', () => {
     });
 
     it('has correct MIME type', async () => {
-      mockQueryLogs.mockResolvedValue({ rows: SAMPLE_ROWS, total: 2 });
+      mockQueryLogs.mockResolvedValue({ data: { rows: SAMPLE_ROWS, total: 2 } });
 
       const blob = await exportCsv();
       expect(blob.type).toBe('text/csv;charset=utf-8');
@@ -191,7 +191,7 @@ describe('exportLogsService', () => {
 
   describe('exportJson', () => {
     it('generates JSON with version and rows', async () => {
-      mockQueryLogs.mockResolvedValue({ rows: SAMPLE_ROWS, total: 2 });
+      mockQueryLogs.mockResolvedValue({ data: { rows: SAMPLE_ROWS, total: 2 } });
 
       const blob = await exportJson();
       const text = await blob.text();
@@ -204,7 +204,7 @@ describe('exportLogsService', () => {
     });
 
     it('has correct MIME type', async () => {
-      mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
+      mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 
       const blob = await exportJson();
       expect(blob.type).toBe('application/json');
@@ -274,25 +274,25 @@ describe('exportLogsService', () => {
       await expect(exportJson()).rejects.toThrow('Database connection lost.');
     });
 
-    it('rejects when the query returns null', async () => {
-      mockQueryLogs.mockResolvedValue(null);
-      await expect(exportJson()).rejects.toThrow(/could not read the database/i);
+    it('rejects when the query reports an error instead of a row list', async () => {
+      mockQueryLogs.mockResolvedValue({ error: 'Storage quota exceeded.' });
+      await expect(exportJson()).rejects.toThrow('Storage quota exceeded.');
     });
 
     it('rejects rather than silently truncating when the history exceeds the limit', async () => {
       // total far exceeds the rows actually returned: the file would have been
       // written with only the first page and reported as a complete export.
-      mockQueryLogs.mockResolvedValue({ rows: SAMPLE_ROWS, total: 25000 });
+      mockQueryLogs.mockResolvedValue({ data: { rows: SAMPLE_ROWS, total: 25000 } });
       await expect(exportJson()).rejects.toThrow(/25000/);
     });
 
     it('still exports normally when the row count matches the total', async () => {
-      mockQueryLogs.mockResolvedValue({ rows: SAMPLE_ROWS, total: SAMPLE_ROWS.length });
+      mockQueryLogs.mockResolvedValue({ data: { rows: SAMPLE_ROWS, total: SAMPLE_ROWS.length } });
       await expect(exportJson()).resolves.toBeInstanceOf(Blob);
     });
 
     it('treats a genuinely empty database as success, not an error', async () => {
-      mockQueryLogs.mockResolvedValue({ rows: [], total: 0 });
+      mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
       await expect(exportJson()).resolves.toBeInstanceOf(Blob);
     });
   });

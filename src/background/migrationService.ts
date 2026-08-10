@@ -305,14 +305,17 @@ export class MigrationService {
       }
 
       // Query all non-deleted SQLite entries
-      const allResult = await this.sqliteClient.query({ limit: 50000 });
-      if (!allResult || allResult.rows.length === 0) {
+      const allResult = await this.sqliteClient.queryResult({ limit: 50000 });
+      if (!allResult.success) {
+        throw new Error(`Backfill query failed: ${allResult.error.message}`);
+      }
+      if (allResult.data.rows.length === 0) {
         return { updated: 0, total: 0 };
       }
 
       let updated = 0;
 
-      for (const sqliteRow of allResult.rows) {
+      for (const sqliteRow of allResult.data.rows) {
         const record = sqliteRow as BrowsingLogRecord;
         if (record.id == null) continue;
 
@@ -347,15 +350,15 @@ export class MigrationService {
 
         if (Object.keys(changes).length === 0) continue;
 
-        const ok = await this.sqliteClient.update(record.id, changes);
-        if (ok) updated++;
+        const ok = await this.sqliteClient.updateResult(record.id, changes);
+        if (ok.success) updated++;
       }
 
-      addLog(LogType.INFO, 'Backfill: completed', { updated, total: allResult.rows.length });
-      return { updated, total: allResult.rows.length };
+      addLog(LogType.INFO, 'Backfill: completed', { updated, total: allResult.data.rows.length });
+      return { updated, total: allResult.data.rows.length };
     } catch (error) {
       addLog(LogType.ERROR, 'Backfill: failed', { error: errorMessage(error) });
-      return { updated: 0, total: 0 };
+      throw error;
     }
   }
 

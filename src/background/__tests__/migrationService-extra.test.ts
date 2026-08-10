@@ -72,8 +72,8 @@ describe('MigrationService', () => {
   let service: MigrationService;
   let sqliteClient: {
     insertBatch: ReturnType<typeof vi.fn>;
-    query: ReturnType<typeof vi.fn>;
-    update: ReturnType<typeof vi.fn>;
+    queryResult: ReturnType<typeof vi.fn>;
+    updateResult: ReturnType<typeof vi.fn>;
     getStatus: ReturnType<typeof vi.fn>;
   };
   let mockStorage: Record<string, unknown>;
@@ -108,8 +108,8 @@ describe('MigrationService', () => {
     setupChrome();
     sqliteClient = {
       insertBatch: vi.fn().mockResolvedValue({ count: 0 }),
-      query: vi.fn().mockResolvedValue({ rows: [], total: 0 }),
-      update: vi.fn().mockResolvedValue(true),
+      queryResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
+      updateResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
       getStatus: vi.fn().mockResolvedValue({ fallback: false, initialized: true }),
     };
     service = new MigrationService(sqliteClient as any);
@@ -260,17 +260,20 @@ describe('MigrationService', () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 60000, sentTokens: 50, pageBytes: 2000 },
       ];
-      sqliteClient.query.mockResolvedValue({
-        rows: [
-          { id: 1, url: 'https://a.com', created_at: 60000, sent_tokens: null, received_tokens: null },
-        ],
-        total: 1,
+      sqliteClient.queryResult.mockResolvedValue({
+        success: true,
+        data: {
+          rows: [
+            { id: 1, url: 'https://a.com', created_at: 60000, sent_tokens: null, received_tokens: null },
+          ],
+          total: 1,
+        },
       });
-      sqliteClient.update.mockResolvedValue(true);
+      sqliteClient.updateResult.mockResolvedValue({ success: true, data: undefined });
 
       const result = await service.backfillDiagnosticMetadata();
       expect(result.updated).toBe(1);
-      expect(sqliteClient.update).toHaveBeenCalledWith(1, expect.objectContaining({
+      expect(sqliteClient.updateResult).toHaveBeenCalledWith(1, expect.objectContaining({
         sent_tokens: 50,
         page_bytes: 2000,
       }));
@@ -280,11 +283,14 @@ describe('MigrationService', () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 60000, sentTokens: 50 },
       ];
-      sqliteClient.query.mockResolvedValue({
-        rows: [
-          { id: 1, url: 'https://a.com', created_at: 60000, sent_tokens: 50, received_tokens: null },
-        ],
-        total: 1,
+      sqliteClient.queryResult.mockResolvedValue({
+        success: true,
+        data: {
+          rows: [
+            { id: 1, url: 'https://a.com', created_at: 60000, sent_tokens: 50, received_tokens: null },
+          ],
+          total: 1,
+        },
       });
 
       const result = await service.backfillDiagnosticMetadata();
@@ -295,20 +301,19 @@ describe('MigrationService', () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 60000, sentTokens: 50 },
       ];
-      sqliteClient.query.mockResolvedValue({ rows: [], total: 0 });
+      sqliteClient.queryResult.mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
 
       const result = await service.backfillDiagnosticMetadata();
       expect(result).toEqual({ updated: 0, total: 0 });
     });
 
-    it('handles error gracefully', async () => {
+    it('propagates query errors', async () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 60000, sentTokens: 50 },
       ];
-      sqliteClient.query.mockRejectedValue(new Error('Query failed'));
+      sqliteClient.queryResult.mockRejectedValue(new Error('Query failed'));
 
-      const result = await service.backfillDiagnosticMetadata();
-      expect(result).toEqual({ updated: 0, total: 0 });
+      await expect(service.backfillDiagnosticMetadata()).rejects.toThrow('Query failed');
     });
 
     it('returns {0,0} when storageMap is empty (no diagnostic fields)', async () => {
@@ -319,15 +324,21 @@ describe('MigrationService', () => {
       expect(result).toEqual({ updated: 0, total: 0 });
     });
 
-    it('handles update returning false', async () => {
+    it('handles updateResult returning failure', async () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 60000, sentTokens: 50 },
       ];
-      sqliteClient.query.mockResolvedValue({
-        rows: [{ id: 1, url: 'https://a.com', created_at: 60000, sent_tokens: null }],
-        total: 1,
+      sqliteClient.queryResult.mockResolvedValue({
+        success: true,
+        data: {
+          rows: [{ id: 1, url: 'https://a.com', created_at: 60000, sent_tokens: null }],
+          total: 1,
+        },
       });
-      sqliteClient.update.mockResolvedValue(false);
+      sqliteClient.updateResult.mockResolvedValue({
+        success: false,
+        error: { kind: 'sqlite_error', message: 'update failed', retriable: false },
+      });
 
       const result = await service.backfillDiagnosticMetadata();
       expect(result.updated).toBe(0);
@@ -337,9 +348,12 @@ describe('MigrationService', () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 60000, sentTokens: 50 },
       ];
-      sqliteClient.query.mockResolvedValue({
-        rows: [{ id: null, url: 'https://a.com', created_at: 60000, sent_tokens: null }],
-        total: 1,
+      sqliteClient.queryResult.mockResolvedValue({
+        success: true,
+        data: {
+          rows: [{ id: null, url: 'https://a.com', created_at: 60000, sent_tokens: null }],
+          total: 1,
+        },
       });
 
       const result = await service.backfillDiagnosticMetadata();

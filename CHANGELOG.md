@@ -39,6 +39,37 @@ All notable changes to this project will be documented in this file.
 
 （次のリリースに向けての変更をここに記載）
 
+## [6.7.30] - 2026-08-11
+
+SQLiteの結果処理とRecordingPipelineの依存配線を整理し、失敗理由が途中で失われる問題を修正した。
+
+### Fixed
+
+- **SQLite操作の失敗が空結果や成功として扱われる問題を修正**
+  dashboard、Service Worker、offscreen間の結果契約を統一し、空結果と通信・DB障害を区別するようにした。
+- **SQLite応答の欠損フィールドが暗黙に0へ変換される問題を修正**
+  offscreen応答を操作ごとの型付きprotocolとして扱い、失敗理由と不正な応答を検出しやすくした。
+- **SQLite応答の型と実際のwire形式が一致しない問題を修正**
+  コンテンツパージ応答の不要な`skipped`フィールドを型から削除し、status応答の診断情報をService Worker側でも保持するようにした。
+- **migration・Obsidian同期・Gist同期のDB障害が成功扱いになる問題を修正**
+  query失敗を「対象0件」や「部分同期の正常完了」に変換せず、呼び出し元へエラーとして伝播するようにした。
+- **オフライン再試行対象がstep名の文字列照合に依存していた問題を修正**
+  RecordingPipelineのstep metadataから再試行可否とjob種別を決定するようにした。
+
+### Refactor
+
+- SqliteClientの失敗情報を捨てる重複wrapperを削除し、`*Result`メソッドへ統一した。
+- BackgroundのRecordingPipeline依存生成を共通化し、context menuの重複配線を解消した。
+- SQLiteメッセージのテストハーネスをResult契約に合わせて整理した。
+- `OfflineJobKind`の定義をキューとRecordingPipelineで共有し、job種別追加時の型ドリフトを防止した。
+- 重複していた`src/eslint.config.js`を削除し、ルートのESLint設定へ統一した。
+
+### Tests
+
+- PBI-01〜05の受け入れシナリオ、失敗経路、型付き応答、オフライン再試行を検証するテストを追加・更新した。
+- 全テスト **7,763件成功、18件skip**、TypeScript型チェック成功。
+- レビュー指摘に対する回帰テストを追加・更新し、関連テスト153件と全テスト7,763件が成功した。
+
 ## [6.7.29] - 2026-08-10
 
 PBI 2026-08-09-23（SQLite トランスポート層削減）の Phase 3 を完了。
@@ -3503,4 +3534,3 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 - **classifier.ts**: `TRS_Editor`大文字不一致（`trs_editor`に修正）
 - **helpers.ts**: `Advertise`小文字不一致（`advertise`に修正）
 - **stripExtended.ts**: linkなし段落削除ロジック欠陥
-

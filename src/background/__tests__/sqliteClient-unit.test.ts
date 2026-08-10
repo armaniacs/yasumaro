@@ -55,118 +55,172 @@ describe('SqliteClient — unit tests', () => {
     client = new SqliteClient();
   });
 
-  describe('query()', () => {
+  describe('queryResult()', () => {
     it('returns rows and total on success', async () => {
       setupChromeMock({ success: true, rows: [{ id: 1 }], total: 1 });
 
-      const result = await client.query({ limit: 10 });
+      const result = await client.queryResult({ limit: 10 });
 
-      expect(result).toEqual({ rows: [{ id: 1 }], total: 1 });
+      expect(result).toEqual({ success: true, data: { rows: [{ id: 1 }], total: 1 } });
       expect(recordSqliteSuccess).toHaveBeenCalled();
     });
 
-    it('returns null on failure', async () => {
+    it('returns failure result on failure', async () => {
       setupChromeMock({ success: false, error: 'Query failed' });
 
-      const result = await client.query();
+      const result = await client.queryResult();
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ success: false, error: expect.anything() });
       expect(recordSqliteFailure).toHaveBeenCalled();
     });
 
-    it('returns null on exception', async () => {
+    it('returns failure result on exception', async () => {
       setupChromeMock(null, 'Connection lost');
 
-      const result = await client.query();
+      const result = await client.queryResult();
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ success: false, error: expect.anything() });
     });
 
     it('returns empty rows when response has no rows', async () => {
       setupChromeMock({ success: true, total: 0 });
 
-      const result = await client.query();
+      const result = await client.queryResult();
 
-      expect(result).toEqual({ rows: [], total: 0 });
+      expect(result).toEqual({ success: true, data: { rows: [], total: 0 } });
     });
   });
 
-  describe('insert()', () => {
+  describe('typed response decoding (PBI-04)', () => {
+    it('getCountResult returns the count directly, not coerced', async () => {
+      setupChromeMock({ success: true, count: 7 });
+
+      const result = await client.getCountResult();
+
+      expect(result).toEqual({ success: true, data: 7 });
+    });
+
+    it('getCountResult reports a missing count as a failure instead of masking it to 0', async () => {
+      // A well-formed offscreen response always carries `count`; a response
+      // without it is a bug and must not be silently reported as 0 records.
+      setupChromeMock({ success: true });
+
+      const result = await client.getCountResult();
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.message).toContain('missing a numeric count');
+      }
+    });
+
+    it('queryResult propagates total without the legacy `|| 0` mask', async () => {
+      setupChromeMock({ success: true, rows: [{ id: 1 }], total: 3 });
+
+      const result = await client.queryResult();
+
+      expect(result).toEqual({ success: true, data: { rows: [{ id: 1 }], total: 3 } });
+    });
+
+    it('getStatusResult decodes diagnostic fields from the typed shape', async () => {
+      setupChromeMock({
+        success: true,
+        initialized: true,
+        path: 'opfs',
+        fallback: false,
+        fts5: true,
+        compileOptions: ['SQLITE_FTS5'],
+        compileOptionsSource: 'opfs-worker',
+      });
+
+      const result = await client.getStatus();
+
+      expect(result).toEqual({
+        initialized: true,
+        path: 'opfs',
+        fallback: false,
+        fts5: true,
+        compileOptions: ['SQLITE_FTS5'],
+        compileOptionsSource: 'opfs-worker',
+      });
+    });
+  });
+
+  describe('insertResult()', () => {
     it('returns id on success', async () => {
       setupChromeMock({ success: true, id: 42 });
 
-      const result = await client.insert({
+      const result = await client.insertResult({
         url: 'https://example.com',
         title: 'Test',
         created_at: Date.now(),
       });
 
-      expect(result).toEqual({ id: 42 });
+      expect(result).toEqual({ success: true, data: { id: 42 } });
     });
 
-    it('returns null on failure', async () => {
+    it('returns failure result on failure', async () => {
       setupChromeMock({ success: false, error: 'Insert failed' });
 
-      const result = await client.insert({
+      const result = await client.insertResult({
         url: 'https://example.com',
         created_at: Date.now(),
       });
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ success: false, error: expect.anything() });
     });
   });
 
-  describe('update()', () => {
-    it('returns true on success', async () => {
+  describe('updateResult()', () => {
+    it('returns success result on success', async () => {
       setupChromeMock({ success: true });
 
-      const result = await client.update(1, { title: 'Updated' });
+      const result = await client.updateResult(1, { title: 'Updated' });
 
-      expect(result).toBe(true);
+      expect(result).toEqual({ success: true, data: undefined });
     });
 
-    it('returns false on failure', async () => {
+    it('returns failure result on failure', async () => {
       setupChromeMock({ success: false, error: 'Not found' });
 
-      const result = await client.update(999, { title: 'Updated' });
+      const result = await client.updateResult(999, { title: 'Updated' });
 
-      expect(result).toBe(false);
+      expect(result).toEqual({ success: false, error: expect.anything() });
     });
   });
 
-  describe('delete()', () => {
-    it('returns true on success', async () => {
+  describe('deleteResult()', () => {
+    it('returns success result on success', async () => {
       setupChromeMock({ success: true });
 
-      const result = await client.delete(1);
+      const result = await client.deleteResult(1);
 
-      expect(result).toBe(true);
+      expect(result).toEqual({ success: true, data: undefined });
     });
 
-    it('returns false on failure', async () => {
+    it('returns failure result on failure', async () => {
       setupChromeMock({ success: false, error: 'Delete failed' });
 
-      const result = await client.delete(999);
+      const result = await client.deleteResult(999);
 
-      expect(result).toBe(false);
+      expect(result).toEqual({ success: false, error: expect.anything() });
     });
   });
 
-  describe('getCount()', () => {
+  describe('getCountResult()', () => {
     it('returns count on success', async () => {
       setupChromeMock({ success: true, count: 42 });
 
-      const result = await client.getCount();
+      const result = await client.getCountResult();
 
-      expect(result).toBe(42);
+      expect(result).toEqual({ success: true, data: 42 });
     });
 
-    it('returns null on failure', async () => {
+    it('returns failure result on failure', async () => {
       setupChromeMock({ success: false });
 
-      const result = await client.getCount();
+      const result = await client.getCountResult();
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ success: false, error: expect.anything() });
     });
   });
 
@@ -207,39 +261,39 @@ describe('SqliteClient — unit tests', () => {
     });
   });
 
-  describe('clearAll()', () => {
-    it('returns true on success', async () => {
+  describe('clearAllResult()', () => {
+    it('returns success result on success', async () => {
       setupChromeMock({ success: true });
 
-      const result = await client.clearAll();
+      const result = await client.clearAllResult();
 
-      expect(result).toBe(true);
+      expect(result).toEqual({ success: true, data: undefined });
     });
 
-    it('returns false on failure', async () => {
+    it('returns failure result on failure', async () => {
       setupChromeMock({ success: false });
 
-      const result = await client.clearAll();
+      const result = await client.clearAllResult();
 
-      expect(result).toBe(false);
+      expect(result).toEqual({ success: false, error: expect.anything() });
     });
   });
 
-  describe('toggleStar()', () => {
+  describe('toggleStarResult()', () => {
     it('returns is_starred on success', async () => {
       setupChromeMock({ success: true, is_starred: 1 });
 
-      const result = await client.toggleStar(1);
+      const result = await client.toggleStarResult(1);
 
-      expect(result).toEqual({ is_starred: 1 });
+      expect(result).toEqual({ success: true, data: { is_starred: 1 } });
     });
 
-    it('returns null on failure', async () => {
+    it('returns failure result on failure', async () => {
       setupChromeMock({ success: false });
 
-      const result = await client.toggleStar(1);
+      const result = await client.toggleStarResult(1);
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ success: false, error: expect.anything() });
     });
   });
 
@@ -284,31 +338,31 @@ describe('SqliteClient — unit tests', () => {
     });
   });
 
-  describe('restoreDb', () => {
-    it('sends SQLITE_RESTORE with data array and returns true on success', async () => {
+  describe('restoreDbResult', () => {
+    it('sends SQLITE_RESTORE with data array and returns success result on success', async () => {
       const spy = vi.spyOn(client, 'msgOffscreen').mockResolvedValue({ success: true });
       const data = new Uint8Array([1, 2, 3]);
 
-      const result = await client.restoreDb(data);
+      const result = await client.restoreDbResult(data);
 
-      expect(result).toBe(true);
+      expect(result).toEqual({ success: true, data: undefined });
       expect(spy).toHaveBeenCalledWith('SQLITE_RESTORE', { data: [1, 2, 3] }, '');
     });
 
-    it('returns false when offscreen reports failure', async () => {
+    it('returns failure result when offscreen reports failure', async () => {
       vi.spyOn(client, 'msgOffscreen').mockResolvedValue({ success: false, error: 'boom' });
 
-      const result = await client.restoreDb(new Uint8Array([9]));
+      const result = await client.restoreDbResult(new Uint8Array([9]));
 
-      expect(result).toBe(false);
+      expect(result).toEqual({ success: false, error: expect.anything() });
     });
 
-    it('returns false when msgOffscreen throws', async () => {
+    it('returns failure result when msgOffscreen throws', async () => {
       vi.spyOn(client, 'msgOffscreen').mockRejectedValue(new Error('timeout'));
 
-      const result = await client.restoreDb(new Uint8Array([9]));
+      const result = await client.restoreDbResult(new Uint8Array([9]));
 
-      expect(result).toBe(false);
+      expect(result).toEqual({ success: false, error: expect.anything() });
     });
   });
 

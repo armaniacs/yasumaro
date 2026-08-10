@@ -8,10 +8,11 @@
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { PersistentRetryQueue, ChromeStorageAdapter, RetryableItem } from './persistentRetryQueue.js';
+import type { OfflineJobKind } from './pipeline/types.js';
 
 export interface OfflineJob extends RetryableItem {
   id: string;
-  type: 'ai_summary' | 'obsidian_sync';
+  type: OfflineJobKind;
   payload: unknown;
 }
 

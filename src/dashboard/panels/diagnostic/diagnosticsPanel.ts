@@ -5,7 +5,7 @@ import { PROVIDER_LABELS } from '../../../background/aiClient.js';
 import { makeStatRow, getSeverityLabel } from '../../diagnosticUtils.js';
 
 import { UI_COLORS } from '../../../constants/appConstants.js';
-import { getSqliteStatus, getLogCount, runOpfsSpike, migrateLogs, backfillMetadata, cleanupLegacyStorage } from '../../dashboardSqliteService.js';
+import { getSqliteStatus, getLogCount, runOpfsSpike, migrateLogs, backfillMetadata, cleanupLegacyStorage, isServiceError } from '../../dashboardSqliteService.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { diagnoseDeficiencies, type DiagnosticInput } from '../../diagnoseDeficiencies.js';
@@ -200,7 +200,7 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
         const kb = (bytesUsed / 1024).toFixed(1);
         const urlCount = await getLogCount();
         storageStats.appendChild(makeStatRow(getMessage('diagStorageUsed') || 'Storage Used', `${kb} KB`));
-        const countLabel = urlCount >= 0 ? String(urlCount) : (getMessage('diagUnavailable') || 'Unavailable');
+        const countLabel = isServiceError(urlCount) ? (getMessage('diagUnavailable') || 'Unavailable') : String(urlCount.data);
         storageStats.appendChild(makeStatRow(getMessage('diagSavedUrls') || 'Saved URLs', countLabel));
       } catch {
         storageStats.textContent = getMessage('diagLoadError') || 'Failed to load storage info.';

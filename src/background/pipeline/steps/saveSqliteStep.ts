@@ -13,14 +13,14 @@ export interface SaveSqliteStepParams {
 
 export async function saveSqliteStep(params: SaveSqliteStepParams): Promise<void> {
   try {
-    const insertResult = await params.sqliteClient.insert(params.record, params.traceId);
-    if (!insertResult) {
+    const insertResult = await params.sqliteClient.insertResult(params.record, params.traceId);
+    if (!insertResult.success) {
       // SQLite unavailable/failing: queue the record instead of losing it (M14).
       await enqueuePendingRecord(params.record);
-      throw new Error(`SQLite insert returned null for url=${params.record.url}`);
+      throw new Error(`SQLite insert failed for url=${params.record.url}`);
     }
     if (params.obsidianSynced !== undefined) {
-      await params.sqliteClient.update(insertResult.id, {
+      await params.sqliteClient.updateResult(insertResult.data.id, {
         obsidian_synced: params.obsidianSynced ? 1 : 0,
       }, params.traceId);
     }

@@ -20,6 +20,11 @@
 |---|---|---|---|---|
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
 | 🔶 [2026-08-07-08-refactor-ai-client-service-unification.md](2026-08-07-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合（modelName型ドリフトは解消済み。AIClient削除は中核パスの高リスクのため保留） |
+| ⬜ [2026-08-10-01-refactor-dashboard-sqlite-result-contract.md](2026-08-10-01-refactor-dashboard-sqlite-result-contract.md) | 🔴高 | 🟡軽微 | 🔧 | ダッシュボードSQLiteの失敗結果を統一し、空結果と障害を区別する |
+| ⬜ [2026-08-10-02-refactor-sqlite-client-result-surface.md](2026-08-10-02-refactor-sqlite-client-result-surface.md) | 🔴高 | 🟡軽微 | 🔧 | SqliteClientの重複Result/簡易結果メソッドとテスト対応表を整理する |
+| ⬜ [2026-08-10-03-refactor-background-composition-wiring.md](2026-08-10-03-refactor-background-composition-wiring.md) | 🔴高 | 🔴あり | 🔧 | Backgroundの依存配線をcomposition moduleへ集約する |
+| ⬜ [2026-08-10-04-refactor-sqlite-offscreen-response-protocol.md](2026-08-10-04-refactor-sqlite-offscreen-response-protocol.md) | 🔴高 | 🟡軽微 | 🔧 | SWとoffscreen間のSQLite応答を型付きprotocolへ統一する |
+| ⬜ [2026-08-10-05-refactor-recording-offline-policy.md](2026-08-10-05-refactor-recording-offline-policy.md) | 🟡中 | 🟡軽微 | 🔧 | RecordingPipelineのオフライン再試行ポリシーを宣言化する |
 
 ---
 

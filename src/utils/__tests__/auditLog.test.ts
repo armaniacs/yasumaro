@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockInsertAuditLog = vi.fn().mockResolvedValue({ id: 1 });
-const mockQueryAuditLog = vi.fn().mockResolvedValue({ rows: [], total: 0 });
+const mockQueryAuditLogResult = vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
 
 vi.mock('../../background/sqliteClient.js', () => {
   class MockSqliteClient {
@@ -9,8 +9,8 @@ vi.mock('../../background/sqliteClient.js', () => {
       return mockInsertAuditLog(record);
     }
 
-    async queryAuditLog(options: Record<string, unknown>) {
-      return mockQueryAuditLog(options);
+    async queryAuditLogResult(options: Record<string, unknown>) {
+      return mockQueryAuditLogResult(options);
     }
   }
 
@@ -30,9 +30,9 @@ import { recordAuditLog, getAuditLogs } from '../auditLog.js';
 describe('auditLog', () => {
   beforeEach(() => {
     mockInsertAuditLog.mockClear();
-    mockQueryAuditLog.mockClear();
+    mockQueryAuditLogResult.mockClear();
     mockInsertAuditLog.mockResolvedValue({ id: 1 });
-    mockQueryAuditLog.mockResolvedValue({ rows: [], total: 0 });
+    mockQueryAuditLogResult.mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
   });
 
   it('recordAuditLog calls SqliteClient.insertAuditLog with provider, url, and a timestamp', async () => {
@@ -63,15 +63,18 @@ describe('auditLog', () => {
     );
   });
 
-  it('getAuditLogs delegates to SqliteClient.queryAuditLog', async () => {
-    mockQueryAuditLog.mockResolvedValue({
-      rows: [{ id: 1, provider: 'gemini', url: 'https://example.com', created_at: 1000 }],
-      total: 1,
+  it('getAuditLogs delegates to SqliteClient.queryAuditLogResult', async () => {
+    mockQueryAuditLogResult.mockResolvedValue({
+      success: true,
+      data: {
+        rows: [{ id: 1, provider: 'gemini', url: 'https://example.com', created_at: 1000 }],
+        total: 1,
+      },
     });
 
     const result = await getAuditLogs({ limit: 10, offset: 0 });
 
-    expect(mockQueryAuditLog).toHaveBeenCalledWith({ limit: 10, offset: 0 });
+    expect(mockQueryAuditLogResult).toHaveBeenCalledWith({ limit: 10, offset: 0 });
     expect(result.rows).toHaveLength(1);
     expect(result.total).toBe(1);
   });

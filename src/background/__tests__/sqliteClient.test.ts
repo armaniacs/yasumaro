@@ -81,8 +81,8 @@ describe('SqliteClient', () => {
         created_at: Date.now(),
       };
 
-      const result = await client.insert(record);
-      expect(result).toEqual({ id: 42 });
+      const result = await client.insertResult(record);
+      expect(result).toEqual({ success: true, data: { id: 42 } });
       expect(sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'SQLITE_INSERT',
@@ -93,18 +93,18 @@ describe('SqliteClient', () => {
       );
     });
 
-    it('returns null when insert fails', async () => {
+    it('returns failure result when insert fails', async () => {
       sendMessageMock.mockImplementation(
         (_msg: unknown, callback: (response: unknown) => void) => {
           callback({ success: false, error: 'Insert failed' });
         }
       );
 
-      const result = await client.insert({
+      const result = await client.insertResult({
         url: 'https://example.com',
         created_at: Date.now(),
       });
-      expect(result).toBeNull();
+      expect(result).toEqual({ success: false, error: expect.anything() });
     });
 
     it('propagates traceId in SQLITE_INSERT message', async () => {
@@ -114,11 +114,11 @@ describe('SqliteClient', () => {
         }
       );
 
-      const result = await client.insert(
+      const result = await client.insertResult(
         { url: 'https://example.com', created_at: Date.now() },
         'trace-sqlite-123'
       );
-      expect(result).toEqual({ id: 42 });
+      expect(result).toEqual({ success: true, data: { id: 42 } });
       expect(sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'SQLITE_INSERT',
@@ -141,10 +141,11 @@ describe('SqliteClient', () => {
         }
       );
 
-      const result = await client.query({ limit: 10, offset: 0 });
-      expect(result).not.toBeNull();
-      expect(result!.rows).toHaveLength(1);
-      expect(result!.total).toBe(1);
+      const result = await client.queryResult({ limit: 10, offset: 0 });
+      expect(result).toEqual({
+        success: true,
+        data: { rows: [{ id: 1, url: 'https://example.com', title: 'Test' }], total: 1 },
+      });
       expect(sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'SQLITE_QUERY',
@@ -167,9 +168,8 @@ describe('SqliteClient', () => {
         }
       );
 
-      const result = await client.search('typescript', 20, 0);
-      expect(result).not.toBeNull();
-      expect(result!.total).toBe(0);
+      const result = await client.searchResult('typescript', 20, 0);
+      expect(result).toEqual({ success: true, data: { rows: [], total: 0 } });
       expect(sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'SQLITE_SEARCH',
@@ -188,8 +188,8 @@ describe('SqliteClient', () => {
         }
       );
 
-      const result = await client.update(1, { title: 'Updated Title' });
-      expect(result).toBe(true);
+      const result = await client.updateResult(1, { title: 'Updated Title' });
+      expect(result).toEqual({ success: true, data: undefined });
       expect(sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'SQLITE_UPDATE',
@@ -206,8 +206,8 @@ describe('SqliteClient', () => {
         }
       );
 
-      const result = await client.update(1, { title: 'Updated' }, 'trace-update-456');
-      expect(result).toBe(true);
+      const result = await client.updateResult(1, { title: 'Updated' }, 'trace-update-456');
+      expect(result).toEqual({ success: true, data: undefined });
       expect(sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'SQLITE_UPDATE',
@@ -227,8 +227,8 @@ describe('SqliteClient', () => {
         }
       );
 
-      const result = await client.delete(1);
-      expect(result).toBe(true);
+      const result = await client.deleteResult(1);
+      expect(result).toEqual({ success: true, data: undefined });
       expect(sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'SQLITE_DELETE',
@@ -247,8 +247,8 @@ describe('SqliteClient', () => {
         }
       );
 
-      const result = await client.toggleStar(1);
-      expect(result).toEqual({ is_starred: 1 });
+      const result = await client.toggleStarResult(1);
+      expect(result).toEqual({ success: true, data: { is_starred: 1 } });
       expect(sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'SQLITE_TOGGLE_STAR',
@@ -267,8 +267,8 @@ describe('SqliteClient', () => {
         }
       );
 
-      const result = await client.getCount();
-      expect(result).toBe(42);
+      const result = await client.getCountResult();
+      expect(result).toEqual({ success: true, data: 42 });
       expect(sendMessageMock).toHaveBeenCalledWith(
         { type: 'SQLITE_COUNT', target: 'offscreen', payload: {}, traceId: '' },
         expect.any(Function)
@@ -347,25 +347,24 @@ describe('SqliteClient', () => {
         }
       );
 
-      const result = await client.backupDb();
+      const result = await client.backupDbResult();
 
-      expect(result).toBeInstanceOf(Uint8Array);
-      expect(Array.from(result!)).toEqual(bytes);
+      expect(result).toEqual({ success: true, data: new Uint8Array(bytes) });
       expect(sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'SQLITE_BACKUP', target: 'offscreen' }),
         expect.any(Function)
       );
     });
 
-    it('returns null when backup fails', async () => {
+    it('returns failure result when backup fails', async () => {
       sendMessageMock.mockImplementation(
         (_msg: unknown, callback: (response: unknown) => void) => {
           callback({ success: false, error: 'Backup failed' });
         }
       );
 
-      const result = await client.backupDb();
-      expect(result).toBeNull();
+      const result = await client.backupDbResult();
+      expect(result).toEqual({ success: false, error: expect.anything() });
     });
   });
 

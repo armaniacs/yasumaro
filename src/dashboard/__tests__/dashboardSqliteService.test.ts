@@ -48,7 +48,7 @@ describe('dashboardSqliteService', () => {
 
       const result = await queryLogs({ limit: 10, offset: 0 });
 
-      expect(result).toEqual({ rows: [{ id: 1, url: 'https://example.com' }], total: 1 });
+      expect(result).toEqual({ data: { rows: [{ id: 1, url: 'https://example.com' }], total: 1 } });
     });
 
     it('sends the correct message payload', async () => {
@@ -68,11 +68,11 @@ describe('dashboardSqliteService', () => {
       expect(result).toEqual({ error: 'DB error' });
     });
 
-    it('returns null on rejection', async () => {
+    it('surfaces the failure reason on rejection', async () => {
       givenLastError('Connection failed');
 
       const result = await queryLogs();
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: 'Connection failed' });
     });
   });
 
@@ -81,7 +81,7 @@ describe('dashboardSqliteService', () => {
       givenResponse({ success: true, rows: [{ id: 2, url: 'https://example.com/search' }], total: 1 });
 
       const result = await searchLogs('test query', 20, 0);
-      expect(result).toEqual({ rows: [{ id: 2, url: 'https://example.com/search' }], total: 1 });
+      expect(result).toEqual({ data: { rows: [{ id: 2, url: 'https://example.com/search' }], total: 1 } });
     });
 
     it('uses default limit and offset', async () => {
@@ -95,11 +95,11 @@ describe('dashboardSqliteService', () => {
       );
     });
 
-    it('returns null on rejection', async () => {
+    it('surfaces the failure reason on rejection', async () => {
       givenLastError('Timeout');
 
       const result = await searchLogs('test');
-      expect(result).toBeNull();
+      expect(result).toEqual({ error: 'Timeout' });
     });
   });
 
@@ -186,21 +186,21 @@ describe('dashboardSqliteService', () => {
       givenResponse({ success: true, count: 42 });
 
       const result = await getLogCount();
-      expect(result).toBe(42);
+      expect(result).toEqual({ data: 42 });
     });
 
-    it('returns -1 on failed response', async () => {
+    it('surfaces the failure reason on failed response', async () => {
       givenResponse({ success: false });
 
       const result = await getLogCount();
-      expect(result).toBe(-1);
+      expect(result).toEqual({ error: 'Get count failed' });
     });
 
-    it('returns -1 on rejection', async () => {
+    it('surfaces the failure reason on rejection', async () => {
       givenLastError('Timeout');
 
       const result = await getLogCount();
-      expect(result).toBe(-1);
+      expect(result).toEqual({ error: 'Timeout' });
     });
   });
 });

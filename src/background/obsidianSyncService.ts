@@ -55,7 +55,7 @@ export class ObsidianSyncService implements SyncTarget {
       const markdown = `- [${sanitizedTitle}](${sanitizedUrl})${sanitizedSummary ? `: ${sanitizedSummary}` : ''}`;
       await this.obsidianClient.appendToDailyNote(markdown);
       // Mark as synced in SQLite
-      await this.sqliteClient.update(logId, { obsidian_synced: 1 });
+      await this.sqliteClient.updateResult(logId, { obsidian_synced: 1 });
       addLog(LogType.INFO, 'ObsidianSync: synced', { url, logId });
       return { success: true };
     } catch (error) {
@@ -78,17 +78,20 @@ export class ObsidianSyncService implements SyncTarget {
     }
 
     try {
-      const result = await this.sqliteClient.query({
+      const result = await this.sqliteClient.queryResult({
         limit: ObsidianSyncService.BATCH_SIZE,
         orderBy: 'created_at',
         orderDir: 'DESC',
       });
 
-      if (!result || !result.rows || result.rows.length === 0) {
+      if (!result.success) {
+        throw new Error(`Obsidian sync query failed: ${result.error.message}`);
+      }
+      if (result.data.rows.length === 0) {
         return 0;
       }
 
-      const unsyncedRows = result.rows.filter((r) => !r.obsidian_synced);
+      const unsyncedRows = result.data.rows.filter((r) => !r.obsidian_synced);
       if (unsyncedRows.length === 0) {
         return 0;
       }
@@ -111,7 +114,7 @@ export class ObsidianSyncService implements SyncTarget {
       addLog(LogType.WARN, 'ObsidianSync: batch failed', {
         error: errorMessage(error),
       });
-      return 0;
+      throw error;
     }
   }
 

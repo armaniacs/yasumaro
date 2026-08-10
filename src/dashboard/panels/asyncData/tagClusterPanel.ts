@@ -3,7 +3,7 @@
  * Renders a tag cooccurrence graph (nodes + edges) as SVG in the dashboard.
  */
 
-import { queryLogs, getSqliteStatus } from '../../dashboardSqliteService.js';
+import { queryLogs, getSqliteStatus, isServiceError } from '../../dashboardSqliteService.js';
 import { computeTagCooccurrence, limitToTopNodes } from '../../tagCooccurrence.js';
 import { computeLayout, computeCanvasSize } from '../../tagClusterLayout.js';
 import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
@@ -155,10 +155,10 @@ async function loadRowsWithRetry(): Promise<BrowsingLogEntry[]> {
       // retries when the thunk yields null or throws, so coercing an error to
       // an empty array made it return "successfully" on the first attempt and
       // skip all remaining attempts.
-      if (!queryResult || 'error' in queryResult) {
+      if (isServiceError(queryResult)) {
         return null;
       }
-      return queryResult.rows;
+      return queryResult.data.rows;
     },
     { label: 'tagCluster', maxAttempts: 4 }
   );

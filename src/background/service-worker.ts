@@ -406,14 +406,23 @@ const _dashboardSqliteHandler = createDashboardSqliteHandler(
         'yasumaro_migration_status',
         'yasumaro_migration_progress',
       ]);
-      const beforeCount = await sqliteClient.getCount();
+      const beforeCount = await sqliteClient.getCountResult();
       await migrationService.run();
-      const afterCount = await sqliteClient.getCount();
+      const afterCount = await sqliteClient.getCountResult();
+      // Do not mask a count failure as 0 records — a failed read must not be
+      // reported as a successful migration of nothing (PBI-02).
+      if (!beforeCount.success || !afterCount.success) {
+        return {
+          success: false,
+          error: 'Failed to read SQLite record count during migration',
+          count: 0,
+        };
+      }
       return {
         success: true,
-        count: afterCount ?? 0,
+        count: afterCount.data,
         read: 0,
-        inserted: Math.max(0, (afterCount ?? 0) - (beforeCount ?? 0)),
+        inserted: Math.max(0, afterCount.data - beforeCount.data),
       };
     },
     getConfirmToken: () => ensureConfirmToken(),
@@ -573,22 +582,12 @@ export const handleNotificationClicked = _notificationHandlers.onClicked;
 
 export const registerManualRecordContextMenu = _registerManualRecordContextMenu;
 const _contextClickHandler = createContextClickHandler({
-  handleManualRecord: async (message, sender, sendResponse) => {
-    const handler = createManualRecordHandler({
-      isRecordingAllowed: () => hasPrivacyConsent(),
-      checkRateLimit: (sender, settings) => rateLimiter.check(sender, settings),
-      fetchContent: (url) => manualContentFetcher.fetchContent(url),
-      getPrivacyInfoWithCache: (url) => RecordingCache.getPrivacyInfoWithCache(url),
-      obsidian,
-      aiService,
-      sqliteClient,
-      getSettings: () => getSettings(),
-      setUrlContent: async (url, content) => {
-        await updateSavedUrlEntry(url, (entry) => ({ ...entry, content }));
-      },
-    });
-    await handler(message, sender, sendResponse);
-  },
+  // Reuse the already-wired handler rather than rebuilding the same
+  // dependency set — previously the deps (rateLimiter, manualContentFetcher,
+  // RecordingCache, obsidian, aiService, sqliteClient, getSettings,
+  // setUrlContent) were reconstructed inline here, risking drift when a dep
+  // changed in _manualRecordDeps.
+  handleManualRecord,
 });
 
 // ============================================================================
@@ -652,8 +651,8 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     chrome.alarms.onAlarm.addListener(async (alarm) => {
           if (alarm.name === 'yasumaro-daily-purge') {
             handleDailyPurgeAlarm(
-                (days, max) => sqliteClient.purgeOldRecords(days, max),
-                (days, max, starred) => sqliteClient.purgeContent(days, max, starred),
+                (days, max) => sqliteClient.purgeOldRecordsResult(days, max),
+                (days, max, starred) => sqliteClient.purgeContentResult(days, max, starred),
             );
           }
           if (alarm.name === 'yasumaro-local-md-flush') {
