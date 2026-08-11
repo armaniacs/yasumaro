@@ -39,6 +39,14 @@ All notable changes to this project will be documented in this file.
 
 （次のリリースに向けての変更をここに記載）
 
+## [6.7.33] - 2026-08-11
+
+Backgroundテストの共有fixtureを整理した。
+
+### Tests
+
+- RecordingLogicのテストで使用するcomposition fixtureを共有helperへ抽出した。
+
 ## [6.7.32] - 2026-08-11
 
 Backgroundの依存配線とhandler registryをcomposition rootへ集約した。
