@@ -37,6 +37,12 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+（次のリリースに向けての変更をここに記載）
+
+## [6.7.42] - 2026-08-12
+
+### Fixed
+
 - fallback検索失敗時にServiceErrorを返しover-fetchを解消
 - sqliteHistoryPanelのstate mutationをreducer経由に統一
 - metadata patch queueのcoalescing・payload上限100KB・content省略を実装
