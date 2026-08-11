@@ -39,6 +39,14 @@ All notable changes to this project will be documented in this file.
 
 （次のリリースに向けての変更をここに記載）
 
+## [6.7.40] - 2026-08-11
+
+archive済みPBIの本文を実装結果と同期した。
+
+### Docs
+
+- Architecture deepening Epicと子PBIの完了記録を更新した。
+
 ## [6.7.39] - 2026-08-11
 
 前回のコミット分離漏れを補正した。
