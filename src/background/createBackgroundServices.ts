@@ -22,9 +22,11 @@ import { ManualContentFetcher } from './manualContentFetcher.js';
 import { SessionStore } from './sessionStore.js';
 import { createRecordingPipeline, buildRecordingPipelineDeps } from './pipeline/RecordingPipeline.js';
 import type { RecordingPipeline } from './pipeline/RecordingPipeline.js';
+import { createReviewSummaryGenerator } from './reviewSummaryGenerator.js';
+import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import { hasPrivacyConsent } from '../popup/privacyConsent.js';
 import { getSettings } from '../utils/storage.js';
-import { updateSavedUrlEntry } from '../utils/storage/savedUrlStore.js';
+import { saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlStore.js';
 import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/messageHandlers.js';
 
 export interface BackgroundServices {
@@ -44,6 +46,14 @@ export interface BackgroundServices {
    */
   aiService: AIService;
   sessionStore: SessionStore;
+  /**
+   * Shared weekly/monthly review summary generator.
+   *
+   * Built once here (deep-dig 子PBI 5) so the alarm path and the
+   * GENERATE_REVIEW_SUMMARY message path share one instance instead of each
+   * constructing its own AIService.
+   */
+  reviewSummaryGenerator: ReviewSummaryGenerator;
 }
 
 /**
@@ -79,6 +89,10 @@ export function createBackgroundServices(): BackgroundServicesComposition {
   const aiClient = new AIClient();
   const aiService = createAIService({ aiClient });
 
+  // One shared review summary generator for the alarm and message paths
+  // (deep-dig 子PBI 5): both observe the same AIService composition.
+  const reviewSummaryGenerator = createReviewSummaryGenerator({ aiService, sqliteClient });
+
   // One shared pipeline for every recording path, automatic and handler-based.
   const recordingPipeline = createRecordingPipeline(buildRecordingPipelineDeps({
     getPrivacyInfoWithCache: (url: string) => RecordingCache.getPrivacyInfoWithCache(url),
@@ -89,32 +103,27 @@ export function createBackgroundServices(): BackgroundServicesComposition {
 
   const recordingLogic = new RecordingLogic(obsidian, aiService, recordingPipeline, sqliteClient);
 
+  // Content backfill must not reorder LRU, so the timestamp is left alone. One
+  // closure is shared by both recording handlers instead of being rebuilt per
+  // handler (deep-dig 子PBI 4).
+  const setUrlContent = async (url: string, content: string): Promise<void> => {
+    await saveSavedUrlEntryMetadata(url, { content }, { refreshTimestamp: false, createIfMissing: false });
+  };
+
   const manualRecordDeps: ManualRecordHandlerDeps = {
     isRecordingAllowed: () => hasPrivacyConsent(),
     checkRateLimit: (sender, settings) => rateLimiter.check(sender, settings),
     fetchContent: (url: string) => manualContentFetcher.fetchContent(url),
-    getPrivacyInfoWithCache: (url: string) => RecordingCache.getPrivacyInfoWithCache(url),
-    obsidian,
-    aiService,
-    sqliteClient,
     recordingPipeline,
     getSettings: () => getSettings(),
-    setUrlContent: async (url: string, content: string) => {
-      await updateSavedUrlEntry(url, (entry) => ({ ...entry, content }));
-    },
+    setUrlContent,
   };
 
   const saveRecordDeps: SaveRecordHandlerDeps = {
     isRecordingAllowed: () => hasPrivacyConsent(),
-    getPrivacyInfoWithCache: (url: string) => RecordingCache.getPrivacyInfoWithCache(url),
-    obsidian,
-    aiService,
-    sqliteClient,
     recordingPipeline,
     getSettings: () => getSettings(),
-    setUrlContent: async (url: string, content: string) => {
-      await updateSavedUrlEntry(url, (entry) => ({ ...entry, content }));
-    },
+    setUrlContent,
   };
 
   return {
@@ -126,6 +135,7 @@ export function createBackgroundServices(): BackgroundServicesComposition {
     manualContentFetcher,
     aiClient,
     aiService,
+    reviewSummaryGenerator,
     sessionStore,
     recordingPipeline,
     dashboardSqliteClient: sqliteClient,

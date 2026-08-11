@@ -1,17 +1,16 @@
 import {
-  queryLogs,
-  searchLogs,
   toggleStar,
   deleteLog,
   getSqliteStatus,
   appendToLogs,
-  isServiceError,
 } from '../../dashboardSqliteService.js';
 import { getMessageOr } from '../../../utils/i18n.js';
-import { getSavedUrlEntries } from '../../../utils/storageUrls.js';
-import type { SavedUrlEntry } from '../../../utils/storageUrls.js';
-import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
-import type { ServiceResult } from '../../dashboardSqliteService.js';
+import {
+  queryHistory,
+  isServiceError,
+  dateRangeFromSelectedDate,
+} from './sqliteHistoryQuery.js';
+import type { BrowsingLogEntry, UnifiedHistoryQueryResult } from './sqliteHistoryQuery.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
@@ -20,49 +19,18 @@ import { copyTextToClipboard } from '../../../utils/clipboard.js';
 import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
 import { isSecureUrl } from '../../../utils/urlUtils.js';
 import { type AsyncDataPanel } from '../types.js';
-import { getRegistry } from '../registryContext.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
-import { shouldFallbackToTextSearch } from '../../historyFilters.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import {
-  buildEnrichmentKey,
-  enrichEntryWithChromeStorage,
-  filterRowsByTag,
-  dateRangeFromSelectedDate,
-} from './sqliteHistoryQuery.js';
+  createInitialHistoryState,
+  historyStateReducer,
+  type SqliteHistoryState,
+} from './sqliteHistoryPanelState.js';
 
 const PAGE_SIZE = 20;
 
-/**
- * Fetch window used only when a tag filter is active.
- *
- * Tag matching runs client-side (see filterRowsByTag), so the rows have to be
- * in memory before they can be filtered and counted. This caps how far back
- * tag filtering can see; the non-tag path pages in SQL and has no such cap.
- */
-const TAG_FILTER_FETCH_LIMIT = 5000;
-
 function t(key: string, substitutions?: string | string[]): string {
   return getMessageOr(key, key, substitutions);
-}
-
-interface SqliteHistoryState {
-  entries: BrowsingLogEntry[];
-  total: number;
-  currentPage: number;
-  searchQuery: string;
-  selectedDate: string | null;
-  loading: boolean;
-  error: string | null;
-  fallbackMode: boolean;
-  selectedIds: Set<number>;
-  activeTagFilter: string | null;
-  /**
-   * Set when a tag-initiated navigation (Tag Cluster) produced zero tag
-   * matches and we fell back to a full-text search for the term. UI shows a
-   * notice while this is non-null.
-   */
-  pendingTagFallback: { tag: string; fallbackTo: string; matched: number } | null;
 }
 
 function formatDate(date: Date): string {
@@ -182,19 +150,8 @@ export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
 export function createSqliteHistoryPanel(): AsyncDataPanel {
   let container: HTMLElement | null = null;
 
-  const state: SqliteHistoryState = {
-    entries: [],
-    total: 0,
-    currentPage: 0,
-    searchQuery: '',
-    selectedDate: null,
-    loading: false,
-    error: null,
-    fallbackMode: false,
-    selectedIds: new Set(),
-    activeTagFilter: null,
-    pendingTagFallback: null,
-  };
+  let state = createInitialHistoryState();
+  let requestGeneration = 0;
 
   let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   let isMounted = false;
@@ -203,34 +160,6 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
    * Used to preserve searchTag/searchDomain across the loadData lifecycle.
    */
   let pendingInit: Record<string, unknown> | null = null;
-  let currentEnrichmentMap: Map<string, SavedUrlEntry> | null = null;
-
-  let chromeStorageCache: { map: Map<string, SavedUrlEntry>; builtAt: number } | null = null;
-  const CHROME_STORAGE_CACHE_TTL_MS = 5000;
-
-  async function getChromeStorageLookup(): Promise<Map<string, SavedUrlEntry> | null> {
-    const now = Date.now();
-    if (chromeStorageCache && (now - chromeStorageCache.builtAt) < CHROME_STORAGE_CACHE_TTL_MS) {
-      return chromeStorageCache.map;
-    }
-
-    try {
-      const entries = await getSavedUrlEntries();
-      const map = new Map<string, SavedUrlEntry>();
-      for (const entry of entries) {
-        map.set(buildEnrichmentKey(entry.url, entry.timestamp), entry);
-      }
-      chromeStorageCache = { map, builtAt: now };
-      return map;
-    } catch (err) {
-      console.error('Failed to load chrome.storage entries for enrichment:', err);
-      return null;
-    }
-  }
-
-  function invalidateChromeStorageCache(): void {
-    chromeStorageCache = null;
-  }
 
   function dateRangeFromSelected(): { since?: number; until?: number } {
     return dateRangeFromSelectedDate(state.selectedDate);
@@ -245,13 +174,14 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     if ('error' in result) {
       // Without this the click looked ignored: a failed toggle left the star
       // unchanged and showed nothing at all (PBI-21).
-      state.error = result.error;
+      state = historyStateReducer(state, { type: 'operationError', error: result.error });
       refresh();
       return;
     }
     const entry = state.entries.find(e => e.id === id);
-    if (entry) entry.is_starred = result.data.is_starred;
-    state.error = null;
+    if (entry) {
+      state = historyStateReducer(state, { type: 'toggleStarSuccess', id, starred: result.data.is_starred === 1 });
+    }
     refresh();
   }
 
@@ -268,14 +198,11 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     if ('error' in result) {
       // The entry stays in the list — removing it would claim a delete that
       // did not happen.
-      state.error = result.error;
+      state = historyStateReducer(state, { type: 'operationError', error: result.error });
       refresh();
       return;
     }
-    state.entries = state.entries.filter(e => e.id !== id);
-    state.total = Math.max(0, state.total - 1);
-    state.selectedIds.delete(id);
-    state.error = null;
+    state = historyStateReducer(state, { type: 'deleteSuccess', id });
     refresh();
   }
 
@@ -367,9 +294,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
   }
 
   function handleSearch(query: string): void {
-    state.searchQuery = query;
-    state.currentPage = 0;
-    state.pendingTagFallback = null;
+    state = historyStateReducer(state, { type: 'search', query });
     if (query.trim()) {
       fetchData({ search: query.trim() });
     } else {
@@ -378,10 +303,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
   }
 
   async function handleDateSelect(dateStr: string): Promise<void> {
-    state.selectedDate = dateStr;
-    state.searchQuery = '';
-    state.pendingTagFallback = null;
-    state.currentPage = 0;
+    state = historyStateReducer(state, { type: 'dateSelect', date: dateStr });
 
     const date = new Date(dateStr + 'T00:00:00');
     const since = date.getTime();
@@ -426,9 +348,9 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
 
   function reloadCurrent(): void {
     if (state.searchQuery.trim()) {
-      fetchData({ search: state.searchQuery, page: state.currentPage });
+      void fetchData({ search: state.searchQuery, page: state.currentPage });
     } else {
-      fetchData({ ...dateRangeFromSelected(), page: state.currentPage });
+      void fetchData({ ...dateRangeFromSelected(), page: state.currentPage });
     }
   }
 
@@ -441,109 +363,53 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     tagFilter?: string;
     tagInitiated?: boolean;
   } = {}): Promise<void> {
-    state.loading = true;
-    state.error = null;
+    const generation = ++requestGeneration;
+    state = historyStateReducer(state, { type: 'loadStart' });
     refresh();
 
     try {
-      const page = options.page ?? state.currentPage;
+      const page = Math.max(0, options.page ?? state.currentPage);
       const limit = PAGE_SIZE;
       const offset = page * limit;
 
-      let result: ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>;
-
       const activeTagFilter = options.tagFilter !== undefined ? options.tagFilter : state.activeTagFilter;
 
-      if (options.search) {
-        result = await searchLogs(options.search, limit, offset);
-      } else {
-        // Tag filtering still happens client-side (filterRowsByTag), so that
-        // path has to over-fetch. Everything else pages in SQL: fetching a
-        // fixed first 1000 rows made every page past the 50th unreachable
-        // once the history grew beyond 1000 records.
-        //
-        // The tag filter is deliberately NOT pushed down to the server: the
-        // SQL side matches tags via FTS5 trigram MATCH, which needs >= 3
-        // characters and has no LIKE fallback on that path, so short tags
-        // (e.g. "AI") would silently return nothing.
-        const useServerPaging = !activeTagFilter;
-        result = await queryLogs({
-          limit: useServerPaging ? limit : TAG_FILTER_FETCH_LIMIT,
-          offset: useServerPaging ? offset : 0,
-          since: options.since,
-          until: options.until,
-          orderBy: 'created_at',
-          orderDir: 'DESC',
-        });
+      // All storage knowledge — SQLite paging/search plus legacy
+      // chrome.storage enrichment — lives in the unified history query module.
+      const result: UnifiedHistoryQueryResult = await queryHistory({
+        search: options.search,
+        since: options.since,
+        until: options.until,
+        limit,
+        offset,
+        tagFilter: activeTagFilter || undefined,
+        tagInitiated: options.tagInitiated,
+      });
 
-        if (!isServiceError(result) && activeTagFilter) {
-          const filteredRows = filterRowsByTag(result.data.rows, activeTagFilter);
-
-          // Tag Cluster navigation that matched nothing → fall back to a
-          // full-text search for the same term so the user still lands on
-          // related history instead of an empty panel.
-          const fallbackTerm = shouldFallbackToTextSearch(
-            options.tagInitiated ? 'tag' : 'manual',
-            { rows: filteredRows, total: filteredRows.length },
-            activeTagFilter,
-          );
-          if (fallbackTerm) {
-            const searchResult = await searchLogs(fallbackTerm, limit, offset);
-            if (!isServiceError(searchResult)) {
-              result = { data: { rows: searchResult.data.rows, total: searchResult.data.total } };
-              state.searchQuery = fallbackTerm;
-              // Only surface the notice when the fallback actually returned
-              // rows; a zero-hit fallback stays a plain empty state.
-              state.pendingTagFallback = searchResult.data.total > 0
-                ? { tag: activeTagFilter, fallbackTo: fallbackTerm, matched: searchResult.data.total }
-                : null;
-            } else {
-              state.pendingTagFallback = null;
-            }
-          } else {
-            result = {
-              data: {
-                rows: filteredRows.slice(offset, offset + limit),
-                total: filteredRows.length,
-              },
-            };
-          }
-        }
-        // No client-side slice in the non-tag path: SQL already applied
-        // LIMIT/OFFSET, so slicing again would drop every row past the first
-        // page.
-      }
+      if (generation !== requestGeneration) return;
 
       if (isServiceError(result)) {
-        state.error = t('historyLoadError');
-        state.entries = [];
-        state.total = 0;
+        state = historyStateReducer(state, { type: 'loadFailure', error: t('historyLoadError') });
       } else {
-        state.entries = result.data.rows;
-        state.total = result.data.total;
-        state.selectedIds.clear();
+        const data = result.data;
+        state = historyStateReducer(state, { type: 'loadSuccess', data });
       }
     } catch (err) {
-      state.error = `Error: ${errorMessage(err)}`;
-      state.entries = [];
-      state.total = 0;
+      if (generation !== requestGeneration) return;
+      state = historyStateReducer(state, { type: 'loadFailure', error: `Error: ${errorMessage(err)}` });
     } finally {
-      state.loading = false;
-      currentEnrichmentMap = await getChromeStorageLookup();
-      refresh();
+      if (generation === requestGeneration) {
+        state = { ...state, loading: false };
+        refresh();
+        refreshTagFallbackNotice();
+      }
     }
   }
 
   function clearTagFilterAndReload(): void {
     const hadFallback = state.pendingTagFallback !== null;
-    state.activeTagFilter = null;
-    state.pendingTagFallback = null;
-    state.currentPage = 0;
-    if (hadFallback && state.searchQuery) {
-      // The search box value came from a tag fallback; clear it and reload
-      // the full list rather than leaving a stale full-text query behind.
-      state.searchQuery = '';
-    }
+    state = historyStateReducer(state, { type: 'clearTagFilter' });
+    if (hadFallback && state.searchQuery) state = historyStateReducer(state, { type: 'search', query: '' });
     void fetchData({ page: 0, ...dateRangeFromSelected() });
   }
 
@@ -554,7 +420,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     onClear: () => void,
   ): void {
     const existingBar = containerEl.querySelector('#sqlite-tag-filter-bar') as HTMLElement | null;
-    if (activeTagFilter) {
+    if (activeTagFilter || pendingTagFallback) {
       if (!existingBar) {
         const bar = document.createElement('div');
         bar.id = 'sqlite-tag-filter-bar';
@@ -562,7 +428,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         bar.setAttribute('role', 'status');
         bar.innerHTML = `
           <span data-i18n="tagFilterLabel">\u30D5\u30A3\u30EB\u30BF\u30FC:</span>
-          <span class="tag-filter-badge">#${escapeHtml(activeTagFilter)}</span>
+           <span class="tag-filter-badge">#${escapeHtml(activeTagFilter || pendingTagFallback?.tag || '')}</span>
           <button type="button" id="sqlite-tag-filter-clear" class="tag-filter-clear" aria-label="${t('clearTagFilter') || 'Clear tag filter'}">\u2715</button>`;
         containerEl.appendChild(bar);
         const clearBtn = bar.querySelector('#sqlite-tag-filter-clear') as HTMLButtonElement | null;
@@ -644,7 +510,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       if (state.loading) {
         listContainer.innerHTML = `<div class="loading">${t('historyLoading')}</div>`;
       } else {
-        renderEntryList(listContainer, state.entries, state.selectedIds, state.activeTagFilter, currentEnrichmentMap, {
+        renderEntryList(listContainer, state.entries, state.selectedIds, state.activeTagFilter, {
           onToggleStar: (id) => void handleToggleStar(id),
           onDelete: (id) => void handleDelete(id),
           onSelectionChange: (id, selected) => { if (selected) state.selectedIds.add(id); else state.selectedIds.delete(id); updateBulkBar(state.selectedIds, state.entries); },
@@ -679,7 +545,6 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     entries: BrowsingLogEntry[],
     selectedIds: Set<number>,
     activeTagFilter: string | null,
-    _enrichmentMap: Map<string, SavedUrlEntry> | null,
     callbacks: {
       onToggleStar: (id: number) => void;
       onDelete: (id: number) => void;
@@ -695,11 +560,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       return;
     }
 
-    const enrichedEntries = _enrichmentMap
-      ? displayEntries.map(e => enrichEntryWithChromeStorage(e, _enrichmentMap!))
-      : displayEntries;
-
-    _container.innerHTML = enrichedEntries.map(entry => {
+    _container.innerHTML = displayEntries.map(entry => {
       const entryTags = parseTagsForDisplay(entry.tags);
       const tagsHtml = entryTags.length > 0
         ? `<div class="sqlite-entry-tags">${entryTags.map(tag => {
@@ -965,7 +826,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
 
       const listContainer = document.getElementById('sqlite-entry-list');
       if (listContainer) {
-        renderEntryList(listContainer, state.entries, state.selectedIds, state.activeTagFilter, currentEnrichmentMap, {
+        renderEntryList(listContainer, state.entries, state.selectedIds, state.activeTagFilter, {
           onToggleStar: (id) => void handleToggleStar(id),
           onDelete: (id) => void handleDelete(id),
           onSelectionChange: (id, selected) => { if (selected) state.selectedIds.add(id); else state.selectedIds.delete(id); updateBulkBar(state.selectedIds, state.entries); },
@@ -1022,11 +883,22 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     }
   }
 
+  function refreshTagFallbackNotice(): void {
+    const searchArea = container?.querySelector('.sqlite-history-search');
+    if (!searchArea) return;
+    updateTagFilterBar(
+      searchArea as HTMLElement,
+      state.activeTagFilter,
+      state.pendingTagFallback,
+      clearTagFilterAndReload,
+    );
+  }
+
   async function checkFallbackStatus(): Promise<void> {
     try {
       const status = await getSqliteStatus();
       if (status?.fallback) {
-        state.fallbackMode = true;
+        state = historyStateReducer(state, { type: 'setFallbackMode' });
         renderState();
       }
     } catch {
@@ -1086,7 +958,6 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
 
       isMounted = true;
       await checkFallbackStatus();
-      currentEnrichmentMap = await getChromeStorageLookup();
       renderState();
 
       // Consume any init params set by onActivate (which runs before loadData)
@@ -1100,21 +971,18 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         searchDebounceTimer = null;
       }
       isMounted = false;
+      requestGeneration += 1;
       // Clear bulk bar listener references
       state.selectedIds.clear();
     },
     onActivate(init) {
       if (init?.searchTag) {
         pendingInit = init;
-        state.activeTagFilter = init.searchTag as string;
-        state.currentPage = 0;
-        state.pendingTagFallback = null;
-        state.searchQuery = init.searchTag as string;
+        state = historyStateReducer(state, { type: 'tagInitiated', tag: init.searchTag as string });
         void fetchData({ page: 0, tagFilter: state.activeTagFilter || undefined, tagInitiated: true });
       } else if (init?.searchDomain) {
         pendingInit = init;
-        state.searchQuery = init.searchDomain as string;
-        state.currentPage = 0;
+        state = historyStateReducer(state, { type: 'domainSearchInitiated', query: init.searchDomain as string });
         if (state.searchQuery.trim()) {
           void fetchData({ search: state.searchQuery.trim() });
         }
