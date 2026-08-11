@@ -46,6 +46,19 @@ const { mockAddListener, mockQuery, mockGet, mockCreate, mockRemove, mockClear,
     };
 });
 
+// Shared review summary generator: createBackgroundServices builds it once and
+// both the alarm path and the GENERATE_REVIEW_SUMMARY message path must observe
+// the same instance (deep-dig 子PBI 5).
+const mockReviewGenerator = vi.hoisted(() => ({
+    generateWeeklySummary: vi.fn().mockResolvedValue(false),
+    generateMonthlySummary: vi.fn().mockResolvedValue(false),
+}));
+
+const mockReviewSummaryAlarm = vi.hoisted(() => ({
+    initializeReviewSummaryAlarms: vi.fn().mockResolvedValue(undefined),
+    setupReviewSummaryAlarmListener: vi.fn(),
+}));
+
 // Mock chrome module
 vi.mock('chrome', () => ({
     tabs: {
@@ -232,6 +245,7 @@ vi.mock('../headerDetector.js', () => ({
 }));
 vi.mock('../../utils/storage/savedUrlStore.js', () => ({
     updateSavedUrlEntry: vi.fn().mockResolvedValue(undefined),
+    saveSavedUrlEntryMetadata: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('../../utils/permissionManager.js', () => ({
     cleanupOldDeniedEntries: vi.fn().mockResolvedValue(undefined),
@@ -262,13 +276,9 @@ vi.mock('../localMarkdownIdleFlusher.js', () => ({
     initExportScheduler: vi.fn().mockResolvedValue(undefined),
     flushYesterdaysExport: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('../reviewSummaryAlarm.js', () => ({
-    initializeReviewSummaryAlarms: vi.fn().mockResolvedValue(undefined),
-    setupReviewSummaryAlarmListener: vi.fn(),
-}));
+vi.mock('../reviewSummaryAlarm.js', () => mockReviewSummaryAlarm);
 vi.mock('../reviewSummaryGenerator.js', () => ({
-    generateWeeklySummary: vi.fn().mockResolvedValue(false),
-    generateMonthlySummary: vi.fn().mockResolvedValue(false),
+    createReviewSummaryGenerator: vi.fn(() => mockReviewGenerator),
 }));
 
 // Import the extracted functions from service-worker
@@ -1368,6 +1378,22 @@ describe('service-worker handlers', () => {
 
             expect(sessionAlarmsManager.initialize).toHaveBeenCalled();
         });
+
+        it('shares one review summary generator between the alarm and message paths', async () => {
+            // The generator is built once by createBackgroundServices (deep-dig
+            // 子PBI 5). init() must hand that same instance to the alarm wiring,
+            // and the GENERATE_REVIEW_SUMMARY message handler must route through
+            // the same instance rather than constructing its own.
+            const serviceWorker = await import('../service-worker.js');
+            serviceWorker.init();
+
+            await vi.waitFor(() => {
+                expect(mockReviewSummaryAlarm.initializeReviewSummaryAlarms).toHaveBeenCalledTimes(1);
+            });
+            const generator = mockReviewSummaryAlarm.initializeReviewSummaryAlarms.mock.calls[0][0];
+            expect(mockReviewSummaryAlarm.setupReviewSummaryAlarmListener).toHaveBeenCalledWith(generator);
+            expect(generator).toBe(mockReviewGenerator);
+        });
     });
 
     describe('chrome.alarms.onAlarm dispatch', () => {
@@ -1440,6 +1466,38 @@ describe('service-worker handlers', () => {
             await new Promise(resolve => setTimeout(resolve, 10));
 
             expect(flushPendingRecords).toHaveBeenCalledTimes(1);
+        });
+
+        it('flushes queued chrome-storage metadata writes on the offline-network-retry alarm', async () => {
+            if (!onAlarmListener) throw new Error('onAlarm listener not registered');
+
+            await chrome.storage.local.remove('pending_chrome_storage_writes');
+
+            const { enqueuePendingWrite } = await import('../pendingChromeStorageQueue.js');
+            await enqueuePendingWrite({
+                type: 'metadataPatch',
+                key: 'savedUrlsWithTimestamps',
+                url: 'https://queued.com',
+                patch: { recordType: 'auto' },
+                refreshTimestamp: true,
+                mergeTags: true,
+            });
+            (savedUrlStore.saveSavedUrlEntryMetadata as ReturnType<typeof vi.fn>).mockClear();
+
+            onAlarmListener({ name: 'yasumaro-offline-network-retry' } as chrome.alarms.Alarm);
+
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            // The alarm's allSettled runs flushPendingWrites(retryPendingChromeStorageWrite),
+            // which replays the queued patch through the store (PBI-13 loop).
+            expect(savedUrlStore.saveSavedUrlEntryMetadata).toHaveBeenCalledWith(
+                'https://queued.com',
+                { recordType: 'auto' },
+                { refreshTimestamp: true, mergeTags: true },
+            );
+
+            // Leave no seeded queue behind for other tests.
+            await chrome.storage.local.remove('pending_chrome_storage_writes');
         });
     });
 
@@ -2051,6 +2109,89 @@ describe('service-worker handlers', () => {
         });
     });
 
+    describe('retryPendingChromeStorageWrite', () => {
+        it('applies the queued timestamp to an existing legacy entry, keeping its metadata', async () => {
+            await chrome.storage.local.set({
+                savedUrlsWithTimestamps: [{ url: 'https://legacy.com', timestamp: 111, aiSummary: 'keep' }],
+            });
+
+            const ok = await serviceWorker.retryPendingChromeStorageWrite({
+                key: 'savedUrlsWithTimestamps',
+                value: { url: 'https://legacy.com', title: 't', timestamp: 222 },
+            });
+
+            expect(ok).toBe(true);
+            const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
+            const entry = (stored.savedUrlsWithTimestamps as Array<{ url: string; timestamp: number; aiSummary?: string }>)
+                .find((e) => e.url === 'https://legacy.com');
+            expect(entry?.timestamp).toBe(222);
+            expect(entry?.aiSummary).toBe('keep');
+        });
+
+        it('adds a legacy queued payload entry when it does not exist yet', async () => {
+            const ok = await serviceWorker.retryPendingChromeStorageWrite({
+                key: 'savedUrlsWithTimestamps',
+                value: { url: 'https://new.com', timestamp: 333 },
+            });
+
+            expect(ok).toBe(true);
+            const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
+            expect(stored.savedUrlsWithTimestamps).toEqual([
+                expect.objectContaining({ url: 'https://new.com', timestamp: 333 }),
+            ]);
+        });
+
+        it('returns false for legacy payloads targeting other keys', async () => {
+            const ok = await serviceWorker.retryPendingChromeStorageWrite({ key: 'other', value: {} });
+            expect(ok).toBe(false);
+        });
+
+        it('routes a metadata-patch payload to saveSavedUrlEntryMetadata', async () => {
+            const ok = await serviceWorker.retryPendingChromeStorageWrite({
+                type: 'metadataPatch',
+                key: 'savedUrlsWithTimestamps',
+                url: 'https://patch.com',
+                patch: { recordType: 'auto' },
+                refreshTimestamp: true,
+                mergeTags: true,
+            });
+
+            expect(ok).toBe(true);
+            expect(savedUrlStore.saveSavedUrlEntryMetadata).toHaveBeenCalledWith(
+                'https://patch.com',
+                { recordType: 'auto' },
+                { refreshTimestamp: true, mergeTags: true },
+            );
+        });
+
+        it('returns false for metadata-patch payloads targeting other keys', async () => {
+            const ok = await serviceWorker.retryPendingChromeStorageWrite({
+                type: 'metadataPatch',
+                key: 'other',
+                url: 'https://patch.com',
+                patch: {},
+            });
+            expect(ok).toBe(false);
+        });
+
+        it('returns false when saveSavedUrlEntryMetadata rejects (write stays queued)', async () => {
+            (savedUrlStore.saveSavedUrlEntryMetadata as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+                new Error('storage quota exceeded')
+            );
+
+            const ok = await serviceWorker.retryPendingChromeStorageWrite({
+                type: 'metadataPatch',
+                key: 'savedUrlsWithTimestamps',
+                url: 'https://patch.com',
+                patch: { recordType: 'auto' },
+                refreshTimestamp: true,
+                mergeTags: true,
+            });
+
+            expect(ok).toBe(false);
+        });
+    });
+
     describe('handleCheckDomain', () => {
         it('should be exported and be a function', () => {
             expect(typeof serviceWorker.handleCheckDomain).toBe('function');
@@ -2325,9 +2466,8 @@ describe('service-worker handlers', () => {
 
         it('should handle GENERATE_REVIEW_SUMMARY (weekly)', async () => {
             const serviceWorker = await import('../service-worker.js');
-            const { generateWeeklySummary, generateMonthlySummary } = await import('../reviewSummaryGenerator.js');
-            vi.mocked(generateWeeklySummary).mockClear().mockResolvedValue(true);
-            vi.mocked(generateMonthlySummary).mockClear();
+            vi.mocked(mockReviewGenerator.generateWeeklySummary).mockClear().mockResolvedValue(true);
+            vi.mocked(mockReviewGenerator.generateMonthlySummary).mockClear();
             const handler = serviceWorker.createMessageHandler();
             const sendResponse = vi.fn();
 
@@ -2339,16 +2479,15 @@ describe('service-worker handlers', () => {
             expect(result).toBe(true);
 
             await new Promise(resolve => setTimeout(resolve, 10));
-            expect(generateWeeklySummary).toHaveBeenCalledTimes(1);
-            expect(generateMonthlySummary).not.toHaveBeenCalled();
+            expect(mockReviewGenerator.generateWeeklySummary).toHaveBeenCalledTimes(1);
+            expect(mockReviewGenerator.generateMonthlySummary).not.toHaveBeenCalled();
             expect(sendResponse).toHaveBeenCalledWith({ success: true, generated: true });
         });
 
         it('should handle GENERATE_REVIEW_SUMMARY (monthly)', async () => {
             const serviceWorker = await import('../service-worker.js');
-            const { generateWeeklySummary, generateMonthlySummary } = await import('../reviewSummaryGenerator.js');
-            vi.mocked(generateWeeklySummary).mockClear();
-            vi.mocked(generateMonthlySummary).mockClear().mockResolvedValue(false);
+            vi.mocked(mockReviewGenerator.generateWeeklySummary).mockClear();
+            vi.mocked(mockReviewGenerator.generateMonthlySummary).mockClear().mockResolvedValue(false);
             const handler = serviceWorker.createMessageHandler();
             const sendResponse = vi.fn();
 
@@ -2360,8 +2499,8 @@ describe('service-worker handlers', () => {
             expect(result).toBe(true);
 
             await new Promise(resolve => setTimeout(resolve, 10));
-            expect(generateMonthlySummary).toHaveBeenCalledTimes(1);
-            expect(generateWeeklySummary).not.toHaveBeenCalled();
+            expect(mockReviewGenerator.generateMonthlySummary).toHaveBeenCalledTimes(1);
+            expect(mockReviewGenerator.generateWeeklySummary).not.toHaveBeenCalled();
             expect(sendResponse).toHaveBeenCalledWith({ success: true, generated: false });
         });
 

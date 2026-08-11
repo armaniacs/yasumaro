@@ -45,4 +45,60 @@ describe('pendingChromeStorageQueue', () => {
     const queue = storageData[PENDING_CHROME_STORAGE_KEY] as unknown[];
     expect(queue.length).toBeLessThanOrEqual(500);
   });
+
+  it('queues and flushes a metadata-patch payload', async () => {
+    await enqueuePendingWrite({
+      type: 'metadataPatch',
+      key: 'savedUrlsWithTimestamps',
+      url: 'https://example.com',
+      patch: { recordType: 'auto', tags: ['news'] },
+      refreshTimestamp: true,
+      mergeTags: true,
+    });
+
+    const retryFn = vi.fn().mockResolvedValue(true);
+    await flushPendingWrites(retryFn);
+
+    expect(retryFn).toHaveBeenCalledWith({
+      type: 'metadataPatch',
+      key: 'savedUrlsWithTimestamps',
+      url: 'https://example.com',
+      patch: { recordType: 'auto', tags: ['news'] },
+      refreshTimestamp: true,
+      mergeTags: true,
+    });
+  });
+
+  it('keeps a metadata-patch payload queued when retry fails', async () => {
+    await enqueuePendingWrite({
+      type: 'metadataPatch',
+      key: 'savedUrlsWithTimestamps',
+      url: 'https://example.com',
+      patch: { content: 'body' },
+    });
+
+    const retryFn = vi.fn().mockResolvedValue(false);
+    await flushPendingWrites(retryFn);
+
+    const remaining = storageData[PENDING_CHROME_STORAGE_KEY] as unknown[];
+    expect(remaining).toHaveLength(1);
+    expect((remaining[0] as { type?: string }).type).toBe('metadataPatch');
+  });
+
+  it('handles a queue mixing legacy and metadata-patch payloads', async () => {
+    await enqueuePendingWrite({ key: 'savedUrlsWithTimestamps', value: [{ url: 'https://legacy.com', timestamp: 1 }] });
+    await enqueuePendingWrite({
+      type: 'metadataPatch',
+      key: 'savedUrlsWithTimestamps',
+      url: 'https://patch.com',
+      patch: { aiSummary: 's' },
+    });
+
+    const retryFn = vi.fn().mockResolvedValue(true);
+    await flushPendingWrites(retryFn);
+
+    expect(retryFn).toHaveBeenCalledTimes(2);
+    expect(retryFn).toHaveBeenCalledWith(expect.objectContaining({ key: 'savedUrlsWithTimestamps', value: expect.anything() }));
+    expect(retryFn).toHaveBeenCalledWith(expect.objectContaining({ type: 'metadataPatch', url: 'https://patch.com' }));
+  });
 });
