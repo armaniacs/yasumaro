@@ -17,7 +17,7 @@ import {
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { migrateLegacyPendingPagesKey } from '../utils/pendingStorage.js';
 import { flushPendingRecords } from './pendingSqliteQueue.js';
-import { flushPendingWrites, type QueuedChromeStorageWrite } from './pendingChromeStorageQueue.js';
+import { flushPendingWrites, type QueuedChromeStorageWrite, type PendingMetadataPatchWrite } from './pendingChromeStorageQueue.js';
 import { withOptimisticLock } from '../utils/optimisticLock.js';
 import type { SavedUrlEntry } from '../utils/urlEntry.js';
 import { saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlStore.js';
@@ -519,6 +519,9 @@ export async function retryPendingChromeStorageWrite(write: QueuedChromeStorageW
   // Metadata-patch payload: replay the same atomic save that failed originally.
   if (write.key !== 'savedUrlsWithTimestamps') return false;
   try {
+    if ((write as PendingMetadataPatchWrite).contentOmitted) {
+      logWarn('Retrying metadata patch without content (omitted due to size)', { url: write.url });
+    }
     await saveSavedUrlEntryMetadata(write.url, write.patch, {
       refreshTimestamp: write.refreshTimestamp,
       mergeTags: write.mergeTags,

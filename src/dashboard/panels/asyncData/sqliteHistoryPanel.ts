@@ -6,9 +6,9 @@ import {
 } from '../../dashboardSqliteService.js';
 import { removeSavedUrl } from '../../../utils/storageUrls.js';
 import { getMessageOr } from '../../../utils/i18n.js';
+import { isServiceError } from '../../dashboardSqliteService.js';
 import {
   queryHistory,
-  isServiceError,
   dateRangeFromSelectedDate,
 } from './sqliteHistoryQuery.js';
 import type { BrowsingLogEntry, UnifiedHistoryQueryResult } from './sqliteHistoryQuery.js';
@@ -490,6 +490,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     const errorEl = document.getElementById('sqlite-error');
     if (errorEl) {
       errorEl.textContent = state.error || '';
+      errorEl.classList.toggle('hidden', !state.error);
       (errorEl as HTMLElement).style.display = state.error ? '' : 'none';
     }
 
@@ -509,8 +510,8 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         { searchQuery: state.searchQuery, activeTagFilter: state.activeTagFilter },
         {
           onDateSelect: (d) => void handleDateSelect(d),
-          onRangeSelect: (since, until) => { state.selectedDate = null; state.searchQuery = ''; state.pendingTagFallback = null; state.currentPage = 0; void fetchData({ since, until }); },
-          onClearFilters: () => { state.searchQuery = ''; state.selectedDate = null; state.activeTagFilter = null; state.pendingTagFallback = null; state.currentPage = 0; void fetchData(); },
+          onRangeSelect: (since, until) => { state = historyStateReducer(state, { type: 'rangeSelect' }); void fetchData({ since, until }); },
+          onClearFilters: () => { state = historyStateReducer(state, { type: 'clearFilters' }); void fetchData(); },
         }
       );
     }
@@ -523,8 +524,8 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         renderEntryList(listContainer, state.entries, state.selectedIds, state.activeTagFilter, {
           onToggleStar: (id) => void handleToggleStar(id),
           onDelete: (id) => void handleDelete(id),
-          onSelectionChange: (id, selected) => { if (selected) state.selectedIds.add(id); else state.selectedIds.delete(id); updateBulkBar(state.selectedIds, state.entries); },
-          onTagFilterClick: (tag) => { state.activeTagFilter = state.activeTagFilter === tag ? null : tag; state.currentPage = 0; void fetchData({ tagFilter: state.activeTagFilter || undefined, ...dateRangeFromSelected() }); },
+          onSelectionChange: (id, selected) => { state = historyStateReducer(state, { type: 'selectionChange', id, selected }); updateBulkBar(state.selectedIds, state.entries); },
+          onTagFilterClick: (tag) => { state = historyStateReducer(state, { type: 'tagFilterClick', tag }); void fetchData({ tagFilter: state.activeTagFilter || undefined, ...dateRangeFromSelected() }); },
           onContentToggle: (controlsId) => handleContentToggle(controlsId),
         });
       }
@@ -532,7 +533,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
 
     if (!state.loading) {
       const pagContainer = document.getElementById('sqlite-pagination');
-      if (pagContainer) renderPagination(pagContainer, state.currentPage, state.total, PAGE_SIZE, (page) => { state.currentPage = page; reloadCurrent(); });
+      if (pagContainer) renderPagination(pagContainer, state.currentPage, state.total, PAGE_SIZE, (page) => { state = historyStateReducer(state, { type: 'pageChange', page }); reloadCurrent(); });
     }
 
     updateBulkBar(state.selectedIds, state.entries);
@@ -839,14 +840,14 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         renderEntryList(listContainer, state.entries, state.selectedIds, state.activeTagFilter, {
           onToggleStar: (id) => void handleToggleStar(id),
           onDelete: (id) => void handleDelete(id),
-          onSelectionChange: (id, selected) => { if (selected) state.selectedIds.add(id); else state.selectedIds.delete(id); updateBulkBar(state.selectedIds, state.entries); },
-          onTagFilterClick: (tag) => { state.activeTagFilter = state.activeTagFilter === tag ? null : tag; state.currentPage = 0; void fetchData({ tagFilter: state.activeTagFilter || undefined, ...dateRangeFromSelected() }); },
+          onSelectionChange: (id, selected) => { state = historyStateReducer(state, { type: 'selectionChange', id, selected }); updateBulkBar(state.selectedIds, state.entries); },
+          onTagFilterClick: (tag) => { state = historyStateReducer(state, { type: 'tagFilterClick', tag }); void fetchData({ tagFilter: state.activeTagFilter || undefined, ...dateRangeFromSelected() }); },
           onContentToggle: (controlsId) => handleContentToggle(controlsId),
         });
       }
 
       const pagContainer = document.getElementById('sqlite-pagination');
-      if (pagContainer) renderPagination(pagContainer, state.currentPage, state.total, PAGE_SIZE, (page) => { state.currentPage = page; reloadCurrent(); });
+      if (pagContainer) renderPagination(pagContainer, state.currentPage, state.total, PAGE_SIZE, (page) => { state = historyStateReducer(state, { type: 'pageChange', page }); reloadCurrent(); });
     }
 
     const searchInput = document.getElementById('sqlite-search-input') as HTMLInputElement;
@@ -865,9 +866,9 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       selectAllCheckbox.checked = state.selectedIds.size > 0 && state.selectedIds.size === state.entries.length;
       selectAllCheckbox.addEventListener('change', () => {
         if (selectAllCheckbox.checked) {
-          state.entries.forEach(e => state.selectedIds.add(e.id));
+          state = historyStateReducer(state, { type: 'selectAll', checked: true });
         } else {
-          state.selectedIds.clear();
+          state = historyStateReducer(state, { type: 'clearSelection' });
         }
         refresh();
       });
@@ -875,7 +876,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
 
     if (clearSelectionBtn) {
       clearSelectionBtn.addEventListener('click', () => {
-        state.selectedIds.clear();
+        state = historyStateReducer(state, { type: 'clearSelection' });
         refresh();
       });
     }
@@ -919,10 +920,6 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
   async function retryInitialLoad(
     fetchOpts: Parameters<typeof fetchData>[0] = { limit: PAGE_SIZE },
   ): Promise<void> {
-    state.loading = true;
-    state.error = null;
-    renderState();
-
     const result = await retryWithExponentialBackoff<boolean>(
       async () => {
         await fetchData(fetchOpts);
@@ -931,11 +928,10 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       { label: 'sqliteHistory', maxAttempts: 4 }
     );
 
-    state.loading = false;
     if (!result) {
       // Error already set by fetchData
     }
-    renderState();
+    refresh();
   }
 
   /**
@@ -983,7 +979,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       isMounted = false;
       requestGeneration += 1;
       // Clear bulk bar listener references
-      state.selectedIds.clear();
+      state = historyStateReducer(state, { type: 'clearSelection' });
     },
     onActivate(init) {
       if (init?.searchTag) {

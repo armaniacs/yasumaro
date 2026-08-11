@@ -168,6 +168,7 @@ export const saveMetadataStep: PipelineStepFunction = async (
     // PBI-13: retry via pendingChromeStorageQueue instead of dropping the write.
     // The metadata patch is queued as-is so the retry replays the same atomic
     // save (timestamp refresh included) rather than a partial field update.
+    // PBI-08: payload size limit and content omission are enforced by the queue.
     await enqueuePendingWrite({
       type: 'metadataPatch',
       key: 'savedUrlsWithTimestamps',
@@ -176,6 +177,8 @@ export const saveMetadataStep: PipelineStepFunction = async (
       refreshTimestamp: false,
       timestamp,
       mergeTags: true,
+      createdAt: Date.now(),
+      retryCount: 0,
     });
   }
 

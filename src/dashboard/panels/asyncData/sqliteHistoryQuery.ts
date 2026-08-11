@@ -293,21 +293,18 @@ export async function queryHistory(
       if (fallbackTerm) {
         const searchResult = await searchRows(fallbackTerm, options.limit, options.offset);
         if (isServiceError(searchResult)) {
-          // Existing behavior: a failed fallback keeps the raw over-fetched
-          // rows; only the fallback notice is suppressed.
-          rows = queryResult.data.rows;
-          total = queryResult.data.total;
-          tagFallback = { pendingTagFallback: null };
-        } else {
-          rows = searchResult.data.rows;
-          total = searchResult.data.total;
-          tagFallback = {
-            searchQuery: fallbackTerm,
-            pendingTagFallback: total > 0
-              ? { tag: options.tagFilter, fallbackTo: fallbackTerm, matched: total }
-              : null,
-          };
+          // A failed fallback search must not return the raw over-fetched rows
+          // as a successful result; surface the error so the panel can show it.
+          return searchResult;
         }
+        rows = searchResult.data.rows;
+        total = searchResult.data.total;
+        tagFallback = {
+          searchQuery: fallbackTerm,
+          pendingTagFallback: total > 0
+            ? { tag: options.tagFilter, fallbackTo: fallbackTerm, matched: total }
+            : null,
+        };
       } else {
         // Client-side slice: the over-fetch already contains every candidate.
         rows = filteredRows.slice(options.offset, options.offset + options.limit);
