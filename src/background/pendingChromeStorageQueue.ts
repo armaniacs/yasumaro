@@ -8,20 +8,43 @@
 
 import { addLog, LogType } from '../utils/logger.js';
 import { PersistentRetryQueue, ChromeStorageAdapter } from './persistentRetryQueue.js';
+import type { SavedUrlEntryMetadataPatch } from '../utils/storage/savedUrlStore.js';
 
 export const PENDING_CHROME_STORAGE_KEY = 'pending_chrome_storage_writes';
 
 /** Hard cap so a prolonged storage outage can't grow this list unbounded. */
 const MAX_PENDING_WRITES = 500;
 
+/**
+ * Legacy payload: a raw chrome.storage write that failed. Kept so payloads
+ * already queued by older versions are still understood by the retry handler.
+ */
 export interface PendingChromeStorageWrite {
   key: string;
   value: unknown;
   id?: number;
 }
 
+/**
+ * Metadata-patch payload: replays a failed saveSavedUrlEntryMetadata call.
+ * Discriminated from the legacy payload by `type: 'metadataPatch'` so the
+ * retry handler can route each shape without guessing.
+ */
+export interface PendingMetadataPatchWrite {
+  type: 'metadataPatch';
+  key: 'savedUrlsWithTimestamps';
+  url: string;
+  patch: SavedUrlEntryMetadataPatch;
+  refreshTimestamp?: boolean;
+  timestamp?: number;
+  mergeTags?: boolean;
+  id?: number;
+}
+
+export type QueuedChromeStorageWrite = PendingChromeStorageWrite | PendingMetadataPatchWrite;
+
 const adapter = new ChromeStorageAdapter();
-const queue = new PersistentRetryQueue<PendingChromeStorageWrite>(adapter, {
+const queue = new PersistentRetryQueue<QueuedChromeStorageWrite>(adapter, {
   storageKey: PENDING_CHROME_STORAGE_KEY,
   maxSize: MAX_PENDING_WRITES,
   logLabel: 'pendingChromeStorageQueue',
@@ -32,7 +55,7 @@ const queue = new PersistentRetryQueue<PendingChromeStorageWrite>(adapter, {
  * write failure is logged but not thrown, so it never masks the original
  * write failure.
  */
-export async function enqueuePendingWrite(write: PendingChromeStorageWrite): Promise<void> {
+export async function enqueuePendingWrite(write: QueuedChromeStorageWrite): Promise<void> {
   await queue.enqueue(write);
 }
 
@@ -42,7 +65,7 @@ export async function enqueuePendingWrite(write: PendingChromeStorageWrite): Pro
  * @param retryFn - Performs the actual retry; returns true on success.
  */
 export async function flushPendingWrites(
-  retryFn: (write: PendingChromeStorageWrite) => Promise<boolean>
+  retryFn: (write: QueuedChromeStorageWrite) => Promise<boolean>
 ): Promise<void> {
   const writes = await queue.load();
   if (writes.length === 0) return;

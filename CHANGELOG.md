@@ -39,6 +39,20 @@ All notable changes to this project will be documented in this file.
 
 （次のリリースに向けての変更をここに記載）
 
+## [6.7.36] - 2026-08-11
+
+Background・Dashboard・AI summaryの主要moduleを深深化した。
+
+### Refactor
+
+- Saved URL metadata保存をatomic CASへ集約した。
+- SQLite history queryとrecording handlerの依存経路を整理した。
+- review summaryをAIService factory経由へ移行した。
+
+### Tests
+
+- 保存、履歴query、handler、AI summaryの回帰テストを追加した。
+
 ## [6.7.35] - 2026-08-11
 
 アーキテクチャ深掘り作業のPBI整理を完了した。

@@ -17,9 +17,10 @@ import {
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { migrateLegacyPendingPagesKey } from '../utils/pendingStorage.js';
 import { flushPendingRecords } from './pendingSqliteQueue.js';
-import { flushPendingWrites, type PendingChromeStorageWrite } from './pendingChromeStorageQueue.js';
+import { flushPendingWrites, type QueuedChromeStorageWrite } from './pendingChromeStorageQueue.js';
 import { withOptimisticLock } from '../utils/optimisticLock.js';
 import type { SavedUrlEntry } from '../utils/urlEntry.js';
+import { saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlStore.js';
 import { MigrationService } from './migrationService.js';
 import { createErrorResponse } from '../utils/errorMessages.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -78,8 +79,8 @@ export function init(): void {
     (async () => {
       try {
         const { initializeReviewSummaryAlarms, setupReviewSummaryAlarmListener } = await import('./reviewSummaryAlarm.js');
-        await initializeReviewSummaryAlarms();
-        setupReviewSummaryAlarmListener();
+        await initializeReviewSummaryAlarms(reviewSummaryGenerator);
+        setupReviewSummaryAlarmListener(reviewSummaryGenerator);
       } catch (err) {
         logError('Failed to init review summary alarms', { error: String(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
       }
@@ -130,6 +131,7 @@ const {
     rateLimiter,
     manualContentFetcher,
     sessionStore,
+    reviewSummaryGenerator,
 } = services;
 const { manualRecordDeps, saveRecordDeps } = services;
 
@@ -310,14 +312,8 @@ const messageRegistryComposition = createMessageHandlerRegistry({
     const { updateConsentBadge } = await import('./consentBadge.js');
     await updateConsentBadge();
   },
-  generateWeeklySummary: async () => {
-    const { generateWeeklySummary } = await import('./reviewSummaryGenerator.js');
-    return generateWeeklySummary();
-  },
-  generateMonthlySummary: async () => {
-    const { generateMonthlySummary } = await import('./reviewSummaryGenerator.js');
-    return generateMonthlySummary();
-  },
+  generateWeeklySummary: () => reviewSummaryGenerator.generateWeeklySummary(),
+  generateMonthlySummary: () => reviewSummaryGenerator.generateMonthlySummary(),
   dashboardSqliteHandler: dashboardSqliteMessageHandler,
 });
 
@@ -501,15 +497,32 @@ const _contextClickHandler = createContextClickHandler({
 // globalThis.chrome is undefined, without causing errors.
 // ============================================================================
 
-async function retryPendingChromeStorageWrite(write: PendingChromeStorageWrite): Promise<boolean> {
+export async function retryPendingChromeStorageWrite(write: QueuedChromeStorageWrite): Promise<boolean> {
+  // Legacy payload: a whole SavedUrlEntry queued by older versions. The
+  // existing entry keeps its metadata and only the queued timestamp is applied.
+  if (!('type' in write)) {
+    if (write.key !== 'savedUrlsWithTimestamps') return false;
+    try {
+      const entry = write.value as SavedUrlEntry;
+      await withOptimisticLock<SavedUrlEntry[]>('savedUrlsWithTimestamps', (current) => {
+        const list = current || [];
+        const idx = list.findIndex((e) => e.url === entry.url);
+        if (idx >= 0) return list.map((e, i) => (i === idx ? { ...e, timestamp: entry.timestamp } : e));
+        return [...list, entry];
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Metadata-patch payload: replay the same atomic save that failed originally.
   if (write.key !== 'savedUrlsWithTimestamps') return false;
   try {
-    const entry = write.value as SavedUrlEntry;
-    await withOptimisticLock<SavedUrlEntry[]>('savedUrlsWithTimestamps', (current) => {
-      const list = current || [];
-      const idx = list.findIndex((e) => e.url === entry.url);
-      if (idx >= 0) return list.map((e, i) => (i === idx ? { ...e, timestamp: entry.timestamp } : e));
-      return [...list, entry];
+    await saveSavedUrlEntryMetadata(write.url, write.patch, {
+      refreshTimestamp: write.refreshTimestamp,
+      mergeTags: write.mergeTags,
+      timestamp: write.timestamp,
     });
     return true;
   } catch {

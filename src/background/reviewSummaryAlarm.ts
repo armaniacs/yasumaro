@@ -5,7 +5,7 @@
 
 import { getSettings, StorageKeys } from '../utils/storage.js';
 import { addLog, LogType } from '../utils/logger.js';
-import { generateWeeklySummary, generateMonthlySummary } from './reviewSummaryGenerator.js';
+import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 
 const WEEKLY_ALARM_NAME = 'yasumaro-review-weekly';
 const MONTHLY_ALARM_NAME = 'yasumaro-review-monthly';
@@ -14,9 +14,10 @@ let listenerSetUp = false;
 
 /**
  * レビューサマリ用アラームを初期化する
- * Service Worker起動時に呼ばれる
+ * Service Worker起動時に呼ばれる。アラーム発火はcomposition rootから注入された
+ * 同一generatorへ委譲し、message handler経路とインスタンスを共有する。
  */
-export async function initializeReviewSummaryAlarms(): Promise<void> {
+export async function initializeReviewSummaryAlarms(generator: ReviewSummaryGenerator): Promise<void> {
   const settings = await getSettings();
   const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED] as boolean;
 
@@ -45,17 +46,17 @@ export async function initializeReviewSummaryAlarms(): Promise<void> {
 /**
  * アラームリスナーを設定する
  */
-export function setupReviewSummaryAlarmListener(): void {
+export function setupReviewSummaryAlarmListener(generator: ReviewSummaryGenerator): void {
   if (listenerSetUp) return;
   listenerSetUp = true;
 
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === WEEKLY_ALARM_NAME) {
-      generateWeeklySummary().catch((err) => {
+      generator.generateWeeklySummary().catch((err) => {
         addLog(LogType.ERROR, 'Weekly summary alarm failed', { error: String(err) });
       });
     } else if (alarm.name === MONTHLY_ALARM_NAME) {
-      generateMonthlySummary().catch((err) => {
+      generator.generateMonthlySummary().catch((err) => {
         addLog(LogType.ERROR, 'Monthly summary alarm failed', { error: String(err) });
       });
     }

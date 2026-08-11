@@ -3,7 +3,6 @@ import type { TabData } from '../tabCache.js';
 import type { Settings } from '../../utils/storage.js';
 import { isSecureUrl, sanitizeUrlForLogging } from '../../utils/urlUtils.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../../utils/fetch.js';
-import { isDomainAllowed } from '../../utils/domainUtils.js';
 import { BADGE_COLORS } from '../../constants/appConstants.js';
 import { logDebug, logWarn, logError, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
@@ -16,9 +15,6 @@ import { NotificationHelper } from '../notificationHelper.js';
 import type { MessageSenderLike } from '../rateLimiter.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import type { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
-import type { ObsidianClient } from '../obsidianClient.js';
-import type { AIService } from '../ai/AIService.js';
-import type { SqliteClient } from '../sqliteClient.js';
 import type { AiTestProgress } from '../aiClient.js';
 
 import type {
@@ -58,14 +54,13 @@ export interface FetchUrlHandlerDeps {
   buildAllowedUrls: (settings: Settings) => Set<string>;
 }
 
-export interface ManualRecordHandlerDeps {
+/**
+ * Behaviour shared by the recording handlers (MANUAL_RECORD/PREVIEW_RECORD and
+ * SAVE_RECORD). Kept to what the handlers actually invoke (deep-dig 子PBI 4):
+ * adding a collaborator to one handler must not force it onto the other.
+ */
+export interface RecordingHandlerBaseDeps {
   isRecordingAllowed: () => Promise<boolean>;
-  checkRateLimit: (sender: MessageSenderLike | undefined, settings: Record<string, unknown>) => Promise<{ allowed: boolean; error?: string }>;
-  fetchContent: (url: string) => Promise<string>;
-  getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
-  obsidian: ObsidianClient;
-  aiService: AIService | null;
-  sqliteClient: SqliteClient | null;
   /**
    * Injected by the composition root. The handler never constructs a pipeline
    * itself; a missing pipeline is a wiring error, not a fallback path.
@@ -75,20 +70,12 @@ export interface ManualRecordHandlerDeps {
   setUrlContent: (url: string, content: string) => Promise<void>;
 }
 
-export interface SaveRecordHandlerDeps {
-  isRecordingAllowed: () => Promise<boolean>;
-  getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
-  obsidian: ObsidianClient;
-  aiService: AIService | null;
-  sqliteClient: SqliteClient | null;
-  /**
-   * Injected by the composition root. The handler never constructs a pipeline
-   * itself; a missing pipeline is a wiring error, not a fallback path.
-   */
-  recordingPipeline: RecordingPipeline;
-  getSettings: () => Promise<Settings>;
-  setUrlContent: (url: string, content: string) => Promise<void>;
+export interface ManualRecordHandlerDeps extends RecordingHandlerBaseDeps {
+  checkRateLimit: (sender: MessageSenderLike | undefined, settings: Record<string, unknown>) => Promise<{ allowed: boolean; error?: string }>;
+  fetchContent: (url: string) => Promise<string>;
 }
+
+export interface SaveRecordHandlerDeps extends RecordingHandlerBaseDeps {}
 
 export interface ContentCleansingExecutedHandlerDeps {
   hasBadgeTab: (tabId: number) => boolean;
