@@ -60,10 +60,9 @@ describe('createBackgroundServices', () => {
     mocks.TabCache.mockImplementation(function () { return { tabCache: true }; });
     mocks.RateLimiter.mockImplementation(function () { return { rateLimiter: true }; });
     mocks.ManualContentFetcher.mockImplementation(function () { return { manualContentFetcher: true }; });
-    mocks.AIClient.mockImplementation(function () { return { aiClient: true }; });
-    mocks.BuiltInAIClient.mockImplementation(function () { return { builtInAIClient: true }; });
+    mocks.AIClient.mockImplementation(function () { return { aiClient: true, remoteAiService: { remoteAIService: true } }; });
+    mocks.BuiltInAIClient.mockImplementation(function () { return { builtInAiClient: true }; });
     mocks.LocalAIService.mockImplementation(function () { return { localAIService: true }; });
-    mocks.RemoteAIService.mockImplementation(function () { return { remoteAIService: true }; });
     mocks.FallbackAIService.mockImplementation(function () { return { fallbackAIService: true }; });
     mocks.RecordingLogic.mockImplementation(function () { return { recordingLogic: true }; });
     mocks.SessionStore.mockImplementation(function () { return { sessionStore: true }; });
@@ -86,7 +85,7 @@ describe('createBackgroundServices', () => {
       tabCache: { tabCache: true },
       rateLimiter: { rateLimiter: true },
       manualContentFetcher: { manualContentFetcher: true },
-      aiClient: { aiClient: true },
+      aiClient: { aiClient: true, remoteAiService: { remoteAIService: true } },
       aiService: { fallbackAIService: true },
       reviewSummaryGenerator: expect.any(Object),
       sessionStore: { sessionStore: true },
@@ -130,8 +129,15 @@ describe('createBackgroundServices', () => {
 
     expect(mocks.BuiltInAIClient).toHaveBeenCalledTimes(1);
     expect(mocks.LocalAIService).toHaveBeenCalledTimes(1);
-    expect(mocks.RemoteAIService).toHaveBeenCalledTimes(1);
+    expect(mocks.AIClient).toHaveBeenCalledTimes(1);
     expect(mocks.FallbackAIService).toHaveBeenCalledTimes(1);
+
+    const aiClientInstance = mocks.AIClient.mock.results[0].value;
+    const local = mocks.LocalAIService.mock.results[0].value;
+    expect(mocks.FallbackAIService).toHaveBeenCalledWith({
+      local,
+      remote: aiClientInstance.remoteAiService,
+    });
     expect(mocks.RecordingLogic).toHaveBeenCalledWith(
       { obsidian: true },
       { fallbackAIService: true },

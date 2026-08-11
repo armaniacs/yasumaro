@@ -1,104 +1,135 @@
 import { describe, it, expect, vi } from 'vitest';
 import { RemoteAIService } from '../RemoteAIService.js';
+import { AIProviderStrategy } from '../providers/index.js';
 
-/** Build the aiClient collaborator with a default no-op testConnection. */
-function makeAiClient(generateSummary: ReturnType<typeof vi.fn>, testConnection = vi.fn()) {
-  return { generateSummary, testConnection };
+function makeProvider(summary: string, success = true): AIProviderStrategy {
+  return {
+    generateSummary: vi.fn().mockResolvedValue({ success, summary }),
+    testConnection: vi.fn().mockResolvedValue({ success, message: summary }),
+  };
+}
+
+function createService(providerSlots: Array<{ provider: string }>, getSettingsOverride?: () => Promise<Record<string, unknown>>) {
+  const getSettings = getSettingsOverride || (async () => ({
+    ai_provider_priority_list: providerSlots,
+    ai_provider: 'gemini',
+    summary_min_length: 0,
+  } as Record<string, unknown>));
+  return new RemoteAIService({ getSettings });
 }
 
 describe('RemoteAIService', () => {
-  it('calls aiClient.generateSummary with content and options', async () => {
-    const generateSummary = vi.fn().mockResolvedValue({
-      summary: 'remote summary',
-      sentTokens: 100,
-      receivedTokens: 50,
-      providerName: 'TestProvider',
-      modelName: 'test-model',
-    });
-    const service = new RemoteAIService({ aiClient: makeAiClient(generateSummary) });
+  it('delegates generateSummary to the first successful provider', async () => {
+    const service = createService([{ provider: 'test-provider' }]);
+    service['registerProvider']('test-provider', () => makeProvider('test summary'));
 
-    const result = await service.generateSummary('test content', {
-      tagSummaryMode: true,
-      url: 'https://example.com',
-    });
+    const result = await service.generateSummary('content', { url: 'https://example.com' });
 
-    expect(generateSummary).toHaveBeenCalledWith('test content', true, 'https://example.com', undefined);
-    expect(result).toEqual({
-      summary: 'remote summary',
-      sentTokens: 100,
-      receivedTokens: 50,
-      providerName: 'TestProvider',
-      modelName: 'test-model',
-      success: undefined,
-      error: undefined,
-    });
+    expect(result.summary).toBe('test summary');
+    expect(result.success).toBe(true);
   });
 
-  it('works without optional options', async () => {
-    const generateSummary = vi.fn().mockResolvedValue({ summary: 'plain summary' });
-    const service = new RemoteAIService({ aiClient: makeAiClient(generateSummary) });
+  it('falls back to the next provider when the first fails', async () => {
+    const service = createService([{ provider: 'fail-provider' }, { provider: 'success-provider' }]);
+    service['registerProvider']('fail-provider', () => makeProvider('fail', false));
+    service['registerProvider']('success-provider', () => makeProvider('success'));
 
-    const result = await service.generateSummary('test content');
+    const result = await service.generateSummary('content');
 
-    expect(generateSummary).toHaveBeenCalledWith('test content', undefined, undefined, undefined);
-    expect(result.summary).toBe('plain summary');
+    expect(result.summary).toBe('success');
+    expect(result.success).toBe(true);
   });
 
-  it('propagates traceId to aiClient', async () => {
-    const generateSummary = vi.fn().mockResolvedValue({ summary: 'remote summary' });
-    const service = new RemoteAIService({ aiClient: makeAiClient(generateSummary) });
+  it('returns the last provider result when all providers fail', async () => {
+    const service = createService([{ provider: 'fail1' }, { provider: 'fail2' }]);
+    service['registerProvider']('fail1', () => makeProvider('fail1', false));
+    service['registerProvider']('fail2', () => makeProvider('fail2', false));
 
-    await service.generateSummary('test content', {
-      tagSummaryMode: false,
-      url: 'https://example.com',
-      traceId: 'trace-123',
+    const result = await service.generateSummary('content');
+
+    expect(result.success).toBe(false);
+    expect(result.summary).toBe('fail2');
+  });
+
+  it('deduplicates concurrent generateSummary calls for the same URL', async () => {
+    const service = createService([{ provider: 'test' }]);
+    let callCount = 0;
+    service['registerProvider']('test', () => {
+      callCount++;
+      return makeProvider(`call-${callCount}`);
     });
 
-    expect(generateSummary).toHaveBeenCalledWith('test content', false, 'https://example.com', 'trace-123');
+    const [result1, result2] = await Promise.all([
+      service.generateSummary('content', { url: 'https://example.com' }),
+      service.generateSummary('content', { url: 'https://example.com' }),
+    ]);
+
+    expect(callCount).toBe(1);
+    expect(result1).toBe(result2);
   });
 
-  it('propagates errors from aiClient', async () => {
-    const generateSummary = vi.fn().mockRejectedValue(new Error('api error'));
-    const service = new RemoteAIService({ aiClient: makeAiClient(generateSummary) });
+  it('treats empty URL as non-dedupeable', async () => {
+    const service = createService([{ provider: 'test' }]);
+    let callCount = 0;
+    service['registerProvider']('test', () => {
+      callCount++;
+      return makeProvider(`call-${callCount}`);
+    });
 
-    await expect(service.generateSummary('test content')).rejects.toThrow('api error');
+    await Promise.all([
+      service.generateSummary('content', { url: '' }),
+      service.generateSummary('content', { url: '' }),
+    ]);
+
+    expect(callCount).toBe(2);
+  });
+
+  it('propagates provider exceptions as error results', async () => {
+    const service = createService([{ provider: 'throw' }]);
+    service['registerProvider']('throw', () => ({
+      generateSummary: vi.fn().mockRejectedValue(new Error('provider error')),
+      testConnection: vi.fn().mockResolvedValue({ success: true }),
+    }));
+
+    const result = await service.generateSummary('content');
+
+    expect(result.success).toBe(false);
+    expect(result.summary).toContain('Error:');
+  });
+
+  it('propagates traceId to provider', async () => {
+    const service = createService([{ provider: 'test' }]);
+    const provider = makeProvider('ok');
+    service['registerProvider']('test', () => provider);
+
+    await service.generateSummary('content', { url: 'https://example.com', traceId: 'trace-123' });
+
+    expect(provider.generateSummary).toHaveBeenCalledWith(
+      'content',
+      false,
+      'trace-123',
+    );
   });
 
   it('reports supported modes', () => {
-    const service = new RemoteAIService({ aiClient: makeAiClient(vi.fn()) });
-
+    const service = createService([]);
     expect(service.getSupportedModes()).toEqual(['full_pipeline', 'masked_cloud']);
   });
 
-  // Regression: success/error used to be dropped here, so FallbackAIService's
-  // 'auto' branch (which keys on `success === false`) read every remote failure
-  // as `undefined` and treated it as a success.
-  it('forwards success and error from aiClient', async () => {
-    const generateSummary = vi.fn().mockResolvedValue({
-      summary: 'Error: quota exceeded',
-      success: false,
-      error: 'quota exceeded',
-    });
-    const service = new RemoteAIService({ aiClient: makeAiClient(generateSummary) });
-
-    const result = await service.generateSummary('test content');
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('quota exceeded');
-  });
-
-  it('delegates testConnection to aiClient with progress callback and runId', async () => {
-    const testConnection = vi.fn().mockResolvedValue({
-      success: true,
-      message: 'ok',
-      providers: [],
-    });
-    const service = new RemoteAIService({ aiClient: makeAiClient(vi.fn(), testConnection) });
+  it('delegates testConnection to providers with progress callback', async () => {
+    const service = createService([{ provider: 'test' }]);
     const onProgress = vi.fn();
+    service['registerProvider']('test', () => makeProvider('ok'));
 
     const result = await service.testConnection(onProgress, 'run-1');
 
-    expect(testConnection).toHaveBeenCalledWith(onProgress, 'run-1');
+    expect(onProgress).toHaveBeenCalledWith({
+      provider: 'test',
+      model: undefined,
+      index: 0,
+      total: 1,
+      runId: 'run-1',
+    });
     expect(result.success).toBe(true);
   });
 });

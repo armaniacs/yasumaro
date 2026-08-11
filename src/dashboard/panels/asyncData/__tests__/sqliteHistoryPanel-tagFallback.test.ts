@@ -18,8 +18,8 @@ vi.mock('../../../dashboardSqliteService.js', () => ({
   deleteLog: vi.fn(),
   getSqliteStatus: vi.fn().mockResolvedValue({ initialized: true, fallback: false }),
   appendToLogs: vi.fn(),
-  // Mirrors the real narrowing helper: the panel imports it alongside the
-  // query functions to tell the failure side of ServiceResult apart.
+  // Mirrors the real narrowing helper: the panel imports it directly to tell
+  // the failure side of ServiceResult apart.
   isServiceError: (result: object) => 'error' in result,
 }));
 
@@ -176,6 +176,31 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
     // searchLogs is still attempted (fallback decision fired), but since it
     // returned zero rows the panel shows the empty state with no notice.
     expect(mockedDb.searchLogs).toHaveBeenCalledWith('nonexistent', 20, 0);
+    expect(container.innerHTML).not.toContain('sqlite-tag-fallback-note');
+  });
+
+  it('shows an error state when the fallback search fails', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const panel = makePanel(container);
+
+    // queryLogs returns rows that do NOT carry the "教育" tag, so the fallback
+    // search is attempted; that search fails.
+    mockedDb.queryLogs.mockResolvedValue({
+      data: {
+        rows: [makeRow(1, 'tech')],
+        total: 1,
+      },
+    });
+    mockedDb.searchLogs.mockResolvedValue({ error: 'Search failed' });
+
+    panel.onActivate?.({ searchTag: '教育' });
+    await flush();
+
+    expect(mockedDb.searchLogs).toHaveBeenCalledWith('教育', 20, 0);
+    // The error container is visible and the fallback notice is not shown.
+    expect(container.innerHTML).toContain('sqlite-history-error');
+    expect(container.innerHTML).not.toContain('sqlite-history-error hidden');
     expect(container.innerHTML).not.toContain('sqlite-tag-fallback-note');
   });
 });

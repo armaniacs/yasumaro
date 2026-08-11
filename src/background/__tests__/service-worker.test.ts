@@ -196,7 +196,8 @@ vi.mock('../obsidianClient.js', () => ({
 }));
 vi.mock('../aiClient.js', () => ({
     AIClient: class {
-        testConnection = vi.fn().mockResolvedValue({ success: true });
+        remoteAiService = { testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok', providers: [] }) };
+        testConnection = vi.fn().mockResolvedValue({ success: true, message: 'ok', providers: [] });
         registerBuiltInAiService = vi.fn();
     }
 }));
