@@ -16,7 +16,11 @@
 
 `pbi/` に残っているのは**未完了のPBIのみ**。完了したものは `dev-docs/archived/pbi/` にある。
 
-（現在、未着手・部分実装のPBIはありません）
+| PBI | 難易度 | 副作用 | 種別 | 概要 |
+|---|---|---|---|---|
+| ⬜ [2026-08-12-01-refactor-move-message-handler-registry-to-composition-root.md](2026-08-12-01-refactor-move-message-handler-registry-to-composition-root.md) | 🟡中 | 🟡軽微 | 🔧 | Handler registryをcomposition rootへ移設し、service-worker.tsの責務を削減 |
+| ⬜ [2026-08-12-02-refactor-migrate-aiclient-tests-to-aiservice.md](2026-08-12-02-refactor-migrate-aiclient-tests-to-aiservice.md) | 🟡中 | 🟡軽微 | 🔧 | aiClient.test.ts等をAIService/RemoteAIService経由に移行し、AIClientテストを委譲contractに絞る |
+| ⬜ [2026-08-12-03-feat-dashboard-multitab-ai-test-correlation.md](2026-08-12-03-feat-dashboard-multitab-ai-test-correlation.md) | 🟢低 | 🟢なし | ✨ | AIテスト進捗に相関IDを付与し、複数ダッシュボードタブの干渉を防止 |
 
 ---
 
