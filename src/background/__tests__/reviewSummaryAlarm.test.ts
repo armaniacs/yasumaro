@@ -13,16 +13,19 @@ vi.mock('../../utils/logger.js', () => ({
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
 }));
 
-vi.mock('../reviewSummaryGenerator.js', () => ({
-  generateWeeklySummary: vi.fn().mockResolvedValue(true),
-  generateMonthlySummary: vi.fn().mockResolvedValue(true),
-}));
-
 import { getSettings } from '../../utils/storage.js';
 import { addLog } from '../../utils/logger.js';
-import { generateWeeklySummary, generateMonthlySummary } from '../reviewSummaryGenerator.js';
+import type { ReviewSummaryGenerator } from '../reviewSummaryGenerator.js';
 
 let alarmListener: ((alarm: { name: string }) => void) | undefined;
+
+/** generatorはcomposition rootから注入される契約なので、fakeで差し替える */
+function makeFakeGenerator(): ReviewSummaryGenerator {
+  return {
+    generateWeeklySummary: vi.fn().mockResolvedValue(true),
+    generateMonthlySummary: vi.fn().mockResolvedValue(true),
+  };
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -39,17 +42,16 @@ beforeEach(() => {
       },
     },
   });
-  vi.mocked(generateWeeklySummary).mockReset().mockResolvedValue(true);
-  vi.mocked(generateMonthlySummary).mockReset().mockResolvedValue(true);
   vi.resetModules();
 });
 
 describe('initializeReviewSummaryAlarms', () => {
   it('creates weekly and monthly alarms when enabled', async () => {
+    const generator = makeFakeGenerator();
     vi.mocked(getSettings).mockResolvedValue({ review_summary_enabled: true } as any);
     const { initializeReviewSummaryAlarms } = await import('../reviewSummaryAlarm.js');
 
-    await initializeReviewSummaryAlarms();
+    await initializeReviewSummaryAlarms(generator);
 
     expect(chrome.alarms.create).toHaveBeenCalledWith(
       'yasumaro-review-weekly',
@@ -64,10 +66,11 @@ describe('initializeReviewSummaryAlarms', () => {
   });
 
   it('clears alarms when disabled', async () => {
+    const generator = makeFakeGenerator();
     vi.mocked(getSettings).mockResolvedValue({ review_summary_enabled: false } as any);
     const { initializeReviewSummaryAlarms } = await import('../reviewSummaryAlarm.js');
 
-    await initializeReviewSummaryAlarms();
+    await initializeReviewSummaryAlarms(generator);
 
     expect(chrome.alarms.clear).toHaveBeenCalledWith('yasumaro-review-weekly');
     expect(chrome.alarms.clear).toHaveBeenCalledWith('yasumaro-review-monthly');
@@ -77,50 +80,55 @@ describe('initializeReviewSummaryAlarms', () => {
 
 describe('setupReviewSummaryAlarmListener', () => {
   it('registers the alarm listener and guards against double registration', async () => {
+    const generator = makeFakeGenerator();
     const { setupReviewSummaryAlarmListener } = await import('../reviewSummaryAlarm.js');
 
-    setupReviewSummaryAlarmListener();
-    setupReviewSummaryAlarmListener();
+    setupReviewSummaryAlarmListener(generator);
+    setupReviewSummaryAlarmListener(generator);
 
     expect(chrome.alarms.onAlarm.addListener).toHaveBeenCalledTimes(1);
     expect(alarmListener).toBeDefined();
   });
 
   it('does nothing for unknown alarm names', async () => {
+    const generator = makeFakeGenerator();
     const { setupReviewSummaryAlarmListener } = await import('../reviewSummaryAlarm.js');
 
-    setupReviewSummaryAlarmListener();
+    setupReviewSummaryAlarmListener(generator);
     alarmListener!({ name: 'some-other-alarm' });
 
-    expect(generateWeeklySummary).not.toHaveBeenCalled();
-    expect(generateMonthlySummary).not.toHaveBeenCalled();
+    expect(generator.generateWeeklySummary).not.toHaveBeenCalled();
+    expect(generator.generateMonthlySummary).not.toHaveBeenCalled();
   });
 
   it('calls generateWeeklySummary on weekly alarm', async () => {
+    const generator = makeFakeGenerator();
     const { setupReviewSummaryAlarmListener } = await import('../reviewSummaryAlarm.js');
 
-    setupReviewSummaryAlarmListener();
+    setupReviewSummaryAlarmListener(generator);
     alarmListener!({ name: 'yasumaro-review-weekly' });
 
-    expect(generateWeeklySummary).toHaveBeenCalledTimes(1);
-    expect(generateMonthlySummary).not.toHaveBeenCalled();
+    expect(generator.generateWeeklySummary).toHaveBeenCalledTimes(1);
+    expect(generator.generateMonthlySummary).not.toHaveBeenCalled();
   });
 
   it('calls generateMonthlySummary on monthly alarm', async () => {
+    const generator = makeFakeGenerator();
     const { setupReviewSummaryAlarmListener } = await import('../reviewSummaryAlarm.js');
 
-    setupReviewSummaryAlarmListener();
+    setupReviewSummaryAlarmListener(generator);
     alarmListener!({ name: 'yasumaro-review-monthly' });
 
-    expect(generateMonthlySummary).toHaveBeenCalledTimes(1);
-    expect(generateWeeklySummary).not.toHaveBeenCalled();
+    expect(generator.generateMonthlySummary).toHaveBeenCalledTimes(1);
+    expect(generator.generateWeeklySummary).not.toHaveBeenCalled();
   });
 
   it('logs error when weekly summary fails', async () => {
-    vi.mocked(generateWeeklySummary).mockRejectedValue(new Error('network error'));
+    const generator = makeFakeGenerator();
+    (generator.generateWeeklySummary as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('network error'));
     const { setupReviewSummaryAlarmListener } = await import('../reviewSummaryAlarm.js');
 
-    setupReviewSummaryAlarmListener();
+    setupReviewSummaryAlarmListener(generator);
     alarmListener!({ name: 'yasumaro-review-weekly' });
 
     await vi.waitFor(() => {
@@ -131,10 +139,11 @@ describe('setupReviewSummaryAlarmListener', () => {
   });
 
   it('logs error when monthly summary fails', async () => {
-    vi.mocked(generateMonthlySummary).mockRejectedValue(new Error('timeout'));
+    const generator = makeFakeGenerator();
+    (generator.generateMonthlySummary as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('timeout'));
     const { setupReviewSummaryAlarmListener } = await import('../reviewSummaryAlarm.js');
 
-    setupReviewSummaryAlarmListener();
+    setupReviewSummaryAlarmListener(generator);
     alarmListener!({ name: 'yasumaro-review-monthly' });
 
     await vi.waitFor(() => {

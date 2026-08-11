@@ -39,6 +39,16 @@ All notable changes to this project will be documented in this file.
 
 （次のリリースに向けての変更をここに記載）
 
+## [6.7.37] - 2026-08-11
+
+深深化したmoduleのテスト表面を拡充した。
+
+### Tests
+
+- SQLite history panel state reducerの全actionを検証した。
+- panelのstale response防止とSaved URL CAS競合を検証した。
+- AIService factoryとmetadata patch retryの契約テストを追加した。
+
 ## [6.7.36] - 2026-08-11
 
 Background・Dashboard・AI summaryの主要moduleを深深化した。
