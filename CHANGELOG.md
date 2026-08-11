@@ -39,6 +39,16 @@ All notable changes to this project will be documented in this file.
 
 （次のリリースに向けての変更をここに記載）
 
+## [6.7.38] - 2026-08-11
+
+PBIとアーキテクチャ記録を実装状態へ同期した。
+
+### Docs
+
+- 完了済みPBIをarchiveへ移動し、PBI INDEXの履歴を更新した。
+- deep-digの判断記録とAIService lifecycleのADRを整理した。
+- 未解決の3課題を新規PBIとして登録した。
+
 ## [6.7.37] - 2026-08-11
 
 深深化したmoduleのテスト表面を拡充した。

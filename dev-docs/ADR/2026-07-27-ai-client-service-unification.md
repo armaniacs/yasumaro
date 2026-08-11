@@ -27,7 +27,7 @@ Checking Team レビュー（`plans/2026-07-23-1038-review-fix-0723.md`）で、
 |---|---|
 | `src/background/ServiceWorkerContext.ts` | `AIClient` の遅延初期化と `RemoteAIService` への配線 |
 | `src/background/createBackgroundServices.ts` | `AIClient` を生成し `FallbackAIService` を構成 |
-| `src/background/reviewSummaryGenerator.ts` | `new AIClient()` を直接生成して週次/月次ダイジェストを作成 |
+| `src/background/reviewSummaryGenerator.ts` | `new AIClient()` を直接生成して週次/月次ダイジェストを作成（2026-08-11 に解消。追記参照） |
 | `src/background/service-worker.ts` | トップレベルで `AIClient` を生成し `FallbackAIService` を構成 |
 
 ### グループB: `AIService` 型のみを import（ビジネスロジック層、6ファイル）
@@ -55,15 +55,15 @@ Checking Team レビュー（`plans/2026-07-23-1038-review-fix-0723.md`）で、
 - **グループB（6ファイル）**: 既に `AIService` 型のみに依存しており、変更不要。
 - **グループC（2ファイル）**: 表示用定数・型のみの import のため、変更不要。
 
-## 例外事項: `reviewSummaryGenerator.ts`
+## 追記（2026-08-11）: `reviewSummaryGenerator.ts` の移行完了
 
-`src/background/reviewSummaryGenerator.ts` は `generateWeeklySummary` / `generateMonthlySummary` 内で `new AIClient()` を直接生成している。`AIService.generateSummary(content, options?)` のシグネチャは `AIClient.generateSummary(content)` と互換ではあるが、以下の理由により本PBIでは移行を見送り、正当な例外として明記する。
+当初の例外事項はアーキテクチャ深深化PBI 子PBI 5（`2026-08-11-06-migrate-review-summary-to-ai-service.md`）で解消した。本節が当初記述した「移行を見送り、正当な例外として明記する」状態は**過去の記録**であり、現在は移行済みである。
 
-1. **依存注入の変更範囲が広い**: 週次/月次サマリ生成関数は `service-worker.ts` のメッセージハンドラ、`reviewSummaryAlarm.ts` のアラームハンドラ、`dashboard` 側のUIイベントから呼ばれている。`AIService` インスタンスを注入するには、これら全ての呼び出し経路を変更する必要がある。
-2. **独立した背景ジョブである**: 週次/月次サマリは Service Worker 起動時に初期化される `aiService` とは独立したタイミングで実行される背景処理であり、自前の `AIClient` を生成しても副作用は小さい。
-3. **回帰リスクが大きい**: テストで `AIClient` をモックしている箇所が多く、移行には広範なテスト更新が必要となる。
-
-**今後の方針**: `reviewSummaryGenerator.ts` の `AIClient` 直接利用を解消する場合は、別PBIとして `AIService` インスタンスの注入経路を設計・実装する。
+- `reviewSummaryGenerator.ts` は `AIClient` を import せず、`AIService` 型のみに依存する。`new AIClient()` は存在しない。
+- 週次/月次サマリ生成器は `createReviewSummaryGenerator({ aiService, sqliteClient })` ファクトリで組み立てる。インスタンスは composition root（`createBackgroundServices.ts`）で1度だけ生成され、alarm（`reviewSummaryAlarm.ts`）と `GENERATE_REVIEW_SUMMARY` message handler が同一インスタンスを共有する。
+- provider 選択・token policy は既存の `createAIService` composition に従い、summary 出力・prompt・fallback・sanitization・`chrome.downloads` 挙動は変更しない。
+- テストは実際の `AIClient` を生成せず、AIService fake を注入して検証する。
+- AI 用途の offscreen document 所有権は本追記時点の調査で「AIService は offscreen 非依存」（詳細は `2026-07-13-architecture-phase2-deep-dig.md` 追記参照）。`OffscreenManager` 相当は新設しない。
 
 ## 追記（2026-08-08）: `AIService.testConnection` の追加
 
@@ -100,7 +100,7 @@ testConnection: (onProgress, runId) => aiClient.testConnection(onProgress, runId
 - 新しいAIプロバイダー統合やAI機能追加は、`AIService` インターフェースの拡張を通じて行う。
 - `aiClient.ts` への新規の直接依存（グループAへの追加）は原則禁止する。
 - `AIClient` クラスには「新規コードからの直接利用は避けること」の JSDoc コメントを追加する（本ADR作成と同時に実施）。
-- `reviewSummaryGenerator.ts` の移行は、将来の別PBIで検討する。
+- `reviewSummaryGenerator.ts` の移行は、2026-08-11 の子PBI 5で完了した（追記参照）。
 
 ## 備考
 
