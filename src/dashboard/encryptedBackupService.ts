@@ -25,9 +25,6 @@ interface BackupPayload {
 async function buildBackupPayload(): Promise<BackupPayload> {
   const settings = await getSettings();
   const dbBlob = await exportDb();
-  if (!dbBlob) {
-    throw new Error('Failed to read history database for backup');
-  }
   const dbBuffer = await dbBlob.arrayBuffer();
   const historyDbBase64 = bytesToBase64(new Uint8Array(dbBuffer));
 

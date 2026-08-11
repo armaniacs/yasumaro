@@ -31,6 +31,50 @@ export function isServiceError<T>(result: ServiceResult<T>): result is { error: 
   return 'error' in result;
 }
 
+function requiredFiniteNumber(value: unknown, field: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`Invalid SQLite response: ${field}`);
+  }
+  return value;
+}
+
+function requiredNonNegativeNumber(value: unknown, field: string): number {
+  const number = requiredFiniteNumber(value, field);
+  if (number < 0) {
+    throw new Error(`Invalid SQLite response: ${field}`);
+  }
+  return number;
+}
+
+function requiredBoolean(value: unknown, field: string): boolean {
+  if (typeof value !== 'boolean') {
+    throw new Error(`Invalid SQLite response: ${field}`);
+  }
+  return value;
+}
+
+function requiredString(value: unknown, field: string): string {
+  if (typeof value !== 'string') {
+    throw new Error(`Invalid SQLite response: ${field}`);
+  }
+  return value;
+}
+
+function optionalBoolean(value: unknown, field: string): boolean | undefined {
+  if (value === undefined) return undefined;
+  return requiredBoolean(value, field);
+}
+
+function optionalNullableString(value: unknown, field: string): string | null {
+  if (value === undefined || value === null) return null;
+  return requiredString(value, field);
+}
+
+function optionalNonNegativeNumber(value: unknown, field: string): number {
+  if (value === undefined || value === null) return 0;
+  return requiredNonNegativeNumber(value, field);
+}
+
 /**
  * Send a DASHBOARD_SQLITE message to the service worker.
  */
@@ -94,6 +138,62 @@ import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 export type { BrowsingLogEntry };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function requiredRows<T>(
+  value: unknown,
+  field: string,
+  isRow: (value: unknown) => value is T,
+): T[] {
+  if (!Array.isArray(value) || !value.every(isRow)) {
+    throw new Error(`Invalid SQLite response: ${field}`);
+  }
+  return value;
+}
+
+function isBrowsingLogEntry(value: unknown): value is BrowsingLogEntry {
+  return isRecord(value)
+    && isFiniteNumber(value.id)
+    && typeof value.url === 'string'
+    && isFiniteNumber(value.created_at);
+}
+
+type AuditLogEntryView = { id: number; provider: string; url: string; created_at: number };
+
+function isAuditLogEntry(value: unknown): value is AuditLogEntryView {
+  return isRecord(value)
+    && isFiniteNumber(value.id)
+    && typeof value.provider === 'string'
+    && typeof value.url === 'string'
+    && isFiniteNumber(value.created_at);
+}
+
+function requiredStringArray(value: unknown, field: string): string[] {
+  if (!Array.isArray(value) || !value.every((item): item is string => typeof item === 'string')) {
+    throw new Error(`Invalid SQLite response: ${field}`);
+  }
+  return value;
+}
+
+function optionalStringArray(value: unknown, field: string): string[] | undefined {
+  if (value === undefined) return undefined;
+  return requiredStringArray(value, field);
+}
+
+type CompileOptionsSource = 'opfs-worker' | 'idb' | 'fallback';
+
+function optionalCompileOptionsSource(value: unknown): CompileOptionsSource | undefined {
+  if (value === undefined) return undefined;
+  if (value === 'opfs-worker' || value === 'idb' || value === 'fallback') return value;
+  throw new Error('Invalid SQLite response: compileOptionsSource');
+}
+
 export interface DateCount {
   date: string; // YYYY-MM-DD
   count: number;
@@ -118,7 +218,12 @@ export async function queryLogs(options: {
     try {
       const response = await sendDashboardMessage({ subtype: 'query', ...options });
       if (response.success) {
-        return { data: { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) } };
+        return {
+          data: {
+            rows: requiredRows(response.rows, 'rows', isBrowsingLogEntry),
+            total: requiredNonNegativeNumber(response.total, 'total'),
+          },
+        };
       }
       // Retry only when the service worker says the failure is transient.
       // This used to match the message text for 'Query failed', which is the
@@ -155,7 +260,12 @@ export async function searchLogs(
     try {
       const response = await sendDashboardMessage({ subtype: 'search', query, limit, offset });
       if (response.success) {
-        return { data: { rows: (response.rows || []) as BrowsingLogEntry[], total: Number(response.total || 0) } };
+        return {
+          data: {
+            rows: requiredRows(response.rows, 'rows', isBrowsingLogEntry),
+            total: requiredNonNegativeNumber(response.total, 'total'),
+          },
+        };
       }
       // See queryLogs: retriability now comes from the service worker's
       // error classification rather than the wording of the message.
@@ -188,7 +298,7 @@ export async function toggleStar(id: number): Promise<ServiceResult<{ is_starred
   try {
     const response = await sendDashboardMessage({ subtype: 'toggle_star', id });
     if (response.success) {
-      return { data: { is_starred: Number(response.is_starred) } };
+      return { data: { is_starred: requiredNonNegativeNumber(response.is_starred, 'is_starred') } };
     }
     return { error: String(response.error || 'Toggle star failed') };
   } catch (error) {
@@ -242,9 +352,9 @@ export async function migrateLogs(): Promise<ServiceResult<{ count: number; read
     if (response.success) {
       return {
         data: {
-          count: Number(response.count || 0),
-          read: Number(response.read || 0),
-          inserted: Number(response.inserted || 0),
+          count: requiredNonNegativeNumber(response.count, 'count'),
+          read: requiredNonNegativeNumber(response.read, 'read'),
+          inserted: requiredNonNegativeNumber(response.inserted, 'inserted'),
         },
       };
     }
@@ -263,6 +373,32 @@ export interface OpfsSpikeReportView {
   durationMs: number;
 }
 
+function decodeOpfsSpikeReport(value: unknown): OpfsSpikeReportView {
+  if (!isRecord(value)
+    || typeof value.strategy !== 'string'
+    || !Array.isArray(value.steps)
+    || !value.steps.every((step) => isRecord(step)
+      && typeof step.name === 'string'
+      && typeof step.ok === 'boolean'
+      && typeof step.detail === 'string')
+    || typeof value.passed !== 'boolean'
+    || !isFiniteNumber(value.durationMs)
+    || value.durationMs < 0) {
+    throw new Error('Invalid SQLite response: report');
+  }
+
+  return {
+    strategy: value.strategy,
+    steps: value.steps.map((step) => ({
+      name: step.name,
+      ok: step.ok,
+      detail: step.detail,
+    })),
+    passed: value.passed,
+    durationMs: value.durationMs,
+  };
+}
+
 /**
  * Run the OPFS feasibility spike (PBI-10) and return its structured report.
  * Used by the diagnostics panel for manual verification in real Chrome.
@@ -271,7 +407,7 @@ export async function runOpfsSpike(): Promise<ServiceResult<OpfsSpikeReportView>
   try {
     const response = await sendDashboardMessage({ subtype: 'opfs_spike' });
     if (response.success && response.report) {
-      return { data: response.report as OpfsSpikeReportView };
+      return { data: decodeOpfsSpikeReport(response.report) };
     }
     return { error: response.success ? 'OPFS spike returned no report' : String(response.error || 'OPFS spike failed') };
   } catch (error) {
@@ -301,7 +437,7 @@ export async function getLogCount(): Promise<ServiceResult<number>> {
   try {
     const response = await sendDashboardMessage({ subtype: 'get_count' });
     if (response.success) {
-      return { data: Number(response.count || 0) };
+      return { data: requiredNonNegativeNumber(response.count, 'count') };
     }
     return { error: String(response.error || 'Get count failed') };
   } catch (error) {
@@ -330,17 +466,17 @@ export async function getSqliteStatus(): Promise<{
     const response = await sendDashboardMessage({ subtype: 'status' });
     if (response.success) {
       return {
-        initialized: Boolean(response.initialized),
-        path: String(response.path || ''),
-        fallback: Boolean(response.fallback),
-        fts5: Boolean(response.fts5),
-        compileOptions: Array.isArray(response.compileOptions) ? response.compileOptions : undefined,
-        compileOptionsSource: response.compileOptionsSource as 'opfs-worker' | 'idb' | 'fallback' | undefined,
+        initialized: requiredBoolean(response.initialized, 'initialized'),
+        path: requiredString(response.path, 'path'),
+        fallback: requiredBoolean(response.fallback, 'fallback'),
+        fts5: requiredBoolean(response.fts5, 'fts5'),
+        compileOptions: optionalStringArray(response.compileOptions, 'compileOptions'),
+        compileOptionsSource: optionalCompileOptionsSource(response.compileOptionsSource),
         initError: response.initError ? String(response.initError) : undefined,
-        opfsMigrationV2Done: response.opfsMigrationV2Done,
-        opfsMigrationV2LastAttemptedAt: response.opfsMigrationV2LastAttemptedAt ?? null,
-        opfsMigrationV2CompletedAt: response.opfsMigrationV2CompletedAt ?? null,
-        opfsMigrationV2RecordCount: response.opfsMigrationV2RecordCount ?? 0,
+        opfsMigrationV2Done: optionalBoolean(response.opfsMigrationV2Done, 'opfsMigrationV2Done'),
+        opfsMigrationV2LastAttemptedAt: optionalNullableString(response.opfsMigrationV2LastAttemptedAt, 'opfsMigrationV2LastAttemptedAt'),
+        opfsMigrationV2CompletedAt: optionalNullableString(response.opfsMigrationV2CompletedAt, 'opfsMigrationV2CompletedAt'),
+        opfsMigrationV2RecordCount: optionalNonNegativeNumber(response.opfsMigrationV2RecordCount, 'opfsMigrationV2RecordCount'),
       };
     }
     return {
@@ -375,7 +511,7 @@ export async function cleanupLegacyStorage(): Promise<ServiceResult<{ removed: s
       return {
         data: {
           removed: Array.isArray(response.removed) ? response.removed : [],
-          totalBytes: Number(response.totalBytes || 0),
+          totalBytes: requiredNonNegativeNumber(response.totalBytes, 'totalBytes'),
         },
       };
     }
@@ -398,8 +534,8 @@ export async function backfillMetadata(): Promise<ServiceResult<{ updated: numbe
     if (response.success) {
       return {
         data: {
-          updated: Number(response.updated || 0),
-          total: Number(response.total || 0),
+          updated: requiredNonNegativeNumber(response.updated, 'updated'),
+          total: requiredNonNegativeNumber(response.total, 'total'),
         },
       };
     }
@@ -419,7 +555,7 @@ export async function backupDb(): Promise<ServiceResult<Uint8Array>> {
       { subtype: 'backup_db' },
     );
     if (response.success && response.data) {
-      return { data: base64ToBytes(response.data as string) };
+      return { data: base64ToBytes(requiredString(response.data, 'data')) };
     }
     // A failed backup must not look like "nothing to back up" — the caller
     // would otherwise offer the user an empty or missing file as success.
@@ -468,9 +604,9 @@ export async function importLogs(rows: Array<{
     if (response.success) {
       return {
         data: {
-          inserted: Number(response.inserted || 0),
-          skipped: Number(response.skipped || 0),
-          total: Number(response.total || 0),
+          inserted: requiredNonNegativeNumber(response.inserted, 'inserted'),
+          skipped: requiredNonNegativeNumber(response.skipped, 'skipped'),
+          total: requiredNonNegativeNumber(response.total, 'total'),
         },
       };
     }
@@ -489,7 +625,7 @@ export async function purgeOldRecordsNow(): Promise<ServiceResult<{ purged: numb
   try {
     const response = await sendDashboardMessage({ subtype: 'purge_now' });
     if (response.success) {
-      return { data: { purged: Number(response.purged || 0), skipped: Boolean(response.skipped) } };
+      return { data: { purged: requiredNonNegativeNumber(response.purged, 'purged'), skipped: requiredBoolean(response.skipped, 'skipped') } };
     }
     return { error: String(response.error || 'Purge failed') };
   } catch (error) {
@@ -506,7 +642,7 @@ export async function purgeContentNow(): Promise<ServiceResult<{ purged: number;
   try {
     const response = await sendDashboardMessage({ subtype: 'content_purge_now' });
     if (response.success) {
-      return { data: { purged: Number(response.purged || 0), skipped: Boolean(response.skipped) } };
+      return { data: { purged: requiredNonNegativeNumber(response.purged, 'purged'), skipped: requiredBoolean(response.skipped, 'skipped') } };
     }
     return { error: String(response.error || 'Content purge failed') };
   } catch (error) {
@@ -523,7 +659,7 @@ export async function appendToLogs(ids: number[]): Promise<ServiceResult<{ appen
   try {
     const response = await sendDashboardMessage({ subtype: 'append_to_obsidian', ids });
     if (response.success) {
-      return { data: { appended: Number(response.appended || ids.length) } };
+      return { data: { appended: requiredNonNegativeNumber(response.appended, 'appended') } };
     }
     return { error: response.error ? String(response.error) : 'Append failed' };
   } catch (error) {
@@ -544,8 +680,8 @@ export async function queryAuditLogs(
     if (response.success) {
       return {
         data: {
-          rows: (response.rows || []) as Array<{ id: number; provider: string; url: string; created_at: number }>,
-          total: Number(response.total || 0),
+          rows: requiredRows(response.rows, 'rows', isAuditLogEntry),
+          total: requiredNonNegativeNumber(response.total, 'total'),
         },
       };
     }

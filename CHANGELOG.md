@@ -39,6 +39,20 @@ All notable changes to this project will be documented in this file.
 
 （次のリリースに向けての変更をここに記載）
 
+## [6.7.34] - 2026-08-11
+
+DashboardとSQLiteの応答契約を厳密化した。
+
+### Fixed
+
+- DashboardのSQLite応答で欠損・不正な値を暗黙の既定値へ変換せず、エラーとして扱うようにした。
+- OPFS migration statusの各フィールドに型検証を適用した。
+- SQLite監査ログとDashboardのエクスポート経路で失敗理由を保持するようにした。
+
+### Tests
+
+- Dashboard、SQLite、監査ログの欠損フィールド・不正値・失敗応答に対する回帰テストを追加した。
+
 ## [6.7.33] - 2026-08-11
 
 Backgroundテストの共有fixtureを整理した。

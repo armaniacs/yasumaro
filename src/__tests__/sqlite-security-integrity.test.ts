@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { MessageHandlerRegistry } from '../background/handlers/MessageHandlerRegistry.js';
+import { createMessageHandlerRegistry } from '../background/handlers/createMessageHandlerRegistry.js';
 
 describe('SQLite Security & Data Integrity', () => {
   describe('Issue 1: DASHBOARD_SQLITE sender validation (Red Team High)', () => {
@@ -42,8 +43,32 @@ describe('SQLite Security & Data Integrity', () => {
     ];
 
     it('registers DASHBOARD_SQLITE as extension-only', () => {
-      const source = readFileSync(join(process.cwd(), 'src/background/service-worker.ts'), 'utf8');
-      expect(source).toMatch(/registry\.register\(\s*'DASHBOARD_SQLITE'\s*,[^,]+,\s*'extension-only'\s*\)/);
+      const composition = createMessageHandlerRegistry({
+        runtimeId: RUNTIME_ID,
+        recordingLogic: { record: async () => ({ success: true }) },
+        tabCache: { add: () => undefined, update: () => undefined },
+        obsidian: { testConnection: async () => ({ success: true, message: 'ok' }) },
+        aiService: { testConnection: async () => ({ success: true, message: 'ok' }) },
+        manualRecordDeps: {} as never,
+        saveRecordDeps: {} as never,
+        hasPrivacyConsent: async () => true,
+        buildAllowedUrls: () => new Set(),
+        getSettings: async () => ({}),
+        isDomainAllowed: async () => true,
+        clearSettingsCache: () => undefined,
+        notifyAiTestProgress: () => undefined,
+        getPrivacyCache: () => null,
+        updateActivity: async () => undefined,
+        lockSession: async () => undefined,
+        autoSavedBadgeTabs: { add: () => undefined, has: () => false },
+        initExportScheduler: async () => undefined,
+        updateConsentBadge: async () => undefined,
+        generateWeeklySummary: async () => true,
+        generateMonthlySummary: async () => true,
+        dashboardSqliteHandler: () => undefined,
+      });
+      expect(composition.handlers.DASHBOARD_SQLITE).toBeDefined();
+      expect(composition.trustLevels.DASHBOARD_SQLITE).toBe('extension-only');
     });
 
     it('should reject DASHBOARD_SQLITE calls from content scripts for ALL subtypes', () => {

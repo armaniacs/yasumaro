@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const mockInsertAuditLog = vi.fn().mockResolvedValue({ id: 1 });
+const mockInsertAuditLog = vi.fn().mockResolvedValue({ success: true, data: { id: 1 } });
 const mockQueryAuditLogResult = vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
 
 vi.mock('../../background/sqliteClient.js', () => {
   class MockSqliteClient {
-    async insertAuditLog(record: Record<string, unknown>) {
+    async insertAuditLogResult(record: Record<string, unknown>) {
       return mockInsertAuditLog(record);
     }
 
@@ -31,11 +31,11 @@ describe('auditLog', () => {
   beforeEach(() => {
     mockInsertAuditLog.mockClear();
     mockQueryAuditLogResult.mockClear();
-    mockInsertAuditLog.mockResolvedValue({ id: 1 });
+    mockInsertAuditLog.mockResolvedValue({ success: true, data: { id: 1 } });
     mockQueryAuditLogResult.mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
   });
 
-  it('recordAuditLog calls SqliteClient.insertAuditLog with provider, url, and a timestamp', async () => {
+  it('recordAuditLog calls SqliteClient.insertAuditLogResult with provider, url, and a timestamp', async () => {
     await recordAuditLog({ provider: 'gemini', url: 'https://example.com/page' });
 
     expect(mockInsertAuditLog).toHaveBeenCalledWith(
@@ -45,14 +45,14 @@ describe('auditLog', () => {
     expect(typeof callArg.created_at).toBe('number');
   });
 
-  it('recordAuditLog does not throw when insertAuditLog rejects', async () => {
+  it('recordAuditLog does not throw when insertAuditLogResult rejects', async () => {
     mockInsertAuditLog.mockRejectedValue(new Error('offscreen unreachable'));
 
     await expect(recordAuditLog({ provider: 'gemini', url: 'https://example.com/page' })).resolves.toBeUndefined();
   });
 
-  it('recordAuditLog logs error when insertAuditLog returns null', async () => {
-    mockInsertAuditLog.mockResolvedValue(null);
+  it('recordAuditLog logs error when insertAuditLogResult fails', async () => {
+    mockInsertAuditLog.mockResolvedValue({ success: false, error: { message: 'insert failed' } });
     const { logError } = await import('../logger.js');
 
     await recordAuditLog({ provider: 'gemini', url: 'https://example.com/page' });
