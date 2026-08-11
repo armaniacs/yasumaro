@@ -39,6 +39,15 @@ All notable changes to this project will be documented in this file.
 
 （次のリリースに向けての変更をここに記載）
 
+## [6.7.35] - 2026-08-11
+
+アーキテクチャ深掘り作業のPBI整理を完了した。
+
+### Docs
+
+- 完了したhandler registry、offline retry、Dashboard decoderのPBIをアーカイブへ移動した。
+- アーキテクチャ深掘りEpicとPBI INDEXを更新した。
+
 ## [6.7.34] - 2026-08-11
 
 DashboardとSQLiteの応答契約を厳密化した。
