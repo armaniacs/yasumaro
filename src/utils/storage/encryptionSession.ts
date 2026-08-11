@@ -140,33 +140,64 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
         return cachedEncryptionKey;
     }
 
-    // マスターパスワード未設定の場合：従来の方式を使用（マイグレーション準備）
-    // 注意：この方式は脆弱だが、マイグレーション完了まで維持
+    // マスターパスワード未設定の場合：session storageから秘密を取得、なければ生成
+    // 【セキュリティ強化】ENCRYPTION_SECRET を chrome.storage.local から
+    // chrome.storage.session へ移行。local storage には平文の秘密を保持しない。
+    // chrome.storage.session が利用不能な環境（古いブラウザ等）では
+    // local storage にフォールバックする。
+    const hasSessionStorage = chrome.storage && chrome.storage.session;
     let saltBase64 = result[StorageKeys.ENCRYPTION_SALT] as string;
-    let secret = result[StorageKeys.ENCRYPTION_SECRET] as string;
 
-    if (!saltBase64 || !secret) {
-        // 初回: ソルトとシークレットを生成
+    if (!saltBase64) {
+        // 初回: ソルトを生成してlocal storageに保存
         const salt = generateSalt();
         saltBase64 = btoa(String.fromCharCode(...salt));
-        // 32バイトのランダムシークレットを生成
-        const secretBytes = crypto.getRandomValues(new Uint8Array(32));
-        secret = btoa(String.fromCharCode(...secretBytes));
-
         await chrome.storage.local.set({
             [StorageKeys.ENCRYPTION_SALT]: saltBase64,
-            [StorageKeys.ENCRYPTION_SECRET]: secret
         });
+    }
+
+    // マイグレーション: local storage に残っている旧秘密を session storage へ移動
+    const localSecret = result[StorageKeys.ENCRYPTION_SECRET] as string;
+    if (localSecret && hasSessionStorage) {
+        await chrome.storage.session.set({
+            [StorageKeys.ENCRYPTION_SECRET]: localSecret
+        });
+        await chrome.storage.local.remove(StorageKeys.ENCRYPTION_SECRET);
+    }
+
+    let sessionSecret: string;
+    if (hasSessionStorage) {
+        // session storage から秘密を取得
+        const sessionResult = await chrome.storage.session.get(StorageKeys.ENCRYPTION_SECRET);
+        sessionSecret = sessionResult[StorageKeys.ENCRYPTION_SECRET] as string;
+
+        if (!sessionSecret) {
+            // 初回または再起動後: 新しい秘密を生成してsession storageに保存
+            const secretBytes = crypto.getRandomValues(new Uint8Array(32));
+            sessionSecret = btoa(String.fromCharCode(...secretBytes));
+
+            await chrome.storage.session.set({
+                [StorageKeys.ENCRYPTION_SECRET]: sessionSecret
+            });
+        }
+    } else {
+        // フォールバック: session storage が利用不能な場合は local storage を使用
+        sessionSecret = localSecret || (() => {
+            const secretBytes = crypto.getRandomValues(new Uint8Array(32));
+            return btoa(String.fromCharCode(...secretBytes));
+        })();
+        if (!localSecret) {
+            await chrome.storage.local.set({
+                [StorageKeys.ENCRYPTION_SECRET]: sessionSecret
+            });
+        }
     }
 
     const salt = base64ToUint8Array(saltBase64);
 
     // ランダムなsecretとsaltからPBKDF2でキー導出
-    // 【セキュリティ】secretは初回生成時にcrypto.getRandomValuesで生成した32バイトの乱数であり、
-    // これ単体で十分なエントロピーを持つ。以前はchrome.runtime.id（Extension ID）を
-    // 追加で結合していたが、Extension IDは公開情報であるためセキュリティ上の
-    // 価値がなく、誤った安心感を与えるだけだったため削除した。
-    cachedEncryptionKey = await deriveKey(secret, salt);
+    cachedEncryptionKey = await deriveKey(sessionSecret, salt);
     return cachedEncryptionKey;
 }
 
