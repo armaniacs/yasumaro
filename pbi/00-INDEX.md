@@ -20,12 +20,9 @@
 |---|---|---|---|---|
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
 | 🔶 [2026-08-07-08-refactor-ai-client-service-unification.md](2026-08-07-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合（modelName型ドリフトは解消済み。AIClient削除は中核パスの高リスクのため保留） |
-| 🔶 [2026-08-10-01-refactor-dashboard-sqlite-result-contract.md](2026-08-10-01-refactor-dashboard-sqlite-result-contract.md) | 🔴高 | 🟡軽微 | 🔧 | ダッシュボードSQLiteの失敗結果を統一し、空結果と障害を区別する（Epic 2026-08-11-01 に統合。実装完了、コードレビュー待ち） |
-| 🔶 [2026-08-10-02-refactor-sqlite-client-result-surface.md](2026-08-10-02-refactor-sqlite-client-result-surface.md) | 🔴高 | 🟡軽微 | 🔧 | SqliteClientの重複Result/簡易結果メソッドとテスト対応表を整理する（Epic 2026-08-11-01 に統合。実装完了、コードレビュー待ち） |
-| 🔶 [2026-08-10-03-refactor-background-composition-wiring.md](2026-08-10-03-refactor-background-composition-wiring.md) | 🔴高 | 🔴あり | 🔧 | Backgroundの依存配線をcomposition moduleへ集約する（Epic 2026-08-11-01 に統合。handler registry移設は範囲外として残存） |
-| 🔶 [2026-08-10-04-refactor-sqlite-offscreen-response-protocol.md](2026-08-10-04-refactor-sqlite-offscreen-response-protocol.md) | 🔴高 | 🟡軽微 | 🔧 | SWとoffscreen間のSQLite応答を型付きprotocolへ統一する（Epic 2026-08-11-01 に統合。実装完了、コードレビュー待ち） |
-| 🔶 [2026-08-10-05-refactor-recording-offline-policy.md](2026-08-10-05-refactor-recording-offline-policy.md) | 🟡中 | 🟡軽微 | 🔧 | RecordingPipelineのオフライン再試行ポリシーを宣言化する（Epic 2026-08-11-01 に統合。実装完了、コードレビュー待ち） |
-| 🔶 [2026-08-11-01-refactor-architecture-deepening-epic.md](2026-08-11-01-refactor-architecture-deepening-epic.md) | 🔴高 | 🔴あり | 🔧 | SQLite結果契約、Dashboard、Background composition、RecordingPipelineを依存順に深深化する統合Epic（Candidate 1〜5 実装完了。コードレビューのみ未了） |
+| ⬜ [2026-08-11-07-fix-sqlite-history-panel-reducer-consistency.md](2026-08-11-07-fix-sqlite-history-panel-reducer-consistency.md) | 🔴高 | 🟡軽微 | 🔧 | SQLite history panelの直接state mutationとreducerの二重経路を統一する |
+| ⬜ [2026-08-11-08-fix-metadata-patch-queue-capacity.md](2026-08-11-08-fix-metadata-patch-queue-capacity.md) | 🔴高 | 🔴あり | 🔧 | metadata patch queueのpayload byte上限、同一URL統合、大容量contentのretry方針を定義する |
+| ⬜ [2026-08-11-09-fix-history-fallback-failure-contract.md](2026-08-11-09-fix-history-fallback-failure-contract.md) | 🟡中 | 🟡軽微 | 🔧 | fallback検索失敗時のover-fetch漏れとrows/total不整合を解消する |
 
 ---
 
@@ -45,6 +42,20 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-11 アーキテクチャ深深化Epicでアーカイブ済み（11件）
+
+- 2026-08-11-01-refactor-architecture-deepening-epic.md (5候補と子PBIを依存順に実装。atomic Saved URL保存、unified history query、panel state seam、handler依存縮小、review summaryのAIService移行を完了)
+- 2026-08-11-02-deepen-saved-url-entry-module.md (Saved URL metadataのatomic CAS、metadata patch retry、旧queue payload互換)
+- 2026-08-11-03-unify-history-query-module.md (SQLite history panelのquery/enrichment統合、最新row限定enrichment)
+- 2026-08-11-04-deepen-sqlite-history-panel-test-seams.md (DOM非依存state seam、request generation guard、stale response防止)
+- 2026-08-11-05-unify-recording-handler-interface.md (handler最小依存、共有closure、composition wiring整理)
+- 2026-08-11-06-migrate-review-summary-to-ai-service.md (AIService factory注入、alarm/message共有、AIClient直接生成除去)
+- 2026-08-10-01-refactor-dashboard-sqlite-result-contract.md (Epicへ統合し、SQLite結果契約とDashboard失敗処理を実装)
+- 2026-08-10-02-refactor-sqlite-client-result-surface.md (Epicへ統合し、重複結果surfaceを整理)
+- 2026-08-10-03-refactor-background-composition-wiring.md (Epicへ統合し、production compositionとrecording依存を整理)
+- 2026-08-10-04-refactor-sqlite-offscreen-response-protocol.md (Epicへ統合し、SQLite response protocolを実装)
+- 2026-08-10-05-refactor-recording-offline-policy.md (Epicへ統合し、offline policy metadataを実装)
 
 ### 2026-08-11 セッションでアーカイブ済み（3件）
 
