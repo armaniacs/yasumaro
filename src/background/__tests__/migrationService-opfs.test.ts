@@ -43,7 +43,7 @@ vi.mock('../../utils/logger.js', () => ({
 describe('PBI-25: OPFS Recovery Migration', () => {
     let migrationService: MigrationService;
     let mockSqliteClient: {
-        insertBatch: ReturnType<typeof vi.fn>;
+        insertBatchResult: ReturnType<typeof vi.fn>;
         getStatus: ReturnType<typeof vi.fn>;
     };
 
@@ -55,7 +55,7 @@ describe('PBI-25: OPFS Recovery Migration', () => {
         }
 
         mockSqliteClient = {
-            insertBatch: vi.fn().mockResolvedValue({ count: 0 }),
+            insertBatchResult: vi.fn().mockResolvedValue({ success: true, data: { count: 0 } }),
             getStatus: vi.fn().mockResolvedValue({ fallback: false, initialized: true }),
         };
 
@@ -126,7 +126,7 @@ describe('PBI-25: OPFS Recovery Migration', () => {
                 ],
             };
 
-            mockSqliteClient.insertBatch.mockResolvedValue({ count: 2 });
+            mockSqliteClient.insertBatchResult.mockResolvedValue({ success: true, data: { count: 2 } });
 
             const result = await migrationService.migrateOpfsRecovery();
 
@@ -146,13 +146,13 @@ describe('PBI-25: OPFS Recovery Migration', () => {
             expect(result.migrated).toBe(0);
         });
 
-        it('should preserve flag on insertBatch failure', async () => {
+        it('should preserve flag on insertBatchResult failure', async () => {
             storageMock['opfs_fallback_mode'] = true;
             storageMock['FALLBACK_STORAGE_DATA'] = {
                 records: [{ url: 'https://example.com', created_at: 123 }],
             };
 
-            mockSqliteClient.insertBatch.mockResolvedValue(null);
+            mockSqliteClient.insertBatchResult.mockResolvedValue({ success: false, error: { kind: 'sqlite_error', message: 'insert failed', retriable: false } });
 
             const result = await migrationService.migrateOpfsRecovery();
 
@@ -185,12 +185,12 @@ describe('PBI-25: OPFS Recovery Migration', () => {
                 ],
             };
 
-            mockSqliteClient.insertBatch.mockImplementation((batch) => {
+            mockSqliteClient.insertBatchResult.mockImplementation((batch) => {
                 expect(batch[0].url).toBe('https://example.com');
                 expect(batch[0].title).toBe('Test Title');
                 expect(batch[0].tags).toBe('tag1, tag2');
                 expect(batch[0].is_starred).toBe(1);
-                return Promise.resolve({ count: 1 });
+                return Promise.resolve({ success: true, data: { count: 1 } });
             });
 
             const result = await migrationService.migrateOpfsRecovery();
@@ -208,12 +208,12 @@ describe('PBI-25: OPFS Recovery Migration', () => {
             storageMock['FALLBACK_STORAGE_DATA'] = { records };
 
             let callCount = 0;
-            mockSqliteClient.insertBatch.mockImplementation(() => {
+            mockSqliteClient.insertBatchResult.mockImplementation(() => {
                 callCount++;
                 if (callCount === 1) {
-                    return Promise.resolve({ count: 100 });
+                    return Promise.resolve({ success: true, data: { count: 100 } });
                 }
-                return Promise.resolve(null);
+                return Promise.resolve({ success: false, error: { kind: 'sqlite_error', message: 'insert failed', retriable: false } });
             });
 
             const result = await migrationService.migrateOpfsRecovery();
@@ -228,7 +228,7 @@ describe('PBI-25: OPFS Recovery Migration', () => {
             storageMock['FALLBACK_STORAGE_DATA'] = {
                 records: [{ url: 'https://example.com', created_at: 123 }],
             };
-            mockSqliteClient.insertBatch.mockResolvedValue({ count: 1 });
+            mockSqliteClient.insertBatchResult.mockResolvedValue({ success: true, data: { count: 1 } });
 
             const removeSpy = vi.spyOn(chrome.storage.local, 'remove');
 
@@ -250,7 +250,7 @@ describe('PBI-25: OPFS Recovery Migration', () => {
             storageMock['FALLBACK_STORAGE_DATA'] = {
                 records: [{ url: 'https://example.com', created_at: 123 }],
             };
-            mockSqliteClient.insertBatch.mockResolvedValue({ count: 1 });
+            mockSqliteClient.insertBatchResult.mockResolvedValue({ success: true, data: { count: 1 } });
 
             const originalRemove = chrome.storage.local.remove;
             vi.spyOn(chrome.storage.local, 'remove').mockImplementationOnce(async () => {

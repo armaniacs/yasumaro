@@ -71,7 +71,7 @@ describe('mapLegacyEntryToRecord', () => {
 describe('MigrationService', () => {
   let service: MigrationService;
   let sqliteClient: {
-    insertBatch: ReturnType<typeof vi.fn>;
+    insertBatchResult: ReturnType<typeof vi.fn>;
     queryResult: ReturnType<typeof vi.fn>;
     updateResult: ReturnType<typeof vi.fn>;
     getStatus: ReturnType<typeof vi.fn>;
@@ -107,7 +107,7 @@ describe('MigrationService', () => {
     mockStorage = {};
     setupChrome();
     sqliteClient = {
-      insertBatch: vi.fn().mockResolvedValue({ count: 0 }),
+      insertBatchResult: vi.fn().mockResolvedValue({ success: true, data: { count: 0 } }),
       queryResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
       updateResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
       getStatus: vi.fn().mockResolvedValue({ fallback: false, initialized: true }),
@@ -123,14 +123,14 @@ describe('MigrationService', () => {
     it('completes when already-migrated status is set', async () => {
       mockStorage['yasumaro_migration_status'] = 'completed';
       await service.run();
-      expect(sqliteClient.insertBatch).not.toHaveBeenCalled();
+      expect(sqliteClient.insertBatchResult).not.toHaveBeenCalled();
     });
 
     it('marks fresh_install when no legacy data exists', async () => {
       mockStorage['savedUrlsWithTimestamps'] = [];
       await service.run();
       expect(mockStorage['yasumaro_migration_status']).toBe('fresh_install');
-      expect(sqliteClient.insertBatch).not.toHaveBeenCalled();
+      expect(sqliteClient.insertBatchResult).not.toHaveBeenCalled();
     });
 
     it('migrates data in batches', async () => {
@@ -138,30 +138,30 @@ describe('MigrationService', () => {
         url: `https://x${i}.com`, timestamp: i,
       }));
       mockStorage['savedUrlsWithTimestamps'] = entries;
-      sqliteClient.insertBatch.mockResolvedValue({ count: 100 });
+      sqliteClient.insertBatchResult.mockResolvedValue({ success: true, data: { count: 100 } });
 
       await service.run();
 
       // 250 entries / 100 batch = 3 calls (100 + 100 + 50)
-      expect(sqliteClient.insertBatch).toHaveBeenCalledTimes(3);
+      expect(sqliteClient.insertBatchResult).toHaveBeenCalledTimes(3);
     });
 
-    it('handles insertBatch returning null', async () => {
+    it('handles insertBatchResult returning a failure result', async () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 1 },
       ];
-      sqliteClient.insertBatch.mockResolvedValue(null);
+      sqliteClient.insertBatchResult.mockResolvedValue({ success: false, error: { kind: 'sqlite_error', message: 'insert failed', retriable: false } });
 
       await service.run();
 
       expect(mockStorage['yasumaro_migration_status']).not.toBe('completed');
     });
 
-    it('handles insertBatch throwing an error', async () => {
+    it('handles insertBatchResult throwing an error', async () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 1 },
       ];
-      sqliteClient.insertBatch.mockRejectedValue(new Error('DB error'));
+      sqliteClient.insertBatchResult.mockRejectedValue(new Error('DB error'));
 
       await service.run();
 
@@ -174,7 +174,7 @@ describe('MigrationService', () => {
         { url: 'https://b.com', timestamp: 2 },
         { url: 'https://c.com', timestamp: 3 },
       ];
-      sqliteClient.insertBatch.mockResolvedValue({ count: 2 });
+      sqliteClient.insertBatchResult.mockResolvedValue({ success: true, data: { count: 2 } });
 
       await service.run();
 
@@ -196,7 +196,7 @@ describe('MigrationService', () => {
         mockStorage['savedUrlsWithTimestamps'] = [
           { url: 'https://a.com', timestamp: 1 },
         ];
-        sqliteClient.insertBatch.mockRejectedValue(new Error('DB error'));
+        sqliteClient.insertBatchResult.mockRejectedValue(new Error('DB error'));
       });
 
       it('increments the retry count on each failure without reaching the limit', async () => {
@@ -224,8 +224,8 @@ describe('MigrationService', () => {
 
         await service.run();
 
-        // insertBatch should not be called — run() should short-circuit
-        expect(sqliteClient.insertBatch).not.toHaveBeenCalled();
+        // insertBatchResult should not be called — run() should short-circuit
+        expect(sqliteClient.insertBatchResult).not.toHaveBeenCalled();
       });
 
       it('resets the retry count once migration succeeds', async () => {
@@ -233,7 +233,7 @@ describe('MigrationService', () => {
         expect(mockStorage['yasumaro_migration_retry_count']).toBe(1);
 
         // Now make the next attempt succeed
-        sqliteClient.insertBatch.mockResolvedValue({ count: 1 });
+        sqliteClient.insertBatchResult.mockResolvedValue({ success: true, data: { count: 1 } });
         await service.run();
 
         expect(mockStorage['yasumaro_migration_status']).toBe('completed');
@@ -420,7 +420,7 @@ describe('MigrationService', () => {
       mockStorage['FALLBACK_STORAGE_DATA'] = {
         records: [{ url: 'https://a.com', created_at: 1 }],
       };
-      sqliteClient.insertBatch.mockResolvedValue(null);
+      sqliteClient.insertBatchResult.mockResolvedValue({ success: false, error: { kind: 'sqlite_error', message: 'insert failed', retriable: false } });
 
       const result = await service.migrateOpfsRecovery();
       expect(result.success).toBe(false);
@@ -432,7 +432,7 @@ describe('MigrationService', () => {
       mockStorage['FALLBACK_STORAGE_DATA'] = {
         records: [{ url: 'https://a.com', created_at: 1 }],
       };
-      sqliteClient.insertBatch.mockRejectedValue(new Error('Batch error'));
+      sqliteClient.insertBatchResult.mockRejectedValue(new Error('Batch error'));
 
       const result = await service.migrateOpfsRecovery();
       expect(result.success).toBe(false);

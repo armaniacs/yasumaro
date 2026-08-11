@@ -131,10 +131,11 @@ export class MigrationService {
         const batch = remaining.slice(i, i + BATCH_SIZE).map(mapLegacyEntryToRecord);
 
         try {
-          const result = await this.sqliteClient.insertBatch(batch);
+          const result = await this.sqliteClient.insertBatchResult(batch);
 
-          if (result !== null) {
-            const currentProgress = progress + i + result.count;
+          const normalized = result;
+          if (normalized.success) {
+            const currentProgress = progress + i + normalized.data.count;
             batchesSinceLastWrite++;
 
             if (batchesSinceLastWrite >= PROGRESS_WRITE_INTERVAL || i + BATCH_SIZE >= remaining.length) {
@@ -143,11 +144,11 @@ export class MigrationService {
               batchesSinceLastWrite = 0;
             }
 
-            if (result.count < batch.length) {
+            if (normalized.data.count < batch.length) {
               hasErrors = true;
-              addLog(LogType.WARN, 'Migration: insertBatch partially succeeded', {
+              addLog(LogType.WARN, 'Migration: insertBatchResult partially succeeded', {
                 batchSize: batch.length,
-                insertedCount: result.count,
+                insertedCount: normalized.data.count,
               });
             }
           } else {
@@ -158,8 +159,9 @@ export class MigrationService {
               lastWrittenProgress = currentProgress;
               batchesSinceLastWrite = 0;
             }
-            addLog(LogType.WARN, 'Migration: insertBatch failed or returned null, will retry', {
+            addLog(LogType.WARN, 'Migration: insertBatchResult failed, will retry', {
               batchSize: batch.length,
+              error: normalized.error.message,
             });
           }
         } catch (batchError) {
@@ -447,15 +449,16 @@ export class MigrationService {
         const batch = records.slice(i, i + BATCH_SIZE).map(convertFallbackRecord);
 
         try {
-          const result = await this.sqliteClient.insertBatch(batch);
+          const result = await this.sqliteClient.insertBatchResult(batch);
 
-          if (result !== null) {
-            totalMigrated += result.count;
+          const normalized = result;
+          if (normalized.success) {
+            totalMigrated += normalized.data.count;
           } else {
             return {
               success: false,
               migrated: totalMigrated,
-              error: 'insertBatch returned null',
+              error: normalized.error.message,
             };
           }
         } catch (batchError) {

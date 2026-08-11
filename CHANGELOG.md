@@ -39,6 +39,37 @@ All notable changes to this project will be documented in this file.
 
 （次のリリースに向けての変更をここに記載）
 
+## [6.7.32] - 2026-08-11
+
+Backgroundの依存配線とhandler registryをcomposition rootへ集約した。
+
+### Refactor
+
+- Background servicesとRecordingPipelineの共有依存をcomposition rootで構築するよう整理した。
+- handler registryの登録を専用compositionへ移設し、19件のsender trust levelを一元管理した。
+- 不要になったServiceWorkerContextを削除し、関連テストと配線を更新した。
+
+### Tests
+
+- 全handlerの登録とsender trust policyを網羅する契約テストを追加した。
+
+## [6.7.31] - 2026-08-11
+
+Background composition、offline retry、Dashboard SQLite statusの残作業を完了した。
+
+### Fixed
+
+- **handler registryの登録先がService Workerに残っていた問題を修正**
+  19件のhandler登録をcomposition rootへ移設し、各message typeのtrust levelを一元管理するようにした。
+- **offline retryの既知の挙動が将来の変更で失われる問題を防止**
+  `obsidian_sync` retryで`maskedCount`を再利用せず、SQLite stepとmetadata stepを再実行しない契約をテストで固定した。
+- **DashboardのOPFS migration statusが未検証のままUIへ渡る問題を修正**
+  `opfsMigrationV2*`フィールドに厳密なdecoderを適用し、不正なboolean、日時、件数を成功値として扱わないようにした。
+
+### Refactor
+
+- sender trust policyの全19 message typeをcomposition rootの契約テストで網羅した。
+
 ## [6.7.30] - 2026-08-11
 
 SQLiteの結果処理とRecordingPipelineの依存配線を整理し、失敗理由が途中で失われる問題を修正した。

@@ -256,6 +256,43 @@ describe('Offline retry policy via step metadata', () => {
       );
     });
 
+    it('enqueues the payload shape offlineQueueProcessor reads back', async () => {
+      // Producer/consumer contract: offlineQueueProcessor destructures exactly
+      // these fields off job.payload. A rename here silently breaks retries.
+      mockProcess.mockResolvedValue({ summary: 'AI summary', maskedCount: 3, tags: ['x'] });
+
+      const offlineQueue = makeOfflineQueue();
+      const failingObsidian = {
+        appendToDailyNote: vi.fn<() => Promise<void>>().mockRejectedValue(new Error('Connection refused')),
+      };
+
+      const pipeline = new RecordingPipeline(
+        makeGetPrivacyInfo(),
+        failingObsidian as any,
+        makeAiClient() as any,
+        null,
+        offlineQueue as any,
+      );
+
+      await pipeline.execute({
+        title: 'Payload Shape',
+        url: 'https://example.com/payload',
+        content: 'Body content',
+      }, mockSettings);
+
+      expect(offlineQueue.enqueue).toHaveBeenCalledWith({
+        type: 'obsidian_sync',
+        payload: {
+          title: 'Payload Shape',
+          url: 'https://example.com/payload',
+          content: 'Body content',
+          summary: 'AI summary',
+          maskedCount: 3,
+          tags: ['x'],
+        },
+      });
+    });
+
     it('saveObsidian failure without offlineNetworkQueue does not crash', async () => {
       mockProcess.mockResolvedValue({ summary: 'AI summary', maskedCount: 0 });
 

@@ -24,18 +24,16 @@ describe('RecordingLogic - TrustChecker Integration', () => {
       expect(hasExecute).toBe(true);
     });
 
-    it('verifies recordingLogic delegates to pipeline', async () => {
+    it('verifies recordingLogic delegates to the injected pipeline', async () => {
       const recordingLogicSource = await import('fs').then(fs =>
         fs.readFileSync('src/background/recordingLogic.ts', 'utf8')
       );
 
-      // Extract the key sections
-      const pipelineIndex = recordingLogicSource.indexOf('createRecordingPipeline');
-      const executeIndex = recordingLogicSource.indexOf('pipeline.execute');
-
-      // Verify pipeline is created and executed
-      expect(pipelineIndex).toBeGreaterThanOrEqual(0);
-      expect(executeIndex).toBeGreaterThan(pipelineIndex);
+      // The pipeline is injected by the composition root, so recordingLogic must
+      // delegate to it without constructing one of its own (a second instance
+      // would split the automatic-record path off from the handler paths).
+      expect(recordingLogicSource).toContain('this.pipeline.execute');
+      expect(recordingLogicSource).not.toContain('createRecordingPipeline(');
     });
   });
 

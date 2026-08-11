@@ -11,7 +11,7 @@ import { ObsidianClient } from './obsidianClient.js';
 import type { AIService } from './ai/AIService.js';
 import type { SqliteClient } from './sqliteClient.js';
 import type { RecordingResult } from '../messaging/types.js';
-import { createRecordingPipeline, buildRecordingPipelineDeps } from './pipeline/RecordingPipeline.js';
+import type { RecordingPipeline } from './pipeline/RecordingPipeline.js';
 import { Mutex } from '../utils/Mutex.js';
 import { formatMarkdownStep } from './pipeline/steps/formatMarkdownStep.js';
 import { saveToObsidianStep } from './pipeline/steps/saveToObsidianStep.js';
@@ -92,13 +92,18 @@ export class RecordingLogic {
   private obsidian: ObsidianClient;
   private aiService: AIService;
   private sqliteClient: SqliteClient | null;
-  private mode: string | null;
+  private pipeline: RecordingPipeline;
 
-  constructor(obsidianClient: ObsidianClient, aiService: AIService, _privacyPipeline?: unknown | null, sqliteClient?: SqliteClient | null) {
+  constructor(
+    obsidianClient: ObsidianClient,
+    aiService: AIService,
+    pipeline: RecordingPipeline,
+    sqliteClient?: SqliteClient | null,
+  ) {
     this.obsidian = obsidianClient;
     this.aiService = aiService;
     this.sqliteClient = sqliteClient || null;
-    this.mode = null;
+    this.pipeline = pipeline;
   }
 
   // =========================================================================
@@ -132,15 +137,8 @@ export class RecordingLogic {
 
   async record(data: RecordingData): Promise<RecordingResult> {
     return RecordingLogic.withUrlRecordMutex(data.url, async () => {
-      const pipeline = createRecordingPipeline(buildRecordingPipelineDeps({
-        getPrivacyInfoWithCache: (url: string) => RecordingCache.getPrivacyInfoWithCache(url),
-        obsidian: this.obsidian,
-        aiService: this.aiService,
-        sqliteClient: this.sqliteClient,
-      }));
-
       const settings = await RecordingCache.getSettingsWithCache();
-      return await pipeline.execute(data, settings);
+      return await this.pipeline.execute(data, settings);
     });
   }
 

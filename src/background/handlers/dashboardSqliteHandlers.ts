@@ -7,7 +7,7 @@ import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 import { TOKEN_REQUIRED_SUBTYPES } from './dashboardSqliteProtocol.js';
 import type { DashboardSqliteRequest } from './dashboardSqliteProtocol.js';
 import { bytesToBase64, base64ToBytes } from '../../utils/crypto/index.js';
-import type { SqliteError } from '../sqliteClient.js';
+import type { CallResult, SqliteError } from '../sqliteClient.js';
 
 const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 const MAX_APPEND_IDS = 100;
@@ -21,7 +21,16 @@ const MAX_IMPORT_ROWS = 5000;
  * why it failed, so the reason travels with the return value instead of
  * being read back out of shared state afterward.
  */
-export type DepsResult<T> = { success: true; data: T } | { success: false; error: SqliteError };
+export type DepsResult<T> = CallResult<T>;
+
+/**
+ * Common failure mapping: every *Result deps call classifies its failure
+ * (kind, message, retriable), so the handler only forwards the message and
+ * retriable flag instead of reinterpreting them per case.
+ */
+function toFailure(result: { success: false; error: SqliteError }): { success: false; error: string; retriable: boolean } {
+  return { success: false, error: result.error.message, retriable: result.error.retriable };
+}
 
 export interface DashboardSqliteHandlerDeps {
   query: (params: Record<string, unknown>) => Promise<DepsResult<{ rows: unknown[]; total: number }>>;
@@ -47,7 +56,10 @@ export interface DashboardSqliteHandlerDeps {
   purgeOldRecords: (days?: number, max?: number) => Promise<DepsResult<{ purged: number }>>;
   purgeContent: (days?: number, max?: number, includeStarred?: boolean) => Promise<DepsResult<{ purged: number }>>;
   backupDb: () => Promise<DepsResult<Uint8Array>>;
-  runMigration: () => Promise<{ success: boolean; count: number; read?: number; inserted?: number; error?: string }>;
+  runMigration: () => Promise<
+    | { success: true; count: number; read: number; inserted: number; error?: string }
+    | { success: false; error?: string; count?: number; read?: number; inserted?: number }
+  >;
   getConfirmToken: () => Promise<string>;
   runBackfill: () => Promise<{ updated: number; total: number }>;
   runCleanup: () => Promise<{ removed: string[]; totalBytes: number }>;
@@ -101,7 +113,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
             tagFilter: payload.tagFilter,
           });
           if (!result.success) {
-            return { success: false, error: result.error.message, retriable: result.error.retriable };
+            return toFailure(result);
           }
           return { success: true, rows: result.data.rows, total: result.data.total };
         }
@@ -112,21 +124,21 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
             payload.offset ?? 0,
           );
           if (!result.success) {
-            return { success: false, error: result.error.message, retriable: result.error.retriable };
+            return toFailure(result);
           }
           return { success: true, rows: result.data.rows, total: result.data.total };
         }
         case 'toggle_star': {
           const result = await deps.toggleStar(payload.id);
           if (!result.success) {
-            return { success: false, error: result.error.message, retriable: result.error.retriable };
+            return toFailure(result);
           }
           return { success: true, ...result.data };
         }
         case 'delete': {
           const result = await deps.delete(payload.id);
           if (!result.success) {
-            return { success: false, error: result.error.message, retriable: result.error.retriable };
+            return toFailure(result);
           }
           return { success: true };
         }
@@ -138,21 +150,21 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           }
           const result = await deps.update(payload.id, changes);
           if (!result.success) {
-            return { success: false, error: result.error.message, retriable: result.error.retriable };
+            return toFailure(result);
           }
           return { success: true };
         }
         case 'get_count': {
           const result = await deps.getCount();
           if (!result.success) {
-            return { success: false, error: result.error.message, retriable: result.error.retriable };
+            return toFailure(result);
           }
           return { success: true, count: result.data };
         }
         case 'clear_all': {
           const result = await deps.clearAll();
           if (!result.success) {
-            return { success: false, error: result.error.message, retriable: result.error.retriable };
+            return toFailure(result);
           }
           return { success: true };
         }
@@ -217,7 +229,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           }
           const result = await deps.restoreDb(base64ToBytes(data));
           if (!result.success) {
-            return { success: false, error: result.error.message, retriable: result.error.retriable };
+            return toFailure(result);
           }
           return { success: true };
         }
@@ -234,7 +246,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
         case 'opfs_spike': {
           const result = await deps.runOpfsSpike();
           if (!result.success) {
-            return { success: false, error: result.error.message, retriable: result.error.retriable };
+            return toFailure(result);
           }
           return { success: true, report: result.data };
         }
@@ -300,7 +312,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
             max  !== null ? Number(max)  : undefined,
           );
           if (!result.success) {
-            return { success: false, error: result.error.message, retriable: result.error.retriable };
+            return toFailure(result);
           }
           return { success: true, purged: result.data.purged, skipped: false };
         }
@@ -310,7 +322,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
             offset: payload.offset,
           });
           if (!result.success) {
-            return { success: false, error: result.error.message, retriable: result.error.retriable };
+            return toFailure(result);
           }
           return { success: true, rows: result.data.rows, total: result.data.total };
         }
@@ -328,7 +340,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
             includeStarred,
           );
           if (!result.success) {
-            return { success: false, error: result.error.message, retriable: result.error.retriable };
+            return toFailure(result);
           }
           return { success: true, purged: result.data.purged, skipped: false };
         }
@@ -337,7 +349,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           if (result.success) {
             return { success: true, data: bytesToBase64(result.data) };
           }
-          return { success: false, error: result.error.message, retriable: result.error.retriable };
+          return toFailure(result);
         }
         case 'backfill_metadata': {
           try {
@@ -423,4 +435,3 @@ export function createSqliteClientDeps(
     ...serviceWorkerDeps,
   };
 }
-

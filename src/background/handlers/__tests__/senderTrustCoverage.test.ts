@@ -9,9 +9,8 @@
  * the old per-handler guards safe.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 import { checkSenderTrust, type SenderTrustLevel } from '../senderTrust.js';
+import { createMessageHandlerRegistry } from '../createMessageHandlerRegistry.js';
 
 const RUNTIME_ID = 'this-extension-id';
 
@@ -45,14 +44,31 @@ const EXPECTED_TRUST: Record<string, SenderTrustLevel> = {
   DASHBOARD_SQLITE: 'extension-only',
 };
 
-function readRegistrations(): Map<string, string> {
-  const source = readFileSync(join(process.cwd(), 'src/background/service-worker.ts'), 'utf8');
-  const found = new Map<string, string>();
-  const pattern = /registry\.register\(\s*'([A-Z_]+)'\s*,\s*[^,]+,\s*'([a-z-]+)'\s*\)/g;
-  for (const match of source.matchAll(pattern)) {
-    found.set(match[1]!, match[2]!);
-  }
-  return found;
+function createRegistry() {
+  return createMessageHandlerRegistry({
+    runtimeId: RUNTIME_ID,
+    recordingLogic: { record: async () => ({ success: true }) },
+    tabCache: { add: () => undefined, update: () => undefined },
+    obsidian: { testConnection: async () => ({ success: true, message: 'ok' }) },
+    aiService: { testConnection: async () => ({ success: true, message: 'ok' }) },
+    manualRecordDeps: {} as never,
+    saveRecordDeps: {} as never,
+    hasPrivacyConsent: async () => true,
+    buildAllowedUrls: () => new Set(),
+    getSettings: async () => ({}),
+    isDomainAllowed: async () => true,
+    clearSettingsCache: () => undefined,
+    notifyAiTestProgress: () => undefined,
+    getPrivacyCache: () => null,
+    updateActivity: async () => undefined,
+    lockSession: async () => undefined,
+    autoSavedBadgeTabs: { add: () => undefined, has: () => false },
+    initExportScheduler: async () => undefined,
+    updateConsentBadge: async () => undefined,
+    generateWeeklySummary: async () => true,
+    generateMonthlySummary: async () => true,
+    dashboardSqliteHandler: () => undefined,
+  });
 }
 
 const contentScriptSender = {
@@ -67,16 +83,14 @@ const extensionPageSender = {
 } as chrome.runtime.MessageSender;
 
 describe('sender trust coverage', () => {
-  const registrations = readRegistrations();
+  const registrations = createRegistry();
 
   it('registers every message type with an explicit trust level', () => {
-    expect(registrations.size).toBe(Object.keys(EXPECTED_TRUST).length);
+    expect(Object.keys(registrations.handlers).length).toBe(Object.keys(EXPECTED_TRUST).length);
   });
 
   it('assigns each type the trust level this test documents', () => {
-    const actual = Object.fromEntries([...registrations.entries()].sort());
-    const expected = Object.fromEntries(Object.entries(EXPECTED_TRUST).sort());
-    expect(actual).toEqual(expected);
+    expect(registrations.trustLevels).toEqual(EXPECTED_TRUST);
   });
 
   describe('content-script reachability', () => {

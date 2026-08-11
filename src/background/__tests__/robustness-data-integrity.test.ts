@@ -5,8 +5,8 @@
  */
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { RecordingLogic } from '../recordingLogic.ts';
 import { RecordingCache } from '../recordingCache.ts';
+import { makeRecordingLogic } from './helpers/makeRecordingLogic.ts';
 import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps } from '../../utils/storage.ts';
 import { PrivacyPipeline } from '../privacyPipeline.ts';
 import { NotificationHelper } from '../notificationHelper.ts';
@@ -87,7 +87,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
   let recordingLogic;
 
   beforeEach(() => {
-    recordingLogic = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
+    recordingLogic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
     vi.clearAllMocks();
 
     // Problem #7: URLキャッシュを初期化
@@ -129,7 +129,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
       const mockObsidianClient = {
         appendToDailyNote: vi.fn().mockRejectedValue(new Error('Network error'))
       };
-      recordingLogic = new RecordingLogic(mockObsidianClient, {});
+      recordingLogic = makeRecordingLogic(mockObsidianClient, {});
 
       const result = await recordingLogic.record({
         title: 'Test Page',
@@ -170,7 +170,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
       const mockObsidianClient = {
         appendToDailyNote: vi.fn().mockResolvedValue()
       };
-      recordingLogic = new RecordingLogic(mockObsidianClient, {});
+      recordingLogic = makeRecordingLogic(mockObsidianClient, {});
 
       const urlMap = new Map([['https://example.com', Date.now()]]);
       getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
@@ -197,7 +197,7 @@ describe('RecordingLogic: データ整合性（P0）', () => {
       const mockObsidianClient = {
         appendToDailyNote: vi.fn().mockRejectedValue(new Error('Network error'))
       };
-      recordingLogic = new RecordingLogic(mockObsidianClient, {});
+      recordingLogic = makeRecordingLogic(mockObsidianClient, {});
       getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
 
       const result = await recordingLogic.record({

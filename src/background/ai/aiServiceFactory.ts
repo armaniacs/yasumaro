@@ -2,9 +2,8 @@
  * aiServiceFactory.ts
  * Centralized factory for creating the AIService composition root.
  *
- * Eliminates the duplicated LocalAIService + RemoteAIService + FallbackAIService
- * wiring found in createBackgroundServices.ts, service-worker.ts, and
- * ServiceWorkerContext.ts.
+ * The only place that wires LocalAIService + RemoteAIService + FallbackAIService
+ * together; callers take the composed AIService rather than rebuilding it.
  */
 
 import { AIClient } from '../aiClient.js';

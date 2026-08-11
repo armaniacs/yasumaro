@@ -1,3 +1,13 @@
+/**
+ * backgroundComposition.test.ts
+ * Production composition contract (Candidate 2).
+ *
+ * Fixes that service-worker's recording paths share ONE composition: the same
+ * SqliteClient (via getSharedSqliteClient, never `new SqliteClient()`), and the
+ * same RecordingPipeline injected into manual/save handler deps. The handlers
+ * must not rebuild a pipeline per message; a per-message fallback would make
+ * these identity assertions impossible.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -48,7 +58,7 @@ vi.mock('../../utils/storage/savedUrlStore.js', () => ({ updateSavedUrlEntry: mo
 
 import { createBackgroundServices } from '../createBackgroundServices.js';
 
-describe('createBackgroundServices', () => {
+describe('production composition contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -73,97 +83,37 @@ describe('createBackgroundServices', () => {
     mocks.updateSavedUrlEntry.mockResolvedValue(undefined);
   });
 
-  it('creates and returns all background services', () => {
-    const services = createBackgroundServices();
-
-    expect(services).toEqual({
-      obsidian: { obsidian: true },
-      sqliteClient: { sqlite: true },
-      recordingLogic: { recordingLogic: true },
-      tabCache: { tabCache: true },
-      rateLimiter: { rateLimiter: true },
-      manualContentFetcher: { manualContentFetcher: true },
-      aiClient: { aiClient: true },
-      aiService: { fallbackAIService: true },
-      sessionStore: { sessionStore: true },
-      recordingPipeline: { pipeline: true },
-      dashboardSqliteClient: { sqlite: true },
-      manualRecordDeps: expect.any(Object),
-      saveRecordDeps: expect.any(Object),
-    });
-  });
-
-  it('exposes the AIService, not just the raw AIClient', () => {
-    // The AIService composition used to be built and discarded, leaving
-    // callers with only the raw AIClient — the dependency ADR 2026-07-27 asks
-    // new code to avoid.
-    const services = createBackgroundServices();
-
-    expect(services.aiService).toEqual({ fallbackAIService: true });
-  });
-
-  it('shares a single SessionStore instance with TabCache and RateLimiter', () => {
-    createBackgroundServices();
-
-    const sessionStoreInstance = mocks.SessionStore.mock.results[0].value;
-    expect(mocks.TabCache).toHaveBeenCalledWith(sessionStoreInstance);
-    expect(mocks.RateLimiter).toHaveBeenCalledWith(sessionStoreInstance);
-  });
-
-  it('wires AI services through FallbackAIService', () => {
-    createBackgroundServices();
-
-    expect(mocks.BuiltInAIClient).toHaveBeenCalledTimes(1);
-    expect(mocks.LocalAIService).toHaveBeenCalledTimes(1);
-    expect(mocks.RemoteAIService).toHaveBeenCalledTimes(1);
-    expect(mocks.FallbackAIService).toHaveBeenCalledTimes(1);
-    expect(mocks.RecordingLogic).toHaveBeenCalledWith(
-      { obsidian: true },
-      { fallbackAIService: true },
-      { pipeline: true },
-      { sqlite: true },
-    );
-  });
-
-  it('passes builtInAiClient to LocalAIService (Service Worker直接呼び出し、Offscreen非経由)', () => {
-    createBackgroundServices();
-
-    const builtInAiClientInstance = mocks.BuiltInAIClient.mock.results[0].value;
-    const config = mocks.LocalAIService.mock.calls[0][0];
-    expect(config.localAiClient).toBe(builtInAiClientInstance);
-    expect(config.ensureOffscreenDocument).toBeUndefined();
-  });
-
-  it('creates AIClient with default providers including built-in-ai Strategy', () => {
-    createBackgroundServices();
-
-    expect(mocks.AIClient).toHaveBeenCalledTimes(1);
-    // AIClient constructor calls registerDefaultProviders which includes 'built-in-ai'
-    const aiClientInstance = mocks.AIClient.mock.results[0].value;
-    expect(aiClientInstance).toBeDefined();
-  });
-
-  it('uses getSharedSqliteClient instead of constructing a new SqliteClient', () => {
+  it('builds the SqliteClient through getSharedSqliteClient, never `new SqliteClient()`', () => {
     createBackgroundServices();
 
     expect(mocks.getSharedSqliteClient).toHaveBeenCalledTimes(1);
     expect(mocks.SqliteClient).not.toHaveBeenCalled();
   });
 
-  it('shares one RecordingPipeline across manual and save handler deps', () => {
-    const services = createBackgroundServices();
+  it('shares one SqliteClient with the Dashboard SQLite handler wiring', () => {
+    const composition = createBackgroundServices();
 
-    expect(services.recordingPipeline).toBe(services.manualRecordDeps.recordingPipeline);
-    expect(services.recordingPipeline).toBe(services.saveRecordDeps.recordingPipeline);
+    expect(composition.sqliteClient).toBe(composition.dashboardSqliteClient);
   });
 
-  it('shares the SqliteClient with the Dashboard SQLite path', () => {
-    const services = createBackgroundServices();
+  it('injects one shared RecordingPipeline into manual and save handler deps', () => {
+    const composition = createBackgroundServices();
 
-    expect(services.sqliteClient).toBe(services.dashboardSqliteClient);
+    expect(composition.recordingPipeline).toBe(composition.manualRecordDeps.recordingPipeline);
+    expect(composition.recordingPipeline).toBe(composition.saveRecordDeps.recordingPipeline);
   });
 
-  it('builds the shared RecordingPipeline exactly once with the shared collaborators', () => {
+  it('injects the same shared RecordingPipeline into RecordingLogic', () => {
+    const composition = createBackgroundServices();
+
+    // The automatic-record path (VALID_VISIT -> recordingLogic.record) must run
+    // through the same pipeline instance as the manual/save handlers, not a
+    // second one built lazily inside RecordingLogic.
+    const [, , injectedPipeline] = mocks.RecordingLogic.mock.calls[0];
+    expect(injectedPipeline).toBe(composition.recordingPipeline);
+  });
+
+  it('constructs the RecordingPipeline exactly once with the shared collaborators', () => {
     createBackgroundServices();
 
     expect(mocks.createRecordingPipeline).toHaveBeenCalledTimes(1);

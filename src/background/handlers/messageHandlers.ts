@@ -15,7 +15,7 @@ import { encodeUrlSafeBase64 } from './urlNotificationHandlers.js';
 import { NotificationHelper } from '../notificationHelper.js';
 import type { MessageSenderLike } from '../rateLimiter.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
-import { createRecordingPipeline, buildRecordingPipelineDeps } from '../pipeline/RecordingPipeline.js';
+import type { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIService } from '../ai/AIService.js';
 import type { SqliteClient } from '../sqliteClient.js';
@@ -66,6 +66,11 @@ export interface ManualRecordHandlerDeps {
   obsidian: ObsidianClient;
   aiService: AIService | null;
   sqliteClient: SqliteClient | null;
+  /**
+   * Injected by the composition root. The handler never constructs a pipeline
+   * itself; a missing pipeline is a wiring error, not a fallback path.
+   */
+  recordingPipeline: RecordingPipeline;
   getSettings: () => Promise<Settings>;
   setUrlContent: (url: string, content: string) => Promise<void>;
 }
@@ -76,6 +81,11 @@ export interface SaveRecordHandlerDeps {
   obsidian: ObsidianClient;
   aiService: AIService | null;
   sqliteClient: SqliteClient | null;
+  /**
+   * Injected by the composition root. The handler never constructs a pipeline
+   * itself; a missing pipeline is a wiring error, not a fallback path.
+   */
+  recordingPipeline: RecordingPipeline;
   getSettings: () => Promise<Settings>;
   setUrlContent: (url: string, content: string) => Promise<void>;
 }
@@ -379,12 +389,7 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
       }
     }
 
-    const pipeline = createRecordingPipeline(buildRecordingPipelineDeps({
-      getPrivacyInfoWithCache: deps.getPrivacyInfoWithCache,
-      obsidian: deps.obsidian,
-      aiService: deps.aiService,
-      sqliteClient: deps.sqliteClient,
-    }));
+    const pipeline = deps.recordingPipeline;
 
     const result = await pipeline.execute({
       title: message.payload.title,
@@ -445,12 +450,7 @@ export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
 
     const settings = await deps.getSettings();
 
-    const pipeline = createRecordingPipeline(buildRecordingPipelineDeps({
-      getPrivacyInfoWithCache: deps.getPrivacyInfoWithCache,
-      obsidian: deps.obsidian,
-      aiService: deps.aiService,
-      sqliteClient: deps.sqliteClient,
-    }));
+    const pipeline = deps.recordingPipeline;
 
     const result = await pipeline.execute({
       title: message.payload.title,

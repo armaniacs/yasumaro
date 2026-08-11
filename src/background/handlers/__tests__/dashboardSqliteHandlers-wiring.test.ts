@@ -55,7 +55,7 @@ const TOKEN = 'test-confirm-token';
 
 function makeServiceWorkerDeps(overrides: Partial<SqliteClientBackedDeps> = {}): SqliteClientBackedDeps {
   return {
-    runMigration: vi.fn().mockResolvedValue({ success: true, count: 0 }),
+    runMigration: vi.fn().mockResolvedValue({ success: true, count: 0, read: 0, inserted: 0 }),
     getConfirmToken: vi.fn().mockResolvedValue(TOKEN),
     runBackfill: vi.fn().mockResolvedValue({ updated: 0, total: 0 }),
     runCleanup: vi.fn().mockResolvedValue({ removed: [], totalBytes: 0 }),

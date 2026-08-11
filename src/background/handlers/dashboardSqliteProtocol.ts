@@ -113,7 +113,7 @@ export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
       S extends 'toggle_star' ? { success: true; is_starred: number } :
       S extends 'delete' ? { success: true } :
       S extends 'update' ? { success: true } :
-      S extends 'migrate' ? { success: true; count: number; read?: number; inserted?: number } :
+      S extends 'migrate' ? { success: true; count: number; read: number; inserted: number } :
       S extends 'opfs_spike' ? { success: true; report: OpfsSpikeReport } :
       S extends 'clear_all' ? { success: true } :
       S extends 'get_count' ? { success: true; count: number } :
