@@ -39,6 +39,18 @@ All notable changes to this project will be documented in this file.
 
 （次のリリースに向けての変更をここに記載）
 
+## [6.7.39] - 2026-08-11
+
+前回のコミット分離漏れを補正した。
+
+### Refactor
+
+- SQLite history panelのstate seamを実装コミットへ追加した。
+
+### Docs
+
+- archive済みPBIの実装結果を確定記録した。
+
 ## [6.7.38] - 2026-08-11
 
 PBIとアーキテクチャ記録を実装状態へ同期した。
