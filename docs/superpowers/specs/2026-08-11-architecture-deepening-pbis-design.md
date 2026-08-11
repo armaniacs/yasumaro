@@ -39,6 +39,7 @@
 - AIClientはprovider implementationとして残し、新規呼び出し側はAIServiceを利用する。
 - 実際の複数adapterまたは明確なテストseamがない限り、新しいadapter interfaceを追加しない。
 - 既存ADRに反する変更は、摩擦が実在し再検討が必要な場合だけADRを更新する。
+- offscreen document lifecycleの所有権は、AI用途について未確立である（`2026-07-13-architecture-phase2-deep-dig.md`候補#3で「未解決の疑問」として持ち越され、`OffscreenManager`相当の実装は存在しない）。SQLite用途では`sqliteClient.ts`が独自にoffscreenドキュメントを管理しており、この既存所有権には触れない。子PBI5はAI用途向けの所有権を新たに確定させる作業を含み、既存制約の「維持」対象ではなく「今回決定する」対象として扱う。
 
 ## 親PBI: アーキテクチャ深深化候補5件を依存順に完了する
 
