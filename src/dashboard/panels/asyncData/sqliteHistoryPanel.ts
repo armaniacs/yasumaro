@@ -4,6 +4,7 @@ import {
   getSqliteStatus,
   appendToLogs,
 } from '../../dashboardSqliteService.js';
+import { removeSavedUrl } from '../../../utils/storageUrls.js';
 import { getMessageOr } from '../../../utils/i18n.js';
 import {
   queryHistory,
@@ -194,6 +195,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       dangerous: true,
     });
     if (!confirmed) return;
+    const entry = state.entries.find((candidate) => candidate.id === id);
     const result = await deleteLog(id);
     if ('error' in result) {
       // The entry stays in the list — removing it would claim a delete that
@@ -201,6 +203,14 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       state = historyStateReducer(state, { type: 'operationError', error: result.error });
       refresh();
       return;
+    }
+    // Keep the legacy source in sync so startup migration cannot recreate it.
+    if (entry) {
+      try {
+        await removeSavedUrl(entry.url);
+      } catch (error) {
+        console.error('Failed to remove legacy history entry:', error);
+      }
     }
     state = historyStateReducer(state, { type: 'deleteSuccess', id });
     refresh();
