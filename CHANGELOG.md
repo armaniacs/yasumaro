@@ -37,7 +37,23 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-（次のリリースに向けての変更をここに記載）
+- fallback検索失敗時にServiceErrorを返しover-fetchを解消
+- sqliteHistoryPanelのstate mutationをreducer経由に統一
+- metadata patch queueのcoalescing・payload上限100KB・content省略を実装
+- マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行
+- AIClientをRemoteAIServiceの薄い委譲ラッパー化しin-flight重複排除を実装
+
+## [6.7.41]
+
+### Fixed
+
+（前リリースの変更）
+
+## [6.7.41] - 2026-08-11
+
+### Fixed
+
+- ダッシュボードでURL経由（`?tab=`）に初期パネルを開いた際、「初期設定」パネルのヘッダーが残存し、サイドバー選択状態とパネル表示がずれる不具合を修正した。
 
 ## [6.7.40] - 2026-08-11
 
