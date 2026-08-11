@@ -374,7 +374,7 @@ describe('queryHistory', () => {
     expect(result.data.rows).toEqual([]);
   });
 
-  it('keeps the raw over-fetched rows when the fallback search fails', async () => {
+  it('returns the fallback search error instead of raw over-fetched rows', async () => {
     const rawRows = [makeRow(1, { tags: 'tech' })];
     const sources = makeSources({
       queryLogs: vi.fn().mockResolvedValue({ data: { rows: rawRows, total: 1 } }),
@@ -383,15 +383,9 @@ describe('queryHistory', () => {
 
     const result = await queryHistory({ ...baseOptions, tagFilter: '教育', tagInitiated: true }, sources);
 
-    // Existing behavior: the failed fallback leaves the over-fetched rows in
-    // place and only suppresses the notice; no searchQuery is applied.
-    expect(result).toEqual({
-      data: {
-        rows: rawRows,
-        total: 1,
-        tagFallback: { pendingTagFallback: null },
-      },
-    });
+    // A failed fallback search must surface the error; the raw over-fetched
+    // rows must not leak into the successful result.
+    expect(result).toEqual({ error: 'Search failed' });
   });
 
   it('returns an empty result (no fallback) for a manual tag filter with no matches', async () => {
