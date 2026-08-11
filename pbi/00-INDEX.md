@@ -20,11 +20,12 @@
 |---|---|---|---|---|
 | ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
 | 🔶 [2026-08-07-08-refactor-ai-client-service-unification.md](2026-08-07-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合（modelName型ドリフトは解消済み。AIClient削除は中核パスの高リスクのため保留） |
-| ⬜ [2026-08-10-01-refactor-dashboard-sqlite-result-contract.md](2026-08-10-01-refactor-dashboard-sqlite-result-contract.md) | 🔴高 | 🟡軽微 | 🔧 | ダッシュボードSQLiteの失敗結果を統一し、空結果と障害を区別する |
-| ⬜ [2026-08-10-02-refactor-sqlite-client-result-surface.md](2026-08-10-02-refactor-sqlite-client-result-surface.md) | 🔴高 | 🟡軽微 | 🔧 | SqliteClientの重複Result/簡易結果メソッドとテスト対応表を整理する |
-| ⬜ [2026-08-10-03-refactor-background-composition-wiring.md](2026-08-10-03-refactor-background-composition-wiring.md) | 🔴高 | 🔴あり | 🔧 | Backgroundの依存配線をcomposition moduleへ集約する |
-| ⬜ [2026-08-10-04-refactor-sqlite-offscreen-response-protocol.md](2026-08-10-04-refactor-sqlite-offscreen-response-protocol.md) | 🔴高 | 🟡軽微 | 🔧 | SWとoffscreen間のSQLite応答を型付きprotocolへ統一する |
-| ⬜ [2026-08-10-05-refactor-recording-offline-policy.md](2026-08-10-05-refactor-recording-offline-policy.md) | 🟡中 | 🟡軽微 | 🔧 | RecordingPipelineのオフライン再試行ポリシーを宣言化する |
+| 🔶 [2026-08-10-01-refactor-dashboard-sqlite-result-contract.md](2026-08-10-01-refactor-dashboard-sqlite-result-contract.md) | 🔴高 | 🟡軽微 | 🔧 | ダッシュボードSQLiteの失敗結果を統一し、空結果と障害を区別する（Epic 2026-08-11-01 に統合。実装完了、コードレビュー待ち） |
+| 🔶 [2026-08-10-02-refactor-sqlite-client-result-surface.md](2026-08-10-02-refactor-sqlite-client-result-surface.md) | 🔴高 | 🟡軽微 | 🔧 | SqliteClientの重複Result/簡易結果メソッドとテスト対応表を整理する（Epic 2026-08-11-01 に統合。実装完了、コードレビュー待ち） |
+| 🔶 [2026-08-10-03-refactor-background-composition-wiring.md](2026-08-10-03-refactor-background-composition-wiring.md) | 🔴高 | 🔴あり | 🔧 | Backgroundの依存配線をcomposition moduleへ集約する（Epic 2026-08-11-01 に統合。handler registry移設は範囲外として残存） |
+| 🔶 [2026-08-10-04-refactor-sqlite-offscreen-response-protocol.md](2026-08-10-04-refactor-sqlite-offscreen-response-protocol.md) | 🔴高 | 🟡軽微 | 🔧 | SWとoffscreen間のSQLite応答を型付きprotocolへ統一する（Epic 2026-08-11-01 に統合。実装完了、コードレビュー待ち） |
+| 🔶 [2026-08-10-05-refactor-recording-offline-policy.md](2026-08-10-05-refactor-recording-offline-policy.md) | 🟡中 | 🟡軽微 | 🔧 | RecordingPipelineのオフライン再試行ポリシーを宣言化する（Epic 2026-08-11-01 に統合。実装完了、コードレビュー待ち） |
+| 🔶 [2026-08-11-01-refactor-architecture-deepening-epic.md](2026-08-11-01-refactor-architecture-deepening-epic.md) | 🔴高 | 🔴あり | 🔧 | SQLite結果契約、Dashboard、Background composition、RecordingPipelineを依存順に深深化する統合Epic（Candidate 1〜5 実装完了。コードレビューのみ未了） |
 
 ---
 
@@ -44,6 +45,12 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-11 セッションでアーカイブ済み（3件）
+
+- 2026-08-11-02-refactor-handler-registry-composition-root.md (handler registryをcomposition rootへ移設し、全19件のtrust levelを契約テストで固定)
+- 2026-08-11-03-test-offline-retry-contract.md (obsidian_sync retryのmaskedCount不使用、SQLite/metadata step非再実行を契約テストで固定)
+- 2026-08-11-04-refactor-dashboard-opfs-migration-decoder.md (DashboardのopfsMigrationV2*フィールドに厳密decoderを適用)
 
 ### 2026-08-09 セッションでアーカイブ済み（17件）
 
@@ -310,8 +317,8 @@
 | 状態 | 件数 |
 |---|---|
 | ⬜ 未着手 | 1（✨機能追加 0 / 🔧非機能追加 1） |
-| 🔶 部分実装 | 1（2026-08-07-08 AIレイヤー統合） |
-| **`pbi/` 残存合計** | **2** |
+| 🔶 部分実装 | 7（2026-08-07-08 AIレイヤー統合、2026-08-10-01〜05、2026-08-11-01 Epic） |
+| **`pbi/` 残存合計** | **8** |
 | アーカイブ済みPBI | 245 |
 | アーカイブ済み実装計画 | 105 |
 
@@ -326,6 +333,8 @@
 | PBI | 内容 | 状態 |
 |---|---|---|
 | 2026-08-07-08（AIレイヤー統合） | modelName型ドリフト解消済み。AIClient削除は中核パスの高リスクのため保留 | 🔶 |
+| 2026-08-11-01（アーキテクチャ深化Epic） | Candidate 1〜5 実装完了、コードレビュー済み。type-check / validate / build 成功。handler registry移設のみ範囲外として残存 | 🔶 |
+| 2026-08-10-01〜05 | Epic 2026-08-11-01 に統合済み。個別の再実装は不要 | 🔶 |
 
 ### 2026-08-09 アーキテクチャレビュー由来（20〜24）の実施順と依存
 
