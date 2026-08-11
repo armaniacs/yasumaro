@@ -135,7 +135,8 @@ vi.mock('../../utils/storageUrls.js', () => ({
 }));
 
 // ─── Imports (after mocks) ──────────────────────────────────────────────────
-import { RecordingLogic, isValidFetchUrl, truncateContentSize } from '../recordingLogic.js';
+import { isValidFetchUrl, truncateContentSize } from '../recordingLogic.js';
+import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
 import { RecordingCache } from '../recordingCache.js';
 import { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
 import { PrivacyPipeline } from '../privacyPipeline.js';
@@ -176,7 +177,7 @@ function makeMockAiClient() {
 }
 
 function makeLogic() {
-  return new RecordingLogic(makeMockObsidian(), makeMockAiClient());
+  return makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────

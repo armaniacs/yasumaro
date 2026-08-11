@@ -34,6 +34,7 @@ export interface PipelineError {
   error: Error;
   strategy: ErrorStrategy;
   timestamp: number;
+  recoveryKind?: OfflineJobKind;
   context?: {
     url: string;
     tabId?: number;
@@ -124,6 +125,7 @@ export interface PipelineStep {
    * This replaces the former string-comparison-based dispatch in enqueueOfflineJob.
    */
   offlineRetry?: { jobKind: OfflineJobKind };
+  previewBreakpoint?: boolean;
   /** Execute the step */
   execute(context: RecordingContext): Promise<RecordingContext>;
 }
@@ -132,5 +134,3 @@ export interface PipelineStep {
  * Pipeline step function type
  */
 export type PipelineStepFunction = (context: RecordingContext) => Promise<RecordingContext>;
-
-

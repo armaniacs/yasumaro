@@ -172,6 +172,7 @@ export class RecordingPipeline {
         errorStrategy: ErrorStrategy.RETRY,
         maxRetries: 3,
         offlineRetry: { jobKind: 'ai_summary' },
+        previewBreakpoint: true,
         execute: processPrivacyPipelineStep
       },
       {
@@ -287,7 +288,7 @@ export class RecordingPipeline {
         context = await this.executeWithStrategy(step, context);
 
         // previewOnly: privacyPipeline ステップ完了後に早期リターン
-        if (data.previewOnly && context.result && step.name === 'privacyPipeline') {
+        if (data.previewOnly && context.result && step.previewBreakpoint) {
           // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
           if (context.result.maskedItems && Array.isArray(context.result.maskedItems)) {
             context.result.maskedItems = stripPiiFromMaskedItems(context.result.maskedItems);
@@ -321,6 +322,7 @@ export class RecordingPipeline {
           error: error as Error,
           strategy: step.errorStrategy,
           timestamp: Date.now(),
+          recoveryKind: step.offlineRetry?.jobKind,
           context: {
             url: context.data.url,
             tabId: (context.data as unknown as Record<string, unknown>).tabId as number | undefined
@@ -368,7 +370,7 @@ export class RecordingPipeline {
 
         // Queue network-dependent steps for later retry when offline/retry limit is reached.
         if (this.offlineNetworkQueue) {
-          await this.enqueueOfflineJob(step.name, context, error);
+          await this.enqueueOfflineJob(step, context);
         }
 
         throw error;
@@ -377,15 +379,10 @@ export class RecordingPipeline {
   }
 
   private async enqueueOfflineJob(
-    stepName: string,
-    context: RecordingContext,
-    error: unknown
+    step: PipelineStep,
+    context: RecordingContext
   ): Promise<void> {
-    // Resolve offline retry policy from the step's metadata instead of
-    // comparing step names — the former string-list approach silently broke
-    // when a step was renamed or a new retryable step was added.
-    const step = this.steps.find(s => s.name === stepName);
-    if (!step?.offlineRetry) {
+    if (!step.offlineRetry) {
       return;
     }
 
@@ -402,7 +399,7 @@ export class RecordingPipeline {
 
     try {
       await this.offlineNetworkQueue!.enqueue({ type, payload });
-      addLog(LogType.INFO, `RecordingPipeline: queued offline job for ${stepName}`, {
+      addLog(LogType.INFO, `RecordingPipeline: queued offline job for ${step.name}`, {
         url: context.data.url,
         type,
         traceId: context.traceId,
@@ -487,7 +484,7 @@ export class RecordingPipeline {
     }
 
     // 記録漏れリカバリ: Obsidian書き込みのみ失敗した場合、pending に登録して再記録できるようにする
-    const obsidianError = errors.find(e => e.step === 'saveObsidian');
+    const obsidianError = errors.find(e => e.recoveryKind === 'obsidian_sync');
     if (obsidianError) {
       void addPendingPage({
         url: data.url,

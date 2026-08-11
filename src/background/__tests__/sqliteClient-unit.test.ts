@@ -297,24 +297,24 @@ describe('SqliteClient — unit tests', () => {
     });
   });
 
-  describe('insertBatch()', () => {
+  describe('insertBatchResult()', () => {
     it('returns count on success', async () => {
       setupChromeMock({ success: true, count: 5 });
 
-      const result = await client.insertBatch([
+      const result = await client.insertBatchResult([
         { url: 'https://a.com', created_at: Date.now() },
         { url: 'https://b.com', created_at: Date.now() },
       ]);
 
-      expect(result).toEqual({ count: 5 });
+      expect(result).toEqual({ success: true, data: { count: 5 } });
     });
 
-    it('returns null on failure', async () => {
+    it('returns a failure result on failure', async () => {
       setupChromeMock({ success: false, error: 'Batch insert failed' });
 
-      const result = await client.insertBatch([]);
+      const result = await client.insertBatchResult([]);
 
-      expect(result).toBeNull();
+      expect(result).toMatchObject({ success: false, error: { message: expect.any(String) } });
     });
   });
 

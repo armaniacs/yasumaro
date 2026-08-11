@@ -16,7 +16,13 @@ export const PENDING_SQLITE_RECORDS_KEY = 'pending_sqlite_records';
 const MAX_PENDING_RECORDS = 500;
 
 interface SqliteClientLike {
-  insertBatch(records: BrowsingLogRecord[]): Promise<{ count: number } | null>;
+  insertBatchResult: (records: BrowsingLogRecord[]) => Promise<{
+    success: true;
+    data: { count: number };
+  } | {
+    success: false;
+    error: { kind: string; message: string; retriable: boolean };
+  }>;
 }
 
 /** Number of records to insert in a single offscreen round-trip. */
@@ -64,8 +70,8 @@ export async function flushPendingRecords(sqliteClient: SqliteClientLike): Promi
 
   for (const chunk of chunks) {
     try {
-      const result = await sqliteClient.insertBatch(chunk);
-      if (!result) {
+      const result = await sqliteClient.insertBatchResult(chunk);
+      if (!result.success) {
         stillPending.push(...chunk);
       }
     } catch {

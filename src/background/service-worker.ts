@@ -1,10 +1,5 @@
-import { ObsidianClient } from './obsidianClient.js';
-import { AIClient } from './aiClient.js';
 import { notifyAiTestProgress } from './aiTestProgressNotifier.js';
-import { createAIService } from './ai/aiServiceFactory.js';
 import { RecordingCache } from './recordingCache.js';
-import { RecordingLogic } from './recordingLogic.js';
-import { getTabCacheInstance } from './tabCacheFactory.js';
 import { HeaderDetector } from './headerDetector.js';
 import { SessionStore } from './sessionStore.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
@@ -23,7 +18,6 @@ import { isDomainAllowed } from '../utils/domainUtils.js';
 import { migrateLegacyPendingPagesKey } from '../utils/pendingStorage.js';
 import { flushPendingRecords } from './pendingSqliteQueue.js';
 import { flushPendingWrites, type PendingChromeStorageWrite } from './pendingChromeStorageQueue.js';
-import { getSharedSqliteClient } from './sqliteClient.js';
 import { withOptimisticLock } from '../utils/optimisticLock.js';
 import type { SavedUrlEntry } from '../utils/urlEntry.js';
 import { MigrationService } from './migrationService.js';
@@ -31,13 +25,10 @@ import { createErrorResponse } from '../utils/errorMessages.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { NotificationHelper } from './notificationHelper.js';
 import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
-import { updateSavedUrlEntry } from '../utils/storage/savedUrlStore.js';
 
 import { updateActivity, initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
 import { handleDailyPurgeAlarm } from './dailyPurgeHandler.js';
 import { hasPrivacyConsent } from '../popup/privacyConsent.js';
-import { RateLimiter } from './rateLimiter.js';
-import { ManualContentFetcher } from './manualContentFetcher.js';
 import { formatEntriesToMarkdown } from '../dashboard/obsidianFormatter.js';
 import {
     VALID_MESSAGE_TYPES,
@@ -47,35 +38,14 @@ import {
 } from './messageTypes.js';
 import type { ExtensionMessage } from './messageTypes.js';
 import { MessageHandlerRegistry } from './handlers/MessageHandlerRegistry.js';
-import {
-    createValidVisitHandler,
-    createFetchUrlHandler,
-    createManualRecordHandler,
-    createSaveRecordHandler,
-    createContentCleansingExecutedHandler,
-    createCheckDomainHandler,
-    createTestConnectionsHandler,
-    createTestObsidianHandler,
-    createTestAiHandler,
-    createGetPrivacyCacheHandler,
-    createActivityUpdateHandler,
-    createSessionLockRequestHandler,
-    createPingHandler,
-    createRefreshLocalMarkdownSchedulerHandler,
-    createConsentStateChangedHandler,
-    createGenerateReviewSummaryHandler,
-    createLogForwardHandler,
-} from './handlers/messageHandlers.js';
-import type {
-    ManualRecordHandlerDeps,
-    SaveRecordHandlerDeps,
-} from './handlers/messageHandlers.js';
 import { createDashboardSqliteHandler, createSqliteClientDeps } from './handlers/dashboardSqliteHandlers.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
 import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
 import { createOfflineQueueProcessor } from './offlineQueueProcessor.js';
 import { createCacheInitializedFlag, createAutoSavedBadgeTabs } from './swStatePersistence.js';
 import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.js';
+import { createBackgroundServices } from './createBackgroundServices.js';
+import { createMessageHandlerRegistry } from './handlers/createMessageHandlerRegistry.js';
 
 // ============================================================================
 // Service Worker Initialization
@@ -141,8 +111,29 @@ async function runMigration(): Promise<void> {
     await migrateLegacyPendingPagesKey();
 }
 
+// ============================================================================
+// Production composition root
+//
+// All long-lived collaborators are constructed once by createBackgroundServices
+// (shared SqliteClient via getSharedSqliteClient, one shared RecordingPipeline,
+// and the manual/save handler deps). The Service Worker keeps its startup side
+// effects here: suspend-handler registration, HeaderDetector, rate-limiter
+// rehydration, alarms, and deferred migrations.
+// ============================================================================
+const services = createBackgroundServices();
+const {
+    obsidian,
+    aiService,
+    sqliteClient,
+    recordingLogic,
+    tabCache,
+    rateLimiter,
+    manualContentFetcher,
+    sessionStore,
+} = services;
+const { manualRecordDeps, saveRecordDeps } = services;
+
 // Session store for cross-SW-restart persistence
-const sessionStore = new SessionStore();
 SessionStore.registerSuspendHandler(sessionStore);
 
 const CONFIRM_TOKEN_KEY = 'dashboardSqliteConfirmToken';
@@ -178,20 +169,12 @@ export async function ensureConfirmToken(): Promise<string> {
 }
 
 // Initialize clients
-const obsidian = new ObsidianClient();
-const aiClient = new AIClient();
-const aiService = createAIService({ aiClient });
-const sqliteClient = getSharedSqliteClient();
-const recordingLogic = new RecordingLogic(obsidian, aiService, undefined, sqliteClient);
 const migrationService = new MigrationService(sqliteClient);
 
 const processOfflineNetworkQueue = createOfflineQueueProcessor({
     offlineNetworkQueue: sharedOfflineNetworkQueue,
     recordingLogic,
 });
-
-// TabCache for storing tab data (lazy-initialized singleton)
-const tabCache = getTabCacheInstance(sessionStore);
 
 // 自動保存成功バッジを表示中のタブIDセット（SW再起動をまたいで永続化）
 const autoSavedBadgeTabs = createAutoSavedBadgeTabs();
@@ -203,14 +186,11 @@ const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 
 // Rate limiter for skipAi operations
-const rateLimiter = new RateLimiter(sessionStore);
 rateLimiter.initialize();
 
 // Track whether cache has been initialized (for startup rehydration; persisted
 // across Service Worker restarts via chrome.storage.session)
 const isCacheInitialized = createCacheInitializedFlag();
-
-const manualContentFetcher = new ManualContentFetcher();
 
 export function resetManualRecordCache(): void {
     manualContentFetcher.clear();
@@ -255,147 +235,6 @@ async function runDeferredStartupMigrations(): Promise<void> {
 // Message Handler Registry
 // ============================================================================
 
-const registry = new MessageHandlerRegistry();
-
-const _manualRecordDeps: ManualRecordHandlerDeps = {
-  isRecordingAllowed: () => hasPrivacyConsent(),
-  checkRateLimit: (sender: import('./rateLimiter.js').MessageSenderLike | undefined, settings: Record<string, unknown>) => rateLimiter.check(sender, settings),
-  fetchContent: (url: string) => manualContentFetcher.fetchContent(url),
-  getPrivacyInfoWithCache: (url: string) => RecordingCache.getPrivacyInfoWithCache(url),
-  obsidian,
-  aiService,
-  sqliteClient,
-  getSettings: () => getSettings(),
-  setUrlContent: async (url: string, content: string) => {
-    await updateSavedUrlEntry(url, (entry) => ({ ...entry, content }));
-  },
-};
-
-const _saveRecordDeps: SaveRecordHandlerDeps = {
-  isRecordingAllowed: () => hasPrivacyConsent(),
-  getPrivacyInfoWithCache: (url: string) => RecordingCache.getPrivacyInfoWithCache(url),
-  obsidian,
-  aiService,
-  sqliteClient,
-  getSettings: () => getSettings(),
-  setUrlContent: async (url: string, content: string) => {
-    await updateSavedUrlEntry(url, (entry) => ({ ...entry, content }));
-  },
-};
-
-export const handleValidVisit = createValidVisitHandler({
-  isRecordingAllowed: () => hasPrivacyConsent(),
-  cacheTab: tabCache.add.bind(tabCache),
-  updateCachedTab: tabCache.update.bind(tabCache),
-  recordVisit: (data) => recordingLogic.record(data),
-  addBadgeTab: (tabId) => { autoSavedBadgeTabs.add(tabId); },
-  hasBadgeTab: (tabId) => autoSavedBadgeTabs.has(tabId),
-});
-// A content script reporting a completed visit is the whole point of this
-// message; the handler additionally requires sender.tab.
-registry.register('VALID_VISIT', handleValidVisit, 'content-script-allowed');
-
-export const handleFetchUrl = createFetchUrlHandler({
-  getSettings: () => getSettings(),
-  buildAllowedUrls: (settings) => buildAllowedUrls(settings),
-});
-registry.register('FETCH_URL', handleFetchUrl, 'extension-only');
-
-export const handleManualRecord = createManualRecordHandler(_manualRecordDeps);
-registry.register('MANUAL_RECORD', handleManualRecord, 'extension-only');
-
-export const handlePreviewRecord = createManualRecordHandler(_manualRecordDeps);
-registry.register('PREVIEW_RECORD', handlePreviewRecord, 'extension-only');
-
-export const handleSaveRecord = createSaveRecordHandler(_saveRecordDeps);
-registry.register('SAVE_RECORD', handleSaveRecord, 'extension-only');
-
-export const handleContentCleansingExecuted = createContentCleansingExecutedHandler({
-  hasBadgeTab: (tabId) => autoSavedBadgeTabs.has(tabId),
-});
-// Sent by the content extractor running in the page.
-registry.register('CONTENT_CLEANSING_EXECUTED', handleContentCleansingExecuted, 'content-script-allowed');
-
-export const handleCheckDomain = createCheckDomainHandler({
-  isDomainAllowed: (url) => isDomainAllowed(url),
-});
-// The content script loader asks whether it should activate on this page.
-registry.register('CHECK_DOMAIN', handleCheckDomain, 'content-script-allowed');
-
-export const handleTestConnections = createTestConnectionsHandler({
-  testObsidian: () => obsidian.testConnection(),
-  testAi: () => aiService.testConnection(),
-});
-registry.register('TEST_CONNECTIONS', handleTestConnections, 'extension-only');
-
-export const handleTestObsidian = createTestObsidianHandler({
-  testConnection: (override?: { apiKey?: string }) => obsidian.testConnection(override),
-});
-registry.register('TEST_OBSIDIAN', handleTestObsidian, 'extension-only');
-
-export const handleTestAi = createTestAiHandler({
-  clearSettingsCache: () => clearSettingsCache(),
-  testConnection: (onProgress, runId) => aiService.testConnection(onProgress, runId),
-  notifyProgress: notifyAiTestProgress,
-});
-registry.register('TEST_AI', handleTestAi, 'extension-only');
-
-export const handleGetPrivacyCache = createGetPrivacyCacheHandler({
-  getPrivacyCache: () => RecordingCache.getPrivacyCache(),
-});
-registry.register('GET_PRIVACY_CACHE', handleGetPrivacyCache, 'extension-only');
-
-export const handleActivityUpdate = createActivityUpdateHandler({
-  updateActivity: () => updateActivity(),
-});
-registry.register('ACTIVITY_UPDATE', handleActivityUpdate, 'extension-only');
-
-export const handleSessionLockRequest = createSessionLockRequestHandler({
-  lockSession: () => lockSession(),
-});
-registry.register('SESSION_LOCK_REQUEST', handleSessionLockRequest, 'extension-only');
-
-export const handlePing = createPingHandler({});
-// Liveness probe with no payload and no side effects; the content script
-// loader uses it to tell a sleeping Service Worker from a broken one.
-registry.register('PING', handlePing, 'content-script-allowed');
-
-export const handleRefreshLocalMarkdownScheduler = createRefreshLocalMarkdownSchedulerHandler({
-  initExportScheduler: async () => {
-    const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
-    await initExportScheduler();
-  },
-});
-// Only the dashboard changes the export schedule. Previously unguarded, so a
-// content script could restart the scheduler.
-registry.register('REFRESH_LOCAL_MARKDOWN_SCHEDULER', handleRefreshLocalMarkdownScheduler, 'extension-only');
-
-export const handleConsentStateChanged = createConsentStateChangedHandler({
-  updateConsentBadge: async () => {
-    const { updateConsentBadge } = await import('./consentBadge.js');
-    await updateConsentBadge();
-  },
-});
-// Sent by the popup after the consent dialog closes.
-registry.register('CONSENT_STATE_CHANGED', handleConsentStateChanged, 'extension-only');
-
-export const handleGenerateReviewSummary = createGenerateReviewSummaryHandler({
-  generateWeeklySummary: async () => {
-    const { generateWeeklySummary } = await import('./reviewSummaryGenerator.js');
-    return generateWeeklySummary();
-  },
-  generateMonthlySummary: async () => {
-    const { generateMonthlySummary } = await import('./reviewSummaryGenerator.js');
-    return generateMonthlySummary();
-  },
-});
-// Sent by the dashboard; triggers paid AI calls, so keep it off web pages.
-registry.register('GENERATE_REVIEW_SUMMARY', handleGenerateReviewSummary, 'extension-only');
-
-export const handleLogForward = createLogForwardHandler();
-// Sent by the offscreen document (chrome-extension:// URL, no tab).
-registry.register('LOG_FORWARD', handleLogForward, 'extension-only');
-
 // The SqliteClient-backed half of these dependencies is shared with the tests
 // via createSqliteClientDeps, so both go through one wiring. Only the four
 // operations the Service Worker owns are supplied here.
@@ -433,7 +272,7 @@ const _dashboardSqliteHandler = createDashboardSqliteHandler(
 
 // Sender authorization is enforced by the registry ('extension-only'), which
 // rejects content scripts and external extensions before dispatch.
-export const handleDashboardSqlite = ((message: Record<string, unknown>, _sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void): void => {
+const dashboardSqliteMessageHandler = ((message: Record<string, unknown>, _sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void): void => {
   void (async () => {
     try {
       const result = await _dashboardSqliteHandler(
@@ -445,7 +284,73 @@ export const handleDashboardSqlite = ((message: Record<string, unknown>, _sender
     }
   })();
 });
-registry.register('DASHBOARD_SQLITE', handleDashboardSqlite, 'extension-only');
+
+const messageRegistryComposition = createMessageHandlerRegistry({
+  recordingLogic,
+  tabCache,
+  obsidian,
+  aiService,
+  manualRecordDeps,
+  saveRecordDeps,
+  hasPrivacyConsent: () => hasPrivacyConsent(),
+  buildAllowedUrls: (settings) => buildAllowedUrls(settings),
+  getSettings: () => getSettings(),
+  isDomainAllowed: (url) => isDomainAllowed(url),
+  clearSettingsCache: () => clearSettingsCache(),
+  notifyAiTestProgress,
+  getPrivacyCache: () => RecordingCache.getPrivacyCache(),
+  updateActivity: () => updateActivity(),
+  lockSession: () => lockSession(),
+  autoSavedBadgeTabs,
+  initExportScheduler: async () => {
+    const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
+    await initExportScheduler();
+  },
+  updateConsentBadge: async () => {
+    const { updateConsentBadge } = await import('./consentBadge.js');
+    await updateConsentBadge();
+  },
+  generateWeeklySummary: async () => {
+    const { generateWeeklySummary } = await import('./reviewSummaryGenerator.js');
+    return generateWeeklySummary();
+  },
+  generateMonthlySummary: async () => {
+    const { generateMonthlySummary } = await import('./reviewSummaryGenerator.js');
+    return generateMonthlySummary();
+  },
+  dashboardSqliteHandler: dashboardSqliteMessageHandler,
+});
+
+const { registry } = messageRegistryComposition;
+export const {
+  VALID_VISIT: handleValidVisit,
+  FETCH_URL: handleFetchUrl,
+  MANUAL_RECORD: handleManualRecord,
+  PREVIEW_RECORD: handlePreviewRecord,
+  SAVE_RECORD: handleSaveRecord,
+  CONTENT_CLEANSING_EXECUTED: handleContentCleansingExecuted,
+  CHECK_DOMAIN: handleCheckDomain,
+  TEST_CONNECTIONS: handleTestConnections,
+  TEST_OBSIDIAN: handleTestObsidian,
+  TEST_AI: handleTestAi,
+  GET_PRIVACY_CACHE: handleGetPrivacyCache,
+  ACTIVITY_UPDATE: handleActivityUpdate,
+  SESSION_LOCK_REQUEST: handleSessionLockRequest,
+  PING: handlePing,
+  REFRESH_LOCAL_MARKDOWN_SCHEDULER: handleRefreshLocalMarkdownScheduler,
+  CONSENT_STATE_CHANGED: handleConsentStateChanged,
+  GENERATE_REVIEW_SUMMARY: handleGenerateReviewSummary,
+  LOG_FORWARD: handleLogForward,
+  DASHBOARD_SQLITE: handleDashboardSqlite,
+} = messageRegistryComposition.handlers;
+
+const handleManualRecordForContextMenu = async (
+  message: Parameters<typeof handleManualRecord>[0],
+  sender: Parameters<typeof handleManualRecord>[1],
+  sendResponse: Parameters<typeof handleManualRecord>[2],
+): Promise<void> => {
+  await handleManualRecord(message, sender, sendResponse);
+};
 
 // ============================================================================
 // Message Handler (wraps registry with validation)
@@ -587,7 +492,7 @@ const _contextClickHandler = createContextClickHandler({
   // RecordingCache, obsidian, aiService, sqliteClient, getSettings,
   // setUrlContent) were reconstructed inline here, risking drift when a dep
   // changed in _manualRecordDeps.
-  handleManualRecord,
+  handleManualRecord: handleManualRecordForContextMenu,
 });
 
 // ============================================================================

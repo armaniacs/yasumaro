@@ -303,6 +303,15 @@ import type {
     PingMessage,
 } from '../messageTypes.js';
 import { CURRENT_PROTOCOL_VERSION } from '../messageTypes.js';
+import { createRecordingPipeline } from '../pipeline/RecordingPipeline.js';
+
+// The production composition root builds the shared RecordingPipeline once at
+// Service Worker module load; handlers must reuse that instance instead of
+// building a new one per message (Candidate 2). Capture it before
+// beforeEach()'s vi.clearAllMocks() wipes the mock's call history.
+const injectedRecordingPipeline = (createRecordingPipeline as unknown as ReturnType<typeof vi.fn>).mock.results[0]?.value as
+    | { execute: ReturnType<typeof vi.fn> }
+    | undefined;
 
 const contextMenuClickListener = ((globalThis as any).chrome?.contextMenus?.onClicked?.addListener as ReturnType<typeof vi.fn>)?.mock?.calls?.[0]?.[0] as
     | ((info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) => Promise<void>)
@@ -1451,7 +1460,6 @@ describe('service-worker handlers', () => {
         it('calls executeScript and processes the extracted payload for a valid tab', async () => {
             if (!contextMenuClickListener) throw new Error('Context menu listener not registered');
 
-            const { createRecordingPipeline } = await import('../pipeline/RecordingPipeline.js');
             const executeScriptMock = chrome.scripting.executeScript as ReturnType<typeof vi.fn>;
             executeScriptMock.mockResolvedValueOnce([
                 { result: { url: 'https://example.com', title: 'Example', content: 'body text' } },
@@ -1466,11 +1474,11 @@ describe('service-worker handlers', () => {
                 expect.objectContaining({ target: { tabId: 1 } })
             );
 
-            // handleManualRecord forwards the payload to RecordingPipeline.execute via factory
-            const pipelineInstance = (createRecordingPipeline as ReturnType<typeof vi.fn>).mock.results[
-                (createRecordingPipeline as ReturnType<typeof vi.fn>).mock.results.length - 1
-            ].value;
-            expect(pipelineInstance.execute).toHaveBeenCalledWith(
+            // The composition root built the pipeline once at SW module load;
+            // the manual-record handler must reuse that instance rather than
+            // constructing a new pipeline per message.
+            expect(injectedRecordingPipeline).toBeDefined();
+            expect(injectedRecordingPipeline!.execute).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: 'Example',
                     url: 'https://example.com',
@@ -1745,6 +1753,10 @@ describe('service-worker handlers', () => {
             const sender = {} as chrome.runtime.MessageSender;
 
             await serviceWorker.handleManualRecord(message, sender, sendResponse);
+
+            // The handler must reuse the composition-injected pipeline instead
+            // of constructing a new one per message.
+            expect(createRecordingPipeline).not.toHaveBeenCalled();
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true, summary: 'Pipeline summary' })
             );
@@ -1891,6 +1903,10 @@ describe('service-worker handlers', () => {
             } as SaveRecordMessage;
 
             await serviceWorker.handleSaveRecord(message, {} as chrome.runtime.MessageSender, sendResponse);
+
+            // The handler must reuse the composition-injected pipeline instead
+            // of constructing a new one per message.
+            expect(createRecordingPipeline).not.toHaveBeenCalled();
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true, summary: 'Pipeline summary' })
             );

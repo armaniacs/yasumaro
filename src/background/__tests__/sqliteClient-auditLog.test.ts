@@ -26,9 +26,9 @@ describe('SqliteClient audit log methods', () => {
     } as unknown as typeof chrome;
   });
 
-  it('insertAuditLog sends SQLITE_AUDIT_LOG_INSERT and returns id', async () => {
-    const result = await client.insertAuditLog({ provider: 'gemini', url: 'https://example.com', created_at: 1000 });
-    expect(result).toEqual({ id: 42 });
+  it('insertAuditLogResult sends SQLITE_AUDIT_LOG_INSERT and returns id', async () => {
+    const result = await client.insertAuditLogResult({ provider: 'gemini', url: 'https://example.com', created_at: 1000 });
+    expect(result).toEqual({ success: true, data: { id: 42 } });
   });
 
   it('queryAuditLog sends SQLITE_AUDIT_LOG_QUERY and returns rows', async () => {

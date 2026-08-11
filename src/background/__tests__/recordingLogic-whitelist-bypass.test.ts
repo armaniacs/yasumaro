@@ -1,7 +1,8 @@
 // src/background/__tests__/recordingLogic-whitelist-bypass.test.ts
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { RecordingLogic } from '../recordingLogic.js';
+import type { RecordingLogic } from '../recordingLogic.js';
 import { RecordingCache } from '../recordingCache.js';
+import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIClient } from '../aiClient.js';
 import { StorageKeys } from '../../utils/storage.js';
@@ -48,7 +49,7 @@ describe('RecordingLogic - Whitelist Privacy Bypass', () => {
       generateSummary: vi.fn().mockResolvedValue({ summary: 'Test summary' })
     } as any;
 
-    recordingLogic = new RecordingLogic(mockObsidian, mockAIClient);
+    recordingLogic = makeRecordingLogic(mockObsidian, mockAIClient);
 
     // storageのデフォルトモック
     const storageMocked = vi.mocked(storageModule);

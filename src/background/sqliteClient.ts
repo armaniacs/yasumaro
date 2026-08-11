@@ -274,13 +274,12 @@ export class SqliteClient {
     );
   }
 
-  async insertBatch(records: BrowsingLogRecord[]): Promise<{ count: number } | null> {
-    const result = await this.call<{ count: number }, OffscreenCountResponse>(
+  async insertBatchResult(records: BrowsingLogRecord[]): Promise<CallResult<{ count: number }>> {
+    return this.call<{ count: number }, OffscreenCountResponse>(
       'SQLITE_INSERT_BATCH',
       { records: records as unknown as Record<string, unknown>[] },
       (res) => ({ count: res.count }),
     );
-    return result.success ? result.data : null;
   }
 
   // --------------------------------------------------------------------------
@@ -338,13 +337,12 @@ export class SqliteClient {
     });
   }
 
-  async exportDb(): Promise<Uint8Array | null> {
-    const result = await this.call<Uint8Array, OffscreenBinaryResponse>(
+  async exportDbResult(): Promise<CallResult<Uint8Array>> {
+    return this.call<Uint8Array, OffscreenBinaryResponse>(
       'SQLITE_EXPORT',
       {},
       (res) => new Uint8Array(res.data),
     );
-    return result.success ? result.data : null;
   }
 
   async backupDbResult(): Promise<CallResult<Uint8Array>> {
@@ -433,13 +431,12 @@ export class SqliteClient {
     );
   }
 
-  async insertAuditLog(record: { provider: string; url: string; created_at: number }): Promise<{ id: number } | null> {
-    const result = await this.call<{ id: number }, OffscreenInsertResponse>(
+  async insertAuditLogResult(record: { provider: string; url: string; created_at: number }): Promise<CallResult<{ id: number }>> {
+    return this.call<{ id: number }, OffscreenInsertResponse>(
       'SQLITE_AUDIT_LOG_INSERT',
       record,
       (res) => ({ id: res.id }),
     );
-    return result.success ? result.data : null;
   }
 
   async queryAuditLogResult(options: { limit?: number; offset?: number } = {}): Promise<CallResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>> {

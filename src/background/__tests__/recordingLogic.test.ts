@@ -1,6 +1,7 @@
 // src/background/__tests__/recordingLogic.test.ts
 import { RecordingLogic } from '../recordingLogic.js';
 import { RecordingCache } from '../recordingCache.js';
+import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
 import * as storage from '../../utils/storage.js';
 import * as domainUtils from '../../utils/domainUtils.js';
 import * as privacy from '../privacyPipeline.js';
@@ -19,10 +20,10 @@ describe('RecordingLogic', () => {
 
   const mockAiClient = {
     // @ts-expect-error - vi.fn() type narrowing issue
-  
+
     getSupportedModes: vi.fn().mockReturnValue(['local_only', 'full_pipeline']),
     // @ts-expect-error - vi.fn() type narrowing issue
-  
+
     generateSummary: vi.fn().mockResolvedValue({ summary: 'Cloud summary' }),
   };
 
@@ -67,23 +68,23 @@ describe('RecordingLogic', () => {
     };
     // domainUtilsのデフォルトモック
     // @ts-expect-error - vi.fn() type narrowing issue
-  
+
     domainUtils.isDomainAllowed.mockResolvedValue(true);
     // PrivacyPipelineのデフォルトモック
     // @ts-expect-error - vi.fn() type narrowing issue
-  
+
     privacy.PrivacyPipeline.mockImplementation(function(this: any) {
     // @ts-expect-error - vi.fn() type narrowing issue
-  
+
       this.process = vi.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 });
     });
   });
 
   describe('record', () => {
     it('should skip recording when domain is not allowed', async () => {
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
     // @ts-expect-error - vi.fn() type narrowing issue
-  
+
       domainUtils.isDomainAllowed.mockResolvedValue(false);
 
       const result = await logic.record({
@@ -97,9 +98,9 @@ describe('RecordingLogic', () => {
     });
 
     it('should skip recording when URL is already saved', async () => {
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
     // @ts-expect-error - vi.fn() type narrowing issue
-  
+
       storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map([['https://test.com', Date.now()]]));
 
       const result = await logic.record({
@@ -114,7 +115,7 @@ describe('RecordingLogic', () => {
 
     it('should truncate extremely large content to 64KB', async () => {
       // 🟢 信頼性レベル: 直接実装（RecordingLogic.js 130行目）を参照
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
       const largeContent = 'a'.repeat(100 * 1024); // 100KB
       const expectedLimit = 64 * 1024;
 
@@ -142,7 +143,7 @@ describe('RecordingLogic', () => {
 
     // 【追加テスト #1】64KB以下のコンテンツは切り詰められない（正常系・必須）🟢
     it('should not truncate content under 64KB', async () => {
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
       const smallContent = 'a'.repeat(10 * 1024); // 10KB
 
       const mockPipeline = {
@@ -164,7 +165,7 @@ describe('RecordingLogic', () => {
 
     // 【追加テスト #2】正好64KBのコンテンツは変更なし（境界値テスト）🟢
     it('should not truncate content exactly at 64KB boundary', async () => {
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
       const exact64KB = 'a'.repeat(64 * 1024); // 正確に64KB
 
       const mockPipeline = {
@@ -186,7 +187,7 @@ describe('RecordingLogic', () => {
 
     // 【追加テスト #3】空文字列コンテンツは処理可能（異常系・コーナーケース）🟢
     it('should handle empty string content', async () => {
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
       const emptyContent = '';
 
       const mockPipeline = {
@@ -209,7 +210,7 @@ describe('RecordingLogic', () => {
 
   describe('urlRecordMutexes のリソース管理', () => {
     it('record() 完了後に URL 別 Mutex エントリが解放・削除される', async () => {
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
       const url = 'https://mutex-cleanup.example.com';
 
       await logic.record({ url, title: 'Mutex Cleanup', content: 'content' });
@@ -239,7 +240,7 @@ describe('RecordingLogic', () => {
 
   describe('retryObsidianWriteOnly', () => {
     it('saves to Obsidian using the already-computed summary without calling the AI provider', async () => {
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       const result = await logic.retryObsidianWriteOnly({
         title: 'Retry Page',
@@ -258,7 +259,7 @@ describe('RecordingLogic', () => {
     });
 
     it('propagates the error when the Obsidian append fails', async () => {
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
       mockObsidian.appendToDailyNote.mockRejectedValueOnce(new Error('network down'));
 
       await expect(
@@ -279,7 +280,7 @@ describe('RecordingLogic', () => {
       const mutex = (RecordingLogic as any).getUrlMutex(url);
       await mutex.acquire();
 
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
       let done = false;
       const retryPromise = (async () => {
         await logic.retryObsidianWriteOnly({ title: 'Retry', url, summary: 's' });
@@ -317,7 +318,7 @@ describe('RecordingLogic', () => {
       });
 
       const url = 'https://serialize-race.example.com';
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       const call1 = logic.record({ url, title: 'A', content: 'a' });
       await firstProcessStarted;
@@ -348,7 +349,7 @@ describe('RecordingLogic', () => {
 
       const obsidian = {} as any;
       const aiClient = {} as any;
-      const logic = new RecordingLogic(obsidian, aiClient);
+      const logic = makeRecordingLogic(obsidian, aiClient);
 
       const result = await RecordingCache.getPrivacyInfoWithCache(url);
 
@@ -362,7 +363,7 @@ describe('RecordingLogic', () => {
 
       const obsidian = {} as any;
       const aiClient = {} as any;
-      const logic = new RecordingLogic(obsidian, aiClient);
+      const logic = makeRecordingLogic(obsidian, aiClient);
 
       const result = await RecordingCache.getPrivacyInfoWithCache(url);
 
@@ -383,7 +384,7 @@ describe('RecordingLogic', () => {
 
       const obsidian = {} as any;
       const aiClient = {} as any;
-      const logic = new RecordingLogic(obsidian, aiClient);
+      const logic = makeRecordingLogic(obsidian, aiClient);
 
       const result = await RecordingCache.getPrivacyInfoWithCache(url);
 
@@ -453,7 +454,7 @@ describe('RecordingLogic', () => {
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       const result = await logic.record({
         title: 'Test',
@@ -481,7 +482,7 @@ describe('RecordingLogic', () => {
         // @ts-expect-error - vi.fn() type narrowing issue
         generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       const result = await logic.record({
         title: 'Test',
@@ -504,7 +505,7 @@ describe('RecordingLogic', () => {
         // @ts-expect-error - vi.fn() type narrowing issue
         generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       const result = await logic.record({
         title: 'Test',
@@ -563,7 +564,7 @@ describe('RecordingLogic', () => {
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       const result = await logic.record({
         title: 'Bank Account',
@@ -593,7 +594,7 @@ describe('RecordingLogic', () => {
         // @ts-expect-error - vi.fn() type narrowing issue
         generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       // force=true で再試行
       const result = await logic.record({
@@ -622,7 +623,7 @@ describe('RecordingLogic', () => {
         // @ts-expect-error - vi.fn() type narrowing issue
         generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       const result = await logic.record({
         title: 'Public Article',
@@ -644,7 +645,7 @@ describe('RecordingLogic', () => {
         // @ts-expect-error - vi.fn() type narrowing issue
         generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       const result = await logic.record({
         title: 'Unknown Page',
@@ -716,7 +717,7 @@ describe('RecordingLogic', () => {
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       // @ts-expect-error - requireConfirmation is part of RecordingData extension
       const result = await logic.record({
@@ -765,7 +766,7 @@ describe('RecordingLogic', () => {
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       // @ts-expect-error - requireConfirmation is part of RecordingData extension
       const result = await logic.record({
@@ -807,7 +808,7 @@ describe('RecordingLogic', () => {
         // @ts-expect-error - vi.fn() type narrowing issue
         generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       // @ts-expect-error - requireConfirmation is part of RecordingData extension
       const result = await logic.record({
@@ -889,7 +890,7 @@ describe('RecordingLogic', () => {
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
-      const recordingLogic = new RecordingLogic(mockObsidian, mockAiClient);
+      const recordingLogic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       const response = await recordingLogic.record({
         title: 'Private Page',
@@ -971,7 +972,7 @@ describe('RecordingLogic', () => {
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       const testHeaderValue = 'private, no-store, must-revalidate';
       // @ts-expect-error - requireConfirmation is part of RecordingData extension
@@ -1006,7 +1007,7 @@ describe('RecordingLogic', () => {
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       // headerValueを指定せず、requireConfirmationを指定
       // @ts-expect-error - requireConfirmation is part of RecordingData extension
@@ -1041,7 +1042,7 @@ describe('RecordingLogic', () => {
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const mockAiClient = {} as any;
-      const logic = new RecordingLogic(mockObsidian, mockAiClient);
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       // 1024文字を超える長いheaderValueを作成（authorizationはREDACTEDになるためlengthは無関係）
       const longHeaderValue = 'x'.repeat(2000);
@@ -1076,7 +1077,7 @@ describe('RecordingLogic', () => {
       }]]);
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
-      const logic = new RecordingLogic(mockObsidian, {} as any);
+      const logic = makeRecordingLogic(mockObsidian, {} as any);
 
       // @ts-expect-error - requireConfirmation is part of RecordingData extension
       await logic.record({
@@ -1105,7 +1106,7 @@ describe('RecordingLogic', () => {
       }]]);
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
-      const logic = new RecordingLogic(mockObsidian, {} as any);
+      const logic = makeRecordingLogic(mockObsidian, {} as any);
 
       // @ts-expect-error - requireConfirmation is part of RecordingData extension
       await logic.record({
@@ -1134,7 +1135,7 @@ describe('RecordingLogic', () => {
       }]]);
 
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
-      const logic = new RecordingLogic(mockObsidian, {} as any);
+      const logic = makeRecordingLogic(mockObsidian, {} as any);
 
       // @ts-expect-error - requireConfirmation is part of RecordingData extension
       await logic.record({

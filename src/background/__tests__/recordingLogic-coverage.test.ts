@@ -131,8 +131,9 @@ vi.mock('../pipeline/RecordingPipeline.ts', () => {
 });
 
 // ─── Imports (after mocks) ──────────────────────────────────────────────────
-import { RecordingLogic, truncateContentSize } from '../recordingLogic.ts';
+import { truncateContentSize } from '../recordingLogic.ts';
 import { RecordingCache } from '../recordingCache.ts';
+import { makeRecordingLogic } from './helpers/makeRecordingLogic.ts';
 import * as storage from '../../utils/storage.ts';
 import * as domainUtils from '../../utils/domainUtils.ts';
 import { PrivacyPipeline } from '../privacyPipeline.ts';
@@ -230,7 +231,7 @@ describe('RecordingLogic - getSavedUrlsWithCache', () => {
 
   beforeEach(() => {
     resetCacheState();
-    logic = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
+    logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
     vi.clearAllMocks();
 
     // @ts-expect-error - vi.fn() type narrowing
@@ -325,7 +326,7 @@ describe('RecordingLogic - normalizeUrlForCache (via getPrivacyInfoWithCache)', 
 
   beforeEach(() => {
     resetCacheState();
-    logic = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
+    logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
   });
 
   test('normalizes URL by removing trailing slash', async () => {
@@ -373,7 +374,7 @@ describe('RecordingLogic - getPrivacyInfoWithCache session storage fallback', ()
 
   beforeEach(() => {
     resetCacheState();
-    logic = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
+    logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
   });
 
   test('restores privacy info from chrome.storage.session on cache miss', async () => {
@@ -505,7 +506,7 @@ describe('RecordingLogic - record (delegates to RecordingPipeline)', () => {
       this.execute = mockExecute;
     });
 
-    logic = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
+    logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
   });
 
   test('creates RecordingPipeline and calls execute', async () => {
@@ -610,7 +611,7 @@ describe('RecordingLogic - recordWithPreview', () => {
       this.execute = mockExecute;
     });
 
-    logic = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
+    logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
   });
 
   test('calls record with previewOnly=true', async () => {
@@ -661,15 +662,15 @@ describe('RecordingLogic - recordWithPreview', () => {
 });
 
 describe('RecordingLogic - constructor', () => {
-  test('initializes mode as null', () => {
-    const logic = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
-    expect((logic as any).mode).toBeNull();
+  test('stores the injected pipeline', () => {
+    const logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
+    expect((logic as any).pipeline).toBeDefined();
   });
 
   test('stores obsidian and aiService references', () => {
     const obsidian = makeMockObsidian();
     const aiClient = makeMockAiClient();
-    const logic = new RecordingLogic(obsidian, aiClient);
+    const logic = makeRecordingLogic(obsidian, aiClient);
 
     expect((logic as any).obsidian).toBe(obsidian);
     expect((logic as any).aiService).toBe(aiClient);
@@ -695,7 +696,7 @@ describe('RecordingLogic - settings cache interaction with record', () => {
       this.execute = vi.fn().mockResolvedValue({ success: true });
     });
 
-    logic = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
+    logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
   });
 
   test('record populates settings cache', async () => {
@@ -739,12 +740,12 @@ describe('RecordingLogic - static cache state', () => {
     // @ts-expect-error - vi.fn() type narrowing
     storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'test' });
 
-    const logic1 = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
+    const logic1 = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
     await RecordingCache.getSettingsWithCache();
 
     expect(RecordingCache.getCacheState().settingsCache).not.toBeNull();
 
-    const logic2 = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
+    const logic2 = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
     // logic2 should see the same static cache
     const settings = await RecordingCache.getSettingsWithCache();
     expect(settings).toHaveProperty('PRIVACY_MODE', 'test');
@@ -780,7 +781,7 @@ describe('RecordingLogic - edge cases', () => {
   });
 
   test('getPrivacyInfoWithCache returns null for expired cache entry', async () => {
-    logic = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
+    logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
 
     const url = 'https://example.com/expired';
     const expiredInfo = {
@@ -797,7 +798,7 @@ describe('RecordingLogic - edge cases', () => {
   });
 
   test('getPrivacyInfoWithCache returns fresh cache entry', async () => {
-    logic = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
+    logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
 
     const url = 'https://example.com/fresh';
     const freshInfo = {
@@ -812,7 +813,7 @@ describe('RecordingLogic - edge cases', () => {
   });
 
   test('getPrivacyInfoWithCache handles null privacyCache', async () => {
-    logic = new RecordingLogic(makeMockObsidian(), makeMockAiClient());
+    logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
 
     RecordingCache.getCacheState().privacyCache = null;
 
