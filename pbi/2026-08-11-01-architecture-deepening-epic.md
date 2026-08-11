@@ -82,4 +82,19 @@ Scenario: 既存の記録・履歴・AI機能が維持される
 - 子PBI 4: Recording handlerの共通interfaceを深深化する
 - 子PBI 5: review summaryをAIServiceへ移行する
 
-詳細なスコープ、非スコープ、BDD受け入れ条件、テスト観点、ADR関係は、同日付の設計仕様書と各子PBIファイルに記載する。
+ 詳細なスコープ、非スコープ、BDD受け入れ条件、テスト観点、ADR関係は、同日付の設計仕様書と各子PBIファイルに記載する。
+
+## アーカイブ理由
+
+2026-08-11 に5つの子PBIをすべて完了し、Epicの目的を達成した。
+残存していた「handler registry移設」は、影響範囲が独立しており
+別PBIとして切り出す判断とした（`2026-08-XX-move-message-handler-registry-to-composition-root.md`）。
+
+## 完了済み子PBI
+
+- 2026-08-11-02-deepen-saved-url-entry-module.md
+- 2026-08-11-03-unify-history-query-module.md
+- 2026-08-11-04-deepen-sqlite-history-panel-test-seams.md
+- 2026-08-11-05-unify-recording-handler-interface.md
+- 2026-08-11-06-migrate-review-summary-to-ai-service.md
+

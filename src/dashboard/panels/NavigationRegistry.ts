@@ -54,9 +54,13 @@ export class NavigationRegistry {
     if (this.activePanelId) {
       const current = this.panels.get(this.activePanelId);
       if (current?.category === 'async-data') current.onDeactivate?.();
-      // Hide previous panel
-      const prevEl = document.getElementById(this.activePanelId);
-      prevEl?.classList.remove('active');
+    }
+
+    // Clear any panel left `.active` in the static HTML (e.g. panel-general),
+    // not just the one tracked by activePanelId, so the first programmatic
+    // navigate() (activePanelId still null) doesn't leave a stale panel visible.
+    for (const el of document.querySelectorAll('.panel.active')) {
+      el.classList.remove('active');
     }
 
     this.activePanelId = panelId;
