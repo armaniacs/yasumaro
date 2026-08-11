@@ -16,13 +16,7 @@
 
 `pbi/` に残っているのは**未完了のPBIのみ**。完了したものは `dev-docs/archived/pbi/` にある。
 
-| PBI | 難易度 | 副作用 | 種別 | 概要 |
-|---|---|---|---|---|
-| ⬜ [2026-08-01-17-fix-encryption-key-session-storage.md](2026-08-01-17-fix-encryption-key-session-storage.md) | 🔴高 | 🔴あり | 🔧 | マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行 |
-| 🔶 [2026-08-07-08-refactor-ai-client-service-unification.md](2026-08-07-08-refactor-ai-client-service-unification.md) | 🔴高 | 🔴あり | 🔧 | AIClient/AIService二重レイヤーと型ドリフト(model/modelName)の統合（modelName型ドリフトは解消済み。AIClient削除は中核パスの高リスクのため保留） |
-| ⬜ [2026-08-11-07-fix-sqlite-history-panel-reducer-consistency.md](2026-08-11-07-fix-sqlite-history-panel-reducer-consistency.md) | 🔴高 | 🟡軽微 | 🔧 | SQLite history panelの直接state mutationとreducerの二重経路を統一する |
-| ⬜ [2026-08-11-08-fix-metadata-patch-queue-capacity.md](2026-08-11-08-fix-metadata-patch-queue-capacity.md) | 🔴高 | 🔴あり | 🔧 | metadata patch queueのpayload byte上限、同一URL統合、大容量contentのretry方針を定義する |
-| ⬜ [2026-08-11-09-fix-history-fallback-failure-contract.md](2026-08-11-09-fix-history-fallback-failure-contract.md) | 🟡中 | 🟡軽微 | 🔧 | fallback検索失敗時のover-fetch漏れとrows/total不整合を解消する |
+（現在、未着手・部分実装のPBIはありません）
 
 ---
 
@@ -62,6 +56,14 @@
 - 2026-08-11-02-refactor-handler-registry-composition-root.md (handler registryをcomposition rootへ移設し、全19件のtrust levelを契約テストで固定)
 - 2026-08-11-03-test-offline-retry-contract.md (obsidian_sync retryのmaskedCount不使用、SQLite/metadata step非再実行を契約テストで固定)
 - 2026-08-11-04-refactor-dashboard-opfs-migration-decoder.md (DashboardのopfsMigrationV2*フィールドに厳密decoderを適用)
+
+### 2026-08-12 セッションでアーカイブ済み（5件）
+
+- 2026-08-01-17-fix-encryption-key-session-storage.md (マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行。マイグレーション・local storageフォールバック・PRIVACY.md更新を完了)
+- 2026-08-07-08-refactor-ai-client-service-unification.md (AIClientをRemoteAIServiceの薄い委譲ラッパー化。in-flight重複排除・factory reuseを実装。AIClient自体の削除は高リスクのため保留)
+- 2026-08-11-07-fix-sqlite-history-panel-reducer-consistency.md (sqliteHistoryPanelの全state mutationをhistoryStateReducer経由に統一)
+- 2026-08-11-08-fix-metadata-patch-queue-capacity.md (metadata patch coalescing・payload上限100KB・content省略・RetryableItem対応を完了)
+- 2026-08-11-09-fix-history-fallback-failure-contract.md (fallback検索失敗時にServiceErrorを返しover-fetchを解消)
 
 ### 2026-08-09 セッションでアーカイブ済み（17件）
 
@@ -327,25 +329,13 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 1（✨機能追加 0 / 🔧非機能追加 1） |
-| 🔶 部分実装 | 7（2026-08-07-08 AIレイヤー統合、2026-08-10-01〜05、2026-08-11-01 Epic） |
-| **`pbi/` 残存合計** | **8** |
-| アーカイブ済みPBI | 245 |
+| ⬜ 未着手 | 0 |
+| 🔶 部分実装 | 0 |
+| **`pbi/` 残存合計** | **0** |
+| アーカイブ済みPBI | 250 |
 | アーカイブ済み実装計画 | 105 |
 
-未着手の内訳:
-
-| PBI | 内容 | 実施順 |
-|---|---|---|
-| 2026-08-01-17 | 暗号化キーの chrome.storage.session 移行 | 独立 |
-
-部分実装の内訳:
-
-| PBI | 内容 | 状態 |
-|---|---|---|
-| 2026-08-07-08（AIレイヤー統合） | modelName型ドリフト解消済み。AIClient削除は中核パスの高リスクのため保留 | 🔶 |
-| 2026-08-11-01（アーキテクチャ深化Epic） | Candidate 1〜5 実装完了、コードレビュー済み。type-check / validate / build 成功。handler registry移設のみ範囲外として残存 | 🔶 |
-| 2026-08-10-01〜05 | Epic 2026-08-11-01 に統合済み。個別の再実装は不要 | 🔶 |
+※ 2026-08-12 セッションで PBI-07/08/09/17 および PBI-08 AI を完了。pbi/ は現在空。
 
 ### 2026-08-09 アーキテクチャレビュー由来（20〜24）の実施順と依存
 
