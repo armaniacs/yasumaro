@@ -118,10 +118,9 @@ export async function exportJson(): Promise<Blob> {
 // Binary .db Export
 // ============================================================================
 
-export async function exportDb(): Promise<Blob | null> {
+export async function exportDb(): Promise<Blob> {
   const result = await backupDb();
-  // Surface the reason instead of returning null: the caller reports null as
-  // a generic failure, which hides quota and connection errors from the user.
+  // Preserve the backend error so callers can report the actual failure reason.
   if ('error' in result) {
     throw new Error(result.error);
   }

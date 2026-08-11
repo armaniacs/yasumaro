@@ -31,6 +31,7 @@ import {
   restoreDb,
   importLogs,
   appendToLogs,
+  queryAuditLogs,
 } from '../dashboardSqliteService.js';
 
 describe('dashboardSqliteService — additional exports', () => {
@@ -55,6 +56,24 @@ describe('dashboardSqliteService — additional exports', () => {
       givenResponse({ success: false, error: 'Migration failed' });
       const result = await migrateLogs();
       expect(result).toEqual({ error: 'Migration failed' });
+    });
+
+    it('reports an error when count is missing instead of substituting 0', async () => {
+      givenResponse({ success: true });
+      const result = await migrateLogs();
+      expect(result).toEqual({ error: 'Invalid SQLite response: count' });
+    });
+
+    it('reports an error when read is missing instead of treating it as zero', async () => {
+      givenResponse({ success: true, count: 1, inserted: 1 });
+      const result = await migrateLogs();
+      expect(result).toEqual({ error: 'Invalid SQLite response: read' });
+    });
+
+    it('reports an error when inserted is missing instead of treating it as zero', async () => {
+      givenResponse({ success: true, count: 1, read: 1 });
+      const result = await migrateLogs();
+      expect(result).toEqual({ error: 'Invalid SQLite response: inserted' });
     });
 
     it('carries the reason on rejection', async () => {
@@ -167,6 +186,78 @@ describe('dashboardSqliteService — additional exports', () => {
         initError: 'Timeout',
       });
     });
+
+    it.each(['initialized', 'fallback', 'fts5'] as const)(
+      'rejects a non-boolean %s value in a successful response',
+      async (field) => {
+        givenResponse({
+          success: true,
+          initialized: true,
+          path: '/db.sqlite3',
+          fallback: false,
+          fts5: true,
+          [field]: 'true',
+        });
+
+        const result = await getSqliteStatus();
+
+        expect(result).toEqual({
+          initialized: false,
+          path: '',
+          fallback: false,
+          fts5: false,
+          initError: `Invalid SQLite response: ${field}`,
+        });
+      },
+    );
+
+    it.each([
+      ['opfsMigrationV2Done', 'invalid'],
+      ['opfsMigrationV2LastAttemptedAt', 123],
+      ['opfsMigrationV2CompletedAt', {}],
+      ['opfsMigrationV2RecordCount', -1],
+      ['opfsMigrationV2RecordCount', Number.NaN],
+    ] as const)('rejects an invalid %s value', async (field, value) => {
+      givenResponse({
+        success: true,
+        initialized: true,
+        path: '/db.sqlite3',
+        fallback: false,
+        fts5: true,
+        [field]: value,
+      });
+
+      const result = await getSqliteStatus();
+
+      expect(result).toEqual({
+        initialized: false,
+        path: '',
+        fallback: false,
+        fts5: false,
+        initError: `Invalid SQLite response: ${field}`,
+      });
+    });
+
+    it('strictly decodes valid OPFS migration status fields', async () => {
+      givenResponse({
+        success: true,
+        initialized: true,
+        path: '/db.sqlite3',
+        fallback: false,
+        fts5: true,
+        opfsMigrationV2Done: true,
+        opfsMigrationV2LastAttemptedAt: '2026-08-11T10:00:00.000Z',
+        opfsMigrationV2CompletedAt: null,
+        opfsMigrationV2RecordCount: 3,
+      });
+
+      await expect(getSqliteStatus()).resolves.toMatchObject({
+        opfsMigrationV2Done: true,
+        opfsMigrationV2LastAttemptedAt: '2026-08-11T10:00:00.000Z',
+        opfsMigrationV2CompletedAt: null,
+        opfsMigrationV2RecordCount: 3,
+      });
+    });
   });
 
   describe('cleanupLegacyStorage', () => {
@@ -176,10 +267,16 @@ describe('dashboardSqliteService — additional exports', () => {
       expect(result).toEqual({ data: { removed: ['old_key_1', 'old_key_2'], totalBytes: 1024 } });
     });
 
-    it('handles missing response fields', async () => {
-      givenResponse({ success: true });
+    it('keeps the removed fallback when totalBytes is present', async () => {
+      givenResponse({ success: true, totalBytes: 0 });
       const result = await cleanupLegacyStorage();
       expect(result).toEqual({ data: { removed: [], totalBytes: 0 } });
+    });
+
+    it('reports an error when totalBytes is missing instead of substituting 0', async () => {
+      givenResponse({ success: true, removed: ['old_key_1'] });
+      const result = await cleanupLegacyStorage();
+      expect(result).toEqual({ error: 'Invalid SQLite response: totalBytes' });
     });
 
     it('carries the reason from a failed response', async () => {
@@ -200,6 +297,12 @@ describe('dashboardSqliteService — additional exports', () => {
       givenResponse({ success: true, updated: 5, total: 10 });
       const result = await backfillMetadata();
       expect(result).toEqual({ data: { updated: 5, total: 10 } });
+    });
+
+    it('reports an error when updated is missing instead of substituting 0', async () => {
+      givenResponse({ success: true });
+      const result = await backfillMetadata();
+      expect(result).toEqual({ error: 'Invalid SQLite response: updated' });
     });
 
     it('carries the reason from a failed response', async () => {
@@ -294,6 +397,12 @@ describe('dashboardSqliteService — additional exports', () => {
       expect(result).toEqual({ data: { inserted: 2, skipped: 0, total: 2 } });
     });
 
+    it('reports an error when inserted is missing instead of substituting 0', async () => {
+      givenResponse({ success: true });
+      const result = await importLogs(sampleRows);
+      expect(result).toEqual({ error: 'Invalid SQLite response: inserted' });
+    });
+
     it('carries the reason from a failed response', async () => {
       givenResponse({ success: false, error: 'Import failed' });
       const result = await importLogs(sampleRows);
@@ -314,10 +423,10 @@ describe('dashboardSqliteService — additional exports', () => {
       expect(result).toEqual({ data: { appended: 5 } });
     });
 
-    it('returns success with ids.length fallback when appended missing', async () => {
+    it('reports an error when appended is missing instead of substituting ids.length', async () => {
       givenResponse({ success: true });
       const result = await appendToLogs([1, 2, 3]);
-      expect(result).toEqual({ data: { appended: 3 } });
+      expect(result).toEqual({ error: 'Invalid SQLite response: appended' });
     });
 
     it('carries the reason when response is failure', async () => {
@@ -336,6 +445,37 @@ describe('dashboardSqliteService — additional exports', () => {
       givenLastError('Failed');
       const result = await appendToLogs([1]);
       expect(result).toEqual({ error: expect.stringContaining('Failed') });
+    });
+  });
+
+  describe('queryAuditLogs', () => {
+    it('returns validated audit rows and total on success', async () => {
+      const rows = [{ id: 1, provider: 'cloud', url: 'https://example.com', created_at: 1000 }];
+      givenResponse({ success: true, rows, total: 1 });
+
+      const result = await queryAuditLogs();
+
+      expect(result).toEqual({ data: { rows, total: 1 } });
+    });
+
+    it('reports an error when the required rows array is missing', async () => {
+      givenResponse({ success: true, total: 0 });
+
+      const result = await queryAuditLogs();
+
+      expect(result).toEqual({ error: 'Invalid SQLite response: rows' });
+    });
+
+    it('reports an error when an audit row has invalid fields', async () => {
+      givenResponse({
+        success: true,
+        rows: [{ id: 1, provider: 'cloud', url: 'https://example.com' }],
+        total: 1,
+      });
+
+      const result = await queryAuditLogs();
+
+      expect(result).toEqual({ error: 'Invalid SQLite response: rows' });
     });
   });
 });

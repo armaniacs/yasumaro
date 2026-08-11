@@ -83,13 +83,13 @@ describe('retry follows the retriable flag, not the message text', () => {
   it('retries once when the service worker marks the failure transient', async () => {
     givenResponses(
       { success: false, error: TIMEOUT, retriable: true },
-      { success: true, rows: [{ id: 1 }], total: 1 },
+      { success: true, rows: [{ id: 1, url: 'https://example.com', created_at: 1 }], total: 1 },
     );
 
     const result = await queryLogs({ limit: 10 });
 
     expect(sendMessage).toHaveBeenCalledTimes(2);
-    expect(result).toEqual({ data: { rows: [{ id: 1 }], total: 1 } });
+    expect(result).toEqual({ data: { rows: [{ id: 1, url: 'https://example.com', created_at: 1 }], total: 1 } });
   });
 
   it('does not retry a deterministic failure', async () => {

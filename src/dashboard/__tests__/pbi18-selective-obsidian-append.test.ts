@@ -353,12 +353,12 @@ describe('appendToLogs', () => {
     expect(result).toEqual({ data: { appended: 5 } });
   });
 
-  it('falls back to ids.length when appended count not provided', async () => {
+  it('reports an error when appended count is missing instead of substituting ids.length', async () => {
     givenResponse({ success: true });
 
     const result = await appendToLogs([1, 2]);
 
-    expect(result).toEqual({ data: { appended: 2 } });
+    expect(result).toEqual({ error: 'Invalid SQLite response: appended' });
   });
 
   it('returns error result on SW failure response', async () => {

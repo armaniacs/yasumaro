@@ -99,9 +99,9 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
     expect(restoreDb).not.toHaveBeenCalled();
   });
 
-  it('rejects when exportDb fails (no history db available)', async () => {
+  it('rejects when exportDb fails', async () => {
     vi.mocked(getSettings).mockResolvedValue(FAKE_SETTINGS);
-    vi.mocked(exportDb).mockResolvedValue(null);
+    vi.mocked(exportDb).mockRejectedValue(new Error('Database unavailable'));
 
     await expect(exportEncryptedBackup('correct-password')).rejects.toThrow();
   });

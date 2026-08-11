@@ -44,11 +44,11 @@ describe('dashboardSqliteService', () => {
 
   describe('queryLogs', () => {
     it('returns rows and total on success', async () => {
-      givenResponse({ success: true, rows: [{ id: 1, url: 'https://example.com' }], total: 1 });
+      givenResponse({ success: true, rows: [{ id: 1, url: 'https://example.com', created_at: 1000 }], total: 1 });
 
       const result = await queryLogs({ limit: 10, offset: 0 });
 
-      expect(result).toEqual({ data: { rows: [{ id: 1, url: 'https://example.com' }], total: 1 } });
+       expect(result).toEqual({ data: { rows: [{ id: 1, url: 'https://example.com', created_at: 1000 }], total: 1 } });
     });
 
     it('sends the correct message payload', async () => {
@@ -68,6 +68,22 @@ describe('dashboardSqliteService', () => {
       expect(result).toEqual({ error: 'DB error' });
     });
 
+    it('rejects a successful response without the required rows array', async () => {
+      givenResponse({ success: true, total: 0 });
+
+      const result = await queryLogs();
+
+      expect(result).toEqual({ error: 'Invalid SQLite response: rows' });
+    });
+
+    it('rejects rows that do not contain the required entry fields', async () => {
+      givenResponse({ success: true, rows: [{ id: 1, url: 'https://example.com' }], total: 1 });
+
+      const result = await queryLogs();
+
+      expect(result).toEqual({ error: 'Invalid SQLite response: rows' });
+    });
+
     it('surfaces the failure reason on rejection', async () => {
       givenLastError('Connection failed');
 
@@ -78,10 +94,10 @@ describe('dashboardSqliteService', () => {
 
   describe('searchLogs', () => {
     it('returns search results on success', async () => {
-      givenResponse({ success: true, rows: [{ id: 2, url: 'https://example.com/search' }], total: 1 });
+      givenResponse({ success: true, rows: [{ id: 2, url: 'https://example.com/search', created_at: 2000 }], total: 1 });
 
       const result = await searchLogs('test query', 20, 0);
-      expect(result).toEqual({ data: { rows: [{ id: 2, url: 'https://example.com/search' }], total: 1 } });
+      expect(result).toEqual({ data: { rows: [{ id: 2, url: 'https://example.com/search', created_at: 2000 }], total: 1 } });
     });
 
     it('uses default limit and offset', async () => {
@@ -109,6 +125,13 @@ describe('dashboardSqliteService', () => {
 
       const result = await toggleStar(42);
       expect(result).toEqual({ data: { is_starred: 1 } });
+    });
+
+    it('reports an error when is_starred is missing instead of substituting a value', async () => {
+      givenResponse({ success: true });
+
+      const result = await toggleStar(42);
+      expect(result).toEqual({ error: 'Invalid SQLite response: is_starred' });
     });
 
     // Failures carry their reason instead of collapsing to null: the panel
