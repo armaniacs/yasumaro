@@ -1,5 +1,9 @@
 # PBI: Saved URL entry moduleを深深化する
 
+## 実装状況
+
+**完了** — 2026-08-11。`saveSavedUrlEntryMetadata`による原子CAS、metadata patch retry、旧queue payload互換、dual-write制御、関連テストを実装済み。
+
 ## 親PBI
 
 `2026-08-11-01-architecture-deepening-epic.md`
@@ -81,3 +85,11 @@ Scenario: dual-write無効化を維持する
 - BDDシナリオが成功している。
 - 子PBI 2のhistory query統合に必要な保存契約が明確である。
 - Manifest V3の非同期処理とService Worker lifecycleに違反しない。
+
+## 実装結果
+
+- `savedUrlStore.ts`へ一括metadata保存を追加した。
+- `saveMetadataStep`のfield単位書き込みを一回のpatch保存へ集約した。
+- metadata patch queueと旧payload再生を実装した。
+- `LEGACY_DUAL_WRITE_ENABLED`、quota recovery、retry契約を維持した。
+- 関連テスト、type-check、validate、buildが成功した。

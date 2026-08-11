@@ -1,5 +1,9 @@
 # PBI: Recording handlerの共通interfaceを深深化する
 
+## 実装状況
+
+**完了** — 2026-08-11。recording handlerの最小dependency interface、共有closure、composition wiringを実装済み。
+
 ## 親PBI
 
 `2026-08-11-01-architecture-deepening-epic.md`
@@ -88,3 +92,11 @@ Scenario: fakeを使ってhandlerをテストする
 - handler registryの既存動作とMV3 message契約が維持される。
 - ADRの明示的な依存注入方針と整合する。
 - 子PBI 5が利用できる安定したcomposition rootと依存注入経路が確立される。
+
+## 実装結果
+
+- `RecordingHandlerBaseDeps`へ共通依存を集約した。
+- 未使用のstorage、AI、Obsidian依存をhandler interfaceから削除した。
+- `setUrlContent` closureをcomposition rootで一度だけ構築した。
+- MV3 message契約、permission、rate limit、RecordingPipeline共有を維持した。
+- 関連テスト、type-check、validate、buildが成功した。

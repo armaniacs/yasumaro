@@ -1,5 +1,9 @@
 # PBI: SQLite結果契約と周辺moduleを段階的に深深化する
 
+## 実装状況
+
+**完了** — 2026-08-11。親Epicの5候補と子PBI 1〜5を依存順に実装し、関連テスト、type-check、validate、buildを完了した。
+
 ## ユーザーストーリー
 
 開発者として、SQLite結果契約・Dashboard SQLite・Background composition・RecordingPipelineのoffline policyを一貫したinterfaceで扱いたい。なぜなら、障害を成功や空結果へ変換する漏れ、productionとテストの配線ドリフト、step名変更による再試行漏れを防ぎ、変更と検証を各moduleへ局所化したいから。
@@ -173,6 +177,13 @@ Phase 1〜3に依存する理由:
 - `enqueueOfflineJob`のstep名文字列判定を削除する。
 - step名変更後もpolicyが維持されるcontract testを追加する。
 - 既存のretry回数、error strategy、queue payloadは維持する。
+
+### Epic実装結果
+
+- SQLite結果契約、Dashboard response、Background composition、RecordingPipeline offline policyを実装済み。
+- Saved URL entry atomic CAS、unified history query、history panel state seam、recording handler minimal deps、review summary AIService移行を追加実装した。
+- 最終検証: `npm run type-check`、`npm test`（432 files / 7,887 passed / 18 skipped）、`npm run build`。
+- コードレビューで判明したdual-write無効時のlegacy entry作成回帰とqueue timestamp回帰を修正した。
 
 Phase 4に依存する理由:
 

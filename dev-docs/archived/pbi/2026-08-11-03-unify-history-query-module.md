@@ -1,5 +1,9 @@
 # PBI: Unified history query moduleを深深化する
 
+## 実装状況
+
+**完了** — 2026-08-11。SQLite history panelへ統一query moduleを適用し、最新row限定enrichmentと既存tag fallbackを実装済み。
+
 ## 親PBI
 
 `2026-08-11-01-architecture-deepening-epic.md`
@@ -84,3 +88,11 @@ Scenario: panelが統一interfaceだけを利用する
 - legacy metadata欠損時の履歴表示が維持される。
 - 子PBI 3が利用できる安定したquery interfaceが確立される。
 - 既存ADRのlegacy履歴保持方針と矛盾しない。
+
+## 実装結果
+
+- `queryHistory`へSQLite取得、legacy enrichment、tag fallbackを集約した。
+- 同一URL・同一bucketでは最新SQLite rowだけをenrichment対象にした。
+- panelからSQLite/legacy storageの直接参照を除去した。
+- legacy panelとduplicate checkは既存経路を維持した。
+- 関連テスト、type-check、validate、buildが成功した。

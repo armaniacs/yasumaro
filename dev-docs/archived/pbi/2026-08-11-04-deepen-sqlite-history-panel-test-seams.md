@@ -1,5 +1,9 @@
 # PBI: SQLite history panelの内部seamを深深化する
 
+## 実装状況
+
+**完了** — 2026-08-11。DOM非依存state seam、request generation guard、unmount後のstale response防止、既存UI回帰テストを実装済み。
+
 ## 親PBI
 
 `2026-08-11-01-architecture-deepening-epic.md`
@@ -85,3 +89,11 @@ Scenario: query失敗をpanelへ伝える
 - HTML生成時のsanitizationと既存のセキュリティ制約が維持される。
 - 子PBI 2のquery interfaceを直接迂回しない。
 - ADRのpanel lifecycle方針と整合する。
+
+## 実装結果
+
+- `sqliteHistoryPanelState.ts`へstate遷移と純関数テストを追加した。
+- queryの世代管理とunmount無効化を追加した。
+- 不正pageのclamp、query failure、sanitizationの契約をテストで固定した。
+- `AsyncDataPanel` interfaceと既存UI lifecycleを維持した。
+- 関連テスト、type-check、validate、buildが成功した。

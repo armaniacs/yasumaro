@@ -1,5 +1,9 @@
 # PBI: review summaryをAIServiceへ移行する
 
+## 実装状況
+
+**完了** — 2026-08-11。review summaryのAIService factory注入、alarm/message共有、AIClient直接生成除去、ADR更新を実装済み。
+
 ## 親PBI
 
 `2026-08-11-01-architecture-deepening-epic.md`
@@ -93,3 +97,11 @@ Scenario: AIService fakeで検証する
 - AIClientは内部implementationとして残る。
 - ADRの例外が解消または明示的に更新される。
 - 親PBIの全体完了条件を満たせる。
+
+## 実装結果
+
+- review summary generatorをfactory化し、AIServiceとSQLite依存を注入した。
+- weekly/monthly summary、alarm、message経路で同一generatorを利用した。
+- AI用途はoffscreen非依存として整理し、関連ADRと設計文書を更新した。
+- summary出力、fallback、token、sanitization、download契約を維持した。
+- 関連テスト、type-check、validate、buildが成功した。
