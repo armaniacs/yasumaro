@@ -26,43 +26,6 @@ export function extractSourceFromImportMetaUrl(url: string): string {
 }
 
 /**
- * Resolve the `source` field for a log entry.
- * If an explicit source is provided, it is returned unchanged.
- * Otherwise, the caller location is inferred from `Error.stack`.
- *
- * Note: after bundling, stack frames may point to chunk files rather than
- * original source files. The returned value is still useful for tracing but
- * may not match the TypeScript source name.
- */
-export function resolveLogSource(source?: string): string | undefined {
-    if (source !== undefined) {
-        return source;
-    }
-
-    const stack = new Error().stack || '';
-    const lines = stack.split('\n');
-
-    for (const line of lines) {
-        // Skip frames that are part of this logger module.
-        if (line.includes('/logger.ts') || line.includes('\\logger.ts') ||
-            line.includes('/logger/api.ts') || line.includes('\\logger\\api.ts')) {
-            continue;
-        }
-
-        // Match common stack frame shapes:
-        //   at functionName (file:///path/to/file.ts:123:45)
-        //   at file:///path/to/file.ts:123:45
-        //   at functionName (/path/to/file.ts:123:45)
-        const match = line.match(/at\s+(?:[^\s(]+\s+)?\(?([^\s)]+?):\d+(?::\d+)?\)?$/);
-        if (match) {
-            return extractSourceFromImportMetaUrl(match[1]);
-        }
-    }
-
-    return 'unknown';
-}
-
-/**
  * 構造化されたログエントリを作成する（内部関数）
  * @param {LogTypeValues} type - ログタイプ
  * @param {string} message - メッセージ
@@ -100,7 +63,7 @@ export async function logInfo<T extends object = Record<string, unknown>>(
     details: T = {} as T,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.INFO, message, details, undefined, resolveLogSource(source));
+    const entry = createStructuredLog(LogType.INFO, message, details, undefined, source);
     await writeStructuredLog(entry);
 }
 
@@ -117,7 +80,7 @@ export async function logWarn<T extends object = Record<string, unknown>>(
     errorCode?: ErrorCodeValues,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.WARN, message, details, errorCode, resolveLogSource(source));
+    const entry = createStructuredLog(LogType.WARN, message, details, errorCode, source);
     await writeStructuredLog(entry);
 }
 
@@ -134,7 +97,7 @@ export async function logError<T extends object = Record<string, unknown>>(
     errorCode: ErrorCodeValues = ErrorCode.UNKNOWN_ERROR,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, resolveLogSource(source));
+    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, source);
     await writeStructuredLog(entry);
 
     // 開発環境ではconsole.errorにも出力
@@ -158,7 +121,7 @@ export async function logDebug<T extends object = Record<string, unknown>>(
     if (!isDevelopment()) {
         return;
     }
-    const entry = createStructuredLog(LogType.DEBUG, message, details, undefined, resolveLogSource(source));
+    const entry = createStructuredLog(LogType.DEBUG, message, details, undefined, source);
     await writeStructuredLog(entry);
 
     // 開発環境ではconsole.debugにも出力
@@ -180,7 +143,7 @@ export async function logSanitize<T extends object = Record<string, unknown>>(
     errorCode?: ErrorCodeValues,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.SANITIZE, message, details, errorCode, resolveLogSource(source));
+    const entry = createStructuredLog(LogType.SANITIZE, message, details, errorCode, source);
     await writeStructuredLog(entry);
 }
 
@@ -220,7 +183,7 @@ export async function logCritical<T extends object = Record<string, unknown>>(
     source?: string,
     sink: CriticalAlertSink = defaultCriticalSink,
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, resolveLogSource(source));
+    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, source);
     await writeStructuredLog(entry);
     // Critical logs are flushed immediately so they are not lost on SW termination.
     await flushLogs(true);
