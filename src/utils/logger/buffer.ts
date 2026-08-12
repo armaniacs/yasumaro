@@ -30,4 +30,9 @@ export class LogBuffer {
   clear(): void {
     this.entries = [];
   }
+
+  /** Return a shallow copy of buffered entries without draining. */
+  peek(): LogEntry[] {
+    return [...this.entries];
+  }
 }
