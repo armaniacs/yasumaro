@@ -31,4 +31,11 @@ describe('LogBuffer', () => {
     buf.clear();
     expect(buf.size()).toBe(0);
   });
+
+  it('peek returns entries without draining', () => {
+    const buf = new LogBuffer(5);
+    buf.push(makeEntry('a'));
+    expect(buf.peek().map((e) => e.id)).toEqual(['a']);
+    expect(buf.size()).toBe(1);
+  });
 });

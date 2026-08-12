@@ -20,7 +20,16 @@ export class ChromeAlarmFlushScheduler implements LogFlushScheduler {
     }
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onSuspend) {
       chrome.runtime.onSuspend.addListener(async () => {
-        await this.flushNow();
+        // Await flush with a timeout so pending logs are not lost when the SW dies.
+        const flushCompleted = await Promise.race([
+          this.flushNow().then(() => true),
+          new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
+        ]);
+        if (!flushCompleted) {
+          console.error(
+            '[Logger] Flush timed out during suspend — pending log entries may not have been persisted'
+          );
+        }
       });
     }
   }
