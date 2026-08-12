@@ -39,6 +39,12 @@ All notable changes to this project will be documented in this file.
 
 （次のリリースに向けての変更をここに記載）
 
+## [6.7.43] - 2026-08-12
+
+### Fixed
+
+- **暗号化秘密値の保存先を `chrome.storage.local` に戻し、拡張機能アップデート後のAPIキー消失を修正** — v6.7.42で `chrome.storage.session` へ移行したが、`chrome.storage.session` は拡張機能アップデート時にクリアされる仕様のため、アップデートのたびに新しい秘密値が生成され、既存の暗号化済みAPIキー（Obsidian・AIプロバイダのトークン）が復号不能になっていた。`chrome.storage.local` へ戻し、直前バージョンで `chrome.storage.session` に秘密値が移動済みだが未クリアのユーザー向けに救済マイグレーションを追加した。設計判断の詳細は [ADR](dev-docs/ADR/2026-08-12-encryption-secret-storage-area-must-be-local.md) を参照。既にアップデートを跨いで秘密値が失われたユーザーはAPIキーの再入力が必要。
+
 ## [6.7.42] - 2026-08-12
 
 ### Fixed
