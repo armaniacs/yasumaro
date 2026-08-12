@@ -148,12 +148,9 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       expect(settings).toHaveProperty('AI_PROVIDER', 'openai');
     });
 
-    it('キャッシュバージョンが変更された場合に再取得する', async () => {
-      // Problem #3: 2重キャッシュ構造を1段階に簡素化
-      // バージョンチェックのロジックが簡素化されたため、このテストはスキップ
-      // TLLに基づく期限切れチェックのみ行われる
-      expect(true).toBe(true); // Placeholder test
-    });
+    // Problem #3: 2重キャッシュ構造を1段階に簡素化したため、バージョンチェック
+    // ロジック自体が存在しない（TTLに基づく期限切れチェックのみ行われる）。
+    it.skip('キャッシュバージョンが変更された場合に再取得する', () => {});
 
     it('静的キャッシュが使用可能な場合は静的キャッシュを使用する', async () => {
       const firstInstance = makeRecordingLogic(mockObsidianClient, mockAiClient);
