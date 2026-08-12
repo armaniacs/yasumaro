@@ -33,7 +33,6 @@ export {
 
 export {
     extractSourceFromImportMetaUrl,
-    resolveLogSource,
     logInfo,
     logWarn,
     logError,
