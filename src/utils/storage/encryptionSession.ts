@@ -140,64 +140,53 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
         return cachedEncryptionKey;
     }
 
-    // マスターパスワード未設定の場合：session storageから秘密を取得、なければ生成
-    // 【セキュリティ強化】ENCRYPTION_SECRET を chrome.storage.local から
-    // chrome.storage.session へ移行。local storage には平文の秘密を保持しない。
-    // chrome.storage.session が利用不能な環境（古いブラウザ等）では
-    // local storage にフォールバックする。
-    const hasSessionStorage = chrome.storage && chrome.storage.session;
+    // マスターパスワード未設定の場合：従来の方式を使用（マイグレーション準備）
+    // 【重要】ENCRYPTION_SECRET は chrome.storage.local に保存する。
+    // chrome.storage.session は拡張機能のアップデート時にクリアされる
+    // ("session" storage area, cleared on extension update per Chrome's
+    // Storage API contract) ため、ここに秘密を置くと updateのたびに
+    // 秘密が失われ、既存の暗号化済みAPIキー（Obsidian/AI providerの
+    // トークン）が復号不能になりデータロスを引き起こす（2026-08-12
+    // インシデント: v6.7.42アップデート後にAPIキーが消失した報告）。
     let saltBase64 = result[StorageKeys.ENCRYPTION_SALT] as string;
+    let secret = result[StorageKeys.ENCRYPTION_SECRET] as string;
 
-    if (!saltBase64) {
-        // 初回: ソルトを生成してlocal storageに保存
+    // 救済マイグレーション: 直前のバージョンでsession storageに一時的に
+    // secretが移されたユーザーを、まだSWコンテキストが生きていて
+    // session storageが失われていない間に local へ復元する。
+    // アップデートを跨いでsession storageが既にクリアされてしまった
+    // ユーザーはここに到達しても何も残っていないため復旧できない
+    // （＝暗号化済みAPIキーの再入力が必要）。
+    if (saltBase64 && !secret && chrome.storage.session) {
+        const sessionResult = await chrome.storage.session.get(StorageKeys.ENCRYPTION_SECRET);
+        const sessionSecret = sessionResult[StorageKeys.ENCRYPTION_SECRET] as string | undefined;
+        if (sessionSecret) {
+            secret = sessionSecret;
+            await chrome.storage.local.set({
+                [StorageKeys.ENCRYPTION_SECRET]: secret
+            });
+            await chrome.storage.session.remove(StorageKeys.ENCRYPTION_SECRET);
+        }
+    }
+
+    if (!saltBase64 || !secret) {
+        // 初回: ソルトとシークレットを生成
         const salt = generateSalt();
         saltBase64 = btoa(String.fromCharCode(...salt));
+        // 32バイトのランダムシークレットを生成
+        const secretBytes = crypto.getRandomValues(new Uint8Array(32));
+        secret = btoa(String.fromCharCode(...secretBytes));
+
         await chrome.storage.local.set({
             [StorageKeys.ENCRYPTION_SALT]: saltBase64,
+            [StorageKeys.ENCRYPTION_SECRET]: secret
         });
-    }
-
-    // マイグレーション: local storage に残っている旧秘密を session storage へ移動
-    const localSecret = result[StorageKeys.ENCRYPTION_SECRET] as string;
-    if (localSecret && hasSessionStorage) {
-        await chrome.storage.session.set({
-            [StorageKeys.ENCRYPTION_SECRET]: localSecret
-        });
-        await chrome.storage.local.remove(StorageKeys.ENCRYPTION_SECRET);
-    }
-
-    let sessionSecret: string;
-    if (hasSessionStorage) {
-        // session storage から秘密を取得
-        const sessionResult = await chrome.storage.session.get(StorageKeys.ENCRYPTION_SECRET);
-        sessionSecret = sessionResult[StorageKeys.ENCRYPTION_SECRET] as string;
-
-        if (!sessionSecret) {
-            // 初回または再起動後: 新しい秘密を生成してsession storageに保存
-            const secretBytes = crypto.getRandomValues(new Uint8Array(32));
-            sessionSecret = btoa(String.fromCharCode(...secretBytes));
-
-            await chrome.storage.session.set({
-                [StorageKeys.ENCRYPTION_SECRET]: sessionSecret
-            });
-        }
-    } else {
-        // フォールバック: session storage が利用不能な場合は local storage を使用
-        sessionSecret = localSecret || (() => {
-            const secretBytes = crypto.getRandomValues(new Uint8Array(32));
-            return btoa(String.fromCharCode(...secretBytes));
-        })();
-        if (!localSecret) {
-            await chrome.storage.local.set({
-                [StorageKeys.ENCRYPTION_SECRET]: sessionSecret
-            });
-        }
     }
 
     const salt = base64ToUint8Array(saltBase64);
 
     // ランダムなsecretとsaltからPBKDF2でキー導出
-    cachedEncryptionKey = await deriveKey(sessionSecret, salt);
+    cachedEncryptionKey = await deriveKey(secret, salt);
     return cachedEncryptionKey;
 }
 
