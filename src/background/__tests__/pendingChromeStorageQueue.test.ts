@@ -45,4 +45,110 @@ describe('pendingChromeStorageQueue', () => {
     const queue = storageData[PENDING_CHROME_STORAGE_KEY] as unknown[];
     expect(queue.length).toBeLessThanOrEqual(500);
   });
+
+  it('queues and flushes a metadata-patch payload', async () => {
+    await enqueuePendingWrite({
+      type: 'metadataPatch',
+      key: 'savedUrlsWithTimestamps',
+      url: 'https://example.com',
+      patch: { recordType: 'auto', tags: ['news'] },
+      refreshTimestamp: true,
+      mergeTags: true,
+    });
+
+    const retryFn = vi.fn().mockResolvedValue(true);
+    await flushPendingWrites(retryFn);
+
+    expect(retryFn).toHaveBeenCalledWith({
+      type: 'metadataPatch',
+      key: 'savedUrlsWithTimestamps',
+      url: 'https://example.com',
+      patch: { recordType: 'auto', tags: ['news'] },
+      refreshTimestamp: true,
+      mergeTags: true,
+    });
+  });
+
+  it('keeps a metadata-patch payload queued when retry fails', async () => {
+    await enqueuePendingWrite({
+      type: 'metadataPatch',
+      key: 'savedUrlsWithTimestamps',
+      url: 'https://example.com',
+      patch: { content: 'body' },
+    });
+
+    const retryFn = vi.fn().mockResolvedValue(false);
+    await flushPendingWrites(retryFn);
+
+    const remaining = storageData[PENDING_CHROME_STORAGE_KEY] as unknown[];
+    expect(remaining).toHaveLength(1);
+    expect((remaining[0] as { type?: string }).type).toBe('metadataPatch');
+  });
+
+  it('handles a queue mixing legacy and metadata-patch payloads', async () => {
+    await enqueuePendingWrite({ key: 'savedUrlsWithTimestamps', value: [{ url: 'https://legacy.com', timestamp: 1 }] });
+    await enqueuePendingWrite({
+      type: 'metadataPatch',
+      key: 'savedUrlsWithTimestamps',
+      url: 'https://patch.com',
+      patch: { aiSummary: 's' },
+    });
+
+    const retryFn = vi.fn().mockResolvedValue(true);
+    await flushPendingWrites(retryFn);
+
+    expect(retryFn).toHaveBeenCalledTimes(2);
+    expect(retryFn).toHaveBeenCalledWith(expect.objectContaining({ key: 'savedUrlsWithTimestamps', value: expect.anything() }));
+    expect(retryFn).toHaveBeenCalledWith(expect.objectContaining({ type: 'metadataPatch', url: 'https://patch.com' }));
+  });
+
+  it('coalesces metadata patches for the same URL', async () => {
+    await enqueuePendingWrite({
+      type: 'metadataPatch',
+      key: 'savedUrlsWithTimestamps',
+      url: 'https://example.com',
+      patch: { tags: ['a'], recordType: 'auto' },
+      timestamp: 1000,
+      mergeTags: true,
+      createdAt: 1000,
+      retryCount: 0,
+    });
+    await enqueuePendingWrite({
+      type: 'metadataPatch',
+      key: 'savedUrlsWithTimestamps',
+      url: 'https://example.com',
+      patch: { tags: ['b'], aiSummary: 's' },
+      timestamp: 2000,
+      mergeTags: true,
+      createdAt: 2000,
+      retryCount: 0,
+    });
+
+    const queue = storageData[PENDING_CHROME_STORAGE_KEY] as unknown[];
+    expect(queue).toHaveLength(1);
+    const merged = queue[0] as { patch: Record<string, unknown> };
+    expect(merged.patch.tags).toEqual(['a', 'b']);
+    expect(merged.patch.aiSummary).toBe('s');
+    expect(merged.patch.recordType).toBe('auto');
+    expect((merged as { timestamp?: number }).timestamp).toBe(2000);
+  });
+
+  it('omits content when the serialized patch exceeds the payload limit', async () => {
+    const largeContent = 'x'.repeat(200 * 1024);
+    await enqueuePendingWrite({
+      type: 'metadataPatch',
+      key: 'savedUrlsWithTimestamps',
+      url: 'https://example.com',
+      patch: { content: largeContent, tags: ['t'] },
+      createdAt: Date.now(),
+      retryCount: 0,
+    });
+
+    const queue = storageData[PENDING_CHROME_STORAGE_KEY] as unknown[];
+    expect(queue).toHaveLength(1);
+    const queued = queue[0] as { patch: { content?: string; tags: string[] }; contentOmitted?: boolean };
+    expect(queued.patch.content).toBeUndefined();
+    expect(queued.contentOmitted).toBe(true);
+    expect(queued.patch.tags).toEqual(['t']);
+  });
 });

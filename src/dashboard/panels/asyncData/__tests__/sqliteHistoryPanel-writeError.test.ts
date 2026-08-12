@@ -24,6 +24,7 @@ vi.mock('../../../dashboardSqliteService.js', () => ({
 
 vi.mock('../../../../utils/storageUrls.js', () => ({
   getSavedUrlEntries: vi.fn().mockResolvedValue([]),
+  removeSavedUrl: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../../utils/confirmDialog.js', () => ({
@@ -33,6 +34,7 @@ vi.mock('../../../utils/confirmDialog.js', () => ({
 import { createSqliteHistoryPanel } from '../sqliteHistoryPanel.js';
 import * as db from '../../../dashboardSqliteService.js';
 import * as confirmDialog from '../../../utils/confirmDialog.js';
+import * as storageUrls from '../../../../utils/storageUrls.js';
 import type { AsyncDataPanel } from '../../types.js';
 
 const mockedDb = db as unknown as {
@@ -132,5 +134,6 @@ describe('変更系の失敗が利用者に伝わる', () => {
 
     expect(errorText()).toBe('');
     expect(document.querySelector('.sqlite-entry[data-id="1"]')).toBeNull();
+    expect(storageUrls.removeSavedUrl).toHaveBeenCalledWith('https://example.com/1');
   });
 });

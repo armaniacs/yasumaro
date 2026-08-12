@@ -9,6 +9,8 @@ Three incompatible AI interface shapes exist: `AIProviderStrategy` (abstract cla
 
 ## Decision: Offscreen Lifecycle Ownership
 
+> **追記（2026-08-11）**: 当初本節は「AIService が offscreen document lifecycle を所有する」と記したが、実装調査の結果 `LocalAIService` / `RemoteAIService` / `FallbackAIService` は offscreen document に依存しないことが判明し、**AIService は offscreen 非依存**として確定した（`dev-docs/ADR/2026-07-13-architecture-phase2-deep-dig.md` 追記、アーキテクチャ深深化PBI 子PBI 5）。offscreen を生成・利用・終了するのは SQLite 用途の `sqliteClient.ts` のみであり、`OffscreenManager` は新設しない。下表の LocalAIService の offscreen 管理行は現状を反映したものではない。
+
 **AIService owns the offscreen document lifecycle.** Rationale:
 - Local AI is an implementation detail of "calling an AI model" — callers shouldn't care whether the model runs in-process, in an offscreen document, or on a remote server.
 - Single-unit E2E tests (Playwright) cover the local AI path; AIService unit tests focus on remote strategy switching.

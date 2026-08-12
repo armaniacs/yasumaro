@@ -141,9 +141,33 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
     }
 
     // マスターパスワード未設定の場合：従来の方式を使用（マイグレーション準備）
-    // 注意：この方式は脆弱だが、マイグレーション完了まで維持
+    // 【重要】ENCRYPTION_SECRET は chrome.storage.local に保存する。
+    // chrome.storage.session は拡張機能のアップデート時にクリアされる
+    // ("session" storage area, cleared on extension update per Chrome's
+    // Storage API contract) ため、ここに秘密を置くと updateのたびに
+    // 秘密が失われ、既存の暗号化済みAPIキー（Obsidian/AI providerの
+    // トークン）が復号不能になりデータロスを引き起こす（2026-08-12
+    // インシデント: v6.7.42アップデート後にAPIキーが消失した報告）。
     let saltBase64 = result[StorageKeys.ENCRYPTION_SALT] as string;
     let secret = result[StorageKeys.ENCRYPTION_SECRET] as string;
+
+    // 救済マイグレーション: 直前のバージョンでsession storageに一時的に
+    // secretが移されたユーザーを、まだSWコンテキストが生きていて
+    // session storageが失われていない間に local へ復元する。
+    // アップデートを跨いでsession storageが既にクリアされてしまった
+    // ユーザーはここに到達しても何も残っていないため復旧できない
+    // （＝暗号化済みAPIキーの再入力が必要）。
+    if (saltBase64 && !secret && chrome.storage.session) {
+        const sessionResult = await chrome.storage.session.get(StorageKeys.ENCRYPTION_SECRET);
+        const sessionSecret = sessionResult[StorageKeys.ENCRYPTION_SECRET] as string | undefined;
+        if (sessionSecret) {
+            secret = sessionSecret;
+            await chrome.storage.local.set({
+                [StorageKeys.ENCRYPTION_SECRET]: secret
+            });
+            await chrome.storage.session.remove(StorageKeys.ENCRYPTION_SECRET);
+        }
+    }
 
     if (!saltBase64 || !secret) {
         // 初回: ソルトとシークレットを生成
@@ -162,10 +186,6 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
     const salt = base64ToUint8Array(saltBase64);
 
     // ランダムなsecretとsaltからPBKDF2でキー導出
-    // 【セキュリティ】secretは初回生成時にcrypto.getRandomValuesで生成した32バイトの乱数であり、
-    // これ単体で十分なエントロピーを持つ。以前はchrome.runtime.id（Extension ID）を
-    // 追加で結合していたが、Extension IDは公開情報であるためセキュリティ上の
-    // 価値がなく、誤った安心感を与えるだけだったため削除した。
     cachedEncryptionKey = await deriveKey(secret, salt);
     return cachedEncryptionKey;
 }

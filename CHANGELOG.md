@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.28` リリース。
+> - 現時点では `v6.7.43` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -38,6 +38,88 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 （次のリリースに向けての変更をここに記載）
+
+## [6.7.43] - 2026-08-12
+
+### Fixed
+
+- **暗号化秘密値の保存先を `chrome.storage.local` に戻し、拡張機能アップデート後のAPIキー消失を修正** — v6.7.42で `chrome.storage.session` へ移行したが、`chrome.storage.session` は拡張機能アップデート時にクリアされる仕様のため、アップデートのたびに新しい秘密値が生成され、既存の暗号化済みAPIキー（Obsidian・AIプロバイダのトークン）が復号不能になっていた。`chrome.storage.local` へ戻し、直前バージョンで `chrome.storage.session` に秘密値が移動済みだが未クリアのユーザー向けに救済マイグレーションを追加した。設計判断の詳細は [ADR](dev-docs/ADR/2026-08-12-encryption-secret-storage-area-must-be-local.md) を参照。既にアップデートを跨いで秘密値が失われたユーザーはAPIキーの再入力が必要。
+
+## [6.7.42] - 2026-08-12
+
+### Fixed
+
+- fallback検索失敗時にServiceErrorを返しover-fetchを解消
+- sqliteHistoryPanelのstate mutationをreducer経由に統一
+- metadata patch queueのcoalescing・payload上限100KB・content省略を実装
+- マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行
+- AIClientをRemoteAIServiceの薄い委譲ラッパー化しin-flight重複排除を実装
+
+## [6.7.41]
+
+### Fixed
+
+（前リリースの変更）
+
+## [6.7.41] - 2026-08-11
+
+### Fixed
+
+- ダッシュボードでURL経由（`?tab=`）に初期パネルを開いた際、「初期設定」パネルのヘッダーが残存し、サイドバー選択状態とパネル表示がずれる不具合を修正した。
+
+## [6.7.40] - 2026-08-11
+
+archive済みPBIの本文を実装結果と同期した。
+
+### Docs
+
+- Architecture deepening Epicと子PBIの完了記録を更新した。
+
+## [6.7.39] - 2026-08-11
+
+前回のコミット分離漏れを補正した。
+
+### Refactor
+
+- SQLite history panelのstate seamを実装コミットへ追加した。
+
+### Docs
+
+- archive済みPBIの実装結果を確定記録した。
+
+## [6.7.38] - 2026-08-11
+
+PBIとアーキテクチャ記録を実装状態へ同期した。
+
+### Docs
+
+- 完了済みPBIをarchiveへ移動し、PBI INDEXの履歴を更新した。
+- deep-digの判断記録とAIService lifecycleのADRを整理した。
+- 未解決の3課題を新規PBIとして登録した。
+
+## [6.7.37] - 2026-08-11
+
+深深化したmoduleのテスト表面を拡充した。
+
+### Tests
+
+- SQLite history panel state reducerの全actionを検証した。
+- panelのstale response防止とSaved URL CAS競合を検証した。
+- AIService factoryとmetadata patch retryの契約テストを追加した。
+
+## [6.7.36] - 2026-08-11
+
+Background・Dashboard・AI summaryの主要moduleを深深化した。
+
+### Refactor
+
+- Saved URL metadata保存をatomic CASへ集約した。
+- SQLite history queryとrecording handlerの依存経路を整理した。
+- review summaryをAIService factory経由へ移行した。
+
+### Tests
+
+- 保存、履歴query、handler、AI summaryの回帰テストを追加した。
 
 ## [6.7.35] - 2026-08-11
 

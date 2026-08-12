@@ -305,27 +305,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
   });
 
-  describe('エラーハンドリングの一貫性の確認', () => {
-    it('errorUtils.jsのgetUserErrorMessage関数が使用されていない（一貫性問題）', () => {
-      // obsidianClient.jsにはimport errorUtilsがないため、一貫したエラーハンドリングが行われていない
-      // これはテスト自体で確認すべきことで、コードレビューで見つけるべき問題である
-
-      // 分析: obsidianClient.jsはerrorUtils.jsの関数を使用せず、独自のエラーハンドリングを実装している
-      // これにより、エラーメッセージの形式や内容が他のモジュールと異なり、一貫性が欠如している
-      expect(true).toBe(true); // 分析結果をドキュメント化するためのプレースホルダー
-    });
-  });
-
-  describe('推奨される改善点', () => {
-    it('エラーメッセージから内部URL情報を削除すべきである', () => {
-      expect(true).toBe(true);
-    });
-
-    it('errorUtils.jsを使用して一貫したエラーハンドリングを実装すべきである', () => {
-      expect(true).toBe(true);
-    });
-  });
-
   describe('_validatePort', () => {
     it('undefinedの場合はデフォルトポートを返す', () => {
       expect(obsidianClient._validatePort(undefined)).toBe('27123');

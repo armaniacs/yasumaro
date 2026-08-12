@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const mockQuery = vi.hoisted(() => vi.fn());
-const mockGenerateSummary = vi.hoisted(() => vi.fn());
-
 vi.mock('../../utils/storage.js', () => ({
   StorageKeys: {
     REVIEW_SUMMARY_ENABLED: 'review_summary_enabled',
@@ -22,32 +19,20 @@ vi.mock('../../utils/errorUtils.js', () => ({
   errorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
 }));
 
+// AIClient直接生成の残存検出: factory経路がAIClientを決して生成しないことを検証する
 vi.mock('../aiClient.js', () => ({
-  AIClient: class MockAIClient {
-    generateSummary = mockGenerateSummary;
-  },
+  AIClient: vi.fn(),
 }));
 
-vi.mock('../sqliteClient.js', () => {
-  class MockSqliteClient {
-    query = mockQuery;
-    // Derived from mockQuery so the existing `mockQuery.mockResolvedValue(...)`
-    // setups in this file keep working: production reads through queryResult
-    // to keep each failure's reason attached to its own call (PBI-19/21).
-    queryResult = async (...args: unknown[]) => {
-      const data = await mockQuery(...args);
-      return data == null
-        ? { success: false, error: { kind: 'unknown', message: 'Query failed', retriable: false } }
-        : { success: true, data };
-    };
-  }
-  return {
-    SqliteClient: MockSqliteClient,
-    getSharedSqliteClient: () => new MockSqliteClient(),
-  };
-});
-
-import { generateWeeklySummary, generateMonthlySummary, generateStatsSection, generateReviewMarkdown } from '../reviewSummaryGenerator.js';
+import {
+  createReviewSummaryGenerator,
+  generateStatsSection,
+  generateReviewMarkdown,
+} from '../reviewSummaryGenerator.js';
+import type { AIService } from '../ai/AIService.js';
+import type { AISummaryResult } from '../ai/AIService.js';
+import type { SqliteClient } from '../sqliteClient.js';
+import { AIClient } from '../aiClient.js';
 import { getSettings } from '../../utils/storage.js';
 import { addLog } from '../../utils/logger.js';
 
@@ -67,6 +52,24 @@ function makeEntry(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** AIService fake + fake SQLite queryを注入したgeneratorを組み立てる */
+function createHarness() {
+  const generateSummary = vi.fn<(content: string) => Promise<AISummaryResult>>();
+  const aiService = {
+    generateSummary,
+    getSupportedModes: () => ['full_pipeline', 'local_only'],
+    testConnection: vi.fn(),
+  } as unknown as AIService;
+  const queryResult = vi.fn();
+  const sqliteClient = { queryResult } as unknown as Pick<SqliteClient, 'queryResult'>;
+  const generator = createReviewSummaryGenerator({ aiService, sqliteClient });
+  return { generateSummary, queryResult, sqliteClient, generator };
+}
+
+function mockRows(rows: unknown[], total = rows.length) {
+  return { success: true, data: { rows, total } } as const;
+}
+
 describe('generateWeeklySummary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -77,113 +80,114 @@ describe('generateWeeklySummary', () => {
   });
 
   it('returns false when feature is disabled', async () => {
+    const { generator } = createHarness();
     vi.mocked(getSettings).mockResolvedValue({ review_summary_enabled: false } as any);
-    const result = await generateWeeklySummary(new Date('2026-07-08'));
+    const result = await generator.generateWeeklySummary(new Date('2026-07-08'));
     expect(result).toBe(false);
     expect(addLog).toHaveBeenCalledWith('INFO', 'Weekly review summary is disabled');
   });
 
   it('returns false when already generated for this week', async () => {
+    const { generator } = createHarness();
     vi.mocked(getSettings).mockResolvedValue({
       review_summary_enabled: true,
       review_summary_last_generated_week: '2026-W28',
     } as any);
-    const result = await generateWeeklySummary(new Date('2026-07-08'));
+    const result = await generator.generateWeeklySummary(new Date('2026-07-08'));
     expect(result).toBe(false);
     expect(addLog).toHaveBeenCalledWith('INFO', 'Weekly summary already generated for this week', expect.any(Object));
   });
 
-  it('returns false when query returns null', async () => {
+  it('returns false when query fails', async () => {
+    const { generator, queryResult } = createHarness();
     vi.mocked(getSettings).mockResolvedValue({ review_summary_enabled: true } as any);
-    mockQuery.mockResolvedValueOnce(null);
-    const result = await generateWeeklySummary(new Date('2026-07-08'));
+    queryResult.mockResolvedValueOnce({
+      success: false,
+      error: { kind: 'unknown', message: 'Query failed', retriable: false },
+    });
+    const result = await generator.generateWeeklySummary(new Date('2026-07-08'));
     expect(result).toBe(false);
   });
 
   it('returns false when entries array is empty', async () => {
+    const { generator, queryResult } = createHarness();
     vi.mocked(getSettings).mockResolvedValue({ review_summary_enabled: true } as any);
-    mockQuery.mockResolvedValueOnce({ rows: [], total: 0 });
-    const result = await generateWeeklySummary(new Date('2026-07-08'));
+    queryResult.mockResolvedValueOnce(mockRows([], 0));
+    const result = await generator.generateWeeklySummary(new Date('2026-07-08'));
     expect(result).toBe(false);
   });
 
-  it('generates digest using AI when summaries exist', async () => {
+  it('generates digest using the injected AIService when summaries exist', async () => {
+    const { generator, generateSummary, queryResult } = createHarness();
     vi.mocked(getSettings).mockResolvedValue({
       review_summary_enabled: true,
       local_markdown_export_path: 'Yasumaro',
     } as any);
-    mockQuery.mockResolvedValueOnce({
-      rows: [makeEntry({ summary: 'First page summary' }), makeEntry({ summary: 'Second page summary' })],
-      total: 2,
-    });
-    mockGenerateSummary.mockResolvedValueOnce({ success: true, summary: 'AI digest text' });
+    queryResult.mockResolvedValueOnce(
+      mockRows([makeEntry({ summary: 'First page summary' }), makeEntry({ summary: 'Second page summary' })])
+    );
+    generateSummary.mockResolvedValueOnce({ success: true, summary: 'AI digest text' });
 
-    const result = await generateWeeklySummary(new Date('2026-07-08'));
+    const result = await generator.generateWeeklySummary(new Date('2026-07-08'));
     expect(result).toBe(true);
-    expect(mockGenerateSummary).toHaveBeenCalled();
+    expect(generateSummary).toHaveBeenCalledWith(
+      expect.stringContaining('週次振り返りダイジェスト')
+    );
     expect((globalThis as any).chrome.storage.local.set).toHaveBeenCalled();
   });
 
   it('uses fallback digest when all entry summaries are null', async () => {
+    const { generator, generateSummary, queryResult } = createHarness();
     vi.mocked(getSettings).mockResolvedValue({
       review_summary_enabled: true,
       local_markdown_export_path: 'Yasumaro',
     } as any);
-    mockQuery.mockResolvedValueOnce({
-      rows: [makeEntry({ summary: null }), makeEntry({ summary: null })],
-      total: 2,
-    });
+    queryResult.mockResolvedValueOnce(mockRows([makeEntry({ summary: null }), makeEntry({ summary: null })]));
 
-    const result = await generateWeeklySummary(new Date('2026-07-08'));
+    const result = await generator.generateWeeklySummary(new Date('2026-07-08'));
     expect(result).toBe(true);
-    expect(mockGenerateSummary).not.toHaveBeenCalled();
+    expect(generateSummary).not.toHaveBeenCalled();
   });
 
   it('uses fallback digest when AI generation fails', async () => {
+    const { generator, generateSummary, queryResult } = createHarness();
     vi.mocked(getSettings).mockResolvedValue({
       review_summary_enabled: true,
       local_markdown_export_path: 'Yasumaro',
     } as any);
-    mockQuery.mockResolvedValueOnce({
-      rows: [makeEntry({ summary: 'Some summary' })],
-      total: 1,
-    });
-    mockGenerateSummary.mockResolvedValueOnce({ success: false, summary: '' });
+    queryResult.mockResolvedValueOnce(mockRows([makeEntry({ summary: 'Some summary' })]));
+    generateSummary.mockResolvedValueOnce({ success: false, summary: '' });
 
-    const result = await generateWeeklySummary(new Date('2026-07-08'));
+    const result = await generator.generateWeeklySummary(new Date('2026-07-08'));
     expect(result).toBe(true);
-    expect(mockGenerateSummary).toHaveBeenCalled();
+    expect(generateSummary).toHaveBeenCalled();
   });
 
   it('returns false when download fails and does not save week marker', async () => {
+    const { generator, generateSummary, queryResult } = createHarness();
     vi.mocked(getSettings).mockResolvedValue({
       review_summary_enabled: true,
       local_markdown_export_path: 'Yasumaro',
     } as any);
-    mockQuery.mockResolvedValueOnce({
-      rows: [makeEntry()],
-      total: 1,
-    });
-    mockGenerateSummary.mockResolvedValueOnce({ success: true, summary: 'Digest' });
+    queryResult.mockResolvedValueOnce(mockRows([makeEntry()]));
+    generateSummary.mockResolvedValueOnce({ success: true, summary: 'Digest' });
     (globalThis as any).chrome.downloads.download = vi.fn().mockRejectedValue(new Error('Download error'));
 
-    const result = await generateWeeklySummary(new Date('2026-07-08'));
+    const result = await generator.generateWeeklySummary(new Date('2026-07-08'));
     expect(result).toBe(false);
     expect((globalThis as any).chrome.storage.local.set).not.toHaveBeenCalled();
   });
 
   it('uses default export path when not configured', async () => {
+    const { generator, generateSummary, queryResult } = createHarness();
     vi.mocked(getSettings).mockResolvedValue({
       review_summary_enabled: true,
     } as any);
-    mockQuery.mockResolvedValueOnce({
-      rows: [makeEntry()],
-      total: 1,
-    });
-    mockGenerateSummary.mockResolvedValueOnce({ success: true, summary: 'Digest' });
+    queryResult.mockResolvedValueOnce(mockRows([makeEntry()]));
+    generateSummary.mockResolvedValueOnce({ success: true, summary: 'Digest' });
     (globalThis as any).chrome.downloads.download = vi.fn().mockResolvedValue({});
 
-    const result = await generateWeeklySummary(new Date('2026-07-08'));
+    const result = await generator.generateWeeklySummary(new Date('2026-07-08'));
     expect(result).toBe(true);
     expect((globalThis as any).chrome.downloads.download).toHaveBeenCalledWith(
       expect.objectContaining({ filename: expect.stringContaining('Yasumaro/') })
@@ -201,59 +205,88 @@ describe('generateMonthlySummary', () => {
   });
 
   it('returns false when feature is disabled', async () => {
+    const { generator } = createHarness();
     vi.mocked(getSettings).mockResolvedValue({ review_summary_enabled: false } as any);
-    const result = await generateMonthlySummary(new Date('2026-07-15'));
+    const result = await generator.generateMonthlySummary(new Date('2026-07-15'));
     expect(result).toBe(false);
   });
 
   it('returns false when already generated for this month', async () => {
+    const { generator } = createHarness();
     vi.mocked(getSettings).mockResolvedValue({
       review_summary_enabled: true,
       review_summary_last_generated_month: '2026-07',
     } as any);
-    const result = await generateMonthlySummary(new Date('2026-07-15'));
+    const result = await generator.generateMonthlySummary(new Date('2026-07-15'));
     expect(result).toBe(false);
   });
 
-  it('returns false when no entries found', async () => {
+  it('returns false when query fails', async () => {
+    const { generator, queryResult } = createHarness();
     vi.mocked(getSettings).mockResolvedValue({ review_summary_enabled: true } as any);
-    mockQuery.mockResolvedValueOnce(null);
-    const result = await generateMonthlySummary(new Date('2026-07-15'));
+    queryResult.mockResolvedValueOnce({
+      success: false,
+      error: { kind: 'unknown', message: 'Query failed', retriable: false },
+    });
+    const result = await generator.generateMonthlySummary(new Date('2026-07-15'));
     expect(result).toBe(false);
   });
 
   it('generates monthly summary with AI digest and saves', async () => {
+    const { generator, generateSummary, queryResult } = createHarness();
     vi.mocked(getSettings).mockResolvedValue({
       review_summary_enabled: true,
       local_markdown_export_path: 'Yasumaro',
     } as any);
-    mockQuery.mockResolvedValueOnce({
-      rows: [makeEntry({ summary: 'Monthly entry' })],
-      total: 1,
-    });
-    mockGenerateSummary.mockResolvedValueOnce({ success: true, summary: 'Monthly digest' });
+    queryResult.mockResolvedValueOnce(mockRows([makeEntry({ summary: 'Monthly entry' })]));
+    generateSummary.mockResolvedValueOnce({ success: true, summary: 'Monthly digest' });
 
-    const result = await generateMonthlySummary(new Date('2026-07-15'));
+    const result = await generator.generateMonthlySummary(new Date('2026-07-15'));
     expect(result).toBe(true);
+    expect(generateSummary).toHaveBeenCalledWith(
+      expect.stringContaining('月次振り返りダイジェスト')
+    );
     expect((globalThis as any).chrome.storage.local.set).toHaveBeenCalledWith(
       expect.objectContaining({ review_summary_last_generated_month: '2026-07' })
     );
   });
 
   it('handles download failure correctly', async () => {
+    const { generator, generateSummary, queryResult } = createHarness();
     vi.mocked(getSettings).mockResolvedValue({
       review_summary_enabled: true,
     } as any);
-    mockQuery.mockResolvedValueOnce({
-      rows: [makeEntry()],
-      total: 1,
-    });
-    mockGenerateSummary.mockResolvedValueOnce({ success: true, summary: 'Digest' });
+    queryResult.mockResolvedValueOnce(mockRows([makeEntry()]));
+    generateSummary.mockResolvedValueOnce({ success: true, summary: 'Digest' });
     (globalThis as any).chrome.downloads.download = vi.fn().mockRejectedValue(new Error('Fail'));
 
-    const result = await generateMonthlySummary(new Date('2026-07-15'));
+    const result = await generator.generateMonthlySummary(new Date('2026-07-15'));
     expect(result).toBe(false);
     expect((globalThis as any).chrome.storage.local.set).not.toHaveBeenCalled();
+  });
+});
+
+describe('AIClient direct generation residual detection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (globalThis as any).chrome.downloads = {
+      download: vi.fn().mockResolvedValue({}),
+    };
+    (globalThis as any).chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
+  });
+
+  it('never constructs AIClient while generating summaries through the factory', async () => {
+    const { generator, generateSummary, queryResult } = createHarness();
+    vi.mocked(getSettings).mockResolvedValue({
+      review_summary_enabled: true,
+    } as any);
+    queryResult.mockResolvedValue(mockRows([makeEntry({ summary: 'Some summary' })]));
+    generateSummary.mockResolvedValue({ success: true, summary: 'Digest' });
+
+    await generator.generateWeeklySummary(new Date('2026-07-08'));
+    await generator.generateMonthlySummary(new Date('2026-07-15'));
+
+    expect(AIClient).not.toHaveBeenCalled();
   });
 });
 

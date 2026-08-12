@@ -784,12 +784,12 @@ export async function handleRequest(req: RequestMessage): Promise<ResponseMessag
         break;
       }
       case 'DELETE': {
-        await handleHardDelete(payload as number);
+        await handleHardDelete((payload as { id: number }).id);
         result = { deleted: true };
         break;
       }
       case 'TOGGLE_STAR': {
-        result = await handleToggleStar(payload as number);
+        result = await handleToggleStar((payload as { id: number }).id);
         break;
       }
       case 'GET_COUNT': {

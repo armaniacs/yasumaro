@@ -17,6 +17,7 @@
 
 // Web Crypto APIのモック設定
 const storageData: Record<string, any> = { settings_migrated: true };
+const sessionData: Record<string, any> = {};
 
 // chromeのモック（インポート前に設定）
 (global as any).chrome = {
@@ -73,10 +74,55 @@ const storageData: Record<string, any> = { settings_migrated: true };
             })
         },
         session: {
-            get: vi.fn(() => Promise.resolve({})),
-            set: vi.fn(() => Promise.resolve()),
-            remove: vi.fn(() => Promise.resolve()),
-            clear: vi.fn(() => Promise.resolve()),
+            get: vi.fn((keys, callback) => {
+                const result: Record<string, any> = {};
+                if (keys === null) {
+                    Object.assign(result, sessionData);
+                } else if (Array.isArray(keys)) {
+                    keys.forEach((key: string) => {
+                        if (key in sessionData) {
+                            result[key] = sessionData[key];
+                        }
+                    });
+                } else if (typeof keys === 'string') {
+                    if (keys in sessionData) {
+                        result[keys] = sessionData[keys];
+                    }
+                }
+                if (callback) {
+                    callback(result);
+                }
+                return Promise.resolve(result);
+            }),
+                    set: vi.fn((data: Record<string, any>, callback) => {
+                        Object.assign(sessionData, data);
+                        if (callback) {
+                            callback();
+                        }
+                        return Promise.resolve();
+                    }),
+            remove: vi.fn((keys: string | string[], callback) => {
+                if (Array.isArray(keys)) {
+                    keys.forEach((key: string) => {
+                        delete sessionData[key];
+                    });
+                } else {
+                    delete sessionData[keys];
+                }
+                if (callback) {
+                    callback();
+                }
+                return Promise.resolve();
+            }),
+            clear: vi.fn((callback) => {
+                for (const key in sessionData) {
+                    delete sessionData[key];
+                }
+                if (callback) {
+                    callback();
+                }
+                return Promise.resolve();
+            })
         },
     },
     runtime: {
@@ -162,10 +208,35 @@ describe('Master Password Security', () => {
                     })
                 },
                 session: {
-                    get: vi.fn(() => Promise.resolve({})),
-                    set: vi.fn(() => Promise.resolve()),
-                    remove: vi.fn(() => Promise.resolve()),
-                    clear: vi.fn(() => Promise.resolve()),
+                    get: vi.fn((keys) => {
+                        const result: Record<string, any> = {};
+                        if (keys === null || keys === undefined) {
+                            Object.assign(result, sessionData);
+                        } else if (Array.isArray(keys)) {
+                            keys.forEach((key: string) => {
+                                if (key in sessionData) result[key] = sessionData[key];
+                            });
+                        } else if (typeof keys === 'string') {
+                            if (keys in sessionData) result[keys] = sessionData[keys];
+                        }
+                        return Promise.resolve(result);
+                    }),
+                    set: vi.fn((data: Record<string, any>) => {
+                        Object.assign(sessionData, data);
+                        return Promise.resolve();
+                    }),
+                    remove: vi.fn((keys: string | string[]) => {
+                        if (Array.isArray(keys)) {
+                            keys.forEach((key: string) => delete sessionData[key]);
+                        } else {
+                            delete sessionData[keys];
+                        }
+                        return Promise.resolve();
+                    }),
+                    clear: vi.fn(() => {
+                        for (const key in sessionData) delete sessionData[key];
+                        return Promise.resolve();
+                    }),
                 },
             },
             runtime: {
@@ -182,6 +253,9 @@ describe('Master Password Security', () => {
         // テストごとにストレージをクリア
         for (const key in storageData) {
             delete storageData[key];
+        }
+        for (const key in sessionData) {
+            delete sessionData[key];
         }
         storageData.settings_migrated = true;
     });
@@ -354,6 +428,66 @@ describe('Master Password Security', () => {
 
             const key2 = await getOrCreateEncryptionKey();
             expect(key2).toBeDefined();
+        });
+
+        test('マスターパスワード未設定時は秘密がlocal storageに永続化される', async () => {
+            const key = await getOrCreateEncryptionKey();
+            expect(key).toBeDefined();
+
+            // local storage に ENCRYPTION_SECRET が保存されていることを確認。
+            // chrome.storage.session は拡張機能のアップデートでクリアされる
+            // ため、秘密をそこに置くと update のたびに暗号化済みAPIキーが
+            // 復号不能になる（2026-08-12 インシデントの再発防止）。
+            const localSetCalls = (chrome.storage.local.set as any).mock.calls;
+            const localSetWithSecret = localSetCalls.find((call: any) =>
+                call[0] && call[0].encryption_secret !== undefined
+            );
+            expect(localSetWithSecret).toBeDefined();
+            expect(typeof localSetWithSecret[0].encryption_secret).toBe('string');
+        });
+
+        test('再起動後もlocal storageの秘密は保持され、同じキーが導出される', async () => {
+            // 通常のキー生成
+            const key1 = await getOrCreateEncryptionKey();
+            expect(key1).toBeDefined();
+
+            const localSetCalls1 = (chrome.storage.local.set as any).mock.calls;
+            const firstSecret = localSetCalls1.filter((call: any) =>
+                call[0] && call[0].encryption_secret
+            ).pop()[0].encryption_secret;
+
+            // SW再起動（＝拡張機能アップデートを含む）をシミュレート:
+            // キャッシュのみクリアし、storageData（chrome.storage.localの
+            // モック実体）はそのまま残す。
+            const localSetMock = (chrome.storage.local.set as any);
+            localSetMock.mockClear();
+            clearEncryptionKeyCache();
+
+            const key2 = await getOrCreateEncryptionKey();
+            expect(key2).toBeDefined();
+
+            // 秘密を再生成していない（local storage.setが呼ばれていない）
+            const localSetCalls2 = (chrome.storage.local.set as any).mock.calls;
+            const secretRewritten = localSetCalls2.find((call: any) =>
+                call[0] && call[0].encryption_secret !== undefined
+            );
+            expect(secretRewritten).toBeUndefined();
+            expect(storageData['encryption_secret']).toBe(firstSecret);
+        });
+
+        test('直前バージョンでsession storageに移されていた秘密をlocal storageへ救済マイグレーションする', async () => {
+            // 2026-08-12の一時的な変更でsession storageに移動済みのユーザーを再現:
+            // salt はlocalにあるが、secretはsessionにのみ存在しlocalには無い。
+            storageData['encryption_salt'] = 'dGVzdA==';
+            sessionData['encryption_secret'] = 'secret_stranded_in_session';
+
+            const key = await getOrCreateEncryptionKey();
+            expect(key).toBeDefined();
+
+            // secretがlocalへ復元されている
+            expect(storageData['encryption_secret']).toBe('secret_stranded_in_session');
+            // sessionからは削除されている（役目を終えたため）
+            expect(sessionData['encryption_secret']).toBeUndefined();
         });
     });
 

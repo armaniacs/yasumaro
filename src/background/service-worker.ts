@@ -1,5 +1,3 @@
-import { notifyAiTestProgress } from './aiTestProgressNotifier.js';
-import { RecordingCache } from './recordingCache.js';
 import { HeaderDetector } from './headerDetector.js';
 import { SessionStore } from './sessionStore.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
@@ -7,28 +5,23 @@ import { createTabEventHandlers } from './handlers/tabEventHandlers.js';
 import { createLifecycleHandlers, restoreRecordingCacheOnWake } from './handlers/lifecycleHandlers.js';
 import { registerManualRecordContextMenu as _registerManualRecordContextMenu, createContextClickHandler } from './handlers/contextMenuHandlers.js';
 import {
-    getSettings,
-    buildAllowedUrls,
     migrateToSingleSettingsObject,
-    lockSession,
     StorageKeys,
-    clearSettingsCache
 } from '../utils/storage.js';
-import { isDomainAllowed } from '../utils/domainUtils.js';
 import { migrateLegacyPendingPagesKey } from '../utils/pendingStorage.js';
 import { flushPendingRecords } from './pendingSqliteQueue.js';
-import { flushPendingWrites, type PendingChromeStorageWrite } from './pendingChromeStorageQueue.js';
+import { flushPendingWrites, type QueuedChromeStorageWrite, type PendingMetadataPatchWrite } from './pendingChromeStorageQueue.js';
 import { withOptimisticLock } from '../utils/optimisticLock.js';
 import type { SavedUrlEntry } from '../utils/urlEntry.js';
+import { saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlStore.js';
 import { MigrationService } from './migrationService.js';
 import { createErrorResponse } from '../utils/errorMessages.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { NotificationHelper } from './notificationHelper.js';
 import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
 
-import { updateActivity, initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
+import { initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
 import { handleDailyPurgeAlarm } from './dailyPurgeHandler.js';
-import { hasPrivacyConsent } from '../popup/privacyConsent.js';
 import { formatEntriesToMarkdown } from '../dashboard/obsidianFormatter.js';
 import {
     VALID_MESSAGE_TYPES,
@@ -45,7 +38,7 @@ import { createOfflineQueueProcessor } from './offlineQueueProcessor.js';
 import { createCacheInitializedFlag, createAutoSavedBadgeTabs } from './swStatePersistence.js';
 import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.js';
 import { createBackgroundServices } from './createBackgroundServices.js';
-import { createMessageHandlerRegistry } from './handlers/createMessageHandlerRegistry.js';
+import { createMessageRegistryComposition } from './createMessageRegistryComposition.js';
 
 // ============================================================================
 // Service Worker Initialization
@@ -78,8 +71,8 @@ export function init(): void {
     (async () => {
       try {
         const { initializeReviewSummaryAlarms, setupReviewSummaryAlarmListener } = await import('./reviewSummaryAlarm.js');
-        await initializeReviewSummaryAlarms();
-        setupReviewSummaryAlarmListener();
+        await initializeReviewSummaryAlarms(reviewSummaryGenerator);
+        setupReviewSummaryAlarmListener(reviewSummaryGenerator);
       } catch (err) {
         logError('Failed to init review summary alarms', { error: String(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
       }
@@ -130,6 +123,7 @@ const {
     rateLimiter,
     manualContentFetcher,
     sessionStore,
+    reviewSummaryGenerator,
 } = services;
 const { manualRecordDeps, saveRecordDeps } = services;
 
@@ -285,40 +279,10 @@ const dashboardSqliteMessageHandler = ((message: Record<string, unknown>, _sende
   })();
 });
 
-const messageRegistryComposition = createMessageHandlerRegistry({
-  recordingLogic,
-  tabCache,
-  obsidian,
-  aiService,
-  manualRecordDeps,
-  saveRecordDeps,
-  hasPrivacyConsent: () => hasPrivacyConsent(),
-  buildAllowedUrls: (settings) => buildAllowedUrls(settings),
-  getSettings: () => getSettings(),
-  isDomainAllowed: (url) => isDomainAllowed(url),
-  clearSettingsCache: () => clearSettingsCache(),
-  notifyAiTestProgress,
-  getPrivacyCache: () => RecordingCache.getPrivacyCache(),
-  updateActivity: () => updateActivity(),
-  lockSession: () => lockSession(),
-  autoSavedBadgeTabs,
-  initExportScheduler: async () => {
-    const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
-    await initExportScheduler();
-  },
-  updateConsentBadge: async () => {
-    const { updateConsentBadge } = await import('./consentBadge.js');
-    await updateConsentBadge();
-  },
-  generateWeeklySummary: async () => {
-    const { generateWeeklySummary } = await import('./reviewSummaryGenerator.js');
-    return generateWeeklySummary();
-  },
-  generateMonthlySummary: async () => {
-    const { generateMonthlySummary } = await import('./reviewSummaryGenerator.js');
-    return generateMonthlySummary();
-  },
+const messageRegistryComposition = createMessageRegistryComposition({
+  services,
   dashboardSqliteHandler: dashboardSqliteMessageHandler,
+  autoSavedBadgeTabs,
 });
 
 const { registry } = messageRegistryComposition;
@@ -501,15 +465,35 @@ const _contextClickHandler = createContextClickHandler({
 // globalThis.chrome is undefined, without causing errors.
 // ============================================================================
 
-async function retryPendingChromeStorageWrite(write: PendingChromeStorageWrite): Promise<boolean> {
+export async function retryPendingChromeStorageWrite(write: QueuedChromeStorageWrite): Promise<boolean> {
+  // Legacy payload: a whole SavedUrlEntry queued by older versions. The
+  // existing entry keeps its metadata and only the queued timestamp is applied.
+  if (!('type' in write)) {
+    if (write.key !== 'savedUrlsWithTimestamps') return false;
+    try {
+      const entry = write.value as SavedUrlEntry;
+      await withOptimisticLock<SavedUrlEntry[]>('savedUrlsWithTimestamps', (current) => {
+        const list = current || [];
+        const idx = list.findIndex((e) => e.url === entry.url);
+        if (idx >= 0) return list.map((e, i) => (i === idx ? { ...e, timestamp: entry.timestamp } : e));
+        return [...list, entry];
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Metadata-patch payload: replay the same atomic save that failed originally.
   if (write.key !== 'savedUrlsWithTimestamps') return false;
   try {
-    const entry = write.value as SavedUrlEntry;
-    await withOptimisticLock<SavedUrlEntry[]>('savedUrlsWithTimestamps', (current) => {
-      const list = current || [];
-      const idx = list.findIndex((e) => e.url === entry.url);
-      if (idx >= 0) return list.map((e, i) => (i === idx ? { ...e, timestamp: entry.timestamp } : e));
-      return [...list, entry];
+    if ((write as PendingMetadataPatchWrite).contentOmitted) {
+      logWarn('Retrying metadata patch without content (omitted due to size)', { url: write.url });
+    }
+    await saveSavedUrlEntryMetadata(write.url, write.patch, {
+      refreshTimestamp: write.refreshTimestamp,
+      mergeTags: write.mergeTags,
+      timestamp: write.timestamp,
     });
     return true;
   } catch {
