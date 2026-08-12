@@ -21,6 +21,10 @@
 | ⬜ [2026-08-12-01-refactor-move-message-handler-registry-to-composition-root.md](2026-08-12-01-refactor-move-message-handler-registry-to-composition-root.md) | 🟡中 | 🟡軽微 | 🔧 | Handler registryをcomposition rootへ移設し、service-worker.tsの責務を削減 |
 | ⬜ [2026-08-12-02-refactor-migrate-aiclient-tests-to-aiservice.md](2026-08-12-02-refactor-migrate-aiclient-tests-to-aiservice.md) | 🟡中 | 🟡軽微 | 🔧 | aiClient.test.ts等をAIService/RemoteAIService経由に移行し、AIClientテストを委譲contractに絞る |
 | ⬜ [2026-08-12-03-feat-dashboard-multitab-ai-test-correlation.md](2026-08-12-03-feat-dashboard-multitab-ai-test-correlation.md) | 🟢低 | 🟢なし | ✨ | AIテスト進捗に相関IDを付与し、複数ダッシュボードタブの干渉を防止 |
+| ⬜ [2026-08-12-04-refactor-logger-core-concern-separation.md](2026-08-12-04-refactor-logger-core-concern-separation.md) | 🟡中 | 🟡軽微 | 🔧 | Logger core を buffer/storage/scheduler/sanitize に分割（storage/scheduler は adapter、外部 interface 不変） |
+| ⬜ [2026-08-12-05-refactor-logcritical-notification-seam.md](2026-08-12-05-refactor-logcritical-notification-seam.md) | 🟡中 | 🟡軽微 | 🔧 | logCritical から通知を CriticalAlertSink adapter に分離（記録のみに留める） |
+| ⬜ [2026-08-12-06-refactor-resolvelogsource-stack-removal.md](2026-08-12-06-refactor-resolvelogsource-stack-removal.md) | 🟢低 | 🟢なし | 🔧 | resolveLogSource の new Error().stack パースを削除し source を明示渡しのみに |
+| ⬜ [2026-08-12-07-refactor-errorMessage-retain-as-is.md](2026-08-12-07-refactor-errorMessage-retain-as-is.md) | 🟢低 | 🟢なし | 🔧 | errorMessage() を削除テストで現状維持と確定（58箇所集約価値あり） |
 
 ---
 
