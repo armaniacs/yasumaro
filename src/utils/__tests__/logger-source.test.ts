@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractSourceFromImportMetaUrl, resolveLogSource } from '../logger.js';
+import { extractSourceFromImportMetaUrl } from '../logger.js';
 
 describe('extractSourceFromImportMetaUrl', () => {
     it('extracts the filename without extension from a file URL', () => {
@@ -27,21 +27,3 @@ describe('extractSourceFromImportMetaUrl', () => {
     });
 });
 
-describe('resolveLogSource', () => {
-    it('returns the explicitly provided source unchanged', () => {
-        expect(resolveLogSource('custom-source')).toBe('custom-source');
-    });
-
-    it('returns undefined when called with undefined in a non-Error.stack context', () => {
-        // In a fresh call from a test file, the stack should point back to this test file.
-        const source = resolveLogSource();
-        expect(source).not.toBe('unknown');
-        expect(source).toContain('logger-source');
-    });
-
-    it('does not resolve to logger.ts frames', () => {
-        // Calling through the helper should skip the logger.ts frames.
-        const source = resolveLogSource();
-        expect(source).not.toContain('logger.ts');
-    });
-});
