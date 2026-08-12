@@ -1,5 +1,3 @@
-import { notifyAiTestProgress } from './aiTestProgressNotifier.js';
-import { RecordingCache } from './recordingCache.js';
 import { HeaderDetector } from './headerDetector.js';
 import { SessionStore } from './sessionStore.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
@@ -7,14 +5,9 @@ import { createTabEventHandlers } from './handlers/tabEventHandlers.js';
 import { createLifecycleHandlers, restoreRecordingCacheOnWake } from './handlers/lifecycleHandlers.js';
 import { registerManualRecordContextMenu as _registerManualRecordContextMenu, createContextClickHandler } from './handlers/contextMenuHandlers.js';
 import {
-    getSettings,
-    buildAllowedUrls,
     migrateToSingleSettingsObject,
-    lockSession,
     StorageKeys,
-    clearSettingsCache
 } from '../utils/storage.js';
-import { isDomainAllowed } from '../utils/domainUtils.js';
 import { migrateLegacyPendingPagesKey } from '../utils/pendingStorage.js';
 import { flushPendingRecords } from './pendingSqliteQueue.js';
 import { flushPendingWrites, type QueuedChromeStorageWrite, type PendingMetadataPatchWrite } from './pendingChromeStorageQueue.js';
@@ -27,9 +20,8 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { NotificationHelper } from './notificationHelper.js';
 import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
 
-import { updateActivity, initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
+import { initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
 import { handleDailyPurgeAlarm } from './dailyPurgeHandler.js';
-import { hasPrivacyConsent } from '../popup/privacyConsent.js';
 import { formatEntriesToMarkdown } from '../dashboard/obsidianFormatter.js';
 import {
     VALID_MESSAGE_TYPES,
@@ -46,7 +38,7 @@ import { createOfflineQueueProcessor } from './offlineQueueProcessor.js';
 import { createCacheInitializedFlag, createAutoSavedBadgeTabs } from './swStatePersistence.js';
 import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.js';
 import { createBackgroundServices } from './createBackgroundServices.js';
-import { createMessageHandlerRegistry } from './handlers/createMessageHandlerRegistry.js';
+import { createMessageRegistryComposition } from './createMessageRegistryComposition.js';
 
 // ============================================================================
 // Service Worker Initialization
@@ -287,34 +279,10 @@ const dashboardSqliteMessageHandler = ((message: Record<string, unknown>, _sende
   })();
 });
 
-const messageRegistryComposition = createMessageHandlerRegistry({
-  recordingLogic,
-  tabCache,
-  obsidian,
-  aiService,
-  manualRecordDeps,
-  saveRecordDeps,
-  hasPrivacyConsent: () => hasPrivacyConsent(),
-  buildAllowedUrls: (settings) => buildAllowedUrls(settings),
-  getSettings: () => getSettings(),
-  isDomainAllowed: (url) => isDomainAllowed(url),
-  clearSettingsCache: () => clearSettingsCache(),
-  notifyAiTestProgress,
-  getPrivacyCache: () => RecordingCache.getPrivacyCache(),
-  updateActivity: () => updateActivity(),
-  lockSession: () => lockSession(),
-  autoSavedBadgeTabs,
-  initExportScheduler: async () => {
-    const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
-    await initExportScheduler();
-  },
-  updateConsentBadge: async () => {
-    const { updateConsentBadge } = await import('./consentBadge.js');
-    await updateConsentBadge();
-  },
-  generateWeeklySummary: () => reviewSummaryGenerator.generateWeeklySummary(),
-  generateMonthlySummary: () => reviewSummaryGenerator.generateMonthlySummary(),
+const messageRegistryComposition = createMessageRegistryComposition({
+  services,
   dashboardSqliteHandler: dashboardSqliteMessageHandler,
+  autoSavedBadgeTabs,
 });
 
 const { registry } = messageRegistryComposition;
