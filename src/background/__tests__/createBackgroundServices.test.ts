@@ -19,7 +19,8 @@ const mocks = vi.hoisted(() => ({
   getPrivacyInfoWithCache: vi.fn(),
   hasPrivacyConsent: vi.fn(),
   getSettings: vi.fn(),
-  updateSavedUrlEntry: vi.fn(),
+  saveSavedUrlEntryMetadata: vi.fn(),
+  createReviewSummaryGenerator: vi.fn(),
 }));
 
 vi.mock('../obsidianClient.js', () => ({ ObsidianClient: mocks.ObsidianClient }));
@@ -44,7 +45,8 @@ vi.mock('../pipeline/RecordingPipeline.js', () => ({
 }));
 vi.mock('../../popup/privacyConsent.js', () => ({ hasPrivacyConsent: mocks.hasPrivacyConsent }));
 vi.mock('../../utils/storage.js', () => ({ getSettings: mocks.getSettings }));
-vi.mock('../../utils/storage/savedUrlStore.js', () => ({ updateSavedUrlEntry: mocks.updateSavedUrlEntry }));
+vi.mock('../../utils/storage/savedUrlStore.js', () => ({ saveSavedUrlEntryMetadata: mocks.saveSavedUrlEntryMetadata }));
+vi.mock('../reviewSummaryGenerator.js', () => ({ createReviewSummaryGenerator: mocks.createReviewSummaryGenerator }));
 
 import { createBackgroundServices } from '../createBackgroundServices.js';
 
@@ -58,10 +60,9 @@ describe('createBackgroundServices', () => {
     mocks.TabCache.mockImplementation(function () { return { tabCache: true }; });
     mocks.RateLimiter.mockImplementation(function () { return { rateLimiter: true }; });
     mocks.ManualContentFetcher.mockImplementation(function () { return { manualContentFetcher: true }; });
-    mocks.AIClient.mockImplementation(function () { return { aiClient: true }; });
-    mocks.BuiltInAIClient.mockImplementation(function () { return { builtInAIClient: true }; });
+    mocks.AIClient.mockImplementation(function () { return { aiClient: true, remoteAiService: { remoteAIService: true } }; });
+    mocks.BuiltInAIClient.mockImplementation(function () { return { builtInAiClient: true }; });
     mocks.LocalAIService.mockImplementation(function () { return { localAIService: true }; });
-    mocks.RemoteAIService.mockImplementation(function () { return { remoteAIService: true }; });
     mocks.FallbackAIService.mockImplementation(function () { return { fallbackAIService: true }; });
     mocks.RecordingLogic.mockImplementation(function () { return { recordingLogic: true }; });
     mocks.SessionStore.mockImplementation(function () { return { sessionStore: true }; });
@@ -70,7 +71,8 @@ describe('createBackgroundServices', () => {
     mocks.getPrivacyInfoWithCache.mockResolvedValue(null);
     mocks.hasPrivacyConsent.mockResolvedValue(true);
     mocks.getSettings.mockResolvedValue({});
-    mocks.updateSavedUrlEntry.mockResolvedValue(undefined);
+    mocks.saveSavedUrlEntryMetadata.mockResolvedValue(undefined);
+    mocks.createReviewSummaryGenerator.mockReturnValue({ generateWeeklySummary: vi.fn(), generateMonthlySummary: vi.fn() });
   });
 
   it('creates and returns all background services', () => {
@@ -83,8 +85,9 @@ describe('createBackgroundServices', () => {
       tabCache: { tabCache: true },
       rateLimiter: { rateLimiter: true },
       manualContentFetcher: { manualContentFetcher: true },
-      aiClient: { aiClient: true },
+      aiClient: { aiClient: true, remoteAiService: { remoteAIService: true } },
       aiService: { fallbackAIService: true },
+      reviewSummaryGenerator: expect.any(Object),
       sessionStore: { sessionStore: true },
       recordingPipeline: { pipeline: true },
       dashboardSqliteClient: { sqlite: true },
@@ -102,6 +105,17 @@ describe('createBackgroundServices', () => {
     expect(services.aiService).toEqual({ fallbackAIService: true });
   });
 
+  it('builds the review summary generator once with the shared AIService and SqliteClient', () => {
+    const services = createBackgroundServices();
+
+    expect(mocks.createReviewSummaryGenerator).toHaveBeenCalledTimes(1);
+    expect(mocks.createReviewSummaryGenerator).toHaveBeenCalledWith({
+      aiService: { fallbackAIService: true },
+      sqliteClient: { sqlite: true },
+    });
+    expect(services.reviewSummaryGenerator).toBeDefined();
+  });
+
   it('shares a single SessionStore instance with TabCache and RateLimiter', () => {
     createBackgroundServices();
 
@@ -115,8 +129,15 @@ describe('createBackgroundServices', () => {
 
     expect(mocks.BuiltInAIClient).toHaveBeenCalledTimes(1);
     expect(mocks.LocalAIService).toHaveBeenCalledTimes(1);
-    expect(mocks.RemoteAIService).toHaveBeenCalledTimes(1);
+    expect(mocks.AIClient).toHaveBeenCalledTimes(1);
     expect(mocks.FallbackAIService).toHaveBeenCalledTimes(1);
+
+    const aiClientInstance = mocks.AIClient.mock.results[0].value;
+    const local = mocks.LocalAIService.mock.results[0].value;
+    expect(mocks.FallbackAIService).toHaveBeenCalledWith({
+      local,
+      remote: aiClientInstance.remoteAiService,
+    });
     expect(mocks.RecordingLogic).toHaveBeenCalledWith(
       { obsidian: true },
       { fallbackAIService: true },
@@ -174,5 +195,36 @@ describe('createBackgroundServices', () => {
         sqliteClient: { sqlite: true },
       }),
     );
+  });
+
+  it('wires setUrlContent through saveSavedUrlEntryMetadata without refreshing the timestamp', async () => {
+    const services = createBackgroundServices();
+
+    await services.manualRecordDeps.setUrlContent('https://example.com', 'content');
+    await services.saveRecordDeps.setUrlContent('https://example.com', 'content');
+
+    expect(mocks.saveSavedUrlEntryMetadata).toHaveBeenCalledTimes(2);
+    expect(mocks.saveSavedUrlEntryMetadata).toHaveBeenCalledWith(
+      'https://example.com',
+      { content: 'content' },
+      { refreshTimestamp: false, createIfMissing: false },
+    );
+  });
+
+  it('builds the setUrlContent closure once and shares it between the recording handlers', () => {
+    const services = createBackgroundServices();
+
+    expect(services.manualRecordDeps.setUrlContent).toBe(services.saveRecordDeps.setUrlContent);
+  });
+
+  it('keeps the recording handler deps to the minimum behaviour the handlers use', () => {
+    const services = createBackgroundServices();
+
+    for (const deps of [services.manualRecordDeps, services.saveRecordDeps]) {
+      expect(deps).not.toHaveProperty('obsidian');
+      expect(deps).not.toHaveProperty('aiService');
+      expect(deps).not.toHaveProperty('sqliteClient');
+      expect(deps).not.toHaveProperty('getPrivacyInfoWithCache');
+    }
   });
 });

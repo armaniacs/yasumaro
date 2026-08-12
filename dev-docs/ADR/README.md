@@ -40,6 +40,7 @@ YasumaroプロジェクトのArchitecture Decision Record（ADR）一覧です�
 | - | [Deep Dig Findings — SQLite Architecture Deepening](./2026-07-13-sqlite-architecture-deep-dig.md) | 2026-07-13 | 調査記録 |
 | - | [Markdown出力経路へのサニタイズ適用ルール](./2026-07-22-markdown-output-sanitization-guardrail.md) | 2026-07-22 | 承認済み |
 | - | [Response Size Limit Guardrail](./2026-07-22-response-size-limit-guardrail.md) | 2026-07-22 | 承認済み |
+| - | [暗号化秘密値（ENCRYPTION_SECRET）は chrome.storage.local に保存する](./2026-08-12-encryption-secret-storage-area-must-be-local.md) | 2026-08-12 | 採用済み |
 
 ---
 

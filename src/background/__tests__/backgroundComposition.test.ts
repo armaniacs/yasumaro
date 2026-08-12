@@ -29,7 +29,8 @@ const mocks = vi.hoisted(() => ({
   getPrivacyInfoWithCache: vi.fn(),
   hasPrivacyConsent: vi.fn(),
   getSettings: vi.fn(),
-  updateSavedUrlEntry: vi.fn(),
+  saveSavedUrlEntryMetadata: vi.fn(),
+  createReviewSummaryGenerator: vi.fn(),
 }));
 
 vi.mock('../obsidianClient.js', () => ({ ObsidianClient: mocks.ObsidianClient }));
@@ -54,7 +55,8 @@ vi.mock('../pipeline/RecordingPipeline.js', () => ({
 }));
 vi.mock('../../popup/privacyConsent.js', () => ({ hasPrivacyConsent: mocks.hasPrivacyConsent }));
 vi.mock('../../utils/storage.js', () => ({ getSettings: mocks.getSettings }));
-vi.mock('../../utils/storage/savedUrlStore.js', () => ({ updateSavedUrlEntry: mocks.updateSavedUrlEntry }));
+vi.mock('../../utils/storage/savedUrlStore.js', () => ({ saveSavedUrlEntryMetadata: mocks.saveSavedUrlEntryMetadata }));
+vi.mock('../reviewSummaryGenerator.js', () => ({ createReviewSummaryGenerator: mocks.createReviewSummaryGenerator }));
 
 import { createBackgroundServices } from '../createBackgroundServices.js';
 
@@ -80,7 +82,8 @@ describe('production composition contract', () => {
     mocks.getPrivacyInfoWithCache.mockResolvedValue(null);
     mocks.hasPrivacyConsent.mockResolvedValue(true);
     mocks.getSettings.mockResolvedValue({});
-    mocks.updateSavedUrlEntry.mockResolvedValue(undefined);
+    mocks.saveSavedUrlEntryMetadata.mockResolvedValue(undefined);
+    mocks.createReviewSummaryGenerator.mockReturnValue({ generateWeeklySummary: vi.fn(), generateMonthlySummary: vi.fn() });
   });
 
   it('builds the SqliteClient through getSharedSqliteClient, never `new SqliteClient()`', () => {
@@ -101,6 +104,16 @@ describe('production composition contract', () => {
 
     expect(composition.recordingPipeline).toBe(composition.manualRecordDeps.recordingPipeline);
     expect(composition.recordingPipeline).toBe(composition.saveRecordDeps.recordingPipeline);
+  });
+
+  it('builds the review summary generator once with the shared AIService and SqliteClient', () => {
+    createBackgroundServices();
+
+    expect(mocks.createReviewSummaryGenerator).toHaveBeenCalledTimes(1);
+    expect(mocks.createReviewSummaryGenerator).toHaveBeenCalledWith({
+      aiService: { fallbackAIService: true },
+      sqliteClient: { sqlite: true },
+    });
   });
 
   it('injects the same shared RecordingPipeline into RecordingLogic', () => {
@@ -124,5 +137,22 @@ describe('production composition contract', () => {
         sqliteClient: { sqlite: true },
       }),
     );
+  });
+
+  it('builds the setUrlContent closure once and shares it between the recording handlers', () => {
+    const composition = createBackgroundServices();
+
+    expect(composition.manualRecordDeps.setUrlContent).toBe(composition.saveRecordDeps.setUrlContent);
+  });
+
+  it('keeps the recording handler deps to the minimum behaviour the handlers use', () => {
+    const composition = createBackgroundServices();
+
+    for (const deps of [composition.manualRecordDeps, composition.saveRecordDeps]) {
+      expect(deps).not.toHaveProperty('obsidian');
+      expect(deps).not.toHaveProperty('aiService');
+      expect(deps).not.toHaveProperty('sqliteClient');
+      expect(deps).not.toHaveProperty('getPrivacyInfoWithCache');
+    }
   });
 });

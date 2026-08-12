@@ -5,6 +5,7 @@
 
 // 型定義と定数
 export type { SavedUrlEntry, CleansedReason } from './urlEntry.js';
+export type { SavedUrlEntryMetadataPatch } from './storage/savedUrlStore.js';
 export {
     MAX_URL_SET_SIZE,
     URL_WARNING_THRESHOLD,
@@ -24,6 +25,7 @@ export {
     getSavedUrlCount,
     updateSavedUrlEntry,
     mergeSavedUrlEntry,
+    saveSavedUrlEntryMetadata,
     setUrlTags,
     addUrlTag,
     removeUrlTag

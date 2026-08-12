@@ -2,6 +2,8 @@ import { NavigationRegistry } from './NavigationRegistry.js';
 import { type Panel } from './types.js';
 
 export class DashboardBootstrapper {
+  private sidebar: HTMLElement | null = null;
+
   constructor(private registry: NavigationRegistry) {}
 
   registerPanels(panels: Panel[]): void {
@@ -10,7 +12,21 @@ export class DashboardBootstrapper {
     }
   }
 
+  #updateActiveTabForPanel(panelId: string): void {
+    if (!this.sidebar) return;
+    const btn = this.sidebar.querySelector<HTMLElement>(`[data-panel="${panelId}"]`);
+    if (!btn) return;
+    const tabs = Array.from(this.sidebar.querySelectorAll<HTMLElement>('.sidebar-nav-btn'));
+    tabs.forEach((el) => {
+      const isActive = el === btn;
+      el.classList.toggle('active', isActive);
+      el.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      el.setAttribute('tabindex', isActive ? '0' : '-1');
+    });
+  }
+
   wireSidebar(sidebar: HTMLElement): void {
+    this.sidebar = sidebar;
     const getTabs = (): HTMLElement[] => {
       return Array.from(sidebar.querySelectorAll<HTMLElement>('.sidebar-nav-btn'));
     };
@@ -19,16 +35,6 @@ export class DashboardBootstrapper {
       const tabs = getTabs();
       tabs.forEach((el) => {
         el.setAttribute('tabindex', el === activeBtn ? '0' : '-1');
-      });
-    };
-
-    const updateActiveTab = (activeBtn: HTMLElement): void => {
-      const tabs = getTabs();
-      tabs.forEach((el) => {
-        const isActive = el === activeBtn;
-        el.classList.toggle('active', isActive);
-        el.setAttribute('aria-selected', isActive ? 'true' : 'false');
-        el.setAttribute('tabindex', isActive ? '0' : '-1');
       });
     };
 
@@ -47,7 +53,7 @@ export class DashboardBootstrapper {
       if (!panelId) return;
 
       // Update sidebar active state and ARIA selection
-      updateActiveTab(btn);
+      this.#updateActiveTabForPanel(panelId);
 
       try {
         this.registry.navigate(panelId);
@@ -90,6 +96,7 @@ export class DashboardBootstrapper {
   start(defaultPanelId?: string): void {
     if (defaultPanelId) {
       this.registry.navigate(defaultPanelId);
+      this.#updateActiveTabForPanel(defaultPanelId);
     }
   }
 }

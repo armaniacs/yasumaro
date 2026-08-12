@@ -41,6 +41,14 @@
 
 ## 未解決の疑問
 
-- #3: offscreen lifecycle 管理は「テスト可能だが複雑（OffscreenManager 分離）」と「シンプルだがテスト不能（AIService 内蔵）」のどちらを選ぶべきか？現時点では判断材料不足。local AI のテスト戦略全体を見直す必要がある
+- ~~#3: offscreen lifecycle 管理は「テスト可能だが複雑（OffscreenManager 分離）」と「シンプルだがテスト不能（AIService 内蔵）」のどちらを選ぶべきか？現時点では判断材料不足。local AI のテスト戦略全体を見直す必要がある~~ → 2026-08-11 に確定（下記追記参照）
 - #1: Panel 抽象は 25 パネルすべてに適用すべきか、それとも「設定系」「履歴系」などカテゴリ別の interface に分けるべきか？
 - #2: `data-storage-key` 方式に移行する際、旧 `getSettingsMapping()` をいつ削除するか？全設定項目の移行完了をどう検証するか？
+
+## 追記（2026-08-11）: offscreen lifecycle 所有権の確定
+
+未解決の疑問 #3（offscreen document lifecycle 管理の所有権）は、アーキテクチャ深深化PBI 子PBI 5（`2026-08-11-06-migrate-review-summary-to-ai-service.md`）で確定した。調査の結果、`AIService` の実装（`LocalAIService` / `RemoteAIService` / `FallbackAIService`）は offscreen document に依存しておらず、AI 用途に offscreen を管理する経路は現存しない。
+
+- **AI 用途**: AIService は **offscreen 非依存**として扱う。呼び出し側（service-worker、alarm、review summary generator）は offscreen を生成・終了せず、その存在を関知しない。`OffscreenManager` 相当の新設は行わない（YAGNI）。
+- **SQLite 用途**: offscreen document の生成・利用・終了は従来どおり `sqliteClient.ts` が所有する。この既存所有権には触れない。
+- この両者分離により、AIService は実装ごとに chrome API 依存の有無が異なる「テスト不能/可能」の二分ではなく、単一 interface で検証可能になる。

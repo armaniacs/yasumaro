@@ -4,11 +4,14 @@
  *
  * 対象期間の閲覧履歴を集計し、AI要約を用いたダイジェストMarkdownファイルを生成する。
  * 出力先: ~/Downloads/Yasumaro/YYYY-week-NN.md / YYYY-month-NN.md
+ *
+ * AIServiceとSQLite queryはfactory引数で注入する（ADR 2026-07-27、deep-dig 子PBI 5）。
+ * インスタンスはcomposition rootで1度だけ生成し、alarmとGENERATE_REVIEW_SUMMARYが共有する。
  */
 
 import { getSettings, StorageKeys } from '../utils/storage.js';
-import { AIClient } from './aiClient.js';
-import { getSharedSqliteClient } from './sqliteClient.js';
+import type { AIService } from './ai/AIService.js';
+import type { SqliteClient } from './sqliteClient.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
@@ -16,7 +19,18 @@ import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 
 type ReviewLogEntry = BrowsingLogRecord & { id: number };
 
-const sqliteClient = getSharedSqliteClient();
+/** Review summary生成器。alarmとmessage handlerが同一インスタンスを共有する。 */
+export interface ReviewSummaryGenerator {
+  generateWeeklySummary(targetDate?: Date): Promise<boolean>;
+  generateMonthlySummary(targetDate?: Date): Promise<boolean>;
+}
+
+export interface CreateReviewSummaryGeneratorOptions {
+  /** AI要約の実行先。provider選択・token policyはcomposition rootの構成に従う。 */
+  aiService: AIService;
+  /** 対象期間の閲覧履歴を引くSQLite query。 */
+  sqliteClient: Pick<SqliteClient, 'queryResult'>;
+}
 
 /**
  * ISO週番号を取得する
@@ -162,145 +176,148 @@ async function downloadMarkdown(content: string, filename: string, exportPath: s
 }
 
 /**
- * 週次レビューサマリを生成する
+ * 週次/月次レビューサマリ生成器を組み立てる。
+ *
+ * aiServiceとsqliteClientは呼び出し側から注入し、生成器自身はAIClient等を直接生成しない。
  */
-export async function generateWeeklySummary(targetDate?: Date): Promise<boolean> {
-  const settings = await getSettings();
-  const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED] as boolean;
-  if (!enabled) {
-    addLog(LogType.INFO, 'Weekly review summary is disabled');
-    return false;
-  }
+export function createReviewSummaryGenerator(options: CreateReviewSummaryGeneratorOptions): ReviewSummaryGenerator {
+  const { aiService, sqliteClient } = options;
 
-  const date = targetDate || new Date();
-  const weekYear = getISOWeekYear(date);
-  const weekNum = getISOWeekNumber(date);
-  const weekKey = `${weekYear}-W${String(weekNum).padStart(2, '0')}`;
-
-  // Check if already generated
-  const lastGenerated = settings[StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK] as string;
-  if (lastGenerated === weekKey) {
-    addLog(LogType.INFO, 'Weekly summary already generated for this week', { weekKey });
-    return false;
-  }
-
-  const { start, end } = getWeekPeriod(date);
-  const queryResult = await sqliteClient.queryResult({ since: start, until: end, limit: 10000 });
-
-  if (!queryResult.success) {
-    addLog(LogType.ERROR, 'Failed to query entries for weekly summary', { weekKey, error: queryResult.error.message });
-    return false;
-  }
-  const result = queryResult.data;
-  if (result.rows.length === 0) {
-    addLog(LogType.INFO, 'No entries for this week, skipping', { weekKey });
-    return false;
-  }
-
-  // Generate digest using AI
-  const aiClient = new AIClient();
-  const summaries = result.rows
-    .map((e) => e.summary)
-    .filter(Boolean)
-    .join('\n\n');
-
-  let digest = 'Weekly review digest generation requires AI provider configuration.';
-  if (summaries) {
-    const digestResult = await aiClient.generateSummary(
-      `以下の1週間の閲覧ページの要約を統合して、週次振り返りダイジェストを生成してください。\n\n${summaries}`
-    );
-    if (digestResult.success) {
-      digest = digestResult.summary;
+  async function generateWeeklySummary(targetDate?: Date): Promise<boolean> {
+    const settings = await getSettings();
+    const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED] as boolean;
+    if (!enabled) {
+      addLog(LogType.INFO, 'Weekly review summary is disabled');
+      return false;
     }
-  }
 
-  const entries = result.rows as ReviewLogEntry[];
+    const date = targetDate || new Date();
+    const weekYear = getISOWeekYear(date);
+    const weekNum = getISOWeekNumber(date);
+    const weekKey = `${weekYear}-W${String(weekNum).padStart(2, '0')}`;
 
-  const markdown = generateReviewMarkdown(`Week ${weekNum} (${weekYear})`, entries, digest);
-  const filename = `${weekYear}-week-${String(weekNum).padStart(2, '0')}.md`;
-  const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
-
-  const success = await downloadMarkdown(markdown, filename, exportPath);
-
-  if (success) {
-    // Save last generated week
-    await chrome.storage.local.set({
-      [StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK]: weekKey
-    });
-    addLog(LogType.INFO, 'Weekly review summary generated', { weekKey, entryCount: result.rows.length });
-  }
-
-  return success;
-}
-
-/**
- * 月次レビューサマリを生成する
- */
-export async function generateMonthlySummary(targetDate?: Date): Promise<boolean> {
-  const settings = await getSettings();
-  const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED] as boolean;
-  if (!enabled) {
-    addLog(LogType.INFO, 'Monthly review summary is disabled');
-    return false;
-  }
-
-  const date = targetDate || new Date();
-  const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-
-  // Check if already generated
-  const lastGenerated = settings[StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_MONTH] as string;
-  if (lastGenerated === monthKey) {
-    addLog(LogType.INFO, 'Monthly summary already generated for this month', { monthKey });
-    return false;
-  }
-
-  const { start, end } = getMonthPeriod(date);
-  const queryResult = await sqliteClient.queryResult({ since: start, until: end, limit: 10000 });
-
-  if (!queryResult.success) {
-    addLog(LogType.ERROR, 'Failed to query entries for monthly summary', { monthKey, error: queryResult.error.message });
-    return false;
-  }
-  const result = queryResult.data;
-  if (result.rows.length === 0) {
-    addLog(LogType.INFO, 'No entries for this month, skipping', { monthKey });
-    return false;
-  }
-
-  // Generate digest using AI
-  const aiClient = new AIClient();
-  const summaries = result.rows
-    .map((e) => e.summary)
-    .filter(Boolean)
-    .join('\n\n');
-
-  let digest = 'Monthly review digest generation requires AI provider configuration.';
-  if (summaries) {
-    const digestResult = await aiClient.generateSummary(
-      `以下の1ヶ月間の閲覧ページの要約を統合して、月次振り返りダイジェストを生成してください。\n\n${summaries}`
-    );
-    if (digestResult.success) {
-      digest = digestResult.summary;
+    // Check if already generated
+    const lastGenerated = settings[StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK] as string;
+    if (lastGenerated === weekKey) {
+      addLog(LogType.INFO, 'Weekly summary already generated for this week', { weekKey });
+      return false;
     }
+
+    const { start, end } = getWeekPeriod(date);
+    const queryResult = await sqliteClient.queryResult({ since: start, until: end, limit: 10000 });
+
+    if (!queryResult.success) {
+      addLog(LogType.ERROR, 'Failed to query entries for weekly summary', { weekKey, error: queryResult.error.message });
+      return false;
+    }
+    const result = queryResult.data;
+    if (result.rows.length === 0) {
+      addLog(LogType.INFO, 'No entries for this week, skipping', { weekKey });
+      return false;
+    }
+
+    // Generate digest using AI
+    const summaries = result.rows
+      .map((e) => e.summary)
+      .filter(Boolean)
+      .join('\n\n');
+
+    let digest = 'Weekly review digest generation requires AI provider configuration.';
+    if (summaries) {
+      const digestResult = await aiService.generateSummary(
+        `以下の1週間の閲覧ページの要約を統合して、週次振り返りダイジェストを生成してください。\n\n${summaries}`
+      );
+      if (digestResult.success) {
+        digest = digestResult.summary;
+      }
+    }
+
+    const entries = result.rows as ReviewLogEntry[];
+
+    const markdown = generateReviewMarkdown(`Week ${weekNum} (${weekYear})`, entries, digest);
+    const filename = `${weekYear}-week-${String(weekNum).padStart(2, '0')}.md`;
+    const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
+
+    const success = await downloadMarkdown(markdown, filename, exportPath);
+
+    if (success) {
+      // Save last generated week
+      await chrome.storage.local.set({
+        [StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK]: weekKey
+      });
+      addLog(LogType.INFO, 'Weekly review summary generated', { weekKey, entryCount: result.rows.length });
+    }
+
+    return success;
   }
 
-  const entries = result.rows as ReviewLogEntry[];
+  async function generateMonthlySummary(targetDate?: Date): Promise<boolean> {
+    const settings = await getSettings();
+    const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED] as boolean;
+    if (!enabled) {
+      addLog(LogType.INFO, 'Monthly review summary is disabled');
+      return false;
+    }
 
-  const markdown = generateReviewMarkdown(`${date.getFullYear()}年${date.getMonth() + 1}月`, entries, digest);
-  const filename = `${date.getFullYear()}-month-${String(date.getMonth() + 1).padStart(2, '0')}.md`;
-  const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
+    const date = targetDate || new Date();
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 
-  const success = await downloadMarkdown(markdown, filename, exportPath);
+    // Check if already generated
+    const lastGenerated = settings[StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_MONTH] as string;
+    if (lastGenerated === monthKey) {
+      addLog(LogType.INFO, 'Monthly summary already generated for this month', { monthKey });
+      return false;
+    }
 
-  if (success) {
-    // Save last generated month
-    await chrome.storage.local.set({
-      [StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_MONTH]: monthKey
-    });
-    addLog(LogType.INFO, 'Monthly review summary generated', { monthKey, entryCount: result.rows.length });
+    const { start, end } = getMonthPeriod(date);
+    const queryResult = await sqliteClient.queryResult({ since: start, until: end, limit: 10000 });
+
+    if (!queryResult.success) {
+      addLog(LogType.ERROR, 'Failed to query entries for monthly summary', { monthKey, error: queryResult.error.message });
+      return false;
+    }
+    const result = queryResult.data;
+    if (result.rows.length === 0) {
+      addLog(LogType.INFO, 'No entries for this month, skipping', { monthKey });
+      return false;
+    }
+
+    // Generate digest using AI
+    const summaries = result.rows
+      .map((e) => e.summary)
+      .filter(Boolean)
+      .join('\n\n');
+
+    let digest = 'Monthly review digest generation requires AI provider configuration.';
+    if (summaries) {
+      const digestResult = await aiService.generateSummary(
+        `以下の1ヶ月間の閲覧ページの要約を統合して、月次振り返りダイジェストを生成してください。\n\n${summaries}`
+      );
+      if (digestResult.success) {
+        digest = digestResult.summary;
+      }
+    }
+
+    const entries = result.rows as ReviewLogEntry[];
+
+    const markdown = generateReviewMarkdown(`${date.getFullYear()}年${date.getMonth() + 1}月`, entries, digest);
+    const filename = `${date.getFullYear()}-month-${String(date.getMonth() + 1).padStart(2, '0')}.md`;
+    const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
+
+    const success = await downloadMarkdown(markdown, filename, exportPath);
+
+    if (success) {
+      // Save last generated month
+      await chrome.storage.local.set({
+        [StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_MONTH]: monthKey
+      });
+      addLog(LogType.INFO, 'Monthly review summary generated', { monthKey, entryCount: result.rows.length });
+    }
+
+    return success;
   }
 
-  return success;
+  return { generateWeeklySummary, generateMonthlySummary };
 }
 
 // Exported for testing

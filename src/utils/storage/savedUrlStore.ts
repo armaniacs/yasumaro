@@ -15,6 +15,36 @@ export { MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, URL_RETENTION_DAYS, MAX_CONTEN
 export type { SavedUrlEntry } from '../urlEntry.js';
 
 /**
+ * Metadata-only subset of a SavedUrlEntry. `url` and `timestamp` are owned by
+ * the module and never appear in a patch. A key present with `undefined` means
+ * "do not update"; fields that need an explicit empty value follow the storage
+ * rules of the type (e.g. `tags: []` clears tags).
+ *
+ * Note: the legacy save path used to write a `title` field that was never part
+ * of SavedUrlEntry and never read anywhere (see migrationService's
+ * mapLegacyEntryToRecord). This contract intentionally excludes it.
+ */
+export type SavedUrlEntryMetadataPatch = Partial<Omit<SavedUrlEntry, 'url' | 'timestamp'>>;
+
+export interface SaveSavedUrlEntryMetadataOptions {
+  /**
+   * Refresh the entry timestamp to Date.now() in the same CAS. Defaults to
+   * true so recording-time saves bump LRU ordering; content backfills that
+   * must not reorder LRU (e.g. setUrlContent) pass false.
+   */
+  refreshTimestamp?: boolean;
+  /**
+   * Merge patch.tags into the entry's existing tags (deduplicated, existing
+   * tags first) instead of replacing them. Preserves the accumulation
+   * behavior of the per-tag addUrlTag path used by the legacy
+   * saveMetadataStep.
+   */
+  mergeTags?: boolean;
+  createIfMissing?: boolean;
+  timestamp?: number;
+}
+
+/**
  * Get the list of saved URLs with LRU eviction
  * @returns {Promise<Set<string>>} Set of saved URLs
  */
@@ -301,6 +331,79 @@ export async function updateSavedUrlEntry(
         }
         return entries;
     });
+}
+
+/**
+ * Atomically update a URL entry's timestamp and metadata in a single CAS.
+ *
+ * Timestamp + metadata are committed in one withOptimisticLock cycle so a
+ * concurrent update or a Service Worker termination between the two writes can
+ * never leave a partially-updated entry. If the entry does not exist yet it is
+ * created with `{ url, timestamp: Date.now() }` merged with the patch.
+ *
+ * The `savedUrls` mirror set is intentionally not touched: updateSavedUrlEntry
+ * never synced it either, and keeping this operation a single CAS preserves
+ * the existing mirror behavior.
+ */
+export async function saveSavedUrlEntryMetadata(
+    url: string,
+    patch: SavedUrlEntryMetadataPatch,
+    options: SaveSavedUrlEntryMetadataOptions = {}
+): Promise<void> {
+    const { refreshTimestamp = true, mergeTags = false, createIfMissing = true, timestamp } = options;
+
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+        const entries = currentEntries || [];
+        const idx = entries.findIndex(e => e.url === url);
+        if (idx < 0) {
+            if (!createIfMissing) return entries;
+            return [...entries, applyMetadataPatch({ url, timestamp: timestamp ?? Date.now() }, patch, mergeTags)];
+        }
+        const updatedEntries = [...entries];
+        const merged = applyMetadataPatch(updatedEntries[idx], patch, mergeTags);
+        updatedEntries[idx] = refreshTimestamp
+            ? { ...merged, timestamp: timestamp ?? Date.now() }
+            : merged;
+        return updatedEntries;
+    });
+}
+
+/**
+ * Merge a metadata patch into an entry. `undefined` values are skipped
+ * (they mean "no update"); explicit empty values follow the storage rules
+ * of the type (empty tags are stored as undefined).
+ */
+function applyMetadataPatch(
+    current: SavedUrlEntry,
+    patch: SavedUrlEntryMetadataPatch,
+    mergeTags: boolean
+): SavedUrlEntry {
+    const result: SavedUrlEntry = { ...current };
+    for (const [key, value] of Object.entries(patch)) {
+        if (value === undefined) continue;
+        if (key === 'tags') {
+            if (mergeTags) {
+                const existing = current.tags || [];
+                const seen = new Set(existing);
+                const merged = [...existing];
+                for (const tag of value as string[]) {
+                    if (!seen.has(tag)) {
+                        seen.add(tag);
+                        merged.push(tag);
+                    }
+                }
+                if (merged.length > 0) result.tags = merged;
+                else delete result.tags;
+            } else {
+                // Empty tag lists are stored as absent (existing convention).
+                if ((value as string[]).length > 0) result.tags = value as string[];
+                else delete result.tags;
+            }
+        } else {
+            (result as unknown as Record<string, unknown>)[key] = value;
+        }
+    }
+    return result;
 }
 
 /**
