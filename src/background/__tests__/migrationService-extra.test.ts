@@ -186,9 +186,9 @@ describe('MigrationService', () => {
       const origGet = chrome.storage.local.get;
       (chrome.storage.local.get as any).mockRejectedValue(new Error('Top-level error'));
 
-      await service.run();
-      // Should not throw, caught by top-level catch
-      expect(true).toBe(true);
+      // run() must not throw even when storage access fails; the top-level
+      // catch inside run() is expected to swallow it.
+      await expect(service.run()).resolves.not.toThrow();
     });
 
     describe('retry limit', () => {
