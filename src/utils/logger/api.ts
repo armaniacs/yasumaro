@@ -4,6 +4,7 @@
  * logSanitize, logCritical) built on top of logger/core.ts's addLog/flushLogs.
  */
 import { addLog, flushLogs, isDevelopment } from './core.js';
+import { defaultCriticalSink, type CriticalAlertSink } from './criticalAlertSink.js';
 import { ErrorCode, ErrorCodeValues, LogEntry, LogType, LogTypeValues } from './types.js';
 
 // 【SRE/Logging改善 #8】構造化ロギング便利関数
@@ -22,43 +23,6 @@ export function extractSourceFromImportMetaUrl(url: string): string {
         const fallback = url.split('/').pop() || 'unknown';
         return fallback.replace(/\.(js|ts)$/i, '') || 'unknown';
     }
-}
-
-/**
- * Resolve the `source` field for a log entry.
- * If an explicit source is provided, it is returned unchanged.
- * Otherwise, the caller location is inferred from `Error.stack`.
- *
- * Note: after bundling, stack frames may point to chunk files rather than
- * original source files. The returned value is still useful for tracing but
- * may not match the TypeScript source name.
- */
-export function resolveLogSource(source?: string): string | undefined {
-    if (source !== undefined) {
-        return source;
-    }
-
-    const stack = new Error().stack || '';
-    const lines = stack.split('\n');
-
-    for (const line of lines) {
-        // Skip frames that are part of this logger module.
-        if (line.includes('/logger.ts') || line.includes('\\logger.ts') ||
-            line.includes('/logger/api.ts') || line.includes('\\logger\\api.ts')) {
-            continue;
-        }
-
-        // Match common stack frame shapes:
-        //   at functionName (file:///path/to/file.ts:123:45)
-        //   at file:///path/to/file.ts:123:45
-        //   at functionName (/path/to/file.ts:123:45)
-        const match = line.match(/at\s+(?:[^\s(]+\s+)?\(?([^\s)]+?):\d+(?::\d+)?\)?$/);
-        if (match) {
-            return extractSourceFromImportMetaUrl(match[1]);
-        }
-    }
-
-    return 'unknown';
 }
 
 /**
@@ -99,7 +63,7 @@ export async function logInfo<T extends object = Record<string, unknown>>(
     details: T = {} as T,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.INFO, message, details, undefined, resolveLogSource(source));
+    const entry = createStructuredLog(LogType.INFO, message, details, undefined, source);
     await writeStructuredLog(entry);
 }
 
@@ -116,7 +80,7 @@ export async function logWarn<T extends object = Record<string, unknown>>(
     errorCode?: ErrorCodeValues,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.WARN, message, details, errorCode, resolveLogSource(source));
+    const entry = createStructuredLog(LogType.WARN, message, details, errorCode, source);
     await writeStructuredLog(entry);
 }
 
@@ -133,7 +97,7 @@ export async function logError<T extends object = Record<string, unknown>>(
     errorCode: ErrorCodeValues = ErrorCode.UNKNOWN_ERROR,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, resolveLogSource(source));
+    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, source);
     await writeStructuredLog(entry);
 
     // 開発環境ではconsole.errorにも出力
@@ -157,7 +121,7 @@ export async function logDebug<T extends object = Record<string, unknown>>(
     if (!isDevelopment()) {
         return;
     }
-    const entry = createStructuredLog(LogType.DEBUG, message, details, undefined, resolveLogSource(source));
+    const entry = createStructuredLog(LogType.DEBUG, message, details, undefined, source);
     await writeStructuredLog(entry);
 
     // 開発環境ではconsole.debugにも出力
@@ -179,7 +143,7 @@ export async function logSanitize<T extends object = Record<string, unknown>>(
     errorCode?: ErrorCodeValues,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.SANITIZE, message, details, errorCode, resolveLogSource(source));
+    const entry = createStructuredLog(LogType.SANITIZE, message, details, errorCode, source);
     await writeStructuredLog(entry);
 }
 
@@ -207,21 +171,19 @@ async function writeStructuredLog(entry: LogEntry): Promise<void> {
     }
 }
 
-const CRITICAL_NOTIFICATION_COOLDOWN_MS = 5 * 60 * 1000;
-let lastCriticalNotificationTime = 0;
-
 /**
- * CRITICAL — 構造化ERRORログ + chrome.notifications アラート
+ * CRITICAL — 構造化ERRORログ + 即時フラッシュ + 任意の CriticalAlertSink アラート
  * 暗号化失敗、データ損失リスクなど重大な障害で使用する。
- * 通知にはクールダウン（5分）があり、連続通知スパムを防ぐ。
+ * 通知のクールダウンは sink 側で管理する。
  */
 export async function logCritical<T extends object = Record<string, unknown>>(
     message: string,
     details: T = {} as T,
     errorCode: ErrorCodeValues = ErrorCode.UNKNOWN_ERROR,
-    source?: string
+    source?: string,
+    sink: CriticalAlertSink = defaultCriticalSink,
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, resolveLogSource(source));
+    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, source);
     await writeStructuredLog(entry);
     // Critical logs are flushed immediately so they are not lost on SW termination.
     await flushLogs(true);
@@ -236,30 +198,5 @@ export async function logCritical<T extends object = Record<string, unknown>>(
         return value;
     })}`);
 
-    const now = Date.now();
-    if (now - lastCriticalNotificationTime < CRITICAL_NOTIFICATION_COOLDOWN_MS) {
-        return;
-    }
-    lastCriticalNotificationTime = now;
-
-    try {
-        if (typeof chrome !== 'undefined' && chrome.notifications && typeof chrome.notifications.create === 'function') {
-            const title = chrome.i18n.getMessage('criticalAlertTitle') || 'Yasumaro — Critical Error';
-            const notificationMessage = chrome.i18n.getMessage('criticalAlertBody', [message]) || message;
-            const iconUrl = (typeof chrome.runtime !== 'undefined' && typeof chrome.runtime.getURL === 'function')
-                ? chrome.runtime.getURL('icons/icon48.png')
-                : 'icons/icon48.png';
-
-            chrome.notifications.create({
-                type: 'basic',
-                iconUrl,
-                title,
-                message: notificationMessage,
-                priority: 2,
-                requireInteraction: true,
-            });
-        }
-    } catch (e) {
-        console.error('Logger: Failed to create critical notification', e);
-    }
+    sink.raise(message, details as Record<string, unknown>, errorCode);
 }

@@ -8,6 +8,7 @@
  */
 
 import { addLog, LogType, ErrorCode, logCritical } from '../utils/logger.js';
+import { ChromeNotificationCriticalSink } from '../utils/logger/criticalAlertSink.js';
 
 const ALERT_THRESHOLD = 3;
 const ALERT_COOLDOWN_MS = 60 * 60 * 1000;
@@ -18,6 +19,8 @@ const INIT_SUPPRESSED_PATTERNS = ['OPFS Worker unavailable', 'timed out', 'offsc
 let consecutiveFailures = 0;
 let lastAlertTime = 0;
 let firstFailureTime = 0;
+
+const criticalSink = new ChromeNotificationCriticalSink();
 
 export function recordSqliteFailure(component: string, error: string): void {
     consecutiveFailures++;
@@ -45,7 +48,8 @@ export function recordSqliteFailure(component: string, error: string): void {
             `SQLite persistent failure in ${component}`,
             { component, totalFailures: ALERT_THRESHOLD, lastError: error },
             ErrorCode.STORAGE_READ_FAILURE,
-            'sqliteAlert'
+            'sqliteAlert',
+            criticalSink
         );
     }
 }

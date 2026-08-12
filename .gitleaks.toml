@@ -1,0 +1,14 @@
+[allowlist]
+paths = [
+  # Test fixtures with fake API key strings — pre-existing false positives
+  "src/background/__tests__/dashboardSqliteHandlers-append.test.ts",
+  "src/utils/__tests__/obsidianEnabled.test.ts",
+  "src/background/pipeline/steps/__tests__/saveToObsidianStep.test.ts",
+  "src/background/__tests__/obsidianSyncService.test.ts",
+  "src/utils/__tests__/storage-security.test.ts",
+  "src/background/__tests__/obsidianClient-security.test.ts",
+  "src/dashboard/diagnoseDeficiencies.ts",
+  "src/__tests__/types.ts",
+  "src/utils/__tests__/crypto.test.ts",
+  "src/utils/__tests__/crypto.test.js",
+]
