@@ -18,13 +18,7 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| ⬜ [2026-08-12-01-refactor-move-message-handler-registry-to-composition-root.md](2026-08-12-01-refactor-move-message-handler-registry-to-composition-root.md) | 🟡中 | 🟡軽微 | 🔧 | Handler registryをcomposition rootへ移設し、service-worker.tsの責務を削減 |
-| ⬜ [2026-08-12-02-refactor-migrate-aiclient-tests-to-aiservice.md](2026-08-12-02-refactor-migrate-aiclient-tests-to-aiservice.md) | 🟡中 | 🟡軽微 | 🔧 | aiClient.test.ts等をAIService/RemoteAIService経由に移行し、AIClientテストを委譲contractに絞る |
-| ⬜ [2026-08-12-03-feat-dashboard-multitab-ai-test-correlation.md](2026-08-12-03-feat-dashboard-multitab-ai-test-correlation.md) | 🟢低 | 🟢なし | ✨ | AIテスト進捗に相関IDを付与し、複数ダッシュボードタブの干渉を防止 |
-| ⬜ [2026-08-12-04-refactor-logger-core-concern-separation.md](2026-08-12-04-refactor-logger-core-concern-separation.md) | 🟡中 | 🟡軽微 | 🔧 | Logger core を buffer/storage/scheduler/sanitize に分割（storage/scheduler は adapter、外部 interface 不変） |
-| ⬜ [2026-08-12-05-refactor-logcritical-notification-seam.md](2026-08-12-05-refactor-logcritical-notification-seam.md) | 🟡中 | 🟡軽微 | 🔧 | logCritical から通知を CriticalAlertSink adapter に分離（記録のみに留める） |
-| ⬜ [2026-08-12-06-refactor-resolvelogsource-stack-removal.md](2026-08-12-06-refactor-resolvelogsource-stack-removal.md) | 🟢低 | 🟢なし | 🔧 | resolveLogSource の new Error().stack パースを削除し source を明示渡しのみに |
-| ⬜ [2026-08-12-07-refactor-errorMessage-retain-as-is.md](2026-08-12-07-refactor-errorMessage-retain-as-is.md) | 🟢低 | 🟢なし | 🔧 | errorMessage() を削除テストで現状維持と確定（58箇所集約価値あり） |
+| （なし） | — | — | — | — |
 
 ---
 
@@ -72,6 +66,16 @@
 - 2026-08-11-07-fix-sqlite-history-panel-reducer-consistency.md (sqliteHistoryPanelの全state mutationをhistoryStateReducer経由に統一)
 - 2026-08-11-08-fix-metadata-patch-queue-capacity.md (metadata patch coalescing・payload上限100KB・content省略・RetryableItem対応を完了)
 - 2026-08-11-09-fix-history-fallback-failure-contract.md (fallback検索失敗時にServiceErrorを返しover-fetchを解消)
+
+### 2026-08-12 セッションでアーカイブ済み（Logger/Error層深耕 — 6件）
+
+- 2026-08-12-01-refactor-move-message-handler-registry-to-composition-root.md (handler registryをcomposition rootへ移設し、service-worker.tsの責務を削減。createMessageRegistryCompositionを新設)
+- 2026-08-12-02-refactor-migrate-aiclient-tests-to-aiservice.md (aiClient.test.tsとaiClient-priority-fallback.test.tsの実質テストをRemoteAIService.test.tsに移行。aiClient.test.tsは委譲contractに縮小)
+- 2026-08-12-03-feat-dashboard-multitab-ai-test-correlation.md (AIテスト進捗に相関IDを付与し、複数ダッシュボードタブの干渉を防止)
+- 2026-08-12-04-refactor-logger-core-concern-separation.md (Logger core を LogBuffer/LogSanitize/LogStorageAdapter/LogFlushScheduler に分割。core.tsはオーケストレータ化)
+- 2026-08-12-05-refactor-logcritical-notification-seam.md (logCriticalから通知責務をCriticalAlertSinkアダプタに分離。sqliteAlert.tsも明示的にsinkを渡す)
+- 2026-08-12-06-refactor-resolvelogsource-stack-removal.md (resolveLogSourceのnew Error().stackパースを削除し、sourceを明示渡しのみに)
+- 2026-08-12-07-refactor-errorMessage-retain-as-is.md (errorMessage()を削除テストで現状維持と確定。rationaleコメントを追加)
 
 ### 2026-08-09 セッションでアーカイブ済み（17件）
 
@@ -340,10 +344,10 @@
 | ⬜ 未着手 | 0 |
 | 🔶 部分実装 | 0 |
 | **`pbi/` 残存合計** | **0** |
-| アーカイブ済みPBI | 250 |
-| アーカイブ済み実装計画 | 105 |
+| アーカイブ済みPBI | 256 |
+| アーカイブ済み実装計画 | 111 |
 
-※ 2026-08-12 セッションで PBI-07/08/09/17 および PBI-08 AI を完了。pbi/ は現在空。
+※ 2026-08-12 セッションで PBI-01〜02（handler registry / aiClientテスト移行）、PBI-04〜07（logger/error層深耕）を完了。pbi/ は現在空。
 
 ### 2026-08-09 アーキテクチャレビュー由来（20〜24）の実施順と依存
 
