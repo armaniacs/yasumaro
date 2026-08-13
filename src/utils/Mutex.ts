@@ -6,6 +6,22 @@
 
 import { addLog, LogType } from '../utils/logger.js';
 
+// addLog (and the LogType it's called with) is best-effort diagnostics
+// only. If evaluating the call throws synchronously — e.g. a test mocks
+// logger.js without exporting addLog or LogType — that must never abort
+// the lock state change it follows: an aborted acquire() leaves
+// `locked = true` forever with no matching release(), deadlocking every
+// future acquirer. The callback form (rather than a variadic wrapper)
+// ensures the LogType.* argument expression is evaluated inside the
+// try block too, not just the addLog call itself.
+function safeAddLog(fn: () => void): void {
+    try {
+        fn();
+    } catch {
+        // Logging failure is not this class's concern.
+    }
+}
+
 export interface MutexOptions {
     maxQueueSize?: number;
     timeoutMs?: number;
@@ -42,10 +58,10 @@ export class Mutex {
         const now = Date.now();
 
         if (this.queue.size >= this.maxQueueSize) {
-            addLog(LogType.ERROR, 'Mutex: Queue is full, rejecting request', {
+            safeAddLog(() => void addLog(LogType.ERROR, 'Mutex: Queue is full, rejecting request', {
                 queueLength: this.queue.size,
                 maxSize: this.maxQueueSize
-            });
+            }));
             throw new Error(`Mutex queue is full (max ${this.maxQueueSize}). Too many concurrent requests.`);
         }
 
@@ -71,7 +87,7 @@ export class Mutex {
 
         this.locked = true;
         this.lockedAt = Date.now();
-        addLog(LogType.DEBUG, 'Mutex: Lock acquired');
+        safeAddLog(() => void addLog(LogType.DEBUG, 'Mutex: Lock acquired'));
     }
 
     /**
@@ -79,7 +95,7 @@ export class Mutex {
      */
     release(): void {
         if (!this.locked) {
-            addLog(LogType.WARN, 'Mutex: Attempting to release unlocked mutex');
+            safeAddLog(() => void addLog(LogType.WARN, 'Mutex: Attempting to release unlocked mutex'));
             return;
         }
 
@@ -100,9 +116,9 @@ export class Mutex {
                     task.resolve();
                 }
 
-                addLog(LogType.DEBUG, 'Mutex: Lock transferred to waiting task', {
+                safeAddLog(() => void addLog(LogType.DEBUG, 'Mutex: Lock transferred to waiting task', {
                     remainingQueue: this.queue.size
-                });
+                }));
                 return;
             }
         }
@@ -110,7 +126,7 @@ export class Mutex {
         // If queue is empty or something weird happened with iterator
         this.locked = false;
         this.lockedAt = null;
-        addLog(LogType.DEBUG, 'Mutex: Lock released');
+        safeAddLog(() => void addLog(LogType.DEBUG, 'Mutex: Lock released'));
     }
 
     /**
