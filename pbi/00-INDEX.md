@@ -18,7 +18,11 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| （なし） | — | — | — | — |
+| [2026-08-13-01-fix-encryption-session-mutex.md](2026-08-13-01-fix-encryption-session-mutex.md) | 🟡中 | 🔴あり | 🔧非機能追加 | encryptionSessionのsecret復元処理をMutexで排他制御し、アップデート直後の競合による暗号化データ永久損失を防ぐ |
+| [2026-08-13-02-fix-log-critical-sanitize-notification.md](2026-08-13-02-fix-log-critical-sanitize-notification.md) | 🟢低 | 🟡軽微 | 🔧非機能追加 | logCriticalのOS通知にサニタイズ済みメッセージを渡し、PII/APIキー漏洩を防ぐ |
+| [2026-08-13-03-fix-pending-queue-tags-unbounded-growth.md](2026-08-13-03-fix-pending-queue-tags-unbounded-growth.md) | 🟡中 | 🟡軽微 | 🔧非機能追加 | pendingChromeStorageQueueのマージ後ペイロードを合計サイズで検証し、tags無制限肥大化によるストレージ圧迫を防ぐ |
+| [2026-08-13-04-fix-logger-flush-alarm-not-cleared.md](2026-08-13-04-fix-logger-flush-alarm-not-cleared.md) | 🟢低 | 🟢なし | 🔧非機能追加 | ロガーのモジュール分割で消失したフラッシュアラーム解除処理を復元する |
+| [2026-08-13-05-fix-apply-metadata-patch-runtime-guard.md](2026-08-13-05-fix-apply-metadata-patch-runtime-guard.md) | 🟢低 | 🟢なし | 🔧非機能追加 | applyMetadataPatchにurl/timestamp実行時ガードを追加し、将来の型キャスト経由の改ざんを防ぐ |
 
 ---
 
