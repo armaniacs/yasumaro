@@ -153,9 +153,11 @@ describe('pendingChromeStorageQueue', () => {
   });
 
   it('truncates tags when repeated merges exceed the payload limit even without content', async () => {
-    // 1件目のtagsを大量に用意する（1タグあたり短い文字列でも、件数を
-    // 十分増やせばMAX_PATCH_PAYLOAD_BYTES(100KB)を超えられる）。
-    const manyTags = Array.from({ length: 3000 }, (_, i) => `tag-${i}`);
+    // 1件目・2件目それぞれのtagsは単独では上限(100KB)を超えないが、
+    // タグ文字列が異なるためmergeTagsでの重複排除が効かず、マージ後は
+    // 合計で上限を超える（1件あたり5000件、1タグあたり約13バイト）。
+    const manyTags = Array.from({ length: 5000 }, (_, i) => `tag-a-${i}`);
+    const moreTags = Array.from({ length: 5000 }, (_, i) => `tag-b-${i}`);
     await enqueuePendingWrite({
       type: 'metadataPatch',
       key: 'savedUrlsWithTimestamps',
@@ -174,7 +176,7 @@ describe('pendingChromeStorageQueue', () => {
       type: 'metadataPatch',
       key: 'savedUrlsWithTimestamps',
       url: 'https://example.com',
-      patch: { tags: ['fresh-tag'] },
+      patch: { tags: [...moreTags, 'fresh-tag'] },
       timestamp: 2000,
       mergeTags: true,
       createdAt: 2000,
