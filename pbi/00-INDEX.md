@@ -18,7 +18,6 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| [2026-08-13-04-fix-logger-flush-alarm-not-cleared.md](2026-08-13-04-fix-logger-flush-alarm-not-cleared.md) | 🟢低 | 🟢なし | 🔧非機能追加 | ロガーのモジュール分割で消失したフラッシュアラーム解除処理を復元する |
 
 ---
 
@@ -45,6 +44,7 @@
 - 2026-08-13-02-fix-log-critical-sanitize-notification.md (logCriticalのOS通知にsanitizeRegex適用、PII/APIキー漏洩を防止)
 - 2026-08-13-05-fix-apply-metadata-patch-runtime-guard.md (applyMetadataPatchにurl/timestamp実行時ガードを追加、型キャスト経由の改ざんを防止)
 - 2026-08-13-03-fix-pending-queue-tags-unbounded-growth.md (pendingChromeStorageQueueのマージ後サイズ検証を拡張、content間引き後もtags肥大化する場合は末尾優先で切り詰め)
+- 2026-08-13-04-fix-logger-flush-alarm-not-cleared.md (LogFlushSchedulerにclear()追加、persistPending成功時とclearLogsでスケジュール済みアラームを解除)
 
 ### 2026-08-11 アーキテクチャ深深化Epicでアーカイブ済み（11件）
 
