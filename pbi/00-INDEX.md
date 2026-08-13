@@ -21,7 +21,6 @@
 | [2026-08-13-02-fix-log-critical-sanitize-notification.md](2026-08-13-02-fix-log-critical-sanitize-notification.md) | 🟢低 | 🟡軽微 | 🔧非機能追加 | logCriticalのOS通知にサニタイズ済みメッセージを渡し、PII/APIキー漏洩を防ぐ |
 | [2026-08-13-03-fix-pending-queue-tags-unbounded-growth.md](2026-08-13-03-fix-pending-queue-tags-unbounded-growth.md) | 🟡中 | 🟡軽微 | 🔧非機能追加 | pendingChromeStorageQueueのマージ後ペイロードを合計サイズで検証し、tags無制限肥大化によるストレージ圧迫を防ぐ |
 | [2026-08-13-04-fix-logger-flush-alarm-not-cleared.md](2026-08-13-04-fix-logger-flush-alarm-not-cleared.md) | 🟢低 | 🟢なし | 🔧非機能追加 | ロガーのモジュール分割で消失したフラッシュアラーム解除処理を復元する |
-| [2026-08-13-05-fix-apply-metadata-patch-runtime-guard.md](2026-08-13-05-fix-apply-metadata-patch-runtime-guard.md) | 🟢低 | 🟢なし | 🔧非機能追加 | applyMetadataPatchにurl/timestamp実行時ガードを追加し、将来の型キャスト経由の改ざんを防ぐ |
 
 ---
 
@@ -45,6 +44,7 @@
 ### 2026-08-13 アーカイブ済み
 
 - 2026-08-13-01-fix-encryption-session-mutex.md (getOrCreateEncryptionKeyのsession→local復元をMutexで排他制御、ダブルチェックロッキングで二重の新規secret生成を防止。実装中にMutex.ts自体の潜在バグ（診断ログ失敗によるロック永久化）を発見し併せて修正)
+- 2026-08-13-05-fix-apply-metadata-patch-runtime-guard.md (applyMetadataPatchにurl/timestamp実行時ガードを追加、型キャスト経由の改ざんを防止)
 
 ### 2026-08-11 アーキテクチャ深深化Epicでアーカイブ済み（11件）
 
@@ -351,7 +351,7 @@
 | ⬜ 未着手 | 0 |
 | 🔶 部分実装 | 0 |
 | **`pbi/` 残存合計** | **0** |
-| アーカイブ済みPBI | 256 |
+| アーカイブ済みPBI | 257 |
 | アーカイブ済み実装計画 | 111 |
 
 ※ 2026-08-12 セッションで PBI-01〜02（handler registry / aiClientテスト移行）、PBI-04〜07（logger/error層深耕）を完了。pbi/ は現在空。
