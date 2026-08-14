@@ -277,7 +277,7 @@ export async function saveSavedUrlEntryMetadata(
             if (!createIfMissing) return entries;
             return [...entries, applyMetadataPatch({ url, timestamp: timestamp ?? Date.now() }, patch, mergeTags)];
         }
-        const updatedEntries = [...entries]0;
+        const updatedEntries = [...entries];
         const merged = applyMetadataPatch(updatedEntries[idx], patch, mergeTags);
         updatedEntries[idx] = refreshTimestamp
             ? { ...merged, timestamp: timestamp ?? Date.now() }
