@@ -18,7 +18,6 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| （なし） | — | — | — | — |
 
 ---
 
@@ -38,6 +37,14 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-13 アーカイブ済み
+
+- 2026-08-13-01-fix-encryption-session-mutex.md (getOrCreateEncryptionKeyのsession→local復元をMutexで排他制御、ダブルチェックロッキングで二重の新規secret生成を防止。実装中にMutex.ts自体の潜在バグ（診断ログ失敗によるロック永久化）を発見し併せて修正)
+- 2026-08-13-02-fix-log-critical-sanitize-notification.md (logCriticalのOS通知にsanitizeRegex適用、PII/APIキー漏洩を防止)
+- 2026-08-13-05-fix-apply-metadata-patch-runtime-guard.md (applyMetadataPatchにurl/timestamp実行時ガードを追加、型キャスト経由の改ざんを防止)
+- 2026-08-13-03-fix-pending-queue-tags-unbounded-growth.md (pendingChromeStorageQueueのマージ後サイズ検証を拡張、content間引き後もtags肥大化する場合は末尾優先で切り詰め)
+- 2026-08-13-04-fix-logger-flush-alarm-not-cleared.md (LogFlushSchedulerにclear()追加、persistPending成功時とclearLogsでスケジュール済みアラームを解除)
 
 ### 2026-08-11 アーキテクチャ深深化Epicでアーカイブ済み（11件）
 
@@ -344,7 +351,7 @@
 | ⬜ 未着手 | 0 |
 | 🔶 部分実装 | 0 |
 | **`pbi/` 残存合計** | **0** |
-| アーカイブ済みPBI | 256 |
+| アーカイブ済みPBI | 257 |
 | アーカイブ済み実装計画 | 111 |
 
 ※ 2026-08-12 セッションで PBI-01〜02（handler registry / aiClientテスト移行）、PBI-04〜07（logger/error層深耕）を完了。pbi/ は現在空。

@@ -6,6 +6,7 @@
 import { addLog, flushLogs, isDevelopment } from './core.js';
 import { defaultCriticalSink, type CriticalAlertSink } from './criticalAlertSink.js';
 import { ErrorCode, ErrorCodeValues, LogEntry, LogType, LogTypeValues } from './types.js';
+import { sanitizeRegex } from '../piiSanitizer.js';
 
 // 【SRE/Logging改善 #8】構造化ロギング便利関数
 
@@ -198,5 +199,9 @@ export async function logCritical<T extends object = Record<string, unknown>>(
         return value;
     })}`);
 
-    sink.raise(message, details as Record<string, unknown>, errorCode);
+    // OS通知は chrome.storage への保存経路（addLog）とは別経路のため、
+    // ここでも明示的にサニタイズする。addLog内のサニタイズは通知には効かない。
+    const sanitizedMessage = await sanitizeRegex(message);
+    const notificationMessage = sanitizedMessage.maskedItems.length > 0 ? sanitizedMessage.text : message;
+    sink.raise(notificationMessage, details as Record<string, unknown>, errorCode);
 }

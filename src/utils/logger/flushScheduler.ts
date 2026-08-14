@@ -4,6 +4,8 @@ const BATCH_FLUSH_ALARM_MINUTES = 1;
 export interface LogFlushScheduler {
   onFlushRequested(handler: () => Promise<void>): void;
   schedule(): void;
+  /** Cancel a pending scheduled flush (e.g. after a flush already ran). */
+  clear(): void;
   flushNow(): Promise<void>;
 }
 
@@ -39,6 +41,11 @@ export class ChromeAlarmFlushScheduler implements LogFlushScheduler {
     chrome.alarms.create(LOGGER_ALARM_NAME, { delayInMinutes: BATCH_FLUSH_ALARM_MINUTES });
   }
 
+  clear(): void {
+    if (typeof chrome === 'undefined' || !chrome.alarms) return;
+    chrome.alarms.clear(LOGGER_ALARM_NAME);
+  }
+
   async flushNow(): Promise<void> {
     if (this.handler) await this.handler();
   }
@@ -54,6 +61,10 @@ export class ImmediateFlushScheduler implements LogFlushScheduler {
 
   schedule(): void {
     void this.handler?.();
+  }
+
+  clear(): void {
+    // No real alarm exists in this fake — nothing to cancel.
   }
 
   async flushNow(): Promise<void> {

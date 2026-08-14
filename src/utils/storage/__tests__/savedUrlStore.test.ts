@@ -153,4 +153,34 @@ describe('saveSavedUrlEntryMetadata', () => {
         expect(entry?.timestamp).toBe(1234);
         expect(entry?.content).toBe('c');
     });
+
+    it('ignores a url key smuggled into the patch via a type cast', async () => {
+        await seedEntry({ url: 'https://example.com', timestamp: 1000 });
+
+        // 型システムをすり抜けて url を含む patch を渡す状況をわざと再現する。
+        // 通常のTypeScriptコードではこのような patch は型エラーになるが、
+        // 将来 as キャストを経由する呼び出し元が追加された場合の防御を
+        // 検証するためのテスト。
+        const maliciousPatch = { url: 'https://attacker.example.com', recordType: 'auto' } as unknown as Parameters<typeof saveSavedUrlEntryMetadata>[1];
+
+        await saveSavedUrlEntryMetadata('https://example.com', maliciousPatch);
+
+        const entry = await readEntry('https://example.com');
+        expect(entry?.url).toBe('https://example.com');
+        expect(entry?.recordType).toBe('auto');
+    });
+
+    it('ignores a timestamp key smuggled into the patch via a type cast', async () => {
+        await seedEntry({ url: 'https://example.com', timestamp: 1000 });
+
+        const maliciousPatch = { timestamp: 9999999, recordType: 'auto' } as unknown as Parameters<typeof saveSavedUrlEntryMetadata>[1];
+
+        await saveSavedUrlEntryMetadata('https://example.com', maliciousPatch, { refreshTimestamp: false });
+
+        const entry = await readEntry('https://example.com');
+        // refreshTimestamp: false のため、通常のタイムスタンプ更新も発生しない。
+        // patch経由のtimestamp（9999999）も無視されるべきなので、元の1000のまま。
+        expect(entry?.timestamp).toBe(1000);
+        expect(entry?.recordType).toBe('auto');
+    });
 });
