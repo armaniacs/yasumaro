@@ -62,7 +62,7 @@ const queue = new PersistentRetryQueue<QueuedChromeStorageWrite>(adapter, {
   storageKey: PENDING_CHROME_STORAGE_KEY,
   maxSize: MAX_PENDING_WRITES,
   logLabel: 'pendingChromeStorageQueue',
-  maxPayloadBytes: 100 * 1024, // 100KB per metadata patch
+  maxPayloadBytes: MAX_PATCH_PAYLOAD_BYTES,
   maxRetryCount: 5,
   ttlMs: 7 * 24 * 60 * 60 * 1000, // 7 days
 });
