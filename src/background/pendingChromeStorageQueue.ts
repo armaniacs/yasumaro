@@ -16,6 +16,16 @@ export const PENDING_CHROME_STORAGE_KEY = 'pending_chrome_storage_writes';
 const MAX_PENDING_WRITES = 500;
 
 /**
+ * Per-entry payload cap for a merged metadata patch. content is omitted
+ * first when a merge exceeds this; if the payload is still too large
+ * afterwards (e.g. very large accumulated tags), tags are truncated too.
+ */
+const MAX_PATCH_PAYLOAD_BYTES = 100 * 1024;
+
+/** How many tags to keep (most recent first) when a merge must be truncated. */
+const MAX_TAGS_AFTER_TRUNCATION = 50;
+
+/**
  * Legacy payload: a raw chrome.storage write that failed. Kept so payloads
  * already queued by older versions are still understood by the retry handler.
  */
@@ -42,6 +52,7 @@ export interface PendingMetadataPatchWrite {
   createdAt: number;
   retryCount: number;
   contentOmitted?: boolean;
+  tagsOmitted?: boolean;
 }
 
 export type QueuedChromeStorageWrite = PendingChromeStorageWrite | PendingMetadataPatchWrite;
@@ -51,7 +62,7 @@ const queue = new PersistentRetryQueue<QueuedChromeStorageWrite>(adapter, {
   storageKey: PENDING_CHROME_STORAGE_KEY,
   maxSize: MAX_PENDING_WRITES,
   logLabel: 'pendingChromeStorageQueue',
-  maxPayloadBytes: 100 * 1024, // 100KB per metadata patch
+  maxPayloadBytes: MAX_PATCH_PAYLOAD_BYTES,
   maxRetryCount: 5,
   ttlMs: 7 * 24 * 60 * 60 * 1000, // 7 days
 });
@@ -86,16 +97,44 @@ export async function enqueuePendingWrite(write: QueuedChromeStorageWrite): Prom
         createdAt: existingPatch.createdAt,
         retryCount: 0,
       };
-      // Omit content if the merged payload exceeds the limit.
-      const mergedSize = new Blob([JSON.stringify(mergedPatch)]).size;
-      const MAX_PATCH_PAYLOAD_BYTES = 100 * 1024;
+      // Omit content first if the merged payload exceeds the limit.
+      let mergedSize = new Blob([JSON.stringify(mergedPatch)]).size;
       if (mergedSize > MAX_PATCH_PAYLOAD_BYTES && mergedPatch.content) {
         existing[sameUrlIndex] = {
           ...existing[sameUrlIndex],
           patch: (({ content, ...rest }: { content?: string }) => rest)(mergedPatch),
           contentOmitted: true,
         };
+        mergedSize = new Blob([JSON.stringify((existing[sameUrlIndex] as PendingMetadataPatchWrite).patch)]).size;
       }
+
+      // If still too large (e.g. tags accumulated across many failed
+      // retries), truncate tags — keep the most recently added ones
+      // (array tail, since mergeTags appends new tags after existing ones)
+      // and drop the oldest first.
+      if (mergedSize > MAX_PATCH_PAYLOAD_BYTES) {
+        const currentPatch = (existing[sameUrlIndex] as PendingMetadataPatchWrite).patch;
+        const currentTags = currentPatch.tags;
+        if (currentTags && currentTags.length > 0) {
+          let truncatedTags = currentTags.slice(-MAX_TAGS_AFTER_TRUNCATION);
+          let candidatePatch = { ...currentPatch, tags: truncatedTags };
+          let candidateSize = new Blob([JSON.stringify(candidatePatch)]).size;
+          // Even MAX_TAGS_AFTER_TRUNCATION tags might still be too large
+          // if individual tag strings are unusually long — keep shrinking
+          // from the front until it fits or nothing is left.
+          while (candidateSize > MAX_PATCH_PAYLOAD_BYTES && truncatedTags.length > 0) {
+            truncatedTags = truncatedTags.slice(1);
+            candidatePatch = { ...currentPatch, tags: truncatedTags };
+            candidateSize = new Blob([JSON.stringify(candidatePatch)]).size;
+          }
+          existing[sameUrlIndex] = {
+            ...existing[sameUrlIndex],
+            patch: truncatedTags.length > 0 ? candidatePatch : (({ tags, ...rest }: { tags?: string[] }) => rest)(candidatePatch),
+            tagsOmitted: true,
+          };
+        }
+      }
+
       await queue.save(existing);
       return;
     }
@@ -106,7 +145,6 @@ export async function enqueuePendingWrite(write: QueuedChromeStorageWrite): Prom
   if ('type' in write && write.type === 'metadataPatch') {
     const patch = (write as PendingMetadataPatchWrite).patch;
     const payloadSize = new Blob([JSON.stringify(patch)]).size;
-    const MAX_PATCH_PAYLOAD_BYTES = 100 * 1024;
     if (payloadSize > MAX_PATCH_PAYLOAD_BYTES && patch.content) {
       queuedWrite = {
         ...write,
