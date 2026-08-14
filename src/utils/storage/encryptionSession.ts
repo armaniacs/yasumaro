@@ -154,18 +154,20 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
     // 秘密が失われ、既存の暗号化済みAPIキー（Obsidian/AI providerの
     // トークン）が復号不能になりデータロスを引き起こす（2026-08-12
     // インシデント: v6.7.42アップデート後にAPIキーが消失した報告）。
-    // この時点の saltBase64/secret はロック取得"前"に読んだ値であり、
-    // ロック待ち中に別の呼び出しが状態を変えている可能性がある。実際に
-    // 使う値は下の recheck で読み直すため、ここでの代入はロック取得前の
-    // 一時的なプレースホルダに過ぎない（未使用変数警告を避けるためだけに残す）。
-    let saltBase64 = result[StorageKeys.ENCRYPTION_SALT] as string;
-    let secret = result[StorageKeys.ENCRYPTION_SECRET] as string;
+    let saltBase64: string;
+    let secret: string;
 
     // session→local復元と新規secret生成は排他制御する。ロック待ち中に
     // 別の呼び出しが復元・生成を完了させている可能性があるため、ロック
     // 取得後は必ず chrome.storage.local を読み直す（ダブルチェック）。
     await encryptionKeyMutex.acquire();
     try {
+        // 別の呼び出しがロック内で既にキー導出（PBKDF2, ~100k iterations）を
+        // 完了させている場合、そのキャッシュを再利用して重複導出を避ける。
+        if (cachedEncryptionKey) {
+            return cachedEncryptionKey;
+        }
+
         const recheck = await chrome.storage.local.get([
             StorageKeys.ENCRYPTION_SALT,
             StorageKeys.ENCRYPTION_SECRET,
@@ -204,15 +206,15 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
                 [StorageKeys.ENCRYPTION_SECRET]: secret
             });
         }
+
+        const salt = base64ToUint8Array(saltBase64);
+
+        // ランダムなsecretとsaltからPBKDF2でキー導出
+        cachedEncryptionKey = await deriveKey(secret, salt);
+        return cachedEncryptionKey;
     } finally {
         encryptionKeyMutex.release();
     }
-
-    const salt = base64ToUint8Array(saltBase64);
-
-    // ランダムなsecretとsaltからPBKDF2でキー導出
-    cachedEncryptionKey = await deriveKey(secret, salt);
-    return cachedEncryptionKey;
 }
 
 /**
