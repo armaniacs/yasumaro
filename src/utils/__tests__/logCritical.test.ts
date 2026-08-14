@@ -14,4 +14,25 @@ describe('logCritical', () => {
     await logger.logCritical('noop', {}, ErrorCode.UNKNOWN_ERROR, 'test');
     // no throw, default sink is no-op without chrome.notifications
   });
+
+  it('sanitizes API-key-like content in the message before raising it to the sink', async () => {
+    const sink = new FakeCriticalSink();
+    // メールアドレスはこのプロジェクトのPIIパターン（piiSanitizer.ts）で
+    // 確実に検出・マスキングされる代表的なパターンなので、これを使う。
+    const messageWithPii = 'Failed to sync for user test@example.com';
+    await logger.logCritical(messageWithPii, {}, ErrorCode.UNKNOWN_ERROR, 'test', sink);
+
+    expect(sink.raised).toHaveLength(1);
+    expect(sink.raised[0].message).not.toBe(messageWithPii);
+    expect(sink.raised[0].message).not.toContain('test@example.com');
+  });
+
+  it('leaves messages without sensitive content unchanged when raising to the sink', async () => {
+    const sink = new FakeCriticalSink();
+    const plainMessage = 'SQLite sync failed';
+    await logger.logCritical(plainMessage, {}, ErrorCode.UNKNOWN_ERROR, 'test', sink);
+
+    expect(sink.raised).toHaveLength(1);
+    expect(sink.raised[0].message).toBe(plainMessage);
+  });
 });
