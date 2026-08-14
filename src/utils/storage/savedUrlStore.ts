@@ -355,6 +355,9 @@ export async function saveSavedUrlEntryMetadata(
     await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
         const entries = currentEntries || [];
         const idx = entries.findIndex(e => e.url === url);
+        // New entries always get Date.now() (or the explicit `timestamp`
+        // option) here — there is no prior timestamp to "not refresh", so
+        // `refreshTimestamp` is intentionally not consulted on this branch.
         if (idx < 0) {
             if (!createIfMissing) return entries;
             return [...entries, applyMetadataPatch({ url, timestamp: timestamp ?? Date.now() }, patch, mergeTags)];
@@ -372,6 +375,12 @@ export async function saveSavedUrlEntryMetadata(
  * Merge a metadata patch into an entry. `undefined` values are skipped
  * (they mean "no update"); explicit empty values follow the storage rules
  * of the type (empty tags are stored as undefined).
+ *
+ * `url`/`timestamp` are skipped even though SavedUrlEntryMetadataPatch's
+ * Omit<...> type already excludes them: the Omit is a compile-time-only
+ * contract. A future caller that passes external data through an `as`
+ * cast (e.g. an import/restore feature) could bypass it, so this function
+ * — the last line of defense before storage — enforces it at runtime too.
  */
 function applyMetadataPatch(
     current: SavedUrlEntry,
@@ -381,6 +390,7 @@ function applyMetadataPatch(
     const result: SavedUrlEntry = { ...current };
     for (const [key, value] of Object.entries(patch)) {
         if (value === undefined) continue;
+        if (key === 'url' || key === 'timestamp') continue;
         if (key === 'tags') {
             if (mergeTags) {
                 const existing = current.tags || [];

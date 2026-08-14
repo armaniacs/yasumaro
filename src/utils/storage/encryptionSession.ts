@@ -16,6 +16,7 @@ import {
 } from '../crypto/index.js';
 import { StorageKeys } from './types.js';
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../rateLimiter.js';
+import { Mutex } from '../Mutex.js';
 
 // ============================================================================
 // Module-private session state
@@ -25,6 +26,11 @@ let cachedEncryptionKey: CryptoKey | null = null;
 let cachedMasterPassword: string | null = null; // セッション中のマスターパスワードキャッシュ
 let isMasterPasswordRequired = false; // マスターパスワードが設定済みかどうか
 let cachedHmacSecret: string | null = null;
+// getOrCreateEncryptionKey の session→local 復元・新規secret生成を排他制御する。
+// アップデート直後に複数のメッセージハンドラからほぼ同時に呼ばれた場合、
+// この区間をロックしないと片方が誤って新しいsecretを生成し、既存の
+// 暗号化済みAPIキーが復号不能になる（2026-08-12インシデントの再発防止）。
+const encryptionKeyMutex = new Mutex();
 
 // ============================================================================
 // Helpers
@@ -148,46 +154,67 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
     // 秘密が失われ、既存の暗号化済みAPIキー（Obsidian/AI providerの
     // トークン）が復号不能になりデータロスを引き起こす（2026-08-12
     // インシデント: v6.7.42アップデート後にAPIキーが消失した報告）。
-    let saltBase64 = result[StorageKeys.ENCRYPTION_SALT] as string;
-    let secret = result[StorageKeys.ENCRYPTION_SECRET] as string;
+    let saltBase64: string;
+    let secret: string;
 
-    // 救済マイグレーション: 直前のバージョンでsession storageに一時的に
-    // secretが移されたユーザーを、まだSWコンテキストが生きていて
-    // session storageが失われていない間に local へ復元する。
-    // アップデートを跨いでsession storageが既にクリアされてしまった
-    // ユーザーはここに到達しても何も残っていないため復旧できない
-    // （＝暗号化済みAPIキーの再入力が必要）。
-    if (saltBase64 && !secret && chrome.storage.session) {
-        const sessionResult = await chrome.storage.session.get(StorageKeys.ENCRYPTION_SECRET);
-        const sessionSecret = sessionResult[StorageKeys.ENCRYPTION_SECRET] as string | undefined;
-        if (sessionSecret) {
-            secret = sessionSecret;
+    // session→local復元と新規secret生成は排他制御する。ロック待ち中に
+    // 別の呼び出しが復元・生成を完了させている可能性があるため、ロック
+    // 取得後は必ず chrome.storage.local を読み直す（ダブルチェック）。
+    await encryptionKeyMutex.acquire();
+    try {
+        // 別の呼び出しがロック内で既にキー導出（PBKDF2, ~100k iterations）を
+        // 完了させている場合、そのキャッシュを再利用して重複導出を避ける。
+        if (cachedEncryptionKey) {
+            return cachedEncryptionKey;
+        }
+
+        const recheck = await chrome.storage.local.get([
+            StorageKeys.ENCRYPTION_SALT,
+            StorageKeys.ENCRYPTION_SECRET,
+        ]);
+        saltBase64 = recheck[StorageKeys.ENCRYPTION_SALT] as string;
+        secret = recheck[StorageKeys.ENCRYPTION_SECRET] as string;
+
+        // 救済マイグレーション: 直前のバージョンでsession storageに一時的に
+        // secretが移されたユーザーを、まだSWコンテキストが生きていて
+        // session storageが失われていない間に local へ復元する。
+        // アップデートを跨いでsession storageが既にクリアされてしまった
+        // ユーザーはここに到達しても何も残っていないため復旧できない
+        // （＝暗号化済みAPIキーの再入力が必要）。
+        if (saltBase64 && !secret && chrome.storage.session) {
+            const sessionResult = await chrome.storage.session.get(StorageKeys.ENCRYPTION_SECRET);
+            const sessionSecret = sessionResult[StorageKeys.ENCRYPTION_SECRET] as string | undefined;
+            if (sessionSecret) {
+                secret = sessionSecret;
+                await chrome.storage.local.set({
+                    [StorageKeys.ENCRYPTION_SECRET]: secret
+                });
+                await chrome.storage.session.remove(StorageKeys.ENCRYPTION_SECRET);
+            }
+        }
+
+        if (!saltBase64 || !secret) {
+            // 初回: ソルトとシークレットを生成
+            const salt = generateSalt();
+            saltBase64 = btoa(String.fromCharCode(...salt));
+            // 32バイトのランダムシークレットを生成
+            const secretBytes = crypto.getRandomValues(new Uint8Array(32));
+            secret = btoa(String.fromCharCode(...secretBytes));
+
             await chrome.storage.local.set({
+                [StorageKeys.ENCRYPTION_SALT]: saltBase64,
                 [StorageKeys.ENCRYPTION_SECRET]: secret
             });
-            await chrome.storage.session.remove(StorageKeys.ENCRYPTION_SECRET);
         }
+
+        const salt = base64ToUint8Array(saltBase64);
+
+        // ランダムなsecretとsaltからPBKDF2でキー導出
+        cachedEncryptionKey = await deriveKey(secret, salt);
+        return cachedEncryptionKey;
+    } finally {
+        encryptionKeyMutex.release();
     }
-
-    if (!saltBase64 || !secret) {
-        // 初回: ソルトとシークレットを生成
-        const salt = generateSalt();
-        saltBase64 = btoa(String.fromCharCode(...salt));
-        // 32バイトのランダムシークレットを生成
-        const secretBytes = crypto.getRandomValues(new Uint8Array(32));
-        secret = btoa(String.fromCharCode(...secretBytes));
-
-        await chrome.storage.local.set({
-            [StorageKeys.ENCRYPTION_SALT]: saltBase64,
-            [StorageKeys.ENCRYPTION_SECRET]: secret
-        });
-    }
-
-    const salt = base64ToUint8Array(saltBase64);
-
-    // ランダムなsecretとsaltからPBKDF2でキー導出
-    cachedEncryptionKey = await deriveKey(secret, salt);
-    return cachedEncryptionKey;
 }
 
 /**

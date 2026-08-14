@@ -41,6 +41,10 @@ async function persistPending(): Promise<void> {
   } catch (e) {
     console.error('Logger: Failed to flush logs', e);
   } finally {
+    // A scheduled alarm may still be pending even though we just flushed
+    // (e.g. addLog reached BATCH_FLUSH_SIZE before the alarm fired). Clear
+    // it so it doesn't fire again later and run an unnecessary empty flush.
+    scheduler.clear();
     isFlushing = false;
   }
 }
@@ -101,6 +105,7 @@ export async function getLogs(): Promise<LogEntry[]> {
 export async function clearLogs(): Promise<void> {
   buffer.clear();
   await storage.clear();
+  scheduler.clear();
 }
 
 export function isDevelopment(): boolean {
