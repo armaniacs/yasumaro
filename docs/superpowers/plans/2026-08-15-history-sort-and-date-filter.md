@@ -74,8 +74,21 @@ describe('historyStateReducer — sort', () => {
     expect(next.sortDir).toBe('DESC');
   });
 
-  it('search with a non-empty query keeps the current sortBy', () => {
-    const state = makeState({ sortBy: 'relevance', sortDir: 'DESC', searchQuery: '' });
+  it('search starting a query (empty to non-empty) switches sortBy to relevance', () => {
+    const state = makeState({ sortBy: 'created_at', sortDir: 'ASC', searchQuery: '' });
+    const next = historyStateReducer(state, { type: 'search', query: 'bar' });
+    expect(next.sortBy).toBe('relevance');
+  });
+
+  it('search refining an already-active query does not override an explicit created_at sort', () => {
+    const state = makeState({ sortBy: 'created_at', sortDir: 'ASC', searchQuery: 'ba' });
+    const next = historyStateReducer(state, { type: 'search', query: 'bar' });
+    expect(next.sortBy).toBe('created_at');
+    expect(next.sortDir).toBe('ASC');
+  });
+
+  it('search refining an already-active relevance-sorted query keeps relevance', () => {
+    const state = makeState({ sortBy: 'relevance', sortDir: 'DESC', searchQuery: 'ba' });
     const next = historyStateReducer(state, { type: 'search', query: 'bar' });
     expect(next.sortBy).toBe('relevance');
   });
@@ -163,20 +176,28 @@ Add to the `SqliteHistoryAction` union (after `'pageChange'`):
   | { type: 'sortChange'; sortBy: 'created_at' | 'relevance'; sortDir: 'ASC' | 'DESC' }
 ```
 
-Update the `'search'` case to add the relevance-fallback rule:
+Update the `'search'` case to add the relevance-fallback rule. This rule runs **both directions**: clearing the query while sorted by relevance falls back to `created_at DESC` (relevance has no meaning without a query), and starting a search while sorted by `created_at` switches to `relevance` (PBI scenario: "relevance becomes the default when a search starts"). Without the second direction, a user who last picked "oldest first" and then types a search term keeps seeing `created_at ASC` results instead of relevance-ranked ones — the relevance `<option>` appears in the UI (Task 10) but is not auto-selected, contradicting the BDD scenario.
 
 ```ts
     case 'search': {
+      const trimmed = action.query.trim();
       // Relevance sort has no meaning without a search query; clearing the
       // query must not leave the UI stuck showing a "relevance" option that
       // is about to disappear.
-      const clearingRelevance = !action.query.trim() && state.sortBy === 'relevance';
+      const clearingRelevance = !trimmed && state.sortBy === 'relevance';
+      // Starting a search (query goes from empty to non-empty) switches to
+      // relevance by default, per the PBI's "becomes the default when a
+      // search starts" requirement — this only fires on the empty→non-empty
+      // transition so it does not override a sort the user explicitly picked
+      // while already mid-search (e.g. deliberately staying on created_at
+      // DESC/ASC while refining search terms).
+      const startingSearch = trimmed && !state.searchQuery.trim() && state.sortBy !== 'relevance';
       return {
         ...state,
         searchQuery: action.query,
         currentPage: 0,
         pendingTagFallback: null,
-        sortBy: clearingRelevance ? 'created_at' : state.sortBy,
+        sortBy: clearingRelevance ? 'created_at' : startingSearch ? 'relevance' : state.sortBy,
         sortDir: clearingRelevance ? 'DESC' : state.sortDir,
       };
     }
@@ -314,6 +335,23 @@ Also update the fallback search call inside the tag-filter branch (the one that 
         const orderDir = options.sortDir ?? 'DESC';
         const searchResult = await searchRows(fallbackTerm, options.limit, options.offset, { orderBy, orderDir });
 ```
+
+**Known limitation surfaced by this change — document, do not silently fix:** when a tag filter is active, `useServerPaging` is `false` and the `queryRows({...})` call above fetches only `TAG_FILTER_FETCH_LIMIT` (5000) rows before `filterRowsByTag` runs client-side. Before this task, that fetch was always `orderDir: 'DESC'`, so the 5000-row cap consistently meant "the most recent 5000 rows, tag-filtered client-side" — a stable, well-understood limitation. Once `orderDir` becomes user-controlled, selecting "oldest first" while a tag filter is active flips the fetch to `ASC`, so the cap instead means "the *oldest* 5000 rows" — any tagged entries newer than the 5000th-oldest row are silently excluded from that view, which is a *new* failure mode (recent tagged entries disappearing) that didn't exist under the old fixed-DESC behavior. This plan does not change `TAG_FILTER_FETCH_LIMIT` or the tag-filter fetch strategy — that would be a separate, larger change. Instead:
+
+- Add a code comment at the `TAG_FILTER_FETCH_LIMIT` fetch (where `orderDir` is now threaded through) noting this asymmetry explicitly, so a future reader investigating "tagged entries missing under oldest-first" finds the explanation immediately instead of re-deriving it.
+- Add a test in `sqliteHistoryQuery.test.ts` asserting that `orderDir` is forwarded into the tag-filter fetch call (not hardcoded to `DESC`), so the behavior is at least intentional and verified rather than accidental:
+
+```ts
+  it('forwards sortDir into the tag-filter over-fetch query (not hardcoded to DESC)', async () => {
+    const sources = makeSources({ queryLogs: vi.fn().mockResolvedValue({ data: { rows: [], total: 0 } }) });
+    await queryHistory({ limit: 20, offset: 0, tagFilter: 'work', sortDir: 'ASC' }, sources);
+    expect(sources.queryLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ orderDir: 'ASC' })
+    );
+  });
+```
+
+- Do not attempt to fix the underlying cap/ordering interaction in this PBI — flag it to the user as a follow-up if it comes up during manual verification (Task 11).
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -1568,6 +1606,7 @@ Expected: Build succeeds, `dist/chromium-mv3` is populated.
 7. Clear the search box and confirm the select reverts to "新しい順" and the relevance option disappears.
 8. Reload the dashboard page entirely and confirm the previously selected sort (from step 5, "古い順") is still applied on the initial load.
 9. Combine sort with a date-range preset button (e.g. "過去7日間") and confirm both filters apply together correctly.
+10. If your history has more than 5000 tagged entries: click a tag badge to activate the tag filter, switch sort to "古い順", and check whether recently-tagged entries you expect to see are missing (see the "Known limitation" note in Task 2 — this is an accepted, documented gap in this PBI, not a bug to fix here, but confirm it behaves as documented rather than crashing or returning wrong data silently).
 
 - [ ] **Step 4: Report results**
 
@@ -1580,3 +1619,9 @@ No commit for this task — it is verification only. If any manual check fails, 
 - **Spec coverage:** Sort dropdown (Tasks 1, 2, 10) ✓; relevance-only-during-search (Tasks 1, 10) ✓; persistence to chrome.storage.local (Tasks 9, 10) ✓; existing date-preset buttons left untouched (no task modifies `renderCalendarNav`'s button markup) ✓; all three backends covered (Tasks 6, 7, 8) ✓.
 - **Type consistency:** `sortBy: 'created_at' | 'relevance'`, `sortDir: 'ASC' | 'DESC'` used identically across Tasks 1, 2, 3, 4, 5, 6, 7, 8, 10. The wire-level `orderBy: 'rank' | 'created_at'` (used only from Task 2 downstream through the backends) is a distinct but related type — `sortBy: 'relevance'` maps to `orderBy: 'rank'`, `sortBy: 'created_at'` maps to `orderBy: 'created_at'`; this mapping is made explicit in Task 2 Step 3 and consistent thereafter.
 - **No placeholders:** All code blocks contain complete, concrete implementations. Where a task step depends on inspecting existing code first (Tasks 4, 6, 7, 8, 10), the step includes the exact `grep`/`find` command to run and explains how to adapt the shown code to what's found — this is necessary because the exact current shape of `DashboardSqliteHandlerDeps`, `IdbVfsBackend`'s constructor, and existing test mocking conventions could not be fully confirmed from static reading and must be verified live during implementation.
+
+### Adversarial review findings (2026-08-15), addressed inline above
+
+- **Task 1 — `search` action only handled the clear direction.** The original reducer logic only reset `relevance` → `created_at` when a query was cleared; it never switched `created_at` → `relevance` when a search *started*, contradicting the PBI's "becomes the default when a search starts" scenario. Fixed by adding the `startingSearch` branch (empty→non-empty transition only, so it doesn't override a sort chosen mid-search) and three new test cases covering start / refine-with-created_at / refine-with-relevance.
+- **Task 2 — tag-filter + `TAG_FILTER_FETCH_LIMIT` + sort direction interaction was unaddressed.** Making `orderDir` user-controlled on the tag-filter over-fetch query silently changes what the 5000-row cap means: previously a stable "most recent 5000, tag-filtered" limitation, it becomes "oldest 5000" under an ASC sort, making recently-tagged entries vanish from that view — a new failure mode this plan did not originally flag. Not fixed (would require a larger change to the tag-filter fetch strategy, out of scope for this PBI); instead documented as a known limitation with an explicit code comment, a test asserting `orderDir` is forwarded (not hardcoded), and a manual-verification checklist item (Task 11, item 10) so it surfaces as expected behavior rather than a surprise bug report.
+- **Not fixed, tracked as pre-existing/out-of-scope:** `sqliteHistoryPanel.ts` has two separate, hand-duplicated implementations of the calendar nav's `onRangeSelect`/`onClearFilters` callbacks (`renderState` and `updateDynamicRegions`), one of which bypasses the reducer entirely with direct `state.x = ...` mutation. This plan's Task 10 only wires `renderSortControl` into both existing call sites without touching this duplication — deeper unification is a separate refactor, not part of this PBI's scope.
