@@ -669,6 +669,22 @@ describe('IdbVfsBackend.search — ORDER BY branch', () => {
     const rowQuery = calls.find(c => /ORDER BY/i.test(c.sql) && !/COUNT/i.test(c.sql));
     expect(rowQuery?.sql).toMatch(/ORDER BY created_at ASC/);
   });
+
+  it('rejects an orderDir value outside the ASC/DESC whitelist instead of interpolating it', async () => {
+    const { engine, calls } = makeStubEngine();
+    const backend = new IdbVfsBackend(engine as never);
+    (backend as unknown as { ensureDb: () => void }).ensureDb = () => {};
+    // Simulates a value that bypassed the TypeScript type at a message-passing
+    // boundary (chrome.runtime.sendMessage does not enforce it at runtime).
+    const malicious = 'DESC; DROP TABLE browsing_logs; --';
+    const result = await backend.search('example query text', 20, 0, {
+      orderBy: 'created_at',
+      orderDir: malicious as unknown as 'ASC' | 'DESC',
+    });
+    expect(result.success).toBe(false);
+    const rowQuery = calls.find(c => /ORDER BY/i.test(c.sql) && !/COUNT/i.test(c.sql));
+    expect(rowQuery).toBeUndefined();
+  });
 });
 ```
 
@@ -700,7 +716,9 @@ In `src/offscreen/StorageBackend.ts`, find the `search` method signature and cha
 
 - [ ] **Step 5: Implement the `IdbVfsBackend.search()` branch**
 
-In `src/offscreen/IdbVfsBackend.ts`, replace the `search` method body. The current method (from line 104) has two paths — FTS5 and LIKE fallback — each with a hardcoded `ORDER BY`. Update the signature and both `ORDER BY` clauses:
+**Security correction (2026-08-16 self-review):** the TypeScript type `orderDir?: 'ASC' | 'DESC'` on this method's `options` parameter is a compile-time constraint only. `orderDir` arrives here after crossing a `chrome.runtime.sendMessage` boundary (dashboard → service worker → offscreen document), which serializes to JSON — TypeScript's type checking does not survive that boundary, so a compromised or buggy sender could put any string in that field at runtime. The original version of this step used `const dir = options.orderDir ?? 'DESC'`, which only guards against `undefined` — a runtime string like `"DESC; DROP TABLE browsing_logs; --"` would pass through `??` unchanged and land directly in the template literal below. This file's existing `query()` method (line ~77-85) already has exactly this problem solved via `ALLOWED_ORDER_COLUMNS`/`ALLOWED_ORDER_DIRECTIONS` whitelist arrays checked with `.includes(...)` before building its `ORDER BY` clause — `search()` must use the same pattern for consistency and for actual (not merely type-level) safety.
+
+In `src/offscreen/IdbVfsBackend.ts`, replace the `search` method body. The current method (from line 104) has two paths — FTS5 and LIKE fallback — each with a hardcoded `ORDER BY`. Update the signature and both `ORDER BY` clauses, validating `orderDir` against the file's existing `ALLOWED_ORDER_DIRECTIONS` whitelist (defined at the top of this file, already used by `query()`) before it ever reaches a template literal:
 
 ```ts
   async search(
@@ -716,7 +734,16 @@ In `src/offscreen/IdbVfsBackend.ts`, replace the `search` method body. The curre
       return { success: true, rows: [], total: 0 };
     }
 
-    const dir = options.orderDir ?? 'DESC';
+    // Runtime whitelist check — options.orderDir crosses a
+    // chrome.runtime.sendMessage boundary where the 'ASC'|'DESC' TypeScript
+    // type is not enforced at runtime; reuse this file's existing
+    // ALLOWED_ORDER_DIRECTIONS (already used by query() above) rather than
+    // trusting the type alone.
+    const requestedDir = options.orderDir ?? 'DESC';
+    if (!ALLOWED_ORDER_DIRECTIONS.includes(requestedDir as typeof ALLOWED_ORDER_DIRECTIONS[number])) {
+      return { success: false, error: `Invalid orderDir: ${requestedDir}` };
+    }
+    const dir = requestedDir;
     const orderClause = options.orderBy === 'created_at'
       ? `b.created_at ${dir}, b.id ${dir}`
       : 'rank';
@@ -822,15 +849,19 @@ git commit -m "feat: branch IdbVfsBackend.search ORDER BY on orderBy/orderDir"
 **Files:**
 - Modify: `src/offscreen/opfsWorker.ts`
 - Modify: `src/offscreen/OpfsWorkerBackend.ts` (the `StorageBackend` implementation that proxies to the worker — confirm this file exists and implements `search`)
-- Test: `src/offscreen/__tests__/opfsWorker-search-sort.test.ts` (new file, only if a worker-message-level test harness already exists for this file — see Step 1)
+- Test: `src/offscreen/__tests__/opfsWorker-search-sort.test.ts` (new file)
 
-- [ ] **Step 1: Locate the caller-side backend and existing test harness**
+**Correction (2026-08-16 self-review):** an earlier version of this task said "skip the dedicated unit test if no harness exists." That was wrong — `src/offscreen/__tests__/opfsWorker.test.ts` already exists and directly imports and tests module-level functions from `opfsWorker.ts` (`handleRestore`) by mocking `createEngine` from `../sqliteEngine.js` and stubbing `chrome.storage.local`. The only reason `handleSearchFts`/`handleSearchLike` aren't unit-tested today is that they are not `export`ed — the same fix `handleRestore` already got (adding `export`) applies here. Do not skip this test.
+
+- [ ] **Step 1: Locate the caller-side backend and confirm the existing test harness pattern**
 
 Run: `grep -n "class OpfsWorkerBackend" -A 5 src/offscreen/OpfsWorkerBackend.ts`
 Run: `grep -n "search" src/offscreen/OpfsWorkerBackend.ts`
-Run: `find src/offscreen/__tests__ -iname "*opfsWorker*" -o -iname "*OpfsWorkerBackend*"`
+Run: `sed -n '1,40p' src/offscreen/__tests__/opfsWorker.test.ts`
 
-If a test harness for `opfsWorker.ts`'s message handlers already exists (e.g. one that imports `handleSearch` directly or simulates worker messages), model the new test after it. If none exists, skip the dedicated unit test for `opfsWorker.ts` internals — its logic is a near-duplicate of `IdbVfsBackend.search`, already covered at the SQL-construction level by Task 6 — but still make the code change and rely on the type-check plus the E2E-style test in Task 8's `sqliteHistoryQuery.test.ts` coverage (which exercises the whole chain via mocked sources, not the real worker) to catch signature mismatches. Do not skip the `OpfsWorkerBackend.search()` passthrough change itself.
+The last command shows the existing mocking pattern: `vi.mock('../sqliteEngine.js', () => ({ createEngine: vi.fn(), SqliteEngine: class {} }))` plus a `chrome.storage.local` stub. Reuse this exact pattern — don't invent a different mocking approach.
+
+Note one extra wrinkle versus `handleRestore`: `handleSearchFts` only runs when the module-level `fts5Available` flag is `true`, and that flag is set inside `initSqlite()` via `runMigrations(...)`, not by `createEngine` alone. For a unit test that wants to exercise `handleSearchFts` directly (rather than through `initSqlite()`), export `fts5Available` as a mutable test seam instead of routing through full initialization — see Step 4.
 
 - [ ] **Step 2: Update `OpfsWorkerBackend.search()` passthrough**
 
@@ -878,10 +909,10 @@ interface SearchPayload {
 
 (Adjust to match however the type is actually declared — it may be inline in the message-handling switch rather than a named interface; if inline, add the fields at that call site instead.)
 
-Update `handleSearch`:
+Update `handleSearch`, adding `export` (it was module-private before; exporting it — and the two helpers below — is required to unit-test the ORDER BY branch directly, matching the pattern `handleRestore` already uses in this file):
 
 ```ts
-async function handleSearch(payload: SearchPayload): Promise<{ rows: SearchResult[]; total: number }> {
+export async function handleSearch(payload: SearchPayload): Promise<{ rows: SearchResult[]; total: number }> {
   const { searchQuery, limit = 50, offset = 0, orderBy, orderDir } = payload;
   const bare = sanitizeFtsTerm(searchQuery);
   if (!bare) return { rows: [], total: 0 };
@@ -893,6 +924,31 @@ async function handleSearch(payload: SearchPayload): Promise<{ rows: SearchResul
   return handleSearchLike(searchQuery, limit, offset, orderBy, orderDir);
 }
 ```
+
+Confirmed by reading `opfsWorker.ts` directly (lines 88-90, 215-218): `handleSearchFts`/`handleSearchLike` reach the database through `sqlQuery()` → `getEngine()` → the module-level `let engine: SqliteEngine | null = null`, which is only assigned inside `initSqliteInner()` (called by `initSqlite()`), a routine that also runs `SCHEMA_SQL`, `AUDIT_LOG_SCHEMA_SQL`, `runMigrations(...)`, and `runMigrationV2()` (the last one touching `chrome.storage.local`). Driving that whole path just to unit-test an `ORDER BY` clause is disproportionate and drags in unrelated failure modes (migration errors, chrome.storage stubbing details unrelated to sort).
+
+Instead, add a narrow test-only seam: a setter that assigns `engine` and `fts5Available` directly, bypassing `initSqlite()` entirely. Add this export near `getEngine()`:
+
+```ts
+/**
+ * Test seam only — lets tests inject a fake engine and fts5Available value
+ * without driving the full initSqlite() path (schema creation, migrations,
+ * chrome.storage-dependent V2 migration). Not called from any production
+ * code path.
+ */
+export function __setEngineForTesting(fakeEngine: SqliteEngine | null, fts5: boolean): void {
+  engine = fakeEngine;
+  fts5Available = fts5;
+}
+```
+
+This is additive only (one new exported function, zero changes to existing behavior or call paths) and named with the `__...ForTesting` convention to make it unmistakable that production code must never call it.
+
+**Security correction (2026-08-16 self-review):** same issue as `IdbVfsBackend.search()` above — `orderDir` here arrives via `Worker.postMessage`, which structured-clones the payload; the `'ASC' | 'DESC'` TypeScript type is not enforced at that boundary either.
+
+**Follow-up correction (same self-review pass):** the first version of this fix used an `ALLOWED_ORDER_DIRECTIONS.includes(...)` + `throw` pattern copied from `IdbVfsBackend.ts`. That's wrong for *this* file specifically: `opfsWorker.ts`'s own `handleQuery` (the existing non-search path, line ~258-269) already validates `orderDir` a different way — `const dir = orderDir === 'ASC' ? 'ASC' : 'DESC'`, a ternary that silently normalizes anything that isn't exactly `'ASC'` to `'DESC'` rather than throwing. Match that existing convention instead of introducing a second, inconsistent pattern in the same file. There's also a concrete reason to prefer the ternary here over throwing: `OpfsWorkerBackend.search()` calls the worker through `this.engine.tryOpfsProxy(...)`, which catches any error the worker throws and collapses it to a generic `{ success: false, error: 'OPFS Worker unavailable' }` (see `OpfsWorkerBackend.ts:25-29`) — a `throw new Error('Invalid orderDir: ...')` would arrive at the caller as an indistinguishable "worker unavailable" message, discarding the actual reason. The ternary avoids depending on that lossy error path entirely: an unexpected value never reaches SQL, and the call still succeeds with a safe default order instead of failing opaquely.
+
+No new whitelist constant needed — `orderBy`'s existing `ALLOWED_ORDER_COLUMNS` (line 74-77) stays as-is for `handleQuery`; `handleSearchFts`/`handleSearchLike` only need the `orderDir` ternary.
 
 Update `handleSearchFts`:
 
@@ -910,7 +966,11 @@ WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0`,
     (row) => { total = Number(row.c); }
   );
 
-  const dir = orderDir ?? 'DESC';
+  // Ternary, not a whitelist+throw: matches handleQuery's existing orderDir
+  // handling in this file, and avoids OpfsWorkerBackend.search()'s
+  // tryOpfsProxy collapsing a thrown error into an opaque "worker
+  // unavailable" message (see the note above this function).
+  const dir = orderDir === 'ASC' ? 'ASC' : 'DESC';
   const orderClause = orderBy === 'created_at' ? `b.created_at ${dir}, b.id ${dir}` : 'rank';
 
   const rows: SearchResult[] = [];
@@ -960,7 +1020,9 @@ async function handleSearchLike(
     (row) => { total = Number(row.c); }
   );
 
-  const dir = orderBy === 'created_at' ? (orderDir ?? 'DESC') : 'DESC';
+  // Same ternary approach as handleSearchFts above — orderDir only ever
+  // becomes exactly 'ASC' or 'DESC', regardless of what arrives at runtime.
+  const dir = orderBy === 'created_at' && orderDir === 'ASC' ? 'ASC' : 'DESC';
 
   const rows: SearchResult[] = [];
   await sqlQuery(
@@ -991,15 +1053,124 @@ async function handleSearchLike(
 
 Also find where `handleSearch` is invoked from the worker's `onmessage` dispatch (search for `case 'SEARCH'` or similar in `opfsWorker.ts`) and confirm the payload passed through already includes whatever `OpfsWorkerBackend.search()` sends — no change needed there if it forwards the whole payload object as-is.
 
-- [ ] **Step 4: Type-check**
+Export `handleSearchFts` and `handleSearchLike` too (add `export` in front of both `async function` declarations shown above) — testing them directly, rather than only through `handleSearch`, avoids needing to drive `fts5Available` through the real `initSqlite()` path for every test case.
+
+- [ ] **Step 4: Write the failing tests**
+
+Create `src/offscreen/__tests__/opfsWorker-search-sort.test.ts`, using the `__setEngineForTesting` seam added in Step 3 (no need for `vi.mock('../sqliteEngine.js', ...)` or a `chrome.storage.local` stub — those exist in `opfsWorker.test.ts` only because `handleRestore`/`initSqlite()` need them; this test bypasses `initSqlite()` entirely):
+
+```ts
+/**
+ * opfsWorker-search-sort.test.ts
+ * Verifies handleSearchFts/handleSearchLike switch their ORDER BY clause
+ * based on orderBy/orderDir instead of always sorting by FTS5 rank.
+ * Uses __setEngineForTesting to inject a fake engine directly, bypassing
+ * initSqlite() (schema creation, migrations, chrome.storage) entirely —
+ * this test only cares about the SQL string sqlQuery() builds.
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { handleSearchFts, handleSearchLike, __setEngineForTesting } from '../opfsWorker.js';
+
+function makeStubEngine() {
+  const calls: { sql: string; params: unknown[] }[] = [];
+  // Matches the real SqliteEngine interface (src/offscreen/sqliteEngine.ts:9-14):
+  // exec/query/queryValue/close — confirmed by reading that file directly.
+  const engine = {
+    exec: vi.fn(async () => undefined),
+    query: vi.fn(async (sql: string, params: unknown[] = []) => {
+      calls.push({ sql, params });
+      if (/SELECT COUNT/i.test(sql)) return [{ c: 0 }];
+      return [];
+    }),
+    queryValue: vi.fn(async () => null),
+    close: vi.fn(async () => undefined),
+  };
+  return { engine, calls };
+}
+
+describe('opfsWorker handleSearchFts/handleSearchLike — ORDER BY branch', () => {
+  beforeEach(() => {
+    __setEngineForTesting(null, false);
+  });
+
+  it('handleSearchFts orders by rank when orderBy is omitted', async () => {
+    const { engine, calls } = makeStubEngine();
+    __setEngineForTesting(engine as never, true);
+    await handleSearchFts('"example"', 20, 0);
+    const rowQuery = calls.find(c => /ORDER BY/i.test(c.sql) && !/COUNT/i.test(c.sql));
+    expect(rowQuery?.sql).toMatch(/ORDER BY rank/);
+  });
+
+  it('handleSearchFts orders by created_at DESC when orderBy=created_at, orderDir=DESC', async () => {
+    const { engine, calls } = makeStubEngine();
+    __setEngineForTesting(engine as never, true);
+    await handleSearchFts('"example"', 20, 0, 'created_at', 'DESC');
+    const rowQuery = calls.find(c => /ORDER BY/i.test(c.sql) && !/COUNT/i.test(c.sql));
+    expect(rowQuery?.sql).toMatch(/ORDER BY b\.created_at DESC, b\.id DESC/);
+  });
+
+  it('handleSearchFts orders by created_at ASC when orderBy=created_at, orderDir=ASC', async () => {
+    const { engine, calls } = makeStubEngine();
+    __setEngineForTesting(engine as never, true);
+    await handleSearchFts('"example"', 20, 0, 'created_at', 'ASC');
+    const rowQuery = calls.find(c => /ORDER BY/i.test(c.sql) && !/COUNT/i.test(c.sql));
+    expect(rowQuery?.sql).toMatch(/ORDER BY b\.created_at ASC, b\.id ASC/);
+  });
+
+  it('handleSearchLike (short-query fallback) orders by created_at when requested', async () => {
+    const { engine, calls } = makeStubEngine();
+    __setEngineForTesting(engine as never, false);
+    await handleSearchLike('ai', 20, 0, 'created_at', 'ASC');
+    const rowQuery = calls.find(c => /ORDER BY/i.test(c.sql) && !/COUNT/i.test(c.sql));
+    expect(rowQuery?.sql).toMatch(/ORDER BY created_at ASC/);
+  });
+
+  it('handleSearchLike defaults to created_at DESC when orderBy is omitted', async () => {
+    const { engine, calls } = makeStubEngine();
+    __setEngineForTesting(engine as never, false);
+    await handleSearchLike('ai', 20, 0);
+    const rowQuery = calls.find(c => /ORDER BY/i.test(c.sql) && !/COUNT/i.test(c.sql));
+    expect(rowQuery?.sql).toMatch(/ORDER BY created_at DESC/);
+  });
+
+  it('handleSearchFts normalizes an out-of-whitelist orderDir to DESC instead of interpolating it', async () => {
+    const { engine, calls } = makeStubEngine();
+    __setEngineForTesting(engine as never, true);
+    const malicious = 'DESC; DROP TABLE browsing_logs; --';
+    await handleSearchFts('"example"', 20, 0, 'created_at', malicious as unknown as 'ASC' | 'DESC');
+    const rowQuery = calls.find(c => /ORDER BY/i.test(c.sql) && !/COUNT/i.test(c.sql));
+    expect(rowQuery?.sql).toMatch(/ORDER BY b\.created_at DESC, b\.id DESC/);
+    expect(rowQuery?.sql).not.toContain('DROP TABLE');
+  });
+
+  it('handleSearchLike normalizes an out-of-whitelist orderDir to DESC instead of interpolating it', async () => {
+    const { engine, calls } = makeStubEngine();
+    __setEngineForTesting(engine as never, false);
+    const malicious = 'DESC; DROP TABLE browsing_logs; --';
+    await handleSearchLike('ai', 20, 0, 'created_at', malicious as unknown as 'ASC' | 'DESC');
+    const rowQuery = calls.find(c => /ORDER BY/i.test(c.sql) && !/COUNT/i.test(c.sql));
+    expect(rowQuery?.sql).toMatch(/ORDER BY created_at DESC/);
+    expect(rowQuery?.sql).not.toContain('DROP TABLE');
+  });
+});
+```
+
+The `makeStubEngine()` shape above (`exec`/`query`/`queryValue`/`close`) was confirmed against the real `SqliteEngine` interface in `src/offscreen/sqliteEngine.ts:9-14` — no `as unknown as SqliteEngine`-style lying cast is needed; `engine as never` in the test above is only there because `__setEngineForTesting`'s first parameter type is `SqliteEngine | null` and the stub is a plain object literal, not a class instance — if TypeScript accepts the stub structurally without the cast when you write this, remove `as never`.
+
+- [ ] **Step 5: Run tests to verify they fail, then pass**
+
+Run: `npx vitest run src/offscreen/__tests__/opfsWorker-search-sort.test.ts`
+Expected: FAIL first (ORDER BY always says `rank`, or `orderBy`/`orderDir` params don't exist yet), then PASS after Step 3's implementation changes are applied.
+
+- [ ] **Step 6: Type-check**
 
 Run: `npm run type-check`
 Expected: No errors in `opfsWorker.ts` or `OpfsWorkerBackend.ts`. If `FallbackStorageAdapter.ts` still shows an error, that's expected — fixed in Task 8.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add src/offscreen/opfsWorker.ts src/offscreen/OpfsWorkerBackend.ts
+git add src/offscreen/opfsWorker.ts src/offscreen/OpfsWorkerBackend.ts src/offscreen/__tests__/opfsWorker-search-sort.test.ts
 git commit -m "feat: branch OPFS worker search ORDER BY on orderBy/orderDir"
 ```
 
@@ -1687,3 +1858,8 @@ No commit for this task — it is verification only. If any manual check fails, 
 
 - **Task 10 — `hasActiveSearch` conflated "search box has text" with "an FTS5 search is actually running."** `state.searchQuery` is set to the tag name as a display label by the `tagInitiated` action / `onActivate`'s `searchTag` branch, but `fetchData` never passes `search` in that path — only `tagFilter` — so `queryHistory` takes the non-search `queryLogs` branch where `orderBy` is hardcoded to `created_at` (Task 2) and `sortBy: 'relevance'` has no effect. The original `Boolean(state.searchQuery.trim())` condition would show "関連度順" as a selectable option in this state even though selecting it changes nothing — a silently-broken UI control. A naive fix ("hide relevance whenever `activeTagFilter` is set") would introduce the opposite bug: when a tag filter matches nothing and falls back to full-text search (`pendingTagFallback` set), a real FTS5 search *is* running while `activeTagFilter` is still non-null, so relevance must still be offered there. Fixed by replacing the boolean expression with an `isFullTextSearchActive(state)` helper that accounts for both cases, plus two new UI test cases (tag-active-without-fallback hides relevance; tag-fallback-active shows it).
 - **Scope boundary confirmed, not changed:** editing the search box while a tag filter is active (`state.searchQuery` starts as the tag-label string, non-empty) does not trigger the `startingSearch`→`relevance` auto-switch, because the reducer only checks "was `searchQuery` empty before." This is left as existing tag-filter/search-box coupling behavior — introducing a scenario for "user edits the search box while a tag filter is active" would require redesigning what `searchQuery` means when a tag filter is active (it currently serves double duty as both a label and, later, a fallback search term), which is a larger pre-existing design question this PBI does not take on.
+- **Task 6/7 — `orderDir` was not validated at runtime, an actual SQL injection path.** The original `const dir = options.orderDir ?? 'DESC'` (Task 6) / `const dir = orderDir ?? 'DESC'` (Task 7) only guards against `undefined`. `orderDir`'s `'ASC' | 'DESC'` TypeScript type is a compile-time constraint that does not survive the `chrome.runtime.sendMessage` (dashboard→service worker→offscreen) or `Worker.postMessage` (opfsWorker.ts) boundaries — both serialize/structured-clone the payload, so a malformed or compromised sender could put an arbitrary string in that field at runtime, which would then land directly inside the `ORDER BY ${...}` template literal.
+  - **Task 6 fix:** `IdbVfsBackend.ts` already solves this exact problem for its non-search `query()` method via `ALLOWED_ORDER_COLUMNS`/`ALLOWED_ORDER_DIRECTIONS` whitelist constants checked with `.includes(...)`, returning `{success:false, error:...}` on a miss — a pattern this file's callers (`recordsRepo.search()` → `dashboardSqliteHandlers.ts`'s `toFailure()`) already propagate correctly. `search()` now reuses that exact pattern instead of the unvalidated `??` fallback.
+  - **Task 7 fix, revised twice:** first attempt copied the same whitelist+`throw` pattern into `opfsWorker.ts`, but that file already validates its own `orderDir` differently — `handleQuery` (the existing non-search path) uses a ternary (`orderDir === 'ASC' ? 'ASC' : 'DESC'`) that silently normalizes instead of throwing. Matching that existing in-file convention was the right call, not just for consistency: `OpfsWorkerBackend.search()` reaches the worker through `tryOpfsProxy(...)`, which catches any thrown error and collapses it to a generic `'OPFS Worker unavailable'` message (`OpfsWorkerBackend.ts:25-29`) — a thrown "Invalid orderDir" would have been silently swallowed into that unrelated message, so throwing would have been both inconsistent with the file's own conventions *and* practically undebuggable through the real call chain. Settled on the ternary form for both `handleSearchFts` and `handleSearchLike`.
+  - `FallbackStorage.search()` (Task 8) was checked and confirmed safe as originally written — its `dir` variable only feeds a `===` comparison inside an in-memory `Array.sort()` comparator, never a SQL string, so an unexpected value there can at most produce a wrong sort order, not an injection. No change needed there.
+- **Task 7 test plan initially assumed a seam that didn't exist.** The first draft said "skip the unit test if no harness exists," based on an incomplete check — `opfsWorker.test.ts` does exist and tests other module-private functions (`handleRestore`) by mocking `createEngine`. But `handleSearchFts`/`handleSearchLike` reach the database through a module-level `engine` variable only populated by the full `initSqlite()` path (schema creation, migrations, chrome.storage-dependent V2 migration) — disproportionate to drive just for an ORDER BY test. Resolved by adding a narrow `__setEngineForTesting()` export that bypasses `initSqlite()` entirely, and writing out the actual test file content (verified the stub engine shape against the real `SqliteEngine` interface in `sqliteEngine.ts:9-14` rather than guessing it).
