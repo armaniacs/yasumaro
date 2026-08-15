@@ -1506,6 +1506,30 @@ Add the sort control's mount point to the panel's HTML template. In `renderState
       </div>
 ```
 
+**Correction found in a follow-up adversarial pass (2026-08-16):** `Boolean(state.searchQuery.trim())` is not the right condition for "a full-text search is actually running." When a tag is clicked (`tagInitiated` action, or `onActivate`'s `init.searchTag` branch), `state.searchQuery` is set to the tag name as a *display label*, but `fetchData` is called with `tagFilter` only — `search` is never passed, so `queryHistory` takes the non-search (`queryLogs`) path where `orderBy` is always `created_at` (see Task 2's non-search branch). In that state, `state.searchQuery` is non-empty but no FTS5 `rank` exists, so showing "relevance" as a selectable option is misleading — picking it has no effect, since the non-search path ignores `sortBy` entirely.
+
+This is not simply "hide relevance whenever a tag filter is active" either: when a tag filter matches nothing and falls back to full-text search (`pendingTagFallback` gets set — see `sqliteHistoryQuery.ts`'s `tagFallback` handling), a real FTS5 search *is* running even though `activeTagFilter` is still non-null (clearing the tag filter is a separate user action). Hiding relevance in that case would incorrectly suppress a legitimate option.
+
+Add this helper near `sortSelectValue`/`parseSortSelectValue`:
+
+```ts
+  /**
+   * True only when queryHistory will actually take the FTS5 search path
+   * (searchLogs, with a real `rank`) — not merely when the search box has
+   * text in it. A tag click populates the search box as a display label
+   * without running a full-text search (see fetchData's tagInitiated path,
+   * which passes tagFilter but never search); relevance sort has nothing to
+   * rank against there. A tag-fallback search (pendingTagFallback set) does
+   * run FTS5 even while activeTagFilter is still set, so it must not be
+   * excluded by a blanket "activeTagFilter present" check.
+   */
+  function isFullTextSearchActive(state: SqliteHistoryState): boolean {
+    if (!state.searchQuery.trim()) return false;
+    if (!state.activeTagFilter) return true;
+    return state.pendingTagFallback !== null;
+  }
+```
+
 In `renderState()`, right after the existing calendar-nav render block (the `if (!state.loading) { const calContainer = ...; renderCalendarNav(...); }` block), add:
 
 ```ts
@@ -1515,7 +1539,7 @@ In `renderState()`, right after the existing calendar-nav render block (the `if 
           sortContainer,
           state.sortBy,
           state.sortDir,
-          Boolean(state.searchQuery.trim()),
+          isFullTextSearchActive(state),
           (sortBy, sortDir) => void handleSortChange(sortBy, sortDir),
         );
       }
@@ -1530,11 +1554,42 @@ In `updateDynamicRegions()` (the non-full-render refresh path), add the same blo
         sortContainer,
         state.sortBy,
         state.sortDir,
-        Boolean(state.searchQuery.trim()),
+        isFullTextSearchActive(state),
         (sortBy, sortDir) => void handleSortChange(sortBy, sortDir),
       );
     }
 ```
+
+Add these cases to `sqliteHistoryPanel-sort.test.ts` (Step 2 below), alongside the other assertions:
+
+```ts
+  it('does not show relevance while a tag filter is active without a fallback search', async () => {
+    // Simulate onActivate({ searchTag: 'AI' }) equivalent: activeTagFilter set,
+    // searchQuery populated as a label, no pendingTagFallback.
+    const panel = createSqliteHistoryPanel();
+    panel.mount(container);
+    panel.onActivate?.({ searchTag: 'AI' });
+    await panel.loadData();
+    const select = document.getElementById('sqlite-sort-select') as HTMLSelectElement;
+    const options = Array.from(select.options).map(o => o.value);
+    expect(options).not.toContain('relevance:DESC');
+  });
+
+  it('shows relevance when a tag filter fell back to full-text search', async () => {
+    // Mock queryHistory (per this file's existing vi.mock block) to return a
+    // tagFallback result so pendingTagFallback becomes non-null while
+    // activeTagFilter is still set.
+    const panel = createSqliteHistoryPanel();
+    panel.mount(container);
+    panel.onActivate?.({ searchTag: 'nonexistent-tag' });
+    await panel.loadData();
+    const select = document.getElementById('sqlite-sort-select') as HTMLSelectElement;
+    const options = Array.from(select.options).map(o => o.value);
+    expect(options).toContain('relevance:DESC');
+  });
+```
+
+The second test requires the mocked `queryHistory` (from this file's `vi.mock('../sqliteHistoryQuery.js', ...)` block, copied from `sqliteHistoryPanel-tagFallback.test.ts` per Step 1) to return a `tagFallback` payload with a non-null `pendingTagFallback` for the `nonexistent-tag` call — mirror the mock setup used in `sqliteHistoryPanel-tagFallback.test.ts`'s "falls back to searchLogs and shows a notice" test case.
 
 Finally, load the persisted sort preference before the initial fetch. In the panel's `loadData()` method:
 
@@ -1607,6 +1662,8 @@ Expected: Build succeeds, `dist/chromium-mv3` is populated.
 8. Reload the dashboard page entirely and confirm the previously selected sort (from step 5, "古い順") is still applied on the initial load.
 9. Combine sort with a date-range preset button (e.g. "過去7日間") and confirm both filters apply together correctly.
 10. If your history has more than 5000 tagged entries: click a tag badge to activate the tag filter, switch sort to "古い順", and check whether recently-tagged entries you expect to see are missing (see the "Known limitation" note in Task 2 — this is an accepted, documented gap in this PBI, not a bug to fix here, but confirm it behaves as documented rather than crashing or returning wrong data silently).
+11. Click a tag badge to activate the tag filter (a tag with matches, so no fallback triggers) and confirm "関連度順" does NOT appear in the sort options while the tag filter is active — only "新しい順"/"古い順" should be selectable, since no full-text search is running.
+12. If you have a tag with zero direct matches that triggers the tag-fallback full-text search (the fallback notice banner appears), confirm "関連度順" DOES appear as an option in that state, since a real FTS5 search is running underneath the tag fallback.
 
 - [ ] **Step 4: Report results**
 
@@ -1625,3 +1682,8 @@ No commit for this task — it is verification only. If any manual check fails, 
 - **Task 1 — `search` action only handled the clear direction.** The original reducer logic only reset `relevance` → `created_at` when a query was cleared; it never switched `created_at` → `relevance` when a search *started*, contradicting the PBI's "becomes the default when a search starts" scenario. Fixed by adding the `startingSearch` branch (empty→non-empty transition only, so it doesn't override a sort chosen mid-search) and three new test cases covering start / refine-with-created_at / refine-with-relevance.
 - **Task 2 — tag-filter + `TAG_FILTER_FETCH_LIMIT` + sort direction interaction was unaddressed.** Making `orderDir` user-controlled on the tag-filter over-fetch query silently changes what the 5000-row cap means: previously a stable "most recent 5000, tag-filtered" limitation, it becomes "oldest 5000" under an ASC sort, making recently-tagged entries vanish from that view — a new failure mode this plan did not originally flag. Not fixed (would require a larger change to the tag-filter fetch strategy, out of scope for this PBI); instead documented as a known limitation with an explicit code comment, a test asserting `orderDir` is forwarded (not hardcoded), and a manual-verification checklist item (Task 11, item 10) so it surfaces as expected behavior rather than a surprise bug report.
 - **Not fixed, tracked as pre-existing/out-of-scope:** `sqliteHistoryPanel.ts` has two separate, hand-duplicated implementations of the calendar nav's `onRangeSelect`/`onClearFilters` callbacks (`renderState` and `updateDynamicRegions`), one of which bypasses the reducer entirely with direct `state.x = ...` mutation. This plan's Task 10 only wires `renderSortControl` into both existing call sites without touching this duplication — deeper unification is a separate refactor, not part of this PBI's scope.
+
+### Second-pass findings (2026-08-16, root-cause "why" analysis on the first-pass fixes), addressed inline above
+
+- **Task 10 — `hasActiveSearch` conflated "search box has text" with "an FTS5 search is actually running."** `state.searchQuery` is set to the tag name as a display label by the `tagInitiated` action / `onActivate`'s `searchTag` branch, but `fetchData` never passes `search` in that path — only `tagFilter` — so `queryHistory` takes the non-search `queryLogs` branch where `orderBy` is hardcoded to `created_at` (Task 2) and `sortBy: 'relevance'` has no effect. The original `Boolean(state.searchQuery.trim())` condition would show "関連度順" as a selectable option in this state even though selecting it changes nothing — a silently-broken UI control. A naive fix ("hide relevance whenever `activeTagFilter` is set") would introduce the opposite bug: when a tag filter matches nothing and falls back to full-text search (`pendingTagFallback` set), a real FTS5 search *is* running while `activeTagFilter` is still non-null, so relevance must still be offered there. Fixed by replacing the boolean expression with an `isFullTextSearchActive(state)` helper that accounts for both cases, plus two new UI test cases (tag-active-without-fallback hides relevance; tag-fallback-active shows it).
+- **Scope boundary confirmed, not changed:** editing the search box while a tag filter is active (`state.searchQuery` starts as the tag-label string, non-empty) does not trigger the `startingSearch`→`relevance` auto-switch, because the reducer only checks "was `searchQuery` empty before." This is left as existing tag-filter/search-box coupling behavior — introducing a scenario for "user edits the search box while a tag filter is active" would require redesigning what `searchQuery` means when a tag filter is active (it currently serves double duty as both a label and, later, a fallback search term), which is a larger pre-existing design question this PBI does not take on.
