@@ -240,6 +240,9 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     const appendBtn = document.getElementById('sqlite-append-obsidian') as HTMLButtonElement | null;
 
     if (bar) {
+      // .hidden uses `!important` (dashboard.css), so an inline display
+      // override alone cannot show the bar again — the class must be toggled.
+      bar.classList.toggle('hidden', selectedIds.size === 0);
       bar.style.display = selectedIds.size > 0 ? '' : 'none';
     }
 
