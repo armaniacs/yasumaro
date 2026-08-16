@@ -22,6 +22,9 @@
 | `src/background/handlers/dashboardSqliteProtocol.ts` | `search` subtype payload gains `orderBy`/`orderDir` |
 | `src/background/handlers/dashboardSqliteHandlers.ts` | `case 'search'` passes `orderBy`/`orderDir` to `deps.search()` |
 | `src/background/__tests__/dashboardSqliteHandlers.test.ts` | Test for the above |
+| `src/background/sqliteClient.ts` | `searchResult()` gains `orderBy`/`orderDir` param, forwards into `SQLITE_SEARCH` message payload (Task 4.5, plan gap found 2026-08-16) |
+| `src/background/handlers/dashboardSqliteHandlers.ts` (`createSqliteClientDeps`) | production `deps.search` wiring forwards the 4th arg to `sqliteClient.searchResult` (Task 4.5, plan gap found 2026-08-16) |
+| `src/offscreen/offscreen.ts` | `case 'SQLITE_SEARCH':` forwards `orderBy`/`orderDir` from the message payload into `recordsRepo.search()` (folded into Task 5, plan gap found 2026-08-16) |
 | `src/offscreen/recordsRepo.ts` | `search()` gains `orderBy`/`orderDir` params, passes to backend |
 | `src/offscreen/IdbVfsBackend.ts` | `search()` branches `ORDER BY` between `rank` and `created_at {dir}, id {dir}` |
 | `src/offscreen/opfsWorker.ts` | `handleSearch`/`handleSearchFts`/`handleSearchLike` gain the same branch |
@@ -544,13 +547,126 @@ git commit -m "feat: thread orderBy/orderDir through search protocol and handler
 
 ---
 
+### Task 4.5: `sqliteClient.searchResult` + `createSqliteClientDeps` wiring
+
+**Plan gap found during Task 4 implementation (2026-08-16):** this task was missing from the original plan. Task 4 wires `orderBy`/`orderDir` from the protocol payload into `deps.search(...)`, but the production `DashboardSqliteHandlerDeps` object is NOT hand-built — it comes from `createSqliteClientDeps(sqliteClient, ...)` in `dashboardSqliteHandlers.ts` (confirmed as the actual production wiring: `service-worker.ts` imports and calls it, not a test-only stub). That function's `search` field is `search: (query, limit, offset) => sqliteClient.searchResult(query, limit, offset)` — it silently drops any 4th argument. `SqliteClient.searchResult()` itself only accepts `(query, limit, offset)` and sends `{ query, limit, offset }` as the `SQLITE_SEARCH` message payload — no `orderBy`/`orderDir` field at all. Without this task, Tasks 1-10 would all pass their own unit tests (each mocks its direct caller) while the feature does nothing in production, because this one link in the chain drops the parameters before they ever reach the offscreen document.
+
+**Files:**
+- Modify: `src/background/sqliteClient.ts`
+- Modify: `src/background/handlers/dashboardSqliteHandlers.ts` (the `createSqliteClientDeps` function, not the `case 'search'` handler already fixed in Task 4)
+- Test: `src/background/__tests__/sqliteClient.test.ts` (check this file exists first — see Step 1)
+
+- [ ] **Step 1: Confirm the existing test file and message-sending pattern**
+
+Run: `find src/background/__tests__ -iname "*sqliteclient*"`
+Run: `grep -n "searchResult\|SQLITE_SEARCH" src/background/sqliteClient.ts`
+Run: `grep -n "async search\|SQLITE_QUERY" -A 15 src/background/sqliteClient.ts | head -40`
+
+Confirm the exact shape of the `call<T, R>()` private helper's third argument (the payload object literal) used by `queryResult` (which already forwards `orderBy`/`orderDir` — it's the sibling method to model this change after) versus `searchResult` (which does not yet).
+
+- [ ] **Step 2: Write the failing tests**
+
+If `src/background/__tests__/sqliteClient.test.ts` exists, add tests there following its existing mocking pattern for `SqliteClient` (however it stubs `chrome.runtime.sendMessage` or the underlying transport — match that exactly rather than inventing a new mock). If no such file exists, create it, modeling the mock setup after a sibling test file in the same directory that already tests another `SqliteClient` method calling `chrome.runtime.sendMessage`.
+
+Add tests asserting:
+
+```ts
+  it('searchResult forwards orderBy/orderDir into the SQLITE_SEARCH payload', async () => {
+    // Arrange: mock the underlying message-send call this file uses (see Step 1's
+    // findings for the exact mock target — likely chrome.runtime.sendMessage or
+    // an internal `call()` helper spy).
+    // Act:
+    await sqliteClient.searchResult('kddi', 20, 0, { orderBy: 'created_at', orderDir: 'ASC' });
+    // Assert: the SQLITE_SEARCH message payload includes orderBy: 'created_at', orderDir: 'ASC'.
+  });
+
+  it('searchResult omits orderBy/orderDir from the payload when not provided', async () => {
+    await sqliteClient.searchResult('kddi', 20, 0);
+    // Assert: the SQLITE_SEARCH message payload has orderBy/orderDir undefined (matching
+    // the existing pattern from Task 3's searchLogs(), which also passes undefined rather
+    // than omitting the keys when options are not provided).
+  });
+```
+
+Also add a test for `createSqliteClientDeps`'s `search` field specifically:
+
+```ts
+  it('createSqliteClientDeps wires deps.search to forward orderBy/orderDir to sqliteClient.searchResult', async () => {
+    const mockSearchResult = vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
+    const fakeSqliteClient = { searchResult: mockSearchResult } as unknown as import('../sqliteClient.js').SqliteClient;
+    const deps = createSqliteClientDeps(fakeSqliteClient, /* minimal serviceWorkerDeps stub — check createSqliteClientDeps's second param shape and provide only what TypeScript requires */);
+    await deps.search('kddi', 20, 0, { orderBy: 'created_at', orderDir: 'ASC' });
+    expect(mockSearchResult).toHaveBeenCalledWith('kddi', 20, 0, { orderBy: 'created_at', orderDir: 'ASC' });
+  });
+```
+
+Check `SqliteClientBackedDeps` (the second parameter type of `createSqliteClientDeps`) before writing this test — construct the minimal stub it requires by reading the type definition, not by guessing field names.
+
+- [ ] **Step 3: Run tests to verify they fail**
+
+Run: `npx vitest run src/background/__tests__/sqliteClient.test.ts`
+Expected: FAIL — `searchResult` does not accept a 4th argument yet; `createSqliteClientDeps`'s `search` field does not forward one.
+
+- [ ] **Step 4: Implement the fix**
+
+In `src/background/sqliteClient.ts`, update `searchResult`:
+
+```ts
+  async searchResult(
+    query: string,
+    limit = 50,
+    offset = 0,
+    options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
+  ): Promise<CallResult<{ rows: SearchResult[]; total: number }>> {
+    return this.call<{ rows: SearchResult[]; total: number }, OffscreenQueryResponse>(
+      'SQLITE_SEARCH',
+      { query, limit, offset, orderBy: options.orderBy, orderDir: options.orderDir },
+      (res) => ({
+        rows: (res.rows || []) as SearchResult[],
+        total: res.total,
+      }),
+    );
+  }
+```
+
+In `src/background/handlers/dashboardSqliteHandlers.ts`, update the `search` field inside `createSqliteClientDeps`:
+
+```ts
+    search: (query, limit, offset, options) => sqliteClient.searchResult(query, limit, offset, options),
+```
+
+- [ ] **Step 5: Run tests to verify they pass**
+
+Run: `npx vitest run src/background/__tests__/sqliteClient.test.ts`
+Expected: PASS
+
+Run: `npx vitest run src/background/__tests__/dashboardSqliteHandlers.test.ts`
+Expected: PASS (all tests, including Task 4's, unaffected by this change)
+
+- [ ] **Step 6: Type-check**
+
+Run: `npx tsc --noEmit`
+Expected: No errors.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add src/background/sqliteClient.ts src/background/handlers/dashboardSqliteHandlers.ts src/background/__tests__/sqliteClient.test.ts
+git commit -m "fix: forward orderBy/orderDir through sqliteClient.searchResult and its production wiring"
+```
+
+---
+
 ### Task 5: recordsRepo — pass `orderBy`/`orderDir` to the backend
+
+**Plan gap found during Task 4 investigation (2026-08-16), folded into this task:** the offscreen document's message dispatcher (`src/offscreen/offscreen.ts`) has its own `SQLITE_SEARCH` case that reads `msg.payload` and calls `sqliteSearch(searchQuery, limit, offset)` — `sqliteSearch` is this file's `search` function, imported under an alias (`import { search as sqliteSearch } from './recordsRepo.js'`). This is the final hop before `recordsRepo.search()` — without updating it, `orderBy`/`orderDir` would reach the offscreen document (once Task 4.5 fixes the `sqliteClient`/message-sending side) but be silently dropped right before reaching this file's `search()` function. Originally missing from the plan's File Map; added here since it is directly adjacent to this task's change (same `search()` call, one layer up).
 
 **Files:**
 - Modify: `src/offscreen/recordsRepo.ts`
-- Test: none required for this file specifically (it is a thin passthrough); covered end-to-end by Task 6-8 backend tests. Verify manually with a type-check.
+- Modify: `src/offscreen/offscreen.ts` (the `case 'SQLITE_SEARCH':` message handler — see the plan-gap note above)
+- Test: none required for `recordsRepo.ts` specifically (it is a thin passthrough); covered end-to-end by Task 6-8 backend tests. Verify manually with a type-check. For `offscreen.ts`, check for an existing test file first (see Step 1a).
 
-- [ ] **Step 1: Implement the change**
+- [ ] **Step 1: Implement the recordsRepo.ts change**
 
 In `src/offscreen/recordsRepo.ts`, update `search`:
 
@@ -574,6 +690,27 @@ export async function search(
 }
 ```
 
+- [ ] **Step 1a: Implement the offscreen.ts SQLITE_SEARCH handler change**
+
+Run: `find src/offscreen/__tests__ -iname "*offscreen*"` to check for an existing test file covering this message dispatcher. If one exists and already tests other `case '...':` branches by constructing a fake `msg` and calling the exported dispatch function, add a test there for `SQLITE_SEARCH` forwarding `orderBy`/`orderDir`, following that file's existing pattern exactly. If none exists, do not create one for this narrow change — the behavior is already covered end-to-end by Task 6-8's backend-level tests plus Task 11's manual verification; note this decision in your report rather than skipping silently.
+
+In `src/offscreen/offscreen.ts`, update the `case 'SQLITE_SEARCH':` block:
+
+```ts
+        case 'SQLITE_SEARCH': {
+            const searchQuery = String(msg.payload.query || '');
+            const limit = msg.payload.limit != null ? Number(msg.payload.limit) : 50;
+            const offset = msg.payload.offset != null ? Number(msg.payload.offset) : 0;
+            const orderBy = msg.payload.orderBy as 'rank' | 'created_at' | undefined;
+            const orderDir = msg.payload.orderDir as 'ASC' | 'DESC' | undefined;
+            const result = await sqliteSearch(searchQuery, limit, offset, { orderBy, orderDir });
+            sendResponse(result);
+            break;
+        }
+```
+
+Note: `msg.payload.orderBy`/`msg.payload.orderDir` cross a `chrome.runtime.sendMessage` boundary, so the `as` casts here are compile-time only, same caveat as elsewhere in this plan — the actual runtime validation happens downstream in `IdbVfsBackend.search()`/`opfsWorker.ts`'s whitelist checks (Task 6/Task 7), not here. This handler is a pure passthrough and does not need its own validation.
+
 - [ ] **Step 2: Type-check**
 
 Run: `npm run type-check`
@@ -582,7 +719,7 @@ Expected: This will show errors in `StorageBackend` implementations (`IdbVfsBack
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/offscreen/recordsRepo.ts
+git add src/offscreen/recordsRepo.ts src/offscreen/offscreen.ts
 git commit -m "feat: pass orderBy/orderDir from recordsRepo.search to the backend"
 ```
 
@@ -1863,3 +2000,13 @@ No commit for this task — it is verification only. If any manual check fails, 
   - **Task 7 fix, revised twice:** first attempt copied the same whitelist+`throw` pattern into `opfsWorker.ts`, but that file already validates its own `orderDir` differently — `handleQuery` (the existing non-search path) uses a ternary (`orderDir === 'ASC' ? 'ASC' : 'DESC'`) that silently normalizes instead of throwing. Matching that existing in-file convention was the right call, not just for consistency: `OpfsWorkerBackend.search()` reaches the worker through `tryOpfsProxy(...)`, which catches any thrown error and collapses it to a generic `'OPFS Worker unavailable'` message (`OpfsWorkerBackend.ts:25-29`) — a thrown "Invalid orderDir" would have been silently swallowed into that unrelated message, so throwing would have been both inconsistent with the file's own conventions *and* practically undebuggable through the real call chain. Settled on the ternary form for both `handleSearchFts` and `handleSearchLike`.
   - `FallbackStorage.search()` (Task 8) was checked and confirmed safe as originally written — its `dir` variable only feeds a `===` comparison inside an in-memory `Array.sort()` comparator, never a SQL string, so an unexpected value there can at most produce a wrong sort order, not an injection. No change needed there.
 - **Task 7 test plan initially assumed a seam that didn't exist.** The first draft said "skip the unit test if no harness exists," based on an incomplete check — `opfsWorker.test.ts` does exist and tests other module-private functions (`handleRestore`) by mocking `createEngine`. But `handleSearchFts`/`handleSearchLike` reach the database through a module-level `engine` variable only populated by the full `initSqlite()` path (schema creation, migrations, chrome.storage-dependent V2 migration) — disproportionate to drive just for an ORDER BY test. Resolved by adding a narrow `__setEngineForTesting()` export that bypasses `initSqlite()` entirely, and writing out the actual test file content (verified the stub engine shape against the real `SqliteEngine` interface in `sqliteEngine.ts:9-14` rather than guessing it).
+
+### Plan gap found during implementation (2026-08-16, Task 4 execution) — new Task 4.5 inserted, Task 5 extended
+
+While implementing Task 4, the implementer subagent correctly noticed that the production `DashboardSqliteHandlerDeps` object comes from `createSqliteClientDeps(sqliteClient, ...)` (confirmed as production wiring — `service-worker.ts` calls it directly, it is not a test-only stub), and that function's `search` field (`search: (query, limit, offset) => sqliteClient.searchResult(query, limit, offset)`) drops any 4th argument. Investigating further (controller, not the subagent) surfaced two more drops in the same chain that the original plan's File Map never listed:
+- `SqliteClient.searchResult()` (`src/background/sqliteClient.ts:304-313`) only accepts 3 params and sends `{ query, limit, offset }` as the `SQLITE_SEARCH` message payload — no `orderBy`/`orderDir` field at all.
+- `offscreen.ts`'s `case 'SQLITE_SEARCH':` handler (`src/offscreen/offscreen.ts:210-217`) reads `msg.payload.query`/`limit`/`offset` but not `orderBy`/`orderDir`, and calls `sqliteSearch(searchQuery, limit, offset)` (3 args) — dropping the parameters one hop before they'd reach `recordsRepo.search()` (Task 5).
+
+Without fixing these three spots, every other task (1-3, 4, 6-10) would pass its own unit tests — each mocks its direct caller/callee, so a broken link elsewhere in the chain is invisible to any single task's tests — while the feature does nothing in production: `orderBy`/`orderDir` would be silently dropped at the `sqliteClient`/message-layer boundary before ever reaching the offscreen document's backends. This is exactly the kind of gap the plan's own Task 11 manual verification step exists to catch, but catching it there (after all 11 tasks are believed done) would be far more expensive than catching it now.
+
+Resolution: inserted a new **Task 4.5** (`sqliteClient.searchResult` + `createSqliteClientDeps` wiring) between Task 4 and Task 5, and folded the `offscreen.ts` fix into **Task 5** (adjacent to that task's existing `recordsRepo.ts` change — same `search()` call, one layer up). File Map updated to list all three previously-missing files.
