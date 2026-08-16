@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.45` リリース。
+> - 現時点では `v6.7.48` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -38,6 +38,13 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 （次のリリースに向けての変更をここに記載）
+
+## [6.7.48] - 2026-08-16
+
+### Refactor
+
+- DASHBOARD_SQLITE ハンドラ（`dashboardSqliteHandlers.ts`）の20分岐switchを、関心事ごとの3つのサブハンドラ（読み取り専用 / 主要CRUD / メンテナンス・一括処理）と、トークンチェックとdispatchのみを担うルーターに分割した。既存ファイルは import パス維持のための薄い re-export として残し、外部インターフェース（`createDashboardSqliteHandler`）は不変
+- 分割に伴い3サブハンドラへ複製されたエラーハンドリングをルーターの単一 try/catch に集約し、subtype のグループ定義を各サブハンドラへ集約（プロトコルとの整合をモジュール読み込み時に検証）。分割に伴い未使用になった import・export を削除
 
 ## [6.7.47] - 2026-08-16
 
