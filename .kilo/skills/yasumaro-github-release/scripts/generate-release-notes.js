@@ -17,7 +17,9 @@ const CHANGELOG_PATH = resolve(ROOT, 'CHANGELOG.md');
 const PACKAGE_PATH = resolve(ROOT, 'package.json');
 
 function extractEntry(changelog, version) {
-  const headerPattern = new RegExp(`^## \\[${version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]`, 'm');
+  // Consume the whole header line (e.g. "## [6.7.48] - 2026-08-16"), not just
+  // the version bracket, so the trailing date is not emitted as a stray line.
+  const headerPattern = new RegExp(`^## \\[${version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\].*$`, 'm');
   const match = changelog.match(headerPattern);
   if (!match) {
     throw new Error(`Version ${version} not found in CHANGELOG.md`);
