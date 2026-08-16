@@ -748,7 +748,6 @@ Then simplify Step 1a's `offscreen.ts` code to drop the now-unnecessary `as` cas
 ```
 
 Run: `npx tsc --noEmit` and confirm the 2 errors previously at `offscreen.ts`'s `orderBy`/`orderDir` cast lines are now gone (only the expected, separate `recordsRepo.ts`→`backend.search()` 4-arg mismatch should remain — that one is Task 6's responsibility, not this task's).
-```
 
 Note (superseded by Step 1b below — read Step 1b before writing final code): `msg.payload.orderBy`/`msg.payload.orderDir` cross a `chrome.runtime.sendMessage` boundary, so any casts used here are compile-time only, same caveat as elsewhere in this plan — the actual runtime validation happens downstream in `IdbVfsBackend.search()`/`opfsWorker.ts`'s whitelist checks (Task 6/Task 7), not here. This handler is a pure passthrough and does not need its own validation. Fixing the source type in Step 1b removes the need for `as` casts entirely; the note about runtime validation still applies (the type fix does not add runtime validation, it only removes an unnecessary compile-time cast).
 
