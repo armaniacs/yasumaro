@@ -18,7 +18,6 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| [2026-08-15-01-feat-history-sort-dropdown.md](2026-08-15-01-feat-history-sort-dropdown.md) | 🟡中 | 🟢なし | ✨機能追加 | SQLite Historyパネルの検索結果を新しい順/古い順/関連度順でソートするドロップダウンを追加。検索3バックエンド（IdbVfs/OPFS Worker/Fallback）全てにORDER BY分岐、選択はchrome.storage.localに永続化 |
 
 ---
 
@@ -38,6 +37,10 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-15 アーカイブ済み
+
+- 2026-08-15-01-feat-history-sort-dropdown.md (SQLite Historyパネルにソートドロップダウンを追加。検索3バックエンド（IdbVfs/OPFS Worker/Fallback）全てにORDER BY分岐、選択はchrome.storage.localに永続化。v6.7.46 としてリリース)
 
 ### 2026-08-13 アーカイブ済み
 
@@ -349,11 +352,11 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 1 |
+| ⬜ 未着手 | 0 |
 | 🔶 部分実装 | 0 |
-| **`pbi/` 残存合計** | **1** |
-| アーカイブ済みPBI | 257 |
-| アーカイブ済み実装計画 | 111 |
+| **`pbi/` 残存合計** | **0** |
+| アーカイブ済みPBI | 258 |
+| アーカイブ済み実装計画 | 112 |
 
 ※ 2026-08-12 セッションで PBI-01〜02（handler registry / aiClientテスト移行）、PBI-04〜07（logger/error層深耕）を完了。pbi/ は現在空。
 
