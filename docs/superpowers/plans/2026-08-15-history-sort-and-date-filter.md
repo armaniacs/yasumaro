@@ -1542,10 +1542,13 @@ git commit -m "feat: sort FallbackStorage.search results by orderBy/orderDir"
 
 ### Task 9: `StorageKeys` + i18n messages
 
+**Plan gap found during Task 11 validation (2026-08-16), fixed as part of this task:** `npm run validate` (Task 11's own Step 1) failed one test — `src/utils/__tests__/storage-keys.test.ts`'s `'StorageKeysのみを取得する'` case asserts that `getSettings()`'s return value has a property for every `StorageKeys` entry EXCEPT those explicitly listed in that test's own `internalKeys` array (keys that are app-internal state, never round-tripped through `getSettings()`/`saveSettings()`/settings export-import). `HISTORY_SORT_PREFERENCE` was added to `StorageKeys` in this task but never added to that `internalKeys` list, and it genuinely belongs there: Task 10's `loadPersistedSort()`/`persistSort()` read/write it via direct `chrome.storage.local.get`/`set` calls, never through `getSettings()`/`saveSettings()` — the same pattern as the already-listed `OPFS_FALLBACK_MODE` key. Fixed by adding `StorageKeys.HISTORY_SORT_PREFERENCE` to `storage-keys.test.ts`'s `internalKeys` array (Step 4 below).
+
 **Files:**
 - Modify: `src/utils/storage/types.ts`
 - Modify: `public/_locales/ja/messages.json`
 - Modify: `public/_locales/en/messages.json`
+- Modify: `src/utils/__tests__/storage-keys.test.ts` (`internalKeys` array — see plan-gap note above)
 
 - [ ] **Step 1: Add the storage key**
 
@@ -1596,10 +1599,24 @@ Verify JSON validity after editing both files:
 Run: `node -e "JSON.parse(require('fs').readFileSync('public/_locales/ja/messages.json', 'utf8')); JSON.parse(require('fs').readFileSync('public/_locales/en/messages.json', 'utf8')); console.log('OK')"`
 Expected: `OK`
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Add `HISTORY_SORT_PREFERENCE` to `storage-keys.test.ts`'s `internalKeys` list**
+
+In `src/utils/__tests__/storage-keys.test.ts`, find the `internalKeys: StorageKeys[]` array inside the `'StorageKeysのみを取得する'` test case (it currently ends with `StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID,`) and add the new key to it:
+
+```ts
+      StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID,
+      StorageKeys.HISTORY_SORT_PREFERENCE,
+```
+
+This key is read/written directly via `chrome.storage.local.get`/`set` in the history panel (`loadPersistedSort()`/`persistSort()`, added in Task 10) — never through `getSettings()`/`saveSettings()` — so it belongs on this internal-keys exclusion list alongside `OPFS_FALLBACK_MODE`, not in the set of keys `getSettings()` is expected to surface.
+
+Run: `npx vitest run src/utils/__tests__/storage-keys.test.ts`
+Expected: PASS (the `'StorageKeysのみを取得する'` case, previously failing once `HISTORY_SORT_PREFERENCE` existed in `StorageKeys` without a matching entry here, now passes)
+
+- [ ] **Step 4: Commit**
 
 ```bash
-git add src/utils/storage/types.ts public/_locales/ja/messages.json public/_locales/en/messages.json
+git add src/utils/storage/types.ts public/_locales/ja/messages.json public/_locales/en/messages.json src/utils/__tests__/storage-keys.test.ts
 git commit -m "feat: add HISTORY_SORT_PREFERENCE storage key and sort i18n labels"
 ```
 
