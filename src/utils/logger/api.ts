@@ -5,7 +5,7 @@
  */
 import { addLog, flushLogs, isDevelopment } from './core.js';
 import { defaultCriticalSink, type CriticalAlertSink } from './criticalAlertSink.js';
-import { ErrorCode, ErrorCodeValues, LogEntry, LogType, LogTypeValues } from './types.js';
+import { ErrorCode, ErrorCodeValues, LogType, LogTypeValues } from './types.js';
 import { sanitizeRegex } from '../piiSanitizer.js';
 
 // 【SRE/Logging改善 #8】構造化ロギング便利関数
@@ -27,30 +27,29 @@ export function extractSourceFromImportMetaUrl(url: string): string {
 }
 
 /**
- * 構造化されたログエントリを作成する（内部関数）
+ * 構造化ログを書き込む（内部関数）
  * @param {LogTypeValues} type - ログタイプ
  * @param {string} message - メッセージ
  * @param {object} details - 詳細情報
  * @param {ErrorCodeValues} [errorCode] - エラーコード
  * @param {string} [source] - ログ出力元モジュール
- * @returns {LogEntry} ログエントリ
  */
-function createStructuredLog<T extends object = Record<string, unknown>>(
+async function writeStructuredLog<T extends object = Record<string, unknown>>(
     type: LogTypeValues,
     message: string,
     details: T = {} as T,
     errorCode?: ErrorCodeValues,
     source?: string
-): LogEntry {
-    return {
-        id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Math.random().toString(36).substring(2),
-        timestamp: Date.now(),
-        type,
-        message,
-        errorCode,
-        source,
-        details: details as Record<string, unknown>
-    };
+): Promise<void> {
+    try {
+        await addLog(type, message, {
+            ...details,
+            _errorCode: errorCode,
+            _source: source
+        });
+    } catch (e) {
+        console.error('Logger: Failed to write structured log', e);
+    }
 }
 
 /**
@@ -64,8 +63,7 @@ export async function logInfo<T extends object = Record<string, unknown>>(
     details: T = {} as T,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.INFO, message, details, undefined, source);
-    await writeStructuredLog(entry);
+    await writeStructuredLog(LogType.INFO, message, details, undefined, source);
 }
 
 /**
@@ -81,8 +79,7 @@ export async function logWarn<T extends object = Record<string, unknown>>(
     errorCode?: ErrorCodeValues,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.WARN, message, details, errorCode, source);
-    await writeStructuredLog(entry);
+    await writeStructuredLog(LogType.WARN, message, details, errorCode, source);
 }
 
 /**
@@ -98,8 +95,7 @@ export async function logError<T extends object = Record<string, unknown>>(
     errorCode: ErrorCodeValues = ErrorCode.UNKNOWN_ERROR,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, source);
-    await writeStructuredLog(entry);
+    await writeStructuredLog(LogType.ERROR, message, details, errorCode, source);
 
     // 開発環境ではconsole.errorにも出力
     if (isDevelopment()) {
@@ -122,8 +118,7 @@ export async function logDebug<T extends object = Record<string, unknown>>(
     if (!isDevelopment()) {
         return;
     }
-    const entry = createStructuredLog(LogType.DEBUG, message, details, undefined, source);
-    await writeStructuredLog(entry);
+    await writeStructuredLog(LogType.DEBUG, message, details, undefined, source);
 
     // 開発環境ではconsole.debugにも出力
     if (isDevelopment()) {
@@ -144,32 +139,7 @@ export async function logSanitize<T extends object = Record<string, unknown>>(
     errorCode?: ErrorCodeValues,
     source?: string
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.SANITIZE, message, details, errorCode, source);
-    await writeStructuredLog(entry);
-}
-
-/**
- * 構造化ログを書き込む（内部関数）
- * @param {LogEntry} entry - ログエントリ
- */
-async function writeStructuredLog(entry: LogEntry): Promise<void> {
-    try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id, timestamp, type, message, errorCode, source, details } = entry;
-
-        // 既存のaddLog関数を使用（entryを分割して渡す）
-        await addLog(
-            type,
-            message,
-            {
-                ...details,
-                _errorCode: errorCode,
-                _source: source
-            }
-        );
-    } catch (e) {
-        console.error('Logger: Failed to write structured log', e);
-    }
+    await writeStructuredLog(LogType.SANITIZE, message, details, errorCode, source);
 }
 
 /**
@@ -184,8 +154,7 @@ export async function logCritical<T extends object = Record<string, unknown>>(
     source?: string,
     sink: CriticalAlertSink = defaultCriticalSink,
 ): Promise<void> {
-    const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, source);
-    await writeStructuredLog(entry);
+    await writeStructuredLog(LogType.ERROR, message, details, errorCode, source);
     // Critical logs are flushed immediately so they are not lost on SW termination.
     await flushLogs(true);
 
