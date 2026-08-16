@@ -411,7 +411,7 @@ export function createSqliteClientDeps(
     // Every *Result variant keeps the failure reason attached to the call
     // that produced it, rather than routing it through shared client state.
     query: (params) => sqliteClient.queryResult(params),
-    search: (query, limit, offset) => sqliteClient.searchResult(query, limit, offset),
+    search: (query, limit, offset, options) => sqliteClient.searchResult(query, limit, offset, options),
     toggleStar: (id) => sqliteClient.toggleStarResult(id),
     delete: (id) => sqliteClient.deleteResult(id),
     update: (id, changes) => sqliteClient.updateResult(id, changes),

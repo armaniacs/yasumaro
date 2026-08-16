@@ -301,10 +301,15 @@ export class SqliteClient {
     );
   }
 
-  async searchResult(query: string, limit = 50, offset = 0): Promise<CallResult<{ rows: SearchResult[]; total: number }>> {
+  async searchResult(
+    query: string,
+    limit = 50,
+    offset = 0,
+    options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
+  ): Promise<CallResult<{ rows: SearchResult[]; total: number }>> {
     return this.call<{ rows: SearchResult[]; total: number }, OffscreenQueryResponse>(
       'SQLITE_SEARCH',
-      { query, limit, offset },
+      { query, limit, offset, orderBy: options.orderBy, orderDir: options.orderDir },
       (res) => ({
         rows: (res.rows || []) as SearchResult[],
         total: res.total,
