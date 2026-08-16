@@ -254,11 +254,19 @@ export async function queryLogs(options: {
 export async function searchLogs(
   query: string,
   limit = 50,
-  offset = 0
+  offset = 0,
+  options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
 ): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const response = await sendDashboardMessage({ subtype: 'search', query, limit, offset });
+      const response = await sendDashboardMessage({
+        subtype: 'search',
+        query,
+        limit,
+        offset,
+        orderBy: options.orderBy,
+        orderDir: options.orderDir,
+      });
       if (response.success) {
         return {
           data: {
