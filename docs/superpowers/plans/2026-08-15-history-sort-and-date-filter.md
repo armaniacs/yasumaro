@@ -1607,8 +1607,11 @@ git commit -m "feat: add HISTORY_SORT_PREFERENCE storage key and sort i18n label
 
 ### Task 10: UI — sort `<select>` in the panel, persistence
 
+**Plan gap found during Task 10 implementation (2026-08-16), fixed as part of this task:** running the full `asyncData` test directory (per Step 6's regression check) surfaced 4 pre-existing failures in `sqliteHistoryPanel-tagFallback.test.ts` (lines 97, 160, 178, 200) — each asserted `searchLogs` was called with only 3 positional args, but Task 2's change to `queryHistory()` in `sqliteHistoryQuery.ts` made a 4th `{orderBy, orderDir}` argument unconditional. These failures predate Task 10 (independently reproduced via `git checkout` to the post-Task-9 state — same 4 assertions fail identically there) but were never caught because Task 2's own review scope was limited to `sqliteHistoryQuery.test.ts`, not this sibling panel-level test file. Fixed as part of Task 10 rather than deferred to Task 11: all 4 assertions updated to expect `{ orderBy: 'created_at', orderDir: 'DESC' }` as the 4th argument — this is the panel's own default sort state (`sortBy: 'created_at'` from `createInitialHistoryState()`, Task 1), not `queryHistory()`'s internal `'relevance'` fallback, since the panel always passes an explicit `sortBy` once Task 10 wires it through.
+
 **Files:**
 - Modify: `src/dashboard/panels/asyncData/sqliteHistoryPanel.ts`
+- Modify: `src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanel-tagFallback.test.ts` (4 assertions updated — see plan-gap note above)
 - Test: `src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanel-sort.test.ts` (new file)
 
 - [ ] **Step 1: Check the existing jsdom test setup pattern for this panel**
