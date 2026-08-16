@@ -27,7 +27,13 @@ interface AuditLogQueryPayload {
 
 // Worker-internal types (not in shared types):
 type QueryPayload = QueryOptions & { ids?: number[]; tagFilter?: string; isStarred?: number };
-type SearchPayload = { searchQuery: string; limit?: number; offset?: number };
+type SearchPayload = {
+  searchQuery: string;
+  limit?: number;
+  offset?: number;
+  orderBy?: 'rank' | 'created_at';
+  orderDir?: 'ASC' | 'DESC';
+};
 
 interface RequestMessage {
   id: number;
@@ -215,6 +221,17 @@ async function runMigrationV2(): Promise<void> {
 function getEngine(): SqliteEngine {
   if (!engine) throw new Error('OPFS SQLite not initialized');
   return engine;
+}
+
+/**
+ * Test seam only — lets tests inject a fake engine and fts5Available value
+ * without driving the full initSqlite() path (schema creation, migrations,
+ * chrome.storage-dependent V2 migration). Not called from any production
+ * code path.
+ */
+export function __setEngineForTesting(fakeEngine: SqliteEngine | null, fts5: boolean): void {
+  engine = fakeEngine;
+  fts5Available = fts5;
 }
 
 function extractDomain(url: string): string | null {
@@ -653,21 +670,22 @@ export async function handleRestore(data: Uint8Array): Promise<{ restored: true 
   return { restored: true };
 }
 
-async function handleSearch(payload: SearchPayload): Promise<{ rows: SearchResult[]; total: number }> {
-  const { searchQuery, limit = 50, offset = 0 } = payload;
+export async function handleSearch(payload: SearchPayload): Promise<{ rows: SearchResult[]; total: number }> {
+  const { searchQuery, limit = 50, offset = 0, orderBy, orderDir } = payload;
   const bare = sanitizeFtsTerm(searchQuery);
   if (!bare) return { rows: [], total: 0 };
 
   // trigram MATCH requires >= 3 unicode code points; shorter terms fall back to LIKE.
   const charLen = [...bare].length;
   if (fts5Available && charLen >= 3) {
-    return handleSearchFts(`"${bare}"`, limit, offset);
+    return handleSearchFts(`"${bare}"`, limit, offset, orderBy, orderDir);
   }
-  return handleSearchLike(searchQuery, limit, offset);
+  return handleSearchLike(searchQuery, limit, offset, orderBy, orderDir);
 }
 
-async function handleSearchFts(
-  sanitizedQuery: string, limit: number, offset: number
+export async function handleSearchFts(
+  sanitizedQuery: string, limit: number, offset: number,
+  orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC'
 ): Promise<{ rows: SearchResult[]; total: number }> {
   let total = 0;
   await sqlQuery(
@@ -678,13 +696,20 @@ WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0`,
     (row) => { total = Number(row.c); }
   );
 
+  // Ternary, not a whitelist+throw: matches handleQuery's existing orderDir
+  // handling in this file, and avoids OpfsWorkerBackend.search()'s
+  // tryOpfsProxy collapsing a thrown error into an opaque "worker
+  // unavailable" message (see the note above this function).
+  const dir = orderDir === 'ASC' ? 'ASC' : 'DESC';
+  const orderClause = orderBy === 'created_at' ? `b.created_at ${dir}, b.id ${dir}` : 'rank';
+
   const rows: SearchResult[] = [];
   await sqlQuery(
     `SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank AS rank
      FROM browsing_logs_fts
      JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
      WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0
-     ORDER BY rank LIMIT ? OFFSET ?`,
+     ORDER BY ${orderClause} LIMIT ? OFFSET ?`,
     [sanitizedQuery, limit, offset],
     (row) => {
       rows.push({
@@ -706,8 +731,9 @@ WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0`,
   return { rows, total };
 }
 
-async function handleSearchLike(
-  rawQuery: string, limit: number, offset: number
+export async function handleSearchLike(
+  rawQuery: string, limit: number, offset: number,
+  orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC'
 ): Promise<{ rows: SearchResult[]; total: number }> {
   const like = `%${rawQuery}%`;
   const conditions = 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';
@@ -720,11 +746,15 @@ async function handleSearchLike(
     (row) => { total = Number(row.c); }
   );
 
+  // Same ternary approach as handleSearchFts above — orderDir only ever
+  // becomes exactly 'ASC' or 'DESC', regardless of what arrives at runtime.
+  const dir = orderBy === 'created_at' && orderDir === 'ASC' ? 'ASC' : 'DESC';
+
   const rows: SearchResult[] = [];
   await sqlQuery(
     `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred
      FROM browsing_logs WHERE ${conditions}
-     ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+     ORDER BY created_at ${dir} LIMIT ? OFFSET ?`,
     [...params, limit, offset],
     (row) => {
       rows.push({
