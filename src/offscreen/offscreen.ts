@@ -211,7 +211,9 @@ async function handleSqliteMessage(
             const searchQuery = String(msg.payload.query || '');
             const limit = msg.payload.limit != null ? Number(msg.payload.limit) : 50;
             const offset = msg.payload.offset != null ? Number(msg.payload.offset) : 0;
-            const result = await sqliteSearch(searchQuery, limit, offset);
+            const orderBy = msg.payload.orderBy as 'rank' | 'created_at' | undefined;
+            const orderDir = msg.payload.orderDir as 'ASC' | 'DESC' | undefined;
+            const result = await sqliteSearch(searchQuery, limit, offset, { orderBy, orderDir });
             sendResponse(result);
             break;
         }
