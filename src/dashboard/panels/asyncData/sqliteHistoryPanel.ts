@@ -1,20 +1,6 @@
-import {
-  toggleStar,
-  deleteLog,
-  getSqliteStatus,
-  appendToLogs,
-} from '../../dashboardSqliteService.js';
-import { removeSavedUrl } from '../../../utils/storageUrls.js';
 import { getMessageOr } from '../../../utils/i18n.js';
-import { isServiceError } from '../../dashboardSqliteService.js';
-import {
-  queryHistory,
-  dateRangeFromSelectedDate,
-} from './sqliteHistoryQuery.js';
-import type { BrowsingLogEntry, UnifiedHistoryQueryResult } from './sqliteHistoryQuery.js';
+import type { BrowsingLogEntry } from './sqliteHistoryQuery.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
-import { retryWithExponentialBackoff } from '../../utils/retry.js';
-import { errorMessage } from '../../../utils/errorUtils.js';
 import { formatEntryToMarkdown } from '../../../utils/markdownFormatter.js';
 import { copyTextToClipboard } from '../../../utils/clipboard.js';
 import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
@@ -22,11 +8,8 @@ import { isSecureUrl } from '../../../utils/urlUtils.js';
 import { type AsyncDataPanel } from '../types.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
-import {
-  createInitialHistoryState,
-  historyStateReducer,
-  type SqliteHistoryState,
-} from './sqliteHistoryPanelState.js';
+import type { SqliteHistoryState } from './sqliteHistoryPanelState.js';
+import { createSqliteHistoryController } from './sqliteHistoryPanelController.js';
 
 const PAGE_SIZE = 20;
 
@@ -76,8 +59,6 @@ function buildCleansingProgressBarHtml(entry: BrowsingLogEntry): string {
   </div>`;
 }
 
-const HISTORY_SORT_STORAGE_KEY = 'history_sort_preference';
-
 function sortSelectValue(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): string {
   return `${sortBy}:${sortDir}`;
 }
@@ -88,28 +69,6 @@ function parseSortSelectValue(value: string): { sortBy: SqliteHistoryState['sort
     sortBy: sortBy === 'relevance' ? 'relevance' : 'created_at',
     sortDir: sortDir === 'ASC' ? 'ASC' : 'DESC',
   };
-}
-
-async function loadPersistedSort(): Promise<{ sortBy: SqliteHistoryState['sortBy']; sortDir: SqliteHistoryState['sortDir'] } | null> {
-  try {
-    const items = await chrome.storage.local.get(HISTORY_SORT_STORAGE_KEY);
-    const raw = items[HISTORY_SORT_STORAGE_KEY];
-    if (typeof raw !== 'string') return null;
-    const parsed = JSON.parse(raw) as { sortBy?: string; sortDir?: string };
-    if (parsed.sortBy !== 'created_at' && parsed.sortBy !== 'relevance') return null;
-    if (parsed.sortDir !== 'ASC' && parsed.sortDir !== 'DESC') return null;
-    return { sortBy: parsed.sortBy, sortDir: parsed.sortDir };
-  } catch {
-    return null;
-  }
-}
-
-async function persistSort(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): Promise<void> {
-  try {
-    await chrome.storage.local.set({ [HISTORY_SORT_STORAGE_KEY]: JSON.stringify({ sortBy, sortDir }) });
-  } catch (error) {
-    console.error('Failed to persist history sort preference:', error);
-  }
 }
 
 /**
@@ -202,20 +161,21 @@ export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
 
 export function createSqliteHistoryPanel(): AsyncDataPanel {
   let container: HTMLElement | null = null;
-
-  let state = createInitialHistoryState();
-  let requestGeneration = 0;
-
   let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   let isMounted = false;
-  /**
-   * Pending init parameters set by onActivate before loadData runs.
-   * Used to preserve searchTag/searchDomain across the loadData lifecycle.
-   */
-  let pendingInit: Record<string, unknown> | null = null;
 
-  function dateRangeFromSelected(): { since?: number; until?: number } {
-    return dateRangeFromSelectedDate(state.selectedDate);
+  const controller = createSqliteHistoryController({
+    onStateChange: () => refresh(),
+  });
+
+  function state(): SqliteHistoryState {
+    return controller.getState();
+  }
+
+  /** Translate a loadFailure error: an i18n key (from the controller) or a raw "Error: ..." string. */
+  function translateHistoryError(error: string | null): string {
+    if (!error) return '';
+    return error.startsWith('Error: ') ? error : t(error);
   }
 
   function isPanelMounted(): boolean {
@@ -223,19 +183,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
   }
 
   async function handleToggleStar(id: number): Promise<void> {
-    const result = await toggleStar(id);
-    if ('error' in result) {
-      // Without this the click looked ignored: a failed toggle left the star
-      // unchanged and showed nothing at all (PBI-21).
-      state = historyStateReducer(state, { type: 'operationError', error: result.error });
-      refresh();
-      return;
-    }
-    const entry = state.entries.find(e => e.id === id);
-    if (entry) {
-      state = historyStateReducer(state, { type: 'toggleStarSuccess', id, starred: result.data.is_starred === 1 });
-    }
-    refresh();
+    await controller.toggleStar(id);
   }
 
   async function handleDelete(id: number): Promise<void> {
@@ -247,25 +195,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       dangerous: true,
     });
     if (!confirmed) return;
-    const entry = state.entries.find((candidate) => candidate.id === id);
-    const result = await deleteLog(id);
-    if ('error' in result) {
-      // The entry stays in the list — removing it would claim a delete that
-      // did not happen.
-      state = historyStateReducer(state, { type: 'operationError', error: result.error });
-      refresh();
-      return;
-    }
-    // Keep the legacy source in sync so startup migration cannot recreate it.
-    if (entry) {
-      try {
-        await removeSavedUrl(entry.url);
-      } catch (error) {
-        console.error('Failed to remove legacy history entry:', error);
-      }
-    }
-    state = historyStateReducer(state, { type: 'deleteSuccess', id });
-    refresh();
+    await controller.deleteEntry(id);
   }
 
   function createCopyButton(entry: BrowsingLogEntry): HTMLButtonElement {
@@ -280,7 +210,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       try {
         const markdown = formatEntryToMarkdown(entry);
         await copyTextToClipboard(markdown);
-        button.textContent = '\u2713';
+        button.textContent = '✓';
         button.setAttribute('aria-label', t('copyMarkdownSuccess') || 'Copied to clipboard');
         setTimeout(() => {
           button.textContent = originalIcon;
@@ -288,7 +218,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
           button.disabled = false;
         }, 2000);
       } catch {
-        button.textContent = '\u2717';
+        button.textContent = '✗';
         button.setAttribute('aria-label', t('copyMarkdownFail') || 'Failed to copy');
         setTimeout(() => {
           button.textContent = originalIcon;
@@ -327,61 +257,25 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
   }
 
   async function handleAppendToObsidian(): Promise<void> {
-    if (state.selectedIds.size === 0) return;
+    const result = await controller.appendSelectedToObsidian();
+    if (!result) return;
 
-    const ids = Array.from(state.selectedIds);
-    const result = await appendToLogs(ids);
-
-    if ('data' in result) {
-      state.selectedIds.clear();
-      refresh();
+    if (result.success) {
       chrome.notifications?.create({
         type: 'basic',
         iconUrl: chrome.runtime.getURL('/icons/icon48.png'),
         title: t('historyAppendToObsidian'),
-        message: t(getPluralKey('historyAppendSuccess', ids.length), [String(ids.length)]),
+        message: t(getPluralKey('historyAppendSuccess', result.appendedCount), [String(result.appendedCount)]),
       });
       return;
     }
 
-    // "Obsidian not configured" used to be the only failure message shown,
-    // covering both that case and every other reason alike; the reason from
-    // the response is now available and worth showing instead of guessing.
     chrome.notifications?.create({
       type: 'basic',
       iconUrl: chrome.runtime.getURL('/icons/icon48.png'),
       title: t('historyAppendToObsidian'),
       message: `${t('historyAppendFailed')}: ${result.error}`,
     });
-  }
-
-  function handleSearch(query: string): void {
-    state = historyStateReducer(state, { type: 'search', query });
-    if (query.trim()) {
-      fetchData({ search: query.trim() });
-    } else {
-      fetchData({ page: 0 });
-    }
-  }
-
-  async function handleDateSelect(dateStr: string): Promise<void> {
-    state = historyStateReducer(state, { type: 'dateSelect', date: dateStr });
-
-    const date = new Date(dateStr + 'T00:00:00');
-    const since = date.getTime();
-    const until = date.getTime() + 86400000 - 1;
-
-    await fetchData({ since, until });
-  }
-
-  async function handleSortChange(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): Promise<void> {
-    state = historyStateReducer(state, { type: 'sortChange', sortBy, sortDir });
-    void persistSort(sortBy, sortDir);
-    if (state.searchQuery.trim()) {
-      await fetchData({ search: state.searchQuery, page: 0 });
-    } else {
-      await fetchData({ ...dateRangeFromSelected(), page: 0 });
-    }
   }
 
   function handleContentToggle(controlsId: string): void {
@@ -392,9 +286,9 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     if (!btn) return;
     btn.setAttribute('aria-expanded', String(!isHidden));
     if (controlsId.startsWith('content-sent-')) {
-      btn.textContent = isHidden ? (t('historyShowSentData') || 'AI\u306B\u9001\u4FE1\u3057\u305F\u30C7\u30FC\u30BF') : (t('historyHideSentData') || '\u30C7\u30FC\u30BF\u3092\u975E\u8868\u793A');
+      btn.textContent = isHidden ? (t('historyShowSentData') || 'AIに送信したデータ') : (t('historyHideSentData') || 'データを非表示');
     } else if (controlsId.startsWith('content-received-')) {
-      btn.textContent = isHidden ? (t('historyShowReceivedData') || 'AI\u304B\u3089\u53D7\u4FE1\u3057\u305F\u30C7\u30FC\u30BF') : (t('historyHideReceivedData') || '\u30C7\u30FC\u30BF\u3092\u975E\u8868\u793A');
+      btn.textContent = isHidden ? (t('historyShowReceivedData') || 'AIから受信したデータ') : (t('historyHideReceivedData') || 'データを非表示');
     } else {
       btn.textContent = isHidden ? t('historyShowContent') : t('historyHideContent');
     }
@@ -402,90 +296,15 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
 
   const bulkCallbacks = {
     onSelectAll: (checked: boolean) => {
-      if (checked) {
-        state.entries.forEach(e => state.selectedIds.add(e.id));
-      } else {
-        state.selectedIds.clear();
-      }
-      updateBulkBar(state.selectedIds, state.entries);
+      controller.selectAllEntries(checked);
     },
     onClear: () => {
-      state.selectedIds.clear();
-      updateBulkBar(state.selectedIds, state.entries);
+      controller.clearEntrySelection();
     },
     onAppend: () => {
       void handleAppendToObsidian();
     },
   };
-
-  function reloadCurrent(): void {
-    if (state.searchQuery.trim()) {
-      void fetchData({ search: state.searchQuery, page: state.currentPage });
-    } else {
-      void fetchData({ ...dateRangeFromSelected(), page: state.currentPage });
-    }
-  }
-
-  async function fetchData(options: {
-    limit?: number;
-    since?: number;
-    until?: number;
-    search?: string;
-    page?: number;
-    tagFilter?: string;
-    tagInitiated?: boolean;
-  } = {}): Promise<void> {
-    const generation = ++requestGeneration;
-    state = historyStateReducer(state, { type: 'loadStart' });
-    refresh();
-
-    try {
-      const page = Math.max(0, options.page ?? state.currentPage);
-      const limit = PAGE_SIZE;
-      const offset = page * limit;
-
-      const activeTagFilter = options.tagFilter !== undefined ? options.tagFilter : state.activeTagFilter;
-
-      // All storage knowledge — SQLite paging/search plus legacy
-      // chrome.storage enrichment — lives in the unified history query module.
-      const result: UnifiedHistoryQueryResult = await queryHistory({
-        search: options.search,
-        since: options.since,
-        until: options.until,
-        limit,
-        offset,
-        tagFilter: activeTagFilter || undefined,
-        tagInitiated: options.tagInitiated,
-        sortBy: state.sortBy,
-        sortDir: state.sortDir,
-      });
-
-      if (generation !== requestGeneration) return;
-
-      if (isServiceError(result)) {
-        state = historyStateReducer(state, { type: 'loadFailure', error: t('historyLoadError') });
-      } else {
-        const data = result.data;
-        state = historyStateReducer(state, { type: 'loadSuccess', data });
-      }
-    } catch (err) {
-      if (generation !== requestGeneration) return;
-      state = historyStateReducer(state, { type: 'loadFailure', error: `Error: ${errorMessage(err)}` });
-    } finally {
-      if (generation === requestGeneration) {
-        state = { ...state, loading: false };
-        refresh();
-        refreshTagFallbackNotice();
-      }
-    }
-  }
-
-  function clearTagFilterAndReload(): void {
-    const hadFallback = state.pendingTagFallback !== null;
-    state = historyStateReducer(state, { type: 'clearTagFilter' });
-    if (hadFallback && state.searchQuery) state = historyStateReducer(state, { type: 'search', query: '' });
-    void fetchData({ page: 0, ...dateRangeFromSelected() });
-  }
 
   function updateTagFilterBar(
     containerEl: HTMLElement,
@@ -501,9 +320,9 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         bar.className = 'sqlite-tag-filter-bar';
         bar.setAttribute('role', 'status');
         bar.innerHTML = `
-          <span data-i18n="tagFilterLabel">\u30D5\u30A3\u30EB\u30BF\u30FC:</span>
+          <span data-i18n="tagFilterLabel">フィルター:</span>
            <span class="tag-filter-badge">#${escapeHtml(activeTagFilter || pendingTagFallback?.tag || '')}</span>
-          <button type="button" id="sqlite-tag-filter-clear" class="tag-filter-clear" aria-label="${t('clearTagFilter') || 'Clear tag filter'}">\u2715</button>`;
+          <button type="button" id="sqlite-tag-filter-clear" class="tag-filter-clear" aria-label="${t('clearTagFilter') || 'Clear tag filter'}">✕</button>`;
         containerEl.appendChild(bar);
         const clearBtn = bar.querySelector('#sqlite-tag-filter-clear') as HTMLButtonElement | null;
         if (clearBtn) {
@@ -539,43 +358,44 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
   }
 
   function updateDynamicRegions(): void {
+    const s = state();
     const countEl = container?.querySelector('.sqlite-history-count');
-    if (countEl) countEl.textContent = t(getPluralKey('historyRecordCount', state.total), [String(state.total)]);
+    if (countEl) countEl.textContent = t(getPluralKey('historyRecordCount', s.total), [String(s.total)]);
 
     // Keep the search input value in sync with state.searchQuery, which may
     // have been set by a tag-fallback full-text search or cleared by a filter
     // action.  Without this, the input stays stale after non-renderState
     // refresh paths (updateDynamicRegions).
     const searchInputEl = document.getElementById('sqlite-search-input') as HTMLInputElement | null;
-    if (searchInputEl && searchInputEl.value !== state.searchQuery) {
-      searchInputEl.value = state.searchQuery;
+    if (searchInputEl && searchInputEl.value !== s.searchQuery) {
+      searchInputEl.value = s.searchQuery;
     }
 
     const errorEl = document.getElementById('sqlite-error');
     if (errorEl) {
-      errorEl.textContent = state.error || '';
-      errorEl.classList.toggle('hidden', !state.error);
-      (errorEl as HTMLElement).style.display = state.error ? '' : 'none';
+      errorEl.textContent = translateHistoryError(s.error);
+      errorEl.classList.toggle('hidden', !s.error);
+      (errorEl as HTMLElement).style.display = s.error ? '' : 'none';
     }
 
     const searchArea = container?.querySelector('.sqlite-history-search');
     if (searchArea) {
       updateTagFilterBar(
         searchArea as HTMLElement,
-        state.activeTagFilter,
-        state.pendingTagFallback,
-        clearTagFilterAndReload,
+        s.activeTagFilter,
+        s.pendingTagFallback,
+        () => controller.clearTagFilter(),
       );
     }
 
     const calContainer = document.getElementById('sqlite-calendar-nav');
     if (calContainer) {
-      renderCalendarNav(calContainer, state.selectedDate,
-        { searchQuery: state.searchQuery, activeTagFilter: state.activeTagFilter },
+      renderCalendarNav(calContainer, s.selectedDate,
+        { searchQuery: s.searchQuery, activeTagFilter: s.activeTagFilter },
         {
-          onDateSelect: (d) => void handleDateSelect(d),
-          onRangeSelect: (since, until) => { state = historyStateReducer(state, { type: 'rangeSelect' }); void fetchData({ since, until }); },
-          onClearFilters: () => { state = historyStateReducer(state, { type: 'clearFilters' }); void fetchData(); },
+          onDateSelect: (d) => void controller.selectDate(d),
+          onRangeSelect: (since, until) => controller.selectDateRange(since, until),
+          onClearFilters: () => controller.clearAllFilters(),
         }
       );
     }
@@ -584,34 +404,34 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     if (sortContainer) {
       renderSortControl(
         sortContainer,
-        state.sortBy,
-        state.sortDir,
-        isFullTextSearchActive(state),
-        (sortBy, sortDir) => void handleSortChange(sortBy, sortDir),
+        s.sortBy,
+        s.sortDir,
+        isFullTextSearchActive(s),
+        (sortBy, sortDir) => void controller.changeSort(sortBy, sortDir),
       );
     }
 
     const listContainer = document.getElementById('sqlite-entry-list');
     if (listContainer) {
-      if (state.loading) {
+      if (s.loading) {
         listContainer.innerHTML = `<div class="loading">${t('historyLoading')}</div>`;
       } else {
-        renderEntryList(listContainer, state.entries, state.selectedIds, state.activeTagFilter, {
+        renderEntryList(listContainer, s.entries, s.selectedIds, s.activeTagFilter, {
           onToggleStar: (id) => void handleToggleStar(id),
           onDelete: (id) => void handleDelete(id),
-          onSelectionChange: (id, selected) => { state = historyStateReducer(state, { type: 'selectionChange', id, selected }); updateBulkBar(state.selectedIds, state.entries); },
-          onTagFilterClick: (tag) => { state = historyStateReducer(state, { type: 'tagFilterClick', tag }); void fetchData({ tagFilter: state.activeTagFilter || undefined, ...dateRangeFromSelected() }); },
+          onSelectionChange: (id, selected) => controller.selectEntry(id, selected),
+          onTagFilterClick: (tag) => controller.filterByTag(tag),
           onContentToggle: (controlsId) => handleContentToggle(controlsId),
         });
       }
     }
 
-    if (!state.loading) {
+    if (!s.loading) {
       const pagContainer = document.getElementById('sqlite-pagination');
-      if (pagContainer) renderPagination(pagContainer, state.currentPage, state.total, PAGE_SIZE, (page) => { state = historyStateReducer(state, { type: 'pageChange', page }); reloadCurrent(); });
+      if (pagContainer) renderPagination(pagContainer, s.currentPage, s.total, PAGE_SIZE, (page) => controller.changePage(page));
     }
 
-    updateBulkBar(state.selectedIds, state.entries);
+    updateBulkBar(s.selectedIds, s.entries);
   }
 
   const debouncedSearch = (() => {
@@ -619,7 +439,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     return (query: string) => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
-        handleSearch(query);
+        controller.search(query);
         timer = null;
       }, 300);
       searchDebounceTimer = timer;
@@ -668,11 +488,11 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
                  aria-label="${t('historySelectRecord')}">
           <button type="button" class="sqlite-entry-star ${entry.is_starred ? 'starred' : ''}"
                   data-action="star" title="${t('historyToggleStar')}"
-                   aria-pressed="${String(Boolean(entry.is_starred))}" aria-label="${t('historyToggleStar')}">\u2605</button>
+                   aria-pressed="${String(Boolean(entry.is_starred))}" aria-label="${t('historyToggleStar')}">★</button>
           <a href="${isSecureUrl(entry.url) ? escapeHtml(entry.url) : '#'}" target="_blank" rel="noopener noreferrer" class="sqlite-entry-title">
             ${escapeHtml(entry.title || entry.url)}
           </a>
-          <button type="button" class="sqlite-entry-delete" data-action="delete" title="${t('historyDeleteRecord')}" aria-label="${t('historyDeleteRecordAria')}">\u2715</button>
+          <button type="button" class="sqlite-entry-delete" data-action="delete" title="${t('historyDeleteRecord')}" aria-label="${t('historyDeleteRecordAria')}">✕</button>
         </div>
         <div class="sqlite-entry-meta">
           <span class="sqlite-entry-domain">${escapeHtml(entry.domain || '')}</span>
@@ -682,14 +502,14 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         ${entry.content != null ? `
           <button type="button" class="content-toggle-btn" data-action="content-toggle"
                   data-id="${entry.id}" aria-expanded="false" aria-controls="content-sent-${entry.id}">
-            ${t('historyShowSentData') || 'AI\u306B\u9001\u4FE1\u3057\u305F\u30C7\u30FC\u30BF'}
+            ${t('historyShowSentData') || 'AIに送信したデータ'}
           </button>
           <div class="content-preview hidden" id="content-sent-${entry.id}">${escapeHtml(entry.content)}</div>
         ` : ''}
         ${entry.summary != null && entry.summary.trim().length > 0 ? `
           <button type="button" class="content-toggle-btn" data-action="content-toggle"
                   data-id="${entry.id}" aria-expanded="false" aria-controls="content-received-${entry.id}">
-            ${t('historyShowReceivedData') || 'AI\u304B\u3089\u53D7\u4FE1\u3057\u305F\u30C7\u30FC\u30BF'}
+            ${t('historyShowReceivedData') || 'AIから受信したデータ'}
           </button>
           <div class="content-preview hidden" id="content-received-${entry.id}">${escapeHtml(entry.summary)}</div>
         ` : ''}
@@ -826,7 +646,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         <button data-date="${formatDate(new Date(now.getTime() - 86400000))}">${t('historyYesterday')}</button>
         <button data-date="${formatDate(now)}" data-range="7">${t('historyLast7Days')}</button>
         <button data-date="${formatDate(now)}" data-range="30">${t('historyLast30Days')}</button>
-        ${hasActiveFilters ? `<button type="button" id="sqlite-clear-all-filters" class="sqlite-clear-filters-btn" aria-label="${t('clearAllFilters') || 'Clear all filters'}">${t('clearAllFilters') || '\u6761\u4EF6\u3092\u30AF\u30EA\u30A2'}</button>` : ''}
+        ${hasActiveFilters ? `<button type="button" id="sqlite-clear-all-filters" class="sqlite-clear-filters-btn" aria-label="${t('clearAllFilters') || 'Clear all filters'}">${t('clearAllFilters') || '条件をクリア'}</button>` : ''}
       </div>
       <div class="sqlite-calendar-month">
         <button data-month-prev>&lt;</button>
@@ -894,10 +714,11 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
 
   function renderState(): void {
     if (!container) return;
+    const s = state();
 
-    const fallbackBanner = state.fallbackMode
+    const fallbackBanner = s.fallbackMode
       ? `<div class="sqlite-fallback-warning warning-banner" role="alert">
-          \u26A0\uFE0F ${t('fallbackStorageWarning')}
+          ⚠️ ${t('fallbackStorageWarning')}
          </div>`
       : '';
 
@@ -905,43 +726,43 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       ${fallbackBanner}
       <div class="sqlite-history-header">
         <h3 data-i18n="sqliteHistoryTitle">SQLite History</h3>
-        <span class="sqlite-history-count">${t(getPluralKey('historyRecordCount', state.total), [String(state.total)])}</span>
+        <span class="sqlite-history-count">${t(getPluralKey('historyRecordCount', s.total), [String(s.total)])}</span>
       </div>
       <div class="sqlite-history-search">
         <input type="text" id="sqlite-search-input"
           placeholder="${t('historySearchPlaceholder')}"
-          value="${escapeHtml(state.searchQuery)}"
+          value="${escapeHtml(s.searchQuery)}"
           aria-label="${t('historySearchAriaLabel')}" />
         <div id="sqlite-sort-control" class="sqlite-sort-control"></div>
         <div id="sqlite-calendar-nav" class="sqlite-calendar-nav"></div>
-        <div id="sqlite-error" class="sqlite-history-error${state.error ? '' : ' hidden'}">
-          ${escapeHtml(state.error || '')}
+        <div id="sqlite-error" class="sqlite-history-error${s.error ? '' : ' hidden'}">
+          ${escapeHtml(translateHistoryError(s.error))}
         </div>
       </div>
-      <div id="sqlite-bulk-bar" class="sqlite-bulk-bar${state.selectedIds.size > 0 ? '' : ' hidden'}">
+      <div id="sqlite-bulk-bar" class="sqlite-bulk-bar${s.selectedIds.size > 0 ? '' : ' hidden'}">
         <label class="sqlite-bulk-select-all">
           <input type="checkbox" id="sqlite-select-all" aria-label="${t('historySelectAll')}">
           <span data-i18n="historySelectAll">${t('historySelectAll')}</span>
         </label>
         <button type="button" id="sqlite-clear-selection" class="secondary-btn" data-i18n="historyClearSelection">${t('historyClearSelection')}</button>
-        <span id="sqlite-selection-count" class="sqlite-selection-count" aria-live="polite">${t('historySelectionCount', [String(state.selectedIds.size)])}</span>
+        <span id="sqlite-selection-count" class="sqlite-selection-count" aria-live="polite">${t('historySelectionCount', [String(s.selectedIds.size)])}</span>
         <button type="button" id="sqlite-append-obsidian" class="btn-primary" data-i18n="historyAppendToObsidian">${t('historyAppendToObsidian')}</button>
       </div>
       <div id="sqlite-entry-list" class="sqlite-entry-list">
-        ${state.loading ? `<div class="loading">${t('historyLoading')}</div>` : ''}
+        ${s.loading ? `<div class="loading">${t('historyLoading')}</div>` : ''}
       </div>
       <div id="sqlite-pagination" class="sqlite-pagination"></div>
     `;
 
-    if (!state.loading) {
+    if (!s.loading) {
       const calContainer = document.getElementById('sqlite-calendar-nav');
       if (calContainer) {
-        renderCalendarNav(calContainer, state.selectedDate,
-          { searchQuery: state.searchQuery, activeTagFilter: state.activeTagFilter },
+        renderCalendarNav(calContainer, s.selectedDate,
+          { searchQuery: s.searchQuery, activeTagFilter: s.activeTagFilter },
           {
-            onDateSelect: (d) => void handleDateSelect(d),
-            onRangeSelect: (since, until) => { state.selectedDate = null; state.searchQuery = ''; state.pendingTagFallback = null; state.currentPage = 0; void fetchData({ since, until }); },
-            onClearFilters: () => { state.searchQuery = ''; state.selectedDate = null; state.activeTagFilter = null; state.pendingTagFallback = null; state.currentPage = 0; void fetchData(); },
+            onDateSelect: (d) => void controller.selectDate(d),
+            onRangeSelect: (since, until) => controller.selectDateRange(since, until),
+            onClearFilters: () => controller.clearAllFilters(),
           }
         );
       }
@@ -950,26 +771,26 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       if (sortContainer) {
         renderSortControl(
           sortContainer,
-          state.sortBy,
-          state.sortDir,
-          isFullTextSearchActive(state),
-          (sortBy, sortDir) => void handleSortChange(sortBy, sortDir),
+          s.sortBy,
+          s.sortDir,
+          isFullTextSearchActive(s),
+          (sortBy, sortDir) => void controller.changeSort(sortBy, sortDir),
         );
       }
 
       const listContainer = document.getElementById('sqlite-entry-list');
       if (listContainer) {
-        renderEntryList(listContainer, state.entries, state.selectedIds, state.activeTagFilter, {
+        renderEntryList(listContainer, s.entries, s.selectedIds, s.activeTagFilter, {
           onToggleStar: (id) => void handleToggleStar(id),
           onDelete: (id) => void handleDelete(id),
-          onSelectionChange: (id, selected) => { state = historyStateReducer(state, { type: 'selectionChange', id, selected }); updateBulkBar(state.selectedIds, state.entries); },
-          onTagFilterClick: (tag) => { state = historyStateReducer(state, { type: 'tagFilterClick', tag }); void fetchData({ tagFilter: state.activeTagFilter || undefined, ...dateRangeFromSelected() }); },
+          onSelectionChange: (id, selected) => controller.selectEntry(id, selected),
+          onTagFilterClick: (tag) => controller.filterByTag(tag),
           onContentToggle: (controlsId) => handleContentToggle(controlsId),
         });
       }
 
       const pagContainer = document.getElementById('sqlite-pagination');
-      if (pagContainer) renderPagination(pagContainer, state.currentPage, state.total, PAGE_SIZE, (page) => { state = historyStateReducer(state, { type: 'pageChange', page }); reloadCurrent(); });
+      if (pagContainer) renderPagination(pagContainer, s.currentPage, s.total, PAGE_SIZE, (page) => controller.changePage(page));
     }
 
     const searchInput = document.getElementById('sqlite-search-input') as HTMLInputElement;
@@ -985,26 +806,20 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     const appendBtn = document.getElementById('sqlite-append-obsidian') as HTMLButtonElement | null;
 
     if (selectAllCheckbox) {
-      selectAllCheckbox.checked = state.selectedIds.size > 0 && state.selectedIds.size === state.entries.length;
+      selectAllCheckbox.checked = s.selectedIds.size > 0 && s.selectedIds.size === s.entries.length;
       selectAllCheckbox.addEventListener('change', () => {
-        if (selectAllCheckbox.checked) {
-          state = historyStateReducer(state, { type: 'selectAll', checked: true });
-        } else {
-          state = historyStateReducer(state, { type: 'clearSelection' });
-        }
-        refresh();
+        bulkCallbacks.onSelectAll(selectAllCheckbox.checked);
       });
     }
 
     if (clearSelectionBtn) {
       clearSelectionBtn.addEventListener('click', () => {
-        state = historyStateReducer(state, { type: 'clearSelection' });
-        refresh();
+        bulkCallbacks.onClear();
       });
     }
 
     if (appendBtn) {
-      appendBtn.addEventListener('click', () => void handleAppendToObsidian());
+      appendBtn.addEventListener('click', () => bulkCallbacks.onAppend());
     }
   }
 
@@ -1014,65 +829,6 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     } else {
       renderState();
     }
-  }
-
-  function refreshTagFallbackNotice(): void {
-    const searchArea = container?.querySelector('.sqlite-history-search');
-    if (!searchArea) return;
-    updateTagFilterBar(
-      searchArea as HTMLElement,
-      state.activeTagFilter,
-      state.pendingTagFallback,
-      clearTagFilterAndReload,
-    );
-  }
-
-  async function checkFallbackStatus(): Promise<void> {
-    try {
-      const status = await getSqliteStatus();
-      if (status?.fallback) {
-        state = historyStateReducer(state, { type: 'setFallbackMode' });
-        renderState();
-      }
-    } catch {
-      // Ignore
-    }
-  }
-
-  async function retryInitialLoad(
-    fetchOpts: Parameters<typeof fetchData>[0] = { limit: PAGE_SIZE },
-  ): Promise<void> {
-    const result = await retryWithExponentialBackoff<boolean>(
-      async () => {
-        await fetchData(fetchOpts);
-        return state.error ? null : true;
-      },
-      { label: 'sqliteHistory', maxAttempts: 4 }
-    );
-
-    if (!result) {
-      // Error already set by fetchData
-    }
-    refresh();
-  }
-
-  /**
-   * Consume pending init parameters (set by onActivate before loadData runs)
-   * and return the fetch options to use for the initial load.
-   */
-  function consumePendingInit(): Parameters<typeof fetchData>[0] | null {
-    const init = pendingInit;
-    pendingInit = null;
-    if (!init) return null;
-
-    if (init.searchTag) {
-      return { tagFilter: (init.searchTag as string) || undefined, tagInitiated: true, limit: PAGE_SIZE };
-    }
-    if (init.searchDomain) {
-      const q = (init.searchDomain as string).trim();
-      if (q) return { search: q, limit: PAGE_SIZE };
-    }
-    return null;
   }
 
   return {
@@ -1085,19 +841,15 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       if (!container) return;
 
       isMounted = true;
-      await checkFallbackStatus();
-
-      const persistedSort = await loadPersistedSort();
-      if (persistedSort) {
-        state = { ...state, sortBy: persistedSort.sortBy, sortDir: persistedSort.sortDir };
-      }
+      await controller.checkFallbackStatus();
+      await controller.loadPersistedSortIntoState();
 
       renderState();
 
       // Consume any init params set by onActivate (which runs before loadData)
       // so retryInitialLoad uses the correct search/tag parameters.
-      const fetchOpts = consumePendingInit();
-      void retryInitialLoad(fetchOpts ?? { limit: PAGE_SIZE });
+      const fetchOpts = controller.consumePendingInit();
+      void controller.retryInitialLoad(fetchOpts ?? { limit: PAGE_SIZE });
     },
     unmount() {
       if (searchDebounceTimer !== null) {
@@ -1105,21 +857,15 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         searchDebounceTimer = null;
       }
       isMounted = false;
-      requestGeneration += 1;
+      controller.bumpGenerationOnUnmount();
       // Clear bulk bar listener references
-      state = historyStateReducer(state, { type: 'clearSelection' });
+      controller.clearEntrySelection();
     },
     onActivate(init) {
       if (init?.searchTag) {
-        pendingInit = init;
-        state = historyStateReducer(state, { type: 'tagInitiated', tag: init.searchTag as string });
-        void fetchData({ page: 0, tagFilter: state.activeTagFilter || undefined, tagInitiated: true });
+        controller.activateWithTag(init.searchTag as string);
       } else if (init?.searchDomain) {
-        pendingInit = init;
-        state = historyStateReducer(state, { type: 'domainSearchInitiated', query: init.searchDomain as string });
-        if (state.searchQuery.trim()) {
-          void fetchData({ search: state.searchQuery.trim() });
-        }
+        controller.activateWithDomain(init.searchDomain as string);
       }
     },
   };
