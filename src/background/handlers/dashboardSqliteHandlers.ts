@@ -34,7 +34,7 @@ function toFailure(result: { success: false; error: SqliteError }): { success: f
 
 export interface DashboardSqliteHandlerDeps {
   query: (params: Record<string, unknown>) => Promise<DepsResult<{ rows: unknown[]; total: number }>>;
-  search: (query: string, limit: number, offset: number) => Promise<DepsResult<{ rows: unknown[]; total: number }>>;
+  search: (query: string, limit: number, offset: number, options?: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' }) => Promise<DepsResult<{ rows: unknown[]; total: number }>>;
   toggleStar: (id: number) => Promise<DepsResult<{ is_starred: number }>>;
   delete: (id: number) => Promise<DepsResult<void>>;
   update: (id: number, changes: Record<string, unknown>) => Promise<DepsResult<void>>;
@@ -122,6 +122,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
             payload.query || '',
             payload.limit ?? 50,
             payload.offset ?? 0,
+            { orderBy: payload.orderBy, orderDir: payload.orderDir },
           );
           if (!result.success) {
             return toFailure(result);
