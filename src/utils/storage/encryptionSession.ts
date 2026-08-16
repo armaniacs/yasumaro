@@ -83,6 +83,114 @@ async function deriveKeyFromPassword(password: string, salt: Uint8Array): Promis
     );
 }
 
+/**
+ * マスターパスワードからキーを導出する（マスターパスワード方式専用の分岐）。
+ * @throws {Error} マスターパスワード未入力、またはsaltが破損している場合
+ */
+async function deriveKeyFromMasterPassword(passwordSaltBase64: string | undefined): Promise<CryptoKey> {
+    // 【セキュリティ修正】マスターパスワードが設定されている場合は強制的にロック
+    isMasterPasswordRequired = true;
+
+    if (!cachedMasterPassword) {
+        throw new Error('ENCRYPTION_LOCKED: Master password required');
+    }
+    if (!passwordSaltBase64) {
+        throw new Error('CORRUPTION: Master password salt missing');
+    }
+
+    const passwordSalt = base64ToUint8Array(passwordSaltBase64);
+    // PBKDF2キー導出を直接使用（マスターパスワードベース）
+    // セッションタイムアウトチェックを開始（まだ開始していない場合）
+    // Note: Session timeoutはchrome.alarms APIに移行済み（sessionAlarmsManager.ts）
+    return deriveKeyFromPassword(cachedMasterPassword, passwordSalt);
+}
+
+/**
+ * 直前のバージョンでsession storageに一時的に移されたsecretを、まだSWコンテキストが
+ * 生きていてsession storageが失われていない間にlocalへ復元する（救済マイグレーション）。
+ * アップデートを跨いでsession storageが既にクリアされてしまったユーザーは復旧できない
+ * （＝暗号化済みAPIキーの再入力が必要）。
+ * @returns 復元できた場合はsecret、できなかった場合はundefined
+ */
+async function restoreSecretFromSessionIfPresent(): Promise<string | undefined> {
+    if (!chrome.storage.session) return undefined;
+
+    const sessionResult = await chrome.storage.session.get(StorageKeys.ENCRYPTION_SECRET);
+    const sessionSecret = sessionResult[StorageKeys.ENCRYPTION_SECRET] as string | undefined;
+    if (!sessionSecret) return undefined;
+
+    await chrome.storage.local.set({
+        [StorageKeys.ENCRYPTION_SECRET]: sessionSecret
+    });
+    await chrome.storage.session.remove(StorageKeys.ENCRYPTION_SECRET);
+    return sessionSecret;
+}
+
+/** 初回: ランダムなソルトとシークレットを生成してlocalに保存する。 */
+async function generateAndPersistSecret(): Promise<{ saltBase64: string; secret: string }> {
+    const salt = generateSalt();
+    const saltBase64 = btoa(String.fromCharCode(...salt));
+    // 32バイトのランダムシークレットを生成
+    const secretBytes = crypto.getRandomValues(new Uint8Array(32));
+    const secret = btoa(String.fromCharCode(...secretBytes));
+
+    await chrome.storage.local.set({
+        [StorageKeys.ENCRYPTION_SALT]: saltBase64,
+        [StorageKeys.ENCRYPTION_SECRET]: secret
+    });
+
+    return { saltBase64, secret };
+}
+
+/**
+ * マスターパスワード未設定時のキー取得（従来方式、マイグレーション準備）。
+ *
+ * 【重要】ENCRYPTION_SECRET は chrome.storage.local に保存する。
+ * chrome.storage.session は拡張機能のアップデート時にクリアされる
+ * ("session" storage area, cleared on extension update per Chrome's
+ * Storage API contract) ため、ここに秘密を置くと updateのたびに
+ * 秘密が失われ、既存の暗号化済みAPIキー（Obsidian/AI providerの
+ * トークン）が復号不能になりデータロスを引き起こす（2026-08-12
+ * インシデント: v6.7.42アップデート後にAPIキーが消失した報告）。
+ *
+ * session→local復元と新規secret生成は排他制御する。ロック待ち中に
+ * 別の呼び出しが復元・生成を完了させている可能性があるため、ロック
+ * 取得後は必ず chrome.storage.local を読み直す（ダブルチェック）。
+ */
+async function getOrCreateAnonymousSecretKey(): Promise<CryptoKey> {
+    await encryptionKeyMutex.acquire();
+    try {
+        // 別の呼び出しがロック内で既にキー導出（PBKDF2, ~100k iterations）を
+        // 完了させている場合、そのキャッシュを再利用して重複導出を避ける。
+        if (cachedEncryptionKey) {
+            return cachedEncryptionKey;
+        }
+
+        const recheck = await chrome.storage.local.get([
+            StorageKeys.ENCRYPTION_SALT,
+            StorageKeys.ENCRYPTION_SECRET,
+        ]);
+        let saltBase64 = recheck[StorageKeys.ENCRYPTION_SALT] as string;
+        let secret = recheck[StorageKeys.ENCRYPTION_SECRET] as string;
+
+        if (saltBase64 && !secret) {
+            secret = (await restoreSecretFromSessionIfPresent()) ?? secret;
+        }
+
+        if (!saltBase64 || !secret) {
+            ({ saltBase64, secret } = await generateAndPersistSecret());
+        }
+
+        const salt = base64ToUint8Array(saltBase64);
+
+        // ランダムなsecretとsaltからPBKDF2でキー導出
+        cachedEncryptionKey = await deriveKey(secret, salt);
+        return cachedEncryptionKey;
+    } finally {
+        encryptionKeyMutex.release();
+    }
+}
+
 // ============================================================================
 // Public interface
 // ============================================================================
@@ -116,105 +224,17 @@ export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
     // マスターパスワード設定状態を確認
     const result = await chrome.storage.local.get([
         StorageKeys.MASTER_PASSWORD_ENABLED,
-        StorageKeys.ENCRYPTION_SALT,
-        StorageKeys.ENCRYPTION_SECRET,
         StorageKeys.MASTER_PASSWORD_SALT,
-        StorageKeys.IS_LOCKED
     ]);
 
     const masterPasswordEnabled = result[StorageKeys.MASTER_PASSWORD_ENABLED] as boolean;
 
     if (masterPasswordEnabled) {
-        // 【セキュリティ修正】マスターパスワードが設定されている場合は強制的にロック
-        isMasterPasswordRequired = true;
-
-        if (!cachedMasterPassword) {
-            throw new Error('ENCRYPTION_LOCKED: Master password required');
-        }
-
-        // マスターパスワードからキーを導出
-        const passwordSaltBase64 = result[StorageKeys.MASTER_PASSWORD_SALT] as string;
-        if (!passwordSaltBase64) {
-            throw new Error('CORRUPTION: Master password salt missing');
-        }
-
-        const passwordSalt = base64ToUint8Array(passwordSaltBase64);
-        // PBKDF2キー導出を直接使用（マスターパスワードベース）
-        cachedEncryptionKey = await deriveKeyFromPassword(cachedMasterPassword, passwordSalt);
-        // セッションタイムアウトチェックを開始（まだ開始していない場合）
-        // Note: Session timeoutはchrome.alarms APIに移行済み（sessionAlarmsManager.ts）
+        cachedEncryptionKey = await deriveKeyFromMasterPassword(result[StorageKeys.MASTER_PASSWORD_SALT] as string | undefined);
         return cachedEncryptionKey;
     }
 
-    // マスターパスワード未設定の場合：従来の方式を使用（マイグレーション準備）
-    // 【重要】ENCRYPTION_SECRET は chrome.storage.local に保存する。
-    // chrome.storage.session は拡張機能のアップデート時にクリアされる
-    // ("session" storage area, cleared on extension update per Chrome's
-    // Storage API contract) ため、ここに秘密を置くと updateのたびに
-    // 秘密が失われ、既存の暗号化済みAPIキー（Obsidian/AI providerの
-    // トークン）が復号不能になりデータロスを引き起こす（2026-08-12
-    // インシデント: v6.7.42アップデート後にAPIキーが消失した報告）。
-    let saltBase64: string;
-    let secret: string;
-
-    // session→local復元と新規secret生成は排他制御する。ロック待ち中に
-    // 別の呼び出しが復元・生成を完了させている可能性があるため、ロック
-    // 取得後は必ず chrome.storage.local を読み直す（ダブルチェック）。
-    await encryptionKeyMutex.acquire();
-    try {
-        // 別の呼び出しがロック内で既にキー導出（PBKDF2, ~100k iterations）を
-        // 完了させている場合、そのキャッシュを再利用して重複導出を避ける。
-        if (cachedEncryptionKey) {
-            return cachedEncryptionKey;
-        }
-
-        const recheck = await chrome.storage.local.get([
-            StorageKeys.ENCRYPTION_SALT,
-            StorageKeys.ENCRYPTION_SECRET,
-        ]);
-        saltBase64 = recheck[StorageKeys.ENCRYPTION_SALT] as string;
-        secret = recheck[StorageKeys.ENCRYPTION_SECRET] as string;
-
-        // 救済マイグレーション: 直前のバージョンでsession storageに一時的に
-        // secretが移されたユーザーを、まだSWコンテキストが生きていて
-        // session storageが失われていない間に local へ復元する。
-        // アップデートを跨いでsession storageが既にクリアされてしまった
-        // ユーザーはここに到達しても何も残っていないため復旧できない
-        // （＝暗号化済みAPIキーの再入力が必要）。
-        if (saltBase64 && !secret && chrome.storage.session) {
-            const sessionResult = await chrome.storage.session.get(StorageKeys.ENCRYPTION_SECRET);
-            const sessionSecret = sessionResult[StorageKeys.ENCRYPTION_SECRET] as string | undefined;
-            if (sessionSecret) {
-                secret = sessionSecret;
-                await chrome.storage.local.set({
-                    [StorageKeys.ENCRYPTION_SECRET]: secret
-                });
-                await chrome.storage.session.remove(StorageKeys.ENCRYPTION_SECRET);
-            }
-        }
-
-        if (!saltBase64 || !secret) {
-            // 初回: ソルトとシークレットを生成
-            const salt = generateSalt();
-            saltBase64 = btoa(String.fromCharCode(...salt));
-            // 32バイトのランダムシークレットを生成
-            const secretBytes = crypto.getRandomValues(new Uint8Array(32));
-            secret = btoa(String.fromCharCode(...secretBytes));
-
-            await chrome.storage.local.set({
-                [StorageKeys.ENCRYPTION_SALT]: saltBase64,
-                [StorageKeys.ENCRYPTION_SECRET]: secret
-            });
-        }
-
-        const salt = base64ToUint8Array(saltBase64);
-
-        // ランダムなsecretとsaltからPBKDF2でキー導出
-        cachedEncryptionKey = await deriveKey(secret, salt);
-        return cachedEncryptionKey;
-    } finally {
-        encryptionKeyMutex.release();
-    }
+    return getOrCreateAnonymousSecretKey();
 }
 
 /**
