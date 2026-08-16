@@ -94,7 +94,7 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
     panel.onActivate?.({ searchTag: '教育' });
     await flush();
 
-    expect(mockedDb.searchLogs).toHaveBeenCalledWith('教育', 20, 0);
+    expect(mockedDb.searchLogs).toHaveBeenCalledWith('教育', 20, 0, { orderBy: 'created_at', orderDir: 'DESC' });
     expect(container.innerHTML).toContain('sqlite-tag-fallback-note');
     // The tag badge stays visible alongside the fallback notice.
     expect(container.innerHTML).toContain('#教育');
@@ -157,7 +157,7 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
 
     // Domain navigation runs a normal text search (searchLogs is called), but
     // it is NOT a tag-initiated flow, so no fallback notice appears.
-    expect(mockedDb.searchLogs).toHaveBeenCalledWith('example.com', 20, 0);
+    expect(mockedDb.searchLogs).toHaveBeenCalledWith('example.com', 20, 0, { orderBy: 'created_at', orderDir: 'DESC' });
     expect(container.innerHTML).not.toContain('sqlite-tag-fallback-note');
   });
 
@@ -175,7 +175,7 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
 
     // searchLogs is still attempted (fallback decision fired), but since it
     // returned zero rows the panel shows the empty state with no notice.
-    expect(mockedDb.searchLogs).toHaveBeenCalledWith('nonexistent', 20, 0);
+    expect(mockedDb.searchLogs).toHaveBeenCalledWith('nonexistent', 20, 0, { orderBy: 'created_at', orderDir: 'DESC' });
     expect(container.innerHTML).not.toContain('sqlite-tag-fallback-note');
   });
 
@@ -197,7 +197,7 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
     panel.onActivate?.({ searchTag: '教育' });
     await flush();
 
-    expect(mockedDb.searchLogs).toHaveBeenCalledWith('教育', 20, 0);
+    expect(mockedDb.searchLogs).toHaveBeenCalledWith('教育', 20, 0, { orderBy: 'created_at', orderDir: 'DESC' });
     // The error container is visible and the fallback notice is not shown.
     expect(container.innerHTML).toContain('sqlite-history-error');
     expect(container.innerHTML).not.toContain('sqlite-history-error hidden');
