@@ -25,6 +25,7 @@
 | `src/background/sqliteClient.ts` | `searchResult()` gains `orderBy`/`orderDir` param, forwards into `SQLITE_SEARCH` message payload (Task 4.5, plan gap found 2026-08-16) |
 | `src/background/handlers/dashboardSqliteHandlers.ts` (`createSqliteClientDeps`) | production `deps.search` wiring forwards the 4th arg to `sqliteClient.searchResult` (Task 4.5, plan gap found 2026-08-16) |
 | `src/offscreen/offscreen.ts` | `case 'SQLITE_SEARCH':` forwards `orderBy`/`orderDir` from the message payload into `recordsRepo.search()` (folded into Task 5, plan gap found 2026-08-16) |
+| `src/messaging/sqliteMessages.ts` | `SqliteMessage`'s `SQLITE_SEARCH` variant's `payload` type gains `orderBy`/`orderDir` fields (folded into Task 5, second plan gap found 2026-08-16 during Task 5's own implementation) |
 | `src/offscreen/recordsRepo.ts` | `search()` gains `orderBy`/`orderDir` params, passes to backend |
 | `src/offscreen/IdbVfsBackend.ts` | `search()` branches `ORDER BY` between `rank` and `created_at {dir}, id {dir}` |
 | `src/offscreen/opfsWorker.ts` | `handleSearch`/`handleSearchFts`/`handleSearchLike` gain the same branch |
@@ -664,6 +665,7 @@ git commit -m "fix: forward orderBy/orderDir through sqliteClient.searchResult a
 **Files:**
 - Modify: `src/offscreen/recordsRepo.ts`
 - Modify: `src/offscreen/offscreen.ts` (the `case 'SQLITE_SEARCH':` message handler — see the plan-gap note above)
+- Modify: `src/messaging/sqliteMessages.ts` (the `SQLITE_SEARCH` payload type — see Step 1b's plan-gap note)
 - Test: none required for `recordsRepo.ts` specifically (it is a thin passthrough); covered end-to-end by Task 6-8 backend tests. Verify manually with a type-check. For `offscreen.ts`, check for an existing test file first (see Step 1a).
 
 - [ ] **Step 1: Implement the recordsRepo.ts change**
@@ -709,17 +711,56 @@ In `src/offscreen/offscreen.ts`, update the `case 'SQLITE_SEARCH':` block:
         }
 ```
 
-Note: `msg.payload.orderBy`/`msg.payload.orderDir` cross a `chrome.runtime.sendMessage` boundary, so the `as` casts here are compile-time only, same caveat as elsewhere in this plan — the actual runtime validation happens downstream in `IdbVfsBackend.search()`/`opfsWorker.ts`'s whitelist checks (Task 6/Task 7), not here. This handler is a pure passthrough and does not need its own validation.
+- [ ] **Step 1b: Fix the root cause of the `msg.payload.orderBy` type error — `sqliteMessages.ts`**
+
+**Second plan gap found, during Task 5's own implementation (2026-08-16):** the `as 'rank' | 'created_at' | undefined` / `as 'ASC' | 'DESC' | undefined` casts in Step 1a exist only because `msg.payload`'s real type doesn't have those fields. Run:
+
+Run: `grep -n "SQLITE_SEARCH" src/messaging/sqliteMessages.ts`
+
+You will find the `SqliteMessage` discriminated union's `SQLITE_SEARCH` variant typed as:
+
+```ts
+| { type: 'SQLITE_SEARCH'; payload: { query: string; limit?: number; offset?: number }; traceId?: string }
+```
+
+This is the actual source type `msg.payload` in `offscreen.ts`'s `case 'SQLITE_SEARCH':` resolves to (via `SqliteMessage` narrowing) — it does not include `orderBy`/`orderDir`, which is why Step 1a's code needs `as` casts to compile at all, and why `npx tsc --noEmit` will still report 2 errors at those cast lines even after Step 1a's code is in place (the casts silence the immediate assignment but the underlying payload type is still wrong, so anything downstream that inspects `msg.payload` directly — not through the cast variables — stays unsound).
+
+Fix the type at its source instead of casting around it. Update the `SQLITE_SEARCH` variant in `src/messaging/sqliteMessages.ts`:
+
+```ts
+| { type: 'SQLITE_SEARCH'; payload: { query: string; limit?: number; offset?: number; orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' }; traceId?: string }
+```
+
+Then simplify Step 1a's `offscreen.ts` code to drop the now-unnecessary `as` casts — `msg.payload.orderBy`/`msg.payload.orderDir` are now correctly typed without them:
+
+```ts
+        case 'SQLITE_SEARCH': {
+            const searchQuery = String(msg.payload.query || '');
+            const limit = msg.payload.limit != null ? Number(msg.payload.limit) : 50;
+            const offset = msg.payload.offset != null ? Number(msg.payload.offset) : 0;
+            const result = await sqliteSearch(searchQuery, limit, offset, {
+              orderBy: msg.payload.orderBy,
+              orderDir: msg.payload.orderDir,
+            });
+            sendResponse(result);
+            break;
+        }
+```
+
+Run: `npx tsc --noEmit` and confirm the 2 errors previously at `offscreen.ts`'s `orderBy`/`orderDir` cast lines are now gone (only the expected, separate `recordsRepo.ts`→`backend.search()` 4-arg mismatch should remain — that one is Task 6's responsibility, not this task's).
+```
+
+Note (superseded by Step 1b below — read Step 1b before writing final code): `msg.payload.orderBy`/`msg.payload.orderDir` cross a `chrome.runtime.sendMessage` boundary, so any casts used here are compile-time only, same caveat as elsewhere in this plan — the actual runtime validation happens downstream in `IdbVfsBackend.search()`/`opfsWorker.ts`'s whitelist checks (Task 6/Task 7), not here. This handler is a pure passthrough and does not need its own validation. Fixing the source type in Step 1b removes the need for `as` casts entirely; the note about runtime validation still applies (the type fix does not add runtime validation, it only removes an unnecessary compile-time cast).
 
 - [ ] **Step 2: Type-check**
 
 Run: `npm run type-check`
-Expected: This will show errors in `StorageBackend` implementations (`IdbVfsBackend`, OPFS-related, `FallbackStorageAdapter`) because their `search()` signatures don't yet accept the 4th `options` param, and in the `StorageBackend` interface itself. This is expected — Task 6 fixes the interface and all implementations. Do not attempt to fix those errors in this task.
+Expected after Step 1b's fix: the `msg.payload.orderBy`/`orderDir` errors in `offscreen.ts` are gone. You will still see an error in `recordsRepo.ts` where `backend.search(...)` is called with 4 args but `StorageBackend.search()` still expects 3 — that is expected and is Task 6's responsibility, not this task's. Confirm via `git stash` / `npm run type-check` / `git stash pop` (or equivalent) that no OTHER new errors were introduced beyond that one expected one.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/offscreen/recordsRepo.ts src/offscreen/offscreen.ts
+git add src/offscreen/recordsRepo.ts src/offscreen/offscreen.ts src/messaging/sqliteMessages.ts
 git commit -m "feat: pass orderBy/orderDir from recordsRepo.search to the backend"
 ```
 
@@ -2010,3 +2051,11 @@ While implementing Task 4, the implementer subagent correctly noticed that the p
 Without fixing these three spots, every other task (1-3, 4, 6-10) would pass its own unit tests — each mocks its direct caller/callee, so a broken link elsewhere in the chain is invisible to any single task's tests — while the feature does nothing in production: `orderBy`/`orderDir` would be silently dropped at the `sqliteClient`/message-layer boundary before ever reaching the offscreen document's backends. This is exactly the kind of gap the plan's own Task 11 manual verification step exists to catch, but catching it there (after all 11 tasks are believed done) would be far more expensive than catching it now.
 
 Resolution: inserted a new **Task 4.5** (`sqliteClient.searchResult` + `createSqliteClientDeps` wiring) between Task 4 and Task 5, and folded the `offscreen.ts` fix into **Task 5** (adjacent to that task's existing `recordsRepo.ts` change — same `search()` call, one layer up). File Map updated to list all three previously-missing files.
+
+### Second plan gap found during Task 5's own implementation (2026-08-16) — `sqliteMessages.ts`
+
+While implementing Task 5's `offscreen.ts` change (per the brief's own written code, using `as 'rank' | 'created_at' | undefined` casts on `msg.payload.orderBy`/`orderDir`), the implementer correctly ran `npx tsc --noEmit` per Step 2 and found 2 unexplained errors beyond the one expected `recordsRepo.ts`→`backend.search()` mismatch (that one is Task 6's, already anticipated). Root cause, traced by the controller: `src/messaging/sqliteMessages.ts`'s `SqliteMessage` discriminated union types the `SQLITE_SEARCH` variant's `payload` as `{ query: string; limit?: number; offset?: number }` — no `orderBy`/`orderDir` fields — which is the actual source of `msg.payload`'s type in `offscreen.ts` after `SqliteMessage` narrowing. The brief's `as` casts compiled around this locally but did not fix the underlying type, meaning `tsc --noEmit` still failed at those exact cast lines (a cast on an already-`any`-shaped access does not make the assignment type-correct when the source object's declared type lacks the field being cast).
+
+This third file was also absent from the original plan's File Map. Resolution: folded into Task 5 as a new **Step 1b**, which fixes `sqliteMessages.ts`'s `SQLITE_SEARCH` payload type directly and removes the now-unnecessary `as` casts from Step 1a's `offscreen.ts` code, restoring genuine type safety instead of casting around a wrong type. File Map updated to list `sqliteMessages.ts`.
+
+**Pattern across both plan gaps:** each was found by actually running `tsc --noEmit` / following the exact code the plan specified rather than assuming it would compile — the first (Task 4.5) surfaced from the controller independently reading the production wiring code the plan never mentioned; the second (this one) surfaced from an implementer correctly executing the plan's own Step 2 type-check instruction and not dismissing an unexplained error as someone else's problem. Both suggest the original plan's authoring pass (three prior review rounds, all document-level) under-verified the message-passing/wiring layer specifically — code that lives between the layers explicitly named in the File Map, rather than in any single named file.
