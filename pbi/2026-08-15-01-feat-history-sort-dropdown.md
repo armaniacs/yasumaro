@@ -70,6 +70,7 @@ Scenario: 日付フィルタとソートを併用する
 - [ ] 検索クエリを空にすると、ソートが「関連度順」だった場合は「新しい順」に自動フォールバックする
 - [ ] 選択したソート設定が `chrome.storage.local` に永続化され、ダッシュボード再読み込み後も引き継がれる
 - [ ] 3つの検索バックエンド（`IdbVfsBackend`／OPFS Worker／`FallbackStorageAdapter`）すべてで `orderBy`/`orderDir` に応じた `ORDER BY` 分岐が機能する
+- [ ] `orderBy`/`orderDir` が `dashboardSqliteService.searchLogs()` からバックエンドまでの全経路（`sqliteClient.searchResult()` の本番配線 `createSqliteClientDeps`、`offscreen.ts` のメッセージハンドラを含む）で途切れずに伝播する — 実装中の調査でこの2箇所が当初の実装計画から漏れていたことが判明し、Task 4.5として追加・Task 5に統合した
 - [ ] ソート変更時、ページングは1ページ目にリセットされる
 - [ ] タグフィルタ・日付フィルタと併用してもソートが正しく適用される（ただし既知の制約: タグフィルタ有効時は `TAG_FILTER_FETCH_LIMIT`=5000件のクライアント側取得が発生するため、「古い順」選択時は直近5000件超のタグ付き記録が表示対象から漏れうる — 実装計画Task 2「Known limitation」参照。この制約自体の解消は本PBIのスコープ外）
 - [ ] 既存の期間フィルタボタン（今日/昨日/過去7日間/過去30日間）・カレンダー日付選択の挙動に変更がない
