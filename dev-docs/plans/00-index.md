@@ -13,6 +13,7 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 - 更新 2026-07-11（完了済みPBI/plan/specファイルをarchiveへ再整理。`pbi/archive/`, `docs/superpowers/archive/`, `dev-docs/specs/archive-old/` を新設）
 - 更新 2026-07-27（非機能PBIセクションを修正。PBI-13, 15, 24, 26, 27, 29/35/36, 34は完了またはADR記録済みでアーカイブ済み）
 - 更新 2026-08-09（完了PBIに対応する実装計画9件を `dev-docs/archived/plans/` へ移動。「現在の実装計画」セクションを新設し、残存ファイルを一覧化）
+- 更新 2026-08-17（完了済みの実装計画・設計14件を `dev-docs/archived/{plans,specs}/` へ移動。pbi20-24 の実装計画は v6.7.29 で完了・archive 済みのため一覧から除去）
 
 完了済み計画ファイルの移動先は `dev-docs/archived/plans/`。
 （古い記述にある `dev-docs/plans/archive-old/` は現存しない）
@@ -121,15 +122,10 @@ Checking Team レビューから起票した非機能PBI（PBI-13 / 15 / 24 / 26
 
 ## 現在の実装計画
 
-`dev-docs/plans/` に残っているのは**未完了PBIの実装計画と、恒常的な運用ドキュメント**のみ。
+`dev-docs/plans/` に残っているのは**恒常的な運用ドキュメント**のみ。
 
 | ファイル | 対象 | 状態 |
 |---------|------|------|
-| [2026-08-09-pbi20-cleansing-rule-single-source-plan.md](2026-08-09-pbi20-cleansing-rule-single-source-plan.md) | PBI 2026-08-09-20 | ⬜ 未着手（実施順1） |
-| [2026-08-09-pbi21-sqlite-write-result-union-plan.md](2026-08-09-pbi21-sqlite-write-result-union-plan.md) | PBI 2026-08-09-21 | ⬜ 未着手（実施順2） |
-| [2026-08-09-pbi22-shallow-static-form-panels-plan.md](2026-08-09-pbi22-shallow-static-form-panels-plan.md) | PBI 2026-08-09-22 | ⬜ 未着手（実施順3） |
-| [2026-08-09-pbi23-sqlite-transport-layers-plan.md](2026-08-09-pbi23-sqlite-transport-layers-plan.md) | PBI 2026-08-09-23 | ⬜ 未着手（実施順4・Epic） |
-| [2026-08-09-pbi24-dashboard-reverse-dependency-plan.md](2026-08-09-pbi24-dashboard-reverse-dependency-plan.md) | PBI 2026-08-09-24 | ⬜ 未着手（実施順5） |
 | [2026-06-29-maintenance-plan.md](2026-06-29-maintenance-plan.md) | 定期メンテナンス | 📌 恒常ドキュメント |
 | [verified-crx-upload.md](verified-crx-upload.md) | CWS検証済みCRXアップロード | 📌 恒常ドキュメント |
 
