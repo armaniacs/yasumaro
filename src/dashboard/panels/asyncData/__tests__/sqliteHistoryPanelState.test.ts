@@ -51,6 +51,8 @@ describe('createInitialHistoryState', () => {
       selectedIds: new Set(),
       activeTagFilter: null,
       pendingTagFallback: null,
+      sortBy: 'created_at',
+      sortDir: 'DESC',
     });
   });
 });
@@ -417,5 +419,60 @@ describe('historyStateReducer — fallback mode and state identity', () => {
     ] as const) {
       expect(historyStateReducer(state, action)).not.toBe(state);
     }
+  });
+});
+
+describe('historyStateReducer — sort', () => {
+  it('createInitialHistoryState defaults to created_at DESC', () => {
+    const state = createInitialHistoryState();
+    expect(state.sortBy).toBe('created_at');
+    expect(state.sortDir).toBe('DESC');
+  });
+
+  it('sortChange sets sortBy/sortDir and resets to page 0', () => {
+    const state = makeState({ currentPage: 3, sortBy: 'created_at', sortDir: 'DESC' });
+    const next = historyStateReducer(state, { type: 'sortChange', sortBy: 'created_at', sortDir: 'ASC' });
+    expect(next.sortBy).toBe('created_at');
+    expect(next.sortDir).toBe('ASC');
+    expect(next.currentPage).toBe(0);
+  });
+
+  it('sortChange to relevance is accepted as-is', () => {
+    const state = makeState({ sortBy: 'created_at', sortDir: 'DESC' });
+    const next = historyStateReducer(state, { type: 'sortChange', sortBy: 'relevance', sortDir: 'DESC' });
+    expect(next.sortBy).toBe('relevance');
+  });
+
+  it('search clearing the query falls back from relevance to created_at DESC', () => {
+    const state = makeState({ sortBy: 'relevance', sortDir: 'DESC', searchQuery: 'foo' });
+    const next = historyStateReducer(state, { type: 'search', query: '' });
+    expect(next.sortBy).toBe('created_at');
+    expect(next.sortDir).toBe('DESC');
+  });
+
+  it('search starting a query (empty to non-empty) switches sortBy to relevance', () => {
+    const state = makeState({ sortBy: 'created_at', sortDir: 'ASC', searchQuery: '' });
+    const next = historyStateReducer(state, { type: 'search', query: 'bar' });
+    expect(next.sortBy).toBe('relevance');
+  });
+
+  it('search refining an already-active query does not override an explicit created_at sort', () => {
+    const state = makeState({ sortBy: 'created_at', sortDir: 'ASC', searchQuery: 'ba' });
+    const next = historyStateReducer(state, { type: 'search', query: 'bar' });
+    expect(next.sortBy).toBe('created_at');
+    expect(next.sortDir).toBe('ASC');
+  });
+
+  it('search refining an already-active relevance-sorted query keeps relevance', () => {
+    const state = makeState({ sortBy: 'relevance', sortDir: 'DESC', searchQuery: 'ba' });
+    const next = historyStateReducer(state, { type: 'search', query: 'bar' });
+    expect(next.sortBy).toBe('relevance');
+  });
+
+  it('search clearing the query leaves a created_at sort untouched', () => {
+    const state = makeState({ sortBy: 'created_at', sortDir: 'ASC', searchQuery: 'foo' });
+    const next = historyStateReducer(state, { type: 'search', query: '' });
+    expect(next.sortBy).toBe('created_at');
+    expect(next.sortDir).toBe('ASC');
   });
 });

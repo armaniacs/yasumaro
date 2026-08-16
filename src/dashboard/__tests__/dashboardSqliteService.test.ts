@@ -117,6 +117,22 @@ describe('dashboardSqliteService', () => {
       const result = await searchLogs('test');
       expect(result).toEqual({ error: 'Timeout' });
     });
+
+    it('passes orderBy/orderDir through to the message payload', async () => {
+      givenResponse({ success: true, rows: [], total: 0 });
+      await searchLogs('kddi', 20, 0, { orderBy: 'created_at', orderDir: 'ASC' });
+      expect((globalThis as any).chrome.runtime.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ payload: expect.objectContaining({ subtype: 'search', query: 'kddi', limit: 20, offset: 0, orderBy: 'created_at', orderDir: 'ASC' }) })
+      );
+    });
+
+    it('omits orderBy/orderDir from the payload when not provided', async () => {
+      givenResponse({ success: true, rows: [], total: 0 });
+      await searchLogs('kddi', 20, 0);
+      const call = (globalThis as any).chrome.runtime.sendMessage.mock.calls[(globalThis as any).chrome.runtime.sendMessage.mock.calls.length - 1][0];
+      expect(call.payload.orderBy).toBeUndefined();
+      expect(call.payload.orderDir).toBeUndefined();
+    });
   });
 
   describe('toggleStar', () => {

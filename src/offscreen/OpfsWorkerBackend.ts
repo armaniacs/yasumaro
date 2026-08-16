@@ -22,8 +22,13 @@ export class OpfsWorkerBackend implements StorageBackend {
     return { success: true, rows: result.rows as BrowsingLogEntry[], total: result.total };
   }
 
-  async search(query: string, limit: number, offset: number): Promise<BackendOrError<SearchResult>> {
-    const result = await this.engine.tryOpfsProxy<{ rows: (BrowsingLogRecord & { rank: number })[]; total: number }>('SEARCH', { searchQuery: query, limit, offset });
+  async search(
+    query: string,
+    limit: number,
+    offset: number,
+    options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
+  ): Promise<BackendOrError<SearchResult>> {
+    const result = await this.engine.tryOpfsProxy<{ rows: (BrowsingLogRecord & { rank: number })[]; total: number }>('SEARCH', { searchQuery: query, limit, offset, orderBy: options.orderBy, orderDir: options.orderDir });
     if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
     return { success: true, rows: result.rows as (BrowsingLogEntry & { rank: number })[], total: result.total };
   }

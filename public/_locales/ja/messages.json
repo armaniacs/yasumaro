@@ -3252,6 +3252,18 @@
   "historyLast30Days": {
     "message": "過去30日間"
   },
+  "historySortLabel": {
+    "message": "並び替え"
+  },
+  "historySortNewest": {
+    "message": "新しい順"
+  },
+  "historySortOldest": {
+    "message": "古い順"
+  },
+  "historySortRelevance": {
+    "message": "関連度順"
+  },
   "historyPrev": {
     "message": "前へ"
   },

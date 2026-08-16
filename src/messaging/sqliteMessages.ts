@@ -18,7 +18,7 @@ export type SqliteMessage =
   | { type: 'SQLITE_QUERY'; payload?: Partial<QueryOptions>; traceId?: string }
   | { type: 'SQLITE_AUDIT_LOG_INSERT'; payload: { provider: string; url: string; created_at: number }; traceId?: string }
   | { type: 'SQLITE_AUDIT_LOG_QUERY'; payload?: { limit?: number; offset?: number }; traceId?: string }
-  | { type: 'SQLITE_SEARCH'; payload: { query: string; limit?: number; offset?: number }; traceId?: string }
+  | { type: 'SQLITE_SEARCH'; payload: { query: string; limit?: number; offset?: number; orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' }; traceId?: string }
   | { type: 'SQLITE_UPDATE'; payload: { id: number } & Partial<Record<string, unknown>>; traceId?: string }
   | { type: 'SQLITE_DELETE'; payload: { id: number }; traceId?: string }
   | { type: 'SQLITE_TOGGLE_STAR'; payload: { id: number }; traceId?: string }

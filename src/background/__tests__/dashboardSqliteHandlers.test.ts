@@ -1,6 +1,37 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { dispatchDashboardSqlite } from '../handlers/__tests__/dashboardSqliteTestHarness.js';
+import { createDashboardSqliteHandler } from '../handlers/dashboardSqliteHandlers.js';
+import type { DashboardSqliteHandlerDeps } from '../handlers/dashboardSqliteHandlers.js';
 import { SqliteClient } from '../sqliteClient.js';
+
+/** Minimal full DashboardSqliteHandlerDeps stub, only `search` overridden per test. */
+function makeBaseDeps(overrides: Partial<DashboardSqliteHandlerDeps> = {}): DashboardSqliteHandlerDeps {
+  return {
+    query: async () => ({ success: true, data: { rows: [], total: 0 } }),
+    search: async () => ({ success: true, data: { rows: [], total: 0 } }),
+    toggleStar: async () => ({ success: true, data: { is_starred: 0 } }),
+    delete: async () => ({ success: true, data: undefined }),
+    update: async () => ({ success: true, data: undefined }),
+    getCount: async () => ({ success: true, data: 0 }),
+    clearAll: async () => ({ success: true, data: undefined }),
+    insert: async () => ({ success: true, data: { id: 1 } }),
+    getSettings: async () => ({}),
+    formatEntriesToMarkdown: () => null,
+    appendToDailyNote: async () => {},
+    restoreDb: async () => ({ success: true, data: undefined }),
+    getStatus: async () => null,
+    runOpfsSpike: async () => ({ success: true, data: {} }),
+    purgeOldRecords: async () => ({ success: true, data: { purged: 0 } }),
+    purgeContent: async () => ({ success: true, data: { purged: 0 } }),
+    backupDb: async () => ({ success: true, data: new Uint8Array() }),
+    runMigration: async () => ({ success: false, error: 'n/a', count: 0, read: 0, inserted: 0 }),
+    getConfirmToken: async () => '',
+    runBackfill: async () => ({ updated: 0, total: 0 }),
+    runCleanup: async () => ({ removed: [], totalBytes: 0 }),
+    queryAuditLog: async () => ({ success: true, data: { rows: [], total: 0 } }),
+    ...overrides,
+  };
+}
 
 describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
   let sqliteClient: SqliteClient;
@@ -115,6 +146,13 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
       { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toMatchObject({ success: false });
+  });
+
+  it('passes orderBy/orderDir through to deps.search', async () => {
+    const search = vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
+    const handler = createDashboardSqliteHandler(makeBaseDeps({ search }));
+    await handler({ subtype: 'search', query: 'kddi', limit: 20, offset: 0, orderBy: 'created_at', orderDir: 'ASC' });
+    expect(search).toHaveBeenCalledWith('kddi', 20, 0, { orderBy: 'created_at', orderDir: 'ASC' });
   });
 });
 

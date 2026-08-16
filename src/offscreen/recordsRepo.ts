@@ -48,12 +48,17 @@ export async function query(options: QueryOptions = {}): Promise<{
 /**
  * Full-text search using FTS5.
  */
-export async function search(searchQuery: string, limit: number = 50, offset: number = 0): Promise<{
+export async function search(
+  searchQuery: string,
+  limit: number = 50,
+  offset: number = 0,
+  options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
+): Promise<{
   success: true; rows: SearchResult[]; total: number
 } | { success: false; error: string }> {
   limit = Math.min(limit, MAX_QUERY_LIMIT);
   const backend = await engine.getBackend();
-  const result = await backend.search(searchQuery, limit, offset);
+  const result = await backend.search(searchQuery, limit, offset, options);
   if (!result.success) return result;
   return { success: true, rows: result.rows as unknown as SearchResult[], total: result.total };
 }

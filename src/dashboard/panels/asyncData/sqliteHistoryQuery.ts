@@ -174,6 +174,9 @@ export interface UnifiedHistoryQueryOptions {
   tagFilter?: string;
   /** True when the tag filter came from a Tag Cluster navigation. */
   tagInitiated?: boolean;
+  /** Sort applied to results. 'relevance' is only meaningful when `search` is set. */
+  sortBy?: 'created_at' | 'relevance';
+  sortDir?: 'ASC' | 'DESC';
 }
 
 export interface UnifiedHistoryQueryData {
@@ -265,7 +268,10 @@ export async function queryHistory(
   let tagFallback: UnifiedHistoryQueryData['tagFallback'];
 
   if (options.search) {
-    const searchResult = await searchRows(options.search, options.limit, options.offset);
+    const sortBy = options.sortBy ?? 'relevance';
+    const orderBy = sortBy === 'relevance' ? 'rank' : 'created_at';
+    const orderDir = options.sortDir ?? 'DESC';
+    const searchResult = await searchRows(options.search, options.limit, options.offset, { orderBy, orderDir });
     if (isServiceError(searchResult)) return searchResult;
     rows = searchResult.data.rows;
     total = searchResult.data.total;
@@ -279,7 +285,16 @@ export async function queryHistory(
       since: options.since,
       until: options.until,
       orderBy: 'created_at',
-      orderDir: 'DESC',
+      // NOTE: when a tag filter is active, this over-fetch is capped at
+      // TAG_FILTER_FETCH_LIMIT and tag matching runs client-side (see
+      // filterRowsByTag). Before sortDir was user-controlled, this fetch was
+      // always DESC, so the cap consistently meant "the most recent N rows,
+      // tag-filtered client-side". Now that orderDir follows the user's sort
+      // choice, selecting "oldest first" with a tag filter active flips this
+      // to ASC, so the cap instead means "the oldest N rows" — any tagged
+      // entries newer than the Nth-oldest row are silently excluded from
+      // that view. This is a known limitation, not a bug to fix here.
+      orderDir: options.sortDir ?? 'DESC',
     });
     if (isServiceError(queryResult)) return queryResult;
 
@@ -291,7 +306,10 @@ export async function queryHistory(
         options.tagFilter,
       );
       if (fallbackTerm) {
-        const searchResult = await searchRows(fallbackTerm, options.limit, options.offset);
+        const sortBy = options.sortBy ?? 'relevance';
+        const orderBy = sortBy === 'relevance' ? 'rank' : 'created_at';
+        const orderDir = options.sortDir ?? 'DESC';
+        const searchResult = await searchRows(fallbackTerm, options.limit, options.offset, { orderBy, orderDir });
         if (isServiceError(searchResult)) {
           // A failed fallback search must not return the raw over-fetched rows
           // as a successful result; surface the error so the panel can show it.

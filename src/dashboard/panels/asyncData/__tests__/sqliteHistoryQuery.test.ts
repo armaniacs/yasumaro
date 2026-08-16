@@ -259,7 +259,7 @@ describe('queryHistory', () => {
 
     const result = await queryHistory({ ...baseOptions, search: 'rust' }, sources);
 
-    expect(sources.searchLogs).toHaveBeenCalledWith('rust', 20, 0);
+    expect(sources.searchLogs).toHaveBeenCalledWith('rust', 20, 0, { orderBy: 'rank', orderDir: 'DESC' });
     expect(sources.queryLogs).not.toHaveBeenCalled();
     expect(result).toEqual({
       data: {
@@ -350,7 +350,7 @@ describe('queryHistory', () => {
 
     const result = await queryHistory({ ...baseOptions, tagFilter: '教育', tagInitiated: true }, sources);
 
-    expect(sources.searchLogs).toHaveBeenCalledWith('教育', 20, 0);
+    expect(sources.searchLogs).toHaveBeenCalledWith('教育', 20, 0, { orderBy: 'rank', orderDir: 'DESC' });
     expect(result.data.tagFallback).toEqual({
       searchQuery: '教育',
       pendingTagFallback: { tag: '教育', fallbackTo: '教育', matched: 54 },
@@ -366,7 +366,7 @@ describe('queryHistory', () => {
 
     const result = await queryHistory({ ...baseOptions, tagFilter: 'nonexistent', tagInitiated: true }, sources);
 
-    expect(sources.searchLogs).toHaveBeenCalledWith('nonexistent', 20, 0);
+    expect(sources.searchLogs).toHaveBeenCalledWith('nonexistent', 20, 0, { orderBy: 'rank', orderDir: 'DESC' });
     expect(result.data.tagFallback).toEqual({
       searchQuery: 'nonexistent',
       pendingTagFallback: null,
@@ -459,5 +459,47 @@ describe('queryHistory', () => {
     const rows = (result.data as { rows: BrowsingLogEntry[] }).rows;
     expect(rows[0]).toBe(older);
     expect(rows[1].sent_tokens).toBe(42);
+  });
+
+  it('passes sortBy=created_at/sortDir=ASC through to queryLogs as orderBy/orderDir on the non-search path', async () => {
+    const sources = makeSources();
+    await queryHistory({ limit: 20, offset: 0, sortBy: 'created_at', sortDir: 'ASC' }, sources);
+    expect(sources.queryLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ orderBy: 'created_at', orderDir: 'ASC' })
+    );
+  });
+
+  it('defaults to created_at DESC on the non-search path when sortBy/sortDir are omitted', async () => {
+    const sources = makeSources();
+    await queryHistory({ limit: 20, offset: 0 }, sources);
+    expect(sources.queryLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ orderBy: 'created_at', orderDir: 'DESC' })
+    );
+  });
+
+  it('passes orderBy=created_at/orderDir to searchLogs when sortBy=created_at on the search path', async () => {
+    const sources = makeSources();
+    await queryHistory({ search: 'kddi', limit: 20, offset: 0, sortBy: 'created_at', sortDir: 'ASC' }, sources);
+    expect(sources.searchLogs).toHaveBeenCalledWith('kddi', 20, 0, { orderBy: 'created_at', orderDir: 'ASC' });
+  });
+
+  it('passes orderBy=rank to searchLogs when sortBy=relevance on the search path', async () => {
+    const sources = makeSources();
+    await queryHistory({ search: 'kddi', limit: 20, offset: 0, sortBy: 'relevance', sortDir: 'DESC' }, sources);
+    expect(sources.searchLogs).toHaveBeenCalledWith('kddi', 20, 0, { orderBy: 'rank', orderDir: 'DESC' });
+  });
+
+  it('defaults to orderBy=rank on the search path when sortBy is omitted', async () => {
+    const sources = makeSources();
+    await queryHistory({ search: 'kddi', limit: 20, offset: 0 }, sources);
+    expect(sources.searchLogs).toHaveBeenCalledWith('kddi', 20, 0, { orderBy: 'rank', orderDir: 'DESC' });
+  });
+
+  it('forwards sortDir into the tag-filter over-fetch query (not hardcoded to DESC)', async () => {
+    const sources = makeSources({ queryLogs: vi.fn().mockResolvedValue({ data: { rows: [], total: 0 } }) });
+    await queryHistory({ limit: 20, offset: 0, tagFilter: 'work', sortDir: 'ASC' }, sources);
+    expect(sources.queryLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ orderDir: 'ASC' })
+    );
   });
 });
