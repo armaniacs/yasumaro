@@ -76,6 +76,58 @@ function buildCleansingProgressBarHtml(entry: BrowsingLogEntry): string {
   </div>`;
 }
 
+const HISTORY_SORT_STORAGE_KEY = 'history_sort_preference';
+
+function sortSelectValue(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): string {
+  return `${sortBy}:${sortDir}`;
+}
+
+function parseSortSelectValue(value: string): { sortBy: SqliteHistoryState['sortBy']; sortDir: SqliteHistoryState['sortDir'] } {
+  const [sortBy, sortDir] = value.split(':');
+  return {
+    sortBy: sortBy === 'relevance' ? 'relevance' : 'created_at',
+    sortDir: sortDir === 'ASC' ? 'ASC' : 'DESC',
+  };
+}
+
+async function loadPersistedSort(): Promise<{ sortBy: SqliteHistoryState['sortBy']; sortDir: SqliteHistoryState['sortDir'] } | null> {
+  try {
+    const items = await chrome.storage.local.get(HISTORY_SORT_STORAGE_KEY);
+    const raw = items[HISTORY_SORT_STORAGE_KEY];
+    if (typeof raw !== 'string') return null;
+    const parsed = JSON.parse(raw) as { sortBy?: string; sortDir?: string };
+    if (parsed.sortBy !== 'created_at' && parsed.sortBy !== 'relevance') return null;
+    if (parsed.sortDir !== 'ASC' && parsed.sortDir !== 'DESC') return null;
+    return { sortBy: parsed.sortBy, sortDir: parsed.sortDir };
+  } catch {
+    return null;
+  }
+}
+
+async function persistSort(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): Promise<void> {
+  try {
+    await chrome.storage.local.set({ [HISTORY_SORT_STORAGE_KEY]: JSON.stringify({ sortBy, sortDir }) });
+  } catch (error) {
+    console.error('Failed to persist history sort preference:', error);
+  }
+}
+
+/**
+ * True only when queryHistory will actually take the FTS5 search path
+ * (searchLogs, with a real `rank`) — not merely when the search box has
+ * text in it. A tag click populates the search box as a display label
+ * without running a full-text search (see fetchData's tagInitiated path,
+ * which passes tagFilter but never search); relevance sort has nothing to
+ * rank against there. A tag-fallback search (pendingTagFallback set) does
+ * run FTS5 even while activeTagFilter is still set, so it must not be
+ * excluded by a blanket "activeTagFilter present" check.
+ */
+function isFullTextSearchActive(state: SqliteHistoryState): boolean {
+  if (!state.searchQuery.trim()) return false;
+  if (!state.activeTagFilter) return true;
+  return state.pendingTagFallback !== null;
+}
+
 export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
   const parts: string[] = [];
 
@@ -322,6 +374,16 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     await fetchData({ since, until });
   }
 
+  async function handleSortChange(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): Promise<void> {
+    state = historyStateReducer(state, { type: 'sortChange', sortBy, sortDir });
+    void persistSort(sortBy, sortDir);
+    if (state.searchQuery.trim()) {
+      await fetchData({ search: state.searchQuery, page: 0 });
+    } else {
+      await fetchData({ ...dateRangeFromSelected(), page: 0 });
+    }
+  }
+
   function handleContentToggle(controlsId: string): void {
     const area = document.getElementById(controlsId);
     if (!area) return;
@@ -394,6 +456,8 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         offset,
         tagFilter: activeTagFilter || undefined,
         tagInitiated: options.tagInitiated,
+        sortBy: state.sortBy,
+        sortDir: state.sortDir,
       });
 
       if (generation !== requestGeneration) return;
@@ -513,6 +577,17 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
           onRangeSelect: (since, until) => { state = historyStateReducer(state, { type: 'rangeSelect' }); void fetchData({ since, until }); },
           onClearFilters: () => { state = historyStateReducer(state, { type: 'clearFilters' }); void fetchData(); },
         }
+      );
+    }
+
+    const sortContainer = document.getElementById('sqlite-sort-control');
+    if (sortContainer) {
+      renderSortControl(
+        sortContainer,
+        state.sortBy,
+        state.sortDir,
+        isFullTextSearchActive(state),
+        (sortBy, sortDir) => void handleSortChange(sortBy, sortDir),
       );
     }
 
@@ -690,6 +765,41 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     _container.querySelector('[data-page="next"]')?.addEventListener('click', () => onPageChange(currentPage + 1));
   }
 
+  function renderSortControl(
+    _container: HTMLElement,
+    sortBy: SqliteHistoryState['sortBy'],
+    sortDir: SqliteHistoryState['sortDir'],
+    hasActiveSearch: boolean,
+    onChange: (sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']) => void,
+  ): void {
+    const options = [
+      { value: sortSelectValue('created_at', 'DESC'), label: t('historySortNewest') || '新しい順' },
+      { value: sortSelectValue('created_at', 'ASC'), label: t('historySortOldest') || '古い順' },
+    ];
+    if (hasActiveSearch) {
+      options.push({ value: sortSelectValue('relevance', 'DESC'), label: t('historySortRelevance') || '関連度順' });
+    }
+
+    const currentValue = sortSelectValue(sortBy, sortDir);
+    // A relevance value with no active search cannot be rendered (its option
+    // was omitted above); fall back to newest-first so the select always has
+    // a matching selected option.
+    const safeValue = options.some(o => o.value === currentValue) ? currentValue : sortSelectValue('created_at', 'DESC');
+
+    _container.innerHTML = `
+      <label class="sqlite-sort-label" for="sqlite-sort-select">${t('historySortLabel') || '並び替え'}</label>
+      <select id="sqlite-sort-select" aria-label="${t('historySortLabel') || '並び替え'}">
+        ${options.map(o => `<option value="${o.value}"${o.value === safeValue ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}
+      </select>
+    `;
+
+    const select = _container.querySelector('#sqlite-sort-select') as HTMLSelectElement | null;
+    select?.addEventListener('change', () => {
+      const parsed = parseSortSelectValue(select.value);
+      onChange(parsed.sortBy, parsed.sortDir);
+    });
+  }
+
   function renderCalendarNav(
     _container: HTMLElement,
     selectedDate: string | null,
@@ -802,6 +912,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
           placeholder="${t('historySearchPlaceholder')}"
           value="${escapeHtml(state.searchQuery)}"
           aria-label="${t('historySearchAriaLabel')}" />
+        <div id="sqlite-sort-control" class="sqlite-sort-control"></div>
         <div id="sqlite-calendar-nav" class="sqlite-calendar-nav"></div>
         <div id="sqlite-error" class="sqlite-history-error${state.error ? '' : ' hidden'}">
           ${escapeHtml(state.error || '')}
@@ -832,6 +943,17 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
             onRangeSelect: (since, until) => { state.selectedDate = null; state.searchQuery = ''; state.pendingTagFallback = null; state.currentPage = 0; void fetchData({ since, until }); },
             onClearFilters: () => { state.searchQuery = ''; state.selectedDate = null; state.activeTagFilter = null; state.pendingTagFallback = null; state.currentPage = 0; void fetchData(); },
           }
+        );
+      }
+
+      const sortContainer = document.getElementById('sqlite-sort-control');
+      if (sortContainer) {
+        renderSortControl(
+          sortContainer,
+          state.sortBy,
+          state.sortDir,
+          isFullTextSearchActive(state),
+          (sortBy, sortDir) => void handleSortChange(sortBy, sortDir),
         );
       }
 
@@ -964,6 +1086,12 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
 
       isMounted = true;
       await checkFallbackStatus();
+
+      const persistedSort = await loadPersistedSort();
+      if (persistedSort) {
+        state = { ...state, sortBy: persistedSort.sortBy, sortDir: persistedSort.sortDir };
+      }
+
       renderState();
 
       // Consume any init params set by onActivate (which runs before loadData)
