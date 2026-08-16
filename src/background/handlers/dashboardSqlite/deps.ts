@@ -1,8 +1,7 @@
-import { StorageKeys, getSettings } from '../../../utils/storage.js';
+import { getSettings } from '../../../utils/storage.js';
 import { formatEntriesToMarkdown } from '../../../dashboard/obsidianFormatter.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import type { BrowsingLogEntry } from '../../../utils/sqlite-types.js';
-import { bytesToBase64, base64ToBytes } from '../../../utils/crypto/index.js';
 import type { CallResult, SqliteError } from '../../sqliteClient.js';
 
 export const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];

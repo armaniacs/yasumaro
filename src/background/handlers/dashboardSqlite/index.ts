@@ -1,22 +1,30 @@
 import { logError, ErrorCode } from '../../../utils/logger.js';
-import { TOKEN_REQUIRED_SUBTYPES } from '../../../messaging/sqliteOperationSecurity.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
+import { TOKEN_REQUIRED_SUBTYPES, ALL_DASHBOARD_SQLITE_SUBTYPES } from '../../../messaging/sqliteOperationSecurity.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboardSqliteProtocol.js';
 import type { DashboardSqliteHandlerDeps } from './deps.js';
-import { createReadOnlyHandler } from './readOnlyHandler.js';
-import { createCoreCrudHandler } from './coreCrudHandler.js';
-import { createMaintenanceBatchHandler } from './maintenanceBatchHandler.js';
+import { READ_ONLY_SUBTYPES, createReadOnlyHandler } from './readOnlyHandler.js';
+import { CORE_CRUD_SUBTYPES, createCoreCrudHandler } from './coreCrudHandler.js';
+import { MAINTENANCE_BATCH_SUBTYPES, createMaintenanceBatchHandler } from './maintenanceBatchHandler.js';
 
-/** Which of the three sub-handlers owns each subtype. Single source of truth for the routing decision. */
-const READ_ONLY_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new Set([
-  'confirm_token', 'query', 'search', 'get_count', 'status', 'opfs_spike', 'audit_log_query',
-]);
-const CORE_CRUD_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new Set([
-  'toggle_star', 'delete', 'update', 'clear_all', 'append_to_obsidian',
-]);
-// Everything else (migrate, import, restore_db, backup_db, backfill_metadata,
-// cleanup_legacy, purge_now, content_purge_now) falls through to maintenance.
-// An unrecognised subtype string also falls through here, and is reported by
-// maintenanceBatchHandler's own `default` case.
+// Fail fast if the subtype partition ever drifts from the protocol union:
+// every subtype must land in exactly one group, so a subtype added to a
+// handler but forgotten in the protocol (or vice versa) becomes a startup
+// error instead of a silent "Unknown subtype" at runtime.
+const GROUPED_SUBTYPES: readonly DashboardSqliteSubtype[] = [
+  ...READ_ONLY_SUBTYPES,
+  ...CORE_CRUD_SUBTYPES,
+  ...MAINTENANCE_BATCH_SUBTYPES,
+];
+const GROUPED_UNIQUE = new Set<DashboardSqliteSubtype>(GROUPED_SUBTYPES);
+if (
+  GROUPED_UNIQUE.size !== GROUPED_SUBTYPES.length ||
+  GROUPED_UNIQUE.size !== ALL_DASHBOARD_SQLITE_SUBTYPES.length
+) {
+  throw new Error(
+    `Dashboard SQLite subtype partition is inconsistent: ${GROUPED_UNIQUE.size} unique of ${ALL_DASHBOARD_SQLITE_SUBTYPES.length} subtypes`,
+  );
+}
 
 export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
   const readOnlyHandler = createReadOnlyHandler(deps);
@@ -41,26 +49,28 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
       }
     }
 
-    if (READ_ONLY_SUBTYPES.has(subtype)) {
-      return readOnlyHandler(payload);
+    try {
+      // `await` each call so a rejection is caught here instead of escaping
+      // the try block (a bare `return handler(payload)` would not be).
+      if (READ_ONLY_SUBTYPES.has(subtype)) {
+        return await readOnlyHandler(payload);
+      }
+      if (CORE_CRUD_SUBTYPES.has(subtype)) {
+        return await coreCrudHandler(payload);
+      }
+      return await maintenanceBatchHandler(payload);
+    } catch (error) {
+      logError('Dashboard SQLite error', {
+        subtype,
+        error: errorMessage(error),
+      }, ErrorCode.UNKNOWN_ERROR);
+      return { success: false, error: 'An internal error occurred' };
     }
-    if (CORE_CRUD_SUBTYPES.has(subtype)) {
-      return coreCrudHandler(payload);
-    }
-    return maintenanceBatchHandler(payload);
   };
 }
 
 export {
   type DashboardSqliteHandlerDeps,
-  type ReadOnlyDeps,
-  type CoreCrudDeps,
-  type MaintenanceBatchDeps,
   type SqliteClientBackedDeps,
-  type DepsResult,
   createSqliteClientDeps,
-  toFailure,
-  ALLOWED_UPDATE_FIELDS,
-  MAX_APPEND_IDS,
-  MAX_IMPORT_ROWS,
 } from './deps.js';
