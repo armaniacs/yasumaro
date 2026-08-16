@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.48` リリース。
+> - 現時点では `v6.7.49` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -39,6 +39,14 @@ All notable changes to this project will be documented in this file.
 
 （次のリリースに向けての変更をここに記載）
 
+## [6.7.49] - 2026-08-17
+
+このリリースは v6.7.48 のリリース時に発見したリリースノート生成スクリプトの不具合を修正したものです。
+
+### Fixed
+
+- GitHub リリースノート生成スクリプト（`generate-release-notes.js`）が、CHANGELOG のバージョンヘッダーに続く日付部分（例: `- 2026-08-16`）を抽出ボディの先頭に残骸として出力していたバグを修正。ヘッダー行全体を正規表現で消費するようにした
+
 ## [6.7.48] - 2026-08-16
 
 ### Refactor
@@ -68,8 +76,6 @@ All notable changes to this project will be documented in this file.
 
 - SQLite History ダッシュボードパネルに検索結果の並び替え機能を追加。「新しい順」「古い順」に加え、検索実行中は「関連度順」（FTS5ランキングスコア順）も選択可能。選択したソート順は次回起動時も引き継がれる
 - タグフィルタ有効時は、実際に全文検索が実行されている場合（タグがヒットせず全文検索にフォールバックしたとき）のみ「関連度順」を選択肢に表示する
-
-### Fixed
 
 ## [6.7.45] - 2026-08-15
 
@@ -103,12 +109,6 @@ All notable changes to this project will be documented in this file.
 - metadata patch queueのcoalescing・payload上限100KB・content省略を実装
 - マスターパスワード未設定時の暗号化キーをchrome.storage.sessionへ移行
 - AIClientをRemoteAIServiceの薄い委譲ラッパー化しin-flight重複排除を実装
-
-## [6.7.41]
-
-### Fixed
-
-（前リリースの変更）
 
 ## [6.7.41] - 2026-08-11
 
