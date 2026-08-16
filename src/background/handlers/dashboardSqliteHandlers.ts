@@ -8,6 +8,5 @@ export {
   createDashboardSqliteHandler,
   type DashboardSqliteHandlerDeps,
   type SqliteClientBackedDeps,
-  type DepsResult,
   createSqliteClientDeps,
 } from './dashboardSqlite/index.js';
