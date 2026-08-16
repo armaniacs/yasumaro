@@ -30,6 +30,7 @@ export const StorageKeys = {
     MIN_SCROLL_DEPTH: 'min_scroll_depth',
     GEMINI_MODEL: 'gemini_model',
     OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
+    HISTORY_SORT_PREFERENCE: 'history_sort_preference', // 履歴パネルのソート設定 { sortBy, sortDir } をJSON文字列で保存
     AI_PROVIDER: 'ai_provider',
     AI_PROVIDER_PRIORITY_LIST: 'ai_provider_priority_list', // 優先度1〜3位のプロバイダ設定（ProviderSlot[]）
     SUMMARY_MIN_LENGTH: 'summary_min_length', // 要約の最小文字数しきい値（デフォルト: 10）。未満の場合フォールバック対象
@@ -273,6 +274,7 @@ export interface StorageKeyValues {
     [StorageKeys.MIN_SCROLL_DEPTH]: number;
     [StorageKeys.GEMINI_MODEL]: string;
     [StorageKeys.OBSIDIAN_DAILY_PATH]: string;
+    [StorageKeys.HISTORY_SORT_PREFERENCE]: string;
     [StorageKeys.AI_PROVIDER]: string;
     [StorageKeys.AI_PROVIDER_PRIORITY_LIST]: ProviderSlot[];
     [StorageKeys.SUMMARY_MIN_LENGTH]: number;
