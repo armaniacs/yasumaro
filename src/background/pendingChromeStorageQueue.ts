@@ -57,6 +57,52 @@ export interface PendingMetadataPatchWrite {
 
 export type QueuedChromeStorageWrite = PendingChromeStorageWrite | PendingMetadataPatchWrite;
 
+/**
+ * Shrink a metadata patch to fit MAX_PATCH_PAYLOAD_BYTES: drop `content`
+ * first, then trim `tags` from the front (oldest first) until it fits or
+ * nothing is left. Used for both a freshly merged patch and a brand-new one,
+ * so the size limit is enforced identically regardless of which path queued
+ * the write.
+ */
+function truncatePatchToFit(
+  patch: SavedUrlEntryMetadataPatch,
+): { patch: SavedUrlEntryMetadataPatch; contentOmitted: boolean; tagsOmitted: boolean } {
+  let result = patch;
+  let contentOmitted = false;
+  let tagsOmitted = false;
+  let size = new Blob([JSON.stringify(result)]).size;
+
+  if (size > MAX_PATCH_PAYLOAD_BYTES && result.content) {
+    const { content: _content, ...rest } = result;
+    result = rest;
+    contentOmitted = true;
+    size = new Blob([JSON.stringify(result)]).size;
+  }
+
+  if (size > MAX_PATCH_PAYLOAD_BYTES && result.tags && result.tags.length > 0) {
+    let truncatedTags = result.tags.slice(-MAX_TAGS_AFTER_TRUNCATION);
+    let candidate = { ...result, tags: truncatedTags };
+    let candidateSize = new Blob([JSON.stringify(candidate)]).size;
+    // Even MAX_TAGS_AFTER_TRUNCATION tags might still be too large if
+    // individual tag strings are unusually long — keep shrinking from the
+    // front until it fits or nothing is left.
+    while (candidateSize > MAX_PATCH_PAYLOAD_BYTES && truncatedTags.length > 0) {
+      truncatedTags = truncatedTags.slice(1);
+      candidate = { ...result, tags: truncatedTags };
+      candidateSize = new Blob([JSON.stringify(candidate)]).size;
+    }
+    if (truncatedTags.length > 0) {
+      result = candidate;
+    } else {
+      const { tags: _tags, ...rest } = candidate;
+      result = rest;
+    }
+    tagsOmitted = true;
+  }
+
+  return { patch: result, contentOmitted, tagsOmitted };
+}
+
 const adapter = new ChromeStorageAdapter();
 const queue = new PersistentRetryQueue<QueuedChromeStorageWrite>(adapter, {
   storageKey: PENDING_CHROME_STORAGE_KEY,
@@ -90,66 +136,32 @@ export async function enqueuePendingWrite(write: QueuedChromeStorageWrite): Prom
         mergedPatch.tags = Array.from(new Set([...(existingPatch.patch.tags || []), ...(write.patch.tags || [])]));
       }
       const latestTimestamp = Math.max(existingPatch.timestamp || 0, write.timestamp || 0);
+      const { patch: fittedPatch, contentOmitted, tagsOmitted } = truncatePatchToFit(mergedPatch);
       existing[sameUrlIndex] = {
         ...existingPatch,
-        patch: mergedPatch,
+        patch: fittedPatch,
         timestamp: latestTimestamp,
         createdAt: existingPatch.createdAt,
         retryCount: 0,
+        contentOmitted,
+        tagsOmitted,
       };
-      // Omit content first if the merged payload exceeds the limit.
-      let mergedSize = new Blob([JSON.stringify(mergedPatch)]).size;
-      if (mergedSize > MAX_PATCH_PAYLOAD_BYTES && mergedPatch.content) {
-        existing[sameUrlIndex] = {
-          ...existing[sameUrlIndex],
-          patch: (({ content, ...rest }: { content?: string }) => rest)(mergedPatch),
-          contentOmitted: true,
-        };
-        mergedSize = new Blob([JSON.stringify((existing[sameUrlIndex] as PendingMetadataPatchWrite).patch)]).size;
-      }
-
-      // If still too large (e.g. tags accumulated across many failed
-      // retries), truncate tags — keep the most recently added ones
-      // (array tail, since mergeTags appends new tags after existing ones)
-      // and drop the oldest first.
-      if (mergedSize > MAX_PATCH_PAYLOAD_BYTES) {
-        const currentPatch = (existing[sameUrlIndex] as PendingMetadataPatchWrite).patch;
-        const currentTags = currentPatch.tags;
-        if (currentTags && currentTags.length > 0) {
-          let truncatedTags = currentTags.slice(-MAX_TAGS_AFTER_TRUNCATION);
-          let candidatePatch = { ...currentPatch, tags: truncatedTags };
-          let candidateSize = new Blob([JSON.stringify(candidatePatch)]).size;
-          // Even MAX_TAGS_AFTER_TRUNCATION tags might still be too large
-          // if individual tag strings are unusually long — keep shrinking
-          // from the front until it fits or nothing is left.
-          while (candidateSize > MAX_PATCH_PAYLOAD_BYTES && truncatedTags.length > 0) {
-            truncatedTags = truncatedTags.slice(1);
-            candidatePatch = { ...currentPatch, tags: truncatedTags };
-            candidateSize = new Blob([JSON.stringify(candidatePatch)]).size;
-          }
-          existing[sameUrlIndex] = {
-            ...existing[sameUrlIndex],
-            patch: truncatedTags.length > 0 ? candidatePatch : (({ tags, ...rest }: { tags?: string[] }) => rest)(candidatePatch),
-            tagsOmitted: true,
-          };
-        }
-      }
 
       await queue.save(existing);
       return;
     }
   }
 
-  // Omit content for new metadata patches that exceed the payload limit.
+  // Truncate new metadata patches that exceed the payload limit.
   let queuedWrite = write;
   if ('type' in write && write.type === 'metadataPatch') {
-    const patch = (write as PendingMetadataPatchWrite).patch;
-    const payloadSize = new Blob([JSON.stringify(patch)]).size;
-    if (payloadSize > MAX_PATCH_PAYLOAD_BYTES && patch.content) {
+    const { patch: fittedPatch, contentOmitted, tagsOmitted } = truncatePatchToFit((write as PendingMetadataPatchWrite).patch);
+    if (contentOmitted || tagsOmitted) {
       queuedWrite = {
         ...write,
-        patch: (({ content, ...rest }: { content?: string }) => rest)(patch),
-        contentOmitted: true,
+        patch: fittedPatch,
+        contentOmitted,
+        tagsOmitted,
       } as PendingMetadataPatchWrite;
     }
   }
