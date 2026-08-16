@@ -115,9 +115,16 @@ function buildRecordFromPayload(payload: Record<string, unknown>): BrowsingLogRe
   };
 }
 
+// Opaque marker produced only by handleOffscreenMessage's sender-authorization
+// check (below). dispatchSqliteMessage requires one as a parameter, so a call
+// site cannot reach the switch below without having passed that check —
+// the coupling is enforced by the type checker, not by convention.
+type AuthorizedSqliteSender = { readonly __brand: 'AuthorizedSqliteSender' };
+
 // Dispatch a SqliteMessage (SW↔offscreen, see src/messaging/sqliteMessages.ts) to
 // the matching sqlite.js handler and respond via sendResponse.
-async function handleSqliteMessage(
+async function dispatchSqliteMessage(
+    _authorized: AuthorizedSqliteSender,
     msg: SqliteMessage,
     sendResponse: (response: unknown) => void
 ): Promise<void> {
@@ -380,6 +387,10 @@ export function handleOffscreenMessage(
       }
     }
 
+    // Only constructible here, after both checks above have passed — this is
+    // the sole authorization proof dispatchSqliteMessage accepts.
+    const authorizedSender: AuthorizedSqliteSender = { __brand: 'AuthorizedSqliteSender' };
+
     (async () => {
         try {
             if (isSqliteMessage) {
@@ -391,7 +402,7 @@ export function handleOffscreenMessage(
                   // above, so msg.type is a known SqliteMessageType at this point. Payload
                   // shape itself is not runtime-validated here (same trust boundary as
                   // before this refactor: the sender is verified to be our own SW).
-                  await handleSqliteMessage(msg as SqliteMessage, sendResponse);
+                  await dispatchSqliteMessage(authorizedSender, msg as SqliteMessage, sendResponse);
                 } finally {
                   sqliteWriteMutex.release();
                 }
