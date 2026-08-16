@@ -160,7 +160,12 @@ export class FallbackStorage {
     }
   }
 
-  async search(searchQuery: string, limit: number = 50, offset: number = 0): Promise<{
+  async search(
+    searchQuery: string,
+    limit: number = 50,
+    offset: number = 0,
+    options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
+  ): Promise<{
     success: true; rows: SearchResult[]; total: number
   } | { success: false; error: string }> {
     try {
@@ -175,6 +180,14 @@ export class FallbackStorage {
           .toLowerCase();
         return searchable.includes(query);
       });
+
+      // No FTS5 rank exists in the fallback path, so 'relevance' has nothing
+      // to sort by — only an explicit created_at request changes the order;
+      // otherwise keep the existing insertion-order behavior unchanged.
+      if (options.orderBy === 'created_at') {
+        const dir = options.orderDir ?? 'DESC';
+        matched.sort((a, b) => dir === 'ASC' ? a.created_at - b.created_at : b.created_at - a.created_at);
+      }
 
       const total = matched.length;
       const paged = matched.slice(offset, offset + limit);
