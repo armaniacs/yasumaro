@@ -149,6 +149,7 @@ grep -n "'search'" src/background/handlers/dashboardSqliteProtocol.ts
 - **「関連度順」表示条件は検索ボックスの文字有無だけでは判定できない**: タグクリック（`tagInitiated`）は検索ボックスに「タグ名」を表示ラベルとしてセットするだけで、実際にはFTS5検索を実行しない（`fetchData`は`tagFilter`のみを渡し`search`は渡さない）。そのため「検索ボックスが非空なら関連度順を表示する」という単純な条件だと、タグフィルタ中に選んでも何も起きない無効な選択肢を見せてしまう。かといって「タグフィルタが有効なら常に非表示」にすると、タグがヒットせず全文検索にフォールバックした場合（`pendingTagFallback`が立っている状態）は実際にFTS5検索が動いているのに関連度順を隠してしまう逆方向のバグになる。`isFullTextSearchActive(state)`のように「タグフィルタなし かつ 検索クエリが非空」または「タグフィルタありでもフォールバック検索が成立している」の両方を判定する必要がある（実装計画Task 10参照）
 - **SQLインジェクション対策**: `orderBy`/`orderDir` を SQL 文字列に埋め込む際は、必ず型で閉じた文字列リテラル（`'rank'|'created_at'`、`'ASC'|'DESC'`）からのみ構築し、生の`payload.orderBy`のような外部入力をそのままテンプレートリテラルに挿入しないこと
 - **LIKEフォールバック検索（3文字未満のクエリ）**: FTS5が使えない短いクエリ用のLIKE検索パスにも同じORDER BY分岐が必要。FTS5パスだけ直して満足しないこと
+- **既存テストの期待値更新漏れ**: `sqliteHistoryQuery.ts`（Task 2）の変更で`searchLogs`呼び出しが常に4引数目（`{orderBy, orderDir}`）を持つようになったが、これを直接呼び出す全てのテストファイルを更新しないと、機能自体は正しいのにテストだけ落ちる状態になる。今回`sqliteHistoryPanel-tagFallback.test.ts`（Task 2の直接のレビュー範囲外だった兄弟ファイル）で4件の見落としが発生した。パネル層のUI実装（Task 10）を行う際は`npx vitest run`をこのパネルのテストディレクトリ全体に対して実行し、新規追加した機能以外の既存テストも含めて確認すること
 
 ## Definition of Done
 
