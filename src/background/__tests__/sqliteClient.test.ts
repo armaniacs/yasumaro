@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SqliteClient } from '../sqliteClient.js';
+import { createSqliteClientDeps } from '../handlers/dashboardSqliteHandlers.js';
 
 describe('SqliteClient', () => {
   let client: SqliteClient;
@@ -177,6 +178,65 @@ describe('SqliteClient', () => {
         }),
         expect.any(Function)
       );
+    });
+
+    it('forwards orderBy/orderDir into the SQLITE_SEARCH payload', async () => {
+      sendMessageMock.mockImplementation(
+        (_msg: unknown, callback: (response: unknown) => void) => {
+          callback({ success: true, rows: [], total: 0 });
+        }
+      );
+
+      const result = await client.searchResult('kddi', 20, 0, {
+        orderBy: 'created_at',
+        orderDir: 'ASC',
+      });
+      expect(result).toEqual({ success: true, data: { rows: [], total: 0 } });
+      expect(sendMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'SQLITE_SEARCH',
+          payload: { query: 'kddi', limit: 20, offset: 0, orderBy: 'created_at', orderDir: 'ASC' },
+        }),
+        expect.any(Function)
+      );
+    });
+
+    it('omits orderBy/orderDir from the payload when not provided', async () => {
+      sendMessageMock.mockImplementation(
+        (_msg: unknown, callback: (response: unknown) => void) => {
+          callback({ success: true, rows: [], total: 0 });
+        }
+      );
+
+      await client.searchResult('kddi', 20, 0);
+      expect(sendMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'SQLITE_SEARCH',
+          payload: { query: 'kddi', limit: 20, offset: 0, orderBy: undefined, orderDir: undefined },
+        }),
+        expect.any(Function)
+      );
+    });
+  });
+
+  describe('createSqliteClientDeps', () => {
+    it('wires deps.search to forward orderBy/orderDir to sqliteClient.searchResult', async () => {
+      const mockSearchResult = vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
+      const fakeSqliteClient = { searchResult: mockSearchResult } as unknown as SqliteClient;
+      const serviceWorkerDeps = {
+        runMigration: vi.fn(),
+        getConfirmToken: vi.fn(),
+        runBackfill: vi.fn(),
+        runCleanup: vi.fn(),
+      } as unknown as Parameters<typeof createSqliteClientDeps>[1];
+
+      const deps = createSqliteClientDeps(fakeSqliteClient, serviceWorkerDeps);
+      await deps.search('kddi', 20, 0, { orderBy: 'created_at', orderDir: 'ASC' });
+
+      expect(mockSearchResult).toHaveBeenCalledWith('kddi', 20, 0, {
+        orderBy: 'created_at',
+        orderDir: 'ASC',
+      });
     });
   });
 

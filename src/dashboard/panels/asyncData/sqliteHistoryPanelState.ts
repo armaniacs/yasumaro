@@ -37,6 +37,13 @@ export interface SqliteHistoryState {
    * notice while this is non-null.
    */
   pendingTagFallback: { tag: string; fallbackTo: string; matched: number } | null;
+  /**
+   * 'relevance' is only meaningful while a search query is active (FTS5 rank
+   * has no meaning outside a MATCH query) — see the `search` action below for
+   * the fallback rule that keeps this invariant.
+   */
+  sortBy: 'created_at' | 'relevance';
+  sortDir: 'ASC' | 'DESC';
 }
 
 export function createInitialHistoryState(): SqliteHistoryState {
@@ -52,6 +59,8 @@ export function createInitialHistoryState(): SqliteHistoryState {
     selectedIds: new Set(),
     activeTagFilter: null,
     pendingTagFallback: null,
+    sortBy: 'created_at',
+    sortDir: 'DESC',
   };
 }
 
@@ -66,6 +75,7 @@ export type SqliteHistoryAction =
   | { type: 'tagFilterClick'; tag: string }
   | { type: 'clearTagFilter' }
   | { type: 'pageChange'; page: number }
+  | { type: 'sortChange'; sortBy: 'created_at' | 'relevance'; sortDir: 'ASC' | 'DESC' }
   | { type: 'tagInitiated'; tag: string }
   | { type: 'domainSearchInitiated'; query: string }
   | { type: 'toggleStarSuccess'; id: number; starred: boolean }
@@ -130,8 +140,28 @@ export function historyStateReducer(
       // the error is kept so the UI can show it instead of the empty state.
       return { ...state, error: action.error, entries: [], total: 0, loading: false };
 
-    case 'search':
-      return { ...state, searchQuery: action.query, currentPage: 0, pendingTagFallback: null };
+    case 'search': {
+      const trimmed = action.query.trim();
+      // Relevance sort has no meaning without a search query; clearing the
+      // query must not leave the UI stuck showing a "relevance" option that
+      // is about to disappear.
+      const clearingRelevance = !trimmed && state.sortBy === 'relevance';
+      // Starting a search (query goes from empty to non-empty) switches to
+      // relevance by default, per the PBI's "becomes the default when a
+      // search starts" requirement — this only fires on the empty→non-empty
+      // transition so it does not override a sort the user explicitly picked
+      // while already mid-search (e.g. deliberately staying on created_at
+      // DESC/ASC while refining search terms).
+      const startingSearch = trimmed && !state.searchQuery.trim() && state.sortBy !== 'relevance';
+      return {
+        ...state,
+        searchQuery: action.query,
+        currentPage: 0,
+        pendingTagFallback: null,
+        sortBy: clearingRelevance ? 'created_at' : startingSearch ? 'relevance' : state.sortBy,
+        sortDir: clearingRelevance ? 'DESC' : state.sortDir,
+      };
+    }
 
     case 'dateSelect':
       return {
@@ -165,6 +195,9 @@ export function historyStateReducer(
       // The pagination controls never produce negative pages, but a caller
       // can pass one; clamp instead of deriving a nonsensical offset.
       return { ...state, currentPage: Math.max(0, action.page) };
+
+    case 'sortChange':
+      return { ...state, sortBy: action.sortBy, sortDir: action.sortDir, currentPage: 0 };
 
     case 'tagInitiated':
       return {

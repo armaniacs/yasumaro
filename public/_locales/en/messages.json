@@ -3349,6 +3349,18 @@
   "historyLast30Days": {
     "message": "Last 30 days"
   },
+  "historySortLabel": {
+    "message": "Sort"
+  },
+  "historySortNewest": {
+    "message": "Newest first"
+  },
+  "historySortOldest": {
+    "message": "Oldest first"
+  },
+  "historySortRelevance": {
+    "message": "Relevance"
+  },
   "historyPrev": {
     "message": "Previous"
   },

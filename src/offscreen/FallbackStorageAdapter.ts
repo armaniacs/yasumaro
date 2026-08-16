@@ -22,8 +22,13 @@ export class FallbackStorageAdapter implements StorageBackend {
     return { success: true, rows: result.rows as QueryResult['rows'], total: result.total };
   }
 
-  async search(query: string, limit: number, offset: number): Promise<BackendOrError<SearchResult>> {
-    const result = await this.fallback.search(query, limit, offset);
+  async search(
+    query: string,
+    limit: number,
+    offset: number,
+    options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
+  ): Promise<BackendOrError<SearchResult>> {
+    const result = await this.fallback.search(query, limit, offset, options);
     if (!result.success) return result;
     return { success: true, rows: result.rows as SearchResult['rows'], total: result.total };
   }
