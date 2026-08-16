@@ -28,7 +28,12 @@ export interface StorageBackend {
   insert(record: BrowsingLogRecord): Promise<BackendOrError<InsertResult>>;
   insertBatch(records: BrowsingLogRecord[]): Promise<BackendOrError<InsertBatchResult>>;
   query(options: QueryOptions): Promise<BackendOrError<QueryResult>>;
-  search(query: string, limit: number, offset: number): Promise<BackendOrError<SearchResult>>;
+  search(
+    query: string,
+    limit: number,
+    offset: number,
+    options?: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' }
+  ): Promise<BackendOrError<SearchResult>>;
   update(id: number, changes: Record<string, unknown>): Promise<BackendOrError<MutationResult>>;
   delete(id: number): Promise<BackendOrError<MutationResult>>;
   toggleStar(id: number): Promise<BackendOrError<StarResult>>;

@@ -101,13 +101,32 @@ export class IdbVfsBackend implements StorageBackend {
     return { success: true, rows, total };
   }
 
-  async search(searchQuery: string, limit: number, offset: number): Promise<BackendOrError<SearchResult>> {
+  async search(
+    searchQuery: string,
+    limit: number,
+    offset: number,
+    options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
+  ): Promise<BackendOrError<SearchResult>> {
     this.ensureDb();
     const capLimit = Math.min(limit, 100000);
     const bare = sanitizeFtsTerm(searchQuery);
     if (!bare) {
       return { success: true, rows: [], total: 0 };
     }
+
+    // Runtime whitelist check — options.orderDir crosses a
+    // chrome.runtime.sendMessage boundary where the 'ASC'|'DESC' TypeScript
+    // type is not enforced at runtime; reuse this file's existing
+    // ALLOWED_ORDER_DIRECTIONS (already used by query() above) rather than
+    // trusting the type alone.
+    const requestedDir = options.orderDir ?? 'DESC';
+    if (!ALLOWED_ORDER_DIRECTIONS.includes(requestedDir as typeof ALLOWED_ORDER_DIRECTIONS[number])) {
+      return { success: false, error: `Invalid orderDir: ${requestedDir}` };
+    }
+    const dir = requestedDir;
+    const orderClause = options.orderBy === 'created_at'
+      ? `b.created_at ${dir}, b.id ${dir}`
+      : 'rank';
 
     const charLen = [...bare].length;
     if (this.engine.fts5Available && charLen >= 3) {
@@ -125,7 +144,7 @@ export class IdbVfsBackend implements StorageBackend {
          FROM browsing_logs_fts
          JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
          WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0
-         ORDER BY rank
+         ORDER BY ${orderClause}
          LIMIT ? OFFSET ?`,
         [ftsQuery, capLimit, offset],
         (row: SqliteValue[]) => {
@@ -147,6 +166,9 @@ export class IdbVfsBackend implements StorageBackend {
     }
 
     const likePattern = `%${searchQuery}%`;
+    const likeOrderClause = options.orderBy === 'created_at'
+      ? `created_at ${dir}`
+      : `created_at DESC`;
     let total = 0;
     await this.engine.execWithCache(
       `SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)`,
@@ -159,7 +181,7 @@ export class IdbVfsBackend implements StorageBackend {
       `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred
        FROM browsing_logs
        WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)
-       ORDER BY created_at DESC
+       ORDER BY ${likeOrderClause}
        LIMIT ? OFFSET ?`,
       [likePattern, likePattern, likePattern, likePattern, capLimit, offset],
       (row: SqliteValue[]) => {
