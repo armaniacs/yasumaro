@@ -332,6 +332,28 @@ describe('ModelsDevDialog', () => {
       expect(countEl!.textContent).toBe('2 providers');
     });
 
+    it('escapes provider.name to prevent stored XSS from untrusted models-dev data', async () => {
+      const { loadModelsDevData } = await import('../../utils/modelsDevApi.js');
+      (loadModelsDevData as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        providers: [
+          {
+            id: 'evil',
+            name: '<img src=x onerror=alert(1)>',
+            api: 'https://evil.example.com',
+            models: [{ id: 'm', isFreeTier: false, inputPrice: 0.01 }],
+            isAggregator: false,
+          },
+        ],
+      });
+
+      const dialog = new ModelsDevDialog();
+      await dialog.show();
+
+      const firstItem = document.querySelector('.provider-item')!;
+      expect(firstItem.querySelector('img')).toBeNull();
+      expect(firstItem.querySelector('.provider-item-name')!.textContent).toBe('<img src=x onerror=alert(1)>');
+    });
+
     it('should render selected class on previously selected provider', async () => {
       const dialog = new ModelsDevDialog();
       await dialog.show();
