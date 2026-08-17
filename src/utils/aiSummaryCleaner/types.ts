@@ -3,47 +3,34 @@
  * cleanseAISummaryContent / countAISummaryTargets のオプションと結果
  */
 
+// ---------------------------------------------------------------------------
+// RuleKey: CLEANSING_RULES の各ルールキーの共用型。
+// ルールを追加・削除したときはここを更新する。型チェックが漏れを検出する。
+// ---------------------------------------------------------------------------
+
+export type RuleKey =
+    | 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep'
+    | 'jsonLd' | 'lazyLoad' | 'skipLink' | 'card' | 'linkDensity'
+    | 'fixed' | 'recommend' | 'pagination' | 'snsPromo' | 'popup'
+    | 'platform' | 'textDensity' | 'shortSeq' | 'symbolLine' | 'linkPara'
+    | 'enhancedHidden' | 'emptyElem' | 'jpLayout' | 'jpNavigation'
+    | 'author' | 'affiliate' | 'speechBubble'
+    | 'newsMedia' | 'ecSite' | 'qaSite' | 'videoSite';
+
+/**
+ * CLEANSING_RULES から派生したルールフラグ（${key}Enabled）。
+ * ルールを追加すると自動的に型が拡張される。
+ */
+export type AiSummaryCleanseRuleFlags = {
+    [K in RuleKey as `${K}Enabled`]?: boolean;
+};
+
 /**
  * AI要約クレンジングオプション
+ *
+ * ルールフラグは RuleKey から導出。閾値・bodyProtection は明示的フィールド。
  */
-export interface AiSummaryCleanseOptions {
-    altEnabled?: boolean;           // 画像alt属性削除（デフォルト: true）
-    metadataEnabled?: boolean;      // メタデータ削除（デフォルト: true）
-    adsEnabled?: boolean;           // 広告関連要素削除（デフォルト: true）
-    navEnabled?: boolean;          // ナビゲーション・フッター削除（デフォルト: true）
-    socialEnabled?: boolean;       // コメント・ソーシャルウィジェット削除（デフォルト: true）
-    deepEnabled?: boolean;         // ディープクレンジング（aside/form/cookie/関連記事等）（デフォルト: false）
-    jsonLdEnabled?: boolean;       // JSON-LD構造化データ削除（デフォルト: false）
-    lazyLoadEnabled?: boolean;     // 遅延読み込みコンテンツ削除（デフォルト: false）
-    skipLinkEnabled?: boolean;     // スキップリンク削除（デフォルト: false）
-    cardEnabled?: boolean;         // 記事カード・リストアイテム削除（デフォルト: false）
-    linkDensityEnabled?: boolean;  // リンク密度の高いブロック削除（デフォルト: false）
-    // NEW: 6つの新しいオプション
-    fixedEnabled?: boolean;        // 固定要素削除（デフォルト: false）
-    recommendEnabled?: boolean;    // 推薦セクション削除（デフォルト: true）
-    paginationEnabled?: boolean;   // ページネーション削除（デフォルト: false）
-    snsPromoEnabled?: boolean;     // SNSプロモ削除（デフォルト: false）
-    popupEnabled?: boolean;        // ポップアップ削除（デフォルト: true）
-    platformEnabled?: boolean;     // プラットフォームノイズ削除（デフォルト: false）
-    // NEW: 9つの追加オプション
-    textDensityEnabled?: boolean;      // テキスト密度フィルタリング（デフォルト: false）
-    shortSeqEnabled?: boolean;        // 短文要素の連続削除（デフォルト: false）
-    symbolLineEnabled?: boolean;      // 特殊記号行の削除（デフォルト: false）
-    linkParaEnabled?: boolean;        // リンクのみ段落の削除（デフォルト: false）
-    linkParaThreshold?: number;       // リンクのみ段落閾値（デフォルト: 50）
-    enhancedHiddenEnabled?: boolean;  // 非表示要素強化削除（デフォルト: false）
-    emptyElemEnabled?: boolean;       // 空要素の削除（デフォルト: false）
-    jpLayoutEnabled?: boolean;        // JP BEM系レイアウトパターン（デフォルト: false）
-    jpNavigationEnabled?: boolean;     // JP ナビ頻出語（デフォルト: false）
-    authorEnabled?: boolean;         // 執筆者・メタ情報（デフォルト: false）
-    // Category A: WordPress Theme Specific Patterns
-    affiliateEnabled?: boolean;       // アフィリエイト要素のプレーンテキスト化（デフォルト: false）
-    speechBubbleEnabled?: boolean;    // 吹き出し要素のクレンジング（デフォルト: false）
-    // Category B: Site-Type Specific Patterns (News/EC/QA/Video)
-    newsMediaEnabled?: boolean;       // ニュースメディア固有パターン（デフォルト: false）
-    ecSiteEnabled?: boolean;          // EC・通販固有パターン（デフォルト: false）
-    qaSiteEnabled?: boolean;          // Q&A・知恵袋固有パターン（デフォルト: false）
-    videoSiteEnabled?: boolean;       // 動画プラットフォーム固有パターン（デフォルト: false）
+export interface AiSummaryCleanseOptions extends AiSummaryCleanseRuleFlags {
     // Body protection options
     bodyProtectionEnabled?: boolean;   // 本文保護機能（デフォルト: true）
     bodyProtectionThreshold?: number;  // 本文スコア閾値（デフォルト: 200）
@@ -51,6 +38,7 @@ export interface AiSummaryCleanseOptions {
     linkRatioThreshold?: number;      // リンク密度閾値（デフォルト: 70）
     shortTextThreshold?: number;       // 短文閾値文字数（デフォルト: 30）
     shortSeqCount?: number;           // 短文連続数閾値（デフォルト: 5）
+    linkParaThreshold?: number;       // リンクのみ段落閾値（デフォルト: 50）
     // Custom patterns
     customPatterns?: string[];        // カスタムパターン列表
     // Over-cleansed fallback thresholds
