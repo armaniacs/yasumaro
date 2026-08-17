@@ -10,7 +10,6 @@ import type { RecordingContext } from '../types.js';
 import type { PrivacyInfo } from '../../../utils/privacyChecker.js';
 import { redactHeaderValue } from '../../../utils/redaction.js';
 
-// Import the RecordingLogic class method reference - will be injected
 export class PrivacyHeadersChecker {
   private getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
 
@@ -126,7 +125,7 @@ export class PrivacyHeadersChecker {
     // Mask sensitive header values (e.g., Authorization tokens)
     const valueToStore = redactHeaderValue(headerValue, validReason);
 
-    // Truncate headerValue to prevent storage abuse (same as in recordingLogic.ts)
+    // Truncate headerValue to prevent storage abuse
     const MAX_HEADER_VALUE_LENGTH = 1024;
     const validatedHeaderValue = (valueToStore || '').substring(0, MAX_HEADER_VALUE_LENGTH);
 
