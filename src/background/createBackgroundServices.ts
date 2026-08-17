@@ -24,6 +24,7 @@ import { createPendingWriteQueue, setPendingWriteQueue } from './pendingChromeSt
 import { ChromeStorageAdapter } from './persistentRetryQueue.js';
 import { createRecordingPipeline, buildRecordingPipelineDeps } from './pipeline/RecordingPipeline.js';
 import type { RecordingPipeline } from './pipeline/RecordingPipeline.js';
+import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
 import { createReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import { hasPrivacyConsent } from '../popup/privacyConsent.js';
@@ -107,6 +108,7 @@ export function createBackgroundServices(): BackgroundServicesComposition {
     aiService,
     sqliteClient,
     urlStore: { getSavedUrlsWithTimestamps },
+    offlineNetworkQueue: sharedOfflineNetworkQueue,
   }));
 
   // Content backfill must not reorder LRU, so the timestamp is left alone. One

@@ -97,3 +97,30 @@ export class OfflineNetworkQueue {
 }
 
 export const sharedOfflineNetworkQueue = new OfflineNetworkQueue();
+
+/**
+ * No-op queue for tests: enqueue/dequeue are ignored, retryAll/peek report
+ * nothing pending. Avoids touching chrome.storage.local in tests that don't
+ * care about offline-retry behaviour.
+ */
+export class NoOpOfflineNetworkQueue extends OfflineNetworkQueue {
+  async enqueue(): Promise<void> {
+    // Intentionally discarded — this queue never persists anything.
+  }
+
+  async dequeue(): Promise<OfflineJob | null> {
+    return null;
+  }
+
+  async retryAll(): Promise<void> {
+    // No jobs to retry.
+  }
+
+  async getQueueSize(): Promise<number> {
+    return 0;
+  }
+
+  async peek(): Promise<OfflineJob | null> {
+    return null;
+  }
+}
