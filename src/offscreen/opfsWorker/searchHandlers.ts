@@ -9,7 +9,8 @@ import type { SearchPayload } from './types.js';
 import { sqlQuery, type HandlerContext } from './handlers.js';
 
 export async function handleSearch(ctx: HandlerContext, payload: SearchPayload, fts5Available: boolean): Promise<{ rows: SearchResult[]; total: number }> {
-  const { searchQuery, limit = 50, offset = 0, orderBy, orderDir } = payload;
+  const { text: searchQuery = '', limit = 50, offset = 0, orderBy, orderDir } = payload;
+  if (!searchQuery) return { rows: [], total: 0 };
   const bare = sanitizeFtsTerm(searchQuery);
   if (!bare) return { rows: [], total: 0 };
 

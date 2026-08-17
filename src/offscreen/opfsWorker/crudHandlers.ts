@@ -30,9 +30,9 @@ export async function handleInsert(ctx: HandlerContext, record: BrowsingLogRecor
 
 export async function handleQuery(ctx: HandlerContext, payload: QueryPayload): Promise<{ rows: BrowsingLogRecord[]; total: number }> {
   const {
-    limit = 20, offset = 0, since, until, domain,
-    isStarred, orderBy = 'created_at', orderDir = 'DESC', ids,
-    tagFilter, gistSynced,
+    limit = 20, offset = 0, dateFrom, dateTo, domain,
+    starred, orderBy = 'created_at', orderDir = 'DESC', ids,
+    tag, gistSynced,
   } = payload;
 
   if (!ALLOWED_ORDER_COLUMNS.includes(orderBy as typeof ALLOWED_ORDER_COLUMNS[number])) {
@@ -43,17 +43,17 @@ export async function handleQuery(ctx: HandlerContext, payload: QueryPayload): P
   const conditions: string[] = ['is_deleted = 0'];
   const params: SqliteValue[] = [];
 
-  if (since !== undefined) { conditions.push('created_at >= ?'); params.push(since); }
-  if (until !== undefined) { conditions.push('created_at <= ?'); params.push(until); }
+  if (dateFrom !== undefined) { conditions.push('created_at >= ?'); params.push(dateFrom); }
+  if (dateTo !== undefined) { conditions.push('created_at <= ?'); params.push(dateTo); }
   if (domain) { conditions.push('domain = ?'); params.push(domain); }
-  if (isStarred !== undefined) { conditions.push('is_starred = ?'); params.push(isStarred); }
+  if (starred !== undefined) { conditions.push('is_starred = ?'); params.push(starred ? 1 : 0); }
   if (gistSynced !== undefined) { conditions.push('gist_synced = ?'); params.push(gistSynced); }
   if (ids !== undefined && ids.length > 0) {
     conditions.push(`id IN (${ids.map(() => '?').join(',')})`);
     params.push(...ids);
   }
-  if (tagFilter) {
-    const limitedTag = tagFilter.slice(0, FTS_QUERY_MAX_LENGTH);
+  if (tag) {
+    const limitedTag = tag.slice(0, FTS_QUERY_MAX_LENGTH);
     const cleanTag = limitedTag
       .replace(/["'*^~:()+\-\\]/g, ' ')
       .replace(/\b(OR|AND|NOT|NEAR)\b/gi, ' ')
