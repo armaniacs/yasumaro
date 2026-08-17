@@ -18,7 +18,7 @@ import { markBodyElements, unmarkBodyElements } from './bodyProtection.js';
 import { CLEANSING_RULES, isRuleEnabled, resolveThresholds } from './rules.js';
 
 // 型とルール表を再エクスポート
-export type { AiSummaryCleanseOptions, AiSummaryCleanseResult, CleansingRemovalCounts } from './types.js';
+export type { AiSummaryCleanseOptions, AiSummaryCleanseResult, CleansingRemovalCounts, RuleKey, AiSummaryCleanseRuleFlags } from './types.js';
 export { CLEANSING_RULES, CLEANSING_RULE_KEYS, isRuleEnabled, resolveThresholds } from './rules.js';
 export type { CleansingRule, CleansingThresholds } from './rules.js';
 

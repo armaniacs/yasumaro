@@ -1,18 +1,31 @@
-import { describe, it, expect } from 'vitest';
-import { PageState, DEFAULT_CLEANSING_CONFIG } from '../pageState.js';
+import { describe, it, expect, expectTypeOf } from 'vitest';
+import { PageState, DEFAULT_CLEANSING_CONFIG, type CleansingConfig } from '../pageState.js';
 import { CLEANSING_RULES } from '../../utils/aiSummaryCleaner/rules.js';
+import type { RuleKey } from '../../utils/aiSummaryCleaner/types.js';
+
+/**
+ * Type-level completeness check: every RuleKey must map to a property
+ * `aiSummaryCleansing${Capitalize<K>}` in CleansingConfig. This replaces the
+ * old runtime loop test — the derived mapped type now enforces completeness at
+ * compile time.
+ */
+type AssertAllRuleKeysPresent = {
+    [K in RuleKey]: CleansingConfig[`aiSummaryCleansing${Capitalize<K>}`];
+};
 
 describe('DEFAULT_CLEANSING_CONFIG — rule flags derived from CLEANSING_RULES', () => {
-  // DEFAULT_CLEANSING_CONFIG is assembled with `as unknown as CleansingConfig`
-  // (PBI-20): the derived rule flags come from a plain Record<string, boolean>
-  // that TypeScript cannot narrow back to the 32 named properties, so
-  // completeness has to be checked at runtime here instead of at compile time.
   it('has every rule\'s aiSummaryCleansing<Key> property set to its defaultEnabled', () => {
-    const config = DEFAULT_CLEANSING_CONFIG as unknown as Record<string, boolean>;
+    const config = DEFAULT_CLEANSING_CONFIG as Record<string, unknown>;
     for (const rule of CLEANSING_RULES) {
       const prop = `aiSummaryCleansing${rule.key.charAt(0).toUpperCase()}${rule.key.slice(1)}`;
       expect(config[prop], `${rule.key} -> ${prop}`).toBe(rule.defaultEnabled);
     }
+  });
+
+  it('type-level: all RuleKey entries map to CleansingConfig properties', () => {
+    // This is a compile-time assertion: if AssertAllRuleKeysPresent has any
+    // missing key, the test file will fail to compile.
+    expectTypeOf<AssertAllRuleKeysPresent>().not.toBeNever;
   });
 });
 
