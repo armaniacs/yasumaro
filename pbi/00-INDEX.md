@@ -19,7 +19,6 @@
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
 | [2026-08-17-24-refactor-extract-sqlitehistorypanel-closure.md](2026-08-17-24-refactor-extract-sqlitehistorypanel-closure.md) | 🔴高 | 軽微 | refactor | sqliteHistoryPanel 875行クロージャから抽出 |
-| [2026-08-17-26-refactor-decompose-recordcurrentpage-god.md](2026-08-17-26-refactor-decompose-recordcurrentpage-god.md) | 🔴高 | 軽微 | refactor | recordCurrentPage ゴッド関数を分解 |
 | [2026-08-17-27-refactor-decompose-trustdb-god-module.md](2026-08-17-27-refactor-decompose-trustdb-god-module.md) | 🔴高 | あり | refactor | trustDb 6モジュール分解＋循環依存解消（13pt Epic）。CRUD重複はPBI-40で解消済み、残りはDomainVerifier/BloomFilterManager等6モジュール化と循環依存解消。ユーザー確認の上、今回のセッションでは規模超過につき見送り |
 
 ---
@@ -68,6 +67,7 @@
 - 2026-08-17-23-refactor-deepen-cspsettings-static-facade.md (@deprecated CSPSettings静的クラスを削除しCspSettingsControllerインスタンス(cspSettings)に一本化。escapeRegExpをutils/string.tsへ移動、重複i18nヘルパーをutils/i18n.tsのgetMessageに統一。window.alertをインラインメッセージ表示に置換。既存テスト6ファイル更新、npm test 8065件成功)
 - 2026-08-17-39-refactor-collapse-dashboard-sqlite-boilerplate.md (callDashboard<Req,Res>汎用ヘルパーを新設し、同一パターンの14関数を1呼び出しwrapperに置換。リトライ処理・非ServiceResult形状・専用デコードが必要な5関数は対象外として明示。704行→650行、npm test 8066件成功)
 - 2026-08-17-00-backlog-architecture-deepening-batch3.md (対象6候補35〜40が全てアーカイブ済みとなったため索引文書もアーカイブ)
+- 2026-08-17-26-refactor-decompose-recordcurrentpage-god.md (615行を TabContentFetcher/PreviewFlow/ForceRecordFlow/SpinnerManager/ErrorPresenter/RecordOrchestrator の6クラスに分解。uiStateをRecordOrchestratorのインスタンスフィールド化。ファサード32行、新規テスト14件追加、npm test 8080件成功)
 - 2026-08-17-19-refactor-instance-session-store-header-detector.md (HeaderDetectorをインスタンス化。initialize/onHeadersReceived/cachePrivacyInfo等をインスタンスメソッド化しcreateBackgroundServices.tsで生成、service-worker.tsのグローバル初期化を除去。normalizeUrlは状態を持たない純粋関数のためstatic維持。npm test 7979件成功)
 - 2026-08-17-14-refactor-instance-pending-storage-queue.md (pendingChromeStorageQueueのimport時即時生成シングルトンを廃止、createBackgroundServices経由のsetPendingWriteQueue明示初期化に変更。InMemoryAdapterを新設しテストをchrome.storageモック非依存に。呼び出し元saveMetadataStep/alarmHandlerのDI化は全StepDeps型への横断変更となるため今回はスコープ外と判断しユーザー確認済み。npm test 7979件成功)
 - 2026-08-17-18-refactor-logger-dual-module.md (logger/*への直接import違反は実質0件と確認（sqliteAlert.tsのcriticalAlertSink.js importは意図的なDIアダプタ分離のため対象外）。eslint.config.jsにno-restricted-importsルールを追加しlogger/*直接importを禁止、logger.ts自体は除外設定。npm run type-check成功)
@@ -396,10 +396,10 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 2 |
+| ⬜ 未着手 | 1 |
 | 🔶 部分実装 | 0 |
-| **`pbi/` 残存合計** | **3**（PBI-24/26/27。PBI-27は見送り理由付きで残置） |
-| アーカイブ済みPBI | 289 |
+| **`pbi/` 残存合計** | **2**（PBI-24/27。PBI-27は見送り理由付きで残置） |
+| アーカイブ済みPBI | 290 |
 | アーカイブ済み実装計画 | 112 |
 
 ※ 2026-08-17: アーキテクチャレビュー由来の14PBIを追加（06〜19）。00〜05は前回セッションから残存。
