@@ -36,7 +36,7 @@
 import { addLog, LogType, logError, ErrorCode } from '../../utils/logger.js';
 import { addPendingPage } from '../../utils/pendingStorage.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError, type OfflineJobKind, type StepDeps, type UrlStore } from './types.js';
-import { buildResult, buildErrorResult, buildPrivatePageResult, notifyObsidianSaveSuccess } from './resultBuilder.js';
+import { buildResult, buildErrorResult, buildPrivatePageResult, notifyObsidianSaveSuccess, notifyRecordingError } from './resultBuilder.js';
 import {
   truncateContentStep,
   checkDomainFilterStep,
@@ -405,7 +405,9 @@ export class RecordingPipeline {
 
         // Handle error based on strategy
         if (step.errorStrategy === ErrorStrategy.FATAL || step.errorStrategy === ErrorStrategy.RETRY) {
-          return buildErrorResult(context, error as Error, step.name);
+          const errorResult = buildErrorResult(context, error as Error, step.name);
+          notifyRecordingError(context.data.title, (error as Error).message);
+          return errorResult;
         }
 
         // SILENT / BEST_EFFORT - log and continue

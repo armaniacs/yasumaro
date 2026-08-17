@@ -29,7 +29,8 @@ export function buildPrivatePageResult(context: RecordingContext, error: Private
 }
 
 /**
- * Build error result
+ * Build error result. Pure result construction — no chrome.notifications
+ * side effect. Callers show a notification via notifyRecordingError.
  */
 export function buildErrorResult(context: RecordingContext, error: Error, stepName: string): RecordingResult {
   logError(`Pipeline failed at step ${stepName}`, {
@@ -37,16 +38,6 @@ export function buildErrorResult(context: RecordingContext, error: Error, stepNa
     url: context.data.url,
     tabId: (context.data as unknown as Record<string, unknown>).tabId as number | undefined
   }, ErrorCode.INTERNAL_ERROR, 'RecordingPipeline');
-
-  // Create error notification
-  const { title, url } = context.data;
-  const notificationTitle = chrome.i18n.getMessage('recordingFailed') || 'Recording Failed';
-  chrome.notifications.create({
-    type: 'basic',
-    iconUrl: 'icons/icon128.png',
-    title: notificationTitle,
-    message: `Failed to record ${title}: ${error.message}`
-  });
 
   // 記録漏れリカバリ: pending に登録して再記録できるようにする
   void addPendingPage({
@@ -64,6 +55,21 @@ export function buildErrorResult(context: RecordingContext, error: Error, stepNa
     title: context.data.title,
     url: context.data.url
   };
+}
+
+/**
+ * Show a notification for a pipeline error. Called by the pipeline
+ * orchestrator immediately after buildErrorResult, kept as a separate
+ * function so buildErrorResult itself stays a pure result-construction step.
+ */
+export function notifyRecordingError(title: string, errorMessage: string): void {
+  const notificationTitle = chrome.i18n.getMessage('recordingFailed') || 'Recording Failed';
+  chrome.notifications.create({
+    type: 'basic',
+    iconUrl: 'icons/icon128.png',
+    title: notificationTitle,
+    message: `Failed to record ${title}: ${errorMessage}`
+  });
 }
 
 /**
