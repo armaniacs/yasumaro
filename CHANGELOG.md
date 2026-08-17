@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.50` リリース。
+> - 現時点では `v6.7.51` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -38,6 +38,24 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 （次のリリースに向けての変更をここに記載）
+
+## [6.7.51] - 2026-08-18
+
+### Refactor
+
+- `HeaderDetector` を静的メソッドからインスタンス化。`createBackgroundServices.ts` が明示的にインスタンスを生成・初期化する構造に変更
+- `PendingChromeStorageQueue` のシングルトンを遅延初期化に変更。テストからの注入が容易に
+- `messageHandlers.ts`（680行）を `recordingHandlers.ts` / `testingHandlers.ts` / `systemHandlers.ts` の3モジュールへ責務別に分割
+- `errorMessages.ts` の重複ロジックを `errorClassification.ts` の `createErrorResponse` に統合。`errorMessages.ts` は非推奨の re-export シムに縮小
+- `crudHandlers.ts` のインラインWHERE句構築を `sqliteQueryBuilder.ts` の共有クエリビルダーへ統一
+- `RecordingCache` をストア注入可能な `RecordingCacheInstance` に変更。既存の静的APIはデフォルトシングルトンに委譲し呼び出し元は変更不要
+- `checkDuplicateStep` にURLストアを注入可能にし、パイプライン依存関係から明示的に配線
+- `buildRecordingPipelineDeps` を `OfflineNetworkQueue` のDI化に対応。テスト用に `NoOpOfflineNetworkQueue` を追加
+- `resultBuilder.ts` の `buildErrorResult` から `chrome.notifications` 呼び出しを除去し、純粋な結果構築関数に分離
+- `RecordingLogic` クラスを削除し `RecordingPipeline` に統合。`record` / `recordWithPreview` メソッドを `RecordingPipeline` に追加
+- `trustDb.ts`（889→820行）のCRUD重複を `ManagedStringList` パターンへ抽出。Trancoバージョン追跡ロジックを `TrancoVersionTracker` に分離
+- `fetch.ts` からSSRF/IPアドレスポリシー判定を `ssrfGuard.ts` へ分離。`cspValidator.ts` の重複定数 `ALLOWED_LOCALHOST_PORTS` を統一
+- `loader.ts` の `urlSkipper.ts` 相当コードの重複コピーを排除し、静的importに置換（WXT/rolldownバンドル時にインライン化されることを実測確認）
 
 ## [6.7.50] - 2026-08-17
 
