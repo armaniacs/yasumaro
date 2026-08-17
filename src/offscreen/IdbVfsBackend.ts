@@ -1,22 +1,18 @@
 // src/offscreen/IdbVfsBackend.ts
 import type { SqliteEngineContext, SqliteValue } from './sqliteEngineContext.js';
 import type {
-  StorageBackend, InsertResult, InsertBatchResult, QueryResult,
-  SearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult,
+  StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult,
+  MutationResult, StarResult, PurgeResult, FtsSizeResult,
   BackupResult, CountResult, HealthResult, AuditLogQueryResult,
   StatusResult, BackendOrError,
 } from './StorageBackend.js';
-import type { BrowsingLogRecord, BrowsingLogEntry, QueryOptions, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
+import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from './schema.js';
-import { sanitizeFtsTerm } from './schema.js';
 import { extractDomain } from './sqliteEngineContext.js';
-
-const ALLOWED_ORDER_COLUMNS = [
-  'id', 'url', 'title', 'summary', 'tags', 'created_at',
-  'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted',
-] as const;
-
-const ALLOWED_ORDER_DIRECTIONS = ['ASC', 'DESC'] as const;
+import {
+  buildWhereClause, buildOrderByClause, buildFts5OrderClause,
+  buildLikeOrderClause, sanitizeTextForFts5, shouldUseFts5,
+} from './sqliteQueryBuilder.js';
 
 export class IdbVfsBackend implements StorageBackend {
   constructor(private engine: SqliteEngineContext) {}
@@ -59,94 +55,75 @@ export class IdbVfsBackend implements StorageBackend {
     }
   }
 
-  async query(options: QueryOptions): Promise<BackendOrError<QueryResult>> {
+  async query(q: StorageQuery): Promise<BackendOrError<QuerySearchResult>> {
     this.ensureDb();
-    const limit = Math.min(options.limit ?? 100, 1000);
-    const offset = options.offset ?? 0;
-    const conditions: string[] = ['is_deleted = 0'];
-    const params: SqliteValue[] = [];
 
-    if (options.since != null) { conditions.push('created_at >= ?'); params.push(options.since); }
-    if (options.until != null) { conditions.push('created_at <= ?'); params.push(options.until); }
-    if (options.domain) { conditions.push('domain = ?'); params.push(options.domain); }
-    if (options.isStarred != null) { conditions.push('is_starred = ?'); params.push(options.isStarred ? 1 : 0); }
-    if (options.gistSynced != null) { conditions.push('gist_synced = ?'); params.push(options.gistSynced); }
+    if (q.text) {
+      const bare = sanitizeTextForFts5(q.text);
+      if (!bare) return { success: true, rows: [], total: 0 };
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+      const capLimit = Math.min(q.limit ?? 100, 100000);
+      const offset = q.offset ?? 0;
 
-    // Validate ORDER BY to prevent SQL injection
-    const orderBy = options.orderBy || 'created_at';
-    if (!ALLOWED_ORDER_COLUMNS.includes(orderBy as typeof ALLOWED_ORDER_COLUMNS[number])) {
-      return { success: false, error: `Invalid orderBy: ${orderBy}` };
-    }
-    const orderDir = (options.orderDir || 'DESC').toUpperCase();
-    if (!ALLOWED_ORDER_DIRECTIONS.includes(orderDir as typeof ALLOWED_ORDER_DIRECTIONS[number])) {
-      return { success: false, error: `Invalid orderDir: ${orderDir}` };
-    }
+      if (shouldUseFts5(this.engine.fts5Available, bare)) {
+        const ftsQuery = `"${bare}"`;
+        const { orderClause, error } = buildFts5OrderClause(q);
+        if (error) return { success: false, error };
 
-    const rows: BrowsingLogEntry[] = [];
-    await this.engine.execWithCache(
-      `SELECT * FROM browsing_logs ${where} ORDER BY ${orderBy} ${orderDir} LIMIT ? OFFSET ?`,
-      [...params, limit, offset],
-      (row: SqliteValue[]) => { rows.push(this.rowToEntry(row)); }
-    );
+        let total = 0;
+        await this.engine.execWithCache(
+          `SELECT COUNT(*) FROM browsing_logs_fts WHERE browsing_logs_fts MATCH ?`,
+          [ftsQuery],
+          (row: SqliteValue[]) => { total = Number(row[0]); }
+        );
 
-    let total = 0;
-    await this.engine.execWithCache(
-      `SELECT COUNT(*) FROM browsing_logs ${where}`,
-      params,
-      (row: SqliteValue[]) => { total = Number(row[0]); }
-    );
+        const rows: (BrowsingLogEntry & { rank: number })[] = [];
+        await this.engine.execWithCache(
+          `SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank
+           FROM browsing_logs_fts
+           JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
+           WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0
+           ORDER BY ${orderClause}
+           LIMIT ? OFFSET ?`,
+          [ftsQuery, capLimit, offset],
+          (row: SqliteValue[]) => {
+            rows.push({
+              id: Number(row[0]), url: String(row[1]),
+              title: row[2] != null ? String(row[2]) : null,
+              summary: row[3] != null ? String(row[3]) : null,
+              tags: row[4] != null ? String(row[4]) : null,
+              created_at: Number(row[5]),
+              domain: row[6] != null ? String(row[6]) : null,
+              visit_duration: row[7] != null ? Number(row[7]) : null,
+              scroll_ratio: row[8] != null ? Number(row[8]) : null,
+              is_starred: Number(row[9]),
+              rank: Number(row[10]),
+            });
+          }
+        );
+        return { success: true, rows, total };
+      }
 
-    return { success: true, rows, total };
-  }
+      // LIKE fallback
+      const likePattern = `%${q.text}%`;
+      const { orderClause: likeOrderClause, error: likeErr } = buildLikeOrderClause(q);
+      if (likeErr) return { success: false, error: likeErr };
 
-  async search(
-    searchQuery: string,
-    limit: number,
-    offset: number,
-    options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
-  ): Promise<BackendOrError<SearchResult>> {
-    this.ensureDb();
-    const capLimit = Math.min(limit, 100000);
-    const bare = sanitizeFtsTerm(searchQuery);
-    if (!bare) {
-      return { success: true, rows: [], total: 0 };
-    }
-
-    // Runtime whitelist check — options.orderDir crosses a
-    // chrome.runtime.sendMessage boundary where the 'ASC'|'DESC' TypeScript
-    // type is not enforced at runtime; reuse this file's existing
-    // ALLOWED_ORDER_DIRECTIONS (already used by query() above) rather than
-    // trusting the type alone.
-    const requestedDir = options.orderDir ?? 'DESC';
-    if (!ALLOWED_ORDER_DIRECTIONS.includes(requestedDir as typeof ALLOWED_ORDER_DIRECTIONS[number])) {
-      return { success: false, error: `Invalid orderDir: ${requestedDir}` };
-    }
-    const dir = requestedDir;
-    const orderClause = options.orderBy === 'created_at'
-      ? `b.created_at ${dir}, b.id ${dir}`
-      : 'rank';
-
-    const charLen = [...bare].length;
-    if (this.engine.fts5Available && charLen >= 3) {
-      const ftsQuery = `"${bare}"`;
       let total = 0;
       await this.engine.execWithCache(
-        `SELECT COUNT(*) FROM browsing_logs_fts WHERE browsing_logs_fts MATCH ?`,
-        [ftsQuery],
+        `SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)`,
+        [likePattern, likePattern, likePattern, likePattern],
         (row: SqliteValue[]) => { total = Number(row[0]); }
       );
 
       const rows: (BrowsingLogEntry & { rank: number })[] = [];
       await this.engine.execWithCache(
-        `SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank
-         FROM browsing_logs_fts
-         JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
-         WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0
-         ORDER BY ${orderClause}
+        `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred
+         FROM browsing_logs
+         WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)
+         ORDER BY ${likeOrderClause}
          LIMIT ? OFFSET ?`,
-        [ftsQuery, capLimit, offset],
+        [likePattern, likePattern, likePattern, likePattern, capLimit, offset],
         (row: SqliteValue[]) => {
           rows.push({
             id: Number(row[0]), url: String(row[1]),
@@ -158,46 +135,32 @@ export class IdbVfsBackend implements StorageBackend {
             visit_duration: row[7] != null ? Number(row[7]) : null,
             scroll_ratio: row[8] != null ? Number(row[8]) : null,
             is_starred: Number(row[9]),
-            rank: Number(row[10]),
+            rank: 0,
           });
         }
       );
       return { success: true, rows, total };
     }
 
-    const likePattern = `%${searchQuery}%`;
-    const likeOrderClause = options.orderBy === 'created_at'
-      ? `created_at ${dir}`
-      : `created_at DESC`;
-    let total = 0;
-    await this.engine.execWithCache(
-      `SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)`,
-      [likePattern, likePattern, likePattern, likePattern],
-      (row: SqliteValue[]) => { total = Number(row[0]); }
-    );
+    // Plain filtered listing (no text search)
+    const limit = Math.min(q.limit ?? 100, 1000);
+    const offset = q.offset ?? 0;
+    const { where, params: whereParams } = buildWhereClause(q);
+    const { orderClause, error } = buildOrderByClause(q);
+    if (error) return { success: false, error };
 
     const rows: (BrowsingLogEntry & { rank: number })[] = [];
     await this.engine.execWithCache(
-      `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred
-       FROM browsing_logs
-       WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)
-       ORDER BY ${likeOrderClause}
-       LIMIT ? OFFSET ?`,
-      [likePattern, likePattern, likePattern, likePattern, capLimit, offset],
-      (row: SqliteValue[]) => {
-        rows.push({
-          id: Number(row[0]), url: String(row[1]),
-          title: row[2] != null ? String(row[2]) : null,
-          summary: row[3] != null ? String(row[3]) : null,
-          tags: row[4] != null ? String(row[4]) : null,
-          created_at: Number(row[5]),
-          domain: row[6] != null ? String(row[6]) : null,
-          visit_duration: row[7] != null ? Number(row[7]) : null,
-          scroll_ratio: row[8] != null ? Number(row[8]) : null,
-          is_starred: Number(row[9]),
-          rank: 0,
-        });
-      }
+      `SELECT * FROM browsing_logs ${where} ${orderClause} LIMIT ? OFFSET ?`,
+      [...whereParams, limit, offset],
+      (row: SqliteValue[]) => { rows.push({ ...this.rowToEntry(row), rank: 0 }); }
+    );
+
+    let total = 0;
+    await this.engine.execWithCache(
+      `SELECT COUNT(*) FROM browsing_logs ${where}`,
+      whereParams,
+      (row: SqliteValue[]) => { total = Number(row[0]); }
     );
 
     return { success: true, rows, total };

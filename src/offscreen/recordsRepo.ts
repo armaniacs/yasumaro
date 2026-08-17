@@ -12,7 +12,7 @@ import { engine, DB_FILENAME, MAX_QUERY_LIMIT } from './sqliteEngineContext.js';
 import type { SqliteValue } from './sqliteEngineContext.js';
 import { FTS_QUERY_MAX_LENGTH } from './schema.js';
 
-import type { BrowsingLogRecord, QueryOptions, SearchResult } from '../utils/sqlite-types.js';
+import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery } from '../utils/sqlite-types.js';
 
 /**
  * Insert a new browsing log record and return the auto-generated row id.
@@ -34,33 +34,18 @@ export async function insertBatch(records: BrowsingLogRecord[]): Promise<{ succe
 }
 
 /**
- * Query browsing logs with optional filters.
+ * Unified read path — text search (FTS5 / LIKE) and plain filtered listing
+ * through a single StorageQuery interface.
  */
-export async function query(options: QueryOptions = {}): Promise<{
-  success: true; rows: BrowsingLogRecord[]; total: number
+export async function query(q: StorageQuery = {}): Promise<{
+  success: true; rows: (BrowsingLogEntry & { rank: number })[]; total: number
 } | { success: false; error: string }> {
-  const tagFilter = options.tagFilter ? options.tagFilter.slice(0, FTS_QUERY_MAX_LENGTH) : options.tagFilter;
-  const queryLimit = Math.min(options.limit ?? 100, MAX_QUERY_LIMIT);
+  const cappedLimit = Math.min(q.limit ?? 100, MAX_QUERY_LIMIT);
+  // Truncate tag and text to prevent expensive FTS5 queries on extremely long input
+  const tag = q.tag ? q.tag.slice(0, FTS_QUERY_MAX_LENGTH) : q.tag;
+  const text = q.text ? q.text.slice(0, FTS_QUERY_MAX_LENGTH) : q.text;
   const backend = await engine.getBackend();
-  return backend.query({ ...options, limit: queryLimit, tagFilter });
-}
-
-/**
- * Full-text search using FTS5.
- */
-export async function search(
-  searchQuery: string,
-  limit: number = 50,
-  offset: number = 0,
-  options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
-): Promise<{
-  success: true; rows: SearchResult[]; total: number
-} | { success: false; error: string }> {
-  limit = Math.min(limit, MAX_QUERY_LIMIT);
-  const backend = await engine.getBackend();
-  const result = await backend.search(searchQuery, limit, offset, options);
-  if (!result.success) return result;
-  return { success: true, rows: result.rows as unknown as SearchResult[], total: result.total };
+  return backend.query({ ...q, limit: cappedLimit, tag, text });
 }
 
 /**

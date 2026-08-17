@@ -1,9 +1,21 @@
-import type { BrowsingLogRecord, BrowsingLogEntry, QueryOptions, SearchResult as SearchResultType, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
+import type { BrowsingLogRecord, BrowsingLogEntry, QueryOptions, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 
 export interface InsertResult { success: true; id: number }
 export interface InsertBatchResult { success: true; inserted: number; skipped: number }
 export interface QueryResult { success: true; rows: BrowsingLogEntry[]; total: number }
 export interface SearchResult { success: true; rows: (BrowsingLogEntry & { rank: number })[]; total: number }
+
+/**
+ * Unified result type for StorageBackend.query(StorageQuery).
+ * When the query carries `text`, the backend performs FTS5 or LIKE search
+ * and may populate `rank` (FTS5 bm25) — otherwise rank stays 0.
+ */
+export interface QuerySearchResult {
+  success: true;
+  rows: (BrowsingLogEntry & { rank: number })[];
+  total: number;
+}
+
 export interface MutationResult { success: true }
 export interface StarResult { success: true; is_starred: number }
 export interface PurgeResult { success: true; purged: number }
@@ -27,13 +39,14 @@ export interface StatusResult {
 export interface StorageBackend {
   insert(record: BrowsingLogRecord): Promise<BackendOrError<InsertResult>>;
   insertBatch(records: BrowsingLogRecord[]): Promise<BackendOrError<InsertBatchResult>>;
-  query(options: QueryOptions): Promise<BackendOrError<QueryResult>>;
-  search(
-    query: string,
-    limit: number,
-    offset: number,
-    options?: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' }
-  ): Promise<BackendOrError<SearchResult>>;
+  /**
+   * Unified read path — replaces the separate query(QueryOptions) and
+   * search(query, limit, offset, options) signatures.
+   *
+   * When q.text is present, the backend internally decides FTS5 vs LIKE
+   * based on trigram length.  Otherwise returns a plain filtered listing.
+   */
+  query(q: StorageQuery): Promise<BackendOrError<QuerySearchResult>>;
   update(id: number, changes: Record<string, unknown>): Promise<BackendOrError<MutationResult>>;
   delete(id: number): Promise<BackendOrError<MutationResult>>;
   toggleStar(id: number): Promise<BackendOrError<StarResult>>;
@@ -57,7 +70,6 @@ export class NoopBackend implements StorageBackend {
   async insert() { return this.err(); }
   async insertBatch() { return this.err(); }
   async query() { return this.err(); }
-  async search() { return this.err(); }
   async update() { return this.err(); }
   async delete() { return this.err(); }
   async toggleStar() { return this.err(); }

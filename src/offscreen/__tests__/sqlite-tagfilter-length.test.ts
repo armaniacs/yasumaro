@@ -68,14 +68,14 @@ describe('FTS5 tagFilter query length limit', () => {
     expect(longTag.length).toBeGreaterThan(FTS_QUERY_MAX_LENGTH);
 
     workerMessages.length = 0;
-    await mod.query({ tagFilter: longTag });
+    await mod.query({ tag: longTag });
 
-    // The worker should have received a QUERY message with a truncated tagFilter
+    // The worker should have received a QUERY message with a truncated tag
     const queryMsg = workerMessages.find((m) => m.type === 'QUERY');
     expect(queryMsg).toBeDefined();
     const payload = queryMsg!.payload as Record<string, unknown>;
-    expect(payload.tagFilter).toBeDefined();
-    expect(String(payload.tagFilter).length).toBeLessThanOrEqual(FTS_QUERY_MAX_LENGTH);
+    expect(payload.tag).toBeDefined();
+    expect(String(payload.tag).length).toBeLessThanOrEqual(FTS_QUERY_MAX_LENGTH);
   });
 
   it('passes through tagFilter shorter than limit unchanged', async () => {
@@ -86,11 +86,11 @@ describe('FTS5 tagFilter query length limit', () => {
     expect(shortTag.length).toBeLessThan(FTS_QUERY_MAX_LENGTH);
 
     workerMessages.length = 0;
-    await mod.query({ tagFilter: shortTag });
+    await mod.query({ tag: shortTag });
 
     const queryMsg = workerMessages.find((m) => m.type === 'QUERY');
     expect(queryMsg).toBeDefined();
     const payload = queryMsg!.payload as Record<string, unknown>;
-    expect(payload.tagFilter).toBe(shortTag);
+    expect(payload.tag).toBe(shortTag);
   });
 });
