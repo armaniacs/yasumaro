@@ -15,7 +15,7 @@ import { NotificationHelper } from '../notificationHelper.js';
 import type { MessageSenderLike } from '../rateLimiter.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import type { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
-import type { AiTestProgress } from '../aiClient.js';
+import type { AiTestProgress } from '../ai/AIService.js';
 
 import type {
   ValidVisitMessage,

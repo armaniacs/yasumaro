@@ -667,13 +667,12 @@ describe('RecordingLogic - constructor', () => {
     expect((logic as any).pipeline).toBeDefined();
   });
 
-  test('stores obsidian and aiService references', () => {
+  test('stores pipeline reference', () => {
     const obsidian = makeMockObsidian();
     const aiClient = makeMockAiClient();
     const logic = makeRecordingLogic(obsidian, aiClient);
 
-    expect((logic as any).obsidian).toBe(obsidian);
-    expect((logic as any).aiService).toBe(aiClient);
+    expect((logic as any).pipeline).toBeDefined();
   });
 });
 

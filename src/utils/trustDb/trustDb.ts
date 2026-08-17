@@ -13,6 +13,7 @@ import { TrustBloomFilter, bloomFilterFromData, bloomFilterFromDomains } from '.
 import { logDebug, logInfo, logWarn, logError, ErrorCode } from '../logger.js';
 import { withOptimisticLock } from '../optimisticLock.js';
 import { TRANCO_VERSION as CURRENT_TRANCO_VERSION } from './presetDomains.js';
+import { SENSITIVE_DOMAINS_PRESETS as PRESETS, JP_ANCHOR_TLDS } from './presets.js';
 
 // ===== 定数 =====
 
@@ -22,56 +23,11 @@ const STORAGE_KEY = 'trust_db:json';
 // 30日（ミリ秒）- 同意拒否後の再確認間隔
 const _CONSENT_RETRY_DAYS = 30;
 
-// JP-Anchor プリセット TLD
-const JP_ANCHOR_TLDS_PRESET = ['.go.jp', '.ac.jp', '.lg.jp'] as const;
+// JP-Anchor プリセット TLD（presets.ts から取得）
+const JP_ANCHOR_TLDS_PRESET = [...JP_ANCHOR_TLDS] as readonly string[];
 
-// Sensitive ドメインプリセット（固定）
-const SENSITIVE_DOMAINS_PRESETS = {
-  finance: [
-    'rakuten.co.jp',
-    'sbi.co.jp',
-    'shinseibank.com',
-    'smfb.co.jp',
-    'resona.co.jp',
-    'mufg.co.jp',
-    'smbc.co.jp',
-    'dc-card.co.jp',
-    'ucard.co.jp',
-    'ufj.co.jp',
-    'sumitomo.co.jp',
-    'orix.co.jp',
-    'saison.co.jp',
-    'aeon.co.jp',
-    'sevenbank.co.jp',
-    'japanpost.jp',
-    'yucho.co.jp',
-    'cisco.co.jp',
-    'aeoncredit.co.jp',
-    'jcb.co.jp',
-    'vodafone.co.jp'
-  ],
-  gaming: [
-    'nintendo.com',
-    'bandainamco.co.jp',
-    'square-enix.com',
-    'capcom.com',
-    'sega.com',
-    'konami.com',
-    'pokemon.com',
-    'level5.com',
-    'falcom.co.jp',
-    'sega.net'
-  ],
-  sns: [
-    'twitter.com',
-    'instagram.com',
-    'x.com',
-    'facebook.com',
-    'line.me',
-    'weibo.com',
-    't.co'
-  ]
-} as const;
+// Sensitive ドメインプリセット（presets.ts から取得。正本は presets.ts に一元化）
+const SENSITIVE_DOMAINS_PRESETS = PRESETS;
 
 // 入力バリデーション /////////////////////////
 
@@ -82,90 +38,9 @@ const SENSITIVE_DOMAINS_PRESETS = {
 // - ラベルの最大長: 63 文字
 // - ドメイン全体の最大長: 253 文字
 // - 大文字小文字は区別しない
-const DOMAIN_REGEX = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*$/i;
 
-/**
- * RFC準拠のドメイン名バリデーション
- * @param domain バリデーション対象のドメイン名
- * @returns 有効なドメイン名の場合 true、それ以外の場合 false
- */
-function isValidDomain(domain: string): boolean {
-  const normalized = domain.toLowerCase().trim();
-
-  // ドメインが空でないこと
-  if (!normalized) {
-    return false;
-  }
-
-  // 最大長チェック（RFC 1035: 253文字）
-  if (normalized.length > 253) {
-    return false;
-  }
-
-  // ドットで始まらないこと（TLD用プレフィックスとして使用する場合を除く）
-  if (normalized.startsWith('.')) {
-    return false;
-  }
-
-  // ドットで終わらないこと
-  if (normalized.endsWith('.')) {
-    return false;
-  }
-
-  // ドットを含まない場合（TLD単体など）はドメインとして扱わない
-  if (!normalized.includes('.')) {
-    return false;
-  }
-
-  // 正規表現による構造チェック
-  if (!DOMAIN_REGEX.test(normalized)) {
-    return false;
-  }
-
-  // 各ラベルの長さチェック（最大63文字）
-  const labels = normalized.split('.');
-  for (const label of labels) {
-    if (label.length === 0) {
-      return false; // 連続するドット
-    }
-    if (label.length > 63) {
-      return false; // ラベルが長すぎる
-    }
-  }
-
-  return true;
-}
-
-/**
- * TLD バリデーション
- * @param tld バリデーション対象のTLD（.を含むか含まない）
- * @returns 有効なTLDの場合 true、それ以外の場合 false
- */
-function isValidTld(tld: string): boolean {
-  const normalized = tld.trim();
-
-  // ドットがない場合は追加
-  if (!normalized.startsWith('.')) {
-    return isValidTld('.' + normalized);
-  }
-
-  // . を除いた部分のみをドメインとして検証
-  const tldWithoutDot = normalized.slice(1);
-
-  // 最小長チェック（最低2文字）
-  if (tldWithoutDot.length < 2) {
-    return false;
-  }
-
-  // 最大長チェック（63文字）
-  if (tldWithoutDot.length > 63) {
-    return false;
-  }
-
-  // ドメインルールと同様の構造チェック（ドットを含まない単一ラベルとして）
-  const labelRegex = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
-  return labelRegex.test(tldWithoutDot);
-}
+// ドメインバリデーション関数は domainValidation.ts に抽出済み
+import { isValidDomain, isValidTld, compareVersions as _compareVersions } from './domainValidation.js';
 
 // ===== settingsStore 動的import ヘルパー（PBI-2026-08-01-20） =====
 //
@@ -333,19 +208,10 @@ class TrustDb {
   }
 
   /**
-   * バージョン比較
-   * @param v1 比較対象1
-   * @param v2 比較対象2
-   * @returns v1 < v2 の場合は負の値、v1 > v2 の場合は正の値、等しい場合は 0
+   * バージョン比較（domainValidation.ts の compareVersions に委譲）
    */
   private compareVersions(v1: string, v2: string): number {
-    const normalize = (v: string) => v.split('.').map(x => parseInt(x, 10) || 0);
-    const [major1, minor1, patch1] = normalize(v1);
-    const [major2, minor2, patch2] = normalize(v2);
-
-    if (major1 !== major2) return major1 - major2;
-    if (minor1 !== minor2) return minor1 - minor2;
-    return patch1 - patch2;
+    return _compareVersions(v1, v2);
   }
 
   /**

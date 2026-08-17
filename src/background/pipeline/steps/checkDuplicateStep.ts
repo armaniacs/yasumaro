@@ -17,7 +17,7 @@ export const checkDuplicateStep: PipelineStepFunction = async (
   const { data } = context;
   const { url, skipDuplicateCheck } = data;
 
-  // Get saved URLs map
+  // Get saved URLs map via static import (DI override removed: PBI-2026-08-17 review fix)
   const urlMap = await getSavedUrlsWithTimestamps();
 
   // Skip check if flag is set

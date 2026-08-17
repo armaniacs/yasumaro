@@ -4,7 +4,7 @@ import type { RecordingLogic } from '../recordingLogic.js';
 import { RecordingCache } from '../recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
 import type { ObsidianClient } from '../obsidianClient.js';
-import type { AIClient } from '../aiClient.js';
+import type { AIService } from '../ai/AIService.js';
 import { StorageKeys } from '../../utils/storage.js';
 import type { Settings } from '../../utils/storage.js';
 import * as privacy from '../privacyPipeline.js';
@@ -19,7 +19,7 @@ vi.mock('../privacyPipeline.js');
 describe('RecordingLogic - Whitelist Privacy Bypass', () => {
   let recordingLogic: RecordingLogic;
   let mockObsidian: ObsidianClient;
-  let mockAIClient: AIClient;
+  let mockAIClient: AIService;
   let getSettings: any;
   let getSavedUrlsWithTimestamps: any;
   let isDomainAllowed: any;

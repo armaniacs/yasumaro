@@ -5,24 +5,22 @@
 
 import { addLog, LogType } from '../../../utils/logger.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { ObsidianClient } from '../../obsidianClient.js';
-import { NotificationHelper } from '../../notificationHelper.js';
 import { StorageKeys } from '../../../utils/storage.js';
-import type { RecordingContext } from '../types.js';
+import type { RecordingContext, StepDeps } from '../types.js';
 
 /**
  * Save formatted markdown to Obsidian daily note
  * Skips silently when Obsidian is not configured.
  *
- * @param context - The current recording pipeline context
- * @param obsidian - The Obsidian client instance.
- *   In production, this is injected by RecordingPipeline via dependency injection (DI).
- *   The parameter is typed as optional only to allow test overrides;
- *   omitting it in production falls back to constructing a new ObsidianClient instance.
+ * Dependencies are injected via StepDeps instead of creating ObsidianClient
+ * internally. This makes the dependency explicit and testable.
+ *
+ * Notifications are NOT created here — the caller (handler layer) is
+ * responsible for notifying the user based on the pipeline result.
  */
 export const saveToObsidianStep = async (
   context: RecordingContext,
-  obsidian?: ObsidianClient
+  deps?: StepDeps
 ): Promise<RecordingContext> => {
   const { data, markdown } = context;
   const { url, title } = data;
@@ -32,7 +30,7 @@ export const saveToObsidianStep = async (
     return context;
   }
 
-  // ユーザーが Obsidian 使用を明示的に OFF にしている場合はスキップ（フラグ優先）
+  // Skip if user explicitly disabled Obsidian
   const settings = context.settings as Record<string, unknown>;
   const obsidianEnabled = settings[StorageKeys.OBSIDIAN_ENABLED];
   if (obsidianEnabled === false) {
@@ -40,28 +38,18 @@ export const saveToObsidianStep = async (
     return context;
   }
 
-  // If obsidian client was not injected via DI, check if Obsidian is configured
-  // (e.g., in test environments or when using the default ObsidianClient fallback)
-  if (!obsidian) {
-    const obsidianApiKey = settings[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
-    if (!obsidianApiKey || obsidianApiKey.length < 16) {
-      addLog(LogType.INFO, 'Obsidian not configured, skipping save', { url, traceId: context.traceId });
-      return context;
-    }
+  // Require an injected Obsidian client; production always injects via createSaveToObsidianStep
+  const obsidianClient = deps?.obsidian;
+  if (!obsidianClient) {
+    addLog(LogType.INFO, 'No Obsidian client available, skipping save', { url, traceId: context.traceId });
+    return context;
   }
-
-  // Use provided Obsidian client (injected via DI in production) or create new one
-  const obsidianClient = obsidian || new ObsidianClient();
 
   const obsidianStart = Date.now();
   try {
     await obsidianClient.appendToDailyNote(markdown, context.traceId);
     const obsidianDuration = Date.now() - obsidianStart;
     addLog(LogType.INFO, 'Saved to Obsidian', { title, url, traceId: context.traceId });
-
-    // Create notification after successful save
-    const notificationTitle = chrome.i18n.getMessage('saveToObsidian') || 'Saved to Obsidian';
-    NotificationHelper.notifySuccess(notificationTitle, `Saved: ${title}`);
 
     return { ...context, obsidianDuration };
   } catch (error: unknown) {

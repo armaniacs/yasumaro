@@ -19,11 +19,6 @@ vi.mock('../../utils/errorUtils.js', () => ({
   errorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
 }));
 
-// AIClient直接生成の残存検出: factory経路がAIClientを決して生成しないことを検証する
-vi.mock('../aiClient.js', () => ({
-  AIClient: vi.fn(),
-}));
-
 import {
   createReviewSummaryGenerator,
   generateStatsSection,
@@ -32,7 +27,6 @@ import {
 import type { AIService } from '../ai/AIService.js';
 import type { AISummaryResult } from '../ai/AIService.js';
 import type { SqliteClient } from '../sqliteClient.js';
-import { AIClient } from '../aiClient.js';
 import { getSettings } from '../../utils/storage.js';
 import { addLog } from '../../utils/logger.js';
 
@@ -263,30 +257,6 @@ describe('generateMonthlySummary', () => {
     const result = await generator.generateMonthlySummary(new Date('2026-07-15'));
     expect(result).toBe(false);
     expect((globalThis as any).chrome.storage.local.set).not.toHaveBeenCalled();
-  });
-});
-
-describe('AIClient direct generation residual detection', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    (globalThis as any).chrome.downloads = {
-      download: vi.fn().mockResolvedValue({}),
-    };
-    (globalThis as any).chrome.storage.local.set = vi.fn().mockResolvedValue(undefined);
-  });
-
-  it('never constructs AIClient while generating summaries through the factory', async () => {
-    const { generator, generateSummary, queryResult } = createHarness();
-    vi.mocked(getSettings).mockResolvedValue({
-      review_summary_enabled: true,
-    } as any);
-    queryResult.mockResolvedValue(mockRows([makeEntry({ summary: 'Some summary' })]));
-    generateSummary.mockResolvedValue({ success: true, summary: 'Digest' });
-
-    await generator.generateWeeklySummary(new Date('2026-07-08'));
-    await generator.generateMonthlySummary(new Date('2026-07-15'));
-
-    expect(AIClient).not.toHaveBeenCalled();
   });
 });
 

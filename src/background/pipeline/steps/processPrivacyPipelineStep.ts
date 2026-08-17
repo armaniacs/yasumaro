@@ -9,19 +9,21 @@ import { StorageKeys } from '../../../utils/storage.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import type { AIService } from '../../ai/AIService.js';
 import { sanitizeRegex } from '../../../utils/piiSanitizer.js';
-import type { RecordingContext, PipelineStepFunction } from '../types.js';
+import type { RecordingContext, PipelineStepFunction, StepDeps } from '../types.js';
 
 /**
  * Process content through privacy pipeline (AI summarization)
  * This step is retryable on failure
  */
 export const processPrivacyPipelineStep: PipelineStepFunction = async (
-  context: RecordingContext
+  context: RecordingContext,
+  deps?: StepDeps
 ): Promise<RecordingContext> => {
   const { data, settings } = context;
   const { content, previewOnly, alreadyProcessed } = data;
 
-  const aiService = context.aiService as AIService;
+  // Use injected deps.aiService, falling back to context.aiService for backward compatibility
+  const aiService = (deps?.aiService ?? context.aiService) as AIService;
   const pipeline = new PrivacyPipeline(settings, aiService, { sanitizeRegex });
 
   const tagSummaryMode = settings[StorageKeys.TAG_SUMMARY_MODE] as boolean;

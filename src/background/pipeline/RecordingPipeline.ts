@@ -35,7 +35,8 @@
 
 import { addLog, LogType, logError, ErrorCode } from '../../utils/logger.js';
 import { addPendingPage } from '../../utils/pendingStorage.js';
-import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError, type OfflineJobKind } from './types.js';
+import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError, type OfflineJobKind, type StepDeps } from './types.js';
+import { buildResult, buildErrorResult, buildPrivatePageResult, notifyObsidianSaveSuccess } from './resultBuilder.js';
 import {
   truncateContentStep,
   checkDomainFilterStep,
@@ -62,6 +63,8 @@ import type { SqliteClient } from '../sqliteClient.js';
 import { mapToBrowsingLogRecord } from './mappers/BrowsingLogRecordMapper.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import { sharedOfflineNetworkQueue, type OfflineNetworkQueue } from '../offlineNetworkQueue.js';
+import { Mutex } from '../../utils/Mutex.js';
+import { RecordingCache } from '../recordingCache.js';
 
 /**
  * Dependencies required to build a RecordingPipeline instance.
@@ -112,7 +115,10 @@ const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(r
 
 /**
  * Recording Pipeline class
- * Manages the execution of recording steps with configurable error strategies
+ * Manages the execution of recording steps with configurable error strategies.
+ *
+ * Owns per-URL mutex serialization (previously in RecordingLogic) to protect
+ * the read-then-write window between checkDuplicateStep and saveMetadataStep.
  */
 export class RecordingPipeline {
   private steps: PipelineStep[];
@@ -121,6 +127,34 @@ export class RecordingPipeline {
   private aiService: AIService | null;
   private sqliteClient: SqliteClient | null;
   private offlineNetworkQueue: OfflineNetworkQueue | null;
+
+  // Per-URL mutex map (VULN-003 fix: prevents TOCTOU races)
+  private static urlRecordMutexes = new Map<string, Mutex>();
+
+  private static getUrlMutex(url: string): Mutex {
+    let mutex = RecordingPipeline.urlRecordMutexes.get(url);
+    if (!mutex) {
+      mutex = new Mutex({ maxQueueSize: 5, timeoutMs: 60000 });
+      RecordingPipeline.urlRecordMutexes.set(url, mutex);
+    }
+    return mutex;
+  }
+
+  /**
+   * Acquire the per-URL mutex, run fn, then release it.
+   */
+  private static async withUrlRecordMutex<T>(url: string, fn: () => Promise<T>): Promise<T> {
+    const mutex = RecordingPipeline.getUrlMutex(url);
+    try {
+      await mutex.acquire();
+      return await fn();
+    } finally {
+      mutex.release();
+      if (!mutex.isLocked() && mutex.getQueueSize() === 0) {
+        RecordingPipeline.urlRecordMutexes.delete(url);
+      }
+    }
+  }
 
   constructor(
     getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>,
@@ -216,21 +250,22 @@ export class RecordingPipeline {
    */
   private createPrivacyHeadersStep() {
     const checker = new PrivacyHeadersChecker(this.getPrivacyInfoWithCache);
-    return (context: RecordingContext) => checker.execute(context);
+    return (context: RecordingContext, _deps?: StepDeps) => checker.execute(context);
   }
 
   /**
    * Create save to Obsidian step with injected dependency
    */
   private createSaveToObsidianStep() {
-    return (context: RecordingContext) => saveToObsidianStep(context, this.obsidian);
+    const deps: StepDeps = { obsidian: this.obsidian, aiService: this.aiService! };
+    return (context: RecordingContext) => saveToObsidianStep(context, deps);
   }
 
   /**
    * Create save to SQLite step with injected dependency
    */
   private createSaveSqliteStep() {
-    return async (context: RecordingContext): Promise<RecordingContext> => {
+    return async (context: RecordingContext, _deps?: StepDeps): Promise<RecordingContext> => {
       if (!this.sqliteClient) {
         addLog(LogType.WARN, 'No SqliteClient available, skipping SQLite save', {
           url: context.data.url,
@@ -255,16 +290,47 @@ export class RecordingPipeline {
 
   /**
    * Execute the pipeline with initial data.
-   *
-   * NOTE: Per-URL serialization is intentionally NOT handled here. It is
-   * provided by RecordingLogic.withUrlRecordMutex (RecordingLogic.record())
-   * which owns the shared, static per-URL mutex that protects the
-   * read-then-write window between checkDuplicateStep and saveMetadataStep.
-   * Direct pipeline users must either route through RecordingLogic.record()
-   * or accept that no same-URL serialization is applied.
+   * Acquires per-URL mutex to protect the read-then-write window.
    */
   async execute(data: RecordingData, settings: Settings): Promise<RecordingResult> {
-    return this.executeInternal(data, settings);
+    return RecordingPipeline.withUrlRecordMutex(data.url, async () => {
+      return this.executeInternal(data, settings);
+    });
+  }
+
+  /**
+   * Retry an Obsidian write for an offline-queued job.
+   * Reuses the pipeline's formatMarkdown + saveObsidian steps instead of
+   * calling them manually (previously in RecordingLogic.retryObsidianWriteOnly).
+   */
+  async retryObsidianWriteOnly(job: {
+    title: string;
+    url: string;
+    summary: string;
+    tags?: string[];
+  }): Promise<boolean> {
+    return RecordingPipeline.withUrlRecordMutex(job.url, async () => {
+      const settings = await RecordingCache.getSettingsWithCache();
+      const context: RecordingContext = {
+        data: { title: job.title, url: job.url, content: '' } as RecordingData,
+        settings,
+        force: true,
+        errors: [],
+        privacyResult: { summary: job.summary, tags: job.tags },
+      };
+
+      // Run only formatMarkdown + saveObsidian steps (the retry path)
+      const deps: StepDeps = { obsidian: this.obsidian, aiService: this.aiService! };
+      let result = await formatMarkdownStep(context);
+      result = await saveToObsidianStep(result, deps);
+
+      // Notify user on successful offline retry save
+      if (result.obsidianDuration != null) {
+        notifyObsidianSaveSuccess(job.title);
+      }
+
+      return true;
+    });
   }
 
   private async executeInternal(data: RecordingData, settings: Settings): Promise<RecordingResult> {
@@ -272,6 +338,12 @@ export class RecordingPipeline {
     const traceId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
       ? crypto.randomUUID()
       : (() => { const a = new Uint32Array(2); if (typeof crypto !== 'undefined') crypto.getRandomValues(a); return a[0].toString(36) + a[1].toString(36); })();
+
+    // Build deps once per recording event (not per step)
+    const deps: StepDeps = {
+      obsidian: this.obsidian,
+      aiService: this.aiService!,
+    };
 
     let context: RecordingContext = {
       data,
@@ -285,7 +357,7 @@ export class RecordingPipeline {
     // Execute each step
     for (const step of this.steps) {
       try {
-        context = await this.executeWithStrategy(step, context);
+        context = await this.executeWithStrategy(step, context, deps);
 
         // previewOnly: privacyPipeline ステップ完了後に早期リターン
         if (data.previewOnly && context.result && step.previewBreakpoint) {
@@ -298,7 +370,7 @@ export class RecordingPipeline {
       } catch (error) {
         // Handle special error types
         if (error instanceof PrivatePageError) {
-          return this.buildPrivatePageResult(context, error);
+          return buildPrivatePageResult(context, error);
         }
 
         if (error instanceof DuplicateError) {
@@ -313,7 +385,7 @@ export class RecordingPipeline {
 
         // Handle error based on strategy
         if (step.errorStrategy === ErrorStrategy.FATAL || step.errorStrategy === ErrorStrategy.RETRY) {
-          return this.buildErrorResult(context, error as Error, step.name);
+          return buildErrorResult(context, error as Error, step.name);
         }
 
         // SILENT / BEST_EFFORT - log and continue
@@ -340,7 +412,14 @@ export class RecordingPipeline {
     }
 
     // Build final result
-    return this.buildResult(context);
+    const result = buildResult(context);
+
+    // Notify user on successful Obsidian save
+    if (result.success && result.obsidianDuration != null) {
+      notifyObsidianSaveSuccess(data.title);
+    }
+
+    return result;
   }
 
   /**
@@ -348,13 +427,14 @@ export class RecordingPipeline {
    */
   private async executeWithStrategy(
     step: PipelineStep,
-    context: RecordingContext
+    context: RecordingContext,
+    deps: StepDeps
   ): Promise<RecordingContext> {
     let retries = 0;
 
     while (true) {
       try {
-        return await step.execute(context);
+        return await step.execute(context, deps);
       } catch (error) {
         if (step.errorStrategy === ErrorStrategy.RETRY && retries < (step.maxRetries || 0)) {
           retries++;
@@ -412,105 +492,5 @@ export class RecordingPipeline {
         traceId: context.traceId,
       });
     }
-  }
-
-  /**
-   * Build result for private page detection
-   */
-  private buildPrivatePageResult(context: RecordingContext, error: PrivatePageError): RecordingResult {
-    return {
-      success: false,
-      error: error.message,
-      reason: error.reason,
-      confirmationRequired: error.confirmationRequired,
-      headerValue: error.headerValue,
-      title: context.data.title,
-      url: context.data.url
-    };
-  }
-
-  /**
-   * Build error result
-   */
-  private buildErrorResult(context: RecordingContext, error: Error, stepName: string): RecordingResult {
-    logError(`Pipeline failed at step ${stepName}`, {
-      error: error.message,
-      url: context.data.url,
-      tabId: (context.data as unknown as Record<string, unknown>).tabId as number | undefined
-    }, ErrorCode.INTERNAL_ERROR, 'RecordingPipeline');
-
-    // Create error notification
-    const { title, url } = context.data;
-    const notificationTitle = chrome.i18n.getMessage('recordingFailed') || 'Recording Failed';
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'icons/icon128.png',
-      title: notificationTitle,
-      message: `Failed to record ${title}: ${error.message}`
-    });
-
-    // 記録漏れリカバリ: pending に登録して再記録できるようにする
-    void addPendingPage({
-      url,
-      title,
-      timestamp: Date.now(),
-      reason: 'pipeline-error',
-      errorMessage: error.message,
-      expiry: Date.now() + (24 * 60 * 60 * 1000)
-    });
-
-    return {
-      success: false,
-      error: error.message,
-      title: context.data.title,
-      url: context.data.url
-    };
-  }
-
-  /**
-   * Build final success result
-   */
-  private buildResult(context: RecordingContext): RecordingResult {
-    const { data, privacyResult, aiDuration, errors } = context;
-
-    // Log any non-fatal errors
-    if (errors.length > 0) {
-      addLog(LogType.INFO, 'Pipeline completed with non-fatal errors', {
-        url: data.url,
-        errorCount: errors.length,
-        errorSteps: errors.map(e => e.step),
-        traceId: context.traceId
-      });
-    }
-
-    // 記録漏れリカバリ: Obsidian書き込みのみ失敗した場合、pending に登録して再記録できるようにする
-    const obsidianError = errors.find(e => e.recoveryKind === 'obsidian_sync');
-    if (obsidianError) {
-      void addPendingPage({
-        url: data.url,
-        title: data.title,
-        timestamp: Date.now(),
-        reason: 'obsidian-write-failed',
-        errorMessage: obsidianError.error.message,
-        expiry: Date.now() + (24 * 60 * 60 * 1000)
-      });
-    }
-
-    return {
-      success: true,
-      summary: privacyResult?.summary,
-      maskedCount: privacyResult?.maskedCount,
-      tags: privacyResult?.tags,
-      sentTokens: privacyResult?.sentTokens,
-      receivedTokens: privacyResult?.receivedTokens,
-      originalTokens: privacyResult?.originalTokens,
-      cleansedTokens: privacyResult?.cleansedTokens,
-      aiDuration,
-      aiProvider: privacyResult?.providerName,
-      obsidianDuration: context.obsidianDuration,
-      localMarkdownDuration: context.localMarkdownDuration,
-      title: data.title,
-      url: data.url
-    };
   }
 }

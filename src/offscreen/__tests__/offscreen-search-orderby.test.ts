@@ -1,23 +1,19 @@
 // @vitest-environment jsdom
 //
-// Task 5: verify the SQLITE_SEARCH dispatcher forwards orderBy/orderDir from
-// msg.payload into recordsRepo's search() 4th `options` param. The main
-// offscreen-sqlite.test.ts suite exercises the real recordsRepo.ts against a
-// failing engine init, so backend.search() is never reached there and
-// forwarding can't be observed. This file mocks recordsRepo.js directly to
-// assert the call arguments, following the same handleOffscreenMessage
-// dispatch pattern as the rest of the suite.
+// Verify that SQLITE_SEARCH dispatches through the unified recordsRepo.query()
+// with a StorageQuery containing text, and SQLITE_QUERY passes through
+// without text.  Both message types now route to the same query(q: StorageQuery)
+// in recordsRepo.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { searchMock } = vi.hoisted(() => ({
-  searchMock: vi.fn().mockResolvedValue({ success: true, rows: [], total: 0 }),
+const { queryMock } = vi.hoisted(() => ({
+  queryMock: vi.fn().mockResolvedValue({ success: true, rows: [], total: 0 }),
 }));
 
 vi.mock('../recordsRepo.js', () => ({
   insert: vi.fn(),
   insertBatch: vi.fn(),
-  query: vi.fn(),
-  search: searchMock,
+  query: queryMock,
   update: vi.fn(),
   hardDelete: vi.fn(),
   toggleStar: vi.fn(),
@@ -48,12 +44,12 @@ function makeSenderNoTab() {
   return { id: EXTENSION_ID } as chrome.runtime.MessageSender;
 }
 
-describe('handleOffscreenMessage - SQLITE_SEARCH forwards orderBy/orderDir', () => {
+describe('handleOffscreenMessage - SQLITE_SEARCH forwards to unified query()', () => {
   beforeEach(() => {
-    searchMock.mockClear();
+    queryMock.mockClear();
   });
 
-  it('forwards orderBy/orderDir from msg.payload into recordsRepo.search()', async () => {
+  it('SQLITE_SEARCH converts payload to StorageQuery and calls recordsRepo.query()', async () => {
     const responses: unknown[] = [];
     handleOffscreenMessage(
       makeMessage('SQLITE_SEARCH', {
@@ -68,13 +64,16 @@ describe('handleOffscreenMessage - SQLITE_SEARCH forwards orderBy/orderDir', () 
     );
     await vi.waitFor(() => expect(responses.length).toBe(1));
 
-    expect(searchMock).toHaveBeenCalledWith('test query', 20, 5, {
+    expect(queryMock).toHaveBeenCalledWith({
+      text: 'test query',
+      limit: 20,
+      offset: 5,
       orderBy: 'created_at',
       orderDir: 'ASC',
     });
   });
 
-  it('forwards undefined orderBy/orderDir when absent from msg.payload', async () => {
+  it('SQLITE_SEARCH handles absent orderBy/orderDir', async () => {
     const responses: unknown[] = [];
     handleOffscreenMessage(
       makeMessage('SQLITE_SEARCH', { query: 'test query' }),
@@ -83,9 +82,44 @@ describe('handleOffscreenMessage - SQLITE_SEARCH forwards orderBy/orderDir', () 
     );
     await vi.waitFor(() => expect(responses.length).toBe(1));
 
-    expect(searchMock).toHaveBeenCalledWith('test query', 50, 0, {
+    expect(queryMock).toHaveBeenCalledWith({
+      text: 'test query',
+      limit: undefined,
+      offset: undefined,
       orderBy: undefined,
       orderDir: undefined,
+    });
+  });
+
+  it('SQLITE_QUERY forwards StorageQuery fields', async () => {
+    const responses: unknown[] = [];
+    handleOffscreenMessage(
+      makeMessage('SQLITE_QUERY', {
+        limit: 30,
+        offset: 10,
+        domain: 'example.com',
+        orderBy: 'created_at',
+        orderDir: 'DESC',
+      }),
+      makeSenderNoTab(),
+      (r) => responses.push(r)
+    );
+    await vi.waitFor(() => expect(responses.length).toBe(1));
+
+    expect(queryMock).toHaveBeenCalledWith({
+      limit: 30,
+      offset: 10,
+      domain: 'example.com',
+      orderBy: 'created_at',
+      orderDir: 'DESC',
+      starred: undefined,
+      excludeDeleted: undefined,
+      dateFrom: undefined,
+      dateTo: undefined,
+      ids: undefined,
+      tag: undefined,
+      gistSynced: undefined,
+      text: undefined,
     });
   });
 });

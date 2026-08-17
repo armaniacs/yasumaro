@@ -47,6 +47,46 @@ export interface BrowsingLogRecord {
 // Dashboard row type derived from BrowsingLogRecord (id is required)
 export type BrowsingLogEntry = BrowsingLogRecord & { id: number };
 
+/**
+ * Unified read query — replaces the separate query(QueryOptions) and
+ * search(query, limit, offset, options) signatures on StorageBackend.
+ *
+ * When `text` is present the backend decides FTS5 vs LIKE internally
+ * (same trigram-length check as before).  When absent, the query is a
+ * plain filtered listing without text relevance.
+ *
+ * This is a plain-data interface (no class instances) so it can cross
+ * postMessage / chrome.runtime.sendMessage boundaries unchanged.
+ */
+export interface StorageQuery {
+  /** Full-text search term (triggers FTS5 MATCH or LIKE when >= 3 chars) */
+  text?: string;
+  /** Tag filter (client-side in dashboard, FTS5 match in OPFS worker) */
+  tag?: string;
+  /** Starred-only filter */
+  starred?: boolean;
+  /** Domain filter (exact match) */
+  domain?: string;
+  /** Sort column: 'created_at' (default) or 'rank' (FTS5 relevance) */
+  orderBy?: 'created_at' | 'rank';
+  /** Sort direction (default: DESC) */
+  orderDir?: 'ASC' | 'DESC';
+  /** Maximum rows to return (default: 100, capped at MAX_QUERY_LIMIT) */
+  limit?: number;
+  /** Rows to skip (default: 0) */
+  offset?: number;
+  /** Epoch-ms lower bound (inclusive) */
+  dateFrom?: number;
+  /** Epoch-ms upper bound (inclusive) */
+  dateTo?: number;
+  /** Filter by gist_synced status (0 = unsynced, 1 = synced) */
+  gistSynced?: number;
+  /** Filter by specific IDs (targeted query, bypasses normal paging) */
+  ids?: number[];
+  /** Filter out deleted records (default: true) */
+  excludeDeleted?: boolean;
+}
+
 export interface QueryOptions {
   /** Maximum number of rows to return */
   limit?: number;

@@ -1,7 +1,7 @@
 // src/offscreen/OpfsWorkerBackend.ts
 import type { SqliteEngineContext } from './sqliteEngineContext.js';
-import type { StorageBackend, InsertResult, InsertBatchResult, QueryResult, SearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError } from './StorageBackend.js';
-import type { BrowsingLogRecord, BrowsingLogEntry, QueryOptions, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
+import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError } from './StorageBackend.js';
+import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 
 export class OpfsWorkerBackend implements StorageBackend {
   constructor(private engine: SqliteEngineContext) {}
@@ -16,19 +16,8 @@ export class OpfsWorkerBackend implements StorageBackend {
     return { success: true, inserted: result.inserted, skipped: result.skipped };
   }
 
-  async query(options: QueryOptions): Promise<BackendOrError<QueryResult>> {
-    const result = await this.engine.tryOpfsProxy<{ rows: BrowsingLogRecord[]; total: number }>('QUERY', options);
-    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
-    return { success: true, rows: result.rows as BrowsingLogEntry[], total: result.total };
-  }
-
-  async search(
-    query: string,
-    limit: number,
-    offset: number,
-    options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
-  ): Promise<BackendOrError<SearchResult>> {
-    const result = await this.engine.tryOpfsProxy<{ rows: (BrowsingLogRecord & { rank: number })[]; total: number }>('SEARCH', { searchQuery: query, limit, offset, orderBy: options.orderBy, orderDir: options.orderDir });
+  async query(q: StorageQuery): Promise<BackendOrError<QuerySearchResult>> {
+    const result = await this.engine.tryOpfsProxy<{ rows: (BrowsingLogEntry & { rank: number })[]; total: number }>('QUERY', q);
     if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
     return { success: true, rows: result.rows as (BrowsingLogEntry & { rank: number })[], total: result.total };
   }

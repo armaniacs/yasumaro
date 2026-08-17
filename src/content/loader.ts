@@ -73,8 +73,7 @@ function extractDomain(url: string): string | null {
             hostname = hostname.substring(4);
         }
         return hostname;
-    } catch (e) {
-        console.warn('[OWeave] Failed to extract domain', url, _errMsg(e));
+    } catch {
         return null;
     }
 }

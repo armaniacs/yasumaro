@@ -17,7 +17,7 @@ vi.mock('../../../utils/errorUtils.js', () => ({
 
 import { saveToObsidianStep } from '../steps/saveToObsidianStep.js';
 import { addLog, LogType } from '../../../utils/logger.js';
-import type { RecordingContext } from '../types.js';
+import type { RecordingContext, StepDeps } from '../types.js';
 import { StorageKeys } from '../../../utils/storage.js';
 
 function makeContext(overrides: Partial<RecordingContext['settings']> = {}): RecordingContext {
@@ -60,7 +60,7 @@ describe('saveToObsidianStep — obsidian_enabled flag', () => {
       [StorageKeys.OBSIDIAN_ENABLED]: false,
     });
 
-    const result = await saveToObsidianStep(context, mockObsidian);
+    const result = await saveToObsidianStep(context, { obsidian: mockObsidian, aiService: { generateSummary: vi.fn() } as any });
 
     expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
     expect(result).toBe(context);
@@ -77,7 +77,7 @@ describe('saveToObsidianStep — obsidian_enabled flag', () => {
       [StorageKeys.OBSIDIAN_ENABLED]: true,
     });
 
-    const result = await saveToObsidianStep(context, mockObsidian);
+    const result = await saveToObsidianStep(context, { obsidian: mockObsidian, aiService: { generateSummary: vi.fn() } as any });
 
     expect(mockObsidian.appendToDailyNote).toHaveBeenCalledWith('## Example Page\n\nTest content', context.traceId);
     expect(result.obsidianDuration).toBeGreaterThanOrEqual(0);
@@ -91,7 +91,7 @@ describe('saveToObsidianStep — obsidian_enabled flag', () => {
     });
     context.markdown = undefined;
 
-    const result = await saveToObsidianStep(context, mockObsidian);
+    const result = await saveToObsidianStep(context, { obsidian: mockObsidian, aiService: { generateSummary: vi.fn() } as any });
 
     expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
     expect(addLog).toHaveBeenCalledWith(
@@ -112,7 +112,7 @@ describe('saveToObsidianStep — obsidian_enabled flag', () => {
 
     expect(addLog).toHaveBeenCalledWith(
       LogType.INFO,
-      'Obsidian not configured, skipping save',
+      'No Obsidian client available, skipping save',
       expect.objectContaining({ url: 'https://example.com' })
     );
     expect(result).toBe(context);
@@ -126,7 +126,7 @@ describe('saveToObsidianStep — obsidian_enabled flag', () => {
       [StorageKeys.OBSIDIAN_ENABLED]: true,
     });
 
-    await expect(saveToObsidianStep(context, mockObsidian)).rejects.toThrow('Connection refused');
+    await expect(saveToObsidianStep(context, { obsidian: mockObsidian, aiService: { generateSummary: vi.fn() } as any })).rejects.toThrow('Connection refused');
     expect(addLog).toHaveBeenCalledWith(
       LogType.ERROR,
       'Failed to save to Obsidian',
@@ -142,13 +142,13 @@ describe('saveToObsidianStep — obsidian_enabled flag', () => {
       [StorageKeys.OBSIDIAN_API_KEY]: 'valid-api-key-123456',
     });
 
-    const result = await saveToObsidianStep(context, mockObsidian);
+    const result = await saveToObsidianStep(context, { obsidian: mockObsidian, aiService: { generateSummary: vi.fn() } as any });
 
     // Should proceed because API key is valid
     expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
   });
 
-  it('skips when OBSIDIAN_ENABLED is true but API key is empty (no DI client)', async () => {
+  it('skips when OBSIDIAN_ENABLED is true but no DI client', async () => {
     const context = makeContext({
       [StorageKeys.OBSIDIAN_ENABLED]: true,
       [StorageKeys.OBSIDIAN_API_KEY]: '',
@@ -158,7 +158,7 @@ describe('saveToObsidianStep — obsidian_enabled flag', () => {
 
     expect(addLog).toHaveBeenCalledWith(
       LogType.INFO,
-      'Obsidian not configured, skipping save',
+      'No Obsidian client available, skipping save',
       expect.objectContaining({ url: 'https://example.com' })
     );
   });
@@ -170,7 +170,7 @@ describe('saveToObsidianStep — obsidian_enabled flag', () => {
       [StorageKeys.OBSIDIAN_API_KEY]: 'valid-api-key-123456',
     });
 
-    const result = await saveToObsidianStep(context, mockObsidian);
+    const result = await saveToObsidianStep(context, { obsidian: mockObsidian, aiService: { generateSummary: vi.fn() } as any });
 
     expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
     expect(addLog).toHaveBeenCalledWith(

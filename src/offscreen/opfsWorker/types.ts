@@ -4,7 +4,7 @@
  * Discriminated unions replace the old `type: string` for compile-time safety.
  */
 
-import type { BrowsingLogRecord, SearchResult, QueryOptions } from '../../utils/sqlite-types.js';
+import type { BrowsingLogRecord, SearchResult, StorageQuery } from '../../utils/sqlite-types.js';
 import type { SqliteValue, SqliteRow } from '../sqliteEngine.js';
 
 // ---------------------------------------------------------------------------
@@ -42,15 +42,9 @@ export type WorkerMessageType = typeof WORKER_MESSAGE_TYPES[number];
 // Payload types
 // ---------------------------------------------------------------------------
 
-export type QueryPayload = QueryOptions & { ids?: number[]; tagFilter?: string; isStarred?: number };
+export type QueryPayload = StorageQuery;
 
-export type SearchPayload = {
-  searchQuery: string;
-  limit?: number;
-  offset?: number;
-  orderBy?: 'rank' | 'created_at';
-  orderDir?: 'ASC' | 'DESC';
-};
+export type SearchPayload = StorageQuery;
 
 export interface AuditLogQueryPayload {
   limit?: number;

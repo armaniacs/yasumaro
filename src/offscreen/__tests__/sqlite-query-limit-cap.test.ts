@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /**
  * sqlite-query-limit-cap.test.ts
- * M13: query()/search() must clamp an excessively large `limit` to a hard
+ * M13: query() must clamp an excessively large `limit` to a hard
  * cap, so a caller (or attacker-controlled input) can't force the entire
  * table to be loaded into JS memory at once.
  */
@@ -25,8 +25,6 @@ class FakeWorker {
     } else if (type === 'STATUS') {
       result = { initialized: true, path: 'yasumaro.db', fallback: false, fts5: true, count: 0 };
     } else if (type === 'QUERY') {
-      result = { rows: [], total: 0 };
-    } else if (type === 'SEARCH') {
       result = { rows: [], total: 0 };
     } else {
       result = {};
@@ -92,16 +90,16 @@ describe('Query limit hard cap (M13)', () => {
     expect(payload.limit).toBe(500);
   });
 
-  it('clamps search() limit above the hard cap', async () => {
+  it('clamps search() limit above the hard cap via query with text', async () => {
     const mod = await import('./sqliteTestApi.js');
     await mod.init();
 
     workerMessages.length = 0;
-    await mod.search('test', MAX_QUERY_LIMIT * 10);
+    await mod.query({ text: 'test', limit: MAX_QUERY_LIMIT * 10 });
 
-    const searchMsg = workerMessages.find((m) => m.type === 'SEARCH');
-    expect(searchMsg).toBeDefined();
-    const payload = searchMsg!.payload as Record<string, unknown>;
+    const queryMsg = workerMessages.find((m) => m.type === 'QUERY');
+    expect(queryMsg).toBeDefined();
+    const payload = queryMsg!.payload as Record<string, unknown>;
     expect(payload.limit).toBe(MAX_QUERY_LIMIT);
   });
 });

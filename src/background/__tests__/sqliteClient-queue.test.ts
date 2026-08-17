@@ -1,17 +1,21 @@
 /**
- * sqliteClient-queue.test.ts
- * M7: SqliteClient must serialize concurrent requests to the offscreen
- * document — a message must not be sent until the previous one settled,
- * so the offscreen document (a single-threaded document) doesn't get
- * hit with overlapping requests that race each other.
+ * offscreenTransport-queue.test.ts
+ * M7: OffscreenTransport must serialize concurrent requests to the offscreen
+ * document — a message must not be sent until the previous one settled.
+ *
+ * This replaces the former sqliteClient-queue.test.ts which tested
+ * SqliteClient's internal Mutex. Serialization is now the transport's
+ * responsibility (PBI-2026-08-17-13).
  */
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
+import { ChromeOffscreenTransport } from '../offscreenTransport.js';
+import { Mutex } from '../../utils/Mutex.js';
+
 vi.mock('../../utils/logger.js', () => ({
   addLog: vi.fn(),
   logError: vi.fn(),
-  ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
 }));
 
@@ -19,47 +23,31 @@ vi.mock('../../utils/errorUtils.js', () => ({
   errorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
 }));
 
-vi.mock('../sqliteAlert.js', () => ({
-  recordSqliteSuccess: vi.fn(),
-  recordSqliteFailure: vi.fn(),
+vi.mock('../../utils/deviceUtils.js', () => ({
+  getPlatformOs: vi.fn().mockReturnValue('macos'),
 }));
 
-import { SqliteClient } from '../sqliteClient.js';
-import { Mutex } from '../../utils/Mutex.js';
-import { resetPlatformOsCache } from '../../utils/deviceUtils.js';
-
-function setUserAgent(value: string): void {
-  Object.defineProperty(navigator, 'userAgent', {
-    value,
-    configurable: true,
-    writable: true,
-  });
-}
-
-function createSqliteClient(): SqliteClient {
-  return new SqliteClient();
-}
-
-function getRequestQueueMaxSize(client: SqliteClient): number {
-  return ((client as unknown as { requestQueue: Mutex }).requestQueue).getMaxQueueSize();
-}
-
-function getMessageTimeoutMs(client: SqliteClient): number {
-  return (client as unknown as { messageTimeoutMs: number }).messageTimeoutMs;
-}
-
-describe('SqliteClient — request queue (M7)', () => {
-  let client: SqliteClient;
+describe('ChromeOffscreenTransport — request queue (M7)', () => {
+  let transport: ChromeOffscreenTransport;
+  let sendMessageMock: ReturnType<typeof vi.fn>;
   let inFlight: number;
   let maxConcurrent: number;
   let pendingCallbacks: Array<() => void>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    client = new SqliteClient();
     inFlight = 0;
     maxConcurrent = 0;
     pendingCallbacks = [];
+
+    sendMessageMock = vi.fn((_msg: unknown, callback: (response: unknown) => void) => {
+      inFlight++;
+      maxConcurrent = Math.max(maxConcurrent, inFlight);
+      pendingCallbacks.push(() => {
+        inFlight--;
+        callback({ success: true, rows: [], total: 0 });
+      });
+    });
 
     (globalThis as any).chrome = {
       offscreen: {
@@ -68,24 +56,17 @@ describe('SqliteClient — request queue (M7)', () => {
         Reason: { WORKERS: 'WORKERS', LOCAL_STORAGE: 'LOCAL_STORAGE' },
       },
       runtime: {
-        sendMessage: vi.fn((_msg: unknown, callback: (response: unknown) => void) => {
-          inFlight++;
-          maxConcurrent = Math.max(maxConcurrent, inFlight);
-          // Defer resolution so overlapping calls would show up as inFlight > 1
-          pendingCallbacks.push(() => {
-            inFlight--;
-            callback({ success: true, rows: [], total: 0 });
-          });
-        }),
-        getPlatformInfo: vi.fn().mockResolvedValue({ os: 'desktop' }),
+        sendMessage: sendMessageMock,
         lastError: undefined as { message: string } | undefined,
       },
     };
+
+    transport = new ChromeOffscreenTransport();
   });
 
   it('does not send a second message until the first has settled', async () => {
-    const p1 = client.queryResult({ limit: 1 });
-    const p2 = client.queryResult({ limit: 2 });
+    const p1 = transport.msgOffscreen('SQLITE_QUERY', { limit: 1 });
+    const p2 = transport.msgOffscreen('SQLITE_QUERY', { limit: 2 });
 
     // Only the first request should have reached sendMessage so far
     await vi.waitFor(() => expect(pendingCallbacks.length).toBe(1));
@@ -99,34 +80,5 @@ describe('SqliteClient — request queue (M7)', () => {
     await p2;
 
     expect(maxConcurrent).toBe(1);
-  });
-
-  it('uses maxQueueSize 200 on desktop user agents', () => {
-    setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36');
-    const testClient = createSqliteClient();
-    expect(getRequestQueueMaxSize(testClient)).toBe(200);
-  });
-
-  it('uses maxQueueSize 50 on mobile user agents', () => {
-    resetPlatformOsCache();
-    setUserAgent('Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36');
-    (globalThis as any).chrome.runtime.getPlatformInfo = vi.fn().mockResolvedValue({ os: 'android' });
-    const testClient = createSqliteClient();
-    expect(getRequestQueueMaxSize(testClient)).toBe(50);
-  });
-
-  it('uses the 10s message timeout on desktop user agents', () => {
-    resetPlatformOsCache();
-    setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36');
-    const testClient = createSqliteClient();
-    expect(getMessageTimeoutMs(testClient)).toBe(10000);
-  });
-
-  it('uses a shortened 5s message timeout on mobile user agents', () => {
-    resetPlatformOsCache();
-    setUserAgent('Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36');
-    (globalThis as any).chrome.runtime.getPlatformInfo = vi.fn().mockResolvedValue({ os: 'android' });
-    const testClient = createSqliteClient();
-    expect(getMessageTimeoutMs(testClient)).toBe(5000);
   });
 });

@@ -122,7 +122,7 @@ describe('production composition contract', () => {
     // The automatic-record path (VALID_VISIT -> recordingLogic.record) must run
     // through the same pipeline instance as the manual/save handlers, not a
     // second one built lazily inside RecordingLogic.
-    const [, , injectedPipeline] = mocks.RecordingLogic.mock.calls[0];
+    const [injectedPipeline] = mocks.RecordingLogic.mock.calls[0];
     expect(injectedPipeline).toBe(composition.recordingPipeline);
   });
 

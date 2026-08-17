@@ -11,7 +11,8 @@
 
 import { StorageKeys, getSettings } from '../../utils/storage.js';
 import { getMessage } from '../../utils/i18n.js';
-import { type MultiProviderTestResult, type AiTestProgress, PROVIDER_LABELS } from '../../background/aiClient.js';
+import { type AiTestProgress, type MultiProviderTestResult } from '../../background/ai/AIService.js';
+import { PROVIDER_LABELS } from '../../utils/aiProviderLabels.js';
 import { AI_TEST_PROGRESS_MESSAGE_TYPE, type AiTestProgressMessage } from '../../background/aiTestProgressNotifier.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import { saveDashboardSettings } from '../settingsPipeline.js';

@@ -7,7 +7,6 @@ const mocks = vi.hoisted(() => ({
   TabCache: vi.fn(),
   RateLimiter: vi.fn(),
   ManualContentFetcher: vi.fn(),
-  AIClient: vi.fn(),
   BuiltInAIClient: vi.fn(),
   LocalAIService: vi.fn(),
   RemoteAIService: vi.fn(),
@@ -31,7 +30,6 @@ vi.mock('../sqliteClient.js', () => ({
 vi.mock('../tabCache.js', () => ({ TabCache: mocks.TabCache }));
 vi.mock('../rateLimiter.js', () => ({ RateLimiter: mocks.RateLimiter }));
 vi.mock('../manualContentFetcher.js', () => ({ ManualContentFetcher: mocks.ManualContentFetcher }));
-vi.mock('../aiClient.js', () => ({ AIClient: mocks.AIClient }));
 vi.mock('../builtInAIClient.js', () => ({ BuiltInAIClient: mocks.BuiltInAIClient }));
 vi.mock('../ai/FallbackAIService.js', () => ({ FallbackAIService: mocks.FallbackAIService }));
 vi.mock('../ai/LocalAIService.js', () => ({ LocalAIService: mocks.LocalAIService }));
@@ -60,7 +58,7 @@ describe('createBackgroundServices', () => {
     mocks.TabCache.mockImplementation(function () { return { tabCache: true }; });
     mocks.RateLimiter.mockImplementation(function () { return { rateLimiter: true }; });
     mocks.ManualContentFetcher.mockImplementation(function () { return { manualContentFetcher: true }; });
-    mocks.AIClient.mockImplementation(function () { return { aiClient: true, remoteAiService: { remoteAIService: true } }; });
+    mocks.RemoteAIService.mockImplementation(function () { return { remoteAIService: true }; });
     mocks.BuiltInAIClient.mockImplementation(function () { return { builtInAiClient: true }; });
     mocks.LocalAIService.mockImplementation(function () { return { localAIService: true }; });
     mocks.FallbackAIService.mockImplementation(function () { return { fallbackAIService: true }; });
@@ -85,7 +83,6 @@ describe('createBackgroundServices', () => {
       tabCache: { tabCache: true },
       rateLimiter: { rateLimiter: true },
       manualContentFetcher: { manualContentFetcher: true },
-      aiClient: { aiClient: true, remoteAiService: { remoteAIService: true } },
       aiService: { fallbackAIService: true },
       reviewSummaryGenerator: expect.any(Object),
       sessionStore: { sessionStore: true },
@@ -96,10 +93,7 @@ describe('createBackgroundServices', () => {
     });
   });
 
-  it('exposes the AIService, not just the raw AIClient', () => {
-    // The AIService composition used to be built and discarded, leaving
-    // callers with only the raw AIClient — the dependency ADR 2026-07-27 asks
-    // new code to avoid.
+  it('exposes the AIService composition', () => {
     const services = createBackgroundServices();
 
     expect(services.aiService).toEqual({ fallbackAIService: true });
@@ -129,24 +123,21 @@ describe('createBackgroundServices', () => {
 
     expect(mocks.BuiltInAIClient).toHaveBeenCalledTimes(1);
     expect(mocks.LocalAIService).toHaveBeenCalledTimes(1);
-    expect(mocks.AIClient).toHaveBeenCalledTimes(1);
+    expect(mocks.RemoteAIService).toHaveBeenCalledTimes(1);
     expect(mocks.FallbackAIService).toHaveBeenCalledTimes(1);
 
-    const aiClientInstance = mocks.AIClient.mock.results[0].value;
+    const remoteInstance = mocks.RemoteAIService.mock.results[0].value;
     const local = mocks.LocalAIService.mock.results[0].value;
     expect(mocks.FallbackAIService).toHaveBeenCalledWith({
       local,
-      remote: aiClientInstance.remoteAiService,
+      remote: remoteInstance,
     });
     expect(mocks.RecordingLogic).toHaveBeenCalledWith(
-      { obsidian: true },
-      { fallbackAIService: true },
       { pipeline: true },
-      { sqlite: true },
     );
   });
 
-  it('passes builtInAiClient to LocalAIService (Service Worker直接呼び出し、Offscreen非経由)', () => {
+  it('passes builtInAiClient to LocalAIService (Service Worker direct call, not via Offscreen)', () => {
     createBackgroundServices();
 
     const builtInAiClientInstance = mocks.BuiltInAIClient.mock.results[0].value;
@@ -155,13 +146,12 @@ describe('createBackgroundServices', () => {
     expect(config.ensureOffscreenDocument).toBeUndefined();
   });
 
-  it('creates AIClient with default providers including built-in-ai Strategy', () => {
+  it('creates RemoteAIService directly (no AIClient wrapper)', () => {
     createBackgroundServices();
 
-    expect(mocks.AIClient).toHaveBeenCalledTimes(1);
-    // AIClient constructor calls registerDefaultProviders which includes 'built-in-ai'
-    const aiClientInstance = mocks.AIClient.mock.results[0].value;
-    expect(aiClientInstance).toBeDefined();
+    expect(mocks.RemoteAIService).toHaveBeenCalledTimes(1);
+    const remoteInstance = mocks.RemoteAIService.mock.results[0].value;
+    expect(remoteInstance).toBeDefined();
   });
 
   it('uses getSharedSqliteClient instead of constructing a new SqliteClient', () => {

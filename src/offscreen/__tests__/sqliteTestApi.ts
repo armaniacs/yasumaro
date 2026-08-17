@@ -18,7 +18,6 @@ export {
   insert,
   insertBatch,
   query,
-  search,
   update,
   hardDelete,
   toggleStar,

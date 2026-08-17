@@ -18,6 +18,41 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
+| [2026-08-17-00-epic-architecture-deepening-aug17.md](2026-08-17-00-epic-architecture-deepening-aug17.md) | high | 軽微 | refactor | 5候補実装の親エピック（RecordingData/Context/Logic統合を含む） |
+| [2026-08-17-01-refactor-split-sqlite-engine-context.md](2026-08-17-01-refactor-split-sqlite-engine-context.md) | high | あり | refactor | SqliteEngineContext を OPFS/IDB/Fallback/Migration に分割 |
+| [2026-08-17-02-refactor-unify-content-extraction-pipeline.md](2026-08-17-02-refactor-unify-content-extraction-pipeline.md) | medium | 軽微 | refactor | コンテンツ抽出パイプラインの重複統一 |
+| [2026-08-17-03-refactor-remove-aiclient-wrapper.md](2026-08-17-03-refactor-remove-aiclient-wrapper.md) | medium | あり | refactor | AIClient ラッパーを削除して AIService 直接使用 |
+| [2026-08-17-04-refactor-inject-store-recording-cache.md](2026-08-17-04-refactor-inject-store-recording-cache.md) | medium | 軽微 | refactor | RecordingCache に store 注入 |
+| [2026-08-17-05-refactor-composition-root-service-worker.md](2026-08-17-05-refactor-composition-root-service-worker.md) | high | 軽微 | refactor | service-worker.ts の composition root 化完了 |
+| [2026-08-17-06-refactor-unify-recording-data.md](2026-08-17-06-refactor-unify-recording-data.md) | 🟢低 | 軽微 | refactor | RecordingData を単一ソースに統一（基盤） |
+| [2026-08-17-07-refactor-collapse-recording-context.md](2026-08-17-07-refactor-collapse-recording-context.md) | 🔴高 | あり | refactor | RecordingContext god-object を型付き入力に崩壊 |
+| [2026-08-17-08-refactor-merge-recording-logic.md](2026-08-17-08-refactor-merge-recording-logic.md) | 🟡中 | 軽微 | refactor | RecordingLogic を RecordingPipeline に統合 |
+| [2026-08-17-09-refactor-unify-pipeline-step-di.md](2026-08-17-09-refactor-unify-pipeline-step-di.md) | 🟡中 | 軽微 | refactor | パイプラインステップの DI パターン統一 |
+| [2026-08-17-10-refactor-extract-result-builder.md](2026-08-17-10-refactor-extract-result-builder.md) | 🟢低 | 軽微 | refactor | RecordingPipeline から result-building を抽出 |
+| [2026-08-17-11-refactor-remove-notifications-from-pipeline.md](2026-08-17-11-refactor-remove-notifications-from-pipeline.md) | 🟢低 | 軽微 | refactor | パイプラインオーケストレータから chrome.notifications を除去 |
+| [2026-08-17-12-refactor-extract-notification-save-obsidian.md](2026-08-17-12-refactor-extract-notification-save-obsidian.md) | 🟢低 | 軽微 | refactor | saveToObsidianStep から通知を抽出 |
+| [2026-08-17-13-refactor-split-sqliteclient-transport.md](2026-08-17-13-refactor-split-sqliteclient-transport.md) | 🟡中 | あり | refactor | SqliteClient を transport と domain に分割 |
+| [2026-08-17-14-refactor-instance-pending-storage-queue.md](2026-08-17-14-refactor-instance-pending-storage-queue.md) | 🟢低 | 軽微 | refactor | PendingChromeStorageQueue をインスタンス化 |
+| [2026-08-17-15-refactor-flatten-dashboard-handler-deps.md](2026-08-17-15-refactor-flatten-dashboard-handler-deps.md) | 🟢低 | 軽微 | refactor | DashboardSqliteHandlerDeps の union を平坦化 |
+| [2026-08-17-16-refactor-inject-url-store-check-duplicate.md](2026-08-17-16-refactor-inject-url-store-check-duplicate.md) | 🟢低 | 軽微 | refactor | checkDuplicateStep に URL store を注入 |
+| [2026-08-17-17-refactor-di-ify-offline-network-queue.md](2026-08-17-17-refactor-di-ify-offline-network-queue.md) | 🟢低 | 軽微 | refactor | OfflineNetworkQueue を DI 化 |
+| [2026-08-17-18-refactor-logger-dual-module.md](2026-08-17-18-refactor-logger-dual-module.md) | 🟢低 | 軽微 | refactor | Logger の dual-module 正規化 |
+| [2026-08-17-19-refactor-instance-session-store-header-detector.md](2026-08-17-19-refactor-instance-session-store-header-detector.md) | 🟢低 | 軽微 | refactor | SessionStore と HeaderDetector をインスタンス化 |
+| [2026-08-17-20-refactor-unify-error-classification.md](2026-08-17-20-refactor-unify-error-classification.md) | 🟡中 | 軽微 | refactor | 二つのエラー分類システムを統一 |
+| [2026-08-17-21-refactor-unify-sensitive-data-masking.md](2026-08-17-21-refactor-unify-sensitive-data-masking.md) | 🟢低 | 軽微 | refactor | 二つの機密データマスキングシステムを統一 |
+| [2026-08-17-22-refactor-collapse-masterpassword-module-state.md](2026-08-17-22-refactor-collapse-masterpassword-module-state.md) | 🟡中 | 軽微 | refactor | masterPassword モジュールレベルDOM状態を崩壊 |
+| [2026-08-17-23-refactor-deepen-cspsettings-static-facade.md](2026-08-17-23-refactor-deepen-cspsettings-static-facade.md) | 🟡中 | 軽微 | refactor | cspSettings 静的ファサードを深掘り |
+| [2026-08-17-24-refactor-extract-sqlitehistorypanel-closure.md](2026-08-17-24-refactor-extract-sqlitehistorypanel-closure.md) | 🔴高 | 軽微 | refactor | sqliteHistoryPanel 875行クロージャから抽出 |
+| [2026-08-17-25-refactor-eliminate-loader-urlskipper-copy.md](2026-08-17-25-refactor-eliminate-loader-urlskipper-copy.md) | 🟢低 | 軽微 | refactor | loader.ts の urlSkipper コピーを排除 |
+| [2026-08-17-26-refactor-decompose-recordcurrentpage-god.md](2026-08-17-26-refactor-decompose-recordcurrentpage-god.md) | 🔴高 | 軽微 | refactor | recordCurrentPage ゴッド関数を分解 |
+| [2026-08-17-27-refactor-decompose-trustdb-god-module.md](2026-08-17-27-refactor-decompose-trustdb-god-module.md) | 🔴高 | あり | refactor | trustDb 1024行ゴッドモジュールを分解 |
+| [2026-08-17-28-fix-extractor-false-purity-pagestate.md](2026-08-17-28-fix-extractor-false-purity-pagestate.md) | 🟡中 | 軽微 | fix | extractor.ts の誤った純粋性とpageState結合を修正 |
+| [2026-08-17-29-refactor-collapse-sqlite-read-seam.md](2026-08-17-29-refactor-collapse-sqlite-read-seam.md) | 🔴高 | 軽微 | refactor | SQLite読み取りをStorageQuery値オブジェクトへ統合しquery/searchを単一化 |
+| [2026-08-17-30-refactor-split-opfs-worker-god-module.md](2026-08-17-30-refactor-split-opfs-worker-god-module.md) | 🟡中 | 軽微 | refactor | opfsWorker 945行をハンドラ別モジュールに分割しWorkerプロトコルを型付け |
+| [2026-08-17-31-fix-queue-retry-duplication.md](2026-08-17-31-fix-queue-retry-duplication.md) | 🟡中 | 軽微 | fix | キュー2つのリトライ再実装をflush()へ統合しpendingSqliteQueueにmax-retry付与 |
+| [2026-08-17-32-refactor-extract-obsidian-client-validators.md](2026-08-17-32-refactor-extract-obsidian-client-validators.md) | 🟢低 | なし | refactor | ObsidianClient内の純関数バリデータを抽出し設定構築を一元化 |
+| [2026-08-17-33-refactor-unify-backend-resolver.md](2026-08-17-33-refactor-unify-backend-resolver.md) | 🟡中 | 軽微 | refactor | バックエンド選定をBackendResolverに一元化しopfsCapabilitiesを接続 |
+| [2026-08-17-34-refactor-derive-cleansing-option-types.md](2026-08-17-34-refactor-derive-cleansing-option-types.md) | 🟢低 | なし | refactor | クレンジング型をCLEANSING_RULESから導出し手書き32フィールドを廃止 |
 
 ---
 
@@ -352,13 +387,14 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 0 |
+| ⬜ 未着手 | 35 |
 | 🔶 部分実装 | 0 |
-| **`pbi/` 残存合計** | **0** |
+| **`pbi/` 残存合計** | **35** |
 | アーカイブ済みPBI | 258 |
 | アーカイブ済み実装計画 | 112 |
 
-※ 2026-08-12 セッションで PBI-01〜02（handler registry / aiClientテスト移行）、PBI-04〜07（logger/error層深耕）を完了。pbi/ は現在空。
+※ 2026-08-17: アーキテクチャレビュー由来の14PBIを追加（06〜19）。00〜05は前回セッションから残存。
+※ 2026-08-17: アーキテクチャレビュー第2弾由来の6PBIを追加（29〜34）。SQLite読み取りシーム崩壊・opfsWorker分割・キューリトライ統合・ObsidianClient検証抽出・BackendResolver一元化・クレンジング型導出。
 
 ### 2026-08-09 アーキテクチャレビュー由来（20〜24）の実施順と依存
 

@@ -31,7 +31,7 @@ globalThis.chrome = {
   },
   i18n: { getMessage: vi.fn(() => 'Recording Failed') },
   notifications: { create: vi.fn() },
-  runtime: { id: 'test-extension-id' },
+  runtime: { id: 'test-extension-id', getURL: vi.fn((path: string) => `chrome-extension://test-extension-id/${path}`) },
 } as any;
 
 vi.mock('../../../utils/storage.js');
