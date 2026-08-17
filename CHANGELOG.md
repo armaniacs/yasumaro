@@ -37,6 +37,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- 依存パッケージの脆弱性5件（brace-expansion High DoS×2、fast-uri High、js-yaml High、nanoid High、postcss Moderate）を `npm audit fix` で解消（0 vulnerabilities）
+- `models-dev-dialog.ts` のプロバイダー一覧描画で `provider.name`/価格表示を `innerHTML` へ未エスケープで挿入していた stored XSS 脆弱性を修正。`escapeHtml()` を適用し回帰テストを追加
+- プライバシーポリシー同意バージョン定数 `PRIVACY_POLICY_VERSION` が `2026-06-20` のまま固定され、`PRIVACY.md` の実際の最終更新日（2026-07-31）に追従していなかった問題を修正。定数更新に伴い、既存ユーザーは次回起動時に再同意フローが発火する
 - `trustDb.ts`（820行）を `DomainVerifier`（3-Step Verification）/`BloomFilterManager`/`TrancoManager`（Trancoドメインリスト本体、バージョン文字列管理のTrancoVersionTrackerとは別責務）/`SensitiveDomainStore`/`WhitelistStore`/`TrustDbVersion`（DBスキーマバージョン管理、Trancoバージョン管理とは別責務）の6モジュールに分解。オーケストレーターは557行に削減。`storage/types.js`（`StorageKeys`）の動的importを静的importへ変更し循環依存を部分解消。`settingsStore.js`との動的import循環は、Trancoバージョンをsettingsオブジェクトに保存する設計に起因するため意図的に維持（コード内に理由を明記）。単体テスト33件追加
 - `sqliteHistoryPanel.ts`（875行）から純粋なHTML文字列構築関数を `sqliteHistoryPanelView.ts` に抽出。イベント配線はパネルモジュールに残置。`chrome.notifications` 呼び出しを新設の `notificationService.ts`（`notify()`）に移動。パネル本体は586行に削減、Viewモジュール358行
 - `recordCurrentPage.ts`（615行）を `TabContentFetcher`/`PreviewFlow`/`ForceRecordFlow`/`SpinnerManager`/`ErrorPresenter`/`RecordOrchestrator` の6クラスに分解。モジュールレベルの可変状態（`uiState`）を`RecordOrchestrator`のインスタンスフィールドへ移動。ファサードは32行に削減し、既存の公開API（`loadCurrentTab`/`recordCurrentPage`/`setRecordCurrentPageFn`/`handleRecordNowClick`）はデフォルトインスタンスへ委譲する形で不変

@@ -12,6 +12,7 @@ import {
 import { StorageKeys, saveSettings, getSettings } from '../utils/storage.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
+import { escapeHtml } from '../utils/htmlEscape.js';
 
 interface DialogOptions {
     onSave?: (providerId: string, baseUrl: string, apiKey: string, model: string) => void;
@@ -365,10 +366,10 @@ export class ModelsDevDialog {
                 : 'Free tier available';
 
             item.innerHTML = `
-                <div class="provider-item-name">${provider.name}</div>
+                <div class="provider-item-name">${escapeHtml(provider.name)}</div>
                 <div class="provider-item-meta">
                     <span>${provider.models.length} models</span>
-                    <span>${priceDisplay}</span>
+                    <span>${escapeHtml(priceDisplay)}</span>
                     ${provider.isAggregator ? '<span class="provider-badge badge-aggregator">Aggregator</span>' : ''}
                 </div>
             `;

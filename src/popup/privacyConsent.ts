@@ -8,8 +8,8 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import { getConsentHmacKey, generateHmacSignature, verifyHmacSignature } from '../utils/crypto/index.js';
 
-/** プライバシーポリシーバージョン定数 */
-export const PRIVACY_POLICY_VERSION = '2026-06-20';
+/** プライバシーポリシーバージョン定数。PRIVACY.md の「最終更新日」と同期させること */
+export const PRIVACY_POLICY_VERSION = '2026-07-31';
 
 /** プライバシーポリシー同意状態 */
 export interface PrivacyConsentState {
