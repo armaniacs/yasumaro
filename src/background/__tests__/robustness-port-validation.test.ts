@@ -7,6 +7,7 @@
 import { ObsidianClient } from '../obsidianClient.js';
 import * as storage from '../../utils/storage.js';
 import { addLog, LogType } from '../../utils/logger.js';
+import * as validator from '../../utils/obsidianConfigValidator.js';
 
 vi.mock('../../utils/storage.js');
 vi.mock('../../utils/logger.js', () => ({
@@ -250,7 +251,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
 
     it('設定時だけでなく使用時にも検証すべき', async () => {
       // 設定時と使用時の両方で検証を行うべき
-      // _validatePortメソッドが呼び出されることを確認
+      // validateObsidianPort関数が呼び出されることを確認
     // @ts-expect-error - vi.fn() type narrowing issue
   
       storage.getSettings.mockResolvedValue({
@@ -260,7 +261,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
         OBSIDIAN_DAILY_PATH: ''
       });
 
-      const validateSpy = vi.spyOn(obsidianClient, '_validatePort');
+      const validateSpy = vi.spyOn(validator, 'validateObsidianPort');
       await obsidianClient._getConfig();
       expect(validateSpy).toHaveBeenCalledWith('999');
       validateSpy.mockRestore();

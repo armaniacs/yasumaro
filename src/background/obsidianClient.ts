@@ -3,18 +3,18 @@ import { buildDailyNotePath } from '../utils/dailyNotePathBuilder.js';
 import { NoteSectionEditor } from './noteSectionEditor.js';
 import { Mutex } from '../utils/Mutex.js';
 import { addLog, LogType } from '../utils/logger.js';
-import { redactSensitiveData } from '../utils/redaction.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { fetchWithTimeout, CONNECTION_TEST_CACHE_MODE } from '../utils/fetch.js';
-
-/**
- * Problem #2: HTTPヘッダーの固定部分を定数化
- * 毎回のConfig生成で同じオブジェクトを作成するのを防ぐ
- */
-const BASE_HEADERS = {
-    'Content-Type': 'text/markdown',
-    'Accept': 'application/json'
-};
+import {
+    validateObsidianProtocol,
+    validateObsidianHost,
+    isIpv6Address,
+    validateObsidianPort,
+    readBodyWithTimeout,
+    handleObsidianError,
+    type ObsidianProtocol,
+} from '../utils/obsidianConfigValidator.js';
+import { buildObsidianConfig, type ObsidianConfig } from '../utils/obsidianConfigBuilder.js';
 
 /**
  * Problem #1: Fetchタイムアウト設定
@@ -22,26 +22,10 @@ const BASE_HEADERS = {
 const FETCH_TIMEOUT_MS = 15000; // 15秒
 
 /**
- * PBI-11: レスポンスボディ読み込み（response.text()）のタイムアウト設定
- * ヘッダのみ受信後にボディが送られてこないケースでハングしないようにする
- */
-const READ_TIMEOUT_MS = 15000; // 15秒
-
-/**
- * Problem #2: ポート番号検証定数
- */
-const MIN_PORT = 1;
-const MAX_PORT = 65535;
-const DEFAULT_PORT = '27123';
-const DEFAULT_HOST = '127.0.0.1';
-
-/**
  * Problem #6: Mutexキューサイズ制限とタイムアウト設定
  */
 const MAX_QUEUE_SIZE = 50;
 const MUTEX_TIMEOUT_MS = 30000; // 30秒
-
-type ObsidianProtocol = 'http' | 'https';
 
 /**
  * Obsidian Local REST API エンドポイントの一元管理。
@@ -67,12 +51,6 @@ const globalWriteMutex = new Mutex({
     timeoutMs: MUTEX_TIMEOUT_MS
 });
 
-export interface ObsidianConfig {
-    baseUrl: string;
-    headers: HeadersInit;
-    settings: Settings;
-}
-
 export interface ObsidianConnectionResult {
     success: boolean;
     message: string;
@@ -96,43 +74,9 @@ export class ObsidianClient {
 
     /**
      * 設定オブジェクトを取得する
-     * Problem #2: BASE_HEADERS定数を使用してオブジェクト作成を最適化
      */
     async _getConfig(): Promise<ObsidianConfig> {
-        const settings = await getSettings();
-
-        const protocol = this._validateProtocol(settings[StorageKeys.OBSIDIAN_PROTOCOL]);
-        const rawPort = settings[StorageKeys.OBSIDIAN_PORT] ?? DEFAULT_PORT;
-        const port = this._validatePort(rawPort);
-        const host = this._validateHost(settings[StorageKeys.OBSIDIAN_HOST]);
-        const apiKey = settings[StorageKeys.OBSIDIAN_API_KEY];
-
-        addLog(LogType.DEBUG, 'Obsidian API Key check', {
-            exists: !!apiKey,
-            isEmpty: apiKey === ''
-        });
-
-        // APIキーが空文字列、undefined、null、またはオブジェクト（暗号化失敗）の場合
-        if (!apiKey || apiKey === '' || typeof apiKey === 'object') {
-            // 【セキュリティ強化】redactionを適用してAPIキー情報を保護
-            // 【実装方針】: redactSensitiveDataでfullKeyをredactionしてから出力
-            // 【テスト対応】: obsidianClient-security.test.ts
-            // 🟢 信頼性レベル: 青信号（要件定義書の機密情報保護要件通り）
-            console.error('[ObsidianClient] API Key is missing or invalid!', redactSensitiveData({
-                apiKey: typeof apiKey
-            }));
-            addLog(LogType.WARN, 'Obsidian API Key is missing or invalid', { apiKey: typeof apiKey });
-            throw new Error('Error: API key is missing. Please check your Obsidian settings.');
-        }
-
-        return {
-            baseUrl: `${protocol}://${host}:${port}`,
-            headers: {
-                ...BASE_HEADERS,
-                'Authorization': `Bearer ${apiKey}`
-            },
-            settings
-        };
+        return buildObsidianConfig();
     }
 
     /**
@@ -142,26 +86,7 @@ export class ObsidianClient {
      * @throws {Error} プロトコルが無効な場合
      */
     _validateProtocol(protocol: string | undefined | null): ObsidianProtocol {
-        if (protocol === undefined || protocol === null || protocol === '') {
-            return 'https';
-        }
-
-        if (typeof protocol !== 'string') {
-            return 'https';
-        }
-
-        const normalized = protocol.trim().toLowerCase();
-        if (normalized !== 'http' && normalized !== 'https') {
-            throw new Error('Protocol must be "http" or "https".');
-        }
-
-        if (normalized === 'http') {
-            addLog(LogType.WARN, 'HTTP protocol selected — API key and data will be sent in plaintext over the local network. Use HTTPS for encrypted communication.', {
-                protocol: normalized
-            });
-        }
-
-        return normalized;
+        return validateObsidianProtocol(protocol);
     }
 
     /**
@@ -170,36 +95,7 @@ export class ObsidianClient {
      * @returns {string} 有効なホスト名
      */
     _validateHost(host: string | undefined | null): string {
-        if (host === undefined || host === null || host === '') {
-            return DEFAULT_HOST;
-        }
-
-        if (typeof host !== 'string') {
-            return DEFAULT_HOST;
-        }
-
-        const trimmed = host.trim();
-        if (trimmed === '') {
-            return DEFAULT_HOST;
-        }
-
-        // IPv6アドレス（::1, [::1] など）を許可する。
-        // ブラケット付きで返すことで `${protocol}://${host}:${port}` の
-        // URL組み立てが正しく機能する（例: https://[::1]:27123）。
-        if (trimmed.includes(':')) {
-            const inner = trimmed.startsWith('[') && trimmed.endsWith(']') ? trimmed.slice(1, -1) : trimmed;
-            if (!this._isIpv6Address(inner)) {
-                throw new Error('Obsidian host contains invalid characters.');
-            }
-            return `[${inner}]`;
-        }
-
-        // プロトコルやスラッシュを含む不正なホストは拒否
-        if (/[\s\/\\]/.test(trimmed)) {
-            throw new Error('Obsidian host contains invalid characters.');
-        }
-
-        return trimmed;
+        return validateObsidianHost(host);
     }
 
     /**
@@ -209,10 +105,7 @@ export class ObsidianClient {
      * @returns {boolean} IPv6アドレスの場合true
      */
     _isIpv6Address(host: string): boolean {
-        if (!host.includes(':')) {
-            return false;
-        }
-        return /^[0-9a-fA-F:.]+$/.test(host);
+        return isIpv6Address(host);
     }
 
     /**
@@ -222,30 +115,7 @@ export class ObsidianClient {
      * @throws {Error} ポート番号が無効な場合
      */
     _validatePort(port: string | number | undefined | null): string {
-        // 未指定、空文字列の場合はデフォルト値を使用
-        if (port === undefined || port === null || port === '') {
-            return DEFAULT_PORT;
-        }
-
-        // 数値変換
-        const portNum = Number(port);
-
-        // 非数値チェック
-        if (isNaN(portNum)) {
-            throw new Error('Invalid port number. Port must be a valid number.');
-        }
-
-        // 整数チェック
-        if (!Number.isInteger(portNum)) {
-            throw new Error('Invalid port number. Port must be an integer.');
-        }
-
-        // 範囲チェック
-        if (portNum < MIN_PORT || portNum > MAX_PORT) {
-            throw new Error(`Invalid port number. Port must be between ${MIN_PORT} and ${MAX_PORT}.`);
-        }
-
-        return String(portNum);
+        return validateObsidianPort(port);
     }
 
     async appendToDailyNote(content: string, traceId: string = ''): Promise<void> {
@@ -304,23 +174,7 @@ export class ObsidianClient {
      * @throws {Error} ボディ読み込みがタイムアウトした場合（name='AbortError'）
      */
     async _readBodyWithTimeout(response: Response): Promise<string> {
-        const textPromise = response.text();
-        // タイムアウト側が先に勝った場合、text()の遅延失敗がunhandled rejectionにならないよう握りつぶす
-        textPromise.catch(() => {});
-
-        let timer: ReturnType<typeof setTimeout> | undefined;
-        const timeoutPromise = new Promise<never>((_, reject) => {
-            timer = setTimeout(() => {
-                const timeoutError = new Error(`Body read timed out after ${READ_TIMEOUT_MS}ms`);
-                // 下流の _handleError が name ベースで検出できるようにする
-                timeoutError.name = 'AbortError';
-                reject(timeoutError);
-            }, READ_TIMEOUT_MS);
-        });
-
-        const race = Promise.race([textPromise, timeoutPromise]);
-        race.then(() => clearTimeout(timer), () => clearTimeout(timer));
-        return race;
+        return readBodyWithTimeout(response);
     }
 
     async _writeContent(url: string, headers: HeadersInit, content: string, traceId: string = ''): Promise<void> {
@@ -340,17 +194,7 @@ export class ObsidianClient {
     }
 
     _handleError(error: Error, targetUrl: string, traceId: string = ''): Error {
-        const errorMessage = error.message;
-        if (errorMessage.includes('Failed to fetch') && targetUrl.startsWith('https')) {
-            addLog(LogType.ERROR, `Failed to connect to Obsidian at ${targetUrl}`, { traceId });
-            return new Error('Error: Failed to connect to Obsidian. Please visit the Obsidian URL in a new tab and accept the self-signed certificate.');
-        }
-        if (error.name === 'AbortError' || errorMessage.toLowerCase().includes('timed out')) {
-            addLog(LogType.WARN, `Obsidian request timed out: ${targetUrl}`, { error: errorMessage, traceId });
-            return new Error('Error: Request timed out. Please check your Obsidian connection.');
-        }
-        addLog(LogType.ERROR, `Failed to connect to Obsidian at ${targetUrl}. Cause: ${errorMessage}`, { traceId });
-        return new Error('Error: Failed to connect to Obsidian. Please check your settings and connection.');
+        return handleObsidianError(error, targetUrl, traceId);
     }
 
     /**
@@ -365,14 +209,17 @@ export class ObsidianClient {
             let baseUrl: string;
             let headers: HeadersInit;
             if (override) {
-                const protocol = this._validateProtocol(override.protocol);
-                const port = this._validatePort(override.port);
-                const apiKey = override.apiKey;
-                if (!apiKey) {
-                    return { success: false, message: 'API key is missing. Please enter your Obsidian API key.' };
+                try {
+                    const config = await buildObsidianConfig(override);
+                    baseUrl = config.baseUrl;
+                    headers = config.headers;
+                } catch (e: unknown) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    if (msg.includes('API key is missing')) {
+                        return { success: false, message: 'API key is missing. Please enter your Obsidian API key.' };
+                    }
+                    return { success: false, message: msg };
                 }
-                baseUrl = `${protocol}://${DEFAULT_HOST}:${port}`;
-                headers = { ...BASE_HEADERS, 'Authorization': `Bearer ${apiKey}` };
             } else {
                 ({ baseUrl, headers } = await this._getConfig());
             }
