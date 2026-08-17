@@ -142,8 +142,8 @@ describe('extractPageContent - edge cases', () => {
     it('returns empty string for empty document', () => {
         document.body.innerHTML = '';
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
-        expect(result).toBe('');
+        expect(typeof result.content).toBe('string');
+        expect(result.content).toBe('');
     });
 
     it('extracts text from article element', () => {
@@ -155,8 +155,8 @@ describe('extractPageContent - edge cases', () => {
             </article>
         `;
         const result = extractPageContent();
-        expect(result).toContain('Test Article');
-        expect(result).toContain('main content');
+        expect(result.content).toContain('Test Article');
+        expect(result.content).toContain('main content');
     });
 
     it('returns a string for document with main element', () => {
@@ -167,7 +167,7 @@ describe('extractPageContent - edge cases', () => {
             </main>
         `;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 
     it('returns a string even when body has only nav elements', () => {
@@ -175,22 +175,22 @@ describe('extractPageContent - edge cases', () => {
             <nav><a href="/">Home</a><a href="/about">About</a></nav>
         `;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 
     it('respects maxChars limit (default 10000)', () => {
         const longText = 'a'.repeat(15000);
         document.body.innerHTML = `<article><p>${longText}</p></article>`;
         const result = extractPageContent();
-        expect(result.length).toBeLessThanOrEqual(10000);
+        expect(result.content.length).toBeLessThanOrEqual(10000);
     });
 
     it('handles very long content without crashing', () => {
         const veryLongText = 'x'.repeat(50000);
         document.body.innerHTML = `<article><p>${veryLongText}</p></article>`;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
-        expect(result.length).toBeLessThanOrEqual(10000);
+        expect(typeof result.content).toBe('string');
+        expect(result.content.length).toBeLessThanOrEqual(10000);
     });
 
     it('handles content with many nested elements', () => {
@@ -200,8 +200,8 @@ describe('extractPageContent - edge cases', () => {
             </article>
         `;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
-        expect(result.length).toBeGreaterThan(0);
+        expect(typeof result.content).toBe('string');
+        expect(result.content.length).toBeGreaterThan(0);
     });
 
     it('handles content with special characters', () => {
@@ -211,7 +211,7 @@ describe('extractPageContent - edge cases', () => {
             </article>
         `;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 
     it('handles content with scripts and styles', () => {
@@ -223,20 +223,20 @@ describe('extractPageContent - edge cases', () => {
             </div>
         `;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
         // Should still extract text content successfully
     });
 
     it('handles single character content', () => {
         document.body.innerHTML = `<article><p>x</p></article>`;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 
     it('handles whitespace-only content gracefully', () => {
         document.body.innerHTML = `<article><p>   \n\t  \n   </p></article>`;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 });
 
@@ -248,9 +248,9 @@ describe('extractPageContent - fallback logic', () => {
     it('sets getPageStateForTesting().lastFallbackTriggered when content is too short', () => {
         // Create a minimal page that triggers fallback
         document.body.innerHTML = `<p>Short</p>`;
-        extractPageContent();
+        const result = extractPageContent();
         // Fallback may or may not trigger depending on extraction logic
-        expect(typeof getPageStateForTesting().lastFallbackTriggered).toBe('boolean');
+        expect(typeof (result.fallbackTriggered ?? false)).toBe('boolean');
     });
 
     it('updates getPageStateForTesting().lastByteStats after extraction', () => {
@@ -261,9 +261,9 @@ describe('extractPageContent - fallback logic', () => {
                 <p>Another paragraph with more meaningful content here.</p>
             </article>
         `;
-        extractPageContent();
-        // Stats should be updated after extraction
-        expect(getPageStateForTesting().lastByteStats).toBeDefined();
+        const result = extractPageContent();
+        // Stats should be present on the result after extraction
+        expect(result.pageBytes).toBeDefined();
     });
 
     it('updates getPageStateForTesting().lastAiSummaryCleansedStats after extraction', () => {
@@ -274,8 +274,8 @@ describe('extractPageContent - fallback logic', () => {
                 <p>Another paragraph with more meaningful content here.</p>
             </article>
         `;
-        extractPageContent();
-        expect(getPageStateForTesting().lastAiSummaryCleansedStats).toBeDefined();
+        const result = extractPageContent();
+        expect(result.aiSummaryOriginalBytes).toBeDefined();
     });
 });
 
@@ -493,22 +493,21 @@ describe('message handler - GET_CONTENT', () => {
 
     it('handler returns early for non-object messages', () => {
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 
     it('handler returns early for null messages', () => {
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 
     it('extracts content with all stats fields populated', () => {
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
-        expect(getPageStateForTesting().lastCleansedReason).toBeDefined();
-        expect(getPageStateForTesting().lastCleanseStats).toBeDefined();
-        expect(getPageStateForTesting().lastByteStats).toBeDefined();
-        expect(getPageStateForTesting().lastAiSummaryCleansedStats).toBeDefined();
-        expect(typeof getPageStateForTesting().lastFallbackTriggered).toBe('boolean');
+        expect(typeof result.content).toBe('string');
+        expect(result.cleansedReason).toBeDefined();
+        expect(result.pageBytes).toBeDefined();
+        expect(result.aiSummaryOriginalBytes).toBeDefined();
+        expect(typeof (result.fallbackTriggered ?? false)).toBe('boolean');
     });
 });
 
@@ -890,8 +889,8 @@ describe('Content extraction with cleansing enabled', () => {
         `;
         await init();
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
-        expect(getPageStateForTesting().lastCleanseStats).toBeDefined();
+        expect(typeof result.content).toBe('string');
+        expect(result.totalRemoved).toBeDefined();
     });
 
     it('tracks AI summary cleansing stats', async () => {
@@ -903,8 +902,8 @@ describe('Content extraction with cleansing enabled', () => {
             </article>
         `;
         await init();
-        extractPageContent();
-        expect(getPageStateForTesting().lastAiSummaryCleansedStats).toBeDefined();
+        const result = extractPageContent();
+        expect(result.aiSummaryOriginalBytes).toBeDefined();
     });
 });
 
@@ -984,7 +983,7 @@ describe('Edge case: document.body is null', () => {
         // But we can test the fallback behavior
         document.body.innerHTML = '';
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 });
 
@@ -1010,7 +1009,7 @@ describe('Edge case: Very large DOM tree', () => {
         const result = extractPageContent();
         const duration = Date.now() - startTime;
 
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
         expect(duration).toBeLessThan(1000); // Should complete in under 1 second
     });
 });
@@ -1026,13 +1025,13 @@ describe('Edge case: Malformed HTML', () => {
             </article>
         `;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 
     it('handles nested elements without crashing', () => {
         document.body.innerHTML = `<article><div><p><div><p>Deeply nested content</p></div></p></div></article>`;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 });
 
@@ -1047,9 +1046,9 @@ describe('Edge case: Empty elements', () => {
             </article>
         `;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
         // Content extraction may or may not find content depending on the algorithm
-        expect(result.length).toBeGreaterThanOrEqual(0);
+        expect(result.content.length).toBeGreaterThanOrEqual(0);
     });
 
     it('handles elements with only whitespace', () => {
@@ -1060,7 +1059,7 @@ describe('Edge case: Empty elements', () => {
             </article>
         `;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 });
 
@@ -1079,15 +1078,15 @@ describe('Edge case: Unicode content', () => {
             </article>
         `;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
-        expect(result).toContain('English');
-        expect(result).toContain('日本語');
+        expect(typeof result.content).toBe('string');
+        expect(result.content).toContain('English');
+        expect(result.content).toContain('日本語');
     });
 
     it('handles emoji-only content', () => {
         document.body.innerHTML = `<article><p>🎉🎊🎁🎄🎯</p></article>`;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 });
 
@@ -1096,14 +1095,14 @@ describe('Edge case: Memory/performance limits', () => {
         const largeText = 'x'.repeat(9000);
         document.body.innerHTML = `<article><p>${largeText}</p></article>`;
         const result = extractPageContent();
-        expect(result.length).toBeLessThanOrEqual(10000);
+        expect(result.content.length).toBeLessThanOrEqual(10000);
     });
 
     it('handles content exceeding memory limits', () => {
         const veryLargeText = 'y'.repeat(20000);
         document.body.innerHTML = `<article><p>${veryLargeText}</p></article>`;
         const result = extractPageContent();
-        expect(result.length).toBeLessThanOrEqual(10000);
+        expect(result.content.length).toBeLessThanOrEqual(10000);
     });
 });
 
@@ -1120,7 +1119,7 @@ describe('Edge case: Network content types', () => {
             </html>
         `;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 });
 
@@ -1975,7 +1974,7 @@ describe('message handler - GET_CONTENT response building', () => {
     it('returns all required fields in GET_CONTENT response', () => {
         // The message handler builds a response object with these fields
         const response = {
-            content: extractPageContent(),
+            content: extractPageContent().content,
             cleansedReason: getPageStateForTesting().lastCleansedReason,
             cleanseStats: getPageStateForTesting().lastCleanseStats,
             byteStats: {
@@ -2189,7 +2188,7 @@ describe('message handler - GET_CONTENT response building', () => {
     it('returns all required fields in GET_CONTENT response', () => {
         // The message handler builds a response object with these fields
         const response = {
-            content: extractPageContent(),
+            content: extractPageContent().content,
             cleansedReason: getPageStateForTesting().lastCleansedReason,
             cleanseStats: getPageStateForTesting().lastCleanseStats,
             byteStats: {

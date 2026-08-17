@@ -37,7 +37,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-（次のリリースに向けての変更をここに記載）
+- `extractor.ts` の `extractPageContent` を純粋関数化。pageStateへの副作用（`lastCleansedReason`等5フィールド）を除去し、`ExtractResult` オブジェクトをそのまま返すように変更。呼び出し元（`reportValidVisit`、`GET_CONTENT`メッセージハンドラ）が明示的にpageStateへ反映する構造に変更し、抽出とpageStateの所有権を分離
+- `sqliteEngineContext.ts`（698行）を実際に4分割モジュール（`opfsWorkerProxy.ts`, `idbEngineLifecycle.ts`, `migrationBackup.ts`, `fallbackMigration.ts`）へ委譲する構造に修正。6.7.50 の CHANGELOG には「ファサードは268行に削減」と記載していたが、実際は分割モジュールがどこからも参照されない孤立コードのまま残っていた。facade は283行に削減し、既存の public API（`engine`, `DB_FILENAME`, `MAX_QUERY_LIMIT`, `extractDomain`）は不変
 
 ## [6.7.51] - 2026-08-18
 
