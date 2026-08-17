@@ -41,6 +41,8 @@ const SENSITIVE_DOMAINS_PRESETS = PRESETS;
 
 // ドメインバリデーション関数は domainValidation.ts に抽出済み
 import { isValidDomain, isValidTld, compareVersions as _compareVersions } from './domainValidation.js';
+import { ManagedStringList } from './managedStringList.js';
+import { TrancoVersionTracker } from './trancoVersionTracker.js';
 
 // ===== settingsStore 動的import ヘルパー（PBI-2026-08-01-20） =====
 //
@@ -85,6 +87,18 @@ class TrustDb {
     trancoRankMap: new Map(),
     initialized: false
   };
+
+  // Built once initialize() has loaded/created this.state.database, since
+  // ManagedStringList needs a stable reference to the backing array.
+  private userTldsList: ManagedStringList | null = null;
+  private sensitiveDomainsList: ManagedStringList | null = null;
+  private whitelistList: ManagedStringList | null = null;
+
+  private readonly trancoVersionTracker = new TrancoVersionTracker({
+    getSettingsStore,
+    getStorageTypes,
+    currentVersion: CURRENT_TRANCO_VERSION,
+  });
 
   /**
    * Trust Database を初期化
@@ -167,11 +181,68 @@ class TrustDb {
         await this.createDefaultDatabase();
       }
 
+      this.buildManagedStringLists();
       this.state.initialized = true;
     } catch (error) {
       logError('TrustDb', { error }, ErrorCode.TRUST_DB_INIT_FAILED);
       throw error;
     }
+  }
+
+  /**
+   * ManagedStringList インスタンスを構築する（DB ロード/マイグレーション/新規作成の
+   * いずれの経路でも、initialize() の最後に一度だけ呼ばれる）。
+   */
+  private buildManagedStringLists(): void {
+    const db = this.state.database!;
+
+    this.userTldsList = new ManagedStringList(db.jpAnchor.userTlds, {
+      save: () => this.save(),
+      duplicateErrorMessage: 'TLD already exists',
+      notFoundErrorMessage: 'TLD not found',
+      normalize: (tld) => (tld.startsWith('.') ? tld : '.' + tld),
+      validate: (tld) => {
+        if (!isValidTld(tld)) {
+          return {
+            valid: false,
+            error: 'Invalid TLD format. TLD must contain only letters, numbers, and hyphens, must start/end with a letter or number, and be 2-63 characters long (e.g., .com, .jp, .ai)'
+          };
+        }
+        // Also reject TLDs already present in the built-in preset list.
+        if (db.jpAnchor.tlds.includes(tld)) {
+          return { valid: false, error: 'TLD already exists' };
+        }
+        return { valid: true };
+      },
+    });
+
+    this.sensitiveDomainsList = new ManagedStringList(db.sensitive.userBlacklist, {
+      save: () => this.save(),
+      normalize: (domain) => domain.toLowerCase().trim(),
+      validate: (domain) => {
+        if (!isValidDomain(domain)) {
+          return {
+            valid: false,
+            error: 'Invalid domain format. Domain must follow RFC standards: contain only letters, numbers, hyphens, and dots, start/end with letter or number, and be max 253 characters long'
+          };
+        }
+        return { valid: true };
+      },
+    });
+
+    this.whitelistList = new ManagedStringList(db.sensitive.whitelist, {
+      save: () => this.save(),
+      normalize: (domain) => domain.toLowerCase().trim(),
+      validate: (domain) => {
+        if (!isValidDomain(domain)) {
+          return {
+            valid: false,
+            error: 'Invalid domain format. Domain must follow RFC standards: contain only letters, numbers, hyphens, and dots, start/end with letter or number, and be max 253 characters long'
+          };
+        }
+        return { valid: true };
+      },
+    });
   }
 
   /**
@@ -539,59 +610,23 @@ class TrustDb {
   }
 
   /**
-   * TLD を jpAnchor.userTlds に追加する共通ロジック（addUserTld / addJpAnchorTld の共有）
-   */
-  private async _addTldToUserList(tld: string): Promise<{ success: boolean; error?: string }> {
-    if (!this.state.database) {
-      return { success: false, error: 'Database not initialized' };
-    }
-
-    // Validate TLD format using RFC-compliant function
-    if (!isValidTld(tld)) {
-      return {
-        success: false,
-        error: 'Invalid TLD format. TLD must contain only letters, numbers, and hyphens, must start/end with a letter or number, and be 2-63 characters long (e.g., .com, .jp, .ai)'
-      };
-    }
-
-    // Ensure TLD starts with dot
-    if (!tld.startsWith('.')) {
-      tld = '.' + tld;
-    }
-
-    // Check for duplicates
-    if (this.state.database.jpAnchor.tlds.includes(tld) || this.state.database.jpAnchor.userTlds.includes(tld)) {
-      return { success: false, error: 'TLD already exists' };
-    }
-
-    this.state.database.jpAnchor.userTlds.push(tld);
-    await this.save();
-    return { success: true };
-  }
-
-  /**
-   * ユーザー TLD 追加
+   * ユーザー TLD 追加（jpAnchor.userTlds に追加。addJpAnchorTld と同じリストを操作する）
    */
   async addUserTld(tld: string): Promise<{ success: boolean; error?: string }> {
-    return this._addTldToUserList(tld);
+    if (!this.state.database || !this.userTldsList) {
+      return { success: false, error: 'Database not initialized' };
+    }
+    return this.userTldsList.add(tld);
   }
 
   /**
    * ユーザー TLD 削除
    */
   async removeUserTld(tld: string): Promise<{ success: boolean; error?: string }> {
-    if (!this.state.database) {
+    if (!this.state.database || !this.userTldsList) {
       return { success: false, error: 'Database not initialized' };
     }
-
-    const index = this.state.database.jpAnchor.userTlds.indexOf(tld);
-    if (index !== -1) {
-      this.state.database.jpAnchor.userTlds.splice(index, 1);
-      await this.save();
-      return { success: true };
-    }
-
-    return { success: false, error: 'TLD not found' };
+    return this.userTldsList.remove(tld);
   }
 
   /**
@@ -640,28 +675,17 @@ class TrustDb {
   }
 
   /**
-   * JP-Anchor TLD を追加
+   * JP-Anchor TLD を追加（addUserTld と同じ jpAnchor.userTlds を操作する）
    */
   async addJpAnchorTld(tld: string): Promise<{ success: boolean; error?: string }> {
-    return this._addTldToUserList(tld);
+    return this.addUserTld(tld);
   }
 
   /**
    * JP-Anchor TLD を削除
    */
   async removeJpAnchorTld(tld: string): Promise<{ success: boolean; error?: string }> {
-    if (!this.state.database) {
-      return { success: false, error: 'Database not initialized' };
-    }
-
-    const index = this.state.database.jpAnchor.userTlds.indexOf(tld);
-    if (index !== -1) {
-      this.state.database.jpAnchor.userTlds.splice(index, 1);
-      await this.save();
-      return { success: true };
-    }
-
-    return { success: false, error: 'TLD not found' };
+    return this.removeUserTld(tld);
   }
 
   /**
@@ -677,46 +701,20 @@ class TrustDb {
    * Sensitive ドメインを追加
    */
   async addSensitiveDomain(domain: string, _category?: string): Promise<{ success: boolean; error?: string }> {
-    if (!this.state.database) {
+    if (!this.state.database || !this.sensitiveDomainsList) {
       return { success: false, error: 'Database not initialized' };
     }
-
-    const normalizedDomain = domain.toLowerCase().trim();
-
-    // Validate domain format using RFC-compliant function
-    if (!isValidDomain(normalizedDomain)) {
-      return {
-        success: false,
-        error: 'Invalid domain format. Domain must follow RFC standards: contain only letters, numbers, hyphens, and dots, start/end with letter or number, and be max 253 characters long'
-      };
-    }
-
-    // Check for duplicates
-    if (this.state.database.sensitive.userBlacklist.includes(normalizedDomain)) {
-      return { success: false, error: 'Domain already exists' };
-    }
-
-    this.state.database.sensitive.userBlacklist.push(normalizedDomain);
-    await this.save();
-    return { success: true };
+    return this.sensitiveDomainsList.add(domain);
   }
 
   /**
    * Sensitive ドメインを削除
    */
   async removeSensitiveDomain(domain: string): Promise<{ success: boolean; error?: string }> {
-    if (!this.state.database) {
+    if (!this.state.database || !this.sensitiveDomainsList) {
       return { success: false, error: 'Database not initialized' };
     }
-
-    const index = this.state.database.sensitive.userBlacklist.indexOf(domain);
-    if (index !== -1) {
-      this.state.database.sensitive.userBlacklist.splice(index, 1);
-      await this.save();
-      return { success: true };
-    }
-
-    return { success: false, error: 'Domain not found' };
+    return this.sensitiveDomainsList.remove(domain);
   }
 
   /**
@@ -731,46 +729,20 @@ class TrustDb {
    * Whitelist にドメインを追加
    */
   async addToWhitelist(domain: string): Promise<{ success: boolean; error?: string }> {
-    if (!this.state.database) {
+    if (!this.state.database || !this.whitelistList) {
       return { success: false, error: 'Database not initialized' };
     }
-
-    const normalizedDomain = domain.toLowerCase().trim();
-
-    // Validate domain format using RFC-compliant function
-    if (!isValidDomain(normalizedDomain)) {
-      return {
-        success: false,
-        error: 'Invalid domain format. Domain must follow RFC standards: contain only letters, numbers, hyphens, and dots, start/end with letter or number, and be max 253 characters long'
-      };
-    }
-
-    // Check for duplicates
-    if (this.state.database.sensitive.whitelist.includes(normalizedDomain)) {
-      return { success: false, error: 'Domain already exists' };
-    }
-
-    this.state.database.sensitive.whitelist.push(normalizedDomain);
-    await this.save();
-    return { success: true };
+    return this.whitelistList.add(domain);
   }
 
   /**
    * Whitelist からドメインを削除
    */
   async removeFromWhitelist(domain: string): Promise<{ success: boolean; error?: string }> {
-    if (!this.state.database) {
+    if (!this.state.database || !this.whitelistList) {
       return { success: false, error: 'Database not initialized' };
     }
-
-    const index = this.state.database.sensitive.whitelist.indexOf(domain);
-    if (index !== -1) {
-      this.state.database.sensitive.whitelist.splice(index, 1);
-      await this.save();
-      return { success: true };
-    }
-
-    return { success: false, error: 'Domain not found' };
+    return this.whitelistList.remove(domain);
   }
 
   // ===== Tranco バージョン追跡（Phase 1） =====
@@ -779,76 +751,35 @@ class TrustDb {
    * 現在の Tranco バージョンを取得
    */
   getCurrentTrancoVersion(): string {
-    return CURRENT_TRANCO_VERSION;
+    return this.trancoVersionTracker.getCurrentTrancoVersion();
   }
 
   /**
    * 保存されている Tranco バージョンを取得
-   *
-   * settings オブジェクト経由でアクセスする（PBI-2026-08-01-16）。
-   * getSettings() は移行前ユーザーの個別キー（tranco_version）も透過的に
-   * 吸収するため、移行の前後どちらでも正しく値を取得できる。
    */
   async getSavedTrancoVersion(): Promise<string | null> {
-    const { getSettings } = await getSettingsStore();
-    const { StorageKeys } = await getStorageTypes();
-    const settings = await getSettings();
-    return settings[StorageKeys.TRANCO_VERSION] || null;
+    return this.trancoVersionTracker.getSavedTrancoVersion();
   }
 
   /**
    * Tranco バージョンを更新
-   *
-   * settings オブジェクト経由で書き込む（PBI-2026-08-01-16）。tranco_version と
-   * tranco_domains を同一の saveSettings() 呼び出しでまとめて更新することで、
-   * settingsStore の移行ロジックと構造的に整合させる（従来は
-   * chrome.storage.local への個別キー直接書き込みで settings オブジェクトを
-   * 経由しておらず、migrateToSingleSettingsObject() のバックアップ退避対象
-   * から外れていた）。
    */
   async updateTrancoVersion(version: string, domains: string[]): Promise<void> {
-    const { saveSettings } = await getSettingsStore();
-    const { StorageKeys } = await getStorageTypes();
-    await saveSettings({
-      [StorageKeys.TRANCO_VERSION]: version,
-      [StorageKeys.TRANCO_DOMAINS]: domains
-    });
-    logInfo('TrustDb', { version, domainCount: domains.length }, 'Tranco version updated');
+    return this.trancoVersionTracker.updateTrancoVersion(version, domains);
   }
 
   /**
    * Tranco バージョン更新を検知した場合の結果を取得
    */
   async checkTrancoUpdate(): Promise<{ hasUpdate: boolean; oldVersion: string | null; newVersion: string }> {
-    const savedVersion = await this.getSavedTrancoVersion();
-    const currentVersion = this.getCurrentTrancoVersion();
-
-    if (savedVersion !== currentVersion) {
-      logInfo('TrustDb', { savedVersion, currentVersion }, 'Tranco version update detected');
-      return {
-        hasUpdate: true,
-        oldVersion: savedVersion,
-        newVersion: currentVersion
-      };
-    }
-
-    return {
-      hasUpdate: false,
-      oldVersion: savedVersion,
-      newVersion: currentVersion
-    };
+    return this.trancoVersionTracker.checkTrancoUpdate();
   }
 
   /**
    * 保存された Tranco ドメインリストを取得（旧リスト保持用）
-   *
-   * settings オブジェクト経由でアクセスする（PBI-2026-08-01-16）。
    */
   async getSavedTrancoDomains(): Promise<string[]> {
-    const { getSettings } = await getSettingsStore();
-    const { StorageKeys } = await getStorageTypes();
-    const settings = await getSettings();
-    return settings[StorageKeys.TRANCO_DOMAINS] || [];
+    return this.trancoVersionTracker.getSavedTrancoDomains();
   }
 
   /**
