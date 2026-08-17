@@ -14,6 +14,7 @@ const _errMsg = (e: unknown): string => e instanceof Error ? e.message : String(
 // Type-only import to establish graphify edge between content script and
 // the service worker's message type definitions (PBI-02-3).
 import type { CheckDomainMessage } from '../background/messageTypes.js';
+import { shouldSkipUrl, extractDomain, isDomainInList } from './urlSkipper.js';
 
 // Content Script entry point runs without ESM module support, so we cannot
 // import CURRENT_PROTOCOL_VERSION statically. Keep this in sync with
@@ -31,81 +32,8 @@ const StorageKeys = {
     UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled'
 };
 
-// 注意: 以下の関数群（SKIPPED_PROTOCOLS / shouldSkipUrl / extractDomain /
-// matchesPattern / isDomainInList）は loader.ts（Content Script エントリポイント）が
-// 静的 import できない（manifest.json の content_scripts は "type": "module" なしで
-// 登録されるため）ことから、urlSkipper.ts から複製している。
-// 正本は src/content/urlSkipper.ts。ロジック変更時は必ず urlSkipper.ts と同期すること。
-const SKIPPED_PROTOCOLS = [
-    'chrome://',
-    'chrome-extension://',
-    'moz-extension://',
-    'edge://',
-    'about:blank',
-    'about:srcdoc',
-    'data:',
-    'file://'
-];
-
 // キャッシュ有効期限（5分）
 const CACHE_TTL = 5 * 60 * 1000;
-
-/**
- * URL が抽出対象かどうかを判定（パフォーマンス最適化）
- * @param url - 判定対象 URL
- * @returns true でスキップ対象
- */
-function shouldSkipUrl(url: string): boolean {
-    if (!url) return true;
-    return SKIPPED_PROTOCOLS.some(protocol => url.startsWith(protocol));
-}
-
-/**
- * ドメインを抽出して正規化
- * @param url - URL
- * @returns 正規化されたドメイン（失敗時はnull）
- */
-function extractDomain(url: string): string | null {
-    try {
-        const urlObj = new URL(url);
-        let hostname = urlObj.hostname;
-        if (hostname.startsWith('www.')) {
-            hostname = hostname.substring(4);
-        }
-        return hostname;
-    } catch {
-        return null;
-    }
-}
-
-/**
- * パターンマッチング（ワイルドカード対応）
- * @param domain - ドメイン
- * @param pattern - パターン
- * @returns 一致する場合true
- */
-function matchesPattern(domain: string, pattern: string): boolean {
-    if (pattern.includes('*')) {
-        const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regexPattern = escaped.replace(/\\\*/g, '.*');
-        const regex = new RegExp(`^${regexPattern}$`, 'i');
-        return regex.test(domain);
-    }
-    return domain.toLowerCase() === pattern.toLowerCase();
-}
-
-/**
- * ドメインがリストに含まれるかチェック
- * @param domain - ドメイン
- * @param domainList - ドメインリスト
- * @returns 含まれる場合true
- */
-function isDomainInList(domain: string, domainList: string[] | undefined): boolean {
-    if (!domainList || domainList.length === 0) {
-        return false;
-    }
-    return domainList.some(pattern => matchesPattern(domain, pattern));
-}
 
 /**
  * ドメインフィルタキャッシュから許可チェック

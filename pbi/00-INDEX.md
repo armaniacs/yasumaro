@@ -22,7 +22,6 @@
 | [2026-08-17-01-refactor-split-sqlite-engine-context.md](2026-08-17-01-refactor-split-sqlite-engine-context.md) | high | あり | refactor | 🔶部分実装: 分割先モジュールは作成済みだが本体sqliteEngineContext.tsが未接続（孤立コード） |
 | [2026-08-17-23-refactor-deepen-cspsettings-static-facade.md](2026-08-17-23-refactor-deepen-cspsettings-static-facade.md) | 🟡中 | 軽微 | refactor | 🔶部分実装: CspSettingsControllerは存在するが@deprecated静的クラスが残存 |
 | [2026-08-17-24-refactor-extract-sqlitehistorypanel-closure.md](2026-08-17-24-refactor-extract-sqlitehistorypanel-closure.md) | 🔴高 | 軽微 | refactor | sqliteHistoryPanel 875行クロージャから抽出 |
-| [2026-08-17-25-refactor-eliminate-loader-urlskipper-copy.md](2026-08-17-25-refactor-eliminate-loader-urlskipper-copy.md) | 🟢低 | 軽微 | refactor | loader.ts の urlSkipper コピーを排除 |
 | [2026-08-17-26-refactor-decompose-recordcurrentpage-god.md](2026-08-17-26-refactor-decompose-recordcurrentpage-god.md) | 🔴高 | 軽微 | refactor | recordCurrentPage ゴッド関数を分解 |
 | [2026-08-17-27-refactor-decompose-trustdb-god-module.md](2026-08-17-27-refactor-decompose-trustdb-god-module.md) | 🔴高 | あり | refactor | trustDb 6モジュール分解＋循環依存解消（13pt Epic）。CRUD重複はPBI-40で解消済み、残りはDomainVerifier/BloomFilterManager等6モジュール化と循環依存解消。ユーザー確認の上、今回のセッションでは規模超過につき見送り |
 | [2026-08-17-28-fix-extractor-false-purity-pagestate.md](2026-08-17-28-fix-extractor-false-purity-pagestate.md) | 🟡中 | 軽微 | fix | 🔶部分実装: shouldRecordVisitは明示パラメータ化済みだがextractPageContentの副作用は未整理 |
@@ -80,6 +79,7 @@
 - 2026-08-17-11-refactor-remove-notifications-from-pipeline.md (resultBuilder.tsのbuildErrorResultからchrome.notifications.create呼び出しを除去し、notifyRecordingErrorという独立関数に分離。既存のnotifyObsidianSaveSuccess(成功時通知)パターンと統一し、RecordingPipeline.executeInternalが明示的に呼ぶ形に。buildErrorResultはglobalThis.chrome未設定でも動作することをテストで確認。npm test 8006件成功)
 - 2026-08-17-40-refactor-extract-managed-string-list-trustdb.md (trustDb.ts 889行のCRUD重複8メソッドをManagedStringListクラス(add/remove/getAll)に集約し3インスタンス化(userTlds/sensitiveDomains/whitelist)。Trancoバージョン追跡5メソッドをTrancoVersionTrackerに分離。「未初期化時エラー」の既存テスト5件が失敗したため各委譲メソッドにstate.databaseの二重ガードを追加して対応。ManagedStringList/TrancoVersionTracker単体テスト17件新規追加。PBI-27(6モジュール分解＋循環依存解消)はユーザー確認の上、規模超過につき見送り。npm test 8023件成功)
 - 2026-08-17-38-refactor-extract-ssrf-ip-policy.md (fetch.ts 562行からSSRF/IPポリシー(isPrivateIpAddress/isLocalhostAddress/normalizeIpHostname/validateUrl*/ALLOWED_LOCALHOST_PORTS)をssrfGuard.tsへ分離。fetch.tsは再エクスポートで既存呼び出し元3ファイル(recordingValidator.ts/OpenAIProvider.ts/GeminiProvider.ts)を無変更に維持。cspValidator.tsの重複ALLOWED_LOCALHOST_PORTS定義をssrfGuard.tsからのimportに統一。ssrfGuard単体テスト23件新規追加(fetchモック不要)。npm test 8046件成功)
+- 2026-08-17-25-refactor-eliminate-loader-urlskipper-copy.md (「content_scriptsは静的importできない」というPBI本文の前提を実ビルド(WXT/rolldown)で検証したところ、バンドラーがインライン化するため実際には制約が存在しないことが判明。loader.tsからSKIPPED_PROTOCOLS等74行の重複コードを削除しurlSkipper.tsを静的importする形に変更。urlSkipper-contract.test.ts(コピー同期契約テスト)を削除し、loader-no-static-imports.test.tsを「バンドラーで解決可能な相対importのみ許容」+「urlSkipper.tsをimportしていること」を検証する形に更新。wxt-build.test.tsにビルド成果物(content.js)にimport文が残らないことを検証するテストを追加。npm test 8043件成功)
 
 ### 2026-08-15 アーカイブ済み
 
@@ -395,10 +395,10 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 3 |
+| ⬜ 未着手 | 2 |
 | 🔶 部分実装 | 5 |
-| **`pbi/` 残存合計** | **8**（+ 親epic 1件、PBI-27は見送り理由付きで残置） |
-| アーカイブ済みPBI | 284 |
+| **`pbi/` 残存合計** | **7**（+ 親epic 1件、PBI-27は見送り理由付きで残置） |
+| アーカイブ済みPBI | 285 |
 | アーカイブ済み実装計画 | 112 |
 
 ※ 2026-08-17: アーキテクチャレビュー由来の14PBIを追加（06〜19）。00〜05は前回セッションから残存。
