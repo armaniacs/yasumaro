@@ -17,7 +17,7 @@
  * because the two implementations used different selectors.
  */
 
-import type { AiSummaryCleanseOptions } from './types.js';
+import type { AiSummaryCleanseOptions, RuleKey } from './types.js';
 import { StorageKeys } from '../storage/types.js';
 import {
     stripAltAttributes,
@@ -97,7 +97,7 @@ export const THRESHOLD_DEFAULTS: CleansingThresholds = {
  */
 export interface CleansingRule {
     /** Stable identifier. Drives option name, result key, reason and label. */
-    key: string;
+    key: RuleKey;
     /** Value used when a caller (a test, countAISummaryTargets) omits the flag. */
     defaultEnabled: boolean;
     /** chrome.storage key. Must match the value already in StorageKeys. */
@@ -161,14 +161,15 @@ export const CLEANSING_RULES: readonly CleansingRule[] = [
 ] as const;
 
 /** Every rule key, in execution order. */
-export const CLEANSING_RULE_KEYS: readonly string[] = CLEANSING_RULES.map(r => r.key);
+export const CLEANSING_RULE_KEYS: readonly RuleKey[] = CLEANSING_RULES.map(r => r.key);
 
 /**
  * Resolves whether a rule should run, honouring the caller's options and
  * falling back to the rule's own default.
  */
 export function isRuleEnabled(rule: CleansingRule, options: AiSummaryCleanseOptions): boolean {
-    const value = (options as Record<string, unknown>)[`${rule.key}Enabled`];
+    const optKey = `${rule.key}Enabled` as keyof AiSummaryCleanseOptions;
+    const value = options[optKey];
     return typeof value === 'boolean' ? value : rule.defaultEnabled;
 }
 

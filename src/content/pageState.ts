@@ -7,50 +7,27 @@
  */
 
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
+import type { RuleKey } from '../utils/aiSummaryCleaner/types.js';
 import { CLEANSING_RULES } from '../utils/aiSummaryCleaner/rules.js';
 
 // 【設定定数】: デフォルト値の定義
 const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
 const DEFAULT_MIN_SCROLL_DEPTH = 50;   // パーセンテージ
 
+// ---------------------------------------------------------------------------
+// Rule-derived flags: aiSummaryCleansing${Capitalize<RuleKey>}
+// ---------------------------------------------------------------------------
+
+type CleansingConfigRuleFlags = {
+    [K in RuleKey as `aiSummaryCleansing${Capitalize<K>}`]: boolean;
+};
+
 // 【クレンジング設定】: コンテンツクレンジングとAI要約クレンジングの設定を一括管理
-export interface CleansingConfig {
+export interface CleansingConfig extends CleansingConfigRuleFlags {
     contentStripHardEnabled: boolean;
     contentStripKeywordEnabled: boolean;
     contentStripKeywords: string[];
     aiSummaryCleansingEnabled: boolean;
-    aiSummaryCleansingAlt: boolean;
-    aiSummaryCleansingMetadata: boolean;
-    aiSummaryCleansingAds: boolean;
-    aiSummaryCleansingNav: boolean;
-    aiSummaryCleansingSocial: boolean;
-    aiSummaryCleansingDeep: boolean;
-    aiSummaryCleansingJsonLd: boolean;
-    aiSummaryCleansingLazyLoad: boolean;
-    aiSummaryCleansingSkipLink: boolean;
-    aiSummaryCleansingCard: boolean;
-    aiSummaryCleansingLinkDensity: boolean;
-    aiSummaryCleansingFixed: boolean;
-    aiSummaryCleansingRecommend: boolean;
-    aiSummaryCleansingPagination: boolean;
-    aiSummaryCleansingSnsPromo: boolean;
-    aiSummaryCleansingPopup: boolean;
-    aiSummaryCleansingPlatform: boolean;
-    aiSummaryCleansingTextDensity: boolean;
-    aiSummaryCleansingShortSeq: boolean;
-    aiSummaryCleansingSymbolLine: boolean;
-    aiSummaryCleansingLinkPara: boolean;
-    aiSummaryCleansingEnhancedHidden: boolean;
-    aiSummaryCleansingEmptyElem: boolean;
-    aiSummaryCleansingJpLayout: boolean;
-    aiSummaryCleansingJpNavigation: boolean;
-    aiSummaryCleansingAuthor: boolean;
-    aiSummaryCleansingAffiliate: boolean;
-    aiSummaryCleansingSpeechBubble: boolean;
-    aiSummaryCleansingNewsMedia: boolean;
-    aiSummaryCleansingEcSite: boolean;
-    aiSummaryCleansingQaSite: boolean;
-    aiSummaryCleansingVideoSite: boolean;
     whitelistExtractionEnabled: boolean;
     aiSummaryCleansingLinkRatioThreshold: number;
     aiSummaryCleansingShortTextThreshold: number;
@@ -71,12 +48,12 @@ export interface CleansingConfig {
  * `defaultEnabled` (the "no value specified yet" fallback), not the
  * new-user storage default — see pbi/2026-08-09-20.
  */
-const CLEANSING_RULE_PLACEHOLDER_DEFAULTS = Object.fromEntries(
+const CLEANSING_RULE_PLACEHOLDER_DEFAULTS: CleansingConfigRuleFlags = Object.fromEntries(
     CLEANSING_RULES.map(rule => [
         `aiSummaryCleansing${rule.key.charAt(0).toUpperCase()}${rule.key.slice(1)}`,
         rule.defaultEnabled,
     ]),
-) as Record<string, boolean>;
+) as CleansingConfigRuleFlags;
 
 export const DEFAULT_CLEANSING_CONFIG: CleansingConfig = {
     contentStripHardEnabled: true,
@@ -93,14 +70,8 @@ export const DEFAULT_CLEANSING_CONFIG: CleansingConfig = {
     aiSummaryCleansingFallbackMinBytes: 300,
     contentDedupEnabled: true,
     contentDedupThreshold: 0.7,
-    // The 32 rule flags are derived below rather than listed individually —
-    // see CLEANSING_RULE_PLACEHOLDER_DEFAULTS above. Completeness (every
-    // CleansingConfig rule property present) is checked at runtime by
-    // pageState.test.ts rather than statically: the derived object's type
-    // is a plain Record<string, boolean>, which TypeScript cannot narrow
-    // back to the named union of 32 specific keys.
     ...CLEANSING_RULE_PLACEHOLDER_DEFAULTS,
-} as unknown as CleansingConfig;
+};
 
 export class PageState {
     // 【訪問状態】: スクロール深度や訪問時間の監視に使用
