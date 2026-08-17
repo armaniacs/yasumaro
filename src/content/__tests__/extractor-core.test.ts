@@ -35,6 +35,14 @@ describe('shouldRecordVisit', () => {
     it('returns true at exact threshold boundary', () => {
         expect(shouldRecordVisit(5, 50)).toBe(true);
     });
+
+    it('honors explicit minDuration/minScroll params without reading module state (PBI-28: pure)', () => {
+        // Explicit thresholds override pageState defaults entirely — the call
+        // is self-contained and does not need pageState to be pre-configured.
+        expect(shouldRecordVisit(3, 10, 2, 5)).toBe(true);
+        expect(shouldRecordVisit(3, 10, 5, 5)).toBe(false);
+        expect(shouldRecordVisit(3, 10, 2, 20)).toBe(false);
+    });
 });
 
 describe('exported state initial values', () => {
@@ -75,7 +83,7 @@ describe('extractPageContent', () => {
     it('returns empty string for empty document', () => {
         document.body.innerHTML = '';
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 
     it('extracts text from article element', () => {
@@ -87,8 +95,8 @@ describe('extractPageContent', () => {
             </article>
         `;
         const result = extractPageContent();
-        expect(result).toContain('Test Article');
-        expect(result).toContain('main content');
+        expect(result.content).toContain('Test Article');
+        expect(result.content).toContain('main content');
     });
 
     it('returns a string for document with main element', () => {
@@ -99,7 +107,7 @@ describe('extractPageContent', () => {
             </main>
         `;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 
     it('returns a string even when body has only nav elements', () => {
@@ -107,14 +115,45 @@ describe('extractPageContent', () => {
             <nav><a href="/">Home</a><a href="/about">About</a></nav>
         `;
         const result = extractPageContent();
-        expect(typeof result).toBe('string');
+        expect(typeof result.content).toBe('string');
     });
 
     it('respects maxChars limit (default 10000)', () => {
         const longText = 'a'.repeat(15000);
         document.body.innerHTML = `<article><p>${longText}</p></article>`;
         const result = extractPageContent();
-        expect(result.length).toBeLessThanOrEqual(10000);
+        expect(result.content.length).toBeLessThanOrEqual(10000);
+    });
+
+    it('does not mutate pageState as a side effect (PBI-28: pure function)', () => {
+        document.body.innerHTML = `<article><p>Purity check content with enough text to trigger stats.</p></article>`;
+
+        const before = {
+            lastCleansedReason: getPageStateForTesting().lastCleansedReason,
+            lastCleanseStats: { ...getPageStateForTesting().lastCleanseStats },
+            lastByteStats: { ...getPageStateForTesting().lastByteStats },
+            lastAiSummaryCleansedStats: { ...getPageStateForTesting().lastAiSummaryCleansedStats },
+            lastFallbackTriggered: getPageStateForTesting().lastFallbackTriggered,
+        };
+
+        const result = extractPageContent();
+
+        // The result carries its own stats — pageState must remain untouched.
+        expect(result.content.length).toBeGreaterThan(0);
+        expect(getPageStateForTesting().lastCleansedReason).toBe(before.lastCleansedReason);
+        expect(getPageStateForTesting().lastCleanseStats).toEqual(before.lastCleanseStats);
+        expect(getPageStateForTesting().lastByteStats).toEqual(before.lastByteStats);
+        expect(getPageStateForTesting().lastAiSummaryCleansedStats).toEqual(before.lastAiSummaryCleansedStats);
+        expect(getPageStateForTesting().lastFallbackTriggered).toBe(before.lastFallbackTriggered);
+    });
+
+    it('is callable repeatedly without accumulating state (no hidden memoization)', () => {
+        document.body.innerHTML = `<article><p>Repeat call content with sufficient text length here.</p></article>`;
+
+        const first = extractPageContent();
+        const second = extractPageContent();
+
+        expect(first.content).toBe(second.content);
     });
 });
 

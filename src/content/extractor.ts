@@ -12,6 +12,7 @@ import { createSender } from '../utils/retryHelper.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
 import { extractMainContent } from '../utils/contentExtractor/index.js';
+import type { ExtractResult } from '../utils/contentExtractor/types.js';
 import { buildExtractionOptions } from '../utils/contentExtractor/optionBuilder.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
 import { PageState, DEFAULT_CLEANSING_CONFIG, type CleansingConfig } from './pageState.js';
@@ -60,7 +61,7 @@ export function getPageStateForTesting(): Readonly<PageState> {
 const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
 
 /**
- * コンテンツを抽出する共通関数
+ * コンテンツを抽出する共通関数（純粋関数）
  * 【機能概要】: ページの本文テキスト（メインコンテンツ）を抽出し、空白文字を正規化する
  * 【抽出範囲】: メインコンテンツ（ナビゲーション、ヘッダー等除外、最大10,000文字）
  * 【処理内容】:
@@ -70,39 +71,41 @@ const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
  *   4. 最大10,000文字で切り詰め
  * 【改善点】: Readabilityアルゴリズムでナビゲーション等のノイズを除外
  * 【クレンジング】: 設定に従って機密情報を含む要素を削除
- * 🟢
- * @returns {string} - 抽出されたコンテンツ（最大10,000文字）
+ *
+ * pageStateを変更しない（PBI-28）。呼び出し元（オーケストレーター）が
+ * 戻り値を使ってpageStateの統計フィールドを更新する責務を持つ。
+ * @returns {ExtractResult} - content と抽出/クレンジング統計を含む結果オブジェクト
  */
-export function extractPageContent(config: CleansingConfig = pageState.cleansingConfig): string {
+export function extractPageContent(config: CleansingConfig = pageState.cleansingConfig): ExtractResult {
     const { cleanseOptions, aiSummaryCleanseOptions, dedupOptions } = buildExtractionOptions(config);
     const result = extractMainContent(10000, cleanseOptions, aiSummaryCleanseOptions, dedupOptions);
-    // クレンジング情報を保存
-    if (typeof result === 'object' && 'cleansedReason' in result) {
-        pageState.lastCleansedReason = result.cleansedReason || 'none';
-        pageState.lastCleanseStats = {
-            hardStripRemoved: result.hardStripRemoved ?? 0,
-            keywordStripRemoved: result.keywordStripRemoved ?? 0,
-            totalRemoved: result.totalRemoved ?? 0
-        };
-        // バイト数情報を保存
-        pageState.lastByteStats = {
-            pageBytes: result.pageBytes ?? 0,
-            candidateBytes: result.candidateBytes ?? 0,
-            originalBytes: result.originalBytes ?? 0,
-            cleansedBytes: result.cleansedBytes ?? 0
-        };
-        // AI要約クレンジング情報を保存
-        pageState.lastAiSummaryCleansedStats = {
-            aiSummaryOriginalBytes: result.aiSummaryOriginalBytes ?? 0,
-            aiSummaryCleansedBytes: result.aiSummaryCleansedBytes ?? 0,
-            aiSummaryCleansedElements: result.aiSummaryCleansedElements ?? 0,
-            aiSummaryCleansedReason: result.aiSummaryCleansedReason ?? 'none',
-            aiSummaryCleansedReasons: result.aiSummaryCleansedReasons
-        };
-        // フォールバック情報を保存
-        pageState.lastFallbackTriggered = result.fallbackTriggered ?? false;
-    }
-    return typeof result === 'string' ? result : result.content;
+    return typeof result === 'string' ? { content: result } : result;
+}
+
+/**
+ * extractPageContent() の結果を pageState に反映する（オーケストレーター側の責務）。
+ */
+function applyExtractResultToPageState(result: ExtractResult): void {
+    pageState.lastCleansedReason = result.cleansedReason || 'none';
+    pageState.lastCleanseStats = {
+        hardStripRemoved: result.hardStripRemoved ?? 0,
+        keywordStripRemoved: result.keywordStripRemoved ?? 0,
+        totalRemoved: result.totalRemoved ?? 0
+    };
+    pageState.lastByteStats = {
+        pageBytes: result.pageBytes ?? 0,
+        candidateBytes: result.candidateBytes ?? 0,
+        originalBytes: result.originalBytes ?? 0,
+        cleansedBytes: result.cleansedBytes ?? 0
+    };
+    pageState.lastAiSummaryCleansedStats = {
+        aiSummaryOriginalBytes: result.aiSummaryOriginalBytes ?? 0,
+        aiSummaryCleansedBytes: result.aiSummaryCleansedBytes ?? 0,
+        aiSummaryCleansedElements: result.aiSummaryCleansedElements ?? 0,
+        aiSummaryCleansedReason: result.aiSummaryCleansedReason ?? 'none',
+        aiSummaryCleansedReasons: result.aiSummaryCleansedReasons
+    };
+    pageState.lastFallbackTriggered = result.fallbackTriggered ?? false;
 }
 
 /**
@@ -366,7 +369,9 @@ async function reportValidVisit(): Promise<void> {
     void logInfo('Sending VALID_VISIT', {}, 'extractor');
     console.info('[OWeave] VALID_VISIT 送信開始');
 
-    const content = extractPageContent();
+    const extractResult = extractPageContent();
+    applyExtractResultToPageState(extractResult);
+    const content = extractResult.content;
 
     try {
         const response = await messageSender.sendMessageWithRetry({
@@ -683,7 +688,9 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage) {
         const msg = message as ContentMessage;
         if (msg.type !== 'GET_CONTENT') return;
         if (sender.id !== chrome.runtime.id) return;
-        const content = extractPageContent();
+        const extractResult = extractPageContent();
+        applyExtractResultToPageState(extractResult);
+        const content = extractResult.content;
         sendResponse({
             content,
             cleansedReason: pageState.lastCleansedReason,

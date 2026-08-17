@@ -89,31 +89,30 @@ describe('extractPageContent — state tracking', () => {
 
   it('updates getPageStateForTesting().lastCleanseStats when extractMainContent returns object', () => {
     document.body.innerHTML = `<article><p>Some content here with enough text for extraction.</p></article>`;
-    extractPageContent();
-    expect(getPageStateForTesting().lastCleanseStats).toBeDefined();
-    expect(getPageStateForTesting().lastCleanseStats.totalRemoved).toBeGreaterThanOrEqual(0);
-    expect(getPageStateForTesting().lastCleanseStats.hardStripRemoved).toBeGreaterThanOrEqual(0);
-    expect(getPageStateForTesting().lastCleanseStats.keywordStripRemoved).toBeGreaterThanOrEqual(0);
+    const result = extractPageContent();
+    expect(result.totalRemoved ?? 0).toBeGreaterThanOrEqual(0);
+    expect(result.hardStripRemoved ?? 0).toBeGreaterThanOrEqual(0);
+    expect(result.keywordStripRemoved ?? 0).toBeGreaterThanOrEqual(0);
   });
 
   it('updates getPageStateForTesting().lastByteStats after extraction', () => {
     document.body.innerHTML = `<article><p>Content bytes tracking test with enough text.</p></article>`;
-    extractPageContent();
-    expect(getPageStateForTesting().lastByteStats.pageBytes).toBeGreaterThan(0);
-    expect(getPageStateForTesting().lastByteStats.originalBytes).toBeGreaterThan(0);
+    const result = extractPageContent();
+    expect(result.pageBytes ?? 0).toBeGreaterThan(0);
+    expect(result.originalBytes ?? 0).toBeGreaterThan(0);
   });
 
   it('updates getPageStateForTesting().lastAiSummaryCleansedStats after extraction', () => {
     document.body.innerHTML = `<article><p>AI summary cleansing stats test with enough text here.</p></article>`;
-    extractPageContent();
-    expect(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryOriginalBytes).toBeGreaterThanOrEqual(0);
-    expect(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReason).toBeDefined();
+    const result = extractPageContent();
+    expect(result.aiSummaryOriginalBytes ?? 0).toBeGreaterThanOrEqual(0);
+    expect(result.aiSummaryCleansedReason).toBeDefined();
   });
 
   it('tracks fallback triggered state', () => {
     document.body.innerHTML = `<p>Minimal content.</p>`;
-    extractPageContent();
-    expect(typeof getPageStateForTesting().lastFallbackTriggered).toBe('boolean');
+    const result = extractPageContent();
+    expect(typeof (result.fallbackTriggered ?? false)).toBe('boolean');
   });
 
   it('does not throw when document.body is minimal', () => {
@@ -124,13 +123,13 @@ describe('extractPageContent — state tracking', () => {
   it('returns string even when no main article candidate is found', () => {
     document.body.innerHTML = `<header><nav><a href="/">link</a></nav></header>`;
     const result = extractPageContent();
-    expect(typeof result).toBe('string');
+    expect(typeof result.content).toBe('string');
   });
 
   it('extracts from <section> when <article>/<main> are absent', () => {
     document.body.innerHTML = `<section><h2>Section heading</h2><p>Section content here.</p></section>`;
     const result = extractPageContent();
-    expect(typeof result).toBe('string');
+    expect(typeof result.content).toBe('string');
   });
 });
 
@@ -206,7 +205,7 @@ describe('extractPageContent — cleansing options via loadSettings', () => {
     await init();
     document.body.innerHTML = `<article><p>Dedup test content with sufficient text length here.</p></article>`;
     const result = extractPageContent();
-    expect(typeof result).toBe('string');
+    expect(typeof result.content).toBe('string');
   });
 
   it('handles all AI summary cleansing toggles to false', async () => {
@@ -227,7 +226,7 @@ describe('extractPageContent — cleansing options via loadSettings', () => {
     await init();
     document.body.innerHTML = `<article><p>All toggles off content with enough text here.</p></article>`;
     const result = extractPageContent();
-    expect(typeof result).toBe('string');
+    expect(typeof result.content).toBe('string');
   });
 });
 
@@ -250,7 +249,7 @@ describe('reportValidVisit error path simulation', () => {
 
   it('extractPageContent produces a string', () => {
     const result = extractPageContent();
-    expect(typeof result).toBe('string');
+    expect(typeof result.content).toBe('string');
   });
 });
 
@@ -274,8 +273,7 @@ describe('extractPageContent — with cleansedReason tracking', () => {
         <nav><a href="/">nav link</a></nav>
       </article>
     `;
-    extractPageContent();
-    expect(getPageStateForTesting().lastAiSummaryCleansedStats).toHaveProperty('aiSummaryCleansedReasons');
-    expect(Array.isArray(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReasons) || getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReasons === undefined).toBe(true);
+    const result = extractPageContent();
+    expect(Array.isArray(result.aiSummaryCleansedReasons) || result.aiSummaryCleansedReasons === undefined).toBe(true);
   });
 });

@@ -69,7 +69,6 @@ import {
   shouldRecordVisit,
   extractPageContent,
   init,
-  getPageStateForTesting,
   showPrivacyConfirmDialog,
 } from '../extractor.js';
 
@@ -92,13 +91,13 @@ describe('extractPageContent — HTML structure variants', () => {
   it('extracts from div[role="main"] when article/main absent', () => {
     document.body.innerHTML = '<div role="main"><h1>Role main</h1><p>Content inside role=main element here with sufficient text.</p></div>';
     const result = extractPageContent();
-    expect(typeof result).toBe('string');
+    expect(typeof result.content).toBe('string');
   });
 
   it('extracts from body fallback when no semantic container exists', () => {
     document.body.innerHTML = '<p>Only a bare paragraph with enough text to be extracted successfully by the algorithm.</p>';
     const result = extractPageContent();
-    expect(typeof result).toBe('string');
+    expect(typeof result.content).toBe('string');
   });
 
   it('handles page with script/style/noscript content', () => {
@@ -111,28 +110,28 @@ describe('extractPageContent — HTML structure variants', () => {
       </article>
     `;
     const result = extractPageContent();
-    expect(typeof result).toBe('string');
-    expect(result).not.toContain('var x');
+    expect(typeof result.content).toBe('string');
+    expect(result.content).not.toContain('var x');
   });
 
   it('extracts content stripping HTML entities', () => {
     document.body.innerHTML = '<article><p>Price &amp; tax &lt; 100 &gt; 50 &quot;quote&quot;</p><p>More text here for extraction length.</p></article>';
     const result = extractPageContent();
-    expect(typeof result).toBe('string');
+    expect(typeof result.content).toBe('string');
   });
 
   it('handles html with lang attribute detection', () => {
     document.documentElement.setAttribute('lang', 'ja');
     document.body.innerHTML = '<article><p>日本語の記事本文です。十分な長さのテキストが必要です。</p></article>';
     const result = extractPageContent();
-    expect(typeof result).toBe('string');
+    expect(typeof result.content).toBe('string');
     document.documentElement.removeAttribute('lang');
   });
 
   it('handles div.main as the primary content container', () => {
     document.body.innerHTML = '<div class="main"><h1>Main div</h1><p>Content inside the main class div with enough text to be extracted properly.</p></div>';
     const result = extractPageContent();
-    expect(typeof result).toBe('string');
+    expect(typeof result.content).toBe('string');
   });
 
   it('handles content with nested tables', () => {
@@ -143,7 +142,7 @@ describe('extractPageContent — HTML structure variants', () => {
       </article>
     `;
     const result = extractPageContent();
-    expect(typeof result).toBe('string');
+    expect(typeof result.content).toBe('string');
   });
 });
 
@@ -226,7 +225,7 @@ describe('loadSettings — custom patterns and edge cases', () => {
     document.body.innerHTML = '<article><p>Custom patterns empty test with enough content.</p></article>';
     await expect(init()).resolves.not.toThrow();
     const result = extractPageContent();
-    expect(typeof result).toBe('string');
+    expect(typeof result.content).toBe('string');
   });
 
   it('handles custom patterns as non-array (falls back to [])', async () => {
@@ -241,7 +240,7 @@ describe('loadSettings — custom patterns and edge cases', () => {
     document.body.innerHTML = '<article><p>Custom patterns non-array test with enough content.</p></article>';
     await expect(init()).resolves.not.toThrow();
     const result = extractPageContent();
-    expect(typeof result).toBe('string');
+    expect(typeof result.content).toBe('string');
   });
 
   it('handles migrated settings with empty settings object', async () => {
@@ -289,15 +288,15 @@ describe('extractPageContent — last stats with variants', () => {
 
   it('records non-zero candidateBytes when article present', () => {
     document.body.innerHTML = '<article><p>Content here with sufficient text for scoring and extraction purposes in this test scenario.</p></article>';
-    extractPageContent();
-    expect(getPageStateForTesting().lastByteStats.pageBytes).toBeGreaterThan(0);
-    expect(typeof getPageStateForTesting().lastFallbackTriggered).toBe('boolean');
+    const result = extractPageContent();
+    expect(result.pageBytes ?? 0).toBeGreaterThan(0);
+    expect(typeof (result.fallbackTriggered ?? false)).toBe('boolean');
   });
 
   it('keeps getPageStateForTesting().lastCleansedReason as "none" when no cleansing necessary', () => {
     document.body.innerHTML = '<article><p>Clean content with no sensitive data or ads to strip here.</p></article>';
-    extractPageContent();
-    expect(['none', 'hard', 'keyword', 'both']).toContain(getPageStateForTesting().lastCleansedReason);
+    const result = extractPageContent();
+    expect(['none', 'hard', 'keyword', 'both']).toContain(result.cleansedReason ?? 'none');
   });
 
   it('populates aiSummaryCleansedReasons as array when elements cleaned', () => {
@@ -308,9 +307,9 @@ describe('extractPageContent — last stats with variants', () => {
         <nav><a href="/">nav link</a></nav>
       </article>
     `;
-    extractPageContent();
-    expect(Array.isArray(getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReasons) ||
-      getPageStateForTesting().lastAiSummaryCleansedStats.aiSummaryCleansedReasons === undefined).toBe(true);
+    const result = extractPageContent();
+    expect(Array.isArray(result.aiSummaryCleansedReasons) ||
+      result.aiSummaryCleansedReasons === undefined).toBe(true);
   });
 });
 
