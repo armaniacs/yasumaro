@@ -3,8 +3,8 @@
  * Lazy-initialization wrapper for TabCache, extracted from service-worker.ts
  * as a test case for the singleton-to-lazy-init migration (PBI-36). Once
  * this pattern proves out, the remaining clients (ObsidianClient, AIClient,
- * BuiltInAIClient, RecordingLogic, SqliteClient) can follow the same shape in
- * a follow-up PBI.
+ * BuiltInAIClient, RecordingPipeline, SqliteClient) can follow the same shape
+ * in a follow-up PBI.
  */
 import { TabCache } from './tabCache.js';
 import { SessionStore } from './sessionStore.js';

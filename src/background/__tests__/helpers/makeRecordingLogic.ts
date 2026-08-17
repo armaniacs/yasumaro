@@ -1,25 +1,21 @@
 /**
- * Test helper for constructing RecordingLogic.
+ * Test helper for constructing a RecordingPipeline.
  *
- * RecordingLogic takes its RecordingPipeline by injection so that production has
- * exactly one pipeline instance (see backgroundComposition.test.ts). Tests that
- * exercise real pipeline steps build an equivalent pipeline here rather than
- * stubbing it, so step behaviour stays under test.
+ * Tests that exercise real pipeline steps build an equivalent pipeline here
+ * rather than stubbing it, so step behaviour stays under test.
  */
-import { createRecordingPipeline, buildRecordingPipelineDeps } from '../../pipeline/RecordingPipeline.js';
+import { createRecordingPipeline, buildRecordingPipelineDeps, type RecordingPipeline } from '../../pipeline/RecordingPipeline.js';
 import { RecordingCache } from '../../recordingCache.js';
-import { RecordingLogic } from '../../recordingLogic.js';
 
 export function makeRecordingLogic(
   obsidian: unknown,
   aiService: unknown,
   sqliteClient?: unknown,
-): RecordingLogic {
-  const pipeline = createRecordingPipeline(buildRecordingPipelineDeps({
+): RecordingPipeline {
+  return createRecordingPipeline(buildRecordingPipelineDeps({
     getPrivacyInfoWithCache: (url: string) => RecordingCache.getPrivacyInfoWithCache(url),
     obsidian: obsidian as never,
     aiService: aiService as never,
     sqliteClient: (sqliteClient ?? null) as never,
   }));
-  return new RecordingLogic(pipeline);
 }

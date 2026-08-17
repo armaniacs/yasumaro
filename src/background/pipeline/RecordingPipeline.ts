@@ -117,8 +117,8 @@ const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(r
  * Recording Pipeline class
  * Manages the execution of recording steps with configurable error strategies.
  *
- * Owns per-URL mutex serialization (previously in RecordingLogic) to protect
- * the read-then-write window between checkDuplicateStep and saveMetadataStep.
+ * Owns per-URL mutex serialization to protect the read-then-write window
+ * between checkDuplicateStep and saveMetadataStep.
  */
 export class RecordingPipeline {
   private steps: PipelineStep[];
@@ -299,9 +299,24 @@ export class RecordingPipeline {
   }
 
   /**
+   * Record a browsing event, fetching current settings before executing.
+   */
+  async record(data: RecordingData): Promise<RecordingResult> {
+    const settings = await RecordingCache.getSettingsWithCache();
+    return this.execute(data, settings);
+  }
+
+  /**
+   * Record a browsing event in preview mode.
+   */
+  async recordWithPreview(data: RecordingData): Promise<RecordingResult> {
+    return this.record({ ...data, previewOnly: true });
+  }
+
+  /**
    * Retry an Obsidian write for an offline-queued job.
    * Reuses the pipeline's formatMarkdown + saveObsidian steps instead of
-   * calling them manually (previously in RecordingLogic.retryObsidianWriteOnly).
+   * calling them manually.
    */
   async retryObsidianWriteOnly(job: {
     title: string;

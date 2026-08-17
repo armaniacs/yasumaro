@@ -10,7 +10,6 @@
 // ============================================================================
 /**
  * PIIマスキングされた項目の型
- * 参考: src/background/recordingLogic.ts
  * @internal
  * WARNING: original フィールドには生のPIIデータが含まれる可能性があります。
  * このフィールドはデバッグ目的のみで使用し、本番環境では絶対に使用しないでください。
@@ -68,7 +67,6 @@ export function isMaskedItem(item: unknown): item is MaskedItem {
 
 /**
  * 記録処理の結果型
- * 参考: src/background/recordingLogic.ts:123-140
  */
 export interface RecordingResult {
   success: boolean;
