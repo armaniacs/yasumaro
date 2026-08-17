@@ -15,13 +15,13 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { logError, logInfo, logWarn, ErrorCode } from '../utils/logger.js';
 import { FallbackStorage } from './storageFallback.js';
 import { StorageKeys } from '../utils/storage/types.js';
-import { NoopBackend } from './StorageBackend.js';
 import type { StorageBackend } from './StorageBackend.js';
 import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL, INSERT_IGNORE_SQL, buildInsertParams, COLUMN_NAMES } from './schema.js';
 import { runMigrations } from './migrations.js';
 import { createIdbEngine, type SqliteEngine, type SqliteRow } from './sqliteEngine.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 import type { WorkerLogMessage } from './opfsWorker.js';
+import { resolveBackend, createBackend, detectOpfsCapabilitiesForResolver, type BackendType } from './backendResolver.js';
 
 export type SqliteValue = number | string | Uint8Array | Array<number> | bigint | null;
 
@@ -126,7 +126,7 @@ export class SqliteEngineContext {
 
   private isOpfsAvailable(): boolean {
     try {
-      return typeof navigator?.storage?.getDirectory === 'function';
+      return detectOpfsCapabilitiesForResolver().opfsDirectory;
     } catch {
       return false;
     }
@@ -609,23 +609,29 @@ export class SqliteEngineContext {
 
   /**
    * Ensure a storage backend is initialized and return the appropriate handler.
-   * Priority: OPFS Worker > IDB VFS > FallbackStorage
+   * Priority: OPFS Worker > IDB VFS > FallbackStorage > None.
+   * Delegates to resolveBackend() — the single source of truth for priority.
    */
-  async ensureBackend(): Promise<'opfs' | 'idb' | 'fallback' | 'none'> {
+  async ensureBackend(): Promise<BackendType> {
     // Already initialized?
-    if (this.opfsWorker) return 'opfs';
-    if (this.idbEngine) return 'idb';
-    if (this.usingFallbackStorage && this.fallbackStorage) return 'fallback';
+    const current: BackendType = resolveBackend({
+      opfsWorker: !!this.opfsWorker,
+      idbEngine: !!this.idbEngine,
+      usingFallbackStorage: this.usingFallbackStorage,
+      fallbackStorage: !!this.fallbackStorage,
+    });
+    if (current !== 'none') return current;
 
     // Try to initialize
     await this.init();
 
     // Re-check after init
-    if (this.opfsWorker) return 'opfs';
-    if (this.idbEngine) return 'idb';
-    if (this.usingFallbackStorage && this.fallbackStorage) return 'fallback';
-
-    return 'none';
+    return resolveBackend({
+      opfsWorker: !!this.opfsWorker,
+      idbEngine: !!this.idbEngine,
+      usingFallbackStorage: this.usingFallbackStorage,
+      fallbackStorage: !!this.fallbackStorage,
+    });
   }
 
   async getBackend(): Promise<StorageBackend> {
@@ -636,40 +642,14 @@ export class SqliteEngineContext {
       await this.init();
     }
 
-    // Try OPFS Worker only if it was successfully initialized
-    if (this.opfsWorker) {
-      try {
-        const { OpfsWorkerBackend } = await import('./OpfsWorkerBackend.js');
-        this._backend = new OpfsWorkerBackend(this);
-        return this._backend;
-      } catch {
-        // fall through
-      }
-    }
+    const resolved = resolveBackend({
+      opfsWorker: !!this.opfsWorker,
+      idbEngine: !!this.idbEngine,
+      usingFallbackStorage: this.usingFallbackStorage,
+      fallbackStorage: !!this.fallbackStorage,
+    });
 
-    // Try IDB VFS
-    try {
-      if (!this.usingFallbackStorage) {
-        await this.init();
-        if (this.idbEngine) {
-          const { IdbVfsBackend } = await import('./IdbVfsBackend.js');
-          this._backend = new IdbVfsBackend(this);
-          return this._backend;
-        }
-      }
-    } catch {
-      // fall through
-    }
-
-    // Try Fallback
-    if (this.fallbackStorage) {
-      const { FallbackStorageAdapter } = await import('./FallbackStorageAdapter.js');
-      this._backend = new FallbackStorageAdapter(this.fallbackStorage);
-      return this._backend;
-    }
-
-    // Null Object — never throw
-    this._backend = new NoopBackend();
+    this._backend = await createBackend(this, resolved);
     return this._backend;
   }
 
