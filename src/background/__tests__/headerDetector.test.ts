@@ -38,8 +38,11 @@ vi.mock('../../utils/logger.js', () => ({
 import { logError } from '../../utils/logger.js';
 
 describe('HeaderDetector', () => {
+  let detector: HeaderDetector;
+
   beforeEach(() => {
     RecordingCache.invalidatePrivacyCache();
+    detector = new HeaderDetector();
   });
 
   describe('cachePrivacyInfo', () => {
@@ -51,7 +54,7 @@ describe('HeaderDetector', () => {
         timestamp: Date.now()
       };
 
-      HeaderDetector['cachePrivacyInfo'](url, info);
+      detector['cachePrivacyInfo'](url, info);
 
       expect(RecordingCache.getCacheState().privacyCache).not.toBeNull();
       expect(RecordingCache.getCacheState().privacyCache?.get(url)).toEqual(info);
@@ -60,7 +63,7 @@ describe('HeaderDetector', () => {
     test('キャッシュサイズが100を超えたら最も古いエントリを削除する', () => {
       // 100エントリを追加
       for (let i = 0; i < 100; i++) {
-        HeaderDetector['cachePrivacyInfo'](`https://example.com/test${i}`, {
+        detector['cachePrivacyInfo'](`https://example.com/test${i}`, {
           isPrivate: false,
           timestamp: Date.now() + i
         });
@@ -69,7 +72,7 @@ describe('HeaderDetector', () => {
       expect(RecordingCache.getCacheState().privacyCache?.size).toBe(100);
 
       // 101個目を追加
-      HeaderDetector['cachePrivacyInfo']('https://example.com/test100', {
+      detector['cachePrivacyInfo']('https://example.com/test100', {
         isPrivate: true,
         reason: 'cache-control' as const,
         timestamp: Date.now() + 1000
@@ -107,7 +110,7 @@ describe('HeaderDetector', () => {
         ]
       } as chrome.webRequest.WebResponseHeadersDetails;
 
-      HeaderDetector['onHeadersReceived'](details);
+      detector['onHeadersReceived'](details);
 
       const cached = RecordingCache.getCacheState().privacyCache?.get('https://example.com/page');
       expect(cached).toBeDefined();
@@ -124,7 +127,7 @@ describe('HeaderDetector', () => {
         ]
       } as chrome.webRequest.WebResponseHeadersDetails;
 
-      HeaderDetector['onHeadersReceived'](details);
+      detector['onHeadersReceived'](details);
 
       expect(RecordingCache.getCacheState().privacyCache?.has('https://example.com/iframe')).toBeFalsy();
     });
@@ -139,7 +142,7 @@ describe('HeaderDetector', () => {
         ]
       } as chrome.webRequest.WebResponseHeadersDetails;
 
-      HeaderDetector['onHeadersReceived'](details);
+      detector['onHeadersReceived'](details);
 
       expect(RecordingCache.getCacheState().privacyCache?.has('https://example.com/image.png')).toBeFalsy();
     });
@@ -151,7 +154,7 @@ describe('HeaderDetector', () => {
         responseHeaders: []
       } as chrome.webRequest.WebResponseHeadersDetails;
 
-      HeaderDetector['onHeadersReceived'](details);
+      detector['onHeadersReceived'](details);
 
        expect(RecordingCache.getCacheState().privacyCache?.has('https://example.com/noct')).toBeFalsy();
      });
@@ -169,7 +172,7 @@ describe('HeaderDetector', () => {
         ] as chrome.webRequest.HttpHeader[]
       } as chrome.webRequest.WebResponseHeadersDetails;
 
-      expect(() => HeaderDetector['onHeadersReceived'](details)).not.toThrow();
+      expect(() => detector['onHeadersReceived'](details)).not.toThrow();
 
       return new Promise<void>(resolve => setTimeout(resolve, 10)).then(() => {
         expect(logError).toHaveBeenCalledWith(
@@ -207,7 +210,7 @@ describe('HeaderDetector', () => {
       chrome.action.setBadgeText = vi.fn(() => Promise.resolve());
       chrome.action.setBadgeBackgroundColor = vi.fn(() => Promise.resolve());
 
-      await HeaderDetector['cachePrivacyInfo']('https://badge.com', {
+      await detector['cachePrivacyInfo']('https://badge.com', {
         isPrivate: true,
         reason: 'set-cookie',
         timestamp: Date.now()
@@ -220,7 +223,7 @@ describe('HeaderDetector', () => {
     test('tabIdが-1の場合はバッジをスキップする', async () => {
       chrome.action.setBadgeText = vi.fn(() => Promise.resolve());
 
-      await HeaderDetector['cachePrivacyInfo']('https://bg.com', {
+      await detector['cachePrivacyInfo']('https://bg.com', {
         isPrivate: true,
         reason: 'cache-control',
         timestamp: Date.now()
@@ -232,7 +235,7 @@ describe('HeaderDetector', () => {
     test('非プライベートではバッジを設定しない', async () => {
       chrome.action.setBadgeText = vi.fn(() => Promise.resolve());
 
-      await HeaderDetector['cachePrivacyInfo']('https://pub.com', {
+      await detector['cachePrivacyInfo']('https://pub.com', {
         isPrivate: false,
         timestamp: Date.now()
       }, 1);
@@ -244,7 +247,7 @@ describe('HeaderDetector', () => {
       chrome.action.setBadgeText = vi.fn(() => Promise.reject(new Error('Badge error')));
       chrome.action.setBadgeBackgroundColor = vi.fn(() => Promise.resolve());
 
-      await HeaderDetector['cachePrivacyInfo']('https://err.com', {
+      await detector['cachePrivacyInfo']('https://err.com', {
         isPrivate: true,
         reason: 'auth',
         timestamp: Date.now()
@@ -257,7 +260,7 @@ describe('HeaderDetector', () => {
   describe('evictOldestEntry', () => {
     test('キャッシュが空の場合は何もしない', async () => {
       RecordingCache.invalidatePrivacyCache();
-      await HeaderDetector['evictOldestEntry']();
+      await detector['evictOldestEntry']();
       // エラーなく完了
     });
   });
@@ -268,7 +271,7 @@ describe('HeaderDetector', () => {
       // @ts-expect-error
       delete chrome.webRequest;
 
-      await HeaderDetector.initialize();
+      await detector.initialize();
 
       expect(logError).toHaveBeenCalled();
       chrome.webRequest = origWebRequest;
@@ -284,7 +287,7 @@ describe('HeaderDetector', () => {
         }
       } as any;
 
-      await HeaderDetector.initialize();
+      await detector.initialize();
 
       expect(logError).toHaveBeenCalled();
     });

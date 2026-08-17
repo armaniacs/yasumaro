@@ -24,7 +24,7 @@ export class HeaderDetector {
   /**
    * webRequest.onHeadersReceivedリスナーを初期化する
    */
-  static async initialize(): Promise<void> {
+  async initialize(): Promise<void> {
     if (!chrome.webRequest) {
       await logError('webRequest API not available', { source: 'headerDetector' }, ErrorCode.UNKNOWN_ERROR);
       return;
@@ -32,7 +32,7 @@ export class HeaderDetector {
 
     try {
       chrome.webRequest.onHeadersReceived.addListener(
-        HeaderDetector.onHeadersReceived,
+        this.onHeadersReceived,
         {
           urls: ['<all_urls>'],
           types: ['main_frame']
@@ -50,6 +50,8 @@ export class HeaderDetector {
    * URL正規化（キャッシュキーの一貫性のため）
    * - 末尾のスラッシュを削除
    * - フラグメント（#...）を削除
+   *
+   * 状態を持たない純粋関数のため static のまま維持。
    */
   static normalizeUrl(url: string): string {
     try {
@@ -68,7 +70,7 @@ export class HeaderDetector {
   /**
    * HTTPレスポンスヘッダーを受信した際の処理
    */
-  private static onHeadersReceived(details: chrome.webRequest.OnHeadersReceivedDetails): chrome.webRequest.BlockingResponse | undefined {
+  private onHeadersReceived = (details: chrome.webRequest.OnHeadersReceivedDetails): chrome.webRequest.BlockingResponse | undefined => {
     // 【注意】webRequest.onHeadersReceived は同期コールバックのため async 関数にできない
     // URLハッシュ化にはcrypto APIが必要なため、即時実行の非同期関数を経由してログ出力を行う
     (async () => {
@@ -119,7 +121,7 @@ export class HeaderDetector {
       })();
 
       // キャッシュに保存
-      HeaderDetector.cachePrivacyInfo(details.url, privacyInfo, details.tabId).catch(() => {
+      this.cachePrivacyInfo(details.url, privacyInfo, details.tabId).catch(() => {
         // バッジ更新失敗は無視（非重要なUI操作）
       });
 
@@ -140,16 +142,16 @@ export class HeaderDetector {
       })();
     }
     return; // Return undefined (non-blocking)
-  }
+  };
 
   /**
    * プライバシー情報をキャッシュに保存する
    * キャッシュサイズが上限を超えたら最も古いエントリを削除
    */
-  private static async cachePrivacyInfo(url: string, info: PrivacyInfo, tabId?: number): Promise<void> {
+  private async cachePrivacyInfo(url: string, info: PrivacyInfo, tabId?: number): Promise<void> {
     // キャッシュサイズ制限チェック
     if (RecordingCache.getPrivacyCacheSize() >= MAX_CACHE_SIZE) {
-      HeaderDetector.evictOldestEntry();
+      this.evictOldestEntry();
     }
 
     // URL正規化してインメモリキャッシュに保存
@@ -164,7 +166,7 @@ export class HeaderDetector {
       chrome.storage.session.set({ [sessionKey]: info }).then(() => {
         // VULN-003: bound the total number of privacyCache_ session keys so a
         // long-lived session cannot accumulate them without limit.
-        return HeaderDetector.capSessionPrivacyKeys();
+        return this.capSessionPrivacyKeys();
       }).catch(() => {
         // session storage エラーは握りつぶす（インメモリが主、sessionは補助）
       });
@@ -191,7 +193,7 @@ export class HeaderDetector {
    * total exceeds the limit, evict the excess (arbitrary subset; frequently
    * visited URLs are re-written on each visit, so they survive).
    */
-  private static async capSessionPrivacyKeys(): Promise<void> {
+  private async capSessionPrivacyKeys(): Promise<void> {
     try {
       const all = await chrome.storage.session.get(null);
       const keys = Object.keys(all).filter(key => key.startsWith('privacyCache_'));
@@ -207,7 +209,7 @@ export class HeaderDetector {
   /**
    * 最も古いキャッシュエントリを削除する（LRU実装）
    */
-  private static async evictOldestEntry(): Promise<void> {
+  private async evictOldestEntry(): Promise<void> {
     const cache = RecordingCache.getPrivacyCache();
     if (!cache || cache.size === 0) {
       return;
