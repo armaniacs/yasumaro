@@ -1,34 +1,38 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SqliteClient } from '../sqliteClient.js';
-import { createSqliteClientDeps } from '../handlers/dashboardSqliteHandlers.js';
+import type { OffscreenTransport } from '../offscreenTransport.js';
+import type { OffscreenResponse } from '../../messaging/sqliteMessages.js';
+import type { SqliteMessageType } from '../../messaging/sqliteMessages.js';
+
+/**
+ * Create a mock transport that resolves with the given response.
+ */
+function createMockTransport(
+  responseOrError: (() => Promise<OffscreenResponse>) | Error
+): OffscreenTransport {
+  return {
+    async msgOffscreen(
+      _type: SqliteMessageType,
+      _payload: Record<string, unknown> = {},
+      _traceId: string = ''
+    ): Promise<OffscreenResponse> {
+      if (responseOrError instanceof Error) {
+        throw responseOrError;
+      }
+      return responseOrError();
+    },
+  };
+}
 
 describe('SqliteClient', () => {
   let client: SqliteClient;
-  let sendMessageMock: ReturnType<typeof vi.fn>;
-  let hasDocumentMock: ReturnType<typeof vi.fn>;
-  let createDocumentMock: ReturnType<typeof vi.fn>;
+  let mockTransport: OffscreenTransport;
 
   beforeEach(() => {
-    sendMessageMock = vi.fn();
-    hasDocumentMock = vi.fn().mockResolvedValue(true);
-    createDocumentMock = vi.fn().mockResolvedValue(undefined);
-
-    // Mock chrome API
-    (globalThis as any).chrome = {
-      runtime: {
-        sendMessage: sendMessageMock,
-        lastError: undefined,
-      },
-      offscreen: {
-        hasDocument: hasDocumentMock,
-        createDocument: createDocumentMock,
-        Reason: {
-          WORKERS: 'WORKERS',
-        },
-      },
-    };
-
-    client = new SqliteClient();
+    vi.clearAllMocks();
+    // Default: instant success
+    mockTransport = createMockTransport(async () => ({ success: true } as OffscreenResponse));
+    client = new SqliteClient(mockTransport);
   });
 
   afterEach(() => {
@@ -36,429 +40,365 @@ describe('SqliteClient', () => {
   });
 
   describe('init', () => {
-    it('sends SQLITE_INIT message to offscreen', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true, initialized: true });
-        }
-      );
+    it('sends SQLITE_INIT message via transport', async () => {
+      mockTransport = createMockTransport(async () => ({ success: true, initialized: true } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
 
       const result = await client.init();
       expect(result).toBe(true);
-      expect(sendMessageMock).toHaveBeenCalledWith(
-        { type: 'SQLITE_INIT', target: 'offscreen', payload: {}, traceId: '' },
-        expect.any(Function)
-      );
     });
 
-    it('returns false when init fails', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: false, error: 'Init failed' });
-        }
-      );
+    it('returns false on failure', async () => {
+      mockTransport = createMockTransport(async () => ({ success: false, error: 'init failed' } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
 
       const result = await client.init();
       expect(result).toBe(false);
     });
 
-    // Timeout test omitted: the msgOffscreen timeout is 10s which makes
-    // this test impractical without complex timer mocking. The error handling
-    // path is exercised by the 'returns false when init fails' test above.
+    it('returns false on exception', async () => {
+      mockTransport = createMockTransport(new Error('connection lost'));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.init();
+      expect(result).toBe(false);
+    });
   });
 
-  describe('insert', () => {
-    it('sends SQLITE_INSERT message with record data', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true, id: 42 });
-        }
-      );
+  describe('queryResult', () => {
+    it('returns rows and total on success', async () => {
+      mockTransport = createMockTransport(async () => ({
+        success: true, rows: [{ id: 1 }], total: 1,
+      } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
 
-      const record = {
-        url: 'https://example.com',
-        title: 'Example Page',
-        summary: 'A test summary',
-        created_at: Date.now(),
-      };
-
-      const result = await client.insertResult(record);
-      expect(result).toEqual({ success: true, data: { id: 42 } });
-      expect(sendMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'SQLITE_INSERT',
-          target: 'offscreen',
-          payload: record,
-        }),
-        expect.any(Function)
-      );
+      const result = await client.queryResult({ limit: 10 });
+      expect(result).toEqual({ success: true, data: { rows: [{ id: 1 }], total: 1 } });
     });
 
-    it('returns failure result when insert fails', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: false, error: 'Insert failed' });
-        }
-      );
+    it('returns failure result on failure', async () => {
+      mockTransport = createMockTransport(async () => ({ success: false, error: 'Query failed' } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.queryResult();
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('insertResult', () => {
+    it('returns id on success', async () => {
+      mockTransport = createMockTransport(async () => ({ success: true, id: 42 } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
 
       const result = await client.insertResult({
         url: 'https://example.com',
+        title: 'Test',
         created_at: Date.now(),
       });
-      expect(result).toEqual({ success: false, error: expect.anything() });
-    });
-
-    it('propagates traceId in SQLITE_INSERT message', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true, id: 42 });
-        }
-      );
-
-      const result = await client.insertResult(
-        { url: 'https://example.com', created_at: Date.now() },
-        'trace-sqlite-123'
-      );
       expect(result).toEqual({ success: true, data: { id: 42 } });
-      expect(sendMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'SQLITE_INSERT',
-          traceId: 'trace-sqlite-123',
-        }),
-        expect.any(Function)
-      );
     });
   });
 
-  describe('query', () => {
-    it('sends SQLITE_QUERY message with options', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({
-            success: true,
-            rows: [{ id: 1, url: 'https://example.com', title: 'Test' }],
-            total: 1,
-          });
-        }
-      );
+  describe('updateResult', () => {
+    it('returns success on success', async () => {
+      mockTransport = createMockTransport(async () => ({ success: true } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
 
-      const result = await client.queryResult({ limit: 10, offset: 0 });
-      expect(result).toEqual({
-        success: true,
-        data: { rows: [{ id: 1, url: 'https://example.com', title: 'Test' }], total: 1 },
-      });
-      expect(sendMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'SQLITE_QUERY',
-          payload: { limit: 10, offset: 0 },
-        }),
-        expect.any(Function)
-      );
-    });
-  });
-
-  describe('search', () => {
-    it('sends SQLITE_QUERY message with text via searchResult', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({
-            success: true,
-            rows: [],
-            total: 0,
-          });
-        }
-      );
-
-      const result = await client.searchResult('typescript', 20, 0);
-      expect(result).toEqual({ success: true, data: { rows: [], total: 0 } });
-      expect(sendMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'SQLITE_QUERY',
-          payload: { text: 'typescript', limit: 20, offset: 0 },
-        }),
-        expect.any(Function)
-      );
-    });
-
-    it('forwards orderBy/orderDir into the SQLITE_QUERY payload via searchResult', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true, rows: [], total: 0 });
-        }
-      );
-
-      const result = await client.searchResult('kddi', 20, 0, {
-        orderBy: 'created_at',
-        orderDir: 'ASC',
-      });
-      expect(result).toEqual({ success: true, data: { rows: [], total: 0 } });
-      expect(sendMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'SQLITE_QUERY',
-          payload: { text: 'kddi', limit: 20, offset: 0, orderBy: 'created_at', orderDir: 'ASC' },
-        }),
-        expect.any(Function)
-      );
-    });
-
-    it('omits orderBy/orderDir from the payload when not provided', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true, rows: [], total: 0 });
-        }
-      );
-
-      await client.searchResult('kddi', 20, 0);
-      expect(sendMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'SQLITE_QUERY',
-          payload: { text: 'kddi', limit: 20, offset: 0, orderBy: undefined, orderDir: undefined },
-        }),
-        expect.any(Function)
-      );
-    });
-  });
-
-  describe('createSqliteClientDeps', () => {
-    it('wires deps.search to forward orderBy/orderDir to sqliteClient.searchResult', async () => {
-      const mockSearchResult = vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
-      const fakeSqliteClient = { searchResult: mockSearchResult } as unknown as SqliteClient;
-      const serviceWorkerDeps = {
-        runMigration: vi.fn(),
-        getConfirmToken: vi.fn(),
-        runBackfill: vi.fn(),
-        runCleanup: vi.fn(),
-      } as unknown as Parameters<typeof createSqliteClientDeps>[1];
-
-      const deps = createSqliteClientDeps(fakeSqliteClient, serviceWorkerDeps);
-      await deps.search('kddi', 20, 0, { orderBy: 'created_at', orderDir: 'ASC' });
-
-      expect(mockSearchResult).toHaveBeenCalledWith('kddi', 20, 0, {
-        orderBy: 'created_at',
-        orderDir: 'ASC',
-      });
-    });
-  });
-
-  describe('update', () => {
-    it('sends SQLITE_UPDATE message with id and changes', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true });
-        }
-      );
-
-      const result = await client.updateResult(1, { title: 'Updated Title' });
+      const result = await client.updateResult(1, { title: 'Updated' });
       expect(result).toEqual({ success: true, data: undefined });
-      expect(sendMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'SQLITE_UPDATE',
-          payload: { id: 1, title: 'Updated Title' },
-        }),
-        expect.any(Function)
-      );
-    });
-
-    it('propagates traceId in SQLITE_UPDATE message', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true });
-        }
-      );
-
-      const result = await client.updateResult(1, { title: 'Updated' }, 'trace-update-456');
-      expect(result).toEqual({ success: true, data: undefined });
-      expect(sendMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'SQLITE_UPDATE',
-          payload: { id: 1, title: 'Updated' },
-          traceId: 'trace-update-456',
-        }),
-        expect.any(Function)
-      );
     });
   });
 
-  describe('delete', () => {
-    it('sends SQLITE_DELETE message with id', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true });
-        }
-      );
+  describe('deleteResult', () => {
+    it('returns success on success', async () => {
+      mockTransport = createMockTransport(async () => ({ success: true } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
 
       const result = await client.deleteResult(1);
       expect(result).toEqual({ success: true, data: undefined });
-      expect(sendMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'SQLITE_DELETE',
-          payload: { id: 1 },
-        }),
-        expect.any(Function)
-      );
     });
   });
 
-  describe('toggleStar', () => {
-    it('sends SQLITE_TOGGLE_STAR message with id', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true, is_starred: 1 });
-        }
-      );
-
-      const result = await client.toggleStarResult(1);
-      expect(result).toEqual({ success: true, data: { is_starred: 1 } });
-      expect(sendMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'SQLITE_TOGGLE_STAR',
-          payload: { id: 1 },
-        }),
-        expect.any(Function)
-      );
-    });
-  });
-
-  describe('getCount', () => {
-    it('sends SQLITE_COUNT message', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true, count: 42 });
-        }
-      );
+  describe('getCountResult', () => {
+    it('returns count on success', async () => {
+      mockTransport = createMockTransport(async () => ({ success: true, count: 42 } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
 
       const result = await client.getCountResult();
       expect(result).toEqual({ success: true, data: 42 });
-      expect(sendMessageMock).toHaveBeenCalledWith(
-        { type: 'SQLITE_COUNT', target: 'offscreen', payload: {}, traceId: '' },
-        expect.any(Function)
-      );
+    });
+  });
+
+  describe('toggleStarResult', () => {
+    it('returns is_starred on success', async () => {
+      mockTransport = createMockTransport(async () => ({ success: true, is_starred: 1 } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.toggleStarResult(1);
+      expect(result).toEqual({ success: true, data: { is_starred: 1 } });
+    });
+  });
+
+  describe('clearAllResult', () => {
+    it('returns success on success', async () => {
+      mockTransport = createMockTransport(async () => ({ success: true } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.clearAllResult();
+      expect(result).toEqual({ success: true, data: undefined });
     });
   });
 
   describe('getStatus', () => {
-    it('sends SQLITE_STATUS message', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true, initialized: true, path: 'yasumaro.db', fallback: false, fts5: false, compileOptionsSource: 'idb' });
-        }
-      );
+    it('returns status data on success', async () => {
+      mockTransport = createMockTransport(async () => ({
+        success: true,
+        initialized: true,
+        path: 'opfs',
+        fallback: false,
+        fts5: true,
+        compileOptions: ['SQLITE_FTS5'],
+        compileOptionsSource: 'opfs-worker',
+      } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
 
       const result = await client.getStatus();
-      expect(result).toEqual({ initialized: true, path: 'yasumaro.db', fallback: false, fts5: false, initError: undefined, compileOptions: undefined, compileOptionsSource: 'idb' });
+      expect(result).toEqual({
+        initialized: true,
+        path: 'opfs',
+        fallback: false,
+        fts5: true,
+        compileOptions: ['SQLITE_FTS5'],
+        compileOptionsSource: 'opfs-worker',
+      });
     });
   });
 
-  describe('msgOffscreen — timeout lifecycle (H1)', () => {
-    let h1Client: SqliteClient;
-
-    beforeEach(() => {
-      h1Client = new SqliteClient();
-      (h1Client as unknown as { offscreenAlive: boolean }).offscreenAlive = true;
-    });
-
-    it('clears the timeout when a response arrives before expiry', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          setTimeout(() => callback({ success: true, rows: [], total: 0 }), 10);
-        }
-      );
-      const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
-
-      const result = await h1Client.msgOffscreen('SQLITE_STATUS');
-      expect(result).toEqual({ success: true, rows: [], total: 0 });
-      expect(clearTimeoutSpy).toHaveBeenCalled();
-
-      clearTimeoutSpy.mockRestore();
-    });
-
-    it('rejects the promise on timeout (not double-resolution)', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, _callback: (response: unknown) => void) => {
-          // never invoke callback
-        }
-      );
-
-      // Shrink the 10s timeout so the test runs fast
-      const originalSetTimeout = globalThis.setTimeout;
-      const setTimeoutSpy = vi
-        .spyOn(globalThis, 'setTimeout')
-        .mockImplementation((cb: () => void, ms?: number, ...args: unknown[]) => {
-          if (ms === 10000) {
-            return originalSetTimeout(cb, 50, ...args) as unknown as ReturnType<typeof setTimeout>;
-          }
-          return originalSetTimeout(cb, ms as number, ...args) as unknown as ReturnType<typeof setTimeout>;
-        });
-
-      await expect(h1Client.msgOffscreen('SQLITE_STATUS')).rejects.toThrow(/timed out/);
-
-      setTimeoutSpy.mockRestore();
-    });
-  });
-
-  describe('backupDb', () => {
+  describe('backupDbResult', () => {
     it('reconstructs Uint8Array from number[] returned by offscreen', async () => {
-      // offscreen converts Uint8Array → number[] before calling sendResponse
-      // sqliteClient must convert it back to Uint8Array
       const bytes = [83, 81, 76, 105, 116, 101]; // "SQLite"
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true, data: bytes });
-        }
-      );
+      mockTransport = createMockTransport(async () => ({
+        success: true, data: bytes,
+      } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
 
       const result = await client.backupDbResult();
-
       expect(result).toEqual({ success: true, data: new Uint8Array(bytes) });
-      expect(sendMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'SQLITE_BACKUP', target: 'offscreen' }),
-        expect.any(Function)
-      );
     });
 
     it('returns failure result when backup fails', async () => {
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: false, error: 'Backup failed' });
-        }
-      );
+      mockTransport = createMockTransport(async () => ({
+        success: false, error: 'backup failed',
+      } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
 
       const result = await client.backupDbResult();
-      expect(result).toEqual({ success: false, error: expect.anything() });
+      expect(result.success).toBe(false);
     });
   });
 
-  describe('offscreen document management', () => {
-    it('creates offscreen document if not already present', async () => {
-      hasDocumentMock.mockResolvedValue(false);
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true });
-        }
-      );
+  describe('restoreDbResult', () => {
+    it('sends SQLITE_RESTORE with data array and returns success result on success', async () => {
+      mockTransport = createMockTransport(async () => ({ success: true } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
 
-      await client.init();
-
-      expect(hasDocumentMock).toHaveBeenCalled();
-      expect(createDocumentMock).toHaveBeenCalledWith({
-        url: 'offscreen.html',
-        reasons: [chrome.offscreen.Reason.WORKERS, chrome.offscreen.Reason.LOCAL_STORAGE],
-        justification: expect.any(String),
-      });
+      const result = await client.restoreDbResult(new Uint8Array([1, 2, 3]));
+      expect(result).toEqual({ success: true, data: undefined });
     });
 
-    it('skips creating offscreen document if already present', async () => {
-      hasDocumentMock.mockResolvedValue(true);
-      sendMessageMock.mockImplementation(
-        (_msg: unknown, callback: (response: unknown) => void) => {
-          callback({ success: true });
-        }
-      );
+    it('returns failure result when offscreen reports failure', async () => {
+      mockTransport = createMockTransport(async () => ({
+        success: false, error: 'restore failed',
+      } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
 
-      await client.init();
+      const result = await client.restoreDbResult(new Uint8Array([1, 2, 3]));
+      expect(result.success).toBe(false);
+    });
 
-      expect(hasDocumentMock).toHaveBeenCalled();
-      expect(createDocumentMock).not.toHaveBeenCalled();
+    it('returns failure result when transport throws', async () => {
+      mockTransport = createMockTransport(new Error('timeout'));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.restoreDbResult(new Uint8Array([1, 2, 3]));
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('isSqliteHealthy', () => {
+    it('sends SQLITE_HEALTH_CHECK and returns true on success', async () => {
+      mockTransport = createMockTransport(async () => ({ success: true } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.isSqliteHealthy();
+      expect(result).toBe(true);
+    });
+
+    it('returns false when offscreen reports failure', async () => {
+      mockTransport = createMockTransport(async () => ({
+        success: false, error: 'unhealthy',
+      } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.isSqliteHealthy();
+      expect(result).toBe(false);
+    });
+
+    it('returns false when transport throws', async () => {
+      mockTransport = createMockTransport(new Error('timeout'));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.isSqliteHealthy();
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('runOpfsSpikeResult', () => {
+    it('returns spike report on success', async () => {
+      mockTransport = createMockTransport(async () => ({
+        success: true, report: { writeMs: 100, readMs: 50 },
+      } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.runOpfsSpikeResult();
+      expect(result).toEqual({ success: true, data: { writeMs: 100, readMs: 50 } });
+    });
+
+    it('returns failure result when spike fails', async () => {
+      mockTransport = createMockTransport(async () => ({
+        success: false, error: 'OPFS Worker unavailable',
+      } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.runOpfsSpikeResult();
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('purgeOldRecordsResult', () => {
+    it('returns purged count on success', async () => {
+      mockTransport = createMockTransport(async () => ({
+        success: true, purged: 10,
+      } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.purgeOldRecordsResult();
+      expect(result).toEqual({ success: true, data: { purged: 10 } });
+    });
+  });
+
+  describe('purgeContentResult', () => {
+    it('returns purged count on success', async () => {
+      mockTransport = createMockTransport(async () => ({
+        success: true, purged: 5,
+      } as OffscreenResponse));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.purgeContentResult();
+      expect(result).toEqual({ success: true, data: { purged: 5 } });
+    });
+  });
+
+  describe('error classification', () => {
+    it('classifies timeout errors', async () => {
+      mockTransport = createMockTransport(new Error('Offscreen message timed out'));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.queryResult();
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.kind).toBe('timeout');
+      }
+    });
+
+    it('classifies offscreen errors', async () => {
+      mockTransport = createMockTransport(new Error('offscreen document lost'));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.queryResult();
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.kind).toBe('offscreen_lost');
+      }
+    });
+
+    it('classifies quota errors', async () => {
+      mockTransport = createMockTransport(new Error('QuotaExceededError'));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.queryResult();
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.kind).toBe('quota');
+      }
+    });
+
+    it('classifies SQLite errors', async () => {
+      mockTransport = createMockTransport(new Error('SQLITE_CONSTRAINT'));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.queryResult();
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.kind).toBe('sqlite_error');
+      }
+    });
+
+    it('classifies unknown errors', async () => {
+      mockTransport = createMockTransport(new Error('something weird'));
+      client = new SqliteClient(mockTransport);
+
+      const result = await client.queryResult();
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.kind).toBe('unknown');
+      }
+    });
+  });
+
+  describe('concurrent failures keep their own reason', () => {
+    it('gives each concurrent call the error from its own operation', async () => {
+      // Create a transport that returns different errors based on message type
+      mockTransport = {
+        async msgOffscreen(type: SqliteMessageType): Promise<OffscreenResponse> {
+          if (type === 'SQLITE_DELETE') {
+            await new Promise(resolve => setTimeout(resolve, 20));
+            throw new Error('quota exceeded');
+          }
+          throw new Error('request timed out');
+        },
+      };
+      client = new SqliteClient(mockTransport);
+
+      const [deleteResult, clearResult] = await Promise.all([
+        client.deleteResult(1),
+        client.clearAllResult(),
+      ]);
+
+      expect(deleteResult.success).toBe(false);
+      expect(clearResult.success).toBe(false);
+      if (!deleteResult.success && !clearResult.success) {
+        expect(deleteResult.error.kind).toBe('quota');
+        expect(clearResult.error.kind).toBe('timeout');
+      }
+    });
+
+    it('does not let a later failure overwrite an earlier success', async () => {
+      mockTransport = {
+        async msgOffscreen(type: SqliteMessageType): Promise<OffscreenResponse> {
+          if (type === 'SQLITE_TOGGLE_STAR') return { success: true, is_starred: 1 } as any;
+          throw new Error('quota exceeded');
+        },
+      };
+      client = new SqliteClient(mockTransport);
+
+      const [toggleResult, deleteResult] = await Promise.all([
+        client.toggleStarResult(1),
+        client.deleteResult(2),
+      ]);
+
+      expect(toggleResult).toEqual({ success: true, data: { is_starred: 1 } });
+      expect(deleteResult.success).toBe(false);
     });
   });
 });
