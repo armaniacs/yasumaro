@@ -55,7 +55,10 @@ vi.mock('../pipeline/RecordingPipeline.js', () => ({
 }));
 vi.mock('../../popup/privacyConsent.js', () => ({ hasPrivacyConsent: mocks.hasPrivacyConsent }));
 vi.mock('../../utils/storage.js', () => ({ getSettings: mocks.getSettings }));
-vi.mock('../../utils/storage/savedUrlStore.js', () => ({ saveSavedUrlEntryMetadata: mocks.saveSavedUrlEntryMetadata }));
+vi.mock('../../utils/storage/savedUrlStore.js', () => ({
+  saveSavedUrlEntryMetadata: mocks.saveSavedUrlEntryMetadata,
+  getSavedUrlsWithTimestamps: vi.fn(),
+}));
 vi.mock('../reviewSummaryGenerator.js', () => ({ createReviewSummaryGenerator: mocks.createReviewSummaryGenerator }));
 
 import { createBackgroundServices } from '../createBackgroundServices.js';

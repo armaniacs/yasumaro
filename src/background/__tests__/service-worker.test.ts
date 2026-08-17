@@ -224,6 +224,7 @@ vi.mock('../headerDetector.js', () => ({
 vi.mock('../../utils/storage/savedUrlStore.js', () => ({
     updateSavedUrlEntry: vi.fn().mockResolvedValue(undefined),
     saveSavedUrlEntryMetadata: vi.fn().mockResolvedValue(undefined),
+    getSavedUrlsWithTimestamps: vi.fn().mockResolvedValue(new Map()),
 }));
 vi.mock('../../utils/permissionManager.js', () => ({
     cleanupOldDeniedEntries: vi.fn().mockResolvedValue(undefined),

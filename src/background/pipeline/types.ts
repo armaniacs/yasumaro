@@ -201,6 +201,15 @@ export interface PipelineStep {
 export type PipelineStepFunction = (context: RecordingContext, deps?: StepDeps) => Promise<RecordingContext>;
 
 /**
+ * Minimal URL store interface checkDuplicateStep depends on. Backed by
+ * chrome.storage.local (getSavedUrlsWithTimestamps) in production; tests
+ * inject an in-memory implementation to avoid mocking chrome.storage.
+ */
+export interface UrlStore {
+  getSavedUrlsWithTimestamps(): Promise<Map<string, number>>;
+}
+
+/**
  * Dependencies injected into pipeline steps.
  * Steps receive this as a second argument instead of creating dependencies
  * internally or accessing them through context.
@@ -212,4 +221,6 @@ export interface StepDeps {
   obsidian: ObsidianClient;
   /** AI service for summarization */
   aiService: AIService;
+  /** URL store for duplicate-detection lookups (checkDuplicateStep) */
+  urlStore?: UrlStore;
 }

@@ -5,20 +5,23 @@
 
 import { addLog, LogType } from '../../../utils/logger.js';
 import { getSavedUrlsWithTimestamps, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../../../utils/storage.js';
-import type { RecordingContext, PipelineStepFunction } from '../types.js';
+import type { RecordingContext, PipelineStepFunction, StepDeps } from '../types.js';
+
+const defaultUrlStore = { getSavedUrlsWithTimestamps };
 
 /**
  * Check for duplicate URL (same day based on UTC)
  * Also checks URL set size limits
  */
 export const checkDuplicateStep: PipelineStepFunction = async (
-  context: RecordingContext
+  context: RecordingContext,
+  deps?: StepDeps
 ): Promise<RecordingContext> => {
   const { data } = context;
   const { url, skipDuplicateCheck } = data;
 
-  // Get saved URLs map via static import (DI override removed: PBI-2026-08-17 review fix)
-  const urlMap = await getSavedUrlsWithTimestamps();
+  const urlStore = deps?.urlStore ?? defaultUrlStore;
+  const urlMap = await urlStore.getSavedUrlsWithTimestamps();
 
   // Skip check if flag is set
   if (!skipDuplicateCheck) {
