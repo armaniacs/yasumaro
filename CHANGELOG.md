@@ -37,6 +37,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- `trustDb.ts`（820行）を `DomainVerifier`（3-Step Verification）/`BloomFilterManager`/`TrancoManager`（Trancoドメインリスト本体、バージョン文字列管理のTrancoVersionTrackerとは別責務）/`SensitiveDomainStore`/`WhitelistStore`/`TrustDbVersion`（DBスキーマバージョン管理、Trancoバージョン管理とは別責務）の6モジュールに分解。オーケストレーターは557行に削減。`storage/types.js`（`StorageKeys`）の動的importを静的importへ変更し循環依存を部分解消。`settingsStore.js`との動的import循環は、Trancoバージョンをsettingsオブジェクトに保存する設計に起因するため意図的に維持（コード内に理由を明記）。単体テスト33件追加
 - `sqliteHistoryPanel.ts`（875行）から純粋なHTML文字列構築関数を `sqliteHistoryPanelView.ts` に抽出。イベント配線はパネルモジュールに残置。`chrome.notifications` 呼び出しを新設の `notificationService.ts`（`notify()`）に移動。パネル本体は586行に削減、Viewモジュール358行
 - `recordCurrentPage.ts`（615行）を `TabContentFetcher`/`PreviewFlow`/`ForceRecordFlow`/`SpinnerManager`/`ErrorPresenter`/`RecordOrchestrator` の6クラスに分解。モジュールレベルの可変状態（`uiState`）を`RecordOrchestrator`のインスタンスフィールドへ移動。ファサードは32行に削減し、既存の公開API（`loadCurrentTab`/`recordCurrentPage`/`setRecordCurrentPageFn`/`handleRecordNowClick`）はデフォルトインスタンスへ委譲する形で不変
 - `dashboardSqliteService.ts`（704行）に汎用ヘルパー `callDashboard<Req,Res>(payload, decode, defaultErrorMessage)` を新設。同一パターン（送信→成功判定→デコード→ServiceResult）を繰り返していた14関数（toggleStar/deleteLog/updateLog/migrateLogs/clearAllLogs/getLogCount/cleanupLegacyStorage/backfillMetadata/restoreDb/importLogs/purgeOldRecordsNow/purgeContentNow/appendToLogs/queryAuditLogs）を1呼び出しのwrapperに置換。リトライ処理を持つqueryLogs/searchLogs、非ServiceResult形状のgetSqliteStatus、専用デコードが必要なrunOpfsSpike/backupDbは対象外として明示（650行）

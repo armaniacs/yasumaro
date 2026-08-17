@@ -1,15 +1,17 @@
 /**
  * trustDb.ts
- * Trust Database main logic and 3-Step Verification (Phase 1)
+ * Trust Database orchestrator: owns TrustDbState, the init/save lifecycle,
+ * and composes the extracted submodules (DomainVerifier, BloomFilterManager,
+ * TrancoManager, SensitiveDomainStore, WhitelistStore, TrustDbVersion,
+ * ManagedStringList, TrancoVersionTracker).
  */
 
 import type {
   TrustResult,
   TrustDatabase,
-  TrancoConfig,
 } from './trustDbSchema.js';
 import { DomainTrustLevel, type BloomFilterData } from './trustDbSchema.js';
-import { TrustBloomFilter, bloomFilterFromData, bloomFilterFromDomains } from './bloomFilter.js';
+import { TrustBloomFilter, bloomFilterFromData } from './bloomFilter.js';
 import { logDebug, logInfo, logWarn, logError, ErrorCode } from '../logger.js';
 import { withOptimisticLock } from '../optimisticLock.js';
 import { TRANCO_VERSION as CURRENT_TRANCO_VERSION } from './presetDomains.js';
@@ -17,7 +19,6 @@ import { SENSITIVE_DOMAINS_PRESETS as PRESETS, JP_ANCHOR_TLDS } from './presets.
 
 // ===== 定数 =====
 
-const DB_VERSION = '1.0.0';
 const STORAGE_KEY = 'trust_db:json';
 
 // 30日（ミリ秒）- 同意拒否後の再確認間隔
@@ -31,18 +32,16 @@ const SENSITIVE_DOMAINS_PRESETS = PRESETS;
 
 // 入力バリデーション /////////////////////////
 
-// RFC 1035 / RFC 1123 準拠のドメイン名正規表現（trancoUpdater.ts から移植）
-// ルール:
-// - ラベルには英字、数字、ハイフンのみ使用可能
-// - ラベルは英字または数字で始まり、英字または数字で終わる（ハイフンは不可）
-// - ラベルの最大長: 63 文字
-// - ドメイン全体の最大長: 253 文字
-// - 大文字小文字は区別しない
-
 // ドメインバリデーション関数は domainValidation.ts に抽出済み
-import { isValidDomain, isValidTld, compareVersions as _compareVersions } from './domainValidation.js';
+import { isValidDomain, isValidTld } from './domainValidation.js';
 import { ManagedStringList } from './managedStringList.js';
 import { TrancoVersionTracker } from './trancoVersionTracker.js';
+import { DomainVerifier } from './domainVerifier.js';
+import { BloomFilterManager } from './bloomFilterManager.js';
+import { TrancoManager } from './trancoManager.js';
+import { SensitiveDomainStore } from './sensitiveDomainStore.js';
+import { WhitelistStore } from './whitelistStore.js';
+import { TrustDbVersion, DB_VERSION } from './trustDbVersion.js';
 
 // ===== settingsStore 動的import ヘルパー（PBI-2026-08-01-20） =====
 //
@@ -50,9 +49,15 @@ import { TrancoVersionTracker } from './trancoVersionTracker.js';
 // 側も trustDb.ts を動的importしている）。ESMの動的importは2回目以降
 // モジュールキャッシュされるためこのメモ化自体に性能上の意味はほぼないが、
 // 呼び出し側の重複コードを1箇所に集約する目的で用意している。
+//
+// NOTE (PBI-27 分解時に確認): storage/types.ts の StorageKeys はプレーンな
+// オブジェクトで、settingsStore.ts を実行時に import していない（trustDb.ts
+// への依存は `import type` のみで実行時参照を生まない）ため、storage/types.js
+// の動的import は不要と判断し静的importへ変更した。実際の循環は
+// settingsStore.ts <-> trustDb.ts の間にのみ残るため、getSettingsStore() は
+// 動的importのまま維持する。
 
 let settingsStoreModule: typeof import('../storage/settingsStore.js') | undefined;
-let storageTypesModule: typeof import('../storage/types.js') | undefined;
 
 async function getSettingsStore(): Promise<typeof import('../storage/settingsStore.js')> {
   if (!settingsStoreModule) {
@@ -61,11 +66,10 @@ async function getSettingsStore(): Promise<typeof import('../storage/settingsSto
   return settingsStoreModule;
 }
 
-async function getStorageTypes(): Promise<typeof import('../storage/types.js')> {
-  if (!storageTypesModule) {
-    storageTypesModule = await import('../storage/types.js');
-  }
-  return storageTypesModule;
+// TrancoVersionTracker は getStorageTypes を deps として要求するため、
+// 静的importした types モジュールをその場で解決するアダプタを渡す。
+async function getStorageTypesStatic(): Promise<typeof import('../storage/types.js')> {
+  return await import('../storage/types.js');
 }
 
 // ===== trustDb インターフェース =====
@@ -73,8 +77,6 @@ async function getStorageTypes(): Promise<typeof import('../storage/types.js')> 
 interface TrustDbState {
   database: TrustDatabase | null;
   bloomFilter: TrustBloomFilter | null;
-  trancoSet: Set<string>;
-  trancoRankMap: Map<string, number>;
   initialized: boolean;
 }
 
@@ -83,8 +85,6 @@ class TrustDb {
   private state: TrustDbState = {
     database: null,
     bloomFilter: null,
-    trancoSet: new Set(),
-    trancoRankMap: new Map(),
     initialized: false
   };
 
@@ -93,10 +93,22 @@ class TrustDb {
   private userTldsList: ManagedStringList | null = null;
   private sensitiveDomainsList: ManagedStringList | null = null;
   private whitelistList: ManagedStringList | null = null;
+  private sensitiveDomainStore: SensitiveDomainStore | null = null;
+  private whitelistStore: WhitelistStore | null = null;
+
+  private readonly domainVerifier = new DomainVerifier();
+  private readonly bloomFilterManager = new BloomFilterManager();
+  private readonly trancoManager = new TrancoManager({
+    bloomFilterManager: this.bloomFilterManager,
+    save: () => this.save(),
+  });
+  private readonly trustDbVersion = new TrustDbVersion({
+    save: () => this.save(),
+  });
 
   private readonly trancoVersionTracker = new TrancoVersionTracker({
     getSettingsStore,
-    getStorageTypes,
+    getStorageTypes: getStorageTypesStatic,
     currentVersion: CURRENT_TRANCO_VERSION,
   });
 
@@ -163,14 +175,11 @@ class TrustDb {
 
         // バージョンを確認・マイグレーション
         if (this.state.database.version !== DB_VERSION) {
-          await this.migrateDatabase(this.state.database);
+          await this.trustDbVersion.migrateDatabase(this.state.database);
         }
 
-        // trancoSet を再構築（サービスワーカー再起動後もキャッシュを有効化）
-        this.state.trancoSet = new Set(this.state.database.tranco.domains);
-
-        // trancoRankMap を構築 (O(1) ランク検索用)
-        this.state.trancoRankMap = new Map(this.state.database.tranco.domains.map((domain, index) => [domain, index]));
+        // trancoSet / trancoRankMap を再構築（サービスワーカー再起動後もキャッシュを有効化）
+        this.trancoManager.rebuildCachesFromDatabase(this.state.database);
 
         logInfo('TrustDb', {
           version: this.state.database.version,
@@ -243,80 +252,12 @@ class TrustDb {
         return { valid: true };
       },
     });
-  }
 
-  /**
-   * データベースのマイグレーション
-   * @param db マイグレーション対象のデータベース
-   */
-  private async migrateDatabase(db: TrustDatabase): Promise<void> {
-    const currentVersion = db.version || '0.0.0';
-    const targetVersion = DB_VERSION;
-
-    logInfo('TrustDb', { from: currentVersion, to: targetVersion }, 'Starting database migration');
-
-    try {
-      // バージョン比較とマイグレーションパスの実行
-      if (this.compareVersions(currentVersion, targetVersion) < 0) {
-        await this.applyMigrations(currentVersion, targetVersion, db);
-
-        // マイグレーション後のデータを保存（バージョン更新前に保存）
-        await this.save();
-
-        // バージョンを更新（保存成功後にのみ更新）
-        db.version = targetVersion;
-        db.lastUpdated = new Date().toISOString();
-
-        // バージョン更新を保存
-        await this.save();
-
-        logInfo('TrustDb', { to: targetVersion }, 'Database migration completed');
-      }
-    } catch (error) {
-      logError('TrustDb', { from: currentVersion, to: targetVersion, error }, ErrorCode.TRUST_DB_MIGRATION_FAILED);
-      throw error;
-    }
-  }
-
-  /**
-   * バージョン比較（domainValidation.ts の compareVersions に委譲）
-   */
-  private compareVersions(v1: string, v2: string): number {
-    return _compareVersions(v1, v2);
-  }
-
-  /**
-   * マイグレーションパスの適用
-   * @param from 以前のバージョン
-   * @param to ターゲットバージョン
-   * @param db データベース
-   */
-  private async applyMigrations(from: string, to: string, db: TrustDatabase): Promise<void> {
-    // 将来的なマイグレーションパスはここに追加
-    // 例: v1.0.0 -> v1.1.0、v1.1.0 -> v1.2.0 など
-
-    // 現在はマイグレーションパスが定義されていないため、
-    // 新規スキーマに合うようにデフォルト値を設定するのみ
-    logDebug('TrustDb', { from, to }, 'Applying migration defaults');
-
-    // デフォルト値の設定（既存データに欠けているフィールドがあれば追加）
-    if (!db.tranco) {
-      db.tranco = { tier: 'top10k', domains: [], count: 0, sizeBytes: 0 };
-    }
-    if (!db.jpAnchor) {
-      db.jpAnchor = { tlds: [...JP_ANCHOR_TLDS_PRESET], userTlds: [] };
-    }
-    if (!db.sensitive) {
-      db.sensitive = {
-        presets: {
-          finance: [...SENSITIVE_DOMAINS_PRESETS.finance],
-          gaming: [...SENSITIVE_DOMAINS_PRESETS.gaming],
-          sns: [...SENSITIVE_DOMAINS_PRESETS.sns]
-        },
-        userBlacklist: [],
-        whitelist: []
-      };
-    }
+    this.sensitiveDomainStore = new SensitiveDomainStore(
+      this.sensitiveDomainsList,
+      () => this.state.database!.sensitive.presets
+    );
+    this.whitelistStore = new WhitelistStore(this.whitelistList);
   }
 
   /**
@@ -345,27 +286,17 @@ class TrustDb {
         userBlacklist: [],
         whitelist: []
       },
-      bloomFilter: await this.createBloomFilterFromPresets()
+      bloomFilter: await this.bloomFilterManager.createBloomFilterFromPresets()
     };
 
     this.state.database = db;
     this.state.bloomFilter = bloomFilterFromData(db.bloomFilter);
 
     // trancoRankMap を初期化
-    this.state.trancoRankMap = new Map();
+    this.trancoManager.rebuildCachesFromDatabase(db);
 
     await this.save();
     logInfo('TrustDb', {}, 'Created default database');
-  }
-
-  /**
-   * プリセットから Bloom Filter データを作成
-   */
-  private createBloomFilterFromPresets(): Promise<BloomFilterData> {
-    const allSensitiveDomains: string[] = Object.values(SENSITIVE_DOMAINS_PRESETS).flat();
-
-    const bloom = bloomFilterFromDomains(allSensitiveDomains, 0.01);
-    return Promise.resolve(bloom.toData());
   }
 
   /**
@@ -402,175 +333,12 @@ class TrustDb {
       };
     }
 
-    // URL が渡された場合はホスト名を抽出する
-    let normalizedDomain = domain.toLowerCase().trim();
-    if (normalizedDomain.startsWith('http://') || normalizedDomain.startsWith('https://')) {
-      try {
-        normalizedDomain = new URL(normalizedDomain).hostname;
-      } catch {
-        // パース失敗はそのまま使用
-      }
-    }
-
-    // Step 1: JP-Anchor TLD 判定
-    const anchorResult = this.checkJpAnchor(normalizedDomain);
-    if (anchorResult.level === DomainTrustLevel.TRUSTED) {
-      return anchorResult;
-    }
-
-    // Step 2: Sensitive List 判定
-    const sensitiveResult = this.checkSensitive(normalizedDomain);
-    if (sensitiveResult.level === DomainTrustLevel.SENSITIVE) {
-      return sensitiveResult;
-    }
-
-    // Step 3: Tranco 判定
-    const trancoResult = this.checkTranco(normalizedDomain);
-    if (trancoResult.level === DomainTrustLevel.TRUSTED) {
-      return trancoResult;
-    }
-
-    return {
-      level: DomainTrustLevel.UNVERIFIED,
-      source: 'unknown',
-      reason: 'Domain not in any trusted list'
-    };
-  }
-
-  /**
-   * Step 1: JP-Anchor TLD 判定
-   */
-  private checkJpAnchor(domain: string): TrustResult {
-    const allTlds = [
-      ...this.state.database!.jpAnchor.tlds,
-      ...this.state.database!.jpAnchor.userTlds
-    ];
-
-    for (const tld of allTlds) {
-      if (domain.endsWith(tld)) {
-        return {
-          level: DomainTrustLevel.TRUSTED,
-          source: 'jp-anchor',
-          reason: `Domain ends with ${tld}`,
-          category: 'anchor'
-        };
-      }
-    }
-
-    return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Not a JP-Anchor domain' };
-  }
-
-  /**
-   * Step 2: Sensitive List 判定
-   */
-  private checkSensitive(domain: string): TrustResult {
-    const db = this.state.database!;
-
-    // ホワイトリスト優先
-    if (db.sensitive.whitelist.includes(domain)) {
-      return {
-        level: DomainTrustLevel.TRUSTED,
-        source: 'whitelist',
-        reason: 'Domain is in user whitelist',
-        category: 'unknown'
-      };
-    }
-
-    // ユーザー追加ブラックリスト
-    if (db.sensitive.userBlacklist.includes(domain)) {
-      return {
-        level: DomainTrustLevel.SENSITIVE,
-        source: 'user-blacklist',
-        reason: 'Domain is in user blacklist',
-        category: 'unknown'
-      };
-    }
-
-    // Bloom Filter でチェック（偽陽性の可能性あり）
-    if (!this.state.bloomFilter!.mightContain(domain)) {
-      return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Not in sensitive list' };
-    }
-
-    // 精密照合（偽陽性チェック）
-    const financeCheck = this.checkCategory(domain, db.sensitive.presets.finance, 'finance');
-    if (financeCheck) return financeCheck;
-
-    const gamingCheck = this.checkCategory(domain, db.sensitive.presets.gaming, 'gaming');
-    if (gamingCheck) return gamingCheck;
-
-    const snsCheck = this.checkCategory(domain, db.sensitive.presets.sns, 'sns');
-    if (snsCheck) return snsCheck;
-
-    // Bloom Filter 偽陽性
-    return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Bloom filter false positive' };
-  }
-
-  /**
-   * カテゴリ固有のチェック
-   */
-  private checkCategory(
-    domain: string,
-    list: string[],
-    category: 'finance' | 'gaming' | 'sns'
-  ): TrustResult | null {
-    if (list.includes(domain)) {
-      return {
-        level: DomainTrustLevel.SENSITIVE,
-        source: 'sensitive-presets',
-        reason: `Domain is in ${category} sensitive list`,
-        category
-      };
-    }
-    return null;
-  }
-
-  /**
-   * Step 3: Tranco 判定
-   * 最適化: キャッシュされたSet を使用して O(1) 検索
-   */
-  private checkTranco(domain: string): TrustResult {
-    const db = this.state.database!;
-
-    if (db.tranco.domains.length === 0) {
-      return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Tranco list is empty' };
-    }
-
-    // サブドメインを除いた候補リストを生成 (例: edition.cnn.com → [edition.cnn.com, cnn.com])
-    // 【修正】2部ドメインでも正しくサブドメイン除去を行えるようループ条件を修正
-    const candidates: string[] = [domain];
-    const parts = domain.split('.');
-    // 少なくとも1ラベル（TLDは除く）残すようにする
-    for (let i = 1; i < parts.length; i++) {
-      const candidate = parts.slice(i).join('.');
-      // TLDのみにならないようにチェック（ドットを含むことを確認）
-      if (candidate.includes('.')) {
-        candidates.push(candidate);
-      }
-    }
-
-    // キャッシュされたSetを使用 (O(1) 検索)
-    const trancoSet = this.state.trancoSet;
-
-    for (const candidate of candidates) {
-      // Bloom Filter でチェック
-      if (!this.state.bloomFilter!.mightContain(candidate)) {
-        continue;
-      }
-
-      // 精密照合 (Set.has は O(1))
-      if (trancoSet.has(candidate)) {
-        // インデックスを取得 (rank 報告用) - O(1) マップ検索
-        const index = this.state.trancoRankMap.get(candidate)!;
-        return {
-          level: DomainTrustLevel.TRUSTED,
-          source: 'tranco',
-          reason: `Domain is in Tranco top ${db.tranco.tier} at rank ${index + 1}`,
-          category: 'tranco'
-        };
-      }
-    }
-
-    return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Not in Tranco list' };
+    return this.domainVerifier.isDomainTrusted(domain, {
+      database: this.state.database,
+      bloomFilter: this.state.bloomFilter,
+      trancoSet: this.trancoManager.trancoSet,
+      trancoRankMap: this.trancoManager.trancoRankMap,
+    });
   }
 
   /**
@@ -582,31 +350,8 @@ class TrustDb {
       throw new Error('TrustDb not initialized');
     }
 
-    // Bloom Filter 生成
-    const bloom = bloomFilterFromDomains([
-      ...domains,
-      ...db.sensitive.presets.finance,
-      ...db.sensitive.presets.gaming,
-      ...db.sensitive.presets.sns
-    ]);
-
-    // 更新
-    db.tranco = {
-      tier: tier as TrancoConfig['tier'],
-      domains,
-      count: domains.length,
-      sizeBytes: domains.join('\n').length
-    };
-
-    this.state.bloomFilter = bloom;
-    this.state.trancoSet = new Set(domains); // Setをキャッシュ
-
-    // trancoRankMap を構築 (O(1) ランク検索用)
-    this.state.trancoRankMap = new Map(domains.map((domain, index) => [domain, index]));
-
-    await this.save();
-
-    logInfo('TrustDb', { tier, count: domains.length }, `Updated Tranco list: ${domains.length} domains`);
+    const { bloomFilter } = await this.trancoManager.updateTranco(db, domains, tier);
+    this.state.bloomFilter = bloomFilter;
   }
 
   /**
@@ -633,7 +378,7 @@ class TrustDb {
    * バージョン情報を取得
    */
   getVersion(): string {
-    return DB_VERSION;
+    return this.trustDbVersion.getVersion();
   }
 
   /**
@@ -692,57 +437,56 @@ class TrustDb {
    * Sensitive ドメインリストを取得（カテゴリ指定）
    */
   getSensitiveDomains(category: 'finance' | 'gaming' | 'sns'): string[] {
-    if (!this.state.database) return [];
-    const db = this.state.database;
-    return [...db.sensitive.presets[category], ...db.sensitive.userBlacklist];
+    if (!this.state.database || !this.sensitiveDomainStore) return [];
+    return this.sensitiveDomainStore.getSensitiveDomains(category);
   }
 
   /**
    * Sensitive ドメインを追加
    */
   async addSensitiveDomain(domain: string, _category?: string): Promise<{ success: boolean; error?: string }> {
-    if (!this.state.database || !this.sensitiveDomainsList) {
+    if (!this.state.database || !this.sensitiveDomainStore) {
       return { success: false, error: 'Database not initialized' };
     }
-    return this.sensitiveDomainsList.add(domain);
+    return this.sensitiveDomainStore.addSensitiveDomain(domain);
   }
 
   /**
    * Sensitive ドメインを削除
    */
   async removeSensitiveDomain(domain: string): Promise<{ success: boolean; error?: string }> {
-    if (!this.state.database || !this.sensitiveDomainsList) {
+    if (!this.state.database || !this.sensitiveDomainStore) {
       return { success: false, error: 'Database not initialized' };
     }
-    return this.sensitiveDomainsList.remove(domain);
+    return this.sensitiveDomainStore.removeSensitiveDomain(domain);
   }
 
   /**
    * Whitelist を取得
    */
   getWhitelist(): string[] {
-    if (!this.state.database) return [];
-    return [...this.state.database.sensitive.whitelist];
+    if (!this.state.database || !this.whitelistStore) return [];
+    return this.whitelistStore.getWhitelist();
   }
 
   /**
    * Whitelist にドメインを追加
    */
   async addToWhitelist(domain: string): Promise<{ success: boolean; error?: string }> {
-    if (!this.state.database || !this.whitelistList) {
+    if (!this.state.database || !this.whitelistStore) {
       return { success: false, error: 'Database not initialized' };
     }
-    return this.whitelistList.add(domain);
+    return this.whitelistStore.addToWhitelist(domain);
   }
 
   /**
    * Whitelist からドメインを削除
    */
   async removeFromWhitelist(domain: string): Promise<{ success: boolean; error?: string }> {
-    if (!this.state.database || !this.whitelistList) {
+    if (!this.state.database || !this.whitelistStore) {
       return { success: false, error: 'Database not initialized' };
     }
-    return this.whitelistList.remove(domain);
+    return this.whitelistStore.removeFromWhitelist(domain);
   }
 
   // ===== Tranco バージョン追跡（Phase 1） =====
@@ -786,15 +530,7 @@ class TrustDb {
    * 訪問ドメインが Tranco ドメインかを判定
    */
   isTrancoDomain(domain: string): boolean {
-    let normalized = domain.toLowerCase().trim();
-    if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
-      try {
-        normalized = new URL(normalized).hostname;
-      } catch {
-        // パース失敗はそのまま使用
-      }
-    }
-    return this.state.trancoSet.has(normalized);
+    return this.trancoManager.isTrancoDomain(domain);
   }
 }
 

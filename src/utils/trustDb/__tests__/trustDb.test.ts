@@ -70,6 +70,7 @@ vi.mock('../../storage/settingsStore.js', () => ({
 
 import { getTrustDb, isDomainTrusted } from '../trustDb.js';
 import { DomainTrustLevel } from '../trustDbSchema.js';
+import { DomainVerifier } from '../domainVerifier.js';
 
 describe('TrustDb', () => {
   beforeEach(() => {
@@ -292,7 +293,15 @@ describe('TrustDb', () => {
       expect(whitelist).toContain('allowed.com');
       // 注: 現在の isDomainTrusted は checkSensitive の TRUSTED 結果を
       // SENSITIVE と比較するため通過しない。checkSensitive 自体は正しく TRUSTED を返す。
-      const sensitiveResult = (db as any).checkSensitive('allowed.com');
+      // checkSensitive は DomainVerifier に移動したため、同じ state を組み立てて直接検証する。
+      const verifier = new DomainVerifier();
+      const database = db.getDatabase()!;
+      const sensitiveResult = verifier.checkSensitive('allowed.com', {
+        database,
+        bloomFilter: (db as any).state.bloomFilter,
+        trancoSet: new Set(),
+        trancoRankMap: new Map(),
+      });
       expect(sensitiveResult.level).toBe(DomainTrustLevel.TRUSTED);
       expect(sensitiveResult.source).toBe('whitelist');
     });
