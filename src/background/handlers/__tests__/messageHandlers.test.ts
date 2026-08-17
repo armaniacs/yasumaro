@@ -3,8 +3,8 @@
  * Tests for message handler factories, focusing on VALID_VISIT rate limiting.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createValidVisitHandler, resetVisitRateLimiter } from '../messageHandlers.js';
-import type { ValidVisitHandlerDeps } from '../messageHandlers.js';
+import { createValidVisitHandler, resetVisitRateLimiter } from '../recordingHandlers.js';
+import type { ValidVisitHandlerDeps } from '../recordingHandlers.js';
 import type { ValidVisitMessage } from '../../messageTypes.js';
 import type { RecordingResult } from '../../../messaging/types.js';
 

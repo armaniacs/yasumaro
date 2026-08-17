@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createConsentStateChangedHandler } from '../messageHandlers.js';
+import { createConsentStateChangedHandler } from '../systemHandlers.js';
 import { MessageHandlerRegistry } from '../MessageHandlerRegistry.js';
 
 describe('createConsentStateChangedHandler', () => {

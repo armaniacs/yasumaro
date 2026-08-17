@@ -1,11 +1,7 @@
 /**
  * messageHandlers-recordSecurity.test.ts
- * PBI 2026-08-08-06: 記録系ハンドラのセキュリティチェックにテストを付ける
- *
- * messageHandlers.ts は732行・17ファクトリだが、専用テストは
- * createValidVisitHandler 1つ分しかなかった。ここでは
- * createManualRecordHandler / createSaveRecordHandler が持つ
- * 2つのセキュリティ境界を固定する:
+ * 記録系ハンドラ（recordingHandlers.ts の createManualRecordHandler /
+ * createSaveRecordHandler）が持つセキュリティ境界を固定する:
  *
  *   1. VULN-004: 安全でないURLスキーム(javascript:, file:, http: 等)の拒否
  *   2. VULN-004: content script からの送信元拒否（拡張ページ専用の操作）
@@ -25,8 +21,8 @@ vi.mock('../../../utils/logger.js', () => ({
   LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
 }));
 
-import { createManualRecordHandler, createSaveRecordHandler } from '../messageHandlers.js';
-import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from '../messageHandlers.js';
+import { createManualRecordHandler, createSaveRecordHandler } from '../recordingHandlers.js';
+import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from '../recordingHandlers.js';
 import type { ManualRecordMessage, SaveRecordMessage } from '../../messageTypes.js';
 import { MessageHandlerRegistry } from '../MessageHandlerRegistry.js';
 
