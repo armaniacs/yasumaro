@@ -18,41 +18,20 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| [2026-08-17-00-epic-architecture-deepening-aug17.md](2026-08-17-00-epic-architecture-deepening-aug17.md) | high | 軽微 | refactor | 5候補実装の親エピック（RecordingData/Context/Logic統合を含む） |
-| [2026-08-17-01-refactor-split-sqlite-engine-context.md](2026-08-17-01-refactor-split-sqlite-engine-context.md) | high | あり | refactor | SqliteEngineContext を OPFS/IDB/Fallback/Migration に分割 |
-| [2026-08-17-02-refactor-unify-content-extraction-pipeline.md](2026-08-17-02-refactor-unify-content-extraction-pipeline.md) | medium | 軽微 | refactor | コンテンツ抽出パイプラインの重複統一 |
-| [2026-08-17-03-refactor-remove-aiclient-wrapper.md](2026-08-17-03-refactor-remove-aiclient-wrapper.md) | medium | あり | refactor | AIClient ラッパーを削除して AIService 直接使用 |
-| [2026-08-17-04-refactor-inject-store-recording-cache.md](2026-08-17-04-refactor-inject-store-recording-cache.md) | medium | 軽微 | refactor | RecordingCache に store 注入 |
-| [2026-08-17-05-refactor-composition-root-service-worker.md](2026-08-17-05-refactor-composition-root-service-worker.md) | high | 軽微 | refactor | service-worker.ts の composition root 化完了 |
-| [2026-08-17-06-refactor-unify-recording-data.md](2026-08-17-06-refactor-unify-recording-data.md) | 🟢低 | 軽微 | refactor | RecordingData を単一ソースに統一（基盤） |
-| [2026-08-17-07-refactor-collapse-recording-context.md](2026-08-17-07-refactor-collapse-recording-context.md) | 🔴高 | あり | refactor | RecordingContext god-object を型付き入力に崩壊 |
-| [2026-08-17-08-refactor-merge-recording-logic.md](2026-08-17-08-refactor-merge-recording-logic.md) | 🟡中 | 軽微 | refactor | RecordingLogic を RecordingPipeline に統合 |
-| [2026-08-17-09-refactor-unify-pipeline-step-di.md](2026-08-17-09-refactor-unify-pipeline-step-di.md) | 🟡中 | 軽微 | refactor | パイプラインステップの DI パターン統一 |
-| [2026-08-17-10-refactor-extract-result-builder.md](2026-08-17-10-refactor-extract-result-builder.md) | 🟢低 | 軽微 | refactor | RecordingPipeline から result-building を抽出 |
+| [2026-08-17-00-epic-architecture-deepening-aug17.md](2026-08-17-00-epic-architecture-deepening-aug17.md) | high | 軽微 | refactor | 5候補実装の親エピック（子PBIの大半がアーカイブ済みのため実質完了、残作業のみ追跡） |
+| [2026-08-17-01-refactor-split-sqlite-engine-context.md](2026-08-17-01-refactor-split-sqlite-engine-context.md) | high | あり | refactor | 🔶部分実装: 分割先モジュールは作成済みだが本体sqliteEngineContext.tsが未接続（孤立コード） |
 | [2026-08-17-11-refactor-remove-notifications-from-pipeline.md](2026-08-17-11-refactor-remove-notifications-from-pipeline.md) | 🟢低 | 軽微 | refactor | パイプラインオーケストレータから chrome.notifications を除去 |
-| [2026-08-17-12-refactor-extract-notification-save-obsidian.md](2026-08-17-12-refactor-extract-notification-save-obsidian.md) | 🟢低 | 軽微 | refactor | saveToObsidianStep から通知を抽出 |
-| [2026-08-17-13-refactor-split-sqliteclient-transport.md](2026-08-17-13-refactor-split-sqliteclient-transport.md) | 🟡中 | あり | refactor | SqliteClient を transport と domain に分割 |
-| [2026-08-17-14-refactor-instance-pending-storage-queue.md](2026-08-17-14-refactor-instance-pending-storage-queue.md) | 🟢低 | 軽微 | refactor | PendingChromeStorageQueue をインスタンス化 |
-| [2026-08-17-15-refactor-flatten-dashboard-handler-deps.md](2026-08-17-15-refactor-flatten-dashboard-handler-deps.md) | 🟢低 | 軽微 | refactor | DashboardSqliteHandlerDeps の union を平坦化 |
 | [2026-08-17-16-refactor-inject-url-store-check-duplicate.md](2026-08-17-16-refactor-inject-url-store-check-duplicate.md) | 🟢低 | 軽微 | refactor | checkDuplicateStep に URL store を注入 |
 | [2026-08-17-17-refactor-di-ify-offline-network-queue.md](2026-08-17-17-refactor-di-ify-offline-network-queue.md) | 🟢低 | 軽微 | refactor | OfflineNetworkQueue を DI 化 |
-| [2026-08-17-18-refactor-logger-dual-module.md](2026-08-17-18-refactor-logger-dual-module.md) | 🟢低 | 軽微 | refactor | Logger の dual-module 正規化 |
-| [2026-08-17-19-refactor-instance-session-store-header-detector.md](2026-08-17-19-refactor-instance-session-store-header-detector.md) | 🟢低 | 軽微 | refactor | SessionStore と HeaderDetector をインスタンス化 |
-| [2026-08-17-20-refactor-unify-error-classification.md](2026-08-17-20-refactor-unify-error-classification.md) | 🟡中 | 軽微 | refactor | 二つのエラー分類システムを統一 |
-| [2026-08-17-21-refactor-unify-sensitive-data-masking.md](2026-08-17-21-refactor-unify-sensitive-data-masking.md) | 🟢低 | 軽微 | refactor | 二つの機密データマスキングシステムを統一 |
-| [2026-08-17-22-refactor-collapse-masterpassword-module-state.md](2026-08-17-22-refactor-collapse-masterpassword-module-state.md) | 🟡中 | 軽微 | refactor | masterPassword モジュールレベルDOM状態を崩壊 |
-| [2026-08-17-23-refactor-deepen-cspsettings-static-facade.md](2026-08-17-23-refactor-deepen-cspsettings-static-facade.md) | 🟡中 | 軽微 | refactor | cspSettings 静的ファサードを深掘り |
+| [2026-08-17-23-refactor-deepen-cspsettings-static-facade.md](2026-08-17-23-refactor-deepen-cspsettings-static-facade.md) | 🟡中 | 軽微 | refactor | 🔶部分実装: CspSettingsControllerは存在するが@deprecated静的クラスが残存 |
 | [2026-08-17-24-refactor-extract-sqlitehistorypanel-closure.md](2026-08-17-24-refactor-extract-sqlitehistorypanel-closure.md) | 🔴高 | 軽微 | refactor | sqliteHistoryPanel 875行クロージャから抽出 |
 | [2026-08-17-25-refactor-eliminate-loader-urlskipper-copy.md](2026-08-17-25-refactor-eliminate-loader-urlskipper-copy.md) | 🟢低 | 軽微 | refactor | loader.ts の urlSkipper コピーを排除 |
 | [2026-08-17-26-refactor-decompose-recordcurrentpage-god.md](2026-08-17-26-refactor-decompose-recordcurrentpage-god.md) | 🔴高 | 軽微 | refactor | recordCurrentPage ゴッド関数を分解 |
-| [2026-08-17-27-refactor-decompose-trustdb-god-module.md](2026-08-17-27-refactor-decompose-trustdb-god-module.md) | 🔴高 | あり | refactor | trustDb 1024行ゴッドモジュールを分解 |
-| [2026-08-17-28-fix-extractor-false-purity-pagestate.md](2026-08-17-28-fix-extractor-false-purity-pagestate.md) | 🟡中 | 軽微 | fix | extractor.ts の誤った純粋性とpageState結合を修正 |
-| [2026-08-17-29-refactor-collapse-sqlite-read-seam.md](2026-08-17-29-refactor-collapse-sqlite-read-seam.md) | 🔴高 | 軽微 | refactor | SQLite読み取りをStorageQuery値オブジェクトへ統合しquery/searchを単一化 |
-| [2026-08-17-30-refactor-split-opfs-worker-god-module.md](2026-08-17-30-refactor-split-opfs-worker-god-module.md) | 🟡中 | 軽微 | refactor | opfsWorker 945行をハンドラ別モジュールに分割しWorkerプロトコルを型付け |
-| [2026-08-17-31-fix-queue-retry-duplication.md](2026-08-17-31-fix-queue-retry-duplication.md) | 🟡中 | 軽微 | fix | キュー2つのリトライ再実装をflush()へ統合しpendingSqliteQueueにmax-retry付与 |
-| [2026-08-17-32-refactor-extract-obsidian-client-validators.md](2026-08-17-32-refactor-extract-obsidian-client-validators.md) | 🟢低 | なし | refactor | ObsidianClient内の純関数バリデータを抽出し設定構築を一元化 |
-| [2026-08-17-33-refactor-unify-backend-resolver.md](2026-08-17-33-refactor-unify-backend-resolver.md) | 🟡中 | 軽微 | refactor | バックエンド選定をBackendResolverに一元化しopfsCapabilitiesを接続 |
-| [2026-08-17-34-refactor-derive-cleansing-option-types.md](2026-08-17-34-refactor-derive-cleansing-option-types.md) | 🟢低 | なし | refactor | クレンジング型をCLEANSING_RULESから導出し手書き32フィールドを廃止 |
+| [2026-08-17-27-refactor-decompose-trustdb-god-module.md](2026-08-17-27-refactor-decompose-trustdb-god-module.md) | 🔴高 | あり | refactor | trustDb 1024行ゴッドモジュールを分解（PBI-40と重複、着手前にスコープ調整要） |
+| [2026-08-17-28-fix-extractor-false-purity-pagestate.md](2026-08-17-28-fix-extractor-false-purity-pagestate.md) | 🟡中 | 軽微 | fix | 🔶部分実装: shouldRecordVisitは明示パラメータ化済みだがextractPageContentの副作用は未整理 |
+| [2026-08-17-38-refactor-extract-ssrf-ip-policy.md](2026-08-17-38-refactor-extract-ssrf-ip-policy.md) | 🟡中 | 軽微 | refactor | fetch.tsからSSRF/IPポリシーをssrfGuardへ分離 |
+| [2026-08-17-39-refactor-collapse-dashboard-sqlite-boilerplate.md](2026-08-17-39-refactor-collapse-dashboard-sqlite-boilerplate.md) | 🔴高 | 軽微 | refactor | dashboardSqliteService 19関数のボイラープレートを汎用呼び出しで集約 |
+| [2026-08-17-40-refactor-extract-managed-string-list-trustdb.md](2026-08-17-40-refactor-extract-managed-string-list-trustdb.md) | 🟡中 | 軽微 | refactor | trustDbのCRUDをManagedStringListパターンへ抽出（PBI-27と重複） |
 
 ---
 
@@ -72,6 +51,35 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-17 着手状況調査でアーカイブ済み（13件）
+
+コードを直接調査し、受け入れ基準充足を確認できたもののみアーカイブ。部分実装のものはINDEX表に🔶注記付きで残置。
+
+- 2026-08-17-02-refactor-unify-content-extraction-pipeline.md (buildExtractionOptions経由でoptionBuilder.tsに統一済み)
+- 2026-08-17-03-refactor-remove-aiclient-wrapper.md (aiClient.ts自体が削除済み、createBackgroundServices.tsが直接AIService生成)
+- 2026-08-17-05-refactor-composition-root-service-worker.md (service-worker.ts 214行、責務ごとのファクトリに分割済み)
+- 2026-08-17-06-refactor-unify-recording-data.md (RecordingDataをmessaging/types.tsから再エクスポートし単一ソース化)
+- 2026-08-17-07-refactor-collapse-recording-context.md (RecordingContextを意味のあるサブグループの交差型に分解済み)
+- 2026-08-17-09-refactor-unify-pipeline-step-di.md (StepDepsに単一定義、各ステップがDI経由に移行済み)
+- 2026-08-17-10-refactor-extract-result-builder.md (resultBuilder.tsへ抽出しRecordingPipelineから呼び出し済み)
+- 2026-08-17-12-refactor-extract-notification-save-obsidian.md (saveToObsidianStepから通知呼び出しを除去、ハンドラ層責務化を明記)
+- 2026-08-17-13-refactor-split-sqliteclient-transport.md (OffscreenTransport抽象化・ChromeOffscreenTransport実装に分割済み)
+- 2026-08-17-15-refactor-flatten-dashboard-handler-deps.md (ReadOnlyDeps/CoreCrudDeps/MaintenanceBatchDepsに分離済み)
+- 2026-08-17-20-refactor-unify-error-classification.md (errorClassification.tsに統一、errorMessages.tsは委譲shim化)
+- 2026-08-17-21-refactor-unify-sensitive-data-masking.md (sensitiveDataMask.tsに統一、logMasker.ts等が委譲)
+- 2026-08-17-22-refactor-collapse-masterpassword-module-state.md (MasterPasswordControllerクラスへ状態をインスタンス化済み)
+
+### 2026-08-17 /feature-devでアーカイブ済み
+
+- 2026-08-17-08-refactor-merge-recording-logic.md (RecordingPipelineにrecord()/recordWithPreview()を追加しRecordingLogicクラスを削除。createBackgroundServices.tsおよび呼び出し元5ファイルをRecordingPipeline直接参照に統一、テスト14ファイルを整理・移行。npm test 7979件成功)
+- 2026-08-17-19-refactor-instance-session-store-header-detector.md (HeaderDetectorをインスタンス化。initialize/onHeadersReceived/cachePrivacyInfo等をインスタンスメソッド化しcreateBackgroundServices.tsで生成、service-worker.tsのグローバル初期化を除去。normalizeUrlは状態を持たない純粋関数のためstatic維持。npm test 7979件成功)
+- 2026-08-17-14-refactor-instance-pending-storage-queue.md (pendingChromeStorageQueueのimport時即時生成シングルトンを廃止、createBackgroundServices経由のsetPendingWriteQueue明示初期化に変更。InMemoryAdapterを新設しテストをchrome.storageモック非依存に。呼び出し元saveMetadataStep/alarmHandlerのDI化は全StepDeps型への横断変更となるため今回はスコープ外と判断しユーザー確認済み。npm test 7979件成功)
+- 2026-08-17-18-refactor-logger-dual-module.md (logger/*への直接import違反は実質0件と確認（sqliteAlert.tsのcriticalAlertSink.js importは意図的なDIアダプタ分離のため対象外）。eslint.config.jsにno-restricted-importsルールを追加しlogger/*直接importを禁止、logger.ts自体は除外設定。npm run type-check成功)
+- 2026-08-17-35-refactor-split-message-handlers.md (messageHandlers.ts 680行・31エクスポートをrecordingHandlers.ts(8)/testingHandlers.ts(6)/systemHandlers.ts(21)の3モジュールに分割。createMessageHandlerRegistry.tsが3モジュールをimport、createBackgroundServices.tsと関連テスト4ファイルのimport元を更新。npm test 7979件成功)
+- 2026-08-17-36-refactor-complete-error-classification-consolidation.md (createErrorResponseをerrorClassification.tsへ移動しsanitizeContextをsensitiveDataMask.maskSensitiveData('full')に置換。3本番importer(messageHandler.ts/systemHandlers.ts/dashboardSqliteWiring.ts)の参照先を更新、errorMessages.tsを45行の@deprecated再エクスポートshimに縮小。関連テスト396件成功)
+- 2026-08-17-37-refactor-unify-opfs-where-query-builder.md (crudHandlers.tsのインラインWHERE/ORDER BY構築をsqliteQueryBuilder.ts経由(buildWhereClause/buildOrderByClause)に置換。crudHandlers固有のFTS5タグMATCH条件はbuildFtsTagMatchCondition新設で対応、既存IdbVfsBackendの挙動に影響しないようbuildWhereClause本体にはtag条件を追加せず呼び出し側で明示合成。ALLOWED_ORDER_COLUMNSをschema.tsに一本化。契約テスト10件新規追加。npm test 7989件成功)
+- 2026-08-17-04-refactor-inject-store-recording-cache.md (RecordingCacheをRecordingCacheInstance(store注入可能)へ全面インスタンス化。RecordingCacheStore/SessionStoreRecordingCacheStore/InMemoryRecordingCacheStoreを新設。既存static呼び出し元14箇所はdefaultRecordingCacheへ委譲するstatic facadeとして無変更のまま動作、createBackgroundServices側も一貫性維持のためdefaultRecordingCache経由を継続（新規RecordingCacheInstance生成によるキャッシュ分断を回避）。独立性検証テスト5件新規追加。ユーザー確認の上フルインスタンス化を選択。npm test 7994件成功)
 
 ### 2026-08-15 アーカイブ済み
 
@@ -387,14 +395,27 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 35 |
-| 🔶 部分実装 | 0 |
-| **`pbi/` 残存合計** | **35** |
-| アーカイブ済みPBI | 258 |
+| ⬜ 未着手 | 8 |
+| 🔶 部分実装 | 5 |
+| **`pbi/` 残存合計** | **13**（+ 親epic 1件） |
+| アーカイブ済みPBI | 279 |
 | アーカイブ済み実装計画 | 112 |
 
 ※ 2026-08-17: アーキテクチャレビュー由来の14PBIを追加（06〜19）。00〜05は前回セッションから残存。
-※ 2026-08-17: アーキテクチャレビュー第2弾由来の6PBIを追加（29〜34）。SQLite読み取りシーム崩壊・opfsWorker分割・キューリトライ統合・ObsidianClient検証抽出・BackendResolver一元化・クレンジング型導出。
+※ 2026-08-17: アーキテクチャレビュー第2弾由来の6PBIを追加（29〜34）→ 実装完了・アーカイブ済み（2026-08-17）
+※ 2026-08-17: アーキテクチャレビュー第3弾由来の6PBIを追加（35〜40）。着手順はRICE採点で 35→36→37→38→39→40。採点根拠と既存PBIとの重複は [00-backlog-architecture-deepening-batch3.md](2026-08-17-00-backlog-architecture-deepening-batch3.md) を参照。
+※ 2026-08-17: 着手状況の全数調査を実施（Explore並列4本）。01〜28のうち13件が受け入れ基準を満たしアーカイブ、8件が部分実装と判明（INDEX表に🔶注記）、35〜40は新規のため全件未着手を確認。
+
+### 2026-08-17 アーキテクチャレビュー第2弾アーカイブ済み（6件）
+
+PBI-29〜34。アーキテクチャレビュー（post-実装）で再スキャン実施済み。
+
+- 2026-08-17-29-refactor-collapse-sqlite-read-seam.md (SQLite読み取りをStorageQuery値オブジェクトに統合、query/searchを単一化。IdbVfsBackend/OPFS Worker/Fallback/Noopの4アダプタをStorageQuery対応に、契約テスト追加)
+- 2026-08-17-30-refactor-split-opfs-worker-god-module.md (opfsWorker 945行をreadOnlyHandler/coreCrudHandler/maintenanceBatchHandlerの3ハンドラに分割、Workerプロトコルに型付け)
+- 2026-08-17-31-fix-queue-retry-duplication.md (キュー2つのリトライ再実装をflush()へ統合、pendingSqliteQueueにmax-retry付与)
+- 2026-08-17-32-refactor-extract-obsidian-client-validators.md (ObsidianClient内の純関数バリデータを抽出し設定構築を一元化)
+- 2026-08-17-33-refactor-unify-backend-resolver.md (バックエンド選定をBackendResolverに一元化しopfsCapabilitiesを接続)
+- 2026-08-17-34-refactor-derive-cleansing-option-types.md (クレンジング型をCLEANSING_RULESから導出し手書き32フィールドを廃止)
 
 ### 2026-08-09 アーキテクチャレビュー由来（20〜24）の実施順と依存
 

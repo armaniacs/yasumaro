@@ -1,0 +1,438 @@
+/**
+ * recordingCache-settingsCache.test.ts
+ * 設定キャッシュのテスト
+ */
+
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { RecordingCache, SETTINGS_CACHE_TTL } from '../recordingCache.ts';
+import { makeRecordingLogic } from './helpers/makeRecordingLogic.ts';
+import { getSettings, getSavedUrls, setSavedUrls, StorageKeys } from '../../utils/storage.ts';
+import { PrivacyPipeline } from '../privacyPipeline.ts';
+import { NotificationHelper } from '../notificationHelper.ts';
+
+vi.mock('../../utils/storage.ts', async (importOriginal) => {
+  const actual = await importOriginal() as typeof import('../../utils/storage.ts');
+  return {
+    ...actual,
+    getSettings: vi.fn(),
+    getSavedUrls: vi.fn(),
+    setSavedUrls: vi.fn(),
+    StorageKeys: {
+      AI_PROVIDER: 'AI_PROVIDER',
+      GEMINI_API_KEY: 'GEMINI_API_KEY',
+      GEMINI_MODEL: 'GEMINI_MODEL',
+      PRIVACY_MODE: 'PRIVACY_MODE'
+    }
+  };
+});
+vi.mock('../privacyPipeline.ts');
+vi.mock('../notificationHelper.ts');
+vi.mock('../../utils/logger.ts', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
+  logWarn: vi.fn(),
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+  LogType: {
+    DEBUG: 'DEBUG',
+    INFO: 'INFO',
+    WARN: 'WARN',
+    ERROR: 'ERROR'
+  },
+  ErrorCode: {
+    INTERNAL_ERROR: 'INT_001',
+    UNKNOWN_ERROR: 'UNK_001'
+  }
+}));
+vi.mock('../../utils/domainUtils.ts', () => ({
+  isDomainAllowed: vi.fn((url) => Promise.resolve(true))
+}));
+vi.mock('../../utils/piiSanitizer.ts', () => ({
+  sanitizeRegex: vi.fn()
+}));
+
+describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
+  let recordingLogic;
+  const mockObsidianClient = {};
+  const mockAiClient = {};
+
+  beforeEach(() => {
+    recordingLogic = makeRecordingLogic(mockObsidianClient, mockAiClient);
+    vi.clearAllMocks();
+    // Problem #3: 2重キャッシュ構造を1段階に簡素化 - urlCacheも追加
+    Object.assign(RecordingCache.getCacheState(), {
+      settingsCache: null,
+      cacheTimestamp: null,
+      cacheVersion: 0,
+      urlCache: null,
+      urlCacheTimestamp: null
+    });
+    RecordingCache.invalidateUrlCache();
+
+    // デフォルトモック
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+    getSettings.mockResolvedValue({
+      AI_PROVIDER: 'gemini',
+      GEMINI_API_KEY: 'test-key',
+      GEMINI_MODEL: 'gemini-3.1-flash-lite',
+      PRIVACY_MODE: 'masked_cloud'
+    });
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+    getSavedUrls.mockResolvedValue(new Set());
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+    setSavedUrls.mockResolvedValue();
+    StorageKeys.AI_PROVIDER = 'AI_PROVIDER';
+
+    // PrivacyPipelineモック
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+    PrivacyPipeline.mockImplementation(() => ({
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+      process: vi.fn().mockResolvedValue({
+        summary: 'Test summary',
+        maskedContent: 'Masked content'
+      })
+    }));
+
+    // NotificationHelperモック
+    NotificationHelper.notifySuccess = vi.fn();
+    NotificationHelper.notifyError = vi.fn();
+  });
+
+  describe('getSettingsWithCache', () => {
+    it('初回呼び出し時にstorageから設定を取得する', async () => {
+      const settings = await RecordingCache.getSettingsWithCache();
+
+      expect(getSettings).toHaveBeenCalledTimes(1);
+      expect(settings).toHaveProperty('AI_PROVIDER', 'gemini');
+    });
+
+    it('2回目の呼び出し時にキャッシュを使用する', async () => {
+      await RecordingCache.getSettingsWithCache();
+      getSettings.mockClear();
+
+      // 2回目の呼び出し
+      const settings = await RecordingCache.getSettingsWithCache();
+
+      // getSettingsは呼ばれない（キャッシュが使用される）
+      expect(getSettings).not.toHaveBeenCalled();
+      expect(settings).toHaveProperty('AI_PROVIDER', 'gemini');
+    });
+
+    it('キャッシュが期限切れの場合にstorageから設定を再取得する', async () => {
+      await RecordingCache.getSettingsWithCache();
+
+      // Problem #3: 2重キャッシュ構造を1段階に簡素化 - 静的キャッシュのみを使用
+      // キャッシュのタイムスタンプを古くする
+      RecordingCache.getCacheState().cacheTimestamp = Date.now() - SETTINGS_CACHE_TTL - 1000;
+
+      // getSettingsをリセットして新しいモック値を設定
+      getSettings.mockClear();
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+      getSettings.mockResolvedValue({
+        AI_PROVIDER: 'openai',
+        OPENAI_API_KEY: 'openai-key'
+      });
+
+      const settings = await RecordingCache.getSettingsWithCache();
+
+      // getSettingsが再度呼ばれる
+      expect(getSettings).toHaveBeenCalledTimes(1);
+      expect(settings).toHaveProperty('AI_PROVIDER', 'openai');
+    });
+
+    // Problem #3: 2重キャッシュ構造を1段階に簡素化したため、バージョンチェック
+    // ロジック自体が存在しない（TTLに基づく期限切れチェックのみ行われる）。
+    it.skip('キャッシュバージョンが変更された場合に再取得する', () => {});
+
+    it('静的キャッシュが使用可能な場合は静的キャッシュを使用する', async () => {
+      const firstInstance = makeRecordingLogic(mockObsidianClient, mockAiClient);
+      await RecordingCache.getSettingsWithCache();
+      getSettings.mockClear();
+
+      // 2つ目のインスタンスを作成
+      const secondInstance = makeRecordingLogic(mockObsidianClient, mockAiClient);
+      const settings = await RecordingCache.getSettingsWithCache();
+
+      // getSettingsは呼ばれない（静的キャッシュが使用される）
+      expect(getSettings).not.toHaveBeenCalled();
+    });
+
+    it('静的キャッシュが期限切れの場合にstorageから再取得する', async () => {
+      const firstInstance = makeRecordingLogic(mockObsidianClient, mockAiClient);
+      await RecordingCache.getSettingsWithCache();
+
+      // 静的キャッシュのタイムスタンプを古くする
+      RecordingCache.getCacheState().cacheTimestamp = Date.now() - SETTINGS_CACHE_TTL - 1000;
+
+      const secondInstance = makeRecordingLogic(mockObsidianClient, mockAiClient);
+      getSettings.mockClear();
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+      getSettings.mockResolvedValue({
+        AI_PROVIDER: 'updated-provider'
+      });
+
+      const settings = await RecordingCache.getSettingsWithCache();
+
+      // getSettingsが再度呼ばれる
+      expect(getSettings).toHaveBeenCalledTimes(1);
+      expect(settings).toHaveProperty('AI_PROVIDER', 'updated-provider');
+    });
+  });
+
+  describe('invalidateSettingsCache', () => {
+    it('静的キャッシュを無効化する', async () => {
+      // 最初の呼び出しでキャッシュを作成
+      await RecordingCache.getSettingsWithCache();
+      expect(RecordingCache.getCacheState().settingsCache).not.toBeNull();
+
+      // キャッシュを無効化
+      RecordingCache.invalidateSettingsCache();
+
+      expect(RecordingCache.getCacheState().settingsCache).toBeNull();
+    });
+
+    it('無効化後のgetSettingsWithCacheでstorageから再取得する', async () => {
+      await RecordingCache.getSettingsWithCache();
+
+      const cacheVersionBefore = RecordingCache.getCacheState().cacheVersion;
+
+      RecordingCache.invalidateSettingsCache();
+      getSettings.mockClear();
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+      getSettings.mockResolvedValue({
+        AI_PROVIDER: 'new-provider'
+      });
+
+      await RecordingCache.getSettingsWithCache();
+
+      expect(getSettings).toHaveBeenCalledTimes(1);
+      // キャッシュバージョンが増加していることを確認
+      expect(RecordingCache.getCacheState().cacheVersion).toBeGreaterThan(cacheVersionBefore);
+    });
+
+    it('すべてのインスタンスが無効化されたキャッシュを検知する', async () => {
+      // Problem #3: 2重キャッシュ構造を1段階に簡素化
+      // インスタンスキャッシュがないため、このテストは簡素化
+      const instance1 = makeRecordingLogic(mockObsidianClient, mockAiClient);
+      const instance2 = makeRecordingLogic(mockObsidianClient, mockAiClient);
+
+      await RecordingCache.getSettingsWithCache();
+      await RecordingCache.getSettingsWithCache();
+
+      const cacheVersionBefore = RecordingCache.getCacheState().cacheVersion;
+
+      // キャッシュを無効化
+      RecordingCache.invalidateSettingsCache();
+
+      // cacheVersionが増加していることを確認
+      expect(RecordingCache.getCacheState().cacheVersion).toBeGreaterThan(cacheVersionBefore);
+    });
+  });
+
+  // Problem #3: 2重キャッシュ構造を1段階に簡素化
+  // invalidateInstanceCacheはno-opになったため、テストを削除
+
+  describe('recordメソッドでのキャッシュ使用', () => {
+    it('recordメソッドがキャッシュを使用する', async () => {
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+      mockObsidianClient.appendToDailyNote = vi.fn().mockResolvedValue();
+
+      // 最初のrecord呼び出し
+      await recordingLogic.record({
+        title: 'Test Page',
+        url: 'https://example.com',
+        content: 'Test content'
+      });
+
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+      const getSettingsCallsAfterFirst = getSettings.mock.calls.length;
+
+      // 2回目のrecord呼び出し
+      await recordingLogic.record({
+        title: 'Test Page 2',
+        url: 'https://example2.com',
+        content: 'Test content 2'
+      });
+
+      // 2回目の呼び出しでもgetSettingsは追加で呼ばれない（キャッシュ使用）
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+      expect(getSettings.mock.calls.length).toBe(getSettingsCallsAfterFirst);
+    });
+
+    it('キャッシュ期限切れ後にrecordメソッドがstorageから再取得する', async () => {
+      const mockObsidianClient = {
+        appendToDailyNote: vi.fn().mockResolvedValue()
+      };
+      recordingLogic = makeRecordingLogic(mockObsidianClient, mockAiClient);
+
+      // First record call
+      await recordingLogic.record({
+        title: 'Test Page',
+        url: 'https://example.com',
+        content: 'Test content'
+      });
+
+      // Expire the cache
+      RecordingCache.getCacheState().cacheTimestamp = Date.now() - SETTINGS_CACHE_TTL - 1000;
+
+      getSettings.mockClear();
+      getSettings.mockResolvedValue({
+        AI_PROVIDER: 'new-provider'
+      });
+
+      // Second record call
+      await recordingLogic.record({
+        title: 'Test Page 2',
+        url: 'https://example2.com',
+        content: 'Test content 2'
+      });
+
+      expect(getSettings).toHaveBeenCalled();
+    });
+  });
+
+  describe('並列呼び出しの処理', () => {
+    it('複数のrecord呼び出しが並行であっても安全に処理する', async () => {
+      const mockObsidianClient = {
+        appendToDailyNote: vi.fn().mockResolvedValue()
+      };
+      recordingLogic = makeRecordingLogic(mockObsidianClient, mockAiClient);
+
+      // Just verify parallel calls don't throw - the exact behavior may vary
+      const promises = [];
+      for (let i = 0; i < 3; i++) {
+        promises.push(
+          recordingLogic.record({
+            title: `Test Page ${i}`,
+            url: `https://example.com/${i}`,
+            content: `Content ${i}`
+          }).catch(e => ({ success: false, error: e.message }))
+        );
+      }
+
+      const results = await Promise.all(promises);
+
+      // All should either succeed or fail gracefully
+      results.forEach(result => {
+        expect(result).toHaveProperty('success');
+      });
+    });
+
+    it('複数のgetSettingsWithCache呼び出しが安全に処理する', async () => {
+      const promises = [];
+      for (let i = 0; i < 10; i++) {
+        promises.push(RecordingCache.getSettingsWithCache());
+      }
+
+      const results = await Promise.all(promises);
+
+      // すべての結果が設定オブジェクトであることを確認
+      results.forEach(result => {
+        expect(result).toHaveProperty('AI_PROVIDER');
+      });
+
+      // getSettingsは呼ばれるが、キャッシュにより回数が制限される
+      expect(getSettings).toHaveBeenCalled();
+    });
+  });
+
+  describe('エッジケース', () => {
+    it('設定がnullの場合の処理', async () => {
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+      getSettings.mockResolvedValue(null);
+
+      const settings = await RecordingCache.getSettingsWithCache();
+
+      expect(settings).toBeNull();
+    });
+
+    it('設定が空オブジェクトの場合の処理', async () => {
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+      getSettings.mockResolvedValue({});
+
+      const settings = await RecordingCache.getSettingsWithCache();
+
+      expect(settings).toEqual({});
+    });
+
+    it('getSettingsがrejectした場合のエラー伝播', async () => {
+      const error = new Error('Storage error');
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+      getSettings.mockRejectedValue(error);
+
+      await expect(RecordingCache.getSettingsWithCache()).rejects.toThrow('Storage error');
+    });
+
+    it('キャッシュバージョンのオーバーフロー（数値が大きくなった場合）', async () => {
+      // Problem #3: 2重キャッシュ構造を1段階に簡素化
+      RecordingCache.getCacheState().cacheVersion = Number.MAX_SAFE_INTEGER;
+
+      await RecordingCache.getSettingsWithCache();
+
+      // キャッシュバージョンが増加してもエラーがスローされない
+      expect(RecordingCache.getCacheState().cacheVersion).toBeGreaterThanOrEqual(Number.MAX_SAFE_INTEGER);
+    });
+  });
+
+  describe('パフォーマンス検証', () => {
+    it('キャッシュ使用時のパフォーマンス向上を検証する', async () => {
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+      mockObsidianClient.appendToDailyNote = vi.fn().mockResolvedValue();
+
+      // 初回呼び出し（キャッシュミス）
+      const start1 = Date.now();
+      await recordingLogic.record({
+        title: 'Test Page',
+        url: 'https://example.com',
+        content: 'Test content'
+      });
+      const duration1 = Date.now() - start1;
+
+      // 2回目以降の呼び出し（キャッシュヒット）
+      getSettings.mockClear();
+      const start2 = Date.now();
+      await recordingLogic.record({
+        title: 'Test Page 2',
+        url: 'https://example2.com',
+        content: 'Test content 2'
+      });
+      const duration2 = Date.now() - start2;
+
+      // 2回目の呼び出しではgetSettingsが呼ばれないことを確認
+      expect(getSettings).not.toHaveBeenCalled();
+
+      // 注: Jest環境でのテストなので、getSettingsの呼び出し回数を確認する
+      // 実際のパフォーマンス比較は非同期処理のオーバーヘッドにより難しい
+    });
+  });
+});
+
+/**
+ * 実装概要:
+ *
+ * 設定キャッシュの実装により、以下のメリットが期待できます:
+ * 1. chrome.storage.localへのアクセス回数を削減
+ * 2. Service Workerの再起動時にキャッシュ状態を維持（staticキャッシュ）
+ * 3. 設定変更時にキャッシュを簡単に無効化（invalidateSettingsCache）
+ *
+ * キャッシュ戦略:
+ * - インスタンスレベルキャッシュ: RecordingLogicインスタンスごとにキャッシュを持つ
+ * - 静的キャッシュ: Service Worker再起動間で共有キャッシュ
+ * - TTLベースの有効期限: 30秒でキャッシュ期限切れ
+ * - バージョンベースの無効化: 設定変更時にバージョンをインクリメント
+ */
