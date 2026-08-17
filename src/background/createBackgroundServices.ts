@@ -28,6 +28,7 @@ import { createReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import { hasPrivacyConsent } from '../popup/privacyConsent.js';
 import { getSettings } from '../utils/storage.js';
+import { getSavedUrlsWithTimestamps } from '../utils/storage/savedUrlStore.js';
 import { saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlStore.js';
 import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/recordingHandlers.js';
 
@@ -105,6 +106,7 @@ export function createBackgroundServices(): BackgroundServicesComposition {
     obsidian,
     aiService,
     sqliteClient,
+    urlStore: { getSavedUrlsWithTimestamps },
   }));
 
   // Content backfill must not reorder LRU, so the timestamp is left alone. One

@@ -35,7 +35,7 @@
 
 import { addLog, LogType, logError, ErrorCode } from '../../utils/logger.js';
 import { addPendingPage } from '../../utils/pendingStorage.js';
-import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError, type OfflineJobKind, type StepDeps } from './types.js';
+import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError, type OfflineJobKind, type StepDeps, type UrlStore } from './types.js';
 import { buildResult, buildErrorResult, buildPrivatePageResult, notifyObsidianSaveSuccess } from './resultBuilder.js';
 import {
   truncateContentStep,
@@ -75,6 +75,8 @@ export interface RecordingPipelineDeps {
   aiService: AIService | null;
   sqliteClient: SqliteClient | null;
   offlineNetworkQueue?: OfflineNetworkQueue | null;
+  /** URL store for checkDuplicateStep; defaults to chrome.storage.local-backed lookups when omitted. */
+  urlStore?: UrlStore;
 }
 
 /**
@@ -87,7 +89,8 @@ export function createRecordingPipeline(deps: RecordingPipelineDeps): RecordingP
     deps.obsidian,
     deps.aiService,
     deps.sqliteClient,
-    deps.offlineNetworkQueue
+    deps.offlineNetworkQueue,
+    deps.urlStore
   );
 }
 
@@ -100,7 +103,7 @@ export function createRecordingPipeline(deps: RecordingPipelineDeps): RecordingP
  * dependency meant editing several call sites.
  */
 export function buildRecordingPipelineDeps(
-  deps: Pick<RecordingPipelineDeps, 'getPrivacyInfoWithCache' | 'obsidian' | 'aiService' | 'sqliteClient'>,
+  deps: Pick<RecordingPipelineDeps, 'getPrivacyInfoWithCache' | 'obsidian' | 'aiService' | 'sqliteClient' | 'urlStore'>,
 ): RecordingPipelineDeps {
   return {
     ...deps,
@@ -127,6 +130,7 @@ export class RecordingPipeline {
   private aiService: AIService | null;
   private sqliteClient: SqliteClient | null;
   private offlineNetworkQueue: OfflineNetworkQueue | null;
+  private urlStore: UrlStore | undefined;
 
   // Per-URL mutex map (VULN-003 fix: prevents TOCTOU races)
   private static urlRecordMutexes = new Map<string, Mutex>();
@@ -161,13 +165,15 @@ export class RecordingPipeline {
     obsidian: ObsidianClient,
     aiService: AIService | null = null,
     sqliteClient: SqliteClient | null = null,
-    offlineNetworkQueue: OfflineNetworkQueue | null = null
+    offlineNetworkQueue: OfflineNetworkQueue | null = null,
+    urlStore: UrlStore | undefined = undefined
   ) {
     this.getPrivacyInfoWithCache = getPrivacyInfoWithCache;
     this.obsidian = obsidian;
     this.aiService = aiService;
     this.sqliteClient = sqliteClient;
     this.offlineNetworkQueue = offlineNetworkQueue;
+    this.urlStore = urlStore;
 
     // Define pipeline steps with their error strategies
     this.steps = [
@@ -358,6 +364,7 @@ export class RecordingPipeline {
     const deps: StepDeps = {
       obsidian: this.obsidian,
       aiService: this.aiService!,
+      urlStore: this.urlStore,
     };
 
     let context: RecordingContext = {
