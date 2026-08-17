@@ -1,7 +1,7 @@
 // src/offscreen/FallbackStorageAdapter.ts
-import type { StorageBackend, InsertResult, InsertBatchResult, QueryResult, SearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError } from './StorageBackend.js';
+import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError } from './StorageBackend.js';
 import { FallbackStorage } from './storageFallback.js';
-import type { BrowsingLogRecord, QueryOptions, AuditLogRecord } from '../utils/sqlite-types.js';
+import type { BrowsingLogRecord, StorageQuery, AuditLogRecord } from '../utils/sqlite-types.js';
 
 export class FallbackStorageAdapter implements StorageBackend {
   constructor(private fallback: FallbackStorage) {}
@@ -16,21 +16,10 @@ export class FallbackStorageAdapter implements StorageBackend {
     return { success: true, inserted: result.count, skipped: records.length - result.count };
   }
 
-  async query(options: QueryOptions): Promise<BackendOrError<QueryResult>> {
-    const result = await this.fallback.query(options);
+  async query(q: StorageQuery): Promise<BackendOrError<QuerySearchResult>> {
+    const result = await this.fallback.query(q);
     if (!result.success) return result;
-    return { success: true, rows: result.rows as QueryResult['rows'], total: result.total };
-  }
-
-  async search(
-    query: string,
-    limit: number,
-    offset: number,
-    options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
-  ): Promise<BackendOrError<SearchResult>> {
-    const result = await this.fallback.search(query, limit, offset, options);
-    if (!result.success) return result;
-    return { success: true, rows: result.rows as SearchResult['rows'], total: result.total };
+    return { success: true, rows: result.rows as QuerySearchResult['rows'], total: result.total };
   }
 
   async update(id: number, changes: Record<string, unknown>): Promise<BackendOrError<MutationResult>> {

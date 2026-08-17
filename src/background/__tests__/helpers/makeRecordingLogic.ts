@@ -21,10 +21,5 @@ export function makeRecordingLogic(
     aiService: aiService as never,
     sqliteClient: (sqliteClient ?? null) as never,
   }));
-  return new RecordingLogic(
-    obsidian as never,
-    aiService as never,
-    pipeline,
-    (sqliteClient ?? null) as never,
-  );
+  return new RecordingLogic(pipeline);
 }

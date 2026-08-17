@@ -1,5 +1,6 @@
 // src/background/__tests__/recordingLogic.test.ts
 import { RecordingLogic } from '../recordingLogic.js';
+import { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
 import { RecordingCache } from '../recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
 import * as storage from '../../utils/storage.js';
@@ -215,19 +216,19 @@ describe('RecordingLogic', () => {
 
       await logic.record({ url, title: 'Mutex Cleanup', content: 'content' });
 
-      expect((RecordingLogic as any).urlRecordMutexes.has(url)).toBe(false);
+      expect((RecordingPipeline as any).urlRecordMutexes.has(url)).toBe(false);
     });
 
     it('同じ URL の処理が待機中は Mutex エントリを保持する', async () => {
-      const mutexMap = (RecordingLogic as any).urlRecordMutexes;
+      const mutexMap = (RecordingPipeline as any).urlRecordMutexes;
       mutexMap.clear();
       const url = 'https://mutex-queue.example.com';
 
-      const first = (RecordingLogic as any).withUrlRecordMutex(url, async () => {
+      const first = (RecordingPipeline as any).withUrlRecordMutex(url, async () => {
         await new Promise((r) => setTimeout(r, 20));
         return 'first';
       });
-      const second = (RecordingLogic as any).withUrlRecordMutex(url, async () => 'second');
+      const second = (RecordingPipeline as any).withUrlRecordMutex(url, async () => 'second');
 
       await first;
       // first が解放して second に移譲した時点ではまだエントリが残っている必要がある
@@ -275,9 +276,9 @@ describe('RecordingLogic', () => {
 
     it('waits for the same-URL mutex before writing to Obsidian', async () => {
       const url = 'https://retry-serialize.example.com';
-      const mutexMap = (RecordingLogic as any).urlRecordMutexes;
+      const mutexMap = (RecordingPipeline as any).urlRecordMutexes;
       mutexMap.clear();
-      const mutex = (RecordingLogic as any).getUrlMutex(url);
+      const mutex = (RecordingPipeline as any).getUrlMutex(url);
       await mutex.acquire();
 
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);

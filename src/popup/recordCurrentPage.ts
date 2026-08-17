@@ -22,10 +22,17 @@ export function setRecordCurrentPageFn(fn: (force: boolean) => Promise<void>): v
   _recordCurrentPageFn = fn;
 }
 
-// 「それでも記録」ボタン表示中フラグ（recordCurrentPage の finally でのリセットを防ぐ）
-let isAwaitingForceConfirm = false;
-// 記録結果状態（成功/失敗）を表示中のフラグ
-let isShowingResultState = false;
+/**
+ * ポップアップUIの可変状態を集約する。
+ * モジュールレベルの個別変数を1オブジェクトにまとめ、
+ * テストでの状態リセットを容易にする。
+ */
+const uiState = {
+  /** 「それでも記録」ボタン表示中フラグ */
+  isAwaitingForceConfirm: false,
+  /** 記録結果状態（成功/失敗）を表示中のフラグ */
+  isShowingResultState: false,
+};
 
 export async function loadCurrentTab(): Promise<void> {
   const tab = await getCurrentTab();
@@ -85,12 +92,12 @@ function setRecordAnywayButton(
   tab: chrome.tabs.Tab,
   content: string
 ): void {
-  isAwaitingForceConfirm = true;
+  uiState.isAwaitingForceConfirm = true;
   recordBtn.disabled = false;
   recordBtn.textContent = getMessage('forceRecordAnyway') || 'Record Anyway';
   // .onclick property assignment intentional here too — see resetRecordButton() above.
   recordBtn.onclick = () => {
-    isAwaitingForceConfirm = false;
+    uiState.isAwaitingForceConfirm = false;
     return handleRecordNowClick(true, tab, content);
   };
 }
@@ -114,13 +121,13 @@ export async function handleRecordNowClick(
 }
 
 function showButtonResultState(recordBtn: HTMLButtonElement, state: 'done' | 'error'): void {
-  isAwaitingForceConfirm = false;
-  isShowingResultState = true;
+  uiState.isAwaitingForceConfirm = false;
+  uiState.isShowingResultState = true;
   recordBtn.disabled = true;
   recordBtn.textContent = getMessage(state === 'done' ? 'recordNowDone' : 'recordNowError')
     || (state === 'done' ? 'Saved!' : 'Failed');
   setTimeout(() => {
-    isShowingResultState = false;
+    uiState.isShowingResultState = false;
     const btn = document.getElementById('recordBtn') as HTMLButtonElement | null;
     if (btn) void resetRecordButton(btn);
   }, 2000);
@@ -423,6 +430,60 @@ async function showCopyMarkdownButton(
   }
 }
 
+/**
+ * コンテンツスクリプトからページ内容を取得する。
+ * パーミッション不足時はスクリプティングAPIでフォールバック。
+ *
+ * @returns 取得されたコンテンツレスポンス
+ * @throws 取得不能な場合はエラー
+ */
+async function fetchPageContent(
+  tab: chrome.tabs.Tab,
+  force: boolean,
+): Promise<ContentResponse> {
+  if (!tab.id) throw new Error('No active tab found');
+
+  showSpinner(getMessage('fetchingContent'));
+
+  try {
+    const contentResponse = await Promise.race([
+      chrome.tabs.sendMessage(tab.id, { type: 'GET_CONTENT' }) as Promise<ContentResponse>,
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Content script response timeout')), 5000);
+      })
+    ]);
+    if (chrome.runtime.lastError) {
+      throw new Error(chrome.runtime.lastError.message);
+    }
+    return contentResponse;
+  } catch (_e: unknown) {
+    let hasPermission = false;
+    try {
+      hasPermission = await chrome.permissions.contains({ origins: ['<all_urls>'] });
+      if (!hasPermission) {
+        hasPermission = await chrome.permissions.request({ origins: ['<all_urls>'] });
+      }
+    } catch { /* パーミッション要求失敗 */ }
+
+    if (!hasPermission) {
+      throw new Error(getMessage('errorContentScriptNotAvailable'));
+    }
+
+    try {
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => document.body?.innerText || ''
+      });
+      return { content: results?.[0]?.result || '' };
+    } catch (_e2: unknown) {
+      if (force) {
+        return { content: '' };
+      }
+      throw new Error(getMessage('errorContentScriptNotAvailable'));
+    }
+  }
+}
+
 export async function recordCurrentPage(force: boolean = false): Promise<void> {
   const startTime = performance.now();
   const statusDiv = document.getElementById('mainStatus');
@@ -452,43 +513,14 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
     const settings = await getSettings();
     const _usePreview = settings[StorageKeys.PII_CONFIRMATION_UI] !== false;
 
-    showSpinner(getMessage('fetchingContent'));
     let contentResponse: ContentResponse;
     try {
-      contentResponse = await Promise.race([
-        chrome.tabs.sendMessage(tab.id, { type: 'GET_CONTENT' }) as Promise<ContentResponse>,
-        new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Content script response timeout')), 5000);
-        })
-      ]);
-      if (chrome.runtime.lastError) {
-        throw new Error(chrome.runtime.lastError.message);
-      }
-    } catch (_e: unknown) {
-      let hasPermission = false;
-      try {
-        hasPermission = await chrome.permissions.contains({ origins: ['<all_urls>'] });
-        if (!hasPermission) {
-          hasPermission = await chrome.permissions.request({ origins: ['<all_urls>'] });
-        }
-      } catch { /* パーミッション要求失敗 */ }
-
-      if (!hasPermission) {
-        throw new Error(getMessage('errorContentScriptNotAvailable'));
-      }
-
-      try {
-        const results = await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: () => document.body?.innerText || ''
-        });
-        contentResponse = { content: results?.[0]?.result || '' };
-      } catch (_e2: unknown) {
-        if (force) {
-          contentResponse = { content: '' };
-        } else {
-          throw new Error(getMessage('errorContentScriptNotAvailable'));
-        }
+      contentResponse = await fetchPageContent(tab, force);
+    } catch (e: unknown) {
+      if (force) {
+        contentResponse = { content: '' };
+      } else {
+        throw e instanceof Error ? e : new Error(String(e));
       }
     }
 
@@ -571,7 +603,7 @@ export async function recordCurrentPage(force: boolean = false): Promise<void> {
     }
     showError(statusDiv, error, () => recordCurrentPage(true));
   } finally {
-    if (!isAwaitingForceConfirm && !isShowingResultState) {
+    if (!uiState.isAwaitingForceConfirm && !uiState.isShowingResultState) {
       const btn = document.getElementById('recordBtn') as HTMLButtonElement | null;
       const currentTab = await getCurrentTab();
       if (btn && currentTab && isRecordable(currentTab)) {

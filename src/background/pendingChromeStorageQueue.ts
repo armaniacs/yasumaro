@@ -103,15 +103,87 @@ function truncatePatchToFit(
   return { patch: result, contentOmitted, tagsOmitted };
 }
 
-const adapter = new ChromeStorageAdapter();
-const queue = new PersistentRetryQueue<QueuedChromeStorageWrite>(adapter, {
-  storageKey: PENDING_CHROME_STORAGE_KEY,
-  maxSize: MAX_PENDING_WRITES,
-  logLabel: 'pendingChromeStorageQueue',
-  maxPayloadBytes: MAX_PATCH_PAYLOAD_BYTES,
-  maxRetryCount: 5,
-  ttlMs: 7 * 24 * 60 * 60 * 1000, // 7 days
-});
+/**
+ * Create a pending write queue with the given adapter.
+ * The default export uses ChromeStorageAdapter; tests can inject InMemoryAdapter.
+ */
+export function createPendingWriteQueue(adapter: ChromeStorageAdapter) {
+  const queue = new PersistentRetryQueue<QueuedChromeStorageWrite>(adapter, {
+    storageKey: PENDING_CHROME_STORAGE_KEY,
+    maxSize: MAX_PENDING_WRITES,
+    logLabel: 'pendingChromeStorageQueue',
+    maxPayloadBytes: MAX_PATCH_PAYLOAD_BYTES,
+    maxRetryCount: 5,
+    ttlMs: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+
+  return {
+    async enqueuePendingWrite(write: QueuedChromeStorageWrite): Promise<void> {
+      if ('type' in write && write.type === 'metadataPatch') {
+        const existing = await queue.load();
+        const sameUrlIndex = existing.findIndex(
+          (w) => 'type' in w && (w as PendingMetadataPatchWrite).type === 'metadataPatch' && (w as PendingMetadataPatchWrite).url === write.url,
+        );
+        if (sameUrlIndex >= 0) {
+          const existingPatch = existing[sameUrlIndex] as PendingMetadataPatchWrite;
+          const mergedPatch = { ...existingPatch.patch, ...write.patch };
+          if (write.mergeTags && existingPatch.mergeTags && existingPatch.patch.tags && write.patch.tags) {
+            mergedPatch.tags = Array.from(new Set([...(existingPatch.patch.tags || []), ...(write.patch.tags || [])]));
+          }
+          const latestTimestamp = Math.max(existingPatch.timestamp || 0, write.timestamp || 0);
+          const { patch: fittedPatch, contentOmitted, tagsOmitted } = truncatePatchToFit(mergedPatch);
+          existing[sameUrlIndex] = {
+            ...existingPatch,
+            patch: fittedPatch,
+            timestamp: latestTimestamp,
+            createdAt: existingPatch.createdAt,
+            retryCount: 0,
+            contentOmitted,
+            tagsOmitted,
+          };
+
+          await queue.save(existing);
+          return;
+        }
+      }
+
+      // Truncate new metadata patches that exceed the payload limit.
+      let queuedWrite = write;
+      if ('type' in write && write.type === 'metadataPatch') {
+        const { patch: fittedPatch, contentOmitted, tagsOmitted } = truncatePatchToFit((write as PendingMetadataPatchWrite).patch);
+        if (contentOmitted || tagsOmitted) {
+          queuedWrite = {
+            ...write,
+            patch: fittedPatch,
+            contentOmitted,
+            tagsOmitted,
+          } as PendingMetadataPatchWrite;
+        }
+      }
+      await queue.enqueue(queuedWrite);
+    },
+
+    async flushPendingWrites(
+      retryFn: (write: QueuedChromeStorageWrite) => Promise<boolean>
+    ): Promise<void> {
+      const writes = await queue.load();
+      if (writes.length === 0) return;
+
+      const stillPending = await queue.flush(retryFn);
+
+      if (stillPending.length < writes.length) {
+        addLog(LogType.INFO, 'pendingChromeStorageQueue: flushed queued writes', {
+          recovered: writes.length - stillPending.length,
+          remaining: stillPending.length,
+        });
+      }
+    },
+  };
+}
+
+// Default instance for production use
+const defaultAdapter = new ChromeStorageAdapter();
+const defaultQueue = createPendingWriteQueue(defaultAdapter);
 
 /**
  * Queue a chrome.storage.local write that failed. Best-effort: a queue
@@ -123,68 +195,11 @@ const queue = new PersistentRetryQueue<QueuedChromeStorageWrite>(adapter, {
  * wins, tags are combined when mergeTags is enabled) instead of appending
  * a duplicate entry.
  */
-export async function enqueuePendingWrite(write: QueuedChromeStorageWrite): Promise<void> {
-  if ('type' in write && write.type === 'metadataPatch') {
-    const existing = await queue.load();
-    const sameUrlIndex = existing.findIndex(
-      (w) => 'type' in w && (w as PendingMetadataPatchWrite).type === 'metadataPatch' && (w as PendingMetadataPatchWrite).url === write.url,
-    );
-    if (sameUrlIndex >= 0) {
-      const existingPatch = existing[sameUrlIndex] as PendingMetadataPatchWrite;
-      const mergedPatch = { ...existingPatch.patch, ...write.patch };
-      if (write.mergeTags && existingPatch.mergeTags && existingPatch.patch.tags && write.patch.tags) {
-        mergedPatch.tags = Array.from(new Set([...(existingPatch.patch.tags || []), ...(write.patch.tags || [])]));
-      }
-      const latestTimestamp = Math.max(existingPatch.timestamp || 0, write.timestamp || 0);
-      const { patch: fittedPatch, contentOmitted, tagsOmitted } = truncatePatchToFit(mergedPatch);
-      existing[sameUrlIndex] = {
-        ...existingPatch,
-        patch: fittedPatch,
-        timestamp: latestTimestamp,
-        createdAt: existingPatch.createdAt,
-        retryCount: 0,
-        contentOmitted,
-        tagsOmitted,
-      };
-
-      await queue.save(existing);
-      return;
-    }
-  }
-
-  // Truncate new metadata patches that exceed the payload limit.
-  let queuedWrite = write;
-  if ('type' in write && write.type === 'metadataPatch') {
-    const { patch: fittedPatch, contentOmitted, tagsOmitted } = truncatePatchToFit((write as PendingMetadataPatchWrite).patch);
-    if (contentOmitted || tagsOmitted) {
-      queuedWrite = {
-        ...write,
-        patch: fittedPatch,
-        contentOmitted,
-        tagsOmitted,
-      } as PendingMetadataPatchWrite;
-    }
-  }
-  await queue.enqueue(queuedWrite);
-}
+export const enqueuePendingWrite = defaultQueue.enqueuePendingWrite;
 
 /**
  * Retry every queued write. Writes that succeed are removed from the
  * queue; writes that fail stay queued for the next flush.
  * @param retryFn - Performs the actual retry; returns true on success.
  */
-export async function flushPendingWrites(
-  retryFn: (write: QueuedChromeStorageWrite) => Promise<boolean>
-): Promise<void> {
-  const writes = await queue.load();
-  if (writes.length === 0) return;
-
-  const stillPending = await queue.flush(retryFn);
-
-  if (stillPending.length < writes.length) {
-    addLog(LogType.INFO, 'pendingChromeStorageQueue: flushed queued writes', {
-      recovered: writes.length - stillPending.length,
-      remaining: stillPending.length,
-    });
-  }
-}
+export const flushPendingWrites = defaultQueue.flushPendingWrites;

@@ -3,18 +3,15 @@
  * Direct verification of createAIService — the composition root that wires
  * LocalAIService + RemoteAIService + FallbackAIService together.
  *
- * The injection seams ({ aiClient }, { builtInAiClient }) are only exercised
+ * The injection seams ({ remoteAiService }, { builtInAiClient }) are exercised
  * through createBackgroundServices today; this test pins them at the factory
  * boundary so a regression in the wiring is caught without the full background
  * composition.
- *
- * RemoteAIService is created inside AIClient; createAIService reuses
- * aiClient.remoteAiService instead of constructing a new RemoteAIService.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../aiClient.js', () => ({
-  AIClient: vi.fn(),
+vi.mock('../RemoteAIService.js', () => ({
+  RemoteAIService: vi.fn(),
 }));
 vi.mock('../../builtInAIClient.js', () => ({
   BuiltInAIClient: vi.fn(),
@@ -26,13 +23,13 @@ vi.mock('../LocalAIService.js', () => ({
   LocalAIService: vi.fn(),
 }));
 
-import { AIClient } from '../../aiClient.js';
+import { RemoteAIService } from '../RemoteAIService.js';
 import { BuiltInAIClient } from '../../builtInAIClient.js';
 import { FallbackAIService } from '../FallbackAIService.js';
 import { LocalAIService } from '../LocalAIService.js';
 import { createAIService } from '../aiServiceFactory.js';
 
-const AIClientMock = AIClient as unknown as ReturnType<typeof vi.fn>;
+const RemoteAIServiceMock = RemoteAIService as unknown as ReturnType<typeof vi.fn>;
 const BuiltInAIClientMock = BuiltInAIClient as unknown as ReturnType<typeof vi.fn>;
 const FallbackAIServiceMock = FallbackAIService as unknown as ReturnType<typeof vi.fn>;
 const LocalAIServiceMock = LocalAIService as unknown as ReturnType<typeof vi.fn>;
@@ -43,11 +40,10 @@ function lastInstance(mock: ReturnType<typeof vi.fn>): unknown {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // AIClient must be constructable with `new`; give each instance a fake
-  // remoteAiService so FallbackAIService receives a truthy remote without
-  // constructing a real RemoteAIService.
-  AIClientMock.mockImplementation(function AIClientMockCtor() {
-    return { remoteAiService: { fakeRemote: true } };
+  // RemoteAIService must be constructable with `new`; give each instance a fake
+  // so FallbackAIService receives a truthy remote without constructing a real one.
+  RemoteAIServiceMock.mockImplementation(function RemoteAIServiceMockCtor() {
+    return { fakeRemote: true };
   });
 });
 
@@ -55,27 +51,27 @@ describe('createAIService', () => {
   it('builds the default composition: local + remote inside FallbackAIService', () => {
     const service = createAIService();
 
-    expect(AIClientMock).toHaveBeenCalledTimes(1);
+    expect(RemoteAIServiceMock).toHaveBeenCalledTimes(1);
     expect(BuiltInAIClientMock).toHaveBeenCalledTimes(1);
     expect(FallbackAIServiceMock).toHaveBeenCalledTimes(1);
 
-    const aiClientInstance = lastInstance(AIClientMock) as { remoteAiService: unknown };
+    const remoteInstance = lastInstance(RemoteAIServiceMock);
     const local = lastInstance(LocalAIServiceMock);
     expect(FallbackAIServiceMock).toHaveBeenCalledWith({
       local,
-      remote: aiClientInstance.remoteAiService,
+      remote: remoteInstance,
     });
     expect(service).toBe(lastInstance(FallbackAIServiceMock));
   });
 
-  it('uses the injected aiClient instead of constructing a new AIClient', () => {
-    const injected = { fake: true, remoteAiService: { injectedRemote: true } } as unknown as AIClient;
-    createAIService({ aiClient: injected });
+  it('uses the injected remoteAiService instead of constructing a new RemoteAIService', () => {
+    const injected = { injectedRemote: true } as unknown as RemoteAIService;
+    createAIService({ remoteAiService: injected });
 
-    expect(AIClientMock).not.toHaveBeenCalled();
+    expect(RemoteAIServiceMock).not.toHaveBeenCalled();
     expect(FallbackAIServiceMock).toHaveBeenCalledWith({
       local: expect.anything(),
-      remote: injected.remoteAiService,
+      remote: injected,
     });
   });
 
@@ -88,15 +84,15 @@ describe('createAIService', () => {
   });
 
   it('accepts both injection seams at once and wires each service to its client', () => {
-    const aiClient = { fake: 'ai', remoteAiService: { fakeRemote: 'ai' } } as unknown as AIClient;
+    const remoteAiService = { fakeRemote: 'ai' } as unknown as RemoteAIService;
     const builtInAiClient = { fake: 'builtin' } as unknown as BuiltInAIClient;
-    createAIService({ aiClient, builtInAiClient });
+    createAIService({ remoteAiService, builtInAiClient });
 
-    expect(AIClientMock).not.toHaveBeenCalled();
+    expect(RemoteAIServiceMock).not.toHaveBeenCalled();
     expect(BuiltInAIClientMock).not.toHaveBeenCalled();
     expect(FallbackAIServiceMock).toHaveBeenCalledWith({
       local: expect.anything(),
-      remote: aiClient.remoteAiService,
+      remote: remoteAiService,
     });
     expect(LocalAIServiceMock).toHaveBeenCalledWith({ localAiClient: builtInAiClient });
   });
@@ -105,7 +101,7 @@ describe('createAIService', () => {
     createAIService();
     createAIService();
 
-    expect(AIClientMock).toHaveBeenCalledTimes(2);
+    expect(RemoteAIServiceMock).toHaveBeenCalledTimes(2);
     expect(BuiltInAIClientMock).toHaveBeenCalledTimes(2);
     expect(LocalAIServiceMock).toHaveBeenCalledTimes(2);
     expect(FallbackAIServiceMock).toHaveBeenCalledTimes(2);

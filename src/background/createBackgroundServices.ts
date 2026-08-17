@@ -8,8 +8,8 @@
  * message paths observe the same references instead of rebuilding per message.
  */
 
-import { AIClient } from './aiClient.js';
 import { createAIService } from './ai/aiServiceFactory.js';
+import { RemoteAIService } from './ai/RemoteAIService.js';
 import type { AIService } from './ai/AIService.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { getSharedSqliteClient } from './sqliteClient.js';
@@ -36,13 +36,11 @@ export interface BackgroundServices {
   tabCache: TabCache;
   rateLimiter: RateLimiter;
   manualContentFetcher: ManualContentFetcher;
-  aiClient: AIClient;
   /**
-   * The AIService composition built over aiClient.
+   * The AIService composition root.
    *
-   * Previously this was created internally and thrown away, so callers could
-   * only reach the raw AIClient — the exact dependency ADR 2026-07-27 asks new
-   * code to avoid. Returning it makes the module usable without violating that.
+   * Previously accessed through AIClient (ADR 2026-07-27); now created
+   * directly via createAIService with a shared RemoteAIService instance.
    */
   aiService: AIService;
   sessionStore: SessionStore;
@@ -86,8 +84,8 @@ export function createBackgroundServices(): BackgroundServicesComposition {
   const tabCache = new TabCache(sessionStore);
   const rateLimiter = new RateLimiter(sessionStore);
   const manualContentFetcher = new ManualContentFetcher();
-  const aiClient = new AIClient();
-  const aiService = createAIService({ aiClient });
+  const remoteAiService = new RemoteAIService();
+  const aiService = createAIService({ remoteAiService });
 
   // One shared review summary generator for the alarm and message paths
   // (deep-dig 子PBI 5): both observe the same AIService composition.
@@ -101,7 +99,7 @@ export function createBackgroundServices(): BackgroundServicesComposition {
     sqliteClient,
   }));
 
-  const recordingLogic = new RecordingLogic(obsidian, aiService, recordingPipeline, sqliteClient);
+  const recordingLogic = new RecordingLogic(recordingPipeline);
 
   // Content backfill must not reorder LRU, so the timestamp is left alone. One
   // closure is shared by both recording handlers instead of being rebuilt per
@@ -133,7 +131,6 @@ export function createBackgroundServices(): BackgroundServicesComposition {
     tabCache,
     rateLimiter,
     manualContentFetcher,
-    aiClient,
     aiService,
     reviewSummaryGenerator,
     sessionStore,

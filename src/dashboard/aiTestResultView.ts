@@ -7,7 +7,7 @@
  * DOM を触らず文字列を返すので単体テストできる。
  */
 
-import { PROVIDER_LABELS } from '../background/aiClient.js';
+import { PROVIDER_LABELS } from '../utils/aiProviderLabels.js';
 
 /** 表示に必要な範囲だけを受け取る（aiClient の型に依存しすぎないため） */
 export interface AiTestProviderView {

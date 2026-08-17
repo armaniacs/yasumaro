@@ -2,7 +2,7 @@
 /**
  * sqlite-search-fts5.test.ts
  *
- * Verifies that search() in sqlite.ts proxies via the worker's SEARCH message
+ * Verifies that query() with text in sqlite.ts proxies via the worker's QUERY message
  * (real FTS5) and returns rank-bearing rows when the OPFS worker is available.
  *
  * Approach: FakeWorker stub via vi.stubGlobal('Worker', FakeWorker).
@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import type { SearchResult } from '../../utils/sqlite-types.js';
+import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 
 // ---------------------------------------------------------------------------
 // FakeWorker — tracks received messages and responds like the real opfsWorker
@@ -40,8 +40,8 @@ class FakeWorker {
       result = { initialized: true };
     } else if (type === 'STATUS') {
       result = { initialized: true, path: 'smart-history.db', fallback: false, fts5: true, count: 0 };
-    } else if (type === 'SEARCH') {
-      const row: SearchResult = {
+    } else if (type === 'QUERY') {
+      const row: BrowsingLogEntry & { rank: number } = {
         id: 1,
         url: 'https://a.com',
         title: 't',
@@ -108,14 +108,14 @@ afterEach(() => {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('search() — OPFS worker SEARCH proxy (FTS5)', () => {
-  it('routes search() to the worker SEARCH message and returns rank-bearing rows', async () => {
+describe('query() with text — OPFS worker QUERY proxy (FTS5)', () => {
+  it('routes query({ text }) to the worker QUERY message and returns rank-bearing rows', async () => {
     const mod = await import('./sqliteTestApi.js');
 
     const initOk = await mod.init();
     expect(initOk).toBe(true);
 
-    const result = await mod.search('hello', 50, 0);
+    const result = await mod.query({ text: 'hello', limit: 50 });
 
     // Must succeed
     expect(result.success).toBe(true);
@@ -126,14 +126,10 @@ describe('search() — OPFS worker SEARCH proxy (FTS5)', () => {
     expect(result.rows[0].rank).toBe(-1.5);
     expect(result.total).toBe(1);
 
-    // The worker must have received a SEARCH message (not QUERY)
-    const searchMsg = fakeWorkerMessages.find(m => m.type === 'SEARCH');
-    expect(searchMsg).toBeDefined();
-    expect((searchMsg?.payload as { searchQuery: string }).searchQuery).toBe('hello');
-
-    // No QUERY message should have been sent for the search
+    // The worker must have received a QUERY message with text
     const queryMsg = fakeWorkerMessages.find(m => m.type === 'QUERY');
-    expect(queryMsg).toBeUndefined();
+    expect(queryMsg).toBeDefined();
+    expect((queryMsg?.payload as { text: string }).text).toBe('hello');
   });
 
   it('fts5Available is true after OPFS worker initialises', async () => {

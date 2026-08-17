@@ -1,7 +1,7 @@
 import { getMessage } from '../../../utils/i18n.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../../background/messageTypes.js';
 import { getSettings, StorageKeys } from '../../../utils/storage.js';
-import { PROVIDER_LABELS } from '../../../background/aiClient.js';
+import { PROVIDER_LABELS } from '../../../utils/aiProviderLabels.js';
 import { makeStatRow, getSeverityLabel } from '../../diagnosticUtils.js';
 
 import { UI_COLORS } from '../../../constants/appConstants.js';

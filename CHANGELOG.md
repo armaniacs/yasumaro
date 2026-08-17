@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.49` リリース。
+> - 現時点では `v6.7.50` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -38,6 +38,22 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 （次のリリースに向けての変更をここに記載）
+
+## [6.7.50] - 2026-08-17
+
+### Refactor
+
+- `SqliteEngineContext`（718行）を OPFS Worker プロキシ、IDB エンジンライフサイクル、マイグレーションバックアップ、フォールバックマイグレーションの4モジュールに分割。ファサードは268行に削減し、既存の public API（`engine`, `DB_FILENAME`, `MAX_QUERY_LIMIT`, `extractDomain`）は不変
+- `extractor.ts` のオプション構築（32フィールドの CleansingConfig → CleanseOptions 変換）を `contentExtractor/optionBuilder.ts` に集約。コンテンツ抽出パイプラインの重複を解消し、新しいクレンジングルール追加時の修正箇所を2箇所から1箇所に削減
+- `AIClient`（RemoteAIService の委譲ラッパー）を削除。`createBackgroundServices` と `aiServiceFactory` が `RemoteAIService` を直接使用する構造に変更。`PROVIDER_LABELS` / `MultiProviderTestResult` / `AiTestProgress` の型は適切なソース（`aiProviderLabels.ts`, `AIService.ts`）からインポートするように変更
+- `RecordingCache` に `createRecordingCache(sessionStore?)` ファクトリ関数を追加。テストで注入可能なストアと独立したキャッシュインスタンスを作成可能に。既存の static API はデフォルトシングルトンに委譲し、呼び出し元は変更不要
+- `service-worker.ts`（579行）から `confirmTokenManager.ts`, `alarmHandler.ts`, `deferredMigrations.ts`, `dashboardSqliteWiring.ts`, `retryPendingWrites.ts`, `messageHandler.ts` の6モジュールに責務を抽出。ファサードは214行に削減
+
+### Fixed
+
+- `DB_FILENAME` が3ファイルで独立宣言されていた問題を修正。`idbEngineLifecycle.ts` を単一ソースとし、`migrationBackup.ts` と `sqliteEngineContext.ts` がそこからインポート/再エクスポートする構造に変更
+- `sqliteEngineContext.ts` の未使用再エクスポート7件を削除。外部からインポートされていない内部モジュールの型・関数はファサード公開APIから除外
+- `optionBuilder.ts` の未使用 `ExtractionOptions` export を削除
 
 ## [6.7.49] - 2026-08-17
 

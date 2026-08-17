@@ -136,6 +136,7 @@ export interface RecordingData {
   aiSummaryCleansedReasons?: string[];  // 複数理由の詳細リスト（multiple時）
   fallbackTriggered?: boolean;          // NEW: フォールバックが発動したか
   cleansedReason?: string;              // コンテンツクレンジング実行理由 (hard/keyword/both/none)
+  precomputedMaskedCount?: number;      // 事前計算済みPIIマスク件数（privacy pipeline経由不要時）
 }
 
 // ============================================================================

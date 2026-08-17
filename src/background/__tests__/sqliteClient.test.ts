@@ -158,7 +158,7 @@ describe('SqliteClient', () => {
   });
 
   describe('search', () => {
-    it('sends SQLITE_SEARCH message with query', async () => {
+    it('sends SQLITE_QUERY message with text via searchResult', async () => {
       sendMessageMock.mockImplementation(
         (_msg: unknown, callback: (response: unknown) => void) => {
           callback({
@@ -173,14 +173,14 @@ describe('SqliteClient', () => {
       expect(result).toEqual({ success: true, data: { rows: [], total: 0 } });
       expect(sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'SQLITE_SEARCH',
-          payload: { query: 'typescript', limit: 20, offset: 0 },
+          type: 'SQLITE_QUERY',
+          payload: { text: 'typescript', limit: 20, offset: 0 },
         }),
         expect.any(Function)
       );
     });
 
-    it('forwards orderBy/orderDir into the SQLITE_SEARCH payload', async () => {
+    it('forwards orderBy/orderDir into the SQLITE_QUERY payload via searchResult', async () => {
       sendMessageMock.mockImplementation(
         (_msg: unknown, callback: (response: unknown) => void) => {
           callback({ success: true, rows: [], total: 0 });
@@ -194,8 +194,8 @@ describe('SqliteClient', () => {
       expect(result).toEqual({ success: true, data: { rows: [], total: 0 } });
       expect(sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'SQLITE_SEARCH',
-          payload: { query: 'kddi', limit: 20, offset: 0, orderBy: 'created_at', orderDir: 'ASC' },
+          type: 'SQLITE_QUERY',
+          payload: { text: 'kddi', limit: 20, offset: 0, orderBy: 'created_at', orderDir: 'ASC' },
         }),
         expect.any(Function)
       );
@@ -211,8 +211,8 @@ describe('SqliteClient', () => {
       await client.searchResult('kddi', 20, 0);
       expect(sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'SQLITE_SEARCH',
-          payload: { query: 'kddi', limit: 20, offset: 0, orderBy: undefined, orderDir: undefined },
+          type: 'SQLITE_QUERY',
+          payload: { text: 'kddi', limit: 20, offset: 0, orderBy: undefined, orderDir: undefined },
         }),
         expect.any(Function)
       );

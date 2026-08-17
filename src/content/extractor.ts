@@ -12,6 +12,7 @@ import { createSender } from '../utils/retryHelper.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
 import { extractMainContent } from '../utils/contentExtractor/index.js';
+import { buildExtractionOptions } from '../utils/contentExtractor/optionBuilder.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
 import { PageState, DEFAULT_CLEANSING_CONFIG, type CleansingConfig } from './pageState.js';
 import { CLEANSING_RULES } from '../utils/aiSummaryCleaner/rules.js';
@@ -73,63 +74,7 @@ const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
  * @returns {string} - 抽出されたコンテンツ（最大10,000文字）
  */
 export function extractPageContent(config: CleansingConfig = pageState.cleansingConfig): string {
-    const cleanseOptions = {
-        cleanseEnabled: config.contentStripHardEnabled || config.contentStripKeywordEnabled,
-        hardStripEnabled: config.contentStripHardEnabled,
-        keywordStripEnabled: config.contentStripKeywordEnabled,
-        keywords: config.contentStripKeywords,
-        returnInfo: true,
-        whitelistExtractionEnabled: config.whitelistExtractionEnabled
-    };
-    // AI要約クレンジングオプション（ストレージから取得）
-    const aiSummaryCleanseOptions = {
-        aiSummaryCleanseEnabled: config.aiSummaryCleansingEnabled,
-        altEnabled: config.aiSummaryCleansingAlt,
-        metadataEnabled: config.aiSummaryCleansingMetadata,
-        adsEnabled: config.aiSummaryCleansingAds,
-        navEnabled: config.aiSummaryCleansingNav,
-        socialEnabled: config.aiSummaryCleansingSocial,
-        deepEnabled: config.aiSummaryCleansingDeep,
-        jsonLdEnabled: config.aiSummaryCleansingJsonLd,
-        lazyLoadEnabled: config.aiSummaryCleansingLazyLoad,
-        skipLinkEnabled: config.aiSummaryCleansingSkipLink,
-        cardEnabled: config.aiSummaryCleansingCard,
-        linkDensityEnabled: config.aiSummaryCleansingLinkDensity,
-        fixedEnabled: config.aiSummaryCleansingFixed,
-        recommendEnabled: config.aiSummaryCleansingRecommend,
-        paginationEnabled: config.aiSummaryCleansingPagination,
-        snsPromoEnabled: config.aiSummaryCleansingSnsPromo,
-        popupEnabled: config.aiSummaryCleansingPopup,
-        platformEnabled: config.aiSummaryCleansingPlatform,
-        textDensityEnabled: config.aiSummaryCleansingTextDensity,
-        shortSeqEnabled: config.aiSummaryCleansingShortSeq,
-        symbolLineEnabled: config.aiSummaryCleansingSymbolLine,
-        linkParaEnabled: config.aiSummaryCleansingLinkPara,
-        enhancedHiddenEnabled: config.aiSummaryCleansingEnhancedHidden,
-        emptyElemEnabled: config.aiSummaryCleansingEmptyElem,
-        jpLayoutEnabled: config.aiSummaryCleansingJpLayout,
-        jpNavigationEnabled: config.aiSummaryCleansingJpNavigation,
-        authorEnabled: config.aiSummaryCleansingAuthor,
-        affiliateEnabled: config.aiSummaryCleansingAffiliate,
-        speechBubbleEnabled: config.aiSummaryCleansingSpeechBubble,
-        newsMediaEnabled: config.aiSummaryCleansingNewsMedia,
-        ecSiteEnabled: config.aiSummaryCleansingEcSite,
-        qaSiteEnabled: config.aiSummaryCleansingQaSite,
-        videoSiteEnabled: config.aiSummaryCleansingVideoSite,
-        linkRatioThreshold: config.aiSummaryCleansingLinkRatioThreshold,
-        shortTextThreshold: config.aiSummaryCleansingShortTextThreshold,
-        shortSeqCount: config.aiSummaryCleansingShortSeqCount,
-        linkParaThreshold: config.aiSummaryCleansingLinkParaThreshold,
-        customPatterns: config.aiSummaryCleansingCustomPatterns,
-        // Over-cleansed fallback thresholds
-        fallbackRatio: config.aiSummaryCleansingFallbackRatio,
-        fallbackMinBytes: config.aiSummaryCleansingFallbackMinBytes
-    };
-    // テキスト品質設定（冗長除去）
-    const dedupOptions = {
-        dedupEnabled: config.contentDedupEnabled,
-        dedupThreshold: config.contentDedupThreshold
-    };
+    const { cleanseOptions, aiSummaryCleanseOptions, dedupOptions } = buildExtractionOptions(config);
     const result = extractMainContent(10000, cleanseOptions, aiSummaryCleanseOptions, dedupOptions);
     // クレンジング情報を保存
     if (typeof result === 'object' && 'cleansedReason' in result) {
@@ -259,12 +204,25 @@ function loadSettings(): Promise<void> {
 
 /**
  * 有効な訪問の条件を判定する（テスト可能な純粋関数）
+ *
+ * 呼び出し時に閾値を明示的に渡すことで、モジュールレベルの状態に依存しない。
+ * パラメータ未指定時は pageState のデフォルト値を使用し後方互換性を維持する。
+ *
  * @param duration - 訪問時間（秒）
  * @param scrollPercent - 最大スクロール深度（%）
+ * @param minDuration - 最小訪問時間（秒）。省略時は pageState.minVisitDuration
+ * @param minScroll - 最小スクロール深度（%）。省略時は pageState.minScrollDepth
  * @returns 条件を満たす場合true
  */
-export function shouldRecordVisit(duration: number, scrollPercent: number): boolean {
-    return duration >= pageState.minVisitDuration && scrollPercent >= pageState.minScrollDepth;
+export function shouldRecordVisit(
+    duration: number,
+    scrollPercent: number,
+    minDuration?: number,
+    minScroll?: number,
+): boolean {
+    const effectiveMinDuration = minDuration ?? pageState.minVisitDuration;
+    const effectiveMinScroll = minScroll ?? pageState.minScrollDepth;
+    return duration >= effectiveMinDuration && scrollPercent >= effectiveMinScroll;
 }
 
 /**

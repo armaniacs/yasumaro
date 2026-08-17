@@ -2,100 +2,44 @@
  * redaction.ts
  * コンソールログの機密情報削除モジュール
  * APIキー、パスワードなどの機密情報をログ出力から保護
+ *
+ * 注意: このモジュールは後方互換性のために維持されている。
+ * 新規コードでは sensitiveDataMask.ts を直接使用すること。
  */
 
-import { API_KEY_FIELDS } from './storage.js';
-
-const MAX_RECURSION_DEPTH = 100;
-
-// Additional sensitive patterns beyond API keys
-const ADDITIONAL_SENSITIVE_KEYS = [
-  'apiKey',
-  'fullKey',
-  'authToken',
-  'auth',
-  'password',
-  'token',
-  'master_password_hash',
-  'hmac_secret',
-] as const;
-
-// Combine API keys with additional patterns for single source of truth
-const SENSITIVE_KEYS = [
-  ...API_KEY_FIELDS,
-  ...ADDITIONAL_SENSITIVE_KEYS,
-];
-
-// Pre-lowercase for efficient matching (computed once at module load)
-const LOWERCASE_SENSITIVE_KEYS = SENSITIVE_KEYS.map(k => k.toLowerCase());
-
-/**
- * Check if a key is sensitive (case-insensitive)
- */
-function isSensitiveKey(key: string): boolean {
-  const lowerKey = key.toLowerCase();
-  return LOWERCASE_SENSITIVE_KEYS.some(sensitiveKey =>
-    lowerKey.includes(sensitiveKey)
-  );
-}
+import {
+  maskSensitiveData as _maskSensitiveData,
+  redactHeaderValue as _redactHeaderValue,
+  consoleSecureError as _consoleSecureError,
+} from './sensitiveDataMask.js';
 
 /**
  * 再帰的に機密情報を削除する
+ * @deprecated sensitiveDataMask.ts の maskSensitiveData('full') を使用すること
  */
 export function redactSensitiveData(data: unknown, depth = 0): unknown {
-  if (depth >= MAX_RECURSION_DEPTH) {
-    return '[REDACTED: too deep]';
-  }
-
-  if (typeof data !== 'object' || data === null) {
-    return data;
-  }
-
-  if (Array.isArray(data)) {
-    return data.map(item => redactSensitiveData(item, depth + 1));
-  }
-
-  const result: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
-    if (isSensitiveKey(key)) {
-      result[key] = '[REDACTED]';
-    } else if (typeof value === 'object' && value !== null) {
-      result[key] = redactSensitiveData(value, depth + 1);
-    } else {
-      result[key] = value;
-    }
-  }
-
-  return result;
+  return _maskSensitiveData(data, 'full', depth);
 }
 
 /**
  * Reasons that indicate sensitive header values requiring redaction.
- * Add new reasons here to extend masking coverage.
+ * @deprecated sensitiveDataMask.ts の SENSITIVE_HEADER_REASONS を使用すること
  */
 export const SENSITIVE_HEADER_REASONS = ['authorization'] as const;
 export type SensitiveHeaderReason = typeof SENSITIVE_HEADER_REASONS[number];
 
 /**
  * Redact header values for sensitive privacy reasons (e.g., Authorization).
- * Returns '[REDACTED]' if the reason is sensitive, otherwise returns the original value.
+ * @deprecated sensitiveDataMask.ts の redactHeaderValue を使用すること
  */
 export function redactHeaderValue(headerValue: string, reason: string): string {
-  if ((SENSITIVE_HEADER_REASONS as readonly string[]).includes(reason)) {
-    return '[REDACTED]';
-  }
-  return headerValue;
+  return _redactHeaderValue(headerValue, reason);
 }
 
 /**
  * セキュアなエラーログを出力する
+ * @deprecated sensitiveDataMask.ts の consoleSecureError を使用すること
  */
 export function consoleSecureError(message: string, data?: unknown): void {
-  if (data !== undefined && data !== null) {
-    const dataRedacted = redactSensitiveData(data);
-    console.error(message, dataRedacted);
-  } else {
-    console.error(message);
-  }
+  return _consoleSecureError(message, data);
 }

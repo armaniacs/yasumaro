@@ -63,6 +63,13 @@ export interface AiConnectionTestResult {
   providers: AiProviderTestResult[];
 }
 
+/**
+ * Backward-compatible alias for AiConnectionTestResult.
+ * Named this way in the original aiClient.ts; kept so existing callers
+ * that imported MultiProviderTestResult don't break during migration.
+ */
+export type MultiProviderTestResult = AiConnectionTestResult;
+
 export interface AIService {
   generateSummary(content: string, options?: AISummaryOptions): Promise<AISummaryResult>;
   getSupportedModes(): AISummaryMode[];
