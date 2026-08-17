@@ -3,10 +3,11 @@
  * CRUD operations: insert, query, update, hard delete, toggle star, get count, insert batch.
  */
 
-import type { BrowsingLogRecord, SearchResult } from '../../utils/sqlite-types.js';
+import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
+import type { StorageQuery } from '../../utils/sqlite-types.js';
 import type { SqliteValue } from '../sqliteEngine.js';
-import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS, FTS_QUERY_MAX_LENGTH } from '../schema.js';
-import { ALLOWED_ORDER_COLUMNS } from '../schema.js';
+import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from '../schema.js';
+import { buildWhereClause, buildOrderByClause, buildFtsTagMatchCondition } from '../sqliteQueryBuilder.js';
 import type { QueryPayload } from './types.js';
 import { sqlExec, sqlQuery, type HandlerContext } from './handlers.js';
 import { errorMessage } from '../../utils/errorUtils.js';
@@ -29,42 +30,22 @@ export async function handleInsert(ctx: HandlerContext, record: BrowsingLogRecor
 }
 
 export async function handleQuery(ctx: HandlerContext, payload: QueryPayload): Promise<{ rows: BrowsingLogRecord[]; total: number }> {
-  const {
-    limit = 20, offset = 0, dateFrom, dateTo, domain,
-    starred, orderBy = 'created_at', orderDir = 'DESC', ids,
-    tag, gistSynced,
-  } = payload;
+  const { limit = 20, offset = 0, tag } = payload;
 
-  if (!ALLOWED_ORDER_COLUMNS.includes(orderBy as typeof ALLOWED_ORDER_COLUMNS[number])) {
-    throw new Error(`Invalid orderBy: ${orderBy}`);
+  const { orderClause, error } = buildOrderByClause(payload as StorageQuery);
+  if (error) {
+    throw new Error(error);
   }
-  const dir = orderDir === 'ASC' ? 'ASC' : 'DESC';
 
-  const conditions: string[] = ['is_deleted = 0'];
-  const params: SqliteValue[] = [];
+  const { where: baseWhere, params: baseParams } = buildWhereClause(payload as StorageQuery);
+  let where = baseWhere;
+  const params: SqliteValue[] = [...baseParams];
 
-  if (dateFrom !== undefined) { conditions.push('created_at >= ?'); params.push(dateFrom); }
-  if (dateTo !== undefined) { conditions.push('created_at <= ?'); params.push(dateTo); }
-  if (domain) { conditions.push('domain = ?'); params.push(domain); }
-  if (starred !== undefined) { conditions.push('is_starred = ?'); params.push(starred ? 1 : 0); }
-  if (gistSynced !== undefined) { conditions.push('gist_synced = ?'); params.push(gistSynced); }
-  if (ids !== undefined && ids.length > 0) {
-    conditions.push(`id IN (${ids.map(() => '?').join(',')})`);
-    params.push(...ids);
-  }
   if (tag) {
-    const limitedTag = tag.slice(0, FTS_QUERY_MAX_LENGTH);
-    const cleanTag = limitedTag
-      .replace(/["'*^~:()+\-\\]/g, ' ')
-      .replace(/\b(OR|AND|NOT|NEAR)\b/gi, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    const ftsExpr = `"#${cleanTag}"`;
-    conditions.push('id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)');
-    params.push(ftsExpr);
+    const { condition, param } = buildFtsTagMatchCondition(tag);
+    where = where ? `${where} AND ${condition}` : `WHERE ${condition}`;
+    params.push(param);
   }
-
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   let total = 0;
   await sqlQuery(ctx, `SELECT COUNT(*) AS c FROM browsing_logs ${where}`, params, (row) => { total = Number(row.c); });
@@ -74,7 +55,7 @@ export async function handleQuery(ctx: HandlerContext, payload: QueryPayload): P
     ctx,
     `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced, gist_synced
      FROM browsing_logs ${where}
-     ORDER BY ${orderBy} ${dir} LIMIT ? OFFSET ?`,
+     ${orderClause} LIMIT ? OFFSET ?`,
     [...params, limit, offset],
     (row) => {
       rows.push({

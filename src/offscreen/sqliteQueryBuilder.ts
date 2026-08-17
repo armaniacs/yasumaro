@@ -4,12 +4,7 @@
 
 import type { StorageQuery } from '../utils/sqlite-types.js';
 import type { SqliteValue } from './sqliteEngineContext.js';
-import { sanitizeFtsTerm } from './schema.js';
-
-const ALLOWED_ORDER_COLUMNS = [
-  'id', 'url', 'title', 'summary', 'tags', 'created_at',
-  'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted',
-] as const;
+import { sanitizeFtsTerm, ALLOWED_ORDER_COLUMNS, FTS_QUERY_MAX_LENGTH } from './schema.js';
 
 const ALLOWED_ORDER_DIRECTIONS = ['ASC', 'DESC'] as const;
 
@@ -30,9 +25,31 @@ export function buildWhereClause(q: StorageQuery): { where: string; params: Sqli
   if (q.domain) { conditions.push('domain = ?'); params.push(q.domain); }
   if (q.starred != null) { conditions.push('is_starred = ?'); params.push(q.starred ? 1 : 0); }
   if (q.gistSynced != null) { conditions.push('gist_synced = ?'); params.push(q.gistSynced); }
+  if (q.ids != null && q.ids.length > 0) {
+    conditions.push(`id IN (${q.ids.map(() => '?').join(',')})`);
+    params.push(...q.ids);
+  }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
   return { where, params };
+}
+
+/**
+ * Build an FTS5 MATCH sub-query condition for a `#tag` filter, matching the
+ * browsing_logs_fts virtual table (rather than a plain LIKE scan). The
+ * caller passes the tag value WITHOUT the `#` prefix.
+ */
+export function buildFtsTagMatchCondition(tag: string): { condition: string; param: string } {
+  const limitedTag = tag.slice(0, FTS_QUERY_MAX_LENGTH);
+  const cleanTag = limitedTag
+    .replace(/["'*^~:()+\-\\]/g, ' ')
+    .replace(/\b(OR|AND|NOT|NEAR)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return {
+    condition: 'id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)',
+    param: `"#${cleanTag}"`,
+  };
 }
 
 /**
