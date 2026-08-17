@@ -1,14 +1,19 @@
 import { MessageHandlerRegistry, type MessageHandler } from './MessageHandlerRegistry.js';
 import {
   createValidVisitHandler,
-  createFetchUrlHandler,
   createManualRecordHandler,
   createSaveRecordHandler,
-  createContentCleansingExecutedHandler,
-  createCheckDomainHandler,
+} from './recordingHandlers.js';
+import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './recordingHandlers.js';
+import {
   createTestConnectionsHandler,
   createTestObsidianHandler,
   createTestAiHandler,
+} from './testingHandlers.js';
+import {
+  createFetchUrlHandler,
+  createContentCleansingExecutedHandler,
+  createCheckDomainHandler,
   createGetPrivacyCacheHandler,
   createActivityUpdateHandler,
   createSessionLockRequestHandler,
@@ -17,16 +22,15 @@ import {
   createConsentStateChangedHandler,
   createGenerateReviewSummaryHandler,
   createLogForwardHandler,
-} from './messageHandlers.js';
-import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './messageHandlers.js';
-import type { RecordingLogic } from '../recordingLogic.js';
+} from './systemHandlers.js';
+import type { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
 import type { TabCache } from '../tabCache.js';
 import type { AIService } from '../ai/AIService.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 
 export interface MessageHandlerRegistryDeps {
   runtimeId?: string;
-  recordingLogic: Pick<RecordingLogic, 'record'>;
+  recordingPipeline: Pick<RecordingPipeline, 'record'>;
   tabCache: Pick<TabCache, 'add' | 'update'>;
   obsidian: Pick<ObsidianClient, 'testConnection'>;
   aiService: Pick<AIService, 'testConnection'>;
@@ -65,7 +69,7 @@ export function createMessageHandlerRegistry(deps: MessageHandlerRegistryDeps): 
       isRecordingAllowed: deps.hasPrivacyConsent,
       cacheTab: deps.tabCache.add.bind(deps.tabCache),
       updateCachedTab: deps.tabCache.update.bind(deps.tabCache),
-      recordVisit: (data) => deps.recordingLogic.record(data),
+      recordVisit: (data) => deps.recordingPipeline.record(data),
       addBadgeTab: (tabId) => deps.autoSavedBadgeTabs.add(tabId),
       hasBadgeTab: (tabId) => deps.autoSavedBadgeTabs.has(tabId),
     }),

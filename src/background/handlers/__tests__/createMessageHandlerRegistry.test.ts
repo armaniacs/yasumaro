@@ -31,7 +31,7 @@ const contentScriptAllowed = new Set([
 ]);
 
 function makeComposition() {
-  const recordingLogic = { record: vi.fn().mockResolvedValue({ success: true }) };
+  const recordingPipeline = { record: vi.fn().mockResolvedValue({ success: true }) };
   const tabCache = { add: vi.fn(), update: vi.fn() };
   const obsidian = { testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }) };
   const aiService = { testConnection: vi.fn().mockResolvedValue({ success: true, message: 'ok' }) };
@@ -48,7 +48,7 @@ function makeComposition() {
 
   return createMessageHandlerRegistry({
     runtimeId: 'extension-id',
-    recordingLogic,
+    recordingPipeline,
     tabCache,
     obsidian,
     aiService,

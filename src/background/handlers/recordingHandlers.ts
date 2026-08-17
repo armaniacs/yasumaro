@@ -2,38 +2,21 @@ import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 import type { TabData } from '../tabCache.js';
 import type { Settings } from '../../utils/storage.js';
 import { isSecureUrl, sanitizeUrlForLogging } from '../../utils/urlUtils.js';
-import { validateUrlForFilterImport, fetchWithTimeout } from '../../utils/fetch.js';
 import { BADGE_COLORS } from '../../constants/appConstants.js';
-import { logDebug, logWarn, logError, ErrorCode } from '../../utils/logger.js';
+import { logDebug, logWarn, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-import { createErrorResponse } from '../../utils/errorMessages.js';
 import { StorageKeys } from '../../utils/storage.js';
-import { updateSavedUrlEntry } from '../../utils/storage/savedUrlStore.js';
 import { stripPiiFromMaskedItems } from '../../utils/piiStripper.js';
 import { encodeUrlSafeBase64 } from './urlNotificationHandlers.js';
 import { NotificationHelper } from '../notificationHelper.js';
 import type { MessageSenderLike } from '../rateLimiter.js';
-import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import type { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
-import type { AiTestProgress } from '../ai/AIService.js';
 
 import type {
   ValidVisitMessage,
-  FetchUrlMessage,
   ManualRecordMessage,
   PreviewRecordMessage,
   SaveRecordMessage,
-  ContentCleansingExecutedMessage,
-  CheckDomainMessage,
-  TestConnectionsMessage,
-  TestObsidianMessage,
-  TestAiMessage,
-  GetPrivacyCacheMessage,
-  ActivityUpdateMessage,
-  SessionLockRequestMessage,
-  PingMessage,
-  GenerateReviewSummaryMessage,
-  LogForwardMessage,
 } from '../messageTypes.js';
 
 // ============================================================================
@@ -47,11 +30,6 @@ export interface ValidVisitHandlerDeps {
   recordVisit: (data: RecordingData) => Promise<RecordingResult>;
   addBadgeTab: (tabId: number) => void;
   hasBadgeTab: (tabId: number) => boolean;
-}
-
-export interface FetchUrlHandlerDeps {
-  getSettings: () => Promise<Settings>;
-  buildAllowedUrls: (settings: Settings) => Set<string>;
 }
 
 /**
@@ -76,57 +54,6 @@ export interface ManualRecordHandlerDeps extends RecordingHandlerBaseDeps {
 }
 
 export interface SaveRecordHandlerDeps extends RecordingHandlerBaseDeps {}
-
-export interface ContentCleansingExecutedHandlerDeps {
-  hasBadgeTab: (tabId: number) => boolean;
-}
-
-export interface CheckDomainHandlerDeps {
-  isDomainAllowed: (url: string) => Promise<boolean>;
-}
-
-export interface TestConnectionsHandlerDeps {
-  testObsidian: () => Promise<{ success: boolean; message: string }>;
-  testAi: () => Promise<{ success: boolean; message: string }>;
-}
-
-export interface TestObsidianHandlerDeps {
-  testConnection: (override?: { apiKey?: string }) => Promise<unknown>;
-}
-
-export interface TestAiHandlerDeps {
-  clearSettingsCache: () => void;
-  testConnection: (onProgress?: (progress: AiTestProgress) => void, runId?: string) => Promise<unknown>;
-  notifyProgress?: (progress: AiTestProgress) => void;
-}
-
-export interface GetPrivacyCacheHandlerDeps {
-  getPrivacyCache: () => Map<string, PrivacyInfo> | null;
-}
-
-export interface ActivityUpdateHandlerDeps {
-  updateActivity: () => Promise<void>;
-}
-
-export interface SessionLockRequestHandlerDeps {
-  lockSession: () => Promise<void>;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface PingHandlerDeps {}
-
-export interface RefreshLocalMarkdownSchedulerHandlerDeps {
-  initExportScheduler: () => Promise<void>;
-}
-
-export interface ConsentStateChangedHandlerDeps {
-  updateConsentBadge: () => Promise<void>;
-}
-
-export interface GenerateReviewSummaryHandlerDeps {
-  generateWeeklySummary: () => Promise<boolean>;
-  generateMonthlySummary: () => Promise<boolean>;
-}
 
 // ============================================================================
 // Factory functions
@@ -230,7 +157,7 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
     if (result.success && !result.skipped && sender.tab.id) {
       const savedTabId = sender.tab.id;
       deps.addBadgeTab(savedTabId);
-      chrome.action.setBadgeText({ text: '\u25CE', tabId: savedTabId });
+      chrome.action.setBadgeText({ text: '◎', tabId: savedTabId });
       chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.BLUE as string, tabId: savedTabId });
     }
 
@@ -258,60 +185,6 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
     }
 
     sendResponse(result);
-  };
-}
-
-export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
-  // VULN-012 fix: limit response size to prevent memory exhaustion
-  const MAX_FILTER_LIST_SIZE = 10 * 1024 * 1024; // 10MB
-
-  return async (
-    message: FetchUrlMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ): Promise<void> => {
-    // VULN-004: FETCH_URL is an extension-page operation, not a content-script
-    // one. Enforced by the registry's 'extension-only' trust level.
-    try {
-      validateUrlForFilterImport(message.payload.url);
-
-      const settings = await deps.getSettings();
-      const allowedUrls = deps.buildAllowedUrls(settings);
-
-      const response = await fetchWithTimeout(message.payload.url, {
-        method: 'GET',
-        cache: 'no-cache',
-        allowedUrls,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      // VULN-012 fix: check Content-Length header first
-      const contentLength = response.headers.get('content-length');
-      if (contentLength && parseInt(contentLength, 10) > MAX_FILTER_LIST_SIZE) {
-        throw new Error(`Filter list too large: ${Math.round(parseInt(contentLength, 10) / 1024 / 1024)}MB exceeds ${MAX_FILTER_LIST_SIZE / 1024 / 1024}MB limit`);
-      }
-
-      const contentType = response.headers.get('content-type');
-      const text = await response.text();
-
-      // VULN-012 fix: also check actual text size after reading
-      if (text.length > MAX_FILTER_LIST_SIZE) {
-        throw new Error(`Filter list too large: ${Math.round(text.length / 1024 / 1024)}MB exceeds ${MAX_FILTER_LIST_SIZE / 1024 / 1024}MB limit`);
-      }
-
-      sendResponse({ success: true, data: text, contentType });
-    } catch (error) {
-      await logError(
-        'Fetch URL Error',
-        { url: message.payload?.url, error: errorMessage(error) },
-        ErrorCode.API_REQUEST_FAILURE,
-        'service-worker',
-      );
-      sendResponse(createErrorResponse(error, { url: message.payload?.url }));
-    }
   };
 }
 
@@ -468,213 +341,5 @@ export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
     }
 
     sendResponse(result);
-  };
-}
-
-export function createContentCleansingExecutedHandler(deps: ContentCleansingExecutedHandlerDeps) {
-  return async (
-    message: ContentCleansingExecutedMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ): Promise<void> => {
-    const { hardStripRemoved, keywordStripRemoved, totalRemoved } = message.payload || {};
-    const tabId = sender.tab!.id!;
-
-    chrome.action.setBadgeText({ text: `C${totalRemoved || 0}`, tabId });
-    chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string, tabId });
-
-    setTimeout(() => {
-      if (!deps.hasBadgeTab(tabId)) {
-        chrome.action.setBadgeText({ text: '', tabId });
-      }
-    }, 3000);
-
-    if (sender.tab?.url && (totalRemoved ?? 0) > 0) {
-      const hardEnabled = (hardStripRemoved ?? 0) > 0;
-      const keywordEnabled = (keywordStripRemoved ?? 0) > 0;
-      let cleansedReason: 'hard' | 'keyword' | 'both' = 'both';
-      if (hardEnabled && !keywordEnabled) {
-        cleansedReason = 'hard';
-      } else if (!hardEnabled && keywordEnabled) {
-        cleansedReason = 'keyword';
-      }
-      await updateSavedUrlEntry(sender.tab.url, (entry) => ({ ...entry, cleansedReason }));
-    }
-
-    sendResponse({ success: true });
-  };
-}
-
-export function createCheckDomainHandler(deps: CheckDomainHandlerDeps) {
-  return async (
-    _message: CheckDomainMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ): Promise<void> => {
-    const url = sender.tab?.url || '';
-    const allowed = url ? await deps.isDomainAllowed(url) : false;
-    sendResponse({ success: true, allowed });
-  };
-}
-
-export function createTestConnectionsHandler(deps: TestConnectionsHandlerDeps) {
-  return async (
-    _message: TestConnectionsMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ): Promise<void> => {
-    // VULN-009: TEST_* are extension-page operations.
-    // Enforced by the registry's 'extension-only' trust level.
-    const obsidianResult = await deps.testObsidian();
-    const aiResult = await deps.testAi();
-    sendResponse({ success: true, obsidian: obsidianResult, ai: aiResult });
-  };
-}
-
-export function createTestObsidianHandler(deps: TestObsidianHandlerDeps) {
-  return async (
-    message: TestObsidianMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ): Promise<void> => {
-    // VULN-009: content-script senders must not reach the apiKey override.
-    // Enforced by the registry's 'extension-only' trust level.
-    const override = message.payload?.apiKey ? { apiKey: message.payload.apiKey } : undefined;
-    const obsidianResult = await deps.testConnection(override);
-    sendResponse({ success: true, obsidian: obsidianResult });
-  };
-}
-
-export function createTestAiHandler(deps: TestAiHandlerDeps) {
-  return async (
-    message: TestAiMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ): Promise<void> => {
-    // VULN-009: this handler clears the settings cache, so content-script
-    // senders must not reach it. Enforced by the registry's 'extension-only'
-    // trust level.
-    deps.clearSettingsCache();
-    const aiResult = await deps.testConnection(deps.notifyProgress, message.runId);
-    sendResponse({ success: true, ai: aiResult });
-  };
-}
-
-export function createGetPrivacyCacheHandler(deps: GetPrivacyCacheHandlerDeps) {
-  return async (
-    _message: GetPrivacyCacheMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ): Promise<void> => {
-    // VULN-018: privacy-cache disclosure must be extension-page only.
-    // Enforced by the registry's 'extension-only' trust level.
-    const cache = deps.getPrivacyCache();
-    await logDebug('GET_PRIVACY_CACHE requested', { cacheSize: cache?.size || 0 }, 'service-worker');
-    if (cache) {
-      const cacheArray = Array.from(cache.entries());
-      await logDebug('Sending cache entries to popup', { count: cacheArray.length }, 'service-worker');
-      sendResponse({ success: true, cache: cacheArray });
-    } else {
-      await logDebug('No cache available, sending empty array', undefined, 'service-worker');
-      sendResponse({ success: true, cache: [] });
-    }
-  };
-}
-
-export function createActivityUpdateHandler(deps: ActivityUpdateHandlerDeps) {
-  return async (
-    _message: ActivityUpdateMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ): Promise<void> => {
-    // VULN-019: activity refresh (auto-lock suppression) must be extension-page
-    // only. Enforced by the registry's 'extension-only' trust level.
-    await deps.updateActivity();
-    sendResponse({ success: true });
-  };
-}
-
-export function createSessionLockRequestHandler(deps: SessionLockRequestHandlerDeps) {
-  return async (
-    _message: SessionLockRequestMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ): Promise<void> => {
-    // VULN-020: forced session lock (local DoS) must be extension-page only.
-    // Enforced by the registry's 'extension-only' trust level.
-    await deps.lockSession();
-    sendResponse({ success: true });
-  };
-}
-
-export function createPingHandler(_deps: PingHandlerDeps) {
-  return async (
-    _message: PingMessage,
-    _sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ): Promise<void> => {
-    sendResponse({ success: true });
-  };
-}
-
-export function createRefreshLocalMarkdownSchedulerHandler(deps: RefreshLocalMarkdownSchedulerHandlerDeps) {
-  return async (
-    _message: Record<string, unknown>,
-    _sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ): Promise<void> => {
-    await deps.initExportScheduler();
-    sendResponse({ success: true });
-  };
-}
-
-export function createConsentStateChangedHandler(deps: ConsentStateChangedHandlerDeps) {
-  return async (
-    _message: Record<string, unknown>,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ): Promise<void> => {
-    // Sender authorization is enforced by the registry ('extension-only').
-    await deps.updateConsentBadge();
-    sendResponse({ success: true });
-  };
-}
-
-export function createLogForwardHandler() {
-  return async (
-    message: LogForwardMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ): Promise<void> => {
-    // Sender authorization is enforced by the registry ('extension-only'); the
-    // offscreen document is the expected caller.
-    const { level, message: logMessage, details, source } = message.payload;
-    if (level === 'error') {
-      await logError(logMessage, details ?? {}, ErrorCode.INTERNAL_ERROR, source);
-    } else if (level === 'warn') {
-      await logWarn(logMessage, details ?? {}, undefined, source);
-    } else {
-      await logDebug(logMessage, details ?? {}, source);
-    }
-    sendResponse({ success: true });
-  };
-}
-
-export function createGenerateReviewSummaryHandler(deps: GenerateReviewSummaryHandlerDeps) {
-  return async (
-    message: GenerateReviewSummaryMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ): Promise<void> => {
-    // Sender authorization is enforced by the registry ('extension-only').
-    try {
-      const periodType = message.payload?.periodType;
-      const generated = periodType === 'monthly'
-        ? await deps.generateMonthlySummary()
-        : await deps.generateWeeklySummary();
-      sendResponse({ success: true, generated });
-    } catch (error) {
-      sendResponse(createErrorResponse(error));
-    }
   };
 }
