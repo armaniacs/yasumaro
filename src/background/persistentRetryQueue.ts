@@ -11,7 +11,7 @@
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { QueueStorageAdapter } from './queueStorageAdapter.js';
-export { ChromeStorageAdapter } from './queueStorageAdapter.js';
+export { ChromeStorageAdapter, InMemoryAdapter } from './queueStorageAdapter.js';
 
 /**
  * Options for PersistentRetryQueue.
