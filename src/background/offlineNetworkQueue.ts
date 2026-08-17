@@ -6,7 +6,6 @@
  */
 
 import { addLog, LogType } from '../utils/logger.js';
-import { errorMessage } from '../utils/errorUtils.js';
 import { PersistentRetryQueue, ChromeStorageAdapter, RetryableItem } from './persistentRetryQueue.js';
 import type { OfflineJobKind } from './pipeline/types.js';
 
@@ -41,10 +40,6 @@ function generateId(): string {
     .join('');
 }
 
-function isExpired(job: OfflineJob): boolean {
-  return Date.now() - job.createdAt > JOB_TTL_MS;
-}
-
 const adapter = new ChromeStorageAdapter();
 const queue = new PersistentRetryQueue<OfflineJob>(adapter, {
   storageKey: STORAGE_KEY,
@@ -54,6 +49,7 @@ const queue = new PersistentRetryQueue<OfflineJob>(adapter, {
   maxRetryCount: MAX_RETRY_COUNT,
   maxJobsPerCycle: MAX_JOBS_PER_CYCLE,
   maxPayloadBytes: MAX_JOB_PAYLOAD_BYTES,
+  persistPerItem: true,
 });
 
 export class OfflineNetworkQueue {
@@ -84,58 +80,7 @@ export class OfflineNetworkQueue {
   }
 
   async retryAll(handler: (job: OfflineJob) => Promise<boolean>): Promise<void> {
-    const jobs = await queue.load();
-    const expiredCount = jobs.filter(j => Date.now() - j.createdAt > JOB_TTL_MS).length;
-    if (expiredCount > 0) {
-      addLog(LogType.INFO, 'OfflineNetworkQueue: dropped expired jobs', { count: expiredCount });
-    }
-
-    // Only the first MAX_JOBS_PER_CYCLE jobs are processed this pass; the
-    // rest are left untouched in the queue for the next alarm cycle
-    // (PBI-2026-08-01-15).
-    const jobsToProcess = jobs.slice(0, MAX_JOBS_PER_CYCLE);
-    const untouched = jobs.slice(MAX_JOBS_PER_CYCLE);
-    if (untouched.length > 0) {
-      addLog(LogType.INFO, 'OfflineNetworkQueue: deferring jobs to next cycle', {
-        deferred: untouched.length,
-        processing: jobsToProcess.length,
-      });
-    }
-
-    // Jobs not yet processed in this pass; persisted after every job so a
-    // Service Worker termination mid-pass doesn't lose retryCount progress
-    // for jobs already handled (PBI-2026-08-01-14).
-    const pending = [...jobsToProcess];
-    const remaining: OfflineJob[] = [];
-
-    for (const job of jobsToProcess) {
-      pending.shift();
-
-      try {
-        const success = await handler(job);
-        if (success) {
-          addLog(LogType.INFO, 'OfflineNetworkQueue: job succeeded', { id: job.id, type: job.type });
-          await queue.save([...remaining, ...pending, ...untouched]);
-          continue;
-        }
-        job.retryCount++;
-      } catch (error) {
-        job.retryCount++;
-        job.lastError = errorMessage(error);
-      }
-
-      if (job.retryCount >= MAX_RETRY_COUNT) {
-        addLog(LogType.WARN, 'OfflineNetworkQueue: job exceeded max retries, dropping', {
-          id: job.id,
-          type: job.type,
-        });
-        await queue.save([...remaining, ...pending, ...untouched]);
-        continue;
-      }
-
-      remaining.push(job);
-      await queue.save([...remaining, ...pending, ...untouched]);
-    }
+    await queue.flush(handler);
   }
 
   async getQueueSize(): Promise<number> {
