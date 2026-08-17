@@ -204,7 +204,7 @@ export function createReviewSummaryGenerator(options: CreateReviewSummaryGenerat
     }
 
     const { start, end } = getWeekPeriod(date);
-    const queryResult = await sqliteClient.queryResult({ since: start, until: end, limit: 10000 });
+    const queryResult = await sqliteClient.queryResult({ dateFrom: start, dateTo: end, limit: 10000 });
 
     if (!queryResult.success) {
       addLog(LogType.ERROR, 'Failed to query entries for weekly summary', { weekKey, error: queryResult.error.message });
@@ -270,7 +270,7 @@ export function createReviewSummaryGenerator(options: CreateReviewSummaryGenerat
     }
 
     const { start, end } = getMonthPeriod(date);
-    const queryResult = await sqliteClient.queryResult({ since: start, until: end, limit: 10000 });
+    const queryResult = await sqliteClient.queryResult({ dateFrom: start, dateTo: end, limit: 10000 });
 
     if (!queryResult.success) {
       addLog(LogType.ERROR, 'Failed to query entries for monthly summary', { monthKey, error: queryResult.error.message });

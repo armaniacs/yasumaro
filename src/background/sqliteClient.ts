@@ -38,7 +38,7 @@ const MESSAGE_TIMEOUT_MS_MOBILE = 5000; // 5 seconds
 // Types
 // ============================================================================
 
-import type { BrowsingLogRecord, QueryOptions, SearchResult } from '../utils/sqlite-types.js';
+import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
 import type { OpfsSpikeReport } from '../offscreen/opfsSpike.js';
 
 /**
@@ -290,10 +290,15 @@ export class SqliteClient {
   // that reason.)
   // --------------------------------------------------------------------------
 
-  async queryResult<T = BrowsingLogRecord>(options: QueryOptions = {}): Promise<CallResult<{ rows: T[]; total: number }>> {
+  /**
+   * Unified read path — accepts a StorageQuery. When `text` is present the
+   * backend performs FTS5 or LIKE search; otherwise it returns a plain
+   * filtered listing.
+   */
+  async queryResult<T = BrowsingLogRecord>(q: StorageQuery = {}): Promise<CallResult<{ rows: T[]; total: number }>> {
     return this.call<{ rows: T[]; total: number }, OffscreenQueryResponse>(
       'SQLITE_QUERY',
-      options as unknown as Record<string, unknown>,
+      q as unknown as Record<string, unknown>,
       (res) => ({
         rows: (res.rows || []) as T[],
         total: res.total,
@@ -301,20 +306,24 @@ export class SqliteClient {
     );
   }
 
+  /**
+   * Convenience wrapper for text-search callers that still think in
+   * (query, limit, offset) terms.  Builds a StorageQuery and sends it as
+   * SQLITE_QUERY.
+   */
   async searchResult(
-    query: string,
+    searchQuery: string,
     limit = 50,
     offset = 0,
     options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
-  ): Promise<CallResult<{ rows: SearchResult[]; total: number }>> {
-    return this.call<{ rows: SearchResult[]; total: number }, OffscreenQueryResponse>(
-      'SQLITE_SEARCH',
-      { query, limit, offset, orderBy: options.orderBy, orderDir: options.orderDir },
-      (res) => ({
-        rows: (res.rows || []) as SearchResult[],
-        total: res.total,
-      }),
-    );
+  ): Promise<CallResult<{ rows: BrowsingLogRecord[]; total: number }>> {
+    return this.queryResult<BrowsingLogRecord>({
+      text: searchQuery,
+      limit,
+      offset,
+      orderBy: options.orderBy,
+      orderDir: options.orderDir,
+    });
   }
 
   async updateResult(id: number, changes: Partial<Record<string, unknown>>, traceId: string = ''): Promise<CallResult<void>> {

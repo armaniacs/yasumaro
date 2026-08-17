@@ -12,7 +12,6 @@ import {
   insert as sqliteInsert,
   insertBatch as sqliteInsertBatch,
   query as sqliteQuery,
-  search as sqliteSearch,
   update as sqliteUpdate,
   hardDelete as sqliteHardDelete,
   toggleStar as sqliteToggleStar,
@@ -177,18 +176,18 @@ async function dispatchSqliteMessage(
         }
         case 'SQLITE_QUERY': {
             const payload = msg.payload;
-            const options = {
+            const options: import('../utils/sqlite-types.js').StorageQuery = {
                 limit: payload?.limit != null ? Number(payload.limit) : undefined,
                 offset: payload?.offset != null ? Number(payload.offset) : undefined,
-                orderBy: payload?.orderBy != null ? String(payload.orderBy) : undefined,
+                orderBy: payload?.orderBy as 'created_at' | 'rank' | undefined,
                 orderDir: payload?.orderDir as 'ASC' | 'DESC' | undefined,
                 domain: payload?.domain != null ? String(payload.domain) : undefined,
-                isStarred: payload?.isStarred != null ? Boolean(payload.isStarred) : undefined,
+                starred: payload?.isStarred != null ? Boolean(payload.isStarred) : undefined,
                 excludeDeleted: payload?.excludeDeleted != null ? Boolean(payload.excludeDeleted) : undefined,
-                since: payload?.since != null ? Number(payload.since) : undefined,
-                until: payload?.until != null ? Number(payload.until) : undefined,
+                dateFrom: payload?.since != null ? Number(payload.since) : undefined,
+                dateTo: payload?.until != null ? Number(payload.until) : undefined,
                 ids: payload?.ids != null ? payload.ids as number[] : undefined,
-                tagFilter: payload?.tagFilter != null ? String(payload.tagFilter) : undefined,
+                tag: payload?.tagFilter != null ? String(payload.tagFilter) : undefined,
                 gistSynced: payload?.gistSynced != null ? Number(payload.gistSynced) : undefined,
             };
             const result = await sqliteQuery(options);
@@ -215,13 +214,14 @@ async function dispatchSqliteMessage(
             break;
         }
         case 'SQLITE_SEARCH': {
-            const searchQuery = String(msg.payload.query || '');
-            const limit = msg.payload.limit != null ? Number(msg.payload.limit) : 50;
-            const offset = msg.payload.offset != null ? Number(msg.payload.offset) : 0;
-            const result = await sqliteSearch(searchQuery, limit, offset, {
-              orderBy: msg.payload.orderBy,
-              orderDir: msg.payload.orderDir,
-            });
+            const q: import('../utils/sqlite-types.js').StorageQuery = {
+              text: String(msg.payload.query || ''),
+              limit: msg.payload.limit != null ? Number(msg.payload.limit) : undefined,
+              offset: msg.payload.offset != null ? Number(msg.payload.offset) : undefined,
+              orderBy: msg.payload.orderBy as 'created_at' | 'rank' | undefined,
+              orderDir: msg.payload.orderDir as 'ASC' | 'DESC' | undefined,
+            };
+            const result = await sqliteQuery(q);
             sendResponse(result);
             break;
         }

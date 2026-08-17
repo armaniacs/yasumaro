@@ -1,7 +1,7 @@
 /**
  * IdbVfsBackend-search-sort.test.ts
- * Verifies IdbVfsBackend.search() switches its ORDER BY clause based on the
- * orderBy option instead of always sorting by FTS5 rank.
+ * Verifies IdbVfsBackend.query() with text search switches its ORDER BY clause
+ * based on the orderBy option instead of always sorting by FTS5 rank.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { IdbVfsBackend } from '../IdbVfsBackend.js';
@@ -21,12 +21,12 @@ function makeStubEngine(overrides: { fts5Available?: boolean } = {}) {
   return { engine, calls };
 }
 
-describe('IdbVfsBackend.search — ORDER BY branch', () => {
+describe('IdbVfsBackend.query — search ORDER BY branch', () => {
   it('orders by rank when orderBy is omitted (default relevance)', async () => {
     const { engine, calls } = makeStubEngine();
     const backend = new IdbVfsBackend(engine as never);
     (backend as unknown as { ensureDb: () => void }).ensureDb = () => {};
-    await backend.search('example query text', 20, 0);
+    await backend.query({ text: 'example query text', limit: 20 });
     const rowQuery = calls.find(c => /ORDER BY/i.test(c.sql) && !/COUNT/i.test(c.sql));
     expect(rowQuery?.sql).toMatch(/ORDER BY rank/);
   });
@@ -35,7 +35,7 @@ describe('IdbVfsBackend.search — ORDER BY branch', () => {
     const { engine, calls } = makeStubEngine();
     const backend = new IdbVfsBackend(engine as never);
     (backend as unknown as { ensureDb: () => void }).ensureDb = () => {};
-    await backend.search('example query text', 20, 0, { orderBy: 'created_at', orderDir: 'DESC' });
+    await backend.query({ text: 'example query text', limit: 20, orderBy: 'created_at', orderDir: 'DESC' });
     const rowQuery = calls.find(c => /ORDER BY/i.test(c.sql) && !/COUNT/i.test(c.sql));
     expect(rowQuery?.sql).toMatch(/ORDER BY b\.created_at DESC, b\.id DESC/);
   });
@@ -44,7 +44,7 @@ describe('IdbVfsBackend.search — ORDER BY branch', () => {
     const { engine, calls } = makeStubEngine();
     const backend = new IdbVfsBackend(engine as never);
     (backend as unknown as { ensureDb: () => void }).ensureDb = () => {};
-    await backend.search('example query text', 20, 0, { orderBy: 'created_at', orderDir: 'ASC' });
+    await backend.query({ text: 'example query text', limit: 20, orderBy: 'created_at', orderDir: 'ASC' });
     const rowQuery = calls.find(c => /ORDER BY/i.test(c.sql) && !/COUNT/i.test(c.sql));
     expect(rowQuery?.sql).toMatch(/ORDER BY b\.created_at ASC, b\.id ASC/);
   });
@@ -53,7 +53,7 @@ describe('IdbVfsBackend.search — ORDER BY branch', () => {
     const { engine, calls } = makeStubEngine({ fts5Available: false });
     const backend = new IdbVfsBackend(engine as never);
     (backend as unknown as { ensureDb: () => void }).ensureDb = () => {};
-    await backend.search('ai', 20, 0, { orderBy: 'created_at', orderDir: 'ASC' });
+    await backend.query({ text: 'ai', limit: 20, orderBy: 'created_at', orderDir: 'ASC' });
     const rowQuery = calls.find(c => /ORDER BY/i.test(c.sql) && !/COUNT/i.test(c.sql));
     expect(rowQuery?.sql).toMatch(/ORDER BY created_at ASC/);
   });
@@ -65,8 +65,8 @@ describe('IdbVfsBackend.search — ORDER BY branch', () => {
     // Simulates a value that bypassed the TypeScript type at a message-passing
     // boundary (chrome.runtime.sendMessage does not enforce it at runtime).
     const malicious = 'DESC; DROP TABLE browsing_logs; --';
-    const result = await backend.search('example query text', 20, 0, {
-      orderBy: 'created_at',
+    const result = await backend.query({
+      text: 'example query text', limit: 20, orderBy: 'created_at',
       orderDir: malicious as unknown as 'ASC' | 'DESC',
     });
     expect(result.success).toBe(false);

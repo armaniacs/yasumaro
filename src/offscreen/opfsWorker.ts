@@ -14,7 +14,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { migrateOldOpfsDb } from './opfsMigrationV2.js';
 import { readOldDbRecords, deleteOldDbFile } from './opfsMigrationV2Reader.js';
 import { StorageKeys } from '../utils/storage/types.js';
-import type { BrowsingLogRecord, SearchResult, QueryOptions } from '../utils/sqlite-types.js';
+import type { BrowsingLogRecord, SearchResult, StorageQuery } from '../utils/sqlite-types.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -26,14 +26,8 @@ interface AuditLogQueryPayload {
 }
 
 // Worker-internal types (not in shared types):
-type QueryPayload = QueryOptions & { ids?: number[]; tagFilter?: string; isStarred?: number };
-type SearchPayload = {
-  searchQuery: string;
-  limit?: number;
-  offset?: number;
-  orderBy?: 'rank' | 'created_at';
-  orderDir?: 'ASC' | 'DESC';
-};
+type QueryPayload = StorageQuery;
+type SearchPayload = StorageQuery;
 
 interface RequestMessage {
   id: number;
@@ -272,36 +266,46 @@ async function handleInsert(record: BrowsingLogRecord): Promise<{ id: number }> 
   return { id };
 }
 
-async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRecord[]; total: number }> {
+async function handleQuery(payload: QueryPayload): Promise<{ rows: (BrowsingLogRecord & { rank: number })[]; total: number }> {
   const {
-    limit = 20, offset = 0, since, until, domain,
-    isStarred, orderBy = 'created_at', orderDir = 'DESC', ids,
-    tagFilter, gistSynced,
+    limit = 20, offset = 0, dateFrom, dateTo, domain,
+    starred, orderBy = 'created_at', orderDir = 'DESC', ids,
+    tag, gistSynced, text, excludeDeleted,
   } = payload;
 
+  // If text is present, delegate to search logic
+  if (text) {
+    return handleSearch({ ...payload });
+  }
+
   // Validate sort columns
-  if (!ALLOWED_ORDER_COLUMNS.includes(orderBy as typeof ALLOWED_ORDER_COLUMNS[number])) {
-    throw new Error(`Invalid orderBy: ${orderBy}`);
+  const effectiveOrderBy = orderBy === 'rank' ? 'created_at' : orderBy;
+  if (!ALLOWED_ORDER_COLUMNS.includes(effectiveOrderBy as typeof ALLOWED_ORDER_COLUMNS[number])) {
+    throw new Error(`Invalid orderBy: ${effectiveOrderBy}`);
   }
   const dir = orderDir === 'ASC' ? 'ASC' : 'DESC';
 
   // Build WHERE clause
-  const conditions: string[] = ['is_deleted = 0'];
+  const conditions: string[] = [];
   const params: SqliteValue[] = [];
 
-  if (since !== undefined) { conditions.push('created_at >= ?'); params.push(since); }
-  if (until !== undefined) { conditions.push('created_at <= ?'); params.push(until); }
+  if (excludeDeleted !== false) {
+    conditions.push('is_deleted = 0');
+  }
+
+  if (dateFrom != null) { conditions.push('created_at >= ?'); params.push(dateFrom); }
+  if (dateTo != null) { conditions.push('created_at <= ?'); params.push(dateTo); }
   if (domain) { conditions.push('domain = ?'); params.push(domain); }
-  if (isStarred !== undefined) { conditions.push('is_starred = ?'); params.push(isStarred); }
-  if (gistSynced !== undefined) { conditions.push('gist_synced = ?'); params.push(gistSynced); }
+  if (starred != null) { conditions.push('is_starred = ?'); params.push(starred ? 1 : 0); }
+  if (gistSynced != null) { conditions.push('gist_synced = ?'); params.push(gistSynced); }
   if (ids !== undefined && ids.length > 0) {
     conditions.push(`id IN (${ids.map(() => '?').join(',')})`);
     params.push(...ids);
   }
-  if (tagFilter) {
+  if (tag) {
     // Strip FTS5 operator keywords and special chars, but preserve # prefix for trigram matching
     // Apply length limit to prevent expensive FTS5 queries on extremely long input
-    const limitedTag = tagFilter.slice(0, FTS_QUERY_MAX_LENGTH);
+    const limitedTag = tag.slice(0, FTS_QUERY_MAX_LENGTH);
     const cleanTag = limitedTag
       .replace(/["'*^~:()+\-\\]/g, ' ')
       .replace(/\b(OR|AND|NOT|NEAR)\b/gi, ' ')
@@ -319,11 +323,11 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
   await sqlQuery(`SELECT COUNT(*) AS c FROM browsing_logs ${where}`, params, (row) => { total = Number(row.c); });
 
   // Select
-  const rows: BrowsingLogRecord[] = [];
+  const rows: (BrowsingLogRecord & { rank: number })[] = [];
   await sqlQuery(
     `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced, gist_synced
      FROM browsing_logs ${where}
-     ORDER BY ${orderBy} ${dir} LIMIT ? OFFSET ?`,
+     ORDER BY ${effectiveOrderBy} ${dir} LIMIT ? OFFSET ?`,
     [...params, limit, offset],
     (row) => {
       rows.push({
@@ -340,6 +344,7 @@ async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRe
         is_deleted: Number(row.is_deleted),
         obsidian_synced: Number(row.obsidian_synced),
         gist_synced: Number(row.gist_synced),
+        rank: 0,
       });
     }
   );
@@ -671,7 +676,8 @@ export async function handleRestore(data: Uint8Array): Promise<{ restored: true 
 }
 
 export async function handleSearch(payload: SearchPayload): Promise<{ rows: SearchResult[]; total: number }> {
-  const { searchQuery, limit = 50, offset = 0, orderBy, orderDir } = payload;
+  const { text: searchQuery, limit = 50, offset = 0, orderBy, orderDir } = payload;
+  if (!searchQuery) return { rows: [], total: 0 };
   const bare = sanitizeFtsTerm(searchQuery);
   if (!bare) return { rows: [], total: 0 };
 
