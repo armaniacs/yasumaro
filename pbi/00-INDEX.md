@@ -24,11 +24,10 @@
 | [2026-08-17-24-refactor-extract-sqlitehistorypanel-closure.md](2026-08-17-24-refactor-extract-sqlitehistorypanel-closure.md) | 🔴高 | 軽微 | refactor | sqliteHistoryPanel 875行クロージャから抽出 |
 | [2026-08-17-25-refactor-eliminate-loader-urlskipper-copy.md](2026-08-17-25-refactor-eliminate-loader-urlskipper-copy.md) | 🟢低 | 軽微 | refactor | loader.ts の urlSkipper コピーを排除 |
 | [2026-08-17-26-refactor-decompose-recordcurrentpage-god.md](2026-08-17-26-refactor-decompose-recordcurrentpage-god.md) | 🔴高 | 軽微 | refactor | recordCurrentPage ゴッド関数を分解 |
-| [2026-08-17-27-refactor-decompose-trustdb-god-module.md](2026-08-17-27-refactor-decompose-trustdb-god-module.md) | 🔴高 | あり | refactor | trustDb 1024行ゴッドモジュールを分解（PBI-40と重複、着手前にスコープ調整要） |
+| [2026-08-17-27-refactor-decompose-trustdb-god-module.md](2026-08-17-27-refactor-decompose-trustdb-god-module.md) | 🔴高 | あり | refactor | trustDb 6モジュール分解＋循環依存解消（13pt Epic）。CRUD重複はPBI-40で解消済み、残りはDomainVerifier/BloomFilterManager等6モジュール化と循環依存解消。ユーザー確認の上、今回のセッションでは規模超過につき見送り |
 | [2026-08-17-28-fix-extractor-false-purity-pagestate.md](2026-08-17-28-fix-extractor-false-purity-pagestate.md) | 🟡中 | 軽微 | fix | 🔶部分実装: shouldRecordVisitは明示パラメータ化済みだがextractPageContentの副作用は未整理 |
 | [2026-08-17-38-refactor-extract-ssrf-ip-policy.md](2026-08-17-38-refactor-extract-ssrf-ip-policy.md) | 🟡中 | 軽微 | refactor | fetch.tsからSSRF/IPポリシーをssrfGuardへ分離 |
 | [2026-08-17-39-refactor-collapse-dashboard-sqlite-boilerplate.md](2026-08-17-39-refactor-collapse-dashboard-sqlite-boilerplate.md) | 🔴高 | 軽微 | refactor | dashboardSqliteService 19関数のボイラープレートを汎用呼び出しで集約 |
-| [2026-08-17-40-refactor-extract-managed-string-list-trustdb.md](2026-08-17-40-refactor-extract-managed-string-list-trustdb.md) | 🟡中 | 軽微 | refactor | trustDbのCRUDをManagedStringListパターンへ抽出（PBI-27と重複） |
 
 ---
 
@@ -80,6 +79,7 @@
 - 2026-08-17-16-refactor-inject-url-store-check-duplicate.md (StepDepsにUrlStoreインターフェースを追加しcheckDuplicateStepがdeps.urlStoreを優先利用する形に変更。RecordingPipelineがexecuteInternal内で常にurlStoreを渡すため実運用経路ではgetSavedUrlsWithTimestamps直接呼び出しは発生しない。InMemoryUrlStoreによるテスト3件新規追加。npm test 7997件成功)
 - 2026-08-17-17-refactor-di-ify-offline-network-queue.md (buildRecordingPipelineDepsからsharedOfflineNetworkQueueの直接importを除去しPickパラメータとして受け取る形に変更。呼び出し元createBackgroundServices.tsが明示的に注入。NoOpOfflineNetworkQueueを新設しテスト2件追加。npm test 7999件成功)
 - 2026-08-17-11-refactor-remove-notifications-from-pipeline.md (resultBuilder.tsのbuildErrorResultからchrome.notifications.create呼び出しを除去し、notifyRecordingErrorという独立関数に分離。既存のnotifyObsidianSaveSuccess(成功時通知)パターンと統一し、RecordingPipeline.executeInternalが明示的に呼ぶ形に。buildErrorResultはglobalThis.chrome未設定でも動作することをテストで確認。npm test 8006件成功)
+- 2026-08-17-40-refactor-extract-managed-string-list-trustdb.md (trustDb.ts 889行のCRUD重複8メソッドをManagedStringListクラス(add/remove/getAll)に集約し3インスタンス化(userTlds/sensitiveDomains/whitelist)。Trancoバージョン追跡5メソッドをTrancoVersionTrackerに分離。「未初期化時エラー」の既存テスト5件が失敗したため各委譲メソッドにstate.databaseの二重ガードを追加して対応。ManagedStringList/TrancoVersionTracker単体テスト17件新規追加。PBI-27(6モジュール分解＋循環依存解消)はユーザー確認の上、規模超過につき見送り。npm test 8023件成功)
 
 ### 2026-08-15 アーカイブ済み
 
@@ -395,10 +395,10 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 5 |
+| ⬜ 未着手 | 4 |
 | 🔶 部分実装 | 5 |
-| **`pbi/` 残存合計** | **10**（+ 親epic 1件） |
-| アーカイブ済みPBI | 282 |
+| **`pbi/` 残存合計** | **9**（+ 親epic 1件、PBI-27は見送り理由付きで残置） |
+| アーカイブ済みPBI | 283 |
 | アーカイブ済み実装計画 | 112 |
 
 ※ 2026-08-17: アーキテクチャレビュー由来の14PBIを追加（06〜19）。00〜05は前回セッションから残存。
