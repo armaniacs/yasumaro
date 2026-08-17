@@ -20,6 +20,7 @@ vi.mock('../../utils/storage.js', () => ({
   getSettings: hoisted.getSettings,
   clearSettingsCache: hoisted.clearSettingsCache,
   lockSession: hoisted.lockSession,
+  API_KEY_FIELDS: ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key', 'provider_api_key', 'github_pat'],
 }));
 vi.mock('../../utils/domainUtils.js', () => ({
   isDomainAllowed: hoisted.isDomainAllowed,

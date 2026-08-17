@@ -1,35 +1,21 @@
 /**
  * errorMessages.ts
- * エラーメッセージの管理と分離
- *
- * 注意: このモジュールは後方互換性のために維持されている。
- * 新規コードでは errorClassification.ts を直接使用すること。
+ * @deprecated errorClassification.ts の再エクスポートshim。新規コードでは
+ * errorClassification.ts を直接使用すること。
  */
 
-import {
-  ErrorType as _ErrorType,
-  classifyError as _classifyError,
-  getUserMessage as _getUserMessage,
-  convertKnownErrorMessage as _convertKnownErrorMessage,
-  sanitizeContext as _sanitizeContext,
-  type ErrorTypeValues as _ErrorTypeValues,
+export {
+  ErrorType,
+  classifyError,
+  createErrorResponse,
+  type ErrorTypeValues,
+  type ErrorResponse,
 } from './errorClassification.js';
 
-/**
- * エラータイプの定義
- * @deprecated errorClassification.ts の ErrorType を使用すること
- */
-export const ErrorType = _ErrorType;
-
-export type ErrorTypeValues = _ErrorTypeValues;
-
-/**
- * エラーを分類する
- * @deprecated errorClassification.ts の classifyError を使用すること
- */
-export function classifyError(error: unknown): ErrorTypeValues {
-  return _classifyError(error);
-}
+import {
+  getUserMessage as _getUserMessage,
+  convertKnownErrorMessage as _convertKnownErrorMessage,
+} from './errorClassification.js';
 
 /**
  * ユーザー向けエラーメッセージを取得する
@@ -45,37 +31,6 @@ export function getUserMessage(error: unknown): string {
     }
   };
   return _getUserMessage(error, i18n);
-}
-
-export interface ErrorResponse {
-  success: boolean;
-  error: string;
-  errorType: ErrorTypeValues;
-}
-
-/**
- * エラーレスポンスオブジェクトを作成する
- * @deprecated errorClassification.ts の関数を使用すること
- */
-export function createErrorResponse(error: unknown, context: Record<string, unknown> = {}): ErrorResponse {
-  const errorType = classifyError(error);
-  const userMessage = getUserMessage(error);
-
-  // ログには詳細情報を含める（ただしAPIキーなどの機密情報は除く）
-  const err = error instanceof Error ? error : null;
-  console.error('[Service Worker Error]', {
-    type: errorType,
-    name: err?.name,
-    message: err?.message,
-    context: _sanitizeContext(context)
-  });
-
-  // ユーザーには簡潔なメッセージのみ返す
-  return {
-    success: false,
-    error: userMessage,
-    errorType: errorType
-  };
 }
 
 /**
