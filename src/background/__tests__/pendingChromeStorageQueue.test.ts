@@ -1,23 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { enqueuePendingWrite, flushPendingWrites, PENDING_CHROME_STORAGE_KEY } from '../pendingChromeStorageQueue.js';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { enqueuePendingWrite, flushPendingWrites, setPendingWriteQueue, createPendingWriteQueue, PENDING_CHROME_STORAGE_KEY } from '../pendingChromeStorageQueue.js';
+import { InMemoryAdapter } from '../persistentRetryQueue.js';
 
 describe('pendingChromeStorageQueue', () => {
-  let storageData: Record<string, unknown>;
+  let adapter: InMemoryAdapter;
 
   beforeEach(() => {
-    storageData = {};
-    globalThis.chrome = {
-      storage: {
-        local: {
-          get: vi.fn((key: string) => Promise.resolve({ [key]: storageData[key] })),
-          set: vi.fn((obj: Record<string, unknown>) => {
-            Object.assign(storageData, obj);
-            return Promise.resolve();
-          }),
-        },
-      },
-    } as unknown as typeof chrome;
+    adapter = new InMemoryAdapter();
+    setPendingWriteQueue(createPendingWriteQueue(adapter));
   });
+
+  async function loadQueue(): Promise<unknown[]> {
+    return adapter.load(PENDING_CHROME_STORAGE_KEY);
+  }
 
   it('queues a failed write and retries it on flush', async () => {
     await enqueuePendingWrite({ key: 'savedUrlsWithTimestamps', value: [{ url: 'https://example.com', title: 't', timestamp: 1 }] });
@@ -34,7 +29,7 @@ describe('pendingChromeStorageQueue', () => {
     const retryFn = vi.fn().mockResolvedValue(false);
     await flushPendingWrites(retryFn);
 
-    const remaining = storageData[PENDING_CHROME_STORAGE_KEY] as unknown[];
+    const remaining = await loadQueue();
     expect(remaining).toHaveLength(1);
   });
 
@@ -42,7 +37,7 @@ describe('pendingChromeStorageQueue', () => {
     for (let i = 0; i < 600; i++) {
       await enqueuePendingWrite({ key: 'savedUrlsWithTimestamps', value: [], id: i });
     }
-    const queue = storageData[PENDING_CHROME_STORAGE_KEY] as unknown[];
+    const queue = await loadQueue();
     expect(queue.length).toBeLessThanOrEqual(500);
   });
 
@@ -80,7 +75,7 @@ describe('pendingChromeStorageQueue', () => {
     const retryFn = vi.fn().mockResolvedValue(false);
     await flushPendingWrites(retryFn);
 
-    const remaining = storageData[PENDING_CHROME_STORAGE_KEY] as unknown[];
+    const remaining = await loadQueue();
     expect(remaining).toHaveLength(1);
     expect((remaining[0] as { type?: string }).type).toBe('metadataPatch');
   });
@@ -124,7 +119,7 @@ describe('pendingChromeStorageQueue', () => {
       retryCount: 0,
     });
 
-    const queue = storageData[PENDING_CHROME_STORAGE_KEY] as unknown[];
+    const queue = await loadQueue();
     expect(queue).toHaveLength(1);
     const merged = queue[0] as { patch: Record<string, unknown> };
     expect(merged.patch.tags).toEqual(['a', 'b']);
@@ -144,7 +139,7 @@ describe('pendingChromeStorageQueue', () => {
       retryCount: 0,
     });
 
-    const queue = storageData[PENDING_CHROME_STORAGE_KEY] as unknown[];
+    const queue = await loadQueue();
     expect(queue).toHaveLength(1);
     const queued = queue[0] as { patch: { content?: string; tags: string[] }; contentOmitted?: boolean };
     expect(queued.patch.content).toBeUndefined();
@@ -183,7 +178,7 @@ describe('pendingChromeStorageQueue', () => {
       retryCount: 0,
     });
 
-    const queue = storageData[PENDING_CHROME_STORAGE_KEY] as Array<{
+    const queue = await loadQueue() as Array<{
       patch: { tags?: string[]; content?: string };
       tagsOmitted?: boolean;
     }>;

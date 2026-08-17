@@ -37,3 +37,19 @@ export class ChromeStorageAdapter implements QueueStorageAdapter {
     }
   }
 }
+
+/**
+ * In-memory adapter for tests. Avoids touching chrome.storage entirely so
+ * queue tests don't depend on a global chrome mock.
+ */
+export class InMemoryAdapter implements QueueStorageAdapter {
+  private store = new Map<string, unknown[]>();
+
+  async load<T>(key: string): Promise<T[]> {
+    return (this.store.get(key) as T[] | undefined) ?? [];
+  }
+
+  async save<T>(key: string, items: T[]): Promise<void> {
+    this.store.set(key, items);
+  }
+}

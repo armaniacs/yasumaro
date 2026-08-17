@@ -181,9 +181,29 @@ export function createPendingWriteQueue(adapter: ChromeStorageAdapter) {
   };
 }
 
-// Default instance for production use
-const defaultAdapter = new ChromeStorageAdapter();
-const defaultQueue = createPendingWriteQueue(defaultAdapter);
+/**
+ * Module-scoped queue instance used by the enqueuePendingWrite/flushPendingWrites
+ * exports below. Built lazily (not at import time) so createBackgroundServices
+ * controls when the ChromeStorageAdapter is constructed, and tests can swap in
+ * an InMemoryAdapter via setPendingWriteQueue before any write happens.
+ */
+let activeQueue: ReturnType<typeof createPendingWriteQueue> | undefined;
+
+function getActiveQueue(): ReturnType<typeof createPendingWriteQueue> {
+  if (!activeQueue) {
+    activeQueue = createPendingWriteQueue(new ChromeStorageAdapter());
+  }
+  return activeQueue;
+}
+
+/**
+ * Inject the queue used by enqueuePendingWrite/flushPendingWrites. Production
+ * code calls this once from createBackgroundServices; tests call it with a
+ * queue built from InMemoryAdapter to avoid touching chrome.storage.
+ */
+export function setPendingWriteQueue(queue: ReturnType<typeof createPendingWriteQueue>): void {
+  activeQueue = queue;
+}
 
 /**
  * Queue a chrome.storage.local write that failed. Best-effort: a queue
@@ -195,11 +215,17 @@ const defaultQueue = createPendingWriteQueue(defaultAdapter);
  * wins, tags are combined when mergeTags is enabled) instead of appending
  * a duplicate entry.
  */
-export const enqueuePendingWrite = defaultQueue.enqueuePendingWrite;
+export function enqueuePendingWrite(write: QueuedChromeStorageWrite): Promise<void> {
+  return getActiveQueue().enqueuePendingWrite(write);
+}
 
 /**
  * Retry every queued write. Writes that succeed are removed from the
  * queue; writes that fail stay queued for the next flush.
  * @param retryFn - Performs the actual retry; returns true on success.
  */
-export const flushPendingWrites = defaultQueue.flushPendingWrites;
+export function flushPendingWrites(
+  retryFn: (write: QueuedChromeStorageWrite) => Promise<boolean>
+): Promise<void> {
+  return getActiveQueue().flushPendingWrites(retryFn);
+}
