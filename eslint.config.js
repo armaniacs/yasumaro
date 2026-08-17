@@ -8,6 +8,40 @@ export default [
   },
   {
     files: ['src/**/*.ts'],
+    ignores: ['src/utils/logger.ts'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        project: './tsconfig.json',
+        tsconfigRootDir: process.cwd(),
+      },
+    },
+    plugins: {
+      '@typescript-eslint': tsPlugin,
+      local: localPlugin,
+    },
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+      'local/require-sanitized-markdown': 'error',
+      'local/require-response-size-limit': 'error',
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/logger/types.js', '**/logger/core.js', '**/logger/api.js'],
+              message: 'logger/* is an internal implementation detail. Import from logger.js instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/utils/logger.ts'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
