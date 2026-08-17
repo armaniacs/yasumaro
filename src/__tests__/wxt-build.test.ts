@@ -120,4 +120,15 @@ describe.skipIf(!distExists)('WXT Build Output', () => {
       expect(fs.existsSync(path.join(distDir, 'background/service-worker.js'))).toBe(false);
     });
   });
+
+  describe('content script bundle - no static import statements', () => {
+    it('content-scripts/content.js に import 文が残っていない（"type": "module" なしで登録されるため）', () => {
+      const contentScriptPath = path.join(distDir, 'content-scripts', 'content.js');
+      if (!fs.existsSync(contentScriptPath)) return;
+      const bundled = fs.readFileSync(contentScriptPath, 'utf8');
+      // Top-level `import ` statements would throw SyntaxError when Chrome
+      // executes this as a plain (non-module) content script.
+      expect(/(^|\n|;)\s*import\s+[^(]/.test(bundled)).toBe(false);
+    });
+  });
 });

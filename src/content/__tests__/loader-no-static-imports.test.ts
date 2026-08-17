@@ -1,16 +1,24 @@
 /**
- * loader.ts の静的インポート禁止テスト
+ * loader.ts の静的インポート方針テスト
  *
  * 背景:
- *   manifest.json の content_scripts に登録されたスクリプトは ESM モジュールとして
- *   実行されない（"type": "module" 指定なし）。そのため loader.ts に静的 import 文が
- *   あると SyntaxError が発生し、extractor.js の動的インポートも行われず、
- *   5秒・50%の条件を満たしても記録されなくなる。
+ *   manifest.json の content_scripts に登録される最終成果物
+ *   (dist/chromium-mv3/content-scripts/content.js) は "type": "module" なしで
+ *   実行されるプレーンスクリプトである。loader.ts に外部から解決できない
+ *   静的 import があれば、ビルド後にもそれが残り SyntaxError を引き起こす。
+ *
+ *   ただし loader.ts はビルド時に WXT (rolldown) でバンドルされるエントリ
+ *   ポイントであり、プロジェクト内の相対 import はビルド時にインライン化
+ *   される（実測: ビルド前後で loader.ts に静的 import を追加しても
+ *   dist/chromium-mv3/content-scripts/content.js に import 文は残らない）。
+ *   したがって「静的 import が一切存在しないこと」ではなく、
+ *   「バンドラーが解決できない import が無いこと」を保証する。
  *
  * 検証内容:
- *   ビルド成果物 (dist/content/loader.js) ではなく、ソース (src/content/loader.ts) を
- *   検査して「toplevel の import 文が存在しないこと」を保証する。
- *   （ソースに import があれば tsc がそのまま出力するため、ソース検査で十分）
+ *   1. loader.ts のトップレベル静的 import が、プロジェクト内の相対パス
+ *      （./ または ../ で始まる .js）のみであること（bare specifier や
+ *      絶対URLのimportは許容しない）
+ *   2. loader.ts に export {} 以外のトップレベル export がないこと
  */
 
 import * as fs from 'fs';
@@ -18,54 +26,60 @@ import * as path from 'path';
 
 const LOADER_PATH = path.resolve(__dirname, '..', 'loader.ts');
 
-describe('loader.ts - Content Script 静的インポート禁止', () => {
+describe('loader.ts - Content Script 静的インポート方針', () => {
     let source: string;
 
     beforeAll(() => {
         source = fs.readFileSync(LOADER_PATH, 'utf8');
     });
 
-    it('loader.ts に静的 import 文が存在しないこと', () => {
-        // 行ごとに検査して、トップレベルの import 文を探す
+    it('静的 import はプロジェクト内の相対パス（./ または ../）のみであること', () => {
         const lines = source.split('\n');
-        const staticImportLines = lines.filter((line, index) => {
-            // コメント行はスキップ
+        const staticImportLines = lines.filter((line) => {
             const trimmed = line.trimStart();
             if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) {
                 return false;
             }
             // "import type" は TypeScript コンパイル時に完全に消去されるため許容
-            // (PBI-02-3: graphify 依存エッジ化のために import type を使用)
             if (/^import\s+type\s+/.test(trimmed)) {
                 return false;
             }
-            // "import " で始まる行がトップレベルの静的 import
             return /^import\s+/.test(trimmed);
         });
 
-        if (staticImportLines.length > 0) {
-            const detail = staticImportLines.map(l => `  ${l.trim()}`).join('\n');
+        const nonRelativeImports = staticImportLines.filter((line) => {
+            const match = line.match(/from\s+['"]([^'"]+)['"]/);
+            if (!match) return true; // side-effect import without a resolvable path
+            const specifier = match[1];
+            return !(specifier.startsWith('./') || specifier.startsWith('../'));
+        });
+
+        if (nonRelativeImports.length > 0) {
+            const detail = nonRelativeImports.map(l => `  ${l.trim()}`).join('\n');
             throw new Error(
-                `loader.ts に静的 import 文が見つかりました。\n` +
-                `Content Script エントリーポイント (loader.ts) は manifest.json で "type": "module" なしに\n` +
-                `登録されるため、静的 import は SyntaxError を引き起こします。\n` +
-                `代わりに console.warn 等を直接使用してください。\n\n` +
+                `loader.ts に、バンドラーが解決できない可能性のある import 文が見つかりました。\n` +
+                `Content Script の最終成果物 (dist/.../content.js) は "type": "module" なしで登録されるため、\n` +
+                `プロジェクト内の相対パス (./xxx.js) 以外の import はバンドル後に残ると SyntaxError になります。\n\n` +
                 `検出された import 文:\n${detail}`
             );
         }
+    });
 
-        expect(staticImportLines).toHaveLength(0);
+    it('loader.ts が urlSkipper.ts から shouldSkipUrl/extractDomain/isDomainInList を import している（重複コード排除の確認）', () => {
+        expect(source).toMatch(/import\s*\{[^}]*shouldSkipUrl[^}]*\}\s*from\s*['"]\.\/urlSkipper\.js['"]/);
+        expect(source).toContain('extractDomain');
+        expect(source).toContain('isDomainInList');
+        // ローカルに再実装された SKIPPED_PROTOCOLS 定数が残っていないこと
+        expect(source).not.toMatch(/const\s+SKIPPED_PROTOCOLS\s*=/);
     });
 
     it('loader.ts は export {} のみを含むこと（isolatedModules 用ダミーは許容）', () => {
-        // トップレベルの export 文を検査（export {} 以外は不要）
         const lines = source.split('\n');
         const exportLines = lines.filter(line => {
             const trimmed = line.trimStart();
             if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) {
                 return false;
             }
-            // export { ... } 以外のトップレベル export を検出
             return /^export\s+/.test(trimmed) && !/^export\s*\{/.test(trimmed);
         });
 
