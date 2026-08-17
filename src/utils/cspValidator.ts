@@ -9,6 +9,7 @@
 
 import { logWarn, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
+import { ALLOWED_LOCALHOST_PORTS } from './ssrfGuard.js';
 
 class CspError extends Error {
     code: string;
@@ -253,8 +254,7 @@ export class CSPValidator {
       }
 
       // VULN-013 fix: localhost/loopback with port allowlist
-      // Only allow ports declared in host_permissions
-      const ALLOWED_LOCALHOST_PORTS = new Set([27123, 27124, 11434, 1234]);
+      // Only allow ports declared in host_permissions (single source: ssrfGuard.ts)
       const port = parsed.port ? parseInt(parsed.port, 10) : (parsed.protocol === 'https:' ? 443 : 80);
 
       if (domain === 'localhost') {

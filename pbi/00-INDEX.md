@@ -26,7 +26,6 @@
 | [2026-08-17-26-refactor-decompose-recordcurrentpage-god.md](2026-08-17-26-refactor-decompose-recordcurrentpage-god.md) | 🔴高 | 軽微 | refactor | recordCurrentPage ゴッド関数を分解 |
 | [2026-08-17-27-refactor-decompose-trustdb-god-module.md](2026-08-17-27-refactor-decompose-trustdb-god-module.md) | 🔴高 | あり | refactor | trustDb 6モジュール分解＋循環依存解消（13pt Epic）。CRUD重複はPBI-40で解消済み、残りはDomainVerifier/BloomFilterManager等6モジュール化と循環依存解消。ユーザー確認の上、今回のセッションでは規模超過につき見送り |
 | [2026-08-17-28-fix-extractor-false-purity-pagestate.md](2026-08-17-28-fix-extractor-false-purity-pagestate.md) | 🟡中 | 軽微 | fix | 🔶部分実装: shouldRecordVisitは明示パラメータ化済みだがextractPageContentの副作用は未整理 |
-| [2026-08-17-38-refactor-extract-ssrf-ip-policy.md](2026-08-17-38-refactor-extract-ssrf-ip-policy.md) | 🟡中 | 軽微 | refactor | fetch.tsからSSRF/IPポリシーをssrfGuardへ分離 |
 | [2026-08-17-39-refactor-collapse-dashboard-sqlite-boilerplate.md](2026-08-17-39-refactor-collapse-dashboard-sqlite-boilerplate.md) | 🔴高 | 軽微 | refactor | dashboardSqliteService 19関数のボイラープレートを汎用呼び出しで集約 |
 
 ---
@@ -80,6 +79,7 @@
 - 2026-08-17-17-refactor-di-ify-offline-network-queue.md (buildRecordingPipelineDepsからsharedOfflineNetworkQueueの直接importを除去しPickパラメータとして受け取る形に変更。呼び出し元createBackgroundServices.tsが明示的に注入。NoOpOfflineNetworkQueueを新設しテスト2件追加。npm test 7999件成功)
 - 2026-08-17-11-refactor-remove-notifications-from-pipeline.md (resultBuilder.tsのbuildErrorResultからchrome.notifications.create呼び出しを除去し、notifyRecordingErrorという独立関数に分離。既存のnotifyObsidianSaveSuccess(成功時通知)パターンと統一し、RecordingPipeline.executeInternalが明示的に呼ぶ形に。buildErrorResultはglobalThis.chrome未設定でも動作することをテストで確認。npm test 8006件成功)
 - 2026-08-17-40-refactor-extract-managed-string-list-trustdb.md (trustDb.ts 889行のCRUD重複8メソッドをManagedStringListクラス(add/remove/getAll)に集約し3インスタンス化(userTlds/sensitiveDomains/whitelist)。Trancoバージョン追跡5メソッドをTrancoVersionTrackerに分離。「未初期化時エラー」の既存テスト5件が失敗したため各委譲メソッドにstate.databaseの二重ガードを追加して対応。ManagedStringList/TrancoVersionTracker単体テスト17件新規追加。PBI-27(6モジュール分解＋循環依存解消)はユーザー確認の上、規模超過につき見送り。npm test 8023件成功)
+- 2026-08-17-38-refactor-extract-ssrf-ip-policy.md (fetch.ts 562行からSSRF/IPポリシー(isPrivateIpAddress/isLocalhostAddress/normalizeIpHostname/validateUrl*/ALLOWED_LOCALHOST_PORTS)をssrfGuard.tsへ分離。fetch.tsは再エクスポートで既存呼び出し元3ファイル(recordingValidator.ts/OpenAIProvider.ts/GeminiProvider.ts)を無変更に維持。cspValidator.tsの重複ALLOWED_LOCALHOST_PORTS定義をssrfGuard.tsからのimportに統一。ssrfGuard単体テスト23件新規追加(fetchモック不要)。npm test 8046件成功)
 
 ### 2026-08-15 アーカイブ済み
 
@@ -395,10 +395,10 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 4 |
+| ⬜ 未着手 | 3 |
 | 🔶 部分実装 | 5 |
-| **`pbi/` 残存合計** | **9**（+ 親epic 1件、PBI-27は見送り理由付きで残置） |
-| アーカイブ済みPBI | 283 |
+| **`pbi/` 残存合計** | **8**（+ 親epic 1件、PBI-27は見送り理由付きで残置） |
+| アーカイブ済みPBI | 284 |
 | アーカイブ済み実装計画 | 112 |
 
 ※ 2026-08-17: アーキテクチャレビュー由来の14PBIを追加（06〜19）。00〜05は前回セッションから残存。
