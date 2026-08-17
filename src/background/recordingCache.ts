@@ -2,9 +2,12 @@
  * RecordingCache
  * settings/URL/privacy の3種のキャッシュ管理を担当するモジュール。
  *
- * RecordingLogic から抽出（PBI-2026-08-08-01）。
  * headerDetector / tabEventHandlers / service-worker から直接アクセスされるため、
  * accessor メソッドでアクセスを制御する。
+ *
+ * インスタンス化されたクラスとして実装され、store（永続化バックエンド）を
+ * コンストラクタで注入する。既存呼び出し元との互換性のため、モジュールレベル
+ * の defaultRecordingCache を静的メソッド経由で公開する。
  */
 
 import { addLog, LogType } from '../utils/logger.js';
@@ -35,6 +38,54 @@ interface CacheState {
   urlCacheTimestamp: number | null;
   privacyCache: Map<string, PrivacyInfo> | null;
   privacyCacheTimestamp: number | null;
+}
+
+type PersistedCacheState = {
+  settingsCache: Settings | null;
+  cacheTimestamp: number | null;
+  cacheVersion: number;
+  urlCache: [string, number][] | null;
+  urlCacheTimestamp: number | null;
+  privacyCache: [string, PrivacyInfo][] | null;
+  privacyCacheTimestamp: number | null;
+};
+
+// --- Store abstraction ---
+
+/**
+ * Minimal persistence interface RecordingCache depends on. Backed by
+ * SessionStore in production; tests inject an in-memory implementation to
+ * avoid touching chrome.storage.session and to get per-test isolation.
+ */
+export interface RecordingCacheStore {
+  get<T>(key: string): Promise<T | null>;
+  set(key: string, value: unknown, options?: { flushImmediately?: boolean }): Promise<void>;
+}
+
+/** Production store: wraps a SessionStore instance. */
+export class SessionStoreRecordingCacheStore implements RecordingCacheStore {
+  constructor(private readonly sessionStore: SessionStore) {}
+
+  get<T>(key: string): Promise<T | null> {
+    return this.sessionStore.get<T>(key);
+  }
+
+  set(key: string, value: unknown, options?: { flushImmediately?: boolean }): Promise<void> {
+    return this.sessionStore.set(key, value, options);
+  }
+}
+
+/** In-memory store for tests: no chrome.storage dependency, per-instance isolation. */
+export class InMemoryRecordingCacheStore implements RecordingCacheStore {
+  private data = new Map<string, unknown>();
+
+  async get<T>(key: string): Promise<T | null> {
+    return (this.data.get(key) as T | undefined) ?? null;
+  }
+
+  async set(key: string, value: unknown): Promise<void> {
+    this.data.set(key, value);
+  }
 }
 
 // --- VULN-014 helpers ---
@@ -81,11 +132,14 @@ function normalizeUrlForCache(url: string): string {
   }
 }
 
-// --- RecordingCache class ---
+// --- RecordingCacheInstance class ---
 
-export class RecordingCache {
-  // Cache state (private static — accessed only through accessor methods)
-  private static cacheState: CacheState = {
+/**
+ * Instance-based cache. Each instance owns its own cache state and store,
+ * so tests can create independent instances instead of sharing global state.
+ */
+export class RecordingCacheInstance {
+  private cacheState: CacheState = {
     settingsCache: null,
     cacheTimestamp: null,
     cacheVersion: 0,
@@ -95,26 +149,20 @@ export class RecordingCache {
     privacyCacheTimestamp: null,
   };
 
-  private static sessionStore: SessionStore = new SessionStore();
-  private static saveQueueScheduled = false;
+  private saveQueueScheduled = false;
+
+  constructor(private readonly store: RecordingCacheStore) {}
 
   // =========================================================================
   // Cache state access (for backward compatibility and testing)
   // =========================================================================
 
-  /**
-   * Get a reference to the internal cache state (for backward compatibility).
-   * Prefer using specific accessor methods instead of accessing cacheState directly.
-   */
-  static getCacheState(): CacheState {
-    return RecordingCache.cacheState;
+  getCacheState(): CacheState {
+    return this.cacheState;
   }
 
-  /**
-   * Reset cache state (for testing).
-   */
-  static resetCacheState(): void {
-    RecordingCache.cacheState = {
+  resetCacheState(): void {
+    this.cacheState = {
       settingsCache: null,
       cacheTimestamp: null,
       cacheVersion: 0,
@@ -129,49 +177,33 @@ export class RecordingCache {
   // Privacy cache accessors (used by headerDetector, tabEventHandlers, service-worker)
   // =========================================================================
 
-  /**
-   * Get the privacy cache map (for read access by tabEventHandlers, service-worker).
-   */
-  static getPrivacyCache(): Map<string, PrivacyInfo> | null {
-    return RecordingCache.cacheState.privacyCache;
+  getPrivacyCache(): Map<string, PrivacyInfo> | null {
+    return this.cacheState.privacyCache;
   }
 
-  /**
-   * Set a privacy info entry in the cache (used by HeaderDetector).
-   * Initializes the cache map if it doesn't exist.
-   */
-  static setPrivacyCacheEntry(url: string, info: PrivacyInfo): void {
-    if (!RecordingCache.cacheState.privacyCache) {
-      RecordingCache.cacheState.privacyCache = new Map();
-      RecordingCache.cacheState.privacyCacheTimestamp = Date.now();
+  setPrivacyCacheEntry(url: string, info: PrivacyInfo): void {
+    if (!this.cacheState.privacyCache) {
+      this.cacheState.privacyCache = new Map();
+      this.cacheState.privacyCacheTimestamp = Date.now();
     }
-    RecordingCache.cacheState.privacyCache.set(url, info);
+    this.cacheState.privacyCache.set(url, info);
   }
 
-  /**
-   * Get the privacy cache size (used by HeaderDetector for logging).
-   */
-  static getPrivacyCacheSize(): number {
-    return RecordingCache.cacheState.privacyCache?.size ?? 0;
+  getPrivacyCacheSize(): number {
+    return this.cacheState.privacyCache?.size ?? 0;
   }
 
-  /**
-   * Check if the privacy cache is initialized.
-   */
-  static isPrivacyCacheInitialized(): boolean {
-    return RecordingCache.cacheState.privacyCache !== null;
+  isPrivacyCacheInitialized(): boolean {
+    return this.cacheState.privacyCache !== null;
   }
 
   // =========================================================================
   // Settings cache
   // =========================================================================
 
-  /**
-   * Get settings with cache (TTL-based).
-   */
-  static async getSettingsWithCache(): Promise<Settings> {
+  async getSettingsWithCache(): Promise<Settings> {
     const now = Date.now();
-    const cs = RecordingCache.cacheState;
+    const cs = this.cacheState;
 
     if (cs.settingsCache && cs.cacheTimestamp) {
       const age = now - cs.cacheTimestamp;
@@ -181,45 +213,39 @@ export class RecordingCache {
       }
     }
 
-    return RecordingCache.fetchAndCacheSettings(now);
+    return this.fetchAndCacheSettings(now);
   }
 
-  private static async fetchAndCacheSettings(now: number): Promise<Settings> {
+  private async fetchAndCacheSettings(now: number): Promise<Settings> {
     const settings = await getSettings();
-    const cs = RecordingCache.cacheState;
+    const cs = this.cacheState;
 
     cs.settingsCache = settings;
     cs.cacheTimestamp = now;
     cs.cacheVersion++;
 
     addLog(LogType.DEBUG, 'Settings cache updated', { cacheVersion: cs.cacheVersion });
-    RecordingCache.scheduleCacheSave();
+    this.scheduleCacheSave();
 
     return settings;
   }
 
-  /**
-   * Invalidate settings cache.
-   */
-  static invalidateSettingsCache(): void {
+  invalidateSettingsCache(): void {
     addLog(LogType.DEBUG, 'Settings cache invalidated');
-    const cs = RecordingCache.cacheState;
+    const cs = this.cacheState;
     cs.settingsCache = null;
     cs.cacheTimestamp = null;
     cs.cacheVersion++;
-    RecordingCache.scheduleCacheSave();
+    this.scheduleCacheSave();
   }
 
   // =========================================================================
   // URL cache
   // =========================================================================
 
-  /**
-   * Get saved URLs with cache (TTL-based).
-   */
-  static async getSavedUrlsWithCache(): Promise<Map<string, number>> {
+  async getSavedUrlsWithCache(): Promise<Map<string, number>> {
     const now = Date.now();
-    const cs = RecordingCache.cacheState;
+    const cs = this.cacheState;
 
     if (cs.urlCache && cs.urlCacheTimestamp) {
       const age = now - cs.urlCacheTimestamp;
@@ -234,33 +260,27 @@ export class RecordingCache {
     cs.urlCacheTimestamp = now;
 
     addLog(LogType.DEBUG, 'URL cache updated', { count: urlMap.size });
-    RecordingCache.scheduleCacheSave();
+    this.scheduleCacheSave();
 
     return urlMap;
   }
 
-  /**
-   * Invalidate URL cache.
-   */
-  static invalidateUrlCache(): void {
+  invalidateUrlCache(): void {
     addLog(LogType.DEBUG, 'URL cache invalidated');
-    const cs = RecordingCache.cacheState;
+    const cs = this.cacheState;
     cs.urlCache = null;
     cs.urlCacheTimestamp = null;
-    RecordingCache.scheduleCacheSave();
+    this.scheduleCacheSave();
   }
 
   // =========================================================================
   // Privacy cache (get with session storage fallback)
   // =========================================================================
 
-  /**
-   * Get privacy info with cache (TTL-based, session storage fallback).
-   */
-  static async getPrivacyInfoWithCache(url: string): Promise<PrivacyInfo | null> {
+  async getPrivacyInfoWithCache(url: string): Promise<PrivacyInfo | null> {
     const now = Date.now();
     const normalizedUrl = normalizeUrlForCache(url);
-    const cs = RecordingCache.cacheState;
+    const cs = this.cacheState;
 
     if (cs.privacyCache) {
       const cached = cs.privacyCache.get(normalizedUrl);
@@ -299,15 +319,12 @@ export class RecordingCache {
     return null;
   }
 
-  /**
-   * Invalidate privacy cache (in-memory + session storage keys).
-   */
-  static async invalidatePrivacyCache(): Promise<void> {
+  async invalidatePrivacyCache(): Promise<void> {
     addLog(LogType.DEBUG, 'Privacy cache invalidated');
-    const cs = RecordingCache.cacheState;
+    const cs = this.cacheState;
     cs.privacyCache = null;
     cs.privacyCacheTimestamp = null;
-    RecordingCache.scheduleCacheSave();
+    this.scheduleCacheSave();
 
     if (chrome.storage.session) {
       try {
@@ -323,26 +340,15 @@ export class RecordingCache {
   }
 
   // =========================================================================
-  // Session storage persistence
+  // Store persistence
   // =========================================================================
 
-  /**
-   * Restore cache state from session storage.
-   */
-  static async loadCacheFromSession(): Promise<void> {
+  async loadCacheFromSession(): Promise<void> {
     try {
-      const saved = await RecordingCache.sessionStore.get<{
-        settingsCache: Settings | null;
-        cacheTimestamp: number | null;
-        cacheVersion: number;
-        urlCache: [string, number][] | null;
-        urlCacheTimestamp: number | null;
-        privacyCache: [string, PrivacyInfo][] | null;
-        privacyCacheTimestamp: number | null;
-      }>(SESSION_KEYS.RECORDING_CACHE);
+      const saved = await this.store.get<PersistedCacheState>(SESSION_KEYS.RECORDING_CACHE);
       if (!saved) return;
       const now = Date.now();
-      const cs = RecordingCache.cacheState;
+      const cs = this.cacheState;
 
       if (saved.settingsCache && saved.cacheTimestamp && (now - saved.cacheTimestamp) < SETTINGS_CACHE_TTL
         && hasApiKeys(saved.settingsCache)) {
@@ -359,29 +365,29 @@ export class RecordingCache {
         cs.privacyCacheTimestamp = saved.privacyCacheTimestamp;
       }
     } catch {
-      // session store unavailable
+      // store unavailable
     }
   }
 
   /**
-   * Schedule a debounced cache save to session storage.
+   * Schedule a debounced cache save to the store.
    */
-  static scheduleCacheSave(): void {
-    if (RecordingCache.saveQueueScheduled) return;
-    RecordingCache.saveQueueScheduled = true;
+  scheduleCacheSave(): void {
+    if (this.saveQueueScheduled) return;
+    this.saveQueueScheduled = true;
     queueMicrotask(async () => {
-      RecordingCache.saveQueueScheduled = false;
+      this.saveQueueScheduled = false;
       try {
-        await RecordingCache.saveCacheToSession();
+        await this.saveCacheToSession();
       } catch (err) {
         console.warn('[RecordingCache] Failed to persist cache to session storage:', err);
       }
     });
   }
 
-  private static async saveCacheToSession(): Promise<void> {
-    const cs = RecordingCache.cacheState;
-    await RecordingCache.sessionStore.set(SESSION_KEYS.RECORDING_CACHE, {
+  private async saveCacheToSession(): Promise<void> {
+    const cs = this.cacheState;
+    const payload: PersistedCacheState = {
       // VULN-014: persist a redacted copy — never write decrypted API keys
       settingsCache: redactSettingsApiKeys(cs.settingsCache),
       cacheTimestamp: cs.cacheTimestamp,
@@ -390,6 +396,78 @@ export class RecordingCache {
       urlCacheTimestamp: cs.urlCacheTimestamp,
       privacyCache: cs.privacyCache ? SessionStore.mapToEntries(cs.privacyCache) : null,
       privacyCacheTimestamp: cs.privacyCacheTimestamp,
-    }, { flushImmediately: true });
+    };
+    await this.store.set(SESSION_KEYS.RECORDING_CACHE, payload, { flushImmediately: true });
+  }
+}
+
+// --- Default production instance + static compatibility wrapper ---
+
+const defaultRecordingCache = new RecordingCacheInstance(
+  new SessionStoreRecordingCacheStore(new SessionStore())
+);
+
+/**
+ * Static-method facade over defaultRecordingCache, kept so the ~14 existing
+ * call sites (headerDetector, tabEventHandlers, service-worker,
+ * createBackgroundServices, RecordingPipeline, lifecycleHandlers) work
+ * unchanged. New code should prefer constructing a RecordingCacheInstance
+ * directly (or receiving one via DI) instead of adding new static callers.
+ */
+export class RecordingCache {
+  static getCacheState(): CacheState {
+    return defaultRecordingCache.getCacheState();
+  }
+
+  static resetCacheState(): void {
+    defaultRecordingCache.resetCacheState();
+  }
+
+  static getPrivacyCache(): Map<string, PrivacyInfo> | null {
+    return defaultRecordingCache.getPrivacyCache();
+  }
+
+  static setPrivacyCacheEntry(url: string, info: PrivacyInfo): void {
+    defaultRecordingCache.setPrivacyCacheEntry(url, info);
+  }
+
+  static getPrivacyCacheSize(): number {
+    return defaultRecordingCache.getPrivacyCacheSize();
+  }
+
+  static isPrivacyCacheInitialized(): boolean {
+    return defaultRecordingCache.isPrivacyCacheInitialized();
+  }
+
+  static async getSettingsWithCache(): Promise<Settings> {
+    return defaultRecordingCache.getSettingsWithCache();
+  }
+
+  static invalidateSettingsCache(): void {
+    defaultRecordingCache.invalidateSettingsCache();
+  }
+
+  static async getSavedUrlsWithCache(): Promise<Map<string, number>> {
+    return defaultRecordingCache.getSavedUrlsWithCache();
+  }
+
+  static invalidateUrlCache(): void {
+    defaultRecordingCache.invalidateUrlCache();
+  }
+
+  static async getPrivacyInfoWithCache(url: string): Promise<PrivacyInfo | null> {
+    return defaultRecordingCache.getPrivacyInfoWithCache(url);
+  }
+
+  static async invalidatePrivacyCache(): Promise<void> {
+    return defaultRecordingCache.invalidatePrivacyCache();
+  }
+
+  static async loadCacheFromSession(): Promise<void> {
+    return defaultRecordingCache.loadCacheFromSession();
+  }
+
+  static scheduleCacheSave(): void {
+    defaultRecordingCache.scheduleCacheSave();
   }
 }
