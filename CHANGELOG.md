@@ -37,6 +37,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- `sqliteHistoryPanel.ts`（875行）から純粋なHTML文字列構築関数を `sqliteHistoryPanelView.ts` に抽出。イベント配線はパネルモジュールに残置。`chrome.notifications` 呼び出しを新設の `notificationService.ts`（`notify()`）に移動。パネル本体は586行に削減、Viewモジュール358行
 - `recordCurrentPage.ts`（615行）を `TabContentFetcher`/`PreviewFlow`/`ForceRecordFlow`/`SpinnerManager`/`ErrorPresenter`/`RecordOrchestrator` の6クラスに分解。モジュールレベルの可変状態（`uiState`）を`RecordOrchestrator`のインスタンスフィールドへ移動。ファサードは32行に削減し、既存の公開API（`loadCurrentTab`/`recordCurrentPage`/`setRecordCurrentPageFn`/`handleRecordNowClick`）はデフォルトインスタンスへ委譲する形で不変
 - `dashboardSqliteService.ts`（704行）に汎用ヘルパー `callDashboard<Req,Res>(payload, decode, defaultErrorMessage)` を新設。同一パターン（送信→成功判定→デコード→ServiceResult）を繰り返していた14関数（toggleStar/deleteLog/updateLog/migrateLogs/clearAllLogs/getLogCount/cleanupLegacyStorage/backfillMetadata/restoreDb/importLogs/purgeOldRecordsNow/purgeContentNow/appendToLogs/queryAuditLogs）を1呼び出しのwrapperに置換。リトライ処理を持つqueryLogs/searchLogs、非ServiceResult形状のgetSqliteStatus、専用デコードが必要なrunOpfsSpike/backupDbは対象外として明示（650行）
 - `cspSettings.ts` の `@deprecated CSPSettings` 静的クラスファサードを削除し、`CspSettingsController` インスタンス（デフォルトエクスポート `cspSettings`）に一本化。重複していたローカル `escapeRegExp`/`i18n` ヘルパーを削除し、`escapeRegExp` は `src/utils/string.ts` へ移動、i18nは `src/utils/i18n.ts` の `getMessage` に統一。`window.alert` によるエラー通知を `cspSaveMessage`/`cspResetMessage` 要素へのインライン表示に置換（`window.confirm` は既存の削除確認パターンと合わせ維持）
