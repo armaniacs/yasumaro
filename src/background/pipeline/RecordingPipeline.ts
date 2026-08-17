@@ -62,7 +62,7 @@ import type { AIService } from '../ai/AIService.js';
 import type { SqliteClient } from '../sqliteClient.js';
 import { mapToBrowsingLogRecord } from './mappers/BrowsingLogRecordMapper.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
-import { sharedOfflineNetworkQueue, type OfflineNetworkQueue } from '../offlineNetworkQueue.js';
+import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { Mutex } from '../../utils/Mutex.js';
 import { RecordingCache } from '../recordingCache.js';
 
@@ -95,20 +95,18 @@ export function createRecordingPipeline(deps: RecordingPipelineDeps): RecordingP
 }
 
 /**
- * Build the pipeline deps shared by every recording caller, wiring the
- * shared offline network queue singleton.
+ * Build the pipeline deps shared by every recording caller.
  *
  * Previously each caller (messageHandlers manual/save, recordingLogic) rebuilt
- * the same 5-field deps object inline, so adding or renaming a pipeline
- * dependency meant editing several call sites.
+ * the same fields inline, so adding or renaming a pipeline dependency meant
+ * editing several call sites. The caller decides which offlineNetworkQueue to
+ * wire (sharedOfflineNetworkQueue in production, NoOpOfflineNetworkQueue or a
+ * mock in tests) instead of this helper importing the singleton itself.
  */
 export function buildRecordingPipelineDeps(
-  deps: Pick<RecordingPipelineDeps, 'getPrivacyInfoWithCache' | 'obsidian' | 'aiService' | 'sqliteClient' | 'urlStore'>,
+  deps: Pick<RecordingPipelineDeps, 'getPrivacyInfoWithCache' | 'obsidian' | 'aiService' | 'sqliteClient' | 'urlStore' | 'offlineNetworkQueue'>,
 ): RecordingPipelineDeps {
-  return {
-    ...deps,
-    offlineNetworkQueue: sharedOfflineNetworkQueue,
-  };
+  return { ...deps };
 }
 
 /**

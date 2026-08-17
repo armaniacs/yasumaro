@@ -95,6 +95,7 @@ import * as logger from '../../../utils/logger.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import { RecordingPipeline, createRecordingPipeline } from '../RecordingPipeline.js';
+import { NoOpOfflineNetworkQueue } from '../../offlineNetworkQueue.js';
 
 const MockedObsidianClient = ObsidianClient as vi.MockedClass<typeof ObsidianClient>;
 
@@ -626,6 +627,39 @@ describe('RecordingPipeline', () => {
 
       expect(result1.success).toBe(true);
       expect(result2.success).toBe(true);
+    });
+  });
+
+  describe('offlineNetworkQueue の注入 (NoOpOfflineNetworkQueue)', () => {
+    it('createRecordingPipeline に NoOpOfflineNetworkQueue を渡して構築できる', () => {
+      const pipeline = createRecordingPipeline({
+        getPrivacyInfoWithCache: makeGetPrivacyInfo(),
+        obsidian: makeObsidian() as any,
+        aiService: null,
+        sqliteClient: null,
+        offlineNetworkQueue: new NoOpOfflineNetworkQueue(),
+      });
+
+      expect(pipeline).toBeInstanceOf(RecordingPipeline);
+    });
+
+    it('NoOpOfflineNetworkQueue 注入時、失敗した記録は例外なく完了する（キューへの永続化を試みない）', async () => {
+      mockProcess.mockRejectedValue(new Error('AI provider unavailable'));
+
+      const pipeline = new RecordingPipeline(
+        makeGetPrivacyInfo(),
+        makeObsidian() as any,
+        makeAiClient() as any,
+        null,
+        new NoOpOfflineNetworkQueue(),
+      );
+
+      const result = await pipeline.execute(
+        { title: 'Test', url: 'https://example.com/noop-queue', content: 'content' },
+        mockSettings,
+      );
+
+      expect(result.success).toBe(false);
     });
   });
 });
