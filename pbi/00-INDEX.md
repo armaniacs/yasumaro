@@ -20,7 +20,6 @@
 |---|---|---|---|---|
 | [2026-08-17-00-epic-architecture-deepening-aug17.md](2026-08-17-00-epic-architecture-deepening-aug17.md) | high | 軽微 | refactor | 5候補実装の親エピック（子PBIの大半がアーカイブ済みのため実質完了、残作業のみ追跡） |
 | [2026-08-17-01-refactor-split-sqlite-engine-context.md](2026-08-17-01-refactor-split-sqlite-engine-context.md) | high | あり | refactor | 🔶部分実装: 分割先モジュールは作成済みだが本体sqliteEngineContext.tsが未接続（孤立コード） |
-| [2026-08-17-11-refactor-remove-notifications-from-pipeline.md](2026-08-17-11-refactor-remove-notifications-from-pipeline.md) | 🟢低 | 軽微 | refactor | パイプラインオーケストレータから chrome.notifications を除去 |
 | [2026-08-17-23-refactor-deepen-cspsettings-static-facade.md](2026-08-17-23-refactor-deepen-cspsettings-static-facade.md) | 🟡中 | 軽微 | refactor | 🔶部分実装: CspSettingsControllerは存在するが@deprecated静的クラスが残存 |
 | [2026-08-17-24-refactor-extract-sqlitehistorypanel-closure.md](2026-08-17-24-refactor-extract-sqlitehistorypanel-closure.md) | 🔴高 | 軽微 | refactor | sqliteHistoryPanel 875行クロージャから抽出 |
 | [2026-08-17-25-refactor-eliminate-loader-urlskipper-copy.md](2026-08-17-25-refactor-eliminate-loader-urlskipper-copy.md) | 🟢低 | 軽微 | refactor | loader.ts の urlSkipper コピーを排除 |
@@ -80,6 +79,7 @@
 - 2026-08-17-04-refactor-inject-store-recording-cache.md (RecordingCacheをRecordingCacheInstance(store注入可能)へ全面インスタンス化。RecordingCacheStore/SessionStoreRecordingCacheStore/InMemoryRecordingCacheStoreを新設。既存static呼び出し元14箇所はdefaultRecordingCacheへ委譲するstatic facadeとして無変更のまま動作、createBackgroundServices側も一貫性維持のためdefaultRecordingCache経由を継続（新規RecordingCacheInstance生成によるキャッシュ分断を回避）。独立性検証テスト5件新規追加。ユーザー確認の上フルインスタンス化を選択。npm test 7994件成功)
 - 2026-08-17-16-refactor-inject-url-store-check-duplicate.md (StepDepsにUrlStoreインターフェースを追加しcheckDuplicateStepがdeps.urlStoreを優先利用する形に変更。RecordingPipelineがexecuteInternal内で常にurlStoreを渡すため実運用経路ではgetSavedUrlsWithTimestamps直接呼び出しは発生しない。InMemoryUrlStoreによるテスト3件新規追加。npm test 7997件成功)
 - 2026-08-17-17-refactor-di-ify-offline-network-queue.md (buildRecordingPipelineDepsからsharedOfflineNetworkQueueの直接importを除去しPickパラメータとして受け取る形に変更。呼び出し元createBackgroundServices.tsが明示的に注入。NoOpOfflineNetworkQueueを新設しテスト2件追加。npm test 7999件成功)
+- 2026-08-17-11-refactor-remove-notifications-from-pipeline.md (resultBuilder.tsのbuildErrorResultからchrome.notifications.create呼び出しを除去し、notifyRecordingErrorという独立関数に分離。既存のnotifyObsidianSaveSuccess(成功時通知)パターンと統一し、RecordingPipeline.executeInternalが明示的に呼ぶ形に。buildErrorResultはglobalThis.chrome未設定でも動作することをテストで確認。npm test 8006件成功)
 
 ### 2026-08-15 アーカイブ済み
 
@@ -395,10 +395,10 @@
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 6 |
+| ⬜ 未着手 | 5 |
 | 🔶 部分実装 | 5 |
-| **`pbi/` 残存合計** | **11**（+ 親epic 1件） |
-| アーカイブ済みPBI | 281 |
+| **`pbi/` 残存合計** | **10**（+ 親epic 1件） |
+| アーカイブ済みPBI | 282 |
 | アーカイブ済み実装計画 | 112 |
 
 ※ 2026-08-17: アーキテクチャレビュー由来の14PBIを追加（06〜19）。00〜05は前回セッションから残存。
