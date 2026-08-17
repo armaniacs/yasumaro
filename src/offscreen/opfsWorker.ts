@@ -6,61 +6,84 @@
  * all SQLite operations. Communicates with the offscreen document via postMessage.
  *
  * Replaces the old wa-sqlite sync build (AccessHandlePoolVFS, no FTS5).
+ *
+ * This file is the thin message router. Actual handler logic lives in
+ * src/offscreen/opfsWorker/handlers/*.
  */
 /// <reference lib="webworker" />
 
-import { createEngine, type SqliteEngine, type SqliteValue, type SqliteRow } from './sqliteEngine.js';
+import { createEngine, type SqliteEngine, type SqliteValue } from './sqliteEngine.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { migrateOldOpfsDb } from './opfsMigrationV2.js';
-import { readOldDbRecords, deleteOldDbFile } from './opfsMigrationV2Reader.js';
-import { StorageKeys } from '../utils/storage/types.js';
-import type { BrowsingLogRecord, SearchResult, QueryOptions } from '../utils/sqlite-types.js';
+import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL } from './schema.js';
+import { runMigrations, type MigrationEngine } from './migrations.js';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import type { WorkerMessageType, WorkerRequestMessage, WorkerResponseMessage, WorkerLogMessage } from './opfsWorker/types.js';
+import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+import { handleInsert, handleQuery, handleUpdate, handleHardDelete, handleToggleStar, handleGetCount, handleInsertBatch } from './opfsWorker/crudHandlers.js';
+import { handleSearch as handleSearchImpl, handleSearchFts as handleSearchFtsImpl, handleSearchLike as handleSearchLikeImpl } from './opfsWorker/searchHandlers.js';
+import { handleBackup, handleSerialize } from './opfsWorker/backupHandlers.js';
+import { handlePurgeOldRecords, handleContentPurge, handleClearAll } from './opfsWorker/purgeHandlers.js';
+import { handleAuditLogInsert, handleAuditLogQuery } from './opfsWorker/auditHandlers.js';
+import { handleGetStatus, handleFtsIndexSize, handleSqlExec, handleSqlQuery } from './opfsWorker/statusHandlers.js';
+import { runMigrationV2, type MigrationContext } from './opfsWorker/migrationV2.js';
+import { type HandlerContext } from './opfsWorker/handlers.js';
 
-interface AuditLogQueryPayload {
-  limit?: number;
-  offset?: number;
-}
+// Re-export types so existing imports from 'opfsWorker.js' still work
+export type { WorkerLogMessage } from './opfsWorker/types.js';
 
-// Worker-internal types (not in shared types):
-type QueryPayload = QueryOptions & { ids?: number[]; tagFilter?: string; isStarred?: number };
-type SearchPayload = {
-  searchQuery: string;
-  limit?: number;
-  offset?: number;
-  orderBy?: 'rank' | 'created_at';
-  orderDir?: 'ASC' | 'DESC';
-};
+// Re-export handler functions for tests that import them directly.
+// These wrappers close over the module-level handlerCtx so tests can call
+// them with the original positional signature (no context parameter).
 
-interface RequestMessage {
-  id: number;
-  type: string;
-  payload: unknown;
-}
-
-interface ResponseMessage {
-  id: number;
-  success: boolean;
-  result?: unknown;
-  error?: string;
+/**
+ * Thin wrapper for tests — supplies the handler context automatically.
+ */
+export async function handleSearchFts(
+  sanitizedQuery: string, limit: number, offset: number,
+  orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC'
+): Promise<{ rows: import('../utils/sqlite-types.js').SearchResult[]; total: number }> {
+  return handleSearchFtsImpl(handlerCtx, sanitizedQuery, limit, offset, orderBy, orderDir);
 }
 
 /**
- * Log relay message posted to the parent offscreen document, distinguished
- * from ResponseMessage by the __log marker. This Worker has no chrome.*
- * access, so sqliteEngineContext.ts's worker.onmessage handler forwards
- * these to the Service Worker (or logs them directly, since it runs in the
- * offscreen document and can import ../utils/logger.js).
+ * Thin wrapper for tests — supplies the handler context automatically.
  */
-export interface WorkerLogMessage {
-  __log: true;
-  level: 'warn' | 'error' | 'info';
-  message: string;
-  details?: Record<string, unknown>;
+export async function handleSearchLike(
+  rawQuery: string, limit: number, offset: number,
+  orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC'
+): Promise<{ rows: import('../utils/sqlite-types.js').SearchResult[]; total: number }> {
+  return handleSearchLikeImpl(handlerCtx, rawQuery, limit, offset, orderBy, orderDir);
 }
+
+/**
+ * Thin wrapper around backupHandlers.handleRestore that closes over the
+ * module-level engine/initSqlite state. Tests import this function with the
+ * single-argument signature (data only), so we keep this adapter here rather
+ * than re-exporting the 4-argument version.
+ */
+export async function handleRestore(data: Uint8Array): Promise<{ restored: true }> {
+  const { handleRestore: restoreImpl } = await import('./opfsWorker/backupHandlers.js');
+  return restoreImpl(data, () => engine, (e) => { engine = e; }, initSqlite);
+}
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const DB_FILENAME = 'yasumaro.db';
+const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
+
+// ---------------------------------------------------------------------------
+// Module state
+// ---------------------------------------------------------------------------
+
+let engine: SqliteEngine | null = null;
+let cachedCompileOptions: string[] | null = null;
+let fts5Available = false;
+
+// ---------------------------------------------------------------------------
+// Log relay
+// ---------------------------------------------------------------------------
 
 function postWorkerLog(level: WorkerLogMessage['level'], message: string, details?: Record<string, unknown>): void {
   try {
@@ -73,29 +96,6 @@ function postWorkerLog(level: WorkerLogMessage['level'], message: string, detail
 }
 
 // ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const DB_FILENAME = 'yasumaro.db';
-const ALLOWED_ORDER_COLUMNS = [
-  'id', 'url', 'title', 'summary', 'tags', 'created_at',
-  'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted',
-] as const;
-
-const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
-
-import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL, INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, FTS_QUERY_MAX_LENGTH, sanitizeFtsTerm } from './schema.js';
-import { runMigrations, type MigrationEngine } from './migrations.js';
-
-// ---------------------------------------------------------------------------
-// Module state
-// ---------------------------------------------------------------------------
-
-let engine: SqliteEngine | null = null;
-let cachedCompileOptions: string[] | null = null;
-let fts5Available = false;
-
-// ---------------------------------------------------------------------------
 // Init helpers
 // ---------------------------------------------------------------------------
 
@@ -105,10 +105,6 @@ async function initSqlite(): Promise<void> {
   try {
     await initSqliteInner();
   } catch (err) {
-    // Reset so a future call can retry from scratch instead of being
-    // permanently stuck with a half-initialized engine (see PBI-11 postmortem:
-    // a failure here previously left `engine` non-null while migrations
-    // that depend on it, like the gist_synced column, never ran).
     engine = null;
     throw err;
   }
@@ -117,14 +113,10 @@ async function initSqlite(): Promise<void> {
 async function initSqliteInner(): Promise<void> {
   engine = await createEngine(DB_FILENAME, WASM_URL);
 
-  // Enable WAL mode before any schema/migration operations for journal consistency
-  // (mirrors sqliteEngineContext.ts IDB path; without this, concurrent access
-  // suffers read/write blocking and the checkpoint below is a no-op).
   await engine.exec('PRAGMA journal_mode=WAL;');
   await engine.exec(SCHEMA_SQL);
   await engine.exec(AUDIT_LOG_SCHEMA_SQL);
 
-  // Run schema migrations through shared migration engine
   const workerEngine: MigrationEngine = {
     exec: async (sql) => {
       await engine!.exec(sql);
@@ -137,85 +129,15 @@ async function initSqliteInner(): Promise<void> {
   const { fts5Available: fts } = await runMigrations(workerEngine);
   fts5Available = fts;
 
-  // Cache compile options for diagnostics
   const opts = await engine.query('PRAGMA compile_options');
   cachedCompileOptions = opts.map((r) => String(Object.values(r)[0] ?? ''));
 
   // Migrate old AccessHandlePoolVFS database (one-time, idempotent)
-  await runMigrationV2();
-}
-
-// ---------------------------------------------------------------------------
-// V2 Migration helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Module-level guard to avoid redundant migration attempts within the same
- * Worker lifetime (covers the case where chrome.storage is unavailable).
- */
-let migrationV2AttemptedThisSession = false;
-
-async function runMigrationV2(): Promise<void> {
-  if (migrationV2AttemptedThisSession) return;
-  migrationV2AttemptedThisSession = true;
-
-  try {
-    // chrome.storage.local may not be available inside a Worker depending on the
-    // browser version and extension manifest.  We guard before each access and
-    // fall back to a purely idempotent strategy:
-    //   - isMigrationDone: check chrome.storage if available; otherwise treat
-    //     the old OPFS dir absence (which readOldDbRecords already handles by
-    //     returning []) as "nothing to do".
-    //   - setMigrationDone: write to chrome.storage if available; otherwise the
-    //     module-level guard + deleteOldDb ensure we don't re-migrate.
-    const chromeStorageAvailable =
-      typeof chrome !== 'undefined' && chrome.storage?.local !== undefined;
-
-    // Record attempt timestamp
-    const now = new Date().toISOString();
-    if (chromeStorageAvailable) {
-      chrome.storage.local.set({ [StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT]: now });
-    }
-
-    const result = await migrateOldOpfsDb({
-      isMigrationDone: async () => {
-        if (!chromeStorageAvailable) return false; // rely on old-dir absence check
-        return new Promise<boolean>((resolve) => {
-          chrome.storage.local.get(StorageKeys.OPFS_MIGRATION_V2_DONE, (items) => {
-            resolve(items[StorageKeys.OPFS_MIGRATION_V2_DONE] === true);
-          });
-        });
-      },
-      setMigrationDone: async () => {
-        if (!chromeStorageAvailable) return;
-        await new Promise<void>((resolve) => {
-          chrome.storage.local.set({ [StorageKeys.OPFS_MIGRATION_V2_DONE]: true }, resolve);
-        });
-      },
-      readOldRecords: readOldDbRecords,
-      insertBatch: handleInsertBatch,
-      deleteOldDb: deleteOldDbFile,
-    });
-
-    // Record completion metadata after the orchestrator finishes
-    if (!result.skipped && !result.error && chromeStorageAvailable) {
-      const completedAt = new Date().toISOString();
-      chrome.storage.local.set({
-        [StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT]: completedAt,
-        [StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT]: result.migrated,
-      });
-    }
-
-    if (result.skipped) {
-      // Already done — nothing to log
-    } else if (result.error) {
-      postWorkerLog('warn', 'OPFS Worker: V2 migration failed (will retry next init)', { error: result.error });
-    } else {
-      postWorkerLog('info', `OPFS Worker: V2 migration complete — ${result.migrated} records migrated`, { migrated: result.migrated });
-    }
-  } catch (err) {
-    postWorkerLog('warn', 'OPFS Worker: runMigrationV2 unexpected error', { error: errorMessage(err) });
-  }
+  const migrationCtx: MigrationContext = {
+    handleInsertBatch: (records) => handleInsertBatch(handlerCtx, records, postWorkerLog, ensureEngine),
+    postLog: postWorkerLog,
+  };
+  await runMigrationV2(migrationCtx);
 }
 
 function getEngine(): SqliteEngine {
@@ -223,564 +145,32 @@ function getEngine(): SqliteEngine {
   return engine;
 }
 
+async function ensureEngine(): Promise<void> {
+  if (!engine) await initSqlite();
+}
+
 /**
  * Test seam only — lets tests inject a fake engine and fts5Available value
- * without driving the full initSqlite() path (schema creation, migrations,
- * chrome.storage-dependent V2 migration). Not called from any production
- * code path.
+ * without driving the full initSqlite() path.
  */
 export function __setEngineForTesting(fakeEngine: SqliteEngine | null, fts5: boolean): void {
   engine = fakeEngine;
   fts5Available = fts5;
 }
 
-function extractDomain(url: string): string | null {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, '');
-    return host || null;
-  } catch {
-    return null;
-  }
-}
-
 // ---------------------------------------------------------------------------
-// SQL execution helpers
+// Handler context — shared state passed to all handler modules
 // ---------------------------------------------------------------------------
 
-async function sqlExec(sql: string, params: SqliteValue[] = []): Promise<void> {
-  await getEngine().exec(sql, params);
-}
-
-async function sqlQuery(
-  sql: string, params: SqliteValue[], callback: (row: SqliteRow) => void
-): Promise<void> {
-  const rows = await getEngine().query(sql, params);
-  for (const row of rows) callback(row);
-}
+const handlerCtx: HandlerContext = {
+  get engine() { return getEngine(); },
+};
 
 // ---------------------------------------------------------------------------
-// CRUD Handlers
+// Message handler (thin router)
 // ---------------------------------------------------------------------------
 
-async function handleInsert(record: BrowsingLogRecord): Promise<{ id: number }> {
-  const domain = record.domain || extractDomain(record.url);
-
-  await sqlExec(INSERT_SQL, buildInsertParams(record, domain));
-
-  let id = 0;
-  await sqlQuery('SELECT last_insert_rowid() AS id', [], (row) => { id = Number(row.id); });
-  return { id };
-}
-
-async function handleQuery(payload: QueryPayload): Promise<{ rows: BrowsingLogRecord[]; total: number }> {
-  const {
-    limit = 20, offset = 0, since, until, domain,
-    isStarred, orderBy = 'created_at', orderDir = 'DESC', ids,
-    tagFilter, gistSynced,
-  } = payload;
-
-  // Validate sort columns
-  if (!ALLOWED_ORDER_COLUMNS.includes(orderBy as typeof ALLOWED_ORDER_COLUMNS[number])) {
-    throw new Error(`Invalid orderBy: ${orderBy}`);
-  }
-  const dir = orderDir === 'ASC' ? 'ASC' : 'DESC';
-
-  // Build WHERE clause
-  const conditions: string[] = ['is_deleted = 0'];
-  const params: SqliteValue[] = [];
-
-  if (since !== undefined) { conditions.push('created_at >= ?'); params.push(since); }
-  if (until !== undefined) { conditions.push('created_at <= ?'); params.push(until); }
-  if (domain) { conditions.push('domain = ?'); params.push(domain); }
-  if (isStarred !== undefined) { conditions.push('is_starred = ?'); params.push(isStarred); }
-  if (gistSynced !== undefined) { conditions.push('gist_synced = ?'); params.push(gistSynced); }
-  if (ids !== undefined && ids.length > 0) {
-    conditions.push(`id IN (${ids.map(() => '?').join(',')})`);
-    params.push(...ids);
-  }
-  if (tagFilter) {
-    // Strip FTS5 operator keywords and special chars, but preserve # prefix for trigram matching
-    // Apply length limit to prevent expensive FTS5 queries on extremely long input
-    const limitedTag = tagFilter.slice(0, FTS_QUERY_MAX_LENGTH);
-    const cleanTag = limitedTag
-      .replace(/["'*^~:()+\-\\]/g, ' ')
-      .replace(/\b(OR|AND|NOT|NEAR)\b/gi, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    const ftsExpr = `"#${cleanTag}"`;
-    conditions.push('id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)');
-    params.push(ftsExpr);
-  }
-
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-
-  // Count
-  let total = 0;
-  await sqlQuery(`SELECT COUNT(*) AS c FROM browsing_logs ${where}`, params, (row) => { total = Number(row.c); });
-
-  // Select
-  const rows: BrowsingLogRecord[] = [];
-  await sqlQuery(
-    `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced, gist_synced
-     FROM browsing_logs ${where}
-     ORDER BY ${orderBy} ${dir} LIMIT ? OFFSET ?`,
-    [...params, limit, offset],
-    (row) => {
-      rows.push({
-        id: Number(row.id),
-        url: String(row.url),
-        title: row.title as string | null,
-        summary: row.summary as string | null,
-        tags: row.tags as string | null,
-        created_at: Number(row.created_at),
-        domain: row.domain as string | null,
-        visit_duration: row.visit_duration as number | null,
-        scroll_ratio: row.scroll_ratio as number | null,
-        is_starred: Number(row.is_starred),
-        is_deleted: Number(row.is_deleted),
-        obsidian_synced: Number(row.obsidian_synced),
-        gist_synced: Number(row.gist_synced),
-      });
-    }
-  );
-
-  return { rows, total };
-}
-
-async function handleUpdate(payload: { id: number; changes: Record<string, SqliteValue> }): Promise<void> {
-  const { id, changes } = payload;
-  const sets: string[] = [];
-  const vals: SqliteValue[] = [];
-
-  for (const [key, val] of Object.entries(changes)) {
-    if (val !== undefined) {
-      sets.push(`${key} = ?`);
-      vals.push(val);
-    }
-  }
-
-  if (sets.length === 0) return;
-  vals.push(id);
-
-  await sqlExec(
-    `UPDATE browsing_logs SET ${sets.join(', ')} WHERE id = ?`,
-    vals
-  );
-}
-
-async function handleHardDelete(id: number): Promise<void> {
-  await sqlExec('DELETE FROM browsing_logs WHERE id = ?', [id]);
-}
-
-async function handleToggleStar(id: number): Promise<{ is_starred: number }> {
-  await sqlExec(
-    'UPDATE browsing_logs SET is_starred = CASE WHEN is_starred = 0 THEN 1 ELSE 0 END WHERE id = ?',
-    [id]
-  );
-  let isStarred = 0;
-  await sqlQuery('SELECT is_starred AS is_starred FROM browsing_logs WHERE id = ?', [id], (row) => { isStarred = Number(row.is_starred); });
-  return { is_starred: isStarred };
-}
-
-async function handleGetCount(): Promise<number> {
-  let count = 0;
-  await sqlQuery('SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row.c); });
-  return count;
-}
-
-async function handleFtsIndexSize(): Promise<{ count: number }> {
-  if (!engine || !fts5Available) return { count: 0 };
-  let count = 0;
-  await sqlQuery('SELECT COUNT(*) AS c FROM browsing_logs_fts', [], (row) => { count = Number(row.c); });
-  return { count };
-}
-
-async function handleInsertBatch(records: BrowsingLogRecord[]): Promise<{ count: number }> {
-  if (!engine) await initSqlite();
-  let inserted = 0;
-  try {
-    await sqlExec('BEGIN IMMEDIATE');
-    for (const record of records) {
-      try {
-        const domain = record.domain || extractDomain(record.url);
-        await sqlExec(INSERT_IGNORE_SQL, buildInsertParams(record, domain));
-      } catch (err) {
-        // Log first error for diagnosis, silently skip the rest
-        if (inserted === 0 && records.indexOf(record) === 0) {
-          postWorkerLog('error', 'OPFS Worker: first INSERT failed', { error: errorMessage(err), url: record.url });
-        }
-      }
-    }
-    await sqlExec('COMMIT');
-    // Use a single post-COMMIT changes() call for an accurate inserted-row count
-    // (INSERT OR IGNORE makes a local counter unreliable).
-    await sqlQuery('SELECT changes() AS c', [], (row) => {
-      inserted = Number(row.c);
-    });
-  } catch (err) {
-    await sqlExec('ROLLBACK');
-    postWorkerLog('error', 'OPFS Worker: insertBatch transaction failed', { error: errorMessage(err) });
-  }
-  return { count: inserted };
-}
-
-async function handleAuditLogInsert(record: { provider: string; url: string; created_at: number }): Promise<{ id: number }> {
-  await sqlExec(
-    'INSERT INTO audit_log (provider, url, created_at) VALUES (?, ?, ?)',
-    [record.provider, record.url, record.created_at],
-  );
-  let id = 0;
-  await sqlQuery('SELECT last_insert_rowid() AS id', [], (row) => { id = Number(row.id); });
-  return { id };
-}
-
-async function handleAuditLogQuery(payload: AuditLogQueryPayload): Promise<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }> {
-  const limit = Math.min(payload.limit ?? 100, 1000);
-  const offset = payload.offset ?? 0;
-
-  const rows: Array<{ id: number; provider: string; url: string; created_at: number }> = [];
-  await sqlQuery(
-    'SELECT id, provider, url, created_at FROM audit_log ORDER BY created_at DESC LIMIT ? OFFSET ?',
-    [limit, offset],
-    (row) => {
-      rows.push({
-        id: Number(row.id),
-        provider: String(row.provider),
-        url: String(row.url),
-        created_at: Number(row.created_at),
-      });
-    },
-  );
-
-  let total = 0;
-  await sqlQuery('SELECT COUNT(*) AS c FROM audit_log', [], (row) => { total = Number(row.c); });
-
-  return { rows, total };
-}
-
-async function handleGetStatus(): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; count: number; compileOptions?: string[] }> {
-  if (!engine) {
-    return { initialized: false, path: DB_FILENAME, fallback: false, fts5: false, count: 0 };
-  }
-
-  let count = 0;
-  await sqlQuery('SELECT COUNT(*) AS c FROM browsing_logs', [], (row) => { count = Number(row.c); });
-
-  return {
-    initialized: true,
-    path: `OPFS:${DB_FILENAME}`,
-    fallback: false,
-    fts5: fts5Available,
-    count,
-    compileOptions: cachedCompileOptions ?? undefined,
-  };
-}
-
-async function handlePurgeOldRecords(payload: { retentionDays: number; maxRecords: number }): Promise<{ purged: number }> {
-  const { retentionDays, maxRecords } = payload;
-  const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
-  let totalPurged = 0;
-
-  try {
-    await sqlExec('BEGIN IMMEDIATE');
-
-    // Delete old non-starred records
-    await sqlExec(
-      'DELETE FROM browsing_logs WHERE created_at < ? AND is_starred = 0 AND is_deleted = 0',
-      [cutoffMs]
-    );
-
-    // Get change count via query
-    await sqlQuery('SELECT changes() AS c', [], (row) => { totalPurged = Number(row.c); });
-
-    // If still over max, delete oldest non-starred records
-    let count = 0;
-    await sqlQuery('SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row.c); });
-
-    if (count > maxRecords) {
-      const toDelete = count - maxRecords;
-      await sqlExec(
-        `DELETE FROM browsing_logs WHERE id IN (
-           SELECT id FROM browsing_logs WHERE is_starred = 0 AND is_deleted = 0
-           ORDER BY created_at ASC LIMIT ?
-         )`,
-        [toDelete]
-      );
-      // Use actual change count from SQLite
-      await sqlQuery('SELECT changes() AS c', [], (row) => { totalPurged += Number(row.c); });
-    }
-
-    await sqlExec('COMMIT');
-  } catch (err) {
-    await sqlExec('ROLLBACK');
-    postWorkerLog('error', 'OPFS Worker: purge transaction failed', { error: errorMessage(err) });
-    throw err;
-  }
-
-  return { purged: totalPurged };
-}
-
-async function handleContentPurge(payload: {
-  retentionDays?: number | null;
-  maxRecords?: number | null;
-  includeStarred?: boolean | null;
-}): Promise<{ purged: number }> {
-  const starredClause = payload.includeStarred ? '' : 'AND is_starred = 0';
-  let totalPurged = 0;
-
-  // 1. Days-based
-  if (payload.retentionDays != null && payload.retentionDays > 0) {
-    const cutoffMs = Date.now() - payload.retentionDays * 24 * 60 * 60 * 1000;
-    await sqlExec(
-      `UPDATE browsing_logs SET content = NULL
-       WHERE content IS NOT NULL AND created_at < ? ${starredClause}`,
-      [cutoffMs]
-    );
-    await sqlQuery('SELECT changes() AS c', [], (row) => { totalPurged += Number(row.c); });
-  }
-
-  // 2. Count-based
-  if (payload.maxRecords != null && payload.maxRecords > 0) {
-    let count = 0;
-    await sqlQuery(
-      `SELECT COUNT(*) AS c FROM browsing_logs WHERE content IS NOT NULL ${starredClause}`,
-      [],
-      (row) => { count = Number(row.c); }
-    );
-
-    if (count > payload.maxRecords) {
-      const excess = count - payload.maxRecords;
-      await sqlExec(
-        `UPDATE browsing_logs SET content = NULL
-         WHERE id IN (
-           SELECT id FROM browsing_logs
-           WHERE content IS NOT NULL ${starredClause}
-           ORDER BY created_at ASC
-           LIMIT ?
-         )`,
-        [excess]
-      );
-      totalPurged += excess;
-    }
-  }
-
-  return { purged: totalPurged };
-}
-
-async function handleClearAll(): Promise<void> {
-  await sqlExec('DELETE FROM browsing_logs', []);
-  if (fts5Available) {
-    await sqlExec("INSERT INTO browsing_logs_fts(browsing_logs_fts) VALUES('rebuild')", []);
-  }
-}
-
-async function handleSerialize(): Promise<Uint8Array> {
-  const rows: BrowsingLogRecord[] = [];
-  await sqlQuery(
-    `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced, gist_synced
-     FROM browsing_logs WHERE is_deleted = 0 ORDER BY created_at DESC`,
-    [],
-    (row) => {
-      rows.push({
-        id: Number(row.id),
-        url: String(row.url),
-        title: row.title as string | null,
-        summary: row.summary as string | null,
-        tags: row.tags as string | null,
-        created_at: Number(row.created_at),
-        domain: row.domain as string | null,
-        visit_duration: row.visit_duration as number | null,
-        scroll_ratio: row.scroll_ratio as number | null,
-        is_starred: Number(row.is_starred),
-        is_deleted: Number(row.is_deleted),
-        obsidian_synced: Number(row.obsidian_synced),
-        gist_synced: Number(row.gist_synced),
-      });
-    }
-  );
-
-  const encoder = new TextEncoder();
-  return encoder.encode(JSON.stringify(rows));
-}
-
-/**
- * バイナリ .db バックアップを取得
- * OPFS ファイルシステムから直接データベースファイルを読み取る
- *
- * 注意: createSyncAccessHandle は OPFSCoopSyncVFS が同一ファイルを開いていると
- *       INVALID_STATE エラーになるため、非排他読み取りの getFile() を使用する。
- */
-async function handleBackup(): Promise<Uint8Array> {
-  if (!engine) throw new Error('OPFS SQLite not initialized');
-
-  // WAL チェックポイントを実行し、すべてのデータをメイン .db ファイルにフラッシュ
-  try {
-    await engine.exec('PRAGMA wal_checkpoint(TRUNCATE)');
-  } catch {
-    // WAL モードでない場合は無視
-  }
-
-  // OPFS ファイルシステムから .db ファイルのスナップショットを読み取る
-  // getFile() は排他ロックを要求しないため、SQLite が使用中でも動作する
-  const root = await navigator.storage.getDirectory();
-  const fileHandle = await root.getFileHandle(DB_FILENAME, { create: false });
-  const file = await fileHandle.getFile();
-  const buffer = await file.arrayBuffer();
-  return new Uint8Array(buffer);
-}
-
-const RESTORE_TMP_FILENAME = `${DB_FILENAME}.restore-tmp`;
-
-/**
- * バイナリ .db を書き戻して履歴DBを復元する。
- * 一時ファイルに書き込み → SQLite として開けるか検証 → 検証OKなら本番ファイルと置換。
- * 検証に失敗した場合は一時ファイルを破棄し、本番ファイルは変更しない。
- */
-export async function handleRestore(data: Uint8Array): Promise<{ restored: true }> {
-  const root = await navigator.storage.getDirectory();
-
-  // 1. 一時ファイルに書き込む
-  const tmpHandle = await root.getFileHandle(RESTORE_TMP_FILENAME, { create: true });
-  const writable = await tmpHandle.createWritable();
-  await writable.write(data.slice() as unknown as ArrayBuffer);
-  await writable.close();
-
-  // 2. 一時ファイルが開ける有効な SQLite ファイルか検証する
-  try {
-    const tmpEngine = await createEngine(RESTORE_TMP_FILENAME, WASM_URL);
-    await tmpEngine.exec('SELECT count(*) FROM sqlite_master');
-    await tmpEngine.close();
-  } catch (validationError) {
-    // 検証失敗: 一時ファイルを破棄し、本番ファイルには触れない
-    await root.removeEntry(RESTORE_TMP_FILENAME).catch(() => {});
-    throw new Error(`Restore validation failed: ${errorMessage(validationError)}`);
-  }
-
-  // 3. 検証OK: 既存の engine を閉じてから本番ファイルと置換する
-  if (engine) {
-    await engine.close();
-    engine = null;
-  }
-  await root.removeEntry(DB_FILENAME).catch(() => {});
-  await (tmpHandle as unknown as { move: (name: string) => Promise<void> }).move(DB_FILENAME);
-
-  // 4. 復元したファイルで engine を再初期化する
-  await initSqlite();
-
-  return { restored: true };
-}
-
-export async function handleSearch(payload: SearchPayload): Promise<{ rows: SearchResult[]; total: number }> {
-  const { searchQuery, limit = 50, offset = 0, orderBy, orderDir } = payload;
-  const bare = sanitizeFtsTerm(searchQuery);
-  if (!bare) return { rows: [], total: 0 };
-
-  // trigram MATCH requires >= 3 unicode code points; shorter terms fall back to LIKE.
-  const charLen = [...bare].length;
-  if (fts5Available && charLen >= 3) {
-    return handleSearchFts(`"${bare}"`, limit, offset, orderBy, orderDir);
-  }
-  return handleSearchLike(searchQuery, limit, offset, orderBy, orderDir);
-}
-
-export async function handleSearchFts(
-  sanitizedQuery: string, limit: number, offset: number,
-  orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC'
-): Promise<{ rows: SearchResult[]; total: number }> {
-  let total = 0;
-  await sqlQuery(
-    `SELECT COUNT(*) AS c FROM browsing_logs_fts
-JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
-WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0`,
-    [sanitizedQuery],
-    (row) => { total = Number(row.c); }
-  );
-
-  // Ternary, not a whitelist+throw: matches handleQuery's existing orderDir
-  // handling in this file, and avoids OpfsWorkerBackend.search()'s
-  // tryOpfsProxy collapsing a thrown error into an opaque "worker
-  // unavailable" message (see the note above this function).
-  const dir = orderDir === 'ASC' ? 'ASC' : 'DESC';
-  const orderClause = orderBy === 'created_at' ? `b.created_at ${dir}, b.id ${dir}` : 'rank';
-
-  const rows: SearchResult[] = [];
-  await sqlQuery(
-    `SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank AS rank
-     FROM browsing_logs_fts
-     JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
-     WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0
-     ORDER BY ${orderClause} LIMIT ? OFFSET ?`,
-    [sanitizedQuery, limit, offset],
-    (row) => {
-      rows.push({
-        id: Number(row.id),
-        url: String(row.url),
-        title: row.title as string | null,
-        summary: row.summary as string | null,
-        tags: row.tags as string | null,
-        created_at: Number(row.created_at),
-        domain: row.domain as string | null,
-        visit_duration: row.visit_duration as number | null,
-        scroll_ratio: row.scroll_ratio as number | null,
-        is_starred: Number(row.is_starred),
-        rank: Number(row.rank),
-      });
-    }
-  );
-
-  return { rows, total };
-}
-
-export async function handleSearchLike(
-  rawQuery: string, limit: number, offset: number,
-  orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC'
-): Promise<{ rows: SearchResult[]; total: number }> {
-  const like = `%${rawQuery}%`;
-  const conditions = 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';
-  const params: SqliteValue[] = [like, like, like, like];
-
-  let total = 0;
-  await sqlQuery(
-    `SELECT COUNT(*) AS c FROM browsing_logs WHERE ${conditions}`,
-    params,
-    (row) => { total = Number(row.c); }
-  );
-
-  // Same ternary approach as handleSearchFts above — orderDir only ever
-  // becomes exactly 'ASC' or 'DESC', regardless of what arrives at runtime.
-  const dir = orderBy === 'created_at' && orderDir === 'ASC' ? 'ASC' : 'DESC';
-
-  const rows: SearchResult[] = [];
-  await sqlQuery(
-    `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred
-     FROM browsing_logs WHERE ${conditions}
-     ORDER BY created_at ${dir} LIMIT ? OFFSET ?`,
-    [...params, limit, offset],
-    (row) => {
-      rows.push({
-        id: Number(row.id),
-        url: String(row.url),
-        title: row.title as string | null,
-        summary: row.summary as string | null,
-        tags: row.tags as string | null,
-        created_at: Number(row.created_at),
-        domain: row.domain as string | null,
-        visit_duration: row.visit_duration as number | null,
-        scroll_ratio: row.scroll_ratio as number | null,
-        is_starred: Number(row.is_starred),
-        rank: 0,
-      });
-    }
-  );
-
-  return { rows, total };
-}
-
-// ---------------------------------------------------------------------------
-// Message handler
-// ---------------------------------------------------------------------------
-
-export async function handleRequest(req: RequestMessage): Promise<ResponseMessage> {
+export async function handleRequest(req: WorkerRequestMessage): Promise<WorkerResponseMessage> {
   const { id, type, payload } = req;
 
   try {
@@ -797,58 +187,58 @@ export async function handleRequest(req: RequestMessage): Promise<ResponseMessag
         break;
       }
       case 'INSERT': {
-        result = await handleInsert(payload as BrowsingLogRecord);
+        result = await handleInsert(handlerCtx, payload as BrowsingLogRecord);
         break;
       }
       case 'QUERY': {
-        result = await handleQuery(payload as QueryPayload);
+        result = await handleQuery(handlerCtx, payload as import('./opfsWorker/types.js').QueryPayload);
         break;
       }
       case 'SEARCH': {
-        result = await handleSearch(payload as SearchPayload);
+        result = await handleSearchImpl(handlerCtx, payload as import('./opfsWorker/types.js').SearchPayload, fts5Available);
         break;
       }
       case 'UPDATE': {
-        await handleUpdate(payload as { id: number; changes: Record<string, SqliteValue> });
+        await handleUpdate(handlerCtx, payload as { id: number; changes: Record<string, SqliteValue> });
         result = { updated: true };
         break;
       }
       case 'DELETE': {
-        await handleHardDelete((payload as { id: number }).id);
+        await handleHardDelete(handlerCtx, (payload as { id: number }).id);
         result = { deleted: true };
         break;
       }
       case 'TOGGLE_STAR': {
-        result = await handleToggleStar((payload as { id: number }).id);
+        result = await handleToggleStar(handlerCtx, (payload as { id: number }).id);
         break;
       }
       case 'GET_COUNT': {
-        result = { count: await handleGetCount() };
+        result = { count: await handleGetCount(handlerCtx) };
         break;
       }
       case 'STATUS': {
-        result = await handleGetStatus();
+        result = await handleGetStatus(handlerCtx, fts5Available, cachedCompileOptions);
         break;
       }
       case 'PURGE': {
-        result = await handlePurgeOldRecords(payload as { retentionDays: number; maxRecords: number });
+        result = await handlePurgeOldRecords(handlerCtx, payload as { retentionDays: number; maxRecords: number }, { postLog: postWorkerLog });
         break;
       }
       case 'CONTENT_PURGE': {
-        result = await handleContentPurge(payload as { retentionDays?: number; maxRecords?: number; includeStarred?: boolean });
+        result = await handleContentPurge(handlerCtx, payload as { retentionDays?: number; maxRecords?: number; includeStarred?: boolean });
         break;
       }
       case 'CLEAR_ALL': {
-        await handleClearAll();
+        await handleClearAll(handlerCtx, fts5Available);
         result = { cleared: true };
         break;
       }
       case 'SERIALIZE': {
-        result = await handleSerialize();
+        result = await handleSerialize(handlerCtx);
         break;
       }
       case 'BACKUP': {
-        result = await handleBackup();
+        result = await handleBackup(handlerCtx);
         break;
       }
       case 'RESTORE': {
@@ -860,11 +250,11 @@ export async function handleRequest(req: RequestMessage): Promise<ResponseMessag
         break;
       }
       case 'FTS_INDEX_SIZE': {
-        result = await handleFtsIndexSize();
+        result = await handleFtsIndexSize(handlerCtx, fts5Available);
         break;
       }
       case 'INSERT_BATCH': {
-        result = await handleInsertBatch(payload as BrowsingLogRecord[]);
+        result = await handleInsertBatch(handlerCtx, payload as BrowsingLogRecord[], postWorkerLog, ensureEngine);
         break;
       }
       case 'HEALTH_CHECK': {
@@ -872,16 +262,15 @@ export async function handleRequest(req: RequestMessage): Promise<ResponseMessag
         break;
       }
       case 'AUDIT_LOG_INSERT': {
-        result = await handleAuditLogInsert(payload as { provider: string; url: string; created_at: number });
+        result = await handleAuditLogInsert(handlerCtx, payload as { provider: string; url: string; created_at: number });
         break;
       }
       case 'AUDIT_LOG_QUERY': {
-        result = await handleAuditLogQuery(payload as AuditLogQueryPayload);
+        result = await handleAuditLogQuery(handlerCtx, payload as import('./opfsWorker/types.js').AuditLogQueryPayload);
         break;
       }
       // WARNING: SQL_EXEC / SQL_QUERY accept raw SQL strings.
       // Use ONLY for schema migrations (MigrationEngine). Never expose to user input.
-      // Regular CRUD operations MUST use typed operation messages (INSERT, QUERY, etc.).
       case 'SQL_EXEC': {
         const { sql, params = [] } = payload as { sql: string; params: SqliteValue[] };
         await initSqlite();
@@ -937,7 +326,7 @@ function enqueue(task: QueueTask): void {
 // Worker entry point
 // ---------------------------------------------------------------------------
 
-self.onmessage = (e: MessageEvent<RequestMessage>) => {
+self.onmessage = (e: MessageEvent<WorkerRequestMessage>) => {
   enqueue(async () => {
     const response = await handleRequest(e.data);
     (self as unknown as DedicatedWorkerGlobalScope).postMessage(response);
