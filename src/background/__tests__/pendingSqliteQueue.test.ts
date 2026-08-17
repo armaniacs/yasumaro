@@ -168,3 +168,131 @@ describe('chunkArray', () => {
     expect(chunks[1]).toHaveLength(50);
   });
 });
+
+describe('pendingSqliteQueue retry semantics', () => {
+  let mockStorage: Record<string, unknown>;
+
+  beforeEach(() => {
+    mockStorage = {};
+    vi.stubGlobal('chrome', {
+      storage: {
+        local: {
+          get: vi.fn((key: string) => Promise.resolve({ [key]: mockStorage[key] })),
+          set: vi.fn((items: Record<string, unknown>) => {
+            Object.assign(mockStorage, items);
+            return Promise.resolve();
+          }),
+        },
+      },
+    });
+  });
+
+  it('wraps records with createdAt and retryCount on enqueue', async () => {
+    await enqueuePendingRecord(makeRecord('https://a.example.com'));
+
+    const stored = mockStorage[PENDING_SQLITE_RECORDS_KEY] as Array<Record<string, unknown>>;
+    expect(stored).toHaveLength(1);
+    expect(stored[0].createdAt).toBeDefined();
+    expect(typeof stored[0].createdAt).toBe('number');
+    expect(stored[0].retryCount).toBe(0);
+    expect(stored[0].url).toBe('https://a.example.com');
+  });
+
+  it('unwraps metadata before passing to insertBatchResult', async () => {
+    await enqueuePendingRecord(makeRecord('https://a.example.com'));
+    await enqueuePendingRecord(makeRecord('https://b.example.com'));
+
+    const insertBatchResult = vi.fn().mockResolvedValue({ success: true, data: { count: 2 } });
+
+    await flushPendingRecords({ insert: vi.fn(), insertBatchResult } as any);
+
+    // The records passed to insertBatchResult should be plain BrowsingLogRecords
+    // (no createdAt or retryCount fields)
+    const passedRecords = insertBatchResult.mock.calls[0][0];
+    expect(passedRecords).toHaveLength(2);
+    expect(passedRecords[0].url).toBe('https://a.example.com');
+    expect(passedRecords[0].createdAt).toBeUndefined();
+    expect(passedRecords[0].retryCount).toBeUndefined();
+    expect(passedRecords[1].url).toBe('https://b.example.com');
+  });
+
+  it('drops records that exceed max retry count (5)', async () => {
+    // Simulate a record that has already failed 5 times
+    const queuedRecord = {
+      ...makeRecord('https://a.example.com'),
+      createdAt: Date.now(),
+      retryCount: 5, // already at max
+    };
+    mockStorage[PENDING_SQLITE_RECORDS_KEY] = [queuedRecord];
+
+    const insertBatchResult = vi.fn();
+
+    await flushPendingRecords({ insert: vi.fn(), insertBatchResult } as any);
+
+    // Record should be dropped (retryCount 5 >= maxRetryCount 5), not inserted
+    expect(insertBatchResult).not.toHaveBeenCalled();
+    // Queue should be empty after drop
+    const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as unknown[];
+    expect(remaining).toHaveLength(0);
+  });
+
+  it('increments retryCount on failed chunks and retains them', async () => {
+    // Pre-populate with a QueuedRecord that has retryCount=0
+    const queuedRecord = {
+      ...makeRecord('https://a.example.com'),
+      createdAt: Date.now(),
+      retryCount: 0,
+    };
+    mockStorage[PENDING_SQLITE_RECORDS_KEY] = [queuedRecord];
+
+    const insertBatchResult = vi.fn().mockResolvedValue({
+      success: false,
+      error: { kind: 'sqlite_error', message: 'insert failed', retriable: false },
+    });
+
+    await flushPendingRecords({ insert: vi.fn(), insertBatchResult } as any);
+
+    const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as Array<Record<string, unknown>>;
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].retryCount).toBe(1);
+    expect(remaining[0].url).toBe('https://a.example.com');
+  });
+
+  it('drops records after 5 failed flush attempts', async () => {
+    // Simulate a record that has failed 4 times already
+    const queuedRecord = {
+      ...makeRecord('https://a.example.com'),
+      createdAt: Date.now(),
+      retryCount: 4,
+    };
+    mockStorage[PENDING_SQLITE_RECORDS_KEY] = [queuedRecord];
+
+    const insertBatchResult = vi.fn().mockResolvedValue({
+      success: false,
+      error: { kind: 'sqlite_error', message: 'insert failed', retriable: false },
+    });
+
+    // This flush increments to 5, which equals maxRetryCount (5) -> dropped
+    await flushPendingRecords({ insert: vi.fn(), insertBatchResult } as any);
+
+    const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as unknown[];
+    expect(remaining).toHaveLength(0);
+  });
+
+  it('drops expired records (older than 24h)', async () => {
+    const expiredRecord = {
+      ...makeRecord('https://old.example.com'),
+      createdAt: Date.now() - (25 * 60 * 60 * 1000), // 25 hours ago
+      retryCount: 0,
+    };
+    mockStorage[PENDING_SQLITE_RECORDS_KEY] = [expiredRecord];
+
+    const insertBatchResult = vi.fn();
+
+    await flushPendingRecords({ insert: vi.fn(), insertBatchResult } as any);
+
+    expect(insertBatchResult).not.toHaveBeenCalled();
+    const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as unknown[];
+    expect(remaining).toHaveLength(0);
+  });
+});

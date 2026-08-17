@@ -31,6 +31,12 @@ export interface PersistentRetryQueueOptions<T> {
   maxJobsPerCycle?: number;
   /** Maximum payload size in bytes. Items exceeding this are dropped on enqueue. */
   maxPayloadBytes?: number;
+  /**
+   * When true, flush() saves remaining items after every processed item
+   * instead of once at the end. This prevents Service Worker termination
+   * from losing retry-count progress for already-handled items.
+   */
+  persistPerItem?: boolean;
 }
 
 /**
@@ -104,15 +110,30 @@ export class PersistentRetryQueue<T> {
     const now = Date.now();
     const maxJobs = this.options.maxJobsPerCycle ?? items.length;
     const toProcess = items.slice(0, maxJobs);
+    const untouched = items.slice(maxJobs);
     const remaining: T[] = [];
 
+    const persistState = async () => {
+      await this.adapter.save(this.options.storageKey, [...remaining, ...untouched]);
+    };
+
     for (const item of toProcess) {
+      // Drop items that already exceeded max retry count (no handler call)
+      if (shouldDrop(item, this.options.maxRetryCount)) {
+        addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries, dropping`, {
+          id: (item as RetryableItem & { id?: string }).id,
+        });
+        if (this.options.persistPerItem) await persistState();
+        continue;
+      }
+
       // TTL check
       if (isRetryable(item) && this.options.ttlMs) {
         if (now - item.createdAt > this.options.ttlMs) {
           addLog(LogType.INFO, `${this.options.logLabel}: dropped expired item`, {
             id: (item as RetryableItem & { id?: string }).id,
           });
+          if (this.options.persistPerItem) await persistState();
           continue;
         }
       }
@@ -125,6 +146,7 @@ export class PersistentRetryQueue<T> {
             addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries, dropping`, {
               id: (item as RetryableItem & { id?: string }).id,
             });
+            if (this.options.persistPerItem) await persistState();
             continue;
           }
           remaining.push(item);
@@ -136,18 +158,105 @@ export class PersistentRetryQueue<T> {
           addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries, dropping`, {
             id: (item as RetryableItem & { id?: string }).id,
           });
+          if (this.options.persistPerItem) await persistState();
           continue;
         }
         remaining.push(item);
       }
+      if (this.options.persistPerItem) await persistState();
     }
 
-    // Add untouched items (beyond maxJobsPerCycle) back to remaining
-    const untouched = items.slice(maxJobs);
-    const finalRemaining = [...remaining, ...untouched];
+    // Final save (covers both persistPerItem and non-persistPerItem cases)
+    await this.adapter.save(this.options.storageKey, [...remaining, ...untouched]);
+    return [...remaining, ...untouched];
+  }
 
-    await this.adapter.save(this.options.storageKey, finalRemaining);
-    return finalRemaining;
+  /**
+   * Flush items in batches. Each batch is passed to the handler as an array.
+   * The handler returns per-item booleans indicating success/failure.
+   * Failed items are retained with retry count incremented.
+   *
+   * Always persists per-item for Service Worker resilience.
+   */
+  async flushBatch(
+    handler: (items: T[]) => Promise<boolean[]>,
+    batchSize: number
+  ): Promise<T[]> {
+    const items = await this.adapter.load<T>(this.options.storageKey);
+    if (items.length === 0) return [];
+
+    const now = Date.now();
+    const maxJobs = this.options.maxJobsPerCycle ?? items.length;
+    const toProcess = items.slice(0, maxJobs);
+    const untouched = items.slice(maxJobs);
+    const remaining: T[] = [];
+
+    const persistState = async () => {
+      await this.adapter.save(this.options.storageKey, [...remaining, ...untouched]);
+    };
+
+    const chunks = chunkArray(toProcess, batchSize);
+
+    for (const chunk of chunks) {
+      // Filter expired or max-retry-exceeded items from this chunk
+      const validItems: T[] = [];
+      for (const item of chunk) {
+        if (shouldDrop(item, this.options.maxRetryCount)) {
+          addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries, dropping`, {
+            id: (item as RetryableItem & { id?: string }).id,
+          });
+          continue;
+        }
+        if (isRetryable(item) && this.options.ttlMs) {
+          if (now - item.createdAt > this.options.ttlMs) {
+            addLog(LogType.INFO, `${this.options.logLabel}: dropped expired item`, {
+              id: (item as RetryableItem & { id?: string }).id,
+            });
+            continue;
+          }
+        }
+        validItems.push(item);
+      }
+
+      if (validItems.length === 0) {
+        await persistState();
+        continue;
+      }
+
+      try {
+        const results = await handler(validItems);
+        for (let i = 0; i < validItems.length; i++) {
+          if (!results[i]) {
+            incrementRetryCount(validItems[i]);
+            if (shouldDrop(validItems[i], this.options.maxRetryCount)) {
+              addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries, dropping`, {
+                id: (validItems[i] as RetryableItem & { id?: string }).id,
+              });
+              continue;
+            }
+            remaining.push(validItems[i]);
+          }
+        }
+      } catch (error) {
+        // On batch failure, all items in the batch are retained
+        for (const item of validItems) {
+          incrementRetryCount(item);
+          setLastError(item, error);
+          if (shouldDrop(item, this.options.maxRetryCount)) {
+            addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries, dropping`, {
+              id: (item as RetryableItem & { id?: string }).id,
+            });
+            continue;
+          }
+          remaining.push(item);
+        }
+      }
+      await persistState();
+    }
+
+    // Final save
+    await this.adapter.save(this.options.storageKey, [...remaining, ...untouched]);
+    return [...remaining, ...untouched];
   }
 
   /**
@@ -220,4 +329,16 @@ function estimatePayloadSize(payload: unknown): number {
   } catch {
     return 0;
   }
+}
+
+/**
+ * Split an array into chunks of at most `size` items.
+ * Exported for unit testing and use by flushBatch.
+ */
+export function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
 }
