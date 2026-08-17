@@ -20,7 +20,7 @@ import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL, INSERT_IGNORE_SQL, buildInsertParams,
 import { runMigrations } from './migrations.js';
 import { createIdbEngine, type SqliteEngine, type SqliteRow } from './sqliteEngine.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
-import type { WorkerLogMessage } from './opfsWorker.js';
+import type { WorkerLogMessage } from './opfsWorker/types.js';
 import { resolveBackend, createBackend, detectOpfsCapabilitiesForResolver, type BackendType } from './backendResolver.js';
 
 export type SqliteValue = number | string | Uint8Array | Array<number> | bigint | null;

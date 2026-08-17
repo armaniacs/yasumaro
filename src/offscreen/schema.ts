@@ -130,6 +130,15 @@ export const UPDATABLE_FIELDS = [
 /** INSERT OR IGNORE (for insertBatch() and migration). */
 export const INSERT_IGNORE_SQL = `INSERT OR IGNORE INTO browsing_logs (${INSERT_COLS}) VALUES (${INSERT_PLACEHOLDERS})`;
 
+/**
+ * Columns allowed in ORDER BY clauses for query(). Single source of truth
+ * shared between opfsWorker.ts (OPFS path) and IdbVfsBackend.ts (IDB path).
+ */
+export const ALLOWED_ORDER_COLUMNS = [
+  'id', 'url', 'title', 'summary', 'tags', 'created_at',
+  'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted',
+] as const;
+
 // ============================================================================
 // PBI-09: Shared INSERT parameter builder
 // Single source of truth for the 30-column parameter array so sqlite.ts,

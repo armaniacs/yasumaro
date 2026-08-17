@@ -7,14 +7,9 @@ import type {
   StatusResult, BackendOrError,
 } from './StorageBackend.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, QueryOptions, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
-import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from './schema.js';
+import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS, ALLOWED_ORDER_COLUMNS } from './schema.js';
 import { sanitizeFtsTerm } from './schema.js';
 import { extractDomain } from './sqliteEngineContext.js';
-
-const ALLOWED_ORDER_COLUMNS = [
-  'id', 'url', 'title', 'summary', 'tags', 'created_at',
-  'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted',
-] as const;
 
 const ALLOWED_ORDER_DIRECTIONS = ['ASC', 'DESC'] as const;
 
