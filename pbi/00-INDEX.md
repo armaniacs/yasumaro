@@ -18,7 +18,6 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| [2026-08-17-23-refactor-deepen-cspsettings-static-facade.md](2026-08-17-23-refactor-deepen-cspsettings-static-facade.md) | 🟡中 | 軽微 | refactor | 🔶部分実装: CspSettingsControllerは存在するが@deprecated静的クラスが残存 |
 | [2026-08-17-24-refactor-extract-sqlitehistorypanel-closure.md](2026-08-17-24-refactor-extract-sqlitehistorypanel-closure.md) | 🔴高 | 軽微 | refactor | sqliteHistoryPanel 875行クロージャから抽出 |
 | [2026-08-17-26-refactor-decompose-recordcurrentpage-god.md](2026-08-17-26-refactor-decompose-recordcurrentpage-god.md) | 🔴高 | 軽微 | refactor | recordCurrentPage ゴッド関数を分解 |
 | [2026-08-17-27-refactor-decompose-trustdb-god-module.md](2026-08-17-27-refactor-decompose-trustdb-god-module.md) | 🔴高 | あり | refactor | trustDb 6モジュール分解＋循環依存解消（13pt Epic）。CRUD重複はPBI-40で解消済み、残りはDomainVerifier/BloomFilterManager等6モジュール化と循環依存解消。ユーザー確認の上、今回のセッションでは規模超過につき見送り |
@@ -67,6 +66,7 @@
 - 2026-08-17-01-refactor-split-sqlite-engine-context.md (分割先4モジュールが孤立コードだった状態を修正し、sqliteEngineContext.tsが実際に委譲する構造へ。698行→283行、各モジュール250行以内。単体テスト22件追加、npm test 8065件成功)
 - 2026-08-17-00-epic-architecture-deepening-aug17.md (子PBI 01〜05が全て完了したため親エピックも完了)
 - 2026-08-17-28-fix-extractor-false-purity-pagestate.md (extractPageContentを純粋関数化しExtractResultオブジェクトを返す形に変更。pageState反映はreportValidVisit/GET_CONTENTハンドラ側の責務に分離。既存テスト4ファイルのアサーションを新契約に追従、純粋性検証テスト3件追加。npm test 8068件成功)
+- 2026-08-17-23-refactor-deepen-cspsettings-static-facade.md (@deprecated CSPSettings静的クラスを削除しCspSettingsControllerインスタンス(cspSettings)に一本化。escapeRegExpをutils/string.tsへ移動、重複i18nヘルパーをutils/i18n.tsのgetMessageに統一。window.alertをインラインメッセージ表示に置換。既存テスト6ファイル更新、npm test 8065件成功)
 - 2026-08-17-19-refactor-instance-session-store-header-detector.md (HeaderDetectorをインスタンス化。initialize/onHeadersReceived/cachePrivacyInfo等をインスタンスメソッド化しcreateBackgroundServices.tsで生成、service-worker.tsのグローバル初期化を除去。normalizeUrlは状態を持たない純粋関数のためstatic維持。npm test 7979件成功)
 - 2026-08-17-14-refactor-instance-pending-storage-queue.md (pendingChromeStorageQueueのimport時即時生成シングルトンを廃止、createBackgroundServices経由のsetPendingWriteQueue明示初期化に変更。InMemoryAdapterを新設しテストをchrome.storageモック非依存に。呼び出し元saveMetadataStep/alarmHandlerのDI化は全StepDeps型への横断変更となるため今回はスコープ外と判断しユーザー確認済み。npm test 7979件成功)
 - 2026-08-17-18-refactor-logger-dual-module.md (logger/*への直接import違反は実質0件と確認（sqliteAlert.tsのcriticalAlertSink.js importは意図的なDIアダプタ分離のため対象外）。eslint.config.jsにno-restricted-importsルールを追加しlogger/*直接importを禁止、logger.ts自体は除外設定。npm run type-check成功)

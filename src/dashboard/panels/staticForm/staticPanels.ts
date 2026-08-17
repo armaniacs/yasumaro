@@ -5,7 +5,7 @@ import { initTagsPanel } from '../../tagsPanel.js';
 import { initRecordingConditionsSettings } from '../../recordingConditionsSettings.js';
 import { initCustomPromptManager } from '../../settings/customPromptManager.js';
 import { initMarkdownTemplateManager } from '../../markdownTemplateManager.js';
-import { CSPSettings } from '../../cspSettings.js';
+import { cspSettings } from '../../cspSettings.js';
 import { init as initContentSettings, loadContentSettings } from '../../settings/contentSettings.js';
 import { initExportImport } from '../../exportImport.js';
 import { initEncryptedBackupPanel } from '../../encryptedBackupPanel.js';
@@ -47,8 +47,8 @@ export const STATIC_FORM_PANELS: readonly StaticFormPanel[] = [
     }),
     createStaticFormPanel({
         id: 'panel-csp',
-        mount: () => CSPSettings.loadCSPSettings(),
-        refresh: () => CSPSettings.loadCSPSettings(),
+        mount: () => cspSettings.loadCSPSettings(),
+        refresh: () => cspSettings.loadCSPSettings(),
     }),
     createStaticFormPanel({
         id: 'panel-content',

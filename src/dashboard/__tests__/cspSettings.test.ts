@@ -2,12 +2,12 @@
 
 /**
  * cspSettings.test.ts
- * Unit tests for CSPSettings class
+ * Unit tests for CspSettingsController (default `cspSettings` instance).
  */
 
-import { vi } from 'vitest';;
+import { vi } from 'vitest';
 
-// Mock dependencies before importing CSPSettings
+// Mock dependencies before importing cspSettings
 vi.mock('../../utils/storage.js', () => ({
   StorageKeys: {
     CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled',
@@ -31,7 +31,11 @@ vi.mock('../../utils/logger.js', () => ({
   LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
 }));
 
-import { CSPSettings } from '../cspSettings.js';
+vi.mock('../../utils/i18n.js', () => ({
+  getMessage: vi.fn((key: string) => key),
+}));
+
+import { cspSettings, CspSettingsController } from '../cspSettings.js';
 import { getSettings, saveSettings, StorageKeys } from '../../utils/storage.js';
 import { CSPValidator } from '../../utils/cspValidator.js';
 import { addLog } from '../../utils/logger.js';
@@ -52,7 +56,7 @@ function setupDOM() {
   `;
 }
 
-describe('CSPSettings', () => {
+describe('cspSettings (CspSettingsController default instance)', () => {
   beforeEach(() => {
     setupDOM();
     vi.clearAllMocks();
@@ -71,7 +75,7 @@ describe('CSPSettings', () => {
 
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
-      await CSPSettings.loadCSPSettings();
+      await cspSettings.loadCSPSettings();
 
       const checkbox = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
       expect(checkbox.checked).toBe(true);
@@ -86,7 +90,7 @@ describe('CSPSettings', () => {
 
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
-      await CSPSettings.loadCSPSettings();
+      await cspSettings.loadCSPSettings();
 
       const checkbox = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
       expect(checkbox.checked).toBe(true);
@@ -100,7 +104,7 @@ describe('CSPSettings', () => {
 
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
-      await CSPSettings.loadCSPSettings();
+      await cspSettings.loadCSPSettings();
 
       const checkbox = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
       expect(checkbox.checked).toBe(false);
@@ -119,7 +123,7 @@ describe('CSPSettings', () => {
         return null;
       });
 
-      await CSPSettings.loadCSPSettings();
+      await cspSettings.loadCSPSettings();
 
       const container = document.getElementById('cspProviderList');
       expect(container?.children.length).toBe(2);
@@ -129,7 +133,7 @@ describe('CSPSettings', () => {
       mockAddLog.mockClear();
       mockGetSettings.mockRejectedValue(new Error('Storage error'));
 
-      await CSPSettings.loadCSPSettings();
+      await cspSettings.loadCSPSettings();
 
       expect(mockAddLog).toHaveBeenCalledWith('ERROR', 'CSP settings load failed', expect.objectContaining({ error: expect.any(String) }));
     });
@@ -144,7 +148,7 @@ describe('CSPSettings', () => {
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
       // Should not throw
-      await CSPSettings.loadCSPSettings();
+      await cspSettings.loadCSPSettings();
       expect(CSPValidator.initializeFromSettings).toHaveBeenCalled();
     });
   });
@@ -161,7 +165,7 @@ describe('CSPSettings', () => {
         return domains[p] || null;
       });
 
-      await CSPSettings.renderProviderList(['deepinfra']);
+      await cspSettings.renderProviderList(['deepinfra']);
 
       const container = document.getElementById('cspProviderList');
       const rows = container?.querySelectorAll('.csp-provider-row');
@@ -178,7 +182,7 @@ describe('CSPSettings', () => {
         return null;
       });
 
-      await CSPSettings.renderProviderList([]);
+      await cspSettings.renderProviderList([]);
 
       const container = document.getElementById('cspProviderList');
       expect(container?.children.length).toBe(1);
@@ -188,7 +192,7 @@ describe('CSPSettings', () => {
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue(['huggingface']);
       (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue('api-inference.huggingface.co');
 
-      await CSPSettings.renderProviderList(['huggingface']);
+      await cspSettings.renderProviderList(['huggingface']);
 
       const row = document.querySelector('.csp-provider-row');
       expect(row?.classList.contains('csp-provider-row--active')).toBe(true);
@@ -201,7 +205,7 @@ describe('CSPSettings', () => {
       document.getElementById('cspProviderList')?.remove();
 
       // Should not throw
-      await CSPSettings.renderProviderList(['huggingface']);
+      await cspSettings.renderProviderList(['huggingface']);
       expect(CSPValidator.getAvailableProviders).not.toHaveBeenCalled();
     });
 
@@ -216,7 +220,7 @@ describe('CSPSettings', () => {
         return domains[p] || null;
       });
 
-      await CSPSettings.renderProviderList([]);
+      await cspSettings.renderProviderList([]);
 
       const container = document.getElementById('cspProviderList');
       const labels = container?.querySelectorAll('.csp-provider-label');
@@ -247,7 +251,7 @@ describe('CSPSettings', () => {
       mockSaveSettings.mockResolvedValue(undefined);
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
-      await CSPSettings.saveCSPSettings();
+      await cspSettings.saveCSPSettings();
 
       expect(mockSaveSettings).toHaveBeenCalledWith({
         [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,
@@ -266,7 +270,7 @@ describe('CSPSettings', () => {
       mockSaveSettings.mockResolvedValue(undefined);
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
-      await CSPSettings.saveCSPSettings();
+      await cspSettings.saveCSPSettings();
 
       const message = document.getElementById('cspSaveMessage');
       expect(message?.style.display).toBe('block');
@@ -279,7 +283,7 @@ describe('CSPSettings', () => {
       mockSaveSettings.mockResolvedValue(undefined);
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
-      await CSPSettings.saveCSPSettings();
+      await cspSettings.saveCSPSettings();
 
       const message = document.getElementById('cspSaveMessage');
       expect(message?.style.display).toBe('block');
@@ -288,16 +292,18 @@ describe('CSPSettings', () => {
       expect(message?.style.display).toBe('none');
     });
 
-    test('should handle save error with alert', async () => {
+    test('should show inline error message on save failure (no window.alert)', async () => {
       const checkbox = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
       checkbox.checked = true;
       mockSaveSettings.mockRejectedValue(new Error('Save error'));
       mockAddLog.mockClear();
 
-      await CSPSettings.saveCSPSettings();
+      await cspSettings.saveCSPSettings();
 
       expect(mockAddLog).toHaveBeenCalledWith('ERROR', 'CSP settings save failed', expect.objectContaining({ error: expect.any(String) }));
-      expect(alert).toHaveBeenCalled();
+      const message = document.getElementById('cspSaveMessage');
+      expect(message?.style.display).toBe('block');
+      expect(message?.textContent).toBe('cspSaveError');
     });
 
     test('should default enabled to true when checkbox element missing', async () => {
@@ -305,7 +311,7 @@ describe('CSPSettings', () => {
       mockSaveSettings.mockResolvedValue(undefined);
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
-      await CSPSettings.saveCSPSettings();
+      await cspSettings.saveCSPSettings();
 
       expect(mockSaveSettings).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -329,7 +335,7 @@ describe('CSPSettings', () => {
         return null;
       });
 
-      await CSPSettings.loadCSPSettings();
+      await cspSettings.loadCSPSettings();
 
       const searchInput = document.getElementById('cspProviderSearch') as HTMLInputElement;
       searchInput.value = 'hugging';
@@ -349,7 +355,7 @@ describe('CSPSettings', () => {
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
       // Should not throw
-      await CSPSettings.loadCSPSettings();
+      await cspSettings.loadCSPSettings();
     });
   });
 
@@ -362,7 +368,7 @@ describe('CSPSettings', () => {
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
       mockSaveSettings.mockResolvedValue(undefined);
 
-      await CSPSettings.loadCSPSettings();
+      await cspSettings.loadCSPSettings();
 
       const saveButton = document.getElementById('cspSaveButton');
       saveButton?.click();
@@ -382,7 +388,7 @@ describe('CSPSettings', () => {
       mockSaveSettings.mockResolvedValue(undefined);
       (global.confirm as vi.Mock).mockReturnValue(true);
 
-      await CSPSettings.loadCSPSettings();
+      await cspSettings.loadCSPSettings();
 
       const resetButton = document.getElementById('cspResetButton');
       resetButton?.click();
@@ -403,7 +409,7 @@ describe('CSPSettings', () => {
       mockSaveSettings.mockClear();
       (global.confirm as vi.Mock).mockReturnValue(false);
 
-      await CSPSettings.loadCSPSettings();
+      await cspSettings.loadCSPSettings();
 
       const resetButton = document.getElementById('cspResetButton');
       resetButton?.click();
@@ -421,7 +427,7 @@ describe('CSPSettings', () => {
       mockSaveSettings.mockResolvedValue(undefined);
       (global.confirm as vi.Mock).mockReturnValue(true);
 
-      await CSPSettings.loadCSPSettings();
+      await cspSettings.loadCSPSettings();
 
       const resetButton = document.getElementById('cspResetButton');
       resetButton?.click();
@@ -443,24 +449,23 @@ describe('CSPSettings', () => {
       mockSaveSettings.mockResolvedValue(undefined);
       (global.confirm as vi.Mock).mockReturnValue(true);
 
-      await CSPSettings.loadCSPSettings();
+      await cspSettings.loadCSPSettings();
 
       const resetButton = document.getElementById('cspResetButton');
       resetButton?.click();
 
-      // With fake timers, flush microtasks then advance timers
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
+      // With fake timers, flush the click handler's async chain (loadCSPSettings
+      // -> renderProviderList -> showMessage) before asserting.
+      await vi.advanceTimersByTimeAsync(0);
 
       const message = document.getElementById('cspResetMessage');
       expect(message?.style.display).toBe('block');
 
-      vi.advanceTimersByTime(3000);
+      await vi.advanceTimersByTimeAsync(3000);
       expect(message?.style.display).toBe('none');
     });
 
-    test('should handle reset error with alert', async () => {
+    test('should show inline error message on reset failure (no window.alert)', async () => {
       mockGetSettings.mockResolvedValue({
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
@@ -470,7 +475,7 @@ describe('CSPSettings', () => {
       (global.confirm as vi.Mock).mockReturnValue(true);
       mockAddLog.mockClear();
 
-      await CSPSettings.loadCSPSettings();
+      await cspSettings.loadCSPSettings();
 
       const resetButton = document.getElementById('cspResetButton');
       resetButton?.click();
@@ -478,16 +483,18 @@ describe('CSPSettings', () => {
       await new Promise(r => setTimeout(r, 10));
 
       expect(mockAddLog).toHaveBeenCalledWith('ERROR', 'CSP settings reset failed', expect.objectContaining({ error: expect.any(String) }));
-      expect(alert).toHaveBeenCalled();
+      const message = document.getElementById('cspResetMessage');
+      expect(message?.style.display).toBe('block');
+      expect(message?.textContent).toBe('cspResetError');
     });
   });
 
-  describe('requestProviderPermission', () => {
+  describe('requestProviderPermission (static — DOM-independent utility)', () => {
     test('should return false for unknown provider', async () => {
       (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue(null);
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const result = await CSPSettings.requestProviderPermission('nonexistent');
+      const result = await CspSettingsController.requestProviderPermission('nonexistent');
 
       expect(result).toBe(false);
       expect(chrome.permissions.request).not.toHaveBeenCalled();
@@ -499,7 +506,7 @@ describe('CSPSettings', () => {
       (chrome.permissions.request as vi.Mock).mockRejectedValue(new Error('Permission denied'));
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const result = await CSPSettings.requestProviderPermission('huggingface');
+      const result = await CspSettingsController.requestProviderPermission('huggingface');
 
       expect(result).toBe(false);
       consoleSpy.mockRestore();
@@ -509,18 +516,18 @@ describe('CSPSettings', () => {
       (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue('api-inference.huggingface.co');
       (chrome.permissions.request as vi.Mock).mockResolvedValue(undefined);
 
-      const result = await CSPSettings.requestProviderPermission('huggingface');
+      const result = await CspSettingsController.requestProviderPermission('huggingface');
 
       expect(result).toBe(false);
     });
   });
 
-  describe('requestEssentialPermission', () => {
+  describe('requestEssentialPermission (static — DOM-independent utility)', () => {
     test('should handle permission request error', async () => {
       (chrome.permissions.request as vi.Mock).mockRejectedValue(new Error('Permission denied'));
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const result = await CSPSettings.requestEssentialPermission('github-raw');
+      const result = await CspSettingsController.requestEssentialPermission('github-raw');
 
       expect(result).toBe(false);
       consoleSpy.mockRestore();
@@ -529,7 +536,7 @@ describe('CSPSettings', () => {
     test('should return false for unknown essential type', async () => {
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const result = await CSPSettings.requestEssentialPermission('unknown-type');
+      const result = await CspSettingsController.requestEssentialPermission('unknown-type');
 
       expect(result).toBe(false);
       expect(chrome.permissions.request).not.toHaveBeenCalled();
@@ -537,11 +544,11 @@ describe('CSPSettings', () => {
     });
   });
 
-  describe('hasPermission', () => {
+  describe('hasPermission (static — DOM-independent utility)', () => {
     test('should return false for unknown provider', async () => {
       (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue(null);
 
-      const result = await CSPSettings.hasPermission('unknown');
+      const result = await CspSettingsController.hasPermission('unknown');
 
       expect(result).toBe(false);
       expect(chrome.permissions.contains).not.toHaveBeenCalled();
@@ -552,7 +559,7 @@ describe('CSPSettings', () => {
       (chrome.permissions.contains as vi.Mock).mockRejectedValue(new Error('Check failed'));
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      const result = await CSPSettings.hasPermission('huggingface');
+      const result = await CspSettingsController.hasPermission('huggingface');
 
       expect(result).toBe(false);
       consoleSpy.mockRestore();
@@ -562,58 +569,9 @@ describe('CSPSettings', () => {
       (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue('api-inference.huggingface.co');
       (chrome.permissions.contains as vi.Mock).mockResolvedValue(undefined);
 
-      const result = await CSPSettings.hasPermission('huggingface');
+      const result = await CspSettingsController.hasPermission('huggingface');
 
       expect(result).toBe(false);
     });
-  });
-});
-
-describe('escapeRegExp', () => {
-  // Import directly for unit testing
-  let escapeRegExp: (s: string) => string;
-
-  beforeAll(async () => {
-    // Dynamic import to get the exported function
-    const mod = await import('../cspSettings.js');
-    escapeRegExp = mod.escapeRegExp;
-  });
-
-  test('escapes regex special characters', () => {
-    expect(escapeRegExp('a.b*c+d?e^f$g{h}i(j)k|l[m]n\\o')).toBe('a\\.b\\*c\\+d\\?e\\^f\\$g\\{h\\}i\\(j\\)k\\|l\\[m\\]n\\\\o');
-  });
-
-  test('returns string unchanged when no special characters', () => {
-    expect(escapeRegExp('hello-world_123')).toBe('hello-world_123');
-  });
-
-  test('handles empty string', () => {
-    expect(escapeRegExp('')).toBe('');
-  });
-});
-
-describe('i18n with placeholders', () => {
-  let i18n: (key: string, placeholders?: Record<string, string>) => string;
-
-  beforeAll(async () => {
-    const mod = await import('../cspSettings.js');
-    i18n = mod.i18n;
-  });
-
-  test('returns message without placeholders', () => {
-    (chrome.i18n.getMessage as vi.Mock).mockReturnValue('Simple message');
-    expect(i18n('testKey')).toBe('Simple message');
-  });
-
-  test('replaces placeholders in message', () => {
-    (chrome.i18n.getMessage as vi.Mock).mockReturnValue('Hello ${name}, you have ${count} items');
-    const result = i18n('greeting', { name: 'Alice', count: '5' });
-    expect(result).toBe('Hello Alice, you have 5 items');
-  });
-
-  test('handles placeholder with regex special characters', () => {
-    (chrome.i18n.getMessage as vi.Mock).mockReturnValue('Price: ${price}');
-    const result = i18n('price', { price: '$100.00' });
-    expect(result).toBe('Price: $100.00');
   });
 });

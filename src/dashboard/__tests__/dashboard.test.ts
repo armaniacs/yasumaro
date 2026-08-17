@@ -175,7 +175,7 @@ vi.mock('./models-dev-dialog.js', () => ({
     ModelsDevDialog: class { show = vi.fn().mockResolvedValue(undefined) },
 }));
 vi.mock('./cspSettings.js', () => ({
-    CSPSettings: { loadCSPSettings: vi.fn().mockResolvedValue(undefined) },
+    cspSettings: { loadCSPSettings: vi.fn().mockResolvedValue(undefined) },
 }));
 vi.mock('./cleansingStatsView.js', () => ({
     computeCleansingStats: vi.fn().mockReturnValue({ count: 0 }),

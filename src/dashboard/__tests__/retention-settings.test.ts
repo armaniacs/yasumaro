@@ -41,7 +41,7 @@ vi.mock('../../popup/privacyConsent.js', () => ({
     getPrivacyConsent: vi.fn().mockResolvedValue(null),
     withdrawPrivacyConsent: vi.fn(),
 }));
-vi.mock('../cspSettings.js', () => ({ CSPSettings: class { load = vi.fn(); } }));
+vi.mock('../cspSettings.js', () => ({ cspSettings: { loadCSPSettings: vi.fn() } }));
 
 const { mockGetSettings, mockSaveSettings } = vi.hoisted(() => ({
     mockGetSettings: vi.fn(),
