@@ -15,29 +15,6 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../utils/i18n.js';
 
 /**
- * 正規表現特殊文字をエスケープする
- * @deprecated utils/string.ts に移動予定。現在は後方互換性のために維持。
- */
-export function escapeRegExp(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/**
- * i18nヘルパー関数
- * @deprecated utils/i18n.ts の getMessage を使用すること
- */
-export function i18n(key: string, placeholders?: Record<string, string>): string {
-  let message = getMessage(key);
-  if (placeholders) {
-    for (const [placeholder, value] of Object.entries(placeholders)) {
-      const escapedPlaceholder = escapeRegExp(placeholder);
-      message = message.replace(new RegExp(`\\$\\{${escapedPlaceholder}\\}`, 'g'), value);
-    }
-  }
-  return message;
-}
-
-/**
  * CSP設定UIのDOM参照インターフェース。
  */
 export interface CspSettingsDomRefs {
@@ -83,9 +60,10 @@ export class CspSettingsController {
   async loadCSPSettings(): Promise<void> {
     try {
       const settings = await getSettings();
+      const dom = this.resolveDom();
 
-      if (this.resolveDom().conditionalCspEnabled) {
-        this.resolveDom().conditionalCspEnabled.checked = settings[StorageKeys.CONDITIONAL_CSP_ENABLED] !== false;
+      if (dom.conditionalCspEnabled) {
+        dom.conditionalCspEnabled.checked = settings[StorageKeys.CONDITIONAL_CSP_ENABLED] !== false;
       }
 
       CSPValidator.initializeFromSettings(settings);
@@ -151,7 +129,8 @@ export class CspSettingsController {
    */
   async saveCSPSettings(): Promise<void> {
     try {
-      const enabled = this.resolveDom().conditionalCspEnabled ? this.resolveDom().conditionalCspEnabled.checked : true;
+      const dom = this.resolveDom();
+      const enabled = dom.conditionalCspEnabled ? dom.conditionalCspEnabled.checked : true;
 
       const checkboxes = document.querySelectorAll('.csp-provider-checkbox:checked');
       const selectedProviders: string[] = [];
@@ -171,10 +150,10 @@ export class CspSettingsController {
         conditional_csp_providers: selectedProviders
       });
 
-      this.showSaveSuccess();
+      this.showMessage(dom.cspSaveMessage, getMessage('cspSaveSuccess'));
     } catch (error) {
       addLog(LogType.ERROR, 'CSP settings save failed', { error: errorMessage(error) });
-      window.alert(i18n('cspSaveError'));
+      this.showMessage(this.resolveDom().cspSaveMessage, getMessage('cspSaveError'));
     }
   }
 
@@ -207,7 +186,10 @@ export class CspSettingsController {
     if (resetButton) {
       resetButton.addEventListener('click', async (e) => {
         e.preventDefault();
-        if (window.confirm(i18n('cspResetConfirm'))) {
+        // window.confirm はユーザーの同期的な判断を要する破壊的操作の確認であり、
+        // テキスト表示のみの showMessage では代替できないため維持する
+        // （dashboard内の他の削除確認と同じパターン）。
+        if (window.confirm(getMessage('cspResetConfirm'))) {
           await this.resetCSPSettings();
         }
       });
@@ -222,29 +204,22 @@ export class CspSettingsController {
       });
 
       await this.loadCSPSettings();
-      this.showResetSuccess();
+      this.showMessage(this.resolveDom().cspResetMessage, getMessage('cspResetSuccess'));
     } catch (error) {
       addLog(LogType.ERROR, 'CSP settings reset failed', { error: errorMessage(error) });
-      window.alert(i18n('cspResetError'));
+      this.showMessage(this.resolveDom().cspResetMessage, getMessage('cspResetError'));
     }
   }
 
-  private showSaveSuccess(): void {
-    const message = this.resolveDom().cspSaveMessage;
-    if (message) {
-      message.textContent = i18n('cspSaveSuccess');
-      message.style.display = 'block';
-      setTimeout(() => { message.style.display = 'none'; }, 3000);
-    }
-  }
-
-  private showResetSuccess(): void {
-    const message = this.resolveDom().cspResetMessage;
-    if (message) {
-      message.textContent = i18n('cspResetSuccess');
-      message.style.display = 'block';
-      setTimeout(() => { message.style.display = 'none'; }, 3000);
-    }
+  /**
+   * 保存/リセットメッセージ要素にテキストを表示し、3秒後に非表示化する。
+   * window.alert の代替として、cspSaveMessage/cspResetMessage 要素にインライン表示する。
+   */
+  private showMessage(element: HTMLElement | null, text: string): void {
+    if (!element) return;
+    element.textContent = text;
+    element.style.display = 'block';
+    setTimeout(() => { element.style.display = 'none'; }, 3000);
   }
 
   static async requestProviderPermission(provider: string): Promise<boolean> {
@@ -293,186 +268,7 @@ export class CspSettingsController {
   }
 }
 
-// ─── Backward-compatible static class ──────────────────────────────────
-
 /**
- * @deprecated CspSettingsController を使用すること
+ * デフォルトインスタンス。既存呼び出し元（staticPanels.ts等）はこれを使う。
  */
-export class CSPSettings {
-  static async loadCSPSettings(): Promise<void> {
-    try {
-      const settings = await getSettings();
-      const enabledInput = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
-      if (enabledInput) {
-        enabledInput.checked = settings[StorageKeys.CONDITIONAL_CSP_ENABLED] !== false;
-      }
-      CSPValidator.initializeFromSettings(settings);
-      const container = document.getElementById('cspProviderList');
-      if (container) {
-        const availableProviders = CSPValidator.getAvailableProviders();
-        const selectedProviders = (settings[StorageKeys.CONDITIONAL_CSP_PROVIDERS] as string[]) || [];
-        const sortedProviders = [...availableProviders].sort((a, b) => {
-          const aSel = selectedProviders.includes(a);
-          const bSel = selectedProviders.includes(b);
-          if (aSel && !bSel) return -1;
-          if (!aSel && bSel) return 1;
-          return a.localeCompare(b);
-        });
-        container.innerHTML = '';
-        for (const provider of sortedProviders) {
-          const domain = CSPValidator.getProviderDomain(provider);
-          if (!domain) continue;
-          const isSelected = selectedProviders.includes(provider);
-          const row = document.createElement('div');
-          row.className = 'csp-provider-row' + (isSelected ? ' csp-provider-row--active' : '');
-          const checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.id = `csp-provider-${provider}`;
-          checkbox.className = 'csp-provider-checkbox';
-          checkbox.dataset.provider = provider;
-          checkbox.checked = isSelected;
-          const label = document.createElement('label');
-          label.htmlFor = `csp-provider-${provider}`;
-          label.className = 'csp-provider-label';
-          label.textContent = `${provider} (${domain})`;
-          row.appendChild(checkbox);
-          row.appendChild(label);
-          container.appendChild(row);
-        }
-      }
-      const searchInput = document.getElementById('cspProviderSearch') as HTMLInputElement;
-      if (searchInput) {
-        searchInput.addEventListener('input', () => {
-          const query = searchInput.value.toLowerCase();
-          const rows = document.querySelectorAll<HTMLElement>('.csp-provider-row');
-          rows.forEach(row => {
-            const label = row.querySelector('.csp-provider-label')?.textContent?.toLowerCase() || '';
-            row.style.display = label.includes(query) ? '' : 'none';
-          });
-        });
-      }
-      const saveButton = document.getElementById('cspSaveButton');
-      if (saveButton) {
-        saveButton.addEventListener('click', async (e) => {
-          e.preventDefault();
-          await CSPSettings.saveCSPSettings();
-        });
-      }
-      const resetButton = document.getElementById('cspResetButton');
-      if (resetButton) {
-        resetButton.addEventListener('click', async (e) => {
-          e.preventDefault();
-          if (confirm(i18n('cspResetConfirm'))) {
-            await CSPSettings.resetCSPSettings();
-          }
-        });
-      }
-    } catch (error) {
-      addLog(LogType.ERROR, 'CSP settings load failed', { error: errorMessage(error) });
-    }
-  }
-
-  static async renderProviderList(selectedProviders: string[]): Promise<void> {
-    const container = document.getElementById('cspProviderList');
-    if (!container) return;
-    const availableProviders = CSPValidator.getAvailableProviders();
-    const sortedProviders = [...availableProviders].sort((a, b) => {
-      const aSel = selectedProviders.includes(a);
-      const bSel = selectedProviders.includes(b);
-      if (aSel && !bSel) return -1;
-      if (!aSel && bSel) return 1;
-      return a.localeCompare(b);
-    });
-    container.innerHTML = '';
-    for (const provider of sortedProviders) {
-      const domain = CSPValidator.getProviderDomain(provider);
-      if (!domain) continue;
-      const isSelected = selectedProviders.includes(provider);
-      const row = document.createElement('div');
-      row.className = 'csp-provider-row' + (isSelected ? ' csp-provider-row--active' : '');
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.id = `csp-provider-${provider}`;
-      checkbox.className = 'csp-provider-checkbox';
-      checkbox.dataset.provider = provider;
-      checkbox.checked = isSelected;
-      const label = document.createElement('label');
-      label.htmlFor = `csp-provider-${provider}`;
-      label.className = 'csp-provider-label';
-      label.textContent = `${provider} (${domain})`;
-      row.appendChild(checkbox);
-      row.appendChild(label);
-      container.appendChild(row);
-    }
-  }
-
-  static async saveCSPSettings(): Promise<void> {
-    try {
-      const enabledInput = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
-      const enabled = enabledInput ? enabledInput.checked : true;
-      const checkboxes = document.querySelectorAll('.csp-provider-checkbox:checked');
-      const selectedProviders: string[] = [];
-      checkboxes.forEach(checkbox => {
-        const provider = checkbox.getAttribute('data-provider');
-        if (provider) selectedProviders.push(provider);
-      });
-      await saveSettings({
-        [StorageKeys.CONDITIONAL_CSP_ENABLED]: enabled,
-        [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: selectedProviders
-      });
-      CSPValidator.reset();
-      CSPValidator.initializeFromSettings({
-        conditional_csp_enabled: enabled,
-        conditional_csp_providers: selectedProviders
-      });
-      CSPSettings.showSaveSuccess();
-    } catch (error) {
-      addLog(LogType.ERROR, 'CSP settings save failed', { error: errorMessage(error) });
-      alert(i18n('cspSaveError'));
-    }
-  }
-
-  private static showSaveSuccess(): void {
-    const message = document.getElementById('cspSaveMessage');
-    if (message) {
-      message.textContent = i18n('cspSaveSuccess');
-      message.style.display = 'block';
-      setTimeout(() => { message.style.display = 'none'; }, 3000);
-    }
-  }
-
-  private static showResetSuccess(): void {
-    const message = document.getElementById('cspResetMessage');
-    if (message) {
-      message.textContent = i18n('cspResetSuccess');
-      message.style.display = 'block';
-      setTimeout(() => { message.style.display = 'none'; }, 3000);
-    }
-  }
-
-  private static async resetCSPSettings(): Promise<void> {
-    try {
-      await saveSettings({
-        [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,
-        [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: []
-      });
-      await CSPSettings.loadCSPSettings();
-      CSPSettings.showResetSuccess();
-    } catch (error) {
-      addLog(LogType.ERROR, 'CSP settings reset failed', { error: errorMessage(error) });
-      alert(i18n('cspResetError'));
-    }
-  }
-
-  static async requestProviderPermission(provider: string): Promise<boolean> {
-    return CspSettingsController.requestProviderPermission(provider);
-  }
-
-  static async requestEssentialPermission(type: string): Promise<boolean> {
-    return CspSettingsController.requestEssentialPermission(type);
-  }
-
-  static async hasPermission(provider: string): Promise<boolean> {
-    return CspSettingsController.hasPermission(provider);
-  }
-}
+export const cspSettings = new CspSettingsController();

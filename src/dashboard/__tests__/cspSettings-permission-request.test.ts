@@ -19,7 +19,7 @@ global.chrome = {
   }
 } as any;
 
-describe('CSPSettings - Permission Request', () => {
+describe('CspSettingsController - Permission Request', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Mock success response for permission requests
@@ -28,9 +28,9 @@ describe('CSPSettings - Permission Request', () => {
 
   describe('requestProviderPermission', () => {
     it('should request permission for HuggingFace provider', async () => {
-      const { CSPSettings } = await import('../cspSettings.js');
+      const { CspSettingsController } = await import('../cspSettings.js');
 
-      const granted = await CSPSettings.requestProviderPermission('huggingface');
+      const granted = await CspSettingsController.requestProviderPermission('huggingface');
 
       expect(chrome.permissions.request).toHaveBeenCalledWith({
         origins: ['https://api-inference.huggingface.co/*']
@@ -39,30 +39,30 @@ describe('CSPSettings - Permission Request', () => {
     });
 
     it('should return false for unknown provider', async () => {
-      const { CSPSettings } = await import('../cspSettings.js');
+      const { CspSettingsController } = await import('../cspSettings.js');
 
-      const granted = await CSPSettings.requestProviderPermission('unknown_provider');
+      const granted = await CspSettingsController.requestProviderPermission('unknown_provider');
 
       expect(chrome.permissions.request).not.toHaveBeenCalled();
       expect(granted).toBe(false);
     });
 
     it('should handle permission denial', async () => {
-      const { CSPSettings } = await import('../cspSettings.js');
+      const { CspSettingsController } = await import('../cspSettings.js');
 
       (chrome.permissions.request as vi.Mock).mockResolvedValue(false);
 
-      const granted = await CSPSettings.requestProviderPermission('huggingface');
+      const granted = await CspSettingsController.requestProviderPermission('huggingface');
 
       expect(granted).toBe(false);
     });
 
     it('should handle permission request error', async () => {
-      const { CSPSettings } = await import('../cspSettings.js');
+      const { CspSettingsController } = await import('../cspSettings.js');
 
       (chrome.permissions.request as vi.Mock).mockRejectedValue(new Error('Permission denied'));
 
-      const granted = await CSPSettings.requestProviderPermission('huggingface');
+      const granted = await CspSettingsController.requestProviderPermission('huggingface');
 
       expect(granted).toBe(false);
     });
@@ -70,9 +70,9 @@ describe('CSPSettings - Permission Request', () => {
 
   describe('requestEssentialPermission', () => {
     it('should request permission for GitHub Raw Content', async () => {
-      const { CSPSettings } = await import('../cspSettings.js');
+      const { CspSettingsController } = await import('../cspSettings.js');
 
-      const granted = await CSPSettings.requestEssentialPermission('github-raw');
+      const granted = await CspSettingsController.requestEssentialPermission('github-raw');
 
       expect(chrome.permissions.request).toHaveBeenCalledWith({
         origins: ['https://raw.githubusercontent.com/*']
@@ -81,9 +81,9 @@ describe('CSPSettings - Permission Request', () => {
     });
 
     it('should request permission for Tranco List', async () => {
-      const { CSPSettings } = await import('../cspSettings.js');
+      const { CspSettingsController } = await import('../cspSettings.js');
 
-      const granted = await CSPSettings.requestEssentialPermission('tranco');
+      const granted = await CspSettingsController.requestEssentialPermission('tranco');
 
       expect(chrome.permissions.request).toHaveBeenCalledWith({
         origins: ['https://tranco-list.eu/*']
@@ -92,9 +92,9 @@ describe('CSPSettings - Permission Request', () => {
     });
 
     it('should return false for unknown essential permission', async () => {
-      const { CSPSettings } = await import('../cspSettings.js');
+      const { CspSettingsController } = await import('../cspSettings.js');
 
-      const granted = await CSPSettings.requestEssentialPermission('unknown');
+      const granted = await CspSettingsController.requestEssentialPermission('unknown');
 
       expect(chrome.permissions.request).not.toHaveBeenCalled();
       expect(granted).toBe(false);
@@ -103,11 +103,11 @@ describe('CSPSettings - Permission Request', () => {
 
   describe('hasPermission', () => {
     it('should check if permission is granted for provider', async () => {
-      const { CSPSettings } = await import('../cspSettings.js');
+      const { CspSettingsController } = await import('../cspSettings.js');
 
       (chrome.permissions.contains as vi.Mock).mockResolvedValue(true);
 
-      const hasPermission = await CSPSettings.hasPermission('huggingface');
+      const hasPermission = await CspSettingsController.hasPermission('huggingface');
 
       expect(chrome.permissions.contains).toHaveBeenCalledWith({
         origins: ['https://api-inference.huggingface.co/*']
@@ -116,11 +116,11 @@ describe('CSPSettings - Permission Request', () => {
     });
 
     it('should return false if permission not granted', async () => {
-      const { CSPSettings } = await import('../cspSettings.js');
+      const { CspSettingsController } = await import('../cspSettings.js');
 
       (chrome.permissions.contains as vi.Mock).mockResolvedValue(false);
 
-      const hasPermission = await CSPSettings.hasPermission('huggingface');
+      const hasPermission = await CspSettingsController.hasPermission('huggingface');
 
       expect(hasPermission).toBe(false);
     });

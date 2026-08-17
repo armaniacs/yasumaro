@@ -37,6 +37,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- `cspSettings.ts` の `@deprecated CSPSettings` 静的クラスファサードを削除し、`CspSettingsController` インスタンス（デフォルトエクスポート `cspSettings`）に一本化。重複していたローカル `escapeRegExp`/`i18n` ヘルパーを削除し、`escapeRegExp` は `src/utils/string.ts` へ移動、i18nは `src/utils/i18n.ts` の `getMessage` に統一。`window.alert` によるエラー通知を `cspSaveMessage`/`cspResetMessage` 要素へのインライン表示に置換（`window.confirm` は既存の削除確認パターンと合わせ維持）
 - `extractor.ts` の `extractPageContent` を純粋関数化。pageStateへの副作用（`lastCleansedReason`等5フィールド）を除去し、`ExtractResult` オブジェクトをそのまま返すように変更。呼び出し元（`reportValidVisit`、`GET_CONTENT`メッセージハンドラ）が明示的にpageStateへ反映する構造に変更し、抽出とpageStateの所有権を分離
 - `sqliteEngineContext.ts`（698行）を実際に4分割モジュール（`opfsWorkerProxy.ts`, `idbEngineLifecycle.ts`, `migrationBackup.ts`, `fallbackMigration.ts`）へ委譲する構造に修正。6.7.50 の CHANGELOG には「ファサードは268行に削減」と記載していたが、実際は分割モジュールがどこからも参照されない孤立コードのまま残っていた。facade は283行に削減し、既存の public API（`engine`, `DB_FILENAME`, `MAX_QUERY_LIMIT`, `extractDomain`）は不変
 
