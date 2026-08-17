@@ -31,7 +31,7 @@ export const PrivacyStatusCode = {
 export type PrivacyStatusCodeValue = typeof PrivacyStatusCode[keyof typeof PrivacyStatusCode];
 
 /**
- * recordingLogic が返す reason 文字列から PrivacyStatusCode へのマッピング
+ * RecordingPipeline が返す reason 文字列から PrivacyStatusCode へのマッピング
  */
 export function reasonToStatusCode(reason: string | undefined): PrivacyStatusCodeValue {
     switch (reason) {

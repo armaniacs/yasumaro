@@ -106,6 +106,7 @@ vi.mock('chrome', () => ({
 // Mock dependencies
 vi.mock('../../utils/storage.js', () => ({
     StorageKeys: storageMock.StorageKeys,
+    API_KEY_FIELDS: ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key', 'provider_api_key', 'github_pat'],
     getSettings: vi.fn(),
     clearSettingsCache: vi.fn(),
     getSavedUrlsWithTimestamps: vi.fn(),
@@ -124,36 +125,6 @@ vi.mock('../../utils/storage.js', () => ({
 vi.mock('../../utils/domainUtils.js');
 vi.mock('../privacyPipeline.js');
 vi.mock('../../utils/pendingStorage.js');
-vi.mock('../recordingLogic.js', () => ({
-    RecordingLogic: class {
-        static cacheState = {
-            settingsCache: null,
-            cacheTimestamp: null,
-            cacheVersion: 0,
-            urlCache: null,
-            urlCacheTimestamp: null,
-            privacyCache: null,
-            privacyCacheTimestamp: null,
-        };
-        static invalidateSettingsCache = vi.fn();
-        static invalidateUrlCache = vi.fn();
-        static invalidatePrivacyCache = vi.fn();
-        static loadCacheFromSession = vi.fn().mockResolvedValue(undefined);
-        static scheduleCacheSave = vi.fn();
-        record() {
-            return Promise.resolve({ success: true, skipped: false });
-        }
-        getPrivacyInfoWithCache() {
-            return Promise.resolve({});
-        }
-        getSettingsWithCache() {
-            return Promise.resolve(new Map());
-        }
-        getSavedUrlsWithCache() {
-            return Promise.resolve(new Map());
-        }
-    }
-}));
 vi.mock('../recordingCache.js', () => ({
     RecordingCache: class {
         static cacheState = {
@@ -201,15 +172,21 @@ vi.mock('../aiClient.js', () => ({
         registerBuiltInAiService = vi.fn();
     }
 }));
-vi.mock('../pipeline/RecordingPipeline.js', () => ({
-    createRecordingPipeline: vi.fn().mockReturnValue({
-        execute: vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' }),
-    }),
-    buildRecordingPipelineDeps: vi.fn().mockImplementation((deps: unknown) => deps),
-    RecordingPipeline: vi.fn().mockImplementation(function(this: any) {
+vi.mock('../pipeline/RecordingPipeline.js', () => {
+    // record/recordWithPreview live on the prototype (not as instance fields)
+    // so vi.spyOn(RecordingPipeline.prototype, 'record') can override them.
+    const RecordingPipeline = vi.fn().mockImplementation(function(this: any) {
         this.execute = vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' });
-    })
-}));
+        this.retryObsidianWriteOnly = vi.fn().mockResolvedValue(true);
+    });
+    RecordingPipeline.prototype.record = vi.fn().mockResolvedValue({ success: true, skipped: false });
+    RecordingPipeline.prototype.recordWithPreview = vi.fn().mockResolvedValue({ success: true, skipped: false, preview: true });
+    return {
+        RecordingPipeline,
+        createRecordingPipeline: vi.fn().mockImplementation(() => new RecordingPipeline()),
+        buildRecordingPipelineDeps: vi.fn().mockImplementation((deps: unknown) => deps),
+    };
+});
 vi.mock('../../utils/fetch.js', () => ({
     CONNECTION_TEST_CACHE_MODE: 'no-store',
     validateUrlForFilterImport: vi.fn(),
@@ -241,7 +218,7 @@ vi.mock('../sessionAlarmsManager.js', () => ({
 vi.mock('../headerDetector.js', () => ({
     HeaderDetector: class {
         static normalizeUrl = vi.fn((url: string) => url);
-        static initialize = vi.fn();
+        initialize = vi.fn().mockResolvedValue(undefined);
     }
 }));
 vi.mock('../../utils/storage/savedUrlStore.js', () => ({
@@ -289,14 +266,14 @@ import * as domainUtils from '../../utils/domainUtils.js';
 import * as privacyPipeline from '../privacyPipeline.js';
 import * as pendingStorage from '../../utils/pendingStorage.js';
 import { RecordingCache } from '../recordingCache.js';
-import { RecordingLogic } from '../recordingLogic.js';
+import { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
 import * as fetchUtils from '../../utils/fetch.js';
 import * as headerDetector from '../headerDetector.js';
 import * as sessionAlarmsManager from '../sessionAlarmsManager.js';
 import * as savedUrlStore from '../../utils/storage/savedUrlStore.js';
 import * as permissionManager from '../../utils/permissionManager.js';
 import { logError, logWarn, ErrorCode } from '../../utils/logger.js';
-import { resetVisitRateLimiter } from '../handlers/messageHandlers.js';
+import { resetVisitRateLimiter } from '../handlers/recordingHandlers.js';
 import type {
     ValidVisitMessage,
     FetchUrlMessage,
@@ -1268,9 +1245,9 @@ describe('service-worker handlers', () => {
             await expect(serviceWorker.handleNotificationButtonClicked(notificationId, 0)).resolves.not.toThrow();
         });
 
-        it('should log error when recordingLogic.record throws', async () => {
+        it('should log error when recordingPipeline.record throws', async () => {
             // Spy on record and make it throw
-            vi.spyOn(RecordingLogic.prototype, 'record').mockRejectedValueOnce(new Error('Record failed'));
+            vi.spyOn(RecordingPipeline.prototype, 'record').mockRejectedValueOnce(new Error('Record failed'));
 
             // Setup pending pages
             pendingStorage.getPendingPages.mockResolvedValue([
@@ -1682,8 +1659,8 @@ describe('service-worker handlers', () => {
 
         it('should send confirmationRequired notification when needed', async () => {
             // Override the record mock to return confirmationRequired
-            const recordingLogic = (await import('../recordingLogic.js')).RecordingLogic;
-            recordingLogic.prototype.record = vi.fn().mockResolvedValue({
+            const { RecordingPipeline: recordingPipeline } = await import('../pipeline/RecordingPipeline.js');
+            recordingPipeline.prototype.record = vi.fn().mockResolvedValue({
                 success: true,
                 skipped: false,
                 confirmationRequired: true,
@@ -1703,8 +1680,8 @@ describe('service-worker handlers', () => {
 
         it('should strip PII from maskedItems before sending response', async () => {
             // Override the record mock to return maskedItems
-            const recordingLogic = (await import('../recordingLogic.js')).RecordingLogic;
-            recordingLogic.prototype.record = vi.fn().mockResolvedValue({
+            const { RecordingPipeline: recordingPipeline } = await import('../pipeline/RecordingPipeline.js');
+            recordingPipeline.prototype.record = vi.fn().mockResolvedValue({
                 success: true,
                 skipped: false,
                 maskedItems: [{ original: 'secret', masked: true }]

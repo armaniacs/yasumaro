@@ -9,12 +9,12 @@ import { flushPendingRecords } from './pendingSqliteQueue.js';
 import { flushPendingWrites } from './pendingChromeStorageQueue.js';
 import type { SqliteClient } from './sqliteClient.js';
 import type { OfflineNetworkQueue } from './offlineNetworkQueue.js';
-import type { RecordingLogic } from './recordingLogic.js';
+import type { RecordingPipeline } from './pipeline/RecordingPipeline.js';
 import { createOfflineQueueProcessor } from './offlineQueueProcessor.js';
 
 export interface AlarmHandlerDeps {
   sqliteClient: SqliteClient;
-  recordingLogic: RecordingLogic;
+  recordingPipeline: RecordingPipeline;
   getOfflineNetworkQueue: () => Promise<OfflineNetworkQueue>;
   retryPendingChromeStorageWrite: (write: never) => Promise<boolean>;
 }
@@ -49,7 +49,7 @@ export function createAlarmHandler(deps: AlarmHandlerDeps): (alarm: chrome.alarm
       const offlineNetworkQueue = await deps.getOfflineNetworkQueue();
       const processOfflineNetworkQueue = createOfflineQueueProcessor({
         offlineNetworkQueue,
-        recordingLogic: deps.recordingLogic,
+        recordingPipeline: deps.recordingPipeline,
       });
       // allSettled ensures one failing task doesn't block the others.
       await Promise.allSettled([

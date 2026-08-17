@@ -1,4 +1,3 @@
-import { HeaderDetector } from './headerDetector.js';
 import { SessionStore } from './sessionStore.js';
 import { createTabEventHandlers } from './handlers/tabEventHandlers.js';
 import { createLifecycleHandlers, restoreRecordingCacheOnWake } from './handlers/lifecycleHandlers.js';
@@ -71,11 +70,12 @@ const services = createBackgroundServices();
 const {
     aiService,
     sqliteClient,
-    recordingLogic,
+    recordingPipeline,
     tabCache,
     rateLimiter,
     manualContentFetcher,
     sessionStore,
+    headerDetector,
     reviewSummaryGenerator,
 } = services;
 const { manualRecordDeps, saveRecordDeps } = services;
@@ -85,7 +85,7 @@ SessionStore.registerSuspendHandler(sessionStore);
 
 // Initialize clients
 const autoSavedBadgeTabs = createAutoSavedBadgeTabs();
-HeaderDetector.initialize();
+void headerDetector.initialize();
 rateLimiter.initialize();
 const isCacheInitialized = createCacheInitializedFlag();
 
@@ -153,7 +153,7 @@ export const handleStartup = _lifecycleHandlers.handleStartup;
 // Notification Handlers
 // ============================================================================
 export { isValidNotificationUrl } from './handlers/notificationHandlers.js';
-const _notificationHandlers = createNotificationHandlers({ record: (data) => recordingLogic.record(data) });
+const _notificationHandlers = createNotificationHandlers({ record: (data) => recordingPipeline.record(data) });
 export const handleNotificationButtonClicked = _notificationHandlers.onButtonClicked;
 export const handleNotificationClicked = _notificationHandlers.onClicked;
 
@@ -166,7 +166,7 @@ const _contextClickHandler = createContextClickHandler({ handleManualRecord: han
 // Alarm handler
 const handleAlarm = createAlarmHandler({
   sqliteClient,
-  recordingLogic,
+  recordingPipeline,
   getOfflineNetworkQueue: () => import('./offlineNetworkQueue.js').then(m => m.sharedOfflineNetworkQueue),
   retryPendingChromeStorageWrite,
 });
