@@ -83,7 +83,7 @@ function makeMockAiClient() {
   };
 }
 
-describe('RecordingLogic: データ整合性（P0）', () => {
+describe('RecordingPipeline: データ整合性（P0）', () => {
   let recordingLogic;
 
   beforeEach(() => {

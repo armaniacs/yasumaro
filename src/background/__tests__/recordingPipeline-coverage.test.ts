@@ -119,9 +119,17 @@ vi.mock('../../utils/storageUrls.ts', () => ({
 }));
 
 // Pipeline steps mock
-vi.mock('../pipeline/RecordingPipeline.ts', () => {
+vi.mock('../pipeline/RecordingPipeline.ts', async () => {
+  const { RecordingCache: RealRecordingCache } = await import('../recordingCache.ts');
   const RecordingPipeline = vi.fn().mockImplementation(function(this: any) {
     this.execute = vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' });
+    // record/recordWithPreview delegate to execute, mirroring the real class,
+    // so tests can assert on the settings-fetch + execute delegation contract.
+    this.record = async (data: unknown) => {
+      const settings = await RealRecordingCache.getSettingsWithCache();
+      return this.execute(data, settings);
+    };
+    this.recordWithPreview = (data: Record<string, unknown>) => this.record({ ...data, previewOnly: true });
   });
   return {
     RecordingPipeline,
@@ -133,7 +141,6 @@ vi.mock('../pipeline/RecordingPipeline.ts', () => {
 // ─── Imports (after mocks) ──────────────────────────────────────────────────
 import { truncateContentSize } from '../recordingValidator.ts';
 import { RecordingCache } from '../recordingCache.ts';
-import type { RecordingPipeline } from '../pipeline/RecordingPipeline.ts';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.ts';
 import * as storage from '../../utils/storage.ts';
 import * as domainUtils from '../../utils/domainUtils.ts';
@@ -163,6 +170,20 @@ function makeMockAiClient() {
     getSupportedModes: vi.fn().mockReturnValue(['local_only', 'full_pipeline']),
     generateSummary: vi.fn().mockResolvedValue({ summary: 'Cloud summary' }),
   } as any;
+}
+
+// Re-arms the mocked RecordingPipeline's execute() while keeping the
+// record/recordWithPreview delegation defined by the module mock factory.
+function mockPipelineExecute(mockExecute: ReturnType<typeof vi.fn>): void {
+  // @ts-expect-error - vi.fn() type narrowing
+  RecordingPipeline.mockImplementation(function(this: any) {
+    this.execute = mockExecute;
+    this.record = async (data: unknown) => {
+      const settings = await RecordingCache.getSettingsWithCache();
+      return this.execute(data, settings);
+    };
+    this.recordWithPreview = (data: Record<string, unknown>) => this.record({ ...data, previewOnly: true });
+  });
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
@@ -227,7 +248,7 @@ describe('truncateContentSize', () => {
   });
 });
 
-describe('RecordingLogic - getSavedUrlsWithCache', () => {
+describe('RecordingPipeline - getSavedUrlsWithCache', () => {
   let logic: RecordingPipeline;
 
   beforeEach(() => {
@@ -306,7 +327,7 @@ describe('RecordingLogic - getSavedUrlsWithCache', () => {
   });
 });
 
-describe('RecordingLogic - invalidateUrlCache', () => {
+describe('RecordingPipeline - invalidateUrlCache', () => {
   beforeEach(() => {
     resetCacheState();
   });
@@ -322,7 +343,7 @@ describe('RecordingLogic - invalidateUrlCache', () => {
   });
 });
 
-describe('RecordingLogic - normalizeUrlForCache (via getPrivacyInfoWithCache)', () => {
+describe('RecordingPipeline - normalizeUrlForCache (via getPrivacyInfoWithCache)', () => {
   let logic: RecordingPipeline;
 
   beforeEach(() => {
@@ -370,7 +391,7 @@ describe('RecordingLogic - normalizeUrlForCache (via getPrivacyInfoWithCache)', 
   });
 });
 
-describe('RecordingLogic - getPrivacyInfoWithCache session storage fallback', () => {
+describe('RecordingPipeline - getPrivacyInfoWithCache session storage fallback', () => {
   let logic: RecordingPipeline;
 
   beforeEach(() => {
@@ -454,7 +475,7 @@ describe('RecordingLogic - getPrivacyInfoWithCache session storage fallback', ()
   });
 });
 
-describe('RecordingLogic - invalidatePrivacyCache', () => {
+describe('RecordingPipeline - invalidatePrivacyCache', () => {
   beforeEach(() => {
     resetCacheState();
   });
@@ -486,7 +507,7 @@ describe('RecordingLogic - invalidatePrivacyCache', () => {
   });
 });
 
-describe('RecordingLogic - record (delegates to RecordingPipeline)', () => {
+describe('RecordingPipeline - record (delegates to RecordingPipeline)', () => {
   let logic: RecordingPipeline;
   let mockExecute: vi.Mock;
 
@@ -502,10 +523,7 @@ describe('RecordingLogic - record (delegates to RecordingPipeline)', () => {
     domainUtils.isDomainAllowed.mockResolvedValue(true);
 
     mockExecute = vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' });
-    // @ts-expect-error - vi.fn() type narrowing
-    RecordingPipeline.mockImplementation(function(this: any) {
-      this.execute = mockExecute;
-    });
+    mockPipelineExecute(mockExecute);
 
     logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
   });
@@ -587,7 +605,7 @@ describe('RecordingLogic - record (delegates to RecordingPipeline)', () => {
   });
 });
 
-describe('RecordingLogic - recordWithPreview', () => {
+describe('RecordingPipeline - recordWithPreview', () => {
   let logic: RecordingPipeline;
   let mockExecute: vi.Mock;
 
@@ -607,10 +625,7 @@ describe('RecordingLogic - recordWithPreview', () => {
       summary: 'Preview summary',
       processedContent: 'masked content',
     });
-    // @ts-expect-error - vi.fn() type narrowing
-    RecordingPipeline.mockImplementation(function(this: any) {
-      this.execute = mockExecute;
-    });
+    mockPipelineExecute(mockExecute);
 
     logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
   });
@@ -662,22 +677,7 @@ describe('RecordingLogic - recordWithPreview', () => {
   });
 });
 
-describe('RecordingLogic - constructor', () => {
-  test('stores the injected pipeline', () => {
-    const logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
-    expect((logic as any).pipeline).toBeDefined();
-  });
-
-  test('stores pipeline reference', () => {
-    const obsidian = makeMockObsidian();
-    const aiClient = makeMockAiClient();
-    const logic = makeRecordingLogic(obsidian, aiClient);
-
-    expect((logic as any).pipeline).toBeDefined();
-  });
-});
-
-describe('RecordingLogic - settings cache interaction with record', () => {
+describe('RecordingPipeline - settings cache interaction with record', () => {
   let logic: RecordingPipeline;
 
   beforeEach(() => {
@@ -691,10 +691,7 @@ describe('RecordingLogic - settings cache interaction with record', () => {
     // @ts-expect-error - vi.fn() type narrowing
     domainUtils.isDomainAllowed.mockResolvedValue(true);
 
-    // @ts-expect-error - vi.fn() type narrowing
-    RecordingPipeline.mockImplementation(function(this: any) {
-      this.execute = vi.fn().mockResolvedValue({ success: true });
-    });
+    mockPipelineExecute(vi.fn().mockResolvedValue({ success: true }));
 
     logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
   });
@@ -733,7 +730,7 @@ describe('RecordingLogic - settings cache interaction with record', () => {
   });
 });
 
-describe('RecordingLogic - static cache state', () => {
+describe('RecordingPipeline - static cache state', () => {
   test('cacheState is shared across instances', async () => {
     resetCacheState();
 
@@ -767,7 +764,7 @@ describe('RecordingLogic - static cache state', () => {
   });
 });
 
-describe('RecordingLogic - edge cases', () => {
+describe('RecordingPipeline - edge cases', () => {
   let logic: RecordingPipeline;
 
   beforeEach(() => {

@@ -2,7 +2,6 @@
  * RecordingValidator
  * URL validation (SSRF protection) and content truncation.
  *
- * Extracted from recordingLogic.ts (PBI-2026-08-08-01).
  * Pure functions with no state — safe to import from any context.
  */
 

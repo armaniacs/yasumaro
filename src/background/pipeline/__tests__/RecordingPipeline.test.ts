@@ -609,7 +609,7 @@ describe('RecordingPipeline', () => {
     });
   });
 
-  describe('並行実行の安全性（同一URLの直列化は RecordingLogic 層で提供）', () => {
+  describe('並行実行の安全性（同一URLの直列化は urlRecordMutexes で提供、詳細は recordingPipeline-full.test.ts）', () => {
     it('異なるURLへの並行リクエストは互いにブロックしない', async () => {
       mockProcess.mockResolvedValue({ summary: 'AI summary', maskedCount: 0 });
 
