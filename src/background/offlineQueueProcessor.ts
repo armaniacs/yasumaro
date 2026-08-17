@@ -11,14 +11,14 @@ interface OfflineNetworkQueueLike {
     retryAll(handler: (job: OfflineJob) => Promise<boolean>): Promise<void>;
 }
 
-interface RecordingLogicLike {
+interface RecordingPipelineLike {
     record(data: RecordingData): Promise<{ success: boolean; skipped?: boolean }>;
     retryObsidianWriteOnly(job: { title: string; url: string; summary: string; tags?: string[] }): Promise<boolean>;
 }
 
 export interface OfflineQueueProcessorDeps {
     offlineNetworkQueue: OfflineNetworkQueueLike;
-    recordingLogic: RecordingLogicLike;
+    recordingPipeline: RecordingPipelineLike;
 }
 
 export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): () => Promise<void> {
@@ -39,7 +39,7 @@ export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): ()
             // summary) fall through to the full pipeline for backward compatibility.
             if (job.type === 'obsidian_sync' && payload.summary) {
                 try {
-                    return await deps.recordingLogic.retryObsidianWriteOnly({
+                    return await deps.recordingPipeline.retryObsidianWriteOnly({
                         title: payload.title,
                         url: payload.url,
                         summary: payload.summary,
@@ -51,7 +51,7 @@ export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): ()
             }
 
             try {
-                const result = await deps.recordingLogic.record({
+                const result = await deps.recordingPipeline.record({
                     title: payload.title,
                     url: payload.url,
                     content: payload.content,

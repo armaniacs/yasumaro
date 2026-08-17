@@ -22,8 +22,8 @@ const mocks = vi.hoisted(() => ({
   LocalAIService: vi.fn(),
   RemoteAIService: vi.fn(),
   FallbackAIService: vi.fn(),
-  RecordingLogic: vi.fn(),
   SessionStore: vi.fn(),
+  HeaderDetector: vi.fn(),
   createRecordingPipeline: vi.fn(),
   buildRecordingPipelineDeps: vi.fn(),
   getPrivacyInfoWithCache: vi.fn(),
@@ -46,8 +46,8 @@ vi.mock('../builtInAIClient.js', () => ({ BuiltInAIClient: mocks.BuiltInAIClient
 vi.mock('../ai/FallbackAIService.js', () => ({ FallbackAIService: mocks.FallbackAIService }));
 vi.mock('../ai/LocalAIService.js', () => ({ LocalAIService: mocks.LocalAIService }));
 vi.mock('../ai/RemoteAIService.js', () => ({ RemoteAIService: mocks.RemoteAIService }));
-vi.mock('../recordingLogic.js', () => ({ RecordingLogic: mocks.RecordingLogic }));
 vi.mock('../sessionStore.js', () => ({ SessionStore: mocks.SessionStore }));
+vi.mock('../headerDetector.js', () => ({ HeaderDetector: mocks.HeaderDetector }));
 vi.mock('../recordingCache.js', () => ({ RecordingCache: { getPrivacyInfoWithCache: mocks.getPrivacyInfoWithCache } }));
 vi.mock('../pipeline/RecordingPipeline.js', () => ({
   createRecordingPipeline: mocks.createRecordingPipeline,
@@ -75,8 +75,8 @@ describe('production composition contract', () => {
     mocks.LocalAIService.mockImplementation(function () { return { localAIService: true }; });
     mocks.RemoteAIService.mockImplementation(function () { return { remoteAIService: true }; });
     mocks.FallbackAIService.mockImplementation(function () { return { fallbackAIService: true }; });
-    mocks.RecordingLogic.mockImplementation(function () { return { recordingLogic: true }; });
     mocks.SessionStore.mockImplementation(function () { return { sessionStore: true }; });
+    mocks.HeaderDetector.mockImplementation(function () { return { headerDetector: true }; });
     mocks.createRecordingPipeline.mockReturnValue({ pipeline: true });
     mocks.buildRecordingPipelineDeps.mockImplementation((deps: unknown) => deps);
     mocks.getPrivacyInfoWithCache.mockResolvedValue(null);
@@ -114,16 +114,6 @@ describe('production composition contract', () => {
       aiService: { fallbackAIService: true },
       sqliteClient: { sqlite: true },
     });
-  });
-
-  it('injects the same shared RecordingPipeline into RecordingLogic', () => {
-    const composition = createBackgroundServices();
-
-    // The automatic-record path (VALID_VISIT -> recordingLogic.record) must run
-    // through the same pipeline instance as the manual/save handlers, not a
-    // second one built lazily inside RecordingLogic.
-    const [injectedPipeline] = mocks.RecordingLogic.mock.calls[0];
-    expect(injectedPipeline).toBe(composition.recordingPipeline);
   });
 
   it('constructs the RecordingPipeline exactly once with the shared collaborators', () => {

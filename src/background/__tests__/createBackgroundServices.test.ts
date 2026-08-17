@@ -11,8 +11,8 @@ const mocks = vi.hoisted(() => ({
   LocalAIService: vi.fn(),
   RemoteAIService: vi.fn(),
   FallbackAIService: vi.fn(),
-  RecordingLogic: vi.fn(),
   SessionStore: vi.fn(),
+  HeaderDetector: vi.fn(),
   createRecordingPipeline: vi.fn(),
   buildRecordingPipelineDeps: vi.fn(),
   getPrivacyInfoWithCache: vi.fn(),
@@ -34,8 +34,8 @@ vi.mock('../builtInAIClient.js', () => ({ BuiltInAIClient: mocks.BuiltInAIClient
 vi.mock('../ai/FallbackAIService.js', () => ({ FallbackAIService: mocks.FallbackAIService }));
 vi.mock('../ai/LocalAIService.js', () => ({ LocalAIService: mocks.LocalAIService }));
 vi.mock('../ai/RemoteAIService.js', () => ({ RemoteAIService: mocks.RemoteAIService }));
-vi.mock('../recordingLogic.js', () => ({ RecordingLogic: mocks.RecordingLogic }));
 vi.mock('../sessionStore.js', () => ({ SessionStore: mocks.SessionStore }));
+vi.mock('../headerDetector.js', () => ({ HeaderDetector: mocks.HeaderDetector }));
 vi.mock('../recordingCache.js', () => ({ RecordingCache: { getPrivacyInfoWithCache: mocks.getPrivacyInfoWithCache } }));
 vi.mock('../pipeline/RecordingPipeline.js', () => ({
   createRecordingPipeline: mocks.createRecordingPipeline,
@@ -62,8 +62,8 @@ describe('createBackgroundServices', () => {
     mocks.BuiltInAIClient.mockImplementation(function () { return { builtInAiClient: true }; });
     mocks.LocalAIService.mockImplementation(function () { return { localAIService: true }; });
     mocks.FallbackAIService.mockImplementation(function () { return { fallbackAIService: true }; });
-    mocks.RecordingLogic.mockImplementation(function () { return { recordingLogic: true }; });
     mocks.SessionStore.mockImplementation(function () { return { sessionStore: true }; });
+    mocks.HeaderDetector.mockImplementation(function () { return { headerDetector: true }; });
     mocks.createRecordingPipeline.mockReturnValue({ pipeline: true });
     mocks.buildRecordingPipelineDeps.mockImplementation((deps: unknown) => deps);
     mocks.getPrivacyInfoWithCache.mockResolvedValue(null);
@@ -79,13 +79,13 @@ describe('createBackgroundServices', () => {
     expect(services).toEqual({
       obsidian: { obsidian: true },
       sqliteClient: { sqlite: true },
-      recordingLogic: { recordingLogic: true },
       tabCache: { tabCache: true },
       rateLimiter: { rateLimiter: true },
       manualContentFetcher: { manualContentFetcher: true },
       aiService: { fallbackAIService: true },
       reviewSummaryGenerator: expect.any(Object),
       sessionStore: { sessionStore: true },
+      headerDetector: { headerDetector: true },
       recordingPipeline: { pipeline: true },
       dashboardSqliteClient: { sqlite: true },
       manualRecordDeps: expect.any(Object),
@@ -132,9 +132,6 @@ describe('createBackgroundServices', () => {
       local,
       remote: remoteInstance,
     });
-    expect(mocks.RecordingLogic).toHaveBeenCalledWith(
-      { pipeline: true },
-    );
   });
 
   it('passes builtInAiClient to LocalAIService (Service Worker direct call, not via Offscreen)', () => {

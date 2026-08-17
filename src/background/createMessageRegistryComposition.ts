@@ -37,7 +37,7 @@ export function createMessageRegistryComposition(
   const { services, dashboardSqliteHandler, autoSavedBadgeTabs } = deps;
 
   return createMessageHandlerRegistry({
-    recordingLogic: services.recordingLogic,
+    recordingPipeline: services.recordingPipeline,
     tabCache: services.tabCache,
     obsidian: services.obsidian,
     aiService: services.aiService,

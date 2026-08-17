@@ -1,6 +1,5 @@
 /**
- * Pipeline types for recordingLogic refactoring
- * Phase 1: Pipeline pattern implementation
+ * Pipeline types for RecordingPipeline.
  *
  * RecordingContext is decomposed into logical sub-types. Each pipeline step
  * declares which sub-types it reads/writes via JSDoc. The full context is

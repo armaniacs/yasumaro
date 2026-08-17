@@ -14,12 +14,14 @@ import type { AIService } from './ai/AIService.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { getSharedSqliteClient } from './sqliteClient.js';
 import type { SqliteClient } from './sqliteClient.js';
-import { RecordingLogic } from './recordingLogic.js';
 import { RecordingCache } from './recordingCache.js';
 import { TabCache } from './tabCache.js';
 import { RateLimiter } from './rateLimiter.js';
 import { ManualContentFetcher } from './manualContentFetcher.js';
 import { SessionStore } from './sessionStore.js';
+import { HeaderDetector } from './headerDetector.js';
+import { createPendingWriteQueue, setPendingWriteQueue } from './pendingChromeStorageQueue.js';
+import { ChromeStorageAdapter } from './persistentRetryQueue.js';
 import { createRecordingPipeline, buildRecordingPipelineDeps } from './pipeline/RecordingPipeline.js';
 import type { RecordingPipeline } from './pipeline/RecordingPipeline.js';
 import { createReviewSummaryGenerator } from './reviewSummaryGenerator.js';
@@ -27,12 +29,13 @@ import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import { hasPrivacyConsent } from '../popup/privacyConsent.js';
 import { getSettings } from '../utils/storage.js';
 import { saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlStore.js';
-import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/messageHandlers.js';
+import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/recordingHandlers.js';
 
 export interface BackgroundServices {
   obsidian: ObsidianClient;
   sqliteClient: SqliteClient;
-  recordingLogic: RecordingLogic;
+  /** Shared RecordingPipeline; owns per-URL mutex, settings fetch, and step execution. */
+  recordingPipeline: RecordingPipeline;
   tabCache: TabCache;
   rateLimiter: RateLimiter;
   manualContentFetcher: ManualContentFetcher;
@@ -44,6 +47,7 @@ export interface BackgroundServices {
    */
   aiService: AIService;
   sessionStore: SessionStore;
+  headerDetector: HeaderDetector;
   /**
    * Shared weekly/monthly review summary generator.
    *
@@ -61,8 +65,6 @@ export interface BackgroundServices {
  * popup and Dashboard code never see this type.
  */
 export interface BackgroundServicesComposition extends BackgroundServices {
-  /** Single RecordingPipeline shared by the manual/save handler deps. */
-  recordingPipeline: RecordingPipeline;
   /**
    * The SqliteClient handed to the Dashboard SQLite handler wiring; must be
    * the same instance as `sqliteClient` (guarded by backgroundComposition.test).
@@ -76,6 +78,12 @@ export interface BackgroundServicesComposition extends BackgroundServices {
 
 export function createBackgroundServices(): BackgroundServicesComposition {
   const sessionStore = new SessionStore();
+  const headerDetector = new HeaderDetector();
+
+  // Wires the pending-write queue's storage adapter explicitly, instead of the
+  // module constructing a ChromeStorageAdapter at import time. Tests inject an
+  // InMemoryAdapter-backed queue via setPendingWriteQueue instead.
+  setPendingWriteQueue(createPendingWriteQueue(new ChromeStorageAdapter()));
 
   const obsidian = new ObsidianClient();
   // Shared singleton: independent SqliteClient instances would each race to
@@ -98,8 +106,6 @@ export function createBackgroundServices(): BackgroundServicesComposition {
     aiService,
     sqliteClient,
   }));
-
-  const recordingLogic = new RecordingLogic(recordingPipeline);
 
   // Content backfill must not reorder LRU, so the timestamp is left alone. One
   // closure is shared by both recording handlers instead of being rebuilt per
@@ -127,13 +133,13 @@ export function createBackgroundServices(): BackgroundServicesComposition {
   return {
     obsidian,
     sqliteClient,
-    recordingLogic,
     tabCache,
     rateLimiter,
     manualContentFetcher,
     aiService,
     reviewSummaryGenerator,
     sessionStore,
+    headerDetector,
     recordingPipeline,
     dashboardSqliteClient: sqliteClient,
     manualRecordDeps,

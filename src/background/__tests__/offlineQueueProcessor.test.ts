@@ -14,7 +14,7 @@ describe('createOfflineQueueProcessor', () => {
 
         const processQueue = createOfflineQueueProcessor({
             offlineNetworkQueue: { retryAll },
-            recordingLogic: { record, retryObsidianWriteOnly },
+            recordingPipeline: { record, retryObsidianWriteOnly },
         });
 
         await processQueue();
@@ -35,7 +35,7 @@ describe('createOfflineQueueProcessor', () => {
 
         const processQueue = createOfflineQueueProcessor({
             offlineNetworkQueue: { retryAll },
-            recordingLogic: { record, retryObsidianWriteOnly },
+            recordingPipeline: { record, retryObsidianWriteOnly },
         });
 
         await processQueue();
@@ -63,7 +63,7 @@ describe('createOfflineQueueProcessor', () => {
 
         const processQueue = createOfflineQueueProcessor({
             offlineNetworkQueue: { retryAll },
-            recordingLogic: { record, retryObsidianWriteOnly },
+            recordingPipeline: { record, retryObsidianWriteOnly },
         });
 
         await processQueue();
@@ -98,7 +98,7 @@ describe('createOfflineQueueProcessor', () => {
 
         const processQueue = createOfflineQueueProcessor({
             offlineNetworkQueue: { retryAll },
-            recordingLogic: { record, retryObsidianWriteOnly },
+            recordingPipeline: { record, retryObsidianWriteOnly },
         });
 
         await processQueue();
@@ -131,7 +131,7 @@ describe('createOfflineQueueProcessor', () => {
 
         const processQueue = createOfflineQueueProcessor({
             offlineNetworkQueue: { retryAll },
-            recordingLogic: { record, retryObsidianWriteOnly },
+            recordingPipeline: { record, retryObsidianWriteOnly },
         });
 
         await processQueue();
@@ -155,7 +155,7 @@ describe('createOfflineQueueProcessor', () => {
 
         const processQueue = createOfflineQueueProcessor({
             offlineNetworkQueue: { retryAll },
-            recordingLogic: { record, retryObsidianWriteOnly },
+            recordingPipeline: { record, retryObsidianWriteOnly },
         });
 
         await processQueue();
@@ -177,7 +177,7 @@ describe('createOfflineQueueProcessor', () => {
 
         const processQueue = createOfflineQueueProcessor({
             offlineNetworkQueue: { retryAll },
-            recordingLogic: { record, retryObsidianWriteOnly },
+            recordingPipeline: { record, retryObsidianWriteOnly },
         });
 
         await processQueue();
