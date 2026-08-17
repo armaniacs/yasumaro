@@ -130,6 +130,39 @@ async function sendDashboardMessage<T extends DashboardSqliteRequest>(
   ]);
 }
 
+/**
+ * Generic wrapper for the common "send → on success decode+validate the
+ * response, on failure/exception surface the reason" pattern shared by most
+ * DASHBOARD_SQLITE API functions.
+ *
+ * Not every function fits this shape — retrying functions (queryLogs,
+ * searchLogs) and non-ServiceResult functions (getSqliteStatus) implement
+ * their own logic instead of calling this (PBI-39).
+ *
+ * @param payload - The request payload (subtype + fields).
+ * @param decode - Called with the successful response to build the success
+ *   data. Throwing here (e.g. via the requiredXxx/requiredRows helpers) is
+ *   caught and reported as a decode failure, same as a network exception.
+ * @param defaultErrorMessage - Used when the response carries no `error` field.
+ */
+async function callDashboard<T extends DashboardSqliteRequest, R>(
+  payload: T,
+  decode: (response: Extract<DashboardSqliteResponseFor<T['subtype']>, { success: true }>) => R,
+  defaultErrorMessage: string,
+): Promise<ServiceResult<R>> {
+  try {
+    const response = await sendDashboardMessage(payload);
+    if (response.success) {
+      return { data: decode(response) };
+    }
+    console.warn(`${payload.subtype} failed:`, String(response.error || 'Unknown error'));
+    return { error: String(response.error || defaultErrorMessage) };
+  } catch (error) {
+    console.error(`${payload.subtype} failed:`, errorMessage(error));
+    return { error: errorMessage(error) };
+  }
+}
+
 // ============================================================================
 // Public API
 // ============================================================================
@@ -202,6 +235,9 @@ export interface DateCount {
 /**
  * Query browsing logs with date range and filters.
  * Retries once on first failure to handle SQLite initialization timing.
+ *
+ * Not a callDashboard() wrapper (PBI-39): the retry loop doesn't fit the
+ * generic single-attempt shape.
  */
 export async function queryLogs(options: {
   limit?: number;
@@ -250,6 +286,8 @@ export async function queryLogs(options: {
 /**
  * FTS5 full-text search.
  * Retries once on first failure to handle SQLite initialization timing.
+ *
+ * Not a callDashboard() wrapper (PBI-39): same retry-loop shape as queryLogs.
  */
 export async function searchLogs(
   query: string,
@@ -302,17 +340,12 @@ export async function searchLogs(
  * a bare null left the UI silent — pressing the star simply did nothing when
  * the database was unavailable (PBI-21).
  */
-export async function toggleStar(id: number): Promise<ServiceResult<{ is_starred: number }>> {
-  try {
-    const response = await sendDashboardMessage({ subtype: 'toggle_star', id });
-    if (response.success) {
-      return { data: { is_starred: requiredNonNegativeNumber(response.is_starred, 'is_starred') } };
-    }
-    return { error: String(response.error || 'Toggle star failed') };
-  } catch (error) {
-    console.error('toggleStar failed:', errorMessage(error));
-    return { error: errorMessage(error) };
-  }
+export function toggleStar(id: number): Promise<ServiceResult<{ is_starred: number }>> {
+  return callDashboard(
+    { subtype: 'toggle_star', id },
+    (response) => ({ is_starred: requiredNonNegativeNumber(response.is_starred, 'is_starred') }),
+    'Toggle star failed',
+  );
 }
 
 /**
@@ -321,56 +354,31 @@ export async function toggleStar(id: number): Promise<ServiceResult<{ is_starred
  * See toggleStar: the failure reason travels to the caller so the UI can
  * show it instead of appearing to ignore the click.
  */
-export async function deleteLog(id: number): Promise<ServiceResult<void>> {
-  try {
-    const response = await sendDashboardMessage({ subtype: 'delete', id });
-    if (response.success) {
-      return { data: undefined };
-    }
-    return { error: String(response.error || 'Delete failed') };
-  } catch (error) {
-    console.error('deleteLog failed:', errorMessage(error));
-    return { error: errorMessage(error) };
-  }
+export function deleteLog(id: number): Promise<ServiceResult<void>> {
+  return callDashboard({ subtype: 'delete', id }, () => undefined, 'Delete failed');
 }
 
 /**
  * Update a log entry's fields.
  */
-export async function updateLog(id: number, changes: Record<string, unknown>): Promise<ServiceResult<void>> {
-  try {
-    const response = await sendDashboardMessage({ subtype: 'update', id, changes });
-    if (response.success === true) {
-      return { data: undefined };
-    }
-    return { error: String(response.error || 'Update failed') };
-  } catch (error) {
-    console.error('updateLog failed:', errorMessage(error));
-    return { error: errorMessage(error) };
-  }
+export function updateLog(id: number, changes: Record<string, unknown>): Promise<ServiceResult<void>> {
+  return callDashboard({ subtype: 'update', id, changes }, () => undefined, 'Update failed');
 }
 
 /**
  * Force re-run the chrome.storage → SQLite migration.
  * Returns the SQLite record count after migration, or null on failure.
  */
-export async function migrateLogs(): Promise<ServiceResult<{ count: number; read: number; inserted: number }>> {
-  try {
-    const response = await sendDashboardMessage({ subtype: 'migrate' });
-    if (response.success) {
-      return {
-        data: {
-          count: requiredNonNegativeNumber(response.count, 'count'),
-          read: requiredNonNegativeNumber(response.read, 'read'),
-          inserted: requiredNonNegativeNumber(response.inserted, 'inserted'),
-        },
-      };
-    }
-    return { error: String(response.error || 'Migration failed') };
-  } catch (error) {
-    console.error('migrateLogs failed:', errorMessage(error));
-    return { error: errorMessage(error) };
-  }
+export function migrateLogs(): Promise<ServiceResult<{ count: number; read: number; inserted: number }>> {
+  return callDashboard(
+    { subtype: 'migrate' },
+    (response) => ({
+      count: requiredNonNegativeNumber(response.count, 'count'),
+      read: requiredNonNegativeNumber(response.read, 'read'),
+      inserted: requiredNonNegativeNumber(response.inserted, 'inserted'),
+    }),
+    'Migration failed',
+  );
 }
 
 export interface OpfsSpikeStepResult { name: string; ok: boolean; detail: string }
@@ -410,6 +418,10 @@ function decodeOpfsSpikeReport(value: unknown): OpfsSpikeReportView {
 /**
  * Run the OPFS feasibility spike (PBI-10) and return its structured report.
  * Used by the diagnostics panel for manual verification in real Chrome.
+ *
+ * Not a callDashboard() wrapper (PBI-39): success also requires a non-empty
+ * `report` field, which callDashboard's single success/failure branch
+ * doesn't model.
  */
 export async function runOpfsSpike(): Promise<ServiceResult<OpfsSpikeReportView>> {
   try {
@@ -424,38 +436,31 @@ export async function runOpfsSpike(): Promise<ServiceResult<OpfsSpikeReportView>
   }
 }
 
-export async function clearAllLogs(): Promise<ServiceResult<void>> {
-  try {
-    const response = await sendDashboardMessage({ subtype: 'clear_all' });
-    if (response.success === true) {
-      return { data: undefined };
-    }
-    return { error: String(response.error || 'Clear all failed') };
-  } catch (error) {
-    console.error('clearAllLogs failed:', errorMessage(error));
-    return { error: errorMessage(error) };
-  }
+export function clearAllLogs(): Promise<ServiceResult<void>> {
+  return callDashboard({ subtype: 'clear_all' }, () => undefined, 'Clear all failed');
 }
 
 /**
  * Get total record count.
  * Returns a ServiceResult so a failure is distinguishable from a count of 0.
  */
-export async function getLogCount(): Promise<ServiceResult<number>> {
-  try {
-    const response = await sendDashboardMessage({ subtype: 'get_count' });
-    if (response.success) {
-      return { data: requiredNonNegativeNumber(response.count, 'count') };
-    }
-    return { error: String(response.error || 'Get count failed') };
-  } catch (error) {
-    return { error: errorMessage(error) };
-  }
+export function getLogCount(): Promise<ServiceResult<number>> {
+  return callDashboard(
+    { subtype: 'get_count' },
+    (response) => requiredNonNegativeNumber(response.count, 'count'),
+    'Get count failed',
+  );
 }
 
 /**
  * Get SQLite status including fallback mode flag.
  * Returns diagnostic info even on failure so the UI can display it.
+ *
+ * Not a callDashboard() wrapper (PBI-39): this function does not return
+ * ServiceResult<T> — it returns a status object unconditionally, with
+ * initError set on failure, so the diagnostics UI can render fields even
+ * when the query failed. isServiceError() below is the type guard other
+ * callers use to distinguish the ServiceResult-shaped functions.
  */
 export async function getSqliteStatus(): Promise<{
   initialized: boolean;
@@ -510,52 +515,38 @@ export async function getSqliteStatus(): Promise<{
  * Explicitly clean up legacy chrome.storage keys.
  * This is a destructive operation - only call after user confirmation.
  */
-export async function cleanupLegacyStorage(): Promise<ServiceResult<{ removed: string[]; totalBytes: number }>> {
-  try {
-    const response = await sendDashboardMessage(
-      { subtype: 'cleanup_legacy' }
-    );
-    if (response.success) {
-      return {
-        data: {
-          removed: Array.isArray(response.removed) ? response.removed : [],
-          totalBytes: requiredNonNegativeNumber(response.totalBytes, 'totalBytes'),
-        },
-      };
-    }
-    return { error: String(response.error || 'Cleanup failed') };
-  } catch (error) {
-    console.error('cleanupLegacyStorage failed:', errorMessage(error));
-    return { error: errorMessage(error) };
-  }
+export function cleanupLegacyStorage(): Promise<ServiceResult<{ removed: string[]; totalBytes: number }>> {
+  return callDashboard(
+    { subtype: 'cleanup_legacy' },
+    (response) => ({
+      removed: Array.isArray(response.removed) ? response.removed : [],
+      totalBytes: requiredNonNegativeNumber(response.totalBytes, 'totalBytes'),
+    }),
+    'Cleanup failed',
+  );
 }
 
 /**
  * Backfill diagnostic metadata for already-migrated SQLite entries
  * that are missing metric fields (sent_tokens, page_bytes, etc.).
  */
-export async function backfillMetadata(): Promise<ServiceResult<{ updated: number; total: number }>> {
-  try {
-    const response = await sendDashboardMessage(
-      { subtype: 'backfill_metadata' }
-    );
-    if (response.success) {
-      return {
-        data: {
-          updated: requiredNonNegativeNumber(response.updated, 'updated'),
-          total: requiredNonNegativeNumber(response.total, 'total'),
-        },
-      };
-    }
-    return { error: String(response.error || 'Backfill failed') };
-  } catch (error) {
-    console.error('backfillMetadata failed:', errorMessage(error));
-    return { error: errorMessage(error) };
-  }
+export function backfillMetadata(): Promise<ServiceResult<{ updated: number; total: number }>> {
+  return callDashboard(
+    { subtype: 'backfill_metadata' },
+    (response) => ({
+      updated: requiredNonNegativeNumber(response.updated, 'updated'),
+      total: requiredNonNegativeNumber(response.total, 'total'),
+    }),
+    'Backfill failed',
+  );
 }
 
 /**
  * バイナリ .db バックアップを取得
+ *
+ * Not a callDashboard() wrapper (PBI-39): success also requires a non-empty
+ * `data` field (an empty backup must not look like success), and the
+ * decoded value needs a distinct error message from a transport failure.
  */
 export async function backupDb(): Promise<ServiceResult<Uint8Array>> {
   try {
@@ -582,123 +573,78 @@ export async function backupDb(): Promise<ServiceResult<Uint8Array>> {
  * Restore the entire history database from a binary snapshot.
  * Requires a confirmation token (destructive operation).
  */
-export async function restoreDb(data: Uint8Array): Promise<ServiceResult<void>> {
-  try {
-    const response = await sendDashboardMessage(
-      { subtype: 'restore_db', data: bytesToBase64(data) }
-    );
-    if (response.success) {
-      return { data: undefined };
-    }
-    return { error: String(response.error || 'Restore failed') };
-  } catch (error) {
-    console.error('restoreDb failed:', errorMessage(error));
-    return { error: errorMessage(error) };
-  }
+export function restoreDb(data: Uint8Array): Promise<ServiceResult<void>> {
+  return callDashboard({ subtype: 'restore_db', data: bytesToBase64(data) }, () => undefined, 'Restore failed');
 }
 
 /**
  * Import browsing log rows into SQLite.
  */
-export async function importLogs(rows: Array<{
+export function importLogs(rows: Array<{
   url: string; title?: string; summary?: string; tags?: string;
   created_at: number; domain?: string; visit_duration?: number;
   scroll_ratio?: number; is_starred?: number; is_deleted?: number;
 }>): Promise<ServiceResult<{ inserted: number; skipped: number; total: number }>> {
-  try {
-    const response = await sendDashboardMessage(
-      { subtype: 'import', rows }
-    );
-    if (response.success) {
-      return {
-        data: {
-          inserted: requiredNonNegativeNumber(response.inserted, 'inserted'),
-          skipped: requiredNonNegativeNumber(response.skipped, 'skipped'),
-          total: requiredNonNegativeNumber(response.total, 'total'),
-        },
-      };
-    }
-    return { error: String(response.error || 'Import failed') };
-  } catch (error) {
-    console.error('importLogs failed:', errorMessage(error));
-    return { error: errorMessage(error) };
-  }
+  return callDashboard(
+    { subtype: 'import', rows },
+    (response) => ({
+      inserted: requiredNonNegativeNumber(response.inserted, 'inserted'),
+      skipped: requiredNonNegativeNumber(response.skipped, 'skipped'),
+      total: requiredNonNegativeNumber(response.total, 'total'),
+    }),
+    'Import failed',
+  );
 }
 
 /**
  * Run a manual retention purge of old browsing-log records.
  * Destructive — the confirmToken is attached by the sender's fail-safe default.
  */
-export async function purgeOldRecordsNow(): Promise<ServiceResult<{ purged: number; skipped: boolean }>> {
-  try {
-    const response = await sendDashboardMessage({ subtype: 'purge_now' });
-    if (response.success) {
-      return { data: { purged: requiredNonNegativeNumber(response.purged, 'purged'), skipped: requiredBoolean(response.skipped, 'skipped') } };
-    }
-    return { error: String(response.error || 'Purge failed') };
-  } catch (error) {
-    console.error('purgeOldRecordsNow failed:', errorMessage(error));
-    return { error: errorMessage(error) };
-  }
+export function purgeOldRecordsNow(): Promise<ServiceResult<{ purged: number; skipped: boolean }>> {
+  return callDashboard(
+    { subtype: 'purge_now' },
+    (response) => ({ purged: requiredNonNegativeNumber(response.purged, 'purged'), skipped: requiredBoolean(response.skipped, 'skipped') }),
+    'Purge failed',
+  );
 }
 
 /**
  * Run a manual content purge of stored page content.
  * Destructive — the confirmToken is attached by the sender's fail-safe default.
  */
-export async function purgeContentNow(): Promise<ServiceResult<{ purged: number; skipped: boolean }>> {
-  try {
-    const response = await sendDashboardMessage({ subtype: 'content_purge_now' });
-    if (response.success) {
-      return { data: { purged: requiredNonNegativeNumber(response.purged, 'purged'), skipped: requiredBoolean(response.skipped, 'skipped') } };
-    }
-    return { error: String(response.error || 'Content purge failed') };
-  } catch (error) {
-    console.error('purgeContentNow failed:', errorMessage(error));
-    return { error: errorMessage(error) };
-  }
+export function purgeContentNow(): Promise<ServiceResult<{ purged: number; skipped: boolean }>> {
+  return callDashboard(
+    { subtype: 'content_purge_now' },
+    (response) => ({ purged: requiredNonNegativeNumber(response.purged, 'purged'), skipped: requiredBoolean(response.skipped, 'skipped') }),
+    'Content purge failed',
+  );
 }
 
 /**
  * Append selected log entries to Obsidian daily note.
  * Writes to Obsidian — the confirmToken is attached by the sender's fail-safe default.
  */
-export async function appendToLogs(ids: number[]): Promise<ServiceResult<{ appended: number }>> {
-  try {
-    const response = await sendDashboardMessage({ subtype: 'append_to_obsidian', ids });
-    if (response.success) {
-      return { data: { appended: requiredNonNegativeNumber(response.appended, 'appended') } };
-    }
-    return { error: response.error ? String(response.error) : 'Append failed' };
-  } catch (error) {
-    console.error('appendToLogs failed:', errorMessage(error));
-    return { error: errorMessage(error) };
-  }
+export function appendToLogs(ids: number[]): Promise<ServiceResult<{ appended: number }>> {
+  return callDashboard(
+    { subtype: 'append_to_obsidian', ids },
+    (response) => ({ appended: requiredNonNegativeNumber(response.appended, 'appended') }),
+    'Append failed',
+  );
 }
 
 /**
  * Query audit log entries (cloud AI provider send events).
  * Read-only on SQLite — no confirm token needed.
  */
-export async function queryAuditLogs(
+export function queryAuditLogs(
   options: { limit?: number; offset?: number } = {}
 ): Promise<ServiceResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>> {
-  try {
-    const response = await sendDashboardMessage({ subtype: 'audit_log_query', ...options });
-    if (response.success) {
-      return {
-        data: {
-          rows: requiredRows(response.rows, 'rows', isAuditLogEntry),
-          total: requiredNonNegativeNumber(response.total, 'total'),
-        },
-      };
-    }
-    // Return the reason rather than null: a caller that cannot tell "failed"
-    // from "empty" reports a broken database as "no data".
-    console.warn('queryAuditLogs failed:', String(response.error || 'Unknown error'));
-    return { error: String(response.error || 'Audit log query failed') };
-  } catch (error) {
-    console.error('queryAuditLogs failed:', errorMessage(error));
-    return { error: errorMessage(error) };
-  }
+  return callDashboard(
+    { subtype: 'audit_log_query', ...options },
+    (response) => ({
+      rows: requiredRows(response.rows, 'rows', isAuditLogEntry),
+      total: requiredNonNegativeNumber(response.total, 'total'),
+    }),
+    'Audit log query failed',
+  );
 }

@@ -172,6 +172,18 @@ describe('dashboardSqliteService', () => {
       const result = await toggleStar(42);
       expect(result).toEqual({ error: 'Timeout' });
     });
+
+    // callDashboard() logs every non-exception failure via console.warn
+    // (PBI-39), distinct from the console.error used for thrown exceptions.
+    it('logs a warning (not an error) when the service worker reports failure', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      givenResponse({ success: false, error: 'Storage quota exceeded.' });
+
+      await toggleStar(42);
+
+      expect(warnSpy).toHaveBeenCalledWith('toggle_star failed:', 'Storage quota exceeded.');
+      warnSpy.mockRestore();
+    });
   });
 
   describe('deleteLog', () => {
