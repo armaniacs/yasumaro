@@ -5,6 +5,8 @@
  * 単一ソースオブトゥルースを提供する。
  */
 
+import { maskSensitiveData } from './sensitiveDataMask.js';
+
 // ─── Error types ───────────────────────────────────────────────────────
 
 /**
@@ -234,22 +236,36 @@ export function convertKnownErrorMessage(errorMessage: string, i18n?: I18nGetter
   return getUserMessage({ message: errorMessage, name: 'Error' }, i18n);
 }
 
-// ─── Context sanitization ──────────────────────────────────────────────
+// ─── Error response ────────────────────────────────────────────────────
+
+export interface ErrorResponse {
+  success: boolean;
+  error: string;
+  errorType: ErrorTypeValues;
+}
 
 /**
- * コンテキスト情報から機密情報を削除する。
+ * エラーレスポンスオブジェクトを作成する。
+ * ログにはコンテキスト情報を含めるが、機密フィールドは
+ * sensitiveDataMask.maskSensitiveData で値ベースにマスキングする。
  */
-export function sanitizeContext(context: Record<string, unknown>): Record<string, unknown> {
-  if (!context || typeof context !== 'object') return {};
+export function createErrorResponse(error: unknown, context: Record<string, unknown> = {}): ErrorResponse {
+  const errorType = classifyError(error);
+  const userMessage = getUserMessage(error);
 
-  const sanitized = { ...context };
-  const sensitiveKeys = ['apiKey', 'api_key', 'password', 'token', 'secret', 'credential'];
+  // ログには詳細情報を含める（ただしAPIキーなどの機密情報は除く）
+  const err = error instanceof Error ? error : null;
+  console.error('[Service Worker Error]', {
+    type: errorType,
+    name: err?.name,
+    message: err?.message,
+    context: maskSensitiveData(context, 'full')
+  });
 
-  for (const key of Object.keys(sanitized)) {
-    if (sensitiveKeys.some(sk => key.toLowerCase().includes(sk))) {
-      sanitized[key] = '[REDACTED]';
-    }
-  }
-
-  return sanitized;
+  // ユーザーには簡潔なメッセージのみ返す
+  return {
+    success: false,
+    error: userMessage,
+    errorType: errorType
+  };
 }

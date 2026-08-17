@@ -6,7 +6,7 @@
 
 import { createDashboardSqliteHandler, createSqliteClientDeps } from './handlers/dashboardSqliteHandlers.js';
 import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.js';
-import { createErrorResponse } from '../utils/errorMessages.js';
+import { createErrorResponse } from '../utils/errorClassification.js';
 import type { SqliteClient } from './sqliteClient.js';
 import { MigrationService } from './migrationService.js';
 

@@ -7,7 +7,7 @@
 
 import { logWarn, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { createErrorResponse } from '../utils/errorMessages.js';
+import { createErrorResponse } from '../utils/errorClassification.js';
 import {
     VALID_MESSAGE_TYPES,
     CONTENT_SCRIPT_ONLY_TYPES,
