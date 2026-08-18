@@ -11,6 +11,7 @@ import { sanitizeLogDetails } from './sanitize.js';
 import { ChromeStorageLogAdapter, type LogStorageAdapter } from './storageAdapter.js';
 import { ChromeAlarmFlushScheduler, type LogFlushScheduler } from './flushScheduler.js';
 import { LogEntry, LogTypeValues } from './types.js';
+import { pickDefined } from '../objectUtils.js';
 
 const MAX_PENDING_LOGS = 100;
 const BATCH_FLUSH_SIZE = 10;
@@ -78,7 +79,7 @@ export async function addLog<T extends object = Record<string, unknown>>(
       type,
       message: sanitizedMessage.maskedItems.length > 0 ? sanitizedMessage.text : message,
       details: await sanitizeLogDetails(restDetails),
-      traceId,
+      ...pickDefined({ traceId }),
     };
 
     buffer.push(entry);

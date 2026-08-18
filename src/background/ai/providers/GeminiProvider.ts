@@ -9,6 +9,7 @@ import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt, getDefaultSystemPrompt } from '../../../utils/customPromptUtils.js';
+import { pickDefined } from '../../../utils/objectUtils.js';
 
 
 interface GeminiApiResponse {
@@ -238,11 +239,11 @@ export class GeminiProvider extends AIProviderStrategy {
                     : GeminiProvider.describeEmptyResponse(candidate?.finishReason, data.promptFeedback?.blockReason),
                 debug: {
                     prompt: CONNECTION_TEST_PROMPT,
-                    response: hasContent ? text : undefined,
                     endpoint: `POST ${testUrl}`,
                     modelName: cleanModelName,
                     statusCode: response.status,
                     hasContent,
+                    ...pickDefined({ response: hasContent ? text : undefined }),
                     ...(usage?.promptTokenCount !== undefined ? { sentTokens: usage.promptTokenCount } : {}),
                     ...(usage?.candidatesTokenCount !== undefined ? { receivedTokens: usage.candidatesTokenCount } : {}),
                     ...(hasContent ? {} : {
@@ -358,6 +359,6 @@ export class GeminiProvider extends AIProviderStrategy {
         // 以前は || 0 で丸めて必ず記録し、統計に誤った 0 が混入していた）
         await this.recordUsageIfPresent(sentTokens, receivedTokens);
 
-        return { success: true, summary, sentTokens, receivedTokens, providerName: this.getName(), modelName: this.model };
+        return { success: true, summary, providerName: this.getName(), modelName: this.model, ...pickDefined({ sentTokens, receivedTokens }) };
     }
 }

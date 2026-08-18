@@ -34,6 +34,7 @@ import {
 import { errorMessage } from '../utils/errorUtils.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 import { forwardWarn, forwardError } from './offscreenLogger.js';
+import { pickDefined } from '../utils/objectUtils.js';
 
 // VULN-016 fix: simple promise-based mutex to serialize SQLite write operations
 // and prevent concurrent transactions from rolling back each other
@@ -175,7 +176,7 @@ async function dispatchSqliteMessage(
         }
         case 'SQLITE_QUERY': {
             const payload = msg.payload;
-            const options: import('../utils/sqlite-types.js').StorageQuery = {
+            const options: import('../utils/sqlite-types.js').StorageQuery = pickDefined({
                 limit: payload?.limit != null ? Number(payload.limit) : undefined,
                 offset: payload?.offset != null ? Number(payload.offset) : undefined,
                 orderBy: payload?.orderBy as 'created_at' | 'rank' | undefined,
@@ -188,7 +189,7 @@ async function dispatchSqliteMessage(
                 ids: payload?.ids != null ? payload.ids as number[] : undefined,
                 tag: payload?.tagFilter != null ? String(payload.tagFilter) : undefined,
                 gistSynced: payload?.gistSynced != null ? Number(payload.gistSynced) : undefined,
-            };
+            });
             const result = await sqliteQuery(options);
             sendResponse(result);
             break;
@@ -205,20 +206,22 @@ async function dispatchSqliteMessage(
         }
         case 'SQLITE_AUDIT_LOG_QUERY': {
             const payload = msg.payload;
-            const result = await sqliteQueryAuditLog({
+            const result = await sqliteQueryAuditLog(pickDefined({
                 limit: payload?.limit != null ? Number(payload.limit) : undefined,
                 offset: payload?.offset != null ? Number(payload.offset) : undefined,
-            });
+            }));
             sendResponse(result);
             break;
         }
         case 'SQLITE_SEARCH': {
             const q: import('../utils/sqlite-types.js').StorageQuery = {
               text: String(msg.payload.query || ''),
-              limit: msg.payload.limit != null ? Number(msg.payload.limit) : undefined,
-              offset: msg.payload.offset != null ? Number(msg.payload.offset) : undefined,
-              orderBy: msg.payload.orderBy as 'created_at' | 'rank' | undefined,
-              orderDir: msg.payload.orderDir as 'ASC' | 'DESC' | undefined,
+              ...pickDefined({
+                limit: msg.payload.limit != null ? Number(msg.payload.limit) : undefined,
+                offset: msg.payload.offset != null ? Number(msg.payload.offset) : undefined,
+                orderBy: msg.payload.orderBy as 'created_at' | 'rank' | undefined,
+                orderDir: msg.payload.orderDir as 'ASC' | 'DESC' | undefined,
+              }),
             };
             const result = await sqliteQuery(q);
             sendResponse(result);

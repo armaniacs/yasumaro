@@ -7,6 +7,7 @@ import { StorageKeys } from '../utils/storage.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import { getConsentHmacKey, generateHmacSignature, verifyHmacSignature } from '../utils/crypto/index.js';
+import { pickDefined } from '../utils/objectUtils.js';
 
 /** プライバシーポリシーバージョン定数。PRIVACY.md の「最終更新日」と同期させること */
 export const PRIVACY_POLICY_VERSION = '2026-07-31';
@@ -101,9 +102,8 @@ export async function getPrivacyConsent(): Promise<PrivacyConsentState> {
             const needsReconsent = !versionMatch && data.hasConsented === true;
             return {
                 hasConsented: data.hasConsented === true && versionMatch,
-                consentDate: data.consentDate,
-                consentVersion: data.consentVersion,
-                needsReconsent
+                needsReconsent,
+                ...pickDefined({ consentDate: data.consentDate, consentVersion: data.consentVersion })
             };
         }
 
@@ -236,8 +236,10 @@ export async function withdrawPrivacyConsent(): Promise<PrivacyConsentWithdrawal
         const currentConsent = await getPrivacyConsent();
         const withdrawal: PrivacyConsentWithdrawal = {
             withdrawalDate: new Date().toISOString(),
-            previousConsentDate: currentConsent.consentDate,
-            previousConsentVersion: currentConsent.consentVersion
+            ...pickDefined({
+                previousConsentDate: currentConsent.consentDate,
+                previousConsentVersion: currentConsent.consentVersion
+            })
         };
 
         const withdrawnState: PrivacyConsentState & { withdrawal?: PrivacyConsentWithdrawal } = {

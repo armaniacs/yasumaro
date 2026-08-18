@@ -7,6 +7,7 @@ import { sanitizePromptContent, DangerLevel } from '../utils/promptSanitizer.js'
 import { addPendingPage } from '../utils/pendingStorage.js';
 import type { AIService, AISummaryResult } from './ai/AIService.js';
 import type { MaskedItem } from '../messaging/types.js';
+import { pickDefined } from '../utils/objectUtils.js';
 
 /**
  * Calculate token count approximation from text length.
@@ -137,9 +138,9 @@ export class PrivacyPipeline {
       const aiCallStart = performance.now();
       const aiResult = await this.aiService.generateSummary(processingText, {
         mode: 'full_pipeline',
-        tagSummaryMode: options.tagSummaryMode,
         url,
         traceId,
+        ...pickDefined({ tagSummaryMode: options.tagSummaryMode }),
       });
       const aiCallDurationMs = performance.now() - aiCallStart;
       return {
@@ -220,11 +221,13 @@ export class PrivacyPipeline {
         result: {
           summary: processedText,
           originalTokens,
-          sentTokens: localResult.sentTokens,
-          receivedTokens: localResult.receivedTokens,
-          providerName: localResult.providerName,
-          modelName: localResult.modelName,
           aiCallDurationMs: localCallDurationMs,
+          ...pickDefined({
+            sentTokens: localResult.sentTokens,
+            receivedTokens: localResult.receivedTokens,
+            providerName: localResult.providerName,
+            modelName: localResult.modelName,
+          }),
         },
       };
     }
@@ -263,14 +266,16 @@ export class PrivacyPipeline {
     return {
       summary: sanitizedSummary,
       maskedCount,
-      tags,
       originalTokens,
       cleansedTokens,
-      sentTokens: aiResult.sentTokens,
-      receivedTokens: aiResult.receivedTokens,
-      providerName: aiResult.providerName,
-      modelName: aiResult.modelName,
       aiCallDurationMs,
+      ...pickDefined({
+        tags,
+        sentTokens: aiResult.sentTokens,
+        receivedTokens: aiResult.receivedTokens,
+        providerName: aiResult.providerName,
+        modelName: aiResult.modelName,
+      }),
     };
   }
 

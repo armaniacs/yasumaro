@@ -10,6 +10,7 @@ import { getStorageUsage, estimateDataSize, STORAGE_QUOTA_BYTES, hasUnlimitedSto
 import type { RecordType } from '../commonTypes.js';
 import { MAX_URL_SET_SIZE, URL_RETENTION_DAYS, MAX_CONTENT_ENTRIES } from '../urlEntry.js';
 import type { SavedUrlEntry } from '../urlEntry.js';
+import { pickDefined } from '../objectUtils.js';
 
 export { MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, URL_RETENTION_DAYS, MAX_CONTENT_ENTRIES } from '../urlEntry.js';
 export type { SavedUrlEntry } from '../urlEntry.js';
@@ -425,10 +426,10 @@ function applyMetadataPatch(
  * Set tags for a URL entry.
  */
 export async function setUrlTags(url: string, tags: string[]): Promise<void> {
-    await updateSavedUrlEntry(url, (entry) => ({
-        ...entry,
-        tags: tags.length > 0 ? tags : undefined
-    }));
+    await updateSavedUrlEntry(url, (entry) => {
+        const { tags: _omit, ...rest } = entry;
+        return { ...rest, ...pickDefined({ tags: tags.length > 0 ? tags : undefined }) };
+    });
     // Note: warning for URL not found is not logged here to keep updateSavedUrlEntry generic.
     // The caller can check existence beforehand if needed.
 }
@@ -453,7 +454,8 @@ export async function removeUrlTag(url: string, tag: string): Promise<void> {
     await updateSavedUrlEntry(url, (entry) => {
         if (!entry.tags) return entry;
         const filtered = entry.tags.filter(t => t !== tag);
-        return { ...entry, tags: filtered.length > 0 ? filtered : undefined };
+        const { tags: _omit, ...rest } = entry;
+        return { ...rest, ...pickDefined({ tags: filtered.length > 0 ? filtered : undefined }) };
     });
 }
 

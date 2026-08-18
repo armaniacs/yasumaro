@@ -7,6 +7,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { hashUrl } from '../utils/crypto/index.js';
 import { wildcardToRegex } from '../utils/wildcardToRegex.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
+import { pickDefined } from '../utils/objectUtils.js';
 
 export interface StatusInfo {
   domainFilter: {
@@ -191,10 +192,10 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
     // キャッシュ情報（Service Workerから取得した情報を優先）
     const headers = privacyInfo?.headers;
     const cacheInfo = {
-      cacheControl: headers?.cacheControl,
       hasCookie: headers?.hasCookie || false,
       hasAuth: headers?.hasAuth || false,
-      hasCache: !!headers?.cacheControl
+      hasCache: !!headers?.cacheControl,
+      ...pickDefined({ cacheControl: headers?.cacheControl })
     };
 
     // プライバシー判定（Service Workerから取得した情報を使用）
@@ -227,13 +228,12 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
         allowed,
         mode,
         matched,
-        matchedPattern
+        ...pickDefined({ matchedPattern })
       },
       privacy: {
         isPrivate,
-        reason,
         hasCache: cacheInfo.hasCache,
-        piiRisk: undefined // 将来の拡張用
+        ...pickDefined({ reason }) // piiRisk は将来の拡張用（未使用のため省略）
       },
       cache: cacheInfo,
       lastSaved: lastSavedInfo

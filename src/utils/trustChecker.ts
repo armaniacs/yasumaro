@@ -9,6 +9,7 @@ import { getTrustDb } from './trustDb/trustDb.js';
 import { StorageKeys } from './storage.js';
 import { logInfo, logDebug, logWarn } from './logger.js';
 import { errorMessage } from './errorUtils.js';
+import { pickDefined } from './objectUtils.js';
 
 // ============================================================================
 // Alert Settings
@@ -181,7 +182,7 @@ export class TrustChecker {
       canProceed,
       trustResult: trustResultRaw,
       showAlert,
-      reason: !canProceed ? this.getBlockReason(trustResultRaw, showAlert) : undefined
+      ...pickDefined({ reason: !canProceed ? this.getBlockReason(trustResultRaw, showAlert) : undefined })
     };
   }
 

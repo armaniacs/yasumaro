@@ -11,6 +11,7 @@ import { encodeUrlSafeBase64 } from './urlNotificationHandlers.js';
 import { NotificationHelper } from '../notificationHelper.js';
 import type { MessageSenderLike } from '../rateLimiter.js';
 import type { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
+import { pickDefined } from '../../utils/objectUtils.js';
 
 import type {
   ValidVisitMessage,
@@ -134,15 +135,17 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
       content: message.payload?.content || '',
       skipDuplicateCheck: false,
       recordType: 'auto',
-      pageBytes: message.payload?.pageBytes,
-      candidateBytes: message.payload?.candidateBytes,
-      originalBytes: message.payload?.originalBytes,
-      cleansedBytes: message.payload?.cleansedBytes,
-      aiSummaryOriginalBytes: message.payload?.aiSummaryOriginalBytes,
-      aiSummaryCleansedBytes: message.payload?.aiSummaryCleansedBytes,
-      aiSummaryCleansedElements: message.payload?.aiSummaryCleansedElements,
-      aiSummaryCleansedReason: message.payload?.aiSummaryCleansedReason,
-      aiSummaryCleansedReasons: message.payload?.aiSummaryCleansedReasons,
+      ...pickDefined({
+        pageBytes: message.payload?.pageBytes,
+        candidateBytes: message.payload?.candidateBytes,
+        originalBytes: message.payload?.originalBytes,
+        cleansedBytes: message.payload?.cleansedBytes,
+        aiSummaryOriginalBytes: message.payload?.aiSummaryOriginalBytes,
+        aiSummaryCleansedBytes: message.payload?.aiSummaryCleansedBytes,
+        aiSummaryCleansedElements: message.payload?.aiSummaryCleansedElements,
+        aiSummaryCleansedReason: message.payload?.aiSummaryCleansedReason,
+        aiSummaryCleansedReasons: message.payload?.aiSummaryCleansedReasons,
+      }),
     });
 
     if (sender.tab.id) {
@@ -180,11 +183,11 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
       }
     }
 
-    if (result.maskedItems && Array.isArray(result.maskedItems)) {
-      result.maskedItems = stripPiiFromMaskedItems(result.maskedItems);
-    }
-
-    sendResponse(result);
+    sendResponse(
+      result.maskedItems && Array.isArray(result.maskedItems)
+        ? { ...result, maskedItems: stripPiiFromMaskedItems(result.maskedItems) }
+        : result
+    );
   };
 }
 
@@ -217,7 +220,13 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
     }
 
     if (skipAi) {
-      const rateLimitResult = await deps.checkRateLimit(sender, settings);
+      const senderLike: MessageSenderLike = {
+        ...pickDefined({
+          url: sender.url,
+          tab: sender.tab ? pickDefined({ id: sender.tab.id }) : undefined,
+        }),
+      };
+      const rateLimitResult = await deps.checkRateLimit(senderLike, settings);
       if (!rateLimitResult.allowed) {
         sendResponse({ success: false, error: rateLimitResult.error });
         return;
@@ -255,31 +264,33 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
       title: message.payload.title,
       url: message.payload.url,
       content,
-      force: message.payload.force,
       skipDuplicateCheck: true,
       previewOnly: message.type === 'PREVIEW_RECORD',
       recordType: 'manual',
-      skipAi,
-      pageBytes: message.payload.pageBytes,
-      candidateBytes: message.payload.candidateBytes,
-      originalBytes: message.payload.originalBytes,
-      cleansedBytes: message.payload.cleansedBytes,
-      aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
-      aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
-      aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
-      aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
-      aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons,
+      ...pickDefined({
+        skipAi,
+        force: message.payload.force,
+        pageBytes: message.payload.pageBytes,
+        candidateBytes: message.payload.candidateBytes,
+        originalBytes: message.payload.originalBytes,
+        cleansedBytes: message.payload.cleansedBytes,
+        aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
+        aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
+        aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
+        aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
+        aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons,
+      }),
     }, settings);
 
     if (result.success) {
       await deps.setUrlContent(message.payload.url, content);
     }
 
-    if (result.maskedItems && Array.isArray(result.maskedItems)) {
-      result.maskedItems = stripPiiFromMaskedItems(result.maskedItems);
-    }
-
-    sendResponse(result);
+    sendResponse(
+      result.maskedItems && Array.isArray(result.maskedItems)
+        ? { ...result, maskedItems: stripPiiFromMaskedItems(result.maskedItems) }
+        : result
+    );
   };
 }
 
@@ -318,28 +329,30 @@ export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
       content: message.payload.content,
       skipDuplicateCheck: true,
       alreadyProcessed: true,
-      force: message.payload.force,
       recordType: 'manual',
-      maskedCount: message.payload.maskedCount,
-      pageBytes: message.payload.pageBytes,
-      candidateBytes: message.payload.candidateBytes,
-      originalBytes: message.payload.originalBytes,
-      cleansedBytes: message.payload.cleansedBytes,
-      aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
-      aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
-      aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
-      aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
-      aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons,
+      ...pickDefined({
+        force: message.payload.force,
+        maskedCount: message.payload.maskedCount,
+        pageBytes: message.payload.pageBytes,
+        candidateBytes: message.payload.candidateBytes,
+        originalBytes: message.payload.originalBytes,
+        cleansedBytes: message.payload.cleansedBytes,
+        aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
+        aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
+        aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
+        aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
+        aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons,
+      }),
     }, settings);
 
     if (result.success && message.payload.content) {
       await deps.setUrlContent(message.payload.url, message.payload.content);
     }
 
-    if (result.maskedItems && Array.isArray(result.maskedItems)) {
-      result.maskedItems = stripPiiFromMaskedItems(result.maskedItems);
-    }
-
-    sendResponse(result);
+    sendResponse(
+      result.maskedItems && Array.isArray(result.maskedItems)
+        ? { ...result, maskedItems: stripPiiFromMaskedItems(result.maskedItems) }
+        : result
+    );
   };
 }

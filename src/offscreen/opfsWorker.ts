@@ -18,6 +18,7 @@ import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL } from './schema.js';
 import { runMigrations, type MigrationEngine } from './migrations.js';
 
 import type { WorkerRequestMessage, WorkerResponseMessage, WorkerLogMessage } from './opfsWorker/types.js';
+import { pickDefined } from '../utils/objectUtils.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 import { handleInsert, handleQuery, handleUpdate, handleHardDelete, handleToggleStar, handleGetCount, handleInsertBatch } from './opfsWorker/crudHandlers.js';
 import { handleSearch as handleSearchImpl, handleSearchFts as handleSearchFtsImpl, handleSearchLike as handleSearchLikeImpl } from './opfsWorker/searchHandlers.js';
@@ -88,7 +89,7 @@ let fts5Available = false;
 function postWorkerLog(level: WorkerLogMessage['level'], message: string, details?: Record<string, unknown>): void {
   try {
     // WHY: `self` is typed as `Window` in non-Worker contexts; cast is needed for Worker global scope
-    (self as unknown as DedicatedWorkerGlobalScope).postMessage({ __log: true, level, message, details } satisfies WorkerLogMessage);
+    (self as unknown as DedicatedWorkerGlobalScope).postMessage({ __log: true, level, message, ...pickDefined({ details }) } satisfies WorkerLogMessage);
   } catch {
     // Non-Worker global (e.g. jsdom's Window.postMessage requires a
     // targetOrigin argument) — fall back to console so nothing is lost.

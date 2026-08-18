@@ -11,6 +11,7 @@ import { logError, ErrorCode } from '../utils/logger.js';
 import { engine, DB_FILENAME, MAX_QUERY_LIMIT } from './sqliteEngineContext.js';
 import type { SqliteValue } from './sqliteEngineContext.js';
 import { FTS_QUERY_MAX_LENGTH } from './schema.js';
+import { pickDefined } from '../utils/objectUtils.js';
 
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery } from '../utils/sqlite-types.js';
 
@@ -45,7 +46,7 @@ export async function query(q: StorageQuery = {}): Promise<{
   const tag = q.tag ? q.tag.slice(0, FTS_QUERY_MAX_LENGTH) : q.tag;
   const text = q.text ? q.text.slice(0, FTS_QUERY_MAX_LENGTH) : q.text;
   const backend = await engine.getBackend();
-  return backend.query({ ...q, limit: cappedLimit, tag, text });
+  return backend.query({ ...q, limit: cappedLimit, ...pickDefined({ tag, text }) });
 }
 
 /**

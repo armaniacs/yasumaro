@@ -186,7 +186,9 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
 
     chrome.tabs.onRemoved.addListener(handleTabRemoved);
     chrome.tabs.onActivated.addListener(handleTabActivated);
-    chrome.tabs.onUpdated.addListener(handleTabUpdated);
+    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) =>
+      handleTabUpdated(tabId, changeInfo, tab.url !== undefined ? { url: tab.url } : {}),
+    );
 
     chrome.runtime.onInstalled.addListener(handleInstalled);
     chrome.runtime.onStartup.addListener(handleStartup);

@@ -11,6 +11,7 @@
 import { PATTERNS, RULE_TYPES, PREFIXES, RuleType } from './constants.js';
 import { isValidString, validateDomain } from './validation.js';
 import { buildRuleObject, generateRuleId, UblockRule } from './transform.js';
+import { pickDefined } from '../objectUtils.js';
 
 // ============================================================================
 // ルール解析ヘルパー関数
@@ -137,7 +138,7 @@ function parseHostsLine(rawLine: string, hostsPart: string): UblockRule | { type
     type: RULE_TYPES.BLOCK,
     domain: domain,
     pattern: domain,
-    options: { thirdParty: undefined, firstParty: undefined, domains: [], important: false }
+    options: pickDefined({ thirdParty: undefined, firstParty: undefined, domains: [], important: false })
   };
 }
 

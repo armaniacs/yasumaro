@@ -23,6 +23,7 @@ import type { ExtractResult, AiSummaryCleanseRunResult } from './types.js';
 import { findMainContentCandidates } from './scoring.js';
 import { extractTextFromElement } from './textExtraction.js';
 import { matchWhitelistAdapter, extractWhitelistedContent } from './whitelistAdapters.js';
+import { pickDefined } from '../objectUtils.js';
 
 // パブリックAPIを再エクスポート
 export type { ExtractResult } from './types.js';
@@ -454,7 +455,26 @@ export function extractMainContent(
             }
         }
         
-        return { content, cleansedReason, hardStripRemoved, keywordStripRemoved, totalRemoved, pageBytes, candidateBytes, originalBytes, cleansedBytes, aiSummaryOriginalBytes, aiSummaryCleansedBytes, aiSummaryCleansedElements, aiSummaryCleansedReason, aiSummaryCleansedReasons, fallbackTriggered, fallbackReason };
+        return {
+            content,
+            ...pickDefined({
+                cleansedReason,
+                hardStripRemoved,
+                keywordStripRemoved,
+                totalRemoved,
+                pageBytes,
+                candidateBytes,
+                originalBytes,
+                cleansedBytes,
+                aiSummaryOriginalBytes,
+                aiSummaryCleansedBytes,
+                aiSummaryCleansedElements,
+                aiSummaryCleansedReason,
+                aiSummaryCleansedReasons,
+                fallbackTriggered,
+                fallbackReason,
+            }),
+        };
     }
 
     return content;

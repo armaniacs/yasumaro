@@ -17,6 +17,7 @@ import { buildExtractionOptions } from '../utils/contentExtractor/optionBuilder.
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
 import { PageState, type CleansingConfig } from './pageState.js';
 import { CLEANSING_RULES } from '../utils/aiSummaryCleaner/rules.js';
+import { pickDefined } from '../utils/objectUtils.js';
 
 // Type-only import to establish graphify edge between content script and
 // the service worker's message type definitions (PBI-02-3).
@@ -102,7 +103,7 @@ function applyExtractResultToPageState(result: ExtractResult): void {
         aiSummaryCleansedBytes: result.aiSummaryCleansedBytes ?? 0,
         aiSummaryCleansedElements: result.aiSummaryCleansedElements ?? 0,
         aiSummaryCleansedReason: result.aiSummaryCleansedReason ?? 'none',
-        aiSummaryCleansedReasons: result.aiSummaryCleansedReasons
+        ...pickDefined({ aiSummaryCleansedReasons: result.aiSummaryCleansedReasons })
     };
     pageState.lastFallbackTriggered = result.fallbackTriggered ?? false;
 }

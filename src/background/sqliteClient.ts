@@ -8,6 +8,7 @@
 
 import { logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { pickDefined } from '../utils/objectUtils.js';
 import { recordSqliteFailure, recordSqliteSuccess } from './sqliteAlert.js';
 import type { SqliteMessageType } from '../messaging/sqliteMessages.js';
 import type {
@@ -206,8 +207,7 @@ export class SqliteClient {
       text: searchQuery,
       limit,
       offset,
-      orderBy: options.orderBy,
-      orderDir: options.orderDir,
+      ...pickDefined({ orderBy: options.orderBy, orderDir: options.orderDir }),
     });
   }
 
@@ -264,14 +264,16 @@ export class SqliteClient {
         initialized: res.initialized,
         path: res.path,
         fallback: res.fallback,
-        fts5: res.fts5,
-        initError: res.initError,
-        compileOptions: res.compileOptions,
-        compileOptionsSource: res.compileOptionsSource,
-        opfsMigrationV2Done: res.opfsMigrationV2Done,
-        opfsMigrationV2LastAttemptedAt: res.opfsMigrationV2LastAttemptedAt,
-        opfsMigrationV2CompletedAt: res.opfsMigrationV2CompletedAt,
-        opfsMigrationV2RecordCount: res.opfsMigrationV2RecordCount,
+        ...pickDefined({
+          fts5: res.fts5,
+          initError: res.initError,
+          compileOptions: res.compileOptions,
+          compileOptionsSource: res.compileOptionsSource,
+          opfsMigrationV2Done: res.opfsMigrationV2Done,
+          opfsMigrationV2LastAttemptedAt: res.opfsMigrationV2LastAttemptedAt,
+          opfsMigrationV2CompletedAt: res.opfsMigrationV2CompletedAt,
+          opfsMigrationV2RecordCount: res.opfsMigrationV2RecordCount,
+        }),
       }),
     );
     if (result.success) {
@@ -284,7 +286,6 @@ export class SqliteClient {
       fallback: false,
       fts5: false,
       initError: result.error.message || 'Unknown error',
-      compileOptionsSource: undefined,
     };
   }
 

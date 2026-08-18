@@ -6,6 +6,7 @@ import {
   type AiTestProgress,
   type AiConnectionTestResult,
 } from './AIService.js';
+import { pickDefined } from '../../utils/objectUtils.js';
 
 /** Provider identifier reported for history entries produced via this service. */
 const LOCAL_AI_PROVIDER_NAME = 'built-in-ai';
@@ -36,11 +37,13 @@ export class LocalAIService implements AIService {
     return {
       summary: result.summary ?? '',
       usedLocal: true,
-      sentTokens: result.sentTokens,
-      receivedTokens: result.receivedTokens,
       providerName: LOCAL_AI_PROVIDER_NAME,
-      success: result.success,
-      error: result.error,
+      success: result.success ?? true,
+      ...pickDefined({
+        sentTokens: result.sentTokens,
+        receivedTokens: result.receivedTokens,
+        error: result.error,
+      }),
     };
   }
 

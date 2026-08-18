@@ -5,6 +5,7 @@ import { sendMessageWithRetry } from '../../utils/retryHelper.js';
 import { logError, ErrorCode } from '../../utils/logger.js';
 import type { ContentResponse, PreviewResponse } from '../mainTypes.js';
 import { SpinnerManager } from './spinnerManager.js';
+import { pickDefined } from '../../utils/objectUtils.js';
 
 export interface PreviewSaveOptions {
   tab: chrome.tabs.Tab;
@@ -64,7 +65,7 @@ export class PreviewFlow {
           aiSummaryCleansedReasons: aiSummaryCleansedStats?.aiSummaryCleansedReasons
         }
       });
-      return { success: !!result?.success, result, error: result?.error };
+      return { success: !!result?.success, ...pickDefined({ result, error: result?.error }) };
     }
 
     this.spinner.show(getMessage('localAiProcessing'));
@@ -94,7 +95,7 @@ export class PreviewFlow {
     }
 
     if (!previewResponse.success && previewResponse.error === 'PRIVATE_PAGE_DETECTED') {
-      return { success: false, error: 'PRIVATE_PAGE_DETECTED', reason: previewResponse.reason };
+      return { success: false, error: 'PRIVATE_PAGE_DETECTED', ...pickDefined({ reason: previewResponse.reason }) };
     }
 
     if (!previewResponse.success) {
@@ -143,6 +144,6 @@ export class PreviewFlow {
       }
     });
 
-    return { success: !!result?.success, result, error: result?.error };
+    return { success: !!result?.success, ...pickDefined({ result, error: result?.error }) };
   }
 }

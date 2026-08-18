@@ -10,6 +10,7 @@
 import { logWarn, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 import { ALLOWED_LOCALHOST_PORTS } from './ssrfGuard.js';
+import { pickDefined } from './objectUtils.js';
 
 class CspError extends Error {
     code: string;
@@ -216,7 +217,7 @@ export class CSPValidator {
     }
 
     return new Promise((resolve, reject) => {
-      CSPValidator.requestQueue.push({ url, options, resolve, reject });
+      CSPValidator.requestQueue.push({ url, ...pickDefined({ options }), resolve, reject });
     });
   }
 

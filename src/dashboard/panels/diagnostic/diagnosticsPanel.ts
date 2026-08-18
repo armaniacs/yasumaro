@@ -14,6 +14,7 @@ import { checkBuiltInAiAvailability, startBuiltInAiDownload, type BuiltInAiDiagn
 import type { BuiltInAIAvailability } from '../../../background/builtInAIClient.js';
 import { type DiagnosticPanel } from '../types.js';
 import { formatProviderHeadline, formatProviderDetailLines } from '../../aiTestResultView.js';
+import { pickDefined } from '../../../utils/objectUtils.js';
 
 /**
  * Renders the built-in AI availability row and toggles the download button.
@@ -279,8 +280,8 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
         initialized: sqliteStatus.initialized,
         fallback: sqliteStatus.fallback,
         fts5: sqliteStatus.fts5,
-        initError: sqliteStatus.initError,
         vfsStrategy: offscreenStrategy,
+        ...pickDefined({ initError: sqliteStatus.initError }),
       };
       const deficiencies = diagnoseDeficiencies(diagInput);
 

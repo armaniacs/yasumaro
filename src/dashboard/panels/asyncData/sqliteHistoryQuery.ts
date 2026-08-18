@@ -18,6 +18,7 @@ import type { SavedUrlEntry } from '../../../utils/storageUrls.js';
 import { queryLogs, searchLogs, isServiceError } from '../../dashboardSqliteService.js';
 import type { ServiceResult } from '../../dashboardSqliteService.js';
 import { getSavedUrlEntries } from '../../../utils/storageUrls.js';
+import { pickDefined } from '../../../utils/objectUtils.js';
 import { shouldFallbackToTextSearch } from '../../historyFilters.js';
 
 export { isServiceError };
@@ -282,8 +283,7 @@ export async function queryHistory(
     const queryResult = await queryRows({
       limit: useServerPaging ? options.limit : TAG_FILTER_FETCH_LIMIT,
       offset: useServerPaging ? options.offset : 0,
-      since: options.since,
-      until: options.until,
+      ...pickDefined({ since: options.since, until: options.until }),
       orderBy: 'created_at',
       // NOTE: when a tag filter is active, this over-fetch is capped at
       // TAG_FILTER_FETCH_LIMIT and tag matching runs client-side (see

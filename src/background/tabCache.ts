@@ -1,4 +1,5 @@
 import { SessionStore, SESSION_KEYS } from './sessionStore.js';
+import { pickDefined } from '../utils/objectUtils.js';
 
 export interface TabData {
     title?: string;
@@ -34,11 +35,10 @@ export class TabCache {
                 tabs.forEach(tab => {
                     if (tab.id && tab.url && tab.url.startsWith('http')) {
                         this.cache.set(tab.id, {
-                            title: tab.title,
                             url: tab.url,
-                            favIconUrl: tab.favIconUrl,
                             lastUpdated: Date.now(),
-                            isValidVisit: false
+                            isValidVisit: false,
+                            ...pickDefined({ title: tab.title, favIconUrl: tab.favIconUrl }),
                         });
                     }
                 });
@@ -84,11 +84,10 @@ export class TabCache {
     add(tab: chrome.tabs.Tab): void {
         if (tab.id && tab.url && tab.url.startsWith('http')) {
             this.cache.set(tab.id, {
-                title: tab.title,
                 url: tab.url,
-                favIconUrl: tab.favIconUrl,
                 lastUpdated: Date.now(),
-                isValidVisit: false
+                isValidVisit: false,
+                ...pickDefined({ title: tab.title, favIconUrl: tab.favIconUrl }),
             });
             this.saveToSession();
         }

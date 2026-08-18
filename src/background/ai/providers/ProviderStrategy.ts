@@ -8,6 +8,7 @@ import { validateMaxTokens } from '../../../utils/aiLimits.js';
 import { checkHardLimit, checkRateLimit, checkUsageWarning, getRateLimitMessage, recordUsage } from '../../../utils/aiUsageTracker.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { addLog, LogType } from '../../../utils/logger.js';
+import { pickDefined } from '../../../utils/objectUtils.js';
 
 export interface AIProviderConnectionResult {
     success: boolean;
@@ -47,6 +48,8 @@ export const CONNECTION_TEST_PROMPT = 'Reply with the single word: OK';
 export interface AISummaryResult {
     success: boolean;
     summary: string;
+    tags?: string[];
+    usedLocal?: boolean;
     sentTokens?: number;
     receivedTokens?: number;
     providerName?: string;  // 使用したAIプロバイダー名
@@ -201,7 +204,7 @@ export abstract class AIProviderStrategy {
             return {
                 success: false,
                 message: `Connection error: ${msg}`,
-                debug: { error: msg, statusCode: statusCode || undefined },
+                debug: { error: msg, ...pickDefined({ statusCode: statusCode || undefined }) },
             };
         }
     }

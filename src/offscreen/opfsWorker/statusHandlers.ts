@@ -5,6 +5,7 @@
 
 import type { SqliteValue, SqliteRow } from '../sqliteEngine.js';
 import { sqlQuery, type HandlerContext } from './handlers.js';
+import { pickDefined } from '../../utils/objectUtils.js';
 
 const DB_FILENAME = 'yasumaro.db';
 
@@ -22,7 +23,7 @@ export async function handleGetStatus(
     fallback: false,
     fts5: fts5Available,
     count,
-    compileOptions: cachedCompileOptions ?? undefined,
+    ...pickDefined({ compileOptions: cachedCompileOptions ?? undefined }),
   };
 }
 

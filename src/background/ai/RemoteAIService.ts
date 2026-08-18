@@ -13,6 +13,7 @@ import { GeminiProvider, OpenAIProvider, BuiltInAiProvider, AIProviderStrategy }
 import { addLog, LogType } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { recordAuditLog } from '../../utils/auditLog.js';
+import { pickDefined } from '../../utils/objectUtils.js';
 
 interface RemoteAIServiceConfig {
   builtInAiClient?: BuiltInAiProvider;
@@ -169,9 +170,9 @@ export class RemoteAIService implements AIService {
       const effectiveModel = this.resolveEffectiveModel(settings, slot);
       onProgress?.({
         provider: slot.provider,
-        model: effectiveModel,
         index,
         total: slots.length,
+        ...pickDefined({ model: effectiveModel }),
         ...(runId !== undefined ? { runId } : {}),
       });
 
@@ -179,11 +180,11 @@ export class RemoteAIService implements AIService {
       if (!factory) {
         providerResults.push({
           provider: slot.provider,
-          model: effectiveModel,
           success: false,
           message: `Unknown provider: ${slot.provider}`,
           elapsedMs: performance.now() - slotStart,
           debug: { error: `Provider "${slot.provider}" is not registered` },
+          ...pickDefined({ model: effectiveModel }),
         });
         continue;
       }
@@ -195,11 +196,10 @@ export class RemoteAIService implements AIService {
         const result = await providerInstance.testConnection();
         providerResults.push({
           provider: slot.provider,
-          model: effectiveModel,
           success: result.success,
           message: result.message,
           elapsedMs: performance.now() - slotStart,
-          debug: result.debug,
+          ...pickDefined({ model: effectiveModel, debug: result.debug }),
         });
         if (result.success) {
           anySuccess = true;
@@ -209,11 +209,11 @@ export class RemoteAIService implements AIService {
         addLog(LogType.ERROR, `Connection test failed for ${slot.provider}: ${msg}`);
         providerResults.push({
           provider: slot.provider,
-          model: effectiveModel,
           success: false,
           message: msg,
           elapsedMs: performance.now() - slotStart,
           debug: { error: msg },
+          ...pickDefined({ model: effectiveModel }),
         });
       }
     }

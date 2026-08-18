@@ -23,6 +23,7 @@ import {
 } from '../../dashboardSqliteService.js';
 import { isServiceError } from '../../dashboardSqliteService.js';
 import { removeSavedUrl } from '../../../utils/storageUrls.js';
+import { pickDefined } from '../../../utils/objectUtils.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import {
@@ -153,15 +154,17 @@ export function createSqliteHistoryController(
       // All storage knowledge — SQLite paging/search plus legacy
       // chrome.storage enrichment — lives in the unified history query module.
       const result: UnifiedHistoryQueryResult = await runQueryHistory({
-        search: options.search,
-        since: options.since,
-        until: options.until,
         limit,
         offset,
-        tagFilter: activeTagFilter || undefined,
-        tagInitiated: options.tagInitiated,
         sortBy: state.sortBy,
         sortDir: state.sortDir,
+        ...pickDefined({
+          search: options.search,
+          since: options.since,
+          until: options.until,
+          tagFilter: activeTagFilter || undefined,
+          tagInitiated: options.tagInitiated,
+        }),
       });
 
       if (generation !== requestGeneration) return;
@@ -221,7 +224,7 @@ export function createSqliteHistoryController(
     if (!init) return null;
 
     if (init.searchTag) {
-      return { tagFilter: (init.searchTag as string) || undefined, tagInitiated: true, limit: PAGE_SIZE };
+      return { ...pickDefined({ tagFilter: (init.searchTag as string) || undefined }), tagInitiated: true, limit: PAGE_SIZE };
     }
     if (init.searchDomain) {
       const q = (init.searchDomain as string).trim();
@@ -233,7 +236,7 @@ export function createSqliteHistoryController(
   function activateWithTag(tag: string): void {
     pendingInit = { searchTag: tag };
     dispatch({ type: 'tagInitiated', tag });
-    void fetchData({ page: 0, tagFilter: state.activeTagFilter || undefined, tagInitiated: true });
+    void fetchData({ page: 0, ...pickDefined({ tagFilter: state.activeTagFilter || undefined }), tagInitiated: true });
   }
 
   function activateWithDomain(query: string): void {
@@ -342,7 +345,7 @@ export function createSqliteHistoryController(
 
   function filterByTag(tag: string): void {
     dispatch({ type: 'tagFilterClick', tag });
-    void fetchData({ tagFilter: state.activeTagFilter || undefined, ...dateRangeFromSelected() });
+    void fetchData({ ...pickDefined({ tagFilter: state.activeTagFilter || undefined }), ...dateRangeFromSelected() });
   }
 
   function clearTagFilter(): void {
