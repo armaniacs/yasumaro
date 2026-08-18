@@ -18,7 +18,7 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| [2026-08-18-06-refactor-optional-property-strictness.md](2026-08-18-06-refactor-optional-property-strictness.md) | 🔴高 | 軽微 | refactor | `exactOptionalPropertyTypes`/`noImplicitReturns` を段階導入 |
+| （なし） | | | | |
 
 ---
 
@@ -39,8 +39,9 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
-### 2026-08-18 型安全性強化でアーカイブ済み（5件）
+### 2026-08-18 型安全性強化でアーカイブ済み（6件）
 
+- 2026-08-18-06-refactor-optional-property-strictness.md (`exactOptionalPropertyTypes`/`noImplicitReturns` を tsconfig.json に追加、発生エラー93件を53ファイルで全件解消)
 - 2026-08-18-01-fix-eslint-errors-and-wire-ci-lint.md (npm run lint がエラー0件。validateスクリプトにlint追加、CIにLintステップ追加済み。既に完了していたため即時アーカイブ)
 - 2026-08-18-02-fix-ban-explicit-any.md (eslint.config.js に no-explicit-any: error 追加。本番コードの any 9件を具象型に置換。MessageHandler の message: any は WHY コメント付きで維持)
 - 2026-08-18-04-fix-remove-unknown-casts.md (as unknown as 31件を棚卸し。11件を型安全に置換、残り20件に WHY コメント付与。staticPanelAdapter/sourceManager の型設計見直し)
