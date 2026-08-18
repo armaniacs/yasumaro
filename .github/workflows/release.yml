@@ -44,6 +44,8 @@ jobs:
             echo "is_even=false" >> $GITHUB_OUTPUT
           fi
           echo "Minor version: ${MINOR} (even: $((MINOR % 2 == 0)))"
+      - name: Check version consistency
+        run: node scripts/check-version-consistency.js
       - name: Build for Chrome
         run: npx wxt zip -b chrome
       - name: Check bundle size (M26)

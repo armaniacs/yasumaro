@@ -39,6 +39,23 @@ describe('version consistency', () => {
     expect(VERSION_FILES).toEqual(expected);
   });
 
+  it('E2E test PRIVACY_POLICY_VERSION should match source constant', () => {
+    const sourceContent = readFileSync(join(ROOT, 'src/popup/privacyConsent.ts'), 'utf-8');
+    const sourceMatch = sourceContent.match(/export const PRIVACY_POLICY_VERSION\s*=\s*'([^']+)'/);
+    expect(sourceMatch, 'PRIVACY_POLICY_VERSION not found in src/popup/privacyConsent.ts').not.toBeNull();
+    const sourceVersion = sourceMatch![1];
+
+    const e2eContent = readFileSync(join(ROOT, 'testDir/e2e/recording-traceId.spec.ts'), 'utf-8');
+    const e2eMatch = e2eContent.match(/const PRIVACY_POLICY_VERSION\s*=\s*'([^']+)'/);
+    expect(e2eMatch, 'PRIVACY_POLICY_VERSION not found in testDir/e2e/recording-traceId.spec.ts').not.toBeNull();
+    const e2eVersion = e2eMatch![1];
+
+    expect(
+      e2eVersion,
+      `E2E test PRIVACY_POLICY_VERSION ('${e2eVersion}') does not match source ('${sourceVersion}'). Update the E2E test constant.`
+    ).toBe(sourceVersion);
+  });
+
   it('package-lock.json should be in sync with package.json (prevents npm ci failures in CI)', () => {
     const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8')) as {
       version: string;
