@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.53` リリース。
+> - 現時点では `v6.7.54` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,14 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.7.54] - 2026-08-18
+
+### Fixed
+
+- `tsconfig.json` に `noImplicitReturns`/`exactOptionalPropertyTypes` を追加し、型安全性の最終仕上げを完了。return漏れ1件、undefined明示代入93件を全件解消（53ファイル）
+- 共通ヘルパー `pickDefined`（`src/utils/objectUtils.ts`）を新設し、値が `undefined` なプロパティをキーごと省略する形に統一
+- `AISummaryResult`・`MaskedItem` の重複型定義を統合。`MaskedItem.original` を必須化し、PIIストリップ後の状態を表す `StrippedMaskedItem` 型を新設。`stripPiiFromMaskedItem(s)` を冪等な実装に変更
 
 ## [6.7.53] - 2026-08-18
 
