@@ -294,7 +294,7 @@ export async function verifyHmacSignature(data: string, signature: string, key: 
         const sig8 = new Uint8Array(sigBuf);
         const comp8 = new Uint8Array(compBuf);
         for (let i = 0; i < sigBuf.byteLength; i++) {
-            result |= sig8[i] ^ comp8[i];
+            result |= (sig8[i] ?? 0) ^ (comp8[i] ?? 0);
         }
         return result === 0;
     } catch (_error: unknown) {

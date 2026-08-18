@@ -223,6 +223,7 @@ function collectKeywordElements(element: Element, keywords: readonly string[]): 
             if (matched.has(elem)) continue;
             for (let i = 0; i < elem.attributes.length; i++) {
                 const attr = elem.attributes[i];
+                if (!attr) continue;
                 const attrNameLower = attr.name.toLowerCase();
                 if (attrNameLower.startsWith('data-') && attrNameLower.includes(kwLower)) {
                     matched.add(elem);

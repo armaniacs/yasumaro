@@ -145,7 +145,7 @@ async function showStep(wizard: HTMLElement, stepName: string): Promise<void> {
       sqlite: getMessage('wizardSqliteTitle') || 'Set up AI Provider',
       minimal: getMessage('wizardMinimalTitle') || "You're ready",
     };
-    titleEl.textContent = titleMap[stepName] ?? titleMap.type;
+    titleEl.textContent = titleMap[stepName] ?? titleMap['type'] ?? null;
   }
 
   // ステップ切り替え時もフォーカストラップを現在の表示要素に合わせて更新

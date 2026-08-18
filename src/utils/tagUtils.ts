@@ -96,7 +96,7 @@ function selectBestBlock(text: string): string {
     // ケース2: "\n\n要約：インライン本文" — 見出しと本文が同じ行
     const detailMatch = text.match(/\n\n要約文?[：:]\n?([\s\S]+)/);
     if (detailMatch) {
-        const detailText = detailMatch[1].trim();
+        const detailText = (detailMatch[1] ?? '').trim();
         if (detailText.length > 0) {
             // 詳細本文の最初のブロックを返す
             const blocks = detailText.split('\n\n').map(b => b.trim()).filter(b => b.length > 0);
@@ -118,8 +118,8 @@ export function parseTagsFromSummary(summary: string): { tags: string[]; summary
         return { tags: [], summary: removeNoiseLines(selectBestBlock(summary)) };
     }
 
-    const tagPart = pipeMatch[1].trim();
-    const summaryPart = pipeMatch[2].trim();
+    const tagPart = (pipeMatch[1] ?? '').trim();
+    const summaryPart = (pipeMatch[2] ?? '').trim();
 
     // タグを抽出: `#カテゴリ` 形式
     const tagRegex = /#(\S+)/g;

@@ -28,11 +28,11 @@ function splitSentences(text: string): { sentence: string; delimiter: string }[]
   while ((match = regex.exec(text)) !== null) {
     if (match.index > lastIndex) {
       result.push({
-        sentence: text.slice(lastIndex, match.index + match[1].length),
-        delimiter: match[0].slice(match[1].length),
+        sentence: text.slice(lastIndex, match.index + (match[1] ?? '').length),
+        delimiter: (match[0] ?? '').slice((match[1] ?? '').length),
       });
     }
-    lastIndex = match.index + match[1].length;
+    lastIndex = match.index + (match[1] ?? '').length;
   }
 
   if (lastIndex < text.length) {
@@ -55,7 +55,7 @@ function containsJapanese(text: string): boolean {
 function getBigrams(text: string): string[] {
   const bigrams: string[] = [];
   for (let i = 0; i < text.length - 1; i++) {
-    bigrams.push(text[i] + text[i + 1]);
+    bigrams.push(text.charAt(i) + text.charAt(i + 1));
   }
   return bigrams;
 }

@@ -181,7 +181,7 @@ function isAiTestProgressMessage(message: unknown): message is AiTestProgressMes
 /** Look up a provider label without leaking Object.prototype keys. */
 function providerLabelSafe(provider: string): string {
   return Object.prototype.hasOwnProperty.call(PROVIDER_LABELS, provider)
-    ? PROVIDER_LABELS[provider]
+    ? PROVIDER_LABELS[provider] ?? provider
     : provider;
 }
 

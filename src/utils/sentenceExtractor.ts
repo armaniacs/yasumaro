@@ -43,12 +43,12 @@ export function splitSentences(text: string): string[] {
 
   while ((match = regex.exec(text)) !== null) {
     if (match.index > lastIndex) {
-      const sentence = text.slice(lastIndex, match.index + match[1].length).trim();
+      const sentence = text.slice(lastIndex, match.index + match[1]!.length).trim();
       if (sentence) {
         result.push(sentence);
       }
     }
-    lastIndex = match.index + match[1].length;
+    lastIndex = match.index + match[1]!.length;
   }
 
   // Handle remaining text without punctuation
@@ -75,7 +75,7 @@ function containsJapanese(text: string): boolean {
 function getBigrams(text: string): string[] {
   const bigrams: string[] = [];
   for (let i = 0; i < text.length - 1; i++) {
-    bigrams.push(text[i] + text[i + 1]);
+    bigrams.push(text[i]! + text[i + 1]!);
   }
   return bigrams;
 }
@@ -139,17 +139,17 @@ function buildSentenceGraph(
 
   // Initialize graph
   for (let i = 0; i < n; i++) {
-    graph.set(sentences[i], []);
+    graph.set(sentences[i]!, []);
   }
 
   // Build edges based on similarity
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      const sim = calculateSimilarity(sentences[i], sentences[j]);
+      const sim = calculateSimilarity(sentences[i]!, sentences[j]!);
       if (sim >= threshold) {
         // Add edge (bidirectional)
-        graph.get(sentences[i])!.push(j);
-        graph.get(sentences[j])!.push(i);
+        graph.get(sentences[i]!)!.push(j);
+        graph.get(sentences[j]!)!.push(i);
       }
     }
   }
@@ -170,7 +170,7 @@ export function textRank(graph: Map<string, number[]>): Map<string, number> {
   }
 
   if (n === 1) {
-    return new Map([[nodes[0], 1.0]]);
+    return new Map([[nodes[0]!, 1.0]]);
   }
 
   const dampingFactor = 0.85;
@@ -187,7 +187,7 @@ export function textRank(graph: Map<string, number[]>): Map<string, number> {
     let maxDiff = 0;
 
     for (let i = 0; i < n; i++) {
-      const node = nodes[i];
+      const node = nodes[i]!;
       const neighbors = graph.get(node) || [];
 
       if (neighbors.length === 0) {
@@ -198,7 +198,7 @@ export function textRank(graph: Map<string, number[]>): Map<string, number> {
       // Sum of scores from incoming edges, weighted by out-degree
       let sum = 0;
       for (const neighborIdx of neighbors) {
-        const neighbor = nodes[neighborIdx];
+        const neighbor = nodes[neighborIdx]!;
         const neighborNeighbors = graph.get(neighbor) || [];
         const outDegree = neighborNeighbors.length;
         if (outDegree > 0) {

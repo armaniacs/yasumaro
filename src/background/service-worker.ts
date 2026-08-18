@@ -117,10 +117,11 @@ export const {
 } = messageRegistryComposition.handlers;
 
 const handleManualRecordForContextMenu = async (
-  message: Parameters<typeof handleManualRecord>[0],
-  sender: Parameters<typeof handleManualRecord>[1],
-  sendResponse: Parameters<typeof handleManualRecord>[2],
+  message: Parameters<NonNullable<typeof handleManualRecord>>[0],
+  sender: Parameters<NonNullable<typeof handleManualRecord>>[1],
+  sendResponse: Parameters<NonNullable<typeof handleManualRecord>>[2],
 ): Promise<void> => {
+  if (!handleManualRecord) return;
   await handleManualRecord(message, sender, sendResponse);
 };
 

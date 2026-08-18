@@ -151,19 +151,20 @@ export function extractMainContent(
 
         // findMainContentCandidates() 後の候補要素のバイト数を計測（textContentベース、全バイト数と単位統一）
         if (candidates.length > 0) {
-            candidateBytes = getByteSize(candidates[0].textContent || '');
+            candidateBytes = getByteSize(candidates[0]!.textContent || '');
         }
 
         if (candidates.length > 0) {
             // クレンジングまたはAI要約クレンジングが有効な場合、クローンを作成してから実行
+            const firstCandidate = candidates[0]!;
             let targetElement: Element;
 
             if (cleanseEnabled) {
                 // DOMを直接操作しないようにクローンを作成
-                const clone = candidates[0].cloneNode(true) as Element;
+                const clone = firstCandidate.cloneNode(true) as Element;
 
                 // クレンジング前のバイト数を計算（textContentベースで統一）
-                originalBytes = getByteSize(candidates[0].textContent || '');
+                originalBytes = getByteSize(firstCandidate.textContent || '');
 
                 // クローンに対してコンテンツクレンジングを実行
                 const cleanseResult: CleanseResult = cleanseContent(clone, {
@@ -238,7 +239,7 @@ export function extractMainContent(
                     preAiCleanseText = aiSummaryRunResult.preCleanseText;
                 }
             } else {
-                targetElement = candidates[0];
+                targetElement = firstCandidate;
                 // バイト数を計算（クレンジングなし、textContentベースで統一）
                 originalBytes = getByteSize(targetElement.textContent || '');
                 cleansedBytes = originalBytes;
@@ -247,7 +248,7 @@ export function extractMainContent(
                 // クローンを作成してAI要約クレンジングを実行
                 if (aiSummaryCleanseEnabled) {
                     // DOMを直接操作しないようにクローンを作成
-                    const clone = candidates[0].cloneNode(true) as Element;
+                    const clone = firstCandidate.cloneNode(true) as Element;
 
                     const aiSummaryRunResult = runAiSummaryCleanse(clone, resolvedAiSummaryOptions, cleansedBytes);
                     aiSummaryOriginalBytes = aiSummaryRunResult.originalBytes;

@@ -248,7 +248,9 @@ export class TagClusterPanZoomController {
   private handleTouchMove = (e: TouchEvent): void => {
     if (e.touches.length === 2 && this.activeTouches.size === 2) {
       e.preventDefault();
-      const [t1, t2] = [e.touches[0], e.touches[1]];
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      if (!t1 || !t2) return;
       const distance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
       if (this.pinchStartDistance) {
         const factor = distance / this.pinchStartDistance;
@@ -266,6 +268,7 @@ export class TagClusterPanZoomController {
 
     if (e.touches.length === 1) {
       const t = e.touches[0];
+      if (!t) return;
       const prev = this.activeTouches.get(t.identifier);
       if (prev) {
         const dxPx = t.clientX - prev.x;
@@ -295,7 +298,10 @@ export class TagClusterPanZoomController {
 
   private currentPinchDistance(): number {
     const pts = Array.from(this.activeTouches.values());
-    return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    const p0 = pts[0];
+    const p1 = pts[1];
+    if (!p0 || !p1) return 0;
+    return Math.hypot(p0.x - p1.x, p0.y - p1.y);
   }
 
   private applyViewBox(): void {

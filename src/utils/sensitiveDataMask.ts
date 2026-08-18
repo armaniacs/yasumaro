@@ -67,7 +67,7 @@ export type MaskStrategy = 'full' | 'partial';
  */
 function maskEmail(email: string): string {
   const [local, domain] = email.split('@');
-  if (!domain) return '***';
+  if (!local || !domain) return '***';
   return `${local[0]}***@${domain}`;
 }
 

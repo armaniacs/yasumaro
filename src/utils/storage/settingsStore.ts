@@ -327,7 +327,9 @@ async function tryRestoreFromBackup(): Promise<Settings | null> {
 
     // Most recent backup wins (keys are suffixed with Date.now())
     backupKeys.sort().reverse();
-    const latest = all[backupKeys[0]] as { data: Record<string, unknown>; createdAt: number } | undefined;
+    const firstKey = backupKeys[0];
+    if (!firstKey) return null;
+    const latest = all[firstKey] as { data: Record<string, unknown>; createdAt: number } | undefined;
     if (!latest?.data) return null;
 
     const restored: Settings = {};

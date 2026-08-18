@@ -90,10 +90,10 @@ function extractDomain(workLine: string): string | null {
  */
 function parseHostsLine(rawLine: string, hostsPart: string): UblockRule | { type: string, originalLine: string } | null {
   // ホスト部分からドメインを抽出（コメント部分を除去）
-  let domain = hostsPart.split('#')[0].trim();
+  let domain = (hostsPart.split('#')[0] ?? '').trim();
 
   // 複数のスペースで区切られている場合は最初のドメインのみ使用
-  domain = domain.split(/\s+/)[0];
+  domain = domain.split(/\s+/)[0] ?? '';
 
   // ドメインが空の場合はスキップ（nullを返す＝エラー扱いではなく、無視すべき行として扱うための準備）
   if (!domain) {
@@ -191,7 +191,7 @@ export function parseUblockFilterLine(line: string): UblockRule | null {
   // 【hosts形式検出】: 0.0.0.0 または 127.0.0.1 で始まる行を処理 🟢
   const hostsMatch = PATTERNS.HOSTS_FORMAT.exec(trimmedLine);
   if (hostsMatch) {
-    const parsed = parseHostsLine(trimmedLine, hostsMatch[2]);
+    const parsed = parseHostsLine(trimmedLine, hostsMatch[2] ?? '');
     // IGNOREタイプまたはnullの場合はnullを返す
     if (!parsed || ('type' in parsed && parsed.type === RULE_TYPES.IGNORE)) {
       return null;

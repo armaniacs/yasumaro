@@ -271,7 +271,7 @@ export class TrustChecker {
       'locked': { color: '#6b7280', icon: '🔒' }       // Gray - Locked (P0)
     };
 
-    const display = mapping[result.level] || mapping['unverified'];
+    const display = mapping[result.level] ?? { color: '#94a3b8', icon: '⚪' };
 
     return {
       level: result.level.toUpperCase(),

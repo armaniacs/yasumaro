@@ -14,7 +14,7 @@ export function validateLuhn(number: string | number): boolean {
     let isEven = false;
 
     for (let i = str.length - 1; i >= 0; i--) {
-        let digit = parseInt(str[i], 10);
+        let digit = parseInt(str[i] ?? '', 10);
 
         if (isEven) {
             digit *= 2;

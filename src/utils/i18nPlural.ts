@@ -16,7 +16,7 @@ function getPluralLocale(): string {
 }
 
 function selectPluralSuffix(locale: string, count: number): string | null {
-    const lang = locale.split('-')[0].toLowerCase();
+    const lang = (locale.split('-')[0] ?? '').toLowerCase();
     // English-style cardinal plural: one for exactly 1, other otherwise.
     if (lang === 'en') {
         return count === 1 ? 'one' : 'other';

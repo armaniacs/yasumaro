@@ -326,7 +326,9 @@ export async function updateSavedUrlEntry(
         const idx = entries.findIndex(e => e.url === url);
         if (idx >= 0) {
             const updatedEntries = [...entries];
-            updatedEntries[idx] = updater(updatedEntries[idx]);
+            const current = updatedEntries[idx];
+            if (current === undefined) return entries;
+            updatedEntries[idx] = updater(current);
             return updatedEntries;
         }
         return entries;
@@ -363,7 +365,9 @@ export async function saveSavedUrlEntryMetadata(
             return [...entries, applyMetadataPatch({ url, timestamp: timestamp ?? Date.now() }, patch, mergeTags)];
         }
         const updatedEntries = [...entries];
-        const merged = applyMetadataPatch(updatedEntries[idx], patch, mergeTags);
+        const current = updatedEntries[idx];
+        if (current === undefined) return entries;
+        const merged = applyMetadataPatch(current, patch, mergeTags);
         updatedEntries[idx] = refreshTimestamp
             ? { ...merged, timestamp: timestamp ?? Date.now() }
             : merged;

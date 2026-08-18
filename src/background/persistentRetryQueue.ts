@@ -234,7 +234,7 @@ export class PersistentRetryQueue<T> {
               });
               continue;
             }
-            remaining.push(validItems[i]);
+            remaining.push(validItems[i]!);
           }
         }
       } catch (error) {

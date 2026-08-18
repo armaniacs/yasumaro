@@ -165,7 +165,7 @@ export abstract class AIProviderStrategy {
 
         // HTTPステータスコードをパース
         const httpMatch = msg.match(/HTTP\s+(\d+):/);
-        const statusCode = httpMatch ? parseInt(httpMatch[1], 10) : 0;
+        const statusCode = httpMatch?.[1] ? parseInt(httpMatch[1], 10) : 0;
 
         if (statusCode === 401 || statusCode === 403) {
             return {

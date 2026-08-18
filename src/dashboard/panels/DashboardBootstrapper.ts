@@ -89,7 +89,7 @@ export class DashboardBootstrapper {
       }
 
       e.preventDefault();
-      tabs[newIndex].focus();
+      tabs[newIndex]?.focus();
     });
   }
 

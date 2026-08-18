@@ -72,7 +72,7 @@ export async function addLog<T extends object = Record<string, unknown>>(
           : (() => {
               const a = new Uint32Array(2);
               crypto.getRandomValues(a);
-              return a[0].toString(36) + a[1].toString(36);
+              return (a[0] ?? 0).toString(36) + (a[1] ?? 0).toString(36);
             })(),
       timestamp: Date.now(),
       type,

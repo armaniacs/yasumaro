@@ -19,7 +19,7 @@ export class NoteSectionEditor {
 
     // Find the next section header (any line starting with #)
     for (let i = sectionIndex + 1; i < lines.length; i++) {
-      if (lines[i].startsWith('#')) {
+      if (lines[i]?.startsWith('#')) {
         insertIndex = i;
         break;
       }

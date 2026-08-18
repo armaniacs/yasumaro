@@ -27,7 +27,7 @@ export function setHtmlLangDir(): void {
     document.documentElement.lang = locale;
 
     const rtlLanguages = ['ar', 'he', 'fa', 'ur', 'ku', 'yi', 'dv'];
-    if (rtlLanguages.includes(langCode)) {
+    if (langCode != null && rtlLanguages.includes(langCode)) {
         document.documentElement.dir = 'rtl';
     } else {
         document.documentElement.dir = 'ltr';
@@ -79,11 +79,12 @@ export async function initPopup(): Promise<void> {
         const pending = await getPendingPages();
         if (pending.length === 1) {
             const page = pending[0];
-            // Privacy detections ask the user to decide; failures only offer a retry.
-            if (isPrivacyPendingReason(page.reason)) {
-                showPrivatePageDialog(page.url, page.reason, page.headerValue || '');
-            } else {
-                showRecordingFailedDialog(page.url, renderPendingReason(page.reason));
+            if (page != null) {
+                if (isPrivacyPendingReason(page.reason)) {
+                    showPrivatePageDialog(page.url, page.reason, page.headerValue || '');
+                } else {
+                    showRecordingFailedDialog(page.url, renderPendingReason(page.reason));
+                }
             }
         }
     } catch (error) {

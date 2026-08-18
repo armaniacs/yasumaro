@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.52` リリース。
+> - 現時点では `v6.7.53` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,12 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.7.53] - 2026-08-18
+
+### Fixed
+
+- `tsconfig.json` に `noUncheckedIndexedAccess`/`noImplicitOverride`/`noFallthroughCasesInSwitch` を追加し、CI とエディタ（`.wxt/tsconfig.json`）の型チェック厳格度を整合。187件の型エラーを全件解消（53ファイル）。optional chaining / null check / `??` デフォルト値で修正、原則として非nullアサーション（`!`）はループ境界チェック後・配列長チェック後にのみ使用
 
 ## [6.7.52] - 2026-08-18
 

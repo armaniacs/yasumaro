@@ -22,6 +22,7 @@ export function renderMarkdown(md: string): string {
 
     while (i < lines.length) {
         const line = lines[i];
+        if (line === undefined) continue;
 
         // Horizontal rule
         if (/^---+$/.test(line.trim())) {
@@ -33,10 +34,10 @@ export function renderMarkdown(md: string): string {
         // Headings
         const hMatch = line.match(/^(#{1,5})\s+(.*)/);
         if (hMatch) {
-            const level = hMatch[1].length;
-            const text = renderInline(hMatch[2]);
-            // anchor from raw text
-            const id = hMatch[2].replace(/[^\p{L}\p{N}\s-]/gu, '').trim().toLowerCase().replace(/\s+/g, '-');
+            const level = (hMatch[1] ?? '').length;
+            const headingText = hMatch[2] ?? '';
+            const text = renderInline(headingText);
+            const id = headingText.replace(/[^\p{L}\p{N}\s-]/gu, '').trim().toLowerCase().replace(/\s+/g, '-');
             out.push(`<h${level} id="${id}">${text}</h${level}>`);
             i++;
             continue;
@@ -45,9 +46,11 @@ export function renderMarkdown(md: string): string {
         // Blockquote (including > [!NOTE])
         if (line.startsWith('>')) {
             const bqLines: string[] = [];
-            while (i < lines.length && (lines[i].startsWith('>') || lines[i] === '')) {
-                if (lines[i] === '') break;
-                bqLines.push(lines[i].replace(/^>\s?/, ''));
+            while (i < lines.length) {
+                const bqLine = lines[i];
+                if (bqLine === undefined || (!bqLine.startsWith('>') && bqLine !== '')) break;
+                if (bqLine === '') break;
+                bqLines.push(bqLine.replace(/^>\s?/, ''));
                 i++;
             }
             const inner = renderMarkdown(bqLines.join('\n')).replace(/^\[!NOTE\]\s*/i, '');
@@ -56,12 +59,14 @@ export function renderMarkdown(md: string): string {
         }
 
         // Table
-        if (line.includes('|') && i + 1 < lines.length && lines[i + 1].includes('---')) {
+        if (line.includes('|') && i + 1 < lines.length && (lines[i + 1] ?? '').includes('---')) {
             const headers = line.split('|').filter(c => c.trim() !== '').map(c => `<th>${renderInline(c.trim())}</th>`);
             out.push('<table><thead><tr>' + headers.join('') + '</tr></thead><tbody>');
             i += 2; // skip header and separator
-            while (i < lines.length && lines[i].includes('|')) {
-                const cells = lines[i].split('|').filter(c => c.trim() !== '').map(c => `<td>${renderInline(c.trim())}</td>`);
+            while (i < lines.length) {
+                const tableLine = lines[i];
+                if (tableLine === undefined || !tableLine.includes('|')) break;
+                const cells = tableLine.split('|').filter(c => c.trim() !== '').map(c => `<td>${renderInline(c.trim())}</td>`);
                 out.push('<tr>' + cells.join('') + '</tr>');
                 i++;
             }
@@ -71,23 +76,27 @@ export function renderMarkdown(md: string): string {
 
         // Unordered list
         if (/^(\s*)[-*]\s/.test(line)) {
-            const indent = (line.match(/^(\s*)/) || ['', ''])[1].length;
+            const indent = line.match(/^(\s*)/)?.[1]?.length ?? 0;
             out.push('<ul>');
-            while (i < lines.length && /^(\s*)[-*]\s/.test(lines[i])) {
-                const curIndent = (lines[i].match(/^(\s*)/) || ['', ''])[1].length;
+            while (i < lines.length && /^(\s*)[-*]\s/.test(lines[i] ?? '')) {
+                const curLine = lines[i];
+                if (curLine === undefined) break;
+                const curIndent = curLine.match(/^(\s*)/)?.[1]?.length ?? 0;
                 if (curIndent > indent) {
                     // nested — simple handling
                     out.push('<ul>');
-                    while (i < lines.length && /^(\s*)[-*]\s/.test(lines[i])) {
-                        const ni = (lines[i].match(/^(\s*)/) || ['', ''])[1].length;
+                    while (i < lines.length && /^(\s*)[-*]\s/.test(lines[i] ?? '')) {
+                        const nestedLine = lines[i];
+                        if (nestedLine === undefined) break;
+                        const ni = nestedLine.match(/^(\s*)/)?.[1]?.length ?? 0;
                         if (ni <= indent) break;
-                        const text = lines[i].replace(/^\s*[-*]\s/, '');
+                        const text = nestedLine.replace(/^\s*[-*]\s/, '');
                         out.push(`<li>${renderInline(text)}</li>`);
                         i++;
                     }
                     out.push('</ul>');
                 } else {
-                    const text = lines[i].replace(/^\s*[-*]\s/, '');
+                    const text = curLine.replace(/^\s*[-*]\s/, '');
                     out.push(`<li>${renderInline(text)}</li>`);
                     i++;
                 }
@@ -99,8 +108,10 @@ export function renderMarkdown(md: string): string {
         // Ordered list
         if (/^\d+\.\s/.test(line)) {
             out.push('<ol>');
-            while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
-                const text = lines[i].replace(/^\d+\.\s/, '');
+            while (i < lines.length && /^\d+\.\s/.test(lines[i] ?? '')) {
+                const olLine = lines[i];
+                if (olLine === undefined) break;
+                const text = olLine.replace(/^\d+\.\s/, '');
                 out.push(`<li>${renderInline(text)}</li>`);
                 i++;
             }

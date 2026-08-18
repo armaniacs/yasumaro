@@ -126,7 +126,7 @@ export class BuiltInAiProvider extends AIProviderStrategy {
     /**
      * プロバイダーIDを取得
      */
-    getProviderId(): string {
+    override getProviderId(): string {
         return 'built-in-ai';
     }
 }

@@ -33,8 +33,9 @@ function wrapDb(db: { run: (sql: string, params?: SqliteValue[]) => Promise<Sqli
         return null;
       }
       const firstRow = rows[0];
+      if (!firstRow) return null;
       const firstKey = Object.keys(firstRow)[0];
-      return firstKey !== undefined ? firstRow[firstKey] : null;
+      return firstKey !== undefined ? (firstRow[firstKey] ?? null) : null;
     },
 
     async close(): Promise<void> {

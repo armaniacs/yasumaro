@@ -322,16 +322,18 @@ export class GeminiProvider extends AIProviderStrategy {
             addLog(LogType.ERROR, error, { traceId });
             return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
         }
-        if (!data.candidates[0].content) {
+        // length guard above guarantees [0] exists
+        const candidate = data.candidates[0];
+        if (!candidate?.content) {
             const error = 'Gemini schema validation failed: candidates[0].content is missing';
             addLog(LogType.ERROR, error, { traceId });
             return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
         }
-        const parts = data.candidates[0].content.parts;
+        const parts = candidate.content.parts;
         // 応答が複数 parts に分かれる場合があるため全て結合する
         const summary = (parts ?? []).map(part => part.text ?? '').join('');
         if (summary.trim().length === 0) {
-            const finishReason = data.candidates[0].finishReason;
+            const finishReason = candidate.finishReason;
             const thoughts = data.usageMetadata?.thoughtsTokenCount;
             const error = GeminiProvider.describeEmptyResponseDetail(
                 finishReason,

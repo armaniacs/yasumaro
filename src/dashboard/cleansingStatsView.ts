@@ -157,7 +157,7 @@ export function renderFunnelChart(canvas: HTMLCanvasElement, stats: CleansingSta
     stats.funnelAvg.aiCleansed,
   ];
 
-  const maxVal = values[0];
+  const maxVal = values[0] ?? 0;
   if (maxVal === 0) return;
 
   // ダークモード判定（document.documentElement の data-theme またはメディアクエリ）
@@ -197,12 +197,16 @@ export function renderFunnelChart(canvas: HTMLCanvasElement, stats: CleansingSta
     ctx.font = '11px system-ui, sans-serif';
     ctx.textAlign = 'right';
     const funnelLabels = getFunnelLabels();
-    const labelLines = funnelLabels[i].split('\n');
+    const labelLine = funnelLabels[i];
+    if (labelLine == null) return;
+    const labelLines = labelLine.split('\n');
+    const line0 = labelLines[0] ?? '';
+    const line1 = labelLines[1] ?? '';
     if (labelLines.length === 1) {
-      ctx.fillText(labelLines[0], paddingLeft - 8, y + barHeight / 2 + 4);
+      ctx.fillText(line0, paddingLeft - 8, y + barHeight / 2 + 4);
     } else {
-      ctx.fillText(labelLines[0], paddingLeft - 8, y + barHeight / 2 - 3);
-      ctx.fillText(labelLines[1], paddingLeft - 8, y + barHeight / 2 + 10);
+      ctx.fillText(line0, paddingLeft - 8, y + barHeight / 2 - 3);
+      ctx.fillText(line1, paddingLeft - 8, y + barHeight / 2 + 10);
     }
 
     ctx.textAlign = 'left';

@@ -83,7 +83,7 @@ export interface TemplateValidationResult {
 /** テンプレート文字列に含まれる {{xxx}} プレースホルダーのキー一覧を抽出する */
 function extractPlaceholderKeys(template: string): string[] {
   const matches = template.matchAll(/\{\{(\w+)\}\}/g);
-  return Array.from(matches, m => m[1]);
+  return Array.from(matches, m => m[1]).filter((v): v is string => v !== undefined);
 }
 
 /**

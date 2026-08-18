@@ -91,6 +91,7 @@ export async function reloadSource(index: number, fetchFromUrlCallback: (url: st
   }
 
   const source = sources[index];
+  if (!source) throw new Error('無効なインデックス');
   if (source.url === 'manual') {
     throw new Error('手動入力のソースは更新できません');
   }

@@ -157,6 +157,7 @@ export function parseUblockFilterListWithErrors(text: string): ParseResultWithEr
     // 【メモリ最適化】: early returnで無駄な処理をスキップ 🟢
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
+        if (line === undefined) continue;
 
         // 【空行スキップ】: 空行は事前にスキップして処理を軽量化 🟢
         if (isEmptyLine(line)) {
