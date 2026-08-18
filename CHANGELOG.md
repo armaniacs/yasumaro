@@ -35,6 +35,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.56] - 2026-08-18
+
+このリリースは前日のレビュー指摘を即座に反映したものです。
+
+### Fixed
+
+- E2E テストの `PRIVACY_POLICY_VERSION` とソース定数の整合性を `versionConsistency.test.ts` で自動検証するテストを追加。将来のバージョン更新時に E2E テスト側の更新漏れをコンパイル時に検出
+- `release.yml` のビルド前に `check-version-consistency.js` を追加し、リリース時のバージョン不整合をCIゲートで防止
+
 ## [6.7.55] - 2026-08-18
 
 ### Fixed
