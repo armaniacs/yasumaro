@@ -38,10 +38,10 @@ Scenario: 既存コードへの影響が段階的に吸収される
   Then 各段階で `npm run type-check` がエラー0件に戻り、途中でビルドが壊れた状態が残らない
 
 ## 受け入れ基準
-- [ ] `exactOptionalPropertyTypes` が `tsconfig.json` に追加され、発生エラーが全て解消される
-- [ ] `noImplicitReturns` が `tsconfig.json` に追加され、発生エラーが全て解消される
-- [ ] 途中段階でも `npm run type-check` がエラー0件を維持できる手順（フラグ追加→解消→次のフラグ）で進められる
-- [ ] 既存テストがパスする
+- [x] `exactOptionalPropertyTypes` が `tsconfig.json` に追加され、発生エラーが全て解消される
+- [x] `noImplicitReturns` が `tsconfig.json` に追加され、発生エラーが全て解消される
+- [x] 途中段階でも `npm run type-check` がエラー0件を維持できる手順（フラグ追加→解消→次のフラグ）で進められる
+- [x] 既存テストがパスする
 
 ## テスト戦略
 - 単体: オプショナルプロパティに `undefined` を渡す/渡さない境界の型テスト（該当コードに追加）
@@ -63,6 +63,6 @@ Scenario: 既存コードへの影響が段階的に吸収される
 - タイミングは refactor0817 と PBI 02〜05 の完了後を想定
 
 ## Definition of Done
-- [ ] 両フラグが `tsconfig.json` に有効化され、`npm run type-check` エラー0件
-- [ ] 既存テストパス
-- [ ] コードレビュー完了
+- [x] 両フラグが `tsconfig.json` に有効化され、`npm run type-check` エラー0件
+- [x] 既存テストパス
+- [x] コードレビュー完了
