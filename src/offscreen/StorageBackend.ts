@@ -1,4 +1,4 @@
-import type { BrowsingLogRecord, BrowsingLogEntry, QueryOptions, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
+import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 
 export interface InsertResult { success: true; id: number }
 export interface InsertBatchResult { success: true; inserted: number; skipped: number }

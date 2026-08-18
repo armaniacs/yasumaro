@@ -16,7 +16,7 @@ export { ChromeStorageAdapter, InMemoryAdapter } from './queueStorageAdapter.js'
 /**
  * Options for PersistentRetryQueue.
  */
-export interface PersistentRetryQueueOptions<T> {
+export interface PersistentRetryQueueOptions {
   /** Storage key for the queue data. */
   storageKey: string;
   /** Maximum number of items in the queue. */
@@ -55,7 +55,7 @@ export interface RetryableItem {
 export class PersistentRetryQueue<T> {
   constructor(
     private readonly adapter: QueueStorageAdapter,
-    private readonly options: PersistentRetryQueueOptions<T>
+    private readonly options: PersistentRetryQueueOptions
   ) {}
 
   /**

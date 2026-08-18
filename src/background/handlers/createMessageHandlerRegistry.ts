@@ -25,8 +25,10 @@ import {
 } from './systemHandlers.js';
 import type { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
 import type { TabCache } from '../tabCache.js';
-import type { AIService } from '../ai/AIService.js';
+import type { AIService, AiTestProgress } from '../ai/AIService.js';
 import type { ObsidianClient } from '../obsidianClient.js';
+import type { Settings } from '../../utils/storage/types.js';
+import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
 export interface MessageHandlerRegistryDeps {
   runtimeId?: string;
@@ -37,12 +39,12 @@ export interface MessageHandlerRegistryDeps {
   manualRecordDeps: ManualRecordHandlerDeps;
   saveRecordDeps: SaveRecordHandlerDeps;
   hasPrivacyConsent: () => Promise<boolean>;
-  buildAllowedUrls: (settings: any) => Set<string>;
-  getSettings: () => Promise<any>;
+  buildAllowedUrls: (settings: Settings) => Set<string>;
+  getSettings: () => Promise<Settings>;
   isDomainAllowed: (url: string) => Promise<boolean>;
   clearSettingsCache: () => void;
-  notifyAiTestProgress: (progress: any) => void;
-  getPrivacyCache: () => Map<string, any> | null;
+  notifyAiTestProgress: (progress: AiTestProgress) => void;
+  getPrivacyCache: () => Map<string, PrivacyInfo> | null;
   updateActivity: () => Promise<void>;
   lockSession: () => Promise<void>;
   autoSavedBadgeTabs: {

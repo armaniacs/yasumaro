@@ -75,16 +75,6 @@ const REFINED_INJECTION_PATTERNS = [
 ];
 
 /**
- * 安全な文脈パターン（誤検知低減）
- * これらのパターンが前後に存在する場合はインジェクション警告を抑制
- */
-const SAFE_CONTEXT_PATTERNS = [
-  /\b(?:is|are|was|were|be(?:come)?|seem|appear|remain|goes?|went|going|will|would|should|could|can|may|might)\s+(?:now|here|there|then)\b/gi,
-  /\b(?:from|in|on|at|by|since|before|after|until|over|during|while)\\s+now\b/gi,
-  /\bnow\b(?=\s+(?:,|\.|!|\?|\sand|\sor|\sbut|\showever|\stherefore|-|—))/gi,
-];
-
-/**
  * 一般的な技術用語・正当用語（独立時は安全）
  */
 const GENERIC_TERM_PATTERNS = [

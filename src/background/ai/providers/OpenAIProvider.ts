@@ -9,7 +9,7 @@ import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
-import { recordUsage } from '../../../utils/aiUsageTracker.js';
+
 import { normalizeProviderKeyName, resolveModelKey } from '../../../utils/aiModelKey.js';
 
 interface OpenAIApiResponse {

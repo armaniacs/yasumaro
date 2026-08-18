@@ -15,12 +15,11 @@ import { extractMainContent } from '../utils/contentExtractor/index.js';
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
 import { buildExtractionOptions } from '../utils/contentExtractor/optionBuilder.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
-import { PageState, DEFAULT_CLEANSING_CONFIG, type CleansingConfig } from './pageState.js';
+import { PageState, type CleansingConfig } from './pageState.js';
 import { CLEANSING_RULES } from '../utils/aiSummaryCleaner/rules.js';
 
 // Type-only import to establish graphify edge between content script and
 // the service worker's message type definitions (PBI-02-3).
-import type { ValidVisitMessage } from '../background/messageTypes.js';
 import { StorageKeys, type StorageKey } from '../utils/storage.js';
 
 interface OWTestState {
@@ -151,6 +150,7 @@ function loadSettings(): Promise<void> {
             ];
             for (const [key, prop] of booleanKeys) {
                 if (s[key] !== undefined) {
+                    // WHY: CleansingConfig lacks index signature; dynamic property access for boolean keys
                     (pageState.cleansingConfig as unknown as Record<string, boolean | string[] | number>)[prop] = Boolean(s[key]);
                 }
             }
@@ -161,6 +161,7 @@ function loadSettings(): Promise<void> {
             ];
             for (const [key, prop] of stringArrayKeys) {
                 if (s[key] !== undefined && Array.isArray(s[key])) {
+                    // WHY: CleansingConfig lacks index signature; dynamic property access for string array keys
                     (pageState.cleansingConfig as unknown as Record<string, boolean | string[] | number>)[prop] = s[key] as string[];
                 }
             }

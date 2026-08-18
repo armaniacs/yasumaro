@@ -26,6 +26,7 @@ export function createTagClusterPanel(): AsyncDataPanel {
     id: 'panel-tag-cluster',
     category: 'async-data',
     mount(container) {
+      // WHY: `querySelector` returns `Element | null`; cast needed for SVG-specific API access
       svg = container.querySelector('#tagClusterSvg') as unknown as SVGSVGElement | null;
       emptyState = container.querySelector('#tagClusterEmptyState');
       truncatedNotice = container.querySelector('#tagClusterTruncatedNotice');

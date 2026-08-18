@@ -30,6 +30,7 @@ export function createStaticFormPanel(spec: StaticPanelSpec): StaticFormPanel {
         category: 'static-form',
         async mount(_container) {
             // `await` accepts non-promises, so sync and async inits share one path.
+            // WHY: When needsSettings is false, mount doesn't use settings; cast satisfies the type signature
             const settings = spec.needsSettings
                 ? await getSettings()
                 : (undefined as unknown as Settings);

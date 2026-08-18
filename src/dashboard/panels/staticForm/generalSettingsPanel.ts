@@ -2,7 +2,6 @@ import { type StaticFormPanel } from '../types.js';
 import { loadSettingsToInputs } from '../../../utils/settingsFormBinding.js';
 import { getSettings, saveSettingsWithAllowedUrls, StorageKeys } from '../../../utils/storage.js';
 import { getMessage } from '../../../utils/i18n.js';
-import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import {
   loadGeneralSettings,
   handlePurgeNow, handleContentPurgeNow,
@@ -93,7 +92,7 @@ export function createGeneralSettingsPanel(): StaticFormPanel {
       };
 
       // Update <summary> provider names dynamically
-      const updatePrioritySummaryNames = (selected: string[]): void => {
+      const updatePrioritySummaryNames = (_selected: string[]): void => {
         const selects = ['aiProvider', 'aiProviderPriority2', 'aiProviderPriority3'];
         selects.forEach((id, index) => {
           const select = document.getElementById(id) as HTMLSelectElement | null;

@@ -79,6 +79,7 @@ export async function handleRestore(
   // 1. Write to temp file
   const tmpHandle = await root.getFileHandle(RESTORE_TMP_FILENAME, { create: true });
   const writable = await tmpHandle.createWritable();
+  // WHY: `data.slice()` returns `Uint8Array` but `FileSystemWritableFileStream.write()` accepts `ArrayBuffer` at runtime
   await writable.write(data.slice() as unknown as ArrayBuffer);
   await writable.close();
 
@@ -99,6 +100,7 @@ export async function handleRestore(
     setEngine(null);
   }
   await root.removeEntry(DB_FILENAME).catch(() => {});
+  // WHY: OPFS `FileSystemFileHandle` lacks `move()` in TypeScript types but it exists in Chromium
   await (tmpHandle as unknown as { move: (name: string) => Promise<void> }).move(DB_FILENAME);
 
   await initSqlite();

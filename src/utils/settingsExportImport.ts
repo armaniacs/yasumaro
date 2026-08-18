@@ -6,7 +6,7 @@
 import { getSettings, saveSettings, getOrCreateHmacSecret, Settings, API_KEY_FIELDS } from './storage.js';
 import { computeHMAC, encrypt, decryptData, deriveKey, constantTimeCompare } from './crypto/index.js';
 import { generateSalt } from './crypto/index.js';
-import { logError, logWarn, logInfo, ErrorCode } from './logger.js';
+import { logError, logInfo, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 
 /** Current export format version */

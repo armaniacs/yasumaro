@@ -48,7 +48,6 @@ export interface SessionLockRequestHandlerDeps {
   lockSession: () => Promise<void>;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface PingHandlerDeps {}
 
 export interface RefreshLocalMarkdownSchedulerHandlerDeps {

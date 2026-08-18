@@ -4,7 +4,7 @@
  */
 
 import type { SearchResult } from '../../utils/sqlite-types.js';
-import { FTS_QUERY_MAX_LENGTH, sanitizeFtsTerm } from '../schema.js';
+import { sanitizeFtsTerm } from '../schema.js';
 import type { SearchPayload } from './types.js';
 import { sqlQuery, type HandlerContext } from './handlers.js';
 

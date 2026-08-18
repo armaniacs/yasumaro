@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.51` リリース。
+> - 現時点では `v6.7.52` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -35,18 +35,28 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.52] - 2026-08-18
+
 ### Fixed
 
-- 依存パッケージの脆弱性5件（brace-expansion High DoS×2、fast-uri High、js-yaml High、nanoid High、postcss Moderate）を `npm audit fix` で解消（0 vulnerabilities）
-- `models-dev-dialog.ts` のプロバイダー一覧描画で `provider.name`/価格表示を `innerHTML` へ未エスケープで挿入していた stored XSS 脆弱性を修正。`escapeHtml()` を適用し回帰テストを追加
-- プライバシーポリシー同意バージョン定数 `PRIVACY_POLICY_VERSION` が `2026-06-20` のまま固定され、`PRIVACY.md` の実際の最終更新日（2026-07-31）に追従していなかった問題を修正。定数更新に伴い、既存ユーザーは次回起動時に再同意フローが発火する
-- `trustDb.ts`（820行）を `DomainVerifier`（3-Step Verification）/`BloomFilterManager`/`TrancoManager`（Trancoドメインリスト本体、バージョン文字列管理のTrancoVersionTrackerとは別責務）/`SensitiveDomainStore`/`WhitelistStore`/`TrustDbVersion`（DBスキーマバージョン管理、Trancoバージョン管理とは別責務）の6モジュールに分解。オーケストレーターは557行に削減。`storage/types.js`（`StorageKeys`）の動的importを静的importへ変更し循環依存を部分解消。`settingsStore.js`との動的import循環は、Trancoバージョンをsettingsオブジェクトに保存する設計に起因するため意図的に維持（コード内に理由を明記）。単体テスト33件追加
-- `sqliteHistoryPanel.ts`（875行）から純粋なHTML文字列構築関数を `sqliteHistoryPanelView.ts` に抽出。イベント配線はパネルモジュールに残置。`chrome.notifications` 呼び出しを新設の `notificationService.ts`（`notify()`）に移動。パネル本体は586行に削減、Viewモジュール358行
-- `recordCurrentPage.ts`（615行）を `TabContentFetcher`/`PreviewFlow`/`ForceRecordFlow`/`SpinnerManager`/`ErrorPresenter`/`RecordOrchestrator` の6クラスに分解。モジュールレベルの可変状態（`uiState`）を`RecordOrchestrator`のインスタンスフィールドへ移動。ファサードは32行に削減し、既存の公開API（`loadCurrentTab`/`recordCurrentPage`/`setRecordCurrentPageFn`/`handleRecordNowClick`）はデフォルトインスタンスへ委譲する形で不変
-- `dashboardSqliteService.ts`（704行）に汎用ヘルパー `callDashboard<Req,Res>(payload, decode, defaultErrorMessage)` を新設。同一パターン（送信→成功判定→デコード→ServiceResult）を繰り返していた14関数（toggleStar/deleteLog/updateLog/migrateLogs/clearAllLogs/getLogCount/cleanupLegacyStorage/backfillMetadata/restoreDb/importLogs/purgeOldRecordsNow/purgeContentNow/appendToLogs/queryAuditLogs）を1呼び出しのwrapperに置換。リトライ処理を持つqueryLogs/searchLogs、非ServiceResult形状のgetSqliteStatus、専用デコードが必要なrunOpfsSpike/backupDbは対象外として明示（650行）
-- `cspSettings.ts` の `@deprecated CSPSettings` 静的クラスファサードを削除し、`CspSettingsController` インスタンス（デフォルトエクスポート `cspSettings`）に一本化。重複していたローカル `escapeRegExp`/`i18n` ヘルパーを削除し、`escapeRegExp` は `src/utils/string.ts` へ移動、i18nは `src/utils/i18n.ts` の `getMessage` に統一。`window.alert` によるエラー通知を `cspSaveMessage`/`cspResetMessage` 要素へのインライン表示に置換（`window.confirm` は既存の削除確認パターンと合わせ維持）
-- `extractor.ts` の `extractPageContent` を純粋関数化。pageStateへの副作用（`lastCleansedReason`等5フィールド）を除去し、`ExtractResult` オブジェクトをそのまま返すように変更。呼び出し元（`reportValidVisit`、`GET_CONTENT`メッセージハンドラ）が明示的にpageStateへ反映する構造に変更し、抽出とpageStateの所有権を分離
-- `sqliteEngineContext.ts`（698行）を実際に4分割モジュール（`opfsWorkerProxy.ts`, `idbEngineLifecycle.ts`, `migrationBackup.ts`, `fallbackMigration.ts`）へ委譲する構造に修正。6.7.50 の CHANGELOG には「ファサードは268行に削減」と記載していたが、実際は分割モジュールがどこからも参照されない孤立コードのまま残っていた。facade は283行に削減し、既存の public API（`engine`, `DB_FILENAME`, `MAX_QUERY_LIMIT`, `extractDomain`）は不変
+- `eslint.config.js` に `@typescript-eslint/no-explicit-any: error` を追加し、本番コードの明示的な `any` 使用を機械的に禁止。`createMessageHandlerRegistry.ts` の4つの `any` 型を具象型（`Settings`/`AiTestProgress`/`PrivacyInfo`）に、`i18n.ts` の `substitutions: any` を実装の共通型に、`gistSettings.ts` の `as any` を `as Settings` に、`deps.ts` の `record as any` を `record as unknown as BrowsingLogRecord` にそれぞれ修正。`MessageHandler` の `message: any` は異種コレクション型として構造的に維持し WHY コメントを付与
+- `as unknown as` 二段キャスト31件を棚卸し。11件を型安全に置換（`sqliteClient.ts` 5件、`extractor.ts` 2件、`resultBuilder.ts`/`RecordingPipeline.ts` 2件、`sourceManager.ts` 3件、`storageFallback.ts` 1件、`customPromptUtils.ts` 1件）。残り20件（WASM/OPFS/Worker境界）に WHY コメントを付与
+- `tsconfig.json` の `allowJs` を `false` に変更し型チェック対象を TypeScript に統一。`bloomfilter-vendor.d.mts` 型宣言を新設し、`bloomFilter.ts` の `@ts-ignore` を削除
+- `sourceManager.ts` の `UblockRules` キャストを型安全なフィールド抽出に変更し、重複パターンを `buildRulesPayload()` ヘルパー関数に抽出
+- CIワークフローに `npm run lint` ステップを追加、`validate` スクリプトに lint を組み込み
+- `ObsidianClient.appendToDailyNote` のエラーレスポンスに Content-Length ガードを追加（1MB上限）
+- `TrancoUpdater.fetchTrancoCsv` のレスポンスに Content-Length ガードを追加（50MB上限）
+- `readBodyWithTimeout` のレスポンスに Content-Length ガードを追加（10MB上限）
+
+### Refactor
+
+- `appConstants.ts` から未使用定数10件（`TRUST_LEVEL_COLORS`/`TIMEOUTS_MINUTES`/`SIZE_LIMITS`/`RETRY_CONFIG`/`DEFAULT_VISIT_SETTINGS`/`DEFAULT_PORT`/`ERROR_CODES`/`NON_RECORDABLE_SCHEMES`/`DOM_SELECTORS`）を削除
+- `popup/errorUtils.ts` から未使用型定義7件（`ErrorWithDetails`/`ObsidianError`/`AiError`/`NetworkError`/`UserError`/`SystemError`/`KnownError`）と型ガード関数5件を削除
+- `offscreen/schema.ts` から未使用 `FTS5_SQL` 定数を削除
+- `offscreen/dbMaintenance.ts` から未使用関数2件（`getFtsIndexSize`/`checkFtsIndexHealth`）を削除
+- 未使用 import・変数を60ファイル以上で除去（`no-unused-vars` エラー解消）
+- `PersistentRetryQueueOptions` から未使用のジェネリックパラメータ `T` を除去
+- `promptSanitizer.ts` から未使用の `SAFE_CONTEXT_PATTERNS` を削除（`isInSafeContext()` が常に `false` を返すためデッドコード）
 
 ## [6.7.51] - 2026-08-18
 

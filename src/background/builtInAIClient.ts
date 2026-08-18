@@ -58,7 +58,6 @@ interface LanguageModelGlobal {
 }
 
 declare global {
-    // eslint-disable-next-line no-var
     var LanguageModel: LanguageModelGlobal | undefined;
 }
 

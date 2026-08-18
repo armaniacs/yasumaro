@@ -10,7 +10,7 @@ import type {
   TrustResult,
   TrustDatabase,
 } from './trustDbSchema.js';
-import { DomainTrustLevel, type BloomFilterData } from './trustDbSchema.js';
+import { DomainTrustLevel } from './trustDbSchema.js';
 import { TrustBloomFilter, bloomFilterFromData } from './bloomFilter.js';
 import { logDebug, logInfo, logWarn, logError, ErrorCode } from '../logger.js';
 import { withOptimisticLock } from '../optimisticLock.js';

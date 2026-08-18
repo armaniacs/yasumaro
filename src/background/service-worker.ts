@@ -2,21 +2,13 @@ import { SessionStore } from './sessionStore.js';
 import { createTabEventHandlers } from './handlers/tabEventHandlers.js';
 import { createLifecycleHandlers, restoreRecordingCacheOnWake } from './handlers/lifecycleHandlers.js';
 import { registerManualRecordContextMenu as _registerManualRecordContextMenu, createContextClickHandler } from './handlers/contextMenuHandlers.js';
-import { logWarn, logError, ErrorCode } from '../utils/logger.js';
+import { logError, ErrorCode } from '../utils/logger.js';
 import { initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
-import {
-    VALID_MESSAGE_TYPES,
-    CONTENT_SCRIPT_ONLY_TYPES,
-    NO_PAYLOAD_TYPES,
-    CURRENT_PROTOCOL_VERSION,
-} from './messageTypes.js';
-import type { ExtensionMessage } from './messageTypes.js';
-import { MessageHandlerRegistry } from './handlers/MessageHandlerRegistry.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
 import { createCacheInitializedFlag, createAutoSavedBadgeTabs } from './swStatePersistence.js';
 import { createBackgroundServices } from './createBackgroundServices.js';
 import { createMessageRegistryComposition } from './createMessageRegistryComposition.js';
-import { createMessageHandler as _createMessageHandler, type MessageHandlerDeps } from './messageHandler.js';
+import { createMessageHandler as _createMessageHandler } from './messageHandler.js';
 import { ensureConfirmToken } from './confirmTokenManager.js';
 import { createAlarmHandler } from './alarmHandler.js';
 import { createDeferredMigrationRunner } from './deferredMigrations.js';
@@ -68,7 +60,6 @@ export function init(): void {
 // ============================================================================
 const services = createBackgroundServices();
 const {
-    aiService,
     sqliteClient,
     recordingPipeline,
     tabCache,
@@ -78,7 +69,6 @@ const {
     headerDetector,
     reviewSummaryGenerator,
 } = services;
-const { manualRecordDeps, saveRecordDeps } = services;
 
 // Session store for cross-SW-restart persistence
 SessionStore.registerSuspendHandler(sessionStore);

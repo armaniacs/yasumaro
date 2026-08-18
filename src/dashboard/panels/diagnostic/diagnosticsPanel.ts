@@ -444,7 +444,6 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
           const ai = testResult?.ai;
           if (ai) {
             connectionResult.innerHTML = '';
-            const providerLabels: Record<string, string> = PROVIDER_LABELS;
 
             if (ai.providers && ai.providers.length > 1) {
               // Multi-provider: show per-provider results

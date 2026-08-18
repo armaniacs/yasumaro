@@ -10,10 +10,8 @@ import { updateCleansingStatsPanel } from '../../historyCleansingSync.js';
 import { type AsyncDataPanel } from '../types.js';
 
 export function createHistoryPanel(): AsyncDataPanel {
-  let state: HistoryPanelState | null = null;
   let elements: HistoryElements | null = null;
   let tagEditElements: TagEditElements | null = null;
-  let applyFiltersFunc: ((resetPage?: boolean) => void) | null = null;
   let onStorageChanged: ((changes: Record<string, chrome.storage.StorageChange>, area: string) => void) | null = null;
 
   return {
@@ -68,7 +66,6 @@ export function createHistoryPanel(): AsyncDataPanel {
       s.entries = rawEntries.slice().sort((a, b) => b.timestamp - a.timestamp);
       s.pendingPages = pendingPages;
       pendingPages.forEach(p => s.pendingUrlSet.add(p.url));
-      state = s;
 
       const _state: HistoryPanelState = s;
       const _elements: HistoryElements = elements;
@@ -100,8 +97,6 @@ export function createHistoryPanel(): AsyncDataPanel {
         renderHistoryEntries(_state, _elements, _tagEditElements, searchText, onTagFilterChange, applyFiltersInternal);
         updateCleansingStatsPanel(_state.entries);
       }
-
-      applyFiltersFunc = applyFiltersInternal as (resetPage?: boolean) => void;
 
       // Remove previous storage listener if re-mounting
       if (onStorageChanged) {

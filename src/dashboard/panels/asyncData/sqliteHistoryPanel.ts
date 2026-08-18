@@ -33,7 +33,7 @@ function t(key: string, substitutions?: string | string[]): string {
 export function createSqliteHistoryPanel(): AsyncDataPanel {
   let container: HTMLElement | null = null;
   let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-  let isMounted = false;
+  let _isMounted = false;
 
   const controller = createSqliteHistoryController({
     onStateChange: () => refresh(),
@@ -554,7 +554,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     async loadData() {
       if (!container) return;
 
-      isMounted = true;
+      _isMounted = true;
       await controller.checkFallbackStatus();
       await controller.loadPersistedSortIntoState();
 
@@ -570,7 +570,7 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
         clearTimeout(searchDebounceTimer);
         searchDebounceTimer = null;
       }
-      isMounted = false;
+      _isMounted = false;
       controller.bumpGenerationOnUnmount();
       // Clear bulk bar listener references
       controller.clearEntrySelection();

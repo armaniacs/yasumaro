@@ -145,8 +145,10 @@ async function backupOldWaSqliteIdb(oldIdbName: string): Promise<void> {
   const sqlite3 = SQLite.Factory(asyncModule);
   const vfs = new IDBBatchAtomicVFS(oldIdbName);
   if (typeof (vfs as { hasAsyncMethod?: unknown }).hasAsyncMethod !== 'function') {
+    // WHY: IDBBatchAtomicVFS `hasAsyncMethod` not in TypeScript types; patched at runtime for compatibility
     (vfs as unknown as { hasAsyncMethod: (m: string) => boolean }).hasAsyncMethod = () => false;
   }
+  // WHY: wa-sqlite VFS type mismatch between IDBBatchAtomicVFS and SQLiteVFS interface
   sqlite3.vfs_register(vfs as unknown as SQLiteVFS, true);
 
   let dbHandle: number | null = null;
@@ -180,6 +182,7 @@ async function backupOldWaSqliteIdb(oldIdbName: string): Promise<void> {
     // Critical: the old VFS's IndexedDB connection MUST be closed, or the
     // new engine's indexedDB.open(DB_FILENAME, N) upgrade below hangs
     // indefinitely (verified in the E2E spike for this PBI).
+    // WHY: IDBBatchAtomicVFS `close()` not in TypeScript types; must close old IDB to prevent migration hang
     await (vfs as unknown as { close: () => Promise<void> }).close().catch(() => {});
   }
 }

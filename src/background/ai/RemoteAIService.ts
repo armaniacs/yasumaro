@@ -9,7 +9,7 @@ import {
 } from './AIService.js';
 import { getSettings, StorageKeys, type Settings, type ProviderSlot } from '../../utils/storage.js';
 import { resolveModelKey } from '../../utils/aiModelKey.js';
-import { GeminiProvider, OpenAIProvider, BuiltInAiProvider, AIProviderStrategy, AISummaryResult as ProviderAISummaryResult } from './providers/index.js';
+import { GeminiProvider, OpenAIProvider, BuiltInAiProvider, AIProviderStrategy } from './providers/index.js';
 import { addLog, LogType } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { recordAuditLog } from '../../utils/auditLog.js';

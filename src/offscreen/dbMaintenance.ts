@@ -7,12 +7,10 @@
  * All methods delegate to the active StorageBackend returned by engine.getBackend().
  */
 
-import { logWarn } from '../utils/logger.js';
 import { engine } from './sqliteEngineContext.js';
 
 const DEFAULT_RETENTION_DAYS = 90;
 const DEFAULT_MAX_RECORDS = 1000;
-const FTS_INDEX_WARNING_THRESHOLD = 10_000;
 
 /**
  * Purge old browsing log records based on retention policy.
@@ -39,29 +37,6 @@ export async function purgeContent(
 ): Promise<{ success: true; purged: number } | { success: false; error: string }> {
   const backend = await engine.getBackend();
   return backend.purgeContent(retentionDays ?? undefined, maxRecords ?? undefined, includeStarred ?? undefined);
-}
-
-/**
- * Get the number of entries in the FTS5 index.
- */
-async function getFtsIndexSize(): Promise<{ success: true; count: number } | { success: false; error: string }> {
-  const backend = await engine.getBackend();
-  return backend.getFtsIndexSize();
-}
-
-/**
- * Check FTS5 index health and log a warning if it exceeds the threshold.
- * Returns the current FTS index size.
- */
-async function checkFtsIndexHealth(): Promise<{ count: number; warning: boolean }> {
-  const backend = await engine.getBackend();
-  const result = await backend.getFtsIndexSize();
-  if (!result.success) return { count: 0, warning: false };
-  const warning = result.count > FTS_INDEX_WARNING_THRESHOLD;
-  if (warning) {
-    logWarn('FTS index is large; consider evaluation', { count: result.count }, undefined, 'sqlite');
-  }
-  return { count: result.count, warning };
 }
 
 /**

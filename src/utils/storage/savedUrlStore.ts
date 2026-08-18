@@ -410,6 +410,7 @@ function applyMetadataPatch(
                 else delete result.tags;
             }
         } else {
+            // WHY: dynamic property assignment on result object; URL keys are generated at runtime
             (result as unknown as Record<string, unknown>)[key] = value;
         }
     }

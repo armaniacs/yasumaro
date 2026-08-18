@@ -1,7 +1,7 @@
 import { getSettings } from '../../../utils/storage.js';
 import { formatEntriesToMarkdown } from '../../../dashboard/obsidianFormatter.js';
 import { ObsidianClient } from '../../obsidianClient.js';
-import type { BrowsingLogEntry } from '../../../utils/sqlite-types.js';
+import type { BrowsingLogEntry, BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import type { CallResult, SqliteError } from '../../sqliteClient.js';
 
 export const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
@@ -111,7 +111,8 @@ export function createSqliteClientDeps(
     update: (id, changes) => sqliteClient.updateResult(id, changes),
     getCount: () => sqliteClient.getCountResult(),
     clearAll: () => sqliteClient.clearAllResult(),
-    insert: (record) => sqliteClient.insertResult(record as any),
+    // WHY: `Record<string, unknown>` is not structurally compatible with `BrowsingLogRecord` (missing required fields)
+    insert: (record) => sqliteClient.insertResult(record as unknown as BrowsingLogRecord),
     restoreDb: (data) => sqliteClient.restoreDbResult(data),
     // Deliberately not *Result: getStatus() reports initialization failure
     // inside its success value so the diagnostics panel can display it.
