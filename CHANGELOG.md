@@ -35,6 +35,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.55] - 2026-08-18
+
+### Fixed
+
+- `docs/version.json` が `6.7.53` のまま更新されず、ビルド時のバージョン整合性チェックで失敗していた問題を修正
+- E2E テスト `recording-traceId.spec.ts` が `consentVersion: '2026-06-20'` をハードコードしており、`PRIVACY_POLICY_VERSION`（`2026-07-31`）と不一致で `hasPrivacyConsent()` が `false` を返し、`VALID_VISIT` が `privacy_consent_required` で拒否されてログが0件になる問題を修正。テスト定数を `PRIVACY_POLICY_VERSION` に同期し、ログ取得をポーリング方式に変更
+- ユニットテスト `sourceManager.test.ts` の `afterEach` で `localStorage` が `undefined`/`null` の場合に `Object.keys()` が `TypeError` をスローしていた問題を修正
+
 ## [6.7.54] - 2026-08-18
 
 ### Fixed

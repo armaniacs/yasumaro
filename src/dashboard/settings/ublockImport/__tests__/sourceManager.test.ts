@@ -184,7 +184,9 @@ describe('ublockImport - SourceManager Module', () => {
     RecordingCache.invalidateUrlCache();
 
     // jest.setup.js の localStorage をクリアして状態をリセット
-    Object.keys(localStorage).forEach(key => delete localStorage[key]);
+    if (typeof localStorage !== 'undefined' && localStorage !== null) {
+      Object.keys(localStorage).forEach(key => delete localStorage[key]);
+    }
   });
 
   // ========================================================================
