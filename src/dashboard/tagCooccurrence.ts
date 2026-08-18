@@ -44,7 +44,7 @@ export function computeTagCooccurrence(
   const nodes: TagNode[] = Array.from(nodeCounts.entries()).map(([tag, count]) => ({ tag, count }));
   const edges: TagEdge[] = Array.from(edgeWeights.entries()).map(([key, weight]) => {
     const [source, target] = key.split('|');
-    return { source, target, weight };
+    return { source: source ?? '', target: target ?? '', weight };
   });
 
   return { nodes, edges };

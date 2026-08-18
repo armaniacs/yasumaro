@@ -93,6 +93,9 @@ export async function decodeUrlFromNotificationId(notificationId: string): Promi
     }
 
     const [urlB64, signature] = parts;
+    if (!urlB64 || !signature) {
+      throw new Error('Invalid notification ID format');
+    }
     const b64 = urlB64.replace(/-/g, '+').replace(/_/g, '/');
     const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '=');
     const binaryString = atob(padded);

@@ -78,7 +78,11 @@ export function isPrivateIpAddress(hostname: string): boolean {
   // IPv4形式（xxx.xxx.xxx.xxx）
   const ipv4Match = normalized.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (ipv4Match) {
-    const [, a, b, c, d] = ipv4Match.map(Number);
+    const [, aStr, bStr, cStr, dStr] = ipv4Match;
+    const a = Number(aStr);
+    const b = Number(bStr);
+    const c = Number(cStr);
+    const d = Number(dStr);
 
     // 各オクテットが0-255の範囲内かチェック
     // 無効なIPアドレス（999.999.999.999など）を識別するため
@@ -120,7 +124,7 @@ export function isPrivateIpAddress(hostname: string): boolean {
     /^::ffff:((?:\d{1,3}\.){3}\d{1,3}|[0-9a-f]{1,4}:[0-9a-f]{1,4}|[0-9a-f]{1,8})$/
   );
   if (ipv4MappedMatch) {
-    const embeddedIpv4 = ipv4MappedMatch[1];
+    const embeddedIpv4 = ipv4MappedMatch[1] ?? '';
     // ドット区切り IPv4 (::ffff:10.0.0.1)
     if (embeddedIpv4.includes('.')) {
       return isPrivateIpAddress(embeddedIpv4);
@@ -130,9 +134,9 @@ export function isPrivateIpAddress(hostname: string): boolean {
     // 注意: JS の << は 32bit 符号付き整数を返すため、最上位ビットが立つと負数になる。
     //        >>> 0 で符号なし 32bit に正規化する。
     const hexParts = embeddedIpv4.split(':');
-    const ipv4Int = Number.parseInt(hexParts[0], 16);
+    const ipv4Int = Number.parseInt(hexParts[0] ?? '', 16);
     const ipv4Hex = (hexParts.length === 2
-      ? (ipv4Int << 16) | Number.parseInt(hexParts[1], 16)
+      ? (ipv4Int << 16) | Number.parseInt(hexParts[1] ?? '', 16)
       : ipv4Int) >>> 0;
     const a = (ipv4Hex >>> 24) & 0xff;
     const b = (ipv4Hex >>> 16) & 0xff;

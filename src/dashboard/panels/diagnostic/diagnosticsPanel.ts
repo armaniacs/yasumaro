@@ -132,6 +132,7 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
         // Show each provider in the priority list
         for (let i = 0; i < slots.length; i++) {
           const slot = slots[i];
+          if (!slot) continue;
           const label = providerLabels[slot.provider] || slot.provider;
           const priorityLabel = slots.length > 1 ? `#${i + 1} ` : '';
           const modelOverride = slot.model ? ` [${slot.model}]` : '';

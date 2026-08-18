@@ -372,6 +372,7 @@ function jumpToMaskedPosition(index: number): void {
 
   currentMaskedIndex = index;
   const pos = maskedPositions[index];
+  if (!pos) return;
   previewContent.focus();
   previewContent.setSelectionRange(pos.start, pos.end);
 

@@ -99,7 +99,7 @@ export function createGeneralSettingsPanel(): StaticFormPanel {
           const summaryName = document.querySelector(`.priority-provider-name[data-priority="${index + 1}"]`) as HTMLElement | null;
           if (select && summaryName) {
             const option = select.options[select.selectedIndex];
-            summaryName.textContent = option.value ? `— ${option.text}` : '';
+            summaryName.textContent = option?.value ? `— ${option.text}` : '';
           }
         });
       };

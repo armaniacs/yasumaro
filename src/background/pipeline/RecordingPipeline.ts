@@ -355,7 +355,7 @@ export class RecordingPipeline {
     // Create initial context with a trace ID for cross-step log correlation
     const traceId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
       ? crypto.randomUUID()
-      : (() => { const a = new Uint32Array(2); if (typeof crypto !== 'undefined') crypto.getRandomValues(a); return a[0].toString(36) + a[1].toString(36); })();
+      : (() => { const a = new Uint32Array(2); if (typeof crypto !== 'undefined') crypto.getRandomValues(a); return (a[0] ?? 0).toString(36) + (a[1] ?? 0).toString(36); })();
 
     // Build deps once per recording event (not per step)
     const deps: StepDeps = {

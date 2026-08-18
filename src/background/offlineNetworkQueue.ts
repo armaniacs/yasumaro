@@ -104,23 +104,23 @@ export const sharedOfflineNetworkQueue = new OfflineNetworkQueue();
  * care about offline-retry behaviour.
  */
 export class NoOpOfflineNetworkQueue extends OfflineNetworkQueue {
-  async enqueue(): Promise<void> {
+  override async enqueue(): Promise<void> {
     // Intentionally discarded — this queue never persists anything.
   }
 
-  async dequeue(): Promise<OfflineJob | null> {
+  override async dequeue(): Promise<OfflineJob | null> {
     return null;
   }
 
-  async retryAll(): Promise<void> {
+  override async retryAll(): Promise<void> {
     // No jobs to retry.
   }
 
-  async getQueueSize(): Promise<number> {
+  override async getQueueSize(): Promise<number> {
     return 0;
   }
 
-  async peek(): Promise<OfflineJob | null> {
+  override async peek(): Promise<OfflineJob | null> {
     return null;
   }
 }

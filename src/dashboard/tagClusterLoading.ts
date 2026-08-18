@@ -55,7 +55,8 @@ export class TagClusterLoadingManager {
     if (stepIndex < 0 || stepIndex >= this.steps.length) return;
 
     this.currentStep = stepIndex;
-    this.steps[stepIndex].completed = true;
+    const step = this.steps[stepIndex];
+    if (step) step.completed = true;
     this.render();
   }
 

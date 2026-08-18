@@ -46,7 +46,7 @@ export function formatElapsed(elapsedMs: number): string {
 /** プロバイダ表示名を Object.prototype 汚染なしで引く */
 export function providerLabel(provider: string): string {
   return Object.prototype.hasOwnProperty.call(PROVIDER_LABELS, provider)
-    ? PROVIDER_LABELS[provider]
+    ? PROVIDER_LABELS[provider] ?? provider
     : provider;
 }
 

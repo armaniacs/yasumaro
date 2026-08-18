@@ -32,7 +32,7 @@ const originalParents = new Map<string, HTMLElement>();
  * @param priorityLevel 優先度（1、2、3）
  * @param provider プロバイダID
  */
-function moveProviderSettingsToPriority(priorityLevel: 1 | 2 | 3, provider: string): void {
+function moveProviderSettingsToPriority(priorityLevel: 1 | 2 | 3, provider: string | undefined): void {
   const containerSelector = `#priority${priorityLevel}ProviderSettings`;
   const container = document.querySelector(containerSelector) as HTMLElement;
 

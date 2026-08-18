@@ -122,8 +122,9 @@ export async function saveTagEdits(
     await setUrlTags(state.editingUrl, state.editingTags);
 
     const entryIndex = state.entries.findIndex(e => e.url === state.editingUrl);
-    if (entryIndex !== -1) {
-      state.entries[entryIndex].tags = state.editingTags;
+    const entry = entryIndex !== -1 ? state.entries[entryIndex] : undefined;
+    if (entry) {
+      entry.tags = state.editingTags;
     }
 
     closeTagEditModal(state, elements);

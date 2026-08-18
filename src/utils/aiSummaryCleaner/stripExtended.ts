@@ -526,6 +526,7 @@ export function stripLinkOnlyParagraphs(element: Element, maxLength: number = 50
 
         for (let i = 0; i < children.length; i++) {
             const child = children[i];
+            if (!child) continue;
             if (child.tagName.toLowerCase() === 'a') {
                 hasLinks = true;
                 continue;
@@ -539,6 +540,7 @@ export function stripLinkOnlyParagraphs(element: Element, maxLength: number = 50
 
         for (let i = 0; i < children.length; i++) {
             const child = children[i];
+            if (!child) continue;
             if (child.tagName.toLowerCase() !== 'a' && child.tagName.toLowerCase() !== 'br') {
                 const childText = child.textContent || '';
                 if (childText.trim().length > 0) {

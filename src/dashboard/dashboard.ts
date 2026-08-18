@@ -73,7 +73,7 @@ export function applySectionDeepLink(search: string = window.location.search): v
 
 export function setHtmlLangDir(): void {
   const locale = chrome.i18n.getUILanguage();
-  const langCode = locale.split('-')[0];
+  const langCode = locale.split('-')[0] ?? locale;
   document.documentElement.lang = locale;
   const rtlLanguages = ['ar', 'he', 'fa', 'ur', 'ku', 'yi', 'dv'];
   document.documentElement.dir = rtlLanguages.includes(langCode) ? 'rtl' : 'ltr';

@@ -129,7 +129,7 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     for (const rule of CLEANSING_RULES) {
         (currentSettings as Record<string, boolean>)[rule.storageKey] =
         // WHY: dynamic property access on settings object; rule keys are generated at runtime
-        (settings as unknown as Record<string, boolean>)[ruleOptionKey(rule)];
+        (settings as unknown as Record<string, boolean>)[ruleOptionKey(rule)] ?? false;
     }
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] = settings.linkRatioThreshold;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD] = settings.shortTextThreshold;
@@ -165,7 +165,7 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     for (const rule of CLEANSING_RULES) {
         const checkbox = document.getElementById(ruleHtmlId(rule)) as HTMLInputElement | null;
         // WHY: dynamic property access on settings object; rule keys are generated at runtime
-        if (checkbox) checkbox.checked = (settings as unknown as Record<string, boolean>)[ruleOptionKey(rule)];
+        if (checkbox) checkbox.checked = (settings as unknown as Record<string, boolean>)[ruleOptionKey(rule)] ?? false;
     }
     if (whitelistExtractionCheckbox) whitelistExtractionCheckbox.checked = settings.whitelistExtractionEnabled;
     // Body protection (dashboard)

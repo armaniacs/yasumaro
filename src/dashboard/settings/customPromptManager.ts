@@ -421,7 +421,8 @@ async function handleActivatePrompt(promptId: string, provider: string): Promise
         const name = getPromptDisplayName(preset, locale);
         const now = Date.now();
         if (existing >= 0) {
-            prompts[existing] = { ...prompts[existing], isActive: true, updatedAt: now };
+            const current = prompts[existing];
+            if (current) prompts[existing] = { ...current, isActive: true, updatedAt: now };
         } else {
             const newEntry: CustomPrompt = {
                 id: promptId,

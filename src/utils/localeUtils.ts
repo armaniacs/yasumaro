@@ -34,7 +34,7 @@ export function getUserLocale(): string {
  */
 export function isRTL(locale?: string): boolean {
   const targetLocale = locale || getUserLocale();
-  const localeCode = targetLocale.toLowerCase().split('-')[0];
+  const localeCode = targetLocale.toLowerCase().split('-')[0] ?? '';
 
   // RTL言語リスト（主要なRTL言語）
   const rtlLanguages = ['ar', 'he', 'fa', 'ur', 'yi', 'ckb', 'sd', 'ps'];
@@ -68,7 +68,7 @@ export function formatDate(date?: Date | string | number, options?: Intl.DateTim
       });
     } else {
       // Intl APIが未対応の場合のフォールバック
-      return targetDate.toISOString().split('T')[0];
+      return targetDate.toISOString().split('T')[0] ?? '';
     }
   } catch (_e) {
     // フォーマット失敗時のフォールバック

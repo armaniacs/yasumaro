@@ -280,7 +280,7 @@ export class OpenAIProvider extends AIProviderStrategy {
             addLog(LogType.ERROR, error, { traceId });
             return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
         }
-        if (!data.choices[0].message) {
+        if (!data.choices[0]?.message) {
             const error = 'OpenAI schema validation failed: choices[0].message is missing';
             addLog(LogType.ERROR, error, { traceId });
             return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };

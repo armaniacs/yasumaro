@@ -50,7 +50,7 @@ export function computeLayout(
   }
 
   if (nodes.length === 1) {
-    positions.set(nodes[0].tag, { x: width / 2, y: height / 2 });
+    positions.set(nodes[0]!.tag, { x: width / 2, y: height / 2 });
     return positions;
   }
 
@@ -73,8 +73,8 @@ export function computeLayout(
     // Repulsion between every pair of nodes
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
-        const a = nodes[i].tag;
-        const b = nodes[j].tag;
+        const a = nodes[i]!.tag;
+        const b = nodes[j]!.tag;
         const posA = positions.get(a)!;
         const posB = positions.get(b)!;
         const dx = posA.x - posB.x;
