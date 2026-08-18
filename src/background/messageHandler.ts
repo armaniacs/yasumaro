@@ -101,6 +101,7 @@ export function createMessageHandler(deps: MessageHandlerDeps): (
                     'service-worker'
                 );
                 sendResponse(createErrorResponse(error));
+                return;
             }
         };
 
