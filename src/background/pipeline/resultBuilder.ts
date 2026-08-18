@@ -9,6 +9,7 @@
 import { addLog, LogType, logError, ErrorCode } from '../../utils/logger.js';
 import { addPendingPage } from '../../utils/pendingStorage.js';
 import { NotificationHelper } from '../notificationHelper.js';
+import { pickDefined } from '../../utils/objectUtils.js';
 import type { RecordingContext } from './types.js';
 import type { RecordingResult } from '../../messaging/types.js';
 import { PrivatePageError } from './steps/checkPrivacyHeadersStep.js';
@@ -20,11 +21,13 @@ export function buildPrivatePageResult(context: RecordingContext, error: Private
   return {
     success: false,
     error: error.message,
-    reason: error.reason,
-    confirmationRequired: error.confirmationRequired,
-    headerValue: error.headerValue,
     title: context.data.title,
-    url: context.data.url
+    url: context.data.url,
+    ...pickDefined({
+      reason: error.reason,
+      confirmationRequired: error.confirmationRequired,
+      headerValue: error.headerValue,
+    }),
   };
 }
 
@@ -103,19 +106,21 @@ export function buildResult(context: RecordingContext): RecordingResult {
 
   return {
     success: true,
-    summary: privacyResult?.summary,
-    maskedCount: privacyResult?.maskedCount,
-    tags: privacyResult?.tags,
-    sentTokens: privacyResult?.sentTokens,
-    receivedTokens: privacyResult?.receivedTokens,
-    originalTokens: privacyResult?.originalTokens,
-    cleansedTokens: privacyResult?.cleansedTokens,
-    aiDuration,
-    aiProvider: privacyResult?.providerName,
-    obsidianDuration: context.obsidianDuration,
-    localMarkdownDuration: context.localMarkdownDuration,
     title: data.title,
-    url: data.url
+    url: data.url,
+    ...pickDefined({
+      summary: privacyResult?.summary,
+      maskedCount: privacyResult?.maskedCount,
+      tags: privacyResult?.tags,
+      sentTokens: privacyResult?.sentTokens,
+      receivedTokens: privacyResult?.receivedTokens,
+      originalTokens: privacyResult?.originalTokens,
+      cleansedTokens: privacyResult?.cleansedTokens,
+      aiDuration,
+      aiProvider: privacyResult?.providerName,
+      obsidianDuration: context.obsidianDuration,
+      localMarkdownDuration: context.localMarkdownDuration,
+    }),
   };
 }
 

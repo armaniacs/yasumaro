@@ -46,7 +46,7 @@ export class SyncTargetRegistry {
     const tasks = Array.from(this.targets.entries()).map(async ([key, target]) => {
       const configured = await target.isConfigured();
       if (!configured) {
-        results[key] = { success: true, error: undefined };
+        results[key] = { success: true };
         return;
       }
       return { key, target };

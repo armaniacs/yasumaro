@@ -7,6 +7,8 @@
 
 import { validateLuhn } from './luhn.js';
 import { errorMessage } from './errorUtils.js';
+import type { MaskedItem } from '../messaging/types.js';
+import { pickDefined } from './objectUtils.js';
 
 // 定数設定
 export const MAX_INPUT_SIZE = 64 * 1024; // 64KB (65,536 characters)
@@ -209,12 +211,6 @@ export interface SanitizeOptions {
     includeIndices?: boolean;
 }
 
-export interface MaskedItem {
-    type: string;
-    original: string;
-    index?: number;
-}
-
 export interface SanitizeResult {
     text: string;
     maskedItems: MaskedItem[];
@@ -258,7 +254,7 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
             return {
                 text,
                 maskedItems: [],
-                error: sizeValidation.error
+                ...pickDefined({ error: sizeValidation.error })
             };
         }
     } else {
@@ -385,7 +381,7 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
         finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
         const resultItems = finalMaskedItems.map(item =>
             includeIndices
-                ? { type: item.type, original: item.original, index: item.index }
+                ? { type: item.type, original: item.original, ...pickDefined({ index: item.index }) }
                 : { type: item.type, original: item.original }
         );
 
@@ -402,7 +398,7 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
                 text: processedText,
                 maskedItems: trimmedMaskedItems.map(item =>
                     includeIndices
-                        ? { type: item.type, original: item.original, index: item.index }
+                        ? { type: item.type, original: item.original, ...pickDefined({ index: item.index }) }
                         : { type: item.type, original: item.original }
                 ),
                 error: `Output truncated to ${MAX_OUTPUT_SIZE} characters`

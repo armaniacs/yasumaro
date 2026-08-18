@@ -34,6 +34,7 @@
  */
 
 import { addLog, LogType } from '../../utils/logger.js';
+import { pickDefined } from '../../utils/objectUtils.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError, type OfflineJobKind, type StepDeps, type UrlStore } from './types.js';
 import { buildResult, buildErrorResult, buildPrivatePageResult, notifyObsidianSaveSuccess, notifyRecordingError } from './resultBuilder.js';
 import {
@@ -282,8 +283,10 @@ export class RecordingPipeline {
         recordId: 0,
         record,
         sqliteClient: this.sqliteClient,
-        obsidianSynced: context.obsidianDuration !== undefined ? true : undefined,
-        traceId: context.traceId
+        ...pickDefined({
+          obsidianSynced: context.obsidianDuration !== undefined ? true : undefined,
+          traceId: context.traceId,
+        }),
       });
 
       addLog(LogType.INFO, 'Saved to SQLite', { url: context.data.url, title: context.data.title, traceId: context.traceId });
@@ -334,7 +337,7 @@ export class RecordingPipeline {
         settings,
         force: true,
         errors: [],
-        privacyResult: { summary: job.summary, tags: job.tags },
+        privacyResult: { summary: job.summary, ...pickDefined({ tags: job.tags }) },
       };
 
       // Run only formatMarkdown + saveObsidian steps (the retry path)
@@ -361,7 +364,7 @@ export class RecordingPipeline {
     const deps: StepDeps = {
       obsidian: this.obsidian,
       aiService: this.aiService!,
-      urlStore: this.urlStore,
+      ...pickDefined({ urlStore: this.urlStore }),
     };
 
     let context: RecordingContext = {
@@ -381,10 +384,10 @@ export class RecordingPipeline {
         // previewOnly: privacyPipeline ステップ完了後に早期リターン
         if (data.previewOnly && context.result && step.previewBreakpoint) {
           // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
-          if (context.result.maskedItems && Array.isArray(context.result.maskedItems)) {
-            context.result.maskedItems = stripPiiFromMaskedItems(context.result.maskedItems);
-          }
-          return context.result;
+          const { result } = context;
+          return result.maskedItems && Array.isArray(result.maskedItems)
+            ? { ...result, maskedItems: stripPiiFromMaskedItems(result.maskedItems) }
+            : result;
         }
       } catch (error) {
         // Handle special error types
@@ -415,7 +418,7 @@ export class RecordingPipeline {
           error: error as Error,
           strategy: step.errorStrategy,
           timestamp: Date.now(),
-          recoveryKind: step.offlineRetry?.jobKind,
+          ...pickDefined({ recoveryKind: step.offlineRetry?.jobKind }),
           context: {
             url: context.data.url,
             tabId: undefined, // RecordingData has no tabId; kept for PipelineError.context compatibility

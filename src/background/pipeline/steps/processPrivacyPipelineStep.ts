@@ -9,6 +9,7 @@ import { StorageKeys } from '../../../utils/storage.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import type { AIService } from '../../ai/AIService.js';
 import { sanitizeRegex } from '../../../utils/piiSanitizer.js';
+import { pickDefined } from '../../../utils/objectUtils.js';
 import type { RecordingContext, PipelineStepFunction, StepDeps } from '../types.js';
 
 /**
@@ -30,12 +31,10 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
 
   try {
     const pipelineResult = await pipeline.process(content || '', {
-      previewOnly,
-      alreadyProcessed,
       tagSummaryMode,
       url: data.url,
       title: data.title,
-      traceId: context.traceId,
+      ...pickDefined({ previewOnly, alreadyProcessed, traceId: context.traceId }),
     });
 
     // AI要約（ローカルL1 または クラウドL3）が実際に呼ばれた場合のみ実測値が入る
@@ -46,13 +45,13 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
       return {
         ...context,
         privacyResult: pipelineResult,
-        aiDuration,
+        ...pickDefined({ aiDuration }),
         result: {
           ...pipelineResult,
           success: pipelineResult.success !== undefined ? pipelineResult.success : true,
           title: data.title,
           url: data.url,
-          aiDuration
+          ...pickDefined({ aiDuration }),
         }
       };
     }
@@ -60,8 +59,8 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
     return {
       ...context,
       privacyResult: pipelineResult,
-      aiDuration,
-      sanitizedSummary: pipelineResult.summary || 'Summary not available.'
+      sanitizedSummary: pipelineResult.summary || 'Summary not available.',
+      ...pickDefined({ aiDuration }),
     };
   } catch (error: unknown) {
     addLog(LogType.ERROR, 'Privacy pipeline failed', {

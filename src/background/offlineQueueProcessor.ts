@@ -6,6 +6,7 @@
  */
 import type { OfflineJob } from './offlineNetworkQueue.js';
 import type { RecordingData } from '../messaging/types.js';
+import { pickDefined } from '../utils/objectUtils.js';
 
 interface OfflineNetworkQueueLike {
     retryAll(handler: (job: OfflineJob) => Promise<boolean>): Promise<void>;
@@ -43,7 +44,7 @@ export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): ()
                         title: payload.title,
                         url: payload.url,
                         summary: payload.summary,
-                        tags: payload.tags,
+                        ...pickDefined({ tags: payload.tags }),
                     });
                 } catch {
                     return false;

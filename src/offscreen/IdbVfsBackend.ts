@@ -13,6 +13,7 @@ import {
   buildWhereClause, buildOrderByClause, buildFts5OrderClause,
   buildLikeOrderClause, sanitizeTextForFts5, shouldUseFts5,
 } from './sqliteQueryBuilder.js';
+import { pickDefined } from '../utils/objectUtils.js';
 
 export class IdbVfsBackend implements StorageBackend {
   constructor(private engine: SqliteEngineContext) {}
@@ -330,8 +331,8 @@ export class IdbVfsBackend implements StorageBackend {
       fallback: false,
       fts5: this.engine.fts5Available,
       supportsBinaryBackup: false,
-      compileOptions: this.engine.cachedCompileOptions ?? undefined,
       compileOptionsSource: 'idb',
+      ...pickDefined({ compileOptions: this.engine.cachedCompileOptions ?? undefined }),
     };
   }
 

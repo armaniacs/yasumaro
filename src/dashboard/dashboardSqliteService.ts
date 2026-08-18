@@ -8,6 +8,7 @@ import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../back
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { tokenExempt } from '../messaging/sqliteOperationSecurity.js';
 import { bytesToBase64, base64ToBytes } from '../utils/crypto/index.js';
+import { pickDefined } from '../utils/objectUtils.js';
 
 const DASHBOARD_SQLITE_TIMEOUT = 10000;
 const CONFIRM_TOKEN_KEY = 'dashboardSqliteConfirmToken';
@@ -302,8 +303,7 @@ export async function searchLogs(
         query,
         limit,
         offset,
-        orderBy: options.orderBy,
-        orderDir: options.orderDir,
+        ...pickDefined({ orderBy: options.orderBy, orderDir: options.orderDir }),
       });
       if (response.success) {
         return {
@@ -483,13 +483,15 @@ export async function getSqliteStatus(): Promise<{
         path: requiredString(response.path, 'path'),
         fallback: requiredBoolean(response.fallback, 'fallback'),
         fts5: requiredBoolean(response.fts5, 'fts5'),
-        compileOptions: optionalStringArray(response.compileOptions, 'compileOptions'),
-        compileOptionsSource: optionalCompileOptionsSource(response.compileOptionsSource),
-        initError: response.initError ? String(response.initError) : undefined,
-        opfsMigrationV2Done: optionalBoolean(response.opfsMigrationV2Done, 'opfsMigrationV2Done'),
-        opfsMigrationV2LastAttemptedAt: optionalNullableString(response.opfsMigrationV2LastAttemptedAt, 'opfsMigrationV2LastAttemptedAt'),
-        opfsMigrationV2CompletedAt: optionalNullableString(response.opfsMigrationV2CompletedAt, 'opfsMigrationV2CompletedAt'),
-        opfsMigrationV2RecordCount: optionalNonNegativeNumber(response.opfsMigrationV2RecordCount, 'opfsMigrationV2RecordCount'),
+        ...pickDefined({
+          compileOptions: optionalStringArray(response.compileOptions, 'compileOptions'),
+          compileOptionsSource: optionalCompileOptionsSource(response.compileOptionsSource),
+          initError: response.initError ? String(response.initError) : undefined,
+          opfsMigrationV2Done: optionalBoolean(response.opfsMigrationV2Done, 'opfsMigrationV2Done'),
+          opfsMigrationV2LastAttemptedAt: optionalNullableString(response.opfsMigrationV2LastAttemptedAt, 'opfsMigrationV2LastAttemptedAt'),
+          opfsMigrationV2CompletedAt: optionalNullableString(response.opfsMigrationV2CompletedAt, 'opfsMigrationV2CompletedAt'),
+          opfsMigrationV2RecordCount: optionalNonNegativeNumber(response.opfsMigrationV2RecordCount, 'opfsMigrationV2RecordCount'),
+        }),
       };
     }
     return {

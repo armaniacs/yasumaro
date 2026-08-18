@@ -9,6 +9,7 @@ import type { SavedUrlEntry } from '../utils/urlEntry.js';
 import { saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlStore.js';
 import type { QueuedChromeStorageWrite, PendingMetadataPatchWrite } from './pendingChromeStorageQueue.js';
 import { logWarn } from '../utils/logger.js';
+import { pickDefined } from '../utils/objectUtils.js';
 
 export async function retryPendingChromeStorageWrite(write: QueuedChromeStorageWrite): Promise<boolean> {
   // Legacy payload: a whole SavedUrlEntry queued by older versions.
@@ -34,11 +35,11 @@ export async function retryPendingChromeStorageWrite(write: QueuedChromeStorageW
     if ((write as PendingMetadataPatchWrite).contentOmitted) {
       logWarn('Retrying metadata patch without content (omitted due to size)', { url: write.url });
     }
-    await saveSavedUrlEntryMetadata(write.url, write.patch, {
+    await saveSavedUrlEntryMetadata(write.url, write.patch, pickDefined({
       refreshTimestamp: write.refreshTimestamp,
       mergeTags: write.mergeTags,
       timestamp: write.timestamp,
-    });
+    }));
     return true;
   } catch {
     return false;

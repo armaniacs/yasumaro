@@ -18,6 +18,7 @@ import {
     getPresetPrompt,
     getPromptDisplayName
 } from '../../utils/customPromptUtils.js';
+import { pickDefined } from '../../utils/objectUtils.js';
 import { getMessage } from '../../utils/i18n.js';
 import { applyI18n } from '../../utils/i18n-dom.js';
 import { escapeHtml } from '../../popup/errorUtils.js';
@@ -293,8 +294,8 @@ async function handleSavePrompt(): Promise<void> {
         prompts = updatePrompt(prompts, editingId, {
             name,
             provider,
-            systemPrompt,
-            prompt: promptText
+            prompt: promptText,
+            ...pickDefined({ systemPrompt })
         });
         showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptUpdated') || 'Prompt updated', 'success');
     } else {
@@ -302,9 +303,9 @@ async function handleSavePrompt(): Promise<void> {
         const newPrompt = createPrompt({
             name,
             provider,
-            systemPrompt,
             prompt: promptText,
-            isActive: false
+            isActive: false,
+            ...pickDefined({ systemPrompt })
         });
         prompts.push(newPrompt);
         showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptCreated') || 'Prompt created', 'success');

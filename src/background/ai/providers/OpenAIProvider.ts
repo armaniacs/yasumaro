@@ -11,6 +11,7 @@ import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 
 import { normalizeProviderKeyName, resolveModelKey } from '../../../utils/aiModelKey.js';
+import { pickDefined } from '../../../utils/objectUtils.js';
 
 interface OpenAIApiResponse {
     choices?: Array<{ message?: { content: string } }>;
@@ -248,11 +249,11 @@ export class OpenAIProvider extends AIProviderStrategy {
                 message: hasContent ? 'Connected to AI API.' : 'Response contained no content.',
                 debug: {
                     prompt: CONNECTION_TEST_PROMPT,
-                    response: hasContent ? text : undefined,
                     endpoint: `POST ${url}`,
                     modelName: this.model,
                     statusCode: response.status,
                     hasContent,
+                    ...pickDefined({ response: hasContent ? text : undefined }),
                     ...(data.usage?.prompt_tokens !== undefined ? { sentTokens: data.usage.prompt_tokens } : {}),
                     ...(data.usage?.completion_tokens !== undefined ? { receivedTokens: data.usage.completion_tokens } : {}),
                     ...(hasContent ? {} : { error: 'choices[0].message.content was empty' }),
@@ -297,6 +298,6 @@ export class OpenAIProvider extends AIProviderStrategy {
         // トークン使用量を記録（成功時のみ、かつ数値が得られた場合のみ）
         await this.recordUsageIfPresent(sentTokens, receivedTokens);
 
-        return { success: true, summary: content, sentTokens, receivedTokens, providerName: this.providerName, modelName: this.model };
+        return { success: true, summary: content, providerName: this.providerName, modelName: this.model, ...pickDefined({ sentTokens, receivedTokens }) };
     }
 }

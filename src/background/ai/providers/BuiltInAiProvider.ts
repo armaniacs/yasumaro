@@ -11,6 +11,7 @@ import { AIProviderStrategy, AISummaryResult, AIProviderConnectionResult, CONNEC
 import { BuiltInAIClient } from '../../builtInAIClient.js';
 import { addLog, LogType } from '../../../utils/logger.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
+import { pickDefined } from '../../../utils/objectUtils.js';
 
 export class BuiltInAiProvider extends AIProviderStrategy {
     private builtInAiClient: BuiltInAIClient;
@@ -55,10 +56,9 @@ export class BuiltInAiProvider extends AIProviderStrategy {
             return {
                 success: true,
                 summary: result.summary || '',
-                sentTokens: result.sentTokens,
-                receivedTokens: result.receivedTokens,
                 providerName: 'built-in-ai',
                 modelName: 'built-in-ai',
+                ...pickDefined({ sentTokens: result.sentTokens, receivedTokens: result.receivedTokens }),
             };
         } catch (error: unknown) {
             addLog(LogType.ERROR, `Built-in AI generateSummary failed: ${errorMessage(error)}`, {});
@@ -94,10 +94,9 @@ export class BuiltInAiProvider extends AIProviderStrategy {
                 message: errorMsg,
                 debug: {
                     prompt: CONNECTION_TEST_PROMPT,
-                    response: result.summary || undefined,
                     endpoint: 'on-device (Built-in AI)',
-                    error: result.error,
                     hasContent: false,
+                    ...pickDefined({ response: result.summary || undefined, error: result.error }),
                 },
             };
         } catch (error: unknown) {

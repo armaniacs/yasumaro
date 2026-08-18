@@ -6,6 +6,7 @@
 import { addLog, LogType } from '../../../utils/logger.js';
 import { TrustChecker } from '../../../utils/trustChecker.js';
 import { NotificationHelper } from '../../notificationHelper.js';
+import { pickDefined } from '../../../utils/objectUtils.js';
 import type { RecordingContext, PipelineStepFunction, TrustCheckResult } from '../types.js';
 
 /**
@@ -41,8 +42,8 @@ export const checkTrustDomainStep: PipelineStepFunction = async (
   const result: TrustCheckResult = {
     canProceed: trustCheck.canProceed,
     showAlert: trustCheck.showAlert,
-    reason: trustCheck.reason,
-    trustLevel: trustCheck.trustResult.level
+    trustLevel: trustCheck.trustResult.level,
+    ...pickDefined({ reason: trustCheck.reason }),
   };
 
   return {

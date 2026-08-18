@@ -110,8 +110,7 @@ export class PermissionManager {
           // 初回拒否
           deniedDomains[domain] = {
             count: 1,
-            lastDenied: nowISO,
-            lastDismissed: undefined
+            lastDenied: nowISO
           };
         } else {
           // 既存エントリー: カウントインクリメントと最後の拒否日時更新

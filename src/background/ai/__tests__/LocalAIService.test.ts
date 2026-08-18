@@ -15,7 +15,7 @@ describe('LocalAIService', () => {
       sentTokens: undefined,
       receivedTokens: undefined,
       providerName: 'built-in-ai',
-      success: undefined,
+      success: true,
       error: undefined,
     });
   });

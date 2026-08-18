@@ -437,8 +437,6 @@ describe('extractMainContent - cleanseEnabled false', () => {
         ) as Record<string, unknown>;
         expect(typeof result.content).toBe('string');
         expect(result.cleansedReason).toBe('hard');
-        expect(result).toHaveProperty('aiSummaryOriginalBytes');
-        expect(result).toHaveProperty('aiSummaryCleansedBytes');
         expect(result).toHaveProperty('aiSummaryCleansedElements');
         expect(result.aiSummaryCleansedElements).toBeGreaterThan(0);
         expect(result.aiSummaryCleansedReason).toBe('multiple');
@@ -1424,7 +1422,7 @@ describe('extractMainContent - no candidates path (lines 364-510)', () => {
 
         expect(typeof result.content).toBe('string');
         expect(result.cleansedReason).toBe('none');
-        expect(result).toHaveProperty('aiSummaryOriginalBytes');
+        expect(result).toHaveProperty('aiSummaryCleansedElements');
     });
 
     it('no-candidates path with only direct text nodes and no elements', () => {

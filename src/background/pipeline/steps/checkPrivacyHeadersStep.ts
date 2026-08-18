@@ -9,6 +9,7 @@ import { addPendingPage } from '../../../utils/pendingStorage.js';
 import type { RecordingContext } from '../types.js';
 import type { PrivacyInfo } from '../../../utils/privacyChecker.js';
 import { redactHeaderValue } from '../../../utils/redaction.js';
+import { pickDefined } from '../../../utils/objectUtils.js';
 
 export class PrivacyHeadersChecker {
   private getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
@@ -70,8 +71,8 @@ export class PrivacyHeadersChecker {
 
       await this.savePendingPage(url, title, reason, actualHeaderValue);
       throw new PrivatePageError('PRIVATE_PAGE_DETECTED', {
-        reason: privacyInfo.reason,
-        confirmationRequired: true
+        confirmationRequired: true,
+        ...pickDefined({ reason: privacyInfo.reason }),
       });
     }
 
@@ -83,15 +84,13 @@ export class PrivacyHeadersChecker {
 
     if (autoSaveBehavior === 'skip') {
       await this.savePendingPage(url, title, autoReason, autoHeaderValue);
-      throw new PrivatePageError('PRIVATE_PAGE_DETECTED', {
-        reason: privacyInfo.reason
-      });
+      throw new PrivatePageError('PRIVATE_PAGE_DETECTED', pickDefined({ reason: privacyInfo.reason }));
     } else if (autoSaveBehavior === 'confirm') {
       await this.savePendingPage(url, title, autoReason, autoHeaderValue);
       throw new PrivatePageError('PRIVATE_PAGE_DETECTED', {
-        reason: privacyInfo.reason,
         confirmationRequired: true,
-        headerValue: autoHeaderValue
+        headerValue: autoHeaderValue,
+        ...pickDefined({ reason: privacyInfo.reason }),
       });
     }
 
@@ -154,8 +153,6 @@ export class PrivatePageError extends Error {
     options: { reason?: string; confirmationRequired?: boolean; headerValue?: string } = {}
   ) {
     super(message);
-    this.reason = options.reason;
-    this.confirmationRequired = options.confirmationRequired;
-    this.headerValue = options.headerValue;
+    Object.assign(this, pickDefined(options));
   }
 }

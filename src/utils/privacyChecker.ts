@@ -1,3 +1,5 @@
+import { pickDefined } from './objectUtils.js';
+
 export interface PrivacyInfo {
   isPrivate: boolean;
   reason?: 'cache-control' | 'set-cookie' | 'authorization';
@@ -52,7 +54,7 @@ export function checkPrivacy(headers: chrome.webRequest.HttpHeader[]): PrivacyIn
         reason: 'cache-control',
         timestamp,
         headers: {
-          cacheControl: cacheControl.value,
+          ...pickDefined({ cacheControl: cacheControl.value }),
           hasCookie,
           hasAuth
         }
@@ -66,7 +68,7 @@ export function checkPrivacy(headers: chrome.webRequest.HttpHeader[]): PrivacyIn
         reason: 'cache-control',
         timestamp,
         headers: {
-          cacheControl: cacheControl.value,
+          ...pickDefined({ cacheControl: cacheControl.value }),
           hasCookie,
           hasAuth
         }
@@ -83,7 +85,7 @@ export function checkPrivacy(headers: chrome.webRequest.HttpHeader[]): PrivacyIn
       reason: 'set-cookie',
       timestamp,
       headers: {
-        cacheControl: cacheControl?.value,
+        ...pickDefined({ cacheControl: cacheControl?.value }),
         hasCookie: true,
         hasAuth
       }
@@ -97,7 +99,7 @@ export function checkPrivacy(headers: chrome.webRequest.HttpHeader[]): PrivacyIn
       reason: 'authorization',
       timestamp,
       headers: {
-        cacheControl: cacheControl?.value,
+        ...pickDefined({ cacheControl: cacheControl?.value }),
         hasCookie: false,
         hasAuth: true
       }
@@ -109,7 +111,7 @@ export function checkPrivacy(headers: chrome.webRequest.HttpHeader[]): PrivacyIn
     isPrivate: false,
     timestamp,
     headers: {
-      cacheControl: cacheControl?.value,
+      ...pickDefined({ cacheControl: cacheControl?.value }),
       hasCookie,
       hasAuth
     }

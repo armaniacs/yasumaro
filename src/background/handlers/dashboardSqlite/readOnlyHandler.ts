@@ -1,6 +1,7 @@
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboardSqliteProtocol.js';
 import type { ReadOnlyDeps } from './deps.js';
 import { toFailure } from './deps.js';
+import { pickDefined } from '../../../utils/objectUtils.js';
 
 /**
  * Subtypes this handler owns. The router derives its dispatch from this set,
@@ -43,7 +44,7 @@ export function createReadOnlyHandler(deps: ReadOnlyDeps) {
           payload.query || '',
           payload.limit ?? 50,
           payload.offset ?? 0,
-          { orderBy: payload.orderBy, orderDir: payload.orderDir },
+          pickDefined({ orderBy: payload.orderBy, orderDir: payload.orderDir }),
         );
         if (!result.success) {
           return toFailure(result);
@@ -75,10 +76,9 @@ export function createReadOnlyHandler(deps: ReadOnlyDeps) {
         return { success: true, report: result.data };
       }
       case 'audit_log_query': {
-        const result = await deps.queryAuditLog({
-          limit: payload.limit,
-          offset: payload.offset,
-        });
+        const result = await deps.queryAuditLog(
+          pickDefined({ limit: payload.limit, offset: payload.offset }),
+        );
         if (!result.success) {
           return toFailure(result);
         }

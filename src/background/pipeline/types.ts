@@ -6,7 +6,7 @@
  * a composition of all sub-types, used only by the pipeline orchestrator.
  */
 
-import type { RecordingData, RecordingResult } from '../../messaging/types.js';
+import type { RecordingData, RecordingResult, MaskedItem } from '../../messaging/types.js';
 import type { Settings } from '../../utils/storage.js';
 import type { PrivacyPipelineResult } from '../privacyPipeline.js';
 import type { AIService } from '../ai/AIService.js';
@@ -41,7 +41,7 @@ export interface PipelineError {
   recoveryKind?: OfflineJobKind;
   context?: {
     url: string;
-    tabId?: number;
+    tabId?: number | undefined;
   };
 }
 
@@ -143,13 +143,24 @@ export interface PipelineTimings {
 }
 
 /**
+ * Pipeline内部で組み立て中の RecordingResult。
+ *
+ * maskedItems は stripPiiFromMaskedItems 適用前の生 MaskedItem（original 付き）を
+ * 許容する。sendResponse / ストレージ保存など外部へ送出する直前に必ず
+ * stripPiiFromMaskedItems を通し、RecordingResult（StrippedMaskedItem）へ変換すること。
+ */
+export type InProgressRecordingResult = Omit<RecordingResult, 'maskedItems'> & {
+  maskedItems?: (string | MaskedItem)[];
+};
+
+/**
  * Pipeline output: final result and errors.
  *
  * Produced by: processPrivacyPipelineStep (result for preview), pipeline orchestrator (result for success/error)
  * Read by: pipeline orchestrator (buildResult, buildErrorResult)
  */
 export interface PipelineOutput {
-  result?: RecordingResult;
+  result?: InProgressRecordingResult;
   errors: PipelineError[];
 }
 

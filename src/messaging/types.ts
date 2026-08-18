@@ -13,14 +13,18 @@
  * @internal
  * WARNING: original フィールドには生のPIIデータが含まれる可能性があります。
  * このフィールドはデバッグ目的のみで使用し、本番環境では絶対に使用しないでください。
- * ストレージ保存やログ出力前に必ず stripPiiFromMaskedItem/Items 関数で削除してください。
+ * ストレージ保存やログ出力前に必ず stripPiiFromMaskedItem/Items 関数で削除してください
+ * （戻り値は StrippedMaskedItem — original を型レベルで持たない）。
  */
 export interface MaskedItem {
   type: string;       // マスク項目の種類（例: "email", "creditCard", "phoneJp", "myNumber", "bankAccount"）
   position?: string;  // コンテンツ内の一般的な位置（例: "header", "body"）
-  original?: string; // 元の値（デバッグ用、本番環境では使用しない）@internal
+  original: string;   // 元の値（デバッグ用、本番環境では使用しない）@internal
   index?: number;     // マスク項目の出現順序インデックス
 }
+
+/** stripPiiFromMaskedItem(s) 適用後の状態。original を型レベルで持たない。 */
+export type StrippedMaskedItem = Omit<MaskedItem, 'original'>;
 
 /**
  * MaskedItem 型ガード関数
@@ -52,11 +56,11 @@ export function isMaskedItem(item: unknown): item is MaskedItem {
     return false;
   }
   
-  // Optional original property
-  if ('original' in maskedItem && maskedItem.original !== undefined && typeof maskedItem.original !== 'string') {
+  // original property (required on MaskedItem, absent on StrippedMaskedItem)
+  if ('original' in maskedItem && typeof maskedItem.original !== 'string') {
     return false;
   }
-  
+
   // Optional index property
   if ('index' in maskedItem && maskedItem.index !== undefined && typeof maskedItem.index !== 'number') {
     return false;
@@ -80,7 +84,7 @@ export interface RecordingResult {
   processedContent?: string;
   mode?: string;
   maskedCount?: number;
-  maskedItems?: (string | MaskedItem)[]; // マスクされたPII項目のリスト
+  maskedItems?: (string | StrippedMaskedItem)[]; // マスクされたPII項目のリスト（original はストリップ済み）
   /** クラウドAI要約の実処理時間 (ミリ秒) — クラウドAIが呼ばれなかった場合は undefined */
   aiDuration?: number;
   /** AI要約に使用したプロバイダー識別子 (例: "openai", "gemini") — undefined の場合は不明 */
@@ -105,6 +109,7 @@ import { CURRENT_PROTOCOL_VERSION, VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from 
 import type { ExtensionMessage } from '../background/messageTypes.js';
 import type { ContentResponse } from '../popup/mainTypes.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
+import { pickDefined } from '../utils/objectUtils.js';
 
 /**
  * 記録データ型
@@ -249,8 +254,7 @@ export function extractMessageContent(sender: chrome.runtime.MessageSender): Mes
   const _isContentScriptSender = !!(sender.tab && sender.tab.id && sender.tab.url);
 
   return {
-    tabId,
-    tabUrl,
+    ...pickDefined({ tabId, tabUrl }),
     // isValidSender: Allow all messages from popup/dashboard (no tab)
     // VALID_VISIT, CHECK_DOMAIN are restricted to content scripts only (checked separately in service-worker.ts)
     isValidSender: true

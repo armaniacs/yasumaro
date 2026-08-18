@@ -6,6 +6,8 @@
  * pairs into one reusable implementation.
  */
 
+import { pickDefined } from '../objectUtils.js';
+
 export interface ManagedStringListOptions {
   /** Validate (and optionally reject) an item before it is added. */
   validate?: (item: string) => { valid: boolean; error?: string };
@@ -31,7 +33,7 @@ export class ManagedStringList {
     if (this.options.validate) {
       const result = this.options.validate(normalized);
       if (!result.valid) {
-        return { success: false, error: result.error };
+        return { success: false, ...pickDefined({ error: result.error }) };
       }
     }
 
