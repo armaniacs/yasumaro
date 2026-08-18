@@ -34,7 +34,7 @@ export class ChromeNotificationCriticalSink implements CriticalAlertSink {
     return true;
   }
 
-  raise(message: string, details: Record<string, unknown>, errorCode: ErrorCodeValues): void {
+  raise(message: string, _details: Record<string, unknown>, _errorCode: ErrorCodeValues): void {
     if (!this.shouldRaise()) return;
     try {
       const notifications =

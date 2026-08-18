@@ -7,69 +7,6 @@
 import { PROVIDER_LABELS as AI_PROVIDER_LABELS } from '../utils/aiProviderLabels.js';
 
 // エラータイプの定義
-type ErrorWithDetails = Error & {
-  message: string;
-  code?: string;
-  status?: number;
-  details?: Record<string, unknown>;
-};
-
-type ObsidianError = ErrorWithDetails & {
-  source: 'obsidian';
-  endpoint?: string;
-};
-
-type AiError = ErrorWithDetails & {
-  source: 'ai';
-  provider?: string;
-  request?: unknown;
-  response?: unknown;
-};
-
-type NetworkError = ErrorWithDetails & {
-  source: 'network';
-  url?: string;
-  status?: number;
-  response?: unknown;
-};
-
-type UserError = ErrorWithDetails & {
-  source: 'user';
-  input?: string;
-};
-
-type SystemError = ErrorWithDetails & {
-  source: 'system';
-  module?: string;
-};
-
-type KnownError = ObsidianError | AiError | NetworkError | UserError | SystemError;
-
-function hasSource(error: unknown): error is { source: string } {
-  return typeof error === 'object' && error !== null && 'source' in error;
-}
-
-// 型ガード関数
-function isObsidianError(error: unknown): error is ObsidianError {
-  return hasSource(error) && error.source === 'obsidian';
-}
-
-function isAiError(error: unknown): error is AiError {
-  return hasSource(error) && error.source === 'ai';
-}
-
-function isNetworkError(error: unknown): error is NetworkError {
-  return hasSource(error) && error.source === 'network';
-}
-
-function isUserError(error: unknown): error is UserError {
-  return hasSource(error) && error.source === 'user';
-}
-
-function isSystemError(error: unknown): error is SystemError {
-  return hasSource(error) && error.source === 'system';
-}
-
 /**
  * エラーメッセージ定数（Problem #5: キャッシュ追加でパフォーマンス改善）
  */

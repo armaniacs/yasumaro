@@ -2,8 +2,18 @@ import { checkSenderTrust, type SenderTrustLevel } from './senderTrust.js';
 
 export type { SenderTrustLevel };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/**
+ * Heterogeneous collection type: the registry stores handlers for different
+ * message types in a single Map. Each handler factory internally narrows
+ * the message to its specific type (e.g., ValidVisitMessage, ManualRecordMessage).
+ *
+ * `any` is retained here because:
+ * - `unknown` would break `satisfies Record<string, MessageHandler>` (contravariance)
+ * - `ExtensionMessage` would require all 20 handler factories to change their parameter types
+ * Type safety is preserved at the call site via `satisfies` and at each handler's internal narrowing.
+ */
 export type MessageHandler = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- architectural: heterogeneous collection
   message: any,
   sender: chrome.runtime.MessageSender,
   sendResponse: (response?: unknown) => void,
@@ -30,8 +40,8 @@ export class MessageHandlerRegistry {
   }
 
   dispatch(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- matches MessageHandler type
     message: any,
     sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void,

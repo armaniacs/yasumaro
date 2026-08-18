@@ -144,6 +144,13 @@ export class TrancoUpdater {
       throw new Error(`Tranco CSV returned status ${response.status}: ${response.statusText}`);
     }
 
+    // Guard against unbounded reads of potentially huge responses
+    const contentLength = response.headers?.get('content-length');
+    const MAX_TRANCO_SIZE = 50 * 1024 * 1024; // 50MB
+    if (contentLength && parseInt(contentLength, 10) > MAX_TRANCO_SIZE) {
+      throw new Error(`Tranco CSV too large: ${Math.round(parseInt(contentLength, 10) / 1024 / 1024)}MB exceeds ${MAX_TRANCO_SIZE / 1024 / 1024}MB limit`);
+    }
+
     const text = await response.text();
     const domains = this.parseTrancoCSV(text, tier);
 

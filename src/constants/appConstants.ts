@@ -28,18 +28,6 @@ export const STATUS_COLORS = {
   WARNING: '#d97706',
 } as const;
 
-/** トラストレベル表示用の色 */
-const TRUST_LEVEL_COLORS = {
-  /** Trusted - 緑 */
-  TRUSTED: '#10b981',
-  /** Sensitive - アンバー */
-  SENSITIVE: '#f59e0b',
-  /** Unverified - グレー */
-  UNVERIFIED: '#94a3b8',
-  /** Locked - グレー */
-  LOCKED: '#6b7280',
-} as const;
-
 /** クレンジング統計グラフ用の色（ライトモード） */
 export const CLEANSING_GRAPH_COLORS_LIGHT = {
   /** バー背景（紫） */
@@ -118,40 +106,6 @@ export const TIMEOUTS = {
   STATUS_MESSAGE_ERROR: 5000,
 } as const;
 
-/** 分単位の時間定数 */
-const TIMEOUTS_MINUTES = {
-  /** アラームチェック間隔: 1分 */
-  ALARM_CHECK_INTERVAL: 1,
-} as const;
-
-// =============================================================================
-// サイズ制限定数
-// =============================================================================
-
-/** URLやコンテンツのサイズ制限 */
-const SIZE_LIMITS = {
-  /** URL最大長: 64KB */
-  MAX_URL_LENGTH: 64 * 1024,
-  /** 推奨最大コンテンツサイズ: 8KB */
-  RECOMMENDED_CONTENT_SIZE: 8000,
-  /** 許容最大コンテンツサイズ: 10KB */
-  MAX_CONTENT_SIZE: 10000,
-} as const;
-
-// =============================================================================
-// リトライ設定
-// =============================================================================
-
-/** メッセージ送信のリトライ設定 */
-const RETRY_CONFIG = {
-  /** 最大リトライ回数 */
-  MAX_RETRIES: 3,
-  /** 初期待機時間: 2000ms */
-  INITIAL_DELAY: 2000,
-  /** バックオフ乗数 */
-  BACKOFF_MULTIPLIER: 2,
-} as const;
-
 // =============================================================================
 // レートリミット設定
 // =============================================================================
@@ -162,67 +116,4 @@ export const RATE_LIMITS = {
   SKIP_AI_MAX: 5,
   /** skipAI レートリミットウィンドウ: 1分 */
   SKIP_AI_WINDOW_MS: 60 * 1000,
-} as const;
-
-// =============================================================================
-// デフォルト設定値
-// =============================================================================
-
-/** デフォルトの訪問設定 */
-const DEFAULT_VISIT_SETTINGS = {
-  /** 最小訪問時間: 5秒 */
-  MIN_VISIT_DURATION: 5,
-  /** 最小スクロール深度: 50% */
-  MIN_SCROLL_DEPTH: 50,
-} as const;
-
-/** デフォルトのポート番号 */
-const DEFAULT_PORT = 27123;
-
-// =============================================================================
-// エラーコード定数
-// =============================================================================
-
-/** ドメインブロックエラーコード */
-const ERROR_CODES = {
-  /** ドメインブロック */
-  DOMAIN_BLOCKED: 'DOMAIN_BLOCKED',
-  /** プライベートページ検出 */
-  PRIVATE_PAGE_DETECTED: 'PRIVATE_PAGE_DETECTED',
-  /** Content Script利用不可 */
-  CONTENT_SCRIPT_NOT_AVAILABLE: 'CONTENT_SCRIPT_NOT_AVAILABLE',
-} as const;
-
-// =============================================================================
-// 外部URLパターン
-// =============================================================================
-
-/** 特殊URLスキーム（記録不可） */
-const NON_RECORDABLE_SCHEMES = [
-  'chrome://',
-  'chrome-extension://',
-  'edge://',
-  'about:',
-  'file://',
-  'javascript:',
-  'data:',
-  'blob:',
-] as const;
-
-// =============================================================================
-// セレクタ定数（DOM操作で使用）
-// =============================================================================
-
-/** DOM要素セレクタ */
-const DOM_SELECTORS = {
-  /** メインステータス表示エリア */
-  MAIN_STATUS: '#mainStatus',
-  /** 記録ボタン */
-  RECORD_BUTTON: '#recordBtn',
-  /** ステータスパネル */
-  STATUS_PANEL: '#statusPanel',
-  /** タグ結果パネル */
-  TAG_RESULT_PANEL: '#tagResultPanel',
-  /** ローディングスピナー */
-  SPINNER: '#loadingSpinner',
 } as const;

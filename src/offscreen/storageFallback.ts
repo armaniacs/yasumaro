@@ -223,7 +223,7 @@ export class FallbackStorage {
       for (const field of UPDATABLE_FIELDS) {
         const f = field as keyof BrowsingLogRecord;
         if (f in changes) {
-          (record as unknown as Record<string, unknown>)[f] = changes[f];
+          Object.assign(record, { [f]: changes[f] });
         }
       }
 

@@ -1,9 +1,7 @@
 import { type StaticFormPanel } from '../types.js';
-import { getSettings } from '../../../utils/storage.js';
 import {
   getAiSummaryCleansingSettings, applyAiSummaryCleansingSettingsToUI,
   setupAiSummaryCleansingEventListeners, saveAiSummaryCleansingSettings,
-  getAiSummaryCleansingSettingsFromUI,
 } from '../../settings/aiSummaryCleansingSettingsV2.js';
 import { getSavedUrlEntries } from '../../../utils/storageUrls.js';
 import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from '../../cleansingStatsView.js';
@@ -35,6 +33,7 @@ export function createAiSummaryCleansingPanel(): StaticFormPanel {
           });
           slider.addEventListener('change', async () => {
             const s = await getAiSummaryCleansingSettings();
+            // WHY: dynamic property access on settings object; setting keys are generated at runtime
             const ss = s as unknown as Record<string, number>;
             ss[config.settingKey] = parseInt(slider.value, 10);
             await saveAiSummaryCleansingSettings(s);

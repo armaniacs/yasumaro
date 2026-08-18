@@ -18,10 +18,11 @@ export function getMessage(key: string): string;
 
 /**
  * Get the translated message for a key with substitutions.
- * The `any` overload preserves compatibility with legacy callers that passed
- * values typed as `any` or unknown-shaped records.
  */
-export function getMessage(key: string, substitutions: any): string;
+export function getMessage(
+  key: string,
+  substitutions: string | Array<string | number> | Record<string, string | number> | null
+): string;
 
 /**
  * Get the translated message for a key.

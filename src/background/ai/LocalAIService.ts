@@ -31,7 +31,7 @@ interface LocalAIServiceConfig {
 export class LocalAIService implements AIService {
   constructor(private config: LocalAIServiceConfig) {}
 
-  async generateSummary(content: string, options?: AISummaryOptions): Promise<AISummaryResult> {
+  async generateSummary(content: string, _options?: AISummaryOptions): Promise<AISummaryResult> {
     const result = await this.config.localAiClient.summarize(content);
     return {
       summary: result.summary ?? '',

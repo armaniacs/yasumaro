@@ -3,7 +3,7 @@
  * GitHub Gist sync settings UI logic.
  */
 
-import { getSettings, saveSettings, StorageKeys } from '../utils/storage.js';
+import { getSettings, saveSettings, StorageKeys, type Settings } from '../utils/storage.js';
 import { GistSyncTarget } from '../background/syncTargets/gistSyncTarget.js';
 import { SqliteClient } from '../background/sqliteClient.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -36,7 +36,7 @@ export async function initGistSettings(): Promise<void> {
       await saveSettings({
         [StorageKeys.GIST_ENABLED]: gistEnabled?.checked ?? false,
         [StorageKeys.GITHUB_PAT]: githubPat?.value ?? '',
-      } as any);
+      } as Settings);
       setStatus('Gist settings saved', false);
     } catch (error) {
       setStatus(`Save failed: ${errorMessage(error)}`, true);

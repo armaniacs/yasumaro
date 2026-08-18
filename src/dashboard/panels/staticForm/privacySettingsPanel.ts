@@ -1,9 +1,7 @@
 import { type StaticFormPanel } from '../types.js';
-import { getSettings } from '../../../utils/storage.js';
 import { init as initPrivacySettings, loadPrivacySettings } from '../../settings/privacySettings.js';
 import { initMasterPasswordSettings, loadMasterPasswordSettings } from '../../masterPassword.js';
 import { getPrivacyConsent, withdrawPrivacyConsent } from '../../../popup/privacyConsent.js';
-import { getMessage } from '../../../utils/i18n.js';
 
 export function createPrivacySettingsPanel(): StaticFormPanel {
   return {

@@ -42,6 +42,7 @@ export function buildExtractionOptions(config: CleansingConfig): ExtractionOptio
     const ruleFlags: Record<string, boolean> = Object.fromEntries(
         CLEANSING_RULES.map(rule => [
             `${rule.key}Enabled`,
+            // WHY: dynamic property access on config object; cleansing rule keys are generated at runtime
             (config as unknown as Record<string, unknown>)[`aiSummaryCleansing${capitalize(rule.key)}`] as boolean,
         ]),
     );

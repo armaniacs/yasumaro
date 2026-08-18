@@ -13,7 +13,6 @@ import {
     validateObsidianPort,
     OBSIDIAN_DEFAULT_PORT,
     OBSIDIAN_DEFAULT_HOST,
-    type ObsidianProtocol,
 } from './obsidianConfigValidator.js';
 
 /** HTTP headers sent with every Obsidian API request. */

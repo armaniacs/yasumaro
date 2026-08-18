@@ -141,6 +141,13 @@ export function validateObsidianPort(port: string | number | undefined | null): 
  * @throws Error with name='AbortError' if body read times out
  */
 export async function readBodyWithTimeout(response: Response): Promise<string> {
+    // Guard against unbounded reads of potentially huge responses
+    const contentLength = response.headers?.get('content-length');
+    const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10MB
+    if (contentLength && parseInt(contentLength, 10) > MAX_BODY_SIZE) {
+        throw new Error(`Response body too large: ${Math.round(parseInt(contentLength, 10) / 1024 / 1024)}MB exceeds ${MAX_BODY_SIZE / 1024 / 1024}MB limit`);
+    }
+
     const textPromise = response.text();
     // Suppress unhandled rejection when timeout wins the race
     textPromise.catch(() => {});

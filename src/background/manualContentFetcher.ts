@@ -153,5 +153,3 @@ export class ManualContentFetcher {
     return '';
   }
 }
-
-const manualContentFetcher = new ManualContentFetcher();

@@ -94,6 +94,7 @@ export async function importEncryptedBackup(
   }
 
   const { sanitized, skippedKeys } = validateRestorableSettings(
+    // WHY: backup payload settings type is `unknown`; validateRestorableSettings narrows to `Record<string, unknown>`
     payload.settings as unknown as Record<string, unknown>
   );
   await saveSettings(sanitized);

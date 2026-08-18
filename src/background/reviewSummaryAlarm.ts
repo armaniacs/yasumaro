@@ -17,7 +17,7 @@ let listenerSetUp = false;
  * Service Worker起動時に呼ばれる。アラーム発火はcomposition rootから注入された
  * 同一generatorへ委譲し、message handler経路とインスタンスを共有する。
  */
-export async function initializeReviewSummaryAlarms(generator: ReviewSummaryGenerator): Promise<void> {
+export async function initializeReviewSummaryAlarms(_generator: ReviewSummaryGenerator): Promise<void> {
   const settings = await getSettings();
   const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED] as boolean;
 

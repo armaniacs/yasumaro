@@ -9,6 +9,7 @@
  * would otherwise pass 500 lines.
  */
 
+// eslint-disable-next-line local/require-sanitized-markdown -- test data with hardcoded markdown, not user input
 import { StorageKeys, getSettings } from '../../utils/storage.js';
 import { getMessage } from '../../utils/i18n.js';
 import { type AiTestProgress, type MultiProviderTestResult } from '../../background/ai/AIService.js';
@@ -405,6 +406,7 @@ export async function handleTestLocalMarkdown(): Promise<void> {
     const now = new Date();
     const date = now.toISOString().split('T')[0];
     const time = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    // Test content with hardcoded markdown patterns (not user input)
     const testContent = `# ${date}\n\n- ${time} [Yasumaro Test](https://example.com)\n    - This is a test entry for local Markdown export. If you can see this file, the export is working correctly!`;
 
     // Download test file

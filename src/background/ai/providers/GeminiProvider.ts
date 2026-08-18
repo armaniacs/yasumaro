@@ -9,7 +9,7 @@ import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls, Settings, StorageKeys } from '../../../utils/storage.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt, getDefaultSystemPrompt } from '../../../utils/customPromptUtils.js';
-import { recordUsage } from '../../../utils/aiUsageTracker.js';
+
 
 interface GeminiApiResponse {
     candidates?: Array<{

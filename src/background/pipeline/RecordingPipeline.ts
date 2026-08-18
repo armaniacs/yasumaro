@@ -33,8 +33,7 @@
  *     only the same-day duplicate check is bypassed.
  */
 
-import { addLog, LogType, logError, ErrorCode } from '../../utils/logger.js';
-import { addPendingPage } from '../../utils/pendingStorage.js';
+import { addLog, LogType } from '../../utils/logger.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError, type OfflineJobKind, type StepDeps, type UrlStore } from './types.js';
 import { buildResult, buildErrorResult, buildPrivatePageResult, notifyObsidianSaveSuccess, notifyRecordingError } from './resultBuilder.js';
 import {
@@ -419,7 +418,7 @@ export class RecordingPipeline {
           recoveryKind: step.offlineRetry?.jobKind,
           context: {
             url: context.data.url,
-            tabId: (context.data as unknown as Record<string, unknown>).tabId as number | undefined
+            tabId: undefined, // RecordingData has no tabId; kept for PipelineError.context compatibility
           }
         };
 

@@ -9,7 +9,7 @@
 import { addLog, LogType, logError, ErrorCode } from '../../utils/logger.js';
 import { addPendingPage } from '../../utils/pendingStorage.js';
 import { NotificationHelper } from '../notificationHelper.js';
-import type { RecordingContext, PipelineError } from './types.js';
+import type { RecordingContext } from './types.js';
 import type { RecordingResult } from '../../messaging/types.js';
 import { PrivatePageError } from './steps/checkPrivacyHeadersStep.js';
 
@@ -36,7 +36,7 @@ export function buildErrorResult(context: RecordingContext, error: Error, stepNa
   logError(`Pipeline failed at step ${stepName}`, {
     error: error.message,
     url: context.data.url,
-    tabId: (context.data as unknown as Record<string, unknown>).tabId as number | undefined
+    tabId: undefined, // RecordingData has no tabId; kept for PipelineError.context compatibility
   }, ErrorCode.INTERNAL_ERROR, 'RecordingPipeline');
 
   // 記録漏れリカバリ: pending に登録して再記録できるようにする

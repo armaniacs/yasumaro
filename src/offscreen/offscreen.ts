@@ -127,7 +127,6 @@ async function dispatchSqliteMessage(
     msg: SqliteMessage,
     sendResponse: (response: unknown) => void
 ): Promise<void> {
-    const traceId = msg.traceId || '';
     switch (msg.type) {
         case 'SQLITE_HEALTH_CHECK': {
             const ok = await sqliteHealthCheck();

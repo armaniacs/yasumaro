@@ -81,7 +81,7 @@ export function getBrowserLocale(): string {
     if (typeof navigator === 'undefined') return 'ja';
     
     try {
-        const lang = navigator.language || ('userLanguage' in navigator ? (navigator as unknown as { userLanguage: string }).userLanguage : null) || 'ja';
+        const lang = navigator.language || ('userLanguage' in navigator ? (navigator as Navigator & { userLanguage?: string }).userLanguage : null) || 'ja';
         const locale = resolveLocaleWithFallback(lang);
         return locale;
     } catch (_e) {

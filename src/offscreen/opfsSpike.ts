@@ -9,7 +9,7 @@
  */
 
 import { errorMessage } from '../utils/errorUtils.js';
-import { detectLiveVfsStrategy, type VfsStrategy } from './opfsCapabilities.js';
+import { type VfsStrategy } from './opfsCapabilities.js';
 
 export interface SpikeStep {
   name: string;
@@ -49,8 +49,6 @@ export async function runSpikeSteps(steps: SpikeStep[]): Promise<{ steps: SpikeS
   return { steps: results, passed };
 }
 
-const SPIKE_DB_FILENAME = 'opfs-spike.db';
-const SPIKE_VFS_NAME = 'opfs';
 const WORKER_SPIKE_TIMEOUT_MS = 15000;
 
 /**

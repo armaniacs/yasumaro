@@ -1,4 +1,4 @@
-import { getSettings, StorageKeys, Settings } from '../utils/storage.js';
+import { StorageKeys } from '../utils/storage.js';
 import { buildDailyNotePath } from '../utils/dailyNotePathBuilder.js';
 import { NoteSectionEditor } from './noteSectionEditor.js';
 import { Mutex } from '../utils/Mutex.js';
@@ -187,6 +187,13 @@ export class ObsidianClient {
         }, FETCH_TIMEOUT_MS);
 
         if (!response.ok) {
+            // Guard against unbounded reads of potentially huge error responses
+            const contentLength = response.headers?.get('content-length');
+            const MAX_ERROR_BODY_SIZE = 1024 * 1024; // 1MB
+            if (contentLength && parseInt(contentLength, 10) > MAX_ERROR_BODY_SIZE) {
+                addLog(LogType.ERROR, `Obsidian API Error: ${response.status} (response body too large: ${contentLength} bytes)`, { traceId });
+                throw new Error('Error: Failed to write to daily note. Please check your Obsidian connection.');
+            }
             const errorText = await response.text();
             addLog(LogType.ERROR, `Obsidian API Error: ${response.status} ${errorText}`, { traceId });
             throw new Error('Error: Failed to write to daily note. Please check your Obsidian connection.');

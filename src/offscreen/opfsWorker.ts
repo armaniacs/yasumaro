@@ -17,14 +17,14 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL } from './schema.js';
 import { runMigrations, type MigrationEngine } from './migrations.js';
 
-import type { WorkerMessageType, WorkerRequestMessage, WorkerResponseMessage, WorkerLogMessage } from './opfsWorker/types.js';
+import type { WorkerRequestMessage, WorkerResponseMessage, WorkerLogMessage } from './opfsWorker/types.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 import { handleInsert, handleQuery, handleUpdate, handleHardDelete, handleToggleStar, handleGetCount, handleInsertBatch } from './opfsWorker/crudHandlers.js';
 import { handleSearch as handleSearchImpl, handleSearchFts as handleSearchFtsImpl, handleSearchLike as handleSearchLikeImpl } from './opfsWorker/searchHandlers.js';
 import { handleBackup, handleSerialize } from './opfsWorker/backupHandlers.js';
 import { handlePurgeOldRecords, handleContentPurge, handleClearAll } from './opfsWorker/purgeHandlers.js';
 import { handleAuditLogInsert, handleAuditLogQuery } from './opfsWorker/auditHandlers.js';
-import { handleGetStatus, handleFtsIndexSize, handleSqlExec, handleSqlQuery } from './opfsWorker/statusHandlers.js';
+import { handleGetStatus, handleFtsIndexSize } from './opfsWorker/statusHandlers.js';
 import { runMigrationV2, type MigrationContext } from './opfsWorker/migrationV2.js';
 import { type HandlerContext } from './opfsWorker/handlers.js';
 
@@ -87,6 +87,7 @@ let fts5Available = false;
 
 function postWorkerLog(level: WorkerLogMessage['level'], message: string, details?: Record<string, unknown>): void {
   try {
+    // WHY: `self` is typed as `Window` in non-Worker contexts; cast is needed for Worker global scope
     (self as unknown as DedicatedWorkerGlobalScope).postMessage({ __log: true, level, message, details } satisfies WorkerLogMessage);
   } catch {
     // Non-Worker global (e.g. jsdom's Window.postMessage requires a
@@ -329,6 +330,7 @@ function enqueue(task: QueueTask): void {
 self.onmessage = (e: MessageEvent<WorkerRequestMessage>) => {
   enqueue(async () => {
     const response = await handleRequest(e.data);
+    // WHY: `self` is typed as `Window` in non-Worker contexts; cast is needed for Worker global scope
     (self as unknown as DedicatedWorkerGlobalScope).postMessage(response);
   });
 };

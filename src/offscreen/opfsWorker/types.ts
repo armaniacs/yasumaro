@@ -4,8 +4,8 @@
  * Discriminated unions replace the old `type: string` for compile-time safety.
  */
 
-import type { BrowsingLogRecord, SearchResult, StorageQuery } from '../../utils/sqlite-types.js';
-import type { SqliteValue, SqliteRow } from '../sqliteEngine.js';
+import type { StorageQuery } from '../../utils/sqlite-types.js';
+import type { SqliteValue } from '../sqliteEngine.js';
 
 // ---------------------------------------------------------------------------
 // Message type constants

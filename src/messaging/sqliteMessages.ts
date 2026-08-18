@@ -8,7 +8,7 @@
  * 意図的にこの型定義の対象外としている（PBI: 2026-07-16-05）。
  */
 
-import type { BrowsingLogRecord, QueryOptions } from '../utils/sqlite-types.js';
+import type { QueryOptions } from '../utils/sqlite-types.js';
 
 export type SqliteMessage =
   | { type: 'SQLITE_HEALTH_CHECK'; payload?: never; traceId?: string }

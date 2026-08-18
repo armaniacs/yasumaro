@@ -133,7 +133,8 @@ export class SqliteClient {
         return { success: false, error: categorizeError(msg) };
       }
       recordSqliteSuccess();
-      return { success: true, data: transform ? transform(res as Extract<R, { success: true }>) : (res as unknown as T) };
+      // WHY: offscreen document returns serialized data that TypeScript cannot structurally validate
+      return { success: true, data: transform ? transform(res as Extract<R, { success: true }>) : (res as T) };
     } catch (error) {
       const msg = errorMessage(error);
       recordSqliteFailure(type, msg);
@@ -150,6 +151,7 @@ export class SqliteClient {
   async insertResult(record: BrowsingLogRecord, traceId: string = ''): Promise<CallResult<{ id: number }>> {
     return this.call<{ id: number }, OffscreenInsertResponse>(
       'SQLITE_INSERT',
+      // WHY: BrowsingLogRecord lacks index signature; must cast through unknown for offscreen payload
       record as unknown as Record<string, unknown>,
       (res) => ({ id: res.id }),
       traceId,
@@ -159,6 +161,7 @@ export class SqliteClient {
   async insertBatchResult(records: BrowsingLogRecord[]): Promise<CallResult<{ count: number }>> {
     return this.call<{ count: number }, OffscreenCountResponse>(
       'SQLITE_INSERT_BATCH',
+      // WHY: BrowsingLogRecord[] lacks index signature; must cast through unknown for offscreen payload
       { records: records as unknown as Record<string, unknown>[] },
       (res) => ({ count: res.count }),
     );
@@ -180,7 +183,7 @@ export class SqliteClient {
   async queryResult<T = BrowsingLogRecord>(q: StorageQuery = {}): Promise<CallResult<{ rows: T[]; total: number }>> {
     return this.call<{ rows: T[]; total: number }, OffscreenQueryResponse>(
       'SQLITE_QUERY',
-      q as unknown as Record<string, unknown>,
+      q as Record<string, unknown>,
       (res) => ({
         rows: (res.rows || []) as T[],
         total: res.total,
@@ -338,7 +341,7 @@ export class SqliteClient {
   async queryAuditLogResult(options: { limit?: number; offset?: number } = {}): Promise<CallResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>> {
     return this.call<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }, OffscreenQueryResponse>(
       'SQLITE_AUDIT_LOG_QUERY',
-      options as unknown as Record<string, unknown>,
+      options as Record<string, unknown>,
       (res) => ({
         rows: (res.rows || []) as Array<{ id: number; provider: string; url: string; created_at: number }>,
         total: res.total,

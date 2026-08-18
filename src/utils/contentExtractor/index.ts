@@ -15,7 +15,7 @@
 import { cleanseContent, countCleanseTargets, type CleanseOptions, type CleanseResult } from '../contentCleaner.js';
 import { logSanitize, logDebug } from '../logger.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../messaging/protocol.js';
-import { cleanseAISummaryContent, countAISummaryTargets, type AiSummaryCleanseOptions, type AiSummaryCleanseResult } from '../aiSummaryCleaner/index.js';
+import { cleanseAISummaryContent, countAISummaryTargets, type AiSummaryCleanseOptions } from '../aiSummaryCleaner/index.js';
 import { THRESHOLD_DEFAULTS } from '../aiSummaryCleaner/rules.js';
 import { deriveCleansedReason } from './cleansedReason.js';
 import { deduplicateContent } from '../contentDeduplicator.js';
@@ -160,7 +160,6 @@ export function extractMainContent(
 
             if (cleanseEnabled) {
                 // DOMを直接操作しないようにクローンを作成
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const clone = candidates[0].cloneNode(true) as Element;
 
                 // クレンジング前のバイト数を計算（textContentベースで統一）

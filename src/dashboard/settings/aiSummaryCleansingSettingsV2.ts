@@ -128,7 +128,8 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_ENABLED] = settings.enabled;
     for (const rule of CLEANSING_RULES) {
         (currentSettings as Record<string, boolean>)[rule.storageKey] =
-            (settings as unknown as Record<string, boolean>)[ruleOptionKey(rule)];
+        // WHY: dynamic property access on settings object; rule keys are generated at runtime
+        (settings as unknown as Record<string, boolean>)[ruleOptionKey(rule)];
     }
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] = settings.linkRatioThreshold;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD] = settings.shortTextThreshold;
@@ -163,6 +164,7 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     // ruleHtmlId()/ruleOptionKey() instead of 32 named lookups + 32 assignments.
     for (const rule of CLEANSING_RULES) {
         const checkbox = document.getElementById(ruleHtmlId(rule)) as HTMLInputElement | null;
+        // WHY: dynamic property access on settings object; rule keys are generated at runtime
         if (checkbox) checkbox.checked = (settings as unknown as Record<string, boolean>)[ruleOptionKey(rule)];
     }
     if (whitelistExtractionCheckbox) whitelistExtractionCheckbox.checked = settings.whitelistExtractionEnabled;

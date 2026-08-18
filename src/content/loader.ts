@@ -13,7 +13,6 @@ const _errMsg = (e: unknown): string => e instanceof Error ? e.message : String(
 
 // Type-only import to establish graphify edge between content script and
 // the service worker's message type definitions (PBI-02-3).
-import type { CheckDomainMessage } from '../background/messageTypes.js';
 import { shouldSkipUrl, extractDomain, isDomainInList } from './urlSkipper.js';
 
 // Content Script entry point runs without ESM module support, so we cannot

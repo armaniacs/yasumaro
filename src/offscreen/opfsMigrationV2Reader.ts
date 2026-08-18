@@ -64,7 +64,7 @@ export async function readOldDbRecords(): Promise<BrowsingLogRecord[]> {
   const sqlite3Module = await (SQLiteESMFactory as (opts?: object) => Promise<unknown>)();
 
   // wa-sqlite's named exports: Factory builds the API; constants live at module level.
-  // Cast through unknown to avoid the structural overlap check for incompatible types.
+  // WHY: wa-sqlite module has dynamic exports not in TypeScript types; cast is needed for WASM API access
   const SQLite = SQLiteModule as unknown as {
     Factory: (module: unknown) => {
       open_v2(filename: string, flags: number, vfs: string): Promise<number>;
@@ -95,6 +95,7 @@ export async function readOldDbRecords(): Promise<BrowsingLogRecord[]> {
     (vfsInstance as { hasAsyncMethod: () => boolean }).hasAsyncMethod = () => false;
   }
 
+  // WHY: wa-sqlite VFS registration API not in TypeScript types; dynamic method check at runtime
   const vfsApi = sqlite3 as unknown as {
     vfs_register?: (vfs: unknown, makeDefault?: boolean) => void;
     registerVFS?: (vfs: unknown, makeDefault?: boolean) => void;

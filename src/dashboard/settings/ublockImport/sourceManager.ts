@@ -7,7 +7,7 @@ import { parseUblockFilterListWithErrors, isValidString } from '../../../utils/u
 import { StorageKeys, saveSettings, getSettings } from '../../../utils/storage.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { rebuildRulesFromSources } from './rulesBuilder.js';
-import type { Source, UblockRules } from '../../../utils/types.js';
+import type { Source } from '../../../utils/types.js';
 
 interface ReloadResult {
   sources: Source[];
@@ -18,6 +18,24 @@ interface SaveResult {
   sources: Source[];
   action: string;
   ruleCount: number;
+}
+
+/**
+ * Extract only the fields that storage consumers read from merged rules.
+ * `blockRules`/`exceptionRules` are `string[]` in RebuiltRules but `UblockRule[]`
+ * in UblockRules — storing them would require a type-unsafe cast. Consumers
+ * prefer `blockDomains`/`exceptionDomains` when present, so we only persist those.
+ */
+function buildRulesPayload(mergedRules: ReturnType<typeof rebuildRulesFromSources>): {
+  blockDomains: string[];
+  exceptionDomains: string[];
+  metadata: { importedAt: number; ruleCount: number };
+} {
+  return {
+    blockDomains: mergedRules.blockDomains,
+    exceptionDomains: mergedRules.exceptionDomains,
+    metadata: mergedRules.metadata,
+  };
 }
 
 /**
@@ -48,7 +66,7 @@ export async function deleteSource(index: number, renderCallback?: (sources: Sou
 
   await saveSettings({
     [StorageKeys.UBLOCK_SOURCES]: sources,
-    [StorageKeys.UBLOCK_RULES]: mergedRules as unknown as UblockRules,
+    [StorageKeys.UBLOCK_RULES]: buildRulesPayload(mergedRules),
     [StorageKeys.UBLOCK_FORMAT_ENABLED]: sources.length > 0
   }, true);
 
@@ -110,7 +128,7 @@ export async function reloadSource(index: number, fetchFromUrlCallback: (url: st
 
   await saveSettings({
     [StorageKeys.UBLOCK_SOURCES]: sources,
-    [StorageKeys.UBLOCK_RULES]: mergedRules as unknown as UblockRules
+    [StorageKeys.UBLOCK_RULES]: buildRulesPayload(mergedRules)
   }, true);
 
   return {
@@ -173,7 +191,7 @@ export async function saveUblockSettings(text: string, url: string | null = null
 
   await saveSettings({
     [StorageKeys.UBLOCK_SOURCES]: sources,
-    [StorageKeys.UBLOCK_RULES]: mergedRules as unknown as UblockRules,
+    [StorageKeys.UBLOCK_RULES]: buildRulesPayload(mergedRules),
     [StorageKeys.UBLOCK_FORMAT_ENABLED]: true
   }, true);
 
