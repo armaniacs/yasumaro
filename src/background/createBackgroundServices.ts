@@ -83,7 +83,7 @@ export interface BackgroundServicesComposition extends BackgroundServices {
 export function createBackgroundServices(): BackgroundServicesComposition {
   const sessionStore = new SessionStore();
   const recordingCache = new RecordingCacheInstance(new SessionStoreRecordingCacheStore(sessionStore));
-  const headerDetector = new HeaderDetector();
+  const headerDetector = new HeaderDetector(recordingCache);
 
   // Wires the pending-write queue's storage adapter explicitly, instead of the
   // module constructing a ChromeStorageAdapter at import time. Tests inject an
