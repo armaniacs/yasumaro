@@ -1,5 +1,6 @@
 import { checkPrivacy, PrivacyInfo } from '../utils/privacyChecker.js';
 import type { RecordingCacheInstance } from './recordingCache.js';
+import { RecordingCache } from './recordingCache.js';
 import { logInfo, logDebug, logError, ErrorCode } from '../utils/logger.js';
 import { hashUrl } from '../utils/crypto/index.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
@@ -127,7 +128,7 @@ export class HeaderDetector {
         // バッジ更新失敗は無視（非重要なUI操作）
       });
 
-      const cacheSize = this.cache?.getPrivacyCacheSize() ?? 0;
+      const cacheSize = this.cache ? this.cache.getPrivacyCacheSize() : RecordingCache.getPrivacyCacheSize();
       (async () => {
         const urlHash = await hashUrl(details.url);
         await logDebug('Privacy info cached', { urlHash, isPrivate: privacyInfo.isPrivate, cacheSize, source: 'headerDetector' });
@@ -151,11 +152,9 @@ export class HeaderDetector {
    * キャッシュサイズが上限を超えたら最も古いエントリを削除
    */
   private async cachePrivacyInfo(url: string, info: PrivacyInfo, tabId?: number): Promise<void> {
-    // キャッシュサイズ制限チェック — DI 未注入時はスキップ（テスト互換）
-    if (this.cache && this.cache.getPrivacyCacheSize() >= MAX_CACHE_SIZE) {
+    const cacheSize = this.cache ? this.cache.getPrivacyCacheSize() : RecordingCache.getPrivacyCacheSize();
+    if (cacheSize >= MAX_CACHE_SIZE) {
       this.evictOldestEntry();
-    } else if (!this.cache) {
-      // フォールバック: キャッシュ未注入時はチェックをスキップ
     }
 
     // URL正規化してインメモリキャッシュに保存
@@ -163,6 +162,9 @@ export class HeaderDetector {
     if (this.cache) {
       this.cache.setPrivacyCacheEntry(normalizedUrl, info);
       this.cache.scheduleCacheSave();
+    } else {
+      RecordingCache.setPrivacyCacheEntry(normalizedUrl, info);
+      RecordingCache.scheduleCacheSave();
     }
 
     // Service Worker 再起動後もプライバシー情報を失わないよう session storage にも保存
@@ -216,7 +218,7 @@ export class HeaderDetector {
    * 最も古いキャッシュエントリを削除する（LRU実装）
    */
   private async evictOldestEntry(): Promise<void> {
-    const cache = this.cache?.getPrivacyCache() ?? null;
+    const cache = this.cache ? this.cache.getPrivacyCache() : RecordingCache.getPrivacyCache();
     if (!cache || cache.size === 0) {
       return;
     }
