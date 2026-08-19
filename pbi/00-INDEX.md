@@ -39,6 +39,19 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-19 コードレビュー指摘対応でアーカイブ済み（10件）
+
+- 2026-08-19-00-backlog.md (コードレビュー指摘5件の順位付けバックログ)
+- 2026-08-19-01-fix-localhost-port-validation.md (isLocalhostAddressがport未指定時にtrueを返すよう修正済み)
+- 2026-08-19-02-fix-prompt-safecontext.md (isInSafeContextの常時falseバグを修正、safeMarkersロジックを実装済み)
+- 2026-08-19-03-fix-dashboard-sqlite-types.md (DashboardSqliteMessageのpayloadをDashboardSqliteRequest共用体型に置換済み)
+- 2026-08-19-04-fix-encrypt-base64.md (encrypt()の危険なbtoaを安全なbytesToBase64に置換済み)
+- 2026-08-19-05-fix-visit-rate-limiter.md (TTLベースのエビクションを追加済み)
+- 2026-08-19-06-fix-visit-rate-limiter-ttl-sweep.md (TTLスイープを毎回実行しMAX_ENTRIESは安全弁に留める)
+- 2026-08-19-07-fix-prompt-safecontext-bypass.md (HTML属性値内を安全とみなさないようにsafe-context判定を強化)
+- 2026-08-19-08-fix-malicious-usage-dangerlevel-ignored.md (LOW危険度検知を4箇所の呼び出し元で構造化ログに記録)
+- 2026-08-19-09-improve-pbi-dod-enforcement.md (PBI DoDのテスト存在確認をCIで自動検証)
+
 ### 2026-08-18 型安全性強化でアーカイブ済み（6件）
 
 - 2026-08-18-06-refactor-optional-property-strictness.md (`exactOptionalPropertyTypes`/`noImplicitReturns` を tsconfig.json に追加、発生エラー93件を53ファイルで全件解消)
