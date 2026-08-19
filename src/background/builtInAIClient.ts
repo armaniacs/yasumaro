@@ -168,6 +168,14 @@ export class BuiltInAIClient {
             addLog(LogType.WARN, 'Content blocked due to high danger level', { warnings: sanitizeResult.warnings, source: 'BuiltInAI' });
             return { success: false, error: 'Content contains potentially dangerous patterns' };
         }
+        if (sanitizeResult.dangerLevel === DangerLevel.LOW) {
+            addLog(LogType.WARN, 'Low-risk prompt injection detected in built-in AI input', {
+                warnings: sanitizeResult.warnings,
+                source: 'BuiltInAI',
+                dangerLevel: sanitizeResult.dangerLevel,
+                category: 'generic_term',
+            });
+        }
 
         const staticMaxChars = getProviderMaxTokens('localai');
 

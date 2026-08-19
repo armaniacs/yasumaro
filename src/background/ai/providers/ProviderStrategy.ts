@@ -105,7 +105,11 @@ export abstract class AIProviderStrategy {
     ): { blocked: boolean; sanitized: string; warnings: string[] } {
         const { sanitized, warnings, dangerLevel } = sanitizePromptContent(content);
         if (warnings.length > 0) {
-            addLog(LogType.WARN, `[${providerName}] Prompt injection detected: ${warnings.join('; ')}`, { traceId });
+            addLog(LogType.WARN, `[${providerName}] Prompt injection detected: ${warnings.join('; ')}`, {
+                traceId,
+                dangerLevel,
+                category: dangerLevel === 'low' ? 'generic_term' : 'refined_injection',
+            });
         }
         if (dangerLevel === 'high') {
             const cause = warnings.length > 0 ? warnings.join('; ') : 'High risk content detected';

@@ -187,6 +187,14 @@ export class PrivacyPipeline {
       });
       return { returnEarly: true, result: { summary: 'Error: Content blocked due to potential security risk.', originalTokens } };
     }
+    if (localSanitizeResult.dangerLevel === DangerLevel.LOW) {
+      addLog(LogType.WARN, 'Local AI low-risk prompt injection detected', {
+        warnings: localSanitizeResult.warnings,
+        traceId,
+        dangerLevel: localSanitizeResult.dangerLevel,
+        category: 'generic_term',
+      });
+    }
 
     const localCallStart = performance.now();
     const localResult = await this.aiService.generateSummary(localSanitizeResult.sanitized, { mode: 'local_only', traceId });
@@ -252,6 +260,12 @@ export class PrivacyPipeline {
       if (sanitizeResult.dangerLevel === DangerLevel.HIGH) {
         addLog(LogType.WARN, 'AI summary sanitized - high danger content detected', {
           warnings: sanitizeResult.warnings,
+        });
+      } else if (sanitizeResult.dangerLevel === DangerLevel.LOW) {
+        addLog(LogType.WARN, 'AI summary low-risk prompt injection detected', {
+          warnings: sanitizeResult.warnings,
+          dangerLevel: sanitizeResult.dangerLevel,
+          category: 'generic_term',
         });
       }
 

@@ -56,6 +56,8 @@ import {
     deletePrompt,
     setActivePrompt
 } from '../customPromptUtils.js';
+import { addLog } from '../logger.js';
+import { sanitizePromptContent } from '../promptSanitizer.js';
 
 describe('customPromptUtils', () => {
 
@@ -289,6 +291,25 @@ describe('customPromptUtils', () => {
             const prompt = 'a'.repeat(5000);
             const result = validatePrompt(prompt);
             expect(result.valid).toBe(true);
+        });
+
+        test('LOW危険度検知時は警告ログを出力して valid: true を返す', () => {
+            const mocked = vi.mocked(sanitizePromptContent);
+            mocked.mockReturnValueOnce({
+                dangerLevel: 'low',
+                warnings: ['Detected potential command: "system"'],
+            });
+
+            const result = validatePrompt('Summarize: {{content}}');
+            expect(result.valid).toBe(true);
+            expect(addLog).toHaveBeenCalledWith(
+                'warn',
+                'Low-risk prompt injection detected in custom prompt',
+                expect.objectContaining({
+                    dangerLevel: 'low',
+                    category: 'generic_term',
+                })
+            );
         });
     });
 

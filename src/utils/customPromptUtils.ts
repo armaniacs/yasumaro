@@ -249,6 +249,13 @@ export function validatePrompt(prompt: string): { valid: boolean; error?: string
             error: `Potentially unsafe prompt: ${warnings.join('; ')}` 
         };
     }
+    if (dangerLevel === DangerLevel.LOW) {
+        addLog(LogType.WARN, 'Low-risk prompt injection detected in custom prompt', {
+            warnings,
+            dangerLevel,
+            category: 'generic_term',
+        });
+    }
 
     return { valid: true };
 }

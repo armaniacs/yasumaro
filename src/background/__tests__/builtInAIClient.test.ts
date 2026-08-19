@@ -29,6 +29,7 @@ vi.mock('../../utils/promptSanitizer.js', () => ({
 
 import { BuiltInAIClient } from '../builtInAIClient.js';
 import * as promptSanitizerModule from '../../utils/promptSanitizer.js';
+import { addLog } from '../../utils/logger.js';
 
 const { sanitizePromptContent } = vi.mocked(promptSanitizerModule);
 
@@ -237,6 +238,27 @@ describe('BuiltInAIClient', () => {
             expect(result.success).toBe(false);
             expect(result.error).toContain('dangerous patterns');
             expect(mockLanguageModel.create).not.toHaveBeenCalled();
+        });
+
+        test('プロンプトインジェクション LOW 時は警告ログを出力して処理を続行する', async () => {
+            sanitizePromptContent.mockReturnValueOnce({
+                sanitized: 'sanitized content',
+                warnings: ['Detected potential command: "system"'],
+                dangerLevel: 'low'
+            });
+            mockLanguageModel.create.mockResolvedValueOnce(createMockSession());
+
+            await client.summarize('content with generic term');
+
+            expect(addLog).toHaveBeenCalledWith(
+                'warn',
+                'Low-risk prompt injection detected in built-in AI input',
+                expect.objectContaining({
+                    source: 'BuiltInAI',
+                    dangerLevel: 'low',
+                    category: 'generic_term',
+                })
+            );
         });
 
         test('入力を aiLimits.ts の上限（16,384文字）に切り詰める', async () => {

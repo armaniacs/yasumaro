@@ -337,6 +337,27 @@ describe('sanitizeContent', () => {
         expect(result.blocked).toBe(false);
         expect(result.sanitized).toBe('safe content');
     });
+
+    test('dangerLevel=low時は構造化ログにcategory=generic_termを含める', () => {
+        sanitizePromptContentMock.mockReturnValue({
+            sanitized: 'sanitized',
+            warnings: ['Detected potential command: "system"'],
+            dangerLevel: 'low'
+        });
+        const settings = {} as Settings;
+        const provider = new TestProvider(settings);
+        provider.callSanitizeContent('content with generic term', 'test-provider', 'trace-2');
+
+        expect(addLogMock).toHaveBeenCalledWith(
+            'warn',
+            expect.stringContaining('Prompt injection detected'),
+            expect.objectContaining({
+                traceId: 'trace-2',
+                dangerLevel: 'low',
+                category: 'generic_term',
+            })
+        );
+    });
 });
 
 describe('mapConnectionError', () => {

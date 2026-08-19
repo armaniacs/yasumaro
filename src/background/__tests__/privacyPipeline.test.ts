@@ -210,6 +210,55 @@ describe('PrivacyPipeline', () => {
       expect(result.summary).toBe('1行目');
     });
 
+    it('should log low-risk generic-term detections from local input sanitization', async () => {
+      const pipeline = new PrivacyPipeline(mockSettings, mockAiService, mockSanitizers);
+
+      vi.mocked(promptSanitizerModule.sanitizePromptContent)
+        .mockReturnValueOnce({
+          sanitized: 'input',
+          warnings: ['Detected potential command: "system"'],
+          dangerLevel: 'low'
+        })
+        .mockReturnValueOnce({ sanitized: 'Local summary', warnings: [], dangerLevel: 'low' })
+        .mockReturnValueOnce({ sanitized: 'Cloud summary', warnings: [], dangerLevel: 'low' });
+
+      await pipeline.process('content', { traceId: 'trace-low-1' });
+
+      expect(addLog).toHaveBeenCalledWith(
+        LogType.WARN,
+        'Local AI low-risk prompt injection detected',
+        expect.objectContaining({
+          traceId: 'trace-low-1',
+          dangerLevel: 'low',
+          category: 'generic_term',
+        })
+      );
+    });
+
+    it('should log low-risk generic-term detections from cloud output sanitization', async () => {
+      const pipeline = new PrivacyPipeline(mockSettings, mockAiService, mockSanitizers);
+
+      vi.mocked(promptSanitizerModule.sanitizePromptContent)
+        .mockReturnValueOnce({ sanitized: 'input', warnings: [], dangerLevel: 'low' })
+        .mockReturnValueOnce({ sanitized: 'Local summary', warnings: [], dangerLevel: 'low' })
+        .mockReturnValueOnce({
+          sanitized: 'Cloud summary',
+          warnings: ['Detected potential command: "update"'],
+          dangerLevel: 'low'
+        });
+
+      await pipeline.process('content');
+
+      expect(addLog).toHaveBeenCalledWith(
+        LogType.WARN,
+        'AI summary low-risk prompt injection detected',
+        expect.objectContaining({
+          dangerLevel: 'low',
+          category: 'generic_term',
+        })
+      );
+    });
+
     it('should return Summary not available when content is empty', async () => {
       const pipeline = new PrivacyPipeline(mockSettings, mockAiService, mockSanitizers);
       const result = await pipeline.process('');
