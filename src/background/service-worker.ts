@@ -128,7 +128,11 @@ const handleManualRecordForContextMenu = async (
 // ============================================================================
 // Tab Event Handlers
 // ============================================================================
-const _tabHandlers = createTabEventHandlers({ tabCache, autoSavedBadgeTabs });
+const _tabHandlers = createTabEventHandlers({
+  tabCache,
+  autoSavedBadgeTabs,
+  getPrivacyCache: () => services.recordingCache.getPrivacyCache(),
+});
 export const handleTabRemoved = _tabHandlers.handleTabRemoved;
 export const handleTabActivated = _tabHandlers.handleTabActivated;
 export const handleTabUpdated = _tabHandlers.handleTabUpdated;
@@ -136,7 +140,7 @@ export const handleTabUpdated = _tabHandlers.handleTabUpdated;
 // ============================================================================
 // Lifecycle Handlers
 // ============================================================================
-const _lifecycleHandlers = createLifecycleHandlers({ isCacheInitialized, rateLimiter, sqliteClient });
+const _lifecycleHandlers = createLifecycleHandlers({ isCacheInitialized, rateLimiter, sqliteClient, recordingCache: services.recordingCache });
 export const handleInstalled = _lifecycleHandlers.handleInstalled;
 export const handleStartup = _lifecycleHandlers.handleStartup;
 
@@ -194,7 +198,7 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     chrome.runtime.onStartup.addListener(handleStartup);
 
     if (chrome.storage?.session) {
-      void restoreRecordingCacheOnWake();
+      void restoreRecordingCacheOnWake(services.recordingCache);
     }
 
     chrome.runtime.onInstalled.addListener(_registerManualRecordContextMenu);
