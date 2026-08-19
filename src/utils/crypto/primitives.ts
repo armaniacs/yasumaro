@@ -144,12 +144,12 @@ export async function encrypt(plaintext: string, key: CryptoKey): Promise<Encryp
         data
     );
 
-    const ciphertextArray = Array.from(new Uint8Array(ciphertextBuffer));
-    const ivArray = Array.from(iv);
+    const ciphertextArray = new Uint8Array(ciphertextBuffer);
+    const ivBytes = iv;
 
     return {
-        ciphertext: btoa(String.fromCharCode(...ciphertextArray)),
-        iv: btoa(String.fromCharCode(...ivArray))
+        ciphertext: bytesToBase64(ciphertextArray),
+        iv: bytesToBase64(ivBytes)
     };
 }
 
