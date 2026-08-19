@@ -46,11 +46,10 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
             const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
             let privacyInfo: PrivacyInfo | undefined;
             const cache = ctx.getPrivacyCache ? ctx.getPrivacyCache() : null;
-            // Prefer DI cache, then static cacheState direct read for test compatibility
-            const primaryCache = cache ?? (RecordingCache.cacheState.privacyCache as Map<string, PrivacyInfo> | null) ?? RecordingCache.getPrivacyCache();
+            const primaryCache = cache ?? RecordingCache.getPrivacyCache();
             privacyInfo = primaryCache?.get(normalizedUrl);
             if (!privacyInfo) {
-                const fallbackCache = RecordingCache.getPrivacyCache() ?? (RecordingCache.cacheState.privacyCache as Map<string, PrivacyInfo> | null);
+                const fallbackCache = RecordingCache.getPrivacyCache();
                 if (fallbackCache !== primaryCache) {
                     privacyInfo = fallbackCache?.get(normalizedUrl);
                 }
@@ -81,10 +80,10 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
         const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
         let privacyInfo2: PrivacyInfo | undefined;
         const cache2 = ctx.getPrivacyCache ? ctx.getPrivacyCache() : null;
-        const primaryCache2 = cache2 ?? (RecordingCache.cacheState.privacyCache as Map<string, PrivacyInfo> | null) ?? RecordingCache.getPrivacyCache();
+        const primaryCache2 = cache2 ?? RecordingCache.getPrivacyCache();
         privacyInfo2 = primaryCache2?.get(normalizedUrl);
         if (!privacyInfo2) {
-            const fallbackCache2 = RecordingCache.getPrivacyCache() ?? (RecordingCache.cacheState.privacyCache as Map<string, PrivacyInfo> | null);
+            const fallbackCache2 = RecordingCache.getPrivacyCache();
             if (fallbackCache2 !== primaryCache2) {
                 privacyInfo2 = fallbackCache2?.get(normalizedUrl);
             }
