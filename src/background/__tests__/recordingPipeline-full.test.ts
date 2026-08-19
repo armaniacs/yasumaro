@@ -1,6 +1,6 @@
 // src/background/__tests__/recordingPipeline-full.test.ts
 import { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
-import { RecordingCache } from '../recordingCache.js';
+import { RecordingCache } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
 import * as storage from '../../utils/storage.js';
 import * as domainUtils from '../../utils/domainUtils.js';

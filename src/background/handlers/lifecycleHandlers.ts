@@ -5,7 +5,6 @@
  * Handles install, update, and startup lifecycle events.
  */
 import type { RecordingCacheInstance } from '../recordingCache.js';
-import { RecordingCache } from '../recordingCache.js';
 import { getSettings, updateDomainFilterCache } from '../../utils/storage.js';
 import { migrateLegacyPrivacyConsent } from '../../popup/privacyConsent.js';
 import { cleanupOldDeniedEntries, cleanupDismissedEntries } from '../../utils/permissionManager.js';
@@ -34,9 +33,8 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
         } else if (details.reason === 'update') {
             logInfo(`Service Worker updated from ${details.previousVersion}`, {}, 'service-worker');
 
-            // 更新時はキャッシュをクリアして再初期化 — DIと静的Facadeの両方を呼ぶ（移行期間の後方互換）
+            // 更新時はキャッシュをクリアして再初期化
             if (ctx.recordingCache) ctx.recordingCache.invalidateSettingsCache();
-            RecordingCache.invalidateSettingsCache();
             const settings = await getSettings();
             await updateDomainFilterCache(settings);
 
@@ -88,16 +86,14 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
         }
 
         try {
-            // 関連キャッシュを無効化して再読み込みを強制 — 両方を呼ぶ（移行期間）
+            // 関連キャッシュを無効化して再読み込みを強制
             if (ctx.recordingCache) await ctx.recordingCache.invalidateSettingsCache();
-            await RecordingCache.invalidateSettingsCache();
             const settings = await getSettings();
             await updateDomainFilterCache(settings);
             ctx.isCacheInitialized.value = true;
 
-            // Reload recording cache from session — 両方を呼ぶ
+            // Reload recording cache from session
             if (ctx.recordingCache) await ctx.recordingCache.loadCacheFromSession();
-            await RecordingCache.loadCacheFromSession();
 
             // Reload rate limiter from session
             await ctx.rateLimiter.reload();
@@ -141,9 +137,5 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
 export async function restoreRecordingCacheOnWake(cache?: RecordingCacheInstance | null): Promise<void> {
     if (cache) {
         await cache.loadCacheFromSession();
-        return;
     }
-    // フォールバック: 旧静的Facade経由（移行期間）
-    const { RecordingCache } = await import('../recordingCache.js');
-    await RecordingCache.loadCacheFromSession();
 }

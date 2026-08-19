@@ -64,13 +64,12 @@ import { mapToBrowsingLogRecord } from './mappers/BrowsingLogRecordMapper.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { Mutex } from '../../utils/Mutex.js';
-import { RecordingCache } from '../recordingCache.js';
 /**
  * Dependencies required to build a RecordingPipeline instance.
  */
 export interface RecordingPipelineDeps {
   getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
-  getSettingsWithCache?: () => Promise<Settings>;
+  getSettingsWithCache: () => Promise<Settings>;
   obsidian: ObsidianClient;
   aiService: AIService | null;
   sqliteClient: SqliteClient | null;
@@ -167,10 +166,10 @@ export class RecordingPipeline {
     sqliteClient: SqliteClient | null = null,
     offlineNetworkQueue: OfflineNetworkQueue | null = null,
     urlStore: UrlStore | undefined = undefined,
-    getSettingsWithCache?: () => Promise<Settings>
+    getSettingsWithCache: () => Promise<Settings>
   ) {
     this.getPrivacyInfoWithCache = getPrivacyInfoWithCache;
-    this.getSettingsWithCache = getSettingsWithCache ?? (() => RecordingCache.getSettingsWithCache());
+    this.getSettingsWithCache = getSettingsWithCache;
     this.obsidian = obsidian;
     this.aiService = aiService;
     this.sqliteClient = sqliteClient;

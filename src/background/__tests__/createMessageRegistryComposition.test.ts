@@ -31,10 +31,6 @@ vi.mock('../aiTestProgressNotifier.js', () => ({
 vi.mock('../sessionAlarmsManager.js', () => ({
   updateActivity: hoisted.updateActivity,
 }));
-vi.mock('../recordingCache.js', () => ({
-  RecordingCache: { getPrivacyCache: hoisted.getPrivacyCache },
-}));
-
 import { createMessageRegistryComposition } from '../createMessageRegistryComposition.js';
 
 const registeredTypes = [
@@ -80,6 +76,7 @@ function makeServices() {
       generateWeeklySummary: vi.fn().mockResolvedValue(true),
       generateMonthlySummary: vi.fn().mockResolvedValue(true),
     },
+    recordingCache: { getPrivacyCache: hoisted.getPrivacyCache },
   } as never;
 }
 
@@ -94,7 +91,7 @@ describe('createMessageRegistryComposition', () => {
     expect(Object.keys(composition.handlers).sort()).toEqual([...registeredTypes].sort());
   });
 
-  it('wires GET_PRIVACY_CACHE handler to RecordingCache.getPrivacyCache', async () => {
+  it('wires GET_PRIVACY_CACHE handler to services.recordingCache.getPrivacyCache', async () => {
     const composition = createMessageRegistryComposition({
       services: makeServices(),
       dashboardSqliteHandler: vi.fn(),

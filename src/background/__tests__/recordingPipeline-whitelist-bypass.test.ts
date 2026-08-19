@@ -1,7 +1,7 @@
 // src/background/__tests__/recordingPipeline-whitelist-bypass.test.ts
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
-import { RecordingCache } from '../recordingCache.js';
+import { RecordingCache } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIService } from '../ai/AIService.js';

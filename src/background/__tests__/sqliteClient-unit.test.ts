@@ -280,22 +280,25 @@ describe('SqliteClient — unit tests', () => {
   });
 
   describe('init()', () => {
-    it('returns true on success', async () => {
+    it('returns success result on init', async () => {
       mockTransport = createMockTransport({ success: true });
       client = new SqliteClient(mockTransport);
 
       const result = await client.init();
 
-      expect(result).toBe(true);
+      expect(result).toEqual({ success: true, data: true });
     });
 
-    it('returns false on failure', async () => {
+    it('returns classified failure on init failure', async () => {
       mockTransport = createMockTransport({ success: false, error: 'Init failed' });
       client = new SqliteClient(mockTransport);
 
       const result = await client.init();
 
-      expect(result).toBe(false);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.message).toContain('Init failed');
+      }
     });
   });
 

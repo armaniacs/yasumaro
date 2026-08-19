@@ -167,10 +167,10 @@ vi.mock('../recordingCache.js', () => {
         getPrivacyCacheSize = vi.fn().mockReturnValue(0);
         setPrivacyCacheEntry = vi.fn();
         scheduleCacheSave = vi.fn();
-        loadCacheFromSession = vi.fn().mockResolvedValue(undefined);
-        invalidateSettingsCache = vi.fn();
-        invalidatePrivacyCache = vi.fn().mockResolvedValue(undefined);
-        invalidateUrlCache = vi.fn();
+        loadCacheFromSession = vi.fn().mockImplementation(() => RecordingCacheMock.loadCacheFromSession());
+        invalidateSettingsCache = vi.fn().mockImplementation(() => RecordingCacheMock.invalidateSettingsCache());
+        invalidatePrivacyCache = vi.fn().mockImplementation(() => RecordingCacheMock.invalidatePrivacyCache());
+        invalidateUrlCache = vi.fn().mockImplementation(() => RecordingCacheMock.invalidateUrlCache());
   }
   return {
     RecordingCache: RecordingCacheMock,

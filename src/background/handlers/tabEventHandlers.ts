@@ -7,7 +7,6 @@
 import { BADGE_COLORS } from '../../constants/appConstants.js';
 import { HeaderDetector } from '../headerDetector.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
-import { RecordingCache } from '../recordingCache.js';
 import { TabCache } from '../tabCache.js';
 import { logError, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
@@ -46,14 +45,7 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
             const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
             let privacyInfo: PrivacyInfo | undefined;
             const cache = ctx.getPrivacyCache ? ctx.getPrivacyCache() : null;
-            const primaryCache = cache ?? RecordingCache.getPrivacyCache();
-            privacyInfo = primaryCache?.get(normalizedUrl);
-            if (!privacyInfo) {
-                const fallbackCache = RecordingCache.getPrivacyCache();
-                if (fallbackCache !== primaryCache) {
-                    privacyInfo = fallbackCache?.get(normalizedUrl);
-                }
-            }
+            privacyInfo = cache?.get(normalizedUrl);
             if (privacyInfo?.isPrivate) {
                 chrome.action.setBadgeText({ text: '!' });
                 chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string });
@@ -78,17 +70,9 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
         // ページ遷移完了時は自動保存バッジをクリア（新しいページのため）
         ctx.autoSavedBadgeTabs.delete(tabId);
         const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
-        let privacyInfo2: PrivacyInfo | undefined;
-        const cache2 = ctx.getPrivacyCache ? ctx.getPrivacyCache() : null;
-        const primaryCache2 = cache2 ?? RecordingCache.getPrivacyCache();
-        privacyInfo2 = primaryCache2?.get(normalizedUrl);
-        if (!privacyInfo2) {
-            const fallbackCache2 = RecordingCache.getPrivacyCache();
-            if (fallbackCache2 !== primaryCache2) {
-                privacyInfo2 = fallbackCache2?.get(normalizedUrl);
-            }
-        }
-        const privacyInfo = privacyInfo2;
+        let privacyInfo: PrivacyInfo | undefined;
+        const cache = ctx.getPrivacyCache ? ctx.getPrivacyCache() : null;
+        privacyInfo = cache?.get(normalizedUrl);
         if (privacyInfo?.isPrivate) {
             chrome.action.setBadgeText({ text: '!', tabId });
             chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string, tabId });

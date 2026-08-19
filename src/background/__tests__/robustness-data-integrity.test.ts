@@ -5,7 +5,7 @@
  */
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { RecordingCache } from '../recordingCache.ts';
+import { RecordingCache } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.ts';
 import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps } from '../../utils/storage.ts';
 import { PrivacyPipeline } from '../privacyPipeline.ts';

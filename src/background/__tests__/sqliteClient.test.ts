@@ -45,23 +45,29 @@ describe('SqliteClient', () => {
       client = new SqliteClient(mockTransport);
 
       const result = await client.init();
-      expect(result).toBe(true);
+      expect(result).toEqual({ success: true, data: true });
     });
 
-    it('returns false on failure', async () => {
+    it('returns classified failure on transport failure', async () => {
       mockTransport = createMockTransport(async () => ({ success: false, error: 'init failed' } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
       const result = await client.init();
-      expect(result).toBe(false);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.message).toContain('init failed');
+      }
     });
 
-    it('returns false on exception', async () => {
+    it('returns classified failure on exception', async () => {
       mockTransport = createMockTransport(new Error('connection lost'));
       client = new SqliteClient(mockTransport);
 
       const result = await client.init();
-      expect(result).toBe(false);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.kind).toBe('unknown');
+      }
     });
   });
 

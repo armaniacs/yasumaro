@@ -7,6 +7,7 @@
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { tokenExempt } from '../messaging/sqliteOperationSecurity.js';
+import { categorizeError } from '../messaging/sqliteRpcClient.js';
 import { bytesToBase64, base64ToBytes } from '../utils/crypto/index.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import {
@@ -41,6 +42,10 @@ const CONFIRM_TOKEN_KEY = 'dashboardSqliteConfirmToken';
  * The success side is `{ data }` rather than `{ ok: true, data }` to match the
  * `{ ... } | { error }` functions that PBI-19/21 already migrated; adding an
  * `ok` discriminant here would have made a third idiom instead of removing one.
+ *
+ * PBI-05: the error strings themselves now come from the same
+ * `categorizeError()` that SqliteClient uses, so dashboard callers and the
+ * Service Worker agree on wording and retry hints.
  */
 export type ServiceResult<T> = { data: T } | { error: string };
 
@@ -124,16 +129,31 @@ async function callDashboard<T extends DashboardSqliteRequest, R>(
   decode: (response: Extract<DashboardSqliteResponseFor<T['subtype']>, { success: true }>) => R,
   defaultErrorMessage: string,
 ): Promise<ServiceResult<R>> {
+  let response: DashboardSqliteResponseFor<T['subtype']>;
   try {
-    const response = await sendDashboardMessage(payload);
-    if (response.success) {
-      return { data: decode(response) };
-    }
+    response = await sendDashboardMessage(payload);
+  } catch (error) {
+    // Transport-level failures (network, timeout, offscreen gone) are
+    // classified with the same logic SqliteClient uses so both sides agree
+    // on wording and retry hints.
+    const classified = categorizeError(errorMessage(error)).message;
+    console.error(`${payload.subtype} failed:`, classified);
+    return { error: classified };
+  }
+
+  if (!response.success) {
     console.warn(`${payload.subtype} failed:`, String(response.error || 'Unknown error'));
     return { error: String(response.error || defaultErrorMessage) };
+  }
+
+  try {
+    return { data: decode(response) };
   } catch (error) {
-    console.error(`${payload.subtype} failed:`, errorMessage(error));
-    return { error: errorMessage(error) };
+    // Decode failures (missing/ malformed fields) are already user-facing;
+    // wrapping them would only add noise.
+    const raw = errorMessage(error);
+    console.warn(`${payload.subtype} decode failed:`, raw);
+    return { error: raw };
   }
 }
 
@@ -169,34 +189,43 @@ export async function queryLogs(options: {
   tagFilter?: string;
 } = {}): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
   for (let attempt = 0; attempt < 2; attempt++) {
+    let response: DashboardSqliteResponseFor<'query'>;
     try {
-      const response = await sendDashboardMessage({ subtype: 'query', ...options });
-      if (response.success) {
+      response = await sendDashboardMessage({ subtype: 'query', ...options });
+    } catch (error) {
+      if (attempt === 0) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        continue;
+      }
+      const classified = categorizeError(errorMessage(error)).message;
+      console.error('queryLogs failed:', classified);
+      return { error: classified };
+    }
+
+    if (response.success) {
+      try {
         return {
           data: {
             rows: requiredRows(response.rows, 'rows', isBrowsingLogEntry),
             total: requiredNonNegativeNumber(response.total, 'total'),
           },
         };
+      } catch (error) {
+        const raw = errorMessage(error);
+        console.warn('queryLogs decode failed:', raw);
+        return { error: raw };
       }
-      // Retry only when the service worker says the failure is transient.
-      // This used to match the message text for 'Query failed', which is the
-      // fallback wording used when no specific error was available — so the
-      // retry stopped firing as soon as errors became specific.
-      if (attempt === 0 && response.retriable) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        continue;
-      }
-      console.warn('queryLogs failed:', String(response.error || 'Unknown error'));
-      return { error: String(response.error || 'Query failed') };
-    } catch (error) {
-      if (attempt === 0) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        continue;
-      }
-      console.error('queryLogs failed:', errorMessage(error));
-      return { error: errorMessage(error) };
     }
+    // Retry only when the service worker says the failure is transient.
+    // This used to match the message text for 'Query failed', which is the
+    // fallback wording used when no specific error was available — so the
+    // retry stopped firing as soon as errors became specific.
+    if (attempt === 0 && response.retriable) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      continue;
+    }
+    console.warn('queryLogs failed:', String(response.error || 'Unknown error'));
+    return { error: String(response.error || 'Query failed') };
   }
   return { error: 'Query failed' };
 }
@@ -214,38 +243,47 @@ export async function searchLogs(
   options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
 ): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
   for (let attempt = 0; attempt < 2; attempt++) {
+    let response: DashboardSqliteResponseFor<'search'>;
     try {
-      const response = await sendDashboardMessage({
+      response = await sendDashboardMessage({
         subtype: 'search',
         query,
         limit,
         offset,
         ...pickDefined({ orderBy: options.orderBy, orderDir: options.orderDir }),
       });
-      if (response.success) {
+    } catch (error) {
+      if (attempt === 0) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        continue;
+      }
+      const classified = categorizeError(errorMessage(error)).message;
+      console.error('searchLogs failed:', classified);
+      return { error: classified };
+    }
+
+    if (response.success) {
+      try {
         return {
           data: {
             rows: requiredRows(response.rows, 'rows', isBrowsingLogEntry),
             total: requiredNonNegativeNumber(response.total, 'total'),
           },
         };
+      } catch (error) {
+        const raw = errorMessage(error);
+        console.warn('searchLogs decode failed:', raw);
+        return { error: raw };
       }
-      // See queryLogs: retriability now comes from the service worker's
-      // error classification rather than the wording of the message.
-      if (attempt === 0 && response.retriable) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        continue;
-      }
-      console.warn('searchLogs failed:', String(response.error || 'Unknown error'));
-      return { error: String(response.error || 'Search failed') };
-    } catch (error) {
-      if (attempt === 0) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        continue;
-      }
-      console.error('searchLogs failed:', errorMessage(error));
-      return { error: errorMessage(error) };
     }
+    // See queryLogs: retriability now comes from the service worker's
+    // error classification rather than the wording of the message.
+    if (attempt === 0 && response.retriable) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      continue;
+    }
+    console.warn('searchLogs failed:', String(response.error || 'Unknown error'));
+    return { error: String(response.error || 'Search failed') };
   }
   return { error: 'Search failed' };
 }
@@ -341,15 +379,27 @@ function decodeOpfsSpikeReport(value: unknown): OpfsSpikeReportView {
  * doesn't model.
  */
 export async function runOpfsSpike(): Promise<ServiceResult<OpfsSpikeReportView>> {
+  let response: DashboardSqliteResponseFor<'opfs_spike'>;
   try {
-    const response = await sendDashboardMessage({ subtype: 'opfs_spike' });
-    if (response.success && response.report) {
-      return { data: decodeOpfsSpikeReport(response.report) };
-    }
-    return { error: response.success ? 'OPFS spike returned no report' : String(response.error || 'OPFS spike failed') };
+    response = await sendDashboardMessage({ subtype: 'opfs_spike' });
   } catch (error) {
-    console.error('runOpfsSpike failed:', errorMessage(error));
-    return { error: errorMessage(error) };
+    const classified = categorizeError(errorMessage(error)).message;
+    console.error('runOpfsSpike failed:', classified);
+    return { error: classified };
+  }
+
+  if (!response.success) {
+    return { error: String(response.error || 'OPFS spike failed') };
+  }
+  if (!response.report) {
+    return { error: 'OPFS spike returned no report' };
+  }
+  try {
+    return { data: decodeOpfsSpikeReport(response.report) };
+  } catch (error) {
+    const raw = errorMessage(error);
+    console.warn('runOpfsSpike decode failed:', raw);
+    return { error: raw };
   }
 }
 
@@ -392,9 +442,22 @@ export async function getSqliteStatus(): Promise<{
   opfsMigrationV2CompletedAt?: string | null;
   opfsMigrationV2RecordCount?: number;
 }> {
+  let response: DashboardSqliteResponseFor<'status'>;
   try {
-    const response = await sendDashboardMessage({ subtype: 'status' });
-    if (response.success) {
+    response = await sendDashboardMessage({ subtype: 'status' });
+  } catch (error) {
+    const classified = categorizeError(errorMessage(error)).message;
+    return {
+      initialized: false,
+      path: '',
+      fallback: false,
+      fts5: false,
+      initError: classified,
+    };
+  }
+
+  if (response.success) {
+    try {
       return {
         initialized: requiredBoolean(response.initialized, 'initialized'),
         path: requiredString(response.path, 'path'),
@@ -410,23 +473,23 @@ export async function getSqliteStatus(): Promise<{
           opfsMigrationV2RecordCount: optionalNonNegativeNumber(response.opfsMigrationV2RecordCount, 'opfsMigrationV2RecordCount'),
         }),
       };
+    } catch (error) {
+      return {
+        initialized: false,
+        path: '',
+        fallback: false,
+        fts5: false,
+        initError: errorMessage(error),
+      };
     }
-    return {
-      initialized: false,
-      path: '',
-      fallback: false,
-      fts5: false,
-      initError: String(response.error || 'Failed to get SQLite status'),
-    };
-  } catch (error) {
-    return {
-      initialized: false,
-      path: '',
-      fallback: false,
-      fts5: false,
-      initError: errorMessage(error),
-    };
   }
+  return {
+    initialized: false,
+    path: '',
+    fallback: false,
+    fts5: false,
+    initError: String(response.error || 'Failed to get SQLite status'),
+  };
 }
 
 
@@ -468,23 +531,30 @@ export function backfillMetadata(): Promise<ServiceResult<{ updated: number; tot
  * decoded value needs a distinct error message from a transport failure.
  */
 export async function backupDb(): Promise<ServiceResult<Uint8Array>> {
+  let response: DashboardSqliteResponseFor<'backup_db'>;
   try {
-    const response = await sendDashboardMessage(
-      { subtype: 'backup_db' },
-    );
-    if (response.success && response.data) {
-      return { data: base64ToBytes(requiredString(response.data, 'data')) };
-    }
-    // A failed backup must not look like "nothing to back up" — the caller
-    // would otherwise offer the user an empty or missing file as success.
-    const message = response.success
-      ? 'Backup returned no data'
-      : String(response.error || 'Backup failed');
+    response = await sendDashboardMessage({ subtype: 'backup_db' });
+  } catch (error) {
+    const classified = categorizeError(errorMessage(error)).message;
+    console.error('backupDb failed:', classified);
+    return { error: classified };
+  }
+
+  if (!response.success) {
+    const message = String(response.error || 'Backup failed');
     console.warn('backupDb failed:', message);
     return { error: message };
+  }
+  if (!response.data) {
+    console.warn('backupDb: Backup returned no data');
+    return { error: 'Backup returned no data' };
+  }
+  try {
+    return { data: base64ToBytes(requiredString(response.data, 'data')) };
   } catch (error) {
-    console.error('backupDb failed:', errorMessage(error));
-    return { error: errorMessage(error) };
+    const raw = errorMessage(error);
+    console.warn('backupDb decode failed:', raw);
+    return { error: raw };
   }
 }
 

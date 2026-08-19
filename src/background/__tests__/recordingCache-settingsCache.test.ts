@@ -4,8 +4,8 @@
  */
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { RecordingCache, SETTINGS_CACHE_TTL } from '../recordingCache.ts';
-import { makeRecordingLogic } from './helpers/makeRecordingLogic.ts';
+import { RecordingCache, SETTINGS_CACHE_TTL } from './helpers/recordingCache.js';
+import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
 import { getSettings, getSavedUrls, setSavedUrls, StorageKeys } from '../../utils/storage.ts';
 import { PrivacyPipeline } from '../privacyPipeline.ts';
 import { NotificationHelper } from '../notificationHelper.ts';

@@ -140,7 +140,7 @@ vi.mock('../pipeline/RecordingPipeline.ts', async () => {
 
 // ─── Imports (after mocks) ──────────────────────────────────────────────────
 import { truncateContentSize } from '../recordingValidator.ts';
-import { RecordingCache } from '../recordingCache.ts';
+import { RecordingCache } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.ts';
 import * as storage from '../../utils/storage.ts';
 import * as domainUtils from '../../utils/domainUtils.ts';

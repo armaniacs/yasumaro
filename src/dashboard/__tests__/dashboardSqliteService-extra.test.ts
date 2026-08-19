@@ -106,7 +106,7 @@ describe('dashboardSqliteService — additional exports', () => {
     it('carries the reason on rejection', async () => {
       givenLastError('Timeout');
       const result = await runOpfsSpike();
-      expect(result).toEqual({ error: expect.stringContaining('Timeout') });
+      expect(result).toEqual({ error: 'SQLite request timed out. The database may still be initializing.' });
     });
   });
 
@@ -132,7 +132,7 @@ describe('dashboardSqliteService — additional exports', () => {
     it('carries the reason on rejection', async () => {
       givenLastError('Timeout');
       const result = await clearAllLogs();
-      expect(result).toEqual({ error: expect.stringContaining('Timeout') });
+      expect(result).toEqual({ error: 'SQLite request timed out. The database may still be initializing.' });
     });
   });
 
@@ -172,7 +172,6 @@ describe('dashboardSqliteService — additional exports', () => {
       const result = await getSqliteStatus();
       expect(result).toEqual({
         initialized: false, path: '', fallback: false, fts5: false,
-        compileOptions: undefined, compileOptionsSource: undefined,
         initError: 'Query failed',
       });
     });
@@ -182,8 +181,7 @@ describe('dashboardSqliteService — additional exports', () => {
       const result = await getSqliteStatus();
       expect(result).toEqual({
         initialized: false, path: '', fallback: false, fts5: false,
-        compileOptions: undefined, compileOptionsSource: undefined,
-        initError: 'Timeout',
+        initError: 'SQLite request timed out. The database may still be initializing.',
       });
     });
 

@@ -20,7 +20,6 @@ import { buildAllowedUrls, getSettings, clearSettingsCache, lockSession } from '
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { notifyAiTestProgress } from './aiTestProgressNotifier.js';
 import { updateActivity } from './sessionAlarmsManager.js';
-import { RecordingCache } from './recordingCache.js';
 
 export interface MessageRegistryCompositionDeps {
   services: BackgroundServicesComposition;
@@ -49,11 +48,7 @@ export function createMessageRegistryComposition(
     isDomainAllowed: (url) => isDomainAllowed(url),
     clearSettingsCache: () => clearSettingsCache(),
     notifyAiTestProgress,
-    getPrivacyCache: () => {
-      const rc = (services as unknown as { recordingCache?: { getPrivacyCache: () => Map<string, import('../utils/privacyChecker.js').PrivacyInfo> | null } }).recordingCache;
-      const cache = rc ? rc.getPrivacyCache() : null;
-      return cache ?? RecordingCache.getPrivacyCache();
-    },
+    getPrivacyCache: () => services.recordingCache.getPrivacyCache(),
     updateActivity: () => updateActivity(),
     lockSession: () => lockSession(),
     autoSavedBadgeTabs,

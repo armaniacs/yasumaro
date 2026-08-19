@@ -2,12 +2,9 @@
  * RecordingCache
  * settings/URL/privacy の3種のキャッシュ管理を担当するモジュール。
  *
- * headerDetector / tabEventHandlers / service-worker から直接アクセスされるため、
- * accessor メソッドでアクセスを制御する。
- *
- * インスタンス化されたクラスとして実装され、store（永続化バックエンド）を
- * コンストラクタで注入する。既存呼び出し元との互換性のため、モジュールレベル
- * の defaultRecordingCache を静的メソッド経由で公開する。
+ * RecordingCacheInstance はコンストラクタで RecordingCacheStore を注入する。
+ * 本番では SessionStoreRecordingCacheStore、テストでは InMemoryRecordingCacheStore
+ * を使い、グローバルな状態を持たない。
  */
 
 import { addLog, LogType } from '../utils/logger.js';
@@ -401,73 +398,6 @@ export class RecordingCacheInstance {
   }
 }
 
-// --- Default production instance + static compatibility wrapper ---
-
-const defaultRecordingCache = new RecordingCacheInstance(
-  new SessionStoreRecordingCacheStore(new SessionStore())
-);
-
-/**
- * Static-method facade over defaultRecordingCache, kept so the ~14 existing
- * call sites (headerDetector, tabEventHandlers, service-worker,
- * createBackgroundServices, RecordingPipeline, lifecycleHandlers) work
- * unchanged. New code should prefer constructing a RecordingCacheInstance
- * directly (or receiving one via DI) instead of adding new static callers.
- */
-export class RecordingCache {
-  static getCacheState(): CacheState {
-    return defaultRecordingCache.getCacheState();
-  }
-
-  static resetCacheState(): void {
-    defaultRecordingCache.resetCacheState();
-  }
-
-  static getPrivacyCache(): Map<string, PrivacyInfo> | null {
-    return defaultRecordingCache.getPrivacyCache();
-  }
-
-  static setPrivacyCacheEntry(url: string, info: PrivacyInfo): void {
-    defaultRecordingCache.setPrivacyCacheEntry(url, info);
-  }
-
-  static getPrivacyCacheSize(): number {
-    return defaultRecordingCache.getPrivacyCacheSize();
-  }
-
-  static isPrivacyCacheInitialized(): boolean {
-    return defaultRecordingCache.isPrivacyCacheInitialized();
-  }
-
-  static async getSettingsWithCache(): Promise<Settings> {
-    return defaultRecordingCache.getSettingsWithCache();
-  }
-
-  static invalidateSettingsCache(): void {
-    defaultRecordingCache.invalidateSettingsCache();
-  }
-
-  static async getSavedUrlsWithCache(): Promise<Map<string, number>> {
-    return defaultRecordingCache.getSavedUrlsWithCache();
-  }
-
-  static invalidateUrlCache(): void {
-    defaultRecordingCache.invalidateUrlCache();
-  }
-
-  static async getPrivacyInfoWithCache(url: string): Promise<PrivacyInfo | null> {
-    return defaultRecordingCache.getPrivacyInfoWithCache(url);
-  }
-
-  static async invalidatePrivacyCache(): Promise<void> {
-    return defaultRecordingCache.invalidatePrivacyCache();
-  }
-
-  static async loadCacheFromSession(): Promise<void> {
-    return defaultRecordingCache.loadCacheFromSession();
-  }
-
-  static scheduleCacheSave(): void {
-    defaultRecordingCache.scheduleCacheSave();
-  }
-}
+// WHY: PBI-03 removed the module-level static RecordingCache facade. All
+// callers now receive a RecordingCacheInstance via DI, so tests and production
+// use the same instance-based API and there is no hidden global state.
