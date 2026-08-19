@@ -88,32 +88,54 @@ export async function deriveHmacWrappingKey(password: string, salt: Uint8Array):
 
 /**
  * Get (or create) the session-scoped HMAC wrapping key.
- * Persisted in chrome.storage.session so that reading chrome.storage.local
- * alone does not expose the wrapped HMAC keys. Lost when the browser closes —
- * acceptable tradeoff: HMAC keys are re-created on the next launch.
+ * Persisted in chrome.storage.local to preserve wrapped HMAC keys across
+ * browser restarts. This is necessary for privacy consent signatures to
+ * remain valid after browser closure. Session storage serves as a cache.
  * @returns {Promise<CryptoKey>} AES-GCM wrapping key
  */
 async function getOrCreateHmacWrappingKey(): Promise<CryptoKey> {
     const webcrypto = getWebCrypto();
 
     try {
-        const result = await chrome.storage.session.get(HMAC_WRAPPING_KEY_SESSION);
-        const stored = result[HMAC_WRAPPING_KEY_SESSION];
-        if (typeof stored === 'string' && stored.length > 0) {
+        // Try session storage first (current session)
+        const sessionResult = await chrome.storage.session.get(HMAC_WRAPPING_KEY_SESSION);
+        const sessionStored = sessionResult[HMAC_WRAPPING_KEY_SESSION];
+        if (typeof sessionStored === 'string' && sessionStored.length > 0) {
             return await webcrypto.subtle.importKey(
                 'raw',
-                base64ToBytes(stored) as BufferSource,
+                base64ToBytes(sessionStored) as BufferSource,
                 { name: 'AES-GCM', length: KEY_LENGTH },
                 false,
                 ['wrapKey', 'unwrapKey']
             );
+        }
+
+        // Fallback to local storage (persistent across restarts)
+        const localResult = await chrome.storage.local.get(HMAC_WRAPPING_KEY_SESSION);
+        const localStored = localResult[HMAC_WRAPPING_KEY_SESSION];
+        if (typeof localStored === 'string' && localStored.length > 0) {
+            const key = await webcrypto.subtle.importKey(
+                'raw',
+                base64ToBytes(localStored) as BufferSource,
+                { name: 'AES-GCM', length: KEY_LENGTH },
+                false,
+                ['wrapKey', 'unwrapKey']
+            );
+            // Cache in session for this browser session
+            await chrome.storage.session.set({ [HMAC_WRAPPING_KEY_SESSION]: localStored });
+            return key;
         }
     } catch (error: unknown) {
         console.warn('Failed to load HMAC wrapping key, generating new one:', errorMessage(error));
     }
 
     const keyBytes = webcrypto.getRandomValues(new Uint8Array(32));
-    await chrome.storage.session.set({ [HMAC_WRAPPING_KEY_SESSION]: bytesToBase64(keyBytes) });
+    const keyBase64 = bytesToBase64(keyBytes);
+    // Store in both session and local storage
+    await Promise.all([
+        chrome.storage.session.set({ [HMAC_WRAPPING_KEY_SESSION]: keyBase64 }),
+        chrome.storage.local.set({ [HMAC_WRAPPING_KEY_SESSION]: keyBase64 })
+    ]);
     return webcrypto.subtle.importKey(
         'raw',
         keyBytes as BufferSource,
