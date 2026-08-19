@@ -125,20 +125,30 @@ vi.mock('../../utils/storage.js', () => ({
 vi.mock('../../utils/domainUtils.js');
 vi.mock('../privacyPipeline.js');
 vi.mock('../../utils/pendingStorage.js');
-vi.mock('../recordingCache.js', () => ({
+vi.mock('../recordingCache.js', () => {
+  const sharedCacheState: {
+    settingsCache: unknown | null;
+    cacheTimestamp: number | null;
+    cacheVersion: number;
+    urlCache: unknown | null;
+    urlCacheTimestamp: number | null;
+    privacyCache: Map<string, unknown> | null;
+    privacyCacheTimestamp: number | null;
+  } = {
+    settingsCache: null,
+    cacheTimestamp: null,
+    cacheVersion: 0,
+    urlCache: null,
+    urlCacheTimestamp: null,
+    privacyCache: null,
+    privacyCacheTimestamp: null,
+  };
+  return {
     RecordingCache: class {
-        static cacheState = {
-            settingsCache: null,
-            cacheTimestamp: null,
-            cacheVersion: 0,
-            urlCache: null,
-            urlCacheTimestamp: null,
-            privacyCache: null,
-            privacyCacheTimestamp: null,
-        };
-        static getCacheState() { return RecordingCache.cacheState; }
+        static cacheState = sharedCacheState;
+        static getCacheState() { return sharedCacheState; }
         static resetCacheState() {}
-        static getPrivacyCache() { return RecordingCache.cacheState.privacyCache; }
+        static getPrivacyCache() { return sharedCacheState.privacyCache as Map<string, import('../../utils/privacyChecker.js').PrivacyInfo> | null; }
         static setPrivacyCacheEntry() {}
         static getPrivacyCacheSize() { return 0; }
         static isPrivacyCacheInitialized() { return false; }
@@ -154,13 +164,18 @@ vi.mock('../recordingCache.js', () => ({
     RecordingCacheInstance: class {
         getPrivacyInfoWithCache = vi.fn().mockResolvedValue(null);
         getSettingsWithCache = vi.fn().mockResolvedValue({});
-        getPrivacyCache = vi.fn().mockReturnValue(null);
+        getPrivacyCache = vi.fn(() => sharedCacheState.privacyCache as Map<string, import('../../utils/privacyChecker.js').PrivacyInfo> | null);
         getPrivacyCacheSize = vi.fn().mockReturnValue(0);
         setPrivacyCacheEntry = vi.fn();
         scheduleCacheSave = vi.fn();
+        loadCacheFromSession = vi.fn().mockResolvedValue(undefined);
+        invalidateSettingsCache = vi.fn();
+        invalidatePrivacyCache = vi.fn().mockResolvedValue(undefined);
+        invalidateUrlCache = vi.fn();
     },
     SessionStoreRecordingCacheStore: class {}
-}));
+  };
+});
 vi.mock('../tabCache.js', () => ({
     TabCache: class {
         add = vi.fn();
