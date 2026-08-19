@@ -20,13 +20,13 @@ Scenario: 静的ファサード削除後も既存テストがパスする
   Then 型エラーが発生せず、すべてのテストがパスする
 
 ## 受け入れ基準
-- [ ] `RecordingCache` 静的クラスが削除されている
-- [ ] 14 箇所の静的メソッド呼び出しがすべて `RecordingCacheInstance` のインジェクションに置き換わっている
-- [ ] 静的メソッド呼び出しが新規コードに追加されていない
-- [ ] `createBackgroundServices.ts` で `RecordingCacheInstance` が生成され、必要なモジュールに配布されている
-- [ ] 生成される `RecordingCacheInstance` と `SessionStore` は同じストレージバックエンドインスタンスを共有する
-- [ ] テストでは `InMemoryRecordingCacheStore` を注入し、グローバル状態を参照しない
-- [ ] 既存の `recordingCache.test.ts` が変更なしでパスする
+- [x] `RecordingCache` 静的クラスが削除されている
+- [x] 14 箇所の静的メソッド呼び出しがすべて `RecordingCacheInstance` のインジェクションに置き換わっている
+- [x] 静的メソッド呼び出しが新規コードに追加されていない
+- [x] `createBackgroundServices.ts` で `RecordingCacheInstance` が生成され、必要なモジュールに配布されている
+- [x] 生成される `RecordingCacheInstance` と `SessionStore` は同じストレージバックエンドインスタンスを共有する
+- [x] テストでは `InMemoryRecordingCacheStore` を注入し、グローバル状態を参照しない
+- [x] 既存の `recordingCache.test.ts` が変更なしでパスする
 
 ## テスト戦略
 - 単体: `RecordingCacheInstance` の既存テストがパスすること
@@ -42,7 +42,7 @@ Scenario: 静的ファサード削除後も既存テストがパスする
 1.5 ストーリーポイント（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（該当する場合のみ）
-- [ ] `RecordingCache` 静的クラスの削除が完了している
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` のキャッシュセクションを更新）
+- [x] `RecordingCache` 静的クラスの削除が完了している

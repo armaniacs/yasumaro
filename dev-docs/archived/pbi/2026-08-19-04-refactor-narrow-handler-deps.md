@@ -22,13 +22,13 @@ Scenario: 既存のメッセージ登録が変更なしで動作する
   Then すべてのメッセージタイプが以前と同じように処理され、クライアントへの影響がない
 
 ## 受け入れ基準
-- [ ] `MessageHandlerRegistryDeps` がサブインターフェース（`RecordingHandlerDeps`、`TestingHandlerDeps`、`SystemHandlerDeps` など）に分割されている
-- [ ] 各ハンドラーファクトリが必要な依存だけを宣言する
-- [ ] `CommonHandlerDeps` などの共通依存をベースインターフェースとして抽出し、各サブインターフェースが extends する
-- [ ] `createBackgroundServices.ts` でサブ依存オブジェクトが生成され、適切なハンドラーグループに渡されている
-- [ ] `createMessageRegistryComposition.ts` が薄すぎる中継層になっていないか再評価し、不要なら削除または統合する
-- [ ] 各ハンドラーの単体テストが narrow 化された依存を注入するよう更新されている
-- [ ] 既存の `messageHandlerRegistry.test.ts` が変更なしでパスする
+- [x] `MessageHandlerRegistryDeps` がサブインターフェース（`RecordingHandlerDeps`、`TestingHandlerDeps`、`SystemHandlerDeps` など）に分割されている
+- [x] 各ハンドラーファクトリが必要な依存だけを宣言する
+- [x] `CommonHandlerDeps` などの共通依存をベースインターフェースとして抽出し、各サブインターフェースが extends する
+- [x] `createBackgroundServices.ts` でサブ依存オブジェクトが生成され、適切なハンドラーグループに渡されている
+- [x] `createMessageRegistryComposition.ts` が薄すぎる中継層になっていないか再評価し、不要なら削除または統合する
+- [x] 各ハンドラーの単体テストが narrow 化された依存を注入するよう更新されている
+- [x] 既存の `messageHandlerRegistry.test.ts` が変更なしでパスする
 
 ## テスト戦略
 - 単体: 各ハンドラーファクトリのテストで、必要な依存だけを注入してテスト
@@ -44,7 +44,7 @@ Scenario: 既存のメッセージ登録が変更なしで動作する
 2 ストーリーポイント（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（該当する場合のみ）
-- [ ] `MessageHandlerRegistryDeps` の 18 フィールドがサブインターフェースに分割されている
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（該当する場合のみ）
+- [x] `MessageHandlerRegistryDeps` の 18 フィールドがサブインターフェースに分割されている

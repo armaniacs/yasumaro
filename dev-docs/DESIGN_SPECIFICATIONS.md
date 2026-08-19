@@ -58,11 +58,13 @@ All settings are managed via `StorageKeys` defined in `src/utils/storage.js`:
 - When approaching threshold (≥ 8,000), warning is logged
 
 ### 5.3 Cache Strategy
-RecordingLogic implements multi-level caching with static `cacheState`:
+RecordingCache is implemented as `RecordingCacheInstance` with injected `RecordingCacheStore` (no global state):
 - **Settings Cache**: 30-second TTL (`SETTINGS_CACHE_TTL`)
 - **URL Cache**: 60-second TTL (`URL_CACHE_TTL`)
+- **Privacy Cache**: per-entry TTL with LRU eviction at 100 entries
 - Cache version tracking for invalidation
-- Cache persists across Service Worker restarts
+- Cache persists across Service Worker restarts via `SessionStoreRecordingCacheStore`
+- Tests use `InMemoryRecordingCacheStore` for isolation
 
 ### 5.4 SQLite Secondary Store (OPFS + FTS5)
 A local SQLite database acts as a **secondary store for browsing/search**, independent of the Obsidian integration. It runs in the offscreen document, which proxies operations to a Web Worker over `postMessage`. See [ADR-014](ADR/2026-06-17-opfs-fts5-coexistence.md).
@@ -73,6 +75,7 @@ A local SQLite database acts as a **secondary store for browsing/search**, indep
 - **Full-text search**: FTS5 virtual table `browsing_logs_fts` (external content, synced by triggers) with the **`trigram` tokenizer** to support Japanese/CJK substring search. Queries shorter than 3 code points fall back to LIKE (trigram cannot match < 3 chars). User input is whitelisted and phrase-quoted (`sanitizeFtsTerm`) to prevent FTS5 operator injection.
 - **Migration**: existing users' old `AccessHandlePoolVFS` database is migrated once (idempotent) into the new DB via `opfsMigrationV2.ts` (old `wa-sqlite` dependency is confined to `opfsMigrationV2Reader.ts`). Tracked by `StorageKeys.OPFS_MIGRATION_V2_DONE`.
 - **Dashboard access**: the dashboard talks to the store via `DASHBOARD_SQLITE` messages (subtypes `query`/`search`/`status`/`import`/...). All read handlers wrap results as `{ success: true, rows, total }` so the dashboard service can distinguish success from failure.
+- **Shared RPC types** (`src/messaging/sqliteRpcClient.ts`): `SqliteRpcClient` interface, `SqliteRpcResult<T>`, `SqliteError`, and `categorizeError` are shared between the Service Worker's `SqliteClient` (production implementation) and the Dashboard's `dashboardSqliteService` (message-passing proxy). Both sides classify transport failures identically so user-facing error messages and retry hints are consistent.
 
 ## 6. Domain Filtering Behavior
 
