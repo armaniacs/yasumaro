@@ -93,14 +93,152 @@ const GENERIC_TERM_PATTERNS = [
 ];
 
 /**
+ * HTML属性値内にマッチ位置が含まれているかを線形時間で判定する。
+ * 完全なHTMLパーサではなく、 safe-context 判定のための保守的なヒューリスティック。
+ * @returns マッチ位置が属性値内なら true
+ */
+function isInsideHtmlTag(content: string, index: number): boolean {
+  const before = content.slice(0, index);
+  const lastClose = before.lastIndexOf('>');
+  const lastOpen = before.lastIndexOf('<');
+
+  if (lastOpen === -1) return false;
+  if (lastOpen > lastClose) return true;
+
+  // If the match starts right after a '>' that belongs to an opening tag
+  // (not a closing tag), treat it as inside the tag's text content.
+  if (lastClose === index - 1 && lastOpen !== -1) {
+    const tagContent = before.slice(lastOpen + 1, lastClose);
+    return !tagContent.startsWith('/');
+  }
+
+  return false;
+}
+
+/**
+ * HTML属性値内にマッチ位置が含まれているかを線形時間で判定する。
+ * 完全なHTMLパーサではなく、 safe-context 判定のための保守的なヒューリスティック。
+ * @returns マッチ位置が属性値内なら true
+ */
+function isInsideHtmlAttributeValue(content: string, index: number): boolean {
+  if (!isInsideHtmlTag(content, index)) {
+    return false;
+  }
+
+  const before = content.slice(0, index);
+  const lastOpen = before.lastIndexOf('<');
+  const tagContent = content.slice(lastOpen + 1, index);
+
+  // Scan attribute/value pairs in the unclosed tag.
+  let pos = 0;
+  while (pos < tagContent.length) {
+    const eqIndex = tagContent.indexOf('=', pos);
+    if (eqIndex === -1) break;
+
+    let valueStart = eqIndex + 1;
+    while (valueStart < tagContent.length && /\s/.test(tagContent.charAt(valueStart))) {
+      valueStart++;
+    }
+    if (valueStart >= tagContent.length) {
+      return false;
+    }
+
+    const quote = tagContent.charAt(valueStart);
+    if (quote === '"' || quote === "'") {
+      const closeQuote = tagContent.indexOf(quote, valueStart + 1);
+      if (closeQuote === -1) {
+        // Unclosed quoted value reaches index.
+        return true;
+      }
+      if (closeQuote >= tagContent.length - 1) {
+        // Quote closes at or after index.
+        return true;
+      }
+      pos = closeQuote + 1;
+    } else {
+      // Unquoted value: runs until whitespace or '>'.
+      let valueEnd = valueStart;
+      while (
+        valueEnd < tagContent.length &&
+        !/\s/.test(tagContent.charAt(valueEnd)) &&
+        tagContent.charAt(valueEnd) !== '>'
+      ) {
+        valueEnd++;
+      }
+      if (valueEnd >= tagContent.length) {
+        // Value reaches index.
+        return true;
+      }
+      pos = valueEnd;
+    }
+  }
+
+  return false;
+}
+
+/**
  * 誤検知防止チェッカー
+ * マッチがコードブロック・HTMLタグ・ドキュメント/ガイド文脈内にある場合に
+ * safe-context と判定する。ランタイム検査のみ（追加正規表現は使わない）。
+ *
+ * 本チェッカーは多層防御の一部であり、正規表現ベースの近接ヒューリスティック
+ * であるため、適応的な攻撃者に対する完全防御を目的としない。
+ * 新しい安全語を追加する場合は SAFE_MARKER_WINDOW（8文字）以下の
+ * 3文字以上の複合語に限定すること。
+ *
  * @param content - チェック対象コンテンツ
  * @param match - 検出されたマッチ
  * @param index - マッチ位置
  * @returns 安全ならtrue
  */
-function isInSafeContext(_content: string, _match: string, _index: number): boolean {
-  return false;
+/** Exported for unit tests; called internally by {@link sanitizePromptContent}. */
+export function isInSafeContext(content: string, _match: string, index: number): boolean {
+  const SAFE_MARKER_WINDOW = 8;
+
+  const beforeMarkerContext = content.slice(Math.max(0, index - SAFE_MARKER_WINDOW), index).toLowerCase();
+
+  // 1. コードブロック内（``` または ~~~）
+  const blockStart = content.lastIndexOf('```', index);
+  const blockEnd = content.indexOf('```', index);
+  const tildeStart = content.lastIndexOf('~~~', index);
+  const tildeEnd = content.indexOf('~~~', index);
+  if ((blockStart !== -1 && blockEnd !== -1 && blockStart < index && index < blockEnd) ||
+      (tildeStart !== -1 && tildeEnd !== -1 && tildeStart < index && index < tildeEnd)) {
+    return true;
+  }
+
+  // 2. HTML/XMLタグ内 — 属性値内は除外
+  if (isInsideHtmlAttributeValue(content, index)) return false;
+  if (isInsideHtmlTag(content, index)) return true;
+
+  // 3. 記述的コンテキスト（ドキュメント・ガイド等）
+  // before のみを検査（after はインジェクション試行自身を含むため安全マーカーに使わない）
+  const safeMarkers = [
+    /\bexample\b/i,
+    /\bsample\b/i,
+    /\bdocumentation\b/i,
+    /\bguide\b/i,
+    /\btutorial\b/i,
+    /\btest\s+case\b/i,
+    /\breference\b/i,
+    /\breadme\b/i,
+    /\bprompt\s+injection\b/i,
+    /\binjection\s+attack\b/i,
+    /\battack\s+example\b/i,
+    /\bmalicious\b/i,
+    /\bhow\s+to\s+(prevent|avoid|block|detect|mitigate)\b/i,
+    /\bprevent\s+injection\b/i,
+    /\bprotect\s+against\b/i,
+    /\bdefend\s+against\b/i,
+    /\bcountermeasure\b/i,
+    /\bmitigation\b/i,
+    // Japanese compound markers (3-8 chars, fit inside SAFE_MARKER_WINDOW)
+    /対策例/,
+    /注意喚起/,
+    /攻撃手法/,
+  ];
+
+  return safeMarkers.some((p) => p.test(beforeMarkerContext));
 }
 
 /**
