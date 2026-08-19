@@ -51,7 +51,8 @@ export function createMessageRegistryComposition(
     notifyAiTestProgress,
     getPrivacyCache: () => {
       const rc = (services as unknown as { recordingCache?: { getPrivacyCache: () => Map<string, import('../utils/privacyChecker.js').PrivacyInfo> | null } }).recordingCache;
-      return rc ? rc.getPrivacyCache() : RecordingCache.getPrivacyCache();
+      const cache = rc ? rc.getPrivacyCache() : null;
+      return cache ?? RecordingCache.getPrivacyCache();
     },
     updateActivity: () => updateActivity(),
     lockSession: () => lockSession(),
