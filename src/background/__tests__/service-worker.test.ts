@@ -143,12 +143,11 @@ vi.mock('../recordingCache.js', () => {
     privacyCache: null,
     privacyCacheTimestamp: null,
   };
-  return {
-    RecordingCache: class {
+  class RecordingCacheMock {
         static cacheState = sharedCacheState;
-        static getCacheState() { return sharedCacheState; }
+        static getCacheState() { return RecordingCacheMock.cacheState; }
         static resetCacheState() {}
-        static getPrivacyCache() { return sharedCacheState.privacyCache as Map<string, import('../../utils/privacyChecker.js').PrivacyInfo> | null; }
+        static getPrivacyCache = vi.fn(() => RecordingCacheMock.cacheState.privacyCache as Map<string, import('../../utils/privacyChecker.js').PrivacyInfo> | null);
         static setPrivacyCacheEntry() {}
         static getPrivacyCacheSize() { return 0; }
         static isPrivacyCacheInitialized() { return false; }
@@ -160,11 +159,11 @@ vi.mock('../recordingCache.js', () => {
         static invalidatePrivacyCache = vi.fn();
         static loadCacheFromSession = vi.fn().mockResolvedValue(undefined);
         static scheduleCacheSave = vi.fn();
-    },
-    RecordingCacheInstance: class {
+  }
+  class RecordingCacheInstanceMock {
         getPrivacyInfoWithCache = vi.fn().mockResolvedValue(null);
         getSettingsWithCache = vi.fn().mockResolvedValue({});
-        getPrivacyCache = vi.fn(() => sharedCacheState.privacyCache as Map<string, import('../../utils/privacyChecker.js').PrivacyInfo> | null);
+        getPrivacyCache = vi.fn(() => RecordingCacheMock.cacheState.privacyCache as Map<string, import('../../utils/privacyChecker.js').PrivacyInfo> | null);
         getPrivacyCacheSize = vi.fn().mockReturnValue(0);
         setPrivacyCacheEntry = vi.fn();
         scheduleCacheSave = vi.fn();
@@ -172,7 +171,10 @@ vi.mock('../recordingCache.js', () => {
         invalidateSettingsCache = vi.fn();
         invalidatePrivacyCache = vi.fn().mockResolvedValue(undefined);
         invalidateUrlCache = vi.fn();
-    },
+  }
+  return {
+    RecordingCache: RecordingCacheMock,
+    RecordingCacheInstance: RecordingCacheInstanceMock,
     SessionStoreRecordingCacheStore: class {}
   };
 });
