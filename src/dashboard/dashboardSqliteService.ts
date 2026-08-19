@@ -9,6 +9,23 @@ import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { tokenExempt } from '../messaging/sqliteOperationSecurity.js';
 import { bytesToBase64, base64ToBytes } from '../utils/crypto/index.js';
 import { pickDefined } from '../utils/objectUtils.js';
+import {
+  requiredFiniteNumber,
+  requiredNonNegativeNumber,
+  requiredBoolean,
+  requiredString,
+  optionalBoolean,
+  optionalNullableString,
+  optionalNonNegativeNumber,
+  isRecord,
+  isFiniteNumber,
+  requiredRows,
+  isBrowsingLogEntry,
+  isAuditLogEntry,
+  requiredStringArray,
+  optionalStringArray,
+  optionalCompileOptionsSource,
+} from '../messaging/sqliteValidators.js';
 
 const DASHBOARD_SQLITE_TIMEOUT = 10000;
 const CONFIRM_TOKEN_KEY = 'dashboardSqliteConfirmToken';
@@ -30,50 +47,6 @@ export type ServiceResult<T> = { data: T } | { error: string };
 /** Narrowing helper so call sites do not each re-derive the check. */
 export function isServiceError<T>(result: ServiceResult<T>): result is { error: string } {
   return 'error' in result;
-}
-
-function requiredFiniteNumber(value: unknown, field: string): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    throw new Error(`Invalid SQLite response: ${field}`);
-  }
-  return value;
-}
-
-function requiredNonNegativeNumber(value: unknown, field: string): number {
-  const number = requiredFiniteNumber(value, field);
-  if (number < 0) {
-    throw new Error(`Invalid SQLite response: ${field}`);
-  }
-  return number;
-}
-
-function requiredBoolean(value: unknown, field: string): boolean {
-  if (typeof value !== 'boolean') {
-    throw new Error(`Invalid SQLite response: ${field}`);
-  }
-  return value;
-}
-
-function requiredString(value: unknown, field: string): string {
-  if (typeof value !== 'string') {
-    throw new Error(`Invalid SQLite response: ${field}`);
-  }
-  return value;
-}
-
-function optionalBoolean(value: unknown, field: string): boolean | undefined {
-  if (value === undefined) return undefined;
-  return requiredBoolean(value, field);
-}
-
-function optionalNullableString(value: unknown, field: string): string | null {
-  if (value === undefined || value === null) return null;
-  return requiredString(value, field);
-}
-
-function optionalNonNegativeNumber(value: unknown, field: string): number {
-  if (value === undefined || value === null) return 0;
-  return requiredNonNegativeNumber(value, field);
 }
 
 /**
@@ -171,62 +144,6 @@ async function callDashboard<T extends DashboardSqliteRequest, R>(
 import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 export type { BrowsingLogEntry };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
-}
-
-function requiredRows<T>(
-  value: unknown,
-  field: string,
-  isRow: (value: unknown) => value is T,
-): T[] {
-  if (!Array.isArray(value) || !value.every(isRow)) {
-    throw new Error(`Invalid SQLite response: ${field}`);
-  }
-  return value;
-}
-
-function isBrowsingLogEntry(value: unknown): value is BrowsingLogEntry {
-  return isRecord(value)
-    && isFiniteNumber(value.id)
-    && typeof value.url === 'string'
-    && isFiniteNumber(value.created_at);
-}
-
-type AuditLogEntryView = { id: number; provider: string; url: string; created_at: number };
-
-function isAuditLogEntry(value: unknown): value is AuditLogEntryView {
-  return isRecord(value)
-    && isFiniteNumber(value.id)
-    && typeof value.provider === 'string'
-    && typeof value.url === 'string'
-    && isFiniteNumber(value.created_at);
-}
-
-function requiredStringArray(value: unknown, field: string): string[] {
-  if (!Array.isArray(value) || !value.every((item): item is string => typeof item === 'string')) {
-    throw new Error(`Invalid SQLite response: ${field}`);
-  }
-  return value;
-}
-
-function optionalStringArray(value: unknown, field: string): string[] | undefined {
-  if (value === undefined) return undefined;
-  return requiredStringArray(value, field);
-}
-
-type CompileOptionsSource = 'opfs-worker' | 'idb' | 'fallback';
-
-function optionalCompileOptionsSource(value: unknown): CompileOptionsSource | undefined {
-  if (value === undefined) return undefined;
-  if (value === 'opfs-worker' || value === 'idb' || value === 'fallback') return value;
-  throw new Error('Invalid SQLite response: compileOptionsSource');
-}
 
 export interface DateCount {
   date: string; // YYYY-MM-DD
