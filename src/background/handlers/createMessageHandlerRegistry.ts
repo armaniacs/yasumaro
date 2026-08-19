@@ -30,33 +30,56 @@ import type { ObsidianClient } from '../obsidianClient.js';
 import type { Settings } from '../../utils/storage/types.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
-export interface MessageHandlerRegistryDeps {
+export interface CommonHandlerDeps {
   runtimeId?: string;
+  dashboardSqliteHandler: MessageHandler;
+}
+
+export interface RecordingHandlerDeps {
   recordingPipeline: Pick<RecordingPipeline, 'record'>;
   tabCache: Pick<TabCache, 'add' | 'update'>;
-  obsidian: Pick<ObsidianClient, 'testConnection'>;
-  aiService: Pick<AIService, 'testConnection'>;
-  manualRecordDeps: ManualRecordHandlerDeps;
-  saveRecordDeps: SaveRecordHandlerDeps;
   hasPrivacyConsent: () => Promise<boolean>;
-  buildAllowedUrls: (settings: Settings) => Set<string>;
-  getSettings: () => Promise<Settings>;
-  isDomainAllowed: (url: string) => Promise<boolean>;
-  clearSettingsCache: () => void;
-  notifyAiTestProgress: (progress: AiTestProgress) => void;
-  getPrivacyCache: () => Map<string, PrivacyInfo> | null;
-  updateActivity: () => Promise<void>;
-  lockSession: () => Promise<void>;
   autoSavedBadgeTabs: {
     add(tabId: number): void;
     has(tabId: number): boolean;
   };
+  manualRecordDeps: ManualRecordHandlerDeps;
+  saveRecordDeps: SaveRecordHandlerDeps;
+}
+
+export interface TestingHandlerDeps {
+  obsidian: Pick<ObsidianClient, 'testConnection'>;
+  aiService: Pick<AIService, 'testConnection'>;
+  clearSettingsCache: () => void;
+  notifyAiTestProgress: (progress: AiTestProgress) => void;
+}
+
+export interface SystemHandlerDeps {
+  buildAllowedUrls: (settings: Settings) => Set<string>;
+  getSettings: () => Promise<Settings>;
+  isDomainAllowed: (url: string) => Promise<boolean>;
+  getPrivacyCache: () => Map<string, PrivacyInfo> | null;
+  autoSavedBadgeTabs: {
+    add(tabId: number): void;
+    has(tabId: number): boolean;
+  };
+}
+
+export interface LifecycleHandlerDeps {
+  updateActivity: () => Promise<void>;
+  lockSession: () => Promise<void>;
   initExportScheduler: () => Promise<void>;
   updateConsentBadge: () => Promise<void>;
   generateWeeklySummary: () => Promise<boolean>;
   generateMonthlySummary: () => Promise<boolean>;
-  dashboardSqliteHandler: MessageHandler;
 }
+
+export type MessageHandlerRegistryDeps =
+  CommonHandlerDeps &
+  RecordingHandlerDeps &
+  TestingHandlerDeps &
+  SystemHandlerDeps &
+  LifecycleHandlerDeps;
 
 export interface MessageHandlerRegistryComposition {
   registry: MessageHandlerRegistry;
