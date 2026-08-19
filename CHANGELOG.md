@@ -35,6 +35,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.59] - 2026-08-20
+
+### Fix
+
+- ブラウザ再起動後もプライバシーポリシー同意モーダルが表示される問題を修正。HMAC署名検証用の wrapping key を `chrome.storage.session` から `chrome.storage.local` に永続化し、ブラウザ再起動後も署名検証が成功するように改善
+
 ## [6.7.58] - 2026-08-20
 
 ### Refactor
