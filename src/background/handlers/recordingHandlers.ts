@@ -66,9 +66,14 @@ export interface SaveRecordHandlerDeps extends RecordingHandlerBaseDeps {}
 // In-memory, module-level so entries survive across handler invocations within
 // a single Service Worker lifetime. Prevents a hostile page from flooding
 // VALID_VISIT messages to drive up AI processing costs.
+//
+// TTL: entries older than VISIT_RATE_LIMIT_TTL_MS are evicted on each check.
+// This bounds memory growth and prevents stale entries from accumulating
+// across long-lived Service Worker sessions.
 // ----------------------------------------------------------------------------
 const visitRateLimiter = new Map<string, number>();
 const VISIT_RATE_LIMIT_MS = 5000;
+const VISIT_RATE_LIMIT_TTL_MS = 30_000; // 30 seconds
 const VISIT_RATE_LIMIT_MAX_ENTRIES = 1000;
 
 /**
@@ -86,14 +91,23 @@ function getRateLimitKey(url: string): string {
   }
 }
 
-function isRateLimitedVisit(url: string): boolean {
+/** Exported for unit tests; used internally by the VALID_VISIT handler. */
+export function isRateLimitedVisit(url: string): boolean {
     const now = Date.now();
     const key = getRateLimitKey(url);
+
+    // Evict entries older than TTL on every check so stale entries never
+    // persist past TTL, regardless of Map size. This bounds memory growth
+    // across long-lived Service Worker sessions.
+    for (const [k, ts] of visitRateLimiter) {
+        if (now - ts > VISIT_RATE_LIMIT_TTL_MS) visitRateLimiter.delete(k);
+    }
+
     const last = visitRateLimiter.get(key);
     if (last !== undefined && now - last < VISIT_RATE_LIMIT_MS) return true;
     visitRateLimiter.set(key, now);
-    // Guard against unbounded growth: evict the oldest tracked URL when the
-    // cap is exceeded (Map preserves insertion order).
+
+    // Safety net: even if the TTL sweep somehow falls behind, cap growth.
     if (visitRateLimiter.size > VISIT_RATE_LIMIT_MAX_ENTRIES) {
         const oldestKey = visitRateLimiter.keys().next().value as string | undefined;
         if (oldestKey !== undefined) visitRateLimiter.delete(oldestKey);
