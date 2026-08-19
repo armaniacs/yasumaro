@@ -35,9 +35,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [6.7.56] - 2026-08-18
+## [6.7.57] - 2026-08-19
 
-このリリースは前日のレビュー指摘を即座に反映したものです。
+### Fixed
+
+- プロンプトサニタイザの `LOW` 危険度検知を各呼び出し元でログに記録するよう変更
+- プロンプトサニタイザの safe-context 判定を強化し、HTML属性値内を安全とみなさないように修正
+- 訪問レートリミットの TTL スイープを毎回実行するよう修正し、古いエントリが残り続ける問題を解消
+- 暗号化 `encrypt()` の Base64 エンコードをスプレッド構文（`String.fromCharCode(...array)`）からループベースの `bytesToBase64()` に置換し、大きなバッファで発生しうるコールスタック溢れを回避
+
+### Refactor
+
+- `DASHBOARD_SQLITE` メッセージの `payload` 型を `Record<string, unknown>` から `DashboardSqliteRequest` に型付けし、型安全性を向上
+
+### Chore
+
+- CI に PBI DoD（Definition of Done）の自動検証ジョブを追加
+
+## [6.7.56] - 2026-08-18
 
 ### Fixed
 
