@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { formatTimeAgo, checkPageStatus } from '../statusChecker.js';
-import { RecordingCache } from '../../background/recordingCache.js';
+import { RecordingCache } from '../../background/__tests__/helpers/recordingCache.js';
 import * as storage from '../../utils/storage.js';
 
 // Mock chrome runtime for privacy cache

@@ -35,16 +35,29 @@ vi.mock('../../utils/storage/settingsStore.js', () => ({
 }));
 
 import {
-  RecordingCache,
+  RecordingCacheInstance,
   redactSettingsApiKeys,
   SETTINGS_CACHE_TTL,
   URL_CACHE_TTL,
   PRIVACY_CACHE_TTL,
 } from '../recordingCache.js';
+import type { RecordingCacheStore } from '../recordingCache.js';
 import { SESSION_KEYS } from '../sessionStore.js';
 
 /** In-memory stand-in for chrome.storage.session. */
 let sessionData: Record<string, unknown> = {};
+
+/** Store implementation that mirrors the production SessionStoreRecordingCacheStore
+ *  but writes to the test-local sessionData object instead of chrome.storage.session. */
+class SessionDataRecordingCacheStore implements RecordingCacheStore {
+  async get<T>(key: string): Promise<T | null> {
+    return (sessionData[key] as T | undefined) ?? null;
+  }
+
+  async set(key: string, value: unknown): Promise<void> {
+    sessionData[key] = value;
+  }
+}
 
 function installChromeSessionMock(): void {
   const session = {
@@ -67,11 +80,13 @@ async function flushSave(): Promise<void> {
   for (let i = 0; i < 5; i++) await Promise.resolve();
 }
 
+let cache: RecordingCacheInstance;
+
 beforeEach(() => {
   sessionData = {};
   vi.clearAllMocks();
   installChromeSessionMock();
-  RecordingCache.resetCacheState();
+  cache = new RecordingCacheInstance(new SessionDataRecordingCacheStore());
   mockGetSettings.mockResolvedValue({ geminiApiKey: 'secret-key', someFlag: true });
   mockGetSavedUrlsWithTimestamps.mockResolvedValue(new Map([['https://example.com', 1700000000000]]));
 });
@@ -82,7 +97,7 @@ afterEach(() => {
 
 describe('RecordingCache — session storage persistence', () => {
   it('VULN-014: never writes decrypted API keys to session storage', async () => {
-    await RecordingCache.getSettingsWithCache();
+    await cache.getSettingsWithCache();
     await flushSave();
 
     const persisted = sessionData[SESSION_KEYS.RECORDING_CACHE] as
@@ -90,7 +105,7 @@ describe('RecordingCache — session storage persistence', () => {
 
     expect(persisted).toBeDefined();
     // The in-memory cache keeps the real key for API calls...
-    expect(RecordingCache.getCacheState().settingsCache?.geminiApiKey).toBe('secret-key');
+    expect(cache.getCacheState().settingsCache?.geminiApiKey).toBe('secret-key');
     // ...but the persisted mirror must not carry it.
     expect(persisted!.settingsCache.geminiApiKey).toBe('');
     expect(JSON.stringify(persisted)).not.toContain('secret-key');
@@ -108,9 +123,9 @@ describe('RecordingCache — session storage persistence', () => {
       privacyCacheTimestamp: null,
     };
 
-    await RecordingCache.loadCacheFromSession();
+    await cache.loadCacheFromSession();
 
-    const state = RecordingCache.getCacheState();
+    const state = cache.getCacheState();
     expect(state.settingsCache?.someFlag).toBe(false);
     expect(state.cacheVersion).toBe(7);
   });
@@ -126,9 +141,9 @@ describe('RecordingCache — session storage persistence', () => {
       privacyCacheTimestamp: null,
     };
 
-    await RecordingCache.loadCacheFromSession();
+    await cache.loadCacheFromSession();
 
-    expect(RecordingCache.getCacheState().settingsCache).toBeNull();
+    expect(cache.getCacheState().settingsCache).toBeNull();
   });
 
   it('VULN-014: does not restore a redacted settings cache (no usable API key)', async () => {
@@ -144,9 +159,9 @@ describe('RecordingCache — session storage persistence', () => {
       privacyCacheTimestamp: null,
     };
 
-    await RecordingCache.loadCacheFromSession();
+    await cache.loadCacheFromSession();
 
-    expect(RecordingCache.getCacheState().settingsCache).toBeNull();
+    expect(cache.getCacheState().settingsCache).toBeNull();
   });
 
   it('restores url and privacy caches that are still within TTL', async () => {
@@ -161,9 +176,9 @@ describe('RecordingCache — session storage persistence', () => {
       privacyCacheTimestamp: now,
     };
 
-    await RecordingCache.loadCacheFromSession();
+    await cache.loadCacheFromSession();
 
-    const state = RecordingCache.getCacheState();
+    const state = cache.getCacheState();
     expect(state.urlCache?.get('https://a.example')).toBe(1700000000000);
     expect(state.privacyCache?.has('https://b.example')).toBe(true);
   });
@@ -180,45 +195,45 @@ describe('RecordingCache — session storage persistence', () => {
       privacyCacheTimestamp: now - PRIVACY_CACHE_TTL - 1,
     };
 
-    await RecordingCache.loadCacheFromSession();
+    await cache.loadCacheFromSession();
 
-    const state = RecordingCache.getCacheState();
+    const state = cache.getCacheState();
     expect(state.urlCache).toBeNull();
     expect(state.privacyCache).toBeNull();
   });
 
   it('survives a missing session entry without throwing', async () => {
-    await expect(RecordingCache.loadCacheFromSession()).resolves.toBeUndefined();
-    expect(RecordingCache.getCacheState().settingsCache).toBeNull();
+    await expect(cache.loadCacheFromSession()).resolves.toBeUndefined();
+    expect(cache.getCacheState().settingsCache).toBeNull();
   });
 });
 
 describe('RecordingCache — URL cache', () => {
   it('serves a second call from cache instead of re-reading storage', async () => {
-    await RecordingCache.getSavedUrlsWithCache();
-    await RecordingCache.getSavedUrlsWithCache();
+    await cache.getSavedUrlsWithCache();
+    await cache.getSavedUrlsWithCache();
 
     expect(mockGetSavedUrlsWithTimestamps).toHaveBeenCalledTimes(1);
   });
 
   it('re-reads storage once the TTL has elapsed', async () => {
     vi.useFakeTimers();
-    await RecordingCache.getSavedUrlsWithCache();
+    await cache.getSavedUrlsWithCache();
     expect(mockGetSavedUrlsWithTimestamps).toHaveBeenCalledTimes(1);
 
     vi.advanceTimersByTime(URL_CACHE_TTL + 1);
-    await RecordingCache.getSavedUrlsWithCache();
+    await cache.getSavedUrlsWithCache();
 
     expect(mockGetSavedUrlsWithTimestamps).toHaveBeenCalledTimes(2);
   });
 
   it('re-reads storage after explicit invalidation', async () => {
-    await RecordingCache.getSavedUrlsWithCache();
-    RecordingCache.invalidateUrlCache();
-    await RecordingCache.getSavedUrlsWithCache();
+    await cache.getSavedUrlsWithCache();
+    cache.invalidateUrlCache();
+    await cache.getSavedUrlsWithCache();
 
     expect(mockGetSavedUrlsWithTimestamps).toHaveBeenCalledTimes(2);
-    expect(RecordingCache.getCacheState().urlCacheTimestamp).not.toBeNull();
+    expect(cache.getCacheState().urlCacheTimestamp).not.toBeNull();
   });
 });
 
@@ -227,18 +242,18 @@ describe('RecordingCache — privacy cache session fallback', () => {
     const url = 'https://example.com/page';
     sessionData['privacyCache_' + url] = { isPrivate: true, timestamp: Date.now() };
 
-    const result = await RecordingCache.getPrivacyInfoWithCache(url);
+    const result = await cache.getPrivacyInfoWithCache(url);
 
     expect(result?.isPrivate).toBe(true);
     // The recovered entry is promoted into the in-memory cache.
-    expect(RecordingCache.getPrivacyCache()?.has(url)).toBe(true);
+    expect(cache.getPrivacyCache()?.has(url)).toBe(true);
   });
 
   it('evicts and ignores a session entry past the privacy TTL', async () => {
     const url = 'https://example.com/stale';
     sessionData['privacyCache_' + url] = { isPrivate: true, timestamp: Date.now() - PRIVACY_CACHE_TTL - 1 };
 
-    const result = await RecordingCache.getPrivacyInfoWithCache(url);
+    const result = await cache.getPrivacyInfoWithCache(url);
 
     expect(result).toBeNull();
     expect(sessionData['privacyCache_' + url]).toBeUndefined();
@@ -246,9 +261,9 @@ describe('RecordingCache — privacy cache session fallback', () => {
 
   it('normalizes the URL so a fragment does not miss the cache', async () => {
     const canonical = 'https://example.com/page';
-    RecordingCache.setPrivacyCacheEntry(canonical, { isPrivate: true, timestamp: Date.now() } as never);
+    cache.setPrivacyCacheEntry(canonical, { isPrivate: true, timestamp: Date.now() } as never);
 
-    const result = await RecordingCache.getPrivacyInfoWithCache(canonical + '#section');
+    const result = await cache.getPrivacyInfoWithCache(canonical + '#section');
 
     expect(result?.isPrivate).toBe(true);
   });
@@ -258,16 +273,16 @@ describe('RecordingCache — privacy cache session fallback', () => {
     sessionData['privacyCache_https://b.example'] = { isPrivate: false, timestamp: Date.now() };
     sessionData['unrelated_key'] = 'keep me';
 
-    await RecordingCache.invalidatePrivacyCache();
+    await cache.invalidatePrivacyCache();
 
     expect(sessionData['privacyCache_https://a.example']).toBeUndefined();
     expect(sessionData['privacyCache_https://b.example']).toBeUndefined();
     expect(sessionData['unrelated_key']).toBe('keep me');
-    expect(RecordingCache.getPrivacyCache()).toBeNull();
+    expect(cache.getPrivacyCache()).toBeNull();
   });
 
   it('returns null when nothing is cached anywhere', async () => {
-    const result = await RecordingCache.getPrivacyInfoWithCache('https://example.com/unknown');
+    const result = await cache.getPrivacyInfoWithCache('https://example.com/unknown');
     expect(result).toBeNull();
   });
 });

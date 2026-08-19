@@ -137,7 +137,7 @@ vi.mock('../../utils/storageUrls.js', () => ({
 // ─── Imports (after mocks) ──────────────────────────────────────────────────
 import { isValidFetchUrl, truncateContentSize } from '../recordingValidator.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
-import { RecordingCache } from '../recordingCache.js';
+import { RecordingCache } from './helpers/recordingCache.js';
 import { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
 import { PrivacyPipeline } from '../privacyPipeline.js';
 import * as storage from '../../utils/storage.js';

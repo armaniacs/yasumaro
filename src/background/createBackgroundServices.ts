@@ -14,7 +14,7 @@ import type { AIService } from './ai/AIService.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { getSharedSqliteClient } from './sqliteClient.js';
 import type { SqliteClient } from './sqliteClient.js';
-import { RecordingCache, RecordingCacheInstance, SessionStoreRecordingCacheStore } from './recordingCache.js';
+import { RecordingCacheInstance, SessionStoreRecordingCacheStore } from './recordingCache.js';
 import { TabCache } from './tabCache.js';
 import { RateLimiter } from './rateLimiter.js';
 import { ManualContentFetcher } from './manualContentFetcher.js';

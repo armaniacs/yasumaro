@@ -128,7 +128,11 @@ const handleManualRecordForContextMenu = async (
 // ============================================================================
 // Tab Event Handlers
 // ============================================================================
-const _tabHandlers = createTabEventHandlers({ tabCache, autoSavedBadgeTabs });
+const _tabHandlers = createTabEventHandlers({
+  tabCache,
+  autoSavedBadgeTabs,
+  getPrivacyCache: () => services.recordingCache.getPrivacyCache(),
+});
 export const handleTabRemoved = _tabHandlers.handleTabRemoved;
 export const handleTabActivated = _tabHandlers.handleTabActivated;
 export const handleTabUpdated = _tabHandlers.handleTabUpdated;

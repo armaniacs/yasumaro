@@ -1,5 +1,5 @@
 // src/background/__tests__/integration-recording.test.js
-import { RecordingCache } from '../recordingCache.js';
+import { RecordingCache } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
 
 import * as storage from '../../utils/storage.js';

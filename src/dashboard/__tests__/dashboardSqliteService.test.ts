@@ -88,7 +88,7 @@ describe('dashboardSqliteService', () => {
       givenLastError('Connection failed');
 
       const result = await queryLogs();
-      expect(result).toEqual({ error: 'Connection failed' });
+      expect(result).toEqual({ error: 'Unexpected error: Connection failed' });
     });
   });
 
@@ -115,7 +115,7 @@ describe('dashboardSqliteService', () => {
       givenLastError('Timeout');
 
       const result = await searchLogs('test');
-      expect(result).toEqual({ error: 'Timeout' });
+      expect(result).toEqual({ error: 'SQLite request timed out. The database may still be initializing.' });
     });
 
     it('passes orderBy/orderDir through to the message payload', async () => {
@@ -170,7 +170,7 @@ describe('dashboardSqliteService', () => {
       givenLastError('Timeout');
 
       const result = await toggleStar(42);
-      expect(result).toEqual({ error: 'Timeout' });
+      expect(result).toEqual({ error: 'SQLite request timed out. The database may still be initializing.' });
     });
 
     // callDashboard() logs every non-exception failure via console.warn
@@ -212,7 +212,7 @@ describe('dashboardSqliteService', () => {
       givenLastError('Timeout');
 
       const result = await deleteLog(42);
-      expect(result).toEqual({ error: 'Timeout' });
+      expect(result).toEqual({ error: 'SQLite request timed out. The database may still be initializing.' });
     });
   });
 
@@ -228,7 +228,7 @@ describe('dashboardSqliteService', () => {
       givenLastError('Timeout');
 
       const result = await updateLog(1, {});
-      expect(result).toEqual({ error: 'Timeout' });
+      expect(result).toEqual({ error: 'SQLite request timed out. The database may still be initializing.' });
     });
   });
 
@@ -251,7 +251,7 @@ describe('dashboardSqliteService', () => {
       givenLastError('Timeout');
 
       const result = await getLogCount();
-      expect(result).toEqual({ error: 'Timeout' });
+      expect(result).toEqual({ error: 'SQLite request timed out. The database may still be initializing.' });
     });
   });
 });

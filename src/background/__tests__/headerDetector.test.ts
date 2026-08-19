@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'vitest';
 import { HeaderDetector, sessionCacheKeysToEvict } from '../headerDetector.js';
-import { RecordingCache } from '../recordingCache.js';
+import { RecordingCache } from './helpers/recordingCache.js';
 import { checkPrivacy } from '../../utils/privacyChecker.js';
 import { ErrorCode } from '../../utils/logger.js';
 
@@ -40,9 +40,9 @@ import { logError } from '../../utils/logger.js';
 describe('HeaderDetector', () => {
   let detector: HeaderDetector;
 
-  beforeEach(() => {
-    RecordingCache.invalidatePrivacyCache();
-    detector = new HeaderDetector();
+  beforeEach(async () => {
+    await RecordingCache.invalidatePrivacyCache();
+    detector = new HeaderDetector(RecordingCache as unknown as import('../recordingCache.js').RecordingCacheInstance);
   });
 
   describe('cachePrivacyInfo', () => {

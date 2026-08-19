@@ -7,13 +7,6 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-vi.mock('../../recordingCache.js', () => ({
-  RecordingCache: {
-    invalidateSettingsCache: vi.fn(),
-    loadCacheFromSession: vi.fn().mockResolvedValue(undefined),
-  },
-}));
-
 vi.mock('../../../utils/storage.js', () => ({
   getSettings: vi.fn().mockResolvedValue({}),
   updateDomainFilterCache: vi.fn().mockResolvedValue(undefined),
@@ -46,7 +39,7 @@ vi.mock('../../pendingSqliteQueue.js', () => ({
 }));
 
 import { createLifecycleHandlers, restoreRecordingCacheOnWake } from '../lifecycleHandlers.js';
-import { RecordingCache } from '../../recordingCache.js';
+import { RecordingCache } from '../../__tests__/helpers/recordingCache.js';
 
 describe('handleStartup — pending SQLite queue flush (M14)', () => {
   beforeEach(() => {
@@ -85,8 +78,9 @@ describe('restoreRecordingCacheOnWake — SW wake-up cache rehydration', () => {
   });
 
   it('restores the recording cache from session storage', async () => {
-    await restoreRecordingCacheOnWake();
+    const spy = vi.spyOn(RecordingCache, 'loadCacheFromSession');
+    await restoreRecordingCacheOnWake(RecordingCache as unknown as import('../../recordingCache.js').RecordingCacheInstance);
 
-    expect(RecordingCache.loadCacheFromSession).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 });

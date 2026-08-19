@@ -5,7 +5,7 @@
  * rather than stubbing it, so step behaviour stays under test.
  */
 import { createRecordingPipeline, buildRecordingPipelineDeps, type RecordingPipeline } from '../../pipeline/RecordingPipeline.js';
-import { RecordingCache } from '../../recordingCache.js';
+import { RecordingCache } from './recordingCache.js';
 
 export function makeRecordingLogic(
   obsidian: unknown,
@@ -14,6 +14,7 @@ export function makeRecordingLogic(
 ): RecordingPipeline {
   return createRecordingPipeline(buildRecordingPipelineDeps({
     getPrivacyInfoWithCache: (url: string) => RecordingCache.getPrivacyInfoWithCache(url),
+    getSettingsWithCache: () => RecordingCache.getSettingsWithCache(),
     obsidian: obsidian as never,
     aiService: aiService as never,
     sqliteClient: (sqliteClient ?? null) as never,

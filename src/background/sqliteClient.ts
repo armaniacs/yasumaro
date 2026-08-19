@@ -10,6 +10,12 @@ import { logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { recordSqliteFailure, recordSqliteSuccess } from './sqliteAlert.js';
+import type {
+  SqliteRpcResult,
+  SqliteError,
+  SqliteRpcClient,
+} from '../messaging/sqliteRpcClient.js';
+import { categorizeError } from '../messaging/sqliteRpcClient.js';
 import type { SqliteMessageType } from '../messaging/sqliteMessages.js';
 import type {
   OffscreenResponse,
@@ -31,72 +37,14 @@ import { ChromeOffscreenTransport } from './offscreenTransport.js';
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
 import type { OpfsSpikeReport } from '../offscreen/opfsSpike.js';
 
-/**
- * What kind of failure this was.
- *
- * The raw input is still a string — Chrome extension APIs report errors as
- * messages, not typed exceptions (ADR 2026-07-13, assumption G). What changed
- * is that the classification survives: it used to be folded straight into an
- * English sentence and discarded, so callers wanting to know "is this worth
- * retrying?" had to pattern-match the prose back out again.
- */
-export type SqliteErrorKind =
-  | 'timeout'         // request timed out; the DB may still be initializing
-  | 'offscreen_lost'  // offscreen document went away
-  | 'quota'           // storage quota exceeded
-  | 'sqlite_error'    // SQLite itself reported a problem
-  | 'unknown';
-
-export interface SqliteError {
-  kind: SqliteErrorKind;
-  /** User-facing message. Unchanged from the pre-classification wording. */
-  message: string;
-  /**
-   * Whether retrying the same call could plausibly succeed.
-   *
-   * Only timeouts qualify: the offscreen document plus WASM load can outrun
-   * the first query after the dashboard opens. Quota and SQLite errors are
-   * deterministic, and a lost offscreen document needs a reload, so retrying
-   * those just delays the error the user needs to see.
-   */
-  retriable: boolean;
-}
-
-export type CallResult<T> = { success: true; data: T } | { success: false; error: SqliteError };
-
-export function categorizeError(msg: string): SqliteError {
-  if (msg.includes('timed out') || msg.includes('Timeout')) {
-    return {
-      kind: 'timeout',
-      message: 'SQLite request timed out. The database may still be initializing.',
-      retriable: true,
-    };
-  }
-  if (msg.includes('offscreen') || msg.includes('offscreenDocument')) {
-    return {
-      kind: 'offscreen_lost',
-      message: 'Database connection lost. Please reload the extension.',
-      retriable: false,
-    };
-  }
-  if (msg.includes('quota') || msg.includes('QuotaExceededError')) {
-    return {
-      kind: 'quota',
-      message: 'Storage quota exceeded. Some older records may have been removed.',
-      retriable: false,
-    };
-  }
-  if (msg.includes('SQLITE_') || msg.includes('disk I/O')) {
-    return { kind: 'sqlite_error', message: `Database error: ${msg}`, retriable: false };
-  }
-  return { kind: 'unknown', message: `Unexpected error: ${msg}`, retriable: false };
-}
+export type { SqliteRpcResult as CallResult, SqliteError } from '../messaging/sqliteRpcClient.js';
+export { categorizeError } from '../messaging/sqliteRpcClient.js';
 
 // ============================================================================
 // SqliteClient
 // ============================================================================
 
-export class SqliteClient {
+export class SqliteClient implements SqliteRpcClient {
   /**
    * Transport layer for sending messages to the offscreen document.
    * Injected for testing; defaults to ChromeOffscreenTransport in production.
@@ -124,7 +72,7 @@ export class SqliteClient {
     payload: Record<string, unknown> = {},
     transform?: (res: Extract<R, { success: true }>) => T,
     traceId: string = '',
-  ): Promise<CallResult<T>> {
+  ): Promise<SqliteRpcResult<T>> {
     try {
       const res = await this.msgOffscreen(type, payload, traceId);
       if (!res?.success) {
@@ -144,12 +92,12 @@ export class SqliteClient {
     }
   }
 
-  async init(): Promise<boolean> {
+  async init(): Promise<SqliteRpcResult<boolean>> {
     const result = await this.call('SQLITE_INIT');
-    return result.success;
+    return result.success ? { success: true, data: true } : result;
   }
 
-  async insertResult(record: BrowsingLogRecord, traceId: string = ''): Promise<CallResult<{ id: number }>> {
+  async insertResult(record: BrowsingLogRecord, traceId: string = ''): Promise<SqliteRpcResult<{ id: number }>> {
     return this.call<{ id: number }, OffscreenInsertResponse>(
       'SQLITE_INSERT',
       // WHY: BrowsingLogRecord lacks index signature; must cast through unknown for offscreen payload
@@ -159,7 +107,7 @@ export class SqliteClient {
     );
   }
 
-  async insertBatchResult(records: BrowsingLogRecord[]): Promise<CallResult<{ count: number }>> {
+  async insertBatchResult(records: BrowsingLogRecord[]): Promise<SqliteRpcResult<{ count: number }>> {
     return this.call<{ count: number }, OffscreenCountResponse>(
       'SQLITE_INSERT_BATCH',
       // WHY: BrowsingLogRecord[] lacks index signature; must cast through unknown for offscreen payload
@@ -181,7 +129,7 @@ export class SqliteClient {
    * backend performs FTS5 or LIKE search; otherwise it returns a plain
    * filtered listing.
    */
-  async queryResult<T = BrowsingLogRecord>(q: StorageQuery = {}): Promise<CallResult<{ rows: T[]; total: number }>> {
+  async queryResult<T = BrowsingLogRecord>(q: StorageQuery = {}): Promise<SqliteRpcResult<{ rows: T[]; total: number }>> {
     return this.call<{ rows: T[]; total: number }, OffscreenQueryResponse>(
       'SQLITE_QUERY',
       q as Record<string, unknown>,
@@ -202,7 +150,7 @@ export class SqliteClient {
     limit = 50,
     offset = 0,
     options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
-  ): Promise<CallResult<{ rows: BrowsingLogRecord[]; total: number }>> {
+  ): Promise<SqliteRpcResult<{ rows: BrowsingLogRecord[]; total: number }>> {
     return this.queryResult<BrowsingLogRecord>({
       text: searchQuery,
       limit,
@@ -211,15 +159,15 @@ export class SqliteClient {
     });
   }
 
-  async updateResult(id: number, changes: Partial<Record<string, unknown>>, traceId: string = ''): Promise<CallResult<void>> {
+  async updateResult(id: number, changes: Partial<Record<string, unknown>>, traceId: string = ''): Promise<SqliteRpcResult<void>> {
     return this.call<void, OffscreenWriteResponse>('SQLITE_UPDATE', { id, ...changes }, () => undefined, traceId);
   }
 
-  async deleteResult(id: number): Promise<CallResult<void>> {
+  async deleteResult(id: number): Promise<SqliteRpcResult<void>> {
     return this.call<void, OffscreenWriteResponse>('SQLITE_DELETE', { id }, () => undefined);
   }
 
-  async toggleStarResult(id: number): Promise<CallResult<{ is_starred: number }>> {
+  async toggleStarResult(id: number): Promise<SqliteRpcResult<{ is_starred: number }>> {
     return this.call<{ is_starred: number }, OffscreenToggleStarResponse>(
       'SQLITE_TOGGLE_STAR',
       { id },
@@ -227,7 +175,7 @@ export class SqliteClient {
     );
   }
 
-  async getCountResult(): Promise<CallResult<number>> {
+  async getCountResult(): Promise<SqliteRpcResult<number>> {
     return this.call<number, OffscreenCountResponse>('SQLITE_COUNT', {}, (res) => {
       if (!Number.isFinite(res.count)) {
         throw new Error('SQLite count response was missing a numeric count');
@@ -236,7 +184,7 @@ export class SqliteClient {
     });
   }
 
-  async exportDbResult(): Promise<CallResult<Uint8Array>> {
+  async exportDbResult(): Promise<SqliteRpcResult<Uint8Array>> {
     return this.call<Uint8Array, OffscreenBinaryResponse>(
       'SQLITE_EXPORT',
       {},
@@ -244,7 +192,7 @@ export class SqliteClient {
     );
   }
 
-  async backupDbResult(): Promise<CallResult<Uint8Array>> {
+  async backupDbResult(): Promise<SqliteRpcResult<Uint8Array>> {
     return this.call<Uint8Array, OffscreenBinaryResponse>(
       'SQLITE_BACKUP',
       {},
@@ -252,7 +200,7 @@ export class SqliteClient {
     );
   }
 
-  async restoreDbResult(data: Uint8Array): Promise<CallResult<void>> {
+  async restoreDbResult(data: Uint8Array): Promise<SqliteRpcResult<void>> {
     return this.call<void, OffscreenWriteResponse>('SQLITE_RESTORE', { data: Array.from(data) }, () => undefined);
   }
 
@@ -289,7 +237,7 @@ export class SqliteClient {
     };
   }
 
-  async clearAllResult(): Promise<CallResult<void>> {
+  async clearAllResult(): Promise<SqliteRpcResult<void>> {
     return this.call<void, OffscreenWriteResponse>('SQLITE_CLEAR_ALL', {}, () => undefined);
   }
 
@@ -303,7 +251,7 @@ export class SqliteClient {
     return result.success;
   }
 
-  async runOpfsSpikeResult(): Promise<CallResult<OpfsSpikeReport>> {
+  async runOpfsSpikeResult(): Promise<SqliteRpcResult<OpfsSpikeReport>> {
     return this.call<OpfsSpikeReport, OffscreenOpfsSpikeResponse>(
       'SQLITE_OPFS_SPIKE',
       {},
@@ -311,7 +259,7 @@ export class SqliteClient {
     );
   }
 
-  async purgeOldRecordsResult(retentionDays?: number, maxRecords?: number): Promise<CallResult<{ purged: number }>> {
+  async purgeOldRecordsResult(retentionDays?: number, maxRecords?: number): Promise<SqliteRpcResult<{ purged: number }>> {
     return this.call<{ purged: number }, OffscreenPurgeResponse>(
       'SQLITE_PURGE',
       { retentionDays, maxRecords },
@@ -323,7 +271,7 @@ export class SqliteClient {
     retentionDays?: number,
     maxRecords?: number,
     includeStarred?: boolean,
-  ): Promise<CallResult<{ purged: number }>> {
+  ): Promise<SqliteRpcResult<{ purged: number }>> {
     return this.call<{ purged: number }, OffscreenContentPurgeResponse>(
       'CONTENT_PURGE',
       { retentionDays, maxRecords, includeStarred },
@@ -331,7 +279,7 @@ export class SqliteClient {
     );
   }
 
-  async insertAuditLogResult(record: { provider: string; url: string; created_at: number }): Promise<CallResult<{ id: number }>> {
+  async insertAuditLogResult(record: { provider: string; url: string; created_at: number }): Promise<SqliteRpcResult<{ id: number }>> {
     return this.call<{ id: number }, OffscreenInsertResponse>(
       'SQLITE_AUDIT_LOG_INSERT',
       record,
@@ -339,7 +287,7 @@ export class SqliteClient {
     );
   }
 
-  async queryAuditLogResult(options: { limit?: number; offset?: number } = {}): Promise<CallResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>> {
+  async queryAuditLogResult(options: { limit?: number; offset?: number } = {}): Promise<SqliteRpcResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>> {
     return this.call<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }, OffscreenQueryResponse>(
       'SQLITE_AUDIT_LOG_QUERY',
       options as Record<string, unknown>,
