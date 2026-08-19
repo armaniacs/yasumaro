@@ -6,7 +6,6 @@
 
 import { logError, logWarn, ErrorCode } from '../logger.js';
 import { errorMessage } from '../errorUtils.js';
-import { migrateUblockSettings, migrateJpLayoutDefault, migrateCategoryBDefault, migrateWhitelistExtractionDefault } from '../migration.js';
 import { isEncrypted, encryptApiKey, decryptApiKey } from '../crypto/index.js';
 import { withOptimisticLock } from '../optimisticLock.js';
 import { getOrCreateEncryptionKey } from './encryptionSession.js';

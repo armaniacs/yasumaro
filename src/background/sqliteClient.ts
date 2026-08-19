@@ -12,7 +12,6 @@ import { pickDefined } from '../utils/objectUtils.js';
 import { recordSqliteFailure, recordSqliteSuccess } from './sqliteAlert.js';
 import type {
   SqliteRpcResult,
-  SqliteError,
   SqliteRpcClient,
 } from '../messaging/sqliteRpcClient.js';
 import { categorizeError } from '../messaging/sqliteRpcClient.js';
