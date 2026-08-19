@@ -11,7 +11,6 @@ import { categorizeError } from '../messaging/sqliteRpcClient.js';
 import { bytesToBase64, base64ToBytes } from '../utils/crypto/index.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import {
-  requiredFiniteNumber,
   requiredNonNegativeNumber,
   requiredBoolean,
   requiredString,
@@ -23,7 +22,6 @@ import {
   requiredRows,
   isBrowsingLogEntry,
   isAuditLogEntry,
-  requiredStringArray,
   optionalStringArray,
   optionalCompileOptionsSource,
 } from '../messaging/sqliteValidators.js';
