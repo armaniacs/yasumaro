@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.54` リリース。
+> - 現時点では `v6.7.58` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,17 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.7.58] - 2026-08-20
+
+### Refactor
+
+- 静的 `RecordingCache` クラスを削除し、全呼び出し元を `RecordingCacheInstance` の依存性注入に統一。グローバル状態を排除しテスト時のインスタンス分離が可能に
+- `SqliteRpcClient` インターフェースを `src/messaging/sqliteRpcClient.ts` に新設し、Service Worker 側 `SqliteClient` と Dashboard 側 `dashboardSqliteService` でエラー分類（`categorizeError`）と結果型（`SqliteRpcResult<T>`）を共有
+- `settingsStore.ts`（685行）から `urlWhitelist.ts` / `settingsMigration.ts` / `storageMaintenance.ts` にモジュール分割し、循環依存を解消
+- `RecordingContextFieldMapper` を新設し、`saveMetadataStep.ts` の重複マッピングを 186行→98行に縮小
+- `MessageHandlerRegistryDeps`（18フィールド）を `CommonHandlerDeps` / `RecordingHandlerDeps` / `TestingHandlerDeps` / `SystemHandlerDeps` / `LifecycleHandlerDeps` にサブインターフェース分割
+- テストの `RecordingCache` 参照を `__tests__/helpers/recordingCache.ts` テストヘルパー経由に移行
 
 ## [6.7.57] - 2026-08-19
 
