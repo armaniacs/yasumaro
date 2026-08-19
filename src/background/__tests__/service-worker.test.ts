@@ -150,7 +150,16 @@ vi.mock('../recordingCache.js', () => ({
         static invalidatePrivacyCache = vi.fn();
         static loadCacheFromSession = vi.fn().mockResolvedValue(undefined);
         static scheduleCacheSave = vi.fn();
-    }
+    },
+    RecordingCacheInstance: class {
+        getPrivacyInfoWithCache = vi.fn().mockResolvedValue(null);
+        getSettingsWithCache = vi.fn().mockResolvedValue({});
+        getPrivacyCache = vi.fn().mockReturnValue(null);
+        getPrivacyCacheSize = vi.fn().mockReturnValue(0);
+        setPrivacyCacheEntry = vi.fn();
+        scheduleCacheSave = vi.fn();
+    },
+    SessionStoreRecordingCacheStore: class {}
 }));
 vi.mock('../tabCache.js', () => ({
     TabCache: class {

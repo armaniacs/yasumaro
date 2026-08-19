@@ -31,6 +31,8 @@ const mocks = vi.hoisted(() => ({
   getSettings: vi.fn(),
   saveSavedUrlEntryMetadata: vi.fn(),
   createReviewSummaryGenerator: vi.fn(),
+  RecordingCacheInstance: vi.fn(),
+  SessionStoreRecordingCacheStore: vi.fn(),
 }));
 
 vi.mock('../obsidianClient.js', () => ({ ObsidianClient: mocks.ObsidianClient }));
@@ -48,7 +50,11 @@ vi.mock('../ai/LocalAIService.js', () => ({ LocalAIService: mocks.LocalAIService
 vi.mock('../ai/RemoteAIService.js', () => ({ RemoteAIService: mocks.RemoteAIService }));
 vi.mock('../sessionStore.js', () => ({ SessionStore: mocks.SessionStore }));
 vi.mock('../headerDetector.js', () => ({ HeaderDetector: mocks.HeaderDetector }));
-vi.mock('../recordingCache.js', () => ({ RecordingCache: { getPrivacyInfoWithCache: mocks.getPrivacyInfoWithCache } }));
+vi.mock('../recordingCache.js', () => ({
+  RecordingCache: { getPrivacyInfoWithCache: mocks.getPrivacyInfoWithCache },
+  RecordingCacheInstance: mocks.RecordingCacheInstance,
+  SessionStoreRecordingCacheStore: mocks.SessionStoreRecordingCacheStore,
+}));
 vi.mock('../pipeline/RecordingPipeline.js', () => ({
   createRecordingPipeline: mocks.createRecordingPipeline,
   buildRecordingPipelineDeps: mocks.buildRecordingPipelineDeps,
@@ -87,6 +93,8 @@ describe('production composition contract', () => {
     mocks.getSettings.mockResolvedValue({});
     mocks.saveSavedUrlEntryMetadata.mockResolvedValue(undefined);
     mocks.createReviewSummaryGenerator.mockReturnValue({ generateWeeklySummary: vi.fn(), generateMonthlySummary: vi.fn() });
+    mocks.RecordingCacheInstance.mockImplementation(function () { return { getPrivacyInfoWithCache: mocks.getPrivacyInfoWithCache, getSettingsWithCache: vi.fn().mockResolvedValue({}) }; });
+    mocks.SessionStoreRecordingCacheStore.mockImplementation(function () { return {}; });
   });
 
   it('builds the SqliteClient through getSharedSqliteClient, never `new SqliteClient()`', () => {

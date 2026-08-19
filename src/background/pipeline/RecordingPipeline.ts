@@ -65,12 +65,12 @@ import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { Mutex } from '../../utils/Mutex.js';
 import { RecordingCache } from '../recordingCache.js';
-
 /**
  * Dependencies required to build a RecordingPipeline instance.
  */
 export interface RecordingPipelineDeps {
   getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
+  getSettingsWithCache?: () => Promise<Settings>;
   obsidian: ObsidianClient;
   aiService: AIService | null;
   sqliteClient: SqliteClient | null;
@@ -90,7 +90,8 @@ export function createRecordingPipeline(deps: RecordingPipelineDeps): RecordingP
     deps.aiService,
     deps.sqliteClient,
     deps.offlineNetworkQueue,
-    deps.urlStore
+    deps.urlStore,
+    deps.getSettingsWithCache
   );
 }
 
@@ -104,7 +105,7 @@ export function createRecordingPipeline(deps: RecordingPipelineDeps): RecordingP
  * mock in tests) instead of this helper importing the singleton itself.
  */
 export function buildRecordingPipelineDeps(
-  deps: Pick<RecordingPipelineDeps, 'getPrivacyInfoWithCache' | 'obsidian' | 'aiService' | 'sqliteClient' | 'urlStore' | 'offlineNetworkQueue'>,
+  deps: Pick<RecordingPipelineDeps, 'getPrivacyInfoWithCache' | 'getSettingsWithCache' | 'obsidian' | 'aiService' | 'sqliteClient' | 'urlStore' | 'offlineNetworkQueue'>,
 ): RecordingPipelineDeps {
   return { ...deps };
 }
@@ -124,6 +125,7 @@ const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(r
 export class RecordingPipeline {
   private steps: PipelineStep[];
   private getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
+  private getSettingsWithCache: () => Promise<Settings>;
   private obsidian: ObsidianClient;
   private aiService: AIService | null;
   private sqliteClient: SqliteClient | null;
@@ -164,9 +166,11 @@ export class RecordingPipeline {
     aiService: AIService | null = null,
     sqliteClient: SqliteClient | null = null,
     offlineNetworkQueue: OfflineNetworkQueue | null = null,
-    urlStore: UrlStore | undefined = undefined
+    urlStore: UrlStore | undefined = undefined,
+    getSettingsWithCache?: () => Promise<Settings>
   ) {
     this.getPrivacyInfoWithCache = getPrivacyInfoWithCache;
+    this.getSettingsWithCache = getSettingsWithCache ?? (() => RecordingCache.getSettingsWithCache());
     this.obsidian = obsidian;
     this.aiService = aiService;
     this.sqliteClient = sqliteClient;
@@ -308,7 +312,7 @@ export class RecordingPipeline {
    * Record a browsing event, fetching current settings before executing.
    */
   async record(data: RecordingData): Promise<RecordingResult> {
-    const settings = await RecordingCache.getSettingsWithCache();
+    const settings = await this.getSettingsWithCache();
     return this.execute(data, settings);
   }
 
@@ -331,7 +335,7 @@ export class RecordingPipeline {
     tags?: string[];
   }): Promise<boolean> {
     return RecordingPipeline.withUrlRecordMutex(job.url, async () => {
-      const settings = await RecordingCache.getSettingsWithCache();
+      const settings = await this.getSettingsWithCache();
       const context: RecordingContext = {
         data: { title: job.title, url: job.url, content: '' } as RecordingData,
         settings,
