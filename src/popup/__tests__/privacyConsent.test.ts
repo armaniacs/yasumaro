@@ -348,3 +348,40 @@ describe('getConsentWithdrawalHistory', () => {
         expect(history?.withdrawalDate).toBeDefined();
     });
 });
+
+describe('Browser Restart Simulation (Wrapping Key Persistence)', () => {
+    it('ブラウザ再起動後も同意署名が検証可能（local storageの wrapping keyから復元）', async () => {
+        // 1. 初回: 同意を保存（wrapping key が local/session storage に保存される）
+        await savePrivacyConsent();
+        const savedState = await getPrivacyConsent();
+        expect(savedState.hasConsented).toBe(true);
+
+        // 2. ブラウザ再起動をシミュレート: session storage をクリア
+        Object.keys(sessionMock).forEach(k => delete sessionMock[k]);
+
+        // 3. 再起動後: local storage の wrapping key から復元できる
+        const afterRestart = await getPrivacyConsent();
+        // 修正前は署名検証に失敗して hasConsented: false になっていた
+        // 修正後は local storage から wrapping key を読み込んで検証成功
+        expect(afterRestart.hasConsented).toBe(true);
+        expect(afterRestart.consentVersion).toBe(PRIVACY_POLICY_VERSION);
+    });
+
+    it('session storage が空でも local storage から wrapping key を復元できる', async () => {
+        // local storage に wrapping key が存在する状態をシミュレート
+        await savePrivacyConsent();
+        const consentData = storageMock['privacy_consent'];
+
+        // session storage をクリア
+        Object.keys(sessionMock).forEach(k => delete sessionMock[k]);
+
+        // 同意状態を読みなおす（local storage の wrapping key から復元）
+        const state = await getPrivacyConsent();
+        expect(state.hasConsented).toBe(true);
+
+        // session storage に wrapping key がキャッシュされたことを確認
+        // (次のアクセスは session から読み込まれる)
+        const sessionWrappingKey = sessionMock['hmac-wrapping-key'];
+        expect(typeof sessionWrappingKey).toBe('string');
+    });
+});
