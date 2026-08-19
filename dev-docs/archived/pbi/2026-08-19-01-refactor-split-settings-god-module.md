@@ -20,14 +20,14 @@ Scenario: 既存の getSettings / saveSettings が後方互換を維持する
   Then 既存の呼び出し元は変更なしで動作し、型エラーが発生しない
 
 ## 受け入れ基準
-- [ ] `settingsStore.ts` から `buildAllowedUrls`、`ALLOWED_AI_PROVIDER_DOMAINS`、`isDomainInWhitelist` を `urlWhitelist.ts` に抽出
-- [ ] `migrateToSingleSettingsObject`、`_applyMigrationsAndDecrypt`、`tryRestoreFromBackup`、`cleanupExpiredSettingsBackups` を `settingsMigration.ts` に抽出
-- [ ] `purgeLegacyStorage` および `getDefaultSqliteHealthCheck` などのクォータ管理・メンテナンスロジックを `storageMaintenance.ts` 等に抽出
-- [ ] 動的インポートしていた `SqliteClient` への依存を完全に除去
-- [ ] 抽出先モジュール (`urlWhitelist.ts` / `settingsMigration.ts` / `storageMaintenance.ts`) が `settingsStore.ts` を再 import して循環依存を作らないこと
-- [ ] 既存の `getSettings()` / `saveSettings()` / `saveSettingsWithAllowedUrls()` / `getAllowedUrls()` のシグネチャは変更しない
-- [ ] 既存テストが変更なしでパスする
-- [ ] `urlWhitelist.ts` は `src/utils/` 配下に配置し、`settingsStore.ts` 以外からも import 可能にする
+- [x] `settingsStore.ts` から `buildAllowedUrls`、`ALLOWED_AI_PROVIDER_DOMAINS`、`isDomainInWhitelist` を `urlWhitelist.ts` に抽出
+- [x] `migrateToSingleSettingsObject`、`_applyMigrationsAndDecrypt`、`tryRestoreFromBackup`、`cleanupExpiredSettingsBackups` を `settingsMigration.ts` に抽出
+- [x] `purgeLegacyStorage` および `getDefaultSqliteHealthCheck` などのクォータ管理・メンテナンスロジックを `storageMaintenance.ts` 等に抽出
+- [x] 動的インポートしていた `SqliteClient` への依存を完全に除去
+- [x] 抽出先モジュール (`urlWhitelist.ts` / `settingsMigration.ts` / `storageMaintenance.ts`) が `settingsStore.ts` を再 import して循環依存を作らないこと
+- [x] 既存の `getSettings()` / `saveSettings()` / `saveSettingsWithAllowedUrls()` / `getAllowedUrls()` のシグネチャは変更しない
+- [x] 既存テストが変更なしでパスする
+- [x] `urlWhitelist.ts` は `src/utils/` 配下に配置し、`settingsStore.ts` 以外からも import 可能にする
 
 ## テスト戦略
 - 単体: `settingsStore.test.ts`、`settingsMigration.test.ts`、`urlWhitelist.test.ts` の既存テストがパスすること
@@ -43,7 +43,7 @@ Scenario: 既存の getSettings / saveSettings が後方互換を維持する
 2 ストーリーポイント（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` のストレージセクションを更新）
-- [ ] `settingsStore.ts` が 350 行以下であること
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` のストレージセクションを更新）
+- [x] `settingsStore.ts` が 350 行以下であること

@@ -20,13 +20,13 @@ Scenario: バリデーションロジックが重複しない
   Then 同じバリデーター関数が使用され、片方だけが更新されて不一致になることがない
 
 ## 受け入れ基準
-- [ ] `SqliteRpcClient` インターフェースが定義され、Dashboard 側と SW 側の両方が実装している
-- [ ] 共有バリデーターモジュールが chrome API に依存せず、Dashboard と SW の両方から import 可能な純粋関数として実装されている
-- [ ] `dashboardSqliteService.ts` の `requiredRows`、`requiredNonNegativeNumber` 等が共有バリデーターに置き換わっている
-- [ ] `sqliteClient.ts` の `call()` メソッドのバリデーションが共有バリデーターを使用している
-- [ ] `categorizeError` などのエラー分類も必要に応じて共有化し、Dashboard 側でも `retriable` 等の情報を利用可能にする
-- [ ] `confirmToken` 取得や破壊的操作の確認は Dashboard 側アダプタに残し、SW 側実装には漏れ出さない
-- [ ] 既存の `dashboardSqliteService.test.ts` と `sqliteClient.test.ts` が変更なしでパスする
+- [x] `SqliteRpcClient` インターフェースが定義され、Dashboard 側と SW 側の両方が実装している
+- [x] 共有バリデーターモジュールが chrome API に依存せず、Dashboard と SW の両方から import 可能な純粋関数として実装されている
+- [x] `dashboardSqliteService.ts` の `requiredRows`、`requiredNonNegativeNumber` 等が共有バリデーターに置き換わっている
+- [x] `sqliteClient.ts` の `call()` メソッドのバリデーションが共有バリデーターを使用している
+- [x] `categorizeError` などのエラー分類も必要に応じて共有化し、Dashboard 側でも `retriable` 等の情報を利用可能にする
+- [x] `confirmToken` 取得や破壊的操作の確認は Dashboard 側アダプタに残し、SW 側実装には漏れ出さない
+- [x] 既存の `dashboardSqliteService.test.ts` と `sqliteClient.test.ts` が変更なしでパスする
 
 ## テスト戦略
 - 単体: `SqliteRpcClient` の Dashboard 側実装と SW 側実装をそれぞれテスト
@@ -43,7 +43,7 @@ Scenario: バリデーションロジックが重複しない
 3 ストーリーポイント（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` の SQLite セクションを更新）
-- [ ] `dashboardSqliteService.ts` と `sqliteClient.ts` の重複バリデーションが解消されている
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` の SQLite セクションを更新）
+- [x] `dashboardSqliteService.ts` と `sqliteClient.ts` の重複バリデーションが解消されている

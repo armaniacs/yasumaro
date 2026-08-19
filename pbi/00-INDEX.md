@@ -39,6 +39,14 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-19 アーキテクチャ深深化でアーカイブ済み（5件）
+
+- 2026-08-19-01-refactor-split-settings-god-module.md (settingsStore.tsをurlWhitelist/settingsMigration/storageMaintenanceに分割し循環依存を解消。133行)
+- 2026-08-19-02-refactor-collapse-metadata-mappers.md (RecordingContextFieldMapper新設、saveMetadataStep.tsを186行→98行に縮小)
+- 2026-08-19-03-refactor-delete-recordingcache-facade.md (静的RecordingCacheクラスを削除し全呼び出し元をRecordingCacheInstance DIに統一)
+- 2026-08-19-04-refactor-narrow-handler-deps.md (MessageHandlerRegistryDepsをCommonHandlerDeps/RecordingHandlerDeps等にサブインターフェース分割)
+- 2026-08-19-05-refactor-unify-dashboard-sqlite.md (SqliteRpcClientインターフェース導入、categorizeErrorを共有エラー分類に統一)
+
 ### 2026-08-19 コードレビュー指摘対応でアーカイブ済み（10件）
 
 - 2026-08-19-00-backlog.md (コードレビュー指摘5件の順位付けバックログ)

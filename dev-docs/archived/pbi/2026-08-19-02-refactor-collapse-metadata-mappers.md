@@ -20,11 +20,11 @@ Scenario: フィールド名変更が 1 箇所の修正で完了する
   Then 両方の出力形状が自動的に新フィールドを反映し、手動での重複編集が不要
 
 ## 受け入れ基準
-- [ ] `RecordingContext` 内の「ストレージ保存対象フィールド」のマッピングロジックが共有モジュールに集約されている
-- [ ] `BrowsingLogRecordMapper` が同じフィールドインベントリを再利用している
-- [ ] 共有インベントリは「正規化されたフィールド値」を返し、各アダプタがパッチ用の「undefined 省略」と行用の「null 変換」を個別に処理する
-- [ ] `saveMetadataStep.ts` の行数が 186 行から大幅に減少している
-- [ ] 既存の `saveMetadataStep` と `saveSqliteStep` のテストがパスする
+- [x] `RecordingContext` 内の「ストレージ保存対象フィールド」のマッピングロジックが共有モジュールに集約されている
+- [x] `BrowsingLogRecordMapper` が同じフィールドインベントリを再利用している
+- [x] 共有インベントリは「正規化されたフィールド値」を返し、各アダプタがパッチ用の「undefined 省略」と行用の「null 変換」を個別に処理する
+- [x] `saveMetadataStep.ts` の行数が 186 行から大幅に減少している
+- [x] 既存の `saveMetadataStep` と `saveSqliteStep` のテストがパスする
 
 ## テスト戦略
 - 単体: `RecordingContextFieldMapper.test.ts` を新規作成し、全フィールドのマッピング網羅性をテスト
@@ -40,7 +40,7 @@ Scenario: フィールド名変更が 1 箇所の修正で完了する
 0.5 ストーリーポイント（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（該当する場合のみ）
-- [ ] `saveMetadataStep.ts` の重複マッピング行が削除されている
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（該当する場合のみ）
+- [x] `saveMetadataStep.ts` の重複マッピング行が削除されている
