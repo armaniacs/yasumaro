@@ -14,7 +14,7 @@ import type { AIService } from './ai/AIService.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { getSharedSqliteClient } from './sqliteClient.js';
 import type { SqliteClient } from './sqliteClient.js';
-import { RecordingCache } from './recordingCache.js';
+import { RecordingCache, RecordingCacheInstance, SessionStoreRecordingCacheStore } from './recordingCache.js';
 import { TabCache } from './tabCache.js';
 import { RateLimiter } from './rateLimiter.js';
 import { ManualContentFetcher } from './manualContentFetcher.js';
@@ -50,6 +50,8 @@ export interface BackgroundServices {
   aiService: AIService;
   sessionStore: SessionStore;
   headerDetector: HeaderDetector;
+  /** Shared RecordingCache instance used by all cache consumers (PBI-03). */
+  recordingCache: RecordingCacheInstance;
   /**
    * Shared weekly/monthly review summary generator.
    *
@@ -80,6 +82,7 @@ export interface BackgroundServicesComposition extends BackgroundServices {
 
 export function createBackgroundServices(): BackgroundServicesComposition {
   const sessionStore = new SessionStore();
+  const recordingCache = new RecordingCacheInstance(new SessionStoreRecordingCacheStore(sessionStore));
   const headerDetector = new HeaderDetector();
 
   // Wires the pending-write queue's storage adapter explicitly, instead of the
@@ -103,7 +106,8 @@ export function createBackgroundServices(): BackgroundServicesComposition {
 
   // One shared pipeline for every recording path, automatic and handler-based.
   const recordingPipeline = createRecordingPipeline(buildRecordingPipelineDeps({
-    getPrivacyInfoWithCache: (url: string) => RecordingCache.getPrivacyInfoWithCache(url),
+    getPrivacyInfoWithCache: (url: string) => recordingCache.getPrivacyInfoWithCache(url),
+    getSettingsWithCache: () => recordingCache.getSettingsWithCache(),
     obsidian,
     aiService,
     sqliteClient,
@@ -144,6 +148,7 @@ export function createBackgroundServices(): BackgroundServicesComposition {
     reviewSummaryGenerator,
     sessionStore,
     headerDetector,
+    recordingCache,
     recordingPipeline,
     dashboardSqliteClient: sqliteClient,
     manualRecordDeps,
