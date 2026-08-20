@@ -18,7 +18,10 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| [Wave 2+ Panel Lifecycle Backlog](2026-08-20-wave2-panel-lifecycle-backlog.md) | 🟡 (2pt × 10 panels) | 🟢 | 🔧 | Dashboard Panel Abstraction Wave 2-3: diagnosticsPanel, historyPanel, 他 9 パネルの段階的 PanelLifecycle 移行。Wave 1 パターン確立後の実装ロードマップ。見積もり 4-6 週間。 |
+| [2026-08-21-01-refactor-diagnostics-panel-wave2.md](2026-08-21-01-refactor-diagnostics-panel-wave2.md) | 🟡 | 🟢 | 🔧 | Dashboard Panel Abstraction Wave 2: diagnosticsPanel を PanelLifecycle 直接実装に移行。Wave 1 パターン検証・改善。見積もり 2pt |
+| [2026-08-22-02-refactor-utils-layer-boundary.md](2026-08-22-02-refactor-utils-layer-boundary.md) | 🟡 | 🟢 | 🔧 | Utils Layer Boundary 形式化：Layer 0/1/2 の命名規則とドキュメント。循環依存（trustDb ↔ settingsStore）を ADR に記録。見積もり 2pt |
+| [2026-08-23-03-refactor-messaging-validator-interface.md](2026-08-23-03-refactor-messaging-validator-interface.md) | 🟡 | 🟢 | 🔧 | Messaging Validator Interface 統一：MessageValidator<T> 定義、5 validator 統合、handler registry 紐付け。schema 単一化。見積もり 2pt |
+| [Wave 2+ Panel Lifecycle Backlog](2026-08-20-wave2-panel-lifecycle-backlog.md) | 🟡 (2pt × 10 panels) | 🟢 | 🔧 | Dashboard Panel Abstraction Wave 2-3 ロードマップ：diagnosticsPanel 以降の 9 パネル段階的移行。4-6 週間。 |
 
 ---
 
