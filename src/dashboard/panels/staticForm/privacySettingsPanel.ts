@@ -1,9 +1,9 @@
-import { type StaticFormPanel } from '../types.js';
+import { type PanelLifecycle } from '../types.js';
 import { init as initPrivacySettings, loadPrivacySettings } from '../../settings/privacySettings.js';
 import { initMasterPasswordSettings, loadMasterPasswordSettings } from '../../masterPassword.js';
 import { getPrivacyConsent, withdrawPrivacyConsent } from '../../../popup/privacyConsent.js';
 
-export function createPrivacySettingsPanel(): StaticFormPanel {
+export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () => Promise<void> } {
   return {
     id: 'panel-privacy',
     category: 'static-form',

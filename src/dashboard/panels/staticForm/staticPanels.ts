@@ -1,5 +1,5 @@
 import { createStaticFormPanel } from './staticPanelAdapter.js';
-import { type StaticFormPanel } from '../types.js';
+import { type PanelLifecycle } from '../types.js';
 
 import { initTagsPanel } from '../../tagsPanel.js';
 import { initRecordingConditionsSettings } from '../../recordingConditionsSettings.js';
@@ -26,7 +26,7 @@ import { initDomainFilterTagUI } from '../../domainFilterTagUI.js';
  * Panels that carry real logic (generalSettingsPanel, privacySettingsPanel,
  * aiSummaryCleansingPanel) are registered separately in main.ts.
  */
-export const STATIC_FORM_PANELS: readonly StaticFormPanel[] = [
+export const STATIC_FORM_PANELS: readonly (PanelLifecycle & { refresh?: () => Promise<void> })[] = [
     createStaticFormPanel({
         id: 'panel-tags',
         mount: () => initTagsPanel(),

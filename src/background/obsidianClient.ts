@@ -1,4 +1,4 @@
-import { StorageKeys } from '../utils/storage.js';
+import { StorageKeys } from '../utils/storage/types.js';
 import { buildDailyNotePath } from '../utils/dailyNotePathBuilder.js';
 import { NoteSectionEditor } from './noteSectionEditor.js';
 import { Mutex } from '../utils/Mutex.js';

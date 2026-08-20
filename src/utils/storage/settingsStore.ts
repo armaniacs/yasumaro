@@ -1,3 +1,4 @@
+// @layer 1-循環 — Infrastructure (circular with trustDb, see ADR 2026-08-20)
 /**
  * storage/settingsStore.ts
  * Settings CRUD, cache, and encryption orchestration.

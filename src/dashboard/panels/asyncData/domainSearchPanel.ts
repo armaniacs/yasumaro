@@ -1,11 +1,12 @@
 import { getMessage } from '../../../utils/i18n.js';
-import { getSettings, StorageKeys } from '../../../utils/storage.js';
+import { getSettings } from '../../../utils/storage/settingsStore.js';
+import { StorageKeys } from '../../../utils/storage/types.js';
 import { extractDomain, isDomainAllowed } from '../../../utils/domainUtils.js';
-import type { Settings } from '../../../utils/storage.js';
-import { type AsyncDataPanel } from '../types.js';
+import type { Settings } from '../../../utils/storage/types.js';
+import { type PanelLifecycle } from '../types.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 
-export function createDomainSearchPanel(): AsyncDataPanel {
+export function createDomainSearchPanel(): PanelLifecycle {
   let searchInput: HTMLInputElement | null = null;
   let matchesEl: HTMLElement | null = null;
   let checkInput: HTMLInputElement | null = null;
@@ -35,10 +36,10 @@ export function createDomainSearchPanel(): AsyncDataPanel {
         void runCheck(checkInput, resultEl);
       }, { signal });
     },
-    async loadData() {
+    async load() {
       // No initial load — data is fetched on user input
     },
-    unmount() {
+    destroy() {
       ac?.abort();
       ac = null;
     },

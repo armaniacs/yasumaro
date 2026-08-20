@@ -12,7 +12,7 @@ import { diagnoseDeficiencies, type DiagnosticInput } from '../../diagnoseDefici
 import { detectLiveVfsStrategy } from '../../../offscreen/opfsCapabilities.js';
 import { checkBuiltInAiAvailability, startBuiltInAiDownload, type BuiltInAiDiagnosticsResult } from '../../builtInAiDiagnosticsService.js';
 import type { BuiltInAIAvailability } from '../../../background/builtInAIClient.js';
-import { type DiagnosticPanel } from '../types.js';
+import { type PanelLifecycle } from '../types.js';
 import { formatProviderHeadline, formatProviderDetailLines } from '../../aiTestResultView.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 
@@ -56,7 +56,7 @@ export function renderBuiltInAiStatus(
   }
 }
 
-export function createDiagnosticsPanel(): DiagnosticPanel {
+export function createDiagnosticsPanel(): PanelLifecycle {
   let _container: HTMLElement | null = null;
 
   async function loadAndPopulate(): Promise<void> {
@@ -671,11 +671,12 @@ export function createDiagnosticsPanel(): DiagnosticPanel {
           diagBuiltInAiDownloadBtn.disabled = false;
         }
       });
-
+    },
+    async load() {
       await loadAndPopulate();
     },
-    async refresh() {
-      await loadAndPopulate();
+    destroy() {
+      _container = null;
     },
   };
 }

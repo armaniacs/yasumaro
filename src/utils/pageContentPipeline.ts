@@ -1,3 +1,4 @@
+// @layer 2 — High-level Utilities (depends on Layer 0/1)
 /**
  * PageContentPipeline — deep module hiding the 10 shallow content-extraction modules
  *

@@ -1,3 +1,4 @@
+// @layer 1 — Infrastructure (depends on Layer 0 only)
 /**
  * storage/defaults.ts
  * デフォルト設定定数

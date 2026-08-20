@@ -7,9 +7,9 @@ import { renderSkippedMode, renderPendingPage } from '../../historyPendingPanel.
 import { updateTagFilterIndicator } from '../../historyFilters.js';
 import { initTagEditModal } from '../../historyTagEditModal.js';
 import { updateCleansingStatsPanel } from '../../historyCleansingSync.js';
-import { type AsyncDataPanel } from '../types.js';
+import { type PanelLifecycle } from '../types.js';
 
-export function createHistoryPanel(): AsyncDataPanel {
+export function createHistoryPanel(): PanelLifecycle {
   let elements: HistoryElements | null = null;
   let tagEditElements: TagEditElements | null = null;
   let onStorageChanged: ((changes: Record<string, chrome.storage.StorageChange>, area: string) => void) | null = null;
@@ -56,7 +56,7 @@ export function createHistoryPanel(): AsyncDataPanel {
         saveTagEditsBtn,
       };
     },
-    async loadData() {
+    async load() {
       if (!elements?.historyList || !tagEditElements) return;
 
       const rawEntries = await getSavedUrlEntries();
@@ -173,13 +173,13 @@ export function createHistoryPanel(): AsyncDataPanel {
       applyFiltersInternal();
       updateCleansingStatsPanel(_state.entries);
     },
-    unmount() {
+    destroy() {
       if (onStorageChanged) {
         chrome.storage.onChanged.removeListener(onStorageChanged);
         onStorageChanged = null;
       }
     },
-    onActivate() {
+    init() {
       // No cross-panel context needed for panel-history
     },
   };

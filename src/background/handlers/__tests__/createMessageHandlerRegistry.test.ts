@@ -87,11 +87,32 @@ describe('createMessageHandlerRegistry', () => {
 
   it('allows content scripts only for the explicitly permitted message types', () => {
     const composition = makeComposition();
+    const makeValidMessage = (t: string): unknown => {
+      switch (t) {
+        case 'VALID_VISIT':
+          return { type: t, payload: { content: 'hello' }, protocolVersion: 1 };
+        case 'FETCH_URL':
+          return { type: t, payload: { url: 'https://example.com' }, protocolVersion: 1 };
+        case 'MANUAL_RECORD':
+        case 'PREVIEW_RECORD':
+        case 'SAVE_RECORD':
+          return { type: t, payload: { title: 't', url: 'https://example.com', content: 'c' }, protocolVersion: 1 };
+        case 'CONTENT_CLEANSING_EXECUTED':
+          return { type: t, payload: { hardStripRemoved: 1, keywordStripRemoved: 1, totalRemoved: 2 }, protocolVersion: 1 };
+        case 'DASHBOARD_SQLITE':
+          return { type: t, payload: { subtype: 'status' }, protocolVersion: 1 };
+        case 'CHECK_DOMAIN':
+        case 'PING':
+          return { type: t, protocolVersion: 1 };
+        default:
+          return { type: t, protocolVersion: 1, payload: {} as unknown as never };
+      }
+    };
     for (const type of registeredTypes) {
       const response = vi.fn();
       const accepted = composition.registry.dispatch(
         type,
-        {},
+        makeValidMessage(type),
         { id: 'extension-id', tab: { id: 1 }, url: 'https://example.com' } as chrome.runtime.MessageSender,
         response,
       );

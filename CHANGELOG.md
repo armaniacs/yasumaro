@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.61` リリース。
+> - 現時点では `v6.7.62` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,16 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.7.62] - 2026-08-20
+
+### Refactor
+
+- `PanelLifecycle` Wave 3 残り9パネルを移行完了。`diagnosticsPanel`/`sqliteHistoryPanel` に続き `historyPanel`/`tagClusterPanel`/`domainSearchPanel`/`exportLogsPanel`/`generalSettingsPanel`/`privacySettingsPanel`/`aiSummaryCleansingPanel` と `STATIC_FORM_PANELS` 9件を `PanelLifecycle` 直接実装に移行。`src/dashboard/main.ts` の `adaptLegacyPanel` ラッパーを全廃。`src/dashboard/panels/types.ts` の legacy 型 (`AsyncDataPanel`/`StaticFormPanel`/`DiagnosticPanel`/`Panel`/`adaptLegacyPanel`) を削除。`NavigationRegistry` に `diagnostic` 向け `load()` 呼出を追加し失敗時の UI フィードバックを実装。`MessageHandlerRegistry` の validator 拒否時の返り値を `false` に統一。
+- `src/utils/` レイヤー境界を形式化。`dev-docs/LAYERS.md` 新設、ADR `2026-08-20-utils-layer-circular-dependency` 新設、`src/utils/` 15ファイルに `// @layer` コメント付与。`storage.ts` barrel から `storage/types.js` への直接 import へ段階的移行（`rateLimiter`/`obsidianClient`/`saveToObsidianStep`/`BrowsingLogRecordMapper`/`obsidianSyncService` の5ファイルを移行、残り27件は次スプリントへ）。`trustDb↔settingsStore` 循環と `storageMaintenance→background/sqliteClient` 逆依存を例外として文書化。
+- `src/messaging/validators.ts` に `MessageValidator<T>` 統一インターフェースを新設。`ServiceWorkerRequestValidator`/`ValidVisitValidator`/`DashboardSqliteValidator`/`FetchUrlValidator`/`ManualRecordValidator`/`CheckDomainValidator`/`ContentCleansingExecutedValidator` の7 concrete と singleton 8件を実装。`MessageHandlerRegistry` に `validator` オプション追加し `VALID_VISIT`/`DASHBOARD_SQLITE`/`FETCH_URL`/`MANUAL_RECORD`/`PREVIEW_RECORD`/`SAVE_RECORD`/`CHECK_DOMAIN`/`CONTENT_CLEANSING_EXECUTED` の8タイプを配線。単体テスト49件＋registry統合テストを追加。
+- バージョン整合性を修復。`wxt.config.ts`/`docs/version.json`/`package-lock.json` を `6.7.61` に同期後、`6.7.62` へバンプ。
+- `validate`（lint 0件 / type-check 成功 / 8300テスト成功）と `build`（6.91 MB）を通過。
 
 ## [6.7.61] - 2026-08-20
 

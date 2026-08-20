@@ -1,11 +1,11 @@
 import { exportJson, exportCsv, exportMarkdown, exportDb, downloadText, downloadBlob } from '../../exportLogsService.js';
-import { type DiagnosticPanel } from '../types.js';
+import { type PanelLifecycle } from '../types.js';
 import { queryAuditLogs } from '../../dashboardSqliteService.js';
 import { toTsvString } from '../../utils/auditLogTsv.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 
-export function createExportLogsPanel(): DiagnosticPanel {
+export function createExportLogsPanel(): PanelLifecycle {
   return {
     id: 'panel-export-logs',
     category: 'diagnostic',

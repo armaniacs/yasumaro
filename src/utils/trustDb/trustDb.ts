@@ -1,3 +1,4 @@
+// @layer 1-循環 — Infrastructure (circular with storage/settingsStore, see ADR 2026-08-20)
 /**
  * trustDb.ts
  * Trust Database orchestrator: owns TrustDbState, the init/save lifecycle,

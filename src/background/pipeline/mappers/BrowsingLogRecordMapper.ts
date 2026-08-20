@@ -1,7 +1,7 @@
 import type { RecordingContext } from '../types.js';
 import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import { extractDomain } from '../../../utils/domainUtils.js';
-import { StorageKeys } from '../../../utils/storage.js';
+import { StorageKeys } from '../../../utils/storage/types.js';
 import { extractCommonStorageFields } from './commonStorageFields.js';
 
 export function mapToBrowsingLogRecord(context: RecordingContext): BrowsingLogRecord {

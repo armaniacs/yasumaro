@@ -1,6 +1,6 @@
 import { SessionStore, SESSION_KEYS } from './sessionStore.js';
 import { RATE_LIMITS } from '../constants/appConstants.js';
-import { StorageKeys } from '../utils/storage.js';
+import { StorageKeys } from '../utils/storage/types.js';
 import { logWarn } from '../utils/logger.js';
 
 interface RateLimitEntry {

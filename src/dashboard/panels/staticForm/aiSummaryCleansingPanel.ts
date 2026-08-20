@@ -1,4 +1,4 @@
-import { type StaticFormPanel } from '../types.js';
+import { type PanelLifecycle } from '../types.js';
 import {
   getAiSummaryCleansingSettings, applyAiSummaryCleansingSettingsToUI,
   setupAiSummaryCleansingEventListeners, saveAiSummaryCleansingSettings,
@@ -6,7 +6,7 @@ import {
 import { getSavedUrlEntries } from '../../../utils/storageUrls.js';
 import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from '../../cleansingStatsView.js';
 
-export function createAiSummaryCleansingPanel(): StaticFormPanel {
+export function createAiSummaryCleansingPanel(): PanelLifecycle & { refresh?: () => Promise<void> } {
   let panelContainer: HTMLElement | null = null;
   return {
     id: 'panel-ai-summary-cleansing',
@@ -48,7 +48,7 @@ export function createAiSummaryCleansingPanel(): StaticFormPanel {
         applyAiSummaryCleansingSettingsToUI(settings);
       }
     },
-    onActivate() {
+    init() {
       const summaryEl = document.getElementById('cleansingStatsSummary') as HTMLElement | null;
       const chartEl = document.getElementById('cleansingFunnelChart') as HTMLCanvasElement | null;
       if (!summaryEl) return;

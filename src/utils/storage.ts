@@ -1,3 +1,4 @@
+// @layer Barrel — Re-export (deprecated, use direct imports)
 /**
  * storage.ts
  * Wrapper for chrome.storage.local to manage settings.

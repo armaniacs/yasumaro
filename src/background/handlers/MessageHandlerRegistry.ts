@@ -1,4 +1,5 @@
 import { checkSenderTrust, type SenderTrustLevel } from './senderTrust.js';
+import type { MessageValidator } from '../../messaging/validators.js';
 
 export type { SenderTrustLevel };
 
@@ -20,7 +21,7 @@ export type MessageHandler = (
 ) => void | Promise<void>;
 
 export class MessageHandlerRegistry {
-  private handlers = new Map<string, { handler: MessageHandler; trust: SenderTrustLevel }>();
+  private handlers = new Map<string, { handler: MessageHandler; trust: SenderTrustLevel; validator?: MessageValidator<unknown> }>();
   private readonly runtimeId: string | undefined;
 
   constructor(runtimeId?: string) {
@@ -31,12 +32,19 @@ export class MessageHandlerRegistry {
    * @param trust who may send this message type. Required so that adding a
    *   handler forces an explicit answer — content scripts pass the registry's
    *   sender-id check, so an omitted level would silently mean "anyone".
+   * @param validator optional validator for the message payload. When provided,
+   *   the registry validates the message before dispatching to the handler.
+   *   ValidationError is caught and returned as {success:false} without invoking handler.
    */
-  register(type: string, handler: MessageHandler, trust: SenderTrustLevel): void {
+  register(type: string, handler: MessageHandler, trust: SenderTrustLevel, validator?: MessageValidator<unknown>): void {
     if (this.handlers.has(type)) {
       throw new Error(`Duplicate handler for message type: ${type}`);
     }
-    this.handlers.set(type, { handler, trust });
+    if (validator) {
+      this.handlers.set(type, { handler, trust, validator });
+    } else {
+      this.handlers.set(type, { handler, trust });
+    }
   }
 
   dispatch(
@@ -58,11 +66,21 @@ export class MessageHandlerRegistry {
       return false;
     }
 
-    const { handler, trust } = entry;
+    const { handler, trust, validator } = entry;
     const decision = checkSenderTrust(sender, trust, type, this.runtimeId);
     if (!decision.allowed) {
       sendResponse({ success: false, error: decision.error });
       return false;
+    }
+    // Validate before dispatch if a validator is registered
+    if (validator) {
+      try {
+        validator.validate(message);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        sendResponse({ success: false, error: msg });
+        return false;
+      }
     }
     // Fire-and-forget: handlers are async and use sendResponse for replies.
     // Catch handler errors so they do not become unhandled promise rejections.
