@@ -2,7 +2,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NavigationRegistry } from '../NavigationRegistry.js';
 import { DashboardBootstrapper } from '../DashboardBootstrapper.js';
-import { type StaticFormPanel } from '../types.js';
+import { type PanelLifecycle } from '../types.js';
+
+function mockPanel(overrides?: Partial<PanelLifecycle>): PanelLifecycle {
+  return {
+    id: 'panel-test',
+    category: 'static-form',
+    mount: vi.fn().mockResolvedValue(undefined),
+    activate: vi.fn(),
+    ...overrides,
+  };
+}
 
 describe('DashboardBootstrapper', () => {
   let registry: NavigationRegistry;
@@ -16,39 +26,22 @@ describe('DashboardBootstrapper', () => {
   });
 
   it('registerPanels registers all panels', () => {
-    const panelA: StaticFormPanel = {
-      id: 'panel-a', category: 'static-form',
-      mount: vi.fn().mockResolvedValue(undefined),
-      refresh: vi.fn().mockResolvedValue(undefined),
-    };
-    const panelB: StaticFormPanel = {
-      id: 'panel-b', category: 'static-form',
-      mount: vi.fn().mockResolvedValue(undefined),
-      refresh: vi.fn().mockResolvedValue(undefined),
-    };
+    const panelA = mockPanel({ id: 'panel-a' });
+    const panelB = mockPanel({ id: 'panel-b' });
     bootstrapper.registerPanels([panelA, panelB]);
     expect(registry.activeId).toBeNull();
   });
 
   it('start activates default panel', () => {
-    const panel: StaticFormPanel = {
-      id: 'panel-default', category: 'static-form',
-      mount: vi.fn().mockResolvedValue(undefined),
-      refresh: vi.fn().mockResolvedValue(undefined),
-      onActivate: vi.fn(),
-    };
+    const panel = mockPanel({ id: 'panel-default' });
     bootstrapper.registerPanels([panel]);
     bootstrapper.start('panel-default');
     expect(registry.activeId).toBe('panel-default');
-    expect(panel.onActivate).toHaveBeenCalled();
+    expect(panel.activate).toHaveBeenCalled();
   });
 
   it('wireSidebar navigates on button click', () => {
-    const panel: StaticFormPanel = {
-      id: 'panel-settings', category: 'static-form',
-      mount: vi.fn().mockResolvedValue(undefined),
-      refresh: vi.fn().mockResolvedValue(undefined),
-    };
+    const panel = mockPanel({ id: 'panel-settings' });
     bootstrapper.registerPanels([panel]);
 
     const btn = document.createElement('button');
@@ -69,16 +62,8 @@ describe('DashboardBootstrapper', () => {
   });
 
   it('wireSidebar toggles aria-selected when switching tabs', () => {
-    const panelA: StaticFormPanel = {
-      id: 'panel-a', category: 'static-form',
-      mount: vi.fn().mockResolvedValue(undefined),
-      refresh: vi.fn().mockResolvedValue(undefined),
-    };
-    const panelB: StaticFormPanel = {
-      id: 'panel-b', category: 'static-form',
-      mount: vi.fn().mockResolvedValue(undefined),
-      refresh: vi.fn().mockResolvedValue(undefined),
-    };
+    const panelA = mockPanel({ id: 'panel-a' });
+    const panelB = mockPanel({ id: 'panel-b' });
     bootstrapper.registerPanels([panelA, panelB]);
 
     const btnA = document.createElement('button');

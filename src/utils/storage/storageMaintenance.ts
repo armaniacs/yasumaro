@@ -5,7 +5,7 @@
  */
 
 import { getStorageUsage, estimateDataSize, STORAGE_QUOTA_BYTES, hasUnlimitedStorage } from './quota.js';
-import { purgeLegacyStorage } from './savedUrlStore.js';
+import { purgeLegacyStorage } from './savedUrlRepository.js';
 import { logInfo, logError, ErrorCode } from '../logger.js';
 
 export async function getDefaultSqliteHealthCheck(): Promise<() => Promise<boolean>> {

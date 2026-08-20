@@ -5,7 +5,7 @@
 
 // 型定義と定数
 export type { SavedUrlEntry, CleansedReason } from './urlEntry.js';
-export type { SavedUrlEntryMetadataPatch } from './storage/savedUrlStore.js';
+export type { SavedUrlEntryMetadataPatch } from './storage/savedUrlRepository.js';
 export {
     MAX_URL_SET_SIZE,
     URL_WARNING_THRESHOLD,
@@ -29,7 +29,7 @@ export {
     setUrlTags,
     addUrlTag,
     removeUrlTag
-} from './storage/savedUrlStore.js';
+} from './storage/savedUrlRepository.js';
 
 // 許可URL管理機能
 export {

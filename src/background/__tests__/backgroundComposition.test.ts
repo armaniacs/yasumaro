@@ -60,10 +60,41 @@ vi.mock('../pipeline/RecordingPipeline.js', () => ({
   buildRecordingPipelineDeps: mocks.buildRecordingPipelineDeps,
 }));
 vi.mock('../../popup/privacyConsent.js', () => ({ hasPrivacyConsent: mocks.hasPrivacyConsent }));
-vi.mock('../../utils/storage.js', () => ({ getSettings: mocks.getSettings }));
-vi.mock('../../utils/storage/savedUrlStore.js', () => ({
+vi.mock('../../utils/storage.js', () => ({
+  getSettings: mocks.getSettings,
+  buildAllowedUrls: vi.fn().mockReturnValue(new Set()),
+  clearSettingsCache: vi.fn(),
+  lockSession: vi.fn().mockResolvedValue(undefined),
+  API_KEY_FIELDS: ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key', 'provider_api_key', 'github_pat'],
+}));
+vi.mock('../../utils/storage/savedUrlRepository.js', () => ({
   saveSavedUrlEntryMetadata: mocks.saveSavedUrlEntryMetadata,
   getSavedUrlsWithTimestamps: vi.fn(),
+}));
+vi.mock('../../utils/domainUtils.js', () => ({
+  isDomainAllowed: vi.fn().mockResolvedValue(true),
+}));
+vi.mock('../aiTestProgressNotifier.js', () => ({
+  notifyAiTestProgress: vi.fn(),
+}));
+vi.mock('../sessionAlarmsManager.js', () => ({
+  updateActivity: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('../swStatePersistence.js', () => ({
+  createAutoSavedBadgeTabs: vi.fn().mockReturnValue({ add: vi.fn(), has: vi.fn().mockReturnValue(false), delete: vi.fn(), restore: vi.fn() }),
+}));
+vi.mock('../dashboardSqliteWiring.js', () => ({
+  createDashboardSqliteMessageHandler: vi.fn().mockReturnValue(vi.fn()),
+}));
+vi.mock('../confirmTokenManager.js', () => ({
+  ensureConfirmToken: vi.fn().mockResolvedValue('token'),
+}));
+vi.mock('../handlers/createMessageHandlerRegistry.js', () => ({
+  createMessageHandlerRegistry: vi.fn().mockReturnValue({
+    registry: { register: vi.fn() },
+    handlers: {},
+    trustLevels: {},
+  }),
 }));
 vi.mock('../reviewSummaryGenerator.js', () => ({ createReviewSummaryGenerator: mocks.createReviewSummaryGenerator }));
 

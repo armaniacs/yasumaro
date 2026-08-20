@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.58` リリース。
+> - 現時点では `v6.7.60` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,13 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.7.60] - 2026-08-20
+
+### Refactor
+
+- アーキテクチャ深深化 5件を実装。`savedUrlRepository` への集約（`storage/savedUrlStore.ts` 552行を38行の薄い re-export に縮小し30行の手動プロパティ列挙を `spreadExistingFields` に置換、プロトタイプ汚染ガード追加）、`dashboardSqliteService` の重複プロキシ集約（`runOpfsSpike`/`backupDb` を汎用 `callDashboard` 経由に統合 637→598行）、`PanelLifecycle` 共通寿命サイクル導入（`NavigationRegistry`/`DashboardBootstrapper` を統一 interface に移行し25パネルを `adaptLegacyPanel` でラップ）、`createMessageRegistryComposition` パススルー削除（配線を `createBackgroundServices` に集約し `Pick<>` による依存絞り込みとサブセット静的保証を追加）、`SettingsSchema`/`ValidationSchema` 導入（`settingsPipeline` の7要素IDハードコードをスキーマ駆動に、`GENERAL_SETTINGS_SCHEMA` を dashboard/popup 共有の単一ソース化し `RecordingContextFieldMapper` を `commonStorageFields` に集約して重複を解消）
+- 共有 `commonStorageFields` への集約により `saveMetadataStep` と `BrowsingLogRecordMapper` の41フィールド抽出の二重管理を解消
 
 ## [6.7.59] - 2026-08-20
 

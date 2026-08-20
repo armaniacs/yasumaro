@@ -4,7 +4,7 @@ import { BADGE_COLORS } from '../../constants/appConstants.js';
 import { logDebug, logWarn, logError, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { createErrorResponse } from '../../utils/errorClassification.js';
-import { updateSavedUrlEntry } from '../../utils/storage/savedUrlStore.js';
+import { updateSavedUrlEntry } from '../../utils/storage/savedUrlRepository.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
 import type {

@@ -20,7 +20,7 @@ vi.mock('../../utils/storage.js', () => ({
   getSettings: vi.fn().mockResolvedValue({}),
 }));
 
-vi.mock('../../utils/storage/savedUrlStore.js', () => ({
+vi.mock('../../utils/storage/savedUrlRepository.js', () => ({
   setUrlTags: vi.fn().mockResolvedValue(undefined),
 }));
 

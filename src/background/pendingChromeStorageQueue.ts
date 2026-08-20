@@ -8,7 +8,7 @@
 
 import { addLog, LogType } from '../utils/logger.js';
 import { PersistentRetryQueue, ChromeStorageAdapter } from './persistentRetryQueue.js';
-import type { SavedUrlEntryMetadataPatch } from '../utils/storage/savedUrlStore.js';
+import type { SavedUrlEntryMetadataPatch } from '../utils/storage/savedUrlRepository.js';
 
 export const PENDING_CHROME_STORAGE_KEY = 'pending_chrome_storage_writes';
 

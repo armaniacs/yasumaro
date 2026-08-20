@@ -16,7 +16,7 @@ import { applyMigrationsAndDecrypt, tryRestoreFromBackup, API_KEY_FIELDS } from 
 import { buildAllowedUrls, computeUrlsHash } from './urlWhitelist.js';
 import { ensureStorageQuota } from './storageMaintenance.js';
 
-export { purgeLegacyStorage } from './savedUrlStore.js';
+export { purgeLegacyStorage } from './savedUrlRepository.js';
 export { API_KEY_FIELDS } from './settingsMigration.js';
 export { ALLOWED_AI_PROVIDER_DOMAINS, isDomainInWhitelist, buildAllowedUrls, computeUrlsHash, getAllowedUrls } from './urlWhitelist.js';
 export { LEGACY_SETTINGS_BACKUP_KEY, migrateToSingleSettingsObject, cleanupExpiredSettingsBackups } from './settingsMigration.js';

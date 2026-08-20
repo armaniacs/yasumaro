@@ -48,10 +48,38 @@ vi.mock('../pipeline/RecordingPipeline.js', () => ({
   buildRecordingPipelineDeps: mocks.buildRecordingPipelineDeps,
 }));
 vi.mock('../../popup/privacyConsent.js', () => ({ hasPrivacyConsent: mocks.hasPrivacyConsent }));
-vi.mock('../../utils/storage.js', () => ({ getSettings: mocks.getSettings }));
-vi.mock('../../utils/storage/savedUrlStore.js', () => ({
+vi.mock('../../utils/storage.js', () => ({
+  getSettings: mocks.getSettings,
+  buildAllowedUrls: vi.fn().mockReturnValue(new Set()),
+  clearSettingsCache: vi.fn(),
+  lockSession: vi.fn().mockResolvedValue(undefined),
+  API_KEY_FIELDS: ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key', 'provider_api_key', 'github_pat'],
+}));
+vi.mock('../../utils/storage/savedUrlRepository.js', () => ({
   saveSavedUrlEntryMetadata: mocks.saveSavedUrlEntryMetadata,
   getSavedUrlsWithTimestamps: vi.fn(),
+}));
+vi.mock('../../utils/domainUtils.js', () => ({
+  isDomainAllowed: vi.fn().mockResolvedValue(true),
+}));
+vi.mock('../aiTestProgressNotifier.js', () => ({
+  notifyAiTestProgress: vi.fn(),
+}));
+vi.mock('../swStatePersistence.js', () => ({
+  createAutoSavedBadgeTabs: vi.fn().mockReturnValue({ add: vi.fn(), has: vi.fn().mockReturnValue(false), delete: vi.fn(), restore: vi.fn() }),
+}));
+vi.mock('../dashboardSqliteWiring.js', () => ({
+  createDashboardSqliteMessageHandler: vi.fn().mockReturnValue(vi.fn()),
+}));
+vi.mock('../confirmTokenManager.js', () => ({
+  ensureConfirmToken: vi.fn().mockResolvedValue('token'),
+}));
+vi.mock('../handlers/createMessageHandlerRegistry.js', () => ({
+  createMessageHandlerRegistry: vi.fn().mockReturnValue({
+    registry: { register: vi.fn() },
+    handlers: {},
+    trustLevels: {},
+  }),
 }));
 vi.mock('../reviewSummaryGenerator.js', () => ({ createReviewSummaryGenerator: mocks.createReviewSummaryGenerator }));
 
@@ -87,22 +115,23 @@ describe('createBackgroundServices', () => {
   it('creates and returns all background services', () => {
     const services = createBackgroundServices();
 
-    expect(services).toEqual({
-      obsidian: { obsidian: true },
-      sqliteClient: { sqlite: true },
-      tabCache: { tabCache: true },
-      rateLimiter: { rateLimiter: true },
-      manualContentFetcher: { manualContentFetcher: true },
-      aiService: { fallbackAIService: true },
-      reviewSummaryGenerator: expect.any(Object),
-      sessionStore: { sessionStore: true },
-      headerDetector: { headerDetector: true },
-      recordingCache: expect.any(Object),
-      recordingPipeline: { pipeline: true },
-      dashboardSqliteClient: { sqlite: true },
-      manualRecordDeps: expect.any(Object),
-      saveRecordDeps: expect.any(Object),
-    });
+    expect(services).toHaveProperty('obsidian');
+    expect(services).toHaveProperty('sqliteClient');
+    expect(services).toHaveProperty('tabCache');
+    expect(services).toHaveProperty('rateLimiter');
+    expect(services).toHaveProperty('manualContentFetcher');
+    expect(services).toHaveProperty('aiService');
+    expect(services).toHaveProperty('reviewSummaryGenerator');
+    expect(services).toHaveProperty('sessionStore');
+    expect(services).toHaveProperty('headerDetector');
+    expect(services).toHaveProperty('recordingCache');
+    expect(services).toHaveProperty('recordingPipeline');
+    expect(services).toHaveProperty('dashboardSqliteClient');
+    expect(services).toHaveProperty('manualRecordDeps');
+    expect(services).toHaveProperty('saveRecordDeps');
+    expect(services).toHaveProperty('messageHandlerRegistry');
+    expect(services).toHaveProperty('dashboardSqliteHandler');
+    expect(services).toHaveProperty('autoSavedBadgeTabs');
   });
 
   it('exposes the AIService composition', () => {

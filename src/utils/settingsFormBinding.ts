@@ -1,3 +1,46 @@
+/**
+ * SettingsSchema: a declarative mapping from StorageKeys to DOM elements.
+ *
+ * Each field describes:
+ * - key: the StorageKeys constant value (compile-time checked)
+ * - type: the HTML input type for extraction/validation
+ *
+ * The selector is derived automatically from the key via the
+ * `[data-storage-key="..."]` convention — no manual selector needed.
+ *
+ * When a schema is provided to loadSettingsToInputs / extractSettingsFromInputs,
+ * it iterates the schema instead of querying all [data-storage-key] elements.
+ * Without a schema, the functions fall back to the legacy attribute scan.
+ */
+import type { StorageKeys as StorageKeysType } from './storage/types.js';
+type StorageKey = (typeof StorageKeysType)[keyof typeof StorageKeysType];
+
+export interface SettingsFieldConfig {
+  /** StorageKeys constant value — must be a valid storage key. */
+  key: StorageKey;
+  /** HTML input type for extraction and validation. */
+  type: 'text' | 'checkbox' | 'number' | 'select' | 'password';
+  /** Optional validation rule. Returns an error message string on failure, null on success. */
+  validate?: (value: unknown) => string | null;
+}
+
+export type SettingsSchema = SettingsFieldConfig[];
+
+/**
+ * Validation field config: maps a StorageKey to its DOM element ID and error
+ * element ID. Used by settingsPipeline.ts to replace hardcoded element lookups.
+ */
+export interface ValidationFieldConfig {
+  /** StorageKeys constant value for type-safe reference. */
+  storageKey: StorageKey;
+  /** DOM element ID (used by getElementById for validation inputs). */
+  elementId: string;
+  /** Error message element ID. */
+  errorId: string;
+}
+
+export type ValidationSchema = ValidationFieldConfig[];
+
 const API_KEY_PATTERN = /_api_key$/i;
 const MASKED_PLACEHOLDER_PATTERN = /^\u25cf+$/;
 
@@ -20,7 +63,53 @@ function isMaskedValue(value: string): boolean {
   return value === '' || MASKED_PLACEHOLDER_PATTERN.test(value);
 }
 
-export function loadSettingsToInputs(container: HTMLElement, settings: Record<string, unknown>): void {
+/**
+ * Derive a CSS selector from a StorageKeys value.
+ * Convention: `[data-storage-key="<key>"]`.
+ */
+function selectorForKey(key: string): string {
+  return `[data-storage-key="${key}"]`;
+}
+
+/**
+ * Load settings values into form elements.
+ *
+ * When a schema is provided, iterates the schema fields for type-safe access.
+ * Without a schema, falls back to scanning all [data-storage-key] attributes
+ * (legacy behavior, backward compatible).
+ */
+export function loadSettingsToInputs(
+  container: HTMLElement,
+  settings: Record<string, unknown>,
+  schema?: SettingsSchema,
+): void {
+  if (schema) {
+    for (const field of schema) {
+      const element = container.querySelector<HTMLElement>(selectorForKey(field.key));
+      if (!element) continue;
+
+      const value = settings[field.key];
+
+      if (isApiKeyField(field.key) && element instanceof HTMLInputElement && element.type === 'password') {
+        if (value && value !== '') {
+          element.placeholder = '\u25cf\u25cf\u25cf\u25cf\u25cf\u25cf\u25cf\u25cf (Already set)';
+          element.value = '';
+        }
+        continue;
+      }
+
+      if (value !== undefined && value !== null) {
+        if (element instanceof HTMLInputElement && element.type === 'checkbox') {
+          element.checked = !!value;
+        } else if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
+          element.value = String(value);
+        }
+      }
+    }
+    return;
+  }
+
+  // Legacy path: scan all [data-storage-key] attributes
   const elements = container.querySelectorAll<HTMLElement>('[data-storage-key]');
   for (const element of elements) {
     const key = element.getAttribute('data-storage-key');
@@ -31,7 +120,6 @@ export function loadSettingsToInputs(container: HTMLElement, settings: Record<st
     if (isApiKeyField(key) && element instanceof HTMLInputElement && element.type === 'password') {
       if (value && value !== '') {
         element.placeholder = '\u25cf\u25cf\u25cf\u25cf\u25cf\u25cf\u25cf\u25cf (Already set)';
-
         element.value = '';
       }
       continue;
@@ -47,23 +135,43 @@ export function loadSettingsToInputs(container: HTMLElement, settings: Record<st
   }
 }
 
-export function extractSettingsFromInputs(container: HTMLElement): Record<string, unknown> {
+/**
+ * Extract settings values from form elements.
+ *
+ * When a schema is provided, iterates the schema fields for type-safe access.
+ * Without a schema, falls back to scanning all [data-storage-key] attributes.
+ */
+export function extractSettingsFromInputs(
+  container: HTMLElement,
+  schema?: SettingsSchema,
+): Record<string, unknown> {
   const settings: Record<string, unknown> = {};
-  const elements = container.querySelectorAll<HTMLElement>('[data-storage-key]');
 
+  if (schema) {
+    for (const field of schema) {
+      const element = container.querySelector<HTMLElement>(selectorForKey(field.key));
+      if (!element) continue;
+
+      let value = getInputValue(element);
+      if (typeof value === 'string') value = value.trim();
+
+      if (isApiKeyField(field.key) && (value === '' || isMaskedValue(String(value)))) continue;
+
+      settings[field.key] = value;
+    }
+    return settings;
+  }
+
+  // Legacy path
+  const elements = container.querySelectorAll<HTMLElement>('[data-storage-key]');
   for (const element of elements) {
     const key = element.getAttribute('data-storage-key');
     if (!key) continue;
 
     let value = getInputValue(element);
+    if (typeof value === 'string') value = value.trim();
 
-    if (typeof value === 'string') {
-      value = value.trim();
-    }
-
-    if (isApiKeyField(key) && (value === '' || isMaskedValue(String(value)))) {
-      continue;
-    }
+    if (isApiKeyField(key) && (value === '' || isMaskedValue(String(value)))) continue;
 
     settings[key] = value;
   }

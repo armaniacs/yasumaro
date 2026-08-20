@@ -371,34 +371,16 @@ function decodeOpfsSpikeReport(value: unknown): OpfsSpikeReportView {
 /**
  * Run the OPFS feasibility spike (PBI-10) and return its structured report.
  * Used by the diagnostics panel for manual verification in real Chrome.
- *
- * Not a callDashboard() wrapper (PBI-39): success also requires a non-empty
- * `report` field, which callDashboard's single success/failure branch
- * doesn't model.
  */
-export async function runOpfsSpike(): Promise<ServiceResult<OpfsSpikeReportView>> {
-  let response: DashboardSqliteResponseFor<'opfs_spike'>;
-  try {
-    response = await sendDashboardMessage({ subtype: 'opfs_spike' });
-  } catch (error) {
-    const classified = categorizeError(errorMessage(error)).message;
-    console.error('runOpfsSpike failed:', classified);
-    return { error: classified };
-  }
-
-  if (!response.success) {
-    return { error: String(response.error || 'OPFS spike failed') };
-  }
-  if (!response.report) {
-    return { error: 'OPFS spike returned no report' };
-  }
-  try {
-    return { data: decodeOpfsSpikeReport(response.report) };
-  } catch (error) {
-    const raw = errorMessage(error);
-    console.warn('runOpfsSpike decode failed:', raw);
-    return { error: raw };
-  }
+export function runOpfsSpike(): Promise<ServiceResult<OpfsSpikeReportView>> {
+  return callDashboard(
+    { subtype: 'opfs_spike' },
+    (response) => {
+      if (!response.report) throw new Error('OPFS spike returned no report');
+      return decodeOpfsSpikeReport(response.report);
+    },
+    'OPFS spike failed',
+  );
 }
 
 export function clearAllLogs(): Promise<ServiceResult<void>> {
@@ -523,37 +505,16 @@ export function backfillMetadata(): Promise<ServiceResult<{ updated: number; tot
 
 /**
  * バイナリ .db バックアップを取得
- *
- * Not a callDashboard() wrapper (PBI-39): success also requires a non-empty
- * `data` field (an empty backup must not look like success), and the
- * decoded value needs a distinct error message from a transport failure.
  */
-export async function backupDb(): Promise<ServiceResult<Uint8Array>> {
-  let response: DashboardSqliteResponseFor<'backup_db'>;
-  try {
-    response = await sendDashboardMessage({ subtype: 'backup_db' });
-  } catch (error) {
-    const classified = categorizeError(errorMessage(error)).message;
-    console.error('backupDb failed:', classified);
-    return { error: classified };
-  }
-
-  if (!response.success) {
-    const message = String(response.error || 'Backup failed');
-    console.warn('backupDb failed:', message);
-    return { error: message };
-  }
-  if (!response.data) {
-    console.warn('backupDb: Backup returned no data');
-    return { error: 'Backup returned no data' };
-  }
-  try {
-    return { data: base64ToBytes(requiredString(response.data, 'data')) };
-  } catch (error) {
-    const raw = errorMessage(error);
-    console.warn('backupDb decode failed:', raw);
-    return { error: raw };
-  }
+export function backupDb(): Promise<ServiceResult<Uint8Array>> {
+  return callDashboard(
+    { subtype: 'backup_db' },
+    (response) => {
+      if (!response.data) throw new Error('Backup returned no data');
+      return base64ToBytes(requiredString(response.data, 'data'));
+    },
+    'Backup failed',
+  );
 }
 
 /**

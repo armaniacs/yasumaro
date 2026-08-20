@@ -18,7 +18,7 @@ vi.mock('../../../../utils/logger.js', () => ({
   ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
 }));
 
-vi.mock('../../../../utils/storage/savedUrlStore.js', () => ({
+vi.mock('../../../../utils/storage/savedUrlRepository.js', () => ({
   saveSavedUrlEntryMetadata: vi.fn().mockResolvedValue(undefined),
 }));
 

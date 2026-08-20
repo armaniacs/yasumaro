@@ -247,7 +247,7 @@ vi.mock('../headerDetector.js', () => ({
         initialize = vi.fn().mockResolvedValue(undefined);
     }
 }));
-vi.mock('../../utils/storage/savedUrlStore.js', () => ({
+vi.mock('../../utils/storage/savedUrlRepository.js', () => ({
     updateSavedUrlEntry: vi.fn().mockResolvedValue(undefined),
     saveSavedUrlEntryMetadata: vi.fn().mockResolvedValue(undefined),
     getSavedUrlsWithTimestamps: vi.fn().mockResolvedValue(new Map()),

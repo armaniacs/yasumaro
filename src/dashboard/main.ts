@@ -1,5 +1,6 @@
 import { NavigationRegistry } from './panels/NavigationRegistry.js';
 import { DashboardBootstrapper } from './panels/DashboardBootstrapper.js';
+import { adaptLegacyPanel } from './panels/types.js';
 import { createDiagnosticsPanel } from './panels/diagnostic/diagnosticsPanel.js';
 import { createExportLogsPanel } from './panels/diagnostic/exportLogsPanel.js';
 import { createDomainSearchPanel } from './panels/asyncData/domainSearchPanel.js';
@@ -18,18 +19,16 @@ setRegistry(registry);
 const bootstrapper = new DashboardBootstrapper(registry);
 
 bootstrapper.registerPanels([
-  createDiagnosticsPanel(),
-  createExportLogsPanel(),
-  createDomainSearchPanel(),
-  createTagClusterPanel(),
-  createHistoryPanel(),
-  createSqliteHistoryPanel(),
-  // StaticFormPanels that carry logic of their own
-  createGeneralSettingsPanel(),
-  createPrivacySettingsPanel(),
-  createAiSummaryCleansingPanel(),
-  // StaticFormPanels that only forward to an init function
-  ...STATIC_FORM_PANELS,
+  adaptLegacyPanel(createDiagnosticsPanel()),
+  adaptLegacyPanel(createExportLogsPanel()),
+  adaptLegacyPanel(createDomainSearchPanel()),
+  adaptLegacyPanel(createTagClusterPanel()),
+  adaptLegacyPanel(createHistoryPanel()),
+  adaptLegacyPanel(createSqliteHistoryPanel()),
+  adaptLegacyPanel(createGeneralSettingsPanel()),
+  adaptLegacyPanel(createPrivacySettingsPanel()),
+  adaptLegacyPanel(createAiSummaryCleansingPanel()),
+  ...STATIC_FORM_PANELS.map(adaptLegacyPanel),
 ]);
 
 const sidebar = document.getElementById('sidebar');
