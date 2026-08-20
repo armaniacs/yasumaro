@@ -6,7 +6,7 @@
 
 import type { TrustResult, SafetyMode, TrancoTier } from './trustDb/trustDbSchema.js';
 import { getTrustDb } from './trustDb/trustDb.js';
-import { StorageKeys } from './storage.js';
+import { StorageKeys } from './storage/types.js';
 import { logInfo, logDebug, logWarn } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 import { pickDefined } from './objectUtils.js';

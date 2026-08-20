@@ -5,7 +5,7 @@
  * 単一ソースオブトゥルースを提供する。
  */
 
-import { API_KEY_FIELDS } from './storage.js';
+import { API_KEY_FIELDS } from './storage/settingsMigration.js';
 
 // ─── Field lists ───────────────────────────────────────────────────────
 
