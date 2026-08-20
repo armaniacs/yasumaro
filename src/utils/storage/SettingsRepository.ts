@@ -19,9 +19,8 @@
  * PanelLifecycle for onChange wiring — soft dependencies, hence last in order.
  */
 
-import { StorageKeys, type StorageKey, type Settings as SettingsType } from './types.js';
+import type { StorageKey, Settings as SettingsType } from './types.js';
 import { getSettings } from './settingsStore.js';
-import type { Settings } from './types.js';
 
 export interface StorageAdapter {
   get(keys: string | string[] | null): Promise<Record<string, unknown>>;
@@ -31,7 +30,7 @@ export interface StorageAdapter {
 
 class ChromeStorageAdapter implements StorageAdapter {
   async get(keys: string | string[] | null): Promise<Record<string, unknown>> {
-    return chrome.storage.local.get(keys as any) as Promise<Record<string, unknown>>;
+    return chrome.storage.local.get(keys) as Promise<Record<string, unknown>>;
   }
   async set(items: Record<string, unknown>): Promise<void> {
     await chrome.storage.local.set(items);
@@ -40,7 +39,7 @@ class ChromeStorageAdapter implements StorageAdapter {
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== 'local') return;
       const local: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(changes)) local[k] = (v as any).newValue;
+      for (const [k, v] of Object.entries(changes)) local[k] = (v as { newValue: unknown }).newValue;
       callback(local);
     });
   }

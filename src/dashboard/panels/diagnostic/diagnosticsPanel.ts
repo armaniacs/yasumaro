@@ -15,7 +15,6 @@ import type { BuiltInAIAvailability } from '../../../background/builtInAIClient.
 import { type DiagnosticPanel } from '../types.js';
 import { formatProviderHeadline, formatProviderDetailLines } from '../../aiTestResultView.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
-import { diagnosticsCollector } from './DiagnosticsCollector.js';
 
 /**
  * Renders the built-in AI availability row and toggles the download button.
