@@ -18,7 +18,7 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-_現在、進行中のPBIはありません。_（2026-08-20 第2波 5件は `dev-docs/archived/pbi/` へアーカイブ済み）
+| [Wave 2+ Panel Lifecycle Backlog](2026-08-20-wave2-panel-lifecycle-backlog.md) | 🟡 (2pt × 10 panels) | 🟢 | 🔧 | Dashboard Panel Abstraction Wave 2-3: diagnosticsPanel, historyPanel, 他 9 パネルの段階的 PanelLifecycle 移行。Wave 1 パターン確立後の実装ロードマップ。見積もり 4-6 週間。 |
 
 ---
 
