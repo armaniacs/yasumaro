@@ -18,11 +18,7 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| [2026-08-20-01-refactor-page-content-pipeline](2026-08-20-01-refactor-page-content-pipeline.md) | 🔴高 | 🟡軽微 | 🔧refactor | Page Content Pipeline統合。10モジュール3,600行をprepare()の1 seamに集約 |
-| [2026-08-20-02-refactor-recording-pipeline-steps](2026-08-20-02-refactor-recording-pipeline-steps.md) | 🔴高 | 🟡軽微 | 🔧refactor | Recording Pipeline Steps内部化。13のshallow stepを深いPipelineに集約 |
-| [2026-08-20-03-refactor-sqlite-domain-repository](2026-08-20-03-refactor-sqlite-domain-repository.md) | 🟡中 | 🟡軽微 | 🔧refactor | SQLite Domain Repository集約。20の薄いproxyを6 domainメソッドに崩壊 |
-| [2026-08-20-04-refactor-diagnostics-panel-deepening](2026-08-20-04-refactor-diagnostics-panel-deepening.md) | 🔴高 | 🟢なし | 🔧refactor | Diagnostics Panel深深化。681行god moduleをCollector+Rendererに分解 |
-| [2026-08-20-05-refactor-settings-repository-unification](2026-08-20-05-refactor-settings-repository-unification.md) | 🔴高 | 🟡軽微 | 🔧refactor | Settings Repository統合。30+散在するStorageKeysアクセスを型安全なget/setに集約 |
+_現在、進行中のPBIはありません。_（2026-08-20 第2波 5件は `dev-docs/archived/pbi/` へアーカイブ済み）
 
 ---
 
@@ -43,6 +39,15 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-20 アーキテクチャ深深化第2波 実装完了（5件）
+
+- 2026-08-20-01-refactor-page-content-pipeline.md (PageContentPipeline深いモジュールを新設 — 10モジュール3,600行を prepare() の1 seam に集約。extractor.ts を委譲に簡素化。interface テスト6件追加。86e0786c)
+- 2026-08-20-02-refactor-recording-pipeline-steps.md (RecordingPipeline 8フラグ組み合わせの深いインターフェーステストを追加 — force/skipDuplicateCheck/previewOnly の相互作用を record() の1 seam で検証。BEST_EFFORT/Mutex も同 seam で検証。a10b2a34)
+- 2026-08-20-03-refactor-sqlite-domain-repository.md (BrowsingLogRepository深いモジュールを新設 — 20 thin proxy を6 domain メソッドに集約。token/timeout/retry を1 seamに隠蔽。6a05d936)
+- 2026-08-20-04-refactor-diagnostics-panel-deepening.md (DiagnosticsCollector深いモジュールを新設 — 681行 god module の11診断を collect() → Snapshot に集約。local-substitutable adapter でテスト。e06fa484)
+- 2026-08-20-05-refactor-settings-repository-unification.md (SettingsRepository深いモジュールを新設 — 30+散在の StorageKeys アクセスを typed get/set に集約。InMemory adapter でテスト。e06fa484)
+- 2026-08-20-00-backlog.md (第2波5件のRICEスコアリングバックログ — Reach/Impact/Confidence/Effort + 依存図 + なぜなぜ分析)
+
 ### 2026-08-20 アーキテクチャ深深化第2波 前波アーカイブ（5件）
 
 - 2026-08-20-01-refactor-saved-url-repository.md (SavedUrlRepository統合。前波で実装 — savedUrlStore 552行の5責務を崩壊、c39ad7b4でマージ)
@@ -50,7 +55,7 @@
 - 2026-08-20-03-refactor-panel-lifecycle-interface.md (25パネルのPanelLifecycle定義。前波で実装)
 - 2026-08-20-04-refactor-handler-composition-collapse.md (3層handler配線を統合、Pick型で最小依存注入。前波で実装)
 - 2026-08-20-05-refactor-settings-schema-binding.md (SettingsSchema定義。前波で実装)
-- 2026-08-20-00-backlog.md (前波5件のRICEスコアリングバックログ)
+- 2026-08-20-00-backlog.md (前波5件のRICEスコアリングバックログ) — 注: 同名ファイルのため archived 側は前波版、pbi/ 側は第2波版が現行
 
 ### 2026-08-19 アーキテクチャ深深化でアーカイブ済み（5件）
 
