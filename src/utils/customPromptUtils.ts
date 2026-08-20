@@ -4,7 +4,7 @@
  * ユーザー定義のプロンプトを管理し、AI要約生成時に適用する
  */
 
-import { Settings, StorageKeys } from './storage.js';
+import { Settings, StorageKeys } from './storage/types.js';
 import { sanitizePromptContent, DangerLevel } from './promptSanitizer.js';
 import { addLog, LogType } from './logger.js';
 import { CustomPrompt } from './types.js';

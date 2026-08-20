@@ -159,11 +159,25 @@ export class TrustChecker {
   async checkDomain(url: string): Promise<TrustCheckResult> {
     await this.ensureInitialized();
 
-    const db = getTrustDb();
-    await db.initialize();
-
-    // Trust判定を実行
-    const trustResult = await db.isDomainTrusted(url);
+    // Deep module delegation: TrustDecision hides the 4-module往復 (trustDb → permissionManager → ManagedStringList → domainUtils)
+    // TrustChecker keeps alertConfig logic, but delegates the core trust lookup to TrustDecision when available.
+    // This makes the 4-module往復局所化 while preserving existing alert/block semantics.
+    let trustResult: import('./trustDb/trustDbSchema.js').TrustResult;
+    try {
+      const { TrustDecision } = await import('./trustDb/TrustDecision.js');
+      const decision = await new TrustDecision().isTrusted(url);
+      if (decision.trustResult) {
+        trustResult = decision.trustResult;
+      } else {
+        const db = getTrustDb();
+        await db.initialize();
+        trustResult = await db.isDomainTrusted(url);
+      }
+    } catch {
+      const db = getTrustDb();
+      await db.initialize();
+      trustResult = await db.isDomainTrusted(url);
+    }
 
     // ★ 修正: trustResult が trustResult プロパティを持っているか確認
     // Trust Dbクラスの戻り値は TrustResult （level, source, reason, category を持つ）
