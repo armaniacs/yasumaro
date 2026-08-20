@@ -29,8 +29,6 @@ import {
   optionalBoolean,
   optionalNullableString,
   optionalNonNegativeNumber,
-  isRecord,
-  isFiniteNumber,
   requiredRows,
   isBrowsingLogEntry,
   optionalStringArray,

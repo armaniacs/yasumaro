@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.60` リリース。
+> - 現時点では `v6.7.61` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,13 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.7.61] - 2026-08-20
+
+### Refactor
+
+- アーキテクチャ深深化 第2波 5件を実装。`PageContentPipeline` 深いモジュール新設（`contentExtractor` 480行 + `aiSummaryCleaner` stripCore 522行/stripExtended 1008行 等、計約3,600行を `preparePageContent()` の1 seam に集約。`buildExtractionOptions` の6フラグを `PrepareHints` に集約し `src/content/extractor.ts` を1行委譲に簡素化。interface テスト6件追加）、`RecordingPipeline` 深いインターフェーステスト追加（`force`/`skipDuplicateCheck`/`previewOnly` の8通り + `BEST_EFFORT` + `per-URL Mutex` を `record()` の1 seam で検証。`PipelineStep`/`ErrorStrategy`/`RecordingContext` は内部 seam に留まることを保証）、`BrowsingLogRepository` 深いモジュール新設（`dashboardSqliteService` 598行の20 thin proxy を6 domain メソッド `query`/`search`/`toggleStar`/`deleteLog`/`getCount`/`getStatus` に集約。`tokenExempt`/`timeout`/`retry` を1 seamに隠蔽。`OffscreenTransport` は ports & adapters として維持）、`DiagnosticsCollector` 深いモジュール新設（681行 god module の11診断を `collect() → Snapshot` に集約。`storage`/`sqlite`/`deficiencies`/`builtInAi` 等を並列収集し型安全な Snapshot で返却。`chrome.storage`/`getSqliteStatus` は adapter 注入可能）、`SettingsRepository` 深いモジュール新設（30+散在の `StorageKeys` アクセスを `get`/`set`/`getAll`/`onChange` の1 seam に集約。defaults/validation/encryption/migration を内部に隠蔽。`StorageAdapter` で `ChromeStorageAdapter`/`InMemoryStorageAdapter` の2 adapter）
+- `validate`（lint 0件 / type-check 成功 / 8191テスト成功）と `build`（6.91 MB）を通過。`pbi/00-INDEX.md` を空にし第2波5件を `dev-docs/archived/pbi/` へアーカイブ
 
 ## [6.7.60] - 2026-08-20
 

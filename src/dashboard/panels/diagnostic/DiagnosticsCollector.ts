@@ -73,7 +73,7 @@ export class DiagnosticsCollector {
     const [settings, sqliteStatus, logCountResult, builtInAiResult, bytesUsed, debugMode] = await Promise.all([
       getSettingsFn().catch(() => ({} as Record<string, unknown>)),
       getSqliteStatusFn().catch(() => null),
-      getLogCountFn().catch(() => ({ error: 'unavailable' } as any)),
+      getLogCountFn().catch(() => ({ error: 'unavailable' } as unknown as Awaited<ReturnType<typeof getLogCount>>)),
       checkBuiltInAiFn().catch(() => null),
       getBytesInUse().catch(() => 0),
       getDebugMode().catch(() => false),
