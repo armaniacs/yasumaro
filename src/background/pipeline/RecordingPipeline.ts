@@ -299,7 +299,7 @@ export class RecordingPipeline {
 
   /**
    * Execute the pipeline with initial data.
-   * Acquires per-URL mutex to protect the read-then-write window.
+   * @internal — internal seam for tests and retryObsidianWriteOnly. External callers should use `record()` instead. Acquires per-URL mutex to protect the read-then-write window.
    */
   async execute(data: RecordingData, settings: Settings): Promise<RecordingResult> {
     return RecordingPipeline.withUrlRecordMutex(data.url, async () => {

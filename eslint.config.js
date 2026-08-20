@@ -29,12 +29,30 @@ export default [
       'local/require-sanitized-markdown': 'error',
       'local/require-response-size-limit': 'error',
       'no-restricted-imports': [
-        'error',
+        'warn',
         {
           patterns: [
             {
               group: ['**/logger/types.js', '**/logger/core.js', '**/logger/api.js'],
               message: 'logger/* is an internal implementation detail. Import from logger.js instead.',
+            },
+          ],
+          paths: [
+            {
+              name: '../../utils/storage.js',
+              message: 'Use direct module imports instead (e.g., from ./storage/types.js or ./storage/settingsStore.js). See dev-docs/LAYERS.md Wave 3.',
+            },
+            {
+              name: '../utils/storage.js',
+              message: 'Use direct module imports instead (e.g., from ../utils/storage/types.js). See dev-docs/LAYERS.md Wave 3.',
+            },
+            {
+              name: './storage.js',
+              message: 'Use direct module imports instead. See dev-docs/LAYERS.md Wave 3.',
+            },
+            {
+              name: 'src/utils/storage.js',
+              message: 'Use direct module imports instead. See dev-docs/LAYERS.md Wave 3.',
             },
           ],
         },

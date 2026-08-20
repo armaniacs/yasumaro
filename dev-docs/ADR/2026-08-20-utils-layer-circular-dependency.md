@@ -54,6 +54,35 @@ trancoConsentManager.ts (L119,133,150)  await import('../storage/settingsStore.j
 3. `dev-docs/LAYERS.md` に Layer 1-循環 として明記し、本 ADR を参照する。
 4. 各ファイルの先頭に `// @layer` コメントで層を明示し、grep で検証可能にする。
 
+## 将来の解消計画（PBI 01 SettingsRepository Seam で追記）
+
+### TrancoVersionTracker の StorageAdapter 化
+
+**現状**: `trustDb.ts` が `getSettingsStore()` 経由で `settingsStore` に動的依存
+
+**将来的に**: `TrancoVersionTracker` に `StorageAdapter` を注入し、`settingsStore` への依存を物理的に断つ
+
+```typescript
+// 将来のコンストラクタ
+class TrancoVersionTracker {
+  constructor(private storage: StorageAdapter) {}
+  async getSavedTrancoVersion(): Promise<string | null> {
+    const r = await this.storage.get([StorageKeys.TRANCO_VERSION]);
+    return r[StorageKeys.TRANCO_VERSION] as string | null;
+  }
+}
+```
+
+**移行ステップ**:
+1. `TrancoVersionTracker` のコンストラクタに `StorageAdapter` を追加
+2. `trustDb.ts` で `TrancoVersionTracker` を初期化する際、`new ChromeStorageAdapter()` または `settingsRepository` の adapter を注入
+3. `getSettingsStore()` の動的 import を削除（`settingsStore` 側の循環 import も不要に）
+
+**リスク**: `getSettings()` 初回実行時の `db.initialize()` タイミングが変わる可能性
+**検証**: v6.7.43 の暗号化キー救済マイグレーションとの整合性を確認必要
+**見積もり**: 別PBIで 0.5人月
+**判断**: 今回のPBIでは `SettingsRepository` の深さに集中し、循環の物理的解消は次PBIで実施。ADR は保護のまま維持。
+
 ## Consequences
 
 * **Positive**: 循環の存在理由が文書化され、将来の開発者が「不要な複雑さ」と誤認して削除するリスクを防止する。
