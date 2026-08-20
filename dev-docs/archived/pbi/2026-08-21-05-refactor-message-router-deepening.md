@@ -30,10 +30,10 @@ Scenario: 19タイプ×3送信元の網羅が1 seamで検証できる
   Then 期待される `Response`（成功 / trust拒否 / validation失敗）が返る
 
 ## 受け入れ基準
-- [ ] `MessageRouter` の外部 interface が `dispatch(msg, sender)` のみに集約されている
-- [ ] `trust` と `validator` の表が Router 実装内に隠蔽されている
-- [ ] `checkSenderTrust` と各 `MessageValidator` が internal adapters に格下げされている
-- [ ] 既存の59件の trust 網羅テストと8 validator テストが `dispatch` 越しにパスする
+- [x] `MessageRouter` の外部 interface が `dispatch(msg, sender)` のみに集約されている
+- [x] `trust` と `validator` の表が Router 実装内に隠蔽されている
+- [x] `checkSenderTrust` と各 `MessageValidator` が internal adapters に格下げされている
+- [x] 既存の59件の trust 網羅テストと8 validator テストが `dispatch` 越しにパスする
 
 ## テスト戦略
 - E2E: 実際の拡張で各メッセージ型の送受信を検証
@@ -44,10 +44,10 @@ Scenario: 19タイプ×3送信元の網羅が1 seamで検証できる
 1pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
-- [ ] `createMessageHandlerRegistry` の19エントリ宣言表が Router 内に集約されている
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
+- [x] `createMessageHandlerRegistry` の19エントリ宣言表が Router 内に集約されている
 
 ## 補足
 - `sqliteOperationSecurity.ts` の `tokenExempt` 導出パターンと同様に、trust 表の漏れを型で検出する。

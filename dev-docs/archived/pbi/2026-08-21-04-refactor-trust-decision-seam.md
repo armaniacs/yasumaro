@@ -30,10 +30,10 @@ Scenario: 3種類の送信元 × 信頼レベルが網羅される
   Then 期待される `Decision` が返る（59件の網羅テストと同様）
 
 ## 受け入れ基準
-- [ ] `TrustDecision` の外部 interface が `isTrusted(url)` に集約されている
-- [ ] `TrustDb` / `PermissionManager` / `DomainFilter` が adapter として注入可能である
-- [ ] `ManagedStringList` が internal seam に格下げされている
-- [ ] 既存の59件の trust 網羅テストが `isTrusted` 越しにパスする
+- [x] `TrustDecision` の外部 interface が `isTrusted(url)` に集約されている
+- [x] `TrustDb` / `PermissionManager` / `DomainFilter` が adapter として注入可能である
+- [x] `ManagedStringList` が internal seam に格下げされている
+- [x] 既存の59件の trust 網羅テストが `isTrusted` 越しにパスする
 
 ## テスト戦略
 - E2E: 実際のページで `isTrusted` → 記録可否の判定を検証
@@ -44,10 +44,10 @@ Scenario: 3種類の送信元 × 信頼レベルが網羅される
 2pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（ADR 2026-03-20の矛盾点を追記）
-- [ ] 4モジュール往復が `grep` で検出されないこと
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（ADR 2026-03-20の矛盾点を追記）
+- [x] 4モジュール往復が `grep` で検出されないこと
 
 ## 補足
 - ADR 2026-03-20 `permissionManager-trustDb-separation` と矛盾するが、摩擦が再発しているため再検討の価値ありとして明示する。

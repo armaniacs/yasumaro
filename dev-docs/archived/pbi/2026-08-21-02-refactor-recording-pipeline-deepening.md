@@ -30,10 +30,10 @@ Scenario: BEST_EFFORT で一部失敗しても全体が継続する
   Then 失敗は `Result` に集約され、後続 step はスキップされずに実行される
 
 ## 受け入れ基準
-- [ ] `RecordingPipeline` の外部 interface が `record(ctx)` のみに集約されている
-- [ ] `PipelineStep` / `ErrorStrategy` / `RecordingContext` が外部から import 不可（internal seam）である
-- [ ] `OfflineNetworkQueue` / `RecordingCacheInstance` が adapter として注入可能である
-- [ ] 既存の8通り + Mutex のテストが `record()` 越しにパスする
+- [x] `RecordingPipeline` の外部 interface が `record(ctx)` のみに集約されている
+- [x] `PipelineStep` / `ErrorStrategy` / `RecordingContext` が外部から import 不可（internal seam）である
+- [x] `OfflineNetworkQueue` / `RecordingCacheInstance` が adapter として注入可能である
+- [x] 既存の8通り + Mutex のテストが `record()` 越しにパスする
 
 ## テスト戦略
 - E2E: 実際のページで `VALID_VISIT` → `record` → Obsidian/SQLite への保存を検証
@@ -44,7 +44,7 @@ Scenario: BEST_EFFORT で一部失敗しても全体が継続する
 3pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
-- [ ] 既存の step 単体テストの整理（削除/内部化）が完了している
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
+- [x] 既存の step 単体テストの整理（削除/内部化）が完了している

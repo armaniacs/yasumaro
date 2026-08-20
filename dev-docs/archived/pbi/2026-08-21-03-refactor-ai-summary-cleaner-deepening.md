@@ -30,10 +30,10 @@ Scenario: ルール追加が表1箇所で完結する
   Then `content/pageState.ts` の37分割代入や `aiSummaryCleansingSettingsV2` の5箇所を手書きで直す必要がない
 
 ## 受け入れ基準
-- [ ] `AiSummaryCleaner` の外部 interface が `clean(html, opts)` のみに集約されている
-- [ ] `CLEANSING_RULES` 表が単一ソース化され、`newUserDefault`/`defaultEnabled` が明記されている
-- [ ] `content/pageState.ts` の37分割代入と `aiSummaryCleansingSettingsV2` の5箇所が表からの導出に置換されている
-- [ ] 32ルール往復テストが `clean()` 越しにパスする
+- [x] `AiSummaryCleaner` の外部 interface が `clean(html, opts)` のみに集約されている
+- [x] `CLEANSING_RULES` 表が単一ソース化され、`newUserDefault`/`defaultEnabled` が明記されている
+- [x] `content/pageState.ts` の37分割代入と `aiSummaryCleansingSettingsV2` の5箇所が表からの導出に置換されている
+- [x] 32ルール往復テストが `clean()` 越しにパスする
 
 ## テスト戦略
 - E2E: 実際のページでコンテンツ抽出 → クレンジング → AI要約の一連の流れを検証
@@ -44,7 +44,7 @@ Scenario: ルール追加が表1箇所で完結する
 2pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
-- [ ] 10層の手書き重複が `grep` で検出されないこと
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
+- [x] 10層の手書き重複が `grep` で検出されないこと
