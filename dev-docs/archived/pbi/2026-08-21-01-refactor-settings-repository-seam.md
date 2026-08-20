@@ -31,10 +31,10 @@ Scenario: 不正な設定値は seam 内で拒否される
   Then validation エラーが返り、永続化されない
 
 ## 受け入れ基準
-- [ ] `SettingsRepository` の外部 interface が `get`/`set`/`getAll`/`onChange` の4メソッドのみである
-- [ ] `storage.ts` barrel の re-export が削除され、直接 import が強制される（lintで検出可能）
-- [ ] `InMemoryStorageAdapter` による interface 越しテストで `chrome.storage` mock が不要である
-- [ ] `trustDb ↔ settingsStore` 循環が `TrancoVersionTracker` 注入で解消され、ADRが更新されている
+- [x] `SettingsRepository` の外部 interface が `get`/`set`/`getAll`/`onChange` の4メソッドのみである
+- [x] `storage.ts` barrel の re-export が削除され、直接 import が強制される（lintで検出可能）
+- [x] `InMemoryStorageAdapter` による interface 越しテストで `chrome.storage` mock が不要である
+- [x] `trustDb ↔ settingsStore` 循環が `TrancoVersionTracker` 注入で解消され、ADRが更新されている
 
 ## テスト戦略
 - E2E: 設定画面で値を変更し、再起動後も永続化されていること
@@ -45,7 +45,7 @@ Scenario: 不正な設定値は seam 内で拒否される
 2pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`dev-docs/LAYERS.md` / ADR）
-- [ ] `storage.ts` barrel の削除が `grep` で検証可能である
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`dev-docs/LAYERS.md` / ADR）
+- [x] `storage.ts` barrel の削除が `grep` で検証可能である
