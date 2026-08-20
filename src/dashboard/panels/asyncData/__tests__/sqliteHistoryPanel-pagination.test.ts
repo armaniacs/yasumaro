@@ -40,7 +40,7 @@ vi.mock('../../../utils/confirmDialog.js', () => ({
 
 import { createSqliteHistoryPanel } from '../sqliteHistoryPanel.js';
 import * as db from '../../../dashboardSqliteService.js';
-import type { AsyncDataPanel } from '../../types.js';
+import type { PanelLifecycle } from '../../types.js';
 
 const mockedDb = db as unknown as {
   queryLogs: ReturnType<typeof vi.fn>;
@@ -60,7 +60,7 @@ function makeRow(id: number, tags = ''): object {
   };
 }
 
-function makePanel(container: HTMLElement): AsyncDataPanel {
+function makePanel(container: HTMLElement): PanelLifecycle {
   const panel = createSqliteHistoryPanel();
   panel.mount(container);
   return panel;
@@ -96,7 +96,7 @@ describe('createSqliteHistoryPanel — server-side pagination', () => {
     document.body.appendChild(container);
     const panel = makePanel(container);
 
-    await panel.loadData();
+    await panel.load?.();
     await flush();
 
     const options = lastQueryOptions();
@@ -122,7 +122,7 @@ describe('createSqliteHistoryPanel — server-side pagination', () => {
       },
     });
 
-    await panel.loadData();
+    await panel.load?.();
     await flush();
 
     const next = document.querySelector('[data-page="next"]') as HTMLButtonElement | null;
@@ -149,7 +149,7 @@ describe('createSqliteHistoryPanel — server-side pagination', () => {
         total: 5000,
       },
     });
-    await panel.loadData();
+    await panel.load?.();
     await flush();
 
     // Second page: SQL already applied OFFSET, so these are the rows to show.
@@ -178,7 +178,7 @@ describe('createSqliteHistoryPanel — server-side pagination', () => {
       },
     });
 
-    panel.onActivate?.({ searchTag: 'AI' });
+    panel.init?.({ searchTag: 'AI' });
     await flush();
 
     const options = lastQueryOptions();

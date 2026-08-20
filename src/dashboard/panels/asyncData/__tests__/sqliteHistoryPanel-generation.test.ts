@@ -30,7 +30,7 @@ vi.mock('../../../utils/confirmDialog.js', () => ({
 
 import { createSqliteHistoryPanel } from '../sqliteHistoryPanel.js';
 import * as db from '../../../dashboardSqliteService.js';
-import type { AsyncDataPanel } from '../../types.js';
+import type { PanelLifecycle } from '../../types.js';
 
 const mockedDb = db as unknown as {
   queryLogs: ReturnType<typeof vi.fn>;
@@ -50,7 +50,7 @@ function makeRow(id: number, tags = TAG): object {
   };
 }
 
-function makePanel(container: HTMLElement): AsyncDataPanel {
+function makePanel(container: HTMLElement): PanelLifecycle {
   const panel = createSqliteHistoryPanel();
   panel.mount(container);
   return panel;
@@ -85,7 +85,7 @@ describe('createSqliteHistoryPanel — requestGeneration race guard', () => {
     const deferred = new Promise(resolve => { resolveFetch = resolve; });
     mockedDb.queryLogs.mockImplementationOnce(() => deferred);
 
-    panel.onActivate?.({ searchTag: TAG });
+    panel.init?.({ searchTag: TAG });
     await settle();
 
     expect(container.querySelector('.loading')).not.toBeNull();
@@ -112,8 +112,8 @@ describe('createSqliteHistoryPanel — requestGeneration race guard', () => {
       .mockImplementationOnce(() => newer);
 
     // Two overlapping tag navigations: the second bumps requestGeneration.
-    panel.onActivate?.({ searchTag: TAG });
-    panel.onActivate?.({ searchTag: TAG });
+    panel.init?.({ searchTag: TAG });
+    panel.init?.({ searchTag: TAG });
     await settle();
 
     // The newer request resolves first with its own data…
@@ -146,8 +146,8 @@ describe('createSqliteHistoryPanel — requestGeneration race guard', () => {
       .mockImplementationOnce(() => stale)
       .mockImplementationOnce(() => newer);
 
-    panel.onActivate?.({ searchTag: TAG });
-    panel.onActivate?.({ searchTag: TAG });
+    panel.init?.({ searchTag: TAG });
+    panel.init?.({ searchTag: TAG });
     await settle();
 
     resolveNewer({ data: { rows: [makeRow(2)], total: 1 } });

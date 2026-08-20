@@ -29,7 +29,7 @@ vi.mock('../../../utils/confirmDialog.js', () => ({
 
 import { createSqliteHistoryPanel } from '../sqliteHistoryPanel.js';
 import * as db from '../../../dashboardSqliteService.js';
-import type { AsyncDataPanel } from '../../types.js';
+import type { PanelLifecycle } from '../../types.js';
 
 const mockedDb = db as unknown as {
   queryLogs: ReturnType<typeof vi.fn>;
@@ -46,7 +46,7 @@ function makeRow(id: number, tags: string): object {
   };
 }
 
-function makePanel(container: HTMLElement): AsyncDataPanel {
+function makePanel(container: HTMLElement): PanelLifecycle {
   const panel = createSqliteHistoryPanel();
   panel.mount(container);
   return panel;
@@ -74,7 +74,7 @@ describe('createSqliteHistoryPanel — sort control', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const panel = makePanel(container);
-    await panel.loadData();
+    await panel.load?.();
 
     const select = document.getElementById('sqlite-sort-select') as HTMLSelectElement | null;
     expect(select).not.toBeNull();
@@ -85,7 +85,7 @@ describe('createSqliteHistoryPanel — sort control', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const panel = makePanel(container);
-    await panel.loadData();
+    await panel.load?.();
 
     const select = document.getElementById('sqlite-sort-select') as HTMLSelectElement;
     const options = Array.from(select.options).map(o => o.value);
@@ -96,7 +96,7 @@ describe('createSqliteHistoryPanel — sort control', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const panel = makePanel(container);
-    await panel.loadData();
+    await panel.load?.();
     mockedDb.queryLogs.mockClear();
 
     const select = document.getElementById('sqlite-sort-select') as HTMLSelectElement;
@@ -113,7 +113,7 @@ describe('createSqliteHistoryPanel — sort control', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const panel = makePanel(container);
-    await panel.loadData();
+    await panel.load?.();
 
     const select = document.getElementById('sqlite-sort-select') as HTMLSelectElement;
     select.value = 'created_at:ASC';
@@ -136,8 +136,8 @@ describe('createSqliteHistoryPanel — sort control', () => {
       data: { rows: [makeRow(1, 'AI'), makeRow(2, 'AI')], total: 2 },
     });
 
-    panel.onActivate?.({ searchTag: 'AI' });
-    await panel.loadData();
+    panel.init?.({ searchTag: 'AI' });
+    await panel.load?.();
     await flush();
 
     const select = document.getElementById('sqlite-sort-select') as HTMLSelectElement;
@@ -157,8 +157,8 @@ describe('createSqliteHistoryPanel — sort control', () => {
     const searchRows = Array.from({ length: 5 }, (_, i) => makeRow(i + 10, ''));
     mockedDb.searchLogs.mockResolvedValue({ data: { rows: searchRows, total: 5 } });
 
-    panel.onActivate?.({ searchTag: 'nonexistent-tag' });
-    await panel.loadData();
+    panel.init?.({ searchTag: 'nonexistent-tag' });
+    await panel.load?.();
     await flush();
 
     const select = document.getElementById('sqlite-sort-select') as HTMLSelectElement;

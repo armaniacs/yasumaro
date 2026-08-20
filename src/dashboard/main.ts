@@ -24,7 +24,7 @@ bootstrapper.registerPanels([
   adaptLegacyPanel(createDomainSearchPanel()),
   adaptLegacyPanel(createTagClusterPanel()),
   adaptLegacyPanel(createHistoryPanel()),
-  adaptLegacyPanel(createSqliteHistoryPanel()),
+  createSqliteHistoryPanel(),
   adaptLegacyPanel(createGeneralSettingsPanel()),
   adaptLegacyPanel(createPrivacySettingsPanel()),
   adaptLegacyPanel(createAiSummaryCleansingPanel()),
