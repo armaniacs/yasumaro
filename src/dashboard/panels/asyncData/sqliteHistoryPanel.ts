@@ -3,7 +3,7 @@ import type { BrowsingLogEntry } from './sqliteHistoryQuery.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { formatEntryToMarkdown } from '../../../utils/markdownFormatter.js';
 import { copyTextToClipboard } from '../../../utils/clipboard.js';
-import { type AsyncDataPanel } from '../types.js';
+import { type PanelLifecycle } from '../types.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import type { SqliteHistoryState } from './sqliteHistoryPanelState.js';
@@ -30,7 +30,7 @@ function t(key: string, substitutions?: string | string[]): string {
   return getMessageOr(key, key, substitutions);
 }
 
-export function createSqliteHistoryPanel(): AsyncDataPanel {
+export function createSqliteHistoryPanel(): PanelLifecycle {
   let container: HTMLElement | null = null;
   let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   let _isMounted = false;
@@ -551,7 +551,14 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
     mount(c: HTMLElement) {
       container = c;
     },
-    async loadData() {
+    init(initParams?: Record<string, unknown>) {
+      if (initParams?.searchTag) {
+        controller.activateWithTag(initParams.searchTag as string);
+      } else if (initParams?.searchDomain) {
+        controller.activateWithDomain(initParams.searchDomain as string);
+      }
+    },
+    async load() {
       if (!container) return;
 
       _isMounted = true;
@@ -560,12 +567,12 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
 
       renderState();
 
-      // Consume any init params set by onActivate (which runs before loadData)
+      // Consume any init params set by init() (which runs before load())
       // so retryInitialLoad uses the correct search/tag parameters.
       const fetchOpts = controller.consumePendingInit();
       void controller.retryInitialLoad(fetchOpts ?? { limit: PAGE_SIZE });
     },
-    unmount() {
+    destroy() {
       if (searchDebounceTimer !== null) {
         clearTimeout(searchDebounceTimer);
         searchDebounceTimer = null;
@@ -574,13 +581,6 @@ export function createSqliteHistoryPanel(): AsyncDataPanel {
       controller.bumpGenerationOnUnmount();
       // Clear bulk bar listener references
       controller.clearEntrySelection();
-    },
-    onActivate(init) {
-      if (init?.searchTag) {
-        controller.activateWithTag(init.searchTag as string);
-      } else if (init?.searchDomain) {
-        controller.activateWithDomain(init.searchDomain as string);
-      }
     },
   };
 }

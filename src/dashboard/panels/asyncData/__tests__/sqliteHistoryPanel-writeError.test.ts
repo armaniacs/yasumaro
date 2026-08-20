@@ -35,7 +35,7 @@ import { createSqliteHistoryPanel } from '../sqliteHistoryPanel.js';
 import * as db from '../../../dashboardSqliteService.js';
 import * as confirmDialog from '../../../utils/confirmDialog.js';
 import * as storageUrls from '../../../../utils/storageUrls.js';
-import type { AsyncDataPanel } from '../../types.js';
+import type { PanelLifecycle } from '../../types.js';
 
 const mockedDb = db as unknown as {
   queryLogs: ReturnType<typeof vi.fn>;
@@ -58,7 +58,7 @@ function makeRow(id: number): object {
   };
 }
 
-function makePanel(container: HTMLElement): AsyncDataPanel {
+function makePanel(container: HTMLElement): PanelLifecycle {
   const panel = createSqliteHistoryPanel();
   panel.mount(container);
   return panel;
@@ -90,7 +90,7 @@ describe('変更系の失敗が利用者に伝わる', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const panel = makePanel(container);
-    await panel.loadData();
+    await panel.load?.();
     await flush();
 
     mockedConfirmDialog.showConfirmDialog.mockResolvedValue(true);
@@ -108,7 +108,7 @@ describe('変更系の失敗が利用者に伝わる', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const panel = makePanel(container);
-    await panel.loadData();
+    await panel.load?.();
     await flush();
 
     mockedDb.toggleStar.mockResolvedValue({ error: 'Database connection lost. Please reload the extension.' });
@@ -123,7 +123,7 @@ describe('変更系の失敗が利用者に伝わる', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const panel = makePanel(container);
-    await panel.loadData();
+    await panel.load?.();
     await flush();
 
     mockedConfirmDialog.showConfirmDialog.mockResolvedValue(true);
