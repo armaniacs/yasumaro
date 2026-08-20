@@ -3,7 +3,7 @@
  * AI使用状況トラッキング・レート制限管理
  */
 
-import { StorageKeys } from './storage.js';
+import { StorageKeys } from './storage/types.js';
 import { addLog, LogType } from './logger.js';
 
 // レート制限設定

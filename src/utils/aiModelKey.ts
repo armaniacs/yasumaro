@@ -9,7 +9,7 @@
  * a key naming convention changes.
  */
 
-import { StorageKeys } from './storage.js';
+import { StorageKeys } from './storage/types.js';
 
 /**
  * Normalize a provider identifier into the snake_case stem used for its

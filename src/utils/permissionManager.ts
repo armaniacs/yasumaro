@@ -4,7 +4,7 @@
  * host_permissionsチェックとoptional_permissions要求、拒否ドメイン管理
  */
 
-import { StorageKeys } from './storage.js';
+import { StorageKeys } from './storage/types.js';
 import { logDebug, logWarn } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 import { withOptimisticLock } from './optimisticLock.js';
