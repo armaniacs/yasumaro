@@ -5,14 +5,11 @@ import { registerManualRecordContextMenu as _registerManualRecordContextMenu, cr
 import { logError, ErrorCode } from '../utils/logger.js';
 import { initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
-import { createCacheInitializedFlag, createAutoSavedBadgeTabs } from './swStatePersistence.js';
+import { createCacheInitializedFlag } from './swStatePersistence.js';
 import { createBackgroundServices } from './createBackgroundServices.js';
-import { createMessageRegistryComposition } from './createMessageRegistryComposition.js';
 import { createMessageHandler as _createMessageHandler } from './messageHandler.js';
-import { ensureConfirmToken } from './confirmTokenManager.js';
 import { createAlarmHandler } from './alarmHandler.js';
 import { createDeferredMigrationRunner } from './deferredMigrations.js';
-import { createDashboardSqliteMessageHandler } from './dashboardSqliteWiring.js';
 import { retryPendingChromeStorageWrite } from './retryPendingWrites.js';
 export { retryPendingChromeStorageWrite } from './retryPendingWrites.js';
 
@@ -68,13 +65,14 @@ const {
     sessionStore,
     headerDetector,
     reviewSummaryGenerator,
+    messageHandlerRegistry,
+    autoSavedBadgeTabs,
 } = services;
 
 // Session store for cross-SW-restart persistence
 SessionStore.registerSuspendHandler(sessionStore);
 
 // Initialize clients
-const autoSavedBadgeTabs = createAutoSavedBadgeTabs();
 void headerDetector.initialize();
 rateLimiter.initialize();
 const isCacheInitialized = createCacheInitializedFlag();
@@ -85,15 +83,9 @@ export function resetManualRecordCache(): void {
 
 // Extracted modules
 const runDeferredStartupMigrations = createDeferredMigrationRunner(sqliteClient);
-const dashboardSqliteHandler = createDashboardSqliteMessageHandler({ sqliteClient, ensureConfirmToken });
 
-const messageRegistryComposition = createMessageRegistryComposition({
-  services,
-  dashboardSqliteHandler,
-  autoSavedBadgeTabs,
-});
+const { registry, handlers: registryHandlers } = messageHandlerRegistry;
 
-const { registry } = messageRegistryComposition;
 export const {
   VALID_VISIT: handleValidVisit,
   FETCH_URL: handleFetchUrl,
@@ -114,7 +106,7 @@ export const {
   GENERATE_REVIEW_SUMMARY: handleGenerateReviewSummary,
   LOG_FORWARD: handleLogForward,
   DASHBOARD_SQLITE: handleDashboardSqlite,
-} = messageRegistryComposition.handlers;
+} = registryHandlers;
 
 const handleManualRecordForContextMenu = async (
   message: Parameters<NonNullable<typeof handleManualRecord>>[0],

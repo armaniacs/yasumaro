@@ -16,9 +16,9 @@ import { StorageKeys } from '../../../utils/storage/types.js';
 import {
   saveSavedUrlEntryMetadata,
   type SavedUrlEntryMetadataPatch,
-} from '../../../utils/storage/savedUrlStore.js';
+} from '../../../utils/storage/savedUrlRepository.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
-import { extractCommonStorageFields } from '../mappers/RecordingContextFieldMapper.js';
+import { extractCommonStorageFields } from '../mappers/commonStorageFields.js';
 
 export const saveMetadataStep: PipelineStepFunction = async (
   context: RecordingContext

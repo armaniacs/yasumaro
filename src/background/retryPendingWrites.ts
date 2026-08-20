@@ -6,7 +6,7 @@
 
 import { withOptimisticLock } from '../utils/optimisticLock.js';
 import type { SavedUrlEntry } from '../utils/urlEntry.js';
-import { saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlStore.js';
+import { saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlRepository.js';
 import type { QueuedChromeStorageWrite, PendingMetadataPatchWrite } from './pendingChromeStorageQueue.js';
 import { logWarn } from '../utils/logger.js';
 import { pickDefined } from '../utils/objectUtils.js';

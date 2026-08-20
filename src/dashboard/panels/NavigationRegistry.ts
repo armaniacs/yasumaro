@@ -1,31 +1,17 @@
-import { type Panel, type PanelInitMap } from './types.js';
+import { type PanelLifecycle, type PanelInitMap } from './types.js';
 
 /**
- * Invoke a panel's onActivate, respecting the per-category signature:
- * only AsyncDataPanel accepts the init payload. Discriminating on `category`
- * keeps this type-safe, so adding a panel category surfaces here as a
- * compile error rather than being silently cast away.
+ * NavigationRegistry manages dashboard panel lifecycle using the unified
+ * PanelLifecycle interface. All panels — both new (implementing PanelLifecycle
+ * directly) and legacy (wrapped via adaptLegacyPanel) — are operated through
+ * this single interface.
  */
-function activate(panel: Panel, init?: Record<string, unknown>): void {
-  switch (panel.category) {
-    case 'async-data':
-      panel.onActivate?.(init);
-      return;
-    case 'static-form':
-      panel.onActivate?.();
-      return;
-    case 'diagnostic':
-      // DiagnosticPanel has no activation hook.
-      return;
-  }
-}
-
 export class NavigationRegistry {
-  private panels = new Map<string, Panel>();
+  private panels = new Map<string, PanelLifecycle>();
   private activePanelId: string | null = null;
   private mountedPanels = new Set<string>();
 
-  register(panel: Panel): void {
+  register(panel: PanelLifecycle): void {
     if (this.panels.has(panel.id)) {
       throw new Error(`Panel "${panel.id}" is already registered`);
     }
@@ -47,13 +33,13 @@ export class NavigationRegistry {
     }
 
     if (this.activePanelId === panelId) {
-      activate(panel, init);
+      (panel.init ?? panel.activate)?.(init);
       return;
     }
 
     if (this.activePanelId) {
       const current = this.panels.get(this.activePanelId);
-      if (current?.category === 'async-data') current.onDeactivate?.();
+      current?.deactivate?.();
     }
 
     // Clear any panel left `.active` in the static HTML (e.g. panel-general),
@@ -77,11 +63,11 @@ export class NavigationRegistry {
       this.mountedPanels.add(panelId);
     }
 
-    activate(panel, init);
+    (panel.init ?? panel.activate)?.(init);
 
-    if (panel.category === 'async-data') {
-      panel.loadData().catch((err: unknown) => {
-        console.error(`[NavigationRegistry] loadData failed for panel "${panelId}":`, err);
+    if (panel.category === 'async-data' && panel.load) {
+      panel.load().catch((err: unknown) => {
+        console.error(`[NavigationRegistry] load failed for panel "${panelId}":`, err);
       });
     }
   }

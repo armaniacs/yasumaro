@@ -1,4 +1,71 @@
+/**
+ * Unified lifecycle interface for all dashboard panels.
+ *
+ * New panels should implement this directly. Existing panels (AsyncDataPanel,
+ * StaticFormPanel, DiagnosticPanel) are wrapped by adaptLegacyPanel() to
+ * conform to this shape — they don't need to change.
+ *
+ * The interface is intentionally minimal: mount is the only required method.
+ * activate/deactivate/destroy are optional hooks that the registry calls at
+ * the appropriate lifecycle points.
+ */
+export interface PanelLifecycle {
+  readonly id: string;
+  readonly category: 'async-data' | 'static-form' | 'diagnostic';
+  mount(container: HTMLElement): void | Promise<void>;
+  /** PBI#03 spec name for activation — alias for activate, kept for spec compliance. */
+  init?(init?: Record<string, unknown>): void | Promise<void>;
+  activate?(init?: Record<string, unknown>): void | Promise<void>;
+  load?(): Promise<void>;
+  deactivate?(): void;
+  destroy?(): void;
+}
+
+/**
+ * Legacy union type — kept for backward compatibility with existing panels.
+ * New panels should implement PanelLifecycle instead.
+ */
 export type Panel = AsyncDataPanel | StaticFormPanel | DiagnosticPanel;
+
+/**
+ * Wrap a legacy panel (AsyncDataPanel / StaticFormPanel / DiagnosticPanel)
+ * into the PanelLifecycle interface.
+ *
+ * This adapter maps:
+ * - onActivate(init?) → activate(init)
+ * - onDeactivate() → deactivate()
+ * - loadData() → activate() (for async-data panels, registry calls activate then load)
+ */
+export function adaptLegacyPanel(panel: Panel): PanelLifecycle {
+  const activateFn = (init?: Record<string, unknown>): void => {
+    if (panel.category === 'async-data') {
+      panel.onActivate?.(init);
+    } else if ('onActivate' in panel) {
+      panel.onActivate?.();
+    }
+  };
+  const base: PanelLifecycle = {
+    id: panel.id,
+    category: panel.category,
+    mount: (container) => panel.mount(container),
+    init: activateFn,
+    activate: activateFn,
+    deactivate: () => {
+      if (panel.category === 'async-data') {
+        panel.onDeactivate?.();
+      }
+    },
+    destroy: () => {
+      if ('unmount' in panel) {
+        panel.unmount?.();
+      }
+    },
+  };
+  if (panel.category === 'async-data') {
+    base.load = () => panel.loadData();
+  }
+  return base;
+}
 
 export interface AsyncDataPanel {
   readonly id: string;

@@ -27,10 +27,18 @@ import type { RecordingPipeline } from './pipeline/RecordingPipeline.js';
 import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
 import { createReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
+import { createAutoSavedBadgeTabs, type AutoSavedBadgeTabs } from './swStatePersistence.js';
+import { createDashboardSqliteMessageHandler } from './dashboardSqliteWiring.js';
+import { ensureConfirmToken } from './confirmTokenManager.js';
 import { hasPrivacyConsent } from '../popup/privacyConsent.js';
-import { getSettings } from '../utils/storage.js';
-import { getSavedUrlsWithTimestamps } from '../utils/storage/savedUrlStore.js';
-import { saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlStore.js';
+import { getSettings, buildAllowedUrls, clearSettingsCache, lockSession } from '../utils/storage.js';
+import { getSavedUrlsWithTimestamps, saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlRepository.js';
+import { isDomainAllowed } from '../utils/domainUtils.js';
+import { notifyAiTestProgress } from './aiTestProgressNotifier.js';
+import { updateActivity } from './sessionAlarmsManager.js';
+import { createMessageHandlerRegistry, type MessageHandlerRegistryComposition } from './handlers/createMessageHandlerRegistry.js';
+import type { MessageHandlerRegistryDeps } from './handlers/createMessageHandlerRegistry.js';
+import type { MessageHandler } from './handlers/MessageHandlerRegistry.js';
 import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/recordingHandlers.js';
 
 export interface BackgroundServices {
@@ -69,16 +77,25 @@ export interface BackgroundServices {
  * popup and Dashboard code never see this type.
  */
 export interface BackgroundServicesComposition extends BackgroundServices {
-  /**
-   * The SqliteClient handed to the Dashboard SQLite handler wiring; must be
-   * the same instance as `sqliteClient` (guarded by backgroundComposition.test).
-   */
   dashboardSqliteClient: SqliteClient;
-  /** Deps for MANUAL_RECORD / PREVIEW_RECORD / context-menu handlers. */
   manualRecordDeps: ManualRecordHandlerDeps;
-  /** Deps for SAVE_RECORD. */
   saveRecordDeps: SaveRecordHandlerDeps;
+  messageHandlerRegistry: MessageHandlerRegistryComposition;
+  dashboardSqliteHandler: MessageHandler;
+  autoSavedBadgeTabs: AutoSavedBadgeTabs;
 }
+
+// PBI#04: 静的保証 — BackgroundServices のコアフィールドが MessageHandlerRegistryDeps の
+// サブセットとして代入可能であることをコンパイル時に検証。
+// もし BackgroundServices の型が registry 側の Pick より狭すぎる/広すぎる場合、ここで型エラーになる。
+type _CoreServicesSubsetCheck = Pick<BackgroundServices, 'obsidian' | 'tabCache' | 'recordingPipeline' | 'aiService'> extends Pick<
+  MessageHandlerRegistryDeps,
+  'obsidian' | 'tabCache' | 'recordingPipeline' | 'aiService'
+>
+  ? true
+  : never;
+const _subsetCheck: _CoreServicesSubsetCheck = true as const;
+void _subsetCheck;
 
 export function createBackgroundServices(): BackgroundServicesComposition {
   const sessionStore = new SessionStore();
@@ -138,6 +155,41 @@ export function createBackgroundServices(): BackgroundServicesComposition {
     setUrlContent,
   };
 
+  // Construct the dashboard SQLite handler and auto-saved badge tabs
+  const dashboardSqliteHandler = createDashboardSqliteMessageHandler({ sqliteClient, ensureConfirmToken });
+  const autoSavedBadgeTabs = createAutoSavedBadgeTabs();
+
+  // Compose the message handler registry here — all wiring centralized in one place.
+  const messageHandlerRegistry = createMessageHandlerRegistry({
+    recordingPipeline: { record: (data) => recordingPipeline.record(data) },
+    tabCache: { add: (tab) => tabCache.add(tab), update: (tabId, data) => tabCache.update(tabId, data) },
+    obsidian,
+    aiService,
+    manualRecordDeps,
+    saveRecordDeps,
+    hasPrivacyConsent: () => hasPrivacyConsent(),
+    buildAllowedUrls: (settings) => buildAllowedUrls(settings),
+    getSettings: () => getSettings(),
+    isDomainAllowed: (url) => isDomainAllowed(url),
+    clearSettingsCache: () => clearSettingsCache(),
+    notifyAiTestProgress,
+    getPrivacyCache: () => recordingCache.getPrivacyCache(),
+    updateActivity: () => updateActivity(),
+    lockSession: () => lockSession(),
+    autoSavedBadgeTabs,
+    initExportScheduler: async () => {
+      const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
+      await initExportScheduler();
+    },
+    updateConsentBadge: async () => {
+      const { updateConsentBadge } = await import('./consentBadge.js');
+      await updateConsentBadge();
+    },
+    generateWeeklySummary: () => reviewSummaryGenerator.generateWeeklySummary(),
+    generateMonthlySummary: () => reviewSummaryGenerator.generateMonthlySummary(),
+    dashboardSqliteHandler,
+  });
+
   return {
     obsidian,
     sqliteClient,
@@ -153,5 +205,8 @@ export function createBackgroundServices(): BackgroundServicesComposition {
     dashboardSqliteClient: sqliteClient,
     manualRecordDeps,
     saveRecordDeps,
+    messageHandlerRegistry,
+    dashboardSqliteHandler,
+    autoSavedBadgeTabs,
   };
 }

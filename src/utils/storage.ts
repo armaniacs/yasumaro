@@ -67,9 +67,9 @@ export {
     removeSavedUrl,
     isUrlSaved,
     getSavedUrlCount,
-} from './storage/savedUrlStore.js';
+} from './storage/savedUrlRepository.js';
 /** @deprecated Use direct module imports instead (see file header). */
-export type { SavedUrlEntry } from './storage/savedUrlStore.js';
+export type { SavedUrlEntry } from './storage/savedUrlRepository.js';
 
 /** @deprecated Use direct module imports instead (see file header). */
 export {

@@ -89,21 +89,36 @@ export interface MessageHandlerRegistryComposition {
 
 export function createMessageHandlerRegistry(deps: MessageHandlerRegistryDeps): MessageHandlerRegistryComposition {
   const registry = new MessageHandlerRegistry(deps.runtimeId);
+  // PBI#04: Each factory receives a Pick<>-narrowed slice — the registry deps
+  // object is destructured into minimal views before forwarding.
+  const validVisitPick: Pick<MessageHandlerRegistryDeps, 'hasPrivacyConsent' | 'tabCache' | 'recordingPipeline' | 'autoSavedBadgeTabs'> = {
+    hasPrivacyConsent: deps.hasPrivacyConsent,
+    tabCache: deps.tabCache,
+    recordingPipeline: deps.recordingPipeline,
+    autoSavedBadgeTabs: deps.autoSavedBadgeTabs,
+  };
+  const fetchUrlPick: Pick<MessageHandlerRegistryDeps, 'getSettings' | 'buildAllowedUrls'> = {
+    getSettings: deps.getSettings,
+    buildAllowedUrls: deps.buildAllowedUrls,
+  };
+  const checkDomainPick: Pick<MessageHandlerRegistryDeps, 'isDomainAllowed'> = {
+    isDomainAllowed: deps.isDomainAllowed,
+  };
   const handlers = {
     VALID_VISIT: createValidVisitHandler({
-      isRecordingAllowed: deps.hasPrivacyConsent,
-      cacheTab: deps.tabCache.add.bind(deps.tabCache),
-      updateCachedTab: deps.tabCache.update.bind(deps.tabCache),
-      recordVisit: (data) => deps.recordingPipeline.record(data),
-      addBadgeTab: (tabId) => deps.autoSavedBadgeTabs.add(tabId),
-      hasBadgeTab: (tabId) => deps.autoSavedBadgeTabs.has(tabId),
+      isRecordingAllowed: validVisitPick.hasPrivacyConsent,
+      cacheTab: validVisitPick.tabCache.add.bind(validVisitPick.tabCache),
+      updateCachedTab: validVisitPick.tabCache.update.bind(validVisitPick.tabCache),
+      recordVisit: (data) => validVisitPick.recordingPipeline.record(data),
+      addBadgeTab: (tabId) => validVisitPick.autoSavedBadgeTabs.add(tabId),
+      hasBadgeTab: (tabId) => validVisitPick.autoSavedBadgeTabs.has(tabId),
     }),
-    FETCH_URL: createFetchUrlHandler({ getSettings: deps.getSettings, buildAllowedUrls: deps.buildAllowedUrls }),
+    FETCH_URL: createFetchUrlHandler({ getSettings: fetchUrlPick.getSettings, buildAllowedUrls: fetchUrlPick.buildAllowedUrls }),
     MANUAL_RECORD: createManualRecordHandler(deps.manualRecordDeps),
     PREVIEW_RECORD: createManualRecordHandler(deps.manualRecordDeps),
     SAVE_RECORD: createSaveRecordHandler(deps.saveRecordDeps),
     CONTENT_CLEANSING_EXECUTED: createContentCleansingExecutedHandler({ hasBadgeTab: (tabId) => deps.autoSavedBadgeTabs.has(tabId) }),
-    CHECK_DOMAIN: createCheckDomainHandler({ isDomainAllowed: deps.isDomainAllowed }),
+    CHECK_DOMAIN: createCheckDomainHandler({ isDomainAllowed: checkDomainPick.isDomainAllowed }),
     TEST_CONNECTIONS: createTestConnectionsHandler({
       testObsidian: () => deps.obsidian.testConnection(),
       testAi: () => deps.aiService.testConnection(),

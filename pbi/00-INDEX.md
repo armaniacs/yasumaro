@@ -18,7 +18,11 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| （なし） | | | | |
+| [2026-08-20-01-refactor-saved-url-repository](2026-08-20-01-refactor-saved-url-repository.md) | 🔴高 | 🔴あり | 🔧refactor | SavedUrlRepositoryへの統合。savedUrlStore.ts(552行)の5責務を崩壊しSavedUrlEntryを不透明値オブジェクト化 |
+| [2026-08-20-02-refactor-dashboard-sqlite-proxy-collapse](2026-08-20-02-refactor-dashboard-sqlite-proxy-collapse.md) | 🟡中 | 🟡軽微 | 🔧refactor | dashboardSqliteService.ts(637行)の~20関数を汎用callDashboard()に集約 |
+| [2026-08-20-03-refactor-panel-lifecycle-interface](2026-08-20-03-refactor-panel-lifecycle-interface.md) | 🔴高 | 🟡軽微 | 🔧refactor | 25ダッシュボードパネルの共通PanelLifecycle寿命サイクル定義 |
+| [2026-08-20-04-refactor-handler-composition-collapse](2026-08-20-04-refactor-handler-composition-collapse.md) | 🟡中 | 🟡軽微 | 🔧refactor | 3層handler配線の統合。67行パススルー層削除+各factoryにPick型で最小依存注入 |
+| [2026-08-20-05-refactor-settings-schema-binding](2026-08-20-05-refactor-settings-schema-binding.md) | 🔴高 | 🟢なし | 🔧refactor | SettingsSchema定義。data-storage-key属性にコンパイル時チェック付与 |
 
 ---
 

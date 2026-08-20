@@ -7,10 +7,37 @@
  */
 
 import { getSettings, saveSettingsWithAllowedUrls, StorageKeys } from '../utils/storage.js';
-import { extractSettingsFromInputs, extractLocalMarkdownExportTiming } from '../utils/settingsFormBinding.js';
+import { extractSettingsFromInputs, extractLocalMarkdownExportTiming, type ValidationSchema } from '../utils/settingsFormBinding.js';
+import { GENERAL_SETTINGS_SCHEMA } from '../utils/settingsSchemas.js';
 import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, ErrorPair } from './settings/fieldValidation.js';
 import { getMessage } from '../utils/i18n.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
+
+/**
+ * General settings validation schema — single source of truth for the
+ * 7 element IDs that were previously hardcoded. Each entry maps a StorageKey
+ * to its DOM element ID and error element ID.
+ */
+export const GENERAL_SETTINGS_VALIDATION_FIELDS: ValidationSchema = [
+  { storageKey: StorageKeys.OBSIDIAN_PROTOCOL, elementId: 'protocol', errorId: 'protocolError' },
+  { storageKey: StorageKeys.OBSIDIAN_PORT, elementId: 'port', errorId: 'portError' },
+  { storageKey: StorageKeys.OBSIDIAN_HOST, elementId: 'obsidianHost', errorId: 'obsidianHostError' },
+  { storageKey: StorageKeys.GEMINI_API_VERSION, elementId: 'geminiApiVersion', errorId: 'geminiApiVersionError' },
+  { storageKey: StorageKeys.MIN_VISIT_DURATION, elementId: 'minVisitDuration', errorId: 'minVisitDurationError' },
+  { storageKey: StorageKeys.MIN_SCROLL_DEPTH, elementId: 'minScrollDepth', errorId: 'minScrollDepthError' },
+  { storageKey: StorageKeys.MAX_TOKENS_PER_PROMPT, elementId: 'maxTokensPerPrompt', errorId: 'maxTokensErrors' },
+];
+
+/**
+ * Resolve a ValidationSchema into ErrorPair[] (element, errorId) by looking
+ * up each element ID in the DOM.
+ */
+function resolveValidationPairs(schema: ValidationSchema): ErrorPair[] {
+  return schema.map((field) => [
+    document.getElementById(field.elementId) as HTMLInputElement | null,
+    field.errorId,
+  ]);
+}
 
 export interface SaveSettingsOptions {
   /** CSS selector for the settings form container. Defaults to '#panel-general'. */
@@ -41,22 +68,18 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
     extraValidationPairs = [],
   } = options;
 
-  const protocolInput = document.getElementById('protocol') as HTMLInputElement | null;
-  const portInput = document.getElementById('port') as HTMLInputElement | null;
-  const obsidianHostInput = document.getElementById('obsidianHost') as HTMLInputElement | null;
-  const geminiApiVersionInput = document.getElementById('geminiApiVersion') as HTMLInputElement | null;
-  const minVisitDurationInput = document.getElementById('minVisitDuration') as HTMLInputElement | null;
-  const minScrollDepthInput = document.getElementById('minScrollDepth') as HTMLInputElement | null;
-  const maxTokensPerPromptInput = document.getElementById('maxTokensPerPrompt') as HTMLInputElement | null;
+  const pairs = resolveValidationPairs(GENERAL_SETTINGS_VALIDATION_FIELDS);
+  const getElement = (index: number): HTMLInputElement | null => pairs[index]?.[0] ?? null;
+  const protocolInput = getElement(0);
+  const portInput = getElement(1);
+  const obsidianHostInput = getElement(2);
+  const geminiApiVersionInput = getElement(3);
+  const minVisitDurationInput = getElement(4);
+  const minScrollDepthInput = getElement(5);
+  const maxTokensPerPromptInput = getElement(6);
 
   const errorPairs: ErrorPair[] = [
-    [protocolInput, 'protocolError'],
-    [portInput, 'portError'],
-    [obsidianHostInput, 'obsidianHostError'],
-    [geminiApiVersionInput, 'geminiApiVersionError'],
-    [minVisitDurationInput, 'minVisitDurationError'],
-    [minScrollDepthInput, 'minScrollDepthError'],
-    [maxTokensPerPromptInput, 'maxTokensErrors'],
+    ...pairs,
     ...extraValidationPairs,
   ];
 
@@ -88,7 +111,7 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
     }
   }
 
-  const newSettings = extractSettingsFromInputs(document.querySelector(formSelector) ?? document.body);
+  const newSettings = extractSettingsFromInputs(document.querySelector(formSelector) ?? document.body, GENERAL_SETTINGS_SCHEMA);
 
   if (includeTiming) {
     const timing = extractLocalMarkdownExportTiming();

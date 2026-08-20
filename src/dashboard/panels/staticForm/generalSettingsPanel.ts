@@ -1,5 +1,6 @@
 import { type StaticFormPanel } from '../types.js';
 import { loadSettingsToInputs } from '../../../utils/settingsFormBinding.js';
+import { GENERAL_SETTINGS_SCHEMA } from '../../../utils/settingsSchemas.js';
 import { getSettings, saveSettingsWithAllowedUrls, StorageKeys } from '../../../utils/storage.js';
 import { getMessage } from '../../../utils/i18n.js';
 import {
@@ -42,7 +43,7 @@ export function createGeneralSettingsPanel(): StaticFormPanel {
     async mount(container) {
       panelContainer = container;
       const settings = await getSettings();
-      loadSettingsToInputs(container, settings);
+      loadSettingsToInputs(container, settings, GENERAL_SETTINGS_SCHEMA);
       await loadGeneralSettings();
 
       const obsidianEnabled = container.querySelector('#obsidianEnabled') as HTMLInputElement | null;
@@ -215,7 +216,7 @@ export function createGeneralSettingsPanel(): StaticFormPanel {
       const container = panelContainer;
       if (container) {
         const settings = await getSettings();
-        loadSettingsToInputs(container, settings);
+        loadSettingsToInputs(container, settings, GENERAL_SETTINGS_SCHEMA);
         await loadGeneralSettings();
       }
     },

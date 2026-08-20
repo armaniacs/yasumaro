@@ -10,6 +10,7 @@
 
 import { StorageKeys, getSettings, ProviderSlot } from '../../utils/storage.js';
 import { loadSettingsToInputs, loadLocalMarkdownExportTiming } from '../../utils/settingsFormBinding.js';
+import { GENERAL_SETTINGS_SCHEMA } from '../../utils/settingsSchemas.js';
 import { getMessage } from '../../utils/i18n.js';
 import { getPluralKey } from '../../utils/i18nPlural.js';
 import { getAiProviderElements, updateAIProviderVisibilityMulti } from '../settings/aiProvider.js';
@@ -80,7 +81,7 @@ export function applyProviderPrioritySlots(slots: ProviderSlot[]): void {
 
 export async function loadGeneralSettings(): Promise<void> {
   const settings = await getSettings();
-  loadSettingsToInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body, settings);
+  loadSettingsToInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body, settings, GENERAL_SETTINGS_SCHEMA);
   loadLocalMarkdownExportTiming(settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING]);
 
   // Apply provider priority slots and update multi-provider visibility

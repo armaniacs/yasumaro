@@ -1,12 +1,12 @@
 import { NavigationRegistry } from './NavigationRegistry.js';
-import { type Panel } from './types.js';
+import { type PanelLifecycle } from './types.js';
 
 export class DashboardBootstrapper {
   private sidebar: HTMLElement | null = null;
 
   constructor(private registry: NavigationRegistry) {}
 
-  registerPanels(panels: Panel[]): void {
+  registerPanels(panels: PanelLifecycle[]): void {
     for (const panel of panels) {
       this.registry.register(panel);
     }
