@@ -18,11 +18,11 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| [2026-08-20-01-refactor-saved-url-repository](2026-08-20-01-refactor-saved-url-repository.md) | 🔴高 | 🔴あり | 🔧refactor | SavedUrlRepositoryへの統合。savedUrlStore.ts(552行)の5責務を崩壊しSavedUrlEntryを不透明値オブジェクト化 |
-| [2026-08-20-02-refactor-dashboard-sqlite-proxy-collapse](2026-08-20-02-refactor-dashboard-sqlite-proxy-collapse.md) | 🟡中 | 🟡軽微 | 🔧refactor | dashboardSqliteService.ts(637行)の~20関数を汎用callDashboard()に集約 |
-| [2026-08-20-03-refactor-panel-lifecycle-interface](2026-08-20-03-refactor-panel-lifecycle-interface.md) | 🔴高 | 🟡軽微 | 🔧refactor | 25ダッシュボードパネルの共通PanelLifecycle寿命サイクル定義 |
-| [2026-08-20-04-refactor-handler-composition-collapse](2026-08-20-04-refactor-handler-composition-collapse.md) | 🟡中 | 🟡軽微 | 🔧refactor | 3層handler配線の統合。67行パススルー層削除+各factoryにPick型で最小依存注入 |
-| [2026-08-20-05-refactor-settings-schema-binding](2026-08-20-05-refactor-settings-schema-binding.md) | 🔴高 | 🟢なし | 🔧refactor | SettingsSchema定義。data-storage-key属性にコンパイル時チェック付与 |
+| [2026-08-20-01-refactor-page-content-pipeline](2026-08-20-01-refactor-page-content-pipeline.md) | 🔴高 | 🟡軽微 | 🔧refactor | Page Content Pipeline統合。10モジュール3,600行をprepare()の1 seamに集約 |
+| [2026-08-20-02-refactor-recording-pipeline-steps](2026-08-20-02-refactor-recording-pipeline-steps.md) | 🔴高 | 🟡軽微 | 🔧refactor | Recording Pipeline Steps内部化。13のshallow stepを深いPipelineに集約 |
+| [2026-08-20-03-refactor-sqlite-domain-repository](2026-08-20-03-refactor-sqlite-domain-repository.md) | 🟡中 | 🟡軽微 | 🔧refactor | SQLite Domain Repository集約。20の薄いproxyを6 domainメソッドに崩壊 |
+| [2026-08-20-04-refactor-diagnostics-panel-deepening](2026-08-20-04-refactor-diagnostics-panel-deepening.md) | 🔴高 | 🟢なし | 🔧refactor | Diagnostics Panel深深化。681行god moduleをCollector+Rendererに分解 |
+| [2026-08-20-05-refactor-settings-repository-unification](2026-08-20-05-refactor-settings-repository-unification.md) | 🔴高 | 🟡軽微 | 🔧refactor | Settings Repository統合。30+散在するStorageKeysアクセスを型安全なget/setに集約 |
 
 ---
 
@@ -42,6 +42,15 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-20 アーキテクチャ深深化第2波 前波アーカイブ（5件）
+
+- 2026-08-20-01-refactor-saved-url-repository.md (SavedUrlRepository統合。前波で実装 — savedUrlStore 552行の5責務を崩壊、c39ad7b4でマージ)
+- 2026-08-20-02-refactor-dashboard-sqlite-proxy-collapse.md (dashboardSqliteService 20関数をcallDashboardに集約。前波で実装)
+- 2026-08-20-03-refactor-panel-lifecycle-interface.md (25パネルのPanelLifecycle定義。前波で実装)
+- 2026-08-20-04-refactor-handler-composition-collapse.md (3層handler配線を統合、Pick型で最小依存注入。前波で実装)
+- 2026-08-20-05-refactor-settings-schema-binding.md (SettingsSchema定義。前波で実装)
+- 2026-08-20-00-backlog.md (前波5件のRICEスコアリングバックログ)
 
 ### 2026-08-19 アーキテクチャ深深化でアーカイブ済み（5件）
 

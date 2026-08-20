@@ -11,9 +11,8 @@
 import { createSender } from '../utils/retryHelper.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
-import { extractMainContent } from '../utils/contentExtractor/index.js';
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
-import { buildExtractionOptions } from '../utils/contentExtractor/optionBuilder.js';
+import { preparePageContent } from '../utils/pageContentPipeline.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
 import { PageState, type CleansingConfig } from './pageState.js';
 import { CLEANSING_RULES } from '../utils/aiSummaryCleaner/rules.js';
@@ -77,9 +76,7 @@ const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
  * @returns {ExtractResult} - content と抽出/クレンジング統計を含む結果オブジェクト
  */
 export function extractPageContent(config: CleansingConfig = pageState.cleansingConfig): ExtractResult {
-    const { cleanseOptions, aiSummaryCleanseOptions, dedupOptions } = buildExtractionOptions(config);
-    const result = extractMainContent(10000, cleanseOptions, aiSummaryCleanseOptions, dedupOptions);
-    return typeof result === 'string' ? { content: result } : result;
+    return preparePageContent(config);
 }
 
 /**
