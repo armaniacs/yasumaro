@@ -1,3 +1,4 @@
+// @layer 1 — Infrastructure (depends on Layer 0 only)
 /**
  * storage/domainFilterCache.ts
  * Domain filter cache used by content scripts (avoids a message round-trip

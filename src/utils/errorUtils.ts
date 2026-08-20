@@ -1,3 +1,4 @@
+// @layer 0 — Foundation (pure, no dependencies)
 /**
  * Extract a string message from any error value.
  * Replaces the `error instanceof Error ? error.message : String(error)` pattern.

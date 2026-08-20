@@ -1,5 +1,5 @@
 /**
- * tagClusterPanel.ts (AsyncDataPanel)
+ * tagClusterPanel.ts (PanelLifecycle)
  * Renders a tag cooccurrence graph (nodes + edges) as SVG in the dashboard.
  */
 
@@ -10,13 +10,13 @@ import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
 import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
-import { type AsyncDataPanel } from '../types.js';
+import { type PanelLifecycle } from '../types.js';
 import { getRegistry } from '../registryContext.js';
 
 const MAX_NODES = 50;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-export function createTagClusterPanel(): AsyncDataPanel {
+export function createTagClusterPanel(): PanelLifecycle {
   let svg: SVGSVGElement | null = null;
   let emptyState: HTMLElement | null = null;
   let truncatedNotice: HTMLElement | null = null;
@@ -31,7 +31,7 @@ export function createTagClusterPanel(): AsyncDataPanel {
       emptyState = container.querySelector('#tagClusterEmptyState');
       truncatedNotice = container.querySelector('#tagClusterTruncatedNotice');
     },
-    async loadData() {
+    async load() {
       if (!svg) return;
 
       panZoomController?.cleanup();
@@ -124,13 +124,13 @@ export function createTagClusterPanel(): AsyncDataPanel {
         console.error('[tagClusterPanel] error:', error);
       }
     },
-    unmount() {
+    destroy() {
       panZoomController?.cleanup();
       panZoomController = null;
     },
-    onActivate(init) {
+    init(init?: Record<string, unknown>) {
       if (init?.focusTag) {
-        // focus on a specific tag — data will be reloaded via loadData
+        // focus on a specific tag — data will be reloaded via load
       }
     },
   };

@@ -1,3 +1,4 @@
+// @layer Barrel — Re-export
 /**
  * logger.ts
  * Structured Logging Utility with Error Codes — barrel re-export.

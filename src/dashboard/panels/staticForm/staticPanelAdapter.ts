@@ -1,4 +1,4 @@
-import { type StaticFormPanel } from '../types.js';
+import { type PanelLifecycle } from '../types.js';
 import { getSettings, type Settings } from '../../../utils/storage.js';
 
 /**
@@ -24,8 +24,8 @@ export interface StaticPanelSpec {
     refresh?: () => void | Promise<void>;
 }
 
-export function createStaticFormPanel(spec: StaticPanelSpec): StaticFormPanel {
-    const panel: StaticFormPanel = {
+export function createStaticFormPanel(spec: StaticPanelSpec): PanelLifecycle & { refresh?: () => Promise<void> } {
+    const panel: PanelLifecycle & { refresh?: () => Promise<void> } = {
         id: spec.id,
         category: 'static-form',
         async mount(_container) {
@@ -40,9 +40,10 @@ export function createStaticFormPanel(spec: StaticPanelSpec): StaticFormPanel {
 
     // Assigned conditionally: declaring an empty refresh would contradict the
     // optional contract settled in PBI 2026-08-08-03.
+    // Keep refresh for direct callers; registry does not invoke it.
     if (spec.refresh) {
         const refresh = spec.refresh;
-        (panel as { refresh?: () => Promise<void> }).refresh = async () => { await refresh(); };
+        panel.refresh = async () => { await refresh(); };
     }
 
     return panel;

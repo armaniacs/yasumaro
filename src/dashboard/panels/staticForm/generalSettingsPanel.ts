@@ -1,7 +1,9 @@
-import { type StaticFormPanel } from '../types.js';
+import { type PanelLifecycle } from '../types.js';
 import { loadSettingsToInputs } from '../../../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../../utils/settingsSchemas.js';
-import { getSettings, saveSettingsWithAllowedUrls, StorageKeys } from '../../../utils/storage.js';
+import { getSettings } from '../../../utils/storage/settingsStore.js';
+import { saveSettingsWithAllowedUrls } from '../../../utils/storage/settingsStore.js';
+import { StorageKeys } from '../../../utils/storage/types.js';
 import { getMessage } from '../../../utils/i18n.js';
 import {
   loadGeneralSettings,
@@ -35,7 +37,7 @@ async function handleGenerateMonthlySummary(): Promise<void> {
   await generateReviewSummary({ button: btn, statusElement: statusEl, periodType: 'monthly' });
 }
 
-export function createGeneralSettingsPanel(): StaticFormPanel {
+export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () => Promise<void> } {
   let panelContainer: HTMLElement | null = null;
   return {
     id: 'panel-general',

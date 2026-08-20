@@ -2,9 +2,7 @@ import { type PanelLifecycle, type PanelInitMap } from './types.js';
 
 /**
  * NavigationRegistry manages dashboard panel lifecycle using the unified
- * PanelLifecycle interface. All panels — both new (implementing PanelLifecycle
- * directly) and legacy (wrapped via adaptLegacyPanel) — are operated through
- * this single interface.
+ * PanelLifecycle interface. All panels implement PanelLifecycle directly.
  */
 export class NavigationRegistry {
   private panels = new Map<string, PanelLifecycle>();
@@ -65,9 +63,22 @@ export class NavigationRegistry {
 
     (panel.init ?? panel.activate)?.(init);
 
-    if (panel.category === 'async-data' && panel.load) {
+    if ((panel.category === 'async-data' || panel.category === 'diagnostic') && panel.load) {
       panel.load().catch((err: unknown) => {
         console.error(`[NavigationRegistry] load failed for panel "${panelId}":`, err);
+        // UI feedback for load failure: panels handle their own errors internally,
+        // but an unexpected rejection (e.g., programming error) should be visible
+        // rather than leaving the panel empty.
+        const container = document.getElementById(panelId);
+        if (container && !container.querySelector('.panel-load-error')) {
+          const errEl = document.createElement('div');
+          errEl.className = 'panel-load-error';
+          errEl.setAttribute('role', 'alert');
+          errEl.textContent = `Failed to load panel: ${err instanceof Error ? err.message : String(err)}`;
+          errEl.style.cssText =
+            'padding:12px;color:var(--color-error, #c00);background:var(--color-error-bg, #fee);border:1px solid var(--color-error, #c00);border-radius:4px;margin:8px 0;';
+          container.prepend(errEl);
+        }
       });
     }
   }

@@ -1,3 +1,4 @@
+// @layer 0 — Foundation (pure, no dependencies)
 /**
  * objectUtils.ts
  * オブジェクト操作の共通ユーティリティ

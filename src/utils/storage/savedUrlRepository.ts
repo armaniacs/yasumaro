@@ -1,3 +1,4 @@
+// @layer 1 — Infrastructure (depends on Layer 0 only)
 /**
  * savedUrlRepository.ts
  * Saved-URL CRUD — encapsulates chrome.storage.local operations behind a

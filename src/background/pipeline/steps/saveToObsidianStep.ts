@@ -5,7 +5,7 @@
 
 import { addLog, LogType } from '../../../utils/logger.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { StorageKeys } from '../../../utils/storage.js';
+import { StorageKeys } from '../../../utils/storage/types.js';
 import type { RecordingContext, StepDeps } from '../types.js';
 
 /**

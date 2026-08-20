@@ -1,3 +1,4 @@
+// @layer 1 — Infrastructure (depends on Layer 0 only)
 /**
  * storage/types.ts
  * ストレージキー定数・型定義

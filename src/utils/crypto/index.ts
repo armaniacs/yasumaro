@@ -1,3 +1,4 @@
+// @layer Barrel — Re-export
 /**
  * crypto/index.ts
  * 暗号化ユーティリティの re-export barrel。

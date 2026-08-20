@@ -1,3 +1,4 @@
+// @layer 1 — Infrastructure (depends on Layer 0 only)
 /**
  * storage/encryptionSession.ts
  * Master password lifecycle, encryption key derivation, and HMAC secret

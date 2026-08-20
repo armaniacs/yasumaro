@@ -29,6 +29,14 @@ import type { AIService, AiTestProgress } from '../ai/AIService.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { Settings } from '../../utils/storage/types.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
+import {
+  validVisitValidator,
+  dashboardSqliteValidator,
+  fetchUrlValidator,
+  manualRecordValidator,
+  checkDomainValidator,
+  contentCleansingExecutedValidator,
+} from '../../messaging/validators.js';
 
 export interface CommonHandlerDeps {
   runtimeId?: string;
@@ -147,8 +155,18 @@ export function createMessageHandlerRegistry(deps: MessageHandlerRegistryDeps): 
   const trustLevels = Object.fromEntries(
     Object.keys(handlers).map((type) => [type, contentScriptAllowed.has(type) ? 'content-script-allowed' : 'extension-only']),
   ) as MessageHandlerRegistryComposition['trustLevels'];
+  const validators: Record<string, import('../../messaging/validators.js').MessageValidator<unknown>> = {
+    VALID_VISIT: validVisitValidator as unknown as import('../../messaging/validators.js').MessageValidator<unknown>,
+    DASHBOARD_SQLITE: dashboardSqliteValidator as unknown as import('../../messaging/validators.js').MessageValidator<unknown>,
+    FETCH_URL: fetchUrlValidator as unknown as import('../../messaging/validators.js').MessageValidator<unknown>,
+    MANUAL_RECORD: manualRecordValidator as unknown as import('../../messaging/validators.js').MessageValidator<unknown>,
+    PREVIEW_RECORD: manualRecordValidator as unknown as import('../../messaging/validators.js').MessageValidator<unknown>,
+    SAVE_RECORD: manualRecordValidator as unknown as import('../../messaging/validators.js').MessageValidator<unknown>,
+    CHECK_DOMAIN: checkDomainValidator as unknown as import('../../messaging/validators.js').MessageValidator<unknown>,
+    CONTENT_CLEANSING_EXECUTED: contentCleansingExecutedValidator as unknown as import('../../messaging/validators.js').MessageValidator<unknown>,
+  };
   for (const [type, handler] of Object.entries(handlers)) {
-    registry.register(type, handler, trustLevels[type]!);
+    registry.register(type, handler, trustLevels[type]!, validators[type]);
   }
   return { registry, handlers, trustLevels };
 }

@@ -18,10 +18,7 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| [2026-08-21-01-refactor-diagnostics-panel-wave2.md](2026-08-21-01-refactor-diagnostics-panel-wave2.md) | 🟡 | 🟢 | 🔧 | Dashboard Panel Abstraction Wave 2: diagnosticsPanel を PanelLifecycle 直接実装に移行。Wave 1 パターン検証・改善。見積もり 2pt |
-| [2026-08-22-02-refactor-utils-layer-boundary.md](2026-08-22-02-refactor-utils-layer-boundary.md) | 🟡 | 🟢 | 🔧 | Utils Layer Boundary 形式化：Layer 0/1/2 の命名規則とドキュメント。循環依存（trustDb ↔ settingsStore）を ADR に記録。見積もり 2pt |
-| [2026-08-23-03-refactor-messaging-validator-interface.md](2026-08-23-03-refactor-messaging-validator-interface.md) | 🟡 | 🟢 | 🔧 | Messaging Validator Interface 統一：MessageValidator<T> 定義、5 validator 統合、handler registry 紐付け。schema 単一化。見積もり 2pt |
-| [Wave 2+ Panel Lifecycle Backlog](2026-08-20-wave2-panel-lifecycle-backlog.md) | 🟡 (2pt × 10 panels) | 🟢 | 🔧 | Dashboard Panel Abstraction Wave 2-3 ロードマップ：diagnosticsPanel 以降の 9 パネル段階的移行。4-6 週間。 |
+| _なし — 全 PBI 完了。次 Wave は `pbi/` に新規作成_ | — | — | — | — |
 
 ---
 
@@ -41,6 +38,19 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-20 Panel Lifecycle Wave 3 完了 + Utils/Messaging 継続（残課題解消）
+
+- 2026-08-20-wave2-panel-lifecycle-backlog.md (Dashboard Panel Abstraction Wave 2-3 ロードマップ 10パネルを完了。Wave 2: diagnosticsPanel、Wave 3: historyPanel/tagClusterPanel/domainSearchPanel/exportLogsPanel/generalSettingsPanel/privacySettingsPanel/aiSummaryCleansingPanel/STATIC_FORM_PANELS 9件を PanelLifecycle 直接実装に移行。main.ts の adaptLegacyPanel 全廃、types.ts legacy 型を @deprecated 化。268件の panel テスト成功)
+- Utils barrel 直接化 継続 (rateLimiter/obsidianClient/saveToObsidianStep/BrowsingLogRecordMapper/obsidianSyncService の5ファイルを storage/types.js 直接化。残り27件は次スプリントへ)
+- Messaging validator 拡張 (FetchUrlValidator/ManualRecordValidator に加え CheckDomainValidator/ContentCleansingExecutedValidator を追加し計7 concrete / 8タイプ配線。単体テスト49件)
+- 2026-08-20 追加分: domainSearchPanel/exportLogsPanel/generalSettingsPanel/privacySettingsPanel/aiSummaryCleansingPanel/staticPanelAdapter を PanelLifecycle 化。historyPanel/tagClusterPanel の lifecycle テスト16件追加、tagClusterPanel-retry の loadData→load 修正
+
+### 2026-08-20 Feature Dev 3件 実装完了（diagnosticsPanel Wave2 + utils layer + messaging validator）
+
+- 2026-08-21-01-refactor-diagnostics-panel-wave2.md (diagnosticsPanel を PanelLifecycle 直接実装に移行。mount/load/destroy 分離、adaptLegacyPanel 削除、NavigationRegistry に diagnostic load 分岐追加。新規 lifecycle テスト19件追加。npm run validate 8260件成功)
+- 2026-08-22-02-refactor-utils-layer-boundary.md (dev-docs/LAYERS.md 新設、ADR 2026-08-20-utils-layer-circular-dependency 新設、src/utils/ 15ファイルに // @layer コメント付与。trustDb↔settingsStore 循環と storageMaintenance 逆依存を例外として記録)
+- 2026-08-23-03-refactor-messaging-validator-interface.md (src/messaging/validators.ts に MessageValidator<T> + ValidationError + 3 validator (ServiceWorkerRequest/ValidVisit/DashboardSqlite) を新設。MessageHandlerRegistry に validator オプション追加し VALID_VISIT/DASHBOARD_SQLITE に配線。単体テスト33件+registry統合テスト5件追加)
 
 ### 2026-08-20 アーキテクチャ深深化第2波 実装完了（5件）
 

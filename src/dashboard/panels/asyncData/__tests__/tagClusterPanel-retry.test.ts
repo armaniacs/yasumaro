@@ -74,7 +74,7 @@ describe('tag cluster panel — query retry', () => {
     mockQueryLogs.mockResolvedValue({ error: 'Database connection lost.' });
 
     const panel = mountPanel();
-    await panel.loadData();
+    await panel.load?.();
 
     // maxAttempts is 4; a non-retrying loader would call this exactly once.
     expect(mockQueryLogs.mock.calls.length).toBeGreaterThan(1);
@@ -84,7 +84,7 @@ describe('tag cluster panel — query retry', () => {
     mockGetSqliteStatus.mockResolvedValue({ initialized: false });
 
     const panel = mountPanel();
-    await panel.loadData();
+    await panel.load?.();
 
     // The not-initialized guard returns null before querying, so the backoff
     // must retry instead of treating the first null as success.
@@ -98,7 +98,7 @@ describe('tag cluster panel — query retry', () => {
       .mockResolvedValueOnce({ data: { rows: [], total: 0 } });
 
     const panel = mountPanel();
-    await panel.loadData();
+    await panel.load?.();
 
     expect(mockQueryLogs).toHaveBeenCalledTimes(2);
   });
@@ -107,7 +107,7 @@ describe('tag cluster panel — query retry', () => {
     mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 
     const panel = mountPanel();
-    await panel.loadData();
+    await panel.load?.();
 
     expect(mockQueryLogs).toHaveBeenCalledTimes(1);
   });

@@ -1,3 +1,4 @@
+// @layer 1 — Infrastructure (depends on Layer 0 only)
 /**
  * storage/quota.ts
  * chrome.storage.local usage/quota helpers shared by settingsStore and

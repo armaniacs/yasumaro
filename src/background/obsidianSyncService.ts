@@ -9,7 +9,7 @@ import { ObsidianClient } from './obsidianClient.js';
 import { SqliteClient } from './sqliteClient.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { StorageKeys } from '../utils/storage.js';
+import { StorageKeys } from '../utils/storage/types.js';
 import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
 import type { SyncTarget } from './syncTargets/SyncTarget.js';
 

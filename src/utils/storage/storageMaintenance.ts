@@ -1,3 +1,4 @@
+// @layer 1-循環 — Infrastructure (exception: reverse dep to background/sqliteClient, see ADR)
 /**
  * storage/storageMaintenance.ts
  * Storage quota and maintenance helpers.
