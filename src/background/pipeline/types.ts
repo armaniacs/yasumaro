@@ -18,6 +18,7 @@ export { MAX_RECORD_SIZE } from '../recordingValidator.js';
 
 /**
  * Error handling strategies for pipeline steps
+ * @internal — internal seam for step orchestration. External callers should not depend on this.
  */
 export enum ErrorStrategy {
   /** Fatal error - stop pipeline and return error */
@@ -166,7 +167,7 @@ export interface PipelineOutput {
 
 /**
  * Full recording context: composition of all sub-types.
- * Used by the pipeline orchestrator and step function signatures.
+ * @internal — internal seam, not part of public interface. Only RecordingPipeline orchestrator constructs and passes this. External callers use RecordingData/RecordingResult.
  *
  * Steps should reference specific sub-types in their JSDoc to declare
  * which fields they read/write. The orchestrator constructs and passes
@@ -182,6 +183,7 @@ export type OfflineJobKind = 'ai_summary' | 'obsidian_sync';
 
 /**
  * Pipeline step interface
+ * @internal — internal seam, not part of RecordingPipeline's public interface. External callers should use `record()` only.
  */
 export interface PipelineStep {
   /** Step name for logging and debugging */

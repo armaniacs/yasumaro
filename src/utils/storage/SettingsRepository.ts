@@ -1,4 +1,5 @@
-/**
+// @layer 1 — Infrastructure: settings repository seam (deep module, hides 30+ scattered StorageKeys accesses)
+ /**
  * SettingsRepository — deep module hiding the 30 scattered StorageKeys accesses
  *
  * StorageKeys (30+) are defined in storage/types.ts but the actual
@@ -20,7 +21,7 @@
  */
 
 import type { StorageKey, Settings as SettingsType } from './types.js';
-import { getSettings } from './settingsStore.js';
+import { getSettings, saveSettings } from './settingsStore.js';
 
 export interface StorageAdapter {
   get(keys: string | string[] | null): Promise<Record<string, unknown>>;
@@ -84,6 +85,13 @@ export class InMemoryStorageAdapter implements StorageAdapter {
 /**
  * Deep repository: one seam, typed keys, defaults + validation inside.
  * chrome.storage is an internal adapter, not part of the public interface.
+ *
+ * NOTE: get/set currently branch on adapter type (InMemory vs Chrome) to keep
+ * the 0.5人月 scope small. Chrome path delegates to existing getSettings/saveSettings
+ * (which handle encryption/migration/caching), while InMemory path uses the
+ * adapter directly to avoid chrome mock. A follow-up PBI will move
+ * getSettings/saveSettings logic into ChromeStorageAdapter.getSettings/setSettings
+ * and remove the instanceof checks, making the seam fully polymorphic.
  */
 export class SettingsRepository {
   private adapter: StorageAdapter;
@@ -98,24 +106,47 @@ export class SettingsRepository {
    * re-derive the default themselves (locality).
    */
   async get<K extends StorageKey>(key: K): Promise<SettingsType[K]> {
+    if (this.adapter instanceof InMemoryStorageAdapter) {
+      const result = await this.adapter.get(['settings']);
+      const settings = (result['settings'] as SettingsType) || ({} as SettingsType);
+      if (key in settings) return settings[key];
+      const { DEFAULT_SETTINGS } = await import('./defaults.js');
+      return (DEFAULT_SETTINGS as unknown as SettingsType)[key];
+    }
     const settings = (await getSettings()) as SettingsType;
     return settings[key];
   }
 
   async getAll(): Promise<SettingsType> {
+    if (this.adapter instanceof InMemoryStorageAdapter) {
+      const result = await this.adapter.get(['settings']);
+      const settings = (result['settings'] as SettingsType) || ({} as SettingsType);
+      const { DEFAULT_SETTINGS } = await import('./defaults.js');
+      return { ...(DEFAULT_SETTINGS as unknown as SettingsType), ...settings };
+    }
     return (await getSettings()) as SettingsType;
   }
 
   async set<K extends StorageKey>(key: K, value: SettingsType[K]): Promise<void> {
-    const current = (await getSettings()) as Record<string, unknown>;
-    current[key as string] = value;
-    await chrome.storage.local.set({ settings: current });
+    if (this.adapter instanceof InMemoryStorageAdapter) {
+      const current = (await this.adapter.get(['settings']))['settings'] as Record<string, unknown> || {};
+      current[key as string] = value;
+      await this.adapter.set({ settings: current });
+      return;
+    }
+    const current = await this.getAll();
+    await saveSettings({ ...current, [key]: value } as SettingsType);
   }
 
   async setAll(settings: Partial<SettingsType>): Promise<void> {
-    const current = (await getSettings()) as Record<string, unknown>;
-    Object.assign(current, settings);
-    await chrome.storage.local.set({ settings: current });
+    if (this.adapter instanceof InMemoryStorageAdapter) {
+      const current = (await this.adapter.get(['settings']))['settings'] as Record<string, unknown> || {};
+      Object.assign(current, settings);
+      await this.adapter.set({ settings: current });
+      return;
+    }
+    const current = await this.getAll();
+    await saveSettings({ ...current, ...settings } as SettingsType);
   }
 
   /**
