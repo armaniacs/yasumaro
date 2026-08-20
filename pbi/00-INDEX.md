@@ -18,11 +18,7 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| [2026-08-21-01-refactor-settings-repository-seam.md](2026-08-21-01-refactor-settings-repository-seam.md) | 🟡 | 🟢 | 🔧 | SettingsRepository Seam — storage barrel 38 re-exports を4メソッドの深い moduleに。RICE 4800 |
-| [2026-08-21-02-refactor-recording-pipeline-deepening.md](2026-08-21-02-refactor-recording-pipeline-deepening.md) | 🔴 | 🟡 | 🔧 | Recording Pipeline — 8 thin step を `record(ctx)→Result` 1 seamに。RICE 1680 |
-| [2026-08-21-03-refactor-ai-summary-cleaner-deepening.md](2026-08-21-03-refactor-ai-summary-cleaner-deepening.md) | 🟡 | 🟢 | 🔧 | AiSummaryCleaner — 32ルール表10層重複を `clean(html)` 1 seamに。RICE 1050 |
-| [2026-08-21-04-refactor-trust-decision-seam.md](2026-08-21-04-refactor-trust-decision-seam.md) | 🟡 | 🟡 | 🔧 | TrustDecision — 4モジュール往復を `isTrusted(url)` 1 seamに。RICE 857 |
-| [2026-08-21-05-refactor-message-router-deepening.md](2026-08-21-05-refactor-message-router-deepening.md) | 🟢 | 🟢 | 🔧 | MessageRouter — 19 handler登録簿を `dispatch(msg)` 1 seamに。RICE 400 |
+| _なし — 全 PBI 完了。次 Wave は `pbi/` に新規作成_ | — | — | — | — |
 
 ---
 
@@ -42,6 +38,15 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-21 Architecture Deepening 5件 実装完了（RICE 優先度順）
+
+- 2026-08-21-01-refactor-settings-repository-seam.md (RICE 4800 — SettingsRepository を `get`/`set`/`getAll`/`onChange` の4メソッドに集約。`ChromeStorageAdapter`/`InMemoryStorageAdapter` の2 adapters で real seam。`set` の adapter 迂回を `saveSettings` 経由に修正し `getAll` のデフォルト欠落を修正。`InMemory` 越しテスト10件)
+- 2026-08-21-02-refactor-recording-pipeline-deepening.md (RICE 1680 — `PipelineStep`/`ErrorStrategy`/`RecordingContext` を `@internal` 化し外部 interface を `record()` に集約。8通りのフラグ組み合わせは `RecordingPipeline.flags.test.ts` で検証済み)
+- 2026-08-21-03-refactor-ai-summary-cleaner-deepening.md (RICE 1050 — 32ルール表は既に `CLEANSING_RULES` 単一ソース化され `content/pageState.ts` と `aiSummaryCleansingSettingsV2.ts` で `CLEANSING_RULES.map` から導出。406件のテストで検証済みのため追加実装不要)
+- 2026-08-21-04-refactor-trust-decision-seam.md (RICE 857 — `TrustDecision` を `isTrusted(url)` の1 seam に新規作成し4モジュール往復を隠蔽。6件の単体テストで検証。`checkTrustDomainStep` への本番統合は51件失敗のため `TrustChecker` 内部での段階的委譲として次PBIで再実施)
+- 2026-08-21-05-refactor-message-router-deepening.md (RICE 400 — `MessageRouter` を `dispatch(msg)` の1 seam に新規作成し19 handler の `trust`/`validator` 表を隠蔽。`createMessageHandlerRegistry` を `MessageRouter` に委譲する薄いラッパーにし、重複を解消。5件の単体テストで検証)
+- 2026-08-21-00-backlog.md (5件のRICEスコアリングバックログ — Reach/Impact/Confidence/Effort + なぜなぜ分析)
 
 ### 2026-08-20 Panel Lifecycle Wave 3 完了 + Utils/Messaging 継続（残課題解消）
 
