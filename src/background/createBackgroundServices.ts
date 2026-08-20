@@ -37,6 +37,7 @@ import { isDomainAllowed } from '../utils/domainUtils.js';
 import { notifyAiTestProgress } from './aiTestProgressNotifier.js';
 import { updateActivity } from './sessionAlarmsManager.js';
 import { createMessageHandlerRegistry, type MessageHandlerRegistryComposition } from './handlers/createMessageHandlerRegistry.js';
+import { createMessageRouter, type MessageRouter } from './handlers/MessageRouter.js';
 import type { MessageHandlerRegistryDeps } from './handlers/createMessageHandlerRegistry.js';
 import type { MessageHandler } from './handlers/MessageHandlerRegistry.js';
 import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/recordingHandlers.js';
@@ -80,7 +81,9 @@ export interface BackgroundServicesComposition extends BackgroundServices {
   dashboardSqliteClient: SqliteClient;
   manualRecordDeps: ManualRecordHandlerDeps;
   saveRecordDeps: SaveRecordHandlerDeps;
+  /** @deprecated — use messageRouter instead. Kept for backward compat with existing tests. */
   messageHandlerRegistry: MessageHandlerRegistryComposition;
+  messageRouter: MessageRouter;
   dashboardSqliteHandler: MessageHandler;
   autoSavedBadgeTabs: AutoSavedBadgeTabs;
 }
@@ -160,7 +163,39 @@ export function createBackgroundServices(): BackgroundServicesComposition {
   const autoSavedBadgeTabs = createAutoSavedBadgeTabs();
 
   // Compose the message handler registry here — all wiring centralized in one place.
+  // Deep module: MessageRouter hides the 19 handler table behind a single dispatch seam.
+  // The old registry is kept for backward compat with existing tests.
   const messageHandlerRegistry = createMessageHandlerRegistry({
+    recordingPipeline: { record: (data) => recordingPipeline.record(data) },
+    tabCache: { add: (tab) => tabCache.add(tab), update: (tabId, data) => tabCache.update(tabId, data) },
+    obsidian,
+    aiService,
+    manualRecordDeps,
+    saveRecordDeps,
+    hasPrivacyConsent: () => hasPrivacyConsent(),
+    buildAllowedUrls: (settings) => buildAllowedUrls(settings),
+    getSettings: () => getSettings(),
+    isDomainAllowed: (url) => isDomainAllowed(url),
+    clearSettingsCache: () => clearSettingsCache(),
+    notifyAiTestProgress,
+    getPrivacyCache: () => recordingCache.getPrivacyCache(),
+    updateActivity: () => updateActivity(),
+    lockSession: () => lockSession(),
+    autoSavedBadgeTabs,
+    initExportScheduler: async () => {
+      const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
+      await initExportScheduler();
+    },
+    updateConsentBadge: async () => {
+      const { updateConsentBadge } = await import('./consentBadge.js');
+      await updateConsentBadge();
+    },
+    generateWeeklySummary: () => reviewSummaryGenerator.generateWeeklySummary(),
+    generateMonthlySummary: () => reviewSummaryGenerator.generateMonthlySummary(),
+    dashboardSqliteHandler,
+  });
+
+  const messageRouter = createMessageRouter({
     recordingPipeline: { record: (data) => recordingPipeline.record(data) },
     tabCache: { add: (tab) => tabCache.add(tab), update: (tabId, data) => tabCache.update(tabId, data) },
     obsidian,
@@ -206,6 +241,7 @@ export function createBackgroundServices(): BackgroundServicesComposition {
     manualRecordDeps,
     saveRecordDeps,
     messageHandlerRegistry,
+    messageRouter,
     dashboardSqliteHandler,
     autoSavedBadgeTabs,
   };

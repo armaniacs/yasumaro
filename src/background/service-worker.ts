@@ -66,6 +66,7 @@ const {
     headerDetector,
     reviewSummaryGenerator,
     messageHandlerRegistry,
+    messageRouter,
     autoSavedBadgeTabs,
 } = services;
 
@@ -160,6 +161,7 @@ const handleAlarm = createAlarmHandler({
 
 // Re-export createMessageHandler for backward compatibility with tests
 // that call it without arguments.
+// Deep module: prefer MessageRouter's single dispatch seam when available
 export function createMessageHandler(): (
     rawMessage: unknown,
     sender: chrome.runtime.MessageSender,
@@ -167,6 +169,7 @@ export function createMessageHandler(): (
 ) => boolean {
     return _createMessageHandler({
       registry,
+      router: messageRouter,
       tabCache,
       isCacheInitialized,
       autoSavedBadgeTabs,
