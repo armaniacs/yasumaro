@@ -18,7 +18,12 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| _なし — 全 PBI 完了。次 Wave は `pbi/` に新規作成_ | — | — | — | — |
+| [2026-08-21-01](2026-08-21-01-refactor-collapse-message-handler-registry-shadow.md) ⬜ | 🟢低 (2pt) | 🟢なし | 🔧refactor | MessageHandlerRegistry shadow collapse — MessageRouter 1 seam に集約（RICE 1200） |
+| [2026-08-21-02](2026-08-21-02-refactor-remove-redundant-offscreen-mutex.md) ⬜ | 🟢低 (1pt) | 🟡軽微 | 🔧refactor | offscreen SqliteWriteMutex 削除 — transport Mutex に集約（RICE 640） |
+| [2026-08-21-03](2026-08-21-03-refactor-deepen-sqlite-client-interface.md) ⬜ | 🟡中 (3pt) | 🟡軽微 | 🔧refactor | SqliteClient 20メソッドの shallow interface を 3ドメインに deepen（RICE 160） |
+| [2026-08-21-04](2026-08-21-04-refactor-retire-storage-barrel.md) ⬜ | 🟡中 (3pt) | 🟢なし | 🔧refactor | storage.ts barrel retire — 50箇所を直接 import に移行、lint seam で強制（RICE 100） |
+| [2026-08-21-05](2026-08-21-05-refactor-close-background-dashboard-seam-leak.md) ⬜ | 🟢低 (1pt) | 🟢なし | 🔧refactor | background→dashboard seam leak 解消 — markdown formatting を utils に集約（RICE 12.5） |
+| [2026-08-21-00](2026-08-21-00-backlog.md) ⬜ | — | — | 📋backlog | アーキテクチャ深掘り5件のRICEバックログ + なぜなぜ分析 |
 
 ---
 
