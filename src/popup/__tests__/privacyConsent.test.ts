@@ -75,7 +75,9 @@ describe('getPrivacyConsent', () => {
     it('レガシー boolean true を処理する', async () => {
         storageMock['privacy_consent'] = true;
         const state = await getPrivacyConsent();
-        expect(state.hasConsented).toBe(true);
+        // WHY: Legacy boolean lacks version info — treat as needsReconsent to avoid stale consent after policy updates
+        expect(state.hasConsented).toBe(false);
+        expect(state.needsReconsent).toBe(true);
     });
 
     it('レガシー boolean false を処理する', async () => {
@@ -220,10 +222,13 @@ describe('hasPrivacyConsent', () => {
         expect(result).toBe(false);
     });
 
-    it('レガシー true で true を返す', async () => {
+    it('レガシー true は再同意が必要で false を返す', async () => {
         storageMock['privacy_consent'] = true;
         const result = await hasPrivacyConsent();
-        expect(result).toBe(true);
+        // WHY: Legacy true now requires re-consent (no version) — hasPrivacyConsent returns false
+        expect(result).toBe(false);
+        const state = await getPrivacyConsent();
+        expect(state.needsReconsent).toBe(true);
     });
 });
 

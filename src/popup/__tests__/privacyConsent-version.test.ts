@@ -102,12 +102,13 @@ describe('PBI-23: Privacy Consent Version Migration', () => {
             expect(result.needsReconsent).toBe(false);
         });
 
-        it('should return needsReconsent: undefined for legacy boolean consent (known gap)', async () => {
+        it('should return needsReconsent: true for legacy boolean consent (gap closed)', async () => {
             storageMock['privacy_consent'] = true;
 
             const result = await getPrivacyConsent();
-            expect(result.hasConsented).toBe(true);
-            expect(result.needsReconsent).toBeUndefined();
+            // WHY: Legacy boolean now forces re-consent (no version) — gap closed in privacyConsent.ts
+            expect(result.hasConsented).toBe(false);
+            expect(result.needsReconsent).toBe(true);
         });
 
         it('should return needsReconsent for legacy boolean consent when policy version changes', async () => {
@@ -115,8 +116,9 @@ describe('PBI-23: Privacy Consent Version Migration', () => {
             storageMock['privacy_consent_version'] = 'old-version';
 
             const result = await getPrivacyConsent();
-            expect(result.hasConsented).toBe(true);
-            expect(result.needsReconsent).toBeUndefined();
+            // WHY: Legacy boolean always needs re-consent regardless of stored version
+            expect(result.hasConsented).toBe(false);
+            expect(result.needsReconsent).toBe(true);
         });
 
         it('should return needsReconsent: false for unconsented user', async () => {

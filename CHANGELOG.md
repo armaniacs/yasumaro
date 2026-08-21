@@ -35,6 +35,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.63] - 2026-08-21
+
+### Fixed
+
+- Dashboard SQLite の `confirmToken` 検証を定数時間比較に置換し、タイミングサイドチャネル（CWE-208）を解消。`src/background/handlers/dashboardSqlite/index.ts:42` の `!==` を `src/utils/crypto/primitives.ts:67` の `constantTimeCompare`（`await` 必須）に置換。`providedToken` の undefined ガードを維持。`src/background/handlers/__tests__/confirmTokenConstantTime.test.ts` に 6件の回帰テストを追加（正トークン成功 / 長さ違い / 先頭違い / 末尾違い / 未指定拒否 / 読み取り系トークン不要）
+- プライバシー同意のレガシー boolean 形式（`chrome.storage.local` に `true` が直接保存された旧形式）がポリシー更新時に再同意を促さない問題を修正。`src/popup/privacyConsent.ts:70` の legacy 分岐を `hasConsented: false, needsReconsent: true` に変更し、`PRIVACY_POLICY_VERSION` 不一致時に再同意が必須になるようにした。`src/popup/__tests__/privacyConsent.test.ts` / `src/popup/__tests__/privacyConsent-version.test.ts` の期待値を更新し、known gap として記録されていた 2件のテストを gap closed に是正
+- `src/utils/__tests__/logger-production.test.ts:29` の stale `TODO` コメントを `WHY` に置換。`isDevelopment` は `src/utils/logger/core.ts:112` に実装済みで `src/utils/logger.ts:26` から再エクスポートされているため、コメントのみ更新
+- `validate`（lint 0 errors / type-check 成功 / 8327 tests 成功）と `build`（6.92MB）を通過。バージョン整合性を `6.7.63` に同期
+
 ## [6.7.62] - 2026-08-20
 
 ### Refactor

@@ -1,6 +1,7 @@
 import { logError, ErrorCode } from '../../../utils/logger.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { TOKEN_REQUIRED_SUBTYPES, ALL_DASHBOARD_SQLITE_SUBTYPES } from '../../../messaging/sqliteOperationSecurity.js';
+import { constantTimeCompare } from '../../../utils/crypto/primitives.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboardSqliteProtocol.js';
 import type { DashboardSqliteHandlerDeps } from './deps.js';
 import { READ_ONLY_SUBTYPES, createReadOnlyHandler } from './readOnlyHandler.js';
@@ -39,7 +40,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
     if (TOKEN_REQUIRED_SUBTYPES.has(subtype)) {
       const providedToken = payload.confirmToken;
       const validConfirmToken = await deps.getConfirmToken();
-      if (!providedToken || providedToken !== validConfirmToken) {
+      if (!providedToken || !(await constantTimeCompare(providedToken, validConfirmToken))) {
         logError(
           'Dashboard SQLite: token mismatch',
           { subtype, hasToken: Boolean(providedToken) },
