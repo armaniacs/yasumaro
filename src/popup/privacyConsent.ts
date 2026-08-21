@@ -67,12 +67,13 @@ export async function getPrivacyConsent(): Promise<PrivacyConsentState> {
         const consentValue = result[StorageKeys.PRIVACY_CONSENT];
 
         // レガシー形式（ブール値）の処理
-        // TODO: Legacy booleans lack version info — they should prompt re-consent when policy updates.
-        // Migration (migrateLegacyPrivacyConsent) should convert these to object format on startup,
-        // so this branch should be rare. If it's hit after a version bump, the user gets stale consent.
+        // WHY: Legacy boolean has no version info; treat as needing re-consent to avoid stale consent after policy updates.
+        // Migration (migrateLegacyPrivacyConsent) normally converts these to object format on startup,
+        // so this branch is rare. If hit, force re-consent when the value is true.
         if (typeof consentValue === 'boolean') {
             return {
-                hasConsented: consentValue
+                hasConsented: false,
+                needsReconsent: consentValue === true
             };
         }
 

@@ -26,7 +26,7 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
         // 🟡 信頼性レベル: 黄信号（環境判定方法が確定していない）
 
         // 【実際の処理実行】logger.tsをインポートして環境判定を確認
-        // TODO: 実装後に以下の関数がエクスポートされることを期待
+        // WHY: isDevelopment is now implemented in logger/core.ts:112 and re-exported via logger.ts:26
         const logger = await import('../logger.ts');
 
         // 【結果検証】実装前の状態では環境判定ロジックは存在しない
