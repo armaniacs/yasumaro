@@ -48,6 +48,11 @@
 - 2026-08-21-05-refactor-message-router-deepening.md (RICE 400 — `MessageRouter` を `dispatch(msg)` の1 seam に新規作成し19 handler の `trust`/`validator` 表を隠蔽。`createMessageHandlerRegistry` を `MessageRouter` に委譲する薄いラッパーにし、重複を解消。5件の単体テストで検証)
 - 2026-08-21-00-backlog.md (5件のRICEスコアリングバックログ — Reach/Impact/Confidence/Effort + なぜなぜ分析)
 
+### 2026-08-21 VulnHunter 指摘対応 1件 実装完了（CWE-208）
+
+- 2026-08-21-01-fix-constant-time-confirm-token.md (RICE 2500 — `dashboardSqlite/index.ts:42` の `!==` を `constantTimeCompare`（`primitives.ts:67`）に置換。`providedToken` undefined ガード維持、async `await` 必須。`confirmTokenConstantTime.test.ts` 6件追加。8327テスト成功)
+- 2026-08-21-00-backlog-vulnhunter.md (VulnHunter 2026-08-21 指摘1件のRICEスコアリングバックログ — RICE 2500 + 5 Whys分析)
+
 ### 2026-08-20 Panel Lifecycle Wave 3 完了 + Utils/Messaging 継続（残課題解消）
 
 - 2026-08-20-wave2-panel-lifecycle-backlog.md (Dashboard Panel Abstraction Wave 2-3 ロードマップ 10パネルを完了。Wave 2: diagnosticsPanel、Wave 3: historyPanel/tagClusterPanel/domainSearchPanel/exportLogsPanel/generalSettingsPanel/privacySettingsPanel/aiSummaryCleansingPanel/STATIC_FORM_PANELS 9件を PanelLifecycle 直接実装に移行。main.ts の adaptLegacyPanel 全廃、types.ts legacy 型を @deprecated 化。268件の panel テスト成功)
