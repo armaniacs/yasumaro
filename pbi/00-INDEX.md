@@ -24,6 +24,11 @@
 | [2026-08-21-04](2026-08-21-04-refactor-retire-storage-barrel.md) ⬜ | 🟡中 (3pt) | 🟢なし | 🔧refactor | storage.ts barrel retire — 50箇所を直接 import に移行、lint seam で強制（RICE 100） |
 | [2026-08-21-05](2026-08-21-05-refactor-close-background-dashboard-seam-leak.md) ⬜ | 🟢低 (1pt) | 🟢なし | 🔧refactor | background→dashboard seam leak 解消 — markdown formatting を utils に集約（RICE 12.5） |
 | [2026-08-21-00](2026-08-21-00-backlog.md) ⬜ | — | — | 📋backlog | アーキテクチャ深掘り5件のRICEバックログ + なぜなぜ分析 |
+| [2026-08-22-01](2026-08-22-01-refactor-migration-service-split.md) ⬜ | 🔴高 (3pt) | 🟢なし | 🔧refactor | MigrationService 分割 — LegacyMigration/OpfsRecovery + 状態マシンの port 化（RICE 213） |
+| [2026-08-22-02](2026-08-22-02-refactor-diagnostics-panel-deepening.md) ⬜ | 🔴高 (3pt) | 🟡軽微 | 🔧refactor | diagnosticsPanel 深掘り — collect() → Snapshot → render の1 seam 化（RICE 160） |
+| [2026-08-22-03](2026-08-22-03-refactor-settings-repository-adoption.md) ⬜ | 🔴高 (3pt) | 🟢なし | 🔧refactor | SettingsRepository 採用 — getMany 追加とパネルの生キャスト撤去（RICE 120） |
+| [2026-08-22-04](2026-08-22-04-backlog-ai-test-progress-client.md) ⬜ | 🟢低 (1pt) | 🟢なし | 📋backlog | AI 接続テスト進捗 client 抽出 — 第2消費者出現時の引き金付き（RICE 10） |
+| [2026-08-22-00](2026-08-22-00-backlog-architecture-pass2.md) ⬜ | — | — | 📋backlog | アーキテクチャ深掘り pass2 4件のRICEバックログ + なぜなぜ分析 |
 
 ---
 
