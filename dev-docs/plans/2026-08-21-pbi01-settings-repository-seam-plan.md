@@ -48,7 +48,7 @@ async set<K extends StorageKey>(key: K, value: SettingsType[K]): Promise<void> {
 **Files:**
 - Modify: `src/utils/storage/SettingsRepository.ts:109-119`
 
-- [ ] **Step 1: `saveSettings` の import を追加**
+- [x] **Step 1: `saveSettings` の import を追加**
 
 ```typescript
 // 変更前 (line 23)
@@ -58,7 +58,7 @@ import { getSettings } from './settingsStore.js';
 import { getSettings, saveSettings } from './settingsStore.js';
 ```
 
-- [ ] **Step 2: `set()` メソッドを修正**
+- [x] **Step 2: `set()` メソッドを修正**
 
 ```typescript
 // 変更前 (lines 109-113)
@@ -75,7 +75,7 @@ async set<K extends StorageKey>(key: K, value: SettingsType[K]): Promise<void> {
 }
 ```
 
-- [ ] **Step 3: `setAll()` メソッドを修正**
+- [x] **Step 3: `setAll()` メソッドを修正**
 
 ```typescript
 // 変更前 (lines 115-119)
@@ -92,22 +92,17 @@ async setAll(settings: Partial<SettingsType>): Promise<void> {
 }
 ```
 
-- [ ] **Step 4: テストを実行して既存テストがパスすることを確認**
+- [x] **Step 4: テストを実行して既存テストがパスすることを確認**
 
 Run: `npx vitest run src/utils/storage/__tests__/`
 Expected: All pass
 
-- [ ] **Step 5: 型チェックを実行**
+- [x] **Step 5: 型チェックを実行**
 
 Run: `npx tsc --noEmit`
 Expected: No errors
 
-- [ ] **Step 6: コミット**
-
-```bash
-git add src/utils/storage/SettingsRepository.ts
-git commit -m "fix: route SettingsRepository.set/setAll through saveSettings adapter"
-```
+- [x] **Step 6: コミット**（コミット済み: `SettingsRepository.ts` は既に `saveSettings` を使用する状態で committed）
 
 ---
 
@@ -116,7 +111,7 @@ git commit -m "fix: route SettingsRepository.set/setAll through saveSettings ada
 **Files:**
 - Create: `src/utils/storage/__tests__/SettingsRepository.test.ts`
 
-- [ ] **Step 1: テストファイルを作成**
+- [x] **Step 1: テストファイルを作成**（`src/utils/storage/__tests__/SettingsRepository.test.ts` が既に存在、10 テスト全 pass）
 
 ```typescript
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -211,12 +206,12 @@ describe('SettingsRepository', () => {
 });
 ```
 
-- [ ] **Step 2: テストを実行**
+- [x] **Step 2: テストを実行**（全 10 テスト pass 確認済み）
 
 Run: `npx vitest run src/utils/storage/__tests__/SettingsRepository.test.ts`
 Expected: All pass
 
-- [ ] **Step 3: コミット**
+- [x] **Step 3: コミット**（テストファイルは既に committed）
 
 ```bash
 git add src/utils/storage/__tests__/SettingsRepository.test.ts
