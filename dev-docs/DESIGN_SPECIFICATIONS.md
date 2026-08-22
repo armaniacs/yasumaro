@@ -34,6 +34,22 @@ To prevent unauthorized or unexpected message processing in the Service Worker:
 - **Standard**: Network errors must be detailed and user-friendly.
 - **Implementation**: Catch fetch errors and map them to localized messages using `errorUtils.js`. Avoid exposing technical stacks or private URLs in error strings.
 
+### 3.1 Diagnostics Panel (collect → Snapshot → render)
+
+The diagnostics panel follows a strict one-seam structure:
+
+- **Collect:** `DiagnosticsCollector.collect(): Promise<DiagnosticsSnapshot>` is the single
+  entry point for all diagnostic data (storage usage, SQLite status with retry,
+  deficiencies, built-in AI, Obsidian settings, per-provider AI settings, ext info,
+  VFS divergence, debug mode, settings-load failure flag). Chrome dependencies are
+  injected as adapters so tests use plain fakes.
+- **Render:** `diagnosticsPanel.ts` renders sections purely from the snapshot and must
+  not import `getSettings` or `chrome.storage`.
+- **Actions:** `diagnosticsActions.ts` owns all button handlers, including the confirm
+  dialogs for destructive operations (migrate / cleanup).
+- **Persistence:** the `debugMode` flag is read/written only through
+  `debugModeStore.getDebugMode()/setDebugMode()`.
+
 ## 4. Accessibility (A11y)
 
 ### 4.1 Focus Management
