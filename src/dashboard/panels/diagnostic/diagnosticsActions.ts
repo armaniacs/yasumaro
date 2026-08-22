@@ -63,7 +63,7 @@ export function createDiagnosticActions(
     migrateBtn, backfillBtn, cleanupBtn, builtInAiDownloadBtn,
     connectionResult, sqliteResult, opfsSpikeResult,
     migrateResult, backfillResult, cleanupResult,
-    builtInAiStats, builtInAiDownloadResult,
+    builtInAiDownloadResult,
   } = els;
 
   // Obsidian connection test
