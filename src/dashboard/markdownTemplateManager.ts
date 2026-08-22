@@ -108,7 +108,7 @@ export function initMarkdownTemplateManager(settings: Settings): void {
  * Get the full template list: built-in default first, then user-defined templates.
  */
 function getTemplates(): MarkdownExportTemplate[] {
-  const stored = (currentSettings?.[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] as MarkdownExportTemplate[]) || [];
+  const stored = currentSettings?.[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] ?? [];
   return [DEFAULT_MARKDOWN_TEMPLATE, ...stored];
 }
 
@@ -116,7 +116,7 @@ function getTemplates(): MarkdownExportTemplate[] {
  * Get the currently active template id (falls back to the default template id).
  */
 function getActiveTemplateId(): string {
-  return (currentSettings?.[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] as string) || DEFAULT_MARKDOWN_TEMPLATE.id;
+  return currentSettings?.[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] ?? DEFAULT_MARKDOWN_TEMPLATE.id;
 }
 
 /**
@@ -205,7 +205,7 @@ async function handleDeleteClick(id: string): Promise<void> {
     return;
   }
 
-  const stored = (currentSettings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] as MarkdownExportTemplate[]) || [];
+  const stored = currentSettings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] ?? [];
   const updated = deleteTemplate(stored, id);
   currentSettings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] = updated;
 
@@ -357,7 +357,7 @@ async function handleSaveClick(): Promise<void> {
     return;
   }
 
-  const stored = (currentSettings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] as MarkdownExportTemplate[]) || [];
+  const stored = currentSettings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] ?? [];
 
   let updated: MarkdownExportTemplate[];
   if (editingTemplateId) {
