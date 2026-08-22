@@ -1,565 +1,70 @@
 /**
  * migrationService.ts
- * Migrates existing chrome.storage.local browsing data to SQLite (OPFS).
- * Designed for Phase 2 of the yasumaro SQLite migration plan.
+ * Backward-compatible facade for the migration module.
  *
- * Pattern: src/utils/migration.ts (settings migration)
+ * The actual implementation has been split into:
+ * - migration/legacyMigration.ts — Legacy chrome.storage → SQLite migration
+ * - migration/opfsRecovery.ts — OPFS fallback → SQLite recovery
+ * - migration/migrationState.ts — Storage adapter for state persistence
+ *
+ * This file re-exports the public API so existing consumers
+ * (deferredMigrations.ts, dashboardSqliteWiring.ts, test files)
+ * continue to work without import changes.
+ *
+ * PBI: 2026-08-22-01 (MigrationService split)
  */
 
-import { addLog, LogType } from '../utils/logger.js';
-import { StorageKeys } from '../utils/storage.js';
 import { SqliteClient } from './sqliteClient.js';
-import { errorMessage } from '../utils/errorUtils.js';
-import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+import { ChromeMigrationStateAdapter } from './migration/migrationState.js';
+import { LegacyMigrationService } from './migration/legacyMigration.js';
+import { OpfsRecoveryService } from './migration/opfsRecovery.js';
 
-/** Separator used when serializing the legacy tags array into the SQLite `tags` TEXT column. */
-const TAGS_SEPARATOR = ', ';
-
-/** FallbackStorage のストレージキー */
-const FALLBACK_STORAGE_KEY = 'FALLBACK_STORAGE_DATA';
+export type { LegacyUrlEntry } from './migration/legacyMigration.js';
+export { mapLegacyEntryToRecord } from './migration/legacyMigration.js';
 
 /**
- * Map a legacy chrome.storage.local browsing entry to a SQLite BrowsingLogRecord.
- * `domain` is left null so the SQLite layer derives it from the url.
- * Legacy entries have no title field, so `title` stays null.
- */
-export function mapLegacyEntryToRecord(entry: LegacyUrlEntry): BrowsingLogRecord {
-  const tags = Array.isArray(entry.tags) && entry.tags.length > 0
-    ? entry.tags.join(TAGS_SEPARATOR)
-    : null;
-  return {
-    url: entry.url,
-    created_at: entry.timestamp,
-    title: null,
-    summary: typeof entry.aiSummary === 'string' ? entry.aiSummary : null,
-    tags,
-    domain: null,
-    visit_duration: null,
-    scroll_ratio: null,
-    is_starred: 0,
-    is_deleted: 0,
-    content: entry.content ?? null,
-    masked_count: entry.maskedCount ?? null,
-    cleansed_reason: entry.cleansedReason ?? null,
-    ai_provider: entry.aiProvider ?? null,
-    ai_model: entry.aiModel ?? null,
-    ai_duration_ms: entry.aiDuration ?? null,
-    obsidian_duration_ms: entry.obsidianDuration ?? null,
-    sent_tokens: entry.sentTokens ?? null,
-    received_tokens: entry.receivedTokens ?? null,
-    original_tokens: entry.originalTokens ?? null,
-    cleansed_tokens: entry.cleansedTokens ?? null,
-    page_bytes: entry.pageBytes ?? null,
-    candidate_bytes: entry.candidateBytes ?? null,
-    original_bytes: entry.originalBytes ?? null,
-    cleansed_bytes: entry.cleansedBytes ?? null,
-    ai_summary_original_bytes: entry.aiSummaryOriginalBytes ?? null,
-    ai_summary_cleansed_bytes: entry.aiSummaryCleansedBytes ?? null,
-    fallback_triggered: entry.fallbackTriggered ? 1 : 0,
-  };
-}
-
-const BATCH_SIZE = 100;
-const PROGRESS_WRITE_INTERVAL = 5;
-const MIGRATION_STATUS_KEY = StorageKeys.YASUMARO_MIGRATION_STATUS;
-const MIGRATION_PROGRESS_KEY = StorageKeys.YASUMARO_MIGRATION_PROGRESS;
-const MIGRATION_RETRY_COUNT_KEY = StorageKeys.YASUMARO_MIGRATION_RETRY_COUNT;
-
-/** 連続失敗がこの回数に達すると、それ以降の起動でマイグレーションを試行しない */
-const MAX_MIGRATION_RETRY_COUNT = 5;
-
-type MigrationStatus = 'pending' | 'completed' | 'fresh_install' | 'failed_permanently';
-
-/**
- * MigrationService handles one-time migration of legacy browsing log data
- * from chrome.storage.local into the SQLite database.
+ * MigrationService — backward-compatible class that composes
+ * LegacyMigrationService and OpfsRecoveryService under the same API.
+ *
+ * Existing consumers call:
+ *   new MigrationService(sqliteClient).run()
+ *   new MigrationService(sqliteClient).needsOpfsRecoveryMigration()
+ *   new MigrationService(sqliteClient).migrateOpfsRecovery()
+ *   new MigrationService(sqliteClient).backfillDiagnosticMetadata()
+ *   new MigrationService(sqliteClient).cleanupLegacyStorage()
  */
 export class MigrationService {
-  private sqliteClient: SqliteClient;
+  private readonly legacy: LegacyMigrationService;
+  private readonly opfs: OpfsRecoveryService;
 
   constructor(sqliteClient: SqliteClient) {
-    this.sqliteClient = sqliteClient;
+    const state = new ChromeMigrationStateAdapter();
+    this.legacy = new LegacyMigrationService(sqliteClient, state);
+    this.opfs = new OpfsRecoveryService(sqliteClient);
   }
 
-  /**
-   * Run the migration if needed. Safe to call multiple times.
-   */
-  async run(): Promise<void> {
-    try {
-      const status = await this.getMigrationStatus();
-
-      if (status === 'completed' || status === 'fresh_install') {
-        addLog(LogType.INFO, 'Migration: already completed or fresh install', { status });
-        return;
-      }
-
-      if (status === 'failed_permanently') {
-        addLog(LogType.WARN, 'Migration: skipped — retry limit previously reached', { status });
-        return;
-      }
-
-      addLog(LogType.INFO, 'Migration: starting data migration', { status });
-
-      // Read all legacy browsing data
-      const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
-      const entries = (result.savedUrlsWithTimestamps as LegacyUrlEntry[]) || [];
-
-      if (entries.length === 0) {
-        // No data to migrate — mark as fresh install
-        await this.setMigrationStatus('fresh_install');
-        await chrome.storage.local.set({ legacyStoreReadOnly: true });
-        addLog(LogType.INFO, 'Migration: no legacy data found, marked as fresh install');
-        return;
-      }
-
-      // Resume from previous progress if interrupted
-      const progress = await this.getMigrationProgress();
-      const remaining = entries.slice(progress);
-
-      addLog(LogType.INFO, 'Migration: migrating data', {
-        total: entries.length,
-        alreadyMigrated: progress,
-        remaining: remaining.length,
-      });
-
-      // Process in batches
-      let hasErrors = false;
-      let batchesSinceLastWrite = 0;
-      let lastWrittenProgress = -1;
-
-      for (let i = 0; i < remaining.length; i += BATCH_SIZE) {
-        const batch = remaining.slice(i, i + BATCH_SIZE).map(mapLegacyEntryToRecord);
-
-        try {
-          const result = await this.sqliteClient.insertBatchResult(batch);
-
-          const normalized = result;
-          if (normalized.success) {
-            const currentProgress = progress + i + normalized.data.count;
-            batchesSinceLastWrite++;
-
-            if (batchesSinceLastWrite >= PROGRESS_WRITE_INTERVAL || i + BATCH_SIZE >= remaining.length) {
-              await this.setMigrationProgress(currentProgress);
-              lastWrittenProgress = currentProgress;
-              batchesSinceLastWrite = 0;
-            }
-
-            if (normalized.data.count < batch.length) {
-              hasErrors = true;
-              addLog(LogType.WARN, 'Migration: insertBatchResult partially succeeded', {
-                batchSize: batch.length,
-                insertedCount: normalized.data.count,
-              });
-            }
-          } else {
-            hasErrors = true;
-            const currentProgress = progress + i;
-            if (currentProgress !== lastWrittenProgress) {
-              await this.setMigrationProgress(currentProgress);
-              lastWrittenProgress = currentProgress;
-              batchesSinceLastWrite = 0;
-            }
-            addLog(LogType.WARN, 'Migration: insertBatchResult failed, will retry', {
-              batchSize: batch.length,
-              error: normalized.error.message,
-            });
-          }
-        } catch (batchError) {
-          hasErrors = true;
-          const currentProgress = progress + i;
-          if (currentProgress !== lastWrittenProgress) {
-            await this.setMigrationProgress(currentProgress);
-            lastWrittenProgress = currentProgress;
-            batchesSinceLastWrite = 0;
-          }
-          addLog(LogType.ERROR, 'Migration: failed to insert batch', {
-            batchSize: batch.length,
-            error: errorMessage(batchError),
-          });
-        }
-      }
-
-      if (hasErrors) {
-        await this.recordFailureAndMaybeGiveUp(entries.length);
-        return;
-      }
-
-      // Mark migration as complete (but do NOT delete original data)
-      // Original chrome.storage data is preserved so users can keep using both panels
-      // or run an explicit cleanup step from the diagnostics panel.
-      await this.setMigrationStatus('completed');
-      await chrome.storage.local.remove(MIGRATION_PROGRESS_KEY);
-      await chrome.storage.local.remove(MIGRATION_RETRY_COUNT_KEY);
-
-      addLog(LogType.INFO, 'Migration: completed (original data preserved)', {
-        totalMigrated: entries.length,
-        note: 'Use diagnostics panel to explicitly clean up legacy storage if desired.'
-      });
-    } catch (error) {
-      addLog(LogType.ERROR, 'Migration: failed', {
-        error: errorMessage(error),
-      });
-      try {
-        await this.recordFailureAndMaybeGiveUp();
-      } catch (retryTrackingError) {
-        // Storage itself may be unavailable (the same failure that triggered the
-        // outer catch). Retry tracking is best-effort — next startup will simply
-        // retry from scratch (retryCount defaults to 0 when unreadable).
-        addLog(LogType.WARN, 'Migration: failed to record retry count', {
-          error: errorMessage(retryTrackingError),
-        });
-      }
-    }
+  /** Run legacy chrome.storage → SQLite migration */
+  run(): Promise<void> {
+    return this.legacy.run();
   }
 
-  /**
-   * Increment the retry counter after a failed migration attempt.
-   * Once MAX_MIGRATION_RETRY_COUNT consecutive failures are reached, the status
-   * is set to 'failed_permanently' so subsequent startups stop retrying and the
-   * failure can be surfaced to the user via the diagnostics panel.
-   */
-  private async recordFailureAndMaybeGiveUp(totalEntries?: number): Promise<void> {
-    const retryCount = (await this.getMigrationRetryCount()) + 1;
-    await this.setMigrationRetryCount(retryCount);
-
-    if (retryCount >= MAX_MIGRATION_RETRY_COUNT) {
-      await this.setMigrationStatus('failed_permanently');
-      addLog(LogType.ERROR, 'Migration: retry limit reached, giving up', {
-        retryCount,
-        maxRetryCount: MAX_MIGRATION_RETRY_COUNT,
-        total: totalEntries,
-      });
-      return;
-    }
-
-    addLog(LogType.WARN, 'Migration: completed with errors, will retry on next startup', {
-      retryCount,
-      maxRetryCount: MAX_MIGRATION_RETRY_COUNT,
-      total: totalEntries,
-    });
-    // Don't mark as completed — next startup will retry failed entries
-    // (already migrated entries are skipped due to progress tracking)
+  /** Backfill diagnostic metadata for already-migrated entries */
+  backfillDiagnosticMetadata(): Promise<{ updated: number; total: number }> {
+    return this.legacy.backfillDiagnosticMetadata();
   }
 
-  /** Read the current migration status from chrome.storage.local */
-  private async getMigrationStatus(): Promise<MigrationStatus | null> {
-    const result = await chrome.storage.local.get(MIGRATION_STATUS_KEY);
-    return (result[MIGRATION_STATUS_KEY] as MigrationStatus) || null;
+  /** Remove legacy chrome.storage keys (destructive, user-confirmed) */
+  cleanupLegacyStorage(): Promise<{ removed: string[]; totalBytes: number }> {
+    return this.legacy.cleanupLegacyStorage();
   }
 
-  /** Persist migration status */
-  private async setMigrationStatus(status: MigrationStatus): Promise<void> {
-    await chrome.storage.local.set({ [MIGRATION_STATUS_KEY]: status });
+  /** Check if OPFS fallback → SQLite recovery is needed */
+  needsOpfsRecoveryMigration(): Promise<boolean> {
+    return this.opfs.needsMigration();
   }
 
-  /** Read migration progress (number of entries already migrated) */
-  private async getMigrationProgress(): Promise<number> {
-    const result = await chrome.storage.local.get(MIGRATION_PROGRESS_KEY);
-    return (result[MIGRATION_PROGRESS_KEY] as number) || 0;
+  /** Migrate OPFS fallback data to SQLite */
+  migrateOpfsRecovery(): Promise<{ success: boolean; migrated: number; error?: string }> {
+    return this.opfs.migrate();
   }
-
-  /** Save migration progress */
-  private async setMigrationProgress(count: number): Promise<void> {
-    await chrome.storage.local.set({ [MIGRATION_PROGRESS_KEY]: count });
-  }
-
-  /** Read the current consecutive-failure retry count */
-  private async getMigrationRetryCount(): Promise<number> {
-    const result = await chrome.storage.local.get(MIGRATION_RETRY_COUNT_KEY);
-    return (result[MIGRATION_RETRY_COUNT_KEY] as number) || 0;
-  }
-
-  /** Save the consecutive-failure retry count */
-  private async setMigrationRetryCount(count: number): Promise<void> {
-    await chrome.storage.local.set({ [MIGRATION_RETRY_COUNT_KEY]: count });
-  }
-
-  /**
-   * Backfill diagnostic metadata for already-migrated SQLite entries
-   * that are missing metric fields. Reads from chrome.storage.local
-   * (savedUrlsWithTimestamps) and updates matching SQLite rows.
-   */
-  async backfillDiagnosticMetadata(): Promise<{ updated: number; total: number }> {
-    try {
-      const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
-      const storageEntries = (result.savedUrlsWithTimestamps as LegacyUrlEntry[]) || [];
-
-      if (storageEntries.length === 0) {
-        return { updated: 0, total: 0 };
-      }
-
-      addLog(LogType.INFO, 'Backfill: starting', { storageEntries: storageEntries.length });
-
-      // Build lookup map: url+timestamp (rounded to minute) → entry
-      const storageMap = new Map<string, LegacyUrlEntry>();
-      for (const entry of storageEntries) {
-        const key = `${entry.url}|${Math.floor(entry.timestamp / 60000)}`;
-        const hasData = entry.sentTokens != null || entry.receivedTokens != null ||
-          entry.pageBytes != null || entry.aiProvider != null;
-        if (hasData) {
-          storageMap.set(key, entry);
-        }
-      }
-
-      if (storageMap.size === 0) {
-        addLog(LogType.INFO, 'Backfill: no storage entries with diagnostic data');
-        return { updated: 0, total: 0 };
-      }
-
-      // Query all non-deleted SQLite entries
-      const allResult = await this.sqliteClient.queryResult({ limit: 50000 });
-      if (!allResult.success) {
-        throw new Error(`Backfill query failed: ${allResult.error.message}`);
-      }
-      if (allResult.data.rows.length === 0) {
-        return { updated: 0, total: 0 };
-      }
-
-      let updated = 0;
-
-      for (const sqliteRow of allResult.data.rows) {
-        const record = sqliteRow as BrowsingLogRecord;
-        if (record.id == null) continue;
-
-        // Skip entries that already have diagnostic data
-        if (record.sent_tokens != null || record.received_tokens != null) continue;
-
-        // Look up in storage map
-        const key = `${record.url}|${Math.floor(record.created_at / 60000)}`;
-        const entry = storageMap.get(key);
-        if (!entry) continue;
-
-        // Build update payload
-        const changes: Record<string, unknown> = {};
-        if (entry.sentTokens != null) changes.sent_tokens = entry.sentTokens;
-        if (entry.receivedTokens != null) changes.received_tokens = entry.receivedTokens;
-        if (entry.originalTokens != null) changes.original_tokens = entry.originalTokens;
-        if (entry.cleansedTokens != null) changes.cleansed_tokens = entry.cleansedTokens;
-        if (entry.pageBytes != null) changes.page_bytes = entry.pageBytes;
-        if (entry.candidateBytes != null) changes.candidate_bytes = entry.candidateBytes;
-        if (entry.originalBytes != null) changes.original_bytes = entry.originalBytes;
-        if (entry.cleansedBytes != null) changes.cleansed_bytes = entry.cleansedBytes;
-        if (entry.aiSummaryOriginalBytes != null) changes.ai_summary_original_bytes = entry.aiSummaryOriginalBytes;
-        if (entry.aiSummaryCleansedBytes != null) changes.ai_summary_cleansed_bytes = entry.aiSummaryCleansedBytes;
-        if (entry.aiProvider != null) changes.ai_provider = entry.aiProvider;
-        if (entry.aiModel != null) changes.ai_model = entry.aiModel;
-        if (entry.aiDuration != null) changes.ai_duration_ms = entry.aiDuration;
-        if (entry.obsidianDuration != null) changes.obsidian_duration_ms = entry.obsidianDuration;
-        if (entry.content != null) changes.content = entry.content;
-        if (entry.maskedCount != null) changes.masked_count = entry.maskedCount;
-        if (entry.cleansedReason != null) changes.cleansed_reason = entry.cleansedReason;
-        if (entry.fallbackTriggered != null) changes.fallback_triggered = entry.fallbackTriggered ? 1 : 0;
-
-        if (Object.keys(changes).length === 0) continue;
-
-        const ok = await this.sqliteClient.updateResult(record.id, changes);
-        if (ok.success) updated++;
-      }
-
-      addLog(LogType.INFO, 'Backfill: completed', { updated, total: allResult.data.rows.length });
-      return { updated, total: allResult.data.rows.length };
-    } catch (error) {
-      addLog(LogType.ERROR, 'Backfill: failed', { error: errorMessage(error) });
-      throw error;
-    }
-  }
-
-  /**
-   * Explicitly clean up legacy chrome.storage keys.
-   * This is a destructive operation that should only be called
-   * after the user has confirmed they want to remove the original data.
-   * The data is already in SQLite at this point.
-   */
-  async cleanupLegacyStorage(): Promise<{ removed: string[]; totalBytes: number }> {
-    try {
-      const legacyKeys = ['savedUrlsWithTimestamps', 'savedUrls'];
-      const data = await chrome.storage.local.get(legacyKeys);
-      const totalBytes = Object.values(data).reduce(
-        (sum: number, val) => sum + (val ? JSON.stringify(val).length : 0),
-        0
-      );
-      await chrome.storage.local.remove(legacyKeys);
-      await chrome.storage.local.remove('legacyStoreReadOnly');
-      addLog(LogType.INFO, 'Cleanup: legacy storage keys removed', { keys: legacyKeys, totalBytes });
-      return { removed: legacyKeys, totalBytes };
-    } catch (error) {
-      addLog(LogType.ERROR, 'Cleanup: failed', { error: errorMessage(error) });
-      return { removed: [], totalBytes: 0 };
-    }
-  }
-
-  /**
-   * OPFS 復旧時のマイグレーションが必要かチェック
-   * - OPFS_FALLBACK_MODE が true
-   * - SQLite が OPFS/IDB で利用可能
-   * - フォールバックデータが存在する
-   */
-  async needsOpfsRecoveryMigration(): Promise<boolean> {
-    try {
-      // 1. フォールバックモードかチェック
-      const fallbackResult = await chrome.storage.local.get(StorageKeys.OPFS_FALLBACK_MODE);
-      const isFallbackMode = fallbackResult[StorageKeys.OPFS_FALLBACK_MODE] === true;
-
-      if (!isFallbackMode) {
-        return false;
-      }
-
-      // 2. SQLite が利用可能かチェック
-      const statusResult = await this.sqliteClient.getStatus();
-      if (!statusResult || statusResult.fallback === true) {
-        // まだフォールバックモードのまま
-        return false;
-      }
-
-      // 3. フォールバックデータが存在するかチェック
-      const dataResult = await chrome.storage.local.get(FALLBACK_STORAGE_KEY);
-      const fallbackData = dataResult[FALLBACK_STORAGE_KEY] as { records: BrowsingLogRecord[] } | undefined;
-
-      if (!fallbackData || !fallbackData.records || !Array.isArray(fallbackData.records) || fallbackData.records.length === 0) {
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      addLog(LogType.ERROR, 'OPFS recovery check failed', { error: errorMessage(error) });
-      return false; // エラー時は安全側に倒す
-    }
-  }
-
-  /**
-   * OPFS 復旧時にフォールバックデータを SQLite に移行
-   */
-  async migrateOpfsRecovery(): Promise<{ success: boolean; migrated: number; error?: string }> {
-    let totalMigrated = 0;
-
-    try {
-      // フォールバックデータを取得
-      const dataResult = await chrome.storage.local.get(FALLBACK_STORAGE_KEY);
-      const fallbackData = dataResult[FALLBACK_STORAGE_KEY] as { records: BrowsingLogRecord[] } | undefined;
-
-      if (!fallbackData || !fallbackData.records || !Array.isArray(fallbackData.records)) {
-        return { success: true, migrated: 0 };
-      }
-
-      const records = fallbackData.records;
-      addLog(LogType.INFO, 'OPFS recovery: starting migration', { totalRecords: records.length });
-
-      // バッチ単位で SQLite にインポート
-      for (let i = 0; i < records.length; i += BATCH_SIZE) {
-        const batch = records.slice(i, i + BATCH_SIZE).map(convertFallbackRecord);
-
-        try {
-          const result = await this.sqliteClient.insertBatchResult(batch);
-
-          const normalized = result;
-          if (normalized.success) {
-            totalMigrated += normalized.data.count;
-          } else {
-            return {
-              success: false,
-              migrated: totalMigrated,
-              error: normalized.error.message,
-            };
-          }
-        } catch (batchError) {
-          return {
-            success: false,
-            migrated: totalMigrated,
-            error: errorMessage(batchError),
-          };
-        }
-      }
-
-      // 移行完了 — まずデータを削除し、最後にフラグをクリアする
-      // (データ削除を先に行うことで、途中でSW終了しても復旧可能に保つ)
-      await chrome.storage.local.remove(FALLBACK_STORAGE_KEY);
-      await chrome.storage.local.remove(StorageKeys.OPFS_FALLBACK_MODE);
-
-      addLog(LogType.INFO, 'OPFS recovery: migration completed', { migrated: totalMigrated });
-
-      return { success: true, migrated: totalMigrated };
-    } catch (error) {
-      addLog(LogType.ERROR, 'OPFS recovery: migration failed', { error: errorMessage(error) });
-      return {
-        success: false,
-        migrated: totalMigrated,
-        error: errorMessage(error),
-      };
-    }
-  }
-}
-
-/**
- * フォールバックデータを BrowsingLogRecord 形式に変換
- *
- * Maps all fields from the stored record (which was originally converted
- * via buildInsertRecordFields in schema.ts) with proper null/default handling.
- * Must stay in sync with all 31 fields of InsertRecordFields/schema.ts.
- */
-function convertFallbackRecord(record: BrowsingLogRecord): BrowsingLogRecord {
-  return {
-    url: record.url,
-    title: record.title ?? null,
-    summary: record.summary ?? null,
-    tags: record.tags ?? null,
-    created_at: record.created_at,
-    domain: record.domain ?? null,
-    visit_duration: record.visit_duration ?? null,
-    scroll_ratio: record.scroll_ratio ?? null,
-    is_starred: record.is_starred ?? 0,
-    is_deleted: record.is_deleted ?? 0,
-    obsidian_synced: record.obsidian_synced ?? 0,
-    gist_synced: record.gist_synced ?? 0,
-    content: record.content ?? null,
-    masked_count: record.masked_count ?? null,
-    cleansed_reason: record.cleansed_reason ?? null,
-    ai_provider: record.ai_provider ?? null,
-    ai_model: record.ai_model ?? null,
-    ai_duration_ms: record.ai_duration_ms ?? null,
-    obsidian_duration_ms: record.obsidian_duration_ms ?? null,
-    sent_tokens: record.sent_tokens ?? null,
-    received_tokens: record.received_tokens ?? null,
-    original_tokens: record.original_tokens ?? null,
-    cleansed_tokens: record.cleansed_tokens ?? null,
-    page_bytes: record.page_bytes ?? null,
-    candidate_bytes: record.candidate_bytes ?? null,
-    original_bytes: record.original_bytes ?? null,
-    cleansed_bytes: record.cleansed_bytes ?? null,
-    ai_summary_original_bytes: record.ai_summary_original_bytes ?? null,
-    ai_summary_cleansed_bytes: record.ai_summary_cleansed_bytes ?? null,
-    extracted_sentences_bytes: record.extracted_sentences_bytes ?? null,
-    extracted_sentences_original_bytes: record.extracted_sentences_original_bytes ?? null,
-    fallback_triggered: record.fallback_triggered ?? 0,
-  };
-}
-
-/**
- * Legacy URL entry format from chrome.storage.local.
- */
-interface LegacyUrlEntry {
-  url: string;
-  timestamp: number;
-  tags?: string[];
-  aiSummary?: string;
-  content?: string;
-  cleansedReason?: string;
-  maskedCount?: number;
-  sentTokens?: number;
-  receivedTokens?: number;
-  originalTokens?: number;
-  cleansedTokens?: number;
-  pageBytes?: number;
-  candidateBytes?: number;
-  originalBytes?: number;
-  cleansedBytes?: number;
-  aiSummaryOriginalBytes?: number;
-  aiSummaryCleansedBytes?: number;
-  aiSummaryCleansedElements?: number;
-  aiSummaryCleansedReason?: string;
-  aiProvider?: string;
-  aiModel?: string;
-  aiDuration?: number;
-  obsidianDuration?: number;
-  fallbackTriggered?: boolean;
-  [key: string]: unknown;
 }
