@@ -3,7 +3,7 @@
  * 週次/月次レビューサマリの自動生成を chrome.alarms でスケジュールする
  */
 
-import { getSettings } from '../utils/storage/settingsStore.js';
+import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { addLog, LogType } from '../utils/logger.js';
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
@@ -18,9 +18,12 @@ let listenerSetUp = false;
  * Service Worker起動時に呼ばれる。アラーム発火はcomposition rootから注入された
  * 同一generatorへ委譲し、message handler経路とインスタンスを共有する。
  */
-export async function initializeReviewSummaryAlarms(_generator: ReviewSummaryGenerator): Promise<void> {
-  const settings = await getSettings();
-  const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED] as boolean;
+export async function initializeReviewSummaryAlarms(
+  _generator: ReviewSummaryGenerator,
+  repo: SettingsReader = settingsRepository,
+): Promise<void> {
+  const settings = await repo.getAll();
+  const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED];
 
   if (!enabled) {
     // 無効時はアラームをクリアして終了

@@ -35,8 +35,8 @@ vi.mock('../../utils/promptSanitizer.js', () => ({
 
 describe('PrivacyPipeline', () => {
   const mockSettings = {
-    PRIVACY_MODE: 'full_pipeline',
-    PII_SANITIZE_LOGS: true
+    [StorageKeys.PRIVACY_MODE]: 'full_pipeline',
+    [StorageKeys.PII_SANITIZE_LOGS]: true
   };
 
   const mockAiService = {

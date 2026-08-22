@@ -7,6 +7,7 @@ import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNEC
 import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls } from '../../../utils/storage/settingsStore.js';
+import { DEFAULT_SETTINGS } from '../../../utils/storage/defaults.js';
 import { Settings, StorageKeys } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt, getDefaultSystemPrompt } from '../../../utils/customPromptUtils.js';
@@ -35,9 +36,13 @@ export class GeminiProvider extends AIProviderStrategy {
 
     constructor(settings: Settings) {
         super(settings);
-        // storage.jsのStorageKeysと対応するキー名を使用（snake_case）
-        this.apiKey = (settings.gemini_api_key as string) || '';
-        this.model = settings.gemini_model || 'gemini-3.1-flash-lite';
+        // storage.jsのStorageKeysと対応するキー名を使用（snake_case）。
+        // GEMINI_API_KEY は復号済みで string として返るが、型上 EncryptedData も
+        // 許容するため、decrypt 済みであることを明示して string に絞る。
+        this.apiKey = (settings[StorageKeys.GEMINI_API_KEY] as string | undefined)
+            ?? (DEFAULT_SETTINGS[StorageKeys.GEMINI_API_KEY] as string);
+        this.model = settings[StorageKeys.GEMINI_MODEL]
+            ?? (DEFAULT_SETTINGS[StorageKeys.GEMINI_MODEL] as string);
         // タイムアウト設定: 設定値が0の場合はデフォルト30000ms
         const storedTimeout = Number(settings[StorageKeys.AI_TIMEOUT_MS] ?? 0);
         this.timeoutMs = storedTimeout > 0 ? storedTimeout : 30000;
@@ -139,11 +144,12 @@ export class GeminiProvider extends AIProviderStrategy {
     }
 
     private _getApiVersion(): string {
+        const fallback = DEFAULT_SETTINGS[StorageKeys.GEMINI_API_VERSION] as string;
         const version = (this.settings[StorageKeys.GEMINI_API_VERSION] as string | undefined)?.trim();
         if (version && /^(v\d+([a-z]+)?)$/.test(version)) {
             return version;
         }
-        return 'v1beta';
+        return fallback;
     }
 
     async testConnection(): Promise<AIProviderConnectionResult> {

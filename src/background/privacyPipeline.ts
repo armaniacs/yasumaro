@@ -1,6 +1,7 @@
 // src/background/privacyPipeline.ts
 import { addLog, LogType } from '../utils/logger.js';
 import { Settings, StorageKeys } from '../utils/storage/types.js';
+import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
 import { parseTagsFromSummary, normalizeTags } from '../utils/tagUtils.js';
 import type { TagNormalizationEntry } from '../utils/types.js';
 import { sanitizePromptContent, DangerLevel } from '../utils/promptSanitizer.js';
@@ -64,7 +65,8 @@ export class PrivacyPipeline {
   ) {}
 
   private get mode(): string {
-    return (this.settings as Record<string, unknown>)[StorageKeys.PRIVACY_MODE] as string || 'full_pipeline';
+    return this.settings[StorageKeys.PRIVACY_MODE]
+      ?? (DEFAULT_SETTINGS[StorageKeys.PRIVACY_MODE] as string);
   }
 
   async process(

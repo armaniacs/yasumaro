@@ -5,12 +5,12 @@
  * decides *when* to call this and *which* days to include via `filter`.
  */
 
-import { getSettings } from '../utils/storage/settingsStore.js';
+import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
+import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { DAILY_BUFFER_PREFIX, buildDailyMarkdown } from './pipeline/steps/saveLocalMarkdownStep.js';
 import { getActiveTemplate } from '../utils/markdownTemplateUtils.js';
-import type { MarkdownExportTemplate } from '../utils/types.js';
 
 /**
  * Download each buffered day's Markdown exactly once.
@@ -18,13 +18,15 @@ import type { MarkdownExportTemplate } from '../utils/types.js';
  *   omitted, every buffered day with entries is flushed.
  */
 export async function flushBufferedExports(
-  filter?: (date: string) => boolean
+  filter?: (date: string) => boolean,
+  repo: SettingsReader = settingsRepository,
 ): Promise<void> {
   try {
-    const settings = await getSettings();
-    const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
-    const templates = (settings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] as MarkdownExportTemplate[]) || [];
-    const activeTemplateId = settings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] as string | undefined;
+    const settings = await repo.getAll();
+    const exportPath = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]
+      ?? (DEFAULT_SETTINGS[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string);
+    const templates = settings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] ?? [];
+    const activeTemplateId = settings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID];
     const activeTemplate = getActiveTemplate(templates, activeTemplateId);
 
     // Deliberately no-arg (fetch all of storage): the daily buffer keys this
