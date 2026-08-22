@@ -12,8 +12,8 @@
  * what would be written without touching chrome.downloads.
  */
 
-import { getSettings } from '../utils/storage/settingsStore.js';
 import { StorageKeys } from '../utils/storage/types.js';
+import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { queryLogs, type BrowsingLogEntry } from './dashboardSqliteService.js';
 import { renderFileTemplate, getActiveTemplate, getHostname } from '../utils/markdownTemplateUtils.js';
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';
@@ -117,11 +117,15 @@ export interface ExportConfig {
   template: MarkdownExportTemplate;
 }
 
-export async function loadExportConfig(): Promise<ExportConfig> {
-  const settings = await getSettings();
-  const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || DEFAULT_EXPORT_PATH;
-  const templates = (settings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] as MarkdownExportTemplate[]) || [];
-  const activeTemplateId = settings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] as string | undefined;
+export async function loadExportConfig(repo: SettingsReader = settingsRepository): Promise<ExportConfig> {
+  const settings = await repo.getMany([
+    StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH,
+    StorageKeys.MARKDOWN_EXPORT_TEMPLATES,
+    StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID,
+  ]);
+  const exportPath = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] ?? DEFAULT_EXPORT_PATH;
+  const templates = settings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] ?? [];
+  const activeTemplateId = settings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID];
   return { exportPath, template: getActiveTemplate(templates, activeTemplateId) };
 }
 

@@ -9,7 +9,8 @@
 
 import { StorageKeys } from '../utils/storage/types.js';
 import { CSPValidator } from '../utils/cspValidator.js';
-import { getSettings, saveSettings } from '../utils/storage/settingsStore.js';
+import { saveSettings } from '../utils/storage/settingsStore.js';
+import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../utils/i18n.js';
@@ -45,13 +46,15 @@ function resolveDefaultDomRefs(): CspSettingsDomRefs {
  */
 export class CspSettingsController {
   private resolveDom: () => CspSettingsDomRefs;
+  private repo: SettingsReader;
 
-  constructor(domRefs?: CspSettingsDomRefs) {
+  constructor(domRefs?: CspSettingsDomRefs, repo: SettingsReader = settingsRepository) {
     if (domRefs) {
       this.resolveDom = () => domRefs;
     } else {
       this.resolveDom = resolveDefaultDomRefs;
     }
+    this.repo = repo;
   }
 
   /**
@@ -59,7 +62,7 @@ export class CspSettingsController {
    */
   async loadCSPSettings(): Promise<void> {
     try {
-      const settings = await getSettings();
+      const settings = await this.repo.getAll();
       const dom = this.resolveDom();
 
       if (dom.conditionalCspEnabled) {
@@ -68,7 +71,7 @@ export class CspSettingsController {
 
       CSPValidator.initializeFromSettings(settings);
 
-      await this.renderProviderList(settings[StorageKeys.CONDITIONAL_CSP_PROVIDERS] as string[] || []);
+      await this.renderProviderList(settings[StorageKeys.CONDITIONAL_CSP_PROVIDERS] ?? []);
 
       this.bindSearchInput();
       this.bindSaveButton();

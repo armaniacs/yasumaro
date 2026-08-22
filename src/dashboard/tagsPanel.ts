@@ -5,15 +5,16 @@
 
 import { getMessage } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
-import { getSettings, saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.js';
+import { saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.js';
 import { StorageKeys } from '../utils/storage/types.js';
+import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { DEFAULT_CATEGORIES } from '../utils/tagUtils.js';
-import type { TagCategory, TagNormalizationEntry } from '../utils/types.js';
+import type { TagNormalizationEntry } from '../utils/types.js';
 
 /**
  * Initialize the tag settings panel.
  */
-export async function initTagsPanel(): Promise<void> {
+export async function initTagsPanel(repo: SettingsReader = settingsRepository): Promise<void> {
   // --- Category elements ---
   const tagSummaryModeInput = document.getElementById('tagSummaryMode') as HTMLInputElement | null;
   const defaultCategoriesList = document.getElementById('defaultCategoriesList') as HTMLElement | null;
@@ -206,8 +207,8 @@ export async function initTagsPanel(): Promise<void> {
   // Settings save
   // ========================================================================
 
-  async function saveTagSettings(): Promise<void> {
-    const settings = await getSettings();
+  async function saveTagSettings(repo: SettingsReader = settingsRepository): Promise<void> {
+    const settings = await repo.getAll();
 
     // Tag summary mode
     settings[StorageKeys.TAG_SUMMARY_MODE] = tagSummaryModeInput?.checked || false;
@@ -239,23 +240,25 @@ export async function initTagsPanel(): Promise<void> {
   // Settings load
   // ========================================================================
 
-  async function loadTagSettings(): Promise<void> {
-    const settings = await getSettings();
+  async function loadTagSettings(repo: SettingsReader = settingsRepository): Promise<void> {
+    const settings = await repo.getMany([
+      StorageKeys.TAG_SUMMARY_MODE,
+      StorageKeys.TAG_CATEGORIES,
+      StorageKeys.TAG_NORMALIZATION_DICT,
+    ]);
 
     // Tag summary mode
     if (tagSummaryModeInput) {
-      tagSummaryModeInput.checked = (settings[StorageKeys.TAG_SUMMARY_MODE] as boolean) || false;
+      tagSummaryModeInput.checked = settings[StorageKeys.TAG_SUMMARY_MODE] ?? false;
     }
 
     // User categories
-    const savedUserCategories =
-      (settings[StorageKeys.TAG_CATEGORIES] as TagCategory[] | undefined) || [];
+    const savedUserCategories = settings[StorageKeys.TAG_CATEGORIES] ?? [];
     userCategories = savedUserCategories.filter((c) => !c.isDefault).map((c) => c.name);
     renderUserCategories();
 
     // Normalization dictionary
-    const savedDict =
-      (settings[StorageKeys.TAG_NORMALIZATION_DICT] as TagNormalizationEntry[] | undefined) || [];
+    const savedDict = settings[StorageKeys.TAG_NORMALIZATION_DICT] ?? [];
     normalizationEntries = savedDict.map(e => ({ from: e.from, to: e.to }));
     renderNormalizationEntries();
   }
@@ -265,7 +268,7 @@ export async function initTagsPanel(): Promise<void> {
   // ========================================================================
 
   renderDefaultCategories();
-  await loadTagSettings();
+  await loadTagSettings(repo);
 
   // Category event handlers
   addCategoryBtn?.addEventListener('click', addCategory);
@@ -297,5 +300,5 @@ export async function initTagsPanel(): Promise<void> {
   });
 
   // Main save button
-  saveTagsBtn?.addEventListener('click', saveTagSettings);
+  saveTagsBtn?.addEventListener('click', () => saveTagSettings(repo));
 }
