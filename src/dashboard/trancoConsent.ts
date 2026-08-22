@@ -4,8 +4,9 @@
 
 import { getMessage } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
-import { getSettings, saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.js';
+import { saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.js';
 import { StorageKeys } from '../utils/storage/types.js';
+import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 
 interface TrancoConsentState {
   needsConsent: 'GRANTED' | 'DENIED' | 'PENDING' | 'ALREADY_GRANTED' | 'RETRY_NEEDED';
@@ -15,7 +16,7 @@ interface TrancoConsentState {
   latestVersion: string;
 }
 
-export async function initTrancoConsentPanel(): Promise<void> {
+export async function initTrancoConsentPanel(repo: SettingsReader = settingsRepository): Promise<void> {
   console.log('[Dashboard] Initializing Tranco Consent Panel');
 
   const currentVersionEl = document.getElementById('trancoCurrentVersion');
@@ -28,10 +29,10 @@ export async function initTrancoConsentPanel(): Promise<void> {
   }
 
   try {
-    // Get current Tranco version
-    const settings = await getSettings();
-    const version = settings[StorageKeys.TRANCO_VERSION] as string | null;
-    const domains = settings[StorageKeys.TRANCO_DOMAINS] as string[] || [];
+    // Get current Tranco version and domains with DEFAULT_SETTINGS fallback.
+    const trancoSettings = await repo.getMany([StorageKeys.TRANCO_VERSION, StorageKeys.TRANCO_DOMAINS]);
+    const version = trancoSettings[StorageKeys.TRANCO_VERSION];
+    const domains = trancoSettings[StorageKeys.TRANCO_DOMAINS] ?? [];
 
     // Display version info
     if (version) {
@@ -47,18 +48,23 @@ export async function initTrancoConsentPanel(): Promise<void> {
     domainCountEl.textContent = domains.length.toString();
 
     // Get consent state
-    const consentState = await getTrancoConsentState(version || 'unknown');
-    updateConsentUI(consentState);
+    const consentState = await getTrancoConsentState(repo, version || 'unknown');
+    updateConsentUI(repo, consentState);
   } catch (e) {
     console.error('[Dashboard] Error loading Tranco consent state:', e);
     showStatus('trancoUpdateStatus', getMessage('errorLoadTrancoData') || 'Trancoデータの読み込みに失敗しました', 'error');
   }
 }
 
-async function getTrancoConsentState(latestVersion: string): Promise<TrancoConsentState> {
-  const settings = await getSettings();
-  const grantedVersion = settings[StorageKeys.TRANCO_CONSENT_GRANTED] as string | null;
-  const deniedTimestamp = settings[StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP] as number | null;
+async function getTrancoConsentState(repo: SettingsReader, latestVersion: string): Promise<TrancoConsentState> {
+  const consentSettings = await repo.getMany([
+    StorageKeys.TRANCO_CONSENT_GRANTED,
+    StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP,
+    StorageKeys.TRANCO_CONSENT_DENIED_REASON,
+  ]);
+  const grantedVersion = consentSettings[StorageKeys.TRANCO_CONSENT_GRANTED];
+  const deniedTimestamp = consentSettings[StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP];
+  const deniedReason = consentSettings[StorageKeys.TRANCO_CONSENT_DENIED_REASON];
 
   let needsConsent: TrancoConsentState['needsConsent'];
   let calculatedRetryDays: number | null = null;
@@ -66,7 +72,7 @@ async function getTrancoConsentState(latestVersion: string): Promise<TrancoConse
   if (grantedVersion === latestVersion) {
     needsConsent = 'ALREADY_GRANTED';
   } else if (deniedTimestamp) {
-    const elapsedDays = (Date.now() - deniedTimestamp) / (1000 * 60 * 60 * 24);
+    const elapsedDays = (Date.now() - (deniedTimestamp as number)) / (1000 * 60 * 60 * 24);
     const retryDaysRemaining = Math.max(0, 30 - Math.ceil(elapsedDays));
 
     if (retryDaysRemaining > 0) {
@@ -81,14 +87,14 @@ async function getTrancoConsentState(latestVersion: string): Promise<TrancoConse
 
   return {
     needsConsent,
-    grantedVersion,
-    deniedReason: settings[StorageKeys.TRANCO_CONSENT_DENIED_REASON] as string | null,
+    grantedVersion: grantedVersion as string | null,
+    deniedReason: deniedReason as string | null,
     retryDaysRemaining: calculatedRetryDays,
     latestVersion
   };
 }
 
-function updateConsentUI(state: TrancoConsentState): void {
+function updateConsentUI(repo: SettingsReader, state: TrancoConsentState): void {
   const consentStatusEl = document.getElementById('trancoConsentStatus');
   const consentRetryInfoEl = document.getElementById('trancoConsentRetryInfo');
   const consentActionsEl = document.getElementById('trancoConsentActions');
@@ -113,12 +119,12 @@ function updateConsentUI(state: TrancoConsentState): void {
     const grantBtn = document.createElement('button');
     grantBtn.className = 'btn-primary';
     grantBtn.textContent = getMessage('trancoUpdateModalConfirmLabel') || '同意する';
-    grantBtn.addEventListener('click', () => handleTrancoGrant(state.latestVersion));
+    grantBtn.addEventListener('click', () => handleTrancoGrant(repo, state.latestVersion));
 
     const denyBtn = document.createElement('button');
     denyBtn.className = 'btn-secondary';
     denyBtn.textContent = getMessage('trancoUpdateModalDenyLabel') || '拒否する';
-    denyBtn.addEventListener('click', () => handleTrancoDeny());
+    denyBtn.addEventListener('click', () => handleTrancoDeny(repo));
 
     consentActionsEl!.innerHTML = '';
     consentActionsEl!.appendChild(grantBtn);
@@ -129,9 +135,9 @@ function updateConsentUI(state: TrancoConsentState): void {
   }
 }
 
-async function handleTrancoGrant(version: string): Promise<void> {
+async function handleTrancoGrant(repo: SettingsReader, version: string): Promise<void> {
   try {
-    const settings = await getSettings();
+    const settings = await repo.getAll();
 
     const updatedSettings = { ...settings };
     updatedSettings[StorageKeys.TRANCO_CONSENT_GRANTED] = version;
@@ -146,7 +152,7 @@ async function handleTrancoGrant(version: string): Promise<void> {
       'success'
     );
 
-    await initTrancoConsentPanel();
+    await initTrancoConsentPanel(repo);
   } catch (e) {
     console.error('[Dashboard] Error granting Tranco consent:', e);
     showStatus(
@@ -157,9 +163,9 @@ async function handleTrancoGrant(version: string): Promise<void> {
   }
 }
 
-async function handleTrancoDeny(): Promise<void> {
+async function handleTrancoDeny(repo: SettingsReader): Promise<void> {
   try {
-    const settings = await getSettings();
+    const settings = await repo.getAll();
 
     const updatedSettings = { ...settings };
     updatedSettings[StorageKeys.TRANCO_CONSENT_GRANTED] = null;
@@ -174,7 +180,7 @@ async function handleTrancoDeny(): Promise<void> {
       'error'
     );
 
-    await initTrancoConsentPanel();
+    await initTrancoConsentPanel(repo);
   } catch (e) {
     console.error('[Dashboard] Error denying Tranco consent:', e);
     showStatus(
