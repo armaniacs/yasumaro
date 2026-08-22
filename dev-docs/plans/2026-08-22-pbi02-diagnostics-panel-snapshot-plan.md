@@ -1,6 +1,6 @@
 # diagnosticsPanel Snapshot リファクタリング 実装計画
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** diagnosticsPanel（683行）を「collect() → DiagnosticsSnapshot → render(Snapshot)」の1 seam に再構成し、400行未満・getSettings/chrome.storage 直 import ゼロを達成する。
 
@@ -34,7 +34,7 @@
 - Create: `src/dashboard/panels/diagnostic/debugModeStore.ts`
 - Test: `src/dashboard/panels/diagnostic/__tests__/debugModeStore.test.ts`
 
-- [ ] **Step 1: 失敗するテストを書く**
+- [x] **Step 1: 失敗するテストを書く**
 
 ```typescript
 // src/dashboard/panels/diagnostic/__tests__/debugModeStore.test.ts
@@ -75,12 +75,12 @@ describe('debugModeStore', () => {
 });
 ```
 
-- [ ] **Step 2: テストが失敗することを確認**
+- [x] **Step 2: テストが失敗することを確認**
 
 Run: `npx vitest run src/dashboard/panels/diagnostic/__tests__/debugModeStore.test.ts`
 Expected: FAIL（`../debugModeStore.js` が存在しない）
 
-- [ ] **Step 3: 最小実装を書く**
+- [x] **Step 3: 最小実装を書く**
 
 ```typescript
 // src/dashboard/panels/diagnostic/debugModeStore.ts
@@ -102,12 +102,12 @@ export async function setDebugMode(value: boolean): Promise<void> {
 }
 ```
 
-- [ ] **Step 4: テストが通ることを確認**
+- [x] **Step 4: テストが通ることを確認**
 
 Run: `npx vitest run src/dashboard/panels/diagnostic/__tests__/debugModeStore.test.ts`
 Expected: PASS（3 tests）
 
-- [ ] **Step 5: コミット**
+- [x] **Step 5: コミット**
 
 ```bash
 git add src/dashboard/panels/diagnostic/debugModeStore.ts src/dashboard/panels/diagnostic/__tests__/debugModeStore.test.ts
@@ -122,7 +122,7 @@ git commit -m "feat: debugModeStore port を新設し debugMode キー直書き�
 - Modify: `src/dashboard/panels/diagnostic/DiagnosticsCollector.ts`
 - Test: `src/dashboard/panels/diagnostic/__tests__/DiagnosticsCollector.test.ts`
 
-- [ ] **Step 1: 失敗するテストを追加**
+- [x] **Step 1: 失敗するテストを追加**
 
 既存 `DiagnosticsCollector.test.ts` の先頭（import 文の直後）にモジュールモックを追加:
 
@@ -276,12 +276,12 @@ describe('DiagnosticsCollector — snapshot extensions', () => {
 });
 ```
 
-- [ ] **Step 2: テストが失敗することを確認**
+- [x] **Step 2: テストが失敗することを確認**
 
 Run: `npx vitest run src/dashboard/panels/diagnostic/__tests__/DiagnosticsCollector.test.ts`
 Expected: FAIL — `settingsLoadFailed` / `extInfo` / `divergence` が undefined、リトライテストは call count 不一致
 
-- [ ] **Step 3: Collector を拡張する**
+- [x] **Step 3: Collector を拡張する**
 
 `DiagnosticsCollector.ts` への変更。import ブロックに2行追加:
 
@@ -379,12 +379,12 @@ return 文を拡張:
     };
 ```
 
-- [ ] **Step 4: テストが通ることを確認**
+- [x] **Step 4: テストが通ることを確認**
 
 Run: `npx vitest run src/dashboard/panels/diagnostic/__tests__/DiagnosticsCollector.test.ts`
 Expected: PASS（既存3 + 新規6 = 9 tests）
 
-- [ ] **Step 5: コミット**
+- [x] **Step 5: コミット**
 
 ```bash
 git add src/dashboard/panels/diagnostic/DiagnosticsCollector.ts src/dashboard/panels/diagnostic/__tests__/DiagnosticsCollector.test.ts
@@ -399,7 +399,7 @@ git commit -m "feat: DiagnosticsSnapshot に extInfo/divergence/settingsLoadFail
 - Create: `src/dashboard/panels/diagnostic/diagnosticsActions.ts`
 - Test: `src/dashboard/panels/diagnostic/__tests__/diagnosticsActions.test.ts`
 
-- [ ] **Step 1: 失敗するテストを書く**
+- [x] **Step 1: 失敗するテストを書く**
 
 ```typescript
 // src/dashboard/panels/diagnostic/__tests__/diagnosticsActions.test.ts
@@ -524,12 +524,12 @@ describe('diagnosticsActions', () => {
 });
 ```
 
-- [ ] **Step 2: テストが失敗することを確認**
+- [x] **Step 2: テストが失敗することを確認**
 
 Run: `npx vitest run src/dashboard/panels/diagnostic/__tests__/diagnosticsActions.test.ts`
 Expected: FAIL（`../diagnosticsActions.js` が存在しない）
 
-- [ ] **Step 3: diagnosticsActions.ts を実装する**
+- [x] **Step 3: diagnosticsActions.ts を実装する**
 
 現行パネル mount() 内ハンドラ（407〜674行）を移植。完全なファイル:
 
@@ -870,12 +870,12 @@ export function createDiagnosticActions(
 }
 ```
 
-- [ ] **Step 4: テストが通ることを確認**
+- [x] **Step 4: テストが通ることを確認**
 
 Run: `npx vitest run src/dashboard/panels/diagnostic/__tests__/diagnosticsActions.test.ts`
 Expected: PASS（5 tests）
 
-- [ ] **Step 5: コミット**
+- [x] **Step 5: コミット**
 
 ```bash
 git add src/dashboard/panels/diagnostic/diagnosticsActions.ts src/dashboard/panels/diagnostic/__tests__/diagnosticsActions.test.ts
@@ -890,7 +890,7 @@ git commit -m "feat: diagnosticsActions を新設しボタンハンドラ群を�
 - Modify（全面置換）: `src/dashboard/panels/diagnostic/diagnosticsPanel.ts`
 - Test: `src/dashboard/panels/diagnostic/__tests__/diagnosticsPanel.lifecycle.test.ts`（内容断言1件のみ強化）
 
-- [ ] **Step 1: パネル全体を次の内容で置換する**
+- [x] **Step 1: パネル全体を次の内容で置換する**
 
 ```typescript
 // src/dashboard/panels/diagnostic/diagnosticsPanel.ts
@@ -1251,12 +1251,12 @@ export function createDiagnosticsPanel(): PanelLifecycle {
 }
 ```
 
-- [ ] **Step 2: 型チェックとテストを実行**
+- [x] **Step 2: 型チェックとテストを実行**
 
 Run: `npm run type-check && npx vitest run src/dashboard/panels/diagnostic/__tests__/diagnosticsPanel.lifecycle.test.ts src/dashboard/panels/diagnostic/__tests__/diagnosticsPanel-builtInAi.test.ts`
 Expected: type-check PASS、lifecycle 19件 PASS、builtInAi 4件 PASS
 
-- [ ] **Step 3: lifecycle テストの内容断言1件を強化**
+- [x] **Step 3: lifecycle テストの内容断言1件を強化**
 
 `diagnosticsPanel.lifecycle.test.ts` の `'populates stats elements after load'` テストを置換:
 
@@ -1270,12 +1270,12 @@ Expected: type-check PASS、lifecycle 19件 PASS、builtInAi 4件 PASS
     });
 ```
 
-- [ ] **Step 4: 行数目標とテストを確認**
+- [x] **Step 4: 行数目標とテストを確認**
 
 Run: `wc -l src/dashboard/panels/diagnostic/diagnosticsPanel.ts && npx vitest run src/dashboard/panels/diagnostic`
 Expected: 400行未満、diagnostic 配下の全テスト PASS
 
-- [ ] **Step 5: コミット**
+- [x] **Step 5: コミット**
 
 ```bash
 git add src/dashboard/panels/diagnostic/diagnosticsPanel.ts src/dashboard/panels/diagnostic/__tests__/diagnosticsPanel.lifecycle.test.ts
@@ -1289,7 +1289,7 @@ git commit -m "refactor: diagnosticsPanel を collect() → Snapshot 描画の1 
 **Files:**
 - Modify: `dev-docs/DESIGN_SPECIFICATIONS.md`（§3 UI Implementation Standards 内、末尾に小節追加）
 
-- [ ] **Step 1: §3 の末尾（§4 の見出し直前）に次の小節を追加**
+- [x] **Step 1: §3 の末尾（§4 の見出し直前）に次の小節を追加**
 
 ```markdown
 ### 3.1 Diagnostics Panel (collect → Snapshot → render)
@@ -1309,7 +1309,7 @@ The diagnostics panel follows a strict one-seam structure:
   `debugModeStore.getDebugMode()/setDebugMode()`.
 ```
 
-- [ ] **Step 2: コミット**
+- [x] **Step 2: コミット**
 
 ```bash
 git add dev-docs/DESIGN_SPECIFICATIONS.md
@@ -1325,18 +1325,18 @@ git commit -m "docs: 診断パネルの collect → Snapshot → render 構造�
 - Move: 同ファイル → `dev-docs/archived/pbi/`
 - Modify: `pbi/00-INDEX.md`
 
-- [ ] **Step 1: 全検証を実行**
+- [x] **Step 1: 全検証を実行**
 
 ```bash
 npm run type-check && npm run lint && npm test && npm run build
 ```
 Expected: 全て成功。テストは既存8320件 + 本計画の新規約14件
 
-- [ ] **Step 2: PBI の受け入れ基準と DoD をすべて `[x]` に更新**
+- [x] **Step 2: PBI の受け入れ基準と DoD をすべて `[x]` に更新**
 
 `pbi/2026-08-22-02-refactor-diagnostics-panel-deepening.md` の `- [ ]` をすべて `- [x]` に置換する（11件）。
 
-- [ ] **Step 3: PBI をアーカイブし INDEX を更新**
+- [x] **Step 3: PBI をアーカイブし INDEX を更新**
 
 ```bash
 git mv pbi/2026-08-22-02-refactor-diagnostics-panel-deepening.md dev-docs/archived/pbi/
@@ -1350,7 +1350,7 @@ git mv pbi/2026-08-22-02-refactor-diagnostics-panel-deepening.md dev-docs/archiv
 - 2026-08-22-02-refactor-diagnostics-panel-deepening.md (RICE 160 — diagnosticsPanel 683行を collect() → DiagnosticsSnapshot → render の1 seam に再構成。収集は collector に完全集約（extInfo/divergence/settingsLoadFailed 追加、sqlite リトライ内蔵）、操作は diagnosticsActions へ分離、debugMode は port 経由。パネル400行未満・getSettings/chrome.storage 直 import ゼロ)
 ```
 
-- [ ] **Step 4: コミット**
+- [x] **Step 4: コミット**
 
 ```bash
 git add pbi/00-INDEX.md
@@ -1359,7 +1359,7 @@ git commit -m "docs: PBI 2026-08-22-02（diagnosticsPanel 深掘り）を完了�
 
 （`git mv` がリネームを既にステージング済みのため、追加でステージするのは INDEX のみ）
 
-- [ ] **Step 5: 知識グラフ更新**
+- [x] **Step 5: 知識グラフ更新**
 
 ```bash
 graphify update .
