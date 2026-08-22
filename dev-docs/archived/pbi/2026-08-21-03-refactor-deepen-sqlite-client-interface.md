@@ -70,6 +70,7 @@ Scenario: 境界 — transform が細粒度な型変換を隠蔽する
 
 ## 見積もり
 3pt（要チームでの見積もり）— interface 再設計、deps 更新、テスト更新、レビューでの合意形成が必要
+- **確認**: sqliteClient.ts は 319行、20メソッドの shallow interface が実在
 
 ## 技術的考慮事項
 - 依存関係: PBI 02（offscreen Mutex 削除）完了後に着手すると transport seam の理解が深まるが、必須依存ではない。PBI 04（barrel 削除）とは独立

@@ -90,15 +90,15 @@ src/utils/ublockParser/
 src/utils/ublockMatcher/
 ```
 
-### Barrel — Re-export (後方互換)
+### Barrel — Re-export (retired)
 
 ```
-src/utils/storage.ts      — 88行38export、36箇所から参照。@deprecated。4つの深いモジュールへ分割済みの再エクスポート層
+src/utils/storage.ts      — @deprecated re-export shim。production は全て直接 import に移行済み（PBI 2026-08-21-04）。テストのレガシー mock 経路のみが参照。eslint no-restricted-imports により新規利用は禁止
 src/utils/logger.ts       — 42行、logger/* からの再エクスポート。約120箇所から参照
 src/utils/crypto/index.ts — crypto/* からの再エクスポート
 ```
 
-新規コードは barrel 経由ではなく各モジュールから直接 import すること。
+新規コードは barrel 経由ではなく各モジュールから直接 import すること。`storage.ts` への import は lint が警告する。
 
 ## 依存ルール
 
@@ -144,7 +144,7 @@ export function getDomainFilterCacheSync() { ... }
 
 ## 将来の移行計画
 
-* **Wave 3**: `storage.ts` barrel の段階的分割 — 各 PBI で barrel の `@deprecated` import を直接モジュール import に置換する小 PBI として切り出す
+* **Wave 3**: `storage.ts` barrel — 完了（PBI 2026-08-21-04）。production の直接 import 化済み。テスト用 shim は参照が0になった時点で削除
 * **Wave 4**: `logger.ts` barrel の同様の分割
 * 循環の解消は業務ルール上不可のため、dynamic import による回避を維持し、ADR で保護する
 

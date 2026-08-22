@@ -38,12 +38,12 @@ Scenario: エラー — 収集の一部が失敗しても他セクションは�
 ```
 
 ## 受け入れ基準
-- [ ] `diagnosticsPanel.ts` が400行未満になり、`getSettings` / `chrome.storage.local.get` を直接呼ばない（import しない）
-- [ ] `DiagnosticsSnapshot` 型に全セクション（storage/extInfo/obsidian/ai/connection/sqlite/deficiency/builtInAI/compileOptions/divergence）のフィールドが定義され、`collect(): Promise<DiagnosticsSnapshot>` が単一エントリポイントになる
-- [ ] `renderBuiltInAiStatus` を含む整形関数がパネル側に残り、Snapshot を入力として純粋描画する
-- [ ] 既存の lifecycle テスト（Wave 2 追加分19件）が Snapshot ベースに移行され、DOM querySelector 断言が Snapshot 断言に置換される
-- [ ] migrate/backfill/cleanup ボタンの confirm dialog 挙動とエラー表示が現行どおり維持される
-- [ ] `npm run type-check` / `npm test` がパスする
+- [x] `diagnosticsPanel.ts` が400行未満になり、`getSettings` / `chrome.storage.local.get` を直接呼ばない（import しない）
+- [x] `DiagnosticsSnapshot` 型に全セクション（storage/extInfo/obsidian/ai/connection/sqlite/deficiency/builtInAI/compileOptions/divergence）のフィールドが定義され、`collect(): Promise<DiagnosticsSnapshot>` が単一エントリポイントになる
+- [x] `renderBuiltInAiStatus` を含む整形関数がパネル側に残り、Snapshot を入力として純粋描画する
+- [x] 既存の lifecycle テスト（Wave 2 追加分19件）が Snapshot ベースに移行され、DOM querySelector 断言が Snapshot 断言に置換される
+- [x] migrate/backfill/cleanup ボタンの confirm dialog 挙動とエラー表示が現行どおり維持される
+- [x] `npm run type-check` / `npm test` がパスする
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -60,6 +60,7 @@ Scenario: エラー — 収集の一部が失敗しても他セクションは�
 
 ## 見積もり
 3pt（要チームでの見積もり）— 全面移植だが型（Snapshot）で導かれる機械的移動。既存 lifecycle テストの書き換えが主コスト
+- **確認**: diagnosticsPanel.ts は 682行、DiagnosticsCollector.ts は 146行（underused）
 
 ## 技術的考慮事項
 - 依存関係: なし。ただし PBI 03（SettingsRepository 採用）は本 PBI 完了後に着手すると diagnosticsPanel 分のキャスト撤去作業が不要になる
@@ -94,8 +95,8 @@ ls src/dashboard/panels/diagnostic/__tests__/
 - connectionResult セクションは前回テスト結果の保持（ロード時に常に空ではない）可能性があるため、Snapshot が stateful 側面を持たないよう「直近テスト結果」フィールドの扱いを実装前に確認すること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（collector のセクション別エラー分岐）
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了（パネル400行未満、収集の panel 直呼び出しゼロ）
-- [ ] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の diagnostics 記述を Snapshot 構造に更新）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす（collector のセクション別エラー分岐）
+- [x] コードレビュー完了
+- [x] リファクタリング完了（パネル400行未満、収集の panel 直呼び出しゼロ）
+- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の diagnostics 記述を Snapshot 構造に更新）
