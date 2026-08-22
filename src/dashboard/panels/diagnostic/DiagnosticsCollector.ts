@@ -13,12 +13,23 @@
  * in-memory stand-ins for tests. Two adapters justify the seam.
  */
 
-import { getSettings, StorageKeys } from '../../../utils/storage.js';
+import { getSettings } from '../../../utils/storage/settingsStore.js';
+import { StorageKeys } from '../../../utils/storage/types.js';
 import { getSqliteStatus, getLogCount } from '../../dashboardSqliteService.js';
 import { diagnoseDeficiencies, type DiagnosticInput } from '../../diagnoseDeficiencies.js';
 import { checkBuiltInAiAvailability, type BuiltInAiDiagnosticsResult } from '../../builtInAiDiagnosticsService.js';
 import { detectLiveVfsStrategy } from '../../../offscreen/opfsCapabilities.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
+import { retryWithExponentialBackoff } from '../../utils/retry.js';
+import { getDebugMode } from './debugModeStore.js';
+
+export interface ProviderDetail {
+  provider: string;
+  model: string | undefined;
+  label: string;
+  baseUrl?: string;
+  apiKey?: string;
+}
 
 export interface DiagnosticsSnapshot {
   storage: { bytesUsedKb: string; savedUrls: string };
@@ -39,6 +50,10 @@ export interface DiagnosticsSnapshot {
   builtInAi: BuiltInAiDiagnosticsResult | null;
   obsidian: { protocol: string; port: string; apiKey: string; dailyPath: string };
   aiProviders: Array<{ provider: string; model: string | undefined; label: string }>;
+  aiProviderDetails: ProviderDetail[];
+  extInfo: { version: string; name: string };
+  divergence: { dashboardDetectsOpfs: boolean; offscreenUsesFallback: boolean };
+  settingsLoadFailed: boolean;
   debugMode: boolean;
 }
 
@@ -49,6 +64,8 @@ export interface DiagnosticsCollectorDeps {
   checkBuiltInAiAvailability?: typeof checkBuiltInAiAvailability;
   getStorageBytesInUse?: () => Promise<number>;
   getDebugMode?: () => Promise<boolean>;
+  getManifest?: () => { version: string; name: string };
+  detectVfsStrategy?: () => { strategy: string };
 }
 
 /**
@@ -60,23 +77,31 @@ export class DiagnosticsCollector {
 
   async collect(): Promise<DiagnosticsSnapshot> {
     const getSettingsFn = this.deps.getSettings ?? getSettings;
-    const getSqliteStatusFn = this.deps.getSqliteStatus ?? getSqliteStatus;
+    const getSqliteStatusFn: typeof getSqliteStatus = this.deps.getSqliteStatus ?? (async () =>
+      retryWithExponentialBackoff(() => getSqliteStatus(), { label: 'diagSqliteStatus', maxAttempts: 4 })
+    );
     const getLogCountFn = this.deps.getLogCount ?? getLogCount;
     const checkBuiltInAiFn = this.deps.checkBuiltInAiAvailability ?? checkBuiltInAiAvailability;
     const getBytesInUse = this.deps.getStorageBytesInUse ?? (() => chrome.storage.local.getBytesInUse(null));
-    const getDebugMode = this.deps.getDebugMode ?? (async () => {
-      const r = await chrome.storage.local.get('debugMode') as Record<string, unknown>;
-      return Boolean(r['debugMode']);
+    const getDebugModeFn = this.deps.getDebugMode ?? getDebugMode;
+    const getManifestFn = this.deps.getManifest ?? (() => {
+      try { return chrome.runtime.getManifest(); } catch { return { version: 'unknown', name: 'unknown' }; }
     });
+    const detectVfsStrategyFn = this.deps.detectVfsStrategy ?? detectLiveVfsStrategy;
+
+    let settingsLoadFailed = false;
 
     // Parallel gathering — faster than sequential awaits in the old panel
     const [settings, sqliteStatus, logCountResult, builtInAiResult, bytesUsed, debugMode] = await Promise.all([
-      getSettingsFn().catch(() => ({} as Record<string, unknown>)),
+      getSettingsFn().catch(() => {
+        settingsLoadFailed = true;
+        return {} as Record<string, unknown>;
+      }),
       getSqliteStatusFn().catch(() => null),
       getLogCountFn().catch(() => ({ error: 'unavailable' } as unknown as Awaited<ReturnType<typeof getLogCount>>)),
       checkBuiltInAiFn().catch(() => null),
       getBytesInUse().catch(() => 0),
-      getDebugMode().catch(() => false),
+      getDebugModeFn().catch(() => false),
     ]);
 
     const s = settings as Record<string, unknown>;
@@ -120,16 +145,52 @@ export class DiagnosticsCollector {
       label: slot.provider,
     }));
 
+    // Per-provider detailed settings (baseUrl, apiKey) for panel rendering
+    const aiProviderDetails: ProviderDetail[] = slots.map((slot: { provider: string; model?: string }) => {
+      const base: ProviderDetail = {
+        provider: slot.provider,
+        model: slot.model as string | undefined,
+        label: slot.provider,
+      };
+      switch (slot.provider) {
+        case 'gemini':
+          base.model = (s[StorageKeys.GEMINI_MODEL] as string) || slot.model as string | undefined;
+          base.apiKey = (s[StorageKeys.GEMINI_API_KEY] as string) || '';
+          break;
+        case 'openai':
+          base.baseUrl = (s[StorageKeys.OPENAI_BASE_URL] as string) || '';
+          base.model = (s[StorageKeys.OPENAI_MODEL] as string) || slot.model as string | undefined;
+          base.apiKey = (s[StorageKeys.OPENAI_API_KEY] as string) || '';
+          break;
+        case 'openai2':
+          base.baseUrl = (s[StorageKeys.OPENAI_2_BASE_URL] as string) || '';
+          base.model = (s[StorageKeys.OPENAI_2_MODEL] as string) || slot.model as string | undefined;
+          base.apiKey = (s[StorageKeys.OPENAI_2_API_KEY] as string) || '';
+          break;
+        case 'lm-studio':
+          base.baseUrl = (s[StorageKeys.LM_STUDIO_BASE_URL] as string) || '';
+          base.model = (s[StorageKeys.LM_STUDIO_MODEL] as string) || slot.model as string | undefined;
+          break;
+        case 'ollama':
+          base.baseUrl = (s[StorageKeys.OLLAMA_BASE_URL] as string) || '';
+          base.model = (s[StorageKeys.OLLAMA_MODEL] as string) || slot.model as string | undefined;
+          break;
+        case 'openai-compatible':
+          base.baseUrl = (s[StorageKeys.PROVIDER_BASE_URL] as string) || '';
+          base.model = (s[StorageKeys.PROVIDER_MODEL] as string) || slot.model as string | undefined;
+          base.apiKey = (s[StorageKeys.PROVIDER_API_KEY] as string) || '';
+          break;
+      }
+      return base;
+    });
+
     // Divergence check (dashboard vs offscreen)
-    // Kept inside collector so the panel doesn't need to know the strategy strings
+    let dashboardDetectsOpfs = false;
     try {
-      const { strategy } = detectLiveVfsStrategy();
-      const dashboardDetectsOpfs = strategy !== 'fallback';
-      const offscreenUsesFallback = sqliteStatus?.fallback ?? false;
-      // Divergence is a derived field, not stored — panel can compute from snapshot if needed
-      void dashboardDetectsOpfs;
-      void offscreenUsesFallback;
-    } catch { /* ignore */ }
+      const { strategy } = detectVfsStrategyFn();
+      dashboardDetectsOpfs = strategy !== 'fallback';
+    } catch { /* detectLiveVfsStrategy may fail */ }
+    const offscreenUsesFallback = sqliteStatus?.fallback ?? false;
 
     return {
       storage: { bytesUsedKb, savedUrls },
@@ -138,6 +199,10 @@ export class DiagnosticsCollector {
       builtInAi: builtInAiResult,
       obsidian: { protocol, port, apiKey, dailyPath },
       aiProviders,
+      aiProviderDetails,
+      extInfo: getManifestFn(),
+      divergence: { dashboardDetectsOpfs, offscreenUsesFallback },
+      settingsLoadFailed,
       debugMode,
     };
   }
