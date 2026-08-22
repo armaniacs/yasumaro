@@ -587,8 +587,8 @@ describe('buildAllowedUrls', () => {
 
     it('includes Obsidian API URLs with default protocol/port', () => {
         const urls = buildAllowedUrls({}, whitelistFn);
-        expect(urls.has('https://127.0.0.1:27123')).toBe(true);
-        expect(urls.has('https://localhost:27123')).toBe(true);
+        expect(urls.has('https://127.0.0.1:27124')).toBe(true);
+        expect(urls.has('https://localhost:27124')).toBe(true);
     });
 
     it('uses custom protocol and port', () => {

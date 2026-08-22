@@ -18,7 +18,6 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| [2026-08-22-03](2026-08-22-03-refactor-settings-repository-adoption.md) ⬜ | 🔴高 (3pt) | 🟢なし | 🔧refactor | SettingsRepository 採用 — getMany 追加とパネルの生キャスト撤去（RICE 120） |
 | [2026-08-22-04](2026-08-22-04-backlog-ai-test-progress-client.md) ⬜ | 🟢低 (1pt) | 🟢なし | 📋backlog | AI 接続テスト進捗 client 抽出 — 第2消費者出現時の引き金付き（RICE 10） |
 
 ---
@@ -45,6 +44,7 @@
 - 2026-08-22-00-backlog-architecture-pass2.md (pass 2 の4件の候補を RICE 213/160/120/10 で優先度付け。01-03 を PBI 化、04 は保留条件付き backlog として配置。なぜなぜ分析4件を完了)
 - 2026-08-22-01-refactor-migration-service-split.md (RICE 213 — migrationService.ts 565行を migration/legacyMigration.ts + migration/opfsRecovery.ts + migration/migrationState.ts に分割。MigrationStatePort で chrome.storage 依存を剥がし InMemory テスト可能に。facade で後方互換維持。67件の移行テスト + 8320テスト成功)
 - 2026-08-22-02-refactor-diagnostics-panel-deepening.md (RICE 160 — diagnosticsPanel 683行→375行。収集は DiagnosticsCollector.collect() の単一 seam に完全集約（extInfo/divergence/settingsLoadFailed 追加、sqlite リトライ内蔵）、操作は diagnosticsActions へ分離、debugMode は debugModeStore port 経由。パネルは getSettings/chrome.storage 直 import ゼロの Snapshot 描画のみ。新規テスト約22件、8342テスト成功)
+- 2026-08-22-03-refactor-settings-repository-adoption.md (RICE 120 — SettingsRepository に `getMany` を追加し `DiagnosticsCollector`/`settingsForm`/`connectionTests` を repository 経由に移行。生キャスト22件を0件に。既定ポートを https+27124、AI_PROVIDER を openai に統一。DESIGN_SPECIFICATIONS.md に settings アクセス指針を追記。8347テスト成功)
 
 ### 2026-08-22 メッセージング seam 整理 + barrel retire 4件 実装完了
 

@@ -33,11 +33,11 @@ Scenario: エラー — storage 失敗時は現行と同一の挙動
 ```
 
 ## 受け入れ基準
-- [ ] `SettingsRepository` に `getMany<K extends StorageKey>(keys: K[]): Promise<Pick<SettingsType, K>>` が追加され、単体テスト（InMemory adapter 越し）がある
-- [ ] diagnosticsPanel（PBI 02 完了後は DiagnosticsCollector）、generalSettingsPanel/settingsForm、connectionTests、statusChecker 相当の主要な読み取り箇所が repository 経由に移行されている
-- [ ] 移行済みファイルでの settings 関連キャスト（`as string|number|boolean` + StorageKeys インデックス）が0件
-- [ ] デフォルト値の重複が解消され、schema/defaults は `storage/types.ts` または settingsStore 側の一元ソースのみを参照する
-- [ ] `npm run type-check` / `npm test` がパスし、既存 settingsStore 系テストが無傷
+- [x] `SettingsRepository` に `getMany<K extends StorageKey>(keys: K[]): Promise<Pick<SettingsType, K>>` が追加され、単体テスト（InMemory adapter 越し）がある
+- [x] diagnosticsPanel（PBI 02 完了後は DiagnosticsCollector）、generalSettingsPanel/settingsForm、connectionTests、statusChecker 相当の主要な読み取り箇所が repository 経由に移行されている
+- [x] 移行済みファイルでの settings 関連キャスト（`as string|number|boolean` + StorageKeys インデックス）が0件
+- [x] デフォルト値の重複が解消され、schema/defaults は `storage/types.ts` または settingsStore 側の一元ソースのみを参照する
+- [x] `npm run type-check` / `npm test` がパスし、既存 settingsStore 系テストが無傷
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -88,8 +88,8 @@ grep -rln "(settings\[StorageKeys\..*\] as " src/dashboard/ --include="*.ts" | g
 - connectionTests はフォーム未保存値（input 要素の現在値）と保存済み settings を混在させる。repository 移行は「保存済み値」側のみに限定し、フォーム値の読み取りは DOM のままにすること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（getMany の境界値）
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了（移行済みファイルのキャスト0件）
-- [ ] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の settings アクセス指針に getMany を追記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす（getMany の境界値）
+- [x] コードレビュー完了
+- [x] リファクタリング完了（移行済みファイルのキャスト0件）
+- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の settings アクセス指針に getMany を追記）

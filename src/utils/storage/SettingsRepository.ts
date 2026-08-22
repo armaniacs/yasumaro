@@ -117,6 +117,34 @@ export class SettingsRepository {
     return settings[key];
   }
 
+  /**
+   * Bulk typed get — fetches multiple keys in a single storage call.
+   * Missing keys are filled from DEFAULT_SETTINGS.
+   */
+  async getMany<K extends StorageKey>(keys: readonly K[]): Promise<Pick<SettingsType, K>> {
+    const unique = [...new Set(keys)];
+    if (unique.length === 0) return {} as Pick<SettingsType, K>;
+
+    if (this.adapter instanceof InMemoryStorageAdapter) {
+      const result = await this.adapter.get(['settings']);
+      const settings = (result['settings'] as SettingsType) || ({} as SettingsType);
+      const { DEFAULT_SETTINGS } = await import('./defaults.js');
+      const merged = { ...(DEFAULT_SETTINGS as unknown as SettingsType), ...settings };
+      const out = {} as Record<string, unknown>;
+      for (const k of unique) out[k] = merged[k];
+      return out as Pick<SettingsType, K>;
+    }
+
+    // Chrome path: single getSettings() call (30s TTL cache) + fill missing
+    const settings = (await getSettings()) as SettingsType;
+    const { DEFAULT_SETTINGS } = await import('./defaults.js');
+    const out = {} as Record<string, unknown>;
+    for (const k of unique) {
+      out[k] = k in settings ? settings[k] : (DEFAULT_SETTINGS as unknown as SettingsType)[k];
+    }
+    return out as Pick<SettingsType, K>;
+  }
+
   async getAll(): Promise<SettingsType> {
     if (this.adapter instanceof InMemoryStorageAdapter) {
       const result = await this.adapter.get(['settings']);
@@ -163,5 +191,7 @@ export class SettingsRepository {
     });
   }
 }
+
+export type SettingsReader = Pick<SettingsRepository, 'getMany' | 'getAll'>;
 
 export const settingsRepository = new SettingsRepository();

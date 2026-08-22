@@ -11,7 +11,7 @@ export type ObsidianProtocol = 'http' | 'https';
 
 const MIN_PORT = 1;
 const MAX_PORT = 65535;
-const DEFAULT_PORT = '27123';
+const DEFAULT_PORT = '27124';
 const DEFAULT_HOST = '127.0.0.1';
 
 /**

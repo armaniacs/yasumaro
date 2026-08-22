@@ -80,7 +80,7 @@ export function isDomainInWhitelist(url: string): boolean {
 export function buildAllowedUrls(settings: Settings): Set<string> {
     const allowedUrls = new Set<string>();
     const protocol = (settings[StorageKeys.OBSIDIAN_PROTOCOL] as string) || 'https';
-    const port = (settings[StorageKeys.OBSIDIAN_PORT] as string) || '27123';
+    const port = (settings[StorageKeys.OBSIDIAN_PORT] as string) || '27124';
     try {
         allowedUrls.add(normalizeUrl(`${protocol}://127.0.0.1:${port}`));
     } catch (e) {

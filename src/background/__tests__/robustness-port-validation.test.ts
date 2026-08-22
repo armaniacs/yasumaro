@@ -173,7 +173,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
   });
 
   describe('予約されたポート番号', () => {
-    it('ポート番号が未指定の場合はデフォルト値（27123）を使用すべき', async () => {
+    it('ポート番号が未指定の場合はデフォルト値（27124）を使用すべき', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
       storageSettings.getSettings.mockResolvedValue({
@@ -184,10 +184,10 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       });
 
       const config = await obsidianClient._getConfig();
-      expect(config.baseUrl).toContain(':27123');
+      expect(config.baseUrl).toContain(':27124');
     });
 
-    it('ポート番号が空文字列の場合はデフォルト値（27123）を使用すべき', async () => {
+    it('ポート番号が空文字列の場合はデフォルト値（27124）を使用すべき', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
       storageSettings.getSettings.mockResolvedValue({
@@ -198,7 +198,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       });
 
       const config = await obsidianClient._getConfig();
-      expect(config.baseUrl).toContain(':27123');
+      expect(config.baseUrl).toContain(':27124');
     });
   });
 
@@ -288,7 +288,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
  *    - addLogを使用して警告ログを出力
  *
  * 3. デフォルト値の使用
- *    - ポート番号が未指定または空の場合はデフォルト値（27123）を使用
+ *    - ポート番号が未指定または空の場合はデフォルト値（27124）を使用
  *
  * 4. 設定時の検証
  *    - 設定保存時にポート番号を検証

@@ -1,21 +1,35 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DiagnosticsCollector } from '../DiagnosticsCollector.js';
-import { StorageKeys } from '../../../../utils/storage/types.js';
+import { StorageKeys, type StorageKey, type Settings } from '../../../../utils/storage/types.js';
+import type { SettingsRepository } from '../../../../utils/storage/SettingsRepository.js';
 
 vi.mock('../../../dashboardSqliteService.js', () => ({
   getSqliteStatus: vi.fn(),
   getLogCount: vi.fn(),
 }));
 
+function mockGetMany(partial: Partial<Settings>): SettingsRepository['getMany'] {
+  return vi.fn(async (keys: readonly StorageKey[]) => {
+    const out: Record<string, unknown> = {};
+    for (const k of keys) {
+      out[k] = partial[k as keyof Settings];
+    }
+    return out as Pick<Settings, typeof keys[number]>;
+  });
+}
+
+function baseDeps() {
+  return {
+    getLogCount: vi.fn().mockResolvedValue({ data: 1 }),
+    checkBuiltInAiAvailability: vi.fn().mockResolvedValue(null),
+    getStorageBytesInUse: vi.fn().mockResolvedValue(0),
+    getDebugMode: vi.fn().mockResolvedValue(false),
+    getManifest: vi.fn(() => ({ version: '0.0.0', name: 'collector-test' })),
+  };
+}
+
 describe('DiagnosticsCollector — deep module interface', () => {
   it('collect() returns typed snapshot via single seam', async () => {
-    const mockGetSettings = vi.fn().mockResolvedValue({
-      OBSDIAN_PROTOCOL: 'https',
-      OBSDIAN_PORT: '27124',
-      OBSDIAN_API_KEY: 'test-key',
-      OBSDIAN_DAILY_PATH: 'daily',
-      AI_PROVIDER_PRIORITY_LIST: [{ provider: 'gemini', model: 'gemini-2.0' }],
-    });
     const mockGetSqliteStatus = vi.fn().mockResolvedValue({
       initialized: true,
       path: 'OPFS:/test.db',
@@ -30,7 +44,13 @@ describe('DiagnosticsCollector — deep module interface', () => {
     const mockGetDebug = vi.fn().mockResolvedValue(false);
 
     const collector = new DiagnosticsCollector({
-      getSettings: mockGetSettings as any,
+      getMany: mockGetMany({
+        [StorageKeys.OBSIDIAN_PROTOCOL]: 'https',
+        [StorageKeys.OBSIDIAN_PORT]: '27124',
+        [StorageKeys.OBSIDIAN_API_KEY]: 'test-key',
+        [StorageKeys.OBSIDIAN_DAILY_PATH]: 'daily',
+        [StorageKeys.AI_PROVIDER_PRIORITY_LIST]: [{ provider: 'gemini', model: 'gemini-2.0' }],
+      }),
       getSqliteStatus: mockGetSqliteStatus as any,
       getLogCount: mockGetLogCount as any,
       checkBuiltInAiAvailability: mockCheckBuiltInAi as any,
@@ -53,18 +73,13 @@ describe('DiagnosticsCollector — deep module interface', () => {
   });
 
   it('handles partial failures without crashing — locality', async () => {
-    const mockGetSettings = vi.fn().mockResolvedValue({});
-    const mockGetSqliteStatus = vi.fn().mockRejectedValue(new Error('SQLite unavailable'));
-    const mockGetLogCount = vi.fn().mockResolvedValue({ error: 'unavailable' });
-    const mockCheckBuiltInAi = vi.fn().mockRejectedValue(new Error('AI check failed'));
-
     const collector = new DiagnosticsCollector({
-      getSettings: mockGetSettings as any,
-      getSqliteStatus: mockGetSqliteStatus as any,
-      getLogCount: mockGetLogCount as any,
-      checkBuiltInAiAvailability: mockCheckBuiltInAi as any,
-      getStorageBytesInUse: vi.fn().mockResolvedValue(0) as any,
-      getDebugMode: vi.fn().mockResolvedValue(false) as any,
+      getMany: mockGetMany({}),
+      getSqliteStatus: vi.fn().mockRejectedValue(new Error('SQLite unavailable')),
+      getLogCount: vi.fn().mockResolvedValue({ error: 'unavailable' }),
+      checkBuiltInAiAvailability: vi.fn().mockRejectedValue(new Error('AI check failed')),
+      getStorageBytesInUse: vi.fn().mockResolvedValue(0),
+      getDebugMode: vi.fn().mockResolvedValue(false),
     });
 
     const snapshot = await collector.collect();
@@ -78,12 +93,12 @@ describe('DiagnosticsCollector — deep module interface', () => {
 
   it('collect() is the test surface — no chrome.* mock needed for collector logic', async () => {
     const collector = new DiagnosticsCollector({
-      getSettings: vi.fn().mockResolvedValue({}) as any,
-      getSqliteStatus: vi.fn().mockResolvedValue(null) as any,
-      getLogCount: vi.fn().mockResolvedValue({ error: 'x' }) as any,
-      checkBuiltInAiAvailability: vi.fn().mockResolvedValue(null) as any,
-      getStorageBytesInUse: vi.fn().mockResolvedValue(0) as any,
-      getDebugMode: vi.fn().mockResolvedValue(false) as any,
+      getMany: mockGetMany({}),
+      getSqliteStatus: vi.fn().mockResolvedValue(null),
+      getLogCount: vi.fn().mockResolvedValue({ error: 'x' }),
+      checkBuiltInAiAvailability: vi.fn().mockResolvedValue(null),
+      getStorageBytesInUse: vi.fn().mockResolvedValue(0),
+      getDebugMode: vi.fn().mockResolvedValue(false),
     });
 
     const snapshot = await collector.collect();
@@ -94,20 +109,12 @@ describe('DiagnosticsCollector — deep module interface', () => {
 });
 
 describe('DiagnosticsCollector — snapshot extensions', () => {
-  const baseDeps = () => ({
-    getLogCount: vi.fn().mockResolvedValue({ data: 1 }),
-    checkBuiltInAiAvailability: vi.fn().mockResolvedValue(null),
-    getStorageBytesInUse: vi.fn().mockResolvedValue(0),
-    getDebugMode: vi.fn().mockResolvedValue(false),
-    getManifest: vi.fn(() => ({ version: '0.0.0', name: 'collector-test' })),
-  });
-
-  it('flags settingsLoadFailed when getSettings rejects and falls back to defaults', async () => {
+  it('flags settingsLoadFailed when getMany rejects and falls back to defaults', async () => {
     const collector = new DiagnosticsCollector({
       ...baseDeps(),
-      getSettings: vi.fn().mockRejectedValue(new Error('storage broken')),
+      getMany: vi.fn().mockRejectedValue(new Error('storage broken')),
       getSqliteStatus: vi.fn().mockResolvedValue(null),
-    } as any);
+    });
 
     const snapshot = await collector.collect();
 
@@ -116,20 +123,20 @@ describe('DiagnosticsCollector — snapshot extensions', () => {
     expect(snapshot.obsidian.port).toBe('27124');
     expect(snapshot.obsidian.apiKey).toBe('');
     expect(snapshot.aiProviderDetails.length).toBe(1);
-    expect(snapshot.aiProviderDetails[0]?.provider).toBe('gemini');
+    expect(snapshot.aiProviderDetails[0]?.provider).toBe('openai');
   });
 
   it('reports settingsLoadFailed false when settings load succeeds', async () => {
     const collector = new DiagnosticsCollector({
       ...baseDeps(),
-      getSettings: vi.fn().mockResolvedValue({
+      getMany: mockGetMany({
         [StorageKeys.OBSIDIAN_PROTOCOL]: 'http',
         [StorageKeys.AI_PROVIDER]: 'ollama',
         [StorageKeys.OLLAMA_BASE_URL]: 'http://127.0.0.1:11434',
         [StorageKeys.OLLAMA_MODEL]: 'llama3',
       }),
       getSqliteStatus: vi.fn().mockResolvedValue(null),
-    } as any);
+    });
 
     const snapshot = await collector.collect();
 
@@ -143,10 +150,10 @@ describe('DiagnosticsCollector — snapshot extensions', () => {
   it('collects extInfo from injected getManifest', async () => {
     const collector = new DiagnosticsCollector({
       ...baseDeps(),
-      getSettings: vi.fn().mockResolvedValue({}),
+      getMany: mockGetMany({}),
       getSqliteStatus: vi.fn().mockResolvedValue(null),
       getManifest: vi.fn(() => ({ version: '9.9.9', name: 'Yasumaro Test' })),
-    } as any);
+    });
 
     const snapshot = await collector.collect();
 
@@ -160,12 +167,12 @@ describe('DiagnosticsCollector — snapshot extensions', () => {
   ])('derives divergence for strategy=$strategy fallback=$fallback', async ({ strategy, fallback, dash, offscreen }) => {
     const collector = new DiagnosticsCollector({
       ...baseDeps(),
-      getSettings: vi.fn().mockResolvedValue({}),
+      getMany: mockGetMany({}),
       getSqliteStatus: vi.fn().mockResolvedValue({
         initialized: true, path: '/x.db', fallback, fts5: true,
       }),
       detectVfsStrategy: vi.fn(() => ({ strategy })),
-    } as any);
+    });
 
     const snapshot = await collector.collect();
 
@@ -178,7 +185,7 @@ describe('DiagnosticsCollector — snapshot extensions', () => {
   it('maps per-provider settings into aiProviderDetails', async () => {
     const collector = new DiagnosticsCollector({
       ...baseDeps(),
-      getSettings: vi.fn().mockResolvedValue({
+      getMany: mockGetMany({
         [StorageKeys.AI_PROVIDER_PRIORITY_LIST]: [{ provider: 'openai' }, { provider: 'lm-studio' }],
         [StorageKeys.OPENAI_BASE_URL]: 'https://api.openai.com/v1',
         [StorageKeys.OPENAI_MODEL]: 'gpt-4o-mini',
@@ -187,7 +194,7 @@ describe('DiagnosticsCollector — snapshot extensions', () => {
         [StorageKeys.LM_STUDIO_MODEL]: 'qwen',
       }),
       getSqliteStatus: vi.fn().mockResolvedValue(null),
-    } as any);
+    });
 
     const snapshot = await collector.collect();
 
@@ -210,8 +217,8 @@ describe('DiagnosticsCollector — snapshot extensions', () => {
     try {
       const collector = new DiagnosticsCollector({
         ...baseDeps(),
-        getSettings: vi.fn().mockResolvedValue({}),
-      } as any);
+        getMany: mockGetMany({}),
+      });
 
       const promise = collector.collect();
       await vi.runAllTimersAsync();

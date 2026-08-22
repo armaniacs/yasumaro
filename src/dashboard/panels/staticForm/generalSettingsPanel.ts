@@ -210,7 +210,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       document.getElementById('save')?.addEventListener('click', handleSaveOnly);
       document.getElementById('testObsidianBtn')?.addEventListener('click', handleTestObsidian);
       document.getElementById('testAiBtn')?.addEventListener('click', handleTestAi);
-      container.querySelector('#testLocalMarkdownBtnBottom')?.addEventListener('click', handleTestLocalMarkdown);
+      container.querySelector('#testLocalMarkdownBtnBottom')?.addEventListener('click', () => handleTestLocalMarkdown());
       document.getElementById('purgeNowBtn')?.addEventListener('click', handlePurgeNow);
       document.getElementById('contentPurgeNowBtn')?.addEventListener('click', handleContentPurgeNow);
     },

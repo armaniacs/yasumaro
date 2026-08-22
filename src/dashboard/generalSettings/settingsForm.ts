@@ -8,8 +8,8 @@
  * the module it was meant to replace.
  */
 
-import { getSettings } from '../../utils/storage/settingsStore.js';
 import { StorageKeys, ProviderSlot } from '../../utils/storage/types.js';
+import { settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
 import { loadSettingsToInputs, loadLocalMarkdownExportTiming } from '../../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../utils/settingsSchemas.js';
 import { getMessage } from '../../utils/i18n.js';
@@ -80,13 +80,13 @@ export function applyProviderPrioritySlots(slots: ProviderSlot[]): void {
   }
 }
 
-export async function loadGeneralSettings(): Promise<void> {
-  const settings = await getSettings();
+export async function loadGeneralSettings(repo: SettingsReader = settingsRepository): Promise<void> {
+  const settings = await repo.getAll();
   loadSettingsToInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body, settings, GENERAL_SETTINGS_SCHEMA);
   loadLocalMarkdownExportTiming(settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING]);
 
   // Apply provider priority slots and update multi-provider visibility
-  const prioritySlots = (settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] as ProviderSlot[]) ?? [];
+  const prioritySlots = settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] ?? [];
   applyProviderPrioritySlots(prioritySlots);
   const selectedProviders = [
     prioritySlots[0]?.provider ?? '',
@@ -120,9 +120,9 @@ export async function loadGeneralSettings(): Promise<void> {
   // Load openai-compatible provider selection
   const selectedProviderInfoDiv = document.getElementById('selectedProviderInfo') as HTMLElement | null;
   const providerInfoDisplayDiv = document.getElementById('providerInfoDisplay') as HTMLElement | null;
-  const providerType = settings[StorageKeys.PROVIDER_TYPE] as string;
-  const providerBaseUrl = settings[StorageKeys.PROVIDER_BASE_URL] as string;
-  if (providerType && providerBaseUrl && selectedProviderInfoDiv && providerInfoDisplayDiv) {
+    const providerType = settings[StorageKeys.PROVIDER_TYPE];
+    const providerBaseUrl = settings[StorageKeys.PROVIDER_BASE_URL];
+    if (providerType && providerBaseUrl && selectedProviderInfoDiv && providerInfoDisplayDiv) {
     selectedProviderInfoDiv.classList.remove('hidden');
     providerInfoDisplayDiv.textContent = `${providerType} (${providerBaseUrl})`;
   } else if (selectedProviderInfoDiv) {

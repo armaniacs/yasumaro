@@ -10,8 +10,8 @@
  */
 
 // eslint-disable-next-line local/require-sanitized-markdown -- test data with hardcoded markdown, not user input
-import { getSettings } from '../../utils/storage/settingsStore.js';
 import { StorageKeys } from '../../utils/storage/types.js';
+import { settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
 import { getMessage } from '../../utils/i18n.js';
 import { type AiTestProgress, type MultiProviderTestResult } from '../../background/ai/AIService.js';
 import { PROVIDER_LABELS } from '../../utils/aiProviderLabels.js';
@@ -370,7 +370,7 @@ export async function handleTestAi(): Promise<void> {
   }
 }
 
-export async function handleTestLocalMarkdown(): Promise<void> {
+export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRepository): Promise<void> {
   const testLocalMarkdownBtn = document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement | null;
   const statusTopDiv = document.getElementById('statusTop') as HTMLElement | null;
   if (!testLocalMarkdownBtn || !statusTopDiv) return;
@@ -395,7 +395,7 @@ export async function handleTestLocalMarkdown(): Promise<void> {
     refreshLocalMarkdownScheduler();
 
     // Check if enabled
-    const settings = await getSettings();
+    const settings = await repo.getMany([StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED, StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]);
     const localExportEnabled = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED];
     if (!localExportEnabled) {
       statusTopDiv.textContent = getMessage('testLocalMarkdownDisabled') || 'ローカルMarkdown書き出しが無効です。まず有効にしてください。';
@@ -411,7 +411,7 @@ export async function handleTestLocalMarkdown(): Promise<void> {
     const testContent = `# ${date}\n\n- ${time} [Yasumaro Test](https://example.com)\n    - This is a test entry for local Markdown export. If you can see this file, the export is working correctly!`;
 
     // Download test file
-    const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
+    const exportPath = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] ?? 'Yasumaro';
     const blob = new Blob([testContent], { type: 'text/markdown' });
     const blobUrl = URL.createObjectURL(blob);
 
