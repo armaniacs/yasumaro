@@ -18,17 +18,8 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| [2026-08-21-01](2026-08-21-01-refactor-collapse-message-handler-registry-shadow.md) ⬜ | 🟢低 (2pt) | 🟢なし | 🔧refactor | MessageHandlerRegistry shadow collapse — MessageRouter 1 seam に集約（RICE 1200） |
-| [2026-08-21-02](2026-08-21-02-refactor-remove-redundant-offscreen-mutex.md) ⬜ | 🟢低 (1pt) | 🟡軽微 | 🔧refactor | offscreen SqliteWriteMutex 削除 — transport Mutex に集約（RICE 640） |
-| [2026-08-21-03](2026-08-21-03-refactor-deepen-sqlite-client-interface.md) ⬜ | 🟡中 (3pt) | 🟡軽微 | 🔧refactor | SqliteClient 20メソッドの shallow interface を 3ドメインに deepen（RICE 160） |
-| [2026-08-21-04](2026-08-21-04-refactor-retire-storage-barrel.md) ⬜ | 🟡中 (3pt) | 🟢なし | 🔧refactor | storage.ts barrel retire — 50箇所を直接 import に移行、lint seam で強制（RICE 100） |
-| [2026-08-21-05](2026-08-21-05-refactor-close-background-dashboard-seam-leak.md) ⬜ | 🟢低 (1pt) | 🟢なし | 🔧refactor | background→dashboard seam leak 解消 — markdown formatting を utils に集約（RICE 12.5） |
-| [2026-08-21-00](2026-08-21-00-backlog.md) ⬜ | — | — | 📋backlog | アーキテクチャ深掘り5件のRICEバックログ + なぜなぜ分析 |
-| [2026-08-22-01](2026-08-22-01-refactor-migration-service-split.md) ⬜ | 🔴高 (3pt) | 🟢なし | 🔧refactor | MigrationService 分割 — LegacyMigration/OpfsRecovery + 状態マシンの port 化（RICE 213） |
-| [2026-08-22-02](2026-08-22-02-refactor-diagnostics-panel-deepening.md) ⬜ | 🔴高 (3pt) | 🟡軽微 | 🔧refactor | diagnosticsPanel 深掘り — collect() → Snapshot → render の1 seam 化（RICE 160） |
 | [2026-08-22-03](2026-08-22-03-refactor-settings-repository-adoption.md) ⬜ | 🔴高 (3pt) | 🟢なし | 🔧refactor | SettingsRepository 採用 — getMany 追加とパネルの生キャスト撤去（RICE 120） |
 | [2026-08-22-04](2026-08-22-04-backlog-ai-test-progress-client.md) ⬜ | 🟢低 (1pt) | 🟢なし | 📋backlog | AI 接続テスト進捗 client 抽出 — 第2消費者出現時の引き金付き（RICE 10） |
-| [2026-08-22-00](2026-08-22-00-backlog-architecture-pass2.md) ⬜ | — | — | 📋backlog | アーキテクチャ深掘り pass2 4件のRICEバックログ + なぜなぜ分析 |
 
 ---
 
@@ -48,6 +39,20 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-22 アーキテクチャ深掘り pass2 レジストリ完成 + MigrationService 分割
+
+- 2026-08-22-00-backlog-architecture-pass2.md (pass 2 の4件の候補を RICE 213/160/120/10 で優先度付け。01-03 を PBI 化、04 は保留条件付き backlog として配置。なぜなぜ分析4件を完了)
+- 2026-08-22-01-refactor-migration-service-split.md (RICE 213 — migrationService.ts 565行を migration/legacyMigration.ts + migration/opfsRecovery.ts + migration/migrationState.ts に分割。MigrationStatePort で chrome.storage 依存を剥がし InMemory テスト可能に。facade で後方互換維持。67件の移行テスト + 8320テスト成功)
+- 2026-08-22-02-refactor-diagnostics-panel-deepening.md (RICE 160 — diagnosticsPanel 683行→375行。収集は DiagnosticsCollector.collect() の単一 seam に完全集約（extInfo/divergence/settingsLoadFailed 追加、sqlite リトライ内蔵）、操作は diagnosticsActions へ分離、debugMode は debugModeStore port 経由。パネルは getSettings/chrome.storage 直 import ゼロの Snapshot 描画のみ。新規テスト約22件、8342テスト成功)
+
+### 2026-08-22 メッセージング seam 整理 + barrel retire 4件 実装完了
+
+- 2026-08-21-01-refactor-collapse-message-handler-registry-shadow.md (RICE 1200 — `MessageHandlerRegistry`/`createMessageHandlerRegistry` を削除し `MessageRouter.dispatch` の1 seam に集約。createBackgroundServices の二重 deps リテラルを解消、messageHandler を router 必須の単一パス化、`as unknown as` cast を observable accessor（getHandler/getTrustLevel/getRegisteredTypes）で全廃。8320テスト成功)
+- 2026-08-21-02-refactor-remove-redundant-offscreen-mutex.md (RICE 640 — `SqliteWriteMutex` クラスと手作りキューを削除し、`ChromeOffscreenTransport.requestQueue: Mutex` のみで直列化を担保。transport の maxQueueSize・timeout で back-pressure を可視化。type-check / 8327テスト成功)
+- 2026-08-21-04-refactor-retire-storage-barrel.md (RICE 100 — storage.ts barrel の production 参照76箇所（静的75+動的1）を全て所有モジュールの直接 import に移行。lint 警告58件→0件。テストの barrel mock は importOriginal マージ形式のサブモジュール mock へ展開。barrel は @deprecated shim として維持。8320テスト成功)
+- 2026-08-21-05-refactor-close-background-dashboard-seam-leak.md (RICE 12.5 — `formatEntriesToMarkdown` を `dashboard/obsidianFormatter.ts` から `utils/markdownFormatter.ts` に移動。`dashboard/obsidianFormatter.ts` を薄い re-export に縮小。`deps.ts` の import を utils に変更。background→dashboard の seam leak を解消。8327テスト成功)
+- 2026-08-21-03-refactor-deepen-sqlite-client-interface.md (RICE 160 — SqliteClient を query/mutate/maintain/getStatus の4ドメインに deep 化。旧 20 メソッドのラッパーは後方互換で残存し委譲。createSqliteClientDeps を3ドメイン deps に更新。13ファイルのテスト mock を新 core メソッドに移行。8320テスト成功)
 
 ### 2026-08-21 Architecture Deepening 5件 実装完了（RICE 優先度順）
 
