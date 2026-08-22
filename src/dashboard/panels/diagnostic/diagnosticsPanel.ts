@@ -182,6 +182,8 @@ function renderAiSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): voi
 function renderSqliteSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {
   if (!el) return;
 
+  el.replaceChildren();
+
   const st = snap.sqlite;
   if (!st) {
     el.textContent = getMessage('diagSqliteCheckFailed') || 'Failed to check SQLite status.';
