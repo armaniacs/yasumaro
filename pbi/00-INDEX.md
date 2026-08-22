@@ -58,6 +58,10 @@
 - 2026-08-23-11-backlog-sbom-compliance-verification.md (RICE 1 backlog — `sbom.json` はCycloneDX 1.6/644 components/ `$schema` 正常。`validate-json.mjs` で準拠検証をCI化。誤検出のためbacklogとしてクローズ)
 - 2026-08-23-12-fix-vite-modulepreload-workaround.md (RICE 6.25 — `wxt.config.ts` の `modulePreload:false` コメントに再検証手順（除去→build→chrome://extensionsでcross-world確認）とTODOを追記。wxt/vite major bump時に再検証)
 
+### 2026-08-23 release スクリプト パス解決バグ修正完了
+
+- 2026-08-23-13-fix-release-script-path-resolution.md (`check-release-branding.js` が `../../..`（3階層）で `.kilo/.github/workflows/release.yml` を参照していたバグを修正。`../../../..`（4階層）でプロジェクトルートの `release.yml` を指すよう変更。exit 0/1/2 の検証済み。`generate-release-notes.js` は元から `../../../..` で正しいため変更なし。未コミット)
+
 ### 2026-08-23 aiTestProgressClient 抽出完了
 
 - 2026-08-22-04-backlog-ai-test-progress-client.md (RICE 10 — connectionTests.ts が450行トリガーに接近（435行、余裕15行）したため着手。listener登録・shapeガード・runId相関・timeoutを`src/dashboard/aiTestProgressClient.ts`（deep module、新規テスト8件）へ抽出し、connectionTests.tsを435行→404行に削減。第2消費者トリガー（popup/diagnosticsPanel）は2026-08-23のADRで却下済みのため対象外化。type-check / 1889テスト全パス)
