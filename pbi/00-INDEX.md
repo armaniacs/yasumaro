@@ -19,6 +19,7 @@
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
 | [2026-08-22-04](2026-08-22-04-backlog-ai-test-progress-client.md) ⬜ | 🟢低 (1pt) | 🟢なし | 📋backlog | AI 接続テスト進捗 client 抽出 — 第2消費者出現時の引き金付き（RICE 10） |
+| [2026-08-22-05](2026-08-22-05-refactor-background-settings-repository-adoption.md) 🔶 | 🟢低 (1pt) | 🟢なし | 🔧refactor | background 側 SettingsRepository 採用 — RemoteAIService を起点（RICE 60） |
 
 ---
 
