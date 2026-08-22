@@ -75,6 +75,9 @@ describe('MigrationService', () => {
     queryResult: ReturnType<typeof vi.fn>;
     updateResult: ReturnType<typeof vi.fn>;
     getStatus: ReturnType<typeof vi.fn>;
+    query: ReturnType<typeof vi.fn>;
+    mutate: ReturnType<typeof vi.fn>;
+    maintain: ReturnType<typeof vi.fn>;
   };
   let mockStorage: Record<string, unknown>;
 
@@ -111,6 +114,15 @@ describe('MigrationService', () => {
       queryResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
       updateResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
       getStatus: vi.fn().mockResolvedValue({ fallback: false, initialized: true }),
+      query: vi.fn().mockImplementation((op: any) => {
+        return sqliteClient.queryResult(op);
+      }),
+      mutate: vi.fn().mockImplementation((op: any) => {
+        if (op.type === 'insertBatch') return sqliteClient.insertBatchResult(op.records);
+        if (op.type === 'update') return sqliteClient.updateResult(op.id, op.changes);
+        return Promise.resolve({ success: true, data: undefined });
+      }),
+      maintain: vi.fn().mockResolvedValue({ success: true, data: undefined }),
     };
     service = new MigrationService(sqliteClient as any);
   });

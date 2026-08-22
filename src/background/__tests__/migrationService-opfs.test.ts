@@ -45,6 +45,9 @@ describe('PBI-25: OPFS Recovery Migration', () => {
     let mockSqliteClient: {
         insertBatchResult: ReturnType<typeof vi.fn>;
         getStatus: ReturnType<typeof vi.fn>;
+        query: ReturnType<typeof vi.fn>;
+        mutate: ReturnType<typeof vi.fn>;
+        maintain: ReturnType<typeof vi.fn>;
     };
 
     beforeEach(() => {
@@ -57,6 +60,13 @@ describe('PBI-25: OPFS Recovery Migration', () => {
         mockSqliteClient = {
             insertBatchResult: vi.fn().mockResolvedValue({ success: true, data: { count: 0 } }),
             getStatus: vi.fn().mockResolvedValue({ fallback: false, initialized: true }),
+            query: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
+            mutate: vi.fn().mockImplementation((op: any) => {
+                if (op.type === 'insertBatch') return mockSqliteClient.insertBatchResult(op.records);
+                if (op.type === 'update') return Promise.resolve({ success: true, data: undefined });
+                return Promise.resolve({ success: true, data: undefined });
+            }),
+            maintain: vi.fn().mockResolvedValue({ success: true, data: undefined }),
         };
 
         migrationService = new MigrationService(mockSqliteClient as any);
