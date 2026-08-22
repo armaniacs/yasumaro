@@ -10,10 +10,13 @@
 
 ## 保留条件（トリガー）
 
-以下のいずれかが発生したら本 PBI を着手する:
-1. popup に AI 接続クイックテストを追加する PBI が立つ
-2. diagnosticsPanel 側に TEST_AI 再実行ボタンが要望される
-3. `connectionTests.ts` が450行を超えてさらに膨張する
+以下が発生したら本 PBI を着手する:
+1. `connectionTests.ts` が450行を超えてさらに膨張する
+
+> 旧トリガー「popup へのAI接続クイックテスト追加」「diagnosticsPanel への
+> TEST_AI 再実行ボタン追加」は却下済み（see
+> [2026-08-23-ai-test-progress-client-extraction-rejected.md](../dev-docs/ADR/2026-08-23-ai-test-progress-client-extraction-rejected.md)）。
+> 第2消費者が現れる見込みがなくなったため real seam 成立条件は現状満たせない。
 
 ## BDD受け入れシナリオ（着手時に RED 化する）
 
