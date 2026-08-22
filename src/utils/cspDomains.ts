@@ -58,6 +58,39 @@ export const OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS = [
   'https://nsfw.oisd.nl/*',
 ] as const;
 
+/** Local service ports that host_permissions and CSP connect-src must allow. */
+export const LOCAL_PORTS = [27123, 27124, 11434, 1234] as const;
+
+/** Hosts that pair with LOCAL_PORTS for local service access. */
+const LOCAL_HOSTS = ['127.0.0.1', 'localhost'] as const;
+
+/** Schemes for local service access. */
+const LOCAL_SCHEMES = ['http', 'https'] as const;
+
+/**
+ * Generates manifest `host_permissions` entries for all local service origins.
+ * Produces `schemes × hosts × ports` (2×2×4=16) entries of the form `http://127.0.0.1:27123/*`.
+ */
+export function buildLocalHostPermissions(): string[] {
+  const out: string[] = [];
+  for (const scheme of LOCAL_SCHEMES) {
+    for (const host of LOCAL_HOSTS) {
+      for (const port of LOCAL_PORTS) {
+        out.push(`${scheme}://${host}:${port}/*`);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Generates CSP `connect-src` origins for local services.
+ * Produces `schemes × hosts × ports` (2×2×4=16) origins without trailing `/*`.
+ */
+export function buildLocalConnectSrc(): string[] {
+  return buildLocalHostPermissions().map((p) => p.replace(/\/\*$/, ''));
+}
+
 /**
  * Strips the manifest `/*` suffix from each required + optional host
  * permission, producing the domain list for CSP's connect-src directive.
@@ -66,4 +99,26 @@ export function buildConnectSrcDomains(): string[] {
   return [...AI_PROVIDER_HOST_PERMISSIONS, ...OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS].map(
     (perm) => perm.replace(/\/\*$/, '')
   );
+}
+
+/**
+ * Validates CSP domain list. Throws with descriptive message on first invalid entry.
+ * Checks: non-empty, https:// scheme (for AI domains) or http/https for local, no spaces/quotes/semicolons, URL-parseable.
+ */
+export function validateCspDomains(domains: string[]): void {
+  for (const d of domains) {
+    if (!d || d.trim() === '') throw new Error(`CSP domain validation failed: empty domain`);
+    if (d.includes(' ') || d.includes('\n') || d.includes("'") || d.includes(';')) {
+      throw new Error(`CSP domain validation failed: domain contains forbidden char: "${d}"`);
+    }
+    let url: URL;
+    try {
+      url = new URL(d);
+    } catch {
+      throw new Error(`CSP domain validation failed: not a valid URL: "${d}"`);
+    }
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+      throw new Error(`CSP domain validation failed: unsupported scheme in "${d}"`);
+    }
+  }
 }

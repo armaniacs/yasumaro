@@ -39,6 +39,12 @@ All notable changes to this project will be documented in this file.
 
 ### Refactor
 
+## [6.7.65] - 2026-08-23
+
+### Fixed
+
+### Refactor
+
 ## [6.7.64] - 2026-08-23
 
 ### Fixed

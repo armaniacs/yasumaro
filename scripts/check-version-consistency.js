@@ -32,8 +32,13 @@ export function extractVersion(content, filePath) {
     return match ? match[1] : null;
   }
 
-  // wxt.config.ts: version: '5.1.14'
+  // wxt.config.ts: version: '5.1.14' or pkg.version (SSOT)
   if (filePath.includes('wxt.config.ts')) {
+    if (content.includes('pkg.version')) {
+      const pkgContent = readFileSync(join(ROOT_DIR, 'package.json'), 'utf8');
+      const pkgMatch = pkgContent.match(/"version"\s*:\s*"([^"]+)"/);
+      return pkgMatch ? pkgMatch[1] : null;
+    }
     const match = content.match(/version\s*:\s*['"]([^'"]+)['"]/);
     return match ? match[1] : null;
   }
