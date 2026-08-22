@@ -22,7 +22,7 @@ vi.mock('../../../builtInAiDiagnosticsService.js', () => ({
   startBuiltInAiDownload: vi.fn(),
 }));
 
-import { migrateLogs, cleanupLegacyStorage } from '../../../dashboardSqliteService.js';
+import { runOpfsSpike, migrateLogs, backfillMetadata, cleanupLegacyStorage } from '../../../dashboardSqliteService.js';
 import { showConfirmDialog } from '../../../utils/confirmDialog.js';
 
 function makeElements(): DiagnosticActionElements {
@@ -119,5 +119,115 @@ describe('diagnosticsActions', () => {
 
     els.builtInAiDownloadBtn!.click();
     await vi.waitFor(() => expect(hook).toHaveBeenCalledWith(expect.objectContaining({ status: 'available' })));
+  });
+
+  it('TEST_AI single provider shows success message and class', async () => {
+    vi.mocked(globalThis.chrome.runtime.sendMessage).mockResolvedValue({
+      ai: { success: true, message: 'ok' },
+    });
+    const els = makeElements();
+    createDiagnosticActions(els, { onBuiltInAiDownloaded: vi.fn() });
+
+    els.testAiBtn!.click();
+    await vi.waitFor(() => {
+      expect(els.connectionResult!.textContent).toContain('AI: ✓ ok');
+      expect(els.connectionResult!.className).toContain('diag-success');
+    });
+    expect(els.testAiBtn!.disabled).toBe(false);
+  });
+
+  it('TEST_AI multi-provider renders header and provider rows using real formatters', async () => {
+    vi.mocked(globalThis.chrome.runtime.sendMessage).mockResolvedValue({
+      ai: {
+        success: false,
+        message: 'failed',
+        providers: [
+          { provider: 'gemini', model: 'm', success: true, message: 'a', elapsedMs: 5 },
+          { provider: 'openai', model: null, success: false, message: 'b', elapsedMs: 7 },
+        ],
+      },
+    });
+    const els = makeElements();
+    createDiagnosticActions(els, { onBuiltInAiDownloaded: vi.fn() });
+
+    els.testAiBtn!.click();
+    await vi.waitFor(() => {
+      const result = els.connectionResult!;
+      expect(result.textContent).toContain('AI:');
+      const children = Array.from(result.children) as HTMLElement[];
+      expect(children.length).toBeGreaterThanOrEqual(3);
+      expect(children[0].textContent).toContain('AI:');
+      expect(children[0].className).toContain('diag-bold');
+      expect(children[1].textContent).toContain('Google Gemini (m): a (5ms)');
+      expect(children[2].textContent).toContain('OpenAI Compatible: b (7ms)');
+    });
+    expect(els.testAiBtn!.disabled).toBe(false);
+  });
+
+  it('TEST_SQLITE success with initialized and fts5', async () => {
+    vi.mocked(globalThis.chrome.runtime.sendMessage).mockResolvedValue({
+      success: true,
+      initialized: true,
+      fts5: true,
+    });
+    const els = makeElements();
+    createDiagnosticActions(els, { onBuiltInAiDownloaded: vi.fn() });
+
+    els.testSqliteBtn!.click();
+    await vi.waitFor(() => {
+      expect(els.sqliteResult!.textContent).toContain('FTS5 ✓');
+      expect(els.sqliteResult!.style.color).toBeTruthy();
+    });
+    expect(els.testSqliteBtn!.disabled).toBe(false);
+  });
+
+  it('TEST_SQLITE init failure shows error message', async () => {
+    vi.mocked(globalThis.chrome.runtime.sendMessage).mockResolvedValue({
+      success: true,
+      initialized: false,
+      initError: 'boom',
+    });
+    const els = makeElements();
+    createDiagnosticActions(els, { onBuiltInAiDownloaded: vi.fn() });
+
+    els.testSqliteBtn!.click();
+    await vi.waitFor(() => {
+      expect(els.sqliteResult!.textContent).toContain('boom');
+    });
+    expect(els.testSqliteBtn!.disabled).toBe(false);
+  });
+
+  it('OPFS spike displays strategy and duration', async () => {
+    vi.mocked(runOpfsSpike).mockResolvedValue({
+      data: {
+        passed: true,
+        strategy: 'opfs-sync-worker',
+        durationMs: 12,
+        steps: [{ ok: true, name: 's1', detail: 'd' }],
+      },
+    } as any);
+    const els = makeElements();
+    createDiagnosticActions(els, { onBuiltInAiDownloaded: vi.fn() });
+
+    els.opfsSpikeBtn!.click();
+    await vi.waitFor(() => {
+      expect(els.opfsSpikeResult!.textContent).toContain('strategy=opfs-sync-worker');
+      expect(els.opfsSpikeResult!.textContent).toContain('(12ms)');
+    });
+    expect(els.opfsSpikeBtn!.disabled).toBe(false);
+  });
+
+  it('backfill reports updated and total counts', async () => {
+    vi.mocked(backfillMetadata).mockResolvedValue({
+      data: { updated: 3, total: 9 },
+    } as any);
+    const els = makeElements();
+    createDiagnosticActions(els, { onBuiltInAiDownloaded: vi.fn() });
+
+    els.backfillBtn!.click();
+    await vi.waitFor(() => {
+      expect(els.backfillResult!.textContent).toContain('updated=3/9');
+    });
+    expect(els.backfillBtn!.disabled).toBe(false);
   });
 });
