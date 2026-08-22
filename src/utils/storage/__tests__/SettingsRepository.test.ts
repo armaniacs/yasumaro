@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SettingsRepository, InMemoryStorageAdapter } from '../SettingsRepository.js';
 import { StorageKeys } from '../types.js';
 
@@ -78,6 +78,48 @@ describe('SettingsRepository — deep module via StorageAdapter', () => {
     const memRepo = new SettingsRepository(mem);
     expect(await memRepo.get(StorageKeys.GEMINI_MODEL)).toBe('gemini-pro');
     // InMemory path does not require chrome.storage mock — verified by not touching global chrome
+  });
+
+  it('getMany returns requested keys as a typed subset', async () => {
+    adapter.seed({
+      settings: {
+        [StorageKeys.OBSIDIAN_PROTOCOL]: 'https',
+        [StorageKeys.OBSIDIAN_PORT]: '27124',
+        [StorageKeys.OBSIDIAN_HOST]: 'localhost',
+      },
+    });
+    const subset = await repo.getMany([StorageKeys.OBSIDIAN_PROTOCOL, StorageKeys.OBSIDIAN_PORT]);
+    expect(subset[StorageKeys.OBSIDIAN_PROTOCOL]).toBe('https');
+    expect(subset[StorageKeys.OBSIDIAN_PORT]).toBe('27124');
+    expect(StorageKeys.OBSIDIAN_HOST in subset).toBe(false);
+  });
+
+  it('getMany deduplicates repeated keys', async () => {
+    adapter.seed({ settings: { [StorageKeys.OBSIDIAN_PORT]: '27124' } });
+    const subset = await repo.getMany([StorageKeys.OBSIDIAN_PORT, StorageKeys.OBSIDIAN_PORT]);
+    expect(Object.keys(subset).length).toBe(1);
+    expect(subset[StorageKeys.OBSIDIAN_PORT]).toBe('27124');
+  });
+
+  it('getMany returns empty object for empty key list without touching storage', async () => {
+    const getSpy = vi.spyOn(adapter, 'get');
+    const subset = await repo.getMany([]);
+    expect(subset).toEqual({});
+    expect(getSpy).not.toHaveBeenCalled();
+  });
+
+  it('getMany fills missing keys from DEFAULT_SETTINGS', async () => {
+    adapter.seed({ settings: { [StorageKeys.OBSIDIAN_PROTOCOL]: 'https' } });
+    const subset = await repo.getMany([StorageKeys.OBSIDIAN_PROTOCOL, StorageKeys.OBSIDIAN_PORT]);
+    expect(subset[StorageKeys.OBSIDIAN_PROTOCOL]).toBe('https');
+    expect(subset[StorageKeys.OBSIDIAN_PORT]).toBeDefined();
+    expect(typeof subset[StorageKeys.OBSIDIAN_PORT]).toBe('string');
+  });
+
+  it('getMany prefers stored values over defaults', async () => {
+    adapter.seed({ settings: { [StorageKeys.OBSIDIAN_PORT]: '99999' } });
+    const subset = await repo.getMany([StorageKeys.OBSIDIAN_PORT]);
+    expect(subset[StorageKeys.OBSIDIAN_PORT]).toBe('99999');
   });
 
   it('typed get provides compile-time safety (typo would be error)', async () => {

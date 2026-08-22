@@ -314,15 +314,15 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
 
   describe('_validatePort', () => {
     it('undefinedの場合はデフォルトポートを返す', () => {
-      expect(obsidianClient._validatePort(undefined)).toBe('27123');
+      expect(obsidianClient._validatePort(undefined)).toBe('27124');
     });
 
     it('nullの場合はデフォルトポートを返す', () => {
-      expect(obsidianClient._validatePort(null)).toBe('27123');
+      expect(obsidianClient._validatePort(null)).toBe('27124');
     });
 
     it('空文字列の場合はデフォルトポートを返す', () => {
-      expect(obsidianClient._validatePort('')).toBe('27123');
+      expect(obsidianClient._validatePort('')).toBe('27124');
     });
 
     it('数値でない場合はエラーを投げる', () => {

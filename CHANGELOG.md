@@ -35,6 +35,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- 既定 Obsidian ポートペアを訂正。`DEFAULT_SETTINGS`/`allowedUrls`/`urlWhitelist`/`obsidianConfigValidator` のフォールバックポートを `27123` から `27124` に統一し、`protocol='https' × port='27124'` の整合ペアにした。明示設定ユーザーの保存値は尊重。`storage-defaults.test.ts` / `obsidianClient.test.ts` / `robustness-port-validation.test.ts` / `storageUrls.test.ts` の default 期待値を `27124` に更新。
+
+### Refactor
+
+- `SettingsRepository` に `getMany` を追加し、`DiagnosticsCollector` / `settingsForm` / `connectionTests` を repository 経由に移行。生キャスト（`as string` 等）を0件に削減。`SettingsReader` 型を export し、view model 関数に後置 optional パラメータで注入シームを提供。`InMemoryStorageAdapter` 越しの単体テストを追加。
+
 ## [6.7.63] - 2026-08-21
 
 ### Fixed

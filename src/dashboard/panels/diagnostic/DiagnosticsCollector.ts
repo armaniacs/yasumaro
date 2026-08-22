@@ -13,8 +13,8 @@
  * in-memory stand-ins for tests. Two adapters justify the seam.
  */
 
-import { getSettings } from '../../../utils/storage/settingsStore.js';
-import { StorageKeys } from '../../../utils/storage/types.js';
+import { StorageKeys, type Settings } from '../../../utils/storage/types.js';
+import { settingsRepository, type SettingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { getSqliteStatus, getLogCount } from '../../dashboardSqliteService.js';
 import { diagnoseDeficiencies, type DiagnosticInput } from '../../diagnoseDeficiencies.js';
 import { checkBuiltInAiAvailability, type BuiltInAiDiagnosticsResult } from '../../builtInAiDiagnosticsService.js';
@@ -22,6 +22,11 @@ import { detectLiveVfsStrategy } from '../../../offscreen/opfsCapabilities.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { getDebugMode } from './debugModeStore.js';
+import type { EncryptedData } from '../../../utils/crypto/types.js';
+
+function stringOrEmpty(value: string | EncryptedData | undefined): string {
+  return typeof value === 'string' ? value : '';
+}
 
 export interface ProviderDetail {
   provider: string;
@@ -58,7 +63,7 @@ export interface DiagnosticsSnapshot {
 }
 
 export interface DiagnosticsCollectorDeps {
-  getSettings?: typeof getSettings;
+  getMany?: SettingsRepository['getMany'];
   getSqliteStatus?: typeof getSqliteStatus;
   getLogCount?: typeof getLogCount;
   checkBuiltInAiAvailability?: typeof checkBuiltInAiAvailability;
@@ -76,7 +81,7 @@ export class DiagnosticsCollector {
   constructor(private deps: DiagnosticsCollectorDeps = {}) {}
 
   async collect(): Promise<DiagnosticsSnapshot> {
-    const getSettingsFn = this.deps.getSettings ?? getSettings;
+    const getManyFn = this.deps.getMany ?? settingsRepository.getMany.bind(settingsRepository);
     const getSqliteStatusFn = this.deps.getSqliteStatus
       ?? (async () =>
         retryWithExponentialBackoff(() => getSqliteStatus(), { label: 'diagSqliteStatus', maxAttempts: 4 })
@@ -94,11 +99,25 @@ export class DiagnosticsCollector {
 
     let settingsLoadFailed = false;
 
+    // All settings keys needed by this collector — single getMany call
+    const settingsKeys = [
+      StorageKeys.OBSIDIAN_PROTOCOL, StorageKeys.OBSIDIAN_PORT,
+      StorageKeys.OBSIDIAN_API_KEY, StorageKeys.OBSIDIAN_DAILY_PATH,
+      StorageKeys.AI_PROVIDER_PRIORITY_LIST, StorageKeys.AI_PROVIDER,
+      StorageKeys.GEMINI_MODEL, StorageKeys.GEMINI_API_KEY,
+      StorageKeys.OPENAI_BASE_URL, StorageKeys.OPENAI_MODEL, StorageKeys.OPENAI_API_KEY,
+      StorageKeys.OPENAI_2_BASE_URL, StorageKeys.OPENAI_2_MODEL, StorageKeys.OPENAI_2_API_KEY,
+      StorageKeys.LM_STUDIO_BASE_URL, StorageKeys.LM_STUDIO_MODEL,
+      StorageKeys.OLLAMA_BASE_URL, StorageKeys.OLLAMA_MODEL,
+      StorageKeys.PROVIDER_BASE_URL, StorageKeys.PROVIDER_MODEL, StorageKeys.PROVIDER_API_KEY,
+    ] as const;
+
     // Parallel gathering — faster than sequential awaits in the old panel
     const [settings, sqliteStatus, logCountResult, builtInAiResult, bytesUsed, debugMode] = await Promise.all([
-      getSettingsFn().catch(() => {
+      getManyFn(settingsKeys).catch(async () => {
         settingsLoadFailed = true;
-        return {} as Record<string, unknown>;
+        const { DEFAULT_SETTINGS } = await import('../../../utils/storage/defaults.js');
+        return DEFAULT_SETTINGS as unknown as Pick<Settings, typeof settingsKeys[number]>;
       }),
       getSqliteStatusFn().catch(() => null),
       getLogCountFn().catch(() => ({ error: 'unavailable' } as unknown as Awaited<ReturnType<typeof getLogCount>>)),
@@ -107,11 +126,10 @@ export class DiagnosticsCollector {
       getDebugModeFn().catch(() => false),
     ]);
 
-    const s = settings as Record<string, unknown>;
-    const protocol = (s[StorageKeys.OBSIDIAN_PROTOCOL] as string) || 'https';
-    const port = (s[StorageKeys.OBSIDIAN_PORT] as string) || '27124';
-    const apiKey = (s[StorageKeys.OBSIDIAN_API_KEY] as string) || '';
-    const dailyPath = (s[StorageKeys.OBSIDIAN_DAILY_PATH] as string) || '';
+    const protocol = settings[StorageKeys.OBSIDIAN_PROTOCOL] ?? 'https';
+    const port = settings[StorageKeys.OBSIDIAN_PORT] ?? '27124';
+    const apiKey = stringOrEmpty(settings[StorageKeys.OBSIDIAN_API_KEY]);
+    const dailyPath = settings[StorageKeys.OBSIDIAN_DAILY_PATH] ?? '';
 
     const bytesUsedKb = (bytesUsed / 1024).toFixed(1);
     const savedUrls = (logCountResult && typeof logCountResult === 'object' && 'data' in logCountResult)
@@ -139,12 +157,12 @@ export class DiagnosticsCollector {
     }
 
     // AI providers
-    const priorityList = (s[StorageKeys.AI_PROVIDER_PRIORITY_LIST] as Array<{ provider: string; model?: string }>) || [];
-    const legacyProvider = (s[StorageKeys.AI_PROVIDER] as string) || 'gemini';
+    const priorityList = settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] ?? [];
+    const legacyProvider = settings[StorageKeys.AI_PROVIDER] ?? 'gemini';
     const slots = priorityList.length > 0 ? priorityList : [{ provider: legacyProvider }];
     const aiProviders = slots.map((slot: { provider: string; model?: string }) => ({
       provider: slot.provider,
-      model: slot.model as string | undefined,
+      model: slot.model,
       label: slot.provider,
     }));
 
@@ -152,36 +170,36 @@ export class DiagnosticsCollector {
     const aiProviderDetails: ProviderDetail[] = slots.map((slot: { provider: string; model?: string }) => {
       const base: ProviderDetail = {
         provider: slot.provider,
-        model: slot.model as string | undefined,
+        model: slot.model,
         label: slot.provider,
       };
       switch (slot.provider) {
         case 'gemini':
-          base.model = (s[StorageKeys.GEMINI_MODEL] as string) || slot.model as string | undefined;
-          base.apiKey = (s[StorageKeys.GEMINI_API_KEY] as string) || '';
+          base.model = settings[StorageKeys.GEMINI_MODEL] ?? slot.model;
+          base.apiKey = stringOrEmpty(settings[StorageKeys.GEMINI_API_KEY]);
           break;
         case 'openai':
-          base.baseUrl = (s[StorageKeys.OPENAI_BASE_URL] as string) || '';
-          base.model = (s[StorageKeys.OPENAI_MODEL] as string) || slot.model as string | undefined;
-          base.apiKey = (s[StorageKeys.OPENAI_API_KEY] as string) || '';
+          base.baseUrl = settings[StorageKeys.OPENAI_BASE_URL] ?? '';
+          base.model = settings[StorageKeys.OPENAI_MODEL] ?? slot.model;
+          base.apiKey = stringOrEmpty(settings[StorageKeys.OPENAI_API_KEY]);
           break;
         case 'openai2':
-          base.baseUrl = (s[StorageKeys.OPENAI_2_BASE_URL] as string) || '';
-          base.model = (s[StorageKeys.OPENAI_2_MODEL] as string) || slot.model as string | undefined;
-          base.apiKey = (s[StorageKeys.OPENAI_2_API_KEY] as string) || '';
+          base.baseUrl = settings[StorageKeys.OPENAI_2_BASE_URL] ?? '';
+          base.model = settings[StorageKeys.OPENAI_2_MODEL] ?? slot.model;
+          base.apiKey = stringOrEmpty(settings[StorageKeys.OPENAI_2_API_KEY]);
           break;
         case 'lm-studio':
-          base.baseUrl = (s[StorageKeys.LM_STUDIO_BASE_URL] as string) || '';
-          base.model = (s[StorageKeys.LM_STUDIO_MODEL] as string) || slot.model as string | undefined;
+          base.baseUrl = settings[StorageKeys.LM_STUDIO_BASE_URL] ?? '';
+          base.model = settings[StorageKeys.LM_STUDIO_MODEL] ?? slot.model;
           break;
         case 'ollama':
-          base.baseUrl = (s[StorageKeys.OLLAMA_BASE_URL] as string) || '';
-          base.model = (s[StorageKeys.OLLAMA_MODEL] as string) || slot.model as string | undefined;
+          base.baseUrl = settings[StorageKeys.OLLAMA_BASE_URL] ?? '';
+          base.model = settings[StorageKeys.OLLAMA_MODEL] ?? slot.model;
           break;
         case 'openai-compatible':
-          base.baseUrl = (s[StorageKeys.PROVIDER_BASE_URL] as string) || '';
-          base.model = (s[StorageKeys.PROVIDER_MODEL] as string) || slot.model as string | undefined;
-          base.apiKey = (s[StorageKeys.PROVIDER_API_KEY] as string) || '';
+          base.baseUrl = settings[StorageKeys.PROVIDER_BASE_URL] ?? '';
+          base.model = settings[StorageKeys.PROVIDER_MODEL] ?? slot.model;
+          base.apiKey = stringOrEmpty(settings[StorageKeys.PROVIDER_API_KEY]);
           break;
       }
       return base;

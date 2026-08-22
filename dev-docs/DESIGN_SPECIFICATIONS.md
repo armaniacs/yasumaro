@@ -59,7 +59,17 @@ The diagnostics panel follows a strict one-seam structure:
 ## 5. Data Management & Storage
 
 ### 5.1 Storage Keys Structure
-All settings are managed via `StorageKeys` defined in `src/utils/storage.js`:
+
+All settings are managed via `StorageKeys` defined in `src/utils/storage/types.js`.
+Settings access goes through the `SettingsRepository` deep module (`src/utils/storage/SettingsRepository.ts`):
+
+- **Single source of defaults**: `DEFAULT_SETTINGS` in `src/utils/storage/defaults.ts` is the only source of fallback values.
+- **No inline fallbacks**: Callers must not use `|| 'default'` after reading settings.
+- **Partial reads**: use `repo.getMany([StorageKeys.X, StorageKeys.Y])`.
+- **Full reads**: use `repo.getAll()` when loading an entire form.
+- **Testability**: tests inject `InMemoryStorageAdapter` via `SettingsReader` (`Pick<SettingsRepository, 'getMany' | 'getAll'>`) so they do not depend on `chrome.storage` mocks.
+
+Key groups:
 - **Obsidian Configuration**: `OBSIDIAN_API_KEY`, `OBSIDIAN_PROTOCOL`, `OBSIDIAN_PORT`, `OBSIDIAN_DAILY_PATH`
 - **AI Provider Configuration**: `GEMINI_API_KEY`, `GEMINI_MODEL`, `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_2_*`
 - **Visit Detection**: `MIN_VISIT_DURATION` (default: 5 seconds), `MIN_SCROLL_DEPTH` (default: 50%)

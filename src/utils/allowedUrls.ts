@@ -22,7 +22,7 @@ export function buildAllowedUrls(
 
     // Obsidian API
     const protocol = (settings.obsidian_protocol as string) || 'https';
-    const port = (settings.obsidian_port as string) || '27123';
+    const port = (settings.obsidian_port as string) || '27124';
     try {
         allowedUrls.add(normalizeUrl(`${protocol}://127.0.0.1:${port}`));
     } catch (e) {
