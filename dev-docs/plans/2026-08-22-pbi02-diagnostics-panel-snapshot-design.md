@@ -189,7 +189,7 @@ null 許容の理由: パネルは querySelector の結果をそのまま渡す�
 | テストファイル | 内容 |
 |---|---|
 | `DiagnosticsCollector.test.ts` 拡充 | セクション別 Snapshot 断言: settingsLoadFailed 経路（getSettings reject → フラグ true + デフォルト値群）、extInfo、divergence の組合せ（dashboard OPFS検知 × offscreen fallback）、aiProviderDetails のプロバイダ別マッピング、sqlite 一時失敗→リトライ成功（fake timers） |
-| `diagnosticsPanel.lifecycle.test.ts` | interface 準拠19件は無変更で全パス（公開 surface 不変）。内容断言1件は注入 deps での検証に置換 |
+| `diagnosticsPanel.lifecycle.test.ts` | interface 準拠19件は無変更で全パス（公開 surface 不変）。内容断言1件（extInfo の null チェック）は manifest モック値のテキスト断言への強化に置換する。パネルは collector シングルトンを利用するため deps 注入による検証は collector 単体テスト側で担保 |
 | `diagnosticsPanel-builtInAi.test.ts` | 無変更（renderBuiltInAiStatus の export 維持） |
 | `diagnosticsActions.test.ts` 新規 | showConfirmDialog を mock した回帰保険 3〜4件: cleanup/migrate の confirm キャンセル時にサービス関数が呼ばれない、承認時には呼ばれる |
 
