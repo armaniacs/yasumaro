@@ -34,7 +34,7 @@ var PiiSandbox = (() => {
     let sum = 0;
     let isEven = false;
     for (let i = str.length - 1; i >= 0; i--) {
-      let digit = parseInt(str[i], 10);
+      let digit = parseInt(str[i] ?? "", 10);
       if (isEven) {
         digit *= 2;
         if (digit > 9) {
@@ -52,6 +52,18 @@ var PiiSandbox = (() => {
     return error instanceof Error ? error.message : String(error);
   }
 
+  // src/utils/objectUtils.ts
+  function pickDefined(obj) {
+    const result = {};
+    for (const key of Object.keys(obj)) {
+      const value = obj[key];
+      if (value !== void 0) {
+        result[key] = value;
+      }
+    }
+    return result;
+  }
+
   // src/utils/piiSanitizer.ts
   var MAX_INPUT_SIZE = 64 * 1024;
   var MAX_SKIP_SIZE = 512 * 1024;
@@ -59,6 +71,31 @@ var PiiSandbox = (() => {
   var DEFAULT_TIMEOUT = 5e3;
   var MAX_MATCH_COUNT = 1e3;
   var TIMEOUT_CHECK_INTERVAL = 5;
+  var TOKEN_EDGE_KEEP_LENGTH = 100;
+  var NON_WHITESPACE_RUN = /\S+/g;
+  function neutralizeLongNonWhitespaceRuns(text) {
+    return text.replace(NON_WHITESPACE_RUN, (token) => {
+      const threshold = TOKEN_EDGE_KEEP_LENGTH * 2;
+      if (token.length <= threshold) return token;
+      const head = token.slice(0, TOKEN_EDGE_KEEP_LENGTH);
+      const tail = token.slice(-TOKEN_EDGE_KEEP_LENGTH);
+      const middle = token.slice(TOKEN_EDGE_KEEP_LENGTH, -TOKEN_EDGE_KEEP_LENGTH);
+      return head + sampleMiddleForScan(middle) + tail;
+    });
+  }
+  function sampleMiddleForScan(middle) {
+    const sampleInterval = TOKEN_EDGE_KEEP_LENGTH;
+    let sampled = "";
+    for (let i = 0; i < middle.length; i += sampleInterval) {
+      const chunk = middle.slice(i, i + sampleInterval);
+      if (chunk.length === sampleInterval) {
+        sampled += chunk.slice(0, -1) + "#";
+      } else {
+        sampled += chunk;
+      }
+    }
+    return sampled;
+  }
   var PII_PATTERNS = [
     // メールアドレス（最も具体的）
     {
@@ -198,7 +235,7 @@ var PiiSandbox = (() => {
         return {
           text,
           maskedItems: [],
-          error: sizeValidation.error
+          ...pickDefined({ error: sizeValidation.error })
         };
       }
     } else {
@@ -214,6 +251,7 @@ var PiiSandbox = (() => {
     try {
       const _maskedItems = [];
       const replacements = [];
+      const scanText = neutralizeLongNonWhitespaceRuns(text);
       const typeGroups = [];
       const seenTypes = /* @__PURE__ */ new Set();
       for (const { type } of PII_PATTERNS) {
@@ -225,7 +263,7 @@ var PiiSandbox = (() => {
       const combinedRegex = new RegExp(typeGroups.join("|"), "g");
       let match;
       let matchCount = 0;
-      while ((match = combinedRegex.exec(text)) !== null) {
+      while ((match = combinedRegex.exec(scanText)) !== null) {
         matchCount++;
         if (matchCount % TIMEOUT_CHECK_INTERVAL === 0 && Date.now() - startTime > timeout) {
           throw new Error(`Operation timed out after ${timeout}ms`);
@@ -233,7 +271,7 @@ var PiiSandbox = (() => {
         if (matchCount > MAX_MATCH_COUNT) {
           throw new Error(`Operation exceeded maximum match count of ${MAX_MATCH_COUNT}`);
         }
-        const matchedValue = match[0];
+        const matchedValue = text.substring(match.index, match.index + match[0].length);
         const startIndex = match.index;
         let matchedType = "unknown";
         if (match.groups) {
@@ -284,7 +322,7 @@ var PiiSandbox = (() => {
       processedText = textParts.join("");
       finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
       const resultItems = finalMaskedItems.map(
-        (item) => includeIndices ? { type: item.type, original: item.original, index: item.index } : { type: item.type, original: item.original }
+        (item) => includeIndices ? { type: item.type, original: item.original, ...pickDefined({ index: item.index }) } : { type: item.type, original: item.original }
       );
       const outputSize = processedText.length;
       if (outputSize > MAX_OUTPUT_SIZE) {
@@ -295,19 +333,19 @@ var PiiSandbox = (() => {
         return {
           text: processedText,
           maskedItems: trimmedMaskedItems.map(
-            (item) => includeIndices ? { type: item.type, original: item.original, index: item.index } : { type: item.type, original: item.original }
+            (item) => includeIndices ? { type: item.type, original: item.original, ...pickDefined({ index: item.index }) } : { type: item.type, original: item.original }
           ),
           error: `Output truncated to ${MAX_OUTPUT_SIZE} characters`
         };
       }
       return { text: processedText, maskedItems: resultItems };
-    } catch (error) {
-      return {
-        text: "[SANITIZATION_FAILED]",
-        maskedItems: [],
-        error: errorMessage(error)
-      };
-    }
+} catch (error) {
+       return {
+         text: "[SANITIZATION_FAILED]",
+         maskedItems: [],
+         error: errorMessage(error)
+       };
+     }
   }
 
   // docs-src/pii-sandbox.ts
