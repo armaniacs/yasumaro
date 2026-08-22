@@ -42,31 +42,32 @@ All notable changes to this project will be documented in this file.
 ## [6.7.65] - 2026-08-23
 
 ### Fixed
+- 既定 Obsidian ポートペアを訂正。`DEFAULT_SETTINGS`/`allowedUrls`/`urlWhitelist`/`obsidianConfigValidator` のフォールバックポートを `27123` から `27124` に統一し、`protocol='https' × port='27124'` の整合ペアにした。明示設定ユーザーの保存値は尊重。`storage-defaults.test.ts` / `obsidianClient.test.ts` / `robustness-port-validation.test.ts` / `storageUrls.test.ts` の default 期待値を `27124` に更新。
+- Built-in AI のセッション作成に `expectedOutputs: [{ type: 'text', languages: ['ja'] }]` を指定し、日本語テキスト出力を明示的に要求するようにした。`builtInAIClient.ts` および `builtInAiDiagnosticsService.ts` のダウンロード診断セッションに適用。
+- PII サニタイゼーションのエラーハンドリングを修正し、例外のスローではなくエラーオブジェクトの返却を復元して API コントラクトを維持（`docs/assets/pii-sandbox.js`）
 
 ### Refactor
+- `SettingsRepository` に `getMany` を追加し、`DiagnosticsCollector` / `settingsForm` / `connectionTests` / `CspSettingsController` / `tagsPanel` / `gistSettings` / `markdownExport` / `recordingConditionsSettings` を repository 経由に移行。生キャスト（`as string` 等）を0件に削減。`SettingsReader` 型を export し、view model 関数・クラスに後置 optional パラメータで注入シームを提供。`InMemoryStorageAdapter` 越しの単体テストを追加。
+- AI 接続テストの進捗 UI（スピナー + プロバイダラベル + 経過時間）を `aiTestProgressView.ts` に抽出し、「初期設定」画面と「診断」画面の両方から共有するようにした。`connectionTests.ts` と `diagnosticsActions.ts` の重複していた DOM 構築・レンダリングロジックを純関数として統合。
+- `dev-docs/dig-findings-*.md` を `dev-docs/archived/` へ移動し、完了した深掘り記録をアーカイブした。
+- `plans/` ディレクトリを廃止し、今後は `dev-docs/plans/` に一本化した。`pbi/00-INDEX.md` の運用ルールを更新。
+- CSP セキュリティ強化: `connect-src` ワイルドカードを特定ポートに制限し、SSRF リスクを低減
+- Web アクセシブル リソースのスコープを文書化し、最小限に抑制
+- CSP テンプレートのビルド時検証を追加し、不正値によるサイレント破綻を防止
+- wasm-unsafe-eval のスコープを明確化し、必要性をコメントで根拠付け
+- host_permissions の自動生成関数を追加し、手書き16行を1行に削減
+- バージョン単一ソース化: `package.json` を SSOT とし、`wxt.config.ts` と `docs/version.json` を自動同期
+- JSON schema/CI バリデーションを追加し、設定ファイルのタイポを早期検出
+- PiiSandbox のハードコードデモを文書化し、実行時副作用を除去
+- PiiSandbox の暗黙グローバル依存を解消し、参照エラーを防止
+- vite modulePreload ワークアラウンドの再検証手順と TODO を追加
 
 ## [6.7.64] - 2026-08-23
 
-### Fixed
-
-- 既定 Obsidian ポートペアを訂正。`DEFAULT_SETTINGS`/`allowedUrls`/`urlWhitelist`/`obsidianConfigValidator` のフォールバックポートを `27123` から `27124` に統一し、`protocol='https' × port='27124'` の整合ペアにした。明示設定ユーザーの保存値は尊重。`storage-defaults.test.ts` / `obsidianClient.test.ts` / `robustness-port-validation.test.ts` / `storageUrls.test.ts` の default 期待値を `27124` に更新。
-- Built-in AI のセッション作成に `expectedOutputs: [{ type: 'text', languages: ['ja'] }]` を指定し、日本語テキスト出力を明示的に要求するようにした。`builtInAIClient.ts` および `builtInAiDiagnosticsService.ts` のダウンロード診断セッションに適用。
-
-### Refactor
-
-- `SettingsRepository` に `getMany` を追加し、`DiagnosticsCollector` / `settingsForm` / `connectionTests` / `CspSettingsController` / `tagsPanel` / `gistSettings` / `markdownExport` / `recordingConditionsSettings` を repository 経由に移行。生キャスト（`as string` 等）を0件に削減。`SettingsReader` 型を export し、view model 関数・クラスに後置 optional パラメータで注入シームを提供。`InMemoryStorageAdapter` 越しの単体テストを追加。
-- AI 接続テストの進捗 UI（スピナー + プロバイダラベル + 経過時間）を `aiTestProgressView.ts` に抽出し、「初期設定」画面と「診断」画面の両方から共有するようにした。`connectionTests.ts` と `diagnosticsActions.ts` の重複していた DOM 構築・レンダリングロジックを純関数として統合。
-
-### Chore
-
-- `dev-docs/dig-findings-*.md` を `dev-docs/archived/` へ移動し、完了した深掘り記録をアーカイブした。
-- `plans/` ディレクトリを廃止し、今後は `dev-docs/plans/` に一本化した。`pbi/00-INDEX.md` の運用ルールを更新。
+- このリリース番号は 6.7.65 に統合されました。重複リリース番号のため空となっています。
 
 ## [6.7.63] - 2026-08-21
 
-### Fixed
-
-- Dashboard SQLite の `confirmToken` 検証を定数時間比較に置換し、タイミングサイドチャネル（CWE-208）を解消。`src/background/handlers/dashboardSqlite/index.ts:42` の `!==` を `src/utils/crypto/primitives.ts:67` の `constantTimeCompare`（`await` 必須）に置換。`providedToken` の undefined ガードを維持。`src/background/handlers/__tests__/confirmTokenConstantTime.test.ts` に 6件の回帰テストを追加（正トークン成功 / 長さ違い / 先頭違い / 末尾違い / 未指定拒否 / 読み取り系トークン不要）
 - プライバシー同意のレガシー boolean 形式（`chrome.storage.local` に `true` が直接保存された旧形式）がポリシー更新時に再同意を促さない問題を修正。`src/popup/privacyConsent.ts:70` の legacy 分岐を `hasConsented: false, needsReconsent: true` に変更し、`PRIVACY_POLICY_VERSION` 不一致時に再同意が必須になるようにした。`src/popup/__tests__/privacyConsent.test.ts` / `src/popup/__tests__/privacyConsent-version.test.ts` の期待値を更新し、known gap として記録されていた 2件のテストを gap closed に是正
 - `src/utils/__tests__/logger-production.test.ts:29` の stale `TODO` コメントを `WHY` に置換。`isDevelopment` は `src/utils/logger/core.ts:112` に実装済みで `src/utils/logger.ts:26` から再エクスポートされているため、コメントのみ更新
 - `validate`（lint 0 errors / type-check 成功 / 8327 tests 成功）と `build`（6.92MB）を通過。バージョン整合性を `6.7.63` に同期
