@@ -41,7 +41,7 @@ All notable changes to this project will be documented in this file.
 
 ### Refactor
 
-- `SettingsRepository` に `getMany` を追加し、`DiagnosticsCollector` / `settingsForm` / `connectionTests` を repository 経由に移行。生キャスト（`as string` 等）を0件に削減。`SettingsReader` 型を export し、view model 関数に後置 optional パラメータで注入シームを提供。`InMemoryStorageAdapter` 越しの単体テストを追加。
+- `SettingsRepository` に `getMany` を追加し、`DiagnosticsCollector` / `settingsForm` / `connectionTests` / `CspSettingsController` / `tagsPanel` / `gistSettings` / `markdownExport` / `recordingConditionsSettings` を repository 経由に移行。生キャスト（`as string` 等）を0件に削減。`SettingsReader` 型を export し、view model 関数・クラスに後置 optional パラメータで注入シームを提供。`InMemoryStorageAdapter` 越しの単体テストを追加。
 
 ## [6.7.63] - 2026-08-21
 

@@ -4,8 +4,9 @@
  * Note: Recording triggers (scroll/time/snapshot) are no longer configurable.
  */
 
-import { getSettings, saveSettings } from '../utils/storage/settingsStore.js';
+import { saveSettings } from '../utils/storage/settingsStore.js';
 import { StorageKeys } from '../utils/storage/types.js';
+import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
@@ -19,12 +20,12 @@ let aiRateLimitMax = 10;
 let openaiContentChars = 10000;
 let geminiContentChars = 30000;
 
-export async function initRecordingConditionsSettings(): Promise<void> {
+export async function initRecordingConditionsSettings(repo: SettingsReader = settingsRepository): Promise<void> {
   const container = document.getElementById('recording-conditions-settings');
   if (!container) return;
 
   // Load current settings
-  await loadConditionsSettings();
+  await loadConditionsSettings(repo);
 
   renderSettings(container);
   wireEvents(container);
@@ -33,18 +34,27 @@ export async function initRecordingConditionsSettings(): Promise<void> {
   applyI18n(container);
 }
 
-async function loadConditionsSettings(): Promise<void> {
+async function loadConditionsSettings(repo: SettingsReader = settingsRepository): Promise<void> {
   try {
-    const settings = await getSettings();
-    minVisitDuration = (settings[StorageKeys.MIN_VISIT_DURATION] as number) || 5;
-    minScrollDepth = (settings[StorageKeys.MIN_SCROLL_DEPTH] as number) || 50;
-    maxTokensPerPrompt = (settings[StorageKeys.MAX_TOKENS_PER_PROMPT] as number) || 1000;
-    const aiTimeoutMs = (settings[StorageKeys.AI_TIMEOUT_MS] as number) || 0;
+    const settings = await repo.getMany([
+      StorageKeys.MIN_VISIT_DURATION,
+      StorageKeys.MIN_SCROLL_DEPTH,
+      StorageKeys.MAX_TOKENS_PER_PROMPT,
+      StorageKeys.AI_TIMEOUT_MS,
+      StorageKeys.MAX_MONTHLY_TOKENS,
+      StorageKeys.AI_RATE_LIMIT_MAX,
+      StorageKeys.OPENAI_CONTENT_CHARS,
+      StorageKeys.GEMINI_CONTENT_CHARS,
+    ]);
+    minVisitDuration = settings[StorageKeys.MIN_VISIT_DURATION] ?? 5;
+    minScrollDepth = settings[StorageKeys.MIN_SCROLL_DEPTH] ?? 50;
+    maxTokensPerPrompt = settings[StorageKeys.MAX_TOKENS_PER_PROMPT] ?? 1000;
+    const aiTimeoutMs = settings[StorageKeys.AI_TIMEOUT_MS] ?? 0;
     aiTimeoutSeconds = aiTimeoutMs > 0 ? Math.round(aiTimeoutMs / 1000) : 0;
-    maxMonthlyTokens = (settings[StorageKeys.MAX_MONTHLY_TOKENS] as number) ?? 1000000;
-    aiRateLimitMax = (settings[StorageKeys.AI_RATE_LIMIT_MAX] as number) || 10;
-    openaiContentChars = (settings[StorageKeys.OPENAI_CONTENT_CHARS] as number) || 10000;
-    geminiContentChars = (settings[StorageKeys.GEMINI_CONTENT_CHARS] as number) || 30000;
+    maxMonthlyTokens = settings[StorageKeys.MAX_MONTHLY_TOKENS] ?? 1000000;
+    aiRateLimitMax = settings[StorageKeys.AI_RATE_LIMIT_MAX] ?? 10;
+    openaiContentChars = settings[StorageKeys.OPENAI_CONTENT_CHARS] ?? 10000;
+    geminiContentChars = settings[StorageKeys.GEMINI_CONTENT_CHARS] ?? 30000;
   } catch {
     minVisitDuration = 5;
     minScrollDepth = 50;
