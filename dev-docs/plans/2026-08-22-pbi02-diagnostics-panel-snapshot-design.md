@@ -119,12 +119,38 @@ export function setDebugMode(value: boolean): Promise<void>;
 ## 6. diagnosticsActions
 
 ```typescript
-export interface DiagnosticActionElements { /* ボタン8種 + 結果表示要素 */ }
+// 要素ID（パネル mount の querySelector と同一）:
+//   ボタン: #diagTestObsidianBtn #diagTestAiBtn #diagTestSqliteBtn #diagOpfsSpikeBtn
+//           #diagMigrateBtn #diagBackfillBtn #diagCleanupBtn #diagBuiltInAiDownloadBtn
+//   結果表示: #diagConnectionResult #diagSqliteResult #diagOpfsSpikeResult
+//            #diagMigrateResult #diagBackfillResult #diagCleanupResult
+//            #diagBuiltInAiStats #diagBuiltInAiDownloadResult
+export interface DiagnosticActionElements {
+  testObsidianBtn: HTMLButtonElement | null;
+  testAiBtn: HTMLButtonElement | null;
+  testSqliteBtn: HTMLButtonElement | null;
+  opfsSpikeBtn: HTMLButtonElement | null;
+  migrateBtn: HTMLButtonElement | null;
+  backfillBtn: HTMLButtonElement | null;
+  cleanupBtn: HTMLButtonElement | null;
+  builtInAiDownloadBtn: HTMLButtonElement | null;
+  connectionResult: HTMLElement | null;
+  sqliteResult: HTMLElement | null;
+  opfsSpikeResult: HTMLElement | null;
+  migrateResult: HTMLElement | null;
+  backfillResult: HTMLElement | null;
+  cleanupResult: HTMLElement | null;
+  builtInAiStats: HTMLElement | null;
+  builtInAiDownloadResult: HTMLElement | null;
+}
+
 export function createDiagnosticActions(
   els: DiagnosticActionElements,
   hooks: { onBuiltInAiDownloaded: (result: BuiltInAiDiagnosticsResult) => void },
 ): void;
 ```
+
+null 許容の理由: パネルは querySelector の結果をそのまま渡すため。各ハンドラ内で現行どおり対象要素の null ガードを行う。
 
 - 移植するハンドラ8種: TEST_OBSIDIAN / TEST_AI / DASHBOARD_SQLITE(status) の各接続テスト、OPFS spike、migrate（confirm 付き）、backfill、cleanup（confirm 付き）、built-in AI ダウンロード
 - 各ハンドラは現行どおり「disable → Working... 表示 → try/catch → 結果表示 → finally で再有効化」
