@@ -14,12 +14,17 @@ import { StorageKeys } from '../../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
 import { getMessage } from '../../utils/i18n.js';
 import { type AiTestProgress, type MultiProviderTestResult } from '../../background/ai/AIService.js';
-import { PROVIDER_LABELS } from '../../utils/aiProviderLabels.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import { saveDashboardSettings } from '../settingsPipeline.js';
 import { syncStatusToTop } from '../statusView.js';
 import { formatProviderHeadline, formatProviderDetailLines } from '../aiTestResultView.js';
-import { subscribeAiTestProgress } from '../aiTestProgressClient.js';
+import { subscribeAiTestProgress, generateAiTestRunId } from '../aiTestProgressClient.js';
+import {
+  buildAiTestProgressView,
+  renderAiTestProgressLabel,
+  renderAiTestProgressElapsed,
+  type AiTestProgressView,
+} from '../aiTestProgressView.js';
 
 const SETTINGS_FORM_SELECTOR = '#panel-general';
 
@@ -156,69 +161,6 @@ export async function handleTestObsidian(): Promise<void> {
   }
 }
 
-/** Look up a provider label without leaking Object.prototype keys. */
-function providerLabelSafe(provider: string): string {
-  return Object.prototype.hasOwnProperty.call(PROVIDER_LABELS, provider)
-    ? PROVIDER_LABELS[provider] ?? provider
-    : provider;
-}
-
-interface AiTestProgressView {
-  label: HTMLElement;
-  elapsedEl: HTMLElement;
-}
-
-/**
- * Build the in-progress UI (spinner + provider label + elapsed time) once.
- * Subsequent updates mutate textContent only so the spinner animation is not
- * restarted and the live region is not re-announced on every tick.
- */
-function buildAiTestProgressView(statusDiv: HTMLElement): AiTestProgressView {
-  statusDiv.innerHTML = '';
-  statusDiv.className = 'ai-test-progress';
-
-  const spinner = document.createElement('span');
-  spinner.className = 'ai-test-spinner';
-  spinner.setAttribute('aria-hidden', 'true');
-  statusDiv.appendChild(spinner);
-
-  const label = document.createElement('span');
-  statusDiv.appendChild(label);
-
-  const elapsedEl = document.createElement('div');
-  elapsedEl.className = 'ai-test-elapsed';
-  // Elapsed time ticks 5x/sec; keep it out of the live region to avoid
-  // flooding screen readers. The provider label below is the only announced node.
-  elapsedEl.setAttribute('aria-hidden', 'true');
-  statusDiv.appendChild(elapsedEl);
-
-  return { label, elapsedEl };
-}
-
-function renderAiTestProgressLabel(view: AiTestProgressView, progress: AiTestProgress | undefined): void {
-  if (progress) {
-    const providerLabel = providerLabelSafe(progress.provider);
-    const providerDisplay = progress.model ? `${providerLabel} (${progress.model})` : providerLabel;
-    view.label.textContent = getMessage('aiTestingProvider', {
-      provider: providerDisplay,
-      current: String(progress.index + 1),
-      total: String(progress.total),
-    }) || `テスト中... (${progress.index + 1}/${progress.total})`;
-  } else {
-    view.label.textContent = getMessage('testingConnection') || '接続テスト中...';
-  }
-}
-
-function renderAiTestProgressElapsed(view: AiTestProgressView, startTime: number): void {
-  const elapsedSeconds = ((performance.now() - startTime) / 1000).toFixed(1);
-  const text = getMessage('aiTestElapsedTime', { seconds: elapsedSeconds }) || `経過時間: ${elapsedSeconds}秒`;
-  view.elapsedEl.textContent = text;
-  // statusTop is a one-shot innerHTML copy of status (see syncStatusToTop), so its
-  // elapsed node needs its own textContent update on every tick to stay in sync.
-  const topElapsedEl = document.querySelector('#statusTop .ai-test-elapsed');
-  if (topElapsedEl) topElapsedEl.textContent = text;
-}
-
 let aiTestInFlight = false;
 
 export async function handleTestAi(): Promise<void> {
@@ -230,37 +172,38 @@ export async function handleTestAi(): Promise<void> {
   // disabled state, so a mid-test click would double-register the listener,
   // timer and TEST_AI request).
   if (aiTestInFlight) return;
-  aiTestInFlight = true;
-
-  const startTime = performance.now();
-  // Correlation id for this test run so that when multiple Dashboard tabs run a
-  // test concurrently, each tab only renders the progress it initiated.
-  const runId = `ai-test-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-  let latestProgress: AiTestProgress | undefined;
-  let lastProviderKey = '';
-
-  const view = buildAiTestProgressView(statusDiv);
-
-  // announceProvider=true re-renders the live-region label (only on provider
-  // switch); the elapsed timer updates textContent only and is aria-hidden.
-  const updateView = (announceProvider: boolean): void => {
-    if (announceProvider) {
-      renderAiTestProgressLabel(view, latestProgress);
-      syncStatusToTop();
-    }
-    renderAiTestProgressElapsed(view, startTime);
-  };
-
-  const unsubscribeProgress = subscribeAiTestProgress(runId, (progress) => {
-    latestProgress = progress;
-    const key = `${progress.provider}:${progress.index}`;
-    const changed = key !== lastProviderKey;
-    lastProviderKey = key;
-    updateView(changed);
-  });
-
   let elapsedTimer: ReturnType<typeof setInterval> | undefined;
+  let unsubscribeProgress: (() => void) | undefined;
   try {
+    aiTestInFlight = true;
+
+    const startTime = performance.now();
+    // Correlation id for this test run so that when multiple Dashboard tabs run a
+    // test concurrently, each tab only renders the progress it initiated.
+    const runId = generateAiTestRunId();
+    let latestProgress: AiTestProgress | undefined;
+    let lastProviderKey = '';
+
+    const view = buildAiTestProgressView(statusDiv);
+
+    // announceProvider=true re-renders the live-region label (only on provider
+    // switch); the elapsed timer updates textContent only and is aria-hidden.
+    const updateView = (announceProvider: boolean): void => {
+      if (announceProvider) {
+        renderAiTestProgressLabel(view, latestProgress);
+        syncStatusToTop();
+      }
+      renderAiTestProgressElapsed(view, startTime, document.getElementById('statusTop'));
+    };
+
+    unsubscribeProgress = subscribeAiTestProgress(runId, (progress) => {
+      latestProgress = progress;
+      const key = `${progress.provider}:${progress.index}`;
+      const changed = key !== lastProviderKey;
+      lastProviderKey = key;
+      updateView(changed);
+    });
+
     renderAiTestProgressLabel(view, undefined);
     renderAiTestProgressElapsed(view, startTime);
     syncStatusToTop();
@@ -332,7 +275,7 @@ export async function handleTestAi(): Promise<void> {
     }
   } finally {
     if (elapsedTimer) clearInterval(elapsedTimer);
-    unsubscribeProgress();
+    if (unsubscribeProgress) unsubscribeProgress();
     testAiBtn.disabled = false;
     if (testAiBtnTop) testAiBtnTop.disabled = false;
     aiTestInFlight = false;

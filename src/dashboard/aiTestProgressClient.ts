@@ -43,6 +43,14 @@ function isAiTestProgressMessage(message: unknown): message is AiTestProgressMes
 }
 
 /**
+ * Generate a unique run id for an AI test run so that concurrent Dashboard
+ * tabs do not render each other's progress broadcasts.
+ */
+export function generateAiTestRunId(): string {
+  return `ai-test-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
  * Subscribe to AI_TEST_PROGRESS broadcasts for one test run (identified by
  * runId). Progress from other runs (e.g. a concurrent Dashboard tab) and
  * messages from other extensions are discarded. Call the returned function

@@ -22,6 +22,13 @@ import {
   type BuiltInAiDiagnosticsResult,
 } from '../../builtInAiDiagnosticsService.js';
 import { formatProviderHeadline, formatProviderDetailLines } from '../../aiTestResultView.js';
+import { subscribeAiTestProgress, generateAiTestRunId } from '../../aiTestProgressClient.js';
+import {
+  buildAiTestProgressView,
+  renderAiTestProgressLabel,
+  renderAiTestProgressElapsed,
+} from '../../aiTestProgressView.js';
+import { type AiTestProgress } from '../../../background/ai/AIService.js';
 
 export interface DiagnosticActionElements {
   testObsidianBtn: HTMLButtonElement | null;
@@ -49,6 +56,8 @@ function successColor(): string {
 function errorColor(): string {
   return `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
 }
+
+let aiTestInFlight = false;
 
 /**
  * Wire all action handlers. Each handler keeps the current behavior:
@@ -96,15 +105,46 @@ export function createDiagnosticActions(
   // AI connection test
   testAiBtn?.addEventListener('click', async () => {
     if (!connectionResult) return;
-    testAiBtn.disabled = true;
-    connectionResult.textContent = getMessage('testing') || 'Testing...';
-    connectionResult.className = 'diag-result';
-
+    if (aiTestInFlight) return;
+    let elapsedTimer: ReturnType<typeof setInterval> | undefined;
+    let unsubscribeProgress: (() => void) | undefined;
     try {
+      aiTestInFlight = true;
+      testAiBtn.disabled = true;
+
+      const startTime = performance.now();
+      // Correlation id so that a concurrent Dashboard tab's progress broadcasts
+      // don't leak into this run's UI.
+      const runId = generateAiTestRunId();
+      let latestProgress: AiTestProgress | undefined;
+      let lastProviderKey = '';
+
+      const view = buildAiTestProgressView(connectionResult);
+
+      const updateView = (announceProvider: boolean): void => {
+        if (announceProvider) {
+          renderAiTestProgressLabel(view, latestProgress);
+        }
+        renderAiTestProgressElapsed(view, startTime);
+      };
+
+      unsubscribeProgress = subscribeAiTestProgress(runId, (progress) => {
+        latestProgress = progress;
+        const key = `${progress.provider}:${progress.index}`;
+        const changed = key !== lastProviderKey;
+        lastProviderKey = key;
+        updateView(changed);
+      });
+
+      renderAiTestProgressLabel(view, undefined);
+      renderAiTestProgressElapsed(view, startTime);
+      elapsedTimer = setInterval(() => updateView(false), 200);
+
       const testResult = await chrome.runtime.sendMessage({
         type: 'TEST_AI',
         protocolVersion: CURRENT_PROTOCOL_VERSION,
-        payload: {}
+        payload: {},
+        runId,
       }) as { ai?: { success: boolean; message: string; providers?: Array<{ provider: string; model?: string; success: boolean; message: string; elapsedMs: number; debug?: { prompt?: string; response?: string; error?: string; availability?: string; hasContent?: boolean; statusCode?: number } }> } };
 
       const ai = testResult?.ai;
@@ -145,7 +185,10 @@ export function createDiagnosticActions(
       connectionResult.textContent = getMessage('testError') || 'Connection test failed.';
       connectionResult.className = 'diag-result diag-error';
     } finally {
+      if (elapsedTimer) clearInterval(elapsedTimer);
+      if (unsubscribeProgress) unsubscribeProgress();
       testAiBtn.disabled = false;
+      aiTestInFlight = false;
     }
   });
 

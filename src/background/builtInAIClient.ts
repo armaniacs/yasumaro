@@ -54,6 +54,7 @@ interface LanguageModelGlobal {
     create(options?: {
         initialPrompts?: Array<{ role: string; content: string }>;
         monitor?: (monitor: LanguageModelDownloadMonitor) => void;
+        expectedOutputs?: Array<{ type: 'text'; languages: string[] }>;
     }): Promise<LanguageModelSession>;
 }
 
@@ -199,7 +200,8 @@ export class BuiltInAIClient {
         let session: LanguageModelSession;
         try {
             session = await languageModel.create({
-                initialPrompts: [{ role: 'system', content: SYSTEM_PROMPT }]
+                initialPrompts: [{ role: 'system', content: SYSTEM_PROMPT }],
+                expectedOutputs: [{ type: 'text', languages: ['ja'] }]
             });
         } catch (error: unknown) {
             addLog(LogType.ERROR, 'BuiltInAIClient: Failed to create session', { error: errorMessage(error) });

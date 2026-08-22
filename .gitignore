@@ -11,6 +11,8 @@ tmp/
 *-new.json
 *-temp.json
 
+
+
 node_modules/
 dist/
 testDir/coverage/
@@ -23,6 +25,8 @@ sbom.json
 docs/typedoc/
 dev-docs/typedoc/
 dev-docs/blog-*
+dev-docs/dig-findings-*
+plans/
 .ruff_cache/
 .worktrees/
 .DS_Store
@@ -87,3 +91,4 @@ graphify-out/
 *_VULNHUNT_RESULTS_*
 .vulnhunter-fix/
 docs/superpowers
+
