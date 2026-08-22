@@ -261,9 +261,11 @@ export function createDiagnosticsPanel(): PanelLifecycle {
     if (!container) return;
 
     const sections = querySections(container);
+    // Clear first so the sqlite "Checking..." placeholder is visible during
+    // collect()'s retrying status fetch (legacy UX), not just after it.
+    clearSections(sections);
     const snapshot = await diagnosticsCollector.collect();
 
-    clearSections(sections);
     sections.compileOptionsSection?.classList.toggle('hidden', !snapshot.debugMode);
 
     renderObsidianSection(sections.obsidianSettingsEl, snapshot);
