@@ -122,12 +122,12 @@ describe('diagnosticsPanel — PanelLifecycle implementation', () => {
       await expect(panel.load?.()).resolves.toBeUndefined();
     });
 
-    it('populates stats elements after load', async () => {
+    it('populates extension info from manifest after load', async () => {
       await panel.mount(container);
       await panel.load?.();
-      // At least one section should have been populated (extInfo version)
       const extInfo = container.querySelector('#diagExtInfo');
-      expect(extInfo).not.toBeNull();
+      expect(extInfo?.textContent).toContain('6.7.61');
+      expect(extInfo?.textContent).toContain('Yasumaro');
     });
   });
 

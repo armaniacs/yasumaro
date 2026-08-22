@@ -1,20 +1,22 @@
+/**
+ * diagnosticsPanel — render-only panel over DiagnosticsSnapshot.
+ *
+ * Data collection happens exclusively inside DiagnosticsCollector.collect().
+ * This file renders each section from the snapshot and wires the interactive
+ * handlers owned by diagnosticsActions. It must not import getSettings or
+ * chrome.storage directly.
+ */
+
 import { getMessage } from '../../../utils/i18n.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../../background/messageTypes.js';
-import { getSettings, StorageKeys } from '../../../utils/storage.js';
 import { PROVIDER_LABELS } from '../../../utils/aiProviderLabels.js';
 import { makeStatRow, getSeverityLabel } from '../../diagnosticUtils.js';
-
-import { UI_COLORS } from '../../../constants/appConstants.js';
-import { getSqliteStatus, getLogCount, runOpfsSpike, migrateLogs, backfillMetadata, cleanupLegacyStorage, isServiceError } from '../../dashboardSqliteService.js';
-import { showConfirmDialog } from '../../utils/confirmDialog.js';
-import { retryWithExponentialBackoff } from '../../utils/retry.js';
-import { diagnoseDeficiencies, type DiagnosticInput } from '../../diagnoseDeficiencies.js';
-import { detectLiveVfsStrategy } from '../../../offscreen/opfsCapabilities.js';
-import { checkBuiltInAiAvailability, startBuiltInAiDownload, type BuiltInAiDiagnosticsResult } from '../../builtInAiDiagnosticsService.js';
 import type { BuiltInAIAvailability } from '../../../background/builtInAIClient.js';
+import type { BuiltInAiDiagnosticsResult } from '../../builtInAiDiagnosticsService.js';
 import { type PanelLifecycle } from '../types.js';
-import { formatProviderHeadline, formatProviderDetailLines } from '../../aiTestResultView.js';
-import { pickDefined } from '../../../utils/objectUtils.js';
+import { diagnosticsCollector } from './DiagnosticsCollector.js';
+import type { DiagnosticsSnapshot } from './DiagnosticsCollector.js';
+import { getDebugMode, setDebugMode } from './debugModeStore.js';
+import { createDiagnosticActions, type DiagnosticActionElements } from './diagnosticsActions.js';
 
 /**
  * Renders the built-in AI availability row and toggles the download button.
@@ -56,6 +58,199 @@ export function renderBuiltInAiStatus(
   }
 }
 
+interface SectionElements {
+  storageStats: HTMLElement | null;
+  extInfo: HTMLElement | null;
+  obsidianSettingsEl: HTMLElement | null;
+  aiSettingsEl: HTMLElement | null;
+  connectionResult: HTMLElement | null;
+  sqliteStats: HTMLElement | null;
+  diagDeficiencyStats: HTMLElement | null;
+  diagBuiltInAiStats: HTMLElement | null;
+  diagBuiltInAiDownloadBtn: HTMLButtonElement | null;
+  diagCompileOptionsStats: HTMLElement | null;
+  diagDivergenceWarning: HTMLElement | null;
+  compileOptionsSection: HTMLElement | null;
+}
+
+function querySections(container: HTMLElement): SectionElements {
+  return {
+    storageStats: container.querySelector('#diagStorageStats') as HTMLElement | null,
+    extInfo: container.querySelector('#diagExtInfo') as HTMLElement | null,
+    obsidianSettingsEl: container.querySelector('#diagObsidianSettings') as HTMLElement | null,
+    aiSettingsEl: container.querySelector('#diagAiSettings') as HTMLElement | null,
+    connectionResult: container.querySelector('#diagConnectionResult') as HTMLElement | null,
+    sqliteStats: container.querySelector('#diagSqliteStats') as HTMLElement | null,
+    diagDeficiencyStats: container.querySelector('#diagDeficiencyStats') as HTMLElement | null,
+    diagBuiltInAiStats: container.querySelector('#diagBuiltInAiStats') as HTMLElement | null,
+    diagBuiltInAiDownloadBtn: container.querySelector('#diagBuiltInAiDownloadBtn') as HTMLButtonElement | null,
+    diagCompileOptionsStats: container.querySelector('#diagCompileOptionsStats') as HTMLElement | null,
+    diagDivergenceWarning: container.querySelector('#diagDivergenceWarning') as HTMLElement | null,
+    compileOptionsSection: container.querySelector('#diagCompileOptionsSection') as HTMLElement | null,
+  };
+}
+
+function clearSections(s: SectionElements): void {
+  s.storageStats?.replaceChildren();
+  s.extInfo?.replaceChildren();
+  s.obsidianSettingsEl?.replaceChildren();
+  s.aiSettingsEl?.replaceChildren();
+  if (s.sqliteStats) {
+    s.sqliteStats.replaceChildren();
+    s.sqliteStats.textContent = getMessage('diagSqliteChecking') || 'Checking SQLite status...';
+  }
+  s.diagDeficiencyStats?.replaceChildren();
+  s.diagBuiltInAiStats?.replaceChildren();
+  s.diagBuiltInAiDownloadBtn?.classList.add('hidden');
+  s.diagCompileOptionsStats?.replaceChildren();
+  s.diagDivergenceWarning?.classList.add('hidden');
+}
+
+function renderObsidianSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {
+  if (!el) return;
+
+  if (snap.settingsLoadFailed) {
+    el.textContent = getMessage('diagLoadError') || '設定の読み込みに失敗しました。';
+    return;
+  }
+
+  const configuredLabel = getMessage('configured') || '(configured)';
+  const notSetLabel = getMessage('notSet') || '(not set)';
+  const o = snap.obsidian;
+
+  el.appendChild(makeStatRow(getMessage('diagProtocol') || 'Protocol', o.protocol));
+  el.appendChild(makeStatRow(getMessage('diagPort') || 'Port', o.port));
+  el.appendChild(makeStatRow(getMessage('diagRestUrl') || 'REST API URL', `${o.protocol}://127.0.0.1:${o.port}`));
+  el.appendChild(makeStatRow(getMessage('diagDailyPath') || 'Daily Note Path', o.dailyPath || (getMessage('defaultValue') || '(default)')));
+  el.appendChild(makeStatRow(getMessage('diagApiKey') || 'API Key', o.apiKey ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !o.apiKey));
+}
+
+/** Providers that render per-provider setting rows in the AI section (matches the legacy if-chain). */
+const KNOWN_DETAIL_PROVIDERS = new Set(['gemini', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible']);
+
+function renderAiSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {
+  if (!el || snap.settingsLoadFailed) return;
+
+  const providerLabels: Record<string, string> = PROVIDER_LABELS;
+  const configuredLabel = getMessage('configured') || '(configured)';
+  const notSetLabel = getMessage('notSet') || '(not set)';
+  const details = snap.aiProviderDetails;
+
+  if (details.length > 1) {
+    el.appendChild(makeStatRow(
+      getMessage('diagProvider') || 'Provider',
+      `${details.length} providers (priority order)`
+    ));
+  }
+
+  for (let i = 0; i < details.length; i++) {
+    const d = details[i];
+    if (!d) continue;
+    const label = providerLabels[d.provider] || d.provider;
+    const priorityLabel = details.length > 1 ? `#${i + 1} ` : '';
+    const modelOverride = d.model ? ` [${d.model}]` : '';
+
+    const providerGroup = document.createElement('div');
+    providerGroup.className = details.length > 1 ? 'diag-provider-group' : '';
+
+    providerGroup.appendChild(makeStatRow(`${priorityLabel}Provider`, `${label}${modelOverride}`));
+
+    // Unknown providers render the header row only (legacy if-chain behavior).
+    if (!KNOWN_DETAIL_PROVIDERS.has(d.provider)) {
+      el.appendChild(providerGroup);
+      continue;
+    }
+
+    const hasApiKey = d.apiKey !== undefined;
+    if (hasApiKey && d.baseUrl !== undefined) {
+      providerGroup.appendChild(makeStatRow('  Base URL', d.baseUrl || notSetLabel));
+      providerGroup.appendChild(makeStatRow('  Model', d.model || notSetLabel));
+      providerGroup.appendChild(makeStatRow('  API Key', d.apiKey ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !d.apiKey));
+    } else if (d.baseUrl !== undefined) {
+      providerGroup.appendChild(makeStatRow('  Base URL', d.baseUrl || notSetLabel));
+      providerGroup.appendChild(makeStatRow('  Model', d.model || notSetLabel));
+    } else {
+      // gemini: model + API key only
+      providerGroup.appendChild(makeStatRow('  Model', d.model || notSetLabel));
+      providerGroup.appendChild(makeStatRow('  API Key', d.apiKey ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !d.apiKey));
+    }
+
+    el.appendChild(providerGroup);
+  }
+}
+
+function renderSqliteSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {
+  if (!el) return;
+
+  const st = snap.sqlite;
+  if (!st) {
+    el.textContent = getMessage('diagSqliteCheckFailed') || 'Failed to check SQLite status.';
+    return;
+  }
+
+  const initializedText = st.initialized
+    ? (getMessage('diagSqliteAvailable') || 'Available')
+    : (getMessage('diagSqliteUnavailable') || 'Unavailable');
+  el.appendChild(makeStatRow(getMessage('diagSqliteStatus') || 'Status', initializedText));
+  el.appendChild(makeStatRow(getMessage('diagSqlitePath') || 'Path', st.path || '(none)'));
+  const fallbackText = st.fallback
+    ? (getMessage('diagSqliteFallbackYes') || 'Yes (using fallback storage)')
+    : (getMessage('diagSqliteFallbackNo') || 'No (native SQLite)');
+  el.appendChild(makeStatRow(getMessage('diagSqliteFallback') || 'Fallback Mode', fallbackText));
+  el.appendChild(makeStatRow(getMessage('diagSqliteFts5') || 'FTS5 Search', st.fts5 ? '✓ Available' : '✗ Not available (LIKE fallback)'));
+
+  // OPFS migration status
+  if (st.opfsMigrationV2Done !== undefined) {
+    const migrationLabel = getMessage('diagOpfsMigrationV2') || 'OPFS Data Migration';
+    if (st.opfsMigrationV2Done) {
+      const completed = st.opfsMigrationV2CompletedAt
+        ? ` (${new Date(st.opfsMigrationV2CompletedAt).toLocaleString()})`
+        : '';
+      const count = st.opfsMigrationV2RecordCount
+        ? ` — ${st.opfsMigrationV2RecordCount} records`
+        : '';
+      el.appendChild(makeStatRow(migrationLabel, `✓ Completed${completed}${count}`));
+    } else if (st.opfsMigrationV2LastAttemptedAt) {
+      const attempted = new Date(st.opfsMigrationV2LastAttemptedAt).toLocaleString();
+      el.appendChild(makeStatRow(migrationLabel, `⏳ Pending (last attempt: ${attempted})`));
+    } else {
+      el.appendChild(makeStatRow(migrationLabel, '⏳ Pending'));
+    }
+  }
+
+  if (st.compileOptionsSource) {
+    el.appendChild(makeStatRow(getMessage('diagCompileOptionsSource') || 'Source', st.compileOptionsSource));
+  }
+  if (st.initError) {
+    el.appendChild(makeStatRow('Init Error', st.initError));
+  }
+}
+
+function renderCompileOptions(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {
+  if (!el) return;
+  const options = snap.sqlite?.compileOptions;
+  if (!options || !snap.debugMode) return;
+
+  const source = snap.sqlite?.compileOptionsSource || 'unknown';
+  el.appendChild(makeStatRow(getMessage('diagCompileOptionsSource') || 'Source', source));
+  el.appendChild(makeStatRow('Total', String(options.length)));
+
+  const ftsVfsOptions = options.filter(o => o.includes('FTS') || o.includes('VFS'));
+  if (ftsVfsOptions.length > 0) {
+    el.appendChild(makeStatRow(getMessage('diagCompileOptionsHighlight') || 'FTS/VFS related', ftsVfsOptions.join(', ')));
+  }
+
+  const allOptionsDetails = document.createElement('details');
+  allOptionsDetails.className = 'advanced-details';
+  allOptionsDetails.innerHTML = `
+    <summary class="advanced-details-summary">All ${options.length} options</summary>
+    <div class="advanced-details-content">
+      <pre class="diag-compile-options-list">${options.join('\n')}</pre>
+    </div>
+  `;
+  el.appendChild(allOptionsDetails);
+}
+
 export function createDiagnosticsPanel(): PanelLifecycle {
   let _container: HTMLElement | null = null;
 
@@ -63,297 +258,55 @@ export function createDiagnosticsPanel(): PanelLifecycle {
     const container = _container;
     if (!container) return;
 
-    const storageStats = container.querySelector('#diagStorageStats') as HTMLElement | null;
-    const extInfo = container.querySelector('#diagExtInfo') as HTMLElement | null;
-    const obsidianSettingsEl = container.querySelector('#diagObsidianSettings') as HTMLElement | null;
-    const aiSettingsEl = container.querySelector('#diagAiSettings') as HTMLElement | null;
-    const connectionResult = container.querySelector('#diagConnectionResult') as HTMLElement | null;
-    const sqliteStats = container.querySelector('#diagSqliteStats') as HTMLElement | null;
-    const diagDeficiencyStats = container.querySelector('#diagDeficiencyStats') as HTMLElement | null;
-    const diagBuiltInAiStats = container.querySelector('#diagBuiltInAiStats') as HTMLElement | null;
-    const diagBuiltInAiDownloadBtn = container.querySelector('#diagBuiltInAiDownloadBtn') as HTMLButtonElement | null;
-    const diagCompileOptionsStats = container.querySelector('#diagCompileOptionsStats') as HTMLElement | null;
-    const diagDivergenceWarning = container.querySelector('#diagDivergenceWarning') as HTMLElement | null;
-    const compileOptionsSection = container.querySelector('#diagCompileOptionsSection') as HTMLElement | null;
-    const debugModeResult = await chrome.storage.local.get('debugMode');
-    const debugMode = Boolean(debugModeResult.debugMode);
+    const sections = querySections(container);
+    const snapshot = await diagnosticsCollector.collect();
 
-    if (storageStats) storageStats.innerHTML = '';
-    if (extInfo) extInfo.innerHTML = '';
-    if (obsidianSettingsEl) obsidianSettingsEl.innerHTML = '';
-    if (aiSettingsEl) aiSettingsEl.innerHTML = '';
-    if (sqliteStats) { sqliteStats.innerHTML = ''; sqliteStats.textContent = getMessage('diagSqliteChecking') || 'Checking SQLite status...'; }
-    if (diagDeficiencyStats) diagDeficiencyStats.innerHTML = '';
-    if (diagBuiltInAiStats) diagBuiltInAiStats.innerHTML = '';
-    if (diagBuiltInAiDownloadBtn) diagBuiltInAiDownloadBtn.classList.add('hidden');
-    if (diagCompileOptionsStats) diagCompileOptionsStats.innerHTML = '';
-    if (compileOptionsSection) compileOptionsSection.classList.toggle('hidden', !debugMode);
-    if (diagDivergenceWarning) diagDivergenceWarning.classList.add('hidden');
+    clearSections(sections);
+    sections.compileOptionsSection?.classList.toggle('hidden', !snapshot.debugMode);
 
-    // Obsidian / AI settings
-    try {
-      const settings = await getSettings();
+    renderObsidianSection(sections.obsidianSettingsEl, snapshot);
+    renderAiSection(sections.aiSettingsEl, snapshot);
 
-      if (obsidianSettingsEl) {
-        const protocol = (settings[StorageKeys.OBSIDIAN_PROTOCOL] as string) || 'https';
-        const port = (settings[StorageKeys.OBSIDIAN_PORT] as string) || '27124';
-        const apiKey = (settings[StorageKeys.OBSIDIAN_API_KEY] as string) || '';
-        const dailyPath = (settings[StorageKeys.OBSIDIAN_DAILY_PATH] as string) || '';
-
-        obsidianSettingsEl.appendChild(makeStatRow(getMessage('diagProtocol') || 'Protocol', protocol));
-        obsidianSettingsEl.appendChild(makeStatRow(getMessage('diagPort') || 'Port', port));
-        obsidianSettingsEl.appendChild(makeStatRow(getMessage('diagRestUrl') || 'REST API URL', `${protocol}://127.0.0.1:${port}`));
-        obsidianSettingsEl.appendChild(makeStatRow(getMessage('diagDailyPath') || 'Daily Note Path', dailyPath || (getMessage('defaultValue') || '(default)')));
-        const configuredLabel = getMessage('configured') || '(configured)';
-        const notSetLabel = getMessage('notSet') || '(not set)';
-        obsidianSettingsEl.appendChild(makeStatRow(getMessage('diagApiKey') || 'API Key', apiKey ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !apiKey));
-      }
-
-      if (aiSettingsEl) {
-        const providerLabels: Record<string, string> = PROVIDER_LABELS;
-
-        const configuredLabel = getMessage('configured') || '(configured)';
-        const notSetLabel = getMessage('notSet') || '(not set)';
-
-        // Read priority list; fall back to legacy AI_PROVIDER if empty
-        const priorityList = (settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] as Array<{ provider: string; model?: string }>) || [];
-        const legacyProvider = (settings[StorageKeys.AI_PROVIDER] as string) || 'gemini';
-        const slots = priorityList.length > 0
-          ? priorityList
-          : [{ provider: legacyProvider }];
-
-        // Show provider priority list header
-        if (slots.length > 1) {
-          aiSettingsEl.appendChild(makeStatRow(
-            getMessage('diagProvider') || 'Provider',
-            `${slots.length} providers (priority order)`
-          ));
-        }
-
-        // Show each provider in the priority list
-        for (let i = 0; i < slots.length; i++) {
-          const slot = slots[i];
-          if (!slot) continue;
-          const label = providerLabels[slot.provider] || slot.provider;
-          const priorityLabel = slots.length > 1 ? `#${i + 1} ` : '';
-          const modelOverride = slot.model ? ` [${slot.model}]` : '';
-
-          // Wrap each provider group in a bordered container
-          const providerGroup = document.createElement('div');
-          providerGroup.className = slots.length > 1 ? 'diag-provider-group' : '';
-
-          providerGroup.appendChild(makeStatRow(
-            `${priorityLabel}Provider`,
-            `${label}${modelOverride}`
-          ));
-
-          // Show provider-specific settings
-          if (slot.provider === 'gemini') {
-            const model = (settings[StorageKeys.GEMINI_MODEL] as string) || '';
-            const key = (settings[StorageKeys.GEMINI_API_KEY] as string) || '';
-            providerGroup.appendChild(makeStatRow('  Model', model || notSetLabel));
-            providerGroup.appendChild(makeStatRow('  API Key', key ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !key));
-          } else if (slot.provider === 'openai') {
-            const baseUrl = (settings[StorageKeys.OPENAI_BASE_URL] as string) || '';
-            const model = (settings[StorageKeys.OPENAI_MODEL] as string) || '';
-            const key = (settings[StorageKeys.OPENAI_API_KEY] as string) || '';
-            providerGroup.appendChild(makeStatRow('  Base URL', baseUrl || notSetLabel));
-            providerGroup.appendChild(makeStatRow('  Model', model || notSetLabel));
-            providerGroup.appendChild(makeStatRow('  API Key', key ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !key));
-          } else if (slot.provider === 'openai2') {
-            const baseUrl = (settings[StorageKeys.OPENAI_2_BASE_URL] as string) || '';
-            const model = (settings[StorageKeys.OPENAI_2_MODEL] as string) || '';
-            const key = (settings[StorageKeys.OPENAI_2_API_KEY] as string) || '';
-            providerGroup.appendChild(makeStatRow('  Base URL', baseUrl || notSetLabel));
-            providerGroup.appendChild(makeStatRow('  Model', model || notSetLabel));
-            providerGroup.appendChild(makeStatRow('  API Key', key ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !key));
-          } else if (slot.provider === 'lm-studio') {
-            const baseUrl = (settings[StorageKeys.LM_STUDIO_BASE_URL] as string) || '';
-            const model = (settings[StorageKeys.LM_STUDIO_MODEL] as string) || '';
-            providerGroup.appendChild(makeStatRow('  Base URL', baseUrl || notSetLabel));
-            providerGroup.appendChild(makeStatRow('  Model', model || notSetLabel));
-          } else if (slot.provider === 'ollama') {
-            const baseUrl = (settings[StorageKeys.OLLAMA_BASE_URL] as string) || '';
-            const model = (settings[StorageKeys.OLLAMA_MODEL] as string) || '';
-            providerGroup.appendChild(makeStatRow('  Base URL', baseUrl || notSetLabel));
-            providerGroup.appendChild(makeStatRow('  Model', model || notSetLabel));
-          } else if (slot.provider === 'openai-compatible') {
-            const baseUrl = (settings[StorageKeys.PROVIDER_BASE_URL] as string) || '';
-            const model = (settings[StorageKeys.PROVIDER_MODEL] as string) || '';
-            const key = (settings[StorageKeys.PROVIDER_API_KEY] as string) || '';
-            providerGroup.appendChild(makeStatRow('  Base URL', baseUrl || notSetLabel));
-            providerGroup.appendChild(makeStatRow('  Model', model || notSetLabel));
-            providerGroup.appendChild(makeStatRow('  API Key', key ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !key));
-          }
-
-          aiSettingsEl.appendChild(providerGroup);
-        }
-      }
-    } catch {
-      if (obsidianSettingsEl) {
-        obsidianSettingsEl.textContent = getMessage('diagLoadError') || '設定の読み込みに失敗しました。';
-      }
+    if (sections.storageStats) {
+      sections.storageStats.appendChild(makeStatRow(getMessage('diagStorageUsed') || 'Storage Used', `${snapshot.storage.bytesUsedKb} KB`));
+      sections.storageStats.appendChild(makeStatRow(getMessage('diagSavedUrls') || 'Saved URLs', snapshot.storage.savedUrls));
     }
 
-    // Storage stats
-    if (storageStats) {
-      try {
-        const bytesUsed = await chrome.storage.local.getBytesInUse(null);
-        const kb = (bytesUsed / 1024).toFixed(1);
-        const urlCount = await getLogCount();
-        storageStats.appendChild(makeStatRow(getMessage('diagStorageUsed') || 'Storage Used', `${kb} KB`));
-        const countLabel = isServiceError(urlCount) ? (getMessage('diagUnavailable') || 'Unavailable') : String(urlCount.data);
-        storageStats.appendChild(makeStatRow(getMessage('diagSavedUrls') || 'Saved URLs', countLabel));
-      } catch {
-        storageStats.textContent = getMessage('diagLoadError') || 'Failed to load storage info.';
-      }
-    }
+    renderSqliteSection(sections.sqliteStats, snapshot);
 
-    // SQLite status
-    let sqliteStatus: { initialized: boolean; path: string; fallback: boolean; fts5: boolean; compileOptions?: string[]; compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback'; initError?: string; opfsMigrationV2Done?: boolean; opfsMigrationV2LastAttemptedAt?: string | null; opfsMigrationV2CompletedAt?: string | null; opfsMigrationV2RecordCount?: number } | null = null;
-    if (sqliteStats) {
-      try {
-        sqliteStatus = await retryWithExponentialBackoff(
-          () => getSqliteStatus(),
-          { label: 'diagSqliteStatus', maxAttempts: 4 }
-        );
-        sqliteStats.innerHTML = '';
-        if (sqliteStatus) {
-          const initializedText = sqliteStatus.initialized
-            ? (getMessage('diagSqliteAvailable') || 'Available')
-            : (getMessage('diagSqliteUnavailable') || 'Unavailable');
-          sqliteStats.appendChild(makeStatRow(getMessage('diagSqliteStatus') || 'Status', initializedText));
-          sqliteStats.appendChild(makeStatRow(getMessage('diagSqlitePath') || 'Path', sqliteStatus.path || '(none)'));
-          const fallbackText = sqliteStatus.fallback
-            ? (getMessage('diagSqliteFallbackYes') || 'Yes (using fallback storage)')
-            : (getMessage('diagSqliteFallbackNo') || 'No (native SQLite)');
-          sqliteStats.appendChild(makeStatRow(getMessage('diagSqliteFallback') || 'Fallback Mode', fallbackText));
-          sqliteStats.appendChild(makeStatRow(getMessage('diagSqliteFts5') || 'FTS5 Search', sqliteStatus.fts5 ? '✓ Available' : '✗ Not available (LIKE fallback)'));
-
-          // OPFS migration status (PBI: 2026-07-17-08)
-          if (sqliteStatus.opfsMigrationV2Done !== undefined) {
-            const migrationLabel = getMessage('diagOpfsMigrationV2') || 'OPFS Data Migration';
-            if (sqliteStatus.opfsMigrationV2Done) {
-              const completed = sqliteStatus.opfsMigrationV2CompletedAt
-                ? ` (${new Date(sqliteStatus.opfsMigrationV2CompletedAt).toLocaleString()})`
-                : '';
-              const count = sqliteStatus.opfsMigrationV2RecordCount
-                ? ` — ${sqliteStatus.opfsMigrationV2RecordCount} records`
-                : '';
-              sqliteStats.appendChild(makeStatRow(migrationLabel, `✓ Completed${completed}${count}`));
-            } else if (sqliteStatus.opfsMigrationV2LastAttemptedAt) {
-              const attempted = new Date(sqliteStatus.opfsMigrationV2LastAttemptedAt).toLocaleString();
-              sqliteStats.appendChild(makeStatRow(migrationLabel, `⏳ Pending (last attempt: ${attempted})`));
-            } else {
-              sqliteStats.appendChild(makeStatRow(migrationLabel, '⏳ Pending'));
-            }
-          }
-
-          if (sqliteStatus.compileOptionsSource) {
-            sqliteStats.appendChild(makeStatRow(getMessage('diagCompileOptionsSource') || 'Source', sqliteStatus.compileOptionsSource));
-          }
-          if (sqliteStatus.initError) {
-            sqliteStats.appendChild(makeStatRow('Init Error', sqliteStatus.initError));
-          }
-        } else {
-          sqliteStats.textContent = getMessage('diagSqliteCheckFailed') || 'Failed to check SQLite status.';
-        }
-      } catch {
-        sqliteStats.textContent = getMessage('diagLoadError') || 'Failed to load storage info.';
-      }
-    }
-
-    // Deficiency diagnosis
-    if (diagDeficiencyStats && sqliteStatus) {
-      const isOpfsWorker = (sqliteStatus.compileOptionsSource === 'opfs-worker')
-        || sqliteStatus.path.startsWith('OPFS:');
-      const offscreenStrategy: DiagnosticInput['vfsStrategy'] = sqliteStatus.fallback
-        ? 'fallback'
-        : isOpfsWorker
-          ? 'opfs-sync-worker'
-          : 'opfs-async-main';
-
-      const diagInput: DiagnosticInput = {
-        opfsDirectory: isOpfsWorker,
-        syncAccessHandle: isOpfsWorker,
-        worker: isOpfsWorker,
-        initialized: sqliteStatus.initialized,
-        fallback: sqliteStatus.fallback,
-        fts5: sqliteStatus.fts5,
-        vfsStrategy: offscreenStrategy,
-        ...pickDefined({ initError: sqliteStatus.initError }),
-      };
-      const deficiencies = diagnoseDeficiencies(diagInput);
-
+    if (sections.diagDeficiencyStats && snapshot.sqlite) {
+      const deficiencies = snapshot.deficiencies;
       if (deficiencies.length === 0) {
-        diagDeficiencyStats.appendChild(makeStatRow(getMessage('diagDeficiencyNone') || 'No deficiencies — all features are enabled.', '✓'));
+        sections.diagDeficiencyStats.appendChild(makeStatRow(getMessage('diagDeficiencyNone') || 'No deficiencies — all features are enabled.', '✓'));
       } else {
         for (const item of deficiencies) {
           const severityLabel = getSeverityLabel(item.severity);
           const summaryText = getMessage(item.summaryKey) || item.id;
-          diagDeficiencyStats.appendChild(makeStatRow(`${summaryText} [${severityLabel}]`, getMessage(item.recommendedActionKey) || ''));
+          sections.diagDeficiencyStats.appendChild(makeStatRow(`${summaryText} [${severityLabel}]`, getMessage(item.recommendedActionKey) || ''));
         }
       }
     }
 
-    // Built-in AI diagnostics (regardless of the currently configured AI provider)
-    if (diagBuiltInAiStats) {
-      try {
-        const result = await checkBuiltInAiAvailability();
-        renderBuiltInAiStatus(diagBuiltInAiStats, diagBuiltInAiDownloadBtn, result);
-      } catch {
-        diagBuiltInAiStats.textContent = getMessage('diagLoadError') || 'Failed to load storage info.';
-      }
+    if (sections.diagBuiltInAiStats && snapshot.builtInAi) {
+      renderBuiltInAiStatus(sections.diagBuiltInAiStats, sections.diagBuiltInAiDownloadBtn, snapshot.builtInAi);
     }
 
-    // Compile options (debug mode only)
-    if (diagCompileOptionsStats && sqliteStatus?.compileOptions && debugMode) {
-      const options = sqliteStatus.compileOptions;
-      const source = sqliteStatus.compileOptionsSource || 'unknown';
-      diagCompileOptionsStats.appendChild(makeStatRow(getMessage('diagCompileOptionsSource') || 'Source', source));
-      diagCompileOptionsStats.appendChild(makeStatRow('Total', String(options.length)));
+    renderCompileOptions(sections.diagCompileOptionsStats, snapshot);
 
-      const ftsVfsOptions = options.filter(o => o.includes('FTS') || o.includes('VFS'));
-      if (ftsVfsOptions.length > 0) {
-        diagCompileOptionsStats.appendChild(makeStatRow(getMessage('diagCompileOptionsHighlight') || 'FTS/VFS related', ftsVfsOptions.join(', ')));
-      }
-
-      const allOptionsDetails = document.createElement('details');
-      allOptionsDetails.className = 'advanced-details';
-      allOptionsDetails.innerHTML = `
-        <summary class="advanced-details-summary">All ${options.length} options</summary>
-        <div class="advanced-details-content">
-          <pre class="diag-compile-options-list">${options.join('\n')}</pre>
-        </div>
-      `;
-      diagCompileOptionsStats.appendChild(allOptionsDetails);
+    // Divergence warning: offscreen fell back while the dashboard still sees OPFS
+    if (sections.diagDivergenceWarning
+        && snapshot.divergence.offscreenUsesFallback
+        && snapshot.divergence.dashboardDetectsOpfs) {
+      sections.diagDivergenceWarning.classList.remove('hidden');
     }
 
-    // Divergence warning
-    if (diagDivergenceWarning && sqliteStatus) {
-      let dashboardVfsStrategy: string | null = null;
-      try {
-        const { strategy } = detectLiveVfsStrategy();
-        dashboardVfsStrategy = strategy;
-      } catch { /* detectLiveVfsStrategy may fail */ }
-
-      const offscreenUsesFallback = sqliteStatus.fallback;
-      const dashboardDetectsOpfs = dashboardVfsStrategy !== 'fallback';
-      if (offscreenUsesFallback && dashboardDetectsOpfs) {
-        diagDivergenceWarning.classList.remove('hidden');
-      }
+    if (sections.extInfo) {
+      sections.extInfo.appendChild(makeStatRow(getMessage('diagVersion') || 'Version', snapshot.extInfo.version));
+      sections.extInfo.appendChild(makeStatRow(getMessage('diagExtName') || 'Extension', snapshot.extInfo.name));
     }
 
-    // Extension info
-    if (extInfo) {
-      const manifest = chrome.runtime.getManifest();
-      extInfo.appendChild(makeStatRow(getMessage('diagVersion') || 'Version', manifest.version));
-      extInfo.appendChild(makeStatRow(getMessage('diagExtName') || 'Extension', manifest.name));
-    }
-
-    // Placeholder text for connection result
-    if (connectionResult) {
-      connectionResult.dataset['placeholder'] = getMessage('diagConnectionPlaceholder') || 'Click "Test Connection" to check the Obsidian API connection.';
+    if (sections.connectionResult) {
+      sections.connectionResult.dataset['placeholder'] = getMessage('diagConnectionPlaceholder') || 'Click "Test Connection" to check the Obsidian API connection.';
     }
   }
 
@@ -365,26 +318,8 @@ export function createDiagnosticsPanel(): PanelLifecycle {
 
       const diagDebugModeToggle = container.querySelector('#diagDebugModeToggle') as HTMLInputElement | null;
       const compileOptionsSection = container.querySelector('#diagCompileOptionsSection') as HTMLElement | null;
-      const diagTestObsidianBtn = container.querySelector('#diagTestObsidianBtn') as HTMLButtonElement | null;
-      const diagTestAiBtn = container.querySelector('#diagTestAiBtn') as HTMLButtonElement | null;
-      const diagTestSqliteBtn = container.querySelector('#diagTestSqliteBtn') as HTMLButtonElement | null;
-      const connectionResult = container.querySelector('#diagConnectionResult') as HTMLElement | null;
-      const sqliteResult = container.querySelector('#diagSqliteResult') as HTMLElement | null;
-      const diagOpfsSpikeBtn = container.querySelector('#diagOpfsSpikeBtn') as HTMLButtonElement | null;
-      const opfsSpikeResult = container.querySelector('#diagOpfsSpikeResult') as HTMLElement | null;
-      const diagMigrateBtn = container.querySelector('#diagMigrateBtn') as HTMLButtonElement | null;
-      const migrateResult = container.querySelector('#diagMigrateResult') as HTMLElement | null;
-      const diagBackfillBtn = container.querySelector('#diagBackfillBtn') as HTMLButtonElement | null;
-      const backfillResult = container.querySelector('#diagBackfillResult') as HTMLElement | null;
-      const diagCleanupBtn = container.querySelector('#diagCleanupBtn') as HTMLButtonElement | null;
-      const cleanupResult = container.querySelector('#diagCleanupResult') as HTMLElement | null;
-      const diagBuiltInAiStats = container.querySelector('#diagBuiltInAiStats') as HTMLElement | null;
-      const diagBuiltInAiDownloadBtn = container.querySelector('#diagBuiltInAiDownloadBtn') as HTMLButtonElement | null;
-      const diagBuiltInAiDownloadResult = container.querySelector('#diagBuiltInAiDownloadResult') as HTMLElement | null;
 
-      // Debug mode state + toggle
-      const debugModeResult = await chrome.storage.local.get('debugMode');
-      const debugMode = Boolean(debugModeResult.debugMode);
+      const debugMode = await getDebugMode();
       if (diagDebugModeToggle) {
         diagDebugModeToggle.checked = debugMode;
         diagDebugModeToggle.setAttribute('aria-checked', String(debugMode));
@@ -396,280 +331,38 @@ export function createDiagnosticsPanel(): PanelLifecycle {
       diagDebugModeToggle?.addEventListener('change', async () => {
         const isOn = diagDebugModeToggle.checked;
         diagDebugModeToggle.setAttribute('aria-checked', String(isOn));
-        await chrome.storage.local.set({ debugMode: isOn });
+        await setDebugMode(isOn);
         if (compileOptionsSection) {
           compileOptionsSection.style.display = isOn ? '' : 'none';
         }
       });
 
-      // Obsidian connection test
-      diagTestObsidianBtn?.addEventListener('click', async () => {
-        if (!connectionResult) return;
-        diagTestObsidianBtn.disabled = true;
-        connectionResult.textContent = getMessage('testing') || 'Testing...';
-        connectionResult.className = 'diag-result';
+      const sections = querySections(container);
 
-        try {
-          const testResult = await chrome.runtime.sendMessage({
-            type: 'TEST_OBSIDIAN',
-            protocolVersion: CURRENT_PROTOCOL_VERSION,
-            payload: {}
-          }) as { obsidian?: { success: boolean; message: string } };
-
-          const obsidian = testResult?.obsidian;
-          connectionResult.textContent = obsidian
-            ? `Obsidian: ${obsidian.success ? '✓' : '✗'} ${obsidian.message}`
-            : getMessage('testComplete') || 'Test complete.';
-          connectionResult.style.color = obsidian?.success ? `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})` : `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-        } catch {
-          connectionResult.textContent = getMessage('testError') || 'Connection test failed.';
-          connectionResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-        } finally {
-          diagTestObsidianBtn.disabled = false;
-        }
-      });
-
-      // AI connection test
-      diagTestAiBtn?.addEventListener('click', async () => {
-        if (!connectionResult) return;
-        diagTestAiBtn.disabled = true;
-        connectionResult.textContent = getMessage('testing') || 'Testing...';
-        connectionResult.className = 'diag-result';
-
-        try {
-          const testResult = await chrome.runtime.sendMessage({
-            type: 'TEST_AI',
-            protocolVersion: CURRENT_PROTOCOL_VERSION,
-            payload: {}
-          }) as { ai?: { success: boolean; message: string; providers?: Array<{ provider: string; model?: string; success: boolean; message: string; elapsedMs: number; debug?: { prompt?: string; response?: string; error?: string; availability?: string; hasContent?: boolean; statusCode?: number } }> } };
-
-          const ai = testResult?.ai;
-          if (ai) {
-            connectionResult.innerHTML = '';
-
-            if (ai.providers && ai.providers.length > 1) {
-              // Multi-provider: show per-provider results
-              const header = document.createElement('div');
-              header.textContent = ai.success
-                ? `AI: ${getMessage('testSuccess') || '✓ Connection successful'}`
-                : `AI: ${getMessage('testFailed') || '✗ Connection failed'}`;
-              header.className = ai.success ? 'diag-success diag-bold' : 'diag-error diag-bold';
-              connectionResult.appendChild(header);
-
-              for (const provider of ai.providers) {
-                const row = document.createElement('div');
-                row.className = 'diag-indent';
-                row.textContent = formatProviderHeadline(provider);
-                row.classList.add(provider.success ? 'diag-success' : 'diag-error');
-                connectionResult.appendChild(row);
-
-                // 何を送って何が返ったかを1行ずつ表示する
-                for (const line of formatProviderDetailLines(provider)) {
-                  const detailRow = document.createElement('div');
-                  detailRow.className = 'diag-indent ai-debug-details';
-                  detailRow.textContent = line;
-                  connectionResult.appendChild(detailRow);
-                }
-              }
-            } else {
-              // Single provider: show simple result
-              connectionResult.textContent = `AI: ${ai.success ? '✓' : '✗'} ${ai.message}`;
-              connectionResult.className = `diag-result ${ai.success ? 'diag-success' : 'diag-error'}`;
-            }
-          } else {
-            connectionResult.textContent = getMessage('testComplete') || 'Test complete.';
+      const actionEls: DiagnosticActionElements = {
+        testObsidianBtn: container.querySelector('#diagTestObsidianBtn'),
+        testAiBtn: container.querySelector('#diagTestAiBtn'),
+        testSqliteBtn: container.querySelector('#diagTestSqliteBtn'),
+        opfsSpikeBtn: container.querySelector('#diagOpfsSpikeBtn'),
+        migrateBtn: container.querySelector('#diagMigrateBtn'),
+        backfillBtn: container.querySelector('#diagBackfillBtn'),
+        cleanupBtn: container.querySelector('#diagCleanupBtn'),
+        builtInAiDownloadBtn: sections.diagBuiltInAiDownloadBtn,
+        connectionResult: sections.connectionResult,
+        sqliteResult: container.querySelector('#diagSqliteResult'),
+        opfsSpikeResult: container.querySelector('#diagOpfsSpikeResult'),
+        migrateResult: container.querySelector('#diagMigrateResult'),
+        backfillResult: container.querySelector('#diagBackfillResult'),
+        cleanupResult: container.querySelector('#diagCleanupResult'),
+        builtInAiStats: sections.diagBuiltInAiStats,
+        builtInAiDownloadResult: container.querySelector('#diagBuiltInAiDownloadResult'),
+      };
+      createDiagnosticActions(actionEls, {
+        onBuiltInAiDownloaded: (result) => {
+          if (sections.diagBuiltInAiStats) {
+            renderBuiltInAiStatus(sections.diagBuiltInAiStats, sections.diagBuiltInAiDownloadBtn, result);
           }
-        } catch (err) {
-          console.error('Diagnostics: AI test failed', err);
-          connectionResult.textContent = getMessage('testError') || 'Connection test failed.';
-          connectionResult.className = 'diag-result diag-error';
-        } finally {
-          diagTestAiBtn.disabled = false;
-        }
-      });
-
-      // SQLite test
-      diagTestSqliteBtn?.addEventListener('click', async () => {
-        if (!sqliteResult) return;
-        diagTestSqliteBtn.disabled = true;
-        sqliteResult.textContent = getMessage('testing') || 'Testing...';
-        sqliteResult.className = 'diag-result';
-
-        try {
-          const testResult = await chrome.runtime.sendMessage({
-            type: 'DASHBOARD_SQLITE',
-            protocolVersion: CURRENT_PROTOCOL_VERSION,
-            payload: { subtype: 'status' }
-          }) as { success: boolean; initialized?: boolean; fallback?: boolean; error?: string; initError?: string; fts5?: boolean };
-
-          if (testResult.success) {
-            if (testResult.initialized) {
-              const fts5Text = testResult.fts5 ? 'FTS5 ✓' : 'LIKE fallback';
-              sqliteResult.textContent = `✓ ${getMessage('diagSqliteTestOk') || 'SQLite is working correctly.'} (${fts5Text})`;
-              sqliteResult.style.color = `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`;
-            } else {
-              const errorMsg = testResult.initError || testResult.error || 'SQLite initialization failed.';
-              sqliteResult.textContent = `✗ ${getMessage('diagSqliteTestInitFailed') || 'SQLite initialization failed.'}\n${errorMsg}`;
-              sqliteResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-            }
-          } else {
-            sqliteResult.textContent = `✗ ${testResult.error || 'SQLite test failed.'}`;
-            sqliteResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-          }
-        } catch {
-          sqliteResult.textContent = getMessage('testError') || 'Connection test failed.';
-          sqliteResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-        } finally {
-          diagTestSqliteBtn.disabled = false;
-        }
-      });
-
-      // OPFS feasibility spike
-      diagOpfsSpikeBtn?.addEventListener('click', async () => {
-        if (!opfsSpikeResult) return;
-        diagOpfsSpikeBtn.disabled = true;
-        opfsSpikeResult.textContent = getMessage('testing') || 'Testing...';
-        opfsSpikeResult.className = 'diag-result';
-
-        try {
-          const result = await runOpfsSpike();
-          if ('data' in result) {
-            const report = result.data;
-            const header = `${report.passed ? '✓' : '✗'} strategy=${report.strategy} (${report.durationMs}ms)`;
-            const lines = report.steps.map(s => `  ${s.ok ? '✓' : '✗'} ${s.name}${s.detail ? ` — ${s.detail}` : ''}`);
-            opfsSpikeResult.textContent = [header, ...lines].join('\n');
-            opfsSpikeResult.style.color = report.passed
-              ? `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`
-              : `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-          } else {
-            opfsSpikeResult.textContent = `✗ OPFS spike failed: ${result.error}`;
-            opfsSpikeResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-          }
-        } catch {
-          opfsSpikeResult.textContent = getMessage('testError') || 'Spike failed.';
-          opfsSpikeResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-        } finally {
-          diagOpfsSpikeBtn.disabled = false;
-        }
-      });
-
-      // Migrate legacy history to SQLite
-      diagMigrateBtn?.addEventListener('click', async () => {
-        if (!migrateResult) return;
-        const confirmed = await showConfirmDialog({
-          title: getMessage('diagMigrateBtn') || 'Convert history to SQLite',
-          message: getMessage('diagMigrateConfirm') || 'Convert legacy browsing history into SQLite. The original chrome.storage data is preserved (you can clean it up separately from the diagnostics panel).',
-          confirmLabel: getMessage('diagMigrateConfirmLabel') || 'Convert',
-          cancelLabel: getMessage('cancel') || 'Cancel',
-        });
-        if (!confirmed) return;
-
-        diagMigrateBtn.disabled = true;
-        migrateResult.textContent = getMessage('testing') || 'Working...';
-        migrateResult.className = 'diag-result';
-
-        try {
-          const result = await migrateLogs();
-          if ('data' in result) {
-            migrateResult.textContent = `✓ ${getMessage('diagMigrateDone') || 'Conversion complete.'} read=${result.data.read} inserted=${result.data.inserted} total=${result.data.count}`;
-            migrateResult.style.color = `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`;
-          } else {
-            migrateResult.textContent = `✗ ${getMessage('diagMigrateFailed') || 'Conversion failed.'}: ${result.error}`;
-            migrateResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-          }
-        } catch {
-          migrateResult.textContent = `✗ ${getMessage('diagMigrateFailed') || 'Conversion failed.'}`;
-          migrateResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-        } finally {
-          diagMigrateBtn.disabled = false;
-        }
-      });
-
-      // Backfill diagnostic metadata
-      diagBackfillBtn?.addEventListener('click', async () => {
-        if (!backfillResult) return;
-        diagBackfillBtn.disabled = true;
-        backfillResult.textContent = getMessage('testing') || 'Working...';
-        backfillResult.className = 'diag-result';
-
-        try {
-          const result = await backfillMetadata();
-          if ('data' in result) {
-            backfillResult.textContent = `✓ ${getMessage('diagBackfillDone') || 'Backfill complete.'} updated=${result.data.updated}/${result.data.total}`;
-            backfillResult.style.color = `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`;
-          } else {
-            backfillResult.textContent = `✗ ${getMessage('diagBackfillFailed') || 'Backfill failed.'}: ${result.error}`;
-            backfillResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-          }
-        } catch {
-          backfillResult.textContent = `✗ ${getMessage('diagBackfillFailed') || 'Backfill failed.'}`;
-          backfillResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-        } finally {
-          diagBackfillBtn.disabled = false;
-        }
-      });
-
-      // Cleanup legacy storage
-      diagCleanupBtn?.addEventListener('click', async () => {
-        if (!cleanupResult) return;
-        const confirmed = await showConfirmDialog({
-          title: getMessage('diagCleanupBtn') || 'Delete legacy storage data',
-          message: getMessage('diagCleanupConfirm') || 'Delete the original chrome.storage browsing history? This is a destructive operation. The data is already copied to SQLite.',
-          confirmLabel: getMessage('diagCleanupConfirmLabel') || 'Delete',
-          cancelLabel: getMessage('cancel') || 'Cancel',
-        });
-        if (!confirmed) return;
-
-        diagCleanupBtn.disabled = true;
-        cleanupResult.textContent = getMessage('testing') || 'Working...';
-        cleanupResult.className = 'diag-result';
-
-        try {
-          const result = await cleanupLegacyStorage();
-          if ('data' in result) {
-            cleanupResult.textContent = `✓ ${getMessage('diagCleanupDone') || 'Cleanup complete.'} removed=${result.data.removed.length} keys, ${result.data.totalBytes} bytes freed`;
-            cleanupResult.style.color = `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`;
-          } else {
-            cleanupResult.textContent = `✗ ${getMessage('diagCleanupFailed') || 'Cleanup failed.'}: ${result.error}`;
-            cleanupResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-          }
-        } catch {
-          cleanupResult.textContent = `✗ ${getMessage('diagCleanupFailed') || 'Cleanup failed.'}`;
-          cleanupResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-        } finally {
-          diagCleanupBtn.disabled = false;
-        }
-      });
-
-      // Built-in AI model download
-      diagBuiltInAiDownloadBtn?.addEventListener('click', async () => {
-        if (!diagBuiltInAiDownloadResult) return;
-        diagBuiltInAiDownloadBtn.disabled = true;
-        diagBuiltInAiDownloadResult.textContent = getMessage('diagBuiltInAiDownloadStarting') || 'Starting download... 0%';
-        diagBuiltInAiDownloadResult.className = 'diag-result';
-
-        try {
-          const result = await startBuiltInAiDownload((percent) => {
-            diagBuiltInAiDownloadResult.textContent = `${getMessage('diagBuiltInAiDownloading') || 'Downloading...'} ${percent}%`;
-          });
-
-          if (diagBuiltInAiStats) {
-            renderBuiltInAiStatus(diagBuiltInAiStats, diagBuiltInAiDownloadBtn, result);
-          }
-
-          if (result.status === 'available') {
-            diagBuiltInAiDownloadResult.textContent = `✓ ${getMessage('diagBuiltInAiDownloadDone') || 'Download complete.'}`;
-            diagBuiltInAiDownloadResult.style.color = `var(--color-success, ${UI_COLORS.CSS_SUCCESS_FALLBACK})`;
-          } else {
-            diagBuiltInAiDownloadResult.textContent = `✗ ${getMessage('diagBuiltInAiDownloadFailed') || 'Download failed.'}`;
-            diagBuiltInAiDownloadResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-          }
-        } catch {
-          diagBuiltInAiDownloadResult.textContent = `✗ ${getMessage('diagBuiltInAiDownloadFailed') || 'Download failed.'}`;
-          diagBuiltInAiDownloadResult.style.color = `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
-        } finally {
-          diagBuiltInAiDownloadBtn.disabled = false;
-        }
+        },
       });
     },
     async load() {
