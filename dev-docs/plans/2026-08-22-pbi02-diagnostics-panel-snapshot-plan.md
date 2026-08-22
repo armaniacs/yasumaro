@@ -1353,9 +1353,11 @@ git mv pbi/2026-08-22-02-refactor-diagnostics-panel-deepening.md dev-docs/archiv
 - [ ] **Step 4: コミット**
 
 ```bash
-git add pbi/00-INDEX.md dev-docs/archived/pbi/2026-08-22-02-refactor-diagnostics-panel-deepening.md pbi/2026-08-22-02-refactor-diagnostics-panel-deepening.md
+git add pbi/00-INDEX.md
 git commit -m "docs: PBI 2026-08-22-02（diagnosticsPanel 深掘り）を完了としてアーカイブ"
 ```
+
+（`git mv` がリネームを既にステージング済みのため、追加でステージするのは INDEX のみ）
 
 - [ ] **Step 5: 知識グラフ更新**
 
