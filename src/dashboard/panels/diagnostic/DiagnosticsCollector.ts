@@ -77,13 +77,16 @@ export class DiagnosticsCollector {
 
   async collect(): Promise<DiagnosticsSnapshot> {
     const getSettingsFn = this.deps.getSettings ?? getSettings;
-    const getSqliteStatusFn: typeof getSqliteStatus = this.deps.getSqliteStatus ?? (async () =>
-      retryWithExponentialBackoff(() => getSqliteStatus(), { label: 'diagSqliteStatus', maxAttempts: 4 })
-    );
+    const getSqliteStatusFn = this.deps.getSqliteStatus
+      ?? (async () =>
+        retryWithExponentialBackoff(() => getSqliteStatus(), { label: 'diagSqliteStatus', maxAttempts: 4 })
+      );
     const getLogCountFn = this.deps.getLogCount ?? getLogCount;
     const checkBuiltInAiFn = this.deps.checkBuiltInAiAvailability ?? checkBuiltInAiAvailability;
     const getBytesInUse = this.deps.getStorageBytesInUse ?? (() => chrome.storage.local.getBytesInUse(null));
     const getDebugModeFn = this.deps.getDebugMode ?? getDebugMode;
+    // Fallback keeps collect() from rejecting in non-extension test environments
+    // where chrome.runtime is undefined; production always has a manifest.
     const getManifestFn = this.deps.getManifest ?? (() => {
       try { return chrome.runtime.getManifest(); } catch { return { version: 'unknown', name: 'unknown' }; }
     });
