@@ -61,6 +61,7 @@ export async function startBuiltInAiDownload(
           onProgress(Math.round(event.loaded * 100));
         });
       },
+      expectedOutputs: [{ type: 'text', languages: ['ja'] }],
     });
     session.destroy();
   } catch {

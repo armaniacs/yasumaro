@@ -28,8 +28,11 @@
   （`type` は `feat` / `fix` / `refactor` / `doc` / `test` / `investigate`。
   ファイル名の種別がそのまま機能追加/非機能追加の判定基準になる）
 - 実装計画は `dev-docs/plans/YYYY-MM-DD-pbiNN-<slug>-plan.md` として作成する
+- **`plans/` ディレクトリは廃止。** 今後はすべて `dev-docs/plans/` に一本化する
 - **完了したPBIは `dev-docs/archived/pbi/` へ、対応する実装計画は
   `dev-docs/archived/plans/` へ `git mv` で移動する**
+- 対応する dig-findings ファイル（`dev-docs/dig-findings-*.md`）は
+  `dev-docs/archived/` へ `git mv` で移動する
 - 移動したらこのINDEXの表から行を削除し、下の「アーカイブ履歴」に1行追記する
 
 ---

@@ -37,11 +37,24 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+### Refactor
+
+## [6.7.64] - 2026-08-23
+
+### Fixed
+
 - 既定 Obsidian ポートペアを訂正。`DEFAULT_SETTINGS`/`allowedUrls`/`urlWhitelist`/`obsidianConfigValidator` のフォールバックポートを `27123` から `27124` に統一し、`protocol='https' × port='27124'` の整合ペアにした。明示設定ユーザーの保存値は尊重。`storage-defaults.test.ts` / `obsidianClient.test.ts` / `robustness-port-validation.test.ts` / `storageUrls.test.ts` の default 期待値を `27124` に更新。
+- Built-in AI のセッション作成に `expectedOutputs: [{ type: 'text', languages: ['ja'] }]` を指定し、日本語テキスト出力を明示的に要求するようにした。`builtInAIClient.ts` および `builtInAiDiagnosticsService.ts` のダウンロード診断セッションに適用。
 
 ### Refactor
 
 - `SettingsRepository` に `getMany` を追加し、`DiagnosticsCollector` / `settingsForm` / `connectionTests` / `CspSettingsController` / `tagsPanel` / `gistSettings` / `markdownExport` / `recordingConditionsSettings` を repository 経由に移行。生キャスト（`as string` 等）を0件に削減。`SettingsReader` 型を export し、view model 関数・クラスに後置 optional パラメータで注入シームを提供。`InMemoryStorageAdapter` 越しの単体テストを追加。
+- AI 接続テストの進捗 UI（スピナー + プロバイダラベル + 経過時間）を `aiTestProgressView.ts` に抽出し、「初期設定」画面と「診断」画面の両方から共有するようにした。`connectionTests.ts` と `diagnosticsActions.ts` の重複していた DOM 構築・レンダリングロジックを純関数として統合。
+
+### Chore
+
+- `dev-docs/dig-findings-*.md` を `dev-docs/archived/` へ移動し、完了した深掘り記録をアーカイブした。
+- `plans/` ディレクトリを廃止し、今後は `dev-docs/plans/` に一本化した。`pbi/00-INDEX.md` の運用ルールを更新。
 
 ## [6.7.63] - 2026-08-21
 

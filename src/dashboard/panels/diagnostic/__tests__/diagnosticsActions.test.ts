@@ -52,7 +52,11 @@ describe('diagnosticsActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (global as unknown as Record<string, unknown>).chrome = {
-      runtime: { sendMessage: vi.fn() },
+      runtime: {
+        sendMessage: vi.fn(),
+        onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
+        id: 'test-extension-id',
+      },
     } as unknown as typeof chrome;
   });
 
