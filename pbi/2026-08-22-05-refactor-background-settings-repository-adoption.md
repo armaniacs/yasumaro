@@ -34,6 +34,14 @@ Scenario: キャストとインラインデフォルトの撤去
 - [x] 既存テスト（RemoteAIService.test.ts）が repo 注入形式に更新され、全パスする
 - [x] `npm run type-check` / `npm test` がパスする
 
+## 受け入れ基準（後続ラウンド: 残り background モジュール）
+- [x] GeminiProvider: `gemini_api_key || ''` / `gemini_model || 'gemini-3.1-flash-lite'` / `_getApiVersion` の `'v1beta'` を `DEFAULT_SETTINGS` 経由に統一
+- [x] obsidianClient: `OBSIDIAN_DAILY_PATH || ''` を `DEFAULT_SETTINGS` 経由に統一
+- [x] localMarkdownExportCore: `getSettings` → `repo.getAll()`、`EXPORT_PATH || 'Yasumaro'` を撤去
+- [x] reviewSummaryGenerator: `getSettings` → `repo.getAll()`、`EXPORT_PATH || 'Yasumaro'` を撤去
+- [x] privacyPipeline: `PRIVACY_MODE || 'full_pipeline'` を `DEFAULT_SETTINGS`（masked_cloud）に統一し、テストの誤キー（`PRIVACY_MODE` リテラル）を修正
+- [x] reviewSummaryAlarm / recordingCache: `getSettings` 直呼びを `repo.getAll()` に移行
+
 ## テスト戦略（t_wadaスタイル）
 
 ### 単体テスト
@@ -44,15 +52,15 @@ Scenario: キャストとインラインデフォルトの撤去
 - `RemoteAIService × InMemorySettingsRepository`（chrome.storage モック不要）
 
 ## 見積もり
-1pt（RemoteAIService のみ。残り背景モジュールは後続ラウンド）
+2pt（RemoteAIService + 残り background 読み取りモジュール）
 
 ## 技術的考慮事項
 - `SettingsReader = Pick<SettingsRepository, 'getMany' | 'getAll'>`。RemoteAIService は全量を provider へ渡すため `getAll()` が自然
 - 現行 `RemoteAIServiceConfig.getSettings` はテスト注入専用の seam。`repo` 注入へ置き換える
 - 既存 `getSettings()` の 30 秒 TTL キャッシュは `SettingsRepository.getAll()`（Chrome パスは getSettings 委譲）により維持される
-- スコープ外（後続）: GeminiProvider / obsidianClient / localMarkdownExportCore / reviewSummaryGenerator / privacyPipeline / reviewSummaryAlarm / recordingCache / gistSyncTarget の読み取り移行
+- スコープ外（後続）: gistSyncTarget（getSettings / saveSettings 直呼び。保存操作を含むため書き込み移行の PBI で扱う）
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする（RemoteAIService ラウンド）
 - [ ] コードレビュー完了
-- [x] リファクタリング完了（RemoteAIService のキャスト・インラインフォールバック 0 件）
+- [x] リファクタリング完了（background 読み取りモジュールのキャスト・インラインフォールバック 0 件）
