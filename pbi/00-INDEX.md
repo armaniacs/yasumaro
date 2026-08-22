@@ -18,7 +18,7 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| [2026-08-22-04](2026-08-22-04-backlog-ai-test-progress-client.md) ⬜ | 🟢低 (1pt) | 🟢なし | 📋backlog | AI 接続テスト進捗 client 抽出 — 第2消費者出現時の引き金付き（RICE 10） |
+| （現在なし） | | | | |
 
 ---
 
@@ -38,6 +38,10 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-23 aiTestProgressClient 抽出完了
+
+- 2026-08-22-04-backlog-ai-test-progress-client.md (RICE 10 — connectionTests.ts が450行トリガーに接近（435行、余裕15行）したため着手。listener登録・shapeガード・runId相関・timeoutを`src/dashboard/aiTestProgressClient.ts`（deep module、新規テスト8件）へ抽出し、connectionTests.tsを435行→404行に削減。第2消費者トリガー（popup/diagnosticsPanel）は2026-08-23のADRで却下済みのため対象外化。type-check / 1889テスト全パス)
 
 ### 2026-08-22 background SettingsRepository 採用完了
 

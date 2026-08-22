@@ -15,11 +15,11 @@ import { settingsRepository, type SettingsReader } from '../../utils/storage/Set
 import { getMessage } from '../../utils/i18n.js';
 import { type AiTestProgress, type MultiProviderTestResult } from '../../background/ai/AIService.js';
 import { PROVIDER_LABELS } from '../../utils/aiProviderLabels.js';
-import { AI_TEST_PROGRESS_MESSAGE_TYPE, type AiTestProgressMessage } from '../../background/aiTestProgressNotifier.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import { saveDashboardSettings } from '../settingsPipeline.js';
 import { syncStatusToTop } from '../statusView.js';
 import { formatProviderHeadline, formatProviderDetailLines } from '../aiTestResultView.js';
+import { subscribeAiTestProgress } from '../aiTestProgressClient.js';
 
 const SETTINGS_FORM_SELECTOR = '#panel-general';
 
@@ -156,29 +156,6 @@ export async function handleTestObsidian(): Promise<void> {
   }
 }
 
-function isAiTestProgressMessage(message: unknown): message is AiTestProgressMessage {
-  if (
-    typeof message !== 'object' ||
-    message === null ||
-    (message as { type?: unknown }).type !== AI_TEST_PROGRESS_MESSAGE_TYPE
-  ) {
-    return false;
-  }
-  const progress = (message as AiTestProgressMessage).progress;
-  // Validate the payload shape defensively: the broadcast reaches every
-  // extension context, so a malformed/forged message must not corrupt the UI.
-  return (
-    typeof progress === 'object' &&
-    progress !== null &&
-    typeof progress.provider === 'string' &&
-    Number.isInteger(progress.index) &&
-    progress.index >= 0 &&
-    Number.isInteger(progress.total) &&
-    progress.total >= 0 &&
-    (progress.model === undefined || typeof progress.model === 'string')
-  );
-}
-
 /** Look up a provider label without leaking Object.prototype keys. */
 function providerLabelSafe(provider: string): string {
   return Object.prototype.hasOwnProperty.call(PROVIDER_LABELS, provider)
@@ -274,24 +251,16 @@ export async function handleTestAi(): Promise<void> {
     renderAiTestProgressElapsed(view, startTime);
   };
 
-  const progressListener = (message: unknown, sender: chrome.runtime.MessageSender): void => {
-    // AI_TEST_PROGRESS arrives via chrome.runtime.sendMessage broadcast, so any
-    // extension context (content scripts, popup, offscreen) can reach this
-    // listener. Accept only messages originating from this extension AND from
-    // this test run (guards against concurrent Dashboard tabs overwriting state).
-    if (sender?.id !== chrome.runtime.id) return;
-    if (isAiTestProgressMessage(message) && message.progress.runId === runId) {
-      latestProgress = message.progress;
-      const key = `${message.progress.provider}:${message.progress.index}`;
-      const changed = key !== lastProviderKey;
-      lastProviderKey = key;
-      updateView(changed);
-    }
-  };
+  const unsubscribeProgress = subscribeAiTestProgress(runId, (progress) => {
+    latestProgress = progress;
+    const key = `${progress.provider}:${progress.index}`;
+    const changed = key !== lastProviderKey;
+    lastProviderKey = key;
+    updateView(changed);
+  });
 
   let elapsedTimer: ReturnType<typeof setInterval> | undefined;
   try {
-    chrome.runtime.onMessage.addListener(progressListener);
     renderAiTestProgressLabel(view, undefined);
     renderAiTestProgressElapsed(view, startTime);
     syncStatusToTop();
@@ -363,7 +332,7 @@ export async function handleTestAi(): Promise<void> {
     }
   } finally {
     if (elapsedTimer) clearInterval(elapsedTimer);
-    chrome.runtime.onMessage.removeListener(progressListener);
+    unsubscribeProgress();
     testAiBtn.disabled = false;
     if (testAiBtnTop) testAiBtnTop.disabled = false;
     aiTestInFlight = false;
