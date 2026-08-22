@@ -40,12 +40,167 @@ vi.mock('../optimisticLock.js', () => ({
 }));
 
 // storage モック
-vi.mock('../storage.js', () => ({
-    isDomainInWhitelist: vi.fn((url: string) => url.includes('allowed.com')),
-    normalizeUrl: vi.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
-    computeUrlsHash: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
-    Settings: {}
-}));
+vi.mock('../storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      isDomainInWhitelist: vi.fn((url: string) => url.includes('allowed.com')),
+      normalizeUrl: vi.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
+      computeUrlsHash: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      isDomainInWhitelist: vi.fn((url: string) => url.includes('allowed.com')),
+      normalizeUrl: vi.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
+      computeUrlsHash: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      isDomainInWhitelist: vi.fn((url: string) => url.includes('allowed.com')),
+      normalizeUrl: vi.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
+      computeUrlsHash: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      isDomainInWhitelist: vi.fn((url: string) => url.includes('allowed.com')),
+      normalizeUrl: vi.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
+      computeUrlsHash: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      isDomainInWhitelist: vi.fn((url: string) => url.includes('allowed.com')),
+      normalizeUrl: vi.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
+      computeUrlsHash: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      isDomainInWhitelist: vi.fn((url: string) => url.includes('allowed.com')),
+      normalizeUrl: vi.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
+      computeUrlsHash: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      isDomainInWhitelist: vi.fn((url: string) => url.includes('allowed.com')),
+      normalizeUrl: vi.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
+      computeUrlsHash: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 import {
     MAX_URL_SET_SIZE,

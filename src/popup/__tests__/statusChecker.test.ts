@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { formatTimeAgo, checkPageStatus } from '../statusChecker.js';
 import { RecordingCache } from '../../background/__tests__/helpers/recordingCache.js';
-import * as storage from '../../utils/storage.js';
+import * as storage from '../../utils/storage/settingsStore.js';
+import * as storageSavedUrls from '../../utils/storage/savedUrlRepository.js';
 
 // Mock chrome runtime for privacy cache
 const mockChromeRuntime = {
@@ -45,41 +46,14 @@ vi.mock('../../utils/i18n.js', () => ({
 }));
 
 // Mock dependencies (must be defined before imports)
-vi.mock('../../utils/storage.js', () => {
+// Mock dependencies (must be defined before imports)
+vi.mock('../../utils/storage/settingsStore.js', () => {
   const mockGetSettings = vi.fn();
+  return { getSettings: mockGetSettings };
+});
+vi.mock('../../utils/storage/savedUrlRepository.js', () => {
   const mockGetSavedUrlsWithTimestamps = vi.fn();
-
-  // Set default mock implementation
-  mockGetSettings.mockResolvedValue({
-    domain_filter_mode: 'disabled',
-    domain_whitelist: [],
-    domain_blacklist: [],
-    ublock_sources: []
-  });
-  mockGetSavedUrlsWithTimestamps.mockResolvedValue(new Map());
-
-  return {
-    StorageKeys: {
-      DOMAIN_FILTER_MODE: 'domain_filter_mode',
-      DOMAIN_WHITELIST: 'domain_whitelist',
-      DOMAIN_BLACKLIST: 'domain_blacklist',
-      UBLOCK_SOURCES: 'ublock_sources',
-      SIMPLE_FORMAT_ENABLED: 'simple_format_enabled',
-      UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled',
-      UBLOCK_RULES: 'ublock_rules',
-    },
-    DEFAULT_SETTINGS: {},
-    getSettings: mockGetSettings,
-    getSavedUrlsWithTimestamps: mockGetSavedUrlsWithTimestamps,
-    API_KEY_FIELDS: [
-      'obsidian_api_key',
-      'gemini_api_key',
-      'openai_api_key',
-      'openai_2_api_key',
-      'provider_api_key',
-      'github_pat'
-    ],
-  };
+  return { getSavedUrlsWithTimestamps: mockGetSavedUrlsWithTimestamps };
 });
 
 describe('formatTimeAgo', () => {
@@ -160,7 +134,7 @@ describe('checkPageStatus', () => {
       domain_blacklist: [],
       ublock_sources: []
     });
-    (storage.getSavedUrlsWithTimestamps as vi.Mock).mockResolvedValue(new Map());
+    (storageSavedUrls.getSavedUrlsWithTimestamps as vi.Mock).mockResolvedValue(new Map());
   });
 
   afterEach(() => {
@@ -235,7 +209,7 @@ describe('checkPageStatus', () => {
     const url = 'https://example.com/page';
     const savedTimestamp = Date.now() - 5 * 60 * 1000; // 5分前
     const savedUrls = new Map([[url, savedTimestamp]]);
-    (storage.getSavedUrlsWithTimestamps as vi.Mock).mockResolvedValue(savedUrls);
+    (storageSavedUrls.getSavedUrlsWithTimestamps as vi.Mock).mockResolvedValue(savedUrls);
 
     (storage.getSettings as vi.Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',

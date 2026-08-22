@@ -4,10 +4,27 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // ------------------------------------------------------------------
 // Mocks (must be before any imports)
 // ------------------------------------------------------------------
-vi.mock('../../utils/storage.js', () => ({
-  getSettings: vi.fn().mockResolvedValue({}),
-  saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn().mockResolvedValue({}),
+    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => `i18n_${key}`),

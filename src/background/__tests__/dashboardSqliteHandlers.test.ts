@@ -39,11 +39,33 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
   const INVALID_TOKEN = 'wrong-token';
 
   beforeEach(() => {
-    sqliteClient = new SqliteClient();
-    // Stub clearAllResult, not clearAll: the handler calls the Result variant
-    // whose failure reason travels with the call — see dashboardSqliteTestHarness.ts.
-    (sqliteClient as unknown as { clearAllResult: ReturnType<typeof vi.fn> }).clearAllResult =
-      vi.fn().mockResolvedValue({ success: true, data: undefined });
+    sqliteClient = {
+      queryResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
+      searchResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
+      clearAllResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+      runOpfsSpikeResult: vi.fn().mockResolvedValue({ success: true, data: {} }),
+      getStatus: vi.fn().mockResolvedValue(null),
+      // Core methods delegate to the *Result wrappers so existing test assertions
+      // on queryResult/searchResult/clearAllResult/runOpfsSpikeResult keep working.
+      query: vi.fn().mockImplementation((op: any) => {
+        if (op.kind === 'search') return (sqliteClient as any).searchResult(op.text, op.limit, op.offset, op);
+        if (op.kind === 'count') return Promise.resolve({ success: true, data: 0 });
+        return (sqliteClient as any).queryResult(op);
+      }),
+      mutate: vi.fn().mockImplementation((op: any) => {
+        if (op.type === 'clearAll') return (sqliteClient as any).clearAllResult();
+        return Promise.resolve({ success: true, data: undefined });
+      }),
+      maintain: vi.fn().mockImplementation((op: any) => {
+        if (op.type === 'clearAll') return (sqliteClient as any).clearAllResult();
+        if (op.type === 'opfsSpike') return (sqliteClient as any).runOpfsSpikeResult();
+        if (op.type === 'restore') return (sqliteClient as any).restoreDbResult(op.data);
+        if (op.type === 'backup') return (sqliteClient as any).backupDbResult();
+        if (op.type === 'purgeOldRecords') return (sqliteClient as any).purgeOldRecordsResult(op.retentionDays, op.maxRecords);
+        if (op.type === 'purgeContent') return (sqliteClient as any).purgeContentResult(op.retentionDays, op.maxRecords, op.includeStarred);
+        return Promise.resolve({ success: true, data: undefined });
+      }),
+    } as any;
   });
 
   it('rejects clear_all without confirmToken', async () => {
@@ -157,14 +179,20 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
 });
 
 describe('restore_db subtype', () => {
-  let sqliteClient: SqliteClient;
+  let sqliteClient: Record<string, unknown>;
   const VALID_TOKEN = 'test-valid-token-12345';
 
   beforeEach(() => {
-    sqliteClient = new SqliteClient();
-    // Stub restoreDbResult, not restoreDb — see the clearAllResult comment above.
-    (sqliteClient as unknown as { restoreDbResult: ReturnType<typeof vi.fn> }).restoreDbResult =
-      vi.fn().mockResolvedValue({ success: true, data: undefined });
+    sqliteClient = {
+      restoreDbResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+      maintain: vi.fn().mockImplementation((op: any) => {
+        if (op.type === 'restore') return (sqliteClient as any).restoreDbResult(op.data);
+        return Promise.resolve({ success: true, data: undefined });
+      }),
+      query: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
+      mutate: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+      getStatus: vi.fn().mockResolvedValue(null),
+    };
   });
 
   it('rejects without a valid confirmToken', async () => {

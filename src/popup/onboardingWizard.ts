@@ -1,4 +1,4 @@
-import { getSettings, saveSettings } from '../utils/storage.js';
+import { getSettings, saveSettings } from '../utils/storage/settingsStore.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { logError, ErrorCode } from '../utils/logger.js';

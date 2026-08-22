@@ -13,7 +13,13 @@ import type * as ModelsDevApi from '../../utils/modelsDevApi.js';
 
 // Mock the modules
 vi.mock('../../utils/modelsDevApi.js');
-vi.mock('../../utils/storage.js');
+vi.mock('../../utils/storage/types.js');
+vi.mock('../../utils/storage/defaults.js');
+vi.mock('../../utils/storage/encryptionSession.js');
+vi.mock('../../utils/storage/settingsStore.js');
+vi.mock('../../utils/storage/savedUrlRepository.js');
+vi.mock('../../utils/storage/domainFilterCache.js');
+vi.mock('../../utils/storage/quota.js');
 
 class MockModelsDevDialog {
   private dialog: HTMLElement | null = null;

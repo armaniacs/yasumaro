@@ -5,7 +5,8 @@
  * Handles install, update, and startup lifecycle events.
  */
 import type { RecordingCacheInstance } from '../recordingCache.js';
-import { getSettings, updateDomainFilterCache } from '../../utils/storage.js';
+import { updateDomainFilterCache } from '../../utils/storage/domainFilterCache.js';
+import { getSettings } from '../../utils/storage/settingsStore.js';
 import { migrateLegacyPrivacyConsent } from '../../popup/privacyConsent.js';
 import { cleanupOldDeniedEntries, cleanupDismissedEntries } from '../../utils/permissionManager.js';
 import { RateLimiter } from '../rateLimiter.js';

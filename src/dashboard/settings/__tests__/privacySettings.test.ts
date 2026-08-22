@@ -38,15 +38,188 @@ const mockSaveSettings = vi.fn();
 const mockShowStatus = vi.fn();
 const mockGetMessage = vi.fn((key: string) => key);
 
-vi.mock('../../../utils/storage.js', () => ({
-  StorageKeys: {
-    PRIVACY_MODE: 'privacy_mode',
-    PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-    AUTO_SAVE_PRIVACY_BEHAVIOR: 'auto_save_privacy_behavior',
-  },
-  getSettings: (...args: any[]) => mockGetSettings(...args),
-  saveSettings: (...args: any[]) => mockSaveSettings(...args),
-}));
+vi.mock('../../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      PRIVACY_MODE: 'privacy_mode',
+      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'auto_save_privacy_behavior',
+    },
+    getSettings: (...args: any[]) => mockGetSettings(...args),
+    saveSettings: (...args: any[]) => mockSaveSettings(...args),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      PRIVACY_MODE: 'privacy_mode',
+      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'auto_save_privacy_behavior',
+    },
+    getSettings: (...args: any[]) => mockGetSettings(...args),
+    saveSettings: (...args: any[]) => mockSaveSettings(...args),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      PRIVACY_MODE: 'privacy_mode',
+      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'auto_save_privacy_behavior',
+    },
+    getSettings: (...args: any[]) => mockGetSettings(...args),
+    saveSettings: (...args: any[]) => mockSaveSettings(...args),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      PRIVACY_MODE: 'privacy_mode',
+      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'auto_save_privacy_behavior',
+    },
+    getSettings: (...args: any[]) => mockGetSettings(...args),
+    saveSettings: (...args: any[]) => mockSaveSettings(...args),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      PRIVACY_MODE: 'privacy_mode',
+      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'auto_save_privacy_behavior',
+    },
+    getSettings: (...args: any[]) => mockGetSettings(...args),
+    saveSettings: (...args: any[]) => mockSaveSettings(...args),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      PRIVACY_MODE: 'privacy_mode',
+      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'auto_save_privacy_behavior',
+    },
+    getSettings: (...args: any[]) => mockGetSettings(...args),
+    saveSettings: (...args: any[]) => mockSaveSettings(...args),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      PRIVACY_MODE: 'privacy_mode',
+      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'auto_save_privacy_behavior',
+    },
+    getSettings: (...args: any[]) => mockGetSettings(...args),
+    saveSettings: (...args: any[]) => mockSaveSettings(...args),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 vi.mock('../../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: (...args: any[]) => mockShowStatus(...args),

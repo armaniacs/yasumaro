@@ -10,11 +10,21 @@ import type { SqliteClient } from '../../sqliteClient.js';
 import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 
 function makeMockSqlite(overrides: Partial<SqliteClient> = {}): SqliteClient {
-  return {
-    insertResult: vi.fn().mockResolvedValue({ success: true, data: { id: 1 } }),
-    updateResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+  const insertResult = vi.fn().mockResolvedValue({ success: true, data: { id: 1 } });
+  const updateResult = vi.fn().mockResolvedValue({ success: true, data: undefined });
+
+  const mock = {
+    insertResult,
+    updateResult,
+    mutate: vi.fn().mockImplementation((op: any) => {
+      if (op.type === 'insert') return (mock as any).insertResult(op.record, op.traceId);
+      if (op.type === 'update') return (mock as any).updateResult(op.id, op.changes, op.traceId);
+      return Promise.resolve({ success: true, data: undefined });
+    }),
     ...overrides,
   } as unknown as SqliteClient;
+
+  return mock;
 }
 
 describe('saveSqliteStep', () => {
@@ -142,7 +152,15 @@ describe('saveSqliteStep — diagnostic metadata', () => {
   it('passes full diagnostic metadata to insertResult', async () => {
     const mockInsert = vi.fn().mockResolvedValue({ success: true, data: { id: 42 } });
     const mockUpdate = vi.fn().mockResolvedValue({ success: true, data: undefined });
-    const mockClient = { insertResult: mockInsert, updateResult: mockUpdate } as unknown as SqliteClient;
+    const mockClient = {
+      insertResult: mockInsert,
+      updateResult: mockUpdate,
+      mutate: vi.fn().mockImplementation((op: any) => {
+        if (op.type === 'insert') return mockInsert(op.record, op.traceId);
+        if (op.type === 'update') return mockUpdate(op.id, op.changes, op.traceId);
+        return Promise.resolve({ success: true, data: undefined });
+      }),
+    } as unknown as SqliteClient;
 
     const record: BrowsingLogRecord = {
       url: 'https://example.com/page',

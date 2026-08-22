@@ -6,7 +6,7 @@
  * として登録する。内部的に BuiltInAIClient に委譲する。
  */
 
-import { Settings } from '../../../utils/storage.js';
+import { Settings } from '../../../utils/storage/types.js';
 import { AIProviderStrategy, AISummaryResult, AIProviderConnectionResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
 import { BuiltInAIClient } from '../../builtInAIClient.js';
 import { addLog, LogType } from '../../../utils/logger.js';

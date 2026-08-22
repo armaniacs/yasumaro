@@ -6,7 +6,8 @@
  * handleSaveOnly, handleTestAi, and handleTestLocalMarkdown.
  */
 
-import { getSettings, saveSettingsWithAllowedUrls, StorageKeys } from '../utils/storage.js';
+import { getSettings, saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.js';
+import { StorageKeys } from '../utils/storage/types.js';
 import { extractSettingsFromInputs, extractLocalMarkdownExportTiming, type ValidationSchema } from '../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../utils/settingsSchemas.js';
 import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, ErrorPair } from './settings/fieldValidation.js';

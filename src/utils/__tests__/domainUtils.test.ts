@@ -15,7 +15,8 @@ import {
   validateDomainList
 } from '../domainUtils.js';
 import { isUrlBlocked } from '../ublockMatcher.js';
-import { getSettings, type Settings } from '../storage.js';
+import { getSettings, type Settings } from '../storage/settingsStore.js';
+import type { Settings as SettingsType } from '../storage/types.js';
 
 // Mock ublockMatcher.ts
 vi.mock('../ublockMatcher', () => ({
@@ -23,19 +24,13 @@ vi.mock('../ublockMatcher', () => ({
   isUrlBlocked: vi.fn()
 }));
 
-// Mock storage.ts
-vi.mock('../storage', () => ({
+// Mock settingsStore.ts
+vi.mock('../storage/settingsStore', () => ({
   __esModule: true,
-  StorageKeys: {
-    DOMAIN_FILTER_MODE: 'domain_filter_mode',
-    DOMAIN_WHITELIST: 'domain_whitelist',
-    DOMAIN_BLACKLIST: 'domain_blacklist',
-    UBLOCK_RULES: 'ublock_rules',
-    UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled',
-    SIMPLE_FORMAT_ENABLED: 'simple_format_enabled'
-  },
   getSettings: vi.fn()
 }));
+
+type Settings = SettingsType;
 
 const mockedIsUrlBlocked = isUrlBlocked as vi.MockedFunction<typeof isUrlBlocked>;
 const mockedGetSettings = getSettings as vi.MockedFunction<typeof getSettings>;

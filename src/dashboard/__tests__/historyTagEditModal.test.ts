@@ -16,13 +16,47 @@ vi.mock('../../utils/tagUtils.js', () => ({
   getAllCategories: vi.fn().mockReturnValue(['tech', 'work', 'personal']),
 }));
 
-vi.mock('../../utils/storage.js', () => ({
-  getSettings: vi.fn().mockResolvedValue({}),
-}));
+vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
 
-vi.mock('../../utils/storage/savedUrlRepository.js', () => ({
-  setUrlTags: vi.fn().mockResolvedValue(undefined),
-}));
+    getSettings: vi.fn().mockResolvedValue({}),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+
+vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    setUrlTags: vi.fn().mockResolvedValue(undefined),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 function createMockElements(): any {
   return {

@@ -8,7 +8,9 @@
  */
 
 import { addLog, LogType } from '../utils/logger.js';
-import { getSettings, getSavedUrlsWithTimestamps, Settings } from '../utils/storage.js';
+import { getSavedUrlsWithTimestamps } from '../utils/storage/savedUrlRepository.js';
+import { getSettings } from '../utils/storage/settingsStore.js';
+import { Settings } from '../utils/storage/types.js';
 import { API_KEY_FIELDS } from '../utils/storage/settingsStore.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
 import { isPrivacyInfo } from '../utils/privacyChecker.js';

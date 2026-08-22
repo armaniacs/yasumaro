@@ -20,7 +20,7 @@ import { pickDefined } from '../utils/objectUtils.js';
 
 // Type-only import to establish graphify edge between content script and
 // the service worker's message type definitions (PBI-02-3).
-import { StorageKeys, type StorageKey } from '../utils/storage.js';
+import { StorageKeys, StorageKey } from '../utils/storage/types.js';
 
 interface OWTestState {
     maxScrollPercentage: number;

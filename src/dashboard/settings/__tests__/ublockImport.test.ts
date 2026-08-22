@@ -8,7 +8,7 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock dependencies (must be defined before imports)
-vi.mock('../../../utils/storage.js', () => {
+vi.mock('../../../utils/storage/settingsStore.js', () => {
   const mockGetSettings = vi.fn(() => Promise.resolve({
     obsidian_api_key: '',
     obsidian_port: '27123',
@@ -42,13 +42,6 @@ vi.mock('../../../utils/storage.js', () => {
   const mockSaveSettings = vi.fn(() => Promise.resolve());
 
   return {
-    StorageKeys: {
-      DOMAIN_FILTER_MODE: 'domain_filter_mode',
-      DOMAIN_WHITELIST: 'domain_whitelist',
-      DOMAIN_BLACKLIST: 'domain_blacklist',
-      UBLOCK_RULES: 'ublock_rules',
-      UBLOCK_SOURCES: 'ublock_sources',
-    },
     getSettings: mockGetSettings,
     saveSettings: mockSaveSettings,
   };

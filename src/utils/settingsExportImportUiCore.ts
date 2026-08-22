@@ -8,8 +8,8 @@
  * ImportContext / ExportContext として提供する。
  */
 
-import { getSettings } from './storage.js';
-import type { Settings } from './storage.js';
+import { getSettings } from './storage/settingsStore.js';
+import type { Settings } from './storage/types.js';
 import { errorMessage } from './errorUtils.js';
 import { getMessage } from './i18n.js';
 import {

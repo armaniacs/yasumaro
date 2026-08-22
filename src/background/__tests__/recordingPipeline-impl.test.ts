@@ -5,8 +5,122 @@
 import { vi } from 'vitest';
 
 // ─── Mocks (must be before imports) ─────────────────────────────────────────
-vi.mock('../../utils/storage.js', async () => {
-  const actual = await vi.importActual('../../utils/storage.js') as any;
+vi.mock('../../utils/storage/types.js', async () => {
+  const actual = await vi.importActual('../../utils/storage/types.js') as any;
+  return {
+    ...actual,
+    getSettings: vi.fn(),
+    getAllowedUrls: vi.fn(),
+    getSavedUrlsWithTimestamps: vi.fn(),
+    setSavedUrlsWithTimestamps: vi.fn(),
+    saveSettings: vi.fn(),
+    StorageKeys: {
+      PRIVACY_MODE: 'PRIVACY_MODE',
+      PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS',
+      TAG_SUMMARY_MODE: 'TAG_SUMMARY_MODE',
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'AUTO_SAVE_PRIVACY_BEHAVIOR',
+    },
+    MAX_URL_SET_SIZE: 10000,
+    URL_WARNING_THRESHOLD: 9000,
+  };
+});
+vi.mock('../../utils/storage/defaults.js', async () => {
+  const actual = await vi.importActual('../../utils/storage/defaults.js') as any;
+  return {
+    ...actual,
+    getSettings: vi.fn(),
+    getAllowedUrls: vi.fn(),
+    getSavedUrlsWithTimestamps: vi.fn(),
+    setSavedUrlsWithTimestamps: vi.fn(),
+    saveSettings: vi.fn(),
+    StorageKeys: {
+      PRIVACY_MODE: 'PRIVACY_MODE',
+      PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS',
+      TAG_SUMMARY_MODE: 'TAG_SUMMARY_MODE',
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'AUTO_SAVE_PRIVACY_BEHAVIOR',
+    },
+    MAX_URL_SET_SIZE: 10000,
+    URL_WARNING_THRESHOLD: 9000,
+  };
+});
+vi.mock('../../utils/storage/encryptionSession.js', async () => {
+  const actual = await vi.importActual('../../utils/storage/encryptionSession.js') as any;
+  return {
+    ...actual,
+    getSettings: vi.fn(),
+    getAllowedUrls: vi.fn(),
+    getSavedUrlsWithTimestamps: vi.fn(),
+    setSavedUrlsWithTimestamps: vi.fn(),
+    saveSettings: vi.fn(),
+    StorageKeys: {
+      PRIVACY_MODE: 'PRIVACY_MODE',
+      PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS',
+      TAG_SUMMARY_MODE: 'TAG_SUMMARY_MODE',
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'AUTO_SAVE_PRIVACY_BEHAVIOR',
+    },
+    MAX_URL_SET_SIZE: 10000,
+    URL_WARNING_THRESHOLD: 9000,
+  };
+});
+vi.mock('../../utils/storage/settingsStore.js', async () => {
+  const actual = await vi.importActual('../../utils/storage/settingsStore.js') as any;
+  return {
+    ...actual,
+    getSettings: vi.fn(),
+    getAllowedUrls: vi.fn(),
+    getSavedUrlsWithTimestamps: vi.fn(),
+    setSavedUrlsWithTimestamps: vi.fn(),
+    saveSettings: vi.fn(),
+    StorageKeys: {
+      PRIVACY_MODE: 'PRIVACY_MODE',
+      PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS',
+      TAG_SUMMARY_MODE: 'TAG_SUMMARY_MODE',
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'AUTO_SAVE_PRIVACY_BEHAVIOR',
+    },
+    MAX_URL_SET_SIZE: 10000,
+    URL_WARNING_THRESHOLD: 9000,
+  };
+});
+vi.mock('../../utils/storage/savedUrlRepository.js', async () => {
+  const actual = await vi.importActual('../../utils/storage/savedUrlRepository.js') as any;
+  return {
+    ...actual,
+    getSettings: vi.fn(),
+    getAllowedUrls: vi.fn(),
+    getSavedUrlsWithTimestamps: vi.fn(),
+    setSavedUrlsWithTimestamps: vi.fn(),
+    saveSettings: vi.fn(),
+    StorageKeys: {
+      PRIVACY_MODE: 'PRIVACY_MODE',
+      PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS',
+      TAG_SUMMARY_MODE: 'TAG_SUMMARY_MODE',
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'AUTO_SAVE_PRIVACY_BEHAVIOR',
+    },
+    MAX_URL_SET_SIZE: 10000,
+    URL_WARNING_THRESHOLD: 9000,
+  };
+});
+vi.mock('../../utils/storage/domainFilterCache.js', async () => {
+  const actual = await vi.importActual('../../utils/storage/domainFilterCache.js') as any;
+  return {
+    ...actual,
+    getSettings: vi.fn(),
+    getAllowedUrls: vi.fn(),
+    getSavedUrlsWithTimestamps: vi.fn(),
+    setSavedUrlsWithTimestamps: vi.fn(),
+    saveSettings: vi.fn(),
+    StorageKeys: {
+      PRIVACY_MODE: 'PRIVACY_MODE',
+      PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS',
+      TAG_SUMMARY_MODE: 'TAG_SUMMARY_MODE',
+      AUTO_SAVE_PRIVACY_BEHAVIOR: 'AUTO_SAVE_PRIVACY_BEHAVIOR',
+    },
+    MAX_URL_SET_SIZE: 10000,
+    URL_WARNING_THRESHOLD: 9000,
+  };
+});
+vi.mock('../../utils/storage/quota.js', async () => {
+  const actual = await vi.importActual('../../utils/storage/quota.js') as any;
   return {
     ...actual,
     getSettings: vi.fn(),
@@ -140,7 +254,8 @@ import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
 import { RecordingCache } from './helpers/recordingCache.js';
 import { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
 import { PrivacyPipeline } from '../privacyPipeline.js';
-import * as storage from '../../utils/storage.js';
+import * as storage from '../../utils/storage/types.js';
+import * as storageSavedUrls from '../../utils/storage/savedUrlRepository.js';
 import * as domainUtils from '../../utils/domainUtils.js';
 import * as storageUrls from '../../utils/storageUrls.js';
 import * as loggerModule from '../../utils/logger.js';
@@ -302,9 +417,9 @@ describe('RecordingPipeline', () => {
 
     // StorageKeys, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD はモックモジュール内で定義済み
     // @ts-expect-error - mock
-    storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
     // @ts-expect-error - mock
-    storage.setSavedUrlsWithTimestamps.mockResolvedValue(undefined);
+    storageSavedUrls.setSavedUrlsWithTimestamps.mockResolvedValue(undefined);
 
     // @ts-expect-error - mock
     domainUtils.isDomainAllowed.mockResolvedValue(true);

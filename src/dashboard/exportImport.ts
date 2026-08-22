@@ -3,7 +3,7 @@
  * Settings export/import and log import functionality for the dashboard
  */
 
-import type { Settings } from '../utils/storage.js';
+import type { Settings } from '../utils/storage/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';

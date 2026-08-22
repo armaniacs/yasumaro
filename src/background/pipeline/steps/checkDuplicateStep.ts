@@ -4,7 +4,7 @@
  */
 
 import { addLog, LogType } from '../../../utils/logger.js';
-import { getSavedUrlsWithTimestamps, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../../../utils/storage.js';
+import { getSavedUrlsWithTimestamps, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../../../utils/storage/savedUrlRepository.js';
 import type { RecordingContext, PipelineStepFunction, StepDeps } from '../types.js';
 
 const defaultUrlStore = { getSavedUrlsWithTimestamps };

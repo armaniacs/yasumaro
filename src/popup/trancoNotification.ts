@@ -3,7 +3,8 @@
  * Tranco 更新通知バナー UI と同意処理
  */
 
-import { StorageKeys, getSettings, saveSettingsWithAllowedUrls } from '../utils/storage.js';
+import { getSettings, saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.js';
+import { StorageKeys } from '../utils/storage/types.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { getMessage } from '../utils/i18n.js';
 

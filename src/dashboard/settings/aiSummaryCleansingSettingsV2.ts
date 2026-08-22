@@ -3,7 +3,8 @@
  * AI要約クレンジング設定の管理（V2 — 後方互換のためV1は削除済み）
  */
 
-import { StorageKeys, getSettings, saveSettings } from '../../utils/storage.js';
+import { getSettings, saveSettings } from '../../utils/storage/settingsStore.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import { logError, ErrorCode } from '../../utils/logger.js';
 import { CLEANSING_RULES, type CleansingRule } from '../../utils/aiSummaryCleaner/rules.js';
 

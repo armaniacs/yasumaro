@@ -4,7 +4,8 @@
  * Used by both _getConfig() and testConnection() to eliminate duplication.
  */
 
-import { getSettings, StorageKeys, Settings } from './storage.js';
+import { getSettings } from './storage/settingsStore.js';
+import { StorageKeys, Settings } from './storage/types.js';
 import { addLog, LogType } from './logger.js';
 import { redactSensitiveData } from './redaction.js';
 import {

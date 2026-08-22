@@ -21,18 +21,209 @@ vi.mock('../../utils/logger.js', () => ({
 }));
 
 // storage モック
-vi.mock('../../utils/storage.js', () => ({
-    getAllowedUrls: vi.fn(async () => new Set(['https://api.openai.com'])),
-    StorageKeys: {
-        MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-        CUSTOM_PROMPTS: 'custom_prompts',
-        PROVIDER_BASE_URL: 'provider_base_url',
-        PROVIDER_API_KEY: 'provider_api_key',
-        PROVIDER_MODEL: 'provider_model',
-        OPENAI_CONTENT_CHARS: 'openai_content_chars'
-    },
-    Settings: {}
-}));
+vi.mock('../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getAllowedUrls: vi.fn(async () => new Set(['https://api.openai.com'])),
+      StorageKeys: {
+          MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
+          CUSTOM_PROMPTS: 'custom_prompts',
+          PROVIDER_BASE_URL: 'provider_base_url',
+          PROVIDER_API_KEY: 'provider_api_key',
+          PROVIDER_MODEL: 'provider_model',
+          OPENAI_CONTENT_CHARS: 'openai_content_chars'
+      },
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getAllowedUrls: vi.fn(async () => new Set(['https://api.openai.com'])),
+      StorageKeys: {
+          MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
+          CUSTOM_PROMPTS: 'custom_prompts',
+          PROVIDER_BASE_URL: 'provider_base_url',
+          PROVIDER_API_KEY: 'provider_api_key',
+          PROVIDER_MODEL: 'provider_model',
+          OPENAI_CONTENT_CHARS: 'openai_content_chars'
+      },
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getAllowedUrls: vi.fn(async () => new Set(['https://api.openai.com'])),
+      StorageKeys: {
+          MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
+          CUSTOM_PROMPTS: 'custom_prompts',
+          PROVIDER_BASE_URL: 'provider_base_url',
+          PROVIDER_API_KEY: 'provider_api_key',
+          PROVIDER_MODEL: 'provider_model',
+          OPENAI_CONTENT_CHARS: 'openai_content_chars'
+      },
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getAllowedUrls: vi.fn(async () => new Set(['https://api.openai.com'])),
+      StorageKeys: {
+          MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
+          CUSTOM_PROMPTS: 'custom_prompts',
+          PROVIDER_BASE_URL: 'provider_base_url',
+          PROVIDER_API_KEY: 'provider_api_key',
+          PROVIDER_MODEL: 'provider_model',
+          OPENAI_CONTENT_CHARS: 'openai_content_chars'
+      },
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getAllowedUrls: vi.fn(async () => new Set(['https://api.openai.com'])),
+      StorageKeys: {
+          MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
+          CUSTOM_PROMPTS: 'custom_prompts',
+          PROVIDER_BASE_URL: 'provider_base_url',
+          PROVIDER_API_KEY: 'provider_api_key',
+          PROVIDER_MODEL: 'provider_model',
+          OPENAI_CONTENT_CHARS: 'openai_content_chars'
+      },
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getAllowedUrls: vi.fn(async () => new Set(['https://api.openai.com'])),
+      StorageKeys: {
+          MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
+          CUSTOM_PROMPTS: 'custom_prompts',
+          PROVIDER_BASE_URL: 'provider_base_url',
+          PROVIDER_API_KEY: 'provider_api_key',
+          PROVIDER_MODEL: 'provider_model',
+          OPENAI_CONTENT_CHARS: 'openai_content_chars'
+      },
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getAllowedUrls: vi.fn(async () => new Set(['https://api.openai.com'])),
+      StorageKeys: {
+          MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
+          CUSTOM_PROMPTS: 'custom_prompts',
+          PROVIDER_BASE_URL: 'provider_base_url',
+          PROVIDER_API_KEY: 'provider_api_key',
+          PROVIDER_MODEL: 'provider_model',
+          OPENAI_CONTENT_CHARS: 'openai_content_chars'
+      },
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 // promptSanitizer モック
 vi.mock('../../utils/promptSanitizer.js', () => ({

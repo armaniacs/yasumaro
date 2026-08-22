@@ -1,4 +1,4 @@
-import { StorageKeys } from '../../../utils/storage.js';
+import { StorageKeys } from '../../../utils/storage/types.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboardSqliteProtocol.js';
 import type { SqliteError } from '../../sqliteClient.js';
 import { bytesToBase64, base64ToBytes } from '../../../utils/crypto/index.js';

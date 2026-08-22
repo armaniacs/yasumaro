@@ -8,7 +8,8 @@ import type { SyncTarget } from './SyncTarget.js';
 import { SqliteClient } from '../sqliteClient.js';
 import { addLog, LogType } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-import { StorageKeys, getSettings, saveSettings } from '../../utils/storage.js';
+import { getSettings, saveSettings } from '../../utils/storage/settingsStore.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../../utils/markdownSanitizer.js';
 import { CONNECTION_TEST_CACHE_MODE } from '../../utils/fetch.js';
 import type { Settings } from '../../utils/storage/types.js';
@@ -58,7 +59,7 @@ export class GistSyncTarget implements SyncTarget {
         await saveSettings({ [StorageKeys.GIST_ID]: newGistId } as Partial<Settings> as Settings);
       }
 
-      await this.sqliteClient.updateResult(logId, { gist_synced: 1 });
+      await this.sqliteClient.mutate({ type: 'update', id: logId, changes: { gist_synced: 1 } });
       addLog(LogType.INFO, 'GistSync: synced', { url, logId });
       return { success: true };
     } catch (error) {
@@ -82,14 +83,14 @@ export class GistSyncTarget implements SyncTarget {
     try {
       let totalSynced = 0;
 
-        for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-            const result = await this.sqliteClient.queryResult({
-                limit: BATCH_SIZE,
-                offset: 0,
-                orderBy: 'created_at',
-                orderDir: 'DESC',
-                gistSynced: 0,
-            });
+for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+             const result = await this.sqliteClient.query({
+                 limit: BATCH_SIZE,
+                 offset: 0,
+                 orderBy: 'created_at',
+                 orderDir: 'DESC',
+                 gistSynced: 0,
+             });
 
             if (!result.success) {
                 throw new Error(`Gist sync query failed: ${result.error.message}`);

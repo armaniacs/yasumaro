@@ -10,17 +10,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { MessageHandlerRegistry } from '../background/handlers/MessageHandlerRegistry.js';
-import { createMessageHandlerRegistry } from '../background/handlers/createMessageHandlerRegistry.js';
+import { createMessageRouter } from '../background/handlers/MessageRouter.js';
+import type { MessageRouterDeps } from '../background/handlers/MessageRouter.js';
 
 describe('SQLite Security & Data Integrity', () => {
   describe('Issue 1: DASHBOARD_SQLITE sender validation (Red Team High)', () => {
     // The invariant is that a content script cannot reach any SQLite operation
     // through DASHBOARD_SQLITE. This used to be checked by string-matching a
     // `sender.tab` guard inside service-worker.ts; the guard now lives in
-    // MessageHandlerRegistry, which enforces it for every registered type. The
-    // checks below exercise that behaviour instead of the guard's old location,
-    // so they keep holding wherever the enforcement lives.
+    // MessageRouter's trust table, which enforces it for every registered type.
+    // The checks below exercise that behaviour instead of the guard's old
+    // location, so they keep holding wherever the enforcement lives.
     const RUNTIME_ID = 'test-extension-id';
 
     const CONTENT_SCRIPT_SENDER = {
@@ -42,13 +42,13 @@ describe('SQLite Security & Data Integrity', () => {
       'cleanup_legacy', 'migrate', 'confirm_token',
     ];
 
-    it('registers DASHBOARD_SQLITE as extension-only', () => {
-      const composition = createMessageHandlerRegistry({
+    function makeDeps(): MessageRouterDeps {
+      return {
         runtimeId: RUNTIME_ID,
-        recordingLogic: { record: async () => ({ success: true }) },
+        recordingPipeline: { record: async () => ({ success: true }) },
         tabCache: { add: () => undefined, update: () => undefined },
-        obsidian: { testConnection: async () => ({ success: true, message: 'ok' }) },
-        aiService: { testConnection: async () => ({ success: true, message: 'ok' }) },
+        obsidian: { testConnection: async () => ({ success: true }) },
+        aiService: { testConnection: async () => ({ success: true }) },
         manualRecordDeps: {} as never,
         saveRecordDeps: {} as never,
         hasPrivacyConsent: async () => true,
@@ -65,22 +65,25 @@ describe('SQLite Security & Data Integrity', () => {
         updateConsentBadge: async () => undefined,
         generateWeeklySummary: async () => true,
         generateMonthlySummary: async () => true,
-        dashboardSqliteHandler: () => undefined,
-      });
-      expect(composition.handlers.DASHBOARD_SQLITE).toBeDefined();
-      expect(composition.trustLevels.DASHBOARD_SQLITE).toBe('extension-only');
+        dashboardSqliteHandler: vi.fn(),
+      };
+    }
+
+    it('registers DASHBOARD_SQLITE as extension-only', () => {
+      const router = createMessageRouter(makeDeps());
+      expect(router.getHandler('DASHBOARD_SQLITE')).toBeDefined();
+      expect(router.getTrustLevel('DASHBOARD_SQLITE')).toBe('extension-only');
     });
 
     it('should reject DASHBOARD_SQLITE calls from content scripts for ALL subtypes', () => {
-      const registry = new MessageHandlerRegistry(RUNTIME_ID);
-      const handler = vi.fn();
-      registry.register('DASHBOARD_SQLITE', handler, 'extension-only');
+      const deps = makeDeps();
+      const router = createMessageRouter(deps);
+      const handler = deps.dashboardSqliteHandler as ReturnType<typeof vi.fn>;
 
       for (const subtype of ALL_SUBTYPES) {
         const sendResponse = vi.fn();
-        registry.dispatch(
-          'DASHBOARD_SQLITE',
-          { type: 'DASHBOARD_SQLITE', payload: { subtype } },
+        router.dispatch(
+          { type: 'DASHBOARD_SQLITE', payload: { subtype }, protocolVersion: 1 },
           CONTENT_SCRIPT_SENDER,
           sendResponse,
         );
@@ -96,14 +99,13 @@ describe('SQLite Security & Data Integrity', () => {
     });
 
     it('should reject the guard BEFORE any SQLite operation runs', () => {
-      const registry = new MessageHandlerRegistry(RUNTIME_ID);
-      const handler = vi.fn();
+      const deps = makeDeps();
+      const router = createMessageRouter(deps);
+      const handler = deps.dashboardSqliteHandler as ReturnType<typeof vi.fn>;
       const sendResponse = vi.fn();
-      registry.register('DASHBOARD_SQLITE', handler, 'extension-only');
 
-      const handled = registry.dispatch(
-        'DASHBOARD_SQLITE',
-        { type: 'DASHBOARD_SQLITE', payload: { subtype: 'clear_all' } },
+      const handled = router.dispatch(
+        { type: 'DASHBOARD_SQLITE', payload: { subtype: 'clear_all' }, protocolVersion: 1 },
         CONTENT_SCRIPT_SENDER,
         sendResponse,
       );
@@ -114,20 +116,22 @@ describe('SQLite Security & Data Integrity', () => {
       expect(handler).not.toHaveBeenCalled();
     });
 
-    it('still allows the dashboard itself', () => {
-      const registry = new MessageHandlerRegistry(RUNTIME_ID);
-      const handler = vi.fn();
+    it('still allows the dashboard itself', async () => {
+      const deps = makeDeps();
+      const router = createMessageRouter(deps);
+      const handler = deps.dashboardSqliteHandler as ReturnType<typeof vi.fn>;
       const sendResponse = vi.fn();
-      registry.register('DASHBOARD_SQLITE', handler, 'extension-only');
 
-      registry.dispatch(
-        'DASHBOARD_SQLITE',
-        { type: 'DASHBOARD_SQLITE', payload: { subtype: 'query' } },
+      const handled = router.dispatch(
+        { type: 'DASHBOARD_SQLITE', payload: { subtype: 'query' }, protocolVersion: 1 },
         DASHBOARD_SENDER,
         sendResponse,
       );
 
-      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handled).toBe(true);
+      await vi.waitFor(() => {
+        expect(handler).toHaveBeenCalledTimes(1);
+      });
     });
 
     it('should NOT have subtype-specific sender checks (unified guard)', () => {

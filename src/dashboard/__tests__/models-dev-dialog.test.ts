@@ -32,17 +32,202 @@ vi.mock('../../utils/modelsDevApi.js', () => ({
   getApiKeyUrl: vi.fn().mockReturnValue(null),
 }));
 
-vi.mock('../../utils/storage.js', () => ({
-  StorageKeys: {
-    AI_PROVIDER: 'ai_provider',
-    PROVIDER_TYPE: 'provider_type',
-    PROVIDER_BASE_URL: 'provider_base_url',
-    PROVIDER_API_KEY: 'provider_api_key',
-    PROVIDER_MODEL: 'provider_model',
-  },
-  getSettings: vi.fn().mockResolvedValue({}),
-  saveSettings: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock('../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      AI_PROVIDER: 'ai_provider',
+      PROVIDER_TYPE: 'provider_type',
+      PROVIDER_BASE_URL: 'provider_base_url',
+      PROVIDER_API_KEY: 'provider_api_key',
+      PROVIDER_MODEL: 'provider_model',
+    },
+    getSettings: vi.fn().mockResolvedValue({}),
+    saveSettings: vi.fn().mockResolvedValue(undefined),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      AI_PROVIDER: 'ai_provider',
+      PROVIDER_TYPE: 'provider_type',
+      PROVIDER_BASE_URL: 'provider_base_url',
+      PROVIDER_API_KEY: 'provider_api_key',
+      PROVIDER_MODEL: 'provider_model',
+    },
+    getSettings: vi.fn().mockResolvedValue({}),
+    saveSettings: vi.fn().mockResolvedValue(undefined),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      AI_PROVIDER: 'ai_provider',
+      PROVIDER_TYPE: 'provider_type',
+      PROVIDER_BASE_URL: 'provider_base_url',
+      PROVIDER_API_KEY: 'provider_api_key',
+      PROVIDER_MODEL: 'provider_model',
+    },
+    getSettings: vi.fn().mockResolvedValue({}),
+    saveSettings: vi.fn().mockResolvedValue(undefined),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      AI_PROVIDER: 'ai_provider',
+      PROVIDER_TYPE: 'provider_type',
+      PROVIDER_BASE_URL: 'provider_base_url',
+      PROVIDER_API_KEY: 'provider_api_key',
+      PROVIDER_MODEL: 'provider_model',
+    },
+    getSettings: vi.fn().mockResolvedValue({}),
+    saveSettings: vi.fn().mockResolvedValue(undefined),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      AI_PROVIDER: 'ai_provider',
+      PROVIDER_TYPE: 'provider_type',
+      PROVIDER_BASE_URL: 'provider_base_url',
+      PROVIDER_API_KEY: 'provider_api_key',
+      PROVIDER_MODEL: 'provider_model',
+    },
+    getSettings: vi.fn().mockResolvedValue({}),
+    saveSettings: vi.fn().mockResolvedValue(undefined),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      AI_PROVIDER: 'ai_provider',
+      PROVIDER_TYPE: 'provider_type',
+      PROVIDER_BASE_URL: 'provider_base_url',
+      PROVIDER_API_KEY: 'provider_api_key',
+      PROVIDER_MODEL: 'provider_model',
+    },
+    getSettings: vi.fn().mockResolvedValue({}),
+    saveSettings: vi.fn().mockResolvedValue(undefined),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      AI_PROVIDER: 'ai_provider',
+      PROVIDER_TYPE: 'provider_type',
+      PROVIDER_BASE_URL: 'provider_base_url',
+      PROVIDER_API_KEY: 'provider_api_key',
+      PROVIDER_MODEL: 'provider_model',
+    },
+    getSettings: vi.fn().mockResolvedValue({}),
+    saveSettings: vi.fn().mockResolvedValue(undefined),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 vi.mock('../../utils/i18n.js', () => ({
   applyI18n: vi.fn(),

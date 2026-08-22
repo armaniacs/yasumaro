@@ -1,4 +1,4 @@
-import type { Settings } from '../../utils/storage.js';
+import type { Settings } from '../../utils/storage/types.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../../utils/fetch.js';
 import { BADGE_COLORS } from '../../constants/appConstants.js';
 import { logDebug, logWarn, logError, ErrorCode } from '../../utils/logger.js';

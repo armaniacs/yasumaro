@@ -4,7 +4,8 @@
 
 import { getMessage } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
-import { getSettings, saveSettingsWithAllowedUrls, StorageKeys } from '../utils/storage.js';
+import { getSettings, saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.js';
+import { StorageKeys } from '../utils/storage/types.js';
 
 interface TrancoConsentState {
   needsConsent: 'GRANTED' | 'DENIED' | 'PENDING' | 'ALREADY_GRANTED' | 'RETRY_NEEDED';

@@ -55,7 +55,7 @@ import {
   saveSqliteStep
 } from './steps/index.js';
 import type { RecordingData, RecordingResult } from '../../messaging/types.js';
-import type { Settings } from '../../utils/storage.js';
+import type { Settings } from '../../utils/storage/types.js';
 import { stripPiiFromMaskedItems } from '../../utils/piiStripper.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIService } from '../ai/AIService.js';

@@ -3,7 +3,9 @@
  * Settings export and import functionality
  */
 
-import { getSettings, saveSettings, getOrCreateHmacSecret, Settings, API_KEY_FIELDS } from './storage.js';
+import { getOrCreateHmacSecret } from './storage/encryptionSession.js';
+import { getSettings, saveSettings, API_KEY_FIELDS } from './storage/settingsStore.js';
+import { Settings } from './storage/types.js';
 import { computeHMAC, encrypt, decryptData, deriveKey, constantTimeCompare } from './crypto/index.js';
 import { generateSalt } from './crypto/index.js';
 import { logError, logInfo, ErrorCode } from './logger.js';

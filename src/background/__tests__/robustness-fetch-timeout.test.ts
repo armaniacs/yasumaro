@@ -5,10 +5,17 @@
  */
 
 import { ObsidianClient } from '../obsidianClient.js';
-import * as storage from '../../utils/storage.js';
+import * as storage from '../../utils/storage/types.js';
+import * as storageSettings from '../../utils/storage/settingsStore.js';
 import { addLog, LogType } from '../../utils/logger.js';
 
-vi.mock('../../utils/storage.js');
+vi.mock('../../utils/storage/types.js');
+vi.mock('../../utils/storage/defaults.js');
+vi.mock('../../utils/storage/encryptionSession.js');
+vi.mock('../../utils/storage/settingsStore.js');
+vi.mock('../../utils/storage/savedUrlRepository.js');
+vi.mock('../../utils/storage/domainFilterCache.js');
+vi.mock('../../utils/storage/quota.js');
 vi.mock('../../utils/logger.js', () => ({
   addLog: vi.fn(),
   LogType: {
@@ -29,7 +36,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
 
     // storageのデフォルトモック
     // @ts-expect-error - vi.fn() type narrowing issue
-    storage.getSettings.mockResolvedValue({
+    storageSettings.getSettings.mockResolvedValue({
       OBSIDIAN_API_KEY: 'test_key',
       OBSIDIAN_PROTOCOL: 'https',
       OBSIDIAN_PORT: '27123',

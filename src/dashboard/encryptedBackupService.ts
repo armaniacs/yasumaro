@@ -3,7 +3,7 @@
  * 履歴(SQLite DB全体)と設定を1つの暗号化ファイルにまとめてエクスポート/インポートする。
  */
 
-import { getSettings, saveSettings } from '../utils/storage.js';
+import { getSettings, saveSettings } from '../utils/storage/settingsStore.js';
 import { exportDb } from './exportLogsService.js';
 import { restoreDb, isServiceError } from './dashboardSqliteService.js';
 import { encryptEnvelope, decryptEnvelope, isEncryptionEnvelope } from '../utils/crypto/index.js';

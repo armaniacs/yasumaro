@@ -6,11 +6,18 @@
 
 import { ObsidianClient } from '../obsidianClient.js';
 import { vi } from 'vitest';
-import * as storage from '../../utils/storage.js';
+import * as storage from '../../utils/storage/types.js';
+import * as storageSettings from '../../utils/storage/settingsStore.js';
 import { buildDailyNotePath } from '../../utils/dailyNotePathBuilder.js';
 import { NoteSectionEditor } from '../noteSectionEditor.js';
 
-vi.mock('../../utils/storage.js');
+vi.mock('../../utils/storage/types.js');
+vi.mock('../../utils/storage/defaults.js');
+vi.mock('../../utils/storage/encryptionSession.js');
+vi.mock('../../utils/storage/settingsStore.js');
+vi.mock('../../utils/storage/savedUrlRepository.js');
+vi.mock('../../utils/storage/domainFilterCache.js');
+vi.mock('../../utils/storage/quota.js');
 vi.mock('../../utils/dailyNotePathBuilder.js', () => ({
   buildDailyNotePath: vi.fn((pathRaw) => '2026-02-07')
 }));
@@ -31,7 +38,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     // storageのデフォルトモック
     // @ts-expect-error - vi.fn() type narrowing issue
   
-    storage.getSettings.mockResolvedValue({});
+    storageSettings.getSettings.mockResolvedValue({});
     storage.StorageKeys = {
       OBSIDIAN_PROTOCOL: 'OBSIDIAN_PROTOCOL',
       OBSIDIAN_PORT: 'OBSIDIAN_PORT',
@@ -45,7 +52,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     it('APIキーがない場合、ユーザーに分かりやすいエラーメッセージがスローされること（修正後）', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({ OBSIDIAN_API_KEY: '' });
+      storageSettings.getSettings.mockResolvedValue({ OBSIDIAN_API_KEY: '' });
 
       await expect(obsidianClient.appendToDailyNote('Test content')).rejects.toThrow('Error: API key is missing');
 
@@ -56,7 +63,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     it('エラーメッセージがユーザーに分かりやすい形式であること（修正後）', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({ OBSIDIAN_API_KEY: '' });
+      storageSettings.getSettings.mockResolvedValue({ OBSIDIAN_API_KEY: '' });
 
       const error = await obsidianClient.appendToDailyNote('Test content').catch(e => e);
 
@@ -70,7 +77,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     it('接続失敗時、完全なURLがエラーメッセージに含まれないこと（修正後）', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
         OBSIDIAN_PORT: '27123',
@@ -100,7 +107,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     it('HTTPS接続失敗時、自己署名証明書に関するメッセージが含まれること（修正後）', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
         OBSIDIAN_PORT: '27124',
@@ -140,7 +147,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     it('読み取りエラー時、HTTPステータスコードがエラーメッセージに含まれないこと（修正後）', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
         OBSIDIAN_PORT: '27123',
@@ -180,7 +187,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     it('書き込みエラー時、HTTPステータスコードがエラーメッセージに含まれないこと（修正後）', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
         OBSIDIAN_PORT: '27123',
@@ -229,7 +236,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     it('接続成功時、詳細なメッセージが返されること（修正後）', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
         OBSIDIAN_PORT: '27123',
@@ -254,7 +261,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     it('接続失敗時、HTTPステータスコードがメッセージに含まれないこと（修正後）', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
         OBSIDIAN_PORT: '27123',
@@ -281,7 +288,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     it('ネットワークエラー時、詳細なエラーメッセージが含まれないこと（修正後）', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
         OBSIDIAN_PORT: '27123',
@@ -428,7 +435,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
      });
 
      it('タイムアウトエラーで適切なメッセージを返す', async () => {
-       storage.getSettings.mockResolvedValue({
+       storageSettings.getSettings.mockResolvedValue({
          OBSIDIAN_API_KEY: 'test_key',
          OBSIDIAN_PROTOCOL: 'http',
          OBSIDIAN_PORT: '27123',
@@ -444,7 +451,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
      });
 
      it('その他のエラーでConnection errorを返す', async () => {
-       storage.getSettings.mockResolvedValue({
+       storageSettings.getSettings.mockResolvedValue({
          OBSIDIAN_API_KEY: 'test_key',
          OBSIDIAN_PROTOCOL: 'http',
          OBSIDIAN_PORT: '27123',
@@ -460,7 +467,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
      });
 
      it('_getConfig で API key エラーが起きた場合に適切なメッセージを返す', async () => {
-       storage.getSettings.mockResolvedValue({
+       storageSettings.getSettings.mockResolvedValue({
          OBSIDIAN_API_KEY: '',
          OBSIDIAN_PROTOCOL: 'http',
          OBSIDIAN_PORT: '27123',
@@ -481,7 +488,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
      });
 
       it('should abort request after timeout and return timeout error', async () => {
-        storage.getSettings.mockResolvedValue({
+        storageSettings.getSettings.mockResolvedValue({
           OBSIDIAN_API_KEY: 'test_key',
           OBSIDIAN_PROTOCOL: 'http',
           OBSIDIAN_PORT: '27123',
@@ -510,7 +517,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
 
   describe('protocol handling', () => {
     it('HTTP設定ではHTTP接続をそのまま使用する', async () => {
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
         OBSIDIAN_PORT: '27123',
@@ -546,7 +553,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('無効なプロトコル設定は拒否する', async () => {
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'ftp',
         OBSIDIAN_PORT: '27123',
@@ -596,7 +603,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('既存コンテンツに追記する', async () => {
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
         OBSIDIAN_PORT: '27123',
@@ -619,7 +626,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('ENDPOINTS.dailyNote()経由で正しいURL（/vault/配下）を生成する', async () => {
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
         OBSIDIAN_PORT: '27124',
@@ -650,7 +657,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('testConnection()でENDPOINTS.root()経由のルートURLにリクエストする', async () => {
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
         OBSIDIAN_PORT: '27123',
@@ -669,7 +676,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('appendToDailyNote propagates traceId to helper methods', async () => {
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
         OBSIDIAN_PORT: '27123',

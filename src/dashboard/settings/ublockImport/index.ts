@@ -12,7 +12,8 @@ import { loadAndDisplaySources, deleteSource, reloadSource, saveUblockSettings }
 import { renderSourceList, updatePreviewUI, hidePreview, clearInput, exportSimpleFormat, copyToClipboard } from './uiRenderer.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { LogType, addLog } from '../../../utils/logger.js';
-import { StorageKeys, getSettings, saveSettings } from '../../../utils/storage.js';
+import { getSettings, saveSettings } from '../../../utils/storage/settingsStore.js';
+import { StorageKeys } from '../../../utils/storage/types.js';
 import { getMessage } from '../../../utils/i18n.js';
 
 // グローバル状態

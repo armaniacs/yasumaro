@@ -10,19 +10,216 @@ vi.mock('../../../utils/errorUtils.js', () => ({
   errorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
 }));
 
-vi.mock('../../../utils/storage.js', () => ({
-  StorageKeys: {
-    OBSIDIAN_API_KEY: 'obsidian_api_key',
-    SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
-    SQLITE_MAX_RECORDS: 'sqlite_max_records',
-    CONTENT_RETENTION_DAYS: 'content_retention_days',
-    CONTENT_MAX_RECORDS: 'content_max_records',
-    CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
-  },
-  getSettings: vi.fn().mockResolvedValue({}),
-  DEFAULT_SETTINGS: {},
-  API_KEY_FIELDS: [],
-}));
+vi.mock('../../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      OBSIDIAN_API_KEY: 'obsidian_api_key',
+      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
+      SQLITE_MAX_RECORDS: 'sqlite_max_records',
+      CONTENT_RETENTION_DAYS: 'content_retention_days',
+      CONTENT_MAX_RECORDS: 'content_max_records',
+      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
+    },
+    getSettings: vi.fn().mockResolvedValue({}),
+    DEFAULT_SETTINGS: {},
+    API_KEY_FIELDS: [],
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      OBSIDIAN_API_KEY: 'obsidian_api_key',
+      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
+      SQLITE_MAX_RECORDS: 'sqlite_max_records',
+      CONTENT_RETENTION_DAYS: 'content_retention_days',
+      CONTENT_MAX_RECORDS: 'content_max_records',
+      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
+    },
+    getSettings: vi.fn().mockResolvedValue({}),
+    DEFAULT_SETTINGS: {},
+    API_KEY_FIELDS: [],
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      OBSIDIAN_API_KEY: 'obsidian_api_key',
+      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
+      SQLITE_MAX_RECORDS: 'sqlite_max_records',
+      CONTENT_RETENTION_DAYS: 'content_retention_days',
+      CONTENT_MAX_RECORDS: 'content_max_records',
+      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
+    },
+    getSettings: vi.fn().mockResolvedValue({}),
+    DEFAULT_SETTINGS: {},
+    API_KEY_FIELDS: [],
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      OBSIDIAN_API_KEY: 'obsidian_api_key',
+      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
+      SQLITE_MAX_RECORDS: 'sqlite_max_records',
+      CONTENT_RETENTION_DAYS: 'content_retention_days',
+      CONTENT_MAX_RECORDS: 'content_max_records',
+      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
+    },
+    getSettings: vi.fn().mockResolvedValue({}),
+    DEFAULT_SETTINGS: {},
+    API_KEY_FIELDS: [],
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      OBSIDIAN_API_KEY: 'obsidian_api_key',
+      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
+      SQLITE_MAX_RECORDS: 'sqlite_max_records',
+      CONTENT_RETENTION_DAYS: 'content_retention_days',
+      CONTENT_MAX_RECORDS: 'content_max_records',
+      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
+    },
+    getSettings: vi.fn().mockResolvedValue({}),
+    DEFAULT_SETTINGS: {},
+    API_KEY_FIELDS: [],
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      OBSIDIAN_API_KEY: 'obsidian_api_key',
+      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
+      SQLITE_MAX_RECORDS: 'sqlite_max_records',
+      CONTENT_RETENTION_DAYS: 'content_retention_days',
+      CONTENT_MAX_RECORDS: 'content_max_records',
+      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
+    },
+    getSettings: vi.fn().mockResolvedValue({}),
+    DEFAULT_SETTINGS: {},
+    API_KEY_FIELDS: [],
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      OBSIDIAN_API_KEY: 'obsidian_api_key',
+      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
+      SQLITE_MAX_RECORDS: 'sqlite_max_records',
+      CONTENT_RETENTION_DAYS: 'content_retention_days',
+      CONTENT_MAX_RECORDS: 'content_max_records',
+      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
+    },
+    getSettings: vi.fn().mockResolvedValue({}),
+    DEFAULT_SETTINGS: {},
+    API_KEY_FIELDS: [],
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 import { createDashboardSqliteHandler, createSqliteClientDeps } from '../dashboardSqliteHandlers.js';
 import type { SqliteClientBackedDeps } from '../dashboardSqliteHandlers.js';
@@ -48,7 +245,42 @@ function makeSqliteClient(overrides: Record<string, unknown> = {}) {
     ...overrides,
   } as unknown as SqliteClient;
 
-  return base;
+  // Core methods used by createSqliteClientDeps — delegate to the *Result wrappers above
+  const client = {
+    ...base,
+    query: vi.fn().mockImplementation((op: any) => {
+      if (op?.kind === 'search') return (base as any).searchResult(op.text, op.limit, op.offset, op);
+      if (op?.kind === 'count') return (base as any).getCountResult();
+      if (op?.kind === 'auditLog') return (base as any).queryAuditLogResult(op);
+      return (base as any).queryResult(op);
+    }),
+    mutate: vi.fn().mockImplementation((op: any) => {
+      switch (op.type) {
+        case 'insert': return (base as any).insertResult(op.record, op.traceId);
+        case 'insertBatch': return (base as any).insertBatchResult(op.records);
+        case 'update': return (base as any).updateResult(op.id, op.changes);
+        case 'delete': return (base as any).deleteResult(op.id);
+        case 'toggleStar': return (base as any).toggleStarResult(op.id);
+        case 'insertAuditLog': return (base as any).insertAuditLogResult(op.record);
+        default: return Promise.resolve({ success: true, data: undefined });
+      }
+    }),
+    maintain: vi.fn().mockImplementation((op: any) => {
+      switch (op.type) {
+        case 'init': return (base as any).init ? (base as any).init() : Promise.resolve({ success: true, data: true });
+        case 'backup': return (base as any).backupDbResult();
+        case 'restore': return (base as any).restoreDbResult(op.data);
+        case 'clearAll': return (base as any).clearAllResult();
+        case 'purgeOldRecords': return (base as any).purgeOldRecordsResult(op.retentionDays, op.maxRecords);
+        case 'purgeContent': return (base as any).purgeContentResult(op.retentionDays, op.maxRecords, op.includeStarred);
+        case 'opfsSpike': return (base as any).runOpfsSpikeResult();
+        case 'healthCheck': return (base as any).isSqliteHealthy ? (base as any).isSqliteHealthy() : Promise.resolve(true);
+        default: return Promise.resolve({ success: true, data: undefined });
+      }
+    }),
+  };
+
+  return client as unknown as SqliteClient;
 }
 
 const TOKEN = 'test-confirm-token';

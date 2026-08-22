@@ -43,7 +43,13 @@ globalThis.chrome = {
   },
 } as any;
 
-vi.mock('../../../utils/storage.js');
+vi.mock('../../../utils/storage/types.js');
+vi.mock('../../../utils/storage/defaults.js');
+vi.mock('../../../utils/storage/encryptionSession.js');
+vi.mock('../../../utils/storage/settingsStore.js');
+vi.mock('../../../utils/storage/savedUrlRepository.js');
+vi.mock('../../../utils/storage/domainFilterCache.js');
+vi.mock('../../../utils/storage/quota.js');
 vi.mock('../../../utils/errorUtils.js', () => ({
   errorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
 }));
@@ -82,7 +88,8 @@ vi.mock('../../../utils/piiSanitizer.js', () => ({
   sanitizeRegex: vi.fn().mockResolvedValue({ text: 'sanitized', maskedItems: [] }),
 }));
 
-import * as storage from '../../../utils/storage.js';
+import * as storage from '../../../utils/storage/types.js';
+import * as storageSavedUrls from '../../../utils/storage/savedUrlRepository.js';
 import * as domainUtils from '../../../utils/domainUtils.js';
 import * as permissionManager from '../../../utils/permissionManager.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
@@ -118,7 +125,7 @@ beforeEach(() => {
     PRIVACY_MODE: 'PRIVACY_MODE',
   };
   // @ts-expect-error - mock
-  storage.getSavedUrlsWithTimestamps = vi.fn().mockResolvedValue(new Map());
+  storageSavedUrls.getSavedUrlsWithTimestamps = vi.fn().mockResolvedValue(new Map());
   // @ts-expect-error - mock
   domainUtils.isDomainAllowed = vi.fn().mockResolvedValue(true);
   // @ts-expect-error - mock

@@ -2,15 +2,16 @@
  * Locks down which message types content scripts may reach.
  *
  * Authorization used to be enforced inside each handler, in four different
- * spellings, with four types left unguarded. It now lives in the registry, so
- * this reads the registration table out of service-worker.ts and asserts the
- * level of every type. Adding a handler without a level fails to compile;
- * changing an existing type's level fails here, which is what makes deleting
- * the old per-handler guards safe.
+ * spellings, with four types left unguarded. It now lives in MessageRouter's
+ * trust table, so this reads the policy through the router's observable
+ * accessors and asserts the level of every registered type. Adding a handler
+ * without a trust entry fails here, which is what makes deleting the old
+ * per-handler guards safe.
  */
 import { describe, it, expect } from 'vitest';
 import { checkSenderTrust, type SenderTrustLevel } from '../senderTrust.js';
-import { createMessageHandlerRegistry } from '../createMessageHandlerRegistry.js';
+import { createMessageRouter } from '../MessageRouter.js';
+import type { MessageRouterDeps } from '../MessageRouter.js';
 
 const RUNTIME_ID = 'this-extension-id';
 
@@ -44,10 +45,10 @@ const EXPECTED_TRUST: Record<string, SenderTrustLevel> = {
   DASHBOARD_SQLITE: 'extension-only',
 };
 
-function createRegistry() {
-  return createMessageHandlerRegistry({
+function makeDeps(): MessageRouterDeps {
+  return {
     runtimeId: RUNTIME_ID,
-    recordingLogic: { record: async () => ({ success: true }) },
+    recordingPipeline: { record: async () => ({ success: true }) },
     tabCache: { add: () => undefined, update: () => undefined },
     obsidian: { testConnection: async () => ({ success: true, message: 'ok' }) },
     aiService: { testConnection: async () => ({ success: true, message: 'ok' }) },
@@ -68,7 +69,7 @@ function createRegistry() {
     generateWeeklySummary: async () => true,
     generateMonthlySummary: async () => true,
     dashboardSqliteHandler: () => undefined,
-  });
+  };
 }
 
 const contentScriptSender = {
@@ -83,14 +84,23 @@ const extensionPageSender = {
 } as chrome.runtime.MessageSender;
 
 describe('sender trust coverage', () => {
-  const registrations = createRegistry();
+  const router = createMessageRouter(makeDeps());
 
-  it('registers every message type with an explicit trust level', () => {
-    expect(Object.keys(registrations.handlers).length).toBe(Object.keys(EXPECTED_TRUST).length);
+  it('registers every production message type exactly once', () => {
+    expect(router.getRegisteredTypes().sort()).toEqual(Object.keys(EXPECTED_TRUST).sort());
   });
 
   it('assigns each type the trust level this test documents', () => {
-    expect(registrations.trustLevels).toEqual(EXPECTED_TRUST);
+    for (const [type, expectedLevel] of Object.entries(EXPECTED_TRUST)) {
+      expect(router.getTrustLevel(type)).toBe(expectedLevel);
+    }
+  });
+
+  it('has no unregistered type in the documented policy', () => {
+    const registered = new Set(router.getRegisteredTypes());
+    for (const type of Object.keys(EXPECTED_TRUST)) {
+      expect(registered.has(type)).toBe(true);
+    }
   });
 
   describe('content-script reachability', () => {

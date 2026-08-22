@@ -31,15 +31,14 @@ import { createAutoSavedBadgeTabs, type AutoSavedBadgeTabs } from './swStatePers
 import { createDashboardSqliteMessageHandler } from './dashboardSqliteWiring.js';
 import { ensureConfirmToken } from './confirmTokenManager.js';
 import { hasPrivacyConsent } from '../popup/privacyConsent.js';
-import { getSettings, buildAllowedUrls, clearSettingsCache, lockSession } from '../utils/storage.js';
+import { lockSession } from '../utils/storage/encryptionSession.js';
+import { getSettings, buildAllowedUrls, clearSettingsCache } from '../utils/storage/settingsStore.js';
 import { getSavedUrlsWithTimestamps, saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlRepository.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { notifyAiTestProgress } from './aiTestProgressNotifier.js';
 import { updateActivity } from './sessionAlarmsManager.js';
-import { createMessageHandlerRegistry, type MessageHandlerRegistryComposition } from './handlers/createMessageHandlerRegistry.js';
-import { createMessageRouter, type MessageRouter } from './handlers/MessageRouter.js';
-import type { MessageHandlerRegistryDeps } from './handlers/createMessageHandlerRegistry.js';
-import type { MessageHandler } from './handlers/MessageHandlerRegistry.js';
+import { createMessageRouter, type MessageRouter, type MessageRouterDeps } from './handlers/MessageRouter.js';
+import type { MessageHandler } from './handlers/MessageRouter.js';
 import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/recordingHandlers.js';
 
 export interface BackgroundServices {
@@ -81,18 +80,16 @@ export interface BackgroundServicesComposition extends BackgroundServices {
   dashboardSqliteClient: SqliteClient;
   manualRecordDeps: ManualRecordHandlerDeps;
   saveRecordDeps: SaveRecordHandlerDeps;
-  /** @deprecated — use messageRouter instead. Kept for backward compat with existing tests. */
-  messageHandlerRegistry: MessageHandlerRegistryComposition;
   messageRouter: MessageRouter;
   dashboardSqliteHandler: MessageHandler;
   autoSavedBadgeTabs: AutoSavedBadgeTabs;
 }
 
-// PBI#04: 静的保証 — BackgroundServices のコアフィールドが MessageHandlerRegistryDeps の
+// PBI#04: 静的保証 — BackgroundServices のコアフィールドが MessageRouterDeps の
 // サブセットとして代入可能であることをコンパイル時に検証。
-// もし BackgroundServices の型が registry 側の Pick より狭すぎる/広すぎる場合、ここで型エラーになる。
+// もし BackgroundServices の型が router 側の Pick より狭すぎる/広すぎる場合、ここで型エラーになる。
 type _CoreServicesSubsetCheck = Pick<BackgroundServices, 'obsidian' | 'tabCache' | 'recordingPipeline' | 'aiService'> extends Pick<
-  MessageHandlerRegistryDeps,
+  MessageRouterDeps,
   'obsidian' | 'tabCache' | 'recordingPipeline' | 'aiService'
 >
   ? true
@@ -162,10 +159,9 @@ export function createBackgroundServices(): BackgroundServicesComposition {
   const dashboardSqliteHandler = createDashboardSqliteMessageHandler({ sqliteClient, ensureConfirmToken });
   const autoSavedBadgeTabs = createAutoSavedBadgeTabs();
 
-  // Compose the message handler registry here — all wiring centralized in one place.
+  // Compose the message router here — all wiring centralized in one place.
   // Deep module: MessageRouter hides the 19 handler table behind a single dispatch seam.
-  // The old registry is kept for backward compat with existing tests.
-  const messageHandlerRegistry = createMessageHandlerRegistry({
+  const messageRouterDeps: MessageRouterDeps = {
     recordingPipeline: { record: (data) => recordingPipeline.record(data) },
     tabCache: { add: (tab) => tabCache.add(tab), update: (tabId, data) => tabCache.update(tabId, data) },
     obsidian,
@@ -193,37 +189,9 @@ export function createBackgroundServices(): BackgroundServicesComposition {
     generateWeeklySummary: () => reviewSummaryGenerator.generateWeeklySummary(),
     generateMonthlySummary: () => reviewSummaryGenerator.generateMonthlySummary(),
     dashboardSqliteHandler,
-  });
+  };
 
-  const messageRouter = createMessageRouter({
-    recordingPipeline: { record: (data) => recordingPipeline.record(data) },
-    tabCache: { add: (tab) => tabCache.add(tab), update: (tabId, data) => tabCache.update(tabId, data) },
-    obsidian,
-    aiService,
-    manualRecordDeps,
-    saveRecordDeps,
-    hasPrivacyConsent: () => hasPrivacyConsent(),
-    buildAllowedUrls: (settings) => buildAllowedUrls(settings),
-    getSettings: () => getSettings(),
-    isDomainAllowed: (url) => isDomainAllowed(url),
-    clearSettingsCache: () => clearSettingsCache(),
-    notifyAiTestProgress,
-    getPrivacyCache: () => recordingCache.getPrivacyCache(),
-    updateActivity: () => updateActivity(),
-    lockSession: () => lockSession(),
-    autoSavedBadgeTabs,
-    initExportScheduler: async () => {
-      const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
-      await initExportScheduler();
-    },
-    updateConsentBadge: async () => {
-      const { updateConsentBadge } = await import('./consentBadge.js');
-      await updateConsentBadge();
-    },
-    generateWeeklySummary: () => reviewSummaryGenerator.generateWeeklySummary(),
-    generateMonthlySummary: () => reviewSummaryGenerator.generateMonthlySummary(),
-    dashboardSqliteHandler,
-  });
+  const messageRouter = createMessageRouter(messageRouterDeps);
 
   return {
     obsidian,
@@ -240,7 +208,6 @@ export function createBackgroundServices(): BackgroundServicesComposition {
     dashboardSqliteClient: sqliteClient,
     manualRecordDeps,
     saveRecordDeps,
-    messageHandlerRegistry,
     messageRouter,
     dashboardSqliteHandler,
     autoSavedBadgeTabs,

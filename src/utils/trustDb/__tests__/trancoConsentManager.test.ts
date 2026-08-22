@@ -15,14 +15,31 @@ import { StorageKeys } from '../../storage.js';
 // getOldTrancoDomains/clearOldTrancoDomains が settings オブジェクト経由に
 // なったため). Backed by the same mockStorage Map used for chrome.storage.local
 // below so both access paths observe the same underlying state.
-vi.mock('../../storage/settingsStore.js', () => ({
-  getSettings: vi.fn(async () => Object.fromEntries(mockStorage.entries())),
-  saveSettings: vi.fn(async (partial: Record<string, unknown>) => {
-    for (const [key, value] of Object.entries(partial)) {
-      mockStorage.set(key, value);
-    }
-  }),
-}));
+vi.mock('../../storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn(async () => Object.fromEntries(mockStorage.entries())),
+    saveSettings: vi.fn(async (partial: Record<string, unknown>) => {
+      for (const [key, value] of Object.entries(partial)) {
+        mockStorage.set(key, value);
+      }
+    }),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 beforeAll(() => {
   vi.useFakeTimers();

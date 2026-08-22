@@ -7,18 +7,209 @@ import { webcrypto as crypto } from '@peculiar/webcrypto';
 Object.defineProperty(global, 'crypto', { value: crypto });
 
 // StorageKeys モック
-vi.mock('../storage.js', () => ({
-    StorageKeys: {
-        AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
-        AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
-        AI_RATE_LIMIT_MAX: 'ai_rate_limit_max',
-        AI_USAGE_MONTH: 'ai_usage_month',
-        AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
-        AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
-        AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
-        MAX_MONTHLY_TOKENS: 'max_monthly_tokens'
-    }
-}));
+vi.mock('../storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      StorageKeys: {
+          AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
+          AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
+          AI_RATE_LIMIT_MAX: 'ai_rate_limit_max',
+          AI_USAGE_MONTH: 'ai_usage_month',
+          AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
+          AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
+          AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
+          MAX_MONTHLY_TOKENS: 'max_monthly_tokens'
+      }
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      StorageKeys: {
+          AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
+          AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
+          AI_RATE_LIMIT_MAX: 'ai_rate_limit_max',
+          AI_USAGE_MONTH: 'ai_usage_month',
+          AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
+          AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
+          AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
+          MAX_MONTHLY_TOKENS: 'max_monthly_tokens'
+      }
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      StorageKeys: {
+          AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
+          AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
+          AI_RATE_LIMIT_MAX: 'ai_rate_limit_max',
+          AI_USAGE_MONTH: 'ai_usage_month',
+          AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
+          AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
+          AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
+          MAX_MONTHLY_TOKENS: 'max_monthly_tokens'
+      }
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      StorageKeys: {
+          AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
+          AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
+          AI_RATE_LIMIT_MAX: 'ai_rate_limit_max',
+          AI_USAGE_MONTH: 'ai_usage_month',
+          AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
+          AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
+          AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
+          MAX_MONTHLY_TOKENS: 'max_monthly_tokens'
+      }
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      StorageKeys: {
+          AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
+          AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
+          AI_RATE_LIMIT_MAX: 'ai_rate_limit_max',
+          AI_USAGE_MONTH: 'ai_usage_month',
+          AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
+          AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
+          AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
+          MAX_MONTHLY_TOKENS: 'max_monthly_tokens'
+      }
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      StorageKeys: {
+          AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
+          AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
+          AI_RATE_LIMIT_MAX: 'ai_rate_limit_max',
+          AI_USAGE_MONTH: 'ai_usage_month',
+          AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
+          AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
+          AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
+          MAX_MONTHLY_TOKENS: 'max_monthly_tokens'
+      }
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      StorageKeys: {
+          AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
+          AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
+          AI_RATE_LIMIT_MAX: 'ai_rate_limit_max',
+          AI_USAGE_MONTH: 'ai_usage_month',
+          AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
+          AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
+          AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
+          MAX_MONTHLY_TOKENS: 'max_monthly_tokens'
+      }
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 // logger モック
 vi.mock('../logger.js', () => ({

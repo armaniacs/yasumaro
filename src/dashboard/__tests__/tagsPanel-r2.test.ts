@@ -24,15 +24,188 @@ vi.mock('../../utils/i18n.js', () => ({
   getMessage: (key: string) => `i18n_${key}`,
 }));
 
-vi.mock('../../utils/storage.js', () => ({
-  getSettings: vi.fn().mockResolvedValue({}),
-  saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-  StorageKeys: {
-    TAG_SUMMARY_MODE: 'tagSummaryMode',
-    TAG_CATEGORIES: 'tagCategories',
-    TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
-  },
-}));
+vi.mock('../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn().mockResolvedValue({}),
+    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+    StorageKeys: {
+      TAG_SUMMARY_MODE: 'tagSummaryMode',
+      TAG_CATEGORIES: 'tagCategories',
+      TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn().mockResolvedValue({}),
+    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+    StorageKeys: {
+      TAG_SUMMARY_MODE: 'tagSummaryMode',
+      TAG_CATEGORIES: 'tagCategories',
+      TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn().mockResolvedValue({}),
+    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+    StorageKeys: {
+      TAG_SUMMARY_MODE: 'tagSummaryMode',
+      TAG_CATEGORIES: 'tagCategories',
+      TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn().mockResolvedValue({}),
+    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+    StorageKeys: {
+      TAG_SUMMARY_MODE: 'tagSummaryMode',
+      TAG_CATEGORIES: 'tagCategories',
+      TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn().mockResolvedValue({}),
+    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+    StorageKeys: {
+      TAG_SUMMARY_MODE: 'tagSummaryMode',
+      TAG_CATEGORIES: 'tagCategories',
+      TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn().mockResolvedValue({}),
+    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+    StorageKeys: {
+      TAG_SUMMARY_MODE: 'tagSummaryMode',
+      TAG_CATEGORIES: 'tagCategories',
+      TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn().mockResolvedValue({}),
+    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+    StorageKeys: {
+      TAG_SUMMARY_MODE: 'tagSummaryMode',
+      TAG_CATEGORIES: 'tagCategories',
+      TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: vi.fn(),

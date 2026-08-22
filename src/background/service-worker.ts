@@ -65,7 +65,6 @@ const {
     sessionStore,
     headerDetector,
     reviewSummaryGenerator,
-    messageHandlerRegistry,
     messageRouter,
     autoSavedBadgeTabs,
 } = services;
@@ -85,29 +84,27 @@ export function resetManualRecordCache(): void {
 // Extracted modules
 const runDeferredStartupMigrations = createDeferredMigrationRunner(sqliteClient);
 
-const { registry, handlers: registryHandlers } = messageHandlerRegistry;
-
-export const {
-  VALID_VISIT: handleValidVisit,
-  FETCH_URL: handleFetchUrl,
-  MANUAL_RECORD: handleManualRecord,
-  PREVIEW_RECORD: handlePreviewRecord,
-  SAVE_RECORD: handleSaveRecord,
-  CONTENT_CLEANSING_EXECUTED: handleContentCleansingExecuted,
-  CHECK_DOMAIN: handleCheckDomain,
-  TEST_CONNECTIONS: handleTestConnections,
-  TEST_OBSIDIAN: handleTestObsidian,
-  TEST_AI: handleTestAi,
-  GET_PRIVACY_CACHE: handleGetPrivacyCache,
-  ACTIVITY_UPDATE: handleActivityUpdate,
-  SESSION_LOCK_REQUEST: handleSessionLockRequest,
-  PING: handlePing,
-  REFRESH_LOCAL_MARKDOWN_SCHEDULER: handleRefreshLocalMarkdownScheduler,
-  CONSENT_STATE_CHANGED: handleConsentStateChanged,
-  GENERATE_REVIEW_SUMMARY: handleGenerateReviewSummary,
-  LOG_FORWARD: handleLogForward,
-  DASHBOARD_SQLITE: handleDashboardSqlite,
-} = registryHandlers;
+// Individual handlers are exposed via the router's observable accessor —
+// no cast into private state. Used by tests and the context-menu path.
+export const handleValidVisit = messageRouter.getHandler('VALID_VISIT');
+export const handleFetchUrl = messageRouter.getHandler('FETCH_URL');
+export const handleManualRecord = messageRouter.getHandler('MANUAL_RECORD');
+export const handlePreviewRecord = messageRouter.getHandler('PREVIEW_RECORD');
+export const handleSaveRecord = messageRouter.getHandler('SAVE_RECORD');
+export const handleContentCleansingExecuted = messageRouter.getHandler('CONTENT_CLEANSING_EXECUTED');
+export const handleCheckDomain = messageRouter.getHandler('CHECK_DOMAIN');
+export const handleTestConnections = messageRouter.getHandler('TEST_CONNECTIONS');
+export const handleTestObsidian = messageRouter.getHandler('TEST_OBSIDIAN');
+export const handleTestAi = messageRouter.getHandler('TEST_AI');
+export const handleGetPrivacyCache = messageRouter.getHandler('GET_PRIVACY_CACHE');
+export const handleActivityUpdate = messageRouter.getHandler('ACTIVITY_UPDATE');
+export const handleSessionLockRequest = messageRouter.getHandler('SESSION_LOCK_REQUEST');
+export const handlePing = messageRouter.getHandler('PING');
+export const handleRefreshLocalMarkdownScheduler = messageRouter.getHandler('REFRESH_LOCAL_MARKDOWN_SCHEDULER');
+export const handleConsentStateChanged = messageRouter.getHandler('CONSENT_STATE_CHANGED');
+export const handleGenerateReviewSummary = messageRouter.getHandler('GENERATE_REVIEW_SUMMARY');
+export const handleLogForward = messageRouter.getHandler('LOG_FORWARD');
+export const handleDashboardSqlite = messageRouter.getHandler('DASHBOARD_SQLITE');
 
 const handleManualRecordForContextMenu = async (
   message: Parameters<NonNullable<typeof handleManualRecord>>[0],
@@ -161,14 +158,12 @@ const handleAlarm = createAlarmHandler({
 
 // Re-export createMessageHandler for backward compatibility with tests
 // that call it without arguments.
-// Deep module: prefer MessageRouter's single dispatch seam when available
 export function createMessageHandler(): (
     rawMessage: unknown,
     sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void
 ) => boolean {
     return _createMessageHandler({
-      registry,
       router: messageRouter,
       tabCache,
       isCacheInitialized,

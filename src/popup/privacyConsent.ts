@@ -3,7 +3,7 @@
  * プライバシーポリシー同意管理 (GDPR/CCPA対応)
  */
 
-import { StorageKeys } from '../utils/storage.js';
+import { StorageKeys } from '../utils/storage/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import { getConsentHmacKey, generateHmacSignature, verifyHmacSignature } from '../utils/crypto/index.js';

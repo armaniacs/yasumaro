@@ -15,7 +15,6 @@ import {
     CURRENT_PROTOCOL_VERSION,
 } from './messageTypes.js';
 import type { ExtensionMessage } from './messageTypes.js';
-import type { MessageHandlerRegistry } from './handlers/MessageHandlerRegistry.js';
 import type { MessageRouter } from './handlers/MessageRouter.js';
 import type { TabCache } from './tabCache.js';
 
@@ -30,8 +29,7 @@ function isValidContentScriptSender(sender: chrome.runtime.MessageSender): boole
 }
 
 export interface MessageHandlerDeps {
-  registry: MessageHandlerRegistry;
-  router?: MessageRouter;
+  router: MessageRouter;
   tabCache: TabCache;
   isCacheInitialized: { restore: () => Promise<void> };
   autoSavedBadgeTabs: { restore: () => Promise<void> };
@@ -94,11 +92,9 @@ export function createMessageHandler(deps: MessageHandlerDeps): (
                     return;
                 }
 
-                // Deep module: prefer MessageRouter's single dispatch seam when available
-                if (deps.router) {
-                    return deps.router.dispatch(msg, sender, sendResponse);
-                }
-                return deps.registry.dispatch(msg.type as string, msg, sender, sendResponse);
+                // Single dispatch seam: MessageRouter hides the 19 handler table,
+                // trust levels, and validators behind one method.
+                return deps.router.dispatch(msg, sender, sendResponse);
             } catch (error) {
                 logError(
                     'Service Worker Error',
