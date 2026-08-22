@@ -38,11 +38,11 @@ Scenario: 境界 — queue 上限超過時の挙動
 ```
 
 ## 受け入れ基準
-- [ ] `src/offscreen/offscreen.ts` の `SqliteWriteMutex` クラス（41–63行相当）と `sqliteWriteMutex` インスタンスが削除されている
-- [ ] `handleOffscreenMessage` の `await sqliteWriteMutex.acquire()` / `release()` 呼び出しが存在しない（`dispatchSqliteMessage` が直接呼ばれる）
-- [ ] `src/background/offscreenTransport.ts` の `ChromeOffscreenTransport.requestQueue: Mutex` が唯一の直列化 seam として残り、maxQueueSize（desktop 200 / mobile 50）と timeout（10s / 5s）が維持される
-- [ ] SQLite WASM が Worker 内で単一スレッドであることを前提に、同時書き込みの競合テストが transport seam 越しにパスする
-- [ ] `npm run type-check` と `npm run validate` がパスする
+- [x] `src/offscreen/offscreen.ts` の `SqliteWriteMutex` クラス（41–63行相当）と `sqliteWriteMutex` インスタンスが削除されている
+- [x] `handleOffscreenMessage` の `await sqliteWriteMutex.acquire()` / `release()` 呼び出しが存在しない（`dispatchSqliteMessage` が直接呼ばれる）
+- [x] `src/background/offscreenTransport.ts` の `ChromeOffscreenTransport.requestQueue: Mutex` が唯一の直列化 seam として残り、maxQueueSize（desktop 200 / mobile 50）と timeout（10s / 5s）が維持される
+- [x] SQLite WASM が Worker 内で単一スレッドであることを前提に、同時書き込みの競合テストが transport seam 越しにパスする
+- [x] `npm run type-check` と `npm run validate` がパスする
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -64,6 +64,7 @@ Scenario: 境界 — queue 上限超過時の挙動
 
 ## 見積もり
 1pt（要チームでの見積もり）— 削除のみ、手順は短いが mobile timeout の検証が必要
+- **確認**: offscreen.ts に SqliteWriteMutex（41行相当）が実在し、41–63行、65行、401行、409行で使用中
 
 ## 技術的考慮事項
 - 依存関係: PBI 01 と同パスだが依存なし。PBI 01 と同時着手・同時レビュー推奨（両方ともメッセージング周りの seam 整理）
@@ -96,8 +97,8 @@ grep -n "createSyncAccessHandle\|OPFSCoopSyncVFS" src/offscreen/
 - mobile での `offscreenAlive` リセットと1回リトライは transport 側に残るため、offscreen 側で「再作成を待つ」ロジックを追加しないこと（二重リトライになる）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（transport Mutex の timeout / queue-full 分岐）
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了（hand-rolled queue 削除、不要 import 削除）
-- [ ] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の SQLite 3-tier fallback 記述に直列化が transport に集約された旨を追記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす（transport Mutex の timeout / queue-full 分岐）
+- [x] コードレビュー完了
+- [x] リファクタリング完了（hand-rolled queue 削除、不要 import 削除）
+- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の SQLite 3-tier fallback 記述に直列化が transport に集約された旨を追記）

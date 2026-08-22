@@ -38,10 +38,10 @@ npm view wxt version
 - axe-core a11y ジョブ追加
 
 **確認項目**:
-- [ ] PR 作成時に重複 CI が発生していないか
-- [ ] PR コメント機能（tests.yml → github-script）が動作しているか
-- [ ] a11y ジョブが正しく並列実行されているか
-- [ ] SHA ピン留め後に Dependabot が PR を作成しているか
+- [x] PR 作成時に重複 CI が発生していないか
+- [x] PR コメント機能（tests.yml → github-script）が動作しているか
+- [x] a11y ジョブが正しく並列実行されているか
+- [x] SHA ピン留め後に Dependabot が PR を作成しているか
 
 **最終確認**: 2026-06-29 — 全5WFで mutable tag ゼロ。Dependabot weekly 設定済み。a11y ジョブ正常。PR コメント機能正常。
 **次回の CI ワークフロー更新時**:

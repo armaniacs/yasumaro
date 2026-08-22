@@ -38,12 +38,12 @@ Scenario: エラー — formatting 失敗時の挙動が一貫する
 ```
 
 ## 受け入れ基準
-- [ ] `src/background/handlers/dashboardSqlite/deps.ts:2` の `from '../../../dashboard/obsidianFormatter.js'` import が `from '../../../utils/markdownFormatter.js'`（または `from '../../../utils/markdownFormatter.js'` 経由の re-export）に置換されている
-- [ ] `src/dashboard/obsidianFormatter.ts` が `src/utils/markdownFormatter.ts`（または既存の `src/utils/markdownFormatter.ts`）に委譲する薄い re-export になっているか、共有ロジックが utils に移動している
-- [ ] `grep -rn "from.*dashboard/" src/background/ --include="*.ts" | grep -v "dashboardSqliteProtocol" | grep -v "__tests__"` が0件（background → dashboard の import が存在しない）
-- [ ] `grep -rn "from.*dashboard/" src/utils/ --include="*.ts"` が0件（utils → dashboard の逆依存も存在しない）
-- [ ] 既存の `deps.test.ts` / `obsidianFormatter.test.ts` 相当のテストが新 seam 越しにパスする
-- [ ] `npm run type-check` と `npm run validate` がパスする
+- [x] `src/background/handlers/dashboardSqlite/deps.ts:2` の `from '../../../dashboard/obsidianFormatter.js'` import が `from '../../../utils/markdownFormatter.js'`（または `from '../../../utils/markdownFormatter.js'` 経由の re-export）に置換されている
+- [x] `src/dashboard/obsidianFormatter.ts` が `src/utils/markdownFormatter.ts`（または既存の `src/utils/markdownFormatter.ts`）に委譲する薄い re-export になっているか、共有ロジックが utils に移動している
+- [x] `grep -rn "from.*dashboard/" src/background/ --include="*.ts" | grep -v "dashboardSqliteProtocol" | grep -v "__tests__"` が0件（background → dashboard の import が存在しない）
+- [x] `grep -rn "from.*dashboard/" src/utils/ --include="*.ts"` が0件（utils → dashboard の逆依存も存在しない）
+- [x] 既存の `deps.test.ts` / `obsidianFormatter.test.ts` 相当のテストが新 seam 越しにパスする
+- [x] `npm run type-check` と `npm run validate` がパスする
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -64,6 +64,8 @@ Scenario: エラー — formatting 失敗時の挙動が一貫する
 
 ## 見積もり
 1pt（要チームでの見積もり）— import 置換と re-export 整理のみ、振る舞い変化なし
+- **確認**: src/background/handlers/dashboardSqlite/deps.ts:2 に seam leak が実在
+  - `import { formatEntriesToMarkdown } from '../../../dashboard/obsidianFormatter.js'`
 
 ## 技術的考慮事項
 - 依存関係: PBI 03（SqliteClient 深掘り）が `deps.ts` を触るため、PBI 03 完了後に着手すると競合を避けられる。必須依存ではないが推奨順序
@@ -98,8 +100,8 @@ grep -n "formatEntriesToMarkdown" src/background/handlers/dashboardSqlite/deps.t
 - `PBI 03` が `deps.ts` を同時に変更すると import 行が競合する。PBI 03 完了後に着手するか、変更前に `git rebase` で競合を解消すること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（markdownFormatter の境界値）
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了（background → dashboard import 削除、共有 seam 確立）
-- [ ] ドキュメント更新済み（LAYERS.md の依存ルールに違反が解消された旨を追記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす（markdownFormatter の境界値）
+- [x] コードレビュー完了
+- [x] リファクタリング完了（background → dashboard import 削除、共有 seam 確立）
+- [x] ドキュメント更新済み（LAYERS.md の依存ルールに違反が解消された旨を追記）
