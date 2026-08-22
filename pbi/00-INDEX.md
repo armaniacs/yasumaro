@@ -19,7 +19,6 @@
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
 | [2026-08-22-04](2026-08-22-04-backlog-ai-test-progress-client.md) ⬜ | 🟢低 (1pt) | 🟢なし | 📋backlog | AI 接続テスト進捗 client 抽出 — 第2消費者出現時の引き金付き（RICE 10） |
-| [2026-08-22-05](2026-08-22-05-refactor-background-settings-repository-adoption.md) 🔶 | 🟢低 (1pt) | 🟢なし | 🔧refactor | background 側 SettingsRepository 採用 — RemoteAIService を起点（RICE 60） |
 
 ---
 
@@ -39,6 +38,10 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-22 background SettingsRepository 採用完了
+
+- 2026-08-22-05-refactor-background-settings-repository-adoption.md (RICE 60 — RemoteAIService に SettingsReader を注入し `|| 'gemini'` インラインフォールバックを撤去。GeminiProvider/obsidianClient/localMarkdownExportCore/reviewSummaryGenerator/privacyPipeline/reviewSummaryAlarm/recordingCache の background 読み取りモジュール全てを `??` + DEFAULT_SETTINGS 統一に移行。コードレビュー実施、type-check / test 全パス確認)
 
 ### 2026-08-22 アーキテクチャ深掘り pass2 レジストリ完成 + MigrationService 分割
 

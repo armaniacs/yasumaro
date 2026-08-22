@@ -62,5 +62,5 @@ Scenario: キャストとインラインデフォルトの撤去
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする（RemoteAIService ラウンド）
-- [ ] コードレビュー完了
+- [x] コードレビュー完了（`||` → `??` + DEFAULT_SETTINGS への一貫した置換を確認。type-check / test 全パス）
 - [x] リファクタリング完了（background 読み取りモジュールのキャスト・インラインフォールバック 0 件）
