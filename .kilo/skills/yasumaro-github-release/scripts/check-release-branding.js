@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const WORKFLOW_PATH = resolve(__dirname, '../../..', '.github', 'workflows', 'release.yml');
+const WORKFLOW_PATH = resolve(__dirname, '../../../..', '.github', 'workflows', 'release.yml');
 
 const FORBIDDEN = [
   { pattern: /Obsidian Weave/g, replacement: 'Yasumaro' },
