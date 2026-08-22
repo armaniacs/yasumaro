@@ -42,6 +42,22 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-23 Adversarial Review 13件 RICE対応完了
+
+- 2026-08-23-00-backlog.md (RICE 13件の棚卸し — 00は索引。以下12件をRICE 4000/4000/1250/1000/80/66.7/40/26.7/20/12.5/1/6.25で優先度付け、依存「host_permissions→CSP→WAR」「pii-sandbox 3件」を同一バッチ化)
+- 2026-08-23-01-fix-csp-connect-src-port-restriction.md (RICE 4000 — `wxt.config.ts:67` の `http://localhost:*` ワイルドカードを `buildLocalConnectSrc()` による16オリジン列挙に置換。SSRF面を最小化。`cspDomains.ts` に `LOCAL_PORTS`/`buildLocalConnectSrc()` 追加 + 検証)
+- 2026-08-23-02-fix-web-accessible-resources-scope.md (RICE 4000 — WARの `resources` は `content-extractor.js` + `icon48.png` が最小（extractor.tsでinjectのためicon必要）、`matches` は全http(s)で正当とコメントで根拠明記。fingerprinting面を文書化)
+- 2026-08-23-03-fix-csp-template-validation.md (RICE 1250 — `validateCspDomains()` を `cspDomains.ts` に新設し `wxt.config.ts` トップレベルで `localConnectSrc+aiConnectSrc` を検証。不正時throwでビルド失敗。9件の単体テスト追加)
+- 2026-08-23-04-fix-csp-wasm-unsafe-eval-scope.md (RICE 1000 — `grep -rn wasm` でoffscreen/sqlite-wasm使用を確認。`wasm-unsafe-eval` はOPFS/IDBで必須とコメントで根拠明記（除去は機能破壊）。将来的にWASM除去時はdrop可能)
+- 2026-08-23-05-fix-host-permissions-generation.md (RICE 80 — `LOCAL_PORTS=[27123,27124,11434,1234]` と `buildLocalHostPermissions()` を新設し `wxt.config.ts` の16行直書きを `...buildLocalHostPermissions()` の1行に置換。SSOT化)
+- 2026-08-23-06-fix-version-single-source.md (RICE 66.7 — `wxt.config.ts` を `readFileSync('package.json')` で `pkg.version` をSSOT読込、`docs/version.json` は `scripts/sync-version.mjs` でビルド時生成。`check-version-consistency.js` はSSOT対応に更新、`package.json` build scriptsは sync→check→wxt の順に)
+- 2026-08-23-07-fix-json-schema-ci-validation.md (RICE 40 — `scripts/validate-json.mjs` を新設し docs/version.json/dev-docs/metrics/history.json/sbom.json のJSON parse + semver + CycloneDX 1.6検証。`package.json` に `validate:json` 追加し `validate` に統合)
+- 2026-08-23-08-fix-pii-sandbox-hardcoded-demo.md (RICE 26.7 — `docs-src/pii-sandbox.ts` は既にtop-levelデモ無し・クリーンな `sanitize()` のみ。`esbuild --global-name=PiiSandbox` 出力を再ビルドし自動実行コードが無いことを確認。対応不要として文書化)
+- 2026-08-23-09-fix-pii-sandbox-implicit-global.md (RICE 20 — 同上。`docs-src/pii-sandbox.ts` は `sanitizeRegex` を明示importし、成果物に `new PiiSanitizer()` は存在せず。暗黙globalは既に解消済みとして検証・クローズ)
+- 2026-08-23-10-fix-pii-sandbox-window-freeze.md (RICE 12.5 — GitHub Pagesの静的docsでsame-origin iframe攻撃は低リスク。`esbuild` IIFEの `window.PiiSandbox` は低コストだが現状でfreeze未実施でも実害なし。将来のhardening候補として記録しクローズ)
+- 2026-08-23-11-backlog-sbom-compliance-verification.md (RICE 1 backlog — `sbom.json` はCycloneDX 1.6/644 components/ `$schema` 正常。`validate-json.mjs` で準拠検証をCI化。誤検出のためbacklogとしてクローズ)
+- 2026-08-23-12-fix-vite-modulepreload-workaround.md (RICE 6.25 — `wxt.config.ts` の `modulePreload:false` コメントに再検証手順（除去→build→chrome://extensionsでcross-world確認）とTODOを追記。wxt/vite major bump時に再検証)
+
 ### 2026-08-23 aiTestProgressClient 抽出完了
 
 - 2026-08-22-04-backlog-ai-test-progress-client.md (RICE 10 — connectionTests.ts が450行トリガーに接近（435行、余裕15行）したため着手。listener登録・shapeガード・runId相関・timeoutを`src/dashboard/aiTestProgressClient.ts`（deep module、新規テスト8件）へ抽出し、connectionTests.tsを435行→404行に削減。第2消費者トリガー（popup/diagnosticsPanel）は2026-08-23のADRで却下済みのため対象外化。type-check / 1889テスト全パス)

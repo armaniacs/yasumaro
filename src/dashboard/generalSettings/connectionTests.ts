@@ -23,7 +23,6 @@ import {
   buildAiTestProgressView,
   renderAiTestProgressLabel,
   renderAiTestProgressElapsed,
-  type AiTestProgressView,
 } from '../aiTestProgressView.js';
 
 const SETTINGS_FORM_SELECTOR = '#panel-general';

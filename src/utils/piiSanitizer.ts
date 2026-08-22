@@ -362,20 +362,15 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
         let processedText = text;
         const finalMaskedItems: MaskedItem[] = [];
 
-        // 【パフォーマンス改善】: 配列ベースの置換方式で文字列連結のオーバーヘッドを削減
-        // テキストを配列に分割して置換し、最後にjoinすることで中間文字列を削減
-        const textParts = processedText.split('');
+        // 文字列ベースの効率的な置換（インデックス降順で処理してインデックスのずれを防止）
+        // これにより、split/joinオーバーヘッドを回避できる
+        resolvedReplacements.sort((a, b) => b.index - a.index); // 降順ソート（既にソート済みだが、念のため）
         for (const r of resolvedReplacements) {
-            for (let i = 0; i < r.length; i++) {
-                if (i === 0) {
-                    textParts[r.index] = r.mask;
-                } else {
-                    textParts[r.index + i] = '';
-                }
-            }
+            processedText = processedText.substring(0, r.index) + r.mask + processedText.substring(r.index + r.length);
             finalMaskedItems.push({ type: r.type, original: r.original, index: r.index });
         }
-        processedText = textParts.join('');
+        // 出現順（インデックス昇順）に並べ替えて返す
+        finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
 
         // 3. 実際に置換された項目を出現順（インデックス昇順）に並べ替えて返す
         finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
