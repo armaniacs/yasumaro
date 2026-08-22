@@ -7,7 +7,8 @@ import {
   type AiConnectionTestResult,
   type AiProviderTestResult,
 } from './AIService.js';
-import { getSettings } from '../../utils/storage/settingsStore.js';
+import { settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
+import { DEFAULT_SETTINGS } from '../../utils/storage/defaults.js';
 import { StorageKeys, Settings, ProviderSlot } from '../../utils/storage/types.js';
 import { resolveModelKey } from '../../utils/aiModelKey.js';
 import { GeminiProvider, OpenAIProvider, BuiltInAiProvider, AIProviderStrategy } from './providers/index.js';
@@ -18,19 +19,24 @@ import { pickDefined } from '../../utils/objectUtils.js';
 
 interface RemoteAIServiceConfig {
   builtInAiClient?: BuiltInAiProvider;
-  getSettings?: () => Promise<Settings>;
+  repo?: SettingsReader;
 }
 
 export class RemoteAIService implements AIService {
   private providers: Map<string, (settings: Settings) => AIProviderStrategy>;
   private inFlightSummaryRequests: Map<string, Promise<AISummaryResult>>;
-  private getSettingsImpl: () => Promise<Settings>;
+  private repo: SettingsReader;
 
   constructor(private config: RemoteAIServiceConfig = {}) {
     this.providers = new Map();
     this.inFlightSummaryRequests = new Map();
-    this.getSettingsImpl = config.getSettings || getSettings;
+    this.repo = config.repo ?? settingsRepository;
     this.registerDefaultProviders();
+  }
+
+  /** Load the full settings snapshot via the injected repository seam. */
+  private loadSettings(): Promise<Settings> {
+    return this.repo.getAll();
   }
 
   private registerDefaultProviders(): void {
@@ -51,10 +57,12 @@ export class RemoteAIService implements AIService {
   private static readonly MAX_PROVIDERS = 10;
 
   private resolveProviderSlots(settings: Settings): ProviderSlot[] {
-    const slots = settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] as ProviderSlot[] | undefined;
-    const resolved = (slots && slots.length > 0)
+    const slots = settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] ?? [];
+    const fallbackProvider = settings[StorageKeys.AI_PROVIDER]
+      ?? (DEFAULT_SETTINGS[StorageKeys.AI_PROVIDER] as string);
+    const resolved = (slots.length > 0)
       ? slots
-      : [{ provider: (settings[StorageKeys.AI_PROVIDER] as string) || 'gemini' }];
+      : [{ provider: fallbackProvider }];
     return resolved.slice(0, RemoteAIService.MAX_PROVIDERS);
   }
 
@@ -101,8 +109,9 @@ export class RemoteAIService implements AIService {
   }
 
   async generateSummary(content: string, options?: AISummaryOptions): Promise<AISummaryResult> {
-    const settings = await this.getSettingsImpl();
-    const minLength = (settings[StorageKeys.SUMMARY_MIN_LENGTH] as number) || 0;
+    const settings = await this.loadSettings();
+    const minLength = settings[StorageKeys.SUMMARY_MIN_LENGTH]
+      ?? (DEFAULT_SETTINGS[StorageKeys.SUMMARY_MIN_LENGTH] as number);
     const slots = this.resolveProviderSlots(settings);
 
     // In-flight deduplication: concurrent calls for the same URL+mode share
@@ -160,7 +169,7 @@ export class RemoteAIService implements AIService {
     onProgress?: (progress: AiTestProgress) => void,
     runId?: string,
   ): Promise<AiConnectionTestResult> {
-    const settings = await this.getSettingsImpl();
+    const settings = await this.loadSettings();
     const slots = this.resolveProviderSlots(settings);
 
     const providerResults: AiProviderTestResult[] = [];
