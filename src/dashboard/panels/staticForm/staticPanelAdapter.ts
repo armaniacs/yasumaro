@@ -1,5 +1,6 @@
 import { type PanelLifecycle } from '../types.js';
-import { getSettings, type Settings } from '../../../utils/storage.js';
+import { getSettings } from '../../../utils/storage/settingsStore.js';
+import type { Settings } from '../../../utils/storage/types.js';
 
 /**
  * Declarative description of a panel whose only job is to call existing

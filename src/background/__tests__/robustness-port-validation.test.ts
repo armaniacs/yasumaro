@@ -5,11 +5,18 @@
  */
 
 import { ObsidianClient } from '../obsidianClient.js';
-import * as storage from '../../utils/storage.js';
+import * as storage from '../../utils/storage/types.js';
+import * as storageSettings from '../../utils/storage/settingsStore.js';
 import { addLog, LogType } from '../../utils/logger.js';
 import * as validator from '../../utils/obsidianConfigValidator.js';
 
-vi.mock('../../utils/storage.js');
+vi.mock('../../utils/storage/types.js');
+vi.mock('../../utils/storage/defaults.js');
+vi.mock('../../utils/storage/encryptionSession.js');
+vi.mock('../../utils/storage/settingsStore.js');
+vi.mock('../../utils/storage/savedUrlRepository.js');
+vi.mock('../../utils/storage/domainFilterCache.js');
+vi.mock('../../utils/storage/quota.js');
 vi.mock('../../utils/logger.js', () => ({
   addLog: vi.fn(),
   LogType: {
@@ -30,7 +37,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
     // storageのデフォルトモック
     // @ts-expect-error - vi.fn() type narrowing issue
   
-    storage.getSettings.mockResolvedValue({
+    storageSettings.getSettings.mockResolvedValue({
       OBSIDIAN_API_KEY: 'test_key',
       OBSIDIAN_PROTOCOL: 'https',
       OBSIDIAN_PORT: '27123',
@@ -63,7 +70,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       for (const port of validPorts) {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-        storage.getSettings.mockResolvedValue({
+        storageSettings.getSettings.mockResolvedValue({
           OBSIDIAN_API_KEY: 'test_key',
           OBSIDIAN_PROTOCOL: 'https',
           OBSIDIAN_PORT: port,
@@ -83,7 +90,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       for (const port of invalidPorts) {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-        storage.getSettings.mockResolvedValue({
+        storageSettings.getSettings.mockResolvedValue({
           OBSIDIAN_API_KEY: 'test_key',
           OBSIDIAN_PROTOCOL: 'https',
           OBSIDIAN_PORT: port,
@@ -101,7 +108,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       // ポート番号0は予約されているため、使用すべきでない
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
         OBSIDIAN_PORT: '0',
@@ -115,7 +122,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       // ポート番号の最大値は65535
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
         OBSIDIAN_PORT: '65536',
@@ -128,7 +135,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
     it('ポート番号が負の値の場合はエラーをスローすべき', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
         OBSIDIAN_PORT: '-1',
@@ -141,7 +148,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
     it('ポート番号が非数値の場合はエラーをスローすべき', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
         OBSIDIAN_PORT: 'abc',
@@ -154,7 +161,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
     it('ポート番号が小数の場合はエラーをスローすべき', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
         OBSIDIAN_PORT: '27123.5',
@@ -169,7 +176,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
     it('ポート番号が未指定の場合はデフォルト値（27123）を使用すべき', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
         OBSIDIAN_PORT: undefined,
@@ -183,7 +190,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
     it('ポート番号が空文字列の場合はデフォルト値（27123）を使用すべき', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
         OBSIDIAN_PORT: '',
@@ -199,7 +206,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
     it('無効なポート番号の場合に適切なエラーメッセージを表示すべき', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
         OBSIDIAN_PORT: '0',
@@ -214,7 +221,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
     it('ポート番号が非数値の場合に適切なエラーメッセージを表示すべき', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
         OBSIDIAN_PORT: 'abc',
@@ -254,7 +261,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       // validateObsidianPort関数が呼び出されることを確認
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
         OBSIDIAN_PORT: '999',

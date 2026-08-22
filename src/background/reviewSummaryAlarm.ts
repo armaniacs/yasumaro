@@ -3,7 +3,8 @@
  * 週次/月次レビューサマリの自動生成を chrome.alarms でスケジュールする
  */
 
-import { getSettings, StorageKeys } from '../utils/storage.js';
+import { getSettings } from '../utils/storage/settingsStore.js';
+import { StorageKeys } from '../utils/storage/types.js';
 import { addLog, LogType } from '../utils/logger.js';
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 

@@ -39,27 +39,31 @@ const DEPS_MOCKS: Partial<Record<DashboardSqliteSubtype, () => unknown>> = {
 
 // Map subtypes to the SqliteClient method the handler would call.
 const DEPS_METHOD: Partial<Record<DashboardSqliteSubtype, string>> = {
-  toggle_star: 'toggleStarResult',
-  update: 'updateResult',
-  delete: 'deleteResult',
+  toggle_star: 'mutate',
+  update: 'mutate',
+  delete: 'mutate',
   migrate: 'runMigration',
-  clear_all: 'clearAllResult',
+  clear_all: 'maintain',
   backfill_metadata: 'runBackfill',
   cleanup_legacy: 'runCleanup',
-  backup_db: 'backupDbResult',
-  restore_db: 'restoreDbResult',
-  import: 'insertResult',
-  append_to_obsidian: 'queryResult',
-  purge_now: 'purgeOldRecordsResult',
-  content_purge_now: 'purgeContentResult',
+  backup_db: 'maintain',
+  restore_db: 'maintain',
+  import: 'mutate',
+  purge_now: 'maintain',
+  content_purge_now: 'maintain',
 };
 
 describe('dashboardSqliteHandlers — token guard (data-driven)', () => {
   const VALID_TOKEN = 'test-valid-token-12345';
-  let sqliteClient: SqliteClient;
+  let sqliteClient: Record<string, unknown>;
 
   beforeEach(() => {
-    sqliteClient = new SqliteClient();
+    sqliteClient = {
+      query: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
+      mutate: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+      maintain: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+      getStatus: vi.fn().mockResolvedValue(null),
+    };
   });
 
   const requiredSubtypes = [...TOKEN_REQUIRED_SUBTYPES] as DashboardSqliteSubtype[];
@@ -88,12 +92,12 @@ describe('dashboardSqliteHandlers — token guard (data-driven)', () => {
   );
 
   it('allows a read-only (exempt) subtype without confirmToken', async () => {
-    (sqliteClient as unknown as Record<string, ReturnType<typeof vi.fn>>)['queryResult'] =
+    (sqliteClient as Record<string, ReturnType<typeof vi.fn>>)['query'] =
       vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
 
     const result = await dispatchDashboardSqlite(
       { subtype: 'query' },
-      sqliteClient,
+      sqliteClient as any,
       { getConfirmToken: async () => VALID_TOKEN },
     );
 

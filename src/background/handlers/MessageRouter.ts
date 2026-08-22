@@ -2,7 +2,7 @@
 /**
  * MessageRouter — deep module hiding the 19 handler shallow registry
  *
- * createMessageHandlerRegistry exposes register(type, handler, trust, validator) with
+ * The legacy shallow registry exposed register(type, handler, trust, validator) with
  * 19 types × trust × validator combinations. Callers must know which trust level
  * each type needs and which validator to attach. The true bug surface is policy
  * leakage (e.g., VALID_VISIT is content-script-allowed but DASHBOARD_SQLITE is
@@ -48,9 +48,82 @@ import {
   checkDomainValidator,
   contentCleansingExecutedValidator,
 } from '../../messaging/validators.js';
-import type { MessageHandlerRegistryDeps } from './createMessageHandlerRegistry.js';
-import type { MessageHandler } from './MessageHandlerRegistry.js';
+import type { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
+import type { TabCache } from '../tabCache.js';
+import type { AIService, AiTestProgress } from '../ai/AIService.js';
+import type { ObsidianClient } from '../obsidianClient.js';
+import type { Settings } from '../../utils/storage/types.js';
+import type { PrivacyInfo } from '../../utils/privacyChecker.js';
+import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './recordingHandlers.js';
 import type { MessageValidator } from '../../messaging/validators.js';
+
+/**
+ * Heterogeneous collection type: the router stores handlers for different
+ * message types in a single Map. Each handler factory internally narrows
+ * the message to its specific type (e.g., ValidVisitMessage, ManualRecordMessage).
+ *
+ * `any` is retained here because:
+ * - `unknown` would break `satisfies Record<string, MessageHandler>` (contravariance)
+ * - `ExtensionMessage` would require all 20 handler factories to change their parameter types
+ * Type safety is preserved at the call site via `satisfies` and at each handler's internal narrowing.
+ */
+export type MessageHandler = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- architectural: heterogeneous collection
+  message: any,
+  sender: chrome.runtime.MessageSender,
+  sendResponse: (response?: unknown) => void,
+) => void | Promise<void>;
+
+export interface CommonHandlerDeps {
+  runtimeId?: string;
+  dashboardSqliteHandler: MessageHandler;
+}
+
+export interface RecordingHandlerDeps {
+  recordingPipeline: Pick<RecordingPipeline, 'record'>;
+  tabCache: Pick<TabCache, 'add' | 'update'>;
+  hasPrivacyConsent: () => Promise<boolean>;
+  autoSavedBadgeTabs: {
+    add(tabId: number): void;
+    has(tabId: number): boolean;
+  };
+  manualRecordDeps: ManualRecordHandlerDeps;
+  saveRecordDeps: SaveRecordHandlerDeps;
+}
+
+export interface TestingHandlerDeps {
+  obsidian: Pick<ObsidianClient, 'testConnection'>;
+  aiService: Pick<AIService, 'testConnection'>;
+  clearSettingsCache: () => void;
+  notifyAiTestProgress: (progress: AiTestProgress) => void;
+}
+
+export interface SystemHandlerDeps {
+  buildAllowedUrls: (settings: Settings) => Set<string>;
+  getSettings: () => Promise<Settings>;
+  isDomainAllowed: (url: string) => Promise<boolean>;
+  getPrivacyCache: () => Map<string, PrivacyInfo> | null;
+  autoSavedBadgeTabs: {
+    add(tabId: number): void;
+    has(tabId: number): boolean;
+  };
+}
+
+export interface LifecycleHandlerDeps {
+  updateActivity: () => Promise<void>;
+  lockSession: () => Promise<void>;
+  initExportScheduler: () => Promise<void>;
+  updateConsentBadge: () => Promise<void>;
+  generateWeeklySummary: () => Promise<boolean>;
+  generateMonthlySummary: () => Promise<boolean>;
+}
+
+export type MessageRouterDeps =
+  CommonHandlerDeps &
+  RecordingHandlerDeps &
+  TestingHandlerDeps &
+  SystemHandlerDeps &
+  LifecycleHandlerDeps;
 
 export class MessageRouter {
   private handlers = new Map<string, MessageHandler>();
@@ -58,7 +131,7 @@ export class MessageRouter {
   private validators = new Map<string, MessageValidator<unknown>>();
   private runtimeId: string | undefined;
 
-  constructor(deps: MessageHandlerRegistryDeps) {
+  constructor(deps: MessageRouterDeps) {
     this.runtimeId = deps.runtimeId ?? (typeof chrome !== 'undefined' ? chrome.runtime?.id : undefined);
 
     // — Deep implementation: 19 handlers + trust table + 8 validators are all hidden behind the seam —
@@ -175,12 +248,29 @@ export class MessageRouter {
   getHandlerCount(): number {
     return this.handlers.size;
   }
+
+  /**
+   * Observable accessors over the private tables — lets tests and the
+   * service-worker export individual handlers without casting into
+   * private state.
+   */
+  getHandler(type: string): MessageHandler | undefined {
+    return this.handlers.get(type);
+  }
+
+  getTrustLevel(type: string): 'extension-only' | 'content-script-allowed' | undefined {
+    return this.trustLevels.get(type);
+  }
+
+  getRegisteredTypes(): string[] {
+    return [...this.handlers.keys()];
+  }
 }
 
 /**
  * Factory for the deep module — hides the 19 handler wiring.
  * Two adapters justify the seam: prod deps vs InMemory test deps.
  */
-export function createMessageRouter(deps: MessageHandlerRegistryDeps): MessageRouter {
+export function createMessageRouter(deps: MessageRouterDeps): MessageRouter {
   return new MessageRouter(deps);
 }

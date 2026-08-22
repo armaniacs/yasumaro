@@ -13,7 +13,8 @@
 
 import { normalizeUrl } from './urlUtils.js';
 import { CSPValidator, getCspErrorMessage } from './cspValidator.js';
-import { getSettings, StorageKeys } from './storage.js';
+import { getSettings } from './storage/settingsStore.js';
+import { StorageKeys } from './storage/types.js';
 import { logDebug, logWarn } from './logger.js';
 import { validateUrl } from './ssrfGuard.js';
 

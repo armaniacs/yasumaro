@@ -15,16 +15,27 @@ vi.mock('../../../../utils/localeUtils.js', () => ({
   getUserLocale: vi.fn().mockReturnValue('en-US'),
 }));
 vi.mock('../../../../utils/markdownSanitizer.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../utils/markdownSanitizer.js')>();
-  return {
-    ...actual,
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
     sanitizeForObsidian: vi.fn((text: string) => text),
     sanitizeUrlForMarkdownTarget: vi.fn((url: string) => url),
     // Spy that calls through to the real implementation so link-breakout
     // escaping is exercised by integration tests while call-sites are assertable.
     sanitizeForMarkdownLinkText: vi.fn((text: string) => actual.sanitizeForMarkdownLinkText(text)),
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
   };
-});
+});;
 
 import { formatMarkdownStep } from '../formatMarkdownStep.js';
 import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget, sanitizeForMarkdownLinkText } from '../../../../utils/markdownSanitizer.js';

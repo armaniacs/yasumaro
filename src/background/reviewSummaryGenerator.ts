@@ -9,7 +9,8 @@
  * インスタンスはcomposition rootで1度だけ生成し、alarmとGENERATE_REVIEW_SUMMARYが共有する。
  */
 
-import { getSettings, StorageKeys } from '../utils/storage.js';
+import { getSettings } from '../utils/storage/settingsStore.js';
+import { StorageKeys } from '../utils/storage/types.js';
 import type { AIService } from './ai/AIService.js';
 import type { SqliteClient } from './sqliteClient.js';
 import { addLog, LogType } from '../utils/logger.js';
@@ -29,7 +30,7 @@ export interface CreateReviewSummaryGeneratorOptions {
   /** AI要約の実行先。provider選択・token policyはcomposition rootの構成に従う。 */
   aiService: AIService;
   /** 対象期間の閲覧履歴を引くSQLite query。 */
-  sqliteClient: Pick<SqliteClient, 'queryResult'>;
+  sqliteClient: Pick<SqliteClient, 'query'>;
 }
 
 /**
@@ -203,10 +204,10 @@ export function createReviewSummaryGenerator(options: CreateReviewSummaryGenerat
       return false;
     }
 
-    const { start, end } = getWeekPeriod(date);
-    const queryResult = await sqliteClient.queryResult({ dateFrom: start, dateTo: end, limit: 10000 });
+const { start, end } = getWeekPeriod(date);
+     const queryResult = await sqliteClient.query({ dateFrom: start, dateTo: end, limit: 10000 });
 
-    if (!queryResult.success) {
+     if (!queryResult.success) {
       addLog(LogType.ERROR, 'Failed to query entries for weekly summary', { weekKey, error: queryResult.error.message });
       return false;
     }
@@ -269,10 +270,10 @@ export function createReviewSummaryGenerator(options: CreateReviewSummaryGenerat
       return false;
     }
 
-    const { start, end } = getMonthPeriod(date);
-    const queryResult = await sqliteClient.queryResult({ dateFrom: start, dateTo: end, limit: 10000 });
+const { start, end } = getMonthPeriod(date);
+     const queryResult = await sqliteClient.query({ dateFrom: start, dateTo: end, limit: 10000 });
 
-    if (!queryResult.success) {
+     if (!queryResult.success) {
       addLog(LogType.ERROR, 'Failed to query entries for monthly summary', { monthKey, error: queryResult.error.message });
       return false;
     }

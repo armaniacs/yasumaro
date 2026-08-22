@@ -2,12 +2,20 @@
 import { RecordingCache } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
 
-import * as storage from '../../utils/storage.js';
+import * as storage from '../../utils/storage/types.js';
+import * as storageSettings from '../../utils/storage/settingsStore.js';
+import * as storageSavedUrls from '../../utils/storage/savedUrlRepository.js';
 import * as storageUrls from '../../utils/storageUrls.js';
 import * as domainUtils from '../../utils/domainUtils.js';
 import * as privacy from '../privacyPipeline.js';
 
-vi.mock('../../utils/storage.js');
+vi.mock('../../utils/storage/types.js');
+vi.mock('../../utils/storage/defaults.js');
+vi.mock('../../utils/storage/encryptionSession.js');
+vi.mock('../../utils/storage/settingsStore.js');
+vi.mock('../../utils/storage/savedUrlRepository.js');
+vi.mock('../../utils/storage/domainFilterCache.js');
+vi.mock('../../utils/storage/quota.js');
 vi.mock('../../utils/storageUrls.js');
 vi.mock('../../utils/domainUtils.js');
 vi.mock('../privacyPipeline.js');
@@ -21,16 +29,16 @@ beforeEach(() => {
   // storageのデフォルトモック
     // @ts-expect-error - vi.fn() type narrowing issue
 
-  storage.getSettings.mockResolvedValue({
+  storageSettings.getSettings.mockResolvedValue({
     PRIVACY_MODE: 'full_pipeline',
     PII_SANITIZE_LOGS: true
   });
     // @ts-expect-error - vi.fn() type narrowing issue
 
-  storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+  storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
     // @ts-expect-error - vi.fn() type narrowing issue
 
-  storage.setSavedUrlsWithTimestamps.mockResolvedValue();
+  storageSavedUrls.setSavedUrlsWithTimestamps.mockResolvedValue();
 
   // storageUrlsのデフォルトモック
   // @ts-expect-error - vi.fn() type narrowing issue

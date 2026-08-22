@@ -4,7 +4,8 @@
  */
 
 import { parseUblockFilterListWithErrors, isValidString } from '../../../utils/ublockParser/index.js';
-import { StorageKeys, saveSettings, getSettings } from '../../../utils/storage.js';
+import { saveSettings, getSettings } from '../../../utils/storage/settingsStore.js';
+import { StorageKeys } from '../../../utils/storage/types.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { rebuildRulesFromSources } from './rulesBuilder.js';
 import type { Source } from '../../../utils/types.js';

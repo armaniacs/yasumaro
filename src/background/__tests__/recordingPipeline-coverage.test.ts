@@ -8,14 +8,20 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 
 // ─── Mocks (must be before imports) ─────────────────────────────────────────
-vi.mock('../../utils/storage.ts', async (importOriginal) => {
-  const actual = await importOriginal() as typeof import('../../utils/storage.ts');
+vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = await importOriginal() as typeof import('../../utils/storage/settingsStore.js');
   return {
     ...actual,
     getSettings: vi.fn(),
+    saveSettings: vi.fn(),
+  };
+});
+vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = await importOriginal() as typeof import('../../utils/storage/savedUrlRepository.js');
+  return {
+    ...actual,
     getSavedUrlsWithTimestamps: vi.fn(),
     setSavedUrlsWithTimestamps: vi.fn(),
-    saveSettings: vi.fn(),
   };
 });
 
@@ -142,7 +148,8 @@ vi.mock('../pipeline/RecordingPipeline.ts', async () => {
 import { truncateContentSize } from '../recordingValidator.ts';
 import { RecordingCache } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.ts';
-import * as storage from '../../utils/storage.ts';
+import * as storageSettings from '../../utils/storage/settingsStore.js';
+import * as storageSavedUrls from '../../utils/storage/savedUrlRepository.js';
 import * as domainUtils from '../../utils/domainUtils.ts';
 import { PrivacyPipeline } from '../privacyPipeline.ts';
 import { RecordingPipeline } from '../pipeline/RecordingPipeline.ts';
@@ -257,41 +264,41 @@ describe('RecordingPipeline - getSavedUrlsWithCache', () => {
     vi.clearAllMocks();
 
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSettings.mockResolvedValue({});
+    storageSettings.getSettings.mockResolvedValue({});
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
   });
 
   test('fetches from storage on first call (cache miss)', async () => {
     const urlMap = new Map([['https://example.com', Date.now()]]);
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
 
     const result = await RecordingCache.getSavedUrlsWithCache();
 
-    expect(storage.getSavedUrlsWithTimestamps).toHaveBeenCalledTimes(1);
+    expect(storageSavedUrls.getSavedUrlsWithTimestamps).toHaveBeenCalledTimes(1);
     expect(result.get('https://example.com')).toBeDefined();
   });
 
   test('returns cached data on second call within TTL', async () => {
     const urlMap = new Map([['https://example.com', Date.now()]]);
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
 
     await RecordingCache.getSavedUrlsWithCache();
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSavedUrlsWithTimestamps.mockClear();
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockClear();
 
     const result = await RecordingCache.getSavedUrlsWithCache();
 
     // Should not call storage again (cache hit)
-    expect(storage.getSavedUrlsWithTimestamps).not.toHaveBeenCalled();
+    expect(storageSavedUrls.getSavedUrlsWithTimestamps).not.toHaveBeenCalled();
     expect(result.get('https://example.com')).toBeDefined();
   });
 
   test('refetches from storage after TTL expires', async () => {
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map([['https://first.com', 1]]));
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map([['https://first.com', 1]]));
     await RecordingCache.getSavedUrlsWithCache();
 
     // Expire the cache
@@ -299,31 +306,31 @@ describe('RecordingPipeline - getSavedUrlsWithCache', () => {
 
     const newMap = new Map([['https://second.com', 2]]);
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSavedUrlsWithTimestamps.mockResolvedValue(newMap);
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(newMap);
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSavedUrlsWithTimestamps.mockClear();
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockClear();
 
     const result = await RecordingCache.getSavedUrlsWithCache();
 
-    expect(storage.getSavedUrlsWithTimestamps).toHaveBeenCalledTimes(1);
+    expect(storageSavedUrls.getSavedUrlsWithTimestamps).toHaveBeenCalledTimes(1);
     expect(result.get('https://second.com')).toBeDefined();
   });
 
   test('getSavedUrlsWithCache returns equivalent data on cache hit', async () => {
     const originalMap = new Map([['https://a.com', 1], ['https://b.com', 2]]);
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSavedUrlsWithTimestamps.mockResolvedValue(originalMap);
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(originalMap);
 
     const first = await RecordingCache.getSavedUrlsWithCache();
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSavedUrlsWithTimestamps.mockClear();
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockClear();
 
     const second = await RecordingCache.getSavedUrlsWithCache();
 
     // Same data returned from cache
     expect(Array.from(first.entries())).toEqual(Array.from(second.entries()));
     // Storage not called again
-    expect(storage.getSavedUrlsWithTimestamps).not.toHaveBeenCalled();
+    expect(storageSavedUrls.getSavedUrlsWithTimestamps).not.toHaveBeenCalled();
   });
 });
 
@@ -516,9 +523,9 @@ describe('RecordingPipeline - record (delegates to RecordingPipeline)', () => {
     vi.clearAllMocks();
 
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline' });
+    storageSettings.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline' });
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
     // @ts-expect-error - vi.fn() type narrowing
     domainUtils.isDomainAllowed.mockResolvedValue(true);
 
@@ -543,7 +550,7 @@ describe('RecordingPipeline - record (delegates to RecordingPipeline)', () => {
   test('passes settings to pipeline.execute', async () => {
     const settings = { PRIVACY_MODE: 'full_pipeline' };
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSettings.mockResolvedValue(settings);
+    storageSettings.getSettings.mockResolvedValue(settings);
 
     await logic.record({
       title: 'Test',
@@ -614,9 +621,9 @@ describe('RecordingPipeline - recordWithPreview', () => {
     vi.clearAllMocks();
 
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline' });
+    storageSettings.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline' });
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
     // @ts-expect-error - vi.fn() type narrowing
     domainUtils.isDomainAllowed.mockResolvedValue(true);
 
@@ -685,9 +692,9 @@ describe('RecordingPipeline - settings cache interaction with record', () => {
     vi.clearAllMocks();
 
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline' });
+    storageSettings.getSettings.mockResolvedValue({ PRIVACY_MODE: 'full_pipeline' });
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
     // @ts-expect-error - vi.fn() type narrowing
     domainUtils.isDomainAllowed.mockResolvedValue(true);
 
@@ -717,7 +724,7 @@ describe('RecordingPipeline - settings cache interaction with record', () => {
     });
 
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSettings.mockClear();
+    storageSettings.getSettings.mockClear();
 
     await logic.record({
       title: 'Second',
@@ -726,7 +733,7 @@ describe('RecordingPipeline - settings cache interaction with record', () => {
     });
 
     // getSettings should not be called again due to cache
-    expect(storage.getSettings).not.toHaveBeenCalled();
+    expect(storageSettings.getSettings).not.toHaveBeenCalled();
   });
 });
 
@@ -735,7 +742,7 @@ describe('RecordingPipeline - static cache state', () => {
     resetCacheState();
 
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSettings.mockResolvedValue({ PRIVACY_MODE: 'test' });
+    storageSettings.getSettings.mockResolvedValue({ PRIVACY_MODE: 'test' });
 
     const logic1 = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
     await RecordingCache.getSettingsWithCache();
@@ -747,7 +754,7 @@ describe('RecordingPipeline - static cache state', () => {
     const settings = await RecordingCache.getSettingsWithCache();
     expect(settings).toHaveProperty('PRIVACY_MODE', 'test');
     // getSettings should NOT have been called a second time
-    expect(storage.getSettings).toHaveBeenCalledTimes(1);
+    expect(storageSettings.getSettings).toHaveBeenCalledTimes(1);
   });
 
   test('invalidateSettingsCache increments version', () => {
@@ -772,9 +779,9 @@ describe('RecordingPipeline - edge cases', () => {
     vi.clearAllMocks();
 
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSettings.mockResolvedValue({});
+    storageSettings.getSettings.mockResolvedValue({});
     // @ts-expect-error - vi.fn() type narrowing
-    storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
   });
 
   test('getPrivacyInfoWithCache returns null for expired cache entry', async () => {

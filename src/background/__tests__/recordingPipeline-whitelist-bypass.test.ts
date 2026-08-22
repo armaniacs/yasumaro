@@ -12,7 +12,13 @@ import * as storageModule from '../../utils/storage.js';
 import * as domainUtilsModule from '../../utils/domainUtils.js';
 
 // モック設定
-vi.mock('../../utils/storage.js');
+vi.mock('../../utils/storage/types.js');
+vi.mock('../../utils/storage/defaults.js');
+vi.mock('../../utils/storage/encryptionSession.js');
+vi.mock('../../utils/storage/settingsStore.js');
+vi.mock('../../utils/storage/savedUrlRepository.js');
+vi.mock('../../utils/storage/domainFilterCache.js');
+vi.mock('../../utils/storage/quota.js');
 vi.mock('../../utils/domainUtils.js');
 vi.mock('../privacyPipeline.js');
 

@@ -34,7 +34,13 @@ globalThis.chrome = {
   runtime: { id: 'test-extension-id', getURL: vi.fn((path: string) => `chrome-extension://test-extension-id/${path}`) },
 } as any;
 
-vi.mock('../../../utils/storage.js');
+vi.mock('../../../utils/storage/types.js');
+vi.mock('../../../utils/storage/defaults.js');
+vi.mock('../../../utils/storage/encryptionSession.js');
+vi.mock('../../../utils/storage/settingsStore.js');
+vi.mock('../../../utils/storage/savedUrlRepository.js');
+vi.mock('../../../utils/storage/domainFilterCache.js');
+vi.mock('../../../utils/storage/quota.js');
 vi.mock('../../../utils/errorUtils.js', () => ({
   errorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
 }));
@@ -69,7 +75,8 @@ vi.mock('../../../utils/piiSanitizer.js', () => ({
   sanitizeRegex: vi.fn().mockResolvedValue({ text: 'sanitized content', maskedItems: [] }),
 }));
 
-import * as storage from '../../../utils/storage.js';
+import * as storage from '../../../utils/storage/types.js';
+import * as storageSavedUrls from '../../../utils/storage/savedUrlRepository.js';
 import * as domainUtils from '../../../utils/domainUtils.js';
 import * as permissionManager from '../../../utils/permissionManager.js';
 import * as logger from '../../../utils/logger.js';
@@ -106,10 +113,10 @@ function setupMockPipeline() {
     TAG_SUMMARY_MODE: 'TAG_SUMMARY_MODE', AUTO_SAVE_PRIVACY_BEHAVIOR: 'AUTO_SAVE_PRIVACY_BEHAVIOR',
     CONTENT_STORAGE_ENABLED: 'content_storage_enabled',
   };
-  (storage as any).getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
-  (storage as any).setSavedUrlsWithTimestamps.mockResolvedValue(undefined);
-  (storage as any).MAX_URL_SET_SIZE = 10000;
-  (storage as any).URL_WARNING_THRESHOLD = 9000;
+  (storageSavedUrls as any).getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+  (storageSavedUrls as any).setSavedUrlsWithTimestamps.mockResolvedValue(undefined);
+  (storageSavedUrls as any).MAX_URL_SET_SIZE = 10000;
+  (storageSavedUrls as any).URL_WARNING_THRESHOLD = 9000;
   (domainUtils as any).isDomainAllowed.mockResolvedValue(true);
   (domainUtils as any).extractDomain.mockReturnValue('example.com');
   (permissionManager as any).getPermissionManager.mockReturnValue({

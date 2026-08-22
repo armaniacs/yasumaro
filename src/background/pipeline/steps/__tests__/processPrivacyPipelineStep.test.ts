@@ -12,7 +12,13 @@ import { vi } from 'vitest';;
 // PrivacyPipeline をモック化
 vi.mock('../../../privacyPipeline.js');
 vi.mock('../../../../utils/piiSanitizer.js');
-vi.mock('../../../../utils/storage.js');
+vi.mock('../../../../utils/storage/types.js');
+vi.mock('../../../../utils/storage/defaults.js');
+vi.mock('../../../../utils/storage/encryptionSession.js');
+vi.mock('../../../../utils/storage/settingsStore.js');
+vi.mock('../../../../utils/storage/savedUrlRepository.js');
+vi.mock('../../../../utils/storage/domainFilterCache.js');
+vi.mock('../../../../utils/storage/quota.js');
 
 import { PrivacyPipeline } from '../../../privacyPipeline.js';
 import { processPrivacyPipelineStep } from '../processPrivacyPipelineStep.js';

@@ -1,5 +1,6 @@
 import { checkPageStatus } from '../statusChecker.js';
-import { getSettings, StorageKeys } from '../../utils/storage.js';
+import { getSettings } from '../../utils/storage/settingsStore.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import { startAutoCloseTimer } from '../autoClose.js';
 import { getCurrentTab, isRecordable } from '../tabUtils.js';
 import { formatSuccessMessage } from '../errorUtils.js';

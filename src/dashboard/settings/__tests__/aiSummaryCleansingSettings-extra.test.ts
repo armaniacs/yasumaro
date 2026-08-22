@@ -37,12 +37,75 @@ const mockStorageKeys = vi.hoisted(() => ({
   AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD: 'ai_summary_cleansing_body_protection_threshold',
 }));
 
-vi.mock('../../../utils/storage.js', () => ({
-  StorageKeys: mockStorageKeys,
-  DEFAULT_SETTINGS: {},
-  getSettings: vi.fn(),
-  saveSettings: vi.fn(() => Promise.resolve()),
-}));
+vi.mock('../../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: mockStorageKeys,
+    DEFAULT_SETTINGS: {},
+    getSettings: vi.fn(),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: mockStorageKeys,
+    DEFAULT_SETTINGS: {},
+    getSettings: vi.fn(),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: mockStorageKeys,
+    DEFAULT_SETTINGS: {},
+    getSettings: vi.fn(),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 vi.mock('../../../utils/logger.js', () => ({
   logError: vi.fn(),
@@ -52,7 +115,8 @@ vi.mock('../../../utils/logger.js', () => ({
   },
 }));
 
-import * as storage from '../../../utils/storage.js';
+import * as storage from '../../../utils/storage/types.js';
+import * as storageSettings from '../../../utils/storage/settingsStore.js';
 import { logError } from '../../../utils/logger.js';
 import {
   getAiSummaryCleansingSettings,
@@ -63,8 +127,8 @@ import {
   setupAiSummaryCleansingEventListeners,
 } from '../aiSummaryCleansingSettingsV2.js';
 
-const mockGetSettings = vi.mocked(storage.getSettings);
-const mockSaveSettings = vi.mocked(storage.saveSettings);
+const mockGetSettings = vi.mocked(storageSettings.getSettings);
+const mockSaveSettings = vi.mocked(storageSettings.saveSettings);
 
 const baseSettings = {
   enabled: true,

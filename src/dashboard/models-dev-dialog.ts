@@ -9,7 +9,8 @@ import {
     getApiKeyEnvName,
     getApiKeyUrl,
 } from '../utils/modelsDevApi.js';
-import { StorageKeys, saveSettings, getSettings } from '../utils/storage.js';
+import { saveSettings, getSettings } from '../utils/storage/settingsStore.js';
+import { StorageKeys } from '../utils/storage/types.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { escapeHtml } from '../utils/htmlEscape.js';

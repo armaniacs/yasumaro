@@ -5,10 +5,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Crypto } from '@peculiar/webcrypto';
 import { encryptEnvelope } from '../../utils/crypto/index.js';
 
-vi.mock('../../utils/storage.js', () => ({
-  getSettings: vi.fn(),
-  saveSettings: vi.fn(),
-}));
+vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn(),
+    saveSettings: vi.fn(),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 vi.mock('../exportLogsService.js', () => ({
   exportDb: vi.fn(),

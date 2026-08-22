@@ -2,13 +2,21 @@
 import { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
 import { RecordingCache } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
-import * as storage from '../../utils/storage.js';
+import * as storage from '../../utils/storage/types.js';
+import * as storageSettings from '../../utils/storage/settingsStore.js';
+import * as storageSavedUrls from '../../utils/storage/savedUrlRepository.js';
 import * as domainUtils from '../../utils/domainUtils.js';
 import * as privacy from '../privacyPipeline.js';
 import * as pendingStorage from '../../utils/pendingStorage.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
-vi.mock('../../utils/storage.js');
+vi.mock('../../utils/storage/types.js');
+vi.mock('../../utils/storage/defaults.js');
+vi.mock('../../utils/storage/encryptionSession.js');
+vi.mock('../../utils/storage/settingsStore.js');
+vi.mock('../../utils/storage/savedUrlRepository.js');
+vi.mock('../../utils/storage/domainFilterCache.js');
+vi.mock('../../utils/storage/quota.js');
 vi.mock('../../utils/domainUtils.js');
 vi.mock('../privacyPipeline.js');
 vi.mock('../../utils/pendingStorage.js');
@@ -48,7 +56,7 @@ describe('RecordingPipeline', () => {
     // storageのデフォルトモック
     // @ts-expect-error - vi.fn() type narrowing issue
 
-    storage.getSettings.mockResolvedValue({
+    storageSettings.getSettings.mockResolvedValue({
       PRIVACY_MODE: 'full_pipeline',
       PII_SANITIZE_LOGS: true,
       DOMAIN_WHITELIST: [],
@@ -56,10 +64,10 @@ describe('RecordingPipeline', () => {
     });
     // @ts-expect-error - vi.fn() type narrowing issue
 
-    storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
     // @ts-expect-error - vi.fn() type narrowing issue
 
-    storage.setSavedUrlsWithTimestamps.mockResolvedValue();
+    storageSavedUrls.setSavedUrlsWithTimestamps.mockResolvedValue();
     storage.StorageKeys = {
       PRIVACY_MODE: 'PRIVACY_MODE',
       PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS',
@@ -101,7 +109,7 @@ describe('RecordingPipeline', () => {
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);
     // @ts-expect-error - vi.fn() type narrowing issue
 
-      storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map([['https://test.com', Date.now()]]));
+      storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map([['https://test.com', Date.now()]]));
 
       const result = await logic.record({
         url: 'https://test.com',
@@ -422,16 +430,16 @@ describe('RecordingPipeline', () => {
       });
 
       // @ts-expect-error - vi.fn() type narrowing issue
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         PRIVACY_MODE: 'full_pipeline',
         PII_SANITIZE_LOGS: true,
         DOMAIN_WHITELIST: [],
         AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip'
       });
       // @ts-expect-error - vi.fn() type narrowing issue
-      storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+      storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
       // @ts-expect-error - vi.fn() type narrowing issue
-      storage.setSavedUrlsWithTimestamps.mockResolvedValue();
+      storageSavedUrls.setSavedUrlsWithTimestamps.mockResolvedValue();
       // @ts-expect-error - vi.fn() type narrowing issue
       domainUtils.isDomainAllowed.mockResolvedValue(true);
       // @ts-expect-error - vi.fn() type narrowing issue
@@ -531,16 +539,16 @@ describe('RecordingPipeline', () => {
       }
 
       // @ts-expect-error - vi.fn() type narrowing issue
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         PRIVACY_MODE: 'full_pipeline',
         PII_SANITIZE_LOGS: true,
         DOMAIN_WHITELIST: [],
         AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip'
       });
       // @ts-expect-error - vi.fn() type narrowing issue
-      storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+      storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
       // @ts-expect-error - vi.fn() type narrowing issue
-      storage.setSavedUrlsWithTimestamps.mockResolvedValue();
+      storageSavedUrls.setSavedUrlsWithTimestamps.mockResolvedValue();
       // @ts-expect-error - vi.fn() type narrowing issue
       domainUtils.isDomainAllowed.mockResolvedValue(true);
       // @ts-expect-error - vi.fn() type narrowing issue
@@ -683,16 +691,16 @@ describe('RecordingPipeline', () => {
       vi.clearAllMocks();
 
       // @ts-expect-error - vi.fn() type narrowing issue
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         PRIVACY_MODE: 'full_pipeline',
         PII_SANITIZE_LOGS: true,
         DOMAIN_WHITELIST: [],
         AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip'
       });
       // @ts-expect-error - vi.fn() type narrowing issue
-      storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+      storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
       // @ts-expect-error - vi.fn() type narrowing issue
-      storage.setSavedUrlsWithTimestamps.mockResolvedValue();
+      storageSavedUrls.setSavedUrlsWithTimestamps.mockResolvedValue();
       // @ts-expect-error - vi.fn() type narrowing issue
       domainUtils.isDomainAllowed.mockResolvedValue(true);
       // @ts-expect-error - vi.fn() type narrowing issue
@@ -851,16 +859,16 @@ describe('RecordingPipeline', () => {
       vi.clearAllMocks();
 
       // @ts-expect-error - vi.fn() type narrowing issue
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         PRIVACY_MODE: 'full_pipeline',
         PII_SANITIZE_LOGS: true,
         DOMAIN_WHITELIST: [],
         AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip'
       });
       // @ts-expect-error - vi.fn() type narrowing issue
-      storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+      storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
       // @ts-expect-error - vi.fn() type narrowing issue
-      storage.setSavedUrlsWithTimestamps.mockResolvedValue();
+      storageSavedUrls.setSavedUrlsWithTimestamps.mockResolvedValue();
       // @ts-expect-error - vi.fn() type narrowing issue
       domainUtils.isDomainAllowed.mockResolvedValue(true);
       // @ts-expect-error - vi.fn() type narrowing issue
@@ -939,16 +947,16 @@ describe('RecordingPipeline', () => {
       vi.clearAllMocks();
 
       // @ts-expect-error - vi.fn() type narrowing issue
-      storage.getSettings.mockResolvedValue({
+      storageSettings.getSettings.mockResolvedValue({
         PRIVACY_MODE: 'full_pipeline',
         PII_SANITIZE_LOGS: true,
         DOMAIN_WHITELIST: [],
         AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip'
       });
       // @ts-expect-error - vi.fn() type narrowing issue
-      storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+      storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
       // @ts-expect-error - vi.fn() type narrowing issue
-      storage.setSavedUrlsWithTimestamps.mockResolvedValue();
+      storageSavedUrls.setSavedUrlsWithTimestamps.mockResolvedValue();
       // @ts-expect-error - vi.fn() type narrowing issue
       domainUtils.isDomainAllowed.mockResolvedValue(true);
       // @ts-expect-error - vi.fn() type narrowing issue

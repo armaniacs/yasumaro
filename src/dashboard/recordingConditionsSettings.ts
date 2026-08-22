@@ -4,7 +4,8 @@
  * Note: Recording triggers (scroll/time/snapshot) are no longer configurable.
  */
 
-import { StorageKeys, getSettings, saveSettings } from '../utils/storage.js';
+import { getSettings, saveSettings } from '../utils/storage/settingsStore.js';
+import { StorageKeys } from '../utils/storage/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';

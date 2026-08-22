@@ -3,7 +3,8 @@
  * Domain filter settings functionality for the popup UI.
  */
 
-import { StorageKeys, getSettings, saveSettings } from '../../utils/storage.js';
+import { getSettings, saveSettings } from '../../utils/storage/settingsStore.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { parseDomainList, validateDomainList } from '../../utils/domainUtils.js';
 import { init as initUblockImport, handleSaveUblockSettings } from './ublockImport/index.js';

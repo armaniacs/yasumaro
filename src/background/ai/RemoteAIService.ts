@@ -7,7 +7,8 @@ import {
   type AiConnectionTestResult,
   type AiProviderTestResult,
 } from './AIService.js';
-import { getSettings, StorageKeys, type Settings, type ProviderSlot } from '../../utils/storage.js';
+import { getSettings } from '../../utils/storage/settingsStore.js';
+import { StorageKeys, Settings, ProviderSlot } from '../../utils/storage/types.js';
 import { resolveModelKey } from '../../utils/aiModelKey.js';
 import { GeminiProvider, OpenAIProvider, BuiltInAiProvider, AIProviderStrategy } from './providers/index.js';
 import { addLog, LogType } from '../../utils/logger.js';

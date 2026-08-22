@@ -3,7 +3,8 @@
  * GitHub Gist sync settings UI logic.
  */
 
-import { getSettings, saveSettings, StorageKeys, type Settings } from '../utils/storage.js';
+import { getSettings, saveSettings } from '../utils/storage/settingsStore.js';
+import { StorageKeys, Settings } from '../utils/storage/types.js';
 import { GistSyncTarget } from '../background/syncTargets/gistSyncTarget.js';
 import { SqliteClient } from '../background/sqliteClient.js';
 import { errorMessage } from '../utils/errorUtils.js';

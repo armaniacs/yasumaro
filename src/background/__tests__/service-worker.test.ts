@@ -104,24 +104,239 @@ vi.mock('chrome', () => ({
 }));
 
 // Mock dependencies
-vi.mock('../../utils/storage.js', () => ({
-    StorageKeys: storageMock.StorageKeys,
-    API_KEY_FIELDS: ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key', 'provider_api_key', 'github_pat'],
-    getSettings: vi.fn(),
-    clearSettingsCache: vi.fn(),
-    getSavedUrlsWithTimestamps: vi.fn(),
-    setSavedUrlsWithTimestamps: vi.fn(),
-    getAllowedUrls: vi.fn(),
-    buildAllowedUrls: vi.fn(),
-    saveSettingsWithAllowedUrls: vi.fn(),
-    updateDomainFilterCache: vi.fn(),
-    lockSession: vi.fn(),
-    cacheSessionState: vi.fn(),
-    initSettings: vi.fn(),
-    ensureDefaultSettings: vi.fn(),
-    removeOldKeys: vi.fn(),
-    migrateToSingleSettingsObject: vi.fn(),
-}));
+vi.mock('../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      StorageKeys: storageMock.StorageKeys,
+      API_KEY_FIELDS: ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key', 'provider_api_key', 'github_pat'],
+      getSettings: vi.fn(),
+      clearSettingsCache: vi.fn(),
+      getSavedUrlsWithTimestamps: vi.fn(),
+      setSavedUrlsWithTimestamps: vi.fn(),
+      getAllowedUrls: vi.fn(),
+      buildAllowedUrls: vi.fn(),
+      saveSettingsWithAllowedUrls: vi.fn(),
+      updateDomainFilterCache: vi.fn(),
+      lockSession: vi.fn(),
+      cacheSessionState: vi.fn(),
+      initSettings: vi.fn(),
+      ensureDefaultSettings: vi.fn(),
+      removeOldKeys: vi.fn(),
+      migrateToSingleSettingsObject: vi.fn(),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      StorageKeys: storageMock.StorageKeys,
+      API_KEY_FIELDS: ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key', 'provider_api_key', 'github_pat'],
+      getSettings: vi.fn(),
+      clearSettingsCache: vi.fn(),
+      getSavedUrlsWithTimestamps: vi.fn(),
+      setSavedUrlsWithTimestamps: vi.fn(),
+      getAllowedUrls: vi.fn(),
+      buildAllowedUrls: vi.fn(),
+      saveSettingsWithAllowedUrls: vi.fn(),
+      updateDomainFilterCache: vi.fn(),
+      lockSession: vi.fn(),
+      cacheSessionState: vi.fn(),
+      initSettings: vi.fn(),
+      ensureDefaultSettings: vi.fn(),
+      removeOldKeys: vi.fn(),
+      migrateToSingleSettingsObject: vi.fn(),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      StorageKeys: storageMock.StorageKeys,
+      API_KEY_FIELDS: ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key', 'provider_api_key', 'github_pat'],
+      getSettings: vi.fn(),
+      clearSettingsCache: vi.fn(),
+      getSavedUrlsWithTimestamps: vi.fn(),
+      setSavedUrlsWithTimestamps: vi.fn(),
+      getAllowedUrls: vi.fn(),
+      buildAllowedUrls: vi.fn(),
+      saveSettingsWithAllowedUrls: vi.fn(),
+      updateDomainFilterCache: vi.fn(),
+      lockSession: vi.fn(),
+      cacheSessionState: vi.fn(),
+      initSettings: vi.fn(),
+      ensureDefaultSettings: vi.fn(),
+      removeOldKeys: vi.fn(),
+      migrateToSingleSettingsObject: vi.fn(),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      StorageKeys: storageMock.StorageKeys,
+      API_KEY_FIELDS: ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key', 'provider_api_key', 'github_pat'],
+      getSettings: vi.fn(),
+      clearSettingsCache: vi.fn(),
+      getSavedUrlsWithTimestamps: vi.fn(),
+      setSavedUrlsWithTimestamps: vi.fn(),
+      getAllowedUrls: vi.fn(),
+      buildAllowedUrls: vi.fn(),
+      saveSettingsWithAllowedUrls: vi.fn(),
+      updateDomainFilterCache: vi.fn(),
+      lockSession: vi.fn(),
+      cacheSessionState: vi.fn(),
+      initSettings: vi.fn(),
+      ensureDefaultSettings: vi.fn(),
+      removeOldKeys: vi.fn(),
+      migrateToSingleSettingsObject: vi.fn(),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      setSavedUrlsWithTimestamps: vi.fn(),
+      updateSavedUrlEntry: vi.fn().mockResolvedValue(undefined),
+      saveSavedUrlEntryMetadata: vi.fn().mockResolvedValue(undefined),
+      getSavedUrlsWithTimestamps: vi.fn().mockResolvedValue(new Map()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      StorageKeys: storageMock.StorageKeys,
+      API_KEY_FIELDS: ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key', 'provider_api_key', 'github_pat'],
+      getSettings: vi.fn(),
+      clearSettingsCache: vi.fn(),
+      getSavedUrlsWithTimestamps: vi.fn(),
+      setSavedUrlsWithTimestamps: vi.fn(),
+      getAllowedUrls: vi.fn(),
+      buildAllowedUrls: vi.fn(),
+      saveSettingsWithAllowedUrls: vi.fn(),
+      updateDomainFilterCache: vi.fn(),
+      lockSession: vi.fn(),
+      cacheSessionState: vi.fn(),
+      initSettings: vi.fn(),
+      ensureDefaultSettings: vi.fn(),
+      removeOldKeys: vi.fn(),
+      migrateToSingleSettingsObject: vi.fn(),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      StorageKeys: storageMock.StorageKeys,
+      API_KEY_FIELDS: ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key', 'provider_api_key', 'github_pat'],
+      getSettings: vi.fn(),
+      clearSettingsCache: vi.fn(),
+      getSavedUrlsWithTimestamps: vi.fn(),
+      setSavedUrlsWithTimestamps: vi.fn(),
+      getAllowedUrls: vi.fn(),
+      buildAllowedUrls: vi.fn(),
+      saveSettingsWithAllowedUrls: vi.fn(),
+      updateDomainFilterCache: vi.fn(),
+      lockSession: vi.fn(),
+      cacheSessionState: vi.fn(),
+      initSettings: vi.fn(),
+      ensureDefaultSettings: vi.fn(),
+      removeOldKeys: vi.fn(),
+      migrateToSingleSettingsObject: vi.fn(),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 vi.mock('../../utils/domainUtils.js');
 vi.mock('../privacyPipeline.js');
 vi.mock('../../utils/pendingStorage.js');
@@ -247,11 +462,6 @@ vi.mock('../headerDetector.js', () => ({
         initialize = vi.fn().mockResolvedValue(undefined);
     }
 }));
-vi.mock('../../utils/storage/savedUrlRepository.js', () => ({
-    updateSavedUrlEntry: vi.fn().mockResolvedValue(undefined),
-    saveSavedUrlEntryMetadata: vi.fn().mockResolvedValue(undefined),
-    getSavedUrlsWithTimestamps: vi.fn().mockResolvedValue(new Map()),
-}));
 vi.mock('../../utils/permissionManager.js', () => ({
     cleanupOldDeniedEntries: vi.fn().mockResolvedValue(undefined),
     cleanupDismissedEntries: vi.fn().mockResolvedValue(undefined),
@@ -288,7 +498,10 @@ vi.mock('../reviewSummaryGenerator.js', () => ({
 
 // Import the extracted functions from service-worker
 import * as serviceWorker from '../service-worker.js';
-import * as storage from '../../utils/storage.js';
+import * as storageEncryption from '../../utils/storage/encryptionSession.js';
+import * as storageDomainFilter from '../../utils/storage/domainFilterCache.js';
+import * as storageSettings from '../../utils/storage/settingsStore.js';
+import * as storageSavedUrls from '../../utils/storage/savedUrlRepository.js';
 import * as domainUtils from '../../utils/domainUtils.js';
 import * as privacyPipeline from '../privacyPipeline.js';
 import * as pendingStorage from '../../utils/pendingStorage.js';
@@ -394,7 +607,7 @@ describe('service-worker handlers', () => {
 
         // Default storage mock
         // @ts-expect-error - vi.fn() type narrowing
-        storage.getSettings.mockResolvedValue({
+        storageSettings.getSettings.mockResolvedValue({
             PRIVACY_MODE: 'full_pipeline',
             PII_SANITIZE_LOGS: true,
             DOMAIN_WHITELIST: [],
@@ -404,13 +617,13 @@ describe('service-worker handlers', () => {
             SKIP_AI_RATE_LIMIT_WINDOW_MS: 60000,
         });
         // @ts-expect-error - vi.fn() type narrowing
-        storage.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+        storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
         // @ts-expect-error - vi.fn() type narrowing
-        storage.setSavedUrlsWithTimestamps.mockResolvedValue();
+        storageSavedUrls.setSavedUrlsWithTimestamps.mockResolvedValue();
         // @ts-expect-error - vi.fn() type narrowing
-        storage.updateDomainFilterCache.mockResolvedValue(undefined);
+        storageDomainFilter.updateDomainFilterCache.mockResolvedValue(undefined);
         // @ts-expect-error - vi.fn() type narrowing
-        storage.lockSession.mockResolvedValue(undefined);
+        storageEncryption.lockSession.mockResolvedValue(undefined);
         // @ts-expect-error - vi.fn() type narrowing
         domainUtils.isDomainAllowed.mockResolvedValue(true);
         // PrivacyPipeline mock
@@ -691,7 +904,7 @@ describe('service-worker handlers', () => {
             handler(message, {} as any, sendResponse);
             await new Promise(resolve => setTimeout(resolve, 50));
 
-            expect(storage.lockSession).toHaveBeenCalled();
+            expect(storageEncryption.lockSession).toHaveBeenCalled();
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
@@ -699,7 +912,7 @@ describe('service-worker handlers', () => {
             let resolveLock: (() => void) | undefined;
             const lockPromise = new Promise<void>(resolve => { resolveLock = resolve; });
             // @ts-expect-error - vi.fn() type narrowing
-            storage.lockSession.mockReturnValue(lockPromise);
+            storageEncryption.lockSession.mockReturnValue(lockPromise);
 
             const sendResponse = vi.fn();
             const message: SessionLockRequestMessage = { type: 'SESSION_LOCK_REQUEST' };
@@ -982,17 +1195,17 @@ describe('service-worker handlers', () => {
         it('should invalidate cache and update domain filter on update', async () => {
             await serviceWorker.handleInstalled({ reason: 'update', previousVersion: '1.0.0' });
             expect(RecordingCache.invalidateSettingsCache).toHaveBeenCalled();
-            expect(storage.updateDomainFilterCache).toHaveBeenCalled();
+            expect(storageDomainFilter.updateDomainFilterCache).toHaveBeenCalled();
         });
 
         it('should do nothing for unknown install reason', async () => {
             await serviceWorker.handleInstalled({ reason: 'chrome_update' });
             expect(RecordingCache.invalidateSettingsCache).not.toHaveBeenCalled();
-            expect(storage.updateDomainFilterCache).not.toHaveBeenCalled();
+            expect(storageDomainFilter.updateDomainFilterCache).not.toHaveBeenCalled();
         });
 
         it('should propagate errors during update when getSettings fails', async () => {
-            (storage.getSettings as unknown as vi.Mock).mockRejectedValueOnce(new Error('Settings error'));
+            (storageSettings.getSettings as unknown as vi.Mock).mockRejectedValueOnce(new Error('Settings error'));
             await expect(serviceWorker.handleInstalled({
                 reason: 'update',
                 previousVersion: '1.0.0'
@@ -1008,7 +1221,7 @@ describe('service-worker handlers', () => {
 
         it('should handle getSettings error during rehydration', async () => {
             // Mock getSettings to throw (isCacheInitialized is false initially)
-            (storage.getSettings as unknown as vi.Mock).mockRejectedValueOnce(new Error('Failed to get settings'));
+            (storageSettings.getSettings as unknown as vi.Mock).mockRejectedValueOnce(new Error('Failed to get settings'));
 
             await serviceWorker.handleStartup();
             expect(logError).toHaveBeenCalledWith(
@@ -1022,7 +1235,7 @@ describe('service-worker handlers', () => {
         it('should rehydrate caches on first startup', async () => {
             await serviceWorker.handleStartup();
             expect(RecordingCache.invalidateSettingsCache).toHaveBeenCalled();
-            expect(storage.updateDomainFilterCache).toHaveBeenCalled();
+            expect(storageDomainFilter.updateDomainFilterCache).toHaveBeenCalled();
             expect(permissionManager.cleanupOldDeniedEntries).toHaveBeenCalledWith(90);
             expect(permissionManager.cleanupDismissedEntries).toHaveBeenCalledWith(7);
         });
@@ -1849,7 +2062,7 @@ describe('service-worker handlers', () => {
 
             // Disable auto content fetch
             // @ts-expect-error - vi.fn() type narrowing
-            storage.getSettings.mockResolvedValue({
+            storageSettings.getSettings.mockResolvedValue({
                 PRIVACY_MODE: 'full_pipeline',
                 PII_SANITIZE_LOGS: true,
                 DOMAIN_WHITELIST: [],
@@ -2370,7 +2583,7 @@ describe('service-worker handlers', () => {
 
             await serviceWorker.handleSessionLockRequest(message, {} as chrome.runtime.MessageSender, sendResponse);
 
-            expect(storage.lockSession).toHaveBeenCalled();
+            expect(storageEncryption.lockSession).toHaveBeenCalled();
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
     });

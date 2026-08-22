@@ -3,7 +3,8 @@
  * Utility functions for domain filtering with wildcard support.
  */
 
-import { getSettings, StorageKeys } from './storage.js';
+import { getSettings } from './storage/settingsStore.js';
+import { StorageKeys } from './storage/types.js';
 import { isUrlBlocked } from './ublockMatcher.js';
 import { wildcardToRegex } from './wildcardToRegex.js';
 

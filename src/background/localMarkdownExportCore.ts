@@ -5,7 +5,8 @@
  * decides *when* to call this and *which* days to include via `filter`.
  */
 
-import { getSettings, StorageKeys } from '../utils/storage.js';
+import { getSettings } from '../utils/storage/settingsStore.js';
+import { StorageKeys } from '../utils/storage/types.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { DAILY_BUFFER_PREFIX, buildDailyMarkdown } from './pipeline/steps/saveLocalMarkdownStep.js';
 import { getActiveTemplate } from '../utils/markdownTemplateUtils.js';

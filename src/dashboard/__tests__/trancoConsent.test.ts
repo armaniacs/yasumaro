@@ -30,17 +30,202 @@ vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
     showStatus: vi.fn(),
 }));
 
-vi.mock('../../utils/storage.js', () => ({
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-        TRANCO_VERSION: 'tranco_version',
-        TRANCO_DOMAINS: 'tranco_domains',
-        TRANCO_CONSENT_GRANTED: 'tranco_consent_granted',
-        TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
-        TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
-    },
-}));
+vi.mock('../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getSettings: vi.fn().mockResolvedValue({}),
+      saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+      StorageKeys: {
+          TRANCO_VERSION: 'tranco_version',
+          TRANCO_DOMAINS: 'tranco_domains',
+          TRANCO_CONSENT_GRANTED: 'tranco_consent_granted',
+          TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
+          TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
+      },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getSettings: vi.fn().mockResolvedValue({}),
+      saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+      StorageKeys: {
+          TRANCO_VERSION: 'tranco_version',
+          TRANCO_DOMAINS: 'tranco_domains',
+          TRANCO_CONSENT_GRANTED: 'tranco_consent_granted',
+          TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
+          TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
+      },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getSettings: vi.fn().mockResolvedValue({}),
+      saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+      StorageKeys: {
+          TRANCO_VERSION: 'tranco_version',
+          TRANCO_DOMAINS: 'tranco_domains',
+          TRANCO_CONSENT_GRANTED: 'tranco_consent_granted',
+          TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
+          TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
+      },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getSettings: vi.fn().mockResolvedValue({}),
+      saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+      StorageKeys: {
+          TRANCO_VERSION: 'tranco_version',
+          TRANCO_DOMAINS: 'tranco_domains',
+          TRANCO_CONSENT_GRANTED: 'tranco_consent_granted',
+          TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
+          TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
+      },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getSettings: vi.fn().mockResolvedValue({}),
+      saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+      StorageKeys: {
+          TRANCO_VERSION: 'tranco_version',
+          TRANCO_DOMAINS: 'tranco_domains',
+          TRANCO_CONSENT_GRANTED: 'tranco_consent_granted',
+          TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
+          TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
+      },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getSettings: vi.fn().mockResolvedValue({}),
+      saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+      StorageKeys: {
+          TRANCO_VERSION: 'tranco_version',
+          TRANCO_DOMAINS: 'tranco_domains',
+          TRANCO_CONSENT_GRANTED: 'tranco_consent_granted',
+          TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
+          TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
+      },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getSettings: vi.fn().mockResolvedValue({}),
+      saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+      StorageKeys: {
+          TRANCO_VERSION: 'tranco_version',
+          TRANCO_DOMAINS: 'tranco_domains',
+          TRANCO_CONSENT_GRANTED: 'tranco_consent_granted',
+          TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
+          TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
+      },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 // Import after mocks
 import { initTrancoConsentPanel } from '../trancoConsent.js';

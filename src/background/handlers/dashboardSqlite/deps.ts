@@ -1,5 +1,6 @@
-import { getSettings } from '../../../utils/storage.js';
-import { formatEntriesToMarkdown } from '../../../dashboard/obsidianFormatter.js';
+import { getSettings } from '../../../utils/storage/settingsStore.js';
+import { pickDefined } from '../../../utils/objectUtils.js';
+import { formatEntriesToMarkdown } from '../../../utils/markdownFormatter.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import type { BrowsingLogEntry, BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import type { CallResult, SqliteError } from '../../sqliteClient.js';
@@ -102,28 +103,30 @@ export function createSqliteClientDeps(
   serviceWorkerDeps: SqliteClientBackedDeps,
 ): DashboardSqliteHandlerDeps {
   return {
-    // Every *Result variant keeps the failure reason attached to the call
-    // that produced it, rather than routing it through shared client state.
-    query: (params) => sqliteClient.queryResult(params),
-    search: (query, limit, offset, options) => sqliteClient.searchResult(query, limit, offset, options),
-    toggleStar: (id) => sqliteClient.toggleStarResult(id),
-    delete: (id) => sqliteClient.deleteResult(id),
-    update: (id, changes) => sqliteClient.updateResult(id, changes),
-    getCount: () => sqliteClient.getCountResult(),
-    clearAll: () => sqliteClient.clearAllResult(),
+    // Every delegate keeps the failure reason attached to the call that
+    // produced it, rather than routing it through shared client state.
+    query: (params) => sqliteClient.query(params),
+    search: (text, limit, offset, options) =>
+      sqliteClient.query({ kind: 'search', text, limit, offset, ...pickDefined({ orderBy: options?.orderBy, orderDir: options?.orderDir }) }),
+    toggleStar: (id) => sqliteClient.mutate({ type: 'toggleStar', id }),
+    delete: (id) => sqliteClient.mutate({ type: 'delete', id }),
+    update: (id, changes) => sqliteClient.mutate({ type: 'update', id, changes }),
+    getCount: () => sqliteClient.query({ kind: 'count' }),
+    clearAll: () => sqliteClient.maintain({ type: 'clearAll' }),
     // WHY: `Record<string, unknown>` is not structurally compatible with `BrowsingLogRecord` (missing required fields)
-    insert: (record) => sqliteClient.insertResult(record as unknown as BrowsingLogRecord),
-    restoreDb: (data) => sqliteClient.restoreDbResult(data),
-    // Deliberately not *Result: getStatus() reports initialization failure
+    insert: (record) => sqliteClient.mutate({ type: 'insert', record: record as unknown as BrowsingLogRecord }),
+    restoreDb: (data) => sqliteClient.maintain({ type: 'restore', data }),
+    // Deliberately not a result union: getStatus() reports initialization failure
     // inside its success value so the diagnostics panel can display it.
     getStatus: () => sqliteClient.getStatus(),
-    runOpfsSpike: () => sqliteClient.runOpfsSpikeResult() as Promise<DepsResult<Record<string, unknown>>>,
-    purgeOldRecords: (days, max) => sqliteClient.purgeOldRecordsResult(days, max),
-    purgeContent: (days, max, includeStarred) => sqliteClient.purgeContentResult(days, max, includeStarred),
-    backupDb: () => sqliteClient.backupDbResult(),
-    getSettings: () => getSettings(),
-    formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
-    queryAuditLog: (options) => sqliteClient.queryAuditLogResult(options),
+runOpfsSpike: () => sqliteClient.maintain({ type: 'opfsSpike' }) as Promise<DepsResult<Record<string, unknown>>>,
+     purgeOldRecords: (days?: number, max?: number) => sqliteClient.maintain({ type: 'purgeOldRecords', retentionDays: days, maxRecords: max } as { type: 'purgeOldRecords', retentionDays?: number, maxRecords: number }),
+     purgeContent: (days?: number, max?: number, includeStarred?: boolean) =>
+      sqliteClient.maintain({ type: 'purgeContent', retentionDays: days, maxRecords: max, includeStarred } as { type: 'purgeContent', retentionDays?: number, maxRecords?: number, includeStarred: boolean }),
+     backupDb: () => sqliteClient.maintain({ type: 'backup' }),
+     getSettings: () => getSettings(),
+     formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
+     queryAuditLog: (options) => sqliteClient.query({ kind: 'auditLog', limit: options?.limit, offset: options?.offset } as { kind: 'auditLog', limit?: number, offset?: number }),
     appendToDailyNote: async (markdown) => {
       const obsidianClient = new ObsidianClient();
       await obsidianClient.appendToDailyNote(markdown);

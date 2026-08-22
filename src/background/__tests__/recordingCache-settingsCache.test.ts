@@ -6,23 +6,65 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { RecordingCache, SETTINGS_CACHE_TTL } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
-import { getSettings, getSavedUrls, setSavedUrls, StorageKeys } from '../../utils/storage.ts';
+import { getSettings } from '../../utils/storage/settingsStore.js';
+import { getSavedUrls, setSavedUrls } from '../../utils/storage/savedUrlRepository.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import { PrivacyPipeline } from '../privacyPipeline.ts';
 import { NotificationHelper } from '../notificationHelper.ts';
 
-vi.mock('../../utils/storage.ts', async (importOriginal) => {
-  const actual = await importOriginal() as typeof import('../../utils/storage.ts');
-  return {
-    ...actual,
-    getSettings: vi.fn(),
-    getSavedUrls: vi.fn(),
-    setSavedUrls: vi.fn(),
+vi.mock('../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
     StorageKeys: {
       AI_PROVIDER: 'AI_PROVIDER',
       GEMINI_API_KEY: 'GEMINI_API_KEY',
       GEMINI_MODEL: 'GEMINI_MODEL',
-      PRIVACY_MODE: 'PRIVACY_MODE'
-    }
+      PRIVACY_MODE: 'PRIVACY_MODE',
+    },
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});
+vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = { getSettings: vi.fn() } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});
+vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = { getSavedUrls: vi.fn(), setSavedUrls: vi.fn() } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
   };
 });
 vi.mock('../privacyPipeline.ts');

@@ -1,14 +1,187 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../utils/storage.js', () => ({
-  StorageKeys: {
-    REVIEW_SUMMARY_ENABLED: 'review_summary_enabled',
-    REVIEW_SUMMARY_LAST_GENERATED_WEEK: 'review_summary_last_generated_week',
-    REVIEW_SUMMARY_LAST_GENERATED_MONTH: 'review_summary_last_generated_month',
-    LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
-  },
-  getSettings: vi.fn(),
-}));
+vi.mock('../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      REVIEW_SUMMARY_ENABLED: 'review_summary_enabled',
+      REVIEW_SUMMARY_LAST_GENERATED_WEEK: 'review_summary_last_generated_week',
+      REVIEW_SUMMARY_LAST_GENERATED_MONTH: 'review_summary_last_generated_month',
+      LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
+    },
+    getSettings: vi.fn(),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      REVIEW_SUMMARY_ENABLED: 'review_summary_enabled',
+      REVIEW_SUMMARY_LAST_GENERATED_WEEK: 'review_summary_last_generated_week',
+      REVIEW_SUMMARY_LAST_GENERATED_MONTH: 'review_summary_last_generated_month',
+      LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
+    },
+    getSettings: vi.fn(),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      REVIEW_SUMMARY_ENABLED: 'review_summary_enabled',
+      REVIEW_SUMMARY_LAST_GENERATED_WEEK: 'review_summary_last_generated_week',
+      REVIEW_SUMMARY_LAST_GENERATED_MONTH: 'review_summary_last_generated_month',
+      LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
+    },
+    getSettings: vi.fn(),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      REVIEW_SUMMARY_ENABLED: 'review_summary_enabled',
+      REVIEW_SUMMARY_LAST_GENERATED_WEEK: 'review_summary_last_generated_week',
+      REVIEW_SUMMARY_LAST_GENERATED_MONTH: 'review_summary_last_generated_month',
+      LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
+    },
+    getSettings: vi.fn(),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      REVIEW_SUMMARY_ENABLED: 'review_summary_enabled',
+      REVIEW_SUMMARY_LAST_GENERATED_WEEK: 'review_summary_last_generated_week',
+      REVIEW_SUMMARY_LAST_GENERATED_MONTH: 'review_summary_last_generated_month',
+      LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
+    },
+    getSettings: vi.fn(),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      REVIEW_SUMMARY_ENABLED: 'review_summary_enabled',
+      REVIEW_SUMMARY_LAST_GENERATED_WEEK: 'review_summary_last_generated_week',
+      REVIEW_SUMMARY_LAST_GENERATED_MONTH: 'review_summary_last_generated_month',
+      LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
+    },
+    getSettings: vi.fn(),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      REVIEW_SUMMARY_ENABLED: 'review_summary_enabled',
+      REVIEW_SUMMARY_LAST_GENERATED_WEEK: 'review_summary_last_generated_week',
+      REVIEW_SUMMARY_LAST_GENERATED_MONTH: 'review_summary_last_generated_month',
+      LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
+    },
+    getSettings: vi.fn(),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 vi.mock('../../utils/logger.js', () => ({
   addLog: vi.fn().mockResolvedValue(undefined),
@@ -55,7 +228,10 @@ function createHarness() {
     testConnection: vi.fn(),
   } as unknown as AIService;
   const queryResult = vi.fn();
-  const sqliteClient = { queryResult } as unknown as Pick<SqliteClient, 'queryResult'>;
+  const sqliteClient = {
+    queryResult,
+    query: vi.fn().mockImplementation((op: any) => queryResult(op)),
+  } as unknown as SqliteClient;
   const generator = createReviewSummaryGenerator({ aiService, sqliteClient });
   return { generateSummary, queryResult, sqliteClient, generator };
 }

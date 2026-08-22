@@ -9,7 +9,8 @@
  * shared across all three auto-export timings.
  */
 
-import { getSettings, StorageKeys } from '../utils/storage.js';
+import { getSettings } from '../utils/storage/settingsStore.js';
+import { StorageKeys } from '../utils/storage/types.js';
 import { flushBufferedExports } from './localMarkdownExportCore.js';
 
 export const IDLE_FALLBACK_ALARM = 'yasumaro-local-md-flush';

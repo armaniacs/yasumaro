@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { checkSenderTrust } from '../senderTrust.js';
-import { MessageHandlerRegistry } from '../MessageHandlerRegistry.js';
+import { createMessageRouter } from '../MessageRouter.js';
+import type { MessageRouterDeps } from '../MessageRouter.js';
 
 const RUNTIME_ID = 'this-extension-id';
 
@@ -66,43 +67,84 @@ describe('checkSenderTrust', () => {
   });
 });
 
-describe('MessageHandlerRegistry — trust enforcement', () => {
-  it('does not invoke an extension-only handler for a content script', () => {
-    const registry = new MessageHandlerRegistry(RUNTIME_ID);
-    const handler = vi.fn();
+/**
+ * Trust enforcement driven through the MessageRouter dispatch seam with the
+ * production handler table. The router's trust levels are fixed per type, so
+ * each case picks a real type whose level matches the scenario.
+ */
+describe('MessageRouter — trust enforcement', () => {
+  function makeDeps(): MessageRouterDeps {
+    return {
+      runtimeId: RUNTIME_ID,
+      recordingPipeline: { record: vi.fn().mockResolvedValue({ success: true }) },
+      tabCache: { add: vi.fn(), update: vi.fn() },
+      obsidian: { testConnection: vi.fn().mockResolvedValue({ success: true }) },
+      aiService: { testConnection: vi.fn().mockResolvedValue({ success: true }) },
+      manualRecordDeps: {} as never,
+      saveRecordDeps: {} as never,
+      hasPrivacyConsent: vi.fn().mockResolvedValue(true),
+      buildAllowedUrls: vi.fn().mockReturnValue(new Set()),
+      getSettings: vi.fn().mockResolvedValue({}),
+      isDomainAllowed: vi.fn().mockResolvedValue(true),
+      clearSettingsCache: vi.fn(),
+      notifyAiTestProgress: vi.fn(),
+      getPrivacyCache: vi.fn().mockReturnValue(null),
+      updateActivity: vi.fn().mockResolvedValue(undefined),
+      lockSession: vi.fn().mockResolvedValue(undefined),
+      autoSavedBadgeTabs: { add: vi.fn(), has: vi.fn().mockReturnValue(false) },
+      initExportScheduler: vi.fn().mockResolvedValue(undefined),
+      updateConsentBadge: vi.fn().mockResolvedValue(undefined),
+      generateWeeklySummary: vi.fn().mockResolvedValue(true),
+      generateMonthlySummary: vi.fn().mockResolvedValue(true),
+      dashboardSqliteHandler: vi.fn(),
+    };
+  }
+
+  it('does not run the extension-only TEST_AI handler for a content script', () => {
+    const deps = makeDeps();
+    const router = createMessageRouter(deps);
     const sendResponse = vi.fn();
 
-    registry.register('TEST_AI', handler, 'extension-only');
-    const handled = registry.dispatch('TEST_AI', {}, contentScriptSender, sendResponse);
+    const handled = router.dispatch(
+      { type: 'TEST_AI', payload: {}, protocolVersion: 1 },
+      contentScriptSender,
+      sendResponse,
+    );
 
-    expect(handler).not.toHaveBeenCalled();
     expect(handled).toBe(false);
+    expect(deps.aiService.testConnection).not.toHaveBeenCalled();
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: 'TEST_AI is not allowed from content scripts',
     });
   });
 
-  it('invokes an extension-only handler for an extension page', () => {
-    const registry = new MessageHandlerRegistry(RUNTIME_ID);
-    const handler = vi.fn();
+  it('runs the extension-only TEST_AI handler for an extension page', async () => {
+    const deps = makeDeps();
+    const router = createMessageRouter(deps);
     const sendResponse = vi.fn();
 
-    registry.register('TEST_AI', handler, 'extension-only');
-    registry.dispatch('TEST_AI', {}, extensionPageSender, sendResponse);
+    router.dispatch(
+      { type: 'TEST_AI', payload: {}, protocolVersion: 1 },
+      extensionPageSender,
+      sendResponse,
+    );
 
-    expect(handler).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => {
+      expect(deps.aiService.testConnection).toHaveBeenCalled();
+    });
   });
 
-  it('invokes a content-script-allowed handler for a content script', () => {
-    const registry = new MessageHandlerRegistry(RUNTIME_ID);
-    const handler = vi.fn();
+  it('runs a content-script-allowed PING handler for a content script', async () => {
+    const router = createMessageRouter(makeDeps());
     const sendResponse = vi.fn();
 
-    registry.register('VALID_VISIT', handler, 'content-script-allowed');
-    registry.dispatch('VALID_VISIT', {}, contentScriptSender, sendResponse);
+    const handled = router.dispatch({ type: 'PING', protocolVersion: 1 }, contentScriptSender, sendResponse);
 
-    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handled).toBe(true);
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+    });
   });
 
   /**
@@ -110,25 +152,31 @@ describe('MessageHandlerRegistry — trust enforcement', () => {
    * content script could reach it. Only the dashboard sends it.
    */
   it('blocks a content script from restarting the export scheduler', () => {
-    const registry = new MessageHandlerRegistry(RUNTIME_ID);
-    const handler = vi.fn();
+    const deps = makeDeps();
+    const router = createMessageRouter(deps);
     const sendResponse = vi.fn();
 
-    registry.register('REFRESH_LOCAL_MARKDOWN_SCHEDULER', handler, 'extension-only');
-    registry.dispatch('REFRESH_LOCAL_MARKDOWN_SCHEDULER', {}, contentScriptSender, sendResponse);
+    const handled = router.dispatch(
+      { type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER', payload: {}, protocolVersion: 1 },
+      contentScriptSender,
+      sendResponse,
+    );
 
-    expect(handler).not.toHaveBeenCalled();
+    expect(handled).toBe(false);
+    expect(deps.initExportScheduler).not.toHaveBeenCalled();
   });
 
   it('rejects external extensions before reaching the handler', () => {
-    const registry = new MessageHandlerRegistry(RUNTIME_ID);
-    const handler = vi.fn();
+    const deps = makeDeps();
+    const router = createMessageRouter(deps);
     const sendResponse = vi.fn();
 
-    registry.register('PING', handler, 'content-script-allowed');
-    registry.dispatch('PING', {}, externalSender, sendResponse);
+    const handled = router.dispatch({ type: 'PING', protocolVersion: 1 }, externalSender, sendResponse);
 
-    expect(handler).not.toHaveBeenCalled();
-    expect(sendResponse).toHaveBeenCalledWith({ success: false, error: 'Invalid sender' });
+    expect(handled).toBe(false);
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: 'PING is not allowed from external extensions',
+    });
   });
 });

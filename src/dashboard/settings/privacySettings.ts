@@ -3,7 +3,8 @@
  * Privacy settings functionality for the popup UI.
  */
 
-import { StorageKeys, saveSettings, getSettings } from '../../utils/storage.js';
+import { saveSettings, getSettings } from '../../utils/storage/settingsStore.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { addLog, LogType } from '../../utils/logger.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';

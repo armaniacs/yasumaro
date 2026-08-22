@@ -18,18 +18,36 @@ vi.mock('../../../../utils/logger.js', () => ({
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
   ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
 }));
-vi.mock('../../../../utils/storage.js', () => ({
-  getSavedUrlsWithTimestamps: vi.fn(),
-  MAX_URL_SET_SIZE: 10000,
-  URL_WARNING_THRESHOLD: 8000,
-}));
+vi.mock('../../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSavedUrlsWithTimestamps: vi.fn(),
+    MAX_URL_SET_SIZE: 10000,
+    URL_WARNING_THRESHOLD: 8000,
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 import { checkDuplicateStep, DuplicateError } from '../checkDuplicateStep.js';
-import * as storage from '../../../../utils/storage.js';
+import * as storage from '../../../../utils/storage/types.js';
+import * as storageSavedUrls from '../../../../utils/storage/savedUrlRepository.js';
 import * as logger from '../../../../utils/logger.js';
 import type { RecordingContext, StepDeps, UrlStore } from '../../types.js';
 
-const mockGetSavedUrls = storage.getSavedUrlsWithTimestamps as vi.MockedFunction<typeof storage.getSavedUrlsWithTimestamps>;
+const mockGetSavedUrls = storageSavedUrls.getSavedUrlsWithTimestamps as vi.MockedFunction<typeof storageSavedUrls.getSavedUrlsWithTimestamps>;
 
 /** In-memory UrlStore for tests — no chrome.storage mocking required. */
 class InMemoryUrlStore implements UrlStore {

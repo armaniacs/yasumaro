@@ -5,7 +5,7 @@
 
 import { addLog, LogType } from '../../../utils/logger.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { StorageKeys } from '../../../utils/storage.js';
+import { StorageKeys } from '../../../utils/storage/types.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import type { AIService } from '../../ai/AIService.js';
 import { sanitizeRegex } from '../../../utils/piiSanitizer.js';

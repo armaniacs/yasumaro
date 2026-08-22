@@ -12,19 +12,175 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { CLEANSING_RULES } from '../../../utils/aiSummaryCleaner/rules.js';
 
-vi.mock('../../../utils/storage.js', () => ({
-  StorageKeys: new Proxy({}, { get: (_t, k) => String(k) }),
-  DEFAULT_SETTINGS: {},
-  getSettings: vi.fn(() => Promise.resolve({})),
-  saveSettings: vi.fn(() => Promise.resolve()),
-}));
+vi.mock('../../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: new Proxy({}, { get: (_t, k) => String(k) }),
+    DEFAULT_SETTINGS: {},
+    getSettings: vi.fn(() => Promise.resolve({})),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: new Proxy({}, { get: (_t, k) => String(k) }),
+    DEFAULT_SETTINGS: {},
+    getSettings: vi.fn(() => Promise.resolve({})),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: new Proxy({}, { get: (_t, k) => String(k) }),
+    DEFAULT_SETTINGS: {},
+    getSettings: vi.fn(() => Promise.resolve({})),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: new Proxy({}, { get: (_t, k) => String(k) }),
+    DEFAULT_SETTINGS: {},
+    getSettings: vi.fn(() => Promise.resolve({})),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: new Proxy({}, { get: (_t, k) => String(k) }),
+    DEFAULT_SETTINGS: {},
+    getSettings: vi.fn(() => Promise.resolve({})),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: new Proxy({}, { get: (_t, k) => String(k) }),
+    DEFAULT_SETTINGS: {},
+    getSettings: vi.fn(() => Promise.resolve({})),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: new Proxy({}, { get: (_t, k) => String(k) }),
+    DEFAULT_SETTINGS: {},
+    getSettings: vi.fn(() => Promise.resolve({})),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 vi.mock('../../../utils/logger.js', () => ({
   logError: vi.fn(),
   ErrorCode: { STORAGE_WRITE_FAILURE: 'STRG_WR_001', INTERNAL_ERROR: 'INT_001' },
 }));
 
-import * as storage from '../../../utils/storage.js';
+import * as storage from '../../../utils/storage/types.js';
+import * as storageSettings from '../../../utils/storage/settingsStore.js';
 import {
   getAiSummaryCleansingSettings,
   applyAiSummaryCleansingSettingsToUI,
@@ -33,7 +189,7 @@ import {
   type AiSummaryCleansingSettings,
 } from '../aiSummaryCleansingSettingsV2.js';
 
-const mockGetSettings = vi.mocked(storage.getSettings);
+const mockGetSettings = vi.mocked(storageSettings.getSettings);
 
 function ruleHtmlId(key: string): string {
   return `ai-summary-cleansing-${key.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`)}`;

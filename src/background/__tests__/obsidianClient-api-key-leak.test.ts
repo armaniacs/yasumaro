@@ -14,9 +14,16 @@
 
 import { ObsidianClient } from '../obsidianClient.js';
 import { vi } from 'vitest';
-import * as storage from '../../utils/storage.js';
+import * as storage from '../../utils/storage/types.js';
+import * as storageSettings from '../../utils/storage/settingsStore.js';
 
-vi.mock('../../utils/storage.js');
+vi.mock('../../utils/storage/types.js');
+vi.mock('../../utils/storage/defaults.js');
+vi.mock('../../utils/storage/encryptionSession.js');
+vi.mock('../../utils/storage/settingsStore.js');
+vi.mock('../../utils/storage/savedUrlRepository.js');
+vi.mock('../../utils/storage/domainFilterCache.js');
+vi.mock('../../utils/storage/quota.js');
 vi.mock('../../utils/logger.js', () => ({
   addLog: vi.fn(),
   LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug', SANITIZE: 'sanitize' },
@@ -45,7 +52,7 @@ describe('ObsidianClient — API key must never leak to logs (PBI 2026-08-02-04)
     client = new ObsidianClient();
     vi.clearAllMocks();
     // @ts-expect-error - vi.fn() type narrowing issue
-    storage.getSettings.mockResolvedValue({});
+    storageSettings.getSettings.mockResolvedValue({});
     // @ts-expect-error - vi.fn() type narrowing issue
     storage.StorageKeys = {
       OBSIDIAN_PROTOCOL: 'OBSIDIAN_PROTOCOL',
@@ -63,7 +70,7 @@ describe('ObsidianClient — API key must never leak to logs (PBI 2026-08-02-04)
 
   it('puts a valid key in the Authorization header without ever logging it', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
-    storage.getSettings.mockResolvedValue({ OBSIDIAN_API_KEY: RAW_KEY });
+    storageSettings.getSettings.mockResolvedValue({ OBSIDIAN_API_KEY: RAW_KEY });
 
     const config = await client._getConfig();
 
@@ -81,7 +88,7 @@ describe('ObsidianClient — API key must never leak to logs (PBI 2026-08-02-04)
 
   it('redacts the key in the error path when it is missing', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
-    storage.getSettings.mockResolvedValue({ OBSIDIAN_API_KEY: '' });
+    storageSettings.getSettings.mockResolvedValue({ OBSIDIAN_API_KEY: '' });
 
     await expect(client._getConfig()).rejects.toThrow(/API key is missing/);
 
@@ -94,7 +101,7 @@ describe('ObsidianClient — API key must never leak to logs (PBI 2026-08-02-04)
   it('never emits a full raw key even when an object-shaped key slips into settings', async () => {
     // Simulates an encryption failure that yields an object instead of a string.
     // @ts-expect-error - vi.fn() type narrowing issue
-    storage.getSettings.mockResolvedValue({ OBSIDIAN_API_KEY: { fullKey: RAW_KEY } });
+    storageSettings.getSettings.mockResolvedValue({ OBSIDIAN_API_KEY: { fullKey: RAW_KEY } });
 
     await expect(client._getConfig()).rejects.toThrow(/API key is missing/);
 

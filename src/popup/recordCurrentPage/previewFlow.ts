@@ -1,4 +1,5 @@
-import { getSettings, StorageKeys } from '../../utils/storage.js';
+import { getSettings } from '../../utils/storage/settingsStore.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import { showPreview } from '../sanitizePreview.js';
 import { getMessage } from '../../utils/i18n.js';
 import { sendMessageWithRetry } from '../../utils/retryHelper.js';

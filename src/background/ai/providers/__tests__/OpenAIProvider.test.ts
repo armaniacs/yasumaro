@@ -23,8 +23,32 @@ vi.mock('../../../../utils/fetch.js', () => ({
   fetchWithRetry: vi.fn(),
   validateUrlForAIRequests: vi.fn(),
 }));
-vi.mock('../../../../utils/storage.js', async () => {
-  const actual = await vi.importActual<typeof import('../../../../utils/storage.js')>('../../../../utils/storage.js');
+vi.mock('../../../../utils/storage/types.js', async () => {
+  const actual = await vi.importActual<typeof import('../../../../utils/storage/types.js')>('../../../../utils/storage/types.js');
+  return { ...actual, getAllowedUrls: vi.fn(() => Promise.resolve([])) };
+});
+vi.mock('../../../../utils/storage/defaults.js', async () => {
+  const actual = await vi.importActual<typeof import('../../../../utils/storage/defaults.js')>('../../../../utils/storage/defaults.js');
+  return { ...actual, getAllowedUrls: vi.fn(() => Promise.resolve([])) };
+});
+vi.mock('../../../../utils/storage/encryptionSession.js', async () => {
+  const actual = await vi.importActual<typeof import('../../../../utils/storage/encryptionSession.js')>('../../../../utils/storage/encryptionSession.js');
+  return { ...actual, getAllowedUrls: vi.fn(() => Promise.resolve([])) };
+});
+vi.mock('../../../../utils/storage/settingsStore.js', async () => {
+  const actual = await vi.importActual<typeof import('../../../../utils/storage/settingsStore.js')>('../../../../utils/storage/settingsStore.js');
+  return { ...actual, getAllowedUrls: vi.fn(() => Promise.resolve([])) };
+});
+vi.mock('../../../../utils/storage/savedUrlRepository.js', async () => {
+  const actual = await vi.importActual<typeof import('../../../../utils/storage/savedUrlRepository.js')>('../../../../utils/storage/savedUrlRepository.js');
+  return { ...actual, getAllowedUrls: vi.fn(() => Promise.resolve([])) };
+});
+vi.mock('../../../../utils/storage/domainFilterCache.js', async () => {
+  const actual = await vi.importActual<typeof import('../../../../utils/storage/domainFilterCache.js')>('../../../../utils/storage/domainFilterCache.js');
+  return { ...actual, getAllowedUrls: vi.fn(() => Promise.resolve([])) };
+});
+vi.mock('../../../../utils/storage/quota.js', async () => {
+  const actual = await vi.importActual<typeof import('../../../../utils/storage/quota.js')>('../../../../utils/storage/quota.js');
   return { ...actual, getAllowedUrls: vi.fn(() => Promise.resolve([])) };
 });
 

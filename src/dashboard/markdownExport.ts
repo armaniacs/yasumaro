@@ -12,7 +12,8 @@
  * what would be written without touching chrome.downloads.
  */
 
-import { getSettings, StorageKeys } from '../utils/storage.js';
+import { getSettings } from '../utils/storage/settingsStore.js';
+import { StorageKeys } from '../utils/storage/types.js';
 import { queryLogs, type BrowsingLogEntry } from './dashboardSqliteService.js';
 import { renderFileTemplate, getActiveTemplate, getHostname } from '../utils/markdownTemplateUtils.js';
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';

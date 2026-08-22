@@ -3,7 +3,8 @@
  * Content cleansing settings functionality for the dashboard UI.
  */
 
-import { StorageKeys, saveSettings, getSettings } from '../../utils/storage.js';
+import { saveSettings, getSettings } from '../../utils/storage/settingsStore.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { getMessage } from '../../utils/i18n.js';

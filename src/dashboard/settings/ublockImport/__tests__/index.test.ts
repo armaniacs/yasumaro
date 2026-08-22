@@ -62,11 +62,160 @@ vi.mock('../../../../utils/logger.js', () => ({
   addLog: vi.fn(),
 }));
 
-vi.mock('../../../../utils/storage.js', () => ({
-  StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
-  getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
-  saveSettings: vi.fn(() => Promise.resolve()),
-}));
+vi.mock('../../../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
+    getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../../utils/storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
+    getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../../utils/storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
+    getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
+    getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
+    getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../../utils/storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
+    getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../../utils/storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
+    getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
+    saveSettings: vi.fn(() => Promise.resolve()),
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 vi.mock('../../../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string, subs?: Record<string, string>) => {

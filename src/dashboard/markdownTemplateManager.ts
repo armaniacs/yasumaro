@@ -4,7 +4,8 @@
  * customPromptManager.ts の DOM 操作パターン(一覧描画・エディタ表示切替・保存/削除ハンドラ)を踏襲する。
  */
 
-import { Settings, StorageKeys, saveSettings } from '../utils/storage.js';
+import { saveSettings } from '../utils/storage/settingsStore.js';
+import { Settings, StorageKeys } from '../utils/storage/types.js';
 import {
   DEFAULT_MARKDOWN_TEMPLATE,
   createTemplate,

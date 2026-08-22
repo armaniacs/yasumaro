@@ -3,7 +3,7 @@
  * 新しいAIプロバイダーを追加する際はこのクラスを継承する
  */
 
-import { Settings, StorageKeys } from '../../../utils/storage.js';
+import { Settings, StorageKeys } from '../../../utils/storage/types.js';
 import { validateMaxTokens } from '../../../utils/aiLimits.js';
 import { checkHardLimit, checkRateLimit, checkUsageWarning, getRateLimitMessage, recordUsage } from '../../../utils/aiUsageTracker.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';

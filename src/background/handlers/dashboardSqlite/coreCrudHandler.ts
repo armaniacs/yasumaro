@@ -1,6 +1,6 @@
 import { logError, logInfo, ErrorCode } from '../../../utils/logger.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { StorageKeys } from '../../../utils/storage.js';
+import { StorageKeys } from '../../../utils/storage/types.js';
 import type { BrowsingLogEntry } from '../../../utils/sqlite-types.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboardSqliteProtocol.js';
 import type { CoreCrudDeps } from './deps.js';

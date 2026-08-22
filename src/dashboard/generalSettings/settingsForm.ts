@@ -8,7 +8,8 @@
  * the module it was meant to replace.
  */
 
-import { StorageKeys, getSettings, ProviderSlot } from '../../utils/storage.js';
+import { getSettings } from '../../utils/storage/settingsStore.js';
+import { StorageKeys, ProviderSlot } from '../../utils/storage/types.js';
 import { loadSettingsToInputs, loadLocalMarkdownExportTiming } from '../../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../utils/settingsSchemas.js';
 import { getMessage } from '../../utils/i18n.js';

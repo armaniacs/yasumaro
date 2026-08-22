@@ -7,32 +7,49 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { RecordingCache } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.ts';
-import { getSettings, StorageKeys, getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps } from '../../utils/storage.ts';
+import { getSettings } from '../../utils/storage/settingsStore.js';
+import { getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps } from '../../utils/storage/savedUrlRepository.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import { PrivacyPipeline } from '../privacyPipeline.ts';
 import { NotificationHelper } from '../notificationHelper.ts';
 import { addLog, LogType } from '../../utils/logger.ts';
 
-vi.mock('../../utils/storage.ts', () => {
-  return {
-    getSettings: vi.fn(),
-    getSavedUrlsWithTimestamps: vi.fn().mockResolvedValue(new Map()),
-    setSavedUrlsWithTimestamps: vi.fn().mockResolvedValue(undefined),
+vi.mock('../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
     StorageKeys: {
       AI_PROVIDER: 'AI_PROVIDER',
       GEMINI_API_KEY: 'GEMINI_API_KEY',
       GEMINI_MODEL: 'GEMINI_MODEL',
-      PRIVACY_MODE: 'PRIVACY_MODE'
+      PRIVACY_MODE: 'PRIVACY_MODE',
     },
-    DEFAULT_SETTINGS: {},
-    MAX_URL_SET_SIZE: 10000,
-    API_KEY_FIELDS: [
-      'obsidian_api_key',
-      'gemini_api_key',
-      'openai_api_key',
-      'openai_2_api_key',
-      'provider_api_key',
-      'github_pat'
-    ]
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});
+vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getSettings: vi.fn(),
+  };
+});
+vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getSavedUrlsWithTimestamps: vi.fn().mockResolvedValue(new Map()),
+    setSavedUrlsWithTimestamps: vi.fn().mockResolvedValue(undefined),
   };
 });
 vi.mock('../privacyPipeline.ts');
@@ -104,7 +121,8 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
       AI_PROVIDER: 'gemini',
       GEMINI_API_KEY: 'test-key',
       GEMINI_MODEL: 'gemini-3.1-flash-lite',
-      PRIVACY_MODE: 'masked_cloud'
+      PRIVACY_MODE: 'masked_cloud',
+      obsidian_enabled: true,
     });
 
     getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
@@ -125,7 +143,10 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
   });
 
   describe('現在の実装の確認', () => {
-    it('Obsidian書き込み失敗時にURLが保存される不整合がある可能性がある', async () => {
+    // saveObsidian is BEST_EFFORT with offlineRetry (obsidian_sync): a failed
+    // Obsidian write no longer fails the recording; it is queued for retry.
+    // The legacy URL-marking path must stay untouched on that failure path.
+    it('Obsidian書き込み失敗時もベストエフォートで記録が完了し、URL保存は行われないこと', async () => {
       const mockObsidianClient = {
         appendToDailyNote: vi.fn().mockRejectedValue(new Error('Network error'))
       };
@@ -137,7 +158,7 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
         content: 'Test content'
       });
 
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
       expect(setSavedUrlsWithTimestamps).not.toHaveBeenCalled();
     });
 
@@ -193,7 +214,8 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
   });
 
   describe('エッジケース: force記録の場合', () => {
-    it('force=trueの場合でも書き込み失敗時にURLが保存されないこと', async () => {
+    // saveObsidian is BEST_EFFORT (offlineRetry queued) — see the contract note above.
+    it('force=trueの場合でもObsidian書き込み失敗時はURL保存を行わないこと', async () => {
       const mockObsidianClient = {
         appendToDailyNote: vi.fn().mockRejectedValue(new Error('Network error'))
       };
@@ -207,7 +229,7 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
         force: true
       });
 
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
       expect(setSavedUrlsWithTimestamps).not.toHaveBeenCalled();
     });
   });

@@ -14,20 +14,223 @@ const { mockGetSettings, mockSaveSettings } = vi.hoisted(() => ({
   mockSaveSettings: vi.fn(),
 }));
 
-vi.mock('../../utils/storage.js', () => ({
-  getSettings: mockGetSettings,
-  saveSettings: mockSaveSettings,
-  StorageKeys: {
-    MIN_VISIT_DURATION: 'minVisitDuration',
-    MIN_SCROLL_DEPTH: 'minScrollDepth',
-    MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
-    AI_TIMEOUT_MS: 'aiTimeoutMs',
-    MAX_MONTHLY_TOKENS: 'maxMonthlyTokens',
-    AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
-    OPENAI_CONTENT_CHARS: 'openaiContentChars',
-    GEMINI_CONTENT_CHARS: 'geminiContentChars',
-  },
-}));
+vi.mock('../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: mockGetSettings,
+    saveSettings: mockSaveSettings,
+    StorageKeys: {
+      MIN_VISIT_DURATION: 'minVisitDuration',
+      MIN_SCROLL_DEPTH: 'minScrollDepth',
+      MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
+      AI_TIMEOUT_MS: 'aiTimeoutMs',
+      MAX_MONTHLY_TOKENS: 'maxMonthlyTokens',
+      AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
+      OPENAI_CONTENT_CHARS: 'openaiContentChars',
+      GEMINI_CONTENT_CHARS: 'geminiContentChars',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: mockGetSettings,
+    saveSettings: mockSaveSettings,
+    StorageKeys: {
+      MIN_VISIT_DURATION: 'minVisitDuration',
+      MIN_SCROLL_DEPTH: 'minScrollDepth',
+      MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
+      AI_TIMEOUT_MS: 'aiTimeoutMs',
+      MAX_MONTHLY_TOKENS: 'maxMonthlyTokens',
+      AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
+      OPENAI_CONTENT_CHARS: 'openaiContentChars',
+      GEMINI_CONTENT_CHARS: 'geminiContentChars',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: mockGetSettings,
+    saveSettings: mockSaveSettings,
+    StorageKeys: {
+      MIN_VISIT_DURATION: 'minVisitDuration',
+      MIN_SCROLL_DEPTH: 'minScrollDepth',
+      MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
+      AI_TIMEOUT_MS: 'aiTimeoutMs',
+      MAX_MONTHLY_TOKENS: 'maxMonthlyTokens',
+      AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
+      OPENAI_CONTENT_CHARS: 'openaiContentChars',
+      GEMINI_CONTENT_CHARS: 'geminiContentChars',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: mockGetSettings,
+    saveSettings: mockSaveSettings,
+    StorageKeys: {
+      MIN_VISIT_DURATION: 'minVisitDuration',
+      MIN_SCROLL_DEPTH: 'minScrollDepth',
+      MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
+      AI_TIMEOUT_MS: 'aiTimeoutMs',
+      MAX_MONTHLY_TOKENS: 'maxMonthlyTokens',
+      AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
+      OPENAI_CONTENT_CHARS: 'openaiContentChars',
+      GEMINI_CONTENT_CHARS: 'geminiContentChars',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: mockGetSettings,
+    saveSettings: mockSaveSettings,
+    StorageKeys: {
+      MIN_VISIT_DURATION: 'minVisitDuration',
+      MIN_SCROLL_DEPTH: 'minScrollDepth',
+      MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
+      AI_TIMEOUT_MS: 'aiTimeoutMs',
+      MAX_MONTHLY_TOKENS: 'maxMonthlyTokens',
+      AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
+      OPENAI_CONTENT_CHARS: 'openaiContentChars',
+      GEMINI_CONTENT_CHARS: 'geminiContentChars',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: mockGetSettings,
+    saveSettings: mockSaveSettings,
+    StorageKeys: {
+      MIN_VISIT_DURATION: 'minVisitDuration',
+      MIN_SCROLL_DEPTH: 'minScrollDepth',
+      MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
+      AI_TIMEOUT_MS: 'aiTimeoutMs',
+      MAX_MONTHLY_TOKENS: 'maxMonthlyTokens',
+      AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
+      OPENAI_CONTENT_CHARS: 'openaiContentChars',
+      GEMINI_CONTENT_CHARS: 'geminiContentChars',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: mockGetSettings,
+    saveSettings: mockSaveSettings,
+    StorageKeys: {
+      MIN_VISIT_DURATION: 'minVisitDuration',
+      MIN_SCROLL_DEPTH: 'minScrollDepth',
+      MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
+      AI_TIMEOUT_MS: 'aiTimeoutMs',
+      MAX_MONTHLY_TOKENS: 'maxMonthlyTokens',
+      AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
+      OPENAI_CONTENT_CHARS: 'openaiContentChars',
+      GEMINI_CONTENT_CHARS: 'geminiContentChars',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 // ---------------------------------------------------------------------------
 // Chrome API mock (for i18n)

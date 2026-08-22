@@ -6,7 +6,7 @@
 
 import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { StorageKeys } from '../utils/storage.js';
+import { StorageKeys } from '../utils/storage/types.js';
 import { CURRENT_PROTOCOL_VERSION } from './messageTypes.js';
 
 // 定数

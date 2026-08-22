@@ -1,4 +1,4 @@
-import { sanitizeForObsidian } from './markdownSanitizer.js';
+import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from './markdownSanitizer.js';
 import type { BrowsingLogEntry } from './sqlite-types.js';
 
 export function formatEntryToMarkdown(entry: BrowsingLogEntry): string {
@@ -27,4 +27,37 @@ export function formatEntryToMarkdown(entry: BrowsingLogEntry): string {
 export function formatEntriesToGenericMarkdown(entries: BrowsingLogEntry[]): string {
   if (!entries || entries.length === 0) return '';
   return entries.map(formatEntryToMarkdown).join('\n---\n\n');
+}
+
+/**
+ * Format a single BrowsingLogEntry as an Obsidian markdown list item.
+ * - HH:MM [Title](url)
+ *     - Summary text
+ */
+function formatSingleEntry(entry: BrowsingLogEntry, appendedAt: number): string {
+  const timestamp = new Date(appendedAt).toLocaleTimeString('ja-JP', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  const title = sanitizeForMarkdownLinkText(entry.title || entry.url || 'Untitled');
+  const url = sanitizeUrlForMarkdownTarget(entry.url);
+
+  let summary = entry.summary || 'Summary not available.';
+  summary = summary.replace(/\n+/g, ' ').replace(/  +/g, ' ').trim();
+  const sanitizedSummary = sanitizeForObsidian(summary);
+
+  return `- ${timestamp} [${title}](${url})\n    - ${sanitizedSummary}`;
+}
+
+/**
+ * Format multiple BrowsingLogEntry records as Obsidian markdown.
+ * Each entry becomes a list item, separated by newlines.
+ */
+export function formatEntriesToMarkdown(entries: BrowsingLogEntry[]): string {
+  if (!entries || entries.length === 0) {
+    return '';
+  }
+  const appendedAt = Date.now();
+  return entries.map(entry => formatSingleEntry(entry, appendedAt)).join('\n');
 }

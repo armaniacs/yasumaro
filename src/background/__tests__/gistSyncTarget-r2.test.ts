@@ -6,21 +6,201 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GistSyncTarget } from '../syncTargets/gistSyncTarget.js';
 
 vi.mock('../sqliteClient.js', () => ({
-  SqliteClient: vi.fn().mockImplementation(() => ({
-    queryResult: vi.fn(),
-    updateResult: vi.fn(),
-  })),
+  SqliteClient: vi.fn().mockImplementation(() => {
+    const qr = vi.fn();
+    const ur = vi.fn();
+    return {
+      queryResult: qr,
+      updateResult: ur,
+      query: qr,
+      mutate: ur,
+      maintain: vi.fn(),
+    };
+  }),
 }));
 
-vi.mock('../../utils/storage.js', () => ({
-  getSettings: vi.fn(),
-  saveSettings: vi.fn(),
-  StorageKeys: {
-    GIST_ENABLED: 'gist_enabled',
-    GITHUB_PAT: 'github_pat',
-    GIST_ID: 'gist_id',
-  },
-}));
+vi.mock('../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn(),
+    saveSettings: vi.fn(),
+    StorageKeys: {
+      GIST_ENABLED: 'gist_enabled',
+      GITHUB_PAT: 'github_pat',
+      GIST_ID: 'gist_id',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn(),
+    saveSettings: vi.fn(),
+    StorageKeys: {
+      GIST_ENABLED: 'gist_enabled',
+      GITHUB_PAT: 'github_pat',
+      GIST_ID: 'gist_id',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn(),
+    saveSettings: vi.fn(),
+    StorageKeys: {
+      GIST_ENABLED: 'gist_enabled',
+      GITHUB_PAT: 'github_pat',
+      GIST_ID: 'gist_id',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn(),
+    saveSettings: vi.fn(),
+    StorageKeys: {
+      GIST_ENABLED: 'gist_enabled',
+      GITHUB_PAT: 'github_pat',
+      GIST_ID: 'gist_id',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn(),
+    saveSettings: vi.fn(),
+    StorageKeys: {
+      GIST_ENABLED: 'gist_enabled',
+      GITHUB_PAT: 'github_pat',
+      GIST_ID: 'gist_id',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn(),
+    saveSettings: vi.fn(),
+    StorageKeys: {
+      GIST_ENABLED: 'gist_enabled',
+      GITHUB_PAT: 'github_pat',
+      GIST_ID: 'gist_id',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    getSettings: vi.fn(),
+    saveSettings: vi.fn(),
+    StorageKeys: {
+      GIST_ENABLED: 'gist_enabled',
+      GITHUB_PAT: 'github_pat',
+      GIST_ID: 'gist_id',
+    },
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 vi.mock('../../utils/logger.js', () => ({
   addLog: vi.fn(),
@@ -32,13 +212,18 @@ import { addLog } from '../../utils/logger.js';
 
 describe('GistSyncTarget - extended coverage', () => {
   let target: GistSyncTarget;
-  let mockSqliteClient: { queryResult: ReturnType<typeof vi.fn>; updateResult: ReturnType<typeof vi.fn> };
+  let mockSqliteClient: { queryResult: ReturnType<typeof vi.fn>; updateResult: ReturnType<typeof vi.fn>; query: ReturnType<typeof vi.fn>; mutate: ReturnType<typeof vi.fn>; maintain: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    const qr = vi.fn();
+    const ur = vi.fn();
     mockSqliteClient = {
-      queryResult: vi.fn(),
-      updateResult: vi.fn(),
+      queryResult: qr,
+      updateResult: ur,
+      query: qr,
+      mutate: ur,
+      maintain: vi.fn(),
     };
     target = new GistSyncTarget(mockSqliteClient as any);
   });
@@ -111,7 +296,7 @@ describe('GistSyncTarget - extended coverage', () => {
         'https://api.github.com/gists/existing-123',
         expect.objectContaining({ method: 'PATCH' }),
       );
-      expect(mockSqliteClient.updateResult).toHaveBeenCalledWith(1, { gist_synced: 1 });
+      expect(mockSqliteClient.mutate).toHaveBeenCalledWith({ type: 'update', id: 1, changes: { gist_synced: 1 } });
       expect(saveSettings).not.toHaveBeenCalled();
     });
 

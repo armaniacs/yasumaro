@@ -1,11 +1,11 @@
 import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 import type { TabData } from '../tabCache.js';
-import type { Settings } from '../../utils/storage.js';
+import type { Settings } from '../../utils/storage/types.js';
 import { isSecureUrl, sanitizeUrlForLogging } from '../../utils/urlUtils.js';
 import { BADGE_COLORS } from '../../constants/appConstants.js';
 import { logDebug, logWarn, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-import { StorageKeys } from '../../utils/storage.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import { stripPiiFromMaskedItems } from '../../utils/piiStripper.js';
 import { encodeUrlSafeBase64 } from './urlNotificationHandlers.js';
 import { NotificationHelper } from '../notificationHelper.js';

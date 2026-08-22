@@ -4,7 +4,8 @@
  * Handles the prompt editor and list in the popup UI
  */
 
-import { Settings, StorageKeys, saveSettings } from '../../utils/storage.js';
+import { saveSettings } from '../../utils/storage/settingsStore.js';
+import { Settings, StorageKeys } from '../../utils/storage/types.js';
 import {
     CustomPrompt,
     createPrompt,

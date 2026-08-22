@@ -81,35 +81,80 @@ export type SqliteRpcResult<T> =
  * Interface for an SQLite RPC client. SqliteClient in the Service Worker is
  * the production implementation; tests and future dashboard-local clients can
  * implement the same contract.
+ *
+ * Deep module (PBI 2026-08-21-03): the former 20-method 1:1 mirror of the
+ * offscreen message table is grouped into four domain methods. Per-operation
+ * payloads and result transforms live behind each domain; overloads keep
+ * call-site types precise without exposing the transport message types.
  */
+
+/** Audit log row shape shared by insert/query audit operations. */
+export interface AuditLogRecord {
+  id: number;
+  provider: string;
+  url: string;
+  created_at: number;
+}
+
+export type MutateOp =
+  | { type: 'insert'; record: BrowsingLogRecord; traceId?: string }
+  | { type: 'insertBatch'; records: BrowsingLogRecord[] }
+  | { type: 'update'; id: number; changes: Partial<Record<string, unknown>>; traceId?: string }
+  | { type: 'delete'; id: number }
+  | { type: 'toggleStar'; id: number }
+  | { type: 'insertAuditLog'; record: Omit<AuditLogRecord, 'id'> };
+
+export type QueryOp =
+  | { kind: 'records'; q?: StorageQuery }
+  | {
+      kind: 'search';
+      text: string;
+      limit?: number;
+      offset?: number;
+      orderBy?: 'rank' | 'created_at';
+      orderDir?: 'ASC' | 'DESC';
+    }
+  | { kind: 'count' }
+  | { kind: 'auditLog'; limit?: number; offset?: number };
+
+export type MaintainOp =
+  | { type: 'init' }
+  | { type: 'backup' }
+  | { type: 'restore'; data: Uint8Array }
+  | { type: 'clearAll' }
+  | { type: 'purgeOldRecords'; retentionDays?: number; maxRecords?: number }
+  | { type: 'purgeContent'; retentionDays?: number; maxRecords?: number; includeStarred?: boolean }
+  | { type: 'opfsSpike' }
+  | { type: 'healthCheck' };
+
 export interface SqliteRpcClient {
-  init(): Promise<SqliteRpcResult<boolean>>;
-  insertResult(record: BrowsingLogRecord, traceId?: string): Promise<SqliteRpcResult<{ id: number }>>;
-  insertBatchResult(records: BrowsingLogRecord[]): Promise<SqliteRpcResult<{ count: number }>>;
-  queryResult<T = BrowsingLogRecord>(q: StorageQuery): Promise<SqliteRpcResult<{ rows: T[]; total: number }>>;
-  searchResult(
-    searchQuery: string,
-    limit?: number,
-    offset?: number,
-    options?: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' },
-  ): Promise<SqliteRpcResult<{ rows: BrowsingLogRecord[]; total: number }>>;
-  updateResult(id: number, changes: Partial<Record<string, unknown>>, traceId?: string): Promise<SqliteRpcResult<void>>;
-  deleteResult(id: number): Promise<SqliteRpcResult<void>>;
-  toggleStarResult(id: number): Promise<SqliteRpcResult<{ is_starred: number }>>;
-  getCountResult(): Promise<SqliteRpcResult<number>>;
-  exportDbResult(): Promise<SqliteRpcResult<Uint8Array>>;
-  backupDbResult(): Promise<SqliteRpcResult<Uint8Array>>;
-  restoreDbResult(data: Uint8Array): Promise<SqliteRpcResult<void>>;
-  clearAllResult(): Promise<SqliteRpcResult<void>>;
-  runOpfsSpikeResult(): Promise<SqliteRpcResult<OpfsSpikeReport>>;
-  purgeOldRecordsResult(retentionDays?: number, maxRecords?: number): Promise<SqliteRpcResult<{ purged: number }>>;
-  purgeContentResult(
-    retentionDays?: number,
-    maxRecords?: number,
-    includeStarred?: boolean,
+  /** Filtered listing or FTS5/LIKE search over browsing records. */
+  query(q?: StorageQuery): Promise<SqliteRpcResult<{ rows: BrowsingLogRecord[]; total: number }>>;
+  query(op: Extract<QueryOp, { kind: 'search' }>): Promise<SqliteRpcResult<{ rows: BrowsingLogRecord[]; total: number }>>;
+  query(op: Extract<QueryOp, { kind: 'count' }>): Promise<SqliteRpcResult<number>>;
+  query(op: Extract<QueryOp, { kind: 'auditLog' }>): Promise<SqliteRpcResult<{ rows: AuditLogRecord[]; total: number }>>;
+  query(op: QueryOp | StorageQuery): Promise<SqliteRpcResult<unknown>>;
+
+  mutate(op: Extract<MutateOp, { type: 'insert' }>): Promise<SqliteRpcResult<{ id: number }>>;
+  mutate(op: Extract<MutateOp, { type: 'insertBatch' }>): Promise<SqliteRpcResult<{ count: number }>>;
+  mutate(op: Extract<MutateOp, { type: 'update' } | Extract<MutateOp, { type: 'delete' }>>): Promise<SqliteRpcResult<void>>;
+  mutate(op: Extract<MutateOp, { type: 'toggleStar' }>): Promise<SqliteRpcResult<{ is_starred: number }>>;
+  mutate(op: Extract<MutateOp, { type: 'insertAuditLog' }>): Promise<SqliteRpcResult<{ id: number }>>;
+  mutate(op: MutateOp): Promise<SqliteRpcResult<unknown>>;
+
+  maintain(op: Extract<MaintainOp, { type: 'init' }>): Promise<SqliteRpcResult<boolean>>;
+  maintain(op: Extract<MaintainOp, { type: 'backup' }>): Promise<SqliteRpcResult<Uint8Array>>;
+  maintain(op: Extract<MaintainOp, { type: 'restore' } | Extract<MaintainOp, { type: 'clearAll' }>>): Promise<SqliteRpcResult<void>>;
+  maintain(
+    op: Extract<MaintainOp, { type: 'purgeOldRecords' }> | Extract<MaintainOp, { type: 'purgeContent' }>,
   ): Promise<SqliteRpcResult<{ purged: number }>>;
-  insertAuditLogResult(record: { provider: string; url: string; created_at: number }): Promise<SqliteRpcResult<{ id: number }>>;
-  queryAuditLogResult(
-    options: { limit?: number; offset?: number },
-  ): Promise<SqliteRpcResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>>;
+  maintain(op: Extract<MaintainOp, { type: 'opfsSpike' }>): Promise<SqliteRpcResult<OpfsSpikeReport>>;
+  maintain(op: Extract<MaintainOp, { type: 'healthCheck' }>): Promise<SqliteRpcResult<boolean>>;
+  maintain(op: MaintainOp): Promise<SqliteRpcResult<unknown>>;
+
+  /**
+   * Diagnostics snapshot. On failure returns degraded diagnostic info so the
+   * UI can display what went wrong instead of a bare error.
+   */
+  getStatus(): Promise<Omit<import('../messaging/sqliteMessages.js').OffscreenStatusData, 'success'> | null>;
 }

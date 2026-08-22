@@ -17,17 +17,202 @@ const mockGetSettings = vi.fn(() => Promise.resolve({
 }));
 const mockSaveSettings = vi.fn(() => Promise.resolve());
 
-vi.mock('../../../utils/storage.js', () => ({
-  StorageKeys: {
-    DOMAIN_FILTER_MODE: 'domain_filter_mode',
-    DOMAIN_WHITELIST: 'domain_whitelist',
-    DOMAIN_BLACKLIST: 'domain_blacklist',
-    SIMPLE_FORMAT_ENABLED: 'simple_format_enabled',
-    UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled',
-  },
-  getSettings: mockGetSettings,
-  saveSettings: mockSaveSettings,
-}));
+vi.mock('../../../utils/storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      DOMAIN_FILTER_MODE: 'domain_filter_mode',
+      DOMAIN_WHITELIST: 'domain_whitelist',
+      DOMAIN_BLACKLIST: 'domain_blacklist',
+      SIMPLE_FORMAT_ENABLED: 'simple_format_enabled',
+      UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled',
+    },
+    getSettings: mockGetSettings,
+    saveSettings: mockSaveSettings,
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      DOMAIN_FILTER_MODE: 'domain_filter_mode',
+      DOMAIN_WHITELIST: 'domain_whitelist',
+      DOMAIN_BLACKLIST: 'domain_blacklist',
+      SIMPLE_FORMAT_ENABLED: 'simple_format_enabled',
+      UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled',
+    },
+    getSettings: mockGetSettings,
+    saveSettings: mockSaveSettings,
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      DOMAIN_FILTER_MODE: 'domain_filter_mode',
+      DOMAIN_WHITELIST: 'domain_whitelist',
+      DOMAIN_BLACKLIST: 'domain_blacklist',
+      SIMPLE_FORMAT_ENABLED: 'simple_format_enabled',
+      UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled',
+    },
+    getSettings: mockGetSettings,
+    saveSettings: mockSaveSettings,
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      DOMAIN_FILTER_MODE: 'domain_filter_mode',
+      DOMAIN_WHITELIST: 'domain_whitelist',
+      DOMAIN_BLACKLIST: 'domain_blacklist',
+      SIMPLE_FORMAT_ENABLED: 'simple_format_enabled',
+      UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled',
+    },
+    getSettings: mockGetSettings,
+    saveSettings: mockSaveSettings,
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      DOMAIN_FILTER_MODE: 'domain_filter_mode',
+      DOMAIN_WHITELIST: 'domain_whitelist',
+      DOMAIN_BLACKLIST: 'domain_blacklist',
+      SIMPLE_FORMAT_ENABLED: 'simple_format_enabled',
+      UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled',
+    },
+    getSettings: mockGetSettings,
+    saveSettings: mockSaveSettings,
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      DOMAIN_FILTER_MODE: 'domain_filter_mode',
+      DOMAIN_WHITELIST: 'domain_whitelist',
+      DOMAIN_BLACKLIST: 'domain_blacklist',
+      SIMPLE_FORMAT_ENABLED: 'simple_format_enabled',
+      UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled',
+    },
+    getSettings: mockGetSettings,
+    saveSettings: mockSaveSettings,
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../../../utils/storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+    StorageKeys: {
+      DOMAIN_FILTER_MODE: 'domain_filter_mode',
+      DOMAIN_WHITELIST: 'domain_whitelist',
+      DOMAIN_BLACKLIST: 'domain_blacklist',
+      SIMPLE_FORMAT_ENABLED: 'simple_format_enabled',
+      UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled',
+    },
+    getSettings: mockGetSettings,
+    saveSettings: mockSaveSettings,
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 const mockParseDomainList = vi.fn((text: string) =>
   text.split('\n').map((s: string) => s.trim()).filter(Boolean)

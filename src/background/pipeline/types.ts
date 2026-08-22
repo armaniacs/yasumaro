@@ -7,7 +7,7 @@
  */
 
 import type { RecordingData, RecordingResult, MaskedItem } from '../../messaging/types.js';
-import type { Settings } from '../../utils/storage.js';
+import type { Settings } from '../../utils/storage/types.js';
 import type { PrivacyPipelineResult } from '../privacyPipeline.js';
 import type { AIService } from '../ai/AIService.js';
 import type { MarkdownTemplateEntryData } from '../../utils/types.js';

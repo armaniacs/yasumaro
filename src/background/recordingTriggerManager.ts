@@ -4,7 +4,7 @@
  * Integrates with chrome.alarms for periodic snapshots.
  */
 
-import { StorageKeys } from '../utils/storage.js';
+import { StorageKeys } from '../utils/storage/types.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 

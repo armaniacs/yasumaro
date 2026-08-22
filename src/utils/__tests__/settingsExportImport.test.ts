@@ -50,48 +50,419 @@ vi.mock('../logger.js', () => ({
 }));
 
 // storage モック
-vi.mock('../storage.js', () => ({
-    getSettings: vi.fn(async () => ({
-        ai_provider: 'gemini',
-        obsidian_protocol: 'http',
-        obsidian_port: '27123',
-        min_visit_duration: 10,
-        min_scroll_depth: 25,
-        gemini_model: 'gemini-pro',
-        obsidian_daily_path: 'Daily',
-        openai_base_url: 'https://api.openai.com',
-        openai_model: 'gpt-4',
-        openai_2_base_url: '',
-        openai_2_model: '',
-        domain_whitelist: [],
-        domain_blacklist: [],
-        domain_filter_mode: 'whitelist',
-        privacy_mode: 'off',
-        pii_confirmation_ui: false,
-        pii_sanitize_logs: false,
-        ublock_rules: {},
-        ublock_sources: [],
-        ublock_format_enabled: false,
-        simple_format_enabled: false,
-        obsidian_api_key: 'obs_key',
-        gemini_api_key: 'gem_key',
-        openai_api_key: 'oai_key',
-        openai_2_api_key: 'oai2_key',
-        provider_api_key: 'provider_key',
-        github_pat: 'ghp_test_pat'
-    })),
-    saveSettings: vi.fn(async () => {}),
-    getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
-    API_KEY_FIELDS: [
-        'obsidian_api_key',
-        'gemini_api_key',
-        'openai_api_key',
-        'openai_2_api_key',
-        'provider_api_key',
-        'github_pat'
-    ],
-    Settings: {}
-}));
+vi.mock('../storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getSettings: vi.fn(async () => ({
+          ai_provider: 'gemini',
+          obsidian_protocol: 'http',
+          obsidian_port: '27123',
+          min_visit_duration: 10,
+          min_scroll_depth: 25,
+          gemini_model: 'gemini-pro',
+          obsidian_daily_path: 'Daily',
+          openai_base_url: 'https://api.openai.com',
+          openai_model: 'gpt-4',
+          openai_2_base_url: '',
+          openai_2_model: '',
+          domain_whitelist: [],
+          domain_blacklist: [],
+          domain_filter_mode: 'whitelist',
+          privacy_mode: 'off',
+          pii_confirmation_ui: false,
+          pii_sanitize_logs: false,
+          ublock_rules: {},
+          ublock_sources: [],
+          ublock_format_enabled: false,
+          simple_format_enabled: false,
+          obsidian_api_key: 'obs_key',
+          gemini_api_key: 'gem_key',
+          openai_api_key: 'oai_key',
+          openai_2_api_key: 'oai2_key',
+          provider_api_key: 'provider_key',
+          github_pat: 'ghp_test_pat'
+      })),
+      saveSettings: vi.fn(async () => {}),
+      getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
+      API_KEY_FIELDS: [
+          'obsidian_api_key',
+          'gemini_api_key',
+          'openai_api_key',
+          'openai_2_api_key',
+          'provider_api_key',
+          'github_pat'
+      ],
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/defaults.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getSettings: vi.fn(async () => ({
+          ai_provider: 'gemini',
+          obsidian_protocol: 'http',
+          obsidian_port: '27123',
+          min_visit_duration: 10,
+          min_scroll_depth: 25,
+          gemini_model: 'gemini-pro',
+          obsidian_daily_path: 'Daily',
+          openai_base_url: 'https://api.openai.com',
+          openai_model: 'gpt-4',
+          openai_2_base_url: '',
+          openai_2_model: '',
+          domain_whitelist: [],
+          domain_blacklist: [],
+          domain_filter_mode: 'whitelist',
+          privacy_mode: 'off',
+          pii_confirmation_ui: false,
+          pii_sanitize_logs: false,
+          ublock_rules: {},
+          ublock_sources: [],
+          ublock_format_enabled: false,
+          simple_format_enabled: false,
+          obsidian_api_key: 'obs_key',
+          gemini_api_key: 'gem_key',
+          openai_api_key: 'oai_key',
+          openai_2_api_key: 'oai2_key',
+          provider_api_key: 'provider_key',
+          github_pat: 'ghp_test_pat'
+      })),
+      saveSettings: vi.fn(async () => {}),
+      getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
+      API_KEY_FIELDS: [
+          'obsidian_api_key',
+          'gemini_api_key',
+          'openai_api_key',
+          'openai_2_api_key',
+          'provider_api_key',
+          'github_pat'
+      ],
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/encryptionSession.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getSettings: vi.fn(async () => ({
+          ai_provider: 'gemini',
+          obsidian_protocol: 'http',
+          obsidian_port: '27123',
+          min_visit_duration: 10,
+          min_scroll_depth: 25,
+          gemini_model: 'gemini-pro',
+          obsidian_daily_path: 'Daily',
+          openai_base_url: 'https://api.openai.com',
+          openai_model: 'gpt-4',
+          openai_2_base_url: '',
+          openai_2_model: '',
+          domain_whitelist: [],
+          domain_blacklist: [],
+          domain_filter_mode: 'whitelist',
+          privacy_mode: 'off',
+          pii_confirmation_ui: false,
+          pii_sanitize_logs: false,
+          ublock_rules: {},
+          ublock_sources: [],
+          ublock_format_enabled: false,
+          simple_format_enabled: false,
+          obsidian_api_key: 'obs_key',
+          gemini_api_key: 'gem_key',
+          openai_api_key: 'oai_key',
+          openai_2_api_key: 'oai2_key',
+          provider_api_key: 'provider_key',
+          github_pat: 'ghp_test_pat'
+      })),
+      saveSettings: vi.fn(async () => {}),
+      getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
+      API_KEY_FIELDS: [
+          'obsidian_api_key',
+          'gemini_api_key',
+          'openai_api_key',
+          'openai_2_api_key',
+          'provider_api_key',
+          'github_pat'
+      ],
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/settingsStore.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getSettings: vi.fn(async () => ({
+          ai_provider: 'gemini',
+          obsidian_protocol: 'http',
+          obsidian_port: '27123',
+          min_visit_duration: 10,
+          min_scroll_depth: 25,
+          gemini_model: 'gemini-pro',
+          obsidian_daily_path: 'Daily',
+          openai_base_url: 'https://api.openai.com',
+          openai_model: 'gpt-4',
+          openai_2_base_url: '',
+          openai_2_model: '',
+          domain_whitelist: [],
+          domain_blacklist: [],
+          domain_filter_mode: 'whitelist',
+          privacy_mode: 'off',
+          pii_confirmation_ui: false,
+          pii_sanitize_logs: false,
+          ublock_rules: {},
+          ublock_sources: [],
+          ublock_format_enabled: false,
+          simple_format_enabled: false,
+          obsidian_api_key: 'obs_key',
+          gemini_api_key: 'gem_key',
+          openai_api_key: 'oai_key',
+          openai_2_api_key: 'oai2_key',
+          provider_api_key: 'provider_key',
+          github_pat: 'ghp_test_pat'
+      })),
+      saveSettings: vi.fn(async () => {}),
+      getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
+      API_KEY_FIELDS: [
+          'obsidian_api_key',
+          'gemini_api_key',
+          'openai_api_key',
+          'openai_2_api_key',
+          'provider_api_key',
+          'github_pat'
+      ],
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getSettings: vi.fn(async () => ({
+          ai_provider: 'gemini',
+          obsidian_protocol: 'http',
+          obsidian_port: '27123',
+          min_visit_duration: 10,
+          min_scroll_depth: 25,
+          gemini_model: 'gemini-pro',
+          obsidian_daily_path: 'Daily',
+          openai_base_url: 'https://api.openai.com',
+          openai_model: 'gpt-4',
+          openai_2_base_url: '',
+          openai_2_model: '',
+          domain_whitelist: [],
+          domain_blacklist: [],
+          domain_filter_mode: 'whitelist',
+          privacy_mode: 'off',
+          pii_confirmation_ui: false,
+          pii_sanitize_logs: false,
+          ublock_rules: {},
+          ublock_sources: [],
+          ublock_format_enabled: false,
+          simple_format_enabled: false,
+          obsidian_api_key: 'obs_key',
+          gemini_api_key: 'gem_key',
+          openai_api_key: 'oai_key',
+          openai_2_api_key: 'oai2_key',
+          provider_api_key: 'provider_key',
+          github_pat: 'ghp_test_pat'
+      })),
+      saveSettings: vi.fn(async () => {}),
+      getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
+      API_KEY_FIELDS: [
+          'obsidian_api_key',
+          'gemini_api_key',
+          'openai_api_key',
+          'openai_2_api_key',
+          'provider_api_key',
+          'github_pat'
+      ],
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getSettings: vi.fn(async () => ({
+          ai_provider: 'gemini',
+          obsidian_protocol: 'http',
+          obsidian_port: '27123',
+          min_visit_duration: 10,
+          min_scroll_depth: 25,
+          gemini_model: 'gemini-pro',
+          obsidian_daily_path: 'Daily',
+          openai_base_url: 'https://api.openai.com',
+          openai_model: 'gpt-4',
+          openai_2_base_url: '',
+          openai_2_model: '',
+          domain_whitelist: [],
+          domain_blacklist: [],
+          domain_filter_mode: 'whitelist',
+          privacy_mode: 'off',
+          pii_confirmation_ui: false,
+          pii_sanitize_logs: false,
+          ublock_rules: {},
+          ublock_sources: [],
+          ublock_format_enabled: false,
+          simple_format_enabled: false,
+          obsidian_api_key: 'obs_key',
+          gemini_api_key: 'gem_key',
+          openai_api_key: 'oai_key',
+          openai_2_api_key: 'oai2_key',
+          provider_api_key: 'provider_key',
+          github_pat: 'ghp_test_pat'
+      })),
+      saveSettings: vi.fn(async () => {}),
+      getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
+      API_KEY_FIELDS: [
+          'obsidian_api_key',
+          'gemini_api_key',
+          'openai_api_key',
+          'openai_2_api_key',
+          'provider_api_key',
+          'github_pat'
+      ],
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
+vi.mock('../storage/quota.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getSettings: vi.fn(async () => ({
+          ai_provider: 'gemini',
+          obsidian_protocol: 'http',
+          obsidian_port: '27123',
+          min_visit_duration: 10,
+          min_scroll_depth: 25,
+          gemini_model: 'gemini-pro',
+          obsidian_daily_path: 'Daily',
+          openai_base_url: 'https://api.openai.com',
+          openai_model: 'gpt-4',
+          openai_2_base_url: '',
+          openai_2_model: '',
+          domain_whitelist: [],
+          domain_blacklist: [],
+          domain_filter_mode: 'whitelist',
+          privacy_mode: 'off',
+          pii_confirmation_ui: false,
+          pii_sanitize_logs: false,
+          ublock_rules: {},
+          ublock_sources: [],
+          ublock_format_enabled: false,
+          simple_format_enabled: false,
+          obsidian_api_key: 'obs_key',
+          gemini_api_key: 'gem_key',
+          openai_api_key: 'oai_key',
+          openai_2_api_key: 'oai2_key',
+          provider_api_key: 'provider_key',
+          github_pat: 'ghp_test_pat'
+      })),
+      saveSettings: vi.fn(async () => {}),
+      getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
+      API_KEY_FIELDS: [
+          'obsidian_api_key',
+          'gemini_api_key',
+          'openai_api_key',
+          'openai_2_api_key',
+          'provider_api_key',
+          'github_pat'
+      ],
+      Settings: {}
+
+  } as Record<string, unknown>;
+  return {
+    ...actual,
+    ...Object.fromEntries(
+      Object.entries(overrides).map(([k, v]) => [
+        k,
+        v !== null && typeof v === 'object' && !Array.isArray(v) &&
+        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
+          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
+          : v,
+      ]),
+    ),
+  };
+});;
 
 // crypto モック
 vi.mock('../crypto/index.js', () => ({

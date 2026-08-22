@@ -1,6 +1,6 @@
 // src/background/privacyPipeline.ts
 import { addLog, LogType } from '../utils/logger.js';
-import { Settings, StorageKeys } from '../utils/storage.js';
+import { Settings, StorageKeys } from '../utils/storage/types.js';
 import { parseTagsFromSummary, normalizeTags } from '../utils/tagUtils.js';
 import type { TagNormalizationEntry } from '../utils/types.js';
 import { sanitizePromptContent, DangerLevel } from '../utils/promptSanitizer.js';

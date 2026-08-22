@@ -24,7 +24,8 @@ vi.mock('../../../utils/logger.js', () => ({
 import { createManualRecordHandler, createSaveRecordHandler } from '../recordingHandlers.js';
 import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from '../recordingHandlers.js';
 import type { ManualRecordMessage, SaveRecordMessage } from '../../messageTypes.js';
-import { MessageHandlerRegistry } from '../MessageHandlerRegistry.js';
+import { createMessageRouter } from '../MessageRouter.js';
+import type { MessageRouterDeps } from '../MessageRouter.js';
 
 /** Sender representing an extension page (popup/dashboard), which is allowed. */
 const EXTENSION_SENDER = { id: 'test-extension-id' } as chrome.runtime.MessageSender;
@@ -71,6 +72,37 @@ function saveMessage(url: string): SaveRecordMessage {
   } as SaveRecordMessage;
 }
 
+/** Router deps sharing the per-test handler deps so assertions can observe them. */
+function makeRouterDeps(
+  manualDeps: ManualRecordHandlerDeps,
+  saveDeps: SaveRecordHandlerDeps,
+): MessageRouterDeps {
+  return {
+    runtimeId: 'test-extension-id',
+    recordingPipeline: { record: async () => ({ success: true }) },
+    tabCache: { add: () => undefined, update: () => undefined },
+    obsidian: { testConnection: async () => ({ success: true }) },
+    aiService: { testConnection: async () => ({ success: true }) },
+    manualRecordDeps: manualDeps,
+    saveRecordDeps: saveDeps,
+    hasPrivacyConsent: async () => true,
+    buildAllowedUrls: () => new Set(),
+    getSettings: async () => ({}),
+    isDomainAllowed: async () => true,
+    clearSettingsCache: () => undefined,
+    notifyAiTestProgress: () => undefined,
+    getPrivacyCache: () => null,
+    updateActivity: async () => undefined,
+    lockSession: async () => undefined,
+    autoSavedBadgeTabs: { add: () => undefined, has: () => false },
+    initExportScheduler: async () => undefined,
+    updateConsentBadge: async () => undefined,
+    generateWeeklySummary: async () => true,
+    generateMonthlySummary: async () => true,
+    dashboardSqliteHandler: () => undefined,
+  };
+}
+
 /** URL schemes that must never be recorded. */
 const INSECURE_URLS = [
   'javascript:alert(1)',
@@ -109,19 +141,19 @@ describe('createManualRecordHandler — VULN-004 URL scheme validation', () => {
   });
 
   /**
-   * Sender authorization moved from the handler body to the registry, so this
-   * dispatches through the registry rather than calling the handler directly —
-   * calling it directly would bypass the layer that now enforces the rule.
+   * Sender authorization moved from the handler body to the MessageRouter trust
+   * table, so this dispatches through the router rather than calling the handler
+   * directly — calling it directly would bypass the layer that now enforces the rule.
    */
   it('rejects a content script sender (extension-page-only operation)', async () => {
     const deps = makeManualDeps();
-    const registry = new MessageHandlerRegistry('test-extension-id');
+    const router = createMessageRouter(makeRouterDeps(deps, makeSaveDeps()));
     const sendResponse = vi.fn();
 
-    registry.register('MANUAL_RECORD', createManualRecordHandler(deps), 'extension-only');
-    registry.dispatch('MANUAL_RECORD', manualMessage('https://example.com'), CONTENT_SCRIPT_SENDER, sendResponse);
+    const handled = router.dispatch(manualMessage('https://example.com'), CONTENT_SCRIPT_SENDER, sendResponse);
     await Promise.resolve();
 
+    expect(handled).toBe(false);
     expect(deps.isRecordingAllowed).not.toHaveBeenCalled();
     expect(deps.setUrlContent).not.toHaveBeenCalled();
     expect(sendResponse).toHaveBeenCalledWith({
@@ -160,16 +192,16 @@ describe('createSaveRecordHandler — VULN-004 URL scheme validation', () => {
     expect(deps.setUrlContent).not.toHaveBeenCalled();
   });
 
-  /** Dispatched through the registry — see the MANUAL_RECORD case above. */
+  /** Dispatched through the router — see the MANUAL_RECORD case above. */
   it('rejects a content script sender', async () => {
     const deps = makeSaveDeps();
-    const registry = new MessageHandlerRegistry('test-extension-id');
+    const router = createMessageRouter(makeRouterDeps(makeManualDeps(), deps));
     const sendResponse = vi.fn();
 
-    registry.register('SAVE_RECORD', createSaveRecordHandler(deps), 'extension-only');
-    registry.dispatch('SAVE_RECORD', saveMessage('https://example.com'), CONTENT_SCRIPT_SENDER, sendResponse);
+    const handled = router.dispatch(saveMessage('https://example.com'), CONTENT_SCRIPT_SENDER, sendResponse);
     await Promise.resolve();
 
+    expect(handled).toBe(false);
     expect(deps.isRecordingAllowed).not.toHaveBeenCalled();
     expect(deps.setUrlContent).not.toHaveBeenCalled();
     expect(sendResponse).toHaveBeenCalledWith({

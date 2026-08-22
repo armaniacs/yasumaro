@@ -9,7 +9,7 @@
  */
 
 import { addLog, LogType } from '../../../utils/logger.js';
-import { StorageKeys } from '../../../utils/storage.js';
+import { StorageKeys } from '../../../utils/storage/types.js';
 import { extractSentences, getCompressionStats } from '../../../utils/sentenceExtractor.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 import { ErrorStrategy } from '../types.js';

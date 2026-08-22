@@ -10,7 +10,8 @@
  */
 
 // eslint-disable-next-line local/require-sanitized-markdown -- test data with hardcoded markdown, not user input
-import { StorageKeys, getSettings } from '../../utils/storage.js';
+import { getSettings } from '../../utils/storage/settingsStore.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import { getMessage } from '../../utils/i18n.js';
 import { type AiTestProgress, type MultiProviderTestResult } from '../../background/ai/AIService.js';
 import { PROVIDER_LABELS } from '../../utils/aiProviderLabels.js';
