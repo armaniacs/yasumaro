@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { RemoteAIService } from '../RemoteAIService.js';
 import { AIProviderStrategy } from '../providers/index.js';
 import { recordAuditLog } from '../../../utils/auditLog.js';
+import type { SettingsReader } from '../../../utils/storage/SettingsRepository.js';
 
 vi.mock('../../../utils/auditLog.js', () => ({ recordAuditLog: vi.fn() }));
 
@@ -12,13 +13,20 @@ function makeProvider(summary: string, success = true): AIProviderStrategy {
   };
 }
 
-function createService(providerSlots: Array<{ provider: string }>, getSettingsOverride?: () => Promise<Record<string, unknown>>) {
-  const getSettings = getSettingsOverride || (async () => ({
+function makeRepo(settings: Record<string, unknown>): SettingsReader {
+  return {
+    getAll: vi.fn().mockResolvedValue(settings),
+    getMany: vi.fn(),
+  };
+}
+
+function createService(providerSlots: Array<{ provider: string }>, settingsOverride?: Record<string, unknown>) {
+  const settings = settingsOverride ?? {
     ai_provider_priority_list: providerSlots,
     ai_provider: 'gemini',
     summary_min_length: 0,
-  } as Record<string, unknown>));
-  return new RemoteAIService({ getSettings });
+  };
+  return new RemoteAIService({ repo: makeRepo(settings) });
 }
 
 describe('RemoteAIService', () => {
@@ -307,11 +315,12 @@ describe('RemoteAIService', () => {
   });
 
   it('要約が最小長未満の場合、次のプロバイダーにフォールバックする', async () => {
-    const getSettings = async () => ({
-      ai_provider_priority_list: [{ provider: 'short' }, { provider: 'long' }],
-      summary_min_length: 20,
-    } as Record<string, unknown>);
-    const service = new RemoteAIService({ getSettings });
+    const service = new RemoteAIService({
+      repo: makeRepo({
+        ai_provider_priority_list: [{ provider: 'short' }, { provider: 'long' }],
+        summary_min_length: 20,
+      }),
+    });
     service.registerProvider('short', () => makeProvider('短い'));
     service.registerProvider('long', () => makeProvider('これは20文字以上ある十分な長さの要約結果テキストです。'));
 
@@ -322,18 +331,34 @@ describe('RemoteAIService', () => {
   });
 
   it('優先度リストが空配列の場合、旧AI_PROVIDER単一設定にフォールバックする', async () => {
-    const getSettings = async () => ({
-      ai_provider_priority_list: [],
-      ai_provider: 'legacy',
-      summary_min_length: 0,
-    } as Record<string, unknown>);
-    const service = new RemoteAIService({ getSettings });
+    const service = new RemoteAIService({
+      repo: makeRepo({
+        ai_provider_priority_list: [],
+        ai_provider: 'legacy',
+        summary_min_length: 0,
+      }),
+    });
     service.registerProvider('legacy', () => makeProvider('legacy summary'));
 
     const result = await service.generateSummary('content');
 
     expect(result.success).toBe(true);
     expect(result.summary).toBe('legacy summary');
+  });
+
+  it('優先度リストとAI_PROVIDERが欠損の場合、DEFAULT_SETTINGSのopenaiにフォールバックする', async () => {
+    const service = new RemoteAIService({
+      repo: makeRepo({
+        ai_provider_priority_list: [],
+        summary_min_length: 0,
+      }),
+    });
+    service.registerProvider('openai', () => makeProvider('openai summary'));
+
+    const result = await service.generateSummary('content');
+
+    expect(result.success).toBe(true);
+    expect(result.summary).toBe('openai summary');
   });
 
   it('優先度リストの各プロバイダー開始時にonProgressが順番に呼ばれる', async () => {
@@ -350,11 +375,12 @@ describe('RemoteAIService', () => {
   });
 
   it('スロットにmodel未指定でも、設定済みデフォルトモデルを解決してonProgressに渡す', async () => {
-    const getSettings = async () => ({
-      ai_provider_priority_list: [{ provider: 'gemini' }],
-      gemini_model: 'gemini-3.1-flash-lite',
-    } as Record<string, unknown>);
-    const service = new RemoteAIService({ getSettings });
+    const service = new RemoteAIService({
+      repo: makeRepo({
+        ai_provider_priority_list: [{ provider: 'gemini' }],
+        gemini_model: 'gemini-3.1-flash-lite',
+      }),
+    });
     service.registerProvider('gemini', () => makeProvider('ok'));
     const onProgress = vi.fn();
 
