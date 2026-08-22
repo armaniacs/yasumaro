@@ -1,4 +1,5 @@
 import { StorageKeys } from '../utils/storage/types.js';
+import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
 import { buildDailyNotePath } from '../utils/dailyNotePathBuilder.js';
 import { NoteSectionEditor } from './noteSectionEditor.js';
 import { Mutex } from '../utils/Mutex.js';
@@ -126,7 +127,8 @@ export class ObsidianClient {
             const { baseUrl, headers, settings } = await this._getConfig();
 
             // Settings型は StorageKeys でアクセス可能
-            const dailyPathRaw = settings[StorageKeys.OBSIDIAN_DAILY_PATH] || '';
+            const dailyPathRaw = settings[StorageKeys.OBSIDIAN_DAILY_PATH]
+                ?? (DEFAULT_SETTINGS[StorageKeys.OBSIDIAN_DAILY_PATH] as string);
             const dailyPath = buildDailyNotePath(dailyPathRaw);
             const targetUrl = ENDPOINTS.dailyNote(baseUrl, dailyPath);
 

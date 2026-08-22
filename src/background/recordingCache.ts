@@ -9,7 +9,7 @@
 
 import { addLog, LogType } from '../utils/logger.js';
 import { getSavedUrlsWithTimestamps } from '../utils/storage/savedUrlRepository.js';
-import { getSettings } from '../utils/storage/settingsStore.js';
+import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { Settings } from '../utils/storage/types.js';
 import { API_KEY_FIELDS } from '../utils/storage/settingsStore.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
@@ -150,7 +150,10 @@ export class RecordingCacheInstance {
 
   private saveQueueScheduled = false;
 
-  constructor(private readonly store: RecordingCacheStore) {}
+  constructor(
+    private readonly store: RecordingCacheStore,
+    private readonly repo: SettingsReader = settingsRepository,
+  ) {}
 
   // =========================================================================
   // Cache state access (for backward compatibility and testing)
@@ -216,7 +219,7 @@ export class RecordingCacheInstance {
   }
 
   private async fetchAndCacheSettings(now: number): Promise<Settings> {
-    const settings = await getSettings();
+    const settings = await this.repo.getAll();
     const cs = this.cacheState;
 
     cs.settingsCache = settings;

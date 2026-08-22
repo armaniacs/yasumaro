@@ -9,7 +9,8 @@
  * インスタンスはcomposition rootで1度だけ生成し、alarmとGENERATE_REVIEW_SUMMARYが共有する。
  */
 
-import { getSettings } from '../utils/storage/settingsStore.js';
+import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
+import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import type { AIService } from './ai/AIService.js';
 import type { SqliteClient } from './sqliteClient.js';
@@ -31,6 +32,8 @@ export interface CreateReviewSummaryGeneratorOptions {
   aiService: AIService;
   /** 対象期間の閲覧履歴を引くSQLite query。 */
   sqliteClient: Pick<SqliteClient, 'query'>;
+  /** 設定の読み取り先。テストでは InMemory repo を注入する。 */
+  repo?: SettingsReader;
 }
 
 /**
@@ -182,11 +185,11 @@ async function downloadMarkdown(content: string, filename: string, exportPath: s
  * aiServiceとsqliteClientは呼び出し側から注入し、生成器自身はAIClient等を直接生成しない。
  */
 export function createReviewSummaryGenerator(options: CreateReviewSummaryGeneratorOptions): ReviewSummaryGenerator {
-  const { aiService, sqliteClient } = options;
+  const { aiService, sqliteClient, repo = settingsRepository } = options;
 
   async function generateWeeklySummary(targetDate?: Date): Promise<boolean> {
-    const settings = await getSettings();
-    const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED] as boolean;
+    const settings = await repo.getAll();
+    const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED];
     if (!enabled) {
       addLog(LogType.INFO, 'Weekly review summary is disabled');
       return false;
@@ -198,7 +201,7 @@ export function createReviewSummaryGenerator(options: CreateReviewSummaryGenerat
     const weekKey = `${weekYear}-W${String(weekNum).padStart(2, '0')}`;
 
     // Check if already generated
-    const lastGenerated = settings[StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK] as string;
+    const lastGenerated = settings[StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK];
     if (lastGenerated === weekKey) {
       addLog(LogType.INFO, 'Weekly summary already generated for this week', { weekKey });
       return false;
@@ -237,7 +240,8 @@ const { start, end } = getWeekPeriod(date);
 
     const markdown = generateReviewMarkdown(`Week ${weekNum} (${weekYear})`, entries, digest);
     const filename = `${weekYear}-week-${String(weekNum).padStart(2, '0')}.md`;
-    const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
+    const exportPath = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]
+      ?? (DEFAULT_SETTINGS[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string);
 
     const success = await downloadMarkdown(markdown, filename, exportPath);
 
@@ -253,8 +257,8 @@ const { start, end } = getWeekPeriod(date);
   }
 
   async function generateMonthlySummary(targetDate?: Date): Promise<boolean> {
-    const settings = await getSettings();
-    const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED] as boolean;
+    const settings = await repo.getAll();
+    const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED];
     if (!enabled) {
       addLog(LogType.INFO, 'Monthly review summary is disabled');
       return false;
@@ -264,7 +268,7 @@ const { start, end } = getWeekPeriod(date);
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 
     // Check if already generated
-    const lastGenerated = settings[StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_MONTH] as string;
+    const lastGenerated = settings[StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_MONTH];
     if (lastGenerated === monthKey) {
       addLog(LogType.INFO, 'Monthly summary already generated for this month', { monthKey });
       return false;
@@ -303,7 +307,8 @@ const { start, end } = getMonthPeriod(date);
 
     const markdown = generateReviewMarkdown(`${date.getFullYear()}年${date.getMonth() + 1}月`, entries, digest);
     const filename = `${date.getFullYear()}-month-${String(date.getMonth() + 1).padStart(2, '0')}.md`;
-    const exportPath = (settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string) || 'Yasumaro';
+    const exportPath = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]
+      ?? (DEFAULT_SETTINGS[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string);
 
     const success = await downloadMarkdown(markdown, filename, exportPath);
 
