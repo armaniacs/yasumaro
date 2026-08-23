@@ -599,11 +599,12 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       const resetButton = document.getElementById('cspResetButton');
       resetButton?.click();
 
-      // Allow async operations to complete
-      await new Promise(r => setTimeout(r, 10));
-
+      // loadCSPSettings -> renderProviderList -> showMessage is async; wait
+      // for the DOM update instead of relying on a fixed timeout.
       const message = document.getElementById('cspResetMessage');
-      expect(message?.style.display).toBe('block');
+      await vi.waitFor(() => {
+        expect(message?.style.display).toBe('block');
+      });
     });
 
     test('should auto-hide reset message after 3 seconds', async () => {

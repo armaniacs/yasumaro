@@ -16,10 +16,7 @@
 
 `pbi/` に残っているのは**未完了のPBIのみ**。完了したものは `dev-docs/archived/pbi/` にある。
 
-| PBI | 難易度 | 副作用 | 種別 | 概要 |
-|---|---|---|---|---|
-| [2026-08-24-02-refactor-content-extractor-fallback](2026-08-24-02-refactor-content-extractor-fallback.md) | 🔴高 | 🟢なし | 🔧非機能追加 | contentExtractor 神オーケストレータから fallback 判定を抽出（⏸見送り） |
-| [2026-08-24-06-refactor-message-validation-collapse](2026-08-24-06-refactor-message-validation-collapse.md) | 🔴高 | 🔴あり | 🔧非機能追加 | Message 検証を MessageRouter に一本化（⏸見送り） |
+`pbi/` に残っている未完了 PBI はありません。
 
 ---
 
@@ -42,6 +39,11 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-24 Architecture Deepening（arch-delivery-loop）deferred 2件
+
+- 2026-08-24-02-refactor-content-extractor-fallback.md（RICE 19.2 — content extraction の中核を跨ぐ高リスクなため今回見送り。次スプリントで `resolveFallbackPolicy` の純粋関数化を単独着手）
+- 2026-08-24-06-refactor-message-validation-collapse.md（RICE 6.7 — trust/security 層に直結し副作用ありのため今回見送り。次スプリントで型レベルの `satisfies` 表明置換を単独着手）
 
 ### 2026-08-24 Architecture Deepening（arch-delivery-loop）5件 完了
 
