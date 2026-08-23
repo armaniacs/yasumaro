@@ -16,9 +16,10 @@ const _errMsg = (e: unknown): string => e instanceof Error ? e.message : String(
 import { shouldSkipUrl, extractDomain, isDomainInList } from './urlSkipper.js';
 
 // Content Script entry point runs without ESM module support, so we cannot
-// import CURRENT_PROTOCOL_VERSION statically. Keep this in sync with
-// src/background/messageTypes.ts.
-const CURRENT_PROTOCOL_VERSION = 1;
+// import CURRENT_PROTOCOL_VERSION statically. The value is injected at build
+// time via wxt.config.ts `define.__PROTOCOL_VERSION__` (SSOT: src/messaging/protocol.ts).
+declare const __PROTOCOL_VERSION__: number | undefined;
+const CURRENT_PROTOCOL_VERSION: number = typeof __PROTOCOL_VERSION__ !== 'undefined' ? __PROTOCOL_VERSION__ : 1;
 
 // StorageKeys（簡易版 - content script で使用するもののみ）
 const StorageKeys = {

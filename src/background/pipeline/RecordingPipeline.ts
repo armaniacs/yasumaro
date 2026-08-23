@@ -56,7 +56,7 @@ import {
 } from './steps/index.js';
 import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 import type { Settings } from '../../utils/storage/types.js';
-import { stripPiiFromMaskedItems } from '../../utils/piiStripper.js';
+import { toExternalResult } from './piiBoundary.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIService } from '../ai/AIService.js';
 import type { SqliteClient } from '../sqliteClient.js';
@@ -386,11 +386,7 @@ export class RecordingPipeline {
 
         // previewOnly: privacyPipeline ステップ完了後に早期リターン
         if (data.previewOnly && context.result && step.previewBreakpoint) {
-          // PII保護: maskedItemsからoriginalフィールドを削除してからレスポンスを返す
-          const { result } = context;
-          return result.maskedItems && Array.isArray(result.maskedItems)
-            ? { ...result, maskedItems: stripPiiFromMaskedItems(result.maskedItems) }
-            : result;
+          return toExternalResult(context.result);
         }
       } catch (error) {
         // Handle special error types

@@ -100,6 +100,7 @@ void _subsetCheck;
 export function createBackgroundServices(): BackgroundServicesComposition {
   const sessionStore = new SessionStore();
   const recordingCache = new RecordingCacheInstance(new SessionStoreRecordingCacheStore(sessionStore));
+  recordingCache.ensureStorageListener?.();
   const headerDetector = new HeaderDetector(recordingCache);
 
   // Wires the pending-write queue's storage adapter explicitly, instead of the
