@@ -202,6 +202,20 @@ async function dispatchSqliteMessage(
         }
         case 'SQLITE_UPDATE': {
             const payload = msg.payload;
+
+            if (typeof payload.summary === 'string' && payload.summary.length > 1024 * 1024) {
+                sendResponse({ success: false, error: 'Payload too large: summary exceeds 1MB limit' });
+                break;
+            }
+            if (typeof payload.content === 'string' && payload.content.length > 1024 * 1024) {
+                sendResponse({ success: false, error: 'Payload too large: content exceeds 1MB limit' });
+                break;
+            }
+            if (typeof payload.title === 'string' && payload.title.length > 1024 * 1024) {
+                sendResponse({ success: false, error: 'Payload too large: title exceeds 1MB limit' });
+                break;
+            }
+
             const id = Number(payload.id);
             const changes: Record<string, unknown> = {};
             for (const key of [
