@@ -16,6 +16,7 @@
  * across callers. Deleting the shallow registry (a Map put) only moves one line.
  */
 
+import { CONTENT_SCRIPT_ALLOWED_TYPES } from '../messageTypes.js';
 import { checkSenderTrust } from './senderTrust.js';
 import {
   createValidVisitHandler,
@@ -188,7 +189,7 @@ export class MessageRouter {
       DASHBOARD_SQLITE: deps.dashboardSqliteHandler,
     };
 
-    const contentScriptAllowed = new Set(['VALID_VISIT', 'CONTENT_CLEANSING_EXECUTED', 'CHECK_DOMAIN', 'PING']);
+    const contentScriptAllowed = new Set<string>(CONTENT_SCRIPT_ALLOWED_TYPES as readonly string[]);
     for (const [type, handler] of Object.entries(handlers)) {
       this.handlers.set(type, handler);
       this.trustLevels.set(type, contentScriptAllowed.has(type) ? 'content-script-allowed' : 'extension-only');

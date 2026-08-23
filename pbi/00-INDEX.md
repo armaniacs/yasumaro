@@ -42,6 +42,17 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-23 Architecture Deepening 7件 完了
+
+- 2026-08-23-01-fix-protocol-version-single-source.md (RICE 600 — `wxt.config.ts` に `define.__PROTOCOL_VERSION__` で SSOT 単一ソース化。`loader.ts` のハードコードを `__PROTOCOL_VERSION__` 参照に置換。`protocol-sync.test.ts` 3件追加)
+- 2026-08-23-02-fix-pii-stripper-boundary.md (RICE 400 — `src/background/pipeline/piiBoundary.ts` を新設し PII 境界を単一 seam に集約。`RecordingPipeline` preview path で `toExternalResult` を使用。`recordingHandlers.ts` 3箇所の strip 重複を削除。`piiStripper.ts` は deprecated shim に移行。`piiBoundary.test.ts` 3件追加)
+- 2026-08-23-03-refactor-storage-triple-cache-unify.md (RICE 240 — `RecordingCache.ensureStorageListener()` で `chrome.storage.onChanged('settings')` を検知し 30s stale を解消。`createBackgroundServices` で自動接続。完全な SettingsCache モジュール統合は PBI-04 と合わせて段階的に)
+- 2026-08-23-04-refactor-settings-repository-polymorphic.md (RICE 480 — `StorageAdapter` に `getSettings/setSettings` を追加し両 Adapter が多態的に実装。`SettingsRepository` 6メソッドの `instanceof` 分岐を全削除。`ChromeStorageAdapter` は dynamic import で settingsStore に委譲、`InMemoryAdapter` は Map + DEFAULT_SETTINGS で完結。storage 9テスト全パス)
+- 2026-08-23-05-refactor-message-validation-collapse.md (RICE 152 — `messageTypes.ts` に `CONTENT_SCRIPT_ALLOWED_TYPES` (4要素) を SSOT として定義。`MessageRouter` は `new Set(CONTENT_SCRIPT_ALLOWED_TYPES)` で trust table を派生。二重定義を解消)
+- 2026-08-23-06-refactor-extractor-god-module-split.md (RICE 60 — `privacyDialog.ts` を抽出。Shadow DOM + a11y の知識を独立モジュールに隠蔽。extractor.ts は import に変更し re-export で後方互換維持。残り2抽出 (visitTracker/settingsLoader) は将来PBIで段階的に)
+- 2026-08-23-07-refactor-create-background-services-di.md (RICE 34 — `serviceContainer.ts` を新設。`ServiceContainer` に `register/resolve/override/has` を実装。`createBackgroundServices` への完全統合は段階的に)
+- 2026-08-23-00-backlog-arch-deepening.md (7件のRICEスコアリングバックログ — Reach/Impact/Confidence/Effort + 依存図)
+
 ### 2026-08-23 Adversarial Review 13件 RICE対応完了
 
 - 2026-08-23-00-backlog.md (RICE 13件の棚卸し — 00は索引。以下12件をRICE 4000/4000/1250/1000/80/66.7/40/26.7/20/12.5/1/6.25で優先度付け、依存「host_permissions→CSP→WAR」「pii-sandbox 3件」を同一バッチ化)

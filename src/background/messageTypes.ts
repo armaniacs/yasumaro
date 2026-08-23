@@ -238,6 +238,19 @@ export const CONTENT_SCRIPT_ONLY_TYPES = [
     'CHECK_DOMAIN',
 ] as const;
 
+/**
+ * Full set of types that content scripts are allowed to send.
+ * Canonical SSOT for MessageRouter's trust table — MessageRouter derives
+ * its `contentScriptAllowed` Set from this array. Adding a new
+ * content-script-allowed type requires editing only this array.
+ */
+export const CONTENT_SCRIPT_ALLOWED_TYPES = [
+    'VALID_VISIT',
+    'CONTENT_CLEANSING_EXECUTED',
+    'CHECK_DOMAIN',
+    'PING',
+] as const;
+
 export const NO_PAYLOAD_TYPES = [
     'CHECK_DOMAIN',
     'GET_CONTENT',

@@ -200,6 +200,31 @@ export class RecordingCacheInstance {
   }
 
   // =========================================================================
+  // Cross-context invalidation: when dashboard (or any extension page) saves
+  // settings via chrome.storage.local, the background's 30s cache would
+  // otherwise stay stale for up to 29s. Listen to storage changes and
+  // invalidate eagerly.
+  // WHY: dashboard's saveSettings() clears settingsStore (1s) but not this
+  // instance's 30s cache — they run in different JS contexts.
+  // =========================================================================
+  private storageListenerAdded = false;
+
+  ensureStorageListener(): void {
+    if (this.storageListenerAdded) return;
+    this.storageListenerAdded = true;
+    try {
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area !== 'local') return;
+        if ('settings' in changes) {
+          this.invalidateSettingsCache();
+        }
+      });
+    } catch {
+      // chrome.storage unavailable in tests
+    }
+  }
+
+  // =========================================================================
   // Settings cache
   // =========================================================================
 

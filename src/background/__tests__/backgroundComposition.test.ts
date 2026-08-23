@@ -175,7 +175,7 @@ describe('production composition contract', () => {
     mocks.getSettings.mockResolvedValue({});
     mocks.saveSavedUrlEntryMetadata.mockResolvedValue(undefined);
     mocks.createReviewSummaryGenerator.mockReturnValue({ generateWeeklySummary: vi.fn(), generateMonthlySummary: vi.fn() });
-    mocks.RecordingCacheInstance.mockImplementation(function () { return { getPrivacyInfoWithCache: mocks.getPrivacyInfoWithCache, getSettingsWithCache: vi.fn().mockResolvedValue({}), getPrivacyCache: vi.fn(), getPrivacyCacheSize: vi.fn(), setPrivacyCacheEntry: vi.fn(), scheduleCacheSave: vi.fn(), loadCacheFromSession: vi.fn().mockResolvedValue(undefined), invalidateSettingsCache: vi.fn() }; });
+    mocks.RecordingCacheInstance.mockImplementation(function () { return { getPrivacyInfoWithCache: mocks.getPrivacyInfoWithCache, getSettingsWithCache: vi.fn().mockResolvedValue({}), getPrivacyCache: vi.fn(), getPrivacyCacheSize: vi.fn(), setPrivacyCacheEntry: vi.fn(), scheduleCacheSave: vi.fn(), loadCacheFromSession: vi.fn().mockResolvedValue(undefined), invalidateSettingsCache: vi.fn(), ensureStorageListener: vi.fn() }; });
     mocks.SessionStoreRecordingCacheStore.mockImplementation(function () { return {}; });
   });
 

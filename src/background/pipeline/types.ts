@@ -146,9 +146,9 @@ export interface PipelineTimings {
 /**
  * Pipeline内部で組み立て中の RecordingResult。
  *
- * maskedItems は stripPiiFromMaskedItems 適用前の生 MaskedItem（original 付き）を
- * 許容する。sendResponse / ストレージ保存など外部へ送出する直前に必ず
- * stripPiiFromMaskedItems を通し、RecordingResult（StrippedMaskedItem）へ変換すること。
+ * maskedItems は生 MaskedItem（original 付き）を許容する。
+ * 外部へ送出する直前に必ず `piiBoundary.toExternalResult()` を通し、
+ * StrippedMaskedItem へ変換すること。
  */
 export type InProgressRecordingResult = Omit<RecordingResult, 'maskedItems'> & {
   maskedItems?: (string | MaskedItem)[];

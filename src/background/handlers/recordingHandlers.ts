@@ -6,7 +6,6 @@ import { BADGE_COLORS } from '../../constants/appConstants.js';
 import { logDebug, logWarn, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { StorageKeys } from '../../utils/storage/types.js';
-import { stripPiiFromMaskedItems } from '../../utils/piiStripper.js';
 import { encodeUrlSafeBase64 } from './urlNotificationHandlers.js';
 import { NotificationHelper } from '../notificationHelper.js';
 import type { MessageSenderLike } from '../rateLimiter.js';
@@ -197,11 +196,7 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
       }
     }
 
-    sendResponse(
-      result.maskedItems && Array.isArray(result.maskedItems)
-        ? { ...result, maskedItems: stripPiiFromMaskedItems(result.maskedItems) }
-        : result
-    );
+    sendResponse(result);
   };
 }
 
@@ -300,11 +295,7 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
       await deps.setUrlContent(message.payload.url, content);
     }
 
-    sendResponse(
-      result.maskedItems && Array.isArray(result.maskedItems)
-        ? { ...result, maskedItems: stripPiiFromMaskedItems(result.maskedItems) }
-        : result
-    );
+    sendResponse(result);
   };
 }
 
@@ -363,10 +354,6 @@ export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
       await deps.setUrlContent(message.payload.url, message.payload.content);
     }
 
-    sendResponse(
-      result.maskedItems && Array.isArray(result.maskedItems)
-        ? { ...result, maskedItems: stripPiiFromMaskedItems(result.maskedItems) }
-        : result
-    );
+    sendResponse(result);
   };
 }

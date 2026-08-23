@@ -32,6 +32,9 @@ export default defineConfig({
   // TODO(re-verify): remove this flag and test when wxt or vite is bumped
   // (see PBI 2026-08-23-12, RICE 6.25 — no user impact, dev-only noise).
   vite: () => ({
+    define: {
+      __PROTOCOL_VERSION__: JSON.stringify(1),
+    },
     build: {
       modulePreload: false,
     },
