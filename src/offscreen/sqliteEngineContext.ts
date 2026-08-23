@@ -43,7 +43,10 @@ import {
   type FallbackMigrationState,
 } from './sqliteEngineContext/fallbackMigration.js';
 
-export type SqliteValue = number | string | Uint8Array | Array<number> | bigint | null;
+import type { SqliteValue } from './sqliteEngine.js';
+
+// Re-export from the canonical source so callers importing from either module get the same type.
+export type { SqliteValue };
 
 export { DB_FILENAME };
 

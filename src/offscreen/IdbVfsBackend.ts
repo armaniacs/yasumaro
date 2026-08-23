@@ -1,5 +1,6 @@
 // src/offscreen/IdbVfsBackend.ts
-import type { SqliteEngineContext, SqliteValue } from './sqliteEngineContext.js';
+import type { SqliteEngineContext } from './sqliteEngineContext.js';
+import type { SqliteValue } from './sqliteEngine.js';
 import type {
   StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult,
   MutationResult, StarResult, PurgeResult, FtsSizeResult,

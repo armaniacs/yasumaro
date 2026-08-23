@@ -9,7 +9,7 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { logError, logInfo, logWarn, ErrorCode } from '../../utils/logger.js';
 import { INSERT_IGNORE_SQL, buildInsertParams, COLUMN_NAMES } from '../schema.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
-import type { SqliteValue } from '../sqliteEngineContext.js';
+import type { SqliteValue } from '../sqliteEngine.js';
 import type { SqliteEngine } from '../sqliteEngine.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { execWithCache, DB_FILENAME } from './idbEngineLifecycle.js';

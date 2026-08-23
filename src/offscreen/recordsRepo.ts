@@ -9,7 +9,7 @@
 import { errorMessage } from '../utils/errorUtils.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { engine, DB_FILENAME, MAX_QUERY_LIMIT } from './sqliteEngineContext.js';
-import type { SqliteValue } from './sqliteEngineContext.js';
+import type { SqliteValue } from './sqliteEngine.js';
 import { FTS_QUERY_MAX_LENGTH } from './schema.js';
 import { pickDefined } from '../utils/objectUtils.js';
 

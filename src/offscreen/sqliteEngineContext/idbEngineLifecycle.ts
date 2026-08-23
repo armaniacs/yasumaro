@@ -10,7 +10,7 @@ import { logError, ErrorCode } from '../../utils/logger.js';
 import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL } from '../schema.js';
 import { runMigrations } from '../migrations.js';
 import { createIdbEngine, type SqliteEngine, type SqliteRow } from '../sqliteEngine.js';
-import type { SqliteValue } from '../sqliteEngineContext.js';
+import type { SqliteValue } from '../sqliteEngine.js';
 
 export const DB_FILENAME = 'yasumaro.db';
 const IDB_WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm-async', import.meta.url).href;

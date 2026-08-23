@@ -42,6 +42,10 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-24 SqliteValue 型統一 + sqliteEngineContext 循環 import 解消
+
+- 2026-08-24-03-refactor-sqlitevalue-cycle.md（`SqliteValue` 型を `src/offscreen/sqliteEngine.ts` に集約し、`sqliteEngineContext.ts` からは re-export。子モジュール 5 ファイルの import 元を変更。`graphify update .` 後、Import Cycles が "None detected" に。type-check / test / build PASS）
+
 ### 2026-08-24 hmac_secret暗号化 + PBI-08懸念の再検証完了
 
 - 2026-08-24-01-fix-hmac-secret-encryption.md（設定インポート署名鍵`hmac_secret`を平文base64からwrapped envelope形式（AES-GCM、既存KEK共有）に変更。`hmacKeyStore.ts`に`wrapSecretString`/`unwrapSecretString`/`isWrappedSecretString`を追加、`getOrCreateHmacWrappingKey`のkey usagesに`encrypt`/`decrypt`を追加。旧形式は透過的にマイグレーション。KEKのlocal storageフォールバックは「偶発的漏洩への多層防御」として現状維持と結論、真の防御はマスターパスワード由来KEK統合が必要として別スコープ化。8385テスト成功)
