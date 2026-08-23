@@ -35,6 +35,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.68] - 2026-08-23
+
+### Refactor
+
+- Architecture Deepening 0823a 4件を実装（RICE 240/180/120/96）。`ChromeStorageAdapter` を `chrome.storage.local` 直読みに変更し `settingsStore` 循環を断ち `settingsStore.legacy.ts` に退避、10 call sites を `SettingsRepository` に移行し `no-restricted-imports` で新規直importを禁止。`systemHandlers.ts` を `fetchHandlers`/`badgeHandlers`/`lifecycleSystemHandlers` に3分割し `VisitRateLimiter` を抽出。`RecordingPipeline` を `PerUrlMutexMap`/`StepExecutor` に分離し 519→192行に縮小。`contentExtractor` の `returnInfo` boolean trap を `extractMainContent`/`extractMainContentWithInfo` の2メソッドに分割し `pageContentPipeline` を唯一の public seam に
+
 ## [6.7.67] - 2026-08-23
 
 ### Changed
