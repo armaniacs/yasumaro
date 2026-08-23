@@ -3,7 +3,7 @@
  * PIIデータをストリップするユーティリティ関数のテスト
  */
 
-import { stripPiiFromMaskedItems, stripPiiFromMaskedItem } from '../piiStripper.js';
+import { stripPiiFromMaskedItems, stripPiiFromMaskedItem } from '../../background/pipeline/piiBoundary.js';
 import type { MaskedItem } from '../../messaging/types.js';
 
 describe('stripPiiFromMaskedItems', () => {

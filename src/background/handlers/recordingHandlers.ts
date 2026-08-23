@@ -11,6 +11,7 @@ import { NotificationHelper } from '../notificationHelper.js';
 import type { MessageSenderLike } from '../rateLimiter.js';
 import type { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
 import { pickDefined } from '../../utils/objectUtils.js';
+import { visitRateLimiter } from '../visitRateLimiter.js';
 
 import type {
   ValidVisitMessage,
@@ -62,61 +63,19 @@ export interface SaveRecordHandlerDeps extends RecordingHandlerBaseDeps {}
 // ----------------------------------------------------------------------------
 // VALID_VISIT per-URL rate limiting
 //
-// In-memory, module-level so entries survive across handler invocations within
-// a single Service Worker lifetime. Prevents a hostile page from flooding
-// VALID_VISIT messages to drive up AI processing costs.
-//
-// TTL: entries older than VISIT_RATE_LIMIT_TTL_MS are evicted on each check.
-// This bounds memory growth and prevents stale entries from accumulating
-// across long-lived Service Worker sessions.
+// Delegates to the VisitRateLimiter instance (see ../visitRateLimiter.ts).
+// The instance keeps the flood guard injectable and testable in isolation
+// instead of a raw module-level Map here.
 // ----------------------------------------------------------------------------
-const visitRateLimiter = new Map<string, number>();
-const VISIT_RATE_LIMIT_MS = 5000;
-const VISIT_RATE_LIMIT_TTL_MS = 30_000; // 30 seconds
-const VISIT_RATE_LIMIT_MAX_ENTRIES = 1000;
-
-/**
- * VULN-002: derive the rate-limit key from the URL's origin so a hostile page
- * cannot bypass the throttle by rotating the path/fragment/query (pushState
- * only changes same-origin path/fragment). Different registrable hosts still
- * get distinct keys.
- */
-function getRateLimitKey(url: string): string {
-  try {
-    return new URL(url).origin;
-  } catch {
-    // Invalid URL: fall back to the raw string so it is still throttled.
-    return url;
-  }
-}
 
 /** Exported for unit tests; used internally by the VALID_VISIT handler. */
 export function isRateLimitedVisit(url: string): boolean {
-    const now = Date.now();
-    const key = getRateLimitKey(url);
-
-    // Evict entries older than TTL on every check so stale entries never
-    // persist past TTL, regardless of Map size. This bounds memory growth
-    // across long-lived Service Worker sessions.
-    for (const [k, ts] of visitRateLimiter) {
-        if (now - ts > VISIT_RATE_LIMIT_TTL_MS) visitRateLimiter.delete(k);
-    }
-
-    const last = visitRateLimiter.get(key);
-    if (last !== undefined && now - last < VISIT_RATE_LIMIT_MS) return true;
-    visitRateLimiter.set(key, now);
-
-    // Safety net: even if the TTL sweep somehow falls behind, cap growth.
-    if (visitRateLimiter.size > VISIT_RATE_LIMIT_MAX_ENTRIES) {
-        const oldestKey = visitRateLimiter.keys().next().value as string | undefined;
-        if (oldestKey !== undefined) visitRateLimiter.delete(oldestKey);
-    }
-    return false;
+    return visitRateLimiter.isRateLimited(url);
 }
 
 /** Clear all tracked rate-limit entries (used by tests). */
 export function resetVisitRateLimiter(): void {
-    visitRateLimiter.clear();
+    visitRateLimiter.reset();
 }
 
 export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {

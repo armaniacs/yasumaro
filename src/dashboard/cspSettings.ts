@@ -46,6 +46,7 @@ function resolveDefaultDomRefs(): CspSettingsDomRefs {
 export class CspSettingsController {
   private resolveDom: () => CspSettingsDomRefs;
   private repo: SettingsReader;
+  private abortController: AbortController | null = null;
 
   constructor(domRefs?: CspSettingsDomRefs, repo: SettingsReader = settingsRepository) {
     if (domRefs) {
@@ -60,6 +61,12 @@ export class CspSettingsController {
    * CSP設定をロードしてUIに反映
    */
   async loadCSPSettings(): Promise<void> {
+    // Dispose listeners from a previous load so re-mount/re-load does not
+    // stack duplicate handlers on the same elements.
+    this.abortController?.abort();
+    const controller = new AbortController();
+    this.abortController = controller;
+
     try {
       const settings = await this.repo.getAll();
       const dom = this.resolveDom();
@@ -72,9 +79,9 @@ export class CspSettingsController {
 
       await this.renderProviderList(settings[StorageKeys.CONDITIONAL_CSP_PROVIDERS] ?? []);
 
-      this.bindSearchInput();
-      this.bindSaveButton();
-      this.bindResetButton();
+      this.bindSearchInput(controller.signal);
+      this.bindSaveButton(controller.signal);
+      this.bindResetButton(controller.signal);
     } catch (error) {
       addLog(LogType.ERROR, 'CSP settings load failed', { error: errorMessage(error) });
     }
@@ -159,7 +166,7 @@ export class CspSettingsController {
     }
   }
 
-  private bindSearchInput(): void {
+  private bindSearchInput(signal: AbortSignal): void {
     const searchInput = this.resolveDom().cspProviderSearch;
     if (!searchInput) return;
 
@@ -170,20 +177,20 @@ export class CspSettingsController {
         const label = row.querySelector('.csp-provider-label')?.textContent?.toLowerCase() || '';
         row.style.display = label.includes(query) ? '' : 'none';
       });
-    });
+    }, { signal });
   }
 
-  private bindSaveButton(): void {
+  private bindSaveButton(signal: AbortSignal): void {
     const saveButton = this.resolveDom().cspSaveButton;
     if (saveButton) {
       saveButton.addEventListener('click', async (e) => {
         e.preventDefault();
         await this.saveCSPSettings();
-      });
+      }, { signal });
     }
   }
 
-  private bindResetButton(): void {
+  private bindResetButton(signal: AbortSignal): void {
     const resetButton = this.resolveDom().cspResetButton;
     if (resetButton) {
       resetButton.addEventListener('click', async (e) => {
@@ -194,7 +201,7 @@ export class CspSettingsController {
         if (window.confirm(getMessage('cspResetConfirm'))) {
           await this.resetCSPSettings();
         }
-      });
+      }, { signal });
     }
   }
 
