@@ -45,3 +45,5 @@ Scenario: 候補が0件なら即 fallback
 
 ## 結果: deferred（見送り）
 主要な重複（32 cleansing rule）は既に `CLEANSING_RULES` から導出され SSOT 化済み（`extractor.ts` の `loadSettings` コメント参照）。残る 481 行 `extractMainContent` からの fallback 判定抽出は content extraction の中核を跨ぐ高リスク変更で、既存の抽出テスト網羅を前提とした慎重な検証が必要。今回のループではリスクを避けるため見送り。次スプリントで `resolveFallbackPolicy` の純粋関数化を単独で着手する。
+
+**アーカイブ日**: 2026-08-24（未実装のまま `dev-docs/archived/pbi/` へ移動。次スプリントで再開予定）
