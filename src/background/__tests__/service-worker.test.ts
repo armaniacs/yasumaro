@@ -2196,7 +2196,7 @@ describe('service-worker handlers', () => {
             } as SaveRecordMessage;
 
             // Mock RecordingPipeline to return maskedItems with original field
-            const pipelineModule = await import('../../utils/piiStripper.js');
+            const pipelineModule = await import('../pipeline/piiBoundary.js');
             vi.spyOn(pipelineModule, 'stripPiiFromMaskedItems').mockReturnValue([{ masked: true }]);
 
             // Access the mocked RecordingPipeline.execute to return masked items

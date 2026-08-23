@@ -65,12 +65,12 @@ describe('loader.ts - Content Script 静的インポート方針', () => {
         }
     });
 
-    it('loader.ts が urlSkipper.ts から shouldSkipUrl/extractDomain/isDomainInList を import している（重複コード排除の確認）', () => {
+    it('loader.ts が urlSkipper と domainPolicy に委譲し、ローカル再実装を持たない（重複コード排除の確認）', () => {
         expect(source).toMatch(/import\s*\{[^}]*shouldSkipUrl[^}]*\}\s*from\s*['"]\.\/urlSkipper\.js['"]/);
-        expect(source).toContain('extractDomain');
-        expect(source).toContain('isDomainInList');
-        // ローカルに再実装された SKIPPED_PROTOCOLS 定数が残っていないこと
+        expect(source).toMatch(/import\s*\{[^}]*checkDomainAllowedFromCache[^}]*\}\s*from\s*['"]\.\/domainPolicy\.js['"]/);
+        // ローカルに再実装された SKIPPED_PROTOCOLS / StorageKeys 定数が残っていないこと
         expect(source).not.toMatch(/const\s+SKIPPED_PROTOCOLS\s*=/);
+        expect(source).not.toMatch(/const\s+StorageKeys\s*=/);
     });
 
     it('loader.ts は export {} のみを含むこと（isolatedModules 用ダミーは許容）', () => {

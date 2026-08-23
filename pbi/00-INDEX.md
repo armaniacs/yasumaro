@@ -18,7 +18,8 @@
 
 | PBI | 難易度 | 副作用 | 種別 | 概要 |
 |---|---|---|---|---|
-| （現在なし） | | | | |
+| [2026-08-24-02-refactor-content-extractor-fallback](2026-08-24-02-refactor-content-extractor-fallback.md) | 🔴高 | 🟢なし | 🔧非機能追加 | contentExtractor 神オーケストレータから fallback 判定を抽出（⏸見送り） |
+| [2026-08-24-06-refactor-message-validation-collapse](2026-08-24-06-refactor-message-validation-collapse.md) | 🔴高 | 🔴あり | 🔧非機能追加 | Message 検証を MessageRouter に一本化（⏸見送り） |
 
 ---
 
@@ -41,6 +42,14 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-24 Architecture Deepening（arch-delivery-loop）5件 完了
+
+- 2026-08-24-01-refactor-loader-domain-policy.md（RICE 26.7 — `loader.ts` から domain policy を `src/content/domainPolicy.ts` に抽出し `StorageKeys` 再定義を廃止。`storage/types.js` の単一ソースへ。`loader-no-static-imports.test.ts` を新構造に更新）
+- 2026-08-24-03-refactor-visit-rate-limiter-extraction.md（RICE 16.0 — `recordingHandlers` の module-level Map を `src/background/visitRateLimiter.ts` の注入可能な `VisitRateLimiter` + `VisitRateLimiterStore` adapter に抽出。`isRateLimitedVisit`/`resetVisitRateLimiter` はシングルトン委譲で後方互換維持）
+- 2026-08-24-04-refactor-piistripper-shim-removal.md（RICE 10.0 — 非推奨 `piiStripper.ts` shim を削除し、テスト import を `piiBoundary` へ移行）
+- 2026-08-24-05-fix-csp-settings-listener-leak.md（RICE 8.0 — `CspSettingsController.loadCSPSettings` の listener 重ね掛けを `AbortController` で一括破棄。signal を bind メソッドへ注入）
+- 2026-08-24-07-refactor-sync-target-registry-deletion.md（RICE 2.5 — 未使用 `syncTargetRegistry.ts` と専用テストを削除。本番消費者0件を確認）
 
 ### 2026-08-24 SqliteValue 型統一 + sqliteEngineContext 循環 import 解消
 
