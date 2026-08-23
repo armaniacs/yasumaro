@@ -39,6 +39,9 @@ export {
     getNotificationHmacKey,
     generateHmacSignature,
     verifyHmacSignature,
+    wrapSecretString,
+    unwrapSecretString,
+    isWrappedSecretString,
 } from './hmacKeyStore.js';
 
 export {

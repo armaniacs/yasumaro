@@ -106,7 +106,7 @@ async function getOrCreateHmacWrappingKey(): Promise<CryptoKey> {
                 base64ToBytes(sessionStored) as BufferSource,
                 { name: 'AES-GCM', length: KEY_LENGTH },
                 false,
-                ['wrapKey', 'unwrapKey']
+                ['wrapKey', 'unwrapKey', 'encrypt', 'decrypt']
             );
         }
 
@@ -119,7 +119,7 @@ async function getOrCreateHmacWrappingKey(): Promise<CryptoKey> {
                 base64ToBytes(localStored) as BufferSource,
                 { name: 'AES-GCM', length: KEY_LENGTH },
                 false,
-                ['wrapKey', 'unwrapKey']
+                ['wrapKey', 'unwrapKey', 'encrypt', 'decrypt']
             );
             // Cache in session for this browser session
             await chrome.storage.session.set({ [HMAC_WRAPPING_KEY_SESSION]: localStored });
@@ -141,7 +141,7 @@ async function getOrCreateHmacWrappingKey(): Promise<CryptoKey> {
         keyBytes as BufferSource,
         { name: 'AES-GCM', length: KEY_LENGTH },
         false,
-        ['wrapKey', 'unwrapKey']
+        ['wrapKey', 'unwrapKey', 'encrypt', 'decrypt']
     );
 }
 
@@ -251,6 +251,53 @@ async function getOrCreateWrappedHmacKey(storageKey: string, versionKey: string)
     const wrapped = await wrapHmacKey(extractableKey, wrappingKey);
     await chrome.storage.local.set({ [storageKey]: wrapped, [versionKey]: '1' });
     return importHmacKey(keyData, false);
+}
+
+/**
+ * Encrypt an arbitrary secret string (e.g. an HMAC secret used as raw key
+ * material for computeHMAC) with the shared HMAC wrapping key.
+ * Unlike wrapHmacKey/unwrapHmacKey (which wrap non-extractable CryptoKey
+ * objects), this wraps/unwraps a plain string via AES-GCM so the caller can
+ * get the original string back for use with string-based APIs.
+ * @param {string} secret - Secret string to encrypt (e.g. base64 key material)
+ * @returns {Promise<WrappedHmacKey>} Encrypted envelope
+ */
+export async function wrapSecretString(secret: string): Promise<WrappedHmacKey> {
+    const webcrypto = getWebCrypto();
+    const wrappingKey = await getOrCreateHmacWrappingKey();
+    const iv = webcrypto.getRandomValues(new Uint8Array(IV_LENGTH));
+    const ciphertext = await webcrypto.subtle.encrypt(
+        { name: 'AES-GCM', iv: iv as BufferSource },
+        wrappingKey,
+        textEncoder.encode(secret) as BufferSource
+    );
+    return {
+        wrapped: bytesToBase64(new Uint8Array(ciphertext)),
+        iv: bytesToBase64(iv),
+    };
+}
+
+/**
+ * Decrypt a secret string previously encrypted with wrapSecretString.
+ * @param {WrappedHmacKey} envelope - Encrypted envelope
+ * @returns {Promise<string>} Original secret string
+ */
+export async function unwrapSecretString(envelope: WrappedHmacKey): Promise<string> {
+    const webcrypto = getWebCrypto();
+    const wrappingKey = await getOrCreateHmacWrappingKey();
+    const plaintext = await webcrypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: base64ToBytes(envelope.iv) as BufferSource },
+        wrappingKey,
+        base64ToBytes(envelope.wrapped) as BufferSource
+    );
+    return new TextDecoder().decode(plaintext);
+}
+
+/**
+ * Type guard for a wrapped secret envelope, shared with wrapped HMAC keys.
+ */
+export function isWrappedSecretString(data: unknown): data is WrappedHmacKey {
+    return isWrappedHmacKey(data);
 }
 
 /**

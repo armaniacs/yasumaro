@@ -26,6 +26,14 @@ vi.mock('../crypto/index.js', () => ({
   isEncrypted: vi.fn((v: unknown) => typeof v === 'string' && v.startsWith('encrypted:')),
   hashPasswordWithPBKDF2: vi.fn(() => Promise.resolve('hash')),
   verifyPasswordWithPBKDF2: vi.fn(() => Promise.resolve({ isValid: true, needsRehash: false })),
+  // wrapSecretString/unwrapSecretString: a lightweight fake envelope so tests
+  // can assert the storage shape without exercising real AES-GCM (that is
+  // covered by crypto.test.ts's HMAC key encryption suite).
+  wrapSecretString: vi.fn((secret: string) => Promise.resolve({ wrapped: `wrapped:${secret}`, iv: 'fake-iv' })),
+  unwrapSecretString: vi.fn((envelope: { wrapped: string }) => Promise.resolve(envelope.wrapped.replace(/^wrapped:/, ''))),
+  isWrappedSecretString: vi.fn((data: unknown) =>
+    typeof data === 'object' && data !== null && 'wrapped' in data && 'iv' in data
+  ),
 }));
 
 vi.mock('../optimisticLock.js', () => ({
@@ -359,6 +367,10 @@ describe('URL set functions', () => {
   });
 
   describe('getOrCreateHmacSecret', () => {
+    beforeEach(() => {
+      clearEncryptionKeyCache();
+    });
+
     it('creates a new secret when none exists', async () => {
       const secret = await getOrCreateHmacSecret();
       expect(typeof secret).toBe('string');
@@ -369,6 +381,32 @@ describe('URL set functions', () => {
       const s1 = await getOrCreateHmacSecret();
       const s2 = await getOrCreateHmacSecret();
       expect(s1).toBe(s2);
+    });
+
+    it('stores the secret in encrypted (wrapped) form, not plaintext base64', async () => {
+      await getOrCreateHmacSecret();
+
+      const stored = await chrome.storage.local.get(StorageKeys.HMAC_SECRET);
+      const value = stored[StorageKeys.HMAC_SECRET];
+      expect(typeof value).toBe('object');
+      expect(value).toHaveProperty('wrapped');
+      expect(value).toHaveProperty('iv');
+      expect(typeof value).not.toBe('string');
+    });
+
+    it('migrates a legacy plaintext secret to the encrypted format and preserves key material', async () => {
+      const rawBytes = new Uint8Array(32).map((_, i) => (i * 5 + 1) % 256);
+      const plaintextSecret = btoa(String.fromCharCode(...rawBytes));
+      await chrome.storage.local.set({ [StorageKeys.HMAC_SECRET]: plaintextSecret });
+
+      const secret = await getOrCreateHmacSecret();
+      expect(secret).toBe(plaintextSecret);
+
+      const stored = await chrome.storage.local.get(StorageKeys.HMAC_SECRET);
+      const value = stored[StorageKeys.HMAC_SECRET];
+      expect(typeof value).toBe('object');
+      expect(value).toHaveProperty('wrapped');
+      expect(value).toHaveProperty('iv');
     });
   });
 
