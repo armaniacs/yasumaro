@@ -444,7 +444,21 @@ export async function getOrCreateHmacSecret(): Promise<string> {
     let secret: string;
 
     if (isWrappedSecretString(stored)) {
-        secret = await unwrapSecretString(stored);
+        try {
+            secret = await unwrapSecretString(stored);
+        } catch (e) {
+            // The KEK lives in chrome.storage.session and is cleared on browser/
+            // extension restart, so unwrapping an already-wrapped secret can fail
+            // for existing users. Self-heal instead of throwing: generate a fresh
+            // secret and persist it wrapped (mirrors hmacKeyStore recovery).
+            const { logError, ErrorCode } = await import('../logger.js');
+            const { errorMessage } = await import('../errorUtils.js');
+            await logError('Failed to unwrap HMAC secret, regenerating', { error: errorMessage(e as Error) }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
+            const secretBytes = crypto.getRandomValues(new Uint8Array(32));
+            secret = btoa(String.fromCharCode(...secretBytes));
+            const wrapped = await wrapSecretString(secret);
+            await chrome.storage.local.set({ [StorageKeys.HMAC_SECRET]: wrapped });
+        }
     } else if (typeof stored === 'string' && stored.length > 0) {
         // Legacy plaintext secret: migrate to wrapped form.
         secret = stored;

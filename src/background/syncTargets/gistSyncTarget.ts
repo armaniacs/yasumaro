@@ -12,7 +12,6 @@ import { SettingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../../utils/markdownSanitizer.js';
 import { CONNECTION_TEST_CACHE_MODE } from '../../utils/fetch.js';
-import type { Settings } from '../../utils/storage/types.js';
 
 const GIST_API_BASE = 'https://api.github.com';
 
