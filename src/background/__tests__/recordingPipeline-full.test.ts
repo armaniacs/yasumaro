@@ -335,6 +335,41 @@ describe('RecordingPipeline', () => {
 
       expect(processOrder).toEqual(['start-1', 'end-1', 'start-2', 'end-2']);
     });
+
+    it('skipDuplicateCheck: true（MANUAL_RECORD/SAVE_RECORD相当）で execute() を直接呼んでも直列化される', async () => {
+      // recordingHandlers.ts の MANUAL_RECORD/SAVE_RECORD は record() ではなく
+      // pipeline.execute() を直接呼び出す（duplicate check step をスキップするため）。
+      // execute() の入口で mutexMap.runExclusive を通ることを検証する。
+      const processOrder: string[] = [];
+      let callCount = 0;
+      let resolveFirstProcess: (() => void) | undefined;
+      const firstProcessStarted = new Promise<void>((r) => { resolveFirstProcess = r; });
+
+      privacy.PrivacyPipeline.mockImplementation(function(this: any) {
+        this.process = vi.fn(async () => {
+          callCount++;
+          const n = callCount;
+          processOrder.push(`start-${n}`);
+          if (n === 1) {
+            resolveFirstProcess?.();
+            await new Promise((r) => setTimeout(r, 20));
+          }
+          processOrder.push(`end-${n}`);
+          return { summary: 'Test summary', maskedCount: 0 };
+        });
+      });
+
+      const url = 'https://serialize-skip-duplicate.example.com';
+      const logic = makeRecordingLogic(mockObsidian, mockAiClient);
+      const settings = await storageSettings.getSettings();
+
+      const call1 = logic.execute({ url, title: 'A', content: 'a', skipDuplicateCheck: true }, settings);
+      await firstProcessStarted;
+      const call2 = logic.execute({ url, title: 'B', content: 'b', skipDuplicateCheck: true }, settings);
+      await Promise.all([call1, call2]);
+
+      expect(processOrder).toEqual(['start-1', 'end-1', 'start-2', 'end-2']);
+    });
   });
 
   describe('Privacy Cache', () => {
