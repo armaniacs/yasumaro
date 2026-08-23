@@ -42,6 +42,11 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-24 hmac_secret暗号化 + PBI-08懸念の再検証完了
+
+- 2026-08-24-01-fix-hmac-secret-encryption.md（設定インポート署名鍵`hmac_secret`を平文base64からwrapped envelope形式（AES-GCM、既存KEK共有）に変更。`hmacKeyStore.ts`に`wrapSecretString`/`unwrapSecretString`/`isWrappedSecretString`を追加、`getOrCreateHmacWrappingKey`のkey usagesに`encrypt`/`decrypt`を追加。旧形式は透過的にマイグレーション。KEKのlocal storageフォールバックは「偶発的漏洩への多層防御」として現状維持と結論、真の防御はマスターパスワード由来KEK統合が必要として別スコープ化。8385テスト成功)
+- 2026-08-24-02-investigate-record-mutex-coverage.md（対応不要と判明。`RecordingPipeline.execute()` が入口で一律Mutex化されており、`skipDuplicateCheck: true` を渡す MANUAL_RECORD/SAVE_RECORD 経路も含めて直列化されることを統合テストで確認。`.superpowers/sdd/pbi-08-report.md` に解消済み注記を追記）
+
 ### 2026-08-23 Architecture Deepening 7件 完了
 
 - 2026-08-23-01-fix-protocol-version-single-source.md (RICE 600 — `wxt.config.ts` に `define.__PROTOCOL_VERSION__` で SSOT 単一ソース化。`loader.ts` のハードコードを `__PROTOCOL_VERSION__` 参照に置換。`protocol-sync.test.ts` 3件追加)

@@ -13,7 +13,10 @@ import {
     deriveKey,
     hashPasswordWithPBKDF2,
     verifyPasswordWithPBKDF2,
-    ENVELOPE_ITERATIONS
+    ENVELOPE_ITERATIONS,
+    wrapSecretString,
+    unwrapSecretString,
+    isWrappedSecretString,
 } from '../crypto/index.js';
 import { StorageKeys } from './types.js';
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../rateLimiter.js';
@@ -420,11 +423,15 @@ export async function removeMasterPassword(): Promise<void> {
 export function clearEncryptionKeyCache(): void {
     cachedEncryptionKey = null;
     cachedMasterPassword = null;
+    cachedHmacSecret = null;
 }
 
 /**
- * HMAC Secretを取得または作成する
- * @returns {Promise<string>} HMACシークレット
+ * HMAC Secretを取得または作成する。
+ * chrome.storage.local には AES-GCM でラップした envelope 形式でのみ保存し、
+ * 平文base64は保存しない（設定インポート署名鍵の漏洩耐性のため）。
+ * 旧形式（平文base64）が見つかった場合は透過的にラップ形式へ移行する。
+ * @returns {Promise<string>} HMACシークレット（呼び出し元には従来通り平文文字列を返す）
  */
 export async function getOrCreateHmacSecret(): Promise<string> {
     if (cachedHmacSecret) {
@@ -432,16 +439,24 @@ export async function getOrCreateHmacSecret(): Promise<string> {
     }
 
     const result = await chrome.storage.local.get(StorageKeys.HMAC_SECRET);
-    let secret = result[StorageKeys.HMAC_SECRET] as string;
+    const stored = result[StorageKeys.HMAC_SECRET];
 
-    if (!secret) {
+    let secret: string;
+
+    if (isWrappedSecretString(stored)) {
+        secret = await unwrapSecretString(stored);
+    } else if (typeof stored === 'string' && stored.length > 0) {
+        // Legacy plaintext secret: migrate to wrapped form.
+        secret = stored;
+        const wrapped = await wrapSecretString(secret);
+        await chrome.storage.local.set({ [StorageKeys.HMAC_SECRET]: wrapped });
+    } else {
         // 32バイトのランダムシークレットを生成
         const secretBytes = crypto.getRandomValues(new Uint8Array(32));
         secret = btoa(String.fromCharCode(...secretBytes));
 
-        await chrome.storage.local.set({
-            [StorageKeys.HMAC_SECRET]: secret
-        });
+        const wrapped = await wrapSecretString(secret);
+        await chrome.storage.local.set({ [StorageKeys.HMAC_SECRET]: wrapped });
     }
 
     cachedHmacSecret = secret;

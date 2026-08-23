@@ -26,6 +26,9 @@ import {
     hashUrl,
     getNotificationHmacKey,
     getConsentHmacKey,
+    wrapSecretString,
+    unwrapSecretString,
+    isWrappedSecretString,
     encryptEnvelope,
     decryptEnvelope,
     migrateLegacyCiphertext,
@@ -784,6 +787,35 @@ describe('HMAC key encryption (PBI-03)', () => {
         expect(typeof value).toBe('object');
         expect((value as { wrapped: string }).wrapped.length).toBeGreaterThan(0);
         expect((value as { iv: string }).iv.length).toBeGreaterThan(0);
+    });
+});
+
+describe('wrapSecretString / unwrapSecretString (hmac_secret encryption)', () => {
+    test('encrypts a secret string and decrypts it back to the original value', async () => {
+        const original = 'test-secret-base64-value==';
+        const envelope = await wrapSecretString(original);
+
+        expect(envelope).toHaveProperty('wrapped');
+        expect(envelope).toHaveProperty('iv');
+        expect(envelope.wrapped).not.toBe(original);
+
+        const decrypted = await unwrapSecretString(envelope);
+        expect(decrypted).toBe(original);
+    });
+
+    test('isWrappedSecretString identifies a wrapped envelope and rejects plaintext', () => {
+        expect(isWrappedSecretString({ wrapped: 'x', iv: 'y' })).toBe(true);
+        expect(isWrappedSecretString('plain-base64-string')).toBe(false);
+        expect(isWrappedSecretString(null)).toBe(false);
+        expect(isWrappedSecretString(undefined)).toBe(false);
+    });
+
+    test('different secrets produce different ciphertext (no key/IV reuse leak)', async () => {
+        const envelope1 = await wrapSecretString('secret-a');
+        const envelope2 = await wrapSecretString('secret-b');
+
+        expect(envelope1.wrapped).not.toBe(envelope2.wrapped);
+        expect(envelope1.iv).not.toBe(envelope2.iv);
     });
 });
 
