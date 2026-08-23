@@ -46,3 +46,5 @@ Scenario: 信頼レベル不正な送信元はガードされる
 
 ## 結果: deferred（見送り）
 message 検証は trust/security 層（`senderTrust`・`MessageValidator`・protocolVersion）に直結しており、統合を誤ると未検証メッセージの通過や dispatch 破損のセキュリティリスクがある（RICE Confidence 0.5、副作用あり）。既存の `message-types-consistency.test.ts`（regex 照合）は脆いものの動作しており、崩す価値がリスクを上回らない。単独で型レベルの `satisfies` 表明へ置換する作業として次スプリントに分離する。
+
+**アーカイブ日**: 2026-08-24（未実装のまま `dev-docs/archived/pbi/` へ移動。次スプリントで再開予定）
