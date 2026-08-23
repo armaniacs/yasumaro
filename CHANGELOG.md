@@ -35,9 +35,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### Fixed
+## [6.7.66] - 2026-08-23
 
-### Refactor
+### Added
+- Microsoft Edge Add-ons ストアでの配布を開始（[Yasumaro - AI Browsing Logger](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep)）。GitHub Pages（`docs/index.html`）のヒーローセクション・インストールセクションに Edge Add-ons への導線を追加。
+
+### Fixed
+- リリース前ブランドチェックスクリプト（`check-release-branding.js`）がプロジェクトルートの `.github/workflows/release.yml` を正しく参照するよう修正。従来はパス解決バグで `.kilo/.github/workflows/release.yml` を探して常に読み取り失敗していた（`../../..` → `../../../..`）。`generate-release-notes.js` は元から正しく動作していたため変更なし。
 
 ## [6.7.65] - 2026-08-23
 
@@ -215,7 +219,6 @@ All notable changes to this project will be documented in this file.
 - `DB_FILENAME` が3ファイルで独立宣言されていた問題を修正。`idbEngineLifecycle.ts` を単一ソースとし、`migrationBackup.ts` と `sqliteEngineContext.ts` がそこからインポート/再エクスポートする構造に変更
 - `sqliteEngineContext.ts` の未使用再エクスポート7件を削除。外部からインポートされていない内部モジュールの型・関数はファサード公開APIから除外
 - `optionBuilder.ts` の未使用 `ExtractionOptions` export を削除
-
 ## [6.7.49] - 2026-08-17
 
 このリリースは v6.7.48 のリリース時に発見したリリースノート生成スクリプトの不具合を修正したものです。
