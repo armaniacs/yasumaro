@@ -35,6 +35,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.70] - 2026-08-24
+
+### Refactor
+
+- Architecture Deepening（arch-delivery-loop）5件を実装。`loader.ts` から domain policy を `content/domainPolicy.ts` に抽出し `StorageKeys` 再定義を廃止して `storage/types.js` の単一ソースに（content-script-safe adapter 化）、`recordingHandlers` の module-level Map を `visitRateLimiter.ts` の注入可能な `VisitRateLimiter`（`VisitRateLimiterStore` adapter）へ抽出、非推奨 `piiStripper.ts` shim を削除しテスト import を `piiBoundary` に移行、未使用 `syncTargetRegistry.ts` を削除、`CspSettingsController` の listener 重ね掛けを `AbortController` で一括破棄するよう修正（PBI-01/03/04/05/07）。PBI-02（contentExtractor fallback 抽出）と PBI-06（message 検証一本化）は高リスクのため次スプリントへ見送り
+
 ## [6.7.69] - 2026-08-24
 
 ### Fixed
