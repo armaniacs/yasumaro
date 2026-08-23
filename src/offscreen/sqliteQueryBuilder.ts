@@ -3,7 +3,7 @@
 // FallbackStorageAdapter, and any future backend that runs SQL locally.
 
 import type { StorageQuery } from '../utils/sqlite-types.js';
-import type { SqliteValue } from './sqliteEngineContext.js';
+import type { SqliteValue } from './sqliteEngine.js';
 import { sanitizeFtsTerm, ALLOWED_ORDER_COLUMNS, FTS_QUERY_MAX_LENGTH } from './schema.js';
 
 const ALLOWED_ORDER_DIRECTIONS = ['ASC', 'DESC'] as const;
