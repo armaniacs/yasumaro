@@ -1,7 +1,7 @@
 import { getMessage } from '../utils/i18n.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { getAllCategories } from '../utils/tagUtils.js';
-import { getSettings } from '../utils/storage/settingsStore.js';
+import { SettingsRepository } from '../utils/storage/SettingsRepository.js';
 import { setUrlTags } from '../utils/storage/savedUrlRepository.js';
 import type { HistoryPanelState, TagEditElements } from './historyState.js';
 
@@ -78,7 +78,7 @@ export async function updateTagCategorySelect(
 ): Promise<void> {
   if (!elements.tagCategorySelect || !elements.addTagBtn) return;
 
-  const settings = await getSettings();
+  const settings = await new SettingsRepository().getAll();
   const categories = getAllCategories(settings);
   const availableCategories = categories.filter(c => !state.editingTags.includes(c));
 

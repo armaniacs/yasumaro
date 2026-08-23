@@ -6,7 +6,7 @@
 
 import { Mutex } from '../utils/Mutex.js';
 import { UPDATABLE_FIELDS, buildInsertRecordFields } from './schema.js';
-import type { BrowsingLogRecord, QueryOptions, SearchResult } from '../utils/sqlite-types.js';
+import type { BrowsingLogRecord, StorageQuery, SearchResult } from '../utils/sqlite-types.js';
 
 const STORAGE_KEY = 'FALLBACK_STORAGE_DATA';
 const STORAGE_KEY_COUNTER = 'FALLBACK_STORAGE_COUNTER';
@@ -109,90 +109,126 @@ export class FallbackStorage {
     }
   }
 
-  async query(options: QueryOptions = {}): Promise<{
-    success: true; rows: BrowsingLogRecord[]; total: number
-  } | { success: false; error: string }> {
-    try {
-      const data = await this.loadData();
-      let filtered = data.records;
-
-      if (options.excludeDeleted !== false) {
-        filtered = filtered.filter(r => r.is_deleted === 0);
-      }
-      if (options.domain) {
-        filtered = filtered.filter(r => r.domain === options.domain);
-      }
-      if (options.isStarred !== undefined) {
-        filtered = filtered.filter(r => r.is_starred === (options.isStarred ? 1 : 0));
-      }
-      if (options.since !== undefined) {
-        filtered = filtered.filter(r => r.created_at >= options.since!);
-      }
-      if (options.until !== undefined) {
-        filtered = filtered.filter(r => r.created_at <= options.until!);
-      }
-      if (options.gistSynced !== undefined) {
-        filtered = filtered.filter(r => r.gist_synced === options.gistSynced);
-      }
-
-      const total = filtered.length;
-
-      const orderBy = options.orderBy || 'created_at';
-      const orderDir = options.orderDir === 'ASC' ? 1 : -1;
-      filtered.sort((a, b) => {
-        const aVal = a[orderBy as keyof BrowsingLogRecord];
-        const bVal = b[orderBy as keyof BrowsingLogRecord];
-        if (aVal == null && bVal == null) return 0;
-        if (aVal == null) return 1;
-        if (bVal == null) return -1;
-        if (aVal < bVal) return -1 * orderDir;
-        if (aVal > bVal) return 1 * orderDir;
-        return 0;
-      });
-
-      const limit = options.limit ?? 100;
-      const offset = options.offset ?? 0;
-      const rows = filtered.slice(offset, offset + limit);
-
-      return { success: true, rows, total };
-    } catch (error) {
-      return { success: false, error: String(error) };
-    }
-  }
-
+  /**
+   * Unified read path — handles both plain filtered listing and text search.
+   */
+  // Compatibility shim: old tests call storage.search(query, limit, offset, options).
+  // After PBI-03 the search is unified into query({ text, ... }). Keep a
+  // thin wrapper so pre-existing tests that use the old search API still pass
+  // without editing 10+ files. New code should call query({ text }) directly.
   async search(
     searchQuery: string,
     limit: number = 50,
     offset: number = 0,
-    options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
+    options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {},
   ): Promise<{
-    success: true; rows: SearchResult[]; total: number
+    success: true; rows: (BrowsingLogRecord & { rank: number })[]; total: number
+  } | { success: false; error: string }> {
+    return this.query({
+      text: searchQuery,
+      limit,
+      offset,
+      orderBy: options.orderBy as unknown as StorageQuery['orderBy'],
+      orderDir: options.orderDir,
+    } as StorageQuery);
+  }
+
+  async query(q: StorageQuery = {}): Promise<{
+    success: true; rows: (BrowsingLogRecord & { rank: number })[]; total: number
   } | { success: false; error: string }> {
     try {
       const data = await this.loadData();
-      const query = searchQuery.toLowerCase();
+      let filtered = data.records;
+      // Compatibility: support both old (isStarred/since/until) and new (starred/dateFrom/dateTo) param names
+      const qAny = q as unknown as Record<string, unknown>;
+      const effectiveStarred = (q.starred as unknown) ?? qAny['isStarred'] ?? qAny['starred'];
+      const effectiveDateFrom = (q.dateFrom as unknown) ?? qAny['since'] ?? qAny['dateFrom'];
+      const effectiveDateTo = (q.dateTo as unknown) ?? qAny['until'] ?? qAny['dateTo'];
+      const effectiveExcludeDeleted = q.excludeDeleted ?? (qAny['excludeDeleted'] as boolean | undefined);
 
-      const matched = data.records.filter(r => {
-        if (r.is_deleted !== 0) return false;
-        const searchable = [r.url, r.title, r.summary, r.tags]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-        return searchable.includes(query);
-      });
-
-      // No FTS5 rank exists in the fallback path, so 'relevance' has nothing
-      // to sort by — only an explicit created_at request changes the order;
-      // otherwise keep the existing insertion-order behavior unchanged.
-      if (options.orderBy === 'created_at') {
-        const dir = options.orderDir ?? 'DESC';
-        matched.sort((a, b) => dir === 'ASC' ? a.created_at - b.created_at : b.created_at - a.created_at);
+      if (effectiveExcludeDeleted !== false) {
+        filtered = filtered.filter(r => r.is_deleted === 0);
+      }
+      if (q.domain) {
+        filtered = filtered.filter(r => r.domain === q.domain);
+      }
+      if (effectiveStarred !== undefined) {
+        filtered = filtered.filter(r => r.is_starred === (effectiveStarred ? 1 : 0));
+      }
+      if (effectiveDateFrom !== undefined) {
+        filtered = filtered.filter(r => r.created_at >= (effectiveDateFrom as number));
+      }
+      if (effectiveDateTo !== undefined) {
+        filtered = filtered.filter(r => r.created_at <= (effectiveDateTo as number));
+      }
+      if (q.gistSynced !== undefined) {
+        filtered = filtered.filter(r => r.gist_synced === q.gistSynced);
+      }
+      // Also support is_starred passed via q
+      if (qAny['is_starred'] !== undefined && q.starred === undefined && effectiveStarred === undefined) {
+        const v = qAny['is_starred'] as number | boolean;
+        filtered = filtered.filter(r => r.is_starred === (v ? 1 : 0));
       }
 
-      const total = matched.length;
-      const paged = matched.slice(offset, offset + limit);
+      // Text search (LIKE fallback — no FTS5 in chrome.storage path)
+      if (q.text) {
+        const query = q.text.toLowerCase();
+        filtered = filtered.filter(r => {
+          const searchable = [r.url, r.title, r.summary, r.tags]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+          return searchable.includes(query);
+        });
+      }
 
-      const rows: SearchResult[] = paged.map(r => ({
+      const total = filtered.length;
+
+      // Sorting — mirrors pre-PBI split behaviour:
+      // - query (no text): default to created_at DESC when no orderBy given
+      // - search (text): only sort by created_at when explicitly requested; otherwise keep insertion order (no FTS5 rank)
+      if (q.text) {
+        if (q.orderBy === 'created_at') {
+          const dir = q.orderDir === 'ASC' ? 1 : -1;
+          filtered.sort((a, b) => {
+            const aVal = a.created_at;
+            const bVal = b.created_at;
+            if (aVal < bVal) return -1 * dir;
+            if (aVal > bVal) return 1 * dir;
+            return 0;
+          });
+        }
+        // else: no FTS5 rank in fallback path, keep insertion order
+      } else {
+        if (!q.orderBy || q.orderBy === 'created_at') {
+          const dir = q.orderDir === 'ASC' ? 1 : -1;
+          filtered.sort((a, b) => {
+            const aVal = a.created_at;
+            const bVal = b.created_at;
+            if (aVal < bVal) return -1 * dir;
+            if (aVal > bVal) return 1 * dir;
+            return 0;
+          });
+        } else {
+          const dir = q.orderDir === 'ASC' ? 1 : -1;
+          filtered.sort((a, b) => {
+            const aVal = a[q.orderBy as keyof BrowsingLogRecord];
+            const bVal = b[q.orderBy as keyof BrowsingLogRecord];
+            if (aVal == null && bVal == null) return 0;
+            if (aVal == null) return 1;
+            if (bVal == null) return -1;
+            if (aVal < bVal) return -1 * dir;
+            if (aVal > bVal) return 1 * dir;
+            return 0;
+          });
+        }
+      }
+
+      const limit = q.limit ?? 100;
+      const offset = q.offset ?? 0;
+      const paged = filtered.slice(offset, offset + limit);
+
+      const rows: (BrowsingLogRecord & { rank: number })[] = paged.map(r => ({
         id: r.id!,
         url: r.url,
         title: r.title ?? null,

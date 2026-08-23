@@ -9,8 +9,7 @@
 
 import { StorageKeys } from '../utils/storage/types.js';
 import { CSPValidator } from '../utils/cspValidator.js';
-import { saveSettings } from '../utils/storage/settingsStore.js';
-import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
+import { settingsRepository, SettingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../utils/i18n.js';
@@ -142,7 +141,7 @@ export class CspSettingsController {
         if (provider) selectedProviders.push(provider);
       });
 
-      await saveSettings({
+      await new SettingsRepository().setAll({
         [StorageKeys.CONDITIONAL_CSP_ENABLED]: enabled,
         [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: selectedProviders
       });
@@ -201,7 +200,7 @@ export class CspSettingsController {
 
   private async resetCSPSettings(): Promise<void> {
     try {
-      await saveSettings({
+      await new SettingsRepository().setAll({
         [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,
         [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: []
       });

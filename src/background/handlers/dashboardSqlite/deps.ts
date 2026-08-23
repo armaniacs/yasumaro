@@ -1,4 +1,4 @@
-import { getSettings } from '../../../utils/storage/settingsStore.js';
+import { SettingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { formatEntriesToMarkdown } from '../../../utils/markdownFormatter.js';
 import { ObsidianClient } from '../../obsidianClient.js';
@@ -124,7 +124,7 @@ runOpfsSpike: () => sqliteClient.maintain({ type: 'opfsSpike' }) as Promise<Deps
      purgeContent: (days?: number, max?: number, includeStarred?: boolean) =>
       sqliteClient.maintain({ type: 'purgeContent', retentionDays: days, maxRecords: max, includeStarred } as { type: 'purgeContent', retentionDays?: number, maxRecords?: number, includeStarred: boolean }),
      backupDb: () => sqliteClient.maintain({ type: 'backup' }),
-     getSettings: () => getSettings(),
+      getSettings: () => new SettingsRepository().getAll() as Promise<Record<string, unknown>>,
      formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
      queryAuditLog: (options) => sqliteClient.query({ kind: 'auditLog', limit: options?.limit, offset: options?.offset } as { kind: 'auditLog', limit?: number, offset?: number }),
     appendToDailyNote: async (markdown) => {

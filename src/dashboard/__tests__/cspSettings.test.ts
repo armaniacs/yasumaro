@@ -615,19 +615,24 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
       mockSaveSettings.mockResolvedValue(undefined);
       (global.confirm as vi.Mock).mockReturnValue(true);
+      (window as unknown as { confirm: unknown }).confirm = global.confirm;
 
       await cspSettings.loadCSPSettings();
 
       const resetButton = document.getElementById('cspResetButton');
       resetButton?.click();
 
-      // With fake timers, flush the click handler's async chain (loadCSPSettings
-      // -> renderProviderList -> showMessage) before asserting.
-      await vi.advanceTimersByTimeAsync(0);
+      // Flush async chain including SettingsRepository shim's dynamic imports;
+      // advanceTimersByTimeAsync(0) alone is not enough when the shim does
+      // await import(), so wait for the message to appear.
+      await vi.waitFor(async () => {
+        // Advance timers to flush the import() promise microtasks
+        await vi.advanceTimersByTimeAsync(10);
+        const msg = document.getElementById('cspResetMessage');
+        expect(msg?.style.display).toBe('block');
+      }, { timeout: 2000 });
 
       const message = document.getElementById('cspResetMessage');
-      expect(message?.style.display).toBe('block');
-
       await vi.advanceTimersByTimeAsync(3000);
       expect(message?.style.display).toBe('none');
     });
