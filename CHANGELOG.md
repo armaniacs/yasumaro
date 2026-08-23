@@ -35,6 +35,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.67] - 2026-08-23
+
+### Changed
+- 依存パッケージを更新（patch/minor: `@cyclonedx/cyclonedx-npm`、`@vitest/coverage-v8`、`happy-dom`、`vitest`、`@axe-core/playwright`、`@peculiar/webcrypto`、`@playwright/test`、`@types/node`、`@typescript-eslint/*`、`eslint`、`knip`、`vite`。major v0: `@types/chrome`、`esbuild`、`typedoc`）。TypeScript 6→7 は MAJOR 変更のため見送り。Playwright ブラウザバイナリを再インストールし、`make clean test` が全テスト合格することを確認
+
+### Refactor
+- Architecture Deepening 7件を実装。SettingsRepository の `StorageAdapter` を `getSettings`/`setSettings` で多態化し `instanceof` 分岐を解消、PII 境界を `piiBoundary.ts` の `toExternalResult()` に集約し `piiStripper.ts` を deprecated shim 化、protocol version を `wxt.config.ts:define.__PROTOCOL_VERSION__` で単一ソース化し `loader.ts` ハードコードを排除、Storage の `chrome.storage.onChanged` 横断無効化を追加、メッセージ trust table を `CONTENT_SCRIPT_ALLOWED_TYPES` の SSOT 導出に、`content/privacyDialog.ts` を抽出し `extractor.ts` から分離、`serviceContainer.ts` に軽量 DI コンテナを新設
+
 ## [6.7.66] - 2026-08-23
 
 ### Added
