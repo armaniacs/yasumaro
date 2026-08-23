@@ -35,6 +35,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.71] - 2026-08-24
+
+### Fixed
+
+- `CspSettingsController` の reset 成功メッセージ表示テストが非同期 `loadCSPSettings` の完了待機不足でフレーキーになっていた問題を修正。`vi.waitFor` でメッセージ要素の表示を待機するよう変更
+
+### Chore
+
+- 2026-08-24 Architecture Deepening で見送りとした PBI-02（contentExtractor fallback 抽出）と PBI-06（message 検証一本化）を `pbi/` から `dev-docs/archived/pbi/` へ移動。両方とも高リスク・trust/security 層に直結するため次スプリントで単独着手予定
+
 ## [6.7.70] - 2026-08-24
 
 ### Refactor
