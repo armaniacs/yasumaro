@@ -35,6 +35,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.69] - 2026-08-24
+
+### Fixed
+
+- `make clean test` の lint ゲートが 2件の `no-unused-vars` エラーで失敗していた問題を修正。`src/background/syncTargets/gistSyncTarget.ts` の未使用 `Settings` 型 import と `src/offscreen/storageFallback.ts` の未使用 `SearchResult` 型 import を削除し、`lint 0 errors` を復元
+- ブランチ差分レビュー（`/review branch`）で検出した問題を修正：
+  - ハンドラ分割で追加されたが `MessageRouter` が `systemHandlers.ts` からのみ読み込んでいたため未使用だった `badgeHandlers.ts` / `fetchHandlers.ts` / `lifecycleSystemHandlers.ts`、未参照の `serviceContainer.ts`、および `recordingHandlers.ts` の関数実装と重複していた `visitRateLimiter.ts`（クラス）を削除（デッドコード）
+  - `StepExecutor.execute()` の未使用一括ラッパを削除し、`RecordingPipeline` は `executeWithStrategy` を直接呼ぶように
+  - `PerUrlMutexMap` のインスタンス／静的両経路で重複していた try/finally クリーンアップを `runExclusiveOn` に集約（ロック定数と削除条件を単一化）
+  - `src/utils/storage/encryptionSession.ts` の `getOrCreateHmacSecret()` がラップ済みシークレットの復号失敗時に例外を投げるのみだった問題を修正。`chrome.storage.session` クリア（拡張機能更新等）後も自己修復するよう try/catch を追加し、失敗時に新規シークレットを生成・保存するよう `hmacKeyStore` と同等の挙動に
+  - `ChromeStorageAdapter.setSettings` が `ensureStorageQuota` を呼ばずストレージクォータ超過時の退避が遗漏していた問題を修正（legacy `saveSettings` と整合）
+  - `storageFallback` の `insertBatch` がレコードごとにカウンタの `chrome.storage` 往復を行っていた問題を修正し、単一の `allocateIds` で一括確保するよう変更。テキスト検索の小文字化済み検索文字列をクエリ内でキャッシュ
+
 ## [6.7.68] - 2026-08-23
 
 ### Refactor

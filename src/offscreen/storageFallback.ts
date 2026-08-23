@@ -6,7 +6,7 @@
 
 import { Mutex } from '../utils/Mutex.js';
 import { UPDATABLE_FIELDS, buildInsertRecordFields } from './schema.js';
-import type { BrowsingLogRecord, StorageQuery, SearchResult } from '../utils/sqlite-types.js';
+import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
 
 const STORAGE_KEY = 'FALLBACK_STORAGE_DATA';
 const STORAGE_KEY_COUNTER = 'FALLBACK_STORAGE_COUNTER';
@@ -32,11 +32,19 @@ export class FallbackStorage {
   }
 
   private async getNextId(): Promise<number> {
+    return this.allocateIds(1);
+  }
+
+  /**
+   * Reserve a contiguous block of IDs in a single storage round-trip.
+   * Returns the first ID; the next free counter becomes `start + count`.
+   */
+  private async allocateIds(count: number): Promise<number> {
     const result = await chrome.storage.local.get(STORAGE_KEY_COUNTER);
     const current = typeof result[STORAGE_KEY_COUNTER] === 'number' ? result[STORAGE_KEY_COUNTER] : 0;
-    const next = current + 1;
-    await chrome.storage.local.set({ [STORAGE_KEY_COUNTER]: next });
-    return next;
+    const start = current + 1;
+    await chrome.storage.local.set({ [STORAGE_KEY_COUNTER]: current + count });
+    return start;
   }
 
   private async ensureQuotaSpace(): Promise<void> {
@@ -86,11 +94,16 @@ export class FallbackStorage {
       const data = await this.loadData();
       let insertedCount = 0;
 
+      // Reserve all IDs in a single counter round-trip instead of one per record.
+      const startId = await this.allocateIds(records.length);
+      let idOffset = 0;
+
       for (const record of records) {
         const exists = data.records.some(r => r.url === record.url && r.created_at === record.created_at);
         if (exists) continue;
 
-        const id = await this.getNextId();
+        const id = startId + idOffset;
+        idOffset++;
         const domain = record.domain || this.extractDomain(record.url);
 
         data.records.push({
@@ -173,11 +186,19 @@ export class FallbackStorage {
       // Text search (LIKE fallback — no FTS5 in chrome.storage path)
       if (q.text) {
         const query = q.text.toLowerCase();
+        // Cache lowercased searchable strings for the lifetime of this query so
+        // each record is materialized at most once (query never persists data).
+        const searchCache = new Map<number, string>();
         filtered = filtered.filter(r => {
-          const searchable = [r.url, r.title, r.summary, r.tags]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase();
+          const id = r.id!;
+          let searchable = searchCache.get(id);
+          if (searchable === undefined) {
+            searchable = [r.url, r.title, r.summary, r.tags]
+              .filter(Boolean)
+              .join(' ')
+              .toLowerCase();
+            searchCache.set(id, searchable);
+          }
           return searchable.includes(query);
         });
       }

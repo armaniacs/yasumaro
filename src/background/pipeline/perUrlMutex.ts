@@ -18,15 +18,7 @@ export class PerUrlMutexMap {
 
   async runExclusive<T>(url: string, fn: () => Promise<T>): Promise<T> {
     const mutex = this.getOrCreate(url);
-    try {
-      await mutex.acquire();
-      return await fn();
-    } finally {
-      mutex.release();
-      if (!mutex.isLocked() && mutex.getQueueSize() === 0) {
-        this.mutexes.delete(url);
-      }
-    }
+    return PerUrlMutexMap.runExclusiveOn(mutex, url, this.mutexes, fn);
   }
 
   private getOrCreate(url: string): Mutex {
@@ -54,13 +46,28 @@ export class PerUrlMutexMap {
 
   static async runExclusiveStatic<T>(url: string, fn: () => Promise<T>): Promise<T> {
     const mutex = PerUrlMutexMap.getOrCreateStatic(url);
+    return PerUrlMutexMap.runExclusiveOn(mutex, url, PerUrlMutexMap.sharedMutexes, fn);
+  }
+
+  /**
+   * Single acquire/release/cleanup path for both instance and static callers.
+   * The cleanup drops the map entry only when the mutex is fully idle
+   * (no current lock and no queued waiters), so a URL with a pending
+   * concurrent recording keeps its entry.
+   */
+  private static async runExclusiveOn<T>(
+    mutex: Mutex,
+    url: string,
+    map: Map<string, Mutex>,
+    fn: () => Promise<T>,
+  ): Promise<T> {
     try {
       await mutex.acquire();
       return await fn();
     } finally {
       mutex.release();
       if (!mutex.isLocked() && mutex.getQueueSize() === 0) {
-        PerUrlMutexMap.sharedMutexes.delete(url);
+        map.delete(url);
       }
     }
   }

@@ -14,18 +14,6 @@ const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(r
 export class StepExecutor {
   constructor(private offlineNetworkQueue: OfflineNetworkQueue | null) {}
 
-  /**
-   * Execute all steps sequentially, delegating per-step retry/offline to executeWithStrategy.
-   * Convenience for callers that want the full pipeline loop without preview/error handling.
-   */
-  async execute(steps: PipelineStep[], ctx: RecordingContext, deps: StepDeps): Promise<RecordingContext> {
-    let current = ctx;
-    for (const step of steps) {
-      current = await this.executeWithStrategy(step, current, deps);
-    }
-    return current;
-  }
-
   async executeWithStrategy(
     step: PipelineStep,
     context: RecordingContext,
