@@ -53,6 +53,18 @@
 - 2026-08-23-07-refactor-create-background-services-di.md (RICE 34 — `serviceContainer.ts` を新設。`ServiceContainer` に `register/resolve/override/has` を実装。`createBackgroundServices` への完全統合は段階的に)
 - 2026-08-23-00-backlog-arch-deepening.md (7件のRICEスコアリングバックログ — Reach/Impact/Confidence/Effort + 依存図)
 
+### 2026-08-23 Architecture Deepening 0823a 8件 完了（RICE順）
+
+- 2026-08-23-01-refactor-extractor-remaining-split.md (RICE 720 — `extractor.ts` 593→97行に縮小。`settingsLoader.ts`/`visitTracker.ts`/`validVisitReporter.ts`/`utils/throttle.ts` に4責務を分割。`CLEANSING_RULES.map` で32ルール導出。テスト21件追加。8400 tests PASS)
+- 2026-08-23-02-refactor-service-container-migration.md (RICE 480 — `serviceContainer.ts` を `Symbol` typed token 22個に移行。`createBackgroundServices.ts` の22 new を `container.register` に置換。`singleton:true` で二重生成を静的防止。79 files 1170 tests PASS)
+- 2026-08-23-03-refactor-message-handler-single-layer.md (RICE 360 — `messageHandler.ts` 6段if を `MessageRouter` に吸収。`CONTENT_SCRIPT_ALLOWED_TYPES` SSOT に統一。`service-worker.ts` の配線を簡素化。`MessageRouter` に protocolVersion/logWarn/CHECK_DOMAIN ガードを追加。79 files 1170 tests PASS)
+- 2026-08-23-04-refactor-settings-store-retirement.md (RICE 240 — `ChromeStorageAdapter` を `chrome.storage.local` 直読みに変更し循環を断つ。`settingsStore.ts` を `settingsStore.legacy.ts` に退避し shim 化。10 call sites を `SettingsRepository` に移行。eslint `no-restricted-imports` で新規直import禁止。51 storage tests PASS)
+- 2026-08-23-05-refactor-system-handlers-split.md (RICE 180 — `systemHandlers.ts` 287行を `fetchHandlers.ts`/`badgeHandlers.ts`/`lifecycleSystemHandlers.ts` に3分割。`VisitRateLimiter` を `visitRateLimiter.ts` に抽出。229 handler tests PASS)
+- 2026-08-23-06-refactor-recording-pipeline-split.md (RICE 120 — `RecordingPipeline.ts` 519→192行に縮小。`PerUrlMutexMap`/`StepExecutor` に分離。steps宣言は保持し実行を委譲。9 files 78 tests PASS)
+- 2026-08-23-07-refactor-return-info-trap.md (RICE 96 — `contentExtractor/index.ts` の `returnInfo: boolean` union を `extractMainContent`/`extractMainContentWithInfo` の2メソッドに分割。`pageContentPipeline` を唯一の public seam に。226 tests PASS)
+- 2026-08-23-08-refactor-protocol-ssot.md (RICE 80 — `wxt.config.ts:36` を `protocol.ts` からの import 由来に変更。`loader.ts` の fallback `? 1` を削除。`define.__PROTOCOL_VERSION__` で完全SSOT化。499 files 8400 tests PASS)
+- 2026-08-23-00-backlog-0823a.md (8件のRICEスコアリングバックログ — Phase 0 HTMLレポート 8候補)
+
 ### 2026-08-23 Adversarial Review 13件 RICE対応完了
 
 - 2026-08-23-00-backlog.md (RICE 13件の棚卸し — 00は索引。以下12件をRICE 4000/4000/1250/1000/80/66.7/40/26.7/20/12.5/1/6.25で優先度付け、依存「host_permissions→CSP→WAR」「pii-sandbox 3件」を同一バッチ化)

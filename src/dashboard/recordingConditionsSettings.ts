@@ -4,7 +4,7 @@
  * Note: Recording triggers (scroll/time/snapshot) are no longer configurable.
  */
 
-import { saveSettings } from '../utils/storage/settingsStore.js';
+import { SettingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -143,7 +143,9 @@ function wireEvents(container: HTMLElement): void {
 
   saveBtn?.addEventListener('click', async () => {
     validationError.classList.add('hidden');
+    validationError.style.display = 'none';
     successMsg.classList.add('hidden');
+    successMsg.style.display = 'none';
 
     // Validate recording conditions
     const minVisitInput = container.querySelector('#minVisitDuration') as HTMLInputElement;
@@ -167,49 +169,56 @@ function wireEvents(container: HTMLElement): void {
     if (isNaN(minVisitVal) || minVisitVal < 1) {
       validationError.textContent = getMessage('minVisitDurationError') || 'Min visit duration must be at least 1 second.';
       validationError.classList.remove('hidden');
+      validationError.style.display = '';
       return;
     }
 
     if (isNaN(minScrollVal) || minScrollVal < 0 || minScrollVal > 100) {
       validationError.textContent = getMessage('minScrollDepthError') || 'Min scroll depth must be between 0 and 100.';
       validationError.classList.remove('hidden');
+      validationError.style.display = '';
       return;
     }
 
     if (isNaN(maxTokensVal) || maxTokensVal < 10 || maxTokensVal > 16000) {
       validationError.textContent = getMessage('maxTokensError') || 'Max tokens must be between 10 and 16000.';
       validationError.classList.remove('hidden');
+      validationError.style.display = '';
       return;
     }
 
     if (isNaN(maxMonthlyTokensVal) || maxMonthlyTokensVal < 0) {
       validationError.textContent = getMessage('maxMonthlyTokensError') || 'Monthly token limit must be 0 or greater.';
       validationError.classList.remove('hidden');
+      validationError.style.display = '';
       return;
     }
 
     if (isNaN(aiRateLimitMaxVal) || aiRateLimitMaxVal < 1 || aiRateLimitMaxVal > 60) {
       validationError.textContent = getMessage('aiRateLimitMaxError') || 'AI rate limit must be between 1 and 60.';
       validationError.classList.remove('hidden');
+      validationError.style.display = '';
       return;
     }
 
     if (isNaN(openaiContentCharsVal) || openaiContentCharsVal < 1000 || openaiContentCharsVal > 100000) {
       validationError.textContent = getMessage('openaiContentCharsError') || 'OpenAI content characters must be between 1000 and 100000.';
       validationError.classList.remove('hidden');
+      validationError.style.display = '';
       return;
     }
 
     if (isNaN(geminiContentCharsVal) || geminiContentCharsVal < 1000 || geminiContentCharsVal > 100000) {
       validationError.textContent = getMessage('geminiContentCharsError') || 'Gemini content characters must be between 1000 and 100000.';
       validationError.classList.remove('hidden');
+      validationError.style.display = '';
       return;
     }
 
     try {
-      // Save recording conditions via saveSettings so values are written
-      // to the 'settings' object, matching what getSettings reads.
-      await saveSettings({
+      // Save recording conditions via SettingsRepository so values are written
+      // to the 'settings' object, matching what getAll reads.
+      await new SettingsRepository().setAll({
         [StorageKeys.MIN_VISIT_DURATION]: minVisitVal,
         [StorageKeys.MIN_SCROLL_DEPTH]: minScrollVal,
         [StorageKeys.MAX_TOKENS_PER_PROMPT]: maxTokensVal,
@@ -230,9 +239,11 @@ function wireEvents(container: HTMLElement): void {
       geminiContentChars = geminiContentCharsVal;
 
       successMsg.classList.remove('hidden');
+      successMsg.style.display = '';
     } catch (err) {
       validationError.textContent = `${getMessage('error') || 'Error'}: ${errorMessage(err)}`;
       validationError.classList.remove('hidden');
+      validationError.style.display = '';
     }
   });
 }

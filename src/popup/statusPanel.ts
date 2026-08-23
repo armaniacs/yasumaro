@@ -1,5 +1,6 @@
 import { checkPageStatus, StatusInfo } from './statusChecker.js';
-import { getSettings, saveSettings } from '../utils/storage/settingsStore.js';
+import { SettingsRepository } from '../utils/storage/SettingsRepository.js';
+import { saveSettings } from '../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { getMessage } from '../utils/i18n.js';
 import { logError, ErrorCode } from '../utils/logger.js';
@@ -18,7 +19,7 @@ export async function initStatusPanel(): Promise<void> {
   try {
     // Show privacy mode badge (best-effort, guard against test environments)
     try {
-      const settings = await getSettings();
+      const settings = await new SettingsRepository().getAll();
       if (settings) {
         const mode = (settings[StorageKeys.PRIVACY_MODE] as string) || 'full_pipeline';
         const modeBadge = document.getElementById('statusModeBadge');
@@ -374,11 +375,11 @@ function attachPrivacyActionListeners(): void {
     if (tab?.url) {
       const domain = extractDomain(tab.url);
       if (domain) {
-        const settings = await getSettings();
+        const settings = await new SettingsRepository().getAll();
         const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
         if (!whitelist.includes(domain)) {
           whitelist.push(domain);
-          await saveSettings({ [StorageKeys.DOMAIN_WHITELIST]: whitelist }, true);
+          await saveSettings({ [StorageKeys.DOMAIN_WHITELIST]: whitelist } as Record<string, unknown> as import('../utils/storage/types.js').Settings, true);
 
           const statusDiv = document.getElementById('mainStatus');
           if (statusDiv) {
@@ -396,7 +397,7 @@ function attachPrivacyActionListeners(): void {
   addPathBtn?.addEventListener('click', async () => {
     const tab = await getCurrentTab();
     if (tab?.url) {
-      const settings = await getSettings();
+      const settings = await new SettingsRepository().getAll();
       const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
       if (!whitelist.includes(tab.url)) {
         whitelist.push(tab.url);

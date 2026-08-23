@@ -4,7 +4,7 @@
  * customPromptManager.ts の DOM 操作パターン(一覧描画・エディタ表示切替・保存/削除ハンドラ)を踏襲する。
  */
 
-import { saveSettings } from '../utils/storage/settingsStore.js';
+import { SettingsRepository } from '../utils/storage/SettingsRepository.js';
 import { Settings, StorageKeys } from '../utils/storage/types.js';
 import {
   DEFAULT_MARKDOWN_TEMPLATE,
@@ -188,7 +188,7 @@ async function handleActivateClick(id: string): Promise<void> {
   if (!currentSettings) return;
 
   currentSettings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] = id;
-  await saveSettings(currentSettings);
+  await new SettingsRepository().setAll(currentSettings);
 
   showStatus(statusEl ?? 'markdownTemplateStatus', getMessage('markdownTemplateActivated') || 'Template activated', 'success');
   renderTemplateList();
@@ -214,7 +214,7 @@ async function handleDeleteClick(id: string): Promise<void> {
     currentSettings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] = DEFAULT_MARKDOWN_TEMPLATE.id;
   }
 
-  await saveSettings(currentSettings);
+  await new SettingsRepository().setAll(currentSettings);
 
   showStatus(statusEl ?? 'markdownTemplateStatus', getMessage('markdownTemplateDeleted') || 'Template deleted', 'success');
   renderTemplateList();
@@ -378,7 +378,7 @@ async function handleSaveClick(): Promise<void> {
   }
 
   currentSettings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] = updated;
-  await saveSettings(currentSettings);
+  await new SettingsRepository().setAll(currentSettings);
 
   showStatus(statusEl ?? 'markdownTemplateStatus', 
     getMessage(editingTemplateId ? 'markdownTemplateUpdated' : 'markdownTemplateCreated')

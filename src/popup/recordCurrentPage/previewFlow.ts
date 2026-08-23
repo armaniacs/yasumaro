@@ -1,4 +1,4 @@
-import { getSettings } from '../../utils/storage/settingsStore.js';
+import { SettingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { showPreview } from '../sanitizePreview.js';
 import { getMessage } from '../../utils/i18n.js';
@@ -44,7 +44,7 @@ export class PreviewFlow {
 
   async run(options: PreviewSaveOptions): Promise<PreviewSaveResult> {
     const { tab, content, force, byteStats, aiSummaryCleansedStats, cleansedReason, cleanseStats } = options;
-    const settings = await getSettings();
+    const settings = await new SettingsRepository().getAll();
     const usePreview = settings[StorageKeys.PII_CONFIRMATION_UI] !== false;
 
     if (!usePreview) {

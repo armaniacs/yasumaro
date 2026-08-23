@@ -8,7 +8,7 @@ import type { SyncTarget } from './SyncTarget.js';
 import { SqliteClient } from '../sqliteClient.js';
 import { addLog, LogType } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-import { getSettings, saveSettings } from '../../utils/storage/settingsStore.js';
+import { SettingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../../utils/markdownSanitizer.js';
 import { CONNECTION_TEST_CACHE_MODE } from '../../utils/fetch.js';
@@ -25,7 +25,7 @@ export class GistSyncTarget implements SyncTarget {
 
   async isConfigured(): Promise<boolean> {
     try {
-      const settings = await getSettings();
+      const settings = await new SettingsRepository().getAll();
       const pat = settings[StorageKeys.GITHUB_PAT] as string | undefined;
       return typeof pat === 'string' && pat.length > 0;
     } catch {
@@ -39,7 +39,7 @@ export class GistSyncTarget implements SyncTarget {
     }
 
     try {
-      const settings = await getSettings();
+      const settings = await new SettingsRepository().getAll();
       const pat = settings[StorageKeys.GITHUB_PAT] as string;
       const gistId = settings[StorageKeys.GIST_ID] as string | undefined;
       const defaultEntry = () => {
@@ -56,7 +56,7 @@ export class GistSyncTarget implements SyncTarget {
       } else {
         // Create new Gist
         const newGistId = await this.createGist(entry, pat);
-        await saveSettings({ [StorageKeys.GIST_ID]: newGistId } as Partial<Settings> as Settings);
+        await new SettingsRepository().set(StorageKeys.GIST_ID, newGistId);
       }
 
       await this.sqliteClient.mutate({ type: 'update', id: logId, changes: { gist_synced: 1 } });
@@ -130,7 +130,7 @@ for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
     }
 
     try {
-      const settings = await getSettings();
+      const settings = await new SettingsRepository().getAll();
       const pat = settings[StorageKeys.GITHUB_PAT] as string;
 
       const response = await fetch(`${GIST_API_BASE}/user`, {

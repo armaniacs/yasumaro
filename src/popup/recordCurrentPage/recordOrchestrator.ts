@@ -1,5 +1,5 @@
 import { checkPageStatus } from '../statusChecker.js';
-import { getSettings } from '../../utils/storage/settingsStore.js';
+import { SettingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { startAutoCloseTimer } from '../autoClose.js';
 import { getCurrentTab, isRecordable } from '../tabUtils.js';
@@ -265,7 +265,7 @@ export class RecordOrchestrator {
         throw new Error(getMessage('cannotRecordPage'));
       }
 
-      const settings = await getSettings();
+      const settings = await new SettingsRepository().getAll();
       const _usePreview = settings[StorageKeys.PII_CONFIRMATION_UI] !== false;
 
       let contentResponse: ContentResponse;
