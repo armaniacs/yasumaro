@@ -9,8 +9,6 @@ vi.mock('../sqliteClient.js', () => ({
     const qr = vi.fn();
     const ur = vi.fn();
     return {
-      queryResult: qr,
-      updateResult: ur,
       query: qr,
       mutate: ur,
       maintain: vi.fn(),
@@ -210,15 +208,13 @@ import { getSettings, saveSettings } from '../../utils/storage.js';
 
 describe('GistSyncTarget', () => {
   let target: GistSyncTarget;
-  let mockSqliteClient: { queryResult: ReturnType<typeof vi.fn>; updateResult: ReturnType<typeof vi.fn>; query: ReturnType<typeof vi.fn>; mutate: ReturnType<typeof vi.fn>; maintain: ReturnType<typeof vi.fn> };
+  let mockSqliteClient: { query: ReturnType<typeof vi.fn>; mutate: ReturnType<typeof vi.fn>; maintain: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
     const qr = vi.fn();
     const ur = vi.fn();
     mockSqliteClient = {
-      queryResult: qr,
-      updateResult: ur,
       query: qr,
       mutate: ur,
       maintain: vi.fn(),
@@ -244,7 +240,7 @@ describe('GistSyncTarget', () => {
 
   it('sync creates a new Gist when no GIST_ID exists', async () => {
     vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test123' } as any);
-    mockSqliteClient.updateResult.mockResolvedValue({ success: true, data: undefined });
+    mockSqliteClient.mutate.mockResolvedValue({ success: true, data: undefined });
 
     // Mock fetch for createGist
     global.fetch = vi.fn().mockResolvedValue({
@@ -255,7 +251,7 @@ describe('GistSyncTarget', () => {
     const result = await target.sync(1, 'https://example.com', 'Test', 'Summary');
     expect(result.success).toBe(true);
     expect(saveSettings).toHaveBeenCalledWith(expect.objectContaining({ gist_id: 'new-gist-id-123' }));
-    expect(mockSqliteClient.updateResult).toHaveBeenCalled();
+    expect(mockSqliteClient.mutate).toHaveBeenCalled();
   });
 
   it('testConnection returns false when not configured', async () => {

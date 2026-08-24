@@ -40,31 +40,10 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
 
   beforeEach(() => {
     sqliteClient = {
-      queryResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
-      searchResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
-      clearAllResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-      runOpfsSpikeResult: vi.fn().mockResolvedValue({ success: true, data: {} }),
+      query: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
+      mutate: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+      maintain: vi.fn().mockResolvedValue({ success: true, data: undefined }),
       getStatus: vi.fn().mockResolvedValue(null),
-      // Core methods delegate to the *Result wrappers so existing test assertions
-      // on queryResult/searchResult/clearAllResult/runOpfsSpikeResult keep working.
-      query: vi.fn().mockImplementation((op: any) => {
-        if (op.kind === 'search') return (sqliteClient as any).searchResult(op.text, op.limit, op.offset, op);
-        if (op.kind === 'count') return Promise.resolve({ success: true, data: 0 });
-        return (sqliteClient as any).queryResult(op);
-      }),
-      mutate: vi.fn().mockImplementation((op: any) => {
-        if (op.type === 'clearAll') return (sqliteClient as any).clearAllResult();
-        return Promise.resolve({ success: true, data: undefined });
-      }),
-      maintain: vi.fn().mockImplementation((op: any) => {
-        if (op.type === 'clearAll') return (sqliteClient as any).clearAllResult();
-        if (op.type === 'opfsSpike') return (sqliteClient as any).runOpfsSpikeResult();
-        if (op.type === 'restore') return (sqliteClient as any).restoreDbResult(op.data);
-        if (op.type === 'backup') return (sqliteClient as any).backupDbResult();
-        if (op.type === 'purgeOldRecords') return (sqliteClient as any).purgeOldRecordsResult(op.retentionDays, op.maxRecords);
-        if (op.type === 'purgeContent') return (sqliteClient as any).purgeContentResult(op.retentionDays, op.maxRecords, op.includeStarred);
-        return Promise.resolve({ success: true, data: undefined });
-      }),
     } as any;
   });
 
@@ -75,7 +54,7 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
       { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toEqual({ success: false, error: expect.stringContaining('token') });
-    expect((sqliteClient as unknown as { clearAllResult: ReturnType<typeof vi.fn> }).clearAllResult).not.toHaveBeenCalled();
+    expect((sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain).not.toHaveBeenCalled();
   });
 
   it('rejects clear_all with invalid confirmToken', async () => {
@@ -94,7 +73,7 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
       { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toEqual({ success: true });
-    expect((sqliteClient as unknown as { clearAllResult: ReturnType<typeof vi.fn> }).clearAllResult).toHaveBeenCalled();
+    expect((sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain).toHaveBeenCalled();
   });
 
   it('rejects migrate without confirmToken', async () => {
@@ -109,21 +88,21 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
     expect(result).toEqual({ success: false, error: expect.stringContaining('token') });
   });
 
-  it('routes opfs_spike to sqliteClient.runOpfsSpikeResult and returns the report', async () => {
+  it('routes opfs_spike to sqliteClient.maintain opfsSpike and returns the report', async () => {
     const report = { strategy: 'opfs-async-main', steps: [], passed: true, durationMs: 5 };
-    // Stub runOpfsSpikeResult, not runOpfsSpike — see the clearAllResult
+    // Stub maintain opfsSpike — see the maintain
     // comment above.
-    (sqliteClient as unknown as { runOpfsSpikeResult: ReturnType<typeof vi.fn> }).runOpfsSpikeResult =
+    (sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain =
       vi.fn().mockResolvedValue({ success: true, data: report });
 
     const result = await dispatchDashboardSqlite({ subtype: 'opfs_spike' }, sqliteClient);
 
-    expect((sqliteClient as unknown as { runOpfsSpikeResult: ReturnType<typeof vi.fn> }).runOpfsSpikeResult).toHaveBeenCalled();
+    expect((sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain).toHaveBeenCalled();
     expect(result).toEqual({ success: true, report });
   });
 
   it('returns an error when opfs_spike yields no report', async () => {
-    (sqliteClient as unknown as { runOpfsSpikeResult: ReturnType<typeof vi.fn> }).runOpfsSpikeResult =
+    (sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain =
       vi.fn().mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'OPFS spike failed', retriable: false } });
 
     const result = await dispatchDashboardSqlite({ subtype: 'opfs_spike' }, sqliteClient);
@@ -132,9 +111,9 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
   });
 
   it('allows query without confirmToken (read-only)', async () => {
-    // Stub queryResult, not query: the read path calls the Result variant so
+    // Stub query: the read path calls query
     // each failure's reason stays attached to the call that produced it.
-    (sqliteClient as unknown as { queryResult: ReturnType<typeof vi.fn> }).queryResult =
+    (sqliteClient as unknown as { query: ReturnType<typeof vi.fn> }).query =
       vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
     const result = await dispatchDashboardSqlite(
       { subtype: 'query' },
@@ -145,11 +124,11 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
   });
 
   it('wraps search results with success:true (regression: dashboard search showed load error)', async () => {
-    // searchResult resolves to a CallResult carrying { rows, total }. The
+    // query search resolves to a CallResult carrying { rows, total }. The
     // handler must unwrap it and add success:true so the dashboard service does
     // not treat a valid result as a failure ("データの読み込みに失敗しました").
     const rows = [{ id: 1, url: 'https://a.com', title: 'kddi', rank: -1 }];
-    (sqliteClient as unknown as { searchResult: ReturnType<typeof vi.fn> }).searchResult =
+    (sqliteClient as unknown as { query: ReturnType<typeof vi.fn> }).query =
       vi.fn().mockResolvedValue({ success: true, data: { rows, total: 1 } });
     const result = await dispatchDashboardSqlite(
       { subtype: 'search', query: 'kddi' },
@@ -160,7 +139,7 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
   });
 
   it('returns success:false when search yields an error', async () => {
-    (sqliteClient as unknown as { searchResult: ReturnType<typeof vi.fn> }).searchResult =
+    (sqliteClient as unknown as { query: ReturnType<typeof vi.fn> }).query =
       vi.fn().mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Search failed', retriable: false } });
     const result = await dispatchDashboardSqlite(
       { subtype: 'search', query: 'kddi' },
@@ -184,11 +163,7 @@ describe('restore_db subtype', () => {
 
   beforeEach(() => {
     sqliteClient = {
-      restoreDbResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-      maintain: vi.fn().mockImplementation((op: any) => {
-        if (op.type === 'restore') return (sqliteClient as any).restoreDbResult(op.data);
-        return Promise.resolve({ success: true, data: undefined });
-      }),
+      maintain: vi.fn().mockResolvedValue({ success: true, data: undefined }),
       query: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
       mutate: vi.fn().mockResolvedValue({ success: true, data: undefined }),
       getStatus: vi.fn().mockResolvedValue(null),
@@ -203,10 +178,10 @@ describe('restore_db subtype', () => {
     );
 
     expect(result).toEqual({ success: false, error: expect.stringContaining('token') });
-    expect((sqliteClient as unknown as { restoreDbResult: ReturnType<typeof vi.fn> }).restoreDbResult).not.toHaveBeenCalled();
+    expect((sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain).not.toHaveBeenCalled();
   });
 
-  it('calls sqliteClient.restoreDbResult with the provided bytes when token matches', async () => {
+  it('calls sqliteClient.maintain restore with the provided bytes when token matches', async () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'restore_db', data: 'AQID', confirmToken: VALID_TOKEN },
       sqliteClient,
@@ -214,11 +189,11 @@ describe('restore_db subtype', () => {
     );
 
     expect(result).toEqual({ success: true });
-    expect((sqliteClient as unknown as { restoreDbResult: ReturnType<typeof vi.fn> }).restoreDbResult).toHaveBeenCalledWith(new Uint8Array([1, 2, 3]));
+    expect((sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain).toHaveBeenCalledWith({ type: 'restore', data: new Uint8Array([1, 2, 3]) });
   });
 
   it('returns failure when restoreDb resolves false', async () => {
-    (sqliteClient as unknown as { restoreDbResult: ReturnType<typeof vi.fn> }).restoreDbResult =
+    (sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain =
       vi.fn().mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Restore failed', retriable: false } });
 
     const result = await dispatchDashboardSqlite(

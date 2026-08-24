@@ -280,7 +280,7 @@ export async function queryHistory(
     // The tag filter is deliberately NOT pushed down to the server; see the
     // function doc comment. Everything else pages in SQL.
     const useServerPaging = !options.tagFilter;
-    const queryResult = await queryRows({
+    const qRes = await queryRows({
       limit: useServerPaging ? options.limit : TAG_FILTER_FETCH_LIMIT,
       offset: useServerPaging ? options.offset : 0,
       ...pickDefined({ since: options.since, until: options.until }),
@@ -296,10 +296,10 @@ export async function queryHistory(
       // that view. This is a known limitation, not a bug to fix here.
       orderDir: options.sortDir ?? 'DESC',
     });
-    if (isServiceError(queryResult)) return queryResult;
+    if (isServiceError(qRes)) return qRes;
 
     if (options.tagFilter) {
-      const filteredRows = filterRowsByTag(queryResult.data.rows, options.tagFilter);
+      const filteredRows = filterRowsByTag(qRes.data.rows, options.tagFilter);
       const fallbackTerm = shouldFallbackToTextSearch(
         options.tagInitiated ? 'tag' : 'manual',
         { rows: filteredRows, total: filteredRows.length },
@@ -329,8 +329,8 @@ export async function queryHistory(
         total = filteredRows.length;
       }
     } else {
-      rows = queryResult.data.rows;
-      total = queryResult.data.total;
+      rows = qRes.data.rows;
+      total = qRes.data.total;
     }
   }
 

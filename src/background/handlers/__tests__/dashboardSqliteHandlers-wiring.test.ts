@@ -226,60 +226,18 @@ import type { SqliteClientBackedDeps } from '../dashboardSqliteHandlers.js';
 import type { SqliteClient } from '../../sqliteClient.js';
 
 function makeSqliteClient(overrides: Record<string, unknown> = {}) {
-  const base = {
-    queryResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
-    searchResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
-    toggleStarResult: vi.fn().mockResolvedValue({ success: true, data: { is_starred: 1 } }),
-    deleteResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-    updateResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-    getCountResult: vi.fn().mockResolvedValue({ success: true, data: 7 }),
-    clearAllResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-    insertResult: vi.fn().mockResolvedValue({ success: true, data: { id: 1 } }),
-    restoreDbResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+  const client = {
+    query: vi.fn().mockImplementation((op: any) => {
+      if (op?.kind === 'count') return Promise.resolve({ success: true, data: 7 });
+      if (op?.kind === 'search') return Promise.resolve({ success: true, data: { rows: [], total: 0 } });
+      if (op?.kind === 'auditLog') return Promise.resolve({ success: true, data: { rows: [], total: 0 } });
+      return Promise.resolve({ success: true, data: { rows: [], total: 0 } });
+    }),
+    mutate: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+    maintain: vi.fn().mockResolvedValue({ success: true, data: undefined }),
     getStatus: vi.fn().mockResolvedValue({ initialized: true }),
-    runOpfsSpikeResult: vi.fn().mockResolvedValue({ success: true, data: {} }),
-    purgeOldRecordsResult: vi.fn().mockResolvedValue({ success: true, data: { purged: 0 } }),
-    purgeContentResult: vi.fn().mockResolvedValue({ success: true, data: { purged: 0 } }),
-    backupDbResult: vi.fn().mockResolvedValue({ success: true, data: new Uint8Array([1]) }),
-    queryAuditLogResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
     ...overrides,
   } as unknown as SqliteClient;
-
-  // Core methods used by createSqliteClientDeps — delegate to the *Result wrappers above
-  const client = {
-    ...base,
-    query: vi.fn().mockImplementation((op: any) => {
-      if (op?.kind === 'search') return (base as any).searchResult(op.text, op.limit, op.offset, op);
-      if (op?.kind === 'count') return (base as any).getCountResult();
-      if (op?.kind === 'auditLog') return (base as any).queryAuditLogResult(op);
-      return (base as any).queryResult(op);
-    }),
-    mutate: vi.fn().mockImplementation((op: any) => {
-      switch (op.type) {
-        case 'insert': return (base as any).insertResult(op.record, op.traceId);
-        case 'insertBatch': return (base as any).insertBatchResult(op.records);
-        case 'update': return (base as any).updateResult(op.id, op.changes);
-        case 'delete': return (base as any).deleteResult(op.id);
-        case 'toggleStar': return (base as any).toggleStarResult(op.id);
-        case 'insertAuditLog': return (base as any).insertAuditLogResult(op.record);
-        default: return Promise.resolve({ success: true, data: undefined });
-      }
-    }),
-    maintain: vi.fn().mockImplementation((op: any) => {
-      switch (op.type) {
-        case 'init': return (base as any).init ? (base as any).init() : Promise.resolve({ success: true, data: true });
-        case 'backup': return (base as any).backupDbResult();
-        case 'restore': return (base as any).restoreDbResult(op.data);
-        case 'clearAll': return (base as any).clearAllResult();
-        case 'purgeOldRecords': return (base as any).purgeOldRecordsResult(op.retentionDays, op.maxRecords);
-        case 'purgeContent': return (base as any).purgeContentResult(op.retentionDays, op.maxRecords, op.includeStarred);
-        case 'opfsSpike': return (base as any).runOpfsSpikeResult();
-        case 'healthCheck': return (base as any).isSqliteHealthy ? (base as any).isSqliteHealthy() : Promise.resolve(true);
-        default: return Promise.resolve({ success: true, data: undefined });
-      }
-    }),
-  };
-
   return client as unknown as SqliteClient;
 }
 
@@ -350,7 +308,7 @@ describe('dashboard SQLite wiring — Service-Worker-owned dependencies', () => 
       const result = await handler({ subtype: 'clear_all', confirmToken: 'wrong-token' });
 
       expect(result).toEqual({ success: false, error: 'Confirmation token mismatch' });
-      expect(client.clearAllResult).not.toHaveBeenCalled();
+      expect(client.maintain).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'clearAll' }));
     });
 
     it('rejects a destructive subtype when no token is supplied', async () => {
@@ -363,7 +321,7 @@ describe('dashboard SQLite wiring — Service-Worker-owned dependencies', () => 
         success: false,
         error: 'Confirmation token mismatch',
       });
-      expect(client.clearAllResult).not.toHaveBeenCalled();
+      expect(client.maintain).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'clearAll' }));
     });
 
     it('allows a destructive subtype when the token matches', async () => {
@@ -373,7 +331,7 @@ describe('dashboard SQLite wiring — Service-Worker-owned dependencies', () => 
       );
 
       expect(await handler({ subtype: 'clear_all', confirmToken: TOKEN })).toEqual({ success: true });
-      expect(client.clearAllResult).toHaveBeenCalledTimes(1);
+      expect(client.maintain).toHaveBeenCalledWith(expect.objectContaining({ type: 'clearAll' }));
     });
   });
 
@@ -419,12 +377,12 @@ describe('dashboard SQLite wiring — Service-Worker-owned dependencies', () => 
       const handler = createDashboardSqliteHandler(createSqliteClientDeps(client, makeServiceWorkerDeps()));
 
       expect(await handler({ subtype: 'get_count' })).toEqual({ success: true, count: 7 });
-      expect(client.getCountResult).toHaveBeenCalledTimes(1);
+      expect(client.query).toHaveBeenCalledWith(expect.objectContaining({ kind: 'count' }));
     });
 
     it('surfaces the categorized client error through the shared wiring', async () => {
       const client = makeSqliteClient({
-        queryResult: vi.fn().mockResolvedValue({
+        query: vi.fn().mockResolvedValue({
           success: false,
           error: { kind: 'quota', message: 'Storage quota exceeded.', retriable: false },
         }),
