@@ -39,9 +39,12 @@ import { pickDefined } from '../utils/objectUtils.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { isSqliteMessageType, type SqliteMessage } from '../messaging/sqliteMessages.js';
 
-// VULN-007: cap batch insert size to prevent unbounded transaction / memory growth.
+// Payload size guards (security cross-cutting)
+const MAX_FIELD_BYTES = 1_024 * 1_024; // 1MB per field
 const MAX_BATCH_RECORDS = 2000;
 const MAX_BATCH_TOTAL_BYTES = 20 * 1024 * 1024; // 20MB of summary text across the batch
+function isFieldTooLarge(v: unknown): boolean { return typeof v === 'string' && v.length > MAX_FIELD_BYTES; }
+function fieldLimitError(field: string): string { return `Payload too large: ${field} exceeds 1MB limit`; }
 
 // For testing only - reset SQLite state
 export const _resetSqliteForTesting = (): void => {
@@ -115,8 +118,8 @@ async function dispatchSqliteMessage(
         case 'SQLITE_INSERT': {
             const payload = msg.payload;
 
-            if (typeof payload.summary === 'string' && payload.summary.length > 1024 * 1024) {
-                sendResponse({ success: false, error: 'Payload too large: summary exceeds 1MB limit' });
+            if (isFieldTooLarge(payload.summary)) {
+                sendResponse({ success: false, error: fieldLimitError('summary') });
                 break;
             }
 
@@ -203,16 +206,16 @@ async function dispatchSqliteMessage(
         case 'SQLITE_UPDATE': {
             const payload = msg.payload;
 
-            if (typeof payload.summary === 'string' && payload.summary.length > 1024 * 1024) {
-                sendResponse({ success: false, error: 'Payload too large: summary exceeds 1MB limit' });
+            if (isFieldTooLarge(payload.summary)) {
+                sendResponse({ success: false, error: fieldLimitError('summary') });
                 break;
             }
-            if (typeof payload.content === 'string' && payload.content.length > 1024 * 1024) {
-                sendResponse({ success: false, error: 'Payload too large: content exceeds 1MB limit' });
+            if (isFieldTooLarge(payload.content)) {
+                sendResponse({ success: false, error: fieldLimitError('content') });
                 break;
             }
-            if (typeof payload.title === 'string' && payload.title.length > 1024 * 1024) {
-                sendResponse({ success: false, error: 'Payload too large: title exceeds 1MB limit' });
+            if (isFieldTooLarge(payload.title)) {
+                sendResponse({ success: false, error: fieldLimitError('title') });
                 break;
             }
 

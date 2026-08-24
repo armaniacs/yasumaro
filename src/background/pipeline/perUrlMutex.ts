@@ -11,6 +11,8 @@ import { Mutex } from '../../utils/Mutex.js';
  */
 export class PerUrlMutexMap {
   private static sharedMutexes = new Map<string, Mutex>();
+  private static readonly MUTEX_OPTS = { maxQueueSize: 5, timeoutMs: 60000 } as const;
+  private static createMutex(): Mutex { return new Mutex(PerUrlMutexMap.MUTEX_OPTS); }
 
   private get mutexes(): Map<string, Mutex> {
     return PerUrlMutexMap.sharedMutexes;
@@ -24,7 +26,7 @@ export class PerUrlMutexMap {
   private getOrCreate(url: string): Mutex {
     let mutex = this.mutexes.get(url);
     if (!mutex) {
-      mutex = new Mutex({ maxQueueSize: 5, timeoutMs: 60000 });
+      mutex = PerUrlMutexMap.createMutex();
       this.mutexes.set(url, mutex);
     }
     return mutex;
@@ -38,7 +40,7 @@ export class PerUrlMutexMap {
   static getOrCreateStatic(url: string): Mutex {
     let mutex = PerUrlMutexMap.sharedMutexes.get(url);
     if (!mutex) {
-      mutex = new Mutex({ maxQueueSize: 5, timeoutMs: 60000 });
+      mutex = PerUrlMutexMap.createMutex();
       PerUrlMutexMap.sharedMutexes.set(url, mutex);
     }
     return mutex;
