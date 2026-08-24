@@ -50,7 +50,11 @@ export async function saveSettings(
   // health check is threaded through so callers (tests) can inject one without
   // a second ensureStorageQuota pass here; ensureStorageQuota resolves
   // injected -> lazy SqliteClient-backed fallback internally.
-  await repo.setAll(toSave, sqliteHealthCheck ? { sqliteHealthCheck } : undefined);
+  if (sqliteHealthCheck) {
+    await repo.setAll(toSave, { sqliteHealthCheck });
+  } else {
+    await repo.setAll(toSave);
+  }
   if (updateAllowedUrlsFlag) {
     const { updateDomainFilterCache } = await import('./domainFilterCache.js');
     await updateDomainFilterCache(toSave);
