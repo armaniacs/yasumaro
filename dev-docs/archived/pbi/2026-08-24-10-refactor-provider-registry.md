@@ -35,12 +35,12 @@ Scenario: 型レベルで未定義プロバイダが検出される
 ```
 
 ## 受け入れ基準
-- [ ] `src/utils/storage/types.ts` または `src/background/ai/providerRegistry.ts` に `ProviderRegistry: Map<ProviderId, {baseUrlKey, apiKeyKey, modelKey, defaultBaseUrl?, requiresApiKey, isLocal}>` を新設 (Layer 0)
-- [ ] `src/background/ai/providers/OpenAIProvider.ts` の 5分岐コンストラクタを `GenericOpenAICompatibleProvider(RegistryEntry)` に置換。`isLocalUrl` / `timeoutMs` / `getMaxContentLength` の分岐を `entry.requiresApiKey` / `entry.isLocal` から導出
-- [ ] `src/utils/aiModelKey.ts` の `normalizeProviderKeyName` / `resolveModelKey` を registry ルックアップに置換するか、互換 shim として残しつつ内部をテーブル参照に
-- [ ] `src/background/ai/RemoteAIService.ts:registerDefaultProviders` が `for (entry of registry) register(entry.id, ...)` のループに
-- [ ] 既存テストが全パス (RemoteAIService 7プロバイダの testConnection/generateSummary)
-- [ ] 新規 registry 単体テスト (各 entry の baseUrl解決、default値、isLocal判定)
+- [x] `src/utils/storage/types.ts` または `src/background/ai/providerRegistry.ts` に `ProviderRegistry: Map<ProviderId, {baseUrlKey, apiKeyKey, modelKey, defaultBaseUrl?, requiresApiKey, isLocal}>` を新設 (Layer 0)
+- [x] `src/background/ai/providers/OpenAIProvider.ts` の 5分岐コンストラクタを `GenericOpenAICompatibleProvider(RegistryEntry)` に置換。`isLocalUrl` / `timeoutMs` / `getMaxContentLength` の分岐を `entry.requiresApiKey` / `entry.isLocal` から導出
+- [x] `src/utils/aiModelKey.ts` の `normalizeProviderKeyName` / `resolveModelKey` を registry ルックアップに置換するか、互換 shim として残しつつ内部をテーブル参照に
+- [x] `src/background/ai/RemoteAIService.ts:registerDefaultProviders` が `for (entry of registry) register(entry.id, ...)` のループに
+- [x] 既存テストが全パス (RemoteAIService 7プロバイダの testConnection/generateSummary)
+- [x] 新規 registry 単体テスト (各 entry の baseUrl解決、default値、isLocal判定)
 
 ## テスト戦略
 
@@ -62,6 +62,6 @@ Scenario: 型レベルで未定義プロバイダが検出される
 - リスク: OpenAIProvider の削除は影響範囲広いため、旧クラスは @deprecated shim として1スプリント残置も可
 
 ## Definition of Done
-- [ ] 全BDDシナリオがテストで検証され PASS
-- [ ] type-check / lint / test PASS
-- [ ] 新プロバイダ追加手順を docs に1行追記 (registry 1行追加)
+- [x] 全BDDシナリオがテストで検証され PASS
+- [x] type-check / lint / test PASS
+- [x] 新プロバイダ追加手順を docs に1行追記 (registry 1行追加)
