@@ -1,6 +1,6 @@
 /**
  * OpenAIProvider
- * OpenAI互換APIを使用するAIプロバイダー
+ * OpenAI互換APIを使用するAIプロバイダー — registry 駆動の Generic 実装
  */
 
 import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
@@ -11,7 +11,7 @@ import { Settings, StorageKeys } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 
-import { normalizeProviderKeyName, resolveModelKey } from '../../../utils/aiModelKey.js';
+import { getRegistryEntry } from '../providerRegistry.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 
 interface OpenAIApiResponse {
@@ -19,12 +19,13 @@ interface OpenAIApiResponse {
     usage?: { prompt_tokens?: number; completion_tokens?: number };
 }
 
-export class OpenAIProvider extends AIProviderStrategy {
-    private providerName: string;
-    private baseUrl: string;
-    private apiKey: string | undefined;
-    private model: string;
-    private timeoutMs: number;
+export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
+    protected providerName: string;
+    protected baseUrl: string;
+    protected apiKey: string | undefined;
+    protected model: string;
+    protected timeoutMs: number;
+    protected isLocal: boolean;
 
     constructor(settings: Settings, providerName: string = 'openai') {
         super(settings);
@@ -33,27 +34,32 @@ export class OpenAIProvider extends AIProviderStrategy {
         const s = settings as Record<string, unknown>;
         const str = (key: string, fallback = '') => String(s[key] ?? fallback) || fallback;
 
-        // For openai-compatible provider, use generic provider keys
-        if (providerName === 'openai-compatible') {
-            this.baseUrl = str(StorageKeys.PROVIDER_BASE_URL);
-            this.apiKey = s[StorageKeys.PROVIDER_API_KEY] as string | undefined;
-            this.model = str(StorageKeys.PROVIDER_MODEL);
-        } else if (providerName === 'lm-studio') {
-            // LM Studio専用キー（APIキー不要）
-            this.baseUrl = str(StorageKeys.LM_STUDIO_BASE_URL, 'http://127.0.0.1:1234/v1');
-            this.apiKey = undefined;
-            this.model = str(StorageKeys.LM_STUDIO_MODEL);
-        } else if (providerName === 'ollama') {
-            // Ollama専用キー（APIキー不要）
-            this.baseUrl = str(StorageKeys.OLLAMA_BASE_URL, 'http://localhost:11434/v1');
-            this.apiKey = undefined;
-            this.model = str(StorageKeys.OLLAMA_MODEL);
+        const entry = getRegistryEntry(providerName);
+        if (entry) {
+            if (entry.baseUrlKey) {
+                this.baseUrl = str(entry.baseUrlKey, entry.defaultBaseUrl ?? '');
+            } else {
+                this.baseUrl = entry.defaultBaseUrl ?? '';
+            }
+            if (entry.apiKeyKey) {
+                this.apiKey = s[entry.apiKeyKey] as string | undefined;
+            } else {
+                this.apiKey = undefined;
+            }
+            if (entry.modelKey) {
+                this.model = str(entry.modelKey, entry.defaultModel ?? '');
+            } else {
+                this.model = entry.defaultModel ?? '';
+            }
+            this.isLocal = entry.isLocal;
         } else {
-            // snake_caseキー名を使用（storage.jsのStorageKeysと対応）
-            const normalizedName = normalizeProviderKeyName(providerName);
+            // Fallback for unknown providers — preserve legacy string-replace behavior
+            const normalizedName = providerName.replace('2', '_2').replace(/-/g, '_').toLowerCase();
             this.baseUrl = str(`${normalizedName}_base_url`, 'https://api.openai.com/v1');
             this.apiKey = s[`${normalizedName}_api_key`] as string | undefined;
-            this.model = str(resolveModelKey(providerName), 'gpt-3.5-turbo');
+            const modelKey = providerName === 'openai-compatible' ? StorageKeys.PROVIDER_MODEL : `${normalizedName}_model`;
+            this.model = str(modelKey, 'gpt-3.5-turbo');
+            this.isLocal = this.baseUrl ? GenericOpenAICompatibleProvider.isLocalUrl(this.baseUrl) : false;
         }
 
         // BaseUrl SSRF対策
@@ -66,18 +72,16 @@ export class OpenAIProvider extends AIProviderStrategy {
             }
         }
 
-        // タイムアウト設定: 0=自動（ローカル=120秒、クラウド=30秒）
+        // タイムアウト設定: 0=自動（isLocal から導出）
         const storedTimeout = Number(s[StorageKeys.AI_TIMEOUT_MS] ?? 0);
         if (storedTimeout > 0) {
             this.timeoutMs = storedTimeout;
         } else {
-            // ローカルホスト（127.x.x.x / localhost）かどうかで自動判定
-            const isLocal = this.baseUrl ? OpenAIProvider.isLocalUrl(this.baseUrl) : false;
-            this.timeoutMs = isLocal ? 120000 : 30000;
+            this.timeoutMs = this.isLocal ? 120000 : 30000;
         }
     }
 
-    private static isLocalUrl(url: string): boolean {
+    static isLocalUrl(url: string): boolean {
         try {
             const { hostname } = new URL(url);
             if (hostname === 'localhost' || hostname.endsWith('.localhost')) return true;
@@ -116,7 +120,7 @@ export class OpenAIProvider extends AIProviderStrategy {
 
         const trimmedBaseUrl = this.baseUrl.replace(/\/$/, '');
         const url = `${trimmedBaseUrl}/chat/completions`;
-        const contentLimit = OpenAIProvider.isLocalUrl(this.baseUrl)
+        const contentLimit = this.isLocal
             ? 4000
             : this.getMaxContentLength();
         const truncatedContent = content.substring(0, contentLimit);
@@ -300,5 +304,19 @@ export class OpenAIProvider extends AIProviderStrategy {
         await this.recordUsageIfPresent(sentTokens, receivedTokens);
 
         return { success: true, summary: content, providerName: this.providerName, modelName: this.model, ...pickDefined({ sentTokens, receivedTokens }) };
+    }
+}
+
+/**
+ * @deprecated Use GenericOpenAICompatibleProvider directly. Kept for backward compatibility.
+ */
+export class OpenAIProvider extends GenericOpenAICompatibleProvider {
+    constructor(settings: Settings, providerName: string = 'openai') {
+        super(settings, providerName);
+    }
+
+    // Keep static helper for callers that reference OpenAIProvider.isLocalUrl
+    static override isLocalUrl(url: string): boolean {
+        return GenericOpenAICompatibleProvider.isLocalUrl(url);
     }
 }

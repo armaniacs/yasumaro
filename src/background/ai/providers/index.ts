@@ -1,5 +1,5 @@
 export { AIProviderStrategy } from './ProviderStrategy.js';
 export type { AISummaryResult } from './ProviderStrategy.js';
 export { GeminiProvider } from './GeminiProvider.js';
-export { OpenAIProvider } from './OpenAIProvider.js';
+export { OpenAIProvider, GenericOpenAICompatibleProvider } from './OpenAIProvider.js';
 export { BuiltInAiProvider } from './BuiltInAiProvider.js';

@@ -9,13 +9,17 @@ import type { EncryptedData } from '../crypto/types.js';
 import type { UblockRules, Source, CustomPrompt, MarkdownExportTemplate, TagCategory, TagNormalizationEntry } from '../types.js';
 import type { SafetyMode, TrancoTier } from '../trustDb/trustDbSchema.js';
 
+export type SqliteHealthCheck = () => Promise<boolean>;
+
+export type ProviderId = 'gemini' | 'openai' | 'openai2' | 'lm-studio' | 'ollama' | 'openai-compatible' | 'built-in-ai';
+
 /**
  * AIプロバイダ優先度スロット
  * provider: 既存6種のプロバイダID ('gemini' | 'openai' | 'openai2' | 'lm-studio' | 'ollama' | 'openai-compatible')
  * model: 省略時はそのプロバイダの既存モデル設定値（例: gemini_model）を使用する
  */
 export interface ProviderSlot {
-    provider: string;
+    provider: ProviderId | (string & {});
     model?: string;
 }
 
