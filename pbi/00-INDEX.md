@@ -42,86 +42,17 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
-### 2026-08-24 Architecture Deepening（arch-delivery-loop）0824b — 2件完了・2件deferred + ブロッカー解消
+### 2026-08-24 Architecture Deepening（arch-delivery-loop）0824b — 3件完了・1件deferred + ブロッカー解消
 
 - 2026-08-24-08-fix-cookie-consent-cleansing.md（Blocker — OneTrust cookie バナー統合欠落 2 tests FAIL を解消。`entrypoints/options/index.html` に `ai-summary-cleansing-cookie` checkbox 追加、`public/_locales/*/messages.json` に `aiSummaryCleansingCookieDesc` 追加、`src/dashboard/settings/aiSummaryCleansingSettingsV2.ts` の `AiSummaryCleansingSettings` を mapped type `RuleKey` 導出に置換、`src/utils/__tests__/aiSummaryCleaner.test.ts` の全無効テストに `cookieEnabled:false` 等 8 flags 追加 + `recommend/popup/cookie` の合計期待値に `cookieRemoved` 追加。8383 tests PASS）
 - 2026-08-24-09-refactor-cleansing-config-codec.md（RICE 64.0 — AiSummaryCleansingSettings の手書き32項目を `RuleKey` からの mapped type `Record<`${RuleKey}Enabled`, boolean>` に置換し SSOT を `CLEANSING_RULES` に一本化。`entrypoints/options/index.html` の手書き重複を型レベルで検出可能に。残り `cleansingConfigCodec.ts` pure decode の extractor 統合は次スプリントへ）
+- 2026-08-24-10-refactor-provider-registry.md（RICE 11.2 — ProviderRegistry Map 新設により OpenAIProvider 5分岐を GenericOpenAICompatibleProvider に集約。isLocalUrl/timeout/contentLimit を entry.isLocal から導出、aiModelKey を registry ルックアップの互換 shim に置換、RemoteAIService.registerDefaultProviders を registry ループに。ProviderId union を storage/types.ts に追加、registry 単体テスト 11件追加。type-check / lint / 8366テスト PASS）
 - 2026-08-24-00-backlog-0824b.md（5件のRICEスコアリングバックログ — 依存図 + 5 Whysサマリー、P0ブロッカー + C1/C4/C3/C5 + deferred 4件統合）
 
-#### 0824b deferred 2件（次スプリント）
+#### 0824b deferred 1件（次スプリント）
 
-- 2026-08-24-10-refactor-provider-registry.md（RICE 11.2 — OpenAIProvider 5分岐→Registryテーブル駆動化。GenericOpenAICompatibleProvider + ProviderRegistry Map。requiresApiKey/isLocal で timeout/contentLimit を導出）
 - 2026-08-24-11-refactor-sqlite-shim-deletion.md（RICE 20.0 — SqliteClient 20 shim削除 + call分割 4 helper。pure deletion、production消費者0）
 
-### 2026-08-24 Architecture Deepening（arch-delivery-loop）0824a — 3件完了・4件deferred
-
-- 2026-08-24-01-refactor-settings-repository-shim.md（RICE 22.5 — SettingsRepository shim 66行削除 + InMemoryStorageAdapter.getSettings を applyMigrationsAndDecrypt(…, false) で本番ミラー化 + cspSettings等29テストの SettingsRepository モック移行 + settingsStore.legacy static wrapper化 + chrome.storage cache 復元。994 tests PASS）
-- 2026-08-24-03-refactor-ai-provider-typed-dispatch.md（RICE 11.2 — ProviderId union 7種 + ProviderSlot.provider を ProviderId | string に移行し型安全の基盤を構築。 resolveModelKey の集中は次PBIで Registry へ）
-- 2026-08-24-05-refactor-layer-inversion.md（RICE 9.6 — SqliteHealthCheck を types.ts Layer 0 に抽出 + storageMaintenance.ts の utils→background 動的importを除去し Layer 循環を解消。 offscreen の chrome.storage 読取は deprecated 注記）
-
-#### 0824a deferred 4件（次スプリント）
-
-- 2026-08-24-02-refactor-storage-keys-facade.md（RICE 10.67 — StorageKeys god-type に facade 追加。130キー一括はリスク高のため PBI-01 の clean seam 上で incremental に着手。DOD: getObsidianConfig 等3 facade から）
-- 2026-08-24-04-refactor-pipeline-composition-root.md（RICE 3.0 — RecordingPipelineDeps 純粋化 + PerUrlMutexMap static 排除。 createBackgroundServices 216行の段階的縮退は interface 分離から）
-- 2026-08-24-06-refactor-content-extractor-global-state.md（RICE 1.6 — PageState per-tab factory + extractor 594行分解。 Speculative のため訪門ゲートの純粋関数化から単独着手）
-- 2026-08-24-07-refactor-offscreen-dispatch-guard.md（RICE 48.0 — 24-case switch を Map + 共通 assertPayloadSize へ。セキュリティ cross-cutting のため payloadGuard の単体テストから着手し 24 handler を1件ずつ移行）
-- 2026-08-24-00-backlog-0824a.md（7件のRICEスコアリングバックログ — 依存図 + なぜなぜ分析）
-
-### 2026-08-24 Architecture Deepening（arch-delivery-loop）7件 進行中
-
-- 2026-08-24-01-refactor-settings-repository-shim.md（RICE 22.5 — shim 廃止 + StorageAdapter 注入統一）
-- 2026-08-24-02-refactor-storage-keys-facade.md（RICE 10.67 — god-type に facade 追加、incremental）
-- 2026-08-24-03-refactor-ai-provider-typed-dispatch.md（RICE 11.2 — ProviderId union + Registry）
-- 2026-08-24-04-refactor-pipeline-composition-root.md（RICE 3.0 — RecordingPipelineDeps + cache 一元化）
-- 2026-08-24-05-refactor-layer-inversion.md（RICE 9.6 — SqliteHealthCheck 注入 + offscreen chrome.storage 除去）
-- 2026-08-24-06-refactor-content-extractor-global-state.md（RICE 1.6 — per-tab PageState + extractor 分解）
-- 2026-08-24-07-refactor-offscreen-dispatch-guard.md（RICE 48.0 — 24-case switch → Map + 共通 guard）
-- 2026-08-24-00-backlog-0824a.md（7件の RICE スコアリングバックログ — 依存図 + なぜなぜ分析）
-
-### 2026-08-24 Architecture Deepening（arch-delivery-loop）deferred 2件
-
-- 2026-08-24-02-refactor-content-extractor-fallback.md（RICE 19.2 — content extraction の中核を跨ぐ高リスクなため今回見送り。次スプリントで `resolveFallbackPolicy` の純粋関数化を単独着手）
-- 2026-08-24-06-refactor-message-validation-collapse.md（RICE 6.7 — trust/security 層に直結し副作用ありのため今回見送り。次スプリントで型レベルの `satisfies` 表明置換を単独着手）
-
-### 2026-08-24 Architecture Deepening（arch-delivery-loop）5件 完了
-
-- 2026-08-24-01-refactor-loader-domain-policy.md（RICE 26.7 — `loader.ts` から domain policy を `src/content/domainPolicy.ts` に抽出し `StorageKeys` 再定義を廃止。`storage/types.js` の単一ソースへ。`loader-no-static-imports.test.ts` を新構造に更新）
-- 2026-08-24-03-refactor-visit-rate-limiter-extraction.md（RICE 16.0 — `recordingHandlers` の module-level Map を `src/background/visitRateLimiter.ts` の注入可能な `VisitRateLimiter` + `VisitRateLimiterStore` adapter に抽出。`isRateLimitedVisit`/`resetVisitRateLimiter` はシングルトン委譲で後方互換維持）
-- 2026-08-24-04-refactor-piistripper-shim-removal.md（RICE 10.0 — 非推奨 `piiStripper.ts` shim を削除し、テスト import を `piiBoundary` へ移行）
-- 2026-08-24-05-fix-csp-settings-listener-leak.md（RICE 8.0 — `CspSettingsController.loadCSPSettings` の listener 重ね掛けを `AbortController` で一括破棄。signal を bind メソッドへ注入）
-- 2026-08-24-07-refactor-sync-target-registry-deletion.md（RICE 2.5 — 未使用 `syncTargetRegistry.ts` と専用テストを削除。本番消費者0件を確認）
-
-### 2026-08-24 SqliteValue 型統一 + sqliteEngineContext 循環 import 解消
-
-- 2026-08-24-03-refactor-sqlitevalue-cycle.md（`SqliteValue` 型を `src/offscreen/sqliteEngine.ts` に集約し、`sqliteEngineContext.ts` からは re-export。子モジュール 5 ファイルの import 元を変更。`graphify update .` 後、Import Cycles が "None detected" に。type-check / test / build PASS）
-
-### 2026-08-24 hmac_secret暗号化 + PBI-08懸念の再検証完了
-
-- 2026-08-24-01-fix-hmac-secret-encryption.md（設定インポート署名鍵`hmac_secret`を平文base64からwrapped envelope形式（AES-GCM、既存KEK共有）に変更。`hmacKeyStore.ts`に`wrapSecretString`/`unwrapSecretString`/`isWrappedSecretString`を追加、`getOrCreateHmacWrappingKey`のkey usagesに`encrypt`/`decrypt`を追加。旧形式は透過的にマイグレーション。KEKのlocal storageフォールバックは「偶発的漏洩への多層防御」として現状維持と結論、真の防御はマスターパスワード由来KEK統合が必要として別スコープ化。8385テスト成功)
-- 2026-08-24-02-investigate-record-mutex-coverage.md（対応不要と判明。`RecordingPipeline.execute()` が入口で一律Mutex化されており、`skipDuplicateCheck: true` を渡す MANUAL_RECORD/SAVE_RECORD 経路も含めて直列化されることを統合テストで確認。`.superpowers/sdd/pbi-08-report.md` に解消済み注記を追記）
-
-### 2026-08-23 Architecture Deepening 7件 完了
-
-- 2026-08-23-01-fix-protocol-version-single-source.md (RICE 600 — `wxt.config.ts` に `define.__PROTOCOL_VERSION__` で SSOT 単一ソース化。`loader.ts` のハードコードを `__PROTOCOL_VERSION__` 参照に置換。`protocol-sync.test.ts` 3件追加)
-- 2026-08-23-02-fix-pii-stripper-boundary.md (RICE 400 — `src/background/pipeline/piiBoundary.ts` を新設し PII 境界を単一 seam に集約。`RecordingPipeline` preview path で `toExternalResult` を使用。`recordingHandlers.ts` 3箇所の strip 重複を削除。`piiStripper.ts` は deprecated shim に移行。`piiBoundary.test.ts` 3件追加)
-- 2026-08-23-03-refactor-storage-triple-cache-unify.md (RICE 240 — `RecordingCache.ensureStorageListener()` で `chrome.storage.onChanged('settings')` を検知し 30s stale を解消。`createBackgroundServices` で自動接続。完全な SettingsCache モジュール統合は PBI-04 と合わせて段階的に)
-- 2026-08-23-04-refactor-settings-repository-polymorphic.md (RICE 480 — `StorageAdapter` に `getSettings/setSettings` を追加し両 Adapter が多態的に実装。`SettingsRepository` 6メソッドの `instanceof` 分岐を全削除。`ChromeStorageAdapter` は dynamic import で settingsStore に委譲、`InMemoryAdapter` は Map + DEFAULT_SETTINGS で完結。storage 9テスト全パス)
-- 2026-08-23-05-refactor-message-validation-collapse.md (RICE 152 — `messageTypes.ts` に `CONTENT_SCRIPT_ALLOWED_TYPES` (4要素) を SSOT として定義。`MessageRouter` は `new Set(CONTENT_SCRIPT_ALLOWED_TYPES)` で trust table を派生。二重定義を解消)
-- 2026-08-23-06-refactor-extractor-god-module-split.md (RICE 60 — `privacyDialog.ts` を抽出。Shadow DOM + a11y の知識を独立モジュールに隠蔽。extractor.ts は import に変更し re-export で後方互換維持。残り2抽出 (visitTracker/settingsLoader) は将来PBIで段階的に)
-- 2026-08-23-07-refactor-create-background-services-di.md (RICE 34 — `serviceContainer.ts` を新設。`ServiceContainer` に `register/resolve/override/has` を実装。`createBackgroundServices` への完全統合は段階的に)
-- 2026-08-23-00-backlog-arch-deepening.md (7件のRICEスコアリングバックログ — Reach/Impact/Confidence/Effort + 依存図)
-
-### 2026-08-23 Architecture Deepening 0823a 8件 完了（RICE順）
-
-- 2026-08-23-01-refactor-extractor-remaining-split.md (RICE 720 — `extractor.ts` 593→97行に縮小。`settingsLoader.ts`/`visitTracker.ts`/`validVisitReporter.ts`/`utils/throttle.ts` に4責務を分割。`CLEANSING_RULES.map` で32ルール導出。テスト21件追加。8400 tests PASS)
-- 2026-08-23-02-refactor-service-container-migration.md (RICE 480 — `serviceContainer.ts` を `Symbol` typed token 22個に移行。`createBackgroundServices.ts` の22 new を `container.register` に置換。`singleton:true` で二重生成を静的防止。79 files 1170 tests PASS)
-- 2026-08-23-03-refactor-message-handler-single-layer.md (RICE 360 — `messageHandler.ts` 6段if を `MessageRouter` に吸収。`CONTENT_SCRIPT_ALLOWED_TYPES` SSOT に統一。`service-worker.ts` の配線を簡素化。`MessageRouter` に protocolVersion/logWarn/CHECK_DOMAIN ガードを追加。79 files 1170 tests PASS)
-- 2026-08-23-04-refactor-settings-store-retirement.md (RICE 240 — `ChromeStorageAdapter` を `chrome.storage.local` 直読みに変更し循環を断つ。`settingsStore.ts` を `settingsStore.legacy.ts` に退避し shim 化。10 call sites を `SettingsRepository` に移行。eslint `no-restricted-imports` で新規直import禁止。51 storage tests PASS)
-- 2026-08-23-05-refactor-system-handlers-split.md (RICE 180 — `systemHandlers.ts` 287行を `fetchHandlers.ts`/`badgeHandlers.ts`/`lifecycleSystemHandlers.ts` に3分割。`VisitRateLimiter` を `visitRateLimiter.ts` に抽出。229 handler tests PASS)
-- 2026-08-23-06-refactor-recording-pipeline-split.md (RICE 120 — `RecordingPipeline.ts` 519→192行に縮小。`PerUrlMutexMap`/`StepExecutor` に分離。steps宣言は保持し実行を委譲。9 files 78 tests PASS)
-- 2026-08-23-07-refactor-return-info-trap.md (RICE 96 — `contentExtractor/index.ts` の `returnInfo: boolean` union を `extractMainContent`/`extractMainContentWithInfo` の2メソッドに分割。`pageContentPipeline` を唯一の public seam に。226 tests PASS)
-- 2026-08-23-08-refactor-protocol-ssot.md (RICE 80 — `wxt.config.ts:36` を `protocol.ts` からの import 由来に変更。`loader.ts` の fallback `? 1` を削除。`define.__PROTOCOL_VERSION__` で完全SSOT化。499 files 8400 tests PASS)
-- 2026-08-23-00-backlog-0823a.md (8件のRICEスコアリングバックログ — Phase 0 HTMLレポート 8候補)
 
 ### 2026-08-23 Adversarial Review 13件 RICE対応完了
 
