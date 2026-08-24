@@ -24,22 +24,17 @@ type CleansingConfigRuleFlags = {
 };
 
 // 【クレンジング設定】: コンテンツクレンジングとAI要約クレンジングの設定を一括管理
-export interface CleansingConfig extends CleansingConfigRuleFlags {
+// ThresholdProp (7 numeric thresholds) is intersected so that cfg[t.prop] is type-safe
+// without unsafe casts in extractor.ts. Fixed fields exclude the 7 threshold
+// props to avoid duplicate-key declarations.
+export interface CleansingConfig extends CleansingConfigRuleFlags, Record<ThresholdProp, number> {
     contentStripHardEnabled: boolean;
     contentStripKeywordEnabled: boolean;
     contentStripKeywords: string[];
     aiSummaryCleansingEnabled: boolean;
     whitelistExtractionEnabled: boolean;
-    aiSummaryCleansingLinkRatioThreshold: number;
-    aiSummaryCleansingShortTextThreshold: number;
-    aiSummaryCleansingShortSeqCount: number;
-    aiSummaryCleansingLinkParaThreshold: number;
     aiSummaryCleansingCustomPatterns: string[];
-    // Over-cleansed fallback thresholds
-    aiSummaryCleansingFallbackRatio: number;
-    aiSummaryCleansingFallbackMinBytes: number;
     contentDedupEnabled: boolean;
-    contentDedupThreshold: number;
 }
 
 /**
