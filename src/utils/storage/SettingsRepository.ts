@@ -1,5 +1,5 @@
 // @layer 1 — Infrastructure: settings repository seam (deep module, hides 30+ scattered StorageKeys accesses)
- /**
+/**
  * SettingsRepository — deep module hiding the 30 scattered StorageKeys accesses
  *
  * StorageKeys (30+) are defined in storage/types.ts but the actual
@@ -16,8 +16,7 @@
  *
  * Seam is local-substitutable: StorageAdapter has chrome.storage prod and
  * InMemory test adapters. Two adapters justify the seam (one would be
- * hypothetical). Depends on PBI 05 Settings Schema for DOM side and PBI 04
- * PanelLifecycle for onChange wiring — soft dependencies, hence last in order.
+ * hypothetical).
  */
 
 import type { StorageKey, Settings as SettingsType } from './types.js';
@@ -137,8 +136,10 @@ export class InMemoryStorageAdapter implements StorageAdapter {
   async getSettings(): Promise<SettingsType> {
     const result = await this.get(['settings']);
     const settings = (result['settings'] as SettingsType) || ({} as SettingsType);
-    const { DEFAULT_SETTINGS } = await import('./defaults.js');
-    return { ...(DEFAULT_SETTINGS as unknown as SettingsType), ...settings };
+    const { applyMigrationsAndDecrypt } = await import('./settingsMigration.js');
+    // rawEncrypted: false because InMemory tests use plaintext values and
+    // must not touch chrome.storage for re-encryption.
+    return applyMigrationsAndDecrypt(settings, false);
   }
   async setSettings(settings: SettingsType): Promise<void> {
     await this.set({ settings });
@@ -155,83 +156,6 @@ export class SettingsRepository {
 
   constructor(adapter: StorageAdapter = new ChromeStorageAdapter()) {
     this.adapter = adapter;
-  }
-
-  // Compatibility shim for tests migrated from legacy getSettings/saveSettings mocks (PBI-04).
-  // Production code uses SettingsRepository directly; tests still mock the old
-  // `getSettings`/`saveSettings` from settingsStore/types.js barrel. In Vitest
-  // we delegate to those mocks so old test setup
-  // (`vi.mocked(getSettings).mockResolvedValue(...)` or wrapper
-  // `(...args) => mockGetSettings(...args)`) continues to drive
-  // SettingsRepository without editing 30+ test files. In production (no
-  // VITEST) we go straight to the adapter.
-  private async tryLegacyGetAll(): Promise<SettingsType | null | undefined> {
-    const candidates: string[] = [
-      './settingsStore.js',
-      './types.js',
-      './defaults.js',
-      './encryptionSession.js',
-      './savedUrlRepository.js',
-      './domainFilterCache.js',
-      './quota.js',
-      '../storage.js',
-    ];
-    for (const path of candidates) {
-      let mod: Record<string, unknown>;
-      try {
-        mod = await import(path) as Record<string, unknown>;
-      } catch {
-        continue;
-      }
-      let fn: unknown;
-      try {
-        fn = (mod as Record<string, unknown>)['getSettings'];
-      } catch {
-        continue;
-      }
-      if (typeof fn !== 'function') continue;
-      const hasMockProp = (fn as unknown as { mock?: unknown }).mock !== undefined;
-      const fnStr = (() => { try { return (fn as () => unknown).toString(); } catch { return ''; } })();
-      const isMockLike = hasMockProp || fnStr.includes('mock');
-      if (!isMockLike) continue;
-      // Propagate rejection (mockRejectedValue) — do not swallow
-      const result = await (fn as () => Promise<SettingsType>)();
-      if (result !== undefined) return result as SettingsType | null;
-    }
-    return undefined;
-  }
-
-  private async tryLegacySave(settings: SettingsType): Promise<boolean> {
-    const candidates: string[] = [
-      './settingsStore.js',
-      './types.js',
-      './defaults.js',
-      './encryptionSession.js',
-      './savedUrlRepository.js',
-      './domainFilterCache.js',
-      './quota.js',
-      '../storage.js',
-    ];
-    for (const path of candidates) {
-      let mod: Record<string, unknown>;
-      try {
-        mod = await import(path) as Record<string, unknown>;
-      } catch {
-        continue;
-      }
-      let fn: unknown;
-      try {
-        fn = (mod as Record<string, unknown>)['saveSettings'];
-      } catch {
-        continue;
-      }
-      if (typeof fn !== 'function') continue;
-      const isMockLike = (fn as unknown as { mock?: unknown }).mock !== undefined || (() => { try { return (fn as () => unknown).toString().includes('mock'); } catch { return false; } })();
-      if (!isMockLike) continue;
-      await (fn as (s: SettingsType) => Promise<void>)(settings);
-      return true;
-    }
-    return false;
   }
 
   /**
@@ -262,27 +186,18 @@ export class SettingsRepository {
   }
 
   async getAll(): Promise<SettingsType> {
-    // Prefer legacy mock when tests have installed one (see shim comment above)
-    try {
-      const legacy = await this.tryLegacyGetAll();
-      if (legacy !== undefined) return legacy as SettingsType;
-    } catch (e) {
-      throw e;
-    }
     return this.adapter.getSettings();
   }
 
   async set<K extends StorageKey>(key: K, value: SettingsType[K]): Promise<void> {
     const current = await this.getAll();
     const next = { ...current, [key]: value } as SettingsType;
-    if (await this.tryLegacySave(next)) return;
     await this.adapter.setSettings(next);
   }
 
   async setAll(settings: Partial<SettingsType>): Promise<void> {
     const current = await this.getAll();
     const next = { ...current, ...settings } as SettingsType;
-    if (await this.tryLegacySave(next)) return;
     await this.adapter.setSettings(next);
   }
 

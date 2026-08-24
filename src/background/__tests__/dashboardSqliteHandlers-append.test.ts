@@ -6,6 +6,8 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
+const mockGetAll = vi.hoisted(() => vi.fn());
+
 // Mock dependencies
 vi.mock('../../utils/logger.js', () => ({
   logError: vi.fn(),
@@ -19,172 +21,31 @@ vi.mock('../../utils/errorUtils.js', () => ({
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
+  return {
+    ...actual,
     StorageKeys: {
       OBSIDIAN_API_KEY: 'obsidian_api_key',
       OBSIDIAN_ENABLED: 'obsidian_enabled',
     },
-    getSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+});
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-    },
-    getSettings: vi.fn(),
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
+    settingsRepository: {
+      getAll: mockGetAll,
+      setAll: vi.fn(),
+      getMany: vi.fn(),
     },
-    getSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      setAll = vi.fn();
+      getMany = vi.fn();
     },
-    getSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-    },
-    getSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-    },
-    getSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-    },
-    getSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 vi.mock('../obsidianClient.js', () => {
   const mockAppend = vi.fn().mockResolvedValue(undefined);
@@ -209,7 +70,6 @@ const APPEND_TOKEN = 'test-token';
 import { ObsidianClient } from '../obsidianClient.js';
 import { formatEntriesToMarkdown } from '../../dashboard/obsidianFormatter.js';
 import { logError, logInfo } from '../../utils/logger.js';
-import { getSettings } from '../../utils/storage.js';
 
 // Helper to create a mock SqliteClient
 function createMockSqliteClient(rows: unknown[] = []) {
@@ -275,7 +135,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       obsidian_api_key: 'valid-api-key-123456',
       obsidian_enabled: true,
     };
-    vi.mocked(getSettings).mockResolvedValue({ ...defaults, ...overrides } as any);
+    mockGetAll.mockResolvedValue({ ...defaults, ...overrides } as any);
   }
 
   beforeEach(() => {

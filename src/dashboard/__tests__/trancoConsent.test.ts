@@ -30,210 +30,51 @@ vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
     showStatus: vi.fn(),
 }));
 
+const { mockGetAll, mockGetMany, mockSetAll } = vi.hoisted(() => ({
+    mockGetAll: vi.fn().mockResolvedValue({}),
+    mockGetMany: vi.fn().mockResolvedValue({}),
+    mockSetAll: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-      StorageKeys: {
+  return {
+    ...actual,
+    StorageKeys: {
           TRANCO_VERSION: 'tranco_version',
           TRANCO_DOMAINS: 'tranco_domains',
           TRANCO_CONSENT_GRANTED: 'tranco_consent_granted',
           TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
           TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
       },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+});
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-      StorageKeys: {
-          TRANCO_VERSION: 'tranco_version',
-          TRANCO_DOMAINS: 'tranco_domains',
-          TRANCO_CONSENT_GRANTED: 'tranco_consent_granted',
-          TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
-          TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
-      },
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
+    settingsRepository: {
+      getAll: mockGetAll,
+      getMany: mockGetMany,
+      setAll: mockSetAll,
+      get: vi.fn(),
+      set: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      getMany = mockGetMany;
+      setAll = mockSetAll;
+      get = vi.fn();
+      set = vi.fn();
+    },
   };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-      StorageKeys: {
-          TRANCO_VERSION: 'tranco_version',
-          TRANCO_DOMAINS: 'tranco_domains',
-          TRANCO_CONSENT_GRANTED: 'tranco_consent_granted',
-          TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
-          TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
-      },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-      StorageKeys: {
-          TRANCO_VERSION: 'tranco_version',
-          TRANCO_DOMAINS: 'tranco_domains',
-          TRANCO_CONSENT_GRANTED: 'tranco_consent_granted',
-          TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
-          TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
-      },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-      StorageKeys: {
-          TRANCO_VERSION: 'tranco_version',
-          TRANCO_DOMAINS: 'tranco_domains',
-          TRANCO_CONSENT_GRANTED: 'tranco_consent_granted',
-          TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
-          TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
-      },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-      StorageKeys: {
-          TRANCO_VERSION: 'tranco_version',
-          TRANCO_DOMAINS: 'tranco_domains',
-          TRANCO_CONSENT_GRANTED: 'tranco_consent_granted',
-          TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
-          TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
-      },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-      StorageKeys: {
-          TRANCO_VERSION: 'tranco_version',
-          TRANCO_DOMAINS: 'tranco_domains',
-          TRANCO_CONSENT_GRANTED: 'tranco_consent_granted',
-          TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
-          TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
-      },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 // Import after mocks
 import { initTrancoConsentPanel } from '../trancoConsent.js';
-import { getSettings, saveSettingsWithAllowedUrls } from '../../utils/storage.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
-const mockedGetSettings = getSettings as ReturnType<typeof vi.fn>;
-const mockedSaveSettings = saveSettingsWithAllowedUrls as ReturnType<typeof vi.fn>;
 const mockedShowStatus = showStatus as ReturnType<typeof vi.fn>;
 
 function getBaseDom(): string {
@@ -251,8 +92,13 @@ describe('initTrancoConsentPanel', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockGetAll.mockReset();
+        mockGetMany.mockReset();
+        mockSetAll.mockReset();
         settingsReturn = {};
-        mockedGetSettings.mockImplementation(() => Promise.resolve(settingsReturn));
+        mockGetAll.mockImplementation(() => Promise.resolve(settingsReturn));
+        mockGetMany.mockImplementation(() => Promise.resolve(settingsReturn));
+        mockSetAll.mockResolvedValue(undefined);
     });
 
     it('returns early when UI elements not found', async () => {
@@ -433,7 +279,7 @@ describe('initTrancoConsentPanel', () => {
 
     it('handles error in loading Tranco data', async () => {
         document.body.innerHTML = getBaseDom();
-        mockedGetSettings.mockRejectedValueOnce(new Error('Storage failure'));
+        mockGetMany.mockRejectedValueOnce(new Error('Storage failure'));
 
         await initTrancoConsentPanel();
 
@@ -486,7 +332,7 @@ describe('initTrancoConsentPanel', () => {
         const grantBtn = document.querySelector('.btn-primary') as HTMLButtonElement;
         expect(grantBtn).not.toBeNull();
 
-        mockedSaveSettings.mockResolvedValueOnce(undefined);
+        mockSetAll.mockResolvedValueOnce(undefined);
         // After grant, initTrancoConsentPanel is called again, so set settings for next load
         settingsReturn = {
             tranco_version: '2025-03-15',
@@ -495,15 +341,12 @@ describe('initTrancoConsentPanel', () => {
         };
 
         grantBtn.click();
-        // Wait for async handler
-        await new Promise(r => setTimeout(r, 10));
-
-        expect(mockedSaveSettings).toHaveBeenCalled();
-        expect(mockedShowStatus).toHaveBeenCalledWith(
+        await vi.waitFor(() => expect(mockSetAll).toHaveBeenCalled());
+        await vi.waitFor(() => expect(mockedShowStatus).toHaveBeenCalledWith(
             'trancoStatus',
             'trancoConsentGranted',
             'success'
-        );
+        ));
     });
 
     it('deny button saves denial and refreshes panel', async () => {
@@ -518,17 +361,15 @@ describe('initTrancoConsentPanel', () => {
         const denyBtn = document.querySelector('.btn-secondary') as HTMLButtonElement;
         expect(denyBtn).not.toBeNull();
 
-        mockedSaveSettings.mockResolvedValueOnce(undefined);
+        mockSetAll.mockResolvedValueOnce(undefined);
 
         denyBtn.click();
-        await new Promise(r => setTimeout(r, 10));
-
-        expect(mockedSaveSettings).toHaveBeenCalled();
-        expect(mockedShowStatus).toHaveBeenCalledWith(
+        await vi.waitFor(() => expect(mockSetAll).toHaveBeenCalled());
+        await vi.waitFor(() => expect(mockedShowStatus).toHaveBeenCalledWith(
             'trancoStatus',
             'trancoConsentDenied',
             'error'
-        );
+        ));
     });
 
     it('handles error during grant consent', async () => {
@@ -541,16 +382,14 @@ describe('initTrancoConsentPanel', () => {
         await initTrancoConsentPanel();
 
         const grantBtn = document.querySelector('.btn-primary') as HTMLButtonElement;
-        mockedSaveSettings.mockRejectedValueOnce(new Error('Save failed'));
+        mockSetAll.mockRejectedValueOnce(new Error('Save failed'));
 
         grantBtn.click();
-        await new Promise(r => setTimeout(r, 10));
-
-        expect(mockedShowStatus).toHaveBeenCalledWith(
+        await vi.waitFor(() => expect(mockedShowStatus).toHaveBeenCalledWith(
             'trancoStatus',
             'errorConsentData',
             'error'
-        );
+        ));
     });
 
     it('handles error during deny consent', async () => {
@@ -563,16 +402,14 @@ describe('initTrancoConsentPanel', () => {
         await initTrancoConsentPanel();
 
         const denyBtn = document.querySelector('.btn-secondary') as HTMLButtonElement;
-        mockedSaveSettings.mockRejectedValueOnce(new Error('Save failed'));
+        mockSetAll.mockRejectedValueOnce(new Error('Save failed'));
 
         denyBtn.click();
-        await new Promise(r => setTimeout(r, 10));
-
-        expect(mockedShowStatus).toHaveBeenCalledWith(
+        await vi.waitFor(() => expect(mockedShowStatus).toHaveBeenCalledWith(
             'trancoStatus',
             'errorConsentData',
             'error'
-        );
+        ));
     });
 
     it('handles missing deny reason in settings', async () => {

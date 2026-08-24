@@ -4,7 +4,7 @@ import localPlugin from './eslint/plugin.mjs';
 
 export default [
   {
-    ignores: ['node_modules/', 'dist/', 'testDir/', 'coverage/', 'src/**/__tests__/**'],
+    ignores: ['node_modules/', 'dist/', 'testDir/', 'coverage/', 'src/**/__tests__/**', '.vulnhunter-fix/', 'graphify-out/', 'obsidian-smart-history_VULNHUNT_RESULTS*/'],
   },
   {
     files: ['src/**/*.ts'],

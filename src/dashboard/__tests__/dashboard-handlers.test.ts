@@ -26,6 +26,15 @@ import {
 import { saveSettingsWithAllowedUrls } from '../../utils/storage.js';
 import { resetPlatformOsCache } from '../../utils/deviceUtils.js';
 
+const { mockGetAll, mockSetAll, mockGetMany } = vi.hoisted(() => ({
+  mockGetAll: vi.fn().mockResolvedValue({}),
+  mockGetMany: vi.fn().mockResolvedValue({}),
+  mockSetAll: vi.fn(async (settings: unknown) => {
+    lastSavedSettings = settings;
+    return undefined;
+  }),
+}));
+
 // Capture variables for assertions
 let lastSavedSettings: unknown = null;
 let getSavedUrlEntriesCallCount = 0;
@@ -133,361 +142,54 @@ buildDom();
 // ------------------------------------------------------------------
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettingsWithAllowedUrls: vi.fn(async (settings: unknown) => {
-          lastSavedSettings = settings;
-          return undefined;
-      }),
-      StorageKeys: {
-          OBSIDIAN_API_KEY: 'obsidian_api_key',
-          OBSIDIAN_PROTOCOL: 'obsidian_protocol',
-          OBSIDIAN_PORT: 'obsidian_port',
-          OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
-          AI_PROVIDER: 'ai_provider',
-          GEMINI_API_KEY: 'gemini_api_key',
-          GEMINI_MODEL: 'gemini_model',
-          OPENAI_BASE_URL: 'openai_base_url',
-          OPENAI_API_KEY: 'openai_api_key',
-          OPENAI_MODEL: 'openai_model',
-          OPENAI_2_BASE_URL: 'openai_2_base_url',
-          OPENAI_2_API_KEY: 'openai_2_api_key',
-          OPENAI_2_MODEL: 'openai_2_model',
-          LM_STUDIO_BASE_URL: 'lm_studio_base_url',
-          LM_STUDIO_MODEL: 'lm_studio_model',
-          OLLAMA_BASE_URL: 'ollama_base_url',
-          OLLAMA_MODEL: 'ollama_model',
-          PROVIDER_TYPE: 'provider_type',
-          PROVIDER_BASE_URL: 'provider_base_url',
-          PROVIDER_API_KEY: 'provider_api_key',
-          PROVIDER_MODEL: 'provider_model',
-          MIN_VISIT_DURATION: 'min_visit_duration',
-          MIN_SCROLL_DEPTH: 'min_scroll_depth',
-          MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-          AI_TIMEOUT_MS: 'ai_timeout_ms',
-      },
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
+    StorageKeys: {
+      OBSIDIAN_API_KEY: 'obsidian_api_key',
+      OBSIDIAN_PROTOCOL: 'obsidian_protocol',
+      OBSIDIAN_PORT: 'obsidian_port',
+      OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
+      AI_PROVIDER: 'ai_provider',
+      GEMINI_API_KEY: 'gemini_api_key',
+      GEMINI_MODEL: 'gemini_model',
+      OPENAI_BASE_URL: 'openai_base_url',
+      OPENAI_API_KEY: 'openai_api_key',
+      OPENAI_MODEL: 'openai_model',
+      OPENAI_2_BASE_URL: 'openai_2_base_url',
+      OPENAI_2_API_KEY: 'openai_2_api_key',
+      OPENAI_2_MODEL: 'openai_2_model',
+      LM_STUDIO_BASE_URL: 'lm_studio_base_url',
+      LM_STUDIO_MODEL: 'lm_studio_model',
+      OLLAMA_BASE_URL: 'ollama_base_url',
+      OLLAMA_MODEL: 'ollama_model',
+      PROVIDER_TYPE: 'provider_type',
+      PROVIDER_BASE_URL: 'provider_base_url',
+      PROVIDER_API_KEY: 'provider_api_key',
+      PROVIDER_MODEL: 'provider_model',
+      MIN_VISIT_DURATION: 'min_visit_duration',
+      MIN_SCROLL_DEPTH: 'min_scroll_depth',
+      MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
+      AI_TIMEOUT_MS: 'ai_timeout_ms',
+    },
   };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+});
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettingsWithAllowedUrls: vi.fn(async (settings: unknown) => {
-          lastSavedSettings = settings;
-          return undefined;
-      }),
-      StorageKeys: {
-          OBSIDIAN_API_KEY: 'obsidian_api_key',
-          OBSIDIAN_PROTOCOL: 'obsidian_protocol',
-          OBSIDIAN_PORT: 'obsidian_port',
-          OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
-          AI_PROVIDER: 'ai_provider',
-          GEMINI_API_KEY: 'gemini_api_key',
-          GEMINI_MODEL: 'gemini_model',
-          OPENAI_BASE_URL: 'openai_base_url',
-          OPENAI_API_KEY: 'openai_api_key',
-          OPENAI_MODEL: 'openai_model',
-          OPENAI_2_BASE_URL: 'openai_2_base_url',
-          OPENAI_2_API_KEY: 'openai_2_api_key',
-          OPENAI_2_MODEL: 'openai_2_model',
-          LM_STUDIO_BASE_URL: 'lm_studio_base_url',
-          LM_STUDIO_MODEL: 'lm_studio_model',
-          OLLAMA_BASE_URL: 'ollama_base_url',
-          OLLAMA_MODEL: 'ollama_model',
-          PROVIDER_TYPE: 'provider_type',
-          PROVIDER_BASE_URL: 'provider_base_url',
-          PROVIDER_API_KEY: 'provider_api_key',
-          PROVIDER_MODEL: 'provider_model',
-          MIN_VISIT_DURATION: 'min_visit_duration',
-          MIN_SCROLL_DEPTH: 'min_scroll_depth',
-          MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-          AI_TIMEOUT_MS: 'ai_timeout_ms',
-      },
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
+    settingsRepository: {
+      getAll: mockGetAll,
+      setAll: mockSetAll,
+      getMany: mockGetMany,
+    },
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      setAll = mockSetAll;
+      getMany = mockGetMany;
+    },
   };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettingsWithAllowedUrls: vi.fn(async (settings: unknown) => {
-          lastSavedSettings = settings;
-          return undefined;
-      }),
-      StorageKeys: {
-          OBSIDIAN_API_KEY: 'obsidian_api_key',
-          OBSIDIAN_PROTOCOL: 'obsidian_protocol',
-          OBSIDIAN_PORT: 'obsidian_port',
-          OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
-          AI_PROVIDER: 'ai_provider',
-          GEMINI_API_KEY: 'gemini_api_key',
-          GEMINI_MODEL: 'gemini_model',
-          OPENAI_BASE_URL: 'openai_base_url',
-          OPENAI_API_KEY: 'openai_api_key',
-          OPENAI_MODEL: 'openai_model',
-          OPENAI_2_BASE_URL: 'openai_2_base_url',
-          OPENAI_2_API_KEY: 'openai_2_api_key',
-          OPENAI_2_MODEL: 'openai_2_model',
-          LM_STUDIO_BASE_URL: 'lm_studio_base_url',
-          LM_STUDIO_MODEL: 'lm_studio_model',
-          OLLAMA_BASE_URL: 'ollama_base_url',
-          OLLAMA_MODEL: 'ollama_model',
-          PROVIDER_TYPE: 'provider_type',
-          PROVIDER_BASE_URL: 'provider_base_url',
-          PROVIDER_API_KEY: 'provider_api_key',
-          PROVIDER_MODEL: 'provider_model',
-          MIN_VISIT_DURATION: 'min_visit_duration',
-          MIN_SCROLL_DEPTH: 'min_scroll_depth',
-          MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-          AI_TIMEOUT_MS: 'ai_timeout_ms',
-      },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettingsWithAllowedUrls: vi.fn(async (settings: unknown) => {
-          lastSavedSettings = settings;
-          return undefined;
-      }),
-      StorageKeys: {
-          OBSIDIAN_API_KEY: 'obsidian_api_key',
-          OBSIDIAN_PROTOCOL: 'obsidian_protocol',
-          OBSIDIAN_PORT: 'obsidian_port',
-          OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
-          AI_PROVIDER: 'ai_provider',
-          GEMINI_API_KEY: 'gemini_api_key',
-          GEMINI_MODEL: 'gemini_model',
-          OPENAI_BASE_URL: 'openai_base_url',
-          OPENAI_API_KEY: 'openai_api_key',
-          OPENAI_MODEL: 'openai_model',
-          OPENAI_2_BASE_URL: 'openai_2_base_url',
-          OPENAI_2_API_KEY: 'openai_2_api_key',
-          OPENAI_2_MODEL: 'openai_2_model',
-          LM_STUDIO_BASE_URL: 'lm_studio_base_url',
-          LM_STUDIO_MODEL: 'lm_studio_model',
-          OLLAMA_BASE_URL: 'ollama_base_url',
-          OLLAMA_MODEL: 'ollama_model',
-          PROVIDER_TYPE: 'provider_type',
-          PROVIDER_BASE_URL: 'provider_base_url',
-          PROVIDER_API_KEY: 'provider_api_key',
-          PROVIDER_MODEL: 'provider_model',
-          MIN_VISIT_DURATION: 'min_visit_duration',
-          MIN_SCROLL_DEPTH: 'min_scroll_depth',
-          MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-          AI_TIMEOUT_MS: 'ai_timeout_ms',
-      },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettingsWithAllowedUrls: vi.fn(async (settings: unknown) => {
-          lastSavedSettings = settings;
-          return undefined;
-      }),
-      StorageKeys: {
-          OBSIDIAN_API_KEY: 'obsidian_api_key',
-          OBSIDIAN_PROTOCOL: 'obsidian_protocol',
-          OBSIDIAN_PORT: 'obsidian_port',
-          OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
-          AI_PROVIDER: 'ai_provider',
-          GEMINI_API_KEY: 'gemini_api_key',
-          GEMINI_MODEL: 'gemini_model',
-          OPENAI_BASE_URL: 'openai_base_url',
-          OPENAI_API_KEY: 'openai_api_key',
-          OPENAI_MODEL: 'openai_model',
-          OPENAI_2_BASE_URL: 'openai_2_base_url',
-          OPENAI_2_API_KEY: 'openai_2_api_key',
-          OPENAI_2_MODEL: 'openai_2_model',
-          LM_STUDIO_BASE_URL: 'lm_studio_base_url',
-          LM_STUDIO_MODEL: 'lm_studio_model',
-          OLLAMA_BASE_URL: 'ollama_base_url',
-          OLLAMA_MODEL: 'ollama_model',
-          PROVIDER_TYPE: 'provider_type',
-          PROVIDER_BASE_URL: 'provider_base_url',
-          PROVIDER_API_KEY: 'provider_api_key',
-          PROVIDER_MODEL: 'provider_model',
-          MIN_VISIT_DURATION: 'min_visit_duration',
-          MIN_SCROLL_DEPTH: 'min_scroll_depth',
-          MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-          AI_TIMEOUT_MS: 'ai_timeout_ms',
-      },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettingsWithAllowedUrls: vi.fn(async (settings: unknown) => {
-          lastSavedSettings = settings;
-          return undefined;
-      }),
-      StorageKeys: {
-          OBSIDIAN_API_KEY: 'obsidian_api_key',
-          OBSIDIAN_PROTOCOL: 'obsidian_protocol',
-          OBSIDIAN_PORT: 'obsidian_port',
-          OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
-          AI_PROVIDER: 'ai_provider',
-          GEMINI_API_KEY: 'gemini_api_key',
-          GEMINI_MODEL: 'gemini_model',
-          OPENAI_BASE_URL: 'openai_base_url',
-          OPENAI_API_KEY: 'openai_api_key',
-          OPENAI_MODEL: 'openai_model',
-          OPENAI_2_BASE_URL: 'openai_2_base_url',
-          OPENAI_2_API_KEY: 'openai_2_api_key',
-          OPENAI_2_MODEL: 'openai_2_model',
-          LM_STUDIO_BASE_URL: 'lm_studio_base_url',
-          LM_STUDIO_MODEL: 'lm_studio_model',
-          OLLAMA_BASE_URL: 'ollama_base_url',
-          OLLAMA_MODEL: 'ollama_model',
-          PROVIDER_TYPE: 'provider_type',
-          PROVIDER_BASE_URL: 'provider_base_url',
-          PROVIDER_API_KEY: 'provider_api_key',
-          PROVIDER_MODEL: 'provider_model',
-          MIN_VISIT_DURATION: 'min_visit_duration',
-          MIN_SCROLL_DEPTH: 'min_scroll_depth',
-          MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-          AI_TIMEOUT_MS: 'ai_timeout_ms',
-      },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettingsWithAllowedUrls: vi.fn(async (settings: unknown) => {
-          lastSavedSettings = settings;
-          return undefined;
-      }),
-      StorageKeys: {
-          OBSIDIAN_API_KEY: 'obsidian_api_key',
-          OBSIDIAN_PROTOCOL: 'obsidian_protocol',
-          OBSIDIAN_PORT: 'obsidian_port',
-          OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
-          AI_PROVIDER: 'ai_provider',
-          GEMINI_API_KEY: 'gemini_api_key',
-          GEMINI_MODEL: 'gemini_model',
-          OPENAI_BASE_URL: 'openai_base_url',
-          OPENAI_API_KEY: 'openai_api_key',
-          OPENAI_MODEL: 'openai_model',
-          OPENAI_2_BASE_URL: 'openai_2_base_url',
-          OPENAI_2_API_KEY: 'openai_2_api_key',
-          OPENAI_2_MODEL: 'openai_2_model',
-          LM_STUDIO_BASE_URL: 'lm_studio_base_url',
-          LM_STUDIO_MODEL: 'lm_studio_model',
-          OLLAMA_BASE_URL: 'ollama_base_url',
-          OLLAMA_MODEL: 'ollama_model',
-          PROVIDER_TYPE: 'provider_type',
-          PROVIDER_BASE_URL: 'provider_base_url',
-          PROVIDER_API_KEY: 'provider_api_key',
-          PROVIDER_MODEL: 'provider_model',
-          MIN_VISIT_DURATION: 'min_visit_duration',
-          MIN_SCROLL_DEPTH: 'min_scroll_depth',
-          MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-          AI_TIMEOUT_MS: 'ai_timeout_ms',
-      },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
     loadSettingsToInputs: vi.fn(),
@@ -599,12 +301,15 @@ describe('loadGeneralSettings', () => {
         buildDom();
         vi.clearAllMocks();
         lastSavedSettings = null;
+        mockGetAll.mockResolvedValue({});
+        mockGetMany.mockResolvedValue({});
+        mockSetAll.mockResolvedValue(undefined);
+        mockSetAll.mockImplementation(async (settings: unknown) => { lastSavedSettings = settings; return undefined; });
         getSavedUrlEntriesCallCount = 0;
     });
 
     it('shows selected provider info when configured', async () => {
-        const m = await mocked('../../utils/storage.js');
-        m.getSettings.mockResolvedValueOnce({
+        mockGetAll.mockResolvedValueOnce({
             provider_type: 'openai-compatible',
             provider_base_url: 'http://localhost:1234/v1',
         });
@@ -615,8 +320,7 @@ describe('loadGeneralSettings', () => {
 
     it('hides selected provider info when not configured', async () => {
         document.getElementById('selectedProviderInfo')!.classList.remove('hidden');
-        const m = await mocked('../../utils/storage.js');
-        m.getSettings.mockResolvedValueOnce({});
+        mockGetAll.mockResolvedValueOnce({});
         await loadGeneralSettings();
         expect(document.getElementById('selectedProviderInfo')!.classList.contains('hidden')).toBe(true);
     });
@@ -627,6 +331,10 @@ describe('handleSaveOnly', () => {
         buildDom();
         vi.clearAllMocks();
         lastSavedSettings = null;
+        mockGetAll.mockResolvedValue({});
+        mockGetMany.mockResolvedValue({});
+        mockSetAll.mockResolvedValue(undefined);
+        mockSetAll.mockImplementation(async (settings: unknown) => { lastSavedSettings = settings; return undefined; });
         getSavedUrlEntriesCallCount = 0;
     });
 
@@ -664,6 +372,10 @@ describe('handleTestObsidian', () => {
         buildDom();
         vi.clearAllMocks();
         lastSavedSettings = null;
+        mockGetAll.mockResolvedValue({});
+        mockGetMany.mockResolvedValue({});
+        mockSetAll.mockResolvedValue(undefined);
+        mockSetAll.mockImplementation(async (settings: unknown) => { lastSavedSettings = settings; return undefined; });
         getSavedUrlEntriesCallCount = 0;
     });
 
@@ -715,6 +427,10 @@ describe('handleTestAi', () => {
         buildDom();
         vi.clearAllMocks();
         lastSavedSettings = null;
+        mockGetAll.mockResolvedValue({});
+        mockGetMany.mockResolvedValue({});
+        mockSetAll.mockResolvedValue(undefined);
+        mockSetAll.mockImplementation(async (settings: unknown) => { lastSavedSettings = settings; return undefined; });
         getSavedUrlEntriesCallCount = 0;
     });
 
@@ -737,7 +453,7 @@ describe('handleTestAi', () => {
 
     await handleTestAi();
 
-    expect(saveSettingsWithAllowedUrls).toHaveBeenCalledWith(
+    expect(mockSetAll).toHaveBeenCalledWith(
       expect.objectContaining(expectedSettings)
     );
   });

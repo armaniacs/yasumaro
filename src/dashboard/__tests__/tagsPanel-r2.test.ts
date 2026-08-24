@@ -24,188 +24,44 @@ vi.mock('../../utils/i18n.js', () => ({
   getMessage: (key: string) => `i18n_${key}`,
 }));
 
+const { mockGetAll, mockGetMany, mockSetAll } = vi.hoisted(() => ({
+  mockGetAll: vi.fn().mockResolvedValue({}),
+  mockGetMany: vi.fn().mockResolvedValue({}),
+  mockSetAll: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+  return {
+    ...actual,
     StorageKeys: {
       TAG_SUMMARY_MODE: 'tagSummaryMode',
       TAG_CATEGORIES: 'tagCategories',
       TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
     },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+});
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      TAG_SUMMARY_MODE: 'tagSummaryMode',
-      TAG_CATEGORIES: 'tagCategories',
-      TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
-    },
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      TAG_SUMMARY_MODE: 'tagSummaryMode',
-      TAG_CATEGORIES: 'tagCategories',
-      TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
+    settingsRepository: {
+      getAll: mockGetAll,
+      getMany: mockGetMany,
+      setAll: mockSetAll,
+      get: vi.fn(),
+      set: vi.fn(),
     },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      TAG_SUMMARY_MODE: 'tagSummaryMode',
-      TAG_CATEGORIES: 'tagCategories',
-      TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      getMany = mockGetMany;
+      setAll = mockSetAll;
+      get = vi.fn();
+      set = vi.fn();
     },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      TAG_SUMMARY_MODE: 'tagSummaryMode',
-      TAG_CATEGORIES: 'tagCategories',
-      TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      TAG_SUMMARY_MODE: 'tagSummaryMode',
-      TAG_CATEGORIES: 'tagCategories',
-      TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      TAG_SUMMARY_MODE: 'tagSummaryMode',
-      TAG_CATEGORIES: 'tagCategories',
-      TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: vi.fn(),
@@ -216,7 +72,6 @@ vi.mock('../../utils/tagUtils.js', () => ({
 }));
 
 import { initTagsPanel } from '../tagsPanel.js';
-import { getSettings, saveSettingsWithAllowedUrls } from '../../utils/storage.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
 function fullDom(): void {
@@ -240,8 +95,9 @@ function fullDom(): void {
 describe('tagsPanel-r2 — Normalization dictionary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (getSettings as ReturnType<typeof vi.fn>).mockResolvedValue({});
-    (saveSettingsWithAllowedUrls as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    mockGetAll.mockResolvedValue({});
+    mockGetMany.mockResolvedValue({});
+    mockSetAll.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -257,7 +113,10 @@ describe('tagsPanel-r2 — Normalization dictionary', () => {
 
   it('hides no entries message when normalization entries exist', async () => {
     fullDom();
-    (getSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    mockGetMany.mockResolvedValueOnce({
+      tag_normalization_dict: [{ from: 'foo', to: 'bar' }],
+    });
+    mockGetAll.mockResolvedValueOnce({
       tag_normalization_dict: [{ from: 'foo', to: 'bar' }],
     });
     await initTagsPanel();
@@ -285,7 +144,10 @@ describe('tagsPanel-r2 — Normalization dictionary', () => {
 
   it('prevents duplicate normalization entries (case-insensitive NFKC)', async () => {
     fullDom();
-    (getSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    mockGetMany.mockResolvedValueOnce({
+      tag_normalization_dict: [{ from: 'Hello', to: 'World' }],
+    });
+    mockGetAll.mockResolvedValueOnce({
       tag_normalization_dict: [{ from: 'Hello', to: 'World' }],
     });
     await initTagsPanel();
@@ -322,7 +184,10 @@ describe('tagsPanel-r2 — Normalization dictionary', () => {
 
   it('deletes normalization entry via delete button', async () => {
     fullDom();
-    (getSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    mockGetMany.mockResolvedValueOnce({
+      tag_normalization_dict: [{ from: 'keep', to: 'keep' }],
+    });
+    mockGetAll.mockResolvedValueOnce({
       tag_normalization_dict: [{ from: 'keep', to: 'keep' }],
     });
     await initTagsPanel();
@@ -358,7 +223,7 @@ describe('tagsPanel-r2 — Normalization dictionary', () => {
     (document.getElementById('saveTagsBtn') as HTMLButtonElement).click();
     await new Promise(r => setTimeout(r, 10));
 
-    expect(saveSettingsWithAllowedUrls).toHaveBeenCalledWith(
+    expect(mockSetAll).toHaveBeenCalledWith(
       expect.objectContaining({
         tag_normalization_dict: [{ from: 'Old', to: 'New' }],
       }),
@@ -369,7 +234,8 @@ describe('tagsPanel-r2 — Normalization dictionary', () => {
 describe('tagsPanel-r2 — Save error handling', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (getSettings as ReturnType<typeof vi.fn>).mockResolvedValue({});
+    mockGetMany.mockResolvedValue({});
+    mockGetAll.mockResolvedValue({});
   });
 
   afterEach(() => {
@@ -378,7 +244,7 @@ describe('tagsPanel-r2 — Save error handling', () => {
 
   it('shows error status when saveSettingsWithAllowedUrls throws', async () => {
     fullDom();
-    (saveSettingsWithAllowedUrls as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('save failed'));
+    mockSetAll.mockRejectedValue(new Error('save failed'));
     await initTagsPanel();
 
     (document.getElementById('saveTagsBtn') as HTMLButtonElement).click();
@@ -391,7 +257,8 @@ describe('tagsPanel-r2 — Save error handling', () => {
 describe('tagsPanel-r2 — Normalization Enter key behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (getSettings as ReturnType<typeof vi.fn>).mockResolvedValue({});
+    mockGetMany.mockResolvedValue({});
+    mockGetAll.mockResolvedValue({});
   });
 
   afterEach(() => {
@@ -455,7 +322,8 @@ describe('tagsPanel-r2 — Normalization Enter key behavior', () => {
 describe('tagsPanel-r2 — renderDefaultCategories', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (getSettings as ReturnType<typeof vi.fn>).mockResolvedValue({});
+    mockGetMany.mockResolvedValue({});
+    mockGetAll.mockResolvedValue({});
   });
 
   afterEach(() => {

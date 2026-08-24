@@ -26,181 +26,17 @@ vi.mock('../tabUtils.js', () => ({
   isRecordable: vi.fn(() => true)
 }));
 
+const mockGetAll = vi.hoisted(() => vi.fn());
+const mockSetAll = vi.hoisted(() => vi.fn());
+const mockGetMany = vi.hoisted(() => vi.fn());
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = await importOriginal() as any;
+  return { ...actual, settingsRepository: { getAll: mockGetAll, setAll: mockSetAll, getMany: mockGetMany }, SettingsRepository: class { getAll = mockGetAll; setAll = mockSetAll; getMany = mockGetMany } };
+});
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn(() => Promise.resolve({})),
-    saveSettings: vi.fn(() => Promise.resolve()),
-    StorageKeys: {
-      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-      DOMAIN_WHITELIST: 'domainWhitelist'
-    }
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn(() => Promise.resolve({})),
-    saveSettings: vi.fn(() => Promise.resolve()),
-    StorageKeys: {
-      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-      DOMAIN_WHITELIST: 'domainWhitelist'
-    }
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn(() => Promise.resolve({})),
-    saveSettings: vi.fn(() => Promise.resolve()),
-    StorageKeys: {
-      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-      DOMAIN_WHITELIST: 'domainWhitelist'
-    }
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn(() => Promise.resolve({})),
-    saveSettings: vi.fn(() => Promise.resolve()),
-    StorageKeys: {
-      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-      DOMAIN_WHITELIST: 'domainWhitelist'
-    }
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn(() => Promise.resolve({})),
-    saveSettings: vi.fn(() => Promise.resolve()),
-    StorageKeys: {
-      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-      DOMAIN_WHITELIST: 'domainWhitelist'
-    }
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn(() => Promise.resolve({})),
-    saveSettings: vi.fn(() => Promise.resolve()),
-    StorageKeys: {
-      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-      DOMAIN_WHITELIST: 'domainWhitelist'
-    }
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn(() => Promise.resolve({})),
-    saveSettings: vi.fn(() => Promise.resolve()),
-    StorageKeys: {
-      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-      DOMAIN_WHITELIST: 'domainWhitelist'
-    }
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+  return { ...actual, StorageKeys: { ...(actual.StorageKeys as Record<string, unknown>), PII_CONFIRMATION_UI: 'pii_confirmation_ui', DOMAIN_WHITELIST: 'domain_whitelist' } };
+});
 
 vi.mock('../statusChecker.js', () => ({
   checkPageStatus: vi.fn()
@@ -299,7 +135,7 @@ import { showPreview, initializeModalEvents } from '../sanitizePreview.js';
 import { sendMessageWithRetry } from '../../utils/retryHelper.js';
 import { startAutoCloseTimer } from '../autoClose.js';
 import { getCurrentTab, isRecordable } from '../tabUtils.js';
-import { getSettings, StorageKeys } from '../../utils/storage.js';
+import { StorageKeys } from '../../utils/storage.js';
 import { checkPageStatus } from '../statusChecker.js';
 import { loadCurrentTab, recordCurrentPage, getCleansedReasonText, renderSpecialUrlStatus } from '../main.js';
 import { loadPendingPages, saveSelectedPages } from '../pendingPages.js';
@@ -699,7 +535,7 @@ describe('main', () => {
       getCurrentTab.mockImplementation(() => Promise.resolve(mockTab));
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
+      mockGetAll.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
 
       // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
@@ -727,7 +563,7 @@ describe('main', () => {
       getCurrentTab.mockImplementation(() => Promise.resolve(mockTab));
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
+      mockGetAll.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
 
       // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
@@ -758,7 +594,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
+      mockGetAll.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
 
       // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
@@ -803,7 +639,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: false }));
+      mockGetAll.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: false }));
 
       // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
@@ -835,7 +671,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
 
       // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
@@ -868,7 +704,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
 
       // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
@@ -897,7 +733,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
 
       // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
@@ -932,7 +768,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
@@ -966,7 +802,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
 
       // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
@@ -1005,7 +841,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
 
       // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
@@ -1036,7 +872,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script sendMessage fails
       mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
@@ -1065,7 +901,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script sendMessage fails
       mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
@@ -1094,7 +930,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script sendMessage fails
       mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
@@ -1119,7 +955,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script returns undefined/null
       mockChrome.tabs.sendMessage.mockResolvedValue(null);
@@ -1145,7 +981,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script returns null
       mockChrome.tabs.sendMessage.mockResolvedValue(null);
@@ -1168,7 +1004,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
@@ -1197,7 +1033,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
@@ -1230,7 +1066,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
@@ -1436,7 +1272,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({
@@ -1470,7 +1306,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({
@@ -1504,7 +1340,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script fails
       mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
@@ -1533,7 +1369,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
       mockChrome.permissions.contains.mockResolvedValue(false);
@@ -1555,7 +1391,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
       mockChrome.permissions.contains.mockRejectedValue(new Error('Permission API error'));
@@ -1578,7 +1414,7 @@ describe('main', () => {
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
       // @ts-expect-error
-      getSettings.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
+      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });

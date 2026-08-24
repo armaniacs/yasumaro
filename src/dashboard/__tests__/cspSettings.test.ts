@@ -10,179 +10,25 @@ import { vi } from 'vitest';
 // Mock dependencies before importing cspSettings
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
+  return {
+    ...actual,
     StorageKeys: {
       CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled',
       CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers',
     },
-    getSettings: vi.fn(),
-    saveSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
+});
 
-    StorageKeys: {
-      CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled',
-      CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers',
-    },
-    getSettings: vi.fn(),
-    saveSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled',
-      CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers',
-    },
-    getSettings: vi.fn(),
-    saveSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled',
-      CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers',
-    },
-    getSettings: vi.fn(),
-    saveSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled',
-      CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers',
-    },
-    getSettings: vi.fn(),
-    saveSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled',
-      CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers',
-    },
-    getSettings: vi.fn(),
-    saveSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled',
-      CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers',
-    },
-    getSettings: vi.fn(),
-    saveSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+vi.mock('../../utils/storage/SettingsRepository.js', () => ({
+  settingsRepository: {
+    getAll: vi.fn(),
+    setAll: vi.fn(),
+  },
+  SettingsRepository: class {
+    getAll = vi.fn();
+    setAll = vi.fn();
+  },
+}));
 
 vi.mock('../../utils/cspValidator.js', () => ({
   CSPValidator: {
@@ -203,12 +49,13 @@ vi.mock('../../utils/i18n.js', () => ({
 }));
 
 import { cspSettings, CspSettingsController } from '../cspSettings.js';
-import { getSettings, saveSettings, StorageKeys } from '../../utils/storage.js';
+import { StorageKeys } from '../../utils/storage/types.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { CSPValidator } from '../../utils/cspValidator.js';
 import { addLog } from '../../utils/logger.js';
 
-const mockGetSettings = getSettings as vi.MockedFunction<typeof getSettings>;
-const mockSaveSettings = saveSettings as vi.MockedFunction<typeof saveSettings>;
+const mockGetAll = settingsRepository.getAll as vi.MockedFunction<typeof settingsRepository.getAll>;
+const mockSetAll = settingsRepository.setAll as vi.MockedFunction<typeof settingsRepository.setAll>;
 const mockAddLog = addLog as vi.MockedFunction<typeof addLog>;
 
 function setupDOM() {
@@ -235,7 +82,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
 
   describe('loadCSPSettings', () => {
     test('should load settings and set checkbox state', async () => {
-      mockGetSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         conditional_csp_enabled: true,
         conditional_csp_providers: ['huggingface'],
       } as any);
@@ -250,7 +97,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     });
 
     test('should default checkbox to checked when setting is not explicitly false', async () => {
-      mockGetSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         conditional_csp_enabled: undefined,
         conditional_csp_providers: [],
       } as any);
@@ -264,7 +111,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     });
 
     test('should uncheck checkbox when setting is explicitly false', async () => {
-      mockGetSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         conditional_csp_enabled: false,
         conditional_csp_providers: [],
       } as any);
@@ -278,7 +125,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     });
 
     test('should render provider list from settings', async () => {
-      mockGetSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         conditional_csp_enabled: true,
         conditional_csp_providers: ['huggingface'],
       } as any);
@@ -298,7 +145,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
 
     test('should log error on load failure', async () => {
       mockAddLog.mockClear();
-      mockGetSettings.mockRejectedValue(new Error('Storage error'));
+      mockGetAll.mockRejectedValue(new Error('Storage error'));
 
       await cspSettings.loadCSPSettings();
 
@@ -307,7 +154,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
 
     test('should handle missing checkbox element', async () => {
       document.getElementById('conditionalCspEnabled')?.remove();
-      mockGetSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
@@ -415,12 +262,12 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         </div>
       `;
 
-      mockSaveSettings.mockResolvedValue(undefined);
+      mockSetAll.mockResolvedValue(undefined);
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
       await cspSettings.saveCSPSettings();
 
-      expect(mockSaveSettings).toHaveBeenCalledWith({
+      expect(mockSetAll).toHaveBeenCalledWith({
         [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,
         [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: ['huggingface'],
       });
@@ -434,7 +281,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     test('should show success message after save', async () => {
       const checkbox = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
       checkbox.checked = true;
-      mockSaveSettings.mockResolvedValue(undefined);
+      mockSetAll.mockResolvedValue(undefined);
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
       await cspSettings.saveCSPSettings();
@@ -447,7 +294,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       vi.useFakeTimers();
       const checkbox = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
       checkbox.checked = true;
-      mockSaveSettings.mockResolvedValue(undefined);
+      mockSetAll.mockResolvedValue(undefined);
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
       await cspSettings.saveCSPSettings();
@@ -462,7 +309,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     test('should show inline error message on save failure (no window.alert)', async () => {
       const checkbox = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
       checkbox.checked = true;
-      mockSaveSettings.mockRejectedValue(new Error('Save error'));
+      mockSetAll.mockRejectedValue(new Error('Save error'));
       mockAddLog.mockClear();
 
       await cspSettings.saveCSPSettings();
@@ -475,12 +322,12 @@ describe('cspSettings (CspSettingsController default instance)', () => {
 
     test('should default enabled to true when checkbox element missing', async () => {
       document.getElementById('conditionalCspEnabled')?.remove();
-      mockSaveSettings.mockResolvedValue(undefined);
+      mockSetAll.mockResolvedValue(undefined);
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
 
       await cspSettings.saveCSPSettings();
 
-      expect(mockSaveSettings).toHaveBeenCalledWith(
+      expect(mockSetAll).toHaveBeenCalledWith(
         expect.objectContaining({
           [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,
         })
@@ -490,7 +337,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
 
   describe('search input binding', () => {
     test('should filter provider rows by search query', async () => {
-      mockGetSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
@@ -515,7 +362,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
 
     test('should handle missing search input gracefully', async () => {
       document.getElementById('cspProviderSearch')?.remove();
-      mockGetSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
@@ -528,12 +375,12 @@ describe('cspSettings (CspSettingsController default instance)', () => {
 
   describe('save button binding', () => {
     test('should trigger save on click', async () => {
-      mockGetSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
-      mockSaveSettings.mockResolvedValue(undefined);
+      mockSetAll.mockResolvedValue(undefined);
 
       await cspSettings.loadCSPSettings();
 
@@ -541,18 +388,18 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       saveButton?.click();
 
       await new Promise(r => setTimeout(r, 10));
-      expect(mockSaveSettings).toHaveBeenCalled();
+      expect(mockSetAll).toHaveBeenCalled();
     });
   });
 
   describe('reset button binding', () => {
     test('should reset settings when confirmed', async () => {
-      mockGetSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
-      mockSaveSettings.mockResolvedValue(undefined);
+      mockSetAll.mockResolvedValue(undefined);
       (global.confirm as vi.Mock).mockReturnValue(true);
 
       await cspSettings.loadCSPSettings();
@@ -561,19 +408,19 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       resetButton?.click();
 
       await new Promise(r => setTimeout(r, 10));
-      expect(mockSaveSettings).toHaveBeenCalledWith({
+      expect(mockSetAll).toHaveBeenCalledWith({
         [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,
         [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: [],
       });
     });
 
     test('should not reset when confirm is rejected', async () => {
-      mockGetSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
-      mockSaveSettings.mockClear();
+      mockSetAll.mockClear();
       (global.confirm as vi.Mock).mockReturnValue(false);
 
       await cspSettings.loadCSPSettings();
@@ -582,16 +429,16 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       resetButton?.click();
 
       await new Promise(r => setTimeout(r, 10));
-      expect(mockSaveSettings).not.toHaveBeenCalled();
+      expect(mockSetAll).not.toHaveBeenCalled();
     });
 
     test('should show reset success message', async () => {
-      mockGetSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
-      mockSaveSettings.mockResolvedValue(undefined);
+      mockSetAll.mockResolvedValue(undefined);
       (global.confirm as vi.Mock).mockReturnValue(true);
 
       await cspSettings.loadCSPSettings();
@@ -609,12 +456,12 @@ describe('cspSettings (CspSettingsController default instance)', () => {
 
     test('should auto-hide reset message after 3 seconds', async () => {
       vi.useFakeTimers();
-      mockGetSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
-      mockSaveSettings.mockResolvedValue(undefined);
+      mockSetAll.mockResolvedValue(undefined);
       (global.confirm as vi.Mock).mockReturnValue(true);
       (window as unknown as { confirm: unknown }).confirm = global.confirm;
 
@@ -639,12 +486,12 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     });
 
     test('should show inline error message on reset failure (no window.alert)', async () => {
-      mockGetSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
       (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
-      mockSaveSettings.mockRejectedValue(new Error('Reset error'));
+      mockSetAll.mockRejectedValue(new Error('Reset error'));
       (global.confirm as vi.Mock).mockReturnValue(true);
       mockAddLog.mockClear();
 

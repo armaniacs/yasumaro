@@ -35,6 +35,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.72] - 2026-08-24
+
+### Refactor
+
+- Architecture Deepening 0824a（arch-delivery-loop）3件を実装。`SettingsRepository` の shim（`tryLegacyGetAll`/`tryLegacySave` 66行）を削除し `InMemoryStorageAdapter.getSettings` を `applyMigrationsAndDecrypt(…, false)` で本番ミラー化、`settingsStore.legacy.ts` を `@deprecated` static wrapper 化して `SettingsReader` 経由のテストモック移行（29テストの `SettingsRepository` モック化 + `cspSettings.ts` の `this.repo` 注入修正）、`ProviderId` union 7種を `storage/types.ts` に導入し `ProviderSlot.provider` を型安全化、 `SqliteHealthCheck` を `types.ts` Layer 0 に抽出し `storageMaintenance.ts` の `utils→background` 動的 import を排除して Layer 循環を解消。PBI-02（StorageKeys facade）/ PBI-04（Pipeline composition root）/ PBI-06（content extractor global state）/ PBI-07（offscreen dispatch guard）は次スプリントへ見送り
+
+### Fixed
+
+- `settingsStore.legacy.ts` の未使用 import と `cspSettings.ts` の未使用 `SettingsReader` 型 import による lint エラー（`no-unused-vars`）を修正
+- `eslint.config.js` に `.vulnhunter-fix/` と `obsidian-smart-history_VULNHUNT_RESULTS*/` の ignore を追加し `make clean test` の lint ゲート（413件の `parserOptions.project` エラー）が `src/` のみに限定されるよう修正
+- `src/popup/__tests__/statusChecker.test.ts` のブラックリスト判定テストが `settingsStore.legacy` cache により `mockGetAll` の上書きが反映されない問題を修正。 `clearSettingsCache` を `beforeEach` で呼ぶよう変更
+
 ## [6.7.71] - 2026-08-24
 
 ### Fixed

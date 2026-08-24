@@ -4,185 +4,38 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const mockGetSettings = vi.hoisted(() => vi.fn());
+const mockGetAll = vi.hoisted(() => vi.fn());
 const mockStorageGet = vi.hoisted(() => vi.fn());
 const mockDownload = vi.hoisted(() => vi.fn());
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
+  return {
+    ...actual,
     StorageKeys: {
       LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
       MARKDOWN_EXPORT_TEMPLATES: 'markdown_export_templates',
       ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID: 'active_markdown_export_template_id',
     },
-    getSettings: mockGetSettings,
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+});
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
-      MARKDOWN_EXPORT_TEMPLATES: 'markdown_export_templates',
-      ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID: 'active_markdown_export_template_id',
-    },
-    getSettings: mockGetSettings,
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
-      MARKDOWN_EXPORT_TEMPLATES: 'markdown_export_templates',
-      ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID: 'active_markdown_export_template_id',
+    settingsRepository: {
+      getAll: mockGetAll,
+      setAll: vi.fn(),
+      getMany: vi.fn(),
     },
-    getSettings: mockGetSettings,
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
-      MARKDOWN_EXPORT_TEMPLATES: 'markdown_export_templates',
-      ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID: 'active_markdown_export_template_id',
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      setAll = vi.fn();
+      getMany = vi.fn();
     },
-    getSettings: mockGetSettings,
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
-      MARKDOWN_EXPORT_TEMPLATES: 'markdown_export_templates',
-      ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID: 'active_markdown_export_template_id',
-    },
-    getSettings: mockGetSettings,
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
-      MARKDOWN_EXPORT_TEMPLATES: 'markdown_export_templates',
-      ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID: 'active_markdown_export_template_id',
-    },
-    getSettings: mockGetSettings,
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
-      MARKDOWN_EXPORT_TEMPLATES: 'markdown_export_templates',
-      ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID: 'active_markdown_export_template_id',
-    },
-    getSettings: mockGetSettings,
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 vi.mock('../../utils/logger.js', () => ({
   addLog: vi.fn(),
@@ -216,7 +69,7 @@ import { flushBufferedExports } from '../localMarkdownExportCore.js';
 describe('flushBufferedExports', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetSettings.mockResolvedValue({ local_markdown_export_path: 'Yasumaro' });
+    mockGetAll.mockResolvedValue({ local_markdown_export_path: 'Yasumaro' });
   });
 
   it('downloads every buffered day when no filter is given', async () => {

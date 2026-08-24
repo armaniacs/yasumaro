@@ -6,11 +6,12 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { RecordingCache, SETTINGS_CACHE_TTL } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
-import { getSettings } from '../../utils/storage/settingsStore.js';
 import { getSavedUrls, setSavedUrls } from '../../utils/storage/savedUrlRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { PrivacyPipeline } from '../privacyPipeline.ts';
 import { NotificationHelper } from '../notificationHelper.ts';
+
+const mockGetAll = vi.hoisted(() => vi.fn());
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -35,20 +36,20 @@ vi.mock('../../utils/storage/types.js', async (importOriginal) => {
     ),
   };
 });
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = { getSettings: vi.fn() } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
+    settingsRepository: {
+      getAll: mockGetAll,
+      setAll: vi.fn(),
+      getMany: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      setAll = vi.fn();
+      getMany = vi.fn();
+    },
   };
 });
 vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
@@ -114,7 +115,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
     // デフォルトモック
     // @ts-expect-error - vi.fn() type narrowing issue
 
-    getSettings.mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       AI_PROVIDER: 'gemini',
       GEMINI_API_KEY: 'test-key',
       GEMINI_MODEL: 'gemini-3.1-flash-lite',
@@ -149,19 +150,19 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
     it('初回呼び出し時にstorageから設定を取得する', async () => {
       const settings = await RecordingCache.getSettingsWithCache();
 
-      expect(getSettings).toHaveBeenCalledTimes(1);
+      expect(mockGetAll).toHaveBeenCalledTimes(1);
       expect(settings).toHaveProperty('AI_PROVIDER', 'gemini');
     });
 
     it('2回目の呼び出し時にキャッシュを使用する', async () => {
       await RecordingCache.getSettingsWithCache();
-      getSettings.mockClear();
+      mockGetAll.mockClear();
 
       // 2回目の呼び出し
       const settings = await RecordingCache.getSettingsWithCache();
 
-      // getSettingsは呼ばれない（キャッシュが使用される）
-      expect(getSettings).not.toHaveBeenCalled();
+      // mockGetAllは呼ばれない（キャッシュが使用される）
+      expect(mockGetAll).not.toHaveBeenCalled();
       expect(settings).toHaveProperty('AI_PROVIDER', 'gemini');
     });
 
@@ -172,19 +173,19 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       // キャッシュのタイムスタンプを古くする
       RecordingCache.getCacheState().cacheTimestamp = Date.now() - SETTINGS_CACHE_TTL - 1000;
 
-      // getSettingsをリセットして新しいモック値を設定
-      getSettings.mockClear();
+      // mockGetAllをリセットして新しいモック値を設定
+      mockGetAll.mockClear();
     // @ts-expect-error - vi.fn() type narrowing issue
 
-      getSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         AI_PROVIDER: 'openai',
         OPENAI_API_KEY: 'openai-key'
       });
 
       const settings = await RecordingCache.getSettingsWithCache();
 
-      // getSettingsが再度呼ばれる
-      expect(getSettings).toHaveBeenCalledTimes(1);
+      // mockGetAllが再度呼ばれる
+      expect(mockGetAll).toHaveBeenCalledTimes(1);
       expect(settings).toHaveProperty('AI_PROVIDER', 'openai');
     });
 
@@ -195,14 +196,14 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
     it('静的キャッシュが使用可能な場合は静的キャッシュを使用する', async () => {
       const firstInstance = makeRecordingLogic(mockObsidianClient, mockAiClient);
       await RecordingCache.getSettingsWithCache();
-      getSettings.mockClear();
+      mockGetAll.mockClear();
 
       // 2つ目のインスタンスを作成
       const secondInstance = makeRecordingLogic(mockObsidianClient, mockAiClient);
       const settings = await RecordingCache.getSettingsWithCache();
 
-      // getSettingsは呼ばれない（静的キャッシュが使用される）
-      expect(getSettings).not.toHaveBeenCalled();
+      // mockGetAllは呼ばれない（静的キャッシュが使用される）
+      expect(mockGetAll).not.toHaveBeenCalled();
     });
 
     it('静的キャッシュが期限切れの場合にstorageから再取得する', async () => {
@@ -213,17 +214,17 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       RecordingCache.getCacheState().cacheTimestamp = Date.now() - SETTINGS_CACHE_TTL - 1000;
 
       const secondInstance = makeRecordingLogic(mockObsidianClient, mockAiClient);
-      getSettings.mockClear();
+      mockGetAll.mockClear();
     // @ts-expect-error - vi.fn() type narrowing issue
 
-      getSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         AI_PROVIDER: 'updated-provider'
       });
 
       const settings = await RecordingCache.getSettingsWithCache();
 
-      // getSettingsが再度呼ばれる
-      expect(getSettings).toHaveBeenCalledTimes(1);
+      // mockGetAllが再度呼ばれる
+      expect(mockGetAll).toHaveBeenCalledTimes(1);
       expect(settings).toHaveProperty('AI_PROVIDER', 'updated-provider');
     });
   });
@@ -246,16 +247,16 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       const cacheVersionBefore = RecordingCache.getCacheState().cacheVersion;
 
       RecordingCache.invalidateSettingsCache();
-      getSettings.mockClear();
+      mockGetAll.mockClear();
     // @ts-expect-error - vi.fn() type narrowing issue
 
-      getSettings.mockResolvedValue({
+      mockGetAll.mockResolvedValue({
         AI_PROVIDER: 'new-provider'
       });
 
       await RecordingCache.getSettingsWithCache();
 
-      expect(getSettings).toHaveBeenCalledTimes(1);
+      expect(mockGetAll).toHaveBeenCalledTimes(1);
       // キャッシュバージョンが増加していることを確認
       expect(RecordingCache.getCacheState().cacheVersion).toBeGreaterThan(cacheVersionBefore);
     });
@@ -297,7 +298,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
     // @ts-expect-error - vi.fn() type narrowing issue
 
-      const getSettingsCallsAfterFirst = getSettings.mock.calls.length;
+      const mockGetAllCallsAfterFirst = mockGetAll.mock.calls.length;
 
       // 2回目のrecord呼び出し
       await recordingLogic.record({
@@ -306,10 +307,10 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
         content: 'Test content 2'
       });
 
-      // 2回目の呼び出しでもgetSettingsは追加で呼ばれない（キャッシュ使用）
+      // 2回目の呼び出しでもmockGetAllは追加で呼ばれない（キャッシュ使用）
     // @ts-expect-error - vi.fn() type narrowing issue
 
-      expect(getSettings.mock.calls.length).toBe(getSettingsCallsAfterFirst);
+      expect(mockGetAll.mock.calls.length).toBe(mockGetAllCallsAfterFirst);
     });
 
     it('キャッシュ期限切れ後にrecordメソッドがstorageから再取得する', async () => {
@@ -328,8 +329,8 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       // Expire the cache
       RecordingCache.getCacheState().cacheTimestamp = Date.now() - SETTINGS_CACHE_TTL - 1000;
 
-      getSettings.mockClear();
-      getSettings.mockResolvedValue({
+      mockGetAll.mockClear();
+      mockGetAll.mockResolvedValue({
         AI_PROVIDER: 'new-provider'
       });
 
@@ -340,7 +341,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
         content: 'Test content 2'
       });
 
-      expect(getSettings).toHaveBeenCalled();
+      expect(mockGetAll).toHaveBeenCalled();
     });
   });
 
@@ -384,8 +385,8 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
         expect(result).toHaveProperty('AI_PROVIDER');
       });
 
-      // getSettingsは呼ばれるが、キャッシュにより回数が制限される
-      expect(getSettings).toHaveBeenCalled();
+      // mockGetAllは呼ばれるが、キャッシュにより回数が制限される
+      expect(mockGetAll).toHaveBeenCalled();
     });
   });
 
@@ -393,7 +394,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
     it('設定がnullの場合の処理', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
 
-      getSettings.mockResolvedValue(null);
+      mockGetAll.mockResolvedValue(null);
 
       const settings = await RecordingCache.getSettingsWithCache();
 
@@ -403,7 +404,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
     it('設定が空オブジェクトの場合の処理', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
 
-      getSettings.mockResolvedValue({});
+      mockGetAll.mockResolvedValue({});
 
       const settings = await RecordingCache.getSettingsWithCache();
 
@@ -414,7 +415,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       const error = new Error('Storage error');
     // @ts-expect-error - vi.fn() type narrowing issue
 
-      getSettings.mockRejectedValue(error);
+      mockGetAll.mockRejectedValue(error);
 
       await expect(RecordingCache.getSettingsWithCache()).rejects.toThrow('Storage error');
     });
@@ -446,7 +447,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       const duration1 = Date.now() - start1;
 
       // 2回目以降の呼び出し（キャッシュヒット）
-      getSettings.mockClear();
+      mockGetAll.mockClear();
       const start2 = Date.now();
       await recordingLogic.record({
         title: 'Test Page 2',
@@ -455,10 +456,10 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       });
       const duration2 = Date.now() - start2;
 
-      // 2回目の呼び出しではgetSettingsが呼ばれないことを確認
-      expect(getSettings).not.toHaveBeenCalled();
+      // 2回目の呼び出しではmockGetAllが呼ばれないことを確認
+      expect(mockGetAll).not.toHaveBeenCalled();
 
-      // 注: Jest環境でのテストなので、getSettingsの呼び出し回数を確認する
+      // 注: Jest環境でのテストなので、mockGetAllの呼び出し回数を確認する
       // 実際のパフォーマンス比較は非同期処理のオーバーヘッドにより難しい
     });
   });

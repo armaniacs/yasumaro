@@ -6,167 +6,42 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = vi.fn() as any;
 }
 
+const { mockGetAll, mockGetMany, mockSetAll } = vi.hoisted(() => ({
+  mockGetAll: vi.fn().mockResolvedValue({}),
+  mockGetMany: vi.fn().mockResolvedValue({}),
+  mockSetAll: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
+  return {
+    ...actual,
     StorageKeys: {
       CUSTOM_PROMPTS: 'custom_prompts',
     },
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../../utils/storage/defaults.js', async (importOriginal) => {
+});
+
+vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CUSTOM_PROMPTS: 'custom_prompts',
-    },
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CUSTOM_PROMPTS: 'custom_prompts',
+    settingsRepository: {
+      getAll: mockGetAll,
+      getMany: mockGetMany,
+      setAll: mockSetAll,
+      get: vi.fn(),
+      set: vi.fn(),
     },
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CUSTOM_PROMPTS: 'custom_prompts',
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      getMany = mockGetMany;
+      setAll = mockSetAll;
+      get = vi.fn();
+      set = vi.fn();
     },
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CUSTOM_PROMPTS: 'custom_prompts',
-    },
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CUSTOM_PROMPTS: 'custom_prompts',
-    },
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CUSTOM_PROMPTS: 'custom_prompts',
-    },
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 vi.mock('../../../utils/customPromptUtils.js', () => ({
   createPrompt: vi.fn((data) => ({
@@ -409,7 +284,6 @@ describe('customPromptManager', () => {
   describe('handleSavePrompt', () => {
     it('should create a new prompt when save is clicked with valid data', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../../utils/storage.js');
 
       const settings = { custom_prompts: [] };
       initCustomPromptManager(settings);
@@ -424,7 +298,7 @@ describe('customPromptManager', () => {
 
       document.getElementById('savePromptBtn').click();
       await vi.waitFor(() => {
-        expect(saveSettings).toHaveBeenCalled();
+        expect(mockSetAll).toHaveBeenCalled();
       });
 
       // The settings object should be mutated with the new prompt
@@ -441,7 +315,6 @@ describe('customPromptManager', () => {
 
     it('should update an existing prompt when editingPromptId is set', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../../utils/storage.js');
 
       const existingPrompt = createTestPrompt({ id: 'existing_id' });
       const settings = { custom_prompts: [existingPrompt] };
@@ -463,7 +336,7 @@ describe('customPromptManager', () => {
 
       document.getElementById('savePromptBtn').click();
       await vi.waitFor(() => {
-        expect(saveSettings).toHaveBeenCalled();
+        expect(mockSetAll).toHaveBeenCalled();
       });
 
       // Verify the prompts array was updated
@@ -479,7 +352,6 @@ describe('customPromptManager', () => {
 
     it('should show error when name is empty', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../../utils/storage.js');
 
       const settings = { custom_prompts: [] };
       initCustomPromptManager(settings);
@@ -494,8 +366,8 @@ describe('customPromptManager', () => {
         expect(statusDiv.textContent).toBeTruthy();
       });
 
-      // saveSettings should NOT have been called (validation failed)
-      expect(saveSettings).not.toHaveBeenCalled();
+      // mockSetAll should NOT have been called (validation failed)
+      expect(mockSetAll).not.toHaveBeenCalled();
     });
 
     it('should show error when validation fails', async () => {
@@ -503,7 +375,6 @@ describe('customPromptManager', () => {
       validatePrompt.mockReturnValueOnce({ valid: false, error: 'Invalid prompt content' });
 
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../../utils/storage.js');
 
       const settings = { custom_prompts: [] };
       initCustomPromptManager(settings);
@@ -522,7 +393,7 @@ describe('customPromptManager', () => {
         expect(statusDiv.className).toBe('error');
       });
 
-      expect(saveSettings).not.toHaveBeenCalled();
+      expect(mockSetAll).not.toHaveBeenCalled();
     });
 
     it('should handle system prompt input being absent in DOM', async () => {
@@ -531,7 +402,6 @@ describe('customPromptManager', () => {
       systemInput.remove();
 
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../../utils/storage.js');
 
       const settings = { custom_prompts: [] };
       initCustomPromptManager(settings);
@@ -544,7 +414,7 @@ describe('customPromptManager', () => {
 
       document.getElementById('savePromptBtn').click();
       await vi.waitFor(() => {
-        expect(saveSettings).toHaveBeenCalled();
+        expect(mockSetAll).toHaveBeenCalled();
       });
     });
   });
@@ -602,7 +472,6 @@ describe('customPromptManager', () => {
       (global.confirm as vi.Mock).mockReturnValueOnce(true);
 
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../../utils/storage.js');
 
       const prompts = [createTestPrompt({ id: 'delete_test_1' })];
       const settings = { custom_prompts: prompts };
@@ -610,7 +479,7 @@ describe('customPromptManager', () => {
 
       document.getElementById('delete-prompt-delete_test_1').click();
       await vi.waitFor(() => {
-        expect(saveSettings).toHaveBeenCalled();
+        expect(mockSetAll).toHaveBeenCalled();
       });
 
       expect(settings.custom_prompts).toHaveLength(0);
@@ -620,7 +489,6 @@ describe('customPromptManager', () => {
       (global.confirm as vi.Mock).mockReturnValueOnce(false);
 
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../../utils/storage.js');
 
       const prompts = [createTestPrompt({ id: 'delete_test_2' })];
       const settings = { custom_prompts: prompts };
@@ -631,7 +499,7 @@ describe('customPromptManager', () => {
       // Give microtasks time to process
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(saveSettings).not.toHaveBeenCalled();
+      expect(mockSetAll).not.toHaveBeenCalled();
       expect(settings.custom_prompts).toHaveLength(1);
     });
 
@@ -646,7 +514,6 @@ describe('customPromptManager', () => {
   describe('handleActivatePrompt', () => {
     it('should activate default prompt by deactivating all custom prompts', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../../utils/storage.js');
 
       const prompts = [createTestPrompt({ isActive: true })];
       const settings = { custom_prompts: prompts };
@@ -655,7 +522,7 @@ describe('customPromptManager', () => {
       // Click activate on default
       document.getElementById('activate-prompt-__default__').click();
       await vi.waitFor(() => {
-        expect(saveSettings).toHaveBeenCalled();
+        expect(mockSetAll).toHaveBeenCalled();
       });
 
       // All custom prompts should be deactivated
@@ -664,7 +531,6 @@ describe('customPromptManager', () => {
 
     it('should activate a custom prompt', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../../utils/storage.js');
 
       const prompts = [
         createTestPrompt({ id: 'p1', name: 'Prompt 1', isActive: true }),
@@ -676,7 +542,7 @@ describe('customPromptManager', () => {
       // Click activate on prompt 2
       document.getElementById('activate-prompt-p2').click();
       await vi.waitFor(() => {
-        expect(saveSettings).toHaveBeenCalled();
+        expect(mockSetAll).toHaveBeenCalled();
       });
 
       expect(settings.custom_prompts[1].isActive).toBe(true);
@@ -684,7 +550,6 @@ describe('customPromptManager', () => {
 
     it('should activate preset prompt when activate button is clicked', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../../utils/storage.js');
       const { getPresetPrompt } = await import('../../../utils/customPromptUtils.js');
 
       const settings = { custom_prompts: [] };
@@ -694,7 +559,7 @@ describe('customPromptManager', () => {
       const activateBtn = document.getElementById('activate-prompt-__preset__concise');
       activateBtn.click();
       await vi.waitFor(() => {
-        expect(saveSettings).toHaveBeenCalled();
+        expect(mockSetAll).toHaveBeenCalled();
       });
 
       // A new prompt entry should have been created for the preset
@@ -706,7 +571,6 @@ describe('customPromptManager', () => {
 
     it('should upsert existing preset entry instead of duplicating', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../../utils/storage.js');
 
       const existingEntry = createTestPrompt({
         id: '__preset__concise',
@@ -718,7 +582,7 @@ describe('customPromptManager', () => {
 
       document.getElementById('activate-prompt-__preset__concise').click();
       await vi.waitFor(() => {
-        expect(saveSettings).toHaveBeenCalled();
+        expect(mockSetAll).toHaveBeenCalled();
       });
 
       expect(settings.custom_prompts).toHaveLength(1);
@@ -830,7 +694,6 @@ describe('customPromptManager', () => {
   describe('showStatus', () => {
     it('should show success status message after creating a prompt', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../../utils/storage.js');
 
       initCustomPromptManager({ custom_prompts: [] });
 
@@ -841,7 +704,7 @@ describe('customPromptManager', () => {
 
       document.getElementById('savePromptBtn').click();
       await vi.waitFor(() => {
-        expect(saveSettings).toHaveBeenCalled();
+        expect(mockSetAll).toHaveBeenCalled();
       });
 
       const statusDiv = document.getElementById('promptStatus');
