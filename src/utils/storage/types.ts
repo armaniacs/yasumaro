@@ -18,10 +18,6 @@ export type ProviderId = 'gemini' | 'openai' | 'openai2' | 'lm-studio' | 'ollama
  * provider: 既存6種のプロバイダID ('gemini' | 'openai' | 'openai2' | 'lm-studio' | 'ollama' | 'openai-compatible')
  * model: 省略時はそのプロバイダの既存モデル設定値（例: gemini_model）を使用する
  */
-export type SqliteHealthCheck = () => Promise<boolean>;
-
-export type ProviderId = 'gemini' | 'openai' | 'openai2' | 'lm-studio' | 'ollama' | 'openai-compatible' | 'built-in-ai';
-
 export interface ProviderSlot {
     provider: ProviderId | (string & {});
     model?: string;
