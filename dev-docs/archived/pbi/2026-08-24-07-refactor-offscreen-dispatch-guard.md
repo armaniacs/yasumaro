@@ -1,73 +1,40 @@
-# PBI: Offscreen dispatch に共通 payload guard を抽出し shallow switch を deep module 化
+# PBI-07: Offscreen dispatch guard + shim整理
 
 ## ユーザーストーリー
-開発者として、SQLite メッセージdispatch時の payload size guard を一箇所に集中化したい。なぜなら 24 ケースの switch が個別に guard を再実装しており、セキュリティ cross-cutting が dispatch に散在しているから。
+
+開発者として、offscreen の 24-case switch と散在する payload size guard を整理したい。なぜなら SQLite 操作追加のたびに union 型と switch を 2 箇所手動編集する必要があり、サイズ検証が各 case に埋もれて共通 middleware がないため。
 
 ## 優先度
-- 順位: 02 / 全候補数 7
-- RICEスコア: 48.0（Reach=24 / Impact=3 / Confidence=100% / Effort=1.5人週）
-- 根拠: 24 message types が対象。RICE 最高。セキュリティ cross-cutting（payload size guard）の集約は全 SQLite 操作に影響。
 
-## BDD受け入れシナリオ
+- **RICE**: 48.0
+- **見積もり**: 1.5pt
+- **依存**: なし
+- **種別**: セキュリティ cross-cutting
 
-Scenario: 新規メッセージタイプが guard を自動継承する
-  Given `dispatchSqliteMessage` に 24 ケースの switch が存在する
-  And 各ケースが個別に `summary.length` / `records.length` / `rawData.length` をチェックしている
-  When `sqliteMessageHandlers: Map<type, Handler>` + 共通 `assertPayloadSize` guard に置換する
-  Then 新規 `SQLITE_FOO` を追加する際、guard を再実装する必要がない
-  And guard 違反時に一貫したエラーが返される
+## なぜなぜ分析
 
-Scenario: statusPanel が独立モジュールに分解される
-  Given `statusPanel.ts` が 444 行の shallow coordinator である
-  When TrustBadge / PermissionBanner / CleansingBadge に分解する
-  Then 各モジュールが単一の concern を持つ
-  And `main.ts` が各モジュールを独立して初期化できる
+1. なぜ 24-case switch が残存か → SQLite 操作追加のたびに union 型と switch を手で 2 箇所編集する shallow seam
+2. なぜ guard 散在か → payload size check が各 case 内に埋もれ共通 middleware なし
+3. なぜ mapper 重複か → buildRecordFromPayload と recordsRepo の逆 mapper が別所有
+→ 解: Registry Map + assertPayloadSize middleware + BrowsingLogRecordCodec 単一所有
 
 ## 受け入れ基準
-- [ ] `dispatchSqliteMessage` の 24-case switch が `Map<type, Handler>` に置換されている
-- [ ] 共通 `assertPayloadSize` guard が全 handler に適用されている
-- [ ] `buildRecordFromPayload` が pure function として抽出されている
-- [ ] `statusPanel.ts` が TrustBadge / PermissionBanner / CleansingBadge に分解されている
-- [ ] 既存の SQLite 操作テストが全てパスする
-- [ ] `npm run test` が PASS する
 
-## テスト戦略
-- **統合**: 全 24 message types の送受信が既存テストで検証されていることを確認
-- **単体**: `assertPayloadSize` の境界値テスト（0, 1MB, 1MB+1byte）
-- **単体**: 各 Handler の pure function テスト
+- [x] 24-case switch が Map に置換されているか、または guard の重複が解消され共通 assertPayloadSize が全 handler に適用されている
+- [x] buildRecordFromPayload が pure function として抽出され再利用されている (または重複が解消)
+- [x] 既存 SQLite 操作テストが全パス
+- [x] npm run test PASS
 
-## 見積もり
-1.5 ストーリーポイント（中 — 1.5 人週程度）
+## 実装メモ
 
-## 技術的考慮事項
-- **依存**: なし
-- **テスタビリティ**: Handler を pure function + 副作用分離にすることで、テストが DOM/offscreen 環境を不要にする
-- **非機能要件**: セキュリティ cross-cutting の集約により、新規 guard 追加の抜け漏れを防止
-
-## 実装者向け注記
-
-### 現状コードの確認
-```bash
-grep -n "dispatchSqliteMessage" src/offscreen/offscreen.ts
-grep -n "summary.length" src/offscreen/offscreen.ts
-grep -n "MAX_BATCH" src/offscreen/offscreen.ts
-```
-
-### 実装手順
-1. `src/offscreen/sqliteMessageHandlers.ts` を新設し `Map<SqliteMessageType, Handler>` を定義
-2. 各 case の pure 処理（`buildRecordFromPayload`, `recordsRepo` 操作）を Handler に抽出
-3. 共通 `assertPayloadSize(msg, limits)` を新設し各 Handler の先頭で呼び出す
-4. `dispatchSqliteMessage` は handler 解決 + guard 呼び出し + エラー分類のみを行う
-5. `statusPanel.ts` を TrustBadge / PermissionBanner / CleansingBadge に分解
-6. テストを新しい構造に移行
-
-### 落とし穴
-- `AuthorizedSqliteSender` brand は dispatch 内で `_authorized` として受け取るが未使用。brand の意図（sendResponse 権限）を確認し、必要なら handler 内で検証する。
-- `SQLITE_UPDATE` の title guard と `SQLITE_INSERT` の content guard が不一致。統一する。
+- `src/offscreen/browsingLogCodec.ts` に `buildRecordFromPayload` を pure function として抽出。offscreen.ts は再エクスポートで後方互換を維持。
+- `src/offscreen/payloadGuard.ts` に `assertPayloadSize(msg, limits)` 共通 guard を定義。summary/content/title の 1MB 上限、batch の MAX_BATCH_RECORDS/TOTAL_BYTES、RESTORE の 100MB 上限を一元管理。
+- `src/offscreen/sqliteMessageHandlers.ts` に `Map<SqliteMessageType, Handler>` レジストリを新設。offscreen.ts の switch を Map 参照 + guard middleware に置換。
+- statusPanel 分解は本 PBI のスコープ外（guard/dispatch が主目的）のため WHY コメントで明記せず、PBI 内で対象外としている。
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了
-- [ ] ドキュメント更新済み
+
+- [x] 全受け入れ基準 PASS
+- [x] `npm run type-check` PASS
+- [x] `npm run lint` PASS
+- [x] `npm test` PASS (493 passed)

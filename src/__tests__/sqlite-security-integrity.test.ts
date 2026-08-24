@@ -180,8 +180,19 @@ describe('SQLite Security & Data Integrity', () => {
     let offscreenSource: string;
 
     beforeEach(() => {
-      const filePath = join(process.cwd(), 'src/offscreen/offscreen.ts');
-      offscreenSource = readFileSync(filePath, 'utf8');
+      // Whitelist moved from offscreen.ts to sqliteMessageHandlers.ts (PBI-07 registry extraction);
+      // check both locations so the contract survives the refactor.
+      const offscreenPath = join(process.cwd(), 'src/offscreen/offscreen.ts');
+      const handlersPath = join(process.cwd(), 'src/offscreen/sqliteMessageHandlers.ts');
+      const offSrc = readFileSync(offscreenPath, 'utf8');
+      const hSrc = (() => {
+        try {
+          return readFileSync(handlersPath, 'utf8');
+        } catch {
+          return '';
+        }
+      })();
+      offscreenSource = `${offSrc}\n${hSrc}`;
     });
 
     it('should include obsidian_synced in the SQLITE_UPDATE allowed fields whitelist', () => {
