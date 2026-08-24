@@ -23,8 +23,8 @@ export function createAlarmHandler(deps: AlarmHandlerDeps): (alarm: chrome.alarm
   return async (alarm: chrome.alarms.Alarm) => {
     if (alarm.name === 'yasumaro-daily-purge') {
       handleDailyPurgeAlarm(
-        (days, max) => deps.sqliteClient.purgeOldRecordsResult(days, max),
-        (days, max, starred) => deps.sqliteClient.purgeContentResult(days, max, starred),
+        (days, max) => deps.sqliteClient.maintain({ type: 'purgeOldRecords', retentionDays: days, maxRecords: max } as { type: 'purgeOldRecords'; retentionDays?: number; maxRecords?: number }),
+        (days, max, starred) => deps.sqliteClient.maintain({ type: 'purgeContent', retentionDays: days, maxRecords: max, includeStarred: starred } as { type: 'purgeContent'; retentionDays?: number; maxRecords?: number; includeStarred?: boolean }),
       );
     }
     if (alarm.name === 'yasumaro-local-md-flush') {
@@ -59,7 +59,7 @@ export function createAlarmHandler(deps: AlarmHandlerDeps): (alarm: chrome.alarm
         // Piggyback a lightweight health check on this existing 5-minute
         // alarm to keep the offscreen document from being suspended for
         // long stretches on mobile Chrome (PBI-2026-07-26-20).
-        deps.sqliteClient.isSqliteHealthy(),
+        deps.sqliteClient.maintain({ type: 'healthCheck' }),
       ]);
     }
   };

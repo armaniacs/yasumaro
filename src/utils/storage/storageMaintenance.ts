@@ -13,7 +13,10 @@ export async function getDefaultSqliteHealthCheck(): Promise<() => Promise<boole
     try {
         const { SqliteClient } = await import('../../background/sqliteClient.js');
         const client = new SqliteClient();
-        return () => client.isSqliteHealthy();
+        return async () => {
+          const r = await client.maintain({ type: 'healthCheck' });
+          return r.success ? Boolean(r.data) : false;
+        };
     } catch {
         return async () => false;
     }

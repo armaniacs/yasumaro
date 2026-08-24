@@ -35,11 +35,11 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
           // データ削除→同意撤回の順で行う。同意撤回だけ成功しデータが
           // 残る不整合（GDPR Art.7の実効性を損なう）を避けるため。
           const { clearAllLogs, isServiceError } = await import('../../dashboardSqliteService.js');
-          const deleteResult = await clearAllLogs();
-          if (isServiceError(deleteResult)) {
+          const delRes = await clearAllLogs();
+          if (isServiceError(delRes)) {
             if (statusEl) {
               const base = chrome.i18n.getMessage('withdrawConsentDataDeleteFailed') || 'Failed to delete recorded data. Your consent status was not changed.';
-              statusEl.textContent = `${base} (${deleteResult.error})`;
+              statusEl.textContent = `${base} (${delRes.error})`;
               statusEl.style.color = 'var(--color-error)';
             }
             return;

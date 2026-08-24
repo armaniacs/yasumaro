@@ -413,11 +413,11 @@ describe('ublockImport - SourceManager Module', () => {
       expect(state1.settings[StorageKeys.UBLOCK_SOURCES]).toHaveLength(1);
 
       // 同じURLで更新
-      const updateResult = await saveUblockSettings('||updated.com^', url);
+      const updRes = await saveUblockSettings('||updated.com^', url);
 
-      expect(updateResult.action).toBe('更新');
-      expect(updateResult.sources).toHaveLength(1);
-      expect(updateResult.sources[0].url).toBe(url);
+      expect(updRes.action).toBe('更新');
+      expect(updRes.sources).toHaveLength(1);
+      expect(updRes.sources[0].url).toBe(url);
 
       const state2 = storageMocks.getStorageState();
       expect(state2.settings[StorageKeys.UBLOCK_SOURCES]).toHaveLength(1);
@@ -430,10 +430,10 @@ describe('ublockImport - SourceManager Module', () => {
       expect(state1.settings[StorageKeys.UBLOCK_SOURCES]).toHaveLength(1);
 
       // 同じURL（manual）で更新
-      const updateResult = await saveUblockSettings('||updated.com^');
+      const updRes = await saveUblockSettings('||updated.com^');
 
-      expect(updateResult.action).toBe('更新');
-      expect(updateResult.sources).toHaveLength(1);
+      expect(updRes.action).toBe('更新');
+      expect(updRes.sources).toHaveLength(1);
 
       const state2 = storageMocks.getStorageState();
       expect(state2.settings[StorageKeys.UBLOCK_SOURCES]).toHaveLength(1);

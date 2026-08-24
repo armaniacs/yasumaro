@@ -10,8 +10,6 @@ vi.mock('../sqliteClient.js', () => ({
     const qr = vi.fn();
     const ur = vi.fn();
     return {
-      queryResult: qr,
-      updateResult: ur,
       query: qr,
       mutate: ur,
       maintain: vi.fn(),
@@ -212,15 +210,13 @@ import { addLog } from '../../utils/logger.js';
 
 describe('GistSyncTarget - extended coverage', () => {
   let target: GistSyncTarget;
-  let mockSqliteClient: { queryResult: ReturnType<typeof vi.fn>; updateResult: ReturnType<typeof vi.fn>; query: ReturnType<typeof vi.fn>; mutate: ReturnType<typeof vi.fn>; maintain: ReturnType<typeof vi.fn> };
+  let mockSqliteClient: { query: ReturnType<typeof vi.fn>; mutate: ReturnType<typeof vi.fn>; maintain: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
     const qr = vi.fn();
     const ur = vi.fn();
     mockSqliteClient = {
-      queryResult: qr,
-      updateResult: ur,
       query: qr,
       mutate: ur,
       maintain: vi.fn(),
@@ -286,7 +282,7 @@ describe('GistSyncTarget - extended coverage', () => {
   describe('sync', () => {
     it('updates an existing Gist when GIST_ID is set', async () => {
       vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test', gist_id: 'existing-123' } as any);
-      mockSqliteClient.updateResult.mockResolvedValue({ success: true, data: undefined });
+      mockSqliteClient.mutate.mockResolvedValue({ success: true, data: undefined });
       global.fetch = vi.fn().mockResolvedValue({ ok: true } as Response);
 
       const result = await target.sync(1, 'https://example.com', 'Test', 'Summary');
@@ -308,7 +304,7 @@ describe('GistSyncTarget - extended coverage', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
-      expect(mockSqliteClient.updateResult).not.toHaveBeenCalled();
+      expect(mockSqliteClient.mutate).not.toHaveBeenCalled();
       expect(addLog).toHaveBeenCalledWith('WARN', 'GistSync: failed (silent skip)', expect.any(Object));
     });
 
@@ -325,7 +321,7 @@ describe('GistSyncTarget - extended coverage', () => {
     it('uses provided markdown argument when given', async () => {
       vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test' } as any);
       global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ id: 'gist-1' }) } as Response);
-      mockSqliteClient.updateResult.mockResolvedValue({ success: true, data: undefined });
+      mockSqliteClient.mutate.mockResolvedValue({ success: true, data: undefined });
 
       const result = await target.sync(1, 'https://example.com', 'Title', null, '# Custom markdown');
 
@@ -344,7 +340,7 @@ describe('GistSyncTarget - extended coverage', () => {
 
     it('propagates query failure', async () => {
       vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test' } as any);
-      mockSqliteClient.queryResult.mockResolvedValue({
+      mockSqliteClient.query.mockResolvedValue({
         success: false,
         error: { kind: 'sqlite', message: 'query returned null', retriable: false },
       });
@@ -354,7 +350,7 @@ describe('GistSyncTarget - extended coverage', () => {
 
     it('returns 0 when query returns empty rows', async () => {
       vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test' } as any);
-      mockSqliteClient.queryResult.mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
+      mockSqliteClient.query.mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
 
       const result = await target.syncBatch();
       expect(result).toBe(0);
@@ -363,7 +359,7 @@ describe('GistSyncTarget - extended coverage', () => {
     it('returns 0 when no unsynced rows', async () => {
       vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test' } as any);
       // DB-level gistSynced filter returns no rows for synced records
-      mockSqliteClient.queryResult.mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
+      mockSqliteClient.query.mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
 
       const result = await target.syncBatch();
       expect(result).toBe(0);
@@ -371,7 +367,7 @@ describe('GistSyncTarget - extended coverage', () => {
 
     it('syncs unsynced rows and returns count', async () => {
       vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test' } as any);
-      mockSqliteClient.queryResult
+      mockSqliteClient.query
         .mockResolvedValueOnce({
           success: true,
           data: {
@@ -384,17 +380,17 @@ describe('GistSyncTarget - extended coverage', () => {
         })
         .mockResolvedValueOnce({ success: true, data: { rows: [], total: 0 } });
       global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ id: 'gist-new' }) } as Response);
-      mockSqliteClient.updateResult.mockResolvedValue({ success: true, data: undefined });
+      mockSqliteClient.mutate.mockResolvedValue({ success: true, data: undefined });
 
       const result = await target.syncBatch();
 
       expect(result).toBe(2);
-      expect(mockSqliteClient.updateResult).toHaveBeenCalledTimes(2);
+      expect(mockSqliteClient.mutate).toHaveBeenCalledTimes(2);
     });
 
     it('propagates query errors', async () => {
       vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test' } as any);
-      mockSqliteClient.queryResult.mockRejectedValue(new Error('db error'));
+      mockSqliteClient.query.mockRejectedValue(new Error('db error'));
 
       await expect(target.syncBatch()).rejects.toThrow('db error');
       expect(addLog).toHaveBeenCalledWith('WARN', 'GistSync: batch failed', expect.any(Object));
@@ -402,7 +398,7 @@ describe('GistSyncTarget - extended coverage', () => {
 
     it('skips rows with undefined id', async () => {
       vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test' } as any);
-      mockSqliteClient.queryResult
+      mockSqliteClient.query
         .mockResolvedValueOnce({
           success: true,
           data: {
@@ -415,17 +411,17 @@ describe('GistSyncTarget - extended coverage', () => {
         })
         .mockResolvedValueOnce({ success: true, data: { rows: [], total: 0 } });
       global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ id: 'gist-new' }) } as Response);
-      mockSqliteClient.updateResult.mockResolvedValue({ success: true, data: undefined });
+      mockSqliteClient.mutate.mockResolvedValue({ success: true, data: undefined });
 
       const result = await target.syncBatch();
 
       expect(result).toBe(1);
-      expect(mockSqliteClient.updateResult).toHaveBeenCalledTimes(1);
+      expect(mockSqliteClient.mutate).toHaveBeenCalledTimes(1);
     });
 
     it('processes all unsynced records across multiple batches', async () => {
       vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test' } as any);
-      mockSqliteClient.queryResult
+      mockSqliteClient.query
         .mockResolvedValueOnce({
           success: true,
           data: {
@@ -442,13 +438,13 @@ describe('GistSyncTarget - extended coverage', () => {
         })
         .mockResolvedValueOnce({ success: true, data: { rows: [], total: 0 } });
       global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ id: 'gist-new' }) } as Response);
-      mockSqliteClient.updateResult.mockResolvedValue({ success: true, data: undefined });
+      mockSqliteClient.mutate.mockResolvedValue({ success: true, data: undefined });
 
       const result = await target.syncBatch();
 
       expect(result).toBe(2);
-      expect(mockSqliteClient.queryResult).toHaveBeenCalledTimes(3);
-      expect(mockSqliteClient.updateResult).toHaveBeenCalledTimes(2);
+      expect(mockSqliteClient.query).toHaveBeenCalledTimes(3);
+      expect(mockSqliteClient.mutate).toHaveBeenCalledTimes(2);
     });
   });
 });

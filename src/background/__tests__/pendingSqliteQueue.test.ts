@@ -3,7 +3,7 @@
  * M14: when SQLite is temporarily unavailable, a failed insert must be
  * queued in chrome.storage.local instead of silently dropping the record.
  * A later flush (e.g. Service Worker startup) retries queued records in
- * chunks using insertBatchResult() to reduce offscreen round-trips.
+ * chunks using mutate({ type: 'insertBatch' }) to reduce offscreen round-trips.
  */
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
@@ -54,20 +54,20 @@ describe('pendingSqliteQueue (M14)', () => {
     expect(stored).toHaveLength(2);
   });
 
-  it('flushPendingRecords processes records in 50-item chunks using insertBatchResult', async () => {
+  it('flushPendingRecords processes records in 50-item chunks using mutate insertBatch', async () => {
     // 120 records -> chunks of 50, 50, 20
     for (let i = 0; i < 120; i++) {
       await enqueuePendingRecord(makeRecord(`https://example-${i}.com`));
     }
 
-    const insertBatchResult = vi.fn().mockResolvedValue({ success: true, data: { count: 50 } });
+    const mutate = vi.fn().mockResolvedValue({ success: true, data: { count: 50 } });
 
-    await flushPendingRecords({ insert: vi.fn(), insertBatchResult } as any);
+    await flushPendingRecords({ mutate } as any);
 
-    expect(insertBatchResult).toHaveBeenCalledTimes(3);
-    expect(insertBatchResult.mock.calls[0][0]).toHaveLength(50);
-    expect(insertBatchResult.mock.calls[1][0]).toHaveLength(50);
-    expect(insertBatchResult.mock.calls[2][0]).toHaveLength(20);
+    expect(mutate).toHaveBeenCalledTimes(3);
+    expect((mutate.mock.calls[0][0] as any).records).toHaveLength(50);
+    expect((mutate.mock.calls[1][0] as any).records).toHaveLength(50);
+    expect((mutate.mock.calls[2][0] as any).records).toHaveLength(20);
 
     const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as BrowsingLogRecord[];
     expect(remaining).toHaveLength(0);
@@ -79,14 +79,14 @@ describe('pendingSqliteQueue (M14)', () => {
       await enqueuePendingRecord(makeRecord(`https://example-${i}.com`));
     }
 
-    const insertBatchResult = vi.fn()
+    const mutate = vi.fn()
       .mockResolvedValueOnce({ success: true, data: { count: 50 } }) // chunk 1 succeeds
       .mockResolvedValueOnce({ success: false, error: { kind: 'sqlite_error', message: 'insert failed', retriable: false } }) // chunk 2 fails
       .mockResolvedValueOnce({ success: true, data: { count: 50 } }); // chunk 3 succeeds
 
-    await flushPendingRecords({ insert: vi.fn(), insertBatchResult } as any);
+    await flushPendingRecords({ mutate } as any);
 
-    expect(insertBatchResult).toHaveBeenCalledTimes(3);
+    expect(mutate).toHaveBeenCalledTimes(3);
 
     const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as BrowsingLogRecord[];
     expect(remaining).toHaveLength(50);
@@ -95,16 +95,16 @@ describe('pendingSqliteQueue (M14)', () => {
     expect(remaining[49].url).toBe('https://example-99.com');
   });
 
-  it('flushPendingRecords keeps the chunk pending when insertBatchResult throws', async () => {
+  it('flushPendingRecords keeps the chunk pending when mutate insertBatch throws', async () => {
     for (let i = 0; i < 100; i++) {
       await enqueuePendingRecord(makeRecord(`https://example-${i}.com`));
     }
 
-    const insertBatchResult = vi.fn()
+    const mutate = vi.fn()
       .mockResolvedValueOnce({ success: true, data: { count: 50 } })
       .mockRejectedValueOnce(new Error('DB unavailable'));
 
-    await flushPendingRecords({ insert: vi.fn(), insertBatchResult } as any);
+    await flushPendingRecords({ mutate } as any);
 
     const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as BrowsingLogRecord[];
     expect(remaining).toHaveLength(50);
@@ -112,11 +112,11 @@ describe('pendingSqliteQueue (M14)', () => {
   });
 
   it('flushPendingRecords does nothing when the queue is empty', async () => {
-    const insertBatchResult = vi.fn();
+    const mutate = vi.fn();
 
-    await flushPendingRecords({ insert: vi.fn(), insertBatchResult } as any);
+    await flushPendingRecords({ mutate } as any);
 
-    expect(insertBatchResult).not.toHaveBeenCalled();
+    expect(mutate).not.toHaveBeenCalled();
   });
 
   it('flushPendingRecords logs recovered/remaining counts', async () => {
@@ -126,11 +126,11 @@ describe('pendingSqliteQueue (M14)', () => {
       await enqueuePendingRecord(makeRecord(`https://example-${i}.com`));
     }
 
-    const insertBatchResult = vi.fn()
+    const mutate = vi.fn()
       .mockResolvedValueOnce({ success: true, data: { count: 50 } })
       .mockResolvedValueOnce({ success: false, error: { kind: 'sqlite_error', message: 'insert failed', retriable: false } });
 
-    await flushPendingRecords({ insert: vi.fn(), insertBatchResult } as any);
+    await flushPendingRecords({ mutate } as any);
 
     expect(addLog).toHaveBeenCalledWith(LogType.INFO, 'pendingSqliteQueue: flushed queued records', {
       recovered: 50,
@@ -198,17 +198,17 @@ describe('pendingSqliteQueue retry semantics', () => {
     expect(stored[0].url).toBe('https://a.example.com');
   });
 
-  it('unwraps metadata before passing to insertBatchResult', async () => {
+  it('unwraps metadata before passing to mutate insertBatch', async () => {
     await enqueuePendingRecord(makeRecord('https://a.example.com'));
     await enqueuePendingRecord(makeRecord('https://b.example.com'));
 
-    const insertBatchResult = vi.fn().mockResolvedValue({ success: true, data: { count: 2 } });
+    const mutate = vi.fn().mockResolvedValue({ success: true, data: { count: 2 } });
 
-    await flushPendingRecords({ insert: vi.fn(), insertBatchResult } as any);
+    await flushPendingRecords({ mutate } as any);
 
-    // The records passed to insertBatchResult should be plain BrowsingLogRecords
+    // The records passed to mutate should be plain BrowsingLogRecords
     // (no createdAt or retryCount fields)
-    const passedRecords = insertBatchResult.mock.calls[0][0];
+    const passedRecords = (mutate.mock.calls[0][0] as any).records;
     expect(passedRecords).toHaveLength(2);
     expect(passedRecords[0].url).toBe('https://a.example.com');
     expect(passedRecords[0].createdAt).toBeUndefined();
@@ -225,12 +225,12 @@ describe('pendingSqliteQueue retry semantics', () => {
     };
     mockStorage[PENDING_SQLITE_RECORDS_KEY] = [queuedRecord];
 
-    const insertBatchResult = vi.fn();
+    const mutate = vi.fn();
 
-    await flushPendingRecords({ insert: vi.fn(), insertBatchResult } as any);
+    await flushPendingRecords({ mutate } as any);
 
     // Record should be dropped (retryCount 5 >= maxRetryCount 5), not inserted
-    expect(insertBatchResult).not.toHaveBeenCalled();
+    expect(mutate).not.toHaveBeenCalled();
     // Queue should be empty after drop
     const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as unknown[];
     expect(remaining).toHaveLength(0);
@@ -245,12 +245,12 @@ describe('pendingSqliteQueue retry semantics', () => {
     };
     mockStorage[PENDING_SQLITE_RECORDS_KEY] = [queuedRecord];
 
-    const insertBatchResult = vi.fn().mockResolvedValue({
+    const mutate = vi.fn().mockResolvedValue({
       success: false,
       error: { kind: 'sqlite_error', message: 'insert failed', retriable: false },
     });
 
-    await flushPendingRecords({ insert: vi.fn(), insertBatchResult } as any);
+    await flushPendingRecords({ mutate } as any);
 
     const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as Array<Record<string, unknown>>;
     expect(remaining).toHaveLength(1);
@@ -267,13 +267,13 @@ describe('pendingSqliteQueue retry semantics', () => {
     };
     mockStorage[PENDING_SQLITE_RECORDS_KEY] = [queuedRecord];
 
-    const insertBatchResult = vi.fn().mockResolvedValue({
+    const mutate = vi.fn().mockResolvedValue({
       success: false,
       error: { kind: 'sqlite_error', message: 'insert failed', retriable: false },
     });
 
     // This flush increments to 5, which equals maxRetryCount (5) -> dropped
-    await flushPendingRecords({ insert: vi.fn(), insertBatchResult } as any);
+    await flushPendingRecords({ mutate } as any);
 
     const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as unknown[];
     expect(remaining).toHaveLength(0);
@@ -287,11 +287,11 @@ describe('pendingSqliteQueue retry semantics', () => {
     };
     mockStorage[PENDING_SQLITE_RECORDS_KEY] = [expiredRecord];
 
-    const insertBatchResult = vi.fn();
+    const mutate = vi.fn();
 
-    await flushPendingRecords({ insert: vi.fn(), insertBatchResult } as any);
+    await flushPendingRecords({ mutate } as any);
 
-    expect(insertBatchResult).not.toHaveBeenCalled();
+    expect(mutate).not.toHaveBeenCalled();
     const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as unknown[];
     expect(remaining).toHaveLength(0);
   });

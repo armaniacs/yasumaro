@@ -27,9 +27,9 @@ export function createDashboardSqliteMessageHandler(deps: DashboardSqliteWiringD
           'yasumaro_migration_status',
           'yasumaro_migration_progress',
         ]);
-        const beforeCount = await deps.sqliteClient.getCountResult();
+        const beforeCount = await deps.sqliteClient.query({ kind: 'count' });
         await migrationService.run();
-        const afterCount = await deps.sqliteClient.getCountResult();
+        const afterCount = await deps.sqliteClient.query({ kind: 'count' });
         if (!beforeCount.success || !afterCount.success) {
           return {
             success: false,
