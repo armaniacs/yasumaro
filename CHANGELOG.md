@@ -35,6 +35,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.73] - 2026-08-24
+
+### Fixed
+
+- Dell Pro Max ページで OneTrust 製 Cookie同意バナー（`onetrust`/`ot-sdk`系）の定型文が AI へ送信されていた問題を修正。AI要約クレンジングに `cookie` ルール（`COOKIE_TEXT_PATTERNS` 12件: 日 `Cookieの管理`/`必須Cookie`/`マーケティング` 等、英 `Manage.*cookie`/`Always active` 等）を新設し、OneTrust 系クラス（`onetrust`/`ot-sdk`/`optanon`/`truste`等）を `POPUP_PATTERNS` に追加して無条件除去。`stripCookieConsentElements` によりテキストマッチでも1000文字以下のバナー要素を除去。`historyAiSummaryCleansedReasonCookie` を ja/en に追加し、既存ユーザーも `defaultEnabled:true` で有効
+
 ## [6.7.72] - 2026-08-24
 
 ### Refactor
