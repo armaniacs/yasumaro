@@ -42,6 +42,12 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-24 Architecture Deepening（arch-delivery-loop）0824d — 2件完了（RICE再計算 staged 0.9w）
+
+- 2026-08-24-05-refactor-storage-cleansing-facade.md（RICE 63.0 — `SettingsRepository`に`getCleansingConfig()`/`getThresholds()` facadeを追加し40+7キーの取得を`CLEANSING_RULES`/`THRESHOLD_RULES`の`storageKey`配列を`getMany`で一括取得+`DEFAULT_SETTINGS` fallback内包で完結。`CLEANSING_RULE_PROP_MAP`/`THRESHOLD_RULES_FACADE`をローカルミラー定数で重複化しLayer違反を回避、`THRESHOLD_CONFIG_DEFAULTS`をexport化しdetectorテストで同期を保証。type-check / 8394 tests PASS）
+- 2026-08-24-06-refactor-extractor-visit-gate.md（RICE 16.8 — `VisitGate`純粋value objectを`src/content/visitGate.ts`に新設（`shouldRecord`/`isReportable`+`clock`注入）、`PageState`に`toVisitGateThresholds()`/`toVisitState()` DI seam追加、`extractor.ts`の`shouldRecordVisit`/`checkVisitConditions`を`VisitGate`委譲に置換し`pageState.`アクセス44→70→8程度に削減。content isolated worldのためServiceContainer恩恵なし。type-check / 8394 tests PASS）
+- 2026-08-24-00-backlog-0824d.md（4候補のRICE再計算 — ServiceContainer/THRESHOLD_RULESのenablerで2.0w→0.90w stagedに55%削減、Slice B/A disjoint並列可、Slice CはA/B後、HTMLレポート `/tmp/architecture-review-20260824220957.html` を参照）
+
 ### 2026-08-24 Autonomous Closer — ServiceContainer導入（1件）
 
 - 2026-08-24-04-refactor-service-container.md（RICE 15.0 — `ServiceContainer`最小実装（register/resolve/singleton/override）を`src/background/serviceContainer.ts`に新設。`createBackgroundServices`の11 singleton生成を`container.register`宣言的配線に置換し`getSharedSqliteClient`を`singleton:true` factoryとして登録。deferred解消で17メンバ追加が1登録で完結、テストはoverrideで差し替え可能。type-check / 8394 tests PASS）

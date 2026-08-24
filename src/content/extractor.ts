@@ -18,6 +18,8 @@ import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger
 import { PageState, type CleansingConfig } from './pageState.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../utils/aiSummaryCleaner/rules.js';
 import { pickDefined } from '../utils/objectUtils.js';
+import { VisitGate } from './visitGate.js';
+import type { VisitState, VisitGateThresholds } from './visitGate.js';
 
 // Type-only import to establish graphify edge between content script and
 // the service worker's message type definitions (PBI-02-3).
@@ -188,11 +190,15 @@ function loadSettings(): Promise<void> {
     });
 }
 
+export { VisitGate } from './visitGate.js';
+export type { VisitState, VisitGateThresholds } from './visitGate.js';
+
 /**
  * 有効な訪問の条件を判定する（テスト可能な純粋関数）
  *
  * 呼び出し時に閾値を明示的に渡すことで、モジュールレベルの状態に依存しない。
  * パラメータ未指定時は pageState のデフォルト値を使用し後方互換性を維持する。
+ * 内部では VisitGate に委譲し、閾値注入と純粋判定を一元化する。
  *
  * @param duration - 訪問時間（秒）
  * @param scrollPercent - 最大スクロール深度（%）
@@ -206,9 +212,16 @@ export function shouldRecordVisit(
     minDuration?: number,
     minScroll?: number,
 ): boolean {
-    const effectiveMinDuration = minDuration ?? pageState.minVisitDuration;
-    const effectiveMinScroll = minScroll ?? pageState.minScrollDepth;
-    return duration >= effectiveMinDuration && scrollPercent >= effectiveMinScroll;
+    const gate = new VisitGate({
+        minDuration: minDuration ?? pageState.minVisitDuration,
+        minScroll: minScroll ?? pageState.minScrollDepth,
+    });
+    return gate.shouldRecord(duration, scrollPercent);
+}
+
+/** Factory for VisitGate bound to current pageState thresholds. Allows clock injection for tests. */
+export function createVisitGate(clock: () => number = () => Date.now()): VisitGate {
+    return new VisitGate(pageState.toVisitGateThresholds(), clock);
 }
 
 /**
@@ -223,31 +236,32 @@ export function shouldRecordVisit(
  * 🟢
  */
 function checkVisitConditions(): void {
-    if (pageState.isValidVisitReported) return;
-
-    const duration = (Date.now() - pageState.startTime) / 1000;
+    const visitState: VisitState = pageState.toVisitState();
+    const thresholds: VisitGateThresholds = pageState.toVisitGateThresholds();
+    // VisitGate is pure: thresholds + clock injected, state passed as value — no global mutation inside.
+    const gate = new VisitGate(thresholds);
+    const duration = (Date.now() - visitState.startTime) / 1000;
 
     // DEBUG LOG: 状態のデバッグログ（fire-and-forget）
-    void logDebug('Visit status', { duration, maxScrollPercentage: pageState.maxScrollPercentage, minVisitDuration: pageState.minVisitDuration, minScrollDepth: pageState.minScrollDepth }, 'extractor');
+    void logDebug('Visit status', { duration, maxScrollPercentage: visitState.maxScrollPercentage, minVisitDuration: thresholds.minDuration, minScrollDepth: thresholds.minScroll }, 'extractor');
 
     // E2Eテスト用フック: data-ow-e2e-test 属性が設定されている場合のみ有効
-    // （ページスクリプトと Content Script は別 JS コンテキストのため DOM 経由で通信）
     if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
         const state = {
-            maxScrollPercentage: pageState.maxScrollPercentage,
-            isValidVisitReported: pageState.isValidVisitReported,
-            startTime: pageState.startTime,
-            minVisitDuration: pageState.minVisitDuration,
-            minScrollDepth: pageState.minScrollDepth,
+            maxScrollPercentage: visitState.maxScrollPercentage,
+            isValidVisitReported: visitState.isValidVisitReported,
+            startTime: visitState.startTime,
+            minVisitDuration: thresholds.minDuration,
+            minScrollDepth: thresholds.minScroll,
             duration,
         };
         window.__OW_TEST_STATE = state;
         document.documentElement.setAttribute('data-ow-test-state', JSON.stringify(state));
     }
 
-    // 【条件判定】: 時間とスクロール深度の両方の条件を満たす場合に記録を実行
-    if (shouldRecordVisit(duration, pageState.maxScrollPercentage)) {
-        console.info(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${pageState.maxScrollPercentage.toFixed(0)}%`);
+    // 【条件判定】: VisitGate の純粋判定で冪等ガード＋閾値判定を一括
+    if (gate.isReportable(visitState)) {
+        console.info(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${visitState.maxScrollPercentage.toFixed(0)}%`);
         reportValidVisit();
         // E2Eテスト用フック: 報告後に状態を更新
         if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
