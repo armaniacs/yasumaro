@@ -18,6 +18,7 @@ import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+import { Mutex } from '../utils/Mutex.js';
 
 type ReviewLogEntry = BrowsingLogRecord & { id: number };
 
@@ -186,9 +187,13 @@ async function downloadMarkdown(content: string, filename: string, exportPath: s
  */
 export function createReviewSummaryGenerator(options: CreateReviewSummaryGeneratorOptions): ReviewSummaryGenerator {
   const { aiService, sqliteClient, repo = settingsRepository } = options;
+  const weeklyMutex = new Mutex();
+  const monthlyMutex = new Mutex();
 
   async function generateWeeklySummary(targetDate?: Date): Promise<boolean> {
-    const settings = await repo.getAll();
+    await weeklyMutex.acquire();
+    try {
+      const settings = await repo.getAll();
     const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED];
     if (!enabled) {
       addLog(LogType.INFO, 'Weekly review summary is disabled');
@@ -253,11 +258,16 @@ const { start, end } = getWeekPeriod(date);
       addLog(LogType.INFO, 'Weekly review summary generated', { weekKey, entryCount: result.rows.length });
     }
 
-    return success;
+      return success;
+    } finally {
+      weeklyMutex.release();
+    }
   }
 
   async function generateMonthlySummary(targetDate?: Date): Promise<boolean> {
-    const settings = await repo.getAll();
+    await monthlyMutex.acquire();
+    try {
+      const settings = await repo.getAll();
     const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED];
     if (!enabled) {
       addLog(LogType.INFO, 'Monthly review summary is disabled');
@@ -320,7 +330,10 @@ const { start, end } = getMonthPeriod(date);
       addLog(LogType.INFO, 'Monthly review summary generated', { monthKey, entryCount: result.rows.length });
     }
 
-    return success;
+      return success;
+    } finally {
+      monthlyMutex.release();
+    }
   }
 
   return { generateWeeklySummary, generateMonthlySummary };
