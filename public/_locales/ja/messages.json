@@ -3075,6 +3075,9 @@
   "historyAiSummaryCleansedReasonPopup": {
     "message": "ポップアップ"
   },
+  "historyAiSummaryCleansedReasonCookie": {
+    "message": "Cookie同意"
+  },
   "historyAiSummaryCleansedReasonPlatform": {
     "message": "プラットフォームノイズ"
   },

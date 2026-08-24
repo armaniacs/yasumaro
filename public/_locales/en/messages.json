@@ -3172,6 +3172,9 @@
   "historyAiSummaryCleansedReasonPopup": {
     "message": "Popups"
   },
+  "historyAiSummaryCleansedReasonCookie": {
+    "message": "Cookie consent"
+  },
   "historyAiSummaryCleansedReasonPlatform": {
     "message": "Platform noise"
   },
