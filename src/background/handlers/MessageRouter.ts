@@ -234,8 +234,8 @@ export class MessageRouter {
     // 'content-script-allowed' permits both extension pages and content scripts;
     // these two types require a valid tab + http/https sender URL to prevent
     // spoofing from extension pages. This preserves the pre-refactor behavior
-    // previously enforced in messageHandler's CONTENT_SCRIPT_ONLY_TYPES gate,
-    // now consolidated as the single routing seam.
+    // previously enforced in the legacy handler gate, now consolidated as the
+    // single routing seam.
     if (type === 'VALID_VISIT' || type === 'CHECK_DOMAIN') {
       const hasValidTab = Boolean(sender.tab?.id && sender.tab?.url);
       const senderUrl = sender.url;

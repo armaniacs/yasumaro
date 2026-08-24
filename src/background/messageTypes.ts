@@ -246,17 +246,6 @@ export const CONTENT_SCRIPT_ALLOWED_TYPES = [
     'PING',
 ] as const;
 
-/**
- * @deprecated Use CONTENT_SCRIPT_ALLOWED_TYPES — kept for backward
- * compatibility. Type-level subset guarantee ensures every element exists in
- * CONTENT_SCRIPT_ALLOWED_TYPES; adding a new content-script type requires
- * editing only the SSOT above.
- */
-export const CONTENT_SCRIPT_ONLY_TYPES = [
-    'VALID_VISIT',
-    'CHECK_DOMAIN',
-] as const satisfies readonly (typeof CONTENT_SCRIPT_ALLOWED_TYPES[number])[];
-
 export const NO_PAYLOAD_TYPES = [
     'CHECK_DOMAIN',
     'GET_CONTENT',
