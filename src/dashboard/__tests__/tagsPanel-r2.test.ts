@@ -38,6 +38,8 @@ vi.mock('../../utils/storage/types.js', async (importOriginal) => {
       TAG_SUMMARY_MODE: 'tagSummaryMode',
       TAG_CATEGORIES: 'tagCategories',
       TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
+      ALLOWED_URLS: 'allowed_urls',
+      ALLOWED_URLS_HASH: 'allowed_urls_hash',
     },
   };
 });
