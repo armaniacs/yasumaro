@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+const mockGetAll = vi.hoisted(() => vi.fn());
+const mockSet = vi.hoisted(() => vi.fn());
+
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -183,6 +186,28 @@ vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
   };
 });;
 
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: mockGetAll,
+      get: vi.fn(),
+      set: mockSet,
+      setAll: vi.fn(),
+      getMany: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      get = vi.fn();
+      set = mockSet;
+      setAll = vi.fn();
+      getMany = vi.fn();
+    },
+  };
+});
+
 vi.mock('../../utils/logger.js', () => ({
   addLog: vi.fn().mockResolvedValue(undefined),
   LogType: { INFO: 'INFO', ERROR: 'ERROR', WARN: 'WARN' },
@@ -251,7 +276,7 @@ describe('generateWeeklySummary', () => {
 
   it('returns false when feature is disabled', async () => {
     const { generator } = createHarness();
-    vi.mocked(getSettings).mockResolvedValue({ review_summary_enabled: false } as any);
+    mockGetAll.mockResolvedValue({ review_summary_enabled: false } as any);
     const result = await generator.generateWeeklySummary(new Date('2026-07-08'));
     expect(result).toBe(false);
     expect(addLog).toHaveBeenCalledWith('INFO', 'Weekly review summary is disabled');
@@ -259,7 +284,7 @@ describe('generateWeeklySummary', () => {
 
   it('returns false when already generated for this week', async () => {
     const { generator } = createHarness();
-    vi.mocked(getSettings).mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       review_summary_enabled: true,
       review_summary_last_generated_week: '2026-W28',
     } as any);
@@ -270,7 +295,7 @@ describe('generateWeeklySummary', () => {
 
   it('returns false when query fails', async () => {
     const { generator, queryMock } = createHarness();
-    vi.mocked(getSettings).mockResolvedValue({ review_summary_enabled: true } as any);
+    mockGetAll.mockResolvedValue({ review_summary_enabled: true } as any);
     queryMock.mockResolvedValueOnce({
       success: false,
       error: { kind: 'unknown', message: 'Query failed', retriable: false },
@@ -281,7 +306,7 @@ describe('generateWeeklySummary', () => {
 
   it('returns false when entries array is empty', async () => {
     const { generator, queryMock } = createHarness();
-    vi.mocked(getSettings).mockResolvedValue({ review_summary_enabled: true } as any);
+    mockGetAll.mockResolvedValue({ review_summary_enabled: true } as any);
     queryMock.mockResolvedValueOnce(mockRows([], 0));
     const result = await generator.generateWeeklySummary(new Date('2026-07-08'));
     expect(result).toBe(false);
@@ -289,7 +314,7 @@ describe('generateWeeklySummary', () => {
 
   it('generates digest using the injected AIService when summaries exist', async () => {
     const { generator, generateSummary, queryMock } = createHarness();
-    vi.mocked(getSettings).mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       review_summary_enabled: true,
       local_markdown_export_path: 'Yasumaro',
     } as any);
@@ -308,7 +333,7 @@ describe('generateWeeklySummary', () => {
 
   it('uses fallback digest when all entry summaries are null', async () => {
     const { generator, generateSummary, queryMock } = createHarness();
-    vi.mocked(getSettings).mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       review_summary_enabled: true,
       local_markdown_export_path: 'Yasumaro',
     } as any);
@@ -321,7 +346,7 @@ describe('generateWeeklySummary', () => {
 
   it('uses fallback digest when AI generation fails', async () => {
     const { generator, generateSummary, queryMock } = createHarness();
-    vi.mocked(getSettings).mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       review_summary_enabled: true,
       local_markdown_export_path: 'Yasumaro',
     } as any);
@@ -335,7 +360,7 @@ describe('generateWeeklySummary', () => {
 
   it('returns false when download fails and does not save week marker', async () => {
     const { generator, generateSummary, queryMock } = createHarness();
-    vi.mocked(getSettings).mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       review_summary_enabled: true,
       local_markdown_export_path: 'Yasumaro',
     } as any);
@@ -350,7 +375,7 @@ describe('generateWeeklySummary', () => {
 
   it('uses default export path when not configured', async () => {
     const { generator, generateSummary, queryMock } = createHarness();
-    vi.mocked(getSettings).mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       review_summary_enabled: true,
     } as any);
     queryMock.mockResolvedValueOnce(mockRows([makeEntry()]));
@@ -376,14 +401,14 @@ describe('generateMonthlySummary', () => {
 
   it('returns false when feature is disabled', async () => {
     const { generator } = createHarness();
-    vi.mocked(getSettings).mockResolvedValue({ review_summary_enabled: false } as any);
+    mockGetAll.mockResolvedValue({ review_summary_enabled: false } as any);
     const result = await generator.generateMonthlySummary(new Date('2026-07-15'));
     expect(result).toBe(false);
   });
 
   it('returns false when already generated for this month', async () => {
     const { generator } = createHarness();
-    vi.mocked(getSettings).mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       review_summary_enabled: true,
       review_summary_last_generated_month: '2026-07',
     } as any);
@@ -393,7 +418,7 @@ describe('generateMonthlySummary', () => {
 
   it('returns false when query fails', async () => {
     const { generator, queryMock } = createHarness();
-    vi.mocked(getSettings).mockResolvedValue({ review_summary_enabled: true } as any);
+    mockGetAll.mockResolvedValue({ review_summary_enabled: true } as any);
     queryMock.mockResolvedValueOnce({
       success: false,
       error: { kind: 'unknown', message: 'Query failed', retriable: false },
@@ -404,7 +429,7 @@ describe('generateMonthlySummary', () => {
 
   it('generates monthly summary with AI digest and saves', async () => {
     const { generator, generateSummary, queryMock } = createHarness();
-    vi.mocked(getSettings).mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       review_summary_enabled: true,
       local_markdown_export_path: 'Yasumaro',
     } as any);
@@ -423,7 +448,7 @@ describe('generateMonthlySummary', () => {
 
   it('handles download failure correctly', async () => {
     const { generator, generateSummary, queryMock } = createHarness();
-    vi.mocked(getSettings).mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       review_summary_enabled: true,
     } as any);
     queryMock.mockResolvedValueOnce(mockRows([makeEntry()]));

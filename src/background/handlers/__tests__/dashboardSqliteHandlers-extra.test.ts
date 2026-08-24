@@ -1,4 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+const mockGetAll = vi.hoisted(() => vi.fn());
+const mockSet = vi.hoisted(() => vi.fn());
+
+vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: mockGetAll,
+      get: vi.fn(),
+      set: mockSet,
+      setAll: vi.fn(),
+      getMany: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      get = vi.fn();
+      set = mockSet;
+      setAll = vi.fn();
+      getMany = vi.fn();
+    },
+  };
+});
+
 
 vi.mock('../../../utils/logger.js', () => ({
   logError: vi.fn(),
@@ -518,7 +542,7 @@ describe('handleDashboardSqlite — purge_now', () => {
   it('purges with both days and max configured', async () => {
     const mock = createMockSqliteClient();
     mock.maintain.mockResolvedValue({ success: true, data: { purged: 7 } });
-    vi.mocked(getSettings).mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       sqlite_retention_days: 30,
       sqlite_max_records: 5000,
     } as any);
@@ -529,7 +553,7 @@ describe('handleDashboardSqlite — purge_now', () => {
 
   it('skips when both settings are null', async () => {
     const mock = createMockSqliteClient();
-    vi.mocked(getSettings).mockResolvedValue({} as any);
+    mockGetAll.mockResolvedValue({} as any);
     const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 0, skipped: true });
     expect(mock.maintain).not.toHaveBeenCalled();
@@ -538,21 +562,21 @@ describe('handleDashboardSqlite — purge_now', () => {
   it('handles failure from purgeOldRecords maintain', async () => {
     const mock = createMockSqliteClient();
     mock.maintain.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Purge failed', retriable: false } });
-    vi.mocked(getSettings).mockResolvedValue({ sqlite_retention_days: 30 } as any);
+    mockGetAll.mockResolvedValue({ sqlite_retention_days: 30 } as any);
     const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Purge failed', retriable: false });
   });
 
   it('purges with only days configured', async () => {
     const mock = createMockSqliteClient();
-    vi.mocked(getSettings).mockResolvedValue({ sqlite_retention_days: 60 } as any);
+    mockGetAll.mockResolvedValue({ sqlite_retention_days: 60 } as any);
     await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(mock.maintain).toHaveBeenCalledWith(expect.objectContaining({ type: 'purgeOldRecords', retentionDays: 60 }));
   });
 
   it('purges with only max configured', async () => {
     const mock = createMockSqliteClient();
-    vi.mocked(getSettings).mockResolvedValue({ sqlite_max_records: 10000 } as any);
+    mockGetAll.mockResolvedValue({ sqlite_max_records: 10000 } as any);
     await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(mock.maintain).toHaveBeenCalledWith(expect.objectContaining({ type: 'purgeOldRecords', maxRecords: 10000 }));
   });
@@ -562,7 +586,7 @@ describe('handleDashboardSqlite — content_purge_now', () => {
   it('purges content with all settings', async () => {
     const mock = createMockSqliteClient();
     mock.maintain.mockResolvedValue({ success: true, data: { purged: 3 } });
-    vi.mocked(getSettings).mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       content_retention_days: 14,
       content_max_records: 1000,
       content_purge_include_starred: true,
@@ -574,7 +598,7 @@ describe('handleDashboardSqlite — content_purge_now', () => {
 
   it('skips when both content settings are null', async () => {
     const mock = createMockSqliteClient();
-    vi.mocked(getSettings).mockResolvedValue({} as any);
+    mockGetAll.mockResolvedValue({} as any);
     const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 0, skipped: true });
     expect(mock.maintain).not.toHaveBeenCalled();
@@ -583,7 +607,7 @@ describe('handleDashboardSqlite — content_purge_now', () => {
   it('handles failure from purgeContent maintain', async () => {
     const mock = createMockSqliteClient();
     mock.maintain.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Content purge failed', retriable: false } });
-    vi.mocked(getSettings).mockResolvedValue({ content_retention_days: 7 } as any);
+    mockGetAll.mockResolvedValue({ content_retention_days: 7 } as any);
     const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Content purge failed', retriable: false });
   });
