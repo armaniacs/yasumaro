@@ -251,33 +251,38 @@ async function handleOpfsSpike(_msg: SqliteMessage, sendResponse: (r: unknown) =
 }
 
 /**
+ * Static registry object — `satisfies` guarantees exhaustiveness at compile time.
+ * Adding a new SqliteMessage variant without a handler is a type error.
+ */
+const handlerRecord = {
+  SQLITE_HEALTH_CHECK: handleHealthCheck,
+  SQLITE_INIT: handleInit,
+  SQLITE_INSERT: handleInsert,
+  SQLITE_INSERT_BATCH: handleInsertBatch,
+  SQLITE_QUERY: handleQuery,
+  SQLITE_AUDIT_LOG_INSERT: handleAuditLogInsert,
+  SQLITE_AUDIT_LOG_QUERY: handleAuditLogQuery,
+  SQLITE_SEARCH: handleSearch,
+  SQLITE_UPDATE: handleUpdate,
+  SQLITE_DELETE: handleDelete,
+  SQLITE_TOGGLE_STAR: handleToggleStar,
+  SQLITE_COUNT: handleCount,
+  SQLITE_STATUS: handleStatus,
+  SQLITE_CLEAR_ALL: handleClearAll,
+  SQLITE_EXPORT: handleExport,
+  SQLITE_BACKUP: handleBackup,
+  SQLITE_RESTORE: handleRestore,
+  SQLITE_PURGE: handlePurge,
+  CONTENT_PURGE: handleContentPurge,
+  SQLITE_OPFS_SPIKE: handleOpfsSpike,
+} satisfies Record<SqliteMessageType, SqliteHandler>;
+
+/**
  * Registry of all SQLite message handlers.
  * Adding a new SqliteMessage variant requires adding an entry here
  * and in SQLITE_MESSAGE_TYPES — the type checker enforces the coupling
  * via the exhaustive check in dispatch.
  */
-export const sqliteMessageHandlers: Map<SqliteMessageType, SqliteHandler> = new Map<
-  SqliteMessageType,
-  SqliteHandler
->([
-  ['SQLITE_HEALTH_CHECK', handleHealthCheck],
-  ['SQLITE_INIT', handleInit],
-  ['SQLITE_INSERT', handleInsert],
-  ['SQLITE_INSERT_BATCH', handleInsertBatch],
-  ['SQLITE_QUERY', handleQuery],
-  ['SQLITE_AUDIT_LOG_INSERT', handleAuditLogInsert],
-  ['SQLITE_AUDIT_LOG_QUERY', handleAuditLogQuery],
-  ['SQLITE_SEARCH', handleSearch],
-  ['SQLITE_UPDATE', handleUpdate],
-  ['SQLITE_DELETE', handleDelete],
-  ['SQLITE_TOGGLE_STAR', handleToggleStar],
-  ['SQLITE_COUNT', handleCount],
-  ['SQLITE_STATUS', handleStatus],
-  ['SQLITE_CLEAR_ALL', handleClearAll],
-  ['SQLITE_EXPORT', handleExport],
-  ['SQLITE_BACKUP', handleBackup],
-  ['SQLITE_RESTORE', handleRestore],
-  ['SQLITE_PURGE', handlePurge],
-  ['CONTENT_PURGE', handleContentPurge],
-  ['SQLITE_OPFS_SPIKE', handleOpfsSpike],
-]);
+export const sqliteMessageHandlers: Map<SqliteMessageType, SqliteHandler> = new Map(
+  Object.entries(handlerRecord) as [SqliteMessageType, SqliteHandler][],
+);

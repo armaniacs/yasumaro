@@ -35,6 +35,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.76] - 2026-08-24
+
+### Refactor
+
+- Architecture Deepening 0824c（arch-delivery-loop）診断7候補 → RICEスコアリング + 並列性調査で3件をWave 1並列で実装。`THRESHOLD_RULES`テーブル7要素を`src/utils/aiSummaryCleaner/rules.ts`に新設し`THRESHOLD_DEFAULTS`と`DEFAULT_CLEANSING_CONFIG`/`DEFAULT_SETTINGS`を同テーブルから導出、`src/content/extractor.ts`の7連打ifを`for (const t of THRESHOLD_RULES)`の1ループに集約（PBI-01, RICE 42.0）。`CONTENT_SCRIPT_ALLOWED_TYPES`をSSOT化し`CONTENT_SCRIPT_ONLY_TYPES`を派生として型保証、`MessageRouter.dispatch`に`tab.id/tab.url`の厳格チェックを集約し`messageHandler`を`restore+migrate+router.dispatch`の薄い層に縮小（PBI-02, RICE 21.3）。4 helper（callQuery/callMutate/callMaintain/callStatus）を`callInternal` genericに集約し`sqliteMessageHandlers`に`satisfies Record<SqliteMessageType, Handler>`で静的網羅性を付与、`storageMaintenance`の`await import+new SqliteClient`を削除し`setSqliteHealthCheck`注入に、`createBackgroundServices`で`getSharedSqliteClient`を注入、`quota.ts`の`getStorageUsage`を`getBytesInUse`不在時に0を返す耐性化でstub欠落を解消（PBI-03, RICE 17.1）。deferred 3件（extractor分割/ServiceContainer/StorageKeys）を次スプリントへ。`8394 tests PASS / type-check PASS / lint 62 warnings / build 6.89MB`
+
 ## [6.7.75] - 2026-08-24
 
 ### Refactor

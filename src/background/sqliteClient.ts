@@ -59,10 +59,10 @@ export class SqliteClient implements SqliteRpcClient {
   }
 
   // --------------------------------------------------------------------------
-  // domain-private helpers — each owns its OffscreenResponse subtype and error taxonomy
+  // internal helper — single generic consolidating 4 domain helpers
   // --------------------------------------------------------------------------
 
-  private async callQuery<T, R extends OffscreenQueryResponse | OffscreenCountResponse = OffscreenQueryResponse | OffscreenCountResponse>(
+  private async callInternal<T, R = unknown>(
     type: SqliteMessageType,
     payload: Record<string, unknown> = {},
     transform?: (res: Extract<R, { success: true }>) => T,
@@ -78,98 +78,7 @@ export class SqliteClient implements SqliteRpcClient {
       }
       recordSqliteSuccess();
       // WHY: offscreen document returns serialized data that TypeScript cannot structurally validate
-      return { success: true, data: transform ? transform(res as Extract<R, { success: true }>) : (res as T) };
-    } catch (error) {
-      const msg = errorMessage(error);
-      recordSqliteFailure(type, msg);
-      logError('SQLite Client: call failed', { error: msg, traceId }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
-      return { success: false, error: categorizeError(msg) };
-    }
-  }
-
-  private async callMutate<T, R extends OffscreenInsertResponse | OffscreenCountResponse | OffscreenWriteResponse | OffscreenToggleStarResponse = OffscreenInsertResponse | OffscreenCountResponse | OffscreenWriteResponse | OffscreenToggleStarResponse>(
-    type: SqliteMessageType,
-    payload: Record<string, unknown> = {},
-    transform?: (res: Extract<R, { success: true }>) => T,
-    traceId: string = '',
-  ): Promise<SqliteRpcResult<T>> {
-    try {
-      const res = await this.transport.msgOffscreen(type, payload, traceId);
-      if (!res?.success) {
-        const msg = res && 'error' in res ? String(res.error) : `${type} failed`;
-        recordSqliteFailure(type, msg);
-        logError('SQLite Client: call failed', { error: msg, traceId }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
-        return { success: false, error: categorizeError(msg) };
-      }
-      recordSqliteSuccess();
-      // WHY: offscreen document returns serialized data that TypeScript cannot structurally validate
-      return { success: true, data: transform ? transform(res as Extract<R, { success: true }>) : (res as T) };
-    } catch (error) {
-      const msg = errorMessage(error);
-      recordSqliteFailure(type, msg);
-      logError('SQLite Client: call failed', { error: msg, traceId }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
-      return { success: false, error: categorizeError(msg) };
-    }
-  }
-
-  private async callMaintain<T, R extends OffscreenBinaryResponse | OffscreenWriteResponse | OffscreenPurgeResponse | OffscreenContentPurgeResponse | OffscreenOpfsSpikeResponse | OffscreenHealthResponse = OffscreenBinaryResponse | OffscreenWriteResponse | OffscreenPurgeResponse | OffscreenContentPurgeResponse | OffscreenOpfsSpikeResponse | OffscreenHealthResponse>(
-    type: SqliteMessageType,
-    payload: Record<string, unknown> = {},
-    transform?: (res: Extract<R, { success: true }>) => T,
-    traceId: string = '',
-  ): Promise<SqliteRpcResult<T>> {
-    try {
-      const res = await this.transport.msgOffscreen(type, payload, traceId);
-      if (!res?.success) {
-        const msg = res && 'error' in res ? String(res.error) : `${type} failed`;
-        recordSqliteFailure(type, msg);
-        logError('SQLite Client: call failed', { error: msg, traceId }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
-        return { success: false, error: categorizeError(msg) };
-      }
-      recordSqliteSuccess();
-      // WHY: offscreen document returns serialized data that TypeScript cannot structurally validate
-      return { success: true, data: transform ? transform(res as Extract<R, { success: true }>) : (res as T) };
-    } catch (error) {
-      const msg = errorMessage(error);
-      recordSqliteFailure(type, msg);
-      logError('SQLite Client: call failed', { error: msg, traceId }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
-      return { success: false, error: categorizeError(msg) };
-    }
-  }
-
-  private async callStatus(
-    payload: Record<string, unknown> = {},
-    traceId: string = '',
-  ): Promise<SqliteRpcResult<Omit<OffscreenStatusData, 'success'>>> {
-    const type: SqliteMessageType = 'SQLITE_STATUS';
-    try {
-      const res = await this.transport.msgOffscreen(type, payload, traceId);
-      if (!res?.success) {
-        const msg = res && 'error' in res ? String(res.error) : `${type} failed`;
-        recordSqliteFailure(type, msg);
-        logError('SQLite Client: call failed', { error: msg, traceId }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
-        return { success: false, error: categorizeError(msg) };
-      }
-      recordSqliteSuccess();
-      const r = res as Extract<OffscreenStatusResponse, { success: true }>;
-      return {
-        success: true,
-        data: {
-          initialized: r.initialized,
-          path: r.path,
-          fallback: r.fallback,
-          ...pickDefined({
-            fts5: r.fts5,
-            initError: r.initError,
-            compileOptions: r.compileOptions,
-            compileOptionsSource: r.compileOptionsSource,
-            opfsMigrationV2Done: r.opfsMigrationV2Done,
-            opfsMigrationV2LastAttemptedAt: r.opfsMigrationV2LastAttemptedAt,
-            opfsMigrationV2CompletedAt: r.opfsMigrationV2CompletedAt,
-            opfsMigrationV2RecordCount: r.opfsMigrationV2RecordCount,
-          }),
-        },
-      };
+      return { success: true, data: transform ? transform(res as Extract<R, { success: true }>) : (res as unknown as T) };
     } catch (error) {
       const msg = errorMessage(error);
       recordSqliteFailure(type, msg);
@@ -194,14 +103,14 @@ export class SqliteClient implements SqliteRpcClient {
     if (isQueryOp(op)) {
       switch (op.kind) {
         case 'count':
-          return this.callQuery<number, OffscreenCountResponse>('SQLITE_COUNT', {}, (res) => {
+          return this.callInternal<number, OffscreenCountResponse>('SQLITE_COUNT', {}, (res) => {
             if (!Number.isFinite(res.count)) {
               throw new Error('SQLite count response was missing a numeric count');
             }
             return res.count;
           });
         case 'auditLog':
-          return this.callQuery<{ rows: AuditLogRecord[]; total: number }, OffscreenQueryResponse>(
+          return this.callInternal<{ rows: AuditLogRecord[]; total: number }, OffscreenQueryResponse>(
             'SQLITE_AUDIT_LOG_QUERY',
             { limit: op.limit, offset: op.offset },
             (res) => ({
@@ -229,7 +138,7 @@ export class SqliteClient implements SqliteRpcClient {
   }
 
   private async queryRecords(q: StorageQuery): Promise<SqliteRpcResult<{ rows: BrowsingLogRecord[]; total: number }>> {
-    return this.callQuery<{ rows: BrowsingLogRecord[]; total: number }, OffscreenQueryResponse>(
+    return this.callInternal<{ rows: BrowsingLogRecord[]; total: number }, OffscreenQueryResponse>(
       'SQLITE_QUERY',
       q as Record<string, unknown>,
       (res) => ({
@@ -251,7 +160,7 @@ export class SqliteClient implements SqliteRpcClient {
   async mutate(op: MutateOp): Promise<SqliteRpcResult<unknown>> {
     switch (op.type) {
       case 'insert':
-        return this.callMutate<{ id: number }, OffscreenInsertResponse>(
+        return this.callInternal<{ id: number }, OffscreenInsertResponse>(
           'SQLITE_INSERT',
           // WHY: BrowsingLogRecord lacks index signature; must cast through unknown for offscreen payload
           op.record as unknown as Record<string, unknown>,
@@ -259,24 +168,24 @@ export class SqliteClient implements SqliteRpcClient {
           op.traceId ?? '',
         );
       case 'insertBatch':
-        return this.callMutate<{ count: number }, OffscreenCountResponse>(
+        return this.callInternal<{ count: number }, OffscreenCountResponse>(
           'SQLITE_INSERT_BATCH',
           // WHY: BrowsingLogRecord[] lacks index signature; must cast through unknown for offscreen payload
           { records: op.records as unknown as Record<string, unknown>[] },
           (res) => ({ count: res.count }),
         );
       case 'update':
-        return this.callMutate<void, OffscreenWriteResponse>('SQLITE_UPDATE', { id: op.id, ...op.changes }, () => undefined, op.traceId ?? '');
+        return this.callInternal<void, OffscreenWriteResponse>('SQLITE_UPDATE', { id: op.id, ...op.changes }, () => undefined, op.traceId ?? '');
       case 'delete':
-        return this.callMutate<void, OffscreenWriteResponse>('SQLITE_DELETE', { id: op.id }, () => undefined);
+        return this.callInternal<void, OffscreenWriteResponse>('SQLITE_DELETE', { id: op.id }, () => undefined);
       case 'toggleStar':
-        return this.callMutate<{ is_starred: number }, OffscreenToggleStarResponse>(
+        return this.callInternal<{ is_starred: number }, OffscreenToggleStarResponse>(
           'SQLITE_TOGGLE_STAR',
           { id: op.id },
           (res) => ({ is_starred: res.is_starred }),
         );
       case 'insertAuditLog':
-        return this.callMutate<{ id: number }, OffscreenInsertResponse>(
+        return this.callInternal<{ id: number }, OffscreenInsertResponse>(
           'SQLITE_AUDIT_LOG_INSERT',
           op.record as unknown as Record<string, unknown>,
           (res) => ({ id: res.id }),
@@ -304,31 +213,31 @@ export class SqliteClient implements SqliteRpcClient {
   async maintain(op: MaintainOp): Promise<SqliteRpcResult<unknown>> {
     switch (op.type) {
       case 'init': {
-        const result = await this.callMaintain('SQLITE_INIT');
+        const result = await this.callInternal<boolean, OffscreenHealthResponse>('SQLITE_INIT');
         return result.success ? { success: true, data: true } : result;
       }
       case 'backup':
-        return this.callMaintain<Uint8Array, OffscreenBinaryResponse>('SQLITE_BACKUP', {}, (res) => new Uint8Array(res.data));
+        return this.callInternal<Uint8Array, OffscreenBinaryResponse>('SQLITE_BACKUP', {}, (res) => new Uint8Array(res.data));
       case 'restore':
-        return this.callMaintain<void, OffscreenWriteResponse>('SQLITE_RESTORE', { data: Array.from(op.data) }, () => undefined);
+        return this.callInternal<void, OffscreenWriteResponse>('SQLITE_RESTORE', { data: Array.from(op.data) }, () => undefined);
       case 'clearAll':
-        return this.callMaintain<void, OffscreenWriteResponse>('SQLITE_CLEAR_ALL', {}, () => undefined);
+        return this.callInternal<void, OffscreenWriteResponse>('SQLITE_CLEAR_ALL', {}, () => undefined);
       case 'purgeOldRecords':
-        return this.callMaintain<{ purged: number }, OffscreenPurgeResponse>(
+        return this.callInternal<{ purged: number }, OffscreenPurgeResponse>(
           'SQLITE_PURGE',
           { retentionDays: op.retentionDays, maxRecords: op.maxRecords },
           (res) => ({ purged: res.purged }),
         );
       case 'purgeContent':
-        return this.callMaintain<{ purged: number }, OffscreenContentPurgeResponse>(
+        return this.callInternal<{ purged: number }, OffscreenContentPurgeResponse>(
           'CONTENT_PURGE',
           { retentionDays: op.retentionDays, maxRecords: op.maxRecords, includeStarred: op.includeStarred },
           (res) => ({ purged: res.purged }),
         );
       case 'opfsSpike':
-        return this.callMaintain<OpfsSpikeReport, OffscreenOpfsSpikeResponse>('SQLITE_OPFS_SPIKE', {}, (res) => res.report);
+        return this.callInternal<OpfsSpikeReport, OffscreenOpfsSpikeResponse>('SQLITE_OPFS_SPIKE', {}, (res) => res.report);
       case 'healthCheck': {
-        const result = await this.callMaintain('SQLITE_HEALTH_CHECK', {});
+        const result = await this.callInternal<boolean, OffscreenHealthResponse>('SQLITE_HEALTH_CHECK', {});
         return result.success ? { success: true, data: true } : result;
       }
       default: {
@@ -340,7 +249,25 @@ export class SqliteClient implements SqliteRpcClient {
   }
 
   async getStatus(): Promise<Omit<OffscreenStatusData, 'success'> | null> {
-    const result = await this.callStatus();
+    const result = await this.callInternal<Omit<OffscreenStatusData, 'success'>, OffscreenStatusResponse>(
+      'SQLITE_STATUS',
+      {},
+      (r) => ({
+        initialized: r.initialized,
+        path: r.path,
+        fallback: r.fallback,
+        ...pickDefined({
+          fts5: r.fts5,
+          initError: r.initError,
+          compileOptions: r.compileOptions,
+          compileOptionsSource: r.compileOptionsSource,
+          opfsMigrationV2Done: r.opfsMigrationV2Done,
+          opfsMigrationV2LastAttemptedAt: r.opfsMigrationV2LastAttemptedAt,
+          opfsMigrationV2CompletedAt: r.opfsMigrationV2CompletedAt,
+          opfsMigrationV2RecordCount: r.opfsMigrationV2RecordCount,
+        }),
+      }),
+    );
     if (result.success) {
       return result.data;
     }

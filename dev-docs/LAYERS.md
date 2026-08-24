@@ -48,7 +48,7 @@ src/utils/storage/settingsStore.ts  — ただし trustDb との循環あり (La
 src/utils/storage/savedUrlRepository.ts
 src/utils/storage/domainFilterCache.ts
 src/utils/storage/quota.ts
-src/utils/storage/storageMaintenance.ts — 例外: background/sqliteClient.ts への逆方向依存あり
+src/utils/storage/storageMaintenance.ts
 src/utils/optimisticLock.ts
 src/utils/Mutex.ts
 src/utils/rateLimiter.ts
@@ -67,7 +67,6 @@ src/utils/storage/settingsStore.ts  ↔  src/utils/trustDb/trustDb.ts
   - 詳細は ADR 2026-08-20-utils-layer-circular-dependency を参照
 
 src/utils/trustDb/trancoConsentManager.ts → src/utils/storage.ts (barrel) + settingsStore (dynamic)
-src/utils/storage/storageMaintenance.ts → src/background/sqliteClient.ts (utils → background 逆方向依存)
 ```
 
 これらは削除不可。将来のリファクタで「なぜこんな複雑な import？」と除去しないこと。
@@ -108,7 +107,7 @@ Layer 1 → Layer 0 のみ import 可
 Layer 1-循環 → Layer 0 + 相互の dynamic import のみ許容
 Layer 2 → Layer 0/1 import 可
 Barrel → Layer 0/1/2 を再エクスポートのみ
-逆方向依存 (utils → background) は禁止。ただし storageMaintenance.ts → sqliteClient.ts は例外として記録
+逆方向依存 (utils → background) は禁止
 ```
 
 違反検出:

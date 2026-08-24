@@ -10,7 +10,6 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { createErrorResponse } from '../utils/errorClassification.js';
 import {
     VALID_MESSAGE_TYPES,
-    CONTENT_SCRIPT_ONLY_TYPES,
     NO_PAYLOAD_TYPES,
     CURRENT_PROTOCOL_VERSION,
 } from './messageTypes.js';
@@ -18,15 +17,7 @@ import type { ExtensionMessage } from './messageTypes.js';
 import type { MessageRouter } from './handlers/MessageRouter.js';
 import type { TabCache } from './tabCache.js';
 
-const INVALID_SENDER_ERROR = { success: false, error: 'Invalid sender' };
 const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
-
-function isValidContentScriptSender(sender: chrome.runtime.MessageSender): boolean {
-    if (!sender.tab || !sender.tab.id || !sender.tab.url) return false;
-    const senderUrl = sender.url;
-    if (!senderUrl) return false;
-    return senderUrl.startsWith('http://') || senderUrl.startsWith('https://');
-}
 
 export interface MessageHandlerDeps {
   router: MessageRouter;
@@ -75,12 +66,15 @@ export function createMessageHandler(deps: MessageHandlerDeps): (
 
                 const message = rawMessage as ExtensionMessage;
 
-                if (CONTENT_SCRIPT_ONLY_TYPES.includes(message.type as typeof CONTENT_SCRIPT_ONLY_TYPES[number])) {
-                    if (!isValidContentScriptSender(sender)) {
-                        sendResponse(INVALID_SENDER_ERROR);
-                        return;
-                    }
-                }
+                // Trust policy is single-seam in MessageRouter (derived from
+                // CONTENT_SCRIPT_ALLOWED_TYPES SSOT). Previous CONTENT_SCRIPT_ONLY_TYPES
+                // check duplicated that policy; removing it here eliminates the double
+                // SSOT while MessageRouter.dispatch still rejects invalid senders.
+                // VALID_MESSAGE_TYPES / NO_PAYLOAD_TYPES / protocolVersion remain here
+                // as shallow shape guards before the deep dispatch; they are not
+                // duplicated in MessageRouter's per-type validators (which check
+                // payload shape) and provide early INVALID_MESSAGE_ERROR for
+                // malformed envelopes.
 
                 if (message.type !== 'TEST_CONNECTIONS' && message.type !== 'TEST_OBSIDIAN' && message.type !== 'TEST_AI' && message.type !== 'CHECK_DOMAIN') {
                     await deps.runDeferredStartupMigrations();

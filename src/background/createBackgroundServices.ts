@@ -14,6 +14,7 @@ import type { AIService } from './ai/AIService.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { getSharedSqliteClient } from './sqliteClient.js';
 import type { SqliteClient } from './sqliteClient.js';
+import { setSqliteHealthCheck } from '../utils/storage/storageMaintenance.js';
 import { RecordingCacheInstance, SessionStoreRecordingCacheStore } from './recordingCache.js';
 import { TabCache } from './tabCache.js';
 import { RateLimiter } from './rateLimiter.js';
@@ -112,6 +113,11 @@ export function createBackgroundServices(): BackgroundServicesComposition {
   // Shared singleton: independent SqliteClient instances would each race to
   // create the offscreen document (see getSharedSqliteClient).
   const sqliteClient = getSharedSqliteClient();
+  // Inject SQLite health check into storageMaintenance (removes utils→background dynamic import)
+  setSqliteHealthCheck(async () => {
+    const r = await sqliteClient.maintain({ type: 'healthCheck' });
+    return r.success ? Boolean(r.data) : false;
+  });
   const tabCache = new TabCache(sessionStore);
   const rateLimiter = new RateLimiter(sessionStore);
   const manualContentFetcher = new ManualContentFetcher();

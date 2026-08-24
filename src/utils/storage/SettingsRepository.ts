@@ -73,7 +73,7 @@ export class ChromeStorageAdapter implements StorageAdapter {
     const { getOrCreateEncryptionKey } = await import('./encryptionSession.js');
     const { encryptApiKey } = await import('../crypto/index.js');
     const { withOptimisticLock } = await import('../optimisticLock.js');
-    const { ensureStorageQuota } = await import('./storageMaintenance.js');
+    const { ensureStorageQuota, getSqliteHealthCheck } = await import('./storageMaintenance.js');
     let toSave: Record<string, unknown> = { ...(settings as Record<string, unknown>) };
     try {
       const key = await getOrCreateEncryptionKey();
@@ -90,7 +90,8 @@ export class ChromeStorageAdapter implements StorageAdapter {
       throw e;
     }
     // Mirror legacy saveSettings: guard storage quota on every write.
-    await ensureStorageQuota(toSave, undefined);
+    const hc = getSqliteHealthCheck() ?? (async () => false);
+    await ensureStorageQuota(toSave, hc);
     await withOptimisticLock<SettingsType>('settings', (current) => {
       const base = (current as Record<string, unknown>) || {};
       return { ...(base as object), ...toSave } as SettingsType;

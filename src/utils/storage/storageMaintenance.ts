@@ -1,6 +1,4 @@
-// @layer 1-循環 — Infrastructure (exception: reverse dep to background/sqliteClient, see ADR)
-// SqliteHealthCheck type is Layer 0 (types.ts), implementation is injected when available
-// but fallback via dynamic import is kept for deploy safety (quota cleanup must not be disabled).
+// @layer 1 — Infrastructure (depends on Layer 0 only)
 /**
  * storage/storageMaintenance.ts
  * Storage quota and maintenance helpers.
@@ -11,22 +9,23 @@ import { purgeLegacyStorage } from './savedUrlRepository.js';
 import { logInfo, logError, ErrorCode } from '../logger.js';
 import type { SqliteHealthCheck } from './types.js';
 
-export async function getDefaultSqliteHealthCheck(): Promise<SqliteHealthCheck> {
-    try {
-        const { SqliteClient } = await import('../../background/sqliteClient.js');
-        const client = new SqliteClient();
-        return async () => {
-          const r = await client.maintain({ type: 'healthCheck' });
-          return r.success ? Boolean(r.data) : false;
-        };
-    } catch {
-        return async () => false;
-    }
+let _injectedHealthCheck: SqliteHealthCheck | null = null;
+
+/**
+ * Inject the SQLite health check implementation from the background layer.
+ * Called once at startup from createBackgroundServices.
+ */
+export function setSqliteHealthCheck(hc: SqliteHealthCheck): void {
+    _injectedHealthCheck = hc;
+}
+
+export function getSqliteHealthCheck(): SqliteHealthCheck | null {
+    return _injectedHealthCheck;
 }
 
 export async function ensureStorageQuota(
     toSave: Record<string, unknown>,
-    sqliteHealthCheck?: SqliteHealthCheck
+    sqliteHealthCheck: SqliteHealthCheck
 ): Promise<void> {
     if (await hasUnlimitedStorage()) return;
     const currentUsage = await getStorageUsage();
@@ -37,8 +36,7 @@ export async function ensureStorageQuota(
         currentUsage, newDataSize, limit: STORAGE_QUOTA_BYTES,
     }, 'storage/storageMaintenance.ts');
 
-    const effectiveHealthCheck = sqliteHealthCheck ?? (await getDefaultSqliteHealthCheck());
-    const freed = await purgeLegacyStorage(effectiveHealthCheck);
+    const freed = await purgeLegacyStorage(sqliteHealthCheck);
     const afterCleanup = await getStorageUsage();
 
     if (afterCleanup + newDataSize <= STORAGE_QUOTA_BYTES) {

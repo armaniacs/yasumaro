@@ -8,7 +8,8 @@
 
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 import type { RuleKey } from '../utils/aiSummaryCleaner/types.js';
-import { CLEANSING_RULES } from '../utils/aiSummaryCleaner/rules.js';
+import { CLEANSING_RULES, THRESHOLD_RULES } from '../utils/aiSummaryCleaner/rules.js';
+import type { ThresholdProp } from '../utils/aiSummaryCleaner/rules.js';
 
 // 【設定定数】: デフォルト値の定義
 const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
@@ -55,21 +56,25 @@ const CLEANSING_RULE_PLACEHOLDER_DEFAULTS: CleansingConfigRuleFlags = Object.fro
     ]),
 ) as CleansingConfigRuleFlags;
 
+const THRESHOLD_CONFIG_DEFAULTS: Record<ThresholdProp, number> = Object.fromEntries(
+    THRESHOLD_RULES.map(r => [r.prop, r.default]),
+) as Record<ThresholdProp, number>;
+
 export const DEFAULT_CLEANSING_CONFIG: CleansingConfig = {
     contentStripHardEnabled: true,
     contentStripKeywordEnabled: true,
     contentStripKeywords: ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'],
     aiSummaryCleansingEnabled: true,
     whitelistExtractionEnabled: true,
-    aiSummaryCleansingLinkRatioThreshold: 70,
-    aiSummaryCleansingShortTextThreshold: 30,
-    aiSummaryCleansingShortSeqCount: 5,
-    aiSummaryCleansingLinkParaThreshold: 50,
+    aiSummaryCleansingLinkRatioThreshold: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingLinkRatioThreshold,
+    aiSummaryCleansingShortTextThreshold: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingShortTextThreshold,
+    aiSummaryCleansingShortSeqCount: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingShortSeqCount,
+    aiSummaryCleansingLinkParaThreshold: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingLinkParaThreshold,
     aiSummaryCleansingCustomPatterns: [],
-    aiSummaryCleansingFallbackRatio: 0.20,
-    aiSummaryCleansingFallbackMinBytes: 300,
+    aiSummaryCleansingFallbackRatio: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingFallbackRatio,
+    aiSummaryCleansingFallbackMinBytes: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingFallbackMinBytes,
     contentDedupEnabled: true,
-    contentDedupThreshold: 0.7,
+    contentDedupThreshold: THRESHOLD_CONFIG_DEFAULTS.contentDedupThreshold,
     ...CLEANSING_RULE_PLACEHOLDER_DEFAULTS,
 };
 
