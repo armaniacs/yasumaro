@@ -67,7 +67,7 @@ export function createMessageHandler(deps: MessageHandlerDeps): (
                 const message = rawMessage as ExtensionMessage;
 
                 // Trust policy is single-seam in MessageRouter (derived from
-                // CONTENT_SCRIPT_ALLOWED_TYPES SSOT). Previous CONTENT_SCRIPT_ONLY_TYPES
+                // CONTENT_SCRIPT_ALLOWED_TYPES SSOT). The previous allowlist
                 // check duplicated that policy; removing it here eliminates the double
                 // SSOT while MessageRouter.dispatch still rejects invalid senders.
                 // VALID_MESSAGE_TYPES / NO_PAYLOAD_TYPES / protocolVersion remain here

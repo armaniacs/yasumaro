@@ -145,8 +145,10 @@ export class InMemoryStorageAdapter implements StorageAdapter {
     const result = await this.get(['settings']);
     const settings = (result['settings'] as SettingsType) || ({} as SettingsType);
     const { applyMigrationsAndDecrypt } = await import('./settingsMigration.js');
-    // rawEncrypted: false because InMemory tests use plaintext values and
-    // must not touch chrome.storage for re-encryption.
+    // rawEncrypted: false keeps InMemory tests on plaintext without touching
+    // chrome.storage for re-encryption. Migrations (DEFAULT_SETTINGS merge +
+    // legacy key transforms) still run; only the decrypt/re-encrypt branch is
+    // skipped. See pbi/2026-08-25-01 — shared migration test covers parity.
     return applyMigrationsAndDecrypt(settings, false);
   }
   async setSettings(settings: SettingsType): Promise<void> {
