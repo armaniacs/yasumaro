@@ -47,18 +47,13 @@ export async function saveSettings(
     };
   }
   // Delegate quota check via SettingsRepository's underlying adapter behavior.
-  // We need to pass sqliteHealthCheck through; repo.setAll uses ChromeStorageAdapter
-  // which internally calls ensureStorageQuota with undefined. To honor the passed
-  // health check, we call ensureStorageQuota here before repo.setAll when needed.
-  // Import dynamically to avoid circular deps.
-  const { ensureStorageQuota: checkQuota } = await import('./storageMaintenance.js');
+  // repo.setAll uses ChromeStorageAdapter which now reads the injected health check
+  // via getSqliteHealthCheck(). To honor an explicit health check passed by the
+  // caller (tests), we pre-check quota here before repo.setAll.
+  const { ensureStorageQuota: checkQuota, getSqliteHealthCheck } = await import('./storageMaintenance.js');
   const toSaveRecord = toSave as Record<string, unknown>;
-  // Only invoke quota guard when storage is over quota path (mirroring ChromeStorageAdapter logic).
-  // We use repo.setAll for the actual write, but we pre-check quota with the provided health check
-  // so that purgeLegacyStorage behavior is visible to the caller/test.
-  if (sqliteHealthCheck !== undefined) {
-    await checkQuota(toSaveRecord, sqliteHealthCheck);
-  }
+  const effective = sqliteHealthCheck ?? getSqliteHealthCheck() ?? (async () => false);
+  await checkQuota(toSaveRecord, effective);
   await repo.setAll(toSave);
   if (updateAllowedUrlsFlag) {
     const { updateDomainFilterCache } = await import('./domainFilterCache.js');
@@ -78,4 +73,4 @@ export { purgeLegacyStorage } from './savedUrlRepository.js';
 export { API_KEY_FIELDS } from './settingsMigration.js';
 export { ALLOWED_AI_PROVIDER_DOMAINS, isDomainInWhitelist, buildAllowedUrls, computeUrlsHash, getAllowedUrls } from './urlWhitelist.js';
 export { LEGACY_SETTINGS_BACKUP_KEY, migrateToSingleSettingsObject, cleanupExpiredSettingsBackups } from './settingsMigration.js';
-export { getDefaultSqliteHealthCheck } from './storageMaintenance.js';
+export { setSqliteHealthCheck, getSqliteHealthCheck } from './storageMaintenance.js';

@@ -8,7 +8,7 @@
 import { StorageKeys } from './types.js';
 import type { Settings } from './types.js';
 import type { DeepReadonly } from '../typeUtils.js';
-import { CLEANSING_RULES } from '../aiSummaryCleaner/rules.js';
+import { CLEANSING_RULES, THRESHOLD_RULES } from '../aiSummaryCleaner/rules.js';
 
 /**
  * Cleansing rule defaults, derived from CLEANSING_RULES instead of restated.
@@ -19,6 +19,10 @@ import { CLEANSING_RULES } from '../aiSummaryCleaner/rules.js';
 const CLEANSING_RULE_DEFAULTS = Object.fromEntries(
     CLEANSING_RULES.map(rule => [rule.storageKey, rule.newUserDefault]),
 ) as Record<string, boolean>;
+
+const THRESHOLD_SETTING_DEFAULTS: Record<string, number> = Object.fromEntries(
+    THRESHOLD_RULES.map(r => [r.storageKey, r.default]),
+);
 
 export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.OBSIDIAN_API_KEY]: '',
@@ -114,12 +118,12 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     // The 32 per-rule enable flags are derived from CLEANSING_RULES (see
     // CLEANSING_RULE_DEFAULTS above) rather than listed here individually.
     ...CLEANSING_RULE_DEFAULTS,
-    [StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]: 70,
-    [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]: 30,
-    [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]: 5,
-    [StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]: 50,
-    [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]: 0.20,
-    [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]: 300,
+    [StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]: THRESHOLD_SETTING_DEFAULTS[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]!,
+    [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]: THRESHOLD_SETTING_DEFAULTS[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]!,
+    [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]: THRESHOLD_SETTING_DEFAULTS[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]!,
+    [StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]: THRESHOLD_SETTING_DEFAULTS[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]!,
+    [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]: THRESHOLD_SETTING_DEFAULTS[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]!,
+    [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]: THRESHOLD_SETTING_DEFAULTS[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]!,
     [StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS]: [],
     // Domain Whitelist Extraction Mode — default true for new users (existing users migrated to false)
     [StorageKeys.WHITELIST_EXTRACTION_ENABLED]: true,
@@ -138,7 +142,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.AI_RATE_LIMIT_WINDOW_START]: 0,
     [StorageKeys.AI_RATE_LIMIT_COUNT]: 0,
     [StorageKeys.CONTENT_DEDUP_ENABLED]: true,
-    [StorageKeys.CONTENT_DEDUP_THRESHOLD]: 0.7,
+    [StorageKeys.CONTENT_DEDUP_THRESHOLD]: THRESHOLD_SETTING_DEFAULTS[StorageKeys.CONTENT_DEDUP_THRESHOLD]!,
     [StorageKeys.SUMMARY_NORMALIZE_ENABLED]: true,
     [StorageKeys.OPFS_MIGRATION_V2_DONE]: false,
     [StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT]: null,

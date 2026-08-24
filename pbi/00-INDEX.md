@@ -42,6 +42,13 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-24 Architecture Deepening（arch-delivery-loop）0824c — 3件完了（並列Wave 1）
+
+- 2026-08-24-01-refactor-threshold-table.md（RICE 42.0 — `THRESHOLD_RULES`テーブル7要素を`src/utils/aiSummaryCleaner/rules.ts`に新設し`THRESHOLD_DEFAULTS`と`DEFAULT_CLEANSING_CONFIG`/`DEFAULT_SETTINGS`を同テーブルから導出。`src/content/extractor.ts`の7連打ifを`for (const t of THRESHOLD_RULES)`の1ループに集約。contentDedupThresholdもNumber+clampで統一。type-check / 8394 tests PASS）
+- 2026-08-24-02-refactor-message-double-ssot.md（RICE 21.3 — `CONTENT_SCRIPT_ALLOWED_TYPES`をSSOT化し`CONTENT_SCRIPT_ONLY_TYPES`を派生として型保証。`MessageRouter.dispatch`に`tab.id/tab.url + sender.url`の厳格チェックを集約し`messageHandler`を`restore+migrate+router.dispatch`の薄い層に縮小。並列Wave 1でdisjoint、既存229 handlerテスト PASS）
+- 2026-08-24-03-refactor-sqlite-consolidation.md（RICE 17.1 — 4 helper（callQuery/callMutate/callMaintain/callStatus）を`callInternal` genericに集約し`sqliteMessageHandlers`に`satisfies Record<SqliteMessageType, Handler>`で静的網羅性を付与。`storageMaintenance`の`await import+new SqliteClient`を削除し`setSqliteHealthCheck`注入に、`createBackgroundServices`で`getSharedSqliteClient`を注入。`src/utils/storage/quota.ts`の`getStorageUsage`を`getBytesInUse`不在時に0を返す耐性化でtrancoConsentテストのstub欠落を解消。LAYERS.md例外条項を削除）
+- 2026-08-24-00-backlog-0824c.md（7候補のRICEスコアリング + 並列性調査 — 依存グラフ・ファイル触接・ウェーブ分割、#5+#7をマージし3 PBIをWave 1並列で実行。deferred 3件（extractor分割/ServiceContainer/StorageKeys）を次スプリントへ）
+
 ### 2026-08-24 Architecture Deepening（arch-delivery-loop）0824b — 5件完了 + ブロッカー解消
 
 - 2026-08-24-08-fix-cookie-consent-cleansing.md（Blocker — OneTrust cookie バナー統合欠落 2 tests FAIL を解消。`entrypoints/options/index.html` に `ai-summary-cleansing-cookie` checkbox 追加、`public/_locales/*/messages.json` に `aiSummaryCleansingCookieDesc` 追加、`src/dashboard/settings/aiSummaryCleansingSettingsV2.ts` の `AiSummaryCleansingSettings` を mapped type `RuleKey` 導出に置換、`src/utils/__tests__/aiSummaryCleaner.test.ts` の全無効テストに `cookieEnabled:false` 等 8 flags 追加 + `recommend/popup/cookie` の合計期待値に `cookieRemoved` 追加。8383 tests PASS）

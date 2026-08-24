@@ -16,7 +16,7 @@ import { preparePageContent } from '../utils/pageContentPipeline.js';
 import { showPrivacyConfirmDialog } from './privacyDialog.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
 import { PageState, type CleansingConfig } from './pageState.js';
-import { CLEANSING_RULES } from '../utils/aiSummaryCleaner/rules.js';
+import { CLEANSING_RULES, THRESHOLD_RULES } from '../utils/aiSummaryCleaner/rules.js';
 import { pickDefined } from '../utils/objectUtils.js';
 
 // Type-only import to establish graphify edge between content script and
@@ -165,30 +165,13 @@ function loadSettings(): Promise<void> {
                 }
             }
 
-            // Threshold settings (with bounds validation)
-            if (s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] !== undefined) {
-                pageState.cleansingConfig.aiSummaryCleansingLinkRatioThreshold = Math.max(0, Math.min(100, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]) || 70));
-            }
-            if (s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD] !== undefined) {
-                pageState.cleansingConfig.aiSummaryCleansingShortTextThreshold = Math.max(1, Math.min(200, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]) || 30));
-            }
-            if (s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT] !== undefined) {
-                pageState.cleansingConfig.aiSummaryCleansingShortSeqCount = Math.max(1, Math.min(20, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]) || 5));
-            }
-            if (s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD] !== undefined) {
-                pageState.cleansingConfig.aiSummaryCleansingLinkParaThreshold = Math.max(10, Math.min(200, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]) || 50));
-            }
-
-            // Over-cleansed fallback thresholds
-            if (s[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO] !== undefined) {
-                pageState.cleansingConfig.aiSummaryCleansingFallbackRatio = Math.max(0, Math.min(1, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]) || 0.20));
-            }
-            if (s[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES] !== undefined) {
-                pageState.cleansingConfig.aiSummaryCleansingFallbackMinBytes = Math.max(0, Math.min(5000, Number(s[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]) || 300));
-            }
-
-            if (s[StorageKeys.CONTENT_DEDUP_THRESHOLD] !== undefined) {
-                pageState.cleansingConfig.contentDedupThreshold = parseFloat(String(s[StorageKeys.CONTENT_DEDUP_THRESHOLD]));
+            // Threshold settings (table-driven, bounds validated via THRESHOLD_RULES)
+            for (const t of THRESHOLD_RULES) {
+                if (s[t.storageKey] !== undefined) {
+                    // WHY: CleansingConfig lacks index signature; dynamic property access for threshold props
+                    (pageState.cleansingConfig as unknown as Record<string, number>)[t.prop] =
+                        Math.max(t.min, Math.min(t.max, Number(s[t.storageKey]) || t.default));
+                }
             }
             logInfo('Settings loaded', {
                 minVisitDuration: pageState.minVisitDuration,

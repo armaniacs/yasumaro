@@ -63,7 +63,7 @@ describe('MessageRouter — deep module single seam dispatch(msg)', () => {
 
   it('dispatch valid VALID_VISIT via deep seam', async () => {
     const sendResponse = vi.fn();
-    const sender = { id: 'test-id', tab: { id: 1 } } as unknown as chrome.runtime.MessageSender;
+    const sender = { id: 'test-id', tab: { id: 1, url: 'https://example.com' }, url: 'https://example.com' } as unknown as chrome.runtime.MessageSender;
     const msg = { type: 'VALID_VISIT', payload: { content: 'hello' }, protocolVersion: 1 };
     const handled = router.dispatch(msg, sender, sendResponse);
     expect(handled).toBe(true);
@@ -71,7 +71,7 @@ describe('MessageRouter — deep module single seam dispatch(msg)', () => {
 
   it('dispatch invalid VALID_VISIT is rejected via validator hidden behind seam', () => {
     const sendResponse = vi.fn();
-    const sender = { id: 'test-id', tab: { id: 1 } } as unknown as chrome.runtime.MessageSender;
+    const sender = { id: 'test-id', tab: { id: 1, url: 'https://example.com' }, url: 'https://example.com' } as unknown as chrome.runtime.MessageSender;
     const invalid = { type: 'VALID_VISIT', payload: {}, protocolVersion: 1 };
     const handled = router.dispatch(invalid, sender, sendResponse);
     expect(handled).toBe(false); // sync validation error

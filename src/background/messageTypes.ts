@@ -233,11 +233,6 @@ export const VALID_MESSAGE_TYPES = [
     'LOG_FORWARD', // Log relay from Offscreen Document / its Worker (no direct chrome.storage access)
 ] as const;
 
-export const CONTENT_SCRIPT_ONLY_TYPES = [
-    'VALID_VISIT',
-    'CHECK_DOMAIN',
-] as const;
-
 /**
  * Full set of types that content scripts are allowed to send.
  * Canonical SSOT for MessageRouter's trust table — MessageRouter derives
@@ -250,6 +245,17 @@ export const CONTENT_SCRIPT_ALLOWED_TYPES = [
     'CHECK_DOMAIN',
     'PING',
 ] as const;
+
+/**
+ * @deprecated Use CONTENT_SCRIPT_ALLOWED_TYPES — kept for backward
+ * compatibility. Type-level subset guarantee ensures every element exists in
+ * CONTENT_SCRIPT_ALLOWED_TYPES; adding a new content-script type requires
+ * editing only the SSOT above.
+ */
+export const CONTENT_SCRIPT_ONLY_TYPES = [
+    'VALID_VISIT',
+    'CHECK_DOMAIN',
+] as const satisfies readonly (typeof CONTENT_SCRIPT_ALLOWED_TYPES[number])[];
 
 export const NO_PAYLOAD_TYPES = [
     'CHECK_DOMAIN',

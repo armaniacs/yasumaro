@@ -53,7 +53,7 @@ describe('MessageRouter — validator integration', () => {
   it('rejects invalid VALID_VISIT before the handler runs', () => {
     const router = createMessageRouter(deps);
     const sendResponse = vi.fn();
-    const sender = { id: 'test-id', tab: { id: 1, url: 'https://example.com' } } as unknown as chrome.runtime.MessageSender;
+    const sender = { id: 'test-id', tab: { id: 1, url: 'https://example.com' }, url: 'https://example.com' } as unknown as chrome.runtime.MessageSender;
 
     // Invalid: missing content
     const invalidMsg = { type: 'VALID_VISIT', payload: {}, protocolVersion: 1 };
@@ -66,7 +66,7 @@ describe('MessageRouter — validator integration', () => {
   it('passes valid VALID_VISIT through the validator to the pipeline', async () => {
     const router = createMessageRouter(deps);
     const sendResponse = vi.fn();
-    const sender = { id: 'test-id', tab: { id: 1, url: 'https://example.com' } } as unknown as chrome.runtime.MessageSender;
+    const sender = { id: 'test-id', tab: { id: 1, url: 'https://example.com' }, url: 'https://example.com' } as unknown as chrome.runtime.MessageSender;
     const validMsg = { type: 'VALID_VISIT', payload: { content: 'hello' }, protocolVersion: 1 };
 
     router.dispatch(validMsg, sender, sendResponse);
