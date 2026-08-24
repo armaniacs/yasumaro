@@ -14,9 +14,6 @@ import { isSqliteMessageType, type SqliteMessage } from '../messaging/sqliteMess
 import { assertPayloadSize } from './payloadGuard.js';
 import { sqliteMessageHandlers } from './sqliteMessageHandlers.js';
 
-// Re-export pure codec for callers that previously imported from offscreen.ts
-export { buildRecordFromPayload } from './browsingLogCodec.js';
-
 // For testing only - reset SQLite state
 export const _resetSqliteForTesting = (): void => {
     engine.resetForTesting();

@@ -46,15 +46,11 @@ export async function saveSettings(
       [StorageKeys.ALLOWED_URLS_HASH]: allowedUrlsHash
     };
   }
-  // Delegate quota check via SettingsRepository's underlying adapter behavior.
-  // repo.setAll uses ChromeStorageAdapter which now reads the injected health check
-  // via getSqliteHealthCheck(). To honor an explicit health check passed by the
-  // caller (tests), we pre-check quota here before repo.setAll.
-  const { ensureStorageQuota: checkQuota, getSqliteHealthCheck } = await import('./storageMaintenance.js');
-  const toSaveRecord = toSave as Record<string, unknown>;
-  const effective = sqliteHealthCheck ?? getSqliteHealthCheck() ?? (async () => false);
-  await checkQuota(toSaveRecord, effective);
-  await repo.setAll(toSave);
+  // Delegate the quota check to ChromeStorageAdapter.setSettings. The explicit
+  // health check is threaded through so callers (tests) can inject one without
+  // a second ensureStorageQuota pass here; ensureStorageQuota resolves
+  // injected -> lazy SqliteClient-backed fallback internally.
+  await repo.setAll(toSave, sqliteHealthCheck ? { sqliteHealthCheck } : undefined);
   if (updateAllowedUrlsFlag) {
     const { updateDomainFilterCache } = await import('./domainFilterCache.js');
     await updateDomainFilterCache(toSave);

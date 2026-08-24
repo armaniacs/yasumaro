@@ -63,13 +63,20 @@ export class PerUrlMutexMap {
     map: Map<string, Mutex>,
     fn: () => Promise<T>,
   ): Promise<T> {
+    let acquired = false;
     try {
       await mutex.acquire();
+      acquired = true;
       return await fn();
     } finally {
-      mutex.release();
-      if (!mutex.isLocked() && mutex.getQueueSize() === 0) {
-        map.delete(url);
+      // Only release when acquire() succeeded. On queue-full or timeout the
+      // mutex is still held by another recording; releasing here would
+      // transfer/unlock the real holder's lock and break per-URL serialization.
+      if (acquired) {
+        mutex.release();
+        if (!mutex.isLocked() && mutex.getQueueSize() === 0) {
+          map.delete(url);
+        }
       }
     }
   }
