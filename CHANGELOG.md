@@ -35,6 +35,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.75] - 2026-08-24
+
+### Refactor
+
+- 並列スプリントで deferred 3件を同時実装。`ProviderRegistry` 導入で `OpenAIProvider` 5分岐を `GenericOpenAICompatibleProvider` + `PROVIDER_REGISTRY` Map に集約し `isLocal`/`requiresApiKey` で timeout/contentLimit を導出、`aiModelKey` を registry ルックアップの互換 shim 化、`RemoteAIService.registerDefaultProviders` をループ化（PBI-10, RICE 11.2, 11 tests 追加）。`SqliteClient` の 20 shim 削除と `call` → `callQuery/callMutate/callMaintain/callStatus` 4分割で 100行削減、13テストを新 domain API に移行（PBI-11, RICE 20.0）。`offscreen` の 24-case dispatch を `Map` + 共通 `assertPayloadSize` + `browsingLogCodec` 抽出で guard 重複を解消し VULN-001 再発防止（PBI-07, RICE 48.0）。3件のファイル重複はゼロで完全並列実行、統合時の `types.ts` 重複定義と `eslint` worktree 除外および `SettingsRepository` モック不整合（27 tests FAIL）を解消。`8394 tests PASS / type-check PASS / lint 62 warnings`
+
 ## [6.7.74] - 2026-08-24
 
 ### Fixed
