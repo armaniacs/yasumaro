@@ -42,6 +42,10 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-24 Autonomous Closer — ServiceContainer導入（1件）
+
+- 2026-08-24-04-refactor-service-container.md（RICE 15.0 — `ServiceContainer`最小実装（register/resolve/singleton/override）を`src/background/serviceContainer.ts`に新設。`createBackgroundServices`の11 singleton生成を`container.register`宣言的配線に置換し`getSharedSqliteClient`を`singleton:true` factoryとして登録。deferred解消で17メンバ追加が1登録で完結、テストはoverrideで差し替え可能。type-check / 8394 tests PASS）
+
 ### 2026-08-24 Architecture Deepening（arch-delivery-loop）0824c — 3件完了（並列Wave 1）
 
 - 2026-08-24-01-refactor-threshold-table.md（RICE 42.0 — `THRESHOLD_RULES`テーブル7要素を`src/utils/aiSummaryCleaner/rules.ts`に新設し`THRESHOLD_DEFAULTS`と`DEFAULT_CLEANSING_CONFIG`/`DEFAULT_SETTINGS`を同テーブルから導出。`src/content/extractor.ts`の7連打ifを`for (const t of THRESHOLD_RULES)`の1ループに集約。contentDedupThresholdもNumber+clampで統一。type-check / 8394 tests PASS）

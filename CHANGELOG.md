@@ -35,6 +35,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.77] - 2026-08-24
+
+### Refactor
+
+- `ServiceContainer`を`src/background/serviceContainer.ts`に新設し`createBackgroundServices`の11 singleton生成を`container.register`宣言的配線に置換。`getSharedSqliteClient`を`singleton:true` factoryとして登録し、deferredとなっていたArchitecture Deepening #4を解消。`8394 tests PASS / type-check PASS / build 6.89MB`
+
 ## [6.7.76] - 2026-08-24
 
 ### Refactor
