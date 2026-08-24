@@ -1,27 +1,24 @@
-// @layer 1-循環 — Infrastructure (exception: reverse dep to background/sqliteClient, see ADR)
+// @layer 1 — Infrastructure: storage quota and maintenance (Layer 0 only, SqliteHealthCheck injected)
 /**
  * storage/storageMaintenance.ts
  * Storage quota and maintenance helpers.
- * Extracted from settingsStore.ts (PBI-01) to isolate the utils -> background dependency.
+ * Depends only on Layer 0 (quota, types) and injected SqliteHealthCheck.
  */
 
 import { getStorageUsage, estimateDataSize, STORAGE_QUOTA_BYTES, hasUnlimitedStorage } from './quota.js';
 import { purgeLegacyStorage } from './savedUrlRepository.js';
 import { logInfo, logError, ErrorCode } from '../logger.js';
+import type { SqliteHealthCheck } from './types.js';
 
-export async function getDefaultSqliteHealthCheck(): Promise<() => Promise<boolean>> {
-    try {
-        const { SqliteClient } = await import('../../background/sqliteClient.js');
-        const client = new SqliteClient();
-        return () => client.isSqliteHealthy();
-    } catch {
-        return async () => false;
-    }
+export async function getDefaultSqliteHealthCheck(): Promise<SqliteHealthCheck> {
+    // Fallback that reports unhealthy so callers fail safe when no health check is injected.
+    // Real health check should be injected from createBackgroundServices via SqliteClient.
+    return async () => false;
 }
 
 export async function ensureStorageQuota(
     toSave: Record<string, unknown>,
-    sqliteHealthCheck?: () => Promise<boolean>
+    sqliteHealthCheck?: SqliteHealthCheck
 ): Promise<void> {
     if (await hasUnlimitedStorage()) return;
     const currentUsage = await getStorageUsage();

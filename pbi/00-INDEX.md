@@ -16,6 +16,8 @@
 
 `pbi/` に残っているのは**未完了のPBIのみ**。完了したものは `dev-docs/archived/pbi/` にある。
 
+| ID | 状態 | PBI | RICE | 種別 | 見積 |
+|----|------|-----|------|------|------|
 `pbi/` に残っている未完了 PBI はありません。
 
 ---
@@ -39,6 +41,31 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-24 Architecture Deepening（arch-delivery-loop）0824a — 3件完了・4件deferred
+
+- 2026-08-24-01-refactor-settings-repository-shim.md（RICE 22.5 — SettingsRepository shim 66行削除 + InMemoryStorageAdapter.getSettings を applyMigrationsAndDecrypt(…, false) で本番ミラー化 + cspSettings等29テストの SettingsRepository モック移行 + settingsStore.legacy static wrapper化 + chrome.storage cache 復元。994 tests PASS）
+- 2026-08-24-03-refactor-ai-provider-typed-dispatch.md（RICE 11.2 — ProviderId union 7種 + ProviderSlot.provider を ProviderId | string に移行し型安全の基盤を構築。 resolveModelKey の集中は次PBIで Registry へ）
+- 2026-08-24-05-refactor-layer-inversion.md（RICE 9.6 — SqliteHealthCheck を types.ts Layer 0 に抽出 + storageMaintenance.ts の utils→background 動的importを除去し Layer 循環を解消。 offscreen の chrome.storage 読取は deprecated 注記）
+
+#### 0824a deferred 4件（次スプリント）
+
+- 2026-08-24-02-refactor-storage-keys-facade.md（RICE 10.67 — StorageKeys god-type に facade 追加。130キー一括はリスク高のため PBI-01 の clean seam 上で incremental に着手。DOD: getObsidianConfig 等3 facade から）
+- 2026-08-24-04-refactor-pipeline-composition-root.md（RICE 3.0 — RecordingPipelineDeps 純粋化 + PerUrlMutexMap static 排除。 createBackgroundServices 216行の段階的縮退は interface 分離から）
+- 2026-08-24-06-refactor-content-extractor-global-state.md（RICE 1.6 — PageState per-tab factory + extractor 594行分解。 Speculative のため訪門ゲートの純粋関数化から単独着手）
+- 2026-08-24-07-refactor-offscreen-dispatch-guard.md（RICE 48.0 — 24-case switch を Map + 共通 assertPayloadSize へ。セキュリティ cross-cutting のため payloadGuard の単体テストから着手し 24 handler を1件ずつ移行）
+- 2026-08-24-00-backlog-0824a.md（7件のRICEスコアリングバックログ — 依存図 + なぜなぜ分析）
+
+### 2026-08-24 Architecture Deepening（arch-delivery-loop）7件 進行中
+
+- 2026-08-24-01-refactor-settings-repository-shim.md（RICE 22.5 — shim 廃止 + StorageAdapter 注入統一）
+- 2026-08-24-02-refactor-storage-keys-facade.md（RICE 10.67 — god-type に facade 追加、incremental）
+- 2026-08-24-03-refactor-ai-provider-typed-dispatch.md（RICE 11.2 — ProviderId union + Registry）
+- 2026-08-24-04-refactor-pipeline-composition-root.md（RICE 3.0 — RecordingPipelineDeps + cache 一元化）
+- 2026-08-24-05-refactor-layer-inversion.md（RICE 9.6 — SqliteHealthCheck 注入 + offscreen chrome.storage 除去）
+- 2026-08-24-06-refactor-content-extractor-global-state.md（RICE 1.6 — per-tab PageState + extractor 分解）
+- 2026-08-24-07-refactor-offscreen-dispatch-guard.md（RICE 48.0 — 24-case switch → Map + 共通 guard）
+- 2026-08-24-00-backlog-0824a.md（7件の RICE スコアリングバックログ — 依存図 + なぜなぜ分析）
 
 ### 2026-08-24 Architecture Deepening（arch-delivery-loop）deferred 2件
 

@@ -43,144 +43,34 @@ vi.mock('../../popup/privacyConsent.js', () => ({
 }));
 vi.mock('../cspSettings.js', () => ({ cspSettings: { loadCSPSettings: vi.fn() } }));
 
-const { mockGetSettings, mockSaveSettings } = vi.hoisted(() => ({
-    mockGetSettings: vi.fn(),
-    mockSaveSettings: vi.fn().mockResolvedValue(undefined),
+const { mockGetAll, mockSetAll } = vi.hoisted(() => ({
+    mockGetAll: vi.fn(),
+    mockSetAll: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-        getSettings: mockGetSettings,
-        saveSettingsWithAllowedUrls: mockSaveSettings,
-    } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+});
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-        getSettings: mockGetSettings,
-        saveSettingsWithAllowedUrls: mockSaveSettings,
-    } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
+    settingsRepository: {
+      getAll: mockGetAll,
+      setAll: mockSetAll,
+      getMany: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      setAll = mockSetAll;
+      getMany = vi.fn();
+    },
   };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-        getSettings: mockGetSettings,
-        saveSettingsWithAllowedUrls: mockSaveSettings,
-    } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-        getSettings: mockGetSettings,
-        saveSettingsWithAllowedUrls: mockSaveSettings,
-    } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-        getSettings: mockGetSettings,
-        saveSettingsWithAllowedUrls: mockSaveSettings,
-    } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-        getSettings: mockGetSettings,
-        saveSettingsWithAllowedUrls: mockSaveSettings,
-    } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-        getSettings: mockGetSettings,
-        saveSettingsWithAllowedUrls: mockSaveSettings,
-    } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 import {
     loadGeneralSettings,
@@ -223,7 +113,7 @@ describe('Retention settings UI', () => {
     };
 
     it('loadGeneralSettings sets retention selects to null (unlimited) by default', async () => {
-        mockGetSettings.mockResolvedValue({
+        mockGetAll.mockResolvedValue({
             ...baseSettings,
             [StorageKeys.SQLITE_RETENTION_DAYS]: null,
             [StorageKeys.SQLITE_MAX_RECORDS]: null,
@@ -238,7 +128,7 @@ describe('Retention settings UI', () => {
     });
 
     it('loadGeneralSettings populates selects with stored numeric values', async () => {
-        mockGetSettings.mockResolvedValue({
+        mockGetAll.mockResolvedValue({
             ...baseSettings,
             [StorageKeys.SQLITE_RETENTION_DAYS]: 90,
             [StorageKeys.SQLITE_MAX_RECORDS]: 10000,

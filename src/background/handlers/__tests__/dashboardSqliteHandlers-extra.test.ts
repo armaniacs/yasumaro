@@ -10,275 +10,27 @@ vi.mock('../../../utils/errorUtils.js', () => ({
   errorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
 }));
 
-vi.mock('../../../utils/storage/types.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
+const mockGetAll = vi.hoisted(() => vi.fn());
+const mockSetAll = vi.hoisted(() => vi.fn());
 
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
-      SQLITE_MAX_RECORDS: 'sqlite_max_records',
-      CONTENT_RETENTION_DAYS: 'content_retention_days',
-      CONTENT_MAX_RECORDS: 'content_max_records',
-      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
-    },
-    getSettings: vi.fn(),
-    DEFAULT_SETTINGS: {} as any,
-    API_KEY_FIELDS: [
-      'obsidian_api_key',
-      'gemini_api_key',
-      'openai_api_key',
-      'openai_2_api_key',
-      'provider_api_key',
-      'github_pat',
-    ],
-
-  } as Record<string, unknown>;
+vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../../utils/storage/defaults.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
-      SQLITE_MAX_RECORDS: 'sqlite_max_records',
-      CONTENT_RETENTION_DAYS: 'content_retention_days',
-      CONTENT_MAX_RECORDS: 'content_max_records',
-      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
+    settingsRepository: {
+      getAll: mockGetAll,
+      setAll: mockSetAll,
+      getMany: vi.fn(),
     },
-    getSettings: vi.fn(),
-    DEFAULT_SETTINGS: {} as any,
-    API_KEY_FIELDS: [
-      'obsidian_api_key',
-      'gemini_api_key',
-      'openai_api_key',
-      'openai_2_api_key',
-      'provider_api_key',
-      'github_pat',
-    ],
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
-      SQLITE_MAX_RECORDS: 'sqlite_max_records',
-      CONTENT_RETENTION_DAYS: 'content_retention_days',
-      CONTENT_MAX_RECORDS: 'content_max_records',
-      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      setAll = mockSetAll;
+      getMany = vi.fn();
     },
-    getSettings: vi.fn(),
-    DEFAULT_SETTINGS: {} as any,
-    API_KEY_FIELDS: [
-      'obsidian_api_key',
-      'gemini_api_key',
-      'openai_api_key',
-      'openai_2_api_key',
-      'provider_api_key',
-      'github_pat',
-    ],
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
-      SQLITE_MAX_RECORDS: 'sqlite_max_records',
-      CONTENT_RETENTION_DAYS: 'content_retention_days',
-      CONTENT_MAX_RECORDS: 'content_max_records',
-      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
-    },
-    getSettings: vi.fn(),
-    DEFAULT_SETTINGS: {} as any,
-    API_KEY_FIELDS: [
-      'obsidian_api_key',
-      'gemini_api_key',
-      'openai_api_key',
-      'openai_2_api_key',
-      'provider_api_key',
-      'github_pat',
-    ],
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
-      SQLITE_MAX_RECORDS: 'sqlite_max_records',
-      CONTENT_RETENTION_DAYS: 'content_retention_days',
-      CONTENT_MAX_RECORDS: 'content_max_records',
-      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
-    },
-    getSettings: vi.fn(),
-    DEFAULT_SETTINGS: {} as any,
-    API_KEY_FIELDS: [
-      'obsidian_api_key',
-      'gemini_api_key',
-      'openai_api_key',
-      'openai_2_api_key',
-      'provider_api_key',
-      'github_pat',
-    ],
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
-      SQLITE_MAX_RECORDS: 'sqlite_max_records',
-      CONTENT_RETENTION_DAYS: 'content_retention_days',
-      CONTENT_MAX_RECORDS: 'content_max_records',
-      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
-    },
-    getSettings: vi.fn(),
-    DEFAULT_SETTINGS: {} as any,
-    API_KEY_FIELDS: [
-      'obsidian_api_key',
-      'gemini_api_key',
-      'openai_api_key',
-      'openai_2_api_key',
-      'provider_api_key',
-      'github_pat',
-    ],
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
-      SQLITE_MAX_RECORDS: 'sqlite_max_records',
-      CONTENT_RETENTION_DAYS: 'content_retention_days',
-      CONTENT_MAX_RECORDS: 'content_max_records',
-      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
-    },
-    getSettings: vi.fn(),
-    DEFAULT_SETTINGS: {} as any,
-    API_KEY_FIELDS: [
-      'obsidian_api_key',
-      'gemini_api_key',
-      'openai_api_key',
-      'openai_2_api_key',
-      'provider_api_key',
-      'github_pat',
-    ],
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 import { dispatchDashboardSqlite } from './dashboardSqliteTestHarness.js';
-import { getSettings } from '../../../utils/storage.js';
 import { logError } from '../../../utils/logger.js';
 
 function createMockSqliteClient() {
@@ -562,7 +314,7 @@ describe('handleDashboardSqlite — purge_now', () => {
   it('purges with both days and max configured', async () => {
     const mock = createMockSqliteClient();
     mock.purgeOldRecordsResult.mockResolvedValue({ success: true, data: { purged: 7 } });
-    vi.mocked(getSettings).mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       sqlite_retention_days: 30,
       sqlite_max_records: 5000,
     } as any);
@@ -573,7 +325,7 @@ describe('handleDashboardSqlite — purge_now', () => {
 
   it('skips when both settings are null', async () => {
     const mock = createMockSqliteClient();
-    vi.mocked(getSettings).mockResolvedValue({} as any);
+    mockGetAll.mockResolvedValue({} as any);
     const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 0, skipped: true });
     expect(mock.purgeOldRecordsResult).not.toHaveBeenCalled();
@@ -582,21 +334,21 @@ describe('handleDashboardSqlite — purge_now', () => {
   it('handles failure from purgeOldRecordsResult', async () => {
     const mock = createMockSqliteClient();
     mock.purgeOldRecordsResult.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Purge failed', retriable: false } });
-    vi.mocked(getSettings).mockResolvedValue({ sqlite_retention_days: 30 } as any);
+    mockGetAll.mockResolvedValue({ sqlite_retention_days: 30 } as any);
     const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Purge failed', retriable: false });
   });
 
   it('purges with only days configured', async () => {
     const mock = createMockSqliteClient();
-    vi.mocked(getSettings).mockResolvedValue({ sqlite_retention_days: 60 } as any);
+    mockGetAll.mockResolvedValue({ sqlite_retention_days: 60 } as any);
     await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(mock.purgeOldRecordsResult).toHaveBeenCalledWith(60, undefined);
   });
 
   it('purges with only max configured', async () => {
     const mock = createMockSqliteClient();
-    vi.mocked(getSettings).mockResolvedValue({ sqlite_max_records: 10000 } as any);
+    mockGetAll.mockResolvedValue({ sqlite_max_records: 10000 } as any);
     await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(mock.purgeOldRecordsResult).toHaveBeenCalledWith(undefined, 10000);
   });
@@ -606,7 +358,7 @@ describe('handleDashboardSqlite — content_purge_now', () => {
   it('purges content with all settings', async () => {
     const mock = createMockSqliteClient();
     mock.purgeContentResult.mockResolvedValue({ success: true, data: { purged: 3 } });
-    vi.mocked(getSettings).mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       content_retention_days: 14,
       content_max_records: 1000,
       content_purge_include_starred: true,
@@ -618,7 +370,7 @@ describe('handleDashboardSqlite — content_purge_now', () => {
 
   it('skips when both content settings are null', async () => {
     const mock = createMockSqliteClient();
-    vi.mocked(getSettings).mockResolvedValue({} as any);
+    mockGetAll.mockResolvedValue({} as any);
     const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 0, skipped: true });
     expect(mock.purgeContentResult).not.toHaveBeenCalled();
@@ -627,7 +379,7 @@ describe('handleDashboardSqlite — content_purge_now', () => {
   it('handles failure from purgeContentResult', async () => {
     const mock = createMockSqliteClient();
     mock.purgeContentResult.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Content purge failed', retriable: false } });
-    vi.mocked(getSettings).mockResolvedValue({ content_retention_days: 7 } as any);
+    mockGetAll.mockResolvedValue({ content_retention_days: 7 } as any);
     const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Content purge failed', retriable: false });
   });
