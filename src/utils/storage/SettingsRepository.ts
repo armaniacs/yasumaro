@@ -22,6 +22,75 @@
 import type { StorageKey, Settings as SettingsType } from './types.js';
 import { StorageKeys } from './types.js';
 
+// ---------------------------------------------------------------------------
+// Cleansing + Thresholds facade — mirrors src/utils/aiSummaryCleaner/rules.ts
+// (SSOT). Keep in sync; detector tests compare lengths and storageKey sets.
+// L1 (storage) must not import Layer 2 (aiSummaryCleaner) at runtime, so the
+// tables are duplicated here as plain StorageKeys constants with a comment
+// linking to the canonical source. Type-only imports are erased and safe,
+// but the runtime import would violate LAYERS.md.
+// ---------------------------------------------------------------------------
+
+/** Mirrors CLEANSING_RULES[].{storageKey, key} — prop is `aiSummaryCleansing${Capitalize<key>}` */
+export const CLEANSING_RULE_PROP_MAP = [
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_ALT, prop: 'aiSummaryCleansingAlt' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_METADATA, prop: 'aiSummaryCleansingMetadata' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_ADS, prop: 'aiSummaryCleansingAds' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_NAV, prop: 'aiSummaryCleansingNav' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL, prop: 'aiSummaryCleansingSocial' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_DEEP, prop: 'aiSummaryCleansingDeep' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD, prop: 'aiSummaryCleansingJsonLd' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD, prop: 'aiSummaryCleansingLazyLoad' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK, prop: 'aiSummaryCleansingSkipLink' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_CARD, prop: 'aiSummaryCleansingCard' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY, prop: 'aiSummaryCleansingLinkDensity' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_FIXED, prop: 'aiSummaryCleansingFixed' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_RECOMMEND, prop: 'aiSummaryCleansingRecommend' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION, prop: 'aiSummaryCleansingPagination' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO, prop: 'aiSummaryCleansingSnsPromo' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_POPUP, prop: 'aiSummaryCleansingPopup' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_COOKIE, prop: 'aiSummaryCleansingCookie' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM, prop: 'aiSummaryCleansingPlatform' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY, prop: 'aiSummaryCleansingTextDensity' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ, prop: 'aiSummaryCleansingShortSeq' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SYMBOL_LINE, prop: 'aiSummaryCleansingSymbolLine' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA, prop: 'aiSummaryCleansingLinkPara' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN, prop: 'aiSummaryCleansingEnhancedHidden' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM, prop: 'aiSummaryCleansingEmptyElem' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT, prop: 'aiSummaryCleansingJpLayout' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION, prop: 'aiSummaryCleansingJpNavigation' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR, prop: 'aiSummaryCleansingAuthor' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_AFFILIATE, prop: 'aiSummaryCleansingAffiliate' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE, prop: 'aiSummaryCleansingSpeechBubble' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_NEWS_MEDIA, prop: 'aiSummaryCleansingNewsMedia' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_EC_SITE, prop: 'aiSummaryCleansingEcSite' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_QA_SITE, prop: 'aiSummaryCleansingQaSite' as const },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE, prop: 'aiSummaryCleansingVideoSite' as const },
+] as const;
+
+export const CLEANSING_STORAGE_KEYS = CLEANSING_RULE_PROP_MAP.map((r) => r.storageKey) as unknown as readonly StorageKey[];
+
+/** Mirrors THRESHOLD_RULES — prop names match CleansingConfig fields */
+export const THRESHOLD_RULES_FACADE = [
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD, prop: 'aiSummaryCleansingLinkRatioThreshold' as const, min: 0, max: 100, default: 70 },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD, prop: 'aiSummaryCleansingShortTextThreshold' as const, min: 1, max: 200, default: 30 },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT, prop: 'aiSummaryCleansingShortSeqCount' as const, min: 1, max: 20, default: 5 },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD, prop: 'aiSummaryCleansingLinkParaThreshold' as const, min: 10, max: 200, default: 50 },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO, prop: 'aiSummaryCleansingFallbackRatio' as const, min: 0, max: 1, default: 0.2 },
+  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES, prop: 'aiSummaryCleansingFallbackMinBytes' as const, min: 0, max: 5000, default: 300 },
+  { storageKey: StorageKeys.CONTENT_DEDUP_THRESHOLD, prop: 'contentDedupThreshold' as const, min: 0, max: 1, default: 0.7 },
+] as const;
+
+export const THRESHOLD_STORAGE_KEYS = THRESHOLD_RULES_FACADE.map((r) => r.storageKey) as unknown as readonly StorageKey[];
+
+export type CleansingConfig = {
+  [K in (typeof CLEANSING_RULE_PROP_MAP)[number]['prop']]: boolean;
+};
+
+export type CleansingThresholds = {
+  [K in (typeof THRESHOLD_RULES_FACADE)[number]['prop']]: number;
+};
+
 export interface StorageAdapter {
   get(keys: string | string[] | null): Promise<Record<string, unknown>>;
   set(items: Record<string, unknown>): Promise<void>;
@@ -200,6 +269,35 @@ export class SettingsRepository {
     const current = await this.getAll();
     const next = { ...current, ...settings } as SettingsType;
     await this.adapter.setSettings(next);
+  }
+
+  /**
+   * Facade: 1 getMany for all cleansing rule flags (33 keys).
+   * Callers no longer write StorageKeys.* + ?? DEFAULT_SETTINGS; fallback
+   * is inside getMany. Single seam for the 33 booleans defined in rules.ts.
+   */
+  async getCleansingConfig(): Promise<CleansingConfig> {
+    const raw = (await this.getMany(CLEANSING_STORAGE_KEYS as unknown as StorageKey[])) as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const { storageKey, prop } of CLEANSING_RULE_PROP_MAP) {
+      out[prop] = Boolean(raw[storageKey]);
+    }
+    return out as CleansingConfig;
+  }
+
+  /**
+   * Facade: 1 getMany for all threshold numerics (7 keys) with min/max clamp
+   * from THRESHOLD_RULES. Callers no longer repeat Math.max/min per key.
+   */
+  async getThresholds(): Promise<CleansingThresholds> {
+    const raw = (await this.getMany(THRESHOLD_STORAGE_KEYS as unknown as StorageKey[])) as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const { storageKey, prop, min, max, default: def } of THRESHOLD_RULES_FACADE) {
+      const v = Number(raw[storageKey]);
+      const base = Number.isFinite(v) ? v : def;
+      out[prop] = Math.max(min, Math.min(max, base));
+    }
+    return out as CleansingThresholds;
   }
 
   /**

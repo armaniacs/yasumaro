@@ -35,6 +35,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.78] - 2026-08-24
+
+### Refactor
+
+- Architecture Deepening 0824d（arch-delivery-loop）診断4候補 → RICE再計算でServiceContainer/THRESHOLD_RULESのenablerにより2.0w→0.90w stagedに55%削減。`SettingsRepository`に`getCleansingConfig()`/`getThresholds()` facadeを追加し40+7キーの取得を`CLEANSING_RULES`/`THRESHOLD_RULES`の`storageKey`配列を`getMany`で一括取得+`DEFAULT_SETTINGS` fallback内包で完結（PBI-05, RICE 63.0, Effort 0.20w）。`VisitGate`純粋value objectを`src/content/visitGate.ts`に新設し`PageState`に`toVisitGateThresholds()`/`toVisitState()` DI seam追加、`extractor.ts`の`checkVisitConditions`を`VisitGate`委譲に置換（PBI-06, RICE 16.8, Effort 0.90w）。Wave 1並列2件はstorage vs contentでdisjoint、8394 tests PASS / type-check PASS。残りSlice A/C（Obsidian/AI/index撤廃）は次スプリントへ。
+
 ## [6.7.77] - 2026-08-24
 
 ### Refactor

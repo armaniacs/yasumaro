@@ -48,6 +48,8 @@ export interface CleansingConfig extends CleansingConfigRuleFlags {
  * cleansingConfig for a real extraction, so this only needs to match
  * `defaultEnabled` (the "no value specified yet" fallback), not the
  * new-user storage default — see pbi/2026-08-09-20.
+ * Keep in sync with SettingsRepository.getCleansingConfig() (PBI-05) —
+ * both derive from CLEANSING_RULES; a detector test compares the two seams.
  */
 const CLEANSING_RULE_PLACEHOLDER_DEFAULTS: CleansingConfigRuleFlags = Object.fromEntries(
     CLEANSING_RULES.map(rule => [
@@ -56,10 +58,14 @@ const CLEANSING_RULE_PLACEHOLDER_DEFAULTS: CleansingConfigRuleFlags = Object.fro
     ]),
 ) as CleansingConfigRuleFlags;
 
-const THRESHOLD_CONFIG_DEFAULTS: Record<ThresholdProp, number> = Object.fromEntries(
+// Keep in sync with SettingsRepository.getThresholds() / THRESHOLD_RULES_FACADE (PBI-05).
+// Exported for detector tests that verify pageState defaults == facade defaults
+// via the shared THRESHOLD_RULES source of truth.
+export const THRESHOLD_CONFIG_DEFAULTS: Record<ThresholdProp, number> = Object.fromEntries(
     THRESHOLD_RULES.map(r => [r.prop, r.default]),
 ) as Record<ThresholdProp, number>;
 
+// Keep THRESHOLD fields in sync with SettingsRepository.getThresholds() (PBI-05 facade).
 export const DEFAULT_CLEANSING_CONFIG: CleansingConfig = {
     contentStripHardEnabled: true,
     contentStripKeywordEnabled: true,
@@ -86,6 +92,25 @@ export class PageState {
     maxScrollPercentage: number = 0;
     isValidVisitReported: boolean = false;
     checkIntervalId: number | null = null;
+
+    /**
+     * VisitGate 注入用の thresholds を返す純粋ヘルパー。
+     * extractor.init() / checkVisitConditions が VisitGate 生成時に利用する。
+     */
+    toVisitGateThresholds(): { minDuration: number; minScroll: number } {
+        return { minDuration: this.minVisitDuration, minScroll: this.minScrollDepth };
+    }
+
+    /**
+     * VisitGate.isReportable に渡す VisitState を返す純粋ヘルパー。
+     */
+    toVisitState(): { startTime: number; maxScrollPercentage: number; isValidVisitReported: boolean } {
+        return {
+            startTime: this.startTime,
+            maxScrollPercentage: this.maxScrollPercentage,
+            isValidVisitReported: this.isValidVisitReported,
+        };
+    }
 
     // 【クレンジング設定】: コンテンツクレンジングとAI要約クレンジングの設定を一括管理
     cleansingConfig: CleansingConfig = { ...DEFAULT_CLEANSING_CONFIG };
