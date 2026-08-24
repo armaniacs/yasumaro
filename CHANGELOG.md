@@ -35,6 +35,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.74] - 2026-08-24
+
+### Fixed
+
+- Cookie同意バナー統合欠落による 2 tests FAIL を修正。`entrypoints/options/index.html` の手書き checkbox 群に `ai-summary-cleansing-cookie` が欠落し `aiSummaryCleansingSettingsV2-ruleDerivation` が `id="ai-summary-cleansing-cookie"` 不存在で失敗、`src/utils/__tests__/aiSummaryCleaner.test.ts` の「全無効」ケースが `cookieEnabled:false` 未指定で `totalRemoved 1` になる問題を解消。`AiSummaryCleansingSettings` を `RuleKey` からの mapped type `Record<`${RuleKey}Enabled`, boolean>` に置換し `CLEANSING_RULES` が SSOT になるよう型レベルで保証、`public/_locales/*/messages.json` に `aiSummaryCleansingCookieDesc` を追加
+
+### Refactor
+
+- Architecture Deepening 0824b（arch-delivery-loop）診断 8候補 → RICE スコアリング → 2件を実装・2件を次スプリントへ。`AiSummaryCleansingSettings` 手書き 33項目を `RuleKey` 導出の mapped type に置換しルール追加時の型追従を保証（PBI 09, RICE 64.0）。`ProviderRegistry`（RICE 11.2）と `SqliteClient shim`（RICE 20.0）は次スプリントへ見送り。詳細は `dev-docs/archived/pbi/2026-08-24-00-backlog-0824b.md` と HTMLレポート `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260824190249.html` を参照
+
 ## [6.7.73] - 2026-08-24
 
 ### Fixed
