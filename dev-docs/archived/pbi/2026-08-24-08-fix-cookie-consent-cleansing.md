@@ -29,11 +29,11 @@ Scenario: 英語OneTrustバナーも除去される
 ```
 
 ## 受け入れ基準
-- [ ] `stripPopupElements` または新設 `stripCookieConsentElements` が OneTrust系セレクタ（`onetrust`, `ot-sdk`, `ot-sdk-container`, `truste`, `cc-banner`, `cookieNotice`, `optanon`）を `isLikelyPopup` 判定なしで除去する
-- [ ] テキストベースの Cookie 判定（日本語: `Cookieの管理`, `同意の優先設定`, `必須Cookie`, `マーケティング`, `Cookieポリシー`, 英語: `Manage.*cookie`, `Always active` 等）が 500文字以下 + 子に `p/article/section` が2未満の要素に対して動作し、該当要素が除去される
-- [ ] 上記 Dell URL の実測で AIへ送信したデータが 3242→<800バイト かつ AI要約クレンジング削減率が 0.7%→50%以上になる（E2E: 実ページHTMLをクローンして `cleanForAISummary` を実行）
-- [ ] 既存の `stripPopupElements` テストが全てパスし、新規 Cookie パターンの単体テストが追加されている
-- [ ] `rules.ts` に新ルール `cookie`（defaultEnabled: true, newUserDefault: true, storageKey: ai_summary_cleansing_cookie）を追加し、既存ユーザー移行で有効化される（`migration.ts` でデフォルト true を書き込まない＝新規は defaultEnabled で有効）
+- [x] `stripPopupElements` または新設 `stripCookieConsentElements` が OneTrust系セレクタ（`onetrust`, `ot-sdk`, `ot-sdk-container`, `truste`, `cc-banner`, `cookieNotice`, `optanon`）を `isLikelyPopup` 判定なしで除去する
+- [x] テキストベースの Cookie 判定（日本語: `Cookieの管理`, `同意の優先設定`, `必須Cookie`, `マーケティング`, `Cookieポリシー`, 英語: `Manage.*cookie`, `Always active` 等）が 500文字以下 + 子に `p/article/section` が2未満の要素に対して動作し、該当要素が除去される
+- [x] 上記 Dell URL の実測で AIへ送信したデータが 3242→<800バイト かつ AI要約クレンジング削減率が 0.7%→50%以上になる（E2E: 実ページHTMLをクローンして `cleanForAISummary` を実行）
+- [x] 既存の `stripPopupElements` テストが全てパスし、新規 Cookie パターンの単体テストが追加されている
+- [x] `rules.ts` に新ルール `cookie`（defaultEnabled: true, newUserDefault: true, storageKey: ai_summary_cleansing_cookie）を追加し、既存ユーザー移行で有効化される（`migration.ts` でデフォルト true を書き込まない＝新規は defaultEnabled で有効）
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -82,9 +82,9 @@ grep -rn "ai_summary_cleansing_popup" src/utils/storage/types.ts
 - `bodyProtection` 閾値200は製品本文を保護するが、Cookie バナーが本文よりスコア高い場合に本体が保護対象になる危険がある。Cookie 除去は bodyProtection マーキング前に実行すること（`rules.ts` の順序で `cookie` を `popup` 直後に配置）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（新規パターンの単体テスト + Dell fixture の E2E）
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ロールバック手段の検討（`cookie` ルール false で無効化、個別 revert 可能を技術的考慮事項に記載済み）
-- [ ] ドキュメント更新済み（`docs/CLEANSING_ORDER.md` に cookie ルールを追記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす（新規パターンの単体テスト + Dell fixture の E2E）
+- [x] コードレビュー完了
+- [x] リファクタリング完了（グリーン後）
+- [x] ロールバック手段の検討（`cookie` ルール false で無効化、個別 revert 可能を技術的考慮事項に記載済み）
+- [x] ドキュメント更新済み（`docs/CLEANSING_ORDER.md` に cookie ルールを追記）

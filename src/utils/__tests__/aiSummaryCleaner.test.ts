@@ -167,16 +167,17 @@ describe('aiSummaryCleaner', () => {
             expect(result.adsRemoved).toBeGreaterThan(0);
             expect(result.navRemoved).toBeGreaterThan(0);
             expect(result.socialRemoved).toBeGreaterThan(0);
-            // NEW: recommendEnabled=true, popupEnabled=true are default
+            // NEW: recommendEnabled=true, popupEnabled=true, cookieEnabled=true are default
             expect(result.recommendRemoved).toBeGreaterThanOrEqual(0);
             expect(result.popupRemoved).toBeGreaterThanOrEqual(0);
+            expect(result.cookieRemoved).toBeGreaterThanOrEqual(0);
             // NEW: enhancedHiddenEnabled=true, emptyElemEnabled=true are default
             expect(result.enhancedHiddenRemoved).toBeGreaterThanOrEqual(0);
             expect(result.emptyElemRemoved).toBeGreaterThanOrEqual(0);
             expect(result.totalRemoved).toBe(
                 result.altRemoved + result.metadataRemoved + result.adsRemoved +
                 result.navRemoved + result.socialRemoved + result.deepRemoved +
-                result.recommendRemoved + result.popupRemoved +
+                result.recommendRemoved + result.popupRemoved + result.cookieRemoved +
                 result.enhancedHiddenRemoved + result.emptyElemRemoved
             );
         });
@@ -205,6 +206,7 @@ describe('aiSummaryCleaner', () => {
                 paginationEnabled: false,
                 snsPromoEnabled: false,
                 popupEnabled: false,
+                cookieEnabled: false,
                 platformEnabled: false,
                 // NEW: 9つの追加オプション
                 textDensityEnabled: false,
@@ -215,7 +217,13 @@ describe('aiSummaryCleaner', () => {
                 emptyElemEnabled: false,
                 jpLayoutEnabled: false,
                 jpNavigationEnabled: false,
-                authorEnabled: false
+                authorEnabled: false,
+                affiliateEnabled: false,
+                speechBubbleEnabled: false,
+                newsMediaEnabled: false,
+                ecSiteEnabled: false,
+                qaSiteEnabled: false,
+                videoSiteEnabled: false
             });
 
             expect(result.totalRemoved).toBe(0);
