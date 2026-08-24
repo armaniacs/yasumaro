@@ -2376,6 +2376,9 @@
   "aiSummaryCleansingPopupDesc": {
     "message": "ポップアップ・モーダル・トースト通知を削除します。"
   },
+  "aiSummaryCleansingCookieDesc": {
+    "message": "Cookie同意バナー（OneTrust等）を削除します。"
+  },
   "aiSummaryCleansingPlatformDesc": {
     "message": "プラットフォーム固有のノイズ（5ch/be画像 YouTubeコメント欄等）を削除します。"
   },
