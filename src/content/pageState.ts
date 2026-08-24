@@ -43,8 +43,7 @@ export interface CleansingConfig extends CleansingConfigRuleFlags, Record<Thresh
  * cleansingConfig for a real extraction, so this only needs to match
  * `defaultEnabled` (the "no value specified yet" fallback), not the
  * new-user storage default — see pbi/2026-08-09-20.
- * Keep in sync with SettingsRepository.getCleansingConfig() (PBI-05) —
- * both derive from CLEANSING_RULES; a detector test compares the two seams.
+ * Derives directly from CLEANSING_RULES (the single source of truth).
  */
 const CLEANSING_RULE_PLACEHOLDER_DEFAULTS: CleansingConfigRuleFlags = Object.fromEntries(
     CLEANSING_RULES.map(rule => [
@@ -53,14 +52,13 @@ const CLEANSING_RULE_PLACEHOLDER_DEFAULTS: CleansingConfigRuleFlags = Object.fro
     ]),
 ) as CleansingConfigRuleFlags;
 
-// Keep in sync with SettingsRepository.getThresholds() / THRESHOLD_RULES_FACADE (PBI-05).
-// Exported for detector tests that verify pageState defaults == facade defaults
-// via the shared THRESHOLD_RULES source of truth.
+// Derived from the shared THRESHOLD_RULES source of truth.
 export const THRESHOLD_CONFIG_DEFAULTS: Record<ThresholdProp, number> = Object.fromEntries(
     THRESHOLD_RULES.map(r => [r.prop, r.default]),
 ) as Record<ThresholdProp, number>;
 
-// Keep THRESHOLD fields in sync with SettingsRepository.getThresholds() (PBI-05 facade).
+// THRESHOLD fields derive from THRESHOLD_CONFIG_DEFAULTS, which derives from
+// THRESHOLD_RULES (the single source of truth).
 export const DEFAULT_CLEANSING_CONFIG: CleansingConfig = {
     contentStripHardEnabled: true,
     contentStripKeywordEnabled: true,

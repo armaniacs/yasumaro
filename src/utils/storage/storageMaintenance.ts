@@ -23,9 +23,30 @@ export function getSqliteHealthCheck(): SqliteHealthCheck | null {
     return _injectedHealthCheck;
 }
 
+/**
+ * Lazily construct a real SqliteClient-backed health check for contexts where
+ * setSqliteHealthCheck() has not run (popup/options pages run in a separate
+ * context from the service worker, so their module-level _injectedHealthCheck
+ * is always null). Falls back to an always-unhealthy check if the background
+ * module cannot be reached, preserving the fail-safe "skip destructive purge"
+ * behavior.
+ */
+export async function getDefaultSqliteHealthCheck(): Promise<SqliteHealthCheck> {
+    try {
+        const { SqliteClient } = await import('../../background/sqliteClient.js');
+        const client = new SqliteClient();
+        return async () => {
+            const r = await client.maintain({ type: 'healthCheck' });
+            return r.success ? Boolean(r.data) : false;
+        };
+    } catch {
+        return async () => false;
+    }
+}
+
 export async function ensureStorageQuota(
     toSave: Record<string, unknown>,
-    sqliteHealthCheck: SqliteHealthCheck
+    sqliteHealthCheck?: SqliteHealthCheck
 ): Promise<void> {
     if (await hasUnlimitedStorage()) return;
     const currentUsage = await getStorageUsage();
@@ -36,7 +57,9 @@ export async function ensureStorageQuota(
         currentUsage, newDataSize, limit: STORAGE_QUOTA_BYTES,
     }, 'storage/storageMaintenance.ts');
 
-    const freed = await purgeLegacyStorage(sqliteHealthCheck);
+    const effectiveHealthCheck =
+        sqliteHealthCheck ?? getSqliteHealthCheck() ?? (await getDefaultSqliteHealthCheck());
+    const freed = await purgeLegacyStorage(effectiveHealthCheck);
     const afterCleanup = await getStorageUsage();
 
     if (afterCleanup + newDataSize <= STORAGE_QUOTA_BYTES) {

@@ -19,164 +19,13 @@
  * hypothetical).
  */
 
-import type { StorageKey, Settings as SettingsType, ProviderSlot } from './types.js';
+import type { StorageKey, Settings as SettingsType, SqliteHealthCheck } from './types.js';
 import { StorageKeys } from './types.js';
 
-// ---------------------------------------------------------------------------
-// Cleansing + Thresholds facade — mirrors src/utils/aiSummaryCleaner/rules.ts
-// (SSOT). Keep in sync; detector tests compare lengths and storageKey sets.
-// L1 (storage) must not import Layer 2 (aiSummaryCleaner) at runtime, so the
-// tables are duplicated here as plain StorageKeys constants with a comment
-// linking to the canonical source. Type-only imports are erased and safe,
-// but the runtime import would violate LAYERS.md.
-// ---------------------------------------------------------------------------
-
-/** Mirrors CLEANSING_RULES[].{storageKey, key} — prop is `aiSummaryCleansing${Capitalize<key>}` */
-export const CLEANSING_RULE_PROP_MAP = [
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_ALT, prop: 'aiSummaryCleansingAlt' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_METADATA, prop: 'aiSummaryCleansingMetadata' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_ADS, prop: 'aiSummaryCleansingAds' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_NAV, prop: 'aiSummaryCleansingNav' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SOCIAL, prop: 'aiSummaryCleansingSocial' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_DEEP, prop: 'aiSummaryCleansingDeep' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_JSON_LD, prop: 'aiSummaryCleansingJsonLd' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LAZY_LOAD, prop: 'aiSummaryCleansingLazyLoad' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SKIP_LINK, prop: 'aiSummaryCleansingSkipLink' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_CARD, prop: 'aiSummaryCleansingCard' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_DENSITY, prop: 'aiSummaryCleansingLinkDensity' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_FIXED, prop: 'aiSummaryCleansingFixed' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_RECOMMEND, prop: 'aiSummaryCleansingRecommend' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION, prop: 'aiSummaryCleansingPagination' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO, prop: 'aiSummaryCleansingSnsPromo' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_POPUP, prop: 'aiSummaryCleansingPopup' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_COOKIE, prop: 'aiSummaryCleansingCookie' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM, prop: 'aiSummaryCleansingPlatform' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY, prop: 'aiSummaryCleansingTextDensity' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ, prop: 'aiSummaryCleansingShortSeq' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SYMBOL_LINE, prop: 'aiSummaryCleansingSymbolLine' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA, prop: 'aiSummaryCleansingLinkPara' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_ENHANCED_HIDDEN, prop: 'aiSummaryCleansingEnhancedHidden' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_EMPTY_ELEM, prop: 'aiSummaryCleansingEmptyElem' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_JP_LAYOUT, prop: 'aiSummaryCleansingJpLayout' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_JP_NAVIGATION, prop: 'aiSummaryCleansingJpNavigation' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_AUTHOR, prop: 'aiSummaryCleansingAuthor' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_AFFILIATE, prop: 'aiSummaryCleansingAffiliate' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE, prop: 'aiSummaryCleansingSpeechBubble' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_NEWS_MEDIA, prop: 'aiSummaryCleansingNewsMedia' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_EC_SITE, prop: 'aiSummaryCleansingEcSite' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_QA_SITE, prop: 'aiSummaryCleansingQaSite' as const },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE, prop: 'aiSummaryCleansingVideoSite' as const },
-] as const;
-
-export const CLEANSING_STORAGE_KEYS: readonly StorageKey[] = CLEANSING_RULE_PROP_MAP.map((r) => r.storageKey);
-
- /** Mirrors THRESHOLD_RULES — prop names match CleansingConfig fields */
-export const THRESHOLD_RULES_FACADE = [
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD, prop: 'aiSummaryCleansingLinkRatioThreshold' as const, min: 0, max: 100, default: 70 },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD, prop: 'aiSummaryCleansingShortTextThreshold' as const, min: 1, max: 200, default: 30 },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT, prop: 'aiSummaryCleansingShortSeqCount' as const, min: 1, max: 20, default: 5 },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD, prop: 'aiSummaryCleansingLinkParaThreshold' as const, min: 10, max: 200, default: 50 },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO, prop: 'aiSummaryCleansingFallbackRatio' as const, min: 0, max: 1, default: 0.2 },
-  { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES, prop: 'aiSummaryCleansingFallbackMinBytes' as const, min: 0, max: 5000, default: 300 },
-  { storageKey: StorageKeys.CONTENT_DEDUP_THRESHOLD, prop: 'contentDedupThreshold' as const, min: 0, max: 1, default: 0.7 },
-] as const;
-
-export const THRESHOLD_STORAGE_KEYS: readonly StorageKey[] = THRESHOLD_RULES_FACADE.map((r) => r.storageKey);
-
-// ---------------------------------------------------------------------------
-// Obsidian / AI / Privacy facade — mirrors StorageKeys constants
-// L1 must not import AppCore (aiSummaryCleaner, obsidianClient) at runtime,
-// so keys are mirrored locally as StorageKeys constants.
-// ---------------------------------------------------------------------------
-
-/** 6 Obsidian keys — mirrors StorageKeys.OBSIDIAN_* */
-export const OBSIDIAN_STORAGE_KEYS = [
-  StorageKeys.OBSIDIAN_API_KEY,
-  StorageKeys.OBSIDIAN_PROTOCOL,
-  StorageKeys.OBSIDIAN_HOST,
-  StorageKeys.OBSIDIAN_PORT,
-  StorageKeys.OBSIDIAN_DAILY_PATH,
-  StorageKeys.OBSIDIAN_ENABLED,
-] as const;
-
-/** 15+ AI keys — mirrors StorageKeys.* for provider wiring */
-export const AI_STORAGE_KEYS = [
-  StorageKeys.GEMINI_API_KEY,
-  StorageKeys.GEMINI_MODEL,
-  StorageKeys.GEMINI_API_VERSION,
-  StorageKeys.OPENAI_API_KEY,
-  StorageKeys.OPENAI_MODEL,
-  StorageKeys.OPENAI_BASE_URL,
-  StorageKeys.OPENAI_2_API_KEY,
-  StorageKeys.OPENAI_2_MODEL,
-  StorageKeys.OPENAI_2_BASE_URL,
-  StorageKeys.LM_STUDIO_BASE_URL,
-  StorageKeys.LM_STUDIO_MODEL,
-  StorageKeys.OLLAMA_BASE_URL,
-  StorageKeys.OLLAMA_MODEL,
-  StorageKeys.PROVIDER_TYPE,
-  StorageKeys.PROVIDER_API_KEY,
-  StorageKeys.PROVIDER_BASE_URL,
-  StorageKeys.PROVIDER_MODEL,
-  StorageKeys.AI_PROVIDER,
-  StorageKeys.AI_PROVIDER_PRIORITY_LIST,
-] as const;
-
-/** 5 Privacy keys */
-export const PRIVACY_STORAGE_KEYS = [
-  StorageKeys.PRIVACY_MODE,
-  StorageKeys.PII_CONFIRMATION_UI,
-  StorageKeys.PII_SANITIZE_LOGS,
-  StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR,
-  StorageKeys.AUTO_CONTENT_FETCH_ENABLED,
-] as const;
-
-export type ObsidianConfig = {
-  apiKey: string;
-  protocol: 'http' | 'https';
-  host: string;
-  port: string;
-  dailyPath: string;
-  enabled: boolean;
-};
-
-export type AiProviderConfig = {
-  geminiApiKey: string;
-  geminiModel: string;
-  geminiApiVersion: string;
-  openaiApiKey: string;
-  openaiModel: string;
-  openaiBaseUrl: string;
-  openai2ApiKey: string;
-  openai2Model: string;
-  openai2BaseUrl: string;
-  lmStudioBaseUrl: string;
-  lmStudioModel: string;
-  ollamaBaseUrl: string;
-  ollamaModel: string;
-  providerType: string;
-  providerApiKey: string;
-  providerBaseUrl: string;
-  providerModel: string;
-  aiProvider: string;
-  aiProviderPriorityList: ProviderSlot[];
-};
-
-export type PrivacyConfig = {
-  privacyMode: string;
-  piiConfirmationUi: boolean;
-  piiSanitizeLogs: boolean;
-  autoSavePrivacyBehavior: 'save' | 'skip' | 'confirm';
-  autoContentFetchEnabled: boolean;
-};
-
-export type CleansingConfig = {
-  [K in (typeof CLEANSING_RULE_PROP_MAP)[number]['prop']]: boolean;
-};
-
-export type CleansingThresholds = {
-  [K in (typeof THRESHOLD_RULES_FACADE)[number]['prop']]: number;
-};
+/** Options forwarded to the storage adapter's write path. */
+export interface SettingsWriteOptions {
+  sqliteHealthCheck?: SqliteHealthCheck;
+}
 
 export interface StorageAdapter {
   get(keys: string | string[] | null): Promise<Record<string, unknown>>;
@@ -184,7 +33,7 @@ export interface StorageAdapter {
   onChanged?(callback: (changes: Record<string, unknown>) => void): void;
   /** Typed settings access — implemented by both adapters without instanceof branching. */
   getSettings(): Promise<SettingsType>;
-  setSettings(settings: SettingsType): Promise<void>;
+  setSettings(settings: SettingsType, opts?: SettingsWriteOptions): Promise<void>;
 }
 
 export class ChromeStorageAdapter implements StorageAdapter {
@@ -224,12 +73,12 @@ export class ChromeStorageAdapter implements StorageAdapter {
     if (rawSettings) scattered = { ...scattered, ...(rawSettings as Record<string, unknown>) };
     return applyMigrationsAndDecrypt(scattered as SettingsType);
   }
-  async setSettings(settings: SettingsType): Promise<void> {
+  async setSettings(settings: SettingsType, opts?: SettingsWriteOptions): Promise<void> {
     const { API_KEY_FIELDS } = await import('./settingsMigration.js');
     const { getOrCreateEncryptionKey } = await import('./encryptionSession.js');
     const { encryptApiKey } = await import('../crypto/index.js');
     const { withOptimisticLock } = await import('../optimisticLock.js');
-    const { ensureStorageQuota, getSqliteHealthCheck } = await import('./storageMaintenance.js');
+    const { ensureStorageQuota } = await import('./storageMaintenance.js');
     let toSave: Record<string, unknown> = { ...(settings as Record<string, unknown>) };
     try {
       const key = await getOrCreateEncryptionKey();
@@ -246,8 +95,10 @@ export class ChromeStorageAdapter implements StorageAdapter {
       throw e;
     }
     // Mirror legacy saveSettings: guard storage quota on every write.
-    const hc = getSqliteHealthCheck() ?? (async () => false);
-    await ensureStorageQuota(toSave, hc);
+    // The health check resolves injected -> lazy default inside ensureStorageQuota,
+    // so popup/options contexts (where setSqliteHealthCheck never runs) still get
+    // a real SqliteClient-backed check instead of a hardcoded `false`.
+    await ensureStorageQuota(toSave, opts?.sqliteHealthCheck);
     await withOptimisticLock<SettingsType>('settings', (current) => {
       const base = (current as Record<string, unknown>) || {};
       return { ...(base as object), ...toSave } as SettingsType;
@@ -352,99 +203,10 @@ export class SettingsRepository {
     await this.adapter.setSettings(next);
   }
 
-  async setAll(settings: Partial<SettingsType>): Promise<void> {
+  async setAll(settings: Partial<SettingsType>, opts?: SettingsWriteOptions): Promise<void> {
     const current = await this.getAll();
     const next = { ...current, ...settings } as SettingsType;
-    await this.adapter.setSettings(next);
-  }
-
-  /**
-   * Facade: 1 getMany for all cleansing rule flags (33 keys).
-   * Callers no longer write StorageKeys.* + ?? DEFAULT_SETTINGS; fallback
-   * is inside getMany. Single seam for the 33 booleans defined in rules.ts.
-   */
-  async getCleansingConfig(): Promise<CleansingConfig> {
-    const raw = (await this.getMany(CLEANSING_STORAGE_KEYS)) as Record<string, unknown>;
-    const out: Record<string, unknown> = {};
-    for (const { storageKey, prop } of CLEANSING_RULE_PROP_MAP) {
-      out[prop] = Boolean(raw[storageKey]);
-    }
-    return out as CleansingConfig;
-  }
-
-  /**
-   * Facade: 1 getMany for all threshold numerics (7 keys) with min/max clamp
-   * from THRESHOLD_RULES. Callers no longer repeat Math.max/min per key.
-   */
-  async getThresholds(): Promise<CleansingThresholds> {
-    const raw = (await this.getMany(THRESHOLD_STORAGE_KEYS)) as Record<string, unknown>;
-    const out: Record<string, unknown> = {};
-    for (const { storageKey, prop, min, max, default: def } of THRESHOLD_RULES_FACADE) {
-      const v = Number(raw[storageKey]);
-      const base = Number.isFinite(v) ? v : def;
-      out[prop] = Math.max(min, Math.min(max, base));
-    }
-    return out as CleansingThresholds;
-  }
-
-  /**
-   * Facade: 1 getMany for Obsidian 6 keys.
-   * Callers use config.apiKey etc instead of settings[StorageKeys.X] ?? fallback.
-   * Missing keys are filled from DEFAULT_SETTINGS via getMany.
-   */
-  async getObsidianConfig(): Promise<ObsidianConfig> {
-    const raw = (await this.getMany(OBSIDIAN_STORAGE_KEYS)) as Record<string, unknown>;
-    return {
-      apiKey: raw[StorageKeys.OBSIDIAN_API_KEY] as string,
-      protocol: raw[StorageKeys.OBSIDIAN_PROTOCOL] as 'http' | 'https',
-      host: raw[StorageKeys.OBSIDIAN_HOST] as string,
-      port: raw[StorageKeys.OBSIDIAN_PORT] as string,
-      dailyPath: raw[StorageKeys.OBSIDIAN_DAILY_PATH] as string,
-      enabled: raw[StorageKeys.OBSIDIAN_ENABLED] as boolean,
-    };
-  }
-
-  /**
-   * Facade: 1 getMany for AI provider keys (18 keys including priority list).
-   * Callers no longer repeat `|| 'gemini'` inline fallbacks.
-   */
-  async getAiProviderConfig(): Promise<AiProviderConfig> {
-    const raw = (await this.getMany(AI_STORAGE_KEYS)) as Record<string, unknown>;
-    return {
-      geminiApiKey: raw[StorageKeys.GEMINI_API_KEY] as string,
-      geminiModel: raw[StorageKeys.GEMINI_MODEL] as string,
-      geminiApiVersion: raw[StorageKeys.GEMINI_API_VERSION] as string,
-      openaiApiKey: raw[StorageKeys.OPENAI_API_KEY] as string,
-      openaiModel: raw[StorageKeys.OPENAI_MODEL] as string,
-      openaiBaseUrl: raw[StorageKeys.OPENAI_BASE_URL] as string,
-      openai2ApiKey: raw[StorageKeys.OPENAI_2_API_KEY] as string,
-      openai2Model: raw[StorageKeys.OPENAI_2_MODEL] as string,
-      openai2BaseUrl: raw[StorageKeys.OPENAI_2_BASE_URL] as string,
-      lmStudioBaseUrl: raw[StorageKeys.LM_STUDIO_BASE_URL] as string,
-      lmStudioModel: raw[StorageKeys.LM_STUDIO_MODEL] as string,
-      ollamaBaseUrl: raw[StorageKeys.OLLAMA_BASE_URL] as string,
-      ollamaModel: raw[StorageKeys.OLLAMA_MODEL] as string,
-      providerType: raw[StorageKeys.PROVIDER_TYPE] as string,
-      providerApiKey: raw[StorageKeys.PROVIDER_API_KEY] as string,
-      providerBaseUrl: raw[StorageKeys.PROVIDER_BASE_URL] as string,
-      providerModel: raw[StorageKeys.PROVIDER_MODEL] as string,
-      aiProvider: raw[StorageKeys.AI_PROVIDER] as string,
-      aiProviderPriorityList: raw[StorageKeys.AI_PROVIDER_PRIORITY_LIST] as ProviderSlot[],
-    };
-  }
-
-  /**
-   * Facade: 1 getMany for Privacy 5 keys.
-   */
-  async getPrivacyConfig(): Promise<PrivacyConfig> {
-    const raw = (await this.getMany(PRIVACY_STORAGE_KEYS)) as Record<string, unknown>;
-    return {
-      privacyMode: raw[StorageKeys.PRIVACY_MODE] as string,
-      piiConfirmationUi: raw[StorageKeys.PII_CONFIRMATION_UI] as boolean,
-      piiSanitizeLogs: raw[StorageKeys.PII_SANITIZE_LOGS] as boolean,
-      autoSavePrivacyBehavior: raw[StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR] as PrivacyConfig['autoSavePrivacyBehavior'],
-      autoContentFetchEnabled: raw[StorageKeys.AUTO_CONTENT_FETCH_ENABLED] as boolean,
-    };
+    await this.adapter.setSettings(next, opts);
   }
 
   /**

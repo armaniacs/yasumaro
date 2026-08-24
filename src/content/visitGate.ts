@@ -25,16 +25,3 @@ export class VisitGate {
         return elapsed >= this.thresholds.minDuration && state.maxScrollPercentage >= this.thresholds.minScroll;
     }
 }
-
-/**
- * Backward-compatible helper mirroring the historic `shouldRecordVisit` signature.
- * Delegates to VisitGate internally so existing tests can keep importing a function.
- */
-export function shouldRecordVisit(
-    duration: number,
-    scroll: number,
-    minDuration: number = 5,
-    minScroll: number = 50,
-): boolean {
-    return new VisitGate({ minDuration, minScroll }).shouldRecord(duration, scroll);
-}

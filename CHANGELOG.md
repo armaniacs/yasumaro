@@ -33,7 +33,20 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
-## [Unreleased]
+## [6.7.80] - 2026-08-25
+
+### Fixed
+
+- ブランチ差分レビュー（`/review branch`）で検出した問題を修正：
+  - `PerUrlMutexMap.runExclusiveOn` が `acquire()` 失敗時（キュー満杯・タイムアウト）にも `finally` で `release()` を呼び、他レコーディングが保持中のロックを誤解放・譲渡して per-URL 直列化が壊れる問題を修正。取得成功時のみ解放する `acquired` フラグを導入
+  - `storageMaintenance` の `setSqliteHealthCheck` 注入が Service Worker でのみ実行されるため、ポップアップ/オプション画面では `getSqliteHealthCheck()` が常に `null` → `async () => false` となり、レガシー領域の退避（`purgeLegacyStorage`）がスキップされてクォータ超過ユーザーの設定保存が `STORAGE_QUOTA_EXCEEDED` で失敗するリグレッションを修正。`getDefaultSqliteHealthCheck()`（SqliteClient ベースの遅延フォールバック）を復活させ、`ensureStorageQuota` を「明示指定 → 注入済み → 遅延フォールバック」の順で解決
+  - `saveSettings` が `ensureStorageQuota` を二重実行し、明示的な `sqliteHealthCheck` 引数が実効ゲートで無視されていた問題を修正。クォータチェックを `ChromeStorageAdapter.setSettings` に一本化し、ヘルスチェックを `setAll` → `setSettings` 経由でスレッド
+
+### Refactor
+
+- `SettingsRepository` の未使用ファサード（`getCleansingConfig`/`getThresholds`/`getObsidianConfig`/`getAiProviderConfig`/`getPrivacyConfig`）と、それを支える `rules.ts` の手動ミラーテーブル（`CLEANSING_RULE_PROP_MAP` 33件 / `THRESHOLD_RULES_FACADE` 7件 ほか）を削除し、`aiSummaryCleaner/rules.ts` を単一ソースに復帰（デッドコード・ドリフトリスク解消）
+- `content/visitGate.ts` の未使用 `shouldRecordVisit` ヘルパ（`extractor.ts` の同名ラッパが shadowing）を削除
+- `offscreen.ts` の未使用 `buildRecordFromPayload` re-export を削除（利用側は `browsingLogCodec.js` を直接 import）
 
 ## [6.7.79] - 2026-08-25
 
