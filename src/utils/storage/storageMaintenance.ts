@@ -1,8 +1,9 @@
-// @layer 1 — Infrastructure: storage quota and maintenance (Layer 0 only, SqliteHealthCheck injected)
+// @layer 1-循環 — Infrastructure (exception: reverse dep to background/sqliteClient, see ADR)
+// SqliteHealthCheck type is Layer 0 (types.ts), implementation is injected when available
+// but fallback via dynamic import is kept for deploy safety (quota cleanup must not be disabled).
 /**
  * storage/storageMaintenance.ts
  * Storage quota and maintenance helpers.
- * Depends only on Layer 0 (quota, types) and injected SqliteHealthCheck.
  */
 
 import { getStorageUsage, estimateDataSize, STORAGE_QUOTA_BYTES, hasUnlimitedStorage } from './quota.js';
@@ -11,9 +12,13 @@ import { logInfo, logError, ErrorCode } from '../logger.js';
 import type { SqliteHealthCheck } from './types.js';
 
 export async function getDefaultSqliteHealthCheck(): Promise<SqliteHealthCheck> {
-    // Fallback that reports unhealthy so callers fail safe when no health check is injected.
-    // Real health check should be injected from createBackgroundServices via SqliteClient.
-    return async () => false;
+    try {
+        const { SqliteClient } = await import('../../background/sqliteClient.js');
+        const client = new SqliteClient();
+        return () => client.isSqliteHealthy();
+    } catch {
+        return async () => false;
+    }
 }
 
 export async function ensureStorageQuota(

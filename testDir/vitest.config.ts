@@ -22,6 +22,8 @@ export default defineConfig({
       '**/testDir/e2e/**',
       '**/.kilo/**',
       '**/video-*/**',
+      '**/.vulnhunter-fix/**',
+      '**/obsidian-smart-history_VULNHUNT_RESULTS*/**',
     ],
     coverage: {
       provider: 'v8',

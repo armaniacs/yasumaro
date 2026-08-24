@@ -208,40 +208,33 @@ export class FallbackStorage {
       // Sorting — mirrors pre-PBI split behaviour:
       // - query (no text): default to created_at DESC when no orderBy given
       // - search (text): only sort by created_at when explicitly requested; otherwise keep insertion order (no FTS5 rank)
+      const compareCreatedAt = (a: BrowsingLogRecord, b: BrowsingLogRecord, dir: number) => {
+        if (a.created_at < b.created_at) return -1 * dir;
+        if (a.created_at > b.created_at) return 1 * dir;
+        return 0;
+      };
+      const compareField = (a: BrowsingLogRecord, b: BrowsingLogRecord, field: keyof BrowsingLogRecord, dir: number) => {
+        const aVal = a[field]; const bVal = b[field];
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
+        if (aVal < bVal) return -1 * dir;
+        if (aVal > bVal) return 1 * dir;
+        return 0;
+      };
       if (q.text) {
         if (q.orderBy === 'created_at') {
           const dir = q.orderDir === 'ASC' ? 1 : -1;
-          filtered.sort((a, b) => {
-            const aVal = a.created_at;
-            const bVal = b.created_at;
-            if (aVal < bVal) return -1 * dir;
-            if (aVal > bVal) return 1 * dir;
-            return 0;
-          });
+          filtered.sort((a, b) => compareCreatedAt(a, b, dir));
         }
         // else: no FTS5 rank in fallback path, keep insertion order
       } else {
         if (!q.orderBy || q.orderBy === 'created_at') {
           const dir = q.orderDir === 'ASC' ? 1 : -1;
-          filtered.sort((a, b) => {
-            const aVal = a.created_at;
-            const bVal = b.created_at;
-            if (aVal < bVal) return -1 * dir;
-            if (aVal > bVal) return 1 * dir;
-            return 0;
-          });
+          filtered.sort((a, b) => compareCreatedAt(a, b, dir));
         } else {
           const dir = q.orderDir === 'ASC' ? 1 : -1;
-          filtered.sort((a, b) => {
-            const aVal = a[q.orderBy as keyof BrowsingLogRecord];
-            const bVal = b[q.orderBy as keyof BrowsingLogRecord];
-            if (aVal == null && bVal == null) return 0;
-            if (aVal == null) return 1;
-            if (bVal == null) return -1;
-            if (aVal < bVal) return -1 * dir;
-            if (aVal > bVal) return 1 * dir;
-            return 0;
-          });
+          filtered.sort((a, b) => compareField(a, b, q.orderBy as keyof BrowsingLogRecord, dir));
         }
       }
 
