@@ -23,7 +23,7 @@ const sqliteClient = getSharedSqliteClient();
  */
 export async function recordAuditLog({ provider, url }: { provider: string; url: string }): Promise<void> {
   try {
-    const result = await sqliteClient.insertAuditLogResult({ provider, url, created_at: Date.now() });
+    const result = await sqliteClient.mutate({ type: 'insertAuditLog', record: { provider, url, created_at: Date.now() } });
     if (!result.success) {
       logError('Failed to record audit log', { provider, error: result.error.message });
     }
@@ -36,6 +36,6 @@ export async function recordAuditLog({ provider, url }: { provider: string; url:
  * Retrieve audit log entries, most recent first.
  */
 export async function getAuditLogs({ limit = 100, offset = 0 }: { limit?: number; offset?: number } = {}): Promise<{ rows: AuditLogEntry[]; total: number }> {
-  const result = await sqliteClient.queryAuditLogResult({ limit, offset });
+  const result = await sqliteClient.query({ kind: 'auditLog', limit, offset });
   return result.success ? result.data : { rows: [], total: 0 };
 }

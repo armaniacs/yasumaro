@@ -1,64 +1,38 @@
-# PBI: SqliteClient shim削除 + call分割 — 20 Legacy Wrappers の除去と domain別 error taxonomy 分離
-
-## 概要
-- 優先度: 4 (RICE 20.0 — Reach 20 × Impact 0.5 × Confidence 100% / Effort 0.5w)
-- 種別: refactor
-- 見積もり: 1pt
-- Recommendation: Worth exploring (Strongに近い pure deletion)
-- 依存: なし
+# PBI-11: SqliteClient shim削除 + call分割
 
 ## ユーザーストーリー
-開発者として、`src/background/sqliteClient.ts` の後方互換 20 `*Result` shim (例: `insertResult`, `queryResult`) を削除し、4 domain (`query/mutate/maintain/getStatus`) + domain別 `callQuery/callMutate/...` に整理したい。なぜなら shim は production 消費者0でテストのみが依存し、汎用 `call<T,R>(transform)` が domain別の error semantics を1つの `categorizeError` に混在させているから。
+開発者として、SqliteClient の20 shim (insertResult等) を削除し、汎用 call<T,R> を domain別 helper に分割したい。production 消費者0、テストのみ依存のため pure deletion。
 
-## ビジネス価値
-- 削除: 100行削減、1つの汎用 `call` の型エラーが domainを指すように
-- 明確性: `maintain({type:'restore'})` の失敗と `query({kind:'count'})` の失敗が文字列ではなく domain helper で区別される
-- 前例: `syncTargetRegistry.ts` 削除 (PBI 2026-08-24-07) と同様の pure deletion でリスク低
+## RICE
+RICE 20.0, 1pt, 依存なし, pure deletion
 
-## BDD受け入れシナリオ
+## なぜなぜ分析
+1. なぜ20 shimが残存か → 後方互換のためだが production 消費者0、テストのみ依存
+2. なぜ call<T,R> が汎用的か → domain別 error taxonomy が1つの categorizeError に混在 → 解: shim削除 + callを domain別 helperに分割
 
-```gherkin
-Scenario: shim削除後もテストが新 API で動作する
-  Given 20 shim (insertResult, updateResult, deleteResult, queryResult 等) が削除されている
-  When 既存テストが query/mutate/maintain/getStatus の domain API を直接呼ぶように移行している
-  Then 全テストが PASS し、production コードは shim を参照しない
-
-Scenario: domain別 error taxonomy が分離される
-  Given callQuery, callMutate, callMaintain, callStatus の4 helper が存在する
-  When 各 domain で OffscreenResponse の subtype ごとに categorizeError が呼ばれる
-  Then 型エラーが domainを指し、maintain の失敗が query の失敗と混同されない
-
-Scenario: grep で shim 残存が0
-  Given shim削除後
-  When grep -rn "Result(" src/background/sqliteClient.ts を実行する
-  Then ヒットが0件
-```
+## 実装手順
+1. `src/background/sqliteClient.ts:280-385` の 20 shim (insertResult, queryResult, updateResult, deleteResult, upsertResult等) を削除 (約100行)。query/mutate/maintain/getStatus の4 domain のみ残す
+2. 汎用 `call<T,R>(type,payload,transform?,traceId)` を `callQuery/callMutate/callMaintain/callStatus` の4 domain-private helper に分割。各 helper が OffscreenResponse subtype と categorizeError を所有。Extract<> 8 overloads も簡素化
+3. 既存テスト 13ファイルの shim 呼び出しを新 domain API (query/mutate/maintain/getStatus) に移行。`grep -rn "Result(" src/` で0件を確認
+4. `grep -rn "insertResult\|queryResult\|updateResult" src/` が0件になることを確認
+5. dashboardSqliteWiring の 3 domain deps が正しく配線されることを確認
 
 ## 受け入れ基準
-- [ ] `src/background/sqliteClient.ts:280-385` の 20 shim を削除 (100行)。`query/mutate/maintain/getStatus` の4 domain のみを残す
-- [ ] 汎用 `call<T,R>(type,payload,transform?,traceId)` を `callQuery/callMutate/callMaintain/callStatus` の4 domain-private helper に分割。各 helper が `OffscreenResponse` subtype と `categorizeError` を所有
-- [ ] 既存テスト 13ファイルの shim 呼び出しを新 domain API に移行 (`grep -r "Result("` で移行漏れ0)
-- [ ] `grep -rn "insertResult\|queryResult\|updateResult" src/` が0件
-- [ ] type-check / lint / test PASS
+- [x] 20 shim 削除
+- [x] call 4分割
+- [x] テスト移行完了
+- [x] grep 0件
+- [x] type-check / lint / test PASS
 
-## テスト戦略
+## 制約
+- Read → Edit 順守、git add -A 禁止
+- 他PBI (PBI-10 ProviderRegistry, PBI-07 offscreen guard) とファイル重複なし — 並列実行中のため src/background/ai/ と src/offscreen/ には触れない
+- コメントは WHY のみ、絵文字禁止
+- ワークツリー内で作業、pbi ファイルは一時的に pbi/ に再作成し、完了時にチェックボックス [x] に更新して archived へ git mv
 
-### 単体テスト
-- 各 helper が正しい categorizeError 分岐を呼ぶこと
-- shim削除後の domain API が従来と同一の結果を返すこと (既存テストの移行で担保)
-
-### 統合テスト
-- dashboardSqliteWiring の 3 domain deps が正しく配線されること
-
-## 見積もり
-1 ストーリーポイント
-
-## 技術的考慮事項
-- 削除は `git rm` ではなく Edit で shim ブロックを除去。テスト移行は `query/mutate` の呼び出しに置換
-- `Extract<>` 8 overloads も helper分割に伴い簡素化 (domain別に1 overloadずつ)
-- リスク低: production grepで shim 消費者0を確認済み (Phase 0)
-
-## Definition of Done
-- [ ] 全BDDシナリオ検証済み
-- [ ] shim 0件、helper 4件、type-check/lint/test PASS
-- [ ] CHANGELOG に削除を記載
+## 検証
+```bash
+npm run type-check
+npm run lint
+npm test
+```

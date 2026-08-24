@@ -71,9 +71,6 @@ describe('mapLegacyEntryToRecord', () => {
 describe('MigrationService', () => {
   let service: MigrationService;
   let sqliteClient: {
-    insertBatchResult: ReturnType<typeof vi.fn>;
-    queryResult: ReturnType<typeof vi.fn>;
-    updateResult: ReturnType<typeof vi.fn>;
     getStatus: ReturnType<typeof vi.fn>;
     query: ReturnType<typeof vi.fn>;
     mutate: ReturnType<typeof vi.fn>;
@@ -110,18 +107,9 @@ describe('MigrationService', () => {
     mockStorage = {};
     setupChrome();
     sqliteClient = {
-      insertBatchResult: vi.fn().mockResolvedValue({ success: true, data: { count: 0 } }),
-      queryResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
-      updateResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
       getStatus: vi.fn().mockResolvedValue({ fallback: false, initialized: true }),
-      query: vi.fn().mockImplementation((op: any) => {
-        return sqliteClient.queryResult(op);
-      }),
-      mutate: vi.fn().mockImplementation((op: any) => {
-        if (op.type === 'insertBatch') return sqliteClient.insertBatchResult(op.records);
-        if (op.type === 'update') return sqliteClient.updateResult(op.id, op.changes);
-        return Promise.resolve({ success: true, data: undefined });
-      }),
+      query: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
+      mutate: vi.fn().mockResolvedValue({ success: true, data: { count: 0 } }),
       maintain: vi.fn().mockResolvedValue({ success: true, data: undefined }),
     };
     service = new MigrationService(sqliteClient as any);
@@ -135,14 +123,14 @@ describe('MigrationService', () => {
     it('completes when already-migrated status is set', async () => {
       mockStorage['yasumaro_migration_status'] = 'completed';
       await service.run();
-      expect(sqliteClient.insertBatchResult).not.toHaveBeenCalled();
+      expect(sqliteClient.mutate).not.toHaveBeenCalled();
     });
 
     it('marks fresh_install when no legacy data exists', async () => {
       mockStorage['savedUrlsWithTimestamps'] = [];
       await service.run();
       expect(mockStorage['yasumaro_migration_status']).toBe('fresh_install');
-      expect(sqliteClient.insertBatchResult).not.toHaveBeenCalled();
+      expect(sqliteClient.mutate).not.toHaveBeenCalled();
     });
 
     it('migrates data in batches', async () => {
@@ -150,30 +138,30 @@ describe('MigrationService', () => {
         url: `https://x${i}.com`, timestamp: i,
       }));
       mockStorage['savedUrlsWithTimestamps'] = entries;
-      sqliteClient.insertBatchResult.mockResolvedValue({ success: true, data: { count: 100 } });
+      sqliteClient.mutate.mockResolvedValue({ success: true, data: { count: 100 } });
 
       await service.run();
 
       // 250 entries / 100 batch = 3 calls (100 + 100 + 50)
-      expect(sqliteClient.insertBatchResult).toHaveBeenCalledTimes(3);
+      expect(sqliteClient.mutate).toHaveBeenCalledTimes(3);
     });
 
-    it('handles insertBatchResult returning a failure result', async () => {
+    it('handles mutate insertBatch returning a failure result', async () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 1 },
       ];
-      sqliteClient.insertBatchResult.mockResolvedValue({ success: false, error: { kind: 'sqlite_error', message: 'insert failed', retriable: false } });
+      sqliteClient.mutate.mockResolvedValue({ success: false, error: { kind: 'sqlite_error', message: 'insert failed', retriable: false } });
 
       await service.run();
 
       expect(mockStorage['yasumaro_migration_status']).not.toBe('completed');
     });
 
-    it('handles insertBatchResult throwing an error', async () => {
+    it('handles mutate insertBatch throwing an error', async () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 1 },
       ];
-      sqliteClient.insertBatchResult.mockRejectedValue(new Error('DB error'));
+      sqliteClient.mutate.mockRejectedValue(new Error('DB error'));
 
       await service.run();
 
@@ -186,7 +174,7 @@ describe('MigrationService', () => {
         { url: 'https://b.com', timestamp: 2 },
         { url: 'https://c.com', timestamp: 3 },
       ];
-      sqliteClient.insertBatchResult.mockResolvedValue({ success: true, data: { count: 2 } });
+      sqliteClient.mutate.mockResolvedValue({ success: true, data: { count: 2 } });
 
       await service.run();
 
@@ -208,7 +196,7 @@ describe('MigrationService', () => {
         mockStorage['savedUrlsWithTimestamps'] = [
           { url: 'https://a.com', timestamp: 1 },
         ];
-        sqliteClient.insertBatchResult.mockRejectedValue(new Error('DB error'));
+        sqliteClient.mutate.mockRejectedValue(new Error('DB error'));
       });
 
       it('increments the retry count on each failure without reaching the limit', async () => {
@@ -236,8 +224,8 @@ describe('MigrationService', () => {
 
         await service.run();
 
-        // insertBatchResult should not be called — run() should short-circuit
-        expect(sqliteClient.insertBatchResult).not.toHaveBeenCalled();
+        // mutate should not be called — run() should short-circuit
+        expect(sqliteClient.mutate).not.toHaveBeenCalled();
       });
 
       it('resets the retry count once migration succeeds', async () => {
@@ -245,7 +233,7 @@ describe('MigrationService', () => {
         expect(mockStorage['yasumaro_migration_retry_count']).toBe(1);
 
         // Now make the next attempt succeed
-        sqliteClient.insertBatchResult.mockResolvedValue({ success: true, data: { count: 1 } });
+        sqliteClient.mutate.mockResolvedValue({ success: true, data: { count: 1 } });
         await service.run();
 
         expect(mockStorage['yasumaro_migration_status']).toBe('completed');
@@ -272,7 +260,7 @@ describe('MigrationService', () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 60000, sentTokens: 50, pageBytes: 2000 },
       ];
-      sqliteClient.queryResult.mockResolvedValue({
+      sqliteClient.query.mockResolvedValue({
         success: true,
         data: {
           rows: [
@@ -281,21 +269,21 @@ describe('MigrationService', () => {
           total: 1,
         },
       });
-      sqliteClient.updateResult.mockResolvedValue({ success: true, data: undefined });
+      sqliteClient.mutate.mockResolvedValue({ success: true, data: undefined });
 
       const result = await service.backfillDiagnosticMetadata();
       expect(result.updated).toBe(1);
-      expect(sqliteClient.updateResult).toHaveBeenCalledWith(1, expect.objectContaining({
+      expect(sqliteClient.mutate).toHaveBeenCalledWith(expect.objectContaining({ type: 'update', id: 1, changes: expect.objectContaining({
         sent_tokens: 50,
         page_bytes: 2000,
-      }));
+      }) }));
     });
 
     it('skips entries that already have diagnostic data', async () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 60000, sentTokens: 50 },
       ];
-      sqliteClient.queryResult.mockResolvedValue({
+      sqliteClient.query.mockResolvedValue({
         success: true,
         data: {
           rows: [
@@ -313,7 +301,7 @@ describe('MigrationService', () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 60000, sentTokens: 50 },
       ];
-      sqliteClient.queryResult.mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
+      sqliteClient.query.mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
 
       const result = await service.backfillDiagnosticMetadata();
       expect(result).toEqual({ updated: 0, total: 0 });
@@ -323,7 +311,7 @@ describe('MigrationService', () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 60000, sentTokens: 50 },
       ];
-      sqliteClient.queryResult.mockRejectedValue(new Error('Query failed'));
+      sqliteClient.query.mockRejectedValue(new Error('Query failed'));
 
       await expect(service.backfillDiagnosticMetadata()).rejects.toThrow('Query failed');
     });
@@ -336,18 +324,18 @@ describe('MigrationService', () => {
       expect(result).toEqual({ updated: 0, total: 0 });
     });
 
-    it('handles updateResult returning failure', async () => {
+    it('handles mutate update returning failure', async () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 60000, sentTokens: 50 },
       ];
-      sqliteClient.queryResult.mockResolvedValue({
+      sqliteClient.query.mockResolvedValue({
         success: true,
         data: {
           rows: [{ id: 1, url: 'https://a.com', created_at: 60000, sent_tokens: null }],
           total: 1,
         },
       });
-      sqliteClient.updateResult.mockResolvedValue({
+      sqliteClient.mutate.mockResolvedValue({
         success: false,
         error: { kind: 'sqlite_error', message: 'update failed', retriable: false },
       });
@@ -360,7 +348,7 @@ describe('MigrationService', () => {
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://a.com', timestamp: 60000, sentTokens: 50 },
       ];
-      sqliteClient.queryResult.mockResolvedValue({
+      sqliteClient.query.mockResolvedValue({
         success: true,
         data: {
           rows: [{ id: null, url: 'https://a.com', created_at: 60000, sent_tokens: null }],
@@ -432,7 +420,7 @@ describe('MigrationService', () => {
       mockStorage['FALLBACK_STORAGE_DATA'] = {
         records: [{ url: 'https://a.com', created_at: 1 }],
       };
-      sqliteClient.insertBatchResult.mockResolvedValue({ success: false, error: { kind: 'sqlite_error', message: 'insert failed', retriable: false } });
+      sqliteClient.mutate.mockResolvedValue({ success: false, error: { kind: 'sqlite_error', message: 'insert failed', retriable: false } });
 
       const result = await service.migrateOpfsRecovery();
       expect(result.success).toBe(false);
@@ -444,7 +432,7 @@ describe('MigrationService', () => {
       mockStorage['FALLBACK_STORAGE_DATA'] = {
         records: [{ url: 'https://a.com', created_at: 1 }],
       };
-      sqliteClient.insertBatchResult.mockRejectedValue(new Error('Batch error'));
+      sqliteClient.mutate.mockRejectedValue(new Error('Batch error'));
 
       const result = await service.migrateOpfsRecovery();
       expect(result.success).toBe(false);

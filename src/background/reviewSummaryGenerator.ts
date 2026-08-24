@@ -213,13 +213,13 @@ export function createReviewSummaryGenerator(options: CreateReviewSummaryGenerat
     }
 
 const { start, end } = getWeekPeriod(date);
-     const queryResult = await sqliteClient.query({ dateFrom: start, dateTo: end, limit: 10000 });
+     const queryRes = await sqliteClient.query({ dateFrom: start, dateTo: end, limit: 10000 });
 
-     if (!queryResult.success) {
-      addLog(LogType.ERROR, 'Failed to query entries for weekly summary', { weekKey, error: queryResult.error.message });
+     if (!queryRes.success) {
+      addLog(LogType.ERROR, 'Failed to query entries for weekly summary', { weekKey, error: queryRes.error.message });
       return false;
     }
-    const result = queryResult.data;
+    const result = queryRes.data;
     if (result.rows.length === 0) {
       addLog(LogType.INFO, 'No entries for this week, skipping', { weekKey });
       return false;
@@ -285,13 +285,13 @@ const { start, end } = getWeekPeriod(date);
     }
 
 const { start, end } = getMonthPeriod(date);
-     const queryResult = await sqliteClient.query({ dateFrom: start, dateTo: end, limit: 10000 });
+     const queryRes = await sqliteClient.query({ dateFrom: start, dateTo: end, limit: 10000 });
 
-     if (!queryResult.success) {
-      addLog(LogType.ERROR, 'Failed to query entries for monthly summary', { monthKey, error: queryResult.error.message });
+     if (!queryRes.success) {
+      addLog(LogType.ERROR, 'Failed to query entries for monthly summary', { monthKey, error: queryRes.error.message });
       return false;
     }
-    const result = queryResult.data;
+    const result = queryRes.data;
     if (result.rows.length === 0) {
       addLog(LogType.INFO, 'No entries for this month, skipping', { monthKey });
       return false;
