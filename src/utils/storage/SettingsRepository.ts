@@ -19,7 +19,7 @@
  * hypothetical).
  */
 
-import type { StorageKey, Settings as SettingsType } from './types.js';
+import type { StorageKey, Settings as SettingsType, ProviderSlot } from './types.js';
 import { StorageKeys } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -68,9 +68,9 @@ export const CLEANSING_RULE_PROP_MAP = [
   { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_VIDEO_SITE, prop: 'aiSummaryCleansingVideoSite' as const },
 ] as const;
 
-export const CLEANSING_STORAGE_KEYS = CLEANSING_RULE_PROP_MAP.map((r) => r.storageKey) as unknown as readonly StorageKey[];
+export const CLEANSING_STORAGE_KEYS: readonly StorageKey[] = CLEANSING_RULE_PROP_MAP.map((r) => r.storageKey);
 
-/** Mirrors THRESHOLD_RULES — prop names match CleansingConfig fields */
+ /** Mirrors THRESHOLD_RULES — prop names match CleansingConfig fields */
 export const THRESHOLD_RULES_FACADE = [
   { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD, prop: 'aiSummaryCleansingLinkRatioThreshold' as const, min: 0, max: 100, default: 70 },
   { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD, prop: 'aiSummaryCleansingShortTextThreshold' as const, min: 1, max: 200, default: 30 },
@@ -81,7 +81,94 @@ export const THRESHOLD_RULES_FACADE = [
   { storageKey: StorageKeys.CONTENT_DEDUP_THRESHOLD, prop: 'contentDedupThreshold' as const, min: 0, max: 1, default: 0.7 },
 ] as const;
 
-export const THRESHOLD_STORAGE_KEYS = THRESHOLD_RULES_FACADE.map((r) => r.storageKey) as unknown as readonly StorageKey[];
+export const THRESHOLD_STORAGE_KEYS: readonly StorageKey[] = THRESHOLD_RULES_FACADE.map((r) => r.storageKey);
+
+// ---------------------------------------------------------------------------
+// Obsidian / AI / Privacy facade — mirrors StorageKeys constants
+// L1 must not import AppCore (aiSummaryCleaner, obsidianClient) at runtime,
+// so keys are mirrored locally as StorageKeys constants.
+// ---------------------------------------------------------------------------
+
+/** 6 Obsidian keys — mirrors StorageKeys.OBSIDIAN_* */
+export const OBSIDIAN_STORAGE_KEYS = [
+  StorageKeys.OBSIDIAN_API_KEY,
+  StorageKeys.OBSIDIAN_PROTOCOL,
+  StorageKeys.OBSIDIAN_HOST,
+  StorageKeys.OBSIDIAN_PORT,
+  StorageKeys.OBSIDIAN_DAILY_PATH,
+  StorageKeys.OBSIDIAN_ENABLED,
+] as const;
+
+/** 15+ AI keys — mirrors StorageKeys.* for provider wiring */
+export const AI_STORAGE_KEYS = [
+  StorageKeys.GEMINI_API_KEY,
+  StorageKeys.GEMINI_MODEL,
+  StorageKeys.GEMINI_API_VERSION,
+  StorageKeys.OPENAI_API_KEY,
+  StorageKeys.OPENAI_MODEL,
+  StorageKeys.OPENAI_BASE_URL,
+  StorageKeys.OPENAI_2_API_KEY,
+  StorageKeys.OPENAI_2_MODEL,
+  StorageKeys.OPENAI_2_BASE_URL,
+  StorageKeys.LM_STUDIO_BASE_URL,
+  StorageKeys.LM_STUDIO_MODEL,
+  StorageKeys.OLLAMA_BASE_URL,
+  StorageKeys.OLLAMA_MODEL,
+  StorageKeys.PROVIDER_TYPE,
+  StorageKeys.PROVIDER_API_KEY,
+  StorageKeys.PROVIDER_BASE_URL,
+  StorageKeys.PROVIDER_MODEL,
+  StorageKeys.AI_PROVIDER,
+  StorageKeys.AI_PROVIDER_PRIORITY_LIST,
+] as const;
+
+/** 5 Privacy keys */
+export const PRIVACY_STORAGE_KEYS = [
+  StorageKeys.PRIVACY_MODE,
+  StorageKeys.PII_CONFIRMATION_UI,
+  StorageKeys.PII_SANITIZE_LOGS,
+  StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR,
+  StorageKeys.AUTO_CONTENT_FETCH_ENABLED,
+] as const;
+
+export type ObsidianConfig = {
+  apiKey: string;
+  protocol: 'http' | 'https';
+  host: string;
+  port: string;
+  dailyPath: string;
+  enabled: boolean;
+};
+
+export type AiProviderConfig = {
+  geminiApiKey: string;
+  geminiModel: string;
+  geminiApiVersion: string;
+  openaiApiKey: string;
+  openaiModel: string;
+  openaiBaseUrl: string;
+  openai2ApiKey: string;
+  openai2Model: string;
+  openai2BaseUrl: string;
+  lmStudioBaseUrl: string;
+  lmStudioModel: string;
+  ollamaBaseUrl: string;
+  ollamaModel: string;
+  providerType: string;
+  providerApiKey: string;
+  providerBaseUrl: string;
+  providerModel: string;
+  aiProvider: string;
+  aiProviderPriorityList: ProviderSlot[];
+};
+
+export type PrivacyConfig = {
+  privacyMode: string;
+  piiConfirmationUi: boolean;
+  piiSanitizeLogs: boolean;
+  autoSavePrivacyBehavior: 'save' | 'skip' | 'confirm';
+  autoContentFetchEnabled: boolean;
+};
 
 export type CleansingConfig = {
   [K in (typeof CLEANSING_RULE_PROP_MAP)[number]['prop']]: boolean;
@@ -277,7 +364,7 @@ export class SettingsRepository {
    * is inside getMany. Single seam for the 33 booleans defined in rules.ts.
    */
   async getCleansingConfig(): Promise<CleansingConfig> {
-    const raw = (await this.getMany(CLEANSING_STORAGE_KEYS as unknown as StorageKey[])) as Record<string, unknown>;
+    const raw = (await this.getMany(CLEANSING_STORAGE_KEYS)) as Record<string, unknown>;
     const out: Record<string, unknown> = {};
     for (const { storageKey, prop } of CLEANSING_RULE_PROP_MAP) {
       out[prop] = Boolean(raw[storageKey]);
@@ -290,7 +377,7 @@ export class SettingsRepository {
    * from THRESHOLD_RULES. Callers no longer repeat Math.max/min per key.
    */
   async getThresholds(): Promise<CleansingThresholds> {
-    const raw = (await this.getMany(THRESHOLD_STORAGE_KEYS as unknown as StorageKey[])) as Record<string, unknown>;
+    const raw = (await this.getMany(THRESHOLD_STORAGE_KEYS)) as Record<string, unknown>;
     const out: Record<string, unknown> = {};
     for (const { storageKey, prop, min, max, default: def } of THRESHOLD_RULES_FACADE) {
       const v = Number(raw[storageKey]);
@@ -298,6 +385,66 @@ export class SettingsRepository {
       out[prop] = Math.max(min, Math.min(max, base));
     }
     return out as CleansingThresholds;
+  }
+
+  /**
+   * Facade: 1 getMany for Obsidian 6 keys.
+   * Callers use config.apiKey etc instead of settings[StorageKeys.X] ?? fallback.
+   * Missing keys are filled from DEFAULT_SETTINGS via getMany.
+   */
+  async getObsidianConfig(): Promise<ObsidianConfig> {
+    const raw = (await this.getMany(OBSIDIAN_STORAGE_KEYS)) as Record<string, unknown>;
+    return {
+      apiKey: raw[StorageKeys.OBSIDIAN_API_KEY] as string,
+      protocol: raw[StorageKeys.OBSIDIAN_PROTOCOL] as 'http' | 'https',
+      host: raw[StorageKeys.OBSIDIAN_HOST] as string,
+      port: raw[StorageKeys.OBSIDIAN_PORT] as string,
+      dailyPath: raw[StorageKeys.OBSIDIAN_DAILY_PATH] as string,
+      enabled: raw[StorageKeys.OBSIDIAN_ENABLED] as boolean,
+    };
+  }
+
+  /**
+   * Facade: 1 getMany for AI provider keys (18 keys including priority list).
+   * Callers no longer repeat `|| 'gemini'` inline fallbacks.
+   */
+  async getAiProviderConfig(): Promise<AiProviderConfig> {
+    const raw = (await this.getMany(AI_STORAGE_KEYS)) as Record<string, unknown>;
+    return {
+      geminiApiKey: raw[StorageKeys.GEMINI_API_KEY] as string,
+      geminiModel: raw[StorageKeys.GEMINI_MODEL] as string,
+      geminiApiVersion: raw[StorageKeys.GEMINI_API_VERSION] as string,
+      openaiApiKey: raw[StorageKeys.OPENAI_API_KEY] as string,
+      openaiModel: raw[StorageKeys.OPENAI_MODEL] as string,
+      openaiBaseUrl: raw[StorageKeys.OPENAI_BASE_URL] as string,
+      openai2ApiKey: raw[StorageKeys.OPENAI_2_API_KEY] as string,
+      openai2Model: raw[StorageKeys.OPENAI_2_MODEL] as string,
+      openai2BaseUrl: raw[StorageKeys.OPENAI_2_BASE_URL] as string,
+      lmStudioBaseUrl: raw[StorageKeys.LM_STUDIO_BASE_URL] as string,
+      lmStudioModel: raw[StorageKeys.LM_STUDIO_MODEL] as string,
+      ollamaBaseUrl: raw[StorageKeys.OLLAMA_BASE_URL] as string,
+      ollamaModel: raw[StorageKeys.OLLAMA_MODEL] as string,
+      providerType: raw[StorageKeys.PROVIDER_TYPE] as string,
+      providerApiKey: raw[StorageKeys.PROVIDER_API_KEY] as string,
+      providerBaseUrl: raw[StorageKeys.PROVIDER_BASE_URL] as string,
+      providerModel: raw[StorageKeys.PROVIDER_MODEL] as string,
+      aiProvider: raw[StorageKeys.AI_PROVIDER] as string,
+      aiProviderPriorityList: raw[StorageKeys.AI_PROVIDER_PRIORITY_LIST] as ProviderSlot[],
+    };
+  }
+
+  /**
+   * Facade: 1 getMany for Privacy 5 keys.
+   */
+  async getPrivacyConfig(): Promise<PrivacyConfig> {
+    const raw = (await this.getMany(PRIVACY_STORAGE_KEYS)) as Record<string, unknown>;
+    return {
+      privacyMode: raw[StorageKeys.PRIVACY_MODE] as string,
+      piiConfirmationUi: raw[StorageKeys.PII_CONFIRMATION_UI] as boolean,
+      piiSanitizeLogs: raw[StorageKeys.PII_SANITIZE_LOGS] as boolean,
+      autoSavePrivacyBehavior: raw[StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR] as PrivacyConfig['autoSavePrivacyBehavior'],
+      autoContentFetchEnabled: raw[StorageKeys.AUTO_CONTENT_FETCH_ENABLED] as boolean,
+    };
   }
 
   /**

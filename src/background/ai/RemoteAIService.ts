@@ -78,14 +78,16 @@ export class RemoteAIService implements AIService {
     if (!slot.model) {
       return settings;
     }
-    return { ...settings, [resolveModelKey(slot.provider)]: slot.model };
+    const key = resolveModelKey(slot.provider);
+    return { ...settings, [key]: slot.model } as Settings;
   }
 
   private resolveEffectiveModel(settings: Settings, slot: ProviderSlot): string | undefined {
     if (slot.model) {
       return slot.model;
     }
-    const model = settings[resolveModelKey(slot.provider)] as string | undefined;
+    const key = resolveModelKey(slot.provider);
+    const model = (settings as unknown as Record<string, unknown>)[key] as string | undefined;
     return model ? model : undefined;
   }
 

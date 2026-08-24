@@ -458,14 +458,9 @@ export interface StorageKeyValues {
     [StorageKeys.LEGACY_DUAL_WRITE_ENABLED]: boolean;
 }
 
-// 厳格な Settings 型
+// 厳格な Settings 型（後方互換性のため StrictSettings エイリアスを残す）
 export type StrictSettings = {
     [K in StorageKey]: StorageKeyValues[K];
 };
 
-// 以前の Settings 型（後方互換性のため）
-// StrictSettings に徐々に移行を進める
-// StorageKeys で型チェック可能にするために index signature を追加
-export type Settings = Partial<StorageKeyValues> & {
-    [key: string]: unknown; // レガシー互換性
-};
+export type Settings = Partial<StrictSettings>;

@@ -135,13 +135,19 @@ function loadSettings(): Promise<void> {
             // The 32 per-rule keys are derived from CLEANSING_RULES rather than
             // listed here individually — see pbi/2026-08-09-20. Non-rule flags
             // (hard/keyword strip, whitelist extraction, dedup) stay explicit.
-            const cleansingRuleKeys: Array<[StorageKey, keyof CleansingConfig]> = CLEANSING_RULES.map(
+            type BooleanCleansingKey = {
+                [K in keyof CleansingConfig]: CleansingConfig[K] extends boolean ? K : never;
+            }[keyof CleansingConfig];
+            type StringArrayCleansingKey = {
+                [K in keyof CleansingConfig]: CleansingConfig[K] extends string[] ? K : never;
+            }[keyof CleansingConfig];
+            const cleansingRuleKeys: Array<[StorageKey, BooleanCleansingKey]> = CLEANSING_RULES.map(
                 (rule) => [
                     rule.storageKey as StorageKey,
-                    `aiSummaryCleansing${rule.key.charAt(0).toUpperCase()}${rule.key.slice(1)}` as keyof CleansingConfig,
+                    `aiSummaryCleansing${rule.key.charAt(0).toUpperCase()}${rule.key.slice(1)}` as BooleanCleansingKey,
                 ],
             );
-            const booleanKeys: Array<[StorageKey, keyof CleansingConfig]> = [
+            const booleanKeys: Array<[StorageKey, BooleanCleansingKey]> = [
                 [StorageKeys.CONTENT_STRIP_HARD_ENABLED, 'contentStripHardEnabled'],
                 [StorageKeys.CONTENT_STRIP_KEYWORD_ENABLED, 'contentStripKeywordEnabled'],
                 [StorageKeys.AI_SUMMARY_CLEANSING_ENABLED, 'aiSummaryCleansingEnabled'],
@@ -151,28 +157,24 @@ function loadSettings(): Promise<void> {
             ];
             for (const [key, prop] of booleanKeys) {
                 if (s[key] !== undefined) {
-                    // WHY: CleansingConfig lacks index signature; dynamic property access for boolean keys
-                    (pageState.cleansingConfig as unknown as Record<string, boolean | string[] | number>)[prop] = Boolean(s[key]);
+                    pageState.cleansingConfig[prop] = Boolean(s[key]);
                 }
             }
 
-            const stringArrayKeys: Array<[StorageKey, keyof CleansingConfig]> = [
+            const stringArrayKeys: Array<[StorageKey, StringArrayCleansingKey]> = [
                 [StorageKeys.CONTENT_STRIP_KEYWORDS, 'contentStripKeywords'],
                 [StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS, 'aiSummaryCleansingCustomPatterns'],
             ];
             for (const [key, prop] of stringArrayKeys) {
                 if (s[key] !== undefined && Array.isArray(s[key])) {
-                    // WHY: CleansingConfig lacks index signature; dynamic property access for string array keys
-                    (pageState.cleansingConfig as unknown as Record<string, boolean | string[] | number>)[prop] = s[key] as string[];
+                    pageState.cleansingConfig[prop] = s[key] as string[];
                 }
             }
 
             // Threshold settings (table-driven, bounds validated via THRESHOLD_RULES)
             for (const t of THRESHOLD_RULES) {
                 if (s[t.storageKey] !== undefined) {
-                    // WHY: CleansingConfig lacks index signature; dynamic property access for threshold props
-                    (pageState.cleansingConfig as unknown as Record<string, number>)[t.prop] =
-                        Math.max(t.min, Math.min(t.max, Number(s[t.storageKey]) || t.default));
+                    pageState.cleansingConfig[t.prop] = Math.max(t.min, Math.min(t.max, Number(s[t.storageKey]) || t.default));
                 }
             }
             logInfo('Settings loaded', {

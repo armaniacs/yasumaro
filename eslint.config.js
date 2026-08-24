@@ -37,7 +37,7 @@ export default [
               message: 'logger/* is an internal implementation detail. Import from logger.js instead.',
             },
             {
-              group: ['**/settingsStore', '**/settingsStore.js'],
+              group: ['**/settingsStore', '**/settingsStore.js', '**/settingsStore.legacy', '**/settingsStore.legacy.js'],
               message: 'Use SettingsRepository instead (PBI-04). Import from ./storage/SettingsRepository.js or ./storage/settingsMigration.js / ./storage/urlWhitelist.js',
             },
           ],

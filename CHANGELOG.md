@@ -35,6 +35,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.79] - 2026-08-25
+
+### Refactor
+
+- Architecture Deepening 0825a（arch-delivery-loop）診断5候補 → RICE再計算で残存stagedを整理。`SettingsRepository`にObsidian/AI/Privacy 3 facadeを追加し47箇所の`StorageKeys.`直参照94行を集約（PBI-01, RICE 32.0, 0.45w）、`CleansingConfig`に`Record<ThresholdProp,number>`交差を追加し3箇所`as unknown`を型安全化（PBI-02, 32.0, 0.10w）、`createBackgroundServices`後半7件を`container.register(singleton:true)`に移行し3重型更新を解消（PBI-03, 22.5, 0.35w）をWave1並列3で、`Settings`を`Partial<StrictSettings>`に一本化し`settings['typo']`を型エラー化（PBI-04, 36.0, 0.25w）をWave2で。8394 tests PASS / type-check PASS / lint 63 warnings。
+
 ## [6.7.78] - 2026-08-24
 
 ### Refactor

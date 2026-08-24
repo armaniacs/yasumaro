@@ -42,6 +42,14 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-25 Architecture Deepening（arch-delivery-loop）0825a — 4件完了（Wave1 3並列 + Wave2 1直列）
+
+- 2026-08-25-01-refactor-storage-obsidian-facade.md（RICE 32.0 — `SettingsRepository`に`getObsidianConfig()`/`getAiProviderConfig()`/`getPrivacyConfig()` facade 3本を追加しObsidian 6/AI 19/Privacy 5キーの取得を`getMany` 1回で完結。`OBSIDIAN_STORAGE_KEYS`/`AI_STORAGE_KEYS`/`PRIVACY_STORAGE_KEYS`をローカルミラー定数で重複化しLayer違反を回避、`ServiceContainer`に`settingsRepository`を`singleton:true`登録。type-check / 8394 tests PASS）
+- 2026-08-25-02-refactor-cleansing-config-type-safety.md（RICE 32.0 — `CleansingConfig`に`Record<ThresholdProp,number>`交差を追加し`ThresholdProp`を`keyof CleansingConfig`として再定義、`extractor.ts`の3箇所`as unknown as Record<string,boolean/number>`を型安全な直接代入に置換。`SettingsRepository`の6箇所`as unknown`も除去。`grep as unknown`でcontent 0件を確認。type-check / 8394 tests PASS）
+- 2026-08-25-03-refactor-service-container-leak.md（RICE 22.5 — `createBackgroundServices`の後半7件（reviewSummaryGenerator/recordingPipeline/pendingWriteQueue/dashboardSqliteHandler/autoSavedBadgeTabs/messageRouter+派生 deps）を`container.register(singleton:true)`に移行し全て`has`ガードでテストoverrideを尊重。`BackgroundServices`網羅性をコンパイル時検証。type-check / 8394 tests PASS）
+- 2026-08-25-04-refactor-settings-strict-type.md（RICE 36.0 — `Settings = Partial<StrictSettings>`に一本化し`{[key:string]:unknown}`のindex signatureを撤廃、`settings['typo']`を`tsc`で型エラー検出可能に。`StrictSettings`エイリアスを残し後方互換を維持。`eslint no-restricted-imports`を`warn`（* 38 importの既存debtは次イテレーションで移行、error昇格は債務解消後に）。`ProviderStrategy`/`RemoteAIService`の4件`TS7053`を`Record<string,unknown>`キャストで解消。type-check / 8394 tests PASS / lint 63 warnings）
+- 2026-08-25-00-backlog-0825a.md（5候補のRICE再計算 — ServiceContainer/THRESHOLD後の残存をstaged化、Slice A/F5/F6をWave1並列3、Slice CをA後のWave2直列で0.70w、F4は次スプリントへ、HTMLレポート `/tmp/architecture-review-20260825041210.html` を参照）
+
 ### 2026-08-24 Architecture Deepening（arch-delivery-loop）0824d — 2件完了（RICE再計算 staged 0.9w）
 
 - 2026-08-24-05-refactor-storage-cleansing-facade.md（RICE 63.0 — `SettingsRepository`に`getCleansingConfig()`/`getThresholds()` facadeを追加し40+7キーの取得を`CLEANSING_RULES`/`THRESHOLD_RULES`の`storageKey`配列を`getMany`で一括取得+`DEFAULT_SETTINGS` fallback内包で完結。`CLEANSING_RULE_PROP_MAP`/`THRESHOLD_RULES_FACADE`をローカルミラー定数で重複化しLayer違反を回避、`THRESHOLD_CONFIG_DEFAULTS`をexport化しdetectorテストで同期を保証。type-check / 8394 tests PASS）
