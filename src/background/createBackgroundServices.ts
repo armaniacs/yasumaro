@@ -41,6 +41,7 @@ import { updateActivity } from './sessionAlarmsManager.js';
 import { createMessageRouter, type MessageRouter, type MessageRouterDeps } from './handlers/MessageRouter.js';
 import type { MessageHandler } from './handlers/MessageRouter.js';
 import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/recordingHandlers.js';
+import { ServiceContainer } from './serviceContainer.js';
 
 export interface BackgroundServices {
   obsidian: ObsidianClient;
@@ -98,31 +99,47 @@ type _CoreServicesSubsetCheck = Pick<BackgroundServices, 'obsidian' | 'tabCache'
 const _subsetCheck: _CoreServicesSubsetCheck = true as const;
 void _subsetCheck;
 
-export function createBackgroundServices(): BackgroundServicesComposition {
-  const sessionStore = new SessionStore();
-  const recordingCache = new RecordingCacheInstance(new SessionStoreRecordingCacheStore(sessionStore));
-  recordingCache.ensureStorageListener?.();
-  const headerDetector = new HeaderDetector(recordingCache);
+export function createBackgroundServices(container = new ServiceContainer()): BackgroundServicesComposition {
+  // Register core singletons in the container — adding a dependency is one register() call
+  // instead of touching BackgroundServices + Composition + MessageRouterDeps.
+  if (!container.has('sessionStore')) container.register('sessionStore', () => new SessionStore(), { singleton: true });
+  if (!container.has('recordingCache')) container.register('recordingCache', () => {
+    const ss = container.resolve<SessionStore>('sessionStore');
+    const rc = new RecordingCacheInstance(new SessionStoreRecordingCacheStore(ss));
+    rc.ensureStorageListener?.();
+    return rc;
+  }, { singleton: true });
+  if (!container.has('headerDetector')) container.register('headerDetector', () => new HeaderDetector(container.resolve<RecordingCacheInstance>('recordingCache')), { singleton: true });
+  if (!container.has('obsidian')) container.register('obsidian', () => new ObsidianClient(), { singleton: true });
+  if (!container.has('sqliteClient')) container.register('sqliteClient', () => getSharedSqliteClient(), { singleton: true });
+  if (!container.has('tabCache')) container.register('tabCache', () => new TabCache(container.resolve<SessionStore>('sessionStore')), { singleton: true });
+  if (!container.has('rateLimiter')) container.register('rateLimiter', () => new RateLimiter(container.resolve<SessionStore>('sessionStore')), { singleton: true });
+  if (!container.has('manualContentFetcher')) container.register('manualContentFetcher', () => new ManualContentFetcher(), { singleton: true });
+  if (!container.has('remoteAiService')) container.register('remoteAiService', () => new RemoteAIService(), { singleton: true });
+  if (!container.has('aiService')) container.register('aiService', () => createAIService({ remoteAiService: container.resolve<RemoteAIService>('remoteAiService') }), { singleton: true });
+
+  const sessionStore = container.resolve<SessionStore>('sessionStore');
+  const recordingCache = container.resolve<RecordingCacheInstance>('recordingCache');
+  const headerDetector = container.resolve<HeaderDetector>('headerDetector');
 
   // Wires the pending-write queue's storage adapter explicitly, instead of the
   // module constructing a ChromeStorageAdapter at import time. Tests inject an
   // InMemoryAdapter-backed queue via setPendingWriteQueue instead.
   setPendingWriteQueue(createPendingWriteQueue(new ChromeStorageAdapter()));
 
-  const obsidian = new ObsidianClient();
+  const obsidian = container.resolve<ObsidianClient>('obsidian');
   // Shared singleton: independent SqliteClient instances would each race to
   // create the offscreen document (see getSharedSqliteClient).
-  const sqliteClient = getSharedSqliteClient();
+  const sqliteClient = container.resolve<SqliteClient>('sqliteClient');
   // Inject SQLite health check into storageMaintenance (removes utils→background dynamic import)
   setSqliteHealthCheck(async () => {
     const r = await sqliteClient.maintain({ type: 'healthCheck' });
     return r.success ? Boolean(r.data) : false;
   });
-  const tabCache = new TabCache(sessionStore);
-  const rateLimiter = new RateLimiter(sessionStore);
-  const manualContentFetcher = new ManualContentFetcher();
-  const remoteAiService = new RemoteAIService();
-  const aiService = createAIService({ remoteAiService });
+  const tabCache = container.resolve<TabCache>('tabCache');
+  const rateLimiter = container.resolve<RateLimiter>('rateLimiter');
+  const manualContentFetcher = container.resolve<ManualContentFetcher>('manualContentFetcher');
+  const aiService = container.resolve<AIService>('aiService');
 
   // One shared review summary generator for the alarm and message paths
   // (deep-dig 子PBI 5): both observe the same AIService composition.
