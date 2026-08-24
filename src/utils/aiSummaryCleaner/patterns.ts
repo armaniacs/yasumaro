@@ -75,6 +75,25 @@ export const NAV_CLASS_PATTERNS = [
 ];
 
 /**
+ * Cookie同意バナーのテキストパターン
+ * Dell/OneTrust等のCookie定型文をテキストマッチで除去する（クラスに依存しない）
+ */
+export const COOKIE_TEXT_PATTERNS: RegExp[] = [
+    /Cookieの管理/,
+    /同意の優先設定を管理する/,
+    /必須Cookie/,
+    /マーケティング.*Cookie/,
+    /分析.*Cookie/,
+    /Cookieポリシーを参照/,
+    /オプト.*アウト/,
+    /常に(アクティブ|非アクティブ)/,
+    /Manage.*cookie preferences/i,
+    /Always active/i,
+    /Marketing Cookies/i,
+    /Cookie.*consent/i,
+];
+
+/**
  * 法的テキストパターン（著作権・免責事項等）
  * テキストコンテンツベースで要素を削除する（クラス名に依存しない）
  */

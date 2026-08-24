@@ -163,6 +163,7 @@ export const StorageKeys = {
     AI_SUMMARY_CLEANSING_PAGINATION: 'ai_summary_cleansing_pagination', // ページネーション削除（デフォルト: false）
     AI_SUMMARY_CLEANSING_SNS_PROMO: 'ai_summary_cleansing_sns_promo', // SNSプロモ削除（デフォルト: false）
     AI_SUMMARY_CLEANSING_POPUP: 'ai_summary_cleansing_popup', // ポップアップ削除（デフォルト: true）
+    AI_SUMMARY_CLEANSING_COOKIE: 'ai_summary_cleansing_cookie', // Cookie同意バナー削除（デフォルト: true）
     AI_SUMMARY_CLEANSING_PLATFORM: 'ai_summary_cleansing_platform', // プラットフォーム噪声削除（デフォルト: false）
     // NEW: 9 additional cleansing options
     AI_SUMMARY_CLEANSING_TEXT_DENSITY: 'ai_summary_cleansing_text_density', // テキスト密度フィルタリング（デフォルト: false）
@@ -380,6 +381,7 @@ export interface StorageKeyValues {
     [StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_POPUP]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_COOKIE]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ]: boolean;
