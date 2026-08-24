@@ -9,18 +9,15 @@ import { saveSqliteStep } from '../steps/saveSqliteStep.js';
 import type { SqliteClient } from '../../sqliteClient.js';
 import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 
-function makeMockSqlite(overrides: Partial<SqliteClient> = {}): SqliteClient {
-  const insertResult = vi.fn().mockResolvedValue({ success: true, data: { id: 1 } });
-  const updateResult = vi.fn().mockResolvedValue({ success: true, data: undefined });
+function makeMockSqlite(overrides: Partial<Record<string, any>> = {}): SqliteClient {
+  const mutate = (overrides as any).mutate ?? vi.fn().mockImplementation((op: any) => {
+    if (op.type === 'insert') return Promise.resolve({ success: true, data: { id: 1 } });
+    if (op.type === 'update') return Promise.resolve({ success: true, data: undefined });
+    return Promise.resolve({ success: true, data: undefined });
+  });
 
   const mock = {
-    insertResult,
-    updateResult,
-    mutate: vi.fn().mockImplementation((op: any) => {
-      if (op.type === 'insert') return (mock as any).insertResult(op.record, op.traceId);
-      if (op.type === 'update') return (mock as any).updateResult(op.id, op.changes, op.traceId);
-      return Promise.resolve({ success: true, data: undefined });
-    }),
+    mutate,
     ...overrides,
   } as unknown as SqliteClient;
 
@@ -32,7 +29,7 @@ describe('saveSqliteStep', () => {
     vi.clearAllMocks();
   });
 
-  it('calls insertResult and updateResult directly (no optimistic lock)', async () => {
+  it('calls mutate insert and mutate update directly (no optimistic lock)', async () => {
     const mockSqlite = makeMockSqlite();
 
     await saveSqliteStep({
@@ -42,8 +39,8 @@ describe('saveSqliteStep', () => {
       obsidianSynced: true,
     });
 
-    expect(mockSqlite.insertResult).toHaveBeenCalled();
-    expect(mockSqlite.updateResult).toHaveBeenCalled();
+    expect(mockSqlite.mutate).toHaveBeenCalledWith(expect.objectContaining({ type: 'insert' }));
+    expect(mockSqlite.mutate).toHaveBeenCalledWith(expect.objectContaining({ type: 'update', id: 1 }));
   });
 
   it('does not write to old chrome.storage.savedUrlsWithTimestamps', async () => {
@@ -64,7 +61,7 @@ describe('saveSqliteStep', () => {
     setSpy.mockRestore();
   });
 
-  it('skips update when obsidianSynced is undefined', async () => {
+  it('skips mutate update when obsidianSynced is undefined', async () => {
     const mockSqlite = makeMockSqlite();
 
     await saveSqliteStep({
@@ -73,11 +70,11 @@ describe('saveSqliteStep', () => {
       sqliteClient: mockSqlite,
     });
 
-    expect(mockSqlite.insertResult).toHaveBeenCalled();
-    expect(mockSqlite.updateResult).not.toHaveBeenCalled();
+    expect(mockSqlite.mutate).toHaveBeenCalledWith(expect.objectContaining({ type: 'insert' }));
+    expect(mockSqlite.mutate).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'update' }));
   });
 
-  it('calls updateResult with obsidian_synced=1 when obsidianSynced is true', async () => {
+  it('calls mutate update with obsidian_synced=1 when obsidianSynced is true', async () => {
     const mockSqlite = makeMockSqlite();
 
     await saveSqliteStep({
@@ -87,10 +84,10 @@ describe('saveSqliteStep', () => {
       obsidianSynced: true,
     });
 
-    expect(mockSqlite.updateResult).toHaveBeenCalledWith(1, { obsidian_synced: 1 }, undefined);
+    expect(mockSqlite.mutate).toHaveBeenCalledWith(expect.objectContaining({ type: 'update', id: 1, changes: { obsidian_synced: 1 } }));
   });
 
-  it('calls updateResult with obsidian_synced=0 when obsidianSynced is false', async () => {
+  it('calls mutate update with obsidian_synced=0 when obsidianSynced is false', async () => {
     const mockSqlite = makeMockSqlite();
 
     await saveSqliteStep({
@@ -100,16 +97,15 @@ describe('saveSqliteStep', () => {
       obsidianSynced: false,
     });
 
-    expect(mockSqlite.updateResult).toHaveBeenCalledWith(1, { obsidian_synced: 0 }, undefined);
+    expect(mockSqlite.mutate).toHaveBeenCalledWith(expect.objectContaining({ type: 'update', id: 1, changes: { obsidian_synced: 0 } }));
   });
 
-  it('throws when insertResult fails', async () => {
-    const mockSqlite = makeMockSqlite({
-      insertResult: vi.fn().mockResolvedValue({
-        success: false,
-        error: { kind: 'sqlite_error', message: 'mock failure', retriable: false },
-      }),
+  it('throws when mutate insert fails', async () => {
+    const mutate = vi.fn().mockImplementation((op: any) => {
+      if (op.type === 'insert') return Promise.resolve({ success: false, error: { kind: 'sqlite_error', message: 'mock failure', retriable: false } });
+      return Promise.resolve({ success: true, data: undefined });
     });
+    const mockSqlite = makeMockSqlite({ mutate } as any);
 
     await expect(
       saveSqliteStep({
@@ -119,17 +115,16 @@ describe('saveSqliteStep', () => {
       })
     ).rejects.toThrow('SQLite insert failed');
 
-    expect(mockSqlite.insertResult).toHaveBeenCalled();
-    expect(mockSqlite.updateResult).not.toHaveBeenCalled();
+    expect(mockSqlite.mutate).toHaveBeenCalledWith(expect.objectContaining({ type: 'insert' }));
+    expect(mockSqlite.mutate).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'update' }));
   });
 
-  it('does not call updateResult when insertResult fails', async () => {
-    const mockSqlite = makeMockSqlite({
-      insertResult: vi.fn().mockResolvedValue({
-        success: false,
-        error: { kind: 'sqlite_error', message: 'mock failure', retriable: false },
-      }),
+  it('does not call mutate update when mutate insert fails', async () => {
+    const mutate = vi.fn().mockImplementation((op: any) => {
+      if (op.type === 'insert') return Promise.resolve({ success: false, error: { kind: 'sqlite_error', message: 'mock failure', retriable: false } });
+      return Promise.resolve({ success: true, data: undefined });
     });
+    const mockSqlite = makeMockSqlite({ mutate } as any);
 
     await expect(
       saveSqliteStep({
@@ -140,7 +135,7 @@ describe('saveSqliteStep', () => {
       })
     ).rejects.toThrow();
 
-    expect(mockSqlite.updateResult).not.toHaveBeenCalled();
+    expect(mockSqlite.mutate).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'update' }));
   });
 });
 
@@ -149,17 +144,15 @@ describe('saveSqliteStep — diagnostic metadata', () => {
     vi.clearAllMocks();
   });
 
-  it('passes full diagnostic metadata to insertResult', async () => {
+  it('passes full diagnostic metadata to mutate insert', async () => {
     const mockInsert = vi.fn().mockResolvedValue({ success: true, data: { id: 42 } });
-    const mockUpdate = vi.fn().mockResolvedValue({ success: true, data: undefined });
+    const mutate = vi.fn().mockImplementation((op: any) => {
+      if (op.type === 'insert') return mockInsert(op.record, op.traceId);
+      if (op.type === 'update') return Promise.resolve({ success: true, data: undefined });
+      return Promise.resolve({ success: true, data: undefined });
+    });
     const mockClient = {
-      insertResult: mockInsert,
-      updateResult: mockUpdate,
-      mutate: vi.fn().mockImplementation((op: any) => {
-        if (op.type === 'insert') return mockInsert(op.record, op.traceId);
-        if (op.type === 'update') return mockUpdate(op.id, op.changes, op.traceId);
-        return Promise.resolve({ success: true, data: undefined });
-      }),
+      mutate,
     } as unknown as SqliteClient;
 
     const record: BrowsingLogRecord = {

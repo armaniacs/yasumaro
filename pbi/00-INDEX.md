@@ -42,17 +42,14 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
-### 2026-08-24 Architecture Deepening（arch-delivery-loop）0824b — 4件完了・1件deferred + ブロッカー解消
+### 2026-08-24 Architecture Deepening（arch-delivery-loop）0824b — 5件完了 + ブロッカー解消
 
 - 2026-08-24-08-fix-cookie-consent-cleansing.md（Blocker — OneTrust cookie バナー統合欠落 2 tests FAIL を解消。`entrypoints/options/index.html` に `ai-summary-cleansing-cookie` checkbox 追加、`public/_locales/*/messages.json` に `aiSummaryCleansingCookieDesc` 追加、`src/dashboard/settings/aiSummaryCleansingSettingsV2.ts` の `AiSummaryCleansingSettings` を mapped type `RuleKey` 導出に置換、`src/utils/__tests__/aiSummaryCleaner.test.ts` の全無効テストに `cookieEnabled:false` 等 8 flags 追加 + `recommend/popup/cookie` の合計期待値に `cookieRemoved` 追加。8383 tests PASS）
 - 2026-08-24-09-refactor-cleansing-config-codec.md（RICE 64.0 — AiSummaryCleansingSettings の手書き32項目を `RuleKey` からの mapped type `Record<`${RuleKey}Enabled`, boolean>` に置換し SSOT を `CLEANSING_RULES` に一本化。`entrypoints/options/index.html` の手書き重複を型レベルで検出可能に。残り `cleansingConfigCodec.ts` pure decode の extractor 統合は次スプリントへ）
 - 2026-08-24-10-refactor-provider-registry.md（RICE 11.2 — ProviderRegistry Map 新設により OpenAIProvider 5分岐を GenericOpenAICompatibleProvider に集約。isLocalUrl/timeout/contentLimit を entry.isLocal から導出、aiModelKey を registry ルックアップの互換 shim に置換、RemoteAIService.registerDefaultProviders を registry ループに。ProviderId union を storage/types.ts に追加、registry 単体テスト 11件追加。type-check / lint / 8366テスト PASS）
 - 2026-08-24-07-refactor-offscreen-dispatch-guard.md（RICE 48.0 — dispatch 24-case を Map + 共通 assertPayloadSize に。payloadGuard + browsingLogCodec 抽出で guard 重複解消、VULN-001 再発防止。type-check / lint / 8366テスト PASS）
+- 2026-08-24-11-refactor-sqlite-shim-deletion.md（RICE 20.0 — SqliteClient 20 shim削除 + call分割 4 helper を実装。production消費者0、13テストファイルを新 domain API に移行、grep 0件を確認。type-check / lint / 8383テスト PASS）
 - 2026-08-24-00-backlog-0824b.md（5件のRICEスコアリングバックログ — 依存図 + 5 Whysサマリー、P0ブロッカー + C1/C4/C3/C5 + deferred 4件統合）
-
-#### 0824b deferred 1件（次スプリント）
-
-- 2026-08-24-11-refactor-sqlite-shim-deletion.md（RICE 20.0 — SqliteClient 20 shim削除 + call分割 4 helper。pure deletion、production消費者0）
 
 
 ### 2026-08-23 Adversarial Review 13件 RICE対応完了
