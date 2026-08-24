@@ -42,6 +42,10 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-24 ProviderRegistry 導入完了
+
+- 2026-08-24-10-refactor-provider-registry.md (RICE 11.2 — ProviderRegistry Map 新設により OpenAIProvider 5分岐を GenericOpenAICompatibleProvider に集約。isLocalUrl/timeout/contentLimit を entry.isLocal から導出、aiModelKey を registry ルックアップの互換 shim に置換、RemoteAIService.registerDefaultProviders を registry ループに。ProviderId union を storage/types.ts に追加、registry 単体テスト 11件追加。type-check / lint / 8366テスト PASS)
+
 ### 2026-08-23 Adversarial Review 13件 RICE対応完了
 
 - 2026-08-23-00-backlog.md (RICE 13件の棚卸し — 00は索引。以下12件をRICE 4000/4000/1250/1000/80/66.7/40/26.7/20/12.5/1/6.25で優先度付け、依存「host_permissions→CSP→WAR」「pii-sandbox 3件」を同一バッチ化)
