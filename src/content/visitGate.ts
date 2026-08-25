@@ -21,7 +21,8 @@ export class VisitGate {
 
     isReportable(state: VisitState): boolean {
         if (state.isValidVisitReported) return false;
-        const elapsed = (this.clock() - state.startTime) / 1000;
+        // Clamp negative elapsed caused by NTP correction or clock skew
+        const elapsed = Math.max(0, (this.clock() - state.startTime) / 1000);
         return elapsed >= this.thresholds.minDuration && state.maxScrollPercentage >= this.thresholds.minScroll;
     }
 }

@@ -192,9 +192,6 @@ function loadSettings(): Promise<void> {
     });
 }
 
-export { VisitGate } from './visitGate.js';
-export type { VisitState, VisitGateThresholds } from './visitGate.js';
-
 /**
  * 有効な訪問の条件を判定する（テスト可能な純粋関数）
  *
