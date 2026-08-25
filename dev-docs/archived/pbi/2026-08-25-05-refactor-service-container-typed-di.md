@@ -32,10 +32,10 @@ Scenario: 後半7件が container 経由で差し替え可能
 ```
 
 ## 受け入れ基準
-- [ ] `ServiceContainer` が `ServiceTokens` const またはブランド型で `register<T>(token, factory)` が型付けされている
-- [ ] `PerUrlMutexMap` が static ではなく container 管理のインスタンスになっている（または static を deprecated としてラップ）
-- [ ] `createBackgroundServices.ts` の後半7件（reviewSummaryGenerator/recordingPipeline/pendingWriteQueue/dashboardSqliteHandler/autoSavedBadgeTabs/messageRouter+派生）が `container.register(singleton:true)` に移行
-- [ ] `_CoreServicesSubsetCheck` が全フィールドをカバーするか `BackgroundServices` が `ReturnType` で自動導出
+- [x] `ServiceContainer` が `ServiceTokens` const またはブランド型で `register<T>(token, factory)` が型付けされている
+- [x] `PerUrlMutexMap` が static ではなく container 管理のインスタンスになっている（または static を deprecated としてラップ）
+- [x] `createBackgroundServices.ts` の後半7件（reviewSummaryGenerator/recordingPipeline/pendingWriteQueue/dashboardSqliteHandler/autoSavedBadgeTabs/messageRouter+派生）が `container.register(singleton:true)` に移行
+- [x] `_CoreServicesSubsetCheck` が全フィールドをカバーするか `BackgroundServices` が `ReturnType` で自動導出
 
 ## テスト戦略
 
@@ -71,7 +71,7 @@ grep -rn "PerUrlMutexMap\|sharedMutexes" src/background/pipeline/perUrlMutex.ts
 - string-key を一括置換すると 20箇所の修正になる。codemod で一括置換し、type-check で漏れを検出する
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 8394 tests が PASS し、flaky が再現しない
-- [ ] コードレビュー完了（System Architect 観点の再確認）
-- [ ] ドキュメント更新済み（dev-docs/LAYERS.md の DI 章）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 8394 tests が PASS し、flaky が再現しない
+- [x] コードレビュー完了（System Architect 観点の再確認）
+- [x] ドキュメント更新済み（dev-docs/LAYERS.md の DI 章）
