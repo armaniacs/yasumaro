@@ -11,14 +11,34 @@ import * as privacy from '../privacyPipeline.js';
 import * as storageModule from '../../utils/storage.js';
 import * as domainUtilsModule from '../../utils/domainUtils.js';
 
-// モック設定
-vi.mock('../../utils/storage/types.js');
-vi.mock('../../utils/storage/defaults.js');
-vi.mock('../../utils/storage/encryptionSession.js');
-vi.mock('../../utils/storage/settingsStore.js');
-vi.mock('../../utils/storage/savedUrlRepository.js');
-vi.mock('../../utils/storage/domainFilterCache.js');
-vi.mock('../../utils/storage/quota.js');
+const mockGetAll = vi.hoisted(() => vi.fn());
+const mockSetAll = vi.hoisted(() => vi.fn());
+const mockGetSavedUrlsWithTimestamps = vi.hoisted(() => vi.fn());
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: mockGetAll,
+      setAll: mockSetAll,
+      getMany: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      setAll = mockSetAll;
+      getMany = vi.fn();
+    },
+  };
+});
+vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>;
+  return {
+    ...actual,
+    getSavedUrlsWithTimestamps: mockGetSavedUrlsWithTimestamps,
+    setSavedUrlsWithTimestamps: vi.fn(),
+  };
+});
 vi.mock('../../utils/domainUtils.js');
 vi.mock('../privacyPipeline.js');
 
@@ -26,7 +46,6 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
   let recordingLogic: RecordingPipeline;
   let mockObsidian: ObsidianClient;
   let mockAIClient: AIService;
-  let getSettings: any;
   let getSavedUrlsWithTimestamps: any;
   let isDomainAllowed: any;
 
@@ -58,11 +77,9 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
     recordingLogic = makeRecordingLogic(mockObsidian, mockAIClient);
 
     // storageのデフォルトモック
-    const storageMocked = vi.mocked(storageModule);
-    getSettings = storageMocked.getSettings;
-    getSavedUrlsWithTimestamps = storageMocked.getSavedUrlsWithTimestamps;
+    getSavedUrlsWithTimestamps = mockGetSavedUrlsWithTimestamps;
     // @ts-expect-error - vi.fn() type narrowing issue
-    getSettings.mockResolvedValue({
+    mockGetAll.mockResolvedValue({
       [StorageKeys.DOMAIN_WHITELIST]: [],
       [StorageKeys.PRIVACY_MODE]: 'full_pipeline',
       [StorageKeys.PII_SANITIZE_LOGS]: true,
@@ -106,12 +123,12 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
   it('should block private page for non-whitelisted domain', async () => {
     const mockSettings: Partial<Settings> = {
       [StorageKeys.DOMAIN_WHITELIST]: ['confluence.example.com'],
-      PRIVACY_MODE: 'masked_cloud',
+      [StorageKeys.PRIVACY_MODE]: 'masked_cloud',
       'auto_save_privacy_behavior': 'skip',
       [StorageKeys.OBSIDIAN_DAILY_PATH]: 'Daily/{{date}}.md'
     };
 
-    getSettings.mockResolvedValue(mockSettings);
+    mockGetAll.mockResolvedValue(mockSettings);
 
     const privacyInfo = {
       isPrivate: true,
@@ -140,11 +157,11 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
     // モック設定: ワイルドカードパターンをホワイトリストに登録
     const mockSettings: Partial<Settings> = {
       [StorageKeys.DOMAIN_WHITELIST]: ['*.confluence.example.com'],
-      PRIVACY_MODE: 'masked_cloud',
+      [StorageKeys.PRIVACY_MODE]: 'masked_cloud',
       [StorageKeys.OBSIDIAN_DAILY_PATH]: 'Daily/{{date}}.md'
     };
 
-    getSettings.mockResolvedValue(mockSettings);
+    mockGetAll.mockResolvedValue(mockSettings);
 
     // プライバシーキャッシュ: isPrivate=true をセット
     const privacyInfo = {
@@ -186,7 +203,7 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
       [StorageKeys.OBSIDIAN_DAILY_PATH]: 'Daily/{{date}}.md'
     };
 
-    getSettings.mockResolvedValue(mockSettings);
+    mockGetAll.mockResolvedValue(mockSettings);
 
     // プライバシーキャッシュ: isPrivate=true をセット
     const privacyInfo = {
@@ -224,7 +241,7 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
       [StorageKeys.OBSIDIAN_DAILY_PATH]: 'Daily/{{date}}.md'
     };
 
-    getSettings.mockResolvedValue(mockSettings);
+    mockGetAll.mockResolvedValue(mockSettings);
 
     // ドメインフィルター: 許可
     // @ts-expect-error - vi.fn() type narrowing issue

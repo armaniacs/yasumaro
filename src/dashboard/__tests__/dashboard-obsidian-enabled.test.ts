@@ -62,12 +62,16 @@ function buildDom() {
 
 buildDom();
 
+const { mockGetAll, mockSetAll, mockGetMany } = vi.hoisted(() => ({
+  mockGetAll: vi.fn(),
+  mockSetAll: vi.fn(),
+  mockGetMany: vi.fn(),
+}));
+
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn(async () => undefined),
+  return {
+    ...actual,
     StorageKeys: {
       OBSIDIAN_API_KEY: 'obsidian_api_key',
       OBSIDIAN_PROTOCOL: 'obsidian_protocol',
@@ -96,315 +100,25 @@ vi.mock('../../utils/storage/types.js', async (importOriginal) => {
       MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
       AI_TIMEOUT_MS: 'ai_timeout_ms',
     },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+});
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn(async () => undefined),
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_PROTOCOL: 'obsidian_protocol',
-      OBSIDIAN_PORT: 'obsidian_port',
-      OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-      AI_PROVIDER: 'ai_provider',
-      GEMINI_API_KEY: 'gemini_api_key',
-      GEMINI_MODEL: 'gemini_model',
-      OPENAI_BASE_URL: 'openai_base_url',
-      OPENAI_API_KEY: 'openai_api_key',
-      OPENAI_MODEL: 'openai_model',
-      OPENAI_2_BASE_URL: 'openai_2_base_url',
-      OPENAI_2_API_KEY: 'openai_2_api_key',
-      OPENAI_2_MODEL: 'openai_2_model',
-      LM_STUDIO_BASE_URL: 'lm_studio_base_url',
-      LM_STUDIO_MODEL: 'lm_studio_model',
-      OLLAMA_BASE_URL: 'ollama_base_url',
-      OLLAMA_MODEL: 'ollama_model',
-      PROVIDER_TYPE: 'provider_type',
-      PROVIDER_BASE_URL: 'provider_base_url',
-      PROVIDER_API_KEY: 'provider_api_key',
-      PROVIDER_MODEL: 'provider_model',
-      MIN_VISIT_DURATION: 'min_visit_duration',
-      MIN_SCROLL_DEPTH: 'min_scroll_depth',
-      MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-      AI_TIMEOUT_MS: 'ai_timeout_ms',
-    },
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn(async () => undefined),
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_PROTOCOL: 'obsidian_protocol',
-      OBSIDIAN_PORT: 'obsidian_port',
-      OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-      AI_PROVIDER: 'ai_provider',
-      GEMINI_API_KEY: 'gemini_api_key',
-      GEMINI_MODEL: 'gemini_model',
-      OPENAI_BASE_URL: 'openai_base_url',
-      OPENAI_API_KEY: 'openai_api_key',
-      OPENAI_MODEL: 'openai_model',
-      OPENAI_2_BASE_URL: 'openai_2_base_url',
-      OPENAI_2_API_KEY: 'openai_2_api_key',
-      OPENAI_2_MODEL: 'openai_2_model',
-      LM_STUDIO_BASE_URL: 'lm_studio_base_url',
-      LM_STUDIO_MODEL: 'lm_studio_model',
-      OLLAMA_BASE_URL: 'ollama_base_url',
-      OLLAMA_MODEL: 'ollama_model',
-      PROVIDER_TYPE: 'provider_type',
-      PROVIDER_BASE_URL: 'provider_base_url',
-      PROVIDER_API_KEY: 'provider_api_key',
-      PROVIDER_MODEL: 'provider_model',
-      MIN_VISIT_DURATION: 'min_visit_duration',
-      MIN_SCROLL_DEPTH: 'min_scroll_depth',
-      MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-      AI_TIMEOUT_MS: 'ai_timeout_ms',
+    settingsRepository: {
+      getAll: mockGetAll,
+      setAll: mockSetAll,
+      getMany: mockGetMany,
     },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn(async () => undefined),
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_PROTOCOL: 'obsidian_protocol',
-      OBSIDIAN_PORT: 'obsidian_port',
-      OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-      AI_PROVIDER: 'ai_provider',
-      GEMINI_API_KEY: 'gemini_api_key',
-      GEMINI_MODEL: 'gemini_model',
-      OPENAI_BASE_URL: 'openai_base_url',
-      OPENAI_API_KEY: 'openai_api_key',
-      OPENAI_MODEL: 'openai_model',
-      OPENAI_2_BASE_URL: 'openai_2_base_url',
-      OPENAI_2_API_KEY: 'openai_2_api_key',
-      OPENAI_2_MODEL: 'openai_2_model',
-      LM_STUDIO_BASE_URL: 'lm_studio_base_url',
-      LM_STUDIO_MODEL: 'lm_studio_model',
-      OLLAMA_BASE_URL: 'ollama_base_url',
-      OLLAMA_MODEL: 'ollama_model',
-      PROVIDER_TYPE: 'provider_type',
-      PROVIDER_BASE_URL: 'provider_base_url',
-      PROVIDER_API_KEY: 'provider_api_key',
-      PROVIDER_MODEL: 'provider_model',
-      MIN_VISIT_DURATION: 'min_visit_duration',
-      MIN_SCROLL_DEPTH: 'min_scroll_depth',
-      MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-      AI_TIMEOUT_MS: 'ai_timeout_ms',
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      setAll = mockSetAll;
+      getMany = mockGetMany;
     },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn(async () => undefined),
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_PROTOCOL: 'obsidian_protocol',
-      OBSIDIAN_PORT: 'obsidian_port',
-      OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-      AI_PROVIDER: 'ai_provider',
-      GEMINI_API_KEY: 'gemini_api_key',
-      GEMINI_MODEL: 'gemini_model',
-      OPENAI_BASE_URL: 'openai_base_url',
-      OPENAI_API_KEY: 'openai_api_key',
-      OPENAI_MODEL: 'openai_model',
-      OPENAI_2_BASE_URL: 'openai_2_base_url',
-      OPENAI_2_API_KEY: 'openai_2_api_key',
-      OPENAI_2_MODEL: 'openai_2_model',
-      LM_STUDIO_BASE_URL: 'lm_studio_base_url',
-      LM_STUDIO_MODEL: 'lm_studio_model',
-      OLLAMA_BASE_URL: 'ollama_base_url',
-      OLLAMA_MODEL: 'ollama_model',
-      PROVIDER_TYPE: 'provider_type',
-      PROVIDER_BASE_URL: 'provider_base_url',
-      PROVIDER_API_KEY: 'provider_api_key',
-      PROVIDER_MODEL: 'provider_model',
-      MIN_VISIT_DURATION: 'min_visit_duration',
-      MIN_SCROLL_DEPTH: 'min_scroll_depth',
-      MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-      AI_TIMEOUT_MS: 'ai_timeout_ms',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn(async () => undefined),
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_PROTOCOL: 'obsidian_protocol',
-      OBSIDIAN_PORT: 'obsidian_port',
-      OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-      AI_PROVIDER: 'ai_provider',
-      GEMINI_API_KEY: 'gemini_api_key',
-      GEMINI_MODEL: 'gemini_model',
-      OPENAI_BASE_URL: 'openai_base_url',
-      OPENAI_API_KEY: 'openai_api_key',
-      OPENAI_MODEL: 'openai_model',
-      OPENAI_2_BASE_URL: 'openai_2_base_url',
-      OPENAI_2_API_KEY: 'openai_2_api_key',
-      OPENAI_2_MODEL: 'openai_2_model',
-      LM_STUDIO_BASE_URL: 'lm_studio_base_url',
-      LM_STUDIO_MODEL: 'lm_studio_model',
-      OLLAMA_BASE_URL: 'ollama_base_url',
-      OLLAMA_MODEL: 'ollama_model',
-      PROVIDER_TYPE: 'provider_type',
-      PROVIDER_BASE_URL: 'provider_base_url',
-      PROVIDER_API_KEY: 'provider_api_key',
-      PROVIDER_MODEL: 'provider_model',
-      MIN_VISIT_DURATION: 'min_visit_duration',
-      MIN_SCROLL_DEPTH: 'min_scroll_depth',
-      MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-      AI_TIMEOUT_MS: 'ai_timeout_ms',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn(async () => undefined),
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_PROTOCOL: 'obsidian_protocol',
-      OBSIDIAN_PORT: 'obsidian_port',
-      OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-      AI_PROVIDER: 'ai_provider',
-      GEMINI_API_KEY: 'gemini_api_key',
-      GEMINI_MODEL: 'gemini_model',
-      OPENAI_BASE_URL: 'openai_base_url',
-      OPENAI_API_KEY: 'openai_api_key',
-      OPENAI_MODEL: 'openai_model',
-      OPENAI_2_BASE_URL: 'openai_2_base_url',
-      OPENAI_2_API_KEY: 'openai_2_api_key',
-      OPENAI_2_MODEL: 'openai_2_model',
-      LM_STUDIO_BASE_URL: 'lm_studio_base_url',
-      LM_STUDIO_MODEL: 'lm_studio_model',
-      OLLAMA_BASE_URL: 'ollama_base_url',
-      OLLAMA_MODEL: 'ollama_model',
-      PROVIDER_TYPE: 'provider_type',
-      PROVIDER_BASE_URL: 'provider_base_url',
-      PROVIDER_API_KEY: 'provider_api_key',
-      PROVIDER_MODEL: 'provider_model',
-      MIN_VISIT_DURATION: 'min_visit_duration',
-      MIN_SCROLL_DEPTH: 'min_scroll_depth',
-      MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-      AI_TIMEOUT_MS: 'ai_timeout_ms',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
   loadSettingsToInputs: vi.fn(),
@@ -484,15 +198,12 @@ vi.mock('../../popup/privacyConsent.js', () => ({
   withdrawPrivacyConsent: vi.fn(),
 }));
 
-async function mocked(modulePath: string) {
-  const mod = await import(modulePath);
-  return vi.mocked(mod);
-}
-
 describe('Dashboard — obsidianEnabledInput', () => {
   beforeEach(() => {
     buildDom();
     vi.clearAllMocks();
+    mockGetAll.mockResolvedValue({});
+    mockGetMany.mockResolvedValue({});
   });
 
   it('loadGeneralSettings sets details.open based on checkbox state (checked)', async () => {
@@ -501,8 +212,7 @@ describe('Dashboard — obsidianEnabledInput', () => {
     const details = document.getElementById('obsidianSettingsDetails') as HTMLDetailsElement;
     details.open = false;
 
-    const m = await mocked('../../utils/storage.js');
-    m.getSettings.mockResolvedValueOnce({ obsidian_enabled: true });
+    mockGetAll.mockResolvedValueOnce({ obsidian_enabled: true });
 
     await loadGeneralSettings();
 
@@ -523,8 +233,7 @@ describe('Dashboard — obsidianEnabledInput', () => {
     const details = document.getElementById('obsidianSettingsDetails') as HTMLDetailsElement;
     details.open = true;
 
-    const m = await mocked('../../utils/storage.js');
-    m.getSettings.mockResolvedValueOnce({ obsidian_enabled: false });
+    mockGetAll.mockResolvedValueOnce({ obsidian_enabled: false });
 
     await loadGeneralSettings();
 
@@ -532,8 +241,7 @@ describe('Dashboard — obsidianEnabledInput', () => {
   });
 
   it('loadGeneralSettings が min_visit_duration / min_scroll_depth / max_tokens_per_prompt を読み込む', async () => {
-    const m = await mocked('../../utils/storage.js');
-    m.getSettings.mockResolvedValueOnce({
+    mockGetAll.mockResolvedValueOnce({
       min_visit_duration: 10,
       min_scroll_depth: 30,
       max_tokens_per_prompt: 2000,

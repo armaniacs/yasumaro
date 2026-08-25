@@ -4,7 +4,8 @@
  * New code must use SettingsRepository (src/utils/storage/SettingsRepository.ts) instead.
  * The legacy implementation lives in settingsStore.legacy.ts and will be removed
  * once all 34 call sites are migrated. The eslint no-restricted-imports rule
- * warns on new imports from this path.
+ * errors on new imports from this path.
  * @deprecated Use SettingsRepository instead
  */
+// eslint-disable-next-line no-restricted-imports -- shim re-export is intentional
 export * from './settingsStore.legacy.js';

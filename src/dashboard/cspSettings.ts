@@ -9,7 +9,7 @@
 
 import { StorageKeys } from '../utils/storage/types.js';
 import { CSPValidator } from '../utils/cspValidator.js';
-import { settingsRepository, SettingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
+import { settingsRepository, SettingsRepository } from '../utils/storage/SettingsRepository.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../utils/i18n.js';
@@ -45,10 +45,10 @@ function resolveDefaultDomRefs(): CspSettingsDomRefs {
  */
 export class CspSettingsController {
   private resolveDom: () => CspSettingsDomRefs;
-  private repo: SettingsReader;
+  private repo: SettingsRepository;
   private abortController: AbortController | null = null;
 
-  constructor(domRefs?: CspSettingsDomRefs, repo: SettingsReader = settingsRepository) {
+  constructor(domRefs?: CspSettingsDomRefs, repo: SettingsRepository = settingsRepository) {
     if (domRefs) {
       this.resolveDom = () => domRefs;
     } else {
@@ -148,7 +148,7 @@ export class CspSettingsController {
         if (provider) selectedProviders.push(provider);
       });
 
-      await new SettingsRepository().setAll({
+      await this.repo.setAll({
         [StorageKeys.CONDITIONAL_CSP_ENABLED]: enabled,
         [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: selectedProviders
       });
@@ -207,7 +207,7 @@ export class CspSettingsController {
 
   private async resetCSPSettings(): Promise<void> {
     try {
-      await new SettingsRepository().setAll({
+      await this.repo.setAll({
         [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,
         [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: []
       });

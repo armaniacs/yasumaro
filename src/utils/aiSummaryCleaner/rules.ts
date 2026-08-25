@@ -18,7 +18,7 @@
  */
 
 import type { AiSummaryCleanseOptions, RuleKey } from './types.js';
-import { StorageKeys } from '../storage/types.js';
+import { StorageKeys, type StorageKey } from '../storage/types.js';
 import {
     stripAltAttributes,
     stripMetadataElements,
@@ -39,6 +39,7 @@ import {
     stripPaginationElements,
     stripSnsPromoElements,
     stripPopupElements,
+    stripCookieConsentElements,
     stripPlatformNoise,
     stripTextDensityElements,
     stripShortSequenceElements,
@@ -69,11 +70,54 @@ export interface CleansingThresholds {
     customPatterns: string[];
 }
 
+/**
+ * Threshold prop names as they appear on CleansingConfig.
+ * Using a distinct union avoids a circular import on CleansingConfig itself
+ * while remaining type-compatible with `keyof CleansingConfig`.
+ */
+export type ThresholdProp =
+    | 'aiSummaryCleansingLinkRatioThreshold'
+    | 'aiSummaryCleansingShortTextThreshold'
+    | 'aiSummaryCleansingShortSeqCount'
+    | 'aiSummaryCleansingLinkParaThreshold'
+    | 'aiSummaryCleansingFallbackRatio'
+    | 'aiSummaryCleansingFallbackMinBytes'
+    | 'contentDedupThreshold';
+
+export interface ThresholdRule {
+    storageKey: StorageKey;
+    prop: ThresholdProp;
+    min: number;
+    max: number;
+    default: number;
+}
+
+/**
+ * Single source of truth for all 7 numeric thresholds.
+ * Adding a new threshold is one row here; bounds and default live in one place.
+ * `extractor.ts` clamps via a single loop over this table, and
+ * `pageState.ts` / `defaults.ts` derive their defaults from it.
+ */
+export const THRESHOLD_RULES: readonly ThresholdRule[] = [
+    { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD, prop: 'aiSummaryCleansingLinkRatioThreshold', min: 0, max: 100, default: 70 },
+    { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD, prop: 'aiSummaryCleansingShortTextThreshold', min: 1, max: 200, default: 30 },
+    { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT, prop: 'aiSummaryCleansingShortSeqCount', min: 1, max: 20, default: 5 },
+    { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD, prop: 'aiSummaryCleansingLinkParaThreshold', min: 10, max: 200, default: 50 },
+    { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO, prop: 'aiSummaryCleansingFallbackRatio', min: 0, max: 1, default: 0.20 },
+    { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES, prop: 'aiSummaryCleansingFallbackMinBytes', min: 0, max: 5000, default: 300 },
+    { storageKey: StorageKeys.CONTENT_DEDUP_THRESHOLD, prop: 'contentDedupThreshold', min: 0, max: 1, default: 0.7 },
+] as const;
+
+// Derived map for quick lookup by prop (used to build THRESHOLD_DEFAULTS and defaults elsewhere)
+const THRESHOLD_DEFAULT_MAP: Record<ThresholdProp, number> = Object.fromEntries(
+    THRESHOLD_RULES.map(r => [r.prop, r.default]),
+) as Record<ThresholdProp, number>;
+
 export const THRESHOLD_DEFAULTS: CleansingThresholds = {
-    linkRatioThreshold: 70,
-    shortTextThreshold: 30,
-    shortSeqCount: 5,
-    linkParaThreshold: 50,
+    linkRatioThreshold: THRESHOLD_DEFAULT_MAP.aiSummaryCleansingLinkRatioThreshold,
+    shortTextThreshold: THRESHOLD_DEFAULT_MAP.aiSummaryCleansingShortTextThreshold,
+    shortSeqCount: THRESHOLD_DEFAULT_MAP.aiSummaryCleansingShortSeqCount,
+    linkParaThreshold: THRESHOLD_DEFAULT_MAP.aiSummaryCleansingLinkParaThreshold,
     customPatterns: [],
 };
 
@@ -138,6 +182,7 @@ export const CLEANSING_RULES: readonly CleansingRule[] = [
     { key: 'pagination', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION, newUserDefault: false, strip: (el) => stripPaginationElements(el) },
     { key: 'snsPromo', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO, newUserDefault: false, strip: (el) => stripSnsPromoElements(el) },
     { key: 'popup', defaultEnabled: true, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_POPUP, newUserDefault: true, strip: (el) => stripPopupElements(el) },
+    { key: 'cookie', defaultEnabled: true, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_COOKIE, newUserDefault: true, strip: (el) => stripCookieConsentElements(el) },
     { key: 'platform', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM, newUserDefault: false, strip: (el) => stripPlatformNoise(el) },
     { key: 'textDensity', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY, newUserDefault: false, strip: (el, t) => stripTextDensityElements(el, t.linkRatioThreshold) },
     { key: 'shortSeq', defaultEnabled: false, storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ, newUserDefault: false, strip: (el, t) => stripShortSequenceElements(el, t.shortTextThreshold, t.shortSeqCount) },

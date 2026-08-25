@@ -10,181 +10,17 @@ vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => key),
 }));
 
+const mockGetAll = vi.hoisted(() => vi.fn());
+const mockSetAll = vi.hoisted(() => vi.fn());
+const mockGetMany = vi.hoisted(() => vi.fn());
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = await importOriginal() as any;
+  return { ...actual, settingsRepository: { getAll: mockGetAll, setAll: mockSetAll, getMany: mockGetMany }, SettingsRepository: class { getAll = mockGetAll; setAll = mockSetAll; getMany = mockGetMany } };
+});
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-      DOMAIN_WHITELIST: 'domain_whitelist',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-      DOMAIN_WHITELIST: 'domain_whitelist',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-      DOMAIN_WHITELIST: 'domain_whitelist',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-      DOMAIN_WHITELIST: 'domain_whitelist',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-      DOMAIN_WHITELIST: 'domain_whitelist',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-      DOMAIN_WHITELIST: 'domain_whitelist',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      PII_CONFIRMATION_UI: 'pii_confirmation_ui',
-      DOMAIN_WHITELIST: 'domain_whitelist',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+  return { ...actual, StorageKeys: { ...(actual.StorageKeys as Record<string, unknown>), PII_CONFIRMATION_UI: 'pii_confirmation_ui', DOMAIN_WHITELIST: 'domain_whitelist' } };
+});
 
 vi.mock('../statusChecker.js', () => ({
   checkPageStatus: vi.fn().mockResolvedValue(null),
@@ -242,7 +78,7 @@ import {
   recordCurrentPage,
 } from '../recordCurrentPage.js';
 import { getCurrentTab, isRecordable } from '../tabUtils.js';
-import { getSettings } from '../../utils/storage.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import { sendMessageWithRetry } from '../../utils/retryHelper.js';
 import { showError } from '../errorUtils.js';
 import { showSpinner } from '../spinner.js';
@@ -276,7 +112,7 @@ beforeEach(() => {
   chrome.permissions.request = vi.fn().mockResolvedValue(true);
   chrome.tabs.query = vi.fn().mockResolvedValue([{ url: 'https://example.com', id: 1 }]);
   (checkPageStatus as ReturnType<typeof vi.fn>).mockResolvedValue(null);
-  (getSettings as ReturnType<typeof vi.fn>).mockResolvedValue({});
+  (mockGetAll as ReturnType<typeof vi.fn>).mockResolvedValue({});
   (sendMessageWithRetry as ReturnType<typeof vi.fn>).mockResolvedValue({
     success: true,
     aiDuration: 100,
@@ -477,7 +313,7 @@ describe('recordCurrentPage — preview flow', () => {
   });
 
   it('bypasses preview when PII_CONFIRMATION_UI is false', async () => {
-    (getSettings as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (mockGetAll as ReturnType<typeof vi.fn>).mockResolvedValue({
       pii_confirmation_ui: false,
     });
     (sendMessageWithRetry as ReturnType<typeof vi.fn>).mockReset();

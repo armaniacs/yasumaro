@@ -2461,6 +2461,9 @@
   "aiSummaryCleansingPopupDesc": {
     "message": "Remove popups, modals, and toast notifications."
   },
+  "aiSummaryCleansingCookieDesc": {
+    "message": "Remove cookie consent banners (OneTrust, etc.)."
+  },
   "aiSummaryCleansingPlatformDesc": {
     "message": "Remove platform-specific noise (5ch/be images, YouTube comments, etc.)."
   },
@@ -3171,6 +3174,9 @@
   },
   "historyAiSummaryCleansedReasonPopup": {
     "message": "Popups"
+  },
+  "historyAiSummaryCleansedReasonCookie": {
+    "message": "Cookie consent"
   },
   "historyAiSummaryCleansedReasonPlatform": {
     "message": "Platform noise"

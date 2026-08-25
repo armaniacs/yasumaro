@@ -11,7 +11,9 @@ import { settingsRepository, type SettingsReader } from '../../utils/storage/Set
 import { DEFAULT_SETTINGS } from '../../utils/storage/defaults.js';
 import { StorageKeys, Settings, ProviderSlot } from '../../utils/storage/types.js';
 import { resolveModelKey } from '../../utils/aiModelKey.js';
-import { GeminiProvider, OpenAIProvider, BuiltInAiProvider, AIProviderStrategy } from './providers/index.js';
+import { GeminiProvider, BuiltInAiProvider, AIProviderStrategy } from './providers/index.js';
+import { GenericOpenAICompatibleProvider } from './providers/OpenAIProvider.js';
+import { PROVIDER_REGISTRY } from './providerRegistry.js';
 import { addLog, LogType } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { recordAuditLog } from '../../utils/auditLog.js';
@@ -40,13 +42,19 @@ export class RemoteAIService implements AIService {
   }
 
   private registerDefaultProviders(): void {
-    this.registerProvider('gemini', (settings: Settings) => new GeminiProvider(settings));
-    this.registerProvider('openai', (settings: Settings) => new OpenAIProvider(settings, 'openai'));
-    this.registerProvider('openai2', (settings: Settings) => new OpenAIProvider(settings, 'openai2'));
-    this.registerProvider('lm-studio', (settings: Settings) => new OpenAIProvider(settings, 'lm-studio'));
-    this.registerProvider('ollama', (settings: Settings) => new OpenAIProvider(settings, 'ollama'));
-    this.registerProvider('openai-compatible', (settings: Settings) => new OpenAIProvider(settings, 'openai-compatible'));
-    this.registerProvider('built-in-ai', (settings: Settings) => new BuiltInAiProvider(settings));
+    for (const [id] of PROVIDER_REGISTRY) {
+        if (id === 'gemini') {
+            this.registerProvider(id, (settings: Settings) => new GeminiProvider(settings));
+            continue;
+        }
+        if (id === 'built-in-ai') {
+            this.registerProvider(id, (settings: Settings) => new BuiltInAiProvider(settings));
+            continue;
+        }
+        // OpenAI-compatible family: generic provider derives baseUrl/apiKey/model from registry entry
+        const providerId = id;
+        this.registerProvider(id, (settings: Settings) => new GenericOpenAICompatibleProvider(settings, providerId));
+    }
   }
 
   public registerProvider(name: string, factory: (settings: Settings) => AIProviderStrategy): void {
@@ -70,14 +78,16 @@ export class RemoteAIService implements AIService {
     if (!slot.model) {
       return settings;
     }
-    return { ...settings, [resolveModelKey(slot.provider)]: slot.model };
+    const key = resolveModelKey(slot.provider);
+    return { ...settings, [key]: slot.model } as Settings;
   }
 
   private resolveEffectiveModel(settings: Settings, slot: ProviderSlot): string | undefined {
     if (slot.model) {
       return slot.model;
     }
-    const model = settings[resolveModelKey(slot.provider)] as string | undefined;
+    const key = resolveModelKey(slot.provider);
+    const model = (settings as unknown as Record<string, unknown>)[key] as string | undefined;
     return model ? model : undefined;
   }
 

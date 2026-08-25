@@ -1,4 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+const mockGetAll = vi.hoisted(() => vi.fn());
+const mockSet = vi.hoisted(() => vi.fn());
+
+vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: mockGetAll,
+      get: vi.fn(),
+      set: mockSet,
+      setAll: vi.fn(),
+      getMany: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      get = vi.fn();
+      set = mockSet;
+      setAll = vi.fn();
+      getMany = vi.fn();
+    },
+  };
+});
+
 
 vi.mock('../../../utils/logger.js', () => ({
   logError: vi.fn(),
@@ -282,57 +306,13 @@ import { getSettings } from '../../../utils/storage.js';
 import { logError } from '../../../utils/logger.js';
 
 function createMockSqliteClient() {
-  const result = {
-    queryResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
-    searchResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
-    toggleStarResult: vi.fn().mockResolvedValue({ success: true, data: { is_starred: 1 } }),
-    deleteResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-    updateResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-    insertResult: vi.fn().mockResolvedValue({ success: true, data: { id: 1 } }),
-    getCountResult: vi.fn().mockResolvedValue({ success: true, data: 42 }),
-    clearAllResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-    getStatus: vi.fn().mockResolvedValue({ initialized: true, path: '/db.sqlite3', fallback: false, fts5: true }),
-    runOpfsSpikeResult: vi.fn().mockResolvedValue({ success: true, data: { strategy: 'opfs-async-main', steps: [], passed: true, durationMs: 5 } }),
-    purgeOldRecordsResult: vi.fn().mockResolvedValue({ success: true, data: { purged: 10 } }),
-    purgeContentResult: vi.fn().mockResolvedValue({ success: true, data: { purged: 5 } }),
-    backupDbResult: vi.fn().mockResolvedValue({ success: true, data: new Uint8Array([1, 2, 3]) }),
-    restoreDbResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-    queryAuditLogResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
-  };
   const client = {
-    ...result,
-    query: vi.fn().mockImplementation((op: any) => {
-      if (op?.kind === 'search') return client.searchResult(op.text, op.limit, op.offset, op);
-      if (op?.kind === 'count') return client.getCountResult();
-      if (op?.kind === 'auditLog') return client.queryAuditLogResult(op);
-      return client.queryResult(op);
-    }),
-    mutate: vi.fn().mockImplementation((op: any) => {
-      switch (op.type) {
-        case 'insert': return client.insertResult(op.record, op.traceId);
-        case 'insertBatch': return client.insertBatchResult(op.records);
-        case 'update': return client.updateResult(op.id, op.changes);
-        case 'delete': return client.deleteResult(op.id);
-        case 'toggleStar': return client.toggleStarResult(op.id);
-        case 'insertAuditLog': return client.insertAuditLogResult(op.record);
-        default: return Promise.resolve({ success: true, data: undefined });
-      }
-    }),
-    maintain: vi.fn().mockImplementation((op: any) => {
-      switch (op.type) {
-        case 'init': return client.init ? client.init() : Promise.resolve({ success: true, data: true });
-        case 'backup': return client.backupDbResult();
-        case 'restore': return client.restoreDbResult(op.data);
-        case 'clearAll': return client.clearAllResult();
-        case 'purgeOldRecords': return client.purgeOldRecordsResult(op.retentionDays, op.maxRecords);
-        case 'purgeContent': return client.purgeContentResult(op.retentionDays, op.maxRecords, op.includeStarred);
-        case 'opfsSpike': return client.runOpfsSpikeResult();
-        case 'healthCheck': return client.isSqliteHealthy ? client.isSqliteHealthy() : Promise.resolve(true);
-        default: return Promise.resolve({ success: true, data: undefined });
-      }
-    }),
+    query: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
+    mutate: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+    maintain: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+    getStatus: vi.fn().mockResolvedValue({ initialized: true, path: '/db.sqlite3', fallback: false, fts5: true }),
   };
-  return client;
+  return client as any;
 }
 
 const VALID_TOKEN = 'test-token-12345';
@@ -341,27 +321,27 @@ const TK = () => ({ confirmToken: VALID_TOKEN });
 describe('handleDashboardSqlite — query', () => {
   it('returns rows and total on success', async () => {
     const mock = createMockSqliteClient();
-    mock.queryResult.mockResolvedValue({ success: true, data: { rows: [{ id: 1, url: 'https://a.com' }], total: 1 } });
+    mock.query.mockResolvedValue({ success: true, data: { rows: [{ id: 1, url: 'https://a.com' }], total: 1 } });
     const result = await dispatchDashboardSqlite({ subtype: 'query' }, mock as any);
     expect(result).toEqual({ success: true, rows: [{ id: 1, url: 'https://a.com' }], total: 1 });
   });
 
   it('passes query parameters correctly', async () => {
     const mock = createMockSqliteClient();
-    mock.queryResult.mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
+    mock.query.mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
     await dispatchDashboardSqlite(
       { subtype: 'query', limit: 10, offset: 5, domain: 'example.com', isStarred: true, since: 100, until: 200, orderBy: 'created_at', orderDir: 'ASC', tagFilter: '#test' },
       mock as any
     );
-    expect(mock.queryResult).toHaveBeenCalledWith({
+    expect(mock.query).toHaveBeenCalledWith(expect.objectContaining({
       limit: 10, offset: 5, domain: 'example.com', isStarred: true,
       since: 100, until: 200, orderBy: 'created_at', orderDir: 'ASC', tagFilter: '#test',
-    });
+    }));
   });
 
-  it('returns error when sqliteClient.queryResult fails', async () => {
+  it('returns error when sqliteClient.query fails', async () => {
     const mock = createMockSqliteClient();
-    mock.queryResult.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Query failed', retriable: false } });
+    mock.query.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Query failed', retriable: false } });
     const result = await dispatchDashboardSqlite({ subtype: 'query' }, mock as any);
     // retriable accompanies read-path failures so the dashboard can decide
     // whether waiting for initialization is worth another attempt.
@@ -372,18 +352,18 @@ describe('handleDashboardSqlite — query', () => {
 describe('handleDashboardSqlite — toggle_star', () => {
   it('toggles star and returns is_starred', async () => {
     const mock = createMockSqliteClient();
-    mock.toggleStarResult.mockResolvedValue({ success: true, data: { is_starred: 0 } });
+    mock.mutate.mockResolvedValue({ success: true, data: { is_starred: 0 } });
     const result = await dispatchDashboardSqlite({ subtype: 'toggle_star', id: 5, ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     // Previously this response omitted `success`, so the dashboard's
     // `if (response.success)` check always took the failure branch even
     // when the star actually toggled — see PBI-21.
     expect(result).toEqual({ success: true, is_starred: 0 });
-    expect(mock.toggleStarResult).toHaveBeenCalledWith(5);
+    expect(mock.mutate).toHaveBeenCalledWith(expect.objectContaining({ type: 'toggleStar', id: 5 }));
   });
 
-  it('returns error when toggleStarResult fails', async () => {
+  it('returns error when toggleStar mutate fails', async () => {
     const mock = createMockSqliteClient();
-    mock.toggleStarResult.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Toggle star failed', retriable: false } });
+    mock.mutate.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Toggle star failed', retriable: false } });
     const result = await dispatchDashboardSqlite({ subtype: 'toggle_star', id: 5, ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Toggle star failed', retriable: false });
   });
@@ -392,15 +372,15 @@ describe('handleDashboardSqlite — toggle_star', () => {
 describe('handleDashboardSqlite — delete', () => {
   it('deletes entry and returns success', async () => {
     const mock = createMockSqliteClient();
-    mock.deleteResult.mockResolvedValue({ success: true, data: undefined });
+    mock.mutate.mockResolvedValue({ success: true, data: undefined });
     const result = await dispatchDashboardSqlite({ subtype: 'delete', id: 3, ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: true });
-    expect(mock.deleteResult).toHaveBeenCalledWith(3);
+    expect(mock.mutate).toHaveBeenCalledWith(expect.objectContaining({ type: 'delete', id: 3 }));
   });
 
-  it('returns success:false when deleteResult fails', async () => {
+  it('returns success:false when delete mutate fails', async () => {
     const mock = createMockSqliteClient();
-    mock.deleteResult.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Delete failed', retriable: false } });
+    mock.mutate.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Delete failed', retriable: false } });
     const result = await dispatchDashboardSqlite({ subtype: 'delete', id: 3, ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Delete failed', retriable: false });
   });
@@ -409,14 +389,14 @@ describe('handleDashboardSqlite — delete', () => {
 describe('handleDashboardSqlite — update', () => {
   it('updates entry fields and returns success', async () => {
     const mock = createMockSqliteClient();
-    mock.updateResult.mockResolvedValue({ success: true, data: undefined });
+    mock.mutate.mockResolvedValue({ success: true, data: undefined });
     const result = await dispatchDashboardSqlite(
       { subtype: 'update', id: 1, changes: { title: 'New Title' }, ...TK() },
       mock as any,
       { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toEqual({ success: true });
-    expect(mock.updateResult).toHaveBeenCalledWith(1, { title: 'New Title' });
+    expect(mock.mutate).toHaveBeenCalledWith(expect.objectContaining({ type: 'update', id: 1, changes: { title: 'New Title' } }));
   });
 
   it('rejects invalid update fields', async () => {
@@ -427,7 +407,7 @@ describe('handleDashboardSqlite — update', () => {
       { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toEqual({ success: false, error: expect.stringContaining('Invalid update fields') });
-    expect(mock.updateResult).not.toHaveBeenCalled();
+    expect(mock.mutate).not.toHaveBeenCalled();
   });
 
   it('rejects update with multiple invalid fields', async () => {
@@ -441,9 +421,9 @@ describe('handleDashboardSqlite — update', () => {
     expect(result).toEqual({ success: false, error: expect.stringContaining('bar') });
   });
 
-  it('returns success:false when updateResult fails', async () => {
+  it('returns success:false when update mutate fails', async () => {
     const mock = createMockSqliteClient();
-    mock.updateResult.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Update failed', retriable: false } });
+    mock.mutate.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Update failed', retriable: false } });
     const result = await dispatchDashboardSqlite(
       { subtype: 'update', id: 1, changes: { title: 'Test' }, ...TK() },
       mock as any,
@@ -456,14 +436,14 @@ describe('handleDashboardSqlite — update', () => {
 describe('handleDashboardSqlite — get_count', () => {
   it('returns count', async () => {
     const mock = createMockSqliteClient();
-    mock.getCountResult.mockResolvedValue({ success: true, data: 99 });
+    mock.query.mockResolvedValue({ success: true, data: 99 });
     const result = await dispatchDashboardSqlite({ subtype: 'get_count' }, mock as any);
     expect(result).toEqual({ success: true, count: 99 });
   });
 
-  it('returns error when getCountResult fails', async () => {
+  it('returns error when getCount query fails', async () => {
     const mock = createMockSqliteClient();
-    mock.getCountResult.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Get count failed', retriable: false } });
+    mock.query.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Get count failed', retriable: false } });
     const result = await dispatchDashboardSqlite({ subtype: 'get_count' }, mock as any);
     expect(result).toEqual({ success: false, error: 'Get count failed', retriable: false });
   });
@@ -483,7 +463,7 @@ describe('handleDashboardSqlite — import', () => {
       { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toEqual({ success: true, inserted: 3, skipped: 0, total: 3 });
-    expect(mock.insertResult).toHaveBeenCalledTimes(3);
+    expect(mock.mutate).toHaveBeenCalledTimes(3);
   });
 
   it('returns error when rows is empty array', async () => {
@@ -521,14 +501,14 @@ describe('handleDashboardSqlite — import', () => {
       { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toEqual({ success: true, inserted: 120, skipped: 0, total: 120 });
-    expect(mock.insertResult).toHaveBeenCalledTimes(120);
+    expect(mock.mutate).toHaveBeenCalledTimes(120);
   });
 
-  it('increments skipped counter when insertResult fails', async () => {
+  it('increments skipped counter when mutate insert fails', async () => {
     const mock = createMockSqliteClient();
-    // insertResult()'s failure value is a CallResult carrying the reason,
+    // mutate insert failure value is a CallResult carrying the reason,
     // matching how the handler treats a failed insert as a skip.
-    mock.insertResult
+    mock.mutate
       .mockResolvedValueOnce({ success: false, error: { kind: 'unknown', message: 'Insert failed', retriable: false } })
       .mockResolvedValueOnce({ success: false, error: { kind: 'unknown', message: 'Insert failed', retriable: false } })
       .mockResolvedValue({ success: true, data: { id: 1 } });
@@ -545,9 +525,9 @@ describe('handleDashboardSqlite — import', () => {
     expect(result).toEqual({ success: true, inserted: 1, skipped: 2, total: 3 });
   });
 
-  it('increments skipped counter when insertResult throws', async () => {
+  it('increments skipped counter when mutate insert throws', async () => {
     const mock = createMockSqliteClient();
-    mock.insertResult.mockRejectedValueOnce(new Error('DB error'));
+    mock.mutate.mockRejectedValueOnce(new Error('DB error'));
     const rows = [{ url: 'https://a.com', created_at: Date.now() }];
     const result = await dispatchDashboardSqlite(
       { subtype: 'import', rows, ...TK() },
@@ -561,73 +541,73 @@ describe('handleDashboardSqlite — import', () => {
 describe('handleDashboardSqlite — purge_now', () => {
   it('purges with both days and max configured', async () => {
     const mock = createMockSqliteClient();
-    mock.purgeOldRecordsResult.mockResolvedValue({ success: true, data: { purged: 7 } });
-    vi.mocked(getSettings).mockResolvedValue({
+    mock.maintain.mockResolvedValue({ success: true, data: { purged: 7 } });
+    mockGetAll.mockResolvedValue({
       sqlite_retention_days: 30,
       sqlite_max_records: 5000,
     } as any);
     const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 7, skipped: false });
-    expect(mock.purgeOldRecordsResult).toHaveBeenCalledWith(30, 5000);
+    expect(mock.maintain).toHaveBeenCalledWith(expect.objectContaining({ type: 'purgeOldRecords', retentionDays: 30, maxRecords: 5000 }));
   });
 
   it('skips when both settings are null', async () => {
     const mock = createMockSqliteClient();
-    vi.mocked(getSettings).mockResolvedValue({} as any);
+    mockGetAll.mockResolvedValue({} as any);
     const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 0, skipped: true });
-    expect(mock.purgeOldRecordsResult).not.toHaveBeenCalled();
+    expect(mock.maintain).not.toHaveBeenCalled();
   });
 
-  it('handles failure from purgeOldRecordsResult', async () => {
+  it('handles failure from purgeOldRecords maintain', async () => {
     const mock = createMockSqliteClient();
-    mock.purgeOldRecordsResult.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Purge failed', retriable: false } });
-    vi.mocked(getSettings).mockResolvedValue({ sqlite_retention_days: 30 } as any);
+    mock.maintain.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Purge failed', retriable: false } });
+    mockGetAll.mockResolvedValue({ sqlite_retention_days: 30 } as any);
     const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Purge failed', retriable: false });
   });
 
   it('purges with only days configured', async () => {
     const mock = createMockSqliteClient();
-    vi.mocked(getSettings).mockResolvedValue({ sqlite_retention_days: 60 } as any);
+    mockGetAll.mockResolvedValue({ sqlite_retention_days: 60 } as any);
     await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
-    expect(mock.purgeOldRecordsResult).toHaveBeenCalledWith(60, undefined);
+    expect(mock.maintain).toHaveBeenCalledWith(expect.objectContaining({ type: 'purgeOldRecords', retentionDays: 60 }));
   });
 
   it('purges with only max configured', async () => {
     const mock = createMockSqliteClient();
-    vi.mocked(getSettings).mockResolvedValue({ sqlite_max_records: 10000 } as any);
+    mockGetAll.mockResolvedValue({ sqlite_max_records: 10000 } as any);
     await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
-    expect(mock.purgeOldRecordsResult).toHaveBeenCalledWith(undefined, 10000);
+    expect(mock.maintain).toHaveBeenCalledWith(expect.objectContaining({ type: 'purgeOldRecords', maxRecords: 10000 }));
   });
 });
 
 describe('handleDashboardSqlite — content_purge_now', () => {
   it('purges content with all settings', async () => {
     const mock = createMockSqliteClient();
-    mock.purgeContentResult.mockResolvedValue({ success: true, data: { purged: 3 } });
-    vi.mocked(getSettings).mockResolvedValue({
+    mock.maintain.mockResolvedValue({ success: true, data: { purged: 3 } });
+    mockGetAll.mockResolvedValue({
       content_retention_days: 14,
       content_max_records: 1000,
       content_purge_include_starred: true,
     } as any);
     const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 3, skipped: false });
-    expect(mock.purgeContentResult).toHaveBeenCalledWith(14, 1000, true);
+    expect(mock.maintain).toHaveBeenCalledWith(expect.objectContaining({ type: 'purgeContent', retentionDays: 14, maxRecords: 1000, includeStarred: true }));
   });
 
   it('skips when both content settings are null', async () => {
     const mock = createMockSqliteClient();
-    vi.mocked(getSettings).mockResolvedValue({} as any);
+    mockGetAll.mockResolvedValue({} as any);
     const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 0, skipped: true });
-    expect(mock.purgeContentResult).not.toHaveBeenCalled();
+    expect(mock.maintain).not.toHaveBeenCalled();
   });
 
-  it('handles failure from purgeContentResult', async () => {
+  it('handles failure from purgeContent maintain', async () => {
     const mock = createMockSqliteClient();
-    mock.purgeContentResult.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Content purge failed', retriable: false } });
-    vi.mocked(getSettings).mockResolvedValue({ content_retention_days: 7 } as any);
+    mock.maintain.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Content purge failed', retriable: false } });
+    mockGetAll.mockResolvedValue({ content_retention_days: 7 } as any);
     const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Content purge failed', retriable: false });
   });
@@ -638,20 +618,20 @@ describe('handleDashboardSqlite — backup_db', () => {
     const mock = createMockSqliteClient();
     const result = await dispatchDashboardSqlite({ subtype: 'backup_db' }, mock as any);
     expect(result).toEqual({ success: false, error: expect.stringContaining('token') });
-    expect(mock.backupDbResult).not.toHaveBeenCalled();
+    expect(mock.maintain).not.toHaveBeenCalled();
   });
 
   it('returns backup data as array with valid token', async () => {
     const mock = createMockSqliteClient();
     const buffer = new Uint8Array([10, 20, 30]);
-    mock.backupDbResult.mockResolvedValue({ success: true, data: buffer });
+    mock.maintain.mockResolvedValue({ success: true, data: buffer });
     const result = await dispatchDashboardSqlite({ subtype: 'backup_db', confirmToken: VALID_TOKEN }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: true, data: 'ChQe' });
   });
 
-  it('returns error when backupDbResult fails', async () => {
+  it('returns error when backup maintain fails', async () => {
     const mock = createMockSqliteClient();
-    mock.backupDbResult.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Backup failed', retriable: false } });
+    mock.maintain.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Backup failed', retriable: false } });
     const result = await dispatchDashboardSqlite({ subtype: 'backup_db', confirmToken: VALID_TOKEN }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Backup failed', retriable: false });
   });
@@ -757,7 +737,7 @@ describe('handleDashboardSqlite — unknown subtype', () => {
 describe('handleDashboardSqlite — catch block', () => {
   it('catches thrown errors and returns structured error', async () => {
     const mock = createMockSqliteClient();
-    mock.queryResult.mockRejectedValue(new Error('Unexpected DB crash'));
+    mock.query.mockRejectedValue(new Error('Unexpected DB crash'));
     const result = await dispatchDashboardSqlite({ subtype: 'query' }, mock as any);
     expect(result).toEqual({ success: false, error: 'An internal error occurred' });
     expect(logError).toHaveBeenCalled();
@@ -765,7 +745,7 @@ describe('handleDashboardSqlite — catch block', () => {
 
   it('catches thrown errors from search', async () => {
     const mock = createMockSqliteClient();
-    mock.searchResult.mockRejectedValue(new Error('Search engine error'));
+    mock.query.mockRejectedValue(new Error('Search engine error'));
     const result = await dispatchDashboardSqlite(
       { subtype: 'search', query: 'test' },
       mock as any,

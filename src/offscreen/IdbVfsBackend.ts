@@ -60,6 +60,27 @@ export class IdbVfsBackend implements StorageBackend {
   async query(q: StorageQuery): Promise<BackendOrError<QuerySearchResult>> {
     this.ensureDb();
 
+    // Build additional filters that must be applied even during text search (date/domain/starred/etc.).
+    // Keep in sync with buildWhereClause / storageFallback.
+    const extraConds: string[] = [];
+    const extraParams: SqliteValue[] = [];
+    if (q.dateFrom != null) { extraConds.push('created_at >= ?'); extraParams.push(q.dateFrom); }
+    if (q.dateTo != null) { extraConds.push('created_at <= ?'); extraParams.push(q.dateTo); }
+    if (q.domain) { extraConds.push('domain = ?'); extraParams.push(q.domain); }
+    if (q.starred != null) { extraConds.push('is_starred = ?'); extraParams.push(q.starred ? 1 : 0); }
+    if (q.gistSynced != null) { extraConds.push('gist_synced = ?'); extraParams.push(q.gistSynced); }
+    if (q.ids != null && q.ids.length > 0) {
+      extraConds.push(`id IN (${q.ids.map(() => '?').join(',')})`);
+      extraParams.push(...q.ids);
+    }
+    const extraWhereSql = extraConds.length > 0 ? ` AND ${extraConds.join(' AND ')}` : '';
+    const extraWhereSqlFts = extraWhereSql
+      .replace(/domain = \?/g, 'b.domain = ?')
+      .replace(/created_at/g, 'b.created_at')
+      .replace(/is_starred/g, 'b.is_starred')
+      .replace(/gist_synced/g, 'b.gist_synced')
+      .replace(/\bid\b/g, 'b.id');
+
     if (q.text) {
       const bare = sanitizeTextForFts5(q.text);
       if (!bare) return { success: true, rows: [], total: 0 };
@@ -74,8 +95,8 @@ export class IdbVfsBackend implements StorageBackend {
 
         let total = 0;
         await this.engine.execWithCache(
-          `SELECT COUNT(*) FROM browsing_logs_fts WHERE browsing_logs_fts MATCH ?`,
-          [ftsQuery],
+          `SELECT COUNT(*) FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extraWhereSqlFts}`,
+          [ftsQuery, ...extraParams],
           (row: SqliteValue[]) => { total = Number(row[0]); }
         );
 
@@ -84,10 +105,10 @@ export class IdbVfsBackend implements StorageBackend {
           `SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank
            FROM browsing_logs_fts
            JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
-           WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0
+           WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extraWhereSqlFts}
            ORDER BY ${orderClause}
            LIMIT ? OFFSET ?`,
-          [ftsQuery, capLimit, offset],
+          [ftsQuery, ...extraParams, capLimit, offset],
           (row: SqliteValue[]) => {
             rows.push({
               id: Number(row[0]), url: String(row[1]),
@@ -113,8 +134,8 @@ export class IdbVfsBackend implements StorageBackend {
 
       let total = 0;
       await this.engine.execWithCache(
-        `SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)`,
-        [likePattern, likePattern, likePattern, likePattern],
+        `SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)${extraWhereSql}`,
+        [likePattern, likePattern, likePattern, likePattern, ...extraParams],
         (row: SqliteValue[]) => { total = Number(row[0]); }
       );
 
@@ -122,10 +143,10 @@ export class IdbVfsBackend implements StorageBackend {
       await this.engine.execWithCache(
         `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred
          FROM browsing_logs
-         WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)
+         WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ? )${extraWhereSql}
          ORDER BY ${likeOrderClause}
          LIMIT ? OFFSET ?`,
-        [likePattern, likePattern, likePattern, likePattern, capLimit, offset],
+        [likePattern, likePattern, likePattern, likePattern, ...extraParams, capLimit, offset],
         (row: SqliteValue[]) => {
           rows.push({
             id: Number(row[0]), url: String(row[1]),

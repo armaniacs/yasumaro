@@ -39,12 +39,12 @@ describe('SqliteClient', () => {
     vi.clearAllMocks();
   });
 
-  describe('init', () => {
+  describe('maintain init', () => {
     it('sends SQLITE_INIT message via transport', async () => {
       mockTransport = createMockTransport(async () => ({ success: true, initialized: true } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.init();
+      const result = await client.maintain({ type: 'init' });
       expect(result).toEqual({ success: true, data: true });
     });
 
@@ -52,7 +52,7 @@ describe('SqliteClient', () => {
       mockTransport = createMockTransport(async () => ({ success: false, error: 'init failed' } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.init();
+      const result = await client.maintain({ type: 'init' });
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.message).toContain('init failed');
@@ -63,7 +63,7 @@ describe('SqliteClient', () => {
       mockTransport = createMockTransport(new Error('connection lost'));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.init();
+      const result = await client.maintain({ type: 'init' });
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.kind).toBe('unknown');
@@ -71,14 +71,14 @@ describe('SqliteClient', () => {
     });
   });
 
-  describe('queryResult', () => {
+  describe('query', () => {
     it('returns rows and total on success', async () => {
       mockTransport = createMockTransport(async () => ({
         success: true, rows: [{ id: 1 }], total: 1,
       } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.queryResult({ limit: 10 });
+      const result = await client.query({ limit: 10 });
       expect(result).toEqual({ success: true, data: { rows: [{ id: 1 }], total: 1 } });
     });
 
@@ -86,71 +86,74 @@ describe('SqliteClient', () => {
       mockTransport = createMockTransport(async () => ({ success: false, error: 'Query failed' } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.queryResult();
+      const result = await client.query();
       expect(result.success).toBe(false);
     });
   });
 
-  describe('insertResult', () => {
+  describe('mutate insert', () => {
     it('returns id on success', async () => {
       mockTransport = createMockTransport(async () => ({ success: true, id: 42 } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.insertResult({
-        url: 'https://example.com',
-        title: 'Test',
-        created_at: Date.now(),
+      const result = await client.mutate({
+        type: 'insert',
+        record: {
+          url: 'https://example.com',
+          title: 'Test',
+          created_at: Date.now(),
+        } as any,
       });
       expect(result).toEqual({ success: true, data: { id: 42 } });
     });
   });
 
-  describe('updateResult', () => {
+  describe('mutate update', () => {
     it('returns success on success', async () => {
       mockTransport = createMockTransport(async () => ({ success: true } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.updateResult(1, { title: 'Updated' });
+      const result = await client.mutate({ type: 'update', id: 1, changes: { title: 'Updated' } });
       expect(result).toEqual({ success: true, data: undefined });
     });
   });
 
-  describe('deleteResult', () => {
+  describe('mutate delete', () => {
     it('returns success on success', async () => {
       mockTransport = createMockTransport(async () => ({ success: true } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.deleteResult(1);
+      const result = await client.mutate({ type: 'delete', id: 1 });
       expect(result).toEqual({ success: true, data: undefined });
     });
   });
 
-  describe('getCountResult', () => {
+  describe('query count', () => {
     it('returns count on success', async () => {
       mockTransport = createMockTransport(async () => ({ success: true, count: 42 } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.getCountResult();
+      const result = await client.query({ kind: 'count' });
       expect(result).toEqual({ success: true, data: 42 });
     });
   });
 
-  describe('toggleStarResult', () => {
+  describe('mutate toggleStar', () => {
     it('returns is_starred on success', async () => {
       mockTransport = createMockTransport(async () => ({ success: true, is_starred: 1 } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.toggleStarResult(1);
+      const result = await client.mutate({ type: 'toggleStar', id: 1 });
       expect(result).toEqual({ success: true, data: { is_starred: 1 } });
     });
   });
 
-  describe('clearAllResult', () => {
+  describe('maintain clearAll', () => {
     it('returns success on success', async () => {
       mockTransport = createMockTransport(async () => ({ success: true } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.clearAllResult();
+      const result = await client.maintain({ type: 'clearAll' });
       expect(result).toEqual({ success: true, data: undefined });
     });
   });
@@ -180,7 +183,7 @@ describe('SqliteClient', () => {
     });
   });
 
-  describe('backupDbResult', () => {
+  describe('maintain backup', () => {
     it('reconstructs Uint8Array from number[] returned by offscreen', async () => {
       const bytes = [83, 81, 76, 105, 116, 101]; // "SQLite"
       mockTransport = createMockTransport(async () => ({
@@ -188,7 +191,7 @@ describe('SqliteClient', () => {
       } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.backupDbResult();
+      const result = await client.maintain({ type: 'backup' });
       expect(result).toEqual({ success: true, data: new Uint8Array(bytes) });
     });
 
@@ -198,17 +201,17 @@ describe('SqliteClient', () => {
       } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.backupDbResult();
+      const result = await client.maintain({ type: 'backup' });
       expect(result.success).toBe(false);
     });
   });
 
-  describe('restoreDbResult', () => {
+  describe('maintain restore', () => {
     it('sends SQLITE_RESTORE with data array and returns success result on success', async () => {
       mockTransport = createMockTransport(async () => ({ success: true } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.restoreDbResult(new Uint8Array([1, 2, 3]));
+      const result = await client.maintain({ type: 'restore', data: new Uint8Array([1, 2, 3]) });
       expect(result).toEqual({ success: true, data: undefined });
     });
 
@@ -218,7 +221,7 @@ describe('SqliteClient', () => {
       } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.restoreDbResult(new Uint8Array([1, 2, 3]));
+      const result = await client.maintain({ type: 'restore', data: new Uint8Array([1, 2, 3]) });
       expect(result.success).toBe(false);
     });
 
@@ -226,18 +229,18 @@ describe('SqliteClient', () => {
       mockTransport = createMockTransport(new Error('timeout'));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.restoreDbResult(new Uint8Array([1, 2, 3]));
+      const result = await client.maintain({ type: 'restore', data: new Uint8Array([1, 2, 3]) });
       expect(result.success).toBe(false);
     });
   });
 
-  describe('isSqliteHealthy', () => {
+  describe('maintain healthCheck', () => {
     it('sends SQLITE_HEALTH_CHECK and returns true on success', async () => {
       mockTransport = createMockTransport(async () => ({ success: true } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.isSqliteHealthy();
-      expect(result).toBe(true);
+      const result = await client.maintain({ type: 'healthCheck' });
+      expect(result).toEqual({ success: true, data: true });
     });
 
     it('returns false when offscreen reports failure', async () => {
@@ -246,27 +249,27 @@ describe('SqliteClient', () => {
       } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.isSqliteHealthy();
-      expect(result).toBe(false);
+      const result = await client.maintain({ type: 'healthCheck' });
+      expect(result.success).toBe(false);
     });
 
     it('returns false when transport throws', async () => {
       mockTransport = createMockTransport(new Error('timeout'));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.isSqliteHealthy();
-      expect(result).toBe(false);
+      const result = await client.maintain({ type: 'healthCheck' });
+      expect(result.success).toBe(false);
     });
   });
 
-  describe('runOpfsSpikeResult', () => {
+  describe('maintain opfsSpike', () => {
     it('returns spike report on success', async () => {
       mockTransport = createMockTransport(async () => ({
         success: true, report: { writeMs: 100, readMs: 50 },
       } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.runOpfsSpikeResult();
+      const result = await client.maintain({ type: 'opfsSpike' });
       expect(result).toEqual({ success: true, data: { writeMs: 100, readMs: 50 } });
     });
 
@@ -276,31 +279,31 @@ describe('SqliteClient', () => {
       } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.runOpfsSpikeResult();
+      const result = await client.maintain({ type: 'opfsSpike' });
       expect(result.success).toBe(false);
     });
   });
 
-  describe('purgeOldRecordsResult', () => {
+  describe('maintain purgeOldRecords', () => {
     it('returns purged count on success', async () => {
       mockTransport = createMockTransport(async () => ({
         success: true, purged: 10,
       } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.purgeOldRecordsResult();
+      const result = await client.maintain({ type: 'purgeOldRecords' });
       expect(result).toEqual({ success: true, data: { purged: 10 } });
     });
   });
 
-  describe('purgeContentResult', () => {
+  describe('maintain purgeContent', () => {
     it('returns purged count on success', async () => {
       mockTransport = createMockTransport(async () => ({
         success: true, purged: 5,
       } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.purgeContentResult();
+      const result = await client.maintain({ type: 'purgeContent' });
       expect(result).toEqual({ success: true, data: { purged: 5 } });
     });
   });
@@ -310,7 +313,7 @@ describe('SqliteClient', () => {
       mockTransport = createMockTransport(new Error('Offscreen message timed out'));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.queryResult();
+      const result = await client.query();
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.kind).toBe('timeout');
@@ -321,7 +324,7 @@ describe('SqliteClient', () => {
       mockTransport = createMockTransport(new Error('offscreen document lost'));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.queryResult();
+      const result = await client.query();
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.kind).toBe('offscreen_lost');
@@ -332,7 +335,7 @@ describe('SqliteClient', () => {
       mockTransport = createMockTransport(new Error('QuotaExceededError'));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.queryResult();
+      const result = await client.query();
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.kind).toBe('quota');
@@ -343,7 +346,7 @@ describe('SqliteClient', () => {
       mockTransport = createMockTransport(new Error('SQLITE_CONSTRAINT'));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.queryResult();
+      const result = await client.query();
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.kind).toBe('sqlite_error');
@@ -354,7 +357,7 @@ describe('SqliteClient', () => {
       mockTransport = createMockTransport(new Error('something weird'));
       client = new SqliteClient(mockTransport);
 
-      const result = await client.queryResult();
+      const result = await client.query();
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.kind).toBe('unknown');
@@ -377,8 +380,8 @@ describe('SqliteClient', () => {
       client = new SqliteClient(mockTransport);
 
       const [deleteResult, clearResult] = await Promise.all([
-        client.deleteResult(1),
-        client.clearAllResult(),
+        client.mutate({ type: 'delete', id: 1 }),
+        client.maintain({ type: 'clearAll' }),
       ]);
 
       expect(deleteResult.success).toBe(false);
@@ -399,8 +402,8 @@ describe('SqliteClient', () => {
       client = new SqliteClient(mockTransport);
 
       const [toggleResult, deleteResult] = await Promise.all([
-        client.toggleStarResult(1),
-        client.deleteResult(2),
+        client.mutate({ type: 'toggleStar', id: 1 }),
+        client.mutate({ type: 'delete', id: 2 }),
       ]);
 
       expect(toggleResult).toEqual({ success: true, data: { is_starred: 1 } });

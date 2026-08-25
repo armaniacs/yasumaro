@@ -8,7 +8,8 @@
 
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 import type { RuleKey } from '../utils/aiSummaryCleaner/types.js';
-import { CLEANSING_RULES } from '../utils/aiSummaryCleaner/rules.js';
+import { CLEANSING_RULES, THRESHOLD_RULES } from '../utils/aiSummaryCleaner/rules.js';
+import type { ThresholdProp } from '../utils/aiSummaryCleaner/rules.js';
 
 // 【設定定数】: デフォルト値の定義
 const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
@@ -23,22 +24,17 @@ type CleansingConfigRuleFlags = {
 };
 
 // 【クレンジング設定】: コンテンツクレンジングとAI要約クレンジングの設定を一括管理
-export interface CleansingConfig extends CleansingConfigRuleFlags {
+// ThresholdProp (7 numeric thresholds) is intersected so that cfg[t.prop] is type-safe
+// without unsafe casts in extractor.ts. Fixed fields exclude the 7 threshold
+// props to avoid duplicate-key declarations.
+export interface CleansingConfig extends CleansingConfigRuleFlags, Record<ThresholdProp, number> {
     contentStripHardEnabled: boolean;
     contentStripKeywordEnabled: boolean;
     contentStripKeywords: string[];
     aiSummaryCleansingEnabled: boolean;
     whitelistExtractionEnabled: boolean;
-    aiSummaryCleansingLinkRatioThreshold: number;
-    aiSummaryCleansingShortTextThreshold: number;
-    aiSummaryCleansingShortSeqCount: number;
-    aiSummaryCleansingLinkParaThreshold: number;
     aiSummaryCleansingCustomPatterns: string[];
-    // Over-cleansed fallback thresholds
-    aiSummaryCleansingFallbackRatio: number;
-    aiSummaryCleansingFallbackMinBytes: number;
     contentDedupEnabled: boolean;
-    contentDedupThreshold: number;
 }
 
 /**
@@ -47,6 +43,7 @@ export interface CleansingConfig extends CleansingConfigRuleFlags {
  * cleansingConfig for a real extraction, so this only needs to match
  * `defaultEnabled` (the "no value specified yet" fallback), not the
  * new-user storage default — see pbi/2026-08-09-20.
+ * Derives directly from CLEANSING_RULES (the single source of truth).
  */
 const CLEANSING_RULE_PLACEHOLDER_DEFAULTS: CleansingConfigRuleFlags = Object.fromEntries(
     CLEANSING_RULES.map(rule => [
@@ -55,21 +52,28 @@ const CLEANSING_RULE_PLACEHOLDER_DEFAULTS: CleansingConfigRuleFlags = Object.fro
     ]),
 ) as CleansingConfigRuleFlags;
 
+// Derived from the shared THRESHOLD_RULES source of truth.
+export const THRESHOLD_CONFIG_DEFAULTS: Record<ThresholdProp, number> = Object.fromEntries(
+    THRESHOLD_RULES.map(r => [r.prop, r.default]),
+) as Record<ThresholdProp, number>;
+
+// THRESHOLD fields derive from THRESHOLD_CONFIG_DEFAULTS, which derives from
+// THRESHOLD_RULES (the single source of truth).
 export const DEFAULT_CLEANSING_CONFIG: CleansingConfig = {
     contentStripHardEnabled: true,
     contentStripKeywordEnabled: true,
     contentStripKeywords: ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'],
     aiSummaryCleansingEnabled: true,
     whitelistExtractionEnabled: true,
-    aiSummaryCleansingLinkRatioThreshold: 70,
-    aiSummaryCleansingShortTextThreshold: 30,
-    aiSummaryCleansingShortSeqCount: 5,
-    aiSummaryCleansingLinkParaThreshold: 50,
+    aiSummaryCleansingLinkRatioThreshold: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingLinkRatioThreshold,
+    aiSummaryCleansingShortTextThreshold: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingShortTextThreshold,
+    aiSummaryCleansingShortSeqCount: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingShortSeqCount,
+    aiSummaryCleansingLinkParaThreshold: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingLinkParaThreshold,
     aiSummaryCleansingCustomPatterns: [],
-    aiSummaryCleansingFallbackRatio: 0.20,
-    aiSummaryCleansingFallbackMinBytes: 300,
+    aiSummaryCleansingFallbackRatio: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingFallbackRatio,
+    aiSummaryCleansingFallbackMinBytes: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingFallbackMinBytes,
     contentDedupEnabled: true,
-    contentDedupThreshold: 0.7,
+    contentDedupThreshold: THRESHOLD_CONFIG_DEFAULTS.contentDedupThreshold,
     ...CLEANSING_RULE_PLACEHOLDER_DEFAULTS,
 };
 
@@ -81,6 +85,25 @@ export class PageState {
     maxScrollPercentage: number = 0;
     isValidVisitReported: boolean = false;
     checkIntervalId: number | null = null;
+
+    /**
+     * VisitGate 注入用の thresholds を返す純粋ヘルパー。
+     * extractor.init() / checkVisitConditions が VisitGate 生成時に利用する。
+     */
+    toVisitGateThresholds(): { minDuration: number; minScroll: number } {
+        return { minDuration: this.minVisitDuration, minScroll: this.minScrollDepth };
+    }
+
+    /**
+     * VisitGate.isReportable に渡す VisitState を返す純粋ヘルパー。
+     */
+    toVisitState(): { startTime: number; maxScrollPercentage: number; isValidVisitReported: boolean } {
+        return {
+            startTime: this.startTime,
+            maxScrollPercentage: this.maxScrollPercentage,
+            isValidVisitReported: this.isValidVisitReported,
+        };
+    }
 
     // 【クレンジング設定】: コンテンツクレンジングとAI要約クレンジングの設定を一括管理
     cleansingConfig: CleansingConfig = { ...DEFAULT_CLEANSING_CONFIG };

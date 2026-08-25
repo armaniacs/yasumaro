@@ -233,11 +233,6 @@ export const VALID_MESSAGE_TYPES = [
     'LOG_FORWARD', // Log relay from Offscreen Document / its Worker (no direct chrome.storage access)
 ] as const;
 
-export const CONTENT_SCRIPT_ONLY_TYPES = [
-    'VALID_VISIT',
-    'CHECK_DOMAIN',
-] as const;
-
 /**
  * Full set of types that content scripts are allowed to send.
  * Canonical SSOT for MessageRouter's trust table — MessageRouter derives

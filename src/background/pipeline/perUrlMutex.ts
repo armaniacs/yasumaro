@@ -11,9 +11,16 @@ import { Mutex } from '../../utils/Mutex.js';
  */
 export class PerUrlMutexMap {
   private static sharedMutexes = new Map<string, Mutex>();
+  private static readonly MUTEX_OPTS = { maxQueueSize: 5, timeoutMs: 60000 } as const;
+  private static createMutex(): Mutex { return new Mutex(PerUrlMutexMap.MUTEX_OPTS); }
 
-  private get mutexes(): Map<string, Mutex> {
-    return PerUrlMutexMap.sharedMutexes;
+  private readonly mutexes: Map<string, Mutex>;
+
+  constructor(map?: Map<string, Mutex>) {
+    // Default to shared static map to preserve existing per-URL serialization
+    // across all pipeline instances; tests can inject an isolated map via
+    // container.override('perUrlMutexMap', new PerUrlMutexMap(new Map())).
+    this.mutexes = map ?? PerUrlMutexMap.sharedMutexes;
   }
 
   async runExclusive<T>(url: string, fn: () => Promise<T>): Promise<T> {
@@ -24,7 +31,7 @@ export class PerUrlMutexMap {
   private getOrCreate(url: string): Mutex {
     let mutex = this.mutexes.get(url);
     if (!mutex) {
-      mutex = new Mutex({ maxQueueSize: 5, timeoutMs: 60000 });
+      mutex = PerUrlMutexMap.createMutex();
       this.mutexes.set(url, mutex);
     }
     return mutex;
@@ -38,7 +45,7 @@ export class PerUrlMutexMap {
   static getOrCreateStatic(url: string): Mutex {
     let mutex = PerUrlMutexMap.sharedMutexes.get(url);
     if (!mutex) {
-      mutex = new Mutex({ maxQueueSize: 5, timeoutMs: 60000 });
+      mutex = PerUrlMutexMap.createMutex();
       PerUrlMutexMap.sharedMutexes.set(url, mutex);
     }
     return mutex;
@@ -61,13 +68,20 @@ export class PerUrlMutexMap {
     map: Map<string, Mutex>,
     fn: () => Promise<T>,
   ): Promise<T> {
+    let acquired = false;
     try {
       await mutex.acquire();
+      acquired = true;
       return await fn();
     } finally {
-      mutex.release();
-      if (!mutex.isLocked() && mutex.getQueueSize() === 0) {
-        map.delete(url);
+      // Only release when acquire() succeeded. On queue-full or timeout the
+      // mutex is still held by another recording; releasing here would
+      // transfer/unlock the real holder's lock and break per-URL serialization.
+      if (acquired) {
+        mutex.release();
+        if (!mutex.isLocked() && mutex.getQueueSize() === 0) {
+          map.delete(url);
+        }
       }
     }
   }

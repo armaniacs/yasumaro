@@ -11,7 +11,7 @@
 export type RuleKey =
     | 'alt' | 'metadata' | 'ads' | 'nav' | 'social' | 'deep'
     | 'jsonLd' | 'lazyLoad' | 'skipLink' | 'card' | 'linkDensity'
-    | 'fixed' | 'recommend' | 'pagination' | 'snsPromo' | 'popup'
+    | 'fixed' | 'recommend' | 'pagination' | 'snsPromo' | 'popup' | 'cookie'
     | 'platform' | 'textDensity' | 'shortSeq' | 'symbolLine' | 'linkPara'
     | 'enhancedHidden' | 'emptyElem' | 'jpLayout' | 'jpNavigation'
     | 'author' | 'affiliate' | 'speechBubble'
@@ -82,6 +82,7 @@ export interface AiSummaryCleanseResult {
     paginationRemoved?: number;     // ページネーション削除数
     snsPromoRemoved?: number;       // SNSプロモ削除数
     popupRemoved?: number;          // ポップアップ削除数
+    cookieRemoved?: number;         // Cookie同意バナー削除数
     platformRemoved?: number;       // プラットフォームノイズ削除数
     // NEW: 9つの追加オプション
     textDensityRemoved?: number;        // テキスト密度削除数

@@ -229,6 +229,22 @@ export class MessageRouter {
       sendResponse({ success: false, error: decision.error });
       return false;
     }
+    // Strict content-script sender check for message types that must originate
+    // from a web page (VALID_VISIT, CHECK_DOMAIN). The generic trust level
+    // 'content-script-allowed' permits both extension pages and content scripts;
+    // these two types require a valid tab + http/https sender URL to prevent
+    // spoofing from extension pages. This preserves the pre-refactor behavior
+    // previously enforced in the legacy handler gate, now consolidated as the
+    // single routing seam.
+    if (type === 'VALID_VISIT' || type === 'CHECK_DOMAIN') {
+      const hasValidTab = Boolean(sender.tab?.id && sender.tab?.url);
+      const senderUrl = sender.url;
+      const hasValidSenderUrl = typeof senderUrl === 'string' && (senderUrl.startsWith('http://') || senderUrl.startsWith('https://'));
+      if (!hasValidTab || !hasValidSenderUrl) {
+        sendResponse({ success: false, error: 'Invalid sender' });
+        return false;
+      }
+    }
     const validator = this.validators.get(type);
     if (validator) {
       try {

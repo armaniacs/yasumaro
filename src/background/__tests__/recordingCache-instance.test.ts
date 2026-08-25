@@ -8,163 +8,46 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const mockGetSettings = vi.fn();
-const mockGetSavedUrlsWithTimestamps = vi.fn();
+const mockGetAll = vi.hoisted(() => vi.fn());
+const mockGetSavedUrlsWithTimestamps = vi.hoisted(() => vi.fn());
 
-vi.mock('../../utils/storage/types.js', async (importOriginal) => {
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: (...args: unknown[]) => mockGetSettings(...args),
-    getSavedUrlsWithTimestamps: (...args: unknown[]) => mockGetSavedUrlsWithTimestamps(...args),
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
+    settingsRepository: {
+      getAll: mockGetAll,
+      setAll: vi.fn(),
+      getMany: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      setAll = vi.fn();
+      getMany = vi.fn();
+    },
   };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: (...args: unknown[]) => mockGetSettings(...args),
-    getSavedUrlsWithTimestamps: (...args: unknown[]) => mockGetSavedUrlsWithTimestamps(...args),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: (...args: unknown[]) => mockGetSettings(...args),
-    getSavedUrlsWithTimestamps: (...args: unknown[]) => mockGetSavedUrlsWithTimestamps(...args),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: (...args: unknown[]) => mockGetSettings(...args),
-    getSavedUrlsWithTimestamps: (...args: unknown[]) => mockGetSavedUrlsWithTimestamps(...args),
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
+    getSavedUrlsWithTimestamps: (...args: unknown[]) => mockGetSavedUrlsWithTimestamps(...args),
   };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
+});
+
+vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: (...args: unknown[]) => mockGetSettings(...args),
-    getSavedUrlsWithTimestamps: (...args: unknown[]) => mockGetSavedUrlsWithTimestamps(...args),
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
+    API_KEY_FIELDS: ['geminiApiKey'],
   };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: (...args: unknown[]) => mockGetSettings(...args),
-    getSavedUrlsWithTimestamps: (...args: unknown[]) => mockGetSavedUrlsWithTimestamps(...args),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 vi.mock('../../utils/logger.js', () => ({
   addLog: vi.fn(),
   LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
 }));
-
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: (...args: unknown[]) => mockGetSettings(...args),
-    API_KEY_FIELDS: ['geminiApiKey'],
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 
 import { RecordingCacheInstance, InMemoryRecordingCacheStore } from '../recordingCache.js';
 import { SESSION_KEYS } from '../sessionStore.js';
@@ -178,8 +61,8 @@ beforeEach(() => {
 
 describe('RecordingCacheInstance — per-instance isolation', () => {
   it('two instances with separate InMemoryRecordingCacheStore do not share settings cache state', async () => {
-    mockGetSettings.mockResolvedValueOnce({ geminiApiKey: 'a', flag: 1 });
-    mockGetSettings.mockResolvedValueOnce({ geminiApiKey: 'b', flag: 2 });
+    mockGetAll.mockResolvedValueOnce({ geminiApiKey: 'a', flag: 1 });
+    mockGetAll.mockResolvedValueOnce({ geminiApiKey: 'b', flag: 2 });
 
     const cacheA = new RecordingCacheInstance(new InMemoryRecordingCacheStore());
     const cacheB = new RecordingCacheInstance(new InMemoryRecordingCacheStore());
@@ -204,7 +87,7 @@ describe('RecordingCacheInstance — per-instance isolation', () => {
   it('persists to its own injected store with API keys redacted (VULN-014)', async () => {
     const store = new InMemoryRecordingCacheStore();
     const writer = new RecordingCacheInstance(store);
-    mockGetSettings.mockResolvedValue({ geminiApiKey: 'secret', flag: true });
+    mockGetAll.mockResolvedValue({ geminiApiKey: 'secret', flag: true });
 
     await writer.getSettingsWithCache();
     await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
@@ -217,7 +100,7 @@ describe('RecordingCacheInstance — per-instance isolation', () => {
   it('a second instance sharing the same store does not restore a redacted cache (no usable API key)', async () => {
     const store = new InMemoryRecordingCacheStore();
     const writer = new RecordingCacheInstance(store);
-    mockGetSettings.mockResolvedValue({ geminiApiKey: 'secret', flag: true });
+    mockGetAll.mockResolvedValue({ geminiApiKey: 'secret', flag: true });
     await writer.getSettingsWithCache();
     await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
 

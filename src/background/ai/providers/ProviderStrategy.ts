@@ -249,16 +249,16 @@ export abstract class AIProviderStrategy {
     protected getMaxContentChars(defaultValue: number, storageKey?: string): number {
         const providerId = this.getProviderId();
 
-        // 1. プロバイダー別設定を確認
-        const providerSettings = this.settings[`providers`] as Record<string, { maxContentChars?: number }> | undefined;
+        // 1. プロバイダー別設定を確認（legacy 'providers' bag — index signature撤廃のため Record キャスト）
+        const providerSettings = (this.settings as unknown as Record<string, unknown>)['providers'] as Record<string, { maxContentChars?: number }> | undefined;
         const providerConfig = providerSettings?.[providerId];
         if (typeof providerConfig?.maxContentChars === 'number' && providerConfig.maxContentChars > 0) {
             return providerConfig.maxContentChars;
         }
 
-        // 2. グローバル設定を確認
+        // 2. グローバル設定を確認（storageKey は StorageKey の string 値 — strict Settings ではキャストが必要）
         if (storageKey) {
-            const globalValue = this.settings[storageKey] as number | undefined;
+            const globalValue = (this.settings as unknown as Record<string, unknown>)[storageKey] as number | undefined;
             if (typeof globalValue === 'number' && globalValue > 0) {
                 return globalValue;
             }
@@ -278,8 +278,8 @@ export abstract class AIProviderStrategy {
     protected getMaxTokens(): number {
         const providerId = this.getProviderId();
 
-        // 1. プロバイダー別設定を確認
-        const providerSettings = this.settings[`providers`] as Record<string, ProviderSpecificSettings> | undefined;
+        // 1. プロバイダー別設定を確認（legacy bag — Record キャスト）
+        const providerSettings = (this.settings as unknown as Record<string, unknown>)['providers'] as Record<string, ProviderSpecificSettings> | undefined;
         const providerConfig = providerSettings?.[providerId];
         if (providerConfig?.maxTokens) {
             return validateMaxTokens(providerConfig.maxTokens, providerId);
@@ -340,3 +340,10 @@ export abstract class AIProviderStrategy {
         await recordUsage(sentTokens ?? 0, receivedTokens ?? 0);
     }
 }
+
+/**
+ * @deprecated Use AIProviderStrategy — kept for backward compatibility (PBI 02).
+ * Old custom providers importing `ProviderStrategy` continue to type-check
+ * for one major version. Will be removed in next major. See CHANGELOG.
+ */
+export type ProviderStrategy = AIProviderStrategy;

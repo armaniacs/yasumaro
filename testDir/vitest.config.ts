@@ -22,6 +22,8 @@ export default defineConfig({
       '**/testDir/e2e/**',
       '**/.kilo/**',
       '**/video-*/**',
+      '**/.vulnhunter-fix/**',
+      '**/obsidian-smart-history_VULNHUNT_RESULTS*/**',
     ],
     coverage: {
       provider: 'v8',
@@ -34,6 +36,10 @@ export default defineConfig({
         'src/**/*.d.ts',
       ],
       all: true,
+      thresholds: {
+        lines: 80,
+        branches: 80,
+      },
     },
     testTimeout: 15000,
     pool: 'forks',

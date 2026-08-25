@@ -59,12 +59,12 @@ describe('SqliteClient — unit tests', () => {
     client = new SqliteClient(mockTransport);
   });
 
-  describe('queryResult()', () => {
+  describe('query()', () => {
     it('returns rows and total on success', async () => {
       mockTransport = createMockTransport({ success: true, rows: [{ id: 1 }], total: 1 });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.queryResult({ limit: 10 });
+      const result = await client.query({ limit: 10 });
 
       expect(result).toEqual({ success: true, data: { rows: [{ id: 1 }], total: 1 } });
       expect(recordSqliteSuccess).toHaveBeenCalled();
@@ -74,7 +74,7 @@ describe('SqliteClient — unit tests', () => {
       mockTransport = createMockTransport({ success: false, error: 'Query failed' });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.queryResult();
+      const result = await client.query();
 
       expect(result).toEqual({ success: false, error: expect.anything() });
       expect(recordSqliteFailure).toHaveBeenCalled();
@@ -84,7 +84,7 @@ describe('SqliteClient — unit tests', () => {
       mockTransport = createMockTransport(null, 'Connection lost');
       client = new SqliteClient(mockTransport);
 
-      const result = await client.queryResult();
+      const result = await client.query();
 
       expect(result).toEqual({ success: false, error: expect.anything() });
     });
@@ -93,27 +93,27 @@ describe('SqliteClient — unit tests', () => {
       mockTransport = createMockTransport({ success: true, total: 0 });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.queryResult();
+      const result = await client.query();
 
       expect(result).toEqual({ success: true, data: { rows: [], total: 0 } });
     });
   });
 
   describe('typed response decoding (PBI-04)', () => {
-    it('getCountResult returns the count directly, not coerced', async () => {
+    it('query count returns the count directly, not coerced', async () => {
       mockTransport = createMockTransport({ success: true, count: 7 });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.getCountResult();
+      const result = await client.query({ kind: 'count' });
 
       expect(result).toEqual({ success: true, data: 7 });
     });
 
-    it('getCountResult reports a missing count as a failure instead of masking it to 0', async () => {
+    it('query count reports a missing count as a failure instead of masking it to 0', async () => {
       mockTransport = createMockTransport({ success: true });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.getCountResult();
+      const result = await client.query({ kind: 'count' });
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -121,16 +121,16 @@ describe('SqliteClient — unit tests', () => {
       }
     });
 
-    it('queryResult propagates total without the legacy `|| 0` mask', async () => {
+    it('query propagates total without the legacy `|| 0` mask', async () => {
       mockTransport = createMockTransport({ success: true, rows: [{ id: 1 }], total: 3 });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.queryResult();
+      const result = await client.query();
 
       expect(result).toEqual({ success: true, data: { rows: [{ id: 1 }], total: 3 } });
     });
 
-    it('getStatusResult decodes diagnostic fields from the typed shape', async () => {
+    it('getStatus decodes diagnostic fields from the typed shape', async () => {
       mockTransport = createMockTransport({
         success: true,
         initialized: true,
@@ -155,15 +155,18 @@ describe('SqliteClient — unit tests', () => {
     });
   });
 
-  describe('insertResult()', () => {
+  describe('mutate insert', () => {
     it('returns id on success', async () => {
       mockTransport = createMockTransport({ success: true, id: 42 });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.insertResult({
-        url: 'https://example.com',
-        title: 'Test',
-        created_at: Date.now(),
+      const result = await client.mutate({
+        type: 'insert',
+        record: {
+          url: 'https://example.com',
+          title: 'Test',
+          created_at: Date.now(),
+        } as any,
       });
 
       expect(result).toEqual({ success: true, data: { id: 42 } });
@@ -173,21 +176,24 @@ describe('SqliteClient — unit tests', () => {
       mockTransport = createMockTransport({ success: false, error: 'Insert failed' });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.insertResult({
-        url: 'https://example.com',
-        created_at: Date.now(),
+      const result = await client.mutate({
+        type: 'insert',
+        record: {
+          url: 'https://example.com',
+          created_at: Date.now(),
+        } as any,
       });
 
       expect(result).toEqual({ success: false, error: expect.anything() });
     });
   });
 
-  describe('updateResult()', () => {
+  describe('mutate update', () => {
     it('returns success result on success', async () => {
       mockTransport = createMockTransport({ success: true });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.updateResult(1, { title: 'Updated' });
+      const result = await client.mutate({ type: 'update', id: 1, changes: { title: 'Updated' } });
 
       expect(result).toEqual({ success: true, data: undefined });
     });
@@ -196,18 +202,18 @@ describe('SqliteClient — unit tests', () => {
       mockTransport = createMockTransport({ success: false, error: 'Not found' });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.updateResult(1, { title: 'Updated' });
+      const result = await client.mutate({ type: 'update', id: 1, changes: { title: 'Updated' } });
 
       expect(result).toEqual({ success: false, error: expect.anything() });
     });
   });
 
-  describe('deleteResult()', () => {
+  describe('mutate delete', () => {
     it('returns success result on success', async () => {
       mockTransport = createMockTransport({ success: true });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.deleteResult(1);
+      const result = await client.mutate({ type: 'delete', id: 1 });
 
       expect(result).toEqual({ success: true, data: undefined });
     });
@@ -216,18 +222,18 @@ describe('SqliteClient — unit tests', () => {
       mockTransport = createMockTransport({ success: false, error: 'Delete failed' });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.deleteResult(1);
+      const result = await client.mutate({ type: 'delete', id: 1 });
 
       expect(result).toEqual({ success: false, error: expect.anything() });
     });
   });
 
-  describe('getCountResult()', () => {
+  describe('query count', () => {
     it('returns count on success', async () => {
       mockTransport = createMockTransport({ success: true, count: 42 });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.getCountResult();
+      const result = await client.query({ kind: 'count' });
 
       expect(result).toEqual({ success: true, data: 42 });
     });
@@ -236,13 +242,13 @@ describe('SqliteClient — unit tests', () => {
       mockTransport = createMockTransport({ success: false });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.getCountResult();
+      const result = await client.query({ kind: 'count' });
 
       expect(result).toEqual({ success: false, error: expect.anything() });
     });
   });
 
-  describe('toggleStarResult()', () => {
+  describe('mutate toggleStar', () => {
     it('returns is_starred on success', async () => {
       mockTransport = createMockTransport({
         success: true,
@@ -250,7 +256,7 @@ describe('SqliteClient — unit tests', () => {
       });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.toggleStarResult(1);
+      const result = await client.mutate({ type: 'toggleStar', id: 1 });
 
       expect(result).toEqual({ success: true, data: { is_starred: 1 } });
     });
@@ -262,29 +268,29 @@ describe('SqliteClient — unit tests', () => {
       });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.toggleStarResult(1);
+      const result = await client.mutate({ type: 'toggleStar', id: 1 });
 
       expect(result).toEqual({ success: false, error: expect.anything() });
     });
   });
 
-  describe('clearAllResult()', () => {
+  describe('maintain clearAll', () => {
     it('returns success result on success', async () => {
       mockTransport = createMockTransport({ success: true });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.clearAllResult();
+      const result = await client.maintain({ type: 'clearAll' });
 
       expect(result).toEqual({ success: true, data: undefined });
     });
   });
 
-  describe('init()', () => {
+  describe('maintain init', () => {
     it('returns success result on init', async () => {
       mockTransport = createMockTransport({ success: true });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.init();
+      const result = await client.maintain({ type: 'init' });
 
       expect(result).toEqual({ success: true, data: true });
     });
@@ -293,7 +299,7 @@ describe('SqliteClient — unit tests', () => {
       mockTransport = createMockTransport({ success: false, error: 'Init failed' });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.init();
+      const result = await client.maintain({ type: 'init' });
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -302,32 +308,32 @@ describe('SqliteClient — unit tests', () => {
     });
   });
 
-  describe('isSqliteHealthy()', () => {
+  describe('maintain healthCheck', () => {
     it('returns true on success', async () => {
       mockTransport = createMockTransport({ success: true });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.isSqliteHealthy();
+      const result = await client.maintain({ type: 'healthCheck' });
 
-      expect(result).toBe(true);
+      expect(result).toEqual({ success: true, data: true });
     });
 
     it('returns false when transport reports failure', async () => {
       mockTransport = createMockTransport({ success: false, error: 'unhealthy' });
       client = new SqliteClient(mockTransport);
 
-      const result = await client.isSqliteHealthy();
+      const result = await client.maintain({ type: 'healthCheck' });
 
-      expect(result).toBe(false);
+      expect(result.success).toBe(false);
     });
 
     it('returns false when transport throws', async () => {
       mockTransport = createMockTransport(null, 'timeout');
       client = new SqliteClient(mockTransport);
 
-      const result = await client.isSqliteHealthy();
+      const result = await client.maintain({ type: 'healthCheck' });
 
-      expect(result).toBe(false);
+      expect(result.success).toBe(false);
     });
   });
 
@@ -348,8 +354,8 @@ describe('SqliteClient — unit tests', () => {
       client = new SqliteClient(mockTransport);
 
       const [deleteResult, clearResult] = await Promise.all([
-        client.deleteResult(1),
-        client.clearAllResult(),
+        client.mutate({ type: 'delete', id: 1 }),
+        client.maintain({ type: 'clearAll' }),
       ]);
 
       expect(deleteResult.success).toBe(false);
@@ -371,8 +377,8 @@ describe('SqliteClient — unit tests', () => {
       client = new SqliteClient(mockTransport);
 
       const [toggleResult, deleteResult] = await Promise.all([
-        client.toggleStarResult(1),
-        client.deleteResult(2),
+        client.mutate({ type: 'toggleStar', id: 1 }),
+        client.mutate({ type: 'delete', id: 2 }),
       ]);
 
       expect(toggleResult).toEqual({ success: true, data: { is_starred: 1 } });
