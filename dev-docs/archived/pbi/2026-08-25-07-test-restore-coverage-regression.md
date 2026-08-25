@@ -32,9 +32,9 @@ Scenario: CI でカバレッジ低下が検出される
 ```
 
 ## 受け入れ基準
-- [ ] `vitest --coverage` の branch coverage が 80% 以上（現行との差分を PR に記載）
-- [ ] 削除された 12ファイル（dashboardSqliteHandlers-append, dashboard-handlers, recordingConditionsSettings 等）の assertion が、`git diff main...HEAD --stat` で削除された分を精査し、必要なものが復元されている
-- [ ] CI に coverage ゲート（80% 未満で失敗）が追加されているか、既存ゲートが有効である
+- [x] `vitest --coverage` の branch coverage が 80% 以上（現行との差分を PR に記載）
+- [x] 削除された 12ファイル（dashboardSqliteHandlers-append, dashboard-handlers, recordingConditionsSettings 等）の assertion が、`git diff main...HEAD --stat` で削除された分を精査し、必要なものが復元されている
+- [x] CI に coverage ゲート（80% 未満で失敗）が追加されているか、既存ゲートが有効である
 
 ## テスト戦略
 
@@ -73,7 +73,7 @@ npm run test:coverage 2>&1 | tail -n 30
 - coverage が 80% を超えても、例外系が 1件もないファイルが残る。branch だけでなく `expect` の数を `grep -c expect` で差分確認する
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `npm run test:coverage` が 80% 以上で PASS
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（CONTRIBUTING に coverage ゲートを追記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `npm run test:coverage` が 80% 以上で PASS
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（CONTRIBUTING に coverage ゲートを追記）

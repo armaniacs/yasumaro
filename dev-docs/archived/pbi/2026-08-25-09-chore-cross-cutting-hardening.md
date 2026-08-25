@@ -37,13 +37,13 @@ Scenario: PII パターンがログに平文で出ない
 ```
 
 ## 受け入れ基準
-- [ ] `entrypoints/options/index.html` の CSP 変更で違反時のフォールバック表示がある
-- [ ] `public/_locales/en|ja/messages.json` のキー集合差分を CI で検出（`npm run lint:i18n`）
-- [ ] `src/background/alarmHandler.ts` で登録前に `chrome.alarms.clear` するか冪等な登録になっている
-- [ ] `src/utils/aiSummaryCleaner/stripExtended.ts` のカスタムパターンログがハッシュ/truncate されている
-- [ ] `package.json` の依存で `npm audit` High 以上が 0
-- [ ] `eslint.config.js` で `import/no-restricted-paths` の layer ルールが有効
-- [ ] カスタムプロンプトのエラーメッセージが i18n 化されている
+- [x] `entrypoints/options/index.html` の CSP 変更で違反時のフォールバック表示がある
+- [x] `public/_locales/en|ja/messages.json` のキー集合差分を CI で検出（`npm run lint:i18n`）
+- [x] `src/background/alarmHandler.ts` で登録前に `chrome.alarms.clear` するか冪等な登録になっている
+- [x] `src/utils/aiSummaryCleaner/stripExtended.ts` のカスタムパターンログがハッシュ/truncate されている
+- [x] `package.json` の依存で `npm audit` High 以上が 0
+- [x] `eslint.config.js` で `import/no-restricted-paths` の layer ルールが有効
+- [x] カスタムプロンプトのエラーメッセージが i18n 化されている
 
 ## テスト戦略
 
@@ -90,8 +90,8 @@ npm audit --audit-level=high
 - i18n lint を `npm run lint` に含めると既存の lint が失敗する。`lint:i18n` として分離し、CI の別ステップで実行する
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `npm run lint` と `npm run lint:i18n` が PASS
-- [ ] `npm audit` High 以上が 0
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（docs/SETUP_GUIDE, CONTRIBUTING の i18n/CSP 章）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `npm run lint` と `npm run lint:i18n` が PASS
+- [x] `npm audit` High 以上が 0
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（docs/SETUP_GUIDE, CONTRIBUTING の i18n/CSP 章）
