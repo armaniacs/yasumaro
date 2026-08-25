@@ -4,7 +4,7 @@ import localPlugin from './eslint/plugin.mjs';
 
 export default [
   {
-    ignores: ['node_modules/', 'dist/', 'testDir/', 'coverage/', 'src/**/__tests__/**'],
+    ignores: ['node_modules/', 'dist/', 'testDir/', 'coverage/', 'src/**/__tests__/**', '.vulnhunter-fix/', 'graphify-out/', 'obsidian-smart-history_VULNHUNT_RESULTS*/', '.kilo/'],
   },
   {
     files: ['src/**/*.ts'],
@@ -37,7 +37,7 @@ export default [
               message: 'logger/* is an internal implementation detail. Import from logger.js instead.',
             },
             {
-              group: ['**/settingsStore', '**/settingsStore.js'],
+              group: ['**/settingsStore', '**/settingsStore.js', '**/settingsStore.legacy', '**/settingsStore.legacy.js'],
               message: 'Use SettingsRepository instead (PBI-04). Import from ./storage/SettingsRepository.js or ./storage/settingsMigration.js / ./storage/urlWhitelist.js',
             },
           ],

@@ -7,6 +7,7 @@ import { getSettings, saveSettings } from '../../utils/storage/settingsStore.js'
 import { StorageKeys } from '../../utils/storage/types.js';
 import { logError, ErrorCode } from '../../utils/logger.js';
 import { CLEANSING_RULES, type CleansingRule } from '../../utils/aiSummaryCleaner/rules.js';
+import type { RuleKey } from '../../utils/aiSummaryCleaner/types.js';
 
 /**
  * Rule key -> checkbox element id, e.g. `jsonLd` -> `ai-summary-cleansing-json-ld`.
@@ -29,49 +30,18 @@ function ruleOptionKey(rule: CleansingRule): string {
 }
 
 /**
- * AI要約クレンジング設定
+ * AI要約クレンジング設定 — RuleKey から導出する mapped type で SSOT 化
+ * 手書き列挙ではなく CLEANSING_RULES の key から自動導出するため、ルール追加で型が自動追従する
  */
-export interface AiSummaryCleansingSettings {
+export type AiSummaryCleansingSettings = {
     enabled: boolean;
-    // The 32 per-rule flags below are declared individually (not via a
-    // mapped type over CLEANSING_RULES) so callers keep named, autocompleted
-    // properties — see getAiSummaryCleansingSettings for how they are filled.
-    altEnabled: boolean;
-    metadataEnabled: boolean;
-    adsEnabled: boolean;
-    navEnabled: boolean;
-    socialEnabled: boolean;
-    deepEnabled: boolean;
-    linkDensityEnabled: boolean;
-    jsonLdEnabled: boolean;
-    lazyLoadEnabled: boolean;
-    skipLinkEnabled: boolean;
-    cardEnabled: boolean;
-    fixedEnabled: boolean;
-    recommendEnabled: boolean;
-    paginationEnabled: boolean;
-    snsPromoEnabled: boolean;
-    popupEnabled: boolean;
-    platformEnabled: boolean;
-    textDensityEnabled: boolean;
-    shortSeqEnabled: boolean;
-    symbolLineEnabled: boolean;
-    linkParaEnabled: boolean;
+} & {
+    [K in RuleKey as `${K}Enabled`]: boolean;
+} & {
     linkRatioThreshold: number;       // リンク密度閾値（デフォルト: 70）
     shortTextThreshold: number;       // 短文閾値文字数（デフォルト: 30）
     shortSeqCount: number;            // 短文連続数閾値（デフォルト: 5）
     linkParaThreshold: number;        // リンクのみ段落閾値（デフォルト: 50）
-    enhancedHiddenEnabled: boolean;
-    emptyElemEnabled: boolean;
-    jpLayoutEnabled: boolean;
-    jpNavigationEnabled: boolean;
-    authorEnabled: boolean;
-    affiliateEnabled: boolean;
-    speechBubbleEnabled: boolean;
-    newsMediaEnabled: boolean;
-    ecSiteEnabled: boolean;
-    qaSiteEnabled: boolean;
-    videoSiteEnabled: boolean;
     // Domain Whitelist Extraction Mode
     whitelistExtractionEnabled: boolean; // ホワイトリスト抽出モード（デフォルト: true）
     // Body protection settings
@@ -80,7 +50,7 @@ export interface AiSummaryCleansingSettings {
     // Over-cleansed fallback settings
     fallbackRatio: number;           // 過剰削減フォールバック比率閾値（デフォルト: 0.20）
     fallbackMinBytes: number;        // 過剰削減フォールバック絶対量閾値（デフォルト: 300）
-}
+};
 
 /**
  * AI要約クレンジング設定を取得

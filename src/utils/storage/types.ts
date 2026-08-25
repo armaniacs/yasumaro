@@ -9,13 +9,17 @@ import type { EncryptedData } from '../crypto/types.js';
 import type { UblockRules, Source, CustomPrompt, MarkdownExportTemplate, TagCategory, TagNormalizationEntry } from '../types.js';
 import type { SafetyMode, TrancoTier } from '../trustDb/trustDbSchema.js';
 
+export type SqliteHealthCheck = () => Promise<boolean>;
+
+export type ProviderId = 'gemini' | 'openai' | 'openai2' | 'lm-studio' | 'ollama' | 'openai-compatible' | 'built-in-ai';
+
 /**
  * AIプロバイダ優先度スロット
  * provider: 既存6種のプロバイダID ('gemini' | 'openai' | 'openai2' | 'lm-studio' | 'ollama' | 'openai-compatible')
  * model: 省略時はそのプロバイダの既存モデル設定値（例: gemini_model）を使用する
  */
 export interface ProviderSlot {
-    provider: string;
+    provider: ProviderId | (string & {});
     model?: string;
 }
 
@@ -159,6 +163,7 @@ export const StorageKeys = {
     AI_SUMMARY_CLEANSING_PAGINATION: 'ai_summary_cleansing_pagination', // ページネーション削除（デフォルト: false）
     AI_SUMMARY_CLEANSING_SNS_PROMO: 'ai_summary_cleansing_sns_promo', // SNSプロモ削除（デフォルト: false）
     AI_SUMMARY_CLEANSING_POPUP: 'ai_summary_cleansing_popup', // ポップアップ削除（デフォルト: true）
+    AI_SUMMARY_CLEANSING_COOKIE: 'ai_summary_cleansing_cookie', // Cookie同意バナー削除（デフォルト: true）
     AI_SUMMARY_CLEANSING_PLATFORM: 'ai_summary_cleansing_platform', // プラットフォーム噪声削除（デフォルト: false）
     // NEW: 9 additional cleansing options
     AI_SUMMARY_CLEANSING_TEXT_DENSITY: 'ai_summary_cleansing_text_density', // テキスト密度フィルタリング（デフォルト: false）
@@ -376,6 +381,7 @@ export interface StorageKeyValues {
     [StorageKeys.AI_SUMMARY_CLEANSING_PAGINATION]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_SNS_PROMO]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_POPUP]: boolean;
+    [StorageKeys.AI_SUMMARY_CLEANSING_COOKIE]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_PLATFORM]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_TEXT_DENSITY]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ]: boolean;
@@ -452,14 +458,9 @@ export interface StorageKeyValues {
     [StorageKeys.LEGACY_DUAL_WRITE_ENABLED]: boolean;
 }
 
-// 厳格な Settings 型
+// 厳格な Settings 型（後方互換性のため StrictSettings エイリアスを残す）
 export type StrictSettings = {
     [K in StorageKey]: StorageKeyValues[K];
 };
 
-// 以前の Settings 型（後方互換性のため）
-// StrictSettings に徐々に移行を進める
-// StorageKeys で型チェック可能にするために index signature を追加
-export type Settings = Partial<StorageKeyValues> & {
-    [key: string]: unknown; // レガシー互換性
-};
+export type Settings = Partial<StrictSettings>;

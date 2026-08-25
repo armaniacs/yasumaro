@@ -27,6 +27,7 @@ const RULE_LABEL_FALLBACKS: Record<string, string> = {
     pagination: 'ページネーション',
     snsPromo: 'SNSプロモ',
     popup: 'ポップアップ',
+    cookie: 'Cookie同意',
     platform: 'プラットフォームノイズ',
     textDensity: 'テキスト密度',
     shortSeq: '短文の連続',

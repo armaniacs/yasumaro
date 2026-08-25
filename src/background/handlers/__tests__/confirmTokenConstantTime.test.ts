@@ -60,57 +60,13 @@ import { dispatchDashboardSqlite } from './dashboardSqliteTestHarness.js';
 const VALID_TOKEN = 'valid-confirm-token-12345';
 
 function createMockSqliteClient() {
-  const result = {
-    queryResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
-    searchResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
-    toggleStarResult: vi.fn().mockResolvedValue({ success: true, data: { is_starred: 1 } }),
-    deleteResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-    updateResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-    insertResult: vi.fn().mockResolvedValue({ success: true, data: { id: 1 } }),
-    getCountResult: vi.fn().mockResolvedValue({ success: true, data: 0 }),
-    clearAllResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-    getStatus: vi.fn().mockResolvedValue({ initialized: true }),
-    runOpfsSpikeResult: vi.fn().mockResolvedValue({ success: true, data: {} }),
-    restoreDbResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-    backupDbResult: vi.fn().mockResolvedValue({ success: true, data: new Uint8Array() }),
-    purgeOldRecordsResult: vi.fn().mockResolvedValue({ success: true, data: { purged: 0 } }),
-    purgeContentResult: vi.fn().mockResolvedValue({ success: true, data: { purged: 0 } }),
-    queryAuditLogResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
-  };
   const client = {
-    ...result,
-    query: vi.fn().mockImplementation((op: any) => {
-      if (op?.kind === 'search') return client.searchResult(op.text, op.limit, op.offset, op);
-      if (op?.kind === 'count') return client.getCountResult();
-      if (op?.kind === 'auditLog') return client.queryAuditLogResult(op);
-      return client.queryResult(op);
-    }),
-    mutate: vi.fn().mockImplementation((op: any) => {
-      switch (op.type) {
-        case 'insert': return client.insertResult(op.record, op.traceId);
-        case 'insertBatch': return client.insertBatchResult(op.records);
-        case 'update': return client.updateResult(op.id, op.changes);
-        case 'delete': return client.deleteResult(op.id);
-        case 'toggleStar': return client.toggleStarResult(op.id);
-        case 'insertAuditLog': return client.insertAuditLogResult(op.record);
-        default: return Promise.resolve({ success: true, data: undefined });
-      }
-    }),
-    maintain: vi.fn().mockImplementation((op: any) => {
-      switch (op.type) {
-        case 'init': return client.init ? client.init() : Promise.resolve({ success: true, data: true });
-        case 'backup': return client.backupDbResult();
-        case 'restore': return client.restoreDbResult(op.data);
-        case 'clearAll': return client.clearAllResult();
-        case 'purgeOldRecords': return client.purgeOldRecordsResult(op.retentionDays, op.maxRecords);
-        case 'purgeContent': return client.purgeContentResult(op.retentionDays, op.maxRecords, op.includeStarred);
-        case 'opfsSpike': return client.runOpfsSpikeResult();
-        case 'healthCheck': return client.isSqliteHealthy ? client.isSqliteHealthy() : Promise.resolve(true);
-        default: return Promise.resolve({ success: true, data: undefined });
-      }
-    }),
+    query: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
+    mutate: vi.fn().mockResolvedValue({ success: true, data: { is_starred: 1 } }),
+    maintain: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+    getStatus: vi.fn().mockResolvedValue({ initialized: true }),
   };
-  return client;
+  return client as any;
 }
 
 describe('confirmToken constant-time comparison (CWE-208)', () => {
@@ -124,7 +80,7 @@ describe('confirmToken constant-time comparison (CWE-208)', () => {
       { getConfirmToken: async () => VALID_TOKEN },
     );
     expect(result).toEqual({ success: true, data: undefined });
-    expect(client.clearAllResult).toHaveBeenCalled();
+    expect(client.maintain).toHaveBeenCalledWith(expect.objectContaining({ type: 'clearAll' }));
   });
 
   it('長さが異なる不正トークンは拒否される', async () => {
@@ -135,7 +91,7 @@ describe('confirmToken constant-time comparison (CWE-208)', () => {
       { getConfirmToken: async () => VALID_TOKEN },
     );
     expect(result).toEqual({ success: false, error: 'Confirmation token mismatch' });
-    expect(client.clearAllResult).not.toHaveBeenCalled();
+    expect(client.maintain).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'clearAll' }));
   });
 
   it('先頭文字が異なる不正トークンは拒否される', async () => {
@@ -178,6 +134,6 @@ describe('confirmToken constant-time comparison (CWE-208)', () => {
       { getConfirmToken: async () => VALID_TOKEN },
     );
     expect(result).not.toEqual({ success: false, error: 'Confirmation token mismatch' });
-    expect(client.queryResult).toHaveBeenCalled();
+    expect(client.query).toHaveBeenCalled();
   });
 });

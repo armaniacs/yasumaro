@@ -9,17 +9,16 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // ---------------------------------------------------------------------------
 // Hoisted mocks for storage module
 // ---------------------------------------------------------------------------
-const { mockGetSettings, mockSaveSettings } = vi.hoisted(() => ({
-  mockGetSettings: vi.fn(),
-  mockSaveSettings: vi.fn(),
+const { mockGetAll, mockGetMany, mockSetAll } = vi.hoisted(() => ({
+  mockGetAll: vi.fn(),
+  mockGetMany: vi.fn(),
+  mockSetAll: vi.fn(),
 }));
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
+  return {
+    ...actual,
     StorageKeys: {
       MIN_VISIT_DURATION: 'minVisitDuration',
       MIN_SCROLL_DEPTH: 'minScrollDepth',
@@ -30,207 +29,29 @@ vi.mock('../../utils/storage/types.js', async (importOriginal) => {
       OPENAI_CONTENT_CHARS: 'openaiContentChars',
       GEMINI_CONTENT_CHARS: 'geminiContentChars',
     },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+});
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      MIN_VISIT_DURATION: 'minVisitDuration',
-      MIN_SCROLL_DEPTH: 'minScrollDepth',
-      MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
-      AI_TIMEOUT_MS: 'aiTimeoutMs',
-      MAX_MONTHLY_TOKENS: 'maxMonthlyTokens',
-      AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
-      OPENAI_CONTENT_CHARS: 'openaiContentChars',
-      GEMINI_CONTENT_CHARS: 'geminiContentChars',
-    },
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      MIN_VISIT_DURATION: 'minVisitDuration',
-      MIN_SCROLL_DEPTH: 'minScrollDepth',
-      MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
-      AI_TIMEOUT_MS: 'aiTimeoutMs',
-      MAX_MONTHLY_TOKENS: 'maxMonthlyTokens',
-      AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
-      OPENAI_CONTENT_CHARS: 'openaiContentChars',
-      GEMINI_CONTENT_CHARS: 'geminiContentChars',
+    settingsRepository: {
+      getAll: mockGetAll,
+      getMany: mockGetMany,
+      setAll: mockSetAll,
+      get: vi.fn(),
+      set: vi.fn(),
     },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      MIN_VISIT_DURATION: 'minVisitDuration',
-      MIN_SCROLL_DEPTH: 'minScrollDepth',
-      MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
-      AI_TIMEOUT_MS: 'aiTimeoutMs',
-      MAX_MONTHLY_TOKENS: 'maxMonthlyTokens',
-      AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
-      OPENAI_CONTENT_CHARS: 'openaiContentChars',
-      GEMINI_CONTENT_CHARS: 'geminiContentChars',
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      getMany = mockGetMany;
+      setAll = mockSetAll;
+      get = vi.fn();
+      set = vi.fn();
     },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      MIN_VISIT_DURATION: 'minVisitDuration',
-      MIN_SCROLL_DEPTH: 'minScrollDepth',
-      MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
-      AI_TIMEOUT_MS: 'aiTimeoutMs',
-      MAX_MONTHLY_TOKENS: 'maxMonthlyTokens',
-      AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
-      OPENAI_CONTENT_CHARS: 'openaiContentChars',
-      GEMINI_CONTENT_CHARS: 'geminiContentChars',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      MIN_VISIT_DURATION: 'minVisitDuration',
-      MIN_SCROLL_DEPTH: 'minScrollDepth',
-      MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
-      AI_TIMEOUT_MS: 'aiTimeoutMs',
-      MAX_MONTHLY_TOKENS: 'maxMonthlyTokens',
-      AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
-      OPENAI_CONTENT_CHARS: 'openaiContentChars',
-      GEMINI_CONTENT_CHARS: 'geminiContentChars',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      MIN_VISIT_DURATION: 'minVisitDuration',
-      MIN_SCROLL_DEPTH: 'minScrollDepth',
-      MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
-      AI_TIMEOUT_MS: 'aiTimeoutMs',
-      MAX_MONTHLY_TOKENS: 'maxMonthlyTokens',
-      AI_RATE_LIMIT_MAX: 'aiRateLimitMax',
-      OPENAI_CONTENT_CHARS: 'openaiContentChars',
-      GEMINI_CONTENT_CHARS: 'geminiContentChars',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 // ---------------------------------------------------------------------------
 // Chrome API mock (for i18n)
@@ -287,10 +108,13 @@ describe('recordingConditionsSettings', () => {
   beforeEach(() => {
     setupDOM();
     vi.clearAllMocks();
+    mockGetAll.mockResolvedValue({});
+    mockGetMany.mockResolvedValue({});
   });
 
   it('loads and renders recording conditions with defaults when no settings exist', async () => {
-    mockGetSettings.mockResolvedValue({});
+    mockGetMany.mockResolvedValue({});
+    mockGetAll.mockResolvedValue({});
     await initRecordingConditionsSettings();
 
     const minVisitInput = document.getElementById('minVisitDuration') as HTMLInputElement;
@@ -303,7 +127,17 @@ describe('recordingConditionsSettings', () => {
   });
 
   it('loads previously saved values from getSettings', async () => {
-    mockGetSettings.mockResolvedValue({
+    mockGetMany.mockResolvedValue({
+      minVisitDuration: 10,
+      minScrollDepth: 75,
+      maxTokensPerPrompt: 2000,
+      aiTimeoutMs: 30000,
+      maxMonthlyTokens: 50000,
+      aiRateLimitMax: 5,
+      openaiContentChars: 15000,
+      geminiContentChars: 20000,
+    });
+    mockGetAll.mockResolvedValue({
       minVisitDuration: 10,
       minScrollDepth: 75,
       maxTokensPerPrompt: 2000,
@@ -335,8 +169,9 @@ describe('recordingConditionsSettings', () => {
   });
 
   it('saves recording conditions via saveSettings on save click', async () => {
-    mockGetSettings.mockResolvedValue({});
-    mockSaveSettings.mockResolvedValue(undefined);
+    mockGetMany.mockResolvedValue({});
+    mockGetAll.mockResolvedValue({});
+    mockSetAll.mockResolvedValue(undefined);
     await initRecordingConditionsSettings();
 
     const minVisitInput = document.getElementById('minVisitDuration') as HTMLInputElement;
@@ -348,10 +183,10 @@ describe('recordingConditionsSettings', () => {
     saveBtn.click();
 
     await vi.waitFor(() => {
-      expect(mockSaveSettings).toHaveBeenCalled();
+      expect(mockSetAll).toHaveBeenCalled();
     });
 
-    expect(mockSaveSettings).toHaveBeenCalledWith({
+    expect(mockSetAll).toHaveBeenCalledWith({
       minVisitDuration: 15,
       minScrollDepth: 50,
       maxTokensPerPrompt: 3000,
@@ -364,8 +199,9 @@ describe('recordingConditionsSettings', () => {
   });
 
   it('shows success message after save', async () => {
-    mockGetSettings.mockResolvedValue({});
-    mockSaveSettings.mockResolvedValue(undefined);
+    mockGetMany.mockResolvedValue({});
+    mockGetAll.mockResolvedValue({});
+    mockSetAll.mockResolvedValue(undefined);
     await initRecordingConditionsSettings();
 
     const saveBtn = document.getElementById('save-conditions-settings') as HTMLButtonElement;
@@ -378,7 +214,8 @@ describe('recordingConditionsSettings', () => {
   });
 
   it('shows validation error for invalid min visit duration', async () => {
-    mockGetSettings.mockResolvedValue({});
+    mockGetMany.mockResolvedValue({});
+    mockGetAll.mockResolvedValue({});
     await initRecordingConditionsSettings();
 
     const minVisitInput = document.getElementById('minVisitDuration') as HTMLInputElement;
@@ -392,12 +229,13 @@ describe('recordingConditionsSettings', () => {
       expect(errorMsg?.style.display).toBe('');
     });
 
-    expect(mockSaveSettings).not.toHaveBeenCalled();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('handles saveSettings error gracefully', async () => {
-    mockGetSettings.mockResolvedValue({});
-    mockSaveSettings.mockRejectedValue(new Error('Storage full'));
+    mockGetMany.mockResolvedValue({});
+    mockGetAll.mockResolvedValue({});
+    mockSetAll.mockRejectedValue(new Error('Storage full'));
     await initRecordingConditionsSettings();
 
     const saveBtn = document.getElementById('save-conditions-settings') as HTMLButtonElement;

@@ -151,15 +151,15 @@ async function loadRowsWithRetry(): Promise<BrowsingLogEntry[]> {
       if (!status?.initialized) {
         return null;
       }
-      const queryResult = await queryLogs({ limit: 10000 });
+      const qRes = await queryLogs({ limit: 10000 });
       // Return null (not []) on failure: retryWithExponentialBackoff only
       // retries when the thunk yields null or throws, so coercing an error to
       // an empty array made it return "successfully" on the first attempt and
       // skip all remaining attempts.
-      if (isServiceError(queryResult)) {
+      if (isServiceError(qRes)) {
         return null;
       }
-      return queryResult.data.rows;
+      return qRes.data.rows;
     },
     { label: 'tagCluster', maxAttempts: 4 }
   );

@@ -6,7 +6,7 @@
  */
 
 import { buildClassIdSelectors, isFixedOrSticky, isLikelyAd, isLikelyPopup, isPlatformNoise, safeRemoveElement, safeReplaceWithText } from './helpers.js';
-import { NEWS_MEDIA_PATTERNS, EC_SITE_PATTERNS, QA_SITE_PATTERNS, VIDEO_SITE_PATTERNS } from './patterns.js';
+import { COOKIE_TEXT_PATTERNS, NEWS_MEDIA_PATTERNS, EC_SITE_PATTERNS, QA_SITE_PATTERNS, VIDEO_SITE_PATTERNS } from './patterns.js';
 
 // パターンは不変なため、セレクター文字列はモジュール初回評価時に一度だけ構築して使い回す
 const NEWS_MEDIA_SELECTOR = buildClassIdSelectors(NEWS_MEDIA_PATTERNS);
@@ -55,6 +55,8 @@ const POPUP_PATTERNS = [
     'popup', 'modal', 'overlay', 'lightbox', 'dialog',
     'toast', 'notification', 'snackbar', 'ribbon', 'alert',
     'consent', 'cookie-banner', 'gdpr', 'age-gate', 'paywall',
+    // OneTrust / TrustArch etc. (Dell, enterprise sites)
+    'onetrust', 'ot-sdk', 'optanon', 'truste', 'cc-banner', 'cookieNotice', 'consent-sdk', 'cookieConsent',
     // 日本語
     'ameba-popup', 'follow-prompt', 'spc-overlay', 'warranty-popup',
     'popup-cookie', 'consent-banner', 'login-prompt',
@@ -126,6 +128,30 @@ const SPEECH_BUBBLE_TEXT_PATTERNS = [
     'balloon-body', 'talk-body', 'speech-text',
 ];
 const SPEECH_BUBBLE_TEXT_SELECTOR = buildClassIdSelectors(SPEECH_BUBBLE_TEXT_PATTERNS);
+
+/**
+ * Shared helper for text-based cookie consent detection.
+ * Extracted to deduplicate stripPopupElements and stripCookieConsentElements
+ * which previously contained verbatim 15-line duplicates.
+ */
+function collectCookieConsentElements(root: Element, counted: Set<Element>): Element[] {
+    const elementsToRemove: Element[] = [];
+    const candidates = root.querySelectorAll('p, div, span, small, footer, section');
+    candidates.forEach(elem => {
+        if (counted.has(elem)) return;
+        const text = (elem.textContent || '').trim();
+        if (text.length > 1200 || text.length < 10) return;
+        if (elem.querySelectorAll('p, article, section').length >= 3) return;
+        for (const pattern of COOKIE_TEXT_PATTERNS) {
+            if (pattern.test(text)) {
+                elementsToRemove.push(elem);
+                counted.add(elem);
+                break;
+            }
+        }
+    });
+    return elementsToRemove;
+}
 
 /**
  * 固定要素を削除（position:fixed/sticky）
@@ -327,7 +353,7 @@ export function stripPopupElements(element: Element): number {
         }
     });
 
-    // cookie consent banner
+    // cookie consent banner (generic fallback) — requires popup heuristics; OneTrust etc. are in POPUP_SELECTOR above
     element.querySelectorAll('[id*="cookie"], [class*="cookie"], [id*="consent"], [class*="consent"]').forEach(elem => {
         if (!counted.has(elem) && isLikelyPopup(elem)) {
             elementsToRemove.push(elem);
@@ -335,12 +361,27 @@ export function stripPopupElements(element: Element): number {
         }
     });
 
+    // Text-based cookie consent — delegated to shared helper (deduplicated with stripCookieConsentElements)
+    for (const elem of collectCookieConsentElements(element, counted)) {
+        elementsToRemove.push(elem);
+    }
+
     for (const elem of elementsToRemove) {
         if (safeRemoveElement(elem)) {
             removedCount++;
         }
     }
 
+    return removedCount;
+}
+
+export function stripCookieConsentElements(element: Element): number {
+    let removedCount = 0;
+    const counted = new Set<Element>();
+    const elementsToRemove = collectCookieConsentElements(element, counted);
+    for (const elem of elementsToRemove) {
+        if (safeRemoveElement(elem)) removedCount++;
+    }
     return removedCount;
 }
 

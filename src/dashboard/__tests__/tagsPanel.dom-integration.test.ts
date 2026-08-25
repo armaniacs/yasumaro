@@ -26,182 +26,46 @@ vi.mock('../../utils/i18n.js', () => ({
   getMessage: (key: string) => `i18n_${key}`,
 }));
 
-// Mock storage
+const { mockGetAll, mockGetMany, mockSetAll } = vi.hoisted(() => ({
+  mockGetAll: vi.fn().mockResolvedValue({}),
+  mockGetMany: vi.fn().mockResolvedValue({}),
+  mockSetAll: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
+  return {
+    ...actual,
     StorageKeys: {
       TAG_SUMMARY_MODE: 'tagSummaryMode',
       TAG_CATEGORIES: 'tagCategories',
+      TAG_NORMALIZATION_DICT: 'tag_normalization_dict',
+      ALLOWED_URLS: 'allowed_urls',
+      ALLOWED_URLS_HASH: 'allowed_urls_hash',
     },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+});
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      TAG_SUMMARY_MODE: 'tagSummaryMode',
-      TAG_CATEGORIES: 'tagCategories',
-    },
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      TAG_SUMMARY_MODE: 'tagSummaryMode',
-      TAG_CATEGORIES: 'tagCategories',
+    settingsRepository: {
+      getAll: mockGetAll,
+      getMany: mockGetMany,
+      setAll: mockSetAll,
+      get: vi.fn(),
+      set: vi.fn(),
     },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      TAG_SUMMARY_MODE: 'tagSummaryMode',
-      TAG_CATEGORIES: 'tagCategories',
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      getMany = mockGetMany;
+      setAll = mockSetAll;
+      get = vi.fn();
+      set = vi.fn();
     },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      TAG_SUMMARY_MODE: 'tagSummaryMode',
-      TAG_CATEGORIES: 'tagCategories',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      TAG_SUMMARY_MODE: 'tagSummaryMode',
-      TAG_CATEGORIES: 'tagCategories',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-    StorageKeys: {
-      TAG_SUMMARY_MODE: 'tagSummaryMode',
-      TAG_CATEGORIES: 'tagCategories',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 // Mock settingsUiHelper
 vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
@@ -214,7 +78,6 @@ vi.mock('../../utils/tagUtils.js', () => ({
 }));
 
 import { initTagsPanel } from '../tagsPanel.js';
-import { getSettings, saveSettingsWithAllowedUrls } from '../../utils/storage.js';
 
 describe('tagsPanel DOM Integration Tests', () => {
   const requiredDomElements = `
@@ -231,8 +94,9 @@ describe('tagsPanel DOM Integration Tests', () => {
     document.body.innerHTML = requiredDomElements;
     vi.clearAllMocks();
     // Reset mock implementations
-    (getSettings as ReturnType<typeof vi.fn>).mockResolvedValue({});
-    (saveSettingsWithAllowedUrls as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    mockGetAll.mockResolvedValue({});
+    mockGetMany.mockResolvedValue({});
+    mockSetAll.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -248,11 +112,11 @@ describe('tagsPanel DOM Integration Tests', () => {
 
     it('loads tag settings from storage', async () => {
       await initTagsPanel();
-      expect(getSettings).toHaveBeenCalled();
+      expect(mockGetMany).toHaveBeenCalled();
     });
 
     it('loads user categories from settings', async () => {
-      (getSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      mockGetMany.mockResolvedValueOnce({
         tagCategories: [
           { name: 'custom1', isDefault: false, createdAt: Date.now() },
           { name: 'custom2', isDefault: false, createdAt: Date.now() },
@@ -264,14 +128,14 @@ describe('tagsPanel DOM Integration Tests', () => {
     });
 
     it('shows no user categories message when list is empty', async () => {
-      (getSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({});
+      mockGetMany.mockResolvedValueOnce({});
       await initTagsPanel();
       const noUserCategoriesMsg = document.getElementById('noUserCategoriesMsg');
       expect(noUserCategoriesMsg?.hidden).toBe(false);
     });
 
     it('hides no user categories message when categories exist', async () => {
-      (getSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      mockGetMany.mockResolvedValueOnce({
         tagCategories: [{ name: 'custom1', isDefault: false, createdAt: Date.now() }],
       });
       await initTagsPanel();
@@ -300,12 +164,11 @@ describe('tagsPanel DOM Integration Tests', () => {
       await initTagsPanel();
       const saveTagsBtn = document.getElementById('saveTagsBtn') as HTMLButtonElement;
       saveTagsBtn.click();
-      await new Promise(resolve => setTimeout(resolve, 10));
-      expect(saveSettingsWithAllowedUrls).toHaveBeenCalled();
+      await vi.waitFor(() => expect(mockSetAll).toHaveBeenCalled());
     });
 
     it('loads tag summary mode from settings', async () => {
-      (getSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      mockGetMany.mockResolvedValueOnce({
         tagSummaryMode: true,
       });
       await initTagsPanel();
@@ -314,7 +177,7 @@ describe('tagsPanel DOM Integration Tests', () => {
     });
 
     it('default tag summary mode is false', async () => {
-      (getSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({});
+      mockGetMany.mockResolvedValueOnce({});
       await initTagsPanel();
       const tagSummaryModeInput = document.getElementById('tagSummaryMode') as HTMLInputElement;
       expect(tagSummaryModeInput.checked).toBe(false);
@@ -343,7 +206,7 @@ describe('tagsPanel DOM Integration Tests', () => {
     });
 
     it('prevents duplicate category names', async () => {
-      (getSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({});
+      mockGetMany.mockResolvedValueOnce({});
       await initTagsPanel();
       const newCategoryInput = document.getElementById('newCategoryInput') as HTMLInputElement;
       const addCategoryBtn = document.getElementById('addCategoryBtn') as HTMLButtonElement;
@@ -369,7 +232,7 @@ describe('tagsPanel DOM Integration Tests', () => {
     });
 
     it('clicking user category dispatches navigate-to-tag event', async () => {
-      (getSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      mockGetMany.mockResolvedValueOnce({
         tagCategories: [{ name: 'customTag', isDefault: false, createdAt: Date.now() }],
       });
       await initTagsPanel();
@@ -385,7 +248,7 @@ describe('tagsPanel DOM Integration Tests', () => {
     });
 
     it('can delete user category', async () => {
-      (getSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      mockGetMany.mockResolvedValueOnce({
         tagCategories: [{ name: 'toBeDeleted', isDefault: false, createdAt: Date.now() }],
       });
       await initTagsPanel();
@@ -397,7 +260,7 @@ describe('tagsPanel DOM Integration Tests', () => {
     });
 
     it('saves tag settings with correct data structure', async () => {
-      (getSettings as ReturnType<typeof vi.fn>).mockResolvedValueOnce({});
+      mockGetMany.mockResolvedValueOnce({});
       await initTagsPanel();
 
       // Add a category
@@ -410,9 +273,7 @@ describe('tagsPanel DOM Integration Tests', () => {
       const saveTagsBtn = document.getElementById('saveTagsBtn') as HTMLButtonElement;
       saveTagsBtn.click();
 
-      await new Promise(resolve => setTimeout(resolve, 10));
-
-      expect(saveSettingsWithAllowedUrls).toHaveBeenCalledWith(
+      await vi.waitFor(() => expect(mockSetAll).toHaveBeenCalledWith(
         expect.objectContaining({
           tagCategories: expect.arrayContaining([
             expect.objectContaining({
@@ -421,7 +282,7 @@ describe('tagsPanel DOM Integration Tests', () => {
             }),
           ]),
         }),
-      );
+      ));
     });
   });
 });

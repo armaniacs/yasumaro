@@ -33,7 +33,78 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
-## [Unreleased]
+## [6.7.80] - 2026-08-25
+
+### Fixed
+
+- ブランチ差分レビュー（`/review branch`）で検出した問題を修正：
+  - `PerUrlMutexMap.runExclusiveOn` が `acquire()` 失敗時（キュー満杯・タイムアウト）にも `finally` で `release()` を呼び、他レコーディングが保持中のロックを誤解放・譲渡して per-URL 直列化が壊れる問題を修正。取得成功時のみ解放する `acquired` フラグを導入
+  - `storageMaintenance` の `setSqliteHealthCheck` 注入が Service Worker でのみ実行されるため、ポップアップ/オプション画面では `getSqliteHealthCheck()` が常に `null` → `async () => false` となり、レガシー領域の退避（`purgeLegacyStorage`）がスキップされてクォータ超過ユーザーの設定保存が `STORAGE_QUOTA_EXCEEDED` で失敗するリグレッションを修正。`getDefaultSqliteHealthCheck()`（SqliteClient ベースの遅延フォールバック）を復活させ、`ensureStorageQuota` を「明示指定 → 注入済み → 遅延フォールバック」の順で解決
+  - `saveSettings` が `ensureStorageQuota` を二重実行し、明示的な `sqliteHealthCheck` 引数が実効ゲートで無視されていた問題を修正。クォータチェックを `ChromeStorageAdapter.setSettings` に一本化し、ヘルスチェックを `setAll` → `setSettings` 経由でスレッド
+
+### Refactor
+
+- `SettingsRepository` の未使用ファサード（`getCleansingConfig`/`getThresholds`/`getObsidianConfig`/`getAiProviderConfig`/`getPrivacyConfig`）と、それを支える `rules.ts` の手動ミラーテーブル（`CLEANSING_RULE_PROP_MAP` 33件 / `THRESHOLD_RULES_FACADE` 7件 ほか）を削除し、`aiSummaryCleaner/rules.ts` を単一ソースに復帰（デッドコード・ドリフトリスク解消）
+- `content/visitGate.ts` の未使用 `shouldRecordVisit` ヘルパ（`extractor.ts` の同名ラッパが shadowing）を削除
+- `offscreen.ts` の未使用 `buildRecordFromPayload` re-export を削除（利用側は `browsingLogCodec.js` を直接 import）
+
+## [6.7.79] - 2026-08-25
+
+### Refactor
+
+- Architecture Deepening 0825a（arch-delivery-loop）診断5候補 → RICE再計算で残存stagedを整理。`SettingsRepository`にObsidian/AI/Privacy 3 facadeを追加し47箇所の`StorageKeys.`直参照94行を集約（PBI-01, RICE 32.0, 0.45w）、`CleansingConfig`に`Record<ThresholdProp,number>`交差を追加し3箇所`as unknown`を型安全化（PBI-02, 32.0, 0.10w）、`createBackgroundServices`後半7件を`container.register(singleton:true)`に移行し3重型更新を解消（PBI-03, 22.5, 0.35w）をWave1並列3で、`Settings`を`Partial<StrictSettings>`に一本化し`settings['typo']`を型エラー化（PBI-04, 36.0, 0.25w）をWave2で。8394 tests PASS / type-check PASS / lint 63 warnings。
+
+## [6.7.78] - 2026-08-24
+
+### Refactor
+
+- Architecture Deepening 0824d（arch-delivery-loop）診断4候補 → RICE再計算でServiceContainer/THRESHOLD_RULESのenablerにより2.0w→0.90w stagedに55%削減。`SettingsRepository`に`getCleansingConfig()`/`getThresholds()` facadeを追加し40+7キーの取得を`CLEANSING_RULES`/`THRESHOLD_RULES`の`storageKey`配列を`getMany`で一括取得+`DEFAULT_SETTINGS` fallback内包で完結（PBI-05, RICE 63.0, Effort 0.20w）。`VisitGate`純粋value objectを`src/content/visitGate.ts`に新設し`PageState`に`toVisitGateThresholds()`/`toVisitState()` DI seam追加、`extractor.ts`の`checkVisitConditions`を`VisitGate`委譲に置換（PBI-06, RICE 16.8, Effort 0.90w）。Wave 1並列2件はstorage vs contentでdisjoint、8394 tests PASS / type-check PASS。残りSlice A/C（Obsidian/AI/index撤廃）は次スプリントへ。
+
+## [6.7.77] - 2026-08-24
+
+### Refactor
+
+- `ServiceContainer`を`src/background/serviceContainer.ts`に新設し`createBackgroundServices`の11 singleton生成を`container.register`宣言的配線に置換。`getSharedSqliteClient`を`singleton:true` factoryとして登録し、deferredとなっていたArchitecture Deepening #4を解消。`8394 tests PASS / type-check PASS / build 6.89MB`
+
+## [6.7.76] - 2026-08-24
+
+### Refactor
+
+- Architecture Deepening 0824c（arch-delivery-loop）診断7候補 → RICEスコアリング + 並列性調査で3件をWave 1並列で実装。`THRESHOLD_RULES`テーブル7要素を`src/utils/aiSummaryCleaner/rules.ts`に新設し`THRESHOLD_DEFAULTS`と`DEFAULT_CLEANSING_CONFIG`/`DEFAULT_SETTINGS`を同テーブルから導出、`src/content/extractor.ts`の7連打ifを`for (const t of THRESHOLD_RULES)`の1ループに集約（PBI-01, RICE 42.0）。`CONTENT_SCRIPT_ALLOWED_TYPES`をSSOT化し`CONTENT_SCRIPT_ONLY_TYPES`を派生として型保証、`MessageRouter.dispatch`に`tab.id/tab.url`の厳格チェックを集約し`messageHandler`を`restore+migrate+router.dispatch`の薄い層に縮小（PBI-02, RICE 21.3）。4 helper（callQuery/callMutate/callMaintain/callStatus）を`callInternal` genericに集約し`sqliteMessageHandlers`に`satisfies Record<SqliteMessageType, Handler>`で静的網羅性を付与、`storageMaintenance`の`await import+new SqliteClient`を削除し`setSqliteHealthCheck`注入に、`createBackgroundServices`で`getSharedSqliteClient`を注入、`quota.ts`の`getStorageUsage`を`getBytesInUse`不在時に0を返す耐性化でstub欠落を解消（PBI-03, RICE 17.1）。deferred 3件（extractor分割/ServiceContainer/StorageKeys）を次スプリントへ。`8394 tests PASS / type-check PASS / lint 62 warnings / build 6.89MB`
+
+## [6.7.75] - 2026-08-24
+
+### Refactor
+
+- 並列スプリントで deferred 3件を同時実装。`ProviderRegistry` 導入で `OpenAIProvider` 5分岐を `GenericOpenAICompatibleProvider` + `PROVIDER_REGISTRY` Map に集約し `isLocal`/`requiresApiKey` で timeout/contentLimit を導出、`aiModelKey` を registry ルックアップの互換 shim 化、`RemoteAIService.registerDefaultProviders` をループ化（PBI-10, RICE 11.2, 11 tests 追加）。`SqliteClient` の 20 shim 削除と `call` → `callQuery/callMutate/callMaintain/callStatus` 4分割で 100行削減、13テストを新 domain API に移行（PBI-11, RICE 20.0）。`offscreen` の 24-case dispatch を `Map` + 共通 `assertPayloadSize` + `browsingLogCodec` 抽出で guard 重複を解消し VULN-001 再発防止（PBI-07, RICE 48.0）。3件のファイル重複はゼロで完全並列実行、統合時の `types.ts` 重複定義と `eslint` worktree 除外および `SettingsRepository` モック不整合（27 tests FAIL）を解消。`8394 tests PASS / type-check PASS / lint 62 warnings`
+
+## [6.7.74] - 2026-08-24
+
+### Fixed
+
+- Cookie同意バナー統合欠落による 2 tests FAIL を修正。`entrypoints/options/index.html` の手書き checkbox 群に `ai-summary-cleansing-cookie` が欠落し `aiSummaryCleansingSettingsV2-ruleDerivation` が `id="ai-summary-cleansing-cookie"` 不存在で失敗、`src/utils/__tests__/aiSummaryCleaner.test.ts` の「全無効」ケースが `cookieEnabled:false` 未指定で `totalRemoved 1` になる問題を解消。`AiSummaryCleansingSettings` を `RuleKey` からの mapped type `Record<`${RuleKey}Enabled`, boolean>` に置換し `CLEANSING_RULES` が SSOT になるよう型レベルで保証、`public/_locales/*/messages.json` に `aiSummaryCleansingCookieDesc` を追加
+
+### Refactor
+
+- Architecture Deepening 0824b（arch-delivery-loop）診断 8候補 → RICE スコアリング → 2件を実装・2件を次スプリントへ。`AiSummaryCleansingSettings` 手書き 33項目を `RuleKey` 導出の mapped type に置換しルール追加時の型追従を保証（PBI 09, RICE 64.0）。`ProviderRegistry`（RICE 11.2）と `SqliteClient shim`（RICE 20.0）は次スプリントへ見送り。詳細は `dev-docs/archived/pbi/2026-08-24-00-backlog-0824b.md` と HTMLレポート `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260824190249.html` を参照
+
+## [6.7.73] - 2026-08-24
+
+### Fixed
+
+- Dell Pro Max ページで OneTrust 製 Cookie同意バナー（`onetrust`/`ot-sdk`系）の定型文が AI へ送信されていた問題を修正。AI要約クレンジングに `cookie` ルール（`COOKIE_TEXT_PATTERNS` 12件: 日 `Cookieの管理`/`必須Cookie`/`マーケティング` 等、英 `Manage.*cookie`/`Always active` 等）を新設し、OneTrust 系クラス（`onetrust`/`ot-sdk`/`optanon`/`truste`等）を `POPUP_PATTERNS` に追加して無条件除去。`stripCookieConsentElements` によりテキストマッチでも1000文字以下のバナー要素を除去。`historyAiSummaryCleansedReasonCookie` を ja/en に追加し、既存ユーザーも `defaultEnabled:true` で有効
+
+## [6.7.72] - 2026-08-24
+
+### Refactor
+
+- Architecture Deepening 0824a（arch-delivery-loop）3件を実装。`SettingsRepository` の shim（`tryLegacyGetAll`/`tryLegacySave` 66行）を削除し `InMemoryStorageAdapter.getSettings` を `applyMigrationsAndDecrypt(…, false)` で本番ミラー化、`settingsStore.legacy.ts` を `@deprecated` static wrapper 化して `SettingsReader` 経由のテストモック移行（29テストの `SettingsRepository` モック化 + `cspSettings.ts` の `this.repo` 注入修正）、`ProviderId` union 7種を `storage/types.ts` に導入し `ProviderSlot.provider` を型安全化、 `SqliteHealthCheck` を `types.ts` Layer 0 に抽出し `storageMaintenance.ts` の `utils→background` 動的 import を排除して Layer 循環を解消。PBI-02（StorageKeys facade）/ PBI-04（Pipeline composition root）/ PBI-06（content extractor global state）/ PBI-07（offscreen dispatch guard）は次スプリントへ見送り
+
+### Fixed
+
+- `settingsStore.legacy.ts` の未使用 import と `cspSettings.ts` の未使用 `SettingsReader` 型 import による lint エラー（`no-unused-vars`）を修正
+- `eslint.config.js` に `.vulnhunter-fix/` と `obsidian-smart-history_VULNHUNT_RESULTS*/` の ignore を追加し `make clean test` の lint ゲート（413件の `parserOptions.project` エラー）が `src/` のみに限定されるよう修正
+- `src/popup/__tests__/statusChecker.test.ts` のブラックリスト判定テストが `settingsStore.legacy` cache により `mockGetAll` の上書きが反映されない問題を修正。 `clearSettingsCache` を `beforeEach` で呼ぶよう変更
 
 ## [6.7.71] - 2026-08-24
 

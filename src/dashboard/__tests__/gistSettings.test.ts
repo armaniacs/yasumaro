@@ -2,194 +2,40 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { initGistSettings } from '../gistSettings.js';
 
-const { mockGetSettings, mockSaveSettings, mockTestConnection } = vi.hoisted(() => ({
-  mockGetSettings: vi.fn(),
-  mockSaveSettings: vi.fn(),
+const { mockGetAll, mockSetAll, mockTestConnection } = vi.hoisted(() => ({
+  mockGetAll: vi.fn(),
+  mockSetAll: vi.fn(),
   mockTestConnection: vi.fn(),
 }));
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
+  return {
+    ...actual,
     StorageKeys: {
       GIST_ENABLED: 'gist_enabled',
       GITHUB_PAT: 'github_pat',
       GIST_ID: 'gist_id',
     },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+});
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      GIST_ENABLED: 'gist_enabled',
-      GITHUB_PAT: 'github_pat',
-      GIST_ID: 'gist_id',
-    },
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      GIST_ENABLED: 'gist_enabled',
-      GITHUB_PAT: 'github_pat',
-      GIST_ID: 'gist_id',
+    settingsRepository: {
+      getAll: mockGetAll,
+      setAll: mockSetAll,
+      getMany: vi.fn(),
     },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      GIST_ENABLED: 'gist_enabled',
-      GITHUB_PAT: 'github_pat',
-      GIST_ID: 'gist_id',
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      setAll = mockSetAll;
+      getMany = vi.fn();
     },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      GIST_ENABLED: 'gist_enabled',
-      GITHUB_PAT: 'github_pat',
-      GIST_ID: 'gist_id',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      GIST_ENABLED: 'gist_enabled',
-      GITHUB_PAT: 'github_pat',
-      GIST_ID: 'gist_id',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      GIST_ENABLED: 'gist_enabled',
-      GITHUB_PAT: 'github_pat',
-      GIST_ID: 'gist_id',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 vi.mock('../../background/syncTargets/gistSyncTarget.js', () => ({
   GistSyncTarget: vi.fn(function () {
@@ -244,31 +90,31 @@ describe('initGistSettings', () => {
 
   describe('element-missing guards', () => {
     it('handles missing gistEnabled element', async () => {
-      mockGetSettings.mockResolvedValue({});
+      mockGetAll.mockResolvedValue({});
       document.body.innerHTML = '<input id="githubPat" /><button id="saveGistSettingsBtn" />';
       await expect(initGistSettings()).resolves.toBeUndefined();
     });
 
     it('handles missing githubPat element', async () => {
-      mockGetSettings.mockResolvedValue({});
+      mockGetAll.mockResolvedValue({});
       document.body.innerHTML = '<input id="gistEnabled" /><button id="saveGistSettingsBtn" />';
       await expect(initGistSettings()).resolves.toBeUndefined();
     });
 
     it('handles missing save button', async () => {
-      mockGetSettings.mockResolvedValue({});
+      mockGetAll.mockResolvedValue({});
       document.body.innerHTML = '<input id="gistEnabled" /><input id="githubPat" />';
       await expect(initGistSettings()).resolves.toBeUndefined();
     });
 
     it('handles missing test button', async () => {
-      mockGetSettings.mockResolvedValue({});
+      mockGetAll.mockResolvedValue({});
       document.body.innerHTML = '<input id="gistEnabled" /><input id="githubPat" /><button id="saveGistSettingsBtn" />';
       await expect(initGistSettings()).resolves.toBeUndefined();
     });
 
     it('handles complete absence of all elements', async () => {
-      mockGetSettings.mockResolvedValue({});
+      mockGetAll.mockResolvedValue({});
       document.body.innerHTML = '';
       await expect(initGistSettings()).resolves.toBeUndefined();
     });
@@ -277,7 +123,7 @@ describe('initGistSettings', () => {
   describe('populating from settings', () => {
     it('sets checkbox to checked when GIST_ENABLED is true', async () => {
       const { gistEnabled } = setupDom();
-      mockGetSettings.mockResolvedValue({ gist_enabled: true, github_pat: 'ghi789' });
+      mockGetAll.mockResolvedValue({ gist_enabled: true, github_pat: 'ghi789' });
 
       await initGistSettings();
 
@@ -286,7 +132,7 @@ describe('initGistSettings', () => {
 
     it('sets checkbox to unchecked when GIST_ENABLED is falsy', async () => {
       const { gistEnabled } = setupDom();
-      mockGetSettings.mockResolvedValue({ gist_enabled: false, github_pat: '' });
+      mockGetAll.mockResolvedValue({ gist_enabled: false, github_pat: '' });
 
       await initGistSettings();
 
@@ -295,7 +141,7 @@ describe('initGistSettings', () => {
 
     it('sets githubPat value from settings', async () => {
       const { githubPat } = setupDom();
-      mockGetSettings.mockResolvedValue({ gist_enabled: true, github_pat: 'pat-123' });
+      mockGetAll.mockResolvedValue({ gist_enabled: true, github_pat: 'pat-123' });
 
       await initGistSettings();
 
@@ -304,7 +150,7 @@ describe('initGistSettings', () => {
 
     it('sets githubPat to empty string when not in settings', async () => {
       const { githubPat } = setupDom();
-      mockGetSettings.mockResolvedValue({ gist_enabled: false });
+      mockGetAll.mockResolvedValue({ gist_enabled: false });
 
       await initGistSettings();
 
@@ -315,15 +161,15 @@ describe('initGistSettings', () => {
   describe('save handler', () => {
     it('calls saveSettings with correct values on click and shows success status', async () => {
       const { gistEnabled, githubPat, saveBtn, statusEl } = setupDom();
-      mockGetSettings.mockResolvedValue({ gist_enabled: true, github_pat: 'pat-123' });
-      mockSaveSettings.mockResolvedValue(undefined);
+      mockGetAll.mockResolvedValue({ gist_enabled: true, github_pat: 'pat-123' });
+      mockSetAll.mockResolvedValue(undefined);
 
       await initGistSettings();
 
       saveBtn.click();
       await vi.waitFor(() => expect(statusEl.textContent).toBe('Gist settings saved'));
 
-      expect(mockSaveSettings).toHaveBeenCalledWith({
+      expect(mockSetAll).toHaveBeenCalledWith({
         gist_enabled: true,
         github_pat: 'pat-123',
       });
@@ -332,8 +178,8 @@ describe('initGistSettings', () => {
 
     it('shows error status when saveSettings throws', async () => {
       const { saveBtn, statusEl } = setupDom();
-      mockGetSettings.mockResolvedValue({ gist_enabled: true, github_pat: '' });
-      mockSaveSettings.mockRejectedValue(new Error('quota exceeded'));
+      mockGetAll.mockResolvedValue({ gist_enabled: true, github_pat: '' });
+      mockSetAll.mockRejectedValue(new Error('quota exceeded'));
 
       await initGistSettings();
 
@@ -346,14 +192,14 @@ describe('initGistSettings', () => {
 
     it('uses fallback values when elements are null', async () => {
       document.body.innerHTML = '<button id="saveGistSettingsBtn" />';
-      mockGetSettings.mockResolvedValue({});
-      mockSaveSettings.mockResolvedValue(undefined);
+      mockGetAll.mockResolvedValue({});
+      mockSetAll.mockResolvedValue(undefined);
 
       await initGistSettings();
 
       document.getElementById('saveGistSettingsBtn')!.click();
       await vi.waitFor(() => {
-        expect(mockSaveSettings).toHaveBeenCalledWith({
+        expect(mockSetAll).toHaveBeenCalledWith({
           gist_enabled: false,
           github_pat: '',
         });
@@ -364,7 +210,7 @@ describe('initGistSettings', () => {
   describe('test connection handler', () => {
     it('shows success status when testConnection succeeds', async () => {
       const { testBtn, statusEl } = setupDom();
-      mockGetSettings.mockResolvedValue({ gist_enabled: true, github_pat: 'pat' });
+      mockGetAll.mockResolvedValue({ gist_enabled: true, github_pat: 'pat' });
       mockTestConnection.mockResolvedValue({ success: true, message: 'Connected!' });
 
       await initGistSettings();
@@ -376,7 +222,7 @@ describe('initGistSettings', () => {
 
     it('shows error status when testConnection returns non-success', async () => {
       const { testBtn, statusEl } = setupDom();
-      mockGetSettings.mockResolvedValue({ gist_enabled: true, github_pat: 'bad-pat' });
+      mockGetAll.mockResolvedValue({ gist_enabled: true, github_pat: 'bad-pat' });
       mockTestConnection.mockResolvedValue({ success: false, message: 'Invalid PAT' });
 
       await initGistSettings();
@@ -388,7 +234,7 @@ describe('initGistSettings', () => {
 
     it('shows error status when testConnection throws', async () => {
       const { testBtn, statusEl } = setupDom();
-      mockGetSettings.mockResolvedValue({ gist_enabled: true, github_pat: 'pat' });
+      mockGetAll.mockResolvedValue({ gist_enabled: true, github_pat: 'pat' });
       mockTestConnection.mockRejectedValue(new Error('network error'));
 
       await initGistSettings();

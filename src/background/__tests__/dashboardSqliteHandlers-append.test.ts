@@ -6,6 +6,8 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
+const mockGetAll = vi.hoisted(() => vi.fn());
+
 // Mock dependencies
 vi.mock('../../utils/logger.js', () => ({
   logError: vi.fn(),
@@ -19,172 +21,31 @@ vi.mock('../../utils/errorUtils.js', () => ({
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
+  return {
+    ...actual,
     StorageKeys: {
       OBSIDIAN_API_KEY: 'obsidian_api_key',
       OBSIDIAN_ENABLED: 'obsidian_enabled',
     },
-    getSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
+});
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-    },
-    getSettings: vi.fn(),
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
+    settingsRepository: {
+      getAll: mockGetAll,
+      setAll: vi.fn(),
+      getMany: vi.fn(),
     },
-    getSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      setAll = vi.fn();
+      getMany = vi.fn();
     },
-    getSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-    },
-    getSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-    },
-    getSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-    },
-    getSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 vi.mock('../obsidianClient.js', () => {
   const mockAppend = vi.fn().mockResolvedValue(undefined);
@@ -209,62 +70,21 @@ const APPEND_TOKEN = 'test-token';
 import { ObsidianClient } from '../obsidianClient.js';
 import { formatEntriesToMarkdown } from '../../dashboard/obsidianFormatter.js';
 import { logError, logInfo } from '../../utils/logger.js';
-import { getSettings } from '../../utils/storage.js';
 
 // Helper to create a mock SqliteClient
 function createMockSqliteClient(rows: unknown[] = []) {
-  const result = {
-    queryResult: vi.fn().mockResolvedValue({ success: true, data: { rows, total: rows.length } }),
-    searchResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
-    toggleStarResult: vi.fn().mockResolvedValue({ success: true, data: { is_starred: 1 } }),
-    deleteResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-    updateResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-    insertResult: vi.fn().mockResolvedValue({ success: true, data: { id: 1 } }),
-    getCountResult: vi.fn().mockResolvedValue({ success: true, data: 0 }),
-    clearAllResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-    getStatus: vi.fn().mockResolvedValue({ initialized: true }),
-    runOpfsSpikeResult: vi.fn().mockResolvedValue({ success: true, data: {} }),
-    restoreDbResult: vi.fn().mockResolvedValue({ success: true, data: undefined }),
-    backupDbResult: vi.fn().mockResolvedValue({ success: true, data: new Uint8Array() }),
-    purgeOldRecordsResult: vi.fn().mockResolvedValue({ success: true, data: { purged: 0 } }),
-    purgeContentResult: vi.fn().mockResolvedValue({ success: true, data: { purged: 0 } }),
-    queryAuditLogResult: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
-  };
-  // Core methods used by createSqliteClientDeps — delegate to the *Result wrappers above
   const client = {
-    ...result,
     query: vi.fn().mockImplementation((op: any) => {
-      if (op?.kind === 'search') return client.searchResult(op.text, op.limit, op.offset, op);
-      if (op?.kind === 'count') return client.getCountResult();
-      if (op?.kind === 'auditLog') return client.queryAuditLogResult(op);
-      return client.queryResult(op);
+      if (op?.kind === 'search') return Promise.resolve({ success: true, data: { rows: [], total: 0 } });
+      if (op?.kind === 'count') return Promise.resolve({ success: true, data: 0 });
+      if (op?.kind === 'auditLog') return Promise.resolve({ success: true, data: { rows: [], total: 0 } });
+      return Promise.resolve({ success: true, data: { rows, total: rows.length } });
     }),
-    mutate: vi.fn().mockImplementation((op: any) => {
-      switch (op.type) {
-        case 'insert': return client.insertResult(op.record, op.traceId);
-        case 'insertBatch': return client.insertBatchResult(op.records);
-        case 'update': return client.updateResult(op.id, op.changes);
-        case 'delete': return client.deleteResult(op.id);
-        case 'toggleStar': return client.toggleStarResult(op.id);
-        case 'insertAuditLog': return client.insertAuditLogResult(op.record);
-        default: return Promise.resolve({ success: true, data: undefined });
-      }
-    }),
-    maintain: vi.fn().mockImplementation((op: any) => {
-      switch (op.type) {
-        case 'init': return client.init ? client.init() : Promise.resolve({ success: true, data: true });
-        case 'backup': return client.backupDbResult();
-        case 'restore': return client.restoreDbResult(op.data);
-        case 'clearAll': return client.clearAllResult();
-        case 'purgeOldRecords': return client.purgeOldRecordsResult(op.retentionDays, op.maxRecords);
-        case 'purgeContent': return client.purgeContentResult(op.retentionDays, op.maxRecords, op.includeStarred);
-        case 'opfsSpike': return client.runOpfsSpikeResult();
-        case 'healthCheck': return client.isSqliteHealthy ? client.isSqliteHealthy() : Promise.resolve(true);
-        default: return Promise.resolve({ success: true, data: undefined });
-      }
-    }),
+    mutate: vi.fn().mockResolvedValue({ success: true, data: { id: 1 } }),
+    maintain: vi.fn().mockResolvedValue({ success: true, data: undefined }),
+    getStatus: vi.fn().mockResolvedValue({ initialized: true }),
   };
-  return client;
+  return client as any;
 }
 
 describe('handleDashboardSqlite — append_to_obsidian', () => {
@@ -275,7 +95,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       obsidian_api_key: 'valid-api-key-123456',
       obsidian_enabled: true,
     };
-    vi.mocked(getSettings).mockResolvedValue({ ...defaults, ...overrides } as any);
+    mockGetAll.mockResolvedValue({ ...defaults, ...overrides } as any);
   }
 
   beforeEach(() => {
@@ -344,7 +164,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   it('proceeds even when OBSIDIAN_ENABLED is false (manual append ignores the flag)', async () => {
     setupSettings({ obsidian_enabled: false, obsidian_api_key: 'valid-api-key-123456' });
     const mockEntries = [{ id: 1, url: 'https://a.com', title: 'Page A', summary: 'Summary A' }];
-    mockSqliteClient.queryResult.mockResolvedValue({ success: true, data: { rows: mockEntries, total: 1 } });
+    mockSqliteClient.query.mockResolvedValue({ success: true, data: { rows: mockEntries, total: 1 } });
 
     const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [1, 2] },
@@ -358,7 +178,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
 
   it('returns error when no matching entries found', async () => {
     setupSettings({ obsidian_api_key: 'valid-api-key-123456' });
-    mockSqliteClient.queryResult.mockResolvedValue({
+    mockSqliteClient.query.mockResolvedValue({
       success: true,
       data: { rows: [], total: 0 },
     });
@@ -371,7 +191,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
 
     expect(result).toEqual({ success: false, error: 'No matching entries found' });
     // Verify the query was called with the targeted ids
-    expect(mockSqliteClient.queryResult).toHaveBeenCalledWith(
+    expect(mockSqliteClient.query).toHaveBeenCalledWith(
       expect.objectContaining({ ids: [1, 2] })
     );
   });
@@ -382,7 +202,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       { id: 1, url: 'https://a.com', title: 'Page A', summary: 'Summary A' },
       { id: 2, url: 'https://b.com', title: 'Page B', summary: 'Summary B' },
     ];
-    mockSqliteClient.queryResult.mockResolvedValue({ success: true, data: { rows: mockEntries, total: 2 } });
+    mockSqliteClient.query.mockResolvedValue({ success: true, data: { rows: mockEntries, total: 2 } });
 
     const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [1, 2] },
@@ -397,7 +217,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
 
   it('returns error when Obsidian append fails', async () => {
     setupSettings({ obsidian_api_key: 'valid-api-key-123456' });
-    mockSqliteClient.queryResult.mockResolvedValue({
+    mockSqliteClient.query.mockResolvedValue({
       success: true,
       data: { rows: [{ id: 1, url: 'https://a.com', title: 'Page A' }], total: 1 },
     });
@@ -426,7 +246,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       title: `Page ${i + 1}`,
     }));
     // Mock returns all entries; handler passes IDs to SQL layer
-    mockSqliteClient.queryResult.mockResolvedValue({ success: true, data: { rows: allEntries, total: 50 } });
+    mockSqliteClient.query.mockResolvedValue({ success: true, data: { rows: allEntries, total: 50 } });
 
     const result = await dispatchDashboardSqlite(
       { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [5, 25, 45] },
@@ -435,7 +255,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     );
 
     expect(result).toEqual({ success: true, appended: 50 }); // all returned from mock
-    expect(mockSqliteClient.queryResult).toHaveBeenCalledWith(
+    expect(mockSqliteClient.query).toHaveBeenCalledWith(
       expect.objectContaining({ ids: [5, 25, 45] })
     );
   });
@@ -443,7 +263,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
   it('handles mixed valid and invalid IDs', async () => {
     setupSettings({ obsidian_api_key: 'valid-api-key-123456' });
     // SQL handles filtering; mock returns all matching entries
-    mockSqliteClient.queryResult.mockResolvedValue({
+    mockSqliteClient.query.mockResolvedValue({
       success: true,
       data: { rows: [{ id: 1, url: 'https://a.com', title: 'Exists' }], total: 1 },
     });
@@ -455,7 +275,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     );
 
     expect(result).toEqual({ success: true, appended: 1 });
-    expect(mockSqliteClient.queryResult).toHaveBeenCalledWith(
+    expect(mockSqliteClient.query).toHaveBeenCalledWith(
       expect.objectContaining({ ids: [1, 999] })
     );
   });
@@ -482,7 +302,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     it('accepts ids array with exactly 100 elements', async () => {
       const ids = Array.from({ length: 100 }, (_, i) => i + 1);
       const mockEntries = ids.map(id => ({ id, url: `https://p${id}.com`, title: `Page ${id}` }));
-      mockSqliteClient.queryResult.mockResolvedValue({ success: true, data: { rows: mockEntries, total: 100 } });
+      mockSqliteClient.query.mockResolvedValue({ success: true, data: { rows: mockEntries, total: 100 } });
 
       const result = await dispatchDashboardSqlite(
         { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids },
@@ -550,7 +370,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
         url: `https://e${i}.com`,
         created_at: Date.now(),
       }));
-      mockSqliteClient.insertResult.mockResolvedValue({ success: true, data: { id: 1 } });
+      mockSqliteClient.mutate.mockResolvedValue({ success: true, data: { id: 1 } });
 
       const result = await dispatchDashboardSqlite(
         { subtype: 'import', rows, confirmToken: 'test-token' },

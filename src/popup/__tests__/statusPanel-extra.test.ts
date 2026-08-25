@@ -3,8 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const {
   mockGetCurrentTab,
-  mockGetSettings,
-  mockSaveSettings,
   mockGetMessage,
   mockIsAllUrlsPermitted,
   mockIsHostPermitted,
@@ -13,8 +11,6 @@ const {
   mockCheckPageStatus,
 } = vi.hoisted(() => ({
   mockGetCurrentTab: vi.fn(),
-  mockGetSettings: vi.fn(),
-  mockSaveSettings: vi.fn(),
   mockGetMessage: vi.fn(),
   mockIsAllUrlsPermitted: vi.fn(),
   mockIsHostPermitted: vi.fn(),
@@ -22,6 +18,9 @@ const {
   mockCheckDomainTrust: vi.fn(),
   mockCheckPageStatus: vi.fn(),
 }));
+const mockGetAll = vi.hoisted(() => vi.fn());
+const mockSetAll = vi.hoisted(() => vi.fn());
+const mockGetMany = vi.hoisted(() => vi.fn());
 
 const mockRecordDeniedVisit = vi.fn();
 const mockRequestPermission = vi.fn();
@@ -31,179 +30,12 @@ vi.mock('../tabUtils.js', () => ({ getCurrentTab: mockGetCurrentTab }));
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      DOMAIN_WHITELIST: 'domainWhitelist',
-      PRIVACY_MODE: 'privacy_mode',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      DOMAIN_WHITELIST: 'domainWhitelist',
-      PRIVACY_MODE: 'privacy_mode',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      DOMAIN_WHITELIST: 'domainWhitelist',
-      PRIVACY_MODE: 'privacy_mode',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      DOMAIN_WHITELIST: 'domainWhitelist',
-      PRIVACY_MODE: 'privacy_mode',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      DOMAIN_WHITELIST: 'domainWhitelist',
-      PRIVACY_MODE: 'privacy_mode',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      DOMAIN_WHITELIST: 'domainWhitelist',
-      PRIVACY_MODE: 'privacy_mode',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      DOMAIN_WHITELIST: 'domainWhitelist',
-      PRIVACY_MODE: 'privacy_mode',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+  return { ...actual, StorageKeys: { ...(actual.StorageKeys as Record<string, unknown>), DOMAIN_WHITELIST: 'domain_whitelist', PRIVACY_MODE: 'privacy_mode' } };
+});
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = await importOriginal() as any;
+  return { ...actual, settingsRepository: { getAll: mockGetAll, setAll: mockSetAll, getMany: mockGetMany }, SettingsRepository: class { getAll = mockGetAll; setAll = mockSetAll; getMany = mockGetMany } };
+});
 
 vi.mock('../../utils/i18n.js', () => ({ getMessage: mockGetMessage }));
 
@@ -337,7 +169,7 @@ mockGetMessage.mockImplementation((key: string, substitutions?: string | string[
   }
   return msg;
 });
-  mockGetSettings.mockResolvedValue({ privacy_mode: 'full_pipeline' });
+  mockGetAll.mockResolvedValue({ privacy_mode: 'full_pipeline' });
   mockIsAllUrlsPermitted.mockResolvedValue(true);
   mockIsHostPermitted.mockResolvedValue(true);
 });
@@ -382,7 +214,7 @@ describe('initStatusPanel — mode badge', () => {
   });
 
   it('shows mode badge for local_only', async () => {
-    mockGetSettings.mockResolvedValue({ privacy_mode: 'local_only' });
+    mockGetAll.mockResolvedValue({ privacy_mode: 'local_only' });
     await initStatusPanel();
     const badge = document.getElementById('statusModeBadge')!;
     expect(badge.textContent).toBe('Local');
@@ -390,7 +222,7 @@ describe('initStatusPanel — mode badge', () => {
   });
 
   it('shows mode badge for masked_cloud', async () => {
-    mockGetSettings.mockResolvedValue({ privacy_mode: 'masked_cloud' });
+    mockGetAll.mockResolvedValue({ privacy_mode: 'masked_cloud' });
     await initStatusPanel();
     const badge = document.getElementById('statusModeBadge')!;
     expect(badge.textContent).toBe('Masked');
@@ -398,7 +230,7 @@ describe('initStatusPanel — mode badge', () => {
   });
 
   it('shows mode badge for full_pipeline', async () => {
-    mockGetSettings.mockResolvedValue({ privacy_mode: 'full_pipeline' });
+    mockGetAll.mockResolvedValue({ privacy_mode: 'full_pipeline' });
     await initStatusPanel();
     const badge = document.getElementById('statusModeBadge')!;
     expect(badge.textContent).toBe('Full');
@@ -406,7 +238,7 @@ describe('initStatusPanel — mode badge', () => {
   });
 
   it('shows mode badge for unknown mode with fallback', async () => {
-    mockGetSettings.mockResolvedValue({ privacy_mode: 'unknown_mode' });
+    mockGetAll.mockResolvedValue({ privacy_mode: 'unknown_mode' });
     await initStatusPanel();
     const badge = document.getElementById('statusModeBadge')!;
     expect(badge.textContent).toBe('Cloud');
@@ -418,7 +250,7 @@ describe('initStatusPanel — mode badge', () => {
   });
 
   it('tolerates mode badge settings error silently', async () => {
-    mockGetSettings.mockRejectedValueOnce(new Error('storage fail'));
+    mockGetAll.mockRejectedValueOnce(new Error('storage fail'));
     await expect(initStatusPanel()).resolves.not.toThrow();
   });
 });

@@ -14,7 +14,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { ExtensionMessage } from '../messageTypes.js';
-import { VALID_MESSAGE_TYPES, CONTENT_SCRIPT_ONLY_TYPES, NO_PAYLOAD_TYPES } from '../messageTypes.js';
+import { VALID_MESSAGE_TYPES, CONTENT_SCRIPT_ALLOWED_TYPES, NO_PAYLOAD_TYPES } from '../messageTypes.js';
 
 type ValidType = ExtensionMessage['type'];
 
@@ -88,8 +88,8 @@ describe('Message Type Consistency', () => {
         expect(unique.size).toBe(VALID_MESSAGE_TYPES.length);
     });
 
-    test('VALID_VISIT is in CONTENT_SCRIPT_ONLY_TYPES', () => {
-        expect(CONTENT_SCRIPT_ONLY_TYPES).toContain('VALID_VISIT');
+    test('VALID_VISIT is in CONTENT_SCRIPT_ALLOWED_TYPES', () => {
+        expect(CONTENT_SCRIPT_ALLOWED_TYPES).toContain('VALID_VISIT');
     });
 
     test('NO_PAYLOAD_TYPES are a subset of VALID_MESSAGE_TYPES', () => {
@@ -98,8 +98,8 @@ describe('Message Type Consistency', () => {
         }
     });
 
-    test('CONTENT_SCRIPT_ONLY_TYPES are a subset of VALID_MESSAGE_TYPES', () => {
-        for (const type of CONTENT_SCRIPT_ONLY_TYPES) {
+    test('CONTENT_SCRIPT_ALLOWED_TYPES are a subset of VALID_MESSAGE_TYPES', () => {
+        for (const type of CONTENT_SCRIPT_ALLOWED_TYPES) {
             expect(VALID_MESSAGE_TYPES).toContain(type);
         }
     });

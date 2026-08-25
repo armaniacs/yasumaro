@@ -12,7 +12,14 @@ export const STORAGE_QUOTA_BYTES = 10 * 1024 * 1024; // 10MB (chrome.storage.loc
  * @returns {Promise<number>} 使用量（バイト）
  */
 export async function getStorageUsage(): Promise<number> {
-    return await chrome.storage.local.getBytesInUse();
+    try {
+        if (typeof chrome !== 'undefined' && chrome.storage?.local?.getBytesInUse) {
+            return await chrome.storage.local.getBytesInUse();
+        }
+    } catch {
+        // fall through to 0 — test env without chrome.storage
+    }
+    return 0;
 }
 
 /**

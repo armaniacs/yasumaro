@@ -35,8 +35,8 @@ function makePage(): HTMLElement {
 }
 
 describe('CLEANSING_RULES — table integrity', () => {
-  it('defines exactly 32 rules', () => {
-    expect(CLEANSING_RULES).toHaveLength(32);
+  it('defines exactly 33 rules', () => {
+    expect(CLEANSING_RULES).toHaveLength(33);
   });
 
   it('has no duplicate keys', () => {
@@ -49,11 +49,11 @@ describe('CLEANSING_RULES — table integrity', () => {
     }
   });
 
-  it('keeps the six rules that default to ON', () => {
+  it('keeps the seven rules that default to ON', () => {
     // These defaults are user-visible: they decide what a stock install strips.
     const onByDefault = CLEANSING_RULES.filter(r => r.defaultEnabled).map(r => r.key);
     expect(onByDefault.sort()).toEqual(
-      ['ads', 'alt', 'metadata', 'nav', 'popup', 'recommend', 'social'].sort(),
+      ['ads', 'alt', 'cookie', 'metadata', 'nav', 'popup', 'recommend', 'social'].sort(),
     );
   });
 });
@@ -110,7 +110,7 @@ describe('count and cleanse agree', () => {
 });
 
 describe('every rule is represented end to end', () => {
-  it('records a count for all 32 rules, run or not', () => {
+  it('records a count for all 33 rules, run or not', () => {
     // "Did not run" must still be present as 0 — a missing key would surface
     // as `undefined` and break the arithmetic callers do on these fields.
     const result = cleanseAISummaryContent(makePage(), {});

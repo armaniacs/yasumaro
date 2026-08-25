@@ -5,167 +5,42 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = vi.fn() as any;
 }
 
+const { mockGetAll, mockGetMany, mockSetAll } = vi.hoisted(() => ({
+  mockGetAll: vi.fn().mockResolvedValue({}),
+  mockGetMany: vi.fn().mockResolvedValue({}),
+  mockSetAll: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
+  return {
+    ...actual,
     StorageKeys: {
       CUSTOM_PROMPTS: 'custom_prompts',
     },
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../../utils/storage/defaults.js', async (importOriginal) => {
+});
+
+vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CUSTOM_PROMPTS: 'custom_prompts',
-    },
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../../utils/storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CUSTOM_PROMPTS: 'custom_prompts',
+    settingsRepository: {
+      getAll: mockGetAll,
+      getMany: mockGetMany,
+      setAll: mockSetAll,
+      get: vi.fn(),
+      set: vi.fn(),
     },
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CUSTOM_PROMPTS: 'custom_prompts',
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      getMany = mockGetMany;
+      setAll = mockSetAll;
+      get = vi.fn();
+      set = vi.fn();
     },
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
   };
-});;
-vi.mock('../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CUSTOM_PROMPTS: 'custom_prompts',
-    },
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../../utils/storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CUSTOM_PROMPTS: 'custom_prompts',
-    },
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../../../utils/storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      CUSTOM_PROMPTS: 'custom_prompts',
-    },
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 const mockCreatePrompt = vi.fn((data) => ({
   ...data,
@@ -339,7 +214,6 @@ describe('customPromptManager - r2 missed branches', () => {
   describe('handleActivatePrompt edge cases', () => {
     it('should do nothing when preset is not found', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../../utils/storage.js');
       const { getPresetPrompt } = await import('../../../utils/customPromptUtils.js');
       (getPresetPrompt as any).mockReturnValueOnce(undefined);
 
@@ -357,7 +231,7 @@ describe('customPromptManager - r2 missed branches', () => {
       activateBtn.click();
       await new Promise((r) => setTimeout(r, 10));
 
-      expect(saveSettings).not.toHaveBeenCalled();
+      expect(mockSetAll).not.toHaveBeenCalled();
     });
 
     it('should handle activate when currentSettings is null gracefully', async () => {
@@ -529,18 +403,16 @@ describe('customPromptManager - r2 missed branches', () => {
     it('should return early when promptProviderSelect is missing', async () => {
       document.getElementById('promptProvider')!.remove();
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../../utils/storage.js');
       initCustomPromptManager({ custom_prompts: [] });
 
       document.getElementById('savePromptBtn')!.click();
       await new Promise((r) => setTimeout(r, 10));
-      expect(saveSettings).not.toHaveBeenCalled();
+      expect(mockSetAll).not.toHaveBeenCalled();
     });
 
     it('should handle editingPromptIdInput being absent', async () => {
       document.getElementById('editingPromptId')!.remove();
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const { saveSettings } = await import('../../../utils/storage.js');
       initCustomPromptManager({ custom_prompts: [] });
 
       const nameInput = document.getElementById('promptName') as HTMLInputElement;
@@ -550,7 +422,7 @@ describe('customPromptManager - r2 missed branches', () => {
 
       document.getElementById('savePromptBtn')!.click();
       await vi.waitFor(() => {
-        expect(saveSettings).toHaveBeenCalled();
+        expect(mockSetAll).toHaveBeenCalled();
       });
     });
   });

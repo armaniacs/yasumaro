@@ -2,6 +2,9 @@
  * gistSyncTarget.test.ts
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+const mockGetAll = vi.hoisted(() => vi.fn());
+const mockSet = vi.hoisted(() => vi.fn());
+
 import { GistSyncTarget } from '../syncTargets/gistSyncTarget.js';
 
 vi.mock('../sqliteClient.js', () => ({
@@ -9,8 +12,6 @@ vi.mock('../sqliteClient.js', () => ({
     const qr = vi.fn();
     const ur = vi.fn();
     return {
-      queryResult: qr,
-      updateResult: ur,
       query: qr,
       mutate: ur,
       maintain: vi.fn(),
@@ -201,6 +202,28 @@ vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
   };
 });;
 
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: mockGetAll,
+      get: vi.fn(),
+      set: mockSet,
+      setAll: vi.fn(),
+      getMany: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = mockGetAll;
+      get = vi.fn();
+      set = mockSet;
+      setAll = vi.fn();
+      getMany = vi.fn();
+    },
+  };
+});
+
 vi.mock('../../utils/logger.js', () => ({
   addLog: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
@@ -210,15 +233,13 @@ import { getSettings, saveSettings } from '../../utils/storage.js';
 
 describe('GistSyncTarget', () => {
   let target: GistSyncTarget;
-  let mockSqliteClient: { queryResult: ReturnType<typeof vi.fn>; updateResult: ReturnType<typeof vi.fn>; query: ReturnType<typeof vi.fn>; mutate: ReturnType<typeof vi.fn>; maintain: ReturnType<typeof vi.fn> };
+  let mockSqliteClient: { query: ReturnType<typeof vi.fn>; mutate: ReturnType<typeof vi.fn>; maintain: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
     const qr = vi.fn();
     const ur = vi.fn();
     mockSqliteClient = {
-      queryResult: qr,
-      updateResult: ur,
       query: qr,
       mutate: ur,
       maintain: vi.fn(),
@@ -227,24 +248,24 @@ describe('GistSyncTarget', () => {
   });
 
   it('isConfigured returns false when no PAT is set', async () => {
-    vi.mocked(getSettings).mockResolvedValue({} as any);
+    mockGetAll.mockResolvedValue({} as any);
     expect(await target.isConfigured()).toBe(false);
   });
 
   it('isConfigured returns true when PAT is set', async () => {
-    vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test123' } as any);
+    mockGetAll.mockResolvedValue({ github_pat: 'ghp_test123' } as any);
     expect(await target.isConfigured()).toBe(true);
   });
 
   it('sync returns success false when not configured', async () => {
-    vi.mocked(getSettings).mockResolvedValue({} as any);
+    mockGetAll.mockResolvedValue({} as any);
     const result = await target.sync(1, 'https://example.com', 'Test', 'Summary');
     expect(result.success).toBe(false);
   });
 
   it('sync creates a new Gist when no GIST_ID exists', async () => {
-    vi.mocked(getSettings).mockResolvedValue({ github_pat: 'ghp_test123' } as any);
-    mockSqliteClient.updateResult.mockResolvedValue({ success: true, data: undefined });
+    mockGetAll.mockResolvedValue({ github_pat: 'ghp_test123' } as any);
+    mockSqliteClient.mutate.mockResolvedValue({ success: true, data: undefined });
 
     // Mock fetch for createGist
     global.fetch = vi.fn().mockResolvedValue({
@@ -254,12 +275,12 @@ describe('GistSyncTarget', () => {
 
     const result = await target.sync(1, 'https://example.com', 'Test', 'Summary');
     expect(result.success).toBe(true);
-    expect(saveSettings).toHaveBeenCalledWith(expect.objectContaining({ gist_id: 'new-gist-id-123' }));
-    expect(mockSqliteClient.updateResult).toHaveBeenCalled();
+    expect(mockSet).toHaveBeenCalledWith('gist_id', 'new-gist-id-123');
+    expect(mockSqliteClient.mutate).toHaveBeenCalled();
   });
 
   it('testConnection returns false when not configured', async () => {
-    vi.mocked(getSettings).mockResolvedValue({} as any);
+    mockGetAll.mockResolvedValue({} as any);
     const result = await target.testConnection();
     expect(result.success).toBe(false);
     expect(result.message).toContain('not configured');
