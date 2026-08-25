@@ -75,7 +75,9 @@ describe('initializeReviewSummaryAlarms', () => {
       'yasumaro-review-monthly',
       expect.objectContaining({ periodInMinutes: 31 * 24 * 60 }),
     );
-    expect(chrome.alarms.clear).not.toHaveBeenCalled();
+    // Idempotent: clear before create so restart does not leave duplicates
+    expect(chrome.alarms.clear).toHaveBeenCalledWith('yasumaro-review-weekly');
+    expect(chrome.alarms.clear).toHaveBeenCalledWith('yasumaro-review-monthly');
     expect(addLog).toHaveBeenCalledWith('INFO', 'Review summary alarms initialized');
   });
 

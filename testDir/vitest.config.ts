@@ -36,6 +36,10 @@ export default defineConfig({
         'src/**/*.d.ts',
       ],
       all: true,
+      thresholds: {
+        lines: 80,
+        branches: 80,
+      },
     },
     testTimeout: 15000,
     pool: 'forks',

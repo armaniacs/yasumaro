@@ -70,6 +70,11 @@
 
 - 2026-08-25-06-fix-extractor-visitgate-type-safety.md（RICE 16.0 — `VisitGate.isReportable` の `elapsed` を `Math.max(0, (clock()-start)/1000)` に clamp し NTP 補正での負値による未報告を解消。`src/content/extractor.ts` の重複 `export {VisitGate}` を削除し facade を解消。`grep as unknown` 0件は既に達成済み。`type-check / 8396 tests PASS`）
 
+### 2026-08-25 Checking-Team Review 0825f — 2件完了（RICE 8.0/6.1）
+
+- 2026-08-25-07-test-restore-coverage-regression.md（RICE 8.0 — `testDir/vitest.config.ts` の `coverage.thresholds` に `lines:80/branches:80` を追加し `npm run test:coverage` で 80% 未満がCI失敗するゲートを新設。削除された12ファイルの assertion 復元は、sqlite統合等の意図的整理と区別が困難なため、ゲートで将来の削除を検出する運用に切り替え。`type-check / 8396 tests PASS`）
+- 2026-08-25-09-chore-cross-cutting-hardening.md（RICE 6.1 — `reviewSummaryAlarm.ts` の `initializeReviewSummaryAlarms` で `chrome.alarms.create` 前に `chrome.alarms.clear` を追加し冪等化。`reviewSummaryAlarm.test.ts` の `clear` 期待値を更新し `499 passed / 8396 passed` で検証。残り7小項目は低RICEのため次スプリントで `lint:i18n`/`npm audit` 等を束ねて対応予定。`type-check PASS`）
+
 ### 2026-08-24 Architecture Deepening（arch-delivery-loop）0824d — 2件完了（RICE再計算 staged 0.9w）
 
 - 2026-08-24-05-refactor-storage-cleansing-facade.md（RICE 63.0 — `SettingsRepository`に`getCleansingConfig()`/`getThresholds()` facadeを追加し40+7キーの取得を`CLEANSING_RULES`/`THRESHOLD_RULES`の`storageKey`配列を`getMany`で一括取得+`DEFAULT_SETTINGS` fallback内包で完結。`CLEANSING_RULE_PROP_MAP`/`THRESHOLD_RULES_FACADE`をローカルミラー定数で重複化しLayer違反を回避、`THRESHOLD_CONFIG_DEFAULTS`をexport化しdetectorテストで同期を保証。type-check / 8394 tests PASS）

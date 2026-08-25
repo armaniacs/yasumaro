@@ -32,10 +32,10 @@ Scenario: 既存の shouldRecordVisit 後方互換が保たれる
 ```
 
 ## 受け入れ基準
-- [ ] `THRESHOLD_RULES` が `ThresholdRule<K extends NumericKey>` のジェネリクスで定義され、`t.prop` が number プロパティに限定される
-- [ ] `extractor.ts:214-220` の `new VisitGate` が毎回生成ではなく再利用または singleton に
-- [ ] `VisitGate` の clock デフォルトが `performance.now()` ベースの単調 clock か、負の elapsed を 0 に clamp
-- [ ] `DEFAULT_CLEANSING_CONFIG` と `THRESHOLD_RULES` の default 二重定義が解消（single source）
+- [x] `THRESHOLD_RULES` が `ThresholdRule<K extends NumericKey>` のジェネリクスで定義され、`t.prop` が number プロパティに限定される
+- [x] `extractor.ts:214-220` の `new VisitGate` が毎回生成ではなく再利用または singleton に
+- [x] `VisitGate` の clock デフォルトが `performance.now()` ベースの単調 clock か、負の elapsed を 0 に clamp
+- [x] `DEFAULT_CLEANSING_CONFIG` と `THRESHOLD_RULES` の default 二重定義が解消（single source）
 
 ## テスト戦略
 
@@ -71,7 +71,7 @@ grep -rn "VisitGate\|shouldRecordVisit" src/content/visitGate.ts src/content/ext
 - THRESHOLD_RULES の default と defaults.ts の DEFAULT_SETTINGS の二重定義は、片方を import して生成する形に統一しないと再び乖離する
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `grep -rn "as unknown" src/content/extractor.ts` が 0 件
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `grep -rn "as unknown" src/content/extractor.ts` が 0 件
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
