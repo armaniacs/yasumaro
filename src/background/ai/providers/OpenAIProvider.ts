@@ -11,7 +11,7 @@ import { Settings, StorageKeys } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 
-import { getRegistryEntry } from '../providerRegistry.js';
+import { getRegistryEntry, isAllowedProviderBaseUrl } from '../providerRegistry.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 
 interface OpenAIApiResponse {
@@ -62,10 +62,13 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
             this.isLocal = this.baseUrl ? GenericOpenAICompatibleProvider.isLocalUrl(this.baseUrl) : false;
         }
 
-        // BaseUrl SSRF対策
+        // BaseUrl SSRF対策 — validateUrlForAIRequests + registry allowlist (PBI04)
         if (this.baseUrl) {
             try {
                 validateUrlForAIRequests(this.baseUrl);
+                if (!isAllowedProviderBaseUrl(this.baseUrl, this.isLocal)) {
+                    throw new Error(`Base URL not allowed for ${providerName}: ${this.baseUrl}`);
+                }
             } catch (error: unknown) {
                 addLog(LogType.ERROR, `Invalid baseUrl for ${providerName}: ${errorMessage(error)}`);
                 throw new Error(`Invalid baseUrl: ${errorMessage(error)}`);

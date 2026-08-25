@@ -130,6 +130,30 @@ const SPEECH_BUBBLE_TEXT_PATTERNS = [
 const SPEECH_BUBBLE_TEXT_SELECTOR = buildClassIdSelectors(SPEECH_BUBBLE_TEXT_PATTERNS);
 
 /**
+ * Shared helper for text-based cookie consent detection.
+ * Extracted to deduplicate stripPopupElements and stripCookieConsentElements
+ * which previously contained verbatim 15-line duplicates.
+ */
+function collectCookieConsentElements(root: Element, counted: Set<Element>): Element[] {
+    const elementsToRemove: Element[] = [];
+    const candidates = root.querySelectorAll('p, div, span, small, footer, section');
+    candidates.forEach(elem => {
+        if (counted.has(elem)) return;
+        const text = (elem.textContent || '').trim();
+        if (text.length > 1200 || text.length < 10) return;
+        if (elem.querySelectorAll('p, article, section').length >= 3) return;
+        for (const pattern of COOKIE_TEXT_PATTERNS) {
+            if (pattern.test(text)) {
+                elementsToRemove.push(elem);
+                counted.add(elem);
+                break;
+            }
+        }
+    });
+    return elementsToRemove;
+}
+
+/**
  * 固定要素を削除（position:fixed/sticky）
  * @param element - クレンジング対象のルート要素
  * @returns 削除した要素の数
@@ -337,23 +361,10 @@ export function stripPopupElements(element: Element): number {
         }
     });
 
-    // Text-based cookie consent (Japanese/English) — catches banners whose class is generic but text is distinctive
-    const cookieCandidates = element.querySelectorAll('p, div, span, small, footer, section');
-    cookieCandidates.forEach(elem => {
-        if (counted.has(elem)) return;
-        const text = (elem.textContent || '').trim();
-        if (text.length > 1200) return;
-        if (text.length < 10) return;
-        const contentChildren = elem.querySelectorAll('p, article, section');
-        if (contentChildren.length >= 3) return;
-        for (const pattern of COOKIE_TEXT_PATTERNS) {
-            if (pattern.test(text)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-                break;
-            }
-        }
-    });
+    // Text-based cookie consent — delegated to shared helper (deduplicated with stripCookieConsentElements)
+    for (const elem of collectCookieConsentElements(element, counted)) {
+        elementsToRemove.push(elem);
+    }
 
     for (const elem of elementsToRemove) {
         if (safeRemoveElement(elem)) {
@@ -366,23 +377,8 @@ export function stripPopupElements(element: Element): number {
 
 export function stripCookieConsentElements(element: Element): number {
     let removedCount = 0;
-    const elementsToRemove: Element[] = [];
     const counted = new Set<Element>();
-    const candidates = element.querySelectorAll('p, div, span, small, footer, section');
-    candidates.forEach(elem => {
-        if (counted.has(elem)) return;
-        const text = (elem.textContent || '').trim();
-        if (text.length > 1200 || text.length < 10) return;
-        const contentChildren = elem.querySelectorAll('p, article, section');
-        if (contentChildren.length >= 3) return;
-        for (const pattern of COOKIE_TEXT_PATTERNS) {
-            if (pattern.test(text)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-                break;
-            }
-        }
-    });
+    const elementsToRemove = collectCookieConsentElements(element, counted);
     for (const elem of elementsToRemove) {
         if (safeRemoveElement(elem)) removedCount++;
     }

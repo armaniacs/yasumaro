@@ -64,19 +64,19 @@ async function handleInsertBatch(msg: SqliteMessage, sendResponse: (r: unknown) 
 }
 
 async function handleQuery(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_QUERY' }>).payload;
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_QUERY' }>).payload as Record<string, unknown>;
   const options: import('../utils/sqlite-types.js').StorageQuery = pickDefined({
     limit: payload?.limit != null ? Number(payload.limit) : undefined,
     offset: payload?.offset != null ? Number(payload.offset) : undefined,
     orderBy: payload?.orderBy as 'created_at' | 'rank' | undefined,
     orderDir: payload?.orderDir as 'ASC' | 'DESC' | undefined,
     domain: payload?.domain != null ? String(payload.domain) : undefined,
-    starred: payload?.isStarred != null ? Boolean(payload.isStarred) : undefined,
+    starred: payload?.starred != null ? Boolean(payload.starred) : payload?.isStarred != null ? Boolean(payload.isStarred) : undefined,
     excludeDeleted: payload?.excludeDeleted != null ? Boolean(payload.excludeDeleted) : undefined,
-    dateFrom: payload?.since != null ? Number(payload.since) : undefined,
-    dateTo: payload?.until != null ? Number(payload.until) : undefined,
+    dateFrom: payload?.dateFrom != null ? Number(payload.dateFrom) : payload?.since != null ? Number(payload.since) : undefined,
+    dateTo: payload?.dateTo != null ? Number(payload.dateTo) : payload?.until != null ? Number(payload.until) : undefined,
     ids: payload?.ids != null ? (payload.ids as number[]) : undefined,
-    tag: payload?.tagFilter != null ? String(payload.tagFilter) : undefined,
+    tag: payload?.tag != null ? String(payload.tag) : payload?.tagFilter != null ? String(payload.tagFilter) : undefined,
     gistSynced: payload?.gistSynced != null ? Number(payload.gistSynced) : undefined,
   });
   const result = await sqliteQuery(options);

@@ -174,7 +174,10 @@ function loadSettings(): Promise<void> {
             // Threshold settings (table-driven, bounds validated via THRESHOLD_RULES)
             for (const t of THRESHOLD_RULES) {
                 if (s[t.storageKey] !== undefined) {
-                    pageState.cleansingConfig[t.prop] = Math.max(t.min, Math.min(t.max, Number(s[t.storageKey]) || t.default));
+                    const raw = s[t.storageKey];
+                    const n = raw != null && raw !== '' ? Number(raw) : NaN;
+                    const v = Number.isFinite(n) ? n : t.default;
+                    pageState.cleansingConfig[t.prop] = Math.max(t.min, Math.min(t.max, v));
                 }
             }
             logInfo('Settings loaded', {
