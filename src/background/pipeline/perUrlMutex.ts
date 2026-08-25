@@ -14,8 +14,13 @@ export class PerUrlMutexMap {
   private static readonly MUTEX_OPTS = { maxQueueSize: 5, timeoutMs: 60000 } as const;
   private static createMutex(): Mutex { return new Mutex(PerUrlMutexMap.MUTEX_OPTS); }
 
-  private get mutexes(): Map<string, Mutex> {
-    return PerUrlMutexMap.sharedMutexes;
+  private readonly mutexes: Map<string, Mutex>;
+
+  constructor(map?: Map<string, Mutex>) {
+    // Default to shared static map to preserve existing per-URL serialization
+    // across all pipeline instances; tests can inject an isolated map via
+    // container.override('perUrlMutexMap', new PerUrlMutexMap(new Map())).
+    this.mutexes = map ?? PerUrlMutexMap.sharedMutexes;
   }
 
   async runExclusive<T>(url: string, fn: () => Promise<T>): Promise<T> {

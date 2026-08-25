@@ -62,6 +62,10 @@
 - 2026-08-25-03-fix-sqlite-client-ssot-and-error-handling.md（RICE 34.3 — `sqliteClient.ts` の overload を `Extract<QueryOp, {kind:…}>` / `Extract<MutateOp, {type:…}>` に是正し SSOT 乖離を解消。`callInternal` の `traceId` を optional にし空文字送信を廃止（auditLog の `traceId=''` 汚染解消）。`count` の `Number.isFinite` 失敗は `throw` を `categorizeError` 経由の `SqliteRpcResult` 失敗に変換済み。`type-check / 8396 tests PASS`）
 - 2026-08-25-04-fix-provider-registry-ssrf-layer.md（RICE 32.7 — `providerRegistry.ts` の `@layer 0` を `@layer 1` に是正（`storage/types` 依存を明記）。`isAllowedProviderBaseUrl(url,isLocal)` を新設し `169.254.169.254`/`metadata.google.internal`/private IP(10/192.168/172.16-31) を拒否、非Local の http を 127.0.0.1/localhost 以外で拒否。`RemoteAIService` 呼び出し前の SSRF ガードとして利用可。`type-check / 8396 tests PASS`）
 
+### 2026-08-25 Checking-Team Review 0825d — 1件完了（RICE 21.0）
+
+- 2026-08-25-05-refactor-service-container-typed-di.md（RICE 21.0 — `ServiceContainer` に `ServiceTokens` const と `ServiceKey` 型を追加し `register/resolve/has/override` を型付け。`PerUrlMutexMap` を constructor 注入で instance map を共有 static から分離し `container.override('perUrlMutexMap', new PerUrlMutexMap(new Map()))` でテスト隔離可能に。`createBackgroundServices` の7件は既に PBI-03 で移行済みのため追加移行なし。`type-check / 8396 tests PASS`）
+
 ### 2026-08-24 Architecture Deepening（arch-delivery-loop）0824d — 2件完了（RICE再計算 staged 0.9w）
 
 - 2026-08-24-05-refactor-storage-cleansing-facade.md（RICE 63.0 — `SettingsRepository`に`getCleansingConfig()`/`getThresholds()` facadeを追加し40+7キーの取得を`CLEANSING_RULES`/`THRESHOLD_RULES`の`storageKey`配列を`getMany`で一括取得+`DEFAULT_SETTINGS` fallback内包で完結。`CLEANSING_RULE_PROP_MAP`/`THRESHOLD_RULES_FACADE`をローカルミラー定数で重複化しLayer違反を回避、`THRESHOLD_CONFIG_DEFAULTS`をexport化しdetectorテストで同期を保証。type-check / 8394 tests PASS）

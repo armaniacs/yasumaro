@@ -11,14 +11,39 @@
  * call instead of touching 3 type definitions.
  */
 
+export const ServiceTokens = {
+  sessionStore: 'sessionStore',
+  recordingCache: 'recordingCache',
+  headerDetector: 'headerDetector',
+  obsidian: 'obsidian',
+  sqliteClient: 'sqliteClient',
+  tabCache: 'tabCache',
+  rateLimiter: 'rateLimiter',
+  manualContentFetcher: 'manualContentFetcher',
+  remoteAiService: 'remoteAiService',
+  aiService: 'aiService',
+  settingsRepository: 'settingsRepository',
+  pendingWriteQueue: 'pendingWriteQueue',
+  reviewSummaryGenerator: 'reviewSummaryGenerator',
+  recordingPipeline: 'recordingPipeline',
+  dashboardSqliteHandler: 'dashboardSqliteHandler',
+  autoSavedBadgeTabs: 'autoSavedBadgeTabs',
+  manualRecordDeps: 'manualRecordDeps',
+  saveRecordDeps: 'saveRecordDeps',
+  messageRouter: 'messageRouter',
+  perUrlMutexMap: 'perUrlMutexMap',
+} as const;
+
+export type ServiceKey = keyof typeof ServiceTokens | (string & {});
+
 export class ServiceContainer {
   private readonly entries = new Map<string, { factory: () => unknown; singleton: boolean; instance?: unknown; hasInstance: boolean }>();
 
-  register<T>(key: string, factory: () => T, opts: { singleton?: boolean } = {}): void {
+  register<T>(key: ServiceKey, factory: () => T, opts: { singleton?: boolean } = {}): void {
     this.entries.set(key, { factory: factory as () => unknown, singleton: opts.singleton ?? false, hasInstance: false });
   }
 
-  resolve<T>(key: string): T {
+  resolve<T>(key: ServiceKey): T {
     const entry = this.entries.get(key);
     if (!entry) throw new Error(`ServiceContainer: no registration for "${key}"`);
     if (entry.singleton) {
@@ -31,12 +56,12 @@ export class ServiceContainer {
     return entry.factory() as T;
   }
 
-  has(key: string): boolean {
+  has(key: ServiceKey): boolean {
     return this.entries.has(key);
   }
 
   /** Replace a registration with a fixed instance (for tests). */
-  override<T>(key: string, instance: T): void {
+  override<T>(key: ServiceKey, instance: T): void {
     this.entries.set(key, { factory: () => instance as unknown, singleton: true, instance: instance as unknown, hasInstance: true });
   }
 }
