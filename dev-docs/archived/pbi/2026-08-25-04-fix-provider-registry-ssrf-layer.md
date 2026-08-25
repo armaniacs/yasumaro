@@ -32,10 +32,10 @@ Scenario: layer 違反が CI で検出される
 ```
 
 ## 受け入れ基準
-- [ ] `RemoteAIService` または `providerRegistry` 解決後に `urlUtils` の allowlist で host/protocol を検証
-- [ ] `http://169.254.169.254` / `http://metadata.google.internal` が拒否されるテストがある
-- [ ] `127.0.0.1` / `localhost` の http は許可される
-- [ ] `providerRegistry.ts` の `@layer` が LAYERS.md と一致し、CI で import 制限が有効
+- [x] `RemoteAIService` または `providerRegistry` 解決後に `urlUtils` の allowlist で host/protocol を検証
+- [x] `http://169.254.169.254` / `http://metadata.google.internal` が拒否されるテストがある
+- [x] `127.0.0.1` / `localhost` の http は許可される
+- [x] `providerRegistry.ts` の `@layer` が LAYERS.md と一致し、CI で import 制限が有効
 
 ## テスト戦略
 
@@ -71,6 +71,6 @@ cat dev-docs/LAYERS.md
 - `built-in-ai` は baseUrl 不要なので検証対象外にする
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] セキュリティレビュー完了（Red Team 観点の再確認）
-- [ ] ドキュメント更新済み（LAYERS.md, docs/SETUP_GUIDE の baseUrl 章）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] セキュリティレビュー完了（Red Team 観点の再確認）
+- [x] ドキュメント更新済み（LAYERS.md, docs/SETUP_GUIDE の baseUrl 章）

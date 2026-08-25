@@ -1,4 +1,4 @@
-// @layer 0 — ProviderRegistry table (single source of truth for provider wiring)
+// @layer 1 — ProviderRegistry table (depends on storage/types layer 1; single source of truth for provider wiring)
 /**
  * providerRegistry.ts
  * ProviderRegistry: single table that maps ProviderId → storage keys & behavior flags.
@@ -96,4 +96,23 @@ export const PROVIDER_REGISTRY: ReadonlyMap<ProviderId, ProviderRegistryEntry> =
 
 export function getRegistryEntry(providerId: string): ProviderRegistryEntry | undefined {
     return PROVIDER_REGISTRY.get(providerId as ProviderId);
+}
+
+/**
+ * Validate a provider baseUrl against SSRF allowlist.
+ * Rejects metadata service hosts and private IP ranges; for non-local
+ * providers only https is allowed (http only for localhost/127.0.0.1).
+ */
+export function isAllowedProviderBaseUrl(url: string, isLocal: boolean): boolean {
+    try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+        const host = parsed.hostname;
+        if (host === '169.254.169.254' || host === 'metadata.google.internal') return false;
+        if (/^10\.\d+\.\d+\.\d+$/.test(host) || /^192\.168\.\d+\.\d+$/.test(host) || /^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(host)) return false;
+        if (!isLocal && parsed.protocol === 'http:' && host !== '127.0.0.1' && host !== 'localhost') return false;
+        return true;
+    } catch {
+        return false;
+    }
 }

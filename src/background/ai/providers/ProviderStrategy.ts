@@ -340,3 +340,10 @@ export abstract class AIProviderStrategy {
         await recordUsage(sentTokens ?? 0, receivedTokens ?? 0);
     }
 }
+
+/**
+ * @deprecated Use AIProviderStrategy — kept for backward compatibility (PBI 02).
+ * Old custom providers importing `ProviderStrategy` continue to type-check
+ * for one major version. Will be removed in next major. See CHANGELOG.
+ */
+export type ProviderStrategy = AIProviderStrategy;

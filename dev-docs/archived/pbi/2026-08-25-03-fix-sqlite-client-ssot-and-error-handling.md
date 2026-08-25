@@ -32,10 +32,10 @@ Scenario: traceId 空文字が auditLog を汚さない
 ```
 
 ## 受け入れ基準
-- [ ] `sqliteClient.ts:92-165` のオーバーロードが `Extract<QueryOp, {kind:...}>` / `Extract<MutateOp, {type:...}>` を再利用している（または QueryOp を re-export し satisfies で検証）
-- [ ] `callInternal` の catch で型付きエラーを categorizeError に渡し、文字列化はログ出力のみ
-- [ ] `count` 異常時 (NaN) が throw ではなく `SqliteRpcResult` の error として返るか 0 フォールバックする
-- [ ] `traceId ?? ''` が空文字送信ではなく省略/生成になる
+- [x] `sqliteClient.ts:92-165` のオーバーロードが `Extract<QueryOp, {kind:...}>` / `Extract<MutateOp, {type:...}>` を再利用している（または QueryOp を re-export し satisfies で検証）
+- [x] `callInternal` の catch で型付きエラーを categorizeError に渡し、文字列化はログ出力のみ
+- [x] `count` 異常時 (NaN) が throw ではなく `SqliteRpcResult` の error として返るか 0 フォールバックする
+- [x] `traceId ?? ''` が空文字送信ではなく省略/生成になる
 
 ## テスト戦略
 
@@ -73,7 +73,7 @@ grep -rn "traceId" src/background/sqliteClient.ts
 - Offscreen のレスポンス型が `unknown` に緩和されているため、transform 内で再び厳密に検証する必要がある
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `npm run type-check` で QueryOp 追加時の検出が確認できる
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（必要なら dev-docs/DESIGN で QueryOp の SSOT を明記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `npm run type-check` で QueryOp 追加時の検出が確認できる
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（必要なら dev-docs/DESIGN で QueryOp の SSOT を明記）

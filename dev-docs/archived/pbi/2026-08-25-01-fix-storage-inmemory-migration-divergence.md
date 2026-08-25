@@ -32,9 +32,9 @@ Scenario: rawEncrypted=false の誤用が再発しない
 ```
 
 ## 受け入れ基準
-- [ ] `InMemoryStorageAdapter.getSettings()` が `applyMigrationsAndDecrypt(..., true)` 相当の復号パスを通る（または両アダプタで共有された単体テストが存在する）
-- [ ] 旧キーから新キーへのマイグレーションが両アダプタで同一結果になることを示すテストが追加されている
-- [ ] `npm run type-check` と既存 8394 tests が PASS
+- [x] `InMemoryStorageAdapter.getSettings()` が `applyMigrationsAndDecrypt(..., true)` 相当の復号パスを通る（または両アダプタで共有された単体テストが存在する）
+- [x] 旧キーから新キーへのマイグレーションが両アダプタで同一結果になることを示すテストが追加されている
+- [x] `npm run type-check` と既存 8394 tests が PASS
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -75,9 +75,9 @@ grep -rn "rawEncrypted" src/
 - 暗号化キーの取得で `getOrCreateEncryptionKey` が InMemory テストで失敗する場合は、テスト用固定キーを使う
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ロールバック手段の検討（本 PBI はテスト強化のみでロールバック不要）
-- [ ] ドキュメント更新済み（必要なら CONTRIBUTING に「両アダプタで同一テストを走らせる」旨を追記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
+- [x] コードレビュー完了
+- [x] リファクタリング完了（グリーン後）
+- [x] ロールバック手段の検討（本 PBI はテスト強化のみでロールバック不要）
+- [x] ドキュメント更新済み（必要なら CONTRIBUTING に「両アダプタで同一テストを走らせる」旨を追記）
