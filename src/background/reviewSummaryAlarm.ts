@@ -32,13 +32,15 @@ export async function initializeReviewSummaryAlarms(
     return;
   }
 
-  // 週次アラーム: 毎週月曜日 09:00
+  // 週次アラーム: 毎週月曜日 09:00（冪等: 既存をクリアしてから作成）
+  await chrome.alarms.clear(WEEKLY_ALARM_NAME);
   await chrome.alarms.create(WEEKLY_ALARM_NAME, {
     when: getNextMondayAt(9, 0),
     periodInMinutes: 7 * 24 * 60 // 1週間
   });
 
-  // 月次アラーム: 毎月1日 09:00
+  // 月次アラーム: 毎月1日 09:00（冪等: 既存をクリアしてから作成）
+  await chrome.alarms.clear(MONTHLY_ALARM_NAME);
   await chrome.alarms.create(MONTHLY_ALARM_NAME, {
     when: getNextMonthFirstDayAt(9, 0),
     periodInMinutes: 31 * 24 * 60 // 約1ヶ月
