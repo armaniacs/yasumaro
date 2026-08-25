@@ -43,6 +43,7 @@ import type { MessageHandler } from './handlers/MessageRouter.js';
 import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/recordingHandlers.js';
 import { ServiceContainer } from './serviceContainer.js';
 import { SettingsRepository, ChromeStorageAdapter as SettingsChromeStorageAdapter } from '../utils/storage/SettingsRepository.js';
+import { PerUrlMutexMap } from './pipeline/perUrlMutex.js';
 
 export interface BackgroundServices {
   obsidian: ObsidianClient;
@@ -142,6 +143,7 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
   if (!container.has('remoteAiService')) container.register('remoteAiService', () => new RemoteAIService(), { singleton: true });
   if (!container.has('aiService')) container.register('aiService', () => createAIService({ remoteAiService: container.resolve<RemoteAIService>('remoteAiService') }), { singleton: true });
   if (!container.has('settingsRepository')) container.register('settingsRepository', () => new SettingsRepository(new SettingsChromeStorageAdapter()), { singleton: true });
+  if (!container.has('perUrlMutexMap')) container.register('perUrlMutexMap', () => new PerUrlMutexMap(), { singleton: true });
 
   // Content backfill must not reorder LRU, so the timestamp is left alone. One
   // closure is shared by both recording handlers instead of being rebuilt per
