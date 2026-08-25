@@ -32,10 +32,10 @@ Scenario: LAYERS.md が実装と一致する
 ```
 
 ## 受け入れ基準
-- [ ] `src/background/messageTypes.ts:236-254` の `CONTENT_SCRIPT_ONLY_TYPES` が削除され、`CONTENT_SCRIPT_ALLOWED_TYPES` のみが SSOT として残る
-- [ ] `src/background/handlers/MessageRouter.ts` が `CONTENT_SCRIPT_ALLOWED_TYPES` のみを参照
-- [ ] `grep -rn CONTENT_SCRIPT_ONLY_TYPES` が 0 件
-- [ ] `dev-docs/LAYERS.md` が providerRegistry の所属 layer を正しく記載し、CI の import-linter で検証される
+- [x] `src/background/messageTypes.ts:236-254` の `CONTENT_SCRIPT_ONLY_TYPES` が削除され、`CONTENT_SCRIPT_ALLOWED_TYPES` のみが SSOT として残る
+- [x] `src/background/handlers/MessageRouter.ts` が `CONTENT_SCRIPT_ALLOWED_TYPES` のみを参照
+- [x] `grep -rn CONTENT_SCRIPT_ONLY_TYPES` が 0 件
+- [x] `dev-docs/LAYERS.md` が providerRegistry の所属 layer を正しく記載し、CI の import-linter で検証される
 
 ## テスト戦略
 
@@ -69,7 +69,7 @@ cat dev-docs/LAYERS.md
 - 旧定数を即座に削除すると、別ブランチで古い定数を使っている PR がコンフリクトする。1リリースは deprecated として残す選択肢もあるが、本 PBI は RICE 20 の小粒なため一括削除を推奨。事前に `git branch -a` で影響ブランチを確認する
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `grep` で旧定数 0 件を確認
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（CHANGELOG, LAYERS.md）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `grep` で旧定数 0 件を確認
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（CHANGELOG, LAYERS.md）

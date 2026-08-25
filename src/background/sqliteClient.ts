@@ -66,7 +66,7 @@ export class SqliteClient implements SqliteRpcClient {
     type: SqliteMessageType,
     payload: Record<string, unknown> = {},
     transform?: (res: Extract<R, { success: true }>) => T,
-    traceId: string = '',
+    traceId?: string,
   ): Promise<SqliteRpcResult<T>> {
     try {
       const res = await this.transport.msgOffscreen(type, payload, traceId);
@@ -96,9 +96,9 @@ export class SqliteClient implements SqliteRpcClient {
   // --------------------------------------------------------------------------
 
   async query(q?: StorageQuery): Promise<SqliteRpcResult<{ rows: BrowsingLogRecord[]; total: number }>>;
-  async query(op: { kind: 'search'; text: string; limit?: number; offset?: number; orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' }): Promise<SqliteRpcResult<{ rows: BrowsingLogRecord[]; total: number }>>;
-  async query(op: { kind: 'count' }): Promise<SqliteRpcResult<number>>;
-  async query(op: { kind: 'auditLog'; limit?: number; offset?: number }): Promise<SqliteRpcResult<{ rows: AuditLogRecord[]; total: number }>>;
+  async query(op: Extract<QueryOp, { kind: 'search' }>): Promise<SqliteRpcResult<{ rows: BrowsingLogRecord[]; total: number }>>;
+  async query(op: Extract<QueryOp, { kind: 'count' }>): Promise<SqliteRpcResult<number>>;
+  async query(op: Extract<QueryOp, { kind: 'auditLog' }>): Promise<SqliteRpcResult<{ rows: AuditLogRecord[]; total: number }>>;
   async query(op: QueryOp | StorageQuery = {}): Promise<SqliteRpcResult<unknown>> {
     if (isQueryOp(op)) {
       switch (op.kind) {
@@ -152,11 +152,11 @@ export class SqliteClient implements SqliteRpcClient {
   // mutate domain — write path
   // --------------------------------------------------------------------------
 
-  async mutate(op: { type: 'insert'; record: BrowsingLogRecord; traceId?: string }): Promise<SqliteRpcResult<{ id: number }>>;
-  async mutate(op: { type: 'insertBatch'; records: BrowsingLogRecord[] }): Promise<SqliteRpcResult<{ count: number }>>;
-  async mutate(op: { type: 'update'; id: number; changes: Partial<Record<string, unknown>>; traceId?: string } | { type: 'delete'; id: number }): Promise<SqliteRpcResult<void>>;
-  async mutate(op: { type: 'toggleStar'; id: number }): Promise<SqliteRpcResult<{ is_starred: number }>>;
-  async mutate(op: { type: 'insertAuditLog'; record: Omit<AuditLogRecord, 'id'> }): Promise<SqliteRpcResult<{ id: number }>>;
+  async mutate(op: Extract<MutateOp, { type: 'insert' }>): Promise<SqliteRpcResult<{ id: number }>>;
+  async mutate(op: Extract<MutateOp, { type: 'insertBatch' }>): Promise<SqliteRpcResult<{ count: number }>>;
+  async mutate(op: Extract<MutateOp, { type: 'update' }> | Extract<MutateOp, { type: 'delete' }>): Promise<SqliteRpcResult<void>>;
+  async mutate(op: Extract<MutateOp, { type: 'toggleStar' }>): Promise<SqliteRpcResult<{ is_starred: number }>>;
+  async mutate(op: Extract<MutateOp, { type: 'insertAuditLog' }>): Promise<SqliteRpcResult<{ id: number }>>;
   async mutate(op: MutateOp): Promise<SqliteRpcResult<unknown>> {
     switch (op.type) {
       case 'insert':
@@ -165,7 +165,7 @@ export class SqliteClient implements SqliteRpcClient {
           // WHY: BrowsingLogRecord lacks index signature; must cast through unknown for offscreen payload
           op.record as unknown as Record<string, unknown>,
           (res) => ({ id: res.id }),
-          op.traceId ?? '',
+          op.traceId,
         );
       case 'insertBatch':
         return this.callInternal<{ count: number }, OffscreenCountResponse>(
@@ -175,7 +175,7 @@ export class SqliteClient implements SqliteRpcClient {
           (res) => ({ count: res.count }),
         );
       case 'update':
-        return this.callInternal<void, OffscreenWriteResponse>('SQLITE_UPDATE', { id: op.id, ...op.changes }, () => undefined, op.traceId ?? '');
+        return this.callInternal<void, OffscreenWriteResponse>('SQLITE_UPDATE', { id: op.id, ...op.changes }, () => undefined, op.traceId);
       case 'delete':
         return this.callInternal<void, OffscreenWriteResponse>('SQLITE_DELETE', { id: op.id }, () => undefined);
       case 'toggleStar':

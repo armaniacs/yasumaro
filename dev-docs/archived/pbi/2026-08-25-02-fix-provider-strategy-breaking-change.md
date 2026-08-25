@@ -32,10 +32,10 @@ Scenario: 1バージョン後の削除が予告される
 ```
 
 ## 受け入れ基準
-- [ ] `ProviderStrategy` が discriminated union または overload で旧シグネチャを受け付ける
-- [ ] 旧シグネチャ利用時に `console.warn` または型レベル `@deprecated` が出る
-- [ ] `RemoteAIService.registerDefaultProviders` が新旧両方で動作するテストがある
-- [ ] CHANGELOG に breaking change と移行手順が記載されている
+- [x] `ProviderStrategy` が discriminated union または overload で旧シグネチャを受け付ける
+- [x] 旧シグネチャ利用時に `console.warn` または型レベル `@deprecated` が出る
+- [x] `RemoteAIService.registerDefaultProviders` が新旧両方で動作するテストがある
+- [x] CHANGELOG に breaking change と移行手順が記載されている
 
 ## テスト戦略
 
@@ -74,7 +74,7 @@ grep -rn "registerDefaultProviders" src/background/ai/RemoteAIService.ts
 - `OpenAIProvider` の 5分岐を Generic に集約した際、旧 Provider が Generic の判定から漏れる。`isLocal` 分岐前に旧シグネチャを正規化する
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了（API 変更のため API & Contract 観点の確認を PR に明記）
-- [ ] ドキュメント更新済み（CHANGELOG, docs/SETUP_GUIDE の Provider 章）
-- [ ] ロールバック手段の検討（旧シグネチャを即時復活させる revert コミットの用意）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了（API 変更のため API & Contract 観点の確認を PR に明記）
+- [x] ドキュメント更新済み（CHANGELOG, docs/SETUP_GUIDE の Provider 章）
+- [x] ロールバック手段の検討（旧シグネチャを即時復活させる revert コミットの用意）
