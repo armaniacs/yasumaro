@@ -33,6 +33,17 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.7.82] - 2026-08-27
+
+### Fixed
+
+- `dev-docs/Makefile` の `copy-wasm` / `build-wasm` ターゲットが削除済みの `vendor/wa-sqlite/` を参照していたため `make build` が失敗する問題を修正。`build` / `build-store` / `build-edge` から `copy-wasm` への依存を除去し、`build-wasm` ターゲットを削除
+
+### Refactor
+
+- `vendor/wa-sqlite/` の未参照 WASM 成果物（`wa-sqlite-async.wasm`、`wa-sqlite-async.mjs`、`build-wasm.sh`）を削除。`node_modules/wa-sqlite` 経由でバンドルされるためビルド・移行機能に影響なし。SHA1 ハッシュ一致を確認済み。`npm run build` で 4 種 wasm が同一ハッシュで生成されることを検証
+- 診断パネルに旧 DB 移行状態（OPFS / IDB）を表示。`idb_migration_v2_done` を SQLite status プロトコル経由で診断パネルに反映。`renderMigrationSection` で両フラグ true 時「完了」、それ以外は「未完了（該当データがない場合を含む）」と内訳を表示。日英 i18n キー 9 個追加、`diagnosticsPanel.migration.test.ts` に 2 ケース追加
+
 ## [6.7.81] - 2026-08-26
 
 このリリースは前日のレビュー指摘を即座に反映したものです。
