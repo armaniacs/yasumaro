@@ -50,6 +50,7 @@ export interface DiagnosticsSnapshot {
     opfsMigrationV2LastAttemptedAt?: string | null;
     opfsMigrationV2CompletedAt?: string | null;
     opfsMigrationV2RecordCount?: number;
+    idbMigrationV2Done?: boolean;
   } | null;
   deficiencies: ReturnType<typeof diagnoseDeficiencies>;
   builtInAi: BuiltInAiDiagnosticsResult | null;

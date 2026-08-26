@@ -135,6 +135,7 @@ export type OffscreenStatusResponse = {
   opfsMigrationV2LastAttemptedAt?: string | null;
   opfsMigrationV2CompletedAt?: string | null;
   opfsMigrationV2RecordCount?: number;
+  idbMigrationV2Done?: boolean;
 } | OffscreenFailure;
 
 export type OffscreenStatusData = Extract<OffscreenStatusResponse, { success: true }>;

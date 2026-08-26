@@ -39,6 +39,7 @@ describe('diagnosticsPanel — PanelLifecycle implementation', () => {
       <button id="diagBuiltInAiDownloadBtn"></button>
       <div id="diagCompileOptionsStats"></div>
       <div id="diagDivergenceWarning"></div>
+      <div id="diagMigrationStats"></div>
       <div id="diagCompileOptionsSection"></div>
       <input id="diagDebugModeToggle" type="checkbox" />
       <button id="diagTestObsidianBtn"></button>

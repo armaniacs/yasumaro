@@ -1516,6 +1516,33 @@
   "diagSavedUrls": {
     "message": "記録済みURL数"
   },
+  "diagMigrationTitle": {
+    "message": "旧データベース移行"
+  },
+  "diagMigrationOverall": {
+    "message": "旧データベースからの移行"
+  },
+  "diagMigrationCompleted": {
+    "message": "完了"
+  },
+  "diagMigrationNotCompleted": {
+    "message": "未完了（該当データがない場合を含む）"
+  },
+  "diagMigrationOpfsPath": {
+    "message": "OPFS経路"
+  },
+  "diagMigrationIdbPath": {
+    "message": "IDB経路"
+  },
+  "diagMigrationDoneSuffix": {
+    "message": "完了"
+  },
+  "diagMigrationPendingSuffix": {
+    "message": "未完了"
+  },
+  "diagMigrationFreshInstallNote": {
+    "message": "新規インストールでは対象のデータがないため、「未完了」と表示されることがあります。"
+  },
   "diagSqliteTitle": {
     "message": "SQLite データベース"
   },
