@@ -33,6 +33,26 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.7.81] - 2026-08-26
+
+このリリースは前日のレビュー指摘を即座に反映したものです。
+
+### Fixed
+
+- ブランチ差分レビュー（`/review branch`）で検出した5件を修正：
+  - `offscreen/sqliteMessageHandlers.ts` の `handleQuery` で `starred`/`dateFrom`/`dateTo`/`tag` の両エイリアス（`starred`/`isStarred`, `dateFrom`/`since`, `dateTo`/`until`, `tag`/`tagFilter`）をサポートし、SQLite/OPFSとFallbackで異なる結果を返すフィルタバイパスを解消。`payload` を `Record<string, unknown>` にキャストして型エラー解消
+  - `content/extractor.ts` の閾値ループで `Number(s[key]) || t.default` が `0` を `default` に化けるバグを `raw != null && raw !== '' ? Number(raw) : NaN` + `Number.isFinite` チェックに置換（`fallbackRatio 0→0.2` 等）
+  - `utils/aiSummaryCleaner/stripExtended.ts` のテキストベースCookie同意バナー除去の15行重複を `collectCookieConsentElements` ヘルパに抽出し、`stripPopupElements` と `stripCookieConsentElements` の両方から呼び出す形に集約。2x full-page `querySelectorAll` とdriftリスクを解消
+  - `background/ai/providerRegistry.ts` の未使用 `isAllowedProviderBaseUrl` を `GenericOpenAICompatibleProvider` のbaseUrl検証（`validateUrlForAIRequests` 後）に組み込み、private IP/メタデータサービス（`169.254.169.254`）のSSRFガードを有効化（`this.isLocal` に応じて `http` の扱いを分岐）
+  - `background/serviceContainer.ts` の `ServiceTokens.perUrlMutexMap` を `createBackgroundServices` で `register('perUrlMutexMap', () => new PerUrlMutexMap(), {singleton:true})` し、container経由で解決可能にしてdead tokenを解消
+- テスト失敗5件を解消（`gistSettings`/`tagsPanel`/`dashboard-handlers`）: `utils/storage/settingsStore.legacy.ts` で `repo.setAll(toSave, undefined)` を条件分岐（`if (sqliteHealthCheck) register with {sqliteHealthCheck} else register without`）に修正し、`StorageKeys` モックに `ALLOWED_URLS`/`ALLOWED_URLS_HASH` を追加。`8396 tests PASS` に復帰
+
+### Refactor
+
+- checking-teamレビュー指摘16件を9 PBIに統合しRICEで優先度付け（`pbi/2026-08-25-00-backlog.md` および `dev-docs/archived/pbi/2026-08-25-0*.md`）。`InMemoryStorageAdapter` のマイグレーション整合テスト追加と `CONTENT_SCRIPT_ONLY_TYPES` の削除（PBI01/08, RICE 57.6/20.0）、`ProviderStrategy` の後方互換エイリアス `ProviderStrategy = AIProviderStrategy`（PBI02, RICE 40.0）、`sqliteClient` の `Extract<QueryOp>`/`Extract<MutateOp>`是正と `traceId` のoptional化（PBI03, RICE 34.3）、`providerRegistry` の `@layer 1`是正と `isAllowedProviderBaseUrl` 追加（PBI04, RICE 32.7）、`ServiceContainer` の `ServiceTokens` 型付けと `PerUrlMutexMap` のconstructor注入（PBI05, RICE 21.0）、`VisitGate` の `elapsed` clampと `extractor` の重複export削除（PBI06, RICE 16.0）、`vitest` coverage閾値 `lines:80/branches:80` と `reviewSummaryAlarm` の冪等化（PBI07/09, RICE 8.0/6.1）をWave1（3件並列）→Wave2→Wave3→Wave4で実施。全9件を `dev-docs/archived/pbi/` へアーカイブし `pbi/00-INDEX.md` に `0825b/c/d/e/f` 履歴を追記。`0824a` ブランチを `main` へマージ（`3d59ffbc`）
+- `background/serviceContainer.ts` に `ServiceTokens` constと `ServiceKey` 型を追加し `register/resolve/has/override` を型付け。`background/pipeline/perUrlMutex.ts` に `constructor(map?)` を追加しデフォルトは共有static mapを維持しつつ `container.override('perUrlMutexMap', new PerUrlMutexMap(new Map()))` でテスト隔離可能に
+- `content/visitGate.ts` の `isReportable` で `elapsed` を `Math.max(0, (clock()-start)/1000)` にclampしNTP補正での負値による未報告を解消
+
 ## [6.7.80] - 2026-08-25
 
 ### Fixed
