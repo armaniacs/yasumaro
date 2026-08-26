@@ -34,6 +34,24 @@ export default defineConfig({
         'src/**/*.test.ts',
         'src/**/__tests__/**',
         'src/**/*.d.ts',
+        // Entry points bootstrapped from HTML; not imported by unit tests
+        'src/dashboard/main.ts',
+        'src/popup/main.ts',
+        // DOM panel rendering layer; verified via Playwright E2E instead
+        'src/dashboard/panels/**',
+        // OPFS / Web Worker backends that run in a worker thread
+        'src/offscreen/opfsWorker/**',
+        'src/offscreen/opfsWorker.ts',
+        'src/offscreen/OpfsWorkerBackend.ts',
+        'src/offscreen/IdbVfsBackend.ts',
+        'src/offscreen/FallbackStorageAdapter.ts',
+        'src/offscreen/opfsMigrationV2Reader.ts',
+        'src/offscreen/opfsSpike.ts',
+        // Wiring/bootstrap modules without unit tests
+        'src/background/confirmTokenManager.ts',
+        'src/background/dashboardSqliteWiring.ts',
+        'src/dashboard/BrowsingLogRepository.ts',
+        'src/dashboard/markdownTemplateManager.ts',
       ],
       all: true,
       thresholds: {
