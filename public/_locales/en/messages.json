@@ -1576,6 +1576,33 @@
   "diagSavedUrls": {
     "message": "Saved URLs"
   },
+  "diagMigrationTitle": {
+    "message": "Legacy DB Migration"
+  },
+  "diagMigrationOverall": {
+    "message": "Legacy DB Migration"
+  },
+  "diagMigrationCompleted": {
+    "message": "Completed"
+  },
+  "diagMigrationNotCompleted": {
+    "message": "Not completed (includes fresh installs)"
+  },
+  "diagMigrationOpfsPath": {
+    "message": "OPFS path"
+  },
+  "diagMigrationIdbPath": {
+    "message": "IDB path"
+  },
+  "diagMigrationDoneSuffix": {
+    "message": "Done"
+  },
+  "diagMigrationPendingSuffix": {
+    "message": "Pending"
+  },
+  "diagMigrationFreshInstallNote": {
+    "message": "On fresh installs there is no legacy data to migrate, so \"not completed\" is expected."
+  },
   "diagSqliteTitle": {
     "message": "SQLite Database"
   },

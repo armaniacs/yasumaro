@@ -18,7 +18,8 @@
 
 | ID | 状態 | PBI | RICE | 種別 | 見積 |
 |----|------|-----|------|------|------|
-| — | — | (empty) | — | — | — |
+| 03 | ⬜ 未着手（保留、02完了後に判断）🟡🟢 | [旧wa-sqlite移行コードの終息判断](2026-08-27-03-investigate-legacy-migration-sunset.md) | 6.0 | 🔧 | 2pt |
+| 04 | ⬜ 未着手（保留、03確定後に着手）🔴🟡 | [既存WASMバンドルの統合](2026-08-27-04-refactor-consolidate-wasm-bundles.md) | 3.5 | 🔧 | 3pt |
 
 ---
 
@@ -41,6 +42,11 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-27 Autonomous Task Closer — 2件完了（PBI-01/02 並列1バッチ）
+
+- 2026-08-27-01-fix-remove-unused-vendor-wa-sqlite.md（RICE 15.0 — `vendor/wa-sqlite/` の未参照WASM成果物3ファイルを削除。`node_modules/wa-sqlite` 経由でバンドルされるためビルド・移行機能に影響なし。`build-wasm.sh` は古いvendorコピー手順のため再ビルド手順書は保存せず削除。`npm run build` で4種wasmが同一ハッシュで生成されることを確認。type-check / 8399 tests PASS）
+- 2026-08-27-02-feat-migration-status-diagnostics.md（RICE 25.0 — 診断パネルに旧DB移行状態（OPFS/IDB）を表示。`idb_migration_v2_done` を SQLite status プロトコル・offscreen・dashboard service 経由で診断パネルに反映。`renderMigrationSection` で両フラグtrue時「完了」、それ以外は「未完了（該当データがない場合を含む）」と内訳を表示。日英i18n 9キー追加。`diagnosticsPanel.migration.test.ts` に2ケース追加。type-check / 8399 tests PASS）
 
 ### 2026-08-25 Architecture Deepening（arch-delivery-loop）0825a — 4件完了（Wave1 3並列 + Wave2 1直列）
 

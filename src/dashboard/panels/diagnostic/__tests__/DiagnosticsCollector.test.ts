@@ -147,6 +147,26 @@ describe('DiagnosticsCollector — snapshot extensions', () => {
     ]);
   });
 
+  it('passes migration flags through sqlite snapshot', async () => {
+    const collector = new DiagnosticsCollector({
+      ...baseDeps(),
+      getMany: mockGetMany({}),
+      getSqliteStatus: vi.fn().mockResolvedValue({
+        initialized: true,
+        path: 'OPFS:/test.db',
+        fallback: false,
+        fts5: true,
+        opfsMigrationV2Done: true,
+        idbMigrationV2Done: false,
+      }),
+    });
+
+    const snapshot = await collector.collect();
+
+    expect(snapshot.sqlite?.opfsMigrationV2Done).toBe(true);
+    expect(snapshot.sqlite?.idbMigrationV2Done).toBe(false);
+  });
+
   it('collects extInfo from injected getManifest', async () => {
     const collector = new DiagnosticsCollector({
       ...baseDeps(),

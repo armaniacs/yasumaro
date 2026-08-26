@@ -421,6 +421,7 @@ export async function getSqliteStatus(): Promise<{
   opfsMigrationV2LastAttemptedAt?: string | null;
   opfsMigrationV2CompletedAt?: string | null;
   opfsMigrationV2RecordCount?: number;
+  idbMigrationV2Done?: boolean;
 }> {
   let response: DashboardSqliteResponseFor<'status'>;
   try {
@@ -451,6 +452,7 @@ export async function getSqliteStatus(): Promise<{
           opfsMigrationV2LastAttemptedAt: optionalNullableString(response.opfsMigrationV2LastAttemptedAt, 'opfsMigrationV2LastAttemptedAt'),
           opfsMigrationV2CompletedAt: optionalNullableString(response.opfsMigrationV2CompletedAt, 'opfsMigrationV2CompletedAt'),
           opfsMigrationV2RecordCount: optionalNonNegativeNumber(response.opfsMigrationV2RecordCount, 'opfsMigrationV2RecordCount'),
+          idbMigrationV2Done: optionalBoolean(response.idbMigrationV2Done, 'idbMigrationV2Done'),
         }),
       };
     } catch (error) {

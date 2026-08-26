@@ -70,6 +70,7 @@ interface SectionElements {
   diagBuiltInAiDownloadBtn: HTMLButtonElement | null;
   diagCompileOptionsStats: HTMLElement | null;
   diagDivergenceWarning: HTMLElement | null;
+  diagMigrationStats: HTMLElement | null;
   compileOptionsSection: HTMLElement | null;
 }
 
@@ -86,6 +87,7 @@ function querySections(container: HTMLElement): SectionElements {
     diagBuiltInAiDownloadBtn: container.querySelector('#diagBuiltInAiDownloadBtn') as HTMLButtonElement | null,
     diagCompileOptionsStats: container.querySelector('#diagCompileOptionsStats') as HTMLElement | null,
     diagDivergenceWarning: container.querySelector('#diagDivergenceWarning') as HTMLElement | null,
+    diagMigrationStats: container.querySelector('#diagMigrationStats') as HTMLElement | null,
     compileOptionsSection: container.querySelector('#diagCompileOptionsSection') as HTMLElement | null,
   };
 }
@@ -104,6 +106,7 @@ function clearSections(s: SectionElements): void {
   s.diagBuiltInAiDownloadBtn?.classList.add('hidden');
   s.diagCompileOptionsStats?.replaceChildren();
   s.diagDivergenceWarning?.classList.add('hidden');
+  s.diagMigrationStats?.replaceChildren();
 }
 
 function renderObsidianSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {
@@ -228,6 +231,27 @@ function renderSqliteSection(el: HTMLElement | null, snap: DiagnosticsSnapshot):
   }
 }
 
+function renderMigrationSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {
+  if (!el) return;
+
+  const opfsDone = snap.sqlite?.opfsMigrationV2Done ?? false;
+  const idbDone = snap.sqlite?.idbMigrationV2Done ?? false;
+  const allDone = opfsDone && idbDone;
+
+  const overallLabel = getMessage('diagMigrationOverall') || 'Legacy DB Migration';
+  const overallValue = allDone
+    ? (getMessage('diagMigrationCompleted') || 'Completed')
+    : (getMessage('diagMigrationNotCompleted') || 'Not completed (includes fresh installs)');
+  el.appendChild(makeStatRow(overallLabel, overallValue, !allDone));
+
+  const opfsLabel = getMessage('diagMigrationOpfsPath') || 'OPFS path';
+  const idbLabel = getMessage('diagMigrationIdbPath') || 'IDB path';
+  const doneSuffix = getMessage('diagMigrationDoneSuffix') || 'Done';
+  const pendingSuffix = getMessage('diagMigrationPendingSuffix') || 'Pending';
+  el.appendChild(makeStatRow(opfsLabel, opfsDone ? doneSuffix : pendingSuffix, !opfsDone));
+  el.appendChild(makeStatRow(idbLabel, idbDone ? doneSuffix : pendingSuffix, !idbDone));
+}
+
 function renderCompileOptions(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {
   if (!el) return;
   const options = snap.sqlite?.compileOptions;
@@ -277,6 +301,7 @@ export function createDiagnosticsPanel(): PanelLifecycle {
     }
 
     renderSqliteSection(sections.sqliteStats, snapshot);
+    renderMigrationSection(sections.diagMigrationStats, snapshot);
 
     if (sections.diagDeficiencyStats && snapshot.sqlite) {
       const deficiencies = snapshot.deficiencies;

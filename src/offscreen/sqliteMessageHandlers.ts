@@ -190,6 +190,7 @@ async function handleStatus(_msg: SqliteMessage, sendResponse: (r: unknown) => v
         StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT,
         StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT,
         StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT,
+        StorageKeys.IDB_MIGRATION_V2_DONE,
       ]);
       sendResponse({
         ...result,
@@ -197,6 +198,7 @@ async function handleStatus(_msg: SqliteMessage, sendResponse: (r: unknown) => v
         opfsMigrationV2LastAttemptedAt: items[StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT] ?? null,
         opfsMigrationV2CompletedAt: items[StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT] ?? null,
         opfsMigrationV2RecordCount: items[StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT] ?? 0,
+        idbMigrationV2Done: items[StorageKeys.IDB_MIGRATION_V2_DONE] ?? false,
       });
     } catch {
       sendResponse(result);
