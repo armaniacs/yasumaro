@@ -1,21 +1,16 @@
-.PHONY: build build-store build-edge clean test test-watch test-coverage test-e2e type-check validate test-quick test-unit test-news test-news-watch local-ci test-all lock-linux build-wasm
+.PHONY: build build-store build-edge clean test test-watch test-coverage test-e2e type-check validate test-quick test-unit test-news test-news-watch local-ci test-all lock-linux
 
-# build: vendor WASM → node_modules コピー後にバンドル
-build: copy-wasm
+# build: TypeScript + WXT ビルド（node_modules/wa-sqlite 経由）
+build:
 	npm run build
 
 # build-store: バージョン整合性チェック → ビルド → ZIP 生成
-build-store: copy-wasm
+build-store:
 	npm run build:store
 
 # build-edge: バージョン整合性チェック → ビルド → Edge 向け ZIP 生成
-build-edge: copy-wasm
+build-edge:
 	node scripts/check-version-consistency.js && npx wxt zip -b edge
-
-# vendor WASM を node_modules にコピー
-copy-wasm:
-	cp vendor/wa-sqlite/wa-sqlite-async.wasm node_modules/wa-sqlite/dist/
-	cp vendor/wa-sqlite/wa-sqlite-async.mjs node_modules/wa-sqlite/dist/
 
 clean:
 	npm run clean
@@ -75,10 +70,3 @@ test-news:
 
 test-news-watch:
 	npm run test:watch -- src/utils/aiSummaryCleaner/__tests__/newsIntegration.test.ts
-
-# wa-sqlite WASM を Emscripten で再ビルド（FTS5 有効）
-# 前提: brew install emscripten
-build-wasm:
-	bash vendor/wa-sqlite/build-wasm.sh
-	cp vendor/wa-sqlite/wa-sqlite-async.wasm node_modules/wa-sqlite/dist/
-	cp vendor/wa-sqlite/wa-sqlite-async.mjs node_modules/wa-sqlite/dist/
