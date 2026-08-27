@@ -34,10 +34,10 @@ Scenario: 攻撃 — 悪意あるURLはエスケープされスクリプト実�
 ```
 
 ## 受け入れ基準
-- [ ] `src/popup/pendingPages.ts:33` の `value="${page.url}"` が `escapeHtml(page.url)` または `createElement` + `input.value = page.url` / `setAttribute` による安全な代入に置換されている
-- [ ] `innerHTML` テンプレート内の全ての `page.url` 参照がエスケープまたはDOM property代入で無害化されている
-- [ ] `page.title` / `page.reason` と同様に `page.url` のエスケープが一貫している
-- [ ] 既存テスト `src/popup/__tests__/pendingPages.test.ts` がパスし、XSSペイロード (`"><svg onload=alert(1)>`, `javascript:` 等) の追加テストがパスする
+- [x] `src/popup/pendingPages.ts:33` の `value="${page.url}"` が `escapeHtml(page.url)` または `createElement` + `input.value = page.url` / `setAttribute` による安全な代入に置換されている
+- [x] `innerHTML` テンプレート内の全ての `page.url` 参照がエスケープまたはDOM property代入で無害化されている
+- [x] `page.title` / `page.reason` と同様に `page.url` のエスケープが一貫している
+- [x] 既存テスト `src/popup/__tests__/pendingPages.test.ts` がパスし、XSSペイロード (`"><svg onload=alert(1)>`, `javascript:` 等) の追加テストがパスする
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -90,9 +90,9 @@ grep -rn "escapeHtml" src/popup/domUtils.ts src/popup/pendingPages.ts
 - `historyPendingPanel.ts` でも同様の `innerHTML` + `page.url` が無いか `grep -rn "innerHTML" src/dashboard/` で確認
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
-- [ ] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ロールバック手段の検討（本修正は1行のエスケープ追加のため、問題時はrevertで即時切り戻し可能）
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
+- [x] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
+- [x] リファクタリング完了（グリーン後）
+- [x] ロールバック手段の検討（本修正は1行のエスケープ追加のため、問題時はrevertで即時切り戻し可能）
+- [x] ドキュメント更新済み

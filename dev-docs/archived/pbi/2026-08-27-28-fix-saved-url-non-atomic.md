@@ -36,11 +36,11 @@ Scenario: エッジ — 片方の CAS リトライでもう片方が重複更新
   Then リトライ後も両キーが単一トランザクションとして再実行され、二重書き込みが発生しない
 
 ## 受け入れ基準
-- [ ] `setSavedUrlsWithTimestamps` が `savedUrls` と `savedUrlsWithTimestamps` を単一の `withOptimisticLock`（または複数キーを扱う単一 CAS）に統合している
-- [ ] `updateUrlTimestamp` も同様に両キーの更新が同一トランザクションで行われる
-- [ ] 既存の `spreadExistingFields` / `content` 保持 / 7日 cutoff / LRU eviction ロジックが維持される
-- [ ] 並行実行テストで `savedUrls.size === savedUrlsWithTimestamps.length` が常に成立する
-- [ ] `npx vitest run src/utils/storage/__tests__/savedUrlRepository.test.ts` がパスする
+- [x] `setSavedUrlsWithTimestamps` が `savedUrls` と `savedUrlsWithTimestamps` を単一の `withOptimisticLock`（または複数キーを扱う単一 CAS）に統合している
+- [x] `updateUrlTimestamp` も同様に両キーの更新が同一トランザクションで行われる
+- [x] 既存の `spreadExistingFields` / `content` 保持 / 7日 cutoff / LRU eviction ロジックが維持される
+- [x] 並行実行テストで `savedUrls.size === savedUrlsWithTimestamps.length` が常に成立する
+- [x] `npx vitest run src/utils/storage/__tests__/savedUrlRepository.test.ts` がパスする
 
 ## テスト戦略
 - 単体: `withOptimisticLock` をモックし、2回呼ばれていた箇所が1回に統合されたことを検証（呼び出し回数アサーション）
@@ -51,6 +51,6 @@ Scenario: エッジ — 片方の CAS リトライでもう片方が重複更新
 0.1pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

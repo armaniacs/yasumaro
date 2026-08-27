@@ -37,11 +37,11 @@ Scenario: 攻撃 — 改ざんデータは暗号学的ハッシュで検出さ�
 ```
 
 ## 受け入れ基準
-- [ ] `src/utils/trustDb/bloomFilter.ts:162-171` の `simpleHash` が `WebCrypto SHA-256` または `HMAC-SHA256` に置換される（または併用移行パスが実装される）
-- [ ] `TrustBloomFilter.toData():66-79` で生成される `hash` が暗号学的ハッシュ（hex 64文字等）である
-- [ ] `bloomFilterFromData():142-156` の検証が新ハッシュで改ざんを検出し、`simpleHash` 衝突による偽装が拒否される
-- [ ] 既存の永続データ（`simpleHash` で保存された古い `BloomFilterData`）の移行パスが定義される（例: 旧hashは警告ログ＋再生成を促す、または両ハッシュ検証で段階移行）
-- [ ] `npx vitest run src/utils/__tests__/bloomFilter*` および `src/utils/trustDb/__tests__/bloomFilterManager.test.ts` がパスする
+- [x] `src/utils/trustDb/bloomFilter.ts:162-171` の `simpleHash` が `WebCrypto SHA-256` または `HMAC-SHA256` に置換される（または併用移行パスが実装される）
+- [x] `TrustBloomFilter.toData():66-79` で生成される `hash` が暗号学的ハッシュ（hex 64文字等）である
+- [x] `bloomFilterFromData():142-156` の検証が新ハッシュで改ざんを検出し、`simpleHash` 衝突による偽装が拒否される
+- [x] 既存の永続データ（`simpleHash` で保存された古い `BloomFilterData`）の移行パスが定義される（例: 旧hashは警告ログ＋再生成を促す、または両ハッシュ検証で段階移行）
+- [x] `npx vitest run src/utils/__tests__/bloomFilter*` および `src/utils/trustDb/__tests__/bloomFilterManager.test.ts` がパスする
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -100,8 +100,8 @@ cat src/utils/trustDb/bloomFilter.ts | grep -A 12 "function simpleHash"
 - `base64ToUint32Array` の `atob` は非ASCIIで失敗するが現行データは常にASCII base64なので問題なし — 新ハッシュ導入時に `TextEncoder` のエンコーディングを誤らないこと
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `simpleHash` 衝突による偽装が新ハッシュで拒否されることがテストで証明されている
-- [ ] 旧 `BloomFilterData` の移行パスが実装または文書化されている
-- [ ] コードレビュー完了
-- [ ] ADR またはコメントでハッシュ選定理由（SHA-256 vs HMAC）が記録されている
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `simpleHash` 衝突による偽装が新ハッシュで拒否されることがテストで証明されている
+- [x] 旧 `BloomFilterData` の移行パスが実装または文書化されている
+- [x] コードレビュー完了
+- [x] ADR またはコメントでハッシュ選定理由（SHA-256 vs HMAC）が記録されている

@@ -34,11 +34,11 @@ Scenario: 攻撃 — 任意URL連打はrateLimitとドメイン制限でブロ�
 ```
 
 ## 受け入れ基準
-- [ ] `src/utils/urlUtils.ts:33` の `isSecureUrl` または `manualContentFetcher.ts` 内のURL検証にドメイン制限が追加されている（例: 既存タブのURLのみ許可、または許可リスト検証）
-- [ ] `src/background/handlers/recordingHandlers.ts:190-202` のrateLimitチェックが `skipAi` 条件の外に移動し、`skipAi=false` でもrateLimitが適用される
-- [ ] ユニークURL連打時にrateLimitが発動し、裏タブの無制限生成が防止される
-- [ ] 既存の正常系テスト (`manualContentFetcher.test.ts`, `messageHandlers-recordSecurity.test.ts`) がパスする
-- [ ] `chrome.tabs.create` が呼ばれる条件が制限され、10秒保持の裏タブDoSが再現しない
+- [x] `src/utils/urlUtils.ts:33` の `isSecureUrl` または `manualContentFetcher.ts` 内のURL検証にドメイン制限が追加されている（例: 既存タブのURLのみ許可、または許可リスト検証）
+- [x] `src/background/handlers/recordingHandlers.ts:190-202` のrateLimitチェックが `skipAi` 条件の外に移動し、`skipAi=false` でもrateLimitが適用される
+- [x] ユニークURL連打時にrateLimitが発動し、裏タブの無制限生成が防止される
+- [x] 既存の正常系テスト (`manualContentFetcher.test.ts`, `messageHandlers-recordSecurity.test.ts`) がパスする
+- [x] `chrome.tabs.create` が呼ばれる条件が制限され、10秒保持の裏タブDoSが再現しない
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -115,9 +115,9 @@ grep -rn "skipAi" src/background/handlers/recordingHandlers.ts
 - `TAB_LOAD_TIMEOUT_MS = 10000` の10秒保持はDoSの観点で長い。タイムアウト短縮や同時生成数制限（例: 最大3タブ）も併せて検討
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
-- [ ] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ロールバック手段の検討（rateLimit閾値変更は設定で調整可能、ドメイン制限はfeature flagまたはrevertで切り戻し）
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
+- [x] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
+- [x] リファクタリング完了（グリーン後）
+- [x] ロールバック手段の検討（rateLimit閾値変更は設定で調整可能、ドメイン制限はfeature flagまたはrevertで切り戻し）
+- [x] ドキュメント更新済み

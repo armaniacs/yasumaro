@@ -31,11 +31,11 @@ Scenario: 境界 — session.get 失敗時も新規生成と再試行で復旧�
   Then 新規トークンが生成され、永続化の再試行が行われる（またはエラーが適切に伝播し、呼び出し元で再試行可能である）
 
 ## 受け入れ基準
-- [ ] `src/background/confirmTokenManager.ts:11-38` の `ensureConfirmToken` が `chrome.storage.session.set` 成功後のみ `CONFIRM_TOKEN` を更新する、または失敗時に再試行（例: 3回指数バックオフ）を行う
-- [ ] `get` 失敗時と `set` 失敗時の両方でメモリとストレージの不整合が残らない
-- [ ] 既存の `confirmToken` 検証テスト（`confirmTokenConstantTime.test.ts` 等）がパスする
-- [ ] storage 失敗をモックした回帰テストが1件以上追加されている
-- [ ] `npm run type-check` がパスする
+- [x] `src/background/confirmTokenManager.ts:11-38` の `ensureConfirmToken` が `chrome.storage.session.set` 成功後のみ `CONFIRM_TOKEN` を更新する、または失敗時に再試行（例: 3回指数バックオフ）を行う
+- [x] `get` 失敗時と `set` 失敗時の両方でメモリとストレージの不整合が残らない
+- [x] 既存の `confirmToken` 検証テスト（`confirmTokenConstantTime.test.ts` 等）がパスする
+- [x] storage 失敗をモックした回帰テストが1件以上追加されている
+- [x] `npm run type-check` がパスする
 
 ## テスト戦略
 - 単体: `confirmTokenManager` の best-effort 不整合テスト — `chrome.storage.session.set` を `vi.fn().mockRejectedValueOnce` で失敗させ、`ensureConfirmToken()` 後の `CONFIRM_TOKEN` と `chrome.storage.session.get` の値が一致することを検証。再試行ロジックがある場合は `set` が 2 回呼ばれることを検証
@@ -46,6 +46,6 @@ Scenario: 境界 — session.get 失敗時も新規生成と再試行で復旧�
 1pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

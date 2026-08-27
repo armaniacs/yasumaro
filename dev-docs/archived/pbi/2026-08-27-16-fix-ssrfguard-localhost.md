@@ -33,12 +33,12 @@ Scenario: 攻撃 — blockLocalhost=trueで127.0.0.1はブロックされる
 ```
 
 ## 受け入れ基準
-- [ ] `src/utils/ssrfGuard.ts:11-17` の `BLOCKED_PATTERNS` が `127.0.0.1` / `localhost` を正しくブロックする（パターン修正）、または `validateUrl` の `blockLocalhost` 分岐で `isPrivateIpAddress(parsedUrl.hostname)` を呼び出して判定する
-- [ ] `validateUrl("http://127.0.0.1/", { blockLocalhost: true })` がthrowする
-- [ ] `validateUrl("http://localhost/", { blockLocalhost: true })` がthrowする
-- [ ] `validateUrl("http://127.0.0.1:27124/", { blockLocalhost: false })` はthrowしない（Obsidian用途のデフォルト許可を維持）
-- [ ] `validateUrlForFilterImport` / `validateUrlForAIRequests` の既存の `isPrivateIpAddress` / `isLocalhostAddress` による保護が回帰しない
-- [ ] `npm run type-check && npm test -- ssrfGuard` がパスする
+- [x] `src/utils/ssrfGuard.ts:11-17` の `BLOCKED_PATTERNS` が `127.0.0.1` / `localhost` を正しくブロックする（パターン修正）、または `validateUrl` の `blockLocalhost` 分岐で `isPrivateIpAddress(parsedUrl.hostname)` を呼び出して判定する
+- [x] `validateUrl("http://127.0.0.1/", { blockLocalhost: true })` がthrowする
+- [x] `validateUrl("http://localhost/", { blockLocalhost: true })` がthrowする
+- [x] `validateUrl("http://127.0.0.1:27124/", { blockLocalhost: false })` はthrowしない（Obsidian用途のデフォルト許可を維持）
+- [x] `validateUrlForFilterImport` / `validateUrlForAIRequests` の既存の `isPrivateIpAddress` / `isLocalhostAddress` による保護が回帰しない
+- [x] `npm run type-check && npm test -- ssrfGuard` がパスする
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -120,9 +120,9 @@ grep -rn "validateUrl" src/utils/__tests__/ssrfGuard.test.ts src/utils/__tests__
 - 既存の `validateUrlForFilterImport` は既に `isPrivateIpAddress` + `hostname === 'localhost'` でブロックしているため、二重ブロックにならないか確認（問題なし、同じエラーでthrowされるだけ）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
-- [ ] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ロールバック手段の検討（1行修正のためrevertで即時切り戻し可能。Obsidian連携に影響が出た場合は `blockLocalhost` のデフォルト `false` で保護）
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
+- [x] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
+- [x] リファクタリング完了（グリーン後）
+- [x] ロールバック手段の検討（1行修正のためrevertで即時切り戻し可能。Obsidian連携に影響が出た場合は `blockLocalhost` のデフォルト `false` で保護）
+- [x] ドキュメント更新済み

@@ -36,11 +36,11 @@ Scenario: エッジ — ハイフン・アンダースコア・ドットは引�
   Then `true` を返す
 
 ## 受け入れ基準
-- [ ] `src/utils/ublockParser/constants.ts:43` の `DOMAIN_VALIDATION` から `*` が除外されている
-- [ ] `validateDomain("*.example.com")` が `false` を返す
-- [ ] `validateDomain("exa*mple.com")` が `false` を返す
-- [ ] `validateDomain("example.com")` が `true` を返す（リグレッションなし）
-- [ ] `npx vitest run src/utils/__tests__/ublockParser.test.ts` がパスする（既存29ケース維持）
+- [x] `src/utils/ublockParser/constants.ts:43` の `DOMAIN_VALIDATION` から `*` が除外されている
+- [x] `validateDomain("*.example.com")` が `false` を返す
+- [x] `validateDomain("exa*mple.com")` が `false` を返す
+- [x] `validateDomain("example.com")` が `true` を返す（リグレッションなし）
+- [x] `npx vitest run src/utils/__tests__/ublockParser.test.ts` がパスする（既存29ケース維持）
 
 ## テスト戦略
 - 単体: `validateDomain` に `*` 混入パターン（先頭/中間/末尾）、ハイフン境界、二重ドットの組み合わせテストを追加
@@ -51,6 +51,6 @@ Scenario: エッジ — ハイフン・アンダースコア・ドットは引�
 0.05pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
