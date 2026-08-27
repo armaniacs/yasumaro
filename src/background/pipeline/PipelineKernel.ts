@@ -7,8 +7,12 @@
 
 import { addLog, LogType } from '../../utils/logger.js';
 import { pickDefined } from '../../utils/objectUtils.js';
-import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError, type StepDeps } from './types.js';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { ErrorStrategy } from './types.js';
+import type { RecordingContext, PipelineStep, PipelineError, StepDeps } from './types.js';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { buildResult, buildErrorResult, buildPrivatePageResult, notifyObsidianSaveSuccess, notifyRecordingError } from './resultBuilder.js';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { PrivatePageError, DuplicateError } from './steps/index.js';
 import { PerUrlMutexMap } from './perUrlMutex.js';
 import { StepExecutor } from './stepExecutor.js';

@@ -13,7 +13,6 @@ import {
   type SqliteHistoryModel,
   type AppendResult,
 } from './sqliteHistoryModel.js';
-import type { SqliteHistoryState } from './sqliteHistoryModel.js';
 
 export type { FetchDataOptions, AppendResult };
 export type SqliteHistoryControllerDeps = SqliteHistoryModelDeps & { onStateChange: () => void };

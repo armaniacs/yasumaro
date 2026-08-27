@@ -11,10 +11,6 @@ import type {
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from './schema.js';
 import { extractDomain } from './sqliteEngineContext.js';
-import {
-  buildWhereClause, buildOrderByClause, buildFts5OrderClause,
-  buildLikeOrderClause, sanitizeTextForFts5, shouldUseFts5,
-} from './sqliteQueryBuilder.js';
 import { buildQuerySpec, QUERY_CAPS } from './queryPlan.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { withTransaction } from './opfsWorker/handlers.js';
