@@ -23,7 +23,6 @@
 | 24 | ⬜ 未着手 🟡🟢 | [RateLimiter Service化](2026-08-27-24-feat-service-rate-limiter-session.md) | 135 | 🔧 | 2pt |
 | 25 | ⬜ 未着手 🟢🟢 | [TextSimilarity 抽出](2026-08-27-25-feat-extract-text-similarity.md) | 200 | 🔧 | 1pt |
 | 26 | ⬜ 未着手 🟢🟢 | [StorageField 抽出](2026-08-27-26-feat-extract-storage-fields.md) | 180 | 🔧 | 1pt |
-| 27 | ⬜ 未着手 🟢🟢 | [MultiKey OptimisticLock](2026-08-27-27-feat-multi-key-optimistic-lock.md) | 160 | 🔧 | 2pt |
 | 28 | ⬜ 未着手 🟢🟢 | [QueuePolicy 統一](2026-08-27-28-feat-unify-queue-policy.md) | 140 | 🔧 | 1pt |
 | 21 | ⬜ 未着手 🟡🟢 | [Offline Queue Facade](2026-08-27-21-feat-collapse-offline-queue-facade.md) | 157 | 🔧 | 1pt |
 
@@ -48,6 +47,10 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-28 MultiKey OptimisticLock 抽出 — 1件完了
+
+- 2026-08-27-27-feat-multi-key-optimistic-lock.md（RICE 160 — `optimisticLock.ts` に `withAtomicKeys(keys, updater)` を追加し `savedUrlRepository.withAtomicSavedUrls` の複製実装を削除。`JSON.stringify` 比較を `structuredClone`+正準化に置換。type-check / test PASS）
 
 ### 2026-08-27 Review Findings — 8件完了（3バッチ並列）
 
