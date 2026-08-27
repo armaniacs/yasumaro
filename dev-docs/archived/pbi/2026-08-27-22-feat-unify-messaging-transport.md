@@ -25,10 +25,10 @@ Scenario: エッジケース — 型安全性が失われない
   Then `protocolVersion` 付与と `ResponseForType` 型チェックが維持される
 
 ## 受け入れ基準
-- [ ] `MessageTransport` が `send<T>(msg, {retries, clock})` の1 seam を提供する
-- [ ] `MessageValidator` 登録と `RetryPolicy` が内部で統合されている
-- [ ] `src/messaging/types.ts` の3ラッパが `transport.send` への薄いエイリアスに縮退している
-- [ ] `retryHelper.ts` の `ChromeMessageSender` が削除されている
+- [x] `MessageTransport` が `send<T>(msg, {retries, clock})` の1 seam を提供する
+- [x] `MessageValidator` 登録と `RetryPolicy` が内部で統合されている
+- [x] `src/messaging/types.ts` の3ラッパが `transport.send` への薄いエイリアスに縮退している
+- [x] `retryHelper.ts` の `ChromeMessageSender` が削除されている
 
 ## テスト戦略
 - 単体: `MessageTransport` の `send` のリトライ/型/バージョン付与テスト
@@ -39,6 +39,6 @@ Scenario: エッジケース — 型安全性が失われない
 2pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
