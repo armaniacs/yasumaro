@@ -47,6 +47,10 @@
 
 - 2026-08-27-27-feat-multi-key-optimistic-lock.md（RICE 160 — `optimisticLock.ts` に `withAtomicKeys(keys, updater)` を追加し `savedUrlRepository.withAtomicSavedUrls` の複製実装を削除。`JSON.stringify` 比較を `structuredClone`+正準化に置換。type-check / test PASS）
 
+### 2026-08-28 TextSimilarity 深いモジュール抽出 — 1件完了
+
+- 2026-08-27-25-feat-extract-text-similarity.md（RICE 200 — `contentDeduplicator.ts`と`sentenceExtractor.ts`で重複していた`toWordSet`/`splitSentences`/`jaccardSimilarity`を`src/utils/text/tokenizer.ts`+`similarity.ts`に一本化。両モジュールはimportするのみに変更。`buildSentenceGraph`の`Map<string, number[]>`キーを`${index}:${sentence}`のindex-qualifiedキーに変更し、同一文が2つあると頂点が1つに潰れて再現困難だったバグを解消。重複文検出の回帰テストを追加。type-check / 8393 tests PASS（既存の性能系1件は本変更と無関係の既存フレーキー））
+
 ### 2026-08-28 RateLimiter/SessionAlarms Service化 完了
 
 - 2026-08-27-24-feat-service-rate-limiter-session.md（RICE 135 — `src/utils/rateLimiter.ts`（マスターパスワードのブルートフォース制限）を `RateLimitService(Clock, StoragePort)` に、`src/background/sessionAlarmsManager.ts`（自動ロック用 chrome.alarms 管理）を `SessionAlarmService(AlarmPort, Clock, StoragePort, SendMessageFn)` にクラス化。両モジュールの既存エクスポート関数はデフォルトインスタンス委譲の薄いラッパーとして維持し呼び出し元（`masterPassword.ts`/`service-worker.ts`/`createBackgroundServices.ts`）は無改修。`src/utils/ports.ts` に `Clock`/`StoragePort`/`AlarmPort` の3 seam を新設。`src/utils/storage/authGuard.ts` を新設し `encryptionSession.ts` の `getOrCreateEncryptionKey` が直接 `chrome.storage.local` を読んでいた IS_LOCKED チェックを `authGuard.isLocked()` 1 seam に置換。`InMemoryStorageArea`/`FakeClock`/`FakeAlarmPort` で NTP skew（session/local の `lockedUntil` 不一致）・二重ロック・タイマーリスナー重複登録防止を chrome global mock なしに単体テスト（15件新規）。type-check / 8394 tests PASS）
