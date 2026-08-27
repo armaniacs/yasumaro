@@ -262,11 +262,9 @@ describe('IPv6プライベートアドレス検知', () => {
       expect(isPrivateIpAddress('::')).toBe(false);
     });
 
-    test('::ffff:0.0.0.0 はプライベートとして検出される（ループバック0.0.0.0）', () => {
-      // 現在の実装では::ffff:127.x.x.xのみがプライベートとして検出される
-      // ::ffff:0.0.0.0は異なるアドレス範囲
+    test('::ffff:0.0.0.0 はプライベートとして検出される（this host 0.0.0.0）', () => {
       expect(isPrivateIpAddress('::ffff:127.0.0.0')).toBe(true);
-      expect(isPrivateIpAddress('::ffff:0.0.0.0')).toBe(false); // 0.0.0.0はループバックではない
+      expect(isPrivateIpAddress('::ffff:0.0.0.0')).toBe(true);
     });
   });
 
