@@ -7,6 +7,9 @@
  * 1. 内部スキーム（chrome://など）の早期リターン
  * 2. ドメインフィルタキャッシュを使用して、許可ドメイン外で早期リターン
  * 3. キャッシュがない場合のみバックグラウンドメッセージ通信
+ *
+ * PBI-20: domainPolicy は DomainPolicyPort (ChromeDomainPolicyPort) に統一され、
+ * loader と contentKernel で同一の CACHE_TTL と StoragePort 意味論を共有する。
  */
 
 const _errMsg = (e: unknown): string => e instanceof Error ? e.message : String(e);
@@ -34,6 +37,7 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.getURL && typeof
     // E2E test path: imports extractor directly when data-ow-e2e-test is present.
     // Still performs cache-based domain check (does not bypass security), but avoids
     // the service worker message round-trip that causes flaky E2E tests on first load.
+    // checkDomainAllowedFromCache は DomainPolicyPort に統一済み（単一 CACHE_TTL）。
     if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
         const cacheCheck = await checkDomainAllowedFromCache(url);
         if (cacheCheck.useCache && !cacheCheck.allowed) {
@@ -44,7 +48,7 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.getURL && typeof
         return;
     }
 
-    // 【Task #19 最適化】キャッシュベースのドメインチェック
+    // 【Task #19 最適化】キャッシュベースのドメインチェック — DomainPolicyPort 単一 seam
     const cacheCheck = await checkDomainAllowedFromCache(url);
 
     if (cacheCheck.useCache) {
