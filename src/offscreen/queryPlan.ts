@@ -27,6 +27,7 @@ export interface QuerySpec {
   bareText: string | null;
   params: SqliteValue[];
   useFts: boolean;
+  error?: string;
 }
 
 /**
@@ -60,8 +61,18 @@ export function buildQuerySpec(
     orderError = r.error;
   }
   if (orderError) {
-    // Fall back to default order on error (matches IdbVfsBackend behavior)
-    order = 'ORDER BY created_at DESC';
+    return {
+      where,
+      order: 'ORDER BY created_at DESC',
+      limit: 0,
+      offset: 0,
+      cap: caps,
+      ftsTag: null,
+      bareText,
+      params: whereParams,
+      useFts,
+      error: orderError,
+    };
   }
 
   const rawLimit = query.limit ?? 100;

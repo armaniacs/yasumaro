@@ -14,6 +14,7 @@ import {
   buildWhereClause, buildOrderByClause, buildFts5OrderClause,
   buildLikeOrderClause, sanitizeTextForFts5, shouldUseFts5,
 } from './sqliteQueryBuilder.js';
+import { buildQuerySpec, QUERY_CAPS } from './queryPlan.js';
 import { pickDefined } from '../utils/objectUtils.js';
 
 export class IdbVfsBackend implements StorageBackend {
@@ -60,8 +61,10 @@ export class IdbVfsBackend implements StorageBackend {
   async query(q: StorageQuery): Promise<BackendOrError<QuerySearchResult>> {
     this.ensureDb();
 
-    // Build additional filters that must be applied even during text search (date/domain/starred/etc.).
-    // Keep in sync with buildWhereClause / storageFallback.
+    const spec = buildQuerySpec(q, { caps: QUERY_CAPS, fts5Available: this.engine.fts5Available });
+    if (spec.error) return { success: false, error: spec.error };
+
+    // Keep extraWhereSql generation in sync with buildWhereClause / storageFallback / searchHandlers
     const extraConds: string[] = [];
     const extraParams: SqliteValue[] = [];
     if (q.dateFrom != null) { extraConds.push('created_at >= ?'); extraParams.push(q.dateFrom); }
@@ -82,16 +85,15 @@ export class IdbVfsBackend implements StorageBackend {
       .replace(/\bid\b/g, 'b.id');
 
     if (q.text) {
-      const bare = sanitizeTextForFts5(q.text);
+      const bare = spec.bareText;
       if (!bare) return { success: true, rows: [], total: 0 };
 
-      const capLimit = Math.min(q.limit ?? 100, 100000);
-      const offset = q.offset ?? 0;
+      const capLimit = spec.limit;
+      const offset = spec.offset;
 
-      if (shouldUseFts5(this.engine.fts5Available, bare)) {
+      if (spec.useFts) {
         const ftsQuery = `"${bare}"`;
-        const { orderClause, error } = buildFts5OrderClause(q);
-        if (error) return { success: false, error };
+        const orderClause = spec.order;
 
         let total = 0;
         await this.engine.execWithCache(
@@ -129,8 +131,7 @@ export class IdbVfsBackend implements StorageBackend {
 
       // LIKE fallback
       const likePattern = `%${q.text}%`;
-      const { orderClause: likeOrderClause, error: likeErr } = buildLikeOrderClause(q);
-      if (likeErr) return { success: false, error: likeErr };
+      const likeOrderClause = spec.order;
 
       let total = 0;
       await this.engine.execWithCache(
@@ -166,11 +167,11 @@ export class IdbVfsBackend implements StorageBackend {
     }
 
     // Plain filtered listing (no text search)
-    const limit = Math.min(q.limit ?? 100, 1000);
-    const offset = q.offset ?? 0;
-    const { where, params: whereParams } = buildWhereClause(q);
-    const { orderClause, error } = buildOrderByClause(q);
-    if (error) return { success: false, error };
+    const limit = spec.limit;
+    const offset = spec.offset;
+    const where = spec.where;
+    const whereParams = spec.params;
+    const orderClause = spec.order;
 
     const rows: (BrowsingLogEntry & { rank: number })[] = [];
     await this.engine.execWithCache(
