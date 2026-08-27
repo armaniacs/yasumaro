@@ -8,28 +8,32 @@ import type { SyncTarget } from './SyncTarget.js';
 import { SqliteClient } from '../sqliteClient.js';
 import { addLog, LogType } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-import { SettingsRepository } from '../../utils/storage/SettingsRepository.js';
+import { SettingsRepository, settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../../utils/markdownSanitizer.js';
 import { CONNECTION_TEST_CACHE_MODE } from '../../utils/fetch.js';
+import { isCredentialConfigured } from './settingsConfiguredCheck.js';
+import { SyncBatchRunner, type PendingSyncRow } from './SyncBatchRunner.js';
 
 const GIST_API_BASE = 'https://api.github.com';
 
 export class GistSyncTarget implements SyncTarget {
   private sqliteClient: SqliteClient;
+  private settingsReader: SettingsReader;
+  private batchRunner: SyncBatchRunner;
 
-  constructor(sqliteClient: SqliteClient) {
+  constructor(sqliteClient: SqliteClient, settingsReader: SettingsReader = settingsRepository) {
     this.sqliteClient = sqliteClient;
+    this.settingsReader = settingsReader;
+    this.batchRunner = new SyncBatchRunner({
+      targetName: 'GistSync',
+      listPending: (limit) => this.listPending(limit),
+      markSynced: (row) => this.syncRow(row),
+    });
   }
 
   async isConfigured(): Promise<boolean> {
-    try {
-      const settings = await new SettingsRepository().getAll();
-      const pat = settings[StorageKeys.GITHUB_PAT] as string | undefined;
-      return typeof pat === 'string' && pat.length > 0;
-    } catch {
-      return false;
-    }
+    return isCredentialConfigured(this.settingsReader, StorageKeys.GITHUB_PAT, 1);
   }
 
   async sync(logId: number, url: string, title: string | null, summary: string | null, markdown?: string): Promise<{ success: boolean; error?: string }> {
@@ -76,51 +80,32 @@ export class GistSyncTarget implements SyncTarget {
       return 0;
     }
 
-    const BATCH_SIZE = 50;
-    const MAX_ITERATIONS = 100;
+    return this.batchRunner.run();
+  }
 
-    try {
-      let totalSynced = 0;
+  /** SyncBatchRunner ListPending port: fetches up to `limit` unsynced rows. */
+  private async listPending(limit: number): Promise<PendingSyncRow[]> {
+    const result = await this.sqliteClient.query({
+      limit,
+      offset: 0,
+      orderBy: 'created_at',
+      orderDir: 'DESC',
+      gistSynced: 0,
+    });
 
-for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-             const result = await this.sqliteClient.query({
-                 limit: BATCH_SIZE,
-                 offset: 0,
-                 orderBy: 'created_at',
-                 orderDir: 'DESC',
-                 gistSynced: 0,
-             });
-
-            if (!result.success) {
-                throw new Error(`Gist sync query failed: ${result.error.message}`);
-            }
-            if (result.data.rows.length === 0) {
-                break;
-            }
-
-            let batchSynced = 0;
-            for (const row of result.data.rows) {
-                if (row.id === undefined) continue;
-                const syncResult = await this.sync(row.id, row.url, row.title ?? null, row.summary ?? null);
-                if (syncResult.success) {
-                    batchSynced++;
-                }
-            }
-
-            totalSynced += batchSynced;
-        }
-
-      if (totalSynced > 0) {
-        addLog(LogType.INFO, 'GistSync: batch completed', { synced: totalSynced });
-      }
-
-      return totalSynced;
-      } catch (error) {
-      addLog(LogType.WARN, 'GistSync: batch failed', {
-        error: errorMessage(error),
-      });
-      throw error;
+    if (!result.success) {
+      throw new Error(`Gist sync query failed: ${result.error.message}`);
     }
+
+    return result.data.rows
+      .filter((row) => row.id !== undefined)
+      .map((row) => ({ id: row.id as number, url: row.url, title: row.title ?? null, summary: row.summary ?? null }));
+  }
+
+  /** SyncBatchRunner MarkSynced port: syncs one row (sync() itself marks it via sqliteClient.mutate). */
+  private async syncRow(row: PendingSyncRow): Promise<boolean> {
+    const result = await this.sync(row.id, row.url, row.title, row.summary);
+    return result.success;
   }
 
   async testConnection(): Promise<{ success: boolean; message: string }> {
