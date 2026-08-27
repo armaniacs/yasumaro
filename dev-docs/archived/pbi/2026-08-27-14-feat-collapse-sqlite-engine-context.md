@@ -25,10 +25,10 @@ Scenario: エッジケース — 並行 init が競合しない
   Then `Mutex` により1回のみ初期化され、もう片方は待機する。要件に `Mutex` 導入を明記
 
 ## 受け入れ基準
-- [ ] 薄い alias 案: `SqliteEngineHost` が `init/getBackend/execWithCache/getStatus/resetForTesting` + `DB_FILENAME/MAX_QUERY_LIMIT/extractDomain` re-export を維持。`init/exec/getStatus` 3メソッドのみの制約は緩和
-- [ ] 完全カプセル化案では `sendToOpfsWorker`/`tryOpfsProxy` を Host 外に非公開化し `StorageBackend` 経由のみにする（本PBIでは薄い alias を採用）
-- [ ] `migrationBackup` の sunset ゲートを Host 外に切り出し、2026-12-17 削除時に `git rm` で完結する
-- [ ] `opfsWorkerProxy-coverage` テストが `Worker` モックなしで単体で検証可能
+- [x] 薄い alias 案: `SqliteEngineHost` が `init/getBackend/execWithCache/getStatus/resetForTesting` + `DB_FILENAME/MAX_QUERY_LIMIT/extractDomain` re-export を維持。`init/exec/getStatus` 3メソッドのみの制約は緩和
+- [x] 完全カプセル化案では `sendToOpfsWorker`/`tryOpfsProxy` を Host 外に非公開化し `StorageBackend` 経由のみにする（本PBIでは薄い alias を採用）
+- [x] `migrationBackup` の sunset ゲートを Host 外に切り出し、2026-12-17 削除時に `git rm` で完結する
+- [x] `opfsWorkerProxy-coverage` テストが `Worker` モックなしで単体で検証可能
 
 ## テスト戦略
 - 単体: `SqliteEngineHost.init` の再入・失敗・fallback 分岐テスト。並行 init は `Mutex` + `chrome.storage.session` ロックで検証
@@ -39,6 +39,6 @@ Scenario: エッジケース — 並行 init が競合しない
 3pt（薄い alias, 要チームでの見積もり） — 完全 Host は 5pt
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
