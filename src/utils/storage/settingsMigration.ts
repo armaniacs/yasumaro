@@ -83,10 +83,23 @@ export const API_KEY_FIELDS: StorageKey[] = [
     StorageKeys.GITHUB_PAT,
 ];
 
-export async function applyMigrationsAndDecrypt(
+export interface ApplyMigrationsOptions {
+  /** Key provider for decrypt/re-encrypt; defaults to getOrCreateEncryptionKey (chrome path) */
+  getEncryptionKey?: () => Promise<CryptoKey>;
+}
+
+export interface ApplyMigrationsResult {
+  settings: Settings;
+  /** Fields that were plaintext and were re-encrypted — caller should persist via StoragePort */
+  reEncrypted: Record<string, unknown>;
+}
+
+async function applyMigrationsCore(
     rawSettings: Settings,
-    rawEncrypted: boolean = true
-): Promise<Settings> {
+    opts?: ApplyMigrationsOptions
+): Promise<ApplyMigrationsResult> {
+    // BackwardCompat: if opts is boolean (legacy rawEncrypted) treat as no-op
+    if (typeof opts === 'boolean') opts = undefined as unknown as ApplyMigrationsOptions;
     const merged = { ...DEFAULT_SETTINGS, ...rawSettings };
     if (!(StorageKeys.OBSIDIAN_ENABLED in rawSettings)) {
         const apiKey = merged[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
@@ -100,42 +113,61 @@ export async function applyMigrationsAndDecrypt(
         const legacyAutoEnabled = merged[StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED];
         merged[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = legacyAutoEnabled ? 'idle' : 'manual';
     }
-    if (rawEncrypted !== false) {
-        try {
-            const key = await getOrCreateEncryptionKey();
-            for (const field of API_KEY_FIELDS) {
-                const value = merged[field];
-                if (isEncrypted(value)) {
-                    try {
-                        const decryptedValue = await decryptApiKey(value, key);
-                        (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = decryptedValue as StorageKeyValues[StorageKey];
-                    } catch (e) {
-                        await logError(`Failed to decrypt ${field}`, { error: errorMessage(e), field }, ErrorCode.CRYPTO_DECRYPTION_FAILURE);
-                        (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = '' as StorageKeyValues[StorageKey];
-                    }
-                } else if (typeof value === 'string' && value.length > 0) {
-                    await logWarn(
-                        `Plaintext API key detected: ${field}`,
-                        { field },
-                        undefined,
-                        'settingsStore',
-                    );
-                    try {
-                        const encrypted = await encryptApiKey(value, key);
-                        (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = value as StorageKeyValues[StorageKey];
-                        const stored = await chrome.storage.local.get('settings');
-                        const updated = { ...(stored.settings as Record<string, unknown> || {}), [field]: encrypted };
-                        await chrome.storage.local.set({ settings: updated });
-                    } catch (e) {
-                        await logError(`Failed to re-encrypt plaintext ${field}`, { error: errorMessage(e), field }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
-                    }
+    const reEncrypted: Record<string, unknown> = {};
+    try {
+        const keyProvider = (opts as ApplyMigrationsOptions | undefined)?.getEncryptionKey ?? getOrCreateEncryptionKey;
+        const key = await keyProvider();
+        for (const field of API_KEY_FIELDS) {
+            const value = merged[field];
+            if (isEncrypted(value)) {
+                try {
+                    const decryptedValue = await decryptApiKey(value, key);
+                    (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = decryptedValue as StorageKeyValues[StorageKey];
+                } catch (e) {
+                    await logError(`Failed to decrypt ${field}`, { error: errorMessage(e), field }, ErrorCode.CRYPTO_DECRYPTION_FAILURE);
+                    (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = '' as StorageKeyValues[StorageKey];
+                }
+            } else if (typeof value === 'string' && value.length > 0) {
+                await logWarn(
+                    `Plaintext API key detected: ${field}`,
+                    { field },
+                    undefined,
+                    'settingsStore',
+                );
+                try {
+                    const encrypted = await encryptApiKey(value, key);
+                    (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = value as StorageKeyValues[StorageKey];
+                    reEncrypted[field] = encrypted;
+                } catch (e) {
+                    await logError(`Failed to re-encrypt plaintext ${field}`, { error: errorMessage(e), field }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
                 }
             }
-        } catch (e) {
-            await logError('Failed to get encryption key for decryption', { error: errorMessage(e) }, ErrorCode.CRYPTO_KEY_DERIVE_FAILURE);
         }
+    } catch (e) {
+        await logError('Failed to get encryption key for decryption', { error: errorMessage(e) }, ErrorCode.CRYPTO_KEY_DERIVE_FAILURE);
     }
-    return merged;
+    return { settings: merged, reEncrypted };
+}
+
+/**
+ * Pure migration + decrypt. No direct chrome.storage writes.
+ * Plaintext re-encryption is collected in `reEncrypted` for the caller (Settings.getAll)
+ * to persist via StoragePort, keeping this function side-effect free.
+ * Overload keeps legacy callers (returning Settings) working.
+ */
+export async function applyMigrationsAndDecrypt(
+    rawSettings: Settings,
+    opts?: ApplyMigrationsOptions | boolean
+): Promise<Settings> {
+    const core = await applyMigrationsCore(rawSettings, opts as ApplyMigrationsOptions);
+    return core.settings;
+}
+
+export async function applyMigrationsAndDecryptWithReEncrypt(
+    rawSettings: Settings,
+    opts?: ApplyMigrationsOptions | boolean
+): Promise<ApplyMigrationsResult> {
+    return applyMigrationsCore(rawSettings, opts as ApplyMigrationsOptions);
 }
 
 export async function tryRestoreFromBackup(): Promise<Settings | null> {
