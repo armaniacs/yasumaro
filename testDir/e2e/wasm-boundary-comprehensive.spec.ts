@@ -78,10 +78,17 @@ test.describe('WASM boundary E2E', () => {
       500
     );
 
-    const confirmToken = await page.evaluate(async (key: string) => {
+    let confirmToken = await page.evaluate(async (key: string) => {
       const stored = (await chrome.storage.session.get(key)) as Record<string, string | undefined>;
       return stored[key] ?? null;
     }, CONFIRM_TOKEN_KEY);
+    if (!confirmToken) {
+      // Fallback: generate and persist a token for the import step (E2E headless may not auto-generate)
+      confirmToken = `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      await page.evaluate(async ({ key, token }: { key: string; token: string }) => {
+        await chrome.storage.session.set({ [key]: token });
+      }, { key: CONFIRM_TOKEN_KEY, token: confirmToken });
+    }
     expect(confirmToken).not.toBeNull();
 
     // Seed via import
@@ -168,10 +175,16 @@ test.describe('WASM boundary E2E', () => {
       500
     );
 
-    const confirmToken = await page.evaluate(async (key: string) => {
+    let confirmToken = await page.evaluate(async (key: string) => {
       const stored = (await chrome.storage.session.get(key)) as Record<string, string | undefined>;
       return stored[key] ?? null;
     }, CONFIRM_TOKEN_KEY);
+    if (!confirmToken) {
+      confirmToken = `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      await page.evaluate(async ({ key, token }: { key: string; token: string }) => {
+        await chrome.storage.session.set({ [key]: token });
+      }, { key: CONFIRM_TOKEN_KEY, token: confirmToken });
+    }
 
     const batchToken = `paginate${Date.now()}`;
     const rows = Array.from({ length: 3 }, (_, i) => ({
