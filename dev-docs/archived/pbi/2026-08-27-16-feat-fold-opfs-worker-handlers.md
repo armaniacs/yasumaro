@@ -25,9 +25,9 @@ Scenario: エッジケース — ROLLBACK が漏れない
   Then `ROLLBACK` が確実に実行され、外側エラーを隠蔽しない
 
 ## 受け入れ基準
-- [ ] `handlers.ts` に `withTransaction(ctx, fn)` が抽出されている
-- [ ] `crudHandlers.ts:128-146` / `purgeHandlers.ts:22-53` / `IdbVfsBackend.ts:42-55` の3箇所の `BEGIN/COMMIT/ROLLBACK` 重複がヘルパに一本化されている
-- [ ] `SqliteWorkerApi` への統合は見送り、PBI-12/14 後に再評価する方針が ADR またはコメントで明記されている
+- [x] `handlers.ts` に `withTransaction(ctx, fn)` が抽出されている
+- [x] `crudHandlers.ts:128-146` / `purgeHandlers.ts:22-53` / `IdbVfsBackend.ts:42-55` の3箇所の `BEGIN/COMMIT/ROLLBACK` 重複がヘルパに一本化されている
+- [x] `SqliteWorkerApi` への統合は見送り、PBI-12/14 後に再評価する方針が ADR またはコメントで明記されている
 
 ## テスト戦略
 - 単体: `withTransaction` の `COMMIT`/`ROLLBACK` 境界テスト。`BEGIN` 失敗時の `ROLLBACK` 投げ直しで外側エラーを隠蔽しないことを検証
@@ -38,6 +38,6 @@ Scenario: エッジケース — ROLLBACK が漏れない
 3pt（ヘルパ抽出, 要チームでの見積もり） — フル `SqliteWorkerApi` 15メソッド統合は 5pt
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

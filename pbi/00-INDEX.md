@@ -20,8 +20,6 @@
 |----|------|-----|------|------|------|
 | 03 | ⬜ 未着手（保留、02完了後に判断）🟡🟢 | [旧wa-sqlite移行コードの終息判断](2026-08-27-03-investigate-legacy-migration-sunset.md) | 6.0 | 🔧 | 2pt |
 | 04 | ⬜ 未着手（保留、03確定後に着手）🔴🟡 | [既存WASMバンドルの統合](2026-08-27-04-refactor-consolidate-wasm-bundles.md) | 3.5 | 🔧 | 3pt |
-| 16 | ⬜ 未着手 🟡🟢 | [opfsWorker withTransaction 抽出](2026-08-27-16-feat-fold-opfs-worker-handlers.md) | 160 | 🔧 | 3pt |
-| 17 | ⬜ 未着手 🟡🟢 | [HistoryModel 縮小統合](2026-08-27-17-feat-merge-history-panel-mvc.md) | 154 | 🔧 | 3pt |
 | 18 | ⬜ 未着手 🟢🟢 | [Dashboard RPC 最小 (retry抽出)](2026-08-27-18-feat-consolidate-dashboard-rpc.md) | 120→720* | 🔧 | 0.5pt |
 | 22 | ⬜ 未着手 🔴🟢 | [Messaging Transport 統一](2026-08-27-22-feat-unify-messaging-transport.md) | 420 | ✨ | 2pt |
 | 23 | ⬜ 未着手 🟡🟢 | [Sync Batch Runner](2026-08-27-23-feat-extract-sync-batch-runner.md) | 180 | 🔧 | 2pt |
@@ -114,6 +112,8 @@
 - 2026-08-27-13-feat-consolidate-recording-pipeline.md（RICE 420→252 — Phase A-1: `PipelineKernel` を新設し `RecordingPipeline.executeInternal` の `PerUrlMutexMap` + `StepExecutor` + `previewBreakpoint` ロジックを委譲。`RecordingPipeline.record()` は facade に縮退。`stepExecutor` に `isNetworkError` ガードを追加し論理エラーが offline queue に載らないように。`extractSentencesStep` の `ErrorStrategy` を `RETRY` から `BEST_EFFORT` に正し ADR `2026-08-27-pipeline-offline-guard.md` を作成。type-check / 20 Pipeline tests PASS）
 - 2026-08-27-14-feat-collapse-sqlite-engine-context.md（RICE 210 — `sqliteEngineContext` を `SqliteEngineHost` の薄い alias に縮小。`SqliteEngineHost` を新設し `private #state` で 4 State を集約、`Mutex` で `init` 直列化。`IdbVfsBackend`/`OpfsWorkerBackend`/`backendResolver` の型を `SqliteEngineHost|SqliteEngineContext` に拡張。type-check / 36 tests PASS）
 - 2026-08-27-15-feat-deepen-settings-repository.md（RICE 257 — `Settings` を `StoragePort` 1-seam に統一。`storagePort.ts` 新設、`settingsMigration.ts` から `rawEncrypted` 削除、`SettingsRepository` を `StoragePort` 1-seam に書き換え。type-check / 55 tests PASS）
+- 2026-08-27-16-feat-fold-opfs-worker-handlers.md（RICE 160 — `handlers.ts` に `withTransaction` ヘルパを抽出し `crudHandlers`/`purgeHandlers`/`IdbVfsBackend` の3箇所の `BEGIN/COMMIT/ROLLBACK` 重複を一本化。type-check / 44 tests PASS）
+- 2026-08-27-17-feat-merge-history-panel-mvc.md（RICE 154 — `Controller+State` を `HistoryModel` に集約し `Query/View` は委譲維持。`historyStateReducer` を内部再利用。`sqliteHistoryPanelState.test.ts` 30ケース+`Controller` 8ケースを Model 単体へ移管。type-check / 178 tests PASS）
 
 ### 2026-08-27 Autonomous Task Closer — 2件完了（PBI-01/02 並列1バッチ）
 
