@@ -161,5 +161,24 @@ describe('sentenceExtractor', () => {
       const result = extractSentences(content, { topK: 10 });
       expect(result.length).toBeLessThan(sentences.length);
     });
+
+    it('does not collapse duplicate sentences into a single vertex', () => {
+      // Regression: buildSentenceGraph previously keyed on raw sentence text,
+      // so two identical sentences shared one Map key and one vertex was
+      // silently lost from TextRank scoring.
+      const distinctFillers = Array.from(
+        { length: 15 },
+        (_, i) => `これは全く関係のない文${i}の内容です。`
+      );
+      const content = [
+        '重複する重要な文章です。',
+        ...distinctFillers,
+        '重複する重要な文章です。',
+      ].join(' ');
+
+      const result = extractSentences(content, { topK: 20, minLength: 5 });
+      const duplicateCount = result.filter(s => s === '重複する重要な文章です。').length;
+      expect(duplicateCount).toBe(2);
+    });
   });
 });

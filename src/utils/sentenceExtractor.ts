@@ -2,12 +2,17 @@
  * sentenceExtractor.ts
  * L0 Extractive Compression using TextRank algorithm
  * Based on Mihalcea & Tarau (2004) - TextRank: Bringing Order into Text
- * 
+ *
  * Features:
  * - Jaccard/bigram similarity for Japanese and English
  * - PageRank-based sentence ranking
  * - Configurable extraction options
  */
+
+import { splitSentences, toWordSet } from './text/tokenizer.js';
+import { jaccardSimilarity } from './text/similarity.js';
+
+export { splitSentences };
 
 export interface ExtractOptions {
   /** Number of sentences to extract (default: 10) */
@@ -28,75 +33,6 @@ const DEFAULT_OPTIONS: Required<ExtractOptions> = {
 };
 
 /**
- * Split text into sentences
- * Supports Japanese (。！？) and English (.!?)
- */
-export function splitSentences(text: string): string[] {
-  if (!text || !text.trim()) {
-    return [];
-  }
-
-  const result: string[] = [];
-  const regex = /([。！？.!?])\s*/g;
-  let lastIndex = 0;
-  let match;
-
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      const sentence = text.slice(lastIndex, match.index + match[1]!.length).trim();
-      if (sentence) {
-        result.push(sentence);
-      }
-    }
-    lastIndex = match.index + match[1]!.length;
-  }
-
-  // Handle remaining text without punctuation
-  if (lastIndex < text.length) {
-    const remaining = text.slice(lastIndex).trim();
-    if (remaining) {
-      result.push(remaining);
-    }
-  }
-
-  return result;
-}
-
-/**
- * Check if text contains Japanese characters
- */
-function containsJapanese(text: string): boolean {
-  return /[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff]/.test(text);
-}
-
-/**
- * Get character bigrams from text (useful for Japanese similarity)
- */
-function getBigrams(text: string): string[] {
-  const bigrams: string[] = [];
-  for (let i = 0; i < text.length - 1; i++) {
-    bigrams.push(text[i]! + text[i + 1]!);
-  }
-  return bigrams;
-}
-
-/**
- * Convert text to word set for similarity calculation
- */
-function toWordSet(text: string): Set<string> {
-  const cleaned = text.toLowerCase();
-  const words = cleaned
-    .split(/[\s\u3000\u3001\u3002\uff0c\uff0e\uff01\uff1f、。，．！？,.!?\-_:;()\[\]{}""''\u300c\u300d]+/)
-    .filter(w => w.length >= 2);
-
-  if (containsJapanese(cleaned)) {
-    words.push(...getBigrams(cleaned));
-  }
-
-  return new Set(words);
-}
-
-/**
  * Calculate Jaccard similarity between two texts
  * J(A, B) = |A ∩ B| / |A ∪ B|
  */
@@ -105,30 +41,17 @@ export function calculateSimilarity(s1: string, s2: string): number {
     return 0.0;
   }
 
-  const set1 = toWordSet(s1);
-  const set2 = toWordSet(s2);
-
-  if (set1.size === 0 && set2.size === 0) {
-    return 1.0;
-  }
-  if (set1.size === 0 || set2.size === 0) {
-    return 0.0;
-  }
-
-  let intersection = 0;
-  for (const word of set1) {
-    if (set2.has(word)) {
-      intersection++;
-    }
-  }
-
-  const union = set1.size + set2.size - intersection;
-  return intersection / union;
+  return jaccardSimilarity(toWordSet(s1), toWordSet(s2));
 }
 
 /**
- * Build similarity graph from sentences
- * Nodes = sentences, Edges = similarity above threshold
+ * Build similarity graph from sentences.
+ * Nodes = sentence indices, Edges = similarity above threshold.
+ *
+ * NOTE: Keyed by index-qualified strings ("<index>:<sentence>"), not by
+ * raw sentence text — two identical sentences must remain distinct graph
+ * vertices. A plain `Map<sentenceText, ...>` collapses duplicate sentences
+ * into a single vertex, silently losing one during TextRank scoring.
  */
 function buildSentenceGraph(
   sentences: string[],
@@ -136,20 +59,18 @@ function buildSentenceGraph(
 ): Map<string, number[]> {
   const graph = new Map<string, number[]>();
   const n = sentences.length;
+  const keyOf = (i: number): string => `${i}:${sentences[i]}`;
 
-  // Initialize graph
   for (let i = 0; i < n; i++) {
-    graph.set(sentences[i]!, []);
+    graph.set(keyOf(i), []);
   }
 
-  // Build edges based on similarity
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
       const sim = calculateSimilarity(sentences[i]!, sentences[j]!);
       if (sim >= threshold) {
-        // Add edge (bidirectional)
-        graph.get(sentences[i]!)!.push(j);
-        graph.get(sentences[j]!)!.push(i);
+        graph.get(keyOf(i))!.push(j);
+        graph.get(keyOf(j))!.push(i);
       }
     }
   }
@@ -250,11 +171,11 @@ export function extractSentences(
 
   // Filter by minimum length
   const validSentences = sentences.filter(s => s.length >= opts.minLength);
-  
+
   // Determine which sentences to use for extraction
   let sentencesForExtraction: string[];
   let useAllSentencesFallback = false;
-  
+
   if (validSentences.length === 0) {
     // No valid sentences meet minLength, use all sentences but apply minLength to output
     sentencesForExtraction = sentences;
@@ -266,20 +187,20 @@ export function extractSentences(
     sentencesForExtraction = validSentences;
   }
 
-  // Build similarity graph
+  // Build similarity graph (index-qualified keys — see buildSentenceGraph)
   const graph = buildSentenceGraph(sentencesForExtraction, opts.similarityThreshold);
 
   // Run TextRank
   const scores = textRank(graph);
 
-  // Sort by score and get top K
+  // Sort by score, take top K, then strip the index prefix back to plain text
   const sorted = Array.from(scores.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, opts.topK)
-    .map(([sentence]) => sentence);
+    .map(([key]) => key.slice(key.indexOf(':') + 1));
 
   // Filter output by minLength if using fallback
-  const finalResult = useAllSentencesFallback 
+  const finalResult = useAllSentencesFallback
     ? sorted.filter(s => s.length >= opts.minLength)
     : sorted;
 
