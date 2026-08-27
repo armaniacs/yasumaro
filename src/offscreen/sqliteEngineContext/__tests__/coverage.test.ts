@@ -302,7 +302,7 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
   it('resetForTesting / resetBackend / extractDomain / execWithCache / backend 解決をカバーする', async () => {
     // extractDomain: www 除去とパース失敗
     expect(extractDomain('https://www.example.com/path')).toBe('example.com');
-    expect(extractDomain('not a url')).toBe('not a url');
+    expect(extractDomain('not a url')).toBeNull();
     expect(extractDomain('https://example.com')).toBe('example.com');
 
     // execWithCache は idbEngineLifecycle の execWithCache に委譲（mock）

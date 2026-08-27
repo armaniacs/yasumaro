@@ -5,6 +5,7 @@
  */
 
 import { Mutex } from '../utils/Mutex.js';
+import { extractDomain } from '../utils/domainUtils.js';
 import { UPDATABLE_FIELDS, buildInsertRecordFields } from './schema.js';
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
 
@@ -441,12 +442,7 @@ export class FallbackStorage {
     return data.records;
   }
 
-  private extractDomain(url: string): string {
-    try {
-      const parsed = new URL(url);
-      return parsed.hostname;
-    } catch {
-      return url;
-    }
+  private extractDomain(url: string): string | null {
+    return extractDomain(url);
   }
 }

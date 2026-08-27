@@ -458,9 +458,9 @@ describe('FallbackStorage domain extraction', () => {
     expect(records[0]!.domain).toBe('subdomain.example.com');
   });
 
-  it('returns raw URL for invalid URL', async () => {
+  it('returns null for invalid URL', async () => {
     await storage.insert(makeRecord({ url: 'not-a-valid-url' }));
     const records = await storage.getAllRecords();
-    expect(records[0]!.domain).toBe('not-a-valid-url');
+    expect(records[0]!.domain).toBeNull();
   });
 });

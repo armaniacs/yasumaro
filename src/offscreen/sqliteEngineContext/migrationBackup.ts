@@ -13,6 +13,7 @@ import type { SqliteValue } from '../sqliteEngine.js';
 import type { SqliteEngine } from '../sqliteEngine.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { execWithCache, DB_FILENAME } from './idbEngineLifecycle.js';
+import { extractDomain } from '../../utils/domainUtils.js';
 
 /** Columns selected by the pre-migration backup / post-migration restore, in order. */
 const MIGRATION_BACKUP_COLUMNS = [...COLUMN_NAMES];
@@ -77,14 +78,7 @@ export interface MigrationBackupState {
   idbEngine: SqliteEngine | null;
 }
 
-export function extractDomain(url: string): string {
-  try {
-    const parsed = new URL(url);
-    return parsed.hostname.replace(/^www\./, '');
-  } catch {
-    return url;
-  }
-}
+export { extractDomain } from '../../utils/domainUtils.js';
 
 /**
  * Detect a pre-existing wa-sqlite IndexedDB database and back its records
