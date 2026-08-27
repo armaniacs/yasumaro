@@ -30,7 +30,7 @@ export async function loadPendingPages(): Promise<void> {
         item.dataset.index = String(index);
 
         item.innerHTML = `
-          <input type="checkbox" value="${page.url}" class="pending-checkbox">
+          <input type="checkbox" value="${escapeHtml(page.url)}" class="pending-checkbox">
           <div class="pending-item-content">
             <div class="pending-item-title pending-item-title--link">${escapeHtml(page.title)}</div>
             <div class="pending-item-reason">${escapeHtml(page.headerValue || page.reason)}</div>

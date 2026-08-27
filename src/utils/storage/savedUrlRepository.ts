@@ -13,7 +13,7 @@
  * value object rather than an enumerated bag of fields.
  */
 
-import { withOptimisticLock } from '../optimisticLock.js';
+import { withOptimisticLock, ConflictError } from '../optimisticLock.js';
 import { getStorageUsage, estimateDataSize, STORAGE_QUOTA_BYTES, hasUnlimitedStorage } from './quota.js';
 import type { RecordType } from '../commonTypes.js';
 import { MAX_URL_SET_SIZE, URL_RETENTION_DAYS, MAX_CONTENT_ENTRIES } from '../urlEntry.js';
@@ -119,6 +119,87 @@ function applyMetadataPatch(
     return result;
 }
 
+/**
+ * Atomic dual-key CAS for `savedUrls` + `savedUrlsWithTimestamps`.
+ *
+ * 5 Whys (PBI 2026-08-27-28):
+ * 1. なぜ非原子か: `setSavedUrlsWithTimestamps` と `updateUrlTimestamp` が
+ *    `savedUrlsWithTimestamps` と `savedUrls` を2回の独立した
+ *    `withOptimisticLock` で更新するため、中間状態が観測可能だった。
+ * 2. なぜ2回に分けたか: 2キーが `chrome.storage.local` で別キーとして
+ *    保存され、各キー単位で CAS する設計を踏襲したため。
+ * 3. なぜ気づかなかったか: 単一タブ・単一操作のテストでは競合が発生せず、
+ *    並行書き込みのインターリーブを検証するテストがなかった。
+ * 4. なぜリトライが二重書き込みを招くか: 片方だけ成功した後にリトライすると
+ *    もう片方が重複更新されるため、単一トランザクションで再実行する必要がある。
+ * 5. 解: 両キーを単一の楽観的ロック・トランザクションに統合し、
+ *    `chrome.storage.local.set({ savedUrls, savedUrlsWithTimestamps })` の
+ *    アトミック性 + バージョンチェックで競合ウィンドウを閉じる。
+ */
+const INITIAL_VERSION = 0;
+
+async function withAtomicSavedUrls(
+    updater: (state: { urls: string[]; entries: SavedUrlEntry[] }) => { nextUrls: string[]; nextEntries: SavedUrlEntry[] },
+    options: { maxRetries?: number; initialDelay?: number } = {}
+): Promise<void> {
+    const { maxRetries = 5, initialDelay = 100 } = options;
+    let attempt = 0;
+    let lastError: Error | null = null;
+
+    while (attempt <= maxRetries) {
+        try {
+            const result = await chrome.storage.local.get([
+                'savedUrls',
+                'savedUrls_version',
+                'savedUrlsWithTimestamps',
+                'savedUrlsWithTimestamps_version',
+            ]);
+            const currentUrls = (result.savedUrls as string[]) || [];
+            const currentUrlsVersion = (result.savedUrls_version as number) ?? INITIAL_VERSION;
+            const currentEntries = (result.savedUrlsWithTimestamps as SavedUrlEntry[]) || [];
+            const currentEntriesVersion = (result.savedUrlsWithTimestamps_version as number) ?? INITIAL_VERSION;
+
+            const { nextUrls, nextEntries } = updater({ urls: currentUrls, entries: currentEntries });
+
+            const newUrlsVersion = currentUrlsVersion + 1;
+            const newEntriesVersion = currentEntriesVersion + 1;
+
+            const verifyResult = await chrome.storage.local.get([
+                'savedUrls',
+                'savedUrls_version',
+                'savedUrlsWithTimestamps',
+                'savedUrlsWithTimestamps_version',
+            ]);
+            const verifyUrlsVersion = (verifyResult.savedUrls_version as number) ?? INITIAL_VERSION;
+            const verifyEntriesVersion = (verifyResult.savedUrlsWithTimestamps_version as number) ?? INITIAL_VERSION;
+
+            if (verifyUrlsVersion !== currentUrlsVersion || verifyEntriesVersion !== currentEntriesVersion) {
+                throw new ConflictError(
+                    'savedUrls+savedUrlsWithTimestamps',
+                    currentUrlsVersion,
+                    verifyUrlsVersion !== currentUrlsVersion ? verifyUrlsVersion : verifyEntriesVersion
+                );
+            }
+
+            await chrome.storage.local.set({
+                savedUrls: nextUrls,
+                savedUrls_version: newUrlsVersion,
+                savedUrlsWithTimestamps: nextEntries,
+                savedUrlsWithTimestamps_version: newEntriesVersion,
+            });
+            return;
+        } catch (error) {
+            if (!(error instanceof ConflictError)) throw error;
+            lastError = error as Error;
+            attempt++;
+            if (attempt > maxRetries) throw new ConflictError('savedUrls+savedUrlsWithTimestamps', -1, -1);
+            const delay = initialDelay * Math.pow(2, attempt - 1);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+    }
+    throw lastError || new Error('Unexpected error in withAtomicSavedUrls');
+}
+
 // ============================================================================
 // Read operations
 // ============================================================================
@@ -199,6 +280,9 @@ export async function setSavedUrls(urlSet: Set<string>, urlToAdd: string | null 
  * Save the URL Map with timestamps.
  * Existing entry fields are preserved via spreadExistingFields() — no
  * manual field enumeration needed.
+ *
+ * Atomic: `savedUrls` と `savedUrlsWithTimestamps` を単一トランザクションで
+ * 更新し、中間状態を観測させない。
  */
 export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, urlToAdd: string | null = null): Promise<void> {
     if (urlToAdd) {
@@ -207,45 +291,49 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
 
     const urlArray = Array.from(urlMap.keys());
 
-    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+    await withAtomicSavedUrls(({ urls: currentUrls, entries: currentEntries }) => {
         const existingMap = new Map<string, SavedUrlEntry>();
         for (const e of (currentEntries || [])) {
             existingMap.set(e.url, e);
         }
-        const entries: SavedUrlEntry[] = [];
+        const nextEntries: SavedUrlEntry[] = [];
         for (const [url, timestamp] of urlMap.entries()) {
             const existing = existingMap.get(url);
             const entry: SavedUrlEntry = { url, timestamp };
             spreadExistingFields(entry, existing);
-            entries.push(entry);
+            nextEntries.push(entry);
         }
         // contentは最新MAX_CONTENT_ENTRIES件のみ保持（ストレージ節約）
-        const sorted = entries.slice().sort((a, b) => b.timestamp - a.timestamp);
+        const sorted = nextEntries.slice().sort((a, b) => b.timestamp - a.timestamp);
         sorted.forEach((e, i) => { if (i >= MAX_CONTENT_ENTRIES) delete e.content; });
-        return entries;
-    });
 
-    await withOptimisticLock('savedUrls', (currentUrls: string[]) => {
         const currentSet = new Set(currentUrls || []);
         const newSet = new Set(urlArray);
+        let nextUrls: string[];
         if (currentSet.size !== newSet.size) {
-            return Array.from(newSet);
-        }
-        for (const x of currentSet) {
-            if (!newSet.has(x)) {
-                return Array.from(newSet);
+            nextUrls = Array.from(newSet);
+        } else {
+            let changed = false;
+            for (const x of currentSet) {
+                if (!newSet.has(x)) { changed = true; break; }
             }
+            nextUrls = changed ? Array.from(newSet) : (currentUrls || []);
         }
-        return currentUrls;
+
+        return { nextUrls, nextEntries };
     });
 }
 
 /**
  * Update URL timestamp for LRU tracking.
  * Existing entry fields are preserved via spreadExistingFields().
+ *
+ * Atomic: `savedUrls` と `savedUrlsWithTimestamps` を単一トランザクションで
+ * 更新し、並行する読み取りが中間状態を観測しないようにする。
+ * 7日 cutoff / LRU eviction / content 保持ロジックは維持。
  */
 async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise<void> {
-    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
+    await withAtomicSavedUrls(({ entries: currentEntries }) => {
         let entries = currentEntries || [];
         const existing = entries.find(entry => entry.url === url);
         entries = entries.filter(entry => entry.url !== url);
@@ -257,7 +345,7 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
 
         // 7日より古いエントリを削除
         const cutoff = Date.now() - URL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-        entries = entries.filter(entry => entry.timestamp >= cutoff);
+        entries = entries.filter(e => e.timestamp >= cutoff);
 
         if (entries.length > MAX_URL_SET_SIZE) {
             entries.sort((a, b) => a.timestamp - b.timestamp);
@@ -268,13 +356,12 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
         const sorted = entries.slice().sort((a, b) => b.timestamp - a.timestamp);
         sorted.forEach((e, i) => { if (i >= MAX_CONTENT_ENTRIES) delete e.content; });
 
-        return entries;
-    });
+        const nextEntries = entries;
+        // LRU 削除が両キーで同一URLに対して行われるよう、entries 駆動で
+        // savedUrls を導出する。中間不一致を防止し、両キー一致を保証する。
+        const nextUrls = nextEntries.map(e => e.url);
 
-    await withOptimisticLock('savedUrls', (currentUrls: string[]) => {
-        const currentSet = new Set(currentUrls || []);
-        currentSet.add(url);
-        return Array.from(currentSet);
+        return { nextUrls, nextEntries };
     });
 }
 
@@ -291,17 +378,15 @@ export async function addSavedUrl(url: string, recordType?: RecordType): Promise
 
 /**
  * Remove a URL from the saved list.
+ * Atomic: 両キーを単一トランザクションで削除し、中間不一致を防止。
  */
 export async function removeSavedUrl(url: string): Promise<void> {
-    await withOptimisticLock('savedUrls', (currentUrls: string[]) => {
+    await withAtomicSavedUrls(({ urls: currentUrls, entries: currentEntries }) => {
         const urlSet = new Set(currentUrls || []);
         urlSet.delete(url);
-        return Array.from(urlSet);
-    });
-
-    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
-        const entries = currentEntries || [];
-        return entries.filter(entry => entry.url !== url);
+        const nextUrls = Array.from(urlSet);
+        const nextEntries = (currentEntries || []).filter(entry => entry.url !== url);
+        return { nextUrls, nextEntries };
     });
 }
 

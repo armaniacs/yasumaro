@@ -79,9 +79,13 @@ export class PerUrlMutexMap {
       // transfer/unlock the real holder's lock and break per-URL serialization.
       if (acquired) {
         mutex.release();
-        if (!mutex.isLocked() && mutex.getQueueSize() === 0) {
-          map.delete(url);
-        }
+      }
+      // Cleanup even when acquire() threw (queue-full / timeout): if the
+      // mutex is fully idle (no lock, no waiters) the map entry is stale
+      // and must be removed to avoid a permanent leak. Guard keeps
+      // busy mutexes (locked or queued) alive for correct serialization.
+      if (!mutex.isLocked() && mutex.getQueueSize() === 0) {
+        map.delete(url);
       }
     }
   }

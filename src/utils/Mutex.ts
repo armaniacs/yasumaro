@@ -54,6 +54,24 @@ export class Mutex {
     /**
      * ロックを取得する
      */
+    private allocateTaskId(): number {
+        // Wrap around at MAX_SAFE_INTEGER and avoid colliding with an
+        // existing queued taskId (precision/collision guard for long-lived
+        // processes with high-frequency acquire()).
+        if (this.nextTaskId > Number.MAX_SAFE_INTEGER) {
+            this.nextTaskId = 0;
+        }
+        let attempts = 0;
+        while (this.queue.has(this.nextTaskId) && attempts <= this.maxQueueSize) {
+            this.nextTaskId++;
+            if (this.nextTaskId > Number.MAX_SAFE_INTEGER) {
+                this.nextTaskId = 0;
+            }
+            attempts++;
+        }
+        return this.nextTaskId++;
+    }
+
     async acquire(): Promise<void> {
         const now = Date.now();
 
@@ -67,8 +85,14 @@ export class Mutex {
 
         if (this.locked) {
             return new Promise((resolve, reject) => {
-                const taskId = this.nextTaskId++;
+                const taskId = this.allocateTaskId();
                 const timeoutId = setTimeout(() => {
+                    // Guard: if release() already transferred this taskId
+                    // (clearTimeout + resolve) the entry is gone — do not
+                    // double-reject the same Promise.
+                    if (!this.queue.has(taskId)) {
+                        return;
+                    }
                     this.queue.delete(taskId);
                     reject(new Error(`Mutex acquisition timeout after ${this.timeoutMs}ms`));
                 }, this.timeoutMs);

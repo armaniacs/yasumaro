@@ -80,7 +80,11 @@ const PII_PATTERNS: PiiPattern[] = [
     // 区切り文字を必須にして、数値列との誤検知を抑制
     {
         type: 'creditCard',
-        pattern: /\b\d{4}(?:[-\s]\d{4}){3}\b/ // 16桁（4-4-4-4）
+        pattern: /\b\d{4}(?:[-\s]\d{4}){3}\b/ // 16桁（4-4-4-4、区切りあり）
+    },
+    {
+        type: 'creditCard',
+        pattern: /\b\d{16}\b/ // 16桁（連続、Luhn検証で偽陽性抑制）
     },
     {
         type: 'creditCard',

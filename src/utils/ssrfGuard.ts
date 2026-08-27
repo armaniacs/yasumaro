@@ -9,11 +9,12 @@ import { errorMessage } from './errorUtils.js';
 // セキュリティ定数
 const ALLOWED_PROTOCOLS = new Set(['https:', 'http:']);
 const BLOCKED_PATTERNS = [
-  // 注: 127.0.0.1 は Obsidian API で使用されるため除外
-  // 注: localhost は Obsidian API で使用される可能性があるため除外
-  /^0x7f\./i,         // 0x7f.0.0.1 (alternative localhost format, 除外済み)
-  /^::1/,             // IPv6 localhost (除外済み)
-  /^\[::f{0,4}:1\]$/i // ::1 in brackets (除外済み)
+  // 16進等の代替表現やブラケット付きIPv6をブロック。
+  // 127.0.0.1 / localhost の通常形式は blockLocalhost 分岐で isPrivateIpAddress +
+  // 明示的な localhost 判定によりブロックする（Obsidian用途は blockLocalhost:false で許可）。
+  /^0x7f\./i,         // 0x7f.0.0.1 (alternative localhost format)
+  /^::1/,             // IPv6 localhost
+  /^\[::f{0,4}:1\]$/i // ::1 in brackets
 ];
 
 export interface ValidateUrlOptions {
@@ -45,6 +46,17 @@ export function validateUrl(url: string, options: ValidateUrlOptions = {}): void
   // localhostブロック（オプション）
   // Obsidian APIでlocalhostを使用するためデフォルトではブロックしない
   if (blockLocalhost) {
+    // 127.0.0.1 / ::1 等のループバックは isPrivateIpAddress で検出する。
+    // isPrivateIpAddress('localhost') は false を返すため、localhost は明示的に判定が必要。
+    if (isPrivateIpAddress(parsedUrl.hostname)) {
+      throw new Error(`Blocked hostname: ${parsedUrl.hostname}. Access to private network is not allowed.`);
+    }
+    // ドメイン名形式の localhost は isPrivateIpAddress では検出できないため明示的にブロック
+    const lowerHostname = parsedUrl.hostname.toLowerCase();
+    if (lowerHostname === 'localhost' || lowerHostname.endsWith('.localhost')) {
+      throw new Error(`Blocked hostname: ${parsedUrl.hostname}. Access to localhost is not allowed.`);
+    }
+    // 代替表現 (0x7f., ::1 bracket 等) は BLOCKED_PATTERNS でカバー
     for (const pattern of BLOCKED_PATTERNS) {
       if (pattern.test(parsedUrl.hostname)) {
         throw new Error(`Blocked hostname: ${parsedUrl.hostname}. Access to localhost addresses is not allowed.`);

@@ -35,6 +35,49 @@ export interface DeniedDomainData {
 // ============================================================================
 
 export class PermissionManager {
+  // DoS対策: denied_domains の上限とドメイン長の上限
+  // 100件根拠: chrome.storage.local quota 5-10MB に対し1件あたり数百バイトのため100件で十分に収まる。
+  // O(n) の上限チェックコストも n=100 で無視可能。時間ベースの cleanup(90日) と併用し件数ベースで発散を防止。
+  private static readonly MAX_DENIED_DOMAINS = 100;
+  private static readonly MAX_DOMAIN_LENGTH = 253;
+  private static readonly MAX_LABEL_LENGTH = 63;
+
+  /**
+   * RFC 1035準拠のドメイン形式検証
+   * - 1-253文字、ラベルは1-63文字、許可文字は英数字とハイフンのみ、先頭末尾は英数字
+   * - 空文字・null・非文字列は拒否
+   */
+  private isValidDomain(domain: unknown): boolean {
+    if (!domain || typeof domain !== 'string') return false;
+    if (domain.length === 0 || domain.length > PermissionManager.MAX_DOMAIN_LENGTH) return false;
+    const labels = domain.split('.');
+    for (const label of labels) {
+      if (label.length === 0 || label.length > PermissionManager.MAX_LABEL_LENGTH) return false;
+      if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/i.test(label)) return false;
+    }
+    return true;
+  }
+
+  /**
+   * LRU削除: lastDenied が最も古いエントリを1件削除
+   * 上限超過時に新規追加の前に呼び出される
+   */
+  private evictOldestEntry(deniedDomains: Record<string, DeniedDomainData>): void {
+    let oldestKey: string | null = null;
+    let oldestTime = Infinity;
+    for (const [key, entry] of Object.entries(deniedDomains)) {
+      const t = new Date(entry.lastDenied).getTime();
+      const time = Number.isNaN(t) ? 0 : t; // 不正な日付は最も古いとみなす
+      if (time < oldestTime) {
+        oldestTime = time;
+        oldestKey = key;
+      }
+    }
+    if (oldestKey !== null) {
+      delete deniedDomains[oldestKey];
+    }
+  }
+
   /**
    * 共通: denied_domains を取得するヘルパーメソッド
    */
@@ -100,14 +143,27 @@ export class PermissionManager {
 
   /**
    * 拒否されたドメインの訪問回数をインクリメント
+   * DoS対策: ドメイン形式検証 (RFC 1035) と件数上限100件 (LRU) を適用
    * @param domain - 拒否されたドメイン（ホスト名のみ、例: 'example.com'）
    */
   async recordDeniedVisit(domain: string): Promise<void> {
+    // バリデーションはストレージアクセス前に行い、不要な withOptimisticLock 呼び出しを避ける
+    if (!this.isValidDomain(domain)) {
+      logWarn('PermissionManager', { domain: String(domain).slice(0, 100) }, undefined, 'Invalid domain rejected');
+      return;
+    }
     try {
       const nowISO = new Date().toISOString();
       await this.updateDeniedDomains((deniedDomains) => {
         if (!deniedDomains[domain]) {
-          // 初回拒否
+          // 新規追加時のみ上限チェック（既存ドメインの更新は上限対象外）
+          if (Object.keys(deniedDomains).length >= PermissionManager.MAX_DENIED_DOMAINS) {
+            this.evictOldestEntry(deniedDomains);
+          }
+          // evict失敗時の安全策: 依然として上限超過なら追加を拒否
+          if (Object.keys(deniedDomains).length >= PermissionManager.MAX_DENIED_DOMAINS) {
+            return deniedDomains;
+          }
           deniedDomains[domain] = {
             count: 1,
             lastDenied: nowISO

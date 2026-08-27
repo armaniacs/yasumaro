@@ -33,8 +33,26 @@ export const DEFAULT_PAYLOAD_LIMITS: PayloadLimits = {
   maxRestoreBytes: MAX_RESTORE_BYTES,
 };
 
+function getByteLength(value: string): number {
+  // TextEncoder is available in browsers, service workers, offscreen documents, and modern Node.
+  // Fallback to Blob.size for environments where TextEncoder is unavailable.
+  if (typeof TextEncoder !== 'undefined') {
+    return new TextEncoder().encode(value).byteLength;
+  }
+  try {
+    // Blob counts UTF-8 bytes when constructed from a string
+    if (typeof Blob !== 'undefined') {
+      return new Blob([value]).size;
+    }
+  } catch {
+    // fall through
+  }
+  // Last resort: fallback to character count (underestimates for multibyte, but avoids crash)
+  return value.length;
+}
+
 function stringExceeds(value: unknown, limit: number): boolean {
-  return typeof value === 'string' && value.length > limit;
+  return typeof value === 'string' && getByteLength(value) > limit;
 }
 
 /**
@@ -82,10 +100,10 @@ export function assertPayloadSize(
         if (stringExceeds(rec.title, limits.maxStringBytes)) {
           return 'Payload too large: title exceeds 1MB limit';
         }
-        // Accumulate total text size for batch cap
-        if (typeof rec.summary === 'string') totalBytes += rec.summary.length;
-        if (typeof rec.content === 'string') totalBytes += rec.content.length;
-        if (typeof rec.title === 'string') totalBytes += rec.title.length;
+        // Accumulate total text size for batch cap (bytes, not characters)
+        if (typeof rec.summary === 'string') totalBytes += getByteLength(rec.summary);
+        if (typeof rec.content === 'string') totalBytes += getByteLength(rec.content);
+        if (typeof rec.title === 'string') totalBytes += getByteLength(rec.title);
       }
       if (totalBytes > limits.maxBatchTotalBytes) {
         return 'Payload too large: batch summary exceeds size limit';

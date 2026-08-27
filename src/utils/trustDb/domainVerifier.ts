@@ -58,6 +58,14 @@ export class DomainVerifier {
 
   /**
    * Step 1: JP-Anchor TLD 判定
+   *
+   * 5 Whys 分析 (PBI-27):
+   * 1. Why 誤信頼? `domain.endsWith(tld)` のみで判定し `myexamplecom` が `.com` / `example.com` に誤マッチ
+   * 2. Why ドット境界なし? TLD を `example.com` 形式で保存している前提で完全一致とサブドメイン一致を区別しなかった
+   * 3. Why 気づかず? テストが `sub.example.com` の正当サブドメインのみで `evil-example.com` 境界違反を未カバー
+   * 4. Why テスト漏れ? セキュリティ境界(attacker suffix) のテスト観点がレビューチェックリストに無かった
+   * 5. Why プロセス漏れ? 検証時(verification time)に TLD 形式バリデーション(`isValidTld`)が無く、不正 TLD(`*`, 空文字)が判定に参加できた
+   * 解: `domain === tld || domain.endsWith("." + tld)` + `isValidTld` で除外
    */
   checkJpAnchor(domain: string, state: DomainVerifierState): TrustResult {
     const allTlds = [
@@ -65,8 +73,12 @@ export class DomainVerifier {
       ...state.database.jpAnchor.userTlds
     ];
 
+    const normalizedDomain = domain.toLowerCase().trim();
+
     for (const tld of allTlds) {
-      if (domain.endsWith(tld)) {
+      if (!this.isValidTld(tld)) continue;
+      const normalizedTld = tld.toLowerCase().trim().replace(/^\./, '');
+      if (normalizedDomain === normalizedTld || normalizedDomain.endsWith('.' + normalizedTld)) {
         return {
           level: DomainTrustLevel.TRUSTED,
           source: 'jp-anchor',
@@ -77,6 +89,32 @@ export class DomainVerifier {
     }
 
     return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Not a JP-Anchor domain' };
+  }
+
+  /**
+   * TLD 形式バリデーション (PBI-27)
+   * - 空文字 / "*" / ワイルドカード含みを除外
+   * - 先頭ドットは許容し除去して検証 (".go.jp" -> "go.jp")
+   * - RFC ラベル準拠: 各ラベル 1-63 文字、英数字/ハイフン、ハイフンで開始/終了しない
+   * - 複数ラベル (例: "go.jp", "example.com") を許容
+   */
+  private isValidTld(tld: string): boolean {
+    const trimmed = tld.trim();
+    if (!trimmed) return false;
+    if (trimmed.includes('*')) return false;
+    const normalized = trimmed.startsWith('.') ? trimmed.slice(1) : trimmed;
+    if (!normalized) return false;
+    if (normalized.length < 2) return false;
+    if (normalized.length > 253) return false;
+    if (normalized.startsWith('.') || normalized.endsWith('.')) return false;
+    if (normalized.includes('..')) return false;
+    const labels = normalized.split('.');
+    const labelRegex = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
+    for (const label of labels) {
+      if (!label || label.length === 0 || label.length > 63) return false;
+      if (!labelRegex.test(label)) return false;
+    }
+    return true;
   }
 
   /**

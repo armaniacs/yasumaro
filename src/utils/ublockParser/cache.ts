@@ -101,6 +101,18 @@ export function generateCacheKey(text: string): string {
 }
 
 /**
+ * 値を deep clone する内部ヘルパー。
+ * `structuredClone` が利用可能な環境ではそれを使い、なければ JSON 経由でフォールバックする。
+ * キャッシュ値はプレーンオブジェクト/配列のみのため JSON フォールバックでも等価性を保つ。
+ */
+function deepClone<T>(value: T): T {
+  if (typeof globalThis.structuredClone === 'function') {
+    return globalThis.structuredClone(value);
+  }
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+/**
  * キャッシュから値を取得
  * @param {string} key - キャッシュキー
  * @returns {Object|null} - キャッシュされた値（存在しない場合はnull）
@@ -108,7 +120,8 @@ export function generateCacheKey(text: string): string {
 export function getFromCache(key: string): unknown | null {
   if (PARSER_CACHE.has(key)) {
     updateLRUTracker(key);
-    return { ...(PARSER_CACHE.get(key) as Record<string, unknown>) }; // ディープコピーして返す
+    const cached = PARSER_CACHE.get(key);
+    return deepClone(cached);
   }
   return null;
 }
@@ -120,7 +133,7 @@ export function getFromCache(key: string): unknown | null {
  */
 export function saveToCache(key: string, value: unknown) {
   updateLRUTracker(key);
-  PARSER_CACHE.set(key, value);
+  PARSER_CACHE.set(key, deepClone(value));
 }
 
 /**
