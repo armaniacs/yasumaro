@@ -20,6 +20,13 @@
 |----|------|-----|------|------|------|
 | 03 | ⬜ 未着手（保留、02完了後に判断）🟡🟢 | [旧wa-sqlite移行コードの終息判断](2026-08-27-03-investigate-legacy-migration-sunset.md) | 6.0 | 🔧 | 2pt |
 | 04 | ⬜ 未着手（保留、03確定後に着手）🔴🟡 | [既存WASMバンドルの統合](2026-08-27-04-refactor-consolidate-wasm-bundles.md) | 3.5 | 🔧 | 3pt |
+| 12 | ⬜ 未着手 🔴🟢 | [SQLite QueryPlanner 統一](2026-08-27-12-feat-unify-sqlite-storage-backend.md) | 480 | ✨ | 3pt |
+| 13 | ⬜ 未着手 🔴🟢 | [PipelineKernel 統合](2026-08-27-13-feat-consolidate-recording-pipeline.md) | 420 | ✨ | 3pt |
+| 14 | ⬜ 未着手 🟡🟢 | [SqliteEngineHost 集約](2026-08-27-14-feat-collapse-sqlite-engine-context.md) | 360 | 🔧 | 2pt |
+| 15 | ⬜ 未着手 🟡🟢 | [Settings 深掘り](2026-08-27-15-feat-deepen-settings-repository.md) | 300 | 🔧 | 2pt |
+| 16 | ⬜ 未着手 🟡🟢 | [opfsWorker Api 統合](2026-08-27-16-feat-fold-opfs-worker-handlers.md) | 240 | 🔧 | 2pt |
+| 17 | ⬜ 未着手 🟡🟢 | [HistoryModel 統合](2026-08-27-17-feat-merge-history-panel-mvc.md) | 180 | 🔧 | 3pt |
+| 18 | ⬜ 未着手 🟢🟢 | [Dashboard RPC 統合](2026-08-27-18-feat-consolidate-dashboard-rpc.md) | 120 | 🔧 | 2pt |
 
 ---
 
