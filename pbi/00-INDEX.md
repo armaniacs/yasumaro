@@ -16,10 +16,7 @@
 
 `pbi/` に残っているのは**未完了のPBIのみ**。完了したものは `dev-docs/archived/pbi/` にある。
 
-| ID | 状態 | PBI | RICE | 種別 | 見積 |
-|----|------|-----|------|------|------|
-| 21 | ⬜ 未着手 🟡🟢 | [Offline Queue Facade](2026-08-27-21-feat-collapse-offline-queue-facade.md) | 157 | 🔧 | 1pt |
-| 28 | ⬜ 未着手 🟢🟢 | [QueuePolicy 統一](2026-08-27-28-feat-unify-queue-policy.md) | 140 | 🔧 | 1pt |
+`pbi/` には現在未完了のPBIはありません。
 
 ---
 
@@ -42,6 +39,11 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-27 OfflineQueue/QueuePolicy統合 — 2件完了（依存関係のため統合実装）
+
+- 2026-08-27-21-feat-collapse-offline-queue-facade.md（RICE 157 — `OfflineNetworkQueue` を `QueuePort<OfflineJob>` 注入のファサードに縮退し `dequeue`/`peek` のTTL独自実装を撤去、`PersistentRetryQueue.filterExpiredAndOverRetry` に一本化。`NoOpQueuePort` をコンストラクタ注入し `NoOpOfflineNetworkQueue` は継承なしで動作。`AlarmScheduler`抽出は対象4ファイル外・`sessionAlarmsManager.ts`/`logger/flushScheduler.ts`が既に独立実装済みのため見送り。type-check / 8365 tests PASS）
+- 2026-08-27-28-feat-unify-queue-policy.md（RICE 140 — `PersistentRetryQueue.filterExpiredAndOverRetry(items)` を新設し `flush`/`flushBatch` 内部からも利用する一箇所化を実施。`estimatePayloadSize` を `src/background/queue/payload.ts` に抽出し `persistentRetryQueue.ts`/`pendingChromeStorageQueue.ts` で共有。drop/truncateは元々ポリシー分離済みと判明（chrome-storageのpatch truncateは汎用化不可のため踏襲）。type-check / 8365 tests PASS）
 
 ### 2026-08-28 MultiKey OptimisticLock 抽出 — 1件完了
 
