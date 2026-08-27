@@ -8,6 +8,9 @@
  *   - 日本語・英語両対応（句点・ピリオドで分割）
  */
 
+import { toWordSet } from './text/tokenizer.js';
+import { jaccardSimilarity } from './text/similarity.js';
+
 export interface DeduplicateOptions {
   /** 除去判定の類似度閾値 0.0〜1.0（デフォルト: 0.7） */
   threshold?: number;
@@ -18,6 +21,10 @@ export interface DeduplicateOptions {
 /**
  * テキストをセンテンス単位に分割する。
  * 日本語（。！？）と英語（. ! ?）の句点で分割し、空文字列を除去する。
+ *
+ * NOTE: Deliberately local, not the shared text/tokenizer.ts splitSentences —
+ * this variant keeps the trailing delimiter attached per sentence so the
+ * original text can be reconstructed after dedup removes some sentences.
  */
 function splitSentences(text: string): { sentence: string; delimiter: string }[] {
   const result: { sentence: string; delimiter: string }[] = [];
@@ -40,56 +47,6 @@ function splitSentences(text: string): { sentence: string; delimiter: string }[]
   }
 
   return result;
-}
-
-/**
- * Check if text contains Japanese characters
- */
-function containsJapanese(text: string): boolean {
-  return /[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff]/.test(text);
-}
-
-/**
- * Get character bigrams from text (useful for Japanese similarity)
- */
-function getBigrams(text: string): string[] {
-  const bigrams: string[] = [];
-  for (let i = 0; i < text.length - 1; i++) {
-    bigrams.push(text.charAt(i) + text.charAt(i + 1));
-  }
-  return bigrams;
-}
-
-/**
- * センテンスを単語（2文字以上のトークン）の Set に変換する。
- */
-function toWordSet(sentence: string): Set<string> {
-  const cleaned = sentence.replace(/[。！？.!?]$/, '');
-  const words = cleaned
-    .toLowerCase()
-    .split(/[\s\u3000\u3001\u3002\uff0c\uff0e\uff01\uff1f、。，．！？,.!?\-_:;()\[\]{}""''\u300c\u300d]+/)
-    .filter(w => w.length >= 2);
-
-  if (containsJapanese(cleaned)) {
-    words.push(...getBigrams(cleaned));
-  }
-
-  return new Set(words);
-}
-
-/**
- * Jaccard類似度を計算する。
- * J(A, B) = |A ∩ B| / |A ∪ B|
- */
-function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
-  if (a.size === 0 && b.size === 0) return 1;
-  if (a.size === 0 || b.size === 0) return 0;
-  let intersection = 0;
-  for (const word of a) {
-    if (b.has(word)) intersection++;
-  }
-  const union = a.size + b.size - intersection;
-  return intersection / union;
 }
 
 export function deduplicateContent(text: string, options: DeduplicateOptions = {}): string {
