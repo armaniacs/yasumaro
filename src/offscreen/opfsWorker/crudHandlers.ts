@@ -9,7 +9,7 @@ import type { SqliteValue } from '../sqliteEngine.js';
 import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from '../schema.js';
 import { buildWhereClause, buildOrderByClause, buildFtsTagMatchCondition } from '../sqliteQueryBuilder.js';
 import type { QueryPayload } from './types.js';
-import { sqlExec, sqlQuery, type HandlerContext } from './handlers.js';
+import { sqlExec, sqlQuery, withTransaction, type HandlerContext } from './handlers.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { extractDomain } from '../../utils/domainUtils.js';
 
@@ -125,23 +125,22 @@ export async function handleInsertBatch(
   await ensureEngine();
   let inserted = 0;
   try {
-    await sqlExec(ctx, 'BEGIN IMMEDIATE');
-    for (const record of records) {
-      try {
-        const domain = record.domain || extractDomain(record.url);
-        await sqlExec(ctx, INSERT_IGNORE_SQL, buildInsertParams(record, domain));
-      } catch (err) {
-        if (inserted === 0 && records.indexOf(record) === 0) {
-          postLog('error', 'OPFS Worker: first INSERT failed', { error: errorMessage(err), url: record.url });
+    await withTransaction(ctx, async () => {
+      for (const record of records) {
+        try {
+          const domain = record.domain || extractDomain(record.url);
+          await sqlExec(ctx, INSERT_IGNORE_SQL, buildInsertParams(record, domain));
+        } catch (err) {
+          if (inserted === 0 && records.indexOf(record) === 0) {
+            postLog('error', 'OPFS Worker: first INSERT failed', { error: errorMessage(err), url: record.url });
+          }
         }
       }
-    }
-    await sqlExec(ctx, 'COMMIT');
+    });
     await sqlQuery(ctx, 'SELECT changes() AS c', [], (row) => {
       inserted = Number(row.c);
     });
   } catch (err) {
-    await sqlExec(ctx, 'ROLLBACK');
     postLog('error', 'OPFS Worker: insertBatch transaction failed', { error: errorMessage(err) });
   }
   return { count: inserted };
