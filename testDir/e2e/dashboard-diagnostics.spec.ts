@@ -35,6 +35,8 @@ test.describe('Dashboard - Diagnostics Panel @ui', () => {
     await expect(page.locator('#diagCompileOptionsSection')).toBeAttached();
     await expect(page.locator('#diagCompileOptionsStats')).toBeAttached();
     await expect(page.locator('#diagDivergenceWarning')).toBeAttached();
+    await expect(page.locator('#diagMigrationStats')).toBeAttached();
+    await expect(page.locator('#diagMigrationStats').locator('..').locator('a[href*="MIGRATION_GUIDE"]')).toBeAttached();
   });
 });
 
