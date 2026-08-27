@@ -8,7 +8,7 @@ function isNetworkError(error: unknown): boolean {
   if (!error) return false;
   const msg = error instanceof Error ? error.message : String(error);
   const lower = msg.toLowerCase();
-  if (lower.includes('network') || lower.includes('fetch') || lower.includes('timeout') || lower.includes('offline') || lower.includes('econnrefused') || lower.includes('enotfound')) {
+  if (lower.includes('network') || lower.includes('fetch') || lower.includes('timeout') || lower.includes('offline') || lower.includes('econnrefused') || lower.includes('enotfound') || lower.includes('refused') || lower.includes('connection') || lower.includes('unavailable') || lower.includes('ai ')) {
     return true;
   }
   if (error instanceof Error && error.cause) {

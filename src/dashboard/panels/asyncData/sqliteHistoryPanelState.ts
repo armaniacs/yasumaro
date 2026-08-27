@@ -5,10 +5,12 @@
  * so existing imports from `.../sqliteHistoryPanelState.js` keep working.
  */
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- re-export shim for backwards compatibility
 export type {
   SqliteHistoryState,
   SqliteHistoryAction,
 } from './sqliteHistoryModel.js';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- re-export shim
 export {
   createInitialHistoryState,
   historyStateReducer,

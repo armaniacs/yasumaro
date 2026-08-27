@@ -8,8 +8,11 @@
 
 import { addLog, LogType } from '../../utils/logger.js';
 import { pickDefined } from '../../utils/objectUtils.js';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- PipelineError used as type in executeInternal
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type PipelineError, type StepDeps, type UrlStore } from './types.js';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- used in executeInternal
 import { buildResult, buildErrorResult, buildPrivatePageResult, notifyObsidianSaveSuccess, notifyRecordingError } from './resultBuilder.js';
+/* eslint-disable @typescript-eslint/no-unused-vars -- PrivatePageError/DuplicateError used in executeInternal catch (type guard) */
 import {
   truncateContentStep, checkDomainFilterStep, checkPermissionStep, checkTrustDomainStep,
   PrivacyHeadersChecker, PrivatePageError, checkDuplicateStep, DuplicateError,
@@ -18,6 +21,7 @@ import {
 } from './steps/index.js';
 import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 import type { Settings } from '../../utils/storage/types.js';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- used in executeInternal
 import { toExternalResult } from './piiBoundary.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIService } from '../ai/AIService.js';
