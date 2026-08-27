@@ -27,6 +27,7 @@ import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { PerUrlMutexMap } from './perUrlMutex.js';
 import { StepExecutor } from './stepExecutor.js';
+import { PipelineKernel } from './PipelineKernel.js';
 
 export interface RecordingPipelineDeps {
   getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
@@ -161,32 +162,7 @@ export class RecordingPipeline {
       ? crypto.randomUUID()
       : (() => { const a = new Uint32Array(2); if (typeof crypto !== 'undefined') crypto.getRandomValues(a); return (a[0] ?? 0).toString(36) + (a[1] ?? 0).toString(36); })();
     const deps: StepDeps = { obsidian: this.obsidian, aiService: this.aiService!, ...pickDefined({ urlStore: this.urlStore }) };
-    let context: RecordingContext = { data, settings, force: data.force || false, aiService: this.aiService, traceId, errors: [] };
-
-    for (const step of this.steps) {
-      try {
-        context = await this.executor.executeWithStrategy(step, context, deps);
-        if (data.previewOnly && context.result && step.previewBreakpoint) return toExternalResult(context.result);
-      } catch (error) {
-        if (error instanceof PrivatePageError) return buildPrivatePageResult(context, error);
-        if (error instanceof DuplicateError) return { success: true, skipped: true, reason: error.reason, title: data.title, url: data.url };
-        if (step.errorStrategy === ErrorStrategy.FATAL || step.errorStrategy === ErrorStrategy.RETRY) {
-          const errorResult = buildErrorResult(context, error as Error, step.name);
-          notifyRecordingError(context.data.title, (error as Error).message);
-          return errorResult;
-        }
-        const pipelineError: PipelineError = {
-          step: step.name, error: error as Error, strategy: step.errorStrategy, timestamp: Date.now(),
-          ...pickDefined({ recoveryKind: step.offlineRetry?.jobKind }),
-          context: { url: context.data.url, tabId: undefined }
-        };
-        context.errors.push(pipelineError);
-        addLog(LogType.WARN, `Pipeline step ${step.name} failed with ${step.errorStrategy} strategy`, { error: (error as Error).message, url: data.url, traceId: context.traceId });
-      }
-    }
-
-    const result = buildResult(context);
-    if (result.success && result.obsidianDuration != null) notifyObsidianSaveSuccess(data.title);
-    return result;
+    const kernel = new PipelineKernel(this.steps, this.mutexMap, this.executor);
+    return kernel.execute(data, settings, deps, traceId);
   }
 }
