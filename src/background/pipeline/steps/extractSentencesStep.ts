@@ -17,7 +17,7 @@ import { ErrorStrategy } from '../types.js';
 /**
  * Extract important sentences from content using TextRank
  * Position: After privacyPipeline (uses PII-cleaned content)
- * Error Strategy: RETRY + fallback to original content
+ * Error Strategy: BEST_EFFORT — fallback to original content via internal catch
  */
 export const extractSentencesStep: PipelineStepFunction = async (
   context: RecordingContext

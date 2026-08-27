@@ -4,6 +4,19 @@ import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 
 const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
+function isNetworkError(error: unknown): boolean {
+  if (!error) return false;
+  const msg = error instanceof Error ? error.message : String(error);
+  const lower = msg.toLowerCase();
+  if (lower.includes('network') || lower.includes('fetch') || lower.includes('timeout') || lower.includes('offline') || lower.includes('econnrefused') || lower.includes('enotfound')) {
+    return true;
+  }
+  if (error instanceof Error && error.cause) {
+    return isNetworkError(error.cause);
+  }
+  return false;
+}
+
 /**
  * Executes pipeline steps with retry and offline-queue fallback.
  *
@@ -37,7 +50,7 @@ export class StepExecutor {
           continue;
         }
 
-        if (this.offlineNetworkQueue) {
+        if (this.offlineNetworkQueue && step.offlineRetry && isNetworkError(error)) {
           await this.enqueueOfflineJob(step, context);
         }
 
