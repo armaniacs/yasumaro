@@ -25,10 +25,10 @@ Scenario: エッジケース — デフォルト変更が1ファイルで完結�
   Then `Settings` の `get`/`set` で同じ新キーが有効になり、`Chrome`/`InMemory` の両 adapter で parity が保たれる。`rawEncrypted` フラグは廃止
 
 ## 受け入れ基準
-- [ ] Phase1: `StoragePort` が `get/set/onChanged/getBytesInUse` のみに純粋化されている
-- [ ] Phase2: `Settings` が `get`/`set`/`observe` の3メソッドで typed key のみを公開し、`Chrome` と `InMemory` が `StoragePort` 1 seam に統一されている
-- [ ] `getSettings`/`setSettings` の二重実装 (`StorageAdapter` 型) が廃止され、`applyMigrationsAndDecrypt` の `rawEncrypted` 分岐が削除されている
-- [ ] `re-encrypt` 副作用が `Settings.getAll` 内で Port 経由に書き換えられている
+- [x] Phase1: `StoragePort` が `get/set/onChanged/getBytesInUse` のみに純粋化されている
+- [x] Phase2: `Settings` が `get`/`set`/`observe` の3メソッドで typed key のみを公開し、`Chrome` と `InMemory` が `StoragePort` 1 seam に統一されている
+- [x] `getSettings`/`setSettings` の二重実装 (`StorageAdapter` 型) が廃止され、`applyMigrationsAndDecrypt` の `rawEncrypted` 分岐が削除されている
+- [x] `re-encrypt` 副作用が `Settings.getAll` 内で Port 経由に書き換えられている
 
 ## テスト戦略
 - 単体: `Settings` の `get`/`set`/`observe` の typed key テスト。`StoragePort` の `get/set/onChanged` の純粋化テスト
@@ -39,6 +39,6 @@ Scenario: エッジケース — デフォルト変更が1ファイルで完結�
 3pt（Phase1+2, 要チームでの見積もり） — 2pt で収めるなら `quota + encryption` を `optimisticLock` 除外で縮退
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
