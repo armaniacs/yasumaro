@@ -83,6 +83,7 @@ export interface ServiceWorkerResponse {
 
 /**
  * ChromeMessageSenderクラス
+ * @deprecated Use MessageTransport from '../messaging/messageTransport.js' instead. This shim delegates to MessageTransport for backwards compatibility.
  * Service Worker通信にリトライロジックを提供
  */
 export class ChromeMessageSender {
