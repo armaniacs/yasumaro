@@ -64,6 +64,10 @@ export class FallbackStorage {
     try {
       await this.ensureQuotaSpace();
       const data = await this.loadData();
+      const exists = data.records.some(r => r.url === record.url && r.created_at === record.created_at);
+      if (exists) {
+        return { success: true, id: -1 };
+      }
       const id = await this.getNextId();
       const domain = record.domain || this.extractDomain(record.url);
 
@@ -71,11 +75,6 @@ export class FallbackStorage {
         id,
         ...buildInsertRecordFields(record, domain),
       };
-
-      const exists = data.records.some(r => r.url === record.url && r.created_at === record.created_at);
-      if (exists) {
-        return { success: true, id: -1 };
-      }
 
       data.records.push(newRecord);
       await this.saveData(data);
@@ -92,18 +91,28 @@ export class FallbackStorage {
     try {
       await this.ensureQuotaSpace();
       const data = await this.loadData();
+
+      // Deduplicate against existing data and within-batch duplicates before allocating IDs
+      const existingKeys = new Set(data.records.map(r => `${r.url}\0${r.created_at}`));
+      const seen = new Set<string>();
+      const toInsert: BrowsingLogRecord[] = [];
+      for (const record of records) {
+        const key = `${record.url}\0${record.created_at}`;
+        if (existingKeys.has(key) || seen.has(key)) continue;
+        seen.add(key);
+        toInsert.push(record);
+      }
+
+      if (toInsert.length === 0) {
+        return { success: true, count: 0 };
+      }
+
+      const startId = await this.allocateIds(toInsert.length);
       let insertedCount = 0;
 
-      // Reserve all IDs in a single counter round-trip instead of one per record.
-      const startId = await this.allocateIds(records.length);
-      let idOffset = 0;
-
-      for (const record of records) {
-        const exists = data.records.some(r => r.url === record.url && r.created_at === record.created_at);
-        if (exists) continue;
-
-        const id = startId + idOffset;
-        idOffset++;
+      for (let i = 0; i < toInsert.length; i++) {
+        const record = toInsert[i]!;
+        const id = startId + i;
         const domain = record.domain || this.extractDomain(record.url);
 
         data.records.push({

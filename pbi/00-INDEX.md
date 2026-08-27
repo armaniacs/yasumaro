@@ -43,6 +43,18 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-27 Review Findings — 8件完了（3バッチ並列）
+
+- 2026-08-27-01-fix-payloadguard-oom-allocation.md（RICE 3000 — `payloadGuard-comprehensive.test.ts:268` の 100MB+1 配列生成を `customLimits` 小値テストに置換。OOM を解消し 37 tests 292ms でパス）
+- 2026-08-27-02-fix-browsinglogcodec-nan-infinity.md（RICE 900 — `browsingLogCodec.ts` に `toFiniteNumber` ヘルパーを追加し `NaN/Infinity` を `null` に正規化、`url` は `??` に修正。テスト期待値を `null` に更新。type-check / 8710 tests PASS）
+- 2026-08-27-03-fix-migrations-gist-index-error-handling.md（RICE 480 — `migrations.ts` の GIST index catch を `already exists` のみに限定、`MIGRATION_SEQUENCE` も同様に `duplicate column name`/`already exists` のみに限定。テストに `already exists` 正常系を追加。type-check / 8710 tests PASS）
+- 2026-08-27-04-fix-fts-sanitizer-unification.md（RICE 320 — `schema.ts:sanitizeFtsTerm` に `OR/AND/NOT/NEAR` 除去を追加し `sqliteQueryBuilder.ts` と統一。`schema-query-utils.test.ts` の期待値を `foo bar 2` に修正。type-check / 8710 tests PASS）
+- 2026-08-27-05-fix-lrucache-capacity-zero.md（RICE 160 — `lruCache.ts` に `maxSize<=0` ガードと `has` チェックを追加し不変条件を保持、テストを `size===0` に修正。type-check / 8710 tests PASS）
+- 2026-08-27-06-fix-storagefallback-id-waste-alias.md（RICE 157.5 — `storageFallback.ts` の `insert` は重複チェック後に ID 確保、`insertBatch` は既存/バッチ内重複を事前フィルタし `allocateIds` を必要分のみに。type-check / 8710 tests PASS）
+- 2026-08-27-07-fix-offscreen-security-test-assertion.md（RICE 100 — `offscreen-security-comprehensive.test.ts:96` に `expect(result).toBe(false)` と `expect(responses).toHaveLength(0)` を追加し偽陽性を解消。type-check / 8710 tests PASS）
+- 2026-08-27-08-chore-remove-dead-code-imports.md（RICE 100 — `migrations-comprehensive` の `vi`/`shouldThrow`/`origExec`/`queryCallCount`、`storageFallback` の `vi`/`StorageQuery`、`sqliteQueryBuilder` の `StorageQuery` を削除。type-check / 8710 tests PASS）
+- 2026-08-27-00-backlog-review-findings.md（8件のRICEスコアリングバックログ — なぜなぜ分析と依存整理）
+
 ### 2026-08-27 Autonomous Task Closer — 2件完了（PBI-01/02 並列1バッチ）
 
 - 2026-08-27-01-fix-remove-unused-vendor-wa-sqlite.md（RICE 15.0 — `vendor/wa-sqlite/` の未参照WASM成果物3ファイルを削除。`node_modules/wa-sqlite` 経由でバンドルされるためビルド・移行機能に影響なし。`build-wasm.sh` は古いvendorコピー手順のため再ビルド手順書は保存せず削除。`npm run build` で4種wasmが同一ハッシュで生成されることを確認。type-check / 8399 tests PASS）

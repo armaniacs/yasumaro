@@ -16,7 +16,7 @@ describe('sanitizeFtsTerm', () => {
   });
 
   it('strips FTS5 operator keywords and special characters', () => {
-    expect(sanitizeFtsTerm('foo* OR "bar"~2')).toBe('foo OR bar 2');
+    expect(sanitizeFtsTerm('foo* OR "bar"~2')).toBe('foo bar 2');
   });
 
   it('preserves alphanumeric and CJK characters', () => {
