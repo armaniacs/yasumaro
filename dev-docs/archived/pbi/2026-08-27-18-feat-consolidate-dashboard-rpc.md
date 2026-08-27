@@ -25,9 +25,9 @@ Scenario: エッジケース — 新 subtype が操作テーブル1行で完結�
   Then `protocol/security/validator/handler/sender` の5箇所が同時駆動する
 
 ## 受け入れ基準
-- [ ] 最小案: `queryLogs`/`searchLogs` の重複 retry が `withRetry` に抽出されている
-- [ ] フル案では `SqliteRpc` が `query/search/mutate` の3メソッドで完結し、`dashboardSqliteProtocol` の union が `SqliteRpc` に集約されている（本PBIでは最小案を採用）
-- [ ] `BrowsingLogRepository` を本採用するか廃止するかが ADR またはコメントで決定されている
+- [x] 最小案: `queryLogs`/`searchLogs` の重複 retry が `withRetry` に抽出されている
+- [x] フル案では `SqliteRpc` が `query/search/mutate` の3メソッドで完結し、`dashboardSqliteProtocol` の union が `SqliteRpc` に集約されている（本PBIでは最小案を採用）
+- [x] `BrowsingLogRepository` を本採用するか廃止するかが ADR またはコメントで決定されている
 
 ## テスト戦略
 - 単体: 最小案: `withRetry` の `query`/`search` の retry テスト。フル案: `SqliteRpc` の 3メソッドの retry と token 要否テスト
@@ -38,6 +38,6 @@ Scenario: エッジケース — 新 subtype が操作テーブル1行で完結�
 0.5pt（最小案, 要チームでの見積もり） — フル `SqliteRpc` は 3pt。`BrowsingLogRepository` の去就決定が前提で、急ぐ必要はない
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
