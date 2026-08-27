@@ -6,8 +6,8 @@ import { copyTextToClipboard } from '../../../utils/clipboard.js';
 import { type PanelLifecycle } from '../types.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
-import type { SqliteHistoryState } from './sqliteHistoryPanelState.js';
-import { createSqliteHistoryController } from './sqliteHistoryPanelController.js';
+import type { SqliteHistoryState } from './sqliteHistoryModel.js';
+import { createSqliteHistoryModel } from './sqliteHistoryModel.js';
 import { notify } from '../../notificationService.js';
 import {
   formatDiagnosticMetadataHtml,
@@ -35,15 +35,16 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
   let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   let _isMounted = false;
 
-  const controller = createSqliteHistoryController({
-    onStateChange: () => refresh(),
-  });
+  const model = createSqliteHistoryModel();
+  // subscribe is the thin alias of the former onStateChange — Panel shrinks to
+  // model.subscribe(render) while keeping the updateDynamicRegions diff path.
+  let unsubscribe: (() => void) | null = null;
 
   function state(): SqliteHistoryState {
-    return controller.getState();
+    return model.getState();
   }
 
-  /** Translate a loadFailure error: an i18n key (from the controller) or a raw "Error: ..." string. */
+  /** Translate a loadFailure error: an i18n key (from the model) or a raw "Error: ..." string. */
   function translateHistoryError(error: string | null): string {
     if (!error) return '';
     return error.startsWith('Error: ') ? error : t(error);
@@ -54,7 +55,7 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
   }
 
   async function handleToggleStar(id: number): Promise<void> {
-    await controller.toggleStar(id);
+    await model.toggleStar(id);
   }
 
   async function handleDelete(id: number): Promise<void> {
@@ -66,7 +67,7 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
       dangerous: true,
     });
     if (!confirmed) return;
-    await controller.deleteEntry(id);
+    await model.deleteEntry(id);
   }
 
   function createCopyButton(entry: BrowsingLogEntry): HTMLButtonElement {
@@ -131,7 +132,7 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
   }
 
   async function handleAppendToObsidian(): Promise<void> {
-    const result = await controller.appendSelectedToObsidian();
+    const result = await model.appendSelectedToObsidian();
     if (!result) return;
 
     if (result.success) {
@@ -166,10 +167,10 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
 
   const bulkCallbacks = {
     onSelectAll: (checked: boolean) => {
-      controller.selectAllEntries(checked);
+      model.selectAllEntries(checked);
     },
     onClear: () => {
-      controller.clearEntrySelection();
+      model.clearEntrySelection();
     },
     onAppend: () => {
       void handleAppendToObsidian();
@@ -254,7 +255,7 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
         searchArea as HTMLElement,
         s.activeTagFilter,
         s.pendingTagFallback,
-        () => controller.clearTagFilter(),
+        () => model.clearTagFilter(),
       );
     }
 
@@ -263,9 +264,9 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
       renderCalendarNav(calContainer, s.selectedDate,
         { searchQuery: s.searchQuery, activeTagFilter: s.activeTagFilter },
         {
-          onDateSelect: (d) => void controller.selectDate(d),
-          onRangeSelect: (since, until) => controller.selectDateRange(since, until),
-          onClearFilters: () => controller.clearAllFilters(),
+          onDateSelect: (d) => void model.selectDate(d),
+          onRangeSelect: (since, until) => model.selectDateRange(since, until),
+          onClearFilters: () => model.clearAllFilters(),
         }
       );
     }
@@ -277,7 +278,7 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
         s.sortBy,
         s.sortDir,
         isFullTextSearchActive(s),
-        (sortBy, sortDir) => void controller.changeSort(sortBy, sortDir),
+        (sortBy, sortDir) => void model.changeSort(sortBy, sortDir),
       );
     }
 
@@ -289,8 +290,8 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
         renderEntryList(listContainer, s.entries, s.selectedIds, s.activeTagFilter, {
           onToggleStar: (id) => void handleToggleStar(id),
           onDelete: (id) => void handleDelete(id),
-          onSelectionChange: (id, selected) => controller.selectEntry(id, selected),
-          onTagFilterClick: (tag) => controller.filterByTag(tag),
+          onSelectionChange: (id, selected) => model.selectEntry(id, selected),
+          onTagFilterClick: (tag) => model.filterByTag(tag),
           onContentToggle: (controlsId) => handleContentToggle(controlsId),
         });
       }
@@ -298,7 +299,7 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
 
     if (!s.loading) {
       const pagContainer = document.getElementById('sqlite-pagination');
-      if (pagContainer) renderPagination(pagContainer, s.currentPage, s.total, PAGE_SIZE, (page) => controller.changePage(page));
+      if (pagContainer) renderPagination(pagContainer, s.currentPage, s.total, PAGE_SIZE, (page) => model.changePage(page));
     }
 
     updateBulkBar(s.selectedIds, s.entries);
@@ -309,7 +310,7 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
     return (query: string) => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
-        controller.search(query);
+        model.search(query);
         timer = null;
       }, 300);
       searchDebounceTimer = timer;
@@ -474,9 +475,9 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
         renderCalendarNav(calContainer, s.selectedDate,
           { searchQuery: s.searchQuery, activeTagFilter: s.activeTagFilter },
           {
-            onDateSelect: (d) => void controller.selectDate(d),
-            onRangeSelect: (since, until) => controller.selectDateRange(since, until),
-            onClearFilters: () => controller.clearAllFilters(),
+            onDateSelect: (d) => void model.selectDate(d),
+            onRangeSelect: (since, until) => model.selectDateRange(since, until),
+            onClearFilters: () => model.clearAllFilters(),
           }
         );
       }
@@ -488,7 +489,7 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
           s.sortBy,
           s.sortDir,
           isFullTextSearchActive(s),
-          (sortBy, sortDir) => void controller.changeSort(sortBy, sortDir),
+          (sortBy, sortDir) => void model.changeSort(sortBy, sortDir),
         );
       }
 
@@ -497,14 +498,14 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
         renderEntryList(listContainer, s.entries, s.selectedIds, s.activeTagFilter, {
           onToggleStar: (id) => void handleToggleStar(id),
           onDelete: (id) => void handleDelete(id),
-          onSelectionChange: (id, selected) => controller.selectEntry(id, selected),
-          onTagFilterClick: (tag) => controller.filterByTag(tag),
+          onSelectionChange: (id, selected) => model.selectEntry(id, selected),
+          onTagFilterClick: (tag) => model.filterByTag(tag),
           onContentToggle: (controlsId) => handleContentToggle(controlsId),
         });
       }
 
       const pagContainer = document.getElementById('sqlite-pagination');
-      if (pagContainer) renderPagination(pagContainer, s.currentPage, s.total, PAGE_SIZE, (page) => controller.changePage(page));
+      if (pagContainer) renderPagination(pagContainer, s.currentPage, s.total, PAGE_SIZE, (page) => model.changePage(page));
     }
 
     const searchInput = document.getElementById('sqlite-search-input') as HTMLInputElement;
@@ -545,6 +546,9 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
     }
   }
 
+  // Model subscription — thin alias of former onStateChange, completes BDD happy path
+  unsubscribe = model.subscribe(() => refresh());
+
   return {
     id: 'panel-sqlite-history',
     category: 'async-data',
@@ -553,24 +557,24 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
     },
     init(initParams?: Record<string, unknown>) {
       if (initParams?.searchTag) {
-        controller.activateWithTag(initParams.searchTag as string);
+        model.activateWithTag(initParams.searchTag as string);
       } else if (initParams?.searchDomain) {
-        controller.activateWithDomain(initParams.searchDomain as string);
+        model.activateWithDomain(initParams.searchDomain as string);
       }
     },
     async load() {
       if (!container) return;
 
       _isMounted = true;
-      await controller.checkFallbackStatus();
-      await controller.loadPersistedSortIntoState();
+      await model.checkFallbackStatus();
+      await model.loadPersistedSortIntoState();
 
       renderState();
 
       // Consume any init params set by init() (which runs before load())
       // so retryInitialLoad uses the correct search/tag parameters.
-      const fetchOpts = controller.consumePendingInit();
-      void controller.retryInitialLoad(fetchOpts ?? { limit: PAGE_SIZE });
+      const fetchOpts = model.consumePendingInit();
+      void model.retryInitialLoad(fetchOpts ?? { limit: PAGE_SIZE });
     },
     destroy() {
       if (searchDebounceTimer !== null) {
@@ -578,9 +582,13 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
         searchDebounceTimer = null;
       }
       _isMounted = false;
-      controller.bumpGenerationOnUnmount();
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+      model.bumpGenerationOnUnmount();
       // Clear bulk bar listener references
-      controller.clearEntrySelection();
+      model.clearEntrySelection();
     },
   };
 }
