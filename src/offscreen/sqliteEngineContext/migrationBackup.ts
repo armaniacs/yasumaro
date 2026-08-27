@@ -1,8 +1,56 @@
 /**
- * migrationBackup.ts
+ * migrationBackup.ts — Legacy wa-sqlite IDBBatchAtomicVFS → @subframe7536 IDB VFS migration.
+ *
  * Extracted from sqliteEngineContext.ts (PBI-01).
- * Handles the wa-sqlite IDBBatchAtomicVFS → @subframe7536 IDB VFS migration:
- * backup of old IDB data, restore on mismatch, and completion flag management.
+ * Handles backup of old IDB data, restore on mismatch, and completion flag management.
+ *
+ * ## Retention rationale (PBI 03: investigate-legacy-migration-sunset — 2026-08-27)
+ *
+ * This module is intentionally RETAINED as of 2026-08-27. It must not be removed yet.
+ *
+ * ### 5 Whys — why removal is unsafe now
+ * 1. Why would removal cause data loss? → Users who still have the old IndexedDB
+ *    database `idb-batch-atomic` (wa-sqlite) would lose all browsing_logs rows:
+ *    the new engine opens `yasumaro.db` under @subframe7536, which is a different
+ *    IndexedDB database name; without this backup/restore, old rows are invisible.
+ * 2. Why might such users still exist? → Migration was introduced in v6.5.34
+ *    (2026-07-17); as of 2026-08-27 only ~40 days have elapsed. Chrome auto-update
+ *    is not instantaneous and infrequent users / disabled-extension users lag.
+ * 3. Why can't we measure how many remain? → No telemetry is collected by design
+ *    (docs/PRIVACY.md: all browsing data stays local). There is no anonymous
+ *    aggregate of `idb_migration_v2_done` adoption.
+ * 4. Why can't we decide without measurement? → The only local signal (PBI 02:
+ *    diagnostics panel showing OPFS/IDB migration status) was just shipped
+ *    (v6.7.82) and has had zero operating period to collect support reports.
+ * 5. Why does that force retention? → ADR-014 and PBI 2026-07-16-07 mandate a
+ *    6-month retention (re-evaluate 2026-12-17) before sunset; deleting now would
+ *    violate that decision and risk silent data loss for an unmeasurable cohort.
+ *
+ * ### Sunset criteria (acceptance criteria for PBI 03)
+ * - Criterion: earliest re-evaluation date is 2026-12-17 (6 months from v6.5.34).
+ *   Additionally, DiagnosticsCollector/PBI-02 must have been in production for
+ *   several months with zero "Not completed" reports via support/Issues that
+ *   correspond to genuine legacy DBs (fresh installs intentionally show "Not
+ *   completed" and do not count).
+ * - If criteria met: remove this file, remove the wa-sqlite dynamic imports
+ *   (`wa-sqlite/dist/wa-sqlite-async.mjs`, `wa-sqlite/src/examples/IDBBatchAtomicVFS.js`),
+ *   remove StorageKeys.IDB_MIGRATION_V2_DONE / IDB_MIGRATION_BACKUP if no longer
+ *   read, and proceed to PBI 04 (consolidate WASM bundles — ~2.7 MB reduction).
+ *   Also remove the companion legacy path `src/offscreen/opfsMigrationV2Reader.ts`
+ *   + `src/offscreen/opfsMigrationV2.ts` under the same gate and delete the
+ *   `wa-sqlite` dependency from package.json if both paths are sunset.
+ * - If criteria NOT met (genuine uncompleted users still surface): defer sunset,
+ *   publish an in-extension notice (diagnostics panel + release notes) that a
+ *   future version will require an update before a cutoff date, and re-evaluate
+ *   after another fixed window (e.g. +3 months).
+ *
+ * ### Operational notes
+ * - Idempotent and safe for fresh installs: when `idb-batch-atomic` is absent,
+ *   the module immediately marks migration done and becomes a no-op.
+ * - Backup is a JSON snapshot in chrome.storage.local (IDB_MIGRATION_BACKUP);
+ *   restore uses INSERT OR IGNORE so it never duplicates.
+ * - `wa-sqlite` is loaded only via dynamic import when an old DB is detected, so
+ *   it does not inflate the hot path; bundle cost is deferred to PBI 04.
  */
 
 import { errorMessage } from '../../utils/errorUtils.js';
