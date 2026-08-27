@@ -17,6 +17,7 @@ import {
 } from './sqliteQueryBuilder.js';
 import { buildQuerySpec, QUERY_CAPS } from './queryPlan.js';
 import { pickDefined } from '../utils/objectUtils.js';
+import { withTransaction } from './opfsWorker/handlers.js';
 
 export class IdbVfsBackend implements StorageBackend {
   constructor(private engine: SqliteEngineHost | SqliteEngineContext) {}
@@ -41,8 +42,7 @@ export class IdbVfsBackend implements StorageBackend {
 
     let inserted = 0;
     let skipped = 0;
-    await this.engine.execWithCache('BEGIN IMMEDIATE');
-    try {
+    await withTransaction(this.engine, async () => {
       for (const record of records) {
         const domain = record.domain || extractDomain(record.url);
         await this.engine.execWithCache(INSERT_IGNORE_SQL, buildInsertParams(record, domain));
@@ -51,12 +51,8 @@ export class IdbVfsBackend implements StorageBackend {
         if (changed > 0) inserted++;
         else skipped++;
       }
-      await this.engine.execWithCache('COMMIT');
-      return { success: true, inserted, skipped };
-    } catch (error) {
-      await this.engine.execWithCache('ROLLBACK');
-      throw error;
-    }
+    });
+    return { success: true, inserted, skipped };
   }
 
   async query(q: StorageQuery): Promise<BackendOrError<QuerySearchResult>> {
