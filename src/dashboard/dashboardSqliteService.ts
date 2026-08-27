@@ -171,6 +171,50 @@ export interface DateCount {
  * Not a callDashboard() wrapper (PBI-39): the retry loop doesn't fit the
  * generic single-attempt shape.
  */
+async function withRetry<K extends DashboardSqliteRequest['subtype']>(
+  fn: () => Promise<DashboardSqliteResponseFor<K>>,
+  onSuccess: (res: Extract<DashboardSqliteResponseFor<K>, { success: true }>) => ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>,
+  onError: (msg: string) => void,
+): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let response: DashboardSqliteResponseFor<K>;
+    try {
+      response = await fn();
+    } catch (error) {
+      if (attempt === 0) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        continue;
+      }
+      const classified = categorizeError(errorMessage(error)).message;
+      onError(classified);
+      return { error: classified };
+    }
+    if (response.success) {
+      try {
+        return onSuccess(response as Extract<DashboardSqliteResponseFor<K>, { success: true }>);
+      } catch (error) {
+        const raw = errorMessage(error);
+        console.warn('decode failed:', raw);
+        return { error: raw };
+      }
+    }
+    if (attempt === 0 && response.retriable) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      continue;
+    }
+    const msg = String(response.error || 'Query failed');
+    console.warn('failed:', msg);
+    return { error: msg };
+  }
+  return { error: 'Query failed' };
+}
+
+/**
+ * Fetches browsing log filtered records.
+ *
+ * Not a callDashboard() wrapper (PBI-39): the retry loop doesn't fit the
+ * generic single-attempt shape. Now uses withRetry helper (PBI-18).
+ */
 export async function queryLogs(options: {
   limit?: number;
   offset?: number;
@@ -182,46 +226,16 @@ export async function queryLogs(options: {
   orderDir?: 'ASC' | 'DESC';
   tagFilter?: string;
 } = {}): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    let response: DashboardSqliteResponseFor<'query'>;
-    try {
-      response = await sendDashboardMessage({ subtype: 'query', ...options });
-    } catch (error) {
-      if (attempt === 0) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        continue;
-      }
-      const classified = categorizeError(errorMessage(error)).message;
-      console.error('queryLogs failed:', classified);
-      return { error: classified };
-    }
-
-    if (response.success) {
-      try {
-        return {
-          data: {
-            rows: requiredRows(response.rows, 'rows', isBrowsingLogEntry),
-            total: requiredNonNegativeNumber(response.total, 'total'),
-          },
-        };
-      } catch (error) {
-        const raw = errorMessage(error);
-        console.warn('queryLogs decode failed:', raw);
-        return { error: raw };
-      }
-    }
-    // Retry only when the service worker says the failure is transient.
-    // This used to match the message text for 'Query failed', which is the
-    // fallback wording used when no specific error was available — so the
-    // retry stopped firing as soon as errors became specific.
-    if (attempt === 0 && response.retriable) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      continue;
-    }
-    console.warn('queryLogs failed:', String(response.error || 'Unknown error'));
-    return { error: String(response.error || 'Query failed') };
-  }
-  return { error: 'Query failed' };
+  return withRetry<'query'>(
+    () => sendDashboardMessage({ subtype: 'query', ...options }),
+    (res) => ({
+      data: {
+        rows: requiredRows(res.rows, 'rows', isBrowsingLogEntry),
+        total: requiredNonNegativeNumber(res.total, 'total'),
+      },
+    }),
+    (msg) => console.error('queryLogs failed:', msg),
+  );
 }
 
 /**
@@ -236,50 +250,23 @@ export async function searchLogs(
   offset = 0,
   options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
 ): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    let response: DashboardSqliteResponseFor<'search'>;
-    try {
-      response = await sendDashboardMessage({
+  return withRetry<'search'>(
+    () =>
+      sendDashboardMessage({
         subtype: 'search',
         query,
         limit,
         offset,
         ...pickDefined({ orderBy: options.orderBy, orderDir: options.orderDir }),
-      });
-    } catch (error) {
-      if (attempt === 0) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        continue;
-      }
-      const classified = categorizeError(errorMessage(error)).message;
-      console.error('searchLogs failed:', classified);
-      return { error: classified };
-    }
-
-    if (response.success) {
-      try {
-        return {
-          data: {
-            rows: requiredRows(response.rows, 'rows', isBrowsingLogEntry),
-            total: requiredNonNegativeNumber(response.total, 'total'),
-          },
-        };
-      } catch (error) {
-        const raw = errorMessage(error);
-        console.warn('searchLogs decode failed:', raw);
-        return { error: raw };
-      }
-    }
-    // See queryLogs: retriability now comes from the service worker's
-    // error classification rather than the wording of the message.
-    if (attempt === 0 && response.retriable) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      continue;
-    }
-    console.warn('searchLogs failed:', String(response.error || 'Unknown error'));
-    return { error: String(response.error || 'Search failed') };
-  }
-  return { error: 'Search failed' };
+      }),
+    (res) => ({
+      data: {
+        rows: requiredRows(res.rows, 'rows', isBrowsingLogEntry),
+        total: requiredNonNegativeNumber(res.total, 'total'),
+      },
+    }),
+    (msg) => console.error('searchLogs failed:', msg),
+  );
 }
 
 /**
