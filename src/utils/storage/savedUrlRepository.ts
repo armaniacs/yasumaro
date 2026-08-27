@@ -13,7 +13,7 @@
  * value object rather than an enumerated bag of fields.
  */
 
-import { withOptimisticLock } from '../optimisticLock.js';
+import { withOptimisticLock, withAtomicKeys } from '../optimisticLock.js';
 import { getStorageUsage, estimateDataSize, STORAGE_QUOTA_BYTES, hasUnlimitedStorage } from './quota.js';
 import type { RecordType } from '../commonTypes.js';
 import { MAX_URL_SET_SIZE, URL_RETENTION_DAYS, MAX_CONTENT_ENTRIES } from '../urlEntry.js';
@@ -199,6 +199,10 @@ export async function setSavedUrls(urlSet: Set<string>, urlToAdd: string | null 
  * Save the URL Map with timestamps.
  * Existing entry fields are preserved via spreadExistingFields() — no
  * manual field enumeration needed.
+ *
+ * Atomic: `savedUrls` and `savedUrlsWithTimestamps` are updated in a single
+ * `withAtomicKeys` transaction so a concurrent reader never observes one
+ * key updated without the other.
  */
 export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, urlToAdd: string | null = null): Promise<void> {
     if (urlToAdd) {
@@ -207,75 +211,82 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
 
     const urlArray = Array.from(urlMap.keys());
 
-    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
-        const existingMap = new Map<string, SavedUrlEntry>();
-        for (const e of (currentEntries || [])) {
-            existingMap.set(e.url, e);
-        }
-        const entries: SavedUrlEntry[] = [];
-        for (const [url, timestamp] of urlMap.entries()) {
-            const existing = existingMap.get(url);
-            const entry: SavedUrlEntry = { url, timestamp };
-            spreadExistingFields(entry, existing);
-            entries.push(entry);
-        }
-        // contentは最新MAX_CONTENT_ENTRIES件のみ保持（ストレージ節約）
-        const sorted = entries.slice().sort((a, b) => b.timestamp - a.timestamp);
-        sorted.forEach((e, i) => { if (i >= MAX_CONTENT_ENTRIES) delete e.content; });
-        return entries;
-    });
-
-    await withOptimisticLock('savedUrls', (currentUrls: string[]) => {
-        const currentSet = new Set(currentUrls || []);
-        const newSet = new Set(urlArray);
-        if (currentSet.size !== newSet.size) {
-            return Array.from(newSet);
-        }
-        for (const x of currentSet) {
-            if (!newSet.has(x)) {
-                return Array.from(newSet);
+    await withAtomicKeys(
+        ['savedUrlsWithTimestamps', 'savedUrls'],
+        ([currentEntries, currentUrls]: [SavedUrlEntry[], string[]]) => {
+            const existingMap = new Map<string, SavedUrlEntry>();
+            for (const e of (currentEntries || [])) {
+                existingMap.set(e.url, e);
             }
+            const entries: SavedUrlEntry[] = [];
+            for (const [url, timestamp] of urlMap.entries()) {
+                const existing = existingMap.get(url);
+                const entry: SavedUrlEntry = { url, timestamp };
+                spreadExistingFields(entry, existing);
+                entries.push(entry);
+            }
+            // contentは最新MAX_CONTENT_ENTRIES件のみ保持（ストレージ節約）
+            const sorted = entries.slice().sort((a, b) => b.timestamp - a.timestamp);
+            sorted.forEach((e, i) => { if (i >= MAX_CONTENT_ENTRIES) delete e.content; });
+
+            const currentSet = new Set(currentUrls || []);
+            const newSet = new Set(urlArray);
+            let nextUrls: string[];
+            if (currentSet.size !== newSet.size) {
+                nextUrls = Array.from(newSet);
+            } else {
+                let changed = false;
+                for (const x of currentSet) {
+                    if (!newSet.has(x)) { changed = true; break; }
+                }
+                nextUrls = changed ? Array.from(newSet) : (currentUrls || []);
+            }
+
+            return [entries, nextUrls];
         }
-        return currentUrls;
-    });
+    );
 }
 
 /**
  * Update URL timestamp for LRU tracking.
  * Existing entry fields are preserved via spreadExistingFields().
+ *
+ * Atomic: `savedUrls` and `savedUrlsWithTimestamps` are updated in a single
+ * `withAtomicKeys` transaction, closing the window where a reader could see
+ * the timestamp entry added to one key but not the other.
  */
 async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise<void> {
-    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
-        let entries = currentEntries || [];
-        const existing = entries.find(entry => entry.url === url);
-        entries = entries.filter(entry => entry.url !== url);
+    await withAtomicKeys(
+        ['savedUrlsWithTimestamps', 'savedUrls'],
+        ([currentEntries, currentUrls]: [SavedUrlEntry[], string[]]) => {
+            let entries = currentEntries || [];
+            const existing = entries.find(entry => entry.url === url);
+            entries = entries.filter(entry => entry.url !== url);
 
-        const entry: SavedUrlEntry = { url, timestamp: Date.now() };
-        spreadExistingFields(entry, existing);
-        if (recordType) entry.recordType = recordType;
-        entries.push(entry);
+            const entry: SavedUrlEntry = { url, timestamp: Date.now() };
+            spreadExistingFields(entry, existing);
+            if (recordType) entry.recordType = recordType;
+            entries.push(entry);
 
-        // 7日より古いエントリを削除
-        const cutoff = Date.now() - URL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-        entries = entries.filter(entry => entry.timestamp >= cutoff);
+            // 7日より古いエントリを削除
+            const cutoff = Date.now() - URL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+            entries = entries.filter(entry => entry.timestamp >= cutoff);
 
-        if (entries.length > MAX_URL_SET_SIZE) {
-            entries.sort((a, b) => a.timestamp - b.timestamp);
-            entries = entries.slice(entries.length - MAX_URL_SET_SIZE);
+            if (entries.length > MAX_URL_SET_SIZE) {
+                entries.sort((a, b) => a.timestamp - b.timestamp);
+                entries = entries.slice(entries.length - MAX_URL_SET_SIZE);
+            }
+
+            // contentは最新MAX_CONTENT_ENTRIES件のみ保持
+            const sorted = entries.slice().sort((a, b) => b.timestamp - a.timestamp);
+            sorted.forEach((e, i) => { if (i >= MAX_CONTENT_ENTRIES) delete e.content; });
+
+            const currentSet = new Set(currentUrls || []);
+            currentSet.add(url);
+
+            return [entries, Array.from(currentSet)];
         }
-
-        // contentは最新MAX_CONTENT_ENTRIES件のみ保持
-        const sorted = entries.slice().sort((a, b) => b.timestamp - a.timestamp);
-        sorted.forEach((e, i) => { if (i >= MAX_CONTENT_ENTRIES) delete e.content; });
-
-        return entries;
-    });
-
-    await withOptimisticLock('savedUrls', (currentUrls: string[]) => {
-        const currentSet = new Set(currentUrls || []);
-        currentSet.add(url);
-        return Array.from(currentSet);
-    });
+    );
 }
 
 // ============================================================================
@@ -291,18 +302,19 @@ export async function addSavedUrl(url: string, recordType?: RecordType): Promise
 
 /**
  * Remove a URL from the saved list.
+ * Atomic: both keys are deleted in a single `withAtomicKeys` transaction to
+ * avoid a partial removal being observed by a concurrent reader.
  */
 export async function removeSavedUrl(url: string): Promise<void> {
-    await withOptimisticLock('savedUrls', (currentUrls: string[]) => {
-        const urlSet = new Set(currentUrls || []);
-        urlSet.delete(url);
-        return Array.from(urlSet);
-    });
-
-    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
-        const entries = currentEntries || [];
-        return entries.filter(entry => entry.url !== url);
-    });
+    await withAtomicKeys(
+        ['savedUrls', 'savedUrlsWithTimestamps'],
+        ([currentUrls, currentEntries]: [string[], SavedUrlEntry[]]) => {
+            const urlSet = new Set(currentUrls || []);
+            urlSet.delete(url);
+            const nextEntries = (currentEntries || []).filter(entry => entry.url !== url);
+            return [Array.from(urlSet), nextEntries];
+        }
+    );
 }
 
 /**
