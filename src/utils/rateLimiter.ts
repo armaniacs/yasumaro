@@ -2,93 +2,25 @@
  * rateLimiter.ts
  * マスターパスワード認証のレート制限モジュール
  * ブルートフォース攻撃防止のための試行回数制限
+ *
+ * 実体は RateLimitService (Clock + StoragePort 注入可能) に移した。
+ * 既存呼び出し元 (masterPassword.ts 等) との互換性のため関数エクスポートを維持する。
  */
 
-const RATE_LIMIT_ATTEMPTS = 5;      // 5分以内の最大試行回数
-const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;  // 評価ウインドウ: 5分
-const LOCKOUT_DURATION_MS = 30 * 60 * 1000;  // ロックアウト期間: 30分 (pre-computed)
-const LOCKOUT_DURATION_MINUTES = 30;  // ロックアウト期間（分、エラーメッセージ用）
+import { RateLimitService, type RateLimitResult } from './RateLimitService.js';
 
-const STORAGE_KEYS = {
-  FAILED_ATTEMPTS: 'passwordFailedAttempts',
-  FIRST_ATTEMPT_TIME: 'firstFailedAttemptTime',
-  LOCKED_UNTIL: 'lockedUntil',
-} as const;
+export type { RateLimitResult };
 
-export interface RateLimitResult {
-  success: boolean;
-  error?: string;
-}
+const defaultRateLimitService = new RateLimitService();
 
-/**
- * レート制限チェックを行う
- */
 export async function checkRateLimit(): Promise<RateLimitResult> {
-  const sessionStorage = await chrome.storage.session.get([
-    STORAGE_KEYS.FAILED_ATTEMPTS,
-    STORAGE_KEYS.FIRST_ATTEMPT_TIME,
-    STORAGE_KEYS.LOCKED_UNTIL,
-  ]);
-  const localStorage = (await chrome.storage.local.get([STORAGE_KEYS.LOCKED_UNTIL])) || {};
-
-  const attempts = (sessionStorage[STORAGE_KEYS.FAILED_ATTEMPTS] as number) || 0;
-  const sessionLockedUntil = (sessionStorage[STORAGE_KEYS.LOCKED_UNTIL] as number) || 0;
-  const localLockedUntil = (localStorage[STORAGE_KEYS.LOCKED_UNTIL] as number) || 0;
-  const lockedUntil = Math.max(sessionLockedUntil, localLockedUntil);
-  const now = Date.now();
-
-  if (lockedUntil && now < lockedUntil) {
-    const remainingMinutes = Math.ceil((lockedUntil - now) / (60 * 1000));
-    return {
-      success: false,
-      error: `Too many attempts. Please try again in ${remainingMinutes} minutes.`
-    };
-  }
-
-  if (attempts >= RATE_LIMIT_ATTEMPTS) {
-    const firstAttempt = (sessionStorage[STORAGE_KEYS.FIRST_ATTEMPT_TIME] as number) || now;
-
-    if (now - firstAttempt > RATE_LIMIT_WINDOW_MS) {
-      await resetFailedAttempts();
-    } else {
-      const lockoutTime = now + LOCKOUT_DURATION_MS;
-      await chrome.storage.local.set({ [STORAGE_KEYS.LOCKED_UNTIL]: lockoutTime });
-      await chrome.storage.session.set({ [STORAGE_KEYS.LOCKED_UNTIL]: lockoutTime });
-      return {
-        success: false,
-        error: `Too many attempts. Please try again in ${LOCKOUT_DURATION_MINUTES} minutes.`
-      };
-    }
-  }
-
-  return { success: true };
+  return defaultRateLimitService.checkRateLimit();
 }
 
-/**
- * 失敗回数を記録する
- */
 export async function recordFailedAttempt(): Promise<void> {
-  const storage = await chrome.storage.session.get([
-    STORAGE_KEYS.FAILED_ATTEMPTS,
-    STORAGE_KEYS.FIRST_ATTEMPT_TIME,
-  ]);
-  const attempts = (storage[STORAGE_KEYS.FAILED_ATTEMPTS] as number) || 0;
-  const firstAttempt = (storage[STORAGE_KEYS.FIRST_ATTEMPT_TIME] as number) || Date.now();
-
-  await chrome.storage.session.set({
-    [STORAGE_KEYS.FAILED_ATTEMPTS]: attempts + 1,
-    [STORAGE_KEYS.FIRST_ATTEMPT_TIME]: firstAttempt,
-  });
+  return defaultRateLimitService.recordFailedAttempt();
 }
 
-/**
- * 失敗回数をリセットする
- */
 export async function resetFailedAttempts(): Promise<void> {
-  await chrome.storage.session.remove([
-    STORAGE_KEYS.FAILED_ATTEMPTS,
-    STORAGE_KEYS.FIRST_ATTEMPT_TIME,
-    STORAGE_KEYS.LOCKED_UNTIL,
-  ]);
-  await chrome.storage.local.remove([STORAGE_KEYS.LOCKED_UNTIL]);
+  return defaultRateLimitService.resetFailedAttempts();
 }

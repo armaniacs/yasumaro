@@ -20,6 +20,7 @@ import {
 } from '../crypto/index.js';
 import { StorageKeys } from './types.js';
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../rateLimiter.js';
+import { isLocked as authGuardIsLocked } from './authGuard.js';
 import { Mutex } from '../Mutex.js';
 
 // ============================================================================
@@ -210,14 +211,8 @@ async function getOrCreateAnonymousSecretKey(): Promise<CryptoKey> {
  */
 export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
     // VULN-017 fix: check IS_LOCKED before returning cached key.
-    // Only applies when a master password is actually configured — IS_LOCKED
-    // is meaningless (and must not block decryption) for users who never set one.
     if (cachedEncryptionKey) {
-        const lockStatus = await chrome.storage.local.get([
-            StorageKeys.MASTER_PASSWORD_ENABLED,
-            StorageKeys.IS_LOCKED
-        ]);
-        if (lockStatus[StorageKeys.MASTER_PASSWORD_ENABLED] && lockStatus[StorageKeys.IS_LOCKED]) {
+        if (await authGuardIsLocked()) {
             cachedEncryptionKey = null;
             cachedMasterPassword = null;
             throw new Error('ENCRYPTION_LOCKED: Session is locked');
