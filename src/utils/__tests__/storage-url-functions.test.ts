@@ -51,6 +51,12 @@ vi.mock('../optimisticLock.js', () => ({
     mockStorage.set(storageKey, result);
     return result;
   }),
+  withAtomicKeys: vi.fn(async (keys: string[], fn: (current: any[]) => any[]) => {
+    const currentValues = keys.map((key) => mockStorage.get(key) || []);
+    const nextValues = fn(currentValues);
+    keys.forEach((key, i) => mockStorage.set(key, nextValues[i]));
+    return nextValues;
+  }),
 }));
 
 // migration モック

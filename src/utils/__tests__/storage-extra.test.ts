@@ -44,6 +44,15 @@ vi.mock('../optimisticLock.js', () => ({
     await chrome.storage.local.set({ [key]: updated });
     return updated;
   }),
+  withAtomicKeys: vi.fn(async (keys: string[], fn: (data: unknown[]) => unknown[]) => {
+    const result = await chrome.storage.local.get(keys);
+    const currentValues = keys.map((key) => result[key] ?? []);
+    const nextValues = fn(currentValues);
+    const payload: Record<string, unknown> = {};
+    keys.forEach((key, i) => { payload[key] = nextValues[i]; });
+    await chrome.storage.local.set(payload);
+    return nextValues;
+  }),
 }));
 
 vi.mock('../masterPassword.js', () => ({
