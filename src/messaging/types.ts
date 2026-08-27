@@ -304,26 +304,25 @@ export type ResponseForType<T extends ExtensionMessage['type']> =
   SuccessResponse;
 
 /**
- * メッセージ送信の型安全ラッパー
+ * メッセージ送信の型安全ラッパー — now thin alias to MessageTransport (PBI-22)
  */
 export async function sendServiceWorkerMessage<T extends ExtensionMessage['type']>(
   type: T,
   payload?: PayloadForType<T>
 ): Promise<ResponseForType<T>> {
+  const { messageTransport } = await import('./messageTransport.js');
   const message = payload !== undefined
-    ? { type, payload, protocolVersion: CURRENT_PROTOCOL_VERSION }
-    : { type, protocolVersion: CURRENT_PROTOCOL_VERSION };
-  const response = await chrome.runtime.sendMessage(message as unknown);
-
+    ? { type, payload } as unknown as ExtensionMessage & { type: T }
+    : { type } as unknown as ExtensionMessage & { type: T };
+  const response = await messageTransport.send(message as ExtensionMessage);
   if (isErrorResponse(response)) {
-    throw new Error(response.error);
+    throw new Error((response as { error: string }).error);
   }
-
   return response as ResponseForType<T>;
 }
 
 /**
- * Content Script から Service Worker へのメッセージ送信
+ * Content Script から Service Worker へのメッセージ送信 — alias
  */
 export async function sendFromContentScript<T extends ExtensionMessage['type']>(
   type: T,
@@ -333,7 +332,7 @@ export async function sendFromContentScript<T extends ExtensionMessage['type']>(
 }
 
 /**
- * Popup/Dashboard から Service Worker へのメッセージ送信
+ * Popup/Dashboard から Service Worker へのメッセージ送信 — alias
  */
 export async function sendFromPopup<T extends ExtensionMessage['type']>(
   type: T,
