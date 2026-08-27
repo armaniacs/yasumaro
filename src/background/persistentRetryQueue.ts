@@ -11,6 +11,7 @@
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { QueueStorageAdapter } from './queueStorageAdapter.js';
+import { estimatePayloadSize } from './queue/payload.js';
 export { ChromeStorageAdapter, InMemoryAdapter } from './queueStorageAdapter.js';
 
 /**
@@ -107,7 +108,6 @@ export class PersistentRetryQueue<T> {
     const items = await this.adapter.load<T>(this.options.storageKey);
     if (items.length === 0) return [];
 
-    const now = Date.now();
     const maxJobs = this.options.maxJobsPerCycle ?? items.length;
     const toProcess = items.slice(0, maxJobs);
     const untouched = items.slice(maxJobs);
@@ -117,27 +117,15 @@ export class PersistentRetryQueue<T> {
       await this.adapter.save(this.options.storageKey, [...remaining, ...untouched]);
     };
 
-    for (const item of toProcess) {
-      // Drop items that already exceeded max retry count (no handler call)
-      if (shouldDrop(item, this.options.maxRetryCount)) {
-        addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries, dropping`, {
-          id: (item as RetryableItem & { id?: string }).id,
-        });
-        if (this.options.persistPerItem) await persistState();
-        continue;
-      }
+    const { kept, dropped } = this.filterExpiredAndOverRetry(toProcess);
+    for (const item of dropped) {
+      addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries or TTL, dropping`, {
+        id: (item as RetryableItem & { id?: string }).id,
+      });
+    }
+    if (dropped.length > 0 && this.options.persistPerItem) await persistState();
 
-      // TTL check
-      if (isRetryable(item) && this.options.ttlMs) {
-        if (now - item.createdAt > this.options.ttlMs) {
-          addLog(LogType.INFO, `${this.options.logLabel}: dropped expired item`, {
-            id: (item as RetryableItem & { id?: string }).id,
-          });
-          if (this.options.persistPerItem) await persistState();
-          continue;
-        }
-      }
-
+    for (const item of kept) {
       try {
         const ok = await handler(item);
         if (!ok) {
@@ -185,7 +173,6 @@ export class PersistentRetryQueue<T> {
     const items = await this.adapter.load<T>(this.options.storageKey);
     if (items.length === 0) return [];
 
-    const now = Date.now();
     const maxJobs = this.options.maxJobsPerCycle ?? items.length;
     const toProcess = items.slice(0, maxJobs);
     const untouched = items.slice(maxJobs);
@@ -199,23 +186,11 @@ export class PersistentRetryQueue<T> {
 
     for (const chunk of chunks) {
       // Filter expired or max-retry-exceeded items from this chunk
-      const validItems: T[] = [];
-      for (const item of chunk) {
-        if (shouldDrop(item, this.options.maxRetryCount)) {
-          addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries, dropping`, {
-            id: (item as RetryableItem & { id?: string }).id,
-          });
-          continue;
-        }
-        if (isRetryable(item) && this.options.ttlMs) {
-          if (now - item.createdAt > this.options.ttlMs) {
-            addLog(LogType.INFO, `${this.options.logLabel}: dropped expired item`, {
-              id: (item as RetryableItem & { id?: string }).id,
-            });
-            continue;
-          }
-        }
-        validItems.push(item);
+      const { kept: validItems, dropped } = this.filterExpiredAndOverRetry(chunk);
+      for (const item of dropped) {
+        addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries or TTL, dropping`, {
+          id: (item as RetryableItem & { id?: string }).id,
+        });
       }
 
       if (validItems.length === 0) {
@@ -280,6 +255,32 @@ export class PersistentRetryQueue<T> {
     const items = await this.adapter.load<T>(this.options.storageKey);
     return items.length;
   }
+
+  /**
+   * Split items into those still eligible for processing and those that
+   * must be dropped (expired past ttlMs, or already at/over maxRetryCount).
+   * The single source of truth for this policy — flush/flushBatch call it
+   * internally, and callers needing the same filter outside a flush cycle
+   * (e.g. a queue facade's peek/dequeue) should call it too instead of
+   * re-deriving expiry themselves.
+   */
+  filterExpiredAndOverRetry(items: T[]): { kept: T[]; dropped: T[] } {
+    const now = Date.now();
+    const kept: T[] = [];
+    const dropped: T[] = [];
+    for (const item of items) {
+      if (shouldDrop(item, this.options.maxRetryCount)) {
+        dropped.push(item);
+        continue;
+      }
+      if (isRetryable(item) && this.options.ttlMs && now - item.createdAt > this.options.ttlMs) {
+        dropped.push(item);
+        continue;
+      }
+      kept.push(item);
+    }
+    return { kept, dropped };
+  }
 }
 
 /**
@@ -318,17 +319,6 @@ function setLastError(item: unknown, error: unknown): void {
 function shouldDrop(item: unknown, maxRetryCount?: number): boolean {
   if (!maxRetryCount || !isRetryable(item)) return false;
   return item.retryCount >= maxRetryCount;
-}
-
-/**
- * Estimate payload size in bytes.
- */
-function estimatePayloadSize(payload: unknown): number {
-  try {
-    return new Blob([JSON.stringify(payload)]).size;
-  } catch {
-    return 0;
-  }
 }
 
 /**
