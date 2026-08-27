@@ -25,9 +25,9 @@ Scenario: エッジケース — 初期化競合が Model 内で解消される
   Then `generation` が `++requestGeneration` と `generation !== requestGeneration` の2箇所で正しくインクリメントされ、古い fetch が破棄され `loading` 永久スピナーが残らない
 
 ## 受け入れ基準
-- [ ] 縮小案: `HistoryModel` が `Controller(417)+State(265)` の `generation/pendingInit/sort永続` をカプセル化し、`Query`/`View` は委譲維持
-- [ ] `Panel` が `model.subscribe(render)` に縮退しつつ、`updateDynamicRegions` 差分パスは維持されている
-- [ ] `historyStateReducer` が Model 内部で再利用され、`Controller`/`View`/`State` の全面統合 (6ファイル) ではない
+- [x] 縮小案: `HistoryModel` が `Controller(417)+State(265)` の `generation/pendingInit/sort永続` をカプセル化し、`Query`/`View` は委譲維持
+- [x] `Panel` が `model.subscribe(render)` に縮退しつつ、`updateDynamicRegions` 差分パスは維持されている
+- [x] `historyStateReducer` が Model 内部で再利用され、`Controller`/`View`/`State` の全面統合 (6ファイル) ではない
 
 ## テスト戦略
 - 単体: `HistoryModel` の `sort`/`search`/`pagination` の状態遷移テスト。State の30パターン純粋テストは Model 単体に移管
@@ -38,6 +38,6 @@ Scenario: エッジケース — 初期化競合が Model 内で解消される
 3pt（縮小案, 要チームでの見積もり） — 全面案は 4.5-5pt
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
