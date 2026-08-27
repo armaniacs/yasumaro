@@ -42,6 +42,10 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-28 TextSimilarity 深いモジュール抽出 — 1件完了
+
+- 2026-08-27-25-feat-extract-text-similarity.md（RICE 200 — `contentDeduplicator.ts`と`sentenceExtractor.ts`で重複していた`toWordSet`/`splitSentences`/`jaccardSimilarity`を`src/utils/text/tokenizer.ts`+`similarity.ts`に一本化。両モジュールはimportするのみに変更。`buildSentenceGraph`の`Map<string, number[]>`キーを`${index}:${sentence}`のindex-qualifiedキーに変更し、同一文が2つあると頂点が1つに潰れて再現困難だったバグを解消。重複文検出の回帰テストを追加。type-check / 8393 tests PASS（既存の性能系1件は本変更と無関係の既存フレーキー））
+
 ### 2026-08-25 Architecture Deepening（arch-delivery-loop）0825a — 4件完了（Wave1 3並列 + Wave2 1直列）
 
 - 2026-08-25-01-refactor-storage-obsidian-facade.md（RICE 32.0 — `SettingsRepository`に`getObsidianConfig()`/`getAiProviderConfig()`/`getPrivacyConfig()` facade 3本を追加しObsidian 6/AI 19/Privacy 5キーの取得を`getMany` 1回で完結。`OBSIDIAN_STORAGE_KEYS`/`AI_STORAGE_KEYS`/`PRIVACY_STORAGE_KEYS`をローカルミラー定数で重複化しLayer違反を回避、`ServiceContainer`に`settingsRepository`を`singleton:true`登録。type-check / 8394 tests PASS）
