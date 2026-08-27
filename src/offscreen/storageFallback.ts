@@ -8,6 +8,7 @@ import { Mutex } from '../utils/Mutex.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { UPDATABLE_FIELDS, buildInsertRecordFields } from './schema.js';
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
+import { buildQuerySpec, QUERY_CAPS } from './queryPlan.js';
 
 const STORAGE_KEY = 'FALLBACK_STORAGE_DATA';
 const STORAGE_KEY_COUNTER = 'FALLBACK_STORAGE_COUNTER';
@@ -160,6 +161,8 @@ export class FallbackStorage {
     success: true; rows: (BrowsingLogRecord & { rank: number })[]; total: number
   } | { success: false; error: string }> {
     try {
+      const spec = buildQuerySpec(q, { caps: QUERY_CAPS, fts5Available: false });
+      if (spec.error) return { success: false, error: spec.error };
       const data = await this.loadData();
       let filtered = data.records;
       // Compatibility: support both old (isStarred/since/until) and new (starred/dateFrom/dateTo) param names
@@ -248,8 +251,8 @@ export class FallbackStorage {
         }
       }
 
-      const limit = q.limit ?? 100;
-      const offset = q.offset ?? 0;
+      const limit = spec.limit;
+      const offset = spec.offset;
       const paged = filtered.slice(offset, offset + limit);
 
       const rows: (BrowsingLogRecord & { rank: number })[] = paged.map(r => ({
