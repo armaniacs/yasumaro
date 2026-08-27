@@ -18,8 +18,7 @@
 
 | ID | 状態 | PBI | RICE | 種別 | 見積 |
 |----|------|-----|------|------|------|
-| 03 | ⬜ 未着手（保留、02完了後に判断）🟡🟢 | [旧wa-sqlite移行コードの終息判断](2026-08-27-03-investigate-legacy-migration-sunset.md) | 6.0 | 🔧 | 2pt |
-| 04 | ⬜ 未着手（保留、03確定後に着手）🔴🟡 | [既存WASMバンドルの統合](2026-08-27-04-refactor-consolidate-wasm-bundles.md) | 3.5 | 🔧 | 3pt |
+| 21 | ⬜ 未着手 🟡🟢 | [Offline Queue Facade](2026-08-27-21-feat-collapse-offline-queue-facade.md) | 157 | 🔧 | 1pt |
 | 23 | ⬜ 未着手 🟡🟢 | [Sync Batch Runner](2026-08-27-23-feat-extract-sync-batch-runner.md) | 180 | 🔧 | 2pt |
 | 24 | ⬜ 未着手 🟡🟢 | [RateLimiter Service化](2026-08-27-24-feat-service-rate-limiter-session.md) | 135 | 🔧 | 2pt |
 | 25 | ⬜ 未着手 🟢🟢 | [TextSimilarity 抽出](2026-08-27-25-feat-extract-text-similarity.md) | 200 | 🔧 | 1pt |
@@ -112,6 +111,8 @@
 - 2026-08-27-22-feat-unify-messaging-transport.md（RICE 420 — `MessageTransport` を新設し `typed ExtensionMessage` + `CURRENT_PROTOCOL_VERSION` + `MessageValidator` + `RetryPolicy` を 1 seam に統合。`ChromeTransport` / `ImmediateTransport` で local-substitutable。`types.ts` の3ラッパを thin alias に縮退。type-check / 125 messaging tests PASS）
 - 2026-08-27-14-feat-collapse-sqlite-engine-context.md（RICE 210 — `sqliteEngineContext` を `SqliteEngineHost` の薄い alias に縮小。`SqliteEngineHost` を新設し `private #state` で 4 State を集約、`Mutex` で `init` 直列化。`IdbVfsBackend`/`OpfsWorkerBackend`/`backendResolver` の型を `SqliteEngineHost|SqliteEngineContext` に拡張。type-check / 36 tests PASS）
 - 2026-08-27-15-feat-deepen-settings-repository.md（RICE 257 — `Settings` を `StoragePort` 1-seam に統一。`storagePort.ts` 新設、`settingsMigration.ts` から `rawEncrypted` 削除、`SettingsRepository` を `StoragePort` 1-seam に書き換え。type-check / 55 tests PASS）
+- 2026-08-27-03-investigate-legacy-migration-sunset.md（RICE 6.0 — 終息判断基準を 3ヶ月 (2026-11-27) かつ報告0件と明文化。診断表示の運用実績を条件に PBI-04 の WASM 統合を延期。type-check PASS）
+- 2026-08-27-04-refactor-consolidate-wasm-bundles.md（RICE 3.5 — `vendor/wa-sqlite` は既に削除済みで残り3種は移行コード起因のため 03 の終息まで統合不可と結論。WASMバンドル監査で4種の由来をSHA1で文書化。type-check PASS）
 - 2026-08-27-16-feat-fold-opfs-worker-handlers.md（RICE 160 — `handlers.ts` に `withTransaction` ヘルパを抽出し `crudHandlers`/`purgeHandlers`/`IdbVfsBackend` の3箇所の `BEGIN/COMMIT/ROLLBACK` 重複を一本化。type-check / 44 tests PASS）
 - 2026-08-27-17-feat-merge-history-panel-mvc.md（RICE 154 — `Controller+State` を `HistoryModel` に集約し `Query/View` は委譲維持。`historyStateReducer` を内部再利用。`sqliteHistoryPanelState.test.ts` 30ケース+`Controller` 8ケースを Model 単体へ移管。type-check / 178 tests PASS）
 
