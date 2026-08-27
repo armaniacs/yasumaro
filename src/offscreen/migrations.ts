@@ -1,4 +1,19 @@
-// src/offscreen/migrations.ts
+// src/offscreen/migrations.ts — Active schema migrations (NOT legacy sunset target).
+//
+// This file is NOT part of the wa-sqlite legacy sunset investigated in PBI 03.
+// It performs idempotent `ALTER TABLE ADD COLUMN` / FTS5 / index creation that
+// every existing DB must run on upgrade (MIGRATION_SEQUENCE, MIGRATION_COLUMNS,
+// GIST_SYNCED_INDEX_SQL, FTS5_STATEMENTS). Removing it would break upgrades from
+// any prior schema version, whereas the legacy sunset target is specifically
+// `opfsMigrationV2Reader.ts` + `sqliteEngineContext/migrationBackup.ts` which
+// exist only to copy data out of the pre-v6.5.34 wa-sqlite databases
+// (AccessHandlePoolVFS / IDBBatchAtomicVFS). See migrationBackup.ts header for
+// the 5 Whys and sunset criteria; this file stays permanently and is out of
+// scope for PBI 04 WASM consolidation.
+//
+// Retention: KEEP indefinitely. All branches are idempotent (duplicate column /
+// already exists → continue) and safe for fresh installs.
+
 import { MIGRATION_COLUMNS, MIGRATION_SEQUENCE, FTS5_STATEMENTS, GIST_SYNCED_INDEX_SQL } from './schema.js';
 import { errorMessage } from '../utils/errorUtils.js';
 
