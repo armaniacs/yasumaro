@@ -42,6 +42,11 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-27 OfflineQueue/QueuePolicy統合 — 2件完了（依存関係のため統合実装）
+
+- 2026-08-27-21-feat-collapse-offline-queue-facade.md（RICE 157 — `OfflineNetworkQueue` を `QueuePort<OfflineJob>` 注入のファサードに縮退し `dequeue`/`peek` のTTL独自実装を撤去、`PersistentRetryQueue.filterExpiredAndOverRetry` に一本化。`NoOpQueuePort` をコンストラクタ注入し `NoOpOfflineNetworkQueue` は継承なしで動作。`AlarmScheduler`抽出は対象4ファイル外・`sessionAlarmsManager.ts`/`logger/flushScheduler.ts`が既に独立実装済みのため見送り。type-check / 8365 tests PASS）
+- 2026-08-27-28-feat-unify-queue-policy.md（RICE 140 — `PersistentRetryQueue.filterExpiredAndOverRetry(items)` を新設し `flush`/`flushBatch` 内部からも利用する一箇所化を実施。`estimatePayloadSize` を `src/background/queue/payload.ts` に抽出し `persistentRetryQueue.ts`/`pendingChromeStorageQueue.ts` で共有。drop/truncateは元々ポリシー分離済みと判明（chrome-storageのpatch truncateは汎用化不可のため踏襲）。type-check / 8365 tests PASS）
+
 ### 2026-08-25 Architecture Deepening（arch-delivery-loop）0825a — 4件完了（Wave1 3並列 + Wave2 1直列）
 
 - 2026-08-25-01-refactor-storage-obsidian-facade.md（RICE 32.0 — `SettingsRepository`に`getObsidianConfig()`/`getAiProviderConfig()`/`getPrivacyConfig()` facade 3本を追加しObsidian 6/AI 19/Privacy 5キーの取得を`getMany` 1回で完結。`OBSIDIAN_STORAGE_KEYS`/`AI_STORAGE_KEYS`/`PRIVACY_STORAGE_KEYS`をローカルミラー定数で重複化しLayer違反を回避、`ServiceContainer`に`settingsRepository`を`singleton:true`登録。type-check / 8394 tests PASS）

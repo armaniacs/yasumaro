@@ -8,6 +8,7 @@
 
 import { addLog, LogType } from '../utils/logger.js';
 import { PersistentRetryQueue, ChromeStorageAdapter } from './persistentRetryQueue.js';
+import { estimatePayloadSize } from './queue/payload.js';
 import type { SavedUrlEntryMetadataPatch } from '../utils/storage/savedUrlRepository.js';
 
 export const PENDING_CHROME_STORAGE_KEY = 'pending_chrome_storage_writes';
@@ -70,26 +71,26 @@ function truncatePatchToFit(
   let result = patch;
   let contentOmitted = false;
   let tagsOmitted = false;
-  let size = new Blob([JSON.stringify(result)]).size;
+  let size = estimatePayloadSize(result);
 
   if (size > MAX_PATCH_PAYLOAD_BYTES && result.content) {
     const { content: _content, ...rest } = result;
     result = rest;
     contentOmitted = true;
-    size = new Blob([JSON.stringify(result)]).size;
+    size = estimatePayloadSize(result);
   }
 
   if (size > MAX_PATCH_PAYLOAD_BYTES && result.tags && result.tags.length > 0) {
     let truncatedTags = result.tags.slice(-MAX_TAGS_AFTER_TRUNCATION);
     let candidate = { ...result, tags: truncatedTags };
-    let candidateSize = new Blob([JSON.stringify(candidate)]).size;
+    let candidateSize = estimatePayloadSize(candidate);
     // Even MAX_TAGS_AFTER_TRUNCATION tags might still be too large if
     // individual tag strings are unusually long — keep shrinking from the
     // front until it fits or nothing is left.
     while (candidateSize > MAX_PATCH_PAYLOAD_BYTES && truncatedTags.length > 0) {
       truncatedTags = truncatedTags.slice(1);
       candidate = { ...result, tags: truncatedTags };
-      candidateSize = new Blob([JSON.stringify(candidate)]).size;
+      candidateSize = estimatePayloadSize(candidate);
     }
     if (truncatedTags.length > 0) {
       result = candidate;
