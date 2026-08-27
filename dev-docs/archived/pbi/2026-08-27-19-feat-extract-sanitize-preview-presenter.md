@@ -25,9 +25,9 @@ Scenario: エッジケース — 連続 showPreview で Promise がハングし�
   Then 1回目の Promise は拒否され、2回目の Promise が正しく解決する
 
 ## 受け入れ基準
-- [ ] `MaskNavigator` が純粋関数として `collectPositions`/`next`/`prev` を提供する
-- [ ] `PreviewView` が `doc: Document` を注入され `show`/`onConfirm`/`onCancel` の interface を持つ
-- [ ] `PreviewPresenter` が `resolvePromise` と `ResizeObserver` を所有し、テストで `jest.resetModules()` が不要になる
+- [x] `MaskNavigator` が純粋関数として `collectPositions`/`next`/`prev` を提供する
+- [x] `PreviewView` が `doc: Document` を注入され `show`/`onConfirm`/`onCancel` の interface を持つ
+- [x] `PreviewPresenter` が `resolvePromise` と `ResizeObserver` を所有し、テストで `jest.resetModules()` が不要になる
 
 ## テスト戦略
 - 単体: `MaskNavigator` の `collectPositions`/`next`/`prev` の純粋テスト (jsdom 不要)
@@ -39,6 +39,6 @@ Scenario: エッジケース — 連続 showPreview で Promise がハングし�
 2pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

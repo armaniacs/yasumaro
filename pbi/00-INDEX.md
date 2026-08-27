@@ -27,7 +27,6 @@
 | 26 | ⬜ 未着手 🟢🟢 | [StorageField 抽出](2026-08-27-26-feat-extract-storage-fields.md) | 180 | 🔧 | 1pt |
 | 27 | ⬜ 未着手 🟢🟢 | [MultiKey OptimisticLock](2026-08-27-27-feat-multi-key-optimistic-lock.md) | 160 | 🔧 | 2pt |
 | 28 | ⬜ 未着手 🟢🟢 | [QueuePolicy 統一](2026-08-27-28-feat-unify-queue-policy.md) | 140 | 🔧 | 1pt |
-| 19 | ⬜ 未着手 🔴🟢 | [SanitizePreview Presenter](2026-08-27-19-feat-extract-sanitize-preview-presenter.md) | 213 | ✨ | 2pt |
 | 21 | ⬜ 未着手 🟡🟢 | [Offline Queue Facade](2026-08-27-21-feat-collapse-offline-queue-facade.md) | 157 | 🔧 | 1pt |
 
 ---
@@ -109,6 +108,7 @@
 - 2026-08-27-20-feat-unify-content-visit-pipeline.md（RICE 336 — `contentKernel.ts` 新設で `extractor.loadSettings` の 77行テーブル駆動を一本化、`domainPolicyPort` で `loader`/`domainPolicy` の TTL 二重管理を解消。`ContentKernel` に `StoragePort`/`DomainPolicyPort`/`Clock`/`Scheduler` を注入。350 tests PASS）
 - 2026-08-27-12-feat-unify-sqlite-storage-backend.md（RICE 288 — Phase 0: `searchHandlers.ts` に `domain`/`starred`/`date` の extraWhereSql を追加。Phase 1: ADR `2026-08-27-limit-policy.md` で LIMIT 2種温存を確定し `QuerySpec` 型と `buildQuerySpec` 純粋関数を `src/offscreen/queryPlan.ts` に新設。Phase 3: `IdbVfsBackend.query` と `FallbackStorage.query` を `QuerySpec` に移行し `limit`/`order` を一括生成。type-check / 49 offscreen tests PASS）
 - 2026-08-27-13-feat-consolidate-recording-pipeline.md（RICE 420→252 — Phase A-1: `PipelineKernel` を新設し `RecordingPipeline.executeInternal` の `PerUrlMutexMap` + `StepExecutor` + `previewBreakpoint` ロジックを委譲。`RecordingPipeline.record()` は facade に縮退。`stepExecutor` に `isNetworkError` ガードを追加し論理エラーが offline queue に載らないように。`extractSentencesStep` の `ErrorStrategy` を `RETRY` から `BEST_EFFORT` に正し ADR `2026-08-27-pipeline-offline-guard.md` を作成。type-check / 20 Pipeline tests PASS）
+- 2026-08-27-19-feat-extract-sanitize-preview-presenter.md（RICE 213 — `maskNavigator.ts`/`previewView.ts`/`previewPresenter.ts` に分割し `sanitizePreview.ts` を 443行→34行 Facade に縮小。`MaskNavigator` 純粋化で jsdom 不要、`PreviewPresenter` が `resolvePromise` と `ResizeObserver` を所有。30 files 648 tests PASS）
 - 2026-08-27-22-feat-unify-messaging-transport.md（RICE 420 — `MessageTransport` を新設し `typed ExtensionMessage` + `CURRENT_PROTOCOL_VERSION` + `MessageValidator` + `RetryPolicy` を 1 seam に統合。`ChromeTransport` / `ImmediateTransport` で local-substitutable。`types.ts` の3ラッパを thin alias に縮退。type-check / 125 messaging tests PASS）
 - 2026-08-27-14-feat-collapse-sqlite-engine-context.md（RICE 210 — `sqliteEngineContext` を `SqliteEngineHost` の薄い alias に縮小。`SqliteEngineHost` を新設し `private #state` で 4 State を集約、`Mutex` で `init` 直列化。`IdbVfsBackend`/`OpfsWorkerBackend`/`backendResolver` の型を `SqliteEngineHost|SqliteEngineContext` に拡張。type-check / 36 tests PASS）
 - 2026-08-27-15-feat-deepen-settings-repository.md（RICE 257 — `Settings` を `StoragePort` 1-seam に統一。`storagePort.ts` 新設、`settingsMigration.ts` から `rawEncrypted` 削除、`SettingsRepository` を `StoragePort` 1-seam に書き換え。type-check / 55 tests PASS）
