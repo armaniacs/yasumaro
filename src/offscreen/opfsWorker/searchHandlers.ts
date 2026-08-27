@@ -16,23 +16,47 @@ export async function handleSearch(ctx: HandlerContext, payload: SearchPayload, 
 
   const charLen = [...bare].length;
   if (fts5Available && charLen >= 3) {
-    return handleSearchFts(ctx, `"${bare}"`, limit, offset, orderBy, orderDir);
+    return handleSearchFts(ctx, `"${bare}"`, limit, offset, orderBy, orderDir, payload);
   }
-  return handleSearchLike(ctx, searchQuery, limit, offset, orderBy, orderDir);
+  return handleSearchLike(ctx, searchQuery, limit, offset, orderBy, orderDir, payload);
+}
+
+function buildSearchExtra(payload: SearchPayload): { extraWhereSql: string; extraWhereSqlFts: string; extraParams: (string | number)[] } {
+  const extraConds: string[] = [];
+  const extraParams: (string | number)[] = [];
+  if (payload.dateFrom != null) { extraConds.push('created_at >= ?'); extraParams.push(payload.dateFrom); }
+  if (payload.dateTo != null) { extraConds.push('created_at <= ?'); extraParams.push(payload.dateTo); }
+  if (payload.domain) { extraConds.push('domain = ?'); extraParams.push(payload.domain); }
+  if (payload.starred != null) { extraConds.push('is_starred = ?'); extraParams.push(payload.starred ? 1 : 0); }
+  if (payload.gistSynced != null) { extraConds.push('gist_synced = ?'); extraParams.push(payload.gistSynced); }
+  if (payload.ids != null && payload.ids.length > 0) {
+    extraConds.push(`id IN (${payload.ids.map(() => '?').join(',')})`);
+    extraParams.push(...payload.ids);
+  }
+  const extraWhereSql = extraConds.length > 0 ? ` AND ${extraConds.join(' AND ')}` : '';
+  const extraWhereSqlFts = extraWhereSql
+    .replace(/domain = \?/g, 'b.domain = ?')
+    .replace(/created_at/g, 'b.created_at')
+    .replace(/is_starred/g, 'b.is_starred')
+    .replace(/gist_synced/g, 'b.gist_synced')
+    .replace(/\bid\b/g, 'b.id');
+  return { extraWhereSql, extraWhereSqlFts, extraParams };
 }
 
 export async function handleSearchFts(
   ctx: HandlerContext,
   sanitizedQuery: string, limit: number, offset: number,
-  orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC'
+  orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC',
+  payload: SearchPayload = {}
 ): Promise<{ rows: SearchResult[]; total: number }> {
+  const { extraWhereSqlFts, extraParams } = buildSearchExtra(payload);
   let total = 0;
   await sqlQuery(
     ctx,
     `SELECT COUNT(*) AS c FROM browsing_logs_fts
 JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
-WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0`,
-    [sanitizedQuery],
+WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extraWhereSqlFts}`,
+    [sanitizedQuery, ...extraParams],
     (row) => { total = Number(row.c); }
   );
 
@@ -45,9 +69,9 @@ WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0`,
     `SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank AS rank
      FROM browsing_logs_fts
      JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
-     WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0
+     WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extraWhereSqlFts}
      ORDER BY ${orderClause} LIMIT ? OFFSET ?`,
-    [sanitizedQuery, limit, offset],
+    [sanitizedQuery, ...extraParams, limit, offset],
     (row) => {
       rows.push({
         id: Number(row.id),
@@ -71,11 +95,15 @@ WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0`,
 export async function handleSearchLike(
   ctx: HandlerContext,
   rawQuery: string, limit: number, offset: number,
-  orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC'
+  orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC',
+  payload: SearchPayload = {}
 ): Promise<{ rows: SearchResult[]; total: number }> {
   const like = `%${rawQuery}%`;
-  const conditions = 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';
-  const params: (string | number)[] = [like, like, like, like];
+  const baseConds = 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';
+  const baseParams: (string | number)[] = [like, like, like, like];
+  const { extraWhereSql, extraParams } = buildSearchExtra(payload);
+  const conditions = extraWhereSql ? `${baseConds}${extraWhereSql}` : baseConds;
+  const params: (string | number)[] = [...baseParams, ...extraParams];
 
   let total = 0;
   await sqlQuery(
