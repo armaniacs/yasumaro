@@ -3,7 +3,7 @@
  * Purge operations: delete old records, clear content, clear all.
  */
 
-import { sqlExec, sqlQuery, type HandlerContext } from './handlers.js';
+import { sqlExec, sqlQuery, withTransaction, type HandlerContext } from './handlers.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 
 export interface PurgeLogCallback {
@@ -20,35 +20,32 @@ export async function handlePurgeOldRecords(
   let totalPurged = 0;
 
   try {
-    await sqlExec(ctx, 'BEGIN IMMEDIATE');
-
-    await sqlExec(
-      ctx,
-      'DELETE FROM browsing_logs WHERE created_at < ? AND is_starred = 0 AND is_deleted = 0',
-      [cutoffMs]
-    );
-
-    await sqlQuery(ctx, 'SELECT changes() AS c', [], (row) => { totalPurged = Number(row.c); });
-
-    let count = 0;
-    await sqlQuery(ctx, 'SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row.c); });
-
-    if (count > maxRecords) {
-      const toDelete = count - maxRecords;
+    await withTransaction(ctx, async () => {
       await sqlExec(
         ctx,
-        `DELETE FROM browsing_logs WHERE id IN (
-           SELECT id FROM browsing_logs WHERE is_starred = 0 AND is_deleted = 0
-           ORDER BY created_at ASC LIMIT ?
-         )`,
-        [toDelete]
+        'DELETE FROM browsing_logs WHERE created_at < ? AND is_starred = 0 AND is_deleted = 0',
+        [cutoffMs]
       );
-      await sqlQuery(ctx, 'SELECT changes() AS c', [], (row) => { totalPurged += Number(row.c); });
-    }
 
-    await sqlExec(ctx, 'COMMIT');
+      await sqlQuery(ctx, 'SELECT changes() AS c', [], (row) => { totalPurged = Number(row.c); });
+
+      let count = 0;
+      await sqlQuery(ctx, 'SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row.c); });
+
+      if (count > maxRecords) {
+        const toDelete = count - maxRecords;
+        await sqlExec(
+          ctx,
+          `DELETE FROM browsing_logs WHERE id IN (
+             SELECT id FROM browsing_logs WHERE is_starred = 0 AND is_deleted = 0
+             ORDER BY created_at ASC LIMIT ?
+           )`,
+          [toDelete]
+        );
+        await sqlQuery(ctx, 'SELECT changes() AS c', [], (row) => { totalPurged += Number(row.c); });
+      }
+    });
   } catch (err) {
-    await sqlExec(ctx, 'ROLLBACK');
     log.postLog('error', 'OPFS Worker: purge transaction failed', { error: errorMessage(err) });
     throw err;
   }
