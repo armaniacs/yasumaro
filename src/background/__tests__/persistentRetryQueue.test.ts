@@ -313,4 +313,75 @@ describe('PersistentRetryQueue', () => {
       expect(chunks[1]).toHaveLength(1);
     });
   });
+
+  describe('filterExpiredAndOverRetry()', () => {
+    it('drops items older than ttlMs, keeps fresh ones', () => {
+      queue = new PersistentRetryQueue<TestItem>(adapter, {
+        storageKey: 'test',
+        maxSize: 100,
+        logLabel: 'test',
+        ttlMs: 1000,
+      });
+
+      const fresh = makeItem('fresh');
+      const stale: TestItem = { id: 'stale', data: 'old', createdAt: Date.now() - 2000, retryCount: 0 };
+
+      const { kept, dropped } = queue.filterExpiredAndOverRetry([fresh, stale]);
+
+      expect(kept).toEqual([fresh]);
+      expect(dropped).toEqual([stale]);
+    });
+
+    it('drops items at or over maxRetryCount, keeps items under the limit', () => {
+      queue = new PersistentRetryQueue<TestItem>(adapter, {
+        storageKey: 'test',
+        maxSize: 100,
+        logLabel: 'test',
+        maxRetryCount: 3,
+      });
+
+      const underLimit = { ...makeItem('under'), retryCount: 2 };
+      const atLimit = { ...makeItem('at'), retryCount: 3 };
+
+      const { kept, dropped } = queue.filterExpiredAndOverRetry([underLimit, atLimit]);
+
+      expect(kept).toEqual([underLimit]);
+      expect(dropped).toEqual([atLimit]);
+    });
+
+    it('keeps everything when neither ttlMs nor maxRetryCount is configured', () => {
+      queue = new PersistentRetryQueue<TestItem>(adapter, {
+        storageKey: 'test',
+        maxSize: 100,
+        logLabel: 'test',
+      });
+
+      const item = { ...makeItem('a'), createdAt: Date.now() - 999999999, retryCount: 999 };
+
+      const { kept, dropped } = queue.filterExpiredAndOverRetry([item]);
+
+      expect(kept).toEqual([item]);
+      expect(dropped).toEqual([]);
+    });
+
+    it('is the single filter flush() delegates to — expired items never reach the handler', async () => {
+      queue = new PersistentRetryQueue<TestItem>(adapter, {
+        storageKey: 'test',
+        maxSize: 100,
+        logLabel: 'test',
+        ttlMs: 1000,
+      });
+      const stale: TestItem = { id: 'stale', data: 'old', createdAt: Date.now() - 2000, retryCount: 0 };
+      adapter.store['test'] = [stale];
+
+      let handlerCalls = 0;
+      const remaining = await queue.flush(async () => {
+        handlerCalls++;
+        return true;
+      });
+
+      expect(handlerCalls).toBe(0);
+      expect(remaining).toEqual([]);
+    });
+  });
 });

@@ -52,51 +52,101 @@ const queue = new PersistentRetryQueue<OfflineJob>(adapter, {
   persistPerItem: true,
 });
 
-export class OfflineNetworkQueue {
-  async enqueue(options: EnqueueOptions): Promise<void> {
-    const job: OfflineJob = {
+/**
+ * Port that OfflineNetworkQueue depends on. Lets tests substitute a NoOp
+ * implementation via composition (see NoOpQueuePort below) instead of
+ * subclassing and overriding every method.
+ */
+export interface QueuePort<T> {
+  enqueue(item: T): Promise<void>;
+  load(): Promise<T[]>;
+  save(items: T[]): Promise<void>;
+  flush(handler: (item: T) => Promise<boolean>): Promise<T[]>;
+  getQueueSize(): Promise<number>;
+  filterExpiredAndOverRetry(items: T[]): { kept: T[]; dropped: T[] };
+}
+
+/** Builds OfflineJob values with generated id/createdAt/retryCount so callers only supply intent. */
+export const OfflineJobFactory = {
+  create(options: EnqueueOptions): OfflineJob {
+    return {
       id: generateId(),
       type: options.type,
       payload: options.payload,
       createdAt: Date.now(),
       retryCount: 0,
     };
-    await queue.enqueue(job);
+  },
+};
+
+export class OfflineNetworkQueue {
+  constructor(private readonly port: QueuePort<OfflineJob> = queue) {}
+
+  async enqueue(options: EnqueueOptions): Promise<void> {
+    const job = OfflineJobFactory.create(options);
+    await this.port.enqueue(job);
     addLog(LogType.INFO, 'OfflineNetworkQueue: enqueued job', { type: job.type, id: job.id });
   }
 
   async dequeue(): Promise<OfflineJob | null> {
-    const jobs = await queue.load();
-    const now = Date.now();
-    const expired = jobs.filter(j => now - j.createdAt > JOB_TTL_MS);
-    if (expired.length > 0) {
-      addLog(LogType.INFO, 'OfflineNetworkQueue: dropped expired jobs', { count: expired.length });
+    const jobs = await this.port.load();
+    // TTL/retry filtering lives only in PersistentRetryQueue.filterExpiredAndOverRetry
+    // so flush()/flushBatch() and this facade never diverge on expiry policy.
+    const { kept, dropped } = this.port.filterExpiredAndOverRetry(jobs);
+    if (dropped.length > 0) {
+      addLog(LogType.INFO, 'OfflineNetworkQueue: dropped expired jobs', { count: dropped.length });
     }
-    const valid = jobs.filter(j => now - j.createdAt <= JOB_TTL_MS);
-    if (valid.length === 0) return null;
-    const job = valid.shift()!;
-    await queue.save(valid);
+    if (kept.length === 0) return null;
+    const job = kept.shift()!;
+    await this.port.save(kept);
     return job;
   }
 
   async retryAll(handler: (job: OfflineJob) => Promise<boolean>): Promise<void> {
-    await queue.flush(handler);
+    await this.port.flush(handler);
   }
 
   async getQueueSize(): Promise<number> {
-    return queue.getQueueSize();
+    return this.port.getQueueSize();
   }
 
   async peek(): Promise<OfflineJob | null> {
-    const jobs = await queue.load();
-    const now = Date.now();
-    const valid = jobs.filter(j => now - j.createdAt <= JOB_TTL_MS);
-    await queue.save(valid);
-    return valid[0] ?? null;
+    const jobs = await this.port.load();
+    const { kept, dropped } = this.port.filterExpiredAndOverRetry(jobs);
+    if (dropped.length > 0) {
+      await this.port.save(kept);
+    }
+    return kept[0] ?? null;
   }
 }
 
 export const sharedOfflineNetworkQueue = new OfflineNetworkQueue();
+
+/**
+ * NoOp QueuePort for tests: reports nothing pending, discards everything.
+ * Injected via composition (OfflineNetworkQueue's constructor) so no
+ * inheritance/override chain is needed.
+ */
+export class NoOpQueuePort implements QueuePort<OfflineJob> {
+  async enqueue(): Promise<void> {
+    // Intentionally discarded — this port never persists anything.
+  }
+  async load(): Promise<OfflineJob[]> {
+    return [];
+  }
+  async save(): Promise<void> {
+    // Nothing to persist.
+  }
+  async flush(): Promise<OfflineJob[]> {
+    return [];
+  }
+  async getQueueSize(): Promise<number> {
+    return 0;
+  }
+  filterExpiredAndOverRetry(items: OfflineJob[]): { kept: OfflineJob[]; dropped: OfflineJob[] } {
+    return { kept: items, dropped: [] };
+  }
+}
 
 /**
  * No-op queue for tests: enqueue/dequeue are ignored, retryAll/peek report
@@ -104,23 +154,7 @@ export const sharedOfflineNetworkQueue = new OfflineNetworkQueue();
  * care about offline-retry behaviour.
  */
 export class NoOpOfflineNetworkQueue extends OfflineNetworkQueue {
-  override async enqueue(): Promise<void> {
-    // Intentionally discarded — this queue never persists anything.
-  }
-
-  override async dequeue(): Promise<OfflineJob | null> {
-    return null;
-  }
-
-  override async retryAll(): Promise<void> {
-    // No jobs to retry.
-  }
-
-  override async getQueueSize(): Promise<number> {
-    return 0;
-  }
-
-  override async peek(): Promise<OfflineJob | null> {
-    return null;
+  constructor() {
+    super(new NoOpQueuePort());
   }
 }
