@@ -178,3 +178,124 @@ export function enablePostWriteVerification(): void {
 
 let _postWriteVerificationEnabled = true;
 
+/**
+ * Deep-equality check that does not depend on object key insertion order.
+ * `JSON.stringify` equality breaks when the same logical object is
+ * serialized with keys in a different order (e.g. after going through a
+ * Map -> array -> object round trip), producing false-positive conflicts.
+ * `structuredClone` + a canonicalizing stringify avoids that by sorting
+ * object keys recursively before comparison.
+ */
+function canonicalStringify(value: unknown): string {
+    // structuredClone strips functions/undefined the same way JSON does,
+    // and throws on genuinely non-serializable input (e.g. circular refs),
+    // matching the failure mode callers already expect from JSON.stringify.
+    const cloned = structuredClone(value);
+    return JSON.stringify(cloned, (_key, val) => {
+        if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
+            return Object.keys(val)
+                .sort()
+                .reduce((sorted: Record<string, unknown>, k) => {
+                    sorted[k] = (val as Record<string, unknown>)[k];
+                    return sorted;
+                }, {});
+        }
+        return val;
+    });
+}
+
+function deepEqual(a: unknown, b: unknown): boolean {
+    return canonicalStringify(a) === canonicalStringify(b);
+}
+
+/**
+ * Read-Modify-Write pattern for atomically updating multiple storage keys
+ * as a single logical transaction.
+ *
+ * Generalizes `withOptimisticLock` to N keys: all keys are read together,
+ * version-checked together, and written together in one
+ * `chrome.storage.local.set` call, so no other execution context can ever
+ * observe a partial update (e.g. `savedUrls` updated but
+ * `savedUrlsWithTimestamps` not yet).
+ *
+ * @param keys - storage keys to update atomically as one transaction
+ * @param updater - `(currentValues) => newValues`, indexed the same as `keys`
+ * @param options.maxRetries - max retry count on conflict (default: 5)
+ * @param options.initialDelay - initial retry backoff ms (default: 100)
+ * @returns the new values, indexed the same as `keys`
+ * @throws {ConflictError} once retries are exhausted
+ */
+export async function withAtomicKeys<T extends readonly unknown[]>(
+    keys: { [K in keyof T]: string },
+    updater: (currentValues: { [K in keyof T]: T[K] }) => { [K in keyof T]: T[K] },
+    options: { maxRetries?: number; initialDelay?: number } = {}
+): Promise<{ [K in keyof T]: T[K] }> {
+    const { maxRetries = 5, initialDelay = 100 } = options;
+    const versionKeys = keys.map((k) => `${k}_version`);
+    let attempt = 0;
+    let lastError: Error | null = null;
+
+    while (attempt <= maxRetries) {
+        try {
+            const result = await chrome.storage.local.get([...keys, ...versionKeys]);
+            const currentValues = keys.map((k) => result[k]) as { [K in keyof T]: T[K] };
+            const currentVersions = keys.map((k) => (result[`${k}_version`] as number) ?? INITIAL_VERSION);
+
+            const newValues = updater(currentValues);
+            const newVersions = currentVersions.map((v) => v + 1);
+
+            // Re-read and verify all keys before writing, closing the same
+            // TOCTOU window performCasUpdate() closes for the single-key case.
+            const verifyResult = await chrome.storage.local.get([...keys, ...versionKeys]);
+            const verifyVersions = keys.map((k) => (verifyResult[`${k}_version`] as number) ?? INITIAL_VERSION);
+
+            const conflictIndex = verifyVersions.findIndex((v, i) => v !== currentVersions[i]);
+            if (conflictIndex !== -1) {
+                throw new ConflictError(
+                    keys.join('+'),
+                    currentVersions[conflictIndex] ?? -1,
+                    verifyVersions[conflictIndex] ?? -1
+                );
+            }
+
+            const writePayload: Record<string, unknown> = {};
+            keys.forEach((k, i) => {
+                writePayload[k] = newValues[i];
+                writePayload[`${k}_version`] = newVersions[i];
+            });
+            await chrome.storage.local.set(writePayload);
+
+            if (_postWriteVerificationEnabled) {
+                const postWriteResult = await chrome.storage.local.get([...keys, ...versionKeys]);
+                for (let i = 0; i < keys.length; i++) {
+                    const key = keys[i] as string;
+                    const postVersion = (postWriteResult[`${key}_version`] as number) ?? INITIAL_VERSION;
+                    const postValue = postWriteResult[key];
+                    if (postVersion !== newVersions[i] || !deepEqual(postValue, newValues[i])) {
+                        throw new ConflictError(key, newVersions[i] ?? -1, postVersion);
+                    }
+                }
+            }
+
+            return newValues;
+        } catch (error) {
+            if (!(error instanceof ConflictError)) {
+                const err = error as Error;
+                logDebug('withAtomicKeys error', { error: err.message, stack: err.stack }, 'optimisticLock.ts');
+                throw error;
+            }
+            lastError = error;
+            attempt++;
+            if (attempt > maxRetries) {
+                throw new ConflictError(keys.join('+'), -1, -1);
+            }
+            const delay = initialDelay * Math.pow(2, attempt - 1);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+
+            logDebug('withAtomicKeys retrying', { keys, attempt, maxRetries, delay }, 'optimisticLock.ts');
+        }
+    }
+
+    throw lastError || new Error('Unexpected error in withAtomicKeys');
+}
+
