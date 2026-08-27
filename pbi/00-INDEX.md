@@ -20,23 +20,6 @@
 |----|------|-----|------|------|------|
 | 03 | ⬜ 未着手（保留、02完了後に判断）🟡🟢 | [旧wa-sqlite移行コードの終息判断](2026-08-27-03-investigate-legacy-migration-sunset.md) | 6.0 | 🔧 | 2pt |
 | 04 | ⬜ 未着手（保留、03確定後に着手）🔴🟡 | [既存WASMバンドルの統合](2026-08-27-04-refactor-consolidate-wasm-bundles.md) | 3.5 | 🔧 | 3pt |
-| 13 | ⬜ 未着手 🔴🟢 | [payloadGuard バイト長](2026-08-27-13-fix-payloadguard-byte-length.md) | 4800 | 🔧 | 0.5pt |
-| 15 | ⬜ 未着手 🔴🟢 | [pendingPages XSS](2026-08-27-15-fix-pending-pages-xss.md) | 4800 | 🔧 | 0.5pt |
-| 20 | ⬜ 未着手 🔴🟢 | [permissionManager DoS](2026-08-27-20-fix-permission-manager-dos.md) | 960 | 🔧 | 0.5pt |
-| 18 | ⬜ 未着手 🟡🟢 | [ublock cache 汚染](2026-08-27-18-fix-ublock-cache-shallow-copy.md) | 720 | 🔧 | 0.5pt |
-| 17 | ⬜ 未着手 🟡🟢 | [pii クレカ正規表現](2026-08-27-17-fix-pii-credit-card-regex.md) | 600 | 🔧 | 0.5pt |
-| 16 | ⬜ 未着手 🟡🟢 | [ssrfGuard localhost](2026-08-27-16-fix-ssrfguard-localhost.md) | 420 | 🔧 | 0.5pt |
-| 27 | ⬜ 未着手 🟡🟢 | [domainVerifier endsWith](2026-08-27-27-fix-domain-verifier-endswith.md) | 420 | 🔧 | 0.5pt |
-| 14 | ⬜ 未着手 🟡🟢 | [manualContentFetcher DoS](2026-08-27-14-fix-manual-content-fetcher-rate-limit.md) | 320 | 🔧 | 1pt |
-| 22 | ⬜ 未着手 🟢🟢 | [pageState 汚染](2026-08-27-22-fix-page-state-shallow-copy.md) | 320 | 🔧 | 0.5pt |
-| 23 | ⬜ 未着手 🟢🟢 | [extractor Boolean反転](2026-08-27-23-fix-extractor-boolean.md) | 320 | 🔧 | 0.5pt |
-| 24 | ⬜ 未着手 🟢🟢 | [perUrlMutex leak](2026-08-27-24-fix-per-url-mutex-leak.md) | 315 | 🔧 | 0.5pt |
-| 26 | ⬜ 未着手 🟢🟢 | [ublock domain validation](2026-08-27-26-fix-ublock-domain-validation.md) | 280 | 🔧 | 0.5pt |
-| 21 | ⬜ 未着手 🟡🟢 | [optimisticLock TOCTOU](2026-08-27-21-fix-optimistic-lock-toc.md) | 225 | 🔧 | 1pt |
-| 25 | ⬜ 未着手 🟢🟢 | [confirmToken乖離](2026-08-27-25-fix-confirm-token-best-effort.md) | 140 | 🔧 | 0.5pt |
-| 28 | ⬜ 未着手 🟢🟢 | [savedUrl 非原子](2026-08-27-28-fix-saved-url-non-atomic.md) | 140 | 🔧 | 0.5pt |
-| 29 | ⬜ 未着手 🟢🟢 | [Mutex 二重resolve](2026-08-27-29-fix-mutex-timeout-race.md) | 140 | 🔧 | 0.5pt |
-| 19 | ⬜ 未着手 🟡🔴 | [bloomFilter hash](2026-08-27-19-fix-trustdb-bloom-hash.md) | 93 | 🔧 | 3pt |
 
 ---
 
@@ -79,6 +62,27 @@
 - 2026-08-27-11-test-offscreen-engine-context-coverage-90.md（RICE 240 — `offscreen/sqliteEngineContext` 86.85%→95.77%。`_doInit` の 3分岐と 15s タイムアウトを fakeTimers で検証。1ファイル 40 tests 追加。519 files 8909 tests PASS）
 - 2026-08-27-12-test-background-migration-coverage-90.md（RICE 150 — `background/migration` 87.82%→91.73%。`migrationState` 57%→100% / `serviceContainer` 73%→93%。2ファイル 29 tests 追加。519 files 8909 tests PASS）
 - 2026-08-27-00-backlog-coverage.md（4件のRICEスコアリングバックログ — 全分類 90% ゲート達成計画）
+
+### 2026-08-27 Adversarial Review — 17件完了（Wave1-5 計5バッチ）
+
+- 2026-08-27-13-fix-payloadguard-byte-length.md（RICE 4800 — `payloadGuard.ts:36` を `TextEncoder.byteLength` に修正し絵文字で1MB迂回を封鎖。37 tests PASS）
+- 2026-08-27-14-fix-manual-content-fetcher-rate-limit.md（RICE 320 — `recordingHandlers.ts:190` の `checkRateLimit` を `skipAi` 外に移動し全 MANUAL_RECORD でレート制限。34 tests PASS）
+- 2026-08-27-15-fix-pending-pages-xss.md（RICE 4800 — `pendingPages.ts:33` を `escapeHtml(page.url)` に修正し Stored XSS を封鎖。15 tests PASS）
+- 2026-08-27-16-fix-ssrfguard-localhost.md（RICE 420 — `ssrfGuard.ts:11` の `BLOCKED_PATTERNS` に `isPrivateIpAddress` と `localhost` 明示チェックを追加。23 tests PASS）
+- 2026-08-27-17-fix-pii-credit-card-regex.md（RICE 600 — `piiSanitizer.ts:82` に連続16桁パターンを追加し Luhn 検証で PCI 流出を防止。70 tests PASS）
+- 2026-08-27-18-fix-ublock-cache-shallow-copy.md（RICE 720 — `ublockParser/cache.ts:108` を `structuredClone` に修正しキャッシュ汚染を防止。49 tests PASS）
+- 2026-08-27-19-fix-trustdb-bloom-hash.md（RICE 93 — `bloomFilter.ts:162` を `sha256HexSync` に置換し旧データ移行パス追加。221 tests PASS）
+- 2026-08-27-20-fix-permission-manager-dos.md（RICE 960 — `permissionManager.ts:105` にドメイン検証と上限100件を追加し quota 枯渇を防止。45 tests PASS）
+- 2026-08-27-21-fix-optimistic-lock-toc.md（RICE 225 — `optimisticLock.ts` の `_postWriteVerificationEnabled` をデフォルト true にし TOCTOU を検出。34 tests PASS）
+- 2026-08-27-22-fix-page-state-shallow-copy.md（RICE 320 — `pageState.ts:109` を配列スプレッドで独立コピー化し汚染を防止。4 tests PASS）
+- 2026-08-27-23-fix-extractor-boolean.md（RICE 320 — `extractor.ts:158` を `=== true || === 'true'` に修正し文字列反転を防止。143 tests PASS）
+- 2026-08-27-24-fix-per-url-mutex-leak.md（RICE 315 — `perUrlMutex.ts:81` で `acquired` 失敗時も `map.delete` し永残を防止。78 tests PASS）
+- 2026-08-27-25-fix-confirm-token-best-effort.md（RICE 140 — `confirmTokenManager.ts` を `chrome.storage.session` のみ+再試行に一本化し乖離を防止。6 tests PASS）
+- 2026-08-27-26-fix-ublock-domain-validation.md（RICE 280 — `ublockParser/constants.ts:43` から `*` 除外し `validateDomain("***")` を拒否。47 tests PASS）
+- 2026-08-27-27-fix-domain-verifier-endswith.md（RICE 420 — `domainVerifier.ts:68` を `=== tld || endsWith("."+tld)` に修正し広範誤信頼を防止。221 tests PASS）
+- 2026-08-27-28-fix-saved-url-non-atomic.md（RICE 140 — `savedUrlRepository.ts` を単一 `withOptimisticLock` に統合し不整合を防止。20 tests PASS）
+- 2026-08-27-29-fix-mutex-timeout-race.md（RICE 140 — `Mutex.ts:68` に `has` ガードと `allocateTaskId` ラップを追加し二重resolveを防止。78 tests PASS）
+- 2026-08-27-00-backlog-adversarial.md（17件のRICEスコアリングバックログ — Hacker 9 / Maintainer 8）
 
 ### 2026-08-27 Autonomous Task Closer — 2件完了（PBI-01/02 並列1バッチ）
 
