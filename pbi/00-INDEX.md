@@ -19,7 +19,6 @@
 | ID | 状態 | PBI | RICE | 種別 | 見積 |
 |----|------|-----|------|------|------|
 | 21 | ⬜ 未着手 🟡🟢 | [Offline Queue Facade](2026-08-27-21-feat-collapse-offline-queue-facade.md) | 157 | 🔧 | 1pt |
-| 23 | ⬜ 未着手 🟡🟢 | [Sync Batch Runner](2026-08-27-23-feat-extract-sync-batch-runner.md) | 180 | 🔧 | 2pt |
 | 24 | ⬜ 未着手 🟡🟢 | [RateLimiter Service化](2026-08-27-24-feat-service-rate-limiter-session.md) | 135 | 🔧 | 2pt |
 | 25 | ⬜ 未着手 🟢🟢 | [TextSimilarity 抽出](2026-08-27-25-feat-extract-text-similarity.md) | 200 | 🔧 | 1pt |
 | 26 | ⬜ 未着手 🟢🟢 | [StorageField 抽出](2026-08-27-26-feat-extract-storage-fields.md) | 180 | 🔧 | 1pt |
@@ -48,6 +47,10 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-28 Sync Batch Runner 抽出完了
+
+- 2026-08-27-23-feat-extract-sync-batch-runner.md（RICE 180 — `GistSyncTarget`/`ObsidianSyncService` から `SyncBatchRunner`（`listPending`/`markSynced` port）と `isCredentialConfigured`（`SettingsReader` 注入）を抽出し重複バッチロジックを一元化。`ObsidianSyncService.isConfigured` の `chrome.storage.local` 直参照ドリフトも解消。type-check / 該当テストスイート PASS）
 
 ### 2026-08-27 Review Findings — 8件完了（3バッチ並列）
 

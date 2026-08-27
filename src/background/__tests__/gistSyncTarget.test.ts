@@ -205,6 +205,15 @@ vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
 
 vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
+  // WHY: isConfigured() now reads via getMany(); route it through the same
+  // mockGetAll used by the rest of these tests instead of a separate mock,
+  // so existing mockGetAll.mockResolvedValue(...) calls stay in effect.
+  const getManyFromAll = async (keys: readonly string[]) => {
+    const all = await mockGetAll();
+    const out: Record<string, unknown> = {};
+    for (const k of keys) out[k] = all?.[k];
+    return out;
+  };
   return {
     ...actual,
     settingsRepository: {
@@ -212,14 +221,14 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
       get: vi.fn(),
       set: mockSet,
       setAll: vi.fn(),
-      getMany: vi.fn(),
+      getMany: getManyFromAll,
     },
     SettingsRepository: class {
       getAll = mockGetAll;
       get = vi.fn();
       set = mockSet;
       setAll = vi.fn();
-      getMany = vi.fn();
+      getMany = getManyFromAll;
     },
   };
 });

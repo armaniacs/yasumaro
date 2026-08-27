@@ -25,9 +25,9 @@ Scenario: エッジケース — sanitize と成功マークが重複しない
   Then `sanitizeForObsidian` と `sqliteClient.mutate` が1箇所で完結する
 
 ## 受け入れ基準
-- [ ] `SyncBatchRunner` が `listPending(limit)` + `markSynced` port に委譲している
-- [ ] `isConfigured` が `SettingsReader` 注入に統一されている
-- [ ] `BATCH_SIZE` 政策が runner に一元化されている
+- [x] `SyncBatchRunner` が `listPending(limit)` + `markSynced` port に委譲している
+- [x] `isConfigured` が `SettingsReader` 注入に統一されている
+- [x] `BATCH_SIZE` 政策が runner に一元化されている（Gist=50/Obsidian=5 の値そのものは各ターゲットの API レート特性が異なるため維持しつつ、指定箇所を runner の `batchSize` オプション1箇所に集約）
 
 ## テスト戦略
 - 単体: `SyncBatchRunner` の `listPending`/`markSynced` の委譲テスト
@@ -38,6 +38,6 @@ Scenario: エッジケース — sanitize と成功マークが重複しない
 2pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
