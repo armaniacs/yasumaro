@@ -19,12 +19,7 @@
 | ID | 状態 | PBI | RICE | 種別 | 見積 |
 |----|------|-----|------|------|------|
 | 21 | ⬜ 未着手 🟡🟢 | [Offline Queue Facade](2026-08-27-21-feat-collapse-offline-queue-facade.md) | 157 | 🔧 | 1pt |
-| 23 | ⬜ 未着手 🟡🟢 | [Sync Batch Runner](2026-08-27-23-feat-extract-sync-batch-runner.md) | 180 | 🔧 | 2pt |
-| 24 | ⬜ 未着手 🟡🟢 | [RateLimiter Service化](2026-08-27-24-feat-service-rate-limiter-session.md) | 135 | 🔧 | 2pt |
-| 25 | ⬜ 未着手 🟢🟢 | [TextSimilarity 抽出](2026-08-27-25-feat-extract-text-similarity.md) | 200 | 🔧 | 1pt |
-| 26 | ⬜ 未着手 🟢🟢 | [StorageField 抽出](2026-08-27-26-feat-extract-storage-fields.md) | 180 | 🔧 | 1pt |
 | 28 | ⬜ 未着手 🟢🟢 | [QueuePolicy 統一](2026-08-27-28-feat-unify-queue-policy.md) | 140 | 🔧 | 1pt |
-| 21 | ⬜ 未着手 🟡🟢 | [Offline Queue Facade](2026-08-27-21-feat-collapse-offline-queue-facade.md) | 157 | 🔧 | 1pt |
 
 ---
 
@@ -51,6 +46,10 @@
 ### 2026-08-28 MultiKey OptimisticLock 抽出 — 1件完了
 
 - 2026-08-27-27-feat-multi-key-optimistic-lock.md（RICE 160 — `optimisticLock.ts` に `withAtomicKeys(keys, updater)` を追加し `savedUrlRepository.withAtomicSavedUrls` の複製実装を削除。`JSON.stringify` 比較を `structuredClone`+正準化に置換。type-check / test PASS）
+
+### 2026-08-28 RateLimiter/SessionAlarms Service化 完了
+
+- 2026-08-27-24-feat-service-rate-limiter-session.md（RICE 135 — `src/utils/rateLimiter.ts`（マスターパスワードのブルートフォース制限）を `RateLimitService(Clock, StoragePort)` に、`src/background/sessionAlarmsManager.ts`（自動ロック用 chrome.alarms 管理）を `SessionAlarmService(AlarmPort, Clock, StoragePort, SendMessageFn)` にクラス化。両モジュールの既存エクスポート関数はデフォルトインスタンス委譲の薄いラッパーとして維持し呼び出し元（`masterPassword.ts`/`service-worker.ts`/`createBackgroundServices.ts`）は無改修。`src/utils/ports.ts` に `Clock`/`StoragePort`/`AlarmPort` の3 seam を新設。`src/utils/storage/authGuard.ts` を新設し `encryptionSession.ts` の `getOrCreateEncryptionKey` が直接 `chrome.storage.local` を読んでいた IS_LOCKED チェックを `authGuard.isLocked()` 1 seam に置換。`InMemoryStorageArea`/`FakeClock`/`FakeAlarmPort` で NTP skew（session/local の `lockedUntil` 不一致）・二重ロック・タイマーリスナー重複登録防止を chrome global mock なしに単体テスト（15件新規）。type-check / 8394 tests PASS）
 
 ### 2026-08-27 Review Findings — 8件完了（3バッチ並列）
 
