@@ -1,10 +1,11 @@
 // src/offscreen/OpfsWorkerBackend.ts
+import type { SqliteEngineHost } from './sqliteEngineHost.js';
 import type { SqliteEngineContext } from './sqliteEngineContext.js';
 import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError } from './StorageBackend.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 
 export class OpfsWorkerBackend implements StorageBackend {
-  constructor(private engine: SqliteEngineContext) {}
+  constructor(private engine: SqliteEngineHost | SqliteEngineContext) {}
 
   async insert(record: BrowsingLogRecord): Promise<BackendOrError<InsertResult>> {
     const result = await this.engine.sendToOpfsWorker('INSERT', record) as { id: number };
