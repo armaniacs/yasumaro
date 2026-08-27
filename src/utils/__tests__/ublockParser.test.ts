@@ -217,20 +217,10 @@ describe('ublockParser', () => {
 
   describe('parseUblockFilterLine - エッジケース', () => {
     test('複数連続ワイルドカードのパース', () => {
-      // 【テスト目的】: 複雑なワイルドカード処理の確認
-      // 【テスト内容】: *.*.example.comのように複数のワイルドカードを含むパターンが正しく処理されることを確認
-      // 【期待される動作】: domainに'*.*.example.com'がそのまま設定される
-      // 🟡 信頼性レベル: 一般的なパーサー機能として妥当な推測
-
-      // 【テストデータ準備】: 複数のワイルドカードを含むパターンを用意
+      // 【テスト目的】: 複数ワイルドカードを含む不正ドメインが拒否されることを確認 (PBI 2026-08-27-26)
       const input = '||*.*.example.com^';
-
-      // 【実際の処理実行】: parseUblockFilterLine関数を呼び出し
       const result = parseUblockFilterLine(input);
-
-      // 【結果検証】: 複数ワイルドカードが保持されることを確認
-      expect(result).not.toBeNull(); // 【確認内容】: 複数ワイルドカードパターンに対して有効な結果が返されること 🟡
-      expect(result?.domain).toBe('*.*.example.com'); // 【確認内容】: 複数の*が保持されること 🟡
+      expect(result).toBeNull();
     });
 
     test('前後空白を含む行はトリムしてパース', () => {

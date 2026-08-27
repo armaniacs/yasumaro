@@ -20,6 +20,23 @@
 |----|------|-----|------|------|------|
 | 03 | ⬜ 未着手（保留、02完了後に判断）🟡🟢 | [旧wa-sqlite移行コードの終息判断](2026-08-27-03-investigate-legacy-migration-sunset.md) | 6.0 | 🔧 | 2pt |
 | 04 | ⬜ 未着手（保留、03確定後に着手）🔴🟡 | [既存WASMバンドルの統合](2026-08-27-04-refactor-consolidate-wasm-bundles.md) | 3.5 | 🔧 | 3pt |
+| 13 | ⬜ 未着手 🔴🟢 | [payloadGuard バイト長](2026-08-27-13-fix-payloadguard-byte-length.md) | 4800 | 🔧 | 0.5pt |
+| 15 | ⬜ 未着手 🔴🟢 | [pendingPages XSS](2026-08-27-15-fix-pending-pages-xss.md) | 4800 | 🔧 | 0.5pt |
+| 20 | ⬜ 未着手 🔴🟢 | [permissionManager DoS](2026-08-27-20-fix-permission-manager-dos.md) | 960 | 🔧 | 0.5pt |
+| 18 | ⬜ 未着手 🟡🟢 | [ublock cache 汚染](2026-08-27-18-fix-ublock-cache-shallow-copy.md) | 720 | 🔧 | 0.5pt |
+| 17 | ⬜ 未着手 🟡🟢 | [pii クレカ正規表現](2026-08-27-17-fix-pii-credit-card-regex.md) | 600 | 🔧 | 0.5pt |
+| 16 | ⬜ 未着手 🟡🟢 | [ssrfGuard localhost](2026-08-27-16-fix-ssrfguard-localhost.md) | 420 | 🔧 | 0.5pt |
+| 27 | ⬜ 未着手 🟡🟢 | [domainVerifier endsWith](2026-08-27-27-fix-domain-verifier-endswith.md) | 420 | 🔧 | 0.5pt |
+| 14 | ⬜ 未着手 🟡🟢 | [manualContentFetcher DoS](2026-08-27-14-fix-manual-content-fetcher-rate-limit.md) | 320 | 🔧 | 1pt |
+| 22 | ⬜ 未着手 🟢🟢 | [pageState 汚染](2026-08-27-22-fix-page-state-shallow-copy.md) | 320 | 🔧 | 0.5pt |
+| 23 | ⬜ 未着手 🟢🟢 | [extractor Boolean反転](2026-08-27-23-fix-extractor-boolean.md) | 320 | 🔧 | 0.5pt |
+| 24 | ⬜ 未着手 🟢🟢 | [perUrlMutex leak](2026-08-27-24-fix-per-url-mutex-leak.md) | 315 | 🔧 | 0.5pt |
+| 26 | ⬜ 未着手 🟢🟢 | [ublock domain validation](2026-08-27-26-fix-ublock-domain-validation.md) | 280 | 🔧 | 0.5pt |
+| 21 | ⬜ 未着手 🟡🟢 | [optimisticLock TOCTOU](2026-08-27-21-fix-optimistic-lock-toc.md) | 225 | 🔧 | 1pt |
+| 25 | ⬜ 未着手 🟢🟢 | [confirmToken乖離](2026-08-27-25-fix-confirm-token-best-effort.md) | 140 | 🔧 | 0.5pt |
+| 28 | ⬜ 未着手 🟢🟢 | [savedUrl 非原子](2026-08-27-28-fix-saved-url-non-atomic.md) | 140 | 🔧 | 0.5pt |
+| 29 | ⬜ 未着手 🟢🟢 | [Mutex 二重resolve](2026-08-27-29-fix-mutex-timeout-race.md) | 140 | 🔧 | 0.5pt |
+| 19 | ⬜ 未着手 🟡🔴 | [bloomFilter hash](2026-08-27-19-fix-trustdb-bloom-hash.md) | 93 | 🔧 | 3pt |
 
 ---
 

@@ -157,7 +157,7 @@ export function loadSettings(): Promise<void> {
             ];
             for (const [key, prop] of booleanKeys) {
                 if (s[key] !== undefined) {
-                    pageState.cleansingConfig[prop] = Boolean(s[key]);
+                    pageState.cleansingConfig[prop] = s[key] === true || s[key] === 'true';
                 }
             }
 

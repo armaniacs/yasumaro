@@ -144,15 +144,14 @@ async function performCasUpdate<T>(
     }
 
     // アトミックに書き込み（chrome.storage.local.setは呼び出し内でアトミック）
-    // Service Worker は単一スレッドのため、書き込み後の再検証は通常不要。
-    // テスト環境で再検証が必要な場合は enablePostWriteVerification() を事前に呼ぶ。
+    // 5 Whys: なぜ検証が無効だったか→単一スレッドで不要と判断 / なぜ問題か→await間で他イベントが割り込みTOCTOUが発生 / なぜ気づかなかったか→テストが検証無効でもパス / 解: デフォルト有効化で競合を検出
+    // post-write verification はデフォルトで有効。TOCTOUウィンドウ（verify readとsetの間）での
+    // 並行上書きを検出するため、set直後にgetで再検証し不一致なら ConflictError を送出する。
     //
     // TOCTOU note: Between the verification read above and the atomic set below,
-    // another execution context could update the same key. In Manifest V3 the
-    // Service Worker is single-threaded and event-driven, so this window is
-    // negligible in practice. When post-write verification is disabled, that
-    // theoretical window remains; enable it in tests or parallel contexts to
-    // close it.
+    // another execution context could update the same key via an await yield.
+    // Service Worker is single-threaded but event-driven, so logical concurrency
+    // exists. Post-write verification closes this window by re-reading after set.
     await chrome.storage.local.set({
         [key]: newValue,
         [`${key}_version`]: newVersion
@@ -177,5 +176,5 @@ export function enablePostWriteVerification(): void {
     _postWriteVerificationEnabled = true;
 }
 
-let _postWriteVerificationEnabled = false;
+let _postWriteVerificationEnabled = true;
 

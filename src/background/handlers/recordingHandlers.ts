@@ -187,18 +187,16 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
       return;
     }
 
-    if (skipAi) {
-      const senderLike: MessageSenderLike = {
-        ...pickDefined({
-          url: sender.url,
-          tab: sender.tab ? pickDefined({ id: sender.tab.id }) : undefined,
-        }),
-      };
-      const rateLimitResult = await deps.checkRateLimit(senderLike, settings);
-      if (!rateLimitResult.allowed) {
-        sendResponse({ success: false, error: rateLimitResult.error });
-        return;
-      }
+    const senderLike: MessageSenderLike = {
+      ...pickDefined({
+        url: sender.url,
+        tab: sender.tab ? pickDefined({ id: sender.tab.id }) : undefined,
+      }),
+    };
+    const rateLimitResult = await deps.checkRateLimit(senderLike, settings);
+    if (!rateLimitResult.allowed) {
+      sendResponse({ success: false, error: rateLimitResult.error });
+      return;
     }
 
     const autoContentFetchEnabled = settings[StorageKeys.AUTO_CONTENT_FETCH_ENABLED] as boolean;

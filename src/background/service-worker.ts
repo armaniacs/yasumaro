@@ -68,6 +68,7 @@ const {
     messageRouter,
     autoSavedBadgeTabs,
 } = services;
+export const rateLimiterForTest = rateLimiter;
 
 // Session store for cross-SW-restart persistence
 SessionStore.registerSuspendHandler(sessionStore);

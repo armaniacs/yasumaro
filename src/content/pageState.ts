@@ -106,7 +106,11 @@ export class PageState {
     }
 
     // 【クレンジング設定】: コンテンツクレンジングとAI要約クレンジングの設定を一括管理
-    cleansingConfig: CleansingConfig = { ...DEFAULT_CLEANSING_CONFIG };
+    cleansingConfig: CleansingConfig = {
+        ...DEFAULT_CLEANSING_CONFIG,
+        contentStripKeywords: [...DEFAULT_CLEANSING_CONFIG.contentStripKeywords],
+        aiSummaryCleansingCustomPatterns: [...DEFAULT_CLEANSING_CONFIG.aiSummaryCleansingCustomPatterns],
+    };
 
     // 【クレンジング情報】: 直近の抽出で適用されたクレンジング情報を保持
     lastCleansedReason: 'hard' | 'keyword' | 'both' | 'none' = 'none';
