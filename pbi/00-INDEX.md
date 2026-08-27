@@ -20,13 +20,23 @@
 |----|------|-----|------|------|------|
 | 03 | ⬜ 未着手（保留、02完了後に判断）🟡🟢 | [旧wa-sqlite移行コードの終息判断](2026-08-27-03-investigate-legacy-migration-sunset.md) | 6.0 | 🔧 | 2pt |
 | 04 | ⬜ 未着手（保留、03確定後に着手）🔴🟡 | [既存WASMバンドルの統合](2026-08-27-04-refactor-consolidate-wasm-bundles.md) | 3.5 | 🔧 | 3pt |
-| 12 | ⬜ 未着手 🔴🟢 | [SQLite QueryPlanner 統一](2026-08-27-12-feat-unify-sqlite-storage-backend.md) | 480 | ✨ | 3pt |
-| 13 | ⬜ 未着手 🔴🟢 | [PipelineKernel 統合](2026-08-27-13-feat-consolidate-recording-pipeline.md) | 420 | ✨ | 3pt |
-| 14 | ⬜ 未着手 🟡🟢 | [SqliteEngineHost 集約](2026-08-27-14-feat-collapse-sqlite-engine-context.md) | 360 | 🔧 | 2pt |
-| 15 | ⬜ 未着手 🟡🟢 | [Settings 深掘り](2026-08-27-15-feat-deepen-settings-repository.md) | 300 | 🔧 | 2pt |
-| 16 | ⬜ 未着手 🟡🟢 | [opfsWorker Api 統合](2026-08-27-16-feat-fold-opfs-worker-handlers.md) | 240 | 🔧 | 2pt |
-| 17 | ⬜ 未着手 🟡🟢 | [HistoryModel 統合](2026-08-27-17-feat-merge-history-panel-mvc.md) | 180 | 🔧 | 3pt |
-| 18 | ⬜ 未着手 🟢🟢 | [Dashboard RPC 統合](2026-08-27-18-feat-consolidate-dashboard-rpc.md) | 120 | 🔧 | 2pt |
+| 12 | ⬜ 未着手 🔴🟢 | [SQLite QueryPlanner 統一](2026-08-27-12-feat-unify-sqlite-storage-backend.md) | 288 | ✨ | 5pt |
+| 13 | ⬜ 未着手 🔴🟢 | [PipelineKernel 統合 Phase A](2026-08-27-13-feat-consolidate-recording-pipeline.md) | 420→252 | ✨ | 3pt+5pt |
+| 15 | ⬜ 未着手 🟡🟢 | [Settings 深掘り](2026-08-27-15-feat-deepen-settings-repository.md) | 257 | 🔧 | 3pt |
+| 14 | ⬜ 未着手 🟡🟢 | [SqliteEngineHost 集約 (薄いalias)](2026-08-27-14-feat-collapse-sqlite-engine-context.md) | 210 | 🔧 | 3pt |
+| 16 | ⬜ 未着手 🟡🟢 | [opfsWorker withTransaction 抽出](2026-08-27-16-feat-fold-opfs-worker-handlers.md) | 160 | 🔧 | 3pt |
+| 17 | ⬜ 未着手 🟡🟢 | [HistoryModel 縮小統合](2026-08-27-17-feat-merge-history-panel-mvc.md) | 154 | 🔧 | 3pt |
+| 18 | ⬜ 未着手 🟢🟢 | [Dashboard RPC 最小 (retry抽出)](2026-08-27-18-feat-consolidate-dashboard-rpc.md) | 120→720* | 🔧 | 0.5pt |
+| 22 | ⬜ 未着手 🔴🟢 | [Messaging Transport 統一](2026-08-27-22-feat-unify-messaging-transport.md) | 420 | ✨ | 2pt |
+| 23 | ⬜ 未着手 🟡🟢 | [Sync Batch Runner](2026-08-27-23-feat-extract-sync-batch-runner.md) | 180 | 🔧 | 2pt |
+| 24 | ⬜ 未着手 🟡🟢 | [RateLimiter Service化](2026-08-27-24-feat-service-rate-limiter-session.md) | 135 | 🔧 | 2pt |
+| 25 | ⬜ 未着手 🟢🟢 | [TextSimilarity 抽出](2026-08-27-25-feat-extract-text-similarity.md) | 200 | 🔧 | 1pt |
+| 26 | ⬜ 未着手 🟢🟢 | [StorageField 抽出](2026-08-27-26-feat-extract-storage-fields.md) | 180 | 🔧 | 1pt |
+| 27 | ⬜ 未着手 🟢🟢 | [MultiKey OptimisticLock](2026-08-27-27-feat-multi-key-optimistic-lock.md) | 160 | 🔧 | 2pt |
+| 28 | ⬜ 未着手 🟢🟢 | [QueuePolicy 統一](2026-08-27-28-feat-unify-queue-policy.md) | 140 | 🔧 | 1pt |
+| 19 | ⬜ 未着手 🔴🟢 | [SanitizePreview Presenter](2026-08-27-19-feat-extract-sanitize-preview-presenter.md) | 213 | ✨ | 2pt |
+| 20 | ⬜ 未着手 🔴🟢 | [Content Visit Pipeline 統合](2026-08-27-20-feat-unify-content-visit-pipeline.md) | 336 | ✨ | 3pt |
+| 21 | ⬜ 未着手 🟡🟢 | [Offline Queue Facade](2026-08-27-21-feat-collapse-offline-queue-facade.md) | 157 | 🔧 | 1pt |
 
 ---
 
