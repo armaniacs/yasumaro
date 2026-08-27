@@ -108,4 +108,17 @@ describe('diagnosticsPanel — legacy migration status', () => {
     const migrationStats = container.querySelector('#diagMigrationStats');
     expect(migrationStats?.textContent).toContain('Not completed');
   });
+
+  it('shows unavailable when sqlite status is null', async () => {
+    vi.mocked(diagnosticsCollector).collect.mockResolvedValue({
+      ...baseSnapshot(),
+      sqlite: null,
+    });
+
+    await panel.mount(container);
+    await panel.load?.();
+
+    const migrationStats = container.querySelector('#diagMigrationStats');
+    expect(migrationStats?.textContent).toContain('Failed to check');
+  });
 });
