@@ -32,8 +32,6 @@ export const WORKER_MESSAGE_TYPES = [
   'HEALTH_CHECK',
   'AUDIT_LOG_INSERT',
   'AUDIT_LOG_QUERY',
-  'SQL_EXEC',
-  'SQL_QUERY',
 ] as const;
 
 export type WorkerMessageType = typeof WORKER_MESSAGE_TYPES[number];
@@ -69,16 +67,6 @@ export interface UpdatePayload {
 
 export interface DeletePayload {
   id: number;
-}
-
-export interface SqlExecPayload {
-  sql: string;
-  params: SqliteValue[];
-}
-
-export interface SqlQueryPayload {
-  sql: string;
-  params: SqliteValue[];
 }
 
 export interface RestorePayload {

@@ -84,6 +84,17 @@
 - 2026-08-27-29-fix-mutex-timeout-race.md（RICE 140 — `Mutex.ts:68` に `has` ガードと `allocateTaskId` ラップを追加し二重resolveを防止。78 tests PASS）
 - 2026-08-27-00-backlog-adversarial.md（17件のRICEスコアリングバックログ — Hacker 9 / Maintainer 8）
 
+### 2026-08-27 Adversarial Fixes 7件 — 2バッチで完遂
+
+- 2026-08-27-05-fix-ssrfguard-zero-ip.md（RICE 3600 — `ssrfGuard.ts:87` に `0.0.0.0/8` ブロック追加。`isPrivateIpAddress('0.0.0.0')` が `true` を返す。23 tests PASS）
+- 2026-08-27-06-fix-opfs-worker-sql-exec.md（RICE 1200 — `opfsWorker.ts:276` の `SQL_EXEC`/`SQL_QUERY` と `types.ts` の `SQL_EXEC`/`SQL_QUERY` を削除し任意SQL実行を封鎖。519 files 8909 tests PASS）
+- 2026-08-27-07-fix-manual-fetcher-ssrf.md（RICE 1200 — `manualContentFetcher.ts:88` に `validateUrl(blockLocalhost:true)` を追加し private IP へのタブ生成を防止。164 tests PASS）
+- 2026-08-27-08-fix-backup-restore-trigger.md（RICE 270 — `backupHandlers.ts:70` に `sqlite_master type='trigger'` 検証を追加しトリガー付きDBの復元を拒否。109 tests PASS）
+- 2026-08-27-09-fix-saved-url-atomic.md（RICE 180 — `savedUrlRepository.ts` は既に `withAtomicSavedUrls` で単一トランザクション化済み。7 tests PASS）
+- 2026-08-27-10-fix-page-state-duplicate.md（RICE 160 — `pageState.ts:64` を `DEFAULT_KEYWORDS` の `...` に置換し二重管理を解消。`contentCleaner.ts` の `DEFAULT_KEYWORDS` を export 化。170 tests PASS）
+- 2026-08-27-11-fix-mutex-deadlock.md（RICE 140 — `Mutex.ts` は既に `has` ガードと `allocateTaskId` ラップでデッドロック対策済み。78 tests PASS）
+- 2026-08-27-00-backlog-fixes.md（7件のRICEスコアリングバックログ）
+
 ### 2026-08-27 Autonomous Task Closer — 2件完了（PBI-01/02 並列1バッチ）
 
 - 2026-08-27-01-fix-remove-unused-vendor-wa-sqlite.md（RICE 15.0 — `vendor/wa-sqlite/` の未参照WASM成果物3ファイルを削除。`node_modules/wa-sqlite` 経由でバンドルされるためビルド・移行機能に影響なし。`build-wasm.sh` は古いvendorコピー手順のため再ビルド手順書は保存せず削除。`npm run build` で4種wasmが同一ハッシュで生成されることを確認。type-check / 8399 tests PASS）

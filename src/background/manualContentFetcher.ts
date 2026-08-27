@@ -2,6 +2,7 @@ import { logWarn } from '../utils/logger.js';
 import { sanitizeUrlForLogging } from '../utils/urlUtils.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
+import { validateUrl } from '../utils/ssrfGuard.js';
 
 const TAB_LOAD_TIMEOUT_MS = 10000;
 const MAX_EXTRACTED_TEXT_LENGTH = 10000;
@@ -89,6 +90,7 @@ export class ManualContentFetcher {
     let createdTabId: number | undefined;
 
     try {
+      validateUrl(url, { requireValidProtocol: true, blockLocalhost: true });
       const allTabs = await chrome.tabs.query({});
       const existingTab = allTabs.find(t => t.url === url && t.id !== undefined);
       let targetTabId: number | undefined = existingTab?.id;
