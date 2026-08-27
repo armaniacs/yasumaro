@@ -423,6 +423,7 @@ export function sanitizeFtsTerm(query: string): string {
   // and special character injection (*, ", ~, ^, :, (, ), +, -)
   return truncated
     .replace(/[^A-Za-z0-9぀-ゟ゠-ヿ一-鿿㐀-䶿\s]/g, ' ')
+    .replace(/\b(OR|AND|NOT|NEAR)\b/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }

@@ -20,8 +20,8 @@ export class LruCache<K, V> {
     }
 
     get(key: K): V | undefined {
-        const value = this.store.get(key);
-        if (value === undefined) return undefined;
+        if (!this.store.has(key)) return undefined;
+        const value = this.store.get(key) as V;
 
         // Move to most-recently-used position
         this.store.delete(key);
@@ -30,6 +30,7 @@ export class LruCache<K, V> {
     }
 
     set(key: K, value: V): void {
+        if (this.maxSize <= 0) return;
         if (this.store.has(key)) {
             this.store.delete(key);
         } else if (this.store.size >= this.maxSize) {

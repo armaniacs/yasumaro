@@ -12,16 +12,23 @@ export async function runMigrations(engine: MigrationEngine): Promise<{ fts5Avai
   for (const step of MIGRATION_SEQUENCE) {
     try {
       await engine.exec(step.sql);
-    } catch {
-      // Column/target already exists — ignore
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('duplicate column name') || msg.includes('already exists')) continue;
+      throw err;
     }
   }
 
   // PBI-11: gist_synced index
   try {
     await engine.exec(GIST_SYNCED_INDEX_SQL);
-  } catch {
-    // Index already exists
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('already exists')) {
+      // Index already exists — ignore
+    } else {
+      throw err;
+    }
   }
 
   // 2. ALTER TABLE migration for all dynamic columns
