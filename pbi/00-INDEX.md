@@ -47,6 +47,10 @@
 
 - 2026-08-27-27-feat-multi-key-optimistic-lock.md（RICE 160 — `optimisticLock.ts` に `withAtomicKeys(keys, updater)` を追加し `savedUrlRepository.withAtomicSavedUrls` の複製実装を削除。`JSON.stringify` 比較を `structuredClone`+正準化に置換。type-check / test PASS）
 
+### 2026-08-28 StorageField 深いモジュール抽出
+
+- 2026-08-27-26-feat-extract-storage-fields.md（RICE 180 — `CommonStorageFields` に `toMetadataPatch()`/`toBrowsingLogRecord(contentEnabled)` を実装し `saveMetadataStep` の20本手書き `if` を削除。`extractCommonStorageFields` の `maskedCount: rawMasked || null` を `?? null` に修正し `maskedCount:0` が `null` に潰れるバグを解消。type-check / 8396 tests PASS）
+
 ### 2026-08-28 TextSimilarity 深いモジュール抽出 — 1件完了
 
 - 2026-08-27-25-feat-extract-text-similarity.md（RICE 200 — `contentDeduplicator.ts`と`sentenceExtractor.ts`で重複していた`toWordSet`/`splitSentences`/`jaccardSimilarity`を`src/utils/text/tokenizer.ts`+`similarity.ts`に一本化。両モジュールはimportするのみに変更。`buildSentenceGraph`の`Map<string, number[]>`キーを`${index}:${sentence}`のindex-qualifiedキーに変更し、同一文が2つあると頂点が1つに潰れて再現困難だったバグを解消。重複文検出の回帰テストを追加。type-check / 8393 tests PASS（既存の性能系1件は本変更と無関係の既存フレーキー））
