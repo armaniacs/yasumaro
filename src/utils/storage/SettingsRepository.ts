@@ -2,170 +2,102 @@
 /**
  * SettingsRepository — deep module hiding the 30 scattered StorageKeys accesses
  *
- * StorageKeys (30+) are defined in storage/types.ts but the actual
- * chrome.storage.local.get/set calls are scattered across 30+ call sites
- * (generalSettingsPanel, settingsFormBinding, obsidianClient, aiServiceFactory,
- * contentExtractor, ...). Each site re-derives the default, encryption, and
- * migration logic. Changing a default means editing 6 files. A typo in
- * data-storage-key is a silent fail.
- *
- * This module collapses them behind one seam: typed get/set over StorageKeys.
- * Defaults + validation + encryption + migration are inside. Callers get
- * compile-time safety (typo → error) and no longer touch chrome.storage
- * directly. Adding a key is one place, not 6.
- *
- * Seam is local-substitutable: StorageAdapter has chrome.storage prod and
- * InMemory test adapters. Two adapters justify the seam (one would be
- * hypothetical).
+ * Phase15 deepening:
+ * - StoragePort { get/set/onChanged/getBytesInUse } is the single pure seam (thin wrapper)
+ * - SettingsRepository { get/set/observe } owns defaults + migration + encryption + quota
+ * - getSettings/setSettings double impl and rawEncrypted flag are removed
+ * - re-encrypt side effect is via Port inside getAll, not direct chrome.storage
+ * - optimisticLock is chrome-specific inside Settings layer; InMemory does not mimic version
  */
 
 import type { StorageKey, Settings as SettingsType, SqliteHealthCheck } from './types.js';
 import { StorageKeys } from './types.js';
+import { ChromeStoragePort, InMemoryStoragePort, type StoragePort } from './storagePort.js';
+import { withOptimisticLock } from '../optimisticLock.js';
 
-/** Options forwarded to the storage adapter's write path. */
+/** Options forwarded to the storage write path. */
 export interface SettingsWriteOptions {
   sqliteHealthCheck?: SqliteHealthCheck;
 }
 
-export interface StorageAdapter {
-  get(keys: string | string[] | null): Promise<Record<string, unknown>>;
-  set(items: Record<string, unknown>): Promise<void>;
-  onChanged?(callback: (changes: Record<string, unknown>) => void): void;
-  /** Typed settings access — implemented by both adapters without instanceof branching. */
-  getSettings(): Promise<SettingsType>;
-  setSettings(settings: SettingsType, opts?: SettingsWriteOptions): Promise<void>;
+/** @deprecated Use StoragePort — kept for migration compat */
+export type StorageAdapter = StoragePort;
+
+/** Re-export Port impls under legacy Adapter names for backward compat */
+export class ChromeStorageAdapter extends ChromeStoragePort implements StoragePort {}
+export class InMemoryStorageAdapter extends InMemoryStoragePort implements StoragePort {}
+
+/** Options for SettingsRepository construction */
+export interface SettingsRepositoryOptions {
+  /** Injected KeyProvider for decrypt/re-encrypt; defaults to getOrCreateEncryptionKey */
+  keyProvider?: () => Promise<CryptoKey>;
 }
 
-export class ChromeStorageAdapter implements StorageAdapter {
-  async get(keys: string | string[] | null): Promise<Record<string, unknown>> {
-    return chrome.storage.local.get(keys) as Promise<Record<string, unknown>>;
-  }
-  async set(items: Record<string, unknown>): Promise<void> {
-    await chrome.storage.local.set(items);
-  }
-  onChanged(callback: (changes: Record<string, unknown>) => void): void {
-    chrome.storage.onChanged.addListener((changes, area) => {
-      if (area !== 'local') return;
-      const local: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(changes)) local[k] = (v as { newValue: unknown }).newValue;
-      callback(local);
-    });
-  }
-  async getSettings(): Promise<SettingsType> {
-    const { applyMigrationsAndDecrypt, tryRestoreFromBackup } = await import('./settingsMigration.js');
-    const result = (await chrome.storage.local.get(['settings', 'settings_migrated'])) as Record<string, unknown>;
-    const rawSettings = result['settings'] as SettingsType | undefined;
-    if (result['settings'] && result['settings_migrated']) {
-      let settings = result['settings'] as SettingsType;
-      if (Object.keys(settings as Record<string, unknown>).length === 0) {
-        const recovered = await tryRestoreFromBackup();
-        if (recovered) settings = recovered as SettingsType;
-      }
-      const validKeys: string[] = Object.values(StorageKeys);
-      const filtered = {} as SettingsType;
-      for (const [k, v] of Object.entries(settings as Record<string, unknown>)) {
-        if (validKeys.includes(k)) (filtered as Record<string, unknown>)[k] = v;
-      }
-      return applyMigrationsAndDecrypt(filtered);
-    }
-    const keysToGet: string[] = Object.values(StorageKeys);
-    let scattered = (await chrome.storage.local.get(keysToGet)) as Record<string, unknown>;
-    if (rawSettings) scattered = { ...scattered, ...(rawSettings as Record<string, unknown>) };
-    return applyMigrationsAndDecrypt(scattered as SettingsType);
-  }
-  async setSettings(settings: SettingsType, opts?: SettingsWriteOptions): Promise<void> {
-    const { API_KEY_FIELDS } = await import('./settingsMigration.js');
-    const { getOrCreateEncryptionKey } = await import('./encryptionSession.js');
-    const { encryptApiKey } = await import('../crypto/index.js');
-    const { withOptimisticLock } = await import('../optimisticLock.js');
-    const { ensureStorageQuota } = await import('./storageMaintenance.js');
-    let toSave: Record<string, unknown> = { ...(settings as Record<string, unknown>) };
-    try {
-      const key = await getOrCreateEncryptionKey();
-      for (const field of API_KEY_FIELDS) {
-        const val = toSave[field];
-        if (typeof val === 'string' && val !== '') {
-          toSave[field] = await encryptApiKey(val, key);
-        }
-      }
-    } catch (e) {
-      const { logError, ErrorCode } = await import('../logger.js');
-      const { errorMessage } = await import('../errorUtils.js');
-      await logError('Failed to encrypt API keys', { error: errorMessage(e as Error) }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
-      throw e;
-    }
-    // Mirror legacy saveSettings: guard storage quota on every write.
-    // The health check resolves injected -> lazy default inside ensureStorageQuota,
-    // so popup/options contexts (where setSqliteHealthCheck never runs) still get
-    // a real SqliteClient-backed check instead of a hardcoded `false`.
-    await ensureStorageQuota(toSave, opts?.sqliteHealthCheck);
-    await withOptimisticLock<SettingsType>('settings', (current) => {
-      const base = (current as Record<string, unknown>) || {};
-      return { ...(base as object), ...toSave } as SettingsType;
-    });
-  }
+function isChromePort(port: StoragePort): boolean {
+  return port instanceof ChromeStoragePort;
 }
 
-export class InMemoryStorageAdapter implements StorageAdapter {
-  private store = new Map<string, unknown>();
-  private listeners: Array<(changes: Record<string, unknown>) => void> = [];
-
-  async get(keys: string | string[] | null): Promise<Record<string, unknown>> {
-    if (keys === null) {
-      const all: Record<string, unknown> = {};
-      for (const [k, v] of this.store) all[k] = v;
-      return all;
+async function tryRestoreFromBackupViaPort(port: StoragePort): Promise<SettingsType | null> {
+  const all = await port.get(null);
+  const backupKeys = Object.keys(all).filter((k) => k.startsWith('legacy_settings_backup'));
+  if (backupKeys.length === 0) return null;
+  backupKeys.sort().reverse();
+  const firstKey = backupKeys[0];
+  if (!firstKey) return null;
+  const latest = all[firstKey] as { data: Record<string, unknown>; createdAt: number } | undefined;
+  if (!latest?.data) return null;
+  const restored: SettingsType = {};
+  for (const [key, value] of Object.entries(latest.data)) {
+    if ((Object.values(StorageKeys) as string[]).includes(key)) {
+      (restored as Record<string, unknown>)[key] = value;
     }
-    if (Array.isArray(keys)) {
-      const result: Record<string, unknown> = {};
-      for (const k of keys) if (this.store.has(k)) result[k] = this.store.get(k);
-      return result;
+  }
+  // Persist restored via optimisticLock when chrome, otherwise via port
+  if (restored && Object.keys(restored).length > 0) {
+    if (isChromePort(port)) {
+      await withOptimisticLock<SettingsType>('settings', (current) => ({ ...(current as Record<string, unknown> || {}), ...restored } as SettingsType));
+    } else {
+      const existing = await port.get(['settings']);
+      const current = (existing['settings'] as Record<string, unknown>) || {};
+      await port.set({ settings: { ...current, ...restored } });
     }
-    if (typeof keys === 'string') {
-      return this.store.has(keys) ? { [keys]: this.store.get(keys) } : {};
-    }
-    return {};
   }
-
-  async set(items: Record<string, unknown>): Promise<void> {
-    for (const [k, v] of Object.entries(items)) this.store.set(k, v);
-    for (const cb of this.listeners) cb(items);
-  }
-
-  onChanged(callback: (changes: Record<string, unknown>) => void): void {
-    this.listeners.push(callback);
-  }
-
-  // Test helper to seed data
-  seed(items: Record<string, unknown>): void {
-    for (const [k, v] of Object.entries(items)) this.store.set(k, v);
-  }
-
-  async getSettings(): Promise<SettingsType> {
-    const result = await this.get(['settings']);
-    const settings = (result['settings'] as SettingsType) || ({} as SettingsType);
-    const { applyMigrationsAndDecrypt } = await import('./settingsMigration.js');
-    // rawEncrypted: false keeps InMemory tests on plaintext without touching
-    // chrome.storage for re-encryption. Migrations (DEFAULT_SETTINGS merge +
-    // legacy key transforms) still run; only the decrypt/re-encrypt branch is
-    // skipped. See pbi/2026-08-25-01 — shared migration test covers parity.
-    return applyMigrationsAndDecrypt(settings, false);
-  }
-  async setSettings(settings: SettingsType): Promise<void> {
-    await this.set({ settings });
-  }
+  return restored;
 }
 
 /**
- * Deep repository: one seam, typed keys, defaults + validation inside.
- * StorageAdapter is the only seam — no instanceof branching.
- * Both adapters implement getSettings/setSettings polymorphically.
+ * Deep repository: one seam (StoragePort), typed keys, defaults + validation inside.
  */
 export class SettingsRepository {
-  private adapter: StorageAdapter;
+  private port: StoragePort;
+  private keyProvider: (() => Promise<CryptoKey>) | undefined;
 
-  constructor(adapter: StorageAdapter = new ChromeStorageAdapter()) {
-    this.adapter = adapter;
+  constructor(port: StoragePort = new ChromeStoragePort(), opts?: SettingsRepositoryOptions) {
+    this.port = port;
+    this.keyProvider = opts?.keyProvider;
+  }
+
+  /**
+   * Resolve KeyProvider lazily to avoid circular import at top-level.
+   */
+  private async resolveKeyProvider(): Promise<() => Promise<CryptoKey>> {
+    if (this.keyProvider) return this.keyProvider;
+    const { getOrCreateEncryptionKey } = await import('./encryptionSession.js');
+    return getOrCreateEncryptionKey;
+  }
+
+  private async persistReEncrypted(reEncrypted: Record<string, unknown>): Promise<void> {
+    if (Object.keys(reEncrypted).length === 0) return;
+    if (isChromePort(this.port)) {
+      await withOptimisticLock<SettingsType>('settings', (current) => {
+        const base = (current as Record<string, unknown>) || {};
+        return { ...(base as object), ...reEncrypted } as SettingsType;
+      });
+    } else {
+      const existing = await this.port.get(['settings']);
+      const current = (existing['settings'] as Record<string, unknown>) || {};
+      await this.port.set({ settings: { ...current, ...reEncrypted } });
+    }
   }
 
   /**
@@ -196,36 +128,118 @@ export class SettingsRepository {
   }
 
   async getAll(): Promise<SettingsType> {
-    return this.adapter.getSettings();
+    const { applyMigrationsAndDecryptWithReEncrypt } = await import('./settingsMigration.js');
+    const keyProvider = await this.resolveKeyProvider();
+
+    // Unified read via Port (no direct chrome.storage)
+    const result = await this.port.get(['settings', 'settings_migrated']) as Record<string, unknown>;
+    const rawSettings = result['settings'] as SettingsType | undefined;
+
+    if (result['settings'] && result['settings_migrated']) {
+      let settings = result['settings'] as SettingsType;
+      if (Object.keys(settings as Record<string, unknown>).length === 0) {
+        const recovered = await tryRestoreFromBackupViaPort(this.port);
+        if (recovered) settings = recovered as SettingsType;
+      }
+      const validKeys: string[] = Object.values(StorageKeys) as string[];
+      const filtered = {} as SettingsType;
+      for (const [k, v] of Object.entries(settings as Record<string, unknown>)) {
+        if (validKeys.includes(k)) (filtered as Record<string, unknown>)[k] = v;
+      }
+      const { settings: migrated, reEncrypted } = await applyMigrationsAndDecryptWithReEncrypt(filtered, { getEncryptionKey: keyProvider });
+      if (Object.keys(reEncrypted).length > 0) {
+        await this.persistReEncrypted(reEncrypted);
+      }
+      return migrated;
+    }
+
+    // Scattered fallback (legacy pre-migration path) — also via Port
+    const keysToGet: string[] = Object.values(StorageKeys) as string[];
+    let scattered = await this.port.get(keysToGet) as Record<string, unknown>;
+    if (rawSettings) scattered = { ...scattered, ...(rawSettings as Record<string, unknown>) };
+    const { settings: migrated, reEncrypted } = await applyMigrationsAndDecryptWithReEncrypt(scattered as SettingsType, { getEncryptionKey: keyProvider });
+    if (Object.keys(reEncrypted).length > 0) {
+      await this.persistReEncrypted(reEncrypted);
+    }
+    return migrated;
   }
 
   async set<K extends StorageKey>(key: K, value: SettingsType[K]): Promise<void> {
     const current = await this.getAll();
     const next = { ...current, [key]: value } as SettingsType;
-    await this.adapter.setSettings(next);
+    await this.writeSettings(next);
   }
 
   async setAll(settings: Partial<SettingsType>, opts?: SettingsWriteOptions): Promise<void> {
     const current = await this.getAll();
     const next = { ...current, ...settings } as SettingsType;
-    await this.adapter.setSettings(next, opts);
+    await this.writeSettings(next, opts);
+  }
+
+  private async writeSettings(settings: SettingsType, opts?: SettingsWriteOptions): Promise<void> {
+    const { API_KEY_FIELDS } = await import('./settingsMigration.js');
+    const { encryptApiKey } = await import('../crypto/index.js');
+    const { ensureStorageQuota } = await import('./storageMaintenance.js');
+    let toSave: Record<string, unknown> = { ...(settings as Record<string, unknown>) };
+    const keyProvider = await this.resolveKeyProvider();
+    try {
+      const key = await keyProvider();
+      for (const field of API_KEY_FIELDS) {
+        const val = toSave[field];
+        if (typeof val === 'string' && val !== '') {
+          toSave[field] = await encryptApiKey(val, key);
+        }
+      }
+    } catch (e) {
+      const { logError, ErrorCode } = await import('../logger.js');
+      const { errorMessage } = await import('../errorUtils.js');
+      await logError('Failed to encrypt API keys', { error: errorMessage(e as Error) }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
+      throw e;
+    }
+    await ensureStorageQuota(toSave, opts?.sqliteHealthCheck);
+    if (isChromePort(this.port)) {
+      await withOptimisticLock<SettingsType>('settings', (current) => {
+        const base = (current as Record<string, unknown>) || {};
+        return { ...(base as object), ...toSave } as SettingsType;
+      });
+    } else {
+      // InMemory path — no version mimicking, simple merge via Port
+      const existing = await this.port.get(['settings']);
+      const base = (existing['settings'] as Record<string, unknown>) || {};
+      await this.port.set({ settings: { ...(base as object), ...toSave } });
+    }
   }
 
   /**
-   * Subscribe to settings changes. The panel lifecycle (PBI 04) can use this
+   * Subscribe to settings changes. The panel lifecycle can use this
    * instead of chrome.storage.onChanged directly, keeping the storage seam
    * in one module.
    */
   onChange(callback: (changes: Partial<SettingsType>) => void): void {
-    this.adapter.onChanged?.((changes) => {
-      // Only forward keys that are inside the `settings` object
+    this.observe(callback);
+  }
+
+  /**
+   * Primary observe API — typed key only, via StoragePort.
+   */
+  observe(callback: (changes: Partial<SettingsType>) => void): void {
+    this.port.onChanged?.((changes) => {
       if ('settings' in changes) {
         callback(changes['settings'] as Partial<SettingsType>);
       }
     });
+  }
+
+  /** Expose underlying port for advanced uses / testing */
+  getPort(): StoragePort {
+    return this.port;
   }
 }
 
 export type SettingsReader = Pick<SettingsRepository, 'getMany' | 'getAll'>;
 
 export const settingsRepository = new SettingsRepository();
+
+/** Re-export StoragePort types for external import paths */
+export type { StoragePort } from './storagePort.js';
+export { ChromeStoragePort, InMemoryStoragePort } from './storagePort.js';
