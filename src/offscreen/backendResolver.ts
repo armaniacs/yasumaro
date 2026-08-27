@@ -13,6 +13,7 @@
 
 import type { OpfsCapabilities } from './opfsCapabilities.js';
 import { detectLiveVfsStrategy } from './opfsCapabilities.js';
+import type { SqliteEngineHost } from './sqliteEngineHost.js';
 import type { SqliteEngineContext } from './sqliteEngineContext.js';
 import type { StorageBackend } from './StorageBackend.js';
 import { NoopBackend } from './StorageBackend.js';
@@ -44,7 +45,7 @@ export function resolveBackend(state: PostInitState): BackendType {
  * Falls back to NoopBackend if the resolved type has no matching adapter.
  */
 export async function createBackend(
-  context: SqliteEngineContext,
+  context: SqliteEngineHost | SqliteEngineContext,
   resolved: BackendType
 ): Promise<StorageBackend> {
   switch (resolved) {
