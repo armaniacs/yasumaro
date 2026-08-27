@@ -85,7 +85,7 @@ export function extractPageContent(config: CleansingConfig = pageState.cleansing
 /**
  * extractPageContent() の結果を pageState に反映する（オーケストレーター側の責務）。
  */
-function applyExtractResultToPageState(result: ExtractResult): void {
+export function applyExtractResultToPageState(result: ExtractResult): void {
     pageState.lastCleansedReason = result.cleansedReason || 'none';
     pageState.lastCleanseStats = {
         hardStripRemoved: result.hardStripRemoved ?? 0,
@@ -116,7 +116,7 @@ function applyExtractResultToPageState(result: ExtractResult): void {
  * 【マイグレーション対応】: settingsキー下から値を取得（マイグレーション後の構造に対応）
  * 🟢
  */
-function loadSettings(): Promise<void> {
+export function loadSettings(): Promise<void> {
     return new Promise((resolve) => {
         // Migration to the single 'settings' object is complete; read all values
         // from that object to reduce storage access overhead.
@@ -237,7 +237,7 @@ export function createVisitGate(clock: () => number = () => Date.now()): VisitGa
  * 【パフォーマンス】: 条件満了後に定期実行を停止して不要な処理を回避
  * 🟢
  */
-function checkVisitConditions(): void {
+export function checkVisitConditions(): void {
     const visitState: VisitState = pageState.toVisitState();
     const thresholds: VisitGateThresholds = pageState.toVisitGateThresholds();
     // VisitGate is pure: thresholds + clock injected, state passed as value — no global mutation inside.
@@ -284,7 +284,7 @@ function checkVisitConditions(): void {
  * @param fn - Throttle対象の関数
  * @returns Throttle化された関数
  */
-function throttle<T extends (...args: unknown[]) => void>(fn: T): T {
+export function throttle<T extends (...args: unknown[]) => void>(fn: T): T {
     let lastCall = 0;
     let rafId: number | null = null;
     let lastArgs: Parameters<T> | null = null;
@@ -336,7 +336,7 @@ function throttle<T extends (...args: unknown[]) => void>(fn: T): T {
  * 【エラーハンドリング】: 分母が0以下の場合は計算をスキップ（ページが空の場合など）
  * 🟢
  */
-function updateMaxScroll(): void {
+export function updateMaxScroll(): void {
     const scrollTop = window.scrollY;
     const docHeight = document.documentElement.scrollHeight - window.innerHeight;
 
@@ -363,7 +363,7 @@ function updateMaxScroll(): void {
  *   - その他エラー: コンソールにエラーログを出力
  * 🟢
  */
-async function reportValidVisit(): Promise<void> {
+export async function reportValidVisit(): Promise<void> {
     pageState.isValidVisitReported = true;
     void logInfo('Sending VALID_VISIT', {}, 'extractor');
     console.info('[OWeave] VALID_VISIT 送信開始');
@@ -454,7 +454,7 @@ export { showPrivacyConfirmDialog } from './privacyDialog.js';
  * falling back to a short setTimeout. This avoids the fixed 1s polling of
  * setInterval and only runs while the page is visible.
  */
-function scheduleNextCheck(): void {
+export function scheduleNextCheck(): void {
     if (pageState.isValidVisitReported || document.hidden) return;
 
     if (typeof window.requestIdleCallback === 'function') {
@@ -482,7 +482,7 @@ function scheduleNextCheck(): void {
  * 【パフォーマンス】: requestIdleCallback + visibilitychange により不要なCPU使用を回避
  * 🟢
  */
-function startPeriodicCheck(): void {
+export function startPeriodicCheck(): void {
     stopPeriodicCheck();
     scheduleNextCheck();
 }
@@ -496,7 +496,7 @@ function startPeriodicCheck(): void {
  *   - タブ非表示時の一時停止
  * 🟢
  */
-function stopPeriodicCheck(): void {
+export function stopPeriodicCheck(): void {
     if (pageState.checkIntervalId !== null) {
         if (typeof window.cancelIdleCallback === 'function') {
             window.cancelIdleCallback(pageState.checkIntervalId);

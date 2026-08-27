@@ -55,6 +55,14 @@
 - 2026-08-27-08-chore-remove-dead-code-imports.md（RICE 100 — `migrations-comprehensive` の `vi`/`shouldThrow`/`origExec`/`queryCallCount`、`storageFallback` の `vi`/`StorageQuery`、`sqliteQueryBuilder` の `StorageQuery` を削除。type-check / 8710 tests PASS）
 - 2026-08-27-00-backlog-review-findings.md（8件のRICEスコアリングバックログ — なぜなぜ分析と依存整理）
 
+### 2026-08-27 Coverage — 4件完了（1バッチ4並列）
+
+- 2026-08-27-09-test-content-coverage-90.md（RICE 427 — `content` 72.94%→98.52% / Branches 90.38%。`visitGate` に clock 注入した 8パターン + `extractor` に jsdom で `loadSettings`/`throttle`/`checkVisitConditions` を直叩き。`extractor.ts` の私的関数を export 化。519 files 8909 tests PASS）
+- 2026-08-27-10-test-offscreen-coverage-90.md（RICE 408 — `offscreen` 86.52%→92.95%。`recordsRepo` 46%→100% / `backendResolver` 56%→100% / `opfsWorkerProxy` 72%→94%。3ファイルに 91 tests 追加。519 files 8909 tests PASS）
+- 2026-08-27-11-test-offscreen-engine-context-coverage-90.md（RICE 240 — `offscreen/sqliteEngineContext` 86.85%→95.77%。`_doInit` の 3分岐と 15s タイムアウトを fakeTimers で検証。1ファイル 40 tests 追加。519 files 8909 tests PASS）
+- 2026-08-27-12-test-background-migration-coverage-90.md（RICE 150 — `background/migration` 87.82%→91.73%。`migrationState` 57%→100% / `serviceContainer` 73%→93%。2ファイル 29 tests 追加。519 files 8909 tests PASS）
+- 2026-08-27-00-backlog-coverage.md（4件のRICEスコアリングバックログ — 全分類 90% ゲート達成計画）
+
 ### 2026-08-27 Autonomous Task Closer — 2件完了（PBI-01/02 並列1バッチ）
 
 - 2026-08-27-01-fix-remove-unused-vendor-wa-sqlite.md（RICE 15.0 — `vendor/wa-sqlite/` の未参照WASM成果物3ファイルを削除。`node_modules/wa-sqlite` 経由でバンドルされるためビルド・移行機能に影響なし。`build-wasm.sh` は古いvendorコピー手順のため再ビルド手順書は保存せず削除。`npm run build` で4種wasmが同一ハッシュで生成されることを確認。type-check / 8399 tests PASS）
