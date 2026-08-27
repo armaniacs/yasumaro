@@ -197,14 +197,13 @@ describe('extractPageContent', () => {
     });
 
     it('loads settings from a single storage key', async () => {
-        const getSpy = vi.fn((_keys: string | string[], callback?: (result: Record<string, unknown>) => void) => {
-            if (typeof callback === 'function') callback({ settings: {} });
+        const getSpy = vi.fn((_keys: string | string[] | null) => {
             return Promise.resolve({ settings: {} });
         });
-        chrome.storage.local.get = getSpy as typeof chrome.storage.local.get;
+        chrome.storage.local.get = getSpy as unknown as typeof chrome.storage.local.get;
 
         await init();
-        expect(getSpy).toHaveBeenCalledWith(['settings'], expect.any(Function));
+        expect(getSpy).toHaveBeenCalledWith(['settings']);
     });
 
     it('uses requestIdleCallback for periodic checks when available', async () => {

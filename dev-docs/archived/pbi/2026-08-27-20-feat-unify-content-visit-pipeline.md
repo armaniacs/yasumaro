@@ -25,9 +25,9 @@ Scenario: エッジケース — ドメインポリシーが一貫する
   Then `loader` と `domainPolicy` で同じ判定が返る
 
 ## 受け入れ基準
-- [ ] `ContentKernel` が `StoragePort`, `DomainPolicyPort`, `Clock`, `Scheduler` を注入される
-- [ ] `loader.ts` の `shouldSkipUrl`/`checkDomainAllowedFromCache` 重複が解消されている
-- [ ] `pageState` の `DEFAULT_CLEANSING_CONFIG` が `contentCleaner` の `DEFAULT_KEYWORDS` を SSOT として参照する
+- [x] `ContentKernel` が `StoragePort`, `DomainPolicyPort`, `Clock`, `Scheduler` を注入される
+- [x] `loader.ts` の `shouldSkipUrl`/`checkDomainAllowedFromCache` 重複が解消されている
+- [x] `pageState` の `DEFAULT_CLEANSING_CONFIG` が `contentCleaner` の `DEFAULT_KEYWORDS` を SSOT として参照する
 
 ## テスト戦略
 - 単体: `ContentKernel` の `loadSettings` マッピングのテーブル駆動テスト
@@ -39,6 +39,6 @@ Scenario: エッジケース — ドメインポリシーが一貫する
 3pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

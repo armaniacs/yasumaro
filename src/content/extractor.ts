@@ -1,29 +1,26 @@
 /**
  * extractor.ts
- * 【機能概要】: Webページのコンテンツを抽出し、スクロール深度や訪問時間を監視するコンテントスクリプト
- * 【設計方針】: ページの読み込み後に設定を取得し、条件を満たした場合に自動記録を実行
- * 【監視対象】:
- *   - 最小訪問時間（デフォルト: 5秒）
- *   - 最小スクロール深度（デフォルト: 50%）
- * 🟢
+ * Content-script visit pipeline — now a thin facade over ContentKernel.
+ * The 77-line table-driven loadSettings mapping, the ScrollMonitor pure update,
+ * and the VisitReporter VALID_VISIT orchestration have been unified behind
+ * ContentKernel with injected StoragePort / DomainPolicyPort / Clock / Scheduler.
+ * This file preserves the public exports for backward compat and wires the
+ * default chrome-backed ports for the real extension runtime.
  */
 
 import { createSender } from '../utils/retryHelper.js';
-import { errorMessage } from '../utils/errorUtils.js';
-import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
-import { preparePageContent } from '../utils/pageContentPipeline.js';
-import { showPrivacyConfirmDialog } from './privacyDialog.js';
-import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
 import { PageState, type CleansingConfig } from './pageState.js';
-import { CLEANSING_RULES, THRESHOLD_RULES } from '../utils/aiSummaryCleaner/rules.js';
-import { pickDefined } from '../utils/objectUtils.js';
 import { VisitGate } from './visitGate.js';
+import { ChromeStoragePort } from '../utils/storage/storagePort.js';
+import { ChromeDomainPolicyPort } from './domainPolicyPort.js';
+import { ContentKernel, IdleScheduler } from './contentKernel.js';
+
 import type { VisitState, VisitGateThresholds } from './visitGate.js';
 
 // Type-only import to establish graphify edge between content script and
 // the service worker's message type definitions (PBI-02-3).
-import { StorageKeys, StorageKey } from '../utils/storage/types.js';
+import type { StorageKey } from '../utils/storage/types.js';
 
 interface OWTestState {
     maxScrollPercentage: number;
@@ -44,10 +41,6 @@ declare global {
     }
 }
 
-// 【設定定数】: デフォルト値の定義
-const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
-const DEFAULT_MIN_SCROLL_DEPTH = 50;   // パーセンテージ
-
 // 【状態管理】: Content Script単位の可変状態をPageStateインスタンスに集約
 const pageState = new PageState();
 
@@ -62,151 +55,38 @@ export function getPageStateForTesting(): Readonly<PageState> {
 // モジュールレベルでリトライ付き送信者を作成
 const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
 
+// ContentKernel — single unified visit pipeline (StoragePort + DomainPolicyPort + Clock + Scheduler)
+const storagePort = new ChromeStoragePort();
+const domainPolicyPort = new ChromeDomainPolicyPort(storagePort);
+const kernel = new ContentKernel(storagePort, domainPolicyPort, () => Date.now(), new IdleScheduler(), {
+    pageState,
+    sender: messageSender,
+});
+
 /**
  * コンテンツを抽出する共通関数（純粋関数）
- * 【機能概要】: ページの本文テキスト（メインコンテンツ）を抽出し、空白文字を正規化する
- * 【抽出範囲】: メインコンテンツ（ナビゲーション、ヘッダー等除外、最大10,000文字）
- * 【処理内容】:
- *   1. メインコンテンツ（article/mainタグ等優先）を抽出
- *   2. 連続する空白文字を単一のスペースに置換
- *   3. 前後の空白を削除
- *   4. 最大10,000文字で切り詰め
- * 【改善点】: Readabilityアルゴリズムでナビゲーション等のノイズを除外
- * 【クレンジング】: 設定に従って機密情報を含む要素を削除
- *
- * pageStateを変更しない（PBI-28）。呼び出し元（オーケストレーター）が
- * 戻り値を使ってpageStateの統計フィールドを更新する責務を持つ。
- * @returns {ExtractResult} - content と抽出/クレンジング統計を含む結果オブジェクト
+ * PageStateを変更しない（PBI-28）。呼び出し元が戻り値を使って統計を更新する。
  */
 export function extractPageContent(config: CleansingConfig = pageState.cleansingConfig): ExtractResult {
-    return preparePageContent(config);
+    return kernel.extractPageContent(config);
 }
 
 /**
  * extractPageContent() の結果を pageState に反映する（オーケストレーター側の責務）。
  */
 export function applyExtractResultToPageState(result: ExtractResult): void {
-    pageState.lastCleansedReason = result.cleansedReason || 'none';
-    pageState.lastCleanseStats = {
-        hardStripRemoved: result.hardStripRemoved ?? 0,
-        keywordStripRemoved: result.keywordStripRemoved ?? 0,
-        totalRemoved: result.totalRemoved ?? 0
-    };
-    pageState.lastByteStats = {
-        pageBytes: result.pageBytes ?? 0,
-        candidateBytes: result.candidateBytes ?? 0,
-        originalBytes: result.originalBytes ?? 0,
-        cleansedBytes: result.cleansedBytes ?? 0
-    };
-    pageState.lastAiSummaryCleansedStats = {
-        aiSummaryOriginalBytes: result.aiSummaryOriginalBytes ?? 0,
-        aiSummaryCleansedBytes: result.aiSummaryCleansedBytes ?? 0,
-        aiSummaryCleansedElements: result.aiSummaryCleansedElements ?? 0,
-        aiSummaryCleansedReason: result.aiSummaryCleansedReason ?? 'none',
-        ...pickDefined({ aiSummaryCleansedReasons: result.aiSummaryCleansedReasons })
-    };
-    pageState.lastFallbackTriggered = result.fallbackTriggered ?? false;
+    kernel.applyExtractResultToPageState(result);
 }
 
 /**
- * 設定をロードする
- * 【機能概要】: chrome.storage.localから設定を読み込む
- * 【読み込みタイミング】: スクリプト読み込み時（Chrome拡張のコンテントスクリプト読み込み時）
- * 【デフォルト値】: MIN_VISIT_DURATION=5秒, MIN_SCROLL_DEPTH=50%
- * 【マイグレーション対応】: settingsキー下から値を取得（マイグレーション後の構造に対応）
- * 🟢
+ * 設定をロードする — ContentKernel.loadSettings に統一（76行テーブル駆動マッピングの唯一の実装）。
  */
 export function loadSettings(): Promise<void> {
-    return new Promise((resolve) => {
-        // Migration to the single 'settings' object is complete; read all values
-        // from that object to reduce storage access overhead.
-        chrome.storage.local.get(['settings'], (result: Record<string, unknown>) => {
-            const s: Record<string, unknown> = (result['settings'] as Record<string, unknown> | undefined) ?? {};
-
-            if (s[StorageKeys.MIN_VISIT_DURATION] !== undefined) {
-                const parsedDuration = parseInt(String(s[StorageKeys.MIN_VISIT_DURATION]), 10);
-                pageState.minVisitDuration = Number.isNaN(parsedDuration) ? DEFAULT_MIN_VISIT_DURATION : parsedDuration;
-            }
-            if (s[StorageKeys.MIN_SCROLL_DEPTH] !== undefined) {
-                const parsedDepth = parseInt(String(s[StorageKeys.MIN_SCROLL_DEPTH]), 10);
-                pageState.minScrollDepth = Number.isNaN(parsedDepth) ? DEFAULT_MIN_SCROLL_DEPTH : parsedDepth;
-            }
-            // クレンジング設定を一括読み込み
-            // The 32 per-rule keys are derived from CLEANSING_RULES rather than
-            // listed here individually — see pbi/2026-08-09-20. Non-rule flags
-            // (hard/keyword strip, whitelist extraction, dedup) stay explicit.
-            type BooleanCleansingKey = {
-                [K in keyof CleansingConfig]: CleansingConfig[K] extends boolean ? K : never;
-            }[keyof CleansingConfig];
-            type StringArrayCleansingKey = {
-                [K in keyof CleansingConfig]: CleansingConfig[K] extends string[] ? K : never;
-            }[keyof CleansingConfig];
-            const cleansingRuleKeys: Array<[StorageKey, BooleanCleansingKey]> = CLEANSING_RULES.map(
-                (rule) => [
-                    rule.storageKey as StorageKey,
-                    `aiSummaryCleansing${rule.key.charAt(0).toUpperCase()}${rule.key.slice(1)}` as BooleanCleansingKey,
-                ],
-            );
-            const booleanKeys: Array<[StorageKey, BooleanCleansingKey]> = [
-                [StorageKeys.CONTENT_STRIP_HARD_ENABLED, 'contentStripHardEnabled'],
-                [StorageKeys.CONTENT_STRIP_KEYWORD_ENABLED, 'contentStripKeywordEnabled'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_ENABLED, 'aiSummaryCleansingEnabled'],
-                ...cleansingRuleKeys,
-                [StorageKeys.WHITELIST_EXTRACTION_ENABLED, 'whitelistExtractionEnabled'],
-                [StorageKeys.CONTENT_DEDUP_ENABLED, 'contentDedupEnabled'],
-            ];
-            for (const [key, prop] of booleanKeys) {
-                if (s[key] !== undefined) {
-                    pageState.cleansingConfig[prop] = s[key] === true || s[key] === 'true';
-                }
-            }
-
-            const stringArrayKeys: Array<[StorageKey, StringArrayCleansingKey]> = [
-                [StorageKeys.CONTENT_STRIP_KEYWORDS, 'contentStripKeywords'],
-                [StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS, 'aiSummaryCleansingCustomPatterns'],
-            ];
-            for (const [key, prop] of stringArrayKeys) {
-                if (s[key] !== undefined && Array.isArray(s[key])) {
-                    pageState.cleansingConfig[prop] = s[key] as string[];
-                }
-            }
-
-            // Threshold settings (table-driven, bounds validated via THRESHOLD_RULES)
-            for (const t of THRESHOLD_RULES) {
-                if (s[t.storageKey] !== undefined) {
-                    const raw = s[t.storageKey];
-                    const n = raw != null && raw !== '' ? Number(raw) : NaN;
-                    const v = Number.isFinite(n) ? n : t.default;
-                    pageState.cleansingConfig[t.prop] = Math.max(t.min, Math.min(t.max, v));
-                }
-            }
-            logInfo('Settings loaded', {
-                minVisitDuration: pageState.minVisitDuration,
-                minScrollDepth: pageState.minScrollDepth,
-                aiSummaryCleansingEnabled: pageState.cleansingConfig.aiSummaryCleansingEnabled,
-                aiSummaryCleansingAlt: pageState.cleansingConfig.aiSummaryCleansingAlt,
-                aiSummaryCleansingMetadata: pageState.cleansingConfig.aiSummaryCleansingMetadata,
-                aiSummaryCleansingAds: pageState.cleansingConfig.aiSummaryCleansingAds,
-                aiSummaryCleansingNav: pageState.cleansingConfig.aiSummaryCleansingNav,
-                aiSummaryCleansingSocial: pageState.cleansingConfig.aiSummaryCleansingSocial
-            }, 'extractor').catch(() => { /* non-critical logging failure */ });
-            resolve();
-        });
-    });
+    return kernel.loadSettings();
 }
 
 /**
  * 有効な訪問の条件を判定する（テスト可能な純粋関数）
- *
- * 呼び出し時に閾値を明示的に渡すことで、モジュールレベルの状態に依存しない。
- * パラメータ未指定時は pageState のデフォルト値を使用し後方互換性を維持する。
- * 内部では VisitGate に委譲し、閾値注入と純粋判定を一元化する。
- *
- * @param duration - 訪問時間（秒）
- * @param scrollPercent - 最大スクロール深度（%）
- * @param minDuration - 最小訪問時間（秒）。省略時は pageState.minVisitDuration
- * @param minScroll - 最小スクロール深度（%）。省略時は pageState.minScrollDepth
- * @returns 条件を満たす場合true
  */
 export function shouldRecordVisit(
     duration: number,
@@ -214,345 +94,72 @@ export function shouldRecordVisit(
     minDuration?: number,
     minScroll?: number,
 ): boolean {
-    const gate = new VisitGate({
-        minDuration: minDuration ?? pageState.minVisitDuration,
-        minScroll: minScroll ?? pageState.minScrollDepth,
-    });
-    return gate.shouldRecord(duration, scrollPercent);
+    return kernel.shouldRecordVisit(duration, scrollPercent, minDuration, minScroll);
 }
 
 /** Factory for VisitGate bound to current pageState thresholds. Allows clock injection for tests. */
 export function createVisitGate(clock: () => number = () => Date.now()): VisitGate {
+    // Keep original semantics: new gate with current thresholds + injected clock
     return new VisitGate(pageState.toVisitGateThresholds(), clock);
 }
 
 /**
  * 有効な訪問条件をチェックする
- * 【機能概要】: 現在の訪問が条件を満たしているかを確認し、条件を満たした場合は記録を実行
- * 【判定条件】:
- *   - 未報告であること（isValidVisitReported == false）
- *   - 訪問時間 >= 最小訪問時間
- *   - 最大スクロール深度 >= 最小スクロール深度
- * 【タイミング】: スクロール時および1秒ごとに定期実行
- * 【パフォーマンス】: 条件満了後に定期実行を停止して不要な処理を回避
- * 🟢
  */
 export function checkVisitConditions(): void {
-    const visitState: VisitState = pageState.toVisitState();
-    const thresholds: VisitGateThresholds = pageState.toVisitGateThresholds();
-    // VisitGate is pure: thresholds + clock injected, state passed as value — no global mutation inside.
-    const gate = new VisitGate(thresholds);
-    const duration = (Date.now() - visitState.startTime) / 1000;
-
-    // DEBUG LOG: 状態のデバッグログ（fire-and-forget）
-    void logDebug('Visit status', { duration, maxScrollPercentage: visitState.maxScrollPercentage, minVisitDuration: thresholds.minDuration, minScrollDepth: thresholds.minScroll }, 'extractor');
-
-    // E2Eテスト用フック: data-ow-e2e-test 属性が設定されている場合のみ有効
-    if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
-        const state = {
-            maxScrollPercentage: visitState.maxScrollPercentage,
-            isValidVisitReported: visitState.isValidVisitReported,
-            startTime: visitState.startTime,
-            minVisitDuration: thresholds.minDuration,
-            minScrollDepth: thresholds.minScroll,
-            duration,
-        };
-        window.__OW_TEST_STATE = state;
-        document.documentElement.setAttribute('data-ow-test-state', JSON.stringify(state));
-    }
-
-    // 【条件判定】: VisitGate の純粋判定で冪等ガード＋閾値判定を一括
-    if (gate.isReportable(visitState)) {
-        console.info(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${visitState.maxScrollPercentage.toFixed(0)}%`);
-        reportValidVisit();
-        // E2Eテスト用フック: 報告後に状態を更新
-        if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
-            if (window.__OW_TEST_STATE) {
-                window.__OW_TEST_STATE.isValidVisitReported = true;
-            }
-            document.documentElement.setAttribute('data-ow-test-state',
-                JSON.stringify(window.__OW_TEST_STATE));
-        }
-        // 【パフォーマンス向上】: 条件満了後に定期実行を停止
-        stopPeriodicCheck();
-    }
+    return kernel.checkVisitConditions();
 }
 
 /**
  * Throttle function using requestAnimationFrame
- * 【機能概要】: 関数呼び出しをフレーム単位で抑制し、高速スクロール時の負荷を軽減
- * @param fn - Throttle対象の関数
- * @returns Throttle化された関数
  */
 export function throttle<T extends (...args: unknown[]) => void>(fn: T): T {
-    let lastCall = 0;
-    let rafId: number | null = null;
-    let lastArgs: Parameters<T> | null = null;
-
-    const throttledFn = ((...args: Parameters<T>) => {
-        lastArgs = args;
-        const now = performance.now();
-
-        // Cancel existing RAF before scheduling a new one to prevent memory leak
-        if (rafId !== null) {
-            cancelAnimationFrame(rafId);
-            rafId = null;
-        }
-
-        // 前回の呼び出しから十分時間が経過しているか確認
-        const _timeSinceLastCall = now - lastCall;
-        const THROTTLE_DELAY = 100; // 100ms
-
-        rafId = requestAnimationFrame(() => {
-            rafId = null;
-            const callNow = performance.now() - lastCall >= THROTTLE_DELAY;
-            if (callNow && lastArgs) {
-                lastCall = performance.now();
-                fn(...lastArgs);
-            } else if (lastArgs) {
-                // ディレイ未満の場合は追加のチェック
-                if (performance.now() - lastCall >= THROTTLE_DELAY) {
-                    lastCall = performance.now();
-                    fn(...lastArgs);
-                }
-            }
-        });
-    }) as T;
-
-    window.addEventListener('beforeunload', () => {
-        if (rafId !== null) {
-            cancelAnimationFrame(rafId);
-            rafId = null;
-        }
-    });
-
-    return throttledFn;
+    return kernel.throttle(fn);
 }
 
 /**
  * 最大スクロール深度を更新する
- * 【機能概要】: 現在のスクロール位置からスクロール深度（%）を計算し、最大値を更新
- * 【計算式】: (scrollY / (scrollHeight - innerHeight)) * 100
- * 【エラーハンドリング】: 分母が0以下の場合は計算をスキップ（ページが空の場合など）
- * 🟢
  */
 export function updateMaxScroll(): void {
-    const scrollTop = window.scrollY;
-    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-
-    // 【ゼロ除算防止】: ドキュメントの高さが0以下の場合は処理をスキップ
-    if (docHeight <= 0) return;
-
-    const scrollPercentage = (scrollTop / docHeight) * 100;
-
-    // 【最大値更新】: 新しい最大スクロール深度を記録
-    if (scrollPercentage > pageState.maxScrollPercentage) {
-        pageState.maxScrollPercentage = scrollPercentage;
-        // console.log(`New Max Scroll: ${pageState.maxScrollPercentage.toFixed(1)}%`);
-    }
-
-    checkVisitConditions();
+    return kernel.updateMaxScroll();
 }
 
 /**
- * 有効な訪問を報告する
- * 【機能概要】: 条件を満たした訪問をバックグラウンドスクリプトに報告し、記録処理を実行
- * 【送信内容】: コンテンツテキスト（max 10,000文字）
- * 【エラーハンドリング】:
- *   - Service Worker未対応: リトライヘルパーにより自動リトライ
- *   - その他エラー: コンソールにエラーログを出力
- * 🟢
+ * 有効な訪問を報告する — VisitReporter（単一 VALID_VISIT 送信）に統一
  */
 export async function reportValidVisit(): Promise<void> {
-    pageState.isValidVisitReported = true;
-    void logInfo('Sending VALID_VISIT', {}, 'extractor');
-    console.info('[OWeave] VALID_VISIT 送信開始');
-
-    const extractResult = extractPageContent();
-    applyExtractResultToPageState(extractResult);
-    const content = extractResult.content;
-
-    try {
-        const response = await messageSender.sendMessageWithRetry({
-            type: 'VALID_VISIT',
-            payload: {
-                content: content,
-                pageBytes: pageState.lastByteStats.pageBytes || undefined,
-                candidateBytes: pageState.lastByteStats.candidateBytes || undefined,
-                originalBytes: pageState.lastByteStats.originalBytes || undefined,
-                cleansedBytes: pageState.lastByteStats.cleansedBytes || undefined,
-                aiSummaryOriginalBytes: pageState.lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
-                aiSummaryCleansedBytes: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
-                aiSummaryCleansedElements: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
-                aiSummaryCleansedReason: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
-                aiSummaryCleansedReasons: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReasons,
-                fallbackTriggered: pageState.lastFallbackTriggered
-            }
-        });
-        void logDebug('VALID_VISIT response', { response }, 'extractor');
-        console.info('[OWeave] VALID_VISIT レスポンス:', JSON.stringify(response));
-
-        // レスポンスの成功フラグをチェック
-        if (response && !response.success) {
-            if (response.error === 'DOMAIN_BLOCKED') {
-                // 正常な動作: このドメインはブロック対象のため記録しない
-                return;
-            }
-
-            // PRIVATE_PAGE_DETECTED エラーの処理
-            if (response.error === 'PRIVATE_PAGE_DETECTED') {
-                // confirmationRequired=true の場合のみダイアログを表示
-                // （skip モードでは confirmationRequired が返らないのでダイアログ不要）
-                if (!response.confirmationRequired) {
-                    return;
-                }
-
-                const statusCode = reasonToStatusCode(response.reason);
-                const messageKey = statusCodeToMessageKey(statusCode);
-                const reasonLabel = chrome.i18n.getMessage(messageKey)
-                    || chrome.i18n.getMessage(`privatePageReason_${(response.reason || '').replace('-', '')}`)
-                    || response.reason || 'unknown';
-
-                const userConfirmed = await showPrivacyConfirmDialog(statusCode, reasonLabel);
-
-                if (userConfirmed) {
-                    // force flagを立てて再送信
-                    try {
-                        await messageSender.sendMessageWithRetry({
-                            type: 'VALID_VISIT',
-                            payload: {
-                                content: content,
-                                force: true
-                            }
-                        });
-                    } catch (retryError: unknown) {
-                        await logError('Failed to force save private page', { error: errorMessage(retryError) }, ErrorCode.INTERNAL_ERROR, 'extractor');
-                    }
-                }
-                return;
-            }
-
-            await logError('Background worker error', { error: response.error }, ErrorCode.INTERNAL_ERROR, 'extractor');
-        }
-    } catch (error: unknown) {
-        const msg = errorMessage(error);
-        if (msg && (msg.includes('Extension context invalidated') || msg.includes('sendMessage'))) {
-            // 拡張機能がリロードされた場合は、定期チェックを停止してページリフレッシュを推奨
-            stopPeriodicCheck();
-            await logInfo('Extension reloaded - page refresh needed', {}, 'extractor');
-        } else {
-            await logWarn('Failed to report valid visit', { error: msg }, ErrorCode.API_REQUEST_FAILURE, 'extractor');
-        }
-    }
+    return kernel.reportValidVisit();
 }
 
 // showPrivacyConfirmDialog is in ./privacyDialog.ts — re-export for backward compat
 export { showPrivacyConfirmDialog } from './privacyDialog.js';
 
 /**
- * Schedule the next periodic check using requestIdleCallback when available,
- * falling back to a short setTimeout. This avoids the fixed 1s polling of
- * setInterval and only runs while the page is visible.
+ * Schedule the next periodic check using injected Scheduler (IdleScheduler → requestIdleCallback fallback)
  */
 export function scheduleNextCheck(): void {
-    if (pageState.isValidVisitReported || document.hidden) return;
-
-    if (typeof window.requestIdleCallback === 'function') {
-        pageState.checkIntervalId = window.requestIdleCallback(() => {
-            pageState.checkIntervalId = null;
-            updateMaxScroll();
-            if (!pageState.isValidVisitReported && !document.hidden) {
-                scheduleNextCheck();
-            }
-        }, { timeout: 2000 });
-    } else {
-        pageState.checkIntervalId = window.setTimeout(() => {
-            pageState.checkIntervalId = null;
-            updateMaxScroll();
-            if (!pageState.isValidVisitReported && !document.hidden) {
-                scheduleNextCheck();
-            }
-        }, 1000);
-    }
+    return kernel.scheduleNextCheck();
 }
 
 /**
  * 定期実行を開始する
- * 【機能概要】: ブラウザがアイドル時に条件チェックを実行するループを開始する
- * 【パフォーマンス】: requestIdleCallback + visibilitychange により不要なCPU使用を回避
- * 🟢
  */
 export function startPeriodicCheck(): void {
-    stopPeriodicCheck();
-    scheduleNextCheck();
+    return kernel.startPeriodicCheck();
 }
 
 /**
  * 定期実行を停止する
- * 【機能概要】: 条件チェックのタイマーを停止する
- * 【用途】:
- *   - 条件満了時の自動停止
- *   - ページ離脱時のクリーンアップ
- *   - タブ非表示時の一時停止
- * 🟢
  */
 export function stopPeriodicCheck(): void {
-    if (pageState.checkIntervalId !== null) {
-        if (typeof window.cancelIdleCallback === 'function') {
-            window.cancelIdleCallback(pageState.checkIntervalId);
-        } else {
-            window.clearTimeout(pageState.checkIntervalId);
-        }
-        pageState.checkIntervalId = null;
-    }
+    return kernel.stopPeriodicCheck();
 }
 
 /**
- * 初期化処理
- * 【機能概要】: 設定の読み込みとイベントリスナーの登録
- * 🟢
+ * 初期化処理 — isTrusted guard と E2E data-ow-e2e-test 分岐を ContentKernel に統一
  */
 export async function init(): Promise<void> {
-    // 設定をロード（非同期で待機）
-    await loadSettings();
-
-    // 【イベントリスナー登録】: スクロールイベントを監視（throttle化でパフォーマンス向上）
-    // プログラムによるスクロール（element.scrollTo など）は isTrusted=false のため無視し、
-    // ユーザー操作のみで記録判定を進める（PBI-05）
-    const throttledUpdateMaxScroll = throttle(updateMaxScroll);
-    window.addEventListener('scroll', (event: Event) => {
-        if (!event.isTrusted) return;
-        throttledUpdateMaxScroll();
-    }, { passive: true });
-
-    // 【定期実行】: 1秒ごとに条件をチェック
-    startPeriodicCheck();
-
-    // 【クリーンアップ】: ページ離脱時に定期実行を停止
-    window.addEventListener('beforeunload', stopPeriodicCheck);
-
-    // 【パフォーマンス最適化】: タブが非表示の場合は定期実行を停止
-    // Page Visibility APIを使用して、バックグラウンドタブでの不要な処理を回避
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            stopPeriodicCheck();
-        } else if (!pageState.isValidVisitReported) {
-            // タブが表示され、まだ記録が行われていない場合は再開
-            startPeriodicCheck();
-        }
-    });
-
-    // E2Eテスト用: 初期化完了を data-ow-test-state 属性で通知
-    if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
-        document.documentElement.setAttribute('data-ow-test-state', JSON.stringify({
-            maxScrollPercentage: pageState.maxScrollPercentage,
-            isValidVisitReported: pageState.isValidVisitReported,
-            startTime: pageState.startTime,
-            minVisitDuration: pageState.minVisitDuration,
-            minScrollDepth: pageState.minScrollDepth,
-            duration: 0,
-        }));
-    }
+    return kernel.init();
 }
 
 // Guard allows this module to be imported in test environments where
@@ -591,3 +198,7 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage) {
     // 【初期化実行】
     void init();
 }
+
+// Re-export kernel for tests that want to assert on injected seams
+export { kernel as __kernelForTesting };
+export type { StorageKey };
