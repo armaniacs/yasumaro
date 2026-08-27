@@ -20,7 +20,6 @@
 |----|------|-----|------|------|------|
 | 03 | ⬜ 未着手（保留、02完了後に判断）🟡🟢 | [旧wa-sqlite移行コードの終息判断](2026-08-27-03-investigate-legacy-migration-sunset.md) | 6.0 | 🔧 | 2pt |
 | 04 | ⬜ 未着手（保留、03確定後に着手）🔴🟡 | [既存WASMバンドルの統合](2026-08-27-04-refactor-consolidate-wasm-bundles.md) | 3.5 | 🔧 | 3pt |
-| 13 | ⬜ 未着手 🔴🟢 | [PipelineKernel 統合 Phase A](2026-08-27-13-feat-consolidate-recording-pipeline.md) | 420→252 | ✨ | 3pt+5pt |
 | 15 | ⬜ 未着手 🟡🟢 | [Settings 深掘り](2026-08-27-15-feat-deepen-settings-repository.md) | 257 | 🔧 | 3pt |
 | 14 | ⬜ 未着手 🟡🟢 | [SqliteEngineHost 集約 (薄いalias)](2026-08-27-14-feat-collapse-sqlite-engine-context.md) | 210 | 🔧 | 3pt |
 | 16 | ⬜ 未着手 🟡🟢 | [opfsWorker withTransaction 抽出](2026-08-27-16-feat-fold-opfs-worker-handlers.md) | 160 | 🔧 | 3pt |
@@ -114,6 +113,7 @@
 ### 2026-08-27 PBI-12 QueryPlanner — Phase 0-3 完了
 
 - 2026-08-27-12-feat-unify-sqlite-storage-backend.md（RICE 288 — Phase 0: `searchHandlers.ts` に `domain`/`starred`/`date` の extraWhereSql を追加。Phase 1: ADR `2026-08-27-limit-policy.md` で LIMIT 2種温存を確定し `QuerySpec` 型と `buildQuerySpec` 純粋関数を `src/offscreen/queryPlan.ts` に新設。Phase 3: `IdbVfsBackend.query` と `FallbackStorage.query` を `QuerySpec` に移行し `limit`/`order` を一括生成。type-check / 49 offscreen tests PASS）
+- 2026-08-27-13-feat-consolidate-recording-pipeline.md（RICE 420→252 — Phase A-1: `PipelineKernel` を新設し `RecordingPipeline.executeInternal` の `PerUrlMutexMap` + `StepExecutor` + `previewBreakpoint` ロジックを委譲。`RecordingPipeline.record()` は facade に縮退。`stepExecutor` に `isNetworkError` ガードを追加し論理エラーが offline queue に載らないように。`extractSentencesStep` の `ErrorStrategy` を `RETRY` から `BEST_EFFORT` に正し ADR `2026-08-27-pipeline-offline-guard.md` を作成。type-check / 20 Pipeline tests PASS）
 
 ### 2026-08-27 Autonomous Task Closer — 2件完了（PBI-01/02 並列1バッチ）
 
