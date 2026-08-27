@@ -87,6 +87,12 @@ export async function handleRestore(
   try {
     const tmpEngine = await createEngine(RESTORE_TMP_FILENAME, WASM_URL);
     await tmpEngine.exec('SELECT count(*) FROM sqlite_master');
+    const triggerRows = await tmpEngine.query('SELECT count(*) as c FROM sqlite_master WHERE type = \'trigger\'');
+    const triggerCount = Number(triggerRows[0]?.c ?? 0);
+    if (triggerCount > 0) {
+      await tmpEngine.close();
+      throw new Error(`Restore validation failed: trigger detected (${triggerCount})`);
+    }
     await tmpEngine.close();
   } catch (validationError) {
     await root.removeEntry(RESTORE_TMP_FILENAME).catch(() => {});

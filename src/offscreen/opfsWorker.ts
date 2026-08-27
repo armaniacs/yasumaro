@@ -271,22 +271,6 @@ export async function handleRequest(req: WorkerRequestMessage): Promise<WorkerRe
         result = await handleAuditLogQuery(handlerCtx, payload as import('./opfsWorker/types.js').AuditLogQueryPayload);
         break;
       }
-      // WARNING: SQL_EXEC / SQL_QUERY accept raw SQL strings.
-      // Use ONLY for schema migrations (MigrationEngine). Never expose to user input.
-      case 'SQL_EXEC': {
-        const { sql, params = [] } = payload as { sql: string; params: SqliteValue[] };
-        await initSqlite();
-        await engine!.exec(sql, params);
-        result = { changes: 0 };
-        break;
-      }
-      case 'SQL_QUERY': {
-        const { sql, params = [] } = payload as { sql: string; params: SqliteValue[] };
-        await initSqlite();
-        const rows = await engine!.query(sql, params);
-        result = { rows };
-        break;
-      }
       default:
         return { id, success: false, error: `Unknown worker type: ${type}` };
     }

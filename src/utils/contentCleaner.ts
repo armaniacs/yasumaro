@@ -14,7 +14,7 @@ import { escapeCssSelector } from './cssUtils.js';
  * デフォルトのキーワードリスト（countCleanseTargets / cleanseContent 共通）
  * モジュールスコープで一元管理し、重複定義によるデグレを防ぐ
  */
-const DEFAULT_KEYWORDS: readonly string[] = [
+export const DEFAULT_KEYWORDS: readonly string[] = [
     'balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku',
     'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt',
     'rireki', 'torihiki', 'zandaka', 'hoken', 'address',

@@ -102,6 +102,9 @@ export function isPrivateIpAddress(hostname: string): boolean {
       return false; // 無効なIPv4アドレスはプライベートアドレスとして扱わない
     }
 
+    // 0.0.0.0/8 - This host (0.0.0.0) — should be blocked as localhost equivalent
+    if (a === 0) return true;
+
     // 10.x.x.x (10.0.0.0/8)
     if (a === 10) return true;
 

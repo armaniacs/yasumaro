@@ -10,6 +10,7 @@ import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 import type { RuleKey } from '../utils/aiSummaryCleaner/types.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../utils/aiSummaryCleaner/rules.js';
 import type { ThresholdProp } from '../utils/aiSummaryCleaner/rules.js';
+import { DEFAULT_KEYWORDS } from '../utils/contentCleaner.js';
 
 // 【設定定数】: デフォルト値の定義
 const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
@@ -62,7 +63,7 @@ export const THRESHOLD_CONFIG_DEFAULTS: Record<ThresholdProp, number> = Object.f
 export const DEFAULT_CLEANSING_CONFIG: CleansingConfig = {
     contentStripHardEnabled: true,
     contentStripKeywordEnabled: true,
-    contentStripKeywords: ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'],
+    contentStripKeywords: [...DEFAULT_KEYWORDS],
     aiSummaryCleansingEnabled: true,
     whitelistExtractionEnabled: true,
     aiSummaryCleansingLinkRatioThreshold: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingLinkRatioThreshold,
