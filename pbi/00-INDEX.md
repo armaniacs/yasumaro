@@ -42,6 +42,10 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-08-28 StorageField 深いモジュール抽出
+
+- 2026-08-27-26-feat-extract-storage-fields.md（RICE 180 — `CommonStorageFields` に `toMetadataPatch()`/`toBrowsingLogRecord(contentEnabled)` を実装し `saveMetadataStep` の20本手書き `if` を削除。`extractCommonStorageFields` の `maskedCount: rawMasked || null` を `?? null` に修正し `maskedCount:0` が `null` に潰れるバグを解消。type-check / 8396 tests PASS）
+
 ### 2026-08-25 Architecture Deepening（arch-delivery-loop）0825a — 4件完了（Wave1 3並列 + Wave2 1直列）
 
 - 2026-08-25-01-refactor-storage-obsidian-facade.md（RICE 32.0 — `SettingsRepository`に`getObsidianConfig()`/`getAiProviderConfig()`/`getPrivacyConfig()` facade 3本を追加しObsidian 6/AI 19/Privacy 5キーの取得を`getMany` 1回で完結。`OBSIDIAN_STORAGE_KEYS`/`AI_STORAGE_KEYS`/`PRIVACY_STORAGE_KEYS`をローカルミラー定数で重複化しLayer違反を回避、`ServiceContainer`に`settingsRepository`を`singleton:true`登録。type-check / 8394 tests PASS）
