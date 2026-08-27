@@ -1603,6 +1603,9 @@
   "diagMigrationFreshInstallNote": {
     "message": "On fresh installs there is no legacy data to migrate, so \"not completed\" is expected."
   },
+  "diagMigrationGuideLink": {
+    "message": "Migration guide"
+  },
   "diagSqliteTitle": {
     "message": "SQLite Database"
   },

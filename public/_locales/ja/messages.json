@@ -1543,6 +1543,9 @@
   "diagMigrationFreshInstallNote": {
     "message": "新規インストールでは対象のデータがないため、「未完了」と表示されることがあります。"
   },
+  "diagMigrationGuideLink": {
+    "message": "移行ガイド"
+  },
   "diagSqliteTitle": {
     "message": "SQLite データベース"
   },
