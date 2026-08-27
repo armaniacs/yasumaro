@@ -204,25 +204,6 @@ function renderSqliteSection(el: HTMLElement | null, snap: DiagnosticsSnapshot):
   el.appendChild(makeStatRow(getMessage('diagSqliteFallback') || 'Fallback Mode', fallbackText));
   el.appendChild(makeStatRow(getMessage('diagSqliteFts5') || 'FTS5 Search', st.fts5 ? '✓ Available' : '✗ Not available (LIKE fallback)'));
 
-  // OPFS migration status
-  if (st.opfsMigrationV2Done !== undefined) {
-    const migrationLabel = getMessage('diagOpfsMigrationV2') || 'OPFS Data Migration';
-    if (st.opfsMigrationV2Done) {
-      const completed = st.opfsMigrationV2CompletedAt
-        ? ` (${new Date(st.opfsMigrationV2CompletedAt).toLocaleString()})`
-        : '';
-      const count = st.opfsMigrationV2RecordCount
-        ? ` — ${st.opfsMigrationV2RecordCount} records`
-        : '';
-      el.appendChild(makeStatRow(migrationLabel, `✓ Completed${completed}${count}`));
-    } else if (st.opfsMigrationV2LastAttemptedAt) {
-      const attempted = new Date(st.opfsMigrationV2LastAttemptedAt).toLocaleString();
-      el.appendChild(makeStatRow(migrationLabel, `⏳ Pending (last attempt: ${attempted})`));
-    } else {
-      el.appendChild(makeStatRow(migrationLabel, '⏳ Pending'));
-    }
-  }
-
   if (st.compileOptionsSource) {
     el.appendChild(makeStatRow(getMessage('diagCompileOptionsSource') || 'Source', st.compileOptionsSource));
   }
@@ -234,8 +215,13 @@ function renderSqliteSection(el: HTMLElement | null, snap: DiagnosticsSnapshot):
 function renderMigrationSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {
   if (!el) return;
 
-  const opfsDone = snap.sqlite?.opfsMigrationV2Done ?? false;
-  const idbDone = snap.sqlite?.idbMigrationV2Done ?? false;
+  if (!snap.sqlite) {
+    el.textContent = getMessage('diagSqliteCheckFailed') || 'Failed to check migration status.';
+    return;
+  }
+
+  const opfsDone = snap.sqlite.opfsMigrationV2Done ?? false;
+  const idbDone = snap.sqlite.idbMigrationV2Done ?? false;
   const allDone = opfsDone && idbDone;
 
   const overallLabel = getMessage('diagMigrationOverall') || 'Legacy DB Migration';
