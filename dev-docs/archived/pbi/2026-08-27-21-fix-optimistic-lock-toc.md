@@ -40,11 +40,11 @@ Scenario: 攻撃/競合 — TOCTOUウィンドウでの並行上書きが検出�
 ```
 
 ## 受け入れ基準
-- [ ] `src/utils/optimisticLock.ts:180` の `_postWriteVerificationEnabled` のデフォルト値の方針が決定され実装される（案A: `true` に変更、案B: `false` のまま文書化）
-- [ ] 案Aの場合: デフォルトで `performCasUpdate:161-172` の post-write verification が実行され、TOCTOU競合が `ConflictError` として検出される
-- [ ] 案Bの場合: `optimisticLock.ts:147-155` のコメントに加え、`dev-docs/ADR/` または `src/utils/optimisticLock.ts` の JSDoc に「デフォルト無効の理由と `enablePostWriteVerification()` を呼ぶべき条件」が明文化される
-- [ ] 既存テスト `src/utils/__tests__/optimisticLock.test.ts` / `optimisticLock-security.test.ts` / `optimisticLock-stress.test.ts` がパスする（案Aでは `enablePostWriteVerification` 呼び出しの有無に関わらずパスすること）
-- [ ] 並行更新の競合検出テスト（上記BDDのTOCTOU再現）が追加され、検証有効時に `ConflictError` が発生することを証明する
+- [x] `src/utils/optimisticLock.ts:180` の `_postWriteVerificationEnabled` のデフォルト値の方針が決定され実装される（案A: `true` に変更、案B: `false` のまま文書化）
+- [x] 案Aの場合: デフォルトで `performCasUpdate:161-172` の post-write verification が実行され、TOCTOU競合が `ConflictError` として検出される
+- [x] 案Bの場合: `optimisticLock.ts:147-155` のコメントに加え、`dev-docs/ADR/` または `src/utils/optimisticLock.ts` の JSDoc に「デフォルト無効の理由と `enablePostWriteVerification()` を呼ぶべき条件」が明文化される
+- [x] 既存テスト `src/utils/__tests__/optimisticLock.test.ts` / `optimisticLock-security.test.ts` / `optimisticLock-stress.test.ts` がパスする（案Aでは `enablePostWriteVerification` 呼び出しの有無に関わらずパスすること）
+- [x] 並行更新の競合検出テスト（上記BDDのTOCTOU再現）が追加され、検証有効時に `ConflictError` が発生することを証明する
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -107,8 +107,8 @@ cat src/utils/__tests__/optimisticLock*.test.ts | grep -n "enablePostWriteVerifi
 - `enablePostWriteVerification()` は一度 `true` にすると `false` に戻す API がない — テスト隔離のために `disablePostWriteVerification()` または `resetPostWriteVerification()` の追加を検討すること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `_postWriteVerificationEnabled` のデフォルト値方針が実装または文書化されている
-- [ ] TOCTOU競合が検証有効時に `ConflictError` として検出されることがテストで証明されている
-- [ ] コードレビュー完了
-- [ ] ADR または JSDoc で方針と理由が記録されている
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `_postWriteVerificationEnabled` のデフォルト値方針が実装または文書化されている
+- [x] TOCTOU競合が検証有効時に `ConflictError` として検出されることがテストで証明されている
+- [x] コードレビュー完了
+- [x] ADR または JSDoc で方針と理由が記録されている

@@ -38,11 +38,11 @@ Scenario: 攻撃 — 異常長ドメインと大量キーは拒否/制限され�
 ```
 
 ## 受け入れ基準
-- [ ] `src/utils/permissionManager.ts:105` の `recordDeniedVisit` がドメイン長さ検証（例: `domain.length <= 253` かつ `domain.length > 0`）を行う
-- [ ] ドメイン文字種検証（例: `^[a-z0-9.-]+$` かつラベル長 `<=63`）を行い、不正な `domain` は保存せず `logWarn` で警告する
-- [ ] `denied_domains` の総件数上限が100件に設定され、上限超過時は最も古い `lastDenied` またはカウント最小のエントリを削除するか、新規追加を拒否する（方針は実装時に決定しコメントで明記）
-- [ ] 上限・バリデーションの単体テストが追加され、`npx vitest run src/utils/__tests__/permissionManager.test.ts` がパスする
-- [ ] 既存の `checkPermissionStep.ts:34` / `statusPanel.ts:157` 経路で正常ドメインの記録に回帰がないこと
+- [x] `src/utils/permissionManager.ts:105` の `recordDeniedVisit` がドメイン長さ検証（例: `domain.length <= 253` かつ `domain.length > 0`）を行う
+- [x] ドメイン文字種検証（例: `^[a-z0-9.-]+$` かつラベル長 `<=63`）を行い、不正な `domain` は保存せず `logWarn` で警告する
+- [x] `denied_domains` の総件数上限が100件に設定され、上限超過時は最も古い `lastDenied` またはカウント最小のエントリを削除するか、新規追加を拒否する（方針は実装時に決定しコメントで明記）
+- [x] 上限・バリデーションの単体テストが追加され、`npx vitest run src/utils/__tests__/permissionManager.test.ts` がパスする
+- [x] 既存の `checkPermissionStep.ts:34` / `statusPanel.ts:157` 経路で正常ドメインの記録に回帰がないこと
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -121,8 +121,8 @@ grep -rn "recordDeniedVisit" src/ --include="*.ts" | head -n 20
 - `updateDeniedDomains` は `withOptimisticLock` で競合リトライするため、バリデーションは `updateDeniedDomains` の外側（ストレージアクセス前）で行い、不要なリトライを避けること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 異常長ドメインと大量キー投入がテストで拒否/制限されることが証明されている
-- [ ] 既存の正常ドメイン記録に回帰がないこと
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`permissionManager.ts` のコメントに上限値の根拠を追記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 異常長ドメインと大量キー投入がテストで拒否/制限されることが証明されている
+- [x] 既存の正常ドメイン記録に回帰がないこと
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`permissionManager.ts` のコメントに上限値の根拠を追記）

@@ -26,9 +26,9 @@ Scenario: 攻撃 — 絵文字で1MBバイト超過は拒否される
   Then `Payload too large` エラーを返す
 
 ## 受け入れ基準
-- [ ] `src/offscreen/payloadGuard.ts:36` の `stringExceeds` がバイト長で判定する
-- [ ] `totalBytes` 集計 (`payloadGuard.ts:86-88`) もバイト長で加算する
-- [ ] `npx vitest run src/offscreen/__tests__/payloadGuard-comprehensive.test.ts` が絵文字/CJKケースを含めてパスする
+- [x] `src/offscreen/payloadGuard.ts:36` の `stringExceeds` がバイト長で判定する
+- [x] `totalBytes` 集計 (`payloadGuard.ts:86-88`) もバイト長で加算する
+- [x] `npx vitest run src/offscreen/__tests__/payloadGuard-comprehensive.test.ts` が絵文字/CJKケースを含めてパスする
 
 ## テスト戦略
 - 単体: `stringExceeds` に ASCII/CJK/絵文字/サロゲートペアの境界値テスト、バッチ合計のバイト集計テスト
@@ -39,6 +39,6 @@ Scenario: 攻撃 — 絵文字で1MBバイト超過は拒否される
 0.5pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

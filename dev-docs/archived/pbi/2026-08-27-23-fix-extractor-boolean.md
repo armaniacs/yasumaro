@@ -31,11 +31,11 @@ Scenario: 境界 — 文字列 "true" は true、他は false
   Then `"true"` のみ `true`、`"0"` / `""` / `0` は `false`（または仕様で定義した厳密な真偽値）に正規化される
 
 ## 受け入れ基準
-- [ ] `src/content/extractor.ts:158-162` の `Boolean(s[key])` が strict 判定（例: `s[key] === true || s[key] === "true"`）に置換されている
-- [ ] 32 ルール由来の `cleansingRuleKeys` を含む全 `booleanKeys` で文字列 `"false"` が `false` に正しく解釈される
-- [ ] 既存の boolean 型保存ケースの挙動が維持される（`true`→`true`、`false`→`false`）
-- [ ] `src/content/__tests__/extractor-comprehensive.test.ts` および `extractor-core.test.ts` がパスする
-- [ ] 文字列 `"false"` / `"true"` の回帰テストが1件以上追加されている
+- [x] `src/content/extractor.ts:158-162` の `Boolean(s[key])` が strict 判定（例: `s[key] === true || s[key] === "true"`）に置換されている
+- [x] 32 ルール由来の `cleansingRuleKeys` を含む全 `booleanKeys` で文字列 `"false"` が `false` に正しく解釈される
+- [x] 既存の boolean 型保存ケースの挙動が維持される（`true`→`true`、`false`→`false`）
+- [x] `src/content/__tests__/extractor-comprehensive.test.ts` および `extractor-core.test.ts` がパスする
+- [x] 文字列 `"false"` / `"true"` の回帰テストが1件以上追加されている
 
 ## テスト戦略
 - 単体: `loadSettings` の boolean パース分岐テスト — `chrome.storage.local.get` をモックし、`"false"`（文字列）/`"true"`（文字列）/`true`/`false`/`0`/`1`/`""` を投入して `pageState.cleansingConfig[prop]` の真偽値を検証
@@ -46,6 +46,6 @@ Scenario: 境界 — 文字列 "true" は true、他は false
 0.5pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

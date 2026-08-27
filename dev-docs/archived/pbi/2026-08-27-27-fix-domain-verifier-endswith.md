@@ -41,11 +41,11 @@ Scenario: エッジ — 不正な TLD 形式はスキップされる
   Then 当該 TLD は無視され `UNVERIFIED` を返す（`isValidTld` で除外）
 
 ## 受け入れ基準
-- [ ] `src/utils/trustDb/domainVerifier.ts:69` が `domain === tld || domain.endsWith("." + tld)` の境界チェックに修正されている
-- [ ] 不正 TLD を除外する `isValidTld`（または同等のバリデーション）が追加されている
-- [ ] `evil-example.com` / `notexample.com` が `TRUSTED` にならないことをテストで保証する
-- [ ] `sub.example.com` / `example.com` が引き続き `TRUSTED` になる（リグレッションなし）
-- [ ] `npx vitest run src/utils/trustDb/__tests__/domainVerifier.test.ts` がパスする
+- [x] `src/utils/trustDb/domainVerifier.ts:69` が `domain === tld || domain.endsWith("." + tld)` の境界チェックに修正されている
+- [x] 不正 TLD を除外する `isValidTld`（または同等のバリデーション）が追加されている
+- [x] `evil-example.com` / `notexample.com` が `TRUSTED` にならないことをテストで保証する
+- [x] `sub.example.com` / `example.com` が引き続き `TRUSTED` になる（リグレッションなし）
+- [x] `npx vitest run src/utils/trustDb/__tests__/domainVerifier.test.ts` がパスする
 
 ## テスト戦略
 - 単体: `checkJpAnchor` に完全一致/サブドメイン/サフィックス偽装/ハイフン連結/不正TLDの5パターンを追加
@@ -56,6 +56,6 @@ Scenario: エッジ — 不正な TLD 形式はスキップされる
 0.05pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

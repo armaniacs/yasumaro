@@ -31,11 +31,11 @@ Scenario: 回帰 — loadSettings 後の配列置換が他インスタンスに�
   Then もう片方の配列は元のままである
 
 ## 受け入れ基準
-- [ ] `src/content/pageState.ts:109` の初期化がシャローコピーではなく独立コピーになっている（`structuredClone` または配列スプレッドによる複製）
-- [ ] `contentStripKeywords` と `aiSummaryCleansingCustomPatterns` の両方がインスタンス間で参照共有されない
-- [ ] `DEFAULT_CLEANSING_CONFIG` がいずれの PageState 変更でも汚染されない
-- [ ] `npm run type-check` がパスする
-- [ ] 既存テスト `src/content/__tests__/pageState.test.ts` がパスする（必要に応じて汚染回帰テストを1件追加）
+- [x] `src/content/pageState.ts:109` の初期化がシャローコピーではなく独立コピーになっている（`structuredClone` または配列スプレッドによる複製）
+- [x] `contentStripKeywords` と `aiSummaryCleansingCustomPatterns` の両方がインスタンス間で参照共有されない
+- [x] `DEFAULT_CLEANSING_CONFIG` がいずれの PageState 変更でも汚染されない
+- [x] `npm run type-check` がパスする
+- [x] 既存テスト `src/content/__tests__/pageState.test.ts` がパスする（必要に応じて汚染回帰テストを1件追加）
 
 ## テスト戦略
 - 単体: `PageState` の独立性テスト — 2インスタンス生成 → 片方 push → もう片方と DEFAULT が汚染されないことを `expect(...).not.toContain` で検証。`structuredClone` 使用時は `contentStripKeywords` の要素数・内容が維持されることも検証
@@ -46,6 +46,6 @@ Scenario: 回帰 — loadSettings 後の配列置換が他インスタンスに�
 0.5pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

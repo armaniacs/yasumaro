@@ -31,11 +31,11 @@ Scenario: 境界 — timeout throw 時も同様にクリーンアップされる
   Then エントリーは idle なら削除され、後続の `runExclusive` は正常に取得できる
 
 ## 受け入れ基準
-- [ ] `src/background/pipeline/perUrlMutex.ts:65-87` の `runExclusiveOn` が `acquire` 失敗（queue-full / timeout）時にも `map.delete(url)` を条件付きで実行する（`!isLocked() && getQueueSize()===0` ガード維持）
-- [ ] 静的パス `runExclusiveStatic` でも同様のクリーンアップが行われる（`runExclusiveOn` 単一経路なら自動的に満たす）
-- [ ] 既存の `RecordingPipeline` 並行テストがパスする
-- [ ] queue-full 時の map 残留を検証する単体テストが1件以上追加されている
-- [ ] `npm run type-check` がパスする
+- [x] `src/background/pipeline/perUrlMutex.ts:65-87` の `runExclusiveOn` が `acquire` 失敗（queue-full / timeout）時にも `map.delete(url)` を条件付きで実行する（`!isLocked() && getQueueSize()===0` ガード維持）
+- [x] 静的パス `runExclusiveStatic` でも同様のクリーンアップが行われる（`runExclusiveOn` 単一経路なら自動的に満たす）
+- [x] 既存の `RecordingPipeline` 並行テストがパスする
+- [x] queue-full 時の map 残留を検証する単体テストが1件以上追加されている
+- [x] `npm run type-check` がパスする
 
 ## テスト戦略
 - 単体: `PerUrlMutex` の queue-full 回帰テスト — `maxQueueSize: 1` の小さい Mutex で 2件同時 `runExclusive` → 2件目が throw → `map.has(url) === false`（または `getQueueSize()===0 && !isLocked()` なら delete）を検証。`Mutex` を直接モックして `acquire` が throw するケースもカバー
@@ -46,6 +46,6 @@ Scenario: 境界 — timeout throw 時も同様にクリーンアップされる
 1pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

@@ -37,10 +37,10 @@ Scenario: 攻撃 — ネスト配列のpushでキャッシュ汚染が再現し�
 ```
 
 ## 受け入れ基準
-- [ ] `src/utils/ublockParser/cache.ts:108-114` の `getFromCache` が deep clone を返す（`structuredClone` または等価な深いコピー）
-- [ ] ネスト配列/オブジェクトを含む値でも呼び出し側の `push`/プロパティ書き換えが `PARSER_CACHE` に波及しないことを単体テストで検証
-- [ ] `src/utils/ublockParser/index.ts:120,251` の `getFromCache` 呼び出し経路で汚染が再現しないこと
-- [ ] `npx vitest run src/utils/__tests__/ublockParser*.test.ts` および `src/utils/ublockParser/__tests__/**` がパスする（既存29ケース維持）
+- [x] `src/utils/ublockParser/cache.ts:108-114` の `getFromCache` が deep clone を返す（`structuredClone` または等価な深いコピー）
+- [x] ネスト配列/オブジェクトを含む値でも呼び出し側の `push`/プロパティ書き換えが `PARSER_CACHE` に波及しないことを単体テストで検証
+- [x] `src/utils/ublockParser/index.ts:120,251` の `getFromCache` 呼び出し経路で汚染が再現しないこと
+- [x] `npx vitest run src/utils/__tests__/ublockParser*.test.ts` および `src/utils/ublockParser/__tests__/**` がパスする（既存29ケース維持）
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -104,7 +104,7 @@ grep -rn "getFromCache\|PARSER_CACHE" src/utils/ublockParser/
 - テストで `Map` の内容を直接参照しないこと — 必ず `getFromCache` 経由で検証すること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `getFromCache` がネスト構造でも汚染されないことがテストで証明されている
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（必要なら `cache.ts` のコメントに deep clone の意図を追記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `getFromCache` がネスト構造でも汚染されないことがテストで証明されている
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（必要なら `cache.ts` のコメントに deep clone の意図を追記）

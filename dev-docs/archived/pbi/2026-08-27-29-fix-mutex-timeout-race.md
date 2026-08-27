@@ -41,11 +41,11 @@ Scenario: エッジ — clearTimeout が確実に呼ばれる
   Then 当該タスクの `timeoutId` に対して `clearTimeout` が呼ばれ、遅延 reject が発火しない
 
 ## 受け入れ基準
-- [ ] `src/utils/Mutex.ts:71-84` のタイムアウトハンドラが `queue.has(taskId)` ガードまたは `clearTimeout` 競合防止ロジックを持つ
-- [ ] `release()` 側もタイムアウト済みタスクをスキップするガードがある
-- [ ] `nextTaskId` が上限に達した場合に衝突しない対応（ラップアラウンド、未使用ID探索、または `MAX_SAFE_INTEGER` リセット）が実装されている
-- [ ] 単一タスクに対する `resolve` / `reject` が二重に呼ばれないことをテストで保証する
-- [ ] `npx vitest run src/utils/__tests__/Mutex.test.ts` がパスする
+- [x] `src/utils/Mutex.ts:71-84` のタイムアウトハンドラが `queue.has(taskId)` ガードまたは `clearTimeout` 競合防止ロジックを持つ
+- [x] `release()` 側もタイムアウト済みタスクをスキップするガードがある
+- [x] `nextTaskId` が上限に達した場合に衝突しない対応（ラップアラウンド、未使用ID探索、または `MAX_SAFE_INTEGER` リセット）が実装されている
+- [x] 単一タスクに対する `resolve` / `reject` が二重に呼ばれないことをテストで保証する
+- [x] `npx vitest run src/utils/__tests__/Mutex.test.ts` がパスする
 
 ## テスト戦略
 - 単体: `vi.useFakeTimers` でタイムアウト境界の競合を再現（`release()` と `setTimeout` の同時発火）、`nextTaskId` を `MAX_SAFE_INTEGER - 1` に設定してラップアラウンドテスト
@@ -56,6 +56,6 @@ Scenario: エッジ — clearTimeout が確実に呼ばれる
 0.1pt（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
