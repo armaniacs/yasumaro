@@ -90,6 +90,18 @@ export function optionalCompileOptionsSource(value: unknown): CompileOptionsSour
   throw new Error('Invalid SQLite response: compileOptionsSource');
 }
 
+export function decodeStatusExtras(response: Record<string, unknown>): Record<string, unknown> {
+  return {
+    compileOptions: optionalStringArray(response.compileOptions, 'compileOptions'),
+    compileOptionsSource: optionalCompileOptionsSource(response.compileOptionsSource),
+    opfsMigrationV2Done: optionalBoolean(response.opfsMigrationV2Done, 'opfsMigrationV2Done'),
+    opfsMigrationV2LastAttemptedAt: optionalNullableString(response.opfsMigrationV2LastAttemptedAt, 'opfsMigrationV2LastAttemptedAt'),
+    opfsMigrationV2CompletedAt: optionalNullableString(response.opfsMigrationV2CompletedAt, 'opfsMigrationV2CompletedAt'),
+    opfsMigrationV2RecordCount: optionalNonNegativeNumber(response.opfsMigrationV2RecordCount, 'opfsMigrationV2RecordCount'),
+    idbMigrationV2Done: optionalBoolean(response.idbMigrationV2Done, 'idbMigrationV2Done'),
+  };
+}
+
 export function decodeOpfsSpikeReport(value: unknown): import('../offscreen/opfsSpike.js').OpfsSpikeReport {
   if (!isRecord(value)) throw new Error('Invalid SQLite response: report');
   return value as unknown as import('../offscreen/opfsSpike.js').OpfsSpikeReport;

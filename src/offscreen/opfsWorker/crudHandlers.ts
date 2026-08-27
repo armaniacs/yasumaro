@@ -11,15 +11,7 @@ import { buildWhereClause, buildOrderByClause, buildFtsTagMatchCondition } from 
 import type { QueryPayload } from './types.js';
 import { sqlExec, sqlQuery, type HandlerContext } from './handlers.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-
-function extractDomain(url: string): string | null {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, '');
-    return host || null;
-  } catch {
-    return null;
-  }
-}
+import { extractDomain } from '../../utils/domainUtils.js';
 
 export async function handleInsert(ctx: HandlerContext, record: BrowsingLogRecord): Promise<{ id: number }> {
   const domain = record.domain || extractDomain(record.url);

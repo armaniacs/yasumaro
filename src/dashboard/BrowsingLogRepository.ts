@@ -26,13 +26,9 @@ import {
   requiredNonNegativeNumber,
   requiredBoolean,
   requiredString,
-  optionalBoolean,
-  optionalNullableString,
-  optionalNonNegativeNumber,
   requiredRows,
   isBrowsingLogEntry,
-  optionalStringArray,
-  optionalCompileOptionsSource,
+  decodeStatusExtras,
 } from '../messaging/sqliteValidators.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { pickDefined } from '../utils/objectUtils.js';
@@ -268,14 +264,8 @@ export class BrowsingLogRepository {
           fallback: requiredBoolean(response.fallback, 'fallback'),
           fts5: requiredBoolean(response.fts5, 'fts5'),
           ...pickDefined({
-            compileOptions: optionalStringArray(response.compileOptions, 'compileOptions'),
-            compileOptionsSource: optionalCompileOptionsSource(response.compileOptionsSource),
             initError: response.initError ? String(response.initError) : undefined,
-            opfsMigrationV2Done: optionalBoolean(response.opfsMigrationV2Done, 'opfsMigrationV2Done'),
-            opfsMigrationV2LastAttemptedAt: optionalNullableString(response.opfsMigrationV2LastAttemptedAt, 'opfsMigrationV2LastAttemptedAt'),
-            opfsMigrationV2CompletedAt: optionalNullableString(response.opfsMigrationV2CompletedAt, 'opfsMigrationV2CompletedAt'),
-            opfsMigrationV2RecordCount: optionalNonNegativeNumber(response.opfsMigrationV2RecordCount, 'opfsMigrationV2RecordCount'),
-            idbMigrationV2Done: optionalBoolean(response.idbMigrationV2Done, 'idbMigrationV2Done'),
+            ...decodeStatusExtras(response as unknown as Record<string, unknown>),
           }),
         };
       } catch (error) {

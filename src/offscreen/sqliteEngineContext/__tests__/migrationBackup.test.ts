@@ -22,8 +22,8 @@ describe('migrationBackup', () => {
       expect(extractDomain('https://www.example.com/path')).toBe('example.com');
     });
 
-    it('パース失敗時は元の URL をそのまま返す', () => {
-      expect(extractDomain('not a url')).toBe('not a url');
+    it('パース失敗時は null を返す', () => {
+      expect(extractDomain('not a url')).toBeNull();
     });
   });
 
