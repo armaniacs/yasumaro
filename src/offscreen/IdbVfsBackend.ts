@@ -10,7 +10,7 @@ import type {
 } from './StorageBackend.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from './schema.js';
-import { extractDomain } from './sqliteEngineContext.js';
+import { extractDomain, DB_FILENAME } from './sqliteEngineContext.js';
 import { buildQuerySpec, QUERY_CAPS } from './queryPlan.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { withTransaction } from './opfsWorker/handlers.js';
@@ -344,6 +344,7 @@ export class IdbVfsBackend implements StorageBackend {
     this.ensureDb();
     return {
       initialized: true,
+      path: `IDB:${DB_FILENAME}`,
       fallback: false,
       fts5: this.engine.fts5Available,
       supportsBinaryBackup: false,

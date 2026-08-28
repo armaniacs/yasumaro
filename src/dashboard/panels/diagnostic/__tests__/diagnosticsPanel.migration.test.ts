@@ -121,4 +121,80 @@ describe('diagnosticsPanel — legacy migration status', () => {
     const migrationStats = container.querySelector('#diagMigrationStats');
     expect(migrationStats?.textContent).toContain('Failed to check');
   });
+
+  it('shows checking (not a warning) when OPFS migration has not been attempted yet', async () => {
+    vi.mocked(diagnosticsCollector).collect.mockResolvedValue(baseSnapshot({
+      opfsMigrationV2Done: false,
+      opfsMigrationV2LastAttemptedAt: null,
+    }));
+
+    await panel.mount(container);
+    await panel.load?.();
+
+    const migrationStats = container.querySelector('#diagMigrationStats');
+    expect(migrationStats?.textContent).toContain('Checking...');
+    expect(migrationStats?.textContent).not.toContain('Not completed');
+  });
+
+  it('shows pending (warning) when OPFS migration was attempted but not done', async () => {
+    vi.mocked(diagnosticsCollector).collect.mockResolvedValue(baseSnapshot({
+      opfsMigrationV2Done: false,
+      opfsMigrationV2LastAttemptedAt: '2026-08-29T00:00:00.000Z',
+    }));
+
+    await panel.mount(container);
+    await panel.load?.();
+
+    const migrationStats = container.querySelector('#diagMigrationStats');
+    expect(migrationStats?.textContent).toContain('Not completed');
+    expect(migrationStats?.textContent).toContain('Pending');
+  });
+
+  it('shows not-applicable (no warning) for IDB when done=false but no legacy IDB DB was found', async () => {
+    vi.mocked(diagnosticsCollector).collect.mockResolvedValue(baseSnapshot({
+      idbMigrationV2Done: false,
+      idbLegacyDbName: null,
+    }));
+
+    await panel.mount(container);
+    await panel.load?.();
+
+    const migrationStats = container.querySelector('#diagMigrationStats');
+    expect(migrationStats?.textContent).toContain('Not applicable');
+    expect(migrationStats?.textContent).toContain('Completed');
+
+    // The IDB path row's value must not be styled as a warning/masked — legacy DB confirmed absent.
+    const rows = Array.from(migrationStats?.querySelectorAll('.diag-stat-row') ?? []);
+    const idbRow = rows.find((r) => r.textContent?.includes('IDB path'));
+    expect(idbRow?.querySelector('.diag-stat-value')?.classList.contains('diag-stat-masked')).toBe(false);
+  });
+
+  it('shows pending (warning) for IDB when done=false and a legacy IDB DB was found', async () => {
+    vi.mocked(diagnosticsCollector).collect.mockResolvedValue(baseSnapshot({
+      idbMigrationV2Done: false,
+      idbLegacyDbName: 'idb-batch-atomic',
+    }));
+
+    await panel.mount(container);
+    await panel.load?.();
+
+    const migrationStats = container.querySelector('#diagMigrationStats');
+    expect(migrationStats?.textContent).toContain('Pending');
+    expect(migrationStats?.textContent).toContain('idb-batch-atomic');
+  });
+
+  it('shows current engine, record count, and storage used', async () => {
+    vi.mocked(diagnosticsCollector).collect.mockResolvedValue({
+      ...baseSnapshot(),
+      storage: { bytesUsedKb: '42.0', savedUrls: '123' },
+    });
+
+    await panel.mount(container);
+    await panel.load?.();
+
+    const migrationStats = container.querySelector('#diagMigrationStats');
+    expect(migrationStats?.textContent).toContain('OPFS');
+    expect(migrationStats?.textContent).toContain('123');
+    expect(migrationStats?.textContent).toContain('42.0 KB');
+  });
 });

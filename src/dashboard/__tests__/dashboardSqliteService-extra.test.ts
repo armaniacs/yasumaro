@@ -150,7 +150,9 @@ describe('dashboardSqliteService — additional exports', () => {
         opfsMigrationV2Done: undefined,
         opfsMigrationV2LastAttemptedAt: null,
         opfsMigrationV2CompletedAt: null,
-        opfsMigrationV2RecordCount: 0,
+        opfsMigrationV2RecordCount: null,
+        opfsLegacyDbPath: null,
+        idbLegacyDbName: null,
       });
     });
 
@@ -163,7 +165,9 @@ describe('dashboardSqliteService — additional exports', () => {
         opfsMigrationV2Done: undefined,
         opfsMigrationV2LastAttemptedAt: null,
         opfsMigrationV2CompletedAt: null,
-        opfsMigrationV2RecordCount: 0,
+        opfsMigrationV2RecordCount: null,
+        opfsLegacyDbPath: null,
+        idbLegacyDbName: null,
       });
     });
 

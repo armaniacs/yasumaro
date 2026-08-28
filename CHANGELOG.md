@@ -33,6 +33,21 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.7.87] - 2026-08-29
+
+### Fixed
+
+- `offscreen/recordsRepo.ts` の `getStatus()` が各バックエンド（OPFS Worker / IndexedDB / Fallback）の返す実際の `path` を汎用の `DB_FILENAME` で常に上書きしていたため、診断パネルの「現在使用中のエンジン」が常に「不明」と表示される問題を修正。OPFS Worker側の `compileOptionsSource: 'opfs-worker'` 未設定、IdbVfsBackend/FallbackStorageAdapterの `path` 未設定も併せて解消
+- `sqliteMessageHandlers.ts` の `handleStatus()` が `opfsMigrationV2RecordCount` 未書き込み時（移行処理未実行）にデフォルト値 `0` を返し、「実際に0件移行した」状態と区別できず矛盾表示していた問題を修正。`optionalNullableNonNegativeNumber` を新設し `null`（未実行）を区別できるように変更
+
+### Added
+
+- 診断パネル「旧データベース移行」セクションを拡充。「現在使用中のエンジン」（OPFS/IndexedDB/フォールバック、OPFSには推奨タグとファイル名を併記）、「保存データ件数」「ストレージ使用量」を新規表示
+- OPFS経路の状態表示を2値（完了/未完了）から4状態（完了／対象外（旧データなし）／確認中／未完了）に拡張。`opfsMigrationV2LastAttemptedAt`/`CompletedAt`/`RecordCount` を用いて「移行処理が一度も実行されていない一時的な状態」と「実行したが未完了の警告状態」を区別
+- IDB経路にも同様の「対象外」判定を追加。`sqliteMessageHandlers.ts` の `handleStatus()` に旧OPFS/IDBデータベースの実在確認（`oldOpfsDbExists`/`oldIdbDbExists`）を追加し、「旧OPFSデータベースの検出」「旧IndexedDBデータベースの検出」として表示。旧データが実在しないと確認できた場合は警告色にせず「対象外」と表示し、実在する場合のみ本当の「未完了」警告を出す
+- OPFS移行の最終試行日時・完了日時・移行件数の詳細行を追加。データ保存済みなのに「確認中」が続く場合のヒント（専用Workerからのchrome.storage.localアクセス制限の可能性）を表示
+- `docs/MIGRATION_GUIDE.md`・`docs/STORAGE_MODES.md`（日英）を新しい診断パネル表示内容に合わせて更新。絶対ファイルパスがブラウザのサンドボックス仕様上取得不可能である旨を明記
+
 ## [6.7.86] - 2026-08-28
 
 ### Refactor

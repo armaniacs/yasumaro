@@ -1541,10 +1541,70 @@
     "message": "未完了"
   },
   "diagMigrationFreshInstallNote": {
-    "message": "新規インストールでは対象のデータがないため、「未完了」と表示されることがあります。"
+    "message": "新規インストール直後は、移行処理が一度実行されるまで「確認中」と表示されることがあります。これは正常です。"
   },
   "diagMigrationGuideLink": {
     "message": "移行ガイド"
+  },
+  "diagMigrationCheckingSuffix": {
+    "message": "確認中"
+  },
+  "diagMigrationNotApplicableSuffix": {
+    "message": "対象外（旧データなし）"
+  },
+  "diagMigrationCurrentEngine": {
+    "message": "現在使用中のエンジン"
+  },
+  "diagMigrationEngineOpfs": {
+    "message": "OPFS"
+  },
+  "diagMigrationEngineIdb": {
+    "message": "IndexedDB"
+  },
+  "diagMigrationEngineFallback": {
+    "message": "フォールバック（chrome.storage）"
+  },
+  "diagMigrationEngineUnknown": {
+    "message": "不明"
+  },
+  "diagMigrationRecommended": {
+    "message": "推奨"
+  },
+  "diagMigrationOpfsLegacyFound": {
+    "message": "旧OPFSデータベースの検出"
+  },
+  "diagMigrationIdbLegacyFound": {
+    "message": "旧IndexedDBデータベースの検出"
+  },
+  "diagMigrationYes": {
+    "message": "あり"
+  },
+  "diagMigrationNo": {
+    "message": "なし"
+  },
+  "diagMigrationNoAbsolutePath": {
+    "message": "OPFS・IndexedDBともにブラウザのサンドボックス内に保存され、OS上の実ファイルパスはWeb APIから取得できない仕様です（意図的な非公開）。上記はブラウザ内部の仮想パス／識別名です。"
+  },
+  "diagMigrationIdbExplanation": {
+    "message": "IndexedDB経路は、OPFS（Origin Private File System）のディレクトリAPIが利用できない環境向けのフォールバックです。該当しうる例: 拡張機能の初回起動直後でOPFS用のoffscreenドキュメント/Workerがまだ初期化されていない、ブラウザがOPFSのディレクトリAPIやWorker内でのSyncAccessHandleに未対応、シークレットモードなどストレージ機能が制限された環境。「現在使用中のエンジン」がOPFSであれば、この項目は通常「対象外」の意味合いで無視して構いません。"
+  },
+  "diagMigrationRecordCount": {
+    "message": "保存データ件数"
+  },
+  "diagMigrationStorageUsed": {
+    "message": "ストレージ使用量（拡張機能全体）"
+  },
+  "diagMigrationOpfsLastAttempted": {
+    "message": "OPFS 最終試行日時"
+  },
+  "diagMigrationOpfsCompletedAt": {
+    "message": "OPFS 完了日時"
+  },
+  "diagMigrationOpfsRecordCount": {
+    "message": "OPFS 移行件数"
+  },
+  "diagMigrationCheckingStaleHint": {
+    "message": "データは既に保存されているのに「確認中」が続く場合、OPFS Worker内の移行処理がステータスフラグを書き込めていない可能性があります（専用Worker（Worker()コンストラクタで生成されるスレッド）からchrome.storage.localにアクセスできないケースが原因として考えられます）。保存済みデータには影響しません。拡張機能の再読み込みで解消することがあります。解消しない場合も情報表示上の問題として扱って差し支えありません。"
   },
   "diagSqliteTitle": {
     "message": "SQLite データベース"

@@ -13,7 +13,7 @@ export async function handleGetStatus(
   ctx: HandlerContext,
   fts5Available: boolean,
   cachedCompileOptions: string[] | null,
-): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; count: number; compileOptions?: string[] }> {
+): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; count: number; compileOptions?: string[]; compileOptionsSource: 'opfs-worker' }> {
   let count = 0;
   await sqlQuery(ctx, 'SELECT COUNT(*) AS c FROM browsing_logs', [], (row) => { count = Number(row.c); });
 
@@ -23,6 +23,7 @@ export async function handleGetStatus(
     fallback: false,
     fts5: fts5Available,
     count,
+    compileOptionsSource: 'opfs-worker',
     ...pickDefined({ compileOptions: cachedCompileOptions ?? undefined }),
   };
 }

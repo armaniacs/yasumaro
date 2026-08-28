@@ -1601,10 +1601,70 @@
     "message": "Pending"
   },
   "diagMigrationFreshInstallNote": {
-    "message": "On fresh installs there is no legacy data to migrate, so \"not completed\" is expected."
+    "message": "On fresh installs, the status may briefly show \"Checking...\" until migration runs once — this is expected."
   },
   "diagMigrationGuideLink": {
     "message": "Migration guide"
+  },
+  "diagMigrationCheckingSuffix": {
+    "message": "Checking..."
+  },
+  "diagMigrationNotApplicableSuffix": {
+    "message": "Not applicable (no legacy data)"
+  },
+  "diagMigrationCurrentEngine": {
+    "message": "Current engine"
+  },
+  "diagMigrationEngineOpfs": {
+    "message": "OPFS"
+  },
+  "diagMigrationEngineIdb": {
+    "message": "IndexedDB"
+  },
+  "diagMigrationEngineFallback": {
+    "message": "Fallback (chrome.storage)"
+  },
+  "diagMigrationEngineUnknown": {
+    "message": "Unknown"
+  },
+  "diagMigrationRecommended": {
+    "message": "recommended"
+  },
+  "diagMigrationOpfsLegacyFound": {
+    "message": "Legacy OPFS DB detected"
+  },
+  "diagMigrationIdbLegacyFound": {
+    "message": "Legacy IndexedDB DB detected"
+  },
+  "diagMigrationYes": {
+    "message": "Yes"
+  },
+  "diagMigrationNo": {
+    "message": "No"
+  },
+  "diagMigrationNoAbsolutePath": {
+    "message": "Both OPFS and IndexedDB live inside the browser's storage sandbox — the underlying OS file path is intentionally not exposed by any Web API. The values above are the browser-internal virtual path / identifier, which is the most specific location info available."
+  },
+  "diagMigrationIdbExplanation": {
+    "message": "The IndexedDB path is a fallback used when the OPFS (Origin Private File System) directory API is unavailable. This can happen when: the extension just started and the OPFS offscreen document/Worker hasn't initialized yet, the browser lacks OPFS directory API or in-Worker SyncAccessHandle support, or storage is restricted (e.g. incognito mode). If \"Current engine\" above shows OPFS, this row can generally be read as not applicable."
+  },
+  "diagMigrationRecordCount": {
+    "message": "Saved record count"
+  },
+  "diagMigrationStorageUsed": {
+    "message": "Storage used (whole extension)"
+  },
+  "diagMigrationOpfsLastAttempted": {
+    "message": "OPFS last attempted"
+  },
+  "diagMigrationOpfsCompletedAt": {
+    "message": "OPFS completed at"
+  },
+  "diagMigrationOpfsRecordCount": {
+    "message": "OPFS records migrated"
+  },
+  "diagMigrationCheckingStaleHint": {
+    "message": "If this stays \"Checking...\" even though data is already saved, the migration routine inside the OPFS Worker may not be able to write its status flag (chrome.storage.local can be inaccessible from a dedicated Worker context). This does not affect your saved data — reloading the extension may help; otherwise it can be treated as informational."
   },
   "diagSqliteTitle": {
     "message": "SQLite Database"

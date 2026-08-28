@@ -89,7 +89,11 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
   const backend = await engine.getBackend();
   const result = await backend.getStatus();
   if ('error' in result) return result;
-  return { success: true, ...result, path: DB_FILENAME };
+  // Backends that already know their real path (e.g. OPFS worker returns
+  // 'OPFS:<file>') must not be overwritten with the generic DB_FILENAME —
+  // that erased the OPFS/IDB distinction the diagnostics panel relies on.
+  const path = result.path ?? DB_FILENAME;
+  return { success: true, ...result, path };
 }
 
 /**
