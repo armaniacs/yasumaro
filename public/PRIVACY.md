@@ -188,6 +188,11 @@ v4.2.1以降、以下の機能が追加されました：
    - ユーザーが選択したAIプロバイダーAPIへの接続（Google Gemini API、OpenAI互換API等）
    - ユーザーが指定するカスタムAPIエンドポイントへの接続
 
+4. **宣言的ネットワークリクエスト権限 (`declarativeNetRequest`)**:
+   - ユーザーが設定したOllamaサーバーへのリクエストからのみ、`Origin` ヘッダーを削除するために使用されます
+   - Ollamaのデフォルト設定でのCORS拒否を回避するためのもので、対象はOllamaのURLホストに限定されます
+   - リクエスト内容の閲覧・送信先の変更は行いません（ヘッダー削除のみ）
+
 **重要**: すべてのデータ処理はユーザーの明示的な設定に基づいて行われます。開発者はいかなるデータも収集しません。
 
 ---
@@ -352,6 +357,11 @@ This extension requires the following permissions:
    - Connection to Obsidian Local REST API (local server)
    - Connection to user-selected AI provider APIs (Google Gemini, OpenAI-compatible APIs, etc.)
    - Connection to user-specified custom API endpoints
+
+4. **Declarative Net Request Permission (`declarativeNetRequest`)**:
+   - Used only to remove the `Origin` header from requests to the Ollama server the user has configured
+   - Works around Ollama's default CORS rejection; scoped strictly to the configured Ollama host
+   - Does not inspect request content or change the destination (header removal only)
 
 **Important**: All data processing is based on your explicit configuration. The developer does not collect any data.
 

@@ -119,6 +119,14 @@ describe('BuiltInAIClient', () => {
             expect(result).toBe('unavailable');
         });
 
+        test('availability() は create() と同じ expectedOutputs を指定して呼ぶ', async () => {
+            mockLanguageModel.availability.mockResolvedValueOnce('available');
+            await client.getAvailability();
+            expect(mockLanguageModel.availability).toHaveBeenCalledWith({
+                expectedOutputs: [{ type: 'text', languages: ['ja'] }],
+            });
+        });
+
         test('キャッシュされた availability を再利用する（2回目は API を呼ばない）', async () => {
             mockLanguageModel.availability.mockResolvedValueOnce('available');
             const result1 = await client.getAvailability();

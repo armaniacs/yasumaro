@@ -68,6 +68,13 @@ describe('builtInAiDiagnosticsService', () => {
       expect(result.guidance).toBeNull();
     });
 
+    test('availability() は create() と同じ expectedOutputs を指定して呼ぶ', async () => {
+      await checkBuiltInAiAvailability();
+      expect(mockLanguageModel.availability).toHaveBeenCalledWith({
+        expectedOutputs: [{ type: 'text', languages: ['ja'] }],
+      });
+    });
+
     test('downloadable を返す', async () => {
       mockLanguageModel.availability.mockResolvedValueOnce('downloadable');
       const result = await checkBuiltInAiAvailability();

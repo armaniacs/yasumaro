@@ -495,6 +495,27 @@ vi.mock('../reviewSummaryAlarm.js', () => mockReviewSummaryAlarm);
 vi.mock('../reviewSummaryGenerator.js', () => ({
     createReviewSummaryGenerator: vi.fn(() => mockReviewGenerator),
 }));
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+    const actual = (await importOriginal()) as Record<string, unknown>;
+    return {
+        ...actual,
+        settingsRepository: {
+            observe: vi.fn(),
+            get: vi.fn().mockResolvedValue({}),
+            getAll: vi.fn().mockResolvedValue({}),
+            set: vi.fn().mockResolvedValue(undefined),
+            setAll: vi.fn().mockResolvedValue(undefined),
+            getMany: vi.fn().mockResolvedValue({}),
+        },
+    };
+});
+vi.mock('../net/ollamaOriginRule.js', () => ({
+    syncOllamaOriginRule: vi.fn().mockResolvedValue(undefined),
+    OLLAMA_ORIGIN_RULE_ID: 1,
+}));
+vi.mock('../net/ollamaSettingsObserver.js', () => ({
+    createOllamaSettingsObserver: vi.fn().mockReturnValue(vi.fn()),
+}));
 
 // Import the extracted functions from service-worker
 import * as serviceWorker from '../service-worker.js';

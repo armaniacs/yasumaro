@@ -15,6 +15,29 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { updateConsentBadge } from '../consentBadge.js';
 import { flushPendingRecords } from '../pendingSqliteQueue.js';
 import type { SqliteClient } from '../sqliteClient.js';
+import { StorageKeys } from '../../utils/storage/types.js';
+import { syncOllamaOriginRule } from '../net/ollamaOriginRule.js';
+import { getRegistryEntry } from '../ai/providerRegistry.js';
+
+const OLLAMA_DEFAULT_BASE_URL = getRegistryEntry('ollama')?.defaultBaseUrl ?? 'http://localhost:11434/v1';
+
+/**
+ * 現在のOllama baseUrl設定に合わせてOriginヘッダー削除ルールを同期する。
+ * 失敗してもextensionの他機能をブロックしないよう、ここで例外を握りつぶしログのみ行う。
+ */
+async function syncOllamaOriginRuleFromSettings(context: string): Promise<void> {
+    try {
+        const settings = await getSettings();
+        await syncOllamaOriginRule(settings[StorageKeys.OLLAMA_BASE_URL] ?? OLLAMA_DEFAULT_BASE_URL);
+    } catch (error) {
+        logWarn(
+            `Ollama Origin header rule sync failed on ${context}`,
+            { error: errorMessage(error) },
+            undefined,
+            'service-worker'
+        );
+    }
+}
 
 export interface LifecycleHandlerContext {
     /** Mutable flag — the handler may set it to true */
@@ -31,6 +54,7 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
     async function handleInstalled(details: { reason?: string; previousVersion?: string }): Promise<void> {
         if (details.reason === 'install') {
             logInfo('Service Worker installed', {}, 'service-worker');
+            await syncOllamaOriginRuleFromSettings('install');
         } else if (details.reason === 'update') {
             logInfo(`Service Worker updated from ${details.previousVersion}`, {}, 'service-worker');
 
@@ -38,6 +62,7 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
             if (ctx.recordingCache) ctx.recordingCache.invalidateSettingsCache();
             const settings = await getSettings();
             await updateDomainFilterCache(settings);
+            await syncOllamaOriginRuleFromSettings('update');
 
             // Migrate legacy privacy consent for existing users
             // This ensures users who had boolean consent get the new object format
@@ -81,46 +106,45 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
         }
 
         // 既にキャッシュが初期化済みの場合はスキップ（onInstalledで実行済み）
-        if (ctx.isCacheInitialized.value) {
+        if (!ctx.isCacheInitialized.value) {
+            try {
+                // 関連キャッシュを無効化して再読み込みを強制
+                if (ctx.recordingCache) await ctx.recordingCache.invalidateSettingsCache();
+                const settings = await getSettings();
+                await updateDomainFilterCache(settings);
+                ctx.isCacheInitialized.value = true;
+
+                // Reload recording cache from session
+                if (ctx.recordingCache) await ctx.recordingCache.loadCacheFromSession();
+
+                // Reload rate limiter from session
+                await ctx.rateLimiter.reload();
+
+                logInfo('Service Worker startup - cache rehydration complete', {}, 'service-worker');
+            } catch (error) {
+                await logError(
+                    'Service Worker startup - cache rehydration failed',
+                    { error: errorMessage(error) },
+                    ErrorCode.STORAGE_READ_FAILURE,
+                    'service-worker'
+                );
+            }
+
+            // 期限切れの権限データをクリーンアップ（起動時のみ実行）
+            try {
+                await cleanupOldDeniedEntries(90);
+                await cleanupDismissedEntries(7);
+                logDebug('Permission cleanup completed on startup', {}, 'service-worker');
+            } catch (error) {
+                logWarn(
+                    'Permission cleanup failed on startup',
+                    { error: errorMessage(error) },
+                    undefined,
+                    'service-worker'
+                );
+            }
+        } else {
             logDebug('Cache already initialized, skipping startup rehydration', {}, 'service-worker');
-            return;
-        }
-
-        try {
-            // 関連キャッシュを無効化して再読み込みを強制
-            if (ctx.recordingCache) await ctx.recordingCache.invalidateSettingsCache();
-            const settings = await getSettings();
-            await updateDomainFilterCache(settings);
-            ctx.isCacheInitialized.value = true;
-
-            // Reload recording cache from session
-            if (ctx.recordingCache) await ctx.recordingCache.loadCacheFromSession();
-
-            // Reload rate limiter from session
-            await ctx.rateLimiter.reload();
-
-            logInfo('Service Worker startup - cache rehydration complete', {}, 'service-worker');
-        } catch (error) {
-            await logError(
-                'Service Worker startup - cache rehydration failed',
-                { error: errorMessage(error) },
-                ErrorCode.STORAGE_READ_FAILURE,
-                'service-worker'
-            );
-        }
-
-        // 期限切れの権限データをクリーンアップ（起動時のみ実行）
-        try {
-            await cleanupOldDeniedEntries(90);
-            await cleanupDismissedEntries(7);
-            logDebug('Permission cleanup completed on startup', {}, 'service-worker');
-        } catch (error) {
-            logWarn(
-                'Permission cleanup failed on startup',
-                { error: errorMessage(error) },
-                undefined,
-                'service-worker'
-            );
         }
     }
 

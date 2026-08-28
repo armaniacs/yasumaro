@@ -7,5 +7,4 @@
  * errors on new imports from this path.
  * @deprecated Use SettingsRepository instead
  */
-// eslint-disable-next-line no-restricted-imports -- shim re-export is intentional
 export * from './settingsStore.legacy.js';

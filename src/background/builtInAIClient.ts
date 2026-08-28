@@ -50,13 +50,18 @@ export interface LanguageModelDownloadMonitor {
 }
 
 interface LanguageModelGlobal {
-    availability(): Promise<BuiltInAIAvailability>;
+    availability(options?: {
+        expectedOutputs?: Array<{ type: 'text'; languages: string[] }>;
+    }): Promise<BuiltInAIAvailability>;
     create(options?: {
         initialPrompts?: Array<{ role: string; content: string }>;
         monitor?: (monitor: LanguageModelDownloadMonitor) => void;
         expectedOutputs?: Array<{ type: 'text'; languages: string[] }>;
     }): Promise<LanguageModelSession>;
 }
+
+/** create()に渡す出力言語指定と揃える。availability()判定とcreate()実行で異なる言語を指定すると結果が食い違うため定数化。 */
+const EXPECTED_OUTPUTS: Array<{ type: 'text'; languages: string[] }> = [{ type: 'text', languages: ['ja'] }];
 
 declare global {
     var LanguageModel: LanguageModelGlobal | undefined;
@@ -129,7 +134,7 @@ export class BuiltInAIClient {
             return 'unavailable';
         }
         try {
-            const status = await languageModel.availability();
+            const status = await languageModel.availability({ expectedOutputs: EXPECTED_OUTPUTS });
             this._availabilityCache = status;
             return status;
         } catch (error: unknown) {
@@ -201,7 +206,7 @@ export class BuiltInAIClient {
         try {
             session = await languageModel.create({
                 initialPrompts: [{ role: 'system', content: SYSTEM_PROMPT }],
-                expectedOutputs: [{ type: 'text', languages: ['ja'] }]
+                expectedOutputs: EXPECTED_OUTPUTS
             });
         } catch (error: unknown) {
             addLog(LogType.ERROR, 'BuiltInAIClient: Failed to create session', { error: errorMessage(error) });

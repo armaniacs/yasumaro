@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.62` リリース。
+> - 現時点では `v6.7.85` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,30 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.85] - 2026-08-28
+
+### Fixed
+
+- Ollama Originヘッダー削除ルールに `initiatorDomains: [chrome.runtime.id]` を追加し、拡張機能自身からのリクエストにのみ適用されるよう限定。修正前は任意のウェブサイトが `fetch('http://localhost:11434/...')` でOriginヘッダーを削除でき、OllamaのCORS保護を意図せずバイパスしていた
+- Ollama設定Observerに前回値比較（`prevOllamaBaseUrl` クロージャ保持）を追加。修正前は `SettingsRepository.observe` が渡す `newValue` 全体に `OLLAMA_BASE_URL` が常に含まれるため `===undefined` ガードが到達不能で、任意の設定変更のたびに `chrome.declarativeNetRequest.updateDynamicRules` が冗長発火していた
+- `handleStartup` から `syncOllamaOriginRuleFromSettings('startup')` を削除。Observer が差分検知する前提では warm wake 毎の `getSettings()` + `updateDynamicRules` IPC が不要。ルール登録は `onInstalled`（install/update）と Observer でカバー
+
+## [6.7.84] - 2026-08-28
+
+### Added
+
+- OllamaプロバイダのbaseUrlホスト宛リクエストから、`chrome.declarativeNetRequest` により `Origin` ヘッダーを強制削除する機能を追加。OllamaのデフォルトCORS設定（`OLLAMA_ORIGINS`未設定時）による拒否を、Ollama側の設定変更なしに回避できる。ルールはサービスワーカー起動時とOllama baseUrl設定変更時に同期され、対象はOllamaのホスト+ポートに限定（LM Studio・Obsidian REST API等の他ローカルプロバイダには影響しない）
+
+### Fixed
+
+- Chrome内蔵AI（Prompt API / Gemini Nano）呼び出し時、`LanguageModel.availability()` に出力言語指定（`expectedOutputs`）が渡されておらず「No output language was specified」エラーが記録される問題を修正。`create()` と同じ `expectedOutputs` を `availability()` にも渡すよう統一
+
+## [6.7.83] - 2026-08-28
+
+### Fixed
+
+- 設定画面でAIプロバイダー優先度（1〜3位）を変更して保存しても `AI_PROVIDER_PRIORITY_LIST` が保存されず、実際の要約処理に反映されない問題を修正。保存処理にフォームの優先度スロット収集を組み込んだ
 
 ## [6.7.82] - 2026-08-27
 

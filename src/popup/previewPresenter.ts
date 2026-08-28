@@ -160,8 +160,6 @@ export class PreviewPresenter {
     cleanseStats?: { hardStripRemoved: number; keywordStripRemoved: number; totalRemoved: number }
   ): Promise<ConfirmationResult> {
     const modal = this.view.getModal();
-    const previewContent = this.view.getPreviewContent();
-    const modalBody = modal?.querySelector('.modal-body');
 
     this.initializeModalEvents();
 

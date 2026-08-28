@@ -16,6 +16,7 @@ import { ChromeStoragePort } from '../utils/storage/storagePort.js';
 import { ChromeDomainPolicyPort } from './domainPolicyPort.js';
 import { ContentKernel, IdleScheduler } from './contentKernel.js';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- graphify edge: keep type link between content script and visitGate
 import type { VisitState, VisitGateThresholds } from './visitGate.js';
 
 // Type-only import to establish graphify edge between content script and
