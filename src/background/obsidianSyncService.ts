@@ -10,32 +10,42 @@ import { SqliteClient } from './sqliteClient.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { StorageKeys } from '../utils/storage/types.js';
+import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
 import type { SyncTarget } from './syncTargets/SyncTarget.js';
+import { isCredentialConfigured } from './syncTargets/settingsConfiguredCheck.js';
+import { SyncBatchRunner, type PendingSyncRow } from './syncTargets/SyncBatchRunner.js';
 
 export class ObsidianSyncService implements SyncTarget {
   private obsidianClient: ObsidianClient;
   private sqliteClient: SqliteClient;
+  private settingsReader: SettingsReader;
+  private batchRunner: SyncBatchRunner;
 
   static readonly BATCH_SIZE = 5;
   static readonly BATCH_INTERVAL_MS = 30_000;
 
-  constructor(obsidianClient: ObsidianClient, sqliteClient: SqliteClient) {
+  constructor(obsidianClient: ObsidianClient, sqliteClient: SqliteClient, settingsReader: SettingsReader = settingsRepository) {
     this.obsidianClient = obsidianClient;
     this.sqliteClient = sqliteClient;
+    this.settingsReader = settingsReader;
+    this.batchRunner = new SyncBatchRunner({
+      targetName: 'ObsidianSync',
+      // WHY: no gistSynced-style query filter exists for obsidian_synced, so pending
+      // rows are still fetched via a plain page and filtered client-side (kept from
+      // the pre-extraction behavior); BATCH_SIZE policy now lives in the runner.
+      listPending: (limit) => this.listPending(limit),
+      markSynced: (row) => this.syncRow(row),
+      batchSize: ObsidianSyncService.BATCH_SIZE,
+      maxIterations: 1,
+    });
   }
 
   /**
    * Check if Obsidian is configured (has API key in storage).
    */
   async isConfigured(): Promise<boolean> {
-    try {
-      const result = await chrome.storage.local.get(StorageKeys.OBSIDIAN_API_KEY);
-      const key = result[StorageKeys.OBSIDIAN_API_KEY];
-      return typeof key === 'string' && key.length >= 16;
-    } catch {
-      return false;
-    }
+    return isCredentialConfigured(this.settingsReader, StorageKeys.OBSIDIAN_API_KEY, 16);
   }
 
   /**
@@ -77,45 +87,30 @@ export class ObsidianSyncService implements SyncTarget {
       return 0;
     }
 
-    try {
-const result = await this.sqliteClient.query({
-  limit: ObsidianSyncService.BATCH_SIZE,
-  orderBy: 'created_at',
-  orderDir: 'DESC',
-});
+    return this.batchRunner.run();
+  }
 
-      if (!result.success) {
-        throw new Error(`Obsidian sync query failed: ${result.error.message}`);
-      }
-      if (result.data.rows.length === 0) {
-        return 0;
-      }
+  /** SyncBatchRunner ListPending port: fetches up to `limit` rows and filters unsynced ones client-side. */
+  private async listPending(limit: number): Promise<PendingSyncRow[]> {
+    const result = await this.sqliteClient.query({
+      limit,
+      orderBy: 'created_at',
+      orderDir: 'DESC',
+    });
 
-      const unsyncedRows = result.data.rows.filter((r) => !r.obsidian_synced);
-      if (unsyncedRows.length === 0) {
-        return 0;
-      }
-
-      let syncedCount = 0;
-      for (const row of unsyncedRows) {
-        if (row.id === undefined) continue;
-        const result = await this.sync(row.id, row.url, row.title ?? null, row.summary ?? null);
-        if (result.success) {
-          syncedCount++;
-        }
-      }
-
-      if (syncedCount > 0) {
-        addLog(LogType.INFO, 'ObsidianSync: batch completed', { synced: syncedCount });
-      }
-
-      return syncedCount;
-    } catch (error) {
-      addLog(LogType.WARN, 'ObsidianSync: batch failed', {
-        error: errorMessage(error),
-      });
-      throw error;
+    if (!result.success) {
+      throw new Error(`Obsidian sync query failed: ${result.error.message}`);
     }
+
+    return result.data.rows
+      .filter((row) => !row.obsidian_synced && row.id !== undefined)
+      .map((row) => ({ id: row.id as number, url: row.url, title: row.title ?? null, summary: row.summary ?? null }));
+  }
+
+  /** SyncBatchRunner MarkSynced port: syncs one row (sync() itself marks it via sqliteClient.mutate). */
+  private async syncRow(row: PendingSyncRow): Promise<boolean> {
+    const result = await this.sync(row.id, row.url, row.title, row.summary);
+    return result.success;
   }
 
   /**
