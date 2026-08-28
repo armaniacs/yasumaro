@@ -40,26 +40,13 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
-### 2026-08-27 OfflineQueue/QueuePolicy統合 — 2件完了（依存関係のため統合実装）
-
-- 2026-08-27-21-feat-collapse-offline-queue-facade.md（RICE 157 — `OfflineNetworkQueue` を `QueuePort<OfflineJob>` 注入のファサードに縮退し `dequeue`/`peek` のTTL独自実装を撤去、`PersistentRetryQueue.filterExpiredAndOverRetry` に一本化。`NoOpQueuePort` をコンストラクタ注入し `NoOpOfflineNetworkQueue` は継承なしで動作。`AlarmScheduler`抽出は対象4ファイル外・`sessionAlarmsManager.ts`/`logger/flushScheduler.ts`が既に独立実装済みのため見送り。type-check / 8365 tests PASS）
-- 2026-08-27-28-feat-unify-queue-policy.md（RICE 140 — `PersistentRetryQueue.filterExpiredAndOverRetry(items)` を新設し `flush`/`flushBatch` 内部からも利用する一箇所化を実施。`estimatePayloadSize` を `src/background/queue/payload.ts` に抽出し `persistentRetryQueue.ts`/`pendingChromeStorageQueue.ts` で共有。drop/truncateは元々ポリシー分離済みと判明（chrome-storageのpatch truncateは汎用化不可のため踏襲）。type-check / 8365 tests PASS）
-
-### 2026-08-28 MultiKey OptimisticLock 抽出 — 1件完了
-
-- 2026-08-27-27-feat-multi-key-optimistic-lock.md（RICE 160 — `optimisticLock.ts` に `withAtomicKeys(keys, updater)` を追加し `savedUrlRepository.withAtomicSavedUrls` の複製実装を削除。`JSON.stringify` 比較を `structuredClone`+正準化に置換。type-check / test PASS）
-
-### 2026-08-28 StorageField 深いモジュール抽出
-
-- 2026-08-27-26-feat-extract-storage-fields.md（RICE 180 — `CommonStorageFields` に `toMetadataPatch()`/`toBrowsingLogRecord(contentEnabled)` を実装し `saveMetadataStep` の20本手書き `if` を削除。`extractCommonStorageFields` の `maskedCount: rawMasked || null` を `?? null` に修正し `maskedCount:0` が `null` に潰れるバグを解消。type-check / 8396 tests PASS）
-
-### 2026-08-28 TextSimilarity 深いモジュール抽出 — 1件完了
-
-- 2026-08-27-25-feat-extract-text-similarity.md（RICE 200 — `contentDeduplicator.ts`と`sentenceExtractor.ts`で重複していた`toWordSet`/`splitSentences`/`jaccardSimilarity`を`src/utils/text/tokenizer.ts`+`similarity.ts`に一本化。両モジュールはimportするのみに変更。`buildSentenceGraph`の`Map<string, number[]>`キーを`${index}:${sentence}`のindex-qualifiedキーに変更し、同一文が2つあると頂点が1つに潰れて再現困難だったバグを解消。重複文検出の回帰テストを追加。type-check / 8393 tests PASS（既存の性能系1件は本変更と無関係の既存フレーキー））
-
 ### 2026-08-28 RateLimiter/SessionAlarms Service化 完了
 
 - 2026-08-27-24-feat-service-rate-limiter-session.md（RICE 135 — `src/utils/rateLimiter.ts`（マスターパスワードのブルートフォース制限）を `RateLimitService(Clock, StoragePort)` に、`src/background/sessionAlarmsManager.ts`（自動ロック用 chrome.alarms 管理）を `SessionAlarmService(AlarmPort, Clock, StoragePort, SendMessageFn)` にクラス化。両モジュールの既存エクスポート関数はデフォルトインスタンス委譲の薄いラッパーとして維持し呼び出し元（`masterPassword.ts`/`service-worker.ts`/`createBackgroundServices.ts`）は無改修。`src/utils/ports.ts` に `Clock`/`StoragePort`/`AlarmPort` の3 seam を新設。`src/utils/storage/authGuard.ts` を新設し `encryptionSession.ts` の `getOrCreateEncryptionKey` が直接 `chrome.storage.local` を読んでいた IS_LOCKED チェックを `authGuard.isLocked()` 1 seam に置換。`InMemoryStorageArea`/`FakeClock`/`FakeAlarmPort` で NTP skew（session/local の `lockedUntil` 不一致）・二重ロック・タイマーリスナー重複登録防止を chrome global mock なしに単体テスト（15件新規）。type-check / 8394 tests PASS）
+
+### 2026-08-28 Sync Batch Runner 抽出完了
+
+- 2026-08-27-23-feat-extract-sync-batch-runner.md（RICE 180 — `GistSyncTarget`/`ObsidianSyncService` から `SyncBatchRunner`（`listPending`/`markSynced` port）と `isCredentialConfigured`（`SettingsReader` 注入）を抽出し重複バッチロジックを一元化。`ObsidianSyncService.isConfigured` の `chrome.storage.local` 直参照ドリフトも解消。type-check / 該当テストスイート PASS）
 
 ### 2026-08-27 Review Findings — 8件完了（3バッチ並列）
 

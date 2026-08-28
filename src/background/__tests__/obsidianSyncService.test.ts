@@ -6,26 +6,23 @@ describe('ObsidianSyncService', () => {
   let mockObsidianClient: { appendToDailyNote: ReturnType<typeof vi.fn>; testConnection: ReturnType<typeof vi.fn> };
   let mockSqliteClient: { mutate: ReturnType<typeof vi.fn>; query: ReturnType<typeof vi.fn>; getStatus: ReturnType<typeof vi.fn> };
   let mockStorage: Record<string, unknown>;
+  let mockSettingsReader: { getMany: ReturnType<typeof vi.fn>; getAll: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockStorage = {
       obsidian_api_key: 'test-api-key-1234567',
     };
 
-    (globalThis as any).chrome = {
-      storage: {
-        local: {
-          get: vi.fn().mockImplementation((keys: string | string[]) => {
-            if (Array.isArray(keys)) {
-              const result: Record<string, unknown> = {};
-              for (const k of keys) result[k] = mockStorage[k];
-              return Promise.resolve(result);
-            }
-            return Promise.resolve({ [keys]: mockStorage[keys] });
-          }),
-          set: vi.fn().mockResolvedValue(undefined),
-        },
-      },
+    // WHY: isConfigured() now goes through the injected SettingsReader (unified
+    // with GistSyncTarget) instead of raw chrome.storage.local.get, so the test
+    // double models SettingsReader.getMany directly.
+    mockSettingsReader = {
+      getMany: vi.fn().mockImplementation(async (keys: readonly string[]) => {
+        const out: Record<string, unknown> = {};
+        for (const k of keys) out[k] = mockStorage[k];
+        return out;
+      }),
+      getAll: vi.fn(),
     };
 
     mockObsidianClient = {
@@ -39,7 +36,7 @@ describe('ObsidianSyncService', () => {
       getStatus: vi.fn().mockResolvedValue({ initialized: true, path: 'yasumaro.db' }),
     };
 
-    service = new ObsidianSyncService(mockObsidianClient as any, mockSqliteClient as any);
+    service = new ObsidianSyncService(mockObsidianClient as any, mockSqliteClient as any, mockSettingsReader as any);
   });
 
   describe('isConfigured', () => {
@@ -78,7 +75,7 @@ describe('ObsidianSyncService', () => {
     });
 
     it('returns false when storage access throws', async () => {
-      (globalThis as any).chrome.storage.local.get.mockRejectedValue(new Error('storage unavailable'));
+      mockSettingsReader.getMany.mockRejectedValue(new Error('storage unavailable'));
       expect(await service.isConfigured()).toBe(false);
     });
   });
