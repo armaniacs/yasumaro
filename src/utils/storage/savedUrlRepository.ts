@@ -258,7 +258,7 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
 async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise<void> {
     await withAtomicKeys(
         ['savedUrlsWithTimestamps', 'savedUrls'],
-        ([currentEntries, currentUrls]: [SavedUrlEntry[], string[]]) => {
+        ([currentEntries]: [SavedUrlEntry[], string[]]) => {
             let entries = currentEntries || [];
             const existing = entries.find(entry => entry.url === url);
             entries = entries.filter(entry => entry.url !== url);
@@ -281,10 +281,13 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
             const sorted = entries.slice().sort((a, b) => b.timestamp - a.timestamp);
             sorted.forEach((e, i) => { if (i >= MAX_CONTENT_ENTRIES) delete e.content; });
 
-            const currentSet = new Set(currentUrls || []);
-            currentSet.add(url);
+            // savedUrls must be derived from the filtered/evicted entries, not
+            // from the old savedUrls + add — otherwise savedUrls never drops
+            // cutoff-expired or LRU-evicted URLs and permanently diverges from
+            // savedUrlsWithTimestamps.
+            const nextUrls = entries.map(entry => entry.url);
 
-            return [entries, Array.from(currentSet)];
+            return [entries, nextUrls];
         }
     );
 }

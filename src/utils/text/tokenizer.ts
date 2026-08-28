@@ -1,8 +1,10 @@
 /**
  * tokenizer.ts
  * Shared sentence/word tokenization for Japanese and English text.
- * Extracted from contentDeduplicator.ts and sentenceExtractor.ts to remove
- * byte-identical duplicated logic that had drifted into two copies.
+ * Extracted from contentDeduplicator.ts's near-duplicate helpers. Note that
+ * sentenceExtractor.ts keeps its own local toWordSet — its trailing-
+ * punctuation handling differs from this one, so unifying it would silently
+ * change TextRank's Japanese bigram similarity (see sentenceExtractor.ts).
  */
 
 /**

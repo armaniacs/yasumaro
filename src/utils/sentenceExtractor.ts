@@ -9,10 +9,33 @@
  * - Configurable extraction options
  */
 
-import { splitSentences, toWordSet } from './text/tokenizer.js';
+import { splitSentences, containsJapanese, getBigrams } from './text/tokenizer.js';
 import { jaccardSimilarity } from './text/similarity.js';
 
 export { splitSentences };
+
+/**
+ * Convert text to a word set for similarity calculation.
+ *
+ * NOTE: Deliberately local, not the shared text/tokenizer.ts toWordSet —
+ * that variant strips trailing sentence-ending punctuation before taking
+ * bigrams; this one does not, and changing that would silently shift which
+ * sentences extractSentences() picks for Japanese content (a bigram like
+ * "ト。" would disappear from the token set, moving borderline pairs across
+ * `similarityThreshold`).
+ */
+function toWordSet(text: string): Set<string> {
+  const cleaned = text.toLowerCase();
+  const words = cleaned
+    .split(/[\s　、。，．！？、。，．！？,.!?\-_:;()\[\]{}""''「」]+/)
+    .filter(w => w.length >= 2);
+
+  if (containsJapanese(cleaned)) {
+    words.push(...getBigrams(cleaned));
+  }
+
+  return new Set(words);
+}
 
 export interface ExtractOptions {
   /** Number of sentences to extract (default: 10) */

@@ -89,6 +89,24 @@ describe('sentenceExtractor', () => {
       const result = calculateSimilarity('', 'テキスト');
       expect(result).toBe(0.0);
     });
+
+    it('includes the trailing-punctuation bigram in Japanese similarity', () => {
+      // Regression: toWordSet must NOT strip trailing 。！？ before generating
+      // bigrams here (unlike contentDeduplicator's toWordSet) — stripping it
+      // silently changes which bigrams contribute to Jaccard similarity and
+      // can move borderline sentence pairs across similarityThreshold.
+      const s1 = 'これはテストです。';
+      const s2 = 'これはテストでした。';
+      const withPunctuationBigram = calculateSimilarity(s1, s2);
+
+      const s1NoPunct = 'これはテストです';
+      const s2NoPunct = 'これはテストでした';
+      const withoutPunctuationBigram = calculateSimilarity(s1NoPunct, s2NoPunct);
+
+      // Both share the "。" bigram pair only when punctuation isn't stripped,
+      // so similarity with punctuation should differ from without it.
+      expect(withPunctuationBigram).not.toBe(withoutPunctuationBigram);
+    });
   });
 
   describe('textRank', () => {

@@ -776,6 +776,13 @@ describe('updateUrlTimestamp: retention & LRU eviction', () => {
         expect(urls).toContain('https://new.com');
         expect(urls).toContain('https://fresh.com');
         expect(urls).not.toContain('https://old.com');
+
+        // savedUrls must stay in sync with savedUrlsWithTimestamps — it must
+        // not retain URLs that were already cutoff-evicted from entries.
+        const savedUrls = await getSavedUrls();
+        expect(savedUrls.has('https://new.com')).toBe(true);
+        expect(savedUrls.has('https://fresh.com')).toBe(true);
+        expect(savedUrls.has('https://old.com')).toBe(false);
     });
 
     it('LRU evicts oldest entries when exceeding MAX_URL_SET_SIZE', async () => {
@@ -794,6 +801,13 @@ describe('updateUrlTimestamp: retention & LRU eviction', () => {
         // The oldest entries should be evicted
         expect(result.find(e => e.url === 'https://site0.com')).toBeUndefined();
         expect(result.find(e => e.url === 'https://new-entry.com')).toBeDefined();
+
+        // savedUrls must mirror the same eviction — it must not keep growing
+        // unbounded past MAX_URL_SET_SIZE while savedUrlsWithTimestamps evicts.
+        const savedUrls = await getSavedUrls();
+        expect(savedUrls.size).toBeLessThanOrEqual(MAX_URL_SET_SIZE);
+        expect(savedUrls.has('https://site0.com')).toBe(false);
+        expect(savedUrls.has('https://new-entry.com')).toBe(true);
     });
 });
 
