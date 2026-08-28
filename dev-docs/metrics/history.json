@@ -335,6 +335,17 @@
       "testCount": 8839,
       "functionCount": 2077,
       "dependencyCount": 25
+    },
+    {
+      "version": "6.7.87",
+      "tagVersion": "6.7.87",
+      "tag": "v6.7.87",
+      "date": "2026-08-29T08:51:00+09:00",
+      "linesOfCode": 209117,
+      "fileCount": 983,
+      "testCount": 8844,
+      "functionCount": 2081,
+      "dependencyCount": 25
     }
   ]
 }
