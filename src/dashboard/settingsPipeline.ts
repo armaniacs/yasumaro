@@ -10,6 +10,7 @@ import { getSettings, saveSettingsWithAllowedUrls } from '../utils/storage/setti
 import { StorageKeys } from '../utils/storage/types.js';
 import { extractSettingsFromInputs, extractLocalMarkdownExportTiming, type ValidationSchema } from '../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../utils/settingsSchemas.js';
+import { collectProviderPrioritySlots } from './generalSettings/settingsForm.js';
 import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, ErrorPair } from './settings/fieldValidation.js';
 import { getMessage } from '../utils/i18n.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
@@ -113,6 +114,7 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
   }
 
   const newSettings = extractSettingsFromInputs(document.querySelector(formSelector) ?? document.body, GENERAL_SETTINGS_SCHEMA);
+  newSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectProviderPrioritySlots();
 
   if (includeTiming) {
     const timing = extractLocalMarkdownExportTiming();

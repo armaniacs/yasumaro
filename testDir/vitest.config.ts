@@ -21,6 +21,7 @@ export default defineConfig({
       '**/dist/**',
       '**/testDir/e2e/**',
       '**/.kilo/**',
+      '**/.claude/**',
       '**/video-*/**',
       '**/.vulnhunter-fix/**',
       '**/obsidian-smart-history_VULNHUNT_RESULTS*/**',

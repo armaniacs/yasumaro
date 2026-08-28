@@ -61,6 +61,7 @@ export default defineConfig({
       'offscreen',
       'notifications',
       'webRequest',
+      'declarativeNetRequest',
       'alarms',
       'favicon',
       'contextMenus',

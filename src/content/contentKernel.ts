@@ -374,7 +374,6 @@ export class ContentKernel {
         let lastArgs: Parameters<T> | null = null;
         const throttledFn = ((...args: Parameters<T>) => {
             lastArgs = args;
-            const now = performance.now();
             if (rafId !== null) {
                 cancelAnimationFrame(rafId);
                 rafId = null;

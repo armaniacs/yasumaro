@@ -12,6 +12,9 @@ import { createAlarmHandler } from './alarmHandler.js';
 import { createDeferredMigrationRunner } from './deferredMigrations.js';
 import { retryPendingChromeStorageWrite } from './retryPendingWrites.js';
 export { retryPendingChromeStorageWrite } from './retryPendingWrites.js';
+import { settingsRepository } from '../utils/storage/SettingsRepository.js';
+import { syncOllamaOriginRule } from './net/ollamaOriginRule.js';
+import { createOllamaSettingsObserver } from './net/ollamaSettingsObserver.js';
 
 // ============================================================================
 // Service Worker Initialization
@@ -187,6 +190,8 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
 
     chrome.runtime.onInstalled.addListener(handleInstalled);
     chrome.runtime.onStartup.addListener(handleStartup);
+
+    settingsRepository.observe(createOllamaSettingsObserver(syncOllamaOriginRule));
 
     if (chrome.storage?.session) {
       void restoreRecordingCacheOnWake(services?.recordingCache);

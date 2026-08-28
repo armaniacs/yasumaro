@@ -316,9 +316,14 @@ const chromeRuntimeMock = {
         return Promise.resolve();
       }),
     },
+    onChanged: {
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      hasListener: vi.fn(() => false),
+    },
   },
    runtime: {
-     lastError: null as any,
+      lastError: null as any,
      sendMessage: chromeRuntimeMock.sendMessage,
      onMessage: chromeRuntimeMock.onMessage,
      onInstalled: {
@@ -400,6 +405,10 @@ const chromeRuntimeMock = {
     executeScript: vi.fn(() => Promise.resolve([{ result: null }])),
     insertCSS: vi.fn(() => Promise.resolve()),
     removeCSS: vi.fn(() => Promise.resolve()),
+  },
+  declarativeNetRequest: {
+    updateDynamicRules: vi.fn(() => Promise.resolve()),
+    getDynamicRules: vi.fn(() => Promise.resolve([])),
   },
   contextMenus: {
     create: vi.fn(),

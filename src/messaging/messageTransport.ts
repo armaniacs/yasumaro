@@ -7,7 +7,6 @@
 import { CURRENT_PROTOCOL_VERSION } from './protocol.js';
 import type { ExtensionMessage } from '../background/messageTypes.js';
 import { VALID_MESSAGE_TYPES } from '../background/messageTypes.js';
-import { errorMessage } from '../utils/errorUtils.js';
 
 export interface TransportPort {
   send(message: unknown): Promise<unknown>;

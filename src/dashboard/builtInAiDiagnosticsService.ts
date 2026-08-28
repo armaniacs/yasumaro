@@ -20,6 +20,9 @@ function guidanceForCurrentBrowser(): BuiltInAIFlagGuidance | null {
   return getBuiltInAIFlagGuidance(getBrowserName());
 }
 
+/** create()に渡す出力言語指定と揃える。availability()判定とcreate()実行で異なる言語を指定すると結果が食い違うため定数化。 */
+const EXPECTED_OUTPUTS: Array<{ type: 'text'; languages: string[] }> = [{ type: 'text', languages: ['ja'] }];
+
 /**
  * Check whether the on-device Prompt API is available in this browser,
  * regardless of the user's configured AI provider.
@@ -31,7 +34,7 @@ export async function checkBuiltInAiAvailability(): Promise<BuiltInAiDiagnostics
   }
 
   try {
-    const status = await languageModel.availability();
+    const status = await languageModel.availability({ expectedOutputs: EXPECTED_OUTPUTS });
     return {
       status,
       guidance: status === 'unavailable' ? guidanceForCurrentBrowser() : null,
@@ -61,7 +64,7 @@ export async function startBuiltInAiDownload(
           onProgress(Math.round(event.loaded * 100));
         });
       },
-      expectedOutputs: [{ type: 'text', languages: ['ja'] }],
+      expectedOutputs: EXPECTED_OUTPUTS,
     });
     session.destroy();
   } catch {

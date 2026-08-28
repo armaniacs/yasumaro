@@ -4,7 +4,7 @@ import localPlugin from './eslint/plugin.mjs';
 
 export default [
   {
-    ignores: ['node_modules/', 'dist/', 'testDir/', 'coverage/', 'src/**/__tests__/**', '.vulnhunter-fix/', 'graphify-out/', 'obsidian-smart-history_VULNHUNT_RESULTS*/', '.kilo/'],
+    ignores: ['node_modules/', 'dist/', 'testDir/', 'coverage/', 'src/**/__tests__/**', '.vulnhunter-fix/', 'graphify-out/', 'obsidian-smart-history_VULNHUNT_RESULTS*/', '.kilo/', '.claude/'],
   },
   {
     files: ['src/**/*.ts'],
@@ -36,10 +36,6 @@ export default [
               group: ['**/logger/types.js', '**/logger/core.js', '**/logger/api.js'],
               message: 'logger/* is an internal implementation detail. Import from logger.js instead.',
             },
-            {
-              group: ['**/settingsStore', '**/settingsStore.js', '**/settingsStore.legacy', '**/settingsStore.legacy.js'],
-              message: 'Use SettingsRepository instead (PBI-04). Import from ./storage/SettingsRepository.js or ./storage/settingsMigration.js / ./storage/urlWhitelist.js',
-            },
           ],
           paths: [
             {
@@ -57,38 +53,6 @@ export default [
             {
               name: 'src/utils/storage.js',
               message: 'Use direct module imports instead. See dev-docs/LAYERS.md Wave 3.',
-            },
-            {
-              name: './settingsStore',
-              message: 'Use SettingsRepository instead (PBI-04). See src/utils/storage/SettingsRepository.ts',
-            },
-            {
-              name: './settingsStore.js',
-              message: 'Use SettingsRepository instead (PBI-04). See src/utils/storage/SettingsRepository.ts',
-            },
-            {
-              name: '../utils/storage/settingsStore',
-              message: 'Use SettingsRepository instead (PBI-04). See src/utils/storage/SettingsRepository.ts',
-            },
-            {
-              name: '../utils/storage/settingsStore.js',
-              message: 'Use SettingsRepository instead (PBI-04). See src/utils/storage/SettingsRepository.ts',
-            },
-            {
-              name: '../../utils/storage/settingsStore',
-              message: 'Use SettingsRepository instead (PBI-04). See src/utils/storage/SettingsRepository.ts',
-            },
-            {
-              name: '../../utils/storage/settingsStore.js',
-              message: 'Use SettingsRepository instead (PBI-04). See src/utils/storage/SettingsRepository.ts',
-            },
-            {
-              name: '../../../utils/storage/settingsStore',
-              message: 'Use SettingsRepository instead (PBI-04). See src/utils/storage/SettingsRepository.ts',
-            },
-            {
-              name: '../../../utils/storage/settingsStore.js',
-              message: 'Use SettingsRepository instead (PBI-04). See src/utils/storage/SettingsRepository.ts',
             },
           ],
         },
