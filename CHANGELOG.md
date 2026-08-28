@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.85` リリース。
+> - 現時点では `v6.7.86` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,12 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.86] - 2026-08-28
+
+### Refactor
+
+- `GistSyncTarget` と `ObsidianSyncService` に重複していたバッチ同期ループ（listPending→markSynced）と `isConfigured` 判定を共通化。`SyncBatchRunner`（`listPending`/`markSynced` port）と `isCredentialConfigured`（`SettingsReader` 注入）を新設し、各ターゲットは I/O のみを実装する形に縮小。`ObsidianSyncService.isConfigured` が `chrome.storage.local` を直接参照していたドリフトを解消し `SettingsRepository` 経由に統一
 
 ## [6.7.85] - 2026-08-28
 
