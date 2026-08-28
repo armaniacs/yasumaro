@@ -45,6 +45,14 @@ export function optionalNonNegativeNumber(value: unknown, field: string): number
   return requiredNonNegativeNumber(value, field);
 }
 
+// Distinct from optionalNonNegativeNumber: null means "migration never ran yet"
+// (not "ran and migrated 0 records"), so it must not collapse into 0 here —
+// callers that need to tell the two apart (e.g. diagnostics UI) rely on this.
+export function optionalNullableNonNegativeNumber(value: unknown, field: string): number | null {
+  if (value === undefined || value === null) return null;
+  return requiredNonNegativeNumber(value, field);
+}
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -97,8 +105,10 @@ export function decodeStatusExtras(response: Record<string, unknown>): Record<st
     opfsMigrationV2Done: optionalBoolean(response.opfsMigrationV2Done, 'opfsMigrationV2Done'),
     opfsMigrationV2LastAttemptedAt: optionalNullableString(response.opfsMigrationV2LastAttemptedAt, 'opfsMigrationV2LastAttemptedAt'),
     opfsMigrationV2CompletedAt: optionalNullableString(response.opfsMigrationV2CompletedAt, 'opfsMigrationV2CompletedAt'),
-    opfsMigrationV2RecordCount: optionalNonNegativeNumber(response.opfsMigrationV2RecordCount, 'opfsMigrationV2RecordCount'),
+    opfsMigrationV2RecordCount: optionalNullableNonNegativeNumber(response.opfsMigrationV2RecordCount, 'opfsMigrationV2RecordCount'),
     idbMigrationV2Done: optionalBoolean(response.idbMigrationV2Done, 'idbMigrationV2Done'),
+    opfsLegacyDbPath: optionalNullableString(response.opfsLegacyDbPath, 'opfsLegacyDbPath'),
+    idbLegacyDbName: optionalNullableString(response.idbLegacyDbName, 'idbLegacyDbName'),
   };
 }
 

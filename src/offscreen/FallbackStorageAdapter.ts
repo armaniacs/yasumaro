@@ -65,7 +65,7 @@ export class FallbackStorageAdapter implements StorageBackend {
   }
 
   async getStatus(): Promise<BackendOrError<StatusResult>> {
-    return { initialized: true, fallback: true, fts5: false, supportsBinaryBackup: false };
+    return { initialized: true, path: 'chrome.storage.local', fallback: true, fts5: false, supportsBinaryBackup: false, compileOptionsSource: 'fallback' };
   }
 
   async insertAuditLog(_record: AuditLogRecord): Promise<BackendOrError<InsertResult>> {

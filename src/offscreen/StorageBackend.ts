@@ -31,6 +31,7 @@ export interface StatusResult {
   fallback: boolean;
   fts5: boolean;
   supportsBinaryBackup: boolean;
+  path?: string;
   compileOptions?: string[];
   compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback';
   initError?: string;

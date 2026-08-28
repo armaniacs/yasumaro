@@ -130,9 +130,11 @@ export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
         opfsMigrationV2Done?: boolean;
         opfsMigrationV2LastAttemptedAt?: string | null;
         opfsMigrationV2CompletedAt?: string | null;
-        opfsMigrationV2RecordCount?: number;
+        opfsMigrationV2RecordCount?: number | null;
         // IDB migration status (PBI: 2026-08-27-02)
         idbMigrationV2Done?: boolean;
+        opfsLegacyDbPath?: string | null;
+        idbLegacyDbName?: string | null;
       } :
       S extends 'cleanup_legacy' ? { success: true; removed: string[]; totalBytes: number } :
       S extends 'backfill_metadata' ? { success: true; updated: number; total: number } :

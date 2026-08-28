@@ -51,7 +51,7 @@ A. いいえ。フォールバックモードで保存されたデータは、�
 
 **Q. 自分の環境がどちらのモードか確認するには？**
 
-A. ダッシュボードを開いてください。フォールバックモードの場合は上部に黄色い警告バナーが表示されます。バナーが表示されない場合は通常モードで動作しています。
+A. ダッシュボードを開いてください。フォールバックモードの場合は上部に黄色い警告バナーが表示されます。バナーが表示されない場合は通常モードで動作しています。どのバックエンド（OPFS / IndexedDB / フォールバック）を使用しているかをより詳しく確認したい場合は、サイドバーの「診断」タブ内「旧データベース移行」セクションの「現在使用中のエンジン」を参照してください（詳細は[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)参照）。
 
 ---
 
@@ -100,4 +100,4 @@ A. No. Data saved in Fallback Mode is automatically migrated when a higher-prior
 
 **Q. How can I check which mode my environment is using?**
 
-A. Open the dashboard. If you are in a Fallback Mode, a yellow warning banner will appear at the top. If no banner is displayed, you are running in Normal Mode.
+A. Open the dashboard. If you are in a Fallback Mode, a yellow warning banner will appear at the top. If no banner is displayed, you are running in Normal Mode. For a more detailed breakdown of which backend (OPFS / IndexedDB / Fallback) is actually in use, check "Current engine" in the "Legacy DB Migration" section of the Diagnostics tab in the sidebar (see [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) for details).
