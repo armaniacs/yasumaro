@@ -411,4 +411,139 @@ describe('privacySettings', () => {
       expect(() => init()).not.toThrow();
     });
   });
+
+  describe('cloud provider guard (toggleCloudProviderSettings)', () => {
+    function setupProviderDOM() {
+      document.body.innerHTML = `
+        <input type="radio" name="privacyMode" value="masked_cloud" />
+        <input type="radio" name="privacyMode" value="full_pipeline" checked />
+        <input type="radio" name="privacyMode" value="local_only" />
+        <input type="checkbox" id="piiConfirm" />
+        <input type="radio" name="autoSavePrivacyBehavior" value="save" checked />
+        <button id="savePrivacySettings">Save</button>
+        <div id="privacyStatus"></div>
+        <div id="providerWrap">
+          <div class="form-group">
+            <select id="aiProvider"><option value="gemini">Gemini</option></select>
+          </div>
+          <div id="geminiSettings"><input type="text" /></div>
+          <div id="openaiSettings"><input type="text" /></div>
+          <div id="openai2Settings"><input type="text" /></div>
+        </div>
+      `;
+    }
+
+    it('disables cloud provider settings when local_only is selected', async () => {
+      setupProviderDOM();
+      mockGetSettings.mockResolvedValue({});
+
+      const { init, loadPrivacySettings } = await import('../privacySettings.js');
+      await loadPrivacySettings();
+      init();
+
+      const localOnly = document.querySelector('input[name="privacyMode"][value="local_only"]') as HTMLInputElement;
+      localOnly.checked = true;
+      localOnly.dispatchEvent(new Event('change'));
+
+      expect((document.getElementById('aiProvider') as HTMLSelectElement).disabled).toBe(true);
+      expect(
+        (document.querySelector('#geminiSettings input') as HTMLInputElement).disabled
+      ).toBe(true);
+      expect(
+        (document.querySelector('#openaiSettings input') as HTMLInputElement).disabled
+      ).toBe(true);
+      expect(
+        (document.querySelector('#openai2Settings input') as HTMLInputElement).disabled
+      ).toBe(true);
+      expect((document.getElementById('providerWrap') as HTMLElement).style.opacity).toBe('0.5');
+      expect((document.getElementById('providerWrap') as HTMLElement).style.pointerEvents).toBe('none');
+    });
+
+    it('re-enables cloud provider settings when a non-local mode is selected', async () => {
+      setupProviderDOM();
+      mockGetSettings.mockResolvedValue({ privacy_mode: 'local_only' });
+
+      const { init, loadPrivacySettings } = await import('../privacySettings.js');
+      await loadPrivacySettings();
+      init();
+
+      // Start disabled (local_only loaded), then switch to masked_cloud
+      expect((document.getElementById('aiProvider') as HTMLSelectElement).disabled).toBe(true);
+
+      const maskedCloud = document.querySelector('input[name="privacyMode"][value="masked_cloud"]') as HTMLInputElement;
+      maskedCloud.checked = true;
+      maskedCloud.dispatchEvent(new Event('change'));
+
+      expect((document.getElementById('aiProvider') as HTMLSelectElement).disabled).toBe(false);
+      expect(
+        (document.querySelector('#geminiSettings input') as HTMLInputElement).disabled
+      ).toBe(false);
+      expect((document.getElementById('providerWrap') as HTMLElement).style.opacity).toBe('1');
+      expect((document.getElementById('providerWrap') as HTMLElement).style.pointerEvents).toBe('');
+    });
+
+    it('ignores change events on unchecked radios', async () => {
+      setupProviderDOM();
+      mockGetSettings.mockResolvedValue({});
+
+      const { init, loadPrivacySettings } = await import('../privacySettings.js');
+      await loadPrivacySettings();
+      init();
+
+      // Dispatch change without checking the radio → guard must not run
+      const localOnly = document.querySelector('input[name="privacyMode"][value="local_only"]') as HTMLInputElement;
+      localOnly.checked = false;
+      localOnly.dispatchEvent(new Event('change'));
+
+      expect((document.getElementById('aiProvider') as HTMLSelectElement).disabled).toBe(false);
+    });
+  });
+
+  describe('savePrivacySettings validation fallbacks', () => {
+    it('shows modeRequired error when no privacy mode radio is selected', async () => {
+      document.body.innerHTML = `
+        <input type="radio" name="privacyMode" value="masked_cloud" />
+        <input type="radio" name="privacyMode" value="full_pipeline" />
+        <button id="savePrivacySettings">Save</button>
+        <div id="privacyStatus"></div>
+      `;
+      mockGetSettings.mockResolvedValue({ privacy_mode: 'unknown_mode' });
+
+      const { init, loadPrivacySettings } = await import('../privacySettings.js');
+      await loadPrivacySettings();
+      init();
+
+      (document.getElementById('savePrivacySettings') as HTMLButtonElement).click();
+
+      await vi.waitFor(() => {
+        expect(mockShowStatus).toHaveBeenCalledWith('privacyStatus', 'modeRequired', 'error');
+      });
+      expect(mockSaveSettings).not.toHaveBeenCalled();
+    });
+
+    it('defaults confirmation to true and behavior to save when elements are missing', async () => {
+      document.body.innerHTML = `
+        <input type="radio" name="privacyMode" value="full_pipeline" checked />
+        <button id="savePrivacySettings">Save</button>
+        <div id="privacyStatus"></div>
+      `;
+      mockGetSettings.mockResolvedValue({});
+      mockSaveSettings.mockResolvedValue(undefined);
+
+      const { init, loadPrivacySettings } = await import('../privacySettings.js');
+      await loadPrivacySettings();
+      init();
+
+      (document.getElementById('savePrivacySettings') as HTMLButtonElement).click();
+
+      await vi.waitFor(() => {
+        expect(mockSaveSettings).toHaveBeenCalled();
+      });
+      expect(mockSaveSettings).toHaveBeenCalledWith({
+        privacy_mode: 'full_pipeline',
+        pii_confirmation_ui: true,
+        auto_save_privacy_behavior: 'save',
+      });
+    });
+  });
 });

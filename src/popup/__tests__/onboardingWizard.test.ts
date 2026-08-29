@@ -150,4 +150,90 @@ describe('onboardingWizard', () => {
       expect.objectContaining({ url: expect.stringContaining('?section=ai-provider') })
     );
   });
+
+  it('creates wizard DOM and backdrop when neither exists', () => {
+    document.body.innerHTML = '';
+    initOnboardingWizard();
+
+    const wizard = document.getElementById('onboardingWizard');
+    expect(wizard).not.toBeNull();
+    expect(wizard?.getAttribute('role')).toBe('dialog');
+    expect(wizard?.getAttribute('aria-modal')).toBe('true');
+    expect(wizard?.classList.contains('hidden')).toBe(false);
+    expect(document.getElementById('wizardBackdrop')).not.toBeNull();
+    // Created wizard contains all four steps including the minimal finish step
+    expect(wizard?.querySelectorAll('.wizard-step')).toHaveLength(4);
+  });
+
+  it('reuses an existing backdrop when creating the wizard DOM', () => {
+    document.body.innerHTML = '<div id="wizardBackdrop"></div>';
+    initOnboardingWizard();
+
+    expect(document.querySelectorAll('#wizardBackdrop')).toHaveLength(1);
+    expect(document.getElementById('onboardingWizard')).not.toBeNull();
+  });
+
+  it('skips listener setup when the wizard is already initialized', () => {
+    initOnboardingWizard();
+    const trapSpy = vi.spyOn(focusTrapManager, 'trap');
+    initOnboardingWizard();
+    // Second init returns early without re-arming the focus trap
+    expect(trapSpy).not.toHaveBeenCalled();
+    trapSpy.mockRestore();
+  });
+
+  it('rebinds listeners when re-initialized after the initialized flag is cleared', async () => {
+    initOnboardingWizard();
+    const wizard = document.getElementById('onboardingWizard') as HTMLElement;
+    wizard.dataset.initialized = '';
+    initOnboardingWizard();
+
+    const obsidianBtn = document.querySelector('[data-type="obsidian"]') as HTMLButtonElement;
+    obsidianBtn.click();
+    expect(document.querySelector('[data-step="obsidian"]')?.classList.contains('hidden')).toBe(false);
+  });
+
+  it('falls back to the minimal type when finishing with no visible step', async () => {
+    initOnboardingWizard();
+    document.querySelectorAll('.wizard-step').forEach(step => step.classList.add('hidden'));
+    (document.querySelector('[data-step="obsidian"] .wizard-next') as HTMLButtonElement).click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(mockStorage.get(StorageKeys.ONBOARDING_WIZARD_TYPE)).toBe('minimal');
+    expect(chrome.tabs.create).toHaveBeenCalledWith(
+      expect.objectContaining({ url: expect.stringContaining('?section=general') })
+    );
+  });
+
+  it('does not navigate to the dashboard when skipNavigation is true', async () => {
+    initOnboardingWizard(true);
+    (document.querySelector('[data-type="obsidian"]') as HTMLButtonElement).click();
+    (document.querySelector('[data-step="obsidian"] .wizard-next') as HTMLButtonElement).click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(mockStorage.get(StorageKeys.ONBOARDING_WIZARD_COMPLETED)).toBe(true);
+    expect(chrome.tabs.create).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the type step title for an unknown step name', () => {
+    const customBtn = document.createElement('button');
+    customBtn.className = 'wizard-option';
+    customBtn.setAttribute('data-type', 'custom');
+    document.querySelector('.wizard-options')?.appendChild(customBtn);
+
+    initOnboardingWizard();
+    customBtn.click();
+
+    // titleMap['custom'] is undefined → falls back to titleMap['type']
+    expect(document.getElementById('wizardTitle')?.textContent).toBe('wizardTitle');
+  });
+
+  it('uses hardcoded fallback titles when i18n messages are unavailable', () => {
+    (chrome as unknown as Record<string, unknown>).i18n = {
+      getMessage: vi.fn(() => ''),
+    };
+    initOnboardingWizard();
+
+    expect(document.getElementById('wizardTitle')?.textContent).toBe('Welcome to Yasumaro');
+  });
 });
