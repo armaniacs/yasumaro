@@ -130,9 +130,8 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
         if (bPrioritySection) bPrioritySection.hidden = !isB;
         aDetails.forEach((el) => { (el as HTMLElement).hidden = isB; });
         if (isB) {
-          // Aの移動を戻してからBを構築
+          // Aの移動を戻してからBを構築（hideAllはBでは不要 — アコーディオン側で可視化するため）
           restoreOriginalProviderSettingsLayout();
-          hideAllProviderSettings();
           const bListContainer = container.querySelector('#bPriorityList') as HTMLElement | null;
           const bAccordionContainer = container.querySelector('#bProviderAccordion') as HTMLElement | null;
           if (bListContainer && !bPriorityView) {

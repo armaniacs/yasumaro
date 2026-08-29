@@ -26,6 +26,9 @@ export function createBProviderAccordionView(container: HTMLElement): BProviderA
     if (!originalParents.has(id) && settingsDiv.parentElement) {
       originalParents.set(id, settingsDiv.parentElement);
     }
+    // Bでは常設アコーディオン内で可視にする（hideAllProviderSettingsでdisplay:noneにされているため上書き）
+    settingsDiv.style.display = 'block';
+    settingsDiv.removeAttribute('hidden');
     const details = document.createElement('details');
     details.className = 'b-provider-details';
     details.dataset.provider = id;
