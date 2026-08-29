@@ -1,0 +1,7 @@
+{
+  "aiProviderLayoutA": { "message": "A 一体型" },
+  "aiProviderLayoutB": { "message": "B 分離型" },
+  "aiProviderPriorityDuplicateWarning": { "message": "同一プロバイダ・同一モデルが重複しています" },
+  "aiProviderPriority1Required": { "message": "優先度1位は必須です" },
+  "aiProviderLayoutToggleLabel": { "message": "AIプロバイダ表示切替" }
+}

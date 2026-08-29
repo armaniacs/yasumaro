@@ -38,6 +38,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.OBSIDIAN_DAILY_PATH]: '092.Daily',
     [StorageKeys.AI_PROVIDER]: 'openai',
     [StorageKeys.AI_PROVIDER_PRIORITY_LIST]: [],
+    [StorageKeys.AI_PROVIDER_LAYOUT]: 'a',
     [StorageKeys.SUMMARY_MIN_LENGTH]: 10,
     [StorageKeys.OPENAI_BASE_URL]: 'https://api.groq.com/openai/v1',
     [StorageKeys.OPENAI_API_KEY]: '',
