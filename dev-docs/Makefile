@@ -1,4 +1,4 @@
-.PHONY: build build-store build-edge clean test test-watch test-coverage test-e2e type-check validate test-quick test-unit test-news test-news-watch local-ci test-all lock-linux
+.PHONY: build build-store build-edge clean test test-watch test-coverage test-e2e type-check validate test-quick test-unit test-news test-news-watch local-ci test-all lock-linux release-check release-check-fast
 
 # build: TypeScript + WXT ビルド（node_modules/wa-sqlite 経由）
 build:
@@ -70,3 +70,11 @@ test-news:
 
 test-news-watch:
 	npm run test:watch -- src/utils/aiSummaryCleaner/__tests__/newsIntegration.test.ts
+
+# リリース前チェック（全カテゴリ）
+release-check:
+	npm run release:check
+
+# リリース前チェック（E2E をスキップ）
+release-check-fast:
+	npm run release:check:fast

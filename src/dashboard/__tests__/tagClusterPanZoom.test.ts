@@ -293,5 +293,202 @@ describe('TagClusterPanZoomController', () => {
 
       expect(svg.getAttribute('viewBox')).toBe('0 0 800 600');
     });
+
+    it('is safe to call multiple times', () => {
+      const controller = new TagClusterPanZoomController(svg, { width: 800, height: 600 });
+      controller.attach();
+      controller.cleanup();
+      expect(() => controller.cleanup()).not.toThrow();
+    });
+  });
+
+  describe('constructor defaults', () => {
+    it('falls back to size 1 when width/height are 0', () => {
+      const controller = new TagClusterPanZoomController(svg, { width: 0, height: 0 });
+      controller.attach();
+
+      expect(svg.getAttribute('viewBox')).toBe('0 0 1 1');
+    });
+  });
+
+  describe('wheel edge cases', () => {
+    it('does nothing when the svg rect has zero width', () => {
+      const controller = new TagClusterPanZoomController(svg, { width: 800, height: 600 });
+      controller.attach();
+      vi.spyOn(svg, 'getBoundingClientRect').mockReturnValue({
+        x: 0, y: 0, width: 0, height: 600, top: 0, left: 0, right: 0, bottom: 600, toJSON: () => ({}),
+      } as DOMRect);
+
+      wheel(svg, -100);
+
+      expect(svg.getAttribute('viewBox')).toBe('0 0 800 600');
+    });
+
+    it('does nothing when the svg rect has zero height', () => {
+      const controller = new TagClusterPanZoomController(svg, { width: 800, height: 600 });
+      controller.attach();
+      vi.spyOn(svg, 'getBoundingClientRect').mockReturnValue({
+        x: 0, y: 0, width: 800, height: 0, top: 0, left: 0, right: 800, bottom: 0, toJSON: () => ({}),
+      } as DOMRect);
+
+      wheel(svg, -100);
+
+      expect(svg.getAttribute('viewBox')).toBe('0 0 800 600');
+    });
+  });
+
+  describe('mouse move without drag', () => {
+    it('does nothing when mousemove fires without a preceding mousedown', () => {
+      const controller = new TagClusterPanZoomController(svg, { width: 800, height: 600 });
+      controller.attach();
+
+      mouseMove(360, 270);
+
+      expect(svg.getAttribute('viewBox')).toBe('0 0 800 600');
+    });
+
+    it('does not pan while under the drag threshold', () => {
+      const controller = new TagClusterPanZoomController(svg, { width: 800, height: 600 });
+      controller.attach();
+
+      mouseDown(svg, 400, 300);
+      mouseMove(402, 301); // < 5px
+      const vb = getViewBox(svg);
+      expect(vb.x).toBe(0);
+      expect(vb.y).toBe(0);
+      mouseUp();
+    });
+
+    it('does nothing on mousemove when the svg rect is zero-sized', () => {
+      const controller = new TagClusterPanZoomController(svg, { width: 800, height: 600 });
+      controller.attach();
+
+      mouseDown(svg, 400, 300);
+      vi.spyOn(svg, 'getBoundingClientRect').mockReturnValue({
+        x: 0, y: 0, width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0, toJSON: () => ({}),
+      } as DOMRect);
+      mouseMove(420, 320);
+
+      expect(svg.getAttribute('viewBox')).toBe('0 0 800 600');
+      mouseUp();
+    });
+  });
+
+  describe('touch pan (single finger)', () => {
+    it('pans the viewBox on single-finger touchmove past threshold', () => {
+      const controller = new TagClusterPanZoomController(svg, { width: 800, height: 600 });
+      controller.attach();
+
+      svg.dispatchEvent(makeTouchEvent('touchstart', [{ identifier: 1, clientX: 400, clientY: 300 }]));
+      svg.dispatchEvent(makeTouchEvent('touchmove', [{ identifier: 1, clientX: 360, clientY: 270 }]));
+
+      const vb = getViewBox(svg);
+      expect(vb.x).not.toBe(0);
+      expect(vb.y).not.toBe(0);
+      expect(controller.wasDragSuppressingClick()).toBe(true);
+    });
+
+    it('does nothing on touchmove when there is no prior touchstart for that identifier', () => {
+      const controller = new TagClusterPanZoomController(svg, { width: 800, height: 600 });
+      controller.attach();
+
+      svg.dispatchEvent(makeTouchEvent('touchmove', [{ identifier: 99, clientX: 360, clientY: 270 }]));
+
+      expect(svg.getAttribute('viewBox')).toBe('0 0 800 600');
+    });
+
+    it('removes touches on touchend and resets pinch state below 2 fingers', () => {
+      const controller = new TagClusterPanZoomController(svg, { width: 800, height: 600 });
+      controller.attach();
+
+      const start = [
+        { identifier: 1, clientX: 380, clientY: 300 },
+        { identifier: 2, clientX: 420, clientY: 300 },
+      ];
+      svg.dispatchEvent(makeTouchEvent('touchstart', start));
+      svg.dispatchEvent(makeTouchEvent('touchend', [{ identifier: 2, clientX: 420, clientY: 300 }]));
+
+      // Only one finger remains; a further touchmove with that single finger should pan normally.
+      svg.dispatchEvent(makeTouchEvent('touchmove', [{ identifier: 1, clientX: 340, clientY: 260 }]));
+
+      const vb = getViewBox(svg);
+      expect(vb.x).not.toBe(0);
+      expect(vb.y).not.toBe(0);
+    });
+  });
+
+  describe('pinch zoom edge cases', () => {
+    it('does nothing when touchmove reports 2 touches but activeTouches was not primed with 2', () => {
+      const controller = new TagClusterPanZoomController(svg, { width: 800, height: 600 });
+      controller.attach();
+
+      svg.dispatchEvent(makeTouchEvent('touchstart', [{ identifier: 1, clientX: 400, clientY: 300 }]));
+      svg.dispatchEvent(
+        makeTouchEvent('touchmove', [
+          { identifier: 1, clientX: 380, clientY: 300 },
+          { identifier: 2, clientX: 420, clientY: 300 },
+        ])
+      );
+
+      expect(svg.getAttribute('viewBox')).toBe('0 0 800 600');
+    });
+
+    it('does not zoom when the svg rect is zero-sized during pinch', () => {
+      const controller = new TagClusterPanZoomController(svg, { width: 800, height: 600 });
+      controller.attach();
+
+      const start = [
+        { identifier: 1, clientX: 380, clientY: 300 },
+        { identifier: 2, clientX: 420, clientY: 300 },
+      ];
+      svg.dispatchEvent(makeTouchEvent('touchstart', start));
+
+      vi.spyOn(svg, 'getBoundingClientRect').mockReturnValue({
+        x: 0, y: 0, width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0, toJSON: () => ({}),
+      } as DOMRect);
+
+      const moved = [
+        { identifier: 1, clientX: 300, clientY: 300 },
+        { identifier: 2, clientX: 500, clientY: 300 },
+      ];
+      svg.dispatchEvent(makeTouchEvent('touchmove', moved));
+
+      expect(svg.getAttribute('viewBox')).toBe('0 0 800 600');
+    });
+  });
+
+  describe('pinch distance guard', () => {
+    it('does not zoom when one of the two touch points is missing (sparse array)', () => {
+      const controller = new TagClusterPanZoomController(svg, { width: 800, height: 600 });
+      controller.attach();
+
+      const start = [
+        { identifier: 1, clientX: 380, clientY: 300 },
+        { identifier: 2, clientX: 420, clientY: 300 },
+      ];
+      svg.dispatchEvent(makeTouchEvent('touchstart', start));
+
+      const sparse: FakeTouch[] = [{ identifier: 1, clientX: 300, clientY: 300 }];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (sparse as any)[1] = undefined;
+      const event = new Event('touchmove', { bubbles: true, cancelable: true }) as Event & {
+        touches: FakeTouch[];
+        changedTouches: FakeTouch[];
+      };
+      Object.defineProperty(event, 'touches', { value: sparse, configurable: true });
+      Object.defineProperty(event, 'changedTouches', { value: sparse, configurable: true });
+
+      expect(() => svg.dispatchEvent(event)).not.toThrow();
+      expect(svg.getAttribute('viewBox')).toBe('0 0 800 600');
+    });
+  });
+
+  describe('button zoom without wiring', () => {
+    it('does not attach listeners for buttons that are not provided', () => {
+      // No buttons object passed at all — attach() should skip all three `if` branches.
+      const controller = new TagClusterPanZoomController(svg, { width: 800, height: 600 });
+      expect(() => controller.attach()).not.toThrow();
+      expect(svg.getAttribute('viewBox')).toBe('0 0 800 600');
+    });
   });
 });

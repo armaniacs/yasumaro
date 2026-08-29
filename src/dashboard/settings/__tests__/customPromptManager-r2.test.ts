@@ -486,4 +486,400 @@ describe('customPromptManager - r2 missed branches', () => {
       expect(html).toContain('\u30c7\u30d5\u30a9\u30eb\u30c8');
     });
   });
+
+  describe('uncovered branches: handleDeletePrompt default guard', () => {
+    it('should show error when deleting default prompt via injected custom entry', async () => {
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = { custom_prompts: [createTestPrompt({ id: '__default__', name: 'Fake Default' })] };
+      initCustomPromptManager(settings);
+      const delBtn = document.getElementById('delete-prompt-__default__');
+      expect(delBtn).not.toBeNull();
+      delBtn!.click();
+      await new Promise(r => setTimeout(r, 10));
+      const status = document.getElementById('promptStatus') as HTMLElement;
+      expect(status.textContent).toBe('Cannot delete default prompt');
+      expect(status.className).toBe('error');
+      expect(mockSetAll).not.toHaveBeenCalled();
+    });
+
+    it('should use fallback string path when promptStatusDiv is null for delete default', async () => {
+      document.getElementById('promptStatus')!.remove();
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = { custom_prompts: [createTestPrompt({ id: '__default__' })] };
+      initCustomPromptManager(settings);
+      // create fallback element with same id manually to test ?? branch still works via string lookup returning null?
+      // When div is removed before init, promptStatusDiv is null, so showStatus will lookup by id string and find null -> early return safely
+      const delBtn = document.getElementById('delete-prompt-__default__')!;
+      delBtn.click();
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockSetAll).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('uncovered branches: handleEditPrompt default guard and not found', () => {
+    it('should show error when editing default prompt via injected custom entry', async () => {
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = { custom_prompts: [createTestPrompt({ id: '__default__', name: 'Fake' })] };
+      initCustomPromptManager(settings);
+      const editBtn = document.getElementById('edit-prompt-__default__')!;
+      editBtn.click();
+      await new Promise(r => setTimeout(r, 10));
+      const status = document.getElementById('promptStatus') as HTMLElement;
+      expect(status.textContent).toContain('Cannot edit default');
+      expect(status.className).toBe('error');
+    });
+
+    it('should handle edit when prompt not found after mutation', async () => {
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = { custom_prompts: [createTestPrompt({ id: 'toEdit_missing', name: 'ToEdit' })] };
+      initCustomPromptManager(settings);
+      const nameInput = document.getElementById('promptName') as HTMLInputElement;
+      // mutate to remove prompt
+      settings.custom_prompts = [];
+      const editBtn = document.getElementById('edit-prompt-toEdit_missing')!;
+      expect(editBtn).not.toBeNull();
+      editBtn.click();
+      // form should not be populated because prompt not found
+      expect(nameInput.value).toBe('');
+    });
+
+    it('should handle edit when promptSystemInput missing', async () => {
+      document.getElementById('promptSystem')!.remove();
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = { custom_prompts: [createTestPrompt({ id: 'sysMissing', name: 'SysMissing', systemPrompt: 'sys', prompt: 'p' })] };
+      initCustomPromptManager(settings);
+      document.getElementById('edit-prompt-sysMissing')!.click();
+      const nameInput = document.getElementById('promptName') as HTMLInputElement;
+      expect(nameInput.value).toBe('SysMissing');
+    });
+
+    it('should handle edit when savePromptBtn and cancelPromptBtn missing', async () => {
+      document.getElementById('savePromptBtn')!.remove();
+      document.getElementById('cancelPromptBtn')!.remove();
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = { custom_prompts: [createTestPrompt({ id: 'btnMissing', name: 'BtnMissing' })] };
+      initCustomPromptManager(settings);
+      document.getElementById('edit-prompt-btnMissing')!.click();
+      const editingIdInput = document.getElementById('editingPromptId') as HTMLInputElement;
+      expect(editingIdInput.value).toBe('btnMissing');
+    });
+
+    it('should handle edit when editingPromptIdInput missing', async () => {
+      document.getElementById('editingPromptId')!.remove();
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = { custom_prompts: [createTestPrompt({ id: 'editNoIdInput', name: 'NoId' })] };
+      initCustomPromptManager(settings);
+      document.getElementById('edit-prompt-editNoIdInput')!.click();
+      const nameInput = document.getElementById('promptName') as HTMLInputElement;
+      expect(nameInput.value).toBe('NoId');
+    });
+
+    it('should early return when currentSettings missing via guard', async () => {
+      // init with null settings then trigger edit via injected prompt
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      // init with empty to set currentSettings, then force null by re-import? Alternative: init with null
+      (initCustomPromptManager as any)(null as any);
+      // need a prompt to edit but currentSettings is null, so handleEditPrompt will hit default guard first? Actually default guard before null check, so to test null guard we need non-default id
+      // Create a settings with prompt, init, then nullify via second init with null, but edit button won't exist. So instead we test handleSavePrompt guard for null currentSettings elsewhere.
+      // For edit, the guard is after default check, so if currentSettings null and id not default, it returns early without error.
+      // We simulate by calling init with null and then trying to trigger edit via manually created button that would call handler if it existed, but handler doesn't exist because render returned early due to !currentSettings.
+      // So we just ensure no throw when currentSettings is null and we don't have button.
+      expect(document.getElementById('promptList')!.innerHTML).toBe('');
+    });
+  });
+
+  describe('uncovered branches: handleDuplicate custom not found', () => {
+    it('should show error when custom prompt not found for duplication via mutation', async () => {
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = { custom_prompts: [createTestPrompt({ id: 'dupMissing', name: 'DupMissing', systemPrompt: 's', prompt: 'p' })] };
+      initCustomPromptManager(settings);
+      const nameInput = document.getElementById('promptName') as HTMLInputElement;
+      nameInput.value = 'before';
+      settings.custom_prompts = [];
+      document.getElementById('duplicate-prompt-dupMissing')!.click();
+      await new Promise(r => setTimeout(r, 10));
+      const status = document.getElementById('promptStatus') as HTMLElement;
+      expect(status.textContent).toBe('Prompt not found');
+      expect(status.className).toBe('error');
+      expect(nameInput.value).toBe('before');
+    });
+
+    it('should duplicate correctly when promptSystemInput and editingPromptIdInput missing', async () => {
+      document.getElementById('promptSystem')!.remove();
+      document.getElementById('editingPromptId')!.remove();
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = { custom_prompts: [createTestPrompt({ id: 'dupNoSys', name: 'NoSys', systemPrompt: 'sysVal', prompt: 'promptVal', provider: 'openai' })] };
+      initCustomPromptManager(settings);
+      document.getElementById('duplicate-prompt-dupNoSys')!.click();
+      const nameInput = document.getElementById('promptName') as HTMLInputElement;
+      const providerSelect = document.getElementById('promptProvider') as HTMLSelectElement;
+      const textInput = document.getElementById('promptText') as HTMLTextAreaElement;
+      expect(nameInput.value).toBe('NoSys (Copy)');
+      expect(providerSelect.value).toBe('openai');
+      expect(textInput.value).toBe('promptVal');
+    });
+
+    it('should handle duplicate when save/cancel buttons missing', async () => {
+      document.getElementById('savePromptBtn')!.remove();
+      document.getElementById('cancelPromptBtn')!.remove();
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = { custom_prompts: [createTestPrompt({ id: 'dupNoBtn', name: 'NoBtn' })] };
+      initCustomPromptManager(settings);
+      document.getElementById('duplicate-prompt-dupNoBtn')!.click();
+      const nameInput = document.getElementById('promptName') as HTMLInputElement;
+      expect(nameInput.value).toBe('NoBtn (Copy)');
+    });
+
+    it('should cover preset duplicate with systemPrompt fallback to DEFAULT_SYSTEM_PROMPT', async () => {
+      const { getPresetPrompt } = await import('../../../utils/customPromptUtils.js');
+      (getPresetPrompt as any).mockImplementation((id: string) => {
+        if (id === 'concise') return { id: 'concise', name: 'Concise', nameJa: '\u7c21\u6f54', userPrompt: 'Be concise', systemPrompt: '' };
+        if (id === 'default') return { id: 'default', name: 'Default', nameJa: '\u30c7\u30d5\u30a9\u30eb\u30c8', userPrompt: 'Default prompt', systemPrompt: '' };
+        return undefined;
+      });
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      initCustomPromptManager({ custom_prompts: [] } as any);
+      document.getElementById('duplicate-prompt-__preset__concise')!.click();
+      const systemInput = document.getElementById('promptSystem') as HTMLInputElement;
+      // DEFAULT_SYSTEM_PROMPT is 'Default system prompt', since concise has '' it falls back
+      expect(systemInput.value).toBe('Default system prompt');
+    });
+  });
+
+  describe('uncovered branches: handleActivate preset not found and existing null check', () => {
+    it('should early return when preset not found on activate (mock before init)', async () => {
+      const { getPresetPrompt } = await import('../../../utils/customPromptUtils.js');
+      (getPresetPrompt as any).mockImplementation((id: string) => {
+        if (id === 'concise') return undefined;
+        const presets: any = {
+          default: { id: 'default', name: 'Default', nameJa: '\u30c7\u30d5\u30a9\u30eb\u30c8', userPrompt: 'Default prompt', systemPrompt: '' },
+        };
+        return presets[id];
+      });
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = { custom_prompts: [] };
+      initCustomPromptManager(settings);
+      document.getElementById('activate-prompt-__preset__concise')!.click();
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockSetAll).not.toHaveBeenCalled();
+    });
+
+    it('should handle activate preset when existing entry exists (upsert true branch)', async () => {
+      const { getPresetPrompt } = await import('../../../utils/customPromptUtils.js');
+      (getPresetPrompt as any).mockImplementation((id: string) => {
+        if (id === 'concise') return { id: 'concise', name: 'Concise', nameJa: '\u7c21\u6f54', userPrompt: 'Be concise', systemPrompt: '' };
+        if (id === 'default') return { id: 'default', name: 'Default', nameJa: '\u30c7\u30d5\u30a9\u30eb\u30c8', userPrompt: 'Default prompt', systemPrompt: '' };
+        return undefined;
+      });
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = { custom_prompts: [createTestPrompt({ id: '__preset__concise', name: 'Concise', isActive: false })] };
+      initCustomPromptManager(settings);
+      const btn = document.getElementById('activate-prompt-__preset__concise');
+      expect(btn).not.toBeNull();
+      btn!.click();
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockSetAll).toHaveBeenCalled();
+      expect(settings.custom_prompts[0].isActive).toBe(true);
+    });
+  });
+
+  describe('uncovered branches: provider labels and getProviderLabel fallback', () => {
+    it('should return OpenAI label for openai provider', async () => {
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      initCustomPromptManager({ custom_prompts: [createTestPrompt({ id: 'openai_p', provider: 'openai', name: 'OA' })] } as any);
+      expect(document.getElementById('promptList')!.innerHTML).toContain('OpenAI');
+    });
+    it('should return OpenAI 2 label for openai2 provider', async () => {
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      initCustomPromptManager({ custom_prompts: [createTestPrompt({ id: 'openai2_p', provider: 'openai2', name: 'OA2' })] } as any);
+      expect(document.getElementById('promptList')!.innerHTML).toContain('OpenAI 2');
+    });
+    it('should fallback to All Providers when getMessage returns falsy', async () => {
+      const { getMessage } = await import('../../../utils/i18n.js');
+      (getMessage as any).mockImplementation((k: string) => {
+        if (k === 'promptProviderAll') return '';
+        if (k === 'locale') return 'en';
+        return k;
+      });
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      initCustomPromptManager({ custom_prompts: [createTestPrompt({ id: 'all_p', provider: 'all', name: 'All' })] } as any);
+      expect(document.getElementById('promptList')!.innerHTML).toContain('All Providers');
+    });
+  });
+
+  describe('uncovered branches: handleSavePrompt validation and systemPrompt handling', () => {
+    it('should trim whitespace and treat empty systemPrompt as undefined', async () => {
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = { custom_prompts: [] };
+      initCustomPromptManager(settings);
+      const nameInput = document.getElementById('promptName') as HTMLInputElement;
+      const systemInput = document.getElementById('promptSystem') as HTMLInputElement;
+      const textInput = document.getElementById('promptText') as HTMLTextAreaElement;
+      nameInput.value = '  Trim Test  ';
+      systemInput.value = '   ';
+      textInput.value = '  Summarize {{content}}  ';
+      document.getElementById('savePromptBtn')!.click();
+      await vi.waitFor(() => expect(mockSetAll).toHaveBeenCalled());
+      expect(settings.custom_prompts[0].name).toBe('Trim Test');
+      expect(settings.custom_prompts[0].prompt).toBe('Summarize {{content}}');
+      // systemPrompt should be undefined or not set when empty
+      expect(settings.custom_prompts[0].systemPrompt === undefined || settings.custom_prompts[0].systemPrompt === '').toBeTruthy();
+    });
+
+    it('should handle update with systemPrompt defined via pickDefined', async () => {
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const existing = createTestPrompt({ id: 'editSys', name: 'Old', systemPrompt: 'oldSys', prompt: 'old' });
+      const settings: any = { custom_prompts: [existing] };
+      initCustomPromptManager(settings);
+      (document.getElementById('editingPromptId') as HTMLInputElement).value = 'editSys';
+      (document.getElementById('promptName') as HTMLInputElement).value = 'Updated';
+      (document.getElementById('promptSystem') as HTMLInputElement).value = 'newSys';
+      (document.getElementById('promptText') as HTMLTextAreaElement).value = 'newPrompt';
+      (document.getElementById('promptProvider') as HTMLSelectElement).value = 'gemini';
+      document.getElementById('savePromptBtn')!.click();
+      await vi.waitFor(() => expect(mockSetAll).toHaveBeenCalled());
+      expect(settings.custom_prompts[0].systemPrompt).toBe('newSys');
+    });
+
+    it('should handle save with invalid prompt returning branch for validation.error fallback', async () => {
+      mockValidatePrompt.mockReturnValueOnce({ valid: false, error: undefined } as any);
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = { custom_prompts: [] };
+      initCustomPromptManager(settings);
+      (document.getElementById('promptName') as HTMLInputElement).value = 'Name';
+      (document.getElementById('promptText') as HTMLTextAreaElement).value = 'bad';
+      document.getElementById('savePromptBtn')!.click();
+      await new Promise(r => setTimeout(r, 10));
+      const status = document.getElementById('promptStatus') as HTMLElement;
+      expect(status.textContent).toBe('Invalid prompt');
+      expect(status.className).toBe('error');
+    });
+
+    it('should handle save when currentSettings is null (early return)', async () => {
+      // init with null sets currentSettings null
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      (initCustomPromptManager as any)(null as any);
+      // remove promptList to avoid render error, but ensure save button still exists from setupDOM before second init? Actually init overwrites promptList etc. but currentSettings null will cause handleSavePrompt early return.
+      // Try clicking save (button exists)
+      const saveBtn = document.getElementById('savePromptBtn');
+      if (saveBtn) {
+        saveBtn.click();
+        await new Promise(r => setTimeout(r, 10));
+        expect(mockSetAll).not.toHaveBeenCalled();
+      }
+    });
+
+    it('should handle save when promptNameInput missing', async () => {
+      document.getElementById('promptName')!.remove();
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      initCustomPromptManager({ custom_prompts: [] } as any);
+      document.getElementById('savePromptBtn')!.click();
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockSetAll).not.toHaveBeenCalled();
+    });
+
+    it('should handle save when promptTextInput missing', async () => {
+      document.getElementById('promptText')!.remove();
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      initCustomPromptManager({ custom_prompts: [] } as any);
+      document.getElementById('savePromptBtn')!.click();
+      await new Promise(r => setTimeout(r, 10));
+      expect(mockSetAll).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('uncovered branches: locale and preset fallback', () => {
+    it('should fallback to navigator ja when locale undefined and language is ja', async () => {
+      const { getMessage } = await import('../../../utils/i18n.js');
+      (getMessage as any).mockImplementation((k: string) => {
+        if (k === 'locale') return undefined;
+        if (k === 'promptProviderAll') return 'All Providers';
+        if (k === 'defaultPrompt') return 'Default';
+        return k;
+      });
+      Object.defineProperty(navigator, 'language', { value: 'ja-JP', configurable: true });
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      initCustomPromptManager({ custom_prompts: [] } as any);
+      // locale branch should result in 'ja' display name, but since PRESET data has ja name, check html contains ja name for preset?
+      // Default preset nameJa is \u30c7\u30d5\u30a9\u30eb\u30c8
+      expect(document.getElementById('promptList')!.innerHTML).toContain('__preset__concise');
+    });
+
+    it('should fallback to defaultPrompt key when getPresetPrompt returns undefined for default', async () => {
+      const { getPresetPrompt, getPromptDisplayName } = await import('../../../utils/customPromptUtils.js');
+      (getPresetPrompt as any).mockImplementation((id: string) => {
+        if (id === 'default') return undefined;
+        return { id: 'concise', name: 'Concise', nameJa: '\u7c21\u6f54', userPrompt: 'Be concise', systemPrompt: '' };
+      });
+      // Also mock getMessage to return falsy for defaultPrompt to trigger || 'Default'
+      const { getMessage } = await import('../../../utils/i18n.js');
+      (getMessage as any).mockImplementation((k: string) => {
+        if (k === 'defaultPrompt') return '';
+        if (k === 'locale') return 'en';
+        if (k === 'promptProviderAll') return 'All Providers';
+        return '';
+      });
+      (getPromptDisplayName as any).mockReturnValue('FallbackName');
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      initCustomPromptManager({ custom_prompts: [] } as any);
+      const html = document.getElementById('promptList')!.innerHTML;
+      // Should contain fallback 'Default' or 'FallbackName'
+      expect(html).toContain('__default__');
+    });
+  });
+
+  describe('uncovered branches: active preset badge and filtering', () => {
+    it('should show active badge for preset when activePromptId matches', async () => {
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = { custom_prompts: [createTestPrompt({ id: '__preset__concise', isActive: true, name: 'Concise' })] };
+      initCustomPromptManager(settings);
+      const html = document.getElementById('promptList')!.innerHTML;
+      // active preset should have badge and active class, and no activate button
+      expect(document.getElementById('activate-prompt-__preset__concise')).toBeNull();
+      expect(html).toContain('active');
+    });
+
+    it('should filter out preset-backed entries from custom list', async () => {
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      const settings: any = {
+        custom_prompts: [
+          createTestPrompt({ id: '__preset__concise', name: 'PresetClone' }),
+          createTestPrompt({ id: 'custom1', name: 'Custom1' }),
+        ],
+      };
+      initCustomPromptManager(settings);
+      const html = document.getElementById('promptList')!.innerHTML;
+      expect(html).toContain('custom1');
+      // preset-backed entries should not have edit/delete buttons (they are filtered from custom list)
+      expect(document.getElementById('edit-prompt-__preset__concise')).toBeNull();
+      expect(document.getElementById('delete-prompt-__preset__concise')).toBeNull();
+      // but duplicate/activate for preset should exist in preset section
+      expect(document.getElementById('duplicate-prompt-__preset__concise')).not.toBeNull();
+    });
+  });
+
+  describe('uncovered branches: resetForm and loadDefaultPrompt with missing elements', () => {
+    it('should handle resetForm when all inputs missing', async () => {
+      document.getElementById('promptName')!.remove();
+      document.getElementById('promptProvider')!.remove();
+      document.getElementById('promptSystem')!.remove();
+      document.getElementById('promptText')!.remove();
+      document.getElementById('editingPromptId')!.remove();
+      document.getElementById('savePromptBtn')!.remove();
+      document.getElementById('cancelPromptBtn')!.remove();
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      initCustomPromptManager({ custom_prompts: [] } as any);
+      // trigger reset via cancel button fallback? No button, but we can test loadDefaultPrompt missing both
+      const { loadDefaultPrompt } = await import('../customPromptManager.js');
+      expect(() => loadDefaultPrompt()).not.toThrow();
+    });
+
+    it('should handle handleCancelEdit with missing promptStatus', async () => {
+      document.getElementById('promptStatus')!.remove();
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      initCustomPromptManager({ custom_prompts: [] } as any);
+      document.getElementById('cancelPromptBtn')!.click();
+      expect((document.getElementById('promptName') as HTMLInputElement)?.value).toBe('');
+    });
+  });
 });

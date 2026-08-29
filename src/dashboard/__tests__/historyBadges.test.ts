@@ -1,9 +1,14 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
-import { makeRecordTypeBadge, makeMaskBadge, makeCleansedBadge } from '../historyBadges.js';
+import { makeRecordTypeBadge, makeMaskBadge, makeCleansedBadge, makePrivacyModeBadge } from '../historyBadges.js';
 
+const mockGetMessage = vi.hoisted(() => vi.fn((key: string) => key));
 vi.mock('../../utils/i18n.js', () => ({
-  getMessage: (key: string) => key,
+  getMessage: (...args: any[]) => mockGetMessage(...args),
+}));
+
+vi.mock('../../utils/i18nPlural.js', () => ({
+  getPluralKey: (prefix: string, count: number) => `${prefix}_${count}`,
 }));
 
 describe('makeRecordTypeBadge', () => {
@@ -15,6 +20,15 @@ describe('makeRecordTypeBadge', () => {
   it('creates auto badge by default', () => {
     const badge = makeRecordTypeBadge();
     expect(badge.className).toContain('history-badge-auto');
+  });
+
+  it('uses fallback text when getMessage returns empty string', () => {
+    mockGetMessage.mockReturnValueOnce('').mockReturnValueOnce('');
+    const badge = makeRecordTypeBadge('manual');
+    expect(badge.textContent).toBe('手動');
+    mockGetMessage.mockReturnValueOnce('').mockReturnValueOnce('');
+    const badge2 = makeRecordTypeBadge('auto');
+    expect(badge2.textContent).toBe('自動');
   });
 });
 
@@ -31,6 +45,12 @@ describe('makeMaskBadge', () => {
     const badge = makeMaskBadge(5);
     expect(badge).not.toBeNull();
     expect(badge?.className).toContain('history-badge-masked');
+  });
+
+  it('falls back to default label when getMessage returns empty', () => {
+    mockGetMessage.mockReturnValue('');
+    const badge = makeMaskBadge(3);
+    expect(badge?.textContent).toBe('🔒 3');
   });
 });
 
@@ -57,5 +77,33 @@ describe('makeCleansedBadge', () => {
   it('creates both badge', () => {
     const badge = makeCleansedBadge('both');
     expect(badge).not.toBeNull();
+  });
+
+  it('returns null for unknown cleansedReason', () => {
+    expect(makeCleansedBadge('unknown' as any)).toBeNull();
+  });
+});
+
+describe('makePrivacyModeBadge', () => {
+  it('returns null for undefined mode', () => {
+    expect(makePrivacyModeBadge(undefined)).toBeNull();
+  });
+
+  it('returns null for unknown mode', () => {
+    expect(makePrivacyModeBadge('unknown')).toBeNull();
+  });
+
+  it('creates badge for known modes', () => {
+    for (const mode of ['local_only', 'full_pipeline', 'masked_cloud', 'cloud_only']) {
+      const badge = makePrivacyModeBadge(mode);
+      expect(badge).not.toBeNull();
+      expect(badge?.className).toContain('history-badge-privacy-mode');
+    }
+  });
+
+  it('falls back to mode string when getMessage returns empty', () => {
+    mockGetMessage.mockReturnValue('');
+    const badge = makePrivacyModeBadge('local_only');
+    expect(badge?.textContent).toBe('local_only');
   });
 });

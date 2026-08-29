@@ -125,6 +125,26 @@ describe('showRecordError', () => {
         expect(errorEl?.textContent).toBe('Recording failed');
     });
 
+    it('falls back to hardcoded Japanese message when getMessage returns empty', async () => {
+        const i18n = await import('../../utils/i18n.js');
+        const spy = vi.spyOn(i18n, 'getMessage').mockReturnValue('');
+        const container = document.createElement('div');
+        showRecordError(container, null);
+        const errorEl = container.querySelector('.record-error-message');
+        expect(errorEl?.textContent).toBe('記録に失敗しました');
+        spy.mockRestore();
+    });
+
+    it('falls back to Japanese message when error object has empty error string and getMessage empty', async () => {
+        const i18n = await import('../../utils/i18n.js');
+        const spy = vi.spyOn(i18n, 'getMessage').mockReturnValue('');
+        const container = document.createElement('div');
+        showRecordError(container, { error: '' });
+        const errorEl = container.querySelector('.record-error-message');
+        expect(errorEl?.textContent).toBe('記録に失敗しました');
+        spy.mockRestore();
+    });
+
     it('removes error message after timeout', async () => {
         vi.useFakeTimers();
         const container = document.createElement('div');

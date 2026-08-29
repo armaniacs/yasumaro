@@ -38,4 +38,28 @@ describe('spinner', () => {
     expect(consoleSpy).toHaveBeenCalledWith('loadingSpinner element not found');
     consoleSpy.mockRestore();
   });
+
+  it('showSpinner handles missing spinner-text element gracefully', () => {
+    document.body.innerHTML = '<div id="loadingSpinner" style="display:none"></div>';
+    showSpinner('Custom text');
+    const spinner = document.getElementById('loadingSpinner')!;
+    expect(spinner.style.display).toBe('flex');
+    expect(spinner.getAttribute('role')).toBe('status');
+    expect(spinner.getAttribute('aria-live')).toBe('polite');
+  });
+
+  it('hideSpinner warns when element missing', () => {
+    document.body.innerHTML = '';
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    hideSpinner();
+    expect(consoleSpy).toHaveBeenCalledWith('loadingSpinner element not found');
+    consoleSpy.mockRestore();
+  });
+
+  it('showSpinner sets aria attributes', () => {
+    showSpinner('test');
+    const spinner = document.getElementById('loadingSpinner')!;
+    expect(spinner.getAttribute('role')).toBe('status');
+    expect(spinner.getAttribute('aria-live')).toBe('polite');
+  });
 });

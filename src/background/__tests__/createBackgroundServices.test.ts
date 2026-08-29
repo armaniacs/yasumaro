@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   createReviewSummaryGenerator: vi.fn(),
   RecordingCacheInstance: vi.fn(),
   SessionStoreRecordingCacheStore: vi.fn(),
+  setSqliteHealthCheck: vi.fn(),
 }));
 
 vi.mock('../obsidianClient.js', () => ({ ObsidianClient: mocks.ObsidianClient }));
@@ -133,8 +134,10 @@ vi.mock('../confirmTokenManager.js', () => ({
   ensureConfirmToken: vi.fn().mockResolvedValue('token'),
 }));
 vi.mock('../reviewSummaryGenerator.js', () => ({ createReviewSummaryGenerator: mocks.createReviewSummaryGenerator }));
+vi.mock('../../utils/storage/storageMaintenance.js', () => ({ setSqliteHealthCheck: mocks.setSqliteHealthCheck }));
 
 import { createBackgroundServices } from '../createBackgroundServices.js';
+import { ServiceContainer } from '../serviceContainer.js';
 
 describe('createBackgroundServices', () => {
   beforeEach(() => {
@@ -307,5 +310,98 @@ describe('createBackgroundServices', () => {
       expect(deps).not.toHaveProperty('sqliteClient');
       expect(deps).not.toHaveProperty('getPrivacyInfoWithCache');
     }
+  });
+
+  it('reuses every pre-registered container entry instead of re-registering it', () => {
+    const container = new ServiceContainer();
+    const tokens = [
+      'sessionStore',
+      'recordingCache',
+      'headerDetector',
+      'obsidian',
+      'sqliteClient',
+      'tabCache',
+      'rateLimiter',
+      'manualContentFetcher',
+      'remoteAiService',
+      'aiService',
+      'settingsRepository',
+      'perUrlMutexMap',
+      'pendingWriteQueue',
+      'reviewSummaryGenerator',
+      'recordingPipeline',
+      'dashboardSqliteHandler',
+      'autoSavedBadgeTabs',
+      'manualRecordDeps',
+      'saveRecordDeps',
+      'messageRouter',
+    ] as const;
+
+    for (const token of tokens) {
+      container.override(token, { fake: token });
+    }
+
+    const services = createBackgroundServices(container);
+
+    // None of the real factories should have run since every token was pre-registered.
+    expect(mocks.ObsidianClient).not.toHaveBeenCalled();
+    expect(mocks.getSharedSqliteClient).not.toHaveBeenCalled();
+    expect(mocks.TabCache).not.toHaveBeenCalled();
+    expect(mocks.RateLimiter).not.toHaveBeenCalled();
+    expect(mocks.ManualContentFetcher).not.toHaveBeenCalled();
+    expect(mocks.RemoteAIService).not.toHaveBeenCalled();
+    expect(mocks.SessionStore).not.toHaveBeenCalled();
+    expect(mocks.HeaderDetector).not.toHaveBeenCalled();
+    expect(mocks.createReviewSummaryGenerator).not.toHaveBeenCalled();
+    expect(mocks.createRecordingPipeline).not.toHaveBeenCalled();
+
+    expect(services.obsidian).toEqual({ fake: 'obsidian' });
+    expect(services.sqliteClient).toEqual({ fake: 'sqliteClient' });
+    expect(services.tabCache).toEqual({ fake: 'tabCache' });
+    expect(services.rateLimiter).toEqual({ fake: 'rateLimiter' });
+    expect(services.manualContentFetcher).toEqual({ fake: 'manualContentFetcher' });
+    expect(services.aiService).toEqual({ fake: 'aiService' });
+    expect(services.sessionStore).toEqual({ fake: 'sessionStore' });
+    expect(services.headerDetector).toEqual({ fake: 'headerDetector' });
+    expect(services.recordingCache).toEqual({ fake: 'recordingCache' });
+    expect(services.reviewSummaryGenerator).toEqual({ fake: 'reviewSummaryGenerator' });
+    expect(services.recordingPipeline).toEqual({ fake: 'recordingPipeline' });
+    expect(services.dashboardSqliteHandler).toEqual({ fake: 'dashboardSqliteHandler' });
+    expect(services.autoSavedBadgeTabs).toEqual({ fake: 'autoSavedBadgeTabs' });
+    expect(services.manualRecordDeps).toEqual({ fake: 'manualRecordDeps' });
+    expect(services.saveRecordDeps).toEqual({ fake: 'saveRecordDeps' });
+    expect(services.messageRouter).toEqual({ fake: 'messageRouter' });
+  });
+
+  it('wires the SQLite health check to report true when maintain succeeds with truthy data', async () => {
+    const maintain = vi.fn().mockResolvedValue({ success: true, data: true });
+    mocks.getSharedSqliteClient.mockReturnValue({ sqlite: true, maintain });
+
+    createBackgroundServices();
+
+    expect(mocks.setSqliteHealthCheck).toHaveBeenCalledTimes(1);
+    const healthCheck = mocks.setSqliteHealthCheck.mock.calls[0][0] as () => Promise<boolean>;
+
+    await expect(healthCheck()).resolves.toBe(true);
+  });
+
+  it('wires the SQLite health check to report false when maintain succeeds with falsy data', async () => {
+    const maintain = vi.fn().mockResolvedValue({ success: true, data: false });
+    mocks.getSharedSqliteClient.mockReturnValue({ sqlite: true, maintain });
+
+    createBackgroundServices();
+
+    const healthCheck = mocks.setSqliteHealthCheck.mock.calls[0][0] as () => Promise<boolean>;
+    await expect(healthCheck()).resolves.toBe(false);
+  });
+
+  it('wires the SQLite health check to report false when maintain fails', async () => {
+    const maintain = vi.fn().mockResolvedValue({ success: false });
+    mocks.getSharedSqliteClient.mockReturnValue({ sqlite: true, maintain });
+
+    createBackgroundServices();
+
+    const healthCheck = mocks.setSqliteHealthCheck.mock.calls[0][0] as () => Promise<boolean>;
+    await expect(healthCheck()).resolves.toBe(false);
   });
 });

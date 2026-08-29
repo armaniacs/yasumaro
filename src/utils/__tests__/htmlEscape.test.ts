@@ -22,5 +22,18 @@ describe('escapeHtml', () => {
     test('文字列以外の入力は空文字列を返す', () => {
         expect(escapeHtml(null as any)).toBe('');
         expect(escapeHtml(undefined as any)).toBe('');
+        expect(escapeHtml(123 as any)).toBe('');
+        expect(escapeHtml({} as any)).toBe('');
+        expect(escapeHtml([] as any)).toBe('');
+        expect(escapeHtml(true as any)).toBe('');
+        expect(escapeHtml(Symbol('x') as any)).toBe('');
+    });
+    test('nullish coalescing fallbackは到達不能だが、置換が常にマップ済みであることを確認', () => {
+        // 全ての正規表現マッチ文字がマップに存在するため、フォールバック '' は到達不能。
+        // このテストは分岐が意図的に到達不能な防御的コードであることを文書化する。
+        // 置換結果が undefined にならないことを確認
+        expect(escapeHtml('&<>"\'/')).toBe('&amp;&lt;&gt;&quot;&#039;&#x2F;');
+        // 追加の防御: 空文字列や通常文字では置換が発生しない
+        expect(escapeHtml('abc')).toBe('abc');
     });
 });

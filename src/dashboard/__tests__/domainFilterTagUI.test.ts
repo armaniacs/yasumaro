@@ -494,4 +494,227 @@ describe('initDomainFilterTagUI', () => {
       expect(tabBlacklist.getAttribute('aria-selected')).toBe('true');
     });
   });
+
+  describe('starts disabled', () => {
+    it('does not switch tab on init when radioDisabled is checked (isEnabled false branch)', async () => {
+      setupFullDOM();
+      const radioDisabled = document.getElementById('filterDisabled') as HTMLInputElement;
+      const radioWhitelist = document.getElementById('filterWhitelist') as HTMLInputElement;
+      radioWhitelist.checked = false;
+      radioDisabled.checked = true;
+
+      const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
+      await initDomainFilterTagUI();
+
+      const toggle = document.getElementById('domainFilterToggle') as HTMLInputElement;
+      const tabBar = document.getElementById('domainModeTabBar')!;
+      const tagArea = document.getElementById('domainTagArea')!;
+      expect(toggle.checked).toBe(false);
+      expect(tabBar.hasAttribute('hidden')).toBe(true);
+      expect(tagArea.hasAttribute('hidden')).toBe(true);
+    });
+  });
+
+  describe('getMessage fallback strings', () => {
+    it('uses fallback description text when getMessage returns empty string', async () => {
+      const { getMessage } = await import('../../utils/i18n.js');
+      (getMessage as unknown as ReturnType<typeof vi.fn>).mockReturnValue('');
+
+      setupFullDOM();
+      const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
+      await initDomainFilterTagUI();
+
+      const modeDesc = document.getElementById('domainModeDesc')!;
+      const tabBlacklist = document.getElementById('domainModeTab-blacklist') as HTMLButtonElement;
+      tabBlacklist.click();
+      expect(modeDesc.textContent).toBe('ブラックリストのドメインは記録されません。それ以外はすべて記録されます。');
+
+      const tabWhitelist = document.getElementById('domainModeTab-whitelist') as HTMLButtonElement;
+      tabWhitelist.click();
+      expect(modeDesc.textContent).toBe('ホワイトリストのドメインのみ記録されます。それ以外は記録されません。');
+    });
+
+    it('uses fallback error text when getMessage returns empty string', async () => {
+      const { getMessage } = await import('../../utils/i18n.js');
+      (getMessage as unknown as ReturnType<typeof vi.fn>).mockReturnValue('');
+
+      setupFullDOM();
+      const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
+      await initDomainFilterTagUI();
+
+      const tagInput = document.getElementById('domainTagInput') as HTMLInputElement;
+      const tagAddBtn = document.getElementById('domainTagAddBtn') as HTMLButtonElement;
+      const tagError = document.getElementById('domainTagError')!;
+
+      tagInput.value = 'invalid domain!';
+      tagAddBtn.click();
+      expect(tagError.textContent).toBe('無効なドメイン形式です。');
+
+      tagInput.value = 'good.com';
+      tagAddBtn.click();
+      expect(tagError.textContent).toBe('すでに登録されています。');
+    });
+
+    it('uses fallback tag count text when getMessage returns empty string', async () => {
+      const { getMessage } = await import('../../utils/i18n.js');
+      (getMessage as unknown as ReturnType<typeof vi.fn>).mockReturnValue('');
+
+      setupFullDOM();
+      const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
+      await initDomainFilterTagUI();
+
+      const tagCount = document.getElementById('domainTagCount')!;
+      expect(tagCount.textContent).toBe('{count} 件');
+    });
+  });
+
+  describe('missing optional elements branches', () => {
+    it('handles missing modeDesc element gracefully', async () => {
+      setupFullDOM();
+      document.getElementById('domainModeDesc')!.remove();
+
+      const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
+      await expect(initDomainFilterTagUI()).resolves.toBeUndefined();
+
+      const tabBlacklist = document.getElementById('domainModeTab-blacklist') as HTMLButtonElement;
+      expect(() => tabBlacklist.click()).not.toThrow();
+    });
+
+    it('handles missing tagList/tagCount elements gracefully (renderTags no-op)', async () => {
+      setupFullDOM();
+      document.getElementById('domainTagList')!.remove();
+      document.getElementById('domainTagCount')!.remove();
+
+      const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
+      await expect(initDomainFilterTagUI()).resolves.toBeUndefined();
+    });
+
+    it('handles missing tagError element gracefully (addDomain no-op)', async () => {
+      setupFullDOM();
+      document.getElementById('domainTagError')!.remove();
+
+      const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
+      await initDomainFilterTagUI();
+
+      const tagInput = document.getElementById('domainTagInput') as HTMLInputElement;
+      const tagAddBtn = document.getElementById('domainTagAddBtn') as HTMLButtonElement;
+      const whitelistTA = document.getElementById('whitelistTextarea') as HTMLTextAreaElement;
+
+      tagInput.value = 'example.com';
+      expect(() => tagAddBtn.click()).not.toThrow();
+      // tagError missing -> addDomain returns before mutating anything
+      expect(whitelistTA.value).toBe('good.com');
+    });
+
+    it('handles missing domainList (hidden sync textarea) gracefully', async () => {
+      setupFullDOM();
+      document.getElementById('domainList')!.remove();
+
+      const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
+      await initDomainFilterTagUI();
+
+      const tagInput = document.getElementById('domainTagInput') as HTMLInputElement;
+      const tagAddBtn = document.getElementById('domainTagAddBtn') as HTMLButtonElement;
+      const whitelistTA = document.getElementById('whitelistTextarea') as HTMLTextAreaElement;
+
+      tagInput.value = 'example.com';
+      expect(() => tagAddBtn.click()).not.toThrow();
+      expect(whitelistTA.value).toBe('good.com\nexample.com');
+
+      const tabBlacklist = document.getElementById('domainModeTab-blacklist') as HTMLButtonElement;
+      expect(() => tabBlacklist.click()).not.toThrow();
+    });
+
+    it('handles missing tagInput element gracefully on add button click', async () => {
+      setupFullDOM();
+      document.getElementById('domainTagInput')!.remove();
+
+      const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
+      await initDomainFilterTagUI();
+
+      const tagAddBtn = document.getElementById('domainTagAddBtn') as HTMLButtonElement;
+      const whitelistTA = document.getElementById('whitelistTextarea') as HTMLTextAreaElement;
+
+      expect(() => tagAddBtn.click()).not.toThrow();
+      expect(whitelistTA.value).toBe('good.com');
+    });
+
+    it('tagInput input event no-ops when tagError element is missing', async () => {
+      setupFullDOM();
+      document.getElementById('domainTagError')!.remove();
+
+      const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
+      await initDomainFilterTagUI();
+
+      const tagInput = document.getElementById('domainTagInput') as HTMLInputElement;
+      expect(() => tagInput.dispatchEvent(new Event('input'))).not.toThrow();
+    });
+
+    it('handles missing toggle element gracefully (setEnabled skips toggle sync)', async () => {
+      setupFullDOM();
+      document.getElementById('domainFilterToggle')!.remove();
+
+      const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
+      await expect(initDomainFilterTagUI()).resolves.toBeUndefined();
+
+      const tabBar = document.getElementById('domainModeTabBar')!;
+      expect(tabBar.hasAttribute('hidden')).toBe(false);
+    });
+
+    it('handles missing saveStatus element on save button click', async () => {
+      setupFullDOM();
+      document.getElementById('domainSaveStatus')!.remove();
+
+      const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
+      await initDomainFilterTagUI();
+
+      const saveBtn = document.getElementById('domainSaveBtn') as HTMLButtonElement;
+      const realSaveBtn = document.getElementById('saveDomainSettings') as HTMLButtonElement;
+      let clicked = false;
+      realSaveBtn.addEventListener('click', () => { clicked = true; });
+
+      expect(() => saveBtn.click()).not.toThrow();
+      expect(clicked).toBe(true);
+    });
+  });
+
+  describe('keydown non-Enter key', () => {
+    it('does not add domain when a non-Enter key is pressed', async () => {
+      setupFullDOM();
+      const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
+      await initDomainFilterTagUI();
+
+      const tagInput = document.getElementById('domainTagInput') as HTMLInputElement;
+      const whitelistTA = document.getElementById('whitelistTextarea') as HTMLTextAreaElement;
+
+      tagInput.value = 'example.com';
+      const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true });
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+      tagInput.dispatchEvent(event);
+
+      expect(preventDefaultSpy).not.toHaveBeenCalled();
+      expect(whitelistTA.value).toBe('good.com');
+    });
+  });
+
+  describe('MutationObserver className fallback', () => {
+    it('falls back to empty string when realStatus.className is falsy-checked via textContent branch', async () => {
+      setupFullDOM();
+      const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
+      await initDomainFilterTagUI();
+
+      const realStatus = document.getElementById('domainStatus')!;
+      const saveStatus = document.getElementById('domainSaveStatus')!;
+
+      // realStatus.textContent left empty -> exercises `realStatus.textContent || ''` false branch
+      realStatus.className = 'idle';
+      realStatus.dispatchEvent(new Event('mutation'));
+      realStatus.setAttribute('data-x', '1');
+
+      await new Promise(r => setTimeout(r, 0));
+
+      expect(saveStatus.textContent).toBe('');
+      expect(saveStatus.className).toBe('status-message idle');
+    });
+  });
 });

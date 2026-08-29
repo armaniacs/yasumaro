@@ -425,6 +425,62 @@ describe('migrateUblockSettings error handling', () => {
     consoleSpy.mockRestore();
   });
 
+  test('マイグレーション失敗後ロールバックが成功した場合は元のエラーを再スロー', async () => {
+    // 【テスト目的】: マイグレーション失敗→ロールバック成功時に元のエラーがそのまま再スローされることを確認
+    // 【テスト内容】: storage.setがマイグレーション保存時のみ失敗し、restoreFromMigrationBackupは成功するケース
+    // 【期待される動作】: rollback成功ログが出力され、元のエラー（Storage write failed）が再スローされる
+
+    const oldRules = {
+      blockRules: [{ domain: 'example.com' }],
+      exceptionRules: [],
+      metadata: { importedAt: 1000000 }
+    };
+
+    let getCallCount = 0;
+    (global as any).chrome.storage.local.get.mockImplementation(() => {
+      getCallCount++;
+      if (getCallCount === 1) {
+        // cleanupOldBackups: バックアップなし
+        return Promise.resolve({});
+      }
+      if (getCallCount <= 3) {
+        // migrateUblockSettings / createMigrationBackup 用
+        return Promise.resolve({ ublock_rules: oldRules });
+      }
+      // restoreFromMigrationBackup用: 有効なバックアップを返す
+      return Promise.resolve({
+        migration_backup: {
+          timestamp: Date.now(),
+          originalData: oldRules,
+          checksum: computeChecksum(oldRules)
+        }
+      });
+    });
+
+    let setCallCount = 0;
+    (global as any).chrome.storage.local.set.mockImplementation(() => {
+      setCallCount++;
+      if (setCallCount === 2) {
+        // マイグレーション保存時のみ失敗（1回目のバックアップ保存は成功）
+        return Promise.reject(new Error('Storage write failed'));
+      }
+      return Promise.resolve();
+    });
+    (global as any).chrome.storage.local.remove.mockResolvedValue(undefined);
+
+    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(migrateUblockSettings()).rejects.toThrow('Storage write failed');
+
+    expect(consoleLogSpy).toHaveBeenCalledWith('[Migration] Rollback successful');
+
+    consoleLogSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
+  });
+
   test('マイグレーション失敗かつロールバックも失敗した場合に複合エラーをスロー', async () => {
     // 【テスト目的】: マイグレーションとロールバック両方が失敗した場合の動作を確認
     // 【テスト内容】: storage.setが失敗し、restoreFromMigrationBackupもバックアップ不在で失敗
