@@ -1,7 +1,0 @@
-{
-  "aiProviderLayoutA": { "message": "A Unified" },
-  "aiProviderLayoutB": { "message": "B Separated" },
-  "aiProviderPriorityDuplicateWarning": { "message": "Duplicate provider and model" },
-  "aiProviderPriority1Required": { "message": "Priority 1 is required" },
-  "aiProviderLayoutToggleLabel": { "message": "AI provider layout" }
-}
