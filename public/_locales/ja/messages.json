@@ -119,6 +119,21 @@
   "providerPriorityModelPlaceholder": {
     "message": "モデル名（省略可、デフォルト使用）"
   },
+  "aiProviderLayoutA": {
+    "message": "A 一体型"
+  },
+  "aiProviderLayoutB": {
+    "message": "B 分離型"
+  },
+  "aiProviderPriorityDuplicateWarning": {
+    "message": "同一プロバイダ・同一モデルが重複しています"
+  },
+  "aiProviderPriority1Required": {
+    "message": "優先度1位は必須です"
+  },
+  "aiProviderLayoutToggleLabel": {
+    "message": "AIプロバイダ表示切替"
+  },
   "reviewSummarySection": {
     "message": "週次/月次振り返りサマリ"
   },

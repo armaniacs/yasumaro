@@ -119,6 +119,21 @@
   "providerPriorityModelPlaceholder": {
     "message": "Model name (optional, uses default if empty)"
   },
+  "aiProviderLayoutA": {
+    "message": "A Unified"
+  },
+  "aiProviderLayoutB": {
+    "message": "B Separated"
+  },
+  "aiProviderPriorityDuplicateWarning": {
+    "message": "Duplicate provider and model"
+  },
+  "aiProviderPriority1Required": {
+    "message": "Priority 1 is required"
+  },
+  "aiProviderLayoutToggleLabel": {
+    "message": "AI provider layout"
+  },
   "reviewSummarySection": {
     "message": "Weekly/Monthly Review Summary"
   },

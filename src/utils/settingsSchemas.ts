@@ -49,6 +49,7 @@ export const GENERAL_SETTINGS_SCHEMA: SettingsSchema = [
   { key: StorageKeys.MIN_SCROLL_DEPTH, type: 'number' },
   { key: StorageKeys.MAX_TOKENS_PER_PROMPT, type: 'number' },
   { key: StorageKeys.AI_PROVIDER, type: 'select' },
+  { key: StorageKeys.AI_PROVIDER_LAYOUT, type: 'select' },
   { key: StorageKeys.SQLITE_RETENTION_DAYS, type: 'select' },
   { key: StorageKeys.SQLITE_MAX_RECORDS, type: 'select' },
   { key: StorageKeys.CONTENT_RETENTION_DAYS, type: 'select' },
