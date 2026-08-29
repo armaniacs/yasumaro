@@ -110,6 +110,18 @@ export async function handleSaveOnly(): Promise<void> {
   });
 
   if (!result.success) {
+    if (result.error === 'aiProviderPriority1Required') {
+      statusDiv.textContent = getMessage('aiProviderPriority1Required') || 'Priority 1 is required';
+      statusDiv.className = 'error';
+      syncStatusToTop();
+      return;
+    }
+    if (result.error === 'aiProviderPriorityDuplicateWarning') {
+      statusDiv.textContent = getMessage('aiProviderPriorityDuplicateWarning') || 'Duplicate provider and model';
+      statusDiv.className = 'error';
+      syncStatusToTop();
+      return;
+    }
     statusDiv.textContent = getMessage('saveError') || '設定の保存に失敗しました。';
     statusDiv.className = 'error';
     syncStatusToTop();
@@ -216,7 +228,13 @@ export async function handleTestAi(): Promise<void> {
         includeTiming: true,
       });
       if (!saveResult.success) {
-        statusDiv.textContent = getMessage('saveError') || '設定の保存に失敗しました。';
+        if (saveResult.error === 'aiProviderPriority1Required') {
+          statusDiv.textContent = getMessage('aiProviderPriority1Required') || 'Priority 1 is required';
+        } else if (saveResult.error === 'aiProviderPriorityDuplicateWarning') {
+          statusDiv.textContent = getMessage('aiProviderPriorityDuplicateWarning') || 'Duplicate provider and model';
+        } else {
+          statusDiv.textContent = getMessage('saveError') || '設定の保存に失敗しました。';
+        }
         statusDiv.className = 'error';
         syncStatusToTop();
         return;
@@ -298,7 +316,13 @@ export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRep
       includeTiming: true,
     });
     if (!saveResult.success) {
-      statusTopDiv.textContent = getMessage('saveError') || '設定の保存に失敗しました。';
+      if (saveResult.error === 'aiProviderPriority1Required') {
+        statusTopDiv.textContent = getMessage('aiProviderPriority1Required') || 'Priority 1 is required';
+      } else if (saveResult.error === 'aiProviderPriorityDuplicateWarning') {
+        statusTopDiv.textContent = getMessage('aiProviderPriorityDuplicateWarning') || 'Duplicate provider and model';
+      } else {
+        statusTopDiv.textContent = getMessage('saveError') || '設定の保存に失敗しました。';
+      }
       statusTopDiv.className = 'error';
       return;
     }

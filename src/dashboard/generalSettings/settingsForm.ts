@@ -10,7 +10,6 @@
 
 import { StorageKeys, ProviderSlot } from '../../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
-import type { SettingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { loadSettingsToInputs, loadLocalMarkdownExportTiming } from '../../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../utils/settingsSchemas.js';
 import { getMessage } from '../../utils/i18n.js';
@@ -18,7 +17,6 @@ import { getPluralKey } from '../../utils/i18nPlural.js';
 import { getAiProviderElements, updateAIProviderVisibilityMulti } from '../settings/aiProvider.js';
 import { updateProviderSettingsLayout } from '../aiProviderLayoutManager.js';
 import { purgeOldRecordsNow, purgeContentNow, isServiceError } from '../dashboardSqliteService.js';
-import { resolveInitialLayout, mountLayoutToggle } from '../aiProviderLayoutToggle.js';
 import { collectBProviderPrioritySlots } from '../aiProviderB/priorityListView.js';
 import { getSettings } from '../../utils/storage/settingsStore.js';
 
@@ -85,14 +83,6 @@ export function applyProviderPrioritySlots(slots: ProviderSlot[]): void {
 }
 
 export async function loadGeneralSettings(repo: SettingsReader = settingsRepository): Promise<void> {
-  // Task6: 新規/既存の初期レイアウトを getAll 前に永続化（新規->b, 既存->a, 保存済みは尊重）
-  let resolvedLayout: 'a' | 'b' | undefined;
-  try {
-    const fullRepoEarly = (repo as SettingsRepository).getPort ? (repo as SettingsRepository) : settingsRepository;
-    resolvedLayout = await resolveInitialLayout(fullRepoEarly);
-  } catch {
-    // ストレージ/DOMエラーは無視（テスト環境等）
-  }
   const settings = await repo.getAll();
   loadSettingsToInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body, settings, GENERAL_SETTINGS_SCHEMA);
   loadLocalMarkdownExportTiming(settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING]);
@@ -139,20 +129,6 @@ export async function loadGeneralSettings(repo: SettingsReader = settingsReposit
     providerInfoDisplayDiv.textContent = `${providerType} (${providerBaseUrl})`;
   } else if (selectedProviderInfoDiv) {
     selectedProviderInfoDiv.classList.add('hidden');
-  }
-
-  // ヘッダートグルをマウント（既に解決済みなら再利用、なければ解決）
-  try {
-    const fullRepo = (repo as SettingsRepository).getPort ? (repo as SettingsRepository) : settingsRepository;
-    const layout = resolvedLayout ?? (await resolveInitialLayout(fullRepo));
-    const headerEl = document.querySelector('#aiProviderSection .settings-section-title') as HTMLElement | null;
-    if (headerEl) {
-      mountLayoutToggle(headerEl, layout, async (next) => {
-        await fullRepo.set(StorageKeys.AI_PROVIDER_LAYOUT, next);
-      });
-    }
-  } catch {
-    // DOM 未構築やストレージエラーの場合は無視（テスト環境等）
   }
 }
 
