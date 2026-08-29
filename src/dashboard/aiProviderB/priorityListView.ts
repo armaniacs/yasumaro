@@ -49,6 +49,33 @@ export function validateBSlots(slots: ProviderSlot[]): { valid: boolean; duplica
   return { valid: dup.size === 0, duplicateIndices: [...dup].sort((a, b) => a - b) };
 }
 
+/**
+ * Row-aware validation for B containers: returns duplicate row indices (not slot indices)
+ * and P1 empty flag. Used by save pipeline to block saving correctly.
+ */
+export function validateBContainer(container: HTMLElement): { valid: boolean; duplicateRowIndices: number[]; p1Empty: boolean } {
+  const rows = [...container.querySelectorAll<HTMLElement>('.b-priority-row')];
+  const seen = new Map<string, number>();
+  const dupSet = new Set<number>();
+  rows.forEach((row, rowIdx) => {
+    const select = row.querySelector<HTMLSelectElement>('select');
+    const provider = (select?.value ?? '').trim();
+    if (!provider) return;
+    const input = row.querySelector<HTMLInputElement>('input.b-priority-model-input');
+    const model = (input?.value ?? '').trim();
+    const key = `${provider}::${model ?? ''}`;
+    if (seen.has(key)) {
+      dupSet.add(rowIdx);
+      dupSet.add(seen.get(key)!);
+    } else {
+      seen.set(key, rowIdx);
+    }
+  });
+  const p1 = rows[0]?.querySelector<HTMLSelectElement>('select');
+  const p1Empty = !p1 || !p1.value.trim();
+  return { valid: dupSet.size === 0, duplicateRowIndices: [...dupSet].sort((a, b) => a - b), p1Empty };
+}
+
 function createRow(index: number, slot: ProviderSlot | undefined): HTMLElement {
   const row = document.createElement('div');
   row.className = 'b-priority-row';
@@ -162,12 +189,29 @@ export function createBPriorityListView(
     dragIndex = null;
   });
 
-  // validation on change
+  // validation on change — row-aware duplicate detection (fixes indexずれ when empty rows exist)
   const validate = () => {
-    const slots = collectBProviderPrioritySlots(container);
-    const { valid, duplicateIndices } = validateBSlots(slots);
-    container.querySelectorAll('.b-priority-row').forEach((r, i) => {
-      r.classList.toggle('has-error', duplicateIndices.includes(i));
+    const rows = [...container.querySelectorAll<HTMLElement>('.b-priority-row')];
+    const seen = new Map<string, number>();
+    const dupSet = new Set<number>();
+    rows.forEach((row, rowIdx) => {
+      const select = row.querySelector<HTMLSelectElement>('select');
+      const provider = (select?.value ?? '').trim();
+      if (!provider) return;
+      const input = row.querySelector<HTMLInputElement>('input.b-priority-model-input');
+      const model = (input?.value ?? '').trim();
+      const key = `${provider}::${model ?? ''}`;
+      if (seen.has(key)) {
+        dupSet.add(rowIdx);
+        dupSet.add(seen.get(key)!);
+      } else {
+        seen.set(key, rowIdx);
+      }
+    });
+    const duplicateRowIndices = [...dupSet].sort((a, b) => a - b);
+    const valid = dupSet.size === 0;
+    rows.forEach((r, i) => {
+      r.classList.toggle('has-error', duplicateRowIndices.includes(i));
     });
     let warn = container.querySelector('.b-priority-warn');
     if (!valid) {

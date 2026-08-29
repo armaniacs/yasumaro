@@ -11,10 +11,11 @@ import { StorageKeys } from '../utils/storage/types.js';
 import { extractSettingsFromInputs, extractLocalMarkdownExportTiming, type ValidationSchema } from '../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../utils/settingsSchemas.js';
 import { collectProviderPrioritySlots } from './generalSettings/settingsForm.js';
-import { collectBProviderPrioritySlots } from './aiProviderB/priorityListView.js';
+import { collectBProviderPrioritySlots, validateBContainer } from './aiProviderB/priorityListView.js';
 import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, ErrorPair } from './settings/fieldValidation.js';
 import { getMessage } from '../utils/i18n.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
+import { syncStatusToTop } from './statusView.js';
 
 /**
  * General settings validation schema — single source of truth for the
@@ -125,6 +126,46 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
         newSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectBProviderPrioritySlots(bList);
       } catch {
         newSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectProviderPrioritySlots();
+      }
+      // Bレイアウト時の保存ブロック: P1必須（Spec §6）。Aは従来通りフォールバックでgeminiのためブロックしない。
+      const { p1Empty, duplicateRowIndices, valid } = validateBContainer(bList);
+      // UIの重複警告を同期（row-aware）
+      const rows = [...bList.querySelectorAll<HTMLElement>('.b-priority-row')];
+      rows.forEach((r, i) => r.classList.toggle('has-error', duplicateRowIndices.includes(i)));
+      let warn = bList.querySelector('.b-priority-warn') as HTMLElement | null;
+      if (!valid) {
+        if (!warn) {
+          warn = document.createElement('div');
+          warn.className = 'b-priority-warn field-error';
+          warn.setAttribute('role', 'alert');
+          bList.appendChild(warn);
+        }
+        warn.textContent = getMessage('aiProviderPriorityDuplicateWarning') || 'Duplicate provider and model';
+      } else {
+        warn?.remove();
+      }
+      let reqWarn = bList.querySelector('.b-priority-req-warn') as HTMLElement | null;
+      if (p1Empty) {
+        if (!reqWarn) {
+          reqWarn = document.createElement('div');
+          reqWarn.className = 'b-priority-req-warn field-error';
+          reqWarn.setAttribute('role', 'alert');
+          bList.appendChild(reqWarn);
+        }
+        reqWarn.textContent = getMessage('aiProviderPriority1Required') || 'Priority 1 is required';
+        rows[0]?.classList.add('has-error');
+        // status エリアにも表示して保存を中断
+        const statusEl = document.getElementById('status') as HTMLElement | null;
+        if (statusEl) {
+          statusEl.textContent = getMessage('aiProviderPriority1Required') || 'Priority 1 is required';
+          statusEl.className = 'error';
+          try {
+            syncStatusToTop();
+          } catch {}
+        }
+        return { success: false, error: 'aiProviderPriority1Required' };
+      } else {
+        reqWarn?.remove();
       }
     } else {
       newSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectProviderPrioritySlots();
