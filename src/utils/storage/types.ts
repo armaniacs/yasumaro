@@ -38,6 +38,7 @@ export const StorageKeys = {
     HISTORY_SORT_PREFERENCE: 'history_sort_preference', // 履歴パネルのソート設定 { sortBy, sortDir } をJSON文字列で保存
     AI_PROVIDER: 'ai_provider',
     AI_PROVIDER_PRIORITY_LIST: 'ai_provider_priority_list', // 優先度1〜3位のプロバイダ設定（ProviderSlot[]）
+    AI_PROVIDER_LAYOUT: 'ai_provider_layout', // A/Bレイアウト切替 'a'|'b'
     SUMMARY_MIN_LENGTH: 'summary_min_length', // 要約の最小文字数しきい値（デフォルト: 10）。未満の場合フォールバック対象
     OPENAI_BASE_URL: 'openai_base_url',
     OPENAI_API_KEY: 'openai_api_key',
@@ -283,6 +284,7 @@ export interface StorageKeyValues {
     [StorageKeys.HISTORY_SORT_PREFERENCE]: string;
     [StorageKeys.AI_PROVIDER]: string;
     [StorageKeys.AI_PROVIDER_PRIORITY_LIST]: ProviderSlot[];
+    [StorageKeys.AI_PROVIDER_LAYOUT]: 'a' | 'b';
     [StorageKeys.SUMMARY_MIN_LENGTH]: number;
     [StorageKeys.OPENAI_BASE_URL]: string;
     [StorageKeys.OPENAI_API_KEY]: string | EncryptedData;
