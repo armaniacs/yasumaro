@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.86` リリース。
+> - 現時点では `v6.7.88` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,17 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.88] - 2026-08-30
+
+### Added
+
+- AIプロバイダ設定のA/B比較実験を実装。初期設定画面（Dashboard / Initial Setup）のAIセクション内で「A 一体型（現行：優先度カード内に設定を埋め込む）」と「B 分離型（優先度リストとプロバイダ別設定を分離）」をトグルで切り替え可能に。`ai_provider_layout: 'a'|'b'` を新規ストレージキーとして追加し、新規ユーザーはB／既存ユーザーはAをデフォルト、再起動後も保持。優先度は3枠固定、同一プロバイダでもモデルが異なれば重複を許可、同一プロバイダ＋同一モデルは警告（P1空は保存ブロック）。Bはドラッグ＋↑↓ボタンで順序入替、常設アコーディオンは既存DOMを再利用
+- `public/_locales` に `aiProviderLayoutA` / `aiProviderLayoutB` / `aiProviderPriorityDuplicateWarning` / `aiProviderPriority1Required` / `aiProviderLayoutToggleLabel` の5キーを追加
+
+### Fixed
+
+- BレイアウトでProvider Settingsアコーディオンを開いてもBase URLやAPIキーが表示されない問題を修正。`hideAllProviderSettings()` で `display:none` にされたままアコーディオン内に移動されていたため、`providerAccordionView` で `display:block` に上書きし、B表示時は不要な `hideAll` 呼び出しを除去
 
 ## [6.7.87] - 2026-08-29
 
