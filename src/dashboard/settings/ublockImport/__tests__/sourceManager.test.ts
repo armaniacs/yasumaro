@@ -439,4 +439,79 @@ describe('ublockImport - SourceManager Module', () => {
       expect(state2.settings[StorageKeys.UBLOCK_SOURCES]).toHaveLength(1);
     });
   });
+
+  describe('未設定の ublock_sources へのフォールバック', () => {
+    test('loadAndDisplaySources は未設定の場合空配列をコールバックに渡す', async () => {
+      storageMocks.setStorageState({ settings: { ublock_sources: undefined } });
+
+      const renderCallback = vi.fn();
+      await loadAndDisplaySources(renderCallback);
+
+      expect(renderCallback).toHaveBeenCalledWith([]);
+    });
+
+    test('deleteSource は未設定の場合何もしない', async () => {
+      storageMocks.setStorageState({ settings: { ublock_sources: undefined } });
+
+      const renderCallback = vi.fn();
+      await deleteSource(0, renderCallback);
+
+      expect(renderCallback).not.toHaveBeenCalled();
+    });
+
+    test('reloadSource は未設定の場合エラーを投げる', async () => {
+      storageMocks.setStorageState({ settings: { ublock_sources: undefined } });
+
+      const fetchFromUrlCallback = vi.fn();
+      await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('無効なインデックス');
+    });
+
+    test('saveUblockSettings は未設定の場合新規ソースとして追加する', async () => {
+      storageMocks.setStorageState({ settings: { ublock_sources: undefined } });
+
+      const result = await saveUblockSettings('||example.com^');
+
+      expect(result.action).toBe('追加');
+      expect(result.sources).toHaveLength(1);
+      expect(result.sources[0].url).toBe('manual');
+    });
+  });
+
+  describe('一部無効な行を含むフィルター', () => {
+    test('reloadSource は有効ルールがあれば警告付きで更新する', async () => {
+      storageMocks.setStorageState({
+        settings: {
+          ublock_sources: [
+            { url: 'https://example.com/filters.txt', ruleCount: 1, blockDomains: ['example.com'], exceptionDomains: [] }
+          ],
+          ublock_rules: {},
+          ublock_format_enabled: false
+        }
+      });
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        const fetchFromUrlCallback = vi.fn().mockResolvedValue('||example.com^\ninvalid line without caret');
+        const result = await reloadSource(0, fetchFromUrlCallback);
+
+        expect(result.ruleCount).toBe(1);
+        expect(warnSpy).toHaveBeenCalled();
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+
+    test('saveUblockSettings は有効ルールがあれば警告付きで保存する', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        const result = await saveUblockSettings('||example.com^\ninvalid line without caret');
+
+        expect(result.action).toBe('追加');
+        expect(result.ruleCount).toBe(1);
+        expect(warnSpy).toHaveBeenCalled();
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+  });
 });

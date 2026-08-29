@@ -46,8 +46,8 @@ Then 全カテゴリが PASS になる
 
 - [x] `public/_locales/en/messages.json` に `modelsDevDialogTitle`, `tabAll`, `tabAggregator`, `tabOthers` が追加されている
 - [x] `public/_locales/ja/messages.json` に上記4キーの日本語訳が追加されている
-- [ ] `npm run test:coverage` で `branches >= 90.0%` かつ `lines >= 90.0%`（2026-08-29 時点 88.94%まで改善、残り ~130 branches。以下14ファイルで branches カバレッジテストを追加済み、マージ済み: masterPassword.ts(69→97.5%), stripExtended.ts(69→86%), historyPendingPanel.ts(74→100%), migration.ts(59→98%), promptSanitizer.ts(67→96%), historyEntryRow.ts(84→100%), OpenAIProvider.ts(76→95%), createBackgroundServices.ts(49→100%), tagClusterPanZoom.ts(67→92%), storageFallback.ts(85→99%), legacyMigration.ts(85→99%), domainFilterTagUI.ts(75→98%), privacy.ts(76→84%), sessionStore.ts(80→92%)。再開手順: `npm run test:coverage` で最新の未達ファイル一覧を取得し、branches 不足の多いファイル順に同様のテスト追加を継続。直近のフルカバレッジ実行が vitest-pool の worker timeout で不安定だったため、再開時はまず `npm run test:coverage` を単独実行してインフラ起因の flake でないか確認すること）
-- [ ] `npm run release:check:fast` が全カテゴリ PASS（tests カテゴリのみ coverage 未達で FAIL）
+- [x] `npm run test:coverage` で `branches >= 90.0%` かつ `lines >= 90.0%`（2026-08-29 完了時点: branches 90.41% / lines 96.42%。経緯: 14ファイルへのテスト追加で 88.94% まで改善後、環境要因で `eslint` が node_modules から欠落し `eslint/__tests__` の2スイートが失敗していた状態を解消（`npm install` 実行）すると、クリーンなフル実行で 90.02% まで回復。ゲート余裕 (~2 branches) が薄かったためバッファとして5ファイル（permissionManager / onboardingWizard / privacySettings / manualContentFetcher / sourceManager）に branches カバレッジテストを追加し +47 branches）
+- [x] `npm run release:check:fast` が全カテゴリ PASS（7/7 PASS。ローカル生成物 `sbom.json` が欠落していたため `npm run generate-sbom` で再生成）
 - [x] `npm run validate` が PASS
 - [x] 追加・変更した i18n キー/テストがレビュー不要の範囲を超える場合、コードレビュー済み
 
@@ -77,7 +77,7 @@ Then 全カテゴリが PASS になる
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テスト/チェックスクリプトでパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新不要（PBI 作成時点で README/コメントに変更なし）
-- [ ] `pbi/00-INDEX.md` の進行中表に本 PBI が記載され、完了時にアーカイブ履歴へ移動
+- [x] 全 BDD シナリオが自動テスト/チェックスクリプトでパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新不要（PBI 作成時点で README/コメントに変更なし）
+- [x] `pbi/00-INDEX.md` の進行中表に本 PBI が記載され、完了時にアーカイブ履歴へ移動
