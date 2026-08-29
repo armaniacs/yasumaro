@@ -33,6 +33,21 @@
 | [2026-08-29-12-fix-crypto-policy-ssot.md](2026-08-29-12-fix-crypto-policy-ssot.md) | 暗号・認証ポリシーSSOT化（VULN-010/037/038/039/040/052） | ⬜ | 🔧 | 🔴 | 🔴 | 453 |
 | [2026-08-29-13-fix-import-pipeline-safety.md](2026-08-29-13-fix-import-pipeline-safety.md) | インポート経路安全化 — 認証→上限→パース→検証（VULN-023/030/034/035/036） | ⬜ | 🔧 | 🟡 | 🟡 | 405 |
 | [2026-08-29-14-fix-security-hardening-code-quality.md](2026-08-29-14-fix-security-hardening-code-quality.md) | Code Qualityハードニング一括＋orphan-key機能バグ | ⬜ | 🔧 | 🟢 | 🟡 | 255 |
+| [2026-08-30-12-feat-cleansing-i18n-expanded-patterns.md](./2026-08-30-12-feat-cleansing-i18n-expanded-patterns.md) | クレンジングの多言語パターンを拡充する | ⬜ 未着手 | ✨ | 🟢低 | 🟢なし | 12.0 |
+| [2026-08-30-15-feat-llm-output-quality-guard.md](./2026-08-30-15-feat-llm-output-quality-guard.md) | LLMの縮退出力（繰り返し・非文）を検出して保存・表示を抑止する | ⬜ 未着手 | ✨ | 🟡中 | 🟢なし | 8.4 |
+| [2026-08-30-04-investigate-cleansing-single-pass-benchmark.md](./2026-08-30-04-investigate-cleansing-single-pass-benchmark.md) | クレンジング74回走査の1パス集約を計測検証する | ⬜ 未着手 | 🔧 | 🟢低 | 🟢なし | 8.0 |
+| [2026-08-30-06-feat-cleansing-presets.md](./2026-08-30-06-feat-cleansing-presets.md) | クレンジング32トグルをプリセットに束ねる | ⬜ 未着手 | ✨ | 🟡中 | 🟢なし | 8.0 |
+| [2026-08-30-02-feat-cleansing-semantic-classification.md](./2026-08-30-02-feat-cleansing-semantic-classification.md) | クラス部分一致に依存しないセマンティック分類を導入する | ⬜ 未着手 | ✨ | 🟡中 | 🟡軽微 | 6.3 |
+| [2026-08-30-01-feat-cleansing-readability-scoring.md](./2026-08-30-01-feat-cleansing-readability-scoring.md) | クレンジング本文保護スコアをMozilla Readabilityベースに置換する | ⬜ 未着手 | ✨ | 🔴高 | 🟡軽微 | 4.8 |
+| [2026-08-30-09-test-cleansing-corpus-ci.md](./2026-08-30-09-test-cleansing-corpus-ci.md) | クレンジングパターン衝突をコーパスでCI検出する | ⬜ 未着手 | 🔧 | 🟡中 | 🟢なし | 3.5 |
+| [2026-08-30-14-refactor-cleansing-observability-funnel.md](./2026-08-30-14-refactor-cleansing-observability-funnel.md) | クレンジングの観測性(ファネル/理由分解)を改善する | ⬜ 未着手 | 🔧 | 🟡中 | 🟢なし | 3.2 |
+| [2026-08-30-11-feat-cleansing-transparency-dual-payload.md](./2026-08-30-11-feat-cleansing-transparency-dual-payload.md) | クレンジングの透明性を高める二重ペイロード方式を導入する | ⬜ 未着手 | ✨ | 🟡中 | 🟢なし | 2.0 |
+| [2026-08-30-13-feat-cleansing-spa-dynamic-content.md](./2026-08-30-13-feat-cleansing-spa-dynamic-content.md) | SPA動的コンテンツのクレンジングタイミングを改善する | ⬜ 未着手 | ✨ | 🟡中 | 🟡軽微 | 1.67 |
+| [2026-08-30-03-feat-cleansing-shadow-dom-traversal.md](./2026-08-30-03-feat-cleansing-shadow-dom-traversal.md) | クレンジングのShadow DOM/iframe走査に対応する | ⬜ 未着手 | ✨ | 🔴高 | 🟡軽微 | 1.5 |
+| [2026-08-30-07-feat-cleansing-per-site-override.md](./2026-08-30-07-feat-cleansing-per-site-override.md) | クレンジングのドメイン別オーバーライドを可能にする | ⬜ 未着手 | ✨ | 🔴高 | 🟡軽微 | 1.44 |
+| [2026-08-30-08-feat-cleansing-feedback-loop.md](./2026-08-30-08-feat-cleansing-feedback-loop.md) | クレンジング誤削除のフィードバックループを構築する | ⬜ 未着手 | ✨ | 🔴高 | 🟢なし | 0.96 |
+| [2026-08-30-05-feat-cleansing-offscreen-delegation.md](./2026-08-30-05-feat-cleansing-offscreen-delegation.md) | クレンジングのOffscreen Document委譲でメインスレッド占有を削減する | ⬜ 未着手 | ✨ | 🔴高 | 🟡軽微 | 0.8 |
+| [2026-08-30-10-feat-whitelist-adapter-auto-generation.md](./2026-08-30-10-feat-whitelist-adapter-auto-generation.md) | ホワイトリストアダプターをLLMで自動生成する | ⬜ 未着手 | ✨ | 🔴高 | 🟢なし | 0.48 |
 
 ---
 
