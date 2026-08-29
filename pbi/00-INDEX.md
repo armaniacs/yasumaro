@@ -18,7 +18,7 @@
 
 | ファイル | タイトル | 状態 | 種別 | 難易度 | 副作用 | RICE |
 |---|---|---|---|---|---|---|
-| [2026-08-29-01-fix-release-check-blockers.md](./2026-08-29-01-fix-release-check-blockers.md) | リリース前チェックのブロッカー2件を解消する | ⬜ 未着手 | 🔧 | 🟡中 | 🟢なし | 4800 |
+| （なし — 未完了PBIなし） | | | | | | |
 
 ---
 
@@ -41,6 +41,10 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-29 リリース前チェックのブロッカー解消 完了
+
+- 2026-08-29-01-fix-release-check-blockers.md（RICE 4800 — i18n 未翻訳4キー（`modelsDevDialogTitle`/`tabAll`/`tabAggregator`/`tabOthers`）を en/ja に追加し check-i18n を PASS に。branches カバレッジは14ファイルへのテスト追加（88.94%）に加え、node_modules の `eslint` 欠落で失敗していた `eslint/__tests__` 2スイートを `npm install` で解消して 90.02% に回復させ、ゲート余裕確保のため permissionManager / onboardingWizard / privacySettings / manualContentFetcher / sourceManager の5ファイルにテストを追加し 90.41%（+47 branches）。欠落していたローカル生成物 `sbom.json` を `npm run generate-sbom` で再生成。`release:check:fast` 7/7 PASS / `validate` PASS / 10580 tests PASS）
 
 ### 2026-08-28 RateLimiter/SessionAlarms Service化 完了
 
