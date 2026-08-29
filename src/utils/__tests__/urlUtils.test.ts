@@ -53,6 +53,12 @@ describe('sanitizeUrlForLogging', () => {
     test('ロングパスもドメインのみ', () => {
         expect(sanitizeUrlForLogging('https://api.service.com/v1/users/123/profile?id=456')).toBe('api.service.com');
     });
+
+    test('hostnameが空のURLは[INVALID_URL]を返す (file:// や data: URL)', () => {
+        expect(sanitizeUrlForLogging('file:///tmp/file.txt')).toBe('[INVALID_URL]');
+        expect(sanitizeUrlForLogging('data:text/plain,hello')).toBe('[INVALID_URL]');
+        expect(sanitizeUrlForLogging('blob:https://example.com/uuid')).toBe('[INVALID_URL]');
+    });
 });
 
 describe('urlWithoutPath', () => {
@@ -79,6 +85,11 @@ describe('normalizeUrl', () => {
     test('プロトコルを小文字に正規化する', () => {
         expect(normalizeUrl('HTTPS://example.com')).toBe('https://example.com');
         expect(normalizeUrl('HTTP://example.com')).toBe('http://example.com');
+    });
+
+    test('http URL の末尾スラッシュを削除する', () => {
+        expect(normalizeUrl('http://example.com/')).toBe('http://example.com');
+        expect(normalizeUrl('HTTP://example.com/')).toBe('http://example.com');
     });
 
     test('無効なURLの場合はエラーを投げる', () => {

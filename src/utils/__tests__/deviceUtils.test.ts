@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { isMobileUserAgent } from '../deviceUtils.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { isMobileUserAgent, getPlatformOs, resetPlatformOsCache } from '../deviceUtils.js';
 
 describe('isMobileUserAgent', () => {
   it('returns true for Android Chrome', () => {
@@ -20,5 +20,137 @@ describe('isMobileUserAgent', () => {
 
   it('returns false for empty string', () => {
     expect(isMobileUserAgent('')).toBe(false);
+  });
+});
+
+describe('getPlatformOs', () => {
+  const originalNavigator = globalThis.navigator;
+  const originalChrome = (globalThis as any).chrome;
+
+  beforeEach(() => {
+    resetPlatformOsCache();
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { userAgent: '' },
+      configurable: true,
+      writable: true,
+    });
+  });
+
+  afterEach(() => {
+    resetPlatformOsCache();
+    Object.defineProperty(globalThis, 'navigator', {
+      value: originalNavigator,
+      configurable: true,
+      writable: true,
+    });
+    (globalThis as any).chrome = originalChrome;
+  });
+
+  it('returns cached value on subsequent calls', () => {
+    (globalThis as any).chrome = undefined;
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { userAgent: 'Macintosh' },
+      configurable: true,
+      writable: true,
+    });
+    expect(getPlatformOs()).toBe('mac');
+    expect(getPlatformOs()).toBe('mac');
+  });
+
+  it('detects android from user agent', () => {
+    (globalThis as any).chrome = undefined;
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { userAgent: 'Android' },
+      configurable: true,
+      writable: true,
+    });
+    expect(getPlatformOs()).toBe('android');
+  });
+
+  it('detects ios from user agent', () => {
+    (globalThis as any).chrome = undefined;
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { userAgent: 'iPhone' },
+      configurable: true,
+      writable: true,
+    });
+    expect(getPlatformOs()).toBe('ios');
+  });
+
+  it('detects windows from user agent', () => {
+    (globalThis as any).chrome = undefined;
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { userAgent: 'Windows' },
+      configurable: true,
+      writable: true,
+    });
+    expect(getPlatformOs()).toBe('win');
+  });
+
+  it('detects chromebook from user agent', () => {
+    (globalThis as any).chrome = undefined;
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { userAgent: 'CrOS' },
+      configurable: true,
+      writable: true,
+    });
+    expect(getPlatformOs()).toBe('cros');
+  });
+
+  it('detects linux from user agent', () => {
+    (globalThis as any).chrome = undefined;
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { userAgent: 'Linux' },
+      configurable: true,
+      writable: true,
+    });
+    expect(getPlatformOs()).toBe('linux');
+  });
+
+  it('returns unknown for unrecognized user agent', () => {
+    (globalThis as any).chrome = undefined;
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { userAgent: 'SomeUnknownDevice' },
+      configurable: true,
+      writable: true,
+    });
+    expect(getPlatformOs()).toBe('unknown');
+  });
+
+  it('calls chrome.runtime.getPlatformInfo when available', () => {
+    const getPlatformInfo = vi.fn(() => Promise.resolve({ os: 'win' }));
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { userAgent: '' },
+      configurable: true,
+      writable: true,
+    });
+    (globalThis as any).chrome = {
+      runtime: { getPlatformInfo },
+    };
+
+    getPlatformOs();
+    expect(getPlatformInfo).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not create multiple promises on repeated calls', () => {
+    const getPlatformInfo = vi.fn(() => Promise.resolve({ os: 'mac' }));
+    (globalThis as any).chrome = {
+      runtime: { getPlatformInfo },
+    };
+
+    getPlatformOs();
+    getPlatformOs();
+    expect(getPlatformInfo).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to user agent when chrome runtime is unavailable', () => {
+    (globalThis as any).chrome = undefined;
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { userAgent: 'Windows' },
+      configurable: true,
+      writable: true,
+    });
+
+    expect(getPlatformOs()).toBe('win');
   });
 });

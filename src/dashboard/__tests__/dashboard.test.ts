@@ -822,3 +822,61 @@ describe('toMarkdownTemplateEntryData (最終レビュー Fix 2 / Fix 3)', () =>
         expect(result.tags).toBe('#tech #news ');
     });
 });
+
+describe('resolveInitialPanelId', () => {
+    it('returns sqlite-history for ?tab=history', async () => {
+        const { resolveInitialPanelId } = await import('../dashboard.js');
+        expect(resolveInitialPanelId('?tab=history')).toBe('panel-sqlite-history');
+    });
+    it('returns general for ?section=obsidian', async () => {
+        const { resolveInitialPanelId } = await import('../dashboard.js');
+        expect(resolveInitialPanelId('?section=obsidian')).toBe('panel-general');
+    });
+    it('returns general for ?section=ai-provider', async () => {
+        const { resolveInitialPanelId } = await import('../dashboard.js');
+        expect(resolveInitialPanelId('?section=ai-provider')).toBe('panel-general');
+    });
+    it('returns general for ?section=general', async () => {
+        const { resolveInitialPanelId } = await import('../dashboard.js');
+        expect(resolveInitialPanelId('?section=general')).toBe('panel-general');
+    });
+    it('returns default for empty search', async () => {
+        const { resolveInitialPanelId } = await import('../dashboard.js');
+        expect(resolveInitialPanelId('')).toBe('panel-general');
+        expect(resolveInitialPanelId('?section=unknown')).toBe('panel-general');
+    });
+});
+
+describe('applySectionDeepLink', () => {
+    it('opens obsidian details and scrolls', async () => {
+        const { applySectionDeepLink } = await import('../dashboard.js');
+        document.body.innerHTML = '<details id="obsidianSettingsDetails"></details><div id="aiProviderSection"></div>';
+        const details = document.getElementById('obsidianSettingsDetails') as HTMLDetailsElement;
+        details.scrollIntoView = vi.fn();
+        applySectionDeepLink('?section=obsidian');
+        expect(details.open).toBe(true);
+        expect(details.scrollIntoView).toHaveBeenCalled();
+    });
+    it('scrolls ai-provider section', async () => {
+        const { applySectionDeepLink } = await import('../dashboard.js');
+        document.body.innerHTML = '<div id="aiProviderSection"></div>';
+        const el = document.getElementById('aiProviderSection')!;
+        el.scrollIntoView = vi.fn();
+        applySectionDeepLink('?section=ai-provider');
+        expect(el.scrollIntoView).toHaveBeenCalled();
+    });
+    it('does nothing for unknown section', async () => {
+        const { applySectionDeepLink } = await import('../dashboard.js');
+        document.body.innerHTML = '';
+        expect(() => applySectionDeepLink('?section=unknown')).not.toThrow();
+        expect(() => applySectionDeepLink('')).not.toThrow();
+    });
+});
+
+describe('initDashboard', () => {
+    it('handles missing buttons gracefully', async () => {
+        const { initDashboard } = await import('../dashboard.js');
+        document.body.innerHTML = '';
+        await expect(initDashboard()).resolves.toBeUndefined();
+    });
+});

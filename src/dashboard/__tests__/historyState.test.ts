@@ -81,4 +81,26 @@ describe('getCachedMessage', () => {
         const result3 = getCachedMessage(key2, 'another fallback');
         expect(result3).toBe(key2);
     });
+
+    it('falls back to provided fallback when getMessage returns empty string', async () => {
+        const i18n = await import('../../utils/i18n.js');
+        const spy = vi.spyOn(i18n, 'getMessage').mockReturnValue('');
+        const key = 'fallbackTestKey_' + Date.now();
+        const result = getCachedMessage(key, 'myFallback');
+        expect(result).toBe('myFallback');
+        // second call should return cached fallback, not call getMessage again
+        const result2 = getCachedMessage(key, 'otherFallback');
+        expect(result2).toBe('myFallback');
+        expect(spy).toHaveBeenCalledTimes(1);
+        spy.mockRestore();
+    });
+
+    it('uses getMessage result when it returns truthy value', async () => {
+        const i18n = await import('../../utils/i18n.js');
+        const spy = vi.spyOn(i18n, 'getMessage').mockReturnValue('translatedValue');
+        const key = 'truthyTestKey_' + Date.now();
+        const result = getCachedMessage(key, 'fallback');
+        expect(result).toBe('translatedValue');
+        spy.mockRestore();
+    });
 });

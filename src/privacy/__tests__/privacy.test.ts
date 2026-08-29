@@ -128,6 +128,22 @@ describe('renderInline', () => {
     it('should handle empty string', () => {
         expect(renderInline('')).toBe('');
     });
+
+    it('should treat a malformed https URL as unsafe and fall back to #', () => {
+        // "https://" alone fails `new URL()` construction, hitting the catch branch.
+        const result = renderInline('[Link](https://)');
+        expect(result).toContain('<a href="#">Link</a>');
+    });
+
+    it('should leave text without any inline markers unchanged', () => {
+        expect(renderInline('plain text, no markers')).toBe('plain text, no markers');
+    });
+
+    it('should leave bare ampersands in plain text untouched (only escapeHtml escapes them)', () => {
+        // renderInline itself does not run escapeHtml over plain text runs; only
+        // link/bold/code segments are escaped. Bare text is left as-is.
+        expect(renderInline('a & b')).toBe('a & b');
+    });
 });
 
 // ============================================================================
@@ -211,6 +227,22 @@ describe('renderMarkdown', () => {
             expect(result).toContain('<blockquote>');
             expect(result).toContain('[!NOTE]'); // [!NOTE] remains due to implementation detail
         });
+
+        it('should stop the blockquote before a following empty line', () => {
+            const result = renderMarkdown('> Quoted\n\nAfter quote');
+            expect(result).toContain('<blockquote>');
+            expect(result).toContain('After quote');
+            // The paragraph after the blank line must be outside the blockquote.
+            const blockquoteEnd = result.indexOf('</blockquote>');
+            const afterIndex = result.indexOf('After quote');
+            expect(afterIndex).toBeGreaterThan(blockquoteEnd);
+        });
+
+        it('should stop the blockquote before a following non-quote line', () => {
+            const result = renderMarkdown('> Quoted line\nNot quoted');
+            expect(result).toContain('<blockquote>');
+            expect(result).toContain('Not quoted');
+        });
     });
 
     describe('table', () => {
@@ -224,6 +256,24 @@ describe('renderMarkdown', () => {
             expect(result).toContain('<th>Header 2</th>');
             expect(result).toContain('<td>Cell 1</td>');
             expect(result).toContain('<td>Cell 2</td>');
+        });
+
+        it('should stop the table body at the first non-pipe line', () => {
+            const md = `| H1 | H2 |
+| --- | --- |
+| A | B |
+Not a table row`;
+            const result = renderMarkdown(md);
+            expect(result).toContain('<td>A</td>');
+            expect(result).toContain('<p>Not a table row</p>');
+        });
+
+        it('should render a table with only a header row and no body rows', () => {
+            const md = `| H1 | H2 |
+| --- | --- |`;
+            const result = renderMarkdown(md);
+            expect(result).toContain('<thead><tr><th>H1</th><th>H2</th></tr></thead>');
+            expect(result).toContain('<tbody>');
         });
     });
 
@@ -247,6 +297,29 @@ describe('renderMarkdown', () => {
             expect(result).toContain('<li>Item 1</li>');
             expect(result).toContain('<ul>'); // nested
         });
+
+        it('should close the nested list and continue the outer list on dedent', () => {
+            const result = renderMarkdown('- Item 1\n  - Nested\n- Item 2');
+            expect(result).toContain('<li>Item 1</li>');
+            expect(result).toContain('<li>Nested</li>');
+            expect(result).toContain('<li>Item 2</li>');
+        });
+
+        it('should end the list when followed by a non-list paragraph', () => {
+            const result = renderMarkdown('- Item 1\nParagraph after list');
+            expect(result).toContain('<li>Item 1</li>');
+            expect(result).toContain('<p>Paragraph after list</p>');
+        });
+
+        it('should close a nested list when a second nested item dedents back to the outer level', () => {
+            // Inside the nested while-loop, once `ni <= indent` the loop breaks
+            // without consuming "Item 2", so the outer loop must then re-process it.
+            const result = renderMarkdown('- Item 1\n  - Nested\n- Item 2\n  - Nested 2');
+            expect(result).toContain('<li>Item 1</li>');
+            expect(result).toContain('<li>Nested</li>');
+            expect(result).toContain('<li>Item 2</li>');
+            expect(result).toContain('<li>Nested 2</li>');
+        });
     });
 
     describe('ordered list', () => {
@@ -263,6 +336,12 @@ describe('renderMarkdown', () => {
             expect(result).toContain('<li>First</li>');
             expect(result).toContain('<li>Second</li>');
             expect(result).toContain('<li>Third</li>');
+        });
+
+        it('should end the ordered list when followed by a non-numbered line', () => {
+            const result = renderMarkdown('1. First\nNot numbered');
+            expect(result).toContain('<li>First</li>');
+            expect(result).toContain('<p>Not numbered</p>');
         });
     });
 
@@ -388,5 +467,49 @@ describe('loadPrivacyPolicy', () => {
         await loadPrivacyPolicy('custom-container');
 
         expect(document.getElementById('custom-container')?.innerHTML).toContain('Test content');
+    });
+
+    it('should reject content exceeding the size limit', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            headers: {
+                get: (name: string) => (name === 'content-length' ? String(1024 * 1024 + 1) : null)
+            },
+            text: () => Promise.resolve('should not be used')
+        });
+
+        await loadPrivacyPolicy('content');
+
+        expect(document.getElementById('content')?.innerHTML).toContain('error');
+    });
+
+    it('should accept content exactly at the size limit', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+            ok: true,
+            status: 200,
+            headers: {
+                get: (name: string) => (name === 'content-length' ? String(1024 * 1024) : null)
+            },
+            text: () => Promise.resolve('# Within limit')
+        });
+
+        await loadPrivacyPolicy('content');
+
+        expect(document.getElementById('content')?.innerHTML).toContain('<h1');
+    });
+
+    it('should fall back to default message when getMessage returns empty string', async () => {
+        const i18n = await import('../../utils/i18n.js');
+        (i18n.getMessage as any).mockReturnValueOnce('');
+
+        (global.fetch as any).mockResolvedValueOnce({
+            ok: false,
+            status: 500
+        });
+
+        await loadPrivacyPolicy('content');
+
+        expect(document.getElementById('content')?.innerHTML).toContain('Failed to load the privacy policy.');
     });
 });

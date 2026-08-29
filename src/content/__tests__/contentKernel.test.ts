@@ -6,7 +6,7 @@ import { InMemoryDomainPolicyPort, ChromeDomainPolicyPort } from '../domainPolic
 import { PageState } from '../pageState.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../../utils/aiSummaryCleaner/rules.js';
 import { DEFAULT_KEYWORDS } from '../../utils/contentCleaner.js';
-import { computeMaxScroll } from '../scrollMonitor.js';
+import { computeMaxScroll, ScrollMonitor } from '../scrollMonitor.js';
 import { VisitReporter } from '../visitReporter.js';
 
 describe('ContentKernel — StoragePort / DomainPolicyPort / Clock / Scheduler injection', () => {
@@ -85,6 +85,51 @@ describe('ScrollMonitor — pure updateMaxScroll', () => {
         pageState.maxScrollPercentage = 10;
         // Simulate scroll: Can't easily mock window, test pure function directly
         expect(computeMaxScroll(pageState.maxScrollPercentage, 800, 1000)).toBe(80);
+    });
+    it('ScrollMonitor.update mutates PageState when scroll exceeds current', () => {
+        const pageState = new PageState();
+        pageState.maxScrollPercentage = 10;
+        const monitor = new ScrollMonitor(pageState);
+        const next = monitor.update(500, 1000); // 50%
+        expect(next).toBe(50);
+        expect(pageState.maxScrollPercentage).toBe(50);
+    });
+    it('ScrollMonitor.update does not mutate when scroll is lower', () => {
+        const pageState = new PageState();
+        pageState.maxScrollPercentage = 80;
+        const monitor = new ScrollMonitor(pageState);
+        const next = monitor.update(500, 1000); // 50% < 80
+        expect(next).toBe(80);
+        expect(pageState.maxScrollPercentage).toBe(80);
+    });
+    it('ScrollMonitor handles docHeight <=0 without mutation', () => {
+        const pageState = new PageState();
+        pageState.maxScrollPercentage = 30;
+        const monitor = new ScrollMonitor(pageState);
+        const next = monitor.update(100, 0);
+        expect(next).toBe(30);
+        expect(pageState.maxScrollPercentage).toBe(30);
+    });
+    it('ScrollMonitor uses default clock when not provided', () => {
+        const pageState = new PageState();
+        const monitor = new ScrollMonitor(pageState);
+        expect(monitor).toBeDefined();
+        // default clock should be a function returning Date.now()
+        const next = monitor.update(200, 1000);
+        expect(next).toBe(20);
+    });
+    it('ScrollMonitor.updateFromWindow reads window globals', () => {
+        const pageState = new PageState();
+        pageState.maxScrollPercentage = 0;
+        const monitor = new ScrollMonitor(pageState);
+        // jsdom window has scrollY and innerHeight, documentElement.scrollHeight
+        Object.defineProperty(window, 'scrollY', { value: 400, writable: true, configurable: true });
+        Object.defineProperty(window, 'innerHeight', { value: 600, writable: true, configurable: true });
+        Object.defineProperty(document.documentElement, 'scrollHeight', { value: 1600, writable: true, configurable: true });
+        // docHeight = 1600 - 600 =1000, pct =400/1000*100=40
+        const next = monitor.updateFromWindow();
+        expect(next).toBe(40);
+        expect(pageState.maxScrollPercentage).toBe(40);
     });
 });
 

@@ -64,4 +64,32 @@ describe('sqliteEngine', () => {
     await engine.close();
     expect(mockClose).toHaveBeenCalled();
   });
+
+  it('queryValue() は行が空オブジェクトなら null を返す (firstKey undefined)', async () => {
+    mockRun.mockResolvedValue([{}] as any);
+    const engine = await createEngine('test.db', 'wasm-url');
+    const v = await engine.queryValue('SELECT COUNT(*) AS c FROM t');
+    expect(v).toBeNull();
+  });
+
+  it('queryValue() は値が null なら null を返す (nullish coalescing fallback)', async () => {
+    mockRun.mockResolvedValue([{ c: null }] as any);
+    const engine = await createEngine('test.db', 'wasm-url');
+    const v = await engine.queryValue('SELECT COUNT(*) AS c FROM t');
+    expect(v).toBeNull();
+  });
+
+  it('queryValue() は値が undefined なら null を返す', async () => {
+    mockRun.mockResolvedValue([{ c: undefined }] as any);
+    const engine = await createEngine('test.db', 'wasm-url');
+    const v = await engine.queryValue('SELECT COUNT(*) AS c FROM t');
+    expect(v).toBeNull();
+  });
+
+  it('queryValue() は firstRow が falsy なら null を返す', async () => {
+    mockRun.mockResolvedValue([undefined] as any);
+    const engine = await createEngine('test.db', 'wasm-url');
+    const v = await engine.queryValue('SELECT COUNT(*) AS c FROM t');
+    expect(v).toBeNull();
+  });
 });

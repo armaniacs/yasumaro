@@ -335,4 +335,36 @@ describe('initPopup coverage', () => {
         await new Promise(r => setTimeout(r, 50));
         expect(initOnboardingWizard).not.toHaveBeenCalled();
     });
+
+    it('handles pending page with null entry (length 1 but page is null)', async () => {
+        const { getPendingPages } = await import('../../utils/pendingStorage.js');
+        const { showPrivatePageDialog, showRecordingFailedDialog } = await import('../privatePageDialog.js');
+        vi.mocked(showPrivatePageDialog).mockClear();
+        vi.mocked(showRecordingFailedDialog).mockClear();
+        vi.mocked(getPendingPages).mockResolvedValue([null as any]);
+        await initPopup();
+        await new Promise(r => setTimeout(r, 50));
+        expect(showPrivatePageDialog).not.toHaveBeenCalled();
+        expect(showRecordingFailedDialog).not.toHaveBeenCalled();
+    });
+
+    it('handles getPrivacyConsent rejection', async () => {
+        const { getPrivacyConsent } = await import('../privacyConsent.js');
+        vi.mocked(getPrivacyConsent).mockRejectedValue(new Error('consent fail'));
+        await expect(initPopup()).resolves.not.toThrow();
+        await new Promise(r => setTimeout(r, 50));
+    });
+
+    it('covers setHtmlLangDir with locale containing hyphen', () => {
+        vi.stubGlobal('chrome', {
+            ...chrome,
+            i18n: {
+                ...chrome.i18n,
+                getUILanguage: vi.fn().mockReturnValue('en-US'),
+            },
+        });
+        setHtmlLangDir();
+        expect(document.documentElement.lang).toBe('en-US');
+        expect(document.documentElement.dir).toBe('ltr');
+    });
 });

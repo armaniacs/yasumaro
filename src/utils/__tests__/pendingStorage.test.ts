@@ -105,6 +105,12 @@ describe('renderPendingReason', () => {
     it('falls back to the raw reason when unknown', () => {
         expect(renderPendingReason('unknown')).toBe('unknown');
     });
+
+    it('falls back to raw reason when getMessage returns empty', async () => {
+        const { getMessage } = await import('../i18n.js');
+        vi.mocked(getMessage).mockReturnValueOnce('');
+        expect(renderPendingReason('cache-control')).toBe('cache-control');
+    });
 });
 
 describe('pendingStorage', () => {
@@ -534,6 +540,24 @@ describe('pendingStorage', () => {
 
             expect(mockStorage['osh_pending_pages']).toBeUndefined();
             expect(mockChrome.storage.local.set).not.toHaveBeenCalled();
+        });
+
+        it('handles storage get returning empty object without legacy key', async () => {
+            // Simulate chrome.storage.local.get returning {} without the legacy key at all
+            mockChrome.storage.local.get.mockResolvedValueOnce({});
+            await migrateLegacyPendingPagesKey();
+            expect(mockChrome.storage.local.set).not.toHaveBeenCalled();
+        });
+
+        it('handles storage get failure during migration', async () => {
+            mockChrome.storage.local.get.mockRejectedValueOnce(new Error('get failed'));
+            await migrateLegacyPendingPagesKey();
+            const { logError } = await import('../logger.js');
+            expect(logError).toHaveBeenCalledWith(
+                'Failed to migrate legacy pending pages key',
+                expect.objectContaining({ source: 'pendingStorage' }),
+                expect.any(String)
+            );
         });
     });
 });

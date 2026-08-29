@@ -61,6 +61,42 @@ describe('swStatePersistence', () => {
 
             expect(flag.value).toBe(true);
         });
+
+        it('does not persist when setting non-value property via proxy', async () => {
+            const flag = createCacheInitializedFlag();
+            // setting a different property should not trigger saveCacheInitializedState
+            // proxy returns true but does not set the property on target (current implementation)
+            (flag as any).otherProp = true;
+            const stored = await loadCacheInitializedState();
+            expect(stored).toBe(false);
+            // flag.value should remain false
+            expect(flag.value).toBe(false);
+        });
+
+        it('handles storage get failure gracefully on load', async () => {
+            vi.stubGlobal('chrome', {
+                storage: {
+                    session: {
+                        get: vi.fn(async () => { throw new Error('fail'); }),
+                        set: vi.fn(async () => {}),
+                    },
+                },
+            });
+            const value = await loadCacheInitializedState();
+            expect(value).toBe(false);
+        });
+
+        it('handles storage set failure gracefully on save', async () => {
+            vi.stubGlobal('chrome', {
+                storage: {
+                    session: {
+                        get: vi.fn(async () => ({})),
+                        set: vi.fn(async () => { throw new Error('fail'); }),
+                    },
+                },
+            });
+            await expect(saveCacheInitializedState(true)).resolves.toBeUndefined();
+        });
     });
 
     describe('auto-saved badge tabs', () => {

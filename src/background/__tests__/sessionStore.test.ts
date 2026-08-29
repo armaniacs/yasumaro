@@ -257,6 +257,177 @@ describe('SessionStore', () => {
     });
     expect(setCall[SESSION_KEYS.RECORDING_CACHE].urlCache).toBeUndefined();
   });
+
+  it('set() is a no-op after dispose()', async () => {
+    store.dispose();
+    await store.set('key1', 'value1');
+    expect(mockSession.set).not.toHaveBeenCalled();
+  });
+
+  it('remove() is a no-op after dispose()', async () => {
+    store.dispose();
+    store.remove('key1');
+    await store.flushNow();
+    expect(mockSession.remove).not.toHaveBeenCalled();
+  });
+
+  it('flushNow() is a no-op after dispose()', async () => {
+    store.set('key1', 'value1');
+    store.dispose();
+    await store.flushNow();
+    expect(mockSession.set).not.toHaveBeenCalled();
+  });
+
+  it('waitForFlush() is a no-op after dispose()', async () => {
+    store.dispose();
+    await expect(store.waitForFlush()).resolves.toBeUndefined();
+  });
+
+  it('waitForFlush() resolves immediately when nothing scheduled', async () => {
+    await expect(store.waitForFlush()).resolves.toBeUndefined();
+    expect(mockSession.set).not.toHaveBeenCalled();
+  });
+
+  it('flush() with empty queues does not call chrome.storage.session.set', async () => {
+    await store.flushNow();
+    expect(mockSession.set).not.toHaveBeenCalled();
+    expect(mockSession.remove).not.toHaveBeenCalled();
+  });
+
+  it('scheduleFlush() does not schedule a second timer while one is pending', async () => {
+    store.set('key1', 'value1');
+    store.set('key2', 'value2');
+    // second set() call hits the "already scheduled" early-return branch
+    await store.waitForFlush();
+    expect(mockSession.set).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles concurrent flush() calls by awaiting the in-flight flush', async () => {
+    let resolveSet!: () => void;
+    mockSession.set.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSet = resolve;
+        }),
+    );
+    store.set('key1', 'value1');
+    const firstFlush = store.flushNow();
+    // Trigger a second overlapping flush while the first is still in-flight.
+    store.set('key2', 'value2');
+    const secondFlush = store.flushNow();
+    resolveSet();
+    await Promise.all([firstFlush, secondFlush]);
+    expect(mockSession.set).toHaveBeenCalled();
+  });
+
+  it('emergencyFlushToLocal() does nothing when write queue is empty', () => {
+    const mockLocal = {
+      get: vi.fn().mockResolvedValue({}),
+      set: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+    };
+    (globalThis as any).chrome.storage.local = mockLocal;
+
+    store.emergencyFlushToLocal();
+
+    expect(mockLocal.set).not.toHaveBeenCalled();
+  });
+
+  it('emergencyFlushToLocal() does nothing when chrome.storage.local is unavailable', () => {
+    store.set('key1', 'value1');
+    delete (globalThis as any).chrome.storage.local;
+
+    expect(() => store.emergencyFlushToLocal()).not.toThrow();
+  });
+
+  it('estimateStorageSize() returns 0 when JSON.stringify throws (circular reference)', async () => {
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    store.set('key1', circular);
+    await store.flushNow();
+    // Falls through the try/catch to 0, so the size never exceeds MAX_SESSION_SIZE
+    // and the value is written as-is rather than reduced to priority-only data.
+    expect(mockSession.set).toHaveBeenCalledWith({ key1: circular });
+  });
+
+  it('extractPriorityData() keeps non-RECORDING_CACHE keys as-is when payload exceeds 1MB', async () => {
+    const bigString = 'x'.repeat(1.2 * 1024 * 1024);
+    store.set('someOtherKey', bigString);
+    await store.flushNow();
+
+    const setCall = mockSession.set.mock.calls[0][0];
+    expect(setCall.someOtherKey).toBe(bigString);
+  });
+
+  it('registerSuspendHandler() registers an onSuspend listener that flushes to local', () => {
+    const listeners: Array<() => void> = [];
+    (globalThis as any).chrome.runtime = {
+      onSuspend: {
+        addListener: vi.fn((cb: () => void) => listeners.push(cb)),
+      },
+    };
+    const mockLocal = {
+      get: vi.fn().mockResolvedValue({}),
+      set: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+    };
+    (globalThis as any).chrome.storage.local = mockLocal;
+
+    SessionStore.registerSuspendHandler(store);
+    store.set('key1', 'value1');
+    expect(listeners).toHaveLength(1);
+    listeners[0]();
+
+    expect(mockLocal.set).toHaveBeenCalledWith({ key1: 'value1' });
+  });
+
+  it('registerSuspendHandler() is a no-op when chrome.runtime.onSuspend is unavailable', () => {
+    expect(() => SessionStore.registerSuspendHandler(store)).not.toThrow();
+  });
+
+  it('get() returns null when local fallback migration does not find the key', async () => {
+    mockSession.get.mockResolvedValue({});
+    const mockLocal = {
+      get: vi.fn().mockResolvedValue({}),
+      set: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+    };
+    (globalThis as any).chrome.storage.local = mockLocal;
+
+    const value = await store.get<string>('missingKey');
+
+    expect(mockLocal.get).toHaveBeenCalledWith('missingKey');
+    expect(value).toBeNull();
+  });
+
+  it('get() returns null when chrome.storage.session is unavailable', async () => {
+    delete (globalThis as any).chrome.storage.session;
+    const value = await store.get<string>('key1');
+    expect(value).toBeNull();
+  });
+
+  it('get() swallows errors thrown by chrome.storage.session.get', async () => {
+    mockSession.get.mockRejectedValueOnce(new Error('boom'));
+    const value = await store.get<string>('key1');
+    expect(value).toBeNull();
+  });
+
+  it('waitForFlush() awaits an in-flight flush when no timer is pending', async () => {
+    let resolveSet!: () => void;
+    mockSession.set.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSet = resolve;
+        }),
+    );
+    store.set('key1', 'value1');
+    const flushing = store.flushNow();
+    // Timer was cleared by flushNow(), but the flush itself is still in-flight.
+    const waiting = store.waitForFlush();
+    resolveSet();
+    await Promise.all([flushing, waiting]);
+    expect(mockSession.set).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('SessionStore.migrateFromLocalStorage', () => {
@@ -345,6 +516,16 @@ describe('SessionStore.migrateFromLocalStorage', () => {
 
     expect(migrated).toBe(false);
   });
+
+  it('returns false and logs when session.set throws', async () => {
+    localStorage['sw:rateLimiter'] = { entries: [] };
+    mockSession.set.mockRejectedValueOnce(new Error('boom'));
+
+    const migrated = await SessionStore.migrateFromLocalStorage();
+
+    expect(migrated).toBe(false);
+    expect(localStorage['sw:rateLimiter']).toEqual({ entries: [] });
+  });
 });
 
 describe('SessionStore.migrateFromLocalStorageIfSessionEmpty', () => {
@@ -420,5 +601,15 @@ describe('SessionStore.migrateFromLocalStorageIfSessionEmpty', () => {
     const migrated = await SessionStore.migrateFromLocalStorageIfSessionEmpty('sw:rateLimiter');
 
     expect(migrated).toBe(false);
+  });
+
+  it('returns false and logs when session.set throws', async () => {
+    localStorage['sw:rateLimiter'] = { entries: [] };
+    mockSession.set.mockRejectedValueOnce(new Error('boom'));
+
+    const migrated = await SessionStore.migrateFromLocalStorageIfSessionEmpty('sw:rateLimiter');
+
+    expect(migrated).toBe(false);
+    expect(localStorage['sw:rateLimiter']).toEqual({ entries: [] });
   });
 });

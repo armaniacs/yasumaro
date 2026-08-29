@@ -78,4 +78,19 @@ describe('auditLog', () => {
     expect(result.rows).toHaveLength(1);
     expect(result.total).toBe(1);
   });
+
+  it('getAuditLogs returns empty when query fails', async () => {
+    mockQuery.mockResolvedValue({ success: false, error: { message: 'db error' } } as any);
+
+    const result = await getAuditLogs({ limit: 10, offset: 0 });
+
+    expect(result).toEqual({ rows: [], total: 0 });
+  });
+
+  it('getAuditLogs uses default limit and offset', async () => {
+    mockQuery.mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
+    const result = await getAuditLogs();
+    expect(mockQuery).toHaveBeenCalledWith({ kind: 'auditLog', limit: 100, offset: 0 });
+    expect(result).toEqual({ rows: [], total: 0 });
+  });
 });

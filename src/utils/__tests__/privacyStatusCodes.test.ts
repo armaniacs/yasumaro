@@ -38,7 +38,13 @@ describe('privacyStatusCodes', () => {
     });
 
     it('returns correct message key for UNKNOWN', () => {
-      expect(statusCodeToMessageKey(PrivacyStatusCode.UNKNOWN)).toBe('privacyStatus_unknown');
+        expect(statusCodeToMessageKey(PrivacyStatusCode.UNKNOWN)).toBe('privacyStatus_unknown');
+    });
+
+    it('returns fallback for unknown code not in map', () => {
+        expect(statusCodeToMessageKey('PSH-9999' as any)).toBe('privacyStatus_unknown');
+        expect(statusCodeToMessageKey('' as any)).toBe('privacyStatus_unknown');
+        expect(statusCodeToMessageKey(undefined as any)).toBe('privacyStatus_unknown');
     });
   });
 });

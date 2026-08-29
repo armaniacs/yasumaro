@@ -3879,5 +3879,17 @@
   "normalizeDesc": {
     "message": "「です→だ」「でした→だった」「ています→ている」「ていました→ていた」「でしょう→だろう」に変換します。",
     "description": "Description for normalization feature"
+  },
+  "modelsDevDialogTitle": {
+    "message": "OpenAI互換プロバイダー"
+  },
+  "tabAll": {
+    "message": "すべて"
+  },
+  "tabAggregator": {
+    "message": "アグリゲーター"
+  },
+  "tabOthers": {
+    "message": "その他"
   }
 }

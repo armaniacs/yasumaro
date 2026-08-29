@@ -6,6 +6,9 @@
   <a href="https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc" target="_blank" rel="noopener">
     <img src="https://img.shields.io/badge/Chrome_Web_Store-Install-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome Web Store" />
   </a>
+  <a href="https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep" target="_blank" rel="noopener">
+    <img src="https://img.shields.io/badge/Edge_Add--ons-Install-0078D4?style=for-the-badge&logo=microsoftedge&logoColor=white" alt="Edge Add-ons" />
+  </a>
   <a href="https://github.com/armaniacs/yasumaro">
     <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub" />
   </a>
@@ -108,14 +111,21 @@ flowchart LR
 
 ### インストール方法
 
-#### 方法1: Chrome Web Store からインストール（推奨）
+#### 方法1: Chrome Web Store からインストール
 
 1. [Chrome Web Store の Yasumaro ページ](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc) を開きます。
 2. 「Chrome に追加」ボタンをクリックします。
 3. 確認ダイアログで「拡張機能を追加」をクリックします。
 4. ツールバーの Yasumaro アイコンをクリックして設定を開始します。
 
-#### 方法2: ソースからビルド（開発者向け）
+#### 方法2: Edge Add-ons からインストール
+
+1. [Edge Add-ons の Yasumaro ページ](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep) を開きます。
+2. 「入手」ボタンをクリックします。
+3. 確認ダイアログで「拡張機能を追加」をクリックします。
+4. ツールバーの Yasumaro アイコンをクリックして設定を開始します。
+
+#### 方法3: ソースからビルド（開発者向け）
 
 1. このリポジトリをクローンまたはダウンロードします:
    ```bash
@@ -311,14 +321,21 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 
 ### Installation
 
-#### Option 1: Install from Chrome Web Store (Recommended)
+#### Option 1: Install from Chrome Web Store
 
 1. Open the [Yasumaro page on Chrome Web Store](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc).
 2. Click "Add to Chrome".
 3. Click "Add extension" in the confirmation dialog.
 4. Click the Yasumaro icon in your toolbar to start configuring.
 
-#### Option 2: Build from Source (For Developers)
+#### Option 2: Install from Edge Add-ons
+
+1. Open the [Yasumaro page on Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep).
+2. Click "Get".
+3. Click "Add extension" in the confirmation dialog.
+4. Click the Yasumaro icon in your toolbar to start configuring.
+
+#### Option 3: Build from Source (For Developers)
 
 1. Clone or download this repository:
    ```bash

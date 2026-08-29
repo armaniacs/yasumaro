@@ -3889,5 +3889,17 @@
   "normalizeDesc": {
     "message": "Converts polite form to plain form (desu→da, mashita→ta, teimasu→teiru, teimashita→teita, deshou→darou).",
     "description": "Description for normalization feature"
+  },
+  "modelsDevDialogTitle": {
+    "message": "OpenAI-Compatible Provider"
+  },
+  "tabAll": {
+    "message": "All"
+  },
+  "tabAggregator": {
+    "message": "Aggregators"
+  },
+  "tabOthers": {
+    "message": "Others"
   }
 }
