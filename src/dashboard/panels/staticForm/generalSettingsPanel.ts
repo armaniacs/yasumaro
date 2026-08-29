@@ -15,8 +15,14 @@ import {
 import { handleManualLocalMarkdownExport } from '../../localMarkdownExport.js';
 import { generateReviewSummary } from '../../reviewSummaryHandler.js';
 import { syncStatusToTop } from '../../statusView.js';
-import { updateProviderSettingsLayout, hideAllProviderSettings } from '../../aiProviderLayoutManager.js';
+import { updateProviderSettingsLayout, hideAllProviderSettings, restoreOriginalProviderSettingsLayout } from '../../aiProviderLayoutManager.js';
 import { getAiProviderElements, setupAIProviderChangeListener, updateAIProviderVisibilityMulti } from '../../settings/aiProvider.js';
+import { resolveInitialLayout, mountLayoutToggle } from '../../aiProviderLayoutToggle.js';
+import { createBPriorityListView } from '../../aiProviderB/priorityListView.js';
+import { createBProviderAccordionView } from '../../aiProviderB/providerAccordionView.js';
+import { SettingsRepository } from '../../../utils/storage/SettingsRepository.js';
+import { ChromeStoragePort } from '../../../utils/storage/storagePort.js';
+import { collectProviderPrioritySlots } from '../../generalSettings/settingsForm.js';
 import { setupAllFieldValidations, setupObsidianHostValidation, setupGeminiApiVersionValidation } from '../../settings/fieldValidation.js';
 import { initOnboardingWizard } from '../../../popup/onboardingWizard.js';
 import { ModelsDevDialog } from '../../models-dev-dialog.js';
@@ -110,8 +116,64 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       document.getElementById('aiProvider')?.addEventListener('change', refreshMultiVisibility);
       document.getElementById('aiProviderPriority2')?.addEventListener('change', refreshMultiVisibility);
       document.getElementById('aiProviderPriority3')?.addEventListener('change', refreshMultiVisibility);
-      hideAllProviderSettings();
-      refreshMultiVisibility();
+
+      const layoutRepo = new SettingsRepository(new ChromeStoragePort());
+      let currentLayout = await resolveInitialLayout(layoutRepo) as 'a' | 'b';
+      let bPriorityView: ReturnType<typeof createBPriorityListView> | null = null;
+      let bAccordionView: ReturnType<typeof createBProviderAccordionView> | null = null;
+
+      const bPrioritySection = container.querySelector('#bPrioritySection') as HTMLElement | null;
+      const aDetails = container.querySelectorAll<HTMLElement>('.priority-details');
+
+      const refreshAIProviderLayout = (): void => {
+        const isB = currentLayout === 'b';
+        if (bPrioritySection) bPrioritySection.hidden = !isB;
+        aDetails.forEach((el) => { (el as HTMLElement).hidden = isB; });
+        if (isB) {
+          // Aの移動を戻してからBを構築
+          restoreOriginalProviderSettingsLayout();
+          hideAllProviderSettings();
+          const bListContainer = container.querySelector('#bPriorityList') as HTMLElement | null;
+          const bAccordionContainer = container.querySelector('#bProviderAccordion') as HTMLElement | null;
+          if (bListContainer && !bPriorityView) {
+            let existingSlots: ReturnType<typeof collectProviderPrioritySlots> = [];
+            try {
+              existingSlots = collectProviderPrioritySlots();
+            } catch { existingSlots = []; }
+            // storage fallback if DOM collection is empty (initial load after reload)
+            if (existingSlots.length === 0) {
+              const stored = settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] as unknown as typeof existingSlots | undefined;
+              if (Array.isArray(stored)) existingSlots = stored;
+            }
+            bPriorityView = createBPriorityListView(bListContainer, existingSlots);
+          } else if (bListContainer && bPriorityView) {
+            // Ensure hidden flag sync even if view already exists
+            bPriorityView.container.hidden = false;
+          }
+          if (bAccordionContainer && !bAccordionView) {
+            bAccordionView = createBProviderAccordionView(bAccordionContainer);
+          }
+        } else {
+          bPriorityView?.container?.querySelectorAll('.b-priority-warn, .b-priority-req-warn').forEach((el) => el.remove());
+          bAccordionView?.destroy();
+          bPriorityView = null;
+          bAccordionView = null;
+          hideAllProviderSettings();
+          refreshMultiVisibility();
+        }
+      };
+
+      // ヘッダーにトグルをマウント
+      const aiSectionTitle = container.querySelector('#aiProviderSection .settings-section-title') as HTMLElement | null;
+      if (aiSectionTitle) {
+        mountLayoutToggle(aiSectionTitle, currentLayout, async (next) => {
+          currentLayout = next;
+          await layoutRepo.set(StorageKeys.AI_PROVIDER_LAYOUT, next);
+          refreshAIProviderLayout();
+        });
+      }
+
+      refreshAIProviderLayout();
 
       {
         const syncBackdrop = () => {
