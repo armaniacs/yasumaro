@@ -319,7 +319,13 @@
         <!-- AI プロバイダーセクション -->
         <div id="aiProviderSection" class="settings-section">
           <h3 class="settings-section-title" data-i18n="aiSection">AI Provider</h3>
-
+          <!-- B用: 優先度リスト + 常設アコーディオン（A表示時はhidden） -->
+          <div id="bPrioritySection" hidden>
+            <h4 class="settings-subsection-title" data-i18n="aiProviderPrioritySection">Priority (Failover Order)</h4>
+            <div id="bPriorityList"></div>
+            <h4 class="settings-subsection-title" data-i18n="aiProviderSettingsSection">Provider Settings</h4>
+            <div id="bProviderAccordion"></div>
+          </div>
           <!-- Priority 1 Provider -->
           <details class="priority-details" open>
             <summary class="priority-details-summary">
