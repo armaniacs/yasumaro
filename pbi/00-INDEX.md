@@ -18,7 +18,21 @@
 
 | ファイル | タイトル | 状態 | 種別 | 難易度 | 副作用 | RICE |
 |---|---|---|---|---|---|---|
-| [2026-08-29-01-fix-release-check-blockers.md](./2026-08-29-01-fix-release-check-blockers.md) | リリース前チェックのブロッカー2件を解消する | ⬜ 未着手 | 🔧 | 🟡中 | 🟢なし | 4800 |
+| [2026-08-29-00-backlog-vulnhunt-audit.md](2026-08-29-00-backlog-vulnhunt-audit.md) | VulnHunter監査48件のバックログ（RICE＋なぜなぜ分析＋トレーサビリティ） | ⬜ | 🔧 | - | - | 索引 |
+| [2026-08-29-01-fix-regex-safety.md](2026-08-29-01-fix-regex-safety.md) | 正規表現安全性 — ReDoS封鎖（VULN-025/026） | ⬜ | 🔧 | 🟢 | 🟡 | 4750 |
+| [2026-08-29-02-fix-markdown-sanitizer-boundary.md](2026-08-29-02-fix-markdown-sanitizer-boundary.md) | Markdown/Obsidian出力サニタイズ境界確立（VULN-001/008/047） | ⬜ | 🔧 | 🟡 | 🟡 | 2375 |
+| [2026-08-29-03-fix-response-body-caps.md](2026-08-29-03-fix-response-body-caps.md) | レスポンス読み込みバイト上限ユーティリティ（VULN-013/015/027/054/055） | ⬜ | 🔧 | 🟡 | 🟡 | 1663 |
+| [2026-08-29-04-fix-storage-rmw-serialization.md](2026-08-29-04-fix-storage-rmw-serialization.md) | chrome.storage読み書きの直列化（VULN-003/005/009/012/050/056） | ⬜ | 🔧 | 🟡 | 🟡 | 1440 |
+| [2026-08-29-05-fix-query-limit-clamp.md](2026-08-29-05-fix-query-limit-clamp.md) | SQLiteクエリlimit両側クランプ統一（VULN-017/021/048/049） | ⬜ | 🔧 | 🟢 | 🟢 | 1330 |
+| [2026-08-29-06-fix-trust-boundary-consistency.md](2026-08-29-06-fix-trust-boundary-consistency.md) | 信頼境界一貫性 — ゲート迂回解消（VULN-002/011/018/042） | ⬜ | 🔧 | 🟡 | 🔴 | 1260 |
+| [2026-08-29-07-fix-lock-cas-correctness.md](2026-08-29-07-fix-lock-cas-correctness.md) | ロック/CAS運用の正しさ（VULN-028/029） | ⬜ | 🔧 | 🟢 | 🟢 | 1125 |
+| [2026-08-29-08-fix-resource-boundary-caps.md](2026-08-29-08-fix-resource-boundary-caps.md) | リソース上限とライフサイクル境界強制（VULN-004/006/007/024/041/051/053） | ⬜ | 🔧 | 🟡 | 🟡 | 1080 |
+| [2026-08-29-09-fix-fetch-redirect-ssrf.md](2026-08-29-09-fix-fetch-redirect-ssrf.md) | FETCH_URLリダイレクト再検証（VULN-016） | ⬜ | 🔧 | 🟢 | 🟡 | 1000 |
+| [2026-08-29-10-fix-log-integrity.md](2026-08-29-10-fix-log-integrity.md) | ログ完全性 — attributionと制御文字無害化（VULN-019/044） | ⬜ | 🔧 | 🟢 | 🟢 | 713 |
+| [2026-08-29-11-fix-storagefallback-mutate.md](2026-08-29-11-fix-storagefallback-mutate.md) | storageFallbackミューテータ統一（VULN-022） | ⬜ | 🔧 | 🟢 | 🟢 | 475 |
+| [2026-08-29-12-fix-crypto-policy-ssot.md](2026-08-29-12-fix-crypto-policy-ssot.md) | 暗号・認証ポリシーSSOT化（VULN-010/037/038/039/040/052） | ⬜ | 🔧 | 🔴 | 🔴 | 453 |
+| [2026-08-29-13-fix-import-pipeline-safety.md](2026-08-29-13-fix-import-pipeline-safety.md) | インポート経路安全化 — 認証→上限→パース→検証（VULN-023/030/034/035/036） | ⬜ | 🔧 | 🟡 | 🟡 | 405 |
+| [2026-08-29-14-fix-security-hardening-code-quality.md](2026-08-29-14-fix-security-hardening-code-quality.md) | Code Qualityハードニング一括＋orphan-key機能バグ | ⬜ | 🔧 | 🟢 | 🟡 | 255 |
 
 ---
 
@@ -41,6 +55,10 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-29 リリース前チェックのブロッカー解消 完了
+
+- 2026-08-29-01-fix-release-check-blockers.md（RICE 4800 — i18n 未翻訳4キー（`modelsDevDialogTitle`/`tabAll`/`tabAggregator`/`tabOthers`）を en/ja に追加し check-i18n を PASS に。branches カバレッジは14ファイルへのテスト追加（88.94%）に加え、node_modules の `eslint` 欠落で失敗していた `eslint/__tests__` 2スイートを `npm install` で解消して 90.02% に回復させ、ゲート余裕確保のため permissionManager / onboardingWizard / privacySettings / manualContentFetcher / sourceManager の5ファイルにテストを追加し 90.41%（+47 branches）。欠落していたローカル生成物 `sbom.json` を `npm run generate-sbom` で再生成。`release:check:fast` 7/7 PASS / `validate` PASS / 10580 tests PASS）
 
 ### 2026-08-28 RateLimiter/SessionAlarms Service化 完了
 

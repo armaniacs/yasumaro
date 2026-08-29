@@ -730,6 +730,120 @@ describe('PermissionManager - P0 - Error handling', () => {
     global.chrome = originalChrome;
   });
 });
+describe('PermissionManager - P0 - Domain validation and eviction', () => {
+  // Earlier "Error handling" suites replace global.chrome without restoring it,
+  // so this suite rebuilds the storage-backed chrome mock for isolation.
+  function rebuildChromeMock(): void {
+    global.chrome = {
+      storage: {
+        local: {
+          get: vi.fn().mockImplementation((keys: unknown, callback?: (result: Record<string, unknown>) => void) => {
+            const result: Record<string, unknown> = {};
+            if (typeof keys === 'object' && keys !== null && !Array.isArray(keys)) {
+              Object.entries(keys as Record<string, unknown>).forEach(([key, defaultVal]) => {
+                result[key] = mockStorage.has(key) ? mockStorage.get(key) : defaultVal;
+              });
+            } else {
+              const keyArray = Array.isArray(keys) ? keys : keys === undefined || keys === null ? [] : [keys];
+              keyArray.forEach(key => {
+                if (mockStorage.has(key)) {
+                  result[key as string] = mockStorage.get(key);
+                }
+              });
+            }
+            if (callback) {
+              callback(result);
+            }
+            return Promise.resolve(result);
+          }),
+          set: vi.fn().mockImplementation((items: Record<string, unknown>, callback?: () => void) => {
+            Object.entries(items).forEach(([key, value]) => {
+              mockStorage.set(key, value);
+            });
+            if (callback) {
+              callback();
+            }
+            return Promise.resolve();
+          }),
+        },
+      },
+      permissions: {
+        contains: vi.fn(),
+        request: vi.fn(),
+      },
+    } as any;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockStorage.clear();
+    rebuildChromeMock();
+  });
+
+  it('should reject invalid domain formats without touching storage', async () => {
+    mockStorage.set('denied_domains', {});
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    await manager.recordDeniedVisit('');                                              // falsy
+    await manager.recordDeniedVisit(undefined as unknown as string);                  // non-string
+    await manager.recordDeniedVisit(123 as unknown as string);                        // non-string
+    await manager.recordDeniedVisit('a'.repeat(254) + '.com');                        // > 253 chars
+    await manager.recordDeniedVisit('example..com');                                  // empty label
+    await manager.recordDeniedVisit('a'.repeat(64) + '.com');                         // label > 63 chars
+    await manager.recordDeniedVisit('exa_mple.com');                                  // invalid chars
+    await manager.recordDeniedVisit('-example.com');                                  // leading hyphen
+
+    const stored = mockStorage.get('denied_domains');
+    expect(stored).toEqual({});
+  });
+
+  it('should treat null denied_domains as empty when reading frequent domains', async () => {
+    mockStorage.set('denied_domains', null);
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    const result = await manager.getFrequentDeniedDomains();
+    expect(result).toEqual([]);
+  });
+
+  it('should treat null denied_domains as empty when recording a visit', async () => {
+    mockStorage.set('denied_domains', null);
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    await manager.recordDeniedVisit('example.com');
+
+    const stored = mockStorage.get('denied_domains');
+    expect(stored['example.com']).toBeDefined();
+    expect(stored['example.com'].count).toBe(1);
+  });
+
+  it('should evict the entry with an invalid lastDenied date when at the 100 domain limit', async () => {
+    const domains: Record<string, { count: number; lastDenied: string; lastDismissed?: string }> = {};
+    // 99 valid entries with increasing lastDenied
+    for (let i = 0; i < 99; i++) {
+      domains[`domain${i}.com`] = {
+        count: 1,
+        lastDenied: new Date(Date.now() - (100 - i) * 60000).toISOString(),
+      };
+    }
+    // 1 entry with an unparseable date (treated as oldest)
+    domains['bad-date.com'] = { count: 1, lastDenied: 'not-a-date' };
+    mockStorage.set('denied_domains', domains);
+
+    const { getPermissionManager } = await import('../permissionManager.js');
+    const manager = getPermissionManager();
+
+    await manager.recordDeniedVisit('newdomain.com');
+
+    const stored = mockStorage.get('denied_domains');
+    expect(stored['newdomain.com']).toBeDefined();
+    expect(stored['bad-date.com']).toBeUndefined();
+    expect(Object.keys(stored)).toHaveLength(100);
+  });
+});
+
 describe('PermissionManager - P0 - Error handling', () => {
   beforeEach(() => {
     vi.clearAllMocks();
