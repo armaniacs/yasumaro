@@ -13,7 +13,7 @@
 - RICEスコア: 4750（Reach=1000 / Impact=0.5 / Confidence=95% / Effort=0.1人月）
   - Reach 1000: フィルタリスト URL import は third-party 供給経路であり、全利用者が攻撃対象になりうる
   - Impact 0.5: Medium（拡張全体の DoS。VulnHunter 3件の Medium のうち最も到達が容易）
-  - Confidence 95%: シンクと修正箇所が単一 choke point（constants.ts:43）に特定済み。実証 PoC/テスト済み
+  - Confidence 95%: シンクと修正箇所が単一 choke point（`ublockParser/constants.ts` の `DOMAIN_VALIDATION`）に特定済み。実測で再現済み
   - Effort 0.1: regex 置換＋既存ヘルパー再利用＋テスト 1 ファイル
 - 根拠: 最安 Effort で最大 Impact を消す。スイープで「15 regex サイト中 13 は安全」が確認済みのため波及なし
 
@@ -76,9 +76,10 @@ Scenario: urlSkipper のマッチは wildcardToRegex の上限を経由する
 
 ## 技術的考慮事項
 - 依存関係: なし（単独着手可。Wave 1 推奨）
-- テスタビリティ: 状態数計数は Python 実証テスト（`exploit_tests/test_vuln_025_redos_domain_validation.py`）の手法を Jest に移植
+- テスタビリティ: 30 ドット入力に対する状態数計数（バックトラック状態の増加が入力長に線形）とタイミング上限（<100ms）を Jest で検証する。実測値（22ドット→253ms、30ドット→8265ms）は `2026-08-29-00-backlog-vulnhunt-audit.md` の C1 節を参照
 - 非機能要件: 正当パターンの挙動を一切変えない（既存 47 テストが回帰ゲート）
 - 注意: `domainValidation.ts:7` / `trancoUpdater.ts:167` 等の既存境界付き regex には触れない（スイープで安全確認済み）
+- 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
 

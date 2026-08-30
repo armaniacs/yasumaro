@@ -52,7 +52,7 @@ Scenario: エクスポート frontmatter の注入は無効化される
 - [ ] `src/dashboard/encryptedBackupPanel.ts:72-79` が file.size チェックを parse 前に行い、envelope 長検証を境界に移動している
 - [ ] `src/dashboard/exportLogsService.ts:62-71` に YAML エスケープヘルパー（url/title/tags）が適用されている
 - [ ] `npm run type-check` と `npm run validate` が成功する
-- [ ] VulnHunter 再検証: 5 PoC が全て失敗する
+- [ ] VulnHunter 再検証: 5 指摘の再現テスト（BDD シナリオ）が全て失敗する
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -80,6 +80,7 @@ Scenario: エクスポート frontmatter の注入は無効化される
 - テスタビリティ: File/Blob は jsdom で生成可能
 - 非機能要件: 正当ファイルの import/export 互換を壊さない（署名なき旧 log ファイルの扱いを仕様として決める — 移行期間の許可フラグ or 拒否）
 - 注意: log export に署名を付けると旧拡張バージョンとの相互運用が変わる — CHANGELOG と PRIVACY ドキュメントの更新を含める
+- 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
 

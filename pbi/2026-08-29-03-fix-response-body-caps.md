@@ -43,9 +43,9 @@ Scenario: 上限超過はログに記録され処理が継続する
 
 ## 受け入れ基準
 - [ ] `src/utils/readBodyCapped.ts`（仮称）が新設され、バイトカウント付きストリーミング読み取り＋cap 超過中断を実装している
-- [ ] 以下 8 シンクが `readBodyCapped` に置換されている: `obsidianConfigValidator.ts:143-151`、`obsidianClient.ts:166,193-199`、`systemHandlers.ts:98-108`（FETCH_URL）、`trancoUpdater.ts:147-155`、`GeminiProvider.ts:134,232`、`OpenAIProvider.ts:183,251`、`gistSyncTarget.ts:170`
-- [ ] 既存の post-read チェック（systemHandlers.ts:107 等）は防御深度として維持されている
-- [ ] Gist の素 fetch（`gistSyncTarget.ts:120,147,175`）も `fetchWithTimeout` 経由に統一されている
+- [ ] 以下 8 シンクが `readBodyCapped` に置換されている: `src/utils/obsidianConfigValidator.ts:143-151`、`src/background/obsidianClient.ts:166,193-199`、`src/background/handlers/systemHandlers.ts:98-108`（FETCH_URL）、`src/utils/trustDb/trancoUpdater.ts:147-155`、`src/background/ai/providers/GeminiProvider.ts:134,232`、`src/background/ai/providers/OpenAIProvider.ts:183,251`、`src/background/syncTargets/gistSyncTarget.ts:170`
+- [ ] 既存の post-read チェック（`systemHandlers.ts:107` 等）は防御深度として維持されている
+- [ ] Gist の素 fetch（`src/background/syncTargets/gistSyncTarget.ts:120,147,175`）も `fetchWithTimeout` 経由に統一されている
 - [ ] 新規テストで「chunked 超過」「嘘ヘッダ」「cap 内正常系」「各シンク経由」が検証されている
 - [ ] `npm run type-check` と `npm run validate` が成功する
 - [ ] VulnHunter 再検証: `response.text()/json()` の素使用が上記シンクで 0 件
@@ -53,7 +53,7 @@ Scenario: 上限超過はログに記録され処理が継続する
 ## テスト戦略（t_wadaスタイル）
 
 ### E2Eテスト
-- 対象なし（ローカル HTTP モックで十分。実環境計測は PoC に委譲）
+- 対象なし（ローカル HTTP モックで十分。実環境計測は対象外）
 
 ### 統合テスト
 - `ObsidianClient.appendToDailyNote` 経由: 巨大 chunked 応答で cap エラーが既存エラー分類に乗ること
@@ -78,6 +78,7 @@ Scenario: 上限超過はログに記録され処理が継続する
 - テスタビリティ: `Response` をモックし `body.getReader()` でチャンク制御
 - 非機能要件: 正常系の性能劣化なし（ストリーミングは現行と同 O(n)）
 - 注意: `response.json()` 依存の Gemini/OpenAI/Gist は、cap 後に `JSON.parse` する形へ変更（意味不変）
+- 行番号は監査時点（2026-08-29）のもの。着手時に `rg` で該当箇所を再確認すること
 
 ## 実装者向け注記
 
