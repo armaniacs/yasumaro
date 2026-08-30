@@ -424,9 +424,33 @@ describe('createLogForwardHandler', () => {
     const handler = createLogForwardHandler();
     const sendResponse = vi.fn();
 
-    await handler({ payload: { level: 'error', message: 'Oops', details: { x: 1 }, source: 'offscreen' } } as any, {} as any, sendResponse);
-    expect(logError).toHaveBeenCalledWith('Oops', { x: 1 }, expect.anything(), 'offscreen');
+    const sender = { url: 'chrome-extension://abc/offscreen.html' } as chrome.runtime.MessageSender;
+    await handler({ payload: { level: 'error', message: 'Oops', details: { x: 1 }, source: 'offscreen' } } as any, sender, sendResponse);
+    expect(logError).toHaveBeenCalledWith(
+      'Oops',
+      { x: 1, _sourceHintUntrusted: 'offscreen' },
+      expect.anything(),
+      'chrome-extension://abc/offscreen.html',
+    );
     expect(sendResponse).toHaveBeenCalledWith({ success: true });
+  });
+
+  it('derives _source from the sender, not the payload (VULN-019)', async () => {
+    const handler = createLogForwardHandler();
+    const sendResponse = vi.fn();
+    const sender = { url: 'chrome-extension://abc/dashboard.html' } as chrome.runtime.MessageSender;
+
+    await handler(
+      { payload: { level: 'error', message: 'forged', details: {}, source: 'service-worker' } } as any,
+      sender,
+      sendResponse,
+    );
+    expect(logError).toHaveBeenCalledWith(
+      'forged',
+      { _sourceHintUntrusted: 'service-worker' },
+      expect.anything(),
+      'chrome-extension://abc/dashboard.html',
+    );
   });
 
   it('forwards warn level logs', async () => {

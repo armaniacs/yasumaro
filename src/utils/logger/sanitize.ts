@@ -1,4 +1,5 @@
 import { sanitizeRegex } from '../piiSanitizer.js';
+import { neutralizeLogText } from './neutralize.js';
 
 // セキュリティ強化: log sanitization への深度制限と循環参照保護
 // redaction.ts と整合
@@ -63,12 +64,13 @@ async function sanitizeLogDetails(
     }
 
     if (typeof value === 'string') {
+      // Order: PII mask first, then neutralize control bytes / ANSI / newlines.
       const result = await sanitizeRegex(value);
       if (result.maskedItems.length > 0) {
-        sanitized[key] = result.text;
+        sanitized[key] = neutralizeLogText(result.text);
         sanitized[`${key}_maskedTypes`] = result.maskedItems.map((m) => (typeof m === 'string' ? m : m.type));
       } else {
-        sanitized[key] = value;
+        sanitized[key] = neutralizeLogText(value);
       }
     } else if (typeof value === 'object') {
       if (Array.isArray(value)) {
@@ -115,9 +117,9 @@ async function sanitizeArray(
     if (typeof item === 'string') {
       const result = await sanitizeRegex(item);
       if (result.maskedItems.length > 0) {
-        sanitized.push(result.text);
+        sanitized.push(neutralizeLogText(result.text));
       } else {
-        sanitized.push(item);
+        sanitized.push(neutralizeLogText(item));
       }
     } else if (typeof item === 'object') {
       if (Array.isArray(item)) {
