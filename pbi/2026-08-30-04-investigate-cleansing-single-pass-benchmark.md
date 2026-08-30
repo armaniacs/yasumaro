@@ -6,7 +6,7 @@
 
 ## 優先度
 
-- 順位: 04 / 14
+- 順位: 04 / 15
 - RICE: Reach 5 / Impact 2 / Confidence 0.8 / Effort 1日 = 8.0
 - 根拠: 実装ではなく計測。Effortは小さくConfidenceは高い。結果次第で後続の最適化PBIの優先度が決まるEnabler。
 

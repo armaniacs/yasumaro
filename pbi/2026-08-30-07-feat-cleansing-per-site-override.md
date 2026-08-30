@@ -6,7 +6,7 @@
 
 ## 優先度
 
-- 順位: 07 / 14
+- 順位: 07 / 15
 - RICE: Reach 4 / Impact 3 / Confidence 0.6 / Effort 5日 = 1.44
 - 根拠: ヘビーユーザー向け。需要はあるがReachは限定的。`domain_whitelist` / `domain_blacklist` との相互作用の設計が必要でEffortは高め。
 
