@@ -171,19 +171,8 @@ class TrustDb {
       const savedDb = result[STORAGE_KEY] as TrustDatabase | undefined;
 
       if (savedDb && savedDb.bloomFilter) {
-        // 破損DBの修復: jpAnchor/sensitive/tranco/presets が欠落している場合はデフォルトで補完
-        if (!savedDb.jpAnchor) savedDb.jpAnchor = { tlds: [...JP_ANCHOR_TLDS_PRESET], userTlds: [] };
-        if (!savedDb.jpAnchor.tlds) savedDb.jpAnchor.tlds = [...JP_ANCHOR_TLDS_PRESET];
-        if (!savedDb.jpAnchor.userTlds) savedDb.jpAnchor.userTlds = [];
-        if (!savedDb.sensitive) savedDb.sensitive = { presets: { finance: [], gaming: [], sns: [] }, userBlacklist: [], whitelist: [] };
-        if (!savedDb.sensitive.presets) savedDb.sensitive.presets = { finance: [], gaming: [], sns: [] };
-        if (!savedDb.sensitive.presets.finance) savedDb.sensitive.presets.finance = [];
-        if (!savedDb.sensitive.presets.gaming) savedDb.sensitive.presets.gaming = [];
-        if (!savedDb.sensitive.presets.sns) savedDb.sensitive.presets.sns = [];
-        if (!savedDb.sensitive.userBlacklist) savedDb.sensitive.userBlacklist = [];
-        if (!savedDb.sensitive.whitelist) savedDb.sensitive.whitelist = [];
-        if (!savedDb.tranco) savedDb.tranco = { tier: 'top10k', domains: [], count: 0, sizeBytes: 0 };
-        if (!savedDb.tranco.domains) savedDb.tranco.domains = [];
+        // 破損DBの包括的修復: 全必須フィールドをデフォルトで補完（Phase 1 根源: DB自体が部分的に欠落）
+        this.repairDatabase(savedDb);
         // 既存データをロード
         this.state.database = savedDb;
         this.state.bloomFilter = bloomFilterFromData(savedDb.bloomFilter);
@@ -210,6 +199,44 @@ class TrustDb {
     } catch (error) {
       logError('TrustDb', { error }, ErrorCode.TRUST_DB_INIT_FAILED);
       throw error;
+    }
+  }
+
+  /**
+   * 破損DBを包括的に修復（全必須フィールドのデフォルト補完）
+   * Phase 1 根源: 個別フィールドのガード追加では新たな欠落が次々に顕在化するため、
+   * 単一箇所で全フィールドを検証・修復し、将来の欠落にも対応
+   */
+  private repairDatabase(db: Partial<TrustDatabase> & Record<string, unknown>): void {
+    const anyDb = db as Record<string, unknown>;
+    // Top-level
+    if (!anyDb.version) anyDb.version = DB_VERSION;
+    if (!anyDb.lastUpdated) anyDb.lastUpdated = new Date().toISOString();
+    // jpAnchor
+    if (!anyDb.jpAnchor || typeof anyDb.jpAnchor !== 'object') anyDb.jpAnchor = { tlds: [...JP_ANCHOR_TLDS_PRESET], userTlds: [] };
+    const jpAnchor = anyDb.jpAnchor as Record<string, unknown>;
+    if (!Array.isArray(jpAnchor.tlds)) jpAnchor.tlds = [...JP_ANCHOR_TLDS_PRESET];
+    if (!Array.isArray(jpAnchor.userTlds)) jpAnchor.userTlds = [];
+    // sensitive
+    if (!anyDb.sensitive || typeof anyDb.sensitive !== 'object') anyDb.sensitive = { presets: { finance: [], gaming: [], sns: [] }, userBlacklist: [], whitelist: [] };
+    const sensitive = anyDb.sensitive as Record<string, unknown>;
+    if (!sensitive.presets || typeof sensitive.presets !== 'object') sensitive.presets = { finance: [], gaming: [], sns: [] };
+    const presets = sensitive.presets as Record<string, unknown>;
+    if (!Array.isArray(presets.finance)) presets.finance = [];
+    if (!Array.isArray(presets.gaming)) presets.gaming = [];
+    if (!Array.isArray(presets.sns)) presets.sns = [];
+    if (!Array.isArray(sensitive.userBlacklist)) sensitive.userBlacklist = [];
+    if (!Array.isArray(sensitive.whitelist)) sensitive.whitelist = [];
+    // tranco
+    if (!anyDb.tranco || typeof anyDb.tranco !== 'object') anyDb.tranco = { tier: 'top10k', domains: [], count: 0, sizeBytes: 0 };
+    const tranco = anyDb.tranco as Record<string, unknown>;
+    if (!tranco.tier) tranco.tier = 'top10k';
+    if (!Array.isArray(tranco.domains)) tranco.domains = [];
+    if (typeof tranco.count !== 'number') tranco.count = (tranco.domains as unknown[]).length;
+    if (typeof tranco.sizeBytes !== 'number') tranco.sizeBytes = 0;
+    // bloomFilter
+    if (!anyDb.bloomFilter) {
+      // bloomFilter が無い場合は後続で createDefaultDatabase が呼ばれるが、ここでは修復せず呼び出し元で再生成
     }
   }
 
