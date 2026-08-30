@@ -1,4 +1,5 @@
 import type { LogEntry } from './types.js';
+import { runSerialized } from '../keySerializer.js';
 
 const LOG_STORAGE_KEY = 'sanitization_logs';
 const RETENTION_DAYS = 3;
@@ -18,12 +19,19 @@ function pruneLogs(logs: LogEntry[]): LogEntry[] {
 /** Chrome runtime implementation — uses chrome.storage.local */
 export class ChromeStorageLogAdapter implements LogStorageAdapter {
   async append(entries: LogEntry[]): Promise<void> {
-    const storage = await chrome.storage.local.get(LOG_STORAGE_KEY);
-    let logs: LogEntry[] = (storage[LOG_STORAGE_KEY] as LogEntry[]) || [];
-    logs.push(...entries);
-    logs = pruneLogs(logs);
-    if (logs.length > MAX_LOGS) logs = logs.slice(logs.length - MAX_LOGS);
-    await chrome.storage.local.set({ [LOG_STORAGE_KEY]: logs });
+    // Serialize the read->append->prune->write region so a concurrent
+    // append() from another execution context cannot slot its own
+    // read+write between ours and drop entries (VULN-050). The key
+    // serializer is microtask-based and logger-independent, avoiding the
+    // optimisticLock -> logger import cycle.
+    await runSerialized(`logadapter:${LOG_STORAGE_KEY}`, async () => {
+      const storage = await chrome.storage.local.get(LOG_STORAGE_KEY);
+      let logs: LogEntry[] = (storage[LOG_STORAGE_KEY] as LogEntry[]) || [];
+      logs.push(...entries);
+      logs = pruneLogs(logs);
+      if (logs.length > MAX_LOGS) logs = logs.slice(logs.length - MAX_LOGS);
+      await chrome.storage.local.set({ [LOG_STORAGE_KEY]: logs });
+    });
   }
 
   async load(): Promise<LogEntry[]> {
