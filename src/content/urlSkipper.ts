@@ -4,6 +4,8 @@
  * loader.ts から分離（loader.ts は Content Script エントリポイントのため export 不可）。
  */
 
+import { wildcardToRegex } from '../utils/wildcardToRegex.js';
+
 export const SKIPPED_PROTOCOLS = [
     'chrome://',
     'chrome-extension://',
@@ -48,12 +50,15 @@ export function extractDomain(url: string): string | null {
  * @param domain - ドメイン
  * @param pattern - パターン（* をワイルドカードとして使用可能）
  * @returns 一致する場合true
+ *
+ * ワイルドカードの展開は共有ヘルパー wildcardToRegex 経由で行う。
+ * これにより MAX_WILDCARDS_PER_PATTERN 上限を経由し、過剰なワイルドカードを
+ * 含むパターンによる指数バックトラック（ReDoS, VULN-026）を防ぐ。
  */
 export function matchesPattern(domain: string, pattern: string): boolean {
     if (pattern.includes('*')) {
-        const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regexPattern = escaped.replace(/\\\*/g, '.*');
-        const regex = new RegExp(`^${regexPattern}$`, 'i');
+        const regex = wildcardToRegex(pattern);
+        if (!regex) return false;
         return regex.test(domain);
     }
     return domain.toLowerCase() === pattern.toLowerCase();

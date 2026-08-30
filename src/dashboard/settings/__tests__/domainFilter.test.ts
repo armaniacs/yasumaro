@@ -650,6 +650,30 @@ describe('domainFilter.ts (improved coverage)', () => {
         expect.objectContaining({ error: 'Storage full' })
       );
     });
+
+    // VULN-025/026: 保存時バリデーションは選択中モードのリストだけでなく
+    // 非選択モードのリストにも及ぶべき。さもないと不正/危険なパターンが
+    // storage に書き込まれ、後で isDomainAllowed 経由でマッチング時に評価される。
+    test('rejects save when the non-active mode list contains an invalid pattern', async () => {
+      setupFullDOM();
+      (document.getElementById('filterWhitelist') as HTMLInputElement).checked = true;
+      (document.getElementById('domainList') as HTMLTextAreaElement).value = 'good.example';
+      // blacklist（非選択モード）に不正パターンが残っている
+      (document.getElementById('blacklistTextarea') as HTMLTextAreaElement).value = 'bad..pattern';
+      mockValidateDomainList.mockImplementation((list: string[]) =>
+        list.includes('bad..pattern') ? ['Invalid domain: bad..pattern'] : []
+      );
+
+      const { handleSaveDomainSettings } = await import('../domainFilter.js');
+      await handleSaveDomainSettings();
+
+      expect(mockShowStatus).toHaveBeenCalledWith(
+        'domainStatus',
+        expect.stringContaining('Invalid domain'),
+        'error'
+      );
+      expect(mockSaveSettings).not.toHaveBeenCalled();
+    });
   });
 
   // =========================================================================
