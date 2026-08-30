@@ -1,5 +1,20 @@
 import { pickDefined } from './objectUtils.js';
 
+/**
+ * Cap for attacker-controlled header values echoed into a persisted
+ * PrivacyInfo. Matches the 1024-char truncation precedent used elsewhere
+ * for untrusted strings. A response header value beyond this length carries
+ * no additional signal for privacy detection and only bloats storage.
+ */
+export const MAX_HEADER_VALUE_LENGTH = 1024;
+
+function capHeaderValue(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  return value.length > MAX_HEADER_VALUE_LENGTH
+    ? value.slice(0, MAX_HEADER_VALUE_LENGTH)
+    : value;
+}
+
 export interface PrivacyInfo {
   isPrivate: boolean;
   reason?: 'cache-control' | 'set-cookie' | 'authorization';
@@ -39,6 +54,7 @@ export function checkPrivacy(headers: chrome.webRequest.HttpHeader[]): PrivacyIn
   // no-store = キャッシュ完全禁止（機密性の高いページ）
   //   ただし、no-store単独では判定せず、Set-Cookieとの組み合わせで判定
   const cacheControl = findHeader(headers, 'cache-control');
+  const cacheControlValue = capHeaderValue(cacheControl?.value);
   const hasCookie = hasHeader(headers, 'set-cookie');
   const hasAuth = hasHeader(headers, 'authorization');
   const vary = findHeader(headers, 'vary');
@@ -54,7 +70,7 @@ export function checkPrivacy(headers: chrome.webRequest.HttpHeader[]): PrivacyIn
         reason: 'cache-control',
         timestamp,
         headers: {
-          ...pickDefined({ cacheControl: cacheControl.value }),
+          ...pickDefined({ cacheControl: cacheControlValue }),
           hasCookie,
           hasAuth
         }
@@ -68,7 +84,7 @@ export function checkPrivacy(headers: chrome.webRequest.HttpHeader[]): PrivacyIn
         reason: 'cache-control',
         timestamp,
         headers: {
-          ...pickDefined({ cacheControl: cacheControl.value }),
+          ...pickDefined({ cacheControl: cacheControlValue }),
           hasCookie,
           hasAuth
         }
@@ -85,7 +101,7 @@ export function checkPrivacy(headers: chrome.webRequest.HttpHeader[]): PrivacyIn
       reason: 'set-cookie',
       timestamp,
       headers: {
-        ...pickDefined({ cacheControl: cacheControl?.value }),
+        ...pickDefined({ cacheControl: cacheControlValue }),
         hasCookie: true,
         hasAuth
       }
@@ -99,7 +115,7 @@ export function checkPrivacy(headers: chrome.webRequest.HttpHeader[]): PrivacyIn
       reason: 'authorization',
       timestamp,
       headers: {
-        ...pickDefined({ cacheControl: cacheControl?.value }),
+        ...pickDefined({ cacheControl: cacheControlValue }),
         hasCookie: false,
         hasAuth: true
       }
@@ -111,7 +127,7 @@ export function checkPrivacy(headers: chrome.webRequest.HttpHeader[]): PrivacyIn
     isPrivate: false,
     timestamp,
     headers: {
-      ...pickDefined({ cacheControl: cacheControl?.value }),
+      ...pickDefined({ cacheControl: cacheControlValue }),
       hasCookie,
       hasAuth
     }

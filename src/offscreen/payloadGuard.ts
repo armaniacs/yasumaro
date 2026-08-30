@@ -3,26 +3,57 @@
  * Common payload size guard for offscreen SQLite messages.
  * Centralizes the 1 MB field cap, batch limits, and restore size cap
  * that were previously scattered across individual switch cases.
+ *
+ * The per-column caps are schema-driven: every TEXT column declared in
+ * schema.ts is capped, so a new TEXT column is guarded automatically
+ * without editing this file. Unknown fields in a write payload are
+ * rejected (fail-closed) rather than silently forwarded to SQLite.
  */
 
 import type { SqliteMessage } from '../messaging/sqliteMessages.js';
+import { COLUMN_NAMES, SCHEMA_SQL } from './schema.js';
 
-/** Per-field cap for large text fields (summary/content/title). */
+/** Per-field cap for large text fields. */
 export const MAX_PAYLOAD_STRING_BYTES = 1024 * 1024; // 1 MB
 
 /** Maximum records per INSERT_BATCH. */
 export const MAX_BATCH_RECORDS = 2000;
 
-/** Total bytes of text across a batch (sum of summary/content/title). */
+/** Total bytes of text across a batch. */
 export const MAX_BATCH_TOTAL_BYTES = 20 * 1024 * 1024; // 20 MB
+
+/** Total bytes of text across a single write payload (all TEXT columns summed). */
+export const MAX_PAYLOAD_TOTAL_BYTES = 20 * 1024 * 1024; // 20 MB
 
 /** Maximum bytes for RESTORE binary payload. */
 export const MAX_RESTORE_BYTES = 100 * 1024 * 1024; // 100 MB
+
+/**
+ * TEXT columns from schema.ts — parsed from the CREATE TABLE DDL so it stays
+ * in lockstep with the schema. Any column declared `<name> TEXT` is included.
+ */
+export const TEXT_COLUMNS: readonly string[] = (() => {
+  const textCols = new Set<string>();
+  const columnLine = /^\s*([a-z_]+)\s+TEXT\b/i;
+  for (const rawLine of SCHEMA_SQL.split('\n')) {
+    const m = rawLine.match(columnLine);
+    if (m && m[1]) textCols.add(m[1]);
+  }
+  return COLUMN_NAMES.filter((c) => textCols.has(c));
+})();
+
+/** Fields accepted in a write payload: every schema column plus the row id. */
+const KNOWN_WRITE_FIELDS: ReadonlySet<string> = new Set<string>([
+  'id',
+  ...COLUMN_NAMES,
+  'traceId',
+]);
 
 export interface PayloadLimits {
   maxStringBytes: number;
   maxBatchRecords: number;
   maxBatchTotalBytes: number;
+  maxPayloadTotalBytes: number;
   maxRestoreBytes: number;
 }
 
@@ -30,29 +61,60 @@ export const DEFAULT_PAYLOAD_LIMITS: PayloadLimits = {
   maxStringBytes: MAX_PAYLOAD_STRING_BYTES,
   maxBatchRecords: MAX_BATCH_RECORDS,
   maxBatchTotalBytes: MAX_BATCH_TOTAL_BYTES,
+  maxPayloadTotalBytes: MAX_PAYLOAD_TOTAL_BYTES,
   maxRestoreBytes: MAX_RESTORE_BYTES,
 };
 
 function getByteLength(value: string): number {
-  // TextEncoder is available in browsers, service workers, offscreen documents, and modern Node.
-  // Fallback to Blob.size for environments where TextEncoder is unavailable.
   if (typeof TextEncoder !== 'undefined') {
     return new TextEncoder().encode(value).byteLength;
   }
   try {
-    // Blob counts UTF-8 bytes when constructed from a string
     if (typeof Blob !== 'undefined') {
       return new Blob([value]).size;
     }
   } catch {
     // fall through
   }
-  // Last resort: fallback to character count (underestimates for multibyte, but avoids crash)
   return value.length;
 }
 
-function stringExceeds(value: unknown, limit: number): boolean {
-  return typeof value === 'string' && getByteLength(value) > limit;
+/**
+ * Check a record's TEXT columns against the per-column cap and the total cap.
+ * `label` distinguishes an insert record from a batch record in the message.
+ * Returns an error string or null.
+ */
+function checkTextColumns(
+  rec: Record<string, unknown>,
+  limits: PayloadLimits,
+): string | null {
+  let total = 0;
+  for (const col of TEXT_COLUMNS) {
+    const value = rec[col];
+    if (typeof value !== 'string') continue;
+    const bytes = getByteLength(value);
+    if (bytes > limits.maxStringBytes) {
+      return `Payload too large: ${col} exceeds 1MB limit`;
+    }
+    total += bytes;
+  }
+  if (total > limits.maxPayloadTotalBytes) {
+    return 'Payload too large: total text size exceeds limit';
+  }
+  return null;
+}
+
+/**
+ * Reject a write payload that carries a field outside the schema. Prevents an
+ * uncapped attacker-supplied key from being forwarded to the DB layer.
+ */
+function checkUnknownFields(rec: Record<string, unknown>): string | null {
+  for (const key of Object.keys(rec)) {
+    if (!KNOWN_WRITE_FIELDS.has(key)) {
+      return `Payload rejected: unknown field "${key}"`;
+    }
+  }
+  return null;
 }
 
 /**
@@ -67,16 +129,7 @@ export function assertPayloadSize(
   switch (msg.type) {
     case 'SQLITE_INSERT': {
       const payload = msg.payload as Record<string, unknown>;
-      if (stringExceeds(payload.summary, limits.maxStringBytes)) {
-        return 'Payload too large: summary exceeds 1MB limit';
-      }
-      if (stringExceeds(payload.content, limits.maxStringBytes)) {
-        return 'Payload too large: content exceeds 1MB limit';
-      }
-      if (stringExceeds(payload.title, limits.maxStringBytes)) {
-        return 'Payload too large: title exceeds 1MB limit';
-      }
-      return null;
+      return checkUnknownFields(payload) ?? checkTextColumns(payload, limits);
     }
     case 'SQLITE_INSERT_BATCH': {
       const rawRecords = (msg.payload as { records?: unknown }).records;
@@ -90,20 +143,13 @@ export function assertPayloadSize(
       for (const r of rawRecords) {
         if (!r || typeof r !== 'object') continue;
         const rec = r as Record<string, unknown>;
-        // Per-record field cap — fail fast on any oversized field
-        if (stringExceeds(rec.summary, limits.maxStringBytes)) {
-          return 'Payload too large: summary exceeds 1MB limit';
+        const unknownErr = checkUnknownFields(rec);
+        if (unknownErr) return unknownErr;
+        const colErr = checkTextColumns(rec, limits);
+        if (colErr) return colErr;
+        for (const col of TEXT_COLUMNS) {
+          if (typeof rec[col] === 'string') totalBytes += getByteLength(rec[col] as string);
         }
-        if (stringExceeds(rec.content, limits.maxStringBytes)) {
-          return 'Payload too large: content exceeds 1MB limit';
-        }
-        if (stringExceeds(rec.title, limits.maxStringBytes)) {
-          return 'Payload too large: title exceeds 1MB limit';
-        }
-        // Accumulate total text size for batch cap (bytes, not characters)
-        if (typeof rec.summary === 'string') totalBytes += getByteLength(rec.summary);
-        if (typeof rec.content === 'string') totalBytes += getByteLength(rec.content);
-        if (typeof rec.title === 'string') totalBytes += getByteLength(rec.title);
       }
       if (totalBytes > limits.maxBatchTotalBytes) {
         return 'Payload too large: batch summary exceeds size limit';
@@ -112,16 +158,7 @@ export function assertPayloadSize(
     }
     case 'SQLITE_UPDATE': {
       const payload = msg.payload as Record<string, unknown>;
-      if (stringExceeds(payload.summary, limits.maxStringBytes)) {
-        return 'Payload too large: summary exceeds 1MB limit';
-      }
-      if (stringExceeds(payload.content, limits.maxStringBytes)) {
-        return 'Payload too large: content exceeds 1MB limit';
-      }
-      if (stringExceeds(payload.title, limits.maxStringBytes)) {
-        return 'Payload too large: title exceeds 1MB limit';
-      }
-      return null;
+      return checkUnknownFields(payload) ?? checkTextColumns(payload, limits);
     }
     case 'SQLITE_RESTORE': {
       const rawData = (msg.payload as { data?: unknown }).data;
