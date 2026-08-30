@@ -40,6 +40,13 @@
 | [2026-08-29-13-fix-import-pipeline-safety.md](2026-08-29-13-fix-import-pipeline-safety.md) | インポート経路安全化 — 認証→上限→パース→検証（VULN-023/030/034/035/036） | ⬜ | 🔧 | 🟡 | 🟡 | 405 |
 | [2026-08-29-14-fix-security-hardening-code-quality.md](2026-08-29-14-fix-security-hardening-code-quality.md) | Code Qualityハードニング一括（将来攻撃面6件） | ⬜ | 🔧 | 🟢 | 🟡 | 170 |
 | [2026-08-29-15-fix-pending-whitelist-orphan-key.md](2026-08-29-15-fix-pending-whitelist-orphan-key.md) | pendingパネルのホワイトリスト追加が無効な機能バグ修正（orphan key・C14から分離） | ⬜ | 🔧 | 🟢 | 🟡 | 2280 |
+| [2026-08-29-16-fix-cas-verify-write-serialization.md](2026-08-29-16-fix-cas-verify-write-serialization.md) | CAS verify→write 区間の直列化（fake-timer 互換 Mutex・29-04 の残4サイト） | ⬜ | 🔧 | 🔴 | 🟡 | 分離 |
+| [2026-08-29-17-fix-local-export-retention.md](2026-08-29-17-fix-local-export-retention.md) | ローカル Markdown エクスポートの retention（VULN-004・29-08 から分離） | ⬜ | 🔧 | 🟡 | 🟡 | 分離 |
+| [2026-08-29-18-fix-secondary-compute-input-caps.md](2026-08-29-18-fix-secondary-compute-input-caps.md) | 二次計算の入力上限（O(n²) タグ共起/TextRank/クラスタ配置・29-08 から分離） | ⬜ | 🔧 | 🟡 | 🟢 | 分離 |
+
+> 29-04 / 29-08 / 29-13 は Wave 2（PR #73–#76）で部分着地。残タスクは 16/17/18 に分離、
+> HMAC 先行化（29-13/29-04）は 29-12 に統合。詳細は
+> [2026-08-29-00-backlog-vulnhunt-audit.md](2026-08-29-00-backlog-vulnhunt-audit.md) の「フォローアップ PBI」節。
 
 ### クレンジング改善（2026-08-30）
 
