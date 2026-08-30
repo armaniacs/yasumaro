@@ -12,6 +12,7 @@ import { getTrustDb } from './trustDb.js';
 import { logInfo, logError, logWarn, ErrorCode } from '../logger.js';
 import { errorMessage } from '../errorUtils.js';
 import { fetchWithTimeout } from '../fetch.js';
+import { readBodyCapped } from '../readBodyCapped.js';
 
 // ===== 定数 =====
 
@@ -144,14 +145,9 @@ export class TrancoUpdater {
       throw new Error(`Tranco CSV returned status ${response.status}: ${response.statusText}`);
     }
 
-    // Guard against unbounded reads of potentially huge responses
-    const contentLength = response.headers?.get('content-length');
+    // Cap the streamed body on actual bytes; Content-Length is not trusted.
     const MAX_TRANCO_SIZE = 50 * 1024 * 1024; // 50MB
-    if (contentLength && parseInt(contentLength, 10) > MAX_TRANCO_SIZE) {
-      throw new Error(`Tranco CSV too large: ${Math.round(parseInt(contentLength, 10) / 1024 / 1024)}MB exceeds ${MAX_TRANCO_SIZE / 1024 / 1024}MB limit`);
-    }
-
-    const text = await response.text();
+    const text = await readBodyCapped(response, MAX_TRANCO_SIZE);
     const domains = this.parseTrancoCSV(text, tier);
 
     logInfo('TrancoUpdater', { tier, count: domains.length }, `Parsed ${domains.length} domains for tier: ${tier}`);

@@ -16,6 +16,7 @@ import {
     type ObsidianProtocol,
 } from '../utils/obsidianConfigValidator.js';
 import { buildObsidianConfig, type ObsidianConfig } from '../utils/obsidianConfigBuilder.js';
+import { readBodyCapped } from '../utils/readBodyCapped.js';
 
 /**
  * Problem #1: Fetchタイムアウト設定
@@ -189,14 +190,15 @@ export class ObsidianClient {
         }, FETCH_TIMEOUT_MS);
 
         if (!response.ok) {
-            // Guard against unbounded reads of potentially huge error responses
-            const contentLength = response.headers?.get('content-length');
+            // Cap the error body on actual bytes; Content-Length is not trusted.
             const MAX_ERROR_BODY_SIZE = 1024 * 1024; // 1MB
-            if (contentLength && parseInt(contentLength, 10) > MAX_ERROR_BODY_SIZE) {
-                addLog(LogType.ERROR, `Obsidian API Error: ${response.status} (response body too large: ${contentLength} bytes)`, { traceId });
+            let errorText: string;
+            try {
+                errorText = await readBodyCapped(response, MAX_ERROR_BODY_SIZE);
+            } catch {
+                addLog(LogType.ERROR, `Obsidian API Error: ${response.status} (response body too large or unreadable)`, { traceId });
                 throw new Error('Error: Failed to write to daily note. Please check your Obsidian connection.');
             }
-            const errorText = await response.text();
             addLog(LogType.ERROR, `Obsidian API Error: ${response.status} ${errorText}`, { traceId });
             throw new Error('Error: Failed to write to daily note. Please check your Obsidian connection.');
         }
