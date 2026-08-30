@@ -11,6 +11,7 @@ import { logWarn, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 import { ALLOWED_LOCALHOST_PORTS } from './ssrfGuard.js';
 import { pickDefined } from './objectUtils.js';
+import { isAllowedProviderBaseUrl } from '../background/ai/providerRegistry.js';
 
 class CspError extends Error {
     code: string;
@@ -140,32 +141,40 @@ export class CSPValidator {
       }
     }
 
-    // OpenAI互換プロバイダーのBase URLドメインを直接追加（PROVIDER_BASE_URL）
-    const providerBaseUrl = settings.provider_base_url as string | undefined;
-    if (providerBaseUrl) {
+    // 設定由来の Base URL は「信頼できる定数」ではないため、暗黙に許可リストへ
+    // 入れる前に isAllowedProviderBaseUrl で締め直す（private IP・metadata
+    // endpoint・非 localhost の http を拒否）。汚染設定でも条件付き CSP の
+    // 意味を保つ。挙動は暗黙追加のまま（明示オプトイン化はしない）。
+    const addBaseUrlDomain = (rawUrl: string, isLocal: boolean): void => {
+      if (!isAllowedProviderBaseUrl(rawUrl, isLocal)) return;
       try {
-        const domain = new URL(providerBaseUrl).hostname;
+        const domain = new URL(rawUrl).hostname;
         if (domain) {
           CSPValidator.allowedDomains.add(domain);
         }
       } catch {
         // 無効なURLは無視
       }
+    };
+
+    // OpenAI互換プロバイダーのBase URLドメインを直接追加（PROVIDER_BASE_URL）
+    const providerBaseUrl = settings.provider_base_url as string | undefined;
+    if (providerBaseUrl) {
+      addBaseUrlDomain(providerBaseUrl, false);
     }
 
     // All provider Base URL domains (openai, openai2, etc.)
-    const providerTypes = ['openai', 'openai2', 'lm-studio', 'ollama'];
-    for (const pt of providerTypes) {
-      const baseUrl = settings[`${pt}_base_url`] as string | undefined;
+    // lm-studio / ollama は localhost 期待、openai 系はリモート期待
+    const providerTypes: { key: string; isLocal: boolean }[] = [
+      { key: 'openai', isLocal: false },
+      { key: 'openai2', isLocal: false },
+      { key: 'lm-studio', isLocal: true },
+      { key: 'ollama', isLocal: true },
+    ];
+    for (const { key, isLocal } of providerTypes) {
+      const baseUrl = settings[`${key}_base_url`] as string | undefined;
       if (baseUrl) {
-        try {
-          const domain = new URL(baseUrl).hostname;
-          if (domain) {
-            CSPValidator.allowedDomains.add(domain);
-          }
-        } catch {
-          // 無効なURLは無視
-        }
+        addBaseUrlDomain(baseUrl, isLocal);
       }
     }
 
