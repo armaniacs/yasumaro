@@ -339,6 +339,32 @@ describe('handleDashboardSqlite — query', () => {
     }));
   });
 
+  it.each([
+    ['negative', -1, 100],
+    ['zero', 0, 100],
+    ['non-integer', 0.5, 100],
+    ['huge', 1e9, 1000],
+    ['normal', 50, 50],
+  ])('clamps limit=%s at the trust boundary (query)', async (_label, raw, expected) => {
+    const mock = createMockSqliteClient();
+    await dispatchDashboardSqlite({ subtype: 'query', limit: raw as number }, mock as any);
+    expect(mock.query).toHaveBeenCalledWith(expect.objectContaining({ limit: expected }));
+  });
+
+  it('clamps a negative search limit to the search default (50)', async () => {
+    const mock = createMockSqliteClient();
+    await dispatchDashboardSqlite({ subtype: 'search', query: 'x', limit: -1 }, mock as any);
+    expect(mock.query).toHaveBeenCalledWith(expect.objectContaining({ kind: 'search', limit: 50 }));
+  });
+
+  it('clamps a negative audit_log_query limit to a positive value within cap', async () => {
+    const mock = createMockSqliteClient();
+    await dispatchDashboardSqlite({ subtype: 'audit_log_query', limit: -1 } as any, mock as any);
+    const call = mock.query.mock.calls.find((c: unknown[]) => (c[0] as { kind?: string }).kind === 'auditLog');
+    expect(call[0].limit).toBeGreaterThanOrEqual(1);
+    expect(call[0].limit).toBeLessThanOrEqual(1000);
+  });
+
   it('returns error when sqliteClient.query fails', async () => {
     const mock = createMockSqliteClient();
     mock.query.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Query failed', retriable: false } });

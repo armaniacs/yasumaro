@@ -74,3 +74,20 @@ describe('IdbVfsBackend.query — search ORDER BY branch', () => {
     expect(rowQuery).toBeUndefined();
   });
 });
+
+describe('IdbVfsBackend.queryAuditLog — limit clamp', () => {
+  it.each([
+    ['negative', -1, 100],
+    ['zero', 0, 100],
+    ['non-integer', 0.5, 100],
+    ['huge', 1e9, 100000],
+    ['normal', 50, 50],
+  ])('clamps limit=%s to %s in the LIMIT param', async (_label, raw, expected) => {
+    const { engine, calls } = makeStubEngine();
+    const backend = new IdbVfsBackend(engine as never);
+    (backend as unknown as { ensureDb: () => void }).ensureDb = () => {};
+    await backend.queryAuditLog({ limit: raw as number });
+    const rowQuery = calls.find(c => /FROM audit_log ORDER BY/i.test(c.sql));
+    expect(rowQuery?.params[0]).toBe(expected);
+  });
+});
