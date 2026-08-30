@@ -6,7 +6,7 @@
 
 ## 優先度
 
-- 順位: 14 / 14
+- 順位: 14 / 15
 - RICE: Reach 8 / Impact 1 / Confidence 0.8 / Effort 2日 = 3.2
 - 根拠: 上級者の調整の手がかりになるが、直接の要約品質向上ではない。`ExtractResult` と `cleansingStatsView` の表示改善で局所的。
 

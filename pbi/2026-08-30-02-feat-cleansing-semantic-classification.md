@@ -6,7 +6,7 @@
 
 ## 優先度
 
-- 順位: 02 / 14
+- 順位: 02 / 15
 - RICE: Reach 9 / Impact 2 / Confidence 0.7 / Effort 2日 = 6.3
 - 根拠: `AD_CLASS_PATTERNS` `SOCIAL_CLASS_PATTERNS` の誤爆は `patterns.test.ts` で部分的に検出されているが、結合後セレクタの誤爆は未検証。修正は `helpers.ts` の判定ロジック追加で局所的。
 

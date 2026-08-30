@@ -47,7 +47,7 @@ Scenario: ロック契約の誤用はテストで検出される
 - [ ] ロック API 契約テスト（finally カバレッジ・current 消費検証）が追加されている
 - [ ] 既存 trustDb 系 221 テストが全てグリーン
 - [ ] `npm run type-check` と `npm run validate` が成功する
-- [ ] VulnHunter 再検証: lockout PoC・LWW PoC が失敗する
+- [ ] VulnHunter 再検証: lockout 再現テスト（例外中断後もフラグ解除）・LWW 再現テスト（2 writer の差分がマージされる）が失敗する
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -65,7 +65,7 @@ Scenario: ロック契約の誤用はテストで検出される
   - 例外: updateFn throw 時のロック解放
 
 ## 実装アプローチ
-- **Outside-In**: lockout PoC を RED → try/finally で GREEN → LWW PoC を RED → merge 実装で GREEN
+- **Outside-In**: lockout 再現テストを RED → try/finally で GREEN → LWW 再現テストを RED → merge 実装で GREEN
 - **Red-Green-Refactor**: 契約テストは既存 7 正解サイトに対しても実行し、回帰がないことを確認
 
 ## 見積もり
@@ -76,6 +76,7 @@ Scenario: ロック契約の誤用はテストで検出される
 - テスタビリティ: `_currentDb` はテスト注入可能
 - 非機能要件: リトライ上限は既存 `withOptimisticLock` の挙動を踏襲
 - 注意: `contextMenuHandlers.ts:38-100` は正解実装（スイープ済み）— 触れない
+- 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
 
