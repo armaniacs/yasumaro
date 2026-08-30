@@ -4,6 +4,7 @@ import { BADGE_COLORS } from '../../constants/appConstants.js';
 import { logDebug, logWarn, logError, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { createErrorResponse } from '../../utils/errorClassification.js';
+import { readBodyCapped } from '../../utils/readBodyCapped.js';
 import { updateSavedUrlEntry } from '../../utils/storage/savedUrlRepository.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
@@ -112,16 +113,12 @@ export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // VULN-012 fix: check Content-Length header first
-      const contentLength = response.headers.get('content-length');
-      if (contentLength && parseInt(contentLength, 10) > MAX_FILTER_LIST_SIZE) {
-        throw new Error(`Filter list too large: ${Math.round(parseInt(contentLength, 10) / 1024 / 1024)}MB exceeds ${MAX_FILTER_LIST_SIZE / 1024 / 1024}MB limit`);
-      }
-
       const contentType = response.headers.get('content-type');
-      const text = await response.text();
+      // Cap the streamed body on actual bytes; Content-Length is not trusted
+      // (attacker can omit it via chunked transfer-encoding).
+      const text = await readBodyCapped(response, MAX_FILTER_LIST_SIZE);
 
-      // VULN-012 fix: also check actual text size after reading
+      // Defense in depth: keep the post-read size check.
       if (text.length > MAX_FILTER_LIST_SIZE) {
         throw new Error(`Filter list too large: ${Math.round(text.length / 1024 / 1024)}MB exceeds ${MAX_FILTER_LIST_SIZE / 1024 / 1024}MB limit`);
       }
