@@ -11,6 +11,7 @@
 
 import { splitSentences, containsJapanese, getBigrams } from './text/tokenizer.js';
 import { jaccardSimilarity } from './text/similarity.js';
+import { MAX_SENTENCES_FOR_TEXTRANK } from './computeLimits.js';
 
 export { splitSentences };
 
@@ -208,6 +209,15 @@ export function extractSentences(
     sentencesForExtraction = sentences;
   } else {
     sentencesForExtraction = validSentences;
+  }
+
+  // Cap the sentence count fed into TextRank: the similarity graph is O(n^2)
+  // and had no bound (VULN-051, CWE-400). Applied after the minLength filter so
+  // minLength-passing sentences are preferred; a leading slice is acceptable here
+  // because upstream content is already byte-truncated before this step, so the
+  // first MAX_SENTENCES_FOR_TEXTRANK sentences still span the retained article.
+  if (sentencesForExtraction.length > MAX_SENTENCES_FOR_TEXTRANK) {
+    sentencesForExtraction = sentencesForExtraction.slice(0, MAX_SENTENCES_FOR_TEXTRANK);
   }
 
   // Build similarity graph (index-qualified keys — see buildSentenceGraph)

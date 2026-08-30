@@ -4,7 +4,8 @@
  */
 
 import { queryLogs, getSqliteStatus, isServiceError } from '../../dashboardSqliteService.js';
-import { computeTagCooccurrence, limitToTopNodes } from '../../tagCooccurrence.js';
+import { computeTagCooccurrence, limitToTopNodes, narrowEntriesToTopTags } from '../../tagCooccurrence.js';
+import { MAX_TAG_CLUSTER_TAGS } from '../../../utils/computeLimits.js';
 import { computeLayout, computeCanvasSize } from '../../tagClusterLayout.js';
 import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
 import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
@@ -47,7 +48,10 @@ export function createTagClusterPanel(): PanelLifecycle {
         const rows = await loadRowsWithRetry();
         loadingManager.updateStep(0);
 
-        const { nodes, edges } = computeTagCooccurrence(rows);
+        // Narrow to the most frequent tags BEFORE cooccurrence so the O(n^2)
+        // double loop and force-directed layout stay bounded (VULN-053).
+        const narrowedRows = narrowEntriesToTopTags(rows, MAX_TAG_CLUSTER_TAGS);
+        const { nodes, edges } = computeTagCooccurrence(narrowedRows);
         loadingManager.updateStep(1);
 
         if (nodes.length === 0) {
