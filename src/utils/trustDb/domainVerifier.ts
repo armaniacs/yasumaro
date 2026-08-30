@@ -68,9 +68,11 @@ export class DomainVerifier {
    * 解: `domain === tld || domain.endsWith("." + tld)` + `isValidTld` で除外
    */
   checkJpAnchor(domain: string, state: DomainVerifierState): TrustResult {
+    const jpAnchor = state.database?.jpAnchor;
+    if (!jpAnchor) return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Trust DB not initialized' };
     const allTlds = [
-      ...state.database.jpAnchor.tlds,
-      ...state.database.jpAnchor.userTlds
+      ...jpAnchor.tlds,
+      ...jpAnchor.userTlds
     ];
 
     const normalizedDomain = domain.toLowerCase().trim();
@@ -122,6 +124,7 @@ export class DomainVerifier {
    */
   checkSensitive(domain: string, state: DomainVerifierState): TrustResult {
     const db = state.database;
+    if (!db || !db.sensitive) return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Trust DB not initialized' };
 
     // ホワイトリスト優先
     if (db.sensitive.whitelist.includes(domain)) {
@@ -187,6 +190,7 @@ export class DomainVerifier {
    */
   checkTranco(domain: string, state: DomainVerifierState): TrustResult {
     const db = state.database;
+    if (!db || !db.tranco) return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Trust DB not initialized' };
 
     if (db.tranco.domains.length === 0) {
       return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Tranco list is empty' };
