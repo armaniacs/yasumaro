@@ -3,6 +3,7 @@ import { StorageKeys } from '../utils/storage/types.js';
 import { cleanupExpiredSettingsBackups } from '../utils/storage/settingsStore.js';
 import { logInfo, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { purgeExpiredDownloadRecords } from './localMarkdownExportRetention.js';
 import type { CallResult } from './sqliteClient.js';
 
 type PurgeFn = (retentionDays?: number, maxRecords?: number) => Promise<CallResult<{ purged: number }>>;
@@ -57,6 +58,10 @@ export async function handleDailyPurgeAlarm(
 
         // PBI-15: clean up expired settings migration backups
         await cleanupExpiredSettingsBackups();
+
+        // VULN-004: remove local Markdown export download records older than
+        // LOCAL_MARKDOWN_EXPORT_RETENTION_DAYS.
+        await purgeExpiredDownloadRecords();
     } catch (error) {
         logError('daily-purge failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'dailyPurgeHandler');
     }
