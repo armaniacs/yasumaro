@@ -44,6 +44,7 @@
     "check-licenses": "node scripts/check-licenses.mjs",
     "benchmark:cleansing": "node scripts/benchmark-cleansing.mjs",
     "check:cleansing-corpus": "node scripts/check-cleansing-corpus.mjs",
+    "generate:whitelist-adapter": "node scripts/generate-whitelist-adapter.mjs",
     "generate-sbom": "cyclonedx-npm --output-file sbom.json",
     "verify:vulnhunt-fix": "node scripts/verify-vulnhunt-fix.mjs",
     "release:check": "node scripts/release-checks/index.mjs",
