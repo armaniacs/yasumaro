@@ -113,6 +113,18 @@ VulnHunter 2026-08-29 スキャンで確認された **48件の脆弱性（Mediu
 14. `2026-08-29-14-fix-security-hardening-code-quality.md`（170 — ハードニングのみ）
 15. `2026-08-29-15-fix-pending-whitelist-orphan-key.md`（2280 — C14 から分離。着手は Wave 1）
 
+### フォローアップ PBI（Wave 2 の部分完了分から分離）
+
+Wave 2（PR #73–#76）で着地しきれなかった残タスクを新規 PBI として切り出した。
+
+- `2026-08-29-16-fix-cas-verify-write-serialization.md` — 29-04 の残 4 サイト（buffer/pending/logger の CAS + `optimisticLock` の verify→write 直列化）。fake-timer 互換の key 粒度 Mutex 設計が主眼。VULN-003/005/012/050
+- `2026-08-29-17-fix-local-export-retention.md` — 29-08 の VULN-004。ローカル Markdown 自動エクスポートの retention（download 記録の purge + 日次バッファのエントリ上限）
+- `2026-08-29-18-fix-secondary-compute-input-caps.md` — 29-08 の VULN-041/051/053。タグ共起・TextRank・タグクラスタ配置の O(n²) 計算への入力 cap
+
+**29-13 / 29-04 の HMAC 先行化（VULN-034）と log 署名（VULN-035）** は暗号エクスポート形式の変更
+（平文 JSON 署名 → ciphertext 署名）を伴うため、独立 PBI にせず `2026-08-29-12-fix-crypto-policy-ssot.md`
+のスコープに追記して統合対応する。
+
 ---
 
 ## 疑問の解決 — なぜなぜ分析（フェーズ3）
