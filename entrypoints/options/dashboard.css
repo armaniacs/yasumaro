@@ -4559,7 +4559,7 @@ details[open] > .priority-details-summary {
 .ai-layout-toggle {
   display: inline-flex;
   gap: 4px;
-  background: var(--color-surface, #27272a);
+  background: var(--color-bg-subtle);
   border-radius: 16px;
   padding: 2px;
   margin-left: 8px;
@@ -4570,35 +4570,36 @@ details[open] > .priority-details-summary {
   border-radius: 12px;
   border: none;
   background: transparent;
-  color: var(--color-text-muted, #71717a);
+  color: var(--color-text-muted);
   cursor: pointer;
 }
 .ai-layout-toggle-btn.active {
-  background: var(--color-primary, #7c3aed);
+  background: var(--color-primary);
   color: #fff;
 }
 .b-priority-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #27272a;
-  border: 1px solid #3f3f46;
+  /* Row uses subtle paper tone so white select/input children stay distinct. */
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 6px 8px;
   margin-bottom: 6px;
 }
 .b-priority-row.has-error {
-  border-color: #ef4444;
+  border-color: var(--color-danger);
 }
-.b-priority-handle { cursor: grab; color: #a78bfa; }
+.b-priority-handle { cursor: grab; color: var(--color-primary); }
 .b-provider-details {
-  border: 1px solid #3f3f46;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   margin-bottom: 6px;
-  background: #18181b;
+  background: var(--color-bg-white);
 }
 .b-provider-summary {
   padding: 8px 10px;
   cursor: pointer;
-  color: #e4e4e7;
+  color: var(--color-text-secondary);
 }
