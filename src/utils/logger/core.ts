@@ -6,6 +6,7 @@
  * External interface (addLog / getLogs / clearLogs / flushLogs) is unchanged.
  */
 import { sanitizeRegex } from '../piiSanitizer.js';
+import { neutralizeLogText } from './neutralize.js';
 import { LogBuffer } from './buffer.js';
 import { sanitizeLogDetails } from './sanitize.js';
 import { ChromeStorageLogAdapter, type LogStorageAdapter } from './storageAdapter.js';
@@ -62,6 +63,8 @@ export async function addLog<T extends object = Record<string, unknown>>(
       return;
     }
 
+    // Order: PII mask first (matches on original text), then neutralize control
+    // bytes / ANSI / line breaks in the persisted result. See neutralize.ts.
     const sanitizedMessage = await sanitizeRegex(message);
     const { traceId: traceIdValue, ...restDetails } = details as Record<string, unknown>;
     const traceId = typeof traceIdValue === 'string' ? traceIdValue : undefined;
@@ -77,7 +80,9 @@ export async function addLog<T extends object = Record<string, unknown>>(
             })(),
       timestamp: Date.now(),
       type,
-      message: sanitizedMessage.maskedItems.length > 0 ? sanitizedMessage.text : message,
+      message: neutralizeLogText(
+        sanitizedMessage.maskedItems.length > 0 ? sanitizedMessage.text : message,
+      ),
       details: await sanitizeLogDetails(restDetails),
       ...pickDefined({ traceId }),
     };
