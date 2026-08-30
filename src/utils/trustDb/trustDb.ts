@@ -172,7 +172,10 @@ class TrustDb {
 
       if (savedDb && savedDb.bloomFilter) {
         // 破損DBの包括的修復: 全必須フィールドをデフォルトで補完（Phase 1 根源: DB自体が部分的に欠落）
+        const beforeRepair = JSON.stringify(savedDb);
         this.repairDatabase(savedDb);
+        const afterRepair = JSON.stringify(savedDb);
+        const wasRepaired = beforeRepair !== afterRepair;
         // 既存データをロード
         this.state.database = savedDb;
         this.state.bloomFilter = bloomFilterFromData(savedDb.bloomFilter);
@@ -189,6 +192,11 @@ class TrustDb {
           version: this.state.database.version,
           domainCount: this.state.database.tranco.count
         }, 'Loaded existing database');
+
+        if (wasRepaired) {
+          await this.save();
+          logInfo('TrustDb', {}, 'Repaired corrupted database and persisted');
+        }
       } else {
         // 新規作成
         await this.createDefaultDatabase();
