@@ -198,7 +198,14 @@ const mockStorage: Record<string, unknown> = {};
 const mockChrome = {
   storage: {
     local: {
-      get: vi.fn().mockImplementation(async (key: string) => ({ [key]: mockStorage[key] })),
+      get: vi.fn().mockImplementation(async (keys: string | string[]) => {
+        const list = Array.isArray(keys) ? keys : [keys];
+        const out: Record<string, unknown> = {};
+        for (const k of list) {
+          if (k in mockStorage) out[k] = mockStorage[k];
+        }
+        return out;
+      }),
       set: vi.fn().mockImplementation(async (obj: Record<string, unknown>) => {
         Object.assign(mockStorage, obj);
       }),
