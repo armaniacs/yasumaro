@@ -18,6 +18,7 @@ import { buildExtractionOptions } from './contentExtractor/optionBuilder.js';
 import type { ExtractResult } from './contentExtractor/types.js';
 import type { CleansingConfig } from '../content/pageState.js';
 import { PageState } from '../content/pageState.js';
+import { cleanseViaOffscreen as _cleanseViaOffscreen } from '../content/cleansingOffscreenDelegate.js';
 
 // Re-export the domain type so callers don't need to import from the internal
 // contentExtractor/types seam. One import, one module.
@@ -85,3 +86,10 @@ export function prepareFromOptions(
   );
   return typeof result === 'string' ? { content: result } : result;
 }
+
+/**
+ * Offscreen 委譲の PoC エントリ: html 文字列を Offscreen に送り cleansed HTML を受け取る。
+ * 失敗時や feature flag OFF 時は同期フォールバックで結果を返す。
+ * pageContentPipeline の公開 seam として提供（contentKernel からも利用可能）。
+ */
+export const cleanseViaOffscreen = _cleanseViaOffscreen;

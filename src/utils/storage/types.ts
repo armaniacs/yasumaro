@@ -272,6 +272,8 @@ export const StorageKeys = {
     ALLOW_ALL_URLS_OPT_IN: 'allow_all_urls_opt_in',
     // Cleansing feedback queue (PBI 2026-08-30-08)
     CLEANSING_FEEDBACK_QUEUE: 'cleansing_feedback_queue',
+    // Cleansing Offscreen delegation PoC (PBI 2026-08-30-05) — default OFF
+    CLEANSING_OFFSCREEN_ENABLED: 'cleansing_offscreen_enabled',
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -470,6 +472,7 @@ export interface StorageKeyValues {
     [StorageKeys.LEGACY_DUAL_WRITE_ENABLED]: boolean;
     [StorageKeys.ALLOW_ALL_URLS_OPT_IN]: boolean;
     [StorageKeys.CLEANSING_FEEDBACK_QUEUE]: CleansingFeedbackEntry[];
+    [StorageKeys.CLEANSING_OFFSCREEN_ENABLED]: boolean;
 }
 
 // 厳格な Settings 型（後方互換性のため StrictSettings エイリアスを残す）

@@ -21,6 +21,7 @@ import { ScrollMonitor } from './scrollMonitor.js';
 import { VisitReporter, type MessageSender } from './visitReporter.js';
 import { createSender } from '../utils/retryHelper.js';
 import { getCleansingConfigForDomain } from '../utils/aiSummaryCleaner/perSiteOverride.js';
+import { cleanseViaOffscreen as delegateCleanseViaOffscreen } from './cleansingOffscreenDelegate.js';
 
 export interface Scheduler {
     schedule(callback: () => void): number;
@@ -429,6 +430,14 @@ export class ContentKernel {
     // Expose for tests that assert on DEFAULT_CLEANSING_CONFIG SSOT
     getDefaultCleansingConfig(): CleansingConfig {
         return DEFAULT_CLEANSING_CONFIG;
+    }
+
+    /**
+     * PoC: Offscreen へのクレンジング委譲を試みる。失敗時は同期フォールバック。
+     * Content Script のメインスレッド占有を計測するための分岐点。
+     */
+    async cleanseViaOffscreen(html: string): Promise<string> {
+        return delegateCleanseViaOffscreen(html);
     }
 
     /**
