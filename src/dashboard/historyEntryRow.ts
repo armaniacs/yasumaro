@@ -7,6 +7,7 @@ import { makeRecordTypeBadge, makeMaskBadge, makeCleansedBadge, makePrivacyModeB
 import { openTagEditModal } from './historyTagEditModal.js';
 import { getCachedMessage } from './historyState.js';
 import { isDegenerateOutput } from '../utils/llmOutputGuard.js';
+import { isSecureUrl } from '../utils/urlUtils.js';
 
 /** Shown in place of a stored summary that the guard flags as degenerate. */
 const DEGENERATE_SUMMARY_FALLBACK = '要約に失敗しました（AI出力が不自然なため）';
@@ -115,9 +116,13 @@ export function makeHistoryEntryRow(
 
   const urlEl = document.createElement('a');
   urlEl.className = 'history-entry-url';
-  urlEl.href = url;
-  urlEl.target = '_blank';
-  urlEl.rel = 'noopener noreferrer';
+  // Only wire an href for http/https. A stored entry with a javascript: (or
+  // other dangerous) scheme is shown as plain text, never as a clickable link.
+  if (isSecureUrl(url)) {
+    urlEl.href = url;
+    urlEl.target = '_blank';
+    urlEl.rel = 'noopener noreferrer';
+  }
   urlEl.textContent = url;
 
   topRow.appendChild(makeRecordTypeBadge(recordType));

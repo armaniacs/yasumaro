@@ -67,6 +67,35 @@ describe('GeminiProvider: エラーハンドリング', () => {
     expect(result.summary).not.toContain('Invalid request');
   });
 
+  it('model 名に / を含む場合、パストラバーサルを許さずエラーを返す', async () => {
+    const provider = new GeminiProvider({
+      ...baseSettings,
+      gemini_model: '../../../etc/passwd',
+    } as Settings);
+    const result = await provider.generateSummary('content', false, '');
+
+    expect(result.summary).toContain('Error:');
+    expect(result.summary).toContain('Invalid AI model name');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('model 名の特殊文字は URL パスセグメントとしてエンコードされる', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }),
+    });
+
+    const provider = new GeminiProvider({
+      ...baseSettings,
+      gemini_model: 'weird model:v1',
+    } as Settings);
+    await provider.generateSummary('content', false, '');
+
+    const calledUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(calledUrl).toContain('/models/weird%20model%3Av1:generateContent');
+  });
+
   it('ネットワークエラー時、内部エラー詳細を含まない', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(
       new Error('Failed to fetch: Network request failed'),

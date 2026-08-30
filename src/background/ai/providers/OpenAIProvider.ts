@@ -13,6 +13,10 @@ import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 
 import { getRegistryEntry, isAllowedProviderBaseUrl } from '../providerRegistry.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
+import { readJsonCapped } from '../../../utils/readBodyCapped.js';
+
+/** Default byte cap for AI provider JSON responses. */
+const MAX_AI_RESPONSE_BYTES = 10 * 1024 * 1024; // 10MB
 
 interface OpenAIApiResponse {
     choices?: Array<{ message?: { content: string } }>;
@@ -180,7 +184,7 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
                 return { success: false, summary: "Error: Failed to generate summary. Please check your API settings." };
             }
 
-            const data = await response.json();
+            const data = await readJsonCapped(response, MAX_AI_RESPONSE_BYTES) as OpenAIApiResponse;
             return this._extractSummary(data, traceId);
         } catch (error: unknown) {
             const msg = errorMessage(error);
@@ -248,7 +252,7 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
                 };
             }
 
-            const data = await response.json() as OpenAIApiResponse;
+            const data = await readJsonCapped(response, MAX_AI_RESPONSE_BYTES) as OpenAIApiResponse;
             const text = data.choices?.[0]?.message?.content ?? '';
             const hasContent = text.trim().length > 0;
 

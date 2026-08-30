@@ -288,6 +288,33 @@ describe('GistSyncTarget', () => {
     expect(mockSqliteClient.mutate).toHaveBeenCalled();
   });
 
+  it('createGist caps an oversized chunked response body', async () => {
+    mockGetAll.mockResolvedValue({ github_pat: 'ghp_test123' } as any);
+    mockSqliteClient.mutate.mockResolvedValue({ success: true, data: undefined });
+
+    const huge = new Uint8Array(11 * 1024 * 1024); // 11MB, over the 10MB cap
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: () => null },
+      body: {
+        getReader: () => {
+          let sent = false;
+          return {
+            read: () => {
+              if (sent) return Promise.resolve({ done: true, value: undefined });
+              sent = true;
+              return Promise.resolve({ done: false, value: huge });
+            },
+            cancel: () => Promise.resolve(),
+          };
+        },
+      },
+    } as unknown as Response);
+
+    const result = await target.sync(1, 'https://example.com', 'Test', 'Summary');
+    expect(result.success).toBe(false);
+  });
+
   it('testConnection returns false when not configured', async () => {
     mockGetAll.mockResolvedValue({} as any);
     const result = await target.testConnection();

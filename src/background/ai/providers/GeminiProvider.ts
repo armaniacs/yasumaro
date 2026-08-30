@@ -12,6 +12,10 @@ import { Settings, StorageKeys } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt, getDefaultSystemPrompt } from '../../../utils/customPromptUtils.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
+import { readJsonCapped } from '../../../utils/readBodyCapped.js';
+
+/** Default byte cap for AI provider JSON responses. */
+const MAX_AI_RESPONSE_BYTES = 10 * 1024 * 1024; // 10MB
 
 
 interface GeminiApiResponse {
@@ -53,6 +57,21 @@ export class GeminiProvider extends AIProviderStrategy {
     }
 
     /**
+     * Normalize the configured model into a single safe URL path segment.
+     * The model name is interpolated into the API URL path; without encoding a
+     * value containing `/` or `..` could escape the `/models/` segment
+     * (path traversal). Strips a leading `models/` prefix, rejects any
+     * remaining slashes or dot-segments, then percent-encodes the result.
+     */
+    private buildModelPathSegment(): string {
+        const raw = this.model.replace(/^models\//, '');
+        if (raw.includes('/') || raw.includes('\\') || raw === '..' || raw === '.') {
+            throw new Error(`Invalid Gemini model name: ${raw}`);
+        }
+        return encodeURIComponent(raw);
+    }
+
+    /**
      * 要約を生成する
      * @param {string} content - 要約対象のコンテンツ
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
@@ -68,9 +87,14 @@ export class GeminiProvider extends AIProviderStrategy {
             return { success: false, summary: preFlight.message! };
         }
 
-        const cleanModelName = this.model.replace(/^models\//, '');
+        let modelSegment: string;
+        try {
+            modelSegment = this.buildModelPathSegment();
+        } catch {
+            return { success: false, summary: "Error: Invalid AI model name. Please check your AI model settings." };
+        }
         const apiVersion = this._getApiVersion();
-        const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${cleanModelName}:generateContent`;
+        const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${modelSegment}:generateContent`;
         const maxContentChars = this.getMaxContentChars(30_000, StorageKeys.GEMINI_CONTENT_CHARS);
         const truncatedContent = content.substring(0, maxContentChars);
 
@@ -131,7 +155,7 @@ export class GeminiProvider extends AIProviderStrategy {
                 return this._handleError(response);
             }
 
-            const data = await response.json();
+            const data = await readJsonCapped(response, MAX_AI_RESPONSE_BYTES) as GeminiApiResponse;
             return await this._extractSummary(data, traceId);
         } catch (error: unknown) {
             const msg = errorMessage(error);
@@ -164,7 +188,17 @@ export class GeminiProvider extends AIProviderStrategy {
         // モデル一覧(GET /models)ではなく実際に推論を走らせる。メタデータ取得では
         // APIキーの有効性やモデル名の妥当性、実際の応答内容が検証できないため。
         const cleanModelName = this.model.replace(/^models\//, '');
-        const testUrl = `https://generativelanguage.googleapis.com/${this._getApiVersion()}/models/${cleanModelName}:generateContent`;
+        let modelSegment: string;
+        try {
+            modelSegment = this.buildModelPathSegment();
+        } catch (error: unknown) {
+            return {
+                success: false,
+                message: `Invalid model name: ${errorMessage(error)}`,
+                debug: { error: errorMessage(error) },
+            };
+        }
+        const testUrl = `https://generativelanguage.googleapis.com/${this._getApiVersion()}/models/${modelSegment}:generateContent`;
 
         // BaseUrl SSRF対策 - テストURLの検証
         try {
@@ -229,7 +263,7 @@ export class GeminiProvider extends AIProviderStrategy {
                 };
             }
 
-            const data = await response.json() as GeminiApiResponse;
+            const data = await readJsonCapped(response, MAX_AI_RESPONSE_BYTES) as GeminiApiResponse;
             const candidate = data.candidates?.[0];
             // 応答が複数 parts に分かれる場合があるため全て結合する
             const text = (candidate?.content?.parts ?? [])
