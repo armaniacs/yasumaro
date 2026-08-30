@@ -94,3 +94,5 @@ graphify-out/
 .vulnhunter-fix/
 docs/superpowers
 
+dev-docs/whitelist-adapter-draft.json
+dev-docs/whitelist-adapter-prompt.md

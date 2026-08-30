@@ -107,6 +107,14 @@ export class DashboardSqliteValidator implements MessageValidator<DashboardSqlit
         throw new ValidationError('DashboardSqliteValidator', `${subtype}: id must be finite number`, 'id');
       }
     }
+    if (subtype === 'create_confirm_token') {
+      if (typeof p.action !== 'string' || p.action.length === 0) {
+        throw new ValidationError('DashboardSqliteValidator', 'create_confirm_token: action must be non-empty string', 'action');
+      }
+      if (p.id !== undefined && (typeof p.id !== 'number' || !Number.isFinite(p.id))) {
+        throw new ValidationError('DashboardSqliteValidator', 'create_confirm_token: id must be finite number', 'id');
+      }
+    }
     if (subtype === 'update') {
       if (typeof p.id !== 'number' || !Number.isFinite(p.id)) {
         throw new ValidationError('DashboardSqliteValidator', 'update: id must be finite number', 'id');

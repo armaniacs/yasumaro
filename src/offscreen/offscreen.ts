@@ -13,6 +13,7 @@ import { forwardWarn, forwardError } from './offscreenLogger.js';
 import { isSqliteMessageType, type SqliteMessage } from '../messaging/sqliteMessages.js';
 import { assertPayloadSize } from './payloadGuard.js';
 import { sqliteMessageHandlers } from './sqliteMessageHandlers.js';
+import { CLEANSING_OFFSCREEN_TYPE, handleCleansingOffscreenPayload } from './cleansingOffscreen.js';
 
 // For testing only - reset SQLite state
 export const _resetSqliteForTesting = (): void => {
@@ -99,6 +100,12 @@ export function handleOffscreenMessage(
                 // before this refactor: the sender is verified to be our own SW).
                 await dispatchSqliteMessage(authorizedSender, msg as SqliteMessage, sendResponse);
 
+            } else if (msg.type === CLEANSING_OFFSCREEN_TYPE) {
+                // Cleansing delegation is allowed from content scripts (sender.tab may be present)
+                // so it does not go through the SQLite sender authorization check.
+                const res = handleCleansingOffscreenPayload(msg.payload as unknown);
+                sendResponse(res);
+                return;
             } else {
                 const traceId = isSqliteMessageType(msg.type) ? (msg as SqliteMessage).traceId : undefined;
                 forwardWarn(`Offscreen: Unknown message type ${msg.type}`, {}, 'offscreen', traceId);

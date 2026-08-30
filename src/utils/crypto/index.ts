@@ -33,6 +33,8 @@ export {
     ENVELOPE_ITERATIONS,
 } from './primitives.js';
 
+export { CRYPTO_PARAMS, validatePasswordPolicy } from './cryptoParams.js';
+
 export {
     deriveHmacWrappingKey,
     getConsentHmacKey,

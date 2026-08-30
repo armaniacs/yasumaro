@@ -9,18 +9,20 @@ import { clampLimit } from '../../../offscreen/queryPlan.js';
  * so a new read-only subtype becomes reachable the moment it lands here.
  */
 export const READ_ONLY_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new Set([
-  'confirm_token', 'query', 'search', 'get_count', 'status', 'opfs_spike', 'audit_log_query',
+  'create_confirm_token', 'query', 'search', 'get_count', 'status', 'opfs_spike', 'audit_log_query',
 ]);
 
 export function createReadOnlyHandler(deps: ReadOnlyDeps) {
   return async (payload: DashboardSqliteRequest): Promise<unknown> => {
     const subtype = payload.subtype;
     switch (subtype) {
-      case 'confirm_token': {
-        const token = await deps.getConfirmToken();
-        if (!token) {
-          return { success: false, error: 'Confirm token not available' };
+      case 'create_confirm_token': {
+        const action = (payload as { action?: string }).action;
+        const id = (payload as { id?: number }).id;
+        if (!action || typeof action !== 'string') {
+          return { success: false, error: 'action is required' };
         }
+        const token = await deps.createConfirmToken(action, id);
         return { success: true, confirmToken: token };
       }
       case 'query': {

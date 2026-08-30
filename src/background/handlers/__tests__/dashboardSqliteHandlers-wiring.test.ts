@@ -246,7 +246,8 @@ const TOKEN = 'test-confirm-token';
 function makeServiceWorkerDeps(overrides: Partial<SqliteClientBackedDeps> = {}): SqliteClientBackedDeps {
   return {
     runMigration: vi.fn().mockResolvedValue({ success: true, count: 0, read: 0, inserted: 0 }),
-    getConfirmToken: vi.fn().mockResolvedValue(TOKEN),
+    createConfirmToken: vi.fn().mockResolvedValue(TOKEN),
+    verifyConfirmToken: vi.fn().mockImplementation(async (token: string) => token === TOKEN),
     runBackfill: vi.fn().mockResolvedValue({ updated: 0, total: 0 }),
     runCleanup: vi.fn().mockResolvedValue({ removed: [], totalBytes: 0 }),
     ...overrides,
@@ -288,15 +289,16 @@ describe('dashboard SQLite wiring — Service-Worker-owned dependencies', () => 
 
   describe('confirm token', () => {
     it('returns the token issued by the Service Worker', async () => {
-      const getConfirmToken = vi.fn().mockResolvedValue('sw-issued-token');
+      const createConfirmToken = vi.fn().mockResolvedValue('sw-issued-token');
       const handler = createDashboardSqliteHandler(
-        createSqliteClientDeps(makeSqliteClient(), makeServiceWorkerDeps({ getConfirmToken })),
+        createSqliteClientDeps(makeSqliteClient(), makeServiceWorkerDeps({ createConfirmToken })),
       );
 
-      expect(await handler({ subtype: 'confirm_token' })).toEqual({
+      expect(await handler({ subtype: 'create_confirm_token', action: 'delete', id: 1 })).toEqual({
         success: true,
         confirmToken: 'sw-issued-token',
       });
+      expect(createConfirmToken).toHaveBeenCalledWith('delete', 1);
     });
 
     it('rejects a destructive subtype when the token does not match', async () => {

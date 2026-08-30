@@ -62,6 +62,8 @@ export async function initStatusPanel(): Promise<void> {
       void updateTrustStatus(currentTab.url);
     }
 
+    initCleansingFeedbackButton();
+
     const toggleBtn = document.getElementById('statusToggleBtn');
     const detailsPanel = document.getElementById('statusDetails');
 
@@ -438,6 +440,45 @@ async function initAllUrlsPermissionBanner(): Promise<void> {
         void updateTrustStatus(tabs[0].url);
       }
     }
+  });
+}
+
+function initCleansingFeedbackButton(): void {
+  const btn = document.getElementById('reportCleansingFeedbackBtn') as HTMLButtonElement | null;
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    const statusEl = document.getElementById('reportCleansingFeedbackStatus');
+    try {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tab = tabs[0];
+      const url = tab?.url ?? '';
+      const domain = url ? new URL(url).hostname : '';
+      let htmlSnippet = '';
+      let removedByReason: Record<string, number> = {};
+      if (tab?.id !== undefined) {
+        const resp = await new Promise<ContentResponse | undefined>((resolve) => {
+          chrome.tabs.sendMessage(tab.id!, { type: 'GET_CONTENT' }, (r: ContentResponse | undefined) => {
+            if (chrome.runtime.lastError) resolve(undefined);
+            else resolve(r);
+          });
+        });
+        if (resp?.content) htmlSnippet = resp.content.slice(0, 500);
+        if (resp?.cleanseStats) removedByReason = { ...resp.cleanseStats } as unknown as Record<string, number>;
+        if (resp?.aiSummaryCleansedStats) {
+          removedByReason = { ...removedByReason, ...resp.aiSummaryCleansedStats } as unknown as Record<string, number>;
+        }
+      }
+      if (!htmlSnippet) {
+        htmlSnippet = document.documentElement.outerHTML.slice(0, 500);
+      }
+      const { enqueueFeedback } = await import('../utils/aiSummaryCleaner/feedbackQueue.js');
+      await enqueueFeedback({ url, domain, htmlSnippet, removedByReason });
+      if (statusEl) statusEl.textContent = getMessage('reportCleansingFeedbackSuccess') || '報告しました';
+    } catch (e) {
+      if (statusEl) statusEl.textContent = getMessage('reportCleansingFeedbackError') || '報告に失敗しました';
+      logError('Failed to enqueue cleansing feedback', { cause: e }, ErrorCode.INTERNAL_ERROR);
+    }
+    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 2000);
   });
 }
 

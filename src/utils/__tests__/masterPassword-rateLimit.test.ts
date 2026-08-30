@@ -404,7 +404,10 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
             expect(chrome.storage.session.remove).toHaveBeenCalledWith(
                 expect.arrayContaining(['lockedUntil'])
             );
-            expect(chrome.storage.local.remove).toHaveBeenCalledWith(['lockedUntil']);
+            // M3: local にも failedAttempts が永続化されるため、local remove は全キー
+            expect(chrome.storage.local.remove).toHaveBeenCalledWith(
+                expect.arrayContaining(['lockedUntil', 'passwordFailedAttempts', 'firstFailedAttemptTime'])
+            );
         });
 
         test('sessionとlocalの両方に値がある場合、最新を採用', async () => {

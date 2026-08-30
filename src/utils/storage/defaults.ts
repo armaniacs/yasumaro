@@ -126,6 +126,9 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]: THRESHOLD_SETTING_DEFAULTS[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]!,
     [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]: THRESHOLD_SETTING_DEFAULTS[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]!,
     [StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS]: [],
+    [StorageKeys.CLEANSING_PRESET]: 'balanced',
+    [StorageKeys.DOMAIN_CLEANSING_OVERRIDES]: [],
+    [StorageKeys.ALLOW_ALL_URLS_OPT_IN]: false,
     // Domain Whitelist Extraction Mode — default true for new users (existing users migrated to false)
     [StorageKeys.WHITELIST_EXTRACTION_ENABLED]: true,
     [StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED]: true,
@@ -168,4 +171,6 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.GITHUB_PAT]: '',
     [StorageKeys.GIST_ID]: '',
     [StorageKeys.LEGACY_DUAL_WRITE_ENABLED]: true,
+    [StorageKeys.CLEANSING_FEEDBACK_QUEUE]: [],
+    [StorageKeys.CLEANSING_OFFSCREEN_ENABLED]: false,
 };

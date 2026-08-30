@@ -56,7 +56,7 @@ export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): ()
                     title: payload.title,
                     url: payload.url,
                     content: payload.content,
-                    force: true,
+                    force: false,
                     skipDuplicateCheck: true,
                     recordType: 'manual',
                 } as RecordingData);

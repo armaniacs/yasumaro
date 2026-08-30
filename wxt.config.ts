@@ -67,7 +67,7 @@ export default defineConfig({
       'contextMenus',
       'downloads',
     ],
-    optional_host_permissions: [...OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS],
+    optional_host_permissions: [...OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS, '<all_urls>'],
     host_permissions: [...buildLocalHostPermissions(), ...AI_PROVIDER_HOST_PERMISSIONS],
     content_security_policy: {
       // wasm-unsafe-eval is required by @subframe7536/sqlite-wasm (wa-sqlite)

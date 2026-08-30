@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"><title>React 19 の新機能をまとめてみた - Qiita風</title><link rel="stylesheet" href="/assets/style.css"><meta name="description" content="React 19 まとめ"></head>
+<body>
+<header class="header"><div class="header-logo"><a href="/">Qiita風</a></div><nav class="header-nav"><ul><li><a href="/feed">フィード</a></li><li><a href="/questions">質問</a></li><li><a href="/tags">タグ</a></li></ul></nav><div class="header-search"><input type="search" placeholder="キーワード検索"><button>検索</button></div><div class="header-actions"><a href="/login">ログイン</a><a href="/signup">新規登録</a></div></header>
+<div class="ad-banner"><span>スポンサー</span><div data-ad="qiita-ad">広告枠</div></div>
+<main class="main-container">
+<div class="article-wrapper">
+<article class="markdown-article" id="article-body">
+<header class="article-header"><h1>React 19 の新機能をまとめてみた</h1><div class="article-meta"><span class="author">by @tech_writer</span><span class="post-date">2026-08-15</span><span class="like-count">いいね 256</span></div><div class="tag-list"><a href="/tags/react">React</a><a href="/tags/frontend">Frontend</a><a href="/tags/javascript">JavaScript</a></div></header>
+<section class="article-content">
+<p>React 19 では Server Components の安定化、Actions、useFormStatus、useOptimistic などの新 Hook が導入されました。本記事では主要な変更点をサンプルコード付きで解説します。まずは全体像を把握し、次に各機能の詳細を見ていきましょう。</p>
+<h2>1. Server Components の安定化</h2>
+<p>React Server Components (RSC) はサーバー側でレンダリングされ、クライアントに送信される JavaScript バンドルを削減します。Next.js 15 でもデフォルトで有効化されており、データフェッチをコンポーネント内で直接行える点が大きな利点です。従来の useEffect によるフェッチと比較して、コードの見通しが良くなり、パフォーマンスも向上します。</p>
+<pre><code>// app/page.tsx
+async function Page() {
+  const data = await fetch('https://api.example.com/posts');
+  return &lt;div&gt;{data.title}&lt;/div&gt;
+}</code></pre>
+<h2>2. Actions と useFormStatus</h2>
+<p>フォーム送信をサーバーアクションとして扱えるようになりました。useFormStatus で送信中の状態を取得でき、ローディング表示が簡単に実装できます。従来の onSubmit ハンドラと比べて、プログレッシブエンハンスメントが容易です。</p>
+<p>具体的な実装例として、フォームの pending 状態をボタンの disabled 属性に紐付けるパターンが推奨されています。これにより二重送信を防ぎつつ、ユーザーに適切なフィードバックを提供できます。</p>
+<h2>3. useOptimistic</h2>
+<p>楽観的更新を宣言的に記述できる Hook です。サーバーからのレスポンスを待たずに UI を更新し、失敗時にはロールバックします。チャットアプリやいいね機能など、即時性が求められる UI で威力を発揮します。</p>
+</section>
+<div class="address-book"><h3>連絡先（address-book）</h3><p>質問は address-book@example.com まで。執筆者の住所録ページを模したセクション。広告ではないため保持されるべき。</p></div>
+<div class="admin-panel"><p>admin-panel: 編集者用管理パネル — この記事の編集履歴は admin-panel から確認できます。誤って広告として削除してはならない。</p></div>
+<div class="x-data" x-data="{ liked: false }"><p>x-data Alpine コンポーネント: いいねボタンの状態管理ダミー。x- プレフィックスを持つがソーシャルウィジェットではない。</p><button @click="liked = !liked">いいね</button></div>
+<section class="article-footer-meta"><p>この記事は React 公式ドキュメントを参考に執筆しました。誤りがあればコメントで教えてください。</p></section>
+</article>
+<div class="comment-list"><h3>コメント (12)</h3><div class="comment"><p>とても分かりやすい！</p></div><div class="comment"><p>Server Components 便利ですね</p></div></div>
+<div class="related-article-card"><h3>関連記事</h3><ul><li><a href="#">Next.js 15 App Router 完全ガイド</a></li><li><a href="#">React Compiler 入門</a></li></ul></div>
+<div class="ad-container"><p>広告</p><a href="#">転職サービス PR</a></div>
+<div class="social-share"><a href="#">Xでシェア</a><a href="#">はてブ</a></div>
+<div class="author-profile"><p>執筆者: tech_writer — フロントエンドエンジニア</p></div>
+</div>
+<aside class="sidebar"><div class="sidebar-widget"><h4>トレンド</h4><ol><li><a href="#">TypeScript 6.0</a></li><li><a href="#">Biome</a></li></ol></div><div class="ad-slot"><p>サイドバー広告</p><ins class="adsbygoogle">Ad</ins></div><div class="toc"><h4>目次</h4><ul><li><a href="#1">1. Server Components</a></li><li><a href="#2">2. Actions</a></li></ul></div></aside>
+</main>
+<footer class="article-footer"><p>© 2026 Qiita風 All rights reserved.</p><p class="legal">利用規約 | プライバシーポリシー</p></footer>
+<div class="popup-modal" style="position: fixed"><p>Qiita風 Jobs: エンジニア転職をサポート</p></div>
+<div class="cookie-banner"><p>Cookieを使用しています。同意の優先設定を管理する — 必須Cookie / 分析Cookie</p></div>
+</body>
+</html>
