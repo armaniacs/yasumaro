@@ -22,31 +22,27 @@
 
 着手順・Wave 分割は [2026-08-29-00-backlog-vulnhunt-audit.md](2026-08-29-00-backlog-vulnhunt-audit.md) を参照。ファイル名の `NN` が RICE 順位。
 
+**PR #68–#81 で 13 件が完全着地しアーカイブ済み**（`dev-docs/archived/pbi/`）。以下は未完了のみ。
+
 | ファイル | タイトル | 状態 | 種別 | 難易度 | 副作用 | RICE |
 |---|---|---|---|---|---|---|
 | [2026-08-29-00-backlog-vulnhunt-audit.md](2026-08-29-00-backlog-vulnhunt-audit.md) | VulnHunter監査のバックログ（候補列挙＋RICE＋なぜなぜ分析＋トレーサビリティ） | ⬜ | 🔧 | - | - | 索引 |
-| [2026-08-29-01-fix-regex-safety.md](2026-08-29-01-fix-regex-safety.md) | 正規表現安全性 — ReDoS封鎖（VULN-025/026） | ⬜ | 🔧 | 🟢 | 🟡 | 4750 |
-| [2026-08-29-02-fix-markdown-sanitizer-boundary.md](2026-08-29-02-fix-markdown-sanitizer-boundary.md) | Markdown/Obsidian出力サニタイズ境界確立（VULN-001/008/047） | ⬜ | 🔧 | 🟢 | 🟡 | 4750 |
-| [2026-08-29-03-fix-response-body-caps.md](2026-08-29-03-fix-response-body-caps.md) | レスポンス読み込みバイト上限ユーティリティ（VULN-013/015/027/054/055） | ⬜ | 🔧 | 🟡 | 🟡 | 1663 |
-| [2026-08-29-04-fix-storage-rmw-serialization.md](2026-08-29-04-fix-storage-rmw-serialization.md) | chrome.storage読み書きの直列化（VULN-003/005/009/012/050/056） | ⬜ | 🔧 | 🟡 | 🟡 | 1440 |
-| [2026-08-29-05-fix-query-limit-clamp.md](2026-08-29-05-fix-query-limit-clamp.md) | SQLiteクエリlimit両側クランプ統一（VULN-017/021/048/049） | ⬜ | 🔧 | 🟢 | 🟢 | 1330 |
+| [2026-08-29-04-fix-storage-rmw-serialization.md](2026-08-29-04-fix-storage-rmw-serialization.md) | chrome.storage読み書きの直列化（VULN-003/005/009/012/050/056） | 🔶 | 🔧 | 🟡 | 🟡 | 1440 |
 | [2026-08-29-06-fix-trust-boundary-consistency.md](2026-08-29-06-fix-trust-boundary-consistency.md) | 信頼境界一貫性 — ゲート迂回解消（VULN-002/011/018/042） | ⬜ | 🔧 | 🟡 | 🔴 | 1260 |
-| [2026-08-29-07-fix-lock-cas-correctness.md](2026-08-29-07-fix-lock-cas-correctness.md) | ロック/CAS運用の正しさ（VULN-028/029） | ⬜ | 🔧 | 🟢 | 🟢 | 1125 |
-| [2026-08-29-08-fix-resource-boundary-caps.md](2026-08-29-08-fix-resource-boundary-caps.md) | リソース上限とライフサイクル境界強制（VULN-004/006/007/024/041/051/053） | ⬜ | 🔧 | 🟡 | 🟡 | 1080 |
-| [2026-08-29-09-fix-fetch-redirect-ssrf.md](2026-08-29-09-fix-fetch-redirect-ssrf.md) | FETCH_URLリダイレクト再検証（VULN-016） | ⬜ | 🔧 | 🟢 | 🟡 | 1000 |
-| [2026-08-29-10-fix-log-integrity.md](2026-08-29-10-fix-log-integrity.md) | ログ完全性 — attributionと制御文字無害化（VULN-019/044） | ⬜ | 🔧 | 🟢 | 🟢 | 713 |
-| [2026-08-29-11-fix-storagefallback-mutate.md](2026-08-29-11-fix-storagefallback-mutate.md) | storageFallbackミューテータ統一（VULN-022） | ⬜ | 🔧 | 🟢 | 🟢 | 475 |
-| [2026-08-29-12-fix-crypto-policy-ssot.md](2026-08-29-12-fix-crypto-policy-ssot.md) | 暗号・認証ポリシーSSOT化（VULN-010/037/038/039/040/052） | ⬜ | 🔧 | 🔴 | 🔴 | 453 |
-| [2026-08-29-13-fix-import-pipeline-safety.md](2026-08-29-13-fix-import-pipeline-safety.md) | インポート経路安全化 — 認証→上限→パース→検証（VULN-023/030/034/035/036） | ⬜ | 🔧 | 🟡 | 🟡 | 405 |
-| [2026-08-29-14-fix-security-hardening-code-quality.md](2026-08-29-14-fix-security-hardening-code-quality.md) | Code Qualityハードニング一括（将来攻撃面6件） | ⬜ | 🔧 | 🟢 | 🟡 | 170 |
-| [2026-08-29-15-fix-pending-whitelist-orphan-key.md](2026-08-29-15-fix-pending-whitelist-orphan-key.md) | pendingパネルのホワイトリスト追加が無効な機能バグ修正（orphan key・C14から分離） | ⬜ | 🔧 | 🟢 | 🟡 | 2280 |
-| [2026-08-29-16-fix-cas-verify-write-serialization.md](2026-08-29-16-fix-cas-verify-write-serialization.md) | CAS verify→write 区間の直列化（fake-timer 互換 Mutex・29-04 の残4サイト） | ⬜ | 🔧 | 🔴 | 🟡 | 分離 |
-| [2026-08-29-17-fix-local-export-retention.md](2026-08-29-17-fix-local-export-retention.md) | ローカル Markdown エクスポートの retention（VULN-004・29-08 から分離） | ⬜ | 🔧 | 🟡 | 🟡 | 分離 |
-| [2026-08-29-18-fix-secondary-compute-input-caps.md](2026-08-29-18-fix-secondary-compute-input-caps.md) | 二次計算の入力上限（O(n²) タグ共起/TextRank/クラスタ配置・29-08 から分離） | ⬜ | 🔧 | 🟡 | 🟢 | 分離 |
+| [2026-08-29-08-fix-resource-boundary-caps.md](2026-08-29-08-fix-resource-boundary-caps.md) | リソース上限とライフサイクル境界強制（VULN-004/006/007/024/041/051/053） | 🔶 | 🔧 | 🟡 | 🟡 | 1080 |
+| [2026-08-29-12-fix-crypto-policy-ssot.md](2026-08-29-12-fix-crypto-policy-ssot.md) | 暗号・認証ポリシーSSOT化 ＋ HMAC先行化（VULN-010/034/035/037-040/052） | ⬜ | 🔧 | 🔴 | 🔴 | 453 |
+| [2026-08-29-13-fix-import-pipeline-safety.md](2026-08-29-13-fix-import-pipeline-safety.md) | インポート経路安全化 — 認証→上限→パース→検証（VULN-023/030/034/035/036） | 🔶 | 🔧 | 🟡 | 🟡 | 405 |
+| [2026-08-29-14-fix-security-hardening-code-quality.md](2026-08-29-14-fix-security-hardening-code-quality.md) | Code Qualityハードニング一括（将来攻撃面6件） | 🔶 | 🔧 | 🟢 | 🟡 | 170 |
 | [2026-08-29-19-fix-cspvalidator-self-allow.md](2026-08-29-19-fix-cspvalidator-self-allow.md) | CSPValidator の設定由来ドメイン自己許可の締め直し（29-14 の AC1 から分離） | ⬜ | 🔧 | 🟡 | 🟡 | 分離 |
 
-> 29-04 / 29-08 / 29-13 は Wave 2（PR #73–#76）で、29-14 は Wave 3 で部分着地。
-> 残タスクは 16/17/18/19 に分離、HMAC 先行化（29-13/29-04）は 29-12 に統合。詳細は
+> **🔶 部分実装の内訳**（残タスクは別 PBI で完了 or 統合先へ）:
+> - 29-04: 2/6サイト着地（PR #74）。残 4 サイト（buffer/pending/logger の CAS + optimisticLock 直列化）は **29-16 で完了**（PR #79・アーカイブ済み）
+> - 29-08: 3/7指摘着地（PR #75）。VULN-004 は **29-17**、VULN-041/051/053 は **29-18** で完了（PR #78/#77・アーカイブ済み）
+> - 29-13: AC1/4/5/6 着地（PR #76）。HMAC 先行化（VULN-034/035）は **29-12 に統合**
+> - 29-14: AC2–AC6 着地（PR #81）。AC1（CSPValidator 自己許可）は **29-19 に分離**
+>
+> 29-04/08/13/14 は「この PBI 自体の DoD は残タスクを含めて未達」だが、実装は分離先で完了済み。
+> VulnHunter 再スキャンでの最終確認待ちのため `pbi/` に残置。詳細は
 > [2026-08-29-00-backlog-vulnhunt-audit.md](2026-08-29-00-backlog-vulnhunt-audit.md) の「フォローアップ PBI」節。
 
 ### クレンジング改善（2026-08-30）
@@ -57,7 +53,6 @@
 |---|---|---|---|---|---|---|
 | [2026-08-30-00-backlog-cleansing.md](2026-08-30-00-backlog-cleansing.md) | クレンジング改善のバックログ（候補列挙＋RICE＋推奨実行順＋トレーサビリティ） | ⬜ | 🔧 | - | - | 索引 |
 | [2026-08-30-12-feat-cleansing-i18n-expanded-patterns.md](2026-08-30-12-feat-cleansing-i18n-expanded-patterns.md) | クレンジングの多言語パターンを拡充する | ⬜ | ✨ | 🟢 | 🟢 | 12.0 |
-| [2026-08-30-15-feat-llm-output-quality-guard.md](2026-08-30-15-feat-llm-output-quality-guard.md) | LLMの縮退出力（繰り返し・非文）を検出して保存・表示を抑止する | ⬜ | ✨ | 🟡 | 🟢 | 8.4 |
 | [2026-08-30-04-investigate-cleansing-single-pass-benchmark.md](2026-08-30-04-investigate-cleansing-single-pass-benchmark.md) | クレンジング74回走査の1パス集約を計測検証する | ⬜ | 🔧 | 🟢 | 🟢 | 8.0 |
 | [2026-08-30-06-feat-cleansing-presets.md](2026-08-30-06-feat-cleansing-presets.md) | クレンジング32トグルをプリセットに束ねる | ⬜ | ✨ | 🟡 | 🟢 | 8.0 |
 | [2026-08-30-02-feat-cleansing-semantic-classification.md](2026-08-30-02-feat-cleansing-semantic-classification.md) | クラス部分一致に依存しないセマンティック分類を導入する | ⬜ | ✨ | 🟡 | 🟡 | 6.3 |
@@ -93,6 +88,26 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-08-30 VulnHunter 2026-08-29 監査対応 — 13件完了（PR #67–#81）
+
+サブエージェント並列 + TDD で実装。各 PR は `main` にマージ済み、全 CI green。
+
+- 2026-08-29-01-fix-regex-safety.md（PR #68 — `ublockParser/constants.ts` の `DOMAIN_VALIDATION` を線形 label-wise 検証に置換し 30ドット 8秒超の ReDoS を封鎖。`urlSkipper.matchesPattern` を `wildcardToRegex`（5個上限）に統一。`domainFilter` 保存時に両モードのリストを検証。VULN-025/026）
+- 2026-08-29-02-fix-markdown-sanitizer-boundary.md（PR #81 — `sanitizeForObsidian` に HTML エンティティ化（`&`→`&amp;` 先行、`<`/`>`）を追加。既存 `sanitizeForMarkdownLinkText` の適用漏れ 4 箇所（legacy formatter / obsidianSyncService / gistSyncTarget のタイトル、タグ連結2経路）を解消。VULN-001/008/047）
+- 2026-08-29-03-fix-response-body-caps.md（PR #81 — `readBodyCapped` / `readJsonCapped` を新設（ストリーミング読み取り + バイトカウンタ、`ResponseBodyTooLargeError`）。8 シンク（obsidianConfigValidator / obsidianClient 10MB+1MB / FETCH_URL / trancoUpdater 50MB / Gemini×2 / OpenAI×2 / gistSyncTarget）を置換。Gist 素 fetch 3 箇所を `fetchWithTimeout` 経由に。VULN-013/015/027/054/055）
+- 2026-08-29-05-fix-query-limit-clamp.md（PR #69 — `queryPlan.ts` に `clampLimit(raw, cap, fallback)` を新設（非有限/非正→fallback、`Math.max(1, Math.min(cap, floor(raw)))`）。5 シンク（queryPlan / readOnlyHandler×3 / auditHandlers / IdbVfsBackend / recordsRepo）に配線。fts:100000 / plain:1000 の 2 cap 温存。VULN-017/021/048/049）
+- 2026-08-29-07-fix-lock-cas-correctness.md（PR #81 — `trancoUpdater.ts` の更新ループを try/finally 化し恒久ロックアウト解消。`trustDb.ts` の CAS を `(current) => mergeTrustDatabase(current, localSnapshot)` に（新規 `mergeTrustDatabase.ts` — ユーザー編集リストは和集合、tranco/bloom は新しい側、非破壊）。ロック API 契約テスト追加。VULN-028/029）
+- 2026-08-29-09-fix-fetch-redirect-ssrf.md（PR #70 — FETCH_URL の fetch に `redirect: 'error'` + `response.redirected` チェック。`fetchWithRedirectGuard`（`redirect: 'manual'` でホップ毎 `validateUrlForFilterImport` 再適用、最大5ホップ）を新設。ADR `2026-08-29-fetch-redirect-policy.md`。VULN-016）
+- 2026-08-29-10-fix-log-integrity.md（PR #81 — `logger/neutralize.ts` を新設（`\n`→可視区切り `" ⏎ "`、ANSI CSI 除去、C0 制御文字除去。PII マスク後に適用）。LOG_FORWARD の `_source` を `deriveLogSource(sender)` で sender 由来に固定、payload `source` は `_sourceHintUntrusted` に。VULN-019/044）
+- 2026-08-29-11-fix-storagefallback-mutate.md（PR #73 — `storageFallback.ts` に `private async mutate<T>(fn)` を新設（mutex → load → fn → save、try/finally）。update/hardDelete/toggleStar/clearAll/purgeOldRecords/purgeContent の 6 ミューテータを経由化。insert/insertBatch は同一 mutex の bespoke 維持（ID 確保が I/O 副作用のため）。VULN-022）
+- 2026-08-29-15-fix-pending-whitelist-orphan-key.md（PR #71 — `pendingPages.ts` の `addDomainsOrPathsToWhitelist` が camelCase `'domainWhitelist'` に読み書きしていた orphan key バグを `StorageKeys.DOMAIN_WHITELIST`（`'domain_whitelist'`）経由に統一。既存値を保持して追記。機能不全の解消。C14 から分離）
+- 2026-08-29-16-fix-cas-verify-write-serialization.md（PR #79 — 29-04 の残 4 サイト。`keySerializer.ts` を新設（`runSerialized` — microtask promise チェーンで key 粒度直列化、timer 非依存で fake-timer 互換、idle 時同期実行 fast path）。`optimisticLock.ts` の verify→write を bracket。MarkdownBufferManager.flush / pendingStorage add・remove / logger storageAdapter.append に適用。VULN-003/005/012/050）
+- 2026-08-29-17-fix-local-export-retention.md（PR #78 — 29-08 の VULN-004。`localMarkdownExportRetention.ts` を新設（download ID 記録 上限200、`purgeExpiredDownloadRecords` で `chrome.downloads.erase`、retention 30日）。`flushBufferedExports` がフラッシュ後にキー削除。`MarkdownBufferManager` の日次バッファを `MAX_DAILY_BUFFER_ENTRIES`=2000 で上限化）
+- 2026-08-29-18-fix-secondary-compute-input-caps.md（PR #77 — 29-08 の VULN-041/051/053。`computeLimits.ts` を新設（`MAX_TAGS_PER_RECORD`=50 / `MAX_SENTENCES_FOR_TEXTRANK`=200 / `MAX_TAG_CLUSTER_TAGS`=50）。tagCooccurrence の二重ループ前・TextRank 前・tagClusterPanel の共起計算前に cap。browsingLogCodec に書き込み側 tag cap。5000文 TextRank 21,572ms→~20ms）
+- 2026-08-30-15-feat-llm-output-quality-guard.md（PR #72 — `llmOutputGuard.ts` を新設（`isDegenerateOutput` — repetition / lowDiversity / highlyCompressible のいずれかで縮退判定、notSentence は補助のみ、名前付き閾値定数）。`privacyPipeline._processCloudResult` の `parseTagsFromSummary` 後に単一チェックポイントとして組込み、縮退時はフォールバック文字列 + `addLog(WARN)`。`historyEntryRow.ts` で表示時マスク）
+
+**部分着地で `pbi/` に残置**: 29-04（2/6サイト・PR #74）、29-08（3/7指摘・PR #75）、29-13（AC1/4/5/6・PR #76）、29-14（AC2–6・PR #81）。付随して lint 修正（PR #80）、PBI 索引整備（PR #67）もマージ。
 
 ### 2026-08-29 リリース前チェックのブロッカー解消 完了
 
