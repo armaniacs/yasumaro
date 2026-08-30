@@ -31,6 +31,15 @@ export interface NotificationHandlersDeps {
 }
 
 export function createNotificationHandlers(deps: NotificationHandlersDeps) {
+    // VULN-009 (CWE-362): a fast double-click delivers two onButtonClicked
+    // events for the same notification before the first finishes its
+    // getPendingPages -> record -> removePendingPages sequence. Both read the
+    // page as still pending and both call record(), double-recording it.
+    // A single-flight map keyed by URL collapses concurrent handling of the
+    // same URL onto one in-flight promise, modeled on contextMenuHandlers'
+    // contextMenuRecordInProgress guard.
+    const inFlightByUrl = new Map<string, Promise<void>>();
+
     async function onButtonClicked(notificationId: string, buttonIndex: number): Promise<void> {
         try {
             if (!notificationId.startsWith(PRIVACY_CONFIRM_NOTIFICATION_PREFIX)) return;
@@ -61,21 +70,35 @@ export function createNotificationHandlers(deps: NotificationHandlersDeps) {
                 return;
             }
 
-            if (buttonIndex === 0) {
-                const pages = await getPendingPages();
-                const page = pages.find(p => p.url === url);
-                if (page) {
-                    await deps.record({
-                        title: page.title,
-                        url: page.url,
-                        content: '',
-                        force: true,
-                        skipDuplicateCheck: true,
-                        recordType: 'auto',
-                    });
-                }
+            const existing = inFlightByUrl.get(url);
+            if (existing) {
+                await existing;
+                return;
             }
-            await removePendingPages([url]);
+
+            const run = (async () => {
+                if (buttonIndex === 0) {
+                    const pages = await getPendingPages();
+                    const page = pages.find(p => p.url === url);
+                    if (page) {
+                        await deps.record({
+                            title: page.title,
+                            url: page.url,
+                            content: '',
+                            force: true,
+                            skipDuplicateCheck: true,
+                            recordType: 'auto',
+                        });
+                    }
+                }
+                await removePendingPages([url]);
+            })();
+            inFlightByUrl.set(url, run);
+            try {
+                await run;
+            } finally {
+                inFlightByUrl.delete(url);
+            }
         } catch (error) {
             await logError(
                 'Notification button click handler failed',

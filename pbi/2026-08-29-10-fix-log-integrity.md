@@ -48,7 +48,7 @@ Scenario: PII マスクは現行どおり動作する（回帰防止）
 - [ ] LOG_FORWARD の message/details も同一無害化を通る（VULN-044 の co-parameter）
 - [ ] 新規テストで「attribution 派生」「多行注入」「ANSI/制御文字」「PII 回帰」が検証されている
 - [ ] `npm run type-check` と `npm run validate` が成功する
-- [ ] VulnHunter 再検証: 2 PoC が失敗する
+- [ ] VulnHunter 再検証: attribution 偽装・多行注入の再現テストが失敗する
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -77,6 +77,7 @@ Scenario: PII マスクは現行どおり動作する（回帰防止）
 - テスタビリティ: 無害化関数は純粋関数として抽出
 - 非機能要件: 正常ログの可読性を損なわない（区切りは視認可能な文字列へ置換）
 - 注意: payload `source` を UI 表示ヒントとして残す場合は untrusted として明示ラベルを付ける
+- 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
 

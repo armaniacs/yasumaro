@@ -6,6 +6,10 @@ import { makeCleansingProgressBar } from './cleansingStatsView.js';
 import { makeRecordTypeBadge, makeMaskBadge, makeCleansedBadge, makePrivacyModeBadge } from './historyBadges.js';
 import { openTagEditModal } from './historyTagEditModal.js';
 import { getCachedMessage } from './historyState.js';
+import { isDegenerateOutput } from '../utils/llmOutputGuard.js';
+
+/** Shown in place of a stored summary that the guard flags as degenerate. */
+const DEGENERATE_SUMMARY_FALLBACK = '要約に失敗しました（AI出力が不自然なため）';
 import type { HistoryPanelState, TagEditElements } from './historyState.js';
 
 const _cleanseReasonLabels: Record<string, string> = {
@@ -136,7 +140,11 @@ export function makeHistoryEntryRow(
     const aiSummaryEl = document.createElement('div');
     aiSummaryEl.className = 'history-entry-ai-summary';
     const aiSummaryLabel = getMessage('historyAiSummary') || 'AI要約';
-    aiSummaryEl.textContent = `${aiSummaryLabel}: ${aiSummary}`;
+    // Display-time masking for summaries stored before the guard existed.
+    const displaySummary = isDegenerateOutput(aiSummary).isDegenerate
+      ? DEGENERATE_SUMMARY_FALLBACK
+      : aiSummary;
+    aiSummaryEl.textContent = `${aiSummaryLabel}: ${displaySummary}`;
     info.appendChild(aiSummaryEl);
   }
 

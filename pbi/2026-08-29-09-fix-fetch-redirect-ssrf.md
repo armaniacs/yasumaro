@@ -6,7 +6,7 @@
 ## ビジネス価値
 - 実証済み攻撃の封鎖: 許可 URL → 30x リダイレクト → `http://127.0.0.1:9222` の body が返却される（拡張ページからは直接到達できない private IP への SW 仲介アクセス — 明確な新 capability）
 - fetch.ts に hop-level 検証規約を作り、将来の攻撃者影響 URL fetch にも適用可能にする
-- 測定方法: FETCH_URL のリダイレクト PoC が失敗すること、17 fetch サイトのうち攻撃者影響 URL を持つFETCH_URL が全ホップ検証を通ること
+- 測定方法: FETCH_URL のリダイレクト再現テスト（許可 URL→30x→private IP）が失敗すること、17 fetch サイトのうち攻撃者影響 URL を持つ FETCH_URL が全ホップ検証を通ること
 
 ## 優先度
 - 順位: 9 / 14
@@ -45,7 +45,7 @@ Scenario: 他の fetch サイトは現行どおり動作する（回帰防止）
 - [ ] `src/background/handlers/systemHandlers.ts:87` の FETCH_URL fetch に `redirect: 'error'`（または `manual`＋ホップ毎 `validateUrlForFilterImport` 再検証）が設定されている
 - [ ] `src/utils/fetch.ts` に hop-level 再検証ヘルパー（`fetchWithRedirectGuard` 仮称）が新設され、`validateUrlForFilterImport`＋private IP ガードをホップ毎に適用する
 - [ ] 正当なリダイレクトの扱い（拒否 or 許可）が ADR またはコメントで明文化されている
-- [ ] リダイレクト PoC（`poc/VULN-016_fetch_url_redirect_ssrf.md` のシナリオ）が失敗するテストを追加
+- [ ] 許可 URL → 30x → private IP（127.0.0.1:9222 等）へのリダイレクトが拒否されるテストを追加
 - [ ] 既存 fetch 系テストが全てグリーン
 - [ ] `npm run type-check` と `npm run validate` が成功する
 - [ ] VulnHunter 再検証: FETCH_URL のリダイレクト到達が不可能になる
@@ -76,6 +76,7 @@ Scenario: 他の fetch サイトは現行どおり動作する（回帰防止）
 - テスタビリティ: `Response.redirected`/`Response.url` で検証可能
 - 非機能要件: 他 16 fetch サイト（固定ホスト・検証済み）の挙動不変
 - 注意: `manual` モード採用時は opaqueredirect 応答の扱いを確認すること
+- 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
 

@@ -4,7 +4,13 @@
  * Canonical implementation for all domain-matching call sites.
  */
 
-const MAX_WILDCARDS_PER_PATTERN = 5;
+/**
+ * Upper bound on `*` occurrences in a single pattern. Patterns above this are
+ * rejected (return `null`) as a ReDoS guard — each `*` becomes `.*`, and many
+ * `.*` against a long string backtrack catastrophically. Callers that validate
+ * patterns before storage should reject counts above this too.
+ */
+export const MAX_WILDCARDS_PER_PATTERN = 5;
 
 /**
  * Convert a wildcard pattern to a case-insensitive anchored RegExp.

@@ -48,7 +48,7 @@ Scenario: lock 待ちのタイムアウトは既存契約どおり
 - [ ] 並行変異テスト（purge×toggleStar、update×hardDelete）が追加され、全変異が保持される
 - [ ] 既存 storageFallback テストが全てグリーン
 - [ ] `npm run type-check` と `npm run validate` が成功する
-- [ ] VulnHunter 再検証: `poc/VULN-022_storage_fallback_unlocked_mutators.md` のシナリオが失敗する
+- [ ] VulnHunter 再検証: purge×toggleStar / update×hardDelete の並行変異でデータ消失・復活が起きないこと（`2026-08-29-00-backlog-vulnhunt-audit.md` の C11 節参照）
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -73,9 +73,10 @@ Scenario: lock 待ちのタイムアウトは既存契約どおり
 
 ## 技術的考慮事項
 - 依存関係: なし（Wave 2）。OPFS 正常経路（opfsWorker）には触れない
-- テスタビリティ: InMemory ストレージで決定的インターリーブが可能（PoC の Python シナリオを移植）
+- テスタビリティ: InMemory ストレージで決定的インターリーブ（purge×toggleStar、update×hardDelete）が可能
 - 非機能要件: フォールバックモードの性能は現行同等（直列化は現行 insert と同じ単一 mutex）
 - 注意: `loadData` のキャッシュ挙動（ある場合）があれば mutate 内で一貫させる
+- 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
 
