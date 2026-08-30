@@ -22,6 +22,16 @@ describe('toTsvString', () => {
     expect(tsv).toContain('"open\tai"');
   });
 
+  it('neutralizes formula-trigger characters in fields', () => {
+    const rows = [
+      { id: 1, provider: '=1+1', url: '@SUM(A1)', created_at: 1721203200000 },
+      { id: 2, provider: '+cmd', url: '-2+3', created_at: 1721203200000 },
+    ];
+    const tsv = toTsvString(rows);
+    expect(tsv).toContain("1\t'=1+1\t'@SUM(A1)\t");
+    expect(tsv).toContain("2\t'+cmd\t'-2+3\t");
+  });
+
   it('handles empty rows', () => {
     const tsv = toTsvString([]);
     const lines = tsv.split('\n');

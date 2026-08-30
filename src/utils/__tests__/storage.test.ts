@@ -349,15 +349,29 @@ describe('buildAllowedUrls - edge cases', () => {
       whitelist_mode: true,
       ublock_sources: [
         { url: 'not-a-valid-url', name: 'Test' },
-        { url: 'https://example.com/list.txt', name: 'Valid' },
+        { url: 'https://raw.githubusercontent.com/u/r/list.txt', name: 'Valid' },
       ],
     } as unknown as Settings;
 
     const allowedUrls = await buildAllowedUrls(settings);
 
-    // Fixed 8 + 1 valid uBlock origin = 9 total
-    expect(allowedUrls.size).toBe(9);
-    expect(allowedUrls.has('https://example.com')).toBe(true);
+    // The whitelisted origin is already in the fixed set, so the size is
+    // unchanged; the non-whitelisted / invalid entries add nothing.
+    expect(allowedUrls.size).toBe(8);
+    expect(allowedUrls.has('https://raw.githubusercontent.com')).toBe(true);
+  });
+
+  it('does not add non-whitelisted uBlock source origins (no self-allow)', async () => {
+    const settings = {
+      whitelist_mode: true,
+      ublock_sources: [
+        { url: 'https://example.com/list.txt', name: 'NotWhitelisted' },
+      ],
+    } as unknown as Settings;
+
+    const allowedUrls = await buildAllowedUrls(settings);
+
+    expect(allowedUrls.has('https://example.com')).toBe(false);
   });
 });
 

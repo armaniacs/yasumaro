@@ -143,6 +143,18 @@ describe('storage - buildAllowedUrls', () => {
             expect(allowedUrls.has('https://raw.githubusercontent.com')).toBe(true);
         });
 
+        it('should not add non-whitelisted uBlock source origins (no self-allow)', () => {
+            const settings = {
+                [StorageKeys.UBLOCK_SOURCES]: [
+                    { url: 'https://evil.example.com/filters.txt' },
+                ]
+            };
+
+            const allowedUrls = buildAllowedUrls(settings);
+
+            expect(allowedUrls.has('https://evil.example.com')).toBe(false);
+        });
+
         it('should handle empty settings', () => {
             const allowedUrls = buildAllowedUrls({});
             
