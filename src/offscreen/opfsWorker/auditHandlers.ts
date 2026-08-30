@@ -4,6 +4,7 @@
  */
 
 import { sqlExec, sqlQuery, type HandlerContext } from './handlers.js';
+import { clampLimit } from '../queryPlan.js';
 import type { AuditLogQueryPayload } from './types.js';
 
 export async function handleAuditLogInsert(
@@ -24,7 +25,7 @@ export async function handleAuditLogQuery(
   ctx: HandlerContext,
   payload: AuditLogQueryPayload,
 ): Promise<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }> {
-  const limit = Math.min(payload.limit ?? 100, 1000);
+  const limit = clampLimit(payload.limit, 1000, 100);
   const offset = payload.offset ?? 0;
 
   const rows: Array<{ id: number; provider: string; url: string; created_at: number }> = [];

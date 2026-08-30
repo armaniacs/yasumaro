@@ -17,6 +17,22 @@ export const QUERY_CAPS = {
   plain: 1000,
 } as const;
 
+/**
+ * Both-sided LIMIT clamp for the trust boundary.
+ *
+ * SQLite treats `LIMIT -1` as "unlimited", so an upper-bound-only `Math.min`
+ * lets a negative or non-finite value materialize an entire table. Non-finite,
+ * non-integer, or non-positive input falls back to the caller's documented
+ * default rather than being coerced to 1, so `0.5` does not silently become a
+ * 1-row query.
+ */
+export function clampLimit(raw: unknown, cap: number, fallback: number): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || !Number.isInteger(raw) || raw <= 0) {
+    return fallback;
+  }
+  return Math.max(1, Math.min(cap, Math.floor(raw)));
+}
+
 export interface QuerySpec {
   where: string;
   order: string;
@@ -75,9 +91,8 @@ export function buildQuerySpec(
     };
   }
 
-  const rawLimit = query.limit ?? 100;
   const cap = useFts ? caps.fts : caps.plain;
-  const limit = Math.min(rawLimit, cap);
+  const limit = clampLimit(query.limit, cap, 100);
   const offset = query.offset ?? 0;
 
   // FTS tag handling
