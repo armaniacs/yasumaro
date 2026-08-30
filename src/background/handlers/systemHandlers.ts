@@ -84,11 +84,29 @@ export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
       const settings = await deps.getSettings();
       const allowedUrls = deps.buildAllowedUrls(settings);
 
+      // VULN-016 (CWE-918): validateUrlForFilterImport only checks the initial
+      // URL. With the browser default `redirect: 'follow'`, an allow-listed URL
+      // could 30x-redirect to a private address (e.g. http://127.0.0.1:9222)
+      // and the SW would fetch + return the internal response. We use
+      // `redirect: 'error'` here so any redirect aborts the request.
+      //
+      // Decision: `redirect: 'error'` (not `manual` + per-hop re-validation).
+      // All known filter-list sources are fixed HTTPS hosts and none rely on
+      // http->https or mirror redirects, so the stricter policy costs nothing.
+      // See dev-docs/ADR/2026-08-29-fetch-redirect-policy.md. If a future source
+      // needs redirects, switch to fetchWithRedirectGuard() from utils/fetch.ts.
       const response = await fetchWithTimeout(message.payload.url, {
         method: 'GET',
         cache: 'no-cache',
+        redirect: 'error',
         allowedUrls,
       });
+
+      // Defense in depth: `redirect: 'error'` should already have rejected, but
+      // never hand back a body whose response was redirected.
+      if (response.redirected) {
+        throw new Error('Redirected responses are not allowed for filter list imports');
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
