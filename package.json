@@ -43,6 +43,7 @@
     "generate-notices": "node scripts/generate-third-party-notices.mjs",
     "check-licenses": "node scripts/check-licenses.mjs",
     "generate-sbom": "cyclonedx-npm --output-file sbom.json",
+    "verify:vulnhunt-fix": "node scripts/verify-vulnhunt-fix.mjs",
     "release:check": "node scripts/release-checks/index.mjs",
     "release:check:fast": "node scripts/release-checks/index.mjs --skip-e2e"
   },
