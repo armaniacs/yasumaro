@@ -54,15 +54,36 @@ export interface RetryableItem {
  * Deep queue module: owns retry semantics, delegates persistence to adapter.
  */
 export class PersistentRetryQueue<T> {
+  // VULN-056 (CWE-362): enqueue/flush/flushBatch all do load -> mutate -> save
+  // on the same storage key. An enqueue that interleaves with a flush reads the
+  // pre-flush snapshot and its save clobbers the flush result (job lost:
+  // ['A','B'] -> ['A']). A promise-chain lock runs these one-at-a-time; the SW
+  // is single-threaded so chaining is sufficient and avoids a Mutex import
+  // cycle through the logger.
+  private queueLock: Promise<void> = Promise.resolve();
+
   constructor(
     private readonly adapter: QueueStorageAdapter,
     private readonly options: PersistentRetryQueueOptions
   ) {}
 
+  private withQueueLock<R>(fn: () => Promise<R>): Promise<R> {
+    const run = this.queueLock.then(fn, fn);
+    this.queueLock = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
+  }
+
   /**
    * Enqueue an item. Best-effort: a failure is logged but not thrown.
    */
-  async enqueue(item: T): Promise<void> {
+  enqueue(item: T): Promise<void> {
+    return this.withQueueLock(() => this.enqueueUnlocked(item));
+  }
+
+  private async enqueueUnlocked(item: T): Promise<void> {
     try {
       // Payload size check (for retryable items with payload)
       if (this.options.maxPayloadBytes && isRetryable(item)) {
@@ -104,7 +125,11 @@ export class PersistentRetryQueue<T> {
    *
    * Returns remaining items. Saves remaining items back to storage.
    */
-  async flush(handler: (item: T) => Promise<boolean>): Promise<T[]> {
+  flush(handler: (item: T) => Promise<boolean>): Promise<T[]> {
+    return this.withQueueLock(() => this.flushUnlocked(handler));
+  }
+
+  private async flushUnlocked(handler: (item: T) => Promise<boolean>): Promise<T[]> {
     const items = await this.adapter.load<T>(this.options.storageKey);
     if (items.length === 0) return [];
 
@@ -166,7 +191,14 @@ export class PersistentRetryQueue<T> {
    *
    * Always persists per-item for Service Worker resilience.
    */
-  async flushBatch(
+  flushBatch(
+    handler: (items: T[]) => Promise<boolean[]>,
+    batchSize: number
+  ): Promise<T[]> {
+    return this.withQueueLock(() => this.flushBatchUnlocked(handler, batchSize));
+  }
+
+  private async flushBatchUnlocked(
     handler: (items: T[]) => Promise<boolean[]>,
     batchSize: number
   ): Promise<T[]> {
