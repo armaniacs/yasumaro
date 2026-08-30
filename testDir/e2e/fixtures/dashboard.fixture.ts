@@ -52,6 +52,7 @@ const testExt = base.extend<DashboardFixtures>({
         // previous tests reusing the same persistent browser context.
         ai_provider: 'gemini',
         ai_provider_priority_list: [],
+        ai_provider_layout: 'a',  // Force layout A so #aiProvider select is visible
       });
     });
 

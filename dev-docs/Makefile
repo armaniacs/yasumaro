@@ -16,6 +16,10 @@ clean:
 	npm run clean
 
 test: build
+	npm run validate
+
+# test-full: validate + E2E (use when full local coverage is needed)
+test-full: build
 	npm run validate && npm run test:e2e
 
 test-watch:
