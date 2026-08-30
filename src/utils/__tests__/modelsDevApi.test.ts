@@ -9,6 +9,9 @@ import {
   findProviderById,
   loadModelsDevData,
   getApiKeyEnvName,
+  getApiKeyUrl,
+  isHttpsUrl,
+  parseModelsDevData,
   type ModelsDevProvider,
   type ModelsDevModel,
   type ModelsDevData,
@@ -163,6 +166,69 @@ describe('modelsDevApi', () => {
 
       const result = await loadModelsDevData();
       expect(result).toBeNull();
+    });
+
+    it('should drop provider entries with a non-https api/doc', async () => {
+      const raw = {
+        generatedAt: 'x',
+        providers: [
+          {
+            id: 'good', name: 'Good', api: 'https://api.good.com',
+            doc: 'https://good.com/docs', env: [], isAggregator: false, models: [],
+          },
+          {
+            id: 'evil', name: 'Evil', api: 'javascript:alert(1)',
+            doc: 'https://evil.com/docs', env: [], isAggregator: false, models: [],
+          },
+          {
+            id: 'httpdoc', name: 'HttpDoc', api: 'https://api.httpdoc.com',
+            doc: 'http://httpdoc.com/docs', env: [], isAggregator: false, models: [],
+          },
+        ],
+        stats: {},
+      };
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue(raw),
+      } as unknown as Response);
+
+      const result = await loadModelsDevData();
+      expect(result).not.toBeNull();
+      expect(result!.providers.map(p => p.id)).toEqual(['good']);
+    });
+
+    it('should return null when top-level shape is wrong', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue({ nope: true }),
+      } as unknown as Response);
+
+      expect(await loadModelsDevData()).toBeNull();
+    });
+  });
+
+  describe('isHttpsUrl', () => {
+    it('accepts absolute https URLs only', () => {
+      expect(isHttpsUrl('https://example.com')).toBe(true);
+      expect(isHttpsUrl('http://example.com')).toBe(false);
+      expect(isHttpsUrl('javascript:alert(1)')).toBe(false);
+      expect(isHttpsUrl('/relative')).toBe(false);
+      expect(isHttpsUrl('')).toBe(false);
+      expect(isHttpsUrl(undefined)).toBe(false);
+    });
+  });
+
+  describe('parseModelsDevData', () => {
+    it('returns null for non-object / missing providers', () => {
+      expect(parseModelsDevData(null)).toBeNull();
+      expect(parseModelsDevData({})).toBeNull();
+    });
+  });
+
+  describe('getApiKeyUrl', () => {
+    it('returns undefined for a non-https doc fallback', () => {
+      expect(getApiKeyUrl('unknown-provider', 'javascript:alert(1)')).toBeUndefined();
+      expect(getApiKeyUrl('unknown-provider', 'https://ok.com/keys')).toBe('https://ok.com/keys');
     });
   });
 });

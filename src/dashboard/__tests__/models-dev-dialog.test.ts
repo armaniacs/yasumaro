@@ -30,6 +30,7 @@ vi.mock('../../utils/modelsDevApi.js', () => ({
   formatContextLimit: vi.fn().mockReturnValue('8K'),
   getApiKeyEnvName: vi.fn().mockImplementation((id: string) => `MOCK_${id.toUpperCase()}_KEY`),
   getApiKeyUrl: vi.fn().mockReturnValue(null),
+  isHttpsUrl: (v: unknown) => typeof v === 'string' && v.startsWith('https://'),
 }));
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
@@ -641,6 +642,27 @@ describe('ModelsDevDialog', () => {
       await vi.waitFor(() => {
         expect(document.getElementById('models-dev-dialog')!.classList.contains('hidden')).toBe(true);
       });
+    });
+
+    it('should reject a provider whose api is not https', async () => {
+      const { loadModelsDevData } = await import('../../utils/modelsDevApi.js');
+      (loadModelsDevData as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        providers: [
+          { id: 'evil', name: 'Evil', api: 'javascript:alert(1)', models: [{ id: 'm', isFreeTier: false, inputPrice: 0.01 }], isAggregator: false },
+        ],
+      });
+      const onSave = vi.fn();
+      const dialog = new ModelsDevDialog({ onSave });
+      await dialog.show();
+      (document.querySelector('.provider-item') as HTMLElement).click();
+      const apiKeyInput = document.getElementById('api-key-input') as HTMLInputElement;
+      apiKeyInput.value = 'test-key';
+      document.getElementById('dialog-save')?.click();
+      await vi.waitFor(() => {
+        const errorEl = document.getElementById('dialog-error');
+        expect(errorEl!.classList.contains('hidden')).toBe(false);
+      });
+      expect(onSave).not.toHaveBeenCalled();
     });
 
     it('should show error on saveSettings rejection', async () => {

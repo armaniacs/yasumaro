@@ -136,7 +136,13 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
         if (source.url && source.url !== 'manual') {
             try {
                 const parsed = new URL(source.url);
-                allowedUrls.add(normalizeUrl(parsed.origin));
+                // Gate on the whitelist: a stored ublock source must not be able
+                // to add an arbitrary origin to the allow list on its own.
+                if (isDomainInWhitelist(source.url)) {
+                    allowedUrls.add(normalizeUrl(parsed.origin));
+                } else {
+                    console.warn(`uBlock source origin not in whitelist, skipped: ${parsed.origin}`);
+                }
             } catch (_e) {
                 // ignore invalid URL
             }
