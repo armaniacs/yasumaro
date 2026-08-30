@@ -12,6 +12,7 @@ import { getTrustDb } from './trustDb.js';
 import { logInfo, logError, logWarn, ErrorCode } from '../logger.js';
 import { errorMessage } from '../errorUtils.js';
 import { fetchWithTimeout } from '../fetch.js';
+import { readBodyCapped } from '../readBodyCapped.js';
 
 // ===== 定数 =====
 
@@ -65,6 +66,7 @@ export class TrancoUpdater {
     const maxRetries = 3;
     const baseDelay = 1000; // 1秒
 
+    try {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         logInfo('TrancoUpdater', { tier, attempt, maxRetries }, `Starting Tranco update for tier: ${tier}`);
@@ -107,8 +109,6 @@ export class TrancoUpdater {
       }
     }
 
-    this.updateInProgress = false;
-
     // 通常到達しないが、型安全性のため
     return {
       success: false,
@@ -116,6 +116,13 @@ export class TrancoUpdater {
       sizeBytes: 0,
       error: 'Unexpected error'
     };
+    } finally {
+      // Guarantee the lock is released on every exit path, including a
+      // thrown exception from fetch/DB code that never reaches the
+      // loop-exit return. Without this a single failed update would keep
+      // updateInProgress = true forever (VULN-028 / CWE-667).
+      this.updateInProgress = false;
+    }
   }
 
   /**
@@ -144,14 +151,9 @@ export class TrancoUpdater {
       throw new Error(`Tranco CSV returned status ${response.status}: ${response.statusText}`);
     }
 
-    // Guard against unbounded reads of potentially huge responses
-    const contentLength = response.headers?.get('content-length');
+    // Cap the streamed body on actual bytes; Content-Length is not trusted.
     const MAX_TRANCO_SIZE = 50 * 1024 * 1024; // 50MB
-    if (contentLength && parseInt(contentLength, 10) > MAX_TRANCO_SIZE) {
-      throw new Error(`Tranco CSV too large: ${Math.round(parseInt(contentLength, 10) / 1024 / 1024)}MB exceeds ${MAX_TRANCO_SIZE / 1024 / 1024}MB limit`);
-    }
-
-    const text = await response.text();
+    const text = await readBodyCapped(response, MAX_TRANCO_SIZE);
     const domains = this.parseTrancoCSV(text, tier);
 
     logInfo('TrancoUpdater', { tier, count: domains.length }, `Parsed ${domains.length} domains for tier: ${tier}`);

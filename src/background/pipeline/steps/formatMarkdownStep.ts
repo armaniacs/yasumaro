@@ -50,7 +50,7 @@ export const formatMarkdownStep: PipelineStepFunction = async (
   // Tags come from the AI summary (prompt-injection surface) — sanitize each one
   // before interpolating as `#${tag}` (VULN-008) to stop link/wikilink injection.
   const tags = privacyResult?.tags;
-  const tagPrefix = tags && tags.length > 0 ? tags.map(t => `#${sanitizeForObsidian(t)}`).join(' ') + ' ' : '';
+  const tagPrefix = tags && tags.length > 0 ? tags.map(t => `#${sanitizeForMarkdownLinkText(sanitizeForObsidian(t))}`).join(' ') + ' ' : '';
 
   // Create markdown
   const markdown = `- ${timestamp} [${sanitizedTitle}](${sanitizedUrl})\n    - ${tagPrefix}${finalSanitizedSummary}`;

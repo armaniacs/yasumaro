@@ -9,6 +9,31 @@ import * as storage from '../../utils/storage/types.js';
 import * as storageSettings from '../../utils/storage/settingsStore.js';
 import { addLog, LogType } from '../../utils/logger.js';
 
+/** Response body that resolves with the given text (as one chunk). */
+function bodyOf(text: string): { getReader: () => { read: () => Promise<{ done: boolean; value?: Uint8Array }>; cancel: () => Promise<void> } } {
+  let sent = false;
+  return {
+    getReader: () => ({
+      read: () => {
+        if (sent) return Promise.resolve({ done: true, value: undefined });
+        sent = true;
+        return Promise.resolve({ done: false, value: new TextEncoder().encode(text) });
+      },
+      cancel: () => Promise.resolve(),
+    }),
+  };
+}
+
+/** Response body whose read() never resolves. */
+function bodyNever(): { getReader: () => { read: () => Promise<never>; cancel: () => Promise<void> } } {
+  return {
+    getReader: () => ({
+      read: () => new Promise<never>(() => {}),
+      cancel: () => Promise.resolve(),
+    }),
+  };
+}
+
 vi.mock('../../utils/storage/types.js');
 vi.mock('../../utils/storage/defaults.js');
 vi.mock('../../utils/storage/encryptionSession.js');
@@ -62,7 +87,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
       vi.useFakeTimers();
       mockFetch.mockResolvedValue({
         ok: true,
-        text: () => new Promise(() => {}) // ボディが永遠に返らない
+        body: bodyNever()
       });
 
       const promise = client._fetchExistingContent(
@@ -83,7 +108,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
       vi.useFakeTimers();
       mockFetch.mockResolvedValue({
         ok: true,
-        text: () => new Promise(() => {})
+        body: bodyNever()
       });
 
       const promise = client._fetchExistingContent(
@@ -105,7 +130,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
       vi.useFakeTimers();
       mockFetch.mockResolvedValue({
         ok: true,
-        text: () => new Promise(() => {})
+        body: bodyNever()
       });
 
       const mutex = client._globalWriteMutex;
@@ -127,7 +152,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
     it('タイムアウトが発生せずコンテンツを返すこと', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
-        text: () => Promise.resolve('Existing content')
+        body: bodyOf("Existing content")
       });
 
       const result = await client._fetchExistingContent(
@@ -136,6 +161,34 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
       );
 
       expect(result).toBe('Existing content');
+    });
+  });
+
+  describe('_fetchExistingContent - バイト上限', () => {
+    it('Content-Length なしで 10MB を超える chunked 応答は打ち切られエラー分類に乗ること', async () => {
+      const chunk = new Uint8Array(1024 * 1024); // 1MB
+      let count = 0;
+      mockFetch.mockResolvedValue({
+        ok: true,
+        headers: { get: () => null },
+        body: {
+          getReader: () => ({
+            read: () => {
+              count += 1;
+              return Promise.resolve({ done: false, value: chunk });
+            },
+            cancel: () => Promise.resolve(),
+          }),
+        },
+      });
+
+      const err = await client._fetchExistingContent(
+        'http://127.0.0.1:27123/vault/test.md',
+        { 'Authorization': 'Bearer test_key' },
+      ).catch((e: Error) => e);
+
+      expect(err).toBeInstanceOf(Error);
+      expect(count).toBeLessThan(20); // aborted well before buffering everything
     });
   });
 

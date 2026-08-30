@@ -103,6 +103,8 @@ export function sanitizeUrlForMarkdownTarget(url: string): string {
  * 【処理内容】:
  * 1. スキーム非依存のMarkdownリンクエスケープ（sanitizeAllMarkdownLinks）
  * 2. Obsidian wikilink/embed 構文のエスケープ（escapeObsidianWikilinks）
+ * 3. HTML エンティティ化（&, <, >）— 生 HTML がノートに verbatim で
+ *    到達するのを防ぐ（VULN-001）
  *
  * @param {string} content - サニタイズするコンテンツ
  * @returns {string} サニタイズされたコンテンツ
@@ -117,6 +119,14 @@ export function sanitizeForObsidian(content: string): string {
 
     // Escape Obsidian wikilink/embed syntax (VULN-002/005 fix)
     sanitized = escapeObsidianWikilinks(sanitized);
+
+    // HTML entity encoding (VULN-001). `&` must be encoded first so the `;` of
+    // the subsequent `&lt;` / `&gt;` entities is not itself re-encoded.
+    // Markdown syntax characters are deliberately left untouched.
+    sanitized = sanitized
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 
     return sanitized;
 }

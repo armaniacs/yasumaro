@@ -85,16 +85,25 @@ describe('createFetchUrlHandler', () => {
     expect(logError).toHaveBeenCalled();
   });
 
-  it('rejects when Content-Length exceeds limit', async () => {
+  it('rejects an oversized body even when Content-Length lies about a small size', async () => {
+    const oneMb = new Uint8Array(1024 * 1024);
+    let reads = 0;
     vi.mocked(fetchWithTimeout).mockResolvedValue({
       ok: true,
       status: 200,
       headers: {
-        get: vi.fn((name: string) =>
-          name === 'content-length' ? String(11 * 1024 * 1024) : null,
-        ),
+        // Lying header: claims 1 byte, streams far more.
+        get: vi.fn((name: string) => (name === 'content-length' ? '1' : null)),
       },
-      text: vi.fn().mockResolvedValue(''),
+      body: {
+        getReader: () => ({
+          read: () => {
+            reads += 1;
+            return Promise.resolve({ done: false, value: oneMb });
+          },
+          cancel: () => Promise.resolve(),
+        }),
+      },
     } as any);
 
     const handler = createFetchUrlHandler(deps);
@@ -102,6 +111,7 @@ describe('createFetchUrlHandler', () => {
     await handler({ payload: { url: 'https://example.com/list.txt' } } as any, {} as any, sendResponse);
 
     expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
+    expect(reads).toBeLessThan(20); // aborted before buffering the whole stream
   });
 
   it('rejects when actual text size exceeds limit', async () => {
@@ -424,9 +434,33 @@ describe('createLogForwardHandler', () => {
     const handler = createLogForwardHandler();
     const sendResponse = vi.fn();
 
-    await handler({ payload: { level: 'error', message: 'Oops', details: { x: 1 }, source: 'offscreen' } } as any, {} as any, sendResponse);
-    expect(logError).toHaveBeenCalledWith('Oops', { x: 1 }, expect.anything(), 'offscreen');
+    const sender = { url: 'chrome-extension://abc/offscreen.html' } as chrome.runtime.MessageSender;
+    await handler({ payload: { level: 'error', message: 'Oops', details: { x: 1 }, source: 'offscreen' } } as any, sender, sendResponse);
+    expect(logError).toHaveBeenCalledWith(
+      'Oops',
+      { x: 1, _sourceHintUntrusted: 'offscreen' },
+      expect.anything(),
+      'chrome-extension://abc/offscreen.html',
+    );
     expect(sendResponse).toHaveBeenCalledWith({ success: true });
+  });
+
+  it('derives _source from the sender, not the payload (VULN-019)', async () => {
+    const handler = createLogForwardHandler();
+    const sendResponse = vi.fn();
+    const sender = { url: 'chrome-extension://abc/dashboard.html' } as chrome.runtime.MessageSender;
+
+    await handler(
+      { payload: { level: 'error', message: 'forged', details: {}, source: 'service-worker' } } as any,
+      sender,
+      sendResponse,
+    );
+    expect(logError).toHaveBeenCalledWith(
+      'forged',
+      { _sourceHintUntrusted: 'service-worker' },
+      expect.anything(),
+      'chrome-extension://abc/dashboard.html',
+    );
   });
 
   it('forwards warn level logs', async () => {

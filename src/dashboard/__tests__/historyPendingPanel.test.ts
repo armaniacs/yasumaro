@@ -958,6 +958,48 @@ describe('historyPendingPanel', () => {
       });
     });
   });
+
+  describe('isSecureUrl gate on links', () => {
+    it('renderPendingPage: javascript: URL is not wired as an href', async () => {
+      const { renderPendingPage } = await import('../historyPendingPanel.js');
+      const pages = [createMockPage({ url: 'javascript:alert(1)' })];
+      const state = createMockState(pages);
+      const sortedPending = [...pages];
+      const { pendingSection, pendingList, pendingCurrentPageRef } = createPendingFixture();
+
+      renderPendingPage(state, {} as any, pendingSection, pendingList, sortedPending, pendingCurrentPageRef, vi.fn());
+
+      const anchor = pendingList.querySelector('a.history-entry-url') as HTMLAnchorElement;
+      expect(anchor).not.toBeNull();
+      expect(anchor.getAttribute('href')).toBeNull();
+    });
+
+    it('renderPendingPage: http: URL is still wired as an href', async () => {
+      const { renderPendingPage } = await import('../historyPendingPanel.js');
+      const pages = [createMockPage({ url: 'http://example.com/page' })];
+      const state = createMockState(pages);
+      const sortedPending = [...pages];
+      const { pendingSection, pendingList, pendingCurrentPageRef } = createPendingFixture();
+
+      renderPendingPage(state, {} as any, pendingSection, pendingList, sortedPending, pendingCurrentPageRef, vi.fn());
+
+      const anchor = pendingList.querySelector('a.history-entry-url') as HTMLAnchorElement;
+      expect(anchor.getAttribute('href')).toBe('http://example.com/page');
+    });
+
+    it('renderSkippedMode: javascript: URL is not wired as an href', async () => {
+      const { renderSkippedMode } = await import('../historyPendingPanel.js');
+      const pages = [createMockPage({ url: 'javascript:alert(1)' })];
+      const state = createMockState(pages);
+      const elements = { historyList: document.createElement('div'), historyStats: document.createElement('div') };
+
+      renderSkippedMode(state, elements as any, '', vi.fn());
+
+      const anchor = elements.historyList.querySelector('a.history-entry-url') as HTMLAnchorElement;
+      expect(anchor).not.toBeNull();
+      expect(anchor.getAttribute('href')).toBeNull();
+    });
+  });
 });
 
 function createMockState(pages: any[] = []): any {

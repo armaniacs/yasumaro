@@ -15,6 +15,7 @@ import { DomainTrustLevel } from './trustDbSchema.js';
 import { TrustBloomFilter, bloomFilterFromData } from './bloomFilter.js';
 import { logDebug, logInfo, logWarn, logError, ErrorCode } from '../logger.js';
 import { withOptimisticLock } from '../optimisticLock.js';
+import { mergeTrustDatabase } from './mergeTrustDatabase.js';
 import { TRANCO_VERSION as CURRENT_TRANCO_VERSION } from './presetDomains.js';
 import { SENSITIVE_DOMAINS_PRESETS as PRESETS, JP_ANCHOR_TLDS } from './presets.js';
 
@@ -312,11 +313,15 @@ class TrustDb {
     this.state.database.bloomFilter = bloomData;
     this.state.database.lastUpdated = new Date().toISOString();
 
-    // Save the entire database atomically via optimistic lock
-    await withOptimisticLock(STORAGE_KEY, async (_currentDb) => {
-      // Return the current database state; the lock handler persists it
-      return this.state.database;
-    });
+    // Save the entire database atomically via optimistic lock.
+    // The updateFn must consume `currentDb` (the value read inside the CAS
+    // critical section) and merge this writer's intended state onto it, so
+    // a concurrent writer's delta is not silently dropped (VULN-029).
+    const localSnapshot = this.state.database;
+    await withOptimisticLock<TrustDatabase>(
+      STORAGE_KEY,
+      (currentDb) => mergeTrustDatabase(currentDb, localSnapshot)
+    );
 
     logDebug('TrustDb', {}, 'Database saved with optimistic lock');
   }

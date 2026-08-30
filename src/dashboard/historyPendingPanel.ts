@@ -4,6 +4,7 @@ import type { PendingPage } from '../utils/pendingStorage.js';
 import { renderPendingReason } from './historyFilters.js';
 import { showRecordError, checkServiceWorkerAlive, sendMessageWithTimeout, createPaginationControls } from './historyUtils.js';
 import type { HistoryPanelState, HistoryElements } from './historyState.js';
+import { isSecureUrl } from '../utils/urlUtils.js';
 
 const PENDING_PAGE_SIZE = 10;
 
@@ -91,9 +92,13 @@ export function renderSkippedMode(
 
     const urlEl = document.createElement('a');
     urlEl.className = 'history-entry-url';
-    urlEl.href = page.url;
-    urlEl.target = '_blank';
-    urlEl.rel = 'noopener noreferrer';
+    // Re-opening a pending page is by design, but only for http/https — a
+    // dangerous scheme is shown as plain text, never as a clickable link.
+    if (isSecureUrl(page.url)) {
+      urlEl.href = page.url;
+      urlEl.target = '_blank';
+      urlEl.rel = 'noopener noreferrer';
+    }
     urlEl.textContent = page.title || page.url;
     topRow.appendChild(urlEl);
 
@@ -174,9 +179,11 @@ export function renderPendingPage(
 
     const urlEl = document.createElement('a');
     urlEl.className = 'history-entry-url';
-    urlEl.href = page.url;
-    urlEl.target = '_blank';
-    urlEl.rel = 'noopener noreferrer';
+    if (isSecureUrl(page.url)) {
+      urlEl.href = page.url;
+      urlEl.target = '_blank';
+      urlEl.rel = 'noopener noreferrer';
+    }
     urlEl.textContent = page.title || page.url;
 
     const metaEl = document.createElement('div');
