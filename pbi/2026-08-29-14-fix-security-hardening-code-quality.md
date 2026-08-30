@@ -1,7 +1,8 @@
 # PBI: Code Quality ハードニング一括 — 将来攻撃面6件
 
 > 当初この PBI には orphan-key 機能バグ（pending パネルのホワイトリスト追加が無効）が含まれていたが、
-> 実在のユーザー影響がある機能バグのため `2026-08-29-15-fix-pending-whitelist-orphan-key.md` に分離した。
+> 実在のユーザー影響がある機能バグのため `2026-08-29-15-fix-pending-whitelist-orphan-key.md` に分離した
+> （PR #71 で着地・`dev-docs/archived/pbi/` へ移動済み）。
 > 本 PBI は防御深度のハードニング 6 件に絞る。
 
 ## ユーザーストーリー
