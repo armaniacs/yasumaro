@@ -133,6 +133,50 @@ describe('createFetchUrlHandler', () => {
     expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
     expect(logError).toHaveBeenCalled();
   });
+
+  it('requests redirect: "error" so the SW never follows a redirect (VULN-016)', async () => {
+    vi.mocked(validateUrlForFilterImport).mockImplementation(() => {});
+    vi.mocked(fetchWithTimeout).mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      redirected: false,
+      url: 'https://example.com/list.txt',
+      headers: { get: vi.fn().mockReturnValue(null) },
+      text: vi.fn().mockResolvedValue('content'),
+    } as any);
+
+    const handler = createFetchUrlHandler(deps);
+    const sendResponse = vi.fn();
+    await handler({ payload: { url: 'https://example.com/list.txt' } } as any, {} as any, sendResponse);
+
+    const opts = vi.mocked(fetchWithTimeout).mock.calls[0][1] as Record<string, unknown>;
+    expect(opts.redirect).toBe('error');
+  });
+
+  it('does NOT return a body from a redirected response pointing at a private IP (VULN-016)', async () => {
+    // Defense in depth: even if a redirect somehow slipped through, a response
+    // whose final URL is a private address must not be handed back.
+    vi.mocked(validateUrlForFilterImport).mockImplementation(() => {});
+    vi.mocked(fetchWithTimeout).mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      redirected: true,
+      url: 'http://127.0.0.1:9222/json',
+      headers: { get: vi.fn().mockReturnValue(null) },
+      text: vi.fn().mockResolvedValue('{"internal":"devtools"}'),
+    } as any);
+
+    const handler = createFetchUrlHandler(deps);
+    const sendResponse = vi.fn();
+    await handler({ payload: { url: 'https://example.com/list.txt' } } as any, {} as any, sendResponse);
+
+    expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
+    const arg = sendResponse.mock.calls[0][0];
+    expect(JSON.stringify(arg)).not.toContain('devtools');
+    expect(logError).toHaveBeenCalled();
+  });
 });
 
 describe('createContentCleansingExecutedHandler', () => {
