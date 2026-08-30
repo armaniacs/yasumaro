@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.90` リリース。
+> - 現時点では `v6.7.91` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,12 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.91] - 2026-08-30
+
+### Fixed
+
+- このリリースは `v6.7.90` に対する hotfix です。`v6.7.89` で追加した「誤削除を報告」ボタン（`reportCleansingFeedbackBtn`）とドメイン別オーバーライド一覧（`perSiteOverrides`）でインラインスタイル（`style="margin-top:8px"`／`span.style.marginLeft`）を使用していたため、popup の CSP `style-src 'self'` に違反し `chrome://extensions` で 2件のエラーが表示されていた問題を修正。インラインスタイルを外部 CSS クラス（`.report-feedback-btn`／`.per-site-override-suffix`）に移行。
 
 ## [6.7.90] - 2026-08-30
 
