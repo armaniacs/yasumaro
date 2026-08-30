@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { formatEntryToMarkdown, formatEntriesToGenericMarkdown } from '../markdownFormatter.js';
-import { sanitizeForObsidian } from '../markdownSanitizer.js';
 import type { BrowsingLogEntry } from '../sqlite-types.js';
 
 const baseEntry: BrowsingLogEntry = {
@@ -88,16 +87,17 @@ describe('markdownFormatter', () => {
     expect(md).toContain('- URL: https://example.com/\\[click\\]\\(https://evil.com\\)');
   });
 
-  it('escapes markdown links in tags via sanitizeForObsidian', () => {
+  it('escapes markdown links in tags via link-text + obsidian sanitizers', () => {
     const entry = { ...baseEntry, tags: '[promo](https://evil.com),ai' };
     const md = formatEntryToMarkdown(entry);
-    expect(md).toContain('- Tags: #\\[promo\\]\\(https://evil.com\\) #ai');
+    // sanitizeForObsidian escapes the link, sanitizeForMarkdownLinkText escapes
+    // the resulting brackets/parens a second time (join-boundary safety).
+    expect(md).toContain('- Tags: #\\\\[promo\\\\]\\\\(https://evil.com\\\\) #ai');
   });
 
-  it('leaves standalone ] and # characters unchanged', () => {
+  it('escapes standalone ] in the title (link-text boundary safety)', () => {
     const title = 'Title with ] and #';
-    expect(sanitizeForObsidian(title)).toBe(title);
     const md = formatEntryToMarkdown({ ...baseEntry, title });
-    expect(md).toContain('# Title with ] and #');
+    expect(md).toContain('# Title with \\] and #');
   });
 });
