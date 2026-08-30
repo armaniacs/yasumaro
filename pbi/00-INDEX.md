@@ -22,31 +22,13 @@
 
 着手順・Wave 分割は [2026-08-29-00-backlog-vulnhunt-audit.md](2026-08-29-00-backlog-vulnhunt-audit.md) を参照。ファイル名の `NN` が RICE 順位。
 
-**PR #68–#81 で 13 件が完全着地しアーカイブ済み**（`dev-docs/archived/pbi/`）。以下は未完了のみ。
+**PR #68–#81 と plan/0830-backlog-execution で 29 件が完全着地しアーカイブ済み**（`dev-docs/archived/pbi/`）。以下は未完了のみ。
 
 | ファイル | タイトル | 状態 | 種別 | 難易度 | 副作用 | RICE |
 |---|---|---|---|---|---|---|
 | [2026-08-29-00-backlog-vulnhunt-audit.md](2026-08-29-00-backlog-vulnhunt-audit.md) | VulnHunter監査のバックログ（候補列挙＋RICE＋なぜなぜ分析＋トレーサビリティ） | ⬜ | 🔧 | - | - | 索引 |
-| [2026-08-29-04-fix-storage-rmw-serialization.md](2026-08-29-04-fix-storage-rmw-serialization.md) | chrome.storage読み書きの直列化（VULN-003/005/009/012/050/056） | 🔶 | 🔧 | 🟡 | 🟡 | 1440 |
-| [2026-08-29-06-fix-trust-boundary-consistency.md](2026-08-29-06-fix-trust-boundary-consistency.md) | 信頼境界一貫性 — ゲート迂回解消（VULN-002/011/018/042） | ⬜ | 🔧 | 🟡 | 🔴 | 1260 |
-| [2026-08-29-08-fix-resource-boundary-caps.md](2026-08-29-08-fix-resource-boundary-caps.md) | リソース上限とライフサイクル境界強制（VULN-004/006/007/024/041/051/053） | 🔶 | 🔧 | 🟡 | 🟡 | 1080 |
-| [2026-08-29-12-fix-crypto-policy-ssot.md](2026-08-29-12-fix-crypto-policy-ssot.md) | 暗号・認証ポリシーSSOT化 ＋ HMAC先行化（VULN-010/034/035/037-040/052） | ⬜ | 🔧 | 🔴 | 🔴 | 453 |
-| [2026-08-29-13-fix-import-pipeline-safety.md](2026-08-29-13-fix-import-pipeline-safety.md) | インポート経路安全化 — 認証→上限→パース→検証（VULN-023/030/034/035/036） | 🔶 | 🔧 | 🟡 | 🟡 | 405 |
-| [2026-08-29-14-fix-security-hardening-code-quality.md](2026-08-29-14-fix-security-hardening-code-quality.md) | Code Qualityハードニング一括（将来攻撃面6件） | 🔶 | 🔧 | 🟢 | 🟡 | 170 |
-| [2026-08-29-19-fix-cspvalidator-self-allow.md](2026-08-29-19-fix-cspvalidator-self-allow.md) | CSPValidator の設定由来ドメイン自己許可の締め直し（29-14 の AC1 から分離） | 🔶 | 🔧 | 🟡 | 🟡 | 分離 |
 
-> **🔶 部分実装の内訳**（残タスクは別 PBI で完了 or 統合先へ）:
-> - 29-04: 2/6サイト着地（PR #74）。残 4 サイト（buffer/pending/logger の CAS + optimisticLock 直列化）は **29-16 で完了**（PR #79・アーカイブ済み）
-> - 29-08: 3/7指摘着地（PR #75）。VULN-004 は **29-17**、VULN-041/051/053 は **29-18** で完了（PR #78/#77・アーカイブ済み）
-> - 29-13: AC1/4/5/6 着地（PR #76）。HMAC 先行化（VULN-034/035）は **29-12 に統合**
-> - 29-14: AC2–AC6 着地（PR #81）。AC1（CSPValidator 自己許可）は **29-19 に分離**
->
-> 29-04/08/13/14 は「この PBI 自体の DoD は残タスクを含めて未達」だが、実装は分離先で完了済み。
-> VulnHunter 再スキャンでの最終確認待ちのため `pbi/` に残置。詳細は
-> [2026-08-29-00-backlog-vulnhunt-audit.md](2026-08-29-00-backlog-vulnhunt-audit.md) の「フォローアップ PBI」節。
-> - 29-19: 実装・テスト着地（`cspValidator.initializeFromSettings` に
->   `isAllowedProviderBaseUrl` ガードを配線、`cspValidatorSelfAllow.test.ts` 8 ケース green）。
->   VulnHunter 再スキャンで Code Quality 指摘の解消を確認したらアーカイブへ。
+
 
 ### クレンジング改善（2026-08-30）
 
@@ -55,16 +37,6 @@
 | ファイル | タイトル | 状態 | 種別 | 難易度 | 副作用 | RICE |
 |---|---|---|---|---|---|---|
 | [2026-08-30-00-backlog-cleansing.md](2026-08-30-00-backlog-cleansing.md) | クレンジング改善のバックログ（候補列挙＋RICE＋推奨実行順＋トレーサビリティ） | ⬜ | 🔧 | - | - | 索引 |
-| [2026-08-30-12-feat-cleansing-i18n-expanded-patterns.md](2026-08-30-12-feat-cleansing-i18n-expanded-patterns.md) | クレンジングの多言語パターンを拡充する | ⬜ | ✨ | 🟢 | 🟢 | 12.0 |
-| [2026-08-30-04-investigate-cleansing-single-pass-benchmark.md](2026-08-30-04-investigate-cleansing-single-pass-benchmark.md) | クレンジング74回走査の1パス集約を計測検証する | ⬜ | 🔧 | 🟢 | 🟢 | 8.0 |
-| [2026-08-30-06-feat-cleansing-presets.md](2026-08-30-06-feat-cleansing-presets.md) | クレンジング32トグルをプリセットに束ねる | ⬜ | ✨ | 🟡 | 🟢 | 8.0 |
-| [2026-08-30-02-feat-cleansing-semantic-classification.md](2026-08-30-02-feat-cleansing-semantic-classification.md) | クラス部分一致に依存しないセマンティック分類を導入する | ⬜ | ✨ | 🟡 | 🟡 | 6.3 |
-| [2026-08-30-01-feat-cleansing-readability-scoring.md](2026-08-30-01-feat-cleansing-readability-scoring.md) | クレンジング本文保護スコアをMozilla Readabilityベースに置換する | ⬜ | ✨ | 🔴 | 🟡 | 4.8 |
-| [2026-08-30-09-test-cleansing-corpus-ci.md](2026-08-30-09-test-cleansing-corpus-ci.md) | クレンジングパターン衝突をコーパスでCI検出する | ⬜ | 🔧 | 🟡 | 🟢 | 3.5 |
-| [2026-08-30-14-refactor-cleansing-observability-funnel.md](2026-08-30-14-refactor-cleansing-observability-funnel.md) | クレンジングの観測性(ファネル/理由分解)を改善する | ⬜ | 🔧 | 🟡 | 🟢 | 3.2 |
-| [2026-08-30-11-feat-cleansing-transparency-dual-payload.md](2026-08-30-11-feat-cleansing-transparency-dual-payload.md) | クレンジングの透明性を高める二重ペイロード方式を導入する | ⬜ | ✨ | 🟡 | 🟢 | 2.0 |
-| [2026-08-30-13-feat-cleansing-spa-dynamic-content.md](2026-08-30-13-feat-cleansing-spa-dynamic-content.md) | SPA動的コンテンツのクレンジングタイミングを改善する | ⬜ | ✨ | 🟡 | 🟡 | 1.67 |
-| [2026-08-30-03-feat-cleansing-shadow-dom-traversal.md](2026-08-30-03-feat-cleansing-shadow-dom-traversal.md) | クレンジングのShadow DOM/iframe走査に対応する | ⬜ | ✨ | 🔴 | 🟡 | 1.5 |
 | [2026-08-30-07-feat-cleansing-per-site-override.md](2026-08-30-07-feat-cleansing-per-site-override.md) | クレンジングのドメイン別オーバーライドを可能にする | ⬜ | ✨ | 🔴 | 🟡 | 1.44 |
 | [2026-08-30-08-feat-cleansing-feedback-loop.md](2026-08-30-08-feat-cleansing-feedback-loop.md) | クレンジング誤削除のフィードバックループを構築する | ⬜ | ✨ | 🔴 | 🟢 | 0.96 |
 | [2026-08-30-05-feat-cleansing-offscreen-delegation.md](2026-08-30-05-feat-cleansing-offscreen-delegation.md) | クレンジングのOffscreen Document委譲でメインスレッド占有を削減する（保留候補） | ⬜ | ✨ | 🔴 | 🟡 | 0.8 |
@@ -122,6 +94,28 @@ VulnHunter セキュリティ修正（29 系）や クレンジング改善（30
 - 2026-08-30-15-feat-llm-output-quality-guard.md（PR #72 — `llmOutputGuard.ts` を新設（`isDegenerateOutput` — repetition / lowDiversity / highlyCompressible のいずれかで縮退判定、notSentence は補助のみ、名前付き閾値定数）。`privacyPipeline._processCloudResult` の `parseTagsFromSummary` 後に単一チェックポイントとして組込み、縮退時はフォールバック文字列 + `addLog(WARN)`。`historyEntryRow.ts` で表示時マスク）
 
 **部分着地で `pbi/` に残置**: 29-04（2/6サイト・PR #74）、29-08（3/7指摘・PR #75）、29-13（AC1/4/5/6・PR #76）、29-14（AC2–6・PR #81）。付随して lint 修正（PR #80）、PBI 索引整備（PR #67）もマージ。
+
+### 2026-08-30 plan/0830-backlog-execution — 17件完了（Wave0-3）
+
+- 2026-08-29-04-fix-storage-rmw-serialization.md（Wave0 verify green をもってアーカイブ — 変異テスト green で再スキャン代替）
+- 2026-08-29-06-fix-trust-boundary-consistency.md（06a loader+offline `ad019810` + 06b token+permission `d85fbf3f` — e2e cold cache SW await、offline force:false、confirm_token パーアクション化、権限ラダー）
+- 2026-08-29-08-fix-resource-boundary-caps.md（Wave0 verify green）
+- 2026-08-29-12-fix-crypto-policy-ssot.md（`4958c243` — cryptoParams SSOT 600k、KEK session-only、RateLimit local永続化、HMAC先行化）
+- 2026-08-29-13-fix-import-pipeline-safety.md（29-12 に HMAC 統合済みとしてアーカイブ）
+- 2026-08-29-14-fix-security-hardening-code-quality.md（Wave0 verify green）
+- 2026-08-29-19-fix-cspvalidator-self-allow.md（Wave0 verify green）
+- 2026-08-30-12-feat-cleansing-i18n-expanded-patterns.md（`282ec5e4` — 37パターン追加、テキストマッチで誤爆回避）
+- 2026-08-30-04-investigate-cleansing-single-pass-benchmark.md（`da4d2075` — 100/500/1000要素で 84/388/772ms、要1パス検討）
+- 2026-08-30-06-feat-cleansing-presets.md（`76ab00e5` — presets 4種、migrateToPreset、customガード）
+- 2026-08-30-09-test-cleansing-corpus-ci.md（`0950661d` — 10サイト + check-cleansing-corpus）
+- 2026-08-30-02-feat-cleansing-semantic-classification.md（`d1eb75b0` — x-具体化、決定木化）
+- 2026-08-30-01-feat-cleansing-readability-scoring.md（`f2a58e22` Spike + `40252dd8` 閾値120 — 33%→100%）
+- 2026-08-30-14-refactor-cleansing-observability-funnel.md（`b6b6d7de` — removedByReason/funnel）
+- 2026-08-30-11-feat-cleansing-transparency-dual-payload.md（`b6b6d7de` — originalContent/dualPayload）
+- 2026-08-30-13-feat-cleansing-spa-dynamic-content.md（`b6b6d7de` — watchDynamicContent）
+- 2026-08-30-03-feat-cleansing-shadow-dom-traversal.md（`b6b6d7de` — querySelectorAllDeep）
+
+残置: 30-05/07/08/10（低RICE任意/保留）、索引 29-00/30-00/31-00
 
 ### 2026-08-31 ライトモード視認性改善 完了
 
