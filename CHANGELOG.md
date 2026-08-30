@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.96` リリース。
+> - 現時点では `v6.7.97` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,12 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.97] - 2026-08-30
+
+### Fixed
+
+- このリリースは `v6.7.96` に対する hotfix です。診断で `hasSensitive: false` のまま破損DBがストレージに残り、`repairDatabase` がメモリ上のみで永続化されず再発していた問題を修正。`wasRepaired` 検出後に `this.save()` で永続化し、BBC/CNN での `pipeline-error` を永続的に解消。
 
 ## [6.7.96] - 2026-08-30
 
