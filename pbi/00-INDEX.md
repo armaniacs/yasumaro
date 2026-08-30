@@ -37,8 +37,6 @@
 | ファイル | タイトル | 状態 | 種別 | 難易度 | 副作用 | RICE |
 |---|---|---|---|---|---|---|
 | [2026-08-30-00-backlog-cleansing.md](2026-08-30-00-backlog-cleansing.md) | クレンジング改善のバックログ（候補列挙＋RICE＋推奨実行順＋トレーサビリティ） | ⬜ | 🔧 | - | - | 索引 |
-| [2026-08-30-07-feat-cleansing-per-site-override.md](2026-08-30-07-feat-cleansing-per-site-override.md) | クレンジングのドメイン別オーバーライドを可能にする | ⬜ | ✨ | 🔴 | 🟡 | 1.44 |
-| [2026-08-30-08-feat-cleansing-feedback-loop.md](2026-08-30-08-feat-cleansing-feedback-loop.md) | クレンジング誤削除のフィードバックループを構築する | ⬜ | ✨ | 🔴 | 🟢 | 0.96 |
 | [2026-08-30-05-feat-cleansing-offscreen-delegation.md](2026-08-30-05-feat-cleansing-offscreen-delegation.md) | クレンジングのOffscreen Document委譲でメインスレッド占有を削減する（保留候補） | ⬜ | ✨ | 🔴 | 🟡 | 0.8 |
 | [2026-08-30-10-feat-whitelist-adapter-auto-generation.md](2026-08-30-10-feat-whitelist-adapter-auto-generation.md) | ホワイトリストアダプターをLLMで自動生成する（保留候補） | ⬜ | ✨ | 🔴 | 🟢 | 0.48 |
 
@@ -115,7 +113,10 @@ VulnHunter セキュリティ修正（29 系）や クレンジング改善（30
 - 2026-08-30-13-feat-cleansing-spa-dynamic-content.md（`b6b6d7de` — watchDynamicContent）
 - 2026-08-30-03-feat-cleansing-shadow-dom-traversal.md（`b6b6d7de` — querySelectorAllDeep）
 
-残置: 30-05/07/08/10（低RICE任意/保留）、索引 29-00/30-00/31-00
+残置: 30-05/10（低RICE保留 — 30-05は benchmark 772ms で要検討だが5日コストで見送り、30-10は 0.48 で手動adapterで十分）、索引 29-00/30-00/31-00
+
+- 2026-08-30-07-feat-cleansing-per-site-override.md（`45ae459d` — DOMAIN_CLEANSING_OVERRIDES、perSiteOverride、options UI）
+- 2026-08-30-08-feat-cleansing-feedback-loop.md（`5ad9e055` — feedbackQueue 50件FIFO、popup報告/Dashboard一覧）
 
 ### 2026-08-31 ライトモード視認性改善 完了
 
