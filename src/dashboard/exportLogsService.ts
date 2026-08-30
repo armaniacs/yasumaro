@@ -6,6 +6,7 @@
 
 import { queryLogs, backupDb } from './dashboardSqliteService.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
+import { yamlQuote, yamlQuoteList } from '../utils/yamlFrontmatter.js';
 
 // ============================================================================
 // Markdown Export
@@ -60,10 +61,10 @@ export async function exportMarkdown(ids?: number[]): Promise<string> {
     }
 
     return `---
-title: "${(entry.title || entry.url).replace(/"/g, '\\"')}"
-url: ${entry.url}
-date: ${date}
-tags: [${tags.map(t => `"${t}"`).join(', ')}]
+title: ${yamlQuote(entry.title || entry.url)}
+url: ${yamlQuote(entry.url)}
+date: ${yamlQuote(date)}
+tags: ${yamlQuoteList(tags)}
 ---
 
 ${sanitizeForObsidian(entry.summary || '')}
