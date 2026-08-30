@@ -5,6 +5,7 @@ import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
 import { parseTagsFromSummary, normalizeTags } from '../utils/tagUtils.js';
 import type { TagNormalizationEntry } from '../utils/types.js';
 import { sanitizePromptContent, DangerLevel } from '../utils/promptSanitizer.js';
+import { isDegenerateOutput } from '../utils/llmOutputGuard.js';
 import { addPendingPage } from '../utils/pendingStorage.js';
 import type { AIService, AISummaryResult } from './ai/AIService.js';
 import type { MaskedItem } from '../messaging/types.js';
@@ -32,6 +33,9 @@ function estimateTokens(text: string): number {
   // English: ~4 characters per token
   return Math.ceil(text.length / 4);
 }
+
+/** Substituted for a summary the guard flags as degenerate (repetition loop, keyword spam). */
+export const DEGENERATE_SUMMARY_FALLBACK = '要約に失敗しました（AI出力が不自然なため）';
 
 interface ISanitizers {
   sanitizeRegex(text: string): Promise<{ text: string; maskedItems: MaskedItem[] }>;
@@ -277,6 +281,20 @@ export class PrivacyPipeline {
       tags = normalizedTags.length > 0 ? normalizedTags : undefined;
       sanitizedSummary = parsed.summary;
       sanitizedSummary = sanitizedSummary.replace(/\n+/g, ' ').replace(/  +/g, ' ').trim();
+
+      // Single guard choke point for all cloud/Ollama/LM Studio provider paths.
+      // Runs on the summary body only, after parseTagsFromSummary has split off
+      // tags, so a legitimate `tag1 | tag2 | tag3` output is not misread as
+      // degenerate keyword spam.
+      const guard = isDegenerateOutput(sanitizedSummary);
+      if (guard.isDegenerate) {
+        addLog(LogType.WARN, 'Degenerate LLM output detected', {
+          reason: guard.reason,
+          repetitionRate: guard.metrics?.repetitionRate,
+          providerName: aiResult.providerName,
+        });
+        sanitizedSummary = DEGENERATE_SUMMARY_FALLBACK;
+      }
     }
 
     return {
