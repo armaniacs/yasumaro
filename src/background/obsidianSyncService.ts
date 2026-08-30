@@ -11,7 +11,7 @@ import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
-import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
+import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
 import type { SyncTarget } from './syncTargets/SyncTarget.js';
 import { isCredentialConfigured } from './syncTargets/settingsConfiguredCheck.js';
 import { SyncBatchRunner, type PendingSyncRow } from './syncTargets/SyncBatchRunner.js';
@@ -59,7 +59,7 @@ export class ObsidianSyncService implements SyncTarget {
 
     try {
       // Use the existing ObsidianClient to append to daily note
-      const sanitizedTitle = sanitizeForObsidian(title || url || 'Untitled');
+      const sanitizedTitle = sanitizeForMarkdownLinkText(title || url || 'Untitled');
       const sanitizedUrl = sanitizeUrlForMarkdownTarget(url);
       const sanitizedSummary = summary ? sanitizeForObsidian(summary) : null;
       const markdown = `- [${sanitizedTitle}](${sanitizedUrl})${sanitizedSummary ? `: ${sanitizedSummary}` : ''}`;

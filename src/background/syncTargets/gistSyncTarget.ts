@@ -10,7 +10,7 @@ import { addLog, LogType } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { SettingsRepository, settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
-import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../../utils/markdownSanitizer.js';
+import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../../utils/markdownSanitizer.js';
 import { CONNECTION_TEST_CACHE_MODE } from '../../utils/fetch.js';
 import { isCredentialConfigured } from './settingsConfiguredCheck.js';
 import { SyncBatchRunner, type PendingSyncRow } from './SyncBatchRunner.js';
@@ -46,7 +46,7 @@ export class GistSyncTarget implements SyncTarget {
       const pat = settings[StorageKeys.GITHUB_PAT] as string;
       const gistId = settings[StorageKeys.GIST_ID] as string | undefined;
       const defaultEntry = () => {
-        const safeTitle = sanitizeForObsidian(title || url || 'Untitled');
+        const safeTitle = sanitizeForMarkdownLinkText(title || url || 'Untitled');
         const safeUrl = sanitizeUrlForMarkdownTarget(url);
         const safeSummary = summary ? sanitizeForObsidian(summary) : null;
         return `- [${safeTitle}](${safeUrl})${safeSummary ? `: ${safeSummary}` : ''}`;
