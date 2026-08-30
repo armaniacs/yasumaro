@@ -24,11 +24,62 @@ interface ExportedData {
   rows?: ExportedRow[];
 }
 
+/** Upper bound on rows accepted from a single import file (VULN-023). */
+export const MAX_IMPORT_ROWS = 100_000;
+/** Upper bound on the raw import text, mirroring the settings 10 MiB cap. */
+export const MAX_IMPORT_TEXT_BYTES = 10 * 1024 * 1024;
+
+const MAX_URL_LENGTH = 2048;
+const MAX_TITLE_LENGTH = 2048;
+const MAX_SUMMARY_LENGTH = 100_000;
+const MAX_TAGS_LENGTH = 8192;
+const MAX_DOMAIN_LENGTH = 256;
+// created_at is epoch milliseconds. Only a positive, finite value bounded above
+// by now + 1 day of skew is required: older exports may have used a smaller
+// epoch unit, and rejecting them would drop genuine history.
+const MIN_CREATED_AT = 1;
+const CLOCK_SKEW_MS = 24 * 60 * 60 * 1000;
+const MAX_VISIT_DURATION_MS = 24 * 60 * 60 * 1000;
+
+function isOptionalString(value: unknown, maxLen: number): boolean {
+  return value === undefined || (typeof value === 'string' && value.length <= maxLen);
+}
+
+function isOptionalFiniteInRange(value: unknown, min: number, max: number): boolean {
+  return (
+    value === undefined ||
+    (typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max)
+  );
+}
+
+function isOptionalFlag(value: unknown): boolean {
+  return value === undefined || value === 0 || value === 1;
+}
+
 function validateRow(row: unknown): row is ExportedRow {
   if (!row || typeof row !== 'object') return false;
   const r = row as Record<string, unknown>;
-  if (typeof r.url !== 'string' || !r.url) return false;
-  if (typeof r.created_at !== 'number') return false;
+
+  if (typeof r.url !== 'string' || !r.url || r.url.length > MAX_URL_LENGTH) return false;
+
+  if (
+    typeof r.created_at !== 'number' ||
+    !Number.isFinite(r.created_at) ||
+    r.created_at < MIN_CREATED_AT ||
+    r.created_at > Date.now() + CLOCK_SKEW_MS
+  ) {
+    return false;
+  }
+
+  if (!isOptionalString(r.title, MAX_TITLE_LENGTH)) return false;
+  if (!isOptionalString(r.summary, MAX_SUMMARY_LENGTH)) return false;
+  if (!isOptionalString(r.tags, MAX_TAGS_LENGTH)) return false;
+  if (!isOptionalString(r.domain, MAX_DOMAIN_LENGTH)) return false;
+  if (!isOptionalFiniteInRange(r.visit_duration, 0, MAX_VISIT_DURATION_MS)) return false;
+  if (!isOptionalFiniteInRange(r.scroll_ratio, 0, 1)) return false;
+  if (!isOptionalFlag(r.is_starred)) return false;
+  if (!isOptionalFlag(r.is_deleted)) return false;
+
   return true;
 }
 
@@ -36,6 +87,11 @@ export async function importFromJson(
   jsonText: string,
   onProgress?: (current: number, total: number) => void,
 ): Promise<{ inserted: number; skipped: number; total: number } | { error: string }> {
+  // Size cap before parse (VULN-023): reject an oversized file up front.
+  if (typeof jsonText === 'string' && jsonText.length > MAX_IMPORT_TEXT_BYTES) {
+    return { error: 'Import file is too large' };
+  }
+
   let parsed: ExportedData;
   try {
     parsed = JSON.parse(jsonText) as ExportedData;
@@ -46,6 +102,10 @@ export async function importFromJson(
   const rows = parsed.rows;
   if (!Array.isArray(rows) || rows.length === 0) {
     return { error: 'No records found in file' };
+  }
+
+  if (rows.length > MAX_IMPORT_ROWS) {
+    return { error: `Import exceeds the ${MAX_IMPORT_ROWS} row limit` };
   }
 
   // Validate and filter
