@@ -43,6 +43,12 @@ export interface SavedUrlEntry {
     aiSummaryCleansedReason?: AiSummaryCleansedReason;  // AI要約クレンジング実行理由（オプション）
     aiSummaryCleansedReasons?: string[];  // 複数理由の詳細リスト（multiple時、オプション）
     fallbackTriggered?: boolean;          // NEW: フォールバックが発動したか
+    // 30-14: 観測性ファネル
+    removedByReason?: Record<string, number> | Map<string, number>;
+    funnel?: { pageBytes: number; candidateBytes: number; cleansedBytes: number };
+    // 30-11: 二重ペイロード
+    originalContent?: string;
+    dualPayloadEnabled?: boolean;
     extractedSentencesBytes?: number;  // L0抽出後のバイト数（オプション）
     extractedSentencesOriginalBytes?: number;  // L0抽出前のバイト数（オプション）
     isTrancoDomain?: boolean;  // Tranco信頼ドメインが使用されたか（Phase 1）

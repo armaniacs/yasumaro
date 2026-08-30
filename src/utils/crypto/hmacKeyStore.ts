@@ -131,11 +131,10 @@ async function getOrCreateHmacWrappingKey(): Promise<CryptoKey> {
 
     const keyBytes = webcrypto.getRandomValues(new Uint8Array(32));
     const keyBase64 = bytesToBase64(keyBytes);
-    // Store in both session and local storage
-    await Promise.all([
-        chrome.storage.session.set({ [HMAC_WRAPPING_KEY_SESSION]: keyBase64 }),
-        chrome.storage.local.set({ [HMAC_WRAPPING_KEY_SESSION]: keyBase64 })
-    ]);
+    // M3 mitigation: KEK is session-only. Local fallback read is retained for
+    // backward compat, but new KEKs are never written to storage.local (prevents
+    // VULN-010 plaintext adjacency). Wrapped envelopes remain in storage.local.
+    await chrome.storage.session.set({ [HMAC_WRAPPING_KEY_SESSION]: keyBase64 });
     return webcrypto.subtle.importKey(
         'raw',
         keyBytes as BufferSource,

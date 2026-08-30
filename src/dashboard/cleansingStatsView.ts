@@ -271,3 +271,136 @@ export function makeCleansingProgressBar(entry: SavedUrlEntry): HTMLElement | nu
 
   return wrapper;
 }
+
+// ---------------------------------------------------------------------------
+// 30-14: 観測性ファネル — ルール別削除件数のテーブル表示
+// 30-11: 二重ペイロード — originalContent 差分表示
+// ---------------------------------------------------------------------------
+
+/**
+ * 30-14: ルール別削除件数をテーブルで描画する。
+ * Map または Record のいずれも受け付け、空なら「除去なし」メッセージを表示。
+ */
+export function renderRemovedByReason(
+  container: HTMLElement,
+  removedByReason?: Map<string, number> | Record<string, number> | null,
+): void {
+  container.innerHTML = '';
+  container.className = 'cleansing-removed-breakdown';
+
+  if (!removedByReason) {
+    container.textContent = t('cleansingNoRemoval') || 'クレンジングによる除去はありません';
+    container.classList.add('no-data');
+    return;
+  }
+
+  const entries: Array<[string, number]> =
+    removedByReason instanceof Map
+      ? [...removedByReason.entries()]
+      : Object.entries(removedByReason as Record<string, number>);
+
+  const filtered = entries.filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+
+  if (filtered.length === 0) {
+    container.textContent = t('cleansingNoRemoval') || 'クレンジングによる除去はありません';
+    container.classList.add('no-data');
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'removed-by-reason-table';
+  const thead = document.createElement('thead');
+  thead.innerHTML = `<tr><th>${t('cleansingRule') || 'ルール'}</th><th>${t('cleansingCount') || '件数'}</th></tr>`;
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  for (const [rule, count] of filtered) {
+    const tr = document.createElement('tr');
+    const tdRule = document.createElement('td');
+    tdRule.textContent = rule;
+    const tdCount = document.createElement('td');
+    tdCount.textContent = String(count);
+    tr.appendChild(tdRule);
+    tr.appendChild(tdCount);
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  container.appendChild(table);
+}
+
+/**
+ * 30-11: originalContent と content (cleansed) の差分概要を描画する。
+ * originalContent が無い場合は null を返す。差分が 80% 超なら警告を表示。
+ */
+export function makeDualPayloadDiff(
+  entry: { content?: string; originalContent?: string; dualPayloadEnabled?: boolean } & Record<string, unknown>,
+): HTMLElement | null {
+  const original = entry.originalContent as string | undefined;
+  const cleansed = entry.content as string | undefined;
+  if (!original) return null;
+  if (!cleansed) return null;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'dual-payload-diff';
+
+  const originalLen = original.length;
+  const cleansedLen = cleansed.length;
+  const removedChars = Math.max(0, originalLen - cleansedLen);
+  const ratio = originalLen > 0 ? (removedChars / originalLen) * 100 : 0;
+
+  const summary = document.createElement('div');
+  summary.className = 'dual-payload-summary';
+  summary.textContent = `原文 ${originalLen}字 → クレンジング後 ${cleansedLen}字 (除去 ${removedChars}字, ${ratio.toFixed(1)}%)`;
+  wrapper.appendChild(summary);
+
+  if (ratio >= 80) {
+    const warn = document.createElement('div');
+    warn.className = 'dual-payload-warning';
+    warn.textContent = t('cleansingLargeRemovalWarning') || '多くの内容が除去されました。原文を確認してください';
+    wrapper.appendChild(warn);
+  }
+
+  // 差分テキストの先頭プレビュー（最大500字）
+  if (removedChars > 0) {
+    const preview = document.createElement('div');
+    preview.className = 'dual-payload-preview';
+    // 簡易差分: original から cleansed に含まれない部分を抽出（先頭500字）
+    let diffText = '';
+    if (!cleansed || original.indexOf(cleansed.slice(0, 50)) === -1) {
+      diffText = original.slice(0, 500);
+    } else {
+      // naive: original のうち cleansed に無い連続部分
+      diffText = original.length > cleansed.length ? original.slice(cleansed.length, cleansed.length + 500) : original.slice(0, 500);
+      if (!diffText) diffText = original.slice(0, 500);
+    }
+    preview.textContent = `除去内容プレビュー: ${diffText}`;
+    wrapper.appendChild(preview);
+  }
+
+  return wrapper;
+}
+
+/**
+ * 30-14: ファネル（page→candidate→cleansed）の3段階バイトを描画する簡易サマリー。
+ * Canvas チャートの代替としてテキストサマリーを返す。
+ */
+export function renderFunnelSummary(
+  container: HTMLElement,
+  funnel?: { pageBytes: number; candidateBytes: number; cleansedBytes: number } | null,
+): void {
+  container.innerHTML = '';
+  container.className = 'cleansing-funnel-summary';
+  if (!funnel) {
+    container.textContent = t('cleansingStatsNoData') || 'データなし';
+    return;
+  }
+  const { pageBytes, candidateBytes, cleansedBytes } = funnel;
+  const div = document.createElement('div');
+  div.className = 'funnel-values';
+  div.textContent = `${formatBytes(pageBytes)} → ${formatBytes(candidateBytes)} → ${formatBytes(cleansedBytes)}`;
+  container.appendChild(div);
+  const reduction = pageBytes > 0 ? ((pageBytes - cleansedBytes) / pageBytes) * 100 : 0;
+  const rate = document.createElement('div');
+  rate.className = 'funnel-rate';
+  rate.textContent = `削減率 ${reduction.toFixed(1)}%`;
+  container.appendChild(rate);
+}

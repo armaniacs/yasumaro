@@ -44,7 +44,7 @@ describe('createOfflineQueueProcessor', () => {
             title: 't',
             url: 'https://example.com',
             content: 'c',
-            force: true,
+            force: false,
             skipDuplicateCheck: true,
             recordType: 'manual',
         });
@@ -72,7 +72,7 @@ describe('createOfflineQueueProcessor', () => {
         expect(record).toHaveBeenCalledWith(expect.objectContaining({
             url: 'https://example.com',
             content: 'c',
-            force: true,
+            force: false,
         }));
     });
 
@@ -184,5 +184,112 @@ describe('createOfflineQueueProcessor', () => {
 
         expect(record).toHaveBeenCalled();
         expect(retryObsidianWriteOnly).not.toHaveBeenCalled();
+    });
+
+    describe('trust boundary (VULN-011/06a) - gate re-evaluation on replay', () => {
+        it('replays with force:false and skipDuplicateCheck:true (gates re-evaluated, duplicate still skipped)', async () => {
+            const record = vi.fn().mockResolvedValue({ success: true, skipped: false });
+            const retryObsidianWriteOnly = vi.fn();
+            const retryAll = vi.fn(async (handler: (job: unknown) => Promise<boolean>) => {
+                await handler({
+                    type: 'ai_summary',
+                    payload: { title: 't', url: 'https://example.com', content: 'c' },
+                });
+            });
+            const processQueue = createOfflineQueueProcessor({
+                offlineNetworkQueue: { retryAll },
+                recordingPipeline: { record, retryObsidianWriteOnly },
+            });
+            await processQueue();
+            expect(record).toHaveBeenCalledWith(expect.objectContaining({
+                force: false,
+                skipDuplicateCheck: true,
+                recordType: 'manual',
+            }));
+            // skipDuplicateCheck:true is retained so normal retries are not trapped by duplicate
+            expect(record.mock.calls[0][0]).toHaveProperty('skipDuplicateCheck', true);
+            expect(record.mock.calls[0][0]).toHaveProperty('force', false);
+        });
+
+        it('blocked URL (DOMAIN_BLOCKED) is not marked successful — domain gate re-evaluated', async () => {
+            const record = vi.fn().mockResolvedValue({ success: false, error: 'DOMAIN_BLOCKED' });
+            const retryObsidianWriteOnly = vi.fn();
+            const retryAll = vi.fn(async (handler: (job: unknown) => Promise<boolean>) => {
+                const result = await handler({
+                    type: 'ai_summary',
+                    payload: { title: 'blocked', url: 'https://blocked.example/page', content: 'c' },
+                });
+                // Pipeline returns success:false for DOMAIN_BLOCKED when force:false; offline handler must return false
+                expect(result).toBe(false);
+                expect(record).toHaveBeenCalledWith(expect.objectContaining({
+                    url: 'https://blocked.example/page',
+                    force: false,
+                }));
+            });
+            const processQueue = createOfflineQueueProcessor({
+                offlineNetworkQueue: { retryAll },
+                recordingPipeline: { record, retryObsidianWriteOnly },
+            });
+            await processQueue();
+            expect(record).toHaveBeenCalledTimes(1);
+        });
+
+        it('private page blocked (PRIVATE_PAGE_DETECTED) is not marked successful — privacy gate re-evaluated', async () => {
+            const record = vi.fn().mockResolvedValue({ success: false, error: 'PRIVATE_PAGE_DETECTED' });
+            const retryObsidianWriteOnly = vi.fn();
+            const retryAll = vi.fn(async (handler: (job: unknown) => Promise<boolean>) => {
+                const result = await handler({
+                    type: 'ai_summary',
+                    payload: { title: 'private', url: 'https://private.example/secret', content: 'c' },
+                });
+                expect(result).toBe(false);
+                expect(record).toHaveBeenCalledWith(expect.objectContaining({
+                    url: 'https://private.example/secret',
+                    force: false,
+                }));
+            });
+            const processQueue = createOfflineQueueProcessor({
+                offlineNetworkQueue: { retryAll },
+                recordingPipeline: { record, retryObsidianWriteOnly },
+            });
+            await processQueue();
+            expect(record).toHaveBeenCalledTimes(1);
+        });
+
+        it('duplicate skipped result returns false so queue can account for it (not falsely marked success)', async () => {
+            const record = vi.fn().mockResolvedValue({ success: true, skipped: true });
+            const retryObsidianWriteOnly = vi.fn();
+            const retryAll = vi.fn(async (handler: (job: unknown) => Promise<boolean>) => {
+                const result = await handler({
+                    type: 'ai_summary',
+                    payload: { title: 'dup', url: 'https://example.com/dup', content: 'c' },
+                });
+                expect(result).toBe(false);
+            });
+            const processQueue = createOfflineQueueProcessor({
+                offlineNetworkQueue: { retryAll },
+                recordingPipeline: { record, retryObsidianWriteOnly },
+            });
+            await processQueue();
+            expect(record).toHaveBeenCalled();
+        });
+
+        it('successful non-blocked replay returns true', async () => {
+            const record = vi.fn().mockResolvedValue({ success: true, skipped: false });
+            const retryObsidianWriteOnly = vi.fn();
+            const retryAll = vi.fn(async (handler: (job: unknown) => Promise<boolean>) => {
+                const result = await handler({
+                    type: 'ai_summary',
+                    payload: { title: 'ok', url: 'https://allowed.example/page', content: 'c' },
+                });
+                expect(result).toBe(true);
+            });
+            const processQueue = createOfflineQueueProcessor({
+                offlineNetworkQueue: { retryAll },
+                recordingPipeline: { record, retryObsidianWriteOnly },
+            });
+            await processQueue();
+            expect(record).toHaveBeenCalledWith(expect.objectContaining({ force: false }));
+        });
     });
 });

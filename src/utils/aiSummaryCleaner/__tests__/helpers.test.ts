@@ -12,6 +12,7 @@ import {
   isFixedOrSticky,
   isLikelyAd,
   isLikelyPopup,
+  isLikelySocial,
   isPlatformNoise,
   safeReplaceWithText,
 } from '../helpers.js';
@@ -357,6 +358,261 @@ describe('aiSummaryCleaner/helpers', () => {
       el.textContent = 'Plain text';
       const result = safeReplaceWithText(el, 'Replaced');
       expect(result).toBe(true);
+    });
+  });
+
+  describe('isLikelyAd — i18n text patterns', () => {
+    it('detects French publicité', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Ce contenu est une publicité';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('detects French annonce sponsorisée', () => {
+      const el = document.createElement('div');
+      el.textContent = 'annonce sponsorisée par notre partenaire';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('detects German Werbung', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Werbung: Jetzt kaufen!';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('detects German Anzeige', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Anzeige – Sonderangebot';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('detects Chinese 广告', () => {
+      const el = document.createElement('div');
+      el.textContent = '本页面包含广告内容';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('detects Chinese 推广', () => {
+      const el = document.createElement('div');
+      el.textContent = '推广信息，点击查看';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('detects Spanish publicidad', () => {
+      const el = document.createElement('div');
+      el.textContent = 'publicidad patrocinada';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('detects Korean 광고', () => {
+      const el = document.createElement('div');
+      el.textContent = '광고 문의はこちら';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('returns false for body text containing Accepter without cookie context', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Nous devons accepter les différences culturelles.';
+      // This text does not contain ad keywords; should not be ad
+      expect(isLikelyAd(el)).toBe(false);
+    });
+  });
+
+  describe('isLikelySocial — i18n text patterns', () => {
+    it('detects French Partager', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Partager sur Facebook';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects French Suivez-nous', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Suivez-nous sur Twitter';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects German Teilen', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Teilen Sie diesen Artikel';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects German Folgen', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Folgen Sie uns auf Instagram';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects Chinese 分享', () => {
+      const el = document.createElement('div');
+      el.textContent = '分享到微信';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects Chinese 关注我们', () => {
+      const el = document.createElement('div');
+      el.textContent = '关注我们获取更多信息';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects Spanish Compartir', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Compartir en redes sociales';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects Korean 공유하기', () => {
+      const el = document.createElement('div');
+      el.textContent = '공유하기 버튼';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects Korean 팔로우', () => {
+      const el = document.createElement('div');
+      el.textContent = '팔로우 해주세요';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('returns false for normal article text', () => {
+      const el = document.createElement('div');
+      el.textContent = 'これは通常の記事本文です。広告や共有ボタンは含まれていません。';
+      expect(isLikelySocial(el)).toBe(false);
+    });
+
+    it('detects fallback class share', () => {
+      const el = document.createElement('div');
+      el.className = 'share-buttons';
+      el.textContent = 'some content';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+  });
+
+  describe('isLikelySocial — M7 decision tree / mitigations', () => {
+    it('does not treat address-book as social', () => {
+      const el = document.createElement('div');
+      el.className = 'address-book';
+      el.textContent = 'Address list content';
+      expect(isLikelySocial(el)).toBe(false);
+    });
+
+    it('does not treat admin-panel as social', () => {
+      const el = document.createElement('div');
+      el.className = 'admin-panel';
+      expect(isLikelySocial(el)).toBe(false);
+    });
+
+    it('does not treat x-data as social (M7 x- mitigation)', () => {
+      const el = document.createElement('div');
+      el.className = 'x-data x-bind';
+      el.textContent = 'Alpine.js data';
+      expect(isLikelySocial(el)).toBe(false);
+    });
+
+    it('does not treat x-data id as social', () => {
+      const el = document.createElement('div');
+      el.id = 'x-data';
+      expect(isLikelySocial(el)).toBe(false);
+    });
+
+    it('detects x-share as social (concretized pattern)', () => {
+      const el = document.createElement('div');
+      el.className = 'x-share';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects x-follow as social', () => {
+      const el = document.createElement('div');
+      el.className = 'x-follow-button';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects x-button as social', () => {
+      const el = document.createElement('div');
+      el.id = 'x-button';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects x-share in composite class', () => {
+      const el = document.createElement('div');
+      el.className = 'foo x-share bar';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects aria-label="Share on X" as social', () => {
+      const el = document.createElement('div');
+      el.setAttribute('aria-label', 'Share on X');
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects aria-label="Share on Twitter" as social', () => {
+      const el = document.createElement('div');
+      el.setAttribute('aria-label', 'Share on Twitter');
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects text "Share on X" as social', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Share on X';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects text "Follow us on X" as social', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Follow us on X to get updates';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects aria-label social word boundary', () => {
+      const el = document.createElement('div');
+      el.setAttribute('aria-label', 'social share buttons');
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('does not treat commentary as social-like via substring', () => {
+      const el = document.createElement('div');
+      el.className = 'commentary';
+      el.textContent = 'This is commentary text';
+      expect(isLikelySocial(el)).toBe(false);
+    });
+  });
+
+  describe('isLikelyAd — word boundary mitigations', () => {
+    it('does not treat address-book as ad', () => {
+      const el = document.createElement('div');
+      el.className = 'address-book';
+      expect(isLikelyAd(el)).toBe(false);
+    });
+
+    it('does not treat admin-panel as ad', () => {
+      const el = document.createElement('div');
+      el.className = 'admin-panel';
+      expect(isLikelyAd(el)).toBe(false);
+    });
+  });
+
+  describe('isPlatformNoise — word boundary mitigations', () => {
+    it('does not treat address-book as platform noise', () => {
+      const el = document.createElement('div');
+      el.className = 'address-book';
+      expect(isPlatformNoise(el)).toBe(false);
+    });
+
+    it('does not treat x-data as platform noise', () => {
+      const el = document.createElement('div');
+      el.className = 'x-data';
+      expect(isPlatformNoise(el)).toBe(false);
+    });
+
+    it('does not treat commentary as platform noise (word boundary)', () => {
+      const el = document.createElement('div');
+      el.className = 'commentary';
+      expect(isPlatformNoise(el)).toBe(false);
+    });
+
+    it('still detects comments id as platform noise', () => {
+      const el = document.createElement('div');
+      el.id = 'comments';
+      expect(isPlatformNoise(el)).toBe(true);
     });
   });
 });

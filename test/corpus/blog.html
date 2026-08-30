@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"><title>テックブログ風 - 個人開発で月5万円稼ぐまでの記録</title><link rel="stylesheet" href="/blog.css"><meta name="description" content="個人開発ブログ"></head>
+<body>
+<header class="site-header l-header"><div class="logo"><a href="/">TechBlog風</a></div><nav class="global-nav"><ul><li><a href="/">ホーム</a></li><li><a href="/about">About</a></li><li><a href="/archive">アーカイブ</a></li><li><a href="/contact">お問い合わせ</a></li></ul></nav><div class="header-actions"><a href="/rss">RSS</a><a href="/subscribe">購読</a></div><div class="search-form site-search"><input type="search" placeholder="記事を検索"><button>検索</button></div></header>
+<div class="breadcrumb topic-path"><a href="/">ホーム</a> &gt; <a href="/category/make">個人開発</a> &gt; 収益化</div>
+<div class="ad-banner ad-slot"><p>スポンサー</p><ins class="adsbygoogle" data-ad-client="ca-pub-999">広告枠</ins></div>
+<div class="sponsored-content promo-box"><p>PR: おすすめクラウドサービス</p><a href="#">スポンサードリンク</a></div>
+<main class="blog-main">
+<article class="blog-article markdown-body" id="blog-body">
+<header class="article-header"><h1>個人開発で月5万円稼ぐまでの記録 — 失敗と学びの18ヶ月</h1><div class="article-meta"><span class="author-profile"><img alt="author" src="/avatar.jpg"><span>筆者: dev_writer</span></span><span class="post-date">2026-08-25</span><span class="update-date">更新: 2026-08-28</span><span class="post-meta">読了時間 8分</span></div><div class="tag-list article-tag"><a href="/tags/indie">個人開発</a><a href="/tags/monetize">収益化</a><a href="/tags/saas">SaaS</a></div></header>
+<section class="article-content">
+<p>個人開発を始めて18ヶ月、ようやく月5万円の収益を超えました。本記事では、その過程で得た学びと失敗を包み隠さず共有します。最初は収益ゼロの月が続きましたが、小さな改善を積み重ねることで徐々に成果が見えてきました。</p>
+<h2>1. アイデア選定で失敗したこと</h2>
+<p>最初の3ヶ月は「自分が欲しいもの」を作っていました。しかし、それは市場が求めているものではありませんでした。ユーザーインタビューを5人に行ったところ、全員が「使わない」と回答。そこで方向転換し、「既存ツールの不満を解消する」という視点に切り替えました。具体的には、Notion のエクスポート機能に不満を持つユーザーの声を拾い、そこに焦点を当てたプロダクトを作りました。</p>
+<p>この転換により、初月の有料ユーザーが8人獲得できました。小さなニッチでも、深い課題を解決すれば課金は発生するのだと学びました。</p>
+<h2>2. 価格設定の試行錯誤</h2>
+<p>当初は月額980円でスタートしましたが、解約率が高く LTV が伸びませんでした。そこで月額480円と年額3,980円の二本立てに変更。年払いを選ぶユーザーは解約率が1/3に低下し、結果として MRR は1.4倍になりました。</p>
+<pre><code>// 価格テーブルの例
+const plans = [
+  { name: 'Monthly', price: 480 },
+  { name: 'Yearly', price: 3980 },
+];</code></pre>
+<h2>3. 集客チャネル</h2>
+<p>最も効果があったのは Zenn と X（旧Twitter）での発信でした。週1本の技術記事を継続し、プロダクトへの導線を自然に配置。SEO も徐々に効き始め、半年後には検索流入が全体の35%を占めるようになりました。</p>
+</section>
+<div class="address-book"><h3>連絡先（address-book）</h3><p>ご連絡は address-book@example.com まで。〒100-0001 東京都千代田区1-2-3 TechBlog風ビル。広告ではない住所録セクション — 誤爆してはならない。</p><ul><li>住所: 東京都千代田区</li><li>電話: 03-0000-0000</li></ul></div>
+<div class="admin-panel"><h3>管理パネル（admin-panel）</h3><p>このブログの管理は admin-panel から行います。下書き・予約投稿・アクセス解析は管理画面で確認できます。広告パターン ad- を含むが削除対象外。</p><button>管理画面を開く</button></div>
+<div class="x-data" x-data="{ open: false, tab: 'revenue' }"><h3>インタラクティブ要素（x-data）</h3><p>収益グラフのタブ切り替えは Alpine.js の x-data で実装。x- プレフィックスを持つがソーシャル判定で誤爆してはならない。このセクションは本文保護の閾値を超える長文を含み、Body Protection により削除されないことを保証するダミーテキストを含む。個人開発における収益グラフの分析では、月次推移を可視化することが重要である。1月は収益ゼロから始まり、2月に初めて有料ユーザーが1人、3月に3人、4月に5人と徐々に増加。5月にはプロダクトハントでの露出により一時的に20人に跳ね上がり、その後も継続的な改善により6月30人、7月45人、8月52人と安定成長を続けている。グラフの各ポイントには詳細な注釈が付き、どの施策がどの程度寄与したかを分析できる。例えば、5月の急増はプロダクトハントだけでなく、Zenn記事のバズも重なった結果であり、6月の伸びはSEO流入の増加によるものである。こうした詳細な分析テキストが本文として保護されるべきである。</p><p>さらに、収益だけでなく解約率、LTV、チャーン率などの指標も同じコンポーネント内で管理される。解約率は初期の15%から現在の5%まで低下し、LTVは平均8ヶ月に伸びている。これらの指標は投資判断や開発優先度決定に直接影響するため、誤って削除されてはならない重要な本文コンテンツである。Alpine.js の x-data 属性はUIの状態管理に過ぎず、コンテンツ自体は純粋な本文であるため、ソーシャルパターンの x- に引っかけて削除してはならない。</p><button @click="open = !open">グラフを展開</button><div x-show="open"><p>月次収益: 1月 ¥0 → 8月 ¥52,000</p></div></div>
+<section class="article-conclusion"><h2>まとめ</h2><p>個人開発は「小さく作って早く学ぶ」が全て。完璧を目指さず、まずは課金まで持っていくことが重要です。次の目標は月10万円。引き続き記録を公開していきます。</p></section>
+<div class="speech-balloon"><div class="balloon-avatar"><img alt="avatar2" src="/avatar2.jpg"></div><div class="balloon-text"><p>コメント: 継続が一番大事ですね！</p></div></div>
+</article>
+<div class="related-article-card"><h3>関連記事</h3><ul><li><a href="#">個人開発のネタ探し 10選</a></li><li><a href="#">Stripe 導入でハマったこと</a></li><li><a href="#">SEO で月1万PV達成した方法</a></li></ul></div>
+<div class="recommend-section"><h3>おすすめ</h3><div class="ranking"><p>人気記事ランキング</p><ol><li><a href="#">1位 副業で稼ぐ方法</a></li><li><a href="#">2位 Notion 活用術</a></li></ol></div><div class="pickup-item">編集部おすすめ: 独立の準備ガイド</div></div>
+<div class="ad-container ad-wrapper banner-ad"><p>広告</p><a href="#">転職サービス PR</a><ins class="adsbygoogle">Ad</ins></div>
+<div class="social-share share-buttons"><a href="#" class="twitter-share">Xでシェア</a><a href="#" class="fb-share">Facebookでシェア</a><a href="#" class="linkedin-share">LinkedIn</a></div>
+<div class="comment-list thread"><h3>コメント (8)</h3><div class="comment"><p>参考になりました！</p><span class="comment-meta">by reader1</span></div><div class="comment"><p>価格設定の話が刺さった</p></div></div>
+<div class="author-profile writer-bio"><p>執筆者: dev_writer — 個人開発者。SaaS を2つ運営中。</p><a href="/author/dev_writer">プロフィールを見る</a></div>
+<div class="pagination pager"><a href="/blog/prev">前の記事</a><a href="/blog/next">次の記事</a></div>
+</main>
+<aside class="sidebar l-sidebar"><div class="sidebar-widget widget popular"><h4>人気記事</h4><ol><li><a href="#">人気1</a></li><li><a href="#">人気2</a></li></ol></div><div class="sidebar-widget toc table-of-contents"><h4>目次</h4><ul><li><a href="#1">1. アイデア選定</a></li><li><a href="#2">2. 価格設定</a></li><li><a href="#3">3. 集客</a></li></ul></div><div class="ad-slot"><p>サイドバー広告</p><ins class="adsbygoogle">Ad</ins></div><div class="subscribe newsletter signup-form"><h4>メルマガ登録</h4><input placeholder="メールアドレス"><button>登録</button></div></aside>
+<footer class="l-footer common-footer site-footer"><div class="footer-nav"><a href="/terms">利用規約</a><a href="/privacy">プライバシー</a><a href="/disclaimer">免責事項</a></div><p class="copyright">© 2026 TechBlog風 All rights reserved.</p><p>© 2026 TechBlog風 無断転載禁止 All Rights Reserved.</p></footer>
+<div class="popup modal overlay" style="position: fixed"><p>メルマガ登録で特典 PDF プレゼント！</p><button>閉じる</button></div>
+<div class="cookie-consent cookie-banner"><p>当サイトはCookieを使用しています。Cookieの管理 — 必須Cookie / 分析Cookie / マーケティングCookie。同意の優先設定を管理する。Cookieポリシーを参照。</p><button>同意する</button></div>
+<div class="floating sticky fixed-bar"><p>シェアボタン（追従）</p></div>
+</body>
+</html>

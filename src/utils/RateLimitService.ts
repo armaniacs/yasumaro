@@ -35,9 +35,24 @@ export class RateLimitService {
       STORAGE_KEYS.LOCKED_UNTIL,
     ]);
     const localStorage =
-      (await this.storage.local.get<Record<string, number>>([STORAGE_KEYS.LOCKED_UNTIL])) || {};
+      (await this.storage.local.get<Record<string, number>>([
+        STORAGE_KEYS.FAILED_ATTEMPTS,
+        STORAGE_KEYS.FIRST_ATTEMPT_TIME,
+        STORAGE_KEYS.LOCKED_UNTIL,
+      ])) || {};
 
-    const attempts = sessionStorage[STORAGE_KEYS.FAILED_ATTEMPTS] || 0;
+    // M3: persist failedAttempts to local so session clear does not reset.
+    // Take max of both stores (attacker clearing session leaves local value).
+    const attempts = Math.max(
+      sessionStorage[STORAGE_KEYS.FAILED_ATTEMPTS] || 0,
+      localStorage[STORAGE_KEYS.FAILED_ATTEMPTS] || 0
+    );
+    // First attempt time: earliest non-zero value across stores (keeps window tight).
+    const sessionFirst = sessionStorage[STORAGE_KEYS.FIRST_ATTEMPT_TIME] || 0;
+    const localFirst = localStorage[STORAGE_KEYS.FIRST_ATTEMPT_TIME] || 0;
+    const firstAttemptCandidates = [sessionFirst, localFirst].filter(v => v > 0);
+    const effectiveFirstAttempt = firstAttemptCandidates.length > 0 ? Math.min(...firstAttemptCandidates) : 0;
+
     const sessionLockedUntil = sessionStorage[STORAGE_KEYS.LOCKED_UNTIL] || 0;
     const localLockedUntil = localStorage[STORAGE_KEYS.LOCKED_UNTIL] || 0;
     // NTP skew mitigation: session and local storage can drift out of sync
@@ -55,7 +70,7 @@ export class RateLimitService {
     }
 
     if (attempts >= RATE_LIMIT_ATTEMPTS) {
-      const firstAttempt = sessionStorage[STORAGE_KEYS.FIRST_ATTEMPT_TIME] || now;
+      const firstAttempt = effectiveFirstAttempt || now;
 
       if (now - firstAttempt > RATE_LIMIT_WINDOW_MS) {
         await this.resetFailedAttempts();
@@ -76,15 +91,32 @@ export class RateLimitService {
   }
 
   async recordFailedAttempt(): Promise<void> {
-    const storage = await this.storage.session.get<Record<string, number>>([
+    const sessionData = await this.storage.session.get<Record<string, number>>([
       STORAGE_KEYS.FAILED_ATTEMPTS,
       STORAGE_KEYS.FIRST_ATTEMPT_TIME,
     ]);
-    const attempts = storage[STORAGE_KEYS.FAILED_ATTEMPTS] || 0;
-    const firstAttempt = storage[STORAGE_KEYS.FIRST_ATTEMPT_TIME] || this.clock.now();
+    const localData =
+      (await this.storage.local.get<Record<string, number>>([
+        STORAGE_KEYS.FAILED_ATTEMPTS,
+        STORAGE_KEYS.FIRST_ATTEMPT_TIME,
+      ])) || {};
 
+    const sessionAttempts = sessionData[STORAGE_KEYS.FAILED_ATTEMPTS] || 0;
+    const localAttempts = localData[STORAGE_KEYS.FAILED_ATTEMPTS] || 0;
+    const attempts = Math.max(sessionAttempts, localAttempts);
+    const sessionFirst = sessionData[STORAGE_KEYS.FIRST_ATTEMPT_TIME] || 0;
+    const localFirst = localData[STORAGE_KEYS.FIRST_ATTEMPT_TIME] || 0;
+    const firstAttemptCandidates = [sessionFirst, localFirst].filter(v => v > 0);
+    const firstAttempt =
+      firstAttemptCandidates.length > 0 ? Math.min(...firstAttemptCandidates) : this.clock.now();
+
+    const nextAttempts = attempts + 1;
     await this.storage.session.set({
-      [STORAGE_KEYS.FAILED_ATTEMPTS]: attempts + 1,
+      [STORAGE_KEYS.FAILED_ATTEMPTS]: nextAttempts,
+      [STORAGE_KEYS.FIRST_ATTEMPT_TIME]: firstAttempt,
+    });
+    await this.storage.local.set({
+      [STORAGE_KEYS.FAILED_ATTEMPTS]: nextAttempts,
       [STORAGE_KEYS.FIRST_ATTEMPT_TIME]: firstAttempt,
     });
   }
@@ -95,6 +127,10 @@ export class RateLimitService {
       STORAGE_KEYS.FIRST_ATTEMPT_TIME,
       STORAGE_KEYS.LOCKED_UNTIL,
     ]);
-    await this.storage.local.remove([STORAGE_KEYS.LOCKED_UNTIL]);
+    await this.storage.local.remove([
+      STORAGE_KEYS.FAILED_ATTEMPTS,
+      STORAGE_KEYS.FIRST_ATTEMPT_TIME,
+      STORAGE_KEYS.LOCKED_UNTIL,
+    ]);
   }
 }

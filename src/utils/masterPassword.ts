@@ -14,6 +14,7 @@ import {
     decryptData,
     deriveKey
 } from './crypto/index.js';
+import { validatePasswordPolicy, CRYPTO_PARAMS } from './crypto/cryptoParams.js';
 
 // パスワード強度レベル
 export enum PasswordStrength {
@@ -71,18 +72,13 @@ export function calculatePasswordStrength(password: string): PasswordStrengthRes
 }
 
 /**
- * パスワード最小要件をバリデート
+ * パスワード最小要件をバリデート — SSOT 委譲
  * @param {string} password - パスワード
  * @returns {string | null} エラーメッセージ（成功ならnull）
  */
 export function validatePasswordRequirements(password: string): string | null {
-    if (!password) {
-        return 'Password is required';
-    }
-    if (password.length < 8) {
-        return 'Password must be at least 8 characters long';
-    }
-    return null;
+    const result = validatePasswordPolicy(password);
+    return result.ok ? null : (result.reason ?? 'Invalid password');
 }
 
 /**
@@ -206,16 +202,16 @@ export async function changeMasterPassword(
         const result = await getStorageFn(['master_password_salt']);
         const oldSaltBase64 = result['master_password_salt'] as string | undefined;
 
-        // 古いパスワードでキーを取得（再暗号化用）
+        // 古いパスワードでキーを取得（再暗号化用）— SSOT iterations
         const oldSalt = oldSaltBase64
             ? new Uint8Array(atob(oldSaltBase64).split('').map(c => c.charCodeAt(0)))
             : generateSalt();
-        const oldKey = await deriveKey(oldPassword, oldSalt);
+        const oldKey = await deriveKey(oldPassword, oldSalt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);
 
-        // 新しいソルト、ハッシュ、キーを生成
+        // 新しいソルト、ハッシュ、キーを生成 — SSOT iterations
         const newSalt = generateSalt();
-        const newHash = await hashPasswordWithPBKDF2(newPassword, newSalt);
-        const newKey = await deriveKey(newPassword, newSalt);
+        const newHash = await hashPasswordWithPBKDF2(newPassword, newSalt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);
+        const newKey = await deriveKey(newPassword, newSalt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);
 
         // 暗号化されたAPIキーを再暗号化
         const encryptedDataList: Array<{ key: string; encryptedData: EncryptedData | null }> = [];

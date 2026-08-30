@@ -30,7 +30,7 @@ import { createReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import { createAutoSavedBadgeTabs, type AutoSavedBadgeTabs } from './swStatePersistence.js';
 import { createDashboardSqliteMessageHandler } from './dashboardSqliteWiring.js';
-import { ensureConfirmToken } from './confirmTokenManager.js';
+import { ensureConfirmToken, createConfirmToken, verifyConfirmToken } from './confirmTokenManager.js';
 import { hasPrivacyConsent } from '../popup/privacyConsent.js';
 import { lockSession } from '../utils/storage/encryptionSession.js';
 import { getSettings, buildAllowedUrls, clearSettingsCache } from '../utils/storage/settingsStore.js';
@@ -168,7 +168,7 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
       offlineNetworkQueue: sharedOfflineNetworkQueue,
     }));
   }, { singleton: true });
-  if (!container.has('dashboardSqliteHandler')) container.register('dashboardSqliteHandler', () => createDashboardSqliteMessageHandler({ sqliteClient: container.resolve<SqliteClient>('sqliteClient'), ensureConfirmToken }), { singleton: true });
+  if (!container.has('dashboardSqliteHandler')) container.register('dashboardSqliteHandler', () => createDashboardSqliteMessageHandler({ sqliteClient: container.resolve<SqliteClient>('sqliteClient'), ensureConfirmToken, createConfirmToken, verifyConfirmToken }), { singleton: true });
   if (!container.has('autoSavedBadgeTabs')) container.register('autoSavedBadgeTabs', () => createAutoSavedBadgeTabs(), { singleton: true });
   if (!container.has('manualRecordDeps')) container.register('manualRecordDeps', () => ({
     isRecordingAllowed: () => hasPrivacyConsent(),

@@ -197,9 +197,13 @@ export const StorageKeys = {
     AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES: 'ai_summary_cleansing_fallback_min_bytes', // 過剰削減フォールバック絶対量閾値（デフォルト: 300バイト）
     // Custom pattern settings
     AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS: 'ai_summary_cleansing_custom_patterns', // カスタムパターン列表
+    // Cleansing preset (minimal | balanced | aggressive | custom)
+    CLEANSING_PRESET: 'cleansing_preset',
     // Domain Whitelist Extraction Mode
     WHITELIST_EXTRACTION_ENABLED: 'whitelist_extraction_enabled', // ホワイトリスト抽出モード有効フラグ（デフォルト: true、新規ユーザーのみ）
     MIGRATION_WHITELIST_EXTRACTION_DEFAULT_DONE: 'migration_whitelist_extraction_default_done', // 既存ユーザー移行完了フラグ
+    // Per-site cleansing overrides
+    DOMAIN_CLEANSING_OVERRIDES: 'domain_cleansing_overrides', // ドメイン別クレンジング上書き（DomainCleansingOverride[]）
     // Tranco List Update Notification (Phase 1)
     TRANCO_VERSION: 'tranco_version', // 現在の Tranco リストバージョン（ISO 8601形式）
     TRANCO_DOMAINS: 'tranco_domains', // 保存された Tranco ドメインリスト（旧リスト保持用）
@@ -264,6 +268,12 @@ export const StorageKeys = {
     // skipped, leaving SQLite as the single source of truth.
     // Default: true (legacy dual-write behavior preserved).
     LEGACY_DUAL_WRITE_ENABLED: 'legacy_dual_write_enabled',
+    // Permission ladder opt-in for <all_urls> (VULN-042 fix): when false, tabContentFetcher never requests <all_urls>
+    ALLOW_ALL_URLS_OPT_IN: 'allow_all_urls_opt_in',
+    // Cleansing feedback queue (PBI 2026-08-30-08)
+    CLEANSING_FEEDBACK_QUEUE: 'cleansing_feedback_queue',
+    // Cleansing Offscreen delegation PoC (PBI 2026-08-30-05) — default OFF
+    CLEANSING_OFFSCREEN_ENABLED: 'cleansing_offscreen_enabled',
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -409,6 +419,8 @@ export interface StorageKeyValues {
     [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS]: string[];
+    [StorageKeys.CLEANSING_PRESET]: string;
+    [StorageKeys.DOMAIN_CLEANSING_OVERRIDES]: DomainCleansingOverride[];
     [StorageKeys.WHITELIST_EXTRACTION_ENABLED]: boolean;
     [StorageKeys.MIGRATION_WHITELIST_EXTRACTION_DEFAULT_DONE]: boolean;
     [StorageKeys.TRANCO_VERSION]: string;
@@ -458,11 +470,35 @@ export interface StorageKeyValues {
     [StorageKeys.GITHUB_PAT]: string | EncryptedData;
     [StorageKeys.GIST_ID]: string;
     [StorageKeys.LEGACY_DUAL_WRITE_ENABLED]: boolean;
+    [StorageKeys.ALLOW_ALL_URLS_OPT_IN]: boolean;
+    [StorageKeys.CLEANSING_FEEDBACK_QUEUE]: CleansingFeedbackEntry[];
+    [StorageKeys.CLEANSING_OFFSCREEN_ENABLED]: boolean;
 }
 
 // 厳格な Settings 型（後方互換性のため StrictSettings エイリアスを残す）
 export type StrictSettings = {
     [K in StorageKey]: StorageKeyValues[K];
 };
+
+/**
+ * Per-site cleansing override.
+ * `domain` は完全一致（小文字正規化後に比較）。`overrides` は CleansingConfig の差分のみ。
+ * CleansingConfig 自体の型は pageState.ts / aiSummaryCleaner/types.ts で定義されるが、
+ * storage/types は下位レイヤーのため循環を避けて Record<string, unknown> で保持し、
+ * 呼び出し側で Partial<CleansingConfig> として扱う。
+ */
+export interface DomainCleansingOverride {
+    domain: string;
+    overrides: Record<string, boolean | number | string | string[]>;
+}
+
+export interface CleansingFeedbackEntry {
+    id: string;
+    url: string;
+    domain: string;
+    htmlSnippet: string;
+    removedByReason: Record<string, number>;
+    createdAt: number;
+}
 
 export type Settings = Partial<StrictSettings>;

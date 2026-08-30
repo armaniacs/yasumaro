@@ -1,6 +1,15 @@
 /**
  * Domain Whitelist Extraction — サイト別ホワイトリスト抽出アダプタ定義
  * ノイズ比率が極端に高いサイト向けに、特定クラスの中身だけを狙い撃ちで抽出する
+ *
+ * 新ドメイン追加時は手動調査の代わりにヘルパースクリプトを利用できる:
+ *   npm run generate:whitelist-adapter -- https://example.com
+ *   node scripts/generate-whitelist-adapter.mjs https://example.com --html "<html>..."
+ * 出力: dev-docs/whitelist-adapter-draft.json (要手動レビュー) と
+ *       dev-docs/whitelist-adapter-prompt.md (LLM プロンプト)
+ * レビュー後にこのファイルの WHITELIST_ADAPTERS に手動で追加する。
+ * 詳細は `node scripts/generate-whitelist-adapter.mjs --help` を参照。
+ * 推定ロジックの純粋関数は src/utils/contentExtractor/whitelistAdapterGenerator.ts にも存在する。
  */
 
 export interface WhitelistAdapter {

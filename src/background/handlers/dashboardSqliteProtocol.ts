@@ -23,9 +23,9 @@ export { TOKEN_REQUIRED_SUBTYPES } from '../../messaging/sqliteOperationSecurity
 // ============================================================================
 
 export type DashboardSqliteRequest =
-  | { subtype: 'confirm_token' }
+  | { subtype: 'create_confirm_token'; action: string; id?: number }
   | {
-      subtype: 'query';
+       subtype: 'query';
       limit?: number;
       offset?: number;
       domain?: string;
@@ -107,7 +107,7 @@ interface DashboardSqliteFailure {
 export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
   | DashboardSqliteFailure
   | (
-      S extends 'confirm_token' ? { success: true; confirmToken: string } :
+       S extends 'create_confirm_token' ? { success: true; confirmToken: string } :
       S extends 'query' ? { success: true; rows: BrowsingLogEntry[]; total: number } :
       S extends 'search' ? { success: true; rows: BrowsingLogEntry[]; total: number } :
       S extends 'toggle_star' ? { success: true; is_starred: number } :

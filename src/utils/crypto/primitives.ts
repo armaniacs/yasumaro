@@ -11,9 +11,10 @@
  */
 
 import type { EncryptedData } from './types.js';
+import { CRYPTO_PARAMS } from './cryptoParams.js';
 
-// 定数設定
-const PBKDF2_ITERATIONS = 100000;
+// 定数設定 — SSOT via cryptoParams.ts
+const PBKDF2_ITERATIONS = CRYPTO_PARAMS.PBKDF2_ITERATIONS;
 const KEY_LENGTH = 256; // bits
 const IV_LENGTH = 12; // bytes (recommended for AES-GCM)
 const HASH_ALGORITHM = 'SHA-256';
@@ -24,8 +25,9 @@ const SALT_LENGTH = 16; // bytes
 // Declared here (not in envelope.ts) so hashPasswordWithPBKDF2 /
 // verifyPasswordWithPBKDF2 can reference them without TDZ hazards, and so
 // envelope.ts can import them alongside deriveKey.
-export const CURRENT_ENVELOPE_VERSION = 2;
-export const ENVELOPE_ITERATIONS = 600_000;
+// Values are SSOT-re-exported from cryptoParams for backward compatibility.
+export const CURRENT_ENVELOPE_VERSION = CRYPTO_PARAMS.ENVELOPE_VERSION;
+export const ENVELOPE_ITERATIONS = CRYPTO_PARAMS.PBKDF2_ITERATIONS;
 
 /**
  * Web Crypto APIのインスタンスを取得する
@@ -314,9 +316,9 @@ export async function hashPasswordWithPBKDF2(password: string, salt: Uint8Array,
 }
 
 /**
- * Legacy PBKDF2 iteration count used before VULN-019 fix
+ * Legacy PBKDF2 iteration count used before VULN-019 fix — SSOT
  */
-const LEGACY_PBKDF2_ITERATIONS = 100000;
+const LEGACY_PBKDF2_ITERATIONS = CRYPTO_PARAMS.LEGACY_PBKDF2_ITERATIONS;
 
 /**
  * パスワードハッシュを検証する（PBKDF2）

@@ -110,16 +110,20 @@ describe('masterPassword', () => {
             expect(validatePasswordRequirements('')).toBe('Password is required');
         });
 
-        test('8文字未満はエラー', () => {
-            expect(validatePasswordRequirements('abc')).toBe('Password must be at least 8 characters long');
+        test('12文字未満はエラー（SSOT: 12文字必須）', () => {
+            expect(validatePasswordRequirements('abc')).toBe('Password must be at least 12 characters long');
+            expect(validatePasswordRequirements('Abc123!')).toBe('Password must be at least 12 characters long');
         });
 
-        test('8文字以上は null', () => {
-            expect(validatePasswordRequirements('abcdefgh')).toBeNull();
+        test('文字種3種未満はエラー', () => {
+            // 12文字だが英小のみ / 2種のみは拒否
+            expect(validatePasswordRequirements('abcdefghijkl')).not.toBeNull();
+            expect(validatePasswordRequirements('abcdefgh1234')).not.toBeNull();
         });
 
-        test('12文字も null', () => {
-            expect(validatePasswordRequirements('abcdefghijkl')).toBeNull();
+        test('12文字以上かつ3種以上は null', () => {
+            expect(validatePasswordRequirements('Abcdef123!@#')).toBeNull();
+            expect(validatePasswordRequirements('StrongPass123!')).toBeNull();
         });
     });
 
@@ -138,9 +142,9 @@ describe('masterPassword', () => {
     });
 
     describe('setMasterPassword', () => {
-        test('有効なパスワードで成功する', async () => {
+        test('有効なパスワードで成功する（SSOT強度満たす）', async () => {
             const mockSet = vi.fn(async () => {});
-            const result = await setMasterPassword('validpass123', mockSet);
+            const result = await setMasterPassword('StrongPass123!@#', mockSet);
 
             expect(result.success).toBe(true);
             expect(result.error).toBeUndefined();
@@ -150,12 +154,12 @@ describe('masterPassword', () => {
             expect(mockSet).toHaveBeenCalledWith('master_password_enabled', true);
         });
 
-        test('短いパスワードはエラーを返す', async () => {
+        test('短いパスワードはエラーを返す（SSOT 12文字）', async () => {
             const mockSet = vi.fn(async () => {});
             const result = await setMasterPassword('short', mockSet);
 
             expect(result.success).toBe(false);
-            expect(result.error).toBe('Password must be at least 8 characters long');
+            expect(result.error).toBe('Password must be at least 12 characters long');
             expect(mockSet).not.toHaveBeenCalled();
         });
 
@@ -169,7 +173,7 @@ describe('masterPassword', () => {
 
         test('ストレージエラー時にエラーを返す', async () => {
             const mockSet = vi.fn(async () => { throw new Error('Storage failed'); });
-            const result = await setMasterPassword('validpass123', mockSet);
+            const result = await setMasterPassword('StrongPass123!@#', mockSet);
 
             expect(result.success).toBe(false);
             expect(result.error).toBe('Storage failed');
@@ -218,7 +222,7 @@ describe('masterPassword', () => {
     });
 
     describe('changeMasterPassword', () => {
-        test('正しい旧パスワードで変更できる', async () => {
+        test('正しい旧パスワードで変更できる（SSOT強度満たす新パスワード）', async () => {
             const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16).fill(1)));
             const mockGet = vi.fn(async (keys: string[]) => {
                 if (keys.includes('master_password_hash')) {
@@ -237,7 +241,7 @@ describe('masterPassword', () => {
 
             const result = await changeMasterPassword(
                 'correct_password',
-                'newpassword123',
+                'NewStrongPass123!@#',
                 mockGet,
                 mockSet,
                 mockReencrypt
@@ -270,7 +274,7 @@ describe('masterPassword', () => {
             expect(result.error).toBe('Incorrect password');
         });
 
-        test('新しいパスワードが短い場合はエラーを返す', async () => {
+        test('新しいパスワードが短い場合はエラーを返す（SSOT 12文字）', async () => {
             const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16).fill(1)));
             const mockGet = vi.fn(async () => ({
                 'master_password_salt': saltBase64,
@@ -288,7 +292,7 @@ describe('masterPassword', () => {
             );
 
             expect(result.success).toBe(false);
-            expect(result.error).toBe('Password must be at least 8 characters long');
+            expect(result.error).toBe('Password must be at least 12 characters long');
         });
 
         test('暗号化されたAPIキーを再暗号化する', async () => {
@@ -316,7 +320,7 @@ describe('masterPassword', () => {
 
             const result = await changeMasterPassword(
                 'correct_password',
-                'newpassword123',
+                'NewStrongPass123!@#',
                 mockGet,
                 mockSet,
                 mockReencrypt

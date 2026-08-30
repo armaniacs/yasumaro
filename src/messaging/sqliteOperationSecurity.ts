@@ -17,7 +17,7 @@
 
 /** Canonical list of every DASHBOARD_SQLITE subtype. Single source of truth. */
 export const ALL_DASHBOARD_SQLITE_SUBTYPES = [
-  'confirm_token',
+  'create_confirm_token',
   'query',
   'search',
   'toggle_star',
@@ -47,7 +47,7 @@ export type DashboardSqliteSubtype =
  * Canonical safe set used by the allowlist-integrity test.
  */
 export const READ_ONLY_OPS: ReadonlySet<DashboardSqliteSubtype> = new Set([
-  'confirm_token',
+  'create_confirm_token',
   'query',
   'search',
   'get_count',
@@ -62,7 +62,7 @@ export const READ_ONLY_OPS: ReadonlySet<DashboardSqliteSubtype> = new Set([
  * op is also a read-only op — catching a destructive op mistakenly added here.
  */
 export const TOKEN_EXEMPT_OPS = [
-  'confirm_token',
+  'create_confirm_token',
   'query',
   'search',
   'get_count',

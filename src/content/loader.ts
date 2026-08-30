@@ -34,14 +34,36 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.getURL && typeof
 
     const url = window.location.href;
 
-    // E2E test path: imports extractor directly when data-ow-e2e-test is present.
-    // Still performs cache-based domain check (does not bypass security), but avoids
-    // the service worker message round-trip that causes flaky E2E tests on first load.
-    // checkDomainAllowedFromCache は DomainPolicyPort に統一済み（単一 CACHE_TTL）。
+    // E2E test path: cache-based domain check when possible, otherwise
+    // fall back to SW CHECK_DOMAIN (same trust seam as the normal path).
+    // Hot cache keeps the 0-round-trip optimization for E2E suites that
+    // pre-seed domain_filter_cache; cold cache waits for the SW verdict
+    // so the e2e attribute alone cannot bypass the domain filter.
     if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
         const cacheCheck = await checkDomainAllowedFromCache(url);
-        if (cacheCheck.useCache && !cacheCheck.allowed) {
-            return;  // Domain explicitly blocked by filter cache
+        if (cacheCheck.useCache) {
+            if (!cacheCheck.allowed) return; // Domain explicitly blocked by filter cache
+            const src = chrome.runtime.getURL('content-extractor.js');
+            try { await import(src); } catch (e) { console.warn('[OWeave] Dynamic import blocked (e2e)', url, _errMsg(e)); }
+            return;
+        }
+        // Cold cache → fall back to SW CHECK_DOMAIN (trust boundary, retry付き)
+        let e2eResponse: { success?: boolean; allowed?: boolean } | undefined;
+        let e2eLastError: unknown;
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                e2eResponse = await chrome.runtime.sendMessage({ type: 'CHECK_DOMAIN', protocolVersion: CURRENT_PROTOCOL_VERSION });
+                if (e2eResponse) break;
+            } catch (e) {
+                e2eLastError = e;
+                await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
+            }
+        }
+        if (!e2eResponse || !e2eResponse.allowed) {
+            if (!e2eResponse) {
+                console.warn('[OWeave] Domain check failed: no response from service worker', url, _errMsg(e2eLastError ?? 'unknown'));
+            }
+            return;
         }
         const src = chrome.runtime.getURL('content-extractor.js');
         try { await import(src); } catch (e) { console.warn('[OWeave] Dynamic import blocked (e2e)', url, _errMsg(e)); }

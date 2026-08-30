@@ -3906,5 +3906,23 @@
   },
   "tabOthers": {
     "message": "その他"
+  },
+  "cleansingPresetLabel": {
+    "message": "クレンジングプリセット"
+  },
+  "cleansingPresetMinimal": {
+    "message": "Minimal — 3ルール"
+  },
+  "cleansingPresetBalanced": {
+    "message": "Balanced — 9ルール"
+  },
+  "cleansingPresetAggressive": {
+    "message": "Aggressive — 25ルール"
+  },
+  "cleansingPresetCustom": {
+    "message": "カスタム"
+  },
+  "cleansingPresetHelp": {
+    "message": "プリセットを選択。個別に調整する場合はカスタムを選んでください。"
   }
 }

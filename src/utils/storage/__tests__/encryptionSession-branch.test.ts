@@ -138,11 +138,13 @@ describe('isEncryptionLocked', () => {
 
 describe('setMasterPassword', () => {
     it('throws for password shorter than 8 chars', async () => {
-        await expect(setMasterPassword('short')).rejects.toThrow('at least 8 characters');
+        await expect(setMasterPassword('short')).rejects.toThrow('at least 12 characters');
     });
 
     it('throws for weak password', async () => {
-        await expect(setMasterPassword('password')).rejects.toThrow('too weak');
+        // Under SSOT policy, 'password' fails length (12) first, so message is about length.
+        // Keep the test asserting any password-policy error.
+        await expect(setMasterPassword('password')).rejects.toThrow(/Password must/);
     });
 
     it('succeeds for strong password', async () => {

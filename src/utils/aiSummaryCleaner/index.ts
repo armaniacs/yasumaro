@@ -21,6 +21,8 @@ import { CLEANSING_RULES, isRuleEnabled, resolveThresholds } from './rules.js';
 export type { AiSummaryCleanseOptions, AiSummaryCleanseResult, CleansingRemovalCounts, RuleKey, AiSummaryCleanseRuleFlags } from './types.js';
 export { CLEANSING_RULES, CLEANSING_RULE_KEYS, isRuleEnabled, resolveThresholds } from './rules.js';
 export type { CleansingRule, CleansingThresholds } from './rules.js';
+export { getCleansingConfigForDomain, normalizeDomain, upsertDomainOverride } from './perSiteOverride.js';
+export type { DomainCleansingOverride } from './perSiteOverride.js';
 
 /**
  * Projects the keyed removal map onto the flat `xRemoved` fields.

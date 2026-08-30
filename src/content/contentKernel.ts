@@ -20,6 +20,8 @@ import { pickDefined } from '../utils/objectUtils.js';
 import { ScrollMonitor } from './scrollMonitor.js';
 import { VisitReporter, type MessageSender } from './visitReporter.js';
 import { createSender } from '../utils/retryHelper.js';
+import { getCleansingConfigForDomain } from '../utils/aiSummaryCleaner/perSiteOverride.js';
+import { cleanseViaOffscreen as delegateCleanseViaOffscreen } from './cleansingOffscreenDelegate.js';
 
 export interface Scheduler {
     schedule(callback: () => void): number;
@@ -203,6 +205,27 @@ export class ContentKernel {
                 const v = Number.isFinite(n) ? n : t.default;
                 this.pageState.cleansingConfig[t.prop] = Math.max(t.min, Math.min(t.max, v));
             }
+        }
+
+        // Per-site override — hostname に対して完全一致で上書きをマージ
+        try {
+            const rawOverrides = s[StorageKeys.DOMAIN_CLEANSING_OVERRIDES];
+            if (Array.isArray(rawOverrides) && rawOverrides.length > 0) {
+                const hostname =
+                    typeof window !== 'undefined' && window.location?.hostname
+                        ? window.location.hostname
+                        : '';
+                if (hostname) {
+                    const merged = getCleansingConfigForDomain(
+                        hostname,
+                        this.pageState.cleansingConfig as unknown as Record<string, unknown>,
+                        rawOverrides as unknown as import('../utils/storage/types.js').DomainCleansingOverride[],
+                    ) as unknown as CleansingConfig;
+                    this.pageState.cleansingConfig = merged;
+                }
+            }
+        } catch {
+            // override 解決の失敗は致命的ではない — グローバル設定で続行
         }
 
         void logInfo(
@@ -408,4 +431,78 @@ export class ContentKernel {
     getDefaultCleansingConfig(): CleansingConfig {
         return DEFAULT_CLEANSING_CONFIG;
     }
+
+    /**
+     * PoC: Offscreen へのクレンジング委譲を試みる。失敗時は同期フォールバック。
+     * Content Script のメインスレッド占有を計測するための分岐点。
+     */
+    async cleanseViaOffscreen(html: string): Promise<string> {
+        return delegateCleanseViaOffscreen(html);
+    }
+
+    /**
+     * 30-13: SPA 動的コンテンツ監視 — MutationObserver で遅延コンテンツを再抽出。
+     * `debounce 500ms` で onChange を呼ぶ。戻り値の disconnect で監視を停止。
+     */
+    watchDynamicContent(onChange: () => void, target?: Element | Document | null, debounceMs = 500): () => void {
+        return watchDynamicContent(target ?? null, onChange, debounceMs);
+    }
+}
+
+/**
+ * 30-13: SPA 動的コンテンツ監視 — スタンドアロン関数。
+ * MutationObserver で target の childList 変化を監視し、debounce 500ms で onChange を呼ぶ。
+ * @param target 監視対象（nullなら document.body）
+ * @param onChange 変化時に呼ぶコールバック（debounce 500ms）
+ * @param debounceMs デバウンス時間（デフォルト500ms）
+ * @returns 監視を停止する disconnect 関数
+ */
+export function watchDynamicContent(
+    target: Element | Document | null,
+    onChange: () => void,
+    debounceMs = 500,
+): () => void {
+    const observedTarget: Element | Document | null =
+        target ??
+        (typeof document !== 'undefined' ? (document.body as Element | null) ?? document.documentElement ?? null : null);
+
+    if (!observedTarget) {
+        return () => {};
+    }
+
+    const ObserverCtor =
+        (typeof globalThis !== 'undefined' && (globalThis as unknown as { MutationObserver?: typeof MutationObserver }).MutationObserver) ??
+        (typeof window !== 'undefined' && (window as unknown as { MutationObserver?: typeof MutationObserver }).MutationObserver) ??
+        null;
+
+    if (!ObserverCtor) {
+        return () => {};
+    }
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const observer = new ObserverCtor(() => {
+        if (timer !== null) {
+            clearTimeout(timer as unknown as number);
+        }
+        timer = setTimeout(() => {
+            timer = null;
+            onChange();
+        }, debounceMs) as unknown as ReturnType<typeof setTimeout>;
+    });
+
+    try {
+        observer.observe(observedTarget as unknown as Node, { childList: true, subtree: true });
+    } catch {
+        // target が observe 不可なら何もしない
+        return () => {};
+    }
+
+    return () => {
+        if (timer !== null) {
+            clearTimeout(timer as unknown as number);
+            timer = null;
+        }
+        observer.disconnect();
+    };
 }

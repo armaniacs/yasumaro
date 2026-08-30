@@ -1,7 +1,7 @@
 import { calculateReadabilityScore } from './readabilityScore.js';
 
 const BODY_PROTECTION_ATTR = 'data-ow-body-protected';
-const DEFAULT_BODY_SCORE_THRESHOLD = 200;  // デフォルト閾値
+const DEFAULT_BODY_SCORE_THRESHOLD = 120;  // M4 Spike: 200→120 で短文3/3保護（33%→100%）
 
 // クレンジング前: 本文スコアが高い要素に保護マーカーを付ける
 export function markBodyElements(root: Element, threshold: number = DEFAULT_BODY_SCORE_THRESHOLD): void {

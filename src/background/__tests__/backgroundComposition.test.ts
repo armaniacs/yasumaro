@@ -146,6 +146,9 @@ vi.mock('../dashboardSqliteWiring.js', () => ({
 }));
 vi.mock('../confirmTokenManager.js', () => ({
   ensureConfirmToken: vi.fn().mockResolvedValue('token'),
+  createConfirmToken: vi.fn().mockResolvedValue('token'),
+  verifyConfirmToken: vi.fn().mockResolvedValue(true),
+  getConfirmToken: vi.fn().mockResolvedValue('token'),
 }));
 vi.mock('../reviewSummaryGenerator.js', () => ({ createReviewSummaryGenerator: mocks.createReviewSummaryGenerator }));
 

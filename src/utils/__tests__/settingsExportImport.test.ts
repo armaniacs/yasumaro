@@ -486,6 +486,7 @@ vi.mock('../crypto/index.js', () => ({
 
 import {
     EXPORT_VERSION,
+    ENCRYPTED_EXPORT_VERSION,
     validateExportData,
     isEncryptedExport,
     exportSettings,
@@ -853,7 +854,7 @@ describe('settingsExportImport', () => {
             expect(result.success).toBe(true);
             expect(result.encryptedData).toBeDefined();
             expect(result.encryptedData?.encrypted).toBe(true);
-            expect(result.encryptedData?.version).toBe(EXPORT_VERSION);
+            expect(result.encryptedData?.version).toBe(ENCRYPTED_EXPORT_VERSION);
             expect(result.encryptedData?.ciphertext).toBeDefined();
             expect(result.encryptedData?.iv).toBeDefined();
             expect(result.encryptedData?.hmac).toBeDefined();

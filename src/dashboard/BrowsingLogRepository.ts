@@ -40,20 +40,13 @@ export function isServiceError<T>(result: ServiceResult<T>): result is { error: 
 }
 
 const DASHBOARD_SQLITE_TIMEOUT = 10000;
-const CONFIRM_TOKEN_KEY = 'dashboardSqliteConfirmToken';
 
-async function getConfirmToken(): Promise<string | null> {
+async function getConfirmTokenForAction(action: string, id?: number): Promise<string | null> {
   try {
-    const stored = (await chrome.storage.session.get(CONFIRM_TOKEN_KEY)) as Record<string, string | undefined>;
-    if (stored[CONFIRM_TOKEN_KEY]) return stored[CONFIRM_TOKEN_KEY];
-  } catch (e) {
-    console.error('Failed to read dashboard SQLite confirmToken:', e);
-  }
-  try {
-    const response = await sendDashboardMessage({ subtype: 'confirm_token' });
-    if (response.success && typeof response.confirmToken === 'string') {
-      await chrome.storage.session.set({ [CONFIRM_TOKEN_KEY]: response.confirmToken });
-      return response.confirmToken;
+    const requestPayload: DashboardSqliteRequest = { subtype: 'create_confirm_token', action, ...(id !== undefined ? { id } : {}) } as DashboardSqliteRequest;
+    const response = await sendDashboardMessageRaw(requestPayload);
+    if (response.success && typeof (response as { confirmToken?: string }).confirmToken === 'string') {
+      return (response as { confirmToken: string }).confirmToken;
     }
   } catch (e) {
     console.error('Failed to request dashboard SQLite confirmToken:', e);
@@ -62,8 +55,23 @@ async function getConfirmToken(): Promise<string | null> {
 }
 
 async function withConfirmToken<T extends DashboardSqliteRequest>(payload: T): Promise<T & { confirmToken?: string }> {
-  const token = await getConfirmToken();
+  const action = payload.subtype;
+  const id = (payload as unknown as { id?: number }).id;
+  const token = await getConfirmTokenForAction(action, id);
   return token ? { ...payload, confirmToken: token } : payload;
+}
+
+async function sendDashboardMessageRaw<T extends DashboardSqliteRequest>(
+  payload: T,
+): Promise<DashboardSqliteResponseFor<T['subtype']>> {
+  return Promise.race([
+    chrome.runtime.sendMessage({
+      type: 'DASHBOARD_SQLITE',
+      protocolVersion: CURRENT_PROTOCOL_VERSION,
+      payload,
+    }),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Dashboard SQLite request timed out')), DASHBOARD_SQLITE_TIMEOUT)),
+  ]);
 }
 
 async function sendDashboardMessage<T extends DashboardSqliteRequest>(

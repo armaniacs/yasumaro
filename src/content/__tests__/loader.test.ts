@@ -112,6 +112,12 @@ describe('loader.ts', () => {
 
   describe('E2E bypass', () => {
     it('loads extractor with cache-based domain check when data-ow-e2e-test is present', async () => {
+      // Seed a valid cache so the hot-path avoids SW round-trip (compat with E2E suites that pre-seed)
+      setStorageData({
+        domain_filter_cache: [],
+        domain_filter_cache_timestamp: 999999,
+        domain_filter_mode: 'disabled',
+      });
       await importLoader('https://example.com/page', { e2eTest: true });
       expect(getURLSpy).toHaveBeenCalledWith('content-extractor.js');
       // Cache-based domain check runs (avoids SW message round-trip for reliability)

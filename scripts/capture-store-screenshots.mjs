@@ -257,7 +257,7 @@ function mockChromeApisInitScript({ messages, baseUrl }) {
           response.path = ':memory:';
           response.fallback = false;
           response.fts5 = true;
-        } else if (payload.subtype === 'confirm_token') {
+        } else if (payload.subtype === 'create_confirm_token') {
           response.confirmToken = 'screenshot-mock-token';
         }
       } else if (message?.type === 'GET_SQLITE_HISTORY') {

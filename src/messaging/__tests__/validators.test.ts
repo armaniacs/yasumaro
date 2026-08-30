@@ -150,7 +150,7 @@ describe('DashboardSqliteValidator', () => {
 
   it('accepts all 20 subtypes without throwing for minimal valid shape', () => {
     const validSamples: Array<Record<string, unknown>> = [
-      { subtype: 'confirm_token' },
+      { subtype: 'create_confirm_token', action: 'delete', id: 1 },
       { subtype: 'query' },
       { subtype: 'search', query: 'q' },
       { subtype: 'toggle_star', id: 1 },

@@ -39,7 +39,7 @@ describe('SQLite Security & Data Integrity', () => {
       'query', 'search', 'toggle_star', 'delete', 'update', 'get_count', 'clear_all',
       'import', 'restore_db', 'status', 'opfs_spike', 'append_to_obsidian', 'purge_now',
       'audit_log_query', 'content_purge_now', 'backup_db', 'backfill_metadata',
-      'cleanup_legacy', 'migrate', 'confirm_token',
+      'cleanup_legacy', 'migrate', 'create_confirm_token',
     ];
 
     function makeDeps(): MessageRouterDeps {

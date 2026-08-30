@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"><title>Zenn風 - Vite 7.0 で変わること</title><link rel="stylesheet" href="/static/style.css"><meta name="description" content="Vite 7.0 解説"></head>
+<body>
+<header class="header"><div class="logo"><a href="/">Zenn風</a></div><nav class="global-nav"><a href="/feed">Feed</a><a href="/books">Books</a><a href="/scraps">Scraps</a></nav><div class="search-form"><input placeholder="検索"><button>検索</button></div></header>
+<div class="ad-banner"><span>PR</span><div data-gpt-ad="zenn-top">広告</div></div>
+<main class="main">
+<article class="article-body" id="zenn-article">
+<header><h1>Vite 7.0 で変わること — Rolldown への移行と新機能</h1><div class="article-meta"><span class="author">azukisiromochi</span><span class="published">2026-08-28</span><span class="like">❤ 512</span></div><div class="article-tag"><a href="/tags/vite">Vite</a><a href="/tags/frontend">Frontend</a></div></header>
+<section><p>Vite 7.0 ではバンドラが Rolldown に置き換わり、ビルド速度が大幅に向上します。本記事では移行時の注意点と新機能を紹介します。Vite はこれまで esbuild と Rollup を組み合わせていましたが、Rolldown は Rust 製の Rollup 互換バンドラとして開発されています。</p>
+<h2>Rolldown への移行</h2><p>Rolldown は Rollup と高い互換性を持ちつつ、esbuild 並みの速度を実現します。既存の vite.config.ts は基本的にそのまま動作しますが、一部のプラグインでは調整が必要です。特にカスタムプラグインで Rollup の内部 API を直接利用している場合は注意してください。</p>
+<h2>新機能: Environment API</h2><p>Environment API により、ブラウザ・Node・Edge など複数の実行環境を一つの設定で扱えるようになりました。SSR や RSC の開発がよりシンプルになります。</p>
+<pre><code>// vite.config.ts
+export default defineConfig({
+  environments: {
+    client: { /* ... */ },
+    ssr: { /* ... */ }
+  }
+})</code></pre>
+<h2>移行ガイド</h2><p>既存プロジェクトを Vite 7.0 に移行する手順をステップバイステップで解説します。まずは依存関係を更新し、次にビルドログを確認して警告を解消します。最後にテストを実行して動作を検証します。</p>
+<p>移行後はビルド時間が平均 40% 短縮されたという報告もあります。大規模プロジェクトほど恩恵が大きく、CI 時間の削減にも寄与します。</p></section>
+<div class="address-book"><p>address-book: 連絡先 — 著者の住所録: zenn-author@example.com, 東京都千代田区。広告パターン ad- を含むように見えるが誤爆してはならないクラス名。</p></div>
+<div class="admin-panel"><p>admin-panel: Zenn風の管理パネル説明 — 記事の管理は admin-panel から。本来削除対象でない要素。</p></div>
+<div class="x-data" x-data="{ showToc: true }"><p>x-data: 目次トグル用の Alpine.js ダミー。social 判定の x- に引っかかるが保持されるべき。</p></div>
+<section class="article-conclusion"><p>まとめ: Vite 7.0 は速度と柔軟性の両立を目指したメジャーアップデート。早めに試してフィードバックを送りましょう。</p></section>
+</article>
+<div class="related"><h3>関連記事</h3><ul><li><a href="#">Vitest 4.0 新機能</a></li><li><a href="#">Rspack vs Vite</a></li></ul></div>
+<div class="recommend-section"><h3>おすすめ</h3><div class="ranking">ランキング1位: Next.js 15</div></div>
+<div class="social-share share-buttons"><a href="#">Xでシェア</a><a href="#">Facebook</a></div>
+<div class="ad-container"><p>スポンサード</p></div>
+<div class="cookie-banner"><p>Cookieを使用しています。Cookieポリシーを参照してください。</p></div>
+</main>
+<aside class="sidebar"><div class="toc-wrapper"><h4>目次</h4><ul><li><a href="#rolldown">Rolldown</a></li><li><a href="#env">Environment API</a></li></ul></div><div class="sidebar-widget"><h4>著者</h4><p>azukisiromochi</p></div><div class="ad-slot"><p>広告枠</p></div></aside>
+<footer class="l-footer"><p>© 2026 Zenn風 All rights reserved.</p><div class="footer-nav"><a href="/terms">利用規約</a><a href="/privacy">プライバシー</a></div></footer>
+<div class="popup" style="position: fixed"><p>Zenn 本を出版しませんか？</p></div>
+</body>
+</html>

@@ -27,6 +27,7 @@ export interface AiSummaryCleanseRunResult {
     reasons: string[];         // 複数理由の詳細リスト
     elements: number;          // 削除した要素数
     preCleanseText: string;    // クレンジング前のテキスト（フォールバック用）
+    removed?: Record<string, number>; // ルール別削除数（30-14）
 }
 
 /**
@@ -51,4 +52,10 @@ export interface ExtractResult {
     fallbackReason?: FallbackReason;      // フォールバック発動理由（triggered 時のみ）
     whitelistAdapterUsed?: string;       // 発動したホワイトリストアダプタ名（未発動時はundefined）
     whitelistFallbackTriggered?: boolean; // ホワイトリスト抽出0件によりブラックリスト方式にフォールバックしたか
+    // 30-14: 観測性ファネル — ルール別削除件数と3段階バイトファネル
+    removedByReason?: Map<string, number>;
+    funnel?: { pageBytes: number; candidateBytes: number; cleansedBytes: number };
+    // 30-11: 二重ペイロード — クレンジング前の原文保持と有効フラグ
+    originalContent?: string;
+    dualPayloadEnabled?: boolean;
 }

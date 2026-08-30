@@ -77,3 +77,68 @@ describe('deriveCleansedReason', () => {
     expect(deriveCleansedReason(legacy)).toEqual({ reason: 'none', reasons: [] });
   });
 });
+
+// 30-14: 観測性ファネル — recordRemoval と Map 変換
+import { recordRemoval, removedRecordToMap } from '../cleansedReason.js';
+
+describe('recordRemoval (30-14 funnel)', () => {
+  it('新規Mapにカウントを記録する', () => {
+    const m = recordRemoval(undefined, 'ads');
+    expect(m.get('ads')).toBe(1);
+  });
+
+  it('既存Mapに加算する', () => {
+    const m = new Map<string, number>([['ads', 5]]);
+    recordRemoval(m, 'ads', 3);
+    expect(m.get('ads')).toBe(8);
+  });
+
+  it('異なるreasonを別キーで記録', () => {
+    const m = new Map<string, number>();
+    recordRemoval(m, 'ads', 5);
+    recordRemoval(m, 'nav', 3);
+    recordRemoval(m, 'popup', 1);
+    expect(m.get('ads')).toBe(5);
+    expect(m.get('nav')).toBe(3);
+    expect(m.get('popup')).toBe(1);
+  });
+
+  it('count指定で複数件加算', () => {
+    const m = recordRemoval(undefined, 'ads', 10);
+    recordRemoval(m, 'ads', 2);
+    expect(m.get('ads')).toBe(12);
+  });
+
+  it('removedRecordToMap: RecordをMapに変換し0件を除外', () => {
+    const rec = { ads: 5, nav: 0, popup: 1 };
+    const m = removedRecordToMap(rec)!;
+    expect(m.get('ads')).toBe(5);
+    expect(m.get('popup')).toBe(1);
+    expect(m.has('nav')).toBe(false);
+  });
+
+  it('removedRecordToMap: undefinedでundefined', () => {
+    expect(removedRecordToMap(undefined)).toBeUndefined();
+  });
+
+  it('removedRecordToMap: Mapはコピーして返す', () => {
+    const orig = new Map([['ads', 2]]);
+    const copy = removedRecordToMap(orig)!;
+    copy.set('ads', 99);
+    expect(orig.get('ads')).toBe(2);
+  });
+
+  it('funnelを含むExtractResultが型で許容される', async () => {
+    const { extractMainContent } = await import('../index.js');
+    // jsdom で最低限のDOMを用意
+    document.body.innerHTML = `<article><p>${'a'.repeat(200)}</p></article>`;
+    const result = extractMainContent(10000, { cleanseEnabled: false, returnInfo: true }, { aiSummaryCleanseEnabled: true }) as unknown as import('../types.js').ExtractResult;
+    expect(result.funnel).toBeDefined();
+    expect(typeof result.funnel?.pageBytes).toBe('number');
+    expect(typeof result.funnel?.candidateBytes).toBe('number');
+    expect(typeof result.funnel?.cleansedBytes).toBe('number');
+    if (result.removedByReason) {
+      expect(result.removedByReason instanceof Map).toBe(true);
+    }
+  });
+});
