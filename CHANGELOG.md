@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.95` リリース。
+> - 現時点では `v6.7.96` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,16 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.96] - 2026-08-30
+
+### Added
+
+- 回帰テスト `pipelineErrorRegression.test.ts` を追加。BBC／CNN で `pipeline-error`（`userTlds`／`presets` 欠落）が発生し「今すぐ記録」がブロックされていた不具合の再発を防止。破損DB（`jpAnchor`／`userTlds`／`presets` 欠落）でも `DomainVerifier` が例外を投げず `UNVERIFIED` を返し、新たな記録が失敗しないことを保証
+
+### Fixed
+
+- `DomainVerifier.checkJpAnchor` で `jpAnchor.tlds`／`userTlds` が `undefined` の場合に `is not iterable` が発生していた不具合を修正。`...(jpAnchor.tlds ?? [])` でデフォルト空配列にフォールバック
 
 ## [6.7.95] - 2026-08-30
 
