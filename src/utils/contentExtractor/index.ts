@@ -17,7 +17,7 @@ import { logSanitize, logDebug } from '../logger.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../messaging/protocol.js';
 import { cleanseAISummaryContent, countAISummaryTargets, type AiSummaryCleanseOptions } from '../aiSummaryCleaner/index.js';
 import { THRESHOLD_DEFAULTS } from '../aiSummaryCleaner/rules.js';
-import { deriveCleansedReason } from './cleansedReason.js';
+import { deriveCleansedReason, removedRecordToMap } from './cleansedReason.js';
 import { deduplicateContent } from '../contentDeduplicator.js';
 import type { ExtractResult, AiSummaryCleanseRunResult } from './types.js';
 import { findMainContentCandidates } from './scoring.js';
@@ -61,7 +61,7 @@ function runAiSummaryCleanse(
     const { reason, reasons } = deriveCleansedReason(aiSummaryCleanseResult);
     const elements = aiSummaryCleanseResult.totalRemoved > 0 ? aiSummaryCleanseResult.totalRemoved : 0;
 
-    return { originalBytes, cleansedBytes, reason, reasons, elements, preCleanseText };
+    return { originalBytes, cleansedBytes, reason, reasons, elements, preCleanseText, removed: aiSummaryCleanseResult.removed };
 }
 
 /**
@@ -120,6 +120,10 @@ export function extractMainContent(
      let fallbackTriggered = false;
      let preAiCleanseText: string | undefined;            // AI要約クレンジング前のテキスト（フォールバック用）
      let fallbackReason: ExtractResult['fallbackReason'] = undefined; // フォールバック理由（triggered時のみ設定）
+    let removedByReason: Map<string, number> | undefined; // 30-14: ルール別削除件数
+    let funnel: { pageBytes: number; candidateBytes: number; cleansedBytes: number } | undefined; // 30-14: ファネル
+    let originalContent: string | undefined; // 30-11: 二重ペイロード — クレンジング前原文
+    let dualPayloadEnabled: boolean | undefined; // 30-11: 二重ペイロード有効フラグ
 
     try {
         // ホワイトリスト抽出モード判定: ドメイン一致 or DOM構造検知
@@ -156,6 +160,16 @@ export function extractMainContent(
         }
 
         if (candidates.length > 0) {
+            // 30-11: 二重ペイロード — 候補の原文を保持（クレンジング前のテキスト）
+            // 30-14: ファネルの候補バイト数は既に candidateBytes で計測済み
+            const firstCandidateForDual = candidates[0]!;
+            if (!originalContent) {
+                const rawDual = (firstCandidateForDual.textContent || '').trim();
+                if (rawDual) {
+                    originalContent = rawDual.slice(0, maxChars * 2);
+                    dualPayloadEnabled = true;
+                }
+            }
             // クレンジングまたはAI要約クレンジングが有効な場合、クローンを作成してから実行
             const firstCandidate = candidates[0]!;
             let targetElement: Element;
@@ -238,6 +252,7 @@ export function extractMainContent(
                     aiSummaryCleansedReasons = aiSummaryRunResult.reasons.length > 0 ? aiSummaryRunResult.reasons : undefined;
                     aiSummaryCleansedElements = aiSummaryRunResult.elements;
                     preAiCleanseText = aiSummaryRunResult.preCleanseText;
+                    removedByReason = removedRecordToMap(aiSummaryRunResult.removed);
                 }
             } else {
                 targetElement = firstCandidate;
@@ -258,6 +273,7 @@ export function extractMainContent(
                     aiSummaryCleansedReasons = aiSummaryRunResult.reasons.length > 0 ? aiSummaryRunResult.reasons : undefined;
                     aiSummaryCleansedElements = aiSummaryRunResult.elements;
                     preAiCleanseText = aiSummaryRunResult.preCleanseText;
+                    removedByReason = removedRecordToMap(aiSummaryRunResult.removed);
 
                     // クレンジング後のクローンからテキストを抽出
                     targetElement = clone;
@@ -295,6 +311,7 @@ export function extractMainContent(
                     aiSummaryCleansedElements = undefined;
                     aiSummaryCleansedReason = 'none';
                     aiSummaryCleansedReasons = undefined;
+                    removedByReason = undefined;
                 }
                 cleansedReason = 'none';
                 hardStripRemoved = 0;
@@ -345,6 +362,15 @@ export function extractMainContent(
                     aiSummaryCleansedReasons = aiSummaryRunResult.reasons.length > 0 ? aiSummaryRunResult.reasons : undefined;
                     aiSummaryCleansedElements = aiSummaryRunResult.elements;
                     preAiCleanseText = aiSummaryRunResult.preCleanseText;
+                    removedByReason = removedRecordToMap(aiSummaryRunResult.removed);
+                }
+                // 30-11: bodyフォールバックでも原文を保持
+                if (!originalContent && document.body) {
+                    const rawBody = (document.body.textContent || '').trim();
+                    if (rawBody) {
+                        originalContent = rawBody.slice(0, maxChars * 2);
+                        dualPayloadEnabled = true;
+                    }
                 }
 
                 content = extractTextFromElement(clone);
@@ -359,45 +385,46 @@ export function extractMainContent(
                         || _contentBytes < fallbackMinBytes
                     );
 
-                 if (_isTooShort || _overCleansed) {
-                     fallbackTriggered = true;
-                     if (_overCleansed && preAiCleanseText) {
-                         // 過剰削減の場合、AI要約クレンジング前の生テキストに戻す
-                         content = preAiCleanseText;
-                         fallbackReason = 'over_cleansed';
-                         // NOTE: aiSummaryCleansedElements などは保持する（クレンジングが実際に実行されたため）
-                     } else {
-                         // 短すぎるコンテンツの場合、body全体を使用
-                         content = document.body?.innerText || '';
-                         fallbackReason = 'short_content';
+                  if (_isTooShort || _overCleansed) {
+                      fallbackTriggered = true;
+                      if (_overCleansed && preAiCleanseText) {
+                          // 過剰削減の場合、AI要約クレンジング前の生テキストに戻す
+                          content = preAiCleanseText;
+                          fallbackReason = 'over_cleansed';
+                          // NOTE: aiSummaryCleansedElements などは保持する（クレンジングが実際に実行されたため）
+                      } else {
+                          // 短すぎるコンテンツの場合、body全体を使用
+                          content = document.body?.innerText || '';
+                          fallbackReason = 'short_content';
 
-                         // フォールバックしたため、適用したクレンジングの結果を破棄
-                         aiSummaryOriginalBytes = undefined;
-                         aiSummaryCleansedBytes = undefined;
-                         aiSummaryCleansedElements = undefined;
-                         aiSummaryCleansedReason = 'none';
-                         aiSummaryCleansedReasons = undefined;
-                     }
-                     cleansedReason = 'none';
-                     hardStripRemoved = 0;
-                     keywordStripRemoved = 0;
-                     totalRemoved = 0;
+                          // フォールバックしたため、適用したクレンジングの結果を破棄
+                          aiSummaryOriginalBytes = undefined;
+                          aiSummaryCleansedBytes = undefined;
+                          aiSummaryCleansedElements = undefined;
+                          aiSummaryCleansedReason = 'none';
+                          aiSummaryCleansedReasons = undefined;
+                          removedByReason = undefined;
+                      }
+                      cleansedReason = 'none';
+                      hardStripRemoved = 0;
+                      keywordStripRemoved = 0;
+                      totalRemoved = 0;
 
-                     // フォールバック後のバイト数を再計算
-                     originalBytes = getByteSize(content);
-                     cleansedBytes = originalBytes;
-                }
-            } else {
-                content = document.body?.innerText || '';
-                // バイト数を計算（クレンジングなし）
-                originalBytes = getByteSize(content);
-                cleansedBytes = originalBytes;
-            }
-        }
-    } catch (_error) {
-        // エラー時は安全なフォールバック
-        content = document.body?.innerText || '';
-    }
+                      // フォールバック後のバイト数を再計算
+                      originalBytes = getByteSize(content);
+                      cleansedBytes = originalBytes;
+                 }
+             } else {
+                 content = document.body?.innerText || '';
+                 // バイト数を計算（クレンジングなし）
+                 originalBytes = getByteSize(content);
+                 cleansedBytes = originalBytes;
+             }
+         }
+     } catch (_error) {
+         // エラー時は安全なフォールバック
+         content = document.body?.innerText || '';
+     }
 
     // 空白文字の正規化（改行圧縮 → スペース統一 → トリム）
     content = content
@@ -414,6 +441,19 @@ export function extractMainContent(
     // 最大文字数で切り詰め
     if (content.length > maxChars) {
         content = content.substring(0, maxChars);
+    }
+
+    // 30-14: ファネル集計 — 3段階バイトをまとめる
+    if (pageBytes || candidateBytes || cleansedBytes) {
+        funnel = { pageBytes, candidateBytes, cleansedBytes };
+    }
+    // 30-11: originalContent が未設定なら body からフォールバック（jsdomでも取得可能に）
+    if (!originalContent && document.body) {
+        const fallbackRaw = (document.body.textContent || '').trim();
+        if (fallbackRaw) {
+            originalContent = fallbackRaw.slice(0, maxChars * 2);
+            if (!dualPayloadEnabled) dualPayloadEnabled = !!originalContent;
+        }
     }
 
     // returnInfoオプションに従って返り値を変える
@@ -447,6 +487,9 @@ export function extractMainContent(
         if (!fallbackTriggered && aiSummaryCleanseEnabled && document.body) {
             const aiSummaryCountResult = countAISummaryTargets(document.body, resolvedAiSummaryOptions);
             aiSummaryCleansedElements = aiSummaryCountResult.totalRemoved;
+            if (!removedByReason) {
+                removedByReason = removedRecordToMap(aiSummaryCountResult.removed);
+            }
             // カウント結果に応じて理由を設定（0件の場合は'none'のまま）
             if (aiSummaryCountResult.totalRemoved > 0 && aiSummaryCleansedReason === 'none') {
                 const derived = deriveCleansedReason(aiSummaryCountResult);
@@ -473,6 +516,10 @@ export function extractMainContent(
                 aiSummaryCleansedReasons,
                 fallbackTriggered,
                 fallbackReason,
+                removedByReason,
+                funnel,
+                originalContent,
+                dualPayloadEnabled,
             }),
         };
     }

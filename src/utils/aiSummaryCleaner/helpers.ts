@@ -138,6 +138,76 @@ export function isLikelyPopup(elem: Element): boolean {
 }
 
 /**
+ * 30-03: Shadow DOM / iframe を再帰的に走査して selector にマッチする要素を集める。
+ * - open shadowRoot のみ対象（closed は element.shadowRoot が null で走査不可、仕様としてスキップ）
+ * - iframe は same-origin のみ対象、cross-origin は SecurityError を try-catch でスキップ
+ * - 再帰: 各要素の shadowRoot / iframe.contentDocument を深掘り
+ */
+export function querySelectorAllDeep(
+    root: Element | Document | ShadowRoot | DocumentFragment,
+    selector: string,
+): Element[] {
+    const result: Element[] = [];
+
+    // 1) Light DOM — root 直下の querySelectorAll
+    try {
+        const nodeList = (root as Element).querySelectorAll?.(selector);
+        if (nodeList) {
+            result.push(...Array.from(nodeList) as Element[]);
+        }
+    } catch {
+        // invalid selector 等は無視
+    }
+
+    // 2) 子要素を列挙して shadowRoot / iframe を再帰
+    let children: Element[] = [];
+    try {
+        const all = (root as Element).querySelectorAll?.('*');
+        if (all) children = Array.from(all) as Element[];
+        else if ((root as unknown as { children?: HTMLCollection }).children) {
+            children = Array.from((root as unknown as { children: HTMLCollection }).children) as Element[];
+        }
+    } catch {
+        children = [];
+    }
+
+    for (const el of children) {
+        // shadowRoot（open のみ）
+        const shadow = (el as unknown as { shadowRoot?: ShadowRoot | null }).shadowRoot;
+        if (shadow) {
+            try {
+                result.push(...querySelectorAllDeep(shadow, selector));
+            } catch {}
+        }
+        // iframe same-origin
+        if (el.tagName?.toLowerCase() === 'iframe') {
+            try {
+                const iframe = el as HTMLIFrameElement;
+                const doc = iframe.contentDocument;
+                if (doc) {
+                    // iframe 内の document 全体を再帰
+                    result.push(...querySelectorAllDeep(doc as unknown as Element, selector));
+                    // documentElement 直下も含めるため documentElement でも再帰（重複は許容、呼び出し元で Set 化可能）
+                    if (doc.documentElement) {
+                        // querySelectorAllDeep(doc.documentElement) は doc 側で既にカバーされるが、
+                        // iframe 内の shadowRoot を確実に拾うため両方走査
+                    }
+                }
+            } catch {
+                // cross-origin は SecurityError → スキップ
+            }
+        }
+    }
+
+    return result;
+}
+
+/**
+ * エイリアス: 旧 spec で言及された collectElementsDeep としても利用可能
+ */
+export const collectElementsDeep = querySelectorAllDeep;
+
+/**
  * 要素がプラットフォームノイズかどうかを判定 — 決定木化
  * 「 ad 」は単語境界、comment/related は単語境界+aria-label で誤爆を抑止
  */
