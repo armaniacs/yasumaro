@@ -11,7 +11,8 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { SettingsRepository, settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../../utils/markdownSanitizer.js';
-import { CONNECTION_TEST_CACHE_MODE } from '../../utils/fetch.js';
+import { CONNECTION_TEST_CACHE_MODE, fetchWithTimeout } from '../../utils/fetch.js';
+import { readJsonCapped } from '../../utils/readBodyCapped.js';
 import { isCredentialConfigured } from './settingsConfiguredCheck.js';
 import { SyncBatchRunner, type PendingSyncRow } from './SyncBatchRunner.js';
 
@@ -117,13 +118,14 @@ export class GistSyncTarget implements SyncTarget {
       const settings = await new SettingsRepository().getAll();
       const pat = settings[StorageKeys.GITHUB_PAT] as string;
 
-      const response = await fetch(`${GIST_API_BASE}/user`, {
+      const response = await fetchWithTimeout(`${GIST_API_BASE}/user`, {
         headers: {
           Authorization: `token ${pat}`,
           'User-Agent': 'yasumaro-extension',
           Accept: 'application/vnd.github.v3+json',
         },
         cache: CONNECTION_TEST_CACHE_MODE,
+        skipCspValidation: true,
       });
 
       if (response.ok) {
@@ -144,8 +146,9 @@ export class GistSyncTarget implements SyncTarget {
   }
 
   private async createGist(content: string, pat: string): Promise<string> {
-    const response = await fetch(`${GIST_API_BASE}/gists`, {
+    const response = await fetchWithTimeout(`${GIST_API_BASE}/gists`, {
       method: 'POST',
+      skipCspValidation: true,
       headers: {
         Authorization: `token ${pat}`,
         'User-Agent': 'yasumaro-extension',
@@ -167,13 +170,14 @@ export class GistSyncTarget implements SyncTarget {
       throw new Error(`GitHub Gist creation failed: ${response.status}`);
     }
 
-    const data = await response.json() as { id: string };
+    const data = await readJsonCapped(response, 10 * 1024 * 1024) as { id: string };
     return data.id;
   }
 
   private async updateGist(gistId: string, content: string, pat: string): Promise<void> {
-    const response = await fetch(`${GIST_API_BASE}/gists/${gistId}`, {
+    const response = await fetchWithTimeout(`${GIST_API_BASE}/gists/${gistId}`, {
       method: 'PATCH',
+      skipCspValidation: true,
       headers: {
         Authorization: `token ${pat}`,
         'User-Agent': 'yasumaro-extension',

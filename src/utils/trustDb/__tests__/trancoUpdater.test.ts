@@ -120,6 +120,40 @@ describe('trancoUpdater', () => {
                 expect(result.sizeBytes).toBeGreaterThan(0);
             });
 
+            test('Content-Length なしで 50MB を超える chunked CSV は打ち切られエラーを返す', async () => {
+                const huge = new Uint8Array(51 * 1024 * 1024); // 51MB in one chunk
+                let reads = 0;
+                (fetchWithTimeout as vi.Mock).mockResolvedValue({
+                    ok: true,
+                    status: 200,
+                    json: async () => ({ list_id: 'test-list-id' }),
+                    headers: { get: () => null },
+                    body: {
+                        getReader: () => {
+                            let sent = false;
+                            return {
+                                read: () => {
+                                    reads += 1;
+                                    if (sent) return Promise.resolve({ done: true, value: undefined });
+                                    sent = true;
+                                    return Promise.resolve({ done: false, value: huge });
+                                },
+                                cancel: () => Promise.resolve(),
+                            };
+                        },
+                    },
+                });
+
+                const resultPromise = updater.updateTrancoList('top1k');
+                await vi.advanceTimersByTimeAsync(1000);
+                await vi.advanceTimersByTimeAsync(2000);
+                await vi.advanceTimersByTimeAsync(4000);
+                const result = await resultPromise;
+
+                expect(result.success).toBe(false);
+                expect(reads).toBeGreaterThan(0);
+            });
+
             test('API失敗時にリトライして最終的にエラーを返す', async () => {
                 (fetchWithTimeout as vi.Mock).mockResolvedValue({
                     ok: false,

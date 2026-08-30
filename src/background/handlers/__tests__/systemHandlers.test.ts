@@ -85,16 +85,25 @@ describe('createFetchUrlHandler', () => {
     expect(logError).toHaveBeenCalled();
   });
 
-  it('rejects when Content-Length exceeds limit', async () => {
+  it('rejects an oversized body even when Content-Length lies about a small size', async () => {
+    const oneMb = new Uint8Array(1024 * 1024);
+    let reads = 0;
     vi.mocked(fetchWithTimeout).mockResolvedValue({
       ok: true,
       status: 200,
       headers: {
-        get: vi.fn((name: string) =>
-          name === 'content-length' ? String(11 * 1024 * 1024) : null,
-        ),
+        // Lying header: claims 1 byte, streams far more.
+        get: vi.fn((name: string) => (name === 'content-length' ? '1' : null)),
       },
-      text: vi.fn().mockResolvedValue(''),
+      body: {
+        getReader: () => ({
+          read: () => {
+            reads += 1;
+            return Promise.resolve({ done: false, value: oneMb });
+          },
+          cancel: () => Promise.resolve(),
+        }),
+      },
     } as any);
 
     const handler = createFetchUrlHandler(deps);
@@ -102,6 +111,7 @@ describe('createFetchUrlHandler', () => {
     await handler({ payload: { url: 'https://example.com/list.txt' } } as any, {} as any, sendResponse);
 
     expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
+    expect(reads).toBeLessThan(20); // aborted before buffering the whole stream
   });
 
   it('rejects when actual text size exceeds limit', async () => {
