@@ -41,12 +41,27 @@ Scenario: エラーケース — ハードコード残存検出
 ```
 
 ## 受け入れ基準
-- [ ] ライトモード（prefers-color-scheme: light）で B分離型の Priority 3行と Provider Settings 7アコーディオンが白/紙色ベースで表示される（スクショで黒浮きが解消）
-- [ ] ダークモードで従来の暗色見た目が維持される（リグレッションなし）
-- [ ] 主要テキストのコントラスト比が WCAG 2.1 AA（4.5:1）を満たす（--color-text on --color-bg-white 等）
-- [ ] ハードコード色（#27272a, #18181b, #3f3f46, #a78bfa の直値）が dashboard.css の該当3クラスから除去され ymトークン / --color-* に置換
-- [ ] 既存のユニット/統合テストがグリーンを維持
-- [ ] `npm run type-check` と `npm run validate` がパス
+- [x] ライトモード（prefers-color-scheme: light）で B分離型の Priority 3行と Provider Settings 7アコーディオンが白/紙色ベースで表示される（スクショで黒浮きが解消）
+- [x] ダークモードで従来の暗色見た目が維持される（リグレッションなし）
+- [x] 主要テキストのコントラスト比が WCAG 2.1 AA（4.5:1）を満たす（--color-text on --color-bg-white 等）
+- [x] ハードコード色（#27272a, #18181b, #3f3f46, #a78bfa の直値）が dashboard.css の該当3クラスから除去され ymトークン / --color-* に置換
+- [x] 既存のユニット/統合テストがグリーンを維持
+- [x] `npm run type-check` と `npm run validate` がパス
+
+### 着地サマリ
+- CSS トークン置換: PR #84（`9e240f60`）。`.b-priority-row` / `.b-provider-details` /
+  `.b-provider-summary` / `.b-priority-handle` / `.ai-layout-toggle` を `--color-*` トークン化。
+  `--color-*` は dashboard.css:95 の `@media (prefers-color-scheme: dark)` で反転するため、
+  ライトは紙色（`#f8fafc` / `#ffffff`）、ダークは墨色（`#161b22` / `#0d1117`）を自動で使い分ける。
+  別途 `@media` ブロックは不要。
+- 単体テスト: `tests/dashboard/aiProviderBLightMode.test.ts`（PR #84）— CSS ソースの
+  トークン使用と暗色直値の不在をアサート。
+- E2E: `testDir/e2e/dashboard-light-mode.spec.ts` — ビルド後 options CSS を最小 DOM に適用し、
+  `page.emulateMedia({ colorScheme })` で light/dark の `.b-priority-row` / `.b-provider-details`
+  背景 computedStyle を検証（chromium + firefox で 6 ケース green）。
+- ハードコード検出（BDD「エラーケース」）: `grep "#27272a\|#18181b\|#3f3f46"
+  entrypoints/options/dashboard.css` → 0 件。ビルド後 `dist/**/options-*.css` の
+  該当ルールも全て `var(--color-*)`。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -143,9 +158,9 @@ grep -rn "b-priority-row\|b-provider-details\|ai-layout-toggle" src/ entrypoints
 - **ビルド後のCSSパス**: WXTビルドで `dist/chromium-mv3/assets/dashboard-*.css` にハッシュ付与されるため、grepは `dist/` 配下を再帰的に探す
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする（E2E light/dark + ハードコード検出）
-- [ ] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
+- [x] 全BDDシナリオが自動テストとして実装されパスする（E2E light/dark + ハードコード検出）
+- [x] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
 - [ ] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記 — 本PBIはCSSのみだがXSS/CSP観点で inline style 不使用を確認）
-- [ ] リファクタリング完了（グリーン後、トークン命名を DESIGN_TOKENS.md と整合）
-- [ ] ロールバック手段の検討（CSS変更のため即時リバート可能。ダーク見た目が崩れた場合は @media ブロックを削除して前版CSSに戻す。feature flag不要）
-- [ ] ドキュメント更新済み（必要なら DESIGN_TOKENS.md の「B分離型はライト対応済み」追記。不要なら省略）
+- [x] リファクタリング完了（グリーン後、トークン命名を DESIGN_TOKENS.md と整合。dashboard.css 内は `--color-*` で統一済み）
+- [x] ロールバック手段の検討（CSS変更のため即時リバート可能。`--color-*` トークン参照を旧直値に戻すだけ。feature flag不要）
+- [x] ドキュメント更新済み（DESIGN_TOKENS.md には B分離型固有の記載箇所がないため省略。本PBIの「着地サマリ」に集約）
