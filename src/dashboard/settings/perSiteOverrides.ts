@@ -167,9 +167,6 @@ export function initPerSiteOverrides(): void {
             // Store the boolean as-is so domain can force true or false.
             filteredPatch[k] = v;
         }
-        // If user didn't check anything, treat as delete
-        const hasAnyTrue = Object.values(filteredPatch).some((v) => v === true);
-        const hasAnyFalseWithExisting = true; // allow false overrides
         // If no checkbox is checked and none was previously, remove override
         // We'll keep all values, but if all are false and user wants to clear, they can press Delete.
         // So save as-is.

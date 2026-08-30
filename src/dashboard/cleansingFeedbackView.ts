@@ -1,5 +1,4 @@
 import { getFeedbackQueue, clearFeedbackQueue, removeFeedbackEntry } from '../utils/aiSummaryCleaner/feedbackQueue.js';
-import type { CleansingFeedbackEntry } from '../utils/storage/types.js';
 
 export async function renderCleansingFeedback(container: HTMLElement): Promise<void> {
   const entries = await getFeedbackQueue();

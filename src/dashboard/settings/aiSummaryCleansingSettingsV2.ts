@@ -37,9 +37,10 @@ function ruleOptionKey(rule: CleansingRule): string {
 let _isApplyingPreset = false;
 let _initialRenderGuard = true;
 
-function setInitialRenderGuard(value: boolean): void {
+function _setInitialRenderGuard(value: boolean): void {
     _initialRenderGuard = value;
 }
+void _setInitialRenderGuard;
 
 function isGuarded(): boolean {
     return _isApplyingPreset || _initialRenderGuard;
@@ -94,10 +95,11 @@ export async function ensureCleansingPresetMigrated(): Promise<void> {
                 // 新規インストール相当（全て newUserDefault）なら balanced 扱いだが、
                 // ここでは保存形式を壊さないため custom でなく heuristic を使う選択も可能。
                 // 仕様の「deep→aggressive else minimal」を尊重しつつ、既存カスタムは custom にする分岐:
-                const heuristic = migrateToPreset(cfg);
-                // heuristic と exact が異なる場合は custom とみなす（値の上書き防止）
+                const _heuristic = migrateToPreset(cfg);
+                void _heuristic;
+                // _heuristic と exact が異なる場合は custom とみなす（値の上書き防止）
                 // ただし fresh install のデフォルト (newUserDefault = balanced相当) が custom にならないよう、
-                // heuristic が balanced/aggressive の場合はそちらを優先しない — 既存値があれば custom
+                // _heuristic が balanced/aggressive の場合はそちらを優先しない — 既存値があれば custom
                 return 'custom' as PresetId;
             }
             return migrateToPreset(cfg);
