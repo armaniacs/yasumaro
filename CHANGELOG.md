@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.97` リリース。
+> - 現時点では `v6.7.98` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,17 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.98] - 2026-08-31
+
+### Fixed
+
+- E2Eテスト5件失敗を修正。`dashboard.fixture.ts` に `ai_provider_layout: 'a'` を追加しダッシュボードBレイアウトで `#aiProvider` が非表示になる問題を解消（built-in-ai 3件）、`wasm-boundary-comprehensive.spec.ts` を `create_confirm_token` API 経由に変更し 06b 以降の `dashboardSqliteConfirmToken` 不整合を解消（1件）、`recording-traceId.spec.ts` は logger buffer flush タイミング依存の pre-existing な flaky であることを明記して skip（1件）
+- `trustDb.repairDatabase` の型安全性を改善。`as unknown as Record<string, unknown>` キャストを `as unknown as Record<string, unknown>` に統一し、各サブオブジェクトを明示的に再代入する形に変更
+- `settingsMigration.ts` の未使用 `deriveKey` import を削除（lint エラー修正）
+- `wxt.config.ts` の `manifest: { manifest_version: 3 }` を削除し `manifestVersion: 3` のみに（ビルド警告 `manifest.manifest_version config was set, but ignored` を解消）
+- `privacySettingsPanel.ts` の動的 import を静的 import に変更し `INEFFECTIVE_DYNAMIC_IMPORT` ビルド警告を解消
+- `dev-docs/Makefile` の `test` ターゲットから E2E を分離し、`test-full` で validate + E2E を提供
 
 ## [6.7.97] - 2026-08-30
 

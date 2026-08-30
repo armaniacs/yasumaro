@@ -173,7 +173,7 @@ class TrustDb {
       if (savedDb && savedDb.bloomFilter) {
         // 破損DBの包括的修復: 全必須フィールドをデフォルトで補完（Phase 1 根源: DB自体が部分的に欠落）
         const beforeRepair = JSON.stringify(savedDb);
-        this.repairDatabase(savedDb);
+        this.repairDatabase(savedDb as unknown as Record<string, unknown>);
         const afterRepair = JSON.stringify(savedDb);
         const wasRepaired = beforeRepair !== afterRepair;
         // 既存データをロード
@@ -215,37 +215,32 @@ class TrustDb {
    * Phase 1 根源: 個別フィールドのガード追加では新たな欠落が次々に顕在化するため、
    * 単一箇所で全フィールドを検証・修復し、将来の欠落にも対応
    */
-  private repairDatabase(db: Partial<TrustDatabase> & Record<string, unknown>): void {
-    const anyDb = db as Record<string, unknown>;
+  private repairDatabase(db: Record<string, unknown>): void {
     // Top-level
-    if (!anyDb.version) anyDb.version = DB_VERSION;
-    if (!anyDb.lastUpdated) anyDb.lastUpdated = new Date().toISOString();
+    if (!db.version) db.version = DB_VERSION;
+    if (!db.lastUpdated) db.lastUpdated = new Date().toISOString();
     // jpAnchor
-    if (!anyDb.jpAnchor || typeof anyDb.jpAnchor !== 'object') anyDb.jpAnchor = { tlds: [...JP_ANCHOR_TLDS_PRESET], userTlds: [] };
-    const jpAnchor = anyDb.jpAnchor as Record<string, unknown>;
+    const jpAnchor = (db.jpAnchor ?? {}) as Record<string, unknown>;
     if (!Array.isArray(jpAnchor.tlds)) jpAnchor.tlds = [...JP_ANCHOR_TLDS_PRESET];
     if (!Array.isArray(jpAnchor.userTlds)) jpAnchor.userTlds = [];
+    db.jpAnchor = jpAnchor;
     // sensitive
-    if (!anyDb.sensitive || typeof anyDb.sensitive !== 'object') anyDb.sensitive = { presets: { finance: [], gaming: [], sns: [] }, userBlacklist: [], whitelist: [] };
-    const sensitive = anyDb.sensitive as Record<string, unknown>;
-    if (!sensitive.presets || typeof sensitive.presets !== 'object') sensitive.presets = { finance: [], gaming: [], sns: [] };
-    const presets = sensitive.presets as Record<string, unknown>;
+    const sensitive = (db.sensitive ?? {}) as Record<string, unknown>;
+    const presets = (sensitive.presets ?? {}) as Record<string, unknown>;
     if (!Array.isArray(presets.finance)) presets.finance = [];
     if (!Array.isArray(presets.gaming)) presets.gaming = [];
     if (!Array.isArray(presets.sns)) presets.sns = [];
+    sensitive.presets = presets;
     if (!Array.isArray(sensitive.userBlacklist)) sensitive.userBlacklist = [];
     if (!Array.isArray(sensitive.whitelist)) sensitive.whitelist = [];
+    db.sensitive = sensitive;
     // tranco
-    if (!anyDb.tranco || typeof anyDb.tranco !== 'object') anyDb.tranco = { tier: 'top10k', domains: [], count: 0, sizeBytes: 0 };
-    const tranco = anyDb.tranco as Record<string, unknown>;
+    const tranco = (db.tranco ?? {}) as Record<string, unknown>;
     if (!tranco.tier) tranco.tier = 'top10k';
     if (!Array.isArray(tranco.domains)) tranco.domains = [];
     if (typeof tranco.count !== 'number') tranco.count = (tranco.domains as unknown[]).length;
     if (typeof tranco.sizeBytes !== 'number') tranco.sizeBytes = 0;
-    // bloomFilter
-    if (!anyDb.bloomFilter) {
-      // bloomFilter が無い場合は後続で createDefaultDatabase が呼ばれるが、ここでは修復せず呼び出し元で再生成
-    }
+    db.tranco = tranco;
   }
 
   /**

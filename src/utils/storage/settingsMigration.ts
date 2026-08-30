@@ -110,20 +110,10 @@ async function tryDecryptWithLegacyFallback(
             const webcrypto = (globalThis.crypto || crypto) as Crypto;
 
             if (isMasterEnabled) {
-                // Master-password mode: derive legacy key from cached password if available
-                // Note: we cannot derive without password; fallback will fail and caller will keep ''.
-                // The password is cached in encryptionSession; try to use it if present.
-                try {
-                    const { deriveKey } = await import('../crypto/primitives.js');
-                    // Attempt to get cached password via encryptionSession internals is not exposed;
-                    // Instead, try to derive legacy key by re-using currentKey derivation path is not possible.
-                    // Fallback: if master password mode and current decrypt failed, the user likely needs to re-unlock
-                    // with legacy iteration handling in verifyPasswordWithPBKDF2 (already covered).
-                    // For now, return null to indicate failure — the next unlock will migrate.
-                    return { decrypted: null, legacySucceeded: false };
-                } catch {
-                    return { decrypted: null, legacySucceeded: false };
-                }
+                // Master-password mode: legacy fallback requires cached password which is not exposed.
+                // verifyPasswordWithPBKDF2 already handles legacy iteration on unlock, so return failure
+                // and let the next unlock migrate.
+                return { decrypted: null, legacySucceeded: false };
             }
 
             // Anonymous mode: derive legacy 100k key from same secret/salt

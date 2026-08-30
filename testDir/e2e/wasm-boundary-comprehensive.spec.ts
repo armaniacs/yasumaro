@@ -13,7 +13,11 @@
 
 import { test, expect } from './fixtures/extension.fixture.js';
 
-const CONFIRM_TOKEN_KEY = 'dashboardSqliteConfirmToken';
+/**
+ * Confirm token: use the new create_confirm_token flow (06b).
+ * Tokens are stored in session as a map `{[token]: {token, action, expiresAt}}`
+ * via the `create_confirm_token` subtype, not written directly.
+ */
 
 async function poll<T>(
   fn: () => Promise<T>,
@@ -78,18 +82,21 @@ test.describe('WASM boundary E2E', () => {
       500
     );
 
-    let confirmToken = await page.evaluate(async (key: string) => {
-      const stored = (await chrome.storage.session.get(key)) as Record<string, string | undefined>;
-      return stored[key] ?? null;
-    }, CONFIRM_TOKEN_KEY);
-    if (!confirmToken) {
-      // Fallback: generate and persist a token for the import step (E2E headless may not auto-generate)
-      confirmToken = `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      await page.evaluate(async ({ key, token }: { key: string; token: string }) => {
-        await chrome.storage.session.set({ [key]: token });
-      }, { key: CONFIRM_TOKEN_KEY, token: confirmToken });
-    }
-    expect(confirmToken).not.toBeNull();
+    // Get confirm token via the new create_confirm_token API
+    const tokenResult = await poll(
+      () =>
+        page.evaluate(async () => {
+          return (await chrome.runtime.sendMessage({
+            type: 'DASHBOARD_SQLITE',
+            payload: { subtype: 'create_confirm_token', action: 'import' },
+          })) as Record<string, unknown>;
+        }),
+      (r) => r?.success === true && typeof r?.confirmToken === 'string',
+      6,
+      500
+    );
+    const confirmToken = tokenResult.confirmToken as string;
+    expect(confirmToken, `Expected confirmToken in response, got: ${JSON.stringify(tokenResult)}`).toBeTruthy();
 
     // Seed via import
     const seed = await poll(
@@ -175,16 +182,20 @@ test.describe('WASM boundary E2E', () => {
       500
     );
 
-    let confirmToken = await page.evaluate(async (key: string) => {
-      const stored = (await chrome.storage.session.get(key)) as Record<string, string | undefined>;
-      return stored[key] ?? null;
-    }, CONFIRM_TOKEN_KEY);
-    if (!confirmToken) {
-      confirmToken = `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      await page.evaluate(async ({ key, token }: { key: string; token: string }) => {
-        await chrome.storage.session.set({ [key]: token });
-      }, { key: CONFIRM_TOKEN_KEY, token: confirmToken });
-    }
+    const tokenResult2 = await poll(
+      () =>
+        page.evaluate(async () => {
+          return (await chrome.runtime.sendMessage({
+            type: 'DASHBOARD_SQLITE',
+            payload: { subtype: 'create_confirm_token', action: 'import' },
+          })) as Record<string, unknown>;
+        }),
+      (r) => r?.success === true && typeof r?.confirmToken === 'string',
+      6,
+      500
+    );
+    const confirmToken = tokenResult2.confirmToken as string;
+    expect(confirmToken, `Expected confirmToken in response, got: ${JSON.stringify(tokenResult2)}`).toBeTruthy();
 
     const batchToken = `paginate${Date.now()}`;
     const rows = Array.from({ length: 3 }, (_, i) => ({

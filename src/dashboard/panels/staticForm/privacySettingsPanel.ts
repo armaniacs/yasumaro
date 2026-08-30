@@ -2,6 +2,8 @@ import { type PanelLifecycle } from '../types.js';
 import { init as initPrivacySettings, loadPrivacySettings } from '../../settings/privacySettings.js';
 import { initMasterPasswordSettings, loadMasterPasswordSettings } from '../../masterPassword.js';
 import { getPrivacyConsent, withdrawPrivacyConsent } from '../../../popup/privacyConsent.js';
+import { showConfirmDialog } from '../../utils/confirmDialog.js';
+import { clearAllLogs, isServiceError } from '../../dashboardSqliteService.js';
 
 export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () => Promise<void> } {
   return {
@@ -22,7 +24,6 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
           : chrome.i18n.getMessage('notConsented') || 'Not consented';
         btn.classList.toggle('hidden', !state.hasConsented);
         btn.addEventListener('click', async () => {
-          const { showConfirmDialog } = await import('../../utils/confirmDialog.js');
           const confirmed = await showConfirmDialog({
             title: chrome.i18n.getMessage('confirmWithdrawConsentTitle') || 'Withdraw Privacy Consent',
             message: chrome.i18n.getMessage('confirmWithdrawConsentMessage') || 'Withdrawing consent will also permanently delete all previously recorded browsing history. Continue?',
@@ -34,7 +35,6 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
 
           // データ削除→同意撤回の順で行う。同意撤回だけ成功しデータが
           // 残る不整合（GDPR Art.7の実効性を損なう）を避けるため。
-          const { clearAllLogs, isServiceError } = await import('../../dashboardSqliteService.js');
           const delRes = await clearAllLogs();
           if (isServiceError(delRes)) {
             if (statusEl) {
@@ -56,7 +56,6 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
       }
 
       container.querySelector('#btnDeleteAllData')?.addEventListener('click', async () => {
-        const { showConfirmDialog } = await import('../../utils/confirmDialog.js');
         const confirmed = await showConfirmDialog({
           title: chrome.i18n.getMessage('confirmClearAllTitle') || 'Delete All History',
           message: chrome.i18n.getMessage('confirmClearAllMessage') || chrome.i18n.getMessage('deleteAllDataConfirm') || 'This will permanently delete all stored data. Continue?',
@@ -67,7 +66,6 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
         if (!confirmed) return;
         try {
           await chrome.storage.local.clear();
-          const { clearAllLogs, isServiceError } = await import('../../dashboardSqliteService.js');
           const sqliteResult = await clearAllLogs();
           if (isServiceError(sqliteResult)) {
             const statusEl2 = container.querySelector('#deleteAllDataStatus') as HTMLElement | null;

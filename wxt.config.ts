@@ -41,7 +41,6 @@ export default defineConfig({
   }),
 
   manifest: {
-    manifest_version: 3,
     name: '__MSG_extensionName__',
     short_name: '__MSG_extensionShortName__',
     version: pkg.version,
