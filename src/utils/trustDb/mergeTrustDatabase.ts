@@ -44,8 +44,8 @@ export function mergeTrustDatabase(
     tranco: structuredClone(trancoSource.tranco),
     bloomFilter: structuredClone(trancoSource.bloomFilter),
     jpAnchor: {
-      tlds: local.jpAnchor.tlds,
-      userTlds: union(current.jpAnchor.userTlds, local.jpAnchor.userTlds),
+      tlds: local.jpAnchor?.tlds ?? [],
+      userTlds: union(current.jpAnchor?.userTlds, local.jpAnchor?.userTlds),
     },
     sensitive: {
       presets: {
