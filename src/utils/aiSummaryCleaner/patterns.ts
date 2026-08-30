@@ -91,6 +91,23 @@ export const COOKIE_TEXT_PATTERNS: RegExp[] = [
     /Always active/i,
     /Marketing Cookies/i,
     /Cookie.*consent/i,
+    // fr - French cookie consent (GDPR / OneTrust multilingual)
+    /Accepter.*cookies/i,
+    /Gérer.*cookies/i,
+    /Paramétrer les cookies/i,
+    // de - German cookie consent
+    /Alle.*Cookies.*akzeptieren/i,
+    /Cookie.*Einstellungen/i,
+    // es - Spanish cookie consent
+    /Aceptar.*cookies/i,
+    /Gestionar.*cookies/i,
+    // zh - Chinese (Simplified) cookie consent
+    /接受所有Cookie/i,
+    /管理Cookie偏好设置/,
+    /Cookie.*设置/,
+    // ko - Korean cookie consent
+    /모든 쿠키 수락/,
+    /쿠키 설정 관리/,
 ];
 
 /**
@@ -104,6 +121,59 @@ export const LEGAL_TEXT_PATTERNS: RegExp[] = [
     /無断転載禁止/,
     /著作権.*株式会社/,
     /著作権.*有限会社/,
+    // fr - French legal
+    /Tous droits réservés/i,
+    // de - German legal
+    /Alle Rechte vorbehalten/i,
+    // es - Spanish legal
+    /Todos los derechos reservados/i,
+    // zh - Chinese legal
+    /版权所有/,
+    /保留所有权利/,
+    // ko - Korean legal
+    /모든 권리 보유/,
+    /저작권/,
+];
+
+/**
+ * i18n広告テキストパターン（テキストマッチ専用 — クラス部分一致の誤爆を避けるため buildClassIdSelectors には渡さない）
+ * helpers.ts の isLikelyAd から参照される
+ */
+export const I18N_AD_TEXT_PATTERNS: RegExp[] = [
+    // fr - French ad
+    /publicité/i,
+    /annonce sponsorisée/i,
+    // de - German ad
+    /Werbung/i,
+    /Anzeige/i,
+    // zh - Chinese ad
+    /广告/,
+    /推广/,
+    // es - Spanish ad
+    /publicidad/i,
+    // ko - Korean ad
+    /광고/,
+];
+
+/**
+ * i18nソーシャルテキストパターン（テキストマッチ専用 — クラス部分一致の誤爆を避けるため buildClassIdSelectors には渡さない）
+ * helpers.ts の isLikelySocial から参照される
+ */
+export const I18N_SOCIAL_TEXT_PATTERNS: RegExp[] = [
+    // fr - French social
+    /Partager/i,
+    /Suivez-nous/i,
+    // de - German social
+    /Teilen/i,
+    /Folgen/i,
+    // zh - Chinese social
+    /分享/,
+    /关注我们/,
+    // es - Spanish social
+    /Compartir/i,
+    // ko - Korean social
+    /공유하기/,
+    /팔로우/,
 ];
 
 /**

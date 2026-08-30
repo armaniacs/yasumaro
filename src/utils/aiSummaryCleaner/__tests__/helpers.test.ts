@@ -12,6 +12,7 @@ import {
   isFixedOrSticky,
   isLikelyAd,
   isLikelyPopup,
+  isLikelySocial,
   isPlatformNoise,
   safeReplaceWithText,
 } from '../helpers.js';
@@ -357,6 +358,132 @@ describe('aiSummaryCleaner/helpers', () => {
       el.textContent = 'Plain text';
       const result = safeReplaceWithText(el, 'Replaced');
       expect(result).toBe(true);
+    });
+  });
+
+  describe('isLikelyAd — i18n text patterns', () => {
+    it('detects French publicité', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Ce contenu est une publicité';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('detects French annonce sponsorisée', () => {
+      const el = document.createElement('div');
+      el.textContent = 'annonce sponsorisée par notre partenaire';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('detects German Werbung', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Werbung: Jetzt kaufen!';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('detects German Anzeige', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Anzeige – Sonderangebot';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('detects Chinese 广告', () => {
+      const el = document.createElement('div');
+      el.textContent = '本页面包含广告内容';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('detects Chinese 推广', () => {
+      const el = document.createElement('div');
+      el.textContent = '推广信息，点击查看';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('detects Spanish publicidad', () => {
+      const el = document.createElement('div');
+      el.textContent = 'publicidad patrocinada';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('detects Korean 광고', () => {
+      const el = document.createElement('div');
+      el.textContent = '광고 문의はこちら';
+      expect(isLikelyAd(el)).toBe(true);
+    });
+
+    it('returns false for body text containing Accepter without cookie context', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Nous devons accepter les différences culturelles.';
+      // This text does not contain ad keywords; should not be ad
+      expect(isLikelyAd(el)).toBe(false);
+    });
+  });
+
+  describe('isLikelySocial — i18n text patterns', () => {
+    it('detects French Partager', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Partager sur Facebook';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects French Suivez-nous', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Suivez-nous sur Twitter';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects German Teilen', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Teilen Sie diesen Artikel';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects German Folgen', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Folgen Sie uns auf Instagram';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects Chinese 分享', () => {
+      const el = document.createElement('div');
+      el.textContent = '分享到微信';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects Chinese 关注我们', () => {
+      const el = document.createElement('div');
+      el.textContent = '关注我们获取更多信息';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects Spanish Compartir', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Compartir en redes sociales';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects Korean 공유하기', () => {
+      const el = document.createElement('div');
+      el.textContent = '공유하기 버튼';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects Korean 팔로우', () => {
+      const el = document.createElement('div');
+      el.textContent = '팔로우 해주세요';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('returns false for normal article text', () => {
+      const el = document.createElement('div');
+      el.textContent = 'これは通常の記事本文です。広告や共有ボタンは含まれていません。';
+      expect(isLikelySocial(el)).toBe(false);
+    });
+
+    it('detects fallback class share', () => {
+      const el = document.createElement('div');
+      el.className = 'share-buttons';
+      el.textContent = 'some content';
+      expect(isLikelySocial(el)).toBe(true);
     });
   });
 });

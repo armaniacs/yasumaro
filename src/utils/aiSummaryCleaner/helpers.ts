@@ -6,6 +6,7 @@
 import { escapeCssSelector } from '../cssUtils.js';
 import { getLowerClassName } from '../elementClassName.js';
 import { isBodyProtected } from './bodyProtection.js';
+import { I18N_AD_TEXT_PATTERNS, I18N_SOCIAL_TEXT_PATTERNS } from './patterns.js';
 
 /**
  * 要素を削除する前に本文保護チェックを行う
@@ -63,12 +64,28 @@ export function isFixedOrSticky(elem: Element): boolean {
 export function isLikelyAd(elem: Element): boolean {
     const className = getLowerClassName(elem);
     const id = (elem.id || '').toLowerCase();
-    const text = (elem.textContent || '').toLowerCase();
+    const rawText = elem.textContent || '';
+    const text = rawText.toLowerCase();
     // \bはハイフンを認識しないため、CSSクラス向けに (^|[-_\s])ad([-_\s]|$) を使用
     const AD_WORD_RE = /(^|[-_\s])ad([-_\s]|$)/;
-    return AD_WORD_RE.test(className) || AD_WORD_RE.test(id) ||
-           text.includes('sponsored') || text.includes('promoted') ||
-           text.includes('advertise');
+    if (AD_WORD_RE.test(className) || AD_WORD_RE.test(id)) return true;
+    if (text.includes('sponsored') || text.includes('promoted') || text.includes('advertise')) return true;
+    // i18n広告テキストパターン（テキストマッチ — クラス誤爆を避けるため RegExp[] で判定）
+    if (I18N_AD_TEXT_PATTERNS.some((re) => re.test(rawText))) return true;
+    return false;
+}
+
+/**
+ * 要素がソーシャル/共有かどうかを判定（i18nテキストマッチ）
+ */
+export function isLikelySocial(elem: Element): boolean {
+    const rawText = elem.textContent || '';
+    if (I18N_SOCIAL_TEXT_PATTERNS.some((re) => re.test(rawText))) return true;
+    const className = getLowerClassName(elem);
+    const id = (elem.id || '').toLowerCase();
+    // フォールバック: 英語系クラス/IDでも判定（既存 SOCIAL_CLASS_PATTERNS と一貫）
+    return className.includes('social') || className.includes('share') ||
+           id.includes('social') || id.includes('share');
 }
 
 /**
