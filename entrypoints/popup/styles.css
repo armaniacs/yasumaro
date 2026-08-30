@@ -2579,3 +2579,8 @@ label.inline-label {
   font-size: 11px;
   color: #666;
 }
+
+/* CSP fix: report feedback button margin (was inline style) */
+.report-feedback-btn {
+  margin-top: 8px;
+}

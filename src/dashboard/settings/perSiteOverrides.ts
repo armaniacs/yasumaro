@@ -89,7 +89,7 @@ function renderList(listEl: HTMLElement, overrides: DomainCleansingOverride[], o
         const span = document.createElement('span');
         const keys = Object.keys(entry.overrides).join(', ') || '(empty)';
         span.textContent = ` — ${keys}`;
-        span.style.marginLeft = '6px';
+        span.className = 'per-site-override-suffix';
         li.appendChild(span);
         ul.appendChild(li);
     }

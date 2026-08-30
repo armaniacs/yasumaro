@@ -4603,3 +4603,8 @@ details[open] > .priority-details-summary {
   cursor: pointer;
   color: var(--color-text-secondary);
 }
+
+/* CSP fix: per-site override suffix (was inline style margin-left:6px) */
+.per-site-override-suffix {
+  margin-left: 6px;
+}
