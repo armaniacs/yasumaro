@@ -4,7 +4,14 @@ const mockStorage: Record<string, unknown> = {};
 const mockChrome = {
   storage: {
     local: {
-      get: vi.fn(async (key: string) => ({ [key]: mockStorage[key] })),
+      get: vi.fn(async (keys: string | string[]) => {
+        const list = Array.isArray(keys) ? keys : [keys];
+        const out: Record<string, unknown> = {};
+        for (const k of list) {
+          if (k in mockStorage) out[k] = mockStorage[k];
+        }
+        return out;
+      }),
       set: vi.fn(async (obj: Record<string, unknown>) => {
         Object.assign(mockStorage, obj);
       }),
@@ -80,9 +87,8 @@ describe('MarkdownBufferManager', () => {
       await manager.flush();
 
       expect(manager.count).toBe(0);
-      expect(mockChrome.storage.local.set).toHaveBeenCalledTimes(1);
       const setCall = mockChrome.storage.local.set.mock.calls[0][0];
-      const storageKey = Object.keys(setCall)[0];
+      const storageKey = Object.keys(setCall).find((k) => !k.endsWith('_version')) as string;
       expect(storageKey).toMatch(/^local_export_\d{4}-\d{2}-\d{2}$/);
       expect(setCall[storageKey]).toEqual([entry1, entry2]);
     });
@@ -98,7 +104,7 @@ describe('MarkdownBufferManager', () => {
       await manager.flush();
 
       const setCall = mockChrome.storage.local.set.mock.calls[0][0];
-      const key = Object.keys(setCall)[0];
+      const key = Object.keys(setCall).find((k) => !k.endsWith('_version')) as string;
       expect(setCall[key]).toHaveLength(2);
       expect(setCall[key][0]).toEqual(existingEntry);
       expect(setCall[key][1]).toEqual(newEntry);
@@ -120,7 +126,9 @@ describe('MarkdownBufferManager', () => {
       await manager.flush();
       expect(manager.count).toBe(0);
 
-      expect(mockChrome.storage.local.set).toHaveBeenCalledTimes(2);
+      const today = new Date();
+      const dateKey = `local_export_${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      expect((mockStorage[dateKey] as unknown[]).length).toBe(2);
     });
   });
 

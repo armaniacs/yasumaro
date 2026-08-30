@@ -2,6 +2,7 @@ import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 import { hashUrl } from './crypto/index.js';
 import { getMessage } from './i18n.js';
+import { withOptimisticLock } from './optimisticLock.js';
 
 /**
  * Reasons a page was held back because it looks private.
@@ -133,28 +134,32 @@ async function getPendingPagesList(): Promise<PendingPage[]> {
  */
 export async function addPendingPage(page: PendingPage): Promise<void> {
   try {
-    let pages: PendingPage[];
-    try {
-      pages = await getPendingPagesList();
-    } catch {
-      pages = [];
-    }
-
-    // Exclusion of duplicates
-    const exists = pages.some(p => p.url === page.url);
     const urlHash = await hashUrl(page.url);
-    await logInfo('addPendingPage called', { urlHash, exists, currentCount: pages.length, source: 'pendingStorage' });
-    if (exists) return;
 
-    // Prune expired entries at the write boundary so the list stays bounded
-    // even when the daily purge alarm has not run yet.
-    const basePages = pages.length > PENDING_PAGES_PRUNE_THRESHOLD
-      ? pages.filter(p => p.expiry > Date.now())
-      : pages;
+    // Serialize the read-modify-write so a concurrent addPendingPage /
+    // removePendingPages cannot slot its verify+write between our read and
+    // write and drop one of the two updates (VULN-005). The dedup re-check
+    // and the expiry prune both run inside the updater against the
+    // freshly-read list.
+    const updatedPages = await withOptimisticLock<PendingPage[]>(
+      PENDING_PAGES_KEY,
+      (current) => {
+        const pages = Array.isArray(current) ? current : [];
+        if (pages.some(p => p.url === page.url)) return pages;
+        // VULN-006: prune expired entries at the write boundary so the list
+        // stays bounded even when the daily purge alarm has not run yet.
+        const basePages = pages.length > PENDING_PAGES_PRUNE_THRESHOLD
+          ? pages.filter(p => p.expiry > Date.now())
+          : pages;
+        return [...basePages, page];
+      }
+    );
 
-    const updatedPages = [...basePages, page];
-
-    await chrome.storage.local.set({ [PENDING_PAGES_KEY]: updatedPages });
+    await logInfo('addPendingPage called', {
+      urlHash,
+      currentCount: updatedPages.length,
+      source: 'pendingStorage'
+    });
     await logDebug('Pending page saved', { newCount: updatedPages.length, source: 'pendingStorage' });
   } catch (error) {
     await logError(
@@ -191,11 +196,14 @@ export async function getPendingPages(): Promise<PendingPage[]> {
  */
 export async function removePendingPages(urls: string[]): Promise<void> {
   try {
-    const pages = await getPendingPagesList();
     const urlSet = new Set(urls);
-    const updatedPages = pages.filter(p => !urlSet.has(p.url));
-
-    await chrome.storage.local.set({ [PENDING_PAGES_KEY]: updatedPages });
+    await withOptimisticLock<PendingPage[]>(
+      PENDING_PAGES_KEY,
+      (current) => {
+        const pages = Array.isArray(current) ? current : [];
+        return pages.filter(p => !urlSet.has(p.url));
+      }
+    );
   } catch (error) {
     await logError(
       'Failed to remove pending pages',
