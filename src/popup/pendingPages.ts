@@ -3,6 +3,7 @@ import { logError, ErrorCode } from '../utils/logger.js';
 import { getMessage } from '../utils/i18n.js';
 import { showSuccess } from './errorUtils.js';
 import { escapeHtml } from './domUtils.js';
+import { StorageKeys } from '../utils/storage/types.js';
 
 export async function loadPendingPages(): Promise<void> {
   try {
@@ -58,7 +59,11 @@ function escapeRegex(string: string): string {
 }
 
 async function addDomainsOrPathsToWhitelist(urls: string[], type: 'domain' | 'path'): Promise<void> {
-  const { domainWhitelist = [] } = await chrome.storage.local.get('domainWhitelist') as { domainWhitelist?: string[] };
+  // Read/write the shared key every other consumer uses. Any data left under the
+  // legacy orphan key 'domainWhitelist' is discarded, not migrated: the user
+  // already perceives those adds as having done nothing.
+  const stored = await chrome.storage.local.get(StorageKeys.DOMAIN_WHITELIST) as { [key: string]: string[] | undefined };
+  const currentList = stored[StorageKeys.DOMAIN_WHITELIST] ?? [];
 
   const newEntries = urls.map(url => {
     if (type === 'domain') {
@@ -70,8 +75,8 @@ async function addDomainsOrPathsToWhitelist(urls: string[], type: 'domain' | 'pa
     }
   });
 
-  const updatedList = [...domainWhitelist, ...newEntries];
-  await chrome.storage.local.set({ domainWhitelist: updatedList });
+  const updatedList = [...currentList, ...newEntries];
+  await chrome.storage.local.set({ [StorageKeys.DOMAIN_WHITELIST]: updatedList });
 }
 
 export async function saveSelectedPages(whitelistType?: 'domain' | 'path'): Promise<void> {
