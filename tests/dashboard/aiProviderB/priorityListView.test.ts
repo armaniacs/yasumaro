@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { createBPriorityListView, collectBProviderPrioritySlots, validateBSlots } from '../../../src/dashboard/aiProviderB/priorityListView.js';
 import type { ProviderSlot } from '../../../src/utils/storage/types.js';
@@ -12,7 +12,7 @@ function setupDom() {
 describe('collectBProviderPrioritySlots', () => {
   it('3行のselect+inputからProviderSlot[]を収集（空は無視、trim）', () => {
     const container = setupDom();
-    const view = createBPriorityListView(container, [{ provider: 'openai', model: '  gpt  ' }, { provider: '' }, { provider: 'gemini' }]);
+    createBPriorityListView(container, [{ provider: 'openai', model: '  gpt  ' }, { provider: '' }, { provider: 'gemini' }]);
     const slots = collectBProviderPrioritySlots(container);
     expect(slots).toEqual([{ provider: 'openai', model: 'gpt' }, { provider: 'gemini' }]);
   });
