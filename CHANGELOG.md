@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.89` リリース。
+> - 現時点では `v6.7.90` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,12 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.90] - 2026-08-30
+
+### Fixed
+
+- このリリースは `v6.7.89` に対する hotfix です。`v6.7.89` で PBKDF2 を 100k→600k にSSOT化した際、既存の匿名モード暗号化データ（Obsidian／OpenAI 等のAPIキー）を 600k 派生キーで復号しようとして失敗し、空文字として扱われ使えなくなる不具合を修正。`settingsMigration` に `tryDecryptWithLegacyFallback` を追加し、600k で失敗時に 100k 派生キーでリトライ、成功時は 600k で再暗号化して移行。ストレージ上の暗号化 blob が上書きされていなければ再起動で自動復旧。
 
 ## [6.7.89] - 2026-08-30
 
