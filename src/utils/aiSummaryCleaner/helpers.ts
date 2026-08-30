@@ -76,16 +76,51 @@ export function isLikelyAd(elem: Element): boolean {
 }
 
 /**
- * 要素がソーシャル/共有かどうかを判定（i18nテキストマッチ）
+ * 要素がソーシャル/共有かどうかを判定 — 決定木化（M7 mitigation）
+ * 1) i18nテキストパターン
+ * 2) テキスト内容 "Share on X" など英語パターン
+ * 3) aria-label 判定（Share on X / social/share/follow 単語境界）
+ * 4) クラス/ID 単語境界判定（social/share + x-share/x-follow/x-button 具体化パターン）
  */
 export function isLikelySocial(elem: Element): boolean {
     const rawText = elem.textContent || '';
     if (I18N_SOCIAL_TEXT_PATTERNS.some((re) => re.test(rawText))) return true;
+
+    // 英語圏 "Share on X" / "Follow on X" 系テキスト — 精度の高いシグナル
+    const SHARE_ON_X_RE = /share on (x|twitter|facebook|linkedin|instagram)/i;
+    const FOLLOW_ON_RE = /follow (us )?on (x|twitter|facebook|instagram|youtube|tiktok)/i;
+    if (SHARE_ON_X_RE.test(rawText) || FOLLOW_ON_RE.test(rawText)) return true;
+
+    // aria-label 決定木 — getAttribute のみで完結
+    const ariaLabelRaw = elem.getAttribute('aria-label') || '';
+    const ariaLabel = ariaLabelRaw.toLowerCase();
+    if (ariaLabel) {
+        if (SHARE_ON_X_RE.test(ariaLabelRaw) || FOLLOW_ON_RE.test(ariaLabelRaw)) return true;
+        // 単語境界で social/share/follow を判定（\b はハイフンを跨がないため (^|[-_\s]) を使用）
+        const SOCIAL_ARIA_WORD_RE = /(^|[-_\s])(social|share|follow)([-_\s]|$)/;
+        if (SOCIAL_ARIA_WORD_RE.test(ariaLabel)) return true;
+    }
+
     const className = getLowerClassName(elem);
     const id = (elem.id || '').toLowerCase();
-    // フォールバック: 英語系クラス/IDでも判定（既存 SOCIAL_CLASS_PATTERNS と一貫）
-    return className.includes('social') || className.includes('share') ||
-           id.includes('social') || id.includes('share');
+
+    // M7: x- 単独は誤爆するため x-share/x-follow/x-button のみを単語境界で判定
+    const X_SOCIAL_RE = /(^|[-_\s])x-(share|follow|button)([-_\s]|$)/;
+    if (X_SOCIAL_RE.test(className) || X_SOCIAL_RE.test(id)) return true;
+
+    // social/share は単語境界で判定（share-buttons 等は ^share + - でヒット）
+    const SOCIAL_WORD_RE = /(^|[-_\s])(social|share)([-_\s]|$)/;
+    if (SOCIAL_WORD_RE.test(className) || SOCIAL_WORD_RE.test(id)) return true;
+
+    // 短縮系 fb-/tw-/ig- （X以外のSNS短縮）は前方境界で判定
+    const SHORT_SOCIAL_RE = /(^|[-_\s])(fb|tw|ig)-/;
+    if (SHORT_SOCIAL_RE.test(className) || SHORT_SOCIAL_RE.test(id)) return true;
+
+    // フルプラットフォーム名は単語境界で判定
+    const PLATFORM_RE = /(^|[-_\s])(facebook|twitter|linkedin|instagram|youtube|tiktok|pinterest)([-_\s]|$)/;
+    if (PLATFORM_RE.test(className) || PLATFORM_RE.test(id)) return true;
+
+    return false;
 }
 
 /**
@@ -103,15 +138,30 @@ export function isLikelyPopup(elem: Element): boolean {
 }
 
 /**
- * 要素がプラットフォームノイズかどうかを判定
- * 「 ad 」は単語境界レベルでマッチし、header/loaded 等の誤マッチを防ぐ
+ * 要素がプラットフォームノイズかどうかを判定 — 決定木化
+ * 「 ad 」は単語境界、comment/related は単語境界+aria-label で誤爆を抑止
  */
 export function isPlatformNoise(elem: Element): boolean {
     const className = getLowerClassName(elem);
     const id = (elem.id || '').toLowerCase();
     // \bはハイフンを認識しないため、CSSクラス向けに (^|[-_\s])ad([-_\s]|$) を使用
     const AD_WORD_RE = /(^|[-_\s])ad([-_\s]|$)/;
-    return AD_WORD_RE.test(className) || AD_WORD_RE.test(id) ||
-           className.includes('comment') && className.includes('youtube') ||
-           id.includes('comment') || id.includes('related');
+    if (AD_WORD_RE.test(className) || AD_WORD_RE.test(id)) return true;
+
+    // comment/related/youtube は単語境界で判定（comments 複数形も許容）— 既存 isPlatformNoise セマンティクスを単語境界で横展開
+    const COMMENT_RE = /(^|[-_\s])comments?([-_\s]|$)/;
+    const RELATED_RE = /(^|[-_\s])related([-_\s]|$)/;
+    const YOUTUBE_RE = /(^|[-_\s])youtube([-_\s]|$)/;
+
+    // 既存: className は youtube + comment 同居でノイズ（両シグナル必要）
+    if (COMMENT_RE.test(className) && YOUTUBE_RE.test(className)) return true;
+
+    // 既存: id 単独の comment/related はノイズ — 単語境界で横展開（comments 複数形許容）
+    if (COMMENT_RE.test(id) || RELATED_RE.test(id)) return true;
+
+    // 決定木追加: aria-label でも判定（getAttribute のみ、TreeWalker 不使用）
+    const ariaLabel = (elem.getAttribute('aria-label') || '').toLowerCase();
+    if (ariaLabel && (COMMENT_RE.test(ariaLabel) || RELATED_RE.test(ariaLabel))) return true;
+
+    return false;
 }

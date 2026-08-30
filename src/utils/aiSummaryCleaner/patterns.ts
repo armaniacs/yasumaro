@@ -23,11 +23,16 @@ export const AD_CLASS_PATTERNS = [
 
 /**
  * ソーシャルメディア関連のクラス名パターン
+ * M7: x- 単独パターンは x-data/x-bind 等への誤爆が激しいため廃止。
+ * X（旧Twitter）共有系のみ x-share / x-follow / x-button の3つに具体化して誤爆を抑止。
  */
 export const SOCIAL_CLASS_PATTERNS = [
     'facebook',
     'twitter',
-    'x-',
+    // M7 mitigation: x- 単独は Alpine.js (x-data) 等に誤爆するため具体化
+    'x-share',
+    'x-follow',
+    'x-button',
     'linkedin',
     'instagram',
     'youtube',

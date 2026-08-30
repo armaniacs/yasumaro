@@ -64,9 +64,29 @@ describe('aiSummaryCleaner/patterns', () => {
             expect(document.querySelectorAll(selector).length).toBe(1);
         });
 
-        it('matches unrelated CSS framework class names containing "x-"', () => {
-            // 「x-」は意図的に広いパターン。誤爆リスクとして仕様上マッチすることを明示する
+        it('does not match unrelated CSS framework class names containing "x-" (M7 mitigation)', () => {
+            // M7: 'x-' 単独は誤爆のため x-share/x-follow/x-button のみに具体化 — x-large 等はヒットしない
             document.body.innerHTML = '<div class="x-large">サイズ指定</div>';
+            expect(document.querySelectorAll(selector).length).toBe(0);
+        });
+
+        it('does not match Alpine.js x-data via class selector', () => {
+            document.body.innerHTML = '<div class="x-data">Alpine data</div>';
+            expect(document.querySelectorAll(selector).length).toBe(0);
+        });
+
+        it('matches concretized x-share pattern', () => {
+            document.body.innerHTML = '<div class="x-share">share</div>';
+            expect(document.querySelectorAll(selector).length).toBe(1);
+        });
+
+        it('matches concretized x-follow pattern', () => {
+            document.body.innerHTML = '<div class="x-follow">follow</div>';
+            expect(document.querySelectorAll(selector).length).toBe(1);
+        });
+
+        it('matches concretized x-button pattern', () => {
+            document.body.innerHTML = '<div class="x-button">button</div>';
             expect(document.querySelectorAll(selector).length).toBe(1);
         });
     });

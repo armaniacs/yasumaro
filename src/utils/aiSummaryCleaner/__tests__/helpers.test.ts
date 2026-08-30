@@ -486,4 +486,133 @@ describe('aiSummaryCleaner/helpers', () => {
       expect(isLikelySocial(el)).toBe(true);
     });
   });
+
+  describe('isLikelySocial — M7 decision tree / mitigations', () => {
+    it('does not treat address-book as social', () => {
+      const el = document.createElement('div');
+      el.className = 'address-book';
+      el.textContent = 'Address list content';
+      expect(isLikelySocial(el)).toBe(false);
+    });
+
+    it('does not treat admin-panel as social', () => {
+      const el = document.createElement('div');
+      el.className = 'admin-panel';
+      expect(isLikelySocial(el)).toBe(false);
+    });
+
+    it('does not treat x-data as social (M7 x- mitigation)', () => {
+      const el = document.createElement('div');
+      el.className = 'x-data x-bind';
+      el.textContent = 'Alpine.js data';
+      expect(isLikelySocial(el)).toBe(false);
+    });
+
+    it('does not treat x-data id as social', () => {
+      const el = document.createElement('div');
+      el.id = 'x-data';
+      expect(isLikelySocial(el)).toBe(false);
+    });
+
+    it('detects x-share as social (concretized pattern)', () => {
+      const el = document.createElement('div');
+      el.className = 'x-share';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects x-follow as social', () => {
+      const el = document.createElement('div');
+      el.className = 'x-follow-button';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects x-button as social', () => {
+      const el = document.createElement('div');
+      el.id = 'x-button';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects x-share in composite class', () => {
+      const el = document.createElement('div');
+      el.className = 'foo x-share bar';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects aria-label="Share on X" as social', () => {
+      const el = document.createElement('div');
+      el.setAttribute('aria-label', 'Share on X');
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects aria-label="Share on Twitter" as social', () => {
+      const el = document.createElement('div');
+      el.setAttribute('aria-label', 'Share on Twitter');
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects text "Share on X" as social', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Share on X';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects text "Follow us on X" as social', () => {
+      const el = document.createElement('div');
+      el.textContent = 'Follow us on X to get updates';
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('detects aria-label social word boundary', () => {
+      const el = document.createElement('div');
+      el.setAttribute('aria-label', 'social share buttons');
+      expect(isLikelySocial(el)).toBe(true);
+    });
+
+    it('does not treat commentary as social-like via substring', () => {
+      const el = document.createElement('div');
+      el.className = 'commentary';
+      el.textContent = 'This is commentary text';
+      expect(isLikelySocial(el)).toBe(false);
+    });
+  });
+
+  describe('isLikelyAd — word boundary mitigations', () => {
+    it('does not treat address-book as ad', () => {
+      const el = document.createElement('div');
+      el.className = 'address-book';
+      expect(isLikelyAd(el)).toBe(false);
+    });
+
+    it('does not treat admin-panel as ad', () => {
+      const el = document.createElement('div');
+      el.className = 'admin-panel';
+      expect(isLikelyAd(el)).toBe(false);
+    });
+  });
+
+  describe('isPlatformNoise — word boundary mitigations', () => {
+    it('does not treat address-book as platform noise', () => {
+      const el = document.createElement('div');
+      el.className = 'address-book';
+      expect(isPlatformNoise(el)).toBe(false);
+    });
+
+    it('does not treat x-data as platform noise', () => {
+      const el = document.createElement('div');
+      el.className = 'x-data';
+      expect(isPlatformNoise(el)).toBe(false);
+    });
+
+    it('does not treat commentary as platform noise (word boundary)', () => {
+      const el = document.createElement('div');
+      el.className = 'commentary';
+      expect(isPlatformNoise(el)).toBe(false);
+    });
+
+    it('still detects comments id as platform noise', () => {
+      const el = document.createElement('div');
+      el.id = 'comments';
+      expect(isPlatformNoise(el)).toBe(true);
+    });
+  });
 });
