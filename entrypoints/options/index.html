@@ -997,6 +997,18 @@
              data-i18n="cleansingOrderGuideLink">View Cleansing Processing Order (opens in new tab)</a>
         </div>
 
+        <!-- Cleansing Preset Selector -->
+        <div class="form-group">
+          <label for="cleansing-preset" data-i18n="cleansingPresetLabel">Cleansing Preset</label>
+          <select id="cleansing-preset" aria-describedby="cleansingPresetHelp">
+            <option value="minimal" data-i18n="cleansingPresetMinimal">Minimal — 3 rules</option>
+            <option value="balanced" data-i18n="cleansingPresetBalanced">Balanced — 9 rules</option>
+            <option value="aggressive" data-i18n="cleansingPresetAggressive">Aggressive — 25 rules</option>
+            <option value="custom" data-i18n="cleansingPresetCustom">Custom</option>
+          </select>
+          <div id="cleansingPresetHelp" class="help-text" data-i18n="cleansingPresetHelp">Choose a preset. Select Custom to edit individual toggles.</div>
+        </div>
+
         <!-- AI要約クレンジング有効化 -->
         <div class="form-group">
           <fieldset id="aiSummaryCleansingFieldset">

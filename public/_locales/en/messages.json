@@ -3916,5 +3916,23 @@
   },
   "tabOthers": {
     "message": "Others"
+  },
+  "cleansingPresetLabel": {
+    "message": "Cleansing Preset"
+  },
+  "cleansingPresetMinimal": {
+    "message": "Minimal — 3 rules"
+  },
+  "cleansingPresetBalanced": {
+    "message": "Balanced — 9 rules"
+  },
+  "cleansingPresetAggressive": {
+    "message": "Aggressive — 25 rules"
+  },
+  "cleansingPresetCustom": {
+    "message": "Custom"
+  },
+  "cleansingPresetHelp": {
+    "message": "Choose a preset. Select Custom to edit individual toggles."
   }
 }

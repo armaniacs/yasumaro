@@ -197,6 +197,8 @@ export const StorageKeys = {
     AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES: 'ai_summary_cleansing_fallback_min_bytes', // 過剰削減フォールバック絶対量閾値（デフォルト: 300バイト）
     // Custom pattern settings
     AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS: 'ai_summary_cleansing_custom_patterns', // カスタムパターン列表
+    // Cleansing preset (minimal | balanced | aggressive | custom)
+    CLEANSING_PRESET: 'cleansing_preset',
     // Domain Whitelist Extraction Mode
     WHITELIST_EXTRACTION_ENABLED: 'whitelist_extraction_enabled', // ホワイトリスト抽出モード有効フラグ（デフォルト: true、新規ユーザーのみ）
     MIGRATION_WHITELIST_EXTRACTION_DEFAULT_DONE: 'migration_whitelist_extraction_default_done', // 既存ユーザー移行完了フラグ
@@ -409,6 +411,7 @@ export interface StorageKeyValues {
     [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS]: string[];
+    [StorageKeys.CLEANSING_PRESET]: string;
     [StorageKeys.WHITELIST_EXTRACTION_ENABLED]: boolean;
     [StorageKeys.MIGRATION_WHITELIST_EXTRACTION_DEFAULT_DONE]: boolean;
     [StorageKeys.TRANCO_VERSION]: string;
