@@ -3,6 +3,7 @@ import {
   getAiSummaryCleansingSettings, applyAiSummaryCleansingSettingsToUI,
   setupAiSummaryCleansingEventListeners, saveAiSummaryCleansingSettings,
 } from '../../settings/aiSummaryCleansingSettingsV2.js';
+import { initPerSiteOverrides } from '../../settings/perSiteOverrides.js';
 import { getSavedUrlEntries } from '../../../utils/storageUrls.js';
 import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from '../../cleansingStatsView.js';
 
@@ -16,6 +17,7 @@ export function createAiSummaryCleansingPanel(): PanelLifecycle & { refresh?: ()
       const aiSummaryCleansingSettings = await getAiSummaryCleansingSettings();
       applyAiSummaryCleansingSettingsToUI(aiSummaryCleansingSettings);
       setupAiSummaryCleansingEventListeners();
+      try { initPerSiteOverrides(); } catch {}
 
       const sliderConfigs = [
         { sliderId: 'ai-summary-cleansing-link-ratio-threshold', valueId: 'link-ratio-threshold-value', settingKey: 'linkRatioThreshold' },

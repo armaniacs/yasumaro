@@ -1290,6 +1290,26 @@
           <button id="saveAiSummaryCleansingSettings" class="btn-primary" data-i18n="aiSummaryCleansingSave">Save</button>
           <div id="aiSummaryCleansingSettingsStatus" class="status-message" aria-live="polite"></div>
         </div>
+
+        <!-- Per-site Cleansing Overrides (minimal UI) -->
+        <div class="settings-section" id="perSiteCleansingOverridesSection">
+          <h3 class="settings-section-title">Per-site Overrides</h3>
+          <p class="help-text">Domain exact match. Overrides are merged onto the global config (only differences are stored).</p>
+          <div class="form-group">
+            <label for="perSiteOverrideDomain">Domain</label>
+            <input type="text" id="perSiteOverrideDomain" placeholder="example.com" autocomplete="off" spellcheck="false">
+            <div class="help-text">Exact match (subdomains are separate). Example: example.com</div>
+          </div>
+          <div class="form-group" id="perSiteOverrideToggles">
+            <!-- checkboxes generated via JS from CLEANSING_RULES -->
+          </div>
+          <div class="form-group">
+            <button id="perSiteOverrideSaveBtn" class="secondary-btn">Save override</button>
+            <button id="perSiteOverrideDeleteBtn" class="secondary-btn">Delete override</button>
+            <span id="perSiteOverrideStatus" class="status-message" aria-live="polite"></span>
+          </div>
+          <div id="perSiteOverrideList" class="help-text"></div>
+        </div>
       </section>
 
       <!-- Trust Database Settings Panel -->

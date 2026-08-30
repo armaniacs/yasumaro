@@ -20,6 +20,7 @@ import { pickDefined } from '../utils/objectUtils.js';
 import { ScrollMonitor } from './scrollMonitor.js';
 import { VisitReporter, type MessageSender } from './visitReporter.js';
 import { createSender } from '../utils/retryHelper.js';
+import { getCleansingConfigForDomain } from '../utils/aiSummaryCleaner/perSiteOverride.js';
 
 export interface Scheduler {
     schedule(callback: () => void): number;
@@ -203,6 +204,27 @@ export class ContentKernel {
                 const v = Number.isFinite(n) ? n : t.default;
                 this.pageState.cleansingConfig[t.prop] = Math.max(t.min, Math.min(t.max, v));
             }
+        }
+
+        // Per-site override — hostname に対して完全一致で上書きをマージ
+        try {
+            const rawOverrides = s[StorageKeys.DOMAIN_CLEANSING_OVERRIDES];
+            if (Array.isArray(rawOverrides) && rawOverrides.length > 0) {
+                const hostname =
+                    typeof window !== 'undefined' && window.location?.hostname
+                        ? window.location.hostname
+                        : '';
+                if (hostname) {
+                    const merged = getCleansingConfigForDomain(
+                        hostname,
+                        this.pageState.cleansingConfig as unknown as Record<string, unknown>,
+                        rawOverrides as unknown as import('../utils/storage/types.js').DomainCleansingOverride[],
+                    ) as unknown as CleansingConfig;
+                    this.pageState.cleansingConfig = merged;
+                }
+            }
+        } catch {
+            // override 解決の失敗は致命的ではない — グローバル設定で続行
         }
 
         void logInfo(

@@ -202,6 +202,8 @@ export const StorageKeys = {
     // Domain Whitelist Extraction Mode
     WHITELIST_EXTRACTION_ENABLED: 'whitelist_extraction_enabled', // ホワイトリスト抽出モード有効フラグ（デフォルト: true、新規ユーザーのみ）
     MIGRATION_WHITELIST_EXTRACTION_DEFAULT_DONE: 'migration_whitelist_extraction_default_done', // 既存ユーザー移行完了フラグ
+    // Per-site cleansing overrides
+    DOMAIN_CLEANSING_OVERRIDES: 'domain_cleansing_overrides', // ドメイン別クレンジング上書き（DomainCleansingOverride[]）
     // Tranco List Update Notification (Phase 1)
     TRANCO_VERSION: 'tranco_version', // 現在の Tranco リストバージョン（ISO 8601形式）
     TRANCO_DOMAINS: 'tranco_domains', // 保存された Tranco ドメインリスト（旧リスト保持用）
@@ -414,6 +416,7 @@ export interface StorageKeyValues {
     [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS]: string[];
     [StorageKeys.CLEANSING_PRESET]: string;
+    [StorageKeys.DOMAIN_CLEANSING_OVERRIDES]: DomainCleansingOverride[];
     [StorageKeys.WHITELIST_EXTRACTION_ENABLED]: boolean;
     [StorageKeys.MIGRATION_WHITELIST_EXTRACTION_DEFAULT_DONE]: boolean;
     [StorageKeys.TRANCO_VERSION]: string;
@@ -470,5 +473,17 @@ export interface StorageKeyValues {
 export type StrictSettings = {
     [K in StorageKey]: StorageKeyValues[K];
 };
+
+/**
+ * Per-site cleansing override.
+ * `domain` は完全一致（小文字正規化後に比較）。`overrides` は CleansingConfig の差分のみ。
+ * CleansingConfig 自体の型は pageState.ts / aiSummaryCleaner/types.ts で定義されるが、
+ * storage/types は下位レイヤーのため循環を避けて Record<string, unknown> で保持し、
+ * 呼び出し側で Partial<CleansingConfig> として扱う。
+ */
+export interface DomainCleansingOverride {
+    domain: string;
+    overrides: Record<string, boolean | number | string | string[]>;
+}
 
 export type Settings = Partial<StrictSettings>;
