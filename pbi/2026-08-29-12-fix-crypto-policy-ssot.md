@@ -1,4 +1,9 @@
-# PBI: 暗号・認証ポリシーの単一情報源化（VULN-010/037/038/039/040/052, CWE-312/916/307/362/521）
+# PBI: 暗号・認証ポリシーの単一情報源化（VULN-010/034/035/037/038/039/040/052, CWE-312/916/307/347/362/521）
+
+> **29-13 から統合**: PR #76（29-13）で見送った HMAC 先行化（VULN-034）と
+> log export 署名（VULN-035）は、暗号エクスポート形式の変更（平文 JSON 署名 →
+> ciphertext 署名）を伴い、本 PBI の SSOT 化・形式バージョン管理と同一スコープ。
+> 下記「29-13 から統合したスコープ」を参照。
 
 ## ユーザーストーリー
 利用者として、マスターパスワードと API キー保護が単一の強いポリシーで運用されるようにしたい、なぜなら硬化版実装（600k iterations、strict ポリシー、deriveHmacWrappingKey）が死蔵コードで、弱い平行実装が本番に配線され続けているから
@@ -57,7 +62,14 @@ Scenario: 弱いパスワードは production 経路で拒否される
 - [ ] `src/utils/masterPassword.ts:78-86` が strict ポリシー（`encryptionSession.ts:262-274` から抽出した共有 validator）に一本化され、弱い平行実装が削除されている
 - [ ] 既存暗号データの後方互換（旧 iterations 形式の読み込み）がテストされている
 - [ ] `npm run type-check` と `npm run validate` が成功する
-- [ ] VulnHunter 再検証: 6 PoC が全て失敗する
+- [ ] VulnHunter 再検証: 6 指摘の再現テスト（BDD シナリオ）が全て失敗する
+
+### 29-13 から統合したスコープ（VULN-034/035）
+- [ ] 暗号エクスポート形式にバージョンフィールドを導入し、新バージョンは **ciphertext（envelope 全体）に対して HMAC を計算**する。復号前に HMAC 検証が走る（`settingsExportImport.ts` の import フロー。PR #76 で入れた 10MB cap + typed-array decode の後、KDF/復号の前）
+- [ ] 旧バージョン（平文 JSON 署名）の import は読み込み互換を維持（バージョン判定で分岐）。新規エクスポートは常に新バージョンで書き出す
+- [ ] `src/dashboard/exportLogsService.ts` の log export に HMAC 署名を付与し、`src/dashboard/importLogsService.ts` に署名ゲートを追加（PR #76 の `validateRow` 全 9 フィールド検証は維持）
+- [ ] 旧無署名 log ファイルの扱いを決定（移行期間の許可フラグ or 拒否）し、`CHANGELOG.md` と `public/PRIVACY.md` + `docs/PRIVACY.md`（同一に保つ）を更新
+- [ ] 署名対象バイト範囲を既存実装と厳密一致させ、正当ファイルの round-trip が壊れないことをテスト
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -86,6 +98,7 @@ Scenario: 弱いパスワードは production 経路で拒否される
 - テスタビリティ: crypto は Web Crypto polyfill（@peculiar/webcrypto）で既存テストあり
 - 非機能要件: アンロック性能劣化なし（600k は現行 envelope と同等）。deriveHmacWrappingKey 配線時の初回 unlock に KDF コストが乗る点を UX 評価すること
 - 注意: settings export 形式の iterations フィールド追加は「任意読み込み・既定 600k 書き込み」で後方互換
+- 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
 

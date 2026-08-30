@@ -56,7 +56,7 @@ Scenario: 無制限タグ/文は二次計算に入る前に cap される
 - [ ] `src/offscreen/payloadGuard.ts:68-125` が schema（`src/offscreen/schema.ts:69-102` の全 TEXT 列）駆動で各列＋合計を cap し、未知フィールドを fail-closed にする
 - [ ] `src/offscreen/sqliteMessageHandlers.ts:122-164`（SQLite 経路のタグ cap 50）と `tagCooccurrence.ts:36-41` / `sentenceExtractor.ts:91-101` / `tagClusterLayout.ts:69-90` の入力 cap が実装されている
 - [ ] `npm run type-check` と `npm run validate` が成功する
-- [ ] VulnHunter 再検証: 7 指摘の PoC が全て失敗する
+- [ ] VulnHunter 再検証: 7 指摘の再現テスト（BDD シナリオ）が全て GREEN
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -84,6 +84,7 @@ Scenario: 無制限タグ/文は二次計算に入る前に cap される
 - テスタビリティ: purge alarm は FakeAlarmPort（既存 PBI 2026-08-27-24 のパターン）で検証可能
 - 非機能要件: truncate/cap による正規データの欠損は既存表示挙動と同等以内
 - 注意: tagClusterLayout の top-N は計算頻度の高い panel なので UX 劣化を計測すること
+- 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
 

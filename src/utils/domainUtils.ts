@@ -6,7 +6,7 @@
 import { getSettings } from './storage/settingsStore.js';
 import { StorageKeys } from './storage/types.js';
 import { isUrlBlocked } from './ublockMatcher.js';
-import { wildcardToRegex } from './wildcardToRegex.js';
+import { wildcardToRegex, MAX_WILDCARDS_PER_PATTERN } from './wildcardToRegex.js';
 
 /**
  * Check if ublockRules object has any rules (supports both old and new formats)
@@ -91,7 +91,15 @@ export function isValidDomain(domain: unknown): boolean {
         return false;
     }
 
-    // Basic domain validation
+    // Reject patterns with more wildcards than matchesPattern (via wildcardToRegex)
+    // will honor. Such a pattern would silently never match once stored, and a
+    // large count is the ReDoS lever we cap elsewhere (VULN-026).
+    if ((domain.match(/\*/g)?.length ?? 0) > MAX_WILDCARDS_PER_PATTERN) {
+        return false;
+    }
+
+    // Basic domain validation. The bounded {0,61} quantifier and non-nested
+    // label groups keep this linear (no catastrophic backtracking).
     const domainPattern = /^(\*\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
     // Check if it's a valid domain or wildcard pattern

@@ -1,10 +1,17 @@
 # バックログ優先度一覧 — 2026-08-29 VulnHunter 監査対応
 
+## この索引の読み方
+
+- **着手順**: ファイル名の連番 `NN` が RICE 順位と一致する（`01` が最優先）。実際の着手は「依存関係と並列性（Wave 提案）」に従う。`pbi/00-INDEX.md` の表順もこれに合わせる。
+- **VulnHunter 結果ディレクトリ（`obsidian-smart-history_VULNHUNT_RESULTS_2026-08-29-165536/`）はリポジトリに含まれない**（`.gitignore` の `*_VULNHUNT_RESULTS_*` で除外、ローカルにも未保管）。PoC / exploit_tests の完全な再現入力は復元不可。攻撃の具体（実測値・シナリオ形状）は下記「なぜなぜ分析（フェーズ3）」の各クラスタ節に要約されている（例: C1 は 30ドット→8265ms、C4 はバッファ `final=['E2']` / リトライキュー `['A','B']→['A']`）。各 PBI のテストは受け入れ基準（BDD シナリオ）から起こす。
+- 行番号は監査時点（2026-08-29、ブランチ `fix/test-updates-and-cleanup [5d3005a6]`）のもの。着手時に該当シンボルで再確認すること。
+
 ## 候補の列挙（フェーズ0）
 
-VulnHunter 2026-08-29 スキャン（Run ID: `obsidian-smart-history_VULNHUNT_RESULTS_2026-08-29-165536`、
-ブランチ `fix/test-updates-and-cleanup [5d3005a6]`）で確認された **48件の脆弱性（Medium 3 / Low 45）**
+VulnHunter 2026-08-29 スキャンで確認された **48件の脆弱性（Medium 3 / Low 45）**
 と **Code Quality 9件** を、修正戦略が共通するルート原因ごとにクラスタリングし、14候補に整理した。
+その後、C14 に含めていた orphan-key 機能バグ（pending パネルのホワイトリスト追加が無効）は
+実在のユーザー影響があるため `2026-08-29-15` として分離した（計 15 PBI）。
 
 | # | 候補（クラスタ） | 含まれる指摘 | 種別 |
 |---|---|---|---|
@@ -21,9 +28,10 @@ VulnHunter 2026-08-29 スキャン（Run ID: `obsidian-smart-history_VULNHUNT_RE
 | C11 | storageFallback ミューテータ統一 | VULN-022(M) | fix |
 | C12 | 暗号・認証ポリシーの単一情報源化 | VULN-010, 037, 038, 039, 040, 052 | fix |
 | C13 | インポート経路の安全化（認証→上限→パース→検証） | VULN-023, 030, 034, 035, 036 | fix |
-| C14 | Code Quality ハードニング一括（機能バグ1件含む） | orphan-key bug, CSPValidator 自己許可, urlWhitelist 自己許可, Gemini path, TSV 数式無害化, models-dev スキーマ検証, 旧a.hrefパネル | fix |
+| C14 | Code Quality ハードニング一括（将来攻撃面6件） | CSPValidator 自己許可, urlWhitelist 自己許可, Gemini path, TSV 数式無害化, models-dev スキーマ検証, 旧a.hrefパネル | fix |
+| C15 | orphan-key 機能バグ（C14 から分離） | pending パネルのホワイトリスト追加が orphan キー `'domainWhitelist'` に書かれ無効 | fix |
 
-- 全 48 指摘 + Code Quality 9件が過不足なく C1–C14 に割り当て済み（トレーサビリティ表は下記）
+- 全 48 指摘 + Code Quality 9件が過不足なく C1–C15 に割り当て済み（トレーサビリティ表は下記）
 - 誤検知6件（VULN-014/020/031/032/033/043）とスイープ除去2件（VULN-045/046）は PBI 化対象外
   （045/046 のシンクは C2 にハードニングとして吸収）
 
@@ -34,7 +42,7 @@ VulnHunter 2026-08-29 スキャン（Run ID: `obsidian-smart-history_VULNHUNT_RE
 | 候補 | 何を作るか | 誰のため | なぜ必要 | 制約 |
 |---|---|---|---|---|
 | C1 | `DOMAIN_VALIDATION` を線形 label-wise 検証に置換、`matchesPattern` を `wildcardToRegex`（上限付き）に統一、フィルタ保存時バリデーション | 全利用者（第三者配信フィルタリストを購読する人） | 実測 8.3秒の指数 ReDoS が Service Worker を停止。1 regex 置換で消える最安の Medium | 正当なドメイン（`*.example.com` 等）を拒否しないこと、既存テスト 47件の互換維持 |
-| C2 | `sanitizeForObsidian` の HTML エンティティ化、結合安全なフラグメントエスケープヘルパー、4 消費者への適用 | Obsidian 連携利用者全員 | ページ由来 HTML が日次ノートにそのまま書かれ、レンダラ次第で実行されうる（実証済み） | ノートの可読性を損なわないエンティティ化、既存 3+1 消費者の出力互換 |
+| C2 | `sanitizeForObsidian` の HTML エンティティ化＋既存 `sanitizeForMarkdownLinkText` の適用漏れ解消（legacy formatter / 2 sync-target / タグ） | Obsidian 連携利用者全員 | ページ由来 HTML が日次ノートにそのまま書かれ、レンダラ次第で実行されうる。link-text ヘルパー自体は前回レビューで導入済み | ノートの可読性を損なわないエンティティ化、既存消費者の出力互換 |
 | C3 | `readBodyCapped(response, maxBytes)` を新設し 8 シンク（Obsidian/FETCH_URL/Tranco/AI×4/Gist）を置換 | 全利用者 | Content-Length 省略（chunked）で上限が無効化され SW メモリ枯渇（実証: 64–200MB 確保） | タイムアウト維持、post-read チェックは防御深度として残す |
 | C4 | 6 サイト（MarkdownBufferManager/pendingStorage/logger storageAdapter/PersistentRetryQueue/notificationHandlers/optimisticLock）に CAS/Mutex/単一実行を適用 | 全利用者（通常運用でデータ消失が起きうる） | MV3 のマルチコンテキスト並行性でエントリ消失・重複記録・ジョブロストが実証済み | 既存 `withOptimisticLock`/`Mutex` パターンの再利用、`aiUsageTracker` を正解パターンとする |
 | C5 | `queryPlan` と handler で `Math.max(1, Math.min(...))` に統一（4 シンク） | ダッシュボード利用者 | `LIMIT -1` が SQLite で無制限を意味し、監査ログ全件materialization が可能 | 読み取り系の既定値（100/50/1000）維持 |
@@ -46,9 +54,11 @@ VulnHunter 2026-08-29 スキャン（Run ID: `obsidian-smart-history_VULNHUNT_RE
 | C11 | storageFallback に `mutate(fn)` ヘルパーを新設し 8 ミューテータ全てを経由させる | OPFS 不使用環境の利用者 | 6/8 ミューテータがロックなしで RMW → purge が取り消される等（実証済み） | OPFS 正常環境への影響ゼロ（フォールバック専用） |
 | C12 | 暗号パラメータ SSOT（iterations・ポリシー・KDF ラッパー）、KEK session-only 化＋`deriveHmacWrappingKey` 配線、RateLimit の local 永続化、init mutex、弱い平行実装削除 | マスターパスワード設定者 | 硬化版が実装済みでも死蔵コードのため弱い経路が本番に残る（5 指摘の共通根） | アンロック UX・既存暗号データの移行互換 |
 | C13 | 共通インポートプリミティブ（認証→サイズ上限→パース→行検証）を 3 系統に適用、YAML フロントマター エスケープ、validateRow 全フィールド化 | ファイル import 利用者 | 復号・パースが署名検証より先に走り、署名なし履歴偽造が可能（実証済み） | 既存エクスポートファイルの後方互換（iterations フィールド追加は任意読み込み） |
-| C14 | orphan-key ホワイトリストバグ修正（`StorageKeys.DOMAIN_WHITELIST` 経由）、CSPValidator/urlWhitelist 自己許可の締め直し、Gemini path エンコード、TSV 数式無害化、models-dev スキーマ検証、旧a.hrefパネルに isSecureUrl | 全利用者 | 機能が沈黙して効かないバグ1件＋将来の攻撃面になるハードニング6件 | 既存 UI 動作の非破壊 |
+| C14 | CSPValidator/urlWhitelist 自己許可の締め直し、Gemini path エンコード、TSV 数式無害化、models-dev スキーマ検証、旧a.hrefパネルに isSecureUrl | 全利用者 | 将来の攻撃面になるハードニング6件 | 既存 UI 動作の非破壊 |
+| C15 | orphan-key ホワイトリストバグ修正（`StorageKeys.DOMAIN_WHITELIST` 経由への統一） | pending 導線の利用者 | 機能が沈黙して効かない（追加操作が orphan キーに書かれ誰も読まない） | 既存 UI 動作の非破壊、既存 `domain_whitelist` の値を保持 |
 
-不足情報なし。監査レポート（README.md / phase2b / phase3 / phase3d）と全 PoC から復元可能。
+監査の原資料（README.md / phase2b / phase3 / phase3d / poc/ / exploit_tests/）は
+`.gitignore` 除外の結果ディレクトリにありリポジトリ外。攻撃の具体は下記「なぜなぜ分析」節に要約済み。
 
 ---
 
@@ -61,7 +71,7 @@ VulnHunter 2026-08-29 スキャン（Run ID: `obsidian-smart-history_VULNHUNT_RE
 | 順位 | 候補 | Reach | Impact | Confidence | Effort | RICE | 根拠 |
 |---|---|---|---|---|---|---|---|
 | 1 | C1 regex 安全性 | 1000 | 0.5 | 0.95 | 0.1 | **4750** | 第三者配信フィルタリストで全利用者が攻撃対象（unauth-web 相当）。実測 8.3秒の指数 ReDoS。修正は 1 regex 置換＋ヘルパー再利用で最安 |
-| 2 | C2 Markdown サニタイズ境界 | 1000 | 0.5 | 0.95 | 0.2 | **2375** | Medium の HTML 注入。ページ→ノート経路は全 Obsidian 連携ユーザーに到達。消費者 4 箇所の統一で 2pt |
+| 2 | C2 Markdown サニタイズ境界 | 1000 | 0.5 | 0.95 | 0.1 | **4750** | Medium の HTML 注入。link-text ヘルパーは前回レビューで導入済みのため残タスクはエンティティ化＋適用漏れ解消のみ（Effort 0.2→0.1、当初スコア 2375 から再評価） |
 | 3 | C3 レスポンス読み込み上限 | 1000 | 0.35 | 0.95 | 0.2 | **1663** | 5 指摘・8 シンクを 1 ユーティリティで解消。攻撃者は任意サイトの応答ヘッダ/ボディ（chunked）で到達可能 |
 | 4 | C4 storage RMW 直列化 | 800 | 0.4 | 0.9 | 0.2 | **1440** | 通常の MV3 並行動作で記録・ログ・リトライジョブが静黙消失（攻撃不要）。データ完全性 Impact |
 | 5 | C5 limit 両側クランプ | 400 | 0.35 | 0.95 | 0.1 | **1330** | DASHBOARD_SQLITE は extension-only（Reach 抑制）だが監査ログ全件流出・無制限 materialization。修正は clamp 1 行系 |
@@ -73,21 +83,22 @@ VulnHunter 2026-08-29 スキャン（Run ID: `obsidian-smart-history_VULNHUNT_RE
 | 11 | C11 storageFallback 統一 | 100 | 0.5 | 0.95 | 0.1 | **475** | Medium だがフォールバックモード（OPFS 不使用環境）限定で Reach 低。修正はヘルパー抽出 1 件 |
 | 12 | C12 暗号 SSOT | 400 | 0.4 | 0.85 | 0.3 | **453** | KEK 平文・100k KDF・レート制限迂回等の実質。ただし暗号変更は回帰リスクが高く Confidence/Effort を penalize |
 | 13 | C13 インポート安全化 | 300 | 0.3 | 0.9 | 0.2 | **405** | 署名なし履歴偽造（035）を含む。ファイル import ユーザー限定 |
-| 14 | C14 Code Quality 一括 | 300 | 0.15 | 0.85 | 0.15 | **255** | 機能バグ 1＋ハードニング 6。個々は小さいが束ねて 1 PBI |
+| 14 | C14 Code Quality ハードニング | 300 | 0.1 | 0.85 | 0.15 | **170** | 将来攻撃面 6 件。個々は小さいが束ねて 1 PBI（orphan-key バグは C15 に分離） |
+| — | C15 orphan-key 機能バグ | 300 | 0.4 | 0.95 | 0.05 | **2280** | pending パネルのホワイトリスト追加が沈黙。2 行の書き換え。Wave 1 で即着手 |
 
 ### 依存関係と並列性（Wave 提案）
 
-- **Wave 1（全並列・ファイル触接なし）**: 01 regex / 02 markdown / 03 body-caps / 05 limit-clamp / 09 redirect-ssrf
+- **Wave 1（全並列・ファイル触接なし）**: 01 regex / 02 markdown / 03 body-caps / 05 limit-clamp / 09 redirect-ssrf / **15 orphan-key**
 - **Wave 2（並列可）**: 04 storage-RMW / 07 lock-CAS / 08 resource-caps / 10 log-integrity / 11 fallback / 13 import
-  - 注意: 03（systemHandlers.ts:98-108）と 10（systemHandlers.ts:258-264）は同一ファイル → マージ時に要コンフリクト確認
+  - 注意: 03 / 09 / 10 はいずれも `src/background/handlers/systemHandlers.ts` を触る（03: FETCH_URL 応答読み取り ~98-108 行、09: FETCH_URL の fetch オプション ~87 行、10: LOG_FORWARD の `_source` ~258-264 行）→ 同一ブランチにまとめるか、03→09→10 の順にマージしコンフリクトを確認
   - 04（optimisticLock.ts）と 07（trustDb/trancoUpdater）は理論上 04 のロック強化が 07 の CAS 修正と相互作用 → 04 先着手を推奨
 - **Wave 3（高リスク・単独）**: 06 trust-boundary / 12 crypto-SSOT — 既存動作のセマンティクス変更を含むためレビュー強化
-- **任意タイミング**: 14 code-quality
+- **任意タイミング**: 14 code-quality（ハードニングのみ）
 
 ### 最終順位
 
 1. `2026-08-29-01-fix-regex-safety.md`（RICE 4750）
-2. `2026-08-29-02-fix-markdown-sanitizer-boundary.md`（2375）
+2. `2026-08-29-02-fix-markdown-sanitizer-boundary.md`（4750 — 再評価。ファイル名連番は据え置き）
 3. `2026-08-29-03-fix-response-body-caps.md`（1663）
 4. `2026-08-29-04-fix-storage-rmw-serialization.md`（1440）
 5. `2026-08-29-05-fix-query-limit-clamp.md`（1330）
@@ -99,7 +110,20 @@ VulnHunter 2026-08-29 スキャン（Run ID: `obsidian-smart-history_VULNHUNT_RE
 11. `2026-08-29-11-fix-storagefallback-mutate.md`（475）
 12. `2026-08-29-12-fix-crypto-policy-ssot.md`（453）
 13. `2026-08-29-13-fix-import-pipeline-safety.md`（405）
-14. `2026-08-29-14-fix-security-hardening-code-quality.md`（255）
+14. `2026-08-29-14-fix-security-hardening-code-quality.md`（170 — ハードニングのみ）
+15. `2026-08-29-15-fix-pending-whitelist-orphan-key.md`（2280 — C14 から分離。着手は Wave 1）
+
+### フォローアップ PBI（Wave 2 の部分完了分から分離）
+
+Wave 2（PR #73–#76）で着地しきれなかった残タスクを新規 PBI として切り出した。
+
+- `2026-08-29-16-fix-cas-verify-write-serialization.md` — 29-04 の残 4 サイト（buffer/pending/logger の CAS + `optimisticLock` の verify→write 直列化）。fake-timer 互換の key 粒度 Mutex 設計が主眼。VULN-003/005/012/050
+- `2026-08-29-17-fix-local-export-retention.md` — 29-08 の VULN-004。ローカル Markdown 自動エクスポートの retention（download 記録の purge + 日次バッファのエントリ上限）
+- `2026-08-29-18-fix-secondary-compute-input-caps.md` — 29-08 の VULN-041/051/053。タグ共起・TextRank・タグクラスタ配置の O(n²) 計算への入力 cap
+
+**29-13 / 29-04 の HMAC 先行化（VULN-034）と log 署名（VULN-035）** は暗号エクスポート形式の変更
+（平文 JSON 署名 → ciphertext 署名）を伴うため、独立 PBI にせず `2026-08-29-12-fix-crypto-policy-ssot.md`
+のスコープに追記して統合対応する。
 
 ---
 
@@ -277,7 +301,20 @@ VulnHunter 2026-08-29 スキャン（Run ID: `obsidian-smart-history_VULNHUNT_RE
 - 示唆: settings 側の HMAC ゲートは正解実装として存在（fail-closed 実証済み）。
 - 解: 共通インポートプリミティブ（authenticate→size-cap→parse→validate）を確立し 3 系統に適用、`validateRow` 全 9 フィールド化、YAML フロントマター エスケープ、エクスポート側署名付与。
 
-### C14: なぜ「効かない機能」と「自己許可」が残るのか？
+### C14: なぜ「自己許可」構造が残るのか？
+
+1. **なぜ自己許可が残る？** → CSPValidator / urlWhitelist が拡張自身のオリジンや ublock origin を無条件に許可リストへ入れる経路を持つ。
+2. **なぜそうなった？** → 導入時は「自分のリソースは安全」という前提で書かれ、設定由来の値が同じ経路に流れることが想定外だった。
+3. **なぜ想定外？** → 許可判定の入力（信頼できる定数 vs 設定由来）が型で区別されていない。
+4. **なぜ区別しない？** → 許可リスト構築の契約（何を信頼するか）が文書化されていない。
+5. **なぜされない？** → 現時点で exploitable ではない（Code Quality 分類）ため優先度が低く、レビューで指摘されても後回しになる。
+
+**原因 → 示唆 → 解**:
+- 原因: CSPValidator/urlWhitelist の自己許可構造、Gemini path 生補間、TSV 数式無害化欠落、models-dev スキーマ未検証、旧 href パネルの isSecureUrl 欠落（6 ハードニング）。
+- 示唆: いずれも小修正。束ねて 1 PBI とし、個々に受け入れ基準を持たせる。
+- 解: CSP ドメイン追加の厳格化、allowedUrls の自己許可封鎖、Gemini path エンコード、TSV 数式無害化、models-dev スキーマ検証、旧 href パネルの isSecureUrl 適用。
+
+### C15: なぜ「効かない機能」（orphan key）が残るのか？
 
 1. **なぜホワイトリスト追加が効かない？** → popup が orphan キー `'domainWhitelist'` に書き、正キー `domain_whitelist` の読み手がいない。
 2. **なぜ誤る？** → キー名を literal で書き `StorageKeys` 定数を経由していない。
@@ -286,9 +323,9 @@ VulnHunter 2026-08-29 スキャン（Run ID: `obsidian-smart-history_VULNHUNT_RE
 5. **なぜ未実施？** → キー追加時の規約（必ず StorageKeys 経由）が lint/レビューで強制されていない。
 
 **原因 → 示唆 → 解**:
-- 原因: orphan キー書き込み（機能バグ）＋CSPValidator/urlWhitelist の自己許可構造など 6 ハードニング。
-- 示唆: いずれも小修正。束ねて 1 PBI とし、個々に受け入れ基準を持たせる。
-- 解: orphan キー修正（StorageKeys 経由）、CSP ドメイン追加の厳格化、allowedUrls の自己許可封鎖、Gemini path エンコード、TSV 数式無害化、models-dev スキーマ検証、旧 href パネルの isSecureUrl 適用。
+- 原因: `src/popup/pendingPages.ts` の `addDomainsOrPathsToWhitelist` が literal `'domainWhitelist'` に読み書き。
+- 示唆: 修正は 2 行。実在のユーザー影響（pending 導線の沈黙）があるため C14 から分離し Wave 1 で即着手。
+- 解: `StorageKeys.DOMAIN_WHITELIST` 経由に統一、既存 `domain_whitelist` 値を保持、orphan キーのデータは廃棄。テスト期待値（`main.test.ts`）も正キーに修正。
 
 ---
 
@@ -310,17 +347,18 @@ VulnHunter 2026-08-29 スキャン（Run ID: `obsidian-smart-history_VULNHUNT_RE
 | 012 | 04 | 027 | 03 | 043 | （誤検知） | | |
 | 013 | 03 | 028 | 07 | | | | |
 
-Code Quality 9件 → PBI 02（sync-target サニタイザ）、10（LOG_FORWARD 制御文字）、14（残り 7件）。
+Code Quality 9件 → PBI 02（sync-target サニタイザ）、10（LOG_FORWARD 制御文字）、14（ハードニング 6 件）、15（orphan-key バグ）。
 誤検知 6件（014/020/031/032/033/043）とスイープ除去 2件（045/046）は対象外。
 
 ---
 
 ## PBI作成（フェーズ4）・ファイル出力（フェーズ5）
 
-上記順位で 14 PBI を `pbi/` に作成した。各 PBI は `pbi-create-bdd` 準拠
-（ユーザーストーリー / ビジネス価値 / 優先度RICE / BDD 4シナリオ / 受け入れ基準 / テスト戦略 / 実装アプローチ / 見積もり / 技術的考慮事項 / 実装者向け注記 / DoD）。
+上記順位で 15 PBI を `pbi/` に作成した（当初 14 + C14 から分離した 15）。各 PBI は `pbi-create-bdd` 準拠
+（ユーザーストーリー / ビジネス価値 / 優先度RICE / BDD シナリオ / 受け入れ基準 / テスト戦略 / 実装アプローチ / 見積もり / 技術的考慮事項 / 実装者向け注記 / DoD）。
 
 - `pbi/2026-08-29-00-backlog-vulnhunt-audit.md` — 本ファイル（候補列挙・RICE・なぜなぜ分析・トレーサビリティ）
-- `pbi/2026-08-29-01-fix-regex-safety.md` ほか 14 件（ファイル名の `NN` が着手順を示す）
+- `pbi/2026-08-29-01-fix-regex-safety.md` ほか 14 件（ファイル名の `NN` が RICE 順位。着手は Wave 提案に従う）
 
-**出典**: `obsidian-smart-history_VULNHUNT_RESULTS_2026-08-29-165536/`（README.md, phase2_merged_candidates.md, phase2b_output.md, phase3_output.md, phase3d_output.md, poc/, exploit_tests/）
+**出典**: VulnHunter 2026-08-29 スキャン結果（`*_VULNHUNT_RESULTS_2026-08-29-165536/` — `.gitignore` 除外のためリポジトリ外・ローカル未保管）。
+攻撃の具体（実測値・シナリオ形状）は本ファイルの「なぜなぜ分析（フェーズ3）」各節に要約済み。各 PBI のテストは受け入れ基準（BDD シナリオ）から起こす。

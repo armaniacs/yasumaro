@@ -16,7 +16,7 @@ import { CSPValidator, getCspErrorMessage } from './cspValidator.js';
 import { getSettings } from './storage/settingsStore.js';
 import { StorageKeys } from './storage/types.js';
 import { logDebug, logWarn } from './logger.js';
-import { validateUrl } from './ssrfGuard.js';
+import { validateUrl, validateUrlForFilterImport } from './ssrfGuard.js';
 
 export {
   normalizeIpHostname,
@@ -154,6 +154,77 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
     }
     throw error;
   }
+}
+
+/**
+ * Maximum number of redirect hops fetchWithRedirectGuard will follow before
+ * giving up. Matches the browser default (20) is unnecessary here; filter-list
+ * mirrors realistically need at most a couple of hops.
+ */
+const MAX_REDIRECT_HOPS = 5;
+
+const REDIRECT_STATUS_CODES = new Set([301, 302, 303, 307, 308]);
+
+/**
+ * fetch that follows redirects manually, re-validating every hop's target with
+ * validateUrlForFilterImport (protocol + private-IP + localhost guard).
+ *
+ * The platform `fetch` follows redirects silently with `redirect: 'follow'`,
+ * so an allow-listed URL can 30x-redirect to an internal address (SSRF /
+ * CWE-918). This helper closes that hole for attacker-influenced URLs (e.g.
+ * user-supplied uBlock filter-list sources) by using `redirect: 'manual'` and
+ * checking each `Location` before issuing the next request.
+ *
+ * The current FETCH_URL handler uses `redirect: 'error'` (see ADR
+ * 2026-08-29-fetch-redirect-policy); this helper is the contract for any future
+ * fetch of an attacker-influenced URL that legitimately needs to follow
+ * redirects.
+ *
+ * @param url - initial request URL (assumed already validated by the caller)
+ * @param options - fetch options; `redirect` is forced to `'manual'`
+ * @param timeoutMs - per-hop timeout
+ */
+export async function fetchWithRedirectGuard(
+  url: string,
+  options: FetchOptions = {},
+  timeoutMs: number = 30000,
+): Promise<Response> {
+  let currentUrl = url;
+
+  for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop++) {
+    const response = await fetchWithTimeout(
+      currentUrl,
+      // CSP validation targets AI-provider URLs; filter-list fetches gate on
+      // allowedUrls + validateUrlForFilterImport instead, applied per hop below.
+      { ...options, redirect: 'manual', skipCspValidation: true },
+      timeoutMs,
+    );
+
+    if (!REDIRECT_STATUS_CODES.has(response.status)) {
+      return response;
+    }
+
+    const location = response.headers.get('location');
+    if (!location) {
+      throw new Error(`Redirect response ${response.status} is missing a Location header`);
+    }
+
+    // Resolve relative Location against the current hop URL.
+    let nextUrl: string;
+    try {
+      nextUrl = new URL(location, currentUrl).toString();
+    } catch {
+      throw new Error(`Invalid redirect Location: ${location}`);
+    }
+
+    // Re-apply the full SSRF guard to the redirect target.
+    validateUrlForFilterImport(nextUrl);
+
+    logDebug('Following validated redirect', { from: currentUrl, to: nextUrl, status: response.status }, 'fetchWithRedirectGuard');
+    currentUrl = nextUrl;
+  }
+
+  throw new Error(`Too many redirects (limit ${MAX_REDIRECT_HOPS})`);
 }
 
 /**

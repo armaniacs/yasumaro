@@ -3,6 +3,8 @@ import { StorageKeys } from '../utils/storage/types.js';
 import { cleanupExpiredSettingsBackups } from '../utils/storage/settingsStore.js';
 import { logInfo, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { purgeExpiredDownloadRecords } from './localMarkdownExportRetention.js';
+import { clearExpiredPages as defaultClearExpiredPages } from '../utils/pendingStorage.js';
 import type { CallResult } from './sqliteClient.js';
 
 type PurgeFn = (retentionDays?: number, maxRecords?: number) => Promise<CallResult<{ purged: number }>>;
@@ -19,9 +21,14 @@ type ContentPurgeFn = (
 export async function handleDailyPurgeAlarm(
   purgeOldRecords: PurgeFn,
   purgeContent?: ContentPurgeFn,
+  clearExpiredPages: () => Promise<void> = defaultClearExpiredPages,
 ): Promise<void> {
     try {
         const settings = await getSettings();
+
+        // Expired pending pages accumulate forever without this call — the
+        // read-side filter in getPendingPages() hides them but never deletes.
+        await clearExpiredPages();
 
         // Record-level purge (existing)
         const days = settings[StorageKeys.SQLITE_RETENTION_DAYS] ?? null;
@@ -57,6 +64,10 @@ export async function handleDailyPurgeAlarm(
 
         // PBI-15: clean up expired settings migration backups
         await cleanupExpiredSettingsBackups();
+
+        // VULN-004: remove local Markdown export download records older than
+        // LOCAL_MARKDOWN_EXPORT_RETENTION_DAYS.
+        await purgeExpiredDownloadRecords();
     } catch (error) {
         logError('daily-purge failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'dailyPurgeHandler');
     }

@@ -33,6 +33,37 @@ export class FallbackStorage {
     await chrome.storage.local.set({ [STORAGE_KEY]: data });
   }
 
+  /**
+   * Serialized read-modify-write helper.
+   *
+   * Acquires `this.mutex`, loads the current data, applies the pure transform
+   * `fn`, persists the returned `next` state, and releases the lock in a
+   * `finally` block. This is the single locking discipline every mutator must
+   * use so that concurrent mutations (e.g. purgeOldRecords vs toggleStar)
+   * cannot clobber each other's blob writes.
+   *
+   * Contract for `fn`:
+   * - MUST be a pure transform: derive `next` from the given `data` and return
+   *   it together with the caller's `result` value. Do not perform storage I/O.
+   * - MUST NOT call `mutate` (directly or transitively) — the mutex is not
+   *   reentrant and doing so deadlocks.
+   *
+   * If `saveData` throws, the exception propagates to the caller and the lock
+   * is still released by `finally`. The persisted state is left untouched
+   * (the failed write never landed), so no half-written blob results.
+   */
+  private async mutate<T>(fn: (data: StoredData) => { next: StoredData; result: T }): Promise<T> {
+    await this.mutex.acquire();
+    try {
+      const data = await this.loadData();
+      const { next, result } = fn(data);
+      await this.saveData(next);
+      return result;
+    } finally {
+      this.mutex.release();
+    }
+  }
+
   private async getNextId(): Promise<number> {
     return this.allocateIds(1);
   }
@@ -61,6 +92,13 @@ export class FallbackStorage {
     await this.saveData(data);
   }
 
+  // insert / insertBatch keep bespoke locking rather than routing through
+  // `mutate`, but on the SAME `this.mutex`, so they still serialize against
+  // every other mutator. They cannot use `mutate`'s pure-fn contract because
+  // the "dedupe-check THEN allocate IDs" ordering (PBI 2026-08-27-06) requires
+  // side-effecting storage I/O in the middle of the RMW: `ensureQuotaSpace`
+  // and `allocateIds` both touch chrome.storage and must run after the dedupe
+  // check but before the records are appended.
   async insert(record: BrowsingLogRecord): Promise<{ success: true; id: number } | { success: false; error: string }> {
     await this.mutex.acquire();
     try {
@@ -277,20 +315,18 @@ export class FallbackStorage {
 
   async update(id: number, changes: Partial<BrowsingLogRecord>): Promise<{ success: true } | { success: false; error: string }> {
     try {
-      const data = await this.loadData();
-      const record = data.records.find(r => r.id === id);
-      if (!record) {
-        return { success: true };
-      }
-
-      for (const field of UPDATABLE_FIELDS) {
-        const f = field as keyof BrowsingLogRecord;
-        if (f in changes) {
-          Object.assign(record, { [f]: changes[f] });
+      await this.mutate<void>(data => {
+        const record = data.records.find(r => r.id === id);
+        if (record) {
+          for (const field of UPDATABLE_FIELDS) {
+            const f = field as keyof BrowsingLogRecord;
+            if (f in changes) {
+              Object.assign(record, { [f]: changes[f] });
+            }
+          }
         }
-      }
-
-      await this.saveData(data);
+        return { next: data, result: undefined };
+      });
       return { success: true };
     } catch (error) {
       return { success: false, error: String(error) };
@@ -299,9 +335,10 @@ export class FallbackStorage {
 
   async hardDelete(id: number): Promise<{ success: true } | { success: false; error: string }> {
     try {
-      const data = await this.loadData();
-      data.records = data.records.filter(r => r.id !== id);
-      await this.saveData(data);
+      await this.mutate<void>(data => {
+        data.records = data.records.filter(r => r.id !== id);
+        return { next: data, result: undefined };
+      });
       return { success: true };
     } catch (error) {
       return { success: false, error: String(error) };
@@ -310,15 +347,18 @@ export class FallbackStorage {
 
   async toggleStar(id: number): Promise<{ success: true; is_starred: number } | { success: false; error: string }> {
     try {
-      const data = await this.loadData();
-      const record = data.records.find(r => r.id === id);
-      if (!record) {
+      const nextStarred = await this.mutate<number | null>(data => {
+        const record = data.records.find(r => r.id === id);
+        if (!record) {
+          return { next: data, result: null };
+        }
+        record.is_starred = record.is_starred === 0 ? 1 : 0;
+        return { next: data, result: record.is_starred };
+      });
+      if (nextStarred === null) {
         return { success: false, error: 'Record not found' };
       }
-
-      record.is_starred = record.is_starred === 0 ? 1 : 0;
-      await this.saveData(data);
-      return { success: true, is_starred: record.is_starred };
+      return { success: true, is_starred: nextStarred };
     } catch (error) {
       return { success: false, error: String(error) };
     }
@@ -336,7 +376,7 @@ export class FallbackStorage {
 
   async clearAll(): Promise<{ success: boolean; error?: string }> {
     try {
-      await this.saveData({ records: [] });
+      await this.mutate<void>(() => ({ next: { records: [] }, result: undefined }));
       await chrome.storage.local.set({ [STORAGE_KEY_COUNTER]: 0 });
       return { success: true };
     } catch (error) {
@@ -346,34 +386,34 @@ export class FallbackStorage {
 
   async purgeOldRecords(retentionDays: number = 90, maxRecords: number = 1000): Promise<{ success: true; purged: number } | { success: false; error: string }> {
     try {
-      const data = await this.loadData();
-      const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
-      let purged = 0;
+      const purged = await this.mutate<number>(data => {
+        const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+        let count = 0;
 
-      const _before = data.records.length;
-      data.records = data.records.filter(r => {
-        if (r.is_starred === 1 || r.is_deleted === 1) return true;
-        if (r.created_at < cutoffMs) {
-          purged++;
-          return false;
-        }
-        return true;
-      });
-
-      const activeRecords = data.records.filter(r => r.is_deleted === 0);
-      if (activeRecords.length > maxRecords) {
-        const sorted = [...activeRecords].sort((a, b) => a.created_at - b.created_at);
-        const toRemove = new Set(sorted.slice(0, activeRecords.length - maxRecords).map(r => r.id));
         data.records = data.records.filter(r => {
-          if (toRemove.has(r.id)) {
-            purged++;
+          if (r.is_starred === 1 || r.is_deleted === 1) return true;
+          if (r.created_at < cutoffMs) {
+            count++;
             return false;
           }
           return true;
         });
-      }
 
-      await this.saveData(data);
+        const activeRecords = data.records.filter(r => r.is_deleted === 0);
+        if (activeRecords.length > maxRecords) {
+          const sorted = [...activeRecords].sort((a, b) => a.created_at - b.created_at);
+          const toRemove = new Set(sorted.slice(0, activeRecords.length - maxRecords).map(r => r.id));
+          data.records = data.records.filter(r => {
+            if (toRemove.has(r.id)) {
+              count++;
+              return false;
+            }
+            return true;
+          });
+        }
+
+        return { next: data, result: count };
+      });
       return { success: true, purged };
     } catch (error) {
       return { success: false, error: String(error) };
@@ -386,45 +426,46 @@ export class FallbackStorage {
     includeStarred?: boolean,
   ): Promise<{ success: true; purged: number } | { success: false; error: string }> {
     try {
-      const data = await this.loadData();
-      const includeAll = includeStarred === true;
-      let totalPurged = 0;
+      const totalPurged = await this.mutate<number>(data => {
+        const includeAll = includeStarred === true;
+        let count = 0;
 
-      // Filter: records with non-null content
-      let candidates = data.records.filter(r => r.content != null && r.content !== undefined);
-      if (!includeAll) {
-        candidates = candidates.filter(r => r.is_starred !== 1);
-      }
-
-      // 1. Days-based
-      if (retentionDays != null && retentionDays > 0) {
-        const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
-        const toPurge = candidates.filter(r => r.created_at < cutoffMs);
-        for (const r of toPurge) {
-          r.content = null;
-        }
-        totalPurged += toPurge.length;
-      }
-
-      // 2. Count-based
-      if (maxRecords != null && maxRecords > 0) {
-        let remaining = data.records.filter(r => r.content != null);
+        // Filter: records with non-null content
+        let candidates = data.records.filter(r => r.content != null && r.content !== undefined);
         if (!includeAll) {
-          remaining = remaining.filter(r => r.is_starred !== 1);
+          candidates = candidates.filter(r => r.is_starred !== 1);
         }
-        if (remaining.length > maxRecords) {
-          const excess = remaining.length - maxRecords;
-          const sorted = [...remaining].sort((a, b) => a.created_at - b.created_at);
-          const toPurge = sorted.slice(0, excess);
-          for (const r of toPurge) {
-            const record = data.records.find(rec => rec.id === r.id);
-            if (record) record.content = null;
-          }
-          totalPurged += toPurge.length;
-        }
-      }
 
-      await this.saveData(data);
+        // 1. Days-based
+        if (retentionDays != null && retentionDays > 0) {
+          const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+          const toPurge = candidates.filter(r => r.created_at < cutoffMs);
+          for (const r of toPurge) {
+            r.content = null;
+          }
+          count += toPurge.length;
+        }
+
+        // 2. Count-based
+        if (maxRecords != null && maxRecords > 0) {
+          let remaining = data.records.filter(r => r.content != null);
+          if (!includeAll) {
+            remaining = remaining.filter(r => r.is_starred !== 1);
+          }
+          if (remaining.length > maxRecords) {
+            const excess = remaining.length - maxRecords;
+            const sorted = [...remaining].sort((a, b) => a.created_at - b.created_at);
+            const toPurge = sorted.slice(0, excess);
+            for (const r of toPurge) {
+              const record = data.records.find(rec => rec.id === r.id);
+              if (record) record.content = null;
+            }
+            count += toPurge.length;
+          }
+        }
+
+        return { next: data, result: count };
+      });
       return { success: true, purged: totalPurged };
     } catch (error) {
       return { success: false, error: String(error) };

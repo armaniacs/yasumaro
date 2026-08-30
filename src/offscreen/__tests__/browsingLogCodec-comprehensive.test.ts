@@ -6,6 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildRecordFromPayload } from '../browsingLogCodec.js';
+import { MAX_TAGS_PER_RECORD } from '../../utils/computeLimits.js';
 
 describe('buildRecordFromPayload', () => {
   // ── Normal operation ─────────────────────────────────────────────────
@@ -309,6 +310,17 @@ describe('buildRecordFromPayload', () => {
       visit_duration: Infinity,
     });
     expect(record.visit_duration).toBeNull();
+  });
+
+  it('caps stored tags to MAX_TAGS_PER_RECORD (VULN-041/053 write-path defense)', () => {
+    const many = Array.from({ length: 500 }, (_, i) => `#t${i}`).join(' ');
+    const record = buildRecordFromPayload({ url: 'https://test.com', created_at: 1, tags: many });
+    expect(record.tags!.split(/\s+/).filter(Boolean).length).toBe(MAX_TAGS_PER_RECORD);
+  });
+
+  it('leaves a normal-size tag string untouched', () => {
+    const record = buildRecordFromPayload({ url: 'https://test.com', created_at: 1, tags: '#a #b #c' });
+    expect(record.tags).toBe('#a #b #c');
   });
 
   it('handles negative zero', () => {

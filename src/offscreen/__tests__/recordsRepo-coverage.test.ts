@@ -96,6 +96,16 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
       const arg = mockBackend.query.mock.calls[0][0] as { limit: number };
       expect(arg.limit).toBe(100000);
     });
+
+    it.each([
+      ['負値', -1],
+      ['ゼロ', 0],
+      ['非整数', 0.5],
+      ['非有限', Infinity],
+    ])('%s は既定値 100 にフォールバックする', async (_label, raw) => {
+      await query({ limit: raw as number });
+      expect(mockBackend.query).toHaveBeenCalledWith(expect.objectContaining({ limit: 100 }));
+    });
   });
 
   // ── query: tag / text truncation (FTS_QUERY_MAX_LENGTH=200) ────────────
