@@ -170,4 +170,5 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.GITHUB_PAT]: '',
     [StorageKeys.GIST_ID]: '',
     [StorageKeys.LEGACY_DUAL_WRITE_ENABLED]: true,
+    [StorageKeys.CLEANSING_FEEDBACK_QUEUE]: [],
 };
