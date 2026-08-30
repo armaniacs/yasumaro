@@ -71,8 +71,8 @@ export class DomainVerifier {
     const jpAnchor = state.database?.jpAnchor;
     if (!jpAnchor) return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Trust DB not initialized' };
     const allTlds = [
-      ...jpAnchor.tlds,
-      ...jpAnchor.userTlds
+      ...(jpAnchor.tlds ?? []),
+      ...(jpAnchor.userTlds ?? [])
     ];
 
     const normalizedDomain = domain.toLowerCase().trim();
