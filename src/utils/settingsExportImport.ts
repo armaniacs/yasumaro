@@ -10,6 +10,7 @@ import { computeHMAC, encrypt, decryptData, deriveKey, constantTimeCompare } fro
 import { generateSalt } from './crypto/index.js';
 import { logError, logInfo, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
+import { DEFAULT_IMPORT_SIZE_CAP_BYTES, base64ToBytesTyped } from './importPipeline.js';
 
 /** Current export format version */
 export const EXPORT_VERSION = '1.0.0';
@@ -146,6 +147,18 @@ export async function importEncryptedSettings(
   masterPassword: string
 ): Promise<Settings | null> {
   try {
+    // Size cap before any decode/KDF/decrypt work (VULN-034): a forged giant
+    // file must not reach PBKDF2.
+    if (jsonData.length > DEFAULT_IMPORT_SIZE_CAP_BYTES) {
+      await logError(
+        'Import rejected: file exceeds size cap',
+        {},
+        ErrorCode.SETTINGS_IMPORT_FAILURE,
+        'settingsExportImport.ts'
+      );
+      return null;
+    }
+
     const encryptedData = JSON.parse(jsonData) as EncryptedExportData;
 
     // 暗号化されたデータかどうか確認
@@ -159,10 +172,8 @@ export async function importEncryptedSettings(
       return null;
     }
 
-    // ソルトをデコード
-    const salt = new Uint8Array(
-      atob(encryptedData.salt).split('').map(c => c.charCodeAt(0))
-    );
+    // ソルトをデコード（typed-array decode: removes atob split/map amplification）
+    const salt = base64ToBytesTyped(encryptedData.salt);
 
     // パスワードからキーを派生
     const key = await deriveKey(masterPassword, salt);
@@ -368,6 +379,16 @@ export function validateExportData(data: unknown): boolean {
  */
 export async function importSettings(jsonData: string): Promise<Settings | null> {
   try {
+    if (jsonData.length > DEFAULT_IMPORT_SIZE_CAP_BYTES) {
+      await logError(
+        'Import rejected: file exceeds size cap',
+        {},
+        ErrorCode.SETTINGS_IMPORT_FAILURE,
+        'settingsExportImport.ts'
+      );
+      return null;
+    }
+
     const parsed = JSON.parse(jsonData) as ExportData;
 
     // 【セキュリティ強化】署名があるかチェック

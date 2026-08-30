@@ -50,7 +50,7 @@ Scenario: 権限要求は最小スコープから始まる
 - [ ] `src/popup/recordCurrentPage/tabContentFetcher.ts:35-38` が activeTab → `PermissionManager.requestPermission`（per-origin）→ 設定オプトインのレベルラダーになる
 - [ ] senderTrust 網羅性テストを非メッセージ経路（動的 import・リプレイ・権限）に拡張する
 - [ ] `npm run type-check` と `npm run validate` が成功する
-- [ ] VulnHunter 再検証: 4 経路の PoC（e2e 属性注入・リプレイ・token 読み取り・all_urls 要求）が全て失敗する
+- [ ] VulnHunter 再検証: 4 経路の再現テスト（e2e 属性注入・リプレイ・token 読み取り・all_urls 要求）が全て失敗する
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -67,7 +67,7 @@ Scenario: 権限要求は最小スコープから始まる
 - 新規: `senderTrustCoverage` の非メッセージ経路ケース
 
 ## 実装アプローチ
-- **Outside-In**: 4 経路の PoC テスト（RED）→ 正解経路への配線（GREEN）→ 網羅性テスト拡張
+- **Outside-In**: 4 経路の RED 再現テスト → 正解経路への配線（GREEN）→ 網羅性テスト拡張
 - **Red-Green-Refactor**: トークン発行のセマンティクス変更は最後に実施（消費者の UI フロー確認を含む）
 
 ## 見積もり
@@ -78,6 +78,7 @@ Scenario: 権限要求は最小スコープから始まる
 - テスタビリティ: loader は domainPolicyPort のモックで await 待ちを検証可能
 - 非機能要件: e2e テストの実行時間が大幅に増えないこと（SW round-trip 1 回分）
 - 注意: confirmToken の UX（確認ダイアログ）を壊さないこと。発行タイミングの変更を UI 側と合わせて検証
+- 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
 

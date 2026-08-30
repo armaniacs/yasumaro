@@ -11,6 +11,11 @@ import {
 } from './encryptedBackupService.js';
 import { errorMessage } from '../utils/errorUtils.js';
 
+/** Backup files legitimately hold a base64 SQLite DB; allow more headroom. */
+const MAX_BACKUP_FILE_BYTES = 50 * 1024 * 1024;
+/** Upper bound on the base64 ciphertext field of an envelope. */
+const MAX_ENVELOPE_CIPHERTEXT_LENGTH = 64 * 1024 * 1024;
+
 function getExportFilename(): string {
   const date = new Date();
   const y = date.getFullYear();
@@ -68,11 +73,30 @@ export function initEncryptedBackupPanel(): void {
     const file = input.files?.[0];
     if (!file) return;
 
+    // Size cap BEFORE reading/parsing: a forged multi-hundred-MB file must not
+    // be pulled into memory or handed to JSON.parse (VULN-036).
+    if (file.size > MAX_BACKUP_FILE_BYTES) {
+      setStatus('バックアップファイルが大きすぎます', true);
+      if (importFileInput) importFileInput.value = '';
+      return;
+    }
+
     try {
       const text = await file.text();
       const parsed = JSON.parse(text);
 
       if (!isEncryptedBackupFile(parsed)) {
+        setStatus('不正なバックアップファイルです', true);
+        if (importFileInput) importFileInput.value = '';
+        return;
+      }
+
+      // Envelope-length validation at the boundary: reject an envelope whose
+      // ciphertext field alone would amplify into an oversized allocation.
+      if (
+        typeof parsed.data === 'string' &&
+        parsed.data.length > MAX_ENVELOPE_CIPHERTEXT_LENGTH
+      ) {
         setStatus('不正なバックアップファイルです', true);
         if (importFileInput) importFileInput.value = '';
         return;

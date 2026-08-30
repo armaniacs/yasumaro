@@ -109,7 +109,7 @@ describe('exportLogsService', () => {
       const result = await exportMarkdown();
 
       expect(result).toContain('title: "First Page"');
-      expect(result).toContain('url: https://example.com/page1');
+      expect(result).toContain('url: "https://example.com/page1"');
       expect(result).toContain('tags: ["tech", "ai"]');
       expect(result).toContain('Summary of page 1');
       expect(result).toContain('title: "Second Page"');

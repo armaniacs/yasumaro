@@ -6,7 +6,7 @@ Web Components を多用するサイトの閲覧者として、Shadow DOM 内の
 
 ## 優先度
 
-- 順位: 03 / 14
+- 順位: 03 / 15
 - RICE: Reach 3 / Impact 3 / Confidence 0.5 / Effort 3日 = 1.5
 - 根拠: 対象サイトは限定的だが、Notion / YouTube埋め込み / Figma など主要サービスで顕在化。技術的不確実性が高いためスパイク分離も検討。
 
