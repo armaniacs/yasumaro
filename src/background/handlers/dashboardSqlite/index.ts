@@ -1,7 +1,6 @@
 import { logError, ErrorCode } from '../../../utils/logger.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { TOKEN_REQUIRED_SUBTYPES, ALL_DASHBOARD_SQLITE_SUBTYPES } from '../../../messaging/sqliteOperationSecurity.js';
-import { constantTimeCompare } from '../../../utils/crypto/primitives.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboardSqliteProtocol.js';
 import type { DashboardSqliteHandlerDeps } from './deps.js';
 import { READ_ONLY_SUBTYPES, createReadOnlyHandler } from './readOnlyHandler.js';
@@ -39,8 +38,18 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
 
     if (TOKEN_REQUIRED_SUBTYPES.has(subtype)) {
       const providedToken = payload.confirmToken;
-      const validConfirmToken = await deps.getConfirmToken();
-      if (!providedToken || !(await constantTimeCompare(providedToken, validConfirmToken))) {
+      const action = subtype;
+      const id = (payload as unknown as { id?: number }).id;
+      let verified = false;
+      if (providedToken) {
+        if (typeof deps.verifyConfirmToken === 'function') {
+          verified = await deps.verifyConfirmToken(providedToken, action, id);
+        } else if (typeof (deps as unknown as { getConfirmToken?: () => Promise<string> }).getConfirmToken === 'function') {
+          const valid = await (deps as unknown as { getConfirmToken: () => Promise<string> }).getConfirmToken();
+          verified = providedToken === valid;
+        }
+      }
+      if (!verified) {
         logError(
           'Dashboard SQLite: token mismatch',
           { subtype, hasToken: Boolean(providedToken) },

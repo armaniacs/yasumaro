@@ -24,10 +24,29 @@ import type { DashboardSqliteRequest } from '../dashboardSqliteProtocol.js';
 function defaultServiceWorkerDeps(): SqliteClientBackedDeps {
   return {
     runMigration: async () => ({ success: false, error: 'Migration not available', count: 0 }),
-    getConfirmToken: async () => '',
+    createConfirmToken: async () => 'test-token',
+    verifyConfirmToken: async (token: string) => token === 'test-token',
     runBackfill: async () => { throw new Error('Backfill not available'); },
     runCleanup: async () => { throw new Error('Cleanup not available'); },
   };
+}
+
+function normalizeOverrides(overrides: Record<string, unknown>): Record<string, unknown> {
+  const normalized: Record<string, unknown> = { ...overrides };
+  if ('getConfirmToken' in normalized && typeof normalized['getConfirmToken'] === 'function') {
+    const legacyFn = normalized['getConfirmToken'] as () => Promise<string>;
+    if (!('verifyConfirmToken' in normalized)) {
+      normalized['verifyConfirmToken'] = async (token: string) => {
+        const valid = await legacyFn();
+        return token === valid;
+      };
+    }
+    if (!('createConfirmToken' in normalized)) {
+      normalized['createConfirmToken'] = async () => await legacyFn();
+    }
+    delete normalized['getConfirmToken'];
+  }
+  return normalized;
 }
 
 /**
@@ -38,12 +57,13 @@ function defaultServiceWorkerDeps(): SqliteClientBackedDeps {
  */
 export function makeDashboardSqliteHandler(
   sqliteClient: Partial<SqliteClient>,
-  overrides: Partial<SqliteClientBackedDeps> = {},
+  overrides: Partial<SqliteClientBackedDeps> = {} as Partial<SqliteClientBackedDeps>,
 ): (payload: DashboardSqliteRequest & { confirmToken?: string }) => Promise<unknown> {
+  const normalized = normalizeOverrides(overrides as unknown as Record<string, unknown>) as Partial<SqliteClientBackedDeps>;
   return createDashboardSqliteHandler(
     createSqliteClientDeps(sqliteClient as SqliteClient, {
       ...defaultServiceWorkerDeps(),
-      ...overrides,
+      ...normalized,
     }),
   );
 }
@@ -57,7 +77,7 @@ export function makeDashboardSqliteHandler(
 export function dispatchDashboardSqlite(
   payload: DashboardSqliteRequest & { confirmToken?: string },
   sqliteClient: Partial<SqliteClient>,
-  overrides: Partial<SqliteClientBackedDeps> = {},
+  overrides: Partial<SqliteClientBackedDeps> = {} as Partial<SqliteClientBackedDeps>,
 ): Promise<unknown> {
-  return makeDashboardSqliteHandler(sqliteClient, overrides)(payload);
+  return makeDashboardSqliteHandler(sqliteClient, overrides as Partial<SqliteClientBackedDeps>)(payload);
 }

@@ -42,7 +42,10 @@ export interface ReadOnlyDeps {
   getStatus: () => Promise<Record<string, unknown> | null>;
   runOpfsSpike: () => Promise<DepsResult<Record<string, unknown>>>;
   queryAuditLog: (options: { limit?: number; offset?: number }) => Promise<DepsResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>>;
-  getConfirmToken: () => Promise<string>;
+  createConfirmToken: (action: string, id?: number) => Promise<string>;
+  verifyConfirmToken: (token: string, action: string, id?: number) => Promise<boolean>;
+  /** @deprecated legacy - kept for test compat, maps to create/verify */
+  getConfirmToken?: () => Promise<string>;
 }
 
 /** Deps consumed by the everyday dashboard mutation group (toggle_star/delete/update/clear_all/append_to_obsidian). */
@@ -84,7 +87,8 @@ export type DashboardSqliteHandlerDeps = ReadOnlyDeps & CoreCrudDeps & Maintenan
  */
 export interface SqliteClientBackedDeps {
   runMigration: DashboardSqliteHandlerDeps['runMigration'];
-  getConfirmToken: DashboardSqliteHandlerDeps['getConfirmToken'];
+  createConfirmToken: DashboardSqliteHandlerDeps['createConfirmToken'];
+  verifyConfirmToken: DashboardSqliteHandlerDeps['verifyConfirmToken'];
   runBackfill: DashboardSqliteHandlerDeps['runBackfill'];
   runCleanup: DashboardSqliteHandlerDeps['runCleanup'];
 }
@@ -100,8 +104,20 @@ export interface SqliteClientBackedDeps {
  */
 export function createSqliteClientDeps(
   sqliteClient: import('../../sqliteClient.js').SqliteClient,
-  serviceWorkerDeps: SqliteClientBackedDeps,
+  serviceWorkerDeps: SqliteClientBackedDeps & { getConfirmToken?: () => Promise<string> },
 ): DashboardSqliteHandlerDeps {
+  const normalizedDeps: SqliteClientBackedDeps = (() => {
+    const anyDeps = serviceWorkerDeps as unknown as Record<string, unknown>;
+    if ('getConfirmToken' in anyDeps && typeof anyDeps['getConfirmToken'] === 'function' && !('verifyConfirmToken' in anyDeps)) {
+      const legacyFn = anyDeps['getConfirmToken'] as () => Promise<string>;
+      const mapped: Record<string, unknown> = { ...anyDeps };
+      if (!mapped['createConfirmToken']) mapped['createConfirmToken'] = async () => await legacyFn();
+      if (!mapped['verifyConfirmToken']) mapped['verifyConfirmToken'] = async (token: string) => token === await legacyFn();
+      delete mapped['getConfirmToken'];
+      return mapped as unknown as SqliteClientBackedDeps;
+    }
+    return serviceWorkerDeps as SqliteClientBackedDeps;
+  })();
   return {
     // Every delegate keeps the failure reason attached to the call that
     // produced it, rather than routing it through shared client state.
@@ -131,6 +147,6 @@ runOpfsSpike: () => sqliteClient.maintain({ type: 'opfsSpike' }) as Promise<Deps
       const obsidianClient = new ObsidianClient();
       await obsidianClient.appendToDailyNote(markdown);
     },
-    ...serviceWorkerDeps,
+    ...normalizedDeps,
   };
 }

@@ -266,6 +266,8 @@ export const StorageKeys = {
     // skipped, leaving SQLite as the single source of truth.
     // Default: true (legacy dual-write behavior preserved).
     LEGACY_DUAL_WRITE_ENABLED: 'legacy_dual_write_enabled',
+    // Permission ladder opt-in for <all_urls> (VULN-042 fix): when false, tabContentFetcher never requests <all_urls>
+    ALLOW_ALL_URLS_OPT_IN: 'allow_all_urls_opt_in',
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -461,6 +463,7 @@ export interface StorageKeyValues {
     [StorageKeys.GITHUB_PAT]: string | EncryptedData;
     [StorageKeys.GIST_ID]: string;
     [StorageKeys.LEGACY_DUAL_WRITE_ENABLED]: boolean;
+    [StorageKeys.ALLOW_ALL_URLS_OPT_IN]: boolean;
 }
 
 // 厳格な Settings 型（後方互換性のため StrictSettings エイリアスを残す）

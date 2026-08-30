@@ -1,10 +1,14 @@
 import { getMessage } from '../../utils/i18n.js';
 import type { ContentResponse } from '../mainTypes.js';
 import { SpinnerManager } from './spinnerManager.js';
+import { getPermissionManager } from '../../utils/permissionManager.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 
 /**
  * コンテンツスクリプトからページ内容を取得する。
- * パーミッション不足時はスクリプティングAPIでフォールバック。
+ * パーミッション不足時は権限ラダーでフォールバック:
+ *  Level1: per-origin (PermissionManager.requestPermission)
+ *  Level2: allowAllUrlsOptIn のときのみ <all_urls>
  */
 export class TabContentFetcher {
   constructor(private readonly spinner: SpinnerManager = new SpinnerManager()) {}
@@ -30,30 +34,68 @@ export class TabContentFetcher {
       }
       return contentResponse;
     } catch (_e: unknown) {
-      let hasPermission = false;
-      try {
-        hasPermission = await chrome.permissions.contains({ origins: ['<all_urls>'] });
-        if (!hasPermission) {
-          hasPermission = await chrome.permissions.request({ origins: ['<all_urls>'] });
-        }
-      } catch { /* パーミッション要求失敗 */ }
+      const pm = getPermissionManager();
 
-      if (!hasPermission) {
-        throw new Error(getMessage('errorContentScriptNotAvailable'));
+      // Level 1: per-origin via PermissionManager (narrowest)
+      let hasPerOrigin = false;
+      const tabUrl = tab.url ?? '';
+      if (tabUrl) {
+        try {
+          hasPerOrigin = await pm.isHostPermitted(tabUrl);
+          if (!hasPerOrigin) {
+            hasPerOrigin = await pm.requestPermission(tabUrl);
+          }
+        } catch { /* permission check/request failure */ }
       }
 
-      try {
-        const results = await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          func: () => document.body?.innerText || ''
-        });
-        return { content: results?.[0]?.result || '' };
-      } catch (_e2: unknown) {
-        if (force) {
-          return { content: '' };
+      if (hasPerOrigin) {
+        try {
+          const results = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: () => document.body?.innerText || ''
+          });
+          return { content: results?.[0]?.result || '' };
+        } catch (_e2: unknown) {
+          if (force) return { content: '' };
+          throw new Error(getMessage('errorContentScriptNotAvailable'));
         }
-        throw new Error(getMessage('errorContentScriptNotAvailable'));
       }
+
+      // Level 2: <all_urls> only when explicitly opted-in via settings
+      let allowAllUrlsOptIn = false;
+      try {
+        const stored = await chrome.storage.local.get(StorageKeys.ALLOW_ALL_URLS_OPT_IN) as Record<string, boolean | undefined>;
+        allowAllUrlsOptIn = !!stored[StorageKeys.ALLOW_ALL_URLS_OPT_IN];
+        if (!allowAllUrlsOptIn) {
+          // fallback to legacy raw key used by older code/tests
+          const legacy = await chrome.storage.local.get('allowAllUrlsOptIn') as Record<string, boolean | undefined>;
+          allowAllUrlsOptIn = !!legacy['allowAllUrlsOptIn'];
+        }
+      } catch { /* storage unavailable */ }
+
+      if (allowAllUrlsOptIn) {
+        let hasAllUrls = false;
+        try {
+          hasAllUrls = await pm.isAllUrlsPermitted();
+          if (!hasAllUrls) {
+            hasAllUrls = await pm.requestAllUrls();
+          }
+        } catch { /* permission failure */ }
+        if (hasAllUrls) {
+          try {
+            const results = await chrome.scripting.executeScript({
+              target: { tabId: tab.id },
+              func: () => document.body?.innerText || ''
+            });
+            return { content: results?.[0]?.result || '' };
+          } catch (_e3: unknown) {
+            if (force) return { content: '' };
+            throw new Error(getMessage('errorContentScriptNotAvailable'));
+          }
+        }
+      }
+
+      throw new Error(getMessage('errorContentScriptNotAvailable'));
     }
   }
 }

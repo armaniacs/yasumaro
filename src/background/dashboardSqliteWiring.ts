@@ -9,10 +9,13 @@ import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.
 import { createErrorResponse } from '../utils/errorClassification.js';
 import type { SqliteClient } from './sqliteClient.js';
 import { MigrationService } from './migrationService.js';
+import { createConfirmToken as createConfirmTokenImpl, verifyConfirmToken as verifyConfirmTokenImpl } from './confirmTokenManager.js';
 
 export interface DashboardSqliteWiringDeps {
   sqliteClient: SqliteClient;
   ensureConfirmToken: () => Promise<string>;
+  createConfirmToken?: (action: string, id?: number) => Promise<string>;
+  verifyConfirmToken?: (token: string, action: string, id?: number) => Promise<boolean>;
 }
 
 export function createDashboardSqliteMessageHandler(deps: DashboardSqliteWiringDeps): (
@@ -44,7 +47,8 @@ export function createDashboardSqliteMessageHandler(deps: DashboardSqliteWiringD
           inserted: Math.max(0, afterCount.data - beforeCount.data),
         };
       },
-      getConfirmToken: deps.ensureConfirmToken,
+      createConfirmToken: deps.createConfirmToken ?? createConfirmTokenImpl,
+      verifyConfirmToken: deps.verifyConfirmToken ?? verifyConfirmTokenImpl,
       runBackfill: () => migrationService.backfillDiagnosticMetadata(),
       runCleanup: () => migrationService.cleanupLegacyStorage(),
     }),
