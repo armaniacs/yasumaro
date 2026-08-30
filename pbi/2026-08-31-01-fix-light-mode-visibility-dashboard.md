@@ -1,5 +1,9 @@
 # PBI: ライトモード視認性改善 — Dashboard AIプロバイダー設定のトークン準拠化
 
+> **系統**: UI/デザイン（2026-08-31 起票）。VulnHunter セキュリティ修正（29 系）や
+> クレンジング改善（30 系）とは独立。着手順・背景は
+> [2026-08-31-00-backlog-ui-visibility.md](2026-08-31-00-backlog-ui-visibility.md) を参照。
+
 ## ユーザーストーリー
 昼間のブラウザ（OSがライトモード）のユーザーとして、初期設定のAIプロバイダー設定（分離型Bの Priority / Provider Settings）が紙色のUIに自然に馴染み、コントラスト不足なく読めるようにしたい。なぜなら黒いハードコード背景がライトの紙背景に浮いて視認性を損ない、初期設定離脱とブランド（研墨）の一貫性を損なうから。
 
@@ -135,7 +139,7 @@ grep -rn "b-priority-row\|b-provider-details\|ai-layout-toggle" src/ entrypoints
 - **セレクタ詳細度の競合**: 既存のダークブロックが :root 直下にあると上書きされない。必ず `@media (prefers-color-scheme: dark)` 内で再定義すること
 - **入力欄の白被り**: `.b-priority-row select/input` は既に `background: var(--color-bg-white)` なので、行自体を白にすると区別がつかない。行は `--color-bg-subtle`（#f8fafc）にし、入力欄は白のままにすると境界が明確になる
 - **ハンドル色**: `#a78bfa` はダークでは見えるがライトでは薄すぎる。ライトは `var(--color-primary)`（#7c3aed）にするとコントラスト確保
-- **ymトークン vs --color-* の使い分け**: 新規は `--ym-*` 推奨だが、dashboard.css 内では既に `--color-*` にエイリアスしているため `--color-*` で統一する方が差分が最小。DESIGN_TOKENS移行（PBI-14）と競合しないよう --color-* を使う
+- **ymトークン vs --color-* の使い分け**: 新規は `--ym-*` 推奨だが、dashboard.css 内では既に `--color-*` にエイリアスしているため `--color-*` で統一する方が差分が最小。`dev-docs/DESIGN_TOKENS.md` の移行方針と競合しないよう --color-* を使う
 - **ビルド後のCSSパス**: WXTビルドで `dist/chromium-mv3/assets/dashboard-*.css` にハッシュ付与されるため、grepは `dist/` 配下を再帰的に探す
 
 ## Definition of Done

@@ -16,7 +16,7 @@
 
 `pbi/` に残っているのは**未完了のPBIのみ**。完了したものは `dev-docs/archived/pbi/` にある。
 
-2 系統に分かれる。**着手順は各系統のバックログ索引（Wave 提案）に従う**。下記の表は各系統内をファイル名の連番順（＝おおむね RICE 順）で並べているが、RICE の絶対値は系統をまたいで比較できない（29 系と 30 系で Reach/Impact の尺度が異なる）。
+3 系統に分かれる。**着手順は各系統のバックログ索引（Wave 提案）に従う**。下記の表は各系統内をファイル名の連番順（＝おおむね RICE 順）で並べているが、RICE の絶対値は系統をまたいで比較できない（29 系 / 30 系 / 31 系で Reach/Impact の尺度が異なる）。
 
 ### セキュリティ（VulnHunter 2026-08-29 監査）
 
@@ -66,6 +66,15 @@
 | [2026-08-30-08-feat-cleansing-feedback-loop.md](2026-08-30-08-feat-cleansing-feedback-loop.md) | クレンジング誤削除のフィードバックループを構築する | ⬜ | ✨ | 🔴 | 🟢 | 0.96 |
 | [2026-08-30-05-feat-cleansing-offscreen-delegation.md](2026-08-30-05-feat-cleansing-offscreen-delegation.md) | クレンジングのOffscreen Document委譲でメインスレッド占有を削減する（保留候補） | ⬜ | ✨ | 🔴 | 🟡 | 0.8 |
 | [2026-08-30-10-feat-whitelist-adapter-auto-generation.md](2026-08-30-10-feat-whitelist-adapter-auto-generation.md) | ホワイトリストアダプターをLLMで自動生成する（保留候補） | ⬜ | ✨ | 🔴 | 🟢 | 0.48 |
+
+### UI/デザイン視認性（2026-08-31）
+
+VulnHunter セキュリティ修正（29 系）や クレンジング改善（30 系）とは**独立した新系統**。着手順・Wave は [2026-08-31-00-backlog-ui-visibility.md](2026-08-31-00-backlog-ui-visibility.md) を参照。RICE の絶対値は他系統と比較できない。
+
+| ファイル | タイトル | 状態 | 種別 | 難易度 | 副作用 | RICE |
+|---|---|---|---|---|---|---|
+| [2026-08-31-00-backlog-ui-visibility.md](2026-08-31-00-backlog-ui-visibility.md) | UI/デザイン視認性のバックログ（候補列挙＋RICE＋推奨実行順＋トレーサビリティ） | ⬜ | 🔧 | - | - | 索引 |
+| [2026-08-31-01-fix-light-mode-visibility-dashboard.md](2026-08-31-01-fix-light-mode-visibility-dashboard.md) | ライトモード視認性改善 — Dashboard AIプロバイダー設定のトークン準拠化 | ⬜ | 🔧 | 🟢 | 🟢 | 32.4 |
 
 ---
 
