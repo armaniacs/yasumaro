@@ -57,11 +57,28 @@ Scenario: localhost のカスタムエンドポイント（Ollama/LM Studio）�
 ```
 
 ## 受け入れ基準
-- [ ] `CSPValidator.initializeFromSettings` の `provider_base_url` / `*_base_url` の hostname 追加が、`src/utils/allowedUrls.ts` の `isAllowedProviderBaseUrl` 相当のガードを通る（private IP・metadata endpoint・非 https の非 localhost を拒否）
-- [ ] ガードは 1 箇所に集約（`isAllowedProviderBaseUrl` を再利用するか、共有ヘルパーに抽出）
-- [ ] 正当な https カスタムエンドポイントと localhost エンドポイントの許可挙動は不変（既存 `cspValidator.test.ts` の該当テストは新ガードに合わせて期待値更新）
-- [ ] 設定 UI で暗黙に追加される挙動を維持するか、明示オプトインに変えるかを決定しコメント化
-- [ ] `npm run type-check` と `npm run validate` が成功する
+- [x] `CSPValidator.initializeFromSettings` の `provider_base_url` / `*_base_url` の hostname 追加が、`src/background/ai/providerRegistry.ts` の `isAllowedProviderBaseUrl` ガードを通る（private IP・metadata endpoint・非 https の非 localhost を拒否）
+- [x] ガードは 1 箇所に集約（`initializeFromSettings` 内 `addBaseUrlDomain` ヘルパーが `isAllowedProviderBaseUrl` を再利用。ガード本体は `providerRegistry.ts` の既存関数のまま）
+- [x] 正当な https カスタムエンドポイントと localhost エンドポイントの許可挙動は不変（既存 `cspValidator.test.ts` 29 件は無改修で green。safe な値のみ使用していたため期待値更新不要だった）
+- [x] 設定 UI で暗黙に追加される挙動を維持するか、明示オプトインに変えるかを決定しコメント化（暗黙追加を維持。汚染設定はガードで弾くため CSP の意味は保たれる。判断理由を `cspValidator.ts` にコメント化）
+- [x] `npm run type-check` と `npm run validate` が成功する（10847 tests PASS）
+
+### 着地サマリ
+- `src/utils/cspValidator.ts` の `initializeFromSettings` で `provider_base_url` /
+  `{openai|openai2|lm-studio|ollama}_base_url` の hostname を `allowedDomains` へ
+  追加する前に `isAllowedProviderBaseUrl(rawUrl, isLocal)` を通す `addBaseUrlDomain`
+  ヘルパーを新設。`lm-studio` / `ollama` は `isLocal: true`、`openai` 系は `isLocal: false`。
+- ガードは既存の `src/background/ai/providerRegistry.ts` `isAllowedProviderBaseUrl`
+  を再利用（`OpenAIProvider` / `ollamaOriginRule` が実 fetch 層で使う同じ関数）。
+  CSP で許可しても fetch 層で弾かれるドメインを allowlist する無意味を解消し、
+  多層防御の 2 層を一致させる。
+- private IP は local provider でも拒否される（`isAllowedProviderBaseUrl` の仕様）。
+  LAN 上の Ollama（`192.168.x`）を CSP allowlist しなくなるが、実 fetch も同関数で
+  弾くため挙動は一貫。localhost / `127.0.0.1` は従来どおり許可。
+- テスト: `src/utils/__tests__/cspValidatorSelfAllow.test.ts`（LF 新規、8 ケース）—
+  metadata / private IP / 非 https evil / 非 http(s) スキームの拒否と、
+  正当な https・localhost・127.0.0.1 の許可（回帰防止）。
+- CRLF の既存 `cspValidator.test.ts` は無改修（29 件 green 維持）。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -110,8 +127,8 @@ rg -n "Provider Base URL Domains|custom-openai" src/utils/__tests__/cspValidator
 - `isLocal` の判定: `ollama_base_url` / `lm-studio_base_url` は localhost 期待、`provider_base_url` / `openai*_base_url` はリモート期待
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了（グリーン後）
-- [ ] VulnHunter 再スキャンで該当 Code Quality 指摘が解消されること
+- [x] 全 BDD シナリオが自動テストとして実装されパスする（`cspValidatorSelfAllow.test.ts` 8 ケース）
+- [x] テストカバレッジが基準を満たす（汚染系 5・正当系 3 で境界を網羅）
+- [ ] コードレビュー完了（GitHub PR approve）
+- [x] リファクタリング完了（グリーン後 — `addBaseUrlDomain` に集約、`providerTypes` を `{key, isLocal}` 配列化）
+- [ ] VulnHunter 再スキャンで該当 Code Quality 指摘が解消されること（29 系一括の再スキャン時に確認）
