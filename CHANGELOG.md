@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.88` リリース。
+> - 現時点では `v6.7.89` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,35 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.89] - 2026-08-30
+
+### Added
+
+- クレンジング多言語パターン拡充（30-12）。`patterns.ts` にフランス語・ドイツ語・中国語の広告／ソーシャル定型句 37パターンを追加。クラス部分一致ではなくテキストマッチとして判定し `address` 等の誤爆を回避
+- クレンジングプリセット（30-06）。32トグルを `minimal`（3ON）／`balanced`（9ON）／`aggressive`（25ON）／`custom` の4プリセットに束ねる。`presets.ts` 新設、`cleansing_preset` ストレージ追加、既存設定からのマイグレーションと custom 遷移ガードを実装。`entrypoints/options` にセレクト追加
+- クレンジングコーパスCI（30-09）。`test/corpus/` に10サイト分の模擬HTMLと `scripts/check-cleansing-corpus.mjs` で Body Protection 誤爆をCI検出。`package.json` に `check:cleansing-corpus` 追加
+- クレンジングセマンティック分類（30-02）。`SOCIAL_CLASS_PATTERNS` の `x-` 単独を `x-share`／`x-follow`／`x-button` に具体化し `isLikelySocial` を決定木化（単語境界＋aria-label＋Share on X テキスト）
+- クレンジング観測性ファネル（30-14）。`ExtractResult` に `removedByReason: Map` と `funnel` を追加し Dashboard で可視化
+- クレンジング二重ペイロード（30-11）。`ExtractResult` に `originalContent` を追加し cleansed との差分を Dashboard でタブ切替表示
+- SPA動的コンテンツ対応（30-13）。`contentKernel` に `watchDynamicContent`（MutationObserver 500ms debounce）を追加
+- Shadow DOM／iframe 走査（30-03）。`helpers.ts` に `querySelectorAllDeep`（shadowRoot／iframe 再帰）を追加
+- ドメイン別オーバーライド（30-07）。`domain_cleansing_overrides` ストレージと `perSiteOverride.ts`／options UI を追加し per-site でクレンジング設定を上書き可能に
+- フィードバックループ（30-08）。`cleansing_feedback_queue`（50件FIFO 500字truncate）と popup 報告ボタン／Dashboard 一覧 `cleansingFeedbackView` を追加
+- Offscreen委譲 PoC（30-05）。`cleansing_offscreen_enabled` フラグ（デフォルト false）で `CLEANSING_OFFSCREEN` を Offscreen Document に委譲、失敗時は同期フォールバック
+- ホワイトリストアダプタ自動生成ヘルパー（30-10）。`scripts/generate-whitelist-adapter.mjs` で17候補セレクタのテキスト量計測し最多を選択、draft JSON とLLMプロンプトを `dev-docs/` に出力。`whitelistAdapterGenerator.ts` に純粋関数を抽出
+- ベンチマーク（30-04）。`scripts/benchmark-cleansing.mjs` で 100／500／1000要素DOMのクレンジング時間を計測し `dev-docs/benchmark-cleansing-2026-08-30.md` に出力（772msで要1パス検討と判断）
+
+### Fixed
+
+- 信頼境界一貫性（29-06）。`loader.ts` e2e 分岐で cold cache 時に SW `CHECK_DOMAIN` を await、`offlineQueueProcessor` の `force:true` を `force:false` にし2ゲートを再評価、`confirm_token` を `create_confirm_token` パーアクション化（TTL60秒・単回使用）、`tabContentFetcher` を per-origin→opt-in `<all_urls>` の権限ラダーに
+- 暗号・認証ポリシーSSOT（29-12）。`cryptoParams.ts` に `PBKDF2_ITERATIONS=600k` をSSOT化し3 KDF経路を付け替え、KEK を session-only 化（wrapped鍵の local 保存は維持）、`RateLimitService` を local 永続化、settings export を `version:2` ciphertext HMAC 先行化し旧形式は互換読み込み
+- 短文保護閾値（30-01）。`readability-spike` で閾値200では 33% のみ保護、120で 100% を実測し `bodyProtection.ts` の `DEFAULT_BODY_SCORE_THRESHOLD` を 200→120 に変更
+
+### Changed
+
+- `package.json` に `benchmark:cleansing`／`check:cleansing-corpus`／`generate:whitelist-adapter`／`verify:vulnhunt-fix` を追加
+- `wxt.config.ts` の `optional_host_permissions` に `<all_urls>` を追加（タブラダー用、host_permissions 昇格なし）
 
 ## [6.7.88] - 2026-08-30
 
