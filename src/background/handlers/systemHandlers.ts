@@ -265,6 +265,28 @@ export function createConsentStateChangedHandler(deps: ConsentStateChangedHandle
   };
 }
 
+/**
+ * VULN-019 (CWE-290): derive the log attribution from the message sender, never
+ * from the payload. A `chrome-extension://` page (dashboard, popup, offscreen)
+ * could otherwise set `payload.source` to `service-worker` and forge the origin
+ * of a persisted log entry. Extension pages and the offscreen document share the
+ * same extension origin, so this yields the extension id, optionally narrowed by
+ * the page path when available.
+ */
+export function deriveLogSource(sender: chrome.runtime.MessageSender): string {
+  const raw = sender.url || sender.origin || '';
+  if (!raw) {
+    return 'unknown';
+  }
+  try {
+    const parsed = new URL(raw);
+    const page = parsed.pathname.split('/').pop();
+    return page ? `${parsed.protocol}//${parsed.host}/${page}` : `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return raw;
+  }
+}
+
 export function createLogForwardHandler() {
   return async (
     message: LogForwardMessage,
@@ -274,12 +296,21 @@ export function createLogForwardHandler() {
     // Sender authorization is enforced by the registry ('extension-only'); the
     // offscreen document is the expected caller.
     const { level, message: logMessage, details, source } = message.payload;
+    const derivedSource = deriveLogSource(sender);
+    // payload.source is an untrusted display hint only; it must not decide
+    // attribution. The neutralization boundary in logger/core.ts strips control
+    // chars / ANSI / newlines from logMessage and every string in details
+    // (VULN-044 co-parameter).
+    const enrichedDetails = {
+      ...(details ?? {}),
+      _sourceHintUntrusted: source,
+    };
     if (level === 'error') {
-      await logError(logMessage, details ?? {}, ErrorCode.INTERNAL_ERROR, source);
+      await logError(logMessage, enrichedDetails, ErrorCode.INTERNAL_ERROR, derivedSource);
     } else if (level === 'warn') {
-      await logWarn(logMessage, details ?? {}, undefined, source);
+      await logWarn(logMessage, enrichedDetails, undefined, derivedSource);
     } else {
-      await logDebug(logMessage, details ?? {}, source);
+      await logDebug(logMessage, enrichedDetails, derivedSource);
     }
     sendResponse({ success: true });
   };
