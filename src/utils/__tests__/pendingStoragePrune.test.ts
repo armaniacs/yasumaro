@@ -48,7 +48,17 @@ describe('addPendingPage pruning', () => {
     globalThis.chrome = {
       storage: {
         local: {
-          get: vi.fn(async (k: string) => ({ [k]: store[k] })),
+          // Support both string and array keys: a future change routing
+          // addPendingPage through withOptimisticLock reads [key, `${key}_version`].
+          get: vi.fn(async (keys: string | string[] | null) => {
+            if (keys === null) return { ...store };
+            if (Array.isArray(keys)) {
+              const out: Record<string, unknown> = {};
+              for (const k of keys) if (k in store) out[k] = store[k];
+              return out;
+            }
+            return { [keys]: store[keys] };
+          }),
           set: vi.fn(async (obj: Record<string, unknown>) => { Object.assign(store, obj); }),
         },
       },
