@@ -61,7 +61,7 @@ Scenario: enqueue と flush が重なってもジョブが失われない
 - `notificationHandlers` × pending store: 二重クリックでの単一記録
 
 ### 単体テスト
-- 更新: 既存 `exploit_tests/test_vuln_003/005/012/050/056` のシナリオを Jest 化（RED→GREEN 検証用に「lock を外せる注入ポイント」を持たせる）
+- 更新: インターリーブ再現テストを Jest 化（RED→GREEN 検証用に「lock を外せる注入ポイント」を持たせる）。想定シナリオは `2026-08-29-00-backlog-vulnhunt-audit.md` の C4 節（例: バッファ `final=['E2']`、リトライキュー `['A','B']→['A']`）
 - 新規: `src/background/handlers/__tests__/notificationSingleFlight.test.ts`
 
 ## 実装アプローチ
@@ -73,9 +73,10 @@ Scenario: enqueue と flush が重なってもジョブが失われない
 
 ## 技術的考慮事項
 - 依存関係: PBI 07（lock-cas-correctness）と理論上相互作用 — 本 PBI 先着手推奨（Wave 2）
-- テスタビリティ: インターリーブは `Mutex`/`withOptimisticLock` の注入モックで決定的に再現（PoC の Python シナリオを移植）
+- テスタビリティ: インターリーブは `Mutex`/`withOptimisticLock` の注入モックで決定的に再現する
 - 非機能要件: lock 待ちによる UI 遅延は Mutex timeout（既存）で_bound_。queue-full は既存の throw 挙動を維持
 - 注意: `storageFallback.ts` は PBI 11 のスコープ（触れない）。スイープで「緩和済み16サイト」に触れない
+- 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
 

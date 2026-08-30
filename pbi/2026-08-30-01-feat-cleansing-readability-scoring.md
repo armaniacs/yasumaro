@@ -2,17 +2,17 @@
 
 ## ユーザーストーリー
 
-閲覧者として、短い記事やリスト中心のページでも本文が誤って削除されないようにしたい。なぜなら現行 `calculateReadabilityScore` は pタグ数・見出し数・文字数という37行の粗いヒューリスティックで、閾値200は短文記事で保護失敗しやすいから。
+閲覧者として、短い記事やリスト中心のページでも本文が誤って削除されないようにしたい。なぜなら現行 `calculateReadabilityScore` は pタグ数・見出し数・文字数という約40行の粗いヒューリスティックで、閾値200は短文記事で保護失敗しやすいから。
 
 ## 優先度
 
-- 順位: 01 / 14
+- 順位: 01 / 15
 - RICE: Reach 8 / Impact 3 / Confidence 0.6 / Effort 3日 = 4.8
 - 根拠: Body Protection は全クレンジングの唯一の削除ガード。本文誤削除は要約品質に直結するが、現行スコアはテスト済みで安定しており置換はリスクも高い。PoCから段階移行。
 
 ## 背景
 
-- 現行: `src/utils/aiSummaryCleaner/readabilityScore.ts` が `text.length/10 + p*25 + h*50 + class補正 - link密度ペナルティ` でスコア化。200未満は保護されない。
+- 現行: `src/utils/aiSummaryCleaner/readabilityScore.ts`（約40行）が `text.length/10 + p*25 + h*50 + class補正 - link密度ペナルティ` でスコア化。200未満は保護されない。
 - 課題: 短文(8p未満/4見出し未満/2000字未満)で保護漏れ。スコア自体が `querySelectorAll('p')` / `querySelectorAll('h*')` / `querySelectorAll('a')` でDOM走査を追加。
 - 機会: Mozilla Readability.js は本文抽出で実績があり、リンク密度・テキスト密度・親要素スコア伝播を考慮。既存 `bodyProtection.ts` の `markBodyElements` を差し替える形で段階導入可能。
 - 既実装確認: `grep -rn "readability\|Readability" src/` で自前実装のみ、外部ライブラリ導入なし。

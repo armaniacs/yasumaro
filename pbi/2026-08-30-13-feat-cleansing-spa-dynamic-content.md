@@ -6,7 +6,7 @@ SPA(無限スクロール/遅延読み込み)の閲覧者として、スクロ�
 
 ## 優先度
 
-- 順位: 13 / 14
+- 順位: 13 / 15
 - RICE: Reach 5 / Impact 2 / Confidence 0.5 / Effort 3日 = 1.67
 - 根拠: SPAの普及率は高いが、Yasumaroの `VALID_VISIT` 判定(滞在5秒+スクロール50%)で既に一定の遅延があるため、追加コンテンツの取りこぼしは部分的。`MutationObserver` 導入の複雑さでEffortは中。
 

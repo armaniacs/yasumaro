@@ -57,7 +57,7 @@ Scenario: 弱いパスワードは production 経路で拒否される
 - [ ] `src/utils/masterPassword.ts:78-86` が strict ポリシー（`encryptionSession.ts:262-274` から抽出した共有 validator）に一本化され、弱い平行実装が削除されている
 - [ ] 既存暗号データの後方互換（旧 iterations 形式の読み込み）がテストされている
 - [ ] `npm run type-check` と `npm run validate` が成功する
-- [ ] VulnHunter 再検証: 6 PoC が全て失敗する
+- [ ] VulnHunter 再検証: 6 指摘の再現テスト（BDD シナリオ）が全て失敗する
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -86,6 +86,7 @@ Scenario: 弱いパスワードは production 経路で拒否される
 - テスタビリティ: crypto は Web Crypto polyfill（@peculiar/webcrypto）で既存テストあり
 - 非機能要件: アンロック性能劣化なし（600k は現行 envelope と同等）。deriveHmacWrappingKey 配線時の初回 unlock に KDF コストが乗る点を UX 評価すること
 - 注意: settings export 形式の iterations フィールド追加は「任意読み込み・既定 600k 書き込み」で後方互換
+- 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
 
