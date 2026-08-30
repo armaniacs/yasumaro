@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.92` リリース。
+> - 現時点では `v6.7.93` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,12 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.93] - 2026-08-30
+
+### Fixed
+
+- このリリースは `v6.7.92` に対する hotfix です。`v6.7.92` の `DomainVerifier` ガードだけでは、破損した Trust DB（`jpAnchor` 欠落）で `buildManagedStringLists` が `userTlds` 読み取りで例外を投げ、依然として `pipeline-error` が発生していた問題を包括修正。`trustDb.doInitialize` で欠落した `jpAnchor`／`sensitive`／`tranco` をデフォルトで補完し、`buildManagedStringLists` と `mergeTrustDatabase` に `optional chaining` によるガードを追加。
 
 ## [6.7.92] - 2026-08-30
 
