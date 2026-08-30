@@ -65,6 +65,7 @@ export class TrancoUpdater {
     const maxRetries = 3;
     const baseDelay = 1000; // 1秒
 
+    try {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         logInfo('TrancoUpdater', { tier, attempt, maxRetries }, `Starting Tranco update for tier: ${tier}`);
@@ -107,8 +108,6 @@ export class TrancoUpdater {
       }
     }
 
-    this.updateInProgress = false;
-
     // 通常到達しないが、型安全性のため
     return {
       success: false,
@@ -116,6 +115,13 @@ export class TrancoUpdater {
       sizeBytes: 0,
       error: 'Unexpected error'
     };
+    } finally {
+      // Guarantee the lock is released on every exit path, including a
+      // thrown exception from fetch/DB code that never reaches the
+      // loop-exit return. Without this a single failed update would keep
+      // updateInProgress = true forever (VULN-028 / CWE-667).
+      this.updateInProgress = false;
+    }
   }
 
   /**
