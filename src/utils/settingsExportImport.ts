@@ -11,9 +11,13 @@ import { generateSalt } from './crypto/index.js';
 import { logError, logInfo, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 import { DEFAULT_IMPORT_SIZE_CAP_BYTES, base64ToBytesTyped } from './importPipeline.js';
+import { CRYPTO_PARAMS } from './crypto/cryptoParams.js';
 
-/** Current export format version */
+/** Current export format version (plaintext settings) */
 export const EXPORT_VERSION = '1.0.0';
+
+/** Encrypted export format version — v2 uses ciphertext HMAC (SSOT migration) */
+export const ENCRYPTED_EXPORT_VERSION = '2';
 
 export interface SettingsExportData {
   version: string;
@@ -23,7 +27,7 @@ export interface SettingsExportData {
   signature?: string;
 }
 
-// 【マスターパスワード暗号化形式】
+// 【マスターパスワード暗号化形式】 — SSOT iterations, version:2 ciphertext-HMAC
 export interface EncryptedExportData {
   encrypted: true;
   version: string;
@@ -32,6 +36,7 @@ export interface EncryptedExportData {
   iv: string;
   hmac: string;
   salt: string;
+  iterations?: number;
 }
 
 export type ExportFileData = SettingsExportData | EncryptedExportData;
@@ -106,25 +111,28 @@ export async function exportEncryptedSettings(
 
     // ソルト生成
     const salt = generateSalt();
+    const saltB64 = btoa(String.fromCharCode(...salt));
 
-    // パスワードからキーを派生（PBKDF2）
-    const key = await deriveKey(masterPassword, salt);
+    // パスワードからキーを派生（PBKDF2）— SSOT 600k
+    const key = await deriveKey(masterPassword, salt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);
 
     // データを暗号化
     const encrypted = await encrypt(json, key);
 
-    // HMAC署名を計算（元のデータに対して）
+    // HMAC署名を計算（ciphertext全体に対して — version:2 ciphertext-HMAC）
     const hmacSecret = await getOrCreateHmacSecret();
-    const hmac = await computeHMAC(hmacSecret, json);
+    const hmacPayload = `${encrypted.ciphertext}:${encrypted.iv}:${saltB64}`;
+    const hmac = await computeHMAC(hmacSecret, hmacPayload);
 
     const encryptedExportData: EncryptedExportData = {
       encrypted: true,
-      version: EXPORT_VERSION,
+      version: ENCRYPTED_EXPORT_VERSION,
       exportedAt: new Date().toISOString(),
       ciphertext: encrypted.ciphertext,
       iv: encrypted.iv,
       hmac: hmac,
-      salt: btoa(String.fromCharCode(...salt)),
+      salt: saltB64,
+      iterations: CRYPTO_PARAMS.PBKDF2_ITERATIONS,
     };
 
     return { success: true, encryptedData: encryptedExportData };
@@ -172,32 +180,83 @@ export async function importEncryptedSettings(
       return null;
     }
 
-    // ソルトをデコード（typed-array decode: removes atob split/map amplification）
+    // Version branching: v2 = ciphertext HMAC (SSOT), v1 = legacy compat (HMAC skip)
+    const isV2 = encryptedData.version === ENCRYPTED_EXPORT_VERSION || (encryptedData.version as unknown as number) === 2;
+
+    if (isV2) {
+      // HMAC verification BEFORE KDF/decrypt (VULN-034): cheap auth, then amplify
+      const hmacSecret = await getOrCreateHmacSecret();
+      const hmacPayload = `${encryptedData.ciphertext}:${encryptedData.iv}:${encryptedData.salt}`;
+      const computedHmac = await computeHMAC(hmacSecret, hmacPayload);
+      if (!(await constantTimeCompare(encryptedData.hmac, computedHmac))) {
+        await logError(
+          'HMAC verification failed',
+          {},
+          ErrorCode.SETTINGS_SIGNATURE_FAILURE,
+          'settingsExportImport.ts'
+        );
+        return null;
+      }
+    }
+
+    // Salt decode (typed-array, no amplification)
     const salt = base64ToBytesTyped(encryptedData.salt);
 
-    // パスワードからキーを派生
-    const key = await deriveKey(masterPassword, salt);
+    // Helper: try iterations in order (stored -> SSOT -> legacy) for backward compat
+    async function decryptWithFallback(): Promise<string> {
+      const candidates: number[] = [];
+      if (typeof encryptedData.iterations === 'number') {
+        candidates.push(encryptedData.iterations);
+      }
+      candidates.push(CRYPTO_PARAMS.PBKDF2_ITERATIONS, CRYPTO_PARAMS.LEGACY_PBKDF2_ITERATIONS);
+      const unique = [...new Set(candidates)];
+      let lastError: unknown;
+      for (const it of unique) {
+        try {
+          const k = await deriveKey(masterPassword, salt, it);
+          const pt = await decryptData(
+            { ciphertext: encryptedData.ciphertext, iv: encryptedData.iv },
+            k
+          );
+          return pt;
+        } catch (e) {
+          lastError = e;
+          // Try next iteration candidate (legacy compat)
+        }
+      }
+      throw lastError ?? new Error('Decryption failed');
+    }
 
-    // データを復号
-    const decryptedJson = await decryptData(
-      { ciphertext: encryptedData.ciphertext, iv: encryptedData.iv },
-      key
-    );
-
-    // HMAC署名検証
-    const hmacSecret = await getOrCreateHmacSecret();
-    const computedHmac = await computeHMAC(hmacSecret, decryptedJson);
-
-    if (!(await constantTimeCompare(encryptedData.hmac, computedHmac))) {
+    let decryptedJson: string;
+    try {
+      decryptedJson = await decryptWithFallback();
+    } catch (_e) {
       await logError(
-        'HMAC verification failed',
+        'Decryption failed',
         {},
-        ErrorCode.SETTINGS_SIGNATURE_FAILURE,
+        ErrorCode.SETTINGS_IMPORT_FAILURE,
         'settingsExportImport.ts'
       );
-      // VULN-010 fix: reject import unconditionally when HMAC verification fails
-      // Do not allow force-import via confirm() dialog as it bypasses integrity check
       return null;
+    }
+
+    // Legacy v1: HMAC was over plaintext_json.
+    // For backward compat, v1 files without HMAC are accepted (old exports before signing).
+    // If HMAC exists on v1, we still verify it against decryptedJson to preserve
+    // integrity for existing tests that expect wrong-HMAC rejection.
+    // For v2, HMAC was already verified over ciphertext before KDF, so no plaintext check.
+    if (!isV2 && encryptedData.hmac) {
+      const hmacSecret = await getOrCreateHmacSecret();
+      const computedLegacyHmac = await computeHMAC(hmacSecret, decryptedJson);
+      if (!(await constantTimeCompare(encryptedData.hmac, computedLegacyHmac))) {
+        await logError(
+          'HMAC verification failed',
+          {},
+          ErrorCode.SETTINGS_SIGNATURE_FAILURE,
+          'settingsExportImport.ts'
+        );
+        return null;
+      }
     }
 
     // 復号されたJSONを解析してインポート

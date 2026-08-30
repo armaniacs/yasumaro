@@ -18,6 +18,7 @@ import {
     unwrapSecretString,
     isWrappedSecretString,
 } from '../crypto/index.js';
+import { validatePasswordPolicy } from '../crypto/cryptoParams.js';
 import { StorageKeys } from './types.js';
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../rateLimiter.js';
 import { isLocked as authGuardIsLocked } from './authGuard.js';
@@ -260,17 +261,12 @@ export async function isEncryptionLocked(): Promise<boolean> {
  * @returns {Promise<boolean>} 成功した場合true
  */
 export async function setMasterPassword(password: string): Promise<boolean> {
-    if (!password || password.length < 8) {
-        throw new Error('Password must be at least 8 characters');
+    const policy = validatePasswordPolicy(password);
+    if (!policy.ok) {
+        throw new Error(policy.reason);
     }
-
-    // 【セキュリティ改善】パスワード強度チェック
+    // Keep scoring for logInfo (strength still computed via shared scorer)
     const strength = calculatePasswordStrength(password);
-    if (strength.score < 40) {
-        throw new Error(
-            `Password is too weak (score: ${strength.score}, level: ${strength.level}). Please include a mix of uppercase, lowercase, numbers, and special characters.`
-        );
-    }
 
     const salt = generateSalt();
     const saltBase64 = btoa(String.fromCharCode(...salt));

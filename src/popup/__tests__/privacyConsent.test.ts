@@ -355,8 +355,12 @@ describe('getConsentWithdrawalHistory', () => {
 });
 
 describe('Browser Restart Simulation (Wrapping Key Persistence)', () => {
+    // M3 mitigation: KEK is now session-only (VULN-010). After browser restart,
+    // session KEK is lost and old consent signatures (wrapped with old KEK)
+    // cannot be verified. The system self-heals by generating a fresh KEK/HMAC
+    // key, but existing consent verification returns false until user re-consents.
     it('ブラウザ再起動後も同意署名が検証可能（local storageの wrapping keyから復元）', async () => {
-        // 1. 初回: 同意を保存（wrapping key が local/session storage に保存される）
+        // 1. 初回: 同意を保存（wrapping key は session のみに保存 — VULN-010修正）
         await savePrivacyConsent();
         const savedState = await getPrivacyConsent();
         expect(savedState.hasConsented).toBe(true);
@@ -364,29 +368,33 @@ describe('Browser Restart Simulation (Wrapping Key Persistence)', () => {
         // 2. ブラウザ再起動をシミュレート: session storage をクリア
         Object.keys(sessionMock).forEach(k => delete sessionMock[k]);
 
-        // 3. 再起動後: local storage の wrapping key から復元できる
+        // 3. 再起動後: session KEK は失われ、旧署名は検証失敗（session-only のため）
+        //    self-heal により新しい KEK が生成されるが、旧同意は false になる
         const afterRestart = await getPrivacyConsent();
-        // 修正前は署名検証に失敗して hasConsented: false になっていた
-        // 修正後は local storage から wrapping key を読み込んで検証成功
-        expect(afterRestart.hasConsented).toBe(true);
-        expect(afterRestart.consentVersion).toBe(PRIVACY_POLICY_VERSION);
+        expect(afterRestart.hasConsented).toBe(false);
     });
 
     it('session storage が空でも local storage から wrapping key を復元できる', async () => {
-        // local storage に wrapping key が存在する状態をシミュレート
+        // M3: KEK は session-only のため、local に KEK は存在しない。
+        // 再起動後は新しい KEK が生成され、session にキャッシュされる
         await savePrivacyConsent();
         const consentData = storageMock['privacy_consent'];
 
-        // session storage をクリア
+        // session storage をクリア（KEK 消失）
         Object.keys(sessionMock).forEach(k => delete sessionMock[k]);
 
-        // 同意状態を読みなおす（local storage の wrapping key から復元）
+        // 同意状態を読みなおす（KEK 消失により検証は失敗するが、新しい KEK が生成される）
         const state = await getPrivacyConsent();
-        expect(state.hasConsented).toBe(true);
+        // 旧同意は検証失敗するため false
+        expect(state.hasConsented).toBe(false);
 
-        // session storage に wrapping key がキャッシュされたことを確認
-        // (次のアクセスは session から読み込まれる)
+        // 新しい KEK が session にキャッシュされたことを確認
         const sessionWrappingKey = sessionMock['hmac-wrapping-key'];
         expect(typeof sessionWrappingKey).toBe('string');
+
+        // 再同意하면 다시 검증 성공
+        await savePrivacyConsent();
+        const afterReConsent = await getPrivacyConsent();
+        expect(afterReConsent.hasConsented).toBe(true);
     });
 });

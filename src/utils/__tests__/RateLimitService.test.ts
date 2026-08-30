@@ -135,4 +135,62 @@ describe('RateLimitService', () => {
 
     expect(result.success).toBe(false);
   });
+
+  // M3: local 永続化 — session clear でもカウンタが継続すること
+  test('recordFailedAttempt は local にも永続化され、session clear 後も継続する', async () => {
+    for (let i = 0; i < 3; i++) {
+      await service.recordFailedAttempt();
+    }
+
+    // session をクリアしても local に残る
+    await storage.session.remove(['passwordFailedAttempts', 'firstFailedAttemptTime']);
+
+    // さらに2回失敗を追加（local の3回 + 新たに2回 = 5回相当）
+    await service.recordFailedAttempt();
+    await service.recordFailedAttempt();
+
+    // local には 5回蓄積されているはず
+    const localData = await storage.local.get<{ passwordFailedAttempts: number }>(['passwordFailedAttempts']);
+    expect(localData.passwordFailedAttempts).toBe(5);
+
+    const result = await service.checkRateLimit();
+    expect(result.success).toBe(false);
+  });
+
+  test('checkRateLimit は session と local の attempts の大きい方を採用する', async () => {
+    // attacker が session だけクリアしても local が残るケース
+    await storage.local.set({ passwordFailedAttempts: 4, firstFailedAttemptTime: clock.now() });
+    await storage.session.set({ passwordFailedAttempts: 1, firstFailedAttemptTime: clock.now() });
+
+    // 1回追加 -> max(4,1)+1 =5
+    await service.recordFailedAttempt();
+
+    const sessionAfter = await storage.session.get<{ passwordFailedAttempts: number }>(['passwordFailedAttempts']);
+    const localAfter = await storage.local.get<{ passwordFailedAttempts: number }>(['passwordFailedAttempts']);
+    expect(sessionAfter.passwordFailedAttempts).toBe(5);
+    expect(localAfter.passwordFailedAttempts).toBe(5);
+  });
+
+  test('resetFailedAttempts は local のカウンタもクリアする', async () => {
+    for (let i = 0; i < 5; i++) {
+      await service.recordFailedAttempt();
+    }
+    await service.checkRateLimit(); // lock
+
+    await service.resetFailedAttempts();
+
+    const localData = await storage.local.get<{ passwordFailedAttempts: number; lockedUntil: number }>([
+      'passwordFailedAttempts',
+      'lockedUntil',
+    ]);
+    const sessionData = await storage.session.get<{ passwordFailedAttempts: number; lockedUntil: number }>([
+      'passwordFailedAttempts',
+      'lockedUntil',
+    ]);
+
+    expect(localData.passwordFailedAttempts).toBeUndefined();
+    expect(localData.lockedUntil).toBeUndefined();
+    expect(sessionData.passwordFailedAttempts).toBeUndefined();
+    expect(sessionData.lockedUntil).toBeUndefined();
+  });
 });

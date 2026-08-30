@@ -266,7 +266,7 @@ describe('Master Password Security', () => {
 
     describe('setMasterPassword', () => {
         test('マスターパスワードを設定できる', async () => {
-            const password = 'test-password-123';
+            const password = 'TestStrongPass123!@#';
             const result = await setMasterPassword(password);
 
             expect(result).toBe(true);
@@ -285,15 +285,15 @@ describe('Master Password Security', () => {
         });
 
         test('短すぎるパスワードは設定できない', async () => {
-            await expect(setMasterPassword('short')).rejects.toThrow('Password must be at least 8 characters');
+            await expect(setMasterPassword('short')).rejects.toThrow('Password must be at least 12 characters');
         });
 
         test('空文字列のパスワードは設定できない', async () => {
-            await expect(setMasterPassword('')).rejects.toThrow('Password must be at least 8 characters');
+            await expect(setMasterPassword('')).rejects.toThrow('Password is required');
         });
 
         test('同じパスワードで異なるハッシュが生成される（ランダムソルト）', async () => {
-            await setMasterPassword('password123');
+            await setMasterPassword('StrongPass123!@#');
             const hash1 = (await chrome.storage.local.get('master_password_hash')).master_password_hash;
 
             clearEncryptionKeyCache();
@@ -301,7 +301,7 @@ describe('Master Password Security', () => {
                 delete storageData[key];
             }
             storageData.settings_migrated = true;
-            await setMasterPassword('password123');
+            await setMasterPassword('StrongPass123!@#');
             const hash2 = (await chrome.storage.local.get('master_password_hash')).master_password_hash;
 
             expect(hash1).not.toBe(hash2);
@@ -315,7 +315,7 @@ describe('Master Password Security', () => {
         });
 
         test('マスターパスワード設定後はtrueを返す', async () => {
-            await setMasterPassword('password123');
+            await setMasterPassword('StrongPass123!@#');
             const enabled = await isMasterPasswordEnabled();
             expect(enabled).toBe(true);
         });
@@ -328,7 +328,7 @@ describe('Master Password Security', () => {
         });
 
         test('マスターパスワード設定後はtrue（ロック状態）', async () => {
-            await setMasterPassword('password123');
+            await setMasterPassword('StrongPass123!@#');
             const locked = await isEncryptionLocked();
             expect(locked).toBe(true);
         });
@@ -336,7 +336,7 @@ describe('Master Password Security', () => {
 
     describe('unlockWithPassword', () => {
         test('正しいパスワードでアンロックできる', async () => {
-            const password = 'test-password-123';
+            const password = 'TestStrongPass123!@#';
             await setMasterPassword(password);
 
             const unlocked = await unlockWithPassword(password);
@@ -347,9 +347,9 @@ describe('Master Password Security', () => {
         });
 
         test('間違ったパスワードではアンロックできない', async () => {
-            await setMasterPassword('correct-password');
+            await setMasterPassword('CorrectStrong123!@#');
 
-            const unlocked = await unlockWithPassword('wrong-password');
+            const unlocked = await unlockWithPassword('WrongStrongPass123!@#');
             expect(unlocked).toBe(false);
 
             const locked = await isEncryptionLocked();
@@ -357,13 +357,13 @@ describe('Master Password Security', () => {
         });
 
         test('マスターパスワード未設定時はエラー', async () => {
-            await expect(unlockWithPassword('password')).rejects.toThrow('Master password not enabled');
+            await expect(unlockWithPassword('WrongShort')).rejects.toThrow('Master password not enabled');
         });
     });
 
     describe('lockSession', () => {
         test('セッションをロックできる', async () => {
-            const password = 'test-password-123';
+            const password = 'TestStrongPass123!@#';
             await setMasterPassword(password);
             await unlockWithPassword(password);
 
@@ -379,8 +379,8 @@ describe('Master Password Security', () => {
 
     describe('changeMasterPassword', () => {
         test('正しい旧パスワードで変更できる', async () => {
-            const oldPassword = 'old-password-123';
-            const newPassword = 'new-password-456';
+            const oldPassword = 'OldStrongPass123!@#';
+            const newPassword = 'NewStrongPass456!@#';
             await setMasterPassword(oldPassword);
 
             const changed = await changeMasterPassword(oldPassword, newPassword);
@@ -392,22 +392,22 @@ describe('Master Password Security', () => {
         });
 
         test('間違った旧パスワードでは変更できない', async () => {
-            await setMasterPassword('correct-password');
+            await setMasterPassword('CorrectStrong123!@#');
 
-            const changed = await changeMasterPassword('wrong-password', 'new-password');
+            const changed = await changeMasterPassword('WrongStrongPass123!@#', 'new-password');
             expect(changed).toBe(false);
         });
     });
 
     describe('getOrCreateEncryptionKey', () => {
         test('マスターパスワード設定済み時はロックエラーをスロー', async () => {
-            await setMasterPassword('password123');
+            await setMasterPassword('StrongPass123!@#');
 
             await expect(getOrCreateEncryptionKey()).rejects.toThrow('ENCRYPTION_LOCKED: Master password required');
         });
 
         test('アンロック後にキーを取得できる', async () => {
-            const password = 'test-password-123';
+            const password = 'TestStrongPass123!@#';
             await setMasterPassword(password);
             await unlockWithPassword(password);
 
@@ -493,7 +493,7 @@ describe('Master Password Security', () => {
 
     describe('API Key Encryption with Master Password', () => {
         test('マスターパスワードでAPIキーを暗号化・復号化できる', async () => {
-            const password = 'test-password-123';
+            const password = 'TestStrongPass123!@#';
             const apiKey = 'sk-1234567890abcdef';
 
             await setMasterPassword(password);
@@ -511,15 +511,15 @@ describe('Master Password Security', () => {
         test('異なるパスワードで導出したキーでは復号化できない', async () => {
             const apiKey = 'sk-1234567890abcdef';
 
-            await setMasterPassword('password1');
-            await unlockWithPassword('password1');
+            await setMasterPassword('StrongPass1!@#Aa');
+            await unlockWithPassword('StrongPass1!@#Aa');
             const key1 = await getOrCreateEncryptionKey();
             const encrypted = await encryptApiKey(apiKey, key1);
 
             // 新しいパスワードに変更して別のキーを取得
             clearEncryptionKeyCache();
-            await changeMasterPassword('password1', 'password2');
-            await unlockWithPassword('password2');
+            await changeMasterPassword('StrongPass1!@#Aa', 'StrongPass2!@#Bb');
+            await unlockWithPassword('StrongPass2!@#Bb');
             const key2 = await getOrCreateEncryptionKey();
 
             await expect(decryptApiKey(encrypted, key2)).rejects.toThrow();
@@ -528,7 +528,7 @@ describe('Master Password Security', () => {
 
     describe('removeMasterPassword', () => {
         test('マスターパスワードを削除できる', async () => {
-            await setMasterPassword('password123');
+            await setMasterPassword('StrongPass123!@#');
             expect(await isMasterPasswordEnabled()).toBe(true);
 
             await removeMasterPassword();
@@ -552,7 +552,7 @@ describe('Master Password Security', () => {
 
     describe('Security Requirements', () => {
         test('パスワードに対してソルトが使用されている（同一パスワードで異なるハッシュ）', async () => {
-            const password = 'same-password';
+            const password = 'SameStrongPass123!@#';
 
             await setMasterPassword(password);
             const hash1 = (await chrome.storage.local.get('master_password_hash')).master_password_hash;
@@ -569,7 +569,7 @@ describe('Master Password Security', () => {
         });
 
         test('パスワードハッシュは保存されない（PBKDF2ハッシュが保存される）', async () => {
-            const password = 'password123';
+            const password = 'StrongPass123!@#';
             await setMasterPassword(password);
 
             const data = await chrome.storage.local.get(null);
@@ -580,8 +580,8 @@ describe('Master Password Security', () => {
         });
 
         test('暗号化キーはストレージに保存されていない', async () => {
-            await setMasterPassword('password123');
-            await unlockWithPassword('password123');
+            await setMasterPassword('StrongPass123!@#');
+            await unlockWithPassword('StrongPass123!@#');
 
             await getOrCreateEncryptionKey();
 
