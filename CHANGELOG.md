@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.94` リリース。
+> - 現時点では `v6.7.95` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,12 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.95] - 2026-08-30
+
+### Fixed
+
+- このリリースは systematic debugging による包括的 hotfix です。`v6.7.92`→`6.7.94` で個別フィールド（`userTlds`→`presets`）の ad-hoc ガードを追加するたびに次の欠落が顕在化し、3+ fixes failed の architectural problem に該当。根源は `trustDb.doInitialize` で破損DBを単一箇所で検証・修復していないこと。`repairDatabase` を新設し、全必須フィールドを包括的にデフォルト補完する systematic な修復に置換。今後新たなフィールド欠落でも `pipeline-error` を投げず `UNVERIFIED` で継続。
 
 ## [6.7.94] - 2026-08-30
 
