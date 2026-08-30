@@ -124,7 +124,7 @@ export class DomainVerifier {
    */
   checkSensitive(domain: string, state: DomainVerifierState): TrustResult {
     const db = state.database;
-    if (!db || !db.sensitive) return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Trust DB not initialized' };
+    if (!db || !db.sensitive || !db.sensitive.presets) return { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'Trust DB not initialized' };
 
     // ホワイトリスト優先
     if (db.sensitive.whitelist.includes(domain)) {
