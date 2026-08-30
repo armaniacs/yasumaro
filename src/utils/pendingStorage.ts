@@ -64,6 +64,13 @@ export interface PendingPage {
 }
 
 export const PENDING_PAGES_KEY = 'pending_pages';
+
+/**
+ * When the stored list grows past this, addPendingPage prunes expired entries
+ * before appending. Bounds the list without a dedicated alarm for the common
+ * case of a user who never opens the pending panel.
+ */
+export const PENDING_PAGES_PRUNE_THRESHOLD = 50;
 const LEGACY_PENDING_PAGES_KEY = 'osh_pending_pages';
 
 /**
@@ -132,15 +139,19 @@ export async function addPendingPage(page: PendingPage): Promise<void> {
     // Serialize the read-modify-write so a concurrent addPendingPage /
     // removePendingPages cannot slot its verify+write between our read and
     // write and drop one of the two updates (VULN-005). The dedup re-check
-    // runs inside the updater against the freshly-read list.
+    // and the expiry prune both run inside the updater against the
+    // freshly-read list.
     const updatedPages = await withOptimisticLock<PendingPage[]>(
       PENDING_PAGES_KEY,
       (current) => {
         const pages = Array.isArray(current) ? current : [];
         if (pages.some(p => p.url === page.url)) return pages;
-        // Merge point for PR #75 (29-08): the PENDING_PAGES_PRUNE_THRESHOLD
-        // .filter() prune belongs here, applied to `[...pages, page]`.
-        return [...pages, page];
+        // VULN-006: prune expired entries at the write boundary so the list
+        // stays bounded even when the daily purge alarm has not run yet.
+        const basePages = pages.length > PENDING_PAGES_PRUNE_THRESHOLD
+          ? pages.filter(p => p.expiry > Date.now())
+          : pages;
+        return [...basePages, page];
       }
     );
 

@@ -11,7 +11,7 @@ import type {
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from './schema.js';
 import { extractDomain, DB_FILENAME } from './sqliteEngineContext.js';
-import { buildQuerySpec, QUERY_CAPS } from './queryPlan.js';
+import { buildQuerySpec, QUERY_CAPS, clampLimit } from './queryPlan.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { withTransaction } from './opfsWorker/handlers.js';
 
@@ -368,7 +368,7 @@ export class IdbVfsBackend implements StorageBackend {
 
   async queryAuditLog(options: { limit?: number; offset?: number }): Promise<BackendOrError<AuditLogQueryResult>> {
     this.ensureDb();
-    const limit = Math.min(options.limit ?? 100, 100000);
+    const limit = clampLimit(options.limit, 100000, 100);
     const offset = options.offset ?? 0;
 
     const rows: AuditLogEntry[] = [];

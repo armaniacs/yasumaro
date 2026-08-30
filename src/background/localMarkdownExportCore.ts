@@ -11,6 +11,7 @@ import { StorageKeys } from '../utils/storage/types.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { DAILY_BUFFER_PREFIX, buildDailyMarkdown } from './pipeline/steps/saveLocalMarkdownStep.js';
 import { getActiveTemplate } from '../utils/markdownTemplateUtils.js';
+import { recordDownloadId } from './localMarkdownExportRetention.js';
 
 /**
  * Download each buffered day's Markdown exactly once.
@@ -52,12 +53,21 @@ export async function flushBufferedExports(
         const content = buildDailyMarkdown(date, entries, activeTemplate);
         const dataUrl = `data:text/markdown;base64,${btoa(unescape(encodeURIComponent(content)))}`;
 
-        await chrome.downloads.download({
+        const downloadId = await chrome.downloads.download({
           url: dataUrl,
           filename: `${exportPath}/${date}.md`,
           saveAs: false,
           conflictAction: 'overwrite'
         });
+
+        if (typeof downloadId === 'number') {
+          await recordDownloadId(downloadId, date);
+        }
+
+        // VULN-004: drop the daily buffer key now that it is safely written, so
+        // flushed keys do not accumulate in chrome.storage.local. Only reached
+        // when download() (and buildDailyMarkdown) succeeded for this date.
+        await chrome.storage.local.remove(key);
 
         addLog(LogType.INFO, 'Flushed local Markdown export', {
           date,

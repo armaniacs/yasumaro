@@ -81,6 +81,19 @@ describe('matchesPattern', () => {
     it('matches broad wildcard', () => {
         expect(matchesPattern('anything.io', '*.io')).toBe(true);
     });
+
+    // VULN-026: 過剰なワイルドカードを含むパターンによる指数バックトラック（ReDoS）を防ぐ。
+    // wildcardToRegex の MAX_WILDCARDS_PER_PATTERN=5 cap を経由し、上限（5個）を
+    // 超えるパターンは（一致し得る入力であっても）不一致扱いになる。
+    it('does not match a pattern with more than 5 wildcards, even when the shape would match', () => {
+        const overCap = '*.*.*.*.*.*.example.com'; // 6 個のワイルドカード
+        expect(matchesPattern('a.b.c.d.e.f.example.com', overCap)).toBe(false);
+    });
+
+    it('matches a pattern with exactly 5 wildcards (cap boundary)', () => {
+        const atCap = '*.*.*.*.*.example.com'; // 5 個のワイルドカード
+        expect(matchesPattern('a.b.c.d.e.example.com', atCap)).toBe(true);
+    });
 });
 
 describe('isDomainInList', () => {

@@ -34,6 +34,10 @@ describe('handleDailyPurgeAlarm', () => {
           remove: vi.fn((keys: string[]) => { for (const k of keys) delete storageData[k]; return Promise.resolve(); }),
         },
       },
+      downloads: {
+        erase: vi.fn(() => Promise.resolve([])),
+        removeFile: vi.fn(() => Promise.resolve()),
+      },
     } as unknown as typeof chrome;
   });
 
@@ -67,5 +71,25 @@ describe('handleDailyPurgeAlarm', () => {
     await handleDailyPurgeAlarm(purgeFn);
 
     expect(logInfo).toHaveBeenCalledWith('daily-purge completed', { purged: -1 }, 'dailyPurgeHandler');
+  });
+
+  it('VULN-004: erases local-export download records older than the retention window', async () => {
+    const now = Date.now();
+    const FORTY_DAYS_MS = 40 * 24 * 60 * 60 * 1000;
+    storageData = {
+      local_md_export_download_ids: [
+        { downloadId: 11, date: 'old', createdAt: now - FORTY_DAYS_MS },
+        { downloadId: 22, date: 'recent', createdAt: now - 1000 },
+      ],
+    };
+
+    const purgeFn = vi.fn().mockResolvedValue({ success: true, data: { purged: 0 } });
+    await handleDailyPurgeAlarm(purgeFn);
+
+    expect(chrome.downloads.erase).toHaveBeenCalledWith({ id: 11 });
+    expect(chrome.downloads.erase).not.toHaveBeenCalledWith({ id: 22 });
+    expect(storageData.local_md_export_download_ids).toEqual([
+      { downloadId: 22, date: 'recent', createdAt: now - 1000 },
+    ]);
   });
 });

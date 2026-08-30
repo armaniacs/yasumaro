@@ -206,6 +206,26 @@ describe('AI Summary', () => {
     );
     expect(row.querySelector('.history-entry-ai-summary')).toBeNull();
   });
+
+  it('masks a stored degenerate summary with the fallback at display time', () => {
+    const degenerate = Array.from({ length: 200 }, () => '豚肉').join(' | ');
+    const row = makeHistoryEntryRow(
+      createMinimalEntry({ aiSummary: degenerate }), 0, 0, createMockState(), createMockElements(), vi.fn(), vi.fn(),
+    );
+    const el = row.querySelector('.history-entry-ai-summary');
+    expect(el).not.toBeNull();
+    expect(el?.textContent).toContain('要約に失敗しました（AI出力が不自然なため）');
+    expect(el?.textContent).not.toContain('豚肉 | 豚肉');
+  });
+
+  it('renders a natural stored summary unchanged', () => {
+    const natural = '大戸屋の期間限定メニューは豚肉の生姜焼きが中心です。ご飯が進む味付けで好評を得ています。';
+    const row = makeHistoryEntryRow(
+      createMinimalEntry({ aiSummary: natural }), 0, 0, createMockState(), createMockElements(), vi.fn(), vi.fn(),
+    );
+    const el = row.querySelector('.history-entry-ai-summary');
+    expect(el?.textContent).toContain('大戸屋');
+  });
 });
 
 describe('Token Display', () => {

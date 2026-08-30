@@ -7,6 +7,19 @@
  */
 
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+import { MAX_TAGS_PER_RECORD } from '../utils/computeLimits.js';
+
+/**
+ * Defense-in-depth tag cap on the SQLite write path: a stored record must not
+ * carry an unbounded number of tags, since those tags later flow into O(n^2)
+ * dashboard computations (VULN-041/053). Whitespace-separated; first N kept.
+ */
+function capTags(raw: string): string {
+  const parts = raw.split(/\s+/).filter(Boolean);
+  return parts.length <= MAX_TAGS_PER_RECORD
+    ? raw
+    : parts.slice(0, MAX_TAGS_PER_RECORD).join(' ');
+}
 
 /**
  * Build a BrowsingLogRecord from an untrusted payload dictionary.
@@ -23,7 +36,7 @@ export function buildRecordFromPayload(payload: Record<string, unknown>): Browsi
     url: payload.url != null ? String(payload.url) : '',
     title: payload.title != null ? String(payload.title) : null,
     summary: payload.summary != null ? String(payload.summary) : null,
-    tags: payload.tags != null ? String(payload.tags) : null,
+    tags: payload.tags != null ? capTags(String(payload.tags)) : null,
     created_at: payload.created_at != null ? (toFiniteNumber(payload.created_at) ?? Date.now()) : Date.now(),
     domain: payload.domain != null ? String(payload.domain) : null,
     visit_duration: payload.visit_duration != null ? toFiniteNumber(payload.visit_duration) : null,
