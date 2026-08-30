@@ -5,6 +5,7 @@
  */
 
 import { logDebug } from './logger.js';
+import { runSerialized, runSerializedMulti } from './keySerializer.js';
 
 
 // グローバル定数
@@ -70,7 +71,9 @@ export async function withOptimisticLock<T>(
             // Step 3: CAS (Compare-And-Swap) 操作を試行
             // chrome.storage.local では条件付き更新が直接できないため、
             // atomic get/setループを使用する
-            await performCasUpdate(key, currentValue, newValue, currentVersion, newVersion);
+            await runSerialized(key, () =>
+                performCasUpdate(key, currentValue, newValue, currentVersion, newVersion)
+            );
 
             return newValue;
         } catch (error) {
@@ -244,40 +247,43 @@ export async function withAtomicKeys<T extends readonly unknown[]>(
             const newValues = updater(currentValues);
             const newVersions = currentVersions.map((v) => v + 1);
 
-            // Re-read and verify all keys before writing, closing the same
-            // TOCTOU window performCasUpdate() closes for the single-key case.
-            const verifyResult = await chrome.storage.local.get([...keys, ...versionKeys]);
-            const verifyVersions = keys.map((k) => (verifyResult[`${k}_version`] as number) ?? INITIAL_VERSION);
+            // Serialize the verify->write region across all keys (locked in
+            // sorted order to avoid deadlock), closing the same TOCTOU window
+            // performCasUpdate() closes for the single-key case.
+            return await runSerializedMulti(keys as readonly string[], async () => {
+                const verifyResult = await chrome.storage.local.get([...keys, ...versionKeys]);
+                const verifyVersions = keys.map((k) => (verifyResult[`${k}_version`] as number) ?? INITIAL_VERSION);
 
-            const conflictIndex = verifyVersions.findIndex((v, i) => v !== currentVersions[i]);
-            if (conflictIndex !== -1) {
-                throw new ConflictError(
-                    keys.join('+'),
-                    currentVersions[conflictIndex] ?? -1,
-                    verifyVersions[conflictIndex] ?? -1
-                );
-            }
+                const conflictIndex = verifyVersions.findIndex((v, i) => v !== currentVersions[i]);
+                if (conflictIndex !== -1) {
+                    throw new ConflictError(
+                        keys.join('+'),
+                        currentVersions[conflictIndex] ?? -1,
+                        verifyVersions[conflictIndex] ?? -1
+                    );
+                }
 
-            const writePayload: Record<string, unknown> = {};
-            keys.forEach((k, i) => {
-                writePayload[k] = newValues[i];
-                writePayload[`${k}_version`] = newVersions[i];
-            });
-            await chrome.storage.local.set(writePayload);
+                const writePayload: Record<string, unknown> = {};
+                keys.forEach((k, i) => {
+                    writePayload[k] = newValues[i];
+                    writePayload[`${k}_version`] = newVersions[i];
+                });
+                await chrome.storage.local.set(writePayload);
 
-            if (_postWriteVerificationEnabled) {
-                const postWriteResult = await chrome.storage.local.get([...keys, ...versionKeys]);
-                for (let i = 0; i < keys.length; i++) {
-                    const key = keys[i] as string;
-                    const postVersion = (postWriteResult[`${key}_version`] as number) ?? INITIAL_VERSION;
-                    const postValue = postWriteResult[key];
-                    if (postVersion !== newVersions[i] || !deepEqual(postValue, newValues[i])) {
-                        throw new ConflictError(key, newVersions[i] ?? -1, postVersion);
+                if (_postWriteVerificationEnabled) {
+                    const postWriteResult = await chrome.storage.local.get([...keys, ...versionKeys]);
+                    for (let i = 0; i < keys.length; i++) {
+                        const key = keys[i] as string;
+                        const postVersion = (postWriteResult[`${key}_version`] as number) ?? INITIAL_VERSION;
+                        const postValue = postWriteResult[key];
+                        if (postVersion !== newVersions[i] || !deepEqual(postValue, newValues[i])) {
+                            throw new ConflictError(key, newVersions[i] ?? -1, postVersion);
+                        }
                     }
                 }
-            }
 
-            return newValues;
+                return newValues;
+            });
         } catch (error) {
             if (!(error instanceof ConflictError)) {
                 const err = error as Error;

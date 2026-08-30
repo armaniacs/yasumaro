@@ -1,4 +1,5 @@
 import type { MarkdownTemplateEntryData } from '../../../utils/types.js';
+import { withAtomicKeys } from '../../../utils/optimisticLock.js';
 
 export interface MarkdownEntry {
   url: string;
@@ -42,17 +43,28 @@ export class MarkdownBufferManager {
     const date = getTodayDateString();
     const storageKey = `${this.storagePrefix}${date}`;
 
-    const stored = await chrome.storage.local.get(storageKey);
-    const existing: MarkdownEntry[] = Array.isArray(stored[storageKey]) ? stored[storageKey] : [];
-
-    const merged = existing.concat(this.buffer);
-    // VULN-004: keep the persisted daily buffer bounded too (oldest dropped).
-    const capped = merged.length > MAX_DAILY_BUFFER_ENTRIES
-      ? merged.slice(merged.length - MAX_DAILY_BUFFER_ENTRIES)
-      : merged;
-    await chrome.storage.local.set({ [storageKey]: capped });
-
+    // Capture and clear up front so entries buffered during the async flush
+    // are not lost, then re-buffer this batch if the write fails (VULN-003).
+    const batch = this.buffer;
     this.buffer = [];
+
+    try {
+      await withAtomicKeys<[MarkdownEntry[]]>(
+        [storageKey],
+        ([existing]) => {
+          const base = Array.isArray(existing) ? existing : [];
+          const merged = base.concat(batch);
+          // VULN-004: keep the persisted daily buffer bounded too (oldest dropped).
+          const capped = merged.length > MAX_DAILY_BUFFER_ENTRIES
+            ? merged.slice(merged.length - MAX_DAILY_BUFFER_ENTRIES)
+            : merged;
+          return [capped];
+        }
+      );
+    } catch (error) {
+      this.buffer = batch.concat(this.buffer);
+      throw error;
+    }
   }
 
   scheduleDailyFlush(alarmName?: string): void {

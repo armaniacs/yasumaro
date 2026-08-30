@@ -356,8 +356,8 @@ describe('pendingStorage', () => {
     });
 
     describe('error handling', () => {
-        it('addPendingPage should handle getPendingPagesList failure gracefully', async () => {
-            const { logInfo } = await import('../logger.js');
+        it('addPendingPage surfaces a storage read failure via the CAS wrapper', async () => {
+            const { logError } = await import('../logger.js');
             mockChrome.storage.local.get.mockRejectedValueOnce(new Error('Storage read error'));
 
             const now = Date.now();
@@ -369,10 +369,10 @@ describe('pendingStorage', () => {
                 expiry: now + 86400000
             };
 
-            await addPendingPage(page);
-
-            expect(logInfo).toHaveBeenCalled();
-            expect(mockChrome.storage.local.set).toHaveBeenCalled();
+            // The serialized read-modify-write no longer silently treats a
+            // failed read as "no pending pages"; the error propagates.
+            await expect(addPendingPage(page)).rejects.toThrow('Storage read error');
+            expect(logError).toHaveBeenCalled();
         });
 
         it('addPendingPage should handle outer catch when set fails', async () => {
