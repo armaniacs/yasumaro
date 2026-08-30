@@ -33,7 +33,7 @@
 | [2026-08-29-12-fix-crypto-policy-ssot.md](2026-08-29-12-fix-crypto-policy-ssot.md) | 暗号・認証ポリシーSSOT化 ＋ HMAC先行化（VULN-010/034/035/037-040/052） | ⬜ | 🔧 | 🔴 | 🔴 | 453 |
 | [2026-08-29-13-fix-import-pipeline-safety.md](2026-08-29-13-fix-import-pipeline-safety.md) | インポート経路安全化 — 認証→上限→パース→検証（VULN-023/030/034/035/036） | 🔶 | 🔧 | 🟡 | 🟡 | 405 |
 | [2026-08-29-14-fix-security-hardening-code-quality.md](2026-08-29-14-fix-security-hardening-code-quality.md) | Code Qualityハードニング一括（将来攻撃面6件） | 🔶 | 🔧 | 🟢 | 🟡 | 170 |
-| [2026-08-29-19-fix-cspvalidator-self-allow.md](2026-08-29-19-fix-cspvalidator-self-allow.md) | CSPValidator の設定由来ドメイン自己許可の締め直し（29-14 の AC1 から分離） | ⬜ | 🔧 | 🟡 | 🟡 | 分離 |
+| [2026-08-29-19-fix-cspvalidator-self-allow.md](2026-08-29-19-fix-cspvalidator-self-allow.md) | CSPValidator の設定由来ドメイン自己許可の締め直し（29-14 の AC1 から分離） | 🔶 | 🔧 | 🟡 | 🟡 | 分離 |
 
 > **🔶 部分実装の内訳**（残タスクは別 PBI で完了 or 統合先へ）:
 > - 29-04: 2/6サイト着地（PR #74）。残 4 サイト（buffer/pending/logger の CAS + optimisticLock 直列化）は **29-16 で完了**（PR #79・アーカイブ済み）
@@ -44,6 +44,9 @@
 > 29-04/08/13/14 は「この PBI 自体の DoD は残タスクを含めて未達」だが、実装は分離先で完了済み。
 > VulnHunter 再スキャンでの最終確認待ちのため `pbi/` に残置。詳細は
 > [2026-08-29-00-backlog-vulnhunt-audit.md](2026-08-29-00-backlog-vulnhunt-audit.md) の「フォローアップ PBI」節。
+> - 29-19: 実装・テスト着地（`cspValidator.initializeFromSettings` に
+>   `isAllowedProviderBaseUrl` ガードを配線、`cspValidatorSelfAllow.test.ts` 8 ケース green）。
+>   VulnHunter 再スキャンで Code Quality 指摘の解消を確認したらアーカイブへ。
 
 ### クレンジング改善（2026-08-30）
 
