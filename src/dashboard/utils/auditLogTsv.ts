@@ -19,10 +19,17 @@ function toIsoDate(ms: number): string {
 }
 
 function escapeTsvField(value: string): string {
-  if (value.includes('\t') || value.includes('\n') || value.includes('"')) {
-    return '"' + value.replace(/"/g, '""') + '"';
+  let str = value;
+  // CWE-1236: neutralize a leading formula-trigger character so a spreadsheet
+  // treats the cell as text instead of evaluating it. Mirrors escapeCsv in
+  // exportLogsService.ts.
+  if (/^[=+\-@]/.test(str)) {
+    str = `'${str}`;
   }
-  return value;
+  if (str.includes('\t') || str.includes('\n') || str.includes('"')) {
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
 }
 
 export function toTsvString(rows: AuditLogEntry[]): string {

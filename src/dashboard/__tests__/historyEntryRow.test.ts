@@ -130,6 +130,24 @@ describe('URL & Timestamp', () => {
     expect(urlEl.rel).toBe('noopener noreferrer');
   });
 
+  it('javascript: URL is rendered as text, not wired as an href', () => {
+    const row = makeHistoryEntryRow(
+      createMinimalEntry({ url: 'javascript:alert(1)' }), 0, 0, createMockState(), createMockElements(), vi.fn(), vi.fn(),
+    );
+    const urlEl = row.querySelector('.history-entry-url') as HTMLAnchorElement;
+    expect(urlEl).not.toBeNull();
+    expect(urlEl.getAttribute('href')).toBeNull();
+    expect(urlEl.textContent).toBe('javascript:alert(1)');
+  });
+
+  it('http: URL is still wired as an href', () => {
+    const row = makeHistoryEntryRow(
+      createMinimalEntry({ url: 'http://example.com/page' }), 0, 0, createMockState(), createMockElements(), vi.fn(), vi.fn(),
+    );
+    const urlEl = row.querySelector('.history-entry-url') as HTMLAnchorElement;
+    expect(urlEl.getAttribute('href')).toBe('http://example.com/page');
+  });
+
   it('timestamp matches toLocaleString format', () => {
     const ts = 1705300000000;
     const row = makeHistoryEntryRow(

@@ -8,6 +8,7 @@ import {
     loadModelsDevData,
     getApiKeyEnvName,
     getApiKeyUrl,
+    isHttpsUrl,
 } from '../utils/modelsDevApi.js';
 import { saveSettings, getSettings } from '../utils/storage/settingsStore.js';
 import { StorageKeys } from '../utils/storage/types.js';
@@ -447,6 +448,13 @@ export class ModelsDevDialog {
         // Validation
         if (!apiKey) {
             this.showError('Please enter your API key');
+            return;
+        }
+
+        // The provider base URL is written to settings and later used to build
+        // request URLs — reject anything that is not an absolute https: URL.
+        if (!isHttpsUrl(this.selectedProvider.api)) {
+            this.showError('Selected provider has an invalid API endpoint');
             return;
         }
 

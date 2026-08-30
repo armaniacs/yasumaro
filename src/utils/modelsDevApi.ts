@@ -54,6 +54,52 @@ export function findProviderById(providers: ModelsDevProvider[], providerId: str
 }
 
 /**
+ * True only for an absolute https: URL. `doc`/`api` from the provider asset
+ * are used as link hrefs and as the stored provider base URL, so anything that
+ * is not https: (javascript:, http:, data:, relative) is rejected.
+ */
+export function isHttpsUrl(value: unknown): value is string {
+    if (typeof value !== 'string' || value === '') return false;
+    try {
+        return new URL(value).protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Runtime schema check for one provider entry. The asset is bundled today
+ * (chrome.runtime.getURL), so this is defense-in-depth against a tampered or
+ * malformed file; it becomes load-bearing if the source ever moves to a
+ * remote fetch.
+ */
+export function isValidModelsDevProvider(p: unknown): p is ModelsDevProvider {
+    if (typeof p !== 'object' || p === null) return false;
+    const o = p as Record<string, unknown>;
+    return (
+        typeof o.id === 'string' &&
+        typeof o.name === 'string' &&
+        isHttpsUrl(o.api) &&
+        isHttpsUrl(o.doc) &&
+        typeof o.isAggregator === 'boolean' &&
+        Array.isArray(o.models) &&
+        Array.isArray(o.env)
+    );
+}
+
+/**
+ * Validates and narrows raw asset JSON. Returns null if the top-level shape is
+ * wrong; otherwise keeps only the provider entries that pass the schema check.
+ */
+export function parseModelsDevData(raw: unknown): ModelsDevData | null {
+    if (typeof raw !== 'object' || raw === null) return null;
+    const o = raw as Record<string, unknown>;
+    if (!Array.isArray(o.providers)) return null;
+    const providers = o.providers.filter(isValidModelsDevProvider);
+    return { ...(o as unknown as ModelsDevData), providers };
+}
+
+/**
  * Load models.dev data from extension assets
  */
 export async function loadModelsDevData(): Promise<ModelsDevData | null> {
@@ -63,7 +109,12 @@ export async function loadModelsDevData(): Promise<ModelsDevData | null> {
             console.warn('[ModelsDev] Failed to load provider data:', response.status);
             return null;
         }
-        return await response.json() as ModelsDevData;
+        const parsed = parseModelsDevData(await response.json());
+        if (!parsed) {
+            console.warn('[ModelsDev] Provider data failed schema validation');
+            return null;
+        }
+        return parsed;
     } catch (error) {
         console.warn('[ModelsDev] Error loading provider data:', error);
         return null;
@@ -146,5 +197,6 @@ const API_KEY_URLS: Record<string, string> = {
  * Returns the known URL if available, falls back to the provider's doc URL.
  */
 export function getApiKeyUrl(providerId: string, docUrl?: string): string | undefined {
-    return API_KEY_URLS[providerId] ?? docUrl;
+    const candidate = API_KEY_URLS[providerId] ?? docUrl;
+    return isHttpsUrl(candidate) ? candidate : undefined;
 }
