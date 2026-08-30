@@ -74,7 +74,9 @@ VulnHunter セキュリティ修正（29 系）や クレンジング改善（30
 | ファイル | タイトル | 状態 | 種別 | 難易度 | 副作用 | RICE |
 |---|---|---|---|---|---|---|
 | [2026-08-31-00-backlog-ui-visibility.md](2026-08-31-00-backlog-ui-visibility.md) | UI/デザイン視認性のバックログ（候補列挙＋RICE＋推奨実行順＋トレーサビリティ） | ⬜ | 🔧 | - | - | 索引 |
-| [2026-08-31-01-fix-light-mode-visibility-dashboard.md](2026-08-31-01-fix-light-mode-visibility-dashboard.md) | ライトモード視認性改善 — Dashboard AIプロバイダー設定のトークン準拠化 | ⬜ | 🔧 | 🟢 | 🟢 | 32.4 |
+
+> 31-01（ライトモード視認性改善）は完了しアーカイブ済み（`dev-docs/archived/pbi/`）。
+> 新規候補はバックログ索引を参照。
 
 ---
 
@@ -117,6 +119,10 @@ VulnHunter セキュリティ修正（29 系）や クレンジング改善（30
 - 2026-08-30-15-feat-llm-output-quality-guard.md（PR #72 — `llmOutputGuard.ts` を新設（`isDegenerateOutput` — repetition / lowDiversity / highlyCompressible のいずれかで縮退判定、notSentence は補助のみ、名前付き閾値定数）。`privacyPipeline._processCloudResult` の `parseTagsFromSummary` 後に単一チェックポイントとして組込み、縮退時はフォールバック文字列 + `addLog(WARN)`。`historyEntryRow.ts` で表示時マスク）
 
 **部分着地で `pbi/` に残置**: 29-04（2/6サイト・PR #74）、29-08（3/7指摘・PR #75）、29-13（AC1/4/5/6・PR #76）、29-14（AC2–6・PR #81）。付随して lint 修正（PR #80）、PBI 索引整備（PR #67）もマージ。
+
+### 2026-08-31 ライトモード視認性改善 完了
+
+- 2026-08-31-01-fix-light-mode-visibility-dashboard.md（RICE 32.4 — B分離型 AIプロバイダー設定（`.b-priority-row` / `.b-provider-details` / `.b-provider-summary` / `.b-priority-handle` / `.ai-layout-toggle`）のハードコード暗色（`#27272a` / `#18181b` / `#3f3f46` / `#a78bfa` / `#e4e4e7`）を `--color-*` トークンに置換（CSS は PR #84 `9e240f60` で着地）。`--color-*` は `dashboard.css:95` の `@media (prefers-color-scheme: dark)` で反転するため、別 `@media` ブロック不要でライト＝紙色 `#f8fafc`/`#ffffff`、ダーク＝墨色 `#161b22`/`#0d1117` を自動で使い分ける。`.ai-layout-toggle` の未定義 `--color-surface` フォールバックで常時 `#27272a` を描画していたバグも解消。単体テスト `tests/dashboard/aiProviderBLightMode.test.ts`（CSS ソースのトークン使用と暗色直値の不在をアサート）、E2E `testDir/e2e/dashboard-light-mode.spec.ts`（ビルド後 options CSS を最小 DOM に適用し `page.emulateMedia({ colorScheme })` で light/dark の背景 computedStyle を検証、chromium + firefox で 6 ケース green）。BDD「ハードコード残存検出」: `grep "#27272a\|#18181b\|#3f3f46" entrypoints/options/dashboard.css` → 0 件、ビルド後 `dist/**/options-*.css` の該当ルールも全て `var(--color-*)`。type-check / validate（10839 tests）PASS）
 
 ### 2026-08-29 リリース前チェックのブロッカー解消 完了
 
