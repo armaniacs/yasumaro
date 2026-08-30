@@ -59,9 +59,12 @@ vi.mock('../../utils/markdownTemplateUtils.js', () => ({
   })),
 }));
 
+const mockStorageSet = vi.hoisted(() => vi.fn());
+const mockStorageRemove = vi.hoisted(() => vi.fn());
+
 vi.stubGlobal('chrome', {
-  storage: { local: { get: mockStorageGet } },
-  downloads: { download: mockDownload },
+  storage: { local: { get: mockStorageGet, set: mockStorageSet, remove: mockStorageRemove } },
+  downloads: { download: mockDownload, erase: vi.fn(), removeFile: vi.fn() },
 });
 
 import { flushBufferedExports } from '../localMarkdownExportCore.js';
@@ -70,6 +73,9 @@ describe('flushBufferedExports', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetAll.mockResolvedValue({ local_markdown_export_path: 'Yasumaro' });
+    mockDownload.mockResolvedValue(123);
+    mockStorageSet.mockResolvedValue(undefined);
+    mockStorageRemove.mockResolvedValue(undefined);
   });
 
   it('downloads every buffered day when no filter is given', async () => {
@@ -143,5 +149,42 @@ describe('flushBufferedExports', () => {
     // The healthy date must still be downloaded despite the other date's crash.
     expect(mockDownload).toHaveBeenCalledTimes(1);
     expect(mockDownload.mock.calls[0][0].filename).toBe('Yasumaro/2026-07-09.md');
+  });
+
+  it('VULN-004: deletes the daily buffer key after a successful flush', async () => {
+    mockStorageGet.mockResolvedValue({
+      'local_export_2026-09-15': ['# a'],
+    });
+
+    await flushBufferedExports();
+
+    expect(mockStorageRemove).toHaveBeenCalledWith('local_export_2026-09-15');
+  });
+
+  it('VULN-004: does not delete the buffer key when the download throws', async () => {
+    mockDownload.mockRejectedValue(new Error('download failed'));
+    mockStorageGet.mockResolvedValue({
+      'local_export_2026-09-15': ['# a'],
+    });
+
+    await flushBufferedExports();
+
+    expect(mockStorageRemove).not.toHaveBeenCalledWith('local_export_2026-09-15');
+  });
+
+  it('VULN-004: records the generated download ID', async () => {
+    mockDownload.mockResolvedValue(555);
+    mockStorageGet.mockResolvedValue({
+      'local_export_2026-09-15': ['# a'],
+    });
+
+    await flushBufferedExports();
+
+    const idWrite = mockStorageSet.mock.calls.find(
+      (c) => 'local_md_export_download_ids' in c[0],
+    );
+    expect(idWrite).toBeDefined();
+    const records = idWrite![0]['local_md_export_download_ids'] as Array<{ downloadId: number; date: string }>;
+    expect(records[records.length - 1]).toMatchObject({ downloadId: 555, date: '2026-09-15' });
   });
 });
