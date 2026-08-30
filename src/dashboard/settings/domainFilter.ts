@@ -319,14 +319,15 @@ async function saveSimpleFormatSettings(): Promise<void> {
     const whitelist = whitelistText ? parseDomainList(whitelistText) : [];
     const blacklist = blacklistText ? parseDomainList(blacklistText) : [];
 
-    // Validate the current mode's list
-    const currentList = mode === 'whitelist' ? whitelist : blacklist;
-    if (mode !== 'disabled' && currentList.length > 0) {
-        const errors = validateDomainList(currentList);
-        if (errors.length > 0) {
-            showStatus('domainStatus', `${getMessage('domainListError')}\n${errors.join('\n')}`, 'error');
-            return;
-        }
+    // Validate BOTH lists, not just the active mode's. Both are persisted below,
+    // and an unvalidated pattern in the inactive list is still evaluated later
+    // when the user switches modes (via isDomainAllowed → matchesPattern).
+    // A pattern with excessive wildcards or bad syntax must never reach storage
+    // (VULN-025 / VULN-026).
+    const errors = [...validateDomainList(whitelist), ...validateDomainList(blacklist)];
+    if (errors.length > 0) {
+        showStatus('domainStatus', `${getMessage('domainListError')}\n${errors.join('\n')}`, 'error');
+        return;
     }
 
     // Prepare settings object - save both lists

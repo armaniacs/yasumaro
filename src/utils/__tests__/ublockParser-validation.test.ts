@@ -56,6 +56,30 @@ describe('ublockParser - Validation Module', () => {
       expect(validateDomain(null as never)).toBe(false);
       expect(validateDomain(undefined as never)).toBe(false);
     });
+
+    // VULN-025: 悪意あるフィルタ行による指数バックトラック（ReDoS）を防ぐ。
+    // 現行 regex `/^(\*\.)?[a-z0-9._-]+(\.[a-z0-9._-]+)*$/i` は入力長に対し指数的に遅くなる
+    // （実測 22 ドット→253ms、26 ドット→1.2秒、30 ドット→8秒超）。
+    // 24 ドット程度でも現行実装なら数百 ms かかり、この閾値を超える。
+    test('指数入力でも線形時間で完了する（ReDoS 防止）', () => {
+      const malicious = 'a' + '.a'.repeat(24) + '!';
+      const start = performance.now();
+      const result = validateDomain(malicious);
+      const elapsed = performance.now() - start;
+
+      expect(result).toBe(false);
+      expect(elapsed).toBeLessThan(50);
+    }, 5000);
+
+    test('長大な正当ドメインも線形時間で受理される', () => {
+      const longDomain = Array.from({ length: 50 }, () => 'label').join('.') + '.com';
+      const start = performance.now();
+      const result = validateDomain(longDomain);
+      const elapsed = performance.now() - start;
+
+      expect(result).toBe(true);
+      expect(elapsed).toBeLessThan(50);
+    });
   });
 
   // ============================================================================
