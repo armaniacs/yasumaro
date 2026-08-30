@@ -5,6 +5,7 @@
  */
 
 import { addLog, LogType } from './logger.js';
+import { readBodyCapped } from './readBodyCapped.js';
 
 /** Protocol type used by Obsidian Local REST API. */
 export type ObsidianProtocol = 'http' | 'https';
@@ -141,14 +142,10 @@ export function validateObsidianPort(port: string | number | undefined | null): 
  * @throws Error with name='AbortError' if body read times out
  */
 export async function readBodyWithTimeout(response: Response): Promise<string> {
-    // Guard against unbounded reads of potentially huge responses
-    const contentLength = response.headers?.get('content-length');
+    // Cap the streamed body on actual bytes (Content-Length can be omitted or lie).
     const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10MB
-    if (contentLength && parseInt(contentLength, 10) > MAX_BODY_SIZE) {
-        throw new Error(`Response body too large: ${Math.round(parseInt(contentLength, 10) / 1024 / 1024)}MB exceeds ${MAX_BODY_SIZE / 1024 / 1024}MB limit`);
-    }
 
-    const textPromise = response.text();
+    const textPromise = readBodyCapped(response, MAX_BODY_SIZE);
     // Suppress unhandled rejection when timeout wins the race
     textPromise.catch(() => {});
 
