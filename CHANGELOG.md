@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.91` リリース。
+> - 現時点では `v6.7.92` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,12 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.92] - 2026-08-30
+
+### Fixed
+
+- このリリースは `v6.7.91` に対する hotfix です。CNN／BBC 等で `background.js:49` `Cannot read properties of undefined (reading 'userTlds')` が `pipeline-error` として popup に表示され「今すぐ記録」がブロックされていた問題を修正。`trustDb` の `DomainVerifier` が初期化前の `state.database` 参照で例外を投げていたため、`checkJpAnchor`／`checkSensitive`／`checkTranco` に `database` 未初期化ガードを追加し `UNVERIFIED` で継続するように修正。
 
 ## [6.7.91] - 2026-08-30
 
