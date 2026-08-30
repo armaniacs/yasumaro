@@ -1711,7 +1711,7 @@ describe('main', () => {
     });
 
     it('should add domains to whitelist when type is domain', async () => {
-      mockChrome.storage.local.get.mockResolvedValueOnce({ domainWhitelist: [] });
+      mockChrome.storage.local.get.mockResolvedValueOnce({ domain_whitelist: [] });
 
       const list = document.getElementById('pending-pages-list')!;
       list.innerHTML = `<input type="checkbox" class="pending-checkbox" value="https://example.com/page" checked>`;
@@ -1724,7 +1724,7 @@ describe('main', () => {
       await saveSelectedPages('domain');
 
       expect(mockChrome.storage.local.set).toHaveBeenCalledWith(
-        expect.objectContaining({ domainWhitelist: expect.arrayContaining(['example.com']) })
+        expect.objectContaining({ domain_whitelist: expect.arrayContaining(['example.com']) })
       );
     });
   });

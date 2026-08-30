@@ -336,9 +336,46 @@ describe('saveSelectedPages', () => {
         const sendMessageSpy = vi.spyOn(chrome.runtime, 'sendMessage').mockResolvedValue({});
         await saveSelectedPages('path');
         expect(storageSetSpy).toHaveBeenCalledWith({
-            domainWhitelist: expect.arrayContaining(['^https://example\\.com/page$'])
+            domain_whitelist: expect.arrayContaining(['^https://example\\.com/page$'])
         });
         expect(sendMessageSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'record' }));
+    });
+
+    it('writes whitelist entries under domain_whitelist, never the orphan domainWhitelist key', async () => {
+        document.body.innerHTML += `
+            <input type="checkbox" class="pending-checkbox" value="https://example.com/page" checked>
+        `;
+        (getPendingPages as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { url: 'https://example.com/page', title: 'Example Page', reason: 'test', headerValue: '' }
+        ]);
+        const getSpy = vi.spyOn(chrome.storage.local, 'get').mockResolvedValue({});
+        const setSpy = vi.spyOn(chrome.storage.local, 'set').mockResolvedValue(undefined);
+        vi.spyOn(chrome.runtime, 'sendMessage').mockResolvedValue({});
+
+        await saveSelectedPages('domain');
+
+        expect(getSpy).toHaveBeenCalledWith('domain_whitelist');
+        const setArg = setSpy.mock.calls[0][0] as Record<string, unknown>;
+        expect(setArg).toHaveProperty('domain_whitelist');
+        expect(setArg).not.toHaveProperty('domainWhitelist');
+        expect(setArg.domain_whitelist).toEqual(['example.com']);
+    });
+
+    it('appends to existing domain_whitelist values without overwriting', async () => {
+        document.body.innerHTML += `
+            <input type="checkbox" class="pending-checkbox" value="https://new.example.com/x" checked>
+        `;
+        (getPendingPages as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { url: 'https://new.example.com/x', title: 'New', reason: 'test', headerValue: '' }
+        ]);
+        vi.spyOn(chrome.storage.local, 'get').mockResolvedValue({ domain_whitelist: ['old.example.com'] });
+        const setSpy = vi.spyOn(chrome.storage.local, 'set').mockResolvedValue(undefined);
+        vi.spyOn(chrome.runtime, 'sendMessage').mockResolvedValue({});
+
+        await saveSelectedPages('domain');
+
+        const setArg = setSpy.mock.calls[0][0] as { domain_whitelist: string[] };
+        expect(setArg.domain_whitelist).toEqual(['old.example.com', 'new.example.com']);
     });
 });
 
