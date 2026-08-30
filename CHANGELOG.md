@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.93` リリース。
+> - 現時点では `v6.7.94` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,12 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.94] - 2026-08-30
+
+### Fixed
+
+- このリリースは `v6.7.93` に対する hotfix です。`v6.7.93` で `userTlds` は修復したが、次に `presets` が欠落した破損DBで同様に `Cannot read properties of undefined (reading 'presets')` が `pipeline-error` として表示されていた問題を修正。`trustDb.doInitialize` で `presets`／`finance`／`gaming`／`sns` 等の各欠落をデフォルトで補完し、`DomainVerifier.checkSensitive` に `presets` 存在チェックを追加。
 
 ## [6.7.93] - 2026-08-30
 
