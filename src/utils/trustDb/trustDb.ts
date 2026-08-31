@@ -44,6 +44,7 @@ import { TrancoManager } from './trancoManager.js';
 import { SensitiveDomainStore } from './sensitiveDomainStore.js';
 import { WhitelistStore } from './whitelistStore.js';
 import { TrustDbVersion, DB_VERSION } from './trustDbVersion.js';
+import { repairTrustDatabase } from './trustDbRepair.js';
 
 // ===== settingsStore 動的import ヘルパー（PBI-2026-08-01-20） =====
 //
@@ -170,15 +171,26 @@ class TrustDb {
       const result = await chrome.storage.local.get(STORAGE_KEY);
       const savedDb = result[STORAGE_KEY] as TrustDatabase | undefined;
 
-      if (savedDb && savedDb.bloomFilter) {
-        // 破損DBの包括的修復: 全必須フィールドをデフォルトで補完（Phase 1 根源: DB自体が部分的に欠落）
-        const beforeRepair = JSON.stringify(savedDb);
-        this.repairDatabase(savedDb as unknown as Record<string, unknown>);
-        const afterRepair = JSON.stringify(savedDb);
-        const wasRepaired = beforeRepair !== afterRepair;
-        // 既存データをロード
-        this.state.database = savedDb;
-        this.state.bloomFilter = bloomFilterFromData(savedDb.bloomFilter);
+      if (savedDb) {
+        // Pure repair: avoid in-place mutate + partial save race
+        const repaired = repairTrustDatabase(savedDb as unknown as Record<string, unknown>) as unknown as TrustDatabase;
+        let wasRepaired = JSON.stringify(savedDb) !== JSON.stringify(repaired);
+        this.state.database = repaired;
+        let bloomRebuilt = false;
+        try {
+          // bloomFilter may be missing/corrupt after repair — rebuild from presets if needed
+          if (!repaired.bloomFilter || typeof repaired.bloomFilter !== 'object') {
+            throw new Error('Missing bloomFilter');
+          }
+          this.state.bloomFilter = bloomFilterFromData(repaired.bloomFilter as unknown as Parameters<typeof bloomFilterFromData>[0]);
+        } catch {
+          // Corrupt bloomFilter: rebuild from presets via manager and persist once
+          const rebuiltData = await this.bloomFilterManager.createBloomFilterFromPresets();
+          this.state.bloomFilter = bloomFilterFromData(rebuiltData);
+          (this.state.database as unknown as Record<string, unknown>).bloomFilter = rebuiltData;
+          bloomRebuilt = true;
+        }
+        wasRepaired = wasRepaired || bloomRebuilt;
 
         // バージョンを確認・マイグレーション
         if (this.state.database.version !== DB_VERSION) {
@@ -211,36 +223,19 @@ class TrustDb {
   }
 
   /**
-   * 破損DBを包括的に修復（全必須フィールドのデフォルト補完）
-   * Phase 1 根源: 個別フィールドのガード追加では新たな欠落が次々に顕在化するため、
-   * 単一箇所で全フィールドを検証・修復し、将来の欠落にも対応
+   * @deprecated Use repairTrustDatabase pure function — kept for backward compat, delegates to pure.
+   * Mutates the given object for legacy callers, but new code should use the pure function.
    */
   private repairDatabase(db: Record<string, unknown>): void {
-    // Top-level
-    if (!db.version) db.version = DB_VERSION;
-    if (!db.lastUpdated) db.lastUpdated = new Date().toISOString();
-    // jpAnchor
-    const jpAnchor = (db.jpAnchor ?? {}) as Record<string, unknown>;
-    if (!Array.isArray(jpAnchor.tlds)) jpAnchor.tlds = [...JP_ANCHOR_TLDS_PRESET];
-    if (!Array.isArray(jpAnchor.userTlds)) jpAnchor.userTlds = [];
-    db.jpAnchor = jpAnchor;
-    // sensitive
-    const sensitive = (db.sensitive ?? {}) as Record<string, unknown>;
-    const presets = (sensitive.presets ?? {}) as Record<string, unknown>;
-    if (!Array.isArray(presets.finance)) presets.finance = [];
-    if (!Array.isArray(presets.gaming)) presets.gaming = [];
-    if (!Array.isArray(presets.sns)) presets.sns = [];
-    sensitive.presets = presets;
-    if (!Array.isArray(sensitive.userBlacklist)) sensitive.userBlacklist = [];
-    if (!Array.isArray(sensitive.whitelist)) sensitive.whitelist = [];
-    db.sensitive = sensitive;
-    // tranco
-    const tranco = (db.tranco ?? {}) as Record<string, unknown>;
-    if (!tranco.tier) tranco.tier = 'top10k';
-    if (!Array.isArray(tranco.domains)) tranco.domains = [];
-    if (typeof tranco.count !== 'number') tranco.count = (tranco.domains as unknown[]).length;
-    if (typeof tranco.sizeBytes !== 'number') tranco.sizeBytes = 0;
-    db.tranco = tranco;
+    const repaired = repairTrustDatabase(db);
+    // Mutate original object to preserve legacy in-place semantics
+    for (const k of Object.keys(repaired)) {
+      db[k] = repaired[k];
+    }
+    // Ensure removed keys are deleted
+    for (const k of Object.keys(db)) {
+      if (!(k in repaired)) delete db[k];
+    }
   }
 
   /**
