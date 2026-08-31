@@ -4,7 +4,6 @@
  *
  * Prompt API (window.ai / LanguageModel) is no longer handled here — Built-in AI
  * calls LanguageModel directly from the Service Worker (src/background/builtInAIClient.ts).
- * See dev-docs/2026-07-28-built-in-ai-provider-integration-design.md for the rationale.
  */
 
 import { engine } from './sqliteEngineContext.js';
