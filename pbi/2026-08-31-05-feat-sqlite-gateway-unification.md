@@ -71,13 +71,12 @@ Scenario: Transport が Adapter として差し替え可能
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了（offscreen / dashboard / background の影響確認 — 2026-09-01）
-- [ ] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の SQLite 章、ADR 2026-06-17 opfs-fts5-coexistence に追記）
+- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md §5.4 に Unified gateway / Query plan / Backend facets を追記。ADR 2026-06-17 opfs-fts5-coexistence は VFS/FTS5 エンジン選定の ADR で RPC 層は対象外のため追記せず）
 - [x] `npm run validate` が green
 
-## 残作業（次セッション）
-- `InMemoryTransport` adapter の実装（テスト seam の実在化）
-- `isServiceError` の重複解消（`dashboardSqliteService.ts` / `BrowsingLogRepository.ts`）
-- DESIGN_SPECIFICATIONS.md / ADR 追記
+## 残作業
+- `InMemoryTransport` adapter の実装（テスト seam の実在化。現状 `OffscreenTransport` interface は注入可能で機能的には充足）
+- `isServiceError` の重複解消（`dashboardSqliteService.ts` / `BrowsingLogRepository.ts` の 2 箇所。挙動は同一）
 
 ## 実装メモ（任意）
 - `SqliteClient` は互換 shim として一時残し、内部で Gateway に委譲。`getSharedSqliteClient()` は Gateway の singleton を返す形に段階移行
