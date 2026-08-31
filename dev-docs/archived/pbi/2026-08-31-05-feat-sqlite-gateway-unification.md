@@ -56,8 +56,8 @@ Scenario: Transport が Adapter として差し替え可能
 - [x] `SqliteClient` と `dashboardSqliteService` の二重 RPC 実装が Gateway に統合され、呼び出し元が Gateway（`SqliteGateway` / `DashboardSqliteGateway`）に委譲する shim に縮小
 - [x] `buildExtraWhereSql` / `clampLimit` / `buildQuerySpec` が `queryPlan.ts` 1 ファイルに集約され、`IdbVfsBackend` / `opfsWorker/searchHandlers` の個別実装が削除される
 - [x] `StorageBackend` が `Queryable` と `Mutable` の 2 facet に分割される
-- [x] `categorizeError` が Gateway 経由で一元化（dashboard 失敗レスポンスの二重 categorize を修正）。`isServiceError` の重複は未解消（`dashboardSqliteService.ts` / `BrowsingLogRepository.ts` の 2 箇所）
-- [ ] Transport の `InMemoryTransport` adapter は未実装（`OffscreenTransport` interface + `ChromeOffscreenTransport` のみ）
+- [x] `categorizeError` が Gateway 経由で一元化され、dashboard/SW の 2 hop が同一分類（dashboard 失敗レスポンスの二重 categorize を修正）。live な `isServiceError` は `dashboardSqliteService.ts` の 1 箇所。`BrowsingLogRepository.ts` の同名定義は PR #87 由来の未接続コード（consumer / test なし）で、本 PBI の対象外 → 別途「dead code 整理」として扱う
+- [x] Transport は `OffscreenTransport` interface として抽出済み。adapter は `ChromeOffscreenTransport`（本番）と `InMemoryTransport`（`src/background/inMemoryTransport.ts` — stateful な in-memory store。offscreen / chrome.* を起動せず insert→query→count→status が round-trip する）の 2 実装
 - [x] `sqliteClient` / `dashboardSqliteService` / `IdbVfsBackend` のテストが Gateway 経由で green
 
 ## テスト戦略
@@ -74,9 +74,8 @@ Scenario: Transport が Adapter として差し替え可能
 - [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md §5.4 に Unified gateway / Query plan / Backend facets を追記。ADR 2026-06-17 opfs-fts5-coexistence は VFS/FTS5 エンジン選定の ADR で RPC 層は対象外のため追記せず）
 - [x] `npm run validate` が green
 
-## 残作業
-- `InMemoryTransport` adapter の実装（テスト seam の実在化。現状 `OffscreenTransport` interface は注入可能で機能的には充足）
-- `isServiceError` の重複解消（`dashboardSqliteService.ts` / `BrowsingLogRepository.ts` の 2 箇所。挙動は同一）
+## フォローアップ（本 PBI 対象外）
+- `src/dashboard/BrowsingLogRepository.ts`（PR #87 由来、consumer / test なし、296 行）を wire-up するか削除するかの判断。`ServiceResult` / `isServiceError` の重複はこの dead code に由来する
 
 ## 実装メモ（任意）
 - `SqliteClient` は互換 shim として一時残し、内部で Gateway に委譲。`getSharedSqliteClient()` は Gateway の singleton を返す形に段階移行

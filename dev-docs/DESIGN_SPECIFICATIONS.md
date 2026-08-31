@@ -106,6 +106,7 @@ A local SQLite database acts as a **secondary store for browsing/search**, indep
   - The Dashboard hop passes failure-response reasons through **verbatim** (the Service Worker already classified them); it only runs `categorizeError` on its own transport-level exceptions. Re-classifying a already-classified reason would double-wrap it.
 - **Query plan** (`src/offscreen/queryPlan.ts`): `buildQuerySpec` / `clampLimit` / `buildExtraWhereSql` are the single source of truth for WHERE-clause generation and limit clamping. `IdbVfsBackend` and `opfsWorker/searchHandlers` consume them rather than re-deriving the same date/domain/starred/gist/ids filter.
 - **Backend facets** (`src/offscreen/StorageBackend.ts`): the storage backend interface is split into `Queryable` (read) and `Mutable` (write) so callers import only the facet they need.
+- **Transport adapters** (`OffscreenTransport` interface): `ChromeOffscreenTransport` manages the real offscreen-document lifecycle in production; `InMemoryTransport` (`src/background/inMemoryTransport.ts`) is a stateful in-memory store so `SqliteGateway` can be exercised in tests (insert → query → count → status all round-trip) without an offscreen document or any `chrome.*` API.
 
 ### 5.5 Trust DB
 
