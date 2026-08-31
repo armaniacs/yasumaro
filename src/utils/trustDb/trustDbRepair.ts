@@ -13,7 +13,7 @@
  */
 
 import { DB_VERSION } from './trustDbVersion.js';
-import { JP_ANCHOR_TLDS, SENSITIVE_DOMAINS_PRESETS } from './presets.js';
+import { JP_ANCHOR_TLDS } from './presets.js';
 
 const JP_ANCHOR_TLDS_PRESET = [...JP_ANCHOR_TLDS] as readonly string[];
 
