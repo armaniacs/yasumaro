@@ -3,7 +3,8 @@
  * Privacy settings functionality for the popup UI.
  */
 
-import { saveSettings, getSettings } from '../../utils/storage/settingsStore.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
+import { saveSettings } from '../../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { addLog, LogType } from '../../utils/logger.js';
@@ -71,7 +72,7 @@ export function init(): void {
 }
 
 export async function loadPrivacySettings(): Promise<void> {
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     // Mode
     const mode = settings[StorageKeys.PRIVACY_MODE] || 'full_pipeline';

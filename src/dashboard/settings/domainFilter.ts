@@ -3,7 +3,8 @@
  * Domain filter settings functionality for the popup UI.
  */
 
-import { getSettings, saveSettings } from '../../utils/storage/settingsStore.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
+import { saveSettings } from '../../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { parseDomainList, validateDomainList } from '../../utils/domainUtils.js';
@@ -225,7 +226,7 @@ export function toggleFormatUI(): void {
 }
 
 export async function loadDomainSettings(): Promise<void> {
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     // Load filter mode
     // Validate mode to prevent CSS selector injection (only allow: disabled, whitelist, blacklist)
