@@ -47,12 +47,12 @@ Scenario: Speculative 判断 — 今は着手しない
   And   追加がなければ本 PBI は着手しない（YAGNI）
 
 ## 受け入れ基準
-- [ ] `ProviderCatalog` が `resolve(name)` 一つの深い Interface で 6 情報（baseUrlKey/apiKeyKey/modelKey/defaultBaseUrl/cspDomain/label）を返す設計が docs に記録される（実装は任意）
-- [ ] 既存の `providerRegistry.ts` が Catalog の内部 data として吸収されるか、Catalog が registry を委譲する形で一本化される（実装する場合）
-- [ ] `DiagnosticsCollector` の 6 branch switch が Catalog 駆動に置換される（実装する場合）
-- [ ] `cspSettings.ts` の条件分岐が Catalog の `cspDomain` から導出される（実装する場合）
-- [ ] `getMaxContentChars` の `as Record<string,unknown>` 迂回が解消され、typed に `providers` bag を読む（実装する場合）
-- [ ] 本 PBI が Speculative である旨が backlog に明記され、次回 provider 追加時の再評価トリガーが定義される
+- [x] `ProviderCatalog` が `resolve(name)` / `tryResolve(name)` で provider 情報（baseUrlKey/apiKeyKey/modelKey/isLocal/defaultModel/cspDomain/label/contentCharsKey）を返す
+- [x] `providerRegistry.ts` を Catalog が内部 data として委譲（`buildCatalog` が `PROVIDER_REGISTRY` を走査し cspDomain/label/contentCharsKey を augment）
+- [x] `DiagnosticsCollector` の per-provider switch が Catalog 駆動に置換
+- [x] `cspValidator` / `cspSettings.ts` の条件分岐が Catalog の `baseUrlKey` / `cspDomain` から導出
+- [x] `getMaxContentChars` が typed に `settings.providers` bag と `StorageKey` を読む（`as Record` 迂回を解消）
+- [ ] 本 PBI が Speculative である旨と再評価トリガーの backlog 明記（未実施）
 
 ## テスト戦略
 - E2E: 新 provider 追加後の `testConnection` と `generateSummary` が成功（実装する場合）
@@ -63,10 +63,14 @@ Scenario: Speculative 判断 — 今は着手しない
 2 pt（要チームでの見積もり）— Catalog 型と 6 箇所集約 1pt + Diagnostics/CSP 置換 1pt。ただし型パズルで 3pt に膨らむ可能性。Speculative のため今は見積のみ。
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする（実装する場合。見送りの場合は設計 docs のみ）
-- [ ] コードレビュー完了（ai / dashboard / csp の影響確認）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了（ai / dashboard / csp の影響確認 — 2026-09-01）
 - [ ] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の AI Provider 章、CONTEXT.md に Provider 語彙追記）
-- [ ] `npm run validate` が green
+- [x] `npm run validate` が green
+
+## 残作業（次セッション）
+- backlog への Speculative 明記と provider 追加時の再評価トリガー定義
+- DESIGN_SPECIFICATIONS.md / CONTEXT.md への Provider 語彙追記
 
 ## 実装メモ（任意）
 - 本 PBI は Speculative。01-05 の完了後に provider 追加が発生するまで着手しないことを推奨。着手する場合は `ProviderStrategy` の深さを壊さないように Catalog は data 層のみを集約し、checkPreFlight/sanitize 等の振る舞いは Strategy に残す

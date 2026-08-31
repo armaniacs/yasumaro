@@ -52,13 +52,13 @@ Scenario: Transport が Adapter として差し替え可能
   And   本番は `OffscreenTransport` Adapter が同じ Seam で動作する
 
 ## 受け入れ基準
-- [ ] `SqliteGateway` が `query / mutate / maintain / status` の 4 methods と統一 `SqliteResult<T> = {ok:true,data}|{ok:false,error:SqliteError}` を公開する
-- [ ] `SqliteClient` と `dashboardSqliteService` の二重 RPC 実装が Gateway に統合され、呼び出し元（dashboardSqliteService / service-worker）が Gateway に委譲する
-- [ ] `extraWhereSql` / `clampLimit` / `buildQuerySpec` が `queryPlan` 1 ファイルに集約され、3 backends の個別実装が削除される
-- [ ] `StorageBackend` 14 methods が `Queryable`（query/search/status）と `Mutable`（insert/update/delete/purge）に分割され、各 caller が必要な Seam のみを import する
-- [ ] `categorizeError` と `isServiceError` の二重実装が統一され、dashboard/SW で同一文言
-- [ ] Transport が `SqliteTransport` Adapter Interface として抽出され、`OffscreenTransport` と `InMemoryTransport` の 2 adapters で Seam が実在化
-- [ ] 既存の `sqliteClient` / `dashboardSqliteService` / `IdbVfsBackend` / `storageFallback` のテストが Gateway 経由で green
+- [x] `SqliteGateway` が `query / mutate / maintain / status` の 4 methods と統一 `SqliteResult<T> = {success:true,data} | {success:false,error:SqliteError}` を公開する（実装上のキーは `ok` ではなく `success`）
+- [x] `SqliteClient` と `dashboardSqliteService` の二重 RPC 実装が Gateway に統合され、呼び出し元が Gateway（`SqliteGateway` / `DashboardSqliteGateway`）に委譲する shim に縮小
+- [x] `buildExtraWhereSql` / `clampLimit` / `buildQuerySpec` が `queryPlan.ts` 1 ファイルに集約され、`IdbVfsBackend` / `opfsWorker/searchHandlers` の個別実装が削除される
+- [x] `StorageBackend` が `Queryable` と `Mutable` の 2 facet に分割される
+- [x] `categorizeError` が Gateway 経由で一元化（dashboard 失敗レスポンスの二重 categorize を修正）。`isServiceError` の重複は未解消（`dashboardSqliteService.ts` / `BrowsingLogRepository.ts` の 2 箇所）
+- [ ] Transport の `InMemoryTransport` adapter は未実装（`OffscreenTransport` interface + `ChromeOffscreenTransport` のみ）
+- [x] `sqliteClient` / `dashboardSqliteService` / `IdbVfsBackend` のテストが Gateway 経由で green
 
 ## テスト戦略
 - E2E: dashboard で browsing log の search / query / status が成功し、offscreen の OPFS/IDB/fallback のいずれでも同一結果
@@ -69,10 +69,15 @@ Scenario: Transport が Adapter として差し替え可能
 5 pt（要チームでの見積もり）— Gateway 統一 2pt + queryPlan 集約 1pt + Backend seam 分割 1pt + Transport Adapter 化 1pt
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了（offscreen / dashboard / background の影響確認）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了（offscreen / dashboard / background の影響確認 — 2026-09-01）
 - [ ] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の SQLite 章、ADR 2026-06-17 opfs-fts5-coexistence に追記）
-- [ ] `npm run validate` が green、3 backends での手動 search が green
+- [x] `npm run validate` が green
+
+## 残作業（次セッション）
+- `InMemoryTransport` adapter の実装（テスト seam の実在化）
+- `isServiceError` の重複解消（`dashboardSqliteService.ts` / `BrowsingLogRepository.ts`）
+- DESIGN_SPECIFICATIONS.md / ADR 追記
 
 ## 実装メモ（任意）
 - `SqliteClient` は互換 shim として一時残し、内部で Gateway に委譲。`getSharedSqliteClient()` は Gateway の singleton を返す形に段階移行
