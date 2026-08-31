@@ -48,12 +48,12 @@ Scenario: 境界 — テストで override が manifest 差し替えとして機
   And   override されていない他サービスは通常通り生成される
 
 ## 受け入れ基準
-- [ ] `compositionManifest: Array<{key, factory, deps, singleton, onReady?}>` が単一ファイルに定義され、18 登録がここに集約される
-- [ ] `BackgroundServicesComposition` の alias フィールド（`dashboardSqliteClient` / `dashboardSqliteHandler`）が削除され、呼び出し元が `sqliteClient` / `messageRouter.getHandler('DASHBOARD_SQLITE')` に置換される
-- [ ] `__BackgroundServicesKeys` 手動 union と `__CoreServicesSubsetCheck` boilerplate が削除され、型が manifest から自動推論される
-- [ ] `setPendingWriteQueue` / `setSqliteHealthCheck` の副作用が manifest の onReady または専用 wiring module に移設され、`createBackgroundServices.ts` の import が 22 から 10 以下に削減される
-- [ ] 既存の `createBackgroundServices.__tests__` が override パターンで green、service-worker の起動が e2e で green
-- [ ] ADR `2026-07-27-ai-client-service-unification` と `2026-08-20-utils-layer-circular-dependency` に追記
+- [ ] `compositionManifest: Array<{key, factory, deps, singleton, onReady?}>` が単一ファイルに定義され、18 登録がここに集約される（現状: 未着手。`if(!container.has) register()` の羅列のまま）
+- [ ] `BackgroundServicesComposition` の alias フィールド（`dashboardSqliteClient` / `dashboardSqliteHandler`）が削除され、呼び出し元が `sqliteClient` / `messageRouter.getHandler('DASHBOARD_SQLITE')` に置換される（現状: `dashboardSqliteClient` のみ削除。`dashboardSqliteHandler` は残存）
+- [x] `__BackgroundServicesKeys` 手動 union と `__CoreServicesSubsetCheck` boilerplate が削除される（型安全は `messageRouterDeps: MessageRouterDeps` 明示注釈 + `return {...}` リテラルが `BackgroundServicesComposition` を満たす制約で担保）
+- [ ] `setPendingWriteQueue` / `setSqliteHealthCheck` の副作用が専用 wiring に移設され、import が 10 以下に削減される（現状: 副作用は `_onReady()` ローカル関数に集約したが import は 36。manifest 化が前提）
+- [x] 既存の `createBackgroundServices.__tests__` / `backgroundComposition.test.ts` が override パターンで green
+- [ ] ADR `2026-08-20-utils-layer-circular-dependency` に追記
 
 ## テスト戦略
 - E2E: service-worker 起動 → 全 19 message handler が登録され、VALID_VISIT が成功する
@@ -64,10 +64,16 @@ Scenario: 境界 — テストで override が manifest 差し替えとして機
 3 pt（要チームでの見積もり）— Manifest 型と builder 1pt + alias 削除と呼出元置換 1pt + 副作用移設と import 削減 1pt
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了（service-worker / handlers / storage の影響確認）
+- [ ] 全BDDシナリオが自動テストとして実装されパスする（Manifest 型推論シナリオは未実装）
+- [x] コードレビュー完了（service-worker / handlers / storage の影響確認 — 2026-09-01）
 - [ ] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の Communication Architecture 章、ADR 追記）
-- [ ] `npm run validate` が green
+- [x] `npm run validate` が green
+
+## 残作業（次セッション）
+- `compositionManifest` 配列型 + builder の実装（本 PBI の中核。demolition のみ完了）
+- `dashboardSqliteHandler` alias の削除と呼出側の `messageRouter.getHandler` 化
+- manifest 化に伴う import 削減（36 → 10 以下）
+- DESIGN_SPECIFICATIONS.md / ADR 追記
 
 ## 実装メモ（任意）
 - `ServiceContainer` は維持し、内部で manifest を `register` ループする薄い Adapter にする。container 自体を深くしない

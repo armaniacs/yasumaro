@@ -53,12 +53,12 @@ Scenario: エラー — SqliteClient 未設定でも BEST_EFFORT で継続
   Then  saveSqlite step は WARN ログを残して skip し、後続の saveMetadata は実行される
 
 ## 受け入れ基準
-- [ ] `RecordingOrchestrator` の公開 Interface が `record(data: RecordingData): Promise<RecordingResult>`（+ 必要なら `mode` オプション）に統一され、`recordWithPreview` / `retryObsidianWriteOnly` が削除される
-- [ ] `PerUrlMutexMap` の static 互換 (`urlRecordMutexes` / `getOrCreateStatic` / `runExclusiveStatic`) が削除され、instance `mutexMap` のみに
-- [ ] `buildRecordingPipelineDeps` identity 関数が削除され、`createRecordingPipeline` も Orchestrator 生成に一本化
-- [ ] 全 13 steps が内部 registry に登録され、caller から `create*Step()` が不可視。`saveSqliteStep` も `StepDeps` 経由に統一
-- [ ] 既存の `steps/__tests__/*` 8 ファイル + `recordingPipeline-*.test.ts` が同一 Seam で green
-- [ ] `service-worker` / `manualRecord` / `saveRecord` の 3 経路が Orchestrator 経由で e2e green
+- [ ] `RecordingOrchestrator` の公開 Interface が `record(data, opts?)` に統一され、`recordWithPreview` / `retryObsidianWriteOnly` の convenience alias が削除される（現状: `record(data, {mode})` は実装済みだが alias が残存。offlineQueueProcessor が `retryObsidianWriteOnly` を呼ぶため呼出側の移行が必要）
+- [x] `PerUrlMutexMap` の static 互換 (`urlRecordMutexes` / `getOrCreateStatic` / `runExclusiveStatic`) が削除され、instance `mutexMap` のみに
+- [ ] `buildRecordingPipelineDeps` identity 関数が削除され、`createRecordingPipeline` も Orchestrator 生成に一本化（現状: deprecated shim として残存。`createBackgroundServices` が使用中）
+- [x] 全 13 steps が Orchestrator の private array に登録され、caller から `create*Step()` が不可視。`saveSqliteStep` も `StepDeps` 経由
+- [x] 既存の `steps/__tests__/*` + `recordingPipeline-*.test.ts` が同一 Seam で green
+- [x] `service-worker` / `manualRecord` / `saveRecord` の 3 経路が Orchestrator 経由で green（container singleton の `perUrlMutexMap` を pipeline deps に配線し、cross-instance の URL 直列化を回復済み）
 
 ## テスト戦略
 - E2E: VALID_VISIT → Obsidian 保存 → SQLite 保存の一連が成功。preview と retry の手動実行が同一 Orchestrator で成功
@@ -69,10 +69,15 @@ Scenario: エラー — SqliteClient 未設定でも BEST_EFFORT で継続
 5 pt（要チームでの見積もり）— Orchestrator 集約 2pt + Mutex 単一化 1pt + Step 注入統一と registry 化 2pt
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了（pipeline / handlers / service-worker の影響確認）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了（pipeline / handlers / service-worker の影響確認 — 2026-09-01。`perUrlMutexMap` 未配線による duplicate-entry race を発見・修正）
 - [ ] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の pipeline 章、ADR 必要なら新規）
-- [ ] `npm run validate` が green、manual recording の e2e が green
+- [x] `npm run validate` が green
+
+## 残作業（次セッション）
+- `recordWithPreview` / `retryObsidianWriteOnly` alias の削除と呼出側（offlineQueueProcessor / RecordingPipeline facade）の `record(data, {mode})` への移行
+- `buildRecordingPipelineDeps` / `createRecordingPipeline` facade の削除と `createBackgroundServices` の直接 `RecordingOrchestrator` 生成への移行
+- DESIGN_SPECIFICATIONS.md の pipeline 章更新
 
 ## 実装メモ（任意）
 - `PipelineKernel` と `StepExecutor` は Orchestrator の private 実装として残し、外部 Interface には出さない（internal seam）

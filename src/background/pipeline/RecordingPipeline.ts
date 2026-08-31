@@ -1,9 +1,9 @@
 /**
- * Recording Pipeline — orchestrates 13 steps.
- * Steps: truncate, domainFilter, permission, trust, privacyHeaders, duplicate,
- *        privacyPipeline (RETRY, previewBreakpoint), extractSentences (RETRY),
- *        formatMarkdown, saveObsidian (BEST_EFFORT), saveLocalMarkdown,
- *        saveSqlite, saveMetadata. See steps/index.ts for details.
+ * Recording Pipeline — backward-compatible facade over RecordingOrchestrator.
+ *
+ * New code should use RecordingOrchestrator directly.
+ * This class is retained only for existing callers/tests that reference
+ * RecordingPipeline; it delegates every call to the internal orchestrator.
  */
 
 import type { RecordingData, RecordingResult } from '../../messaging/types.js';
@@ -14,18 +14,27 @@ import type { SqliteClient } from '../sqliteClient.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import type { UrlStore } from './types.js';
-import { PerUrlMutexMap } from './perUrlMutex.js';
 import { RecordingOrchestrator, type RecordingOrchestratorDeps } from './RecordingOrchestrator.js';
+import type { PerUrlMutexMap } from './perUrlMutex.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 
 export interface RecordingPipelineDeps extends RecordingOrchestratorDeps {}
 
 export function createRecordingPipeline(deps: RecordingPipelineDeps): RecordingPipeline {
-  return new RecordingPipeline(deps.getPrivacyInfoWithCache, deps.obsidian, deps.aiService, deps.sqliteClient, deps.offlineNetworkQueue, deps.urlStore, deps.getSettingsWithCache);
+  return new RecordingPipeline(
+    deps.getPrivacyInfoWithCache,
+    deps.obsidian,
+    deps.aiService,
+    deps.sqliteClient,
+    deps.offlineNetworkQueue,
+    deps.urlStore,
+    deps.getSettingsWithCache,
+    deps.perUrlMutexMap
+  );
 }
 
-/** @deprecated Use RecordingOrchestrator directly — this identity function is shallow (6 LOC) and will be removed */
-export function buildRecordingPipelineDeps(deps: Pick<RecordingPipelineDeps, 'getPrivacyInfoWithCache' | 'getSettingsWithCache' | 'obsidian' | 'aiService' | 'sqliteClient' | 'urlStore' | 'offlineNetworkQueue'>): RecordingPipelineDeps {
+/** @deprecated Use RecordingOrchestrator directly — this shallow identity function will be removed */
+export function buildRecordingPipelineDeps(deps: Pick<RecordingPipelineDeps, 'getPrivacyInfoWithCache' | 'getSettingsWithCache' | 'obsidian' | 'aiService' | 'sqliteClient' | 'urlStore' | 'offlineNetworkQueue' | 'perUrlMutexMap'>): RecordingPipelineDeps {
   return { ...deps };
 }
 
@@ -38,19 +47,6 @@ export class RecordingPipeline {
     return (this.orchestrator as unknown as { steps: unknown }).steps;
   }
 
-  // Static compat for legacy tests that inspect urlRecordMutexes directly
-  static get urlRecordMutexes() {
-    return PerUrlMutexMap.getSharedMap();
-  }
-
-  private static getUrlMutex(url: string) {
-    return PerUrlMutexMap.getOrCreateStatic(url);
-  }
-
-  private static withUrlRecordMutex<T>(url: string, fn: () => Promise<T>): Promise<T> {
-    return PerUrlMutexMap.runExclusiveStatic(url, fn);
-  }
-
   constructor(
     getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>,
     obsidian: ObsidianClient,
@@ -58,7 +54,8 @@ export class RecordingPipeline {
     sqliteClient: SqliteClient | null = null,
     offlineNetworkQueue: OfflineNetworkQueue | null = null,
     urlStore: UrlStore | undefined = undefined,
-    getSettingsWithCache: () => Promise<Settings>
+    getSettingsWithCache: () => Promise<Settings>,
+    perUrlMutexMap: PerUrlMutexMap | undefined = undefined
   ) {
     this.orchestrator = new RecordingOrchestrator({
       getPrivacyInfoWithCache,
@@ -67,7 +64,7 @@ export class RecordingPipeline {
       aiService,
       sqliteClient,
       offlineNetworkQueue,
-      ...pickDefined({ urlStore }),
+      ...pickDefined({ urlStore, perUrlMutexMap }),
     });
   }
 
@@ -90,7 +87,7 @@ export class RecordingPipeline {
   }
 
   async recordWithPreview(data: RecordingData): Promise<RecordingResult> {
-    return this.orchestrator.recordWithPreview(data);
+    return this.orchestrator.record(data, { mode: 'preview' });
   }
 
   async retryObsidianWriteOnly(job: { title: string; url: string; summary: string; tags?: string[] }): Promise<boolean> {
