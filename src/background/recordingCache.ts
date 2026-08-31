@@ -11,7 +11,7 @@ import { addLog, LogType } from '../utils/logger.js';
 import { getSavedUrlsWithTimestamps } from '../utils/storage/savedUrlRepository.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { Settings } from '../utils/storage/types.js';
-import { API_KEY_FIELDS } from '../utils/storage/settingsStore.js';
+import { API_KEY_FIELDS } from '../utils/storage/settingsMigration.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
 import { isPrivacyInfo } from '../utils/privacyChecker.js';
 import { SessionStore, SESSION_KEYS } from './sessionStore.js';

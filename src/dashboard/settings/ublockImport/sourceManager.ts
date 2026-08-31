@@ -4,7 +4,8 @@
  */
 
 import { parseUblockFilterListWithErrors, isValidString } from '../../../utils/ublockParser/index.js';
-import { saveSettings, getSettings } from '../../../utils/storage/settingsStore.js';
+import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
+import { saveSettings } from '../../../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { rebuildRulesFromSources } from './rulesBuilder.js';
@@ -43,7 +44,7 @@ function buildRulesPayload(mergedRules: ReturnType<typeof rebuildRulesFromSource
  * 保存済みソース一覧を読み込んで表示
  */
 export async function loadAndDisplaySources(renderCallback?: (sources: Source[]) => void): Promise<void> {
-  const settings = await getSettings();
+  const settings = await settingsRepository.getAll();
   const sources = (settings[StorageKeys.UBLOCK_SOURCES] || []) as Source[];
   if (renderCallback) {
     renderCallback(sources);
@@ -55,7 +56,7 @@ export async function loadAndDisplaySources(renderCallback?: (sources: Source[])
  * @param {number} index - 削除するソースのインデックス
  */
 export async function deleteSource(index: number, renderCallback?: (sources: Source[]) => void): Promise<void> {
-  const settings = await getSettings();
+  const settings = await settingsRepository.getAll();
   const sources = (settings[StorageKeys.UBLOCK_SOURCES] || []) as Source[];
 
   if (index < 0 || index >= sources.length) return;
@@ -84,7 +85,7 @@ export async function deleteSource(index: number, renderCallback?: (sources: Sou
  * @returns {Promise<Object>} 更新結果
  */
 export async function reloadSource(index: number, fetchFromUrlCallback: (url: string) => Promise<string>): Promise<ReloadResult> {
-  const settings = await getSettings();
+  const settings = await settingsRepository.getAll();
   const sources = (settings[StorageKeys.UBLOCK_SOURCES] || []) as Source[];
 
   if (index < 0 || index >= sources.length) {
@@ -164,7 +165,7 @@ export async function saveUblockSettings(text: string, url: string | null = null
     console.warn(`${result.errors.length}個のエラーがスキップされました（有効なルール: ${ruleCount}）`);
   }
 
-  const settings = await getSettings();
+  const settings = await settingsRepository.getAll();
   const sources = (settings[StorageKeys.UBLOCK_SOURCES] || []) as Source[];
 
   const sourceUrl = url || 'manual';

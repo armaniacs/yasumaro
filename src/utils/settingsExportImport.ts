@@ -4,7 +4,8 @@
  */
 
 import { getOrCreateHmacSecret } from './storage/encryptionSession.js';
-import { getSettings, saveSettings, API_KEY_FIELDS } from './storage/settingsStore.js';
+import { settingsRepository } from './storage/SettingsRepository.js';
+import { saveSettings, API_KEY_FIELDS } from './storage/settingsStore.legacy.js';
 import { Settings } from './storage/types.js';
 import { computeHMAC, encrypt, decryptData, deriveKey, constantTimeCompare } from './crypto/index.js';
 import { generateSalt } from './crypto/index.js';
@@ -63,7 +64,7 @@ function sanitizeSettingsForExport(settings: Settings): Settings {
  * インポート設定とAPIキーをマージする（APIキー除外時の共通処理）
  */
 async function mergeWithExistingApiKeys(importedSettings: Settings): Promise<Settings> {
-  const existingSettings = await getSettings();
+  const existingSettings = await settingsRepository.getAll();
   const merged: Settings = { ...importedSettings };
   for (const field of API_KEY_FIELDS) {
     (merged as Record<string, unknown>)[field] = existingSettings[field];
@@ -95,7 +96,7 @@ export async function exportEncryptedSettings(
   masterPassword: string
 ): Promise<{ success: boolean; encryptedData?: EncryptedExportData; error?: string }> {
   try {
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     // APIキーを除外した設定でエクスポート
     const sanitizedSettings = sanitizeSettingsForExport(settings);
@@ -307,7 +308,7 @@ export function isEncryptedExport(data: unknown): data is EncryptedExportData {
  * Export all settings to a JSON file
  */
 export async function exportSettings(): Promise<void> {
-  const settings = await getSettings();
+  const settings = await settingsRepository.getAll();
 
   // APIキーを除外した設定でエクスポート
   const sanitizedSettings = sanitizeSettingsForExport(settings);

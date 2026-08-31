@@ -6,7 +6,8 @@
  * handleSaveOnly, handleTestAi, and handleTestLocalMarkdown.
  */
 
-import { getSettings, saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.js';
+import { settingsRepository } from '../utils/storage/SettingsRepository.js';
+import { saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { extractSettingsFromInputs, extractLocalMarkdownExportTiming, type ValidationSchema } from '../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../utils/settingsSchemas.js';
@@ -117,7 +118,7 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
 
   const newSettings = extractSettingsFromInputs(document.querySelector(formSelector) ?? document.body, GENERAL_SETTINGS_SCHEMA);
   // A/B分岐: layout === 'b' のときはBの優先度リストから収集
-  const layout = (await getSettings())[StorageKeys.AI_PROVIDER_LAYOUT] as 'a' | 'b' | undefined;
+  const layout = (await settingsRepository.getAll())[StorageKeys.AI_PROVIDER_LAYOUT] as 'a' | 'b' | undefined;
   if (layout === 'b') {
     const bList = document.getElementById('bPriorityList') as HTMLElement | null;
     const hasBRow = !!bList?.querySelector('.b-priority-row');
@@ -195,7 +196,7 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
   newSettings[StorageKeys.CONTENT_MAX_RECORDS] =
     contentMaxRaw === '' || contentMaxRaw === undefined ? null : Number(contentMaxRaw);
 
-  const currentSettings = await getSettings();
+  const currentSettings = await settingsRepository.getAll();
   const mergedSettings = { ...currentSettings, ...newSettings };
 
   await saveSettingsWithAllowedUrls(mergedSettings);

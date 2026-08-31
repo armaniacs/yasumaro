@@ -3,7 +3,8 @@
  * Dashboard UI for domain_cleansing_overrides — minimal panel inside AI Summary Cleansing.
  */
 
-import { getSettings, saveSettings } from '../../utils/storage/settingsStore.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
+import { saveSettings } from '../../utils/storage/settingsStore.legacy.js';
 import { StorageKeys, type DomainCleansingOverride } from '../../utils/storage/types.js';
 import { CLEANSING_RULES } from '../../utils/aiSummaryCleaner/rules.js';
 import { normalizeDomain, upsertDomainOverride } from '../../utils/aiSummaryCleaner/perSiteOverride.js';
@@ -60,14 +61,14 @@ function clearToggles(container: HTMLElement): void {
 }
 
 async function loadOverrides(): Promise<DomainCleansingOverride[]> {
-    const s = await getSettings();
+    const s = await settingsRepository.getAll();
     const raw = (s as Record<string, unknown>)[StorageKeys.DOMAIN_CLEANSING_OVERRIDES];
     if (Array.isArray(raw)) return raw as DomainCleansingOverride[];
     return [];
 }
 
 async function saveOverrides(next: DomainCleansingOverride[]): Promise<void> {
-    const cur = await getSettings();
+    const cur = await settingsRepository.getAll();
     (cur as Record<string, unknown>)[StorageKeys.DOMAIN_CLEANSING_OVERRIDES] = next;
     await saveSettings(cur);
 }

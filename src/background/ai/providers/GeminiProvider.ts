@@ -6,7 +6,7 @@
 import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
 import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
-import { getAllowedUrls } from '../../../utils/storage/settingsStore.js';
+import { getAllowedUrls } from '../../../utils/storage/urlWhitelist.js';
 import { DEFAULT_SETTINGS } from '../../../utils/storage/defaults.js';
 import { Settings, StorageKeys } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';

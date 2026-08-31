@@ -12,7 +12,8 @@ import { loadAndDisplaySources, deleteSource, reloadSource, saveUblockSettings }
 import { renderSourceList, updatePreviewUI, hidePreview, clearInput, exportSimpleFormat, copyToClipboard } from './uiRenderer.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { LogType, addLog } from '../../../utils/logger.js';
-import { getSettings, saveSettings } from '../../../utils/storage/settingsStore.js';
+import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
+import { saveSettings } from '../../../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { getMessage } from '../../../utils/i18n.js';
 
@@ -143,7 +144,7 @@ function setupExportButtons(): void {
  */
 async function handleExport(): Promise<void> {
   try {
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
     const sources = settings[StorageKeys.UBLOCK_SOURCES] || [];
 
     if (sources.length === 0) {
@@ -257,7 +258,7 @@ async function handleReloadSource(index: number): Promise<void> {
   }
 
   // Fetch current settings to get the old rule count
-  const settings = await getSettings();
+  const settings = await settingsRepository.getAll();
   const currentSources = settings[StorageKeys.UBLOCK_SOURCES] || [];
   const oldRuleCount = currentSources[index]?.ruleCount || 0;
 

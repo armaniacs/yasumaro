@@ -1,4 +1,5 @@
-import { getSettings, saveSettings } from '../utils/storage/settingsStore.js';
+import { settingsRepository } from '../utils/storage/SettingsRepository.js';
+import { saveSettings } from '../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { logError, ErrorCode } from '../utils/logger.js';
@@ -8,12 +9,12 @@ import { applyI18n } from '../utils/i18n-dom.js';
 export type WizardType = 'obsidian' | 'sqlite' | 'minimal';
 
 export async function shouldShowWizard(): Promise<boolean> {
-  const settings = await getSettings();
+  const settings = await settingsRepository.getAll();
   return !settings[StorageKeys.ONBOARDING_WIZARD_COMPLETED];
 }
 
 export async function hasCompletedWizard(): Promise<boolean> {
-  const settings = await getSettings();
+  const settings = await settingsRepository.getAll();
   return !!settings[StorageKeys.ONBOARDING_WIZARD_COMPLETED];
 }
 

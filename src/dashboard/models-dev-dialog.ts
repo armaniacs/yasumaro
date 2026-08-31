@@ -10,7 +10,8 @@ import {
     getApiKeyUrl,
     isHttpsUrl,
 } from '../utils/modelsDevApi.js';
-import { saveSettings, getSettings } from '../utils/storage/settingsStore.js';
+import { settingsRepository } from '../utils/storage/SettingsRepository.js';
+import { saveSettings } from '../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
@@ -460,7 +461,7 @@ export class ModelsDevDialog {
 
         // Save settings
         try {
-            const settings = await getSettings();
+            const settings = await settingsRepository.getAll();
 
             settings[StorageKeys.AI_PROVIDER] = 'openai-compatible';
             settings[StorageKeys.PROVIDER_TYPE] = this.selectedProvider.id;

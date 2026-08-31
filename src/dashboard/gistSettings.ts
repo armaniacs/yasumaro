@@ -3,7 +3,7 @@
  * GitHub Gist sync settings UI logic.
  */
 
-import { saveSettings } from '../utils/storage/settingsStore.js';
+import { saveSettings } from '../utils/storage/settingsStore.legacy.js';
 import { StorageKeys, Settings } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import type { EncryptedData } from '../utils/crypto/types.js';

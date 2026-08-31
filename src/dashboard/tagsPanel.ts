@@ -5,7 +5,7 @@
 
 import { getMessage } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
-import { saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.js';
+import { saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { DEFAULT_CATEGORIES } from '../utils/tagUtils.js';

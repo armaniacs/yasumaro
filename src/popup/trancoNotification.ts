@@ -3,7 +3,8 @@
  * Tranco 更新通知バナー UI と同意処理
  */
 
-import { getSettings, saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.js';
+import { settingsRepository } from '../utils/storage/SettingsRepository.js';
+import { saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { getMessage } from '../utils/i18n.js';
@@ -19,7 +20,7 @@ async function initTrancoUpdateNotification(): Promise<void> {
     }
 
     try {
-        const settings = await getSettings();
+        const settings = await settingsRepository.getAll();
         const currentVersion = settings[StorageKeys.TRANCO_VERSION] as string | null;
         const grantedVersion = settings[StorageKeys.TRANCO_CONSENT_GRANTED] as string | null;
         const _deniedReason = settings[StorageKeys.TRANCO_CONSENT_DENIED_REASON] as string | null;
@@ -73,7 +74,7 @@ async function initTrancoUpdateNotification(): Promise<void> {
 
 async function handleTrancoGrant(version: string): Promise<void> {
     try {
-        const settings = await getSettings();
+        const settings = await settingsRepository.getAll();
 
         const updatedSettings = { ...settings };
         updatedSettings[StorageKeys.TRANCO_CONSENT_GRANTED] = version;
@@ -95,7 +96,7 @@ async function handleTrancoGrant(version: string): Promise<void> {
 
 async function handleTrancoDeny(): Promise<void> {
     try {
-        const settings = await getSettings();
+        const settings = await settingsRepository.getAll();
 
         const updatedSettings = { ...settings };
         updatedSettings[StorageKeys.TRANCO_CONSENT_GRANTED] = null;

@@ -3,7 +3,8 @@
  * AI要約クレンジング設定の管理（V2 — 後方互換のためV1は削除済み）
  */
 
-import { getSettings, saveSettings } from '../../utils/storage/settingsStore.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
+import { saveSettings } from '../../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { logError, ErrorCode } from '../../utils/logger.js';
 import { CLEANSING_RULES, type CleansingRule } from '../../utils/aiSummaryCleaner/rules.js';
@@ -118,7 +119,7 @@ export async function applyPreset(presetId: PresetId): Promise<void> {
     _isApplyingPreset = true;
     try {
         const preset = PRESETS[presetId];
-        const current = await getSettings();
+        const current = await settingsRepository.getAll();
         if (presetId !== 'custom') {
             for (const rule of CLEANSING_RULES) {
                 const optKey = ruleOptionKey(rule) as keyof CleansingConfig;
@@ -183,12 +184,12 @@ export type AiSummaryCleansingSettings = {
  * @returns AI要約クレンジング設定
  */
 export async function getAiSummaryCleansingSettings(): Promise<AiSummaryCleansingSettings> {
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     // The 32 rule flags, derived from CLEANSING_RULES.defaultEnabled instead
     // of restating each fallback. Two of these (enhancedHidden/emptyElem) had
     // drifted to `?? true` here while CLEANSING_RULES / DEFAULT_SETTINGS both
-    // say false; that only mattered when getSettings() omitted the key (it
+    // say false; that only mattered when settingsRepository.getAll() omitted the key (it
     // never does in production, since it merges DEFAULT_SETTINGS), so this
     // fixes a latent inconsistency without changing observed behaviour — see
     // pbi/2026-08-09-20.
@@ -221,7 +222,7 @@ export async function getAiSummaryCleansingSettings(): Promise<AiSummaryCleansin
  * @param settings AI要約クレンジング設定
  */
 export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansingSettings): Promise<void> {
-    const currentSettings = await getSettings();
+    const currentSettings = await settingsRepository.getAll();
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_ENABLED] = settings.enabled;
     for (const rule of CLEANSING_RULES) {
         (currentSettings as Record<string, boolean>)[rule.storageKey] =

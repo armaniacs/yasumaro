@@ -6,7 +6,7 @@
  */
 
 import { logInfo, logError, ErrorCode } from '../utils/logger.js';
-import { migrateToSingleSettingsObject } from '../utils/storage/settingsStore.js';
+import { migrateToSingleSettingsObject } from '../utils/storage/settingsMigration.js';
 import { migrateLegacyPendingPagesKey } from '../utils/pendingStorage.js';
 import { SessionStore } from './sessionStore.js';
 import { MigrationService } from './migrationService.js';

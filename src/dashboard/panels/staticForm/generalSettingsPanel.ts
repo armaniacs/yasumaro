@@ -1,8 +1,8 @@
 import { type PanelLifecycle } from '../types.js';
 import { loadSettingsToInputs } from '../../../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../../utils/settingsSchemas.js';
-import { getSettings } from '../../../utils/storage/settingsStore.js';
-import { saveSettingsWithAllowedUrls } from '../../../utils/storage/settingsStore.js';
+import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
+import { saveSettingsWithAllowedUrls } from '../../../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { getMessage } from '../../../utils/i18n.js';
 import {
@@ -50,7 +50,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
     category: 'static-form',
     async mount(container) {
       panelContainer = container;
-      const settings = await getSettings();
+      const settings = await settingsRepository.getAll();
       loadSettingsToInputs(container, settings, GENERAL_SETTINGS_SCHEMA);
       await loadGeneralSettings();
 
@@ -233,7 +233,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
               const providerModelInput = document.getElementById('providerModel') as HTMLInputElement | null;
               if (providerApiKeyInput) providerApiKeyInput.value = apiKey;
               if (providerModelInput) providerModelInput.value = model;
-              const settings2 = await getSettings();
+              const settings2 = await settingsRepository.getAll();
               settings2[StorageKeys.PROVIDER_TYPE] = providerId;
               settings2[StorageKeys.PROVIDER_BASE_URL] = baseUrl;
               settings2[StorageKeys.PROVIDER_API_KEY] = apiKey;
@@ -278,7 +278,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
     async refresh() {
       const container = panelContainer;
       if (container) {
-        const settings = await getSettings();
+        const settings = await settingsRepository.getAll();
         loadSettingsToInputs(container, settings, GENERAL_SETTINGS_SCHEMA);
         await loadGeneralSettings();
       }
