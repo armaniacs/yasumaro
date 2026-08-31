@@ -46,12 +46,12 @@ Scenario: 境界 — getBytesInUse 不可用でも getAll は成功する
   Then  quota チェックはスキップされ、migration/decrypt は正常に完了する
 
 ## 受け入れ基準
-- [ ] `StoragePort` が `get/set/onChanged/getBytesInUse` に加え `getVersion/setVersion`（または version 付き read/write）を公開し、`InMemoryStoragePort` が CAS セマンティクスを再現する
-- [ ] `SettingsRepository` が 1s TTL cache と `buildAllowedUrls`/`computeUrlsHash` 副作用を内部に持ち、外部から `cachedSettings` に触れられない
-- [ ] `src/utils/storage/settingsStore.legacy.ts` / `settingsStore.ts` が削除され、34 箇所の `getSettings` import が 0 になる
-- [ ] `getAll()` の scattered fallback が削除または `__internal` なテスト専用 seam に分離され、通常経路のカバレッジが 90% 以上
-- [ ] 既存の `SettingsRepository.__tests__` 18 ファイルが InMemory version 付きで green、e2e の Settings 保存が手動で成功する
-- [ ] ADR `2026-03-20-default-settings-single-source` に追記（単一化の完成）
+- [ ] `StoragePort` が `get/set/onChanged/getBytesInUse` を公開し、`InMemoryStoragePort` が version Map + auto-increment と `getBytesInUse` 推定で CAS セマンティクスを再現する（`getVersion/setVersion` の明示的追加は次 PBI に委譲、現行は `dump()` の version 検証で担保）
+- [ ] `SettingsRepository` が 1s TTL cache を内部に持ち、`onChanged` で即時 invalidate する。`buildAllowedUrls`/`computeUrlsHash` は `src/utils/storage/urlWhitelist.ts` に残し repo 内に移さない（呼び出し元で `repo.setAll` + `updateDomainFilterCache` の 2 行に分離）。外部から `cachedSettings` に触れられない
+- [ ] `src/utils/storage/settingsStore.legacy.ts` / `settingsStore.ts` が削除され、34 箇所の `getSettings` import が 0 になる（`src/utils/storage.ts` barrel は `SettingsRepository` / `settingsMigration` に切り替えてから削除）
+- [ ] `getAll()` の scattered fallback が `__internal` なテスト専用 seam に分離され、通常経路は `settings` + `settings_migrated` の 1 経路のみ。通常経路のカバレッジが 90% 以上
+- [ ] 既存の `SettingsRepository.__tests__` 18 ファイルが InMemory version 付きで green、e2e の Settings 保存が手動で成功する。`getVersion(key)` ヘルパで version インクリメントを検証
+- [ ] ADR `2026-03-20-default-settings-single-source` に追記（単一化の完成、AllowedUrls は urlWhitelist に残す旨）
 
 ## テスト戦略
 - E2E: ダッシュボードで Obsidian/AI 設定を保存 → 再読込後も反映される、chrome.storage の `settings:version` がインクリメントされる
