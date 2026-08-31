@@ -1,10 +1,10 @@
+import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 // ============================================================================
 // Tranco Consent Panel
 // ============================================================================
 
 import { getMessage } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
-import { saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 
@@ -144,7 +144,7 @@ async function handleTrancoGrant(repo: SettingsReader, version: string): Promise
     updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_REASON] = null;
     updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP] = null;
 
-    await saveSettingsWithAllowedUrls(updatedSettings);
+    await (async (s)=>{ await settingsRepository.setAll(s); await updateDomainFilterCache(await settingsRepository.getAll()); })(updatedSettings);
 
     showStatus(
       'trancoStatus',
@@ -172,7 +172,7 @@ async function handleTrancoDeny(repo: SettingsReader): Promise<void> {
     updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_REASON] = 'deny';
     updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP] = Date.now();
 
-    await saveSettingsWithAllowedUrls(updatedSettings);
+    await (async (s)=>{ await settingsRepository.setAll(s); await updateDomainFilterCache(await settingsRepository.getAll()); })(updatedSettings);
 
     showStatus(
       'trancoStatus',

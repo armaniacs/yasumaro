@@ -1,8 +1,8 @@
 import type { PendingSave } from './mainTypes.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
-import { saveSettings } from '../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../utils/storage/types.js';
+import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 import { startAutoCloseTimer } from './autoClose.js';
 import { getMessage } from '../utils/i18n.js';
 
@@ -105,7 +105,8 @@ document.getElementById('dialog-save-domain')?.addEventListener('click', async (
       const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
       if (!whitelist.includes(domain)) {
         whitelist.push(domain);
-        await saveSettings({ [StorageKeys.DOMAIN_WHITELIST]: whitelist }, true);
+        await settingsRepository.setAll({ [StorageKeys.DOMAIN_WHITELIST]: whitelist });
+        await updateDomainFilterCache(await settingsRepository.getAll());
       }
     }
     await recordWithForce();
@@ -121,7 +122,8 @@ document.getElementById('dialog-save-path')?.addEventListener('click', async () 
     const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
     if (!whitelist.includes(currentPendingSave.url)) {
       whitelist.push(currentPendingSave.url);
-      await saveSettings({ [StorageKeys.DOMAIN_WHITELIST]: whitelist }, true);
+      await settingsRepository.setAll({ [StorageKeys.DOMAIN_WHITELIST]: whitelist });
+      await updateDomainFilterCache(await settingsRepository.getAll());
     }
     await recordWithForce();
   }

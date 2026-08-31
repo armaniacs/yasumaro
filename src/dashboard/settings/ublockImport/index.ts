@@ -13,7 +13,6 @@ import { renderSourceList, updatePreviewUI, hidePreview, clearInput, exportSimpl
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { LogType, addLog } from '../../../utils/logger.js';
 import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
-import { saveSettings } from '../../../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { getMessage } from '../../../utils/i18n.js';
 
@@ -299,7 +298,7 @@ async function handleSaveUblockSettings(): Promise<void> {
 
   // 1. uBlock形式が無効な場合
   if (!ublockEnabled) {
-    await saveSettings({ [StorageKeys.UBLOCK_FORMAT_ENABLED]: false });
+    await settingsRepository.setAll({ [StorageKeys.UBLOCK_FORMAT_ENABLED]: false });
     return;
   }
 
@@ -309,7 +308,7 @@ async function handleSaveUblockSettings(): Promise<void> {
 
   if (!text) {
     // 入力が空でも「有効化フラグ」だけは保存する（既存のソースは維持される）
-    await saveSettings({ [StorageKeys.UBLOCK_FORMAT_ENABLED]: true });
+    await settingsRepository.setAll({ [StorageKeys.UBLOCK_FORMAT_ENABLED]: true });
     return;
   }
 

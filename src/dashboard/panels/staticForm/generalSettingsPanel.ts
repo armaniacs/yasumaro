@@ -1,8 +1,8 @@
+import { updateDomainFilterCache } from '../../../utils/storage/domainFilterCache.js';
 import { type PanelLifecycle } from '../types.js';
 import { loadSettingsToInputs } from '../../../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../../utils/settingsSchemas.js';
 import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
-import { saveSettingsWithAllowedUrls } from '../../../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { getMessage } from '../../../utils/i18n.js';
 import {
@@ -238,7 +238,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
               settings2[StorageKeys.PROVIDER_BASE_URL] = baseUrl;
               settings2[StorageKeys.PROVIDER_API_KEY] = apiKey;
               settings2[StorageKeys.PROVIDER_MODEL] = model;
-              await saveSettingsWithAllowedUrls(settings2);
+              await (async (s)=>{ await settingsRepository.setAll(s); await updateDomainFilterCache(await settingsRepository.getAll()); })(settings2);
             },
             onCancel: () => {}
           });

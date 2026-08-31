@@ -1,3 +1,4 @@
+import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 /**
  * tagsPanel.ts
  * Tag settings panel: categories + normalization dictionary management.
@@ -5,7 +6,6 @@
 
 import { getMessage } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
-import { saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { DEFAULT_CATEGORIES } from '../utils/tagUtils.js';
@@ -224,7 +224,7 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
     settings[StorageKeys.TAG_NORMALIZATION_DICT] = normalizationEntries;
 
     try {
-      await saveSettingsWithAllowedUrls(settings);
+      await (async (s)=>{ await settingsRepository.setAll(s); await updateDomainFilterCache(await settingsRepository.getAll()); })(settings);
       showStatus(
         'exportImportStatus',
         getMessage('tagSettingsSaved') || 'タグ設定を保存しました',

@@ -1,10 +1,10 @@
+import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 /**
  * trancoNotification.ts
  * Tranco 更新通知バナー UI と同意処理
  */
 
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
-import { saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { getMessage } from '../utils/i18n.js';
@@ -81,7 +81,7 @@ async function handleTrancoGrant(version: string): Promise<void> {
         updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_REASON] = null;
         updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP] = null;
 
-        await saveSettingsWithAllowedUrls(updatedSettings);
+        await (async (s)=>{ await settingsRepository.setAll(s); await updateDomainFilterCache(await settingsRepository.getAll()); })(updatedSettings);
 
         const banner = document.getElementById('trancoUpdateBanner');
         if (banner) {
@@ -103,7 +103,7 @@ async function handleTrancoDeny(): Promise<void> {
         updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_REASON] = 'deny';
         updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP] = Date.now();
 
-        await saveSettingsWithAllowedUrls(updatedSettings);
+        await (async (s)=>{ await settingsRepository.setAll(s); await updateDomainFilterCache(await settingsRepository.getAll()); })(updatedSettings);
 
         const banner = document.getElementById('trancoUpdateBanner');
         if (banner) {
