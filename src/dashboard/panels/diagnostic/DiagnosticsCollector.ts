@@ -23,6 +23,7 @@ import { pickDefined } from '../../../utils/objectUtils.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { getDebugMode } from './debugModeStore.js';
 import type { EncryptedData } from '../../../utils/crypto/types.js';
+import { ProviderCatalog } from '../../../background/ai/providerCatalog.js';
 
 function stringOrEmpty(value: string | EncryptedData | undefined): string {
   return typeof value === 'string' ? value : '';
@@ -159,51 +160,40 @@ export class DiagnosticsCollector {
       deficiencies = diagnoseDeficiencies(diagInput);
     }
 
-    // AI providers
+    // AI providers — Catalog-driven (no per-provider switch)
     const priorityList = settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] ?? [];
     const legacyProvider = settings[StorageKeys.AI_PROVIDER] ?? 'gemini';
     const slots = priorityList.length > 0 ? priorityList : [{ provider: legacyProvider }];
-    const aiProviders = slots.map((slot: { provider: string; model?: string }) => ({
-      provider: slot.provider,
-      model: slot.model,
-      label: slot.provider,
-    }));
+    const aiProviders = slots.map((slot: { provider: string; model?: string }) => {
+      const entry = ProviderCatalog.tryResolve(slot.provider);
+      return {
+        provider: slot.provider,
+        model: slot.model,
+        label: entry?.label ?? slot.provider,
+      };
+    });
 
-    // Per-provider detailed settings (baseUrl, apiKey) for panel rendering
+    // Per-provider detailed settings (baseUrl, apiKey) for panel rendering — Catalog-driven
     const aiProviderDetails: ProviderDetail[] = slots.map((slot: { provider: string; model?: string }) => {
+      const entry = ProviderCatalog.tryResolve(slot.provider);
       const base: ProviderDetail = {
         provider: slot.provider,
         model: slot.model,
-        label: slot.provider,
+        label: entry?.label ?? slot.provider,
       };
-      switch (slot.provider) {
-        case 'gemini':
-          base.model = settings[StorageKeys.GEMINI_MODEL] ?? slot.model;
-          base.apiKey = stringOrEmpty(settings[StorageKeys.GEMINI_API_KEY]);
-          break;
-        case 'openai':
-          base.baseUrl = settings[StorageKeys.OPENAI_BASE_URL] ?? '';
-          base.model = settings[StorageKeys.OPENAI_MODEL] ?? slot.model;
-          base.apiKey = stringOrEmpty(settings[StorageKeys.OPENAI_API_KEY]);
-          break;
-        case 'openai2':
-          base.baseUrl = settings[StorageKeys.OPENAI_2_BASE_URL] ?? '';
-          base.model = settings[StorageKeys.OPENAI_2_MODEL] ?? slot.model;
-          base.apiKey = stringOrEmpty(settings[StorageKeys.OPENAI_2_API_KEY]);
-          break;
-        case 'lm-studio':
-          base.baseUrl = settings[StorageKeys.LM_STUDIO_BASE_URL] ?? '';
-          base.model = settings[StorageKeys.LM_STUDIO_MODEL] ?? slot.model;
-          break;
-        case 'ollama':
-          base.baseUrl = settings[StorageKeys.OLLAMA_BASE_URL] ?? '';
-          base.model = settings[StorageKeys.OLLAMA_MODEL] ?? slot.model;
-          break;
-        case 'openai-compatible':
-          base.baseUrl = settings[StorageKeys.PROVIDER_BASE_URL] ?? '';
-          base.model = settings[StorageKeys.PROVIDER_MODEL] ?? slot.model;
-          base.apiKey = stringOrEmpty(settings[StorageKeys.PROVIDER_API_KEY]);
-          break;
+      if (!entry) return base;
+      const settingsBag = settings as Partial<Record<string, unknown>>;
+      if (entry.modelKey) {
+        const v = settingsBag[entry.modelKey] as string | undefined;
+        base.model = v ?? slot.model ?? entry.defaultModel;
+      }
+      if (entry.baseUrlKey) {
+        const v = settingsBag[entry.baseUrlKey] as string | undefined;
+        base.baseUrl = v ?? '';
+      }
+      if (entry.apiKeyKey) {
+        const v = settingsBag[entry.apiKeyKey] as string | EncryptedData | undefined;
+        base.apiKey = stringOrEmpty(v);
       }
       return base;
     });

@@ -12,6 +12,7 @@ import { errorMessage } from './errorUtils.js';
 import { ALLOWED_LOCALHOST_PORTS } from './ssrfGuard.js';
 import { pickDefined } from './objectUtils.js';
 import { isAllowedProviderBaseUrl } from '../background/ai/providerRegistry.js';
+import { PROVIDER_CATALOG } from '../background/ai/providerCatalog.js';
 
 class CspError extends Error {
     code: string;
@@ -157,24 +158,12 @@ export class CSPValidator {
       }
     };
 
-    // OpenAI互換プロバイダーのBase URLドメインを直接追加（PROVIDER_BASE_URL）
-    const providerBaseUrl = settings.provider_base_url as string | undefined;
-    if (providerBaseUrl) {
-      addBaseUrlDomain(providerBaseUrl, false);
-    }
-
-    // All provider Base URL domains (openai, openai2, etc.)
-    // lm-studio / ollama は localhost 期待、openai 系はリモート期待
-    const providerTypes: { key: string; isLocal: boolean }[] = [
-      { key: 'openai', isLocal: false },
-      { key: 'openai2', isLocal: false },
-      { key: 'lm-studio', isLocal: true },
-      { key: 'ollama', isLocal: true },
-    ];
-    for (const { key, isLocal } of providerTypes) {
-      const baseUrl = settings[`${key}_base_url`] as string | undefined;
-      if (baseUrl) {
-        addBaseUrlDomain(baseUrl, isLocal);
+    // Provider baseUrl domains — derived from catalog's baseUrlKey + isLocal (no hardcoded switch)
+    for (const entry of PROVIDER_CATALOG.values()) {
+      if (!entry.baseUrlKey) continue;
+      const rawUrl = settings[entry.baseUrlKey] as string | undefined;
+      if (rawUrl) {
+        addBaseUrlDomain(rawUrl, entry.isLocal);
       }
     }
 
