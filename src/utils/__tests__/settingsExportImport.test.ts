@@ -24,37 +24,7 @@ const mockChrome = {
 };
 (global as any).chrome = mockChrome;
 
-// confirm / alert モック
-(global as any).confirm = vi.fn(() => true);
-(global as any).alert = vi.fn();
-
-// URL モック
-Object.defineProperty(global, 'URL', {
-    value: {
-        createObjectURL: vi.fn(() => 'blob:http://localhost/fake'),
-        revokeObjectURL: vi.fn()
-    },
-    writable: true,
-    configurable: true
-});
-
-// logger モック
-vi.mock('../logger.js', () => ({
-    logError: vi.fn(async () => {}),
-    logWarn: vi.fn(async () => {}),
-    logInfo: vi.fn(async () => {}),
-    ErrorCode: {
-        SETTINGS_IMPORT_FAILURE: 'SETTINGS_IMPORT_FAILURE',
-        SETTINGS_SIGNATURE_FAILURE: 'SETTINGS_SIGNATURE_FAILURE'
-    }
-}));
-
-// storage モック
-vi.mock('../storage/types.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn(async () => ({
+const mockGetSettingsHoisted = vi.hoisted(() => vi.fn(async () => ({
           ai_provider: 'gemini',
           obsidian_protocol: 'http',
           obsidian_port: '27123',
@@ -82,9 +52,89 @@ vi.mock('../storage/types.js', async (importOriginal) => {
           openai_2_api_key: 'oai2_key',
           provider_api_key: 'provider_key',
           github_pat: 'ghp_test_pat'
-      })),
-      saveSettings: vi.fn(async () => {}),
-      getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
+      })));
+const mockSaveSettingsHoisted = vi.hoisted(() => vi.fn(async () => {}));
+const mockGetOrCreateHmacSecretHoisted = vi.hoisted(() => vi.fn(async () => 'test_hmac_secret'));
+const mockRepoGetAll = vi.hoisted(() => vi.fn(async () => ({
+          ai_provider: 'gemini',
+          obsidian_protocol: 'http',
+          obsidian_port: '27123',
+          min_visit_duration: 10,
+          min_scroll_depth: 25,
+          gemini_model: 'gemini-pro',
+          obsidian_daily_path: 'Daily',
+          openai_base_url: 'https://api.openai.com',
+          openai_model: 'gpt-4',
+          openai_2_base_url: '',
+          openai_2_model: '',
+          domain_whitelist: [],
+          domain_blacklist: [],
+          domain_filter_mode: 'whitelist',
+          privacy_mode: 'off',
+          pii_confirmation_ui: false,
+          pii_sanitize_logs: false,
+          ublock_rules: {},
+          ublock_sources: [],
+          ublock_format_enabled: false,
+          simple_format_enabled: false,
+          obsidian_api_key: 'obs_key',
+          gemini_api_key: 'gem_key',
+          openai_api_key: 'oai_key',
+          openai_2_api_key: 'oai2_key',
+          provider_api_key: 'provider_key',
+          github_pat: 'ghp_test_pat'
+      })));
+const mockRepoSetAll = vi.hoisted(() => vi.fn(async () => {}));
+// alias repo mocks to storage mocks for compat
+
+
+// confirm / alert モック
+(global as any).confirm = vi.fn(() => true);
+(global as any).alert = vi.fn();
+
+// URL モック
+Object.defineProperty(global, 'URL', {
+    value: {
+        createObjectURL: vi.fn(() => 'blob:http://localhost/fake'),
+        revokeObjectURL: vi.fn()
+    },
+    writable: true,
+    configurable: true
+});
+
+// logger モック
+vi.mock('../logger.js', () => ({
+    logError: vi.fn(async () => {}),
+    logWarn: vi.fn(async () => {}),
+    logInfo: vi.fn(async () => {}),
+    ErrorCode: {
+        SETTINGS_IMPORT_FAILURE: 'SETTINGS_IMPORT_FAILURE',
+        SETTINGS_SIGNATURE_FAILURE: 'SETTINGS_SIGNATURE_FAILURE'
+    }
+}));
+
+vi.mock('../storage/SettingsRepository.js', () => ({
+    settingsRepository: {
+        getAll: mockGetSettingsHoisted,
+        setAll: mockSaveSettingsHoisted,
+        get: mockGetSettingsHoisted,
+        set: mockSaveSettingsHoisted,
+        clearCache: vi.fn(),
+        getMany: mockGetSettingsHoisted,
+    },
+    SettingsRepository: class {},
+    ChromeStoragePort: class {},
+    InMemoryStoragePort: class {},
+}));
+
+// storage モック
+vi.mock('../storage/types.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const overrides = {
+
+      getSettings: mockGetSettingsHoisted,
+      saveSettings: mockSaveSettingsHoisted,
+      getOrCreateHmacSecret: mockGetOrCreateHmacSecretHoisted,
       API_KEY_FIELDS: [
           'obsidian_api_key',
           'gemini_api_key',
@@ -113,37 +163,9 @@ vi.mock('../storage/defaults.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
-      getSettings: vi.fn(async () => ({
-          ai_provider: 'gemini',
-          obsidian_protocol: 'http',
-          obsidian_port: '27123',
-          min_visit_duration: 10,
-          min_scroll_depth: 25,
-          gemini_model: 'gemini-pro',
-          obsidian_daily_path: 'Daily',
-          openai_base_url: 'https://api.openai.com',
-          openai_model: 'gpt-4',
-          openai_2_base_url: '',
-          openai_2_model: '',
-          domain_whitelist: [],
-          domain_blacklist: [],
-          domain_filter_mode: 'whitelist',
-          privacy_mode: 'off',
-          pii_confirmation_ui: false,
-          pii_sanitize_logs: false,
-          ublock_rules: {},
-          ublock_sources: [],
-          ublock_format_enabled: false,
-          simple_format_enabled: false,
-          obsidian_api_key: 'obs_key',
-          gemini_api_key: 'gem_key',
-          openai_api_key: 'oai_key',
-          openai_2_api_key: 'oai2_key',
-          provider_api_key: 'provider_key',
-          github_pat: 'ghp_test_pat'
-      })),
-      saveSettings: vi.fn(async () => {}),
-      getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
+      getSettings: mockGetSettingsHoisted,
+      saveSettings: mockSaveSettingsHoisted,
+      getOrCreateHmacSecret: mockGetOrCreateHmacSecretHoisted,
       API_KEY_FIELDS: [
           'obsidian_api_key',
           'gemini_api_key',
@@ -172,37 +194,9 @@ vi.mock('../storage/encryptionSession.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
-      getSettings: vi.fn(async () => ({
-          ai_provider: 'gemini',
-          obsidian_protocol: 'http',
-          obsidian_port: '27123',
-          min_visit_duration: 10,
-          min_scroll_depth: 25,
-          gemini_model: 'gemini-pro',
-          obsidian_daily_path: 'Daily',
-          openai_base_url: 'https://api.openai.com',
-          openai_model: 'gpt-4',
-          openai_2_base_url: '',
-          openai_2_model: '',
-          domain_whitelist: [],
-          domain_blacklist: [],
-          domain_filter_mode: 'whitelist',
-          privacy_mode: 'off',
-          pii_confirmation_ui: false,
-          pii_sanitize_logs: false,
-          ublock_rules: {},
-          ublock_sources: [],
-          ublock_format_enabled: false,
-          simple_format_enabled: false,
-          obsidian_api_key: 'obs_key',
-          gemini_api_key: 'gem_key',
-          openai_api_key: 'oai_key',
-          openai_2_api_key: 'oai2_key',
-          provider_api_key: 'provider_key',
-          github_pat: 'ghp_test_pat'
-      })),
-      saveSettings: vi.fn(async () => {}),
-      getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
+      getSettings: mockGetSettingsHoisted,
+      saveSettings: mockSaveSettingsHoisted,
+      getOrCreateHmacSecret: mockGetOrCreateHmacSecretHoisted,
       API_KEY_FIELDS: [
           'obsidian_api_key',
           'gemini_api_key',
@@ -227,41 +221,13 @@ vi.mock('../storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
-      getSettings: vi.fn(async () => ({
-          ai_provider: 'gemini',
-          obsidian_protocol: 'http',
-          obsidian_port: '27123',
-          min_visit_duration: 10,
-          min_scroll_depth: 25,
-          gemini_model: 'gemini-pro',
-          obsidian_daily_path: 'Daily',
-          openai_base_url: 'https://api.openai.com',
-          openai_model: 'gpt-4',
-          openai_2_base_url: '',
-          openai_2_model: '',
-          domain_whitelist: [],
-          domain_blacklist: [],
-          domain_filter_mode: 'whitelist',
-          privacy_mode: 'off',
-          pii_confirmation_ui: false,
-          pii_sanitize_logs: false,
-          ublock_rules: {},
-          ublock_sources: [],
-          ublock_format_enabled: false,
-          simple_format_enabled: false,
-          obsidian_api_key: 'obs_key',
-          gemini_api_key: 'gem_key',
-          openai_api_key: 'oai_key',
-          openai_2_api_key: 'oai2_key',
-          provider_api_key: 'provider_key',
-          github_pat: 'ghp_test_pat'
-      })),
-      saveSettings: vi.fn(async () => {}),
-      getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
+      getSettings: mockGetSettingsHoisted,
+      saveSettings: mockSaveSettingsHoisted,
+      getOrCreateHmacSecret: mockGetOrCreateHmacSecretHoisted,
       API_KEY_FIELDS: [
           'obsidian_api_key',
           'gemini_api_key',
@@ -290,37 +256,9 @@ vi.mock('../storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
-      getSettings: vi.fn(async () => ({
-          ai_provider: 'gemini',
-          obsidian_protocol: 'http',
-          obsidian_port: '27123',
-          min_visit_duration: 10,
-          min_scroll_depth: 25,
-          gemini_model: 'gemini-pro',
-          obsidian_daily_path: 'Daily',
-          openai_base_url: 'https://api.openai.com',
-          openai_model: 'gpt-4',
-          openai_2_base_url: '',
-          openai_2_model: '',
-          domain_whitelist: [],
-          domain_blacklist: [],
-          domain_filter_mode: 'whitelist',
-          privacy_mode: 'off',
-          pii_confirmation_ui: false,
-          pii_sanitize_logs: false,
-          ublock_rules: {},
-          ublock_sources: [],
-          ublock_format_enabled: false,
-          simple_format_enabled: false,
-          obsidian_api_key: 'obs_key',
-          gemini_api_key: 'gem_key',
-          openai_api_key: 'oai_key',
-          openai_2_api_key: 'oai2_key',
-          provider_api_key: 'provider_key',
-          github_pat: 'ghp_test_pat'
-      })),
-      saveSettings: vi.fn(async () => {}),
-      getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
+      getSettings: mockGetSettingsHoisted,
+      saveSettings: mockSaveSettingsHoisted,
+      getOrCreateHmacSecret: mockGetOrCreateHmacSecretHoisted,
       API_KEY_FIELDS: [
           'obsidian_api_key',
           'gemini_api_key',
@@ -349,37 +287,9 @@ vi.mock('../storage/domainFilterCache.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
-      getSettings: vi.fn(async () => ({
-          ai_provider: 'gemini',
-          obsidian_protocol: 'http',
-          obsidian_port: '27123',
-          min_visit_duration: 10,
-          min_scroll_depth: 25,
-          gemini_model: 'gemini-pro',
-          obsidian_daily_path: 'Daily',
-          openai_base_url: 'https://api.openai.com',
-          openai_model: 'gpt-4',
-          openai_2_base_url: '',
-          openai_2_model: '',
-          domain_whitelist: [],
-          domain_blacklist: [],
-          domain_filter_mode: 'whitelist',
-          privacy_mode: 'off',
-          pii_confirmation_ui: false,
-          pii_sanitize_logs: false,
-          ublock_rules: {},
-          ublock_sources: [],
-          ublock_format_enabled: false,
-          simple_format_enabled: false,
-          obsidian_api_key: 'obs_key',
-          gemini_api_key: 'gem_key',
-          openai_api_key: 'oai_key',
-          openai_2_api_key: 'oai2_key',
-          provider_api_key: 'provider_key',
-          github_pat: 'ghp_test_pat'
-      })),
-      saveSettings: vi.fn(async () => {}),
-      getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
+      getSettings: mockGetSettingsHoisted,
+      saveSettings: mockSaveSettingsHoisted,
+      getOrCreateHmacSecret: mockGetOrCreateHmacSecretHoisted,
       API_KEY_FIELDS: [
           'obsidian_api_key',
           'gemini_api_key',
@@ -408,37 +318,9 @@ vi.mock('../storage/quota.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
-      getSettings: vi.fn(async () => ({
-          ai_provider: 'gemini',
-          obsidian_protocol: 'http',
-          obsidian_port: '27123',
-          min_visit_duration: 10,
-          min_scroll_depth: 25,
-          gemini_model: 'gemini-pro',
-          obsidian_daily_path: 'Daily',
-          openai_base_url: 'https://api.openai.com',
-          openai_model: 'gpt-4',
-          openai_2_base_url: '',
-          openai_2_model: '',
-          domain_whitelist: [],
-          domain_blacklist: [],
-          domain_filter_mode: 'whitelist',
-          privacy_mode: 'off',
-          pii_confirmation_ui: false,
-          pii_sanitize_logs: false,
-          ublock_rules: {},
-          ublock_sources: [],
-          ublock_format_enabled: false,
-          simple_format_enabled: false,
-          obsidian_api_key: 'obs_key',
-          gemini_api_key: 'gem_key',
-          openai_api_key: 'oai_key',
-          openai_2_api_key: 'oai2_key',
-          provider_api_key: 'provider_key',
-          github_pat: 'ghp_test_pat'
-      })),
-      saveSettings: vi.fn(async () => {}),
-      getOrCreateHmacSecret: vi.fn(async () => 'test_hmac_secret'),
+      getSettings: mockGetSettingsHoisted,
+      saveSettings: mockSaveSettingsHoisted,
+      getOrCreateHmacSecret: mockGetOrCreateHmacSecretHoisted,
       API_KEY_FIELDS: [
           'obsidian_api_key',
           'gemini_api_key',

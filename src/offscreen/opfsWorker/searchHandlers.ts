@@ -7,6 +7,7 @@ import type { SearchResult } from '../../utils/sqlite-types.js';
 import { sanitizeFtsTerm } from '../schema.js';
 import type { SearchPayload } from './types.js';
 import { sqlQuery, type HandlerContext } from './handlers.js';
+import { buildExtraWhereSql } from '../queryPlan.js';
 
 export async function handleSearch(ctx: HandlerContext, payload: SearchPayload, fts5Available: boolean): Promise<{ rows: SearchResult[]; total: number }> {
   const { text: searchQuery = '', limit = 50, offset = 0, orderBy, orderDir } = payload;
@@ -22,25 +23,8 @@ export async function handleSearch(ctx: HandlerContext, payload: SearchPayload, 
 }
 
 function buildSearchExtra(payload: SearchPayload): { extraWhereSql: string; extraWhereSqlFts: string; extraParams: (string | number)[] } {
-  const extraConds: string[] = [];
-  const extraParams: (string | number)[] = [];
-  if (payload.dateFrom != null) { extraConds.push('created_at >= ?'); extraParams.push(payload.dateFrom); }
-  if (payload.dateTo != null) { extraConds.push('created_at <= ?'); extraParams.push(payload.dateTo); }
-  if (payload.domain) { extraConds.push('domain = ?'); extraParams.push(payload.domain); }
-  if (payload.starred != null) { extraConds.push('is_starred = ?'); extraParams.push(payload.starred ? 1 : 0); }
-  if (payload.gistSynced != null) { extraConds.push('gist_synced = ?'); extraParams.push(payload.gistSynced); }
-  if (payload.ids != null && payload.ids.length > 0) {
-    extraConds.push(`id IN (${payload.ids.map(() => '?').join(',')})`);
-    extraParams.push(...payload.ids);
-  }
-  const extraWhereSql = extraConds.length > 0 ? ` AND ${extraConds.join(' AND ')}` : '';
-  const extraWhereSqlFts = extraWhereSql
-    .replace(/domain = \?/g, 'b.domain = ?')
-    .replace(/created_at/g, 'b.created_at')
-    .replace(/is_starred/g, 'b.is_starred')
-    .replace(/gist_synced/g, 'b.gist_synced')
-    .replace(/\bid\b/g, 'b.id');
-  return { extraWhereSql, extraWhereSqlFts, extraParams };
+  const { extraWhereSql, extraWhereSqlFts, extraParams } = buildExtraWhereSql(payload as unknown as Record<string, unknown>);
+  return { extraWhereSql, extraWhereSqlFts, extraParams: extraParams as (string | number)[] };
 }
 
 export async function handleSearchFts(

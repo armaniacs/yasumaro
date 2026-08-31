@@ -8,6 +8,10 @@
  * 同一の形を、このテスト1つで担保できるようになる。
  */
 import { describe, it, expect, vi } from 'vitest';
+const { hoistedMockGet, hoistedMockSave } = vi.hoisted(() => ({
+  hoistedMockGet: vi.fn().mockResolvedValue({ some_key: 'value' }),
+  hoistedMockSave: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock('../../../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -69,11 +73,11 @@ vi.mock('../../../../utils/storage/encryptionSession.js', async (importOriginal)
     ),
   };
 });;
-vi.mock('../../../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
-    getSettings: vi.fn().mockResolvedValue({ some_key: 'value' }),
+    getSettings: hoistedMockGet,
 
   } as Record<string, unknown>;
   return {
@@ -89,6 +93,25 @@ vi.mock('../../../../utils/storage/settingsStore.js', async (importOriginal) => 
     ),
   };
 });;
+vi.mock('../../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: hoistedMockGet,
+      setAll: hoistedMockSave,
+      getMany: hoistedMockGet,
+      clearCache: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = hoistedMockGet;
+      setAll = hoistedMockSave;
+      getMany = hoistedMockGet;
+      clearCache = vi.fn();
+    },
+  };
+});
+
 vi.mock('../../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {

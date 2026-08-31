@@ -81,7 +81,7 @@ vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
@@ -173,6 +173,29 @@ vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
     ),
   };
 });;
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: mockGetSettings,
+      get: mockGetSettings,
+      getMany: mockGetSettings,
+      set: vi.fn(),
+      setAll: vi.fn(),
+      clearCache: vi.fn(),
+    } as unknown as Record<string, unknown>,
+    SettingsRepository: class {
+      getAll = mockGetSettings;
+      get = mockGetSettings;
+      getMany = mockGetSettings;
+      set = vi.fn();
+      setAll = vi.fn();
+      clearCache = vi.fn();
+    },
+  };
+});
 
 vi.mock('../localMarkdownExportCore.js', () => ({
   flushBufferedExports: mockFlushBufferedExports,

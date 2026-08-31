@@ -73,7 +73,7 @@ vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
@@ -183,7 +183,6 @@ describe('createBackgroundServices', () => {
     expect(services).toHaveProperty('headerDetector');
     expect(services).toHaveProperty('recordingCache');
     expect(services).toHaveProperty('recordingPipeline');
-    expect(services).toHaveProperty('dashboardSqliteClient');
     expect(services).toHaveProperty('manualRecordDeps');
     expect(services).toHaveProperty('saveRecordDeps');
     expect(services).toHaveProperty('messageRouter');
@@ -263,12 +262,6 @@ describe('createBackgroundServices', () => {
 
     expect(services.recordingPipeline).toBe(services.manualRecordDeps.recordingPipeline);
     expect(services.recordingPipeline).toBe(services.saveRecordDeps.recordingPipeline);
-  });
-
-  it('shares the SqliteClient with the Dashboard SQLite path', () => {
-    const services = createBackgroundServices();
-
-    expect(services.sqliteClient).toBe(services.dashboardSqliteClient);
   });
 
   it('builds the shared RecordingPipeline exactly once with the shared collaborators', () => {

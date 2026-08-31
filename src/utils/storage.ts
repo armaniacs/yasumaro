@@ -8,11 +8,10 @@
  * - さらに storage.ts 本体（1364行、38 export）を4つの深いモジュールへ分割:
  *   - storage/encryptionSession.ts - マスターパスワード・暗号化キー・HMAC secret
  *   - storage/savedUrlStore.ts     - 保存URL集合・LRU管理・レガシークリーンアップ
- *   - storage/settingsStore.ts     - 設定CRUD・移行・許可URLリスト構築
+ *   - storage/SettingsRepository.ts - 設定CRUD・移行・decrypt（唯一の設定アクセス経路）
  *   - storage/domainFilterCache.ts - Content Script向けドメインフィルタキャッシュ
- *
- * このファイルは後方互換のための再エクスポート層。新規コードは上記の
- * 各モジュールから直接importすることを推奨する。
+ * - Phase15: SettingsRepository へ統一。本ファイルは残余 call site 用の
+ *   互換 re-export 層。新規コードは SettingsRepository を直接 import すること。
  */
 
 /** @deprecated Use direct module imports instead (see file header). */
@@ -42,18 +41,19 @@ export {
 /** @deprecated Use direct module imports instead (see file header). */
 export {
     ALLOWED_AI_PROVIDER_DOMAINS,
-    API_KEY_FIELDS,
     isDomainInWhitelist,
-    migrateToSingleSettingsObject,
-    getSettings,
-    clearSettingsCache,
-    saveSettings,
     buildAllowedUrls,
     computeUrlsHash,
-    saveSettingsWithAllowedUrls,
     getAllowedUrls,
-    purgeLegacyStorage,
-} from './storage/settingsStore.js';
+} from './storage/urlWhitelist.js';
+
+/** @deprecated Use direct module imports instead (see file header). */
+export {
+    API_KEY_FIELDS,
+    migrateToSingleSettingsObject,
+    cleanupExpiredSettingsBackups,
+    LEGACY_SETTINGS_BACKUP_KEY,
+} from './storage/settingsMigration.js';
 
 /** @deprecated Use direct module imports instead (see file header). */
 export {
@@ -87,3 +87,51 @@ export {
  */
 /** @deprecated Use direct module imports instead (see file header). */
 export { getStorageUsage } from './storage/quota.js';
+
+/** @deprecated Use direct module imports instead (see file header). */
+export { setSqliteHealthCheck, getSqliteHealthCheck } from './storage/storageMaintenance.js';
+
+/** @deprecated Use direct module imports instead (see file header). */
+export { purgeLegacyStorage } from './storage/savedUrlRepository.js';
+
+/** @deprecated Use SettingsRepository directly instead. */
+export {
+    settingsRepository,
+    SettingsRepository,
+    type SettingsReader,
+    type StoragePort,
+    ChromeStoragePort,
+    InMemoryStoragePort,
+} from './storage/SettingsRepository.js';
+
+// Compatibility shims for call sites still importing getSettings / saveSettings
+// from this barrel. These thin wrappers delegate to SettingsRepository.
+
+import { settingsRepository } from './storage/SettingsRepository.js';
+import type { Settings } from './storage/types.js';
+import { updateDomainFilterCache } from './storage/domainFilterCache.js';
+
+/** @deprecated Use settingsRepository.getAll() directly. */
+export async function getSettings(): Promise<Settings> {
+    return settingsRepository.getAll();
+}
+
+/** @deprecated Use settingsRepository.setAll() directly. */
+export async function saveSettings(
+    settings: Settings,
+    _updateAllowedUrlsFlag?: boolean,
+    sqliteHealthCheck?: () => Promise<boolean>
+): Promise<void> {
+    return settingsRepository.setAll(settings, sqliteHealthCheck ? { sqliteHealthCheck } : undefined);
+}
+
+/** @deprecated Use settingsRepository.clearCache() directly. */
+export function clearSettingsCache(): void {
+    settingsRepository.clearCache();
+}
+
+/** @deprecated Use settingsRepository.setAll() + updateDomainFilterCache() directly. */
+export async function saveSettingsWithAllowedUrls(settings: Settings): Promise<void> {
+    await settingsRepository.setAll(settings);
+    await updateDomainFilterCache(settings);
+}

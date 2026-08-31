@@ -1,5 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+const { hoistedMockGet, hoistedMockSave } = vi.hoisted(() => ({
+  hoistedMockGet: vi.fn().mockResolvedValue({}),
+  hoistedMockSave: vi.fn().mockResolvedValue(undefined),
+}));
 
 // Mock data defined before vi.mock calls
 const mockProviders = [
@@ -117,7 +121,7 @@ vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
@@ -128,8 +132,8 @@ vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
       PROVIDER_API_KEY: 'provider_api_key',
       PROVIDER_MODEL: 'provider_model',
     },
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
+    getSettings: hoistedMockGet,
+    saveSettings: hoistedMockSave,
 
   } as Record<string, unknown>;
   return {
@@ -145,6 +149,25 @@ vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
     ),
   };
 });;
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: hoistedMockGet,
+      setAll: hoistedMockSave,
+      getMany: hoistedMockGet,
+      clearCache: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = hoistedMockGet;
+      setAll = hoistedMockSave;
+      getMany = hoistedMockGet;
+      clearCache = vi.fn();
+    },
+  };
+});
+
 vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {

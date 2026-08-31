@@ -37,9 +37,11 @@ export interface StatusResult {
   initError?: string;
 }
 
-export interface StorageBackend {
-  insert(record: BrowsingLogRecord): Promise<BackendOrError<InsertResult>>;
-  insertBatch(records: BrowsingLogRecord[]): Promise<BackendOrError<InsertBatchResult>>;
+/**
+ * Queryable — read-only facet of storage.
+ * Covers query/search/status/health/count/auditLog read operations.
+ */
+export interface Queryable {
   /**
    * Unified read path — replaces the separate query(QueryOptions) and
    * search(query, limit, offset, options) signatures.
@@ -48,21 +50,32 @@ export interface StorageBackend {
    * based on trigram length.  Otherwise returns a plain filtered listing.
    */
   query(q: StorageQuery): Promise<BackendOrError<QuerySearchResult>>;
+  healthCheck(): Promise<BackendOrError<HealthResult>>;
+  getStatus(): Promise<BackendOrError<StatusResult>>;
+  getFtsIndexSize(): Promise<BackendOrError<FtsSizeResult>>;
+  queryAuditLog(options: { limit?: number; offset?: number }): Promise<BackendOrError<AuditLogQueryResult>>;
+  getCount(): Promise<BackendOrError<CountResult>>;
+}
+
+/**
+ * Mutable — write facet of storage.
+ * Covers insert/update/delete/purge/backup/restore operations.
+ */
+export interface Mutable {
+  insert(record: BrowsingLogRecord): Promise<BackendOrError<InsertResult>>;
+  insertBatch(records: BrowsingLogRecord[]): Promise<BackendOrError<InsertBatchResult>>;
   update(id: number, changes: Record<string, unknown>): Promise<BackendOrError<MutationResult>>;
   delete(id: number): Promise<BackendOrError<MutationResult>>;
   toggleStar(id: number): Promise<BackendOrError<StarResult>>;
   purgeOldRecords(retentionDays: number, maxRecords: number): Promise<BackendOrError<PurgeResult>>;
   purgeContent(retentionDays?: number, maxRecords?: number, includeStarred?: boolean): Promise<BackendOrError<PurgeResult>>;
-  getFtsIndexSize(): Promise<BackendOrError<FtsSizeResult>>;
   backupDb(): Promise<BackendOrError<BackupResult>>;
   restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>>;
-  healthCheck(): Promise<BackendOrError<HealthResult>>;
-  getStatus(): Promise<BackendOrError<StatusResult>>;
   insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>>;
-  queryAuditLog(options: { limit?: number; offset?: number }): Promise<BackendOrError<AuditLogQueryResult>>;
-  getCount(): Promise<BackendOrError<CountResult>>;
   clearAll(): Promise<BackendOrError<MutationResult>>;
 }
+
+export interface StorageBackend extends Queryable, Mutable {}
 
 const NOT_INITIALIZED = 'Database not initialized';
 

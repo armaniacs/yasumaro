@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { API_KEY_FIELDS } from '../settingsStore.js';
+import { API_KEY_FIELDS } from '../settingsMigration.js';
 
 describe('settingsStore API_KEY_FIELDS', () => {
   it('6つのAPIキーフィールドをエクスポートしている', () => {

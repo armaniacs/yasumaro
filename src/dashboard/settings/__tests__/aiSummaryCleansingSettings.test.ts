@@ -113,7 +113,12 @@ vi.mock('../../../utils/storage/encryptionSession.js', async (importOriginal) =>
     ),
   };
 });;
-vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
+const { mockGetSettingsHoisted, mockSaveSettingsHoisted } = vi.hoisted(() => ({
+  mockGetSettingsHoisted: vi.fn(),
+  mockSaveSettingsHoisted: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('../../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
@@ -132,8 +137,8 @@ vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
           AI_SUMMARY_CLEANSING_CARD: 'ai_summary_cleansing_card',
       },
       DEFAULT_SETTINGS: {},
-      getSettings: vi.fn(),
-      saveSettings: vi.fn(() => Promise.resolve()),
+      getSettings: mockGetSettingsHoisted,
+      saveSettings: mockSaveSettingsHoisted,
 
   } as Record<string, unknown>;
   return {
@@ -148,7 +153,25 @@ vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
       ]),
     ),
   };
-});;
+});
+vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: mockGetSettingsHoisted,
+      setAll: mockSaveSettingsHoisted,
+      getMany: mockGetSettingsHoisted,
+      clearCache: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = mockGetSettingsHoisted;
+      setAll = mockSaveSettingsHoisted;
+      getMany = mockGetSettingsHoisted;
+      clearCache = vi.fn();
+    },
+  };
+});
 vi.mock('../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
@@ -259,7 +282,7 @@ vi.mock('../../../utils/storage/quota.js', async (importOriginal) => {
 });;
 
 import * as storage from '../../../utils/storage/types.js';
-import * as storageSettings from '../../../utils/storage/settingsStore.js';
+import * as storageSettings from '../../../utils/storage.js';
 import {
     getAiSummaryCleansingSettings,
     saveAiSummaryCleansingSettings,

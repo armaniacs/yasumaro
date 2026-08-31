@@ -13,7 +13,7 @@
 
 import { normalizeUrl } from './urlUtils.js';
 import { CSPValidator, getCspErrorMessage } from './cspValidator.js';
-import { getSettings } from './storage/settingsStore.js';
+import { settingsRepository } from './storage/SettingsRepository.js';
 import { StorageKeys } from './storage/types.js';
 import { logDebug, logWarn } from './logger.js';
 import { validateUrl, validateUrlForFilterImport } from './ssrfGuard.js';
@@ -104,7 +104,7 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
 
   // P1: CSPValidatorによるAIプロバイダーURL検証
   if (!skipCspValidation) {
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
     const conditionalCspEnabled = settings[StorageKeys.CONDITIONAL_CSP_ENABLED] !== false; // デフォルトはtrue
 
     if (conditionalCspEnabled) {

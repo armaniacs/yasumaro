@@ -3,7 +3,7 @@
  * Content cleansing settings functionality for the dashboard UI.
  */
 
-import { saveSettings, getSettings } from '../../utils/storage/settingsStore.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
@@ -25,7 +25,7 @@ function getDedupThresholdValue(): HTMLElement | null { return document.getEleme
 function getNormalizeEnabledCheckbox(): HTMLInputElement | null { return document.getElementById('summary-normalize-enabled') as HTMLInputElement; }
 
 export async function loadContentSettings(): Promise<void> {
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     const hardCb = getHardEnabledCheckbox();
     const keywordCb = getKeywordEnabledCheckbox();
@@ -67,7 +67,7 @@ export async function loadContentSettings(): Promise<void> {
 
 async function saveContentSettings(): Promise<void> {
     try {
-        const settings = await getSettings();
+        const settings = await settingsRepository.getAll();
 
         const hardCb = getHardEnabledCheckbox();
         const keywordCb = getKeywordEnabledCheckbox();
@@ -100,7 +100,7 @@ async function saveContentSettings(): Promise<void> {
         settings[StorageKeys.SUMMARY_NORMALIZE_ENABLED] = getNormalizeEnabledCheckbox()?.checked ?? true;
 
         // 設定を保存
-        await saveSettings(settings);
+        await settingsRepository.setAll(settings);
 
         // 成功メッセージを表示
         showStatus('contentSettingsStatus', getMessage('settingsSaved') || '設定を保存しました', 'success');

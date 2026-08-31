@@ -366,7 +366,7 @@ describe('CSPValidator - Provider Base URL Domains', () => {
 
     const settings = {
       conditional_csp_providers: [],
-      openai2_base_url: 'https://secondary-openai.example.com/v1'
+      openai_2_base_url: 'https://secondary-openai.example.com/v1'
     };
     CSPValidator.initializeFromSettings(settings);
 

@@ -10,7 +10,11 @@ const mockMigrateOpfsRecovery = vi.hoisted(() => vi.fn().mockResolvedValue({ suc
 const mockLogInfo = vi.hoisted(() => vi.fn());
 const mockLogError = vi.hoisted(() => vi.fn());
 
-vi.mock('../../utils/storage/settingsStore.js', () => ({
+vi.mock('../../utils/storage/settingsMigration.js', () => ({
+  migrateToSingleSettingsObject: mockMigrateToSingleSettingsObject,
+}));
+// keep barrel mock for compatibility
+vi.mock('../../utils/storage.js', () => ({
   migrateToSingleSettingsObject: mockMigrateToSingleSettingsObject,
 }));
 

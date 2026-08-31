@@ -6,7 +6,7 @@ import { focusTrapManager } from '../../utils/ui/focusTrap.js';
 
 const mockStorage = new Map<string, unknown>();
 
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
@@ -29,6 +29,26 @@ vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
     ),
   };
 });;
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: vi.fn(async () => Object.fromEntries(mockStorage)),
+      setAll: vi.fn(async (settings: Record<string, unknown>) => {
+        Object.entries(settings).forEach(([k, v]) => mockStorage.set(k, v));
+      }),
+      getMany: vi.fn(async () => Object.fromEntries(mockStorage)),
+      clearCache: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = vi.fn(async () => Object.fromEntries(mockStorage));
+      setAll = vi.fn(async (settings: Record<string, unknown>) => { Object.entries(settings).forEach(([k, v]) => mockStorage.set(k, v)); });
+      getMany = vi.fn(async () => Object.fromEntries(mockStorage));
+      clearCache = vi.fn();
+    },
+  };
+});
 
 function setupChromeMocks(): void {
   const chromeAny = chrome as unknown as Record<string, unknown>;

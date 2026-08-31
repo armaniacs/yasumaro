@@ -12,7 +12,7 @@ import { loadAndDisplaySources, deleteSource, reloadSource, saveUblockSettings }
 import { renderSourceList, updatePreviewUI, hidePreview, clearInput, exportSimpleFormat, copyToClipboard } from './uiRenderer.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { LogType, addLog } from '../../../utils/logger.js';
-import { getSettings, saveSettings } from '../../../utils/storage/settingsStore.js';
+import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { getMessage } from '../../../utils/i18n.js';
 
@@ -143,7 +143,7 @@ function setupExportButtons(): void {
  */
 async function handleExport(): Promise<void> {
   try {
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
     const sources = settings[StorageKeys.UBLOCK_SOURCES] || [];
 
     if (sources.length === 0) {
@@ -257,7 +257,7 @@ async function handleReloadSource(index: number): Promise<void> {
   }
 
   // Fetch current settings to get the old rule count
-  const settings = await getSettings();
+  const settings = await settingsRepository.getAll();
   const currentSources = settings[StorageKeys.UBLOCK_SOURCES] || [];
   const oldRuleCount = currentSources[index]?.ruleCount || 0;
 
@@ -298,7 +298,7 @@ async function handleSaveUblockSettings(): Promise<void> {
 
   // 1. uBlock形式が無効な場合
   if (!ublockEnabled) {
-    await saveSettings({ [StorageKeys.UBLOCK_FORMAT_ENABLED]: false });
+    await settingsRepository.setAll({ [StorageKeys.UBLOCK_FORMAT_ENABLED]: false });
     return;
   }
 
@@ -308,7 +308,7 @@ async function handleSaveUblockSettings(): Promise<void> {
 
   if (!text) {
     // 入力が空でも「有効化フラグ」だけは保存する（既存のソースは維持される）
-    await saveSettings({ [StorageKeys.UBLOCK_FORMAT_ENABLED]: true });
+    await settingsRepository.setAll({ [StorageKeys.UBLOCK_FORMAT_ENABLED]: true });
     return;
   }
 

@@ -18,7 +18,7 @@ vi.mock('../../../utils/i18n.js', () => ({
 }));
 
 // storage モック (validateBaseUrl の dynamic import 用)
-vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 

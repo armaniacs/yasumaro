@@ -6,7 +6,7 @@
  */
 import type { RecordingCacheInstance } from '../recordingCache.js';
 import { updateDomainFilterCache } from '../../utils/storage/domainFilterCache.js';
-import { getSettings } from '../../utils/storage/settingsStore.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { migrateLegacyPrivacyConsent } from '../../popup/privacyConsent.js';
 import { cleanupOldDeniedEntries, cleanupDismissedEntries } from '../../utils/permissionManager.js';
 import { RateLimiter } from '../rateLimiter.js';
@@ -27,7 +27,7 @@ const OLLAMA_DEFAULT_BASE_URL = getRegistryEntry('ollama')?.defaultBaseUrl ?? 'h
  */
 async function syncOllamaOriginRuleFromSettings(context: string): Promise<void> {
     try {
-        const settings = await getSettings();
+        const settings = await settingsRepository.getAll();
         await syncOllamaOriginRule(settings[StorageKeys.OLLAMA_BASE_URL] ?? OLLAMA_DEFAULT_BASE_URL);
     } catch (error) {
         logWarn(
@@ -60,7 +60,7 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
 
             // 更新時はキャッシュをクリアして再初期化
             if (ctx.recordingCache) ctx.recordingCache.invalidateSettingsCache();
-            const settings = await getSettings();
+            const settings = await settingsRepository.getAll();
             await updateDomainFilterCache(settings);
             await syncOllamaOriginRuleFromSettings('update');
 
@@ -110,7 +110,7 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
             try {
                 // 関連キャッシュを無効化して再読み込みを強制
                 if (ctx.recordingCache) await ctx.recordingCache.invalidateSettingsCache();
-                const settings = await getSettings();
+                const settings = await settingsRepository.getAll();
                 await updateDomainFilterCache(settings);
                 ctx.isCacheInitialized.value = true;
 

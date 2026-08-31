@@ -1,6 +1,6 @@
-import { getSettings } from '../utils/storage/settingsStore.js';
+import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
-import { cleanupExpiredSettingsBackups } from '../utils/storage/settingsStore.js';
+import { cleanupExpiredSettingsBackups } from '../utils/storage/settingsMigration.js';
 import { logInfo, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { purgeExpiredDownloadRecords } from './localMarkdownExportRetention.js';
@@ -24,7 +24,7 @@ export async function handleDailyPurgeAlarm(
   clearExpiredPages: () => Promise<void> = defaultClearExpiredPages,
 ): Promise<void> {
     try {
-        const settings = await getSettings();
+        const settings = await settingsRepository.getAll();
 
         // Expired pending pages accumulate forever without this call — the
         // read-side filter in getPendingPages() hides them but never deletes.

@@ -12,6 +12,44 @@ import { sanitizeFtsTerm } from './schema.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
 import type { SqliteValue } from './sqliteEngine.js';
 
+/**
+ * Unified extra WHERE fragment for FTS/LIKE search paths.
+ *
+ * IdbVfsBackend, OpfsWorker/searchHandlers and any future SQL backend
+ * previously re-implemented the same date/domain/starred/gist/ids filter.
+ * This is the single source of truth — see `StorageBackend` Queryable split.
+ */
+export interface ExtraWhere {
+  extraWhereSql: string;
+  extraWhereSqlFts: string;
+  extraParams: SqliteValue[];
+}
+
+export function buildExtraWhereSql(query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids'>): ExtraWhere {
+  const extraConds: string[] = [];
+  const extraParams: SqliteValue[] = [];
+  if ((query as StorageQuery).dateFrom != null) { extraConds.push('created_at >= ?'); extraParams.push((query as StorageQuery).dateFrom as number); }
+  if ((query as StorageQuery).dateTo != null) { extraConds.push('created_at <= ?'); extraParams.push((query as StorageQuery).dateTo as number); }
+  if ((query as StorageQuery).domain) { extraConds.push('domain = ?'); extraParams.push((query as StorageQuery).domain as string); }
+  if ((query as StorageQuery).starred != null) { extraConds.push('is_starred = ?'); extraParams.push(((query as StorageQuery).starred ? 1 : 0) as unknown as SqliteValue); }
+  if ((query as StorageQuery).gistSynced != null) { extraConds.push('gist_synced = ?'); extraParams.push((query as StorageQuery).gistSynced as unknown as SqliteValue); }
+  if ((query as StorageQuery).ids != null && (query as StorageQuery).ids!.length > 0) {
+    extraConds.push(`id IN (${(query as StorageQuery).ids!.map(() => '?').join(',')})`);
+    extraParams.push(...((query as StorageQuery).ids as unknown as SqliteValue[]));
+  }
+  const extraWhereSql = extraConds.length > 0 ? ` AND ${extraConds.join(' AND ')}` : '';
+  const extraWhereSqlFts = extraWhereSql
+    .replace(/domain = \?/g, 'b.domain = ?')
+    .replace(/created_at/g, 'b.created_at')
+    .replace(/is_starred/g, 'b.is_starred')
+    .replace(/gist_synced/g, 'b.gist_synced')
+    .replace(/\bid\b/g, 'b.id');
+  return { extraWhereSql, extraWhereSqlFts, extraParams };
+}
+
+/** @deprecated alias — use buildExtraWhereSql */
+export const extraWhereSql = buildExtraWhereSql;
+
 export const QUERY_CAPS = {
   fts: 100000,
   plain: 1000,

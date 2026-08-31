@@ -71,6 +71,8 @@ async function tryRestoreFromBackupViaPort(port: StoragePort): Promise<SettingsT
 export class SettingsRepository {
   private port: StoragePort;
   private keyProvider: (() => Promise<CryptoKey>) | undefined;
+  private cached: { data: SettingsType; timestamp: number } | null = null;
+  private readonly CACHE_TTL = 1000;
 
   constructor(port: StoragePort = new ChromeStoragePort(), opts?: SettingsRepositoryOptions) {
     this.port = port;
@@ -88,6 +90,7 @@ export class SettingsRepository {
 
   private async persistReEncrypted(reEncrypted: Record<string, unknown>): Promise<void> {
     if (Object.keys(reEncrypted).length === 0) return;
+    this.cached = null;
     if (isChromePort(this.port)) {
       await withOptimisticLock<SettingsType>('settings', (current) => {
         const base = (current as Record<string, unknown>) || {};
@@ -98,6 +101,7 @@ export class SettingsRepository {
       const current = (existing['settings'] as Record<string, unknown>) || {};
       await this.port.set({ settings: { ...current, ...reEncrypted } });
     }
+    this.cached = null;
   }
 
   /**
@@ -128,13 +132,17 @@ export class SettingsRepository {
   }
 
   async getAll(): Promise<SettingsType> {
+    const now = Date.now();
+    if (this.cached && (now - this.cached.timestamp) < this.CACHE_TTL) {
+      return this.cached.data;
+    }
     const { applyMigrationsAndDecryptWithReEncrypt } = await import('./settingsMigration.js');
     const keyProvider = await this.resolveKeyProvider();
 
     // Unified read via Port (no direct chrome.storage)
     const result = await this.port.get(['settings', 'settings_migrated']) as Record<string, unknown>;
-    const rawSettings = result['settings'] as SettingsType | undefined;
 
+    let migratedResult: SettingsType;
     if (result['settings'] && result['settings_migrated']) {
       let settings = result['settings'] as SettingsType;
       if (Object.keys(settings as Record<string, unknown>).length === 0) {
@@ -150,9 +158,25 @@ export class SettingsRepository {
       if (Object.keys(reEncrypted).length > 0) {
         await this.persistReEncrypted(reEncrypted);
       }
-      return migrated;
+      migratedResult = migrated;
+    } else {
+      migratedResult = await this.__getAllScatteredFallback(result['settings'] as SettingsType | undefined, keyProvider);
     }
+    this.cached = { data: migratedResult, timestamp: Date.now() };
+    return migratedResult;
+  }
 
+  /**
+   * @internal Test-only seam for the legacy scattered-key migration path.
+   * Normal production code always writes a single `settings` object,
+   * so this path is unreachable after first migration. Exposed only so
+   * migration tests can exercise it without touching private internals.
+   */
+  async __getAllScatteredFallback(
+    rawSettings: SettingsType | undefined,
+    keyProvider: () => Promise<CryptoKey>
+  ): Promise<SettingsType> {
+    const { applyMigrationsAndDecryptWithReEncrypt } = await import('./settingsMigration.js');
     // Scattered fallback (legacy pre-migration path) — also via Port
     const keysToGet: string[] = Object.values(StorageKeys) as string[];
     let scattered = await this.port.get(keysToGet) as Record<string, unknown>;
@@ -162,6 +186,10 @@ export class SettingsRepository {
       await this.persistReEncrypted(reEncrypted);
     }
     return migrated;
+  }
+
+  clearCache(): void {
+    this.cached = null;
   }
 
   async set<K extends StorageKey>(key: K, value: SettingsType[K]): Promise<void> {
@@ -197,17 +225,18 @@ export class SettingsRepository {
       throw e;
     }
     await ensureStorageQuota(toSave, opts?.sqliteHealthCheck);
+    this.cached = null;
     if (isChromePort(this.port)) {
       await withOptimisticLock<SettingsType>('settings', (current) => {
         const base = (current as Record<string, unknown>) || {};
         return { ...(base as object), ...toSave } as SettingsType;
       });
     } else {
-      // InMemory path — no version mimicking, simple merge via Port
       const existing = await this.port.get(['settings']);
       const base = (existing['settings'] as Record<string, unknown>) || {};
       await this.port.set({ settings: { ...(base as object), ...toSave } });
     }
+    this.cached = null;
   }
 
   /**
@@ -225,9 +254,15 @@ export class SettingsRepository {
   observe(callback: (changes: Partial<SettingsType>) => void): void {
     this.port.onChanged?.((changes) => {
       if ('settings' in changes) {
+        this.cached = null;
         callback(changes['settings'] as Partial<SettingsType>);
       }
     });
+  }
+
+  /** Compat for legacy clearSettingsCache — clears repo cache */
+  clearSettingsCache(): void {
+    this.clearCache();
   }
 
   /** Expose underlying port for advanced uses / testing */

@@ -9,7 +9,7 @@
 import { logInfo } from '../logger.js';
 
 export interface TrancoVersionTrackerDeps {
-  getSettingsStore: () => Promise<typeof import('../storage/settingsStore.js')>;
+  getSettingsStore: () => Promise<typeof import('../storage.js')>;
   getStorageTypes: () => Promise<typeof import('../storage/types.js')>;
   /** Version baked into the extension build (presetDomains.ts TRANCO_VERSION). */
   currentVersion: string;

@@ -101,7 +101,7 @@ vi.mock('../../../utils/storage/encryptionSession.js', async (importOriginal) =>
     ),
   };
 });;
-vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
@@ -129,6 +129,24 @@ vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
     ),
   };
 });;
+vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: mockGetSettings,
+      setAll: mockSaveSettings,
+      getMany: mockGetSettings,
+      clearCache: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = mockGetSettings;
+      setAll = mockSaveSettings;
+      getMany = mockGetSettings;
+      clearCache = vi.fn();
+    },
+  };
+});
 vi.mock('../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
@@ -565,8 +583,7 @@ describe('domainFilter.ts (improved coverage)', () => {
         expect.objectContaining({
           domain_filter_mode: 'whitelist',
           domain_whitelist: ['example.com', 'test.org'],
-        }),
-        true
+        })
       );
     });
 
@@ -582,8 +599,7 @@ describe('domainFilter.ts (improved coverage)', () => {
         expect.objectContaining({
           domain_filter_mode: 'blacklist',
           domain_blacklist: ['ads.com', 'spam.net'],
-        }),
-        true
+        })
       );
     });
 

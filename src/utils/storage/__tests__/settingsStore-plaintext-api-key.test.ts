@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getSettings, clearSettingsCache } from '../../storage';
 
 vi.mock('../../logger.js', () => ({
   logInfo: vi.fn(() => Promise.resolve()),
@@ -17,7 +18,7 @@ vi.mock('../../logger.js', () => ({
   },
 }));
 
-describe('settingsStore — plaintext API key detection', () => {
+describe('storage — plaintext API key detection', () => {
   let storageData: Record<string, unknown>;
 
   beforeEach(() => {
@@ -52,8 +53,6 @@ describe('settingsStore — plaintext API key detection', () => {
 
   it('warns when an API key field is stored as plaintext', async () => {
     const { logWarn } = await import('../../logger.js');
-    const { getSettings } = await import('../settingsStore.js');
-    const { clearSettingsCache } = await import('../settingsStore.js');
     clearSettingsCache();
 
     const settings = await getSettings();
@@ -68,8 +67,6 @@ describe('settingsStore — plaintext API key detection', () => {
   it('does not warn when API key fields are absent', async () => {
     storageData.settings = {};
     const { logWarn } = await import('../../logger.js');
-    const { getSettings } = await import('../settingsStore.js');
-    const { clearSettingsCache } = await import('../settingsStore.js');
     clearSettingsCache();
 
     await getSettings();
@@ -78,8 +75,6 @@ describe('settingsStore — plaintext API key detection', () => {
   });
 
   it('VULN-015: re-encrypts plaintext API keys at rest during migration', async () => {
-    const { getSettings } = await import('../settingsStore.js');
-    const { clearSettingsCache } = await import('../settingsStore.js');
     clearSettingsCache();
 
     const settings = await getSettings();

@@ -36,7 +36,14 @@ vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   };
 });
 
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../utils/storage/settingsMigration.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    API_KEY_FIELDS: ['geminiApiKey'],
+  };
+});
+vi.mock('../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,

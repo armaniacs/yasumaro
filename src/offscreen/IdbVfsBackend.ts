@@ -11,7 +11,7 @@ import type {
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from './schema.js';
 import { extractDomain, DB_FILENAME } from './sqliteEngineContext.js';
-import { buildQuerySpec, QUERY_CAPS, clampLimit } from './queryPlan.js';
+import { buildQuerySpec, QUERY_CAPS, clampLimit, buildExtraWhereSql } from './queryPlan.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { withTransaction } from './opfsWorker/handlers.js';
 
@@ -57,25 +57,7 @@ export class IdbVfsBackend implements StorageBackend {
     const spec = buildQuerySpec(q, { caps: QUERY_CAPS, fts5Available: this.engine.fts5Available });
     if (spec.error) return { success: false, error: spec.error };
 
-    // Keep extraWhereSql generation in sync with buildWhereClause / storageFallback / searchHandlers
-    const extraConds: string[] = [];
-    const extraParams: SqliteValue[] = [];
-    if (q.dateFrom != null) { extraConds.push('created_at >= ?'); extraParams.push(q.dateFrom); }
-    if (q.dateTo != null) { extraConds.push('created_at <= ?'); extraParams.push(q.dateTo); }
-    if (q.domain) { extraConds.push('domain = ?'); extraParams.push(q.domain); }
-    if (q.starred != null) { extraConds.push('is_starred = ?'); extraParams.push(q.starred ? 1 : 0); }
-    if (q.gistSynced != null) { extraConds.push('gist_synced = ?'); extraParams.push(q.gistSynced); }
-    if (q.ids != null && q.ids.length > 0) {
-      extraConds.push(`id IN (${q.ids.map(() => '?').join(',')})`);
-      extraParams.push(...q.ids);
-    }
-    const extraWhereSql = extraConds.length > 0 ? ` AND ${extraConds.join(' AND ')}` : '';
-    const extraWhereSqlFts = extraWhereSql
-      .replace(/domain = \?/g, 'b.domain = ?')
-      .replace(/created_at/g, 'b.created_at')
-      .replace(/is_starred/g, 'b.is_starred')
-      .replace(/gist_synced/g, 'b.gist_synced')
-      .replace(/\bid\b/g, 'b.id');
+    const { extraWhereSql, extraWhereSqlFts, extraParams } = buildExtraWhereSql(q);
 
     if (q.text) {
       const bare = spec.bareText;

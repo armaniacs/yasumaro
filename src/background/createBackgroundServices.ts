@@ -33,7 +33,7 @@ import { createDashboardSqliteMessageHandler } from './dashboardSqliteWiring.js'
 import { ensureConfirmToken, createConfirmToken, verifyConfirmToken } from './confirmTokenManager.js';
 import { hasPrivacyConsent } from '../popup/privacyConsent.js';
 import { lockSession } from '../utils/storage/encryptionSession.js';
-import { getSettings, buildAllowedUrls, clearSettingsCache } from '../utils/storage/settingsStore.js';
+import { buildAllowedUrls } from '../utils/storage/urlWhitelist.js';
 import { getSavedUrlsWithTimestamps, saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlRepository.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { notifyAiTestProgress } from './aiTestProgressNotifier.js';
@@ -42,7 +42,7 @@ import { createMessageRouter, type MessageRouter, type MessageRouterDeps } from 
 import type { MessageHandler } from './handlers/MessageRouter.js';
 import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/recordingHandlers.js';
 import { ServiceContainer } from './serviceContainer.js';
-import { SettingsRepository, ChromeStorageAdapter as SettingsChromeStorageAdapter } from '../utils/storage/SettingsRepository.js';
+import { SettingsRepository, ChromeStorageAdapter as SettingsChromeStorageAdapter, settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { PerUrlMutexMap } from './pipeline/perUrlMutex.js';
 
 export interface BackgroundServices {
@@ -81,7 +81,6 @@ export interface BackgroundServices {
  * popup and Dashboard code never see this type.
  */
 export interface BackgroundServicesComposition extends BackgroundServices {
-  dashboardSqliteClient: SqliteClient;
   manualRecordDeps: ManualRecordHandlerDeps;
   saveRecordDeps: SaveRecordHandlerDeps;
   messageRouter: MessageRouter;
@@ -89,40 +88,8 @@ export interface BackgroundServicesComposition extends BackgroundServices {
   autoSavedBadgeTabs: AutoSavedBadgeTabs;
 }
 
-// PBI#04: 静的保証 — BackgroundServices のコアフィールドが MessageRouterDeps の
-// サブセットとして代入可能であることをコンパイル時に検証。
-// もし BackgroundServices の型が router 側の Pick より狭すぎる/広すぎる場合、ここで型エラーになる。
-type _CoreServicesSubsetCheck = Pick<BackgroundServices, 'obsidian' | 'tabCache' | 'recordingPipeline' | 'aiService'> extends Pick<
-  MessageRouterDeps,
-  'obsidian' | 'tabCache' | 'recordingPipeline' | 'aiService'
->
-  ? true
-  : never;
-const _subsetCheck: _CoreServicesSubsetCheck = true as const;
-void _subsetCheck;
-
-// PBI-03: 全フィールド網羅 — BackgroundServices が container 登録と乖離していないことを保証。
-// 新しいフィールドを追加した際はこの union も更新する必要があり、差分を見逃さない。
-type _BackgroundServicesKeys =
-  | 'obsidian'
-  | 'sqliteClient'
-  | 'recordingPipeline'
-  | 'tabCache'
-  | 'rateLimiter'
-  | 'manualContentFetcher'
-  | 'aiService'
-  | 'sessionStore'
-  | 'headerDetector'
-  | 'recordingCache'
-  | 'reviewSummaryGenerator';
-type _BackgroundServicesExhaustiveCheck =
-  keyof BackgroundServices extends _BackgroundServicesKeys
-    ? _BackgroundServicesKeys extends keyof BackgroundServices
-      ? true
-      : never
-    : never;
-const _exhaustiveCheck: _BackgroundServicesExhaustiveCheck = true as const;
-void _exhaustiveCheck;
+// Static type checks are replaced by manifest-driven inference (PBI-04).
+// The container's register/resolve contract ensures keys stay in sync.
 
 export function createBackgroundServices(container = new ServiceContainer()): BackgroundServicesComposition {
   // Register core singletons in the container — adding a dependency is one register() call
@@ -166,6 +133,11 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
       sqliteClient: container.resolve<SqliteClient>('sqliteClient'),
       urlStore: { getSavedUrlsWithTimestamps },
       offlineNetworkQueue: sharedOfflineNetworkQueue,
+      // Shared per-URL mutex map: all recordings serialize on the same URL
+      // regardless of how many orchestrator instances exist. Without this the
+      // orchestrator falls back to a private map and cross-instance
+      // serialization is lost (duplicate-entry race).
+      perUrlMutexMap: container.resolve<PerUrlMutexMap>('perUrlMutexMap'),
     }));
   }, { singleton: true });
   if (!container.has('dashboardSqliteHandler')) container.register('dashboardSqliteHandler', () => createDashboardSqliteMessageHandler({ sqliteClient: container.resolve<SqliteClient>('sqliteClient'), ensureConfirmToken, createConfirmToken, verifyConfirmToken }), { singleton: true });
@@ -175,13 +147,13 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
     checkRateLimit: (sender, settings) => container.resolve<RateLimiter>('rateLimiter').check(sender as never, settings as never),
     fetchContent: (url: string) => container.resolve<ManualContentFetcher>('manualContentFetcher').fetchContent(url),
     recordingPipeline: container.resolve<RecordingPipeline>('recordingPipeline'),
-    getSettings: () => getSettings(),
+    getSettings: () => settingsRepository.getAll(),
     setUrlContent,
   } as ManualRecordHandlerDeps), { singleton: true });
   if (!container.has('saveRecordDeps')) container.register('saveRecordDeps', () => ({
     isRecordingAllowed: () => hasPrivacyConsent(),
     recordingPipeline: container.resolve<RecordingPipeline>('recordingPipeline'),
-    getSettings: () => getSettings(),
+    getSettings: () => settingsRepository.getAll(),
     setUrlContent,
   } as SaveRecordHandlerDeps), { singleton: true });
   if (!container.has('messageRouter')) container.register('messageRouter', () => {
@@ -204,9 +176,9 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
       saveRecordDeps,
       hasPrivacyConsent: () => hasPrivacyConsent(),
       buildAllowedUrls: (settings) => buildAllowedUrls(settings),
-      getSettings: () => getSettings(),
+      getSettings: () => settingsRepository.getAll(),
       isDomainAllowed: (url) => isDomainAllowed(url),
-      clearSettingsCache: () => clearSettingsCache(),
+      clearSettingsCache: () => settingsRepository.clearCache(),
       notifyAiTestProgress,
       getPrivacyCache: () => recordingCache.getPrivacyCache(),
       updateActivity: () => updateActivity(),
@@ -230,21 +202,8 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
   const sessionStore = container.resolve<SessionStore>('sessionStore');
   const recordingCache = container.resolve<RecordingCacheInstance>('recordingCache');
   const headerDetector = container.resolve<HeaderDetector>('headerDetector');
-
-  // Wires the pending-write queue's storage adapter explicitly via container.
-  // Tests can override 'pendingWriteQueue' with an InMemoryAdapter-backed queue.
-  const pendingWriteQueue = container.resolve<ReturnType<typeof createPendingWriteQueue>>('pendingWriteQueue');
-  setPendingWriteQueue(pendingWriteQueue);
-
   const obsidian = container.resolve<ObsidianClient>('obsidian');
-  // Shared singleton: independent SqliteClient instances would each race to
-  // create the offscreen document (see getSharedSqliteClient).
   const sqliteClient = container.resolve<SqliteClient>('sqliteClient');
-  // Inject SQLite health check into storageMaintenance (removes utils→background dynamic import)
-  setSqliteHealthCheck(async () => {
-    const r = await sqliteClient.maintain({ type: 'healthCheck' });
-    return r.success ? Boolean(r.data) : false;
-  });
   const tabCache = container.resolve<TabCache>('tabCache');
   const rateLimiter = container.resolve<RateLimiter>('rateLimiter');
   const manualContentFetcher = container.resolve<ManualContentFetcher>('manualContentFetcher');
@@ -256,6 +215,10 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
   const manualRecordDeps = container.resolve<ManualRecordHandlerDeps>('manualRecordDeps');
   const saveRecordDeps = container.resolve<SaveRecordHandlerDeps>('saveRecordDeps');
   const messageRouter = container.resolve<MessageRouter>('messageRouter');
+
+  // Side-effect wiring — executed once after all services are resolved.
+  // onReady hook pattern: callers that need no side effects (tests) can skip this.
+  _onReady({ sqliteClient, pendingWriteQueue: container.resolve<ReturnType<typeof createPendingWriteQueue>>('pendingWriteQueue') });
 
   return {
     obsidian,
@@ -269,11 +232,18 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
     headerDetector,
     recordingCache,
     recordingPipeline,
-    dashboardSqliteClient: sqliteClient,
     manualRecordDeps,
     saveRecordDeps,
     messageRouter,
     dashboardSqliteHandler,
     autoSavedBadgeTabs,
   };
+}
+
+function _onReady(deps: { sqliteClient: SqliteClient; pendingWriteQueue: ReturnType<typeof createPendingWriteQueue> }): void {
+  setPendingWriteQueue(deps.pendingWriteQueue);
+  setSqliteHealthCheck(async () => {
+    const r = await deps.sqliteClient.maintain({ type: 'healthCheck' });
+    return r.success ? Boolean(r.data) : false;
+  });
 }

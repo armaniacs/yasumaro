@@ -6,11 +6,42 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
+const mockGetSettingsHoisted = vi.hoisted(() => vi.fn().mockResolvedValue({}));
+
+vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const getManyFromAll = async (keys: readonly string[]) => {
+    const all = await mockGetSettingsHoisted();
+    const out: Record<string, unknown> = {};
+    for (const k of keys) out[k] = (all as Record<string, unknown>)?.[k];
+    return out;
+  };
+  return {
+    ...actual,
+    settingsRepository: {
+      ...(actual.settingsRepository as Record<string, unknown>),
+      getAll: mockGetSettingsHoisted,
+      get: vi.fn(async (key: string) => (await mockGetSettingsHoisted())?.[key]),
+      getMany: getManyFromAll,
+      clearCache: vi.fn(),
+      set: vi.fn(),
+      setAll: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = mockGetSettingsHoisted;
+      get = vi.fn(async (key: string) => (await mockGetSettingsHoisted())?.[key]);
+      getMany = getManyFromAll;
+      clearCache = vi.fn();
+      set = vi.fn();
+      setAll = vi.fn();
+    },
+  };
+});
+vi.mock('../../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
-    getSettings: vi.fn().mockResolvedValue({}),
+    getSettings: mockGetSettingsHoisted,
   };
 });
 
@@ -49,7 +80,7 @@ vi.mock('../../net/ollamaOriginRule.js', () => ({
   syncOllamaOriginRule: (...args: unknown[]) => mockSyncOllamaOriginRule(...args),
 }));
 
-import { getSettings } from '../../../utils/storage/settingsStore.js';
+import { getSettings } from '../../../utils/storage.js';
 import { createLifecycleHandlers } from '../lifecycleHandlers.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 

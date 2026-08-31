@@ -11,11 +11,11 @@ import { vi } from 'vitest';;
 import { TrancoConsentManager, ConsentResult } from '../trancoConsentManager.js';
 import { StorageKeys } from '../../storage.js';
 
-// settingsStore をモック (PBI-2026-08-01-16: saveOldTrancoDomains/
+// storage をモック (PBI-2026-08-01-16: saveOldTrancoDomains/
 // getOldTrancoDomains/clearOldTrancoDomains が settings オブジェクト経由に
 // なったため). Backed by the same mockStorage Map used for chrome.storage.local
 // below so both access paths observe the same underlying state.
-vi.mock('../../storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 

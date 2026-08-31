@@ -4,7 +4,9 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Use vi.hoisted to ensure mocks are set up before any module imports
+const mockSettingsGetAll = vi.hoisted(() => vi.fn().mockResolvedValue({}));
+
+ // Use vi.hoisted to ensure mocks are set up before any module imports
 const { mockAlarmsCreate, mockAlarmsClear, storageMock } = vi.hoisted(() => {
     const storageKeys = {
         PRIVACY_MODE: 'PRIVACY_MODE',
@@ -209,13 +211,13 @@ vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
       StorageKeys: storageMock.StorageKeys,
       API_KEY_FIELDS: ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key', 'provider_api_key', 'github_pat'],
-      getSettings: vi.fn(),
+      getSettings: mockSettingsGetAll,
       clearSettingsCache: vi.fn(),
       getSavedUrlsWithTimestamps: vi.fn(),
       setSavedUrlsWithTimestamps: vi.fn(),
@@ -502,10 +504,12 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
         settingsRepository: {
             observe: vi.fn(),
             get: vi.fn().mockResolvedValue({}),
-            getAll: vi.fn().mockResolvedValue({}),
+            getAll: mockSettingsGetAll,
             set: vi.fn().mockResolvedValue(undefined),
             setAll: vi.fn().mockResolvedValue(undefined),
             getMany: vi.fn().mockResolvedValue({}),
+            clearCache: vi.fn(),
+            clearSettingsCache: vi.fn(),
         },
     };
 });
@@ -521,7 +525,7 @@ vi.mock('../net/ollamaSettingsObserver.js', () => ({
 import * as serviceWorker from '../service-worker.js';
 import * as storageEncryption from '../../utils/storage/encryptionSession.js';
 import * as storageDomainFilter from '../../utils/storage/domainFilterCache.js';
-import * as storageSettings from '../../utils/storage/settingsStore.js';
+import * as storageSettings from '../../utils/storage.js';
 import * as storageSavedUrls from '../../utils/storage/savedUrlRepository.js';
 import * as domainUtils from '../../utils/domainUtils.js';
 import * as privacyPipeline from '../privacyPipeline.js';

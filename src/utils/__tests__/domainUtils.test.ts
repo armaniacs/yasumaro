@@ -4,7 +4,7 @@
  * 【テスト対象】: src/utils/domainUtils.ts
  */
 
-import { vi } from 'vitest';;
+import { vi } from 'vitest';
 import {
   extractDomain,
   matchesPattern,
@@ -15,8 +15,9 @@ import {
   validateDomainList
 } from '../domainUtils.js';
 import { isUrlBlocked } from '../ublockMatcher.js';
-import { getSettings, type Settings } from '../storage/settingsStore.js';
+import { getSettings, type Settings } from '../storage.js';
 import type { Settings as SettingsType } from '../storage/types.js';
+import { settingsRepository } from '../storage/SettingsRepository.js';
 
 // Mock ublockMatcher.ts
 vi.mock('../ublockMatcher', () => ({
@@ -24,16 +25,28 @@ vi.mock('../ublockMatcher', () => ({
   isUrlBlocked: vi.fn()
 }));
 
-// Mock settingsStore.ts
-vi.mock('../storage/settingsStore', () => ({
+// Mock storage.ts
+vi.mock('../storage', () => ({
   __esModule: true,
   getSettings: vi.fn()
 }));
 
+vi.mock('../storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = await (importOriginal as () => Promise<typeof import('../storage/SettingsRepository.js')>)();
+  return {
+    ...actual,
+    settingsRepository: {
+      ...actual.settingsRepository,
+      getAll: vi.fn(),
+    },
+  };
+});
+
 type Settings = SettingsType;
 
 const mockedIsUrlBlocked = isUrlBlocked as vi.MockedFunction<typeof isUrlBlocked>;
-const mockedGetSettings = getSettings as vi.MockedFunction<typeof getSettings>;
+const mockedGetAll = settingsRepository.getAll as vi.MockedFunction<typeof settingsRepository.getAll>;
+const mockedGetSettings = mockedGetAll;
 
 describe('domainUtils', () => {
   // 【テスト前準備】: 各テスト実行前にChrome APIのモックをクリア

@@ -62,8 +62,8 @@ vi.mock('../../utils/storage/encryptionSession.js', async () => {
     URL_WARNING_THRESHOLD: 9000,
   };
 });
-vi.mock('../../utils/storage/settingsStore.js', async () => {
-  const actual = await vi.importActual('../../utils/storage/settingsStore.js') as any;
+vi.mock('../../utils/storage.js', async () => {
+  const actual = await vi.importActual('../../utils/storage.js') as any;
   return {
     ...actual,
     getSettings: vi.fn(),

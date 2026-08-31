@@ -3,7 +3,6 @@
  * GitHub Gist sync settings UI logic.
  */
 
-import { saveSettings } from '../utils/storage/settingsStore.js';
 import { StorageKeys, Settings } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import type { EncryptedData } from '../utils/crypto/types.js';
@@ -40,7 +39,7 @@ export async function initGistSettings(repo: SettingsReader = settingsRepository
   // Save handler
   saveBtn?.addEventListener('click', async () => {
     try {
-      await saveSettings({
+      await settingsRepository.setAll({
         [StorageKeys.GIST_ENABLED]: gistEnabled?.checked ?? false,
         [StorageKeys.GITHUB_PAT]: githubPat?.value ?? '',
       } as Settings);
