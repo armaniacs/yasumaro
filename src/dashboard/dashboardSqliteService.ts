@@ -8,6 +8,9 @@ import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../back
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { tokenExempt } from '../messaging/sqliteOperationSecurity.js';
 import { categorizeError } from '../messaging/sqliteRpcClient.js';
+// PBI-05: unified SqliteResult vocabulary — both hops now share the same
+// error classification and result shape via SqliteGateway.
+import { dashboardGateway, type SqliteResult } from '../background/sqliteGateway.js';
 import { bytesToBase64, base64ToBytes } from '../utils/crypto/index.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import {
@@ -38,9 +41,15 @@ const DASHBOARD_SQLITE_TIMEOUT = 10000;
  *
  * PBI-05: the error strings themselves now come from the same
  * `categorizeError()` that SqliteClient uses, so dashboard callers and the
- * Service Worker agree on wording and retry hints.
+ * Service Worker agree on wording and retry hints. ServiceResult is now a
+ * mapped view over the unified SqliteResult<T>.
  */
 export type ServiceResult<T> = { data: T } | { error: string };
+/** Unified gateway result — re-exported so dashboard and SW share vocabulary. */
+export type { SqliteResult };
+function toServiceResult<T>(r: SqliteResult<T>): ServiceResult<T> {
+  return r.success ? { data: r.data } : { error: r.error.message };
+}
 
 /** Narrowing helper so call sites do not each re-derive the check. */
 export function isServiceError<T>(result: ServiceResult<T>): result is { error: string } {
@@ -115,43 +124,16 @@ async function sendDashboardMessage<T extends DashboardSqliteRequest>(
  * searchLogs) and non-ServiceResult functions (getSqliteStatus) implement
  * their own logic instead of calling this (PBI-39).
  *
- * @param payload - The request payload (subtype + fields).
- * @param decode - Called with the successful response to build the success
- *   data. Throwing here (e.g. via the requiredXxx/requiredRows helpers) is
- *   caught and reported as a decode failure, same as a network exception.
- * @param defaultErrorMessage - Used when the response carries no `error` field.
+ * PBI-05: delegates to DashboardSqliteGateway so the two RPC stacks share
+ * the same SqliteResult vocabulary and error classification.
  */
 async function callDashboard<T extends DashboardSqliteRequest, R>(
   payload: T,
   decode: (response: Extract<DashboardSqliteResponseFor<T['subtype']>, { success: true }>) => R,
   defaultErrorMessage: string,
 ): Promise<ServiceResult<R>> {
-  let response: DashboardSqliteResponseFor<T['subtype']>;
-  try {
-    response = await sendDashboardMessage(payload);
-  } catch (error) {
-    // Transport-level failures (network, timeout, offscreen gone) are
-    // classified with the same logic SqliteClient uses so both sides agree
-    // on wording and retry hints.
-    const classified = categorizeError(errorMessage(error)).message;
-    console.error(`${payload.subtype} failed:`, classified);
-    return { error: classified };
-  }
-
-  if (!response.success) {
-    console.warn(`${payload.subtype} failed:`, String(response.error || 'Unknown error'));
-    return { error: String(response.error || defaultErrorMessage) };
-  }
-
-  try {
-    return { data: decode(response) };
-  } catch (error) {
-    // Decode failures (missing/ malformed fields) are already user-facing;
-    // wrapping them would only add noise.
-    const raw = errorMessage(error);
-    console.warn(`${payload.subtype} decode failed:`, raw);
-    return { error: raw };
-  }
+  const result = await dashboardGateway.callDashboard(payload, decode, defaultErrorMessage);
+  return toServiceResult(result);
 }
 
 // ============================================================================
