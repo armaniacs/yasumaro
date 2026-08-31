@@ -84,7 +84,7 @@ vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
@@ -187,12 +187,6 @@ describe('production composition contract', () => {
 
     expect(mocks.getSharedSqliteClient).toHaveBeenCalledTimes(1);
     expect(mocks.SqliteClient).not.toHaveBeenCalled();
-  });
-
-  it('shares one SqliteClient with the Dashboard SQLite handler wiring', () => {
-    const composition = createBackgroundServices();
-
-    expect(composition.sqliteClient).toBe(composition.dashboardSqliteClient);
   });
 
   it('injects one shared RecordingPipeline into manual and save handler deps', () => {

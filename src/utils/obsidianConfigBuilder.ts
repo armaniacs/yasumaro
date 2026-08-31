@@ -4,7 +4,7 @@
  * Used by both _getConfig() and testConnection() to eliminate duplication.
  */
 
-import { getSettings } from './storage/settingsStore.js';
+import { settingsRepository } from './storage/SettingsRepository.js';
 import { StorageKeys, Settings } from './storage/types.js';
 import { addLog, LogType } from './logger.js';
 import { redactSensitiveData } from './redaction.js';
@@ -60,7 +60,7 @@ export async function buildObsidianConfig(override?: ObsidianConfigOverride): Pr
  * Build config from stored settings.
  */
 async function buildFromSettings(): Promise<ObsidianConfig> {
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     const protocol = validateObsidianProtocol(settings[StorageKeys.OBSIDIAN_PROTOCOL]);
     const rawPort = settings[StorageKeys.OBSIDIAN_PORT] ?? OBSIDIAN_DEFAULT_PORT;

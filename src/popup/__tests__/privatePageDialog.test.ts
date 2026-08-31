@@ -1,5 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+const { hoistedMockGet, hoistedMockSave } = vi.hoisted(() => ({
+  hoistedMockGet: vi.fn().mockResolvedValue({ domain_whitelist: [] }),
+  hoistedMockSave: vi.fn().mockResolvedValue(undefined),
+}));
 
 // Mock dependencies used by privatePageDialog.ts
 vi.mock('../../utils/domainUtils.js', () => ({
@@ -16,8 +20,8 @@ vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
-    getSettings: vi.fn().mockResolvedValue({ domain_whitelist: [] }),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
+    getSettings: hoistedMockGet,
+    saveSettings: hoistedMockSave,
     StorageKeys: {
       DOMAIN_WHITELIST: 'domain_whitelist',
     },
@@ -40,8 +44,8 @@ vi.mock('../../utils/storage/defaults.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
-    getSettings: vi.fn().mockResolvedValue({ domain_whitelist: [] }),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
+    getSettings: hoistedMockGet,
+    saveSettings: hoistedMockSave,
     StorageKeys: {
       DOMAIN_WHITELIST: 'domain_whitelist',
     },
@@ -64,8 +68,8 @@ vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
-    getSettings: vi.fn().mockResolvedValue({ domain_whitelist: [] }),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
+    getSettings: hoistedMockGet,
+    saveSettings: hoistedMockSave,
     StorageKeys: {
       DOMAIN_WHITELIST: 'domain_whitelist',
     },
@@ -84,12 +88,12 @@ vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
-    getSettings: vi.fn().mockResolvedValue({ domain_whitelist: [] }),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
+    getSettings: hoistedMockGet,
+    saveSettings: hoistedMockSave,
     StorageKeys: {
       DOMAIN_WHITELIST: 'domain_whitelist',
     },
@@ -108,12 +112,30 @@ vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
     ),
   };
 });;
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: hoistedMockGet,
+      setAll: hoistedMockSave,
+      getMany: hoistedMockGet,
+      clearCache: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = hoistedMockGet;
+      setAll = hoistedMockSave;
+      getMany = hoistedMockGet;
+      clearCache = vi.fn();
+    },
+  };
+});
 vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
-    getSettings: vi.fn().mockResolvedValue({ domain_whitelist: [] }),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
+    getSettings: hoistedMockGet,
+    saveSettings: hoistedMockSave,
     StorageKeys: {
       DOMAIN_WHITELIST: 'domain_whitelist',
     },
@@ -136,8 +158,8 @@ vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
-    getSettings: vi.fn().mockResolvedValue({ domain_whitelist: [] }),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
+    getSettings: hoistedMockGet,
+    saveSettings: hoistedMockSave,
     StorageKeys: {
       DOMAIN_WHITELIST: 'domain_whitelist',
     },
@@ -160,8 +182,8 @@ vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
-    getSettings: vi.fn().mockResolvedValue({ domain_whitelist: [] }),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
+    getSettings: hoistedMockGet,
+    saveSettings: hoistedMockSave,
     StorageKeys: {
       DOMAIN_WHITELIST: 'domain_whitelist',
     },
@@ -472,8 +494,7 @@ describe('privatePageDialog', () => {
 
       await vi.waitFor(() => {
         expect(saveSettings).toHaveBeenCalledWith(
-          { domain_whitelist: ['example.com'] },
-          true
+          { domain_whitelist: ['example.com'] }
         );
       });
 
@@ -539,8 +560,7 @@ describe('privatePageDialog', () => {
 
       await vi.waitFor(() => {
         expect(saveSettings).toHaveBeenCalledWith(
-          { domain_whitelist: ['https://example.com/private-path'] },
-          true
+          { domain_whitelist: ['https://example.com/private-path'] }
         );
       });
 

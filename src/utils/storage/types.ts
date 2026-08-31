@@ -501,4 +501,9 @@ export interface CleansingFeedbackEntry {
     createdAt: number;
 }
 
-export type Settings = Partial<StrictSettings>;
+export interface ProviderBagConfig {
+    maxTokens?: number;
+    maxContentChars?: number;
+}
+
+export type Settings = Partial<StrictSettings> & { providers?: Record<string, ProviderBagConfig> };

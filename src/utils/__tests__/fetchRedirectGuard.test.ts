@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../storage/settingsStore.js', () => ({
+vi.mock('../storage.js', () => ({
   getSettings: vi.fn().mockResolvedValue({}),
 }));
 

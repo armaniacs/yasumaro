@@ -12,12 +12,36 @@ vi.mock('../../../utils/storage/types.js', async (importOriginal) => {
   return { ...actual };
 });
 
-vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
+const { mockGetSettingsHoisted, mockSaveSettingsHoisted } = vi.hoisted(() => ({
+  mockGetSettingsHoisted: vi.fn(),
+  mockSaveSettingsHoisted: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('../../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
-    getSettings: vi.fn(),
-    saveSettings: vi.fn(() => Promise.resolve()),
+    getSettings: mockGetSettingsHoisted,
+    saveSettings: mockSaveSettingsHoisted,
+  };
+});
+
+vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: mockGetSettingsHoisted,
+      setAll: mockSaveSettingsHoisted,
+      getMany: mockGetSettingsHoisted,
+      clearCache: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = mockGetSettingsHoisted;
+      setAll = mockSaveSettingsHoisted;
+      getMany = mockGetSettingsHoisted;
+      clearCache = vi.fn();
+    },
   };
 });
 
@@ -27,7 +51,7 @@ vi.mock('../../../utils/logger.js', () => ({
 }));
 
 import { CLEANSING_RULES } from '../../../utils/aiSummaryCleaner/rules.js';
-import * as storageSettings from '../../../utils/storage/settingsStore.js';
+import * as storageSettings from '../../../utils/storage.js';
 import { logError } from '../../../utils/logger.js';
 import {
   getAiSummaryCleansingSettings,

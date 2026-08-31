@@ -1,5 +1,5 @@
 import { getMessage } from '../../../utils/i18n.js';
-import { getSettings } from '../../../utils/storage/settingsStore.js';
+import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { extractDomain, isDomainAllowed } from '../../../utils/domainUtils.js';
 import type { Settings } from '../../../utils/storage/types.js';
@@ -53,7 +53,7 @@ async function runFilterSearch(searchInput: HTMLInputElement | null, matchesEl: 
 
   if (!query) return;
 
-  const settings = await getSettings();
+  const settings = await settingsRepository.getAll();
   const blacklist: string[] = (settings[StorageKeys.DOMAIN_BLACKLIST as keyof Settings] as string[]) || [];
   const whitelist: string[] = (settings[StorageKeys.DOMAIN_WHITELIST as keyof Settings] as string[]) || [];
 

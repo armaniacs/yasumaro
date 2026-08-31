@@ -116,7 +116,7 @@ export class TrancoConsentManager {
    * 単純呼び出しより重いため、高頻度呼び出しは避けること（PBI-2026-08-01-22）。
    */
   static async saveOldTrancoDomains(domains: string[]): Promise<void> {
-    const { saveSettings } = await import('../storage/settingsStore.js');
+    const { saveSettings } = await import('../storage.js');
     await saveSettings({
       [this.STORAGE_KEY_TRANCO_DOMAINS]: domains
     });
@@ -130,7 +130,7 @@ export class TrancoConsentManager {
    * settings オブジェクト経由でアクセスする（PBI-2026-08-01-16）。
    */
   static async getOldTrancoDomains(): Promise<string[]> {
-    const { getSettings } = await import('../storage/settingsStore.js');
+    const { getSettings } = await import('../storage.js');
     const settings = await getSettings();
     return settings[this.STORAGE_KEY_TRANCO_DOMAINS] || [];
   }
@@ -147,7 +147,7 @@ export class TrancoConsentManager {
    * （PBI-2026-08-01-22）。
    */
   static async clearOldTrancoDomains(): Promise<void> {
-    const { saveSettings } = await import('../storage/settingsStore.js');
+    const { saveSettings } = await import('../storage.js');
     await saveSettings({
       [this.STORAGE_KEY_TRANCO_DOMAINS]: []
     });

@@ -3,7 +3,7 @@
  * Utility functions for domain filtering with wildcard support.
  */
 
-import { getSettings } from './storage/settingsStore.js';
+import { settingsRepository } from './storage/SettingsRepository.js';
 import { StorageKeys } from './storage/types.js';
 import { isUrlBlocked } from './ublockMatcher.js';
 import { wildcardToRegex, MAX_WILDCARDS_PER_PATTERN } from './wildcardToRegex.js';
@@ -112,7 +112,7 @@ export function isValidDomain(domain: unknown): boolean {
  * @returns {Promise<boolean>} - True if the URL is allowed
  */
 export async function isDomainAllowed(url: string): Promise<boolean> {
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
     const mode = settings[StorageKeys.DOMAIN_FILTER_MODE];
 
     if (mode === 'disabled') {

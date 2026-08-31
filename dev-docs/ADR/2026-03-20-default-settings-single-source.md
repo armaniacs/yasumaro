@@ -116,6 +116,25 @@ const DEFAULT_SETTINGS: Settings = {
 - v4.11リリース時にドキュメント更新
 - 次期リリースでマイグレーション強化（Phase 3）
 
+### Phase 4: SettingsRepository 単一化と legacy store 削除（完了）
+
+**変更内容（PBI 2026-08-31-01）:**
+1. `SettingsRepository` に内部 TTL cache を一本化（`settingsStore.legacy.ts` の cache を統合）
+2. `settingsStore.legacy.ts` / `settingsStore.ts` shim を削除
+3. `StoragePort` / `InMemoryStoragePort` に version Map + auto-increment + `getBytesInUse` を追加し、InMemory が prod の CAS 競合を再現
+4. `getAll()` の scattered fallback を `__getAllScatteredFallback` として `__internal` seam に分離
+5. `src/utils/storage.ts` barrel を `SettingsRepository` 互換関数に切り替え、`getSettings` / `saveSettings` / `clearSettingsCache` / `saveSettingsWithAllowedUrls` を shim として残存 call site 用に維持
+6. 34 call sites + 70+ テストファイルの `settingsStore.js` import を `storage.js` barrel / `SettingsRepository` / 直接ファイルに移行
+7. `buildAllowedUrls` / `computeUrlsHash` は `urlWhitelist.ts` に残存（repo 内には移設せず、呼出側で `repo.setAll()` + `updateDomainFilterCache()` の2行に分離）
+
+**テスト結果:**
+- テストスイート全体: 11120 passed / 19 skipped（631 test files）
+- `npm run validate`（type-check + lint + test）: green
+
+**設計判断:**
+- `allowedUrls` / `urlsHash` の構築は repository の責務ではなく domain-policy の責務と判断。repository は「値の取得・保存・migration・decrypt」のみを担当し、副作用（ドメインフィルタキャッシュ更新）は呼出側の関心事と分離した。
+- `storage.ts` barrel は deprecated として残し、ゆるやかに移行を続行（新規コードは直接 `SettingsRepository` を import）。
+
 ## Risk Assessment
 
 ### High Risk Items

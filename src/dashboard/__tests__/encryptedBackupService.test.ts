@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Crypto } from '@peculiar/webcrypto';
 import { encryptEnvelope } from '../../utils/crypto/index.js';
 
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
@@ -27,6 +27,23 @@ vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
   };
 });;
 
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const repo = actual.settingsRepository as Record<string, unknown>;
+  const mockedRepo = {
+    ...repo,
+    getAll: vi.fn(),
+    setAll: vi.fn(),
+    getMany: vi.fn(),
+    get: vi.fn(),
+    set: vi.fn(),
+  };
+  return {
+    ...actual,
+    settingsRepository: mockedRepo,
+  };
+});
+
 vi.mock('../exportLogsService.js', () => ({
   exportDb: vi.fn(),
 }));
@@ -37,6 +54,7 @@ vi.mock('../dashboardSqliteService.js', () => ({
 }));
 
 import { getSettings, saveSettings } from '../../utils/storage.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { exportDb } from '../exportLogsService.js';
 import { restoreDb } from '../dashboardSqliteService.js';
 import {
@@ -58,6 +76,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
   it('round-trips settings and history db through encrypt/decrypt', async () => {
     vi.mocked(getSettings).mockResolvedValue(FAKE_SETTINGS);
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
     vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
 
@@ -65,7 +84,8 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
     const result = await importEncryptedBackup(envelope, 'correct-password');
 
     expect(result.success).toBe(true);
-    expect(saveSettings).toHaveBeenCalledWith(FAKE_SETTINGS);
+    expect(saveSettings).not.toHaveBeenCalled();
+    expect(settingsRepository.setAll).toHaveBeenCalledWith(expect.objectContaining(FAKE_SETTINGS));
     expect(restoreDb).toHaveBeenCalledTimes(1);
     const restoredBytes = vi.mocked(restoreDb).mock.calls[0]![0] as Uint8Array;
     expect(Array.from(restoredBytes)).toEqual(Array.from(FAKE_DB_BYTES));
@@ -73,6 +93,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
   it('surfaces the restoreDb failure reason instead of a fixed message', async () => {
     vi.mocked(getSettings).mockResolvedValue(FAKE_SETTINGS);
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
     vi.mocked(restoreDb).mockResolvedValue({ error: 'Database file is corrupt' });
 
@@ -82,10 +103,12 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
     expect(result.success).toBe(false);
     expect((result as { error: string }).error).toContain('Database file is corrupt');
     expect(saveSettings).not.toHaveBeenCalled();
+    expect(settingsRepository.setAll).not.toHaveBeenCalled();
   });
 
   it('fails with wrong password without touching settings or db', async () => {
     vi.mocked(getSettings).mockResolvedValue(FAKE_SETTINGS);
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
 
     const envelope = await exportEncryptedBackup('correct-password');
@@ -93,6 +116,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
     expect(result.success).toBe(false);
     expect(saveSettings).not.toHaveBeenCalled();
+    expect(settingsRepository.setAll).not.toHaveBeenCalled();
     expect(restoreDb).not.toHaveBeenCalled();
   });
 
@@ -118,6 +142,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
   it('rejects when exportDb fails', async () => {
     vi.mocked(getSettings).mockResolvedValue(FAKE_SETTINGS);
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
     vi.mocked(exportDb).mockRejectedValue(new Error('Database unavailable'));
 
     await expect(exportEncryptedBackup('correct-password')).rejects.toThrow();
@@ -132,6 +157,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
       github_pat: 'ghp_attackertoken',
     } as never;
     vi.mocked(getSettings).mockResolvedValue(TAMPERED_SETTINGS);
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(TAMPERED_SETTINGS as any);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
     vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
 
@@ -142,7 +168,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
     expect(result.skippedKeys).toEqual(
       expect.arrayContaining(['obsidian_api_key', 'openai_api_key', 'github_pat'])
     );
-    const savedSettings = vi.mocked(saveSettings).mock.calls[0]![0];
+    const savedSettings = (vi.mocked(settingsRepository.setAll).mock.calls[0]![0] as Record<string, unknown>);
     expect(savedSettings).not.toHaveProperty('obsidian_api_key');
     expect(savedSettings).not.toHaveProperty('openai_api_key');
     expect(savedSettings).not.toHaveProperty('github_pat');
@@ -156,6 +182,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
       some_unknown_key: 'x',
     } as never;
     vi.mocked(getSettings).mockResolvedValue(MIXED_SETTINGS);
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(MIXED_SETTINGS as any);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
     vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
 
@@ -166,7 +193,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
     expect(result.skippedKeys).toEqual(
       expect.arrayContaining(['sqlite_retention_days', 'some_unknown_key'])
     );
-    const savedSettings = vi.mocked(saveSettings).mock.calls[0]![0];
+    const savedSettings = (vi.mocked(settingsRepository.setAll).mock.calls[0]![0] as Record<string, unknown>);
     expect(savedSettings).toMatchObject({ obsidian_protocol: 'https' });
     expect(savedSettings).not.toHaveProperty('sqlite_retention_days');
     expect(savedSettings).not.toHaveProperty('some_unknown_key');
@@ -174,6 +201,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
   it('rejects import with excessive iterations', async () => {
     vi.mocked(getSettings).mockResolvedValue(FAKE_SETTINGS);
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
 
     const envelope = await exportEncryptedBackup('correct-password');
@@ -182,6 +210,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
     expect(result.success).toBe(false);
     expect(saveSettings).not.toHaveBeenCalled();
+    expect(settingsRepository.setAll).not.toHaveBeenCalled();
     expect(restoreDb).not.toHaveBeenCalled();
   });
 });

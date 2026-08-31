@@ -3,7 +3,7 @@
  * 新しいAIプロバイダーを追加する際はこのクラスを継承する
  */
 
-import { Settings, StorageKeys } from '../../../utils/storage/types.js';
+import { Settings, StorageKeys, type StorageKey } from '../../../utils/storage/types.js';
 import { validateMaxTokens } from '../../../utils/aiLimits.js';
 import { checkHardLimit, checkRateLimit, checkUsageWarning, getRateLimitMessage, recordUsage } from '../../../utils/aiUsageTracker.js';
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
@@ -55,13 +55,6 @@ export interface AISummaryResult {
     providerName?: string;  // 使用したAIプロバイダー名
     modelName?: string;     // 使用したAIモデル名
     error?: string;         // スキーマ不整合等の詳細エラー（ユーザー向け summary とは別）
-}
-
-/**
- * プロバイダー別の設定構造
- */
-interface ProviderSpecificSettings {
-    maxTokens?: number;
 }
 
 export abstract class AIProviderStrategy {
@@ -246,19 +239,18 @@ export abstract class AIProviderStrategy {
      * 2. ストレージキーに保存されたグローバル設定
      * 3. デフォルト値
      */
-    protected getMaxContentChars(defaultValue: number, storageKey?: string): number {
+    protected getMaxContentChars(defaultValue: number, storageKey?: StorageKey): number {
         const providerId = this.getProviderId();
 
-        // 1. プロバイダー別設定を確認（legacy 'providers' bag — index signature撤廃のため Record キャスト）
-        const providerSettings = (this.settings as unknown as Record<string, unknown>)['providers'] as Record<string, { maxContentChars?: number }> | undefined;
-        const providerConfig = providerSettings?.[providerId];
+        // 1. プロバイダー別設定を確認（typed providers bag）
+        const providerConfig = this.settings.providers?.[providerId];
         if (typeof providerConfig?.maxContentChars === 'number' && providerConfig.maxContentChars > 0) {
             return providerConfig.maxContentChars;
         }
 
-        // 2. グローバル設定を確認（storageKey は StorageKey の string 値 — strict Settings ではキャストが必要）
+        // 2. グローバル設定を確認（typed StorageKey access — no Record cast）
         if (storageKey) {
-            const globalValue = (this.settings as unknown as Record<string, unknown>)[storageKey] as number | undefined;
+            const globalValue = this.settings[storageKey] as unknown as number | undefined;
             if (typeof globalValue === 'number' && globalValue > 0) {
                 return globalValue;
             }
@@ -278,9 +270,8 @@ export abstract class AIProviderStrategy {
     protected getMaxTokens(): number {
         const providerId = this.getProviderId();
 
-        // 1. プロバイダー別設定を確認（legacy bag — Record キャスト）
-        const providerSettings = (this.settings as unknown as Record<string, unknown>)['providers'] as Record<string, ProviderSpecificSettings> | undefined;
-        const providerConfig = providerSettings?.[providerId];
+        // 1. プロバイダー別設定を確認（typed providers bag）
+        const providerConfig = this.settings.providers?.[providerId];
         if (providerConfig?.maxTokens) {
             return validateMaxTokens(providerConfig.maxTokens, providerId);
         }

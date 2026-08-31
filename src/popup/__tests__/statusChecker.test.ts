@@ -121,9 +121,9 @@ describe('checkPageStatus', () => {
   beforeEach(async () => {
     // Reset caches
     RecordingCache.getCacheState().privacyCache = new Map();
-    // Clear settingsStore.legacy cache (wrapper around SettingsRepository) so mockGetAll changes are visible
+    // Clear settings cache so mockGetAll changes are visible
     try {
-      const { clearSettingsCache } = await import('../../utils/storage/settingsStore.js');
+      const { clearSettingsCache } = await import('../../utils/storage.js');
       clearSettingsCache();
     } catch {}
 

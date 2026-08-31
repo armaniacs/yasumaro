@@ -13,6 +13,7 @@ import { settingsRepository, SettingsRepository } from '../utils/storage/Setting
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../utils/i18n.js';
+import { ProviderCatalog } from '../background/ai/providerCatalog.js';
 
 /**
  * CSP設定UIのDOM参照インターフェース。
@@ -231,14 +232,29 @@ export class CspSettingsController {
     setTimeout(() => { element.style.display = 'none'; }, 3000);
   }
 
+  private static resolveProviderOrigin(provider: string): string | null {
+    const catalogEntry = ProviderCatalog.tryResolve(provider);
+    if (catalogEntry?.cspDomain) {
+      try {
+        const u = new URL(catalogEntry.cspDomain);
+        return `${u.protocol}//${u.host}/*`;
+      } catch {
+        return `https://${catalogEntry.cspDomain}/*`;
+      }
+    }
+    const domain = CSPValidator.getProviderDomain(provider);
+    if (domain) return `https://${domain}/*`;
+    return null;
+  }
+
   static async requestProviderPermission(provider: string): Promise<boolean> {
     try {
-      const domain = CSPValidator.getProviderDomain(provider);
-      if (!domain) {
+      const origin = CspSettingsController.resolveProviderOrigin(provider);
+      if (!origin) {
         addLog(LogType.WARN, 'Unknown CSP provider', { provider });
         return false;
       }
-      const granted = await chrome.permissions.request({ origins: [`https://${domain}/*`] });
+      const granted = await chrome.permissions.request({ origins: [origin] });
       return granted === true;
     } catch (error) {
       addLog(LogType.ERROR, 'Failed to request provider permission', { provider, error: errorMessage(error) });
@@ -266,9 +282,9 @@ export class CspSettingsController {
 
   static async hasPermission(provider: string): Promise<boolean> {
     try {
-      const domain = CSPValidator.getProviderDomain(provider);
-      if (!domain) return false;
-      const hasPermission = await chrome.permissions.contains({ origins: [`https://${domain}/*`] });
+      const origin = CspSettingsController.resolveProviderOrigin(provider);
+      if (!origin) return false;
+      const hasPermission = await chrome.permissions.contains({ origins: [origin] });
       return hasPermission === true;
     } catch (error) {
       addLog(LogType.ERROR, 'Failed to check provider permission', { provider, error: errorMessage(error) });

@@ -7,9 +7,8 @@
 
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
-// Mock dependencies (must be defined before imports)
-vi.mock('../../../utils/storage/settingsStore.js', () => {
-  const mockGetSettings = vi.fn(() => Promise.resolve({
+const { mockGetSettings: hoistedMockGetSettings, mockSaveSettings: hoistedMockSaveSettings } = vi.hoisted(() => ({
+  mockGetSettings: vi.fn(() => Promise.resolve({
     obsidian_api_key: '',
     obsidian_port: '27123',
     obsidian_protocol: 'http',
@@ -37,13 +36,33 @@ vi.mock('../../../utils/storage/settingsStore.js', () => {
       metadata: { importedAt: 0, ruleCount: 0 }
     },
     ublock_sources: [],
-  }));
+  })),
+  mockSaveSettings: vi.fn(() => Promise.resolve()),
+}));
 
-  const mockSaveSettings = vi.fn(() => Promise.resolve());
-
+// Mock dependencies (must be defined before imports)
+vi.mock('../../../utils/storage.js', () => {
   return {
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
+    getSettings: hoistedMockGetSettings,
+    saveSettings: hoistedMockSaveSettings,
+  };
+});
+vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: hoistedMockGetSettings,
+      setAll: hoistedMockSaveSettings,
+      getMany: hoistedMockGetSettings,
+      clearCache: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = hoistedMockGetSettings;
+      setAll = hoistedMockSaveSettings;
+      getMany = hoistedMockGetSettings;
+      clearCache = vi.fn();
+    },
   };
 });
 

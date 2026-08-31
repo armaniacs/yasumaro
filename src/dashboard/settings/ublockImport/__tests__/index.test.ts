@@ -6,6 +6,10 @@
  */
 
 import { vi } from 'vitest';;
+const { hoistedMockGet, hoistedMockSave } = vi.hoisted(() => ({
+  hoistedMockGet: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
+  hoistedMockSave: vi.fn(() => Promise.resolve()),
+}));
 
 // Mock all sub-modules
 vi.mock('../fileReader.js', () => ({
@@ -67,8 +71,8 @@ vi.mock('../../../../utils/storage/types.js', async (importOriginal) => {
   const overrides = {
 
     StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
-    getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
-    saveSettings: vi.fn(() => Promise.resolve()),
+    getSettings: hoistedMockGet,
+    saveSettings: hoistedMockSave,
 
   } as Record<string, unknown>;
   return {
@@ -89,8 +93,8 @@ vi.mock('../../../../utils/storage/defaults.js', async (importOriginal) => {
   const overrides = {
 
     StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
-    getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
-    saveSettings: vi.fn(() => Promise.resolve()),
+    getSettings: hoistedMockGet,
+    saveSettings: hoistedMockSave,
 
   } as Record<string, unknown>;
   return {
@@ -111,8 +115,8 @@ vi.mock('../../../../utils/storage/encryptionSession.js', async (importOriginal)
   const overrides = {
 
     StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
-    getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
-    saveSettings: vi.fn(() => Promise.resolve()),
+    getSettings: hoistedMockGet,
+    saveSettings: hoistedMockSave,
 
   } as Record<string, unknown>;
   return {
@@ -128,13 +132,13 @@ vi.mock('../../../../utils/storage/encryptionSession.js', async (importOriginal)
     ),
   };
 });;
-vi.mock('../../../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
     StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
-    getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
-    saveSettings: vi.fn(() => Promise.resolve()),
+    getSettings: hoistedMockGet,
+    saveSettings: hoistedMockSave,
 
   } as Record<string, unknown>;
   return {
@@ -150,13 +154,31 @@ vi.mock('../../../../utils/storage/settingsStore.js', async (importOriginal) => 
     ),
   };
 });;
+vi.mock('../../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: hoistedMockGet,
+      setAll: hoistedMockSave,
+      getMany: hoistedMockGet,
+      clearCache: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = hoistedMockGet;
+      setAll = hoistedMockSave;
+      getMany = hoistedMockGet;
+      clearCache = vi.fn();
+    },
+  };
+});
 vi.mock('../../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
     StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
-    getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
-    saveSettings: vi.fn(() => Promise.resolve()),
+    getSettings: hoistedMockGet,
+    saveSettings: hoistedMockSave,
 
   } as Record<string, unknown>;
   return {
@@ -177,8 +199,8 @@ vi.mock('../../../../utils/storage/domainFilterCache.js', async (importOriginal)
   const overrides = {
 
     StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
-    getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
-    saveSettings: vi.fn(() => Promise.resolve()),
+    getSettings: hoistedMockGet,
+    saveSettings: hoistedMockSave,
 
   } as Record<string, unknown>;
   return {
@@ -199,8 +221,8 @@ vi.mock('../../../../utils/storage/quota.js', async (importOriginal) => {
   const overrides = {
 
     StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
-    getSettings: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
-    saveSettings: vi.fn(() => Promise.resolve()),
+    getSettings: hoistedMockGet,
+    saveSettings: hoistedMockSave,
 
   } as Record<string, unknown>;
   return {

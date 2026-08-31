@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleDailyPurgeAlarm } from '../dailyPurgeHandler.js';
-import { clearSettingsCache } from '../../utils/storage/settingsStore.js';
+import { clearSettingsCache } from '../../utils/storage.js';
 import { logInfo } from '../../utils/logger.js';
 
 vi.mock('../../utils/logger.js', () => ({

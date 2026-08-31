@@ -4,7 +4,7 @@
  */
 
 import { parseUblockFilterListWithErrors, isValidString } from '../../../utils/ublockParser/index.js';
-import { saveSettings, getSettings } from '../../../utils/storage/settingsStore.js';
+import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { rebuildRulesFromSources } from './rulesBuilder.js';
@@ -43,7 +43,7 @@ function buildRulesPayload(mergedRules: ReturnType<typeof rebuildRulesFromSource
  * 保存済みソース一覧を読み込んで表示
  */
 export async function loadAndDisplaySources(renderCallback?: (sources: Source[]) => void): Promise<void> {
-  const settings = await getSettings();
+  const settings = await settingsRepository.getAll();
   const sources = (settings[StorageKeys.UBLOCK_SOURCES] || []) as Source[];
   if (renderCallback) {
     renderCallback(sources);
@@ -55,7 +55,7 @@ export async function loadAndDisplaySources(renderCallback?: (sources: Source[])
  * @param {number} index - 削除するソースのインデックス
  */
 export async function deleteSource(index: number, renderCallback?: (sources: Source[]) => void): Promise<void> {
-  const settings = await getSettings();
+  const settings = await settingsRepository.getAll();
   const sources = (settings[StorageKeys.UBLOCK_SOURCES] || []) as Source[];
 
   if (index < 0 || index >= sources.length) return;
@@ -65,11 +65,11 @@ export async function deleteSource(index: number, renderCallback?: (sources: Sou
   // ルールを再構築
   const mergedRules = rebuildRulesFromSources(sources);
 
-  await saveSettings({
+  await settingsRepository.setAll({
     [StorageKeys.UBLOCK_SOURCES]: sources,
     [StorageKeys.UBLOCK_RULES]: buildRulesPayload(mergedRules),
     [StorageKeys.UBLOCK_FORMAT_ENABLED]: sources.length > 0
-  }, true);
+  });
 
   if (renderCallback) {
     renderCallback(sources);
@@ -84,7 +84,7 @@ export async function deleteSource(index: number, renderCallback?: (sources: Sou
  * @returns {Promise<Object>} 更新結果
  */
 export async function reloadSource(index: number, fetchFromUrlCallback: (url: string) => Promise<string>): Promise<ReloadResult> {
-  const settings = await getSettings();
+  const settings = await settingsRepository.getAll();
   const sources = (settings[StorageKeys.UBLOCK_SOURCES] || []) as Source[];
 
   if (index < 0 || index >= sources.length) {
@@ -128,10 +128,10 @@ export async function reloadSource(index: number, fetchFromUrlCallback: (url: st
   // ルールを再構築
   const mergedRules = rebuildRulesFromSources(sources);
 
-  await saveSettings({
+  await settingsRepository.setAll({
     [StorageKeys.UBLOCK_SOURCES]: sources,
     [StorageKeys.UBLOCK_RULES]: buildRulesPayload(mergedRules)
-  }, true);
+  });
 
   return {
     sources,
@@ -164,7 +164,7 @@ export async function saveUblockSettings(text: string, url: string | null = null
     console.warn(`${result.errors.length}個のエラーがスキップされました（有効なルール: ${ruleCount}）`);
   }
 
-  const settings = await getSettings();
+  const settings = await settingsRepository.getAll();
   const sources = (settings[StorageKeys.UBLOCK_SOURCES] || []) as Source[];
 
   const sourceUrl = url || 'manual';
@@ -191,11 +191,11 @@ export async function saveUblockSettings(text: string, url: string | null = null
   // ルールを再構築
   const mergedRules = rebuildRulesFromSources(sources);
 
-  await saveSettings({
+  await settingsRepository.setAll({
     [StorageKeys.UBLOCK_SOURCES]: sources,
     [StorageKeys.UBLOCK_RULES]: buildRulesPayload(mergedRules),
     [StorageKeys.UBLOCK_FORMAT_ENABLED]: true
-  }, true);
+  });
 
   const action = existingIndex >= 0 ? '更新' : '追加';
   showStatus('domainStatus', `フィルターソースを${action}しました（${ruleCount}ルール）`, 'success');

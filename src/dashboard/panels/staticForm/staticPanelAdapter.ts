@@ -1,5 +1,5 @@
 import { type PanelLifecycle } from '../types.js';
-import { getSettings } from '../../../utils/storage/settingsStore.js';
+import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import type { Settings } from '../../../utils/storage/types.js';
 
 /**
@@ -33,7 +33,7 @@ export function createStaticFormPanel(spec: StaticPanelSpec): PanelLifecycle & {
             // `await` accepts non-promises, so sync and async inits share one path.
             // WHY: When needsSettings is false, mount doesn't use settings; cast satisfies the type signature
             const settings = spec.needsSettings
-                ? await getSettings()
+                ? await settingsRepository.getAll()
                 : (undefined as unknown as Settings);
             await spec.mount(settings);
         },

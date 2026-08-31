@@ -92,7 +92,7 @@ vi.mock('../storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 

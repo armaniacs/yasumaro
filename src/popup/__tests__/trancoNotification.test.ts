@@ -14,6 +14,21 @@ const mockGetSettings = vi.hoisted(() => vi.fn());
 const mockSaveSettingsWithAllowedUrls = vi.hoisted(() => vi.fn());
 const mockLogError = vi.hoisted(() => vi.fn());
 const mockGetMessage = vi.hoisted(() => vi.fn());
+const mockUpdateDomainFilterCache = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+vi.mock('../../utils/storage/SettingsRepository.js', () => ({
+  settingsRepository: {
+    getAll: mockGetSettings,
+    setAll: mockSaveSettingsWithAllowedUrls,
+    get: mockGetSettings,
+    getMany: mockGetSettings,
+    set: mockSaveSettingsWithAllowedUrls,
+    clearCache: vi.fn(),
+  },
+  SettingsRepository: class {},
+  ChromeStoragePort: class {},
+  InMemoryStoragePort: class {},
+}));
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -96,7 +111,7 @@ vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
@@ -162,6 +177,7 @@ vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
       TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason',
       TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp',
     },
+    updateDomainFilterCache: mockUpdateDomainFilterCache,
 
   } as Record<string, unknown>;
   return {

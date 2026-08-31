@@ -5,22 +5,17 @@ import { Mutex } from '../../utils/Mutex.js';
  * Serializes concurrent recordings of the same URL to protect the
  * read-then-write window between checkDuplicateStep and saveMetadataStep.
  *
- * Uses a shared static map so all RecordingPipeline instances serialize
- * the same URL. This preserves the original static urlRecordMutexes
- * semantics while allowing instance-based injection.
+ * Instance-based via DI container; tests can inject an isolated map
+ * via container.override('perUrlMutexMap', new PerUrlMutexMap(new Map())).
  */
 export class PerUrlMutexMap {
-  private static sharedMutexes = new Map<string, Mutex>();
   private static readonly MUTEX_OPTS = { maxQueueSize: 5, timeoutMs: 60000 } as const;
   private static createMutex(): Mutex { return new Mutex(PerUrlMutexMap.MUTEX_OPTS); }
 
   private readonly mutexes: Map<string, Mutex>;
 
   constructor(map?: Map<string, Mutex>) {
-    // Default to shared static map to preserve existing per-URL serialization
-    // across all pipeline instances; tests can inject an isolated map via
-    // container.override('perUrlMutexMap', new PerUrlMutexMap(new Map())).
-    this.mutexes = map ?? PerUrlMutexMap.sharedMutexes;
+    this.mutexes = map ?? new Map();
   }
 
   async runExclusive<T>(url: string, fn: () => Promise<T>): Promise<T> {
@@ -37,27 +32,8 @@ export class PerUrlMutexMap {
     return mutex;
   }
 
-  /** Exposed for RecordingPipeline static compat and tests. */
-  static getSharedMap(): Map<string, Mutex> {
-    return PerUrlMutexMap.sharedMutexes;
-  }
-
-  static getOrCreateStatic(url: string): Mutex {
-    let mutex = PerUrlMutexMap.sharedMutexes.get(url);
-    if (!mutex) {
-      mutex = PerUrlMutexMap.createMutex();
-      PerUrlMutexMap.sharedMutexes.set(url, mutex);
-    }
-    return mutex;
-  }
-
-  static async runExclusiveStatic<T>(url: string, fn: () => Promise<T>): Promise<T> {
-    const mutex = PerUrlMutexMap.getOrCreateStatic(url);
-    return PerUrlMutexMap.runExclusiveOn(mutex, url, PerUrlMutexMap.sharedMutexes, fn);
-  }
-
   /**
-   * Single acquire/release/cleanup path for both instance and static callers.
+   * Single acquire/release/cleanup path.
    * The cleanup drops the map entry only when the mutex is fully idle
    * (no current lock and no queued waiters), so a URL with a pending
    * concurrent recording keeps its entry.

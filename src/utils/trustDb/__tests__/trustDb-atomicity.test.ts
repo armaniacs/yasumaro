@@ -25,7 +25,7 @@ describe('TrustDb - Atomicity Fix', () => {
   describe('TDD Red Phase - Current Issue', () => {
     it('documents that save() was fixed to use a single transaction', async () => {
       const trustDbSource = await import('fs').then(fs =>
-        fs.readFileSync('src/utils/trustDb/trustDb.ts', 'utf8')
+        fs.readFileSync('src/utils/trustDb/TrustDbKernel.ts', 'utf8')
       );
 
       // Check that save() uses only ONE withOptimisticLock call
@@ -57,7 +57,7 @@ describe('TrustDb - Atomicity Fix', () => {
   describe('Integration After Fix', () => {
     it('should verify that Bloom Filter does NOT use separate lock', async () => {
       const trustDbSource = await import('fs').then(fs =>
-        fs.readFileSync('src/utils/trustDb/trustDb.ts', 'utf8')
+        fs.readFileSync('src/utils/trustDb/TrustDbKernel.ts', 'utf8')
       );
 
       // Bloom Filter should NOT have its own withOptimisticLock call
@@ -69,7 +69,7 @@ describe('TrustDb - Atomicity Fix', () => {
 
     it('should verify single withOptimisticLock usage', async () => {
       const trustDbSource = await import('fs').then(fs =>
-        fs.readFileSync('src/utils/trustDb/trustDb.ts', 'utf8')
+        fs.readFileSync('src/utils/trustDb/TrustDbKernel.ts', 'utf8')
       );
 
       // Count withOptimisticLock calls in entire file
@@ -82,7 +82,7 @@ describe('TrustDb - Atomicity Fix', () => {
 
     it('should not contain chrome.storage.local.set inside save() method', async () => {
       const trustDbSource = await import('fs').then(fs =>
-        fs.readFileSync('src/utils/trustDb/trustDb.ts', 'utf8')
+        fs.readFileSync('src/utils/trustDb/TrustDbKernel.ts', 'utf8')
       );
 
       const saveMethodMatch = trustDbSource.match(/async save\(\): Promise<void>[\s\S]*?^  \}/m);
