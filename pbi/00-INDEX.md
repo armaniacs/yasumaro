@@ -16,14 +16,11 @@
 
 | PBI | 種別 | 難易度 | 副作用 | ステータス | 備考 |
 |-----|------|--------|--------|-----------|------|
-| [02-feat-recording-orchestrator](2026-08-31-02-feat-recording-orchestrator.md) | ✨ | 🔴 | 🟡 | 🔶 | demolition + facade 化完了。alias/shim 削除と docs が残る |
-| [03-fix-trustdb-god-module](2026-08-31-03-fix-trustdb-god-module.md) | 🔧 | 🔴 | 🟡 | 🔶 | Kernel/Policy/Collections 分割完了。DESIGN_SPEC/ADR 追記が残る |
+| [02-feat-recording-orchestrator](2026-08-31-02-feat-recording-orchestrator.md) | ✨ | 🔴 | 🟡 | 🔶 | demolition + facade 化完了。alias/shim 削除と pipeline docs が残る |
 | [04-feat-composition-manifest](2026-08-31-04-feat-composition-manifest.md) | 🔧 | 🔴 | 🟡 | 🔶 | boilerplate 削除のみ。compositionManifest 本体は未実装 |
-| [05-feat-sqlite-gateway-unification](2026-08-31-05-feat-sqlite-gateway-unification.md) | 🔧 | 🔴 | 🟡 | 🔶 | Gateway 統合完了。InMemoryTransport / isServiceError 重複 / docs が残る |
-| [06-feat-provider-catalog](2026-08-31-06-feat-provider-catalog.md) | 🔧 | 🟡 | 🟢 | 🔶 | Catalog 駆動化完了。backlog Speculative 明記と docs が残る |
+| [05-feat-sqlite-gateway-unification](2026-08-31-05-feat-sqlite-gateway-unification.md) | 🔧 | 🔴 | 🟡 | 🔶 | Gateway 統合完了。InMemoryTransport の実装のみ残る |
 
-`pbi/` には上記 5 件が残る（すべて中核実装は完了、残りは docs 更新と小さな cleanup）。
-各 PBI の「残作業（次セッション）」節を参照。
+`pbi/` には上記 3 件が残る。各 PBI の「残作業」節を参照。
 
 ---
 
@@ -47,9 +44,11 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
-### 2026-08-31 Settings 二重真実の解消 — 1件完了（PBI 01）
+### 2026-08-31 Architecture Deepening 0831a — 3件完了（PBI 01 / 03 / 06）
 
 - 2026-08-31-01-fix-settings-dual-truth.md（RICE 2160 — `SettingsRepository` への一本化。`settingsStore.legacy.ts` / `settingsStore.ts` を削除し、`storage.ts` barrel を SettingsRepository 委譲に切り替え。旧 re-export を settingsMigration / urlWhitelist / storageMaintenance / savedUrlRepository へ振り直し。34 call sites + 約 90 テストファイルの import を移行。`getAll()` の scattered fallback を `__getAllScatteredFallback` test 専用 seam に分離。ADR `2026-03-20-default-settings-single-source.md` に Phase 4 追記。type-check / lint / test / build green）
+- 2026-08-31-03-fix-trustdb-god-module.md（RICE — trustDb god module を `TrustDbKernel`（lifecycle + 単一 `chrome.storage` 読取 + 単一 `withOptimisticLock`）/ `TrustPolicy`（`isDomainTrusted` / `isTrancoDomain` seam）/ `ManagedCollections`（userTlds / sensitive / whitelist 束ね）に分割。`trustDb.ts` は re-export shim に。settings アクセスを注入可能な `settingsReader` port 化し、ADR 2026-08-20 の循環 1 を解消。dead code の `whitelistStore.ts` / `sensitiveDomainStore.ts` を削除。DESIGN_SPEC §5.5 新設 + ADR 2026-08-20 に解消記録。11109 tests green。残: 破損 DB 復旧の手動 e2e 確認のみ）
+- 2026-08-31-06-feat-provider-catalog.md（RICE — Speculative。`ProviderCatalog` を単一 seam として先行実装。csp / cspSettings / DiagnosticsCollector / getMaxContentChars を Catalog 駆動化。DESIGN_SPEC §11.3 新設。再評価トリガー（次 provider 追加時）を backlog に明記。11109 tests green）
 
 ### 2026-08-30 VulnHunter 2026-08-29 監査対応 — 13件完了（PR #67–#81）
 

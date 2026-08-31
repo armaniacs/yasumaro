@@ -101,7 +101,20 @@ A local SQLite database acts as a **secondary store for browsing/search**, indep
 - **Full-text search**: FTS5 virtual table `browsing_logs_fts` (external content, synced by triggers) with the **`trigram` tokenizer** to support Japanese/CJK substring search. Queries shorter than 3 code points fall back to LIKE (trigram cannot match < 3 chars). User input is whitelisted and phrase-quoted (`sanitizeFtsTerm`) to prevent FTS5 operator injection.
 - **Migration**: existing users' old `AccessHandlePoolVFS` database is migrated once (idempotent) into the new DB via `opfsMigrationV2.ts` (old `wa-sqlite` dependency is confined to `opfsMigrationV2Reader.ts`). Tracked by `StorageKeys.OPFS_MIGRATION_V2_DONE`.
 - **Dashboard access**: the dashboard talks to the store via `DASHBOARD_SQLITE` messages (subtypes `query`/`search`/`status`/`import`/...). All read handlers wrap results as `{ success: true, rows, total }` so the dashboard service can distinguish success from failure.
-- **Shared RPC types** (`src/messaging/sqliteRpcClient.ts`): `SqliteRpcClient` interface, `SqliteRpcResult<T>`, `SqliteError`, and `categorizeError` are shared between the Service Worker's `SqliteClient` (production implementation) and the Dashboard's `dashboardSqliteService` (message-passing proxy). Both sides classify transport failures identically so user-facing error messages and retry hints are consistent.
+- **Unified gateway** (`src/background/sqliteGateway.ts`): both RPC hops go through `SqliteGateway`. It exposes four methods — `query` / `mutate` / `maintain` / `status` — and a single result vocabulary `SqliteResult<T> = { success: true; data: T } | { success: false; error: SqliteError }`. The Service Worker hop (`SqliteClient`) and the Dashboard hop (`DashboardSqliteGateway`, used by `dashboardSqliteService`) are both thin shims that delegate to the gateway, so error classification and retry hints never drift between them.
+  - The Service Worker hop classifies transport failures with `categorizeError`.
+  - The Dashboard hop passes failure-response reasons through **verbatim** (the Service Worker already classified them); it only runs `categorizeError` on its own transport-level exceptions. Re-classifying a already-classified reason would double-wrap it.
+- **Query plan** (`src/offscreen/queryPlan.ts`): `buildQuerySpec` / `clampLimit` / `buildExtraWhereSql` are the single source of truth for WHERE-clause generation and limit clamping. `IdbVfsBackend` and `opfsWorker/searchHandlers` consume them rather than re-deriving the same date/domain/starred/gist/ids filter.
+- **Backend facets** (`src/offscreen/StorageBackend.ts`): the storage backend interface is split into `Queryable` (read) and `Mutable` (write) so callers import only the facet they need.
+
+### 5.5 Trust DB
+
+Domain trust verification (used by the recording pipeline's trust step) is stored under `chrome.storage.local` key `trust_db:json` and split into three deep modules:
+
+- **`TrustDbKernel`** (`src/utils/trustDb/TrustDbKernel.ts`): owns the lifecycle — `initialize` / `save` / `rebuildCaches`. The **only** place that reads `chrome.storage.local.get('trust_db:json')`. `save()` uses a single `withOptimisticLock` (no separate lock for the Bloom filter). Settings access (Tranco version/domains) goes through an injectable `settingsReader` port; the default reads/writes the `settings` object directly, so there is no dynamic import of the storage layer (resolves circular #1 in [ADR 2026-08-20](ADR/2026-08-20-utils-layer-circular-dependency.md)).
+- **`TrustPolicy`** (`src/utils/trustDb/TrustPolicy.ts`): the public trust seam — `isDomainTrusted` / `isTrancoDomain`. Hides `DomainVerifier` / `BloomFilterManager` / `TrancoManager` as private collaborators.
+- **`ManagedCollections`** (`src/utils/trustDb/ManagedCollections.ts`): bundles the `userTlds` / `sensitive` / `whitelist` string lists behind one module. `ManagedStringList` remains the internal implementation.
+- **`repairTrustDatabase`** (`src/utils/trustDb/trustDbRepair.ts`): a pure function that back-fills every missing field of a corrupted DB without in-place mutation.
 
 ## 6. Domain Filtering Behavior
 
@@ -155,6 +168,12 @@ All Obsidian write operations are serialized via global mutex:
 - Release method never throws exceptions
 - On release error, lock is forced unlocked and error is logged
 - Prevents deadlocks from exceptions in release pathway
+
+### 8.3 Per-URL Recording Serialization
+Recording of the same URL is serialized by `PerUrlMutexMap` (`src/background/pipeline/perUrlMutex.js`):
+- Each map instance owns a `Map<string, Mutex>` (per-URL, `maxQueueSize: 5`, `timeoutMs: 60000`).
+- The map entry is dropped only when its mutex is fully idle (no current lock, no queued waiters), so a URL with a pending concurrent recording keeps its entry.
+- **One shared instance**: registered as a container singleton (`perUrlMutexMap`) and wired into the recording pipeline's deps. All `RecordingOrchestrator` instances must receive this same instance — an orchestrator constructed without it falls back to a private map, losing cross-instance serialization and re-opening the duplicate-entry race.
 
 ## 9. Obsidian REST API Integration
 
@@ -212,6 +231,20 @@ Timestamp in Japanese locale (HH:MM format):
 - **Message Timeout**: 30 seconds
 - **Status Checks**: `readily`, `after-download`, `no`, `unsupported`
 - **Session Reuse**: Session cached for multiple prompts
+
+### 11.3 Cloud AI Provider Catalog
+
+`ProviderCatalog` (`src/background/ai/providerCatalog.ts`) is the single seam for per-provider wiring. `resolve(id)` / `tryResolve(id)` return one entry describing a provider:
+
+- `baseUrlKey` / `apiKeyKey` / `modelKey` — the `StorageKeys` holding that provider's config
+- `isLocal` — whether the base URL is expected to be a localhost address
+- `defaultModel`, `cspDomain`, `label`, `contentCharsKey`
+
+The catalog is built from `PROVIDER_REGISTRY` (wiring data) augmented with `cspDomain` / `label` / `contentCharsKey`. Consumers derive from the catalog instead of hard-coded switches:
+
+- `cspValidator` / `cspSettings` add a provider's base-URL origin from `baseUrlKey` + `isLocal`, and conditional-CSP origins from `cspDomain`.
+- `DiagnosticsCollector` reads each provider's model / base URL / API key via the catalog entry's keys.
+- `getMaxContentChars` (`ProviderStrategy`) reads the typed `settings.providers[<id>]` bag, then the global `StorageKey`, then a default.
 
 ## 12. uBlock Origin Format Support
 

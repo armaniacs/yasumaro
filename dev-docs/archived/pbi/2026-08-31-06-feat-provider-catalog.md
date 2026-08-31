@@ -52,7 +52,7 @@ Scenario: Speculative 判断 — 今は着手しない
 - [x] `DiagnosticsCollector` の per-provider switch が Catalog 駆動に置換
 - [x] `cspValidator` / `cspSettings.ts` の条件分岐が Catalog の `baseUrlKey` / `cspDomain` から導出
 - [x] `getMaxContentChars` が typed に `settings.providers` bag と `StorageKey` を読む（`as Record` 迂回を解消）
-- [ ] 本 PBI が Speculative である旨と再評価トリガーの backlog 明記（未実施）
+- [x] 本 PBI が Speculative である旨と再評価トリガーを backlog（`2026-08-31-00-backlog.md`）に明記
 
 ## テスト戦略
 - E2E: 新 provider 追加後の `testConnection` と `generateSummary` が成功（実装する場合）
@@ -65,12 +65,11 @@ Scenario: Speculative 判断 — 今は着手しない
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了（ai / dashboard / csp の影響確認 — 2026-09-01）
-- [ ] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の AI Provider 章、CONTEXT.md に Provider 語彙追記）
+- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md §11.3 Cloud AI Provider Catalog を新設）
 - [x] `npm run validate` が green
 
-## 残作業（次セッション）
-- backlog への Speculative 明記と provider 追加時の再評価トリガー定義
-- DESIGN_SPECIFICATIONS.md / CONTEXT.md への Provider 語彙追記
+## 再評価トリガー
+次に AI provider を追加するとき、Catalog 駆動化で「追加が 1 箇所で済むか」を確認する。詳細は `pbi/2026-08-31-00-backlog.md` の「PBI 06 — Speculative の扱い」節。
 
 ## 実装メモ（任意）
 - 本 PBI は Speculative。01-05 の完了後に provider 追加が発生するまで着手しないことを推奨。着手する場合は `ProviderStrategy` の深さを壊さないように Catalog は data 層のみを集約し、checkPreFlight/sanitize 等の振る舞いは Strategy に残す
