@@ -4,7 +4,6 @@
  */
 
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
-import { saveSettings } from '../utils/storage/settingsStore.legacy.js';
 import { exportDb } from './exportLogsService.js';
 import { restoreDb, isServiceError } from './dashboardSqliteService.js';
 import { encryptEnvelope, decryptEnvelope, isEncryptionEnvelope } from '../utils/crypto/index.js';
@@ -98,7 +97,7 @@ export async function importEncryptedBackup(
     // WHY: backup payload settings type is `unknown`; validateRestorableSettings narrows to `Record<string, unknown>`
     payload.settings as unknown as Record<string, unknown>
   );
-  await saveSettings(sanitized);
+  await settingsRepository.setAll(sanitized);
 
   return { success: true, skippedKeys };
 }

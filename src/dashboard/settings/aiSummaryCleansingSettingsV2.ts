@@ -4,7 +4,6 @@
  */
 
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
-import { saveSettings } from '../../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { logError, ErrorCode } from '../../utils/logger.js';
 import { CLEANSING_RULES, type CleansingRule } from '../../utils/aiSummaryCleaner/rules.js';
@@ -130,7 +129,7 @@ export async function applyPreset(presetId: PresetId): Promise<void> {
             }
         }
         (current as Record<string, unknown>)[StorageKeys.CLEANSING_PRESET] = presetId;
-        await saveSettings(current);
+        await settingsRepository.setAll(current);
         const settings = await getAiSummaryCleansingSettings();
         applyAiSummaryCleansingSettingsToUI(settings);
         const select = document.getElementById('cleansing-preset') as HTMLSelectElement | null;
@@ -238,7 +237,7 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] = settings.bodyProtectionThreshold;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO] = settings.fallbackRatio;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES] = settings.fallbackMinBytes;
-    await saveSettings(currentSettings);
+    await settingsRepository.setAll(currentSettings);
 }
 
 /**

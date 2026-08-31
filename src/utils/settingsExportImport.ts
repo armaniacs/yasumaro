@@ -5,7 +5,7 @@
 
 import { getOrCreateHmacSecret } from './storage/encryptionSession.js';
 import { settingsRepository } from './storage/SettingsRepository.js';
-import { saveSettings, API_KEY_FIELDS } from './storage/settingsStore.legacy.js';
+import { API_KEY_FIELDS } from '../utils/storage/settingsStore.legacy.js';
 import { Settings } from './storage/types.js';
 import { computeHMAC, encrypt, decryptData, deriveKey, constantTimeCompare } from './crypto/index.js';
 import { generateSalt } from './crypto/index.js';
@@ -276,11 +276,11 @@ export async function importEncryptedSettings(
         'settingsExportImport.ts'
       );
       const merged = await mergeWithExistingApiKeys(parsed.settings);
-      await saveSettings(merged);
+      await settingsRepository.setAll(merged);
       return merged;
     }
 
-    await saveSettings(parsed.settings);
+    await settingsRepository.setAll(parsed.settings);
     return parsed.settings;
   } catch (error) {
     await logError(
@@ -500,11 +500,11 @@ export async function importSettings(jsonData: string): Promise<Settings | null>
         'settingsExportImport.ts'
       );
       const merged = await mergeWithExistingApiKeys(parsed.settings);
-      await saveSettings(merged);
+      await settingsRepository.setAll(merged);
       return merged;
     }
 
-    await saveSettings(parsed.settings);
+    await settingsRepository.setAll(parsed.settings);
     return parsed.settings;
   } catch (error) {
     await logError(
