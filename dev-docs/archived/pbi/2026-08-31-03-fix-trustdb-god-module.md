@@ -71,12 +71,11 @@ Scenario: エラー — 未初期化で isDomainTrusted を呼ぶと UNVERIFIED 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了（trustDb / pipeline / storage の影響確認 — 2026-09-01。dead code だった `whitelistStore.ts` / `sensitiveDomainStore.ts` を削除）
-- [ ] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の Trust 章、ADR 2026-08-20 circular-dependency に追記）
-- [x] `npm run validate` が green（破損 DB からの復旧の手動確認は未実施）
+- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md §5.5 Trust DB を新設、ADR 2026-08-20 circular-dependency に「解消記録」を追記し Status を Partially superseded に）
+- [x] `npm run validate` が green
 
-## 残作業（次セッション）
-- DESIGN_SPECIFICATIONS.md の Trust 章 / ADR 2026-08-20 への追記
-- 破損 DB からの復旧の手動 e2e 確認
+## 残作業
+- 破損 DB からの復旧の手動 e2e 確認（自動テストではカバー済み、実機確認のみ未実施）
 
 ## 実装メモ（任意）
 - `TrustDb` クラスは互換 shim として一時残し、内部で Kernel/Policy/Collections に委譲。`getTrustDb()` singleton は廃止方向で `createTrustDbKernel` に移行

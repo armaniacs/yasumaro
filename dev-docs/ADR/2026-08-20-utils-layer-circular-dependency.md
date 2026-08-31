@@ -1,7 +1,7 @@
 # ADR 2026-08-20: Utils Layer 循環依存の記録と保護
 
 ## Status
-Accepted
+Partially superseded (2026-08-31) — 循環 1 は PBI 01・03 で解消。循環 2・3 は「解消記録」節を参照。
 
 ## Context
 
@@ -83,6 +83,23 @@ class TrancoVersionTracker {
 **見積もり**: 別PBIで 0.5人月
 **判断**: 今回のPBIでは `SettingsRepository` の深さに集中し、循環の物理的解消は次PBIで実施。ADR は保護のまま維持。
 
+## 解消記録（2026-08-31 / PBI 01・03）
+
+### 循環 1: 解消済み
+
+- **PBI 01**: `settingsStore.ts` / `settingsStore.legacy.ts` を削除。`settingsStore.ts → trustDb.ts` の動的 import は消滅した。
+- **PBI 03**: `trustDb.ts` を公開 API の re-export shim に縮小し、ライフサイクルを `TrustDbKernel` に移設。Kernel は settings アクセスを注入可能な `settingsReader` port（`{ getAll, setAll }`）で受け取り、既定実装は `chrome.storage.local` の `settings` キーを直接読み書きする。`getSettingsStore()` の動的 import と `settingsStore` へのモジュール依存は無くなった。
+
+上の「将来の解消計画（TrancoVersionTracker の StorageAdapter 化）」がこの形で実現された。Tranco version の source-of-truth は `chrome.storage.local` の `settings` オブジェクト（`StorageKeys.TRANCO_VERSION` / `TRANCO_DOMAINS`）に一本化されており、二重管理は発生しない。
+
+### 循環 2: 未解消
+
+`storageMaintenance.ts → background/sqliteClient.ts` は動的 import のまま残る。`sqliteClient` は PBI 05 で `SqliteGateway` 委譲の shim になったが、`utils → background` の逆方向依存自体は変わっていない。
+
+### 循環 3: import パスのみ変更
+
+`trancoConsentManager.ts` の動的 import 先が `storage/settingsStore.js` から `storage.js` barrel に変わった（PBI 01）。`StorageKeys` の静的 import は従来どおり実行時循環にならない。
+
 ## Consequences
 
 * **Positive**: 循環の存在理由が文書化され、将来の開発者が「不要な複雑さ」と誤認して削除するリスクを防止する。
@@ -91,9 +108,10 @@ class TrancoVersionTracker {
 
 ## References
 
-* src/utils/storage/settingsStore.ts:72
-* src/utils/trustDb/trustDb.ts:62-66, 109-113
-* src/utils/storage/storageMaintenance.ts:13
+* src/utils/trustDb/TrustDbKernel.ts — `settingsReader` port（循環 1 解消後の settings アクセス）
+* src/utils/storage/storageMaintenance.ts:13 — 循環 2（未解消）
+* src/utils/trustDb/trancoConsentManager.ts — 循環 3
 * dev-docs/LAYERS.md — 層定義の SSOT
-* PBI 2026-08-22-02-refactor-utils-layer-boundary
+* PBI 2026-08-31-01-fix-settings-dual-truth（循環 1 の settingsStore 側を削除）
+* PBI 2026-08-31-03-fix-trustdb-god-module（循環 1 の trustDb 側を port 化）
 
