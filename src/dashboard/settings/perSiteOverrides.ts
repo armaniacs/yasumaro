@@ -4,7 +4,6 @@
  */
 
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
-import { saveSettings } from '../../utils/storage/settingsStore.legacy.js';
 import { StorageKeys, type DomainCleansingOverride } from '../../utils/storage/types.js';
 import { CLEANSING_RULES } from '../../utils/aiSummaryCleaner/rules.js';
 import { normalizeDomain, upsertDomainOverride } from '../../utils/aiSummaryCleaner/perSiteOverride.js';
@@ -70,7 +69,7 @@ async function loadOverrides(): Promise<DomainCleansingOverride[]> {
 async function saveOverrides(next: DomainCleansingOverride[]): Promise<void> {
     const cur = await settingsRepository.getAll();
     (cur as Record<string, unknown>)[StorageKeys.DOMAIN_CLEANSING_OVERRIDES] = next;
-    await saveSettings(cur);
+    await settingsRepository.setAll(cur);
 }
 
 function renderList(listEl: HTMLElement, overrides: DomainCleansingOverride[], onSelect: (d: string) => void): void {

@@ -4,7 +4,6 @@
  */
 
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
-import { saveSettings } from '../../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
@@ -101,7 +100,7 @@ async function saveContentSettings(): Promise<void> {
         settings[StorageKeys.SUMMARY_NORMALIZE_ENABLED] = getNormalizeEnabledCheckbox()?.checked ?? true;
 
         // 設定を保存
-        await saveSettings(settings);
+        await settingsRepository.setAll(settings);
 
         // 成功メッセージを表示
         showStatus('contentSettingsStatus', getMessage('settingsSaved') || '設定を保存しました', 'success');

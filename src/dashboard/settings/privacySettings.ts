@@ -4,7 +4,6 @@
  */
 
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
-import { saveSettings } from '../../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { addLog, LogType } from '../../utils/logger.js';
@@ -131,7 +130,7 @@ async function savePrivacySettings(): Promise<void> {
             [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: (selectedBehavior?.value || 'save') as 'save' | 'skip' | 'confirm'
         };
 
-        await saveSettings(newSettings);
+        await settingsRepository.setAll(newSettings);
         showStatus('privacyStatus', getMessage('privacySaved'), 'success');
 
     } catch (error: unknown) {
