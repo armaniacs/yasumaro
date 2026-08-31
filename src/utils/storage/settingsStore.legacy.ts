@@ -67,6 +67,7 @@ export async function saveSettingsWithAllowedUrls(settings: Settings): Promise<v
 
 export function clearSettingsCache(): void {
   cachedSettings = null;
+  repo.clearCache();
 }
 
 export { purgeLegacyStorage } from './savedUrlRepository.js';
