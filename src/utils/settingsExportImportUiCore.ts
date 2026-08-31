@@ -8,7 +8,7 @@
  * ImportContext / ExportContext として提供する。
  */
 
-import { getSettings } from './storage/settingsStore.js';
+import { settingsRepository } from './storage/SettingsRepository.js';
 import type { Settings } from './storage/types.js';
 import { errorMessage } from './errorUtils.js';
 import { getMessage } from './i18n.js';
@@ -64,7 +64,7 @@ export async function handleExport(
 ): Promise<void> {
   let settings: Settings;
   try {
-    settings = await getSettings();
+    settings = await settingsRepository.getAll();
   } catch (error) {
     ctx.logExportError?.(errorMessage(error));
     ctx.showStatus(`${getMessage('exportError')}: ${errorMessage(error)}`, 'error');
@@ -154,7 +154,7 @@ export async function handleFileImport(
   if (isEncryptedExport(parsed)) {
     let requirePasswordOnImport = true;
     try {
-      const settings = await getSettings();
+      const settings = await settingsRepository.getAll();
       requirePasswordOnImport = settings.mp_require_on_import === true;
     } catch (error) {
       ctx.logImportError?.(errorMessage(error));
