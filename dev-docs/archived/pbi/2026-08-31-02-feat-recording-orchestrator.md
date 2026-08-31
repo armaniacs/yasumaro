@@ -53,9 +53,9 @@ Scenario: エラー — SqliteClient 未設定でも BEST_EFFORT で継続
   Then  saveSqlite step は WARN ログを残して skip し、後続の saveMetadata は実行される
 
 ## 受け入れ基準
-- [ ] `RecordingOrchestrator` の公開 Interface が `record(data, opts?)` に統一され、`recordWithPreview` / `retryObsidianWriteOnly` の convenience alias が削除される（現状: `record(data, {mode})` は実装済みだが alias が残存。offlineQueueProcessor が `retryObsidianWriteOnly` を呼ぶため呼出側の移行が必要）
+- [x] `RecordingPipeline` facade から `recordWithPreview` を削除（production は `execute(data)` / `record(data)` の `previewOnly` で preview を通す）。`retryObsidianWriteOnly` は AI 再実行なしの Obsidian-only retry という別操作として facade に残す（offlineQueueProcessor が `RecordingPipelineLike` 経由で依存）。`RecordingOrchestrator` の同名 convenience alias（`recordWithPreview` / `retryObsidianWriteOnly`）はまだ残存
 - [x] `PerUrlMutexMap` の static 互換 (`urlRecordMutexes` / `getOrCreateStatic` / `runExclusiveStatic`) が削除され、instance `mutexMap` のみに
-- [ ] `buildRecordingPipelineDeps` identity 関数が削除され、`createRecordingPipeline` も Orchestrator 生成に一本化（現状: deprecated shim として残存。`createBackgroundServices` が使用中）
+- [x] `buildRecordingPipelineDeps` identity 関数を削除し、`createRecordingPipeline` / `createBackgroundServices` / テストヘルパが deps を直接渡す形に一本化
 - [x] 全 13 steps が Orchestrator の private array に登録され、caller から `create*Step()` が不可視。`saveSqliteStep` も `StepDeps` 経由
 - [x] 既存の `steps/__tests__/*` + `recordingPipeline-*.test.ts` が同一 Seam で green
 - [x] `service-worker` / `manualRecord` / `saveRecord` の 3 経路が Orchestrator 経由で green（container singleton の `perUrlMutexMap` を pipeline deps に配線し、cross-instance の URL 直列化を回復済み）
@@ -71,13 +71,12 @@ Scenario: エラー — SqliteClient 未設定でも BEST_EFFORT で継続
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了（pipeline / handlers / service-worker の影響確認 — 2026-09-01。`perUrlMutexMap` 未配線による duplicate-entry race を発見・修正）
-- [ ] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の pipeline 章、ADR 必要なら新規）
+- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md §8.3 Per-URL Recording Serialization を新設。pipeline の step registry は Orchestrator private のため章追加は見送り）
 - [x] `npm run validate` が green
 
-## 残作業（次セッション）
-- `recordWithPreview` / `retryObsidianWriteOnly` alias の削除と呼出側（offlineQueueProcessor / RecordingPipeline facade）の `record(data, {mode})` への移行
-- `buildRecordingPipelineDeps` / `createRecordingPipeline` facade の削除と `createBackgroundServices` の直接 `RecordingOrchestrator` 生成への移行
-- DESIGN_SPECIFICATIONS.md の pipeline 章更新
+## 残作業（フォローアップ）
+- `RecordingOrchestrator` の `recordWithPreview` / `retryObsidianWriteOnly` convenience alias の削除（呼出側は既に `record` / facade 経由。orchestrator の内部整理のみ）
+- `RecordingPipeline` facade（`execute` / `record` / `retryObsidianWriteOnly` の 3 メソッド）と `createRecordingPipeline` の完全撤去と、~12 テストファイル + `offlineQueueProcessor` + `recordingHandlers` の `RecordingOrchestrator` 直接利用への移行。blast radius が大きいため別 PBI で扱う
 
 ## 実装メモ（任意）
 - `PipelineKernel` と `StepExecutor` は Orchestrator の private 実装として残し、外部 Interface には出さない（internal seam）

@@ -25,7 +25,6 @@ const mocks = vi.hoisted(() => ({
   SessionStore: vi.fn(),
   HeaderDetector: vi.fn(),
   createRecordingPipeline: vi.fn(),
-  buildRecordingPipelineDeps: vi.fn(),
   getPrivacyInfoWithCache: vi.fn(),
   hasPrivacyConsent: vi.fn(),
   getSettings: vi.fn(),
@@ -57,7 +56,6 @@ vi.mock('../recordingCache.js', () => ({
 }));
 vi.mock('../pipeline/RecordingPipeline.js', () => ({
   createRecordingPipeline: mocks.createRecordingPipeline,
-  buildRecordingPipelineDeps: mocks.buildRecordingPipelineDeps,
 }));
 vi.mock('../../popup/privacyConsent.js', () => ({ hasPrivacyConsent: mocks.hasPrivacyConsent }));
 vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
@@ -172,7 +170,6 @@ describe('production composition contract', () => {
     mocks.SessionStore.mockImplementation(function () { return { sessionStore: true }; });
     mocks.HeaderDetector.mockImplementation(function () { return { headerDetector: true }; });
     mocks.createRecordingPipeline.mockReturnValue({ pipeline: true });
-    mocks.buildRecordingPipelineDeps.mockImplementation((deps: unknown) => deps);
     mocks.getPrivacyInfoWithCache.mockResolvedValue(null);
     mocks.hasPrivacyConsent.mockResolvedValue(true);
     mocks.getSettings.mockResolvedValue({});
@@ -210,7 +207,7 @@ describe('production composition contract', () => {
     createBackgroundServices();
 
     expect(mocks.createRecordingPipeline).toHaveBeenCalledTimes(1);
-    expect(mocks.buildRecordingPipelineDeps).toHaveBeenCalledWith(
+    expect(mocks.createRecordingPipeline).toHaveBeenCalledWith(
       expect.objectContaining({
         obsidian: { obsidian: true },
         aiService: { fallbackAIService: true },
