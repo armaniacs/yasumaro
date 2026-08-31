@@ -18,7 +18,6 @@ import { getAiProviderElements, updateAIProviderVisibilityMulti } from '../setti
 import { updateProviderSettingsLayout } from '../aiProviderLayoutManager.js';
 import { purgeOldRecordsNow, purgeContentNow, isServiceError } from '../dashboardSqliteService.js';
 import { collectBProviderPrioritySlots } from '../aiProviderB/priorityListView.js';
-import { getSettings } from '../../utils/storage/settingsStore.js';
 
 const SETTINGS_FORM_SELECTOR = '#panel-general';
 
@@ -138,7 +137,7 @@ export async function loadGeneralSettings(repo: SettingsReader = settingsReposit
  */
 export async function collectCurrentProviderPrioritySlots(): Promise<ProviderSlot[]> {
   try {
-    const layout = (await getSettings())[StorageKeys.AI_PROVIDER_LAYOUT] as 'a' | 'b' | undefined;
+    const layout = (await settingsRepository.getAll())[StorageKeys.AI_PROVIDER_LAYOUT] as 'a' | 'b' | undefined;
     if (layout === 'b') {
       const bList = document.getElementById('bPriorityList') as HTMLElement | null;
       const hasBRow = !!bList?.querySelector('.b-priority-row');
