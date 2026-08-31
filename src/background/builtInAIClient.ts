@@ -2,8 +2,7 @@
  * builtInAIClient.ts
  * Built-in AI (Prompt API) Client — Chrome (Gemini Nano) and Edge (Phi-mini)
  * Service Worker (Manifest V3) から self.LanguageModel を直接呼び出す。
- * Offscreen Document は経由しない（2026-07-28 実機検証で Service Worker 直接呼び出しの
- * 成功を確認済み。詳細: dev-docs/2026-07-28-built-in-ai-provider-integration-design.md）
+ * Offscreen Document は経由しない（Service Worker 内で self.LanguageModel へ直接アクセス可能）
  *
  * 2026-07-30 実機検証（Edge 150.0.4078.105 stable, Mac）により、Edge の Phi-mini は
  * self.LanguageModel を Chrome と同一の API 形状（availability()/create()/session.prompt()/
