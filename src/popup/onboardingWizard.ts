@@ -1,5 +1,4 @@
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
-import { saveSettings } from '../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { logError, ErrorCode } from '../utils/logger.js';
@@ -19,7 +18,7 @@ export async function hasCompletedWizard(): Promise<boolean> {
 }
 
 export async function completeWizard(type: WizardType): Promise<void> {
-  await saveSettings({
+  await settingsRepository.setAll({
     [StorageKeys.ONBOARDING_WIZARD_COMPLETED]: true,
     [StorageKeys.ONBOARDING_WIZARD_TYPE]: type,
   });
