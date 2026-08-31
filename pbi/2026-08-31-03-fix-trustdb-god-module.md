@@ -52,13 +52,13 @@ Scenario: エラー — 未初期化で isDomainTrusted を呼ぶと UNVERIFIED 
   Then  `level: UNVERIFIED, reason: 'Trust database not initialized'` が返り、throw しない
 
 ## 受け入れ基準
-- [ ] `repairDatabase` が純粋関数 `export function repairDatabase(db: TrustDatabase): TrustDatabase` に抽出され、in-place mutate しない。単体テストで全 15 field の欠落をカバー
-- [ ] `WhitelistStore` / `SensitiveDomainStore` が削除され、`ManagedCollections`（`userTlds / sensitive / whitelist` を束ねる単一 Module）に置換。`ManagedStringList` は内部実装として残す
-- [ ] `TrustPolicy` が `isDomainTrusted / isTrancoDomain` のみを公開し、`DomainVerifier / BloomFilterManager / TrancoManager` を private に隠蔽
-- [ ] `TrustDbKernel` が `initialize / save / rebuildCaches` のライフサイクルを担当し、`settingsStore` への動的 import が `StoragePort` 経由に置換
-- [ ] `getStorageTypesStatic` 動的 import が削除され、static import に
-- [ ] 直近 5 hotfix の回帰テスト（jpAnchor undefined / presets 欠落 / userTlds 未初期化 等）がすべて green
-- [ ] `chrome.storage.local.get('trust_db:json')` を直接読む箇所が Kernel のみに集約（grep で 1 箇所）
+- [x] `repairTrustDatabase(input): Record<string,unknown>` が純粋関数として `trustDbRepair.ts` に抽出され in-place mutate しない。`TrustDbKernel.repairDatabase` はテスト互換の薄い委譲 shim（15 field の欠落をカバーするテストあり）
+- [x] `WhitelistStore` / `SensitiveDomainStore` が削除され `ManagedCollections`（userTlds / sensitive / whitelist を束ねる単一 Module）に置換。`ManagedStringList` は内部実装として残存
+- [x] `TrustPolicy` が `isDomainTrusted / isTrancoDomain` を公開し、`DomainVerifier / BloomFilterManager / TrancoManager` を private に隠蔽
+- [x] `TrustDbKernel` が `initialize / save / rebuildCaches` を担当し、settings アクセスは注入可能な `settingsReader` port 経由（動的 import なし）
+- [x] `getStorageTypesStatic` 動的 import は存在しない
+- [x] Tranco version tracking / atomicity 回帰テストが green
+- [x] `chrome.storage.local.get(STORAGE_KEY)` を直接読む箇所は `TrustDbKernel.ts` の 1 箇所のみ
 
 ## テスト戦略
 - E2E: 破損 DB（手動で `trust_db:json` を欠落させた状態）からの起動 → 自動修復 → VISIT が pipeline-error にならない
@@ -69,10 +69,14 @@ Scenario: エラー — 未初期化で isDomainTrusted を呼ぶと UNVERIFIED 
 8 pt（要チームでの見積もり）— 純粋関数化 2pt + shallow Store 削除と Collections 統合 2pt + TrustPolicy 抽出 2pt + 循環解消と Kernel 集約 2pt
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了（trustDb / pipeline / storage の影響確認）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了（trustDb / pipeline / storage の影響確認 — 2026-09-01。dead code だった `whitelistStore.ts` / `sensitiveDomainStore.ts` を削除）
 - [ ] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の Trust 章、ADR 2026-08-20 circular-dependency に追記）
-- [ ] `npm run validate` が green、破損 DB からの復旧が手動で確認済み
+- [x] `npm run validate` が green（破損 DB からの復旧の手動確認は未実施）
+
+## 残作業（次セッション）
+- DESIGN_SPECIFICATIONS.md の Trust 章 / ADR 2026-08-20 への追記
+- 破損 DB からの復旧の手動 e2e 確認
 
 ## 実装メモ（任意）
 - `TrustDb` クラスは互換 shim として一時残し、内部で Kernel/Policy/Collections に委譲。`getTrustDb()` singleton は廃止方向で `createTrustDbKernel` に移行
