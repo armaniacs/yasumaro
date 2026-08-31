@@ -46,12 +46,12 @@ Scenario: 境界 — getBytesInUse 不可用でも getAll は成功する
   Then  quota チェックはスキップされ、migration/decrypt は正常に完了する
 
 ## 受け入れ基準
-- [ ] `StoragePort` が `get/set/onChanged/getBytesInUse` を公開し、`InMemoryStoragePort` が version Map + auto-increment と `getBytesInUse` 推定で CAS セマンティクスを再現する（`getVersion/setVersion` の明示的追加は次 PBI に委譲、現行は `dump()` の version 検証で担保）
-- [ ] `SettingsRepository` が 1s TTL cache を内部に持ち、`onChanged` で即時 invalidate する。`buildAllowedUrls`/`computeUrlsHash` は `src/utils/storage/urlWhitelist.ts` に残し repo 内に移さない（呼び出し元で `repo.setAll` + `updateDomainFilterCache` の 2 行に分離）。外部から `cachedSettings` に触れられない
-- [ ] `src/utils/storage/settingsStore.legacy.ts` / `settingsStore.ts` が削除され、34 箇所の `getSettings` import が 0 になる（`src/utils/storage.ts` barrel は `SettingsRepository` / `settingsMigration` に切り替えてから削除）
-- [ ] `getAll()` の scattered fallback が `__internal` なテスト専用 seam に分離され、通常経路は `settings` + `settings_migrated` の 1 経路のみ。通常経路のカバレッジが 90% 以上
-- [ ] 既存の `SettingsRepository.__tests__` 18 ファイルが InMemory version 付きで green、e2e の Settings 保存が手動で成功する。`getVersion(key)` ヘルパで version インクリメントを検証
-- [ ] ADR `2026-03-20-default-settings-single-source` に追記（単一化の完成、AllowedUrls は urlWhitelist に残す旨）
+- [x] `StoragePort` が `get/set/onChanged/getBytesInUse` を公開し、`InMemoryStoragePort` が version Map + auto-increment と `getBytesInUse` 推定で CAS セマンティクスを再現する（`getVersion/setVersion` の明示的追加は次 PBI に委譲、現行は `dump()` の version 検証で担保）
+- [x] `SettingsRepository` が 1s TTL cache を内部に持ち、`onChanged` で即時 invalidate する。`buildAllowedUrls`/`computeUrlsHash` は `src/utils/storage/urlWhitelist.ts` に残し repo 内に移さない（呼び出し元で `repo.setAll` + `updateDomainFilterCache` の 2 行に分離）。外部から `cachedSettings` に触れられない
+- [x] `src/utils/storage/settingsStore.legacy.ts` / `settingsStore.ts` が削除され、34 箇所の `getSettings` import が 0 になる（`src/utils/storage.ts` barrel は `SettingsRepository` / `settingsMigration` に切り替えてから削除）
+- [x] `getAll()` の scattered fallback が `__internal` なテスト専用 seam に分離され、通常経路は `settings` + `settings_migrated` の 1 経路のみ。通常経路のカバレッジが 90% 以上
+- [x] 既存の `SettingsRepository.__tests__` 18 ファイルが InMemory version 付きで green、e2e の Settings 保存が手動で成功する。`getVersion(key)` ヘルパで version インクリメントを検証
+- [x] ADR `2026-03-20-default-settings-single-source` に追記（単一化の完成、AllowedUrls は urlWhitelist に残す旨）
 
 ## テスト戦略
 - E2E: ダッシュボードで Obsidian/AI 設定を保存 → 再読込後も反映される、chrome.storage の `settings:version` がインクリメントされる
@@ -62,10 +62,10 @@ Scenario: 境界 — getBytesInUse 不可用でも getAll は成功する
 3 pt（要チームでの見積もり）— Port 拡張 1pt + repo cache 移設 1pt + 34 箇所置換と削除 1pt
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了（storage / pipeline / trustDb の影響確認）
-- [ ] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の Storage Keys 章、ADR 追記）
-- [ ] `npm run validate`（type-check + tests）が green
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了（storage / pipeline / trustDb の影響確認）
+- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の Storage Keys 章、ADR 追記）
+- [x] `npm run validate`（type-check + tests）が green
 
 ## 実装メモ（任意）
 - `StoragePort` 拡張は `ChromeStoragePort` が `withOptimisticLock` の version 読みを Port 経由に委譲する形に

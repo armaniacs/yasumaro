@@ -7,7 +7,7 @@ vi.mock('../../../utils/logger.js', () => ({
     LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
 }));
 
-vi.mock('../../../utils/storage/settingsStore.js', () => ({
+vi.mock('../../../utils/storage.js', () => ({
     getAllowedUrls: vi.fn(async () => new Set<string>()),
 }));
 

@@ -6,13 +6,53 @@
 
 import { ObsidianClient } from '../obsidianClient.js';
 import * as storage from '../../utils/storage/types.js';
-import * as storageSettings from '../../utils/storage/settingsStore.js';
+import * as storageSettings from '../../utils/storage.js';
 import { addLog, LogType } from '../../utils/logger.js';
+
+const mockGetSettings = vi.hoisted(() => vi.fn());
 
 vi.mock('../../utils/storage/types.js');
 vi.mock('../../utils/storage/defaults.js');
 vi.mock('../../utils/storage/encryptionSession.js');
-vi.mock('../../utils/storage/settingsStore.js');
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  const getManyFromAll = async (keys: readonly string[]) => {
+    const all = await mockGetSettings();
+    const out: Record<string, unknown> = {};
+    for (const k of keys) out[k] = (all as Record<string, unknown>)?.[k];
+    return out;
+  };
+  return {
+    ...actual,
+    settingsRepository: {
+      ...(actual.settingsRepository as Record<string, unknown>),
+      getAll: mockGetSettings,
+      get: vi.fn(async (key: string) => (await mockGetSettings())?.[key]),
+      getMany: getManyFromAll,
+      clearCache: vi.fn(),
+      set: vi.fn(),
+      setAll: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = mockGetSettings;
+      get = vi.fn(async (key: string) => (await mockGetSettings())?.[key]);
+      getMany = getManyFromAll;
+      clearCache = vi.fn();
+      set = vi.fn();
+      setAll = vi.fn();
+    },
+  };
+});
+vi.mock('../../utils/storage.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    getSettings: mockGetSettings,
+    saveSettings: vi.fn(),
+    clearSettingsCache: vi.fn(),
+    saveSettingsWithAllowedUrls: vi.fn(),
+  };
+});
 vi.mock('../../utils/storage/savedUrlRepository.js');
 vi.mock('../../utils/storage/domainFilterCache.js');
 vi.mock('../../utils/storage/quota.js');

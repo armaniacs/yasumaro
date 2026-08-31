@@ -19,12 +19,11 @@ const {
   mockCheckPageStatus: vi.fn(),
 }));
 const mockGetAll = vi.hoisted(() => vi.fn());
-const mockSetAll = vi.hoisted(() => vi.fn());
+const mockSetAll = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockGetMany = vi.hoisted(() => vi.fn());
 const mockRecordDeniedVisit = vi.hoisted(() => vi.fn());
 const mockRequestPermission = vi.hoisted(() => vi.fn());
 const mockRequestAllUrls = vi.hoisted(() => vi.fn());
-const mockSaveSettings = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockExtractDomain = vi.hoisted(() => vi.fn((url: string) => {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return null; }
 }));
@@ -71,8 +70,8 @@ vi.mock('../../utils/domainUtils.js', () => ({
   extractDomain: mockExtractDomain,
 }));
 
-vi.mock('../../utils/storage/settingsStore.legacy.js', () => ({
-  saveSettings: mockSaveSettings,
+vi.mock('../../utils/storage.js', () => ({
+  saveSettings: mockSetAll,
 }));
 
 import {
@@ -1035,7 +1034,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
       return msg;
     });
     mockGetAll.mockResolvedValue({ privacy_mode: 'full_pipeline', domain_whitelist: [] });
-    mockSaveSettings.mockResolvedValue(undefined);
+    mockSetAll.mockResolvedValue(undefined);
     mockExtractDomain.mockImplementation((url: string) => {
       try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return null; }
     });
@@ -1066,8 +1065,8 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(mockGetCurrentTab).toHaveBeenCalled();
     expect(mockExtractDomain).toHaveBeenCalledWith('https://example.com/page');
-    expect(mockSaveSettings).toHaveBeenCalled();
-    const savedArg = mockSaveSettings.mock.calls[0][0];
+    expect(mockSetAll).toHaveBeenCalled();
+    const savedArg = mockSetAll.mock.calls[0][0];
     expect(savedArg.domain_whitelist).toContain('example.com');
     expect(document.getElementById('mainStatus')!.textContent).toContain('Domain added');
     expect(document.getElementById('mainStatus')!.className).toBe('success');
@@ -1080,7 +1079,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
-    expect(mockSaveSettings).not.toHaveBeenCalled();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addDomain: tab.url undefined — early return', async () => {
@@ -1089,7 +1088,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
-    expect(mockSaveSettings).not.toHaveBeenCalled();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addDomain: getCurrentTab returns null — early return', async () => {
@@ -1098,7 +1097,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
-    expect(mockSaveSettings).not.toHaveBeenCalled();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addDomain: extractDomain returns null — early return', async () => {
@@ -1107,7 +1106,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
-    expect(mockSaveSettings).not.toHaveBeenCalled();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addDomain: extractDomain returns empty string — early return', async () => {
@@ -1116,7 +1115,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
-    expect(mockSaveSettings).not.toHaveBeenCalled();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addDomain: whitelist undefined falls back to []', async () => {
@@ -1126,8 +1125,8 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
-    expect(mockSaveSettings).toHaveBeenCalled();
-    expect(mockSaveSettings.mock.calls[0][0].domain_whitelist).toContain('example.com');
+    expect(mockSetAll).toHaveBeenCalled();
+    expect(mockSetAll.mock.calls[0][0].domain_whitelist).toContain('example.com');
   });
 
   it('addDomain: statusDiv missing — still saves but no DOM update', async () => {
@@ -1138,7 +1137,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
-    expect(mockSaveSettings).toHaveBeenCalled();
+    expect(mockSetAll).toHaveBeenCalled();
   });
 
   it('addDomain: getMessage fallback when empty', async () => {
@@ -1164,9 +1163,9 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     expect(btn).toBeTruthy();
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
-    expect(mockSaveSettings).toHaveBeenCalled();
-    const savedArg = mockSaveSettings.mock.calls[0][0] as any;
-    // settingsStore.legacy receives whitelist array containing full URL
+    expect(mockSetAll).toHaveBeenCalled();
+    const savedArg = mockSetAll.mock.calls[0][0] as any;
+    // Settings repository receives whitelist array containing full URL
     expect(savedArg.domain_whitelist).toContain('https://example.com/page');
     expect(document.getElementById('mainStatus')!.textContent).toContain('Path added');
   });
@@ -1177,7 +1176,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
-    expect(mockSaveSettings).not.toHaveBeenCalled();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addPath: tab.url undefined — early return', async () => {
@@ -1186,7 +1185,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
-    expect(mockSaveSettings).not.toHaveBeenCalled();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addPath: tab is null — early return', async () => {
@@ -1195,7 +1194,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
-    expect(mockSaveSettings).not.toHaveBeenCalled();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addPath: whitelist undefined fallback', async () => {
@@ -1204,7 +1203,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
-    expect(mockSaveSettings).toHaveBeenCalled();
+    expect(mockSetAll).toHaveBeenCalled();
   });
 
   it('addPath: statusDiv missing — still saves', async () => {
@@ -1214,7 +1213,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
-    expect(mockSaveSettings).toHaveBeenCalled();
+    expect(mockSetAll).toHaveBeenCalled();
   });
 
   it('addPath: getMessage fallback when empty', async () => {

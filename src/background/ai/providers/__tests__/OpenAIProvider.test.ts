@@ -35,8 +35,8 @@ vi.mock('../../../../utils/storage/encryptionSession.js', async () => {
   const actual = await vi.importActual<typeof import('../../../../utils/storage/encryptionSession.js')>('../../../../utils/storage/encryptionSession.js');
   return { ...actual, getAllowedUrls: vi.fn(() => Promise.resolve([])) };
 });
-vi.mock('../../../../utils/storage/settingsStore.js', async () => {
-  const actual = await vi.importActual<typeof import('../../../../utils/storage/settingsStore.js')>('../../../../utils/storage/settingsStore.js');
+vi.mock('../../../../utils/storage.js', async () => {
+  const actual = await vi.importActual<typeof import('../../../../utils/storage.js')>('../../../../utils/storage.js');
   return { ...actual, getAllowedUrls: vi.fn(() => Promise.resolve([])) };
 });
 vi.mock('../../../../utils/storage/savedUrlRepository.js', async () => {

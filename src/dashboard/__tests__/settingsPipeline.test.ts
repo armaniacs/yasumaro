@@ -5,10 +5,42 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../utils/storage/settingsStore.js', () => ({
-  getSettings: vi.fn(),
-  saveSettingsWithAllowedUrls: vi.fn(),
+const { mockGetSettings: hoistedGetSettings, mockSaveSettings: hoistedSaveSettings } = vi.hoisted(() => ({
+  mockGetSettings: vi.fn(),
+  mockSaveSettings: vi.fn(),
 }));
+
+vi.mock('../../utils/storage.js', () => ({
+  getSettings: hoistedGetSettings,
+  saveSettingsWithAllowedUrls: hoistedSaveSettings,
+}));
+
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: hoistedGetSettings,
+      setAll: hoistedSaveSettings,
+      getMany: hoistedGetSettings,
+      clearCache: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = hoistedGetSettings;
+      setAll = hoistedSaveSettings;
+      getMany = hoistedGetSettings;
+      clearCache = vi.fn();
+    },
+  };
+});
+
+vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    updateDomainFilterCache: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 vi.mock('../../utils/settingsFormBinding.js', () => ({
   extractSettingsFromInputs: vi.fn(),
@@ -40,7 +72,7 @@ vi.mock('../utils/confirmDialog.js', () => ({
 }));
 
 import { saveDashboardSettings, GENERAL_SETTINGS_VALIDATION_FIELDS } from '../settingsPipeline.js';
-import * as settingsStore from '../../utils/storage/settingsStore.js';
+import * as settingsStore from '../../utils/storage.js';
 import * as formBinding from '../../utils/settingsFormBinding.js';
 import * as fieldValidation from '../settings/fieldValidation.js';
 import { showConfirmDialog } from '../utils/confirmDialog.js';

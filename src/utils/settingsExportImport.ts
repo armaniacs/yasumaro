@@ -5,7 +5,7 @@
 
 import { getOrCreateHmacSecret } from './storage/encryptionSession.js';
 import { settingsRepository } from './storage/SettingsRepository.js';
-import { API_KEY_FIELDS } from '../utils/storage/settingsStore.legacy.js';
+import { API_KEY_FIELDS } from './storage/settingsMigration.js';
 import { Settings } from './storage/types.js';
 import { computeHMAC, encrypt, decryptData, deriveKey, constantTimeCompare } from './crypto/index.js';
 import { generateSalt } from './crypto/index.js';

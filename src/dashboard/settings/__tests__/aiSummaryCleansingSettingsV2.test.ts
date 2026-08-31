@@ -5,9 +5,27 @@ const mockGetSettings = vi.hoisted(() => vi.fn());
 const mockSaveSettings = vi.hoisted(() => vi.fn());
 const mockLogError = vi.hoisted(() => vi.fn());
 
-vi.mock('../../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return { ...actual, getSettings: mockGetSettings, saveSettings: mockSaveSettings };
+});
+vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: mockGetSettings,
+      setAll: mockSaveSettings,
+      getMany: mockGetSettings,
+      clearCache: vi.fn(),
+    },
+    SettingsRepository: class {
+      getAll = mockGetSettings;
+      setAll = mockSaveSettings;
+      getMany = mockGetSettings;
+      clearCache = vi.fn();
+    },
+  };
 });
 vi.mock('../../../utils/logger.js', () => ({
   logError: mockLogError,

@@ -16,7 +16,7 @@ vi.mock('../../utils/tagUtils.js', () => ({
   getAllCategories: vi.fn().mockReturnValue(['tech', 'work', 'personal']),
 }));
 
-vi.mock('../../utils/storage/settingsStore.js', async (importOriginal) => {
+vi.mock('../../utils/storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 

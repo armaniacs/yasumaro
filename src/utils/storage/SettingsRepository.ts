@@ -141,7 +141,6 @@ export class SettingsRepository {
 
     // Unified read via Port (no direct chrome.storage)
     const result = await this.port.get(['settings', 'settings_migrated']) as Record<string, unknown>;
-    const rawSettings = result['settings'] as SettingsType | undefined;
 
     let migratedResult: SettingsType;
     if (result['settings'] && result['settings_migrated']) {
@@ -161,18 +160,32 @@ export class SettingsRepository {
       }
       migratedResult = migrated;
     } else {
-      // Scattered fallback (legacy pre-migration path) — also via Port
-      const keysToGet: string[] = Object.values(StorageKeys) as string[];
-      let scattered = await this.port.get(keysToGet) as Record<string, unknown>;
-      if (rawSettings) scattered = { ...scattered, ...(rawSettings as Record<string, unknown>) };
-      const { settings: migrated, reEncrypted } = await applyMigrationsAndDecryptWithReEncrypt(scattered as SettingsType, { getEncryptionKey: keyProvider });
-      if (Object.keys(reEncrypted).length > 0) {
-        await this.persistReEncrypted(reEncrypted);
-      }
-      migratedResult = migrated;
+      migratedResult = await this.__getAllScatteredFallback(result['settings'] as SettingsType | undefined, keyProvider);
     }
     this.cached = { data: migratedResult, timestamp: Date.now() };
     return migratedResult;
+  }
+
+  /**
+   * @internal Test-only seam for the legacy scattered-key migration path.
+   * Normal production code always writes a single `settings` object,
+   * so this path is unreachable after first migration. Exposed only so
+   * migration tests can exercise it without touching private internals.
+   */
+  async __getAllScatteredFallback(
+    rawSettings: SettingsType | undefined,
+    keyProvider: () => Promise<CryptoKey>
+  ): Promise<SettingsType> {
+    const { applyMigrationsAndDecryptWithReEncrypt } = await import('./settingsMigration.js');
+    // Scattered fallback (legacy pre-migration path) — also via Port
+    const keysToGet: string[] = Object.values(StorageKeys) as string[];
+    let scattered = await this.port.get(keysToGet) as Record<string, unknown>;
+    if (rawSettings) scattered = { ...scattered, ...(rawSettings as Record<string, unknown>) };
+    const { settings: migrated, reEncrypted } = await applyMigrationsAndDecryptWithReEncrypt(scattered as SettingsType, { getEncryptionKey: keyProvider });
+    if (Object.keys(reEncrypted).length > 0) {
+      await this.persistReEncrypted(reEncrypted);
+    }
+    return migrated;
   }
 
   clearCache(): void {
