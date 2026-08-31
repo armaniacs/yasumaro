@@ -25,6 +25,10 @@ sbom.json
 docs/typedoc/
 dev-docs/typedoc/
 dev-docs/blog-*
+dev-docs/benchmark-*
+dev-docs/readability-spike-*
+dev-docs/verify-vulnhunt-*
+dev-docs/cleansing-corpus-report*
 dev-docs/dig-findings-*
 plans/
 .ruff_cache/
