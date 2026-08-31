@@ -14,40 +14,9 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-`pbi/` に残っているのは**未完了のPBIのみ**。完了したものは `dev-docs/archived/pbi/` にある。
+**全PBI（33件）が完了しアーカイブ済み。未完了のPBIは 0 件。** 完了したものは `dev-docs/archived/pbi/` にある。
 
-3 系統に分かれる。**着手順は各系統のバックログ索引（Wave 提案）に従う**。下記の表は各系統内をファイル名の連番順（＝おおむね RICE 順）で並べているが、RICE の絶対値は系統をまたいで比較できない（29 系 / 30 系 / 31 系で Reach/Impact の尺度が異なる）。
-
-### セキュリティ（VulnHunter 2026-08-29 監査）
-
-着手順・Wave 分割は [2026-08-29-00-backlog-vulnhunt-audit.md](2026-08-29-00-backlog-vulnhunt-audit.md) を参照。ファイル名の `NN` が RICE 順位。
-
-**PR #68–#81 と plan/0830-backlog-execution で 29 件が完全着地しアーカイブ済み**（`dev-docs/archived/pbi/`）。以下は未完了のみ。
-
-| ファイル | タイトル | 状態 | 種別 | 難易度 | 副作用 | RICE |
-|---|---|---|---|---|---|---|
-| [2026-08-29-00-backlog-vulnhunt-audit.md](2026-08-29-00-backlog-vulnhunt-audit.md) | VulnHunter監査のバックログ（候補列挙＋RICE＋なぜなぜ分析＋トレーサビリティ） | ⬜ | 🔧 | - | - | 索引 |
-
-
-
-### クレンジング改善（2026-08-30）
-
-着手順・Wave 分割は [2026-08-30-00-backlog-cleansing.md](2026-08-30-00-backlog-cleansing.md) を参照。ファイル名の `NN` は作成順で RICE 順位ではない（表は RICE 降順）。
-
-| ファイル | タイトル | 状態 | 種別 | 難易度 | 副作用 | RICE |
-|---|---|---|---|---|---|---|
-| [2026-08-30-00-backlog-cleansing.md](2026-08-30-00-backlog-cleansing.md) | クレンジング改善のバックログ（候補列挙＋RICE＋推奨実行順＋トレーサビリティ） | ⬜ | 🔧 | - | - | 索引 |
-
-### UI/デザイン視認性（2026-08-31）
-
-VulnHunter セキュリティ修正（29 系）や クレンジング改善（30 系）とは**独立した新系統**。着手順・Wave は [2026-08-31-00-backlog-ui-visibility.md](2026-08-31-00-backlog-ui-visibility.md) を参照。RICE の絶対値は他系統と比較できない。
-
-| ファイル | タイトル | 状態 | 種別 | 難易度 | 副作用 | RICE |
-|---|---|---|---|---|---|---|
-| [2026-08-31-00-backlog-ui-visibility.md](2026-08-31-00-backlog-ui-visibility.md) | UI/デザイン視認性のバックログ（候補列挙＋RICE＋推奨実行順＋トレーサビリティ） | ⬜ | 🔧 | - | - | 索引 |
-
-> 31-01（ライトモード視認性改善）は完了しアーカイブ済み（`dev-docs/archived/pbi/`）。
-> 新規候補はバックログ索引を参照。
+`pbi/` には INDEX のみが残る。
 
 ---
 
@@ -111,7 +80,13 @@ VulnHunter セキュリティ修正（29 系）や クレンジング改善（30
 - 2026-08-30-13-feat-cleansing-spa-dynamic-content.md（`b6b6d7de` — watchDynamicContent）
 - 2026-08-30-03-feat-cleansing-shadow-dom-traversal.md（`b6b6d7de` — querySelectorAllDeep）
 
-残置: なし（全PBI完了）、索引 29-00/30-00/31-00 は履歴として残置
+残置: なし（全PBI完了）、バックログ索引はアーカイブ済み
+
+### 2026-08-30 バックログ索引アーカイブ
+
+- 2026-08-29-00-backlog-vulnhunt-audit.md（VulnHunter監査バックログ — 全16件の実体PBIがアーカイブ済みのため本文書も移動）
+- 2026-08-30-00-backlog-cleansing.md（クレンジング改善バックログ — 全14件の実体PBIがアーカイブ済みのため本文書も移動）
+- 2026-08-31-00-backlog-ui-visibility.md（UI/デザイン視認性バックログ — 全1件の実体PBIがアーカイブ済みのため本文書も移動）
 
 - 2026-08-30-05-feat-cleansing-offscreen-delegation.md（`e7540e66` — Offscreen委譲 PoC、feature flag OFFでフォールバック）
 - 2026-08-30-10-feat-whitelist-adapter-auto-generation.md（`7faaad20` — generate-whitelist-adapter.mjs、候補17セレクタ計測＋LLMプロンプト）
