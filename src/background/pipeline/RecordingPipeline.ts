@@ -33,11 +33,6 @@ export function createRecordingPipeline(deps: RecordingPipelineDeps): RecordingP
   );
 }
 
-/** @deprecated Use RecordingOrchestrator directly — this shallow identity function will be removed */
-export function buildRecordingPipelineDeps(deps: Pick<RecordingPipelineDeps, 'getPrivacyInfoWithCache' | 'getSettingsWithCache' | 'obsidian' | 'aiService' | 'sqliteClient' | 'urlStore' | 'offlineNetworkQueue' | 'perUrlMutexMap'>): RecordingPipelineDeps {
-  return { ...deps };
-}
-
 export class RecordingPipeline {
   private orchestrator: RecordingOrchestrator;
 
@@ -86,10 +81,9 @@ export class RecordingPipeline {
     return this.orchestrator.record(data);
   }
 
-  async recordWithPreview(data: RecordingData): Promise<RecordingResult> {
-    return this.orchestrator.record(data, { mode: 'preview' });
-  }
-
+  // retryObsidianWriteOnly is a distinct operation (Obsidian append only, no AI
+  // re-run) that offlineQueueProcessor depends on via RecordingPipelineLike.
+  // It delegates to the orchestrator's retryObsidian record mode.
   async retryObsidianWriteOnly(job: { title: string; url: string; summary: string; tags?: string[] }): Promise<boolean> {
     return this.orchestrator.retryObsidianWriteOnly(job);
   }

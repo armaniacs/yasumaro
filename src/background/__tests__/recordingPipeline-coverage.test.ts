@@ -3,7 +3,7 @@
 // Targets: truncateContentSize, isValidFetchUrl (via SSRF),
 //          getSavedUrlsWithCache, invalidateInstanceCache,
 //          normalizeUrlForCache, getPrivacyInfoWithCache (session storage),
-//          _recordImpl branches, recordWithPreview
+//          _recordImpl branches, preview via record({ previewOnly: true })
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 
@@ -140,18 +140,16 @@ vi.mock('../pipeline/RecordingPipeline.ts', async () => {
   const { RecordingCache: RealRecordingCache } = await import('../recordingCache.ts');
   const RecordingPipeline = vi.fn().mockImplementation(function(this: any) {
     this.execute = vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' });
-    // record/recordWithPreview delegate to execute, mirroring the real class,
-    // so tests can assert on the settings-fetch + execute delegation contract.
+    // record delegates to execute, mirroring the real class, so tests can
+    // assert on the settings-fetch + execute delegation contract.
     this.record = async (data: unknown) => {
       const settings = await RealRecordingCache.getSettingsWithCache();
       return this.execute(data, settings);
     };
-    this.recordWithPreview = (data: Record<string, unknown>) => this.record({ ...data, previewOnly: true });
   });
   return {
     RecordingPipeline,
     createRecordingPipeline: vi.fn().mockImplementation(() => new RecordingPipeline()),
-    buildRecordingPipelineDeps: vi.fn().mockImplementation((deps: unknown) => deps),
   };
 });
 
@@ -190,7 +188,7 @@ function makeMockAiClient() {
 }
 
 // Re-arms the mocked RecordingPipeline's execute() while keeping the
-// record/recordWithPreview delegation defined by the module mock factory.
+// record delegation defined by the module mock factory.
 function mockPipelineExecute(mockExecute: ReturnType<typeof vi.fn>): void {
   // @ts-expect-error - vi.fn() type narrowing
   RecordingPipeline.mockImplementation(function(this: any) {
@@ -199,7 +197,6 @@ function mockPipelineExecute(mockExecute: ReturnType<typeof vi.fn>): void {
       const settings = await RecordingCache.getSettingsWithCache();
       return this.execute(data, settings);
     };
-    this.recordWithPreview = (data: Record<string, unknown>) => this.record({ ...data, previewOnly: true });
   });
 }
 
@@ -621,7 +618,7 @@ describe('RecordingPipeline - record (delegates to RecordingPipeline)', () => {
   });
 });
 
-describe('RecordingPipeline - recordWithPreview', () => {
+describe('RecordingPipeline - preview via record({ previewOnly: true })', () => {
   let logic: RecordingPipeline;
   let mockExecute: vi.Mock;
 
@@ -646,12 +643,13 @@ describe('RecordingPipeline - recordWithPreview', () => {
     logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
   });
 
-  test('calls record with previewOnly=true', async () => {
-    await logic.recordWithPreview({
+  test('passes previewOnly=true straight through to execute', async () => {
+    await logic.record({
       title: 'Test',
       url: 'https://example.com',
       content: 'content',
-    });
+      previewOnly: true,
+    } as never);
 
     expect(mockExecute).toHaveBeenCalledWith(
       expect.objectContaining({ previewOnly: true }),
@@ -660,24 +658,26 @@ describe('RecordingPipeline - recordWithPreview', () => {
   });
 
   test('returns preview result', async () => {
-    const result = await logic.recordWithPreview({
+    const result = await logic.record({
       title: 'Preview Page',
       url: 'https://example.com',
       content: 'preview content',
-    });
+      previewOnly: true,
+    } as never);
 
     expect(result.success).toBe(true);
     expect(result.summary).toBe('Preview summary');
   });
 
-  test('preserves other data fields when setting previewOnly', async () => {
-    await logic.recordWithPreview({
+  test('preserves other data fields alongside previewOnly', async () => {
+    await logic.record({
       title: 'My Page',
       url: 'https://example.com',
       content: 'some content',
       force: true,
       skipDuplicateCheck: true,
-    });
+      previewOnly: true,
+    } as never);
 
     expect(mockExecute).toHaveBeenCalledWith(
       expect.objectContaining({

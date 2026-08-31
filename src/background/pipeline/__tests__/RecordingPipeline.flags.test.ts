@@ -2,7 +2,7 @@
  * RecordingPipeline flag combinations — deep module interface test
  *
  * Verifies the 8 combinations of force / skipDuplicateCheck / previewOnly
- * through the public seam `record()` / `recordWithPreview()`. This is the
+ * through the public seam `record()` (previewOnly is passed in the data). This is the
  * test surface for the deep module: bugs in flag interaction live in how
  * execute() calls steps, not in any single step.
  *
