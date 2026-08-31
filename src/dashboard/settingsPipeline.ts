@@ -7,8 +7,8 @@
  */
 
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
-import { saveSettingsWithAllowedUrls } from '../utils/storage/settingsStore.legacy.js';
 import { StorageKeys } from '../utils/storage/types.js';
+import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 import { extractSettingsFromInputs, extractLocalMarkdownExportTiming, type ValidationSchema } from '../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../utils/settingsSchemas.js';
 import { collectProviderPrioritySlots } from './generalSettings/settingsForm.js';
@@ -199,7 +199,8 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
   const currentSettings = await settingsRepository.getAll();
   const mergedSettings = { ...currentSettings, ...newSettings };
 
-  await saveSettingsWithAllowedUrls(mergedSettings);
+  await settingsRepository.setAll(mergedSettings);
+  await updateDomainFilterCache(await settingsRepository.getAll());
 
   options.onSuccess?.();
 
