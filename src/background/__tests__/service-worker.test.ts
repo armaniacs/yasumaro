@@ -416,18 +416,16 @@ vi.mock('../aiClient.js', () => ({
     }
 }));
 vi.mock('../pipeline/RecordingPipeline.js', () => {
-    // record/recordWithPreview live on the prototype (not as instance fields)
-    // so vi.spyOn(RecordingPipeline.prototype, 'record') can override them.
+    // record lives on the prototype (not as an instance field) so
+    // vi.spyOn(RecordingPipeline.prototype, 'record') can override it.
     const RecordingPipeline = vi.fn().mockImplementation(function(this: any) {
         this.execute = vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' });
         this.retryObsidianWriteOnly = vi.fn().mockResolvedValue(true);
     });
     RecordingPipeline.prototype.record = vi.fn().mockResolvedValue({ success: true, skipped: false });
-    RecordingPipeline.prototype.recordWithPreview = vi.fn().mockResolvedValue({ success: true, skipped: false, preview: true });
     return {
         RecordingPipeline,
         createRecordingPipeline: vi.fn().mockImplementation(() => new RecordingPipeline()),
-        buildRecordingPipelineDeps: vi.fn().mockImplementation((deps: unknown) => deps),
     };
 });
 vi.mock('../../utils/fetch.js', () => ({

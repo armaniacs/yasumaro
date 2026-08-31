@@ -23,7 +23,7 @@ import { SessionStore } from './sessionStore.js';
 import { HeaderDetector } from './headerDetector.js';
 import { createPendingWriteQueue, setPendingWriteQueue } from './pendingChromeStorageQueue.js';
 import { ChromeStorageAdapter } from './persistentRetryQueue.js';
-import { createRecordingPipeline, buildRecordingPipelineDeps } from './pipeline/RecordingPipeline.js';
+import { createRecordingPipeline } from './pipeline/RecordingPipeline.js';
 import type { RecordingPipeline } from './pipeline/RecordingPipeline.js';
 import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
 import { createReviewSummaryGenerator } from './reviewSummaryGenerator.js';
@@ -125,7 +125,7 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
   if (!container.has('reviewSummaryGenerator')) container.register('reviewSummaryGenerator', () => createReviewSummaryGenerator({ aiService: container.resolve<AIService>('aiService'), sqliteClient: container.resolve<SqliteClient>('sqliteClient') }), { singleton: true });
   if (!container.has('recordingPipeline')) container.register('recordingPipeline', () => {
     const rc = container.resolve<RecordingCacheInstance>('recordingCache');
-    return createRecordingPipeline(buildRecordingPipelineDeps({
+    return createRecordingPipeline({
       getPrivacyInfoWithCache: (url: string) => rc.getPrivacyInfoWithCache(url),
       getSettingsWithCache: () => rc.getSettingsWithCache(),
       obsidian: container.resolve<ObsidianClient>('obsidian'),
@@ -138,7 +138,7 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
       // orchestrator falls back to a private map and cross-instance
       // serialization is lost (duplicate-entry race).
       perUrlMutexMap: container.resolve<PerUrlMutexMap>('perUrlMutexMap'),
-    }));
+    });
   }, { singleton: true });
   if (!container.has('dashboardSqliteHandler')) container.register('dashboardSqliteHandler', () => createDashboardSqliteMessageHandler({ sqliteClient: container.resolve<SqliteClient>('sqliteClient'), ensureConfirmToken, createConfirmToken, verifyConfirmToken }), { singleton: true });
   if (!container.has('autoSavedBadgeTabs')) container.register('autoSavedBadgeTabs', () => createAutoSavedBadgeTabs(), { singleton: true });
