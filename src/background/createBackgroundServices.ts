@@ -33,7 +33,7 @@ import { createDashboardSqliteMessageHandler } from './dashboardSqliteWiring.js'
 import { ensureConfirmToken, createConfirmToken, verifyConfirmToken } from './confirmTokenManager.js';
 import { hasPrivacyConsent } from '../popup/privacyConsent.js';
 import { lockSession } from '../utils/storage/encryptionSession.js';
-import { getSettings, buildAllowedUrls, clearSettingsCache } from '../utils/storage/settingsStore.js';
+import { buildAllowedUrls } from '../utils/storage/urlWhitelist.js';
 import { getSavedUrlsWithTimestamps, saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlRepository.js';
 import { isDomainAllowed } from '../utils/domainUtils.js';
 import { notifyAiTestProgress } from './aiTestProgressNotifier.js';
@@ -42,7 +42,7 @@ import { createMessageRouter, type MessageRouter, type MessageRouterDeps } from 
 import type { MessageHandler } from './handlers/MessageRouter.js';
 import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/recordingHandlers.js';
 import { ServiceContainer } from './serviceContainer.js';
-import { SettingsRepository, ChromeStorageAdapter as SettingsChromeStorageAdapter } from '../utils/storage/SettingsRepository.js';
+import { SettingsRepository, ChromeStorageAdapter as SettingsChromeStorageAdapter, settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { PerUrlMutexMap } from './pipeline/perUrlMutex.js';
 
 export interface BackgroundServices {
@@ -175,13 +175,13 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
     checkRateLimit: (sender, settings) => container.resolve<RateLimiter>('rateLimiter').check(sender as never, settings as never),
     fetchContent: (url: string) => container.resolve<ManualContentFetcher>('manualContentFetcher').fetchContent(url),
     recordingPipeline: container.resolve<RecordingPipeline>('recordingPipeline'),
-    getSettings: () => getSettings(),
+    getSettings: () => settingsRepository.getAll(),
     setUrlContent,
   } as ManualRecordHandlerDeps), { singleton: true });
   if (!container.has('saveRecordDeps')) container.register('saveRecordDeps', () => ({
     isRecordingAllowed: () => hasPrivacyConsent(),
     recordingPipeline: container.resolve<RecordingPipeline>('recordingPipeline'),
-    getSettings: () => getSettings(),
+    getSettings: () => settingsRepository.getAll(),
     setUrlContent,
   } as SaveRecordHandlerDeps), { singleton: true });
   if (!container.has('messageRouter')) container.register('messageRouter', () => {
@@ -204,9 +204,9 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
       saveRecordDeps,
       hasPrivacyConsent: () => hasPrivacyConsent(),
       buildAllowedUrls: (settings) => buildAllowedUrls(settings),
-      getSettings: () => getSettings(),
+      getSettings: () => settingsRepository.getAll(),
       isDomainAllowed: (url) => isDomainAllowed(url),
-      clearSettingsCache: () => clearSettingsCache(),
+      clearSettingsCache: () => settingsRepository.clearCache(),
       notifyAiTestProgress,
       getPrivacyCache: () => recordingCache.getPrivacyCache(),
       updateActivity: () => updateActivity(),

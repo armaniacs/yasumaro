@@ -9,7 +9,7 @@
  * shared across all three auto-export timings.
  */
 
-import { getSettings } from '../utils/storage/settingsStore.js';
+import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { flushBufferedExports } from './localMarkdownExportCore.js';
 
@@ -42,7 +42,7 @@ export async function initExportScheduler(): Promise<void> {
   chrome.alarms.clear(IDLE_FALLBACK_ALARM);
   chrome.alarms.clear(DAILY_FLUSH_ALARM);
 
-  const settings = await getSettings();
+  const settings = await settingsRepository.getAll();
   const timing = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING];
 
   if (timing === 'idle') {
