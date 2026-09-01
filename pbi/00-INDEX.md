@@ -14,16 +14,14 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-| PBI | 種別 | 副作用 | 状態 | 概要 |
-|-----|------|--------|------|------|
-| [2026-09-01-05-fix-crypto-policy-ssot-followup](2026-09-01-05-fix-crypto-policy-ssot-followup.md) | 🔧 fix | 🟡 | ⬜ 未着手 | archived PBI 2026-08-29-12 の DoD 未達 2 項目: log export/import の HMAC 署名（VULN-035）と `hmacKeyStore`/`confirmTokenManager` の get-or-create 排他（VULN-039 残り） |
+**進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る。
 
 ### 未 PBI 化のトリガー
 - **なし。** PBI 06 の効果確認は 2026-09-01 に実施済み（未達 → 06b/06c を実装し達成）。残債は `2026-08-31-00-backlog.md` の「06d 候補」に記録（次 provider 追加時などに着手検討）
 
 ### archived PBI の DoD 乖離監査（2026-09-01）
 `autonomous-task-closer` で archived PBI のチェックボックスと実コードを照合。実害ありは PBI-22（対応済み）のみ。表記のみの乖離を各 archived PBI の実装メモに追記済み。特記:
-- `2026-08-29-12-fix-crypto-policy-ssot` — 中核実装済み、2 項目未達 → 上記 2026-09-01-05 に切り出し
+- `2026-08-29-12-fix-crypto-policy-ssot` — 中核実装済み、2 項目未達 → `2026-09-01-05` に切り出し実装・アーカイブ済み
 - `2026-08-24-03-refactor-sqlite-consolidation` — 部分実装（`storageMaintenance.ts` の動的 import 未解消、実害低）。追加 PBI 化は見送り
 - `2026-08-30-05-feat-cleansing-offscreen-delegation` — PoC 品質（flag OFF で本番未使用）。追加 PBI 化は見送り
 
@@ -58,8 +56,10 @@
 - 2026-08-31-02-feat-recording-orchestrator.md（RICE 480 — `RecordingOrchestrator` の単一 `record(data, opts)` seam に集約。`PerUrlMutexMap` の static 共有マップを削除し、container singleton の `perUrlMutexMap` を pipeline deps に配線して cross-instance の URL 直列化を回復（**duplicate-entry race の修正**）。`buildRecordingPipelineDeps` identity 関数を削除。`RecordingPipeline` facade から `recordWithPreview` を削除。DESIGN_SPEC §8.3 新設。11117 tests green。フォローアップ: `RecordingPipeline` facade / `createRecordingPipeline` の完全撤去（blast radius 大、別 PBI））
 - 2026-08-31-04-feat-composition-manifest.md（RICE 210 — Service Worker composition root を宣言的 `compositionManifest.ts`（`CompositionEntry[]` = `{ key, factory(container), singleton, onReady? }`）に。`createBackgroundServices` は manifest の register ループに縮小（import 36→16）。`dashboardSqliteClient` / `dashboardSqliteHandler` alias を composition から除去（後者は router 経由）。`setPendingWriteQueue` / `setSqliteHealthCheck` の副作用を `onReady` に局所化。`deps` フィールドは持たず factory が `resolve` する設計（型推論パズルを回避）。DESIGN_SPEC §2.2 新設 + ADR 2026-08-20 に循環 2 の配線整理を追記。11117 tests green）
 
-### 2026-09-01 0831a フォローアップ — 4件完了
+### 2026-09-01 0831a フォローアップ / DoD 乖離監査 — 6件完了
 
+- 2026-09-01-05-fix-crypto-policy-ssot-followup.md（archived PBI 2026-08-29-12 の DoD 未達 2 項目。**VULN-035**: `exportLogsService.exportJson()` に HMAC 署名（`version: 2`）、`importLogsService.importFromJson()` に署名検証ゲート。無署名（旧 v1）/ 改竄ファイルは拒否（旧ログ JSON は再インポート不可）。**VULN-039**: `hmacKeyStore` の署名鍵・ラップキー生成を 2 ロック（outer→inner）で直列化、`confirmTokenManager` のトークンマップ RMW を `withTokenMap()` で直列化。各 concurrency テスト付き（fix なしで fail 確認済み）。CHANGELOG / PRIVACY 更新。PR #103/#104。11116 tests green + e2e 28 passed）
+- 2026-08-27-22-feat-unify-messaging-transport.md（archived PBI の受け入れ基準「`ChromeMessageSender` が削除されている」が未達だったため PR #102 で対応。`src/utils/retryHelper.ts` を全削除、`src/content/contentMessageSender.ts`（`MessageTransport` アダプタ）を新設、`visitReporter` / `contentKernel` / `extractor` / `previewFlow` を移行。実装メモに 2 段階完了を追記。11107 tests green）
 - 2026-09-01-04-refactor-provider-ui-catalog-driven.md（PBI 06 効果確認の対応 06c — ダッシュボード provider UI 層を `ProviderCatalog` 駆動に。`registry` に UI メタデータ（labelI18nKey / fieldPlaceholders / supportsCustomPrompt / settingsBlockKind）を追加。新規 `aiProviderCatalogView.ts`（`renderProviderOptions` / `renderProviderSettings`）で A/B 両レイアウトと custom-prompt select を catalog 駆動に。`index.html` の `<option>` グループ ×4 と 7 個の `<div id="*Settings">` を削除し `#providerSettingsMount` に集約。`aiProviderLabels.ts` 依存を撤去、`settings/aiProvider.ts` の `AIProviderElements` を `{ select; settings: Record<...> }` に一般化。`CustomPrompt.provider` 型を lm-studio/ollama に拡張（ランタイムは既に対応、型/UI のみの不足 = バグ修正）。conformance test 拡張。PR #97/#98/#99。11136 tests green + e2e 185 passed）
 - 2026-09-01-03-refactor-provider-catalog-consolidation.md（PBI 06 効果確認の対応 06b — `ProviderCatalog` のデータソースを `PROVIDER_REGISTRY` 1 箇所に統合。`CSP_DOMAINS` / `LABELS` / `CONTENT_CHARS_KEYS` の 3 独立表と `src/utils/aiProviderLabels.ts`（provider label の 2 コピー目）を削除。`urlWhitelist.ts` の 3× コピペを catalog loop 化。`DiagnosticsCollector` / `diagnosticsPanel` の provider 列挙を catalog 由来に。新規 `providerCatalog.test.ts` で half-wired provider を検出。挙動変更なし。PR #96。11117 tests green）
 - 2026-09-01-02-refactor-browsinglog-repository-decision.md（RICE — 未接続の `src/dashboard/BrowsingLogRepository.ts`（PR #87 由来、296 行、consumer / test ゼロ、PBI 05 の Gateway リファクタに未追従）を削除。`dashboardSqliteService.ts`（Gateway 委譲済み）を唯一の dashboard SQLite 経路に確定。`ServiceResult` / `isServiceError` の重複を解消。アーカイブ済み PBI 2026-08-27-18 の未達だった「去就決定」チェックを追認。11117 tests green）
