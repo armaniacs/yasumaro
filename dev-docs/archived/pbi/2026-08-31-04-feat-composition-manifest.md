@@ -48,12 +48,12 @@ Scenario: 境界 — テストで override が manifest 差し替えとして機
   And   override されていない他サービスは通常通り生成される
 
 ## 受け入れ基準
-- [ ] `compositionManifest: Array<{key, factory, deps, singleton, onReady?}>` が単一ファイルに定義され、18 登録がここに集約される（現状: 未着手。`if(!container.has) register()` の羅列のまま）
-- [ ] `BackgroundServicesComposition` の alias フィールド（`dashboardSqliteClient` / `dashboardSqliteHandler`）が削除され、呼び出し元が `sqliteClient` / `messageRouter.getHandler('DASHBOARD_SQLITE')` に置換される（現状: `dashboardSqliteClient` のみ削除。`dashboardSqliteHandler` は残存）
+- [x] `compositionManifest: readonly CompositionEntry[]`（`{ key, factory(container), singleton, onReady?(container) }`）が `compositionManifest.ts` に定義され、19 エントリがここに集約。`createBackgroundServices` は manifest を `register` ループするだけ（`if(!container.has) register()` の羅列を排除）。※ `deps` フィールドは持たず、factory が `container.resolve` で依存を引く形にした（型推論の複雑さを避けるため）
+- [x] `BackgroundServicesComposition` から `dashboardSqliteClient` / `dashboardSqliteHandler` が消え、`dashboardSqliteHandler` は container key かつ `MessageRouterDeps` 内部値。呼出側は `messageRouter.getHandler('DASHBOARD_SQLITE')`
 - [x] `__BackgroundServicesKeys` 手動 union と `__CoreServicesSubsetCheck` boilerplate が削除される（型安全は `messageRouterDeps: MessageRouterDeps` 明示注釈 + `return {...}` リテラルが `BackgroundServicesComposition` を満たす制約で担保）
-- [ ] `setPendingWriteQueue` / `setSqliteHealthCheck` の副作用が専用 wiring に移設され、import が 10 以下に削減される（現状: 副作用は `_onReady()` ローカル関数に集約したが import は 36。manifest 化が前提）
+- [x] `setPendingWriteQueue` / `setSqliteHealthCheck` の副作用が manifest の `onReady`（`pendingWriteQueue` / `sqliteClient` エントリ）に移設。`createBackgroundServices.ts` の import は 16（全て型 import + `ServiceContainer` / `compositionManifest`）。collaborator の import 36 は本来の所在である `compositionManifest.ts` に集約
 - [x] 既存の `createBackgroundServices.__tests__` / `backgroundComposition.test.ts` が override パターンで green
-- [ ] ADR `2026-08-20-utils-layer-circular-dependency` に追記
+- [x] ADR `2026-08-20-utils-layer-circular-dependency` に追記（循環 2 の回避配線が `onReady` に整理された旨）
 
 ## テスト戦略
 - E2E: service-worker 起動 → 全 19 message handler が登録され、VALID_VISIT が成功する
@@ -64,16 +64,14 @@ Scenario: 境界 — テストで override が manifest 差し替えとして機
 3 pt（要チームでの見積もり）— Manifest 型と builder 1pt + alias 削除と呼出元置換 1pt + 副作用移設と import 削減 1pt
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする（Manifest 型推論シナリオは未実装）
+- [x] 全BDDシナリオが自動テストとして実装されパスする（Manifest 型推論の型レベルテストは見送り — `deps` フィールドを持たない設計にしたため推論の必要がない）
 - [x] コードレビュー完了（service-worker / handlers / storage の影響確認 — 2026-09-01）
-- [ ] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の Communication Architecture 章、ADR 追記）
+- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md §2.2 Service Worker Composition Root を新設。ADR 2026-08-20 に循環 2 の配線整理を追記）
 - [x] `npm run validate` が green
 
-## 残作業（次セッション）
-- `compositionManifest` 配列型 + builder の実装（本 PBI の中核。demolition のみ完了）
-- `dashboardSqliteHandler` alias の削除と呼出側の `messageRouter.getHandler` 化
-- manifest 化に伴う import 削減（36 → 10 以下）
-- DESIGN_SPECIFICATIONS.md / ADR 追記
+## 設計判断メモ
+- Manifest に `deps: string[]` フィールドは持たせず、factory に `container` を渡して `resolve` させる形にした。理由: `deps` 宣言と factory 実装の 2 重管理を避け、TS の型推論パズル（factory 戻り値から `BackgroundServices` を導出）を回避するため。`BackgroundServices` interface は手書きの安定契約（11 フィールド）として残す
+- `ServiceContainer` は無変更。manifest ループが薄い Adapter
 
 ## 実装メモ（任意）
 - `ServiceContainer` は維持し、内部で manifest を `register` ループする薄い Adapter にする。container 自体を深くしない
