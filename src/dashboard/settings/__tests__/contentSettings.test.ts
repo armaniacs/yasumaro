@@ -252,6 +252,7 @@ vi.mock('../../../utils/logger.js', () => ({
 }));
 
 import { loadContentSettings, init } from '../contentSettings.js';
+import { DEFAULT_KEYWORDS } from '../../../utils/contentCleaner.js';
 
 // ============================================================================
 // Helpers
@@ -359,9 +360,7 @@ describe('contentSettings', () => {
       expect(getKeywordEnabledCheckbox()?.checked).toBe(true);
 
       // CONTENT_STRIP_KEYWORDS: defaults when not set
-      expect(getKeywordsTextarea()?.value).toBe(
-        ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'].join('\n')
-      );
+      expect(getKeywordsTextarea()?.value).toBe([...DEFAULT_KEYWORDS].join('\n'));
 
       // CONTENT_DEDUP_ENABLED: default true
       expect(getDedupEnabledCheckbox()?.checked).toBe(true);
@@ -565,7 +564,7 @@ describe('contentSettings', () => {
       await vi.waitFor(() => {
         expect(mockSaveSettings).toHaveBeenCalledWith(
           expect.objectContaining({
-            content_strip_keywords: ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'],
+            content_strip_keywords: [...DEFAULT_KEYWORDS],
           })
         );
       });

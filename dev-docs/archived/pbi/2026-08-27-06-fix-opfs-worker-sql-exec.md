@@ -41,3 +41,15 @@ Scenario: 攻撃 — 外部から任意SQLは拒否される
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了
 - [x] ドキュメント更新済み
+
+## 実装メモ（効果確認: 2026-09-01 の DoD 乖離監査 + 掃除）
+
+- `WORKER_MESSAGE_TYPES` からの削除・ルーティングからの除去は達成済みで、生 SQL 注入経路は
+  実際に断たれている（PBI の主目的は達成）。
+- 受け入れ基準の「case が削除されている」に対し、`src/offscreen/opfsWorker/statusHandlers.ts`
+  に `handleSqlExec` / `handleSqlQuery` が **export されたまま到達不能なデッドコード**として
+  残っていた（`src/` から一切 import されず）。2026-09-01 の掃除 PR で両関数と
+  未使用になった `SqliteValue` / `SqliteRow` import を削除。
+- `opfsWorkerProxy.ts` の汎用 `sendToOpfsWorker` の allowlist 検証（受け入れ基準 3 番目）は
+  未実装のまま。ただしワーカ側ルータが未知 type を拒否するため実害はない。将来
+  `sendToOpfsWorker` を拡張する場合の要注意点として残置。
