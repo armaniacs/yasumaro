@@ -40,3 +40,14 @@ Scenario: エッジケース — 将来キーワード追加時の更新漏れ�
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了
 - [x] ドキュメント更新済み
+
+## 実装メモ（効果確認: 2026-09-01 の DoD 乖離監査 + 掃除）
+
+本 PBI のスコープ（`pageState.ts` ↔ `contentCleaner.ts`）は達成済み。
+2026-09-01 の監査で **スコープ外**の 3 つ目のコピーが見つかった:
+`src/dashboard/settings/contentSettings.ts` にダッシュボード設定 UI 用の
+`DEFAULT_KEYWORDS`（17 語）がハードコードされており、`contentCleaner.DEFAULT_KEYWORDS`
+（~52 語）の古い前半サブセットだった。strip ロジックは全 52 語を使うため、
+設定 UI のデフォルト表示・リセットだけが狭かった。同日の掃除 PR で
+`contentSettings.ts` を `contentCleaner.DEFAULT_KEYWORDS` の import に置換
+（設定 UI のデフォルト/リセットが全 52 語に広がる = 正しい挙動への修正）。

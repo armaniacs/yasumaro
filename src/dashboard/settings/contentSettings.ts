@@ -9,9 +9,10 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { getMessage } from '../../utils/i18n.js';
 import { logError, ErrorCode } from '../../utils/logger.js';
-
-// デフォルトキーワードリスト
-const DEFAULT_KEYWORDS = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'];
+// Single source of truth for the default keyword list — the strip logic in
+// contentCleaner already uses this full set; the dashboard's local copy had
+// drifted to a stale 17-word subset.
+import { DEFAULT_KEYWORDS } from '../../utils/contentCleaner.js';
 
 // DOM Elements (lazily resolved for testability)
 function getSaveBtn(): HTMLElement | null { return document.getElementById('saveContentSettings'); }
@@ -91,7 +92,7 @@ async function saveContentSettings(): Promise<void> {
                 .map(k => k.trim())
                 .filter(k => k.length > 0); // 空行を除外
 
-            settings[StorageKeys.CONTENT_STRIP_KEYWORDS] = keywords.length > 0 ? keywords : DEFAULT_KEYWORDS;
+            settings[StorageKeys.CONTENT_STRIP_KEYWORDS] = keywords.length > 0 ? keywords : [...DEFAULT_KEYWORDS];
         }
 
         // テキスト品質設定
