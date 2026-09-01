@@ -151,11 +151,10 @@ sed -n '30,98p' src/utils/RateLimitService.ts
   `ENCRYPTED_EXPORT_VERSION = '2'`（`settingsExportImport.ts:21`）
 - `encryptionSession.ts` の `encryptionKeyMutex` パターン
 
-### 未達（→ フォローアップ PBI `pbi/2026-09-01-05-fix-crypto-policy-ssot-followup.md`）
-1. **受け入れ基準 L61（get-or-create 排他 / VULN-039 の残り）**: `encryptionSession.ts` のみ
-   `encryptionKeyMutex` 適用済み。`hmacKeyStore.getOrCreateWrappedHmacKey`（`:215`）と
-   `confirmTokenManager`（`src/background/confirmTokenManager.ts`、PBI が指したパスとも異なる）は
-   Mutex なし
-2. **「29-13 から統合したスコープ」L70（log export/import 署名 / VULN-035）**: 完全未実装。
-   `src/dashboard/exportLogsService.ts` / `importLogsService.ts` に HMAC 署名の痕跡ゼロ。
-   settings 側（`settingsExportImport.exportSettings` / `importSettings`）には署名パターンが実在するため移植で対応可
+### 未達だった 2 項目 → **フォローアップ PBI `dev-docs/archived/pbi/2026-09-01-05-fix-crypto-policy-ssot-followup.md`（PR #103/#104）で解消済み**
+1. **受け入れ基準 L61（get-or-create 排他 / VULN-039 の残り）**: `hmacKeyStore` に
+   `signingKeyMutex` / `wrappingKeyMutex`（outer→inner）を適用。`confirmTokenManager` に
+   `withTokenMap()`（`Mutex` 直列化）を適用。concurrency テスト付き
+2. **「29-13 から統合したスコープ」L70（log export/import 署名 / VULN-035）**:
+   `exportLogsService.exportJson()` が HMAC 署名付き（`version: 2`）で書き出し、
+   `importLogsService.importFromJson()` が署名検証ゲートを持つ。無署名（旧 v1）/ 改竄は拒否
