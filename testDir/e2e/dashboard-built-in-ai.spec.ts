@@ -8,47 +8,25 @@ const __dirname = path.dirname(__filename);
 const OPTIONS_PATH = path.join(__dirname, '../../dist/chromium-mv3/options.html');
 
 /**
- * Built-in AI Provider UI テスト (PBI-32)
+ * Built-in AI Provider UI テスト (PBI-32 / PBI-06c)
  *
  * 対象: dist/chromium-mv3/options.html
- * プロトコル: file:// (静的HTML、UI構造確認のみ)
+ * プロトコル: file:// (静的HTML)
  *
- * 実際のBuilt-in AI呼び出し（LanguageModel.availability/create/prompt）の
- * 動作確認は @interaction タグの拡張機能コンテキストテストで行う。
+ * PBI-06c 以降、provider の <option> リストと per-provider 設定ブロックは
+ * catalog から panel mount 時に JS で構築される（静的 HTML には
+ * <select> シェルと #providerSettingsMount のみ）。file:// では拡張機能
+ * ランタイムが無く panel が mount されないため、@ui では構築先の存在だけを
+ * 確認し、実際の option/panel は @interaction（拡張機能コンテキスト）で検証する。
  */
 test.describe('Dashboard - Built-in AI Provider Option @ui', () => {
-  test('Priority 1 select has built-in-ai option', async ({ page }) => {
+  test('provider select shells and settings mount point exist', async ({ page }) => {
     await page.goto(`file://${OPTIONS_PATH}`);
 
-    const option = page.locator('#aiProvider option[value="built-in-ai"]');
-    await expect(option).toBeAttached();
-  });
-
-  test('Priority 2 select has built-in-ai option', async ({ page }) => {
-    await page.goto(`file://${OPTIONS_PATH}`);
-
-    const option = page.locator('#aiProviderPriority2 option[value="built-in-ai"]');
-    await expect(option).toBeAttached();
-  });
-
-  test('Priority 3 select has built-in-ai option', async ({ page }) => {
-    await page.goto(`file://${OPTIONS_PATH}`);
-
-    const option = page.locator('#aiProviderPriority3 option[value="built-in-ai"]');
-    await expect(option).toBeAttached();
-  });
-
-  test('built-in-ai settings panel exists and is present in DOM', async ({ page }) => {
-    await page.goto(`file://${OPTIONS_PATH}`);
-
-    await expect(page.locator('#built-in-aiSettings')).toBeAttached();
-  });
-
-  test('built-in-ai settings panel shows no-API-key help text', async ({ page }) => {
-    await page.goto(`file://${OPTIONS_PATH}`);
-
-    const helpText = page.locator('#built-in-aiSettings .help-text');
-    await expect(helpText).toBeAttached();
+    await expect(page.locator('#aiProvider')).toBeAttached();
+    await expect(page.locator('#aiProviderPriority2')).toBeAttached();
+    await expect(page.locator('#aiProviderPriority3')).toBeAttached();
+    await expect(page.locator('#providerSettingsMount')).toBeAttached();
   });
 });
 
