@@ -9,12 +9,12 @@ import { flushPendingRecords } from './pendingSqliteQueue.js';
 import { flushPendingWrites } from './pendingChromeStorageQueue.js';
 import type { SqliteClient } from './sqliteClient.js';
 import type { OfflineNetworkQueue } from './offlineNetworkQueue.js';
-import type { RecordingPipeline } from './pipeline/RecordingPipeline.js';
+import type { RecordingOrchestrator } from './pipeline/RecordingOrchestrator.js';
 import { createOfflineQueueProcessor } from './offlineQueueProcessor.js';
 
 export interface AlarmHandlerDeps {
   sqliteClient: SqliteClient;
-  recordingPipeline: RecordingPipeline;
+  recordingPipeline: RecordingOrchestrator;
   getOfflineNetworkQueue: () => Promise<OfflineNetworkQueue>;
   retryPendingChromeStorageWrite: (write: never) => Promise<boolean>;
 }

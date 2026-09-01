@@ -94,7 +94,7 @@ import * as domainUtils from '../../../utils/domainUtils.js';
 import * as permissionManager from '../../../utils/permissionManager.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import { ObsidianClient } from '../../obsidianClient.js';
-import { RecordingPipeline } from '../RecordingPipeline.js';
+import { makeOrchestrator } from '../../__tests__/helpers/makeRecordingLogic.js';
 import { NoOpOfflineNetworkQueue } from '../../offlineNetworkQueue.js';
 
 const MockedObsidianClient = ObsidianClient as vi.MockedClass<typeof ObsidianClient>;
@@ -149,7 +149,7 @@ describe('RecordingPipeline — deep interface: flag combinations', () => {
   });
 
   function makePipeline() {
-    return new RecordingPipeline(
+    return makeOrchestrator(
       makeGetPrivacyInfo(),
       makeObsidian() as any,
       makeAiService() as any,
@@ -245,7 +245,7 @@ describe('RecordingPipeline — deep interface: flag combinations', () => {
     const failingObsidian = {
       appendToDailyNote: vi.fn().mockRejectedValue(new Error('Obsidian unreachable')),
     };
-    const pipeline = new RecordingPipeline(
+    const pipeline = makeOrchestrator(
       makeGetPrivacyInfo(),
       failingObsidian as any,
       makeAiService() as any,

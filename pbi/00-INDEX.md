@@ -14,9 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-| PBI | 種別 | 難易度 | 副作用 | ステータス | 備考 |
-|-----|------|--------|--------|-----------|------|
-| [2026-09-01-01-refactor-recording-pipeline-facade-removal](2026-09-01-01-refactor-recording-pipeline-facade-removal.md) | 🔧 | 🔴 | 🟡 | ⬜ | PBI 2026-08-31-02 の残余。facade クラス + `createRecordingPipeline` を撤去し全 caller を Orchestrator 直接利用へ（~12 テスト移行） |
+**進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る。
 
 ### 未 PBI 化のトリガー
 - PBI 06 の効果確認: 次に AI provider を追加するとき、`ProviderCatalog` 駆動化で追加が 1 箇所で済むか確認する（詳細は `2026-08-31-00-backlog.md` の「PBI 06 — Speculative の扱い」節）
@@ -52,9 +50,10 @@
 - 2026-08-31-02-feat-recording-orchestrator.md（RICE 480 — `RecordingOrchestrator` の単一 `record(data, opts)` seam に集約。`PerUrlMutexMap` の static 共有マップを削除し、container singleton の `perUrlMutexMap` を pipeline deps に配線して cross-instance の URL 直列化を回復（**duplicate-entry race の修正**）。`buildRecordingPipelineDeps` identity 関数を削除。`RecordingPipeline` facade から `recordWithPreview` を削除。DESIGN_SPEC §8.3 新設。11117 tests green。フォローアップ: `RecordingPipeline` facade / `createRecordingPipeline` の完全撤去（blast radius 大、別 PBI））
 - 2026-08-31-04-feat-composition-manifest.md（RICE 210 — Service Worker composition root を宣言的 `compositionManifest.ts`（`CompositionEntry[]` = `{ key, factory(container), singleton, onReady? }`）に。`createBackgroundServices` は manifest の register ループに縮小（import 36→16）。`dashboardSqliteClient` / `dashboardSqliteHandler` alias を composition から除去（後者は router 経由）。`setPendingWriteQueue` / `setSqliteHealthCheck` の副作用を `onReady` に局所化。`deps` フィールドは持たず factory が `resolve` する設計（型推論パズルを回避）。DESIGN_SPEC §2.2 新設 + ADR 2026-08-20 に循環 2 の配線整理を追記。11117 tests green）
 
-### 2026-09-01 0831a フォローアップ
+### 2026-09-01 0831a フォローアップ — 2件完了
 
 - 2026-09-01-02-refactor-browsinglog-repository-decision.md（RICE — 未接続の `src/dashboard/BrowsingLogRepository.ts`（PR #87 由来、296 行、consumer / test ゼロ、PBI 05 の Gateway リファクタに未追従）を削除。`dashboardSqliteService.ts`（Gateway 委譲済み）を唯一の dashboard SQLite 経路に確定。`ServiceResult` / `isServiceError` の重複を解消。アーカイブ済み PBI 2026-08-27-18 の未達だった「去就決定」チェックを追認。11117 tests green）
+- 2026-09-01-01-refactor-recording-pipeline-facade-removal.md（RICE — PBI 2026-08-31-02 の残余。`RecordingPipeline` facade クラス + `createRecordingPipeline` + `buildRecordingPipelineDeps` を削除。`RecordingOrchestrator.record(data, opts)` を唯一の recording 経路に。`RecordOptions.settings` を追加し `recordingHandlers` の `execute(data, settings)` → `record(data, { settings })` に移行。`RecordingRunner`（`record` 一つ）の narrow interface で deps 注入。~12 テストファイルを orchestrator seam に移行（`.execute` → `.record`、`makeRecordingLogic` を orchestrator 生成に）。DESIGN_SPEC §8.3 を orchestrator 前提に書き換え。11117 tests green）
 
 ### 2026-08-30 VulnHunter 2026-08-29 監査対応 — 13件完了（PR #67–#81）
 

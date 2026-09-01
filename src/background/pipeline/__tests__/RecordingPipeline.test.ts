@@ -101,7 +101,8 @@ import * as permissionManager from '../../../utils/permissionManager.js';
 import * as logger from '../../../utils/logger.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import { ObsidianClient } from '../../obsidianClient.js';
-import { RecordingPipeline, createRecordingPipeline } from '../RecordingPipeline.js';
+import { makeOrchestrator } from '../../__tests__/helpers/makeRecordingLogic.js';
+import { createRecordingOrchestrator, RecordingOrchestrator } from '../RecordingOrchestrator.js';
 import { NoOpOfflineNetworkQueue } from '../../offlineNetworkQueue.js';
 
 const MockedObsidianClient = ObsidianClient as vi.MockedClass<typeof ObsidianClient>;
@@ -190,17 +191,17 @@ describe('RecordingPipeline', () => {
       });
 
       const aiClient = makeAiClient();
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         aiClient as any
       );
 
-      await pipeline.execute({
+      await pipeline.record({
         title: 'Test',
         url: 'https://example.com',
         content: 'Some content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       // PrivacyPipeline が aiClient を受け取っていること
       expect(MockedPrivacyPipeline).toHaveBeenCalledWith(
@@ -216,17 +217,17 @@ describe('RecordingPipeline', () => {
         maskedCount: 0,
       });
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any
         // aiClient を省略 → null がデフォルト
       );
 
-      await pipeline.execute({
+      await pipeline.record({
         title: 'Test',
         url: 'https://example.com',
         content: 'Some content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       expect(MockedPrivacyPipeline).toHaveBeenCalledWith(
         expect.any(Object),
@@ -243,17 +244,17 @@ describe('RecordingPipeline', () => {
         maskedCount: 0,
       });
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any
       );
 
-      await pipeline.execute({
+      await pipeline.record({
         title: 'Test',
         url: 'https://example.com',
         content: 'Some content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       const calls = (logger.addLog as vi.Mock).mock.calls;
       const traceIds = new Set(calls.map((call: any[]) => call[2]?.traceId).filter(Boolean));
@@ -269,17 +270,17 @@ describe('RecordingPipeline', () => {
         maskedCount: 0,
       });
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any
       );
 
-      await pipeline.execute({
+      await pipeline.record({
         title: 'Test',
         url: 'https://example.com',
         content: 'Some content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       const calls = (logger.addLog as vi.Mock).mock.calls;
       const traceIds = calls.map((call: any[]) => call[2]?.traceId).filter(Boolean);
@@ -299,18 +300,18 @@ describe('RecordingPipeline', () => {
         maskedItems: [{ type: 'email' }],
       });
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any
       );
 
-      const result = await pipeline.execute({
+      const result = await pipeline.record({
         title: 'Test',
         url: 'https://example.com',
         content: 'Content with user@example.com',
         previewOnly: true,
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       expect(result.success).toBe(true);
       expect(result.preview).toBe(true);
@@ -332,18 +333,18 @@ describe('RecordingPipeline', () => {
         maskedItems: [],
       });
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any
       );
 
-      await pipeline.execute({
+      await pipeline.record({
         title: 'Test',
         url: 'https://example.com',
         content: 'Content',
         previewOnly: true,
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       expect(mockAppend).not.toHaveBeenCalled();
     });
@@ -363,17 +364,17 @@ describe('RecordingPipeline', () => {
         maskedCount: 0,
       });
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any
       );
 
-      const result = await pipeline.execute({
+      const result = await pipeline.record({
         title: 'Test Page',
         url: 'https://example.com',
         content: 'Page content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       expect(result.success).toBe(true);
       expect(mockAppend).toHaveBeenCalled();
@@ -385,17 +386,17 @@ describe('RecordingPipeline', () => {
       // @ts-expect-error - mock
       domainUtils.isDomainAllowed.mockResolvedValue(false);
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any
       );
 
-      const result = await pipeline.execute({
+      const result = await pipeline.record({
         title: 'Test',
         url: 'https://blocked.example.com',
         content: 'Content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('DOMAIN_BLOCKED');
@@ -411,17 +412,17 @@ describe('RecordingPipeline', () => {
         appendToDailyNote: vi.fn<() => Promise<void>>().mockRejectedValue(new Error('Obsidian API unreachable')),
       };
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         failingObsidian as any,
         makeAiClient() as any
       );
 
-      const result = await pipeline.execute({
+      const result = await pipeline.record({
         title: 'Obsidian Fail Test',
         url: 'https://example.com/obsidian-fail',
         content: 'Content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       expect(result.success).toBe(true);
 
@@ -442,17 +443,17 @@ describe('RecordingPipeline', () => {
         maskedCount: 0,
       });
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any
       );
 
-      const result = await pipeline.execute({
+      const result = await pipeline.record({
         title: 'Other Step Fail Test',
         url: 'https://example.com/other-step-fail',
         content: 'Content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       expect(result.success).toBe(true);
 
@@ -475,17 +476,17 @@ describe('RecordingPipeline', () => {
       // retries=1: 2^1*1000=2000ms, retries=2: 2^2*1000=4000ms, retries=3: 2^3*1000=8000ms→cap→5000ms
       mockProcess.mockRejectedValue(new Error('Transient error'));
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any
       );
 
-      const executePromise = pipeline.execute({
+      const executePromise = pipeline.record({
         title: 'Retry Test',
         url: 'https://example.com',
         content: 'Content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       // 非同期タイマーを全て完走させる
       await vi.runAllTimersAsync();
@@ -520,17 +521,17 @@ describe('RecordingPipeline', () => {
     it('ステップで例外が発生した場合、logError に ErrorCode.INTERNAL_ERROR が渡される', async () => {
       mockProcess.mockRejectedValue(new Error('Unexpected failure'));
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any
       );
 
-      const result = await pipeline.execute({
+      const result = await pipeline.record({
         title: 'Test',
         url: 'https://example.com',
         content: 'Content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       expect(result.success).toBe(false);
       expect(logger.logError).toHaveBeenCalledWith(
@@ -544,17 +545,17 @@ describe('RecordingPipeline', () => {
     it('エラー結果に success=false と error メッセージが含まれる', async () => {
       mockProcess.mockRejectedValue(new Error('Step crashed'));
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any
       );
 
-      const result = await pipeline.execute({
+      const result = await pipeline.record({
         title: 'Crash Test',
         url: 'https://example.com',
         content: 'Content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
@@ -563,17 +564,17 @@ describe('RecordingPipeline', () => {
     it('パイプライン失敗時に pipeline-error として pending 登録される', async () => {
       mockProcess.mockRejectedValue(new Error('Step crashed'));
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any
       );
 
-      await pipeline.execute({
+      await pipeline.record({
         title: 'Crash Test',
         url: 'https://example.com/crash',
         content: 'Content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       // Import the mocked addPendingPage to verify it was called
       const { addPendingPage } = await import('../../../utils/pendingStorage.js');
@@ -588,32 +589,29 @@ describe('RecordingPipeline', () => {
     });
   });
 
-  describe('createRecordingPipeline ファクトリ', () => {
-    it('渡された依存関係を使って RecordingPipeline インスタンスを生成する', () => {
-      const getPrivacyInfo = makeGetPrivacyInfo();
-      const obsidian = makeObsidian() as any;
-      const aiService = makeAiClient() as any;
-      const sqliteClient = { query: vi.fn() } as any;
-
-      const pipeline = createRecordingPipeline({
-        getPrivacyInfoWithCache: getPrivacyInfo,
-        obsidian,
-        aiService,
-        sqliteClient,
+  describe('createRecordingOrchestrator ファクトリ', () => {
+    it('渡された依存関係を使って RecordingOrchestrator インスタンスを生成する', () => {
+      const pipeline = createRecordingOrchestrator({
+        getPrivacyInfoWithCache: makeGetPrivacyInfo(),
+        getSettingsWithCache: async () => mockSettings,
+        obsidian: makeObsidian() as any,
+        aiService: makeAiClient() as any,
+        sqliteClient: { query: vi.fn() } as any,
       });
 
-      expect(pipeline).toBeInstanceOf(RecordingPipeline);
+      expect(pipeline).toBeInstanceOf(RecordingOrchestrator);
     });
 
-    it('aiService と sqliteClient を省略しても RecordingPipeline を生成する', () => {
-      const pipeline = createRecordingPipeline({
+    it('aiService と sqliteClient を省略しても RecordingOrchestrator を生成する', () => {
+      const pipeline = createRecordingOrchestrator({
         getPrivacyInfoWithCache: makeGetPrivacyInfo(),
+        getSettingsWithCache: async () => mockSettings,
         obsidian: makeObsidian() as any,
         aiService: null,
         sqliteClient: null,
       });
 
-      expect(pipeline).toBeInstanceOf(RecordingPipeline);
+      expect(pipeline).toBeInstanceOf(RecordingOrchestrator);
     });
   });
 
@@ -621,15 +619,15 @@ describe('RecordingPipeline', () => {
     it('異なるURLへの並行リクエストは互いにブロックしない', async () => {
       mockProcess.mockResolvedValue({ summary: 'AI summary', maskedCount: 0 });
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any
       );
 
       const [result1, result2] = await Promise.all([
-        pipeline.execute({ title: 'A', url: 'https://example.com/a', content: 'content-a' }, mockSettings),
-        pipeline.execute({ title: 'B', url: 'https://example.com/b', content: 'content-b' }, mockSettings),
+        pipeline.record({ title: 'A', url: 'https://example.com/a', content: 'content-a' }, { settings: mockSettings }),
+        pipeline.record({ title: 'B', url: 'https://example.com/b', content: 'content-b' }, { settings: mockSettings }),
       ]);
 
       expect(result1.success).toBe(true);
@@ -638,22 +636,23 @@ describe('RecordingPipeline', () => {
   });
 
   describe('offlineNetworkQueue の注入 (NoOpOfflineNetworkQueue)', () => {
-    it('createRecordingPipeline に NoOpOfflineNetworkQueue を渡して構築できる', () => {
-      const pipeline = createRecordingPipeline({
+    it('createRecordingOrchestrator に NoOpOfflineNetworkQueue を渡して構築できる', () => {
+      const pipeline = createRecordingOrchestrator({
         getPrivacyInfoWithCache: makeGetPrivacyInfo(),
+        getSettingsWithCache: async () => mockSettings,
         obsidian: makeObsidian() as any,
         aiService: null,
         sqliteClient: null,
         offlineNetworkQueue: new NoOpOfflineNetworkQueue(),
       });
 
-      expect(pipeline).toBeInstanceOf(RecordingPipeline);
+      expect(pipeline).toBeInstanceOf(RecordingOrchestrator);
     });
 
     it('NoOpOfflineNetworkQueue 注入時、失敗した記録は例外なく完了する（キューへの永続化を試みない）', async () => {
       mockProcess.mockRejectedValue(new Error('AI provider unavailable'));
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any,
@@ -661,9 +660,9 @@ describe('RecordingPipeline', () => {
         new NoOpOfflineNetworkQueue(),
       );
 
-      const result = await pipeline.execute(
+      const result = await pipeline.record(
         { title: 'Test', url: 'https://example.com/noop-queue', content: 'content' },
-        mockSettings,
+        { settings: mockSettings },
       );
 
       expect(result.success).toBe(false);

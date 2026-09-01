@@ -41,7 +41,7 @@ function makeManualDeps(overrides: Partial<ManualRecordHandlerDeps> = {}): Manua
     isRecordingAllowed: vi.fn().mockResolvedValue(true),
     checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
     fetchContent: vi.fn().mockResolvedValue('content'),
-    recordingPipeline: { execute: vi.fn().mockResolvedValue({ success: true }) } as ManualRecordHandlerDeps['recordingPipeline'],
+    recordingPipeline: { record: vi.fn().mockResolvedValue({ success: true }) } as ManualRecordHandlerDeps['recordingPipeline'],
     getSettings: vi.fn().mockResolvedValue({}),
     setUrlContent: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -51,7 +51,7 @@ function makeManualDeps(overrides: Partial<ManualRecordHandlerDeps> = {}): Manua
 function makeSaveDeps(overrides: Partial<SaveRecordHandlerDeps> = {}): SaveRecordHandlerDeps {
   return {
     isRecordingAllowed: vi.fn().mockResolvedValue(true),
-    recordingPipeline: { execute: vi.fn().mockResolvedValue({ success: true }) } as SaveRecordHandlerDeps['recordingPipeline'],
+    recordingPipeline: { record: vi.fn().mockResolvedValue({ success: true }) } as SaveRecordHandlerDeps['recordingPipeline'],
     getSettings: vi.fn().mockResolvedValue({}),
     setUrlContent: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -232,20 +232,20 @@ describe('createSaveRecordHandler — VULN-004 URL scheme validation', () => {
 // result mapping must be preserved.
 describe('recording handlers — minimal base deps behaviour', () => {
   it('MANUAL_RECORD forwards the pipeline result and backfills content on success', async () => {
-    const pipeline = { execute: vi.fn().mockResolvedValue({ success: true, url: 'https://example.com' }) };
+    const pipeline = { record: vi.fn().mockResolvedValue({ success: true, url: 'https://example.com' }) };
     const deps = makeManualDeps({ recordingPipeline: pipeline as never });
     const handler = createManualRecordHandler(deps);
     const sendResponse = vi.fn();
 
     await handler(manualMessage('https://example.com'), EXTENSION_SENDER, sendResponse);
 
-    expect(pipeline.execute).toHaveBeenCalledTimes(1);
+    expect(pipeline.record).toHaveBeenCalledTimes(1);
     expect(deps.setUrlContent).toHaveBeenCalledWith('https://example.com', 'content');
     expect(sendResponse).toHaveBeenCalledWith({ success: true, url: 'https://example.com' });
   });
 
   it('MANUAL_RECORD does not backfill content when recording fails', async () => {
-    const pipeline = { execute: vi.fn().mockResolvedValue({ success: false, error: 'boom' }) };
+    const pipeline = { record: vi.fn().mockResolvedValue({ success: false, error: 'boom' }) };
     const deps = makeManualDeps({ recordingPipeline: pipeline as never });
     const handler = createManualRecordHandler(deps);
     const sendResponse = vi.fn();
@@ -265,7 +265,7 @@ describe('recording handlers — minimal base deps behaviour', () => {
 
     await handler(manualMessage('https://example.com'), EXTENSION_SENDER, sendResponse);
 
-    expect(deps.recordingPipeline.execute).not.toHaveBeenCalled();
+    expect(deps.recordingPipeline.record).not.toHaveBeenCalled();
     expect(deps.setUrlContent).not.toHaveBeenCalled();
     expect(sendResponse).toHaveBeenCalledWith({ success: false, error: 'rate limited' });
   });
@@ -287,20 +287,20 @@ describe('recording handlers — minimal base deps behaviour', () => {
   });
 
   it('SAVE_RECORD forwards the pipeline result and backfills content on success', async () => {
-    const pipeline = { execute: vi.fn().mockResolvedValue({ success: true, url: 'https://example.com' }) };
+    const pipeline = { record: vi.fn().mockResolvedValue({ success: true, url: 'https://example.com' }) };
     const deps = makeSaveDeps({ recordingPipeline: pipeline as never });
     const handler = createSaveRecordHandler(deps);
     const sendResponse = vi.fn();
 
     await handler(saveMessage('https://example.com'), EXTENSION_SENDER, sendResponse);
 
-    expect(pipeline.execute).toHaveBeenCalledTimes(1);
+    expect(pipeline.record).toHaveBeenCalledTimes(1);
     expect(deps.setUrlContent).toHaveBeenCalledWith('https://example.com', 'content');
     expect(sendResponse).toHaveBeenCalledWith({ success: true, url: 'https://example.com' });
   });
 
   it('SAVE_RECORD does not backfill content when recording fails', async () => {
-    const pipeline = { execute: vi.fn().mockResolvedValue({ success: false, error: 'boom' }) };
+    const pipeline = { record: vi.fn().mockResolvedValue({ success: false, error: 'boom' }) };
     const deps = makeSaveDeps({ recordingPipeline: pipeline as never });
     const handler = createSaveRecordHandler(deps);
     const sendResponse = vi.fn();

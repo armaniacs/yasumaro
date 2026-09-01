@@ -1,6 +1,6 @@
 // src/background/__tests__/recordingPipeline-whitelist-bypass.test.ts
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
+import type { RecordingOrchestrator } from '../pipeline/RecordingOrchestrator.js';
 import { RecordingCache } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
 import type { ObsidianClient } from '../obsidianClient.js';
@@ -43,7 +43,7 @@ vi.mock('../../utils/domainUtils.js');
 vi.mock('../privacyPipeline.js');
 
 describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
-  let recordingLogic: RecordingPipeline;
+  let recordingLogic: RecordingOrchestrator;
   let mockObsidian: ObsidianClient;
   let mockAIClient: AIService;
   let getSavedUrlsWithTimestamps: any;

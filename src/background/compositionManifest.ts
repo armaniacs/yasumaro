@@ -30,7 +30,7 @@ import { SessionStore } from './sessionStore.js';
 import { HeaderDetector } from './headerDetector.js';
 import { createPendingWriteQueue, setPendingWriteQueue } from './pendingChromeStorageQueue.js';
 import { ChromeStorageAdapter } from './persistentRetryQueue.js';
-import { createRecordingPipeline } from './pipeline/RecordingPipeline.js';
+import { createRecordingOrchestrator, type RecordingOrchestrator } from './pipeline/RecordingOrchestrator.js';
 import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
 import { createReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import { createAutoSavedBadgeTabs } from './swStatePersistence.js';
@@ -121,7 +121,7 @@ export const compositionManifest: readonly CompositionEntry[] = [
     singleton: true,
     factory: (c) => {
       const rc = c.resolve<RecordingCacheInstance>('recordingCache');
-      return createRecordingPipeline({
+      return createRecordingOrchestrator({
         getPrivacyInfoWithCache: (url: string) => rc.getPrivacyInfoWithCache(url),
         getSettingsWithCache: () => rc.getSettingsWithCache(),
         obsidian: c.resolve<ObsidianClient>('obsidian'),
@@ -174,7 +174,7 @@ export const compositionManifest: readonly CompositionEntry[] = [
     key: 'messageRouter',
     singleton: true,
     factory: (c) => {
-      const recordingPipeline = c.resolve<import('./pipeline/RecordingPipeline.js').RecordingPipeline>('recordingPipeline');
+      const recordingPipeline = c.resolve<RecordingOrchestrator>('recordingPipeline');
       const tabCache = c.resolve<TabCache>('tabCache');
       const recordingCache = c.resolve<RecordingCacheInstance>('recordingCache');
       const reviewSummaryGenerator = c.resolve<ReviewSummaryGenerator>('reviewSummaryGenerator');

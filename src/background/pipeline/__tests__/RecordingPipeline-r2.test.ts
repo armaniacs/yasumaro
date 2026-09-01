@@ -82,7 +82,7 @@ import * as permissionManager from '../../../utils/permissionManager.js';
 import * as logger from '../../../utils/logger.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import { ObsidianClient } from '../../obsidianClient.js';
-import { RecordingPipeline } from '../RecordingPipeline.js';
+import { makeOrchestrator } from '../../__tests__/helpers/makeRecordingLogic.js';
 
 const MockedPrivacyPipeline = PrivacyPipeline as vi.MockedClass<typeof PrivacyPipeline>;
 const MockedObsidianClient = ObsidianClient as vi.MockedClass<typeof ObsidianClient>;
@@ -151,19 +151,17 @@ describe('RecordingPipeline - R2', () => {
       const failingObsidian = {
         appendToDailyNote: vi.fn().mockRejectedValue(new Error('Obsidian write fail')),
       };
-      const pipeline = new RecordingPipeline(makeGetPrivacyInfo(), failingObsidian as any, makeAiClient() as any);
-      const result = await pipeline.execute(
-        { title: 'BeFail', url: 'https://example.com/befail', content: 'Content' }, mockSettings
-      );
+      const pipeline = makeOrchestrator(makeGetPrivacyInfo(), failingObsidian as any, makeAiClient() as any);
+      const result = await pipeline.record(
+        { title: 'BeFail', url: 'https://example.com/befail', content: 'Content' }, { settings: mockSettings });
       expect(result.success).toBe(true);
     });
 
     it('skips SQLite save when client is null', async () => {
       mockProcess.mockResolvedValue({ summary: 'Summary', maskedCount: 0 });
-      const pipeline = new RecordingPipeline(makeGetPrivacyInfo(), makeObsidian() as any, makeAiClient() as any, null);
-      const result = await pipeline.execute(
-        { title: 'NoSQLite', url: 'https://example.com/nosqlite', content: 'Content' }, mockSettings
-      );
+      const pipeline = makeOrchestrator(makeGetPrivacyInfo(), makeObsidian() as any, makeAiClient() as any, null);
+      const result = await pipeline.record(
+        { title: 'NoSQLite', url: 'https://example.com/nosqlite', content: 'Content' }, { settings: mockSettings });
       expect(result.success).toBe(true);
     });
 
@@ -172,19 +170,17 @@ describe('RecordingPipeline - R2', () => {
         success: true, preview: true, processedContent: 'Content with [MASKED:email]',
         maskedCount: 1, maskedItems: [{ type: 'email', original: 'user@example.com' }],
       });
-      const pipeline = new RecordingPipeline(makeGetPrivacyInfo(), makeObsidian() as any, makeAiClient() as any);
-      const result = await pipeline.execute(
-        { title: 'PII Preview', url: 'https://example.com', content: 'Content', previewOnly: true }, mockSettings
-      );
+      const pipeline = makeOrchestrator(makeGetPrivacyInfo(), makeObsidian() as any, makeAiClient() as any);
+      const result = await pipeline.record(
+        { title: 'PII Preview', url: 'https://example.com', content: 'Content', previewOnly: true }, { settings: mockSettings });
       expect(result.success).toBe(true);
     });
 
     it('returns success buildResult with summary and metadata', async () => {
       mockProcess.mockResolvedValue({ summary: 'Summary', maskedCount: 0 });
-      const pipeline = new RecordingPipeline(makeGetPrivacyInfo(), makeObsidian() as any, makeAiClient() as any, null);
-      const result = await pipeline.execute(
-        { title: 'NonFatal', url: 'https://example.com/nonfatal', content: 'Content' }, mockSettings
-      );
+      const pipeline = makeOrchestrator(makeGetPrivacyInfo(), makeObsidian() as any, makeAiClient() as any, null);
+      const result = await pipeline.record(
+        { title: 'NonFatal', url: 'https://example.com/nonfatal', content: 'Content' }, { settings: mockSettings });
       expect(result.success).toBe(true);
       expect(result.summary).toBeDefined();
       expect(result.title).toBe('NonFatal');
@@ -192,13 +188,13 @@ describe('RecordingPipeline - R2', () => {
 
     it('detects private page with auto-save-behavior=skip', async () => {
       mockProcess.mockResolvedValue({ summary: 'Summary', maskedCount: 0 });
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         vi.fn().mockResolvedValue({ isPrivate: true, reason: 'auth', headerValue: 'Bearer ***', headers: { cacheControl: 'private' } }),
         makeObsidian() as any, makeAiClient() as any
       );
-      const result = await pipeline.execute(
+      const result = await pipeline.record(
         { title: 'Private', url: 'https://example.com/private', content: 'Content' },
-        { ...mockSettings, AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip' }
+        { settings: { ...mockSettings, AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip' } }
       );
       expect(result.success).toBe(false);
       expect(result.error).toBe('PRIVATE_PAGE_DETECTED');
@@ -206,13 +202,13 @@ describe('RecordingPipeline - R2', () => {
 
     it('detects private page with requireConfirmation', async () => {
       mockProcess.mockResolvedValue({ summary: 'Summary', maskedCount: 0 });
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         vi.fn().mockResolvedValue({ isPrivate: true, reason: 'cache-control', headerValue: 'private', headers: { cacheControl: 'private' } }),
         makeObsidian() as any, makeAiClient() as any
       );
-      const result = await pipeline.execute(
+      const result = await pipeline.record(
         { title: 'Private2', url: 'https://example.com/private2', content: 'Content', requireConfirmation: true },
-        mockSettings
+        { settings: mockSettings }
       );
       expect(result.success).toBe(false);
       expect(result.error).toBe('PRIVATE_PAGE_DETECTED');
@@ -239,10 +235,9 @@ describe('RecordingPipeline - R2', () => {
         (this as any).process = vi.fn().mockResolvedValue({ summary: 'S', maskedCount: 0 });
       } as any);
 
-      const pipeline = new RecordingPipeline(makeGetPrivacyInfo(), makeObsidian() as any, makeAiClient() as any);
-      const result = await pipeline.execute(
-        { title: 'Test', url: 'https://example.com', content: 'Content' }, mockSettings
-      );
+      const pipeline = makeOrchestrator(makeGetPrivacyInfo(), makeObsidian() as any, makeAiClient() as any);
+      const result = await pipeline.record(
+        { title: 'Test', url: 'https://example.com', content: 'Content' }, { settings: mockSettings });
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
     });
@@ -258,10 +253,9 @@ describe('RecordingPipeline - R2', () => {
         (this as any).process = vi.fn().mockResolvedValue({ summary: 'S', maskedCount: 0 });
       } as any);
 
-      const pipeline = new RecordingPipeline(makeGetPrivacyInfo(), makeObsidian() as any, makeAiClient() as any);
-      const result = await pipeline.execute(
-        { title: 'Test', url: 'https://example.com', content: 'Content' }, mockSettings
-      );
+      const pipeline = makeOrchestrator(makeGetPrivacyInfo(), makeObsidian() as any, makeAiClient() as any);
+      const result = await pipeline.record(
+        { title: 'Test', url: 'https://example.com', content: 'Content' }, { settings: mockSettings });
       expect(result.success).toBe(false);
     });
   });

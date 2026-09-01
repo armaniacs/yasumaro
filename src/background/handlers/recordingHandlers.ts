@@ -9,7 +9,7 @@ import { StorageKeys } from '../../utils/storage/types.js';
 import { encodeUrlSafeBase64 } from './urlNotificationHandlers.js';
 import { NotificationHelper } from '../notificationHelper.js';
 import type { MessageSenderLike } from '../rateLimiter.js';
-import type { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
+import type { RecordOptions } from '../pipeline/RecordingOrchestrator.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import { visitRateLimiter } from '../visitRateLimiter.js';
 
@@ -19,6 +19,11 @@ import type {
   PreviewRecordMessage,
   SaveRecordMessage,
 } from '../messageTypes.js';
+
+/** The recording surface the handlers need: one method, explicit settings. */
+export interface RecordingRunner {
+  record(data: RecordingData, opts?: RecordOptions): Promise<RecordingResult>;
+}
 
 // ============================================================================
 // Deps interfaces
@@ -41,10 +46,10 @@ export interface ValidVisitHandlerDeps {
 export interface RecordingHandlerBaseDeps {
   isRecordingAllowed: () => Promise<boolean>;
   /**
-   * Injected by the composition root. The handler never constructs a pipeline
-   * itself; a missing pipeline is a wiring error, not a fallback path.
+   * Injected by the composition root. The handler never constructs the
+   * orchestrator itself; a missing runner is a wiring error, not a fallback.
    */
-  recordingPipeline: RecordingPipeline;
+  recordingPipeline: RecordingRunner;
   getSettings: () => Promise<Settings>;
   setUrlContent: (url: string, content: string) => Promise<void>;
 }
@@ -226,7 +231,7 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
 
     const pipeline = deps.recordingPipeline;
 
-    const result = await pipeline.execute({
+    const result = await pipeline.record({
       title: message.payload.title,
       url: message.payload.url,
       content,
@@ -246,7 +251,7 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
         aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
         aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons,
       }),
-    }, settings);
+    }, { settings });
 
     if (result.success) {
       await deps.setUrlContent(message.payload.url, content);
@@ -285,7 +290,7 @@ export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
 
     const pipeline = deps.recordingPipeline;
 
-    const result = await pipeline.execute({
+    const result = await pipeline.record({
       title: message.payload.title,
       url: message.payload.url,
       content: message.payload.content,
@@ -305,7 +310,7 @@ export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
         aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
         aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons,
       }),
-    }, settings);
+    }, { settings });
 
     if (result.success && message.payload.content) {
       await deps.setUrlContent(message.payload.url, message.payload.content);

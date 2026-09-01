@@ -47,6 +47,12 @@ export type RecordMode = 'normal' | 'preview' | 'retryObsidian';
 export interface RecordOptions {
   mode?: RecordMode;
   previewOnly?: boolean;
+  /**
+   * Explicit settings, bypassing getSettingsWithCache. Used by the
+   * manual/preview record handlers which have already resolved settings and
+   * must not race a concurrent cache refresh.
+   */
+  settings?: Settings;
 }
 
 export class RecordingOrchestrator {
@@ -132,7 +138,7 @@ export class RecordingOrchestrator {
 
     if (mode === 'retryObsidian') {
       return this.mutexMap.runExclusive(data.url, async () => {
-        const settings = await this.getSettingsWithCache();
+        const settings = opts.settings ?? await this.getSettingsWithCache();
         const context: RecordingContext = {
           data: { title: (data as unknown as { title: string }).title ?? '', url: data.url, content: '' } as RecordingData,
           // retry payload may be { title, url, summary, tags } — pick summary/tags
@@ -154,15 +160,14 @@ export class RecordingOrchestrator {
 
     // preview mode is handled by PipelineKernel's previewBreakpoint on privacyPipeline step
     const effectiveData = mode === 'preview' ? { ...data, previewOnly: true } as RecordingData : data;
-    const settings = await this.getSettingsWithCache();
+    const settings = opts.settings ?? await this.getSettingsWithCache();
     return this.mutexMap.runExclusive(effectiveData.url, () => this.executeInternal(effectiveData, settings));
   }
 
-  // Convenience alias for callers that previously used recordWithPreview
-  async recordWithPreview(data: RecordingData): Promise<RecordingResult> {
-    return this.record(data, { mode: 'preview' });
-  }
-
+  /**
+   * Retry an Obsidian append only (no AI re-run), for offline-queue obsidian_sync
+   * jobs. Returns whether the append succeeded; throws propagate to the caller.
+   */
   async retryObsidianWriteOnly(job: { title: string; url: string; summary: string; tags?: string[] }): Promise<boolean> {
     const result = await this.record(job as unknown as RecordingData, { mode: 'retryObsidian' });
     return Boolean((result as unknown as { success: boolean }).success ?? true);

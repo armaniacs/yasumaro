@@ -101,7 +101,7 @@ import * as domainUtils from '../../../utils/domainUtils.js';
 import * as permissionManager from '../../../utils/permissionManager.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import { ObsidianClient } from '../../obsidianClient.js';
-import { RecordingPipeline } from '../RecordingPipeline.js';
+import { makeOrchestrator } from '../../__tests__/helpers/makeRecordingLogic.js';
 
 const MockedObsidianClient = ObsidianClient as vi.MockedClass<typeof ObsidianClient>;
 const MockedPrivacyPipeline = PrivacyPipeline as vi.MockedClass<typeof PrivacyPipeline>;
@@ -185,7 +185,7 @@ describe('Offline retry policy via step metadata', () => {
 
   describe('offlineRetry metadata declaration', () => {
     it('has offlineRetry on exactly the expected steps', () => {
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any,
@@ -205,7 +205,7 @@ describe('Offline retry policy via step metadata', () => {
     });
 
     it('all other steps have no offlineRetry metadata', () => {
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any,
@@ -241,7 +241,7 @@ describe('Offline retry policy via step metadata', () => {
         appendToDailyNote: vi.fn<() => Promise<void>>().mockRejectedValue(new Error('Connection refused')),
       };
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         failingObsidian as any,
         makeAiClient() as any,
@@ -249,11 +249,11 @@ describe('Offline retry policy via step metadata', () => {
         offlineQueue as any,
       );
 
-      const result = await pipeline.execute({
+      const result = await pipeline.record({
         title: 'Offline Test',
         url: 'https://example.com/offline',
         content: 'Content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       // saveObsidian is BEST_EFFORT so pipeline should still succeed
       expect(result.success).toBe(true);
@@ -273,7 +273,7 @@ describe('Offline retry policy via step metadata', () => {
         appendToDailyNote: vi.fn<() => Promise<void>>().mockRejectedValue(new Error('Connection refused')),
       };
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         failingObsidian as any,
         makeAiClient() as any,
@@ -281,11 +281,11 @@ describe('Offline retry policy via step metadata', () => {
         offlineQueue as any,
       );
 
-      await pipeline.execute({
+      await pipeline.record({
         title: 'Payload Shape',
         url: 'https://example.com/payload',
         content: 'Body content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       expect(offlineQueue.enqueue).toHaveBeenCalledWith({
         type: 'obsidian_sync',
@@ -307,7 +307,7 @@ describe('Offline retry policy via step metadata', () => {
         appendToDailyNote: vi.fn<() => Promise<void>>().mockRejectedValue(new Error('Offline')),
       };
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         failingObsidian as any,
         makeAiClient() as any,
@@ -315,11 +315,11 @@ describe('Offline retry policy via step metadata', () => {
         null, // no offline queue
       );
 
-      const result = await pipeline.execute({
+      const result = await pipeline.record({
         title: 'Offline Test 2',
         url: 'https://example.com/offline2',
         content: 'Content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       expect(result.success).toBe(true);
     });
@@ -330,7 +330,7 @@ describe('Offline retry policy via step metadata', () => {
 
       const offlineQueue = makeOfflineQueue();
 
-      const pipeline = new RecordingPipeline(
+      const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
         makeObsidian() as any,
         makeAiClient() as any,
@@ -338,11 +338,11 @@ describe('Offline retry policy via step metadata', () => {
         offlineQueue as any,
       );
 
-      const result = await pipeline.execute({
+      const result = await pipeline.record({
         title: 'AI Fail Test',
         url: 'https://example.com/ai-fail',
         content: 'Content',
-      }, mockSettings);
+      }, { settings: mockSettings });
 
       // privacyPipeline is RETRY with maxRetries=3, exhausts retries,
       // then throws → pipeline returns error result
