@@ -8,6 +8,35 @@ import { normalizeUrl } from '../urlUtils.js';
 import { errorMessage } from '../errorUtils.js';
 import { StorageKeys } from './types.js';
 import type { Settings } from './types.js';
+import { PROVIDER_CATALOG } from '../../background/ai/providerCatalog.js';
+
+/**
+ * Add each configured remote-provider Base URL to `allowedUrls`, gated on the
+ * whitelist. Derived from PROVIDER_CATALOG so a new provider's base URL is
+ * covered by its registry row alone (was 3× copy-pasted per file).
+ * Local providers (lm-studio/ollama) are skipped — their localhost origins are
+ * covered by the Obsidian localhost block that always runs before this.
+ */
+export function addProviderBaseUrls(
+    allowedUrls: Set<string>,
+    settings: Record<string, unknown>,
+    isInWhitelist: (url: string) => boolean,
+): void {
+    for (const entry of PROVIDER_CATALOG.values()) {
+        if (!entry.baseUrlKey || entry.isLocal) continue;
+        const rawUrl = settings[entry.baseUrlKey] as string | undefined;
+        if (!rawUrl) continue;
+        if (isInWhitelist(rawUrl)) {
+            try {
+                allowedUrls.add(normalizeUrl(rawUrl));
+            } catch (e) {
+                console.warn(`Invalid ${entry.label} Base URL, skipping: ${rawUrl}, error: ${errorMessage(e)}`);
+            }
+        } else {
+            console.warn(`${entry.label} Base URL not in whitelist, skipped: ${rawUrl}`);
+        }
+    }
+}
 
 export const ALLOWED_AI_PROVIDER_DOMAINS = [
     'generativelanguage.googleapis.com',
@@ -92,45 +121,7 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
         console.warn(`Invalid Obsidian URL (localhost), skipping: ${errorMessage(e)}`);
     }
     allowedUrls.add('https://generativelanguage.googleapis.com');
-    const openaiBaseUrl = settings[StorageKeys.OPENAI_BASE_URL] as string | undefined;
-    if (openaiBaseUrl) {
-        if (isDomainInWhitelist(openaiBaseUrl)) {
-            try {
-                const normalized = normalizeUrl(openaiBaseUrl);
-                allowedUrls.add(normalized);
-            } catch (e) {
-                console.warn(`Invalid OpenAI Base URL, skipping: ${openaiBaseUrl}, error: ${errorMessage(e)}`);
-            }
-        } else {
-            console.warn(`OpenAI Base URL not in whitelist, skipped: ${openaiBaseUrl}`);
-        }
-    }
-    const openai2BaseUrl = settings[StorageKeys.OPENAI_2_BASE_URL] as string | undefined;
-    if (openai2BaseUrl) {
-        if (isDomainInWhitelist(openai2BaseUrl)) {
-            try {
-                const normalized = normalizeUrl(openai2BaseUrl);
-                allowedUrls.add(normalized);
-            } catch (e) {
-                console.warn(`Invalid OpenAI 2 Base URL, skipping: ${openai2BaseUrl}, error: ${errorMessage(e)}`);
-            }
-        } else {
-            console.warn(`OpenAI 2 Base URL not in whitelist, skipped: ${openai2BaseUrl}`);
-        }
-    }
-    const providerBaseUrl = settings[StorageKeys.PROVIDER_BASE_URL] as string | undefined;
-    if (providerBaseUrl) {
-        if (isDomainInWhitelist(providerBaseUrl)) {
-            try {
-                const normalized = normalizeUrl(providerBaseUrl);
-                allowedUrls.add(normalized);
-            } catch (e) {
-                console.warn(`Invalid Provider Base URL, skipping: ${providerBaseUrl}, error: ${errorMessage(e)}`);
-            }
-        } else {
-            console.warn(`Provider Base URL not in whitelist, skipped: ${providerBaseUrl}`);
-        }
-    }
+    addProviderBaseUrls(allowedUrls, settings as Record<string, unknown>, isDomainInWhitelist);
     const ublockSources = (settings[StorageKeys.UBLOCK_SOURCES] as Array<{ url?: string }>) || [];
     for (const source of ublockSources) {
         if (source.url && source.url !== 'manual') {

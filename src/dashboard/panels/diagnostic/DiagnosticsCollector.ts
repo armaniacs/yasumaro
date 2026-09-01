@@ -13,7 +13,7 @@
  * in-memory stand-ins for tests. Two adapters justify the seam.
  */
 
-import { StorageKeys, type Settings } from '../../../utils/storage/types.js';
+import { StorageKeys, type Settings, type StorageKey } from '../../../utils/storage/types.js';
 import { settingsRepository, type SettingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { getSqliteStatus, getLogCount } from '../../dashboardSqliteService.js';
 import { diagnoseDeficiencies, type DiagnosticInput } from '../../diagnoseDeficiencies.js';
@@ -103,25 +103,24 @@ export class DiagnosticsCollector {
 
     let settingsLoadFailed = false;
 
-    // All settings keys needed by this collector — single getMany call
-    const settingsKeys = [
+    // All settings keys needed by this collector — single getMany call.
+    // Per-provider keys are derived from the catalog so a new provider needs
+    // no edit here.
+    const providerKeys = [...ProviderCatalog.all.values()]
+      .flatMap((e) => [e.baseUrlKey, e.apiKeyKey, e.modelKey].filter((k): k is string => !!k)) as StorageKey[];
+    const settingsKeys: readonly StorageKey[] = [
       StorageKeys.OBSIDIAN_PROTOCOL, StorageKeys.OBSIDIAN_PORT,
       StorageKeys.OBSIDIAN_API_KEY, StorageKeys.OBSIDIAN_DAILY_PATH,
       StorageKeys.AI_PROVIDER_PRIORITY_LIST, StorageKeys.AI_PROVIDER,
-      StorageKeys.GEMINI_MODEL, StorageKeys.GEMINI_API_KEY,
-      StorageKeys.OPENAI_BASE_URL, StorageKeys.OPENAI_MODEL, StorageKeys.OPENAI_API_KEY,
-      StorageKeys.OPENAI_2_BASE_URL, StorageKeys.OPENAI_2_MODEL, StorageKeys.OPENAI_2_API_KEY,
-      StorageKeys.LM_STUDIO_BASE_URL, StorageKeys.LM_STUDIO_MODEL,
-      StorageKeys.OLLAMA_BASE_URL, StorageKeys.OLLAMA_MODEL,
-      StorageKeys.PROVIDER_BASE_URL, StorageKeys.PROVIDER_MODEL, StorageKeys.PROVIDER_API_KEY,
-    ] as const;
+      ...new Set(providerKeys),
+    ];
 
     // Parallel gathering — faster than sequential awaits in the old panel
     const [settings, sqliteStatus, logCountResult, builtInAiResult, bytesUsed, debugMode] = await Promise.all([
       getManyFn(settingsKeys).catch(async () => {
         settingsLoadFailed = true;
         const { DEFAULT_SETTINGS } = await import('../../../utils/storage/defaults.js');
-        return DEFAULT_SETTINGS as unknown as Pick<Settings, typeof settingsKeys[number]>;
+        return DEFAULT_SETTINGS as unknown as Pick<Settings, StorageKey>;
       }),
       getSqliteStatusFn().catch(() => null),
       getLogCountFn().catch(() => ({ error: 'unavailable' } as unknown as Awaited<ReturnType<typeof getLogCount>>)),

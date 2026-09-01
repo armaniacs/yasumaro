@@ -4,14 +4,7 @@
  * AI接続テスト結果の表示整形のテスト。DOMを使わない純関数なので直接検証できる。
  * 特に formatElapsed は「50ms未満が全部 0.0秒 になる」という表示バグの回帰防止。
  */
-import { describe, it, expect, vi } from 'vitest';
-
-vi.mock('../../background/aiClient.js', () => ({
-  PROVIDER_LABELS: {
-    'openai-compatible': 'OpenAI Compatible',
-    gemini: 'Google Gemini',
-  },
-}));
+import { describe, it, expect } from 'vitest';
 
 import {
   formatElapsed,
@@ -53,7 +46,7 @@ describe('providerLabel', () => {
     expect(providerLabel('unknown-provider')).toBe('unknown-provider');
   });
 
-  it('Object.prototype のキーを拾わない', () => {
+  it('Object.prototype のキーを拾わない（catalog は Map なので安全）', () => {
     expect(providerLabel('toString')).toBe('toString');
     expect(providerLabel('constructor')).toBe('constructor');
   });
