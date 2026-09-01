@@ -67,4 +67,19 @@ describe('confirmTokenManager per-action single-use TTL', () => {
     expect(localData['dashboardSqliteConfirmTokens']).toBeUndefined();
     expect(await verifyConfirmToken(token, 'migrate')).toBe(true);
   });
+
+  it('parallel createConfirmToken calls do not lose entries to last-write-wins (VULN-039)', async () => {
+    vi.useRealTimers();
+    const tokens = await Promise.all([
+      createConfirmToken('delete', 1),
+      createConfirmToken('delete', 2),
+      createConfirmToken('delete', 3),
+      createConfirmToken('delete', 4),
+      createConfirmToken('delete', 5),
+    ]);
+    // Without serialisation, concurrent load->save would drop all but one.
+    for (let i = 0; i < tokens.length; i++) {
+      expect(await verifyConfirmToken(tokens[i], 'delete', i + 1)).toBe(true);
+    }
+  });
 });

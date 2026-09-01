@@ -111,6 +111,14 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
 - **適用範囲**: エクスポートされたJSONファイルに含まれるすべての設定（APIキーを含む）
   - **注意**: パスワードを忘れた場合、暗号化されたエクスポートファイルを復号することはできません
 
+### ログエクスポートの改竄検知
+
+ブラウジングログを JSON 形式でエクスポートすると、ファイルに **HMAC 署名** が付与されます。インポート時にこの署名が検証され、無署名または改竄されたファイルは取り込まれません。署名鍵はブラウザプロファイルごとにローカル生成され、外部に送信されません。
+
+- **対象**: JSON 形式のログエクスポート/インポート
+- **注意**: 旧バージョン（署名なし）でエクスポートしたログ JSON は再インポートできません。必要な場合は最新バージョンで再エクスポートしてください
+- `.db` 形式のエクスポートは対象外です
+
 #### プライバシー同意の仕組み
 
 初回起動時にデータ収集への同意確認モーダルが表示されます。同意しない場合は制限モードで動作し、記録は行われません。3回連続で拒否すると、以降30日間はモーダルが表示されなくなります。30日経過後、再度同意確認が表示されます（GDPR 第7条「再同意取得」準拠）。
@@ -230,6 +238,14 @@ You can encrypt exported settings files with a **master password**.
 - **Encryption**: AES-GCM (industry standard) + PBKDF2 key derivation (100,000 iterations)
 - **Scope**: All settings in the exported JSON file, including API keys
 - **Note**: If you forget your password, encrypted export files cannot be decrypted
+
+### Log Export Tamper Detection
+
+When you export browsing logs as JSON, the file is **HMAC-signed**. On import the signature is verified, and unsigned or tampered files are rejected. The signing key is generated locally per browser profile and is never transmitted.
+
+- **Scope**: JSON-format log export/import
+- **Note**: Log JSON files exported by an older (unsigned) version cannot be re-imported. Re-export them from the latest version if needed
+- `.db`-format exports are not affected
 
 #### Privacy Consent Mechanism
 

@@ -4,6 +4,8 @@
  */
 
 import { importLogs } from './dashboardSqliteService.js';
+import { getOrCreateHmacSecret } from '../utils/storage/encryptionSession.js';
+import { computeHMAC, constantTimeCompare } from '../utils/crypto/index.js';
 
 interface ExportedRow {
   url: string;
@@ -22,6 +24,7 @@ interface ExportedData {
   version?: number;
   table?: string;
   rows?: ExportedRow[];
+  signature?: string;
 }
 
 /** Upper bound on rows accepted from a single import file (VULN-023). */
@@ -54,6 +57,23 @@ function isOptionalFiniteInRange(value: unknown, min: number, max: number): bool
 
 function isOptionalFlag(value: unknown): boolean {
   return value === undefined || value === 0 || value === 1;
+}
+
+/**
+ * Verify the HMAC signature over the signature-stripped body. Returns an error
+ * string to abort the import, or `null` when the file is authentic.
+ */
+async function verifyExportSignature(parsed: ExportedData): Promise<string | null> {
+  if (typeof parsed.signature !== 'string' || parsed.signature.length === 0) {
+    return 'This log file is unsigned and cannot be imported. Re-export it from this extension.';
+  }
+  const { signature, ...body } = parsed;
+  const hmacSecret = await getOrCreateHmacSecret();
+  const expected = await computeHMAC(hmacSecret, JSON.stringify(body, null, 2));
+  if (!(await constantTimeCompare(signature, expected))) {
+    return 'Log file signature verification failed. The file may be corrupted or was exported from a different browser profile.';
+  }
+  return null;
 }
 
 function validateRow(row: unknown): row is ExportedRow {
@@ -97,6 +117,14 @@ export async function importFromJson(
     parsed = JSON.parse(jsonText) as ExportedData;
   } catch {
     return { error: 'Invalid JSON format' };
+  }
+
+  // Signature gate (VULN-035): reject unsigned or tampered files before any
+  // row reaches SQLite. Mirrors settingsExportImport.importSettings — v1
+  // (unsigned) files are not accepted.
+  const signatureError = await verifyExportSignature(parsed);
+  if (signatureError) {
+    return { error: signatureError };
   }
 
   const rows = parsed.rows;

@@ -35,6 +35,11 @@ All notable changes to this project will be documented in this file.
 
 ## [6.7.98] - 2026-08-31
 
+### Security
+
+- ブラウジングログのエクスポート/インポートに HMAC 署名を導入（VULN-035）。`exportLogsService.exportJson()` が署名付き（`version: 2`）で書き出し、`importLogsService.importFromJson()` がインポート前に署名を検証する。無署名（旧 `version: 1`）または改竄されたログファイルは拒否される。**旧バージョンでエクスポートした無署名のログ JSON は再インポートできなくなる**ため、必要なら本バージョンで再エクスポートすること（`.db` エクスポートは影響なし）
+- `hmacKeyStore` の署名鍵・ラップキー生成と `confirmTokenManager` のトークンマップ更新を Mutex で直列化（VULN-039）。並行コンテキストが分岐した鍵/トークンを生成する余地を解消
+
 ### Fixed
 
 - E2Eテスト5件失敗を修正。`dashboard.fixture.ts` に `ai_provider_layout: 'a'` を追加しダッシュボードBレイアウトで `#aiProvider` が非表示になる問題を解消（built-in-ai 3件）、`wasm-boundary-comprehensive.spec.ts` を `create_confirm_token` API 経由に変更し 06b 以降の `dashboardSqliteConfirmToken` 不整合を解消（1件）、`recording-traceId.spec.ts` は logger buffer flush タイミング依存の pre-existing な flaky であることを明記して skip（1件）

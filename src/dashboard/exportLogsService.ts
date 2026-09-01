@@ -7,6 +7,15 @@
 import { queryLogs, backupDb } from './dashboardSqliteService.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 import { yamlQuote, yamlQuoteList } from '../utils/yamlFrontmatter.js';
+import { getOrCreateHmacSecret } from '../utils/storage/encryptionSession.js';
+import { computeHMAC } from '../utils/crypto/index.js';
+
+/**
+ * Log JSON export format version. v2 adds an HMAC `signature` over the
+ * signature-stripped body (VULN-035), mirroring settingsExportImport's
+ * unencrypted export. v1 files (no signature) are rejected on import.
+ */
+export const LOG_EXPORT_VERSION = 2;
 
 // ============================================================================
 // Markdown Export
@@ -111,7 +120,11 @@ export async function exportCsv(): Promise<Blob> {
 
 export async function exportJson(): Promise<Blob> {
   const all = await queryAllData();
-  const json = JSON.stringify({ version: 1, table: 'browsing_logs', rows: all }, null, 2);
+  const body = { version: LOG_EXPORT_VERSION, table: 'browsing_logs', rows: all };
+  // Sign the signature-stripped body; import recomputes over the same bytes.
+  const hmacSecret = await getOrCreateHmacSecret();
+  const signature = await computeHMAC(hmacSecret, JSON.stringify(body, null, 2));
+  const json = JSON.stringify({ ...body, signature }, null, 2);
   return new Blob([json], { type: 'application/json' });
 }
 
