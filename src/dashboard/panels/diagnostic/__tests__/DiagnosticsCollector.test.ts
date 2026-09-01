@@ -143,7 +143,7 @@ describe('DiagnosticsCollector — snapshot extensions', () => {
     expect(snapshot.settingsLoadFailed).toBe(false);
     expect(snapshot.obsidian.protocol).toBe('http');
     expect(snapshot.aiProviderDetails).toEqual([
-      { provider: 'ollama', model: 'llama3', label: 'ollama', baseUrl: 'http://127.0.0.1:11434' },
+      { provider: 'ollama', model: 'llama3', label: 'Ollama', baseUrl: 'http://127.0.0.1:11434' },
     ]);
   });
 
@@ -219,8 +219,8 @@ describe('DiagnosticsCollector — snapshot extensions', () => {
     const snapshot = await collector.collect();
 
     expect(snapshot.aiProviderDetails).toEqual([
-      { provider: 'openai', model: 'gpt-4o-mini', label: 'openai', baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-test' },
-      { provider: 'lm-studio', model: 'qwen', label: 'lm-studio', baseUrl: 'http://localhost:1234' },
+      { provider: 'openai', model: 'gpt-4o-mini', label: 'OpenAI Compatible', baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-test' },
+      { provider: 'lm-studio', model: 'qwen', label: 'LM Studio', baseUrl: 'http://localhost:1234' },
     ]);
   });
 

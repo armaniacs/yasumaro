@@ -731,9 +731,9 @@ describe('handleTestAi', () => {
         const handlePromise = handleTestAi();
         const statusDiv = document.getElementById('status')!;
 
-        // "constructor" is a valid string provider but a prototype key of the
-        // PROVIDER_LABELS record. It must fall back to the raw value, not a
-        // function source or "[object Object]".
+        // "constructor" is a valid string provider but also an Object.prototype
+        // key. The catalog is a Map so the lookup is pollution-safe; the label
+        // must fall back to the raw value, not a function source or "[object Object]".
         await vi.waitFor(() => {
             expect(statusDiv.textContent).toContain('constructor');
         });

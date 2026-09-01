@@ -5,6 +5,7 @@
 
 import { normalizeUrl } from './urlUtils.js';
 import { errorMessage } from './errorUtils.js';
+import { addProviderBaseUrls } from './storage/urlWhitelist.js';
 import type { Source } from './types.js';
 import type { Settings } from './storage/types.js';
 
@@ -37,49 +38,8 @@ export function buildAllowedUrls(
     // Gemini API
     allowedUrls.add('https://generativelanguage.googleapis.com');
 
-    // OpenAI互換API - ホワイトリストチェック
-    const openaiBaseUrl = settings.openai_base_url as string;
-    if (openaiBaseUrl) {
-        if (isDomainInWhitelistFunc(openaiBaseUrl)) {
-            try {
-                const normalized = normalizeUrl(openaiBaseUrl);
-                allowedUrls.add(normalized);
-            } catch (e) {
-                console.warn(`Invalid OpenAI Base URL, skipping: ${openaiBaseUrl}, error: ${errorMessage(e)}`);
-            }
-        } else {
-            console.warn(`OpenAI Base URL not in whitelist, skipped: ${openaiBaseUrl}`);
-        }
-    }
-
-    const openai2BaseUrl = settings.openai_2_base_url as string;
-    if (openai2BaseUrl) {
-        if (isDomainInWhitelistFunc(openai2BaseUrl)) {
-            try {
-                const normalized = normalizeUrl(openai2BaseUrl);
-                allowedUrls.add(normalized);
-            } catch (e) {
-                console.warn(`Invalid OpenAI 2 Base URL, skipping: ${openai2BaseUrl}, error: ${errorMessage(e)}`);
-            }
-        } else {
-            console.warn(`OpenAI 2 Base URL not in whitelist, skipped: ${openai2BaseUrl}`);
-        }
-    }
-
-    // OpenAI互換プロバイダー（provider_base_url）- ホワイトリストチェック
-    const providerBaseUrl = settings.provider_base_url as string;
-    if (providerBaseUrl) {
-        if (isDomainInWhitelistFunc(providerBaseUrl)) {
-            try {
-                const normalized = normalizeUrl(providerBaseUrl);
-                allowedUrls.add(normalized);
-            } catch (e) {
-                console.warn(`Invalid Provider Base URL, skipping: ${providerBaseUrl}, error: ${errorMessage(e)}`);
-            }
-        } else {
-            console.warn(`Provider Base URL not in whitelist, skipped: ${providerBaseUrl}`);
-        }
-    }
+    // OpenAI互換API / OpenAI互換プロバイダー - ホワイトリストチェック（catalog 駆動）
+    addProviderBaseUrls(allowedUrls, settings, isDomainInWhitelistFunc);
 
     // uBlock Filter Sources - 既存のソース
     const ublockSources = (settings.ublock_sources as Source[]) || [];

@@ -1,10 +1,15 @@
 // @layer 1 — ProviderRegistry table (depends on storage/types layer 1; single source of truth for provider wiring)
 /**
  * providerRegistry.ts
- * ProviderRegistry: single table that maps ProviderId → storage keys & behavior flags.
- * Adding a new provider requires only one row here; the rest (model key resolution,
- * factory registration, baseUrl defaults, timeout/content-limit branching) derives
- * from this table.
+ * ProviderRegistry: single table that maps ProviderId → storage keys, behavior
+ * flags, the CSP origin, the display label, and the per-provider content-limit
+ * key. `providerCatalog.ts` is a thin re-export + `resolve()` seam over this.
+ * Adding a new provider requires only one row here; the rest (model key
+ * resolution, factory registration, baseUrl defaults, timeout/content-limit
+ * branching, CSP allow, diagnostics, urlWhitelist) derives from this table.
+ *
+ * `label` holds a brand name ("Google Gemini"), not localized UI text — the
+ * options page renders localized labels from i18n keys, not from here.
  */
 
 import { StorageKeys } from '../../utils/storage/types.js';
@@ -18,6 +23,12 @@ export interface ProviderRegistryEntry {
     readonly defaultModel?: string;
     readonly requiresApiKey: boolean;
     readonly isLocal: boolean;
+    /** Brand display name (not localized). */
+    readonly label: string;
+    /** CSP origin to allow when this provider is active; undefined for user-configured / no-network providers. */
+    readonly cspDomain?: string;
+    /** Storage key for the per-provider send-content char limit. */
+    readonly contentCharsKey?: string;
 }
 
 export const PROVIDER_REGISTRY: ReadonlyMap<ProviderId, ProviderRegistryEntry> = new Map<ProviderId, ProviderRegistryEntry>([
@@ -31,6 +42,9 @@ export const PROVIDER_REGISTRY: ReadonlyMap<ProviderId, ProviderRegistryEntry> =
             defaultModel: 'gpt-3.5-turbo',
             requiresApiKey: true,
             isLocal: false,
+            label: 'OpenAI Compatible',
+            cspDomain: 'https://api.openai.com',
+            contentCharsKey: StorageKeys.OPENAI_CONTENT_CHARS,
         },
     ],
     [
@@ -43,6 +57,9 @@ export const PROVIDER_REGISTRY: ReadonlyMap<ProviderId, ProviderRegistryEntry> =
             defaultModel: 'gpt-3.5-turbo',
             requiresApiKey: true,
             isLocal: false,
+            label: 'OpenAI Compatible 2',
+            cspDomain: 'https://api.openai.com',
+            contentCharsKey: StorageKeys.OPENAI_CONTENT_CHARS,
         },
     ],
     [
@@ -53,6 +70,8 @@ export const PROVIDER_REGISTRY: ReadonlyMap<ProviderId, ProviderRegistryEntry> =
             modelKey: StorageKeys.PROVIDER_MODEL,
             requiresApiKey: true,
             isLocal: false,
+            label: 'OpenAI Compatible',
+            contentCharsKey: StorageKeys.OPENAI_CONTENT_CHARS,
         },
     ],
     [
@@ -63,6 +82,8 @@ export const PROVIDER_REGISTRY: ReadonlyMap<ProviderId, ProviderRegistryEntry> =
             defaultBaseUrl: 'http://127.0.0.1:1234/v1',
             requiresApiKey: false,
             isLocal: true,
+            label: 'LM Studio',
+            cspDomain: 'http://127.0.0.1:1234',
         },
     ],
     [
@@ -73,6 +94,8 @@ export const PROVIDER_REGISTRY: ReadonlyMap<ProviderId, ProviderRegistryEntry> =
             defaultBaseUrl: 'http://localhost:11434/v1',
             requiresApiKey: false,
             isLocal: true,
+            label: 'Ollama',
+            cspDomain: 'http://localhost:11434',
         },
     ],
     [
@@ -82,6 +105,9 @@ export const PROVIDER_REGISTRY: ReadonlyMap<ProviderId, ProviderRegistryEntry> =
             modelKey: StorageKeys.GEMINI_MODEL,
             requiresApiKey: true,
             isLocal: false,
+            label: 'Google Gemini',
+            cspDomain: 'https://generativelanguage.googleapis.com',
+            contentCharsKey: StorageKeys.GEMINI_CONTENT_CHARS,
         },
     ],
     [
@@ -90,6 +116,7 @@ export const PROVIDER_REGISTRY: ReadonlyMap<ProviderId, ProviderRegistryEntry> =
             modelKey: '',
             requiresApiKey: false,
             isLocal: true,
+            label: 'Built-in AI',
         },
     ],
 ]);
