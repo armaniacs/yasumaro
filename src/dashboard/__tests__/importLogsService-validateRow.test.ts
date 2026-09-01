@@ -9,13 +9,24 @@ vi.mock('../dashboardSqliteService.js', () => ({
   importLogs: vi.fn(),
 }));
 
+vi.mock('../../utils/storage/encryptionSession.js', () => ({
+  getOrCreateHmacSecret: vi.fn(async () => 'test-secret'),
+}));
+vi.mock('../../utils/crypto/index.js', () => ({
+  computeHMAC: vi.fn(async (secret: string, payload: string) => `hmac(${secret}):${payload.length}:${payload.slice(0, 8)}`),
+  constantTimeCompare: vi.fn(async (a: string, b: string) => a === b),
+}));
+
 import { importLogs } from '../dashboardSqliteService.js';
+import { computeHMAC } from '../../utils/crypto/index.js';
 
 const NOW = 1_700_000_000_000;
 
 async function importRows(rows: unknown[]) {
   const { importFromJson } = await import('../importLogsService.js');
-  return importFromJson(JSON.stringify({ rows }));
+  const body = { version: 2, table: 'browsing_logs', rows };
+  const signature = await computeHMAC('test-secret', JSON.stringify(body, null, 2));
+  return importFromJson(JSON.stringify({ ...body, signature }));
 }
 
 describe('validateRow (via importFromJson)', () => {
