@@ -3,8 +3,8 @@
  * エラーハンドリング共通モジュール
  */
 
-// 単一ソース: src/utils/aiProviderLabels.ts（依存を持たない純粋定数のため popup バンドルに AIClient を巻き込まない）
-import { PROVIDER_LABELS as AI_PROVIDER_LABELS } from '../utils/aiProviderLabels.js';
+// 単一ソース: ProviderRegistry の row（storage/types にのみ依存する純粋テーブル。AIClient を巻き込まない）
+import { tryResolveCatalogEntry } from '../background/ai/providerCatalog.js';
 
 // エラータイプの定義
 /**
@@ -366,7 +366,7 @@ export function formatSuccessMessage(
 
   if (aiDuration !== undefined && aiDuration > 0) {
     const aiTime = formatDuration(aiDuration);
-    const providerLabel = aiProvider ? (AI_PROVIDER_LABELS[aiProvider] || aiProvider) : undefined;
+    const providerLabel = aiProvider ? (tryResolveCatalogEntry(aiProvider)?.label || aiProvider) : undefined;
     const aiLabel = providerLabel ? `AI: ${aiTime} (${providerLabel})` : `AI: ${aiTime}`;
     return `${baseMessage} (${totalTime} / ${aiLabel})`;
   }

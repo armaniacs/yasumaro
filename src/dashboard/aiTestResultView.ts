@@ -7,7 +7,7 @@
  * DOM を触らず文字列を返すので単体テストできる。
  */
 
-import { PROVIDER_LABELS } from '../utils/aiProviderLabels.js';
+import { tryResolveCatalogEntry } from '../background/ai/providerCatalog.js';
 
 /** 表示に必要な範囲だけを受け取る（aiClient の型に依存しすぎないため） */
 export interface AiTestProviderView {
@@ -43,11 +43,9 @@ export function formatElapsed(elapsedMs: number): string {
   return `${(elapsedMs / 1000).toFixed(1)}s`;
 }
 
-/** プロバイダ表示名を Object.prototype 汚染なしで引く */
+/** プロバイダ表示名（Map lookup なので prototype 汚染の心配なし） */
 export function providerLabel(provider: string): string {
-  return Object.prototype.hasOwnProperty.call(PROVIDER_LABELS, provider)
-    ? PROVIDER_LABELS[provider] ?? provider
-    : provider;
+  return tryResolveCatalogEntry(provider)?.label ?? provider;
 }
 
 /** 1プロバイダぶんの見出し行（✓/✗ ラベル(モデル): メッセージ (所要時間)） */

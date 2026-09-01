@@ -618,7 +618,7 @@ describe('buildAllowedUrls', () => {
     it('warns on invalid OpenAI base URL', () => {
         const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const urls = buildAllowedUrls({ openai_base_url: 'not-a-url' }, whitelistFn);
-        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid OpenAI Base URL'));
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid OpenAI Compatible Base URL'));
         warnSpy.mockRestore();
     });
 
@@ -631,14 +631,14 @@ describe('buildAllowedUrls', () => {
         const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const urls = buildAllowedUrls({ openai_2_base_url: 'https://evil.com/v1' }, rejectFn);
         expect(urls.has('https://evil.com/v1')).toBe(false);
-        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('OpenAI 2 Base URL not in whitelist'));
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('OpenAI Compatible 2 Base URL not in whitelist'));
         warnSpy.mockRestore();
     });
 
     it('warns on invalid OpenAI 2 base URL', () => {
         const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const urls = buildAllowedUrls({ openai_2_base_url: '://bad' }, whitelistFn);
-        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid OpenAI 2 Base URL'));
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid OpenAI Compatible 2 Base URL'));
         warnSpy.mockRestore();
     });
 
@@ -651,7 +651,7 @@ describe('buildAllowedUrls', () => {
         const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const urls = buildAllowedUrls({ provider_base_url: 'https://evil.com/v1' }, rejectFn);
         expect(urls.has('https://evil.com/v1')).toBe(false);
-        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Provider Base URL not in whitelist'));
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('OpenAI Compatible Base URL not in whitelist'));
         warnSpy.mockRestore();
     });
 

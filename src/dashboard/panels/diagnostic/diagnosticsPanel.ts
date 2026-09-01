@@ -8,7 +8,6 @@
  */
 
 import { getMessage } from '../../../utils/i18n.js';
-import { PROVIDER_LABELS } from '../../../utils/aiProviderLabels.js';
 import { makeStatRow, getSeverityLabel } from '../../diagnosticUtils.js';
 import type { BuiltInAIAvailability } from '../../../background/builtInAIClient.js';
 import type { BuiltInAiDiagnosticsResult } from '../../builtInAiDiagnosticsService.js';
@@ -17,6 +16,7 @@ import { diagnosticsCollector } from './DiagnosticsCollector.js';
 import type { DiagnosticsSnapshot } from './DiagnosticsCollector.js';
 import { getDebugMode, setDebugMode } from './debugModeStore.js';
 import { createDiagnosticActions, type DiagnosticActionElements } from './diagnosticsActions.js';
+import { PROVIDER_CATALOG } from '../../../background/ai/providerCatalog.js';
 
 /**
  * Renders the built-in AI availability row and toggles the download button.
@@ -128,13 +128,20 @@ function renderObsidianSection(el: HTMLElement | null, snap: DiagnosticsSnapshot
   el.appendChild(makeStatRow(getMessage('diagApiKey') || 'API Key', o.apiKey ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !o.apiKey));
 }
 
-/** Providers that render per-provider setting rows in the AI section (matches the legacy if-chain). */
-const KNOWN_DETAIL_PROVIDERS = new Set(['gemini', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible']);
+/**
+ * Providers that render per-provider setting rows in the AI section — those
+ * with at least one configurable field. built-in-ai (modelKey '', no baseUrl/
+ * apiKey) renders the header row only, matching the legacy if-chain.
+ */
+const KNOWN_DETAIL_PROVIDERS = new Set<string>(
+  [...PROVIDER_CATALOG.entries()]
+    .filter(([, e]) => Boolean(e.modelKey || e.baseUrlKey || e.apiKeyKey))
+    .map(([id]) => id),
+);
 
 function renderAiSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {
   if (!el || snap.settingsLoadFailed) return;
 
-  const providerLabels: Record<string, string> = PROVIDER_LABELS;
   const configuredLabel = getMessage('configured') || '(configured)';
   const notSetLabel = getMessage('notSet') || '(not set)';
   const details = snap.aiProviderDetails;
@@ -149,7 +156,7 @@ function renderAiSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): voi
   for (let i = 0; i < details.length; i++) {
     const d = details[i];
     if (!d) continue;
-    const label = providerLabels[d.provider] || d.provider;
+    const label = d.label || d.provider;
     const priorityLabel = details.length > 1 ? `#${i + 1} ` : '';
     const modelOverride = d.model ? ` [${d.model}]` : '';
 
