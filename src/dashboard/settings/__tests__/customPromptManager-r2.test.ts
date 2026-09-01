@@ -684,15 +684,15 @@ describe('customPromptManager - r2 missed branches', () => {
   });
 
   describe('uncovered branches: provider labels and getProviderLabel fallback', () => {
-    it('should return OpenAI label for openai provider', async () => {
+    it('should resolve the catalog label i18n key for openai provider', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
       initCustomPromptManager({ custom_prompts: [createTestPrompt({ id: 'openai_p', provider: 'openai', name: 'OA' })] } as any);
-      expect(document.getElementById('promptList')!.innerHTML).toContain('OpenAI');
+      expect(document.getElementById('promptList')!.innerHTML).toContain('openaiCompatible');
     });
-    it('should return OpenAI 2 label for openai2 provider', async () => {
+    it('should resolve the catalog label i18n key for openai2 provider', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
       initCustomPromptManager({ custom_prompts: [createTestPrompt({ id: 'openai2_p', provider: 'openai2', name: 'OA2' })] } as any);
-      expect(document.getElementById('promptList')!.innerHTML).toContain('OpenAI 2');
+      expect(document.getElementById('promptList')!.innerHTML).toContain('openaiCompatible2');
     });
     it('should fallback to All Providers when getMessage returns falsy', async () => {
       const { getMessage } = await import('../../../utils/i18n.js');
