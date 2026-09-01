@@ -14,12 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-**進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る。
+| PBI | 種別 | 難易度 | 副作用 | ステータス | 備考 |
+|-----|------|--------|--------|-----------|------|
+| [2026-09-01-01-refactor-recording-pipeline-facade-removal](2026-09-01-01-refactor-recording-pipeline-facade-removal.md) | 🔧 | 🔴 | 🟡 | ⬜ | PBI 2026-08-31-02 の残余。facade クラス + `createRecordingPipeline` を撤去し全 caller を Orchestrator 直接利用へ（~12 テスト移行） |
+| [2026-09-01-02-refactor-browsinglog-repository-decision](2026-09-01-02-refactor-browsinglog-repository-decision.md) | 🔧 | 🟢 | 🟢 | ⬜ | PBI 2026-08-31-05 の残余。未接続の `BrowsingLogRepository.ts`（296 行）を接続 or 削除。`ServiceResult` / `isServiceError` の重複解消 |
 
-### フォローアップ候補（未 PBI 化）
-- `RecordingPipeline` facade（`execute` / `record` / `retryObsidianWriteOnly`）と `createRecordingPipeline` の完全撤去。~12 テストファイル + `offlineQueueProcessor` + `recordingHandlers` を `RecordingOrchestrator` 直接利用へ移行。PBI 02 の残余（blast radius 大）
-- `src/dashboard/BrowsingLogRepository.ts`（PR #87 由来、consumer / test なし、296 行）を wire-up するか削除するか。`ServiceResult` / `isServiceError` の重複はこの dead code に由来（PBI 05 のフォローアップ）
-- PBI 06 の効果確認（次に AI provider を追加するとき、`ProviderCatalog` 駆動化で追加が 1 箇所で済むか。詳細は `2026-08-31-00-backlog.md`）
+### 未 PBI 化のトリガー
+- PBI 06 の効果確認: 次に AI provider を追加するとき、`ProviderCatalog` 駆動化で追加が 1 箇所で済むか確認する（詳細は `2026-08-31-00-backlog.md` の「PBI 06 — Speculative の扱い」節）
 
 ---
 
