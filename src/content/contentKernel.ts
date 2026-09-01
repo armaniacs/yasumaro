@@ -19,7 +19,7 @@ import type { ExtractResult } from '../utils/contentExtractor/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { ScrollMonitor } from './scrollMonitor.js';
 import { VisitReporter, type MessageSender } from './visitReporter.js';
-import { createSender } from '../utils/retryHelper.js';
+import { createContentMessageSender } from './contentMessageSender.js';
 import { getCleansingConfigForDomain } from '../utils/aiSummaryCleaner/perSiteOverride.js';
 import { cleanseViaOffscreen as delegateCleanseViaOffscreen } from './cleansingOffscreenDelegate.js';
 
@@ -101,7 +101,7 @@ export class ContentKernel {
         // but for explicit clock injection we ensure startTime tracks the fake clock's epoch.
         // Only override if clock is not the default Date.now reference and pageState is fresh.
         this.scrollMonitor = new ScrollMonitor(this.pageState, this.clock);
-        this.sender = opts.sender ?? createSender({ maxRetries: 2, initialDelay: 50 });
+        this.sender = opts.sender ?? createContentMessageSender(2);
         this.isE2ETest =
             opts.isE2ETest ??
             (() => typeof document !== 'undefined' && document.documentElement.hasAttribute('data-ow-e2e-test'));

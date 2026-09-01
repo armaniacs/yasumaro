@@ -8,7 +8,7 @@
  * default chrome-backed ports for the real extension runtime.
  */
 
-import { createSender } from '../utils/retryHelper.js';
+import { createContentMessageSender } from './contentMessageSender.js';
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
 import { PageState, type CleansingConfig } from './pageState.js';
 import { VisitGate } from './visitGate.js';
@@ -54,7 +54,7 @@ export function getPageStateForTesting(): Readonly<PageState> {
 }
 
 // モジュールレベルでリトライ付き送信者を作成
-const messageSender = createSender({ maxRetries: 2, initialDelay: 50 });
+const messageSender = createContentMessageSender(2);
 
 // ContentKernel — single unified visit pipeline (StoragePort + DomainPolicyPort + Clock + Scheduler)
 const storagePort = new ChromeStoragePort();

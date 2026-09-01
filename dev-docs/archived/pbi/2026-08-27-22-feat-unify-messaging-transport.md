@@ -42,3 +42,26 @@ Scenario: エッジケース — 型安全性が失われない
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了
 - [x] ドキュメント更新済み
+
+## 実装メモ
+
+2 段階で完了した。
+
+**第 1 段階（初回アーカイブ時）**: `MessageTransport`（`src/messaging/messageTransport.ts`）を新設し、
+`src/messaging/types.ts` の `sendServiceWorkerMessage` / `sendFromContentScript` /
+`sendFromPopup` を `transport.send` の薄いエイリアスに縮退。
+
+**第 2 段階（2026-09-01、branch `refactor/pbi-22-remove-chrome-message-sender`）**:
+受け入れ基準「`ChromeMessageSender` が削除されている」が第 1 段階では未達だったことが
+`autonomous-task-closer` の洗い出しで判明。`src/utils/retryHelper.ts`（`ChromeMessageSender` /
+`createSender` / `sendMessageWithRetry` / 並存する `Message` 型）を全削除し、
+残る 3 consumer を移行:
+- `src/content/contentMessageSender.ts` を新設（`MessageTransport` + `ChromeTransport` の
+  薄いアダプタ、`createContentMessageSender(retries)`）
+- `contentKernel.ts` / `extractor.ts` が `createContentMessageSender(2)` を使用
+- `visitReporter.ts` が `Message` / `ServiceWorkerResponse` 型を自身で保持（唯一の利用者）
+- `previewFlow.ts` が `messageTransport.send(msg, { retries: 5 })` を直接呼ぶ
+- 影響テスト 5 ファイル（`extractor.test.ts` / `extractor-comprehensive.test.ts` /
+  `recordCurrentPage{,-extra}.test.ts` / `main.test.ts`）の mock を
+  `retryHelper.js` → `contentMessageSender.js` / `messageTransport.js` に張替
+- `retryHelper.test.ts` を削除（アサーションは `messageTransport{,-branch}.test.ts` が既にカバー）

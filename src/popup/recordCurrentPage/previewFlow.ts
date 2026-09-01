@@ -2,7 +2,13 @@ import { SettingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { showPreview } from '../sanitizePreview.js';
 import { getMessage } from '../../utils/i18n.js';
-import { sendMessageWithRetry } from '../../utils/retryHelper.js';
+import { messageTransport } from '../../messaging/messageTransport.js';
+import type { ExtensionMessage } from '../../background/messageTypes.js';
+
+type RecordMessage =
+  | { type: 'MANUAL_RECORD'; payload: Record<string, unknown> }
+  | { type: 'PREVIEW_RECORD'; payload: Record<string, unknown> }
+  | { type: 'SAVE_RECORD'; payload: Record<string, unknown> };
 import { logError, ErrorCode } from '../../utils/logger.js';
 import type { ContentResponse, PreviewResponse } from '../mainTypes.js';
 import { SpinnerManager } from './spinnerManager.js';
@@ -35,6 +41,13 @@ export interface PreviewSaveResult {
   reason?: string;
 }
 
+/** Popup → SW send with retry, via the unified MessageTransport. */
+function send(message: RecordMessage): Promise<SaveRecordResult | undefined> {
+  return messageTransport.send(message as unknown as ExtensionMessage, { retries: 5 }) as Promise<
+    SaveRecordResult | undefined
+  >;
+}
+
 /**
  * PII_CONFIRMATION_UI 設定に応じてMANUAL_RECORD直送、
  * またはPREVIEW_RECORD→確認→SAVE_RECORDの流れを実行する。
@@ -48,7 +61,7 @@ export class PreviewFlow {
     const usePreview = settings[StorageKeys.PII_CONFIRMATION_UI] !== false;
 
     if (!usePreview) {
-      const result = await sendMessageWithRetry({
+      const result = await send({
         type: 'MANUAL_RECORD',
         payload: {
           title: tab.title,
@@ -70,7 +83,7 @@ export class PreviewFlow {
     }
 
     this.spinner.show(getMessage('localAiProcessing'));
-    const previewResponse = await sendMessageWithRetry({
+    const previewResponse = await send({
       type: 'PREVIEW_RECORD',
       payload: {
         title: tab.title,
@@ -125,7 +138,7 @@ export class PreviewFlow {
     }
 
     this.spinner.show(getMessage('saving'));
-    const result = await sendMessageWithRetry({
+    const result = await send({
       type: 'SAVE_RECORD',
       payload: {
         title: tab.title,

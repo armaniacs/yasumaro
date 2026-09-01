@@ -9,7 +9,37 @@ import type { ExtractResult } from '../utils/contentExtractor/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
-import type { ServiceWorkerResponse, Message } from '../utils/retryHelper.js';
+
+/** Message shape accepted by the content-script sender seam. */
+export interface Message {
+    type: string;
+    payload?: unknown;
+    target?: string;
+    protocolVersion?: number;
+}
+
+/**
+ * Service Worker response — the RecordingResult-derived fields a VALID_VISIT /
+ * MANUAL_RECORD reply can carry.
+ */
+export interface ServiceWorkerResponse {
+    success: boolean;
+    error?: string;
+    skipped?: boolean;
+    reason?: string;
+    summary?: string;
+    title?: string;
+    url?: string;
+    preview?: boolean;
+    processedContent?: string;
+    mode?: string;
+    maskedCount?: number;
+    maskedItems?: unknown[];
+    aiDuration?: number;
+    obsidianDuration?: number;
+    confirmationRequired?: boolean;
+    headerValue?: string;
+}
 
 export interface MessageSender {
     sendMessageWithRetry(message: Message): Promise<ServiceWorkerResponse>;
