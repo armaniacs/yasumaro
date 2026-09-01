@@ -42,6 +42,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- コンテンツクレンジングのキーワード設定 UI が既定/リセット時に表示するキーワードを、実際の strip ロジックが使う全リスト（約52語）に合わせた。従来は古い17語のサブセットがハードコードされており、`contentCleaner.DEFAULT_KEYWORDS` からドリフトしていた（archived PBI 2026-08-27-10 の効果確認で発見）
+- archived PBI 2026-08-27-06 の掃除: `opfsWorker/statusHandlers.ts` の到達不能なデッドコード `handleSqlExec` / `handleSqlQuery`（メッセージ型からは削除済みだが export だけ残存）を削除
 - E2Eテスト5件失敗を修正。`dashboard.fixture.ts` に `ai_provider_layout: 'a'` を追加しダッシュボードBレイアウトで `#aiProvider` が非表示になる問題を解消（built-in-ai 3件）、`wasm-boundary-comprehensive.spec.ts` を `create_confirm_token` API 経由に変更し 06b 以降の `dashboardSqliteConfirmToken` 不整合を解消（1件）、`recording-traceId.spec.ts` は logger buffer flush タイミング依存の pre-existing な flaky であることを明記して skip（1件）
 - `trustDb.repairDatabase` の型安全性を改善。`as unknown as Record<string, unknown>` キャストを `as unknown as Record<string, unknown>` に統一し、各サブオブジェクトを明示的に再代入する形に変更
 - `settingsMigration.ts` の未使用 `deriveKey` import を削除（lint エラー修正）
