@@ -15,6 +15,7 @@ import { GENERAL_SETTINGS_SCHEMA } from '../../utils/settingsSchemas.js';
 import { getMessage } from '../../utils/i18n.js';
 import { getPluralKey } from '../../utils/i18nPlural.js';
 import { getAiProviderElements, updateAIProviderVisibilityMulti } from '../settings/aiProvider.js';
+import { providerIdsInOrder } from '../aiProviderCatalogView.js';
 import { updateProviderSettingsLayout } from '../aiProviderLayoutManager.js';
 import { purgeOldRecordsNow, purgeContentNow, isServiceError } from '../dashboardSqliteService.js';
 import { collectBProviderPrioritySlots } from '../aiProviderB/priorityListView.js';
@@ -62,7 +63,7 @@ export function applyProviderPrioritySlots(slots: ProviderSlot[]): void {
   const aiProviderPriority3ModelInput = document.getElementById('aiProviderPriority3Model') as HTMLInputElement | null;
 
   if (aiProviderSelect) {
-    aiProviderSelect.value = slot1?.provider ?? 'gemini';
+    aiProviderSelect.value = slot1?.provider ?? providerIdsInOrder()[0] ?? 'gemini';
   }
   if (aiProviderPriority1ModelInput) {
     aiProviderPriority1ModelInput.value = slot1?.model ?? '';

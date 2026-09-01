@@ -21,6 +21,8 @@ import {
 } from '../../utils/customPromptUtils.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import { getMessage } from '../../utils/i18n.js';
+import { renderProviderOptions } from '../aiProviderCatalogView.js';
+import { tryResolveCatalogEntry } from '../../background/ai/providerCatalog.js';
 import { applyI18n } from '../../utils/i18n-dom.js';
 import { escapeHtml } from '../../popup/errorUtils.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
@@ -69,6 +71,7 @@ export function initCustomPromptManager(settings: Settings): void {
     noPromptsMessage = document.getElementById('noPromptsMessage');
     promptNameInput = document.getElementById('promptName') as HTMLInputElement;
     promptProviderSelect = document.getElementById('promptProvider') as HTMLSelectElement;
+    if (promptProviderSelect) renderProviderOptions(promptProviderSelect, { customPrompt: true });
     promptSystemInput = document.getElementById('promptSystem') as HTMLInputElement;
     promptTextInput = document.getElementById('promptText') as HTMLTextAreaElement;
     editingPromptIdInput = document.getElementById('editingPromptId') as HTMLInputElement;
@@ -254,13 +257,10 @@ function createPromptListItem(prompt: CustomPrompt): string {
  * @returns {string} Display label
  */
 function getProviderLabel(provider: string): string {
-    const labels: Record<string, string> = {
-        'all': getMessage('promptProviderAll') || 'All Providers',
-        'gemini': 'Gemini',
-        'openai': 'OpenAI',
-        'openai2': 'OpenAI 2'
-    };
-    return labels[provider] || provider;
+    if (provider === 'all') return getMessage('promptProviderAll') || 'All Providers';
+    const entry = tryResolveCatalogEntry(provider);
+    if (!entry) return provider;
+    return getMessage(entry.labelI18nKey) || entry.label || provider;
 }
 
 /**

@@ -17,6 +17,7 @@ import { generateReviewSummary } from '../../reviewSummaryHandler.js';
 import { syncStatusToTop } from '../../statusView.js';
 import { updateProviderSettingsLayout, hideAllProviderSettings, restoreOriginalProviderSettingsLayout } from '../../aiProviderLayoutManager.js';
 import { getAiProviderElements, setupAIProviderChangeListener, updateAIProviderVisibilityMulti } from '../../settings/aiProvider.js';
+import { providerIdsInOrder, renderProviderOptions, renderProviderSettings } from '../../aiProviderCatalogView.js';
 import { resolveInitialLayout, mountLayoutToggle } from '../../aiProviderLayoutToggle.js';
 import { createBPriorityListView } from '../../aiProviderB/priorityListView.js';
 import { createBProviderAccordionView } from '../../aiProviderB/providerAccordionView.js';
@@ -51,6 +52,26 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
     async mount(container) {
       panelContainer = container;
       const settings = await settingsRepository.getAll();
+
+      // A layout: build the provider <option> lists and per-provider settings
+      // blocks from the catalog before any value binding runs.
+      const providerSelect = container.querySelector('#aiProvider') as HTMLSelectElement | null;
+      if (providerSelect) renderProviderOptions(providerSelect);
+      for (const priorityId of ['aiProviderPriority2', 'aiProviderPriority3']) {
+        const sel = container.querySelector(`#${priorityId}`) as HTMLSelectElement | null;
+        if (sel) renderProviderOptions(sel, { includeNone: true });
+      }
+      const providerMount = container.querySelector('#providerSettingsMount') as HTMLElement | null;
+      if (providerMount) {
+        providerMount.textContent = '';
+        for (const id of providerIdsInOrder()) {
+          const block = document.createElement('div');
+          block.style.display = 'none';
+          renderProviderSettings(block, id);
+          providerMount.appendChild(block);
+        }
+      }
+
       loadSettingsToInputs(container, settings, GENERAL_SETTINGS_SCHEMA);
       await loadGeneralSettings();
 

@@ -12,6 +12,7 @@ import { PROVIDER_CATALOG, ProviderCatalog, UnknownProviderError } from '../prov
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { ProviderId } from '../../../utils/storage/types.js';
 import { getMessage } from '../../../utils/i18n.js';
+import { GENERAL_SETTINGS_SCHEMA } from '../../../utils/settingsSchemas.js';
 
 // The full ProviderId union, spelled out because a union type is not
 // runtime-available. If ProviderId changes this list must change with it —
@@ -133,6 +134,24 @@ describe('ProviderCatalog conformance', () => {
   it('settingsBlockKind is set on every entry', () => {
     for (const [id, entry] of PROVIDER_CATALOG) {
       expect(['generic', 'models-dev', 'built-in-ai'], id).toContain(entry.settingsBlockKind);
+    }
+  });
+
+  it('every provider detail key is bound in GENERAL_SETTINGS_SCHEMA with the right type', () => {
+    // The catalog-driven settings-form builder renders inputs for these keys;
+    // GENERAL_SETTINGS_SCHEMA must bind each one (password for api keys) or
+    // save/load silently drops the field.
+    const schemaByKey = new Map(GENERAL_SETTINGS_SCHEMA.map((f) => [f.key as string, f.type]));
+    for (const [id, entry] of PROVIDER_CATALOG) {
+      if (entry.baseUrlKey) {
+        expect(schemaByKey.get(entry.baseUrlKey), `${id}: ${entry.baseUrlKey}`).toBe('text');
+      }
+      if (entry.apiKeyKey && entry.requiresApiKey) {
+        expect(schemaByKey.get(entry.apiKeyKey), `${id}: ${entry.apiKeyKey}`).toBe('password');
+      }
+      if (entry.modelKey) {
+        expect(schemaByKey.get(entry.modelKey), `${id}: ${entry.modelKey}`).toBe('text');
+      }
     }
   });
 });

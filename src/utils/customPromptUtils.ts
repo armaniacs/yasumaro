@@ -263,7 +263,7 @@ export function validatePrompt(prompt: string): { valid: boolean; error?: string
 /**
  * 設定からアクティブなカスタムプロンプトを取得
  * @param {Settings} settings - 設定オブジェクト
- * @param {string} providerName - プロバイダー名 ('gemini' | 'openai' | 'openai2')
+ * @param {string} providerName - プロバイダー名 ('gemini' | 'openai' | 'openai2' | 'lm-studio' | 'ollama')
  * @returns {CustomPrompt | null} アクティブなプロンプト、またはnull
  */
 export function getActivePrompt(settings: Settings, providerName: string): CustomPrompt | null {

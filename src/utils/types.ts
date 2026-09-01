@@ -30,7 +30,7 @@ export interface CustomPrompt {
     name: string;
     prompt: string;           // ユーザープロンプト（{{content}}プレースホルダーを含む）
     systemPrompt?: string;    // OpenAI用システムプロンプト（オプション）
-    provider: 'gemini' | 'openai' | 'openai2' | 'all';
+    provider: 'gemini' | 'openai' | 'openai2' | 'lm-studio' | 'ollama' | 'all';
     isActive: boolean;
     createdAt: number;
     updatedAt: number;

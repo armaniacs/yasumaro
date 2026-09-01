@@ -146,8 +146,10 @@ test.describe('Dashboard - Initial Settings Panel @ui', () => {
     await expect(panel.getByRole('heading', { name: 'AI Provider', exact: true })).toBeVisible();
   });
 
-  test('has Gemini API key input', async ({ page }) => {
-    await expect(page.locator('#geminiApiKey')).toBeAttached();
+  test('has provider settings mount point', async ({ page }) => {
+    // Per-provider settings blocks (incl. #geminiApiKey) are built from the
+    // catalog at panel mount; the static HTML carries only the mount point.
+    await expect(page.locator('#providerSettingsMount')).toBeAttached();
   });
 
   test('has retention policy section', async ({ page }) => {

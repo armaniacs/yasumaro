@@ -446,9 +446,9 @@ describe('customPromptManager - r3 remaining branches', () => {
     } as any);
     const html = document.getElementById('promptList')!.innerHTML;
     expect(html).toContain('All Providers');
-    expect(html).toContain('Gemini');
-    expect(html).toContain('OpenAI');
-    expect(html).toContain('OpenAI 2');
+    expect(html).toContain('googleGemini');
+    expect(html).toContain('openaiCompatible');
+    expect(html).toContain('openaiCompatible2');
     expect(html).toContain('customProvider');
   });
 
