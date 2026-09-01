@@ -1,16 +1,6 @@
 import type { ProviderSlot } from '../../utils/storage/types.js';
 import { getMessage } from '../../utils/i18n.js';
-
-const PROVIDER_OPTIONS: { value: string; labelKey: string; fallback: string }[] = [
-  { value: '', labelKey: 'providerPriorityNone', fallback: 'Not set' },
-  { value: 'gemini', labelKey: 'googleGemini', fallback: 'Google Gemini' },
-  { value: 'openai', labelKey: 'openaiCompatible', fallback: 'OpenAI Compatible (Groq, etc.)' },
-  { value: 'openai2', labelKey: 'openaiCompatible2', fallback: 'OpenAI Compatible 2' },
-  { value: 'lm-studio', labelKey: 'lmStudio', fallback: 'LM Studio' },
-  { value: 'ollama', labelKey: 'ollama', fallback: 'Ollama' },
-  { value: 'openai-compatible', labelKey: 'openaiCompatibleModelsDev', fallback: 'OpenAI Compatible (Models.dev)' },
-  { value: 'built-in-ai', labelKey: 'builtInAi', fallback: 'Built-in AI' },
-];
+import { renderProviderOptions } from '../aiProviderCatalogView.js';
 
 export interface BPriorityListView {
   container: HTMLElement;
@@ -93,13 +83,8 @@ function createRow(index: number, slot: ProviderSlot | undefined): HTMLElement {
 
   const select = document.createElement('select');
   select.setAttribute('aria-label', `Priority ${index + 1}`);
-  PROVIDER_OPTIONS.forEach(opt => {
-    const o = document.createElement('option');
-    o.value = opt.value;
-    o.textContent = getMessage(opt.labelKey) || opt.fallback;
-    if (opt.value === (slot?.provider ?? '')) o.selected = true;
-    select.appendChild(o);
-  });
+  renderProviderOptions(select, { includeNone: true });
+  select.value = slot?.provider ?? '';
 
   const modelInput = document.createElement('input');
   modelInput.type = 'text';

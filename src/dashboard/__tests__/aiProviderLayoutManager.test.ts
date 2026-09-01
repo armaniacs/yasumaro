@@ -25,6 +25,7 @@ function buildDom(): { containerEls: HTMLElement[]; parentEls: HTMLElement[] } {
     'lm-studioSettings',
     'ollamaSettings',
     'openai-compatibleSettings',
+    'built-in-aiSettings',
   ];
 
   const parentEls: HTMLElement[] = [];

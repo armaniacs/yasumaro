@@ -1,283 +1,145 @@
 // @vitest-environment jsdom
 /**
- * popup/settings/aiProvider.ts のテスト
- * AIプロバイダーUI表示制御のテスト
+ * dashboard/settings/aiProvider.ts のテスト
+ * AIプロバイダーUI表示制御のテスト（catalog 駆動）
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
     updateAIProviderVisibility,
     setupAIProviderChangeListener,
-    getAiProviderElements
+    getAiProviderElements,
+    AIProviderElements,
 } from '../aiProvider.js';
-import { AIProviderElements } from '../aiProvider.js';
 
-// Mock logger to prevent console output during tests
 vi.mock('../../../utils/logger.js', () => ({
     logWarn: vi.fn(),
 }));
 
-describe('popup/settings/aiProvider', () => {
+const PROVIDER_IDS = ['gemini', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible', 'built-in-ai'];
+
+function createElements(withId = false): AIProviderElements {
+    const select = document.createElement('select');
+    if (withId) select.id = 'aiProvider';
+    PROVIDER_IDS.forEach((id) => {
+        const option = document.createElement('option');
+        option.value = id;
+        select.appendChild(option);
+    });
+    document.body.appendChild(select);
+
+    const settings: Record<string, HTMLElement | undefined> = {};
+    PROVIDER_IDS.forEach((id) => {
+        const div = document.createElement('div');
+        document.body.appendChild(div);
+        settings[id] = div;
+    });
+    return { select, settings };
+}
+
+describe('dashboard/settings/aiProvider', () => {
     describe('AIProviderElements interface', () => {
-        it('should have correct interface structure', () => {
-            const mockSelect = document.createElement('select');
-            const mockGeminiSettings = document.createElement('div');
-            const mockOpenaiSettings = document.createElement('div');
-            const mockOpenai2Settings = document.createElement('div');
-
-            const elements: AIProviderElements = {
-                select: mockSelect,
-                geminiSettings: mockGeminiSettings,
-                openaiSettings: mockOpenaiSettings,
-                openai2Settings: mockOpenai2Settings
-            };
-
+        it('has select + settings map', () => {
+            const elements = createElements();
             expect(elements.select).toBeDefined();
-            expect(elements.geminiSettings).toBeDefined();
-            expect(elements.openaiSettings).toBeDefined();
-            expect(elements.openai2Settings).toBeDefined();
+            expect(elements.settings.gemini).toBeDefined();
+            expect(elements.settings.openai).toBeDefined();
+            expect(elements.settings.openai2).toBeDefined();
         });
     });
 
     describe('updateAIProviderVisibility', () => {
-        function createElements(): AIProviderElements {
-            const select = document.createElement('select');
-            // Add options to the select
-            const options = ['gemini', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible'];
-            options.forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt;
-                select.appendChild(option);
-            });
-            document.body.appendChild(select);
-
-            const elements: AIProviderElements = {
-                select,
-                geminiSettings: document.createElement('div'),
-                openaiSettings: document.createElement('div'),
-                openai2Settings: document.createElement('div'),
-            };
-            document.body.appendChild(elements.geminiSettings);
-            document.body.appendChild(elements.openaiSettings);
-            document.body.appendChild(elements.openai2Settings);
-            return elements;
-        }
-
-        it('should show gemini settings when gemini is selected', () => {
+        it('shows only the selected provider settings block', () => {
             const elements = createElements();
             elements.select.value = 'gemini';
-
             updateAIProviderVisibility(elements);
-
-            expect(elements.geminiSettings.style.display).toBe('block');
-            expect(elements.openaiSettings.style.display).toBe('none');
-            expect(elements.openai2Settings.style.display).toBe('none');
+            expect(elements.settings.gemini!.style.display).toBe('block');
+            expect(elements.settings.openai!.style.display).toBe('none');
+            expect(elements.settings.openai2!.style.display).toBe('none');
         });
 
-        it('should show openai settings when openai is selected', () => {
+        it('shows openai settings when openai is selected', () => {
             const elements = createElements();
             elements.select.value = 'openai';
-
             updateAIProviderVisibility(elements);
-
-            expect(elements.geminiSettings.style.display).toBe('none');
-            expect(elements.openaiSettings.style.display).toBe('block');
-            expect(elements.openai2Settings.style.display).toBe('none');
+            expect(elements.settings.gemini!.style.display).toBe('none');
+            expect(elements.settings.openai!.style.display).toBe('block');
         });
 
-        it('should show openai2 settings when openai2 is selected', () => {
+        it('shows openai2 settings when openai2 is selected', () => {
             const elements = createElements();
             elements.select.value = 'openai2';
-
             updateAIProviderVisibility(elements);
-
-            expect(elements.geminiSettings.style.display).toBe('none');
-            expect(elements.openaiSettings.style.display).toBe('none');
-            expect(elements.openai2Settings.style.display).toBe('block');
+            expect(elements.settings.openai2!.style.display).toBe('block');
+            expect(elements.settings.openai!.style.display).toBe('none');
         });
 
-        it('should hide all settings when no provider is selected', () => {
+        it('hides all settings when no provider is selected', () => {
             const elements = createElements();
-            elements.select.value = ''; // Default/no selection
-
+            elements.select.value = '';
             updateAIProviderVisibility(elements);
-
-            expect(elements.geminiSettings.style.display).toBe('none');
-            expect(elements.openaiSettings.style.display).toBe('none');
-            expect(elements.openai2Settings.style.display).toBe('none');
+            PROVIDER_IDS.forEach((id) => {
+                expect(elements.settings[id]!.style.display).toBe('none');
+            });
         });
 
-        it('should handle optional openaiCompatibleSettings', () => {
-            const elements = createElements();
-            elements.select.value = 'openai-compatible';
-            elements.openaiCompatibleSettings = document.createElement('div');
-            document.body.appendChild(elements.openaiCompatibleSettings);
-
-            updateAIProviderVisibility(elements);
-
-            expect(elements.openaiCompatibleSettings?.style.display).toBe('block');
+        it('shows lm-studio / ollama / openai-compatible blocks', () => {
+            for (const id of ['lm-studio', 'ollama', 'openai-compatible']) {
+                const elements = createElements();
+                elements.select.value = id;
+                updateAIProviderVisibility(elements);
+                expect(elements.settings[id]!.style.display).toBe('block');
+            }
         });
 
-        it('should handle optional lmStudioSettings', () => {
+        it('tolerates a missing settings block', () => {
             const elements = createElements();
-            elements.select.value = 'lm-studio';
-            elements.lmStudioSettings = document.createElement('div');
-            document.body.appendChild(elements.lmStudioSettings);
-
-            updateAIProviderVisibility(elements);
-
-            expect(elements.lmStudioSettings?.style.display).toBe('block');
-        });
-
-        it('should handle optional ollamaSettings', () => {
-            const elements = createElements();
+            elements.settings.ollama = undefined;
             elements.select.value = 'ollama';
-            elements.ollamaSettings = document.createElement('div');
-            document.body.appendChild(elements.ollamaSettings);
-
-            updateAIProviderVisibility(elements);
-
-            expect(elements.ollamaSettings?.style.display).toBe('block');
-        });
-
-        it('should default to hidden for all optional settings', () => {
-            const elements = createElements();
-            elements.select.value = 'gemini';
-
-            // Create optional settings to test they are hidden by default
-            elements.openaiCompatibleSettings = document.createElement('div');
-            elements.lmStudioSettings = document.createElement('div');
-            elements.ollamaSettings = document.createElement('div');
-            document.body.appendChild(elements.openaiCompatibleSettings);
-            document.body.appendChild(elements.lmStudioSettings);
-            document.body.appendChild(elements.ollamaSettings);
-
-            updateAIProviderVisibility(elements);
-
-            expect(elements.openaiCompatibleSettings?.style.display).toBe('none');
-            expect(elements.lmStudioSettings?.style.display).toBe('none');
-            expect(elements.ollamaSettings?.style.display).toBe('none');
+            expect(() => updateAIProviderVisibility(elements)).not.toThrow();
         });
     });
 
     describe('setupAIProviderChangeListener', () => {
-        function createElements(): AIProviderElements {
-            const select = document.createElement('select');
-            select.id = 'aiProvider';
-            const options = ['gemini', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible'];
-            options.forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt;
-                select.appendChild(option);
-            });
-            document.body.appendChild(select);
-
-            const elements: AIProviderElements = {
-                select,
-                geminiSettings: document.createElement('div'),
-                openaiSettings: document.createElement('div'),
-                openai2Settings: document.createElement('div'),
-            };
-            document.body.appendChild(elements.geminiSettings);
-            document.body.appendChild(elements.openaiSettings);
-            document.body.appendChild(elements.openai2Settings);
-            return elements;
-        }
-
-        it('should call updateAIProviderVisibility on change', () => {
-            const elements = createElements();
+        it('calls updateAIProviderVisibility on change', () => {
+            const elements = createElements(true);
             setupAIProviderChangeListener(elements);
-
             elements.select.value = 'openai';
             elements.select.dispatchEvent(new Event('change'));
-
-            expect(elements.openaiSettings.style.display).toBe('block');
+            expect(elements.settings.openai!.style.display).toBe('block');
         });
 
-        it('should handle gemini selection without throwing', () => {
-            const elements = createElements();
+        it('switches visibility on multiple changes', () => {
+            const elements = createElements(true);
             setupAIProviderChangeListener(elements);
 
             elements.select.value = 'gemini';
             elements.select.dispatchEvent(new Event('change'));
-
-            expect(elements.geminiSettings.style.display).toBe('block');
-        });
-
-        it('should handle openai2 selection without throwing', () => {
-            const elements = createElements();
-            setupAIProviderChangeListener(elements);
-
-            elements.select.value = 'openai2';
-            elements.select.dispatchEvent(new Event('change'));
-
-            expect(elements.openai2Settings.style.display).toBe('block');
-        });
-
-        it('should handle openai-compatible selection without throwing', () => {
-            const elements = createElements();
-            setupAIProviderChangeListener(elements);
-
-            elements.select.value = 'openai-compatible';
-            elements.select.dispatchEvent(new Event('change'));
-
-            // Should not throw
-            expect(elements.select.value).toBe('openai-compatible');
-        });
-
-        it('should switch visibility on multiple changes', () => {
-            const elements = createElements();
-            setupAIProviderChangeListener(elements);
-
-            elements.select.value = 'gemini';
-            elements.select.dispatchEvent(new Event('change'));
-            expect(elements.geminiSettings.style.display).toBe('block');
+            expect(elements.settings.gemini!.style.display).toBe('block');
 
             elements.select.value = 'openai';
             elements.select.dispatchEvent(new Event('change'));
-            expect(elements.openaiSettings.style.display).toBe('block');
-            expect(elements.geminiSettings.style.display).toBe('none');
-
-            elements.select.value = 'openai2';
-            elements.select.dispatchEvent(new Event('change'));
-            expect(elements.openai2Settings.style.display).toBe('block');
-            expect(elements.openaiSettings.style.display).toBe('none');
+            expect(elements.settings.openai!.style.display).toBe('block');
+            expect(elements.settings.gemini!.style.display).toBe('none');
         });
 
-        it('should handle optional settings with listener', () => {
-            const elements = createElements();
-            const ollamaDiv = document.createElement('div');
-            document.body.appendChild(ollamaDiv);
-            elements.ollamaSettings = ollamaDiv;
-
+        it('handles built-in-ai selection without throwing', () => {
+            const elements = createElements(true);
             setupAIProviderChangeListener(elements);
-
-            elements.select.value = 'ollama';
+            elements.select.value = 'built-in-ai';
             elements.select.dispatchEvent(new Event('change'));
-
-            expect(elements.ollamaSettings).toBeDefined();
-            expect(elements.ollamaSettings.style.display).toBe('block');
+            expect(elements.settings['built-in-ai']!.style.display).toBe('block');
         });
     });
 
-    // Moved here from dashboard/__tests__/dashboard.test.ts with the function
-    // itself (PBI-24): it belongs beside the AIProviderElements type it
-    // returns, not in the god module the panel layer had to import from.
     describe('getAiProviderElements', () => {
-        it('returns AI provider elements object', () => {
+        it('returns select + settings map keyed by provider id', () => {
             const elements = getAiProviderElements();
-
             expect(elements).toHaveProperty('select');
-            expect(elements).toHaveProperty('geminiSettings');
-            expect(elements).toHaveProperty('openaiSettings');
-            expect(elements).toHaveProperty('openai2Settings');
-        });
-
-        it('returns select element as HTMLSelectElement', () => {
-            const elements = getAiProviderElements();
-
-            // The select element may be null in jsdom, just verify it's either a select or null
-            expect(elements.select === null || elements.select instanceof HTMLSelectElement).toBe(true);
+            expect(elements).toHaveProperty('settings');
+            PROVIDER_IDS.forEach((id) => {
+                expect(Object.prototype.hasOwnProperty.call(elements.settings, id)).toBe(true);
+            });
         });
     });
 });
