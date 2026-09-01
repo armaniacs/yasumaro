@@ -415,17 +415,16 @@ vi.mock('../aiClient.js', () => ({
         registerBuiltInAiService = vi.fn();
     }
 }));
-vi.mock('../pipeline/RecordingPipeline.js', () => {
+vi.mock('../pipeline/RecordingOrchestrator.js', () => {
     // record lives on the prototype (not as an instance field) so
-    // vi.spyOn(RecordingPipeline.prototype, 'record') can override it.
-    const RecordingPipeline = vi.fn().mockImplementation(function(this: any) {
-        this.execute = vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' });
+    // vi.spyOn(RecordingOrchestrator.prototype, 'record') can override it.
+    const RecordingOrchestrator = vi.fn().mockImplementation(function(this: any) {
         this.retryObsidianWriteOnly = vi.fn().mockResolvedValue(true);
     });
-    RecordingPipeline.prototype.record = vi.fn().mockResolvedValue({ success: true, skipped: false });
+    RecordingOrchestrator.prototype.record = vi.fn().mockResolvedValue({ success: true, skipped: false, summary: 'Pipeline summary' });
     return {
-        RecordingPipeline,
-        createRecordingPipeline: vi.fn().mockImplementation(() => new RecordingPipeline()),
+        RecordingOrchestrator,
+        createRecordingOrchestrator: vi.fn().mockImplementation(() => new RecordingOrchestrator()),
     };
 });
 vi.mock('../../utils/fetch.js', () => ({
@@ -529,7 +528,7 @@ import * as domainUtils from '../../utils/domainUtils.js';
 import * as privacyPipeline from '../privacyPipeline.js';
 import * as pendingStorage from '../../utils/pendingStorage.js';
 import { RecordingCache } from '../recordingCache.js';
-import { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
+import { RecordingOrchestrator } from '../pipeline/RecordingOrchestrator.js';
 import * as fetchUtils from '../../utils/fetch.js';
 import * as headerDetector from '../headerDetector.js';
 import * as sessionAlarmsManager from '../sessionAlarmsManager.js';
@@ -554,14 +553,14 @@ import type {
     PingMessage,
 } from '../messageTypes.js';
 import { CURRENT_PROTOCOL_VERSION } from '../messageTypes.js';
-import { createRecordingPipeline } from '../pipeline/RecordingPipeline.js';
+import { createRecordingOrchestrator } from '../pipeline/RecordingOrchestrator.js';
 
-// The production composition root builds the shared RecordingPipeline once at
+// The production composition root builds the shared RecordingOrchestrator once at
 // Service Worker module load; handlers must reuse that instance instead of
 // building a new one per message (Candidate 2). Capture it before
 // beforeEach()'s vi.clearAllMocks() wipes the mock's call history.
-const injectedRecordingPipeline = (createRecordingPipeline as unknown as ReturnType<typeof vi.fn>).mock.results[0]?.value as
-    | { execute: ReturnType<typeof vi.fn> }
+const injectedRecordingPipeline = (createRecordingOrchestrator as unknown as ReturnType<typeof vi.fn>).mock.results[0]?.value as
+    | { record: ReturnType<typeof vi.fn> }
     | undefined;
 
 const contextMenuClickListener = ((globalThis as any).chrome?.contextMenus?.onClicked?.addListener as ReturnType<typeof vi.fn>)?.mock?.calls?.[0]?.[0] as
@@ -577,8 +576,13 @@ const onAlarmListener = ((globalThis as any).chrome?.alarms?.onAlarm?.addListene
     | undefined;
 
 describe('service-worker handlers', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         vi.clearAllMocks();
+        // Several tests reassign RecordingOrchestrator.prototype.record for a
+        // specific scenario; restore the default so unrelated tests are not
+        // polluted (record is now the only recording method — no more .execute).
+        const { RecordingOrchestrator } = await import('../pipeline/RecordingOrchestrator.js');
+        (RecordingOrchestrator as any).prototype.record = vi.fn().mockResolvedValue({ success: true, skipped: false, summary: 'Pipeline summary' });
         resetVisitRateLimiter();
         (serviceWorker as unknown as { rateLimiterForTest?: { clear: () => void } }).rateLimiterForTest?.clear();
 
@@ -1511,7 +1515,7 @@ describe('service-worker handlers', () => {
 
         it('should log error when recordingPipeline.record throws', async () => {
             // Spy on record and make it throw
-            vi.spyOn(RecordingPipeline.prototype, 'record').mockRejectedValueOnce(new Error('Record failed'));
+            vi.spyOn(RecordingOrchestrator.prototype, 'record').mockRejectedValueOnce(new Error('Record failed'));
 
             // Setup pending pages
             pendingStorage.getPendingPages.mockResolvedValue([
@@ -1778,7 +1782,7 @@ describe('service-worker handlers', () => {
             // the manual-record handler must reuse that instance rather than
             // constructing a new pipeline per message.
             expect(injectedRecordingPipeline).toBeDefined();
-            expect(injectedRecordingPipeline!.execute).toHaveBeenCalledWith(
+            expect(injectedRecordingPipeline!.record).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: 'Example',
                     url: 'https://example.com',
@@ -1923,7 +1927,7 @@ describe('service-worker handlers', () => {
 
         it('should send confirmationRequired notification when needed', async () => {
             // Override the record mock to return confirmationRequired
-            const { RecordingPipeline: recordingPipeline } = await import('../pipeline/RecordingPipeline.js');
+            const { RecordingOrchestrator: recordingPipeline } = await import('../pipeline/RecordingOrchestrator.js');
             recordingPipeline.prototype.record = vi.fn().mockResolvedValue({
                 success: true,
                 skipped: false,
@@ -1944,7 +1948,7 @@ describe('service-worker handlers', () => {
 
         it('should strip PII from maskedItems before sending response', async () => {
             // Override the record mock to return maskedItems
-            const { RecordingPipeline: recordingPipeline } = await import('../pipeline/RecordingPipeline.js');
+            const { RecordingOrchestrator: recordingPipeline } = await import('../pipeline/RecordingOrchestrator.js');
             recordingPipeline.prototype.record = vi.fn().mockResolvedValue({
                 success: true,
                 skipped: false,
@@ -2056,7 +2060,7 @@ describe('service-worker handlers', () => {
 
             // The handler must reuse the composition-injected pipeline instead
             // of constructing a new one per message.
-            expect(createRecordingPipeline).not.toHaveBeenCalled();
+            expect(createRecordingOrchestrator).not.toHaveBeenCalled();
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true, summary: 'Pipeline summary' })
             );
@@ -2201,7 +2205,7 @@ describe('service-worker handlers', () => {
 
             // The handler must reuse the composition-injected pipeline instead
             // of constructing a new one per message.
-            expect(createRecordingPipeline).not.toHaveBeenCalled();
+            expect(createRecordingOrchestrator).not.toHaveBeenCalled();
             expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true, summary: 'Pipeline summary' })
             );
@@ -2214,14 +2218,14 @@ describe('service-worker handlers', () => {
                 payload: { title: 'Test', url: 'https://example.com', content: 'content', maskedCount: 2 }
             } as SaveRecordMessage;
 
-            // Mock RecordingPipeline to return maskedItems with original field
+            // Mock RecordingOrchestrator to return maskedItems with original field
             const pipelineModule = await import('../pipeline/piiBoundary.js');
             vi.spyOn(pipelineModule, 'stripPiiFromMaskedItems').mockReturnValue([{ masked: true }]);
 
-            // Access the mocked RecordingPipeline.execute to return masked items
-            const RecordingPipelineMock = (await import('../pipeline/RecordingPipeline.js')).RecordingPipeline;
+            // Access the mocked RecordingOrchestrator.record to return masked items
+            const RecordingPipelineMock = (await import('../pipeline/RecordingOrchestrator.js')).RecordingOrchestrator;
             (RecordingPipelineMock as any).mockImplementation(function(this: any) {
-                this.execute = vi.fn().mockResolvedValue({
+                this.record = vi.fn().mockResolvedValue({
                     success: true,
                     summary: 'Test summary',
                     maskedItems: [{ original: 'secret', masked: true }]

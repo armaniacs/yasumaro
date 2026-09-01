@@ -22,7 +22,7 @@ import type { RateLimiter } from './rateLimiter.js';
 import type { ManualContentFetcher } from './manualContentFetcher.js';
 import type { SessionStore } from './sessionStore.js';
 import type { HeaderDetector } from './headerDetector.js';
-import type { RecordingPipeline } from './pipeline/RecordingPipeline.js';
+import type { RecordingOrchestrator } from './pipeline/RecordingOrchestrator.js';
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import type { AutoSavedBadgeTabs } from './swStatePersistence.js';
 import type { MessageRouter, MessageHandler } from './handlers/MessageRouter.js';
@@ -33,8 +33,8 @@ import { compositionManifest } from './compositionManifest.js';
 export interface BackgroundServices {
   obsidian: ObsidianClient;
   sqliteClient: SqliteClient;
-  /** Shared RecordingPipeline; owns per-URL mutex, settings fetch, and step execution. */
-  recordingPipeline: RecordingPipeline;
+  /** Shared RecordingOrchestrator; owns per-URL mutex, settings fetch, and step execution. */
+  recordingPipeline: RecordingOrchestrator;
   tabCache: TabCache;
   rateLimiter: RateLimiter;
   manualContentFetcher: ManualContentFetcher;
@@ -105,7 +105,7 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
     sessionStore: container.resolve<SessionStore>('sessionStore'),
     headerDetector: container.resolve<HeaderDetector>('headerDetector'),
     recordingCache: container.resolve<RecordingCacheInstance>('recordingCache'),
-    recordingPipeline: container.resolve<RecordingPipeline>('recordingPipeline'),
+    recordingPipeline: container.resolve<RecordingOrchestrator>('recordingPipeline'),
     manualRecordDeps: container.resolve<ManualRecordHandlerDeps>('manualRecordDeps'),
     saveRecordDeps: container.resolve<SaveRecordHandlerDeps>('saveRecordDeps'),
     messageRouter: container.resolve<MessageRouter>('messageRouter'),

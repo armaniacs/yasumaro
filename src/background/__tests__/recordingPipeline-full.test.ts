@@ -1,5 +1,4 @@
 // src/background/__tests__/recordingPipeline-full.test.ts
-import { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
 import { PerUrlMutexMap } from '../pipeline/perUrlMutex.js';
 import { RecordingCache } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
@@ -356,9 +355,9 @@ describe('RecordingPipeline', () => {
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);
       const settings = await mockGetAll();
 
-      const call1 = logic.execute({ url, title: 'A', content: 'a', skipDuplicateCheck: true }, settings);
+      const call1 = logic.record({ url, title: 'A', content: 'a', skipDuplicateCheck: true }, { settings });
       await firstProcessStarted;
-      const call2 = logic.execute({ url, title: 'B', content: 'b', skipDuplicateCheck: true }, settings);
+      const call2 = logic.record({ url, title: 'B', content: 'b', skipDuplicateCheck: true }, { settings });
       await Promise.all([call1, call2]);
 
       expect(processOrder).toEqual(['start-1', 'end-1', 'start-2', 'end-2']);
