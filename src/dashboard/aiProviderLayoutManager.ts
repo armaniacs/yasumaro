@@ -4,25 +4,12 @@
  * 元のDOMノードを移動することで、イベントリスナーと値の同期を保証
  */
 
-interface ProviderSettingsMap {
-  gemini: { id: string; label: string };
-  openai: { id: string; label: string };
-  openai2: { id: string; label: string };
-  'lm-studio': { id: string; label: string };
-  ollama: { id: string; label: string };
-  'openai-compatible': { id: string; label: string };
-  'built-in-ai': { id: string; label: string };
-}
+import { providerIdsInOrder } from './aiProviderCatalogView.js';
 
-const PROVIDER_SETTINGS_MAP: ProviderSettingsMap = {
-  gemini: { id: 'geminiSettings', label: 'Gemini' },
-  openai: { id: 'openaiSettings', label: 'OpenAI' },
-  openai2: { id: 'openai2Settings', label: 'OpenAI 2' },
-  'lm-studio': { id: 'lm-studioSettings', label: 'LM Studio' },
-  ollama: { id: 'ollamaSettings', label: 'Ollama' },
-  'openai-compatible': { id: 'openai-compatibleSettings', label: 'OpenAI Compatible' },
-  'built-in-ai': { id: 'built-in-aiSettings', label: 'Built-in AI' }
-};
+/** Each provider's settings block is `#<providerId>Settings` in both layouts. */
+function settingsDivId(providerId: string): string {
+  return `${providerId}Settings`;
+}
 
 // 各プロバイダ設定divの元の親を保存（復元用）
 const originalParents = new Map<string, HTMLElement>();
@@ -37,24 +24,20 @@ function moveProviderSettingsToPriority(priorityLevel: 1 | 2 | 3, provider: stri
   const container = document.querySelector(containerSelector) as HTMLElement;
 
   if (!container) return;
-
   if (!provider) return;
+  if (!(providerIdsInOrder() as string[]).includes(provider)) return;
 
-  const providerInfo = PROVIDER_SETTINGS_MAP[provider as keyof ProviderSettingsMap];
-  if (!providerInfo) return;
-
-  const settingsDiv = document.getElementById(providerInfo.id) as HTMLElement;
+  const id = settingsDivId(provider);
+  const settingsDiv = document.getElementById(id) as HTMLElement;
   if (!settingsDiv) return;
 
-  // 元の親を保存（まだ保存されていない場合）
-  if (!originalParents.has(providerInfo.id)) {
+  if (!originalParents.has(id)) {
     const parent = settingsDiv.parentElement;
     if (parent) {
-      originalParents.set(providerInfo.id, parent);
+      originalParents.set(id, parent);
     }
   }
 
-  // 既に別の場所にある場合は移動
   settingsDiv.style.display = 'block';
   container.appendChild(settingsDiv);
 }
@@ -75,8 +58,8 @@ export function updateProviderSettingsLayout(providers: string[]): void {
  * すべてのプロバイダ設定を非表示にする
  */
 export function hideAllProviderSettings(): void {
-  Object.values(PROVIDER_SETTINGS_MAP).forEach(({ id }) => {
-    const settingsDiv = document.getElementById(id);
+  providerIdsInOrder().forEach((providerId) => {
+    const settingsDiv = document.getElementById(settingsDivId(providerId));
     if (settingsDiv) {
       settingsDiv.style.display = 'none';
     }
