@@ -68,13 +68,36 @@ Effort: 0.7w (Medium)
 
 ## DoD
 
-- [ ] 4 helperが`callInternal` genericに集約され重複が解消されている
+- [~] 4 helperの重複解消 — `callInternal` genericではなく、`SqliteClient` の
+  `query`/`mutate`/`maintain`/`getStatus` を `SqliteGateway`（PBI 2026-08-31-05）への
+  薄い委譲に置換する別アプローチで実質達成。try/catch・`recordSqliteFailure`・
+  `categorizeError` の verbatim 重複は SqliteClient から消滅。`callInternal` シンボルは未作成
 - [ ] `storageMaintenance.ts`から`await import('../../background/sqliteClient.js')`と`new SqliteClient()`が削除されている
-- [ ] `createBackgroundServices.ts`でhealthCheckが`getSharedSqliteClient`経由で注入されている
-- [ ] `sqliteMessageHandlers` Mapに`satisfies Record<SqliteMessageType, Handler>`で静的保証が付与されている
-- [ ] `npm run type-check` PASS
-- [ ] 既存テスト全PASS（sqliteClient 13ファイル + storageMaintenance）
+  — **未達**。`src/utils/storage/storageMaintenance.ts:34-37` に `getDefaultSqliteHealthCheck()` が現存し、
+  `await import('../../background/sqliteClient.js')` + `new SqliteClient()` を実行。
+  `:61` で `sqliteHealthCheck ?? getSqliteHealthCheck() ?? (await getDefaultSqliteHealthCheck())` と
+  本番フォールバック経路として現役参照（popup/options 等 `setSqliteHealthCheck` 未実行コンテキスト向け）
+- [x] `createBackgroundServices.ts`でhealthCheckが注入されている
+  — `compositionManifest.ts:92` の `onReady` で `setSqliteHealthCheck(...)` を配線、
+  `createBackgroundServices.ts` が resolve。ただし動的 import フォールバックと併存
+- [x] `sqliteMessageHandlers` Mapに`satisfies Record<SqliteMessageType, SqliteHandler>`
+  （`src/offscreen/sqliteMessageHandlers.ts:313`）
+- [x] `npm run type-check` PASS
+- [x] 既存テスト全PASS
 - [ ] `grep -rn "await import.*sqliteClient" src/utils/` が0件
+  — **未達**（`storageMaintenance.ts:36` が 1 件ヒット）
+
+## 実装メモ（効果確認: 2026-09-01 の DoD 乖離監査）
+
+**部分実装**。摩擦A（4 helper の重複）は PBI 2026-08-31-05（SqliteGateway 統合）で
+別アプローチにより実質解消。摩擦B（utils→background の逆依存 = `storageMaintenance.ts` の
+動的 import + `new SqliteClient()`）は**未解消のまま archived 入り**。
+
+実害は低い（動的 import は `setSqliteHealthCheck` 未実行コンテキスト専用のフォールバックで、
+通常経路は composition root で注入済み）。逆依存を完全に断つには
+`getDefaultSqliteHealthCheck` を廃し `ensureStorageQuota` の healthCheck 引数を必須化する
+必要があるが、フォールバックを失う popup/options コンテキストの扱いを先に決める設計が要る。
+現時点で追加 PBI 化は見送り（`dev-docs/LAYERS.md` の storageMaintenance 例外条項は維持）。
 
 ## 技術メモ
 
