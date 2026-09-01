@@ -6,44 +6,29 @@
  * SqliteClient via getSharedSqliteClient, one shared RecordingPipeline, and the
  * manual/save handler dependency objects), so manual record, context menu, and
  * message paths observe the same references instead of rebuilding per message.
+ *
+ * The wiring itself is declared in `compositionManifest.ts`. This function
+ * registers every manifest entry the container does not already have (so tests
+ * can `override()` first), resolves them, runs `onReady` side effects once, and
+ * hands back the typed composition.
  */
 
-import { createAIService } from './ai/aiServiceFactory.js';
-import { RemoteAIService } from './ai/RemoteAIService.js';
 import type { AIService } from './ai/AIService.js';
-import { ObsidianClient } from './obsidianClient.js';
-import { getSharedSqliteClient } from './sqliteClient.js';
+import type { ObsidianClient } from './obsidianClient.js';
 import type { SqliteClient } from './sqliteClient.js';
-import { setSqliteHealthCheck } from '../utils/storage/storageMaintenance.js';
-import { RecordingCacheInstance, SessionStoreRecordingCacheStore } from './recordingCache.js';
-import { TabCache } from './tabCache.js';
-import { RateLimiter } from './rateLimiter.js';
-import { ManualContentFetcher } from './manualContentFetcher.js';
-import { SessionStore } from './sessionStore.js';
-import { HeaderDetector } from './headerDetector.js';
-import { createPendingWriteQueue, setPendingWriteQueue } from './pendingChromeStorageQueue.js';
-import { ChromeStorageAdapter } from './persistentRetryQueue.js';
-import { createRecordingPipeline } from './pipeline/RecordingPipeline.js';
+import type { RecordingCacheInstance } from './recordingCache.js';
+import type { TabCache } from './tabCache.js';
+import type { RateLimiter } from './rateLimiter.js';
+import type { ManualContentFetcher } from './manualContentFetcher.js';
+import type { SessionStore } from './sessionStore.js';
+import type { HeaderDetector } from './headerDetector.js';
 import type { RecordingPipeline } from './pipeline/RecordingPipeline.js';
-import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
-import { createReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
-import { createAutoSavedBadgeTabs, type AutoSavedBadgeTabs } from './swStatePersistence.js';
-import { createDashboardSqliteMessageHandler } from './dashboardSqliteWiring.js';
-import { ensureConfirmToken, createConfirmToken, verifyConfirmToken } from './confirmTokenManager.js';
-import { hasPrivacyConsent } from '../popup/privacyConsent.js';
-import { lockSession } from '../utils/storage/encryptionSession.js';
-import { buildAllowedUrls } from '../utils/storage/urlWhitelist.js';
-import { getSavedUrlsWithTimestamps, saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlRepository.js';
-import { isDomainAllowed } from '../utils/domainUtils.js';
-import { notifyAiTestProgress } from './aiTestProgressNotifier.js';
-import { updateActivity } from './sessionAlarmsManager.js';
-import { createMessageRouter, type MessageRouter, type MessageRouterDeps } from './handlers/MessageRouter.js';
-import type { MessageHandler } from './handlers/MessageRouter.js';
+import type { AutoSavedBadgeTabs } from './swStatePersistence.js';
+import type { MessageRouter, MessageHandler } from './handlers/MessageRouter.js';
 import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/recordingHandlers.js';
 import { ServiceContainer } from './serviceContainer.js';
-import { SettingsRepository, ChromeStorageAdapter as SettingsChromeStorageAdapter, settingsRepository } from '../utils/storage/SettingsRepository.js';
-import { PerUrlMutexMap } from './pipeline/perUrlMutex.js';
+import { compositionManifest } from './compositionManifest.js';
 
 export interface BackgroundServices {
   obsidian: ObsidianClient;
@@ -79,171 +64,54 @@ export interface BackgroundServices {
  * the production wiring and the composition contract test observe one shared
  * RecordingPipeline and one shared SqliteClient across every recording path.
  * popup and Dashboard code never see this type.
+ *
+ * `dashboardSqliteHandler` is not a member: it is an internal wiring value that
+ * only reaches `MessageRouterDeps`. Consumers get it via
+ * `messageRouter.getHandler('DASHBOARD_SQLITE')`.
  */
 export interface BackgroundServicesComposition extends BackgroundServices {
   manualRecordDeps: ManualRecordHandlerDeps;
   saveRecordDeps: SaveRecordHandlerDeps;
   messageRouter: MessageRouter;
-  dashboardSqliteHandler: MessageHandler;
   autoSavedBadgeTabs: AutoSavedBadgeTabs;
 }
 
-// Static type checks are replaced by manifest-driven inference (PBI-04).
-// The container's register/resolve contract ensures keys stay in sync.
-
 export function createBackgroundServices(container = new ServiceContainer()): BackgroundServicesComposition {
-  // Register core singletons in the container — adding a dependency is one register() call
-  // instead of touching BackgroundServices + Composition + MessageRouterDeps.
-  if (!container.has('sessionStore')) container.register('sessionStore', () => new SessionStore(), { singleton: true });
-  if (!container.has('recordingCache')) container.register('recordingCache', () => {
-    const ss = container.resolve<SessionStore>('sessionStore');
-    const rc = new RecordingCacheInstance(new SessionStoreRecordingCacheStore(ss));
-    rc.ensureStorageListener?.();
-    return rc;
-  }, { singleton: true });
-  if (!container.has('headerDetector')) container.register('headerDetector', () => new HeaderDetector(container.resolve<RecordingCacheInstance>('recordingCache')), { singleton: true });
-  if (!container.has('obsidian')) container.register('obsidian', () => new ObsidianClient(), { singleton: true });
-  if (!container.has('sqliteClient')) container.register('sqliteClient', () => getSharedSqliteClient(), { singleton: true });
-  if (!container.has('tabCache')) container.register('tabCache', () => new TabCache(container.resolve<SessionStore>('sessionStore')), { singleton: true });
-  if (!container.has('rateLimiter')) container.register('rateLimiter', () => new RateLimiter(container.resolve<SessionStore>('sessionStore')), { singleton: true });
-  if (!container.has('manualContentFetcher')) container.register('manualContentFetcher', () => new ManualContentFetcher(), { singleton: true });
-  if (!container.has('remoteAiService')) container.register('remoteAiService', () => new RemoteAIService(), { singleton: true });
-  if (!container.has('aiService')) container.register('aiService', () => createAIService({ remoteAiService: container.resolve<RemoteAIService>('remoteAiService') }), { singleton: true });
-  if (!container.has('settingsRepository')) container.register('settingsRepository', () => new SettingsRepository(new SettingsChromeStorageAdapter()), { singleton: true });
-  if (!container.has('perUrlMutexMap')) container.register('perUrlMutexMap', () => new PerUrlMutexMap(), { singleton: true });
+  // Register every manifest entry the container does not already have, so a
+  // test that called container.override(key, fake) keeps its fake.
+  for (const entry of compositionManifest) {
+    if (!container.has(entry.key)) {
+      container.register(entry.key, () => entry.factory(container), { singleton: entry.singleton });
+    }
+  }
 
-  // Content backfill must not reorder LRU, so the timestamp is left alone. One
-  // closure is shared by both recording handlers instead of being rebuilt per
-  // handler (deep-dig 子PBI 4).
-  const setUrlContent = async (url: string, content: string): Promise<void> => {
-    await saveSavedUrlEntryMetadata(url, { content }, { refreshTimestamp: false, createIfMissing: false });
-  };
-
-  // — Remaining services moved into container (PBI-03) —
-  // Each guarded by `has` so tests can `override()` before calling createBackgroundServices.
-  if (!container.has('pendingWriteQueue')) container.register('pendingWriteQueue', () => createPendingWriteQueue(new ChromeStorageAdapter()), { singleton: true });
-  if (!container.has('reviewSummaryGenerator')) container.register('reviewSummaryGenerator', () => createReviewSummaryGenerator({ aiService: container.resolve<AIService>('aiService'), sqliteClient: container.resolve<SqliteClient>('sqliteClient') }), { singleton: true });
-  if (!container.has('recordingPipeline')) container.register('recordingPipeline', () => {
-    const rc = container.resolve<RecordingCacheInstance>('recordingCache');
-    return createRecordingPipeline({
-      getPrivacyInfoWithCache: (url: string) => rc.getPrivacyInfoWithCache(url),
-      getSettingsWithCache: () => rc.getSettingsWithCache(),
-      obsidian: container.resolve<ObsidianClient>('obsidian'),
-      aiService: container.resolve<AIService>('aiService'),
-      sqliteClient: container.resolve<SqliteClient>('sqliteClient'),
-      urlStore: { getSavedUrlsWithTimestamps },
-      offlineNetworkQueue: sharedOfflineNetworkQueue,
-      // Shared per-URL mutex map: all recordings serialize on the same URL
-      // regardless of how many orchestrator instances exist. Without this the
-      // orchestrator falls back to a private map and cross-instance
-      // serialization is lost (duplicate-entry race).
-      perUrlMutexMap: container.resolve<PerUrlMutexMap>('perUrlMutexMap'),
-    });
-  }, { singleton: true });
-  if (!container.has('dashboardSqliteHandler')) container.register('dashboardSqliteHandler', () => createDashboardSqliteMessageHandler({ sqliteClient: container.resolve<SqliteClient>('sqliteClient'), ensureConfirmToken, createConfirmToken, verifyConfirmToken }), { singleton: true });
-  if (!container.has('autoSavedBadgeTabs')) container.register('autoSavedBadgeTabs', () => createAutoSavedBadgeTabs(), { singleton: true });
-  if (!container.has('manualRecordDeps')) container.register('manualRecordDeps', () => ({
-    isRecordingAllowed: () => hasPrivacyConsent(),
-    checkRateLimit: (sender, settings) => container.resolve<RateLimiter>('rateLimiter').check(sender as never, settings as never),
-    fetchContent: (url: string) => container.resolve<ManualContentFetcher>('manualContentFetcher').fetchContent(url),
-    recordingPipeline: container.resolve<RecordingPipeline>('recordingPipeline'),
-    getSettings: () => settingsRepository.getAll(),
-    setUrlContent,
-  } as ManualRecordHandlerDeps), { singleton: true });
-  if (!container.has('saveRecordDeps')) container.register('saveRecordDeps', () => ({
-    isRecordingAllowed: () => hasPrivacyConsent(),
-    recordingPipeline: container.resolve<RecordingPipeline>('recordingPipeline'),
-    getSettings: () => settingsRepository.getAll(),
-    setUrlContent,
-  } as SaveRecordHandlerDeps), { singleton: true });
-  if (!container.has('messageRouter')) container.register('messageRouter', () => {
-    const obsidian = container.resolve<ObsidianClient>('obsidian');
-    const aiService = container.resolve<AIService>('aiService');
-    const tabCache = container.resolve<TabCache>('tabCache');
-    const recordingPipeline = container.resolve<RecordingPipeline>('recordingPipeline');
-    const recordingCache = container.resolve<RecordingCacheInstance>('recordingCache');
-    const manualRecordDeps = container.resolve<ManualRecordHandlerDeps>('manualRecordDeps');
-    const saveRecordDeps = container.resolve<SaveRecordHandlerDeps>('saveRecordDeps');
-    const autoSavedBadgeTabs = container.resolve<AutoSavedBadgeTabs>('autoSavedBadgeTabs');
-    const reviewSummaryGenerator = container.resolve<ReviewSummaryGenerator>('reviewSummaryGenerator');
-    const dashboardSqliteHandler = container.resolve<MessageHandler>('dashboardSqliteHandler');
-    const messageRouterDeps: MessageRouterDeps = {
-      recordingPipeline: { record: (data) => recordingPipeline.record(data) },
-      tabCache: { add: (tab) => tabCache.add(tab), update: (tabId, data) => tabCache.update(tabId, data) },
-      obsidian,
-      aiService,
-      manualRecordDeps,
-      saveRecordDeps,
-      hasPrivacyConsent: () => hasPrivacyConsent(),
-      buildAllowedUrls: (settings) => buildAllowedUrls(settings),
-      getSettings: () => settingsRepository.getAll(),
-      isDomainAllowed: (url) => isDomainAllowed(url),
-      clearSettingsCache: () => settingsRepository.clearCache(),
-      notifyAiTestProgress,
-      getPrivacyCache: () => recordingCache.getPrivacyCache(),
-      updateActivity: () => updateActivity(),
-      lockSession: () => lockSession(),
-      autoSavedBadgeTabs,
-      initExportScheduler: async () => {
-        const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
-        await initExportScheduler();
-      },
-      updateConsentBadge: async () => {
-        const { updateConsentBadge } = await import('./consentBadge.js');
-        await updateConsentBadge();
-      },
-      generateWeeklySummary: () => reviewSummaryGenerator.generateWeeklySummary(),
-      generateMonthlySummary: () => reviewSummaryGenerator.generateMonthlySummary(),
-      dashboardSqliteHandler,
-    };
-    return createMessageRouter(messageRouterDeps);
-  }, { singleton: true });
-
-  const sessionStore = container.resolve<SessionStore>('sessionStore');
-  const recordingCache = container.resolve<RecordingCacheInstance>('recordingCache');
-  const headerDetector = container.resolve<HeaderDetector>('headerDetector');
-  const obsidian = container.resolve<ObsidianClient>('obsidian');
-  const sqliteClient = container.resolve<SqliteClient>('sqliteClient');
-  const tabCache = container.resolve<TabCache>('tabCache');
-  const rateLimiter = container.resolve<RateLimiter>('rateLimiter');
-  const manualContentFetcher = container.resolve<ManualContentFetcher>('manualContentFetcher');
-  const aiService = container.resolve<AIService>('aiService');
-  const reviewSummaryGenerator = container.resolve<ReviewSummaryGenerator>('reviewSummaryGenerator');
-  const recordingPipeline = container.resolve<RecordingPipeline>('recordingPipeline');
-  const dashboardSqliteHandler = container.resolve<MessageHandler>('dashboardSqliteHandler');
-  const autoSavedBadgeTabs = container.resolve<AutoSavedBadgeTabs>('autoSavedBadgeTabs');
-  const manualRecordDeps = container.resolve<ManualRecordHandlerDeps>('manualRecordDeps');
-  const saveRecordDeps = container.resolve<SaveRecordHandlerDeps>('saveRecordDeps');
-  const messageRouter = container.resolve<MessageRouter>('messageRouter');
-
-  // Side-effect wiring — executed once after all services are resolved.
-  // onReady hook pattern: callers that need no side effects (tests) can skip this.
-  _onReady({ sqliteClient, pendingWriteQueue: container.resolve<ReturnType<typeof createPendingWriteQueue>>('pendingWriteQueue') });
+  // Resolve everything, then run onReady side effects once (setPendingWriteQueue,
+  // setSqliteHealthCheck — the utils↔background boundary wiring).
+  for (const entry of compositionManifest) {
+    container.resolve(entry.key);
+  }
+  for (const entry of compositionManifest) {
+    entry.onReady?.(container);
+  }
 
   return {
-    obsidian,
-    sqliteClient,
-    tabCache,
-    rateLimiter,
-    manualContentFetcher,
-    aiService,
-    reviewSummaryGenerator,
-    sessionStore,
-    headerDetector,
-    recordingCache,
-    recordingPipeline,
-    manualRecordDeps,
-    saveRecordDeps,
-    messageRouter,
-    dashboardSqliteHandler,
-    autoSavedBadgeTabs,
+    obsidian: container.resolve<ObsidianClient>('obsidian'),
+    sqliteClient: container.resolve<SqliteClient>('sqliteClient'),
+    tabCache: container.resolve<TabCache>('tabCache'),
+    rateLimiter: container.resolve<RateLimiter>('rateLimiter'),
+    manualContentFetcher: container.resolve<ManualContentFetcher>('manualContentFetcher'),
+    aiService: container.resolve<AIService>('aiService'),
+    reviewSummaryGenerator: container.resolve<ReviewSummaryGenerator>('reviewSummaryGenerator'),
+    sessionStore: container.resolve<SessionStore>('sessionStore'),
+    headerDetector: container.resolve<HeaderDetector>('headerDetector'),
+    recordingCache: container.resolve<RecordingCacheInstance>('recordingCache'),
+    recordingPipeline: container.resolve<RecordingPipeline>('recordingPipeline'),
+    manualRecordDeps: container.resolve<ManualRecordHandlerDeps>('manualRecordDeps'),
+    saveRecordDeps: container.resolve<SaveRecordHandlerDeps>('saveRecordDeps'),
+    messageRouter: container.resolve<MessageRouter>('messageRouter'),
+    autoSavedBadgeTabs: container.resolve<AutoSavedBadgeTabs>('autoSavedBadgeTabs'),
   };
 }
 
-function _onReady(deps: { sqliteClient: SqliteClient; pendingWriteQueue: ReturnType<typeof createPendingWriteQueue> }): void {
-  setPendingWriteQueue(deps.pendingWriteQueue);
-  setSqliteHealthCheck(async () => {
-    const r = await deps.sqliteClient.maintain({ type: 'healthCheck' });
-    return r.success ? Boolean(r.data) : false;
-  });
-}
+// Re-exported so existing test imports (`import { MessageHandler }`) keep working.
+export type { MessageHandler };

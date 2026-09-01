@@ -24,6 +24,14 @@ To prevent unauthorized or unexpected message processing in the Service Worker:
 - **Type Whitelisting**: Only process message types defined in `VALID_MESSAGE_TYPES`.
 - **Origin Check**: Message types that affect system state based on the current page (e.g., `VALID_VISIT`) MUST verify that `sender.tab` is present to ensure they originate from a Content Script.
 
+### 2.2 Service Worker Composition Root
+Long-lived collaborators are wired in `createBackgroundServices()` so every message path observes the same shared references (one `SqliteClient`, one `RecordingPipeline`, …).
+
+- **`compositionManifest.ts`**: a declarative `CompositionEntry[]` — `{ key, factory(container), singleton, onReady?(container) }`. Adding a background dependency is one entry; there is no separate `register()` block, keys union, or subset-check type to keep in sync.
+- **`ServiceContainer`** (`serviceContainer.ts`): a ~50-line string-keyed DI container. `createBackgroundServices` registers every manifest entry the container does not already have (so a test can `container.override(key, fake)` first), resolves them all, then runs each entry's `onReady` once.
+- **`onReady`** is where cross-layer side effects live — `setPendingWriteQueue` and `setSqliteHealthCheck` (utils→background boundary) are declared next to the entry they depend on, not scattered through the composition body.
+- **`dashboardSqliteHandler`** is an internal wiring value: it is a container key and reaches `MessageRouterDeps`, but it is not a field on `BackgroundServicesComposition`. Consumers get the handler via `messageRouter.getHandler('DASHBOARD_SQLITE')`.
+
 ## 3. UI Implementation Standards
 
 ### 3.1 Favicon Retrieval

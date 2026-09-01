@@ -184,7 +184,9 @@ describe('createBackgroundServices', () => {
     expect(services).toHaveProperty('saveRecordDeps');
     expect(services).toHaveProperty('messageRouter');
     expect(services.messageRouter.getHandlerCount()).toBe(19);
-    expect(services).toHaveProperty('dashboardSqliteHandler');
+    // dashboardSqliteHandler is internal wiring — reached via the router, not
+    // exposed on the composition (PBI 04).
+    expect(services).not.toHaveProperty('dashboardSqliteHandler');
     expect(services).toHaveProperty('autoSavedBadgeTabs');
   });
 
@@ -359,7 +361,6 @@ describe('createBackgroundServices', () => {
     expect(services.recordingCache).toEqual({ fake: 'recordingCache' });
     expect(services.reviewSummaryGenerator).toEqual({ fake: 'reviewSummaryGenerator' });
     expect(services.recordingPipeline).toEqual({ fake: 'recordingPipeline' });
-    expect(services.dashboardSqliteHandler).toEqual({ fake: 'dashboardSqliteHandler' });
     expect(services.autoSavedBadgeTabs).toEqual({ fake: 'autoSavedBadgeTabs' });
     expect(services.manualRecordDeps).toEqual({ fake: 'manualRecordDeps' });
     expect(services.saveRecordDeps).toEqual({ fake: 'saveRecordDeps' });

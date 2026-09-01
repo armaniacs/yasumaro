@@ -92,9 +92,11 @@ class TrancoVersionTracker {
 
 上の「将来の解消計画（TrancoVersionTracker の StorageAdapter 化）」がこの形で実現された。Tranco version の source-of-truth は `chrome.storage.local` の `settings` オブジェクト（`StorageKeys.TRANCO_VERSION` / `TRANCO_DOMAINS`）に一本化されており、二重管理は発生しない。
 
-### 循環 2: 未解消
+### 循環 2: 未解消（回避手法の配線場所を整理）
 
 `storageMaintenance.ts → background/sqliteClient.ts` は動的 import のまま残る。`sqliteClient` は PBI 05 で `SqliteGateway` 委譲の shim になったが、`utils → background` の逆方向依存自体は変わっていない。
+
+PBI 04 で、この逆方向依存を橋渡しする `setSqliteHealthCheck(() => sqliteClient.maintain(...))` の呼び出しを `compositionManifest.ts` の `sqliteClient` エントリの `onReady` に移した。回避手法（`storageMaintenance` 側の遅延 import + composition root からの health-check 注入）は不変。配線が「どのサービスに紐づくか」がマニフェスト上で一目で分かるようになった。同様に `setPendingWriteQueue` も `pendingWriteQueue` エントリの `onReady` にある。
 
 ### 循環 3: import パスのみ変更
 
@@ -112,6 +114,8 @@ class TrancoVersionTracker {
 * src/utils/storage/storageMaintenance.ts:13 — 循環 2（未解消）
 * src/utils/trustDb/trancoConsentManager.ts — 循環 3
 * dev-docs/LAYERS.md — 層定義の SSOT
+* src/background/compositionManifest.ts — 循環 2 の回避配線（`onReady` で `setSqliteHealthCheck` / `setPendingWriteQueue`）
 * PBI 2026-08-31-01-fix-settings-dual-truth（循環 1 の settingsStore 側を削除）
 * PBI 2026-08-31-03-fix-trustdb-god-module（循環 1 の trustDb 側を port 化）
+* PBI 2026-08-31-04-feat-composition-manifest（循環 2 の回避配線を manifest の onReady に整理）
 
