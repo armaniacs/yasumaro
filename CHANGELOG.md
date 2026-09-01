@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.98` リリース。
+> - 現時点では `v6.7.99` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -33,17 +33,36 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
-## [6.7.98] - 2026-08-31
+## [6.7.99] - 2026-09-01
+
+このリリースはユーザーに見える新機能を含まず、アーキテクチャの深化（Architecture Deepening 0831a）とセキュリティ強化を中心とした内部改善です。
 
 ### Security
 
 - ブラウジングログのエクスポート/インポートに HMAC 署名を導入（VULN-035）。`exportLogsService.exportJson()` が署名付き（`version: 2`）で書き出し、`importLogsService.importFromJson()` がインポート前に署名を検証する。無署名（旧 `version: 1`）または改竄されたログファイルは拒否される。**旧バージョンでエクスポートした無署名のログ JSON は再インポートできなくなる**ため、必要なら本バージョンで再エクスポートすること（`.db` エクスポートは影響なし）
 - `hmacKeyStore` の署名鍵・ラップキー生成と `confirmTokenManager` のトークンマップ更新を Mutex で直列化（VULN-039）。並行コンテキストが分岐した鍵/トークンを生成する余地を解消
 
+### Changed
+
+- **Architecture Deepening 0831a** — アーキテクチャレビューで抽出した 6 領域を単一 seam / SSOT に集約（挙動変更なし）。
+  - Settings: `SettingsRepository` へ一本化。`settingsStore.legacy.ts` / `settingsStore.ts` を削除し、legacy 1 秒キャッシュと Repository の二重真実を解消（PBI 01）
+  - Recording: `RecordingOrchestrator.record(data, opts)` を唯一の記録経路に。`RecordingPipeline` facade / `createRecordingPipeline` を撤去。`PerUrlMutexMap` の static 共有マップを container singleton に配線し duplicate-entry race を修正（PBI 02 + フォローアップ）
+  - Trust DB: god module を `TrustDbKernel` / `TrustPolicy` / `ManagedCollections` に分割。`repairDatabase` を純粋化（PBI 03）
+  - Composition root: `createBackgroundServices` を宣言的 `compositionManifest.ts` に。手動 union / alias / 副作用配線を解消（PBI 04）
+  - SQLite: 2 系統の RPC を `SqliteGateway` に統合。`queryPlan.ts` に WHERE 生成を集約。`StorageBackend` を `Queryable` / `Mutable` に分割（PBI 05）
+  - AI Provider: `ProviderCatalog` のデータソースを `PROVIDER_REGISTRY` 1 箇所に統合し、ダッシュボード UI（A/B 両レイアウト）を catalog 駆動に。provider 追加が registry 1 行 + i18n キーで完結。`aiProviderLabels.ts` / 静的 `<option>` グループ / per-provider `<div>` を撤去（PBI 06 + 06b/06c）
+  - `src/dashboard/BrowsingLogRepository.ts`（未接続の 296 行）を削除し、dashboard SQLite 経路を `dashboardSqliteService.ts` に確定
+- messaging: 2 系統の `chrome.runtime.sendMessage` seam を `MessageTransport` に統一。`retryHelper.ts`（`ChromeMessageSender`）を撤去（PBI-22 残余）
+
 ### Fixed
 
 - コンテンツクレンジングのキーワード設定 UI が既定/リセット時に表示するキーワードを、実際の strip ロジックが使う全リスト（約52語）に合わせた。従来は古い17語のサブセットがハードコードされており、`contentCleaner.DEFAULT_KEYWORDS` からドリフトしていた（archived PBI 2026-08-27-10 の効果確認で発見）
 - archived PBI 2026-08-27-06 の掃除: `opfsWorker/statusHandlers.ts` の到達不能なデッドコード `handleSqlExec` / `handleSqlQuery`（メッセージ型からは削除済みだが export だけ残存）を削除
+
+## [6.7.98] - 2026-08-31
+
+### Fixed
+
 - E2Eテスト5件失敗を修正。`dashboard.fixture.ts` に `ai_provider_layout: 'a'` を追加しダッシュボードBレイアウトで `#aiProvider` が非表示になる問題を解消（built-in-ai 3件）、`wasm-boundary-comprehensive.spec.ts` を `create_confirm_token` API 経由に変更し 06b 以降の `dashboardSqliteConfirmToken` 不整合を解消（1件）、`recording-traceId.spec.ts` は logger buffer flush タイミング依存の pre-existing な flaky であることを明記して skip（1件）
 - `trustDb.repairDatabase` の型安全性を改善。`as unknown as Record<string, unknown>` キャストを `as unknown as Record<string, unknown>` に統一し、各サブオブジェクトを明示的に再代入する形に変更
 - `settingsMigration.ts` の未使用 `deriveKey` import を削除（lint エラー修正）
