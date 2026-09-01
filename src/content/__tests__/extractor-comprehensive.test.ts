@@ -53,8 +53,8 @@ vi.mock('../../utils/logger.js', () => ({
 const { sendMessageWithRetryMock } = vi.hoisted(() => ({
   sendMessageWithRetryMock: vi.fn(() => Promise.resolve({ success: true })),
 }));
-vi.mock('../../utils/retryHelper.js', () => ({
-  createSender: vi.fn(() => ({ sendMessageWithRetry: sendMessageWithRetryMock })),
+vi.mock('../contentMessageSender.js', () => ({
+  createContentMessageSender: vi.fn(() => ({ sendMessageWithRetry: sendMessageWithRetryMock })),
 }));
 
 const { mockPreparePageContent } = vi.hoisted(() => ({

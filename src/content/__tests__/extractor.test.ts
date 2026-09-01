@@ -64,8 +64,8 @@ vi.mock('../utils/logger.js', () => ({
     },
 }));
 
-vi.mock('../utils/retryHelper.js', () => ({
-    createSender: vi.fn(() => ({
+vi.mock('../contentMessageSender.js', () => ({
+    createContentMessageSender: vi.fn(() => ({
         sendMessageWithRetry: vi.fn(() => Promise.resolve({ success: true })),
     })),
 }));
@@ -1828,9 +1828,9 @@ describe('reportValidVisit - messageSender interaction', () => {
         );
     });
 
-    it('uses messageSender from retryHelper', async () => {
+    it('uses messageSender from contentMessageSender', async () => {
         await init();
-        // The messageSender is created from createSender
+        // The messageSender is created from createContentMessageSender
         // This test verifies the module integration
         expect(true).toBe(true);
     });
