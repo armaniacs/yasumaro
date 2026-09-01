@@ -9,12 +9,13 @@
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
-import { extractSettingsFromInputs, extractLocalMarkdownExportTiming, type ValidationSchema } from '../utils/settingsFormBinding.js';
+import { extractSettingsFromInputs, extractLocalMarkdownExportTiming, isProviderConnectionField, type ValidationSchema } from '../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../utils/settingsSchemas.js';
 import { collectProviderPrioritySlots } from './generalSettings/settingsForm.js';
 import { collectBProviderPrioritySlots, validateBContainer } from './aiProviderB/priorityListView.js';
 import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, ErrorPair } from './settings/fieldValidation.js';
 import { getMessage } from '../utils/i18n.js';
+import { logInfo } from '../utils/logger.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { syncStatusToTop } from './statusView.js';
 
@@ -197,6 +198,28 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
     contentMaxRaw === '' || contentMaxRaw === undefined ? null : Number(contentMaxRaw);
 
   const currentSettings = await settingsRepository.getAll();
+
+  // Guard: never blank a stored provider connection field (base URL / model /
+  // API key) with an empty extracted value. An empty input on save means the
+  // field was not populated (a UI-desync bug — e.g. the B-layout accordion
+  // regression), not an intentional clear. Without this, "Save" wiped
+  // openai_base_url / openai_model for users who opened a broken form.
+  for (const key of Object.keys(newSettings)) {
+    if (!isProviderConnectionField(key)) continue;
+    const next = newSettings[key];
+    const cur = (currentSettings as Record<string, unknown>)[key];
+    const nextEmpty = next === '' || next === undefined || next === null;
+    const curPresent = cur !== '' && cur !== undefined && cur !== null;
+    if (nextEmpty && curPresent) {
+      delete newSettings[key];
+      logInfo(
+        'settingsPipeline',
+        { key },
+        'Skipped overwriting a stored provider connection field with an empty value',
+      );
+    }
+  }
+
   const mergedSettings = { ...currentSettings, ...newSettings };
 
   await settingsRepository.setAll(mergedSettings);
