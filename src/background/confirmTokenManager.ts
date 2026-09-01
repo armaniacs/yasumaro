@@ -4,8 +4,26 @@
  * Stored only in chrome.storage.session, validated on verify with TTL and single-use consumption.
  */
 
+import { Mutex } from '../utils/Mutex.js';
+
 export const CONFIRM_TOKENS_SESSION_KEY = 'dashboardSqliteConfirmTokens';
 export const CONFIRM_TOKEN_TTL_MS = 60_000;
+
+// Serialises the load -> mutate -> save of the token map so a concurrent
+// create/verify pair cannot lose an entry to a last-write-wins overwrite
+// (VULN-039). All map mutations run through withTokenMap.
+const tokenMapMutex = new Mutex();
+
+async function withTokenMap<T>(fn: (map: TokenMap) => T | Promise<T>): Promise<T> {
+  await tokenMapMutex.acquire();
+  try {
+    const map = await loadMap();
+    const result = await fn(map);
+    return result;
+  } finally {
+    tokenMapMutex.release();
+  }
+}
 
 export interface ConfirmTokenRecord {
   token: string;
@@ -62,11 +80,12 @@ export async function createConfirmToken(action: string, id?: number): Promise<s
   const token = generateToken();
   const expiresAt = Date.now() + CONFIRM_TOKEN_TTL_MS;
   const record: ConfirmTokenRecord = { token, action, expiresAt, ...(id !== undefined ? { id } : {}) };
-  const map = await loadMap();
-  pruneExpired(map);
-  map[token] = record;
-  await saveMap(map);
-  return token;
+  return withTokenMap(async (map) => {
+    pruneExpired(map);
+    map[token] = record;
+    await saveMap(map);
+    return token;
+  });
 }
 
 /**
@@ -75,25 +94,26 @@ export async function createConfirmToken(action: string, id?: number): Promise<s
  */
 export async function verifyConfirmToken(token: string, action: string, id?: number): Promise<boolean> {
   if (!token || typeof token !== 'string') return false;
-  const map = await loadMap();
-  const rec = map[token];
-  if (!rec) return false;
-  if (isExpired(rec)) {
+  return withTokenMap(async (map) => {
+    const rec = map[token];
+    if (!rec) return false;
+    if (isExpired(rec)) {
+      delete map[token];
+      try { await saveMap(map); } catch {}
+      return false;
+    }
+    if (rec.action !== action) return false;
+    const recId = rec.id;
+    const wantId = id;
+    if (recId !== wantId) {
+      // Strict compare: both undefined -> equal, otherwise must match
+      if (!(recId === undefined && wantId === undefined) && recId !== wantId) return false;
+    }
+    // Single-use: consume
     delete map[token];
     try { await saveMap(map); } catch {}
-    return false;
-  }
-  if (rec.action !== action) return false;
-  const recId = rec.id;
-  const wantId = id;
-  if (recId !== wantId) {
-    // Strict compare: both undefined -> equal, otherwise must match
-    if (!(recId === undefined && wantId === undefined) && recId !== wantId) return false;
-  }
-  // Single-use: consume
-  delete map[token];
-  try { await saveMap(map); } catch {}
-  return true;
+    return true;
+  });
 }
 
 /**

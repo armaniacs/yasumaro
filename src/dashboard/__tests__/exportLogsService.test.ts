@@ -15,6 +15,13 @@ vi.mock('../dashboardSqliteService.js', () => ({
   queryLogs: (...args: any[]) => mockQueryLogs(...args),
 }));
 
+vi.mock('../../utils/storage/encryptionSession.js', () => ({
+  getOrCreateHmacSecret: vi.fn(async () => 'test-secret'),
+}));
+vi.mock('../../utils/crypto/index.js', () => ({
+  computeHMAC: vi.fn(async (secret: string, payload: string) => `hmac(${secret}):${payload.length}`),
+}));
+
 // ---------------------------------------------------------------------------
 // Import
 // ---------------------------------------------------------------------------
@@ -197,10 +204,21 @@ describe('exportLogsService', () => {
       const text = await blob.text();
       const parsed = JSON.parse(text);
 
-      expect(parsed.version).toBe(1);
+      expect(parsed.version).toBe(2);
       expect(parsed.table).toBe('browsing_logs');
       expect(parsed.rows).toHaveLength(2);
       expect(parsed.rows[0].url).toBe('https://example.com/page1');
+      expect(typeof parsed.signature).toBe('string');
+      expect(parsed.signature.length).toBeGreaterThan(0);
+    });
+
+    it('signs the signature-stripped body so import can verify it', async () => {
+      mockQueryLogs.mockResolvedValue({ data: { rows: SAMPLE_ROWS, total: 2 } });
+      const parsed = JSON.parse(await (await exportJson()).text());
+      const { signature, ...body } = parsed;
+      // mock computeHMAC returns `hmac(secret):<payload length>`
+      const expectedLen = JSON.stringify(body, null, 2).length;
+      expect(signature).toBe(`hmac(test-secret):${expectedLen}`);
     });
 
     it('has correct MIME type', async () => {

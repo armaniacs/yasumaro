@@ -7,12 +7,21 @@
  */
 
 import { errorMessage } from '../errorUtils.js';
+import { Mutex } from '../Mutex.js';
 import {
     getWebCrypto,
     ENVELOPE_ITERATIONS,
     bytesToBase64,
     base64ToBytes,
 } from './primitives.js';
+
+// Serialises get-or-create so two contexts calling in parallel converge on a
+// single persisted key instead of each generating its own (VULN-039).
+// Two locks, always acquired outer (signing key) -> inner (wrapping key), so
+// getOrCreateWrappedHmacKey can call getOrCreateHmacWrappingKey while holding
+// the outer lock without a cycle. Contention is negligible (keys created once).
+const signingKeyMutex = new Mutex();
+const wrappingKeyMutex = new Mutex();
 
 const KEY_LENGTH = 256; // bits
 const IV_LENGTH = 12; // bytes (recommended for AES-GCM)
@@ -94,6 +103,15 @@ export async function deriveHmacWrappingKey(password: string, salt: Uint8Array):
  * @returns {Promise<CryptoKey>} AES-GCM wrapping key
  */
 async function getOrCreateHmacWrappingKey(): Promise<CryptoKey> {
+    await wrappingKeyMutex.acquire();
+    try {
+        return await getOrCreateHmacWrappingKeyLocked();
+    } finally {
+        wrappingKeyMutex.release();
+    }
+}
+
+async function getOrCreateHmacWrappingKeyLocked(): Promise<CryptoKey> {
     const webcrypto = getWebCrypto();
 
     try {
@@ -212,6 +230,15 @@ function base64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
  * @returns {Promise<CryptoKey>} HMAC-SHA256 signing key
  */
 async function getOrCreateWrappedHmacKey(storageKey: string, versionKey: string): Promise<CryptoKey> {
+    await signingKeyMutex.acquire();
+    try {
+        return await getOrCreateWrappedHmacKeyLocked(storageKey, versionKey);
+    } finally {
+        signingKeyMutex.release();
+    }
+}
+
+async function getOrCreateWrappedHmacKeyLocked(storageKey: string, versionKey: string): Promise<CryptoKey> {
     const webcrypto = getWebCrypto();
 
     try {
