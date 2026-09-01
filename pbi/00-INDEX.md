@@ -14,10 +14,18 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-**進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る。
+| PBI | 種別 | 副作用 | 状態 | 概要 |
+|-----|------|--------|------|------|
+| [2026-09-01-05-fix-crypto-policy-ssot-followup](2026-09-01-05-fix-crypto-policy-ssot-followup.md) | 🔧 fix | 🟡 | ⬜ 未着手 | archived PBI 2026-08-29-12 の DoD 未達 2 項目: log export/import の HMAC 署名（VULN-035）と `hmacKeyStore`/`confirmTokenManager` の get-or-create 排他（VULN-039 残り） |
 
 ### 未 PBI 化のトリガー
 - **なし。** PBI 06 の効果確認は 2026-09-01 に実施済み（未達 → 06b/06c を実装し達成）。残債は `2026-08-31-00-backlog.md` の「06d 候補」に記録（次 provider 追加時などに着手検討）
+
+### archived PBI の DoD 乖離監査（2026-09-01）
+`autonomous-task-closer` で archived PBI のチェックボックスと実コードを照合。実害ありは PBI-22（対応済み）のみ。表記のみの乖離を各 archived PBI の実装メモに追記済み。特記:
+- `2026-08-29-12-fix-crypto-policy-ssot` — 中核実装済み、2 項目未達 → 上記 2026-09-01-05 に切り出し
+- `2026-08-24-03-refactor-sqlite-consolidation` — 部分実装（`storageMaintenance.ts` の動的 import 未解消、実害低）。追加 PBI 化は見送り
+- `2026-08-30-05-feat-cleansing-offscreen-delegation` — PoC 品質（flag OFF で本番未使用）。追加 PBI 化は見送り
 
 ---
 

@@ -39,11 +39,35 @@ Scenario: 従来の削除結果と一致する
 
 ## 受け入れ基準
 
-- [ ] `src/offscreen/offscreen.ts` にクレンジング実行ハンドラが追加される
-- [ ] `src/content/contentKernel.ts` または `src/utils/pageContentPipeline.ts` が Offscreen 委譲を試み、失敗時にフォールバックする
-- [ ] Offscreen 委譲時と従来同期実行時で削除結果が一致することをテストで保証
+- [x] `src/offscreen/offscreen.ts` にクレンジング実行ハンドラが追加される
+  — `src/offscreen/cleansingOffscreen.ts`（`CLEANSING_OFFSCREEN_TYPE` /
+  `handleCleansingOffscreenPayload` / `cleanseHtmlOffscreen`）新設。`offscreen.ts:102` でディスパッチ
+- [x] `src/content/contentKernel.ts` または `src/utils/pageContentPipeline.ts` が Offscreen 委譲を試み、失敗時にフォールバックする
+  — `src/content/cleansingOffscreenDelegate.ts` の `cleanseViaOffscreen`（feature flag
+  `cleansing_offscreen_enabled`、既定 false → `cleanseHtmlSync` フォールバック）。
+  `contentKernel.ts` / `pageContentPipeline.ts` が re-export。**ただし実際の抽出パイプラインからは未 invoke（PoC 分岐点）**
+- [x] Offscreen 委譲時と従来同期実行時で削除結果が一致することをテストで保証
+  — 両者とも純粋関数 `cleanseHtmlOffscreen` を呼ぶ設計。`src/offscreen/__tests__/cleansingOffscreen.test.ts`
 - [ ] Offscreen Document のライフサイクル(生成/破棄/再生成)が考慮され、`chrome.offscreen.hasDocument` チェックがある
-- [ ] `npm run validate` が通る
+  — **未達**。`cleansingOffscreenDelegate.ts` は `chrome.runtime.sendMessage` を投げるのみ。
+  `chrome.offscreen.hasDocument` / `createDocument` の呼び出しなし。Document 不在時は
+  sendMessage 失敗 → catch で同期フォールバックという消極的対応のみ
+- [x] `npm run validate` が通る
+
+## 実装メモ（効果確認: 2026-09-01 の DoD 乖離監査）
+
+**実装済み（チェック漏れ）だが PoC 品質**。コード（`cleansingOffscreen.ts` /
+`cleansingOffscreenDelegate.ts`）とテストは PR #87 で導入済み。ファイル内コメントも一貫して
+「PoC」「計測するための分岐点」と明記。
+
+未達 2 点:
+1. feature flag `cleansing_offscreen_enabled` 既定 OFF で、本番の抽出パイプラインからは事実上未使用
+   （`contentKernel.cleanseViaOffscreen` は公開されるが記録フローで invoke なし）
+2. 受け入れ基準の `chrome.offscreen.hasDocument` ライフサイクル管理が未実装
+
+誤アーカイブというより「PoC を feat として archived した」状態。本番挙動に影響はない（flag OFF）。
+将来 Offscreen クレンジングを本番化する場合は、ライフサイクル管理と実パイプライン接続を
+新規 PBI で扱う。現時点では追加 PBI 化を見送り。
 
 ## テスト戦略
 
