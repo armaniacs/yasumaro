@@ -11,6 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { PROVIDER_CATALOG, ProviderCatalog, UnknownProviderError } from '../providerCatalog.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { ProviderId } from '../../../utils/storage/types.js';
+import { getMessage } from '../../../utils/i18n.js';
 
 // The full ProviderId union, spelled out because a union type is not
 // runtime-available. If ProviderId changes this list must change with it —
@@ -97,6 +98,41 @@ describe('ProviderCatalog conformance', () => {
     // so adding a provider does not force a test edit here.
     for (const key of providerKeys) {
       expect(KNOWN_STORAGE_KEYS.has(key), key).toBe(true);
+    }
+  });
+
+  // --- 06c UI metadata ---
+
+  it('every entry has a labelI18nKey that resolves to a message', () => {
+    for (const [id, entry] of PROVIDER_CATALOG) {
+      expect(entry.labelI18nKey, id).toBeTruthy();
+      expect(getMessage(entry.labelI18nKey), `${id}: ${entry.labelI18nKey}`).toBeTruthy();
+    }
+  });
+
+  it('fieldPlaceholders, when present, resolve to messages', () => {
+    for (const [id, entry] of PROVIDER_CATALOG) {
+      if (!entry.fieldPlaceholders) continue;
+      for (const key of Object.values(entry.fieldPlaceholders)) {
+        if (key) expect(getMessage(key), `${id}: ${key}`).toBeTruthy();
+      }
+    }
+  });
+
+  it('supportsCustomPrompt is true exactly for gemini/openai/openai2/lm-studio/ollama', () => {
+    const yes = [...PROVIDER_CATALOG].filter(([, e]) => e.supportsCustomPrompt).map(([id]) => id).sort();
+    expect(yes).toEqual(['gemini', 'lm-studio', 'ollama', 'openai', 'openai2'].sort());
+  });
+
+  it('dropdown order is gemini, openai, openai2, lm-studio, ollama, openai-compatible, built-in-ai', () => {
+    expect([...PROVIDER_CATALOG.keys()]).toEqual([
+      'gemini', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible', 'built-in-ai',
+    ]);
+  });
+
+  it('settingsBlockKind is set on every entry', () => {
+    for (const [id, entry] of PROVIDER_CATALOG) {
+      expect(['generic', 'models-dev', 'built-in-ai'], id).toContain(entry.settingsBlockKind);
     }
   });
 });

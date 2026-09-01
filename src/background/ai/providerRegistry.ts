@@ -23,15 +23,44 @@ export interface ProviderRegistryEntry {
     readonly defaultModel?: string;
     readonly requiresApiKey: boolean;
     readonly isLocal: boolean;
-    /** Brand display name (not localized). */
+    /** Brand display name (not localized) — fallback if labelI18nKey resolves to nothing. */
     readonly label: string;
     /** CSP origin to allow when this provider is active; undefined for user-configured / no-network providers. */
     readonly cspDomain?: string;
     /** Storage key for the per-provider send-content char limit. */
     readonly contentCharsKey?: string;
+    /** i18n key NAME (stable id, not localized text) for the options-page dropdown label. */
+    readonly labelI18nKey: string;
+    /** i18n key names for the settings-form input placeholders; only present fields need entries. */
+    readonly fieldPlaceholders?: {
+        readonly apiKey?: string;
+        readonly baseUrl?: string;
+        readonly model?: string;
+    };
+    /** Offered in the custom-prompt "Apply to Provider" select. */
+    readonly supportsCustomPrompt: boolean;
+    /** How the per-provider settings block renders on the options page. */
+    readonly settingsBlockKind?: 'generic' | 'models-dev' | 'built-in-ai';
 }
 
+// Insertion order == the options-page provider dropdown order.
 export const PROVIDER_REGISTRY: ReadonlyMap<ProviderId, ProviderRegistryEntry> = new Map<ProviderId, ProviderRegistryEntry>([
+    [
+        'gemini',
+        {
+            apiKeyKey: StorageKeys.GEMINI_API_KEY,
+            modelKey: StorageKeys.GEMINI_MODEL,
+            requiresApiKey: true,
+            isLocal: false,
+            label: 'Google Gemini',
+            cspDomain: 'https://generativelanguage.googleapis.com',
+            contentCharsKey: StorageKeys.GEMINI_CONTENT_CHARS,
+            labelI18nKey: 'googleGemini',
+            fieldPlaceholders: { apiKey: 'geminiApiKeyPlaceholder', model: 'geminiModelPlaceholder' },
+            supportsCustomPrompt: true,
+            settingsBlockKind: 'generic',
+        },
+    ],
     [
         'openai',
         {
@@ -45,6 +74,14 @@ export const PROVIDER_REGISTRY: ReadonlyMap<ProviderId, ProviderRegistryEntry> =
             label: 'OpenAI Compatible',
             cspDomain: 'https://api.openai.com',
             contentCharsKey: StorageKeys.OPENAI_CONTENT_CHARS,
+            labelI18nKey: 'openaiCompatible',
+            fieldPlaceholders: {
+                apiKey: 'openaiApiKeyPlaceholder',
+                baseUrl: 'openaiBaseUrlPlaceholder',
+                model: 'openaiModelPlaceholder',
+            },
+            supportsCustomPrompt: true,
+            settingsBlockKind: 'generic',
         },
     ],
     [
@@ -60,18 +97,14 @@ export const PROVIDER_REGISTRY: ReadonlyMap<ProviderId, ProviderRegistryEntry> =
             label: 'OpenAI Compatible 2',
             cspDomain: 'https://api.openai.com',
             contentCharsKey: StorageKeys.OPENAI_CONTENT_CHARS,
-        },
-    ],
-    [
-        'openai-compatible',
-        {
-            baseUrlKey: StorageKeys.PROVIDER_BASE_URL,
-            apiKeyKey: StorageKeys.PROVIDER_API_KEY,
-            modelKey: StorageKeys.PROVIDER_MODEL,
-            requiresApiKey: true,
-            isLocal: false,
-            label: 'OpenAI Compatible',
-            contentCharsKey: StorageKeys.OPENAI_CONTENT_CHARS,
+            labelI18nKey: 'openaiCompatible2',
+            fieldPlaceholders: {
+                apiKey: 'openai2ApiKeyPlaceholder',
+                baseUrl: 'openai2BaseUrlPlaceholder',
+                model: 'openai2ModelPlaceholder',
+            },
+            supportsCustomPrompt: true,
+            settingsBlockKind: 'generic',
         },
     ],
     [
@@ -84,6 +117,10 @@ export const PROVIDER_REGISTRY: ReadonlyMap<ProviderId, ProviderRegistryEntry> =
             isLocal: true,
             label: 'LM Studio',
             cspDomain: 'http://127.0.0.1:1234',
+            labelI18nKey: 'lmStudio',
+            fieldPlaceholders: { baseUrl: 'lmStudioBaseUrlPlaceholder', model: 'lmStudioModelPlaceholder' },
+            supportsCustomPrompt: true,
+            settingsBlockKind: 'generic',
         },
     ],
     [
@@ -96,18 +133,30 @@ export const PROVIDER_REGISTRY: ReadonlyMap<ProviderId, ProviderRegistryEntry> =
             isLocal: true,
             label: 'Ollama',
             cspDomain: 'http://localhost:11434',
+            labelI18nKey: 'ollama',
+            fieldPlaceholders: { baseUrl: 'ollamaBaseUrlPlaceholder', model: 'ollamaModelPlaceholder' },
+            supportsCustomPrompt: true,
+            settingsBlockKind: 'generic',
         },
     ],
     [
-        'gemini',
+        'openai-compatible',
         {
-            apiKeyKey: StorageKeys.GEMINI_API_KEY,
-            modelKey: StorageKeys.GEMINI_MODEL,
+            baseUrlKey: StorageKeys.PROVIDER_BASE_URL,
+            apiKeyKey: StorageKeys.PROVIDER_API_KEY,
+            modelKey: StorageKeys.PROVIDER_MODEL,
             requiresApiKey: true,
             isLocal: false,
-            label: 'Google Gemini',
-            cspDomain: 'https://generativelanguage.googleapis.com',
-            contentCharsKey: StorageKeys.GEMINI_CONTENT_CHARS,
+            label: 'OpenAI Compatible',
+            contentCharsKey: StorageKeys.OPENAI_CONTENT_CHARS,
+            labelI18nKey: 'openaiCompatibleModelsDev',
+            fieldPlaceholders: {
+                apiKey: 'providerApiKeyPlaceholder',
+                baseUrl: 'providerBaseUrlPlaceholder',
+                model: 'providerModelPlaceholder',
+            },
+            supportsCustomPrompt: false,
+            settingsBlockKind: 'models-dev',
         },
     ],
     [
@@ -117,6 +166,9 @@ export const PROVIDER_REGISTRY: ReadonlyMap<ProviderId, ProviderRegistryEntry> =
             requiresApiKey: false,
             isLocal: true,
             label: 'Built-in AI',
+            labelI18nKey: 'builtInAi',
+            supportsCustomPrompt: false,
+            settingsBlockKind: 'built-in-ai',
         },
     ],
 ]);
