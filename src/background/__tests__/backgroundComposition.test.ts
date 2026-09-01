@@ -24,7 +24,7 @@ const mocks = vi.hoisted(() => ({
   FallbackAIService: vi.fn(),
   SessionStore: vi.fn(),
   HeaderDetector: vi.fn(),
-  createRecordingPipeline: vi.fn(),
+  createRecordingOrchestrator: vi.fn(),
   getPrivacyInfoWithCache: vi.fn(),
   hasPrivacyConsent: vi.fn(),
   getSettings: vi.fn(),
@@ -54,8 +54,8 @@ vi.mock('../recordingCache.js', () => ({
   RecordingCacheInstance: mocks.RecordingCacheInstance,
   SessionStoreRecordingCacheStore: mocks.SessionStoreRecordingCacheStore,
 }));
-vi.mock('../pipeline/RecordingPipeline.js', () => ({
-  createRecordingPipeline: mocks.createRecordingPipeline,
+vi.mock('../pipeline/RecordingOrchestrator.js', () => ({
+  createRecordingOrchestrator: mocks.createRecordingOrchestrator,
 }));
 vi.mock('../../popup/privacyConsent.js', () => ({ hasPrivacyConsent: mocks.hasPrivacyConsent }));
 vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
@@ -169,7 +169,7 @@ describe('production composition contract', () => {
     mocks.FallbackAIService.mockImplementation(function () { return { fallbackAIService: true }; });
     mocks.SessionStore.mockImplementation(function () { return { sessionStore: true }; });
     mocks.HeaderDetector.mockImplementation(function () { return { headerDetector: true }; });
-    mocks.createRecordingPipeline.mockReturnValue({ pipeline: true });
+    mocks.createRecordingOrchestrator.mockReturnValue({ pipeline: true });
     mocks.getPrivacyInfoWithCache.mockResolvedValue(null);
     mocks.hasPrivacyConsent.mockResolvedValue(true);
     mocks.getSettings.mockResolvedValue({});
@@ -206,8 +206,8 @@ describe('production composition contract', () => {
   it('constructs the RecordingPipeline exactly once with the shared collaborators', () => {
     createBackgroundServices();
 
-    expect(mocks.createRecordingPipeline).toHaveBeenCalledTimes(1);
-    expect(mocks.createRecordingPipeline).toHaveBeenCalledWith(
+    expect(mocks.createRecordingOrchestrator).toHaveBeenCalledTimes(1);
+    expect(mocks.createRecordingOrchestrator).toHaveBeenCalledWith(
       expect.objectContaining({
         obsidian: { obsidian: true },
         aiService: { fallbackAIService: true },

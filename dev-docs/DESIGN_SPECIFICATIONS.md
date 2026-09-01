@@ -178,11 +178,23 @@ All Obsidian write operations are serialized via global mutex:
 - On release error, lock is forced unlocked and error is logged
 - Prevents deadlocks from exceptions in release pathway
 
-### 8.3 Per-URL Recording Serialization
-Recording of the same URL is serialized by `PerUrlMutexMap` (`src/background/pipeline/perUrlMutex.js`):
+### 8.3 Recording Pipeline
+
+All recording paths go through **`RecordingOrchestrator`** (`src/background/pipeline/RecordingOrchestrator.js`) — a single public method:
+
+```
+record(data: RecordingData, opts?: { mode?: 'normal' | 'preview' | 'retryObsidian'; previewOnly?: boolean; settings?: Settings })
+```
+
+- **normal**: the full step pipeline. `preview`: short-circuits after the privacy step (`previewBreakpoint`). `retryObsidian`: formatMarkdown + Obsidian append only (no AI), for offline-queue `obsidian_sync` retries — exposed also as the named `retryObsidianWriteOnly(job)` convenience method.
+- `opts.settings` bypasses `getSettingsWithCache`; the manual/preview record handlers pass their already-resolved settings this way so a concurrent cache refresh cannot race them.
+- The step list, `PipelineKernel`, and `StepExecutor` are private implementation. Callers only see `record()` / `RecordingData` / `RecordingResult`.
+- Handler deps use the narrow `RecordingRunner` interface (`{ record }`), not the concrete class.
+
+**Per-URL serialization** — `record()` runs each URL's work inside `PerUrlMutexMap` (`src/background/pipeline/perUrlMutex.js`):
 - Each map instance owns a `Map<string, Mutex>` (per-URL, `maxQueueSize: 5`, `timeoutMs: 60000`).
 - The map entry is dropped only when its mutex is fully idle (no current lock, no queued waiters), so a URL with a pending concurrent recording keeps its entry.
-- **One shared instance**: registered as a container singleton (`perUrlMutexMap`) and wired into the recording pipeline's deps. All `RecordingOrchestrator` instances must receive this same instance — an orchestrator constructed without it falls back to a private map, losing cross-instance serialization and re-opening the duplicate-entry race.
+- **One shared instance**: registered as a container singleton (`perUrlMutexMap`) and wired into the orchestrator's deps by `compositionManifest.ts`. An orchestrator constructed without it falls back to a private map, losing cross-instance serialization and re-opening the duplicate-entry race.
 
 ## 9. Obsidian REST API Integration
 

@@ -15,12 +15,12 @@ PBI 2026-08-31-02（RecordingOrchestrator 単一 Seam 化）で orchestrator へ
 - **test**: 約 12 ファイル（`recordingPipeline-*.test.ts` / `RecordingPipeline*.test.ts` / `service-worker.test.ts` / `backgroundComposition.test.ts` / `createBackgroundServices.test.ts` / `helpers/makeRecordingLogic.ts` / `checkPrivacyHeadersStep.test.ts` 他）が `RecordingPipeline` / `createRecordingPipeline` を import またはモック
 
 ## 受け入れ基準
-- [ ] `RecordingOrchestrator` に `execute(data, settings)` 相当の明示 settings 経路が用意されるか、`recordingHandlers` が `record(data)` + 事前 settings 注入に移行する
-- [ ] `offlineQueueProcessor` の `RecordingPipelineLike` が `RecordingOrchestrator` の公開 Interface（`record` + retryObsidian mode）で表現され、`retryObsidianWriteOnly` の呼び出しが `record(job, { mode: 'retryObsidian' })` に置換される
-- [ ] `compositionManifest.ts` の `recordingPipeline` エントリが `createRecordingOrchestrator` 直接生成になる
-- [ ] `RecordingPipeline.ts`（facade クラス + `createRecordingPipeline`）が削除される
-- [ ] 約 12 テストファイルが `RecordingOrchestrator` seam でパスする（`makeRecordingLogic` ヘルパを orchestrator 生成に書き換え）
-- [ ] `MessageRouterDeps.recordingPipeline` の `Pick` 型が orchestrator 由来になる
+- [x] `RecordOptions` に `settings?: Settings` を追加し、`record(data, { settings })` で `getSettingsWithCache` をバイパスできる。`recordingHandlers` は `pipeline.execute(data, settings)` → `pipeline.record(data, { settings })` に移行。deps 型は `RecordingRunner`（`record` 一つ）に縮小
+- [x] `offlineQueueProcessor` の `RecordingPipelineLike` は `RecordingOrchestrator` が満たす（`record` + `retryObsidianWriteOnly`）。`retryObsidianWriteOnly` は AI 再実行なしの Obsidian-only retry という別操作として orchestrator の公開メソッドに残す（`record(_, { mode: 'retryObsidian' })` の named wrapper）
+- [x] `compositionManifest.ts` の `recordingPipeline` エントリが `createRecordingOrchestrator` 直接生成
+- [x] `RecordingPipeline.ts`（facade クラス + `createRecordingPipeline` + `buildRecordingPipelineDeps`）を削除。`RecordingOrchestrator` から `recordWithPreview` convenience alias も削除
+- [x] 影響した約 12 テストファイル + `makeRecordingLogic` ヘルパ（`makeOrchestrator` positional variant を追加）が orchestrator seam でパス
+- [x] `MessageRouterDeps.recordingPipeline` / `alarmHandler` / `recordingHandlers` の型が `RecordingRunner` / `RecordingOrchestrator` 由来
 
 ## テスト戦略
 - 統合: 3 経路（VALID_VISIT / MANUAL_RECORD / SAVE_RECORD / PREVIEW_RECORD / offline retry）が orchestrator 経由で観測可能挙動を保つ
@@ -30,7 +30,12 @@ PBI 2026-08-31-02（RecordingOrchestrator 単一 Seam 化）で orchestrator へ
 5 pt — orchestrator の `execute` 相当 API 追加 1pt + caller 3 経路の移行 2pt + テスト 12 ファイル移行 2pt
 
 ## Definition of Done
-- [ ] 全 caller が `RecordingOrchestrator` 直接利用
-- [ ] `RecordingPipeline.ts` 削除
-- [ ] `npm run validate` が green
-- [ ] DESIGN_SPECIFICATIONS.md の pipeline 記述を facade 前提から orchestrator 前提に更新
+- [x] 全 caller が `RecordingOrchestrator` 直接利用
+- [x] `RecordingPipeline.ts` 削除
+- [x] `npm run validate` が green（type-check / lint / test 11117 passed / build）
+- [x] DESIGN_SPECIFICATIONS.md §8.3 を orchestrator 前提に更新
+
+## 実装メモ
+- テストの `.execute(data, settings)` は `.record(data, { settings })` に一括移行。`makeRecordingLogic` は orchestrator を返し、旧 positional 署名向けに `makeOrchestrator` を追加
+- `service-worker.test.ts` は `.execute` / `.record` が別メソッドだった前提で `prototype` を書き換える箇所があり、両方 `.record` になったため `beforeEach` で `prototype.record` をデフォルトに復元する処理を追加（テスト間汚染の防止）
+- `resultBuilder.ts` の logError context 文字列 `'RecordingPipeline'` は cosmetic なため変更せず（テストの期待値と一致）

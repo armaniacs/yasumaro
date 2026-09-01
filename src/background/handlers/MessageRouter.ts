@@ -49,13 +49,12 @@ import {
   checkDomainValidator,
   contentCleansingExecutedValidator,
 } from '../../messaging/validators.js';
-import type { RecordingPipeline } from '../pipeline/RecordingPipeline.js';
 import type { TabCache } from '../tabCache.js';
 import type { AIService, AiTestProgress } from '../ai/AIService.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { Settings } from '../../utils/storage/types.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
-import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './recordingHandlers.js';
+import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps, RecordingRunner } from './recordingHandlers.js';
 import type { MessageValidator } from '../../messaging/validators.js';
 
 /**
@@ -81,7 +80,7 @@ export interface CommonHandlerDeps {
 }
 
 export interface RecordingHandlerDeps {
-  recordingPipeline: Pick<RecordingPipeline, 'record'>;
+  recordingPipeline: Pick<RecordingRunner, 'record'>;
   tabCache: Pick<TabCache, 'add' | 'update'>;
   hasPrivacyConsent: () => Promise<boolean>;
   autoSavedBadgeTabs: {
