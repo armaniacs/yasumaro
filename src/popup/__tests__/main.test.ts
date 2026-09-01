@@ -58,15 +58,11 @@ vi.mock('../errorUtils.js', () => ({
   formatSuccessMessage: vi.fn((_totalDuration: number, _aiDuration?: number) => '✓ Saved to Obsidian')
 }));
 
-vi.mock('../../utils/retryHelper.js', () => ({
-  sendMessageWithRetry: vi.fn((message) => Promise.resolve({ success: true })),
-  ChromeMessageSender: class {
-    constructor() {}
-    sendMessageWithRetry() { return Promise.resolve({ success: true }); }
-  },
-  createSender: vi.fn(() => ({
-    sendMessageWithRetry: vi.fn(() => Promise.resolve({ success: true }))
-  }))
+const { sendMock } = vi.hoisted(() => ({
+  sendMock: vi.fn((_message) => Promise.resolve({ success: true })),
+}));
+vi.mock('../../messaging/messageTransport.js', () => ({
+  messageTransport: { send: (message: unknown) => sendMock(message) },
 }));
 
 vi.mock('../../utils/i18n.js', () => ({
@@ -143,7 +139,7 @@ vi.mock('../../utils/trustChecker.js', () => ({
 
 // Import mocked functions after vi.mock declarations
 import { showPreview, initializeModalEvents } from '../sanitizePreview.js';
-import { sendMessageWithRetry } from '../../utils/retryHelper.js';
+const sendMessageWithRetry = sendMock;
 import { startAutoCloseTimer } from '../autoClose.js';
 import { getCurrentTab, isRecordable } from '../tabUtils.js';
 import { StorageKeys } from '../../utils/storage.js';

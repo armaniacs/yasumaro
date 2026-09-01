@@ -47,8 +47,12 @@ vi.mock('../autoClose.js', () => ({
   startAutoCloseTimer: vi.fn(),
 }));
 
-vi.mock('../../utils/retryHelper.js', () => ({
-  sendMessageWithRetry: vi.fn(),
+const { sendMock } = vi.hoisted(() => ({ sendMock: vi.fn() }));
+vi.mock('../../messaging/messageTransport.js', () => ({
+  messageTransport: {
+    // previewFlow calls send(message, { retries }); tests assert on the message only
+    send: (message: unknown) => sendMock(message),
+  },
 }));
 
 vi.mock('../../utils/storageUrls.js', () => ({
@@ -79,7 +83,7 @@ import {
 } from '../recordCurrentPage.js';
 import { getCurrentTab, isRecordable } from '../tabUtils.js';
 import { StorageKeys } from '../../utils/storage/types.js';
-import { sendMessageWithRetry } from '../../utils/retryHelper.js';
+const sendMessageWithRetry = sendMock;
 import { showError } from '../errorUtils.js';
 import { showSpinner } from '../spinner.js';
 import { checkPageStatus } from '../statusChecker.js';
