@@ -45,6 +45,7 @@ vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
 vi.mock('../../utils/settingsFormBinding.js', () => ({
   extractSettingsFromInputs: vi.fn(),
   extractLocalMarkdownExportTiming: vi.fn(),
+  isProviderConnectionField: (key: string) => /_(base_url|model|api_key)$/i.test(key),
 }));
 
 vi.mock('../../utils/settingsSchemas.js', () => ({
@@ -129,6 +130,36 @@ describe('saveDashboardSettings', () => {
         content_max_records: 500,
       }),
     );
+  });
+
+  it('does not blank a stored provider connection field with an empty extracted value', async () => {
+    setupInputs('https');
+    mockGetSettings.mockResolvedValue({
+      openai_base_url: 'https://api.ai.sakura.ad.jp/v1',
+      openai_model: 'preview/gemma-4-31B-it',
+      openai_api_key: { iv: 'x', ciphertext: 'y' },
+      openai_2_base_url: '',
+    });
+    // A broken form yields empty strings for provider fields.
+    mockExtract.mockReturnValue({
+      openai_base_url: '',
+      openai_model: '',
+      openai_api_key: '',
+      openai_2_base_url: '',
+      openai_2_model: 'llama-3',
+    });
+
+    await saveDashboardSettings();
+
+    const saved = mockSaveSettings.mock.calls[0][0] as Record<string, unknown>;
+    // Stored non-empty values are preserved
+    expect(saved.openai_base_url).toBe('https://api.ai.sakura.ad.jp/v1');
+    expect(saved.openai_model).toBe('preview/gemma-4-31B-it');
+    expect(saved.openai_api_key).toEqual({ iv: 'x', ciphertext: 'y' });
+    // A genuinely new non-empty value is still written
+    expect(saved.openai_2_model).toBe('llama-3');
+    // Empty over empty is harmless
+    expect(saved.openai_2_base_url).toBe('');
   });
 
   it('calls onSuccess callback when provided', async () => {

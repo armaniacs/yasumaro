@@ -53,16 +53,25 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       panelContainer = container;
       const settings = await settingsRepository.getAll();
 
-      // A layout: build the provider <option> lists and per-provider settings
-      // blocks from the catalog before any value binding runs.
+      const layoutRepo = new SettingsRepository(new ChromeStoragePort());
+      let currentLayout = await resolveInitialLayout(layoutRepo) as 'a' | 'b';
+
+      // Provider <option> lists are shared by both layouts.
       const providerSelect = container.querySelector('#aiProvider') as HTMLSelectElement | null;
       if (providerSelect) renderProviderOptions(providerSelect);
       for (const priorityId of ['aiProviderPriority2', 'aiProviderPriority3']) {
         const sel = container.querySelector(`#${priorityId}`) as HTMLSelectElement | null;
         if (sel) renderProviderOptions(sel, { includeNone: true });
       }
+
       const providerMount = container.querySelector('#providerSettingsMount') as HTMLElement | null;
-      if (providerMount) {
+      // Build the A-layout per-provider settings blocks (#<id>Settings) into
+      // #providerSettingsMount. In B layout the accordion owns its own blocks
+      // with the same ids, so building these here too would create duplicate
+      // ids — the A block wins every querySelector and B never gets its values.
+      // rebuildProviderSettingsMount() is also called on an A<-B toggle.
+      const rebuildProviderSettingsMount = (): void => {
+        if (!providerMount) return;
         providerMount.textContent = '';
         for (const id of providerIdsInOrder()) {
           const block = document.createElement('div');
@@ -70,7 +79,8 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
           renderProviderSettings(block, id);
           providerMount.appendChild(block);
         }
-      }
+      };
+      if (currentLayout === 'a') rebuildProviderSettingsMount();
 
       loadSettingsToInputs(container, settings, GENERAL_SETTINGS_SCHEMA);
       await loadGeneralSettings();
@@ -108,6 +118,8 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       }
 
       const refreshMultiVisibility = (): void => {
+        // A-layout only: B owns its accordion DOM and never reparents #*Settings.
+        if (currentLayout === 'b') return;
         const aiProviderSelect = document.getElementById('aiProvider') as HTMLSelectElement | null;
         const aiProviderPriority2Select = document.getElementById('aiProviderPriority2') as HTMLSelectElement | null;
         const aiProviderPriority3Select = document.getElementById('aiProviderPriority3') as HTMLSelectElement | null;
@@ -138,8 +150,6 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       document.getElementById('aiProviderPriority2')?.addEventListener('change', refreshMultiVisibility);
       document.getElementById('aiProviderPriority3')?.addEventListener('change', refreshMultiVisibility);
 
-      const layoutRepo = new SettingsRepository(new ChromeStoragePort());
-      let currentLayout = await resolveInitialLayout(layoutRepo) as 'a' | 'b';
       let bPriorityView: ReturnType<typeof createBPriorityListView> | null = null;
       let bAccordionView: ReturnType<typeof createBProviderAccordionView> | null = null;
 
@@ -153,6 +163,10 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
         if (isB) {
           // Aの移動を戻してからBを構築（hideAllはBでは不要 — アコーディオン側で可視化するため）
           restoreOriginalProviderSettingsLayout();
+          // In B, the accordion owns the #<id>Settings blocks; the A mount must
+          // not carry duplicates or its (loaded) fields leak into the priority
+          // containers and the accordion shows empty placeholders.
+          if (providerMount) providerMount.textContent = '';
           const bListContainer = container.querySelector('#bPriorityList') as HTMLElement | null;
           const bAccordionContainer = container.querySelector('#bProviderAccordion') as HTMLElement | null;
           if (bListContainer && !bPriorityView) {
@@ -172,12 +186,17 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
           }
           if (bAccordionContainer && !bAccordionView) {
             bAccordionView = createBProviderAccordionView(bAccordionContainer);
+            // The accordion's inputs were just created empty — populate them.
+            loadSettingsToInputs(bAccordionContainer, settings, GENERAL_SETTINGS_SCHEMA);
           }
         } else {
           bPriorityView?.container?.querySelectorAll('.b-priority-warn, .b-priority-req-warn').forEach((el) => el.remove());
           bAccordionView?.destroy();
           bPriorityView = null;
           bAccordionView = null;
+          // Rebuild the A mount (empty in B) and reload its values.
+          rebuildProviderSettingsMount();
+          loadSettingsToInputs(container, settings, GENERAL_SETTINGS_SCHEMA);
           hideAllProviderSettings();
           refreshMultiVisibility();
         }

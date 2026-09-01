@@ -56,6 +56,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- **B レイアウト（分離型）の AI プロバイダー設定が壊れていた不具合を修正**。06c の catalog 駆動化で B レイアウトのアコーディオンが自前の `#<id>Settings` ブロックを持つようになった一方、mount 時に A レイアウトの `#providerSettingsMount` も同じ id で構築・値読込していたため、保存済みの `openai_base_url` / `openai_api_key` / `openai_model` が優先度コンテナ側に流れ込み、アコーディオン内は空プレースホルダのまま、AI テストも失敗していた。B モードでは `#providerSettingsMount` を構築せず、アコーディオン生成後に `loadSettingsToInputs` で値を流し込むよう修正。A↔B トグル時の再構築も対応
+- **保存時に AI プロバイダーの接続設定（Base URL / モデル名 / API キー）が空値で上書きされない保護を追加**。上記の表示バグのように何らかの理由でフォームの入力欄が空のまま「保存する」を押しても、`_base_url` / `_model` / `_api_key` で終わるキーは保存済みの値が非空なら空文字で潰さないよう `settingsPipeline` にガードを入れた（API キーは従来から保護済み、Base URL / モデル名を追加）
 - コンテンツクレンジングのキーワード設定 UI が既定/リセット時に表示するキーワードを、実際の strip ロジックが使う全リスト（約52語）に合わせた。従来は古い17語のサブセットがハードコードされており、`contentCleaner.DEFAULT_KEYWORDS` からドリフトしていた（archived PBI 2026-08-27-10 の効果確認で発見）
 - archived PBI 2026-08-27-06 の掃除: `opfsWorker/statusHandlers.ts` の到達不能なデッドコード `handleSqlExec` / `handleSqlQuery`（メッセージ型からは削除済みだが export だけ残存）を削除
 

@@ -59,6 +59,19 @@ function isApiKeyField(key: string): boolean {
   return API_KEY_PATTERN.test(key);
 }
 
+/**
+ * Provider connection fields (base URL / model / API key). An empty value in
+ * one of these on save almost always means "the input was never populated"
+ * (a UI-desync bug), not "the user wants it blank" — these keys have working
+ * defaults and are set once. Callers must NOT overwrite a non-empty stored
+ * value with an empty extracted one for these keys. Guarded at the save
+ * orchestration layer where the current stored value is available.
+ */
+const PROVIDER_CONNECTION_FIELD_PATTERN = /_(base_url|model|api_key)$/i;
+export function isProviderConnectionField(key: string): boolean {
+  return PROVIDER_CONNECTION_FIELD_PATTERN.test(key);
+}
+
 function isMaskedValue(value: string): boolean {
   return value === '' || MASKED_PLACEHOLDER_PATTERN.test(value);
 }
