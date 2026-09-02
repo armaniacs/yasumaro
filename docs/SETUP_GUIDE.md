@@ -95,7 +95,7 @@
 #### 1. Obsidian設定
 *   **Obsidian API Key**: ステップ1でコピーしたキーを入力。
 *   **Protocol/Port**: デフォルト (`https`, `27124`) のままで通常はOKです。
-*   **Daily Note Path**: デイリーノートが保存されているフォルダパスを指定します（例: `092.Daily` や `Journal`）。日付ファイル（`YYYY-MM-DD.md`）がこのフォルダ直下に作成/追記されます。
+*   **Daily Note Path**: デイリーノートが保存されているフォルダパスを指定します（例: `092.Daily` や `Journal`）。日付ファイル（`YYYY-MM-DD.md`）がこのフォルダ直下に作成/追記されます。年月フォルダで管理している場合は `raw/YYYY-MM` のように `YYYY`/`MM`/`DD` プレースホルダーを使うと、記録時点の年月日に自動置換されるため毎月の手動更新が不要になります。
 
 #### 2. AIプロバイダー設定
 「AI Provider」のプルダウンから使用するサービスを選択します。優先度1〜3位まで設定できるため、複数プロバイダーをフォールバック構成にできます。
@@ -342,7 +342,7 @@ Click the "⚙" icon in the top right to open the Dashboard in a new tab. The Da
 
 #### 1. Obsidian Settings
 *   **Obsidian API Key**: Paste the key from Step 1.
-*   **Daily Note Path**: Enter the folder path where your daily notes are stored (e.g., `092.Daily`).
+*   **Daily Note Path**: Enter the folder path where your daily notes are stored (e.g., `092.Daily`). If you organize notes into monthly subfolders, you can use `YYYY`/`MM`/`DD` placeholders, e.g. `raw/YYYY-MM`, which are automatically replaced with the current date so you never need to update the path manually.
 
 #### 2. AI Provider Settings
 Select your preferred provider from the dropdown. You can configure up to three priority ranks for fallback between providers.

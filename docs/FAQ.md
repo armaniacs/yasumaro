@@ -60,6 +60,8 @@ Obsidian に「Local REST API」コミュニティプラグインをインスト
 
 Obsidian Vault 内でデイリーノートが保存されているフォルダ名を入力します。たとえば `DailyNotes`、`Journal`、`092.Daily` のように Vault のルートからの相対パスを指定します。Obsidian の「デイリーノート」プラグイン設定の「新規作成場所」に表示されているフォルダ名と一致させてください。先頭のスラッシュ `/` は不要です。
 
+年月ごとのサブフォルダを使っている場合（例: `raw/2026-09`）は、`YYYY` / `MM` / `DD` プレースホルダーが使えます。`raw/YYYY-MM` と設定しておけば、記録時点の年月に自動的に置き換わるため、毎月手動でパスを更新する必要がなくなります。
+
 **Q10. Obsidian の URL はデフォルトのまま使えますか？**
 
 ほとんどの場合、デフォルトの `https://127.0.0.1:27124` のまま使えます。ポート `27124` が他のアプリケーションと競合している場合のみ変更が必要です。HTTP を使う場合はポートを `27123` に変更してください。
@@ -317,6 +319,8 @@ You need to install and enable the "Local REST API" community plugin in Obsidian
 **Q9. What should I enter for Daily Note Path?**
 
 Enter the name of the folder inside your Obsidian Vault where daily notes are stored—for example `DailyNotes`, `Journal`, or `092.Daily`. This is a path relative to the Vault root; no leading `/` is needed. Match it to the "New file location" shown in Obsidian's Daily Notes plugin settings.
+
+If your notes are organized into monthly subfolders (e.g. `raw/2026-09`), you can use the `YYYY` / `MM` / `DD` placeholders. Setting the path to `raw/YYYY-MM` automatically resolves to the current year and month, so you never need to update it manually.
 
 **Q10. Can I use the default URL for Obsidian?**
 

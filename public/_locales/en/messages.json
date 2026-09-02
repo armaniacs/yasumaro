@@ -90,7 +90,10 @@
     "message": "Daily Note Path"
   },
   "dailyNotePathPlaceholder": {
-    "message": "e.g. 092.Daily"
+    "message": "e.g. 092.Daily or raw/YYYY-MM"
+  },
+  "dailyNotePathHelp": {
+    "message": "YYYY / MM / DD are replaced with the current date (e.g. raw/YYYY-MM → raw/2026-09)"
   },
   "label_obsidian_host": {
     "message": "Obsidian Host"
