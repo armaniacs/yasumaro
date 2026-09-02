@@ -71,6 +71,7 @@ export class TrustDbKernel {
     this.settingsReader = opts?.settingsReader ?? defaultReader;
     this.policy = new TrustPolicy({ save: () => this.save() });
     this.trustDbVersion = new TrustDbVersion({ save: () => this.save() });
+    (globalThis as unknown as Record<string, unknown>).__trustDbKernel = this;
   }
 
   // ---- Lifecycle ----

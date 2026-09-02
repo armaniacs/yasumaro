@@ -1,8 +1,16 @@
 /**
  * sqliteClient.ts
- * Shim — delegates to SqliteGateway (PBI-05).
- * The unified RPC lives in sqliteGateway.ts; this file remains as the
- * public import path for Service Worker callers and tests.
+ * @deprecated — retained for backward compat (PBI 07). New code should import
+ * from `src/background/sqlite/offscreenGateway.js` (Service Worker → Offscreen hop)
+ * or `src/background/sqlite/dashboardGateway.js` (Dashboard hop). This shim
+ * re-exports `SqliteGateway` (now a facade over the split gateways) and keeps
+ * `getSharedSqliteClient()` as the singleton entry point.
+ *
+ * Full deletion requires updating 36 callers importing sqliteClient
+ * (grep "sqliteClient" in src) — deferred because pipeline / trustDb /
+ * recordingCache / domainFilter callers are out of scope for this PBI and a mass
+ * rewrite is too risky without a dedicated migration. See the PBI file for the
+ * tracking item.
  */
 
 import type {

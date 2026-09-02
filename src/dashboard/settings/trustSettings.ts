@@ -7,7 +7,7 @@
 import type { TrancoTier, SafetyMode } from '../../utils/trustDb/trustDbSchema.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { StorageKeys } from '../../utils/storage/types.js';
-import { getTrustDb } from '../../utils/trustDb/trustDb.js';
+import { getTrustDbAdmin } from '../../utils/trustDb/TrustDbAdmin.js';
 import { getTrancoUpdater } from '../../utils/trustDb/trancoUpdater.js';
 import { logInfo, logError, ErrorCode } from '../../utils/logger.js';
 import { getMessage } from '../../utils/i18n.js';
@@ -132,7 +132,7 @@ function renderJpAnchorList(tlds: string[]): void {
 }
 
 async function addJpAnchorTld(tld: string): Promise<void> {
-  const db = getTrustDb();
+  const db = getTrustDbAdmin();
   await db.initialize();
 
   const result = await db.addJpAnchorTld(tld);
@@ -148,7 +148,7 @@ async function addJpAnchorTld(tld: string): Promise<void> {
 }
 
 async function removeJpAnchorTld(tld: string): Promise<void> {
-  const db = getTrustDb();
+  const db = getTrustDbAdmin();
   await db.initialize();
 
   await db.removeJpAnchorTld(tld);
@@ -196,7 +196,7 @@ function renderSensitiveList(domains: string[], isWhitelist = false): void {
 export { renderJpAnchorList, renderSensitiveList };
 
 async function addSensitiveDomain(domain: string, category: 'finance' | 'gaming' | 'sns'): Promise<void> {
-  const db = getTrustDb();
+  const db = getTrustDbAdmin();
   await db.initialize();
 
   const result = await db.addSensitiveDomain(domain, category);
@@ -214,7 +214,7 @@ async function addSensitiveDomain(domain: string, category: 'finance' | 'gaming'
 }
 
 async function removeSensitiveDomain(domain: string, category: 'finance' | 'gaming' | 'sns'): Promise<void> {
-  const db = getTrustDb();
+  const db = getTrustDbAdmin();
   await db.initialize();
 
   await db.removeSensitiveDomain(domain);
@@ -226,7 +226,7 @@ async function removeSensitiveDomain(domain: string, category: 'finance' | 'gami
 // ============================================================================
 
 async function addWhitelistDomain(domain: string): Promise<void> {
-  const db = getTrustDb();
+  const db = getTrustDbAdmin();
   await db.initialize();
 
   const result = await db.addToWhitelist(domain);
@@ -246,7 +246,7 @@ function renderWhitelistList(domains: string[]): void {
 }
 
 async function removeWhitelistDomain(domain: string): Promise<void> {
-  const db = getTrustDb();
+  const db = getTrustDbAdmin();
   await db.initialize();
 
   await db.removeFromWhitelist(domain);
@@ -326,7 +326,7 @@ function switchCategory(category: 'finance' | 'gaming' | 'sns'): void {
     }
   });
 
-  const db = getTrustDb();
+  const db = getTrustDbAdmin();
   db.initialize().then(() => {
     renderSensitiveList(db.getSensitiveDomains(category));
   });
@@ -355,7 +355,7 @@ async function saveTrustSettings(): Promise<void> {
 // ============================================================================
 
 export async function loadTrustSettings(): Promise<void> {
-  const db = getTrustDb();
+  const db = getTrustDbAdmin();
   await db.initialize();
 
   const dbData = db.getDatabase();

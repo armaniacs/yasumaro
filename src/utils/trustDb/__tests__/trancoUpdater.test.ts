@@ -21,7 +21,7 @@ vi.mock('../../fetch.js', () => ({
     fetchWithTimeout: vi.fn()
 }));
 
-// trustDb モック
+// trustDb モック — mutation seam owns lifecycle (TrustDbAdmin)
 const mockDb = {
     initialize: vi.fn(async () => {}),
     updateTranco: vi.fn(async () => {}),
@@ -29,6 +29,9 @@ const mockDb = {
 };
 vi.mock('../trustDb.js', () => ({
     getTrustDb: vi.fn(() => mockDb)
+}));
+vi.mock('../TrustDbAdmin.js', () => ({
+    getTrustDbAdmin: vi.fn(() => mockDb)
 }));
 
 import {

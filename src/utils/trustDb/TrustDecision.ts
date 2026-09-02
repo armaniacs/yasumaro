@@ -5,7 +5,10 @@
 // の分散した seam を `isTrusted(url) → Decision` の1 seam に集約。
 // 呼び出し元は TrustDecision のみを知れば良い。
 
-import { getTrustDb } from './trustDb.js';
+import { getTrustPolicy } from './TrustPolicy.js';
+import { getTrustDbAdmin } from './TrustDbAdmin.js';
+import type { TrustPolicy } from './TrustPolicy.js';
+import type { TrustDbAdmin } from './TrustDbAdmin.js';
 import { PermissionManager, getPermissionManager } from '../permissionManager.js';
 import { extractDomain } from '../domainUtils.js';
 import { DomainTrustLevel } from './trustDbSchema.js';
@@ -20,14 +23,68 @@ export interface TrustDecisionResult {
 }
 
 export class TrustDecision {
-  private trustDb: ReturnType<typeof getTrustDb>;
+  private policy: TrustPolicy;
+  private admin: TrustDbAdmin;
   private permissionManager: PermissionManager;
 
   constructor(
-    trustDb: ReturnType<typeof getTrustDb> = getTrustDb(),
+    policy: TrustPolicy = getTrustPolicy(),
+    admin: TrustDbAdmin = getTrustDbAdmin(),
     permissionManager: PermissionManager = getPermissionManager()
   ) {
-    this.trustDb = trustDb;
+    const maybeLegacy = policy as unknown as {
+      getPolicy?: () => TrustPolicy;
+      getAdmin?: () => TrustDbAdmin;
+      isDomainTrusted?: (d: string) => TrustResult;
+      addToWhitelist?: (d: string) => Promise<{ success: boolean; error?: string }>;
+      initialize?: () => Promise<void>;
+    };
+    // Legacy 2-arg signature: new TrustDecision(mockDb, mockPermission)
+    if (
+      maybeLegacy &&
+      typeof maybeLegacy.isDomainTrusted === 'function' &&
+      typeof maybeLegacy.addToWhitelist === 'function'
+    ) {
+      const legacy = maybeLegacy as unknown as {
+        isDomainTrusted: (d: string) => TrustResult;
+        isTrancoDomain?: (d: string) => boolean;
+        initialize: () => Promise<void>;
+        addToWhitelist: (d: string) => Promise<{ success: boolean; error?: string }>;
+        addSensitiveDomain: (d: string) => Promise<{ success: boolean; error?: string }>;
+      };
+      this.policy = {
+        isDomainTrusted: legacy.isDomainTrusted.bind(legacy),
+        isTrancoDomain: (legacy.isTrancoDomain?.bind(legacy) ?? (() => false)) as TrustPolicy['isTrancoDomain'],
+      } as unknown as TrustPolicy;
+      this.admin = {
+        initialize: legacy.initialize.bind(legacy),
+        addToWhitelist: legacy.addToWhitelist.bind(legacy),
+        addSensitiveDomain: legacy.addSensitiveDomain.bind(legacy),
+        isDomainTrusted: legacy.isDomainTrusted.bind(legacy),
+      } as unknown as TrustDbAdmin;
+      // second arg is actually PermissionManager in legacy call
+      if (admin && typeof (admin as unknown as PermissionManager).isHostPermitted === 'function') {
+        this.permissionManager = admin as unknown as PermissionManager;
+      } else {
+        this.permissionManager = permissionManager;
+      }
+      return;
+    }
+    // Legacy god object with getPolicy/getAdmin
+    if (maybeLegacy && typeof maybeLegacy.getPolicy === 'function' && typeof maybeLegacy.getAdmin === 'function') {
+      this.policy = maybeLegacy.getPolicy();
+      this.admin = maybeLegacy.getAdmin();
+      this.permissionManager = permissionManager;
+      return;
+    }
+    this.policy = policy as TrustPolicy;
+    // second arg may be PermissionManager when called with old 2-arg signature and first arg is real Policy
+    if (admin && typeof (admin as unknown as PermissionManager).isHostPermitted === 'function') {
+      this.admin = getTrustDbAdmin();
+      this.permissionManager = admin as unknown as PermissionManager;
+      return;
+    }
+    this.admin = admin as TrustDbAdmin;
     this.permissionManager = permissionManager;
   }
 
@@ -53,10 +110,10 @@ export class TrustDecision {
       // Permission check failure → fall through to trust check
     }
 
-    // TrustDb check (Tranco / presets / user lists)
+    // TrustDb check (Tranco / presets / user lists) — readonly via Policy, lifecycle via Admin
     try {
-      await this.trustDb.initialize();
-      const result = this.trustDb.isDomainTrusted(domain);
+      await this.admin.initialize();
+      const result = this.policy.isDomainTrusted(domain);
       const isTrusted = result.level === DomainTrustLevel.TRUSTED || result.level === DomainTrustLevel.SENSITIVE;
       return {
         trusted: isTrusted,
@@ -74,13 +131,13 @@ export class TrustDecision {
    * Allowlist / blocklist helpers — also deep seam, hides ManagedStringList
    */
   async addToAllowlist(domain: string): Promise<{ success: boolean; error?: string }> {
-    await this.trustDb.initialize();
-    return this.trustDb.addToWhitelist(domain);
+    await this.admin.initialize();
+    return this.admin.addToWhitelist(domain);
   }
 
   async addToBlocklist(domain: string): Promise<{ success: boolean; error?: string }> {
-    await this.trustDb.initialize();
-    return this.trustDb.addSensitiveDomain(domain);
+    await this.admin.initialize();
+    return this.admin.addSensitiveDomain(domain);
   }
 }
 

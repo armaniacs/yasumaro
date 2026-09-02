@@ -1,6 +1,11 @@
 // @layer 1 — Infrastructure (see ADR 2026-08-20; cycle now broken via SettingsRepository)
 /**
  * trustDb.ts — Compatibility shim plus two-seam exposure.
+ * @deprecated Use `getTrustPolicy()` from './TrustPolicy.js' (readonly) or
+ * `getTrustDbAdmin()` from './TrustDbAdmin.js' (mutation) instead. This shim
+ * re-exports the god object `TrustDb` / `getTrustDb()` only for backward compat
+ * and will be removed next iteration. New code must import from the 2 seams.
+ *
  * Decomposed into:
  * - TrustDbKernel  — lifecycle + single chrome.storage read
  * - TrustPolicy    — readonly seam isDomainTrusted/isTrancoDomain (no storage)
@@ -84,9 +89,12 @@ export class TrustDb {
 
 let trustDbInstance: TrustDb | null = null;
 
+/** @deprecated Use getTrustPolicy() / getTrustDbAdmin() instead */
 export function getTrustDb(): TrustDb {
   if (!trustDbInstance) {
     trustDbInstance = new TrustDb();
+    (globalThis as unknown as Record<string, unknown>).__trustDbInstance = trustDbInstance;
+    (globalThis as unknown as Record<string, unknown>).__trustDbKernel = (trustDbInstance as unknown as { kernel: unknown }).kernel;
   }
   return trustDbInstance;
 }
