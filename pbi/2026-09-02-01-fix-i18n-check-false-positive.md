@@ -40,12 +40,12 @@ Scenario: missing の既存挙動は維持される
   Then  missing として fail が報告される（リグレッションなし）
 
 ## 受け入れ基準
-- [ ] extra 検出が実ファイル差分を正しく報告する（同期状態で extra = 0 件、警告非表示）
-- [ ] extra キー検出時は `fail` として `allPassed` に反映され、プロセスが非ゼロで終了する
-- [ ] 「No _locales directory found in dist」の誤記を修正する（実際は `public/_locales` を監視）
-- [ ] 回帰テストが `scripts/__tests__/` に新設され、同期状態 = extra 0 / 差分注入 = fail / missing の既存 fail 挙動を検証する
-- [ ] `release:check:fast` が 7/7 PASS（i18n 警告 0 件）で通る
-- [ ] `npm run validate` PASS
+- [x] extra 検出が実ファイル差分を正しく報告する（同期状態で extra = 0 件、警告非表示）
+- [x] extra キー検出時は `fail` として `allPassed` に反映され、プロセスが非ゼロで終了する
+- [x] 「No _locales directory found in dist」の誤記を修正する（実際は `public/_locales` を監視）
+- [x] 回帰テストが `scripts/__tests__/` に新設され、同期状態 = extra 0 / 差分注入 = fail / missing の既存 fail 挙動を検証する
+- [x] `release:check:fast` が 7/7 PASS（i18n 警告 0 件）で通る
+- [x] `npm run validate` PASS
 
 ## テスト戦略
 - 単体: `scripts/__tests__/check-i18n.test.ts` を新設。`check-i18n.mjs` の比較ロジックを export 化し（現状は内部関数）、一時ディレクトリに ja/en の messages.json フィクスチャを配置して 3 パターン（同期 / ja に extra / en に missing）を検証する。既存慣例は `scripts/__tests__/build-store-zip.test.ts`。vitest の include（`**/__tests__/**/*.test.ts`）により scripts 配下も実行対象
@@ -55,8 +55,8 @@ Scenario: missing の既存挙動は維持される
 1pt（🟢低）
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] `release:check:fast` 7/7 PASS（i18n 警告 0 件）
-- [ ] `npm run validate` PASS
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] `release:check:fast` 7/7 PASS（i18n 警告 0 件）
+- [x] `npm run validate` PASS
 - [ ] コードレビュー完了
 - [ ] 完了後 `dev-docs/archived/pbi/` へ移動し `00-INDEX.md` を更新

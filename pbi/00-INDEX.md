@@ -16,7 +16,7 @@
 
 | PBI | 状態 | 種別 | 難易度 | 副作用 | スコア | 概要 |
 |-----|------|------|--------|--------|--------|------|
-| [2026-09-02-01-fix-i18n-check-false-positive](2026-09-02-01-fix-i18n-check-false-positive.md) | ⬜ | 🔧 | 🟢 | 🟢 | 300 | check-i18n.mjs:84 の配列 `in` バグ修正。ja 1,247 キーの誤検知警告を解消し、実差分の extra 検出を fail に昇格（実ファイルは完全同期のため即緑） |
+| [2026-09-02-01-fix-i18n-check-false-positive](2026-09-02-01-fix-i18n-check-false-positive.md) | 🔶 | 🔧 | 🟢 | 🟢 | 300 | check-i18n.mjs:84 の配列 `in` バグ修正＋extra fail 昇格。16 テスト追加、release:check:fast 7/7 PASS、validate PASS。コードレビュー待ち |
 
 ### 未 PBI 化のトリガー
 - **なし。** PBI 06 の効果確認は 2026-09-01 に実施済み（未達 → 06b/06c を実装し達成）。残債は `2026-08-31-00-backlog.md` の「06d 候補」に記録（次 provider 追加時などに着手検討）
