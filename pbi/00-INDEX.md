@@ -14,9 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-| PBI | 状態 | 種別 | 難易度 | 副作用 | スコア | 概要 |
-|-----|------|------|--------|--------|--------|------|
-| [2026-09-02-01-fix-i18n-check-false-positive](2026-09-02-01-fix-i18n-check-false-positive.md) | 🔶 | 🔧 | 🟢 | 🟢 | 300 | check-i18n.mjs:84 の配列 `in` バグ修正＋extra fail 昇格。16 テスト追加、release:check:fast 7/7 PASS、validate PASS。コードレビュー待ち |
+**進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る。
 
 ### 未 PBI 化のトリガー
 - **なし。** PBI 06 の効果確認は 2026-09-01 に実施済み（未達 → 06b/06c を実装し達成）。残債は `2026-08-31-00-backlog.md` の「06d 候補」に記録（次 provider 追加時などに着手検討）
@@ -48,6 +46,10 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-02 i18n チェック誤検知修正 — 1件完了
+
+- 2026-09-02-01-fix-i18n-check-false-positive.md（RICE 300 — check-i18n.mjs:84 の配列への `in` 演算子バグ修正。`Object.keys()` の戻り値（配列）に `in` を使っていたため全 1,247 キーが「extra」と誤判定。オブジェクト照合に修正し、extra キー検出を warn→fail に昇格。比較ロジックを i18n-core.mjs に抽出し 16 テストを追加。Models.dev プロバイダー例の Perplexity→Hugging Face 修正も含む。release:check 7/7 PASS（i18n 警告 0 件）、validate PASS）
 
 ### 2026-08-31 Architecture Deepening 0831a — 6件全完了（PBI 01〜06）
 
