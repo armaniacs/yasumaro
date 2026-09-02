@@ -88,7 +88,7 @@ Obsidian への書き込みは Obsidian が起動している必要がありま�
 |---------|--------------|
 | ブラウザ内蔵 AI | Chrome の Gemini Nano / Edge の Phi-mini（API キー不要・オフライン動作） |
 | クラウド（OpenAI互換） | OpenAI、Anthropic（Claude）、Groq、Mistral AI、OpenRouter、DeepSeek など |
-| クラウド（Models.dev 経由） | Models.dev のカタログから OpenRouter、Perplexity、DeepSeek など 70 以上の OpenAI 互換プロバイダーを選択 |
+| クラウド（Models.dev 経由） | Models.dev のカタログから OpenRouter、DeepSeek、Hugging Face など 70 以上の OpenAI 互換プロバイダーを選択 |
 | Google | Gemini |
 | ローカル | Ollama、LM Studio |
 
@@ -344,7 +344,7 @@ For writing to Obsidian, yes. However, history data is saved to the SQLite DB on
 |----------|---------|
 | Built-in AI | Chrome's Gemini Nano / Edge's Phi-mini (no API key, works offline) |
 | Cloud (OpenAI-compatible) | OpenAI, Anthropic (Claude), Groq, Mistral AI, OpenRouter, DeepSeek, etc. |
-| Cloud (via Models.dev) | Choose from 70+ OpenAI-compatible providers such as OpenRouter, Perplexity, and DeepSeek in the Models.dev catalog |
+| Cloud (via Models.dev) | Choose from 70+ OpenAI-compatible providers such as OpenRouter, DeepSeek, and Hugging Face in the Models.dev catalog |
 | Google | Gemini |
 | Local | Ollama, LM Studio |
 
