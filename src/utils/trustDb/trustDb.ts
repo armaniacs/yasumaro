@@ -1,15 +1,19 @@
-// @layer 1-循環 — Infrastructure (circular with storage, see ADR 2026-08-20)
+// @layer 1 — Infrastructure (see ADR 2026-08-20; cycle now broken via SettingsRepository)
 /**
- * trustDb.ts — Compatibility shim.
- * God Module (604 lines) has been decomposed into:
- * - TrustDbKernel  — initialize/save/rebuildCaches lifecycle + single chrome.storage read
- * - TrustPolicy    — isDomainTrusted/isTrancoDomain seam (hides DomainVerifier/BloomFilterManager/TrancoManager)
- * - ManagedCollections — userTlds/sensitive/whitelist bundle (replaces WhitelistStore/SensitiveDomainStore)
- * This file re-exports the public API and delegates to Kernel so existing imports keep working.
+ * trustDb.ts — Compatibility shim plus two-seam exposure.
+ * Decomposed into:
+ * - TrustDbKernel  — lifecycle + single chrome.storage read
+ * - TrustPolicy    — readonly seam isDomainTrusted/isTrancoDomain (no storage)
+ * - ManagedCollections — userTlds/sensitive/whitelist
+ * - TrustDbAdmin   — mutation seam (addToWhitelist, updateTranco, save)
+ * Readonly callers should use TrustPolicy; mutation callers use TrustDbAdmin.
+ * This shim keeps getTrustDb() for backward compat.
  */
 
 import type { TrustResult, TrustDatabase } from './trustDbSchema.js';
 import { TrustDbKernel } from './TrustDbKernel.js';
+import { TrustPolicy } from './TrustPolicy.js';
+import { TrustDbAdmin } from './TrustDbAdmin.js';
 
 export class TrustDb {
   private readonly kernel: TrustDbKernel;
@@ -72,6 +76,10 @@ export class TrustDb {
   async updateTrancoVersion(version: string, domains: string[]): Promise<void> { return this.kernel.updateTrancoVersion(version, domains); }
   async checkTrancoUpdate(): Promise<{ hasUpdate: boolean; oldVersion: string | null; newVersion: string }> { return this.kernel.checkTrancoUpdate(); }
   async getSavedTrancoDomains(): Promise<string[]> { return this.kernel.getSavedTrancoDomains(); }
+
+  // Two-seam exposure (PBI 04)
+  getPolicy(): TrustPolicy { return this.kernel.getPolicy(); }
+  getAdmin(): TrustDbAdmin { return new TrustDbAdmin(this.kernel); }
 }
 
 let trustDbInstance: TrustDb | null = null;
@@ -81,6 +89,22 @@ export function getTrustDb(): TrustDb {
     trustDbInstance = new TrustDb();
   }
   return trustDbInstance;
+}
+
+let trustPolicyInstance: TrustPolicy | null = null;
+export function getTrustPolicy(): TrustPolicy {
+  if (!trustPolicyInstance) {
+    trustPolicyInstance = getTrustDb().getPolicy();
+  }
+  return trustPolicyInstance;
+}
+
+let trustAdminInstance: TrustDbAdmin | null = null;
+export function getTrustDbAdmin(): TrustDbAdmin {
+  if (!trustAdminInstance) {
+    trustAdminInstance = getTrustDb().getAdmin();
+  }
+  return trustAdminInstance;
 }
 
 export async function isDomainTrusted(domain: string): Promise<TrustResult> {

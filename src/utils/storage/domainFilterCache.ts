@@ -9,6 +9,7 @@
 import { StorageKeys } from './types.js';
 import type { Settings } from './types.js';
 import { wildcardToRegex } from '../wildcardToRegex.js';
+import { DomainFilter } from '../domainFilter/DomainFilter.js';
 
 /**
  * ドメインフィルタキャッシュの有効期限（ミリ秒）
@@ -75,17 +76,12 @@ export function normalizeDomainUrl(url: string): string | null {
 
 /**
  * パターンマッチング（ワイルドカード対応）
- * Content Scriptで使用するため、パッケージ化
- * @param {string} domain - チェック対象のドメイン
- * @param {string} pattern - パターン（*を含む場合あり）
- * @returns {boolean} 一致する場合true
+ * @deprecated Use wildcardToRegex directly or DomainFilter seam — single engine.
  */
 export function matchesWildcardPattern(domain: string, pattern: string): boolean {
-    // 完全一致（大文字小文字区別なし）
     if (!pattern.includes('*')) {
         return domain.toLowerCase() === pattern.toLowerCase();
     }
-    // ワイルドカードパターンを正規表現に変換（共有のReDoSガード付き実装）
     const regex = wildcardToRegex(pattern);
     if (!regex) return false;
     return regex.test(domain);
@@ -93,35 +89,15 @@ export function matchesWildcardPattern(domain: string, pattern: string): boolean
 
 /**
  * バックグラウンドスクリプトでドメインフィルタキャッシュを更新
+ * Delegates to DomainFilter seam so whitelist/blacklist logic lives in one place.
  * @param {Settings} settings - 設定オブジェクト
  */
 export async function updateDomainFilterCache(settings: Settings): Promise<void> {
-    const mode = settings[StorageKeys.DOMAIN_FILTER_MODE];
+    const filter = new DomainFilter();
+    const cachedDomains = filter.buildCacheDomains(settings);
     const now = Date.now();
-
-    // モードに応じてキャッシュするドメインを計算
-    let cachedDomains: string[] = [];
-
-    if (mode === 'whitelist') {
-        const whitelist = (settings[StorageKeys.DOMAIN_WHITELIST] as string[]) || [];
-        const simpleEnabled = settings[StorageKeys.SIMPLE_FORMAT_ENABLED] !== false;
-        if (simpleEnabled) {
-            cachedDomains = whitelist;
-        }
-        // uBlockフォーマットの算出は複雑で、ここでは単純なシンプル形式のみキャッシュ
-    } else if (mode === 'blacklist') {
-        const _blacklist = (settings[StorageKeys.DOMAIN_BLACKLIST] as string[]) || [];
-        const simpleEnabled = settings[StorageKeys.SIMPLE_FORMAT_ENABLED] !== false;
-        if (simpleEnabled) {
-            // ブラックリストモードでは「許可ドメイン」キャッシュは空
-            // 代わりに「ブロックドメイン」をキャッシュ
-            // 実装: 別途ブロックドメインキャッシュが必要だが、TTL短縮で対応
-            cachedDomains = [];
-        }
-    }
-
     await chrome.storage.local.set({
         [StorageKeys.DOMAIN_FILTER_CACHE]: cachedDomains,
-        [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: now
+        [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: now,
     });
 }

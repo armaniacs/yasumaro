@@ -5,7 +5,7 @@
  * OllamaはデフォルトでOriginヘッダーを見てCORS拒否することがあり、
  * Ollama側の OLLAMA_ORIGINS 設定変更を避けるため拡張機能側でヘッダーを削除する。
  */
-import { isAllowedProviderBaseUrl } from '../ai/providerRegistry.js';
+import { isAllowedProviderBaseUrl } from '../ai/providerCatalog.js';
 
 /** 動的ルールの固定ID。baseUrl変更時はこのIDを removeRuleIds に含めて置き換える。 */
 export const OLLAMA_ORIGIN_RULE_ID = 1;

@@ -10,9 +10,9 @@
  */
 
 import { addLog, LogType } from '../../utils/logger.js';
-import { pickDefined } from '../../utils/objectUtils.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps, type UrlStore } from './types.js';
 import { notifyObsidianSaveSuccess } from './resultBuilder.js';
+import { createRetryContext, createSaveSqliteParams, createStepDeps } from './contextBuilder.js';
 import {
   truncateContentStep, checkDomainFilterStep, checkPermissionStep, checkTrustDomainStep,
   PrivacyHeadersChecker, checkDuplicateStep,
@@ -42,9 +42,14 @@ export interface RecordingOrchestratorDeps {
   perUrlMutexMap?: PerUrlMutexMap;
 }
 
+/**
+ * @internal — Prefer distinct entry points `record()` / `preview()` / `retryObsidianWrite()`.
+ * Kept only for backward compat with `record(data, { mode })`. New code must not import this.
+ */
 export type RecordMode = 'normal' | 'preview' | 'retryObsidian';
 
 export interface RecordOptions {
+  /** @deprecated — use distinct entry points `preview()` / `retryObsidianWrite()` instead */
   mode?: RecordMode;
   previewOnly?: boolean;
   /**
@@ -57,6 +62,7 @@ export interface RecordOptions {
 
 export class RecordingOrchestrator {
   private steps: PipelineStep[];
+  private retrySteps: PipelineStep[];
   private getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
   private getSettingsWithCache: () => Promise<Settings>;
   private obsidian: ObsidianClient;
@@ -91,6 +97,12 @@ export class RecordingOrchestrator {
       { name: 'saveSqlite', errorStrategy: ErrorStrategy.BEST_EFFORT, execute: this.createSaveSqliteStep() },
       { name: 'saveMetadata', errorStrategy: ErrorStrategy.BEST_EFFORT, execute: saveMetadataStep }
     ];
+
+    // Retry pipeline is a distinct 2-step subset compiled at construction — not inline in record()
+    this.retrySteps = [
+      { name: 'formatMarkdown', errorStrategy: ErrorStrategy.FATAL, execute: formatMarkdownStep },
+      { name: 'saveObsidian', errorStrategy: ErrorStrategy.BEST_EFFORT, offlineRetry: { jobKind: 'obsidian_sync' }, execute: this.createSaveToObsidianStep() },
+    ];
   }
 
   private createPrivacyHeadersStep() {
@@ -104,15 +116,22 @@ export class RecordingOrchestrator {
   }
 
   private createSaveSqliteStep() {
-    // Unified via StepDeps so test and prod use the same seam (previously closure over this.sqliteClient)
+    // Deps are construction-time fixed; no fallback to `this.sqliteClient` — caller must provide via StepDeps
     return async (context: RecordingContext, deps?: StepDeps): Promise<RecordingContext> => {
-      const client = (deps?.sqliteClient as unknown as SqliteClient | null | undefined) ?? this.sqliteClient;
+      const client = deps?.sqliteClient as SqliteClient | null | undefined;
       if (!client) {
         addLog(LogType.WARN, 'No SqliteClient available, skipping SQLite save', { url: context.data.url, traceId: context.traceId });
         return context;
       }
       const record = mapToBrowsingLogRecord(context);
-      await saveSqliteStep({ recordId: 0, record, sqliteClient: client, ...pickDefined({ obsidianSynced: context.obsidianDuration !== undefined ? true : undefined, traceId: context.traceId }) });
+      const params = createSaveSqliteParams({
+        recordId: 0,
+        record,
+        sqliteClient: client,
+        obsidianSynced: context.obsidianDuration !== undefined ? true : undefined,
+        traceId: context.traceId,
+      });
+      await saveSqliteStep(params);
       addLog(LogType.INFO, 'Saved to SQLite', { url: context.data.url, title: context.data.title, traceId: context.traceId });
       return context;
     };
@@ -128,54 +147,105 @@ export class RecordingOrchestrator {
   }
 
   /**
-   * Deep seam: one method for all recording paths.
-   * - normal: full 13 steps
-   * - preview: short-circuit after privacyPipeline (previewBreakpoint)
-   * - retryObsidian: formatMarkdown + saveToObsidian only
+   * @deprecated — Prefer distinct entry points:
+   * - `record()` for normal full pipeline (13 steps)
+   * - `preview()` for previewBreakpoint short-circuit
+   * - `retryObsidianWrite(job)` for 2-step retry (no AI re-run)
+   * This wrapper is kept for backward compat and delegates to the compiled subsets.
+   * The `mode` branching is the only place `RecordMode` is read; no inline
+   * `formatMarkdownStep + saveToObsidianStep` exists here (see `retrySteps`).
    */
   async record(data: RecordingData, opts: RecordOptions = {}): Promise<RecordingResult> {
     const mode: RecordMode = opts.mode ?? (opts.previewOnly || (data as { previewOnly?: boolean }).previewOnly ? 'preview' : 'normal');
+    if (mode === 'retryObsidian') return this.retryObsidian(data, opts);
+    if (mode === 'preview') return this.preview(data, opts);
+    return this.recordFull(data, opts);
+  }
 
-    if (mode === 'retryObsidian') {
-      return this.mutexMap.runExclusive(data.url, async () => {
-        const settings = opts.settings ?? await this.getSettingsWithCache();
-        const context: RecordingContext = {
-          data: { title: (data as unknown as { title: string }).title ?? '', url: data.url, content: '' } as RecordingData,
-          // retry payload may be { title, url, summary, tags } — pick summary/tags
-          settings, force: true, errors: [],
-          privacyResult: { summary: (data as unknown as { summary: string }).summary ?? '', ...pickDefined({ tags: (data as unknown as { tags?: string[] }).tags }) },
-        };
-        // Also handle job shape { title, url, summary, tags } passed via record()
-        const summary = (data as unknown as { summary?: string }).summary ?? (context.privacyResult as { summary?: string }).summary ?? '';
-        const tags = (data as unknown as { tags?: string[] }).tags;
-        context.privacyResult = { summary, ...pickDefined({ tags }) };
-        const deps: StepDeps = { obsidian: this.obsidian, aiService: this.aiService! };
-        let result = await formatMarkdownStep(context);
-        result = await saveToObsidianStep(result, deps);
-        if (result.obsidianDuration != null) notifyObsidianSaveSuccess((data as unknown as { title: string }).title ?? data.url);
-        // For retry mode, return minimal success result
-        return { success: true } as unknown as RecordingResult;
-      });
-    }
-
-    // preview mode is handled by PipelineKernel's previewBreakpoint on privacyPipeline step
-    const effectiveData = mode === 'preview' ? { ...data, previewOnly: true } as RecordingData : data;
+  /** Normal path: full 13 steps */
+  async recordFull(data: RecordingData, opts: RecordOptions = {}): Promise<RecordingResult> {
     const settings = opts.settings ?? await this.getSettingsWithCache();
+    return this.mutexMap.runExclusive(data.url, () => this.executeInternal(data, settings));
+  }
+
+  /** Preview path: short-circuit after privacyPipeline (previewBreakpoint) */
+  async preview(data: RecordingData, opts: RecordOptions = {}): Promise<RecordingResult> {
+    const settings = opts.settings ?? await this.getSettingsWithCache();
+    const effectiveData = { ...data, previewOnly: true } as RecordingData;
     return this.mutexMap.runExclusive(effectiveData.url, () => this.executeInternal(effectiveData, settings));
   }
 
+  /** Retry Obsidian path: 2-step subset compiled at construction (no inline) */
+  private async retryObsidian(data: RecordingData, opts: RecordOptions = {}): Promise<RecordingResult> {
+    return this.mutexMap.runExclusive(data.url, async () => {
+      const settings = opts.settings ?? await this.getSettingsWithCache();
+      const job = {
+        title: (data as unknown as { title: string }).title ?? '',
+        url: data.url,
+        summary: (data as unknown as { summary: string }).summary ?? '',
+        tags: (data as unknown as { tags?: string[] }).tags,
+      };
+      const traceId = this.generateTraceId();
+      // Typed builder replaces `...pickDefined({ tags })` spread — tags handling is explicit
+      const context = createRetryContext(job, settings, traceId);
+      const deps = createStepDeps({
+        obsidian: this.obsidian,
+        aiService: this.aiService,
+        urlStore: this.urlStore,
+        sqliteClient: this.sqliteClient,
+      });
+      const retryResult = await this.executeRetrySubset(context, deps, traceId);
+      if ((retryResult as unknown as RecordingContext).obsidianDuration != null) notifyObsidianSaveSuccess(job.title || data.url);
+      return { success: true } as unknown as RecordingResult;
+    });
+  }
+
+  private async executeRetrySubset(context: RecordingContext, deps: StepDeps, traceId: string): Promise<RecordingContext> {
+    let ctx = { ...context, traceId } as RecordingContext;
+    for (const step of this.retrySteps) {
+      ctx = await this.executor.executeWithStrategy(step, ctx, deps);
+    }
+    return ctx;
+  }
+
   /**
-   * Retry an Obsidian append only (no AI re-run), for offline-queue obsidian_sync
-   * jobs. Returns whether the append succeeded; throws propagate to the caller.
+   * Distinct entry point: retry Obsidian write only (no AI re-run).
+   * Uses the 2-step subset compiled at construction (`retrySteps`) via `executeRetrySubset`;
+   * `RecordingOrchestrator.steps` (13 elements) is not touched.
+   */
+  async retryObsidianWrite(job: { title: string; url: string; summary: string; tags?: string[] }): Promise<boolean> {
+    return this.mutexMap.runExclusive(job.url, async () => {
+      const settings = await this.getSettingsWithCache();
+      const traceId = this.generateTraceId();
+      const context = createRetryContext(job, settings, traceId);
+      const deps = createStepDeps({
+        obsidian: this.obsidian,
+        aiService: this.aiService,
+        urlStore: this.urlStore,
+        sqliteClient: this.sqliteClient,
+      });
+      const retryResult = await this.executeRetrySubset(context, deps, traceId);
+      if ((retryResult as unknown as RecordingContext).obsidianDuration != null) notifyObsidianSaveSuccess(job.title || job.url);
+      return true;
+    });
+  }
+
+  /**
+   * Backward-compat alias for offline queue. Delegates to `retryObsidianWrite`.
+   * @deprecated — use `retryObsidianWrite(job)` directly
    */
   async retryObsidianWriteOnly(job: { title: string; url: string; summary: string; tags?: string[] }): Promise<boolean> {
-    const result = await this.record(job as unknown as RecordingData, { mode: 'retryObsidian' });
-    return Boolean((result as unknown as { success: boolean }).success ?? true);
+    return this.retryObsidianWrite(job);
   }
 
   private async executeInternal(data: RecordingData, settings: Settings): Promise<RecordingResult> {
     const traceId = this.generateTraceId();
-    const deps: StepDeps = { obsidian: this.obsidian, aiService: this.aiService!, ...pickDefined({ urlStore: this.urlStore, sqliteClient: this.sqliteClient }) as unknown as Pick<StepDeps, 'urlStore' | 'sqliteClient'> };
+    const deps = createStepDeps({
+      obsidian: this.obsidian,
+      aiService: this.aiService,
+      urlStore: this.urlStore,
+      sqliteClient: this.sqliteClient,
+    });
     const kernel = new PipelineKernel(this.steps, this.mutexMap, this.executor);
     return kernel.execute(data, settings, deps, traceId);
   }

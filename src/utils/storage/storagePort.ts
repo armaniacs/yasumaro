@@ -7,11 +7,102 @@
  * SettingsRepository owns that logic and drives this port.
  */
 
+import type { Settings } from './types.js';
+
+// Local copy as string literals to avoid vi.mock hoisting issues where
+// StorageKeys may be undefined at import time (customPromptManager tests mock
+// SettingsRepository which is hoisted above StorageKeys definition).
+const API_KEY_FIELDS: string[] = [
+  'obsidian_api_key',
+  'gemini_api_key',
+  'openai_api_key',
+  'openai_2_api_key',
+  'provider_api_key',
+  'github_pat',
+];
+
+const NORMALIZED_API_KEY_FIELDS = new Set(
+  API_KEY_FIELDS.map((f) => f.toLowerCase().replace(/_/g, '')),
+);
+
+function isApiKeyField(field: string): boolean {
+  return NORMALIZED_API_KEY_FIELDS.has(field.toLowerCase().replace(/_/g, ''));
+}
+
 export interface StoragePort {
   get(keys: string | string[] | null): Promise<Record<string, unknown>>;
   set(items: Record<string, unknown>): Promise<void>;
   onChanged?(callback: (changes: Record<string, unknown>) => void): void;
   getBytesInUse?(keys?: string | string[] | null): Promise<number>;
+}
+
+/**
+ * VULN-014 (CWE-312): return a shallow copy of settings with every API-key
+ * field emptied. Extracted from RecordingCache so cache modules do not need
+ * to know about redaction; StoragePort decorator owns it.
+ */
+export function redactSettingsApiKeys(settings: Settings | null): Settings | null {
+  if (!settings) return null;
+  const copy = { ...settings } as Record<string, unknown>;
+  for (const field of Object.keys(copy)) {
+    if (isApiKeyField(field)) copy[field] = '';
+  }
+  // Also handle exact snake-case fields for completeness
+  for (const field of API_KEY_FIELDS) {
+    if (field in copy) copy[field] = '';
+  }
+  return copy as Settings;
+}
+
+/**
+ * StoragePort decorator that redacts API keys before persisting.
+ * Wraps an inner StoragePort and empties API-key fields on `set()`.
+ * Cache modules remain unaware of redaction.
+ */
+export class RedactingStoragePort implements StoragePort {
+  constructor(private readonly inner: StoragePort) {}
+
+  async get(keys: string | string[] | null): Promise<Record<string, unknown>> {
+    return this.inner.get(keys);
+  }
+
+  async set(items: Record<string, unknown>): Promise<void> {
+    const redacted: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(items)) {
+      if (v && typeof v === 'object' && !Array.isArray(v)) {
+        const rec = v as Record<string, unknown>;
+        const hasApiKey = Object.keys(rec).some(isApiKeyField);
+        if (hasApiKey) {
+          const copy = { ...rec };
+          for (const f of Object.keys(copy)) if (isApiKeyField(f)) copy[f] = '';
+          for (const f of API_KEY_FIELDS) if (f in copy) copy[f] = '';
+          redacted[k] = copy;
+          continue;
+        }
+        if ('settingsCache' in rec && rec.settingsCache && typeof rec.settingsCache === 'object') {
+          const innerSettings = rec.settingsCache as Record<string, unknown>;
+          const hasNestedKey = Object.keys(innerSettings).some(isApiKeyField);
+          if (hasNestedKey) {
+            const copy = { ...rec, settingsCache: { ...innerSettings } } as Record<string, unknown>;
+            for (const f of Object.keys(copy.settingsCache as Record<string, unknown>)) if (isApiKeyField(f)) (copy.settingsCache as Record<string, unknown>)[f] = '';
+            for (const f of API_KEY_FIELDS) if (f in (copy.settingsCache as Record<string, unknown>)) (copy.settingsCache as Record<string, unknown>)[f] = '';
+            redacted[k] = copy;
+            continue;
+          }
+        }
+      }
+      redacted[k] = v;
+    }
+    return this.inner.set(redacted);
+  }
+
+  onChanged(callback: (changes: Record<string, unknown>) => void): void {
+    this.inner.onChanged?.(callback);
+  }
+
+  async getBytesInUse(keys?: string | string[] | null): Promise<number> {
+    return this.inner.getBytesInUse?.(keys) ?? 0;
+  }
 }
 
 export class ChromeStoragePort implements StoragePort {
@@ -92,25 +183,8 @@ export class InMemoryStoragePort implements StoragePort {
       if (k.endsWith('_version') && typeof v === 'number') {
         const base = k.slice(0, -8);
         this.versions.set(base, v);
-      } else {
+      } else if (!k.endsWith('_version')) {
         this.store.set(k, v);
-        // auto-increment version for the base key when not explicitly provided
-        // mimics Chrome's withOptimisticLock version bump so tests see version increments
-        if (!(`${k}_version` in items)) {
-          const cur = this.versions.get(k) ?? 0;
-          // only bump version for known versioned keys (settings, trust_db:json etc.)
-          // but keep it generic: bump whenever base key is written without explicit version
-          if (k === 'settings' || k === 'trust_db:json' || k.startsWith('settings')) {
-            this.versions.set(k, cur + 1);
-          }
-        }
-      }
-    }
-    // handle explicit version writes that arrived as base_version in same batch
-    for (const [k, v] of Object.entries(items)) {
-      if (k.endsWith('_version') && typeof v === 'number') {
-        const base = k.slice(0, -8);
-        this.versions.set(base, v);
       }
     }
     for (const cb of this.listeners) cb(items);

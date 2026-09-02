@@ -108,4 +108,89 @@ describe('InMemoryTransport + SqliteGateway', () => {
     const q = await gateway.query({ kind: 'count' });
     expect(q.success && q.data).toBe(0);
   });
+
+  // PBI 07 regression: ORDER BY must be string-aware (localeCompare) not (??0)
+  it('ORDER BY title ASC sorts strings via localeCompare', async () => {
+    // InMemory previously used (a[key] ?? 0) which broke string columns
+    await gateway.mutate({ type: 'insert', record: rec({ title: 'cherry', url: 'https://example.com/3', created_at: 3000 }) });
+    await gateway.mutate({ type: 'insert', record: rec({ title: 'apple', url: 'https://example.com/1', created_at: 1000 }) });
+    await gateway.mutate({ type: 'insert', record: rec({ title: 'Banana', url: 'https://example.com/2', created_at: 2000 }) });
+
+    const q = await gateway.query({ orderBy: 'title', orderDir: 'ASC' } as unknown as Record<string, unknown> as Parameters<typeof gateway.query>[0]);
+    expect(q.success).toBe(true);
+    if (q.success) {
+      const titles = (q.data as { rows: BrowsingLogRecord[] }).rows.map((r) => r.title);
+      const expected = ['apple', 'Banana', 'cherry'].slice().sort((a, b) => a.localeCompare(b));
+      expect(titles).toEqual(expected);
+      // Explicitly assert it is NOT ASCII order where Banana < apple
+      expect(titles).not.toEqual(['Banana', 'apple', 'cherry']);
+    }
+  });
+
+  it('ORDER BY url ASC sorts strings correctly', async () => {
+    await gateway.mutate({ type: 'insert', record: rec({ url: 'https://example.com/c', title: 'c', created_at: 3 }) });
+    await gateway.mutate({ type: 'insert', record: rec({ url: 'https://example.com/a', title: 'a', created_at: 1 }) });
+    await gateway.mutate({ type: 'insert', record: rec({ url: 'https://example.com/b', title: 'b', created_at: 2 }) });
+
+    const q = await gateway.query({ orderBy: 'url', orderDir: 'ASC' } as unknown as Record<string, unknown> as Parameters<typeof gateway.query>[0]);
+    expect(q.success).toBe(true);
+    if (q.success) {
+      const urls = (q.data as { rows: BrowsingLogRecord[] }).rows.map((r) => r.url);
+      const expected = ['https://example.com/a', 'https://example.com/b', 'https://example.com/c'].slice().sort((a, b) => a.localeCompare(b));
+      expect(urls).toEqual(expected);
+    }
+  });
+
+  it('ORDER BY title DESC is reverse of ASC', async () => {
+    await gateway.mutate({ type: 'insert', record: rec({ title: 'cherry', url: 'https://example.com/3', created_at: 3000 }) });
+    await gateway.mutate({ type: 'insert', record: rec({ title: 'apple', url: 'https://example.com/1', created_at: 1000 }) });
+    await gateway.mutate({ type: 'insert', record: rec({ title: 'Banana', url: 'https://example.com/2', created_at: 2000 }) });
+
+    const asc = await gateway.query({ orderBy: 'title', orderDir: 'ASC' } as unknown as Record<string, unknown> as Parameters<typeof gateway.query>[0]);
+    const desc = await gateway.query({ orderBy: 'title', orderDir: 'DESC' } as unknown as Record<string, unknown> as Parameters<typeof gateway.query>[0]);
+    expect(asc.success && desc.success).toBe(true);
+    if (asc.success && desc.success) {
+      const ascTitles = (asc.data as { rows: BrowsingLogRecord[] }).rows.map((r) => r.title);
+      const descTitles = (desc.data as { rows: BrowsingLogRecord[] }).rows.map((r) => r.title);
+      expect(descTitles).toEqual([...ascTitles].reverse());
+    }
+  });
+
+  it('numeric ORDER BY created_at still sorts numerically', async () => {
+    await gateway.mutate({ type: 'insert', record: rec({ created_at: 3000, title: 'c' }) });
+    await gateway.mutate({ type: 'insert', record: rec({ created_at: 1000, title: 'a' }) });
+    await gateway.mutate({ type: 'insert', record: rec({ created_at: 2000, title: 'b' }) });
+
+    const q = await gateway.query({ orderBy: 'created_at', orderDir: 'ASC' } as unknown as Record<string, unknown> as Parameters<typeof gateway.query>[0]);
+    expect(q.success).toBe(true);
+    if (q.success) {
+      const ats = (q.data as { rows: BrowsingLogRecord[] }).rows.map((r) => r.created_at);
+      expect(ats).toEqual([1000, 2000, 3000]);
+    }
+  });
+
+  it('FTS uses shared sanitizeFtsTerm: operator-only text yields no rows', async () => {
+    await gateway.mutate({ type: 'insert', record: rec({ title: 'hello world', url: 'https://example.com/1', created_at: 1000 }) });
+    // 'OR' is stripped by sanitizeFtsTerm to '' -> should return 0 rows (shared tokenizer)
+    // Old substringIncludes would have searched for 'or' and matched 'world'
+    const q = await gateway.query({ text: 'OR' } as unknown as Record<string, unknown> as Parameters<typeof gateway.query>[0]);
+    expect(q.success).toBe(true);
+    if (q.success) {
+      expect((q.data as { rows: BrowsingLogRecord[] }).total).toBe(0);
+    }
+  });
+
+  it('shares caps with QUERY_CAPS: plain cap is 1000, FTS cap is 100000', async () => {
+    const { QUERY_CAPS } = await import('../../offscreen/queryPlan.js');
+    expect(QUERY_CAPS.plain).toBe(1000);
+    expect(QUERY_CAPS.fts).toBe(100000);
+    // InMemory must clamp using those same caps — insert 5 and request huge limit
+    for (let i = 0; i < 5; i++) await gateway.mutate({ type: 'insert', record: rec({ title: `t${i}`, url: `https://example.com/${i}`, created_at: 1000 + i }) });
+    const qPlain = await gateway.query({ limit: 999999 } as unknown as Record<string, unknown> as Parameters<typeof gateway.query>[0]);
+    expect(qPlain.success).toBe(true);
+    if (qPlain.success) {
+      // limit is capped at plain 1000, so still returns all 5
+      expect((qPlain.data as { rows: BrowsingLogRecord[] }).rows.length).toBe(5);
+    }
+  });
 });

@@ -6,7 +6,7 @@
 import { settingsRepository } from './storage/SettingsRepository.js';
 import { StorageKeys } from './storage/types.js';
 import { isUrlBlocked } from './ublockMatcher.js';
-import { wildcardToRegex, MAX_WILDCARDS_PER_PATTERN } from './wildcardToRegex.js';
+import { wildcardToRegex } from './wildcardToRegex.js';
 
 /**
  * Check if ublockRules object has any rules (supports both old and new formats)
@@ -91,10 +91,7 @@ export function isValidDomain(domain: unknown): boolean {
         return false;
     }
 
-    // Reject patterns with more wildcards than matchesPattern (via wildcardToRegex)
-    // will honor. Such a pattern would silently never match once stored, and a
-    // large count is the ReDoS lever we cap elsewhere (VULN-026).
-    if ((domain.match(/\*/g)?.length ?? 0) > MAX_WILDCARDS_PER_PATTERN) {
+    if (domain.includes('*') && wildcardToRegex(domain) === null) {
         return false;
     }
 

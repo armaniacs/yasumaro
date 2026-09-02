@@ -61,6 +61,7 @@ vi.mock('../presetDomains.js', () => ({
 // storage をモック (PBI-2026-08-01-16: getSavedTrancoVersion/Domains,
 // updateTrancoVersion が settings オブジェクト経由になったため)
 const mockSettingsStore: Record<string, unknown> = {};
+let mockSettingsVersion = 0;
 vi.mock('../../storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
@@ -88,24 +89,39 @@ vi.mock('../../storage.js', async (importOriginal) => {
 import { getTrustDb, isDomainTrusted } from '../trustDb.js';
 import { DomainTrustLevel } from '../trustDbSchema.js';
 import { DomainVerifier } from '../domainVerifier.js';
+import { settingsRepository } from '../../storage/SettingsRepository.js';
 
 describe('TrustDb', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    settingsRepository.clearCache();
     // storage モックをリセット (PBI-2026-08-01-16)
     for (const key of Object.keys(mockSettingsStore)) {
       delete mockSettingsStore[key];
     }
+    mockSettingsVersion = 0;
     // chrome.storage.local をリセット。TrustDbKernel は tranco 設定を
     // chrome.storage.local の 'settings' キー経由で直接読み書きするため、
     // mockSettingsStore をそのバッキングストアとして橋渡しする。
-    (chrome.storage.local.get as vi.Mock).mockImplementation(async (key?: string) => {
+    (chrome.storage.local.get as vi.Mock).mockImplementation(async (key?: string | string[] | null) => {
+      const result: Record<string, unknown> = {};
+      const keys = key == null ? ['settings'] : Array.isArray(key) ? key : [key];
+      if (keys.includes('settings')) result['settings'] = { ...mockSettingsStore };
+      if (keys.includes('settings_version')) result['settings_version'] = mockSettingsVersion;
+      if (keys.includes('settings_migrated')) result['settings_migrated'] = true;
+      if (key === null || key === undefined) return { settings: { ...mockSettingsStore }, settings_migrated: true, settings_version: mockSettingsVersion };
+      if (Array.isArray(key) && key.some(k => k === 'settings' || k === 'settings_version' || k === 'settings_migrated')) {
+        return result;
+      }
       if (key === 'settings') return { settings: { ...mockSettingsStore } };
-      return {};
+      return result;
     });
     (chrome.storage.local.set as vi.Mock).mockImplementation(async (items: Record<string, unknown>) => {
       if (items && typeof items === 'object' && 'settings' in items) {
         Object.assign(mockSettingsStore, items['settings'] as Record<string, unknown>);
+      }
+      if (items && typeof items === 'object' && 'settings_version' in items) {
+        mockSettingsVersion = items['settings_version'] as number;
       }
     });
     // シングルトンをリセット
@@ -535,6 +551,7 @@ describe('TrustDb', () => {
       const db = getTrustDb();
       await db.initialize();
       mockSettingsStore.tranco_domains = ['google.com', 'youtube.com'];
+      settingsRepository.clearCache();
       const domains = await db.getSavedTrancoDomains();
       expect(domains).toEqual(['google.com', 'youtube.com']);
     });

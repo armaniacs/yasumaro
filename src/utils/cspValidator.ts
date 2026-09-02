@@ -11,7 +11,7 @@ import { logWarn, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 import { ALLOWED_LOCALHOST_PORTS } from './ssrfGuard.js';
 import { pickDefined } from './objectUtils.js';
-import { isAllowedProviderBaseUrl } from '../background/ai/providerRegistry.js';
+import { isAllowedProviderBaseUrl } from '../background/ai/providerCatalog.js';
 import { PROVIDER_CATALOG } from '../background/ai/providerCatalog.js';
 
 class CspError extends Error {

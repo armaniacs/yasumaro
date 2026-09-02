@@ -7,7 +7,7 @@
  */
 
 import { StorageKeys } from './storage/types.js';
-import { getRegistryEntry } from '../background/ai/providerRegistry.js';
+import { getRegistryEntry } from '../background/ai/providerCatalog.js';
 
 /**
  * Normalize a provider identifier into the snake_case stem used for its

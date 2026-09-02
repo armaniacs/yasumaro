@@ -166,14 +166,45 @@ export interface PipelineOutput {
 }
 
 /**
- * Full recording context: composition of all sub-types.
- * @internal — internal seam, not part of public interface. Only RecordingPipeline orchestrator constructs and passes this. External callers use RecordingData/RecordingResult.
+ * Full recording context: 7-way intersection (legacy).
  *
- * Steps should reference specific sub-types in their JSDoc to declare
- * which fields they read/write. The orchestrator constructs and passes
- * the full context.
+ * Canonical typed seam is now `StagedContext<S>` via `contextBuilder.ts`:
+ * - New code must use `createInitialContext()` / `createRetryContext()` / `createStepDeps()`
+ *   which return branded `StagedContext<'initial' | 'privacy' | ...>`.
+ * - `StagedContext<'formatted'>` is required to read `markdown`; passing
+ *   `StagedContext<'initial'>` is a compile-time error (see `contextBuilder.test.ts` `@ts-expect-error`).
+ * - `RecordingContext` is retained only for `PipelineStep.execute` backward compat and
+ *   is superseded for construction; `grep "PipelineInput & CheckResults"` should no
+ *   longer be the primary for new call sites.
+ *
+ * @internal — internal seam, not part of public interface. Only RecordingOrchestrator constructs and passes this.
  */
 export type RecordingContext = PipelineInput & CheckResults & PrivacyResults & ContentResults & FormatResults & PipelineTimings & PipelineOutput;
+
+// ---------------------------------------------------------------------------
+// Typed stage branding — see contextBuilder.ts for builder helpers
+// ---------------------------------------------------------------------------
+
+declare const StageBrand: unique symbol;
+type Brand<S extends string> = { readonly [StageBrand]: S };
+
+export type ContextStage =
+  | 'initial'
+  | 'checked'
+  | 'privacy'
+  | 'extracted'
+  | 'formatted'
+  | 'final';
+
+export type StagedContext<S extends ContextStage> = RecordingContext & Brand<S>;
+export type InitialContext = StagedContext<'initial'>;
+export type CheckedContext = StagedContext<'checked'>;
+export type PrivacyContext = StagedContext<'privacy'>;
+export type ExtractedContext = StagedContext<'extracted'>;
+export type FormattedContext = StagedContext<'formatted'>;
+
+export type RequiresPrivacy<C> = C extends { privacyResult: NonNullable<PrivacyResults['privacyResult']> } ? C : never;
+export type RequiresMarkdown<C> = C extends { markdown: string } ? C : never;
 
 /**
  * Job type for the offline retry queue.

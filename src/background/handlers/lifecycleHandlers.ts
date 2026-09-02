@@ -17,7 +17,7 @@ import { flushPendingRecords } from '../pendingSqliteQueue.js';
 import type { SqliteClient } from '../sqliteClient.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { syncOllamaOriginRule } from '../net/ollamaOriginRule.js';
-import { getRegistryEntry } from '../ai/providerRegistry.js';
+import { getRegistryEntry } from '../ai/providerCatalog.js';
 
 const OLLAMA_DEFAULT_BASE_URL = getRegistryEntry('ollama')?.defaultBaseUrl ?? 'http://localhost:11434/v1';
 
