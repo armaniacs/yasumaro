@@ -64,7 +64,7 @@
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] `grep` で wildcard 実装が 1 箇所に収束し、4 gates の重複ロジックが削除されている
-- [ ] コードレビュー完了
+- [x] コードレビュー完了
 - [x] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` の DomainFilter 節を新 module 前提に更新）
 - [x] `npm run validate` green
 

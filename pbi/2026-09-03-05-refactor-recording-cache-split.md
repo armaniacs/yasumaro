@@ -64,8 +64,8 @@
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] `src/background/recordingCache.ts` が facade 化され、各 cache の TTL が独立した module に分離している
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` の RecordingCache 節を 3 cache 前提に更新）
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` の RecordingCache 節を 3 cache 前提に更新）
 - [x] `npm run validate` green
 
 ## 実装メモ（任意）

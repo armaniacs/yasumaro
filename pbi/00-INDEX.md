@@ -21,7 +21,6 @@
 | 5 | [2026-09-03-05-refactor-recording-cache-split](2026-09-03-05-refactor-recording-cache-split.md) | 🔶 | RICE 80 | 🟡中(2) | 🟢なし | 🔧 | RecordingCache 分割 — TTL 3 モジュール分離、facade 完全委譲は 05b で |
 | 6 | [2026-09-03-06-refactor-domain-filter-unification](2026-09-03-06-refactor-domain-filter-unification.md) | 🔶 | RICE 58 | 🟡中(2) | 🟢なし | 🔧 | DomainFilter 統合 — DomainFilter + CacheAdapter 2 adapter 基盤、4 gates 移行は 06b で |
 | 7 | [2026-09-03-07-refactor-sqlite-gateway-fidelity](2026-09-03-07-refactor-sqlite-gateway-fidelity.md) | 🔶 | RICE 12 | 🟡中(2) | 🟢なし | 🔧 | SqliteGateway fidelity — hop 分割完了、InMemory shared builder は 07b で |
-| 8 | [2026-09-03-08-fix-daily-note-path-placeholder-discoverability](2026-09-03-08-fix-daily-note-path-placeholder-discoverability.md) | 🔶 | RICE - | 🟢低(1) | 🟢なし | ✨ | デイリーノートパス placeholder の発見可能性改善 — ja/en ロケールと help text 追加 |
 
 バックログ: [2026-09-03-00-backlog](2026-09-03-00-backlog.md)（RICE 降順、依存グラフ、推奨着手順を記載）
 
@@ -67,6 +66,8 @@
 - 2026-09-03-05-refactor-recording-cache-split.md（TTL 3 モジュール分離完了、facade 完全委譲は 05b で）
 - 2026-09-03-06-refactor-domain-filter-unification.md（DomainFilter + CacheAdapter 基盤完了、4 gates 移行は 06b で）
 - 2026-09-03-07-refactor-sqlite-gateway-fidelity.md（hop 分割完了、InMemory shared builder は 07b で）
+
+- 2026-09-03-08-fix-daily-note-path-placeholder-discoverability.md（RICE - — `dailyNotePathPlaceholder` を `092.Daily または raw/YYYY-MM` に、`dailyNotePathHelp` を ja/en 追加、`entrypoints/options/index.html` に help-text 追加、`docs/FAQ`/`SETUP_GUIDE` に月次例追記、`dailyNotePathBuilder` に 3ケース追加。build 後の dist で placeholder と help-text を目視確認、validate green）
 
 詳細な 5 Whys は `/tmp/kilo/whywhy-remaining.md` に記録。
 

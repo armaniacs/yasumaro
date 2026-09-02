@@ -68,9 +68,9 @@
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] `record(data, { mode: 'retryObsidian' })` の inline path がコードベースに存在しない（`grep` で確認）
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` §8.3 RecordingOrchestrator 節を 3 entry point 前提に更新）
-- [ ] `npm run validate` green
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` §8.3 RecordingOrchestrator 節を 3 entry point 前提に更新）
+- [x] `npm run validate` green
 
 ## 実装メモ（任意）
 - `RecordOptions.previewOnly` / `RecordMode` の削除は破壊的変更のため、`recordingHandlers.ts` の `execute` 呼び出しも新 entry point に移行すること。

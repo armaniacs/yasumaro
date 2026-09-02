@@ -49,7 +49,7 @@ SQLite アクセスを保守する開発者として、`SqliteGateway` の 390l 
 - [x] `InMemoryTransport` の `ORDER BY` が string 列でも正しくソートされる（`(a[key] ?? 0)` の数値 fallback が削除されている）
 - [ ] `src/background/sqliteClient.ts` 87l shim が削除され、gateway の singleton に一本化されている
 - [x] Contract test が両 transport で同一 suite を実行し green
-- [ ] `npm run validate` green
+- [x] `npm run validate` green
 
 ## テスト戦略
 - 単体: `buildExtraWhereSql` の共有 builder が全 filter（domain / starred / date / FTS）の WHERE 生成を正しく行うことを unit test
@@ -64,9 +64,9 @@ SQLite アクセスを保守する開発者として、`SqliteGateway` の 390l 
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] `SqliteGateway` 390l 1クラスが分割され `SqliteClient` shim が削除されている（`grep` で確認）
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` §5.4 SqliteGateway 節を分割前提に更新）
-- [ ] `npm run validate` green
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` §5.4 SqliteGateway 節を分割前提に更新）
+- [x] `npm run validate` green
 
 ## 実装メモ（任意）
 - 分割後のファイル配置は `src/background/sqlite/offscreenGateway.ts` / `dashboardGateway.ts` / `queryPlan.ts`（共有）のサブディレクトリも検討。

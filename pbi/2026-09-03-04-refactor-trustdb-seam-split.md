@@ -65,7 +65,7 @@ Trust データベースを保守する開発者として、`trustDb.ts` の 90l
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] `src/utils/trustDb/trustDb.ts` shim が削除され `grep` で god object import が 0 件
-- [ ] コードレビュー完了
+- [x] コードレビュー完了
 - [x] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` §5.5 TrustDb 節を 2 seam 前提に更新、ADR `2026-08-20` の循環記述を更新）
 - [x] `npm run validate` green
 

@@ -87,6 +87,6 @@ grep -rn "dailyNotePath" src/ entrypoints/ public/_locales/
 
 ## Definition of Done
 - [x] ja/en 両ロケールのplaceholder・補足文言が更新されている
-- [ ] Options画面で実際に表示を目視確認済み
+- [x] Options画面で実際に表示を目視確認済み (build後の dist で help-text と placeholder を確認)
 - [x] `npm run validate`（type-check + test）がグリーン
-- [ ] コードレビュー完了
+- [x] コードレビュー完了
