@@ -33,7 +33,10 @@ async function sendDashboard<T extends DashboardSqliteRequest>(payload: T): Prom
     const action = payload.subtype;
     const id = (payload as unknown as { id?: number }).id;
     const confirmToken = await getDashboardConfirmToken(action, id);
-    if (confirmToken) messagePayload = { ...payload, confirmToken } as T & { confirmToken: string };
+    if (!confirmToken) {
+      throw new Error('Dashboard confirm token unavailable');
+    }
+    messagePayload = { ...payload, confirmToken } as T & { confirmToken: string };
   }
   return Promise.race([
     chrome.runtime.sendMessage({ type: 'DASHBOARD_SQLITE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: messagePayload }),

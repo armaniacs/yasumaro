@@ -5,7 +5,6 @@
 // の分散した seam を `isTrusted(url) → Decision` の1 seam に集約。
 // 呼び出し元は TrustDecision のみを知れば良い。
 
-import { getTrustPolicy } from './TrustPolicy.js';
 import { getTrustDbAdmin } from './TrustDbAdmin.js';
 import type { TrustPolicy } from './TrustPolicy.js';
 import type { TrustDbAdmin } from './TrustDbAdmin.js';
@@ -23,12 +22,18 @@ export interface TrustDecisionResult {
 }
 
 export class TrustDecision {
-  private policy: TrustPolicy;
+  // policy is not cached — always looked up via admin.getPolicy() to avoid stale orphan
+  private _legacyPolicy: TrustPolicy | null = null;
   private admin: TrustDbAdmin;
   private permissionManager: PermissionManager;
 
+  private get policy(): TrustPolicy {
+    if (this._legacyPolicy) return this._legacyPolicy;
+    return this.admin.getPolicy();
+  }
+
   constructor(
-    policy: TrustPolicy = getTrustPolicy(),
+    policy?: TrustPolicy,
     admin: TrustDbAdmin = getTrustDbAdmin(),
     permissionManager: PermissionManager = getPermissionManager()
   ) {
@@ -52,7 +57,7 @@ export class TrustDecision {
         addToWhitelist: (d: string) => Promise<{ success: boolean; error?: string }>;
         addSensitiveDomain: (d: string) => Promise<{ success: boolean; error?: string }>;
       };
-      this.policy = {
+      this._legacyPolicy = {
         isDomainTrusted: legacy.isDomainTrusted.bind(legacy),
         isTrancoDomain: (legacy.isTrancoDomain?.bind(legacy) ?? (() => false)) as TrustPolicy['isTrancoDomain'],
       } as unknown as TrustPolicy;
@@ -72,12 +77,14 @@ export class TrustDecision {
     }
     // Legacy god object with getPolicy/getAdmin
     if (maybeLegacy && typeof maybeLegacy.getPolicy === 'function' && typeof maybeLegacy.getAdmin === 'function') {
-      this.policy = maybeLegacy.getPolicy();
+      this._legacyPolicy = maybeLegacy.getPolicy();
       this.admin = maybeLegacy.getAdmin();
       this.permissionManager = permissionManager;
       return;
     }
-    this.policy = policy as TrustPolicy;
+    // Normal path: do not cache policy, look up via admin on each call
+    // Keep _legacyPolicy null so getter delegates to admin.getPolicy()
+    this._legacyPolicy = null;
     // second arg may be PermissionManager when called with old 2-arg signature and first arg is real Policy
     if (admin && typeof (admin as unknown as PermissionManager).isHostPermitted === 'function') {
       this.admin = getTrustDbAdmin();

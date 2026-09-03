@@ -98,20 +98,15 @@ export class TrustPolicy {
 (globalThis as unknown as Record<string, unknown>).__TrustPolicyClass = TrustPolicy;
 
 // --- Singleton seam (readonly, storage-free) ---
-let _policyInstance: TrustPolicy | null = null;
-
 export function getTrustPolicy(): TrustPolicy {
   const gk = (globalThis as unknown as Record<string, unknown>).__trustDbKernel as { getPolicy?: () => TrustPolicy } | undefined;
   if (gk?.getPolicy) {
-    const shared = gk.getPolicy();
-    _policyInstance = shared;
-    return shared;
+    return gk.getPolicy();
   }
-  if (_policyInstance) return _policyInstance;
-  _policyInstance = new TrustPolicy({ save: async () => {} });
-  return _policyInstance;
+  throw new Error('TrustDb not initialized: call getTrustDbAdmin().initialize() first');
 }
 
 export function _resetTrustPolicyForTest(): void {
-  _policyInstance = null;
+  // No-op: _policyInstance removed, singleton is now Kernel-backed only.
+  // Kept for backward compat with tests that call _resetTrustPolicyForTest().
 }

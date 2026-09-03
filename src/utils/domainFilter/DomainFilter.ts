@@ -98,26 +98,52 @@ export class DomainFilter {
   /**
    * Generate cache record valid for ttlMs — used by updateDomainFilterCache.
    */
-  cache(settings: Settings, now = Date.now()): { cachedDomains: string[]; cachedAt: number; validFor: number } {
+  cache(settings: Settings, now = Date.now()): { cachedDomains: string[]; cachedAt: number; validFor: number; mode: string } {
+    const mode = (settings[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'whitelist';
     return {
       cachedDomains: this.buildCacheDomains(settings),
       cachedAt: now,
       validFor: this.ttlMs,
+      mode,
     };
+  }
+
+  private isDomainInList(hostname: string, list: string[]): boolean {
+    const lower = hostname.toLowerCase();
+    return list.some((pattern) => {
+      if (!pattern.includes('*')) return lower === pattern.toLowerCase();
+      const re = wildcardToRegex(pattern);
+      return re ? re.test(hostname) : false;
+    });
   }
 
   /**
    * Cache-aware isAllowed for content-script path (TTL from construction param).
    * Returns cached result if valid, otherwise falls back to live.
+   * Mode-aware: blacklist inverts the list check, disabled allows all.
    */
-  async isAllowedCached(url: string, cached: { allowedDomains: string[]; cachedAt: number } | null): Promise<boolean> {
+  async isAllowedCached(
+    url: string,
+    cached: { allowedDomains: string[]; cachedAt: number; mode?: string } | null,
+    mode?: string,
+  ): Promise<boolean> {
     if (cached && Date.now() - cached.cachedAt < this.ttlMs) {
-      const hostname = new URL(url).hostname.replace(/^www\./, '');
-      return cached.allowedDomains.some((pattern) => {
-        if (!pattern.includes('*')) return hostname.toLowerCase() === pattern.toLowerCase();
-        const re = wildcardToRegex(pattern);
-        return re ? re.test(hostname) : false;
-      });
+      try {
+        const hostname = new URL(url).hostname.replace(/^www\./, '');
+        const effectiveMode = mode ?? (cached as { mode?: string }).mode;
+        if (effectiveMode === 'blacklist') {
+          return !this.isDomainInList(hostname, cached.allowedDomains);
+        }
+        if (effectiveMode === 'whitelist') {
+          return this.isDomainInList(hostname, cached.allowedDomains);
+        }
+        // No mode or disabled: fall back to live for correctness
+        // If cachedDomains is empty due to disabled, allow all
+        if (cached.allowedDomains.length === 0) return true;
+        return this.isDomainInList(hostname, cached.allowedDomains);
+      } catch {
+        return false;
+      }
     }
     return this.isAllowed(url);
   }
@@ -130,6 +156,7 @@ export class DomainFilter {
 export class DomainFilterCacheAdapter {
   private cachedAt: number | null = null;
   private allowedDomains: string[] = [];
+  private cachedMode: string | null = null;
   private readonly ttlMs: number;
 
   constructor(
@@ -139,9 +166,10 @@ export class DomainFilterCacheAdapter {
     this.ttlMs = opts.ttlMs ?? filter.getTtlMs();
   }
 
-  updateCache(allowedDomains: string[]): void {
+  updateCache(allowedDomains: string[], mode?: string): void {
     this.allowedDomains = [...allowedDomains];
     this.cachedAt = Date.now();
+    if (mode !== undefined) this.cachedMode = mode;
   }
 
   /** Expose TTL for tests (construction param seam). */
@@ -149,14 +177,31 @@ export class DomainFilterCacheAdapter {
     return this.ttlMs;
   }
 
-  async isAllowed(url: string): Promise<boolean> {
+  private isDomainInList(hostname: string, list: string[]): boolean {
+    const lower = hostname.toLowerCase();
+    return list.some((pattern) => {
+      if (!pattern.includes('*')) return lower === pattern.toLowerCase();
+      const re = wildcardToRegex(pattern);
+      return re ? re.test(hostname) : false;
+    });
+  }
+
+  async isAllowed(url: string, mode?: string): Promise<boolean> {
     if (this.cachedAt && Date.now() - this.cachedAt < this.ttlMs) {
-      const hostname = new URL(url).hostname.replace(/^www\./, '');
-      return this.allowedDomains.some((pattern) => {
-        if (!pattern.includes('*')) return hostname.toLowerCase() === pattern.toLowerCase();
-        const re = wildcardToRegex(pattern);
-        return re ? re.test(hostname) : false;
-      });
+      try {
+        const hostname = new URL(url).hostname.replace(/^www\./, '');
+        const effectiveMode = mode ?? this.cachedMode;
+        if (effectiveMode === 'blacklist') {
+          return !this.isDomainInList(hostname, this.allowedDomains);
+        }
+        if (effectiveMode === 'whitelist') {
+          return this.isDomainInList(hostname, this.allowedDomains);
+        }
+        if (this.allowedDomains.length === 0) return true;
+        return this.isDomainInList(hostname, this.allowedDomains);
+      } catch {
+        return false;
+      }
     }
     return this.filter.isAllowed(url);
   }
