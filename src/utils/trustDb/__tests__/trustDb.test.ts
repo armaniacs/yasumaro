@@ -48,9 +48,22 @@ vi.mock('../../logger.js', () => ({
   ErrorCode: {},
 }));
 
-// optimisticLock をモック
-vi.mock('../../optimisticLock.js', () => ({
+// storageTransaction をモック（optimisticLock shim は削除済み）
+vi.mock('../storage/storageTransaction.js', () => ({
   withOptimisticLock: vi.fn(async (_key: string, fn: () => Promise<any>) => fn()),
+  StorageTransaction: vi.fn().mockImplementation(() => ({
+    withLock: vi.fn(async (_key: string, fn: (v: unknown) => unknown) => {
+      const val = undefined;
+      return fn(val);
+    }),
+    withAtomic: vi.fn(async (_keys: unknown, fn: (vals: unknown) => unknown) => fn([])),
+  })),
+  ConflictError: class ConflictError extends Error {
+    constructor(key: string, expected: number, actual: number) {
+      super(`Conflict detected for key: ${key} (expected: ${expected}, actual: ${actual})`);
+      this.name = 'ConflictError';
+    }
+  },
 }));
 
 // presetDomains をモック (trustDb.ts の import パスに合わせる)
