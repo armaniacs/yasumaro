@@ -27,9 +27,6 @@ const mockDb = {
     updateTranco: vi.fn(async () => {}),
     getStatus: vi.fn(() => ({ initialized: true, lastUpdated: new Date().toISOString() }))
 };
-vi.mock('../trustDb.js', () => ({
-    getTrustDb: vi.fn(() => mockDb)
-}));
 vi.mock('../TrustDbAdmin.js', () => ({
     getTrustDbAdmin: vi.fn(() => mockDb)
 }));

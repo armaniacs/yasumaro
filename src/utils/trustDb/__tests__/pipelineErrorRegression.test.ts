@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DomainVerifier } from '../domainVerifier.js';
 import { DomainTrustLevel } from '../trustDbSchema.js';
 import type { TrustDatabase } from '../trustDbSchema.js';
-import { getTrustDb } from '../trustDb.js';
+import { getTrustDbAdmin, TrustDbAdmin } from '../TrustDbAdmin.js';
 
 function makeCorruptedDb(overrides: Partial<TrustDatabase> = {}): unknown {
   return {
@@ -84,7 +84,7 @@ describe('pipelineErrorRegression: 破損DBでも記録が失敗しない', () =
   });
 
   it('TrustDb.isDomainTrusted は未初期化でも例外を投げず UNVERIFIED を返す', async () => {
-    const db = getTrustDb();
+    const db = getTrustDbAdmin();
     // 未初期化状態を強制: bloomFilter が無い状態でも UNVERIFIED を返す（trustDb.ts:332 のガード）
     // @ts-expect-error private access for test
     db['state'] = { database: null, bloomFilter: null, initialized: false };
@@ -94,7 +94,7 @@ describe('pipelineErrorRegression: 破損DBでも記録が失敗しない', () =
   });
 
   it('TrustDb.doInitialize は破損DB（jpAnchor/presets欠落）を修復し pipeline-error を投げない', async () => {
-    const db = getTrustDb();
+    const db = getTrustDbAdmin();
     // 直接 repairDatabase を呼び出し、破損DBが修復されることを検証（bloomFilter の integrity を回避）
     const corrupted = makeCorruptedDb({
       jpAnchor: { tlds: ['.com'] } as unknown as never, // userTlds missing

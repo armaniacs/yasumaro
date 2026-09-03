@@ -101,12 +101,6 @@ export class TrustPolicy {
 let _policyInstance: TrustPolicy | null = null;
 
 export function getTrustPolicy(): TrustPolicy {
-  const g = (globalThis as unknown as Record<string, unknown>).__trustDbInstance as { getPolicy?: () => TrustPolicy } | undefined;
-  if (g?.getPolicy) {
-    const shared = g.getPolicy();
-    _policyInstance = shared;
-    return shared;
-  }
   const gk = (globalThis as unknown as Record<string, unknown>).__trustDbKernel as { getPolicy?: () => TrustPolicy } | undefined;
   if (gk?.getPolicy) {
     const shared = gk.getPolicy();

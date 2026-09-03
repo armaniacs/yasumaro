@@ -71,8 +71,8 @@ describe('Trust Database - Domain/TLD Validation', () => {
     // Clear module cache to get fresh TrustDb instance
     vi.resetModules();
     // Clear the module cache to get fresh import
-    const trustDbModule = await import('../trustDb/trustDb.js');
-    trustDb = trustDbModule.getTrustDb();
+    const trustDbModule = await import('../trustDb/TrustDbAdmin.js');
+    trustDb = trustDbModule.getTrustDbAdmin();
 
     // Initialize the database
     await trustDb.initialize?.();

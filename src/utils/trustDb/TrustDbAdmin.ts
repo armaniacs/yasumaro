@@ -8,6 +8,7 @@
  * breaking the hardcoded string-key cycle.
  */
 
+import type { TrustResult } from './trustDbSchema.js';
 import type { TrustDbKernel } from './TrustDbKernel.js';
 import { TrustDbKernel as TrustDbKernelClass } from './TrustDbKernel.js';
 import { StorageKeys } from '../storage/types.js';
@@ -17,13 +18,29 @@ export const TRUST_DB_STORAGE_KEY = StorageKeys.TRUST_DB;
 export class TrustDbAdmin {
   constructor(private readonly kernel: TrustDbKernel) {}
 
+  /** Test-only seam: exposes kernel state for (db as any).state poking */
+  get state(): ReturnType<TrustDbKernel['_getState']> {
+    return this.kernel._getState();
+  }
+  set state(v: ReturnType<TrustDbKernel['_getState']>) {
+    this.kernel._setState(v);
+  }
+
+  /** Convenience: reset initPromise for tests that need re-init */
+  static get initPromise(): Promise<void> | null {
+    return TrustDbKernelClass.initPromise;
+  }
+  static set initPromise(v: Promise<void> | null) {
+    TrustDbKernelClass.initPromise = v;
+  }
+
   // --- Lifecycle (owns StoragePort) ---
   async initialize(): Promise<void> {
     return this.kernel.initialize();
   }
 
   // --- Readonly delegation (share kernel state; storage-free check still via Policy) ---
-  isDomainTrusted(domain: string): ReturnType<TrustDbKernel['isDomainTrusted']> {
+  isDomainTrusted(domain: string): TrustResult {
     return this.kernel.isDomainTrusted(domain);
   }
   isTrancoDomain(domain: string): boolean {
@@ -101,31 +118,30 @@ export class TrustDbAdmin {
   repairDatabase(db: Record<string, unknown>): void {
     return this.kernel.repairDatabase(db);
   }
+
+  /** Expose policy for backward compat and for getTrustPolicy singleton seam */
+  getPolicy(): ReturnType<TrustDbKernel['getPolicy']> {
+    return this.kernel.getPolicy();
+  }
 }
 
 // --- Singleton seam (mutation, owns StoragePort via StorageKeys.TRUST_DB) ---
 let _adminInstance: TrustDbAdmin | null = null;
 
 export function getTrustDbAdmin(): TrustDbAdmin {
-  const g = (globalThis as unknown as Record<string, unknown>).__trustDbInstance as { getAdmin?: () => TrustDbAdmin } | undefined;
-  if (g?.getAdmin) {
-    const shared = g.getAdmin();
-    _adminInstance = shared;
-    return shared;
-  }
-  const gk = (globalThis as unknown as Record<string, unknown>).__trustDbKernel as TrustDbKernel | undefined;
-  if (gk) {
-    if (_adminInstance) return _adminInstance;
-    _adminInstance = new TrustDbAdmin(gk);
-    return _adminInstance;
-  }
   if (_adminInstance) return _adminInstance;
   const kernel = new TrustDbKernelClass();
-  (globalThis as unknown as Record<string, unknown>).__trustDbKernel = kernel;
   _adminInstance = new TrustDbAdmin(kernel);
   return _adminInstance;
 }
 
 export function _resetTrustDbAdminForTest(): void {
   _adminInstance = null;
+}
+
+/** Convenience: initialize + isDomainTrusted (replaces deleted trustDb.ts shim) */
+export async function isDomainTrusted(domain: string): Promise<TrustResult> {
+  const admin = getTrustDbAdmin();
+  await admin.initialize();
+  return admin.isDomainTrusted(domain);
 }

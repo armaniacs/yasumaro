@@ -43,12 +43,6 @@ vi.mock('../urlUtils.js', () => ({
   normalizeUrl: vi.fn((url: string) => url),
 }));
 
-vi.mock('../trustDb/trustDb.js', () => ({
-  getTrustDb: vi.fn(() => ({
-    initialize: vi.fn(async () => {}),
-  })),
-}));
-
 vi.mock('../trustDb/TrustPolicy.js', () => ({
   getTrustPolicy: vi.fn(() => ({
     isDomainTrusted: vi.fn(() => ({ level: 'UNVERIFIED', source: 'unknown', reason: '' })),

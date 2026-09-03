@@ -7,7 +7,7 @@ function makeTrustDbMock(level: string = 'trusted', source: string = 'preset') {
     isDomainTrusted: vi.fn().mockReturnValue({ level, source, reason: source }),
     addToWhitelist: vi.fn().mockResolvedValue({ success: true }),
     addSensitiveDomain: vi.fn().mockResolvedValue({ success: true }),
-  } as unknown as import('../trustDb.js').TrustDb;
+  } as unknown as import('../TrustDbAdmin.js').TrustDbAdmin;
 }
 
 function makePermissionMock(permitted: boolean) {

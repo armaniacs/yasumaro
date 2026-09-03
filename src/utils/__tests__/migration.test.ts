@@ -14,10 +14,6 @@ const { mockInitialize } = vi.hoisted(() => {
   };
 });
 
-vi.mock('../trustDb/trustDb.js', () => ({
-  getTrustDb: () => ({ initialize: mockInitialize })
-}), { virtual: true });
-
 vi.mock('../trustDb/TrustDbAdmin.js', () => ({
   getTrustDbAdmin: () => ({ initialize: mockInitialize })
 }), { virtual: true });

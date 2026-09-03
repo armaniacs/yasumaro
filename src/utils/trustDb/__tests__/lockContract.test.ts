@@ -42,8 +42,8 @@ describe('lock contract: finally-coverage (trancoUpdater)', () => {
   });
 
   it('releases updateInProgress when the update throws mid-flight', async () => {
-    vi.doMock('../trustDb.js', () => ({
-      getTrustDb: () => ({
+    vi.doMock('../TrustDbAdmin.js', () => ({
+      getTrustDbAdmin: () => ({
         initialize: vi.fn().mockResolvedValue(undefined),
         updateTranco: vi.fn().mockRejectedValue(new Error('db exploded')),
       }),
