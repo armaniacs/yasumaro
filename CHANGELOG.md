@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.100` リリース。
+> - 現時点では `v6.7.101` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,22 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [Unreleased]
+
+## [6.7.101] - 2026-09-04
+
+### Refactor
+
+- Trust seam: globalThis registry 廃止、seam を module-scope singleton に一本化 (PBI 01, RICE 12.0)
+- Pipeline: PipelineKernel を RecordingOrchestrator に統合、dead stage-branding 削除 (PBI 03/04)
+- Composition: global setter seam 撤去し port injection に一本化 (PBI 05)
+- Provider: SSRF security policy を catalog から分離 (PBI 06)
+- SQLite: dashboardGateway の重複 race を sendDashboardRaw に統一 (PBI 07)
+
+### Fixed
+
+- retryPolicy の 'ai ' 部分一致ヒューリスティックを削除 (PBI 02, RICE 9.6)
 
 ## [6.7.100] - 2026-09-02
 
