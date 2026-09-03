@@ -14,7 +14,17 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-**進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る。> 0902a ブランチレビュー由来の PBI。01-04 はコード修正+BDDテスト追加でアーカイブ済み。05 の A1-A4（orphan exports 4件）と C1-C2（shim importers 5 prod）は低RICE(0.9)のため次イテレーションへ。詳細は [2026-09-03-00-backlog.md](2026-09-03-00-backlog.md) を参照。> 0902a ブランチレビュー由来の 5 PBI。RICE 降順が着手順。03/04 は独立で並列可、01/02 も独立で並列可、05 は 01/02 に依存するため直列。詳細は [2026-09-03-00-backlog.md](2026-09-03-00-backlog.md) を参照.
+| # | PBI | RICE | 状態 |
+|---|-----|------|------|
+| 1 | [2026-09-03-01-refactor-trust-seam-consolidation](2026-09-03-01-refactor-trust-seam-consolidation.md) | 12.0 | ⬜ |
+| 2 | [2026-09-03-02-fix-retry-policy-ai-false-positive](2026-09-03-02-fix-retry-policy-ai-false-positive.md) | 9.6 | ⬜ |
+| 3 | [2026-09-03-03-refactor-pipeline-consolidation](2026-09-03-03-refactor-pipeline-consolidation.md) | 6.0 | ⬜ |
+| 4 | [2026-09-03-04-refactor-staged-context-branding](2026-09-03-04-refactor-staged-context-branding.md) | 4.8 | ⬜ (03 に依存) |
+| 5 | [2026-09-03-05-refactor-composition-root-typed](2026-09-03-05-refactor-composition-root-typed.md) | 4.0 | ⬜ |
+| 6 | [2026-09-03-06-refactor-provider-catalog-split](2026-09-03-06-refactor-provider-catalog-split.md) | 2.7 | ⬜ |
+| 7 | [2026-09-03-07-refactor-sqlite-gateway-single-seam](2026-09-03-07-refactor-sqlite-gateway-single-seam.md) | 2.0 | ⬜ |
+
+> Architecture Deepening Round 2026-09-03b。RICE 降順が実行順、04 は 03 に依存。詳細は [backlog](2026-09-03-00-backlog-deepening.md)。> 0902a ブランチレビュー由来の PBI。01-04 はコード修正+BDDテスト追加でアーカイブ済み。05 の A1-A4（orphan exports 4件）と C1-C2（shim importers 5 prod）は低RICE(0.9)のため次イテレーションへ。詳細は [2026-09-03-00-backlog.md](2026-09-03-00-backlog.md) を参照。> 0902a ブランチレビュー由来の 5 PBI。RICE 降順が着手順。03/04 は独立で並列可、01/02 も独立で並列可、05 は 01/02 に依存するため直列。詳細は [2026-09-03-00-backlog.md](2026-09-03-00-backlog.md) を参照.
 
 ### 未 PBI 化のトリガー
 - **なし。** PBI 06 の効果確認は 2026-09-01 に実施済み（未達 → 06b/06c を実装し達成）。残債は `2026-08-31-00-backlog.md` の「06d 候補」に記録（次 provider 追加時などに着手検討）
