@@ -10,8 +10,11 @@
  */
 
 import { addLog, LogType } from '../../utils/logger.js';
-import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps, type UrlStore } from './types.js';
-import { notifyObsidianSaveSuccess } from './resultBuilder.js';
+import { pickDefined } from '../../utils/objectUtils.js';
+import { ErrorStrategy, type RecordingContext, type PipelineError, type PipelineStep, type StepDeps, type UrlStore } from './types.js';
+import { notifyObsidianSaveSuccess, buildErrorResult, buildPrivatePageResult, notifyRecordingError, buildResult } from './resultBuilder.js';
+import { PrivatePageError, DuplicateError } from './steps/index.js';
+import { toExternalResult } from './piiBoundary.js';
 import { createRetryContext, createSaveSqliteParams, createStepDeps } from './contextBuilder.js';
 import {
   truncateContentStep, checkDomainFilterStep, checkPermissionStep, checkTrustDomainStep,
@@ -29,7 +32,6 @@ import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { PerUrlMutexMap } from './perUrlMutex.js';
 import { StepExecutor } from './stepExecutor.js';
-import { PipelineKernel } from './PipelineKernel.js';
 
 export interface RecordingOrchestratorDeps {
   getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
@@ -238,6 +240,12 @@ export class RecordingOrchestrator {
     return this.retryObsidianWrite(job);
   }
 
+  /**
+   * Sole state owner of pipeline execution — formerly PipelineKernel (20-line
+   * thin loop). Inlined here so recording semantics (PrivatePage/Duplicate
+   * special cases, FATAL/RETRY error mapping, previewBreakpoint) live next to
+   * the step definitions that declare them.
+   */
   private async executeInternal(data: RecordingData, settings: Settings): Promise<RecordingResult> {
     const traceId = this.generateTraceId();
     const deps = createStepDeps({
@@ -246,8 +254,33 @@ export class RecordingOrchestrator {
       urlStore: this.urlStore,
       sqliteClient: this.sqliteClient,
     });
-    const kernel = new PipelineKernel(this.steps, this.mutexMap, this.executor);
-    return kernel.execute(data, settings, deps, traceId);
+    let context: RecordingContext = { data, settings, force: data.force || false, aiService: deps.aiService as never, traceId, errors: [] };
+
+    for (const step of this.steps) {
+      try {
+        context = await this.executor.executeWithStrategy(step, context, deps);
+        if (data.previewOnly && context.result && step.previewBreakpoint) return toExternalResult(context.result);
+      } catch (error) {
+        if (error instanceof PrivatePageError) return buildPrivatePageResult(context, error);
+        if (error instanceof DuplicateError) return { success: true, skipped: true, reason: error.reason, title: data.title, url: data.url };
+        if (step.errorStrategy === ErrorStrategy.FATAL || step.errorStrategy === ErrorStrategy.RETRY) {
+          const errorResult = buildErrorResult(context, error as Error, step.name);
+          notifyRecordingError(context.data.title, (error as Error).message);
+          return errorResult;
+        }
+        const pipelineError: PipelineError = {
+          step: step.name, error: error as Error, strategy: step.errorStrategy, timestamp: Date.now(),
+          ...pickDefined({ recoveryKind: step.offlineRetry?.jobKind }),
+          context: { url: context.data.url, tabId: undefined }
+        };
+        context.errors.push(pipelineError);
+        addLog(LogType.WARN, `Pipeline step ${step.name} failed with ${step.errorStrategy} strategy`, { error: (error as Error).message, url: data.url, traceId: context.traceId });
+      }
+    }
+
+    const result = buildResult(context);
+    if (result.success && result.obsidianDuration != null) notifyObsidianSaveSuccess(data.title);
+    return result;
   }
 }
 
