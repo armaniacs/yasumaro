@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yasumaro — ドキュメントガイド / Documentation Guides</title>
+  <meta name="description" content="Yasumaro（AI閲覧履歴録Chrome拡張機能）のユーザーガイド総覧。セットアップ、AI要約、クレンジング、ストレージ、プライバシー、トラブルシューティング。" />
+  <link rel="icon" href="https://github.com/armaniacs/yasumaro/raw/main/public/icons/icon128.png" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --purple: #7c3aed;
+      --purple-light: #a78bfa;
+      --obsidian: #1e1e2e;
+      --obsidian-mid: #2a2a3e;
+      --obsidian-light: #313244;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --green: #34d399;
+      --radius: 12px;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      background: var(--obsidian);
+      color: var(--text);
+      line-height: 1.7;
+    }
+    a { color: var(--purple-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(30, 30, 46, 0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--obsidian-light);
+      padding: 0 2rem; display: flex; align-items: center; justify-content: space-between;
+      height: 60px; gap: 1rem;
+    }
+    .nav-logo { font-weight: 700; font-size: 1.1rem; color: var(--text); flex-shrink: 0; }
+    .nav-links { display: flex; gap: 1.2rem; flex-wrap: wrap; }
+    .nav-links a { font-size: 0.92rem; color: var(--text-muted); }
+    .nav-links a:hover { color: var(--purple-light); text-decoration: none; }
+    .container { max-width: 960px; margin: 0 auto; padding: 3rem 1.5rem; }
+    .page-header { text-align: center; margin-bottom: 3rem; }
+    .page-header h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+    .page-header h1 span { color: var(--purple-light); }
+    .page-header p { color: var(--text-muted); }
+    .cat { margin-bottom: 3rem; }
+    .cat-title {
+      font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem;
+      border-left: 4px solid var(--purple); padding-left: 0.75rem;
+    }
+    .cat-title small { color: var(--text-muted); font-weight: 400; margin-left: 0.5rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+    .card {
+      background: var(--obsidian-mid); border: 1px solid var(--obsidian-light);
+      border-radius: var(--radius); padding: 1.1rem 1.25rem;
+      display: flex; flex-direction: column; gap: 0.35rem;
+      transition: border-color 0.15s ease, transform 0.15s ease;
+    }
+    .card:hover { border-color: var(--purple); text-decoration: none; transform: translateY(-2px); }
+    .card .t { font-weight: 700; color: var(--text); }
+    .card .t small { color: var(--text-muted); font-weight: 400; display: block; font-size: 0.82rem; }
+    .card .d { color: var(--text-muted); font-size: 0.88rem; }
+    .card .tag {
+      align-self: flex-start; font-size: 0.72rem; color: var(--green);
+      border: 1px solid var(--green); border-radius: 999px; padding: 0.05rem 0.55rem; margin-top: 0.25rem;
+    }
+    footer {
+      border-top: 1px solid var(--obsidian-light);
+      color: var(--text-muted); font-size: 0.85rem;
+      text-align: center; padding: 1.5rem;
+    }
+    @media (max-width: 640px) {
+      nav { padding: 0 1rem; }
+      .nav-links { gap: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+<nav>
+  <span class="nav-logo">Yasumaro</span>
+  <div class="nav-links">
+    <a href="index.html">ホーム</a>
+    <a href="#start">はじめに</a>
+    <a href="#ai">AI・クレンジング</a>
+    <a href="#data">データ・ストレージ</a>
+    <a href="#privacy">プライバシー</a>
+    <a href="#dev">開発者向け</a>
+    <a href="privacy.html">プライバシー</a>
+  </div>
+  <a href="https://github.com/armaniacs/yasumaro" target="_blank" rel="noopener noreferrer">GitHub</a>
+</nav>
+
+<div class="container">
+  <header class="page-header">
+    <h1>Yasumaro <span>ドキュメントガイド</span></h1>
+    <p>ユーザーガイド総覧 / All user guides in one place。各リンクは GitHub 上の整形されたドキュメントを開きます。</p>
+  </header>
+
+  <section class="cat" id="start">
+    <h2 class="cat-title">はじめに <small>Getting Started</small></h2>
+    <div class="grid">
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/SETUP_GUIDE.md">
+        <span class="t">完全セットアップガイド <small>Complete Setup Guide</small></span>
+        <span class="d">インストールから AI プロバイダー設定、Obsidian 連携までの一通りの手順。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/OBSIDIAN_SETUP_GUIDE.md">
+        <span class="t">Obsidian 連携ガイド <small>Obsidian Integration Guide</small></span>
+        <span class="d">Local REST API プラグインの導入と接続テスト、トラブルシューティング。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/BUILT_IN_AI_SETUP_GUIDE.md">
+        <span class="t">Built-in AI 設定ガイド <small>Built-in AI Setup Guide</small></span>
+        <span class="d">Chrome 組み込み AI（Gemini Nano）を API キーなしで使う手順。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/FAQ.md">
+        <span class="t">よくある質問 <small>FAQ</small></span>
+        <span class="d">インストール、記録動作、プライバシー、トラブルシューティングの Q&amp;A。</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="cat" id="ai">
+    <h2 class="cat-title">AI・クレンジング <small>AI &amp; Cleansing</small></h2>
+    <div class="grid">
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/AI_SUMMARY_GUIDE.md">
+        <span class="t">AI 自動要約ガイド <small>AI Summarization Guide</small></span>
+        <span class="d">要約の仕組み、モード、プロバイダーごとの挙動。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/USER-GUIDE-AI-PROMPT.md">
+        <span class="t">AI プロンプトカスタマイズ <small>AI Prompt Customization Guide</small></span>
+        <span class="d">要約プロンプトの書き方とカスタム指示の設定。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/CLEANSING_ORDER.md">
+        <span class="t">クレンジングの順番 <small>Cleansing Order</small></span>
+        <span class="d">Hard Strip → Keyword Strip → AI Summary Cleansing の処理順序と既定キーワード。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/CLEANSING_CUSTOMIZATION_GUIDE.md">
+        <span class="t">クレンジングのカスタマイズ <small>Cleansing Customization Guide</small></span>
+        <span class="d">誤削除の報告（Cleansing Feedback）とドメイン別上書き（Per-Site Overrides）。</span>
+        <span class="tag">NEW</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="cat" id="data">
+    <h2 class="cat-title">データ・ストレージ <small>Data &amp; Storage</small></h2>
+    <div class="grid">
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/STORAGE_MODES.md">
+        <span class="t">ストレージアーキテクチャ <small>Storage Architecture</small></span>
+        <span class="d">OPFS SQLite → IndexedDB VFS → FallbackStorage の3層フォールバック。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/LOG_EXPORT_IMPORT_GUIDE.md">
+        <span class="t">ログのエクスポート・インポート <small>Log Export &amp; Import Guide</small></span>
+        <span class="d">JSON / CSV / .db エクスポート、HMAC 署名付きインポート、暗号化バックアップ。</span>
+        <span class="tag">NEW</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/MARKDOWN_DOWNLOAD.md">
+        <span class="t">ローカル Markdown 書き出し <small>Local Markdown Export</small></span>
+        <span class="d">Obsidian 不要の日次 Markdown 書き出し。4つのタイミングモード。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/GITHUB_GIST_SYNC_GUIDE.md">
+        <span class="t">GitHub Gist 連携 <small>Gist Sync Guide</small></span>
+        <span class="d">秘密 Gist への自動同期と Obsidian Sync との使い分け。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/TAG_CLUSTER_GUIDE.md">
+        <span class="t">タグの関連グラフ <small>Tag Cluster Guide</small></span>
+        <span class="d">タグの共出現関係をグラフ表示して知識をつなぐ。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/MIGRATION_GUIDE.md">
+        <span class="t">旧データベースからの移行 <small>Legacy Database Migration Guide</small></span>
+        <span class="d">旧形式ストレージから SQLite へのデータ移行。</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="cat" id="privacy">
+    <h2 class="cat-title">プライバシー・記録 <small>Privacy &amp; Recording</small></h2>
+    <div class="grid">
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/PRIVACY.md">
+        <span class="t">プライバシーポリシー <small>Privacy Policy</small></span>
+        <span class="d">データの扱い、暗号化、同意の仕組み（Chrome Web Store 審査対象版）。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/PII_FEATURE_GUIDE.md">
+        <span class="t">PII 機能ガイド <small>PII Feature Guide</small></span>
+        <span class="d">個人情報の自動マスキングと Masked Cloud モード。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/TRUST_DOMAIN_GUIDE.md">
+        <span class="t">ドメイン信頼度判定 <small>Domain Trust Evaluation Guide</small></span>
+        <span class="d">Tranco・手動リスト・JP ドメイン判定による3段階の信頼評価。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/RECORDING_CONDITIONS.md">
+        <span class="t">記録条件（スマート検出） <small>Smart Detection</small></span>
+        <span class="d">滞在時間・スクロール深度による自動記録の発火条件。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/AUDIT_LOG_GUIDE.md">
+        <span class="t">監査ログガイド <small>Audit Log Guide</small></span>
+        <span class="d">拡張機能内部の動作ログの見方とトラブル調査。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/TOOLBAR_BADGE_GUIDE.md">
+        <span class="t">ツールバーバッジ <small>Toolbar Badge Guide</small></span>
+        <span class="d">オートセーブ状態を示すバッジ表示の意味。</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="cat" id="dev">
+    <h2 class="cat-title">開発者向け <small>For Developers</small></h2>
+    <div class="grid">
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/CSP_GUIDE.md">
+        <span class="t">CSP 設定ガイド <small>CSP Guide</small></span>
+        <span class="d">AI プロバイダー追加時の Content Security Policy 設定。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/LOG_SENSITIVITY_POLICY.md">
+        <span class="t">ログ機微度ポリシー <small>Log Sensitivity Policy</small></span>
+        <span class="d">ログレベルごとの機微情報の扱い。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/CI_SECURITY_CHECKLIST.md">
+        <span class="t">CI/CD セキュリティチェックリスト <small>CI Security Checklist</small></span>
+        <span class="d">GitHub Actions ワークフローのセキュリティレビュー項目。</span>
+      </a>
+      <a class="card" href="https://github.com/armaniacs/yasumaro/blob/main/docs/TRANSLATION_SYNC.md">
+        <span class="t">翻訳同期 <small>Translation Sync</small></span>
+        <span class="d">日英ロケールメッセージの同期手順。</span>
+      </a>
+    </div>
+  </section>
+</div>
+
+<footer>
+  Yasumaro — AI Browsing Logger · <a href="https://github.com/armaniacs/yasumaro">GitHub</a> · <a href="privacy.html">Privacy</a> · <a href="index.html">Home</a>
+</footer>
+</body>
+</html>

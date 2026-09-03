@@ -8,7 +8,16 @@
 |----------------------|------|
 | `ADR/` | アーキテクチャ意思決定記録 (Architecture Decision Records) |
 | `DESIGN_SPECIFICATIONS.md` | 設計仕様 |
+| `API_ENDPOINTS.md` | API エンドポイント定義 |
+| `DESIGN_TOKENS.md` | デザイントークン定義 |
+| `ARCHITECTURE_MAP.md` | コンポーネント構成と機能配置マップ |
 | `ERROR_CODES.md` | エラーコード定義 |
+| `TESTING_GUIDE.md` | テストガイド（手動テスト・シナリオ・制限） |
+| `DEBUGGING_GUIDE.md` | デバッグガイド（問題領域・手順） |
+| `SECURITY_REVIEW_GUIDE.md` | セキュリティレビューガイド |
+| `DOCUMENTATION_GUIDE.md` | ドキュメント整備ガイド（i18n 形式含む） |
+| `NAMING_GUIDELINES.md` | 命名規約 |
+| `PERFORMANCE_GUIDE.md` | パフォーマンスガイド |
 | `CODE_REVIEW_SCORING.md` | Checking Team コードレビュー基準 |
 | `TEST_COVERAGE_ANALYSIS.md` | テストカバレッジ分析 |
 | `TEST_COVERAGE_IMPROVEMENTS.md` | テストカバレッジ改善レポート |

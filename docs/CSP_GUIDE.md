@@ -21,13 +21,13 @@ Yasumaro の**条件付きCSP（Content Security Policy）**設定は、AIプロ
 
 Yasumaro はCSPを2つの層で管理しています。
 
-#### 第一层: manifest.json の connect-src（ブラウザレベル）
+#### 第一層: manifest.json の connect-src（ブラウザレベル）
 
 Chrome の CSP 機能により、拡張機能が接続できるドメインの上限が定義されます。全対応AIプロバイダーのドメインが列挙されており、ユーザーが将来選択する可能性があるドメインを含みます。
 
-この層は Chrome ブラウザが強制するため、コードからバイパスすることはできません。
+この層は Chrome ブラウザが強制するため、コードからバイパスできません。
 
-#### 第二层: CSPValidator（実行時フィルタリング）
+#### 第二層: CSPValidator（実行時フィルタリング）
 
 `src/utils/cspValidator.ts` が管理する実行時のURL検証層です。ユーザーが設定画面で有効にしたプロバイダーのドメインのみを許可します。manifest.json よりも厳格なフィルタリングを行い、設定変更に応じて動的に更新されます。
 
