@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createTabEventHandlers } from '../tabEventHandlers.js';
 
+vi.mock('../../../utils/domainUtils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../utils/domainUtils.js')>();
+  return { ...actual, isDomainAllowed: vi.fn().mockResolvedValue(true) };
+});
+const { isDomainAllowed } = await import('../../../utils/domainUtils.js');
+
 describe('tabEventHandlers', () => {
   let mockTabCache: any;
   let mockAutoSavedBadgeTabs: any;
@@ -14,6 +20,7 @@ describe('tabEventHandlers', () => {
       delete: vi.fn(),
     };
     mockPrivacyCache = new Map();
+    vi.mocked(isDomainAllowed).mockResolvedValue(true);
     vi.stubGlobal('chrome', {
       tabs: { get: vi.fn().mockResolvedValue({ url: 'https://example.com/page' }) },
       action: { setBadgeText: vi.fn(), setBadgeBackgroundColor: vi.fn() },
@@ -104,6 +111,35 @@ describe('tabEventHandlers', () => {
   it('handleTabUpdated without getPrivacyCache', async () => {
     const handlers = createTabEventHandlers({ tabCache: mockTabCache, autoSavedBadgeTabs: mockAutoSavedBadgeTabs });
     await handlers.handleTabUpdated(1, { status: 'complete' }, { url: 'https://example.com' });
+    expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '', tabId: 1 });
+  });
+
+  it('handleTabActivated with domain-filtered url shows ∉ in green', async () => {
+    const url = 'https://blocked.com/page';
+    vi.stubGlobal('chrome', {
+      ...chrome,
+      tabs: { get: vi.fn().mockResolvedValue({ url }) },
+      action: { setBadgeText: vi.fn(), setBadgeBackgroundColor: vi.fn() },
+    });
+    vi.mocked(isDomainAllowed).mockResolvedValue(false);
+    const handlers = createTabEventHandlers({ tabCache: mockTabCache, autoSavedBadgeTabs: mockAutoSavedBadgeTabs, getPrivacyCache: () => mockPrivacyCache });
+    await handlers.handleTabActivated({ tabId: 1 });
+    expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '∉' });
+    expect(chrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({ color: '#10B981' });
+  });
+
+  it('handleTabUpdated with domain-filtered url shows ∉ in green with tabId', async () => {
+    vi.mocked(isDomainAllowed).mockResolvedValue(false);
+    const handlers = createTabEventHandlers({ tabCache: mockTabCache, autoSavedBadgeTabs: mockAutoSavedBadgeTabs, getPrivacyCache: () => mockPrivacyCache });
+    await handlers.handleTabUpdated(1, { status: 'complete' }, { url: 'https://blocked.com/page' });
+    expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '∉', tabId: 1 });
+    expect(chrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({ color: '#10B981', tabId: 1 });
+  });
+
+  it('handleTabUpdated falls back to no badge when domain check throws', async () => {
+    vi.mocked(isDomainAllowed).mockRejectedValue(new Error('storage fail'));
+    const handlers = createTabEventHandlers({ tabCache: mockTabCache, autoSavedBadgeTabs: mockAutoSavedBadgeTabs, getPrivacyCache: () => mockPrivacyCache });
+    await handlers.handleTabUpdated(1, { status: 'complete' }, { url: 'https://public.com/page' });
     expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '', tabId: 1 });
   });
 

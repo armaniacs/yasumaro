@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.102` リリース。
+> - 現時点では `v6.7.103` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,12 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.7.103] - 2026-09-04
+
+### Added
+
+- ツールバーバッジに、ドメインフィルターで記録対象外になっているページを示す緑の `∉` バッジを追加。プライバシー検出（オレンジ `!`）に次ぐ優先度で表示し、別タブへ切り替えると消える。判定が行えなかった場合はバッジを出さない。
 
 ## [6.7.102] - 2026-09-04
 
