@@ -38,10 +38,9 @@ async function sendDashboard<T extends DashboardSqliteRequest>(payload: T): Prom
     }
     messagePayload = { ...payload, confirmToken } as T & { confirmToken: string };
   }
-  return Promise.race([
-    chrome.runtime.sendMessage({ type: 'DASHBOARD_SQLITE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: messagePayload }),
-    new Promise<never>((_, reject) => { setTimeout(() => reject(new Error('Dashboard SQLite request timed out')), DASHBOARD_SQLITE_TIMEOUT); }),
-  ]);
+  // Reuse sendDashboardRaw's single race — the actual send must not build a
+  // second parallel timer/message pair (PBI 07: duplicate fetch/race removal).
+  return sendDashboardRaw(messagePayload);
 }
 
 export class DashboardGateway {
