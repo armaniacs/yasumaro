@@ -43,11 +43,6 @@ vi.mock('../../background/syncTargets/gistSyncTarget.js', () => ({
   }),
 }));
 
-vi.mock('../../background/sqliteClient.js', () => ({
-  SqliteClient: vi.fn(function () {
-    return {};
-  }),
-}));
 
 function setupDom(): {
   gistEnabled: HTMLInputElement;

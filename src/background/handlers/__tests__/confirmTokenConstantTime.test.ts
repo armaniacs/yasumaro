@@ -53,7 +53,6 @@ vi.mock('../../../utils/storage.js', async (importOriginal) => {
   };
 });;
 
-vi.mock('../../sqliteClient.js', () => ({}));
 
 import { dispatchDashboardSqlite } from './dashboardSqliteTestHarness.js';
 
