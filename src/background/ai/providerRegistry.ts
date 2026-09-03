@@ -3,14 +3,11 @@
 // New code should import from './providerCatalog.js'.
 
 export {
-  PROVIDER_CATALOG as PROVIDER_REGISTRY,
   PROVIDER_CATALOG,
-  type ProviderCatalogEntry as ProviderRegistryEntry,
   type ProviderCatalogEntry,
   getRegistryEntry,
   isAllowedProviderBaseUrl,
   createProviderStrategy,
-  createStrategy,
   UnknownProviderError,
   resolveCatalogEntry,
   tryResolveCatalogEntry,

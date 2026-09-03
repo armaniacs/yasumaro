@@ -193,16 +193,23 @@ describe('isAllowedProviderBaseUrl — SSRF guard', () => {
     expect(isAllowedProviderBaseUrl('http://0.0.1.1/', true)).toBe(false);
   });
 
-  // Integer-encoded IPv4
-  it('blocks integer-encoded IPv4 (2130706433 = 127.0.0.1)', () => {
+  // Integer-encoded IPv4: URL parser resolves 2130706433 to 127.0.0.1 (local providers allow it)
+  // But non-local providers block http to 127.0.0.1 as well as non-localhost
+  it('integer-encoded 127.0.0.1 (2130706433): blocked for non-local, allowed for local', () => {
     expect(isAllowedProviderBaseUrl('http://2130706433/', false)).toBe(false);
-    expect(isAllowedProviderBaseUrl('http://2130706433/', true)).toBe(false);
+    expect(isAllowedProviderBaseUrl('http://2130706433/', true)).toBe(true);
+  });
+  it('integer-encoded 10.0.0.1 (167772161): URL resolves to private IP, blocked', () => {
+    expect(isAllowedProviderBaseUrl('http://167772161/', false)).toBe(false);
   });
 
-  // Hex-encoded IPv4
-  it('blocks hex-encoded IPv4 (0x7f000001 = 127.0.0.1)', () => {
+  // Hex-encoded IPv4: URL parser resolves 0x7f000001 to 127.0.0.1
+  it('hex-encoded 127.0.0.1 (0x7f000001): blocked for non-local, allowed for local', () => {
     expect(isAllowedProviderBaseUrl('http://0x7f000001/', false)).toBe(false);
-    expect(isAllowedProviderBaseUrl('http://0x7f000001/', true)).toBe(false);
+    expect(isAllowedProviderBaseUrl('http://0x7f000001/', true)).toBe(true);
+  });
+  it('hex-encoded 10.0.0.1 (0x0a000001): URL resolves to private IP, blocked', () => {
+    expect(isAllowedProviderBaseUrl('http://0x0a000001/', false)).toBe(false);
   });
 
   // IPv6 loopback

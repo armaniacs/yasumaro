@@ -139,9 +139,3 @@ export function _resetTrustDbAdminForTest(): void {
   _adminInstance = null;
 }
 
-/** Convenience: initialize + isDomainTrusted (replaces deleted trustDb.ts shim) */
-export async function isDomainTrusted(domain: string): Promise<TrustResult> {
-  const admin = getTrustDbAdmin();
-  await admin.initialize();
-  return admin.isDomainTrusted(domain);
-}

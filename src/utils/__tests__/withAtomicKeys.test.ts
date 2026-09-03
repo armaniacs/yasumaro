@@ -3,7 +3,7 @@
  * Unit tests for the multi-key optimistic lock (PBI 2026-08-27-27).
  */
 
-import { withAtomicKeys, ConflictError, enablePostWriteVerification } from '../optimisticLock.js';
+import { withAtomicKeys, ConflictError, enablePostWriteVerification } from '../storage/storageTransaction.js';
 
 describe('withAtomicKeys', () => {
     beforeEach(async () => {

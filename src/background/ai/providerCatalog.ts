@@ -184,8 +184,6 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
   ],
 ]);
 
-export type ProviderCatalogEntryAlias = ProviderCatalogEntry;
-export const PROVIDER_REGISTRY = PROVIDER_CATALOG;
 
 export function getRegistryEntry(providerId: string): ProviderCatalogEntry | undefined {
   return PROVIDER_CATALOG.get(providerId as ProviderId);
@@ -229,8 +227,10 @@ export function isAllowedProviderBaseUrl(url: string, isLocal: boolean): boolean
     // Helper: check if IPv4 octets fall into private/link-local/loopback
     const isBlockedIPv4 = (octets: number[]): boolean => {
       if (octets.length !== 4) return false;
-      const a = octets[0] as number;
-      const b = octets[1] as number;
+      const a = octets[0]!;
+      const b = octets[1]!;
+      const _c = octets[2]!;
+      const _d = octets[3]!;
       // 0.0.0.0/8, 127.0.0.0/8, 10.0.0.0/8, 192.168.0.0/16, 172.16.0.0/12, 169.254.0.0/16
       if (a === 0) return true;
       if (a === 127) return true;
@@ -287,7 +287,11 @@ export function isAllowedProviderBaseUrl(url: string, isLocal: boolean): boolean
     // Regular dotted IPv4
     if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
       const octets = host.split('.').map((s) => parseInt(s, 10));
-      if (octets.every((n) => Number.isFinite(n) && n >= 0 && n <= 255) && isBlockedIPv4(octets)) return false;
+      if (octets.every((n) => Number.isFinite(n) && n >= 0 && n <= 255)) {
+        // 127.0.0.1 is legitimate localhost for local providers — exempt from block
+        const is127Loopback = octets[0] === 127 && octets[1] === 0 && octets[2] === 0 && octets[3] === 1;
+        if (!is127Loopback && isBlockedIPv4(octets)) return false;
+      }
     }
 
     // IPv6 checks (host contains ':')
@@ -317,7 +321,8 @@ export function isAllowedProviderBaseUrl(url: string, isLocal: boolean): boolean
 
     // Private IPv4 ranges (dotted) — also covers 0.0.0.0/8 etc. if not already caught
     if (/^10\.\d+\.\d+\.\d+$/.test(host) || /^192\.168\.\d+\.\d+$/.test(host) || /^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(host)) return false;
-    if (/^0\.\d+\.\d+\.\d+$/.test(host) || /^127\.\d+\.\d+\.\d+$/.test(host) || /^169\.254\.\d+\.\d+$/.test(host)) return false;
+    if (/^0\.\d+\.\d+\.\d+$/.test(host) || /^169\.254\.\d+\.\d+$/.test(host)) return false;
+
 
     // Protocol check: non-local providers only allow https.
     // For isLocal, http is allowed for any non-blocked host (SSRF already blocks private IPs).
@@ -345,5 +350,3 @@ export function createProviderStrategy(providerId: string, settings: Settings): 
   return new GenericOpenAICompatibleProvider(settings, providerId);
 }
 
-// Backward-compat alias
-export const createStrategy = createProviderStrategy;

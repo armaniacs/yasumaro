@@ -7,7 +7,7 @@ import {
     withOptimisticLock,
     ConflictError,
     enablePostWriteVerification
-} from '../optimisticLock.js';
+} from '../storage/storageTransaction.js';
 
 describe('withOptimisticLock', () => {
     describe('基本機能', () => {

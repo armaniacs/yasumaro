@@ -231,23 +231,10 @@ export function withAtomicKeys<T extends readonly unknown[]>(
   return defaultTransaction.withAtomic(keys, updater, options);
 }
 
-// Port-aware variants for injected callers
-export function withLockViaPort<T>(
-  port: StoragePort,
-  key: string,
-  updateFn: (currentValue: T) => T,
-  options: { maxRetries?: number; initialDelay?: number } = {}
-): Promise<T> {
-  return new StorageTransaction(port).withLock(key, updateFn, options);
-}
 
-export function withAtomicViaPort<T extends readonly unknown[]>(
-  port: StoragePort,
-  keys: { [K in keyof T]: string },
-  updater: (currentValues: { [K in keyof T]: T[K] }) => { [K in keyof T]: T[K] },
-  options: { maxRetries?: number; initialDelay?: number } = {}
-): Promise<{ [K in keyof T]: T[K] }> {
-  return new StorageTransaction(port).withAtomic(keys, updater, options);
+// Legacy no-op: post-write verification is always enabled in the deep module
+export function enablePostWriteVerification(): void {
+  // no-op: always enabled
 }
 
 // ---------------------------------------------------------------------------

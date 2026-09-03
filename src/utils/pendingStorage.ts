@@ -2,7 +2,7 @@ import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 import { hashUrl } from './crypto/index.js';
 import { getMessage } from './i18n.js';
-import { withOptimisticLock } from './optimisticLock.js';
+import { withOptimisticLock } from './storage/storageTransaction.js';
 
 /**
  * Reasons a page was held back because it looks private.

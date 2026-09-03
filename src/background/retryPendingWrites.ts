@@ -4,7 +4,7 @@
  * Retries failed Chrome storage writes (legacy SavedUrlEntry and metadata patches).
  */
 
-import { withOptimisticLock } from '../utils/optimisticLock.js';
+import { withOptimisticLock } from '../utils/storage/storageTransaction.js';
 import type { SavedUrlEntry } from '../utils/urlEntry.js';
 import { saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlRepository.js';
 import type { QueuedChromeStorageWrite, PendingMetadataPatchWrite } from './pendingChromeStorageQueue.js';

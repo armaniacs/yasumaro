@@ -7,7 +7,7 @@
 import { logError, logWarn, ErrorCode } from '../logger.js';
 import { errorMessage } from '../errorUtils.js';
 import { isEncrypted, encryptApiKey, decryptApiKey } from '../crypto/index.js';
-import { withOptimisticLock } from '../optimisticLock.js';
+import { withOptimisticLock } from './storageTransaction.js';
 import { getOrCreateEncryptionKey } from './encryptionSession.js';
 import { StorageKeys } from './types.js';
 import { DEFAULT_SETTINGS } from './defaults.js';

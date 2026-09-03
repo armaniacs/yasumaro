@@ -8,7 +8,7 @@
 import type { TrustDatabase, TrustResult } from './trustDbSchema.js';
 import { TrustBloomFilter, bloomFilterFromData } from './bloomFilter.js';
 import { logDebug, logInfo, logWarn, logError, ErrorCode } from '../logger.js';
-import { withOptimisticLock } from '../optimisticLock.js';
+import { withOptimisticLock } from '../storage/storageTransaction.js';
 import { mergeTrustDatabase } from './mergeTrustDatabase.js';
 import { TRANCO_VERSION as CURRENT_TRANCO_VERSION } from './presetDomains.js';
 import { SENSITIVE_DOMAINS_PRESETS as PRESETS, JP_ANCHOR_TLDS } from './presets.js';

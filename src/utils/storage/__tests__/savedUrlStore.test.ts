@@ -18,7 +18,7 @@ vi.mock('../../optimisticLock.js', () => ({
 }));
 
 import { setSavedUrls, saveSavedUrlEntryMetadata } from '../savedUrlStore.js';
-import { withOptimisticLock } from '../../optimisticLock.js';
+import { withOptimisticLock } from '../storage/storageTransaction.js';
 import { getStorageUsage, hasUnlimitedStorage } from '../quota.js';
 import { STORAGE_QUOTA_BYTES } from '../quota.js';
 
