@@ -14,15 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-| # | PBI | 状態 | 優先度 | 難易度 | 副作用 | 種別 | 概要 |
-|---|-----|------|--------|--------|--------|------|------|
-| 3 | [2026-09-03-03-refactor-recording-orchestrator-modes](2026-09-03-03-refactor-recording-orchestrator-modes.md) | 🔶 | RICE 186 | 🔴高(3) | 🟡軽微 | 🔧 | RecordingOrchestrator deepening — retryPolicy/retrySteps 完了、typed Context は 03b へ分割 |
-| 4 | [2026-09-03-04-refactor-trustdb-seam-split](2026-09-03-04-refactor-trustdb-seam-split.md) | 🔶 | RICE 168 | 🟡中(2) | 🟡軽微 | 🔧 | TrustDb seam split — Policy/Admin 2 seam 追加、shim 削除は 04b で段階的 |
-| 5 | [2026-09-03-05-refactor-recording-cache-split](2026-09-03-05-refactor-recording-cache-split.md) | 🔶 | RICE 80 | 🟡中(2) | 🟢なし | 🔧 | RecordingCache 分割 — TTL 3 モジュール分離、facade 完全委譲は 05b で |
-| 6 | [2026-09-03-06-refactor-domain-filter-unification](2026-09-03-06-refactor-domain-filter-unification.md) | 🔶 | RICE 58 | 🟡中(2) | 🟢なし | 🔧 | DomainFilter 統合 — DomainFilter + CacheAdapter 2 adapter 基盤、4 gates 移行は 06b で |
-| 7 | [2026-09-03-07-refactor-sqlite-gateway-fidelity](2026-09-03-07-refactor-sqlite-gateway-fidelity.md) | 🔶 | RICE 12 | 🟡中(2) | 🟢なし | 🔧 | SqliteGateway fidelity — hop 分割完了、InMemory shared builder は 07b で |
-
-バックログ: [2026-09-03-00-backlog](2026-09-03-00-backlog.md)（RICE 降順、依存グラフ、推奨着手順を記載）
+**進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る。
 
 ### 未 PBI 化のトリガー
 - **なし。** PBI 06 の効果確認は 2026-09-01 に実施済み（未達 → 06b/06c を実装し達成）。残債は `2026-08-31-00-backlog.md` の「06d 候補」に記録（次 provider 追加時などに着手検討）
@@ -55,17 +47,15 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
-### 2026-09-03 Architecture Deepening 0903 — 2件完了、5件部分実装
+### 2026-09-03 Architecture Deepening 0903 — 7件完了
 
-- 2026-09-03-01-refactor-storage-concurrency-primitive.md（RICE 720 — `StorageTransaction` deep module（`withLock`/`withAtomic` 2メソッド）に統合。`optimisticLock`/`keySerializer` を shim 化、`SettingsRepository` の `isChromePort` 分岐を撤去、`InMemoryStoragePort` の explicit `_version` 対応と contract test 18件追加。`logger/storageAdapter` の循環を遅延生成で解消。type-check/lint/test/build green、636 passed）
-- 2026-09-03-02-refactor-provider-catalog-unification.md（RICE 213 — `ProviderCatalog` を deep module 化（`PROVIDER_CATALOG` データ + `createProviderStrategy` + `isAllowedProviderBaseUrl` + `extraFields`）。`providerRegistry` を shim 化、`RemoteAIService` の switch を委譲に、`aiProviderCatalogView` の `KEY_TO_INPUT_ID` を `storageKeyToInputId` 関数に、`if (gemini)` を `extraFields` 駆動に。`ollamaOriginRule`/`OpenAIProvider`/`cspValidator`/`aiModelKey`/`lifecycleHandlers` の import を移行。type-check/lint/test/build green）
-
-部分実装（🔶）として `pbi/` に残置:
-- 2026-09-03-03-refactor-recording-orchestrator-modes.md（retryPolicy 抽出と retrySteps コンパイル完了、typed Context は 03b へ）
-- 2026-09-03-04-refactor-trustdb-seam-split.md（Policy/Admin 2 seam 追加と settingsReader 移行完了、shim 削除は 04b で）
-- 2026-09-03-05-refactor-recording-cache-split.md（TTL 3 モジュール分離完了、facade 完全委譲は 05b で）
-- 2026-09-03-06-refactor-domain-filter-unification.md（DomainFilter + CacheAdapter 基盤完了、4 gates 移行は 06b で）
-- 2026-09-03-07-refactor-sqlite-gateway-fidelity.md（hop 分割完了、InMemory shared builder は 07b で）
+- 2026-09-03-01-refactor-storage-concurrency-primitive.md（RICE 720 — `StorageTransaction` deep module（`withLock`/`withAtomic` 2メソッド）に統合。`optimisticLock`/`keySerializer` を shim 化、`SettingsRepository` の `isChromePort` 分岐を撤去、`InMemoryStoragePort` の explicit `_version` 対応と contract test 18件追加。type-check/lint/test/build green）
+- 2026-09-03-02-refactor-provider-catalog-unification.md（RICE 213 — `ProviderCatalog` を deep module 化。`providerRegistry` を shim 化、`RemoteAIService` の switch を委譲に、`aiProviderCatalogView` の `KEY_TO_INPUT_ID` を `storageKeyToInputId` 関数に。type-check/lint/test/build green）
+- 2026-09-03-03-refactor-recording-orchestrator-modes.md（RICE 186 — `retryPolicy` 抽出と `retrySteps` コンパイル完了、typed Context は `contextBuilder.ts`（211行）に抽出、`StepDeps` の `?? sqliteClient` fallback 削除、`pickDefined` spread を builder に置換。288 tests green）
+- 2026-09-03-04-refactor-trustdb-seam-split.md（RICE 168 — `TrustDbAdmin`（mutation）と `TrustPolicy`（readonly）の 2 seam に分割。`trustDb.ts` shim を物理削除（04b commit: 64609768）。`STORAGE_KEY` を `StorageKeys.TRUST_DB` に集約、`settingsReader` を `SettingsRepository` 経由に、全 prod caller を `getTrustDbAdmin`/`getTrustPolicy` に移行（16 files）。227 tests green）
+- 2026-09-03-05-refactor-recording-cache-split.md（RICE 80 — `SettingsCache`/`UrlCache`/`PrivacyCache` 3モジュールに TTL 分離。`RedactingStoragePort` で `redactSettingsApiKeys` を委譲。`RecordingCacheInstance` を 3 cache compose の true facade に。42 tests green）
+- 2026-09-03-06-refactor-domain-filter-unification.md（RICE 58 — `DomainFilter` を single seam に統合。`wildcardToRegex` 一本化、`domainFilterCache` の blacklist 空配列 TODO 解消、`CacheAdapter` 第2 adapter で seam を実在化、TTL は construction param に。37+ tests green）
+- 2026-09-03-07-refactor-sqlite-gateway-fidelity.md（RICE 12 — `OffscreenGateway`（131行）と `DashboardGateway`（67行）に hop 分割。`InMemoryTransport` の `ORDER BY` を `localeCompare` に修正、`sanitizeFtsTerm`/`QUERY_CAPS`/`matchesExtraWhere` を共有化。`sqliteClient.ts` shim を物理削除（07b commit: 8f1d956d）。14 contract tests green）
 
 - 2026-09-03-08-fix-daily-note-path-placeholder-discoverability.md（RICE - — `dailyNotePathPlaceholder` を `092.Daily または raw/YYYY-MM` に、`dailyNotePathHelp` を ja/en 追加、`entrypoints/options/index.html` に help-text 追加、`docs/FAQ`/`SETUP_GUIDE` に月次例追記、`dailyNotePathBuilder` に 3ケース追加。build 後の dist で placeholder と help-text を目視確認、validate green）
 

@@ -47,7 +47,7 @@ SQLite アクセスを保守する開発者として、`SqliteGateway` の 390l 
 - [x] `src/background/sqliteGateway.ts` の 390l 1クラスが `OffscreenGateway` と `DashboardGateway` に分割され、各 gateway が自身の hop（Offscreen / Dashboard）の語彙のみを持つ
 - [x] `buildExtraWhereSql` と FTS tokenizer が共有 module として抽出され、`InMemoryTransport` が再実装ではなく委譲している
 - [x] `InMemoryTransport` の `ORDER BY` が string 列でも正しくソートされる（`(a[key] ?? 0)` の数値 fallback が削除されている）
-- [ ] `src/background/sqliteClient.ts` 87l shim が削除され、gateway の singleton に一本化されている — deferred: 36 callers (`grep -rn "from.*sqliteClient" src --include="*.ts" | wc -l` == 36) のため `@deprecated` re-export として温存。pipeline / trustDb / recordingCache / domainFilter は本PBIスコープ外のため一括置換は見送り。新規コードは `sqlite/offscreenGateway.js` / `dashboardGateway.js` を直接 import すること。`sqliteClient.ts` header に移行先を明記済み。
+- [x] `src/background/sqliteClient.ts` 87l shim が削除され、gateway の singleton に一本化されている — `grep -rn "from.*sqliteClient" src --include="*.ts"` == 0 件。36 callers を全て `offscreenGateway.js` に移行し `sqliteClient.ts` を物理削除（07b commit: 8f1d956d）
 - [x] Contract test が両 transport で同一 suite を実行し green — `src/background/__tests__/inMemoryTransport.test.ts` 14 tests green (うち PBI 07 追加の 6 contract tests を含む)
 - [x] `npm run validate` green — `npm run type-check` green / `inMemoryTransport.test.ts` 14 passed
 
@@ -62,8 +62,8 @@ SQLite アクセスを保守する開発者として、`SqliteGateway` の 390l 
 2 pt（要チームでの見積もり）
 
 ## Definition of Done
-- [x] 全BDDシナリオが自動テストとして実装されパスする — 5シナリオ中 4シナリオ green: (1) Offscreen/Dashboard 分割 `grep -r "class SqliteGateway" src/` == 0 / `sqliteGateway.ts` は `export *` facade のみ (2) InMemory が `sanitizeFtsTerm` / `QUERY_CAPS` / `matchesExtraWhere` に委譲 (3) ORDER BY string 列 3 tests green (4) Contract test 6 tests green。残り1シナリオ (SqliteClient shim削除) は 36 callers のため `@deprecated` 温存として deferred — `grep -rn "from.*sqliteClient" src --include="*.ts" | wc -l` == 36 を確認済み。
-- [ ] `SqliteGateway` 390l 1クラスが分割され `SqliteClient` shim が削除されている（`grep` で確認） — 前者は完了 (`OffscreenGateway` 131l + `DashboardGateway` 67l に分割、`sqliteGateway.ts` は facade のみ)、後者は上記理由で deferred（`sqliteClient.ts` に `@deprecated` と移行先を明記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする — 5シナリオ中 5シナリオ green: (1) Offscreen/Dashboard 分割 (2) InMemory が共有 builder に委譲 (3) ORDER BY string 列 (4) Contract test 6 tests green (5) SqliteClient shim 物理削除完了
+- [x] `SqliteGateway` 390l 1クラスが分割され `SqliteClient` shim が削除されている（`grep` で確認） — `grep -r "class SqliteGateway" src/` == 0、`grep -rn "from.*sqliteClient" src --include="*.ts"` == 0。`offscreenGateway.ts`（131l）+ `dashboardGateway.ts`（67l）に分割、`sqliteGateway.ts` は facade のみ、`sqliteClient.ts` は物理削除済み
 - [x] コードレビュー完了
 - [x] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` §5.4 SqliteGateway 節を分割前提に更新）
 - [x] `npm run validate` green
