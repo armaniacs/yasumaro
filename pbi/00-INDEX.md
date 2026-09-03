@@ -16,6 +16,12 @@
 
 **進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る.
 
+### 2026-09-04 0902a レビュー由来（重複・dead-code 7件→3PBI） — 3件完了
+
+- 2026-09-04-01-fix-api-key-list-ssot.md（RICE 60 — `apiKeyFields.ts` SSOT新設。storagePort/settingsMigrationの二重定義を解消、drift検出テスト追加。type-check / lint / 関連46 tests / build green）
+- 2026-09-04-02-fix-domain-filter-duplication.md（RICE 2.4 — `evaluateCachedAllow`共有ヘルパー抽出、`parseAndValidate`に`isValidDomainPattern`統合（新`domainValidator.ts`で循環回避）、dashboard保存時検証を単一seamに。113 tests green）
+- 2026-09-04-03-cleanup-review-dead-exports.md（chore — RequiresPrivacy/Markdown、Slice系4型、domainFilter singleton、RedactingStoragePortを削除。redact関数は維持、DESIGN_SPECIFICATIONS同期。64 tests green）
+
 
 ### 未 PBI 化のトリガー
 - **なし。** PBI 06 の効果確認は 2026-09-01 に実施済み（未達 → 06b/06c を実装し達成）。残債は `2026-08-31-00-backlog.md` の「06d 候補」に記録（次 provider 追加時などに着手検討）

@@ -8,26 +8,11 @@
  */
 
 import type { Settings } from './types.js';
+import { API_KEY_FIELD_NAMES, isApiKeyField } from './apiKeyFields.js';
 
-// Local copy as string literals to avoid vi.mock hoisting issues where
-// StorageKeys may be undefined at import time (customPromptManager tests mock
-// SettingsRepository which is hoisted above StorageKeys definition).
-const API_KEY_FIELDS: string[] = [
-  'obsidian_api_key',
-  'gemini_api_key',
-  'openai_api_key',
-  'openai_2_api_key',
-  'provider_api_key',
-  'github_pat',
-];
-
-const NORMALIZED_API_KEY_FIELDS = new Set(
-  API_KEY_FIELDS.map((f) => f.toLowerCase().replace(/_/g, '')),
-);
-
-function isApiKeyField(field: string): boolean {
-  return NORMALIZED_API_KEY_FIELDS.has(field.toLowerCase().replace(/_/g, ''));
-}
+// Canonical list lives in apiKeyFields.ts (dependency-free so this module
+// stays importable under hoisted vi.mock of SettingsRepository).
+const API_KEY_FIELDS: readonly string[] = API_KEY_FIELD_NAMES;
 
 export interface StoragePort {
   get(keys: string | string[] | null): Promise<Record<string, unknown>>;
@@ -39,7 +24,7 @@ export interface StoragePort {
 /**
  * VULN-014 (CWE-312): return a shallow copy of settings with every API-key
  * field emptied. Extracted from RecordingCache so cache modules do not need
- * to know about redaction; StoragePort decorator owns it.
+ * to know about redaction.
  */
 export function redactSettingsApiKeys(settings: Settings | null): Settings | null {
   if (!settings) return null;
@@ -52,57 +37,6 @@ export function redactSettingsApiKeys(settings: Settings | null): Settings | nul
     if (field in copy) copy[field] = '';
   }
   return copy as Settings;
-}
-
-/**
- * StoragePort decorator that redacts API keys before persisting.
- * Wraps an inner StoragePort and empties API-key fields on `set()`.
- * Cache modules remain unaware of redaction.
- */
-export class RedactingStoragePort implements StoragePort {
-  constructor(private readonly inner: StoragePort) {}
-
-  async get(keys: string | string[] | null): Promise<Record<string, unknown>> {
-    return this.inner.get(keys);
-  }
-
-  async set(items: Record<string, unknown>): Promise<void> {
-    const redacted: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(items)) {
-      if (v && typeof v === 'object' && !Array.isArray(v)) {
-        const rec = v as Record<string, unknown>;
-        const hasApiKey = Object.keys(rec).some(isApiKeyField);
-        if (hasApiKey) {
-          const copy = { ...rec };
-          for (const f of Object.keys(copy)) if (isApiKeyField(f)) copy[f] = '';
-          for (const f of API_KEY_FIELDS) if (f in copy) copy[f] = '';
-          redacted[k] = copy;
-          continue;
-        }
-        if ('settingsCache' in rec && rec.settingsCache && typeof rec.settingsCache === 'object') {
-          const innerSettings = rec.settingsCache as Record<string, unknown>;
-          const hasNestedKey = Object.keys(innerSettings).some(isApiKeyField);
-          if (hasNestedKey) {
-            const copy = { ...rec, settingsCache: { ...innerSettings } } as Record<string, unknown>;
-            for (const f of Object.keys(copy.settingsCache as Record<string, unknown>)) if (isApiKeyField(f)) (copy.settingsCache as Record<string, unknown>)[f] = '';
-            for (const f of API_KEY_FIELDS) if (f in (copy.settingsCache as Record<string, unknown>)) (copy.settingsCache as Record<string, unknown>)[f] = '';
-            redacted[k] = copy;
-            continue;
-          }
-        }
-      }
-      redacted[k] = v;
-    }
-    return this.inner.set(redacted);
-  }
-
-  onChanged(callback: (changes: Record<string, unknown>) => void): void {
-    this.inner.onChanged?.(callback);
-  }
-
-  async getBytesInUse(keys?: string | string[] | null): Promise<number> {
-    return this.inner.getBytesInUse?.(keys) ?? 0;
-  }
 }
 
 export class ChromeStoragePort implements StoragePort {

@@ -178,10 +178,6 @@ export interface PipelineOutput {
  */
 export type RecordingContext = PipelineInput & CheckResults & PrivacyResults & ContentResults & FormatResults & PipelineTimings & PipelineOutput;
 
-
-export type RequiresPrivacy<C> = C extends { privacyResult: NonNullable<PrivacyResults['privacyResult']> } ? C : never;
-export type RequiresMarkdown<C> = C extends { markdown: string } ? C : never;
-
 /**
  * Job type for the offline retry queue.
  * Determines which retry handler processes the job when connectivity returns.

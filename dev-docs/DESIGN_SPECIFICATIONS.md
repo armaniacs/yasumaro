@@ -97,7 +97,7 @@ RecordingCache is implemented as `RecordingCacheInstance` — a **facade composi
 - **UrlCache**: 60-second TTL (`URL_CACHE_TTL`) — `UrlCache` owns `Map<string,number>` and `isStale()`
 - **PrivacyCache**: 5-minute TTL (`PRIVACY_CACHE_TTL`) — `PrivacyCache` owns `Map<string,PrivacyInfo>` and `getWithFallback()` (session fallback `privacyCache_<url>` with TTL eviction)
 - **Cross-context invalidation**: `ensureStorageListener()` is owned once by the facade and broadcasts `invalidateSettingsCache()` on `chrome.storage.onChanged` (`settings` key), with `dispose()` for deregistration
-- **Redaction**: `redactSettingsApiKeys` and `RedactingStoragePort` decorator live in `src/utils/storage/storagePort.ts`; cache modules are unaware of API-key redaction (VULN-014)
+- **Redaction**: `redactSettingsApiKeys` in `src/utils/storage/storagePort.ts` empties API-key fields before session persistence; cache modules are unaware of API-key redaction (VULN-014)
 - Cache persists across Service Worker restarts via `SessionStoreRecordingCacheStore`; tests use `InMemoryRecordingCacheStore` for isolation
 
 ### 5.4 SQLite Secondary Store (OPFS + FTS5)

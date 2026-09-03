@@ -10,6 +10,7 @@
  */
 
 import { isDomainAllowed as isDomainAllowedLive } from '../domainUtils.js';
+import { isValidDomainPattern } from '../domainValidator.js';
 import { wildcardToRegex } from '../wildcardToRegex.js';
 import { StorageKeys } from '../storage/types.js';
 import type { Settings } from '../storage/types.js';
@@ -27,6 +28,34 @@ function isDomainInList(hostname: string, list: string[]): boolean {
     const re = wildcardToRegex(pattern);
     return re ? re.test(hostname) : false;
   });
+}
+
+/**
+ * Shared cached-allow predicate: single place for the
+ * whitelist/blacklist/disabled branching used by both adapters.
+ * Returns null only when the URL itself is unparseable; callers map
+ * null to false (deny on invalid URL).
+ */
+export function evaluateCachedAllow(
+  url: string,
+  allowedDomains: string[],
+  mode?: string | null,
+): boolean | null {
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+  if (mode === 'blacklist') {
+    return !isDomainInList(hostname, allowedDomains);
+  }
+  if (mode === 'whitelist') {
+    return isDomainInList(hostname, allowedDomains);
+  }
+  if (mode === 'disabled') return true;
+  if (allowedDomains.length === 0) return true;
+  return isDomainInList(hostname, allowedDomains);
 }
 
 export class DomainFilter {
@@ -65,7 +94,8 @@ export class DomainFilter {
 
   /**
    * Parse and validate a domain list (used by dashboard textarea).
-   * Returns normalized list or error — single place for ReDoS guard.
+   * Returns normalized list or error — single place for syntax check
+   * (via isValidDomainPattern) and ReDoS guard (via wildcardToRegex).
    */
   parseAndValidate(list: string[]): { valid: string[]; errors: string[] } {
     const valid: string[] = [];
@@ -73,13 +103,9 @@ export class DomainFilter {
     for (const raw of list) {
       const trimmed = raw.trim();
       if (!trimmed) continue;
-      // Use single wildcard engine for validation
-      if (trimmed.includes('*')) {
-        const re = wildcardToRegex(trimmed);
-        if (!re) {
-          errors.push(`Invalid pattern: ${trimmed}`);
-          continue;
-        }
+      if (!isValidDomainPattern(trimmed)) {
+        errors.push(`Invalid pattern: ${trimmed}`);
+        continue;
       }
       valid.push(trimmed);
     }
@@ -128,22 +154,10 @@ export class DomainFilter {
     mode?: string,
   ): Promise<boolean> {
     if (cached && Date.now() - cached.cachedAt < this.ttlMs) {
-      try {
-        const hostname = new URL(url).hostname.replace(/^www\./, '');
-        const effectiveMode = mode ?? (cached as { mode?: string }).mode;
-        if (effectiveMode === 'blacklist') {
-          return !isDomainInList(hostname, cached.allowedDomains);
-        }
-        if (effectiveMode === 'whitelist') {
-          return isDomainInList(hostname, cached.allowedDomains);
-        }
-        // No mode or disabled: fall back to live for correctness
-        // If cachedDomains is empty due to disabled, allow all
-        if (cached.allowedDomains.length === 0) return true;
-        return isDomainInList(hostname, cached.allowedDomains);
-      } catch {
-        return false;
-      }
+      const effectiveMode = mode ?? (cached as { mode?: string }).mode;
+      const result = evaluateCachedAllow(url, cached.allowedDomains, effectiveMode);
+      if (result !== null) return result;
+      return false;
     }
     return this.isAllowed(url);
   }
@@ -179,24 +193,11 @@ export class DomainFilterCacheAdapter {
 
   async isAllowed(url: string, mode?: string): Promise<boolean> {
     if (this.cachedAt && Date.now() - this.cachedAt < this.ttlMs) {
-      try {
-        const hostname = new URL(url).hostname.replace(/^www\./, '');
-        const effectiveMode = mode ?? this.cachedMode;
-        if (effectiveMode === 'blacklist') {
-          return !isDomainInList(hostname, this.allowedDomains);
-        }
-        if (effectiveMode === 'whitelist') {
-          return isDomainInList(hostname, this.allowedDomains);
-        }
-        if (this.allowedDomains.length === 0) return true;
-        return isDomainInList(hostname, this.allowedDomains);
-      } catch {
-        return false;
-      }
+      const effectiveMode = mode ?? this.cachedMode;
+      const result = evaluateCachedAllow(url, this.allowedDomains, effectiveMode);
+      if (result !== null) return result;
+      return false;
     }
     return this.filter.isAllowed(url);
   }
 }
-
-// Default singleton for callers that don't inject
-export const domainFilter = new DomainFilter();

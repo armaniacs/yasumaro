@@ -6,7 +6,7 @@
  * guarded at runtime by step ordering, not by type branding: the earlier
  * stage-branded context experiment was removed because the step seam
  * (PipelineStepFunction) never consumed the brands — the promised compile-time
- * error could not fire. Keep slices below if a future seam adopts them.
+ * error could not fire.
  */
 
 import type { RecordingData } from '../../messaging/types.js';
@@ -14,8 +14,6 @@ import type { Settings } from '../../utils/storage/types.js';
 import type {
   RecordingContext,
   StepDeps,
-  PipelineInput,
-  PipelineOutput,
 } from './types.js';
 import type { PrivacyPipelineResult } from '../privacyPipeline.js';
 import type { ObsidianClient } from '../obsidianClient.js';
@@ -24,37 +22,6 @@ import type { SqliteClient } from '../sqlite/offscreenGateway.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import type { SaveSqliteStepParams } from './steps/saveSqliteStep.js';
 import type { UrlStore } from './types.js';
-
-// ---------------------------------------------------------------------------
-// Slice interfaces — each step declares which slice it reads/writes
-// ---------------------------------------------------------------------------
-
-/**
- * Input slice required by every step.
- */
-export type InputSlice = PipelineInput & PipelineOutput;
-
-/**
- * Privacy slice — present after processPrivacyPipelineStep.
- */
-export interface PrivacySlice {
-  privacyResult: PrivacyPipelineResult;
-  sanitizedSummary?: string;
-}
-
-/**
- * Content slice — present after extractSentencesStep.
- */
-export interface ContentSlice {
-  extractedSentences: string[];
-}
-
-/**
- * Format slice — present after formatMarkdownStep.
- */
-export interface FormatSlice {
-  markdown: string;
-}
 
 // ---------------------------------------------------------------------------
 // Retry context — explicit input for retryObsidianWrite (no AI re-run)

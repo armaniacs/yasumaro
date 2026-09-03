@@ -235,12 +235,10 @@ vi.mock('../../../utils/storage/quota.js', async (importOriginal) => {
 const mockParseDomainList = vi.fn((text: string) =>
   text.split('\n').map((s: string) => s.trim()).filter(Boolean)
 );
-const mockValidateDomainList = vi.fn(() => [] as string[]);
 
 vi.mock('../../../utils/domainUtils.js', () => ({
   extractDomain: vi.fn(),
   parseDomainList: mockParseDomainList,
-  validateDomainList: mockValidateDomainList,
 }));
 
 const mockInitUblock = vi.fn();
@@ -329,7 +327,6 @@ describe('domainFilter.ts (improved coverage)', () => {
     });
     mockHandleSaveUblockSettings.mockResolvedValue(undefined);
     mockSaveSettings.mockResolvedValue(undefined);
-    mockValidateDomainList.mockReturnValue([]);
   });
 
   // =========================================================================
@@ -642,14 +639,13 @@ describe('domainFilter.ts (improved coverage)', () => {
 
     test('should validate domain list before saving', async () => {
       setupFullDOM();
-      mockValidateDomainList.mockReturnValueOnce(['Invalid domain: bad..domain']);
       (document.getElementById('filterWhitelist') as HTMLInputElement).checked = true;
       (document.getElementById('domainList') as HTMLTextAreaElement).value = 'bad..domain';
 
       const { handleSaveDomainSettings } = await import('../domainFilter.js');
       await handleSaveDomainSettings();
 
-      expect(mockShowStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Invalid domain'), 'error');
+      expect(mockShowStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Invalid pattern'), 'error');
     });
 
     test('should handle storage saveSettings throwing', async () => {
@@ -676,16 +672,13 @@ describe('domainFilter.ts (improved coverage)', () => {
       (document.getElementById('domainList') as HTMLTextAreaElement).value = 'good.example';
       // blacklist（非選択モード）に不正パターンが残っている
       (document.getElementById('blacklistTextarea') as HTMLTextAreaElement).value = 'bad..pattern';
-      mockValidateDomainList.mockImplementation((list: string[]) =>
-        list.includes('bad..pattern') ? ['Invalid domain: bad..pattern'] : []
-      );
 
       const { handleSaveDomainSettings } = await import('../domainFilter.js');
       await handleSaveDomainSettings();
 
       expect(mockShowStatus).toHaveBeenCalledWith(
         'domainStatus',
-        expect.stringContaining('Invalid domain'),
+        expect.stringContaining('Invalid pattern'),
         'error'
       );
       expect(mockSaveSettings).not.toHaveBeenCalled();

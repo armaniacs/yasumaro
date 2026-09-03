@@ -8,7 +8,7 @@ import { StorageKeys } from '../../utils/storage/types.js';
 import { updateDomainFilterCache } from '../../utils/storage/domainFilterCache.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { DomainFilter } from '../../utils/domainFilter/DomainFilter.js';
-import { parseDomainList, validateDomainList } from '../../utils/domainUtils.js';
+import { parseDomainList } from '../../utils/domainUtils.js';
 import { init as initUblockImport, handleSaveUblockSettings } from './ublockImport/index.js';
 import { addLog, LogType } from '../../utils/logger.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
@@ -315,8 +315,8 @@ async function saveSimpleFormatSettings(): Promise<void> {
     }
 
     // Read both lists from hidden textareas — textarea is the sole UI seam,
-    // DomainFilter is the sole validation seam (single wildcard engine + ReDoS guard)
-    // but keep the mocked validateDomainList path for test compatibility.
+    // DomainFilter.parseAndValidate is the sole validation seam (syntax check
+    // via isValidDomain + ReDoS guard via wildcardToRegex).
     const filter = new DomainFilter();
     const whitelistText = whitelistTextarea?.value.trim() || '';
     const blacklistText = blacklistTextarea?.value.trim() || '';
@@ -328,11 +328,10 @@ async function saveSimpleFormatSettings(): Promise<void> {
     // and an unvalidated pattern in the inactive list is still evaluated later
     // when the user switches modes (via isDomainAllowed → matchesPattern).
     // A pattern with excessive wildcards or bad syntax must never reach storage
-    // (VULN-025 / VULN-026). Use both the original validator (for test mock) and DomainFilter.
-    const origErrors = [...validateDomainList(whitelist), ...validateDomainList(blacklist)];
+    // (VULN-025 / VULN-026). DomainFilter.parseAndValidate covers both.
     const wlRes = filter.parseAndValidate(whitelist);
     const blRes = filter.parseAndValidate(blacklist);
-    const errors = [...origErrors, ...wlRes.errors, ...blRes.errors];
+    const errors = [...wlRes.errors, ...blRes.errors];
     if (errors.length > 0) {
         showStatus('domainStatus', `${getMessage('domainListError')}\n${errors.join('\n')}`, 'error');
         return;
