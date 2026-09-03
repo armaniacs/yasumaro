@@ -220,7 +220,8 @@ export function isAllowedProviderBaseUrl(url: string, isLocal: boolean): boolean
     const parsed = new URL(url);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
     // Normalize hostname: lowercase + trailing dot removal (URL.hostname is punycode-resolved but retains trailing dot)
-    let host = parsed.hostname.toLowerCase().replace(/\.+$/, '');
+    // Node's URL.hostname includes brackets for IPv6 (e.g. "[::1]"); strip them for checks
+    let host = parsed.hostname.toLowerCase().replace(/\.+$/, '').replace(/^\[(.*)\]$/, '$1');
     if (!host) return false;
     // Block metadata service hosts (with and without trailing dot already normalized)
     if (host === '169.254.169.254' || host === 'metadata.google.internal') return false;
