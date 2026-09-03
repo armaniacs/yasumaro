@@ -135,7 +135,7 @@ describe('lock contract: 2-writer CAS integration (trustDb.save)', () => {
 
     const store: Record<string, unknown> = {};
     // Serialized fake: updateFn is applied against the live stored value.
-    vi.doMock('../../optimisticLock.js', () => ({
+    vi.doMock('../../storage/storageTransaction.js', () => ({
       withOptimisticLock: vi.fn(
         async (key: string, fn: (cur: unknown) => unknown) => {
           const next = fn(store[key]);
@@ -147,7 +147,7 @@ describe('lock contract: 2-writer CAS integration (trustDb.save)', () => {
     }));
 
     const { mergeTrustDatabase: merge } = await import('../mergeTrustDatabase.js');
-    const { withOptimisticLock } = await import('../../optimisticLock.js');
+    const { withOptimisticLock } = await import('../../storage/storageTransaction.js');
 
     const KEY = 'trust_db:json';
     const writerA = makeDb({
