@@ -57,6 +57,10 @@
 - 2026-09-03-05-cleanup-orphan-exports-dead-mocks-shim-importers.md（RICE 0.9 — orphan exports 削除 (withLockViaPort, PROVIDER_REGISTRY, isDomainTrusted convenience)、dead vi.mock 除去 2 件、7 prod importer を optimisticLock → storageTransaction に移行、`optimisticLock.ts` 物理削除。type-check / lint / build green）
 
 
+### 2026-09-04 dashboard テスト confirm-token ハンドシェイク対応 — 1件完了
+
+- 2026-09-04-01-test-dashboard-confirm-handshake.md（RICE 8.0 — PBI 03-v1 の fail-closed 化で破壊的操作が2段階送信になったことに dashboard 系テスト 56件が未対応だった問題を解消。shared ヘルパ `__tests__/helpers/dashboardSqliteMock.ts`（subtype ルーティング）を新設し 4 ファイルを移行。付随して lockContract.test.ts の削除済み optimisticLock import も修正（commit d567547c）。119 tests green）
+
 ### 2026-09-03 Architecture Deepening Round 2026-09-03b — 7件完了（Trust / Retry / Pipeline / Composition / Provider / SQLite）
 
 - 2026-09-03-01-refactor-trust-seam-consolidation.md（RICE 12.0 — globalThis registry 廃止。TrustDbKernel の `__trustDbKernel` 登録と TrustPolicy の `__TrustPolicyClass` を削除。`getTrustPolicy()` を `getTrustDbAdmin().getPolicy()` 委譲に、TrustDecision は `admin.getPolicy()` 毎回 lookup で stale 排除。Admin/Kernel に `isInitialized()` 追加で fail-closed 維持。158 tests green）
