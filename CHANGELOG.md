@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.99` リリース。
+> - 現時点では `v6.7.100` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,20 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.100] - 2026-09-02
+
+このリリースはユーザーに見える機能変更を含まず、ドキュメント整備を中心としたリリースです。
+
+### Documentation / ドキュメント
+
+- `AGENTS.md` を再構成し、トピック別ガイドを `dev-docs/` 配下の専用ファイル（`ARCHITECTURE_MAP.md` / `DEBUGGING_GUIDE.md` / `DOCUMENTATION_GUIDE.md` / `NAMING_GUIDELINES.md` / `PERFORMANCE_GUIDE.md` / `SECURITY_REVIEW_GUIDE.md` / `TESTING_GUIDE.md`）に分割。`dev-docs/README.md` を索引として新設
+- ユーザーガイドを追加: [ログのエクスポート・インポートガイド](LOG_EXPORT_IMPORT_GUIDE.md)（HMAC 署名・暗号化バックアップ）、[クレンジングのカスタマイズガイド](CLEANSING_CUSTOMIZATION_GUIDE.md)（誤削除報告・ドメイン別上書き）
+- `docs/guides.html` を新設し、全ユーザーガイドの総覧ページを GitHub Pages に追加。`docs/index.html` のナビと README の文書一覧からリンク
+- FAQ に新しい質問を追加（Q49: 閲覧履歴のバックアップ/移行、Q50: クレンジング誤削除の報告、Q51: キーワード初期化の中身）し、既存の質問番号を振り直し
+- Q14（対応 AI プロバイダー）と docs/index.html の「対応AI」セクションに、`OpenAI Compatible (Models.dev)` 経由で 70 以上の OpenAI 互換プロバイダー（OpenRouter、Perplexity、DeepSeek 等）を選択できる旨を追記
+- CSP ガイドの見出しに混入していた簡体字「层」を「層」に修正し、翻訳調の文（「〜することはできません」）を自然な表現に修正
+- `docs/PRIVACY.md` の文言修正を `public/PRIVACY.md` に同期（Chrome Web Store 審査対象ファイルとの同一性を回復）
 
 ## [6.7.99] - 2026-09-01
 

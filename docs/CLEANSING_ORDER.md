@@ -47,11 +47,12 @@ Yasumaro には、2つのクレンジング機能があります。それぞれ�
 - **Hard Strip**: 特定のHTMLタグや属性を削除
   - 削除対象タグ: `<script>`, `<style>`, `<iframe>`, `<canvas>`, `<embed>`, `<object>`, `<audio>`, `<video>`, `<input>`, `<textarea>`, `<select>`, `<button>`, `<form>`
   - 削除対象属性: `type="password"`, `type="hidden"`, `type="file"`, `type="email"`, `type="tel"`, `autocomplete`（属性自体）, `inputmode="numeric|tel|email"`
-  - 属性の削除は要素が削除されるわけではなく、特定のセキュリティ上重要な属性パターンを持つ要素を削除します。`onclick` などのイベントハンドラや `class`/`id`/`href`/`src` は**削除されません**。
+  - これらの属性パターンに一致する要素は、属性だけを取り除くのではなく**要素ごと**削除します。`onclick` などのイベントハンドラや `class`/`id`/`href`/`src` は**削除されません**。
 
 - **Keyword Strip**: ID/クラス名に特定のキーワードを含む**要素全体**を削除
-  - デフォルトキーワード（日本語サイト向け）: `balance`, `account`, `meisai`（明細）, `login`, `card-number`, `keiyaku`（契約）
-  - 英語圏の例に相当するキーワード: `billing`, `contract`, `statement` など（カスタマイズ可能）
+  - デフォルトキーワードは日本語・英語の両方のパターン（`balance`, `account`, `meisai`（明細）, `login`, `card-number`, `keiyaku`（契約）, `password`, `payment`, `billing`, `mynumber`, `ssn`, `credit-card`, `seed-phrase` など、計50語超）を網羅します
+  - 設定画面の「初期設定」「リセット」で表示されるキーワード一覧は、実際のクレンジングで使う全リストと一致しています（`contentCleaner.DEFAULT_KEYWORDS` が唯一の情報源）
+  - キーワードはカスタマイズ可能です
 
 **統計情報**:
 - クレンジング前バイト数（テキストベース）
@@ -100,15 +101,19 @@ Yasumaro には、2つのクレンジング機能があります。それぞれ�
 
 ### ドメイン別ホワイトリスト抽出モード（Domain Whitelist Extraction Mode）
 
-**目的**: Togetter・5ちゃんねるまとめブログ・ガールズちゃんねる・Yahoo!知恵袋・小説投稿サイト（なろう/カクヨム）・レシピサイト（クックパッド/クラシル）・はてなブックマーク・食べログのように、周辺ノイズの比率が極端に高く、上記の削除（引き算）方式では綺麗な本文を残せないサイト向けに、あらかじめ定義した特定のクラス/IDの中身だけを狙い撃ちで抽出する専用モードです。
+**目的**: 周辺ノイズの比率が極端に高く、上記の削除（引き算）方式では綺麗な本文を残せないサイト向けに、あらかじめ定義した特定のクラス/IDの中身だけを狙い撃ちで抽出する専用モードです。
+
+**対象サイトの例**: Togetter、5ちゃんねるまとめブログ、ガールズちゃんねる、Yahoo!知恵袋、小説投稿サイト（なろう/カクヨム）、レシピサイト（クックパッド/クラシル）、はてなブックマーク、食べログ
 
 **動作**:
-1. アクセス中のページの `hostname` が対象ドメインと一致するか、対象サイト特有のクラス（例: なろうの `#novel_honbun`）がDOM上に存在すれば、このモードが発動します
+1. このモードは、次のいずれかを満たすと発動します
+   - アクセス中のページの `hostname` が対象ドメインと一致する
+   - 対象サイト特有のクラス（例: なろうの `#novel_honbun`）が DOM 上に存在する
 2. 該当クラスの要素のテキストをDOM出現順に結合して抽出します（Togetterでは `@ユーザー名` やリツイート数などのメタデータも合わせて除去されます）
 3. 対象要素が1件も見つからなかった場合は、通常の削除方式（コンテンツ抽出 → 各種クレンジング）に自動的にフォールバックします
 4. このモードで抽出されたテキストには、Content Cleansing・AI Summary Cleansing の削除処理は適用されません（すでにノイズ源から切り離された本文のみを抽出しているため）
 
-**設定**: Dashboard → AI Summary Cleansing タブの「ホワイトリスト抽出モード」で、対象サイト共通のON/OFFを一括で切り替えられます（デフォルト: 新規ユーザーは**有効**）。
+**設定場所**: Dashboard → AI Summary Cleansing タブの「ホワイトリスト抽出モード」です。対象サイト共通の ON/OFF を一括で切り替えられます（デフォルト: 新規ユーザーは**有効**）。
 
 ### 設定の独立性とデータの依存性
 
@@ -169,11 +174,12 @@ Yasumaro has two cleansing features. Here's an explanation of their purpose and 
 - **Hard Strip**: Remove specific HTML tags and attributes
   - Removed tags: `<script>`, `<style>`, `<iframe>`, `<canvas>`, `<embed>`, `<object>`, `<audio>`, `<video>`, `<input>`, `<textarea>`, `<select>`, `<button>`, `<form>`
   - Attribute-based removals: `type="password"`, `type="hidden"`, `type="file"`, `type="email"`, `type="tel"`, `autocomplete` attribute, `inputmode="numeric|tel|email"`
-  - Attribute-based removal deletes the entire element, not just the attribute. Event handler attributes (`onclick`, etc.) and styling attributes (`class`, `id`, `href`, `src`) are **not** removed.
+  - Elements matching these attribute patterns are removed **along with the entire element**, not just the attribute.
 
 - **Keyword Strip**: Remove **entire elements** whose ID/class names contain specific keywords
-  - Default keywords (Japanese site-oriented): `balance`, `account`, `meisai` (statement), `login`, `card-number`, `keiyaku` (contract)
-  - English equivalents: `billing`, `contract`, `statement`, etc. (customizable)
+  - The default keyword list covers both Japanese and English patterns (`balance`, `account`, `meisai` (statement), `login`, `card-number`, `keiyaku` (contract), `password`, `payment`, `billing`, `mynumber`, `ssn`, `credit-card`, `seed-phrase`, and more — 50+ words in total)
+  - The keyword list shown by "Defaults" and "Reset" in the settings UI matches the full list used by the actual cleansing logic (`contentCleaner.DEFAULT_KEYWORDS` is the single source of truth)
+  - Keywords are customizable
 
 **Statistics**:
 - Bytes before cleansing (text-based)

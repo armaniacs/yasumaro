@@ -13,7 +13,7 @@ Webページを要約してAIに送る前に、個人情報（PII）を自動で
 ### 主な機能
 
 1. **4つのプライバシーモード**: ユーザーのニーズに合わせて選択可能。
-2. **PIIマスキング**: クレジットカード番号、電話番号、EU圏の税ID等の機密情報を正規表現で検出し `[MASKED]` に置換。
+2. **PIIマスキング**: クレジットカード番号、電話番号、税番号（ドイツ）等の機密情報を正規表現で検出し、`[MASKED]` に置換。
 3. **コンテンツクレンジング**: Webページの不要な要素（広告、ナビゲーション、SNS埋め込み等）をAI要約の前に削減。
 4. **確認・編集プレビュー**: 送信前にマスク結果を確認・編集できるモーダルUI。
 
@@ -177,7 +177,7 @@ Local Only / Full Pipeline は、ブラウザ内蔵 AI（Chrome の Gemini Nano 
 
 #### Q. 「スキップ済み」として残ったページはどこで確認できますか？
 
-**A. ダッシュボードの History タブ**で確認できます。自動保存時の動作が `skip` に設定されている場合、プライベートページ検出が発動したページは Obsidian には保存されず、ダッシュボードの「Skipped」フィルターに一覧表示されます。「今すぐ記録」ボタンでその場から手動保存することができます。スキップされたページは24時間後に自動削除されます。
+**A. ダッシュボードの History タブ**で確認できます。自動保存時の動作が `skip` に設定されている場合、プライベートページ検出が発動したページは Obsidian には保存されず、ダッシュボードの「Skipped」フィルターに一覧表示されます。「今すぐ記録」ボタンでその場から手動保存できます。スキップされたページは24時間後に自動削除されます。
 
 #### Q. History の「PIIマスキング」欄で、電話番号やメールアドレスがマスクされているのにトークン数が変化しません。バグですか？
 
@@ -203,7 +203,7 @@ A guide to how Yasumaro automatically masks personally identifiable information 
 ### Key Features
 
 1. **Four Privacy Modes**: Choose according to your needs.
-2. **PII Masking**: Detect sensitive information such as credit card numbers, phone numbers, EU tax IDs, etc. using regex patterns and replace them with `[MASKED]`.
+2. **PII Masking**: Detect sensitive information such as credit card numbers, phone numbers, tax IDs (German), etc. using regex patterns and replace them with `[MASKED]`.
 3. **Content Cleansing**: Remove unwanted elements (ads, navigation, SNS embeds, etc.) from web pages before AI summarization.
 4. **Preview & Edit Modal**: Modal UI to verify and edit masking results before sending.
 

@@ -8,7 +8,10 @@
 
 Yasumaro は、あなたが Chrome で閲覧した Web ページの情報を、自動的に Obsidian のデイリーノートへ書き込む拡張機能です。この連携を実現するには、Obsidian 側で「Local REST API」というコミュニティプラグインを導入し、そのプラグインが発行する API キーを Yasumaro ダッシュボードに登録する必要があります。設定はおよそ5〜10分で完了します。
 
-このガイドを始める前に、[Obsidian](https://obsidian.md/) と Vault（ノートの保管庫）がすでに作成されていること、[Yasumaro Chrome 拡張機能](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc)が Chrome にインストール済みであることを確認してください。
+このガイドを始める前に、次の2点を確認してください。
+
+- [Obsidian](https://obsidian.md/) と Vault（ノートの保管庫）が作成済みであること
+- [Yasumaro Chrome 拡張機能](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc)が Chrome にインストール済みであること
 
 ---
 
@@ -54,7 +57,7 @@ Local REST API プラグインは、Obsidian とブラウザが安全に通信�
 
 Yasumaro は記録を「今日のデイリーノート」に追記します。そのため、あなたの Vault 内でデイリーノートが保存されているフォルダのパスを、プラグイン設定の **Daily Note Path** フィールドに入力する必要があります。
 
-Obsidian 標準の Daily Notes プラグインを使用している場合は、Obsidian 設定 → **デイリーノート** → **新規作成場所** に表示されているフォルダ名を確認してください。たとえば `DailyNotes` フォルダを使っているなら `DailyNotes` と入力します。`Journal` や `092.Daily` のように独自のフォルダ名にしている場合はそのまま入力してください。パスは Vault ルートからの相対パスで、先頭のスラッシュ `/` は不要です。
+Obsidian 標準の Daily Notes プラグインを使用している場合は、フォルダ名を確認してください。Obsidian 設定 → **デイリーノート** → **新規作成場所** に表示されている名前が、入力すべきフォルダ名です。たとえば `DailyNotes` フォルダを使っているなら `DailyNotes` と入力します。`Journal` や `092.Daily` のように独自のフォルダ名にしている場合はそのまま入力してください。パスは Vault ルートからの相対パスで、先頭のスラッシュ `/` は不要です。
 
 ---
 
@@ -82,7 +85,7 @@ Chrome の Yasumaro 拡張機能アイコンを右クリックして **オプシ
 
 なお、この操作はあくまでローカル環境の Obsidian に対してのみ行うものです。インターネット上の一般サイトで同様の警告が出た場合は、**絶対に無視しないでください**。
 
-それでも証明書エラーが解消しない場合は、Yasumaro ダッシュボードのプロトコルを `http`、ポートを `27123` に変更してください。http は証明書検証を行わないため接続できるようになりますが、通信が暗号化されないことに留意してください（ただし通信先は `127.0.0.1` つまり自分のPC内部だけなので、実用上のリスクは限定的です）。
+それでも証明書エラーが解消しない場合は、Yasumaro ダッシュボードのプロトコルを `http`、ポートを `27123` に変更してください。http では証明書検証が行われないため、接続できるようになります。ただし通信は暗号化されません。通信先が `127.0.0.1`（自分のPC内部）に限られるため、実用上のリスクは限定的です。
 
 #### 接続テストがタイムアウトする場合
 

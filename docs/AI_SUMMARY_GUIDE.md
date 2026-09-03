@@ -22,7 +22,7 @@ Yasumaro は、記録対象と判定されたページの本文を AI に送信�
 | **Ollama** | ローカルで動くOllama（`http://localhost:11434/v1`） |
 | **OpenAI Compatible (Models.dev)** | Models.dev のモデル一覧から選択して接続 |
 
-内部的には Gemini 用と OpenAI 互換用の2つの実装しかなく、Groq・Anthropic・ローカルLLM等は「OpenAI Compatible」の枠に Base URL を差し替えることで対応しています。Built-in AI はブラウザの Prompt API を直接使用します。詳しいセットアップ手順は [セットアップガイド](SETUP_GUIDE.md)、Built-in AI 固有の手順は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) を参照してください。
+接続方式は Gemini 用と OpenAI 互換用の 2 種類です。Groq・Anthropic・ローカルLLM 等は「OpenAI Compatible」の枠で Base URL を差し替えるだけで使えます。Built-in AI はブラウザの Prompt API を直接使用します。詳しいセットアップ手順は [セットアップガイド](SETUP_GUIDE.md)、Built-in AI 固有の手順は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) を参照してください。
 
 ### 要約生成の流れ
 
@@ -38,7 +38,7 @@ Yasumaro は、記録対象と判定されたページの本文を AI に送信�
 5. Obsidian / SQLite / ローカルMarkdown へ保存
 ```
 
-クレンジングの詳細な順序と各機能の役割（日本語サイト特化オプションやドメイン別ホワイトリスト抽出モードを含む）は [クレンジングの順番](CLEANSING_ORDER.md) を参照してください。
+クレンジングの処理順序と各機能の役割の詳細は、[クレンジングの順番](CLEANSING_ORDER.md) を参照してください。日本語サイト特化オプションやドメイン別ホワイトリスト抽出モードについても同ガイドで説明しています。
 
 ### 優先度フォールバック（1〜3位設定）
 

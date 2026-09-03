@@ -453,6 +453,7 @@ MIT License
 ## Documentation / ドキュメント
 
 ### 文書一覧
+- [docs/guides.html](https://armaniacs.github.io/yasumaro/guides.html) - ドキュメントガイド総覧（GitHub Pages）
 - [AGENTS.md](AGENTS.md) - 開発者向けエージェント設定
 - [CHANGELOG.md](CHANGELOG.md) - 更新履歴
 - [CONTRIBUTING.md](CONTRIBUTING.md) - コントリビューションガイド
@@ -467,17 +468,21 @@ MIT License
 - [PRIVACY.md](docs/PRIVACY.md) - プライバシーポリシー
 - [STORAGE_MODES.md](docs/STORAGE_MODES.md) - ストレージモードについて
 - [MARKDOWN_DOWNLOAD.md](docs/MARKDOWN_DOWNLOAD.md) - ローカル Markdown 書き出しガイド
+- [LOG_EXPORT_IMPORT_GUIDE.md](docs/LOG_EXPORT_IMPORT_GUIDE.md) - ログのエクスポート・インポートガイド（HMAC署名・暗号化バックアップ）
 - [GITHUB_GIST_SYNC_GUIDE.md](docs/GITHUB_GIST_SYNC_GUIDE.md) - GitHub Gist 連携ガイド
 - [AUDIT_LOG_GUIDE.md](docs/AUDIT_LOG_GUIDE.md) - 監査ログガイド
 - [CLEANSING_ORDER.md](docs/CLEANSING_ORDER.md) - クレンジングの順番
+- [CLEANSING_CUSTOMIZATION_GUIDE.md](docs/CLEANSING_CUSTOMIZATION_GUIDE.md) - クレンジングのカスタマイズガイド（誤削除報告・ドメイン別上書き）
 - [CSP_GUIDE.md](docs/CSP_GUIDE.md) - CSP 設定ガイド
 - [TRUST_DOMAIN_GUIDE.md](docs/TRUST_DOMAIN_GUIDE.md) - ドメイン信頼度ガイド
 - [TAG_CLUSTER_GUIDE.md](docs/TAG_CLUSTER_GUIDE.md) - タグクラスターガイド
 - [TOOLBAR_BADGE_GUIDE.md](docs/TOOLBAR_BADGE_GUIDE.md) - ツールバーバッジガイド
 - [RECORDING_CONDITIONS.md](docs/RECORDING_CONDITIONS.md) - 記録条件ガイド
+- [MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - 旧データベースからの移行ガイド
 - [LICENSE.md](LICENSE.md) - ライセンス詳細
 
 ### Documentation
+- [Guides Catalog](https://armaniacs.github.io/yasumaro/guides.html) - All user guides in one place (GitHub Pages)
 - [AGENTS.md](AGENTS.md) - Developer Agent Configuration
 - [CHANGELOG.md](CHANGELOG.md) - Changelog
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contributing Guide
@@ -492,14 +497,17 @@ MIT License
 - [PRIVACY.md](docs/PRIVACY.md) - Privacy Policy
 - [STORAGE_MODES.md](docs/STORAGE_MODES.md) - Storage Modes
 - [MARKDOWN_DOWNLOAD.md](docs/MARKDOWN_DOWNLOAD.md) - Local Markdown Export Guide
+- [LOG_EXPORT_IMPORT_GUIDE.md](docs/LOG_EXPORT_IMPORT_GUIDE.md) - Log Export & Import Guide (HMAC signature, encrypted backup)
 - [GITHUB_GIST_SYNC_GUIDE.md](docs/GITHUB_GIST_SYNC_GUIDE.md) - GitHub Gist Sync Guide
 - [AUDIT_LOG_GUIDE.md](docs/AUDIT_LOG_GUIDE.md) - Audit Log Guide
 - [CLEANSING_ORDER.md](docs/CLEANSING_ORDER.md) - Cleansing Order
+- [CLEANSING_CUSTOMIZATION_GUIDE.md](docs/CLEANSING_CUSTOMIZATION_GUIDE.md) - Cleansing Customization Guide (mis-deletion reports, per-site overrides)
 - [CSP_GUIDE.md](docs/CSP_GUIDE.md) - CSP Guide
 - [TRUST_DOMAIN_GUIDE.md](docs/TRUST_DOMAIN_GUIDE.md) - Trust Domain Guide
 - [TAG_CLUSTER_GUIDE.md](docs/TAG_CLUSTER_GUIDE.md) - Tag Cluster Guide
 - [TOOLBAR_BADGE_GUIDE.md](docs/TOOLBAR_BADGE_GUIDE.md) - Toolbar Badge Guide
 - [RECORDING_CONDITIONS.md](docs/RECORDING_CONDITIONS.md) - Recording Conditions Guide
+- [MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - Legacy Database Migration Guide
 - [LICENSE.md](LICENSE.md) - License Details
 
 ---

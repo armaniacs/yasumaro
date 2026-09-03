@@ -1,8 +1,22 @@
 # AGENTS.md
 
-This file provides specialized guidance for different agent types when working on the Yasumaro Chrome extension project.
+This file provides topic-based guidance for agents working on the Yasumaro Chrome extension project.
 
-> **Note:** For general contribution guidelines (setup, testing, PR workflow), see [CONTRIBUTING.md](CONTRIBUTING.md).
+> For setup, CI pipeline, coding standards, PR workflow, and release flow, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+## Where to Start
+
+| Task | Read first |
+|------|-----------|
+| Adding a feature | [Architecture Map](dev-docs/ARCHITECTURE_MAP.md) + [Development Patterns](#development-patterns) |
+| Fixing a bug | [Debugging Guide](dev-docs/DEBUGGING_GUIDE.md) |
+| Reviewing code or security | [Security Review Guide](dev-docs/SECURITY_REVIEW_GUIDE.md) |
+| Writing or updating docs | [Documentation Guide](dev-docs/DOCUMENTATION_GUIDE.md) |
+| Testing | [Testing Guide](dev-docs/TESTING_GUIDE.md) |
+| Optimizing performance | [Performance Guide](dev-docs/PERFORMANCE_GUIDE.md) |
+| Preparing a release | [Release](#release) |
 
 ---
 
@@ -20,14 +34,16 @@ This is a **Manifest V3 Chrome extension** with a modular architecture:
 |------------------|-----|
 | Project Architecture | [dev-docs/DESIGN_SPECIFICATIONS.md](dev-docs/DESIGN_SPECIFICATIONS.md) |
 | Architecture Decisions | [dev-docs/ADR/](dev-docs/ADR/) |
+| Architecture Map (components & feature locations) | [dev-docs/ARCHITECTURE_MAP.md](dev-docs/ARCHITECTURE_MAP.md) |
 | Error Codes | [dev-docs/ERROR_CODES.md](dev-docs/ERROR_CODES.md) |
 | API Endpoints | [dev-docs/API_ENDPOINTS.md](dev-docs/API_ENDPOINTS.md) |
 | Design Tokens | [dev-docs/DESIGN_TOKENS.md](dev-docs/DESIGN_TOKENS.md) |
+| Naming Guidelines | [dev-docs/NAMING_GUIDELINES.md](dev-docs/NAMING_GUIDELINES.md) |
+| Performance Guide | [dev-docs/PERFORMANCE_GUIDE.md](dev-docs/PERFORMANCE_GUIDE.md) |
+| Testing / Debugging / Security / Docs | [dev-docs/TESTING_GUIDE.md](dev-docs/TESTING_GUIDE.md) · [DEBUGGING_GUIDE.md](dev-docs/DEBUGGING_GUIDE.md) · [SECURITY_REVIEW_GUIDE.md](dev-docs/SECURITY_REVIEW_GUIDE.md) · [DOCUMENTATION_GUIDE.md](dev-docs/DOCUMENTATION_GUIDE.md) |
 | Contribution Guide | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Accessibility Guide | [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md) |
 | i18n Guide | [docs/i18n-guide.md](docs/i18n-guide.md) |
-
----
 
 ## Quick Start
 
@@ -37,386 +53,21 @@ npm run build:watch      # Build and watch for development changes
 npm run validate         # Type check + run tests (pre-commit gate)
 ```
 
-### Loading the Extension
-
-1. Run `npm run build` to build the extension
-2. Open Chrome and navigate to `chrome://extensions`
-3. Enable "Developer mode" (toggle in top-right)
-4. Click "Load unpacked" and select the `dist/chromium-mv3` directory
-5. The extension is now installed
+To load the unpacked extension: run `npm run build`, open `chrome://extensions`, enable Developer mode, then "Load unpacked" → select `dist/chromium-mv3`.
 
 ---
 
-## For Feature Development Agents
-
-### Architecture Context
-
-The extension follows a modular design pattern:
-
-```
-Service Worker (entrypoints/background/ + src/background/)
-  ├── index.ts → WXT entrypoint
-  ├── ObsidianClient → Obsidian Local REST API
-  ├── AIClient (multiple implementations) → AI Providers
-  ├── localAiClient → Local AI provider (Ollama, etc.)
-  ├── sessionAlarmsManager → Session timeout management
-  ├── Mutex / ServiceWorkerContext → Concurrency management
-  ├── recordingLogic → Core recording orchestration
-  └── service-worker.ts → Service worker lifecycle
-
-Popup UI (entrypoints/popup/ + src/popup/)
-  ├── index.html / main.ts → WXT entrypoints
-  ├── navigation.ts → Tab management
-  ├── domainFilter.ts → Domain filter settings
-  ├── main.ts → Core popup logic
-  ├── ublockImport/ → uBlock filter import functionality
-  ├── settings/ → Settings management
-  └── utils/ → Shared utilities (focusTrap, i18n, etc.)
-
-Dashboard / Options (entrypoints/options/ + src/dashboard/)
-  ├── index.html → Settings configuration interface (WXT entrypoint)
-  ├── main.ts → Dashboard entrypoint
-  └── src/dashboard/ → Dashboard logic modules
-
-Offscreen (entrypoints/offscreen.html + src/offscreen/)
-  ├── offscreen.html → WXT entrypoint
-  └── src/offscreen/offscreen.ts → DOM operations requiring offscreen document
-
-Content Scripts (entrypoints/content/ + src/content/)
-  ├── index.ts → WXT content script entrypoint
-  ├── loader.ts → Injection orchestrator
-  └── extractor.ts → DOM content extraction
-```
-
-### Key Patterns to Follow
-
-1. **Modular Design**: Keep specific functionality in dedicated client classes
-2. **Async/Await**: All API calls should use async/await with proper error handling
-3. **Chrome Extension APIs**: Use appropriate Chrome APIs (storage, tabs, scripting)
-4. **Message Passing**: Communicate between components using Chrome's message passing API
-5. **Error Handling**: Always implement try-catch blocks with user notifications
-
-### Adding New Features
-
-| Feature Type | Location | Notes |
-|--------------|----------|-------|
-| UI features | `src/popup/` (HTML/CSS/TS) | Follow accessibility patterns (see ACCESSIBILITY.md) |
-| Dashboard settings | `src/dashboard/` (HTML/CSS/TS) | Settings management interface |
-| uBlock Import | `src/popup/ublockImport/` | Filter list import functionality |
-| Background processing | `src/background/` service-worker.ts | Use modular client classes |
-| Local AI Integration | `src/background/ai/LocalAIService.ts`, `src/background/builtInAIClient.ts` | Built-in AI (Chrome Gemini Nano / Edge Phi-mini); Ollama/LM Studio go through `src/background/ai/providers/OpenAIProvider.ts` |
-| Page interaction | `src/content/` extractor.ts | Consider CSP restrictions |
-| Storage | `src/utils/storage.ts` | Use StorageKeys constant |
-| API Key Encryption | `src/utils/crypto/` | PBKDF2 + AES-GCM encryption |
-| PII Masking | `src/utils/piiSanitizer.ts` | Privacy-preserving data handling |
-| DOM operations | `src/offscreen/` offscreen.ts | For operations requiring offscreen document |
-| Trust Database | `src/utils/trustDb/` | Domain trust verification with 3-step check |
-| Permission Manager | `src/utils/permissionManager.ts` | chrome.permissions API wrapper + denied domain tracking |
-| CSP Settings | `src/dashboard/cspSettings.ts` | Conditional CSP configuration for AI providers |
-
-**Before implementing major features**, review [dev-docs/ADR/](dev-docs/ADR/) for existing architectural decisions and consistency.
-
-### Critical Considerations
-
-- **i18n**: All user-facing text must use data-i18n attributes (see [i18n-guide.md](docs/i18n-guide.md))
-- **Accessibility**: Follow WCAG 2.1 Level AA guidelines (see [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md))
-- **Manifest V3**: No background scripts, use service workers
-- **CSP**: Adhere to Content Security Policy
-- **Offscreen API**: Use offscreen documents for DOM operations that cannot run in service workers
-
----
-
-## For Code Review Agents
-
-### Security Checklist
-
-- [ ] No hardcoded API keys or sensitive data
-- [ ] Proper input validation for all external data (API responses, user input)
-- [ ] Safe HTML content handling (sanitize if inserting into DOM)
-- [ ] Appropriate permissions requested in manifest.json
-- [ ] HTTPS used for all external API calls where possible
-
-### Chrome Extension Specific Checks
-
-- [ ] Manifest V3 compliance (no background scripts, use service worker)
-- [ ] Proper CSP (Content Security Policy) adherence
-- [ ] No use of eval() or inline scripts
-- [ ] Proper async handling in service worker
-- [ ] Content script injection only where needed
-
-### Code Quality Standards
-
-- [ ] Consistent error handling with user notifications
-- [ ] Use structured error codes (see [dev-docs/ERROR_CODES.md](dev-docs/ERROR_CODES.md))
-- [ ] Proper cleanup of event listeners and intervals
-- [ ] No memory leaks in long-running service worker
-- [ ] Modular code organization
-- [ ] Clear separation of concerns between components
-
----
-
-## For Bug Fixing Agents
-
-### Common Issue Areas & Files
-
-| Issue Area | Primary Files |
-|------------|---------------|
-| API Integration Failures | `src/background/aiClient.ts`, `src/background/ai/providers/*.ts` |
-| Obsidian Connection Issues | `src/background/obsidianClient.ts` |
-| Content Script Not Injecting | `manifest.json`, `src/content/loader.ts`, `src/content/extractor.ts` |
-| Settings Not Persisting | `src/utils/storage.ts` |
-| Duplicate Entries | `src/background/service-worker.ts`, `src/background/recordingLogic.ts` |
-| Focus Trap Issues | `src/popup/utils/focusTrap.ts` |
-| Offscreen Document Issues | `src/offscreen/offscreen.ts` |
-| Optimistic Lock Conflicts | `src/utils/optimisticLock.ts` |
-
-### Debugging Workflow
-
-1. Reproduce the issue consistently
-2. Check browser extension error logs (`chrome://extensions`)
-3. Inspect service worker logs (Extensions → Service Worker → inspect)
-4. Inspect offscreen document logs (if applicable)
-5. Test popup UI with browser dev tools
-6. Verify API connectivity using built-in test functions
-
-### Breaking Changes Risk
-
-**High-risk areas:**
-- Manifest permissions modifications
-- Storage key structure changes
-- API endpoint modifications
-
----
-
-## For Security Review Agents
-
-### Threat Model Overview
-
-| Threat Vector | Mitigation |
-|---------------|-----------|
-| Data Privacy | All browsing data processed locally |
-| API Keys | Stored in Chrome local storage, never logged |
-| Local REST API | Self-signed certificate support |
-| Content Script Injection | Runs on all web pages with user consent |
-| PKI/Certificate | HTTPS with protocol/port validation |
-
-### Security Controls
-
-1. **API Key Protection**: Keys never logged or exposed in error messages
-2. **URL Validation**: Proper validation before making requests (see `src/utils/urlUtils.ts`)
-3. **Self-signed Certificates**: Optional support for HTTPS Obsidian with custom certs
-4. **Permission Minimization**: Request only necessary permissions in manifest
-5. **Content Security**: CSP headers, avoid XSS vulnerabilities
-
-### Regular Audits
-
-- Review API endpoint configurations
-- Validate content script permissions scope
-- Check for data leakage in logs
-- Verify secure storage of sensitive configurations
-- Ensure proper HTTPS connections
-
----
-
-## For Testing Agents
-
-### Manual Testing Required
-
-Automated tests have limitations due to Chrome Extension architecture. Manual verification needed for:
-
-- Chrome extension loading and permissions
-- Actual Chrome extension functionality
-- Real AI provider API calls
-- Obsidian Local REST API integration
-- Content script injection on real websites
-
-### Test Environment Setup
-
-1. Chrome browser with Developer Mode enabled
-2. Obsidian with Local REST API plugin installed
-3. Valid API keys for at least one AI provider
-4. Test daily notes directory structure
-
-### Key Test Scenarios
-
-| Scenario | Coverage |
-|----------|----------|
-| Multiple AI provider configurations | `src/background/aiClient.ts`, `src/background/ai/providers/*.ts` |
-| Various Obsidian daily note path formats | `src/background/obsidianClient.ts` |
-| Different web page structures for content extraction | `src/content/extractor.ts` |
-| Network failure scenarios | All API clients |
-| Chrome extension permission states | `manifest.json` |
-| Accessibility compliance | Lighthouse/axe DevTools |
-| i18n coverage | `_locales/*` messages.json |
-
-### Running Tests
-
-```bash
-npm test              # Run all tests
-npm run test:watch    # Watch mode
-npm run test:coverage # Coverage report
-npm run test:e2e      # Run Playwright E2E tests
-npm run test:e2e:ui   # Playwright with UI mode
-npm run type-check    # TypeScript type checking
-npm run validate      # Type check + run tests (pre-commit gate)
-```
-
-> Note: After code changes, run `npm run build` before testing in Chrome Extension.
-
-### Building
-
-```bash
-npm run build             # Build TypeScript and copy assets to dist/
-npm run build:watch   # Watch mode for development
-```
-
-> The extension loads from the `dist/chromium-mv3` directory in Chrome.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed testing guidelines.
-
----
-
-## For Documentation Agents
-
-### User-Facing Documentation
-
-| Document | Language | Purpose |
-|----------|----------|---------|
-| README.md | Bilingual (JP/EN) | Quick start guide, features overview |
-| docs/SETUP_GUIDE.md | Bilingual (JP/EN) | Detailed step-by-step instructions |
-| docs/OBSIDIAN_SETUP_GUIDE.md | Bilingual (JP/EN) | Obsidian integration guide with screenshots and troubleshooting |
-| docs/PRIVACY.md | Bilingual (JP/EN) | Data handling transparency |
-| docs/USER-GUIDE-UBLOCK-IMPORT.md | Bilingual (JP/EN) | uBlock filter features |
-| docs/PII_FEATURE_GUIDE.md | Bilingual (JP/EN) | PII masking features |
-| CHANGELOG.md | Mixed | Version history |
-
-### Developer Documentation
-
-| Document | Language | Purpose |
-|----------|----------|---------|
-| dev-docs/DESIGN_SPECIFICATIONS.md | English | Architecture decisions |
-| dev-docs/ADR/ | English | Architecture Decision Records |
-| dev-docs/ERROR_CODES.md | English | Structured error code definitions |
-| CONTRIBUTING.md | Bilingual (JP/EN) | Development & contribution guide |
-| AGENTS.md | English | This file - agent-specific guidance |
-
-
-### i18n Guidelines
-
-**User-Facing Docs → Bilingual Format (Japanese/English):**
-- Header: `# {JP Title} / {EN Title}`
-- Navigation: `[日本語](#日本語) | [English](#english)`
-- Sections: `## 日本語` and `## English` in parallel
-- Code/JSON: Keep untranslated
-
-**Developer Docs → English Only:**
-- AGENTS.md, DESIGN_SPECIFICATIONS.md
-
-**Special Handling:**
-- CHANGELOG.md: Historical entries preserved; future entries bilingual
-
-See [i18n-guide.md](docs/i18n-guide.md) for detailed guidelines.
-
-### Project Naming Guidelines
-
-**正式表記:**
-
-| 用途 | 表記 |
-|------|------|
-| リポジトリ・パッケージ名 | `yasumaro` |
-| 拡張機能名・UI・ドキュメント見出し | `Yasumaro` / `Yasumaro - AI Browsing Logger` |
-| GitHub リンクテキスト | `yasumaro` |
-
-**禁止表記（旧称）:**
-- `obsidian-weave` — 旧名。新規ドキュメントでは使用しない
-- `obsidian-smart-history` — リポジトリ旧名。新規ドキュメントでは使用しない
-- `Obsidian Weave` — 拡張機能旧名。新規ドキュメントでは使用しない
-- `Obsidian Smart History` — 拡張機能旧名。新規ドキュメントでは使用しない
-
-**ブログ・リリースノート記述時のチェック:**
-- GitHub リンク: `[yasumaro](https://github.com/armaniacs/yasumaro)`
-- ヘッダー・本文: `Yasumaro v1.x` 形式
-
-### Documentation Update Points
-
-Trigger updates when:
-- New AI provider integrations added
-- Chrome API usage changes
-- Breaking changes in configuration
-- Security updates or considerations
-- Architecture decisions rationalized
-- New user-facing features introduced
-
-### Documentation Update Checklist
-
-When making architectural changes that affect documentation (e.g., TypeScript migration, directory restructuring), verify and update:
-
-- [ ] **CONTRIBUTING.md**: File paths, test naming conventions, import examples
-- [ ] **AGENTS.md**: File paths in feature tables, bug fixing tables, test scenarios
-- [ ] **README.md**: Any file references or technical explanations
-- [ ] **Developer docs** (DESIGN_SPECIFICATIONS.md, ERROR_CODES.md, ADR/)
-- [ ] **User documentation** (Setup guides, feature guides)
-- [ ] **PRIVACY.md sync**: `public/PRIVACY.md` and `docs/PRIVACY.md` must stay identical. Whichever you edit, copy the same changes to the other file (Chrome Web Store reviews `public/PRIVACY.md`; a stale copy risks being flagged as inaccurate).
-
-### TypeScript-Specific Notes
-
-For projects using TypeScript with ESM:
-- Source files: `.ts` extension for source and tests
-- Import statements: Use `.js` extension (TypeScript ESM resolution spec)
-- Documentation: Reference `.ts` file names, explain `.js` in imports
-
-### Localization Notes
-
-- Primary UI language: Japanese
-- Documentation: Bilingual Japanese/English
-- Code comments: English for consistency
-- Error messages: User-friendly, consider localization
-
----
-
-## For Performance Optimization Agents
-
-### Key Performance Metrics
-
-- Content script injection speed
-- API response times for AI summarization
-- Obsidian write operation frequency
-- Memory usage in service worker
-- Popup UI responsiveness
-
-### Optimization Targets
-
-1. **Content Extraction**: Efficient DOM parsing, minimal impact on page load
-2. **API Calls**: Implement request queuing, respect rate limits
-3. **Storage**: Efficient Chrome storage usage, batch operations
-4. **Message Passing**: Minimize chrome.runtime.sendMessage overhead
-5. **Error Recovery**: Fast fallback mechanisms for failed requests
-
-### Browser Compatibility
-
-- Focus on modern Chrome/Chromium browsers
-- Test with latest Chrome version
-- Consider Manifest V3 requirements
-- Account for service worker lifecycle limitations
-
----
-
-## Agent Coordination Notes
-
-When multiple agents work simultaneously:
-
-| Primary Agent | Says Should Coordinate With | If Because |
-|---------------|---------------------------|------------|
-| Feature | Security | Adding new API integrations |
-| Bug Fix | Documentation | User-impacting fixes |
-| Performance | Feature | During new feature development |
-| All | Code Review | Verify compliance with guidelines |
-
-Respect modular architecture and avoid cross-contamination of concerns.
-
----
-
-## Project-Specific Notes
+## Architecture
+
+| Component | Location | Responsibility |
+|-----------|----------|----------------|
+| Service Worker | `entrypoints/background/` + `src/background/` | Coordinates all operations — ObsidianClient, AIClient, sessionAlarmsManager, Mutex/ServiceWorkerContext, recordingLogic |
+| Popup UI | `entrypoints/popup/` + `src/popup/` | Configuration & recording UI — domainFilter, ublockImport, settings, utils (focusTrap, i18n) |
+| Dashboard / Options | `entrypoints/options/` + `src/dashboard/` | Settings and management interface |
+| Offscreen | `entrypoints/offscreen.html` + `src/offscreen/` | DOM operations that cannot run in service workers |
+| Content Scripts | `entrypoints/content/` + `src/content/` | Engagement tracking — loader, extractor |
+
+Full component/file tree and the feature-location table: [dev-docs/ARCHITECTURE_MAP.md](dev-docs/ARCHITECTURE_MAP.md).
 
 ### Chrome Extension Lifecycle Quirks
 
@@ -434,28 +85,91 @@ Respect modular architecture and avoid cross-contamination of concerns.
 - **Optimistic Lock** (`src/utils/optimisticLock.ts`): Version-based conflict detection for storage updates
 - Use `withOptimisticLock()` for critical storage operations
 
-### Privacy Features
-
-- **PII Sanitization** (`src/utils/piiSanitizer.ts`): Masks personally identifiable information
-- **Privacy Consent** (`src/popup/privacyConsent.ts`): User consent tracking for data collection
-- **Privacy Pipeline** (`src/background/privacyPipeline.ts`): Privacy-preserving content processing
-- All API keys encrypted in storage (PBKDF2 + AES-GCM)
-
-### Testing Limitations
-
-- Cannot fully emulate Chrome Extension APIs in Jest
-- Content script tests require jsdom environment
-- Service worker tests have limitations
-- Always verify with actual Chrome browser
-
-### TypeScript Configuration
+### TypeScript Conventions
 
 - **ESM imports**: All imports must use `.js` extensions (including `.ts` source files)
 - **Module resolution**: `nodeNext` mode with strict type checking
 - **Testing**: Jest + jsdom with Web Crypto API polyfill (`@peculiar/webcrypto`)
 - Run `npm run type-check` before committing to catch type errors
 
-### Release Considerations
+---
+
+## Development Patterns
+
+### Key Patterns
+
+1. **Modular Design**: Keep specific functionality in dedicated client classes
+2. **Async/Await**: All API calls should use async/await with proper error handling
+3. **Chrome Extension APIs**: Use appropriate Chrome APIs (storage, tabs, scripting)
+4. **Message Passing**: Communicate between components using Chrome's message passing API
+5. **Error Handling**: Always implement try-catch blocks with user notifications
+
+### Critical Considerations
+
+- **i18n**: All user-facing text must use data-i18n attributes (see [i18n-guide.md](docs/i18n-guide.md))
+- **Accessibility**: Follow WCAG 2.1 Level AA guidelines (see [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md))
+- **Manifest V3**: No background scripts, use service workers
+- **CSP**: Adhere to Content Security Policy
+- **Offscreen API**: Use offscreen documents for DOM operations that cannot run in service workers
+
+---
+
+## Testing
+
+> Test commands (`npm test`, `test:watch`, `test:coverage`, `test:e2e`, `type-check`, `validate`) are documented in [CONTRIBUTING.md](CONTRIBUTING.md). After code changes, run `npm run build` before testing in Chrome Extension.
+
+Manual testing requirements, environment setup, key scenarios, and limitations: [dev-docs/TESTING_GUIDE.md](dev-docs/TESTING_GUIDE.md).
+
+---
+
+## Bug Fixing
+
+Issue areas, debugging workflow, and common fixes: [dev-docs/DEBUGGING_GUIDE.md](dev-docs/DEBUGGING_GUIDE.md).
+
+**High-risk areas for breaking changes:** manifest permissions, storage key structure, API endpoints.
+
+---
+
+## Code Review & Security
+
+Non-negotiables for every review:
+
+- No hardcoded API keys or sensitive data; proper input validation for all external data
+- Manifest V3 compliance (service worker, not background scripts); no `eval()` or inline scripts
+- Proper async handling in the service worker; cleanup of listeners and intervals (no memory leaks)
+
+Full checklist, threat model, security controls, and privacy features: [dev-docs/SECURITY_REVIEW_GUIDE.md](dev-docs/SECURITY_REVIEW_GUIDE.md). Structured error codes: [dev-docs/ERROR_CODES.md](dev-docs/ERROR_CODES.md).
+
+---
+
+## Documentation & i18n
+
+Documentation inventory, i18n formatting rules, and the documentation update checklist: [dev-docs/DOCUMENTATION_GUIDE.md](dev-docs/DOCUMENTATION_GUIDE.md). Naming rules: [dev-docs/NAMING_GUIDELINES.md](dev-docs/NAMING_GUIDELINES.md).
+
+**PRIVACY.md sync (critical):** `public/PRIVACY.md` and `docs/PRIVACY.md` must stay identical. Whichever you edit, copy the same changes to the other file.
+
+---
+
+## Performance
+
+Performance metrics, optimization targets, and browser compatibility notes live in [dev-docs/PERFORMANCE_GUIDE.md](dev-docs/PERFORMANCE_GUIDE.md). When optimizing, verify against the key metrics defined there.
+
+---
+
+## Agent Coordination Notes
+
+| Primary Agent | Coordinate With | When |
+|---------------|-----------------|------|
+| Feature | Security | Adding new API integrations |
+| Bug Fix | Documentation | User-impacting fixes |
+| Performance | Feature | During new feature development |
+| All | Code Review | Verify compliance with guidelines |
+
+Respect modular architecture and avoid cross-contamination of concerns.
+
+---
+
+## Release
 
 Before releasing, verify:
 1. [ ] All tests pass
@@ -466,15 +180,10 @@ Before releasing, verify:
 6. [ ] CHANGELOG.md updated
 7. [ ] Version number bumped in `manifest.json` and `package.json`
 
+The release flow itself is documented in [CONTRIBUTING.md](CONTRIBUTING.md) (リリースフロー / Release Process).
+
+---
+
 ## graphify
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
-
-When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
-
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+Graphify rules live in `AGENTS.local.md` (gitignored, local-only). Read it if present.
