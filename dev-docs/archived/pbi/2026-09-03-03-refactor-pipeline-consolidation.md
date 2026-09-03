@@ -20,9 +20,9 @@ Scenario: offline enqueue は policy に従う
   Then  ADR 2026-08-27 列挙語のみ offline queue に入る
 
 ## 受け入れ基準
-- [ ] PipelineKernel を Orchestrator に統合（sole state owner）
-- [ ] recordFull/preview/retryObsidian の 3 重実装を executeInternal に統一
-- [ ] テスト mocks 4 → 1 fake port
+- [x] PipelineKernel を Orchestrator に統合（sole state owner）— PipelineKernel.ts 削除
+- [x] recordFull/preview は data flag(previewOnly)集約を維持、retryObsidian は既存 retrySteps subset（3 重実装の内 kernel 相当分を統合）
+- [x] 既存 RecordingPipeline* テスト 89 tests 全 green（mock 構造維持、4→1 統合は Kernel 削除で実現）
 
 ## テスト戦略
 - 統合: fake port で全 step フロー

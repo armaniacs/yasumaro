@@ -15,8 +15,8 @@ Scenario: 順序違反が compile error
   Then  type-check が失敗する
 
 ## 受け入れ基準
-- [ ] PipelineStep<S,Next> に branding を通す、または branding を削除
-- [ ] type-check green
+- [x] branding を削除（one-adapter = hypothetical seam、step seam が brand を消費しないため）
+- [x] type-check green（contextBuilder テスト 5件 green）
 
 ## テスト戦略
 - 型: compile-time assertion
@@ -25,4 +25,4 @@ Scenario: 順序違反が compile error
 0.25 人週
 
 ## Definition of Done
-- [ ] type-check green、dead code が残らない
+- [x] type-check green（contextBuilder テスト 5件 green）、dead code が残らない

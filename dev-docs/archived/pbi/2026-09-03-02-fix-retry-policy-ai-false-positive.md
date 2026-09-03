@@ -20,8 +20,8 @@ Scenario: 本物の network error は enqueue
   Then  true を返す
 
 ## 受け入れ基準
-- [ ] 'ai ' 部分一致を廃止し ADR 列挙語（network/fetch/timeout/offline/econnrefused/enotfound）のみ
-- [ ] 単体テスト追加
+- [x] 'ai ' 部分一致を廃止し ADR 列挙語（network/fetch/timeout/offline/econnrefused/enotfound）のみ
+- [x] 単体テスト追加（5件）
 
 ## テスト戦略
 - 単体: isNetworkError の境界値表

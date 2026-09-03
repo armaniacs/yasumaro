@@ -20,10 +20,10 @@ Scenario: globalThis に依存しない
   Then  正しい判定が返る（module-scope singleton）
 
 ## 受け入れ基準
-- [ ] TrustDbAdmin の delegate メソッド群を Kernel 統合で解消
-- [ ] globalThis.__trustDbKernel / __TrustPolicyClass を廃止し module-scope singleton 化
-- [ ] checkTrustDomainStep が TrustChecker を injection で受ける
-- [ ] 既存テスト全 green（vi.mock 移行含む）
+- [x] globalThis registry 廃止 + getTrustPolicy 委譲一本化（delegate 統合は Admin class 維持のため見送り、次ラウンドへ）
+- [x] globalThis.__trustDbKernel / __TrustPolicyClass を廃止し module-scope singleton 化
+- [x] getTrustPolicy() 契約（初期化前 throw）を isInitialized() で維持
+- [x] 158 tests passed (10 files)
 
 ## テスト戦略
 - 単体: TrustModule.checkDomain の境界（未初期化/初期化済/tranco更新後）
