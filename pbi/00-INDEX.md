@@ -14,17 +14,8 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-| # | PBI | RICE | 状態 |
-|---|-----|------|------|
-| 1 | [2026-09-03-01-refactor-trust-seam-consolidation](2026-09-03-01-refactor-trust-seam-consolidation.md) | 12.0 | ⬜ |
-| 2 | [2026-09-03-02-fix-retry-policy-ai-false-positive](2026-09-03-02-fix-retry-policy-ai-false-positive.md) | 9.6 | ⬜ |
-| 3 | [2026-09-03-03-refactor-pipeline-consolidation](2026-09-03-03-refactor-pipeline-consolidation.md) | 6.0 | ⬜ |
-| 4 | [2026-09-03-04-refactor-staged-context-branding](2026-09-03-04-refactor-staged-context-branding.md) | 4.8 | ⬜ (03 に依存) |
-| 5 | [2026-09-03-05-refactor-composition-root-typed](2026-09-03-05-refactor-composition-root-typed.md) | 4.0 | ⬜ |
-| 6 | [2026-09-03-06-refactor-provider-catalog-split](2026-09-03-06-refactor-provider-catalog-split.md) | 2.7 | ⬜ |
-| 7 | [2026-09-03-07-refactor-sqlite-gateway-single-seam](2026-09-03-07-refactor-sqlite-gateway-single-seam.md) | 2.0 | ⬜ |
+**進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る.
 
-> Architecture Deepening Round 2026-09-03b。RICE 降順が実行順、04 は 03 に依存。詳細は [backlog](2026-09-03-00-backlog-deepening.md)。> 0902a ブランチレビュー由来の PBI。01-04 はコード修正+BDDテスト追加でアーカイブ済み。05 の A1-A4（orphan exports 4件）と C1-C2（shim importers 5 prod）は低RICE(0.9)のため次イテレーションへ。詳細は [2026-09-03-00-backlog.md](2026-09-03-00-backlog.md) を参照。> 0902a ブランチレビュー由来の 5 PBI。RICE 降順が着手順。03/04 は独立で並列可、01/02 も独立で並列可、05 は 01/02 に依存するため直列。詳細は [2026-09-03-00-backlog.md](2026-09-03-00-backlog.md) を参照.
 
 ### 未 PBI 化のトリガー
 - **なし。** PBI 06 の効果確認は 2026-09-01 に実施済み（未達 → 06b/06c を実装し達成）。残債は `2026-08-31-00-backlog.md` の「06d 候補」に記録（次 provider 追加時などに着手検討）
@@ -64,6 +55,17 @@
 - 2026-09-03-03-fix-dashboard-confirm-token-fail-closed.md（RICE 10.8 — dashboardGateway の confirm-token を fail-closed 化。token 取得失敗時に IPC を送らず `SqliteResult` エラーで返す。BDD テスト 16 件。type-check / lint / build green）
 - 2026-09-03-04-fix-domain-filter-mode-inversion.md（RICE 5.4 — DomainFilter の `isAllowedCached` / `CacheAdapter` が mode を無視し blacklist を whitelist として反転していたバグを修正。`isDomainInList` ヘルパ抽出、mode thread、cache に mode 追加。BDD テスト 44 件。type-check / lint / build green）
 - 2026-09-03-05-cleanup-orphan-exports-dead-mocks-shim-importers.md（RICE 0.9 — orphan exports 削除 (withLockViaPort, PROVIDER_REGISTRY, isDomainTrusted convenience)、dead vi.mock 除去 2 件、7 prod importer を optimisticLock → storageTransaction に移行、`optimisticLock.ts` 物理削除。type-check / lint / build green）
+
+
+### 2026-09-03 Architecture Deepening Round 2026-09-03b — 7件完了（Trust / Retry / Pipeline / Composition / Provider / SQLite）
+
+- 2026-09-03-01-refactor-trust-seam-consolidation.md（RICE 12.0 — globalThis registry 廃止。TrustDbKernel の `__trustDbKernel` 登録と TrustPolicy の `__TrustPolicyClass` を削除。`getTrustPolicy()` を `getTrustDbAdmin().getPolicy()` 委譲に、TrustDecision は `admin.getPolicy()` 毎回 lookup で stale 排除。Admin/Kernel に `isInitialized()` 追加で fail-closed 維持。158 tests green）
+- 2026-09-03-02-fix-retry-policy-ai-false-positive.md（RICE 9.6 — `isNetworkError` から `lower.includes('ai ')` を削除。ADR 2026-08-27 列挙語（network/fetch/timeout/offline/econnrefused/enotfound）+ connection/unavailable のみに限定。境界テスト 5 件追加。type-check / lint / build green）
+- 2026-09-03-03-refactor-pipeline-consolidation.md（RICE 6.0 — PipelineKernel(60行 thin loop)を RecordingOrchestrator.executeInternal に inline 化し削除。sole state owner 化でセマンティクス集約。89 tests green）
+- 2026-09-03-04-refactor-staged-context-branding.md（RICE 4.8 — StagedContext<S>/ContextStage 等 dead branding を削除。createInitialContext/assertStage 撤去、RetryContext を RecordingContext に。type-check / lint / build green）
+- 2026-09-03-05-refactor-composition-root-typed.md（RICE 4.0 — setSqliteHealthCheck/getSqliteHealthCheck の module-global ペアを削除。ensureStorageQuota の fallback chain を単純化、manifest onReady wiring 撤去。storageMaintenance テスト追加。type-check / lint / build green）
+- 2026-09-03-06-refactor-provider-catalog-split.md（RICE 2.7 — isAllowedProviderBaseUrl(124行)を providerSecurityPolicy.ts に分離。catalog は re-export で後方互換。61 tests green）
+- 2026-09-03-07-refactor-sqlite-gateway-single-seam.md（RICE 2.0 — sendDashboard の重複 Promise.race を sendDashboardRaw に統一。dashboardGateway テスト 16件 green）
 
 ### 2026-09-03 Architecture Deepening 0903 — 7件完了
 
