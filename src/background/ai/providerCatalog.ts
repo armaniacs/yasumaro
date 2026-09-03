@@ -288,9 +288,14 @@ export function isAllowedProviderBaseUrl(url: string, isLocal: boolean): boolean
     if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
       const octets = host.split('.').map((s) => parseInt(s, 10));
       if (octets.every((n) => Number.isFinite(n) && n >= 0 && n <= 255)) {
-        // 127.0.0.1 is legitimate localhost for local providers — exempt from block
+        // 127.0.0.1 is legitimate localhost for local providers (lm-studio/ollama)
+        // but should be blocked for non-local providers
         const is127Loopback = octets[0] === 127 && octets[1] === 0 && octets[2] === 0 && octets[3] === 1;
-        if (!is127Loopback && isBlockedIPv4(octets)) return false;
+        if (is127Loopback) {
+          if (!isLocal) return false;
+        } else {
+          if (isBlockedIPv4(octets)) return false;
+        }
       }
     }
 

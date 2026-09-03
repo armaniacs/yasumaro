@@ -232,11 +232,6 @@ export function withAtomicKeys<T extends readonly unknown[]>(
 }
 
 
-// Legacy no-op: post-write verification is always enabled in the deep module
-export function enablePostWriteVerification(): void {
-  // no-op: always enabled
-}
-
 // ---------------------------------------------------------------------------
 // Internal CAS helper (port-aware)
 // ---------------------------------------------------------------------------

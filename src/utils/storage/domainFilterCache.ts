@@ -96,8 +96,10 @@ export async function updateDomainFilterCache(settings: Settings): Promise<void>
     const filter = new DomainFilter();
     const cachedDomains = filter.buildCacheDomains(settings);
     const now = Date.now();
+    const mode = (settings[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'whitelist';
     await chrome.storage.local.set({
         [StorageKeys.DOMAIN_FILTER_CACHE]: cachedDomains,
         [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: now,
+        [StorageKeys.DOMAIN_FILTER_MODE]: mode,
     });
 }

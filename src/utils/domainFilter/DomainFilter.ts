@@ -20,6 +20,15 @@ export interface DomainFilterOptions {
 
 export const DEFAULT_DOMAIN_FILTER_TTL_MS = 5 * 60 * 1000;
 
+function isDomainInList(hostname: string, list: string[]): boolean {
+  const lower = hostname.toLowerCase();
+  return list.some((pattern) => {
+    if (!pattern.includes('*')) return lower === pattern.toLowerCase();
+    const re = wildcardToRegex(pattern);
+    return re ? re.test(hostname) : false;
+  });
+}
+
 export class DomainFilter {
   private readonly ttlMs: number;
   constructor(private readonly opts: DomainFilterOptions = {}) {
@@ -108,15 +117,6 @@ export class DomainFilter {
     };
   }
 
-  private isDomainInList(hostname: string, list: string[]): boolean {
-    const lower = hostname.toLowerCase();
-    return list.some((pattern) => {
-      if (!pattern.includes('*')) return lower === pattern.toLowerCase();
-      const re = wildcardToRegex(pattern);
-      return re ? re.test(hostname) : false;
-    });
-  }
-
   /**
    * Cache-aware isAllowed for content-script path (TTL from construction param).
    * Returns cached result if valid, otherwise falls back to live.
@@ -132,15 +132,15 @@ export class DomainFilter {
         const hostname = new URL(url).hostname.replace(/^www\./, '');
         const effectiveMode = mode ?? (cached as { mode?: string }).mode;
         if (effectiveMode === 'blacklist') {
-          return !this.isDomainInList(hostname, cached.allowedDomains);
+          return !isDomainInList(hostname, cached.allowedDomains);
         }
         if (effectiveMode === 'whitelist') {
-          return this.isDomainInList(hostname, cached.allowedDomains);
+          return isDomainInList(hostname, cached.allowedDomains);
         }
         // No mode or disabled: fall back to live for correctness
         // If cachedDomains is empty due to disabled, allow all
         if (cached.allowedDomains.length === 0) return true;
-        return this.isDomainInList(hostname, cached.allowedDomains);
+        return isDomainInList(hostname, cached.allowedDomains);
       } catch {
         return false;
       }
@@ -177,28 +177,19 @@ export class DomainFilterCacheAdapter {
     return this.ttlMs;
   }
 
-  private isDomainInList(hostname: string, list: string[]): boolean {
-    const lower = hostname.toLowerCase();
-    return list.some((pattern) => {
-      if (!pattern.includes('*')) return lower === pattern.toLowerCase();
-      const re = wildcardToRegex(pattern);
-      return re ? re.test(hostname) : false;
-    });
-  }
-
   async isAllowed(url: string, mode?: string): Promise<boolean> {
     if (this.cachedAt && Date.now() - this.cachedAt < this.ttlMs) {
       try {
         const hostname = new URL(url).hostname.replace(/^www\./, '');
         const effectiveMode = mode ?? this.cachedMode;
         if (effectiveMode === 'blacklist') {
-          return !this.isDomainInList(hostname, this.allowedDomains);
+          return !isDomainInList(hostname, this.allowedDomains);
         }
         if (effectiveMode === 'whitelist') {
-          return this.isDomainInList(hostname, this.allowedDomains);
+          return isDomainInList(hostname, this.allowedDomains);
         }
         if (this.allowedDomains.length === 0) return true;
-        return this.isDomainInList(hostname, this.allowedDomains);
+        return isDomainInList(hostname, this.allowedDomains);
       } catch {
         return false;
       }

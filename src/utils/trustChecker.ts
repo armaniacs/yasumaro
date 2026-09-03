@@ -5,6 +5,7 @@
  */
 
 import type { TrustResult, SafetyMode, TrancoTier } from './trustDb/trustDbSchema.js';
+import { DomainTrustLevel } from './trustDb/trustDbSchema.js';
 import { getTrustPolicy } from './trustDb/TrustPolicy.js';
 import { getTrustDbAdmin } from './trustDb/TrustDbAdmin.js';
 import { StorageKeys } from './storage/types.js';
@@ -175,9 +176,13 @@ export class TrustChecker {
         trustResult = await getTrustPolicy().isDomainTrusted(url);
       }
     } catch {
-      const admin = getTrustDbAdmin();
-      await admin.initialize();
-      trustResult = await getTrustPolicy().isDomainTrusted(url);
+      try {
+        const admin = getTrustDbAdmin();
+        await admin.initialize();
+        trustResult = getTrustPolicy().isDomainTrusted(url);
+      } catch {
+        trustResult = { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'trust_check_failed' } as import('./trustDb/trustDbSchema.js').TrustResult;
+      }
     }
 
     // ★ 修正: trustResult が trustResult プロパティを持っているか確認
