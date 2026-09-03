@@ -35,6 +35,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.104] - 2026-09-04
+
+このリリースは前日のレビュー指摘を即座に反映したものです。
+
+### Fixed
+
+- 秘匿キー一覧の二重管理を解消。`storagePort.ts` の文字列リテラル版と `settingsMigration.ts` の `StorageKeys` 参照版が並存し、新プロバイダー追加時の片方更新漏れで平文残留・漏洩が起きるリスクがあった。依存なしの `apiKeyFields.ts` を正典（SSOT）に一本化し、両モジュールから参照。drift 検出テストを追加
+- DomainFilter の判定・検証ロジックの重複を解消。キャッシュ付き許可判定2コピーを共有ヘルパー `evaluateCachedAllow` に抽出。保存時検証の二重実行（旧 `validateDomainList`＋新 `parseAndValidate`）を `DomainFilter.parseAndValidate` に一本化し、構文検証を共通 `domainValidator.ts` に集約（循環 import 回避）
+- レビュー由来の dead export を除去。stage-branding 残骸（`RequiresPrivacy` / `RequiresMarkdown`、Slice系4型）、未使用 `domainFilter` singleton、未配線 `RedactingStoragePort` クラスを削除。現役の `redactSettingsApiKeys` 関数は維持
+- `package-lock.json` のバージョンを `6.7.103` に同期（機能 commit にバージョン更新を同梱した際の lock 更新漏れを修正）
+
 ## [6.7.103] - 2026-09-04
 
 ### Added
