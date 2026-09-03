@@ -89,7 +89,6 @@ export {
 export { getStorageUsage } from './storage/quota.js';
 
 /** @deprecated Use direct module imports instead (see file header). */
-export { setSqliteHealthCheck, getSqliteHealthCheck } from './storage/storageMaintenance.js';
 
 /** @deprecated Use direct module imports instead (see file header). */
 export { purgeLegacyStorage } from './storage/savedUrlRepository.js';
