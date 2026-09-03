@@ -14,11 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-| # | PBI | RICE | 難易度 | 副作用 | 種別 | 状態 |
-|---|-----|------|--------|--------|------|------|
-| 5 | [2026-09-03-05-cleanup-orphan-exports-dead-mocks-shim-importers](2026-09-03-05-cleanup-orphan-exports-dead-mocks-shim-importers.md) | 0.9 | 🟢低 | 🟢なし | 🔧 | ⬜ |
-
-> 0902a ブランチレビュー由来の PBI。01-04 はコード修正+BDDテスト追加でアーカイブ済み。05 の A1-A4（orphan exports 4件）と C1-C2（shim importers 5 prod）は低RICE(0.9)のため次イテレーションへ。詳細は [2026-09-03-00-backlog.md](2026-09-03-00-backlog.md) を参照。> 0902a ブランチレビュー由来の 5 PBI。RICE 降順が着手順。03/04 は独立で並列可、01/02 も独立で並列可、05 は 01/02 に依存するため直列。詳細は [2026-09-03-00-backlog.md](2026-09-03-00-backlog.md) を参照.
+**進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る。> 0902a ブランチレビュー由来の PBI。01-04 はコード修正+BDDテスト追加でアーカイブ済み。05 の A1-A4（orphan exports 4件）と C1-C2（shim importers 5 prod）は低RICE(0.9)のため次イテレーションへ。詳細は [2026-09-03-00-backlog.md](2026-09-03-00-backlog.md) を参照。> 0902a ブランチレビュー由来の 5 PBI。RICE 降順が着手順。03/04 は独立で並列可、01/02 も独立で並列可、05 は 01/02 に依存するため直列。詳細は [2026-09-03-00-backlog.md](2026-09-03-00-backlog.md) を参照.
 
 ### 未 PBI 化のトリガー
 - **なし。** PBI 06 の効果確認は 2026-09-01 に実施済み（未達 → 06b/06c を実装し達成）。残債は `2026-08-31-00-backlog.md` の「06d 候補」に記録（次 provider 追加時などに着手検討）
@@ -50,6 +46,14 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-03 0902a ブランチレビュー由来の CRITICAL 修正 — 5件完了
+
+- 2026-09-03-01-fix-ssrf-allowlist-bypass.md（RICE 4.8 — `isAllowedProviderBaseUrl` を CIDR 範囲で堅牢化。0.0.0.0/8, 127.0.0.0/8, 169.254.0.0/16 の範囲ブロック追加、整数/hex IPv4 デコード、IPv6 ブロック (::1/::ffff:/fc00/fe80)。BDD テスト 38 件。type-check / lint / build green）
+- 2026-09-03-02-fix-trust-policy-orphan-singleton.md（RICE 4.8 — TrustPolicy の orphan fallback を撤廃し `getTrustDbAdmin().getPolicy()` に委譲。TrustDecision は `this.admin.getPolicy()` を毎回 lookup し stale cache を排除。BDD テスト 13 件。type-check / lint / build green）
+- 2026-09-03-03-fix-dashboard-confirm-token-fail-closed.md（RICE 10.8 — dashboardGateway の confirm-token を fail-closed 化。token 取得失敗時に IPC を送らず `SqliteResult` エラーで返す。BDD テスト 16 件。type-check / lint / build green）
+- 2026-09-03-04-fix-domain-filter-mode-inversion.md（RICE 5.4 — DomainFilter の `isAllowedCached` / `CacheAdapter` が mode を無視し blacklist を whitelist として反転していたバグを修正。`isDomainInList` ヘルパ抽出、mode thread、cache に mode 追加。BDD テスト 44 件。type-check / lint / build green）
+- 2026-09-03-05-cleanup-orphan-exports-dead-mocks-shim-importers.md（RICE 0.9 — orphan exports 削除 (withLockViaPort, PROVIDER_REGISTRY, isDomainTrusted convenience)、dead vi.mock 除去 2 件、7 prod importer を optimisticLock → storageTransaction に移行、`optimisticLock.ts` 物理削除。type-check / lint / build green）
 
 ### 2026-09-03 Architecture Deepening 0903 — 7件完了
 
