@@ -166,42 +166,18 @@ export interface PipelineOutput {
 }
 
 /**
- * Full recording context: 7-way intersection (legacy).
+ * Full recording context: 7-way intersection.
  *
- * Canonical typed seam is now `StagedContext<S>` via `contextBuilder.ts`:
- * - New code must use `createInitialContext()` / `createRetryContext()` / `createStepDeps()`
- *   which return branded `StagedContext<'initial' | 'privacy' | ...>`.
- * - `StagedContext<'formatted'>` is required to read `markdown`; passing
- *   `StagedContext<'initial'>` is a compile-time error (see `contextBuilder.test.ts` `@ts-expect-error`).
- * - `RecordingContext` is retained only for `PipelineStep.execute` backward compat and
- *   is superseded for construction; `grep "PipelineInput & CheckResults"` should no
- *   longer be the primary for new call sites.
+ * Constructed via `contextBuilder.ts` helpers (`createRetryContext()` /
+ * `createStepDeps()`). Step ordering (e.g. `markdown` only after
+ * formatMarkdownStep) is enforced at runtime by the orchestrator's step
+ * sequence; the earlier stage-branding experiment was removed because the
+ * step seam never consumed the brands.
  *
  * @internal — internal seam, not part of public interface. Only RecordingOrchestrator constructs and passes this.
  */
 export type RecordingContext = PipelineInput & CheckResults & PrivacyResults & ContentResults & FormatResults & PipelineTimings & PipelineOutput;
 
-// ---------------------------------------------------------------------------
-// Typed stage branding — see contextBuilder.ts for builder helpers
-// ---------------------------------------------------------------------------
-
-declare const StageBrand: unique symbol;
-type Brand<S extends string> = { readonly [StageBrand]: S };
-
-export type ContextStage =
-  | 'initial'
-  | 'checked'
-  | 'privacy'
-  | 'extracted'
-  | 'formatted'
-  | 'final';
-
-export type StagedContext<S extends ContextStage> = RecordingContext & Brand<S>;
-export type InitialContext = StagedContext<'initial'>;
-export type CheckedContext = StagedContext<'checked'>;
-export type PrivacyContext = StagedContext<'privacy'>;
-export type ExtractedContext = StagedContext<'extracted'>;
-export type FormattedContext = StagedContext<'formatted'>;
 
 export type RequiresPrivacy<C> = C extends { privacyResult: NonNullable<PrivacyResults['privacyResult']> } ? C : never;
 export type RequiresMarkdown<C> = C extends { markdown: string } ? C : never;

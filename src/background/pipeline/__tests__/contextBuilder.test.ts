@@ -3,9 +3,7 @@ import {
   createRetryContext,
   createStepDeps,
   createSaveSqliteParams,
-  createInitialContext,
 } from '../contextBuilder.js';
-import type { FormattedContext, InitialContext } from '../types.js';
 import type { ObsidianClient } from '../../obsidianClient.js';
 import type { SqliteClient } from '../../sqlite/offscreenGateway.js';
 
@@ -74,33 +72,5 @@ describe('contextBuilder', () => {
     });
     expect(params.obsidianSynced).toBe(true);
     expect(params.traceId).toBe('trace-xyz');
-  });
-
-  it('createInitialContext builds staged initial context', () => {
-    const data = { title: 'T', url: 'https://example.com', content: 'c' } as any;
-    const ctx = createInitialContext(data, {} as any, 'trace-abc');
-    expect((ctx as any).traceId).toBe('trace-abc');
-    expect(ctx.data.url).toBe('https://example.com');
-  });
-
-  it('out-of-order read is a type error (compile-time)', () => {
-    // This test documents the intended type error. The @ts-expect-error below
-    // must not be removed — it proves the builder's branded stage prevents
-    // passing an InitialContext where a FormattedContext is required.
-    function needsFormatted(ctx: FormattedContext) {
-      return ctx.markdown;
-    }
-    const initial = createInitialContext(
-      { title: 'T', url: 'https://example.com', content: '' } as any,
-      {} as any,
-      'trace-1'
-    ) as InitialContext;
-
-    // @ts-expect-error — 'initial' not assignable to 'formatted', out-of-order read is a type error
-    needsFormatted(initial);
-
-    // Positive case: properly staged context passes
-    const formatted = { ...initial, markdown: 'md' } as unknown as FormattedContext;
-    expect(needsFormatted(formatted)).toBe('md');
   });
 });

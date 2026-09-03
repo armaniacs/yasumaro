@@ -2,13 +2,11 @@
  * Typed Context builder for RecordingPipeline.
  *
  * RecordingContext is a 7-way intersection (PipelineInput & CheckResults & ...).
- * Out-of-order reads (e.g. reading `markdown` before formatMarkdownStep) were
- * previously runtime `undefined`. This module introduces explicit stage-branded
- * slices and a builder that makes the contract type-checkable.
- *
- * Full Result<> threading is intentionally deferred — the builder provides the
- * minimal seam to get a compile-time error on mis-ordered step composition
- * without rewriting all 13 steps at once.
+ * Out-of-order reads (e.g. reading `markdown` before formatMarkdownStep) are
+ * guarded at runtime by step ordering, not by type branding: the earlier
+ * stage-branded context experiment was removed because the step seam
+ * (PipelineStepFunction) never consumed the brands — the promised compile-time
+ * error could not fire. Keep slices below if a future seam adopts them.
  */
 
 import type { RecordingData } from '../../messaging/types.js';
@@ -18,9 +16,6 @@ import type {
   StepDeps,
   PipelineInput,
   PipelineOutput,
-  ContextStage,
-  StagedContext,
-  InitialContext,
 } from './types.js';
 import type { PrivacyPipelineResult } from '../privacyPipeline.js';
 import type { ObsidianClient } from '../obsidianClient.js';
@@ -29,9 +24,6 @@ import type { SqliteClient } from '../sqlite/offscreenGateway.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import type { SaveSqliteStepParams } from './steps/saveSqliteStep.js';
 import type { UrlStore } from './types.js';
-
-// Re-export stage types for consumers that import only from builder
-export type { ContextStage, StagedContext, InitialContext } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Slice interfaces — each step declares which slice it reads/writes
@@ -77,10 +69,9 @@ export interface RetryJobInput {
 
 /**
  * RetryContext is the narrow context for the 2-step retry pipeline
- * (formatMarkdown + saveToObsidian). It carries only Input + PrivacyResults
- * and is branded 'privacy' to allow formatMarkdownStep to accept it.
+ * (formatMarkdown + saveToObsidian). It carries Input + PrivacyResults.
  */
-export type RetryContext = StagedContext<'privacy'>;
+export type RetryContext = RecordingContext;
 
 export function createRetryContext(
   job: RetryJobInput,
@@ -103,7 +94,7 @@ export function createRetryContext(
     (base as RecordingContext).traceId = traceId;
   }
 
-  return base as RetryContext;
+  return base;
 }
 
 function buildPrivacyResult(summary: string, tags?: string[] | undefined): PrivacyPipelineResult {
@@ -177,35 +168,3 @@ export function createSaveSqliteParams(input: SaveSqliteBuilderInput): SaveSqlit
   return params;
 }
 
-// ---------------------------------------------------------------------------
-// Initial context builder — explicit typed construction for normal/preview
-// ---------------------------------------------------------------------------
-
-export function createInitialContext(
-  data: RecordingData,
-  settings: Settings,
-  traceId: string,
-  aiService?: AIService | null | undefined
-): InitialContext {
-  const ctx: RecordingContext = {
-    data,
-    settings,
-    force: Boolean((data as unknown as { force?: boolean }).force),
-    errors: [],
-    traceId,
-  };
-
-  if (aiService !== undefined) {
-    (ctx as RecordingContext).aiService = aiService as AIService;
-  }
-
-  return ctx as InitialContext;
-}
-
-/**
- * Assert that a context has reached a given stage.
- * Useful in tests to verify stage branding: `assertStage<PrivacyContext>(ctx, 'privacy')`
- */
-export function assertStage<S extends ContextStage>(_ctx: StagedContext<S>, _stage: S): void {
-  // runtime no-op, type-level only
-}
