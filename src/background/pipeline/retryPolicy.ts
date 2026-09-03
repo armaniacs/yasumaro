@@ -2,8 +2,10 @@
 
 /**
  * RetryPolicy — owns network-error detection and offline enqueue decision.
- * Previously `StepExecutor.isNetworkError` was a string heuristic (`msg.includes('ai ')`)
- * inside the executor. Extracting it makes the policy unit-testable without network
+ * Enum matches ADR 2026-08-27 (network/fetch/timeout/offline/econnrefused/enotfound)
+ * plus connection/unavailable. Substring heuristics like `ai ` were removed — they
+ * matched unrelated failures (e.g. "Failed for ai pipeline") and broadened offline
+ * eligibility beyond the ADR enumeration. Extracting it makes the policy unit-testable without network
  * and hides the heuristic from the executor's interface.
  *
  * One adapter = hypothetical seam, two = real. Currently one policy, but the
@@ -23,8 +25,7 @@ export class RetryPolicy {
       lower.includes('enotfound') ||
       lower.includes('refused') ||
       lower.includes('connection') ||
-      lower.includes('unavailable') ||
-      lower.includes('ai ')
+      lower.includes('unavailable')
     ) {
       return true;
     }
