@@ -103,7 +103,7 @@ export interface SqliteClientBackedDeps {
  * implementations of those four were never exercised by any test.
  */
 export function createSqliteClientDeps(
-  sqliteClient: import('../../sqliteClient.js').SqliteClient,
+  sqliteClient: import('../../sqlite/offscreenGateway.js').SqliteClient,
   serviceWorkerDeps: SqliteClientBackedDeps & { getConfirmToken?: () => Promise<string> },
 ): DashboardSqliteHandlerDeps {
   const normalizedDeps: SqliteClientBackedDeps = (() => {

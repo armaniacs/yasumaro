@@ -25,10 +25,6 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../obsidianClient.js', () => ({ ObsidianClient: mocks.ObsidianClient }));
-vi.mock('../sqliteClient.js', () => ({
-  SqliteClient: mocks.SqliteClient,
-  getSharedSqliteClient: mocks.getSharedSqliteClient,
-}));
 vi.mock('../sqlite/offscreenGateway.js', () => ({
   SqliteClient: mocks.SqliteClient,
   getSharedSqliteClient: mocks.getSharedSqliteClient,

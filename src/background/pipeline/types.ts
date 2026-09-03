@@ -268,5 +268,5 @@ export interface StepDeps {
   /** URL store for duplicate-detection lookups (checkDuplicateStep) */
   urlStore?: UrlStore;
   /** SQLite client for persistence (saveSqliteStep) */
-  sqliteClient?: import('../sqliteClient.js').SqliteClient | null;
+  sqliteClient?: import('../sqlite/offscreenGateway.js').SqliteClient | null;
 }

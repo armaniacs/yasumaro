@@ -33,7 +33,7 @@ export function getSqliteHealthCheck(): SqliteHealthCheck | null {
  */
 export async function getDefaultSqliteHealthCheck(): Promise<SqliteHealthCheck> {
     try {
-        const { SqliteClient } = await import('../../background/sqliteClient.js');
+        const { SqliteClient } = await import('../../background/sqlite/offscreenGateway.js');
         const client = new SqliteClient();
         return async () => {
             const r = await client.maintain({ type: 'healthCheck' });

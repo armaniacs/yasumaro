@@ -7,7 +7,7 @@ const mockSet = vi.hoisted(() => vi.fn());
 
 import { GistSyncTarget } from '../syncTargets/gistSyncTarget.js';
 
-vi.mock('../sqliteClient.js', () => ({
+vi.mock('../sqlite/offscreenGateway.js', () => ({
   SqliteClient: vi.fn().mockImplementation(() => {
     const qr = vi.fn();
     const ur = vi.fn();
