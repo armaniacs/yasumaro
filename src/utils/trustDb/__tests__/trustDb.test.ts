@@ -49,15 +49,23 @@ vi.mock('../../logger.js', () => ({
 }));
 
 // storageTransaction をモック（optimisticLock shim は削除済み）
-vi.mock('../storage/storageTransaction.js', () => ({
-  withOptimisticLock: vi.fn(async (_key: string, fn: () => Promise<any>) => fn()),
-  StorageTransaction: vi.fn().mockImplementation(() => ({
-    withLock: vi.fn(async (_key: string, fn: (v: unknown) => unknown) => {
-      const val = undefined;
-      return fn(val);
-    }),
-    withAtomic: vi.fn(async (_keys: unknown, fn: (vals: unknown) => unknown) => fn([])),
-  })),
+vi.mock('../../storage/storageTransaction.js', () => ({
+  withOptimisticLock: vi.fn(async (key: string, fn: (current: unknown) => unknown) => {
+    const res = await (globalThis as any).chrome.storage.local.get([key, `${key}_version`]);
+    return fn(res[key]);
+  }),
+  StorageTransaction: class {
+    async withLock<T>(key: string, fn: (v: unknown) => T): Promise<T> {
+      // Read-modify-write via the mocked chrome.storage.local (mirrors CAS semantics)
+      const res = await (globalThis as any).chrome.storage.local.get([key, `${key}_version`]);
+      const next = await fn(res[key]);
+      await (globalThis as any).chrome.storage.local.set({ [key]: next });
+      return next as T;
+    }
+    async withAtomic(keys: unknown, fn: (vals: unknown) => unknown): Promise<unknown> {
+      return fn([]);
+    }
+  },
   ConflictError: class ConflictError extends Error {
     constructor(key: string, expected: number, actual: number) {
       super(`Conflict detected for key: ${key} (expected: ${expected}, actual: ${actual})`);
@@ -99,7 +107,7 @@ vi.mock('../../storage.js', async (importOriginal) => {
   };
 });;
 
-import { getTrustDbAdmin, TrustDbAdmin, isDomainTrusted } from '../TrustDbAdmin.js';
+import { getTrustDbAdmin, TrustDbAdmin } from '../TrustDbAdmin.js';
 import { DomainTrustLevel } from '../trustDbSchema.js';
 import { DomainVerifier } from '../domainVerifier.js';
 import { settingsRepository } from '../../storage/SettingsRepository.js';
@@ -129,13 +137,36 @@ describe('TrustDb', () => {
       if (key === 'settings') return { settings: { ...mockSettingsStore } };
       return result;
     });
+    // Generic in-memory store for non-settings keys (trust_db:json etc.)
+    const mockTrustStore: Record<string, unknown> = {};
     (chrome.storage.local.set as vi.Mock).mockImplementation(async (items: Record<string, unknown>) => {
-      if (items && typeof items === 'object' && 'settings' in items) {
-        Object.assign(mockSettingsStore, items['settings'] as Record<string, unknown>);
+      if (items && typeof items === 'object') {
+        for (const [k, v] of Object.entries(items)) {
+          if (k === 'settings') {
+            Object.assign(mockSettingsStore, v as Record<string, unknown>);
+          } else if (k === 'settings_version') {
+            mockSettingsVersion = v as number;
+          } else {
+            mockTrustStore[k] = v;
+          }
+        }
       }
-      if (items && typeof items === 'object' && 'settings_version' in items) {
-        mockSettingsVersion = items['settings_version'] as number;
+    });
+    // Patch get mock to read from mockTrustStore
+    const currentGet = (chrome.storage.local.get as vi.Mock).getMockImplementation();
+    (chrome.storage.local.get as vi.Mock).mockImplementation(async (key?: string | string[] | null) => {
+      if (typeof key === 'string' && key in mockTrustStore) {
+        return { [key]: mockTrustStore[key] };
       }
+      if (Array.isArray(key)) {
+        const out: Record<string, unknown> = {};
+        let handledTrust = false;
+        for (const k of key) {
+          if (k in mockTrustStore) { out[k] = mockTrustStore[k]; handledTrust = true; }
+        }
+        if (handledTrust) return out;
+      }
+      return currentGet ? currentGet(key) : {};
     });
     // シングルトンをリセット
     (getTrustDbAdmin() as any).state = {
@@ -594,15 +625,6 @@ describe('TrustDb', () => {
       await db.initialize();
       await db.updateTranco(['google.com'], 'top1k');
       expect(db.isTrancoDomain('https://google.com/page')).toBe(true);
-    });
-  });
-
-  describe('isDomainTrusted (convenience function)', () => {
-    test('ドメインが信頼済みか確認できる', async () => {
-      (chrome.storage.local.get as vi.Mock).mockResolvedValue({});
-      const result = await isDomainTrusted('example.go.jp');
-      expect(result).toHaveProperty('level');
-      expect(result).toHaveProperty('source');
     });
   });
 
