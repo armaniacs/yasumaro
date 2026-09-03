@@ -7,7 +7,7 @@ import {
 } from '../contextBuilder.js';
 import type { FormattedContext, InitialContext } from '../types.js';
 import type { ObsidianClient } from '../../obsidianClient.js';
-import type { SqliteClient } from '../../sqliteClient.js';
+import type { SqliteClient } from '../../sqlite/offscreenGateway.js';
 
 describe('contextBuilder', () => {
   it('createRetryContext builds privacy Result with tags when provided', () => {

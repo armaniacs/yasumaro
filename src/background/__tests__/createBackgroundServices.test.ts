@@ -29,6 +29,12 @@ vi.mock('../sqliteClient.js', () => ({
   SqliteClient: mocks.SqliteClient,
   getSharedSqliteClient: mocks.getSharedSqliteClient,
 }));
+vi.mock('../sqlite/offscreenGateway.js', () => ({
+  SqliteClient: mocks.SqliteClient,
+  getSharedSqliteClient: mocks.getSharedSqliteClient,
+  OffscreenGateway: vi.fn(),
+  SqliteGateway: vi.fn(),
+}));
 vi.mock('../tabCache.js', () => ({ TabCache: mocks.TabCache }));
 vi.mock('../rateLimiter.js', () => ({ RateLimiter: mocks.RateLimiter }));
 vi.mock('../manualContentFetcher.js', () => ({ ManualContentFetcher: mocks.ManualContentFetcher }));

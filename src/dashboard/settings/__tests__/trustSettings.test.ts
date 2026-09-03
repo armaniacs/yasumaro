@@ -201,6 +201,22 @@ vi.mock('../../../utils/trustDb/trustDb.js', () => ({
   })),
 }));
 
+vi.mock('../../../utils/trustDb/TrustDbAdmin.js', () => ({
+  getTrustDbAdmin: vi.fn(() => ({
+    initialize: mockInitialize,
+    getDatabase: mockGetDatabase,
+    getJpAnchorTlds: mockGetJpAnchorTlds,
+    getSensitiveDomains: mockGetSensitiveDomains,
+    getWhitelist: mockGetWhitelist,
+    addJpAnchorTld: mockAddJpAnchorTld,
+    removeJpAnchorTld: mockRemoveJpAnchorTld,
+    addSensitiveDomain: mockAddSensitiveDomain,
+    removeSensitiveDomain: mockRemoveSensitiveDomain,
+    addToWhitelist: mockAddToWhitelist,
+    removeFromWhitelist: mockRemoveFromWhitelist,
+  })),
+}));
+
 const mockIsUpdateInProgress = vi.fn(() => false);
 const mockUpdateTrancoList = vi.fn(() => Promise.resolve({ success: true, domainsCount: 10000 }));
 
@@ -216,6 +232,7 @@ const mockLogWarn = vi.fn();
 const mockLogError = vi.fn();
 
 vi.mock('../../../utils/logger.js', () => ({
+  logDebug: vi.fn(),
   logInfo: mockLogInfo,
   logWarn: mockLogWarn,
   logError: mockLogError,

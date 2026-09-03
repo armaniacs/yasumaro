@@ -23,7 +23,7 @@ import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 import type { Settings } from '../../utils/storage/types.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIService } from '../ai/AIService.js';
-import type { SqliteClient } from '../sqliteClient.js';
+import type { SqliteClient } from '../sqlite/offscreenGateway.js';
 import { mapToBrowsingLogRecord } from './mappers/BrowsingLogRecordMapper.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';

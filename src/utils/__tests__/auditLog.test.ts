@@ -20,9 +20,13 @@ vi.mock('../../background/sqliteClient.js', () => {
   };
 });
 
-vi.mock('../logger.js', () => ({
-  logError: vi.fn(),
-}));
+vi.mock('../logger.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...(actual as object),
+    logError: vi.fn(),
+  };
+});
 
 // Import after mocking
 import { recordAuditLog, getAuditLogs } from '../auditLog.js';

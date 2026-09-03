@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MigrationService } from '../migrationService.js';
-import { SqliteClient } from '../sqliteClient.js';
+import { SqliteClient } from '../sqlite/offscreenGateway.js';
 
 describe('MigrationService', () => {
   let service: MigrationService;

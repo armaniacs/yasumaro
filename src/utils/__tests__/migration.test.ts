@@ -18,6 +18,14 @@ vi.mock('../trustDb/trustDb.js', () => ({
   getTrustDb: () => ({ initialize: mockInitialize })
 }), { virtual: true });
 
+vi.mock('../trustDb/TrustDbAdmin.js', () => ({
+  getTrustDbAdmin: () => ({ initialize: mockInitialize })
+}), { virtual: true });
+
+vi.mock('../trustDb/TrustPolicy.js', () => ({
+  getTrustPolicy: () => ({ isDomainTrusted: vi.fn() })
+}), { virtual: true });
+
 describe('migration', () => {
   // 【テスト前準備】: 各テスト実行前にChrome APIのモックをクリア
   beforeEach(() => {

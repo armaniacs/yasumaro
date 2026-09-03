@@ -3,7 +3,7 @@ import { pickDefined } from '../../../utils/objectUtils.js';
 import { formatEntriesToMarkdown } from '../../../utils/markdownFormatter.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import type { BrowsingLogEntry, BrowsingLogRecord } from '../../../utils/sqlite-types.js';
-import type { CallResult, SqliteError } from '../../sqliteClient.js';
+import type { CallResult, SqliteError } from '../../sqlite/offscreenGateway.js';
 
 export const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 export const MAX_APPEND_IDS = 100;

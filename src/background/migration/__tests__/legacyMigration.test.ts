@@ -5,7 +5,7 @@ import {
   type LegacyUrlEntry,
 } from '../legacyMigration.js';
 import { InMemoryMigrationStateAdapter } from '../migrationState.js';
-import type { SqliteClient } from '../../sqliteClient.js';
+import type { SqliteClient } from '../sqlite/offscreenGateway.js';
 import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 
 describe('mapLegacyEntryToRecord', () => {

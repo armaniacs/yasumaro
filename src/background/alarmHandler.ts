@@ -7,7 +7,7 @@
 import { handleDailyPurgeAlarm } from './dailyPurgeHandler.js';
 import { flushPendingRecords } from './pendingSqliteQueue.js';
 import { flushPendingWrites } from './pendingChromeStorageQueue.js';
-import type { SqliteClient } from './sqliteClient.js';
+import type { SqliteClient } from './sqlite/offscreenGateway.js';
 import type { OfflineNetworkQueue } from './offlineNetworkQueue.js';
 import type { RecordingOrchestrator } from './pipeline/RecordingOrchestrator.js';
 import { createOfflineQueueProcessor } from './offlineQueueProcessor.js';

@@ -36,6 +36,22 @@ vi.mock('../../../utils/trustDb/trustDb.js', () => ({
   })),
 }));
 
+vi.mock('../../../utils/trustDb/TrustDbAdmin.js', () => ({
+  getTrustDbAdmin: vi.fn(() => ({
+    initialize: mockInitialize,
+    getDatabase: mockGetDatabase,
+    getJpAnchorTlds: mockGetJpAnchorTlds,
+    getSensitiveDomains: mockGetSensitiveDomains,
+    getWhitelist: mockGetWhitelist,
+    addJpAnchorTld: mockAddJpAnchorTld,
+    removeJpAnchorTld: mockRemoveJpAnchorTld,
+    addSensitiveDomain: mockAddSensitiveDomain,
+    removeSensitiveDomain: mockRemoveSensitiveDomain,
+    addToWhitelist: mockAddToWhitelist,
+    removeFromWhitelist: mockRemoveFromWhitelist,
+  })),
+}));
+
 vi.mock('../../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = { StorageKeys: { PERMISSION_NOTIFY_THRESHOLD: 'permission_notify_threshold' } } as Record<string, unknown>;
@@ -84,7 +100,9 @@ vi.mock('../../../utils/trustDb/trancoUpdater.js', () => ({
 const mockLogInfo = vi.fn();
 const mockLogError = vi.fn();
 vi.mock('../../../utils/logger.js', () => ({
+  logDebug: vi.fn(),
   logInfo: mockLogInfo,
+  logWarn: vi.fn(),
   logError: mockLogError,
   ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
 }));

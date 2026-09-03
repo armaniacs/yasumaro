@@ -17,7 +17,7 @@
 
 import { createDashboardSqliteHandler, createSqliteClientDeps } from '../dashboardSqliteHandlers.js';
 import type { SqliteClientBackedDeps } from '../dashboardSqliteHandlers.js';
-import type { SqliteClient } from '../../sqliteClient.js';
+import type { SqliteClient } from '../../sqlite/offscreenGateway.js';
 import type { DashboardSqliteRequest } from '../dashboardSqliteProtocol.js';
 
 /** Matches the wrapper's former defaults so migrated tests keep their behaviour. */

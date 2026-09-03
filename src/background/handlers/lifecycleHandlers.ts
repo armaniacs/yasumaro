@@ -14,7 +14,7 @@ import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../../utils/log
 import { errorMessage } from '../../utils/errorUtils.js';
 import { updateConsentBadge } from '../consentBadge.js';
 import { flushPendingRecords } from '../pendingSqliteQueue.js';
-import type { SqliteClient } from '../sqliteClient.js';
+import type { SqliteClient } from '../sqlite/offscreenGateway.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { syncOllamaOriginRule } from '../net/ollamaOriginRule.js';
 import { getRegistryEntry } from '../ai/providerCatalog.js';

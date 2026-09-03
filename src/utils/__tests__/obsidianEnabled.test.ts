@@ -49,6 +49,18 @@ vi.mock('../trustDb/trustDb.js', () => ({
   })),
 }));
 
+vi.mock('../trustDb/TrustPolicy.js', () => ({
+  getTrustPolicy: vi.fn(() => ({
+    isDomainTrusted: vi.fn(() => ({ level: 'UNVERIFIED', source: 'unknown', reason: '' })),
+  })),
+}));
+
+vi.mock('../trustDb/TrustDbAdmin.js', () => ({
+  getTrustDbAdmin: vi.fn(() => ({
+    initialize: vi.fn(async () => {}),
+  })),
+}));
+
 beforeEach(() => {
   for (const key of Object.keys(mockStorage)) {
     delete mockStorage[key];

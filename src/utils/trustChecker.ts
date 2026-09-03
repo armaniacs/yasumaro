@@ -172,12 +172,12 @@ export class TrustChecker {
       } else {
         const admin = getTrustDbAdmin();
         await admin.initialize();
-        trustResult = getTrustPolicy().isDomainTrusted(url);
+        trustResult = await getTrustPolicy().isDomainTrusted(url);
       }
     } catch {
       const admin = getTrustDbAdmin();
       await admin.initialize();
-      trustResult = getTrustPolicy().isDomainTrusted(url);
+      trustResult = await getTrustPolicy().isDomainTrusted(url);
     }
 
     // ★ 修正: trustResult が trustResult プロパティを持っているか確認
@@ -278,7 +278,7 @@ export class TrustChecker {
   }> {
     const admin = getTrustDbAdmin();
     await admin.initialize();
-    const result = getTrustPolicy().isDomainTrusted(url);
+    const result = await getTrustPolicy().isDomainTrusted(url);
 
     const mapping: Record<string, { color: string; icon: string }> = {
       'trusted': { color: '#10b981', icon: '🟢' },      // Green - Trusted

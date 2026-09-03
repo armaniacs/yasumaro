@@ -36,6 +36,22 @@ vi.mock('../../../utils/trustDb/trustDb.js', () => ({
   })),
 }));
 
+vi.mock('../../../utils/trustDb/TrustDbAdmin.js', () => ({
+  getTrustDbAdmin: vi.fn(() => ({
+    initialize: mockInitialize,
+    getDatabase: mockGetDatabase,
+    getJpAnchorTlds: mockGetJpAnchorTlds,
+    getSensitiveDomains: mockGetSensitiveDomains,
+    getWhitelist: mockGetWhitelist,
+    addJpAnchorTld: mockAddJpAnchorTld,
+    removeJpAnchorTld: mockRemoveJpAnchorTld,
+    addSensitiveDomain: mockAddSensitiveDomain,
+    removeSensitiveDomain: mockRemoveSensitiveDomain,
+    addToWhitelist: mockAddToWhitelist,
+    removeFromWhitelist: mockRemoveFromWhitelist,
+  })),
+}));
+
 vi.mock('../../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
@@ -192,6 +208,7 @@ const mockLogWarn = vi.fn();
 const mockLogError = vi.fn();
 
 vi.mock('../../../utils/logger.js', () => ({
+  logDebug: vi.fn(),
   logInfo: mockLogInfo,
   logWarn: mockLogWarn,
   logError: mockLogError,

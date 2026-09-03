@@ -10,7 +10,7 @@ import { migrateToSingleSettingsObject } from '../utils/storage/settingsMigratio
 import { migrateLegacyPendingPagesKey } from '../utils/pendingStorage.js';
 import { SessionStore } from './sessionStore.js';
 import { MigrationService } from './migrationService.js';
-import type { SqliteClient } from './sqliteClient.js';
+import type { SqliteClient } from './sqlite/offscreenGateway.js';
 
 async function runMigration(): Promise<void> {
   try {

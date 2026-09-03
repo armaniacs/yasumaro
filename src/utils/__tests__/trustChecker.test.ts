@@ -78,6 +78,19 @@ vi.mock('../trustDb/trustDb.js', () => ({
   })),
 }));
 
+vi.mock('../trustDb/TrustPolicy.js', () => ({
+  getTrustPolicy: vi.fn(() => ({
+    isDomainTrusted: mockIsDomainTrusted,
+  })),
+}));
+
+vi.mock('../trustDb/TrustDbAdmin.js', () => ({
+  getTrustDbAdmin: vi.fn(() => ({
+    initialize: mockDbInitialize,
+    isDomainTrusted: mockIsDomainTrusted,
+  })),
+}));
+
 // Initialize chrome mocks at module level
 setupChromeMocks();
 
