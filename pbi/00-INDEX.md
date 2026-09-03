@@ -16,13 +16,9 @@
 
 | # | PBI | RICE | 難易度 | 副作用 | 種別 | 状態 |
 |---|-----|------|--------|--------|------|------|
-| 1 | [2026-09-03-03-fix-dashboard-confirm-token-fail-closed](2026-09-03-03-fix-dashboard-confirm-token-fail-closed.md) | 10.8 | 🟢低 | 🔴あり | 🔧 | ⬜ |
-| 2 | [2026-09-03-04-fix-domain-filter-mode-inversion](2026-09-03-04-fix-domain-filter-mode-inversion.md) | 5.4 | 🟢低 | 🔴あり | 🔧 | ⬜ |
-| 3 | [2026-09-03-01-fix-ssrf-allowlist-bypass](2026-09-03-01-fix-ssrf-allowlist-bypass.md) | 4.8 | 🔴高 | 🔴あり | 🔧 | ⬜ |
-| 4 | [2026-09-03-02-fix-trust-policy-orphan-singleton](2026-09-03-02-fix-trust-policy-orphan-singleton.md) | 4.8 | 🟢低 | 🔴あり | 🔧 | ⬜ |
 | 5 | [2026-09-03-05-cleanup-orphan-exports-dead-mocks-shim-importers](2026-09-03-05-cleanup-orphan-exports-dead-mocks-shim-importers.md) | 0.9 | 🟢低 | 🟢なし | 🔧 | ⬜ |
 
-> 0902a ブランチレビュー由来の 5 PBI。RICE 降順が着手順。03/04 は独立で並列可、01/02 も独立で並列可、05 は 01/02 に依存するため直列。詳細は [2026-09-03-00-backlog.md](2026-09-03-00-backlog.md) を参照.
+> 0902a ブランチレビュー由来の PBI。01-04 はコード修正+BDDテスト追加でアーカイブ済み。05 の A1-A4（orphan exports 4件）と C1-C2（shim importers 5 prod）は低RICE(0.9)のため次イテレーションへ。詳細は [2026-09-03-00-backlog.md](2026-09-03-00-backlog.md) を参照。> 0902a ブランチレビュー由来の 5 PBI。RICE 降順が着手順。03/04 は独立で並列可、01/02 も独立で並列可、05 は 01/02 に依存するため直列。詳細は [2026-09-03-00-backlog.md](2026-09-03-00-backlog.md) を参照.
 
 ### 未 PBI 化のトリガー
 - **なし。** PBI 06 の効果確認は 2026-09-01 に実施済み（未達 → 06b/06c を実装し達成）。残債は `2026-08-31-00-backlog.md` の「06d 候補」に記録（次 provider 追加時などに着手検討）
