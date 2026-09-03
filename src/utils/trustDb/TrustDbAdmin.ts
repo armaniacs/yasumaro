@@ -39,6 +39,11 @@ export class TrustDbAdmin {
     return this.kernel.initialize();
   }
 
+  /** True after initialize() completed — getTrustPolicy() throws before this */
+  isInitialized(): boolean {
+    return this.kernel.isInitialized();
+  }
+
   // --- Readonly delegation (share kernel state; storage-free check still via Policy) ---
   isDomainTrusted(domain: string): TrustResult {
     return this.kernel.isDomainTrusted(domain);

@@ -11,6 +11,7 @@ import { DomainVerifier } from './domainVerifier.js';
 import { BloomFilterManager } from './bloomFilterManager.js';
 import { TrancoManager } from './trancoManager.js';
 import { logError, ErrorCode } from '../logger.js';
+import { getTrustDbAdmin } from './TrustDbAdmin.js';
 
 export interface TrustPolicyDeps {
   save: () => Promise<void>;
@@ -94,16 +95,15 @@ export class TrustPolicy {
   }
 }
 
-// Register class for Kernel's global-based instantiation (breaks static cycle)
-(globalThis as unknown as Record<string, unknown>).__TrustPolicyClass = TrustPolicy;
-
 // --- Singleton seam (readonly, storage-free) ---
+// Delegates to the Admin singleton's kernel-owned policy — single module-scope
+// reference, no globalThis registry. Throws before initialization (fail-closed).
 export function getTrustPolicy(): TrustPolicy {
-  const gk = (globalThis as unknown as Record<string, unknown>).__trustDbKernel as { getPolicy?: () => TrustPolicy } | undefined;
-  if (gk?.getPolicy) {
-    return gk.getPolicy();
+  const admin = getTrustDbAdmin();
+  if (!admin.isInitialized()) {
+    throw new Error('TrustDb not initialized: call getTrustDbAdmin().initialize() first');
   }
-  throw new Error('TrustDb not initialized: call getTrustDbAdmin().initialize() first');
+  return admin.getPolicy();
 }
 
 export function _resetTrustPolicyForTest(): void {
