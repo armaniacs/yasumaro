@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.101` リリース。
+> - 現時点では `v6.7.102` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,14 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.7.102] - 2026-09-04
+
+このリリースは前日のレビュー指摘を即座に反映したものです。
+
+### Fixed
+
+- ドメインフィルター（uBlock Origin 上級者向け）で URL インポート後に「保存」してもフィルターソースが保存されず、リロードすると消える問題を修正。非表示の有効化チェックボックスに保存がゲートされており、初回は常に未チェックのため保存処理が早期 return していた。フィルター本文が入力されていればチェックボックスの状態に関わらず保存するようにした。
 
 ## [6.7.101] - 2026-09-04
 

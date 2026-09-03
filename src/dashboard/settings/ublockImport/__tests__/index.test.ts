@@ -824,6 +824,19 @@ describe('ublockImport/index.ts', () => {
       );
     });
 
+    test('should call saveUblockSettings when text is present even if checkbox unchecked', async () => {
+      document.body.innerHTML = `
+        <input type="checkbox" id="ublockFormatEnabled" />
+        <textarea id="uBlockFilterInput">||example.com^</textarea>
+      `;
+
+      const { handleSaveUblockSettings } = await import('../index.js');
+      await handleSaveUblockSettings();
+
+      const { saveUblockSettings } = await import('../sourceManager.js');
+      expect(saveUblockSettings).toHaveBeenCalledWith('||example.com^', null);
+    });
+
     test('should call saveUblockSettings when text is present', async () => {
       document.body.innerHTML = `
         <input type="checkbox" id="ublockFormatEnabled" checked />
