@@ -15,8 +15,8 @@ Scenario: security policy 単体テスト
   Then  catalog map なしで判定できる
 
 ## 受け入れ基準
-- [ ] isAllowedProviderBaseUrl を別モジュールに分離
-- [ ] aiModelKey fallback 導出を廃止
+- [x] isAllowedProviderBaseUrl を providerSecurityPolicy.ts に分離（catalog から re-export で後方互換）
+- [ ] aiModelKey fallback 導出を廃止（次ラウンドへ — 未知プロバイダ fallback の契約確認が必要）
 
 ## テスト戦略
 - 単体: policy 境界（既存 38 テスト移植）
