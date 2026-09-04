@@ -6,9 +6,59 @@
 
 import type { PageState } from './pageState.js';
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
+import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
+
+/** Byte-stat subset shared by the VALID_VISIT payload and the GET_CONTENT reply. */
+export interface VisitByteStats {
+  pageBytes?: number | undefined;
+  candidateBytes?: number | undefined;
+  originalBytes?: number | undefined;
+  cleansedBytes?: number | undefined;
+}
+
+/** AI-cleanse stat subset shared by both send paths. */
+export interface VisitAiStats {
+  aiSummaryOriginalBytes?: number | undefined;
+  aiSummaryCleansedBytes?: number | undefined;
+  aiSummaryCleansedElements?: number | undefined;
+  aiSummaryCleansedReason?: AiSummaryCleansedReason | undefined;
+  aiSummaryCleansedReasons?: string[] | undefined;
+}
+
+/** One field-selection source for both send paths (auto-visit + manual fetch). */
+export interface VisitStats {
+  byteStats: VisitByteStats;
+  aiStats: VisitAiStats;
+  fallbackTriggered: boolean;
+}
+
+/**
+ * Build the shared stat selection from PageState. The `|| undefined` /
+ * `!== 'none'` normalization lives here once — not once per send path.
+ */
+export function buildVisitStats(pageState: PageState): VisitStats {
+  const ai = pageState.lastAiSummaryCleansedStats;
+  return {
+    byteStats: {
+      pageBytes: pageState.lastByteStats.pageBytes || undefined,
+      candidateBytes: pageState.lastByteStats.candidateBytes || undefined,
+      originalBytes: pageState.lastByteStats.originalBytes || undefined,
+      cleansedBytes: pageState.lastByteStats.cleansedBytes || undefined,
+    },
+    aiStats: {
+      aiSummaryOriginalBytes: ai.aiSummaryOriginalBytes || undefined,
+      aiSummaryCleansedBytes: ai.aiSummaryCleansedBytes || undefined,
+      aiSummaryCleansedElements: ai.aiSummaryCleansedElements || undefined,
+      aiSummaryCleansedReason:
+        ai.aiSummaryCleansedReason !== 'none' ? ai.aiSummaryCleansedReason : undefined,
+      aiSummaryCleansedReasons: ai.aiSummaryCleansedReasons,
+    },
+    fallbackTriggered: pageState.lastFallbackTriggered,
+  };
+}
 
 /** Emit a Performance Timeline mark, ignoring environments without `performance`. */
 function benchMark(name: string): void {
@@ -61,8 +111,19 @@ export interface VisitReporterDeps {
     sender: MessageSender;
     /** Injected for tests; defaults to real privacyDialog */
     confirmDialog?: (statusCode: string, reasonLabel: string) => Promise<boolean>;
+    /** Injected for tests; defaults to the chrome.i18n lookup below */
+    getReasonLabel?: (messageKey: string, fallbackKey: string, fallback: string) => string;
     /** Injected clock for traceability, not required for send */
     stopPeriodicCheck?: () => void;
+}
+
+/** Default reason-label lookup (chrome.i18n with graceful fallbacks). */
+function defaultGetReasonLabel(messageKey: string, fallbackKey: string, fallback: string): string {
+    return typeof chrome !== 'undefined' && chrome.i18n?.getMessage
+        ? chrome.i18n.getMessage(messageKey) ||
+          chrome.i18n.getMessage(fallbackKey) ||
+          fallback
+        : fallback;
 }
 
 export class VisitReporter {
@@ -85,23 +146,14 @@ export class VisitReporter {
         benchMark('ow-send-ready');
 
         try {
+            const stats = buildVisitStats(pageState);
             const response = await sender.sendMessageWithRetry({
                 type: 'VALID_VISIT',
                 payload: {
                     content,
-                    pageBytes: pageState.lastByteStats.pageBytes || undefined,
-                    candidateBytes: pageState.lastByteStats.candidateBytes || undefined,
-                    originalBytes: pageState.lastByteStats.originalBytes || undefined,
-                    cleansedBytes: pageState.lastByteStats.cleansedBytes || undefined,
-                    aiSummaryOriginalBytes: pageState.lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
-                    aiSummaryCleansedBytes: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
-                    aiSummaryCleansedElements: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
-                    aiSummaryCleansedReason:
-                        pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none'
-                            ? pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReason
-                            : undefined,
-                    aiSummaryCleansedReasons: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReasons,
-                    fallbackTriggered: pageState.lastFallbackTriggered,
+                    ...stats.byteStats,
+                    ...stats.aiStats,
+                    fallbackTriggered: stats.fallbackTriggered,
                 },
             });
             void logDebug('VALID_VISIT response', { response }, 'visitReporter');
@@ -117,13 +169,12 @@ export class VisitReporter {
                     }
                     const statusCode = reasonToStatusCode(response.reason);
                     const messageKey = statusCodeToMessageKey(statusCode);
-                    const reasonLabel =
-                        (typeof chrome !== 'undefined' && chrome.i18n?.getMessage
-                            ? chrome.i18n.getMessage(messageKey) ||
-                              chrome.i18n.getMessage(`privatePageReason_${(response.reason || '').replace('-', '')}`) ||
-                              response.reason ||
-                              'unknown'
-                            : response.reason || 'unknown');
+                    const getReasonLabel = this.deps.getReasonLabel ?? defaultGetReasonLabel;
+                    const reasonLabel = getReasonLabel(
+                        messageKey,
+                        `privatePageReason_${(response.reason || '').replace('-', '')}`,
+                        response.reason || 'unknown',
+                    );
                     const confirm = this.deps.confirmDialog
                         ? this.deps.confirmDialog
                         : (await import('./privacyDialog.js')).showPrivacyConfirmDialog;
