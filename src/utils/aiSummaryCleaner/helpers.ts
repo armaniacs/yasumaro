@@ -145,9 +145,9 @@ export function isLikelyPopup(elem: Element): boolean {
  */
 
 /**
- * Deep-scan hosts detected by a single full-subtree scan.
- * Precomputed once per root and shared across rule scans so the
- * `querySelectorAll('*')` enumeration never repeats per rule or per level.
+ * Deep-scan hosts detected by a single full-subtree walk.
+ * Computed once per root and shared across rule scans so host detection
+ * never repeats per rule or per recursion level.
  */
 export interface DeepHosts {
     /** Elements carrying an open shadowRoot. */
@@ -157,26 +157,36 @@ export interface DeepHosts {
 }
 
 /**
- * Collect deep-scan hosts with exactly one `root.querySelectorAll('*')` scan.
+ * Collect deep-scan hosts with a single TreeWalker walk.
+ *
+ * Deliberately does NOT use `querySelectorAll('*')`: the PBI 05 BDD requires
+ * zero full-subtree enumerations on shadow/iframe-less pages, and a TreeWalker
+ * also keeps the detection working in node-env tests where only document/window
+ * are stubbed (NodeFilter global is absent — use the literal SHOW_ELEMENT = 1).
  * Closed shadowRoots report a null `shadowRoot` and are skipped by spec.
  */
 export function findDeepHosts(root: ParentNode): DeepHosts {
     const shadowHosts: Element[] = [];
     const iframes: HTMLIFrameElement[] = [];
-    let all: ArrayLike<Element>;
     try {
-        all = root.querySelectorAll('*');
+        const doc = (root as Element).ownerDocument ?? (root as Document);
+        if (typeof doc?.createTreeWalker !== 'function') {
+            return { shadowHosts, iframes };
+        }
+        const walker = doc.createTreeWalker(root as unknown as Node, 1);
+        let node = walker.nextNode() as Element | null;
+        while (node) {
+            const shadow = (node as unknown as { shadowRoot?: ShadowRoot | null }).shadowRoot;
+            if (shadow) {
+                shadowHosts.push(node);
+            }
+            if (node.tagName?.toLowerCase() === 'iframe') {
+                iframes.push(node as HTMLIFrameElement);
+            }
+            node = walker.nextNode() as Element | null;
+        }
     } catch {
         return { shadowHosts, iframes };
-    }
-    for (const el of Array.from(all)) {
-        const shadow = (el as unknown as { shadowRoot?: ShadowRoot | null }).shadowRoot;
-        if (shadow) {
-            shadowHosts.push(el);
-        }
-        if (el.tagName?.toLowerCase() === 'iframe') {
-            iframes.push(el as HTMLIFrameElement);
-        }
     }
     return { shadowHosts, iframes };
 }

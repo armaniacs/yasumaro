@@ -15,7 +15,6 @@
 import { logDebug } from '../logger.js';
 import type { AiSummaryCleanseOptions, AiSummaryCleanseResult, CleansingRemovalCounts } from './types.js';
 import { markBodyElements, unmarkBodyElements } from './bodyProtection.js';
-import { primeDeepHosts } from './helpers.js';
 import { CLEANSING_RULES, isRuleEnabled, resolveThresholds } from './rules.js';
 
 // Augments AiSummaryCleanseOptions (declared in types.ts) with the opt-in byte
@@ -96,10 +95,9 @@ export function cleanseAISummaryContent(
 
     // Step 2: ルール表の順にクレンジングを実行
     //
-    // Deep host detection runs once on the rule target (which may already be
-    // a clone supplied by the caller) and is cached per root, so repeated
-    // querySelectorAllDeep scans across rules never re-enumerate the subtree.
-    primeDeepHosts(target);
+    // NOTE(PBI 05): primeDeepHosts はホットパスから外した。現行ルールは
+    // querySelectorAllDeep を呼ばないため事前検出は無駄な全走査になる
+    // （ヘルパ自体は shadow/iframe 対応ルール追加時のために維持）。
     //
     // Disabled rules are recorded as 0 rather than omitted: callers read the
     // flat `xRemoved` fields and compare them numerically, so a missing key

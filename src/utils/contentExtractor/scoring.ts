@@ -13,6 +13,9 @@ import { isExcludedElement, isAsianContentElement } from './classifier.js';
 export function calculateTextScore(element: Element): number {
     let score = 0;
 
+    // textContent (not innerText): avoids forced synchronous layout. Accepted
+    // semantic change (PBI 03): display:none subtrees and script/style text
+    // now count toward the score — relative ranking is unaffected in practice.
     const text = element.textContent || '';
     score += text.length;
 
