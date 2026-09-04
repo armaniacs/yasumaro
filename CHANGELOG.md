@@ -37,7 +37,11 @@ All notable changes to this project will be documented in this file.
 
 ### 開発者向け / 非機能
 
-- パフォーマンス最適化 7 件を実施（PBI 2026-09-04-02〜07、`pbi/` アーカイブ参照）。content script の周期ポーリングを単発 deadline タイマー + scroll 駆動に置換（schedule 呼び出し -99%）、textscore の事前計算 + `innerText` 排除（L p99 -49%）、診断用バイト計測の `returnInfo` ゲート化（encode -75%・ヒープ -16%）、クレンジングの deep 走査で Shadow/iframe ホスト不在ページの列挙をゼロ化（M p95 -55%）、Dashboard 履歴に LRU クエリキャッシュ + ソート persist の debounce（クエリ -93%・storage 書き込み -100%）。`deduplicateContent` の近似最適化（PBI 08）はベンチ計測の結果現行実装が十分高速と判明したため不採用
+- ベンチ HTML レポートに履歴トレンド表示を追加。`bench/reports/` に蓄積された `micro-<日付>.json`（schemaVersion 1）を読み、各ベンチの L 指標（wall p50/p95/p99・ヒープ・カウンタ・スケーリング指数）の日付横断 sparkline と最初/最新値を Trend セクションに表示。schemaVersion 非一致・壊れた JSON はスキップして件数を表示し、系列は新しい方から 26 世代に制限。自己完結 HTML（外部参照ゼロ）は維持
+
+### パフォーマンス
+
+- パフォーマンス最適化 7 件を実施（PBI 2026-09-04-02〜07、`dev-docs/archived/pbi/` 参照）。content script の周期ポーリングを単発 deadline タイマー + scroll 駆動に置換（schedule 呼び出し -99%）、textscore の事前計算 + `innerText` 排除（L p99 -49%）、診断用バイト計測の `returnInfo` ゲート化（encode -75%・ヒープ -16%）、クレンジングの deep 走査で Shadow/iframe ホスト不在ページの列挙をゼロ化（M p95 -55%）、Dashboard 履歴に LRU クエリキャッシュ + ソート persist の debounce（クエリ -93%・storage 書き込み -100%）。`deduplicateContent` の近似最適化（PBI 08）はベンチ計測の結果現行実装が十分高速と判明したため不採用
 
 ## [6.7.105] - 2026-09-04
 

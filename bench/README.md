@@ -24,6 +24,12 @@ npm run bench:baseline                   # overwrite bench/baselines/micro.json
 npm run bench:check                      # compare to baseline, exit 1 on regression (CI)
 ```
 
+The generated HTML report includes a **Trend** section: the persisted
+`micro-<date>.json` generations are aggregated (`bench/harness/trend.mjs`) into
+per-bench sparklines (L-size wall p50/p95/p99, heap, counters, scaling exponent)
+with first→last values, capped at the newest 26 generations. Foreign
+`schemaVersion` or unparsable files are skipped with a visible count.
+
 Micro benches use `--expose-gc` (wired into the npm scripts) so heap deltas are
 stable. Run them on an otherwise-idle machine.
 
@@ -116,8 +122,13 @@ bench/
     domEnv.mjs     instrumented jsdom + counters + teardown
     bundle.mjs     esbuild a src/*.ts entry into an importable ESM module
     runner.mjs     bench(id, {setup, run, teardown, sizes, warmup, measure})
+    format.mjs     shared number formatting for both renderers
     report.mjs     Markdown render + baseline comparison
-    cli.mjs        `micro` entry: --filter / --check / --update-baseline / --quick
+    htmlReport.mjs self-contained HTML render (latest + baseline + trend)
+    trend.mjs      history aggregation from persisted micro-<date>.json
+    clean.mjs      reports retention (rolling 5 generations + weekly anchors)
+    openReport.mjs desktop auto-open for the generated HTML report
+    cli.mjs        `micro` entry: --filter / --check / --update-baseline / --quick / --no-open
   micro/           c1-c7 + cleansing, each exporting `definition`
   e2e/             *.bench.ts + _fixtures.ts + server.mjs
   fixtures/_sizes.mjs   synthetic page/content generators (S/M/L)
