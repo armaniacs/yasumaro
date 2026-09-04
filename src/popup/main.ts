@@ -1,11 +1,9 @@
 import { initializeModalEvents } from './sanitizePreview.js';
 import { logError, ErrorCode } from '../utils/logger.js';
-import { loadCurrentTab, recordCurrentPage, setRecordCurrentPageFn, handleRecordNowClick } from './recordCurrentPage.js';
+import { loadCurrentTab, recordCurrentPage, handleRecordNowClick } from './recordCurrentPage.js';
 import { initStatusPanel, initAllUrlsPermissionBanner, getCleansedReasonText, renderSpecialUrlStatus } from './statusPanel.js';
 
 export { loadCurrentTab, recordCurrentPage, getCleansedReasonText, renderSpecialUrlStatus };
-
-setRecordCurrentPageFn(recordCurrentPage);
 
 async function loadCurrentTabAndInitStatus(): Promise<void> {
   await loadCurrentTab();

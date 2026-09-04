@@ -9,12 +9,6 @@ import { extractDomain } from '../utils/domainUtils.js';
 import { updateStatusIcon, escapeHtml } from './domUtils.js';
 import type { ContentResponse } from './mainTypes.js';
 
-let _recordCurrentPage: ((force: boolean) => Promise<void>) | null = null;
-
-export function setRecordCurrentPageFn(fn: (force: boolean) => Promise<void>): void {
-  _recordCurrentPage = fn;
-}
-
 export async function initStatusPanel(): Promise<void> {
   try {
     // Show privacy mode badge (best-effort, guard against test environments)
@@ -343,20 +337,11 @@ function renderStatusPanel(status: StatusInfo): void {
     trustContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`;
   }
 
-  const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement | null;
-  if (recordBtn && !recordBtn.disabled && _recordCurrentPage) {
-    const recordPage = _recordCurrentPage;
-    // Uses .onclick property (not addEventListener) intentionally: this function can be
-    // called repeatedly as status updates arrive, and property assignment replaces the
-    // previous handler atomically instead of stacking listeners (see recordCurrentPage.ts).
-    if (!status.domainFilter.allowed) {
-      recordBtn.textContent = getMessage('forceRecordAnyway') || 'Record Anyway';
-      recordBtn.onclick = () => void recordPage(true);
-    } else {
-      recordBtn.textContent = getMessage('recordNow');
-      recordBtn.onclick = () => recordPage(false);
-    }
-  }
+  // NOTE (PBI 2026-09-05-06): the status render used to rewrite
+  // recordBtn.onclick here through a module hook, but main.ts never set that
+  // hook — the branch was dead in production and raced the session's own
+  // button wiring in theory. The session (RecordSession.resetRecordButton)
+  // is now the sole button writer; this render only updates status content.
 }
 
 export function renderSpecialUrlStatus(): void {
