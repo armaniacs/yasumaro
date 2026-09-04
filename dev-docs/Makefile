@@ -46,11 +46,12 @@ test-unit:
 
 test-and-build: build test
 
-# 全テスト: unit + ニュース統合 + E2E
+# 全テスト: unit + ニュース統合 + E2E + ベンチ（micro + e2e。headless では e2e ベンチは自動 skip）
 test-all: build
 	npm run validate
 	npm test -- src/utils/aiSummaryCleaner/__tests__/newsIntegration.test.ts
 	npm run test:e2e
+	npm run bench
 
 # package-lock.json を linux/amd64 環境で生成（CI の npm ci と一致させる）
 # Mac 上では optional deps（@emnapi/core 等）が異なるため Docker で生成が必要
