@@ -1,4 +1,4 @@
-.PHONY: build build-store build-edge clean test test-watch test-coverage test-e2e type-check validate test-quick test-unit test-news test-news-watch local-ci test-all lock-linux release-check release-check-fast
+.PHONY: build build-store build-edge clean test test-watch test-coverage test-e2e type-check validate test-quick test-unit test-news test-news-watch local-ci test-all lock-linux release-check release-check-fast bench bench-micro bench-e2e bench-check bench-baseline bench-clean
 
 # build: TypeScript + WXT ビルド（node_modules/wa-sqlite 経由）
 build:
@@ -46,11 +46,12 @@ test-unit:
 
 test-and-build: build test
 
-# 全テスト: unit + ニュース統合 + E2E
+# 全テスト: unit + ニュース統合 + E2E + ベンチ（micro + e2e。headless では e2e ベンチは自動 skip）
 test-all: build
 	npm run validate
 	npm test -- src/utils/aiSummaryCleaner/__tests__/newsIntegration.test.ts
 	npm run test:e2e
+	npm run bench
 
 # package-lock.json を linux/amd64 環境で生成（CI の npm ci と一致させる）
 # Mac 上では optional deps（@emnapi/core 等）が異なるため Docker で生成が必要
@@ -74,6 +75,30 @@ test-news:
 
 test-news-watch:
 	npm run test:watch -- src/utils/aiSummaryCleaner/__tests__/newsIntegration.test.ts
+
+# bench-micro: 局所ベンチ（Node + jsdom、ビルド不要）。レポートは bench/reports/ に .md/.html/.json で出力
+bench-micro:
+	npm run bench:micro
+
+# bench-e2e: e2e ベンチ（要ビルド + headed Chromium。headless CI/SSH では自動 skip）
+bench-e2e: build
+	npm run bench:e2e
+
+# bench: フルベンチ（build → micro → e2e）
+bench: build
+	npm run bench
+
+# bench-check: ベースライン比の回帰チェック（決定的カウンタのみ gate。CI 向け）
+bench-check:
+	npm run bench:check
+
+# bench-baseline: ベースライン更新（意図的・レビュー済みの性能変化後のみ）
+bench-baseline:
+	npm run bench:baseline
+
+# bench-clean: bench/reports/ の掃除（ローリング 5 世代 + 週次アンカー。全消去は make bench-clean ARGS=--all）
+bench-clean:
+	npm run bench:clean -- $(ARGS)
 
 # リリース前チェック（全カテゴリ）
 release-check:
