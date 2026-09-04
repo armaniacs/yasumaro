@@ -17,12 +17,17 @@ export function shouldAutoOpen({ noOpen = false, ci, stdoutIsTTY } = {}) {
 /** Best-effort browser open. Returns false when the spawn throws. */
 export function openInBrowser(filePath, platform = process.platform) {
   try {
+    let cp;
     if (platform === 'win32') {
-      spawn('cmd', ['/c', 'start', '', filePath], { detached: true, stdio: 'ignore' }).unref();
+      cp = spawn('cmd', ['/c', 'start', '', filePath], { detached: true, stdio: 'ignore' });
     } else {
       const cmd = platform === 'darwin' ? 'open' : 'xdg-open';
-      spawn(cmd, [filePath], { detached: true, stdio: 'ignore' }).unref();
+      cp = spawn(cmd, [filePath], { detached: true, stdio: 'ignore' });
     }
+    // spawn errors (ENOENT etc.) arrive asynchronously — swallow them; opening
+    // the report is advisory and must never fail a bench run.
+    cp.on('error', () => {});
+    cp.unref();
     return true;
   } catch {
     return false;

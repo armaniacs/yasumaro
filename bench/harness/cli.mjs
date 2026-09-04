@@ -116,7 +116,8 @@ async function main() {
   const md = renderMarkdown(results, { comparison: cmp });
 
   mkdirSync(reportsDir, { recursive: true });
-  const stamp = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const stamp = now.toISOString().slice(0, 10);
   const reportPath = resolve(reportsDir, `micro-${stamp}.md`);
   const htmlPath = resolve(reportsDir, `micro-${stamp}.html`);
   const jsonPath = resolve(reportsDir, `micro-${stamp}.json`);
@@ -128,7 +129,7 @@ async function main() {
     writeFileSync(htmlPath, renderHtml(results, { comparison: cmp }), 'utf8');
     const payload = {
       schemaVersion: 1,
-      generatedAt: new Date().toISOString(),
+      generatedAt: now.toISOString(),
       node: process.version,
       results,
       comparison: cmp ?? null,

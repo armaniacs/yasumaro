@@ -17,6 +17,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROLLING_KEEP = 5;
+// Generations are exactly <prefix>-<YYYY-MM-DD>.<ext>; multi-dot names like
+// micro-2026-08-27.backup.md intentionally do NOT match and are never auto-deleted.
 const DATE_SUFFIX_RE = /(\d{4}-\d{2}-\d{2})\.[^.]+$/;
 
 /** Bucket files by date-stamped generation. Files without a stamp are ignored. */
@@ -54,6 +56,7 @@ export function isoWeekKey(stamp) {
 export function pruneReports(reportsDir, opts = {}) {
   const { all = false, keep = ROLLING_KEEP } = opts;
   if (!existsSync(reportsDir)) return [];
+  // Dotfiles are always preserved, even with --all.
   const files = readdirSync(reportsDir).filter((f) => !f.startsWith('.'));
   if (all) {
     for (const f of files) rmSync(join(reportsDir, f), { recursive: true, force: true });

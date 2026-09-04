@@ -46,9 +46,17 @@ describe('renderHtml', () => {
     );
     const html = renderHtml([result], { comparison });
     expect(html).toContain('REGRESSED');
+    expect(html).toContain('badge v-bad">REGRESSED');
     expect(html).toContain('c2.L.counter_qsa');
     expect(html).toContain('st-regressed');
     expect(html).toContain('st-improved');
+  });
+
+  it('shows UNKNOWN badge for malformed comparison without ok field', () => {
+    const html = renderHtml([result], { comparison: { rows: [] } });
+    expect(html).toContain('UNKNOWN');
+    expect(html).toContain('badge v-muted">UNKNOWN');
+    expect(html).not.toContain('badge v-bad">REGRESSED');
   });
 
   it('omits the comparison section and shows a no-baseline badge when comparison is absent', () => {

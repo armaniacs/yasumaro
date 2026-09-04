@@ -75,7 +75,7 @@ function barChartSvg(perSize) {
   ];
   sizes.forEach(([sizeKey, s], i) => {
     const x0 = 4 + i * groupW;
-    [['p50'], ['p95'], ['p99']].forEach(([m], j) => {
+    ['p50', 'p95', 'p99'].forEach((m, j) => {
       const h = Math.max(1, Math.round((s.wallMs[m] / max) * chartH));
       const x = x0 + j * (barW + gap);
       parts.push(`<rect x="${x}" y="${chartH - h}" width="${barW}" height="${h}" class="bar-${m}"><title>${escapeHtml(sizeKey)} ${m}: ${fmtNum(s.wallMs[m])}ms</title></rect>`);
@@ -90,7 +90,7 @@ function benchCard(r) {
   const chips = [];
   for (const [sizeKey, s] of Object.entries(r.perSize)) {
     chips.push(`<span class="chip">${escapeHtml(sizeKey)} heap=${fmtKB(s.heapBytes.p50)}KiB</span>`);
-    for (const [c, v] of Object.entries(s.counters)) {
+    for (const [c, v] of Object.entries(s.counters ?? {})) {
       chips.push(`<span class="chip">${escapeHtml(sizeKey)}.${escapeHtml(c)}=${fmtNum(v)}</span>`);
     }
   }
@@ -137,9 +137,11 @@ function comparisonTable(comparison) {
 export function renderHtml(results, opts = {}) {
   const { comparison, title = 'Micro Benchmark Report' } = opts;
   const badge = comparison
-    ? comparison.ok
+    ? comparison.ok === true
       ? '<span class="badge v-good">PASS</span>'
-      : '<span class="badge st-regressed">REGRESSED</span>'
+      : comparison.ok === false
+        ? '<span class="badge v-bad">REGRESSED</span>'
+        : '<span class="badge v-muted">UNKNOWN</span>'
     : '<span class="badge v-muted">baseline 未登録</span>';
   const cards = results.map(benchCard).join('\n');
   return `<!DOCTYPE html>
