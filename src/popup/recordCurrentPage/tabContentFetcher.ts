@@ -1,6 +1,6 @@
 import { getMessage } from '../../utils/i18n.js';
 import type { ContentResponse } from '../mainTypes.js';
-import { SpinnerManager } from './spinnerManager.js';
+import { showSpinner } from '../spinner.js';
 import { getPermissionManager } from '../../utils/permissionManager.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 
@@ -11,7 +11,6 @@ import { StorageKeys } from '../../utils/storage/types.js';
  *  Level2: allowAllUrlsOptIn のときのみ <all_urls>
  */
 export class TabContentFetcher {
-  constructor(private readonly spinner: SpinnerManager = new SpinnerManager()) {}
 
   /**
    * @returns 取得されたコンテンツレスポンス
@@ -20,7 +19,7 @@ export class TabContentFetcher {
   async fetch(tab: chrome.tabs.Tab, force: boolean): Promise<ContentResponse> {
     if (!tab.id) throw new Error('No active tab found');
 
-    this.spinner.show(getMessage('fetchingContent'));
+    showSpinner(getMessage('fetchingContent'));
 
     try {
       const contentResponse = await Promise.race([

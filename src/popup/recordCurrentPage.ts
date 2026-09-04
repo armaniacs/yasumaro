@@ -2,8 +2,6 @@ import { RecordSession } from './recordCurrentPage/recordSession.js';
 
 export { TabContentFetcher } from './recordCurrentPage/tabContentFetcher.js';
 export { PreviewFlow } from './recordCurrentPage/previewFlow.js';
-export { SpinnerManager } from './recordCurrentPage/spinnerManager.js';
-export { ErrorPresenter } from './recordCurrentPage/errorPresenter.js';
 export { RecordSession, type RecordSessionState } from './recordCurrentPage/recordSession.js';
 
 const defaultRecordSession = new RecordSession();

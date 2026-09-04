@@ -9,13 +9,13 @@ import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import { getSavedUrlEntries } from '../../utils/storageUrls.js';
 import type { ContentResponse } from '../mainTypes.js';
 import { copyTextToClipboard } from '../../utils/clipboard.js';
+import { showSpinner, hideSpinner } from '../spinner.js';
+import { showError } from '../errorUtils.js';
 import { formatEntryToMarkdown } from '../../utils/markdownFormatter.js';
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 import { updateCleansingStatus, updateTrustStatus } from '../statusPanel.js';
 import { TabContentFetcher } from './tabContentFetcher.js';
 import { PreviewFlow, type PreviewSaveResult, type SaveRecordResult } from './previewFlow.js';
-import { SpinnerManager } from './spinnerManager.js';
-import { ErrorPresenter } from './errorPresenter.js';
 
 /**
  * Popup record session states. Exactly one owner (this module) reads and
@@ -56,8 +56,6 @@ export class RecordSession {
   constructor(
     private readonly tabContentFetcher: TabContentFetcher = new TabContentFetcher(),
     private readonly previewFlow: PreviewFlow = new PreviewFlow(),
-    private readonly spinner: SpinnerManager = new SpinnerManager(),
-    private readonly errorPresenter: ErrorPresenter = new ErrorPresenter(),
   ) {}
 
   /** Read-only state for tests and future callers. Transitions stay private. */
@@ -223,6 +221,16 @@ export class RecordSession {
     }, RESULT_STATE_MS);
   }
 
+  /**
+   * Build the private-page error message. Moved in from the deleted
+   * ErrorPresenter pass-through (wording unchanged).
+   */
+  private buildPrivatePageErrorMessage(reason?: string): string {
+    const reasonKey = `privatePageReason_${reason?.replace('-', '') || 'cacheControl'}`;
+    const reasonText = getMessage(reasonKey) || reason || 'unknown';
+    return `${getMessage('errorPrefix')} PRIVATE_PAGE_DETECTED (${reasonText})`;
+  }
+
   private async showTagResult(url: string, skipAutoClose: boolean = false): Promise<void> {
     if (!url) return;
 
@@ -345,8 +353,8 @@ export class RecordSession {
     content: string
   ): Settlement {
     if (previewSave.error === 'PRIVATE_PAGE_DETECTED') {
-      this.spinner.hide();
-      statusDiv.textContent = this.errorPresenter.buildPrivatePageErrorMessage(previewSave.reason);
+      hideSpinner();
+      statusDiv.textContent = this.buildPrivatePageErrorMessage(previewSave.reason);
       statusDiv.className = 'error';
 
       if (recordBtn) {
@@ -356,7 +364,7 @@ export class RecordSession {
     }
 
     if (previewSave.error === 'CANCELLED') {
-      this.spinner.hide();
+      hideSpinner();
       statusDiv.textContent = getMessage('cancelled');
       if (recordBtn) void this.resetRecordButton(recordBtn);
       this.sessionState = 'idle';
@@ -384,7 +392,7 @@ export class RecordSession {
       recordBtn.textContent = getMessage('recordNowProgress') || 'Recording...';
     }
 
-    this.spinner.hide();
+    hideSpinner();
     statusDiv.textContent = '';
     statusDiv.className = '';
     const tagPanel = document.getElementById('tagResultPanel');
@@ -450,7 +458,7 @@ export class RecordSession {
         throw new Error(previewSave.error || 'Save failed');
       }
 
-      this.spinner.hide();
+      hideSpinner();
       this.reportActivity();
       this.showSuccessMessage(statusDiv, startTime, result);
 
@@ -467,11 +475,11 @@ export class RecordSession {
         this.showButtonResultState(recordBtn, 'done');
       }
     } catch (error: unknown) {
-      this.spinner.hide();
+      hideSpinner();
       if (recordBtn) {
         this.showButtonResultState(recordBtn, 'error');
       }
-      this.errorPresenter.show(statusDiv, error, () => this.recordCurrentPage(true));
+      showError(statusDiv, error, () => this.recordCurrentPage(true));
     }
   }
 
@@ -495,7 +503,7 @@ export class RecordSession {
     button.textContent = getMessage('recordNowProgress') || 'Recording...';
     statusDiv.textContent = '';
     statusDiv.className = '';
-    this.spinner.show(getMessage('saving'));
+    showSpinner(getMessage('saving'));
 
     try {
       const previewSave = await this.previewFlow.run({
@@ -506,7 +514,7 @@ export class RecordSession {
         cleanseStats: undefined,
       });
 
-      this.spinner.hide();
+      hideSpinner();
 
       const settlement = this.settlePreviewSave(previewSave, statusDiv, button, tab, content);
       if (settlement.kind !== 'ok') return;
@@ -523,8 +531,8 @@ export class RecordSession {
         this.showButtonResultState(button, 'error');
       }
     } catch (error: unknown) {
-      this.spinner.hide();
-      this.errorPresenter.show(statusDiv, error, () => this.start(true, tab, content));
+      hideSpinner();
+      showError(statusDiv, error, () => this.start(true, tab, content));
       this.showButtonResultState(button, 'error');
     }
   }

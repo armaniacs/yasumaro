@@ -5,14 +5,16 @@ vi.mock('../../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => key),
 }));
 
+const mockShowSpinner = vi.hoisted(() => vi.fn());
+vi.mock('../../spinner.js', () => ({
+  showSpinner: mockShowSpinner,
+  hideSpinner: vi.fn(),
+}));
+
 import { TabContentFetcher } from '../tabContentFetcher.js';
-import { SpinnerManager } from '../spinnerManager.js';
 
 describe('TabContentFetcher', () => {
-  let mockSpinner: SpinnerManager;
-
   beforeEach(() => {
-    mockSpinner = { show: vi.fn(), hide: vi.fn() } as unknown as SpinnerManager;
     chrome.tabs.sendMessage = vi.fn();
     chrome.runtime.lastError = null;
     chrome.permissions.contains = vi.fn().mockResolvedValue(true);
@@ -21,22 +23,22 @@ describe('TabContentFetcher', () => {
   });
 
   it('throws when tab has no id', async () => {
-    const fetcher = new TabContentFetcher(mockSpinner);
+    const fetcher = new TabContentFetcher();
     await expect(fetcher.fetch({} as chrome.tabs.Tab, false)).rejects.toThrow('No active tab found');
   });
 
   it('returns content from GET_CONTENT when sendMessage succeeds', async () => {
     (chrome.tabs.sendMessage as ReturnType<typeof vi.fn>).mockResolvedValue({ content: 'hello' });
-    const fetcher = new TabContentFetcher(mockSpinner);
+    const fetcher = new TabContentFetcher();
     const result = await fetcher.fetch({ id: 1 } as chrome.tabs.Tab, false);
     expect(result).toEqual({ content: 'hello' });
-    expect(mockSpinner.show).toHaveBeenCalledWith('fetchingContent');
+    expect(mockShowSpinner).toHaveBeenCalledWith('fetchingContent');
   });
 
   it('falls back to scripting.executeScript when sendMessage rejects and permission is granted', async () => {
     (chrome.tabs.sendMessage as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('no content script'));
     (chrome.scripting.executeScript as ReturnType<typeof vi.fn>).mockResolvedValue([{ result: 'fallback text' }]);
-    const fetcher = new TabContentFetcher(mockSpinner);
+    const fetcher = new TabContentFetcher();
     const result = await fetcher.fetch({ id: 1, url: 'https://example.com/page' } as chrome.tabs.Tab, false);
     expect(result).toEqual({ content: 'fallback text' });
     expect(chrome.scripting.executeScript).toHaveBeenCalledWith({
@@ -51,7 +53,7 @@ describe('TabContentFetcher', () => {
     (chrome.permissions.request as ReturnType<typeof vi.fn>).mockImplementation((req: { origins: string[] }) => Promise.resolve(req.origins[0] === '*://example.com/*'));
     (chrome.scripting.executeScript as ReturnType<typeof vi.fn>).mockResolvedValue([{ result: 'ok' }]);
     (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockResolvedValue({});
-    const fetcher = new TabContentFetcher(mockSpinner);
+    const fetcher = new TabContentFetcher();
     await fetcher.fetch({ id: 1, url: 'https://example.com/page' } as chrome.tabs.Tab, false);
     expect(chrome.permissions.request).toHaveBeenCalledWith({ origins: ['*://example.com/*'] });
   });
@@ -61,7 +63,7 @@ describe('TabContentFetcher', () => {
     (chrome.permissions.contains as ReturnType<typeof vi.fn>).mockResolvedValue(false);
     (chrome.permissions.request as ReturnType<typeof vi.fn>).mockResolvedValue(false);
     (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockResolvedValue({});
-    const fetcher = new TabContentFetcher(mockSpinner);
+    const fetcher = new TabContentFetcher();
     await expect(fetcher.fetch({ id: 1, url: 'https://example.com/page' } as chrome.tabs.Tab, false)).rejects.toThrow('errorContentScriptNotAvailable');
   });
 
@@ -69,7 +71,7 @@ describe('TabContentFetcher', () => {
     (chrome.tabs.sendMessage as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('fail'));
     (chrome.permissions.contains as ReturnType<typeof vi.fn>).mockResolvedValue(true);
     (chrome.scripting.executeScript as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('script fail'));
-    const fetcher = new TabContentFetcher(mockSpinner);
+    const fetcher = new TabContentFetcher();
     const result = await fetcher.fetch({ id: 1, url: 'https://example.com/page' } as chrome.tabs.Tab, true);
     expect(result).toEqual({ content: '' });
   });
@@ -78,11 +80,11 @@ describe('TabContentFetcher', () => {
     (chrome.tabs.sendMessage as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('fail'));
     (chrome.permissions.contains as ReturnType<typeof vi.fn>).mockResolvedValue(true);
     (chrome.scripting.executeScript as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('script fail'));
-    const fetcher = new TabContentFetcher(mockSpinner);
+    const fetcher = new TabContentFetcher();
     await expect(fetcher.fetch({ id: 1, url: 'https://example.com/page' } as chrome.tabs.Tab, false)).rejects.toThrow('errorContentScriptNotAvailable');
   });
 
-  it('uses default SpinnerManager when none is injected', async () => {
+  it('shows progress through the shared spinner functions', async () => {
     (chrome.tabs.sendMessage as ReturnType<typeof vi.fn>).mockResolvedValue({ content: 'x' });
     const fetcher = new TabContentFetcher();
     const result = await fetcher.fetch({ id: 1 } as chrome.tabs.Tab, false);
