@@ -72,6 +72,8 @@ Sizes S/M/L map to a per-bench multiplier (`n`). The runner fits
   is not installed.
 - **A/B** — `content-script-impact.bench.ts` compares load with the content
   script active vs. an early-return control (`localStorage.__ow_bench_disable_cs`).
+  The control only exists in a bench build (`OW_BENCH=1 npm run build`);
+  production builds compile the check out.
 - e2e benches write `bench/reports/e2e-*-<date>.json` (not diffed by
   `bench:check` yet — inspect manually or extend `report.mjs`).
 

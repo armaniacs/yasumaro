@@ -6,8 +6,11 @@
  * load timing plus Long Tasks, quantifying "the extension makes pages heavier".
  *
  * The control is achieved by setting localStorage `__ow_bench_disable_cs` which
- * the content script honours as an early return (added in PBI-01). If that flag
- * is not yet wired, the test still runs and records identical A/B numbers.
+ * the content script honours as an early return — but ONLY in a bench build
+ * (`OW_BENCH=1 npm run build`). Production builds compile the check out, so
+ * run the bench against a bench-enabled build for meaningful A/B numbers. If
+ * the build lacks the flag, the test still runs and records identical A/B
+ * numbers.
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
