@@ -118,11 +118,13 @@ describe('createSqliteHistoryPanel — sort control', () => {
     const select = document.getElementById('sqlite-sort-select') as HTMLSelectElement;
     select.value = 'created_at:ASC';
     select.dispatchEvent(new Event('change'));
-    await flush();
-
-    expect(chrome.storage.local.set).toHaveBeenCalledWith(
-      expect.objectContaining({ history_sort_preference: JSON.stringify({ sortBy: 'created_at', sortDir: 'ASC' }) })
-    );
+    // PBI 17: persist goes through the production 500ms debounce scheduler —
+    // wait for the debounced write instead of microtask flushing.
+    await vi.waitFor(() => {
+      expect(chrome.storage.local.set).toHaveBeenCalledWith(
+        expect.objectContaining({ history_sort_preference: JSON.stringify({ sortBy: 'created_at', sortDir: 'ASC' }) })
+      );
+    }, { timeout: 1500, interval: 50 });
   });
 
   it('does not show relevance while a tag filter is active without a fallback search', async () => {
