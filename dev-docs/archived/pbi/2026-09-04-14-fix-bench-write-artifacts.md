@@ -25,10 +25,10 @@ Scenario: 成果物書き出しの失敗はベンチ実行を失敗させない
 ```
 
 ## 受け入れ基準
-- [ ] `writeArtifacts.mjs` に writeReportArtifacts が抽出される
-- [ ] cli.mjs main() は bench → compare → writeReportArtifacts → check/update-baseline に縮小
-- [ ] 既存の smoke（3 点セット生成・trend 含有・prune）が green
-- [ ] --check / --update-baseline モードも同一関数経由
+- [x] `writeArtifacts.mjs` に writeReportArtifacts が抽出される
+- [x] cli.mjs main() は bench → compare → writeReportArtifacts → check/update-baseline に縮小
+- [x] 既存の smoke（3 点セット生成・trend 含有・prune）が green
+- [x] --check / --update-baseline モードも同一関数経由
 
 ## テスト戦略（t_wadaスタイル）
 ### 単体テスト
@@ -64,7 +64,7 @@ sed -n '102,190p' bench/harness/cli.mjs
 - check モードの exit コード判定は成果物書き出しの後に来る — 順序を壊さない
 
 ## Definition of Done
-- [ ] writeArtifacts 単体テスト green
-- [ ] bench スモーク green（3 点セット + trend）
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新（README Files ツリーに writeArtifacts.mjs を追加）
+- [x] writeArtifacts 単体テスト green
+- [x] bench スモーク green（3 点セット + trend）
+- [x] コードレビュー完了
+- [x] ドキュメント更新（README Files ツリーに writeArtifacts.mjs を追加）

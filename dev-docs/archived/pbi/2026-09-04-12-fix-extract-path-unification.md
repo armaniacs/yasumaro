@@ -23,11 +23,11 @@ Scenario: returnInfo を渡さなくても诊断情報が取れる
 ```
 
 ## 受け入れ基準
-- [ ] fallback ブロックの重複（:342-376 vs :454-488）が 1 箇所になる
-- [ ] `if (returnInfo)` ゲートが 12 箇所からゼロになる（ByteMeter または WithInfo 分割に置換）
-- [ ] `optionBuilder.ts` の `returnInfo: true` が不要になる
-- [ ] 既存 contentExtractor suite（~280 tests）が green
-- [ ] クレンジング結果・診断フィールドが変更前とバイト一致
+- [x] fallback ブロックの重複（:342-376 vs :454-488）が 1 箇所になる
+- [x] `if (returnInfo)` ゲートが 12 箇所からゼロになる（ByteMeter または WithInfo 分割に置換）
+- [x] `optionBuilder.ts` の `returnInfo: true` が不要になる
+- [x] 既存 contentExtractor suite（~280 tests）が green
+- [x] クレンジング結果・診断フィールドが変更前とバイト一致
 
 ## テスト戦略（t_wadaスタイル）
 ### 統合テスト
@@ -71,7 +71,7 @@ rg -n "runAiSummaryCleanse|_isTooShort|_overCleansed" src/utils/contentExtractor
 - ~100 テスト呼び出し site が returnInfo を直接渡している — 互換のため旧引数は受理しつつ無視するか、テストをまとめて移行する（後者を推奨）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] contentExtractor + pageContentPipeline 全テスト green
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新（DESIGN_SPECIFICATIONS の contentExtractor 節があれば同期）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] contentExtractor + pageContentPipeline 全テスト green
+- [x] コードレビュー完了
+- [x] ドキュメント更新（DESIGN_SPECIFICATIONS の contentExtractor 節があれば同期）

@@ -22,11 +22,11 @@ Scenario: テストは即時スケジューラを注入して同期的に検証�
 ```
 
 ## 受け入れ基準
-- [ ] `isFakeTimersActive()` / `isTestEnv()` が sqliteHistoryModel.ts から消える
-- [ ] PersistScheduler seam（defer(fn, ms) / cancel）が注入可能になる
-- [ ] 本番既定は 500ms setTimeout、unmount で flush（既存挙動維持）
-- [ ] sort-persistence テストが注入で同期検証に更新される
-- [ ] 既存 asyncData suite 全绿
+- [x] `isFakeTimersActive()` / `isTestEnv()` が sqliteHistoryModel.ts から消える
+- [x] PersistScheduler seam（defer(fn, ms) / cancel）が注入可能になる
+- [x] 本番既定は 500ms setTimeout、unmount で flush（既存挙動維持）
+- [x] sort-persistence テストが注入で同期検証に更新される
+- [x] 既存 asyncData suite 全绿
 
 ## テスト戦略（t_wadaスタイル）
 ### 単体テスト
@@ -63,7 +63,7 @@ rg -n "isFakeTimersActive|isTestEnv|schedulePersistSort|flushPendingPersist" src
 - 本番 scheduler は chrome.storage.local.set を呼ぶ — テスト注入時は fake storage
 
 ## Definition of Done
-- [ ] isFakeTimersActive/isTestEnv がモデルから消える
-- [ ] 単体/統合テスト green
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新（不要: 内部リファクタリング）
+- [x] isFakeTimersActive/isTestEnv がモデルから消える
+- [x] 単体/統合テスト green
+- [x] コードレビュー完了
+- [x] ドキュメント更新（不要: 内部リファクタリング）

@@ -21,10 +21,10 @@ Scenario: throttle と watchDynamicContent は kernel の外から利用でき�
 ```
 
 ## 受け入れ基準
-- [ ] `content/deadlineTimer.ts`（または同等モジュール）に deadline/キャッシュ無効化/スケジュールが抽出される
-- [ ] contentKernel は visit-state orchestration（checkVisitConditions/updateMaxScroll/report）のみに縮小
-- [ ] throttle と watchDynamicContent が kernel ファイルから移動（挙動不変）
-- [ ] 既存 content suite（406 tests）が green
+- [x] `content/deadlineTimer.ts`（または同等モジュール）に deadline/キャッシュ無効化/スケジュールが抽出される
+- [x] contentKernel は visit-state orchestration（checkVisitConditions/updateMaxScroll/report）のみに縮小
+- [x] throttle と watchDynamicContent が kernel ファイルから移動（挙動不変）
+- [x] 既存 content suite（406 tests）が green
 
 ## テスト戦略（t_wadaスタイル）
 ### 単体テスト
@@ -62,7 +62,7 @@ rg -n "deadlineMs|refreshCachesIfStale|throttle|watchDynamicContent" src/content
 - E2E フック（__OW_TEST_STATE / data-ow-test-state）は checkVisitConditions 側 — DeadlineTimer 移動で壊さない
 
 ## Definition of Done
-- [ ] 既存 content suite 406 tests 無修正で green
-- [ ] contentKernel.ts から throttle/watchDynamicContent 実装が消える
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新（不要: 内部リファクタリング）
+- [x] 既存 content suite 406 tests 無修正で green
+- [x] contentKernel.ts から throttle/watchDynamicContent 実装が消える
+- [x] コードレビュー完了
+- [x] ドキュメント更新（不要: 内部リファクタリング）
