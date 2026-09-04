@@ -14,32 +14,16 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bench, flattenMetrics } from './runner.mjs';
-import { compareToBaseline, renderMarkdown } from './report.mjs';
-import { renderHtml } from './htmlReport.mjs';
-import { loadTrendHistory } from './trend.mjs';
-import { pruneReports } from './clean.mjs';
+import { compareToBaseline } from './report.mjs';
+import { writeReportArtifacts } from './writeArtifacts.mjs';
 import { shouldAutoOpen, openInBrowser } from './openReport.mjs';
+import { parseArgs } from './args.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const benchRoot = resolve(__dirname, '..');
 const microDir = resolve(benchRoot, 'micro');
 const baselineDir = resolve(benchRoot, 'baselines');
 const reportsDir = resolve(benchRoot, 'reports');
-
-function parseArgs(argv) {
-  const [, , mode, ...rest] = argv;
-  const opts = { mode: mode ?? 'micro', filter: null, check: false, updateBaseline: false, quick: false, noOpen: false };
-  for (const arg of rest) {
-    if (arg === '--check') opts.check = true;
-    else if (arg === '--update-baseline') opts.updateBaseline = true;
-    else if (arg === '--quick') opts.quick = true;
-    else if (arg === '--no-open') opts.noOpen = true;
-    else if (arg.startsWith('--filter=')) opts.filter = arg.slice('--filter='.length).split(',');
-    else if (arg === '--filter') opts.filter = 'NEXT';
-    else if (opts.filter === 'NEXT') opts.filter = arg.split(',');
-  }
-  return opts;
-}
 
 async function loadDefinitions(filter) {
   const files = readdirSync(microDir).filter((f) => f.endsWith('.bench.mjs'));
@@ -60,7 +44,7 @@ async function loadDefinitions(filter) {
 }
 
 async function main() {
-  const opts = parseArgs(process.argv);
+  const opts = parseArgs(process.argv.slice(2));
   if (opts.mode !== 'micro') {
     console.error(`Unknown mode "${opts.mode}". Only "micro" is supported here; e2e benches run via Playwright.`);
     process.exit(2);
@@ -114,42 +98,9 @@ async function main() {
 
   const comparison = compareToBaseline(current, baseline);
   const cmp = Object.keys(baseline).length ? comparison : undefined;
-  const md = renderMarkdown(results, { comparison: cmp });
 
-  mkdirSync(reportsDir, { recursive: true });
   const now = new Date();
-  const stamp = now.toISOString().slice(0, 10);
-  const reportPath = resolve(reportsDir, `micro-${stamp}.md`);
-  const htmlPath = resolve(reportsDir, `micro-${stamp}.html`);
-  const jsonPath = resolve(reportsDir, `micro-${stamp}.json`);
-  writeFileSync(reportPath, md, 'utf8');
-
-  // All modes produce the same artifact set (.md/.html/.json); failures here
-  // are advisory — the bench run itself already succeeded.
-  try {
-    const payload = {
-      schemaVersion: 1,
-      generatedAt: now.toISOString(),
-      node: process.version,
-      results,
-      comparison: cmp ?? null,
-    };
-    // Write today's json BEFORE loading history so the current run appears as
-    // the newest trend generation.
-    writeFileSync(jsonPath, JSON.stringify(payload, null, 2) + '\n', 'utf8');
-    const history = loadTrendHistory(reportsDir);
-    writeFileSync(htmlPath, renderHtml(results, { comparison: cmp, history }), 'utf8');
-    process.stderr.write(`[bench] report -> ${reportPath} (+ .html / .json)\n`);
-  } catch (err) {
-    process.stderr.write(`[bench] WARNING: html/json report generation failed: ${err?.message ?? err}\n`);
-  }
-
-  try {
-    const deleted = pruneReports(reportsDir);
-    if (deleted.length) process.stderr.write(`[bench] pruned ${deleted.length} old report file(s)\n`);
-  } catch (err) {
-    process.stderr.write(`[bench] WARNING: report pruning failed: ${err?.message ?? err}\n`);
-  }
+  const { htmlPath } = writeReportArtifacts({ results, comparison: cmp, reportsDir, now });
 
   if (shouldAutoOpen({ noOpen: opts.noOpen, ci: process.env.CI, stdoutIsTTY: Boolean(process.stdout.isTTY) })) {
     if (!openInBrowser(htmlPath)) {
