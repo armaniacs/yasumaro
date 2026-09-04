@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { extractMainContent, isExcludedElement, isAsianContentElement, calculateTextScore } from '../index.js';
+import { extractMainContent, extractMainContentWithInfo, isExcludedElement, isAsianContentElement, calculateTextScore } from '../index.js';
 
 beforeEach(() => {
     document.body.innerHTML = '';
@@ -91,25 +91,25 @@ describe('extractMainContent - basic', () => {
 });
 
 // ─────────────────────────────────────────────
-// returnInfo モード
+// WithInfo モード
 // ─────────────────────────────────────────────
-describe('extractMainContent - returnInfo mode', () => {
-    it('returns ExtractResult object when returnInfo is true', () => {
+describe('extractMainContent - WithInfo mode', () => {
+    it('returns ExtractResult object via WithInfo', () => {
         document.body.innerHTML = `
             <article>
                 <h1>Article</h1>
-                <p>Paragraph content for testing returnInfo behavior.</p>
+                <p>Paragraph content for testing WithInfo behavior.</p>
             </article>
         `;
-        const result = extractMainContent(10000, { returnInfo: true });
+        const result = extractMainContentWithInfo(10000, {});
         expect(typeof result).toBe('object');
         const r = result as ReturnType<typeof extractMainContent> & { content: string };
         expect(typeof r.content).toBe('string');
     });
 
-    it('includes byte stats in returnInfo result', () => {
+    it('includes byte stats in WithInfo result', () => {
         document.body.innerHTML = `<article><p>${'Byte measurement content. '.repeat(20)}</p></article>`;
-        const result = extractMainContent(10000, { returnInfo: true }) as Record<string, unknown>;
+        const result = extractMainContentWithInfo(10000, {}) as Record<string, unknown>;
         expect(result).toHaveProperty('pageBytes');
         expect(result).toHaveProperty('originalBytes');
         expect(result).toHaveProperty('cleansedBytes');
@@ -117,18 +117,18 @@ describe('extractMainContent - returnInfo mode', () => {
         expect(result.fallbackTriggered).toBe(false);
     });
 
-    it('includes cleansedReason in returnInfo result', () => {
+    it('includes cleansedReason in WithInfo result', () => {
         document.body.innerHTML = `<article><p>Content for cleanse reason test.</p></article>`;
-        const result = extractMainContent(10000, { returnInfo: true }) as Record<string, unknown>;
+        const result = extractMainContentWithInfo(10000, {}) as Record<string, unknown>;
         expect(result).toHaveProperty('cleansedReason');
         expect(['none', 'hard', 'keyword', 'both']).toContain(result.cleansedReason);
     });
 
-    it('includes AI summary cleanse fields in returnInfo result', () => {
+    it('includes AI summary cleanse fields in WithInfo result', () => {
         document.body.innerHTML = `<article><p>Content for AI summary cleanse test.</p></article>`;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: false }
         ) as Record<string, unknown>;
         expect(result).toHaveProperty('aiSummaryCleansedReason');
@@ -148,9 +148,9 @@ describe('extractMainContent - cleanseEnabled', () => {
                 <form><input type="password" value="secret"></form>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, returnInfo: true }
+            { cleanseEnabled: true }
         ) as Record<string, unknown>;
         expect(typeof result.content).toBe('string');
     });
@@ -163,9 +163,9 @@ describe('extractMainContent - cleanseEnabled', () => {
                 <iframe src="ads.html"></iframe>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: false, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: false }
         ) as Record<string, unknown>;
         expect(['hard', 'none']).toContain(result.cleansedReason);
     });
@@ -173,9 +173,9 @@ describe('extractMainContent - cleanseEnabled', () => {
     it('works with cleanseEnabled but no candidates (body fallback)', () => {
         // body直下のテキストのみ（article/main/divなし）
         document.body.innerHTML = `Plain text without container elements.`;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, returnInfo: true }
+            { cleanseEnabled: true }
         ) as Record<string, unknown>;
         expect(typeof result.content).toBe('string');
     });
@@ -187,9 +187,9 @@ describe('extractMainContent - cleanseEnabled', () => {
                 <div id="balance">Secret balance info</div>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, keywordStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, keywordStripEnabled: true }
         ) as Record<string, unknown>;
         expect(typeof result.content).toBe('string');
     });
@@ -197,9 +197,9 @@ describe('extractMainContent - cleanseEnabled', () => {
     it('calculates candidateBytes and originalBytes when cleanseEnabled', () => {
         const content = 'This is test content for byte calculation verification.';
         document.body.innerHTML = `<article><p>${content}</p><script>alert('remove me')</script></article>`;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true }
         ) as Record<string, unknown>;
         // candidateBytes は findMainContentCandidates() 後の候補要素のバイト数
         expect(result).toHaveProperty('candidateBytes');
@@ -222,9 +222,9 @@ describe('extractMainContent - cleanseEnabled', () => {
                 <p>${'Content for candidateBytes test with AI summary cleansing enabled. '.repeat(5)}</p>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown>;
         expect(result).toHaveProperty('candidateBytes');
@@ -248,9 +248,9 @@ describe('extractMainContent - aiSummaryCleanseEnabled', () => {
                 <nav>Navigation links here</nav>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true }
         ) as Record<string, unknown>;
         expect(typeof result.content).toBe('string');
@@ -267,9 +267,9 @@ describe('extractMainContent - aiSummaryCleanseEnabled', () => {
                 <img src="c.jpg" alt="alt3">
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown>;
         expect(result).toHaveProperty('aiSummaryCleansedElements');
@@ -284,9 +284,9 @@ describe('extractMainContent - aiSummaryCleanseEnabled', () => {
                 <div class="advertisement">Ad content</div>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true, adsEnabled: true }
         ) as Record<string, unknown>;
         expect(['alt', 'nav', 'ads', 'multiple', 'none']).toContain(result.aiSummaryCleansedReason);
@@ -299,24 +299,24 @@ describe('extractMainContent - aiSummaryCleanseEnabled', () => {
                 <img src="x.jpg" alt="image alt text here that is descriptive">
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: false, adsEnabled: false }
         ) as Record<string, unknown>;
         // img[alt] のみ削除 → 'alt' or 'none'
         expect(['alt', 'none']).toContain(result.aiSummaryCleansedReason);
     });
 
-    it('returnInfo with cleanseEnabled counts targets even when none removed', () => {
+    it('WithInfo with cleanseEnabled counts targets even when none removed', () => {
         document.body.innerHTML = `
             <article>
                 <p>${'Clean content without any special elements. '.repeat(10)}</p>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: true },
         ) as Record<string, unknown>;
         // クレンジング対象がなくても totalRemoved は数値
         expect(typeof result.cleansedReason).toBe('string');
@@ -333,7 +333,7 @@ describe('extractMainContent - fallback', () => {
             <article><p>Hi</p></article>
             <div>Some other body content that will be used as fallback text here.</div>
         `;
-        const result = extractMainContent(10000, { returnInfo: true }) as Record<string, unknown>;
+        const result = extractMainContentWithInfo(10000, {}) as Record<string, unknown>;
         // fallbackTriggeredがtrueになるかどうかはコンテンツ長次第
         expect(typeof result.fallbackTriggered).toBe('boolean');
         if (result.fallbackTriggered) {
@@ -348,7 +348,7 @@ describe('extractMainContent - fallback', () => {
                 <p>${'More paragraphs with text. '.repeat(10)}</p>
             </article>
         `;
-        const result = extractMainContent(10000, { returnInfo: true }) as Record<string, unknown>;
+        const result = extractMainContentWithInfo(10000, {}) as Record<string, unknown>;
         expect(result.fallbackTriggered).toBe(false);
     });
 });
@@ -363,18 +363,18 @@ describe('extractMainContent - cleanseEnabled false', () => {
                 <p>${'Article content without cleansing enabled. '.repeat(10)}</p>
             </article>
         `;
-        const result = extractMainContent(10000, { cleanseEnabled: false, returnInfo: true }) as Record<string, unknown>;
+        const result = extractMainContentWithInfo(10000, { cleanseEnabled: false }) as Record<string, unknown>;
         expect(typeof result.content).toBe('string');
         expect(result.cleansedReason).toBe('none');
     });
 
-    it('returnInfo reports originalBytes equals cleansedBytes when no cleansing', () => {
+    it('WithInfo reports originalBytes equals cleansedBytes when no cleansing', () => {
         document.body.innerHTML = `
             <article>
                 <p>${'Content without any cleansing applied here. '.repeat(8)}</p>
             </article>
         `;
-        const result = extractMainContent(10000, { cleanseEnabled: false, returnInfo: true }) as Record<string, unknown>;
+        const result = extractMainContentWithInfo(10000, { cleanseEnabled: false }) as Record<string, unknown>;
         expect(result.cleansedReason).toBe('none');
         expect(result.fallbackTriggered).toBe(false);
     });
@@ -387,9 +387,9 @@ describe('extractMainContent - cleanseEnabled false', () => {
                 <img src="b.jpg" alt="another alt text">
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: false, returnInfo: true },
+            { cleanseEnabled: false },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown>;
         expect(typeof result.content).toBe('string');
@@ -407,9 +407,9 @@ describe('extractMainContent - cleanseEnabled false', () => {
                 <nav aria-label="main nav">Navigation content</nav>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: false, returnInfo: true },
+            { cleanseEnabled: false },
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true }
         ) as Record<string, unknown>;
         expect(typeof result.content).toBe('string');
@@ -430,9 +430,9 @@ describe('extractMainContent - cleanseEnabled false', () => {
                 <nav aria-label="main nav">Navigation content</nav>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true }
         ) as Record<string, unknown>;
         expect(typeof result.content).toBe('string');
@@ -455,9 +455,9 @@ describe('extractMainContent - cleansedReason=both', () => {
                 <div id="balance">keyword strip</div>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true }
         ) as Record<string, unknown>;
 
         // Both script (hard) and #balance (keyword) should be removed
@@ -470,9 +470,9 @@ describe('extractMainContent - cleansedReason=both', () => {
 });
 
 // ─────────────────────────────────────────────
-// returnInfo - counting when no elements removed
+// WithInfo - counting when no elements removed
 // ─────────────────────────────────────────────
-describe('extractMainContent - returnInfo counting when totalRemoved=0', () => {
+describe('extractMainContent - WithInfo counting when totalRemoved=0', () => {
     it('counts cleanse targets when cleanseEnabled but nothing removed', () => {
         // クレンジング対象がないコンテンツ
         document.body.innerHTML = `
@@ -480,9 +480,9 @@ describe('extractMainContent - returnInfo counting when totalRemoved=0', () => {
                 <p>${'Clean content no targets. '.repeat(10)}</p>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true }
         ) as Record<string, unknown>;
 
         // totalRemoved=0 でもカウント処理が走るはず
@@ -498,9 +498,9 @@ describe('extractMainContent - returnInfo counting when totalRemoved=0', () => {
                 <img src="test.jpg" alt="test alt">
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: false, hardStripEnabled: false, keywordStripEnabled: false, returnInfo: true },
+            { cleanseEnabled: false, hardStripEnabled: false, keywordStripEnabled: false },
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: false }
         ) as Record<string, unknown> & { aiSummaryCleansedElements?: number };
 
@@ -509,10 +509,10 @@ describe('extractMainContent - returnInfo counting when totalRemoved=0', () => {
 });
 
 // ─────────────────────────────────────────────
-// returnInfo - counting when cleanseEnabled=false
+// WithInfo - counting when cleanseEnabled=false
 // ─────────────────────────────────────────────
-describe('extractMainContent - returnInfo counting when cleanseEnabled=false', () => {
-    it('counts cleanse targets when cleanseEnabled=false in returnInfo mode', () => {
+describe('extractMainContent - WithInfo counting when cleanseEnabled=false', () => {
+    it('counts cleanse targets when cleanseEnabled=false in WithInfo mode', () => {
         // cleanseEnabled=false だが、コンテンツにはクレンジング対象がある
         document.body.innerHTML = `
             <article>
@@ -520,9 +520,9 @@ describe('extractMainContent - returnInfo counting when cleanseEnabled=false', (
                 <script>alert('target')</script>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: false, hardStripEnabled: true, keywordStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: false, hardStripEnabled: true, keywordStripEnabled: true }
         ) as Record<string, unknown>;
 
         // hardStripEnabled=trueなので、script要素は削除されcleansedReason='hard'になる
@@ -538,9 +538,9 @@ describe('extractMainContent - returnInfo counting when cleanseEnabled=false', (
                 <img src="test.jpg" alt="alt text">
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown> & { aiSummaryCleansedElements?: number };
 
@@ -582,9 +582,9 @@ describe('extractMainContent - Chrome Extension API', () => {
                 <script>alert('remove me')</script>
             </article>
         `;
-        extractMainContent(
+        extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true }
         );
 
         // sendMessage が呼ばれることを確認
@@ -608,9 +608,9 @@ describe('extractMainContent - aiSummaryCleansing with cleanseEnabled=true', () 
                 <img src="test.jpg" alt="test alt text">
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown>;
 
@@ -627,9 +627,9 @@ describe('extractMainContent - aiSummaryCleansing with cleanseEnabled=true', () 
                 <img src="b.jpg" alt="alt text 2">
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, returnInfo: true },
+            { cleanseEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: false, adsEnabled: false, socialEnabled: false, metadataEnabled: false }
         ) as Record<string, unknown>;
 
@@ -646,9 +646,9 @@ describe('extractMainContent - aiSummaryCleansing with cleanseEnabled=true', () 
                 <div class="advertisement">Ad</div>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, returnInfo: true },
+            { cleanseEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true, adsEnabled: true }
         ) as Record<string, unknown>;
 
@@ -664,9 +664,9 @@ describe('extractMainContent - aiSummaryCleansing with cleanseEnabled=true', () 
                 <p>${'Clean content no removal. '.repeat(10)}</p>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, returnInfo: true },
+            { cleanseEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown>;
 
@@ -685,9 +685,9 @@ describe('extractMainContent - aiSummaryCleansing else branch (cleanseEnabled=fa
                 <img src="test.jpg" alt="test alt">
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: false, returnInfo: true },
+            { cleanseEnabled: false },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown>;
 
@@ -705,9 +705,9 @@ describe('extractMainContent - aiSummaryCleansing else branch (cleanseEnabled=fa
                 <img src="c.jpg" alt="alt3">
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: false, returnInfo: true },
+            { cleanseEnabled: false },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown>;
 
@@ -724,9 +724,9 @@ describe('extractMainContent - no candidates path', () => {
         // 空のbodyを用意（候補要素がない状態）
         document.body.innerHTML = '';
         document.body.textContent = 'Plain text without container elements.';
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, returnInfo: true }
+            { cleanseEnabled: true }
         ) as Record<string, unknown>;
 
         // 文字列が返ることを確認（フォールバック動作）
@@ -747,9 +747,9 @@ describe('extractMainContent - no candidates path', () => {
             <script>alert('remove')</script>
             <iframe src="ads.html"></iframe>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true }
         ) as Record<string, unknown>;
 
         expect(result.cleansedReason).not.toBe('none');
@@ -761,9 +761,9 @@ describe('extractMainContent - no candidates path', () => {
             <div>${'Body content for AI cleansing. '.repeat(10)}</div>
             <img src="test.jpg" alt="test alt text">
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, returnInfo: true },
+            { cleanseEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown>;
 
@@ -772,18 +772,18 @@ describe('extractMainContent - no candidates path', () => {
 });
 
 // ─────────────────────────────────────────────
-// returnInfo モード - カウント処理
+// WithInfo モード - カウント処理
 // ─────────────────────────────────────────────
-describe('extractMainContent - returnInfo counting', () => {
-    it('counts cleanse targets when totalRemoved=0 in returnInfo mode', () => {
+describe('extractMainContent - WithInfo counting', () => {
+    it('counts cleanse targets when totalRemoved=0 in WithInfo mode', () => {
         document.body.innerHTML = `
             <article>
                 <p>${'Clean content without target elements. '.repeat(10)}</p>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true }
         ) as Record<string, unknown>;
 
         // totalRemoved=0 でもカウント処理が走る
@@ -791,15 +791,15 @@ describe('extractMainContent - returnInfo counting', () => {
         expect(result.keywordStripRemoved).toBeGreaterThanOrEqual(0);
     });
 
-    it('counts AI summary targets when aiSummaryCleansedElements=0 in returnInfo mode', () => {
+    it('counts AI summary targets when aiSummaryCleansedElements=0 in WithInfo mode', () => {
         document.body.innerHTML = `
             <article>
                 <p>${'Content without AI summary targets. '.repeat(10)}</p>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true }
         ) as Record<string, unknown>;
 
@@ -807,7 +807,7 @@ describe('extractMainContent - returnInfo counting', () => {
         expect(result.aiSummaryCleansedElements).toBeGreaterThanOrEqual(0);
     });
 
-    it('includes aiSummaryCleansedReasons in returnInfo when multiple types', () => {
+    it('includes aiSummaryCleansedReasons in WithInfo when multiple types', () => {
         document.body.innerHTML = `
             <article>
                 <p>${'Content for reasons test. '.repeat(10)}</p>
@@ -815,9 +815,9 @@ describe('extractMainContent - returnInfo counting', () => {
                 <nav>Nav</nav>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true }
         ) as Record<string, unknown>;
 
@@ -833,9 +833,9 @@ describe('extractMainContent - returnInfo counting', () => {
             <article><p>Hi</p></article>
             <div>${'Fallback content here. '.repeat(10)}</div>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, returnInfo: true },
+            { cleanseEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown>;
 
@@ -885,7 +885,7 @@ describe('extractMainContent - edge cases', () => {
                 <img src="b.jpg" alt="alt2">
             </article>
         `;
-        const result = extractMainContent(10000, { returnInfo: true }) as Record<string, unknown>;
+        const result = extractMainContentWithInfo(10000, {}) as Record<string, unknown>;
         expect(typeof result.content).toBe('string');
     });
 
@@ -897,9 +897,9 @@ describe('extractMainContent - edge cases', () => {
                 <img src="x.jpg" alt="${'B'.repeat(5000)}">
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown> & { aiSummaryCleansedElements?: number, fallbackTriggered?: boolean, fallbackReason?: string, aiSummaryOriginalBytes?: number, content?: string };
 
@@ -928,9 +928,9 @@ describe('extractMainContent - cleansedReason counting paths', () => {
             </body>
             </html>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: false, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: false }
         ) as Record<string, unknown>;
 
         // article にはターゲットがないので totalRemoved=0 になり、
@@ -952,9 +952,9 @@ describe('extractMainContent - cleansedReason counting paths', () => {
             </body>
             </html>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: true }
         ) as Record<string, unknown>;
 
         // article にはターゲットがないので totalRemoved=0 になり、
@@ -977,9 +977,9 @@ describe('extractMainContent - cleansedReason counting paths', () => {
             </body>
             </html>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true }
         ) as Record<string, unknown>;
 
         // article にはターゲットがないので totalRemoved=0 になり、
@@ -1001,9 +1001,9 @@ describe('extractMainContent - logDebug and deep coverage paths', () => {
                 <img src="a.jpg" alt="alt text">
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown>;
         expect(typeof result.content).toBe('string');
@@ -1018,9 +1018,9 @@ describe('extractMainContent - logDebug and deep coverage paths', () => {
                 <img src="a.jpg" alt="alt text">
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: false, returnInfo: true },
+            { cleanseEnabled: false },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown>;
         expect(typeof result.content).toBe('string');
@@ -1030,9 +1030,9 @@ describe('extractMainContent - logDebug and deep coverage paths', () => {
 });
 
 // ─────────────────────────────────────────────
-// countAISummaryTargets block in returnInfo (lines 568-638)
+// countAISummaryTargets block in WithInfo (lines 568-638)
 // ─────────────────────────────────────────────
-describe('extractMainContent - countAISummaryTargets in returnInfo', () => {
+describe('extractMainContent - countAISummaryTargets in WithInfo', () => {
     it('counts AI summary targets when aiSummaryCleanseEnabled, totalRemoved=0, and fallback not triggered', () => {
         document.body.innerHTML = `
             <article>
@@ -1040,9 +1040,9 @@ describe('extractMainContent - countAISummaryTargets in returnInfo', () => {
                 <nav aria-label="main">Navigation content here for counting.</nav>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1061,9 +1061,9 @@ describe('extractMainContent - countAISummaryTargets in returnInfo', () => {
                 <div class="advertisement">Ad content</div>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: false, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: false },
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true, adsEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1080,9 +1080,9 @@ describe('extractMainContent - countAISummaryTargets in returnInfo', () => {
                 <img src="a.jpg" alt="only alt target">
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: false, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: false },
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: false, adsEnabled: false }
         ) as Record<string, unknown>;
 
@@ -1098,9 +1098,9 @@ describe('extractMainContent - countAISummaryTargets in returnInfo', () => {
                 <script type="application/ld+json">{"@context":"http://schema.org"}</script>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false },
             { aiSummaryCleanseEnabled: true, deepEnabled: true, jsonLdEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1116,9 +1116,9 @@ describe('extractMainContent - countAISummaryTargets in returnInfo', () => {
                 <a href="#main" class="skip-link">Skip to main</a>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false },
             { aiSummaryCleanseEnabled: true, lazyLoadEnabled: true, skipLinkEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1141,9 +1141,9 @@ describe('extractMainContent - countAISummaryTargets in returnInfo', () => {
                 </ul>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false },
             { aiSummaryCleanseEnabled: true, cardEnabled: true, linkDensityEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1158,9 +1158,9 @@ describe('extractMainContent - countAISummaryTargets in returnInfo', () => {
                 <div class="popup">Popup content</div>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false },
             { aiSummaryCleanseEnabled: true, fixedEnabled: true, popupEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1177,9 +1177,9 @@ describe('extractMainContent - no candidates with cleanse + aiSummary fallback',
     it('triggers short_content fallback when no candidates and cleanseEnabled', () => {
         // bodyに長いテキストはあるが、適切な候補要素がない → 短いフォールバック
         document.body.innerHTML = '<div><p>' + 'Hi '.repeat(100) + '</p></div>';
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true }
         ) as Record<string, unknown>;
 
         expect(result.fallbackTriggered).toBe(false);
@@ -1194,9 +1194,9 @@ describe('extractMainContent - no candidates with cleanse + aiSummary fallback',
                 <img src="x.jpg" alt="${'B'.repeat(5000)}">
             </div>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, returnInfo: true },
+            { cleanseEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1216,9 +1216,9 @@ describe('extractMainContent - no candidates with cleanse + aiSummary fallback',
                 <div id="balance">Secret info</div>
             </div>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true }
         ) as Record<string, unknown>;
 
         expect(result.cleansedReason).toBe('both');
@@ -1240,13 +1240,13 @@ describe('extractMainContent - no candidates path (lines 364-510)', () => {
             <footer>Footer</footer>
             <header>Header</header>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true }
         ) as Record<string, unknown>;
 
         expect(typeof result.content).toBe('string');
-        // Because returnInfo=true and totalRemoved===0 inside script-less clone,
+        // Because WithInfo and totalRemoved===0 inside script-less clone,
         // countCleanseTargets scans the body and counts nothing (no script/iframe).
         // So cleansedReason stays 'none'.
         expect(result.cleansedReason).toBe('none');
@@ -1260,9 +1260,9 @@ describe('extractMainContent - no candidates path (lines 364-510)', () => {
             <nav>Nav text <img src="a.jpg" alt="alt text example"></nav>
             <header>Header</header>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1281,9 +1281,9 @@ describe('extractMainContent - no candidates path (lines 364-510)', () => {
             <nav>Nav <img src="x.jpg" alt="${'Y'.repeat(6000)}"></nav>
             <header>H</header>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, returnInfo: true },
+            { cleanseEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1297,9 +1297,9 @@ describe('extractMainContent - no candidates path (lines 364-510)', () => {
         // Use aiSummaryCleanseEnabled=false so that _overCleansed is undefined
         // and the fallback reason is short_content.
         document.body.innerHTML = `Hi <nav>Nav</nav>`;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false },
             { aiSummaryCleanseEnabled: false }
         ) as Record<string, unknown>;
 
@@ -1318,9 +1318,9 @@ describe('extractMainContent - no candidates path (lines 364-510)', () => {
             <aside><form><input type="password"></form><div id="balance">Secret</div></aside>
             <header>Header</header>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true }
         ) as Record<string, unknown>;
 
         // hard strip removed form/input, keyword strip removed #balance.
@@ -1338,9 +1338,9 @@ describe('extractMainContent - no candidates path (lines 364-510)', () => {
             <aside><div id="balance">Secret</div></aside>
             <header>Header</header>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true }
         ) as Record<string, unknown>;
 
         expect(result.cleansedReason).toBe('keyword');
@@ -1356,16 +1356,16 @@ describe('extractMainContent - no candidates path (lines 364-510)', () => {
             <nav>Nav</nav>
             <header>Header</header>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, returnInfo: true },
+            { cleanseEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: false, navEnabled: false, adsEnabled: false }
         ) as Record<string, unknown>;
 
         expect(typeof result.content).toBe('string');
         // AI cleansing ran but removed nothing inside the clone (all excluded children are skipped)
         expect(result.aiSummaryCleansedReason).toBe('none');
-        // returnInfo runs countAISummaryTargets which returns 0
+        // WithInfo runs countAISummaryTargets which returns 0
         expect(result.aiSummaryCleansedElements).toBe(0);
         // Bytes still get set because the code sets them unconditionally before the if
         expect(result).toHaveProperty('aiSummaryOriginalBytes');
@@ -1379,9 +1379,9 @@ describe('extractMainContent - no candidates path (lines 364-510)', () => {
             ${'Direct text. '.repeat(10)}
             <nav><script>alert('x')</script></nav>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true }
         ) as Record<string, unknown>;
 
         expect(typeof result.content).toBe('string');
@@ -1398,9 +1398,9 @@ describe('extractMainContent - no candidates path (lines 364-510)', () => {
             <nav>Nav only</nav>
             <header>Header</header>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, returnInfo: true },
+            { cleanseEnabled: true },
             { aiSummaryCleanseEnabled: true, navEnabled: true, altEnabled: false, adsEnabled: false }
         ) as Record<string, unknown>;
 
@@ -1414,9 +1414,9 @@ describe('extractMainContent - no candidates path (lines 364-510)', () => {
             ${'Content. '.repeat(15)}
             <nav>Nav <img src="a.jpg" alt="alt text"></nav>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: false, returnInfo: true },
+            { cleanseEnabled: false },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1429,9 +1429,9 @@ describe('extractMainContent - no candidates path (lines 364-510)', () => {
         // body has no element children → candidates is empty
         document.body.innerHTML = '';
         document.body.textContent = 'Plain text directly on body without any wrapper elements.';
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: false, returnInfo: true }
+            { cleanseEnabled: false }
         ) as Record<string, unknown>;
 
         expect(typeof result.content).toBe('string');
@@ -1458,14 +1458,14 @@ describe('extractMainContent - error handling', () => {
         }
     });
 
-    it('covers catch block with returnInfo when querySelectorAll throws', () => {
+    it('covers catch block with WithInfo when querySelectorAll throws', () => {
         const originalQSA = document.querySelectorAll;
         document.querySelectorAll = function() {
             throw new Error('Simulated qsa error');
         } as typeof document.querySelectorAll;
 
         try {
-            const result = extractMainContent(10000, { returnInfo: true }) as Record<string, unknown>;
+            const result = extractMainContentWithInfo(10000, {}) as Record<string, unknown>;
             expect(typeof result.content).toBe('string');
         } finally {
             document.querySelectorAll = originalQSA;
@@ -1500,9 +1500,9 @@ describe('extractMainContent - body protection v5.1.19', () => {
                 <a href="#">About</a>
             </nav>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, returnInfo: true },
+            { cleanseEnabled: true },
             { aiSummaryCleanseEnabled: true, adsEnabled: true, navEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1524,9 +1524,9 @@ describe('extractMainContent - body protection v5.1.19', () => {
             <div class="advertisement">Sponsored content</div>
             <div class="popup">Subscribe popup</div>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: true, adsEnabled: true, popupEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1545,9 +1545,9 @@ describe('extractMainContent - body protection v5.1.19', () => {
             </section>
             <div class="ad-slot">Ad</div>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: true, adsEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1557,9 +1557,9 @@ describe('extractMainContent - body protection v5.1.19', () => {
 });
 
 // ─────────────────────────────────────────────
-// returnInfo count-only path when aiSummaryCleansedReason already set
+// WithInfo count-only path when aiSummaryCleansedReason already set
 // ─────────────────────────────────────────────
-describe('extractMainContent - returnInfo count-only path coverage', () => {
+describe('extractMainContent - WithInfo count-only path coverage', () => {
     it('re-evaluates aiSummaryCleansedReason in count-only path when initial reason is none', () => {
         document.body.innerHTML = `
             <article>
@@ -1570,9 +1570,9 @@ describe('extractMainContent - returnInfo count-only path coverage', () => {
         `;
         // Use cleanseEnabled=true so totalRemoved may be 0 inside article,
         // triggering the countAISummaryTargets block at line 568+
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false },
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1580,7 +1580,7 @@ describe('extractMainContent - returnInfo count-only path coverage', () => {
         expect(result.aiSummaryCleansedElements).toBeGreaterThan(0);
     });
 
-    it('sets aiSummaryCleansedReasons array exactly via countAISummaryTargets in returnInfo', () => {
+    it('sets aiSummaryCleansedReasons array exactly via countAISummaryTargets in WithInfo', () => {
         document.body.innerHTML = `
             <article>
                 <p>${'Content. '.repeat(10)}</p>
@@ -1590,9 +1590,9 @@ describe('extractMainContent - returnInfo count-only path coverage', () => {
                 <aside>Sidebar</aside>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false },
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true, adsEnabled: true, deepEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1619,9 +1619,9 @@ describe('extractMainContent - v5.1.19 new flags edge cases', () => {
                 <div class="platform">Platform noise</div>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             {
                 aiSummaryCleanseEnabled: true,
                 fixedEnabled: true,
@@ -1652,9 +1652,9 @@ describe('extractMainContent - v5.1.19 new flags edge cases', () => {
                 <div class="custom-pattern-test">Custom noise</div>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             {
                 aiSummaryCleanseEnabled: true,
                 jpLayoutEnabled: true,
@@ -1681,9 +1681,9 @@ describe('extractMainContent - v5.1.19 new flags edge cases', () => {
                 </ul>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             {
                 aiSummaryCleanseEnabled: true,
                 textDensityEnabled: true,
@@ -1705,9 +1705,9 @@ describe('extractMainContent - v5.1.19 new flags edge cases', () => {
                 <p>${'Content with empty custom patterns. '.repeat(10)}</p>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: true, jpLayoutEnabled: true, customPatterns: [] }
         ) as Record<string, unknown>;
 
@@ -1722,9 +1722,9 @@ describe('extractMainContent - v5.1.19 new flags edge cases', () => {
             </article>
             <div class="ad">Ad</div>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: true, adsEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1738,9 +1738,9 @@ describe('extractMainContent - v5.1.19 new flags edge cases', () => {
                 <img src="x.jpg" alt="${'B'.repeat(6000)}">
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, returnInfo: true },
+            { cleanseEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1764,9 +1764,9 @@ describe('extractMainContent - aiSummaryCleansedReasons array coverage', () => {
                 <div class="advertisement">Ad content</div>
             </article>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false },
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true, adsEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1793,9 +1793,9 @@ describe('extractMainContent - count-only path with targets outside candidate', 
             <nav>Navigation outside article</nav>
             <div class="advertisement">Ad outside article</div>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false, returnInfo: true },
+            { cleanseEnabled: true, hardStripEnabled: false, keywordStripEnabled: false },
             { aiSummaryCleanseEnabled: true, altEnabled: true, navEnabled: true, adsEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1823,9 +1823,9 @@ describe('extractMainContent - Chrome Extension API catch path', () => {
                 <script>alert('remove me')</script>
             </article>
         `;
-        extractMainContent(
+        extractMainContentWithInfo(
             10000,
-            { cleanseEnabled: true, hardStripEnabled: true, returnInfo: true }
+            { cleanseEnabled: true, hardStripEnabled: true }
         );
 
         expect(mockSendMessage).toHaveBeenCalledWith(
@@ -1854,9 +1854,9 @@ describe('extractMainContent - bodyProtection v5.1.19 integration', () => {
             </aside>
             <nav>Global Navigation</nav>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: true, adsEnabled: true, navEnabled: true }
         ) as Record<string, unknown>;
 
@@ -1875,9 +1875,9 @@ describe('extractMainContent - bodyProtection v5.1.19 integration', () => {
             <div class="advertisement">Sponsored</div>
             <nav class="menu">Menu</nav>
         `;
-        const result = extractMainContent(
+        const result = extractMainContentWithInfo(
             10000,
-            { returnInfo: true },
+            {},
             { aiSummaryCleanseEnabled: true, adsEnabled: true, navEnabled: true }
         ) as Record<string, unknown>;
 

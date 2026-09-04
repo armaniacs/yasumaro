@@ -129,10 +129,10 @@ describe('recordRemoval (30-14 funnel)', () => {
   });
 
   it('funnelを含むExtractResultが型で許容される', async () => {
-    const { extractMainContent } = await import('../index.js');
+    const { extractMainContentWithInfo } = await import('../index.js');
     // jsdom で最低限のDOMを用意
     document.body.innerHTML = `<article><p>${'a'.repeat(200)}</p></article>`;
-    const result = extractMainContent(10000, { cleanseEnabled: false, returnInfo: true }, { aiSummaryCleanseEnabled: true }) as unknown as import('../types.js').ExtractResult;
+    const result = extractMainContentWithInfo(10000, { cleanseEnabled: false }, { aiSummaryCleanseEnabled: true }) as unknown as import('../types.js').ExtractResult;
     expect(result.funnel).toBeDefined();
     expect(typeof result.funnel?.pageBytes).toBe('number');
     expect(typeof result.funnel?.candidateBytes).toBe('number');

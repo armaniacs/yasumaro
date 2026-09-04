@@ -3,7 +3,7 @@
  * dualPayload.test.ts — 30-11 二重ペイロード
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { extractMainContent } from '../index.js';
+import { extractMainContent, extractMainContentWithInfo } from '../index.js';
 import type { ExtractResult } from '../types.js';
 
 describe('dualPayload (30-11)', () => {
@@ -13,9 +13,9 @@ describe('dualPayload (30-11)', () => {
 
   it('クレンジング時に originalContent と dualPayloadEnabled が付与される', () => {
     document.body.innerHTML = `<article><p>${'本文 '.repeat(50)}</p><div class="ad-banner">広告</div></article>`;
-    const result = extractMainContent(
+    const result = extractMainContentWithInfo(
       10000,
-      { cleanseEnabled: false, returnInfo: true },
+      { cleanseEnabled: false },
       { aiSummaryCleanseEnabled: true },
     ) as ExtractResult;
     expect(result.originalContent).toBeDefined();
@@ -26,9 +26,9 @@ describe('dualPayload (30-11)', () => {
 
   it('originalContent は cleansed content より長いか等しい', () => {
     document.body.innerHTML = `<article><p>${'本文 '.repeat(100)}</p><nav>ナビ</nav><div class="social-share">share</div></article>`;
-    const result = extractMainContent(
+    const result = extractMainContentWithInfo(
       10000,
-      { cleanseEnabled: false, returnInfo: true },
+      { cleanseEnabled: false },
       { aiSummaryCleanseEnabled: true },
     ) as ExtractResult;
     expect(result.originalContent!.length).toBeGreaterThanOrEqual(result.content.length);
@@ -36,9 +36,9 @@ describe('dualPayload (30-11)', () => {
 
   it('dualPayload が無効でも funnel は生成される', () => {
     document.body.innerHTML = `<article><p>${'a'.repeat(500)}</p></article>`;
-    const result = extractMainContent(
+    const result = extractMainContentWithInfo(
       10000,
-      { cleanseEnabled: false, returnInfo: true },
+      { cleanseEnabled: false },
       { aiSummaryCleanseEnabled: false },
     ) as ExtractResult;
     // originalContent は body からフォールバックで入る
@@ -48,7 +48,7 @@ describe('dualPayload (30-11)', () => {
 
   it('originalContent が短いページでも取得できる', () => {
     document.body.innerHTML = `<article><p>短い本文テストコンテンツです。十分な長さを確保します。${'x'.repeat(200)}</p></article>`;
-    const result = extractMainContent(10000, { cleanseEnabled: false, returnInfo: true }, { aiSummaryCleanseEnabled: true }) as ExtractResult;
+    const result = extractMainContentWithInfo(10000, { cleanseEnabled: false }, { aiSummaryCleanseEnabled: true }) as ExtractResult;
     expect(result.originalContent).toBeTruthy();
   });
 
