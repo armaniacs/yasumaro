@@ -19,9 +19,10 @@
  */
 
 import { sanitizePromptContent, type DangerLevelValues } from './promptSanitizer.js';
-// Direct logger/* imports (Wave 4): new code must not use the barrel.
-import { addLog } from './logger/core.js';
-import { LogType } from './logger/types.js';
+// Barrel import (not logger/* direct): consumer test files mock the barrel,
+// and migrating those mocks is the Wave-4 call-site migration backlog —
+// not this PBI. The eslint warn here is that migration signal.
+import { addLog, LogType } from './logger.js';
 
 export type PromptSafetyContext =
   | 'local-input'
