@@ -49,7 +49,7 @@ export function isoWeekKey(stamp) {
  * Apply the retention policy to a reports directory.
  * @param {string} reportsDir
  * @param {{ all?: boolean, keep?: number }} [opts]
- * @returns {string[]} deleted file names
+ * @returns {string[]} deleted file names (sorted ascending)
  */
 export function pruneReports(reportsDir, opts = {}) {
   const { all = false, keep = ROLLING_KEEP } = opts;
@@ -57,7 +57,7 @@ export function pruneReports(reportsDir, opts = {}) {
   const files = readdirSync(reportsDir).filter((f) => !f.startsWith('.'));
   if (all) {
     for (const f of files) rmSync(join(reportsDir, f), { recursive: true, force: true });
-    return files;
+    return [...files].sort();
   }
   const gens = groupByGeneration(files);
   const stamps = [...gens.keys()].sort(); // ascending
@@ -75,11 +75,11 @@ export function pruneReports(reportsDir, opts = {}) {
   for (const [stamp, list] of gens) {
     if (keepSet.has(stamp)) continue;
     for (const f of list) {
-      rmSync(join(reportsDir, f), { force: true });
+      rmSync(join(reportsDir, f), { recursive: true, force: true });
       deleted.push(f);
     }
   }
-  return deleted;
+  return deleted.sort();
 }
 
 function main() {
