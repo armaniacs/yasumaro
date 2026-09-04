@@ -13,8 +13,7 @@ import { isExcludedElement, isAsianContentElement } from './classifier.js';
 export function calculateTextScore(element: Element): number {
     let score = 0;
 
-    // テキストノードの長さ
-    const text = ('innerText' in element ? (element as HTMLElement).innerText : null) || element.textContent || '';
+    const text = element.textContent || '';
     score += text.length;
 
     // 単一DOM走覧でp, h*, ul, ol, aの要素をカウント（パフォーマンス改善）
@@ -43,7 +42,7 @@ export function calculateTextScore(element: Element): number {
             listCount++;
         } else if (tag === 'a') {
             _linkCount++;
-            linkTextLength += ('innerText' in elem ? (elem as HTMLElement).innerText?.length : null) || elem.textContent?.length || 0;
+            linkTextLength += elem.textContent?.length || 0;
         }
 
         node = walker.nextNode();
@@ -64,6 +63,22 @@ export function calculateTextScore(element: Element): number {
 }
 
 /**
+ * Score each element exactly once, sort by score descending, return top `take`.
+ * Exported for test observability (scoreFn injection); defaults to calculateTextScore.
+ */
+export function scoreAndSort(
+    elements: Element[],
+    take: number,
+    scoreFn: (el: Element) => number = calculateTextScore,
+): Element[] {
+    return elements
+        .map((el) => ({ el, score: scoreFn(el) }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, take)
+        .map((x) => x.el);
+}
+
+/**
  * メインコンテンツの候補要素を抽出
  */
 export function findMainContentCandidates(): Element[] {
@@ -79,9 +94,7 @@ export function findMainContentCandidates(): Element[] {
 
     // 候補がある場合、最もスコアの高い要素を選択
     if (candidates.length > 0) {
-        // スコア順にソート
-        candidates.sort((a, b) => calculateTextScore(b) - calculateTextScore(a));
-        return candidates.slice(0, 1);
+        return scoreAndSort(candidates, 1);
     }
 
     // アジア圏のコンテンツ構造を検索
@@ -94,8 +107,7 @@ export function findMainContentCandidates(): Element[] {
 
     // アジアコンテンツが見つかった場合、スコア順にソートして返す
     if (candidates.length > 0) {
-        candidates.sort((a, b) => calculateTextScore(b) - calculateTextScore(a));
-        return candidates.slice(0, 3);
+        return scoreAndSort(candidates, 3);
     }
 
     // 候補がない場合、階層的に探索
@@ -114,6 +126,5 @@ export function findMainContentCandidates(): Element[] {
     }
 
     // スコア順にソートし、上位3候補を返す
-    candidates.sort((a, b) => calculateTextScore(b) - calculateTextScore(a));
-    return candidates.slice(0, 3);
+    return scoreAndSort(candidates, 3);
 }
