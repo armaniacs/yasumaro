@@ -142,7 +142,7 @@ git add bench/baselines/micro.json   # PR で差分をレビューする
 - CPU は CDP `Emulation.setCPUThrottlingRate: 4` で固定（マシン差の吸収）
 - Lighthouse は任意依存。未インストールなら該当テストは skip（`npm i -D lighthouse` で有効化）
 - 自動保存 end-to-end 時間は content script の `performance.mark('ow-extract-start')`〜`'ow-send-ready')` 間で計測（`src/content/visitReporter.ts`）
-- 注入あり/なし A/B は `localStorage.__ow_bench_disable_cs = '1'` で content script を早期 return させて比較（`src/content/loader.ts`）
+- 注入あり/なし A/B は `localStorage.__ow_bench_disable_cs = '1'` で content script を早期 return させて比較（`src/content/loader.ts`）。この制御は **ベンチビルド限定**（`OW_BENCH=1 npm run build`）。通常ビルドではコンパイル時に除去されるため、ページ側から挙動を変えられない
 
 ### トラブルシューティング
 
@@ -262,7 +262,10 @@ git add bench/baselines/micro.json
 - Autosave latency = the gap between `performance.mark('ow-extract-start')` and
   `'ow-send-ready')` in `src/content/visitReporter.ts`.
 - The A/B test disables the content script via
-  `localStorage.__ow_bench_disable_cs = '1'` (`src/content/loader.ts`).
+  `localStorage.__ow_bench_disable_cs = '1'` (`src/content/loader.ts`). The
+  toggle only exists in a bench build — build with `OW_BENCH=1 npm run build`.
+  Production builds compile it out, so page content cannot alter extension
+  behavior.
 
 ### Troubleshooting
 

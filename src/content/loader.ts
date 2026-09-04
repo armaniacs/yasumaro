@@ -25,11 +25,31 @@ import { checkDomainAllowedFromCache } from './domainPolicy.js';
 declare const __PROTOCOL_VERSION__: number | undefined;
 const CURRENT_PROTOCOL_VERSION: number = typeof __PROTOCOL_VERSION__ !== 'undefined' ? __PROTOCOL_VERSION__ : 1;
 
+// Benchmark A/B build flag. Only builds made with OW_BENCH=1 define this as
+// true; production builds define it as false so the page-controllable
+// localStorage kill-switch below is compiled out — untrusted page content must
+// never be able to disable the content script.
+declare const __OW_BENCH__: boolean | undefined;
+const BENCH_DISABLE_CS_ENABLED: boolean = typeof __OW_BENCH__ !== 'undefined' && __OW_BENCH__ === true;
+
 // 即時実行関数
 if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.getURL && typeof window !== 'undefined') (async () => {
     // 【セキュリティとパフォーマンス最適化】内部スキームには早期リターン
     if (typeof window.location !== 'undefined' && shouldSkipUrl(window.location.href)) {
         return;
+    }
+
+    // Benchmark A/B control: only compiled into bench builds (OW_BENCH=1).
+    // The bench sets this page-origin localStorage key to measure page load
+    // WITHOUT the content script's work. Production builds never read it.
+    if (BENCH_DISABLE_CS_ENABLED) {
+        try {
+            if (window.localStorage?.getItem('__ow_bench_disable_cs') === '1') {
+                return;
+            }
+        } catch {
+            // localStorage can throw in sandboxed frames — ignore and continue.
+        }
     }
 
     const url = window.location.href;

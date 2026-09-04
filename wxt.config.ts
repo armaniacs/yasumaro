@@ -34,6 +34,11 @@ export default defineConfig({
   vite: () => ({
     define: {
       __PROTOCOL_VERSION__: JSON.stringify(1),
+      // Benchmark A/B flag for src/content/loader.ts. Only bench builds
+      // (OW_BENCH=1) contain the page-controllable localStorage kill-switch;
+      // production builds get `false` so the check is dead-code eliminated.
+      // Untrusted page content must never control extension behavior.
+      __OW_BENCH__: JSON.stringify(process.env.OW_BENCH === '1'),
     },
     build: {
       modulePreload: false,
