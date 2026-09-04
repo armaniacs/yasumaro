@@ -173,6 +173,9 @@ The `force` parameter in `record()` overrides domain filtering, but a warning is
 - **local_only**: Local AI only (fails if unavailable)
 - **cloud_only**: Cloud AI only (no PII masking)
 
+### 7.1b Prompt Safety Seam
+Prompt-injection policy for all five check sites (pipeline local-input / local-summary / cloud-summary, provider base, built-in client) lives in one ordered table (`src/utils/promptSafety.ts` `checkPromptSafety`). MEDIUM explicitly passes everywhere; verdict strings and log shapes are identical to the code it replaced. Compare levels against string literals (not the `DangerLevel` value import) so existing sanitizer-only module mocks keep working.
+
 ### 7.2 PII Confirmation UI
 When enabled (`PII_CONFIRMATION_UI = true`):
 - User must preview masked content before final confirmation

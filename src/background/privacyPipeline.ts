@@ -4,7 +4,7 @@ import { Settings, StorageKeys } from '../utils/storage/types.js';
 import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
 import { parseTagsFromSummary, normalizeTags } from '../utils/tagUtils.js';
 import type { TagNormalizationEntry } from '../utils/types.js';
-import { sanitizePromptContent, DangerLevel } from '../utils/promptSanitizer.js';
+import { checkPromptSafety } from '../utils/promptSafety.js';
 import { isDegenerateOutput } from '../utils/llmOutputGuard.js';
 import { addPendingPage } from '../utils/pendingStorage.js';
 import type { AIService, AISummaryResult } from './ai/AIService.js';
@@ -185,25 +185,13 @@ export class PrivacyPipeline {
       return {};
     }
 
-    const localSanitizeResult = sanitizePromptContent(content);
-    if (localSanitizeResult.dangerLevel === DangerLevel.HIGH) {
-      addLog(LogType.ERROR, 'Local AI blocked - high danger content detected', {
-        warnings: localSanitizeResult.warnings,
-        traceId,
-      });
+    const localSafety = checkPromptSafety(content, 'local-input', { traceId });
+    if (localSafety.blocked) {
       return { returnEarly: true, result: { summary: 'Error: Content blocked due to potential security risk.', originalTokens } };
-    }
-    if (localSanitizeResult.dangerLevel === DangerLevel.LOW) {
-      addLog(LogType.WARN, 'Local AI low-risk prompt injection detected', {
-        warnings: localSanitizeResult.warnings,
-        traceId,
-        dangerLevel: localSanitizeResult.dangerLevel,
-        category: 'generic_term',
-      });
     }
 
     const localCallStart = performance.now();
-    const localResult = await this.aiService.generateSummary(localSanitizeResult.sanitized, { mode: 'local_only', traceId });
+    const localResult = await this.aiService.generateSummary(localSafety.sanitized, { mode: 'local_only', traceId });
     const localCallDurationMs = performance.now() - localCallStart;
     if (!localResult.summary) {
       if (this.mode === 'local_only') {
@@ -220,14 +208,8 @@ export class PrivacyPipeline {
       return {};
     }
 
-    const summarySanitizeResult = sanitizePromptContent(localResult.summary);
-    if (summarySanitizeResult.dangerLevel === DangerLevel.HIGH) {
-      addLog(LogType.WARN, 'Local AI summary sanitized - high danger content detected', {
-        warnings: summarySanitizeResult.warnings,
-      });
-    }
-
-    const processedText = summarySanitizeResult.sanitized;
+    const summarySafety = checkPromptSafety(localResult.summary, 'local-summary');
+    const processedText = summarySafety.sanitized;
 
     if (this.mode === 'local_only') {
       return {
@@ -260,20 +242,8 @@ export class PrivacyPipeline {
     let tags: string[] | undefined;
 
     if (aiResult.summary) {
-      const sanitizeResult = sanitizePromptContent(aiResult.summary);
-      sanitizedSummary = sanitizeResult.sanitized;
-
-      if (sanitizeResult.dangerLevel === DangerLevel.HIGH) {
-        addLog(LogType.WARN, 'AI summary sanitized - high danger content detected', {
-          warnings: sanitizeResult.warnings,
-        });
-      } else if (sanitizeResult.dangerLevel === DangerLevel.LOW) {
-        addLog(LogType.WARN, 'AI summary low-risk prompt injection detected', {
-          warnings: sanitizeResult.warnings,
-          dangerLevel: sanitizeResult.dangerLevel,
-          category: 'generic_term',
-        });
-      }
+      const summarySafety = checkPromptSafety(aiResult.summary, 'cloud-summary');
+      sanitizedSummary = summarySafety.sanitized;
 
       const parsed = parseTagsFromSummary(sanitizedSummary);
       const dict = (this.settings[StorageKeys.TAG_NORMALIZATION_DICT] ?? []) as TagNormalizationEntry[];

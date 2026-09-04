@@ -13,7 +13,7 @@
  */
 
 import { addLog, LogType } from '../utils/logger.js';
-import { sanitizePromptContent, DangerLevel } from '../utils/promptSanitizer.js';
+import { checkPromptSafety } from '../utils/promptSafety.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getProviderMaxTokens } from '../utils/aiLimits.js';
 import { getMessage } from '../utils/i18n.js';
@@ -167,19 +167,11 @@ export class BuiltInAIClient {
             return { success: false, error: 'Invalid content' };
         }
 
-        // Sanitize content to prevent prompt injection (match LocalAIClient/OpenAIProvider behavior)
-        const sanitizeResult = sanitizePromptContent(content);
-        if (sanitizeResult.dangerLevel === DangerLevel.HIGH) {
-            addLog(LogType.WARN, 'Content blocked due to high danger level', { warnings: sanitizeResult.warnings, source: 'BuiltInAI' });
+        // Sanitize content to prevent prompt injection (shared policy seam —
+        // same verdict and logs as before, owned in one place).
+        const sanitizeResult = checkPromptSafety(content, 'builtin-input');
+        if (sanitizeResult.blocked) {
             return { success: false, error: 'Content contains potentially dangerous patterns' };
-        }
-        if (sanitizeResult.dangerLevel === DangerLevel.LOW) {
-            addLog(LogType.WARN, 'Low-risk prompt injection detected in built-in AI input', {
-                warnings: sanitizeResult.warnings,
-                source: 'BuiltInAI',
-                dangerLevel: sanitizeResult.dangerLevel,
-                category: 'generic_term',
-            });
         }
 
         const staticMaxChars = getProviderMaxTokens('localai');
