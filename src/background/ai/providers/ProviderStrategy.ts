@@ -12,6 +12,8 @@ import { pickDefined } from '../../../utils/objectUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { readJsonCapped } from '../../../utils/readBodyCapped.js';
+import { fetchWithRetry } from '../../../utils/fetch.js';
+import { getAllowedUrls } from '../../../utils/storage/urlWhitelist.js';
 
 export interface AIProviderConnectionResult {
     success: boolean;
@@ -283,15 +285,9 @@ export abstract class AIProviderStrategy {
         }
 
         try {
-            // Lazy transport imports: fetch.js → cspValidator → providerCatalog
-            // and urlWhitelist → providerCatalog both edge back into
-            // background/ai. A static import here would circularize base-class
-            // initialization (the settingsStore ↔ trustDb precedent, ADR
-            // 2026-08-20). ESM cache makes this a one-time cost.
-            const [{ fetchWithRetry }, { getAllowedUrls }] = await Promise.all([
-                import('../../../utils/fetch.js'),
-                import('../../../utils/storage/urlWhitelist.js'),
-            ]);
+            // Static transport imports again: the utils -> background back-edge
+            // is gone (PBI 2026-09-05-01 moved the allowlist table + predicate
+            // to the low tier), so no cycle remains to dodge.
             const allowedUrls = await getAllowedUrls();
 
             const response = await fetchWithRetry(prepared.url, {

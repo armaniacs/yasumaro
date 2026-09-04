@@ -8,21 +8,22 @@ import { normalizeUrl } from '../urlUtils.js';
 import { errorMessage } from '../errorUtils.js';
 import { StorageKeys } from './types.js';
 import type { Settings } from './types.js';
-import { PROVIDER_CATALOG } from '../../background/ai/providerCatalog.js';
+import { PROVIDER_ALLOWLIST_ROWS } from './providerAllowlist.js';
 
 /**
  * Add each configured remote-provider Base URL to `allowedUrls`, gated on the
- * whitelist. Derived from PROVIDER_CATALOG so a new provider's base URL is
- * covered by its registry row alone (was 3× copy-pasted per file).
- * Local providers (lm-studio/ollama) are skipped — their localhost origins are
- * covered by the Obsidian localhost block that always runs before this.
+ * whitelist. Derived from the neutral PROVIDER_ALLOWLIST_ROWS so a new
+ * provider's base URL is covered by its table row alone (was 3× copy-pasted
+ * per file). Local providers (lm-studio/ollama) are skipped — their localhost
+ * origins are covered by the Obsidian localhost block that always runs before
+ * this.
  */
 export function addProviderBaseUrls(
     allowedUrls: Set<string>,
     settings: Record<string, unknown>,
     isInWhitelist: (url: string) => boolean,
 ): void {
-    for (const entry of PROVIDER_CATALOG.values()) {
+    for (const entry of PROVIDER_ALLOWLIST_ROWS) {
         if (!entry.baseUrlKey || entry.isLocal) continue;
         const rawUrl = settings[entry.baseUrlKey] as string | undefined;
         if (!rawUrl) continue;

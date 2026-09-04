@@ -5,6 +5,7 @@
 import { StorageKeys } from '../../utils/storage/types.js';
 import type { ProviderId } from '../../utils/storage/types.js';
 import type { Settings } from '../../utils/storage/types.js';
+import { PROVIDER_ALLOWLIST_ROWS } from '../../utils/storage/providerAllowlist.js';
 import type { AIProviderStrategy } from './providers/index.js';
 import { GeminiProvider, BuiltInAiProvider } from './providers/index.js';
 import { GenericOpenAICompatibleProvider } from './providers/OpenAIProvider.js';
@@ -45,16 +46,28 @@ export interface ProviderCatalogEntry {
   }>;
 }
 
+/**
+ * Allow-relevant fields (baseUrlKey/isLocal/label) come from the neutral
+ * low-tier table — spreading them here makes drift impossible: a missing row
+ * throws at module load, and the parity test guards the reverse direction.
+ */
+function allowRow(id: string): { baseUrlKey?: string; isLocal: boolean; label: string } {
+  const row = PROVIDER_ALLOWLIST_ROWS.find((r) => r.id === id);
+  if (!row) throw new UnknownProviderError(id);
+  return row.baseUrlKey === undefined
+    ? { isLocal: row.isLocal, label: row.label }
+    : { baseUrlKey: row.baseUrlKey, isLocal: row.isLocal, label: row.label };
+}
+
 // Insertion order == the options-page provider dropdown order.
 export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = new Map<ProviderId, ProviderCatalogEntry>([
   [
     'gemini',
     {
+      ...allowRow('gemini'),
       apiKeyKey: StorageKeys.GEMINI_API_KEY,
       modelKey: StorageKeys.GEMINI_MODEL,
       requiresApiKey: true,
-      isLocal: false,
-      label: 'Google Gemini',
       cspDomain: 'https://generativelanguage.googleapis.com',
       contentCharsKey: StorageKeys.GEMINI_CONTENT_CHARS,
       labelI18nKey: 'googleGemini',
@@ -75,14 +88,12 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
   [
     'openai',
     {
-      baseUrlKey: StorageKeys.OPENAI_BASE_URL,
+      ...allowRow('openai'),
       apiKeyKey: StorageKeys.OPENAI_API_KEY,
       modelKey: StorageKeys.OPENAI_MODEL,
       defaultBaseUrl: 'https://api.openai.com/v1',
       defaultModel: 'gpt-3.5-turbo',
       requiresApiKey: true,
-      isLocal: false,
-      label: 'OpenAI Compatible',
       cspDomain: 'https://api.openai.com',
       contentCharsKey: StorageKeys.OPENAI_CONTENT_CHARS,
       labelI18nKey: 'openaiCompatible',
@@ -98,14 +109,12 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
   [
     'openai2',
     {
-      baseUrlKey: StorageKeys.OPENAI_2_BASE_URL,
+      ...allowRow('openai2'),
       apiKeyKey: StorageKeys.OPENAI_2_API_KEY,
       modelKey: StorageKeys.OPENAI_2_MODEL,
       defaultBaseUrl: 'https://api.openai.com/v1',
       defaultModel: 'gpt-3.5-turbo',
       requiresApiKey: true,
-      isLocal: false,
-      label: 'OpenAI Compatible 2',
       cspDomain: 'https://api.openai.com',
       contentCharsKey: StorageKeys.OPENAI_CONTENT_CHARS,
       labelI18nKey: 'openaiCompatible2',
@@ -121,12 +130,10 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
   [
     'lm-studio',
     {
-      baseUrlKey: StorageKeys.LM_STUDIO_BASE_URL,
+      ...allowRow('lm-studio'),
       modelKey: StorageKeys.LM_STUDIO_MODEL,
       defaultBaseUrl: 'http://127.0.0.1:1234/v1',
       requiresApiKey: false,
-      isLocal: true,
-      label: 'LM Studio',
       cspDomain: 'http://127.0.0.1:1234',
       labelI18nKey: 'lmStudio',
       fieldPlaceholders: { baseUrl: 'lmStudioBaseUrlPlaceholder', model: 'lmStudioModelPlaceholder' },
@@ -137,12 +144,10 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
   [
     'ollama',
     {
-      baseUrlKey: StorageKeys.OLLAMA_BASE_URL,
+      ...allowRow('ollama'),
       modelKey: StorageKeys.OLLAMA_MODEL,
       defaultBaseUrl: 'http://localhost:11434/v1',
       requiresApiKey: false,
-      isLocal: true,
-      label: 'Ollama',
       cspDomain: 'http://localhost:11434',
       labelI18nKey: 'ollama',
       fieldPlaceholders: { baseUrl: 'ollamaBaseUrlPlaceholder', model: 'ollamaModelPlaceholder' },
@@ -153,12 +158,10 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
   [
     'openai-compatible',
     {
-      baseUrlKey: StorageKeys.PROVIDER_BASE_URL,
+      ...allowRow('openai-compatible'),
       apiKeyKey: StorageKeys.PROVIDER_API_KEY,
       modelKey: StorageKeys.PROVIDER_MODEL,
       requiresApiKey: true,
-      isLocal: false,
-      label: 'OpenAI Compatible',
       contentCharsKey: StorageKeys.OPENAI_CONTENT_CHARS,
       labelI18nKey: 'openaiCompatibleModelsDev',
       fieldPlaceholders: {
@@ -173,10 +176,9 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
   [
     'built-in-ai',
     {
+      ...allowRow('built-in-ai'),
       modelKey: '',
       requiresApiKey: false,
-      isLocal: true,
-      label: 'Built-in AI',
       labelI18nKey: 'builtInAi',
       supportsCustomPrompt: false,
       settingsBlockKind: 'built-in-ai',
