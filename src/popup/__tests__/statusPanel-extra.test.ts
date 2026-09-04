@@ -76,7 +76,6 @@ vi.mock('../../utils/storage.js', () => ({
 
 import {
   initStatusPanel,
-  setRecordCurrentPageFn,
   getCleansedReasonText,
   updateCleansingStatus,
 } from '../statusPanel.js';
@@ -184,29 +183,9 @@ mockGetMessage.mockImplementation((key: string, substitutions?: string | string[
   mockIsHostPermitted.mockResolvedValue(true);
 });
 
-// ──────────────────────────────────────────────
-// setRecordCurrentPageFn
-// ──────────────────────────────────────────────
-describe('setRecordCurrentPageFn', () => {
-  it('calls the stored record function with force=false', async () => {
-    const fn = vi.fn();
-    setRecordCurrentPageFn(fn);
-    setupDefaultDom();
-    setDefaultChromeTabsQuery();
-    mockGetCurrentTab.mockResolvedValue({ url: 'https://example.com', id: 1 });
-    mockCheckPageStatus.mockResolvedValue({
-      domainFilter: { allowed: true, mode: 'disabled', matched: false, matchedPattern: undefined },
-      privacy: { isPrivate: false, hasCache: false },
-      cache: { hasCache: false },
-      lastSaved: { exists: false },
-    });
-    await initStatusPanel();
-    const btn = document.getElementById('recordBtn') as HTMLButtonElement;
-    expect(btn.textContent).toBe('Record Now');
-    btn.click();
-    expect(fn).toHaveBeenCalledWith(false);
-  });
-});
+// NOTE (PBI 2026-09-05-06): the statusPanel recordBtn onclick rewrite was dead
+// in production (main.ts never set the hook), so its hook and the tests
+// covering it were deleted. The session owns button wiring exclusively.
 
 // ──────────────────────────────────────────────
 // initStatusPanel — mode badge
@@ -606,45 +585,6 @@ describe('initStatusPanel — no tab URL', () => {
     await initStatusPanel();
     const panel = document.getElementById('statusPanel')!;
     expect(panel.style.display).toBe('none');
-  });
-});
-
-// ──────────────────────────────────────────────
-// initStatusPanel — recordBtn domain blocked
-// ──────────────────────────────────────────────
-describe('initStatusPanel — recordBtn with blocked domain', () => {
-  beforeEach(() => {
-    setupDefaultDom();
-    setDefaultChromeTabsQuery();
-    const fn = vi.fn();
-    setRecordCurrentPageFn(fn);
-  });
-
-  it('sets recordBtn text to forceRecordAnyway when domain blocked', async () => {
-    mockCheckPageStatus.mockResolvedValue({
-      domainFilter: { allowed: false, mode: 'blacklist', matched: true },
-      privacy: { isPrivate: false, hasCache: false },
-      cache: { hasCache: false },
-      lastSaved: { exists: false },
-    });
-    await initStatusPanel();
-    const btn = document.getElementById('recordBtn') as HTMLButtonElement;
-    expect(btn.textContent).toBe('Record Anyway');
-  });
-
-  it('calls record fn with force=true when domain blocked and btn clicked', async () => {
-    const fn = vi.fn();
-    setRecordCurrentPageFn(fn);
-    mockCheckPageStatus.mockResolvedValue({
-      domainFilter: { allowed: false, mode: 'blacklist', matched: true },
-      privacy: { isPrivate: false, hasCache: false },
-      cache: { hasCache: false },
-      lastSaved: { exists: false },
-    });
-    await initStatusPanel();
-    const btn = document.getElementById('recordBtn') as HTMLButtonElement;
-    btn.click();
-    expect(fn).toHaveBeenCalledWith(true);
   });
 });
 
@@ -1301,38 +1241,7 @@ describe('additional branch coverage — trust and record fallback', () => {
     if (orig) mockGetMessage.mockImplementation(orig as any);
   });
 
-  it('covers recordBtn fallback text (branch 76)', async () => {
-    const { setRecordCurrentPageFn } = await import('../statusPanel.js');
-    const fn = vi.fn();
-    setRecordCurrentPageFn(fn);
-    setupDefaultDom();
-    setDefaultChromeTabsQuery();
-    const orig = mockGetMessage.getMockImplementation();
-    mockGetMessage.mockImplementation((key: string) => {
-      if (key === 'forceRecordAnyway') return '';
-      if (key === 'recordNow') return '';
-      return defaultMessages[key] || key;
-    });
-    mockCheckPageStatus.mockResolvedValue({
-      domainFilter: { allowed: false, mode: 'blacklist' },
-      privacy: { isPrivate: false, hasCache: false },
-      cache: { hasCache: false },
-      lastSaved: { exists: false },
-    });
-    await initStatusPanel();
-    const btn = document.getElementById('recordBtn') as HTMLButtonElement;
-    expect(btn.textContent).toBe('Record Anyway');
-    // also test allowed case
-    mockCheckPageStatus.mockResolvedValue({
-      domainFilter: { allowed: true, mode: 'disabled' },
-      privacy: { isPrivate: false, hasCache: false },
-      cache: { hasCache: false },
-      lastSaved: { exists: false },
-    });
-    await initStatusPanel();
-    // recordNow fallback leads to empty but still calls getMessage
-    if (orig) mockGetMessage.mockImplementation(orig as any);
-  });
+
 
   it('covers permArea missing branch (177) and updateTrustStatus with no errorMsg', async () => {
     const { updateTrustStatus } = await import('../statusPanel.js');

@@ -1,26 +1,19 @@
-import { RecordOrchestrator } from './recordCurrentPage/recordOrchestrator.js';
+import { RecordSession } from './recordCurrentPage/recordSession.js';
 
 export { TabContentFetcher } from './recordCurrentPage/tabContentFetcher.js';
 export { PreviewFlow } from './recordCurrentPage/previewFlow.js';
-export { ForceRecordFlow } from './recordCurrentPage/forceRecordFlow.js';
 export { SpinnerManager } from './recordCurrentPage/spinnerManager.js';
 export { ErrorPresenter } from './recordCurrentPage/errorPresenter.js';
-export { RecordOrchestrator } from './recordCurrentPage/recordOrchestrator.js';
+export { RecordSession, type RecordSessionState } from './recordCurrentPage/recordSession.js';
 
-let _recordCurrentPageFn: ((force: boolean) => Promise<void>) | null = null;
-
-export function setRecordCurrentPageFn(fn: (force: boolean) => Promise<void>): void {
-  _recordCurrentPageFn = fn;
-}
-
-const defaultRecordOrchestrator = new RecordOrchestrator();
+const defaultRecordSession = new RecordSession();
 
 export async function loadCurrentTab(): Promise<void> {
-  return defaultRecordOrchestrator.loadCurrentTab();
+  return defaultRecordSession.loadCurrentTab();
 }
 
 export async function recordCurrentPage(force: boolean = false): Promise<void> {
-  return defaultRecordOrchestrator.recordCurrentPage(force);
+  return defaultRecordSession.recordCurrentPage(force);
 }
 
 export async function handleRecordNowClick(
@@ -28,5 +21,5 @@ export async function handleRecordNowClick(
   tab?: chrome.tabs.Tab,
   content?: string
 ): Promise<void> {
-  return defaultRecordOrchestrator.handleRecordNowClick(force, tab, content);
+  return defaultRecordSession.handleRecordNowClick(force, tab, content);
 }

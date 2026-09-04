@@ -57,16 +57,15 @@ vi.mock('../statusPanel.js', () => ({
   updateTrustStatus: mockUpdateTrustStatus,
 }));
 
-import { RecordOrchestrator } from '../recordCurrentPage/recordOrchestrator.js';
+import { RecordSession } from '../recordCurrentPage/recordSession.js';
 
 // Helper to create mock collaborators
 function createMocks() {
   const tabContentFetcher = { fetch: vi.fn().mockResolvedValue({ content: 'page content' }) } as any;
   const previewFlow = { run: vi.fn().mockResolvedValue({ success: true, result: { success: true, summary: 'sum', tags: ['a','b'], aiDuration: 100, obsidianDuration: 50, aiProvider: 'openai' } }) } as any;
-  const forceRecordFlow = { run: vi.fn().mockResolvedValue(undefined) } as any;
   const spinner = { show: vi.fn(), hide: vi.fn() } as any;
   const errorPresenter = { buildPrivatePageErrorMessage: vi.fn().mockReturnValue('PRIVATE_PAGE_ERROR'), show: vi.fn() } as any;
-  return { tabContentFetcher, previewFlow, forceRecordFlow, spinner, errorPresenter };
+  return { tabContentFetcher, previewFlow, spinner, errorPresenter };
 }
 
 function setupBaseDOM(): void {
@@ -115,18 +114,18 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 // loadCurrentTab
 // ---------------------------------------------------------------------------
-describe('RecordOrchestrator.loadCurrentTab', () => {
+describe('RecordSession.loadCurrentTab', () => {
   it('returns early when no tab', async () => {
     mockGetCurrentTab.mockResolvedValueOnce(null);
-    const { tabContentFetcher, previewFlow, forceRecordFlow, spinner, errorPresenter } = createMocks();
-    const o = new RecordOrchestrator(tabContentFetcher, previewFlow, forceRecordFlow, spinner, errorPresenter);
+    const { tabContentFetcher, previewFlow, spinner, errorPresenter } = createMocks();
+    const o = new RecordSession(tabContentFetcher, previewFlow, spinner, errorPresenter);
     await expect(o.loadCurrentTab()).resolves.not.toThrow();
   });
 
   it('sets favicon with pageUrl param when tab.url present', async () => {
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: 'https://example.com/page', title: 'T' } as any);
-    const { tabContentFetcher, previewFlow, forceRecordFlow, spinner, errorPresenter } = createMocks();
-    const o = new RecordOrchestrator(tabContentFetcher, previewFlow, forceRecordFlow, spinner, errorPresenter);
+    const { tabContentFetcher, previewFlow, spinner, errorPresenter } = createMocks();
+    const o = new RecordSession(tabContentFetcher, previewFlow, spinner, errorPresenter);
     await o.loadCurrentTab();
     const fav = document.getElementById('favicon') as HTMLImageElement;
     expect(fav.src).toContain('pageUrl=');
@@ -135,7 +134,7 @@ describe('RecordOrchestrator.loadCurrentTab', () => {
 
   it('sets favicon without pageUrl when tab.url missing', async () => {
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, title: 'NoUrl' } as any);
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     await o.loadCurrentTab();
     const fav = document.getElementById('favicon') as HTMLImageElement;
     expect(fav.src).toContain('size=32');
@@ -145,13 +144,13 @@ describe('RecordOrchestrator.loadCurrentTab', () => {
   it('handles missing favicon element gracefully', async () => {
     document.getElementById('favicon')!.remove();
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: 'https://example.com', title: 'T' } as any);
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     await expect(o.loadCurrentTab()).resolves.not.toThrow();
   });
 
   it('sets pageTitle with fallback when title missing', async () => {
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: 'https://example.com', title: undefined } as any);
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     await o.loadCurrentTab();
     expect(document.getElementById('pageTitle')!.textContent).toBe('noTitle');
   });
@@ -159,21 +158,21 @@ describe('RecordOrchestrator.loadCurrentTab', () => {
   it('handles missing pageTitle element', async () => {
     document.getElementById('pageTitle')!.remove();
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: 'https://example.com', title: 'T' } as any);
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     await expect(o.loadCurrentTab()).resolves.not.toThrow();
   });
 
   it('handles missing pageUrl element', async () => {
     document.getElementById('pageUrl')!.remove();
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: 'https://example.com', title: 'T' } as any);
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     await expect(o.loadCurrentTab()).resolves.not.toThrow();
   });
 
   it('truncates long url and shows full short url', async () => {
     const longUrl = 'https://example.com/' + 'a'.repeat(60);
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: longUrl, title: 'T' } as any);
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     await o.loadCurrentTab();
     const urlEl = document.getElementById('pageUrl')!;
     expect(urlEl.textContent).toContain('...');
@@ -186,7 +185,7 @@ describe('RecordOrchestrator.loadCurrentTab', () => {
 
   it('handles tab without url (empty string fallback)', async () => {
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, title: 'T' } as any);
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     await o.loadCurrentTab();
     expect(document.getElementById('pageUrl')!.textContent).toBe('');
   });
@@ -194,7 +193,7 @@ describe('RecordOrchestrator.loadCurrentTab', () => {
   it('disables record button when not recordable and enables when recordable', async () => {
     mockIsRecordable.mockReturnValueOnce(false);
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: 'chrome://extensions', title: 'Ext' } as any);
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     await o.loadCurrentTab();
     const btn = document.getElementById('recordBtn') as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
@@ -215,7 +214,7 @@ describe('RecordOrchestrator.loadCurrentTab', () => {
   it('handles missing recordBtn gracefully', async () => {
     document.getElementById('recordBtn')!.remove();
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: 'https://example.com', title: 'T' } as any);
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     await expect(o.loadCurrentTab()).resolves.not.toThrow();
   });
 });
@@ -223,12 +222,12 @@ describe('RecordOrchestrator.loadCurrentTab', () => {
 // ---------------------------------------------------------------------------
 // resetRecordButton
 // ---------------------------------------------------------------------------
-describe('RecordOrchestrator.resetRecordButton', () => {
+describe('RecordSession.resetRecordButton', () => {
   it('sets forceRecordAnyway when domain not allowed', async () => {
     const btn = document.getElementById('recordBtn') as HTMLButtonElement;
     mockCheckPageStatus.mockResolvedValueOnce({ domainFilter: { allowed: false } } as any);
     (chrome.tabs.query as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ url: 'https://blocked.com' }]);
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     await o.resetRecordButton(btn);
     expect(btn.textContent).toBe('forceRecordAnyway');
     expect(typeof btn.onclick).toBe('function');
@@ -244,7 +243,7 @@ describe('RecordOrchestrator.resetRecordButton', () => {
     const btn = document.getElementById('recordBtn') as HTMLButtonElement;
     mockCheckPageStatus.mockResolvedValueOnce({ domainFilter: { allowed: true } } as any);
     (chrome.tabs.query as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ url: 'https://example.com' }]);
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     await o.resetRecordButton(btn);
     expect(btn.textContent).toBe('recordNow');
     // null status
@@ -257,7 +256,7 @@ describe('RecordOrchestrator.resetRecordButton', () => {
   it('handles tabs query with no url and empty array', async () => {
     const btn = document.getElementById('recordBtn') as HTMLButtonElement;
     (chrome.tabs.query as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{}]);
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     await o.resetRecordButton(btn);
     expect(btn.textContent).toBe('recordNow');
     (chrome.tabs.query as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([]);
@@ -271,7 +270,7 @@ describe('RecordOrchestrator.resetRecordButton', () => {
     (chrome.tabs.query as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ url: 'https://blocked.com' }]);
     const mocks = createMocks();
     mocks.previewFlow.run.mockResolvedValue({ success: true, result: { success: true, tags: [] } });
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     // stub recordCurrentPage path via handleRecordNowClick -> recordCurrentPage
     // For this test, ensure handleRecordNowClick will call recordCurrentPage which needs DOM
     // Make fetch succeed
@@ -295,117 +294,120 @@ describe('RecordOrchestrator.resetRecordButton', () => {
 // ---------------------------------------------------------------------------
 // handleRecordNowClick
 // ---------------------------------------------------------------------------
-describe('RecordOrchestrator.handleRecordNowClick', () => {
+describe('RecordSession.handleRecordNowClick', () => {
   it('returns early when button missing', async () => {
     document.getElementById('recordBtn')!.remove();
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     await expect(o.handleRecordNowClick()).resolves.not.toThrow();
   });
 
-  it('delegates to forceRecordFlow when force true with tab and content', async () => {
+  it('runs the force branch with tab and content (no fetch)', async () => {
     const mocks = createMocks();
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     const tab = { id: 1, url: 'https://example.com', title: 'T' } as any;
     await o.handleRecordNowClick(true, tab, 'content');
-    expect(mocks.forceRecordFlow.run).toHaveBeenCalledWith(
-      expect.anything(),
-      tab,
-      'content',
-      expect.objectContaining({
-        setRecordAnywayButton: expect.any(Function),
-        resetRecordButton: expect.any(Function),
-        showButtonResultState: expect.any(Function),
-        showCopyMarkdownButton: expect.any(Function),
-        handleRecordNowClick: expect.any(Function),
-      })
+    expect(mocks.previewFlow.run).toHaveBeenCalledWith(
+      expect.objectContaining({ tab, content: 'content', force: true })
     );
-    const btn = document.getElementById('recordBtn') as HTMLButtonElement;
-    expect(btn.disabled).toBe(true);
-    expect(btn.textContent).toBe('recordNowProgress');
+    expect(mocks.tabContentFetcher.fetch).not.toHaveBeenCalled();
+    expect(o.state).toBe('showing-result');
   });
 
-  it('delegates to forceRecordFlow with empty string content', async () => {
+  it('runs the force branch with empty string content', async () => {
     const mocks = createMocks();
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     const tab = { id: 1, url: 'https://example.com' } as any;
     await o.handleRecordNowClick(true, tab, '');
-    expect(mocks.forceRecordFlow.run).toHaveBeenCalled();
+    expect(mocks.previewFlow.run).toHaveBeenCalledWith(
+      expect.objectContaining({ content: '', force: true })
+    );
   });
 
-  it('calls recordCurrentPage when force false or missing tab/content', async () => {
+  it('runs the normal branch when force false or missing tab/content', async () => {
     const mocks = createMocks();
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
-    const spy = vi.spyOn(o, 'recordCurrentPage').mockResolvedValue(undefined);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     await o.handleRecordNowClick(false);
-    expect(spy).toHaveBeenCalledWith(false);
     await o.handleRecordNowClick(true); // missing tab/content
-    expect(spy).toHaveBeenCalledWith(true);
     await o.handleRecordNowClick(true, { id: 1 } as any); // missing content
-    expect(spy).toHaveBeenCalled();
-    spy.mockRestore();
+    // Normal branch fetches content in all three cases.
+    expect(mocks.tabContentFetcher.fetch).toHaveBeenCalledTimes(3);
   });
 
   it('uses fallback text when getMessage returns empty for progress', async () => {
     mockGetMessage.mockImplementation(() => '');
     const mocks = createMocks();
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     const tab = { id: 1, url: 'https://example.com' } as any;
+    mocks.previewFlow.run.mockResolvedValue({ success: true, result: { success: true } });
     await o.handleRecordNowClick(true, tab, 'c');
     const btn = document.getElementById('recordBtn') as HTMLButtonElement;
-    expect(mocks.forceRecordFlow.run).toHaveBeenCalled();
+    // showButtonResultState done fallback (getMessage empty -> 'Saved!')
+    expect(btn.textContent).toBe('Saved!');
   });
 
-  it('setRecordAnywayButton callback wiring and reset flow', async () => {
+  it('force confirm path drives the session state machine', async () => {
     const mocks = createMocks();
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    mocks.previewFlow.run.mockResolvedValue({ error: 'PRIVATE_PAGE_DETECTED', reason: 'cache-control' });
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     const tab = { id: 1, url: 'https://example.com' } as any;
-    await o.handleRecordNowClick(true, tab, 'content');
-    // capture callbacks
-    const callbacks = mocks.forceRecordFlow.run.mock.calls[0][3];
+    await o.start(true, tab, 'content');
     const btn = document.getElementById('recordBtn') as HTMLButtonElement;
-    // setRecordAnywayButton
-    callbacks.setRecordAnywayButton(btn, tab, 'content');
+    // private-page settlement offers force-retry and parks in awaiting-force
     expect(btn.textContent).toBe('forceRecordAnyway');
-    expect((o as any).isAwaitingForceConfirm).toBe(true);
-    // trigger onclick to verify it resets flag and calls handleRecordNowClick
-    const spy = vi.spyOn(o, 'handleRecordNowClick').mockResolvedValue(undefined);
+    expect(o.state).toBe('awaiting-force');
+    // trigger onclick to verify it re-arms a force attempt
+    const spy = vi.spyOn(o, 'start').mockResolvedValue(undefined);
     await (btn.onclick as any)();
-    expect((o as any).isAwaitingForceConfirm).toBe(false);
     expect(spy).toHaveBeenCalledWith(true, tab, 'content');
     spy.mockRestore();
-    // resetRecordButton and showButtonResultState wrappers
-    await callbacks.resetRecordButton(btn);
-    // showButtonResultState
-    callbacks.showButtonResultState(btn, 'done');
-    expect((o as any).isShowingResultState).toBe(true);
-    // showCopyMarkdownButton wrapper
-    mocks.previewFlow.run.mockResolvedValue({ success: true, result: { success: true } });
-    // handleRecordNowClick wrapper
-    await callbacks.handleRecordNowClick(false);
+    // reset + result states transition explicitly
+    await o.resetRecordButton(btn);
+    (o as any).showButtonResultState(btn, 'done');
+    expect(o.state).toBe('showing-result');
+    // cancel releases back to idle
+    await o.cancel();
+    expect(o.state).toBe('idle');
+  });
+
+  it('concurrent start while running is ignored', async () => {
+    const mocks = createMocks();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    mocks.previewFlow.run.mockImplementationOnce(() => gate.then(() => ({ success: true, result: { success: true } })));
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
+    const first = o.start(false);
+    // Wait until the first attempt reaches the preview step, then race it.
+    await vi.waitFor(() => expect(mocks.previewFlow.run).toHaveBeenCalledTimes(1));
+    expect(o.state).toBe('running');
+    await o.start(false); // concurrent: ignored
+    expect(mocks.previewFlow.run).toHaveBeenCalledTimes(1);
+    release();
+    await first;
+    expect(o.state).toBe('showing-result');
+    await o.cancel();
   });
 });
 
 // ---------------------------------------------------------------------------
 // private helpers via (o as any)
 // ---------------------------------------------------------------------------
-describe('RecordOrchestrator private helpers', () => {
+describe('RecordSession private helpers', () => {
   it('showButtonResultState sets done/error and resets after timeout', async () => {
     vi.useFakeTimers();
     const mocks = createMocks();
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     const btn = document.getElementById('recordBtn') as HTMLButtonElement;
     // done
     (o as any).showButtonResultState(btn, 'done');
     expect(btn.textContent).toBe('recordNowDone');
     expect(btn.disabled).toBe(true);
-    expect((o as any).isShowingResultState).toBe(true);
-    expect((o as any).isAwaitingForceConfirm).toBe(false);
+    expect(o.state).toBe('showing-result');
     // advance timers and check resetRecordButton called indirectly
     // mock checkPageStatus and tabs.query for reset
     mockCheckPageStatus.mockResolvedValue({ domainFilter: { allowed: true } } as any);
     (chrome.tabs.query as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ url: 'https://example.com' }]);
     await vi.advanceTimersByTimeAsync(2100);
-    expect((o as any).isShowingResultState).toBe(false);
+    expect(o.state).toBe('idle');
     // error with fallback message
     mockGetMessage.mockImplementation((k: string) => k === 'recordNowError' ? '' : k);
     (o as any).showButtonResultState(btn, 'error');
@@ -416,12 +418,12 @@ describe('RecordOrchestrator private helpers', () => {
     mockCheckPageStatus.mockResolvedValue(null);
     (o as any).showButtonResultState(btn, 'done');
     await vi.advanceTimersByTimeAsync(2100);
-    expect((o as any).isShowingResultState).toBe(false);
+    expect(o.state).toBe('idle');
     vi.useRealTimers();
   });
 
   it('showTagResult handles url empty, panel missing, no tags, tags present, skipAutoClose, and catch', async () => {
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     // empty url
     await (o as any).showTagResult('');
     expect(mockStartAutoCloseTimer).not.toHaveBeenCalled();
@@ -462,7 +464,7 @@ describe('RecordOrchestrator private helpers', () => {
   });
 
   it('getOrCreateResultActionsContainer handles existing, missing tagPanel, and creates new', async () => {
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     // existing container
     const existing = document.createElement('div');
     existing.id = 'recordResultActions';
@@ -491,7 +493,7 @@ describe('RecordOrchestrator private helpers', () => {
   });
 
   it('buildEntryFromSaveResult handles tags array, non-array, empty summary, title fallbacks', async () => {
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     const tab1 = { url: 'https://example.com', title: 'Title' } as any;
     const r1: any = { summary: 'sum', tags: ['t1', 't2'] };
     const e1 = (o as any).buildEntryFromSaveResult(tab1, r1);
@@ -518,7 +520,7 @@ describe('RecordOrchestrator private helpers', () => {
   it('showCopyMarkdownButton returns false when container missing and true on success, handles copy success/failure', async () => {
     vi.useFakeTimers();
     const mocks = createMocks();
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     // container missing (tagPanel missing)
     document.getElementById('tagResultPanel')!.remove();
     const tab = { url: 'https://example.com', title: 'T' } as any;
@@ -599,10 +601,10 @@ describe('RecordOrchestrator private helpers', () => {
 // ---------------------------------------------------------------------------
 // recordCurrentPage — comprehensive branches
 // ---------------------------------------------------------------------------
-describe('RecordOrchestrator.recordCurrentPage', () => {
+describe('RecordSession.recordCurrentPage', () => {
   it('returns early when statusDiv missing', async () => {
     document.getElementById('mainStatus')!.remove();
-    const o = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     await expect(o.recordCurrentPage()).resolves.not.toThrow();
     expect(createMocks().spinner.hide).not.toHaveBeenCalled();
   });
@@ -610,7 +612,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
   it('handles recordBtn missing and still succeeds', async () => {
     document.getElementById('recordBtn')!.remove();
     const mocks = createMocks();
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     await o.recordCurrentPage();
     expect(mocks.spinner.hide).toHaveBeenCalled();
     expect(document.getElementById('mainStatus')!.textContent).toBe('Success message');
@@ -618,7 +620,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
 
   it('throws when no active tab or tab without id', async () => {
     const mocks = createMocks();
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     mockGetCurrentTab.mockResolvedValueOnce(null);
     await o.recordCurrentPage();
     expect(mocks.errorPresenter.show).toHaveBeenCalled();
@@ -628,7 +630,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
 
     mockGetCurrentTab.mockResolvedValueOnce({ url: 'https://example.com' } as any);
     const mocks2 = createMocks();
-    const o2 = new RecordOrchestrator(mocks2.tabContentFetcher, mocks2.previewFlow, mocks2.forceRecordFlow, mocks2.spinner, mocks2.errorPresenter);
+    const o2 = new RecordSession(mocks2.tabContentFetcher, mocks2.previewFlow, mocks2.spinner, mocks2.errorPresenter);
     await o2.recordCurrentPage();
     expect(mocks2.errorPresenter.show).toHaveBeenCalled();
   });
@@ -637,7 +639,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     mockIsRecordable.mockReturnValueOnce(false);
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: 'chrome://settings', title: 'S' } as any);
     const mocks = createMocks();
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     await o.recordCurrentPage();
     expect(mocks.errorPresenter.show).toHaveBeenCalled();
   });
@@ -645,21 +647,21 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
   it('handles tabContentFetcher throwing with force false vs true and non-Error throw', async () => {
     const mocks = createMocks();
     mocks.tabContentFetcher.fetch.mockRejectedValueOnce(new Error('fetch fail'));
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     mockGetCurrentTab.mockResolvedValue({ id: 1, url: 'https://example.com', title: 'T' } as any);
     await o.recordCurrentPage(false);
     expect(mocks.errorPresenter.show).toHaveBeenCalled();
 
     const mocks2 = createMocks();
     mocks2.tabContentFetcher.fetch.mockRejectedValueOnce('string error');
-    const o2 = new RecordOrchestrator(mocks2.tabContentFetcher, mocks2.previewFlow, mocks2.forceRecordFlow, mocks2.spinner, mocks2.errorPresenter);
+    const o2 = new RecordSession(mocks2.tabContentFetcher, mocks2.previewFlow, mocks2.spinner, mocks2.errorPresenter);
     await o2.recordCurrentPage(false);
     expect(mocks2.errorPresenter.show).toHaveBeenCalled();
 
     const mocks3 = createMocks();
     mocks3.tabContentFetcher.fetch.mockRejectedValueOnce(new Error('fetch fail'));
     mocks3.previewFlow.run.mockResolvedValue({ success: true, result: { success: true } });
-    const o3 = new RecordOrchestrator(mocks3.tabContentFetcher, mocks3.previewFlow, mocks3.forceRecordFlow, mocks3.spinner, mocks3.errorPresenter);
+    const o3 = new RecordSession(mocks3.tabContentFetcher, mocks3.previewFlow, mocks3.spinner, mocks3.errorPresenter);
     await o3.recordCurrentPage(true);
     // force true should swallow fetch error and proceed with empty content
     expect(mocks3.previewFlow.run).toHaveBeenCalledWith(expect.objectContaining({ content: '' }));
@@ -668,27 +670,27 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
   it('handles contentResponse null/undefined with force false vs true', async () => {
     const mocks = createMocks();
     mocks.tabContentFetcher.fetch.mockResolvedValueOnce(null as any);
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     await o.recordCurrentPage(false);
     expect(mocks.errorPresenter.show).toHaveBeenCalled();
 
     const mocks2 = createMocks();
     mocks2.tabContentFetcher.fetch.mockResolvedValueOnce(null as any);
     mocks2.previewFlow.run.mockResolvedValue({ success: true, result: { success: true } });
-    const o2 = new RecordOrchestrator(mocks2.tabContentFetcher, mocks2.previewFlow, mocks2.forceRecordFlow, mocks2.spinner, mocks2.errorPresenter);
+    const o2 = new RecordSession(mocks2.tabContentFetcher, mocks2.previewFlow, mocks2.spinner, mocks2.errorPresenter);
     await o2.recordCurrentPage(true);
     expect(mocks2.previewFlow.run).toHaveBeenCalledWith(expect.objectContaining({ content: '' }));
 
     const mocks3 = createMocks();
     mocks3.tabContentFetcher.fetch.mockResolvedValueOnce(undefined as any);
-    const o3 = new RecordOrchestrator(mocks3.tabContentFetcher, mocks3.previewFlow, mocks3.forceRecordFlow, mocks3.spinner, mocks3.errorPresenter);
+    const o3 = new RecordSession(mocks3.tabContentFetcher, mocks3.previewFlow, mocks3.spinner, mocks3.errorPresenter);
     await o3.recordCurrentPage(false);
     expect(mocks3.errorPresenter.show).toHaveBeenCalled();
   });
 
   it('calls updateCleansingStatus and updateTrustStatus when tab.url present vs missing', async () => {
     const mocks = createMocks();
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c', cleanseStats: { totalRemoved: 1 }, cleansedReason: 'hard' } as any);
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: 'https://example.com', title: 'T' } as any);
     await o.recordCurrentPage();
@@ -699,7 +701,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     mockUpdateTrustStatus.mockClear();
     mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c' } as any);
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, title: 'NoUrl' } as any);
-    const o2 = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o2 = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     await o2.recordCurrentPage();
     expect(mockUpdateTrustStatus).not.toHaveBeenCalled();
   });
@@ -708,7 +710,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     const mocks = createMocks();
     mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c' } as any);
     mocks.previewFlow.run.mockResolvedValueOnce({ success: false, error: 'PRIVATE_PAGE_DETECTED', reason: 'cache-control' } as any);
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: 'https://example.com', title: 'T' } as any);
     await o.recordCurrentPage();
     expect(mocks.errorPresenter.buildPrivatePageErrorMessage).toHaveBeenCalledWith('cache-control');
@@ -716,8 +718,8 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     expect(document.getElementById('mainStatus')!.className).toBe('error');
     const btn = document.getElementById('recordBtn') as HTMLButtonElement;
     expect(btn.textContent).toBe('forceRecordAnyway');
-    expect((o as any).isAwaitingForceConfirm).toBe(true);
-    // ensure finally does not reset button while awaiting force confirm
+    expect(o.state).toBe('awaiting-force');
+    // ensure finish does not reset button while awaiting force confirm
     expect(mocks.spinner.hide).toHaveBeenCalled();
   });
 
@@ -725,7 +727,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     const mocks = createMocks();
     mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c' } as any);
     mocks.previewFlow.run.mockResolvedValueOnce({ success: false, error: 'CANCELLED' } as any);
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     await o.recordCurrentPage();
     expect(document.getElementById('mainStatus')!.textContent).toBe('cancelled');
     // resetRecordButton should have been called (via void) — check button eventually resets
@@ -736,7 +738,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     const mocks = createMocks();
     mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c' } as any);
     mocks.previewFlow.run.mockResolvedValueOnce({ success: false, error: 'Some error' } as any);
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     await o.recordCurrentPage();
     expect(mocks.errorPresenter.show).toHaveBeenCalled();
     const btn = document.getElementById('recordBtn') as HTMLButtonElement;
@@ -747,7 +749,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     const mocks = createMocks();
     mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c' } as any);
     mocks.previewFlow.run.mockResolvedValueOnce({ success: false } as any);
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     await o.recordCurrentPage();
     expect(mocks.errorPresenter.show).toHaveBeenCalled();
   });
@@ -756,8 +758,10 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     const mocks = createMocks();
     mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c', byteStats: { pageBytes: 1 }, aiSummaryCleansedStats: { aiSummaryOriginalBytes: 1 }, cleansedReason: 'both', cleanseStats: { totalRemoved: 2 } } as any);
     mocks.previewFlow.run.mockResolvedValueOnce({ success: true, result: { success: true, summary: 's', tags: ['t'], aiDuration: 123, obsidianDuration: 45, aiProvider: 'openai' } } as any);
-    mockGetSavedUrlEntries.mockResolvedValueOnce([{ url: 'https://example.com', tags: ['t'] } as any]);
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    // NOTE: showTagResult is spied below, so no entries are queued here — a
+    // mockResolvedValueOnce would leak into later tests (clearAllMocks keeps
+    // Once queues) and unhide their tag panels.
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     // spy showCopyMarkdownButton to return true
     const spyCopy = vi.spyOn(o as any, 'showCopyMarkdownButton').mockResolvedValue(true);
     const spyTag = vi.spyOn(o as any, 'showTagResult').mockResolvedValue(undefined);
@@ -776,7 +780,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     const mocks = createMocks();
     mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c' } as any);
     mocks.previewFlow.run.mockResolvedValueOnce({ success: true, result: { success: true } } as any);
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     vi.spyOn(o as any, 'showCopyMarkdownButton').mockResolvedValue(false);
     const spyTag = vi.spyOn(o as any, 'showTagResult').mockResolvedValue(undefined);
     await o.recordCurrentPage();
@@ -791,7 +795,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c' } as any);
     mocks.previewFlow.run.mockResolvedValueOnce({ success: true, result: { success: true, tags: [] } } as any);
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, title: 'NoUrl' } as any);
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     vi.spyOn(o as any, 'showCopyMarkdownButton').mockResolvedValue(false);
     await o.recordCurrentPage();
     expect(document.getElementById('mainStatus')!.textContent).toBe('Success message');
@@ -801,79 +805,60 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     const mocks = createMocks();
     mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c' } as any);
     mocks.previewFlow.run.mockResolvedValueOnce({ success: true, result: { success: true, aiDuration: undefined, obsidianDuration: undefined } } as any);
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     vi.spyOn(o as any, 'showCopyMarkdownButton').mockResolvedValue(true);
     vi.spyOn(o as any, 'showTagResult').mockResolvedValue(undefined);
     await o.recordCurrentPage();
     expect(mockFormatSuccessMessage).toHaveBeenCalledWith(expect.any(Number), undefined, false, undefined);
   });
 
-  it('finally block resets button when not awaiting and not showing result', async () => {
-    vi.useFakeTimers();
-    const mocks = createMocks();
-    mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c' } as any);
-    mocks.previewFlow.run.mockResolvedValueOnce({ success: false, error: 'Some error' } as any);
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
-    // Force isShowingResultState to true via error path, so finally should NOT reset
-    // First trigger error path which sets isShowingResultState true
-    await o.recordCurrentPage();
-    expect((o as any).isShowingResultState).toBe(true);
-    // manually reset flags to test finally success path
-    (o as any).isShowingResultState = false;
-    (o as any).isAwaitingForceConfirm = false;
-    mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: 'https://example.com', title: 'T' } as any);
+  it('finish settles to idle and resets button when a branch leaves running state', async () => {
+    mockGetCurrentTab.mockResolvedValue({ id: 1, url: 'https://example.com', title: 'T' } as any);
     mockIsRecordable.mockReturnValue(true);
     mockCheckPageStatus.mockResolvedValue({ domainFilter: { allowed: true } } as any);
     (chrome.tabs.query as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ url: 'https://example.com' }]);
-    // Call recordCurrentPage again with success to test finally not resetting due to isShowingResultState
-    const mocks2 = createMocks();
-    mocks2.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c' } as any);
-    mocks2.previewFlow.run.mockResolvedValueOnce({ success: true, result: { success: true } } as any);
-    const o2 = new RecordOrchestrator(mocks2.tabContentFetcher, mocks2.previewFlow, mocks2.forceRecordFlow, mocks2.spinner, mocks2.errorPresenter);
-    // Make showButtonResultState set isShowingResultState true, so finally should skip reset
-    await o2.recordCurrentPage();
-    expect((o2 as any).isShowingResultState).toBe(true);
-    // now test finally when flags are false and conditions for reset are met
-    const o3 = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
-    (o3 as any).isAwaitingForceConfirm = false;
-    (o3 as any).isShowingResultState = false;
-    // make recordCurrentPage succeed but showButtonResultState sets flag true; to test the other branch we need a path where isShowingResultState stays false after success — but success always sets it. So test finally via direct call with mocked showButtonResultState not setting flag
-    vi.spyOn(o3 as any, 'showButtonResultState').mockImplementation(() => { /* not setting flag */ });
-    mockGetCurrentTab.mockResolvedValue({ id: 1, url: 'https://example.com', title: 'T' } as any);
-    // need to setup tabContentFetcher etc for success
+    // Stub showButtonResultState to not transition, so the finish net catches
+    // the still-running state and resets.
     const mocks3 = createMocks();
     mocks3.tabContentFetcher.fetch.mockResolvedValue({ content: 'c' } as any);
     mocks3.previewFlow.run.mockResolvedValue({ success: true, result: { success: true } } as any);
-    const o4 = new RecordOrchestrator(mocks3.tabContentFetcher, mocks3.previewFlow, mocks3.forceRecordFlow, mocks3.spinner, createMocks().errorPresenter);
-    (o4 as any).isAwaitingForceConfirm = false;
-    (o4 as any).isShowingResultState = false;
-    // stub showButtonResultState to not set flag, then finally should reset
+    const o4 = new RecordSession(mocks3.tabContentFetcher, mocks3.previewFlow, mocks3.spinner, mocks3.errorPresenter);
     vi.spyOn(o4 as any, 'showButtonResultState').mockImplementation(() => {});
     vi.spyOn(o4 as any, 'showCopyMarkdownButton').mockResolvedValue(false);
     vi.spyOn(o4 as any, 'showTagResult').mockResolvedValue(undefined);
-    mockGetCurrentTab.mockResolvedValue({ id: 1, url: 'https://example.com', title: 'T' } as any);
-    (chrome.tabs.query as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([{ url: 'https://example.com' }]);
     await o4.recordCurrentPage();
-    // after finally, resetRecordButton should have been called (we can check via checkPageStatus call)
+    expect(o4.state).toBe('idle');
+    // resetRecordButton ran (observable via checkPageStatus call)
     expect(mockCheckPageStatus).toHaveBeenCalled();
-    vi.useRealTimers();
   });
 
-  it('finally does not reset when awaitingForceConfirm true', async () => {
+  it('finish does not reset while awaiting force confirm', async () => {
     const mocks = createMocks();
     mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c' } as any);
     mocks.previewFlow.run.mockResolvedValueOnce({ success: false, error: 'PRIVATE_PAGE_DETECTED', reason: 'x' } as any);
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
+    mockCheckPageStatus.mockClear();
     await o.recordCurrentPage();
-    expect((o as any).isAwaitingForceConfirm).toBe(true);
-    // resetRecordButton should not have been auto-called in finally
+    expect(o.state).toBe('awaiting-force');
+    // resetRecordButton should not have been auto-called in finish
+    expect(mockCheckPageStatus).not.toHaveBeenCalled();
+  });
+
+  it('finish does not reset when awaitingForceConfirm true', async () => {
+    const mocks = createMocks();
+    mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c' } as any);
+    mocks.previewFlow.run.mockResolvedValueOnce({ success: false, error: 'PRIVATE_PAGE_DETECTED', reason: 'x' } as any);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
+    await o.recordCurrentPage();
+    expect(o.state).toBe('awaiting-force');
+    // resetRecordButton should not have been auto-called in finish
   });
 
   it('finally handles getCurrentTab null, btn null, isRecordable false branches', async () => {
     const mocks = createMocks();
     mocks.tabContentFetcher.fetch.mockResolvedValue({ content: 'c' } as any);
     mocks.previewFlow.run.mockResolvedValue({ success: true, result: { success: true } } as any);
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     vi.spyOn(o as any, 'showButtonResultState').mockImplementation(() => {});
     vi.spyOn(o as any, 'showCopyMarkdownButton').mockResolvedValue(false);
     vi.spyOn(o as any, 'showTagResult').mockResolvedValue(undefined);
@@ -890,7 +875,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     mocks2.tabContentFetcher.fetch.mockResolvedValue({ content: 'c' } as any);
     mocks2.previewFlow.run.mockResolvedValue({ success: true, result: { success: true } } as any);
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: 'https://example.com', title: 'T' } as any).mockResolvedValueOnce({ id: 1, url: 'https://example.com' } as any);
-    const o2 = new RecordOrchestrator(mocks2.tabContentFetcher, mocks2.previewFlow, mocks2.forceRecordFlow, mocks2.spinner, mocks2.errorPresenter);
+    const o2 = new RecordSession(mocks2.tabContentFetcher, mocks2.previewFlow, mocks2.spinner, mocks2.errorPresenter);
     vi.spyOn(o2 as any, 'showButtonResultState').mockImplementation(() => {});
     vi.spyOn(o2 as any, 'showCopyMarkdownButton').mockResolvedValue(false);
     vi.spyOn(o2 as any, 'showTagResult').mockResolvedValue(undefined);
@@ -910,7 +895,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: 'https://blocked.com', title: 'T' } as any).mockResolvedValueOnce({ id: 1, url: 'https://blocked.com', title: 'T' } as any);
     // first call inside try isRecordable true, second in finally is false
     mockIsRecordable.mockReturnValueOnce(true).mockReturnValueOnce(false);
-    const o3b = new RecordOrchestrator(m3.tabContentFetcher, m3.previewFlow, m3.forceRecordFlow, m3.spinner, m3.errorPresenter);
+    const o3b = new RecordSession(m3.tabContentFetcher, m3.previewFlow, m3.spinner, m3.errorPresenter);
     vi.spyOn(o3b as any, 'showButtonResultState').mockImplementation(() => {});
     vi.spyOn(o3b as any, 'showCopyMarkdownButton').mockResolvedValue(false);
     vi.spyOn(o3b as any, 'showTagResult').mockResolvedValue(undefined);
@@ -922,7 +907,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     const mocks = createMocks();
     mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c' } as any);
     mocks.previewFlow.run.mockResolvedValueOnce({ success: true, result: { success: true } } as any);
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     // ensure tagPanel exists and is hidden after clear
     const tagPanel = document.getElementById('tagResultPanel')!;
     tagPanel.textContent = 'old';
@@ -932,7 +917,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     expect(tagPanel.textContent).toBe('');
     // when tagPanel missing
     tagPanel.remove();
-    const o2 = new RecordOrchestrator(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().forceRecordFlow, createMocks().spinner, createMocks().errorPresenter);
+    const o2 = new RecordSession(createMocks().tabContentFetcher, createMocks().previewFlow, createMocks().spinner, createMocks().errorPresenter);
     mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c' } as any);
     await expect(o2.recordCurrentPage()).resolves.not.toThrow();
   });
@@ -941,7 +926,7 @@ describe('RecordOrchestrator.recordCurrentPage', () => {
     const mocks = createMocks();
     mocks.tabContentFetcher.fetch.mockResolvedValueOnce({ content: 'c' } as any);
     mocks.previewFlow.run.mockResolvedValueOnce({ success: true, result: { summary: '', tags: ['a'], aiDuration: 0, obsidianDuration: 0 } } as any);
-    const o = new RecordOrchestrator(mocks.tabContentFetcher, mocks.previewFlow, mocks.forceRecordFlow, mocks.spinner, mocks.errorPresenter);
+    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow, mocks.spinner, mocks.errorPresenter);
     vi.spyOn(o as any, 'showCopyMarkdownButton').mockResolvedValue(false);
     vi.spyOn(o as any, 'showTagResult').mockResolvedValue(undefined);
     await o.recordCurrentPage();
