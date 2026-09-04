@@ -19,7 +19,9 @@
  */
 
 import { sanitizePromptContent, type DangerLevelValues } from './promptSanitizer.js';
-import { addLog, LogType } from './logger.js';
+// Direct logger/* imports (Wave 4): new code must not use the barrel.
+import { addLog } from './logger/core.js';
+import { LogType } from './logger/types.js';
 
 export type PromptSafetyContext =
   | 'local-input'
@@ -45,8 +47,6 @@ type SafetyHandler = (
   level: DangerLevelValues,
   extra: SafetyExtra,
 ) => boolean;
-
-const passThrough = (): boolean => false;
 
 const SAFETY_POLICY: Record<PromptSafetyContext, SafetyHandler> = {
   'local-input': (warnings, level, extra) => {
