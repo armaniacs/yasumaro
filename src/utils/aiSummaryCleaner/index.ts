@@ -15,8 +15,30 @@
 import { logDebug } from '../logger.js';
 import type { AiSummaryCleanseOptions, AiSummaryCleanseResult, CleansingRemovalCounts } from './types.js';
 import { markBodyElements, unmarkBodyElements } from './bodyProtection.js';
+import { primeDeepHosts } from './helpers.js';
 import { CLEANSING_RULES, isRuleEnabled, resolveThresholds } from './rules.js';
 
+// Augments AiSummaryCleanseOptions (declared in types.ts) with the opt-in byte
+// measurement flag and the caller-cloned contract flag. Kept here so callers
+// can gate the two outerHTML serializations and the internal clone without
+// changing the shared type file.
+declare module './types.js' {
+    interface AiSummaryCleanseOptions {
+        /**
+         * Measure outerHTML bytes via Blob. Default true (legacy behavior for
+         * direct callers); contentExtractor passes returnInfo through so the
+         * hot path measures only for diagnostics.
+         */
+        measureBytes?: boolean;
+        /**
+         * Caller guarantees `element` is already a scratch clone that may be
+         * mutated in place, so the internal cloneNode is skipped. Default
+         * false preserves the legacy contract: cleanse a throwaway internal
+         * clone and leave the caller's DOM untouched.
+         */
+        alreadyCloned?: boolean;
+    }
+}
 // 型とルール表を再エクスポート
 export type { AiSummaryCleanseOptions, AiSummaryCleanseResult, CleansingRemovalCounts, RuleKey, AiSummaryCleanseRuleFlags } from './types.js';
 export { CLEANSING_RULES, CLEANSING_RULE_KEYS, isRuleEnabled, resolveThresholds } from './rules.js';
@@ -61,17 +83,32 @@ export function cleanseAISummaryContent(
     element: Element,
     options: AiSummaryCleanseOptions = {}
 ): AiSummaryCleanseResult {
-    const { bodyProtectionEnabled = true, bodyProtectionThreshold = 200 } = options;
+    const { bodyProtectionEnabled = true, bodyProtectionThreshold = 200, measureBytes = true, alreadyCloned = false } = options;
     const thresholds = resolveThresholds(options);
 
-    const bytesBefore = new Blob([element.outerHTML || '']).size;
+    // Diagnostic-only: serializing outerHTML twice is wasted work on the
+    // hot path, so it runs only when the caller opts in via measureBytes.
+    // Measured on the input before any work; the legacy internal clone below
+    // is content-identical, so the size is the same either way.
+    const bytesBefore = measureBytes ? new Blob([element.outerHTML || '']).size : 0;
+
+    // Clone dedup: when the caller hands us an already-cloned scratch tree
+    // (contentExtractor passes alreadyCloned: true), mutate it in place and
+    // skip the second deep copy. Direct callers keep the legacy internal
+    // clone, so their DOM is never touched.
+    const target = alreadyCloned ? element : (element.cloneNode(true) as Element);
 
     // Step 1: 本文要素にマーキング（本文保護が有効な場合）
     if (bodyProtectionEnabled) {
-        markBodyElements(element, bodyProtectionThreshold);
+        markBodyElements(target, bodyProtectionThreshold);
     }
 
     // Step 2: ルール表の順にクレンジングを実行
+    //
+    // Deep host detection runs once on the rule target (which may already be
+    // a clone supplied by the caller) and is cached per root, so repeated
+    // querySelectorAllDeep scans across rules never re-enumerate the subtree.
+    primeDeepHosts(target);
     //
     // Disabled rules are recorded as 0 rather than omitted: callers read the
     // flat `xRemoved` fields and compare them numerically, so a missing key
@@ -80,16 +117,16 @@ export function cleanseAISummaryContent(
     const removed: CleansingRemovalCounts = {};
     for (const rule of CLEANSING_RULES) {
         removed[rule.key] = isRuleEnabled(rule, options)
-            ? rule.strip(element, thresholds)
+            ? rule.strip(target, thresholds)
             : 0;
     }
 
     // Step 3: マーカーを除去（本文保護が有効な場合）
     if (bodyProtectionEnabled) {
-        unmarkBodyElements(element);
+        unmarkBodyElements(target);
     }
 
-    const bytesAfter = new Blob([element.outerHTML || '']).size;
+    const bytesAfter = measureBytes ? new Blob([target.outerHTML || '']).size : 0;
     const result = buildCleanseResult(removed, bytesBefore, bytesAfter);
 
     logDebug('AI Summary Cleansing executed', {

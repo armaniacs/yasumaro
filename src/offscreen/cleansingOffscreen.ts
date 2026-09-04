@@ -59,7 +59,9 @@ export function cleanseHtmlOffscreen(
         throw new Error('No DOM available for cleansing');
     }
 
-    const result = cleanseAISummaryContent(rootEl, options ?? {});
+    // rootEl is a throwaway parsed tree — mutate it in place so the cleansed
+    // HTML can be serialized back below (PBI 06 default clones internally).
+    const result = cleanseAISummaryContent(rootEl, { ...(options ?? {}), alreadyCloned: true });
 
     let cleansedHtml: string;
     if (doc) {

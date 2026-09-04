@@ -49,14 +49,15 @@ describe('News Site Integration Tests', () => {
       const paragraph = document.querySelector('.article-content p');
       expect(isBodyProtected(paragraph!)).toBe(true);
       
-      // クレンジング実行
+      // クレンジング実行（in-place 契約: フィクスチャを直接クレンジングする）
       const result = cleanseAISummaryContent(document.body, {
         bodyProtectionEnabled: true,
         bodyProtectionThreshold: 50,
         adsEnabled: true,
         navEnabled: true,
+        alreadyCloned: true,
       });
-      
+
       // 広告は削除される
       expect(document.querySelector('.ad-banner')).toBeNull();
       
@@ -585,6 +586,7 @@ describe('News Site Integration Tests', () => {
         bodyProtectionThreshold: 100,
         adsEnabled: true,
         navEnabled: true,
+        alreadyCloned: true,
       });
 
       // 本文は残っている

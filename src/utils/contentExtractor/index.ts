@@ -31,12 +31,18 @@ export { isExcludedElement, isAsianContentElement } from './classifier.js';
 export { calculateTextScore } from './scoring.js';
 
 /**
+ * Shared encoder for UTF-8 byte measurement. TextEncoder.encode allocates a
+ * fresh Uint8Array per call, so reusing one instance avoids repeated setup.
+ */
+const ENCODER = new TextEncoder();
+
+/**
  * 文字列のUTF-8バイト数を計算（Blob生成を避けて効率化）
  * @param str - バイト数を計算する文字列
  * @returns UTF-8バイト数
  */
 function getByteSize(str: string): number {
-    return new TextEncoder().encode(str).length;
+    return ENCODER.encode(str).length;
 }
 
 /**
@@ -53,8 +59,21 @@ function runAiSummaryCleanse(
     originalBytes: number
 ): AiSummaryCleanseRunResult {
     const preCleanseText = clone.textContent || '';
-    const aiSummaryCleanseResult = cleanseAISummaryContent(clone, options);
-    const cleansedBytes = getByteSize(clone.textContent || '');
+    // Clone dedup: `clone` is the orchestrator-owned scratch copy in all
+    // three paths (cleanseEnabled, AI-only, body fallback), so the AI cleanse
+    // mutates it in place instead of cloning again. preCleanseText stays
+    // captured first, before any mutation, as before.
+    const aiSummaryCleanseResult = cleanseAISummaryContent(clone, { ...options, alreadyCloned: true });
+    // Fallback ratio uses originalBytes; the post-cleanse size is diagnostic
+    // only, so skip the encode unless the caller opted into measurement.
+    // Attribute-only removals leave textContent unchanged — reuse the
+    // pre-cleanse size instead of encoding the identical string twice.
+    const postCleanseText = clone.textContent || '';
+    const cleansedBytes = !options.measureBytes
+        ? 0
+        : postCleanseText === preCleanseText
+            ? originalBytes
+            : getByteSize(postCleanseText);
 
     // Reasons come from the rule table via the removal map, so every rule that
     // ran can become a reason. This block used to list only 6 of the 32 rules.
@@ -103,6 +122,9 @@ export function extractMainContent(
         shortSeqCount: aiSummaryCleanseOptions.shortSeqCount ?? THRESHOLD_DEFAULTS.shortSeqCount,
         linkParaThreshold: aiSummaryCleanseOptions.linkParaThreshold ?? THRESHOLD_DEFAULTS.linkParaThreshold,
         customPatterns: aiSummaryCleanseOptions.customPatterns ?? THRESHOLD_DEFAULTS.customPatterns,
+        // Byte measurement (TextEncoder + Blob) is diagnostic-only: enable it
+        // only when the caller asked for ExtractResult diagnostics.
+        measureBytes: aiSummaryCleanseOptions.measureBytes ?? returnInfo,
     };
     let cleansedReason: ExtractResult['cleansedReason'] = 'none';
     let hardStripRemoved = 0;
@@ -148,14 +170,16 @@ export function extractMainContent(
         }
 
         // findMainContentCandidates() 前のbody全体のバイト数を計測（textContentベース、全バイト数と単位統一）
-        if (document.body) {
+        // 診断専用: returnInfo=false の通常経路では body 全体の文字列化もエンコードも行わない
+        if (returnInfo && document.body) {
             pageBytes = getByteSize(document.body.textContent || '');
         }
 
         const candidates = findMainContentCandidates();
 
         // findMainContentCandidates() 後の候補要素のバイト数を計測（textContentベース、全バイト数と単位統一）
-        if (candidates.length > 0) {
+        // 診断専用: returnInfo=false では計測しない
+        if (returnInfo && candidates.length > 0) {
             candidateBytes = getByteSize(candidates[0]!.textContent || '');
         }
 
@@ -178,8 +202,13 @@ export function extractMainContent(
                 // DOMを直接操作しないようにクローンを作成
                 const clone = firstCandidate.cloneNode(true) as Element;
 
-                // クレンジング前のバイト数を計算（textContentベースで統一）
-                originalBytes = getByteSize(firstCandidate.textContent || '');
+                // クレンジング前のテキストを保持（診断時の重複エンコード排除用）
+                const preCleanseText = firstCandidate.textContent || '';
+                // クレンジング前のバイト数（textContentベースで統一）
+                // preCleanseText は candidateBytes と同一文字列のため再利用し、重複エンコードしない
+                if (returnInfo) {
+                    originalBytes = candidateBytes;
+                }
 
                 // クローンに対してコンテンツクレンジングを実行
                 const cleanseResult: CleanseResult = cleanseContent(clone, {
@@ -188,8 +217,17 @@ export function extractMainContent(
                     keywords
                 });
 
-                // クレンジング後のバイト数を計算（textContentベースで統一）
-                cleansedBytes = getByteSize(clone.textContent || '');
+                // クレンジング後のバイト数（textContentベースで統一）
+                // AIフォールバック判定に渡す値。診断時は cleansedBytes をそのまま使い回す
+                // 何も削除されず文字列が同一の場合は再エンコードせず使い回す
+                const cloneText = clone.textContent || '';
+                let preAiBytes = 0;
+                if (returnInfo) {
+                    cleansedBytes = cloneText === preCleanseText ? originalBytes : getByteSize(cloneText);
+                    preAiBytes = cleansedBytes;
+                } else if (aiSummaryCleanseEnabled) {
+                    preAiBytes = getByteSize(cloneText);
+                }
 
                 if (cleanseResult.totalRemoved > 0) {
                     // クレンジング理由を決定（実際に要素が削除された場合のみ）
@@ -245,7 +283,7 @@ export function extractMainContent(
                 // AI要約クレンジングを実行（cleanseEnabledとは独立して動作）
                 logDebug('AI Summary Cleansing check', { aiSummaryCleanseEnabled, ...resolvedAiSummaryOptions });
                 if (aiSummaryCleanseEnabled) {
-                    const aiSummaryRunResult = runAiSummaryCleanse(clone, resolvedAiSummaryOptions, cleansedBytes);
+                    const aiSummaryRunResult = runAiSummaryCleanse(clone, resolvedAiSummaryOptions, preAiBytes);
                     aiSummaryOriginalBytes = aiSummaryRunResult.originalBytes;
                     aiSummaryCleansedBytes = aiSummaryRunResult.cleansedBytes;
                     aiSummaryCleansedReason = aiSummaryRunResult.reason;
@@ -256,9 +294,17 @@ export function extractMainContent(
                 }
             } else {
                 targetElement = firstCandidate;
-                // バイト数を計算（クレンジングなし、textContentベースで統一）
-                originalBytes = getByteSize(targetElement.textContent || '');
-                cleansedBytes = originalBytes;
+                // バイト数（クレンジングなし、textContentベースで統一）
+                // targetElement.textContent は candidateBytes と同一文字列のため再利用する
+                // returnInfo=false では診断値を残さず、AIフォールバック用に1回だけ計測する
+                let preAiBytesElse = 0;
+                if (returnInfo) {
+                    originalBytes = candidateBytes;
+                    cleansedBytes = originalBytes;
+                    preAiBytesElse = cleansedBytes;
+                } else if (aiSummaryCleanseEnabled) {
+                    preAiBytesElse = getByteSize(targetElement.textContent || '');
+                }
 
                 // AI要約クレンジングのみ有効な場合（cleanseEnabled=false, aiSummaryCleanseEnabled=true）
                 // クローンを作成してAI要約クレンジングを実行
@@ -266,7 +312,7 @@ export function extractMainContent(
                     // DOMを直接操作しないようにクローンを作成
                     const clone = firstCandidate.cloneNode(true) as Element;
 
-                    const aiSummaryRunResult = runAiSummaryCleanse(clone, resolvedAiSummaryOptions, cleansedBytes);
+                    const aiSummaryRunResult = runAiSummaryCleanse(clone, resolvedAiSummaryOptions, preAiBytesElse);
                     aiSummaryOriginalBytes = aiSummaryRunResult.originalBytes;
                     aiSummaryCleansedBytes = aiSummaryRunResult.cleansedBytes;
                     aiSummaryCleansedReason = aiSummaryRunResult.reason;
@@ -295,10 +341,14 @@ export function extractMainContent(
 
             if (_isTooShort || _overCleansed) {
                 fallbackTriggered = true;
+                // Byte size of the fallback content. Reuses the already-measured
+                // AI pre-cleanse size when falling back to that exact string.
+                let fallbackBytes: number | undefined;
                 if (_overCleansed && preAiCleanseText) {
                     // 過剰削減の場合、AI要約クレンジング前の生テキストに戻す
                     content = preAiCleanseText;
                     fallbackReason = 'over_cleansed';
+                    fallbackBytes = aiSummaryOriginalBytes;
                     // NOTE: aiSummaryCleansedElements などは保持する（クレンジングが実際に実行されたため）
                 } else {
                     // 短すぎるコンテンツの場合、body全体を使用
@@ -318,17 +368,24 @@ export function extractMainContent(
                 keywordStripRemoved = 0;
                 totalRemoved = 0;
 
-                // フォールバック後のバイト数を再計算
-                originalBytes = getByteSize(content);
-                cleansedBytes = originalBytes;
+                // フォールバック後のバイト数を再計算（診断専用）
+                if (returnInfo) {
+                    originalBytes = fallbackBytes ?? getByteSize(content);
+                    cleansedBytes = originalBytes;
+                }
             }
         } else {
             // 候補がない場合、body全体をクレンジング対象としてフォールバック
             if (cleanseEnabled && document.body) {
                 const clone = document.body.cloneNode(true) as Element;
 
-                // クレンジング前のバイト数を計算（textContentベースで統一）
-                originalBytes = getByteSize(document.body.textContent || '');
+                // クレンジング前のテキストを保持（診断時の重複エンコード排除用）
+                const bodyTextForCleanse = document.body.textContent || '';
+                // クレンジング前のバイト数（textContentベースで統一）
+                // bodyTextForCleanse は pageBytes と同一文字列のため再利用する
+                if (returnInfo) {
+                    originalBytes = pageBytes;
+                }
 
                 const cleanseResult: CleanseResult = cleanseContent(clone, {
                     hardStripEnabled,
@@ -336,8 +393,17 @@ export function extractMainContent(
                     keywords
                 });
 
-                // クレンジング後のバイト数を計算（textContentベースで統一）
-                cleansedBytes = getByteSize(clone.textContent || '');
+                // クレンジング後のバイト数（textContentベースで統一）
+                // AIフォールバック判定に渡す値。診断時は cleansedBytes をそのまま使い回す
+                // 何も削除されず文字列が同一の場合は再エンコードせず使い回す
+                const bodyCloneText = clone.textContent || '';
+                let preAiBytesBody = 0;
+                if (returnInfo) {
+                    cleansedBytes = bodyCloneText === bodyTextForCleanse ? originalBytes : getByteSize(bodyCloneText);
+                    preAiBytesBody = cleansedBytes;
+                } else if (aiSummaryCleanseEnabled) {
+                    preAiBytesBody = getByteSize(bodyCloneText);
+                }
 
                 if (cleanseResult.totalRemoved > 0) {
                     // クレンジング理由を決定（実際に要素が削除された場合のみ）
@@ -355,7 +421,7 @@ export function extractMainContent(
 
                 // AI要約クレンジングを実行
                 if (aiSummaryCleanseEnabled) {
-                    const aiSummaryRunResult = runAiSummaryCleanse(clone, resolvedAiSummaryOptions, cleansedBytes);
+                    const aiSummaryRunResult = runAiSummaryCleanse(clone, resolvedAiSummaryOptions, preAiBytesBody);
                     aiSummaryOriginalBytes = aiSummaryRunResult.originalBytes;
                     aiSummaryCleansedBytes = aiSummaryRunResult.cleansedBytes;
                     aiSummaryCleansedReason = aiSummaryRunResult.reason;
@@ -387,10 +453,14 @@ export function extractMainContent(
 
                   if (_isTooShort || _overCleansed) {
                       fallbackTriggered = true;
+                      // Byte size of the fallback content. Reuses the already-measured
+                      // AI pre-cleanse size when falling back to that exact string.
+                      let fallbackBytesBody: number | undefined;
                       if (_overCleansed && preAiCleanseText) {
                           // 過剰削減の場合、AI要約クレンジング前の生テキストに戻す
                           content = preAiCleanseText;
                           fallbackReason = 'over_cleansed';
+                          fallbackBytesBody = aiSummaryOriginalBytes;
                           // NOTE: aiSummaryCleansedElements などは保持する（クレンジングが実際に実行されたため）
                       } else {
                           // 短すぎるコンテンツの場合、body全体を使用
@@ -410,16 +480,20 @@ export function extractMainContent(
                       keywordStripRemoved = 0;
                       totalRemoved = 0;
 
-                      // フォールバック後のバイト数を再計算
+                      // フォールバック後のバイト数を再計算（診断専用）
+                      if (returnInfo) {
+                          originalBytes = fallbackBytesBody ?? getByteSize(content);
+                          cleansedBytes = originalBytes;
+                      }
+                 }
+              } else {
+                  content = document.body?.innerText || '';
+                  // バイト数（クレンジングなし、診断専用）
+                  if (returnInfo) {
                       originalBytes = getByteSize(content);
                       cleansedBytes = originalBytes;
-                 }
-             } else {
-                 content = document.body?.innerText || '';
-                 // バイト数を計算（クレンジングなし）
-                 originalBytes = getByteSize(content);
-                 cleansedBytes = originalBytes;
-             }
+                  }
+              }
          }
      } catch (_error) {
          // エラー時は安全なフォールバック
@@ -443,8 +517,8 @@ export function extractMainContent(
         content = content.substring(0, maxChars);
     }
 
-    // 30-14: ファネル集計 — 3段階バイトをまとめる
-    if (pageBytes || candidateBytes || cleansedBytes) {
+    // 30-14: ファネル集計 — 3段階バイトをまとめる（診断専用）
+    if (returnInfo && (pageBytes || candidateBytes || cleansedBytes)) {
         funnel = { pageBytes, candidateBytes, cleansedBytes };
     }
     // 30-11: originalContent が未設定なら body からフォールバック（jsdomでも取得可能に）
