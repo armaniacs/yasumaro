@@ -47,16 +47,16 @@ Scenario: ベースラインを更新する
 ```
 
 ## 受け入れ基準
-- [ ] `bench/harness/` に共通ハーネス（runner / stats / report / domEnv / bundle）を実装。`runner.bench(id, {sizes, warmup, measure, setup, run, teardown, counters})` が P50/P95/P99・stddev・カウンタ・スケーリング判定を返す
-- [ ] `bench/micro/` に c1〜c7 の 7 ベンチ定義（backlog 02〜08 の各対象を測る。c5 は FakeScheduler の仮想時間で schedule 回数とコールバック累積時間、c6 は fake `chrome.storage` / fake `queryHistory` の呼び出し回数）
-- [ ] `bench/fixtures/` に 5 種の固定 HTML（news-article / spa-heavy / long-blog / shadow-dom / iframe-nested）と S/M/L 増幅ジェネレータ `_sizes.mjs`
-- [ ] `bench/e2e/` に 4 スペック: autosave-latency / content-script-impact（注入あり/なしビルドの A/B）/ lighthouse（LCP/TBT/CLS/INP）/ sw-startup
-- [ ] content script に `performance.mark('ow-extract-start')` と `performance.mark('ow-send-ready')` を追加（本番コードへの最小侵襲。既存の抽出開始・送信直前地点に 1 行ずつ）
-- [ ] `bench/baselines/{micro,e2e}.json` をコミット。`report.mjs` がベースライン比較し、P95 +15% 超で exit 1
-- [ ] e2e ベンチは CDP `Emulation.setCPUThrottlingRate` を 4x に固定
-- [ ] npm scripts: `bench` / `bench:micro` / `bench:e2e` / `bench:lighthouse` / `bench:baseline` / `bench:check`
-- [ ] `bench/README.md` に実行方法・全指標の定義・ベースライン更新手順・CI 組み込み方法を記載
-- [ ] `scripts/benchmark-cleansing.mjs` を新ハーネス（`bench/harness/*`）を使うよう書き換え、重複ロジックを排除（`npm run benchmark:cleansing` は後方互換で維持 or bench:micro に統合）
+- [x] `bench/harness/` に共通ハーネス（runner / stats / report / domEnv / bundle）を実装。`runner.bench(id, {sizes, warmup, measure, setup, run, teardown, counters})` が P50/P95/P99・stddev・カウンタ・スケーリング判定を返す
+- [x] `bench/micro/` に c1〜c7 の 7 ベンチ定義（backlog 02〜08 の各対象を測る。c5 は FakeScheduler の仮想時間で schedule 回数とコールバック累積時間、c6 は fake `chrome.storage` / fake `queryHistory` の呼び出し回数）
+- [x] `bench/fixtures/` に 5 種の固定 HTML（news-article / spa-heavy / long-blog / shadow-dom / iframe-nested）と S/M/L 増幅ジェネレータ `_sizes.mjs`
+- [x] `bench/e2e/` に 4 スペック: autosave-latency / content-script-impact（注入あり/なしビルドの A/B）/ lighthouse（LCP/TBT/CLS/INP）/ sw-startup
+- [x] content script に `performance.mark('ow-extract-start')` と `performance.mark('ow-send-ready')` を追加（本番コードへの最小侵襲。既存の抽出開始・送信直前地点に 1 行ずつ）
+- [x] `bench/baselines/{micro,e2e}.json` をコミット。`report.mjs` がベースライン比較し、P95 +15% 超で exit 1
+- [x] e2e ベンチは CDP `Emulation.setCPUThrottlingRate` を 4x に固定
+- [x] npm scripts: `bench` / `bench:micro` / `bench:e2e` / `bench:lighthouse` / `bench:baseline` / `bench:check`
+- [x] `bench/README.md` に実行方法・全指標の定義・ベースライン更新手順・CI 組み込み方法を記載
+- [x] `scripts/benchmark-cleansing.mjs` を新ハーネス（`bench/harness/*`）を使うよう書き換え、重複ロジックを排除（`npm run benchmark:cleansing` は後方互換で維持 or bench:micro に統合）
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -132,9 +132,9 @@ bench/
 > 実装前に `npm run bench:micro -- --filter cN` でベースライン取得 → 実装後に再実行し `bench/reports/` の差分を PR に添付。無関係な指標が +15% 超で悪化していないこと。対応 micro ベンチの P95 が baseline 比で有意に改善（目標値は各 PBI に明記）していること。e2e に影響する変更は `npm run bench:e2e` の autosave-latency も添付。
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テスト（単体 + `@extension` スモーク）として実装されパスする
-- [ ] `npm run bench:micro` `npm run bench:e2e` `npm run bench:check` がローカルで動作
-- [ ] baseline JSON をコミット
-- [ ] コードレビュー完了
-- [ ] `dev-docs/PERFORMANCE_GUIDE.md` に「ベンチマークの実行と回帰検出」節を追加
-- [ ] CHANGELOG.md に記載（開発者向け・非機能）
+- [x] 全 BDD シナリオが自動テスト（単体 + `@extension` スモーク）として実装されパスする
+- [x] `npm run bench:micro` `npm run bench:e2e` `npm run bench:check` がローカルで動作
+- [x] baseline JSON をコミット
+- [x] コードレビュー完了
+- [x] `dev-docs/PERFORMANCE_GUIDE.md` に「ベンチマークの実行と回帰検出」節を追加
+- [x] CHANGELOG.md に記載（開発者向け・非機能）

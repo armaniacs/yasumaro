@@ -36,12 +36,12 @@ Scenario: クレンジング結果は従来と一致する
 ```
 
 ## 受け入れ基準
-- [ ] `cleanseAISummaryContent()` に `alreadyCloned?: boolean`（または `mutateInPlace?: boolean`）オプションを追加。true のとき内部の `cloneNode`（`aiSummaryCleaner/index.ts:127`）をスキップし、渡された要素を直接変更
-- [ ] `extractMainContent()` の 3 経路すべてで、オーケストレータが作った 1 個の clone を `cleanseContent` → `cleanseAISummaryContent(clone, { alreadyCloned: true })` の順で使い回す
-- [ ] `countAISummaryTargets()`（削除せず数えるだけ）は live DOM に対して呼ばれるので `alreadyCloned` は付けない（現状維持）
-- [ ] クレンジング結果（`totalRemoved` / `removed` マップ / テキスト）が従来実装とバイト単位で一致
-- [ ] 既存の `aiSummaryCleaner` / `contentExtractor` テストがすべてパス
-- [ ] `cleanseAISummaryContent` を単独で（clone なしで）呼ぶ既存の利用箇所が壊れない（default は従来どおり内部クローン）
+- [x] `cleanseAISummaryContent()` に `alreadyCloned?: boolean`（または `mutateInPlace?: boolean`）オプションを追加。true のとき内部の `cloneNode`（`aiSummaryCleaner/index.ts:127`）をスキップし、渡された要素を直接変更
+- [x] `extractMainContent()` の 3 経路すべてで、オーケストレータが作った 1 個の clone を `cleanseContent` → `cleanseAISummaryContent(clone, { alreadyCloned: true })` の順で使い回す
+- [x] `countAISummaryTargets()`（削除せず数えるだけ）は live DOM に対して呼ばれるので `alreadyCloned` は付けない（現状維持）
+- [x] クレンジング結果（`totalRemoved` / `removed` マップ / テキスト）が従来実装とバイト単位で一致
+- [x] 既存の `aiSummaryCleaner` / `contentExtractor` テストがすべてパス
+- [x] `cleanseAISummaryContent` を単独で（clone なしで）呼ぶ既存の利用箇所が壊れない（default は従来どおり内部クローン）
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -88,8 +88,8 @@ sed -n '55,135p' src/utils/aiSummaryCleaner/index.ts
 - E2E の要約テキスト（`recording-traceId.spec.ts` 等）が変わらないこと
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] `npm run bench:micro -- --filter c4` の before/after を PR に添付
-- [ ] クレンジング結果の新旧一致を回帰テストで保証
-- [ ] コードレビュー完了
-- [ ] CHANGELOG.md に記載（パフォーマンス改善・非機能）
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] `npm run bench:micro -- --filter c4` の before/after を PR に添付
+- [x] クレンジング結果の新旧一致を回帰テストで保証
+- [x] コードレビュー完了
+- [x] CHANGELOG.md に記載（パフォーマンス改善・非機能）

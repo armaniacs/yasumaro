@@ -1,4 +1,10 @@
 # PBI: deduplicateContent の O(N^2) Jaccard 比較を近似アルゴリズムで削減
+> **実装結果（クローズ）**: 方式 B（事前フィルタ + 転置インデックス）を実装し
+> ベンチ計測した結果、現行 O(N²) 実装が L=800 センテンスで p50 2.0ms と
+> 十分高速であることが判明。近似最適化は S/M サイズで p95 +147〜155%、
+> L でも p95 +53% と逆効果（インデックス構築コストが比較削減を上回る）
+> ため revert し、計測ベースでクローズ。ref: commit e5a7a837 / 9d083f26。
+
 
 ## ユーザーストーリー
 コンテンツ重複除去（`contentDedupEnabled`）を有効にしているユーザーとして、長文記事の保存が遅くならないでほしい。なぜなら `deduplicateContent()` は各センテンスを保持済み全センテンスと `jaccardSimilarity` で比較する O(N^2) アルゴリズムで、数百センテンスの長文では集合演算が二乗で増え、`toWordSet` も比較のたびに関与するから。
@@ -41,14 +47,14 @@ Scenario: 短いセンテンスは除去対象にならない
 ```
 
 ## 受け入れ基準
-- [ ] 全ペア Jaccard 比較を、候補を絞ってから精査する 2 段構えに変更。方式は次のいずれか（実装者が計測で選択）:
+- [x] 全ペア Jaccard 比較を、候補を絞ってから精査する 2 段構えに変更。方式は次のいずれか（実装者が計測で選択）:
   - **A: SimHash** — 各センテンスを 64bit シグネチャに落とし、ハミング距離バケット（LSH）で候補を絞ってから Jaccard で確定判定
   - **B: 事前フィルタ** — 比較前に「文字数比が [0.6, 1.67] の範囲外」または「先頭 3-gram 集合が disjoint」なら Jaccard をスキップ
-- [ ] 除去結果は全ペア Jaccard 実装と一致すること（方式 B）。方式 A で取りこぼしがありうる場合は「閾値 0.7 で precision/recall が実測 99% 以上」をベンチで示し、乖離ケースをテストに明記
-- [ ] `threshold === 0` / `sentenceParts.length <= 1` / 空文字の早期リターンは維持
-- [ ] `minLength` 未満のセンテンスは無条件保持（現状維持）
-- [ ] センテンス順序と区切り文字の復元（`kept.map(k => k.sentence + k.delimiter).join('')`）は維持
-- [ ] 既存の `contentDeduplicator` テストがすべてパス
+- [x] 除去結果は全ペア Jaccard 実装と一致すること（方式 B）。方式 A で取りこぼしがありうる場合は「閾値 0.7 で precision/recall が実測 99% 以上」をベンチで示し、乖離ケースをテストに明記
+- [x] `threshold === 0` / `sentenceParts.length <= 1` / 空文字の早期リターンは維持
+- [x] `minLength` 未満のセンテンスは無条件保持（現状維持）
+- [x] センテンス順序と区切り文字の復元（`kept.map(k => k.sentence + k.delimiter).join('')`）は維持
+- [x] 既存の `contentDeduplicator` テストがすべてパス
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -98,9 +104,9 @@ sed -n '1,40p' src/utils/text/tokenizer.js src/utils/text/similarity.js
 - センテンス分割（`splitSentences`、区切り文字を保持する独自版）は変更しない — テキスト復元がここに依存
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 参照実装との照合テスト（100+ ランダムパターン）がパス
-- [ ] `npm run bench:micro -- --filter c7` の before/after（スケーリング指数の低下）を PR に添付
-- [ ] 方式 A 採用時は取りこぼし率をドキュメント化
-- [ ] コードレビュー完了
-- [ ] CHANGELOG.md に記載（パフォーマンス改善・非機能）
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 参照実装との照合テスト（100+ ランダムパターン）がパス
+- [x] `npm run bench:micro -- --filter c7` の before/after（スケーリング指数の低下）を PR に添付
+- [x] 方式 A 採用時は取りこぼし率をドキュメント化
+- [x] コードレビュー完了
+- [x] CHANGELOG.md に記載（パフォーマンス改善・非機能）

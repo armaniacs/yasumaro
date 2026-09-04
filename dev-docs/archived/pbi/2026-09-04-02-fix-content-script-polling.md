@@ -43,14 +43,14 @@ Scenario: VisitGate としきい値オブジェクトは init 後に再生成さ
 ```
 
 ## 受け入れ基準
-- [ ] `requestIdleCallback` / `setTimeout` による自己再帰ポーリングを廃止。代わりに「`minVisitDuration - 経過時間` 後に発火する単発タイマー 1 本」+「既存 scroll ハンドラでの条件チェック」に統合
-- [ ] `visibilitychange`: 非表示でタイマーキャンセル、再表示で「残り時間」ぶんの単発タイマー再セット（固定 interval でなく残余計算）
-- [ ] `VisitGate` としきい値オブジェクト（`toVisitGateThresholds()` の結果）を `init()` 内で 1 回だけ生成し、以降のすべての判定で再利用
-- [ ] `isE2ETest()` の結果を `init()` 時に boolean へ確定し、`checkVisitConditions` 内で `hasAttribute` を毎回呼ばない
-- [ ] `startPeriodicCheck` / `stopPeriodicCheck` / `scheduleNextCheck` の公開 API 名は互換維持（内部実装のみ差し替え）、または呼び出し側をすべて更新
-- [ ] `Scheduler` インターフェース（`schedule` / `cancel`）と `FakeScheduler`（`flush` / `pendingCount`）は維持。単発化してもテスト可能なこと
-- [ ] 既存の content script 関連テスト（`contentKernel` / `visitGate` / `scrollMonitor` 系）がすべてパス
-- [ ] E2E `content-script-recording.spec.ts` / `recording-traceId.spec.ts` が回帰しない
+- [x] `requestIdleCallback` / `setTimeout` による自己再帰ポーリングを廃止。代わりに「`minVisitDuration - 経過時間` 後に発火する単発タイマー 1 本」+「既存 scroll ハンドラでの条件チェック」に統合
+- [x] `visibilitychange`: 非表示でタイマーキャンセル、再表示で「残り時間」ぶんの単発タイマー再セット（固定 interval でなく残余計算）
+- [x] `VisitGate` としきい値オブジェクト（`toVisitGateThresholds()` の結果）を `init()` 内で 1 回だけ生成し、以降のすべての判定で再利用
+- [x] `isE2ETest()` の結果を `init()` 時に boolean へ確定し、`checkVisitConditions` 内で `hasAttribute` を毎回呼ばない
+- [x] `startPeriodicCheck` / `stopPeriodicCheck` / `scheduleNextCheck` の公開 API 名は互換維持（内部実装のみ差し替え）、または呼び出し側をすべて更新
+- [x] `Scheduler` インターフェース（`schedule` / `cancel`）と `FakeScheduler`（`flush` / `pendingCount`）は維持。単発化してもテスト可能なこと
+- [x] 既存の content script 関連テスト（`contentKernel` / `visitGate` / `scrollMonitor` 系）がすべてパス
+- [x] E2E `content-script-recording.spec.ts` / `recording-traceId.spec.ts` が回帰しない
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -98,8 +98,8 @@ sed -n '26,51p;258,341p' src/content/contentKernel.ts   # Scheduler / checkVisit
 - E2E の `__OW_TEST_STATE` / `data-ow-test-state` 更新は条件評価時のみでよい（毎ループ更新をやめても E2E は条件評価タイミングで読めば足りる）— `content-script-recording.spec.ts` の待ち方を確認
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] `npm run bench:micro -- --filter c5` の before/after を PR に添付、schedule 回数の削減を確認
-- [ ] E2E `@extension` の recording 系がパス
-- [ ] コードレビュー完了
-- [ ] CHANGELOG.md に記載（パフォーマンス改善・非機能）
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] `npm run bench:micro -- --filter c5` の before/after を PR に添付、schedule 回数の削減を確認
+- [x] E2E `@extension` の recording 系がパス
+- [x] コードレビュー完了
+- [x] CHANGELOG.md に記載（パフォーマンス改善・非機能）

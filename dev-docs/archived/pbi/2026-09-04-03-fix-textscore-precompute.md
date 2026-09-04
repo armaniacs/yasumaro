@@ -34,11 +34,11 @@ Scenario: スコア順の結果は従来と一致する
 ```
 
 ## 受け入れ基準
-- [ ] `findMainContentCandidates()` の 3 箇所のソートを「`candidates.map(el => ({ el, score: calculateTextScore(el) }))` → `.sort((a,b) => b.score - a.score)` → `.map(x => x.el)`」に変更。スコア計算は候補あたり 1 回
-- [ ] `calculateTextScore` の `innerText` 参照（`scoring.ts:17` `:46`）を `textContent` に置換。可視性補正は不要（TreeWalker でリンクテキスト長を集計しているため）
-- [ ] スコアの計算式（p×50 / h×100 / list×30 / linkRatio>0.5 で ×0.3）は変更しない
-- [ ] 既存の `contentExtractor` / `scoring` 系テストがすべてパス。候補順序・件数の回帰なし
-- [ ] `calculateTextScore` は引き続き public export（`contentExtractor/index.ts:31` で re-export）
+- [x] `findMainContentCandidates()` の 3 箇所のソートを「`candidates.map(el => ({ el, score: calculateTextScore(el) }))` → `.sort((a,b) => b.score - a.score)` → `.map(x => x.el)`」に変更。スコア計算は候補あたり 1 回
+- [x] `calculateTextScore` の `innerText` 参照（`scoring.ts:17` `:46`）を `textContent` に置換。可視性補正は不要（TreeWalker でリンクテキスト長を集計しているため）
+- [x] スコアの計算式（p×50 / h×100 / list×30 / linkRatio>0.5 で ×0.3）は変更しない
+- [x] 既存の `contentExtractor` / `scoring` 系テストがすべてパス。候補順序・件数の回帰なし
+- [x] `calculateTextScore` は引き続き public export（`contentExtractor/index.ts:31` で re-export）
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -83,7 +83,7 @@ grep -rn "calculateTextScore\|innerText" src/utils/contentExtractor/
 - `innerText` を消すと jsdom テストではむしろ挙動が安定する（jsdom の innerText 実装は不完全）。実ブラウザとの差異は「不可視要素のテキストを含むか」だけで、相対順序への影響は軽微
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] `npm run bench:micro -- --filter c2` の before/after を PR に添付
-- [ ] コードレビュー完了
-- [ ] CHANGELOG.md に記載（パフォーマンス改善・非機能）
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] `npm run bench:micro -- --filter c2` の before/after を PR に添付
+- [x] コードレビュー完了
+- [x] CHANGELOG.md に記載（パフォーマンス改善・非機能）

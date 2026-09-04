@@ -48,14 +48,14 @@ Scenario: レースガードとキャッシュが両立する
 ```
 
 ## 受け入れ基準
-- [ ] `fetchData` のクエリパラメータ（`sortBy` / `sortDir` / `page` / `search` / `since` / `until` / `tagFilter` の正規化タプル）をキーにした LRU キャッシュ（上限 20 エントリ程度）を実装
-- [ ] キャッシュヒット時は `runQueryHistory` を呼ばず、`dispatch({ type: 'loadSuccess', data })` を同期的に適用
-- [ ] `toggleStarSuccess` / `deleteSuccess` / `appendSuccess`（データ変更）でキャッシュ全体を無効化（件数・オフセットがずれるため部分無効化はしない）
-- [ ] `requestGeneration` レースガードと整合: stale なレスポンスはキャッシュに保存しない
-- [ ] `loadPersistedSortIntoState()` を起動時 1 回に限定。`persistSort` を 500ms debounce
-- [ ] `chrome.storage.local.get(HISTORY_SORT_STORAGE_KEY)` は Dashboard セッションあたり 1 回
-- [ ] 既存の `sqliteHistoryModel` / `sqliteHistoryPanel` テストがすべてパス
-- [ ] E2E `dashboard-ui.spec.ts` が回帰しない
+- [x] `fetchData` のクエリパラメータ（`sortBy` / `sortDir` / `page` / `search` / `since` / `until` / `tagFilter` の正規化タプル）をキーにした LRU キャッシュ（上限 20 エントリ程度）を実装
+- [x] キャッシュヒット時は `runQueryHistory` を呼ばず、`dispatch({ type: 'loadSuccess', data })` を同期的に適用
+- [x] `toggleStarSuccess` / `deleteSuccess` / `appendSuccess`（データ変更）でキャッシュ全体を無効化（件数・オフセットがずれるため部分無効化はしない）
+- [x] `requestGeneration` レースガードと整合: stale なレスポンスはキャッシュに保存しない
+- [x] `loadPersistedSortIntoState()` を起動時 1 回に限定。`persistSort` を 500ms debounce
+- [x] `chrome.storage.local.get(HISTORY_SORT_STORAGE_KEY)` は Dashboard セッションあたり 1 回
+- [x] 既存の `sqliteHistoryModel` / `sqliteHistoryPanel` テストがすべてパス
+- [x] E2E `dashboard-ui.spec.ts` が回帰しない
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -108,8 +108,8 @@ sed -n '250,300p;350,400p;455,465p;525,540p' src/dashboard/panels/asyncData/sqli
 - debounce した persist が flush されず Dashboard を閉じると、次回起動時にソート設定が古いまま → unmount フックで必ず flush
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] `npm run bench:micro -- --filter c6` の before/after を PR に添付
-- [ ] E2E `dashboard-ui.spec.ts` パス
-- [ ] コードレビュー完了
-- [ ] CHANGELOG.md に記載（パフォーマンス改善・非機能）
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] `npm run bench:micro -- --filter c6` の before/after を PR に添付
+- [x] E2E `dashboard-ui.spec.ts` パス
+- [x] コードレビュー完了
+- [x] CHANGELOG.md に記載（パフォーマンス改善・非機能）
