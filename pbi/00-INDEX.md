@@ -22,7 +22,7 @@ backlog: [2026-09-05-00-backlog-arch4.md](2026-09-05-00-backlog-arch4.md)。着�
 - 2026-09-05-02-refactor-pending-merge-lock.md（✅ 完了・アーカイブ済 — merge＋truncate を pendingPatchPolicy に抽出し mutate 経由に。retryCount は backoff 継承に。interleave 新規テスト付き。queue green）
 - 2026-09-05-03-refactor-popup-feedback.md（✅ 完了・アーカイブ済 — pass-through 2 件＋専用テストを削除しセッション private 化。fetcher/flow の spinner 注入も除去。popup 827 tests green）
 - 2026-09-05-04-refactor-visit-reporter.md（✅ 完了・アーカイブ済 — 共有ビルダー buildVisitStats に一本化＋label 参照を注入化。force retry 最小形は意図的と確定。matrix 8 tests。content 414 green）
-- 2026-09-05-05-refactor-sanitizer-seam.md（⬜ RICE 8.0 — サニタイズ順序を sanitizeForSummarization seam に集約。Worth）
+- 2026-09-05-05-refactor-sanitizer-seam.md（✅ 完了・アーカイブ済 — 5 政策サイトを checkPromptSafety テーブルに集約（MEDIUM 明示 pass、文面同一、リテラル比較で既存モック無修正）。matrix テスト付き。274 tests green）
 - 2026-09-05-06-refactor-visit-admission.md（⬜ RICE 6.7 — 訪問許可判定を visit-admission モジュールに集約）
 - 2026-09-05-07-refactor-pending-queue.md（⬜ RICE 5.0 — 回復ストアを PendingQueue 4 method に狭窄。Worth）
 

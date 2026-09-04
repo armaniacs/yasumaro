@@ -6,14 +6,13 @@
 import { Settings, StorageKeys, type StorageKey } from '../../../utils/storage/types.js';
 import { validateMaxTokens } from '../../../utils/aiLimits.js';
 import { checkHardLimit, checkRateLimit, checkUsageWarning, getRateLimitMessage, recordUsage } from '../../../utils/aiUsageTracker.js';
-import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
-import { addLog, LogType } from '../../../utils/logger.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { readJsonCapped } from '../../../utils/readBodyCapped.js';
 import { fetchWithRetry } from '../../../utils/fetch.js';
 import { getAllowedUrls } from '../../../utils/storage/urlWhitelist.js';
+import { checkPromptSafety } from '../../../utils/promptSafety.js';
 
 export interface AIProviderConnectionResult {
     success: boolean;
@@ -130,20 +129,10 @@ export abstract class AIProviderStrategy {
         providerName: string,
         traceId: string
     ): { blocked: boolean; sanitized: string; warnings: string[] } {
-        const { sanitized, warnings, dangerLevel } = sanitizePromptContent(content);
-        if (warnings.length > 0) {
-            addLog(LogType.WARN, `[${providerName}] Prompt injection detected: ${warnings.join('; ')}`, {
-                traceId,
-                dangerLevel,
-                category: dangerLevel === 'low' ? 'generic_term' : 'refined_injection',
-            });
-        }
-        if (dangerLevel === 'high') {
-            const cause = warnings.length > 0 ? warnings.join('; ') : 'High risk content detected';
-            addLog(LogType.ERROR, `[${providerName}] High risk prompt injection blocked: ${cause}`, { traceId });
-            return { blocked: true, sanitized, warnings };
-        }
-        return { blocked: false, sanitized, warnings };
+        // Policy lives in the shared seam (PBI 2026-09-05-05); this helper
+        // keeps its shape for the template + BuiltIn callers.
+        const verdict = checkPromptSafety(content, 'provider-input', { providerName, traceId });
+        return { blocked: verdict.blocked, sanitized: verdict.sanitized, warnings: verdict.warnings };
     }
 
     /**
