@@ -34,14 +34,14 @@ Scenario: 読み込めない・形式の古い JSON が混在する
 ```
 
 ## 受け入れ基準
-- [ ] Trend セクションが履歴 2 世代以上で sparkline（インライン SVG）+ 最初/最新値つきで描画される
-- [ ] 履歴 0〜1 世代でもレポート生成が壊れない（プレースホルダ表示）
-- [ ] schemaVersion != 1・パース不能な JSON をスキップし、スキップ件数を表示する
-- [ ] トレンド対象は主要指標のみ: 各ベンチの **L サイズ**の wall p50/p95/p99、ヒープ（L）、決定的カウンタ（L）、スケーリング指数
-- [ ] 履歴は保持ポリシー（ローリング 5 世代 + 週次アンカー）で存在する世代のみ使用し、系列は最大 26 世代に制限される
-- [ ] 既存の自己完結性（`src=`/`href=` に外部 URL なし）と HTML エスケープが維持される
-- [ ] `npm run bench:check` の挙動・終了コードが変わらない
-- [ ] 既存テスト（contentExtractor / aiSummaryCleaner / htmlReport / trend）全绿、type-check / lint / build クリーン
+- [x] Trend セクションが履歴 2 世代以上で sparkline（インライン SVG）+ 最初/最新値つきで描画される
+- [x] 履歴 0〜1 世代でもレポート生成が壊れない（プレースホルダ表示）
+- [x] schemaVersion != 1・パース不能な JSON をスキップし、スキップ件数を表示する
+- [x] トレンド対象は主要指標のみ: 各ベンチの **L サイズ**の wall p50/p95/p99、ヒープ（L）、決定的カウンタ（L）、スケーリング指数
+- [x] 履歴は保持ポリシー（ローリング 5 世代 + 週次アンカー）で存在する世代のみ使用し、系列は最大 26 世代に制限される
+- [x] 既存の自己完結性（`src=`/`href=` に外部 URL なし）と HTML エスケープが維持される
+- [x] `npm run bench:check` の挙動・終了コードが変わらない
+- [x] 既存テスト（contentExtractor / aiSummaryCleaner / htmlReport / trend）全绿、type-check / lint / build クリーン
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -112,8 +112,8 @@ rg -n "opts\.(check|updateBaseline|filter|noOpen)" bench/harness/cli.mjs
 - **`bench:check` モードでも Trend が生成される**: 仕様どおり（全モードで成果物 3 点セット）。ただし `--check` の exit コード判定は Trend 生成失敗に影響されないこと（既存の try/catch 方針を維持）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（trend 集約・htmlReport 描画・CLI 配線）
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ドキュメント更新済み（docs/PERFORMANCE_TEST.md 日英 + bench/README.md に Trend セクションの説明を追記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす（trend 集約・htmlReport 描画・CLI 配線）
+- [x] コードレビュー完了
+- [x] リファクタリング完了（グリーン後）
+- [x] ドキュメント更新済み（docs/PERFORMANCE_TEST.md 日英 + bench/README.md に Trend セクションの説明を追記）
