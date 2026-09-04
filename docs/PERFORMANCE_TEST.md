@@ -124,7 +124,9 @@ npm run build && npm run bench:e2e
 - **削除単位は世代単位**: 同一日付の `.md` / `.html` / `.json` は必ずまとめて削除される
 - 日付スタンプを持たないファイルは自動掃除では削除されない。全消去は `npm run bench:clean -- --all`
 
-実行モード（通常 / `--check` / `--update-baseline`）に関係なく、成果物は常に `.md` / `.html` / `.json` の 3 点セットで書き出される。`.html` は依存ゼロの自己完結ファイルなので、そのまま PR に添付・ブラウザオープンできる。自動ブラウザオープンは「`--no-open` 未指定 + CI 以外 + TTY 接続あり（インタラクティブセッション）」のすべてを満たしたときだけ行われる。
+実行モード（通常 / `--check` / `--update-baseline`）に関係なく、成果物は常に `.md` / `.html` / `.json` の 3 点セットで書き出される。
+
+HTML レポートには **Trend セクション** が含まれる。`bench/reports/` に蓄積された過去の `micro-<日付>.json` を読み、各ベンチの L 指標（wall p50/p95/p99・ヒープ・カウンタ・スケーリング指数）の日付横断 sparkline と最初/最新値を表示する（系列は新しい方から最大 26 世代、schemaVersion 非一致・壊れた JSON はスキップして件数表示）。1 世代のみの時点ではプレースホルダ表示で、日をまたぐ実行の蓄積とともに推移が描かれる。`.html` は依存ゼロの自己完結ファイルなので、そのまま PR に添付・ブラウザオープンできる。自動ブラウザオープンは「`--no-open` 未指定 + CI 以外 + TTY 接続あり（インタラクティブセッション）」のすべてを満たしたときだけ行われる。
 
 ### ベースラインの更新
 
@@ -239,7 +241,14 @@ e2e suite nightly or on demand.
 
 Every run mode (default / `--check` / `--update-baseline`) writes the same
 `.md` / `.html` / `.json` artifact set. The `.html` file is self-contained
-(zero external references) — attach it to a PR or open it directly. The browser
+(zero external references) — attach it to a PR or open it directly.
+
+The HTML report includes a **Trend section**: it reads the accumulated
+`micro-<date>.json` generations from `bench/reports/` and renders per-bench
+sparklines (L-size wall p50/p95/p99, heap, deterministic counters, scaling
+exponent) plus first→last values, capped at the newest 26 generations.
+Generations with a foreign `schemaVersion` or unparsable JSON are skipped
+with a visible count. With fewer than 2 generations a placeholder is shown. The browser
 auto-open fires only when ALL of these hold: no `--no-open` flag, not running
 in CI, and a TTY is attached (interactive session).
 

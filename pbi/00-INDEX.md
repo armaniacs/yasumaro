@@ -14,11 +14,11 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-04 ベンチ履歴トレンド表示（1 件）
+**進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る。
 
-| NN | PBI | 種別 | 難易度 | 副作用 | RICE | 状態 |
-|----|-----|------|--------|--------|------|------|
-| 10 | [feat-bench-trend-report](2026-09-04-10-feat-bench-trend-report.md) | ✨ | 🟢 2pt | 🟢 | 5.0 | ⬜ 蓄積済み `micro-<日付>.json` から指標トレンドを HTML レポートに表示（sparkline + 最初/最新値）。依存なし・外部参照ゼロ維持 |
+### 2026-09-04 ベンチ履歴トレンド表示（1 件） — 完了
+
+- 2026-09-04-10-feat-bench-trend-report.md（✨ 2pt — 蓄積済み `micro-<日付>.json` から指標トレンドを HTML レポートに表示。trend.mjs 集約 + sparkline セクション + CLI 配線、外部参照ゼロ維持。テスト 89 harness green・bench:check PASS）
 
 ### 2026-09-04 パフォーマンス最適化 8 件（ベンチ基盤先行） — 8 件完了
 
