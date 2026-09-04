@@ -70,6 +70,16 @@ describe('renderHtml', () => {
     expect(html).not.toContain('a<b>');
   });
 
+  it('escapes hostile sizeKey inside SVG title', () => {
+    const hostileSizeResult = {
+      ...result,
+      perSize: { '<x>': { n: 1, wallMs: { p50: 1, p95: 1, p99: 1 }, heapBytes: { p50: 1024 }, counters: {} } },
+    };
+    const html = renderHtml([hostileSizeResult]);
+    expect(html).toContain('<title>&lt;x&gt;');
+    expect(html).not.toContain('<title><x>');
+  });
+
   it('marks decorative svg as aria-hidden', () => {
     const html = renderHtml([result]);
     expect(html).toContain('aria-hidden="true"');

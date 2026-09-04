@@ -78,7 +78,7 @@ function barChartSvg(perSize) {
     [['p50'], ['p95'], ['p99']].forEach(([m], j) => {
       const h = Math.max(1, Math.round((s.wallMs[m] / max) * chartH));
       const x = x0 + j * (barW + gap);
-      parts.push(`<rect x="${x}" y="${chartH - h}" width="${barW}" height="${h}" class="bar-${m}"><title>${sizeKey} ${m}: ${fmtNum(s.wallMs[m])}ms</title></rect>`);
+      parts.push(`<rect x="${x}" y="${chartH - h}" width="${barW}" height="${h}" class="bar-${m}"><title>${escapeHtml(sizeKey)} ${m}: ${fmtNum(s.wallMs[m])}ms</title></rect>`);
     });
     parts.push(`<text x="${x0 + (barW * 3 + gap * 2) / 2}" y="${chartH + 14}" text-anchor="middle" class="axis">${escapeHtml(sizeKey)} (N=${s.n})</text>`);
   });
