@@ -65,9 +65,11 @@ describe('loader.ts - Content Script 静的インポート方針', () => {
         }
     });
 
-    it('loader.ts が urlSkipper と domainPolicy に委譲し、ローカル再実装を持たない（重複コード排除の確認）', () => {
+    it('loader.ts が urlSkipper と visitAdmission に委譲し、ローカル再実装を持たない（重複コード排除の確認）', () => {
         expect(source).toMatch(/import\s*\{[^}]*shouldSkipUrl[^}]*\}\s*from\s*['"]\.\/urlSkipper\.js['"]/);
-        expect(source).toMatch(/import\s*\{[^}]*checkDomainAllowedFromCache[^}]*\}\s*from\s*['"]\.\/domainPolicy\.js['"]/);
+        expect(source).toMatch(/import\s*\{[^}]*resolveVisitAdmission[^}]*\}\s*from\s*['"]\.\/visitAdmission\.js['"]/);
+        // retry ループ・分岐のローカル再実装がないこと（単一 seam に集約）
+        expect(source).not.toMatch(/for\s*\(\s*let\s+attempt/);
         // ローカルに再実装された SKIPPED_PROTOCOLS / StorageKeys 定数が残っていないこと
         expect(source).not.toMatch(/const\s+SKIPPED_PROTOCOLS\s*=/);
         expect(source).not.toMatch(/const\s+StorageKeys\s*=/);

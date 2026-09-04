@@ -7,14 +7,13 @@
 
 import { StorageKeys } from '../utils/storage/types.js';
 import type { StoragePort } from '../utils/storage/storagePort.js';
-import { extractDomain, isDomainInList, shouldSkipUrl } from './urlSkipper.js';
+import { extractDomain, shouldSkipUrl } from './urlSkipper.js';
+import { evaluateDomainPolicy } from './visitAdmission.js';
+import type { DomainCacheCheck } from './visitAdmission.js';
 
-export const CACHE_TTL = 5 * 60 * 1000;
-
-export interface DomainCacheCheck {
-    allowed: boolean;
-    useCache: boolean;
-}
+// Re-exported for backward compat (tests import them from this seam).
+export { CACHE_TTL } from './visitAdmission.js';
+export type { DomainCacheCheck, DomainPolicySnapshot } from './visitAdmission.js';
 
 export interface DomainPolicyPort {
     shouldSkip(url: string): boolean;
@@ -39,6 +38,8 @@ export class ChromeDomainPolicyPort implements DomainPolicyPort {
 
     async checkDomainAllowedFromCache(url: string): Promise<DomainCacheCheck> {
         const domain = extractDomain(url);
+        // Early return preserved (avoids a wasted storage read); the pure
+        // policy handles null identically for direct callers.
         if (!domain) {
             return { allowed: false, useCache: true };
         }
@@ -53,21 +54,11 @@ export class ChromeDomainPolicyPort implements DomainPolicyPort {
         const cachedAt = (result[StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP] as number) || 0;
         const mode = (result[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'disabled';
 
-        const isCacheValid = cachedAt > 0 && (this.clock() - cachedAt) < CACHE_TTL;
-
-        if (!isCacheValid) {
-            return { allowed: false, useCache: false };
-        }
-
-        if (mode === 'disabled') {
-            return { allowed: true, useCache: true };
-        }
-
-        if (mode === 'whitelist') {
-            const allowed = isDomainInList(domain, cachedWhitelist);
-            return { allowed, useCache: true };
-        }
-
+        // Second-stage read only in blacklist mode (storage call pattern
+        // unchanged); branching itself lives in the shared pure policy.
+        let blacklist: string[] = [];
+        let simpleEnabled = true;
+        let ublockEnabled = false;
         if (mode === 'blacklist') {
             const result2 = await this.storage.get([
                 StorageKeys.DOMAIN_BLACKLIST,
@@ -75,23 +66,16 @@ export class ChromeDomainPolicyPort implements DomainPolicyPort {
                 StorageKeys.UBLOCK_FORMAT_ENABLED,
             ]);
 
-            const blacklist = (result2[StorageKeys.DOMAIN_BLACKLIST] as string[]) || [];
-            const simpleEnabled = result2[StorageKeys.SIMPLE_FORMAT_ENABLED] !== false;
-            const ublockEnabled = result2[StorageKeys.UBLOCK_FORMAT_ENABLED] === true;
-
-            if (ublockEnabled) {
-                return { allowed: false, useCache: false };
-            }
-
-            if (simpleEnabled) {
-                const isBlocked = isDomainInList(domain, blacklist);
-                return { allowed: !isBlocked, useCache: true };
-            }
-
-            return { allowed: true, useCache: true };
+            blacklist = (result2[StorageKeys.DOMAIN_BLACKLIST] as string[]) || [];
+            simpleEnabled = result2[StorageKeys.SIMPLE_FORMAT_ENABLED] !== false;
+            ublockEnabled = result2[StorageKeys.UBLOCK_FORMAT_ENABLED] === true;
         }
 
-        return { allowed: true, useCache: true };
+        return evaluateDomainPolicy(
+            domain,
+            { cachedWhitelist, cachedAt, mode, blacklist, simpleEnabled, ublockEnabled },
+            this.clock(),
+        );
     }
 }
 
@@ -113,25 +97,18 @@ export class InMemoryDomainPolicyPort implements DomainPolicyPort {
         const domain = extractDomain(url);
         if (!domain) return { allowed: false, useCache: true };
 
-        const cachedWhitelist = (this.store[StorageKeys.DOMAIN_FILTER_CACHE] as string[]) || [];
-        const cachedAt = (this.store[StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP] as number) || 0;
-        const mode = (this.store[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'disabled';
-
-        const isCacheValid = cachedAt > 0 && (this.clock() - cachedAt) < CACHE_TTL;
-        if (!isCacheValid) return { allowed: false, useCache: false };
-        if (mode === 'disabled') return { allowed: true, useCache: true };
-        if (mode === 'whitelist') {
-            return { allowed: isDomainInList(domain, cachedWhitelist), useCache: true };
-        }
-        if (mode === 'blacklist') {
-            const blacklist = (this.store[StorageKeys.DOMAIN_BLACKLIST] as string[]) || [];
-            const simpleEnabled = this.store[StorageKeys.SIMPLE_FORMAT_ENABLED] !== false;
-            const ublockEnabled = this.store[StorageKeys.UBLOCK_FORMAT_ENABLED] === true;
-            if (ublockEnabled) return { allowed: false, useCache: false };
-            if (simpleEnabled) return { allowed: !isDomainInList(domain, blacklist), useCache: true };
-            return { allowed: true, useCache: true };
-        }
-        return { allowed: true, useCache: true };
+        return evaluateDomainPolicy(
+            domain,
+            {
+                cachedWhitelist: (this.store[StorageKeys.DOMAIN_FILTER_CACHE] as string[]) || [],
+                cachedAt: (this.store[StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP] as number) || 0,
+                mode: (this.store[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'disabled',
+                blacklist: (this.store[StorageKeys.DOMAIN_BLACKLIST] as string[]) || [],
+                simpleEnabled: this.store[StorageKeys.SIMPLE_FORMAT_ENABLED] !== false,
+                ublockEnabled: this.store[StorageKeys.UBLOCK_FORMAT_ENABLED] === true,
+            },
+            this.clock(),
+        );
     }
 
     seed(items: Record<string, unknown>): void {
