@@ -24,7 +24,7 @@ backlog: [2026-09-05-00-backlog-arch4.md](2026-09-05-00-backlog-arch4.md)。着�
 - 2026-09-05-04-refactor-visit-reporter.md（✅ 完了・アーカイブ済 — 共有ビルダー buildVisitStats に一本化＋label 参照を注入化。force retry 最小形は意図的と確定。matrix 8 tests。content 414 green）
 - 2026-09-05-05-refactor-sanitizer-seam.md（✅ 完了・アーカイブ済 — 5 政策サイトを checkPromptSafety テーブルに集約（MEDIUM 明示 pass、文面同一、リテラル比較で既存モック無修正）。matrix テスト付き。274 tests green）
 - 2026-09-05-06-refactor-visit-admission.md（✅ 完了・アーカイブ済 — 純粋政策関数＋retry＋判定フローを visitAdmission に集約。loader 3分岐→単一フロー、port 2 impl 共有化、shim 削除。content 426 green）
-- 2026-09-05-07-refactor-pending-queue.md（⬜ RICE 5.0 — 回復ストアを PendingQueue 4 method に狭窄。Worth）
+- 2026-09-05-07-refactor-pending-queue.md（✅ 完了・アーカイブ済 — 5 Whys で facade 狭窄を棄却（多層防御は意図的）。真の欠陥 clearExpiredPages のロック外 set を withOptimisticLock 化＋競合回帰テスト。pending 45 green）
 
 ### 2026-09-05 Architecture Round 3（arch3 診断） — 7 件完了
 

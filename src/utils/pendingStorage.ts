@@ -215,14 +215,21 @@ export async function removePendingPages(urls: string[]): Promise<void> {
 
 /**
  * Removes all expired pending pages from storage.
+ *
+ * Runs inside withOptimisticLock like add/remove: the previous raw
+ * get + set could interleave with a concurrent addPendingPage and drop its
+ * write (same VULN-005 class the other two paths already guard against).
  * @returns Promise that resolves when the operation is complete.
  */
 export async function clearExpiredPages(): Promise<void> {
   try {
-    const pages = await getPendingPagesList();
-    const updatedPages = pages.filter(p => p.expiry > Date.now());
-
-    await chrome.storage.local.set({ [PENDING_PAGES_KEY]: updatedPages });
+    await withOptimisticLock<PendingPage[]>(
+      PENDING_PAGES_KEY,
+      (current) => {
+        const pages = Array.isArray(current) ? current : [];
+        return pages.filter(p => p.expiry > Date.now());
+      }
+    );
   } catch (error) {
     await logError(
       'Failed to clear expired pages',
