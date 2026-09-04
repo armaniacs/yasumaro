@@ -347,12 +347,16 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     since?: number | undefined;
     until?: number | undefined;
     tagFilter?: string | null | undefined;
+    tagInitiated?: boolean | undefined;
   }): string {
     const s = params.search !== undefined && params.search !== '' ? params.search : '';
     const t = params.tagFilter != null && params.tagFilter !== '' ? params.tagFilter : '';
     const since = params.since !== undefined ? String(params.since) : '';
     const until = params.until !== undefined ? String(params.until) : '';
-    return JSON.stringify([params.sortBy, params.sortDir, params.page, s, since, until, t]);
+    // tagInitiated is forwarded to the query and triggers a side effect
+    // (activateWithTag) — same filter with/without it must not share a key.
+    const ti = params.tagInitiated ? '1' : '0';
+    return JSON.stringify([params.sortBy, params.sortDir, params.page, s, since, until, t, ti]);
   }
 
   function setCacheEntry(key: string, value: UnifiedHistoryQueryData): void {
@@ -465,6 +469,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
       since: options.since,
       until: options.until,
       tagFilter: activeTagFilter,
+      tagInitiated: options.tagInitiated,
     });
 
     if (queryCache.has(cacheKey)) {
@@ -473,7 +478,9 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
       queryCache.set(cacheKey, cached);
       const generation = ++requestGeneration;
       void generation;
-      dispatch({ type: 'loadSuccess', data: cached });
+      // Defensive copy: state.entries aliases data.rows, and an in-place
+      // consumer mutation would poison future cache hits.
+      dispatch({ type: 'loadSuccess', data: { ...cached, rows: [...cached.rows] } });
       notify();
       return;
     }

@@ -259,6 +259,51 @@ describe('ContentKernel polling — one-shot deadline + scroll driven', () => {
         expect(hasAttrSpy).not.toHaveBeenCalled();
     });
 
+    it('untrusted (programmatic) scroll crossing the threshold post-deadline still reports', async () => {
+        const baseTime = 7_000_000;
+        let now = baseTime + 6000; // past the 5s deadline
+        const clock = () => now;
+        const scheduler = new FakeScheduler();
+        const pageState = new PageState();
+        pageState.startTime = baseTime;
+        pageState.minVisitDuration = 5;
+        pageState.minScrollDepth = 50;
+
+        // Make the document scrollable and start unscrolled
+        Object.defineProperty(window, 'innerHeight', { value: 400, writable: true, configurable: true });
+        Object.defineProperty(document.documentElement, 'scrollHeight', { value: 1600, writable: true, configurable: true });
+        Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
+
+        const { kernel } = makeKernel({ baseTime, clock, scheduler, pageState });
+        await kernel.init();
+
+        const reportSpy = vi.spyOn(kernel, 'reportValidVisit').mockImplementation(async () => {
+            kernel.pageState.isValidVisitReported = true;
+            return Promise.resolve();
+        });
+
+        // Deadline fires: duration met but scroll 0% → unmet, no reschedule
+        scheduler.flush();
+        expect(reportSpy).not.toHaveBeenCalled();
+        expect(scheduler.pendingCount()).toBe(0);
+
+        // Programmatic scroll (dispatched events are untrusted) crossing depth
+        Object.defineProperty(window, 'scrollY', { value: 720, writable: true, configurable: true });
+        window.dispatchEvent(new Event('scroll'));
+
+        // Exactly one deferred evaluation armed (1s), not a polling loop
+        expect(scheduler.pendingCount()).toBe(1);
+        expect(scheduler.lastDelay).toBe(1000);
+
+        now += 1000;
+        scheduler.flush();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(reportSpy).toHaveBeenCalledTimes(1);
+        expect(kernel.pageState.isValidVisitReported).toBe(true);
+    });
+
     it('keeps public API compatibility: startPeriodicCheck / stopPeriodicCheck / scheduleNextCheck exist', async () => {
         const scheduler = new FakeScheduler();
         const pageState = new PageState();

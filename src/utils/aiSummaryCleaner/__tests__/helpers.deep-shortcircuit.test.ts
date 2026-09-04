@@ -67,7 +67,7 @@ describe('PBI 05 querySelectorAllDeep short-circuit', () => {
         vi.restoreAllMocks();
     });
 
-    it('findDeepHosts: plain DOM yields empty hosts with a single scan', () => {
+    it('findDeepHosts: plain DOM yields empty hosts with zero qSA(*) enumerations', () => {
         document.body.innerHTML = `<div><p>hi</p></div><nav>nav</nav>`;
         const spies = installStarSpies();
         const hosts = findDeepHosts(document.body);
@@ -76,10 +76,11 @@ describe('PBI 05 querySelectorAllDeep short-circuit', () => {
 
         expect(hosts.shadowHosts).toEqual([]);
         expect(hosts.iframes).toEqual([]);
-        expect(totalStars(counts)).toBe(1);
+        // Detection walks the tree via TreeWalker — zero qSA('*') calls.
+        expect(totalStars(counts)).toBe(0);
     });
 
-    it('no shadow/iframe: without hosts, exactly one host-detection scan, result matches plain qSA', () => {
+    it('no shadow/iframe: without hosts, zero star enumerations, result matches plain qSA', () => {
         document.body.innerHTML =
             `<div class="x">a</div>` +
             `<div><span class="x">b</span></div>` +
@@ -95,9 +96,9 @@ describe('PBI 05 querySelectorAllDeep short-circuit', () => {
         expect(result.map((e) => e.textContent)).toEqual(
             expected.map((e) => (e as Element).textContent),
         );
-        // One scan for host detection; no per-level / per-element enumeration.
-        expect(totalStars(counts)).toBe(1);
-        expect(counts.element).toBe(1);
+        // Detection is a TreeWalker walk — zero qSA('*') enumerations.
+        expect(totalStars(counts)).toBe(0);
+        expect(counts.element).toBe(0);
     });
 
     it('no shadow/iframe: with precomputed empty hosts, zero star scans', () => {
@@ -138,10 +139,10 @@ describe('PBI 05 querySelectorAllDeep short-circuit', () => {
             'shadow-0',
             'shadow-1',
         ]);
-        // One body-level detection scan + one scan per shadow subtree.
-        // The 50+ plain divs are never enumerated per level.
-        expect(counts.element).toBe(1);
-        expect(counts.shadow).toBe(2);
+        // Detection is a TreeWalker walk — zero qSA('*') enumerations
+        // anywhere; the 50+ plain divs are never enumerated per level.
+        expect(counts.element).toBe(0);
+        expect(counts.shadow).toBe(0);
     });
 
     it('same-origin iframe: inner elements found (existing mock pattern)', () => {
@@ -198,29 +199,30 @@ describe('PBI 05 querySelectorAllDeep short-circuit', () => {
         expect(collectElementsDeep(document.body, '.x', hosts).length).toBe(1);
     });
 
-    it('entry point: host detection runs once for all rules; later deep scans reuse the cache', () => {
+    it('entry point: cleanse without deep hosts performs no full-subtree scan; explicit scans self-short-circuit', () => {
         const root = document.createElement('div');
         root.innerHTML =
             `<div class="ad-banner">ad</div>`.repeat(5) + `<p>real body text</p>`;
         document.body.appendChild(root);
 
         const spies = installStarSpies();
-        // In-place contract: prime + rules run on the same root, so the
-        // primed cache is actually reused.
+        // Hot path no longer primes hosts (PBI 05 finding: no rule consumes
+        // querySelectorAllDeep yet) — a shadow/iframe-less cleanse must not
+        // enumerate the subtree at all.
         cleanseAISummaryContent(root);
         const afterCleanse = spies.counts();
 
-        // Simulate N subsequent rule scans over the same root.
+        // Direct deep scans on a host-less root short-circuit without
+        // enumerating '*' per call.
         for (let i = 0; i < 10; i++) {
             querySelectorAllDeep(root, '.ad-banner');
         }
         const afterRules = spies.counts();
-        // primeDeepHosts is exported for entry points that compute hosts eagerly.
+        // The helper API still allows eager priming for future consumers.
         primeDeepHosts(root);
         spies.restore();
 
-        // Exactly one full-subtree scan for the whole cleanse + 10 rule scans.
-        expect(totalStars(afterCleanse)).toBe(1);
-        expect(totalStars(afterRules)).toBe(1);
+        expect(totalStars(afterCleanse)).toBe(0);
+        expect(totalStars(afterRules)).toBe(0);
     });
 });

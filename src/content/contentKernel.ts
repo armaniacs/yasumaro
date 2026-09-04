@@ -130,6 +130,7 @@ export class ContentKernel {
     private cachedGate: VisitGate | null = null;
     private isE2ECached: boolean | null = null;
     private deadlineMs: number | null = null;
+    private cachedStartTime: number | null = null;
 
     constructor(
         private readonly storage: StoragePort,
@@ -311,11 +312,7 @@ export class ContentKernel {
     }
 
     checkVisitConditions(): void {
-        if (!this.cachedGate || !this.cachedThresholds || this.isE2ECached === null) {
-            if (!this.cachedThresholds) this.cachedThresholds = this.pageState.toVisitGateThresholds();
-            if (!this.cachedGate) this.cachedGate = new VisitGate(this.cachedThresholds, this.clock);
-            if (this.isE2ECached === null) this.isE2ECached = this.isE2ETest();
-        }
+        this.refreshCachesIfStale();
         const visitState: VisitState = this.pageState.toVisitState();
         const thresholds: VisitGateThresholds = this.cachedThresholds!;
         const gate = this.cachedGate;
@@ -375,20 +372,42 @@ export class ContentKernel {
 
     scheduleNextCheck(): void {
         if (this.pageState.isValidVisitReported || (typeof document !== 'undefined' && document.hidden)) return;
+        this.stopPeriodicCheck(); // idempotent: a stray direct call must not leak a second timer
+        this.refreshCachesIfStale();
         if (this.deadlineMs === null) {
-            if (!this.cachedThresholds) {
-                this.cachedThresholds = this.pageState.toVisitGateThresholds();
-                this.cachedGate = new VisitGate(this.cachedThresholds, this.clock);
-                if (this.isE2ECached === null) this.isE2ECached = this.isE2ETest();
-            }
-            this.deadlineMs = this.pageState.startTime + this.cachedThresholds.minDuration * 1000;
+            this.deadlineMs = this.pageState.startTime + this.cachedThresholds!.minDuration * 1000;
         }
         const remaining = Math.max(0, this.deadlineMs - this.clock());
         this.pageState.checkIntervalId = this.scheduler.schedule(() => {
             this.pageState.checkIntervalId = null;
             this.updateMaxScroll();
-            // Do NOT reschedule — scroll events handle depth-driven evaluation
+            // Do NOT reschedule on a fixed loop — after the deadline, trusted
+            // scrolls evaluate immediately and untrusted (programmatic) scrolls
+            // arm a single deferred check (see init scroll listener), so
+            // threshold-crossing visits are still reported without polling.
         }, remaining);
+    }
+
+    /**
+     * Rebuild the cached gate/thresholds/deadline when pageState values drift
+     * (settings reload or startTime reset after init). Cached snapshots frozen
+     * at init would otherwise silently evaluate against dead values.
+     */
+    private refreshCachesIfStale(): void {
+        // Compare the source primitives directly — building the thresholds
+        // object on every call would defeat the PBI 02 single-construction goal.
+        const stale =
+            !this.cachedThresholds ||
+            this.cachedThresholds.minDuration !== this.pageState.minVisitDuration ||
+            this.cachedThresholds.minScroll !== this.pageState.minScrollDepth ||
+            this.cachedStartTime !== this.pageState.startTime;
+        if (stale) {
+            this.cachedThresholds = this.pageState.toVisitGateThresholds();
+            this.cachedGate = new VisitGate(this.cachedThresholds, this.clock);
+            this.deadlineMs = null;
+            this.cachedStartTime = this.pageState.startTime;
+        }
+        if (this.isE2ECached === null) this.isE2ECached = this.isE2ETest();
     }
 
     startPeriodicCheck(): void {
@@ -415,15 +434,29 @@ export class ContentKernel {
         this.cachedGate = new VisitGate(this.cachedThresholds, this.clock);
         this.isE2ECached = this.isE2ETest();
         this.deadlineMs = this.pageState.startTime + this.cachedThresholds.minDuration * 1000;
+        this.cachedStartTime = this.pageState.startTime;
 
-        // Scroll listener with isTrusted guard (PBI-05) — single place, injectable via event param
+        // Scroll listener (PBI-02): trusted events evaluate immediately
+        // (throttled 100ms). Untrusted (programmatic scrollTo / SPA scroll
+        // restoration) events still reflect real position changes — arm a
+        // single deferred evaluation so post-deadline crossings are reported,
+        // while synthetic event storms stay bounded to one check per second.
         const throttled = this.throttle(() => this.updateMaxScroll());
+        let deferredCheckArmed = false;
         if (typeof window !== 'undefined') {
             window.addEventListener(
                 'scroll',
                 (event: Event) => {
-                    if (!event.isTrusted) return;
-                    throttled();
+                    if (event.isTrusted) {
+                        throttled();
+                        return;
+                    }
+                    if (deferredCheckArmed || this.pageState.isValidVisitReported) return;
+                    deferredCheckArmed = true;
+                    this.scheduler.schedule(() => {
+                        deferredCheckArmed = false;
+                        if (!this.pageState.isValidVisitReported) this.updateMaxScroll();
+                    }, 1000);
                 },
                 { passive: true },
             );
