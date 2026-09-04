@@ -24,38 +24,74 @@ import { getCleansingConfigForDomain } from '../utils/aiSummaryCleaner/perSiteOv
 import { cleanseViaOffscreen as delegateCleanseViaOffscreen } from './cleansingOffscreenDelegate.js';
 
 export interface Scheduler {
-    schedule(callback: () => void): number;
+    schedule(callback: () => void, delayMs?: number): number;
     cancel(id: number): void;
 }
 
 export class IdleScheduler implements Scheduler {
+    private readonly timeoutIds = new Set<number>();
+    private readonly idleIds = new Set<number>();
     private get win(): Window | undefined {
         return typeof globalThis !== 'undefined' ? (globalThis as unknown as { window?: Window }).window ?? (typeof window !== 'undefined' ? window : undefined) : undefined;
     }
-    schedule(callback: () => void): number {
+    schedule(callback: () => void, delayMs?: number): number {
+        if (delayMs !== undefined) {
+            const id = globalThis.setTimeout(callback, delayMs) as unknown as number;
+            this.timeoutIds.add(id);
+            return id;
+        }
         const w = this.win as unknown as { requestIdleCallback?: (cb: () => void, opts: { timeout: number }) => number } | undefined;
         if (w?.requestIdleCallback) {
-            return w.requestIdleCallback(callback, { timeout: 2000 });
+            const id = w.requestIdleCallback(callback, { timeout: 2000 });
+            this.idleIds.add(id);
+            return id;
         }
         // Fallback: global setTimeout works in Node/jsdom and browsers
-        return globalThis.setTimeout(callback, 1000) as unknown as number;
+        const id = globalThis.setTimeout(callback, 1000) as unknown as number;
+        this.timeoutIds.add(id);
+        return id;
     }
     cancel(id: number): void {
-        const w = this.win as unknown as { cancelIdleCallback?: (id: number) => void } | undefined;
-        if (w?.cancelIdleCallback) {
-            w.cancelIdleCallback(id);
-        } else {
+        if (this.timeoutIds.has(id)) {
+            this.timeoutIds.delete(id);
             globalThis.clearTimeout(id as unknown as NodeJS.Timeout);
+            return;
+        }
+        if (this.idleIds.has(id)) {
+            this.idleIds.delete(id);
+            const w = this.win as unknown as { cancelIdleCallback?: (id: number) => void } | undefined;
+            if (w?.cancelIdleCallback) {
+                w.cancelIdleCallback(id);
+                return;
+            }
+        }
+        // Fallback: try both
+        try {
+            globalThis.clearTimeout(id as unknown as NodeJS.Timeout);
+        } catch {
+            /* ignore */
+        }
+        const w = this.win as unknown as { cancelIdleCallback?: (id: number) => void } | undefined;
+        try {
+            w?.cancelIdleCallback?.(id);
+        } catch {
+            /* ignore */
         }
     }
 }
 
 export class FakeScheduler implements Scheduler {
     private nextId = 1;
-    private tasks = new Map<number, () => void>();
-    schedule(callback: () => void): number {
+    private tasks = new Map<number, { cb: () => void; delayMs: number | undefined }>();
+    /** All delays passed to schedule (in order) */
+    public delays: Array<number | undefined> = [];
+    /** Last delay passed to schedule */
+    public lastDelay: number | undefined = undefined;
+    schedule(callback: () => void, delayMs?: number): number {
         const id = this.nextId++;
-        this.tasks.set(id, callback);
+        this.tasks.set(id, { cb: callback, delayMs: delayMs });
+        this.delays.push(delayMs);
+        this.lastDelay = delayMs;
         return id;
     }
     cancel(id: number): void {
@@ -64,10 +100,13 @@ export class FakeScheduler implements Scheduler {
     flush(): void {
         const pending = [...this.tasks.values()];
         this.tasks.clear();
-        for (const cb of pending) cb();
+        for (const { cb } of pending) cb();
     }
     pendingCount(): number {
         return this.tasks.size;
+    }
+    pendingDelays(): Array<number | undefined> {
+        return [...this.tasks.values()].map((v) => v.delayMs);
     }
 }
 
@@ -87,6 +126,10 @@ export class ContentKernel {
     private readonly visitReporter: VisitReporter;
     private readonly sender: MessageSender;
     private readonly isE2ETest: () => boolean;
+    private cachedThresholds: VisitGateThresholds | null = null;
+    private cachedGate: VisitGate | null = null;
+    private isE2ECached: boolean | null = null;
+    private deadlineMs: number | null = null;
 
     constructor(
         private readonly storage: StoragePort,
@@ -268,9 +311,14 @@ export class ContentKernel {
     }
 
     checkVisitConditions(): void {
+        if (!this.cachedGate || !this.cachedThresholds || this.isE2ECached === null) {
+            if (!this.cachedThresholds) this.cachedThresholds = this.pageState.toVisitGateThresholds();
+            if (!this.cachedGate) this.cachedGate = new VisitGate(this.cachedThresholds, this.clock);
+            if (this.isE2ECached === null) this.isE2ECached = this.isE2ETest();
+        }
         const visitState: VisitState = this.pageState.toVisitState();
-        const thresholds: VisitGateThresholds = this.pageState.toVisitGateThresholds();
-        const gate = new VisitGate(thresholds, this.clock);
+        const thresholds: VisitGateThresholds = this.cachedThresholds!;
+        const gate = this.cachedGate;
         const duration = (this.clock() - visitState.startTime) / 1000;
 
         void logDebug(
@@ -279,7 +327,7 @@ export class ContentKernel {
             'contentKernel',
         );
 
-        if (this.isE2ETest()) {
+        if (this.isE2ECached) {
             const state = {
                 maxScrollPercentage: visitState.maxScrollPercentage,
                 isValidVisitReported: visitState.isValidVisitReported,
@@ -288,17 +336,25 @@ export class ContentKernel {
                 minScrollDepth: thresholds.minScroll,
                 duration,
             };
-            (window as unknown as { __OW_TEST_STATE?: unknown }).__OW_TEST_STATE = state;
-            document.documentElement.setAttribute('data-ow-test-state', JSON.stringify(state));
+            if (typeof window !== 'undefined') {
+                (window as unknown as { __OW_TEST_STATE?: unknown }).__OW_TEST_STATE = state;
+            }
+            if (typeof document !== 'undefined') {
+                document.documentElement.setAttribute('data-ow-test-state', JSON.stringify(state));
+            }
         }
 
-        if (gate.isReportable(visitState)) {
+        if (gate!.isReportable(visitState)) {
             console.info(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${visitState.maxScrollPercentage.toFixed(0)}%`);
             void this.reportValidVisit();
-            if (this.isE2ETest()) {
-                const w = window as unknown as { __OW_TEST_STATE?: { isValidVisitReported: boolean } };
-                if (w.__OW_TEST_STATE) w.__OW_TEST_STATE.isValidVisitReported = true;
-                document.documentElement.setAttribute('data-ow-test-state', JSON.stringify(w.__OW_TEST_STATE));
+            if (this.isE2ECached) {
+                if (typeof window !== 'undefined') {
+                    const w = window as unknown as { __OW_TEST_STATE?: { isValidVisitReported: boolean } };
+                    if (w.__OW_TEST_STATE) w.__OW_TEST_STATE.isValidVisitReported = true;
+                    if (typeof document !== 'undefined' && w.__OW_TEST_STATE) {
+                        document.documentElement.setAttribute('data-ow-test-state', JSON.stringify(w.__OW_TEST_STATE));
+                    }
+                }
             }
             this.stopPeriodicCheck();
         }
@@ -314,18 +370,25 @@ export class ContentKernel {
     }
 
     // -----------------------------------------------------------------------
-    // Scheduling — injected Scheduler (testable, no direct requestIdleCallback)
+    // Scheduling — single one-shot deadline timer + scroll-driven evaluation
     // -----------------------------------------------------------------------
 
     scheduleNextCheck(): void {
         if (this.pageState.isValidVisitReported || (typeof document !== 'undefined' && document.hidden)) return;
+        if (this.deadlineMs === null) {
+            if (!this.cachedThresholds) {
+                this.cachedThresholds = this.pageState.toVisitGateThresholds();
+                this.cachedGate = new VisitGate(this.cachedThresholds, this.clock);
+                if (this.isE2ECached === null) this.isE2ECached = this.isE2ETest();
+            }
+            this.deadlineMs = this.pageState.startTime + this.cachedThresholds.minDuration * 1000;
+        }
+        const remaining = Math.max(0, this.deadlineMs - this.clock());
         this.pageState.checkIntervalId = this.scheduler.schedule(() => {
             this.pageState.checkIntervalId = null;
             this.updateMaxScroll();
-            if (!this.pageState.isValidVisitReported && typeof document !== 'undefined' && !document.hidden) {
-                this.scheduleNextCheck();
-            }
-        });
+            // Do NOT reschedule — scroll events handle depth-driven evaluation
+        }, remaining);
     }
 
     startPeriodicCheck(): void {
@@ -346,6 +409,12 @@ export class ContentKernel {
 
     async init(): Promise<void> {
         await this.loadSettings();
+
+        // Build VisitGate + thresholds and resolve isE2ETest once — reused thereafter
+        this.cachedThresholds = this.pageState.toVisitGateThresholds();
+        this.cachedGate = new VisitGate(this.cachedThresholds, this.clock);
+        this.isE2ECached = this.isE2ETest();
+        this.deadlineMs = this.pageState.startTime + this.cachedThresholds.minDuration * 1000;
 
         // Scroll listener with isTrusted guard (PBI-05) — single place, injectable via event param
         const throttled = this.throttle(() => this.updateMaxScroll());
@@ -372,7 +441,7 @@ export class ContentKernel {
 
         this.startPeriodicCheck();
 
-        if (this.isE2ETest() && typeof document !== 'undefined') {
+        if (this.isE2ECached && typeof document !== 'undefined') {
             document.documentElement.setAttribute(
                 'data-ow-test-state',
                 JSON.stringify({
