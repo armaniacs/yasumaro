@@ -9,6 +9,9 @@ import { checkHardLimit, checkRateLimit, checkUsageWarning, getRateLimitMessage,
 import { sanitizePromptContent } from '../../../utils/promptSanitizer.js';
 import { addLog, LogType } from '../../../utils/logger.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
+import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
+import { readJsonCapped } from '../../../utils/readBodyCapped.js';
 
 export interface AIProviderConnectionResult {
     success: boolean;
@@ -56,6 +59,35 @@ export interface AISummaryResult {
     modelName?: string;     // 使用したAIモデル名
     error?: string;         // スキーマ不整合等の詳細エラー（ユーザー向け summary とは別）
 }
+
+/** HTTP要約リクエスト（hooks.prepareRequest の成功形） */
+export interface HttpSummaryRequest {
+    url: string;
+    headers: Record<string, string>;
+    body: string;
+}
+
+/**
+ * HTTP要約フローのプロバイダー固有フック。順序・pre-flight・サニタイズ・
+ * プロンプト・fetch・リトライ・timeout変換はテンプレートが所有し、ここには
+ * 限度・資格文面・リクエスト構築・誤差応答・parse の癖だけを置く。
+ */
+export interface HttpSummaryHooks {
+    providerName: string;
+    timeoutMs: number;
+    /** 資格不備があればそのエラー文面、なければ null */
+    checkCredentials(): string | null;
+    /** 送信コンテンツの最大文字数 */
+    contentLimit(): number;
+    /** リクエスト構築。構築に失敗したら { failure } を返す */
+    prepareRequest(userPrompt: string, systemPrompt: string | undefined): Promise<HttpSummaryRequest | { failure: AISummaryResult }>;
+    /** !response.ok のプロバイダー固有変換 */
+    handleErrorResponse(response: Response): Promise<AISummaryResult>;
+    /** 応答 JSON のプロバイダー固有 parse */
+    extractSummary(data: unknown, traceId: string): Promise<AISummaryResult>;
+}
+
+const MAX_HTTP_SUMMARY_RESPONSE_BYTES = 10 * 1024 * 1024; // 10MB
 
 export abstract class AIProviderStrategy {
     protected settings: Settings;
@@ -213,6 +245,85 @@ export abstract class AIProviderStrategy {
      * @param {string} [traceId] - 記録パイプラインのトレースID
      */
     abstract generateSummary(content: string, tagSummaryMode?: boolean, traceId?: string): Promise<AISummaryResult>;
+
+    /**
+     * HTTP要約フローのテンプレートメソッド。資格確認→pre-flight→切り詰め→
+     * サニタイズ→プロンプト→fetch（共通リトライ方針）→timeout変換の順序を
+     * 所有し、プロバイダー固有の癖だけを hooks に委譲する。
+     *
+     * Gemini / OpenAI の2 adapter が使う real seam。BuiltIn（on-device、
+     * pre-flight 不要）は対象外であり、従来どおり独自実装のまま。
+     */
+    protected async executeHttpSummaryFlow(
+        content: string,
+        tagSummaryMode: boolean,
+        traceId: string,
+        hooks: HttpSummaryHooks,
+    ): Promise<AISummaryResult> {
+        const credentialError = hooks.checkCredentials();
+        if (credentialError) {
+            return { success: false, summary: credentialError };
+        }
+
+        const preFlight = await this.checkPreFlight();
+        if (preFlight.blocked) {
+            return { success: false, summary: preFlight.message! };
+        }
+
+        const truncatedContent = content.substring(0, hooks.contentLimit());
+        const sanitizeResult = this.sanitizeContent(truncatedContent, hooks.providerName, traceId);
+        if (sanitizeResult.blocked) {
+            return { success: false, summary: `Error: Content blocked due to potential security risk. (原因: ${sanitizeResult.warnings.join('; ')})` };
+        }
+
+        const { userPrompt, systemPrompt } = applyCustomPrompt(this.settings, hooks.providerName, sanitizeResult.sanitized, tagSummaryMode);
+        const prepared = await hooks.prepareRequest(userPrompt, systemPrompt);
+        if ('failure' in prepared) {
+            return prepared.failure;
+        }
+
+        try {
+            // Lazy transport imports: fetch.js → cspValidator → providerCatalog
+            // and urlWhitelist → providerCatalog both edge back into
+            // background/ai. A static import here would circularize base-class
+            // initialization (the settingsStore ↔ trustDb precedent, ADR
+            // 2026-08-20). ESM cache makes this a one-time cost.
+            const [{ fetchWithRetry }, { getAllowedUrls }] = await Promise.all([
+                import('../../../utils/fetch.js'),
+                import('../../../utils/storage/urlWhitelist.js'),
+            ]);
+            const allowedUrls = await getAllowedUrls();
+
+            const response = await fetchWithRetry(prepared.url, {
+                method: 'POST',
+                headers: prepared.headers,
+                body: prepared.body,
+                allowedUrls,
+                timeoutMs: hooks.timeoutMs,
+            }, {
+                maxRetryCount: 3,
+                initialDelayMs: 1000,
+                backoffMultiplier: 2,
+                maxDelayMs: 60000,
+                shouldRetry: (error, attempt, response, method) =>
+                    this.shouldRetrySummaryRequest(error, attempt, response, method),
+            });
+
+            if (!response.ok) {
+                return hooks.handleErrorResponse(response);
+            }
+
+            const data = await readJsonCapped(response, MAX_HTTP_SUMMARY_RESPONSE_BYTES);
+            return hooks.extractSummary(data, traceId);
+        } catch (error: unknown) {
+            const msg = errorMessage(error);
+            const isTimeout = error instanceof Error && error.name === 'AbortError';
+            if (isTimeout || msg.includes('timed out')) {
+                return { success: false, summary: 'Error: AI request timed out. Please check your connection.' };
+            }
+            return { success: false, summary: 'Error: Failed to generate summary. Please try again or check your settings.' };
+        }
+    }
 
     /**
      * 接続テストを実行する

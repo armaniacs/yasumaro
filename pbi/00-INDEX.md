@@ -19,7 +19,7 @@
 backlog: [2026-09-05-00-backlog-arch3.md](2026-09-05-00-backlog-arch3.md)。着手順 = RICE 降順（ファイル番号 NN）。依存なし。
 
 - 2026-09-05-01-refactor-recording-outcome.md（✅ 完了・アーカイブ済 — outcome 政策を RecordingOutcome に集約。catch 分岐＋pending＋通知のペアリングを1 seam に。pipeline 58 tests green）
-- 2026-09-05-02-refactor-provider-skeleton-template.md（⬜ RICE 25.6 — generateSummary 骨格を基底テンプレート化。3 プロバイダーは hooks のみ）
+- 2026-09-05-02-refactor-provider-skeleton-template.md（✅ 完了・アーカイブ済 — HTTP 2 社の generateSummary 骨格を基底テンプレート化（hooks のみ残す）。BuiltIn/testConnection は対象外。循環回避のため transport は dynamic import。ai 214 tests green）
 - 2026-09-05-03-refactor-logger-wave4.md（⬜ RICE 20.0 — core 配線の注入化＋barrel 分割。LAYERS.md Wave 4 の計画実行）
 - 2026-09-05-04-refactor-cache-liveview-deletion.md（⬜ RICE 15.0 — getCacheState live-view 互換層を削除し typed seam に移行）
 - 2026-09-05-05-refactor-alarm-registry.md（⬜ RICE 12.0 — 5 系統アラームを AlarmRegistry 登録テーブルに集約）
