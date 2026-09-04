@@ -56,8 +56,8 @@ describe('HeaderDetector', () => {
 
       detector['cachePrivacyInfo'](url, info);
 
-      expect(RecordingCache.getCacheState().privacyCache).not.toBeNull();
-      expect(RecordingCache.getCacheState().privacyCache?.get(url)).toEqual(info);
+      expect(RecordingCache.getPrivacyCache()).not.toBeNull();
+      expect(RecordingCache.getPrivacyCache()?.get(url)).toEqual(info);
     });
 
     test('キャッシュサイズが100を超えたら最も古いエントリを削除する', () => {
@@ -69,7 +69,7 @@ describe('HeaderDetector', () => {
         });
       }
 
-      expect(RecordingCache.getCacheState().privacyCache?.size).toBe(100);
+      expect(RecordingCache.getPrivacyCache()?.size).toBe(100);
 
       // 101個目を追加
       detector['cachePrivacyInfo']('https://example.com/test100', {
@@ -79,11 +79,11 @@ describe('HeaderDetector', () => {
       });
 
       // サイズは100のまま（最も古いエントリが削除される）
-      expect(RecordingCache.getCacheState().privacyCache?.size).toBe(100);
+      expect(RecordingCache.getPrivacyCache()?.size).toBe(100);
       // 最古のエントリ(test0)が削除されている
-      expect(RecordingCache.getCacheState().privacyCache?.has('https://example.com/test0')).toBe(false);
+      expect(RecordingCache.getPrivacyCache()?.has('https://example.com/test0')).toBe(false);
       // 最新のエントリ(test100)は存在する
-      expect(RecordingCache.getCacheState().privacyCache?.has('https://example.com/test100')).toBe(true);
+      expect(RecordingCache.getPrivacyCache()?.has('https://example.com/test100')).toBe(true);
     });
   });
 
@@ -112,7 +112,7 @@ describe('HeaderDetector', () => {
 
       detector['onHeadersReceived'](details);
 
-      const cached = RecordingCache.getCacheState().privacyCache?.get('https://example.com/page');
+      const cached = RecordingCache.getPrivacyCache()?.get('https://example.com/page');
       expect(cached).toBeDefined();
       expect(cached?.isPrivate).toBe(true);
       expect(cached?.reason).toBe('cache-control');
@@ -129,7 +129,7 @@ describe('HeaderDetector', () => {
 
       detector['onHeadersReceived'](details);
 
-      expect(RecordingCache.getCacheState().privacyCache?.has('https://example.com/iframe')).toBeFalsy();
+      expect(RecordingCache.getPrivacyCache()?.has('https://example.com/iframe')).toBeFalsy();
     });
 
     test('非HTMLリソースは無視する', () => {
@@ -144,7 +144,7 @@ describe('HeaderDetector', () => {
 
       detector['onHeadersReceived'](details);
 
-      expect(RecordingCache.getCacheState().privacyCache?.has('https://example.com/image.png')).toBeFalsy();
+      expect(RecordingCache.getPrivacyCache()?.has('https://example.com/image.png')).toBeFalsy();
     });
 
     test('Content-Typeがない場合もスキップする', () => {
@@ -156,7 +156,7 @@ describe('HeaderDetector', () => {
 
       detector['onHeadersReceived'](details);
 
-       expect(RecordingCache.getCacheState().privacyCache?.has('https://example.com/noct')).toBeFalsy();
+       expect(RecordingCache.getPrivacyCache()?.has('https://example.com/noct')).toBeFalsy();
      });
 
     test('should handle errors in onHeadersReceived gracefully', () => {

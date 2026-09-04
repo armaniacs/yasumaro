@@ -362,7 +362,6 @@ vi.mock('../recordingCache.js', () => {
   };
   class RecordingCacheMock {
         static cacheState = sharedCacheState;
-        static getCacheState() { return RecordingCacheMock.cacheState; }
         static resetCacheState() {}
         static getPrivacyCache = vi.fn(() => RecordingCacheMock.cacheState.privacyCache as Map<string, import('../../utils/privacyChecker.js').PrivacyInfo> | null);
         static setPrivacyCacheEntry() {}

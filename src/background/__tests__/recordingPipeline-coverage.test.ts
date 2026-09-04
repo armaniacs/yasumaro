@@ -165,15 +165,7 @@ import { NotificationHelper } from '../notificationHelper.ts';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function resetCacheState() {
-  Object.assign(RecordingCache.getCacheState(), {
-    settingsCache: null,
-    cacheTimestamp: null,
-    cacheVersion: 0,
-    urlCache: null,
-    urlCacheTimestamp: null,
-    privacyCache: null,
-    privacyCacheTimestamp: null,
-  });
+  RecordingCache.resetCacheState();
 }
 
 function makeMockObsidian() {
@@ -307,19 +299,24 @@ describe('RecordingPipeline - getSavedUrlsWithCache', () => {
     storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map([['https://first.com', 1]]));
     await RecordingCache.getSavedUrlsWithCache();
 
-    // Expire the cache
-    RecordingCache.getCacheState().urlCacheTimestamp = Date.now() - 61 * 1000; // 61 seconds ago
+    // Expire the cache via fake timers (61s > 60s URL_CACHE_TTL).
+    vi.useFakeTimers();
+    try {
+      vi.advanceTimersByTime(61 * 1000);
 
-    const newMap = new Map([['https://second.com', 2]]);
-    // @ts-expect-error - vi.fn() type narrowing
-    storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(newMap);
-    // @ts-expect-error - vi.fn() type narrowing
-    storageSavedUrls.getSavedUrlsWithTimestamps.mockClear();
+      const newMap = new Map([['https://second.com', 2]]);
+      // @ts-expect-error - vi.fn() type narrowing
+      storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(newMap);
+      // @ts-expect-error - vi.fn() type narrowing
+      storageSavedUrls.getSavedUrlsWithTimestamps.mockClear();
 
-    const result = await RecordingCache.getSavedUrlsWithCache();
+      const result = await RecordingCache.getSavedUrlsWithCache();
 
-    expect(storageSavedUrls.getSavedUrlsWithTimestamps).toHaveBeenCalledTimes(1);
-    expect(result.get('https://second.com')).toBeDefined();
+      expect(storageSavedUrls.getSavedUrlsWithTimestamps).toHaveBeenCalledTimes(1);
+      expect(result.get('https://second.com')).toBeDefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test('getSavedUrlsWithCache returns equivalent data on cache hit', async () => {
@@ -345,14 +342,17 @@ describe('RecordingPipeline - invalidateUrlCache', () => {
     resetCacheState();
   });
 
-  test('clears urlCache and urlCacheTimestamp', () => {
-    RecordingCache.getCacheState().urlCache = new Map([['https://x.com', 1]]);
-    RecordingCache.getCacheState().urlCacheTimestamp = Date.now();
+  test('clears urlCache so the next read refetches', async () => {
+    // @ts-expect-error - vi.fn() type narrowing
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map([['https://x.com', 1]]));
+    await RecordingCache.getSavedUrlsWithCache();
 
     RecordingCache.invalidateUrlCache();
 
-    expect(RecordingCache.getCacheState().urlCache).toBeNull();
-    expect(RecordingCache.getCacheState().urlCacheTimestamp).toBeNull();
+    // @ts-expect-error - vi.fn() type narrowing
+    storageSavedUrls.getSavedUrlsWithTimestamps.mockClear();
+    await RecordingCache.getSavedUrlsWithCache();
+    expect(storageSavedUrls.getSavedUrlsWithTimestamps).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -368,7 +368,7 @@ describe('RecordingPipeline - normalizeUrlForCache (via getPrivacyInfoWithCache)
     const normalizedKey = 'https://example.com/page';
     const privacyInfo = { isPrivate: false, timestamp: Date.now() };
 
-    RecordingCache.getCacheState().privacyCache = new Map([[normalizedKey, privacyInfo]]);
+    RecordingCache.setPrivacyCacheEntry(normalizedKey, privacyInfo);
 
     // Access with trailing slash — should match normalized key
     const result = await RecordingCache.getPrivacyInfoWithCache('https://example.com/page/');
@@ -379,7 +379,7 @@ describe('RecordingPipeline - normalizeUrlForCache (via getPrivacyInfoWithCache)
     const normalizedKey = 'https://example.com/page';
     const privacyInfo = { isPrivate: false, timestamp: Date.now() };
 
-    RecordingCache.getCacheState().privacyCache = new Map([[normalizedKey, privacyInfo]]);
+    RecordingCache.setPrivacyCacheEntry(normalizedKey, privacyInfo);
 
     const result = await RecordingCache.getPrivacyInfoWithCache('https://example.com/page#section');
     expect(result).toEqual(privacyInfo);
@@ -389,7 +389,7 @@ describe('RecordingPipeline - normalizeUrlForCache (via getPrivacyInfoWithCache)
     const normalizedKey = 'https://example.com/';
     const privacyInfo = { isPrivate: false, timestamp: Date.now() };
 
-    RecordingCache.getCacheState().privacyCache = new Map([[normalizedKey, privacyInfo]]);
+    RecordingCache.setPrivacyCacheEntry(normalizedKey, privacyInfo);
 
     const result = await RecordingCache.getPrivacyInfoWithCache('https://example.com/');
     expect(result).toEqual(privacyInfo);
@@ -397,7 +397,7 @@ describe('RecordingPipeline - normalizeUrlForCache (via getPrivacyInfoWithCache)
 
   test('returns original URL if URL is invalid (parse failure)', async () => {
     // Invalid URL - normalizeUrlForCache returns the original string
-    RecordingCache.getCacheState().privacyCache = new Map();
+    RecordingCache.resetCacheState();
 
     const result = await RecordingCache.getPrivacyInfoWithCache('not-a-url');
     expect(result).toBeNull();
@@ -430,7 +430,7 @@ describe('RecordingPipeline - getPrivacyInfoWithCache session storage fallback',
     expect(result).toBeTruthy();
     expect(result?.isPrivate).toBe(true);
     // Should also restore to in-memory cache
-    expect(RecordingCache.getCacheState().privacyCache?.get(normalizedUrl)).toBeTruthy();
+    expect(RecordingCache.getPrivacyCache()?.get(normalizedUrl)).toBeTruthy();
   });
 
   test('ignores and evicts expired session entries (TTL exceeded)', async () => {
@@ -452,14 +452,14 @@ describe('RecordingPipeline - getPrivacyInfoWithCache session storage fallback',
   });
 
   test('returns null when both in-memory and session cache miss', async () => {
-    RecordingCache.getCacheState().privacyCache = new Map();
+    RecordingCache.resetCacheState();
 
     const result = await RecordingCache.getPrivacyInfoWithCache('https://nonexistent.com/page');
     expect(result).toBeNull();
   });
 
   test('handles session storage error gracefully', async () => {
-    RecordingCache.getCacheState().privacyCache = new Map();
+    RecordingCache.resetCacheState();
 
     // Make session.get throw
     const originalGetImpl = (chrome.storage.session.get as vi.Mock).getMockImplementation();
@@ -480,7 +480,7 @@ describe('RecordingPipeline - getPrivacyInfoWithCache session storage fallback',
       timestamp: Date.now(),
     };
 
-    RecordingCache.getCacheState().privacyCache = new Map([[url, cachedInfo]]);
+    RecordingCache.setPrivacyCacheEntry(url, cachedInfo);
 
     const result = await RecordingCache.getPrivacyInfoWithCache(url);
     expect(result).toEqual(cachedInfo);
@@ -493,14 +493,13 @@ describe('RecordingPipeline - invalidatePrivacyCache', () => {
     resetCacheState();
   });
 
-  test('clears privacy cache and timestamp', () => {
-    RecordingCache.getCacheState().privacyCache = new Map([['test', { isPrivate: false, timestamp: Date.now() } as any]]);
-    RecordingCache.getCacheState().privacyCacheTimestamp = Date.now();
+  test('clears privacy cache so the next read misses', async () => {
+    RecordingCache.setPrivacyCacheEntry('test', { isPrivate: false, timestamp: Date.now() } as never);
 
-    RecordingCache.invalidatePrivacyCache();
+    await RecordingCache.invalidatePrivacyCache();
 
-    expect(RecordingCache.getCacheState().privacyCache).toBeNull();
-    expect(RecordingCache.getCacheState().privacyCacheTimestamp).toBeNull();
+    expect(RecordingCache.getPrivacyCache()).toBeNull();
+    expect(RecordingCache.isPrivacyCacheInitialized()).toBe(false);
   });
 
   test('removes privacyCache_* keys from session storage', async () => {
@@ -713,16 +712,18 @@ describe('RecordingPipeline - settings cache interaction with record', () => {
   });
 
   test('record populates settings cache', async () => {
-    expect(RecordingCache.getCacheState().settingsCache).toBeNull();
-
     await logic.record({
       title: 'Test',
       url: 'https://example.com',
       content: 'content',
     });
 
-    // Settings cache should be populated by getSettingsWithCache call
-    expect(RecordingCache.getCacheState().settingsCache).not.toBeNull();
+    // Settings cache was populated by record: a follow-up read hits the
+    // cache instead of the repo.
+    // @ts-expect-error - vi.fn() type narrowing
+    mockGetAll.mockClear();
+    await RecordingCache.getSettingsWithCache();
+    expect(mockGetAll).not.toHaveBeenCalled();
   });
 
   test('second record reuses settings cache', async () => {
@@ -756,8 +757,6 @@ describe('RecordingPipeline - static cache state', () => {
     const logic1 = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
     await RecordingCache.getSettingsWithCache();
 
-    expect(RecordingCache.getCacheState().settingsCache).not.toBeNull();
-
     const logic2 = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
     // logic2 should see the same static cache
     const settings = await RecordingCache.getSettingsWithCache();
@@ -766,17 +765,31 @@ describe('RecordingPipeline - static cache state', () => {
     expect(mockGetAll).toHaveBeenCalledTimes(1);
   });
 
-  test('invalidateSettingsCache increments version', () => {
-    const versionBefore = RecordingCache.getCacheState().cacheVersion;
+  test('invalidateSettingsCache forces refetch on next read', async () => {
+    // @ts-expect-error - vi.fn() type narrowing
+    mockGetAll.mockResolvedValue({ privacy_mode: 'test' });
+    await RecordingCache.getSettingsWithCache();
+    // @ts-expect-error - vi.fn() type narrowing
+    mockGetAll.mockClear();
+
     RecordingCache.invalidateSettingsCache();
-    expect(RecordingCache.getCacheState().cacheVersion).toBe(versionBefore + 1);
+
+    await RecordingCache.getSettingsWithCache();
+    expect(mockGetAll).toHaveBeenCalledTimes(1);
   });
 
-  test('invalidateSettingsCache after two invalidations increments by 2', () => {
-    const versionBefore = RecordingCache.getCacheState().cacheVersion;
+  test('two invalidations still refetch exactly once on next read', async () => {
+    // @ts-expect-error - vi.fn() type narrowing
+    mockGetAll.mockResolvedValue({ privacy_mode: 'test' });
+    await RecordingCache.getSettingsWithCache();
+    // @ts-expect-error - vi.fn() type narrowing
+    mockGetAll.mockClear();
+
     RecordingCache.invalidateSettingsCache();
     RecordingCache.invalidateSettingsCache();
-    expect(RecordingCache.getCacheState().cacheVersion).toBe(versionBefore + 2);
+
+    await RecordingCache.getSettingsWithCache();
+    expect(mockGetAll).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -803,7 +816,7 @@ describe('RecordingPipeline - edge cases', () => {
       timestamp: Date.now() - 6 * 60 * 1000, // 6 minutes ago (> 5 min TTL)
     };
 
-    RecordingCache.getCacheState().privacyCache = new Map([[url, expiredInfo]]);
+    RecordingCache.setPrivacyCacheEntry(url, expiredInfo);
 
     const result = await RecordingCache.getPrivacyInfoWithCache(url);
     // Expired entry should be treated as cache miss
@@ -819,7 +832,7 @@ describe('RecordingPipeline - edge cases', () => {
       timestamp: Date.now(),
     };
 
-    RecordingCache.getCacheState().privacyCache = new Map([[url, freshInfo]]);
+    RecordingCache.setPrivacyCacheEntry(url, freshInfo);
 
     const result = await RecordingCache.getPrivacyInfoWithCache(url);
     expect(result).toEqual(freshInfo);
@@ -827,8 +840,6 @@ describe('RecordingPipeline - edge cases', () => {
 
   test('getPrivacyInfoWithCache handles null privacyCache', async () => {
     logic = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
-
-    RecordingCache.getCacheState().privacyCache = null;
 
     const result = await RecordingCache.getPrivacyInfoWithCache('https://example.com/page');
     expect(result).toBeNull();

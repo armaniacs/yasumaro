@@ -87,15 +87,7 @@ beforeEach(() => {
   storageUrls.setSavedUrlsWithTimestamps.mockResolvedValue();
 
   // Problem #7: URLキャッシュを初期化
-  Object.assign(RecordingCache.getCacheState(), {
-    settingsCache: null,
-    cacheTimestamp: null,
-    cacheVersion: 0,
-    urlCache: null,
-    urlCacheTimestamp: null,
-    privacyCache: null,
-    privacyCacheTimestamp: null
-  });
+  RecordingCache.resetCacheState();
 
   storage.StorageKeys = {
     PRIVACY_MODE: 'PRIVACY_MODE',

@@ -3,9 +3,10 @@
  *
  * PBI 05: TTL constants now owned by typed cache modules; this file is a
  * facade that delegates to SettingsCache / UrlCache / PrivacyCache.
- * The single CacheState object is kept as a live view over the 3 caches so
- * existing tests that mutate `getCacheState().cacheVersion` etc remain green
- * (overflow test). Persistence (load/save) still goes through a single
+ * PBI 2026-09-05-04 removed the getCacheState() live view: state reads go
+ * through the typed accessors (getPrivacyCache, getSettingsWithCache, …)
+ * and writes through the typed seams (setPrivacyCacheEntry, invalidate*,
+ * resetCacheState). Persistence (load/save) still goes through a single
  * SESSION_KEYS.RECORDING_CACHE entry so the microtask saveQueue stays atomic.
  */
 
@@ -24,18 +25,6 @@ import { PrivacyCache, PRIVACY_CACHE_TTL } from './cache/PrivacyCache.js';
 export { SETTINGS_CACHE_TTL, URL_CACHE_TTL, PRIVACY_CACHE_TTL };
 // Re-export redact for backward compat (tests import from here)
 export { redactSettingsApiKeys } from '../utils/storage/storagePort.js';
-
-// --- Cache state interface (live view over 3 caches) ---
-
-interface CacheState {
-  settingsCache: Settings | null;
-  cacheTimestamp: number | null;
-  cacheVersion: number;
-  urlCache: Map<string, number> | null;
-  urlCacheTimestamp: number | null;
-  privacyCache: Map<string, PrivacyInfo> | null;
-  privacyCacheTimestamp: number | null;
-}
 
 type PersistedCacheState = {
   settingsCache: Settings | null;
@@ -106,71 +95,9 @@ export class RecordingCacheInstance {
   }
 
   // =========================================================================
-  // Cache state access (backward compat — live view over 3 caches)
+  // State reset — pure delegation to the 3 typed caches. Reads go through
+  // the typed accessors below; there is no live-view object anymore.
   // =========================================================================
-
-  getCacheState(): CacheState {
-    const view = {} as CacheState;
-    Object.defineProperties(view, {
-      settingsCache: {
-        get: () => this.settingsCache.getState().cache,
-        set: (v: Settings | null) => {
-          const s = this.settingsCache.getState();
-          this.settingsCache.setState(v, s.timestamp, s.version);
-        },
-        enumerable: true,
-      },
-      cacheTimestamp: {
-        get: () => this.settingsCache.getState().timestamp,
-        set: (v: number | null) => {
-          const s = this.settingsCache.getState();
-          this.settingsCache.setState(s.cache, v, s.version);
-        },
-        enumerable: true,
-      },
-      cacheVersion: {
-        get: () => this.settingsCache.getState().version,
-        set: (v: number) => {
-          const s = this.settingsCache.getState();
-          this.settingsCache.setState(s.cache, s.timestamp, v);
-        },
-        enumerable: true,
-      },
-      urlCache: {
-        get: () => this.urlCache.getState().cache,
-        set: (v: Map<string, number> | null) => {
-          const s = this.urlCache.getState();
-          this.urlCache.setState(v, s.timestamp);
-        },
-        enumerable: true,
-      },
-      urlCacheTimestamp: {
-        get: () => this.urlCache.getState().timestamp,
-        set: (v: number | null) => {
-          const s = this.urlCache.getState();
-          this.urlCache.setState(s.cache, v);
-        },
-        enumerable: true,
-      },
-      privacyCache: {
-        get: () => this.privacyCache.getState().cache,
-        set: (v: Map<string, PrivacyInfo> | null) => {
-          const s = this.privacyCache.getState();
-          this.privacyCache.setState(v, s.timestamp);
-        },
-        enumerable: true,
-      },
-      privacyCacheTimestamp: {
-        get: () => this.privacyCache.getState().timestamp,
-        set: (v: number | null) => {
-          const s = this.privacyCache.getState();
-          this.privacyCache.setState(s.cache, v);
-        },
-        enumerable: true,
-      },
-    });
-    return view;
-  }
 
   resetCacheState(): void {
     this.settingsCache.setState(null, null, 0);

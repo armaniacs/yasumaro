@@ -77,8 +77,9 @@ describe('RecordingCacheInstance — per-instance isolation', () => {
     await cacheA.getSettingsWithCache();
     await cacheB.getSettingsWithCache();
 
-    expect(cacheA.getCacheState().settingsCache?.flag).toBe(1);
-    expect(cacheB.getCacheState().settingsCache?.flag).toBe(2);
+    // Cache-hit reads return the per-instance objects without refetching.
+    expect((await cacheA.getSettingsWithCache()).flag).toBe(1);
+    expect((await cacheB.getSettingsWithCache()).flag).toBe(2);
   });
 
   it('two instances with separate InMemoryRecordingCacheStore do not share privacy cache state', () => {
@@ -116,18 +117,27 @@ describe('RecordingCacheInstance — per-instance isolation', () => {
 
     // The persisted mirror has geminiApiKey redacted, so it carries no
     // usable key — hasApiKeys() rejects it and the cache stays empty.
-    expect(reader.getCacheState().settingsCache).toBeNull();
+    // Proved behaviorally: the next read misses and refetches from the repo.
+    mockGetAll.mockClear();
+    mockGetAll.mockResolvedValue({ fresh: true } as never);
+    const settings = await reader.getSettingsWithCache();
+    expect(mockGetAll).toHaveBeenCalledTimes(1);
+    expect((settings as unknown as { fresh: boolean }).fresh).toBe(true);
   });
 
-  it('invalidateSettingsCache resets only the instance it is called on', () => {
+  it('invalidateSettingsCache resets only the instance it is called on', async () => {
+    mockGetAll.mockResolvedValue({ flag: true } as never);
     const cacheA = new RecordingCacheInstance(new InMemoryRecordingCacheStore());
     const cacheB = new RecordingCacheInstance(new InMemoryRecordingCacheStore());
-    cacheA.getCacheState().settingsCache = { flag: true } as never;
-    cacheB.getCacheState().settingsCache = { flag: true } as never;
+    await cacheA.getSettingsWithCache();
+    await cacheB.getSettingsWithCache();
+    mockGetAll.mockClear();
 
     cacheA.invalidateSettingsCache();
 
-    expect(cacheA.getCacheState().settingsCache).toBeNull();
-    expect(cacheB.getCacheState().settingsCache).not.toBeNull();
+    // A refetches (stale), B hits (fresh) — exactly one repo read.
+    await cacheA.getSettingsWithCache();
+    await cacheB.getSettingsWithCache();
+    expect(mockGetAll).toHaveBeenCalledTimes(1);
   });
 });

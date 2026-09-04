@@ -120,7 +120,7 @@ describe('formatTimeAgo', () => {
 describe('checkPageStatus', () => {
   beforeEach(async () => {
     // Reset caches
-    RecordingCache.getCacheState().privacyCache = new Map();
+    RecordingCache.resetCacheState();
     // Clear settings cache so mockGetAll changes are visible
     try {
       const { clearSettingsCache } = await import('../../utils/storage.js');

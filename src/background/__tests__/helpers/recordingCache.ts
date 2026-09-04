@@ -20,7 +20,6 @@ const sharedStore = new InMemoryRecordingCacheStore();
 const sharedCache = new RecordingCacheInstance(sharedStore);
 
 export const RecordingCache = {
-  getCacheState: () => sharedCache.getCacheState(),
   resetCacheState: () => sharedCache.resetCacheState(),
   getPrivacyCache: () => sharedCache.getPrivacyCache(),
   setPrivacyCacheEntry: (url: string, info: import('../../utils/privacyChecker.js').PrivacyInfo) => sharedCache.setPrivacyCacheEntry(url, info),

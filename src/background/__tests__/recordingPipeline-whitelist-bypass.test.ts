@@ -135,8 +135,8 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
       reason: 'cache-control' as const,
       timestamp: Date.now()
     };
-    RecordingCache.getCacheState().privacyCache = new Map();
-    RecordingCache.getCacheState().privacyCache.set('https://bank.example.com/page', privacyInfo);
+    RecordingCache.resetCacheState();
+    RecordingCache.setPrivacyCacheEntry('https://bank.example.com/page', privacyInfo as never);
 
     isDomainAllowed.mockResolvedValue(true);
 
@@ -169,8 +169,8 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
       reason: 'set-cookie' as const,
       timestamp: Date.now()
     };
-    RecordingCache.getCacheState().privacyCache = new Map();
-    RecordingCache.getCacheState().privacyCache.set('https://wiki.confluence.example.com/page', privacyInfo);
+    RecordingCache.resetCacheState();
+    RecordingCache.setPrivacyCacheEntry('https://wiki.confluence.example.com/page', privacyInfo as never);
 
     // ドメインフィルター: 許可
     // @ts-expect-error - vi.fn() type narrowing issue
@@ -211,8 +211,8 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
       reason: 'authorization' as const,
       timestamp: Date.now()
     };
-    RecordingCache.getCacheState().privacyCache = new Map();
-    RecordingCache.getCacheState().privacyCache.set('https://example.com/page', privacyInfo);
+    RecordingCache.resetCacheState();
+    RecordingCache.setPrivacyCacheEntry('https://example.com/page', privacyInfo as never);
 
     // ドメインフィルター: 許可
     // @ts-expect-error - vi.fn() type narrowing issue
