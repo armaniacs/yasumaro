@@ -37,4 +37,10 @@ describe('fmtKB', () => {
     expect(fmtKB(2048)).toBe('2.000');
     expect(fmtKB(9439)).toBe('9.218');
   });
+
+  it('renders null/undefined/NaN as an em dash (same as fmtNum)', () => {
+    expect(fmtKB(null)).toBe('—');
+    expect(fmtKB(undefined)).toBe('—');
+    expect(fmtKB(NaN)).toBe('—');
+  });
 });
