@@ -22,6 +22,9 @@ playwright-report/
 playwright/.cache/
 sbom.json
 
+# Benchmark run artifacts
+bench/reports/
+
 docs/typedoc/
 dev-docs/typedoc/
 dev-docs/blog-*
