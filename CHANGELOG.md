@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.107` リリース。
+> - 現時点では `v6.7.108` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,12 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.108] - 2026-09-05
+
+### リファクタリング
+
+- アーキテクチャ診断（Architecture Round 3、10 候補）から 7 件を実施（PBI 2026-09-05-01〜07、`dev-docs/archived/pbi/` 参照）。記録結果の outcome 政策（PrivatePage/Duplicate/FATAL マッピング＋pending 登録＋通知のペアリング）を `RecordingOutcome` に集約し `resultBuilder` を純粋構築のみに、Gemini/OpenAI の `generateSummary` 骨格を基底テンプレートメソッドに統一（transport は循環回避のため dynamic import、BuiltIn/testConnection は対象外）、logger の core 配線を注入化（`initLogger`/`resetLoggerWiring`＋offscreen フォールバックの adapter 移譲）し barrel 分割の eslint を反転（LAYERS.md Wave 4）、`recordingCache` の live-view 互換層（約60行）を削除して typed seam＋振る舞いアサーションに移行、5 系統アラームを `AlarmRegistry` 登録テーブルに集約（flush/immediate 本体共有・失敗統一ログ）、popup 記録フローを `RecordSession` 状態機械に集約（`ForceRecordFlow` 削除・5コールバック束解消・二重起動ガード、statusPanel のデッド hook 削除）、メッセージ envelope 受理を政策テーブル＋順序付きパイプラインに集約（router の trust/strict 順序は不変）
 
 ## [6.7.107] - 2026-09-05
 
