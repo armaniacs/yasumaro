@@ -205,9 +205,9 @@ describe('PBI 05 querySelectorAllDeep short-circuit', () => {
         document.body.appendChild(root);
 
         const spies = installStarSpies();
-        // In-place contract (matches the extractor path): prime + rules run on
-        // the same root, so the primed cache is actually reused.
-        cleanseAISummaryContent(root, { alreadyCloned: true });
+        // In-place contract: prime + rules run on the same root, so the
+        // primed cache is actually reused.
+        cleanseAISummaryContent(root);
         const afterCleanse = spies.counts();
 
         // Simulate N subsequent rule scans over the same root.

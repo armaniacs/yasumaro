@@ -25,7 +25,10 @@ export function calculateTextScore(element: Element): number {
 
     const walker = document.createTreeWalker(
         element,
-        NodeFilter.SHOW_ELEMENT,
+        // NodeFilter.SHOW_ELEMENT is the constant 1; use the literal because
+        // NodeFilter is not a global in node-env tests that stub only
+        // document/window (PBI 03 made score computation eager, surfacing it).
+        1,
         undefined
     );
 

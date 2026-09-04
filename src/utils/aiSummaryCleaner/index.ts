@@ -30,13 +30,6 @@ declare module './types.js' {
          * hot path measures only for diagnostics.
          */
         measureBytes?: boolean;
-        /**
-         * Caller guarantees `element` is already a scratch clone that may be
-         * mutated in place, so the internal cloneNode is skipped. Default
-         * false preserves the legacy contract: cleanse a throwaway internal
-         * clone and leave the caller's DOM untouched.
-         */
-        alreadyCloned?: boolean;
     }
 }
 // 型とルール表を再エクスポート
@@ -83,20 +76,18 @@ export function cleanseAISummaryContent(
     element: Element,
     options: AiSummaryCleanseOptions = {}
 ): AiSummaryCleanseResult {
-    const { bodyProtectionEnabled = true, bodyProtectionThreshold = 200, measureBytes = true, alreadyCloned = false } = options;
+    const { bodyProtectionEnabled = true, bodyProtectionThreshold = 200, measureBytes = true } = options;
     const thresholds = resolveThresholds(options);
 
     // Diagnostic-only: serializing outerHTML twice is wasted work on the
     // hot path, so it runs only when the caller opts in via measureBytes.
-    // Measured on the input before any work; the legacy internal clone below
-    // is content-identical, so the size is the same either way.
+    // Measured before any work mutates the tree.
     const bytesBefore = measureBytes ? new Blob([element.outerHTML || '']).size : 0;
 
-    // Clone dedup: when the caller hands us an already-cloned scratch tree
-    // (contentExtractor passes alreadyCloned: true), mutate it in place and
-    // skip the second deep copy. Direct callers keep the legacy internal
-    // clone, so their DOM is never touched.
-    const target = alreadyCloned ? element : (element.cloneNode(true) as Element);
+    // Contract: this function MUTATES the passed element in place. Callers
+    // that must preserve the original (contentExtractor's extract path)
+    // clone first and hand us the scratch tree.
+    const target = element;
 
     // Step 1: 本文要素にマーキング（本文保護が有効な場合）
     if (bodyProtectionEnabled) {

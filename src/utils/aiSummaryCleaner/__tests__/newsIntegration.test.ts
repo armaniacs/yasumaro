@@ -55,7 +55,6 @@ describe('News Site Integration Tests', () => {
         bodyProtectionThreshold: 50,
         adsEnabled: true,
         navEnabled: true,
-        alreadyCloned: true,
       });
 
       // 広告は削除される
@@ -586,7 +585,6 @@ describe('News Site Integration Tests', () => {
         bodyProtectionThreshold: 100,
         adsEnabled: true,
         navEnabled: true,
-        alreadyCloned: true,
       });
 
       // 本文は残っている
