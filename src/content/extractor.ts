@@ -15,6 +15,7 @@ import { VisitGate } from './visitGate.js';
 import { ChromeStoragePort } from '../utils/storage/storagePort.js';
 import { ChromeDomainPolicyPort } from './domainPolicyPort.js';
 import { ContentKernel, IdleScheduler } from './contentKernel.js';
+import { buildVisitStats } from './visitReporter.js';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- graphify edge: keep type link between content script and visitGate
 import type { VisitState, VisitGateThresholds } from './visitGate.js';
@@ -175,24 +176,16 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage) {
         const extractResult = extractPageContent();
         applyExtractResultToPageState(extractResult);
         const content = extractResult.content;
+        // Field selection shared with the VALID_VISIT payload (VisitReporter):
+        // one builder, no per-path drift.
+        const stats = buildVisitStats(pageState);
         sendResponse({
             content,
             cleansedReason: pageState.lastCleansedReason,
             cleanseStats: pageState.lastCleanseStats,
-            byteStats: {
-                pageBytes: pageState.lastByteStats.pageBytes || undefined,
-                candidateBytes: pageState.lastByteStats.candidateBytes || undefined,
-                originalBytes: pageState.lastByteStats.originalBytes || undefined,
-                cleansedBytes: pageState.lastByteStats.cleansedBytes || undefined,
-            },
-            aiSummaryCleansedStats: {
-                aiSummaryOriginalBytes: pageState.lastAiSummaryCleansedStats.aiSummaryOriginalBytes || undefined,
-                aiSummaryCleansedBytes: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedBytes || undefined,
-                aiSummaryCleansedElements: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedElements || undefined,
-                aiSummaryCleansedReason: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReason !== 'none' ? pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReason : undefined,
-                aiSummaryCleansedReasons: pageState.lastAiSummaryCleansedStats.aiSummaryCleansedReasons
-            },
-            fallbackTriggered: pageState.lastFallbackTriggered
+            byteStats: stats.byteStats,
+            aiSummaryCleansedStats: stats.aiStats,
+            fallbackTriggered: stats.fallbackTriggered
         });
     });
 
