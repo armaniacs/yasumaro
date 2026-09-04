@@ -24,7 +24,7 @@ backlog: [2026-09-05-00-backlog-arch3.md](2026-09-05-00-backlog-arch3.md)。着�
 - 2026-09-05-04-refactor-cache-liveview-deletion.md（✅ 完了・アーカイブ済 — getCacheState live-view（~60行）削除。9 テストファイルを typed seam＋振る舞いアサーション＋fake timers に移行。background 全 1297 tests green）
 - 2026-09-05-05-refactor-alarm-registry.md（✅ 完了・アーカイブ済 — 5 系統を AlarmRegistry テーブルに集約（flush/immediate 本体共有・失敗統一ログ・daily-purge の await 漏れ解消）。alarm 193 tests green）
 - 2026-09-05-06-refactor-popup-record-session.md（✅ 完了・アーカイブ済 — 記録 choreography を RecordSession 状態機械に集約（ForceRecordFlow 削除・5コールバック束解消・二重起動ガード）。statusPanel のデッド hook と onclick 書き換えを削除。popup 833 tests green）
-- 2026-09-05-07-refactor-envelope-guard.md（⬜ RICE 8.0 — envelope accept/reject を政策テーブルに集約。Worth exploring）
+- 2026-09-05-07-refactor-envelope-guard.md（✅ 完了・アーカイブ済 — envelope accept/reject を政策テーブル＋順序付きパイプラインに集約。router の trust/strict 順序は不変。matrix 8 tests + wrapper 198 tests green）
 
 ### 2026-09-04 フレーキーテスト安定化（1 件） — 完了
 

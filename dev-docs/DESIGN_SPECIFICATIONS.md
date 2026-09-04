@@ -22,6 +22,7 @@ All network requests to external sources (e.g., uBlock filter imports) must be v
 To prevent unauthorized or unexpected message processing in the Service Worker:
 - **Sender Distinction**: Distinguish between `Content Script` (untrusted web page) and `Popup` (trusted extension UI).
 - **Type Whitelisting**: Only process message types defined in `VALID_MESSAGE_TYPES`.
+- **Envelope policy** (`src/background/handlers/envelopePolicy.ts`): shape + version + migration-skip + sender special-cases live in one ordered `checkEnvelope()` pipeline with the policy sets in a single table. Trust + handler lookup stay in `MessageRouter.dispatch`; its strict-sender check deliberately remains after trust so untrusted senders keep reporting the trust error.
 - **Origin Check**: Message types that affect system state based on the current page (e.g., `VALID_VISIT`) MUST verify that `sender.tab` is present to ensure they originate from a Content Script.
 
 ### 2.2 Service Worker Composition Root
