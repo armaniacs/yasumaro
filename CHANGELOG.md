@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.108` リリース。
+> - 現時点では `v6.7.109` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,12 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.109] - 2026-09-05
+
+### リファクタリング
+
+- アーキテクチャ診断（Architecture Round 4、10 候補）から 7 件を実施（PBI 2026-09-05-01〜07、`dev-docs/archived/pbi/` 参照）。プロバイダー許可チェックの utils→background 逆辺を低層中立テーブル（`providerAllowlist`）に反転し catalog を spread 適応で drift 不能に（Round 3 の dynamic-import 回避も除去して静的 import に復帰）、pending 書き込みの URL 結合・切り詰め政策を `pendingPatchPolicy` に抽出してキューロック内実行に（backoff 継承化）、popup の pass-through ラッパー 2 件を削除してセッション private 化、VALID_VISIT ペイロード構築を共有ビルダー `buildVisitStats` に一本化（label 参照を注入化、force retry 最小形は意図的と確定）、サニタイズ 5 政策サイトを `checkPromptSafety` テーブルに集約（MEDIUM 明示 pass、文面同一）、訪問許可判定を `visitAdmission`（純粋政策関数＋retry＋判定フロー）に集約して loader 3 分岐と port 二重実装を解消（shim 削除）、`clearExpiredPages` をロック化して並行 add の消失を防止（facade 狭窄案は多層防御が意図的として棄却）
 
 ## [6.7.108] - 2026-09-05
 
