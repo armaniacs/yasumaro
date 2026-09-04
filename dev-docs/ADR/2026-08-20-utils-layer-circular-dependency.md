@@ -1,7 +1,7 @@
 # ADR 2026-08-20: Utils Layer 循環依存の記録と保護
 
 ## Status
-Partially superseded (2026-08-31) — 循環 1 は PBI 01・03 で解消。循環 2・3 は「解消記録」節を参照。
+Partially superseded (2026-08-31 / 2026-09-03) — 循環 1 は PBI 01・03・04b で解消。循環 2・3 は「解消記録」節を参照。
 
 ## Context
 
@@ -83,12 +83,13 @@ class TrancoVersionTracker {
 **見積もり**: 別PBIで 0.5人月
 **判断**: 今回のPBIでは `SettingsRepository` の深さに集中し、循環の物理的解消は次PBIで実施。ADR は保護のまま維持。
 
-## 解消記録（2026-08-31 / PBI 01・03）
+## 解消記録（2026-08-31 / PBI 01・03・04b）
 
 ### 循環 1: 解消済み
 
 - **PBI 01**: `settingsStore.ts` / `settingsStore.legacy.ts` を削除。`settingsStore.ts → trustDb.ts` の動的 import は消滅した。
 - **PBI 03**: `trustDb.ts` を公開 API の re-export shim に縮小し、ライフサイクルを `TrustDbKernel` に移設。Kernel は settings アクセスを注入可能な `settingsReader` port（`{ getAll, setAll }`）で受け取り、既定実装は `chrome.storage.local` の `settings` キーを直接読み書きする。`getSettingsStore()` の動的 import と `settingsStore` へのモジュール依存は無くなった。
+- **PBI 04b**: Kernel の既定 `settingsReader` を `SettingsRepository` 由来（`settingsRepository.getAll()` / `setAll()`）に置換し、`chrome.storage.local.get('settings')` の直読を削除。`TrustPolicy` は storage-free（`chrome.storage` 参照 0）、`TrustDbAdmin` が `StorageKeys.TRUST_DB`（`TRUST_DB_STORAGE_KEY`）を再exportして永続化キーを own し、string-key 循環を解消。PBI 04 で導入した `TrustPolicy`（readonly: `isDomainTrusted` / `isTrancoDomain`）/ `TrustDbAdmin`（mutation）2-seam により `@layer 1-循環` の `TrustPolicy → storage` 依存はなくなった。shim（`trustDb.ts`）は後方互換のため残置し、`getTrustPolicy()` / `getTrustDbAdmin()` が正規 seam。
 
 上の「将来の解消計画（TrancoVersionTracker の StorageAdapter 化）」がこの形で実現された。Tranco version の source-of-truth は `chrome.storage.local` の `settings` オブジェクト（`StorageKeys.TRANCO_VERSION` / `TRANCO_DOMAINS`）に一本化されており、二重管理は発生しない。
 
@@ -118,4 +119,5 @@ PBI 04 で、この逆方向依存を橋渡しする `setSqliteHealthCheck(() =>
 * PBI 2026-08-31-01-fix-settings-dual-truth（循環 1 の settingsStore 側を削除）
 * PBI 2026-08-31-03-fix-trustdb-god-module（循環 1 の trustDb 側を port 化）
 * PBI 2026-08-31-04-feat-composition-manifest（循環 2 の回避配線を manifest の onReady に整理）
+* PBI 2026-09-03-04-refactor-trustdb-seam-split / 04b（循環 1 完全解消: settingsReader の SettingsRepository 化、TrustPolicy の storage-free 化、STORAGE_KEY の StorageKeys/TRUST_DB 集約と Admin seam への移管）
 

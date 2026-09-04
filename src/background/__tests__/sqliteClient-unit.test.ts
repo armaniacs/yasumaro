@@ -22,7 +22,7 @@ vi.mock('../sqliteAlert.js', () => ({
   recordSqliteFailure: vi.fn(),
 }));
 
-import { SqliteClient } from '../sqliteClient.js';
+import { SqliteClient } from '../sqlite/offscreenGateway.js';
 import { recordSqliteSuccess, recordSqliteFailure } from '../sqliteAlert.js';
 import type { OffscreenTransport } from '../offscreenTransport.js';
 import type { OffscreenResponse } from '../../messaging/sqliteMessages.js';

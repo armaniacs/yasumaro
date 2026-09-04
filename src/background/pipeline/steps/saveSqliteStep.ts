@@ -1,4 +1,4 @@
-import type { SqliteClient } from '../../sqliteClient.js';
+import type { SqliteClient } from '../../sqlite/offscreenGateway.js';
 import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import { addLog, LogType } from '../../../utils/logger.js';
 import { enqueuePendingRecord } from '../../pendingSqliteQueue.js';

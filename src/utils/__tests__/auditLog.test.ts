@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockMutate = vi.fn().mockResolvedValue({ success: true, data: { id: 1 } });
 const mockQuery = vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
 
-vi.mock('../../background/sqliteClient.js', () => {
+vi.mock('../../background/sqlite/offscreenGateway.js', () => {
   class MockSqliteClient {
     async mutate(op: Record<string, unknown>) {
       return mockMutate(op);
@@ -20,9 +20,13 @@ vi.mock('../../background/sqliteClient.js', () => {
   };
 });
 
-vi.mock('../logger.js', () => ({
-  logError: vi.fn(),
-}));
+vi.mock('../logger.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...(actual as object),
+    logError: vi.fn(),
+  };
+});
 
 // Import after mocking
 import { recordAuditLog, getAuditLogs } from '../auditLog.js';

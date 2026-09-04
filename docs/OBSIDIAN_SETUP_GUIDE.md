@@ -59,6 +59,14 @@ Yasumaro は記録を「今日のデイリーノート」に追記します。�
 
 Obsidian 標準の Daily Notes プラグインを使用している場合は、フォルダ名を確認してください。Obsidian 設定 → **デイリーノート** → **新規作成場所** に表示されている名前が、入力すべきフォルダ名です。たとえば `DailyNotes` フォルダを使っているなら `DailyNotes` と入力します。`Journal` や `092.Daily` のように独自のフォルダ名にしている場合はそのまま入力してください。パスは Vault ルートからの相対パスで、先頭のスラッシュ `/` は不要です。
 
+デイリーノートが年月ごとのサブフォルダに分かれている場合（例: `raw/2026-09`）は、`YYYY` / `MM` / `DD` というプレースホルダーを使えます。これらは記録時点の年・月・日に自動的に置き換わるため、毎月パスを手動で書き換える必要がなくなります。
+
+| フォルダ構成 | Daily Note Path の入力例 |
+|------------|------------------------|
+| 年月フォルダ（`raw/2026-09/...`） | `raw/YYYY-MM` |
+| 年フォルダ（`2026/...`） | `YYYY` |
+| 固定フォルダ（`092.Daily/...`） | `092.Daily` |
+
 ---
 
 ### 6. Yasumaro ダッシュボードへの入力と接続テスト
@@ -179,8 +187,11 @@ Examples:
 | Standard Daily Notes (`DailyNotes/2026-06-29.md`) | `DailyNotes` |
 | `Journal` folder with date format | `Journal` |
 | `092.Daily` folder | `092.Daily` |
+| Monthly subfolder (`raw/2026-09/...`) | `raw/YYYY-MM` |
 
 Match the path to your Daily Note plugin settings. If using Obsidian's built-in Daily Notes plugin, enter the folder name specified in the "New file location" setting.
+
+If your daily notes are organized into monthly or yearly subfolders, you can use the `YYYY` / `MM` / `DD` placeholders. They are automatically replaced with the current year, month, and day when a record is saved, so you don't need to update the path every month.
 
 ---
 

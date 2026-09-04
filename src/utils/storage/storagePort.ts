@@ -7,11 +7,36 @@
  * SettingsRepository owns that logic and drives this port.
  */
 
+import type { Settings } from './types.js';
+import { API_KEY_FIELD_NAMES, isApiKeyField } from './apiKeyFields.js';
+
+// Canonical list lives in apiKeyFields.ts (dependency-free so this module
+// stays importable under hoisted vi.mock of SettingsRepository).
+const API_KEY_FIELDS: readonly string[] = API_KEY_FIELD_NAMES;
+
 export interface StoragePort {
   get(keys: string | string[] | null): Promise<Record<string, unknown>>;
   set(items: Record<string, unknown>): Promise<void>;
   onChanged?(callback: (changes: Record<string, unknown>) => void): void;
   getBytesInUse?(keys?: string | string[] | null): Promise<number>;
+}
+
+/**
+ * VULN-014 (CWE-312): return a shallow copy of settings with every API-key
+ * field emptied. Extracted from RecordingCache so cache modules do not need
+ * to know about redaction.
+ */
+export function redactSettingsApiKeys(settings: Settings | null): Settings | null {
+  if (!settings) return null;
+  const copy = { ...settings } as Record<string, unknown>;
+  for (const field of Object.keys(copy)) {
+    if (isApiKeyField(field)) copy[field] = '';
+  }
+  // Also handle exact snake-case fields for completeness
+  for (const field of API_KEY_FIELDS) {
+    if (field in copy) copy[field] = '';
+  }
+  return copy as Settings;
 }
 
 export class ChromeStoragePort implements StoragePort {
@@ -92,25 +117,8 @@ export class InMemoryStoragePort implements StoragePort {
       if (k.endsWith('_version') && typeof v === 'number') {
         const base = k.slice(0, -8);
         this.versions.set(base, v);
-      } else {
+      } else if (!k.endsWith('_version')) {
         this.store.set(k, v);
-        // auto-increment version for the base key when not explicitly provided
-        // mimics Chrome's withOptimisticLock version bump so tests see version increments
-        if (!(`${k}_version` in items)) {
-          const cur = this.versions.get(k) ?? 0;
-          // only bump version for known versioned keys (settings, trust_db:json etc.)
-          // but keep it generic: bump whenever base key is written without explicit version
-          if (k === 'settings' || k === 'trust_db:json' || k.startsWith('settings')) {
-            this.versions.set(k, cur + 1);
-          }
-        }
-      }
-    }
-    // handle explicit version writes that arrived as base_version in same batch
-    for (const [k, v] of Object.entries(items)) {
-      if (k.endsWith('_version') && typeof v === 'number') {
-        const base = k.slice(0, -8);
-        this.versions.set(base, v);
       }
     }
     for (const cb of this.listeners) cb(items);

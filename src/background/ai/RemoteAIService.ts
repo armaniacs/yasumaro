@@ -11,9 +11,8 @@ import { settingsRepository, type SettingsReader } from '../../utils/storage/Set
 import { DEFAULT_SETTINGS } from '../../utils/storage/defaults.js';
 import { StorageKeys, Settings, ProviderSlot } from '../../utils/storage/types.js';
 import { resolveModelKey } from '../../utils/aiModelKey.js';
-import { GeminiProvider, BuiltInAiProvider, AIProviderStrategy } from './providers/index.js';
-import { GenericOpenAICompatibleProvider } from './providers/OpenAIProvider.js';
-import { PROVIDER_REGISTRY } from './providerRegistry.js';
+import { type AIProviderStrategy, type BuiltInAiProvider } from './providers/index.js';
+import { PROVIDER_CATALOG, createProviderStrategy } from './providerCatalog.js';
 import { addLog, LogType } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { recordAuditLog } from '../../utils/auditLog.js';
@@ -42,18 +41,8 @@ export class RemoteAIService implements AIService {
   }
 
   private registerDefaultProviders(): void {
-    for (const [id] of PROVIDER_REGISTRY) {
-        if (id === 'gemini') {
-            this.registerProvider(id, (settings: Settings) => new GeminiProvider(settings));
-            continue;
-        }
-        if (id === 'built-in-ai') {
-            this.registerProvider(id, (settings: Settings) => new BuiltInAiProvider(settings));
-            continue;
-        }
-        // OpenAI-compatible family: generic provider derives baseUrl/apiKey/model from registry entry
-        const providerId = id;
-        this.registerProvider(id, (settings: Settings) => new GenericOpenAICompatibleProvider(settings, providerId));
+    for (const [id] of PROVIDER_CATALOG) {
+      this.registerProvider(id, (settings: Settings) => createProviderStrategy(id, settings));
     }
   }
 

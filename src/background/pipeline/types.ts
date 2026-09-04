@@ -166,12 +166,15 @@ export interface PipelineOutput {
 }
 
 /**
- * Full recording context: composition of all sub-types.
- * @internal — internal seam, not part of public interface. Only RecordingPipeline orchestrator constructs and passes this. External callers use RecordingData/RecordingResult.
+ * Full recording context: 7-way intersection.
  *
- * Steps should reference specific sub-types in their JSDoc to declare
- * which fields they read/write. The orchestrator constructs and passes
- * the full context.
+ * Constructed via `contextBuilder.ts` helpers (`createRetryContext()` /
+ * `createStepDeps()`). Step ordering (e.g. `markdown` only after
+ * formatMarkdownStep) is enforced at runtime by the orchestrator's step
+ * sequence; the earlier stage-branding experiment was removed because the
+ * step seam never consumed the brands.
+ *
+ * @internal — internal seam, not part of public interface. Only RecordingOrchestrator constructs and passes this.
  */
 export type RecordingContext = PipelineInput & CheckResults & PrivacyResults & ContentResults & FormatResults & PipelineTimings & PipelineOutput;
 
@@ -237,5 +240,5 @@ export interface StepDeps {
   /** URL store for duplicate-detection lookups (checkDuplicateStep) */
   urlStore?: UrlStore;
   /** SQLite client for persistence (saveSqliteStep) */
-  sqliteClient?: import('../sqliteClient.js').SqliteClient | null;
+  sqliteClient?: import('../sqlite/offscreenGateway.js').SqliteClient | null;
 }

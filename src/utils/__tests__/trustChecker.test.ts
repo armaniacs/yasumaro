@@ -71,8 +71,14 @@ vi.mock('../logger.js', () => ({
 const mockDbInitialize = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
 const mockIsDomainTrusted = vi.fn();
 
-vi.mock('../trustDb/trustDb.js', () => ({
-  getTrustDb: vi.fn(() => ({
+vi.mock('../trustDb/TrustPolicy.js', () => ({
+  getTrustPolicy: vi.fn(() => ({
+    isDomainTrusted: mockIsDomainTrusted,
+  })),
+}));
+
+vi.mock('../trustDb/TrustDbAdmin.js', () => ({
+  getTrustDbAdmin: vi.fn(() => ({
     initialize: mockDbInitialize,
     isDomainTrusted: mockIsDomainTrusted,
   })),

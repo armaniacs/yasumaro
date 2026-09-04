@@ -40,6 +40,7 @@ describe('getSettings key refinement', () => {
       StorageKeys.MIGRATION_WHITELIST_EXTRACTION_DEFAULT_DONE,
       StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID,
       StorageKeys.HISTORY_SORT_PREFERENCE,
+      StorageKeys.TRUST_DB,
     ];
     Object.values(StorageKeys).forEach((key) => {
       if (!internalKeys.includes(key as StorageKeys)) {

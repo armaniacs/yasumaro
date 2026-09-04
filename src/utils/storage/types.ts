@@ -7,7 +7,7 @@
 
 import type { EncryptedData } from '../crypto/types.js';
 import type { UblockRules, Source, CustomPrompt, MarkdownExportTemplate, TagCategory, TagNormalizationEntry } from '../types.js';
-import type { SafetyMode, TrancoTier } from '../trustDb/trustDbSchema.js';
+import type { SafetyMode, TrancoTier, TrustDatabase } from '../trustDb/trustDbSchema.js';
 
 export type SqliteHealthCheck = () => Promise<boolean>;
 
@@ -127,6 +127,7 @@ export const StorageKeys = {
     ALERT_UNVERIFIED: 'alert_unverified', // 未検証サイト警告（デフォルト: false）
     SAVE_ABORTED_PAGES: 'save_aborted_pages', // 警告で中断したページを履歴に残す（デフォルト: false）
     // Trust Database Settings (Phase 1)
+    TRUST_DB: 'trust_db:json', // Trust database persistence key — owned by storage layer, used via StoragePort/Admin seam
     SAFETY_MODE: 'safety_mode', // Safety Mode (strict/balanced/relaxed, デフォルト: balanced)
     TRANCO_TIER: 'tranco_tier', // Tranco Tier (top1k/top10k/top100k, デフォルト: top10k)
     // Permission Manager Settings (P0)
@@ -362,6 +363,7 @@ export interface StorageKeyValues {
     [StorageKeys.ALERT_SENSITIVE]: boolean;
     [StorageKeys.ALERT_UNVERIFIED]: boolean;
     [StorageKeys.SAVE_ABORTED_PAGES]: boolean;
+    [StorageKeys.TRUST_DB]: TrustDatabase;
     [StorageKeys.SAFETY_MODE]: SafetyMode;
     [StorageKeys.TRANCO_TIER]: TrancoTier;
     [StorageKeys.DENIED_DOMAINS]: Record<string, { count: number; lastDenied: string; lastDismissed?: string }>;

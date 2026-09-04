@@ -1,21 +1,9 @@
 import { addLog, LogType } from '../../utils/logger.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps, type OfflineJobKind } from './types.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
+import { RetryPolicy, defaultRetryPolicy } from './retryPolicy.js';
 
 const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
-
-function isNetworkError(error: unknown): boolean {
-  if (!error) return false;
-  const msg = error instanceof Error ? error.message : String(error);
-  const lower = msg.toLowerCase();
-  if (lower.includes('network') || lower.includes('fetch') || lower.includes('timeout') || lower.includes('offline') || lower.includes('econnrefused') || lower.includes('enotfound') || lower.includes('refused') || lower.includes('connection') || lower.includes('unavailable') || lower.includes('ai ')) {
-    return true;
-  }
-  if (error instanceof Error && error.cause) {
-    return isNetworkError(error.cause);
-  }
-  return false;
-}
 
 /**
  * Executes pipeline steps with retry and offline-queue fallback.
@@ -25,7 +13,10 @@ function isNetworkError(error: unknown): boolean {
  * RecordingPipeline.
  */
 export class StepExecutor {
-  constructor(private offlineNetworkQueue: OfflineNetworkQueue | null) {}
+  constructor(
+    private offlineNetworkQueue: OfflineNetworkQueue | null,
+    private retryPolicy: RetryPolicy = defaultRetryPolicy
+  ) {}
 
   async executeWithStrategy(
     step: PipelineStep,
@@ -50,7 +41,7 @@ export class StepExecutor {
           continue;
         }
 
-        if (this.offlineNetworkQueue && step.offlineRetry && isNetworkError(error)) {
+        if (this.offlineNetworkQueue && step.offlineRetry && this.retryPolicy.shouldEnqueueForOffline(error)) {
           await this.enqueueOfflineJob(step, context);
         }
 

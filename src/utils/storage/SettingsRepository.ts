@@ -13,7 +13,7 @@
 import type { StorageKey, Settings as SettingsType, SqliteHealthCheck } from './types.js';
 import { StorageKeys } from './types.js';
 import { ChromeStoragePort, InMemoryStoragePort, type StoragePort } from './storagePort.js';
-import { withOptimisticLock } from '../optimisticLock.js';
+import { StorageTransaction } from './storageTransaction.js';
 
 /** Options forwarded to the storage write path. */
 export interface SettingsWriteOptions {
@@ -33,10 +33,6 @@ export interface SettingsRepositoryOptions {
   keyProvider?: () => Promise<CryptoKey>;
 }
 
-function isChromePort(port: StoragePort): boolean {
-  return port instanceof ChromeStoragePort;
-}
-
 async function tryRestoreFromBackupViaPort(port: StoragePort): Promise<SettingsType | null> {
   const all = await port.get(null);
   const backupKeys = Object.keys(all).filter((k) => k.startsWith('legacy_settings_backup'));
@@ -52,15 +48,10 @@ async function tryRestoreFromBackupViaPort(port: StoragePort): Promise<SettingsT
       (restored as Record<string, unknown>)[key] = value;
     }
   }
-  // Persist restored via optimisticLock when chrome, otherwise via port
+  // Persist restored via StorageTransaction (deep module) — same seam for all ports
   if (restored && Object.keys(restored).length > 0) {
-    if (isChromePort(port)) {
-      await withOptimisticLock<SettingsType>('settings', (current) => ({ ...(current as Record<string, unknown> || {}), ...restored } as SettingsType));
-    } else {
-      const existing = await port.get(['settings']);
-      const current = (existing['settings'] as Record<string, unknown>) || {};
-      await port.set({ settings: { ...current, ...restored } });
-    }
+    const tx = new StorageTransaction(port);
+    await tx.withLock<SettingsType>('settings', (current) => ({ ...((current as Record<string, unknown>) || {}), ...restored } as SettingsType));
   }
   return restored;
 }
@@ -91,16 +82,11 @@ export class SettingsRepository {
   private async persistReEncrypted(reEncrypted: Record<string, unknown>): Promise<void> {
     if (Object.keys(reEncrypted).length === 0) return;
     this.cached = null;
-    if (isChromePort(this.port)) {
-      await withOptimisticLock<SettingsType>('settings', (current) => {
-        const base = (current as Record<string, unknown>) || {};
-        return { ...(base as object), ...reEncrypted } as SettingsType;
-      });
-    } else {
-      const existing = await this.port.get(['settings']);
-      const current = (existing['settings'] as Record<string, unknown>) || {};
-      await this.port.set({ settings: { ...current, ...reEncrypted } });
-    }
+    const tx = new StorageTransaction(this.port);
+    await tx.withLock<SettingsType>('settings', (current) => {
+      const base = (current as Record<string, unknown>) || {};
+      return { ...(base as object), ...reEncrypted } as SettingsType;
+    });
     this.cached = null;
   }
 
@@ -226,16 +212,11 @@ export class SettingsRepository {
     }
     await ensureStorageQuota(toSave, opts?.sqliteHealthCheck);
     this.cached = null;
-    if (isChromePort(this.port)) {
-      await withOptimisticLock<SettingsType>('settings', (current) => {
-        const base = (current as Record<string, unknown>) || {};
-        return { ...(base as object), ...toSave } as SettingsType;
-      });
-    } else {
-      const existing = await this.port.get(['settings']);
-      const base = (existing['settings'] as Record<string, unknown>) || {};
-      await this.port.set({ settings: { ...(base as object), ...toSave } });
-    }
+    const tx = new StorageTransaction(this.port);
+    await tx.withLock<SettingsType>('settings', (current) => {
+      const base = (current as Record<string, unknown>) || {};
+      return { ...(base as object), ...toSave } as SettingsType;
+    });
     this.cached = null;
   }
 

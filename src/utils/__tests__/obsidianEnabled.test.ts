@@ -25,7 +25,8 @@ vi.mock('../crypto/index.js', () => ({
   verifyPasswordWithPBKDF2: vi.fn(async () => ({ isValid: true, needsRehash: false })),
 }));
 
-vi.mock('../optimisticLock.js', () => ({
+vi.mock('../storage/storageTransaction.js', () => ({
+  StorageTransaction: class StorageTransaction { withLock = async (_k: string, fn: (v: unknown) => unknown) => fn(undefined); withAtomic = async (_ks: unknown, fn: (vs: unknown) => unknown) => fn([]); },
   withOptimisticLock: vi.fn(async (_key: string, fn: (current: unknown) => unknown) => {
     return fn(mockStorage['settings'] || {});
   }),
@@ -43,8 +44,14 @@ vi.mock('../urlUtils.js', () => ({
   normalizeUrl: vi.fn((url: string) => url),
 }));
 
-vi.mock('../trustDb/trustDb.js', () => ({
-  getTrustDb: vi.fn(() => ({
+vi.mock('../trustDb/TrustPolicy.js', () => ({
+  getTrustPolicy: vi.fn(() => ({
+    isDomainTrusted: vi.fn(() => ({ level: 'UNVERIFIED', source: 'unknown', reason: '' })),
+  })),
+}));
+
+vi.mock('../trustDb/TrustDbAdmin.js', () => ({
+  getTrustDbAdmin: vi.fn(() => ({
     initialize: vi.fn(async () => {}),
   })),
 }));

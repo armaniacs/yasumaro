@@ -3,7 +3,7 @@
  * Unit tests for the multi-key optimistic lock (PBI 2026-08-27-27).
  */
 
-import { withAtomicKeys, ConflictError, enablePostWriteVerification } from '../optimisticLock.js';
+import { withAtomicKeys, ConflictError } from '../storage/storageTransaction.js';
 
 describe('withAtomicKeys', () => {
     beforeEach(async () => {
@@ -62,7 +62,6 @@ describe('withAtomicKeys', () => {
 
     describe('行順序脆弱性の再現', () => {
         it('post-write verification がキー順序に依存せず一致判定する', async () => {
-            enablePostWriteVerification();
             await chrome.storage.local.set({ objKey: { b: 2, a: 1 } });
 
             // updater returns a logically-identical object but with keys in a
@@ -77,7 +76,6 @@ describe('withAtomicKeys', () => {
         });
 
         it('キー順序が異なっても同一内容なら競合と判定しない', async () => {
-            enablePostWriteVerification();
 
             const original = chrome.storage.local.get;
             const original_set = chrome.storage.local.set;

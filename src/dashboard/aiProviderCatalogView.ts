@@ -18,24 +18,14 @@ import type { ProviderId } from '../utils/storage/types.js';
 import { getMessage } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 
-/** storage key → the input element id the former static markup used. */
-const KEY_TO_INPUT_ID: Record<string, string> = {
-  gemini_api_key: 'geminiApiKey',
-  gemini_model: 'geminiModel',
-  openai_base_url: 'openaiBaseUrl',
-  openai_api_key: 'openaiApiKey',
-  openai_model: 'openaiModel',
-  openai_2_base_url: 'openai2BaseUrl',
-  openai_2_api_key: 'openai2ApiKey',
-  openai_2_model: 'openai2Model',
-  lm_studio_base_url: 'lmStudioBaseUrl',
-  lm_studio_model: 'lmStudioModel',
-  ollama_base_url: 'ollamaBaseUrl',
-  ollama_model: 'ollamaModel',
-  provider_base_url: 'providerBaseUrl',
-  provider_api_key: 'providerApiKey',
-  provider_model: 'providerModel',
-};
+/**
+ * Deterministic storageKey → inputId conversion (snake_case → camelCase).
+ * Replaces the former KEY_TO_INPUT_ID manual map; catalog owns the mapping
+ * via storageKey fields, view derives the DOM id.
+ */
+function storageKeyToInputId(key: string): string {
+  return key.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+}
 
 export function providerIdsInOrder(): ProviderId[] {
   return [...PROVIDER_CATALOG.keys()];
@@ -142,15 +132,14 @@ function helpText(i18nKey: string): HTMLParagraphElement {
 
 function buildGenericBlock(container: HTMLElement, entry: ProviderCatalogEntry, providerId: ProviderId): void {
   if (entry.baseUrlKey) {
-    const id = KEY_TO_INPUT_ID[entry.baseUrlKey] ?? entry.baseUrlKey;
+    const id = storageKeyToInputId(entry.baseUrlKey);
     container.appendChild(formGroup(
       label(id, 'baseUrl'),
       input({ id, type: 'text', storageKey: entry.baseUrlKey, placeholderKey: entry.fieldPlaceholders?.baseUrl }),
     ));
   }
   if (entry.apiKeyKey && entry.requiresApiKey) {
-    const id = KEY_TO_INPUT_ID[entry.apiKeyKey] ?? entry.apiKeyKey;
-    // gemini uses its own label key; the rest use the shared "aiApiKey"
+    const id = storageKeyToInputId(entry.apiKeyKey);
     const labelKey = providerId === 'gemini' ? 'geminiApiKey' : 'aiApiKey';
     container.appendChild(formGroup(
       label(id, labelKey),
@@ -158,25 +147,33 @@ function buildGenericBlock(container: HTMLElement, entry: ProviderCatalogEntry, 
     ));
   }
   if (entry.modelKey) {
-    const id = KEY_TO_INPUT_ID[entry.modelKey] ?? entry.modelKey;
+    const id = storageKeyToInputId(entry.modelKey);
     container.appendChild(formGroup(
       label(id, 'modelName'),
       input({ id, type: 'text', storageKey: entry.modelKey, placeholderKey: entry.fieldPlaceholders?.model }),
     ));
   }
 
-  if (providerId === 'gemini') {
-    const versionInput = input({ id: 'geminiApiVersion', type: 'text', storageKey: 'gemini_api_version' });
-    versionInput.placeholder = 'v1beta';
-    versionInput.setAttribute('aria-invalid', 'false');
-    versionInput.setAttribute('aria-describedby', 'geminiApiVersionNote geminiApiVersionError');
-    const note = helpText('note_gemini_api_version');
-    note.id = 'geminiApiVersionNote';
-    const err = document.createElement('div');
-    err.id = 'geminiApiVersionError';
-    err.className = 'field-error';
-    err.setAttribute('role', 'alert');
-    container.appendChild(formGroup(label('geminiApiVersion', 'label_gemini_api_version'), versionInput, note, err));
+  // Extra fields driven by catalog (e.g. geminiApiVersion), no if (gemini) branch
+  if (entry.extraFields) {
+    for (const field of entry.extraFields) {
+      const extraInput = input({ id: field.inputId, type: field.type, storageKey: field.storageKey });
+      if (field.placeholder) extraInput.placeholder = field.placeholder;
+      // Preserve aria attributes for geminiApiVersion for a11y
+      if (field.storageKey === 'gemini_api_version') {
+        extraInput.setAttribute('aria-invalid', 'false');
+        extraInput.setAttribute('aria-describedby', 'geminiApiVersionNote geminiApiVersionError');
+        const note = helpText('note_gemini_api_version');
+        note.id = 'geminiApiVersionNote';
+        const err = document.createElement('div');
+        err.id = 'geminiApiVersionError';
+        err.className = 'field-error';
+        err.setAttribute('role', 'alert');
+        container.appendChild(formGroup(label(field.inputId, field.labelI18nKey), extraInput, note, err));
+      } else {
+        container.appendChild(formGroup(label(field.inputId, field.labelI18nKey), extraInput));
+      }
+    }
   }
 }
 

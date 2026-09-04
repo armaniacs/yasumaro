@@ -1,5 +1,5 @@
 import type { LogEntry } from './types.js';
-import { runSerialized } from '../keySerializer.js';
+import { runSerialized } from '../storage/storageTransaction.js';
 
 const LOG_STORAGE_KEY = 'sanitization_logs';
 const RETENTION_DAYS = 3;
@@ -21,9 +21,10 @@ export class ChromeStorageLogAdapter implements LogStorageAdapter {
   async append(entries: LogEntry[]): Promise<void> {
     // Serialize the read->append->prune->write region so a concurrent
     // append() from another execution context cannot slot its own
-    // read+write between ours and drop entries (VULN-050). The key
-    // serializer is microtask-based and logger-independent, avoiding the
-    // optimisticLock -> logger import cycle.
+    // read+write between ours and drop entries (VULN-050). Uses the deep
+    // StorageTransaction's internal serialization (microtask chain) to keep
+    // the seam in one place while staying logger-independent and avoiding
+    // the optimisticLock -> logger cycle.
     await runSerialized(`logadapter:${LOG_STORAGE_KEY}`, async () => {
       const storage = await chrome.storage.local.get(LOG_STORAGE_KEY);
       let logs: LogEntry[] = (storage[LOG_STORAGE_KEY] as LogEntry[]) || [];

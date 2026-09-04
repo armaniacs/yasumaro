@@ -14,7 +14,14 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-**進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る。
+**進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る.
+
+### 2026-09-04 0902a レビュー由来（重複・dead-code 7件→3PBI） — 3件完了
+
+- 2026-09-04-01-fix-api-key-list-ssot.md（RICE 60 — `apiKeyFields.ts` SSOT新設。storagePort/settingsMigrationの二重定義を解消、drift検出テスト追加。type-check / lint / 関連46 tests / build green）
+- 2026-09-04-02-fix-domain-filter-duplication.md（RICE 2.4 — `evaluateCachedAllow`共有ヘルパー抽出、`parseAndValidate`に`isValidDomainPattern`統合（新`domainValidator.ts`で循環回避）、dashboard保存時検証を単一seamに。113 tests green）
+- 2026-09-04-03-cleanup-review-dead-exports.md（chore — RequiresPrivacy/Markdown、Slice系4型、domainFilter singleton、RedactingStoragePortを削除。redact関数は維持、DESIGN_SPECIFICATIONS同期。64 tests green）
+
 
 ### 未 PBI 化のトリガー
 - **なし。** PBI 06 の効果確認は 2026-09-01 に実施済み（未達 → 06b/06c を実装し達成）。残債は `2026-08-31-00-backlog.md` の「06d 候補」に記録（次 provider 追加時などに着手検討）
@@ -46,6 +53,47 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-03 0902a ブランチレビュー由来の CRITICAL 修正 — 5件完了
+
+- 2026-09-03-01-fix-ssrf-allowlist-bypass.md（RICE 4.8 — `isAllowedProviderBaseUrl` を CIDR 範囲で堅牢化。0.0.0.0/8, 127.0.0.0/8, 169.254.0.0/16 の範囲ブロック追加、整数/hex IPv4 デコード、IPv6 ブロック (::1/::ffff:/fc00/fe80)。BDD テスト 38 件。type-check / lint / build green）
+- 2026-09-03-02-fix-trust-policy-orphan-singleton.md（RICE 4.8 — TrustPolicy の orphan fallback を撤廃し `getTrustDbAdmin().getPolicy()` に委譲。TrustDecision は `this.admin.getPolicy()` を毎回 lookup し stale cache を排除。BDD テスト 13 件。type-check / lint / build green）
+- 2026-09-03-03-fix-dashboard-confirm-token-fail-closed.md（RICE 10.8 — dashboardGateway の confirm-token を fail-closed 化。token 取得失敗時に IPC を送らず `SqliteResult` エラーで返す。BDD テスト 16 件。type-check / lint / build green）
+- 2026-09-03-04-fix-domain-filter-mode-inversion.md（RICE 5.4 — DomainFilter の `isAllowedCached` / `CacheAdapter` が mode を無視し blacklist を whitelist として反転していたバグを修正。`isDomainInList` ヘルパ抽出、mode thread、cache に mode 追加。BDD テスト 44 件。type-check / lint / build green）
+- 2026-09-03-05-cleanup-orphan-exports-dead-mocks-shim-importers.md（RICE 0.9 — orphan exports 削除 (withLockViaPort, PROVIDER_REGISTRY, isDomainTrusted convenience)、dead vi.mock 除去 2 件、7 prod importer を optimisticLock → storageTransaction に移行、`optimisticLock.ts` 物理削除。type-check / lint / build green）
+
+
+### 2026-09-04 dashboard テスト confirm-token ハンドシェイク対応 — 1件完了
+
+- 2026-09-04-01-test-dashboard-confirm-handshake.md（RICE 8.0 — PBI 03-v1 の fail-closed 化で破壊的操作が2段階送信になったことに dashboard 系テスト 56件が未対応だった問題を解消。shared ヘルパ `__tests__/helpers/dashboardSqliteMock.ts`（subtype ルーティング）を新設し 4 ファイルを移行。付随して lockContract.test.ts の削除済み optimisticLock import も修正（commit d567547c）。119 tests green）
+
+### 2026-09-03 Architecture Deepening Round 2026-09-03b — 7件完了（Trust / Retry / Pipeline / Composition / Provider / SQLite）
+
+- 2026-09-03-01-refactor-trust-seam-consolidation.md（RICE 12.0 — globalThis registry 廃止。TrustDbKernel の `__trustDbKernel` 登録と TrustPolicy の `__TrustPolicyClass` を削除。`getTrustPolicy()` を `getTrustDbAdmin().getPolicy()` 委譲に、TrustDecision は `admin.getPolicy()` 毎回 lookup で stale 排除。Admin/Kernel に `isInitialized()` 追加で fail-closed 維持。158 tests green）
+- 2026-09-03-02-fix-retry-policy-ai-false-positive.md（RICE 9.6 — `isNetworkError` から `lower.includes('ai ')` を削除。ADR 2026-08-27 列挙語（network/fetch/timeout/offline/econnrefused/enotfound）+ connection/unavailable のみに限定。境界テスト 5 件追加。type-check / lint / build green）
+- 2026-09-03-03-refactor-pipeline-consolidation.md（RICE 6.0 — PipelineKernel(60行 thin loop)を RecordingOrchestrator.executeInternal に inline 化し削除。sole state owner 化でセマンティクス集約。89 tests green）
+- 2026-09-03-04-refactor-staged-context-branding.md（RICE 4.8 — StagedContext<S>/ContextStage 等 dead branding を削除。createInitialContext/assertStage 撤去、RetryContext を RecordingContext に。type-check / lint / build green）
+- 2026-09-03-05-refactor-composition-root-typed.md（RICE 4.0 — setSqliteHealthCheck/getSqliteHealthCheck の module-global ペアを削除。ensureStorageQuota の fallback chain を単純化、manifest onReady wiring 撤去。storageMaintenance テスト追加。type-check / lint / build green）
+- 2026-09-03-06-refactor-provider-catalog-split.md（RICE 2.7 — isAllowedProviderBaseUrl(124行)を providerSecurityPolicy.ts に分離。catalog は re-export で後方互換。61 tests green）
+- 2026-09-03-07-refactor-sqlite-gateway-single-seam.md（RICE 2.0 — sendDashboard の重複 Promise.race を sendDashboardRaw に統一。dashboardGateway テスト 16件 green）
+
+### 2026-09-03 Architecture Deepening 0903 — 7件完了
+
+- 2026-09-03-01-refactor-storage-concurrency-primitive.md（RICE 720 — `StorageTransaction` deep module（`withLock`/`withAtomic` 2メソッド）に統合。`optimisticLock`/`keySerializer` を shim 化、`SettingsRepository` の `isChromePort` 分岐を撤去、`InMemoryStoragePort` の explicit `_version` 対応と contract test 18件追加。type-check/lint/test/build green）
+- 2026-09-03-02-refactor-provider-catalog-unification.md（RICE 213 — `ProviderCatalog` を deep module 化。`providerRegistry` を shim 化、`RemoteAIService` の switch を委譲に、`aiProviderCatalogView` の `KEY_TO_INPUT_ID` を `storageKeyToInputId` 関数に。type-check/lint/test/build green）
+- 2026-09-03-03-refactor-recording-orchestrator-modes.md（RICE 186 — `retryPolicy` 抽出と `retrySteps` コンパイル完了、typed Context は `contextBuilder.ts`（211行）に抽出、`StepDeps` の `?? sqliteClient` fallback 削除、`pickDefined` spread を builder に置換。288 tests green）
+- 2026-09-03-04-refactor-trustdb-seam-split.md（RICE 168 — `TrustDbAdmin`（mutation）と `TrustPolicy`（readonly）の 2 seam に分割。`trustDb.ts` shim を物理削除（04b commit: 64609768）。`STORAGE_KEY` を `StorageKeys.TRUST_DB` に集約、`settingsReader` を `SettingsRepository` 経由に、全 prod caller を `getTrustDbAdmin`/`getTrustPolicy` に移行（16 files）。227 tests green）
+- 2026-09-03-05-refactor-recording-cache-split.md（RICE 80 — `SettingsCache`/`UrlCache`/`PrivacyCache` 3モジュールに TTL 分離。`RedactingStoragePort` で `redactSettingsApiKeys` を委譲。`RecordingCacheInstance` を 3 cache compose の true facade に。42 tests green）
+- 2026-09-03-06-refactor-domain-filter-unification.md（RICE 58 — `DomainFilter` を single seam に統合。`wildcardToRegex` 一本化、`domainFilterCache` の blacklist 空配列 TODO 解消、`CacheAdapter` 第2 adapter で seam を実在化、TTL は construction param に。37+ tests green）
+- 2026-09-03-07-refactor-sqlite-gateway-fidelity.md（RICE 12 — `OffscreenGateway`（131行）と `DashboardGateway`（67行）に hop 分割。`InMemoryTransport` の `ORDER BY` を `localeCompare` に修正、`sanitizeFtsTerm`/`QUERY_CAPS`/`matchesExtraWhere` を共有化。`sqliteClient.ts` shim を物理削除（07b commit: 8f1d956d）。14 contract tests green）
+
+- 2026-09-03-08-fix-daily-note-path-placeholder-discoverability.md（RICE - — `dailyNotePathPlaceholder` を `092.Daily または raw/YYYY-MM` に、`dailyNotePathHelp` を ja/en 追加、`entrypoints/options/index.html` に help-text 追加、`docs/FAQ`/`SETUP_GUIDE` に月次例追記、`dailyNotePathBuilder` に 3ケース追加。build 後の dist で placeholder と help-text を目視確認、validate green）
+
+詳細な 5 Whys は `/tmp/kilo/whywhy-remaining.md` に記録。
+
+### 2026-09-02 i18n チェック誤検知修正 — 1件完了
+
+- 2026-09-02-01-fix-i18n-check-false-positive.md（RICE 300 — check-i18n.mjs:84 の配列への `in` 演算子バグ修正。`Object.keys()` の戻り値（配列）に `in` を使っていたため全 1,247 キーが「extra」と誤判定。オブジェクト照合に修正し、extra キー検出を warn→fail に昇格。比較ロジックを i18n-core.mjs に抽出し 16 テストを追加。Models.dev プロバイダー例の Perplexity→Hugging Face 修正も含む。release:check 7/7 PASS（i18n 警告 0 件）、validate PASS）
 
 ### 2026-08-31 Architecture Deepening 0831a — 6件全完了（PBI 01〜06）
 

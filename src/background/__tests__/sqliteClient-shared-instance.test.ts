@@ -23,7 +23,7 @@ vi.mock('../sqliteAlert.js', () => ({
   recordSqliteFailure: vi.fn(),
 }));
 
-import { SqliteClient, getSharedSqliteClient } from '../sqliteClient.js';
+import { SqliteClient, getSharedSqliteClient } from '../sqlite/offscreenGateway.js';
 
 describe('getSharedSqliteClient (M8)', () => {
   it('returns the same instance on repeated calls', () => {

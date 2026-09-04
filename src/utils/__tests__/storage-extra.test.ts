@@ -36,7 +36,8 @@ vi.mock('../crypto/index.js', () => ({
   ),
 }));
 
-vi.mock('../optimisticLock.js', () => ({
+vi.mock('../storage/storageTransaction.js', () => ({
+  StorageTransaction: class StorageTransaction { withLock = async (_k: string, fn: (v: unknown) => unknown) => fn(undefined); withAtomic = async (_ks: unknown, fn: (vs: unknown) => unknown) => fn([]); },
   withOptimisticLock: vi.fn(async (key: string, fn: (data: unknown) => unknown) => {
     const result = await chrome.storage.local.get(key);
     const current = result[key];

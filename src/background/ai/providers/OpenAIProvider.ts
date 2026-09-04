@@ -11,7 +11,7 @@ import { Settings, StorageKeys } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 
-import { getRegistryEntry, isAllowedProviderBaseUrl } from '../providerRegistry.js';
+import { getRegistryEntry, isAllowedProviderBaseUrl } from '../providerCatalog.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { readJsonCapped } from '../../../utils/readBodyCapped.js';
 

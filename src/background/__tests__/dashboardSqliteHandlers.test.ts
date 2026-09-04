@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { dispatchDashboardSqlite } from '../handlers/__tests__/dashboardSqliteTestHarness.js';
 import { createDashboardSqliteHandler } from '../handlers/dashboardSqliteHandlers.js';
 import type { DashboardSqliteHandlerDeps } from '../handlers/dashboardSqliteHandlers.js';
-import { SqliteClient } from '../sqliteClient.js';
+import { SqliteClient } from '../sqlite/offscreenGateway.js';
 
 /** Minimal full DashboardSqliteHandlerDeps stub, only `search` overridden per test. */
 function makeBaseDeps(overrides: Partial<DashboardSqliteHandlerDeps> = {}): DashboardSqliteHandlerDeps {

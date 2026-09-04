@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { PROVIDER_CATALOG, ProviderCatalog, UnknownProviderError } from '../providerCatalog.js';
+import { PROVIDER_CATALOG, ProviderCatalog, UnknownProviderError, isAllowedProviderBaseUrl } from '../providerCatalog.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { ProviderId } from '../../../utils/storage/types.js';
 import { getMessage } from '../../../utils/i18n.js';
@@ -153,5 +153,133 @@ describe('ProviderCatalog conformance', () => {
         expect(schemaByKey.get(entry.modelKey), `${id}: ${entry.modelKey}`).toBe('text');
       }
     }
+  });
+});
+
+describe('isAllowedProviderBaseUrl — SSRF guard', () => {
+  // Happy path
+  it('allows https url for non-local provider', () => {
+    // BDD: Given a non-local provider with a public https endpoint
+    //      When isAllowedProviderBaseUrl is called with isLocal=false
+    //      Then it returns true
+    expect(isAllowedProviderBaseUrl('https://api.openai.com/', false)).toBe(true);
+  });
+
+  it('allows https url with path for non-local provider', () => {
+    expect(isAllowedProviderBaseUrl('https://api.openai.com/v1', false)).toBe(true);
+  });
+
+  // Metadata service
+  it('blocks metadata service IP 169.254.169.254', () => {
+    expect(isAllowedProviderBaseUrl('http://169.254.169.254/', false)).toBe(false);
+    expect(isAllowedProviderBaseUrl('http://169.254.169.254/', true)).toBe(false);
+  });
+
+  // Link-local range
+  it('blocks link-local range 169.254.0.0/16', () => {
+    expect(isAllowedProviderBaseUrl('http://169.254.1.1/', false)).toBe(false);
+    expect(isAllowedProviderBaseUrl('http://169.254.0.1/', true)).toBe(false);
+  });
+
+  // Loopback range
+  it('blocks loopback range 127.0.0.0/8', () => {
+    expect(isAllowedProviderBaseUrl('http://127.0.0.2/', false)).toBe(false);
+    expect(isAllowedProviderBaseUrl('http://127.0.0.1/', false)).toBe(false);
+  });
+
+  // Zero IP
+  it('blocks 0.0.0.0/8 range', () => {
+    expect(isAllowedProviderBaseUrl('http://0.0.0.0/', false)).toBe(false);
+    expect(isAllowedProviderBaseUrl('http://0.0.1.1/', true)).toBe(false);
+  });
+
+  // Integer-encoded IPv4: URL parser resolves 2130706433 to 127.0.0.1 (local providers allow it)
+  // But non-local providers block http to 127.0.0.1 as well as non-localhost
+  it('integer-encoded 127.0.0.1 (2130706433): blocked for non-local, allowed for local', () => {
+    expect(isAllowedProviderBaseUrl('http://2130706433/', false)).toBe(false);
+    expect(isAllowedProviderBaseUrl('http://2130706433/', true)).toBe(true);
+  });
+  it('integer-encoded 10.0.0.1 (167772161): URL resolves to private IP, blocked', () => {
+    expect(isAllowedProviderBaseUrl('http://167772161/', false)).toBe(false);
+  });
+
+  // Hex-encoded IPv4: URL parser resolves 0x7f000001 to 127.0.0.1
+  it('hex-encoded 127.0.0.1 (0x7f000001): blocked for non-local, allowed for local', () => {
+    expect(isAllowedProviderBaseUrl('http://0x7f000001/', false)).toBe(false);
+    expect(isAllowedProviderBaseUrl('http://0x7f000001/', true)).toBe(true);
+  });
+  it('hex-encoded 10.0.0.1 (0x0a000001): URL resolves to private IP, blocked', () => {
+    expect(isAllowedProviderBaseUrl('http://0x0a000001/', false)).toBe(false);
+  });
+
+  // IPv6 loopback
+  it('blocks IPv6 loopback ::1', () => {
+    expect(isAllowedProviderBaseUrl('http://[::1]/', false)).toBe(false);
+    expect(isAllowedProviderBaseUrl('http://[::1]/', true)).toBe(false);
+  });
+
+  // IPv4-mapped IPv6
+  it('blocks IPv4-mapped IPv6 ::ffff:127.0.0.1', () => {
+    expect(isAllowedProviderBaseUrl('http://[::ffff:127.0.0.1]/', false)).toBe(false);
+    expect(isAllowedProviderBaseUrl('http://[::ffff:127.0.0.1]/', true)).toBe(false);
+  });
+
+  // ULA
+  it('blocks ULA fc00::/7', () => {
+    expect(isAllowedProviderBaseUrl('http://[fc00::1]/', false)).toBe(false);
+    expect(isAllowedProviderBaseUrl('http://[fd00::1]/', false)).toBe(false);
+  });
+
+  // Private ranges
+  it('blocks private range 10.0.0.0/8', () => {
+    expect(isAllowedProviderBaseUrl('http://10.0.0.1/', false)).toBe(false);
+  });
+
+  it('blocks private range 192.168.0.0/16', () => {
+    expect(isAllowedProviderBaseUrl('http://192.168.1.1/', false)).toBe(false);
+  });
+
+  it('blocks private range 172.16.0.0/12', () => {
+    expect(isAllowedProviderBaseUrl('http://172.16.0.1/', false)).toBe(false);
+    expect(isAllowedProviderBaseUrl('http://172.31.255.255/', false)).toBe(false);
+  });
+
+  // Trailing dot
+  it('blocks metadata host with trailing dot (normalization)', () => {
+    expect(isAllowedProviderBaseUrl('http://metadata.google.internal./', false)).toBe(false);
+    expect(isAllowedProviderBaseUrl('http://metadata.google.internal./', true)).toBe(false);
+  });
+
+  it('blocks metadata host without trailing dot', () => {
+    expect(isAllowedProviderBaseUrl('http://metadata.google.internal/', false)).toBe(false);
+  });
+
+  // Invalid URL
+  it('returns false for invalid URL', () => {
+    expect(isAllowedProviderBaseUrl('not-a-url', false)).toBe(false);
+    expect(isAllowedProviderBaseUrl('', false)).toBe(false);
+  });
+
+  // Non-http protocol
+  it('returns false for non-http(s) protocol', () => {
+    expect(isAllowedProviderBaseUrl('ftp://example.com/', false)).toBe(false);
+    expect(isAllowedProviderBaseUrl('file:///etc/passwd', false)).toBe(false);
+  });
+
+  // isLocal=true with localhost
+  it('allows http localhost when isLocal=true', () => {
+    expect(isAllowedProviderBaseUrl('http://localhost:11434/v1', true)).toBe(true);
+    expect(isAllowedProviderBaseUrl('http://localhost:11434/', true)).toBe(true);
+  });
+
+  // isLocal=false with http
+  it('rejects http for non-local provider (https only)', () => {
+    expect(isAllowedProviderBaseUrl('http://api.openai.com/', false)).toBe(false);
+  });
+
+  // Additional: https private range still blocked even for isLocal=false (SSRF takes precedence)
+  it('blocks https private IPs even though protocol is allowed', () => {
+    expect(isAllowedProviderBaseUrl('https://192.168.1.1/', false)).toBe(false);
+    expect(isAllowedProviderBaseUrl('https://10.0.0.1/', false)).toBe(false);
   });
 });

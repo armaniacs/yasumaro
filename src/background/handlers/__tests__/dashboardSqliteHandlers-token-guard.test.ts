@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { dispatchDashboardSqlite } from './dashboardSqliteTestHarness.js';
-import { SqliteClient } from '../../sqliteClient.js';
+import { SqliteClient } from '../../sqlite/offscreenGateway.js';
 import {
   TOKEN_REQUIRED_SUBTYPES,
   TOKEN_EXEMPT_OPS,

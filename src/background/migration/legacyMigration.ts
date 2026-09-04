@@ -7,7 +7,7 @@
  */
 
 import { addLog, LogType } from '../../utils/logger.js';
-import { SqliteClient } from '../sqliteClient.js';
+import { SqliteClient } from '../sqlite/offscreenGateway.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import type { MigrationStatePort } from './migrationState.js';

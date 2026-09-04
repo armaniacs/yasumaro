@@ -8,7 +8,7 @@
  * - 読み込み→更新→書き込み間での競合を検出
  */
 
-import { withOptimisticLock } from '../optimisticLock.js';
+import { withOptimisticLock } from '../storage/storageTransaction.js';
 
 // Chrome Storage API モック
 const mockStorage: Record<string, any> = {};

@@ -185,8 +185,8 @@ const mockRemoveSensitiveDomain = vi.fn(() => Promise.resolve());
 const mockAddToWhitelist = vi.fn(() => Promise.resolve({ success: true }));
 const mockRemoveFromWhitelist = vi.fn(() => Promise.resolve());
 
-vi.mock('../../../utils/trustDb/trustDb.js', () => ({
-  getTrustDb: vi.fn(() => ({
+vi.mock('../../../utils/trustDb/TrustDbAdmin.js', () => ({
+  getTrustDbAdmin: vi.fn(() => ({
     initialize: mockInitialize,
     getDatabase: mockGetDatabase,
     getJpAnchorTlds: mockGetJpAnchorTlds,
@@ -216,6 +216,7 @@ const mockLogWarn = vi.fn();
 const mockLogError = vi.fn();
 
 vi.mock('../../../utils/logger.js', () => ({
+  logDebug: vi.fn(),
   logInfo: mockLogInfo,
   logWarn: mockLogWarn,
   logError: mockLogError,

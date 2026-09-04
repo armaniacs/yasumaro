@@ -29,7 +29,8 @@ const mockChrome = {
 (global as any).chrome = mockChrome;
 
 // optimisticLock モック
-vi.mock('../optimisticLock.js', () => ({
+vi.mock('../storage/storageTransaction.js', () => ({
+    StorageTransaction: class StorageTransaction { withLock = async (_k: string, fn: (v: unknown) => unknown) => fn(undefined); withAtomic = async (_ks: unknown, fn: (vs: unknown) => unknown) => fn([]); },
     withOptimisticLock: vi.fn(async (key: string, fn: (current: any) => any) => {
         const storageKey = key === 'savedUrlsWithTimestamps' ? 'savedUrlsWithTimestamps' : 'settings';
         const current = mockStorage[storageKey] || [];

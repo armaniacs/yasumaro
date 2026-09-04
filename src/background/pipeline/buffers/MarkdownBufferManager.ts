@@ -1,5 +1,5 @@
 import type { MarkdownTemplateEntryData } from '../../../utils/types.js';
-import { withAtomicKeys } from '../../../utils/optimisticLock.js';
+import { withAtomicKeys } from '../../../utils/storage/storageTransaction.js';
 
 export interface MarkdownEntry {
   url: string;

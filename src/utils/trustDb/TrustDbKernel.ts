@@ -2,13 +2,13 @@
  * TrustDbKernel.ts
  * Owns TrustDbState + initialize/save/rebuildCaches lifecycle.
  * Settings access via StoragePort / SettingsRepository (static import), no dynamic import of storage.js.
- * Single place that reads chrome.storage.local.get('trust_db:json').
+ * Persistence key owned by storage layer (StorageKeys.TRUST_DB); Kernel is single reader/writer via that key.
  */
 
 import type { TrustDatabase, TrustResult } from './trustDbSchema.js';
 import { TrustBloomFilter, bloomFilterFromData } from './bloomFilter.js';
 import { logDebug, logInfo, logWarn, logError, ErrorCode } from '../logger.js';
-import { withOptimisticLock } from '../optimisticLock.js';
+import { withOptimisticLock } from '../storage/storageTransaction.js';
 import { mergeTrustDatabase } from './mergeTrustDatabase.js';
 import { TRANCO_VERSION as CURRENT_TRANCO_VERSION } from './presetDomains.js';
 import { SENSITIVE_DOMAINS_PRESETS as PRESETS, JP_ANCHOR_TLDS } from './presets.js';
@@ -18,7 +18,7 @@ import { ManagedCollections } from './ManagedCollections.js';
 import { TrustPolicy } from './TrustPolicy.js';
 import { StorageKeys } from '../storage/types.js';
 
-const STORAGE_KEY = 'trust_db:json';
+const STORAGE_KEY = StorageKeys.TRUST_DB;
 const JP_ANCHOR_TLDS_PRESET = [...JP_ANCHOR_TLDS] as readonly string[];
 const SENSITIVE_DOMAINS_PRESETS = PRESETS;
 
@@ -57,21 +57,25 @@ export class TrustDbKernel {
     const defaultReader = {
       getAll: async (): Promise<Record<string, unknown>> => {
         try {
-          const r = await chrome.storage.local.get('settings');
-          return (r['settings'] as Record<string, unknown>) ?? {};
+          const { settingsRepository } = await import('../storage/SettingsRepository.js');
+          return (await settingsRepository.getAll()) as unknown as Record<string, unknown>;
         } catch {
           return {};
         }
       },
       setAll: async (items: Record<string, unknown>): Promise<void> => {
-        const r = await chrome.storage.local.get('settings');
-        const cur = (r['settings'] as Record<string, unknown>) ?? {};
-        await chrome.storage.local.set({ settings: { ...cur, ...items } });
+        const { settingsRepository } = await import('../storage/SettingsRepository.js');
+        await settingsRepository.setAll(items as unknown as Parameters<typeof settingsRepository.setAll>[0]);
       },
     };
     this.settingsReader = opts?.settingsReader ?? defaultReader;
     this.policy = new TrustPolicy({ save: () => this.save() });
     this.trustDbVersion = new TrustDbVersion({ save: () => this.save() });
+  }
+
+  /** True after initialize() completed */
+  isInitialized(): boolean {
+    return this.state.initialized;
   }
 
   // ---- Lifecycle ----
@@ -323,6 +327,10 @@ export class TrustDbKernel {
   async getSavedTrancoDomains(): Promise<string[]> {
     const settings = await this.settingsReader.getAll();
     return (settings[StorageKeys.TRANCO_DOMAINS] as string[]) || [];
+  }
+
+  getPolicy(): TrustPolicy {
+    return this.policy;
   }
 
   // expose internal state for tests that poke state directly

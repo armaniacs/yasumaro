@@ -12,9 +12,9 @@ import { vi } from 'vitest';;
 
 describe('TrustDatabase - Phase 1 - Module Loading', () => {
   it('should trustDb module be loadable', async () => {
-    const trustDbModule = await import('../trustDb/trustDb.js');
+    const trustDbModule = await import('../trustDb/TrustDbAdmin.js');
     expect(trustDbModule).toBeDefined();
-    expect(typeof trustDbModule.getTrustDb).toBe('function');
+    expect(typeof trustDbModule.getTrustDbAdmin).toBe('function');
   });
 
   it('should trustDbSchema module be loadable', async () => {
@@ -55,16 +55,16 @@ describe('DOMAIN_REGEX trailing dot fix', () => {
 
 describe('addUserTld / addJpAnchorTld parity', () => {
   it('addUserTld rejects invalid TLD', async () => {
-    const trustDbModule = await import('../trustDb/trustDb.js');
-    const db = trustDbModule.getTrustDb();
+    const trustDbModule = await import('../trustDb/TrustDbAdmin.js');
+    const db = trustDbModule.getTrustDbAdmin();
     await db.initialize();
     const r = await db.addUserTld('invalid!tld');
     expect(r.success).toBe(false);
   });
 
   it('addJpAnchorTld rejects same invalid TLD', async () => {
-    const trustDbModule = await import('../trustDb/trustDb.js');
-    const db = trustDbModule.getTrustDb();
+    const trustDbModule = await import('../trustDb/TrustDbAdmin.js');
+    const db = trustDbModule.getTrustDbAdmin();
     await db.initialize();
     const r = await db.addJpAnchorTld('invalid!tld');
     expect(r.success).toBe(false);
@@ -73,8 +73,8 @@ describe('addUserTld / addJpAnchorTld parity', () => {
 
 describe('createBloomFilterFromPresets refactoring validation', () => {
   it('should flatten SENSITIVE_DOMAINS_PRESETS correctly', async () => {
-    const trustDbModule = await import('../trustDb/trustDb.js');
-    const db = trustDbModule.getTrustDb();
+    const trustDbModule = await import('../trustDb/TrustDbAdmin.js');
+    const db = trustDbModule.getTrustDbAdmin();
 
     // Access private method via prototype for testing
     // This validates that Object.values(SENSITIVE_DOMAINS_PRESETS).flat() works correctly
@@ -105,8 +105,8 @@ describe('createBloomFilterFromPresets refactoring validation', () => {
   });
 
   it('should verify bloomFilter data contains all preset domains', async () => {
-    const trustDbModule = await import('../trustDb/trustDb.js');
-    const db = trustDbModule.getTrustDb();
+    const trustDbModule = await import('../trustDb/TrustDbAdmin.js');
+    const db = trustDbModule.getTrustDbAdmin();
 
     await db.initialize();
     const database = db.getDatabase();

@@ -105,6 +105,9 @@ describe('narrowEntriesToTopTags (VULN-053 pre-narrowing)', () => {
     run(500);
     const t1 = Math.max(run(500), 0.01);
     const t4 = run(2000);
-    expect(t4).toBeLessThan(t1 * 8);
+    // 12x (not 8x): wall-clock perf assertions on shared CI hardware pick up
+    // scheduling noise; 4x data at 12x time still rejects the quadratic blow-up
+    // this guards against (observed ~6x on a loaded machine, VULN-053 fix ~2x).
+    expect(t4).toBeLessThan(t1 * 12);
   });
 });
