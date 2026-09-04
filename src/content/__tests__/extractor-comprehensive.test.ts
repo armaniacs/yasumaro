@@ -293,8 +293,9 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
     expect(ps.maxScrollPercentage).toBeCloseTo(50);
   });
 
-  it('checkVisitConditions E2E hook sets window.__OW_TEST_STATE and attribute', () => {
+  it('checkVisitConditions E2E hook sets window.__OW_TEST_STATE and attribute', async () => {
     document.documentElement.setAttribute('data-ow-e2e-test', 'true');
+    await init(); // isE2E is resolved once at init under the PBI 02 contract
     const ps = getPageStateForTesting() as unknown as PageState;
     ps.maxScrollPercentage = 80;
     ps.isValidVisitReported = false;
@@ -333,35 +334,25 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
     Object.defineProperty(document, 'hidden', { value: false, configurable: true });
   });
 
-  it('scheduleNextCheck uses requestIdleCallback when available', async () => {
+  it('scheduleNextCheck schedules a one-shot deadline timer and does not self-reschedule', () => {
     const ps = getPageStateForTesting() as unknown as PageState;
     ps.isValidVisitReported = false;
     ps.checkIntervalId = null;
     Object.defineProperty(document, 'hidden', { value: false, configurable: true });
-    let called = false;
-    let callCount = 0;
-    (window as unknown as Record<string, unknown>).requestIdleCallback = (cb: () => void) => {
-      called = true;
-      // prevent infinite recursion: only trigger first callback, subsequent scheduleNextCheck will be guarded by isValidVisitReported flag via ps mutation
-      if (callCount === 0) {
-        callCount++;
-        // set reported to true so recursive scheduleNextCheck returns early
-        ps.isValidVisitReported = true;
-        cb();
-        ps.isValidVisitReported = false;
-      }
-      return 123;
-    };
-    (window as unknown as Record<string, unknown>).cancelIdleCallback = () => {};
     Object.defineProperty(document.documentElement, 'scrollHeight', { value: 2000, configurable: true });
     Object.defineProperty(window, 'innerHeight', { value: 500, configurable: true });
     Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
     scheduleNextCheck();
-    expect(called).toBe(true);
-    delete (window as unknown as Record<string, unknown>).requestIdleCallback;
-    delete (window as unknown as Record<string, unknown>).cancelIdleCallback;
-    ps.isValidVisitReported = false;
-    ps.checkIntervalId = null;
+    expect(ps.checkIntervalId).not.toBeNull();
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), expect.any(Number));
+    // Fire the deadline: conditions unmet (scroll 0%) → evaluate once, never self-reschedule.
+    const countBefore = setTimeoutSpy.mock.calls.length;
+    const lastCall = setTimeoutSpy.mock.calls.at(-1)!;
+    (lastCall[0] as () => void)();
+    expect(ps.checkIntervalId).toBeNull();
+    expect(setTimeoutSpy.mock.calls.length).toBe(countBefore);
+    setTimeoutSpy.mockRestore();
     stopPeriodicCheck();
   });
 

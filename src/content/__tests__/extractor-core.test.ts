@@ -206,31 +206,23 @@ describe('extractPageContent', () => {
         expect(getSpy).toHaveBeenCalledWith(['settings']);
     });
 
-    it('uses requestIdleCallback for periodic checks when available', async () => {
-        let invoked = false;
-        const requestIdleCallbackSpy = vi.fn((callback: () => void) => {
-            // Invoke once to avoid infinite rescheduling loop in tests
-            if (!invoked) {
-                invoked = true;
-                callback();
-            }
-            return 123;
-        });
-        window.requestIdleCallback = requestIdleCallbackSpy as unknown as typeof window.requestIdleCallback;
-
+    it('schedules a one-shot deadline timer after init (PBI 02: polling removed)', async () => {
+        const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
         await init();
-        expect(requestIdleCallbackSpy).toHaveBeenCalled();
+        expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), expect.any(Number));
+        setTimeoutSpy.mockRestore();
     });
 
-    it('stops periodic checks when the page becomes hidden', async () => {
-        const cancelIdleCallbackSpy = vi.fn();
-        window.cancelIdleCallback = cancelIdleCallbackSpy as unknown as typeof window.cancelIdleCallback;
-        let idleHandle = 0;
-        window.requestIdleCallback = vi.fn(() => ++idleHandle) as unknown as typeof window.requestIdleCallback;
-
+    it('cancels the pending deadline timer when the page becomes hidden', async () => {
         await init();
+        const ps = getPageStateForTesting() as unknown as { checkIntervalId: number | null };
+        const handle = ps.checkIntervalId;
+        expect(handle).not.toBeNull();
+        const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
         Object.defineProperty(document, 'hidden', { value: true, configurable: true });
         document.dispatchEvent(new Event('visibilitychange'));
-        expect(cancelIdleCallbackSpy).toHaveBeenCalledWith(idleHandle);
+        expect(clearTimeoutSpy).toHaveBeenCalledWith(handle);
+        Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+        clearTimeoutSpy.mockRestore();
     });
 });
