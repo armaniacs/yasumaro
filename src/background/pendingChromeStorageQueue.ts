@@ -8,23 +8,15 @@
 
 import { addLog, LogType } from '../utils/logger.js';
 import { PersistentRetryQueue, ChromeStorageAdapter } from './persistentRetryQueue.js';
-import { estimatePayloadSize } from './queue/payload.js';
+import {
+  MAX_PATCH_PAYLOAD_BYTES,
+  MAX_PENDING_WRITES,
+  coalesceMetadataPatch,
+  isMetadataPatchWrite,
+} from './pendingPatchPolicy.js';
 import type { SavedUrlEntryMetadataPatch } from '../utils/storage/savedUrlRepository.js';
 
 export const PENDING_CHROME_STORAGE_KEY = 'pending_chrome_storage_writes';
-
-/** Hard cap so a prolonged storage outage can't grow this list unbounded. */
-const MAX_PENDING_WRITES = 500;
-
-/**
- * Per-entry payload cap for a merged metadata patch. content is omitted
- * first when a merge exceeds this; if the payload is still too large
- * afterwards (e.g. very large accumulated tags), tags are truncated too.
- */
-const MAX_PATCH_PAYLOAD_BYTES = 100 * 1024;
-
-/** How many tags to keep (most recent first) when a merge must be truncated. */
-const MAX_TAGS_AFTER_TRUNCATION = 50;
 
 /**
  * Legacy payload: a raw chrome.storage write that failed. Kept so payloads
@@ -59,52 +51,6 @@ export interface PendingMetadataPatchWrite {
 export type QueuedChromeStorageWrite = PendingChromeStorageWrite | PendingMetadataPatchWrite;
 
 /**
- * Shrink a metadata patch to fit MAX_PATCH_PAYLOAD_BYTES: drop `content`
- * first, then trim `tags` from the front (oldest first) until it fits or
- * nothing is left. Used for both a freshly merged patch and a brand-new one,
- * so the size limit is enforced identically regardless of which path queued
- * the write.
- */
-function truncatePatchToFit(
-  patch: SavedUrlEntryMetadataPatch,
-): { patch: SavedUrlEntryMetadataPatch; contentOmitted: boolean; tagsOmitted: boolean } {
-  let result = patch;
-  let contentOmitted = false;
-  let tagsOmitted = false;
-  let size = estimatePayloadSize(result);
-
-  if (size > MAX_PATCH_PAYLOAD_BYTES && result.content) {
-    const { content: _content, ...rest } = result;
-    result = rest;
-    contentOmitted = true;
-    size = estimatePayloadSize(result);
-  }
-
-  if (size > MAX_PATCH_PAYLOAD_BYTES && result.tags && result.tags.length > 0) {
-    let truncatedTags = result.tags.slice(-MAX_TAGS_AFTER_TRUNCATION);
-    let candidate = { ...result, tags: truncatedTags };
-    let candidateSize = estimatePayloadSize(candidate);
-    // Even MAX_TAGS_AFTER_TRUNCATION tags might still be too large if
-    // individual tag strings are unusually long — keep shrinking from the
-    // front until it fits or nothing is left.
-    while (candidateSize > MAX_PATCH_PAYLOAD_BYTES && truncatedTags.length > 0) {
-      truncatedTags = truncatedTags.slice(1);
-      candidate = { ...result, tags: truncatedTags };
-      candidateSize = estimatePayloadSize(candidate);
-    }
-    if (truncatedTags.length > 0) {
-      result = candidate;
-    } else {
-      const { tags: _tags, ...rest } = candidate;
-      result = rest;
-    }
-    tagsOmitted = true;
-  }
-
-  return { patch: result, contentOmitted, tagsOmitted };
-}
-
-/**
  * Create a pending write queue with the given adapter.
  * The default export uses ChromeStorageAdapter; tests can inject InMemoryAdapter.
  */
@@ -120,48 +66,14 @@ export function createPendingWriteQueue(adapter: ChromeStorageAdapter) {
 
   return {
     async enqueuePendingWrite(write: QueuedChromeStorageWrite): Promise<void> {
-      if ('type' in write && write.type === 'metadataPatch') {
-        const existing = await queue.load();
-        const sameUrlIndex = existing.findIndex(
-          (w) => 'type' in w && (w as PendingMetadataPatchWrite).type === 'metadataPatch' && (w as PendingMetadataPatchWrite).url === write.url,
-        );
-        if (sameUrlIndex >= 0) {
-          const existingPatch = existing[sameUrlIndex] as PendingMetadataPatchWrite;
-          const mergedPatch = { ...existingPatch.patch, ...write.patch };
-          if (write.mergeTags && existingPatch.mergeTags && existingPatch.patch.tags && write.patch.tags) {
-            mergedPatch.tags = Array.from(new Set([...(existingPatch.patch.tags || []), ...(write.patch.tags || [])]));
-          }
-          const latestTimestamp = Math.max(existingPatch.timestamp || 0, write.timestamp || 0);
-          const { patch: fittedPatch, contentOmitted, tagsOmitted } = truncatePatchToFit(mergedPatch);
-          existing[sameUrlIndex] = {
-            ...existingPatch,
-            patch: fittedPatch,
-            timestamp: latestTimestamp,
-            createdAt: existingPatch.createdAt,
-            retryCount: 0,
-            contentOmitted,
-            tagsOmitted,
-          };
-
-          await queue.save(existing);
-          return;
-        }
+      // Metadata patches coalesce by URL inside the queue lock (mutate) —
+      // never as a load()/save() pair, which races flush by construction
+      // (VULN-056). Plain writes keep the capped enqueue path.
+      if (isMetadataPatchWrite(write)) {
+        await queue.mutate((writes) => coalesceMetadataPatch(writes, write));
+        return;
       }
-
-      // Truncate new metadata patches that exceed the payload limit.
-      let queuedWrite = write;
-      if ('type' in write && write.type === 'metadataPatch') {
-        const { patch: fittedPatch, contentOmitted, tagsOmitted } = truncatePatchToFit((write as PendingMetadataPatchWrite).patch);
-        if (contentOmitted || tagsOmitted) {
-          queuedWrite = {
-            ...write,
-            patch: fittedPatch,
-            contentOmitted,
-            tagsOmitted,
-          } as PendingMetadataPatchWrite;
-        }
-      }
-      await queue.enqueue(queuedWrite);
+      await queue.enqueue(write);
     },
 
     async flushPendingWrites(
