@@ -14,7 +14,22 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-**進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る。
+### 2026-09-04 Architecture Round 2（0904b 診断） — 7 件
+
+backlog: [2026-09-04-00-backlog-arch2.md](2026-09-04-00-backlog-arch2.md)。着手順 = NN（RICE 降順・依存尊重: 12→16 / 11→17 / 13→14 は同一ファイル群）。
+診断レポート: `$TMPDIR/architecture-review-20260904112600.html`（Phase 0、10 候補 — Strong 5 / Worth exploring 4 / Speculative 1、クリーン判定: contentDeduplicator / rules.ts / classifier / scoring / helpers predicates / cleansingOffscreen / asyncData panel 分割）。
+
+| NN | PBI | 種別 | 難易度 | 副作用 | RICE | 状態 |
+|----|-----|------|--------|--------|------|------|
+| 11 | [fix-history-query-cache-module](2026-09-04-11-fix-history-query-cache-module.md) | 🔧 | 🟡 2pt | 🟢 | 53 | ⬜ |
+| 12 | [fix-extract-path-unification](2026-09-04-12-fix-extract-path-unification.md) | 🔧 | 🔴 3pt | 🟡 | 38.4 | ⬜ |
+| 13 | [fix-bench-args-parser](2026-09-04-13-fix-bench-args-parser.md) | 🔧 | 🟢 1pt | 🟢 | 24 | ⬜ |
+| 14 | [fix-bench-write-artifacts](2026-09-04-14-fix-bench-write-artifacts.md) | 🔧 | 🟡 2pt | 🟢 | 20 | ⬜ |
+| 15 | [refactor-content-deadline-timer](2026-09-04-15-refactor-content-deadline-timer.md) | 🔧 | 🟡 2pt | 🟡 | 13.3 | ⬜ |
+| 16 | [fix-cleanse-options-byte-units](2026-09-04-16-fix-cleanse-options-byte-units.md) | 🔧 | 🟢 1pt | 🟡 | 8 | ⬜ |
+| 17 | [fix-sort-persist-scheduler](2026-09-04-17-fix-sort-persist-scheduler.md) | 🔧 | 🟢 1pt | 🟢 | 8 | ⬜ |
+
+将来候補（backlog 遡及）: helpers deep-scan wire-or-delete（製品判断待ち）/ tokenizer 署名化 / trendReport 分離。
 
 ### 2026-09-04 ベンチ履歴トレンド表示（1 件） — 完了
 
