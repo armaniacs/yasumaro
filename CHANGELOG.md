@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.103` リリース。
+> - 現時点では `v6.7.105` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -33,11 +33,13 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
-## [Unreleased]
+## [6.7.105] - 2026-09-04
+
+このリリースは v6.7.104 と同日に公開する、開発者向けツール整備中心のリリースです。
 
 ### 開発者向け / 非機能
 
-- パフォーマンスベンチマーク基盤を追加（`bench/`）。局所ベンチ（Node + jsdom、`npm run bench:micro`）は wall-clock P50/P95/P99・DOM 走査数・ヒープ差分・スケーリング指数を計測し、`c1`〜`c7` が最適化 PBI（`pbi/2026-09-04-02`〜`08`）に対応。e2e ベンチ（Playwright、`npm run bench:e2e`）は自動保存の同期コスト（`ow-extract-start`〜`ow-send-ready` マーク区間 = extract + cleanse の同期処理のみ）・Long Tasks/TBT・メモリ・Lighthouse・Service Worker cold start を CPU 4x throttle 下で計測。`npm run bench:check` が `bench/baselines/micro.json` 比 +15% の回帰で exit 1。既存の `benchmark:cleansing` は新ハーネスへ移行（後方互換維持）。
+- パフォーマンスベンチマーク基盤を追加（`bench/`）。局所ベンチ（Node + jsdom、`npm run bench:micro`）は wall-clock P50/P95/P99・DOM 走査数・ヒープ差分・スケーリング指数を計測し、`c1`〜`c7` が最適化 PBI（`pbi/2026-09-04-02`〜`08`）に対応。e2e ベンチ（Playwright、`npm run bench:e2e`）は自動保存の同期コスト（`ow-extract-start`〜`ow-send-ready` マーク区間 = extract + cleanse の同期処理のみ）・Long Tasks/TBT・メモリ・Lighthouse・Service Worker cold start を CPU 4x throttle 下で計測。`npm run bench:check` が `bench/baselines/micro.json` 比 +15% の回帰で exit 1。既存の `benchmark:cleansing` は新ハーネスへ移行（後方互換維持）。HTML レポートは自己完結ファイルとして `bench/reports/` に生成され、レポートはローリング 5 世代 + 週次アンカーで自動掃除される。`make` ターゲット（`make bench-micro` 等）からも呼び出し可能。
 
 ## [6.7.104] - 2026-09-04
 
