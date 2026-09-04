@@ -44,6 +44,14 @@ export interface AiSummaryCleanseOptions extends AiSummaryCleanseRuleFlags {
     // Over-cleansed fallback thresholds
     fallbackRatio?: number;           // 過剰削減フォールバック比率閾値（デフォルト: 0.20）
     fallbackMinBytes?: number;        // 過剰削減フォールバック絶対量閾値（デフォルト: 300）
+    // Byte measurement
+    /**
+     * Measure outerHTML bytes via Blob. Default true (legacy behavior for
+     * direct callers); contentExtractor passes false because it recomputes
+     * its own bytes via TextEncoder and the cleaner serialization is
+     * redundant there.
+     */
+    measureBytes?: boolean;
 }
 
 /**

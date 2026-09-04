@@ -13,7 +13,8 @@
  * contentCleaner → aiSummaryCleaner) across every caller.
  */
 
-import { extractMainContent } from './contentExtractor/index.js';
+import { extractMainContentWithInfo } from './contentExtractor/index.js';
+import type { ExtractCleanseOptions, ExtractAiSummaryOptions, ExtractDedupOptions } from './contentExtractor/index.js';
 import { buildExtractionOptions } from './contentExtractor/optionBuilder.js';
 import type { ExtractResult } from './contentExtractor/types.js';
 import type { CleansingConfig } from '../content/pageState.js';
@@ -29,7 +30,7 @@ export type { ExtractResult } from './contentExtractor/types.js';
  * Prepare page content from the current document.
  *
  * Hides the two-step orchestration that every caller previously re-derived:
- *   buildExtractionOptions(config) → extractMainContent(maxChars, opts)
+ *   buildExtractionOptions(config) → extractMainContentWithInfo(maxChars, opts)
  *
  * The caller provides only the high-level CleansingConfig (or nothing for the
  * default pageState). All 32 rule flags, thresholds, and whitelist logic are
@@ -40,7 +41,7 @@ export type { ExtractResult } from './contentExtractor/types.js';
  * to do with the result (locality).
  *
  * @param config - CleansingConfig, defaults to a fresh PageState's config when omitted
- * @param maxChars - maximum characters, defaults to 10000 (same as extractMainContent)
+ * @param maxChars - maximum characters, defaults to 10000 (same as extractMainContentWithInfo)
  */
 export function preparePageContent(
   config?: CleansingConfig,
@@ -56,14 +57,15 @@ export function preparePageContent(
   const { cleanseOptions, aiSummaryCleanseOptions, dedupOptions } =
     buildExtractionOptions(effectiveConfig);
 
-  const result = extractMainContent(
+  // Diagnostics path: the pipeline consumes ExtractResult fields
+  // (cleansedReason, byte stats, fallback state), so it uses the WithInfo
+  // entry — byte measurement stays enabled, as it genuinely consumes them.
+  return extractMainContentWithInfo(
     maxChars,
     cleanseOptions,
     aiSummaryCleanseOptions,
     dedupOptions,
   );
-
-  return typeof result === 'string' ? { content: result } : result;
 }
 
 /**
@@ -73,18 +75,17 @@ export function preparePageContent(
  * extractor.ts shim). New code should use preparePageContent(config).
  */
 export function prepareFromOptions(
-  cleanseOptions: Parameters<typeof extractMainContent>[1],
-  aiSummaryCleanseOptions: Parameters<typeof extractMainContent>[2],
-  dedupOptions: Parameters<typeof extractMainContent>[3],
+  cleanseOptions: ExtractCleanseOptions,
+  aiSummaryCleanseOptions: ExtractAiSummaryOptions,
+  dedupOptions: ExtractDedupOptions,
   maxChars: number = 10000,
 ): ExtractResult {
-  const result = extractMainContent(
+  return extractMainContentWithInfo(
     maxChars,
     cleanseOptions,
     aiSummaryCleanseOptions,
     dedupOptions,
   );
-  return typeof result === 'string' ? { content: result } : result;
 }
 
 /**

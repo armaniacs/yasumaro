@@ -1,7 +1,17 @@
 import { calculateReadabilityScore } from './readabilityScore.js';
 
 const BODY_PROTECTION_ATTR = 'data-ow-body-protected';
-const DEFAULT_BODY_SCORE_THRESHOLD = 120;  // M4 Spike: 200→120 で短文3/3保護（33%→100%）
+export const DEFAULT_BODY_SCORE_THRESHOLD = 120;  // M4 Spike: 200→120 で短文3/3保護（33%→100%）
+
+/**
+ * Default threshold for the cleanse entry (cleanseAISummaryContent).
+ * Kept at 200: the dashboard settings default (`?? 200` in
+ * aiSummaryCleansingSettingsV2.ts) and every contentExtractor caller rely on
+ * the implicit 200, so adopting 120 here would silently expand body
+ * protection on the extractor path. Unify here — the single owner of body
+ * protection defaults — rather than as a magic number at the call site.
+ */
+export const DEFAULT_CLEANSE_BODY_PROTECTION_THRESHOLD = 200;
 
 // クレンジング前: 本文スコアが高い要素に保護マーカーを付ける
 export function markBodyElements(root: Element, threshold: number = DEFAULT_BODY_SCORE_THRESHOLD): void {

@@ -14,23 +14,9 @@
 
 import { logDebug } from '../logger.js';
 import type { AiSummaryCleanseOptions, AiSummaryCleanseResult, CleansingRemovalCounts } from './types.js';
-import { markBodyElements, unmarkBodyElements } from './bodyProtection.js';
+import { markBodyElements, unmarkBodyElements, DEFAULT_CLEANSE_BODY_PROTECTION_THRESHOLD } from './bodyProtection.js';
 import { CLEANSING_RULES, isRuleEnabled, resolveThresholds } from './rules.js';
 
-// Augments AiSummaryCleanseOptions (declared in types.ts) with the opt-in byte
-// measurement flag and the caller-cloned contract flag. Kept here so callers
-// can gate the two outerHTML serializations and the internal clone without
-// changing the shared type file.
-declare module './types.js' {
-    interface AiSummaryCleanseOptions {
-        /**
-         * Measure outerHTML bytes via Blob. Default true (legacy behavior for
-         * direct callers); contentExtractor passes returnInfo through so the
-         * hot path measures only for diagnostics.
-         */
-        measureBytes?: boolean;
-    }
-}
 // 型とルール表を再エクスポート
 export type { AiSummaryCleanseOptions, AiSummaryCleanseResult, CleansingRemovalCounts, RuleKey, AiSummaryCleanseRuleFlags } from './types.js';
 export { CLEANSING_RULES, CLEANSING_RULE_KEYS, isRuleEnabled, resolveThresholds } from './rules.js';
@@ -75,7 +61,7 @@ export function cleanseAISummaryContent(
     element: Element,
     options: AiSummaryCleanseOptions = {}
 ): AiSummaryCleanseResult {
-    const { bodyProtectionEnabled = true, bodyProtectionThreshold = 200, measureBytes = true } = options;
+    const { bodyProtectionEnabled = true, bodyProtectionThreshold = DEFAULT_CLEANSE_BODY_PROTECTION_THRESHOLD, measureBytes = true } = options;
     const thresholds = resolveThresholds(options);
 
     // Diagnostic-only: serializing outerHTML twice is wasted work on the

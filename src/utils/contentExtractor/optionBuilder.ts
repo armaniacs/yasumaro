@@ -12,7 +12,7 @@ import { CLEANSING_RULES } from '../aiSummaryCleaner/rules.js';
 import type { CleansingConfig } from '../../content/pageState.js';
 
 interface ExtractionOptions {
-    cleanseOptions: CleanseOptions & { cleanseEnabled: boolean; returnInfo: true; whitelistExtractionEnabled: boolean };
+    cleanseOptions: CleanseOptions & { cleanseEnabled: boolean; whitelistExtractionEnabled: boolean };
     aiSummaryCleanseOptions: AiSummaryCleanseOptions & { aiSummaryCleanseEnabled: boolean };
     dedupOptions: { dedupEnabled: boolean; dedupThreshold: number };
 }
@@ -32,7 +32,6 @@ export function buildExtractionOptions(config: CleansingConfig): ExtractionOptio
         hardStripEnabled: config.contentStripHardEnabled,
         keywordStripEnabled: config.contentStripKeywordEnabled,
         keywords: config.contentStripKeywords,
-        returnInfo: true as const,
         whitelistExtractionEnabled: config.whitelistExtractionEnabled,
     };
 
