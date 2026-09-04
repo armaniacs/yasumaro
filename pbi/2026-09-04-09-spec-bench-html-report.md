@@ -53,7 +53,7 @@ micro ベンチの実行結果（最新実行 + baseline 比較）を、依存�
 
 ### 3.2 `bench/harness/htmlReport.mjs`（新規）
 
-`renderHtml(results, opts) => string`。既存 `renderMarkdown` と同じ入力（`results` 配列 + `comparison` オブジェクト）を受け取る純関数。I/O なし。
+`renderHtml(results, opts) => string`。既存 `renderMarkdown` と同じ入力（`results` 配列 + `comparison` オブジェクト）を受け取る純関数。I/O なし（ファイル・ネットワーク I/O を行わない。ヘッダの生成日時表示のため `new Date()` / `process.version` の環境読み取りは行う — `renderMarkdown` と同パターン）。
 
 - インライン CSS + 最小限のインライン JS のみ。`src=` / `href=` に外部 URL を一切含まない
 - 注入するすべての文字列を HTML エスケープする
