@@ -14,10 +14,8 @@ vi.mock('../promptSanitizer.js', () => ({
   sanitizePromptContent: sanitizePromptContentMock,
   DangerLevel: { SAFE: 'safe', LOW: 'low', MEDIUM: 'medium', HIGH: 'high' },
 }));
-vi.mock('../logger/core.js', () => ({
+vi.mock('../logger.js', () => ({
   addLog: addLogMock,
-}));
-vi.mock('../logger/types.js', () => ({
   LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
 }));
 
