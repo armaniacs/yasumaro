@@ -43,6 +43,7 @@ This is a **Manifest V3 Chrome extension** with a modular architecture:
 | Testing / Debugging / Security / Docs | [dev-docs/TESTING_GUIDE.md](dev-docs/TESTING_GUIDE.md) · [DEBUGGING_GUIDE.md](dev-docs/DEBUGGING_GUIDE.md) · [SECURITY_REVIEW_GUIDE.md](dev-docs/SECURITY_REVIEW_GUIDE.md) · [DOCUMENTATION_GUIDE.md](dev-docs/DOCUMENTATION_GUIDE.md) |
 | Contribution Guide | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Accessibility Guide | [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md) |
+| Performance Testing (benchmark harness) | [docs/PERFORMANCE_TEST.md](docs/PERFORMANCE_TEST.md) |
 | i18n Guide | [docs/i18n-guide.md](docs/i18n-guide.md) |
 
 ## Quick Start
@@ -153,6 +154,8 @@ Documentation inventory, i18n formatting rules, and the documentation update che
 ## Performance
 
 Performance metrics, optimization targets, and browser compatibility notes live in [dev-docs/PERFORMANCE_GUIDE.md](dev-docs/PERFORMANCE_GUIDE.md). When optimizing, verify against the key metrics defined there.
+
+Benchmark harness (micro + e2e + CI regression check): [docs/PERFORMANCE_TEST.md](docs/PERFORMANCE_TEST.md) for usage, [bench/README.md](bench/README.md) for implementation. Run `npm run bench:micro` before/after an optimization and attach the diff to the PR.
 
 ---
 

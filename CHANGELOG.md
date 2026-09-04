@@ -35,6 +35,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### 開発者向け / 非機能
+
+- パフォーマンスベンチマーク基盤を追加（`bench/`）。局所ベンチ（Node + jsdom、`npm run bench:micro`）は wall-clock P50/P95/P99・DOM 走査数・ヒープ差分・スケーリング指数を計測し、`c1`〜`c7` が最適化 PBI（`pbi/2026-09-04-02`〜`08`）に対応。e2e ベンチ（Playwright、`npm run bench:e2e`）は自動保存の同期コスト（`ow-extract-start`〜`ow-send-ready` マーク区間 = extract + cleanse の同期処理のみ）・Long Tasks/TBT・メモリ・Lighthouse・Service Worker cold start を CPU 4x throttle 下で計測。`npm run bench:check` が `bench/baselines/micro.json` 比 +15% の回帰で exit 1。既存の `benchmark:cleansing` は新ハーネスへ移行（後方互換維持）。
+
 ## [6.7.104] - 2026-09-04
 
 このリリースは前日のレビュー指摘を即座に反映したものです。
