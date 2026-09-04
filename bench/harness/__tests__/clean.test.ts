@@ -120,3 +120,18 @@ describe('pruneReports (safety)', () => {
     expect(pruneReports(join(dir, 'nope'))).toEqual([]);
   });
 });
+
+describe('pruneReports (deterministic order)', () => {
+  it('returns deleted in sorted ascending order', () => {
+    seed({
+      '2026-08-20': ['md', 'json'],
+      '2026-08-21': ['md', 'json'],
+      '2026-08-24': ['md', 'json'],
+      '2026-08-25': ['md', 'json'],
+      '2026-08-26': ['md', 'json'],
+      '2026-09-01': ['md', 'json'],
+    });
+    const deleted = pruneReports(dir);
+    expect(deleted).toEqual(['micro-2026-08-20.json', 'micro-2026-08-20.md']);
+  });
+});
