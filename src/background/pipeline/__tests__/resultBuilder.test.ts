@@ -1,9 +1,11 @@
 /**
  * resultBuilder.test.ts
  * buildErrorResult/buildResult/buildPrivatePageResult are pure result
- * construction — no chrome.notifications side effect required to test them.
- * notifyRecordingError/notifyObsidianSaveSuccess are the separate notification
- * functions the pipeline orchestrator calls explicitly.
+ * construction — no logging, pending, or chrome.notifications side effects.
+ * Those live in the outcome policy (`recordingOutcome`) and are covered by
+ * recordingOutcome.test.ts through injected fakes.
+ * notifyRecordingError/notifyObsidianSaveSuccess are the notifier adapter
+ * implementations wired as defaults in `defaultOutcomeAdapters`.
  */
 import { vi } from 'vitest';
 
@@ -41,30 +43,17 @@ beforeEach(() => {
 });
 
 describe('buildErrorResult', () => {
-  it('does not touch chrome.notifications (no global chrome mock required)', () => {
+  it('builds a pure shape with no logging, pending, or notification side effects', () => {
     // No globalThis.chrome is installed in this file at all — if
-    // buildErrorResult referenced chrome.notifications, this would throw.
+    // buildErrorResult referenced chrome or storage, this would throw.
     const context = makeContext();
-    const result = buildErrorResult(context, new Error('boom'), 'formatMarkdown');
+    const result = buildErrorResult(context, new Error('boom'));
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('boom');
     expect(result.title).toBe('Test Page');
     expect(result.url).toBe('https://example.com');
-  });
-
-  it('queues a pending-page recovery entry with reason=pipeline-error', () => {
-    const context = makeContext();
-    buildErrorResult(context, new Error('network down'), 'saveObsidian');
-
-    expect(addPendingPage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: 'https://example.com',
-        title: 'Test Page',
-        reason: 'pipeline-error',
-        errorMessage: 'network down',
-      })
-    );
+    expect(addPendingPage).not.toHaveBeenCalled();
   });
 });
 
@@ -90,7 +79,7 @@ describe('buildResult', () => {
     expect(NotificationHelper.notifySuccess).not.toHaveBeenCalled();
   });
 
-  it('queues a pending-page recovery entry when an obsidian_sync error is recorded', () => {
+  it('builds a pure shape — obsidian_sync recovery moved to the outcome policy', () => {
     const context = makeContext({
       errors: [{
         step: 'saveObsidian',
@@ -102,11 +91,10 @@ describe('buildResult', () => {
       }],
     });
 
-    buildResult(context);
+    const result = buildResult(context);
 
-    expect(addPendingPage).toHaveBeenCalledWith(
-      expect.objectContaining({ reason: 'obsidian-write-failed', errorMessage: 'obsidian unreachable' })
-    );
+    expect(result.success).toBe(true);
+    expect(addPendingPage).not.toHaveBeenCalled();
   });
 });
 

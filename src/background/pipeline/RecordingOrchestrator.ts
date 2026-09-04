@@ -10,10 +10,8 @@
  */
 
 import { addLog, LogType } from '../../utils/logger.js';
-import { pickDefined } from '../../utils/objectUtils.js';
-import { ErrorStrategy, type RecordingContext, type PipelineError, type PipelineStep, type StepDeps, type UrlStore } from './types.js';
-import { notifyObsidianSaveSuccess, buildErrorResult, buildPrivatePageResult, notifyRecordingError, buildResult } from './resultBuilder.js';
-import { PrivatePageError, DuplicateError } from './steps/index.js';
+import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps, type UrlStore } from './types.js';
+import { decideStepOutcome, defaultOutcomeAdapters, finalizeSuccess, type OutcomeAdapters } from './recordingOutcome.js';
 import { toExternalResult } from './piiBoundary.js';
 import { createRetryContext, createSaveSqliteParams, createStepDeps } from './contextBuilder.js';
 import {
@@ -42,6 +40,7 @@ export interface RecordingOrchestratorDeps {
   offlineNetworkQueue?: OfflineNetworkQueue | null;
   urlStore?: UrlStore;
   perUrlMutexMap?: PerUrlMutexMap;
+  outcomeAdapters?: OutcomeAdapters;
 }
 
 /**
@@ -73,6 +72,7 @@ export class RecordingOrchestrator {
   private urlStore: UrlStore | undefined;
   private mutexMap: PerUrlMutexMap;
   private executor: StepExecutor;
+  private outcomeAdapters: OutcomeAdapters;
 
   constructor(deps: RecordingOrchestratorDeps) {
     this.getPrivacyInfoWithCache = deps.getPrivacyInfoWithCache;
@@ -83,6 +83,7 @@ export class RecordingOrchestrator {
     this.urlStore = deps.urlStore;
     this.mutexMap = deps.perUrlMutexMap ?? new PerUrlMutexMap();
     this.executor = new StepExecutor(deps.offlineNetworkQueue ?? null);
+    this.outcomeAdapters = deps.outcomeAdapters ?? defaultOutcomeAdapters;
 
     this.steps = [
       { name: 'truncate', errorStrategy: ErrorStrategy.FATAL, execute: truncateContentStep },
@@ -197,7 +198,9 @@ export class RecordingOrchestrator {
         sqliteClient: this.sqliteClient,
       });
       const retryResult = await this.executeRetrySubset(context, deps, traceId);
-      if ((retryResult as unknown as RecordingContext).obsidianDuration != null) notifyObsidianSaveSuccess(job.title || data.url);
+      if ((retryResult as unknown as RecordingContext).obsidianDuration != null) {
+        this.outcomeAdapters.notifier.notifySaveSuccess(job.title || data.url);
+      }
       return { success: true } as unknown as RecordingResult;
     });
   }
@@ -227,7 +230,9 @@ export class RecordingOrchestrator {
         sqliteClient: this.sqliteClient,
       });
       const retryResult = await this.executeRetrySubset(context, deps, traceId);
-      if ((retryResult as unknown as RecordingContext).obsidianDuration != null) notifyObsidianSaveSuccess(job.title || job.url);
+      if ((retryResult as unknown as RecordingContext).obsidianDuration != null) {
+        this.outcomeAdapters.notifier.notifySaveSuccess(job.title || job.url);
+      }
       return true;
     });
   }
@@ -242,9 +247,10 @@ export class RecordingOrchestrator {
 
   /**
    * Sole state owner of pipeline execution — formerly PipelineKernel (20-line
-   * thin loop). Inlined here so recording semantics (PrivatePage/Duplicate
-   * special cases, FATAL/RETRY error mapping, previewBreakpoint) live next to
-   * the step definitions that declare them.
+   * thin loop). Owns the step loop and BEST_EFFORT continuation; the outcome
+   * policy (PrivatePage/Duplicate special cases, FATAL/RETRY mapping, pending
+   * recovery, notices) lives in `recordingOutcome` and is driven through
+   * injected adapters.
    */
   private async executeInternal(data: RecordingData, settings: Settings): Promise<RecordingResult> {
     const traceId = this.generateTraceId();
@@ -261,26 +267,16 @@ export class RecordingOrchestrator {
         context = await this.executor.executeWithStrategy(step, context, deps);
         if (data.previewOnly && context.result && step.previewBreakpoint) return toExternalResult(context.result);
       } catch (error) {
-        if (error instanceof PrivatePageError) return buildPrivatePageResult(context, error);
-        if (error instanceof DuplicateError) return { success: true, skipped: true, reason: error.reason, title: data.title, url: data.url };
-        if (step.errorStrategy === ErrorStrategy.FATAL || step.errorStrategy === ErrorStrategy.RETRY) {
-          const errorResult = buildErrorResult(context, error as Error, step.name);
-          notifyRecordingError(context.data.title, (error as Error).message);
-          return errorResult;
-        }
-        const pipelineError: PipelineError = {
-          step: step.name, error: error as Error, strategy: step.errorStrategy, timestamp: Date.now(),
-          ...pickDefined({ recoveryKind: step.offlineRetry?.jobKind }),
-          context: { url: context.data.url, tabId: undefined }
-        };
-        context.errors.push(pipelineError);
+        // Outcome policy owns the error taxonomy + pending + notice.
+        // BEST_EFFORT returns { done: false } so the loop continues.
+        const outcome = decideStepOutcome(error, step, context, this.outcomeAdapters);
+        if (outcome.done) return outcome.result;
+        context.errors.push(outcome.pipelineError);
         addLog(LogType.WARN, `Pipeline step ${step.name} failed with ${step.errorStrategy} strategy`, { error: (error as Error).message, url: data.url, traceId: context.traceId });
       }
     }
 
-    const result = buildResult(context);
-    if (result.success && result.obsidianDuration != null) notifyObsidianSaveSuccess(data.title);
-    return result;
+    return finalizeSuccess(context, this.outcomeAdapters);
   }
 }
 

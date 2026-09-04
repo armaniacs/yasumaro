@@ -6,8 +6,6 @@
  * result construction from orchestration logic.
  */
 
-import { addLog, LogType, logError, ErrorCode } from '../../utils/logger.js';
-import { addPendingPage } from '../../utils/pendingStorage.js';
 import { NotificationHelper } from '../notificationHelper.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import type { RecordingContext } from './types.js';
@@ -32,26 +30,12 @@ export function buildPrivatePageResult(context: RecordingContext, error: Private
 }
 
 /**
- * Build error result. Pure result construction — no chrome.notifications
- * side effect. Callers show a notification via notifyRecordingError.
+ * Build error result. Pure result construction — no logging, pending, or
+ * chrome.notifications side effects. The outcome policy
+ * (`recordingOutcome.decideStepOutcome`) owns those; callers must route
+ * failures through it instead of calling this builder directly.
  */
-export function buildErrorResult(context: RecordingContext, error: Error, stepName: string): RecordingResult {
-  logError(`Pipeline failed at step ${stepName}`, {
-    error: error.message,
-    url: context.data.url,
-    tabId: undefined, // RecordingData has no tabId; kept for PipelineError.context compatibility
-  }, ErrorCode.INTERNAL_ERROR, 'RecordingPipeline');
-
-  // 記録漏れリカバリ: pending に登録して再記録できるようにする
-  void addPendingPage({
-    url: context.data.url,
-    title: context.data.title,
-    timestamp: Date.now(),
-    reason: 'pipeline-error',
-    errorMessage: error.message,
-    expiry: Date.now() + (24 * 60 * 60 * 1000)
-  });
-
+export function buildErrorResult(context: RecordingContext, error: Error): RecordingResult {
   return {
     success: false,
     error: error.message,
@@ -61,9 +45,9 @@ export function buildErrorResult(context: RecordingContext, error: Error, stepNa
 }
 
 /**
- * Show a notification for a pipeline error. Called by the pipeline
- * orchestrator immediately after buildErrorResult, kept as a separate
- * function so buildErrorResult itself stays a pure result-construction step.
+ * Show a notification for a pipeline error. Wired as the default notifier
+ * adapter in `recordingOutcome.defaultOutcomeAdapters`; the outcome policy
+ * calls it after the error result is built.
  */
 export function notifyRecordingError(title: string, errorMessage: string): void {
   const notificationTitle = chrome.i18n.getMessage('recordingFailed') || 'Recording Failed';
@@ -76,33 +60,12 @@ export function notifyRecordingError(title: string, errorMessage: string): void 
 }
 
 /**
- * Build final success result
+ * Build final success result. Pure result construction — the non-fatal error
+ * summary log and the obsidian_sync recovery registration live in the outcome
+ * policy (`recordingOutcome.finalizeSuccess`); callers must route through it.
  */
 export function buildResult(context: RecordingContext): RecordingResult {
-  const { data, privacyResult, aiDuration, errors } = context;
-
-  // Log any non-fatal errors
-  if (errors.length > 0) {
-    addLog(LogType.INFO, 'Pipeline completed with non-fatal errors', {
-      url: data.url,
-      errorCount: errors.length,
-      errorSteps: errors.map(e => e.step),
-      traceId: context.traceId
-    });
-  }
-
-  // 記録漏れリカバリ: Obsidian書き込みのみ失敗した場合、pending に登録して再記録できるようにする
-  const obsidianError = errors.find(e => e.recoveryKind === 'obsidian_sync');
-  if (obsidianError) {
-    void addPendingPage({
-      url: data.url,
-      title: data.title,
-      timestamp: Date.now(),
-      reason: 'obsidian-write-failed',
-      errorMessage: obsidianError.error.message,
-      expiry: Date.now() + (24 * 60 * 60 * 1000)
-    });
-  }
+  const { data, privacyResult, aiDuration } = context;
 
   return {
     success: true,
@@ -126,7 +89,8 @@ export function buildResult(context: RecordingContext): RecordingResult {
 
 /**
  * Send success notification when Obsidian save succeeded.
- * Called by the caller after buildResult returns success.
+ * Wired as the default notifier adapter in
+ * `recordingOutcome.defaultOutcomeAdapters`.
  */
 export function notifyObsidianSaveSuccess(title: string): void {
   const notificationTitle = chrome.i18n.getMessage('saveToObsidian') || 'Saved to Obsidian';
