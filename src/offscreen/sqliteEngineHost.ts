@@ -375,6 +375,12 @@ export class SqliteEngineHost {
     this.#state.fts5Available = false;
     this.#state.lastInitError = null;
     this.#state.cachedCompileOptions = null;
+    // Drop any in-flight init() serialization state so a stale lock holder or
+    // queued waiter from a previous test cannot leak into the next one. The
+    // old Mutex instance is discarded (its waiters settle against the old
+    // instance); production never calls this method — only the test seam
+    // (_resetSqliteForTesting) does — so live behavior is unchanged.
+    this.#mutex = new Mutex();
   }
 }
 

@@ -3,7 +3,10 @@ import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps,
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { RetryPolicy, defaultRetryPolicy } from './retryPolicy.js';
 
-const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+/** Injectable clock seam for the retry backoff. Defaults to the real timer. */
+export type StepDelayFn = (ms: number) => Promise<void>;
+
+const realDelay: StepDelayFn = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Executes pipeline steps with retry and offline-queue fallback.
@@ -15,7 +18,8 @@ const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(r
 export class StepExecutor {
   constructor(
     private offlineNetworkQueue: OfflineNetworkQueue | null,
-    private retryPolicy: RetryPolicy = defaultRetryPolicy
+    private retryPolicy: RetryPolicy = defaultRetryPolicy,
+    private delay: StepDelayFn = realDelay
   ) {}
 
   async executeWithStrategy(
@@ -37,7 +41,7 @@ export class StepExecutor {
             url: context.data.url,
             traceId: context.traceId
           });
-          await delay(delayMs);
+          await this.delay(delayMs);
           continue;
         }
 

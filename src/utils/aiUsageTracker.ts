@@ -26,6 +26,33 @@ function withCounterLock<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 /**
+ * Restores the counter mutex to its initial state. Test-only: the production
+ * chain must never be reset outside tests.
+ */
+export function resetCounterLockForTesting(): void {
+  counterLock = Promise.resolve();
+}
+
+// Injectable clock for the rate-limit window logic. Defaults to the real
+// wall clock so production behavior is unchanged; tests override it with a
+// fixed value to make window-boundary assertions deterministic under load.
+let clockNow: () => number = Date.now;
+
+/**
+ * Overrides the clock used by rate-limit logic. Test-only.
+ */
+export function setClockForTesting(now: () => number): void {
+  clockNow = now;
+}
+
+/**
+ * Restores the real wall clock. Test-only.
+ */
+export function resetClockForTesting(): void {
+  clockNow = Date.now;
+}
+
+/**
  * レート制限チェック
  * @returns {Promise<{allowed: boolean; remaining: number; resetTime: number}>}
  */
@@ -51,7 +78,7 @@ async function checkRateLimitUnlocked(): Promise<{
   remaining: number;
   resetTime: number;
 }> {
-  const now = Date.now();
+  const now = clockNow();
   const rateLimitMax = await getRateLimitMax();
 
   const result = await chrome.storage.local.get([
@@ -197,7 +224,7 @@ async function recordUsageUnlocked(
  * レート制限警告メッセージを取得
  */
 export function getRateLimitMessage(resetTime: number): string {
-  const seconds = Math.ceil((resetTime - Date.now()) / 1000);
+  const seconds = Math.ceil((resetTime - clockNow()) / 1000);
   return `Rate limit exceeded. Please wait ${seconds} seconds.`;
 }
 

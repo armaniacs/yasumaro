@@ -251,14 +251,31 @@ import {
     recordUsage,
     getRateLimitMessage,
     checkUsageWarning,
-    checkHardLimit
+    checkHardLimit,
+    resetCounterLockForTesting,
+    setClockForTesting,
+    resetClockForTesting
 } from '../aiUsageTracker.js';
+
+// Fixed clock for deterministic rate-limit window assertions. The SUT reads
+// time only through the injected clock, so window-boundary tests no longer
+// depend on real elapsed time under load.
+const FIXED_NOW = 1725456000000;
 
 describe('aiUsageTracker', () => {
 
     beforeEach(() => {
         Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
         vi.clearAllMocks();
+        resetCounterLockForTesting();
+        resetClockForTesting();
+        setClockForTesting(() => FIXED_NOW);
+    });
+
+    afterEach(() => {
+        resetClockForTesting();
+        resetCounterLockForTesting();
+        vi.useRealTimers();
     });
 
     describe('checkRateLimit', () => {
@@ -269,8 +286,7 @@ describe('aiUsageTracker', () => {
         });
 
         test('ウィンドウ内のリクエスト数を追跡する', async () => {
-            const now = Date.now();
-            mockStorage['ai_rate_limit_window_start'] = now;
+            mockStorage['ai_rate_limit_window_start'] = FIXED_NOW;
             mockStorage['ai_rate_limit_count'] = 5;
 
             const result = await checkRateLimit();
@@ -279,8 +295,7 @@ describe('aiUsageTracker', () => {
         });
 
         test('10回以上は拒否される', async () => {
-            const now = Date.now();
-            mockStorage['ai_rate_limit_window_start'] = now;
+            mockStorage['ai_rate_limit_window_start'] = FIXED_NOW;
             mockStorage['ai_rate_limit_count'] = 10;
 
             const result = await checkRateLimit();
@@ -289,53 +304,80 @@ describe('aiUsageTracker', () => {
         });
 
         test('ウィンドウ期限切れでリセットされる', async () => {
-            const oldTime = Date.now() - 61000;
-            mockStorage['ai_rate_limit_window_start'] = oldTime;
+            // Seeded 61s before the injected clock: expiry is deterministic
+            // and independent of real elapsed time under load.
+            mockStorage['ai_rate_limit_window_start'] = FIXED_NOW - 61000;
             mockStorage['ai_rate_limit_count'] = 10;
 
             const result = await checkRateLimit();
             expect(result.allowed).toBe(true);
             expect(result.remaining).toBe(9);
+            // A fresh window starts at the injected clock value.
+            expect(mockStorage['ai_rate_limit_window_start']).toBe(FIXED_NOW);
+            expect(result.resetTime).toBe(FIXED_NOW + 60000);
+        });
+
+        test('ウィンドウ境界内ではリセットされない', async () => {
+            // 1s inside the 60s window: still counts against the cap.
+            mockStorage['ai_rate_limit_window_start'] = FIXED_NOW - 59000;
+            mockStorage['ai_rate_limit_count'] = 10;
+
+            const result = await checkRateLimit();
+            expect(result.allowed).toBe(false);
+            expect(result.remaining).toBe(0);
+            expect(result.resetTime).toBe(FIXED_NOW - 59000 + 60000);
         });
 
         // VULN-010 (CWE-362): concurrent calls must not lose increments on the
         // read-modify-write of the rate-limit counter. With max=1, exactly one
-        // of two concurrent calls may be allowed.
+        // of two concurrent calls may be allowed. Timer-based interleaving uses
+        // scoped fake timers so the stretch under load cannot flake.
         test('VULN-010: 同時呼び出しでレート制限を突破できない', async () => {
-            const origGet = mockChrome.storage.local.get;
-            const origSet = mockChrome.storage.local.set;
-            const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
-            // Force both reads to observe the initial count before either write,
-            // reproducing the read-modify-write interleaving.
-            mockChrome.storage.local.get = vi.fn(async (keys: any) => {
-                await delay(5);
-                return origGet(keys);
-            });
-            mockChrome.storage.local.set = vi.fn(async (data: any) => {
-                await delay(5);
-                return origSet(data);
-            });
+            vi.useFakeTimers();
+            try {
+                const origGet = mockChrome.storage.local.get;
+                const origSet = mockChrome.storage.local.set;
+                const setOrder: unknown[] = [];
+                // Force both reads to observe the initial count before either write,
+                // reproducing the read-modify-write interleaving.
+                mockChrome.storage.local.get = vi.fn(async (keys: any) => {
+                    await new Promise<void>(r => setTimeout(r, 5));
+                    return origGet(keys);
+                });
+                mockChrome.storage.local.set = vi.fn(async (data: any) => {
+                    await new Promise<void>(r => setTimeout(r, 5));
+                    setOrder.push(data['ai_rate_limit_count']);
+                    return origSet(data);
+                });
 
-            const now = Date.now();
-            mockStorage['ai_rate_limit_max'] = 1;
-            mockStorage['ai_rate_limit_window_start'] = now;
-            mockStorage['ai_rate_limit_count'] = 0;
+                mockStorage['ai_rate_limit_max'] = 1;
+                mockStorage['ai_rate_limit_window_start'] = FIXED_NOW;
+                mockStorage['ai_rate_limit_count'] = 0;
 
-            const [a, b] = await Promise.all([checkRateLimit(), checkRateLimit()]);
+                const pending = Promise.all([checkRateLimit(), checkRateLimit()]);
+                // Each serialized call performs 3 storage ops x 5ms; 100ms
+                // covers the full chain deterministically.
+                await vi.advanceTimersByTimeAsync(100);
+                const [a, b] = await pending;
 
-            mockChrome.storage.local.get = origGet;
-            mockChrome.storage.local.set = origSet;
+                mockChrome.storage.local.get = origGet;
+                mockChrome.storage.local.set = origSet;
 
-            const allowed = [a, b].filter(r => r.allowed).length;
-            expect(allowed).toBe(1);
-            // The counter must reflect both increments (reach the cap of 1),
-            // not a lost update back to 1.
-            expect(mockStorage['ai_rate_limit_count']).toBe(1);
+                const allowed = [a, b].filter(r => r.allowed).length;
+                expect(allowed).toBe(1);
+                // The counter must reflect both increments (reach the cap of 1),
+                // not a lost update back to 1.
+                expect(mockStorage['ai_rate_limit_count']).toBe(1);
+                // Serialization proof: the count write happened exactly once
+                // (the denied call wrote nothing), in increment order.
+                expect(setOrder).toEqual([1]);
+            } finally {
+                vi.useRealTimers();
+            }
         });
 
         test('count が undefined の場合は 0 から開始', async () => {
-            const now = Date.now();
-            mockStorage['ai_rate_limit_window_start'] = now;
+            mockStorage['ai_rate_limit_window_start'] = FIXED_NOW;
 
             const result = await checkRateLimit();
             expect(result.allowed).toBe(true);
@@ -344,8 +386,7 @@ describe('aiUsageTracker', () => {
 
         test('AI_RATE_LIMIT_MAX 設定値を参照する', async () => {
             mockStorage['ai_rate_limit_max'] = 5;
-            const now = Date.now();
-            mockStorage['ai_rate_limit_window_start'] = now;
+            mockStorage['ai_rate_limit_window_start'] = FIXED_NOW;
             mockStorage['ai_rate_limit_count'] = 5;
 
             const result = await checkRateLimit();
@@ -354,8 +395,7 @@ describe('aiUsageTracker', () => {
         });
 
         test('AI_RATE_LIMIT_MAX が未設定の場合はデフォルト 10 を使用する', async () => {
-            const now = Date.now();
-            mockStorage['ai_rate_limit_window_start'] = now;
+            mockStorage['ai_rate_limit_window_start'] = FIXED_NOW;
             mockStorage['ai_rate_limit_count'] = 9;
 
             const result = await checkRateLimit();
@@ -431,16 +471,19 @@ describe('aiUsageTracker', () => {
 
     describe('getRateLimitMessage', () => {
         test('レート制限メッセージを返す', () => {
-            const futureTime = Date.now() + 30000;
-            const message = getRateLimitMessage(futureTime);
+            const message = getRateLimitMessage(FIXED_NOW + 30000);
             expect(message).toContain('Rate limit');
-            expect(message).toContain('seconds');
+            expect(message).toContain('30 seconds');
         });
 
         test('秒数を計算する', () => {
-            const futureTime = Date.now() + 5000;
-            const message = getRateLimitMessage(futureTime);
-            expect(message).toMatch(/\d+ seconds/);
+            const message = getRateLimitMessage(FIXED_NOW + 5000);
+            expect(message).toContain('5 seconds');
+        });
+
+        test('残り時間を切り上げで計算する', () => {
+            const message = getRateLimitMessage(FIXED_NOW + 5100);
+            expect(message).toContain('6 seconds');
         });
     });
 

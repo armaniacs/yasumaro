@@ -13,6 +13,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { COLUMN_NAMES } from '../schema.js';
+import { runMigrations } from '../migrations.js';
 
 const mockIdbExec = vi.fn().mockResolvedValue(undefined);
 const mockIdbQuery = vi.fn().mockResolvedValue([]);
@@ -61,6 +62,15 @@ vi.mock('../storageFallback.js', () => ({
   },
 }));
 
+// Boundary mock for the schema-migration step inside initIdbEngine
+// (idbEngineLifecycle.ts). The real runMigrations issues dozens of exec calls
+// plus FTS compile-option probes; stubbing it keeps the 4 hermetic tests below
+// independent of that chain under load. The first test re-installs the real
+// implementation for one call and stays an unmocked integration test.
+vi.mock('../migrations.js', () => ({
+  runMigrations: vi.fn().mockResolvedValue({ fts5Available: true }),
+}));
+
 function makeChromeStorageMock() {
   const store: Record<string, unknown> = {};
   return {
@@ -84,8 +94,37 @@ function makeChromeStorageMock() {
 describe('SqliteEngineContext: IDB migration (wa-sqlite -> @subframe7536)', () => {
   let chromeMock: ReturnType<typeof makeChromeStorageMock>;
 
-  beforeEach(() => {
-    vi.clearAllMocks();
+  beforeEach(async () => {
+    // resetAllMocks (not clearAllMocks): implementations set by one test must
+    // not leak into the next regardless of file order or retries. Everything
+    // wiped here is re-declared below, including the vi.mock factory fns.
+    vi.resetAllMocks();
+    mockIdbExec.mockResolvedValue(undefined);
+    mockIdbQuery.mockResolvedValue([]);
+    mockIdbQueryValue.mockResolvedValue(null);
+    mockIdbClose.mockResolvedValue(undefined);
+    mockOldExec.mockResolvedValue(undefined);
+    mockOldVfsClose.mockResolvedValue(undefined);
+    // Restore the vi.mock factory implementations cleared by resetAllMocks.
+    const { createIdbEngine } = await import('../sqliteEngine.js');
+    vi.mocked(createIdbEngine).mockImplementation(() => Promise.resolve({
+      exec: mockIdbExec,
+      query: mockIdbQuery,
+      queryValue: mockIdbQueryValue,
+      close: mockIdbClose,
+    }) as never);
+    const waSqlite = await import('wa-sqlite');
+    vi.mocked(waSqlite.Factory as never).mockImplementation((() => ({
+      vfs_register: vi.fn(),
+      open_v2: vi.fn().mockResolvedValue(1),
+      exec: mockOldExec,
+      close: vi.fn().mockResolvedValue(undefined),
+    })) as never);
+    const waAsync = await import('wa-sqlite/dist/wa-sqlite-async.mjs');
+    vi.mocked(waAsync.default as never).mockResolvedValue({} as never);
+    // Hermetic default for the migration boundary; the integration test below
+    // overrides this for a single call with the real implementation.
+    vi.mocked(runMigrations).mockResolvedValue({ fts5Available: true });
     chromeMock = makeChromeStorageMock();
     vi.stubGlobal('chrome', chromeMock as never);
     vi.stubGlobal('Worker', vi.fn(() => {
@@ -103,6 +142,11 @@ describe('SqliteEngineContext: IDB migration (wa-sqlite -> @subframe7536)', () =
   });
 
   it('skips backup and marks migration done when no old wa-sqlite IDB database exists', async () => {
+    // Integration test: the only one exercising the real runMigrations chain
+    // (against the mocked IDB engine). All other tests use the stubbed
+    // boundary from beforeEach.
+    const actual = await vi.importActual<typeof import('../migrations.js')>('../migrations.js');
+    vi.mocked(runMigrations).mockImplementationOnce((eng) => actual.runMigrations(eng));
     const { engine } = await import('../sqliteEngineContext.js');
     engine.resetForTesting();
 
