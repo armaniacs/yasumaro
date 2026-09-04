@@ -23,11 +23,11 @@ Scenario: 単独呼び出しでは bytes が Blob 基準で入る
 ```
 
 ## 受け入れ基準
-- [ ] `measureBytes?: boolean` の定義が types.ts に移動し declare module が削除される
-- [ ] extractor 経路（runAiSummaryCleanse）で Blob 直列化が 0 回になる
-- [ ] bodyProtectionThreshold の既定値二重記載（120 vs 200）が 1 定数に統一される
-- [ ] 単独呼び出し（measureBytes: true）の bytes が従来どおり
-- [ ] contentExtractor / aiSummaryCleaner suite 全绿
+- [x] `measureBytes?: boolean` の定義が types.ts に移動し declare module が削除される
+- [x] extractor 経路（runAiSummaryCleanse）で Blob 直列化が 0 回になる
+- [x] bodyProtectionThreshold の既定値二重記載（120 vs 200）が 1 定数に統一される
+- [x] 単独呼び出し（measureBytes: true）の bytes が従来どおり
+- [x] contentExtractor / aiSummaryCleaner suite 全绿
 
 ## テスト戦略（t_wadaスタイル）
 ### 単体テスト
@@ -65,7 +65,7 @@ rg -n "measureBytes|declare module|new Blob|bodyProtectionThreshold" src/utils/a
 - bytesBefore/After が 0 のとき Dashboard 診断が 0 表示になる — extractor 経路は自分で再計算して返すため影響なし（確認）
 
 ## Definition of Done
-- [ ] 単体/統合テスト green（Blob spy 含む）
-- [ ] declare module 削除 + types.ts 完結
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新（不要: 内部リファクタリング）
+- [x] 単体/統合テスト green（Blob spy 含む）
+- [x] declare module 削除 + types.ts 完結
+- [x] コードレビュー完了
+- [x] ドキュメント更新（不要: 内部リファクタリング）

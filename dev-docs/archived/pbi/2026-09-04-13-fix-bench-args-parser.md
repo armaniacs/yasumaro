@@ -22,11 +22,11 @@ Scenario: --filter の次に別フラグが来たら飲み込まない
 ```
 
 ## 受け入れ基準
-- [ ] `bench/harness/args.mjs` に純関数 parseArgs が抽出される
-- [ ] 裸 `--filter` は次トークン 1 個のみ消費し、`--` で始まるトークンは消費しない
-- [ ] 既存の全 documented 用法（--filter= / --filter c2 / --filter c2,c7 / --check / --update-baseline / --quick / --no-open）が動作
-- [ ] args 単体テストで網羅
-- [ ] cli.mjs main() は parseArgs 呼び出しのみに縮小
+- [x] `bench/harness/args.mjs` に純関数 parseArgs が抽出される
+- [x] 裸 `--filter` は次トークン 1 個のみ消費し、`--` で始まるトークンは消費しない
+- [x] 既存の全 documented 用法（--filter= / --filter c2 / --filter c2,c7 / --check / --update-baseline / --quick / --no-open）が動作
+- [x] args 単体テストで網羅
+- [x] cli.mjs main() は parseArgs 呼び出しのみに縮小
 
 ## テスト戦略（t_wadaスタイル）
 ### 単体テスト
@@ -62,7 +62,7 @@ rg -n "parseArgs|NEXT" bench/harness/cli.mjs
 - ヘッダコメント（cli.mjs:5-9）の用法記載と乖離させない
 
 ## Definition of Done
-- [ ] args 単体テスト green
-- [ ] bench スモーク green
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新（cli ヘッダコメントの用法が正しいこと）
+- [x] args 単体テスト green
+- [x] bench スモーク green
+- [x] コードレビュー完了
+- [x] ドキュメント更新（cli ヘッダコメントの用法が正しいこと）
