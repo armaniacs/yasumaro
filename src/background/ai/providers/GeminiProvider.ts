@@ -10,7 +10,7 @@ import { getAllowedUrls } from '../../../utils/storage/urlWhitelist.js';
 import { DEFAULT_SETTINGS } from '../../../utils/storage/defaults.js';
 import { Settings, StorageKeys } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { applyCustomPrompt, getDefaultSystemPrompt } from '../../../utils/customPromptUtils.js';
+import { getDefaultSystemPrompt } from '../../../utils/customPromptUtils.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { readJsonCapped } from '../../../utils/readBodyCapped.js';
 
@@ -77,94 +77,58 @@ export class GeminiProvider extends AIProviderStrategy {
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
      */
     async generateSummary(content: string, tagSummaryMode: boolean = false, traceId: string = ''): Promise<AISummaryResult> {
-        if (!this.apiKey) {
-            return { success: false, summary: "Error: API key is missing. Please check your settings." };
-        }
-
-        // 共通プリフライトガード
-        const preFlight = await this.checkPreFlight();
-        if (preFlight.blocked) {
-            return { success: false, summary: preFlight.message! };
-        }
-
-        let modelSegment: string;
-        try {
-            modelSegment = this.buildModelPathSegment();
-        } catch {
-            return { success: false, summary: "Error: Invalid AI model name. Please check your AI model settings." };
-        }
-        const apiVersion = this._getApiVersion();
-        const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${modelSegment}:generateContent`;
-        const maxContentChars = this.getMaxContentChars(30_000, StorageKeys.GEMINI_CONTENT_CHARS);
-        const truncatedContent = content.substring(0, maxContentChars);
-
-        // 共通サニタイズ
-        const sanitizeResult = this.sanitizeContent(truncatedContent, this.getName(), traceId);
-        if (sanitizeResult.blocked) {
-            return { success: false, summary: `Error: Content blocked due to potential security risk. (原因: ${sanitizeResult.warnings.join('; ')})` };
-        }
-
-        // カスタムプロンプトを適用（タグ付き要約モード対応）
-        const { userPrompt, systemPrompt } = applyCustomPrompt(this.settings, this.getName(), sanitizeResult.sanitized, tagSummaryMode);
-
-        const payload = {
-            systemInstruction: {
-                parts: [{
-                    text: systemPrompt || getDefaultSystemPrompt()
-                }]
+        // 順序（資格→pre-flight→切り詰め→サニタイズ→プロンプト→fetch→timeout変換）は
+        // 基底テンプレートが所有。ここには Gemini の癖だけを hooks として渡す。
+        return this.executeHttpSummaryFlow(content, tagSummaryMode, traceId, {
+            providerName: this.getName(),
+            timeoutMs: this.timeoutMs,
+            checkCredentials: () => !this.apiKey
+                ? "Error: API key is missing. Please check your settings."
+                : null,
+            contentLimit: () => this.getMaxContentChars(30_000, StorageKeys.GEMINI_CONTENT_CHARS),
+            prepareRequest: async (userPrompt, systemPrompt) => {
+                let modelSegment: string;
+                try {
+                    modelSegment = this.buildModelPathSegment();
+                } catch {
+                    return { failure: { success: false, summary: "Error: Invalid AI model name. Please check your AI model settings." } };
+                }
+                const apiVersion = this._getApiVersion();
+                const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${modelSegment}:generateContent`;
+                const payload = {
+                    systemInstruction: {
+                        parts: [{
+                            text: systemPrompt || getDefaultSystemPrompt()
+                        }]
+                    },
+                    contents: [{
+                        parts: [{
+                            text: userPrompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.1,
+                        maxOutputTokens: this.getMaxTokens(),
+                        // Gemini 2.5系以降は thinking がデフォルト有効で、思考トークンが
+                        // maxOutputTokens に加算される。要約は思考を必要としないため
+                        // 明示的に切り、枠をすべて本文に使う。これを入れないと
+                        // maxOutputTokens が小さい設定(既定1000)では思考だけで枠を
+                        // 使い切り、要約が空文字で返る。
+                        thinkingConfig: { thinkingBudget: 0 }
+                    }
+                };
+                return {
+                    url,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-goog-api-key': this.apiKey,
+                    },
+                    body: JSON.stringify(payload),
+                };
             },
-            contents: [{
-                parts: [{
-                    text: userPrompt
-                }]
-            }],
-            generationConfig: {
-                temperature: 0.1,
-                maxOutputTokens: this.getMaxTokens(),
-                // Gemini 2.5系以降は thinking がデフォルト有効で、思考トークンが
-                // maxOutputTokens に加算される。要約は思考を必要としないため
-                // 明示的に切り、枠をすべて本文に使う。これを入れないと
-                // maxOutputTokens が小さい設定(既定1000)では思考だけで枠を
-                // 使い切り、要約が空文字で返る。
-                thinkingConfig: { thinkingBudget: 0 }
-            }
-        };
-
-        try {
-            const allowedUrls = await this._getAllowedUrls();
-
-            const response = await fetchWithRetry(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-goog-api-key': this.apiKey
-                },
-                body: JSON.stringify(payload),
-                allowedUrls,
-                timeoutMs: this.timeoutMs
-            }, {
-                maxRetryCount: 3,
-                initialDelayMs: 1000,
-                backoffMultiplier: 2,
-                maxDelayMs: 60000,
-                shouldRetry: (error, attempt, response, method) =>
-                    this.shouldRetrySummaryRequest(error, attempt, response, method)
-            });
-
-            if (!response.ok) {
-                return this._handleError(response);
-            }
-
-            const data = await readJsonCapped(response, MAX_AI_RESPONSE_BYTES) as GeminiApiResponse;
-            return await this._extractSummary(data, traceId);
-        } catch (error: unknown) {
-            const msg = errorMessage(error);
-            const isTimeout = error instanceof Error && error.name === 'AbortError';
-            if (isTimeout || msg.includes('timed out')) {
-                return { success: false, summary: "Error: AI request timed out. Please check your connection." };
-            }
-            return { success: false, summary: "Error: Failed to generate summary. Please try again or check your settings." };
-        }
+            handleErrorResponse: (response) => this._handleError(response),
+            extractSummary: (data, tid) => this._extractSummary(data as GeminiApiResponse, tid),
+        });
     }
 
     private _getApiVersion(): string {

@@ -9,8 +9,6 @@ import { addLog, LogType } from '../../../utils/logger.js';
 import { getAllowedUrls } from '../../../utils/storage/urlWhitelist.js';
 import { Settings, StorageKeys } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
-
 import { getRegistryEntry, isAllowedProviderBaseUrl } from '../providerCatalog.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { readJsonCapped } from '../../../utils/readBodyCapped.js';
@@ -115,85 +113,44 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
      */
     async generateSummary(content: string, tagSummaryMode: boolean = false, traceId: string = ''): Promise<AISummaryResult> {
-        if (!this.baseUrl) {
-            return { success: false, summary: "Error: Base URL is missing. Please check your settings." };
-        }
-
-        // 共通プリフライトガード
-        const preFlight = await this.checkPreFlight();
-        if (preFlight.blocked) {
-            return { success: false, summary: preFlight.message! };
-        }
-
-        const trimmedBaseUrl = this.baseUrl.replace(/\/$/, '');
-        const url = `${trimmedBaseUrl}/chat/completions`;
-        const contentLimit = this.isLocal
-            ? 4000
-            : this.getMaxContentLength();
-        const truncatedContent = content.substring(0, contentLimit);
-
-        // 共通サニタイズ
-        const sanitizeResult = this.sanitizeContent(truncatedContent, this.providerName, traceId);
-        if (sanitizeResult.blocked) {
-            return { success: false, summary: `Error: Content blocked due to potential security risk. (原因: ${sanitizeResult.warnings.join('; ')})` };
-        }
-
-        // カスタムプロンプトを適用（タグ付き要約モード対応）
-        const { userPrompt, systemPrompt } = applyCustomPrompt(this.settings, this.providerName, sanitizeResult.sanitized, tagSummaryMode);
-
-        const payload = {
-            model: this.model,
-            messages: [
-                {
-                    role: "system",
-                    content: systemPrompt
-                },
-                {
-                    role: "user",
-                    content: userPrompt
+        // 順序（資格→pre-flight→切り詰め→サニタイズ→プロンプト→fetch→timeout変換）は
+        // 基底テンプレートが所有。ここには OpenAI の癖だけを hooks として渡す。
+        return this.executeHttpSummaryFlow(content, tagSummaryMode, traceId, {
+            providerName: this.providerName,
+            timeoutMs: this.timeoutMs,
+            checkCredentials: () => !this.baseUrl
+                ? "Error: Base URL is missing. Please check your settings."
+                : null,
+            contentLimit: () => this.isLocal
+                ? 4000
+                : this.getMaxContentLength(),
+            prepareRequest: async (userPrompt, systemPrompt) => {
+                const trimmedBaseUrl = this.baseUrl.replace(/\/$/, '');
+                const url = `${trimmedBaseUrl}/chat/completions`;
+                const payload = {
+                    model: this.model,
+                    messages: [
+                        {
+                            role: "system",
+                            content: systemPrompt
+                        },
+                        {
+                            role: "user",
+                            content: userPrompt
+                        }
+                    ],
+                    max_tokens: this.getMaxTokens(),
+                    temperature: 0.1
+                };
+                const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                if (this.apiKey) {
+                    headers['Authorization'] = `Bearer ${this.apiKey}`;
                 }
-            ],
-            max_tokens: this.getMaxTokens(),
-            temperature: 0.1
-        };
-
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (this.apiKey) {
-            headers['Authorization'] = `Bearer ${this.apiKey}`;
-        }
-
-        try {
-            const allowedUrls = await this._getAllowedUrls();
-
-            const response = await fetchWithRetry(url, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(payload),
-                allowedUrls,
-                timeoutMs: this.timeoutMs
-            }, {
-                maxRetryCount: 3,
-                initialDelayMs: 1000,
-                backoffMultiplier: 2,
-                maxDelayMs: 60000,
-                shouldRetry: (error, attempt, response, method) =>
-                    this.shouldRetrySummaryRequest(error, attempt, response, method)
-            });
-
-            if (!response.ok) {
-                return { success: false, summary: "Error: Failed to generate summary. Please check your API settings." };
-            }
-
-            const data = await readJsonCapped(response, MAX_AI_RESPONSE_BYTES) as OpenAIApiResponse;
-            return this._extractSummary(data, traceId);
-        } catch (error: unknown) {
-            const msg = errorMessage(error);
-            const isTimeout = error instanceof Error && error.name === 'AbortError';
-            if (isTimeout || msg.includes('timed out')) {
-                return { success: false, summary: "Error: AI request timed out. Please check your connection." };
-            }
-            return { success: false, summary: "Error: Failed to generate summary. Please try again or check your settings." };
-        }
+                return { url, headers, body: JSON.stringify(payload) };
+            },
+            handleErrorResponse: async () => ({ success: false, summary: "Error: Failed to generate summary. Please check your API settings." }),
+            extractSummary: (data, tid) => this._extractSummary(data as OpenAIApiResponse, tid),
+        });
     }
 
     async testConnection(): Promise<AIProviderConnectionResult> {
