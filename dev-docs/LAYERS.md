@@ -144,7 +144,7 @@ export function getDomainFilterCacheSync() { ... }
 ## 将来の移行計画
 
 * **Wave 3**: `storage.ts` barrel — 完了（PBI 2026-08-21-04）。production の直接 import 化済み。テスト用 shim は参照が0になった時点で削除
-* **Wave 4**: `logger.ts` barrel の同様の分割
+* **Wave 4**: `logger.ts` barrel の同様の分割 — 配線完了（PBI 2026-09-05-03）。`core.ts` が `LoggerWiring`（`initLogger` 注入・lazy chrome デフォルト・`resetLoggerWiring`）を受け、offscreen console フォールバックは `ChromeStorageLogAdapter` に移動。eslint は barrel 側を warn（`logger/*` 直接 import を推奨）に反転済み。残作業: 約120箇所の呼び出し側の直接 import 移行（別 PBI 化を推奨）
 * 循環の解消は業務ルール上不可のため、dynamic import による回避を維持し、ADR で保護する
 
 ## 参考

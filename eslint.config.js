@@ -33,8 +33,11 @@ export default [
         {
           patterns: [
             {
-              group: ['**/logger/types.js', '**/logger/core.js', '**/logger/api.js'],
-              message: 'logger/* is an internal implementation detail. Import from logger.js instead.',
+              // Wave 4 (PBI 2026-09-05-03): logger barrel split. New code
+              // imports logger/* directly; the barrel stays as a shim for the
+              // existing call sites until they migrate.
+              group: ['**/logger.js'],
+              message: 'Use direct module imports instead (e.g., from ./logger/core.js or ./logger/api.js). See dev-docs/LAYERS.md Wave 4.',
             },
           ],
           paths: [
