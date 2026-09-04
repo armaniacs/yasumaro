@@ -13,7 +13,7 @@ import { settingsRepository, type SettingsReader } from '../utils/storage/Settin
 import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import type { AIService } from './ai/AIService.js';
-import type { SqliteClient } from './sqliteClient.js';
+import type { SqliteClient } from './sqlite/offscreenGateway.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';

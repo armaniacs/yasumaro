@@ -6,7 +6,7 @@ vi.mock('../../../utils/logger.js', () => ({
 }));
 
 import { saveSqliteStep } from '../steps/saveSqliteStep.js';
-import type { SqliteClient } from '../../sqliteClient.js';
+import type { SqliteClient } from '../../sqlite/offscreenGateway.js';
 import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 
 function makeMockSqlite(overrides: Partial<Record<string, any>> = {}): SqliteClient {

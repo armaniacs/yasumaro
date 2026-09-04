@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { givenHandshakeResponse, givenHandshakeError } from './helpers/dashboardSqliteMock.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 
@@ -301,15 +302,14 @@ describe('formatEntriesToMarkdown', () => {
 // ============================================================================
 
 function givenResponse(response: unknown) {
-  (globalThis as any).chrome.runtime.sendMessage = vi.fn(
-    (_message: unknown) => Promise.resolve(response),
-  );
+  // PBI 2026-09-04-01: destructive ops require a confirm-token handshake.
+  // Route by subtype: create_confirm_token gets a token, the op gets the script.
+  givenHandshakeResponse(response);
 }
 
 function givenLastError(errorMessage: string) {
-  (globalThis as any).chrome.runtime.sendMessage = vi.fn(
-    (_message: unknown) => Promise.reject(new Error(errorMessage)),
-  );
+  // Handshake-aware: token fetch succeeds, the operation rejects.
+  givenHandshakeError(errorMessage);
 }
 
 import { appendToLogs } from '../dashboardSqliteService.js';
@@ -333,15 +333,16 @@ describe('appendToLogs', () => {
     expect(result).toEqual({ error: 'No IDs provided' });
   });
 
-  it('sends correct message payload with ids', async () => {
+  it('sends correct message payload with ids (after confirm-token handshake)', async () => {
     givenResponse({ success: true, appended: 2 });
 
     await appendToLogs([1, 2, 3]);
 
-    expect((globalThis as any).chrome.runtime.sendMessage).toHaveBeenCalledWith({
+    // Call 1 is create_confirm_token; call 2 is the op with the token attached.
+    expect((globalThis as any).chrome.runtime.sendMessage).toHaveBeenLastCalledWith({
       type: 'DASHBOARD_SQLITE',
       protocolVersion: CURRENT_PROTOCOL_VERSION,
-      payload: { subtype: 'append_to_obsidian', ids: [1, 2, 3] },
+      payload: { subtype: 'append_to_obsidian', ids: [1, 2, 3], confirmToken: 'test-confirm-token' },
     });
   });
 

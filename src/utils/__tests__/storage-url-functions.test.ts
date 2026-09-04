@@ -43,7 +43,8 @@ const mockChromeStorageLocal = {
 } as any;
 
 // optimisticLock をモック（実際の storage 関数のロジックを実行させる）
-vi.mock('../optimisticLock.js', () => ({
+vi.mock('../storage/storageTransaction.js', () => ({
+  StorageTransaction: class StorageTransaction { withLock = async (_k: string, fn: (v: unknown) => unknown) => fn(undefined); withAtomic = async (_ks: unknown, fn: (vs: unknown) => unknown) => fn([]); },
   withOptimisticLock: vi.fn(async (key: string, fn: (current: any) => any) => {
     const storageKey = key === 'savedUrlsWithTimestamps' ? 'savedUrlsWithTimestamps' : 'savedUrls';
     const current = mockStorage.get(storageKey) || (key === 'savedUrlsWithTimestamps' ? [] : []);

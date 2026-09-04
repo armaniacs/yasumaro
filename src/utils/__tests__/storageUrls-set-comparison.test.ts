@@ -10,8 +10,8 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-vi.mock('../optimisticLock.ts', async (importOriginal) => {
-    const actual = await importOriginal() as typeof import('../optimisticLock.ts');
+vi.mock('../storage/storageTransaction.js', async (importOriginal) => {
+    const actual = await importOriginal() as typeof import('../storage/storageTransaction.js');
     return actual;
 });
 vi.mock('../logger.ts', () => ({

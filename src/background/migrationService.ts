@@ -14,7 +14,7 @@
  * PBI: 2026-08-22-01 (MigrationService split)
  */
 
-import { SqliteClient } from './sqliteClient.js';
+import { SqliteClient } from './sqlite/offscreenGateway.js';
 import { ChromeMigrationStateAdapter } from './migration/migrationState.js';
 import { LegacyMigrationService } from './migration/legacyMigration.js';
 import { OpfsRecoveryService } from './migration/opfsRecovery.js';

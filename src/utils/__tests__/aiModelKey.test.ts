@@ -3,33 +3,17 @@
  * Verifies the shared provider → model-settings-key mapping used by both
  * AIClient (write/display) and OpenAIProvider (request), so the "write key"
  * and "display key" can never drift apart for a provider.
+ *
+ * PBI 06 (2026-09-03b): the string-derivation fallback was removed — the
+ * provider catalog is the single source of truth and unknown providers
+ * fall back to the generic provider_model key.
  */
 
 import { describe, it, expect } from 'vitest';
-import { normalizeProviderKeyName, resolveModelKey } from '../aiModelKey.js';
-
-describe('normalizeProviderKeyName', () => {
-    it('maps openai2 to openai_2', () => {
-        expect(normalizeProviderKeyName('openai2')).toBe('openai_2');
-    });
-
-    it('maps hyphenated ids to snake_case (lm-studio, built-in-ai)', () => {
-        expect(normalizeProviderKeyName('lm-studio')).toBe('lm_studio');
-        expect(normalizeProviderKeyName('built-in-ai')).toBe('built_in_ai');
-    });
-
-    it('lowercases and leaves plain ids unchanged', () => {
-        expect(normalizeProviderKeyName('gemini')).toBe('gemini');
-        expect(normalizeProviderKeyName('OLLAMA')).toBe('ollama');
-    });
-});
+import { resolveModelKey } from '../aiModelKey.js';
 
 describe('resolveModelKey', () => {
-    it('uses the generic provider_model key for openai-compatible', () => {
-        expect(resolveModelKey('openai-compatible')).toBe('provider_model');
-    });
-
-    it('maps each registered provider to its _model settings key', () => {
+    it('maps each registered provider to its catalog modelKey', () => {
         const expectations: Array<[string, string]> = [
             ['gemini', 'gemini_model'],
             ['openai', 'openai_model'],
@@ -41,5 +25,9 @@ describe('resolveModelKey', () => {
         for (const [provider, key] of expectations) {
             expect(resolveModelKey(provider), `resolveModelKey(${provider})`).toBe(key);
         }
+    });
+
+    it('falls back to generic provider_model for unknown providers (fail-closed)', () => {
+        expect(resolveModelKey('unknown-future-provider')).toBe('provider_model');
     });
 });

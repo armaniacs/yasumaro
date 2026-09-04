@@ -25,9 +25,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../obsidianClient.js', () => ({ ObsidianClient: mocks.ObsidianClient }));
-vi.mock('../sqliteClient.js', () => ({
+vi.mock('../sqlite/offscreenGateway.js', () => ({
   SqliteClient: mocks.SqliteClient,
   getSharedSqliteClient: mocks.getSharedSqliteClient,
+  OffscreenGateway: vi.fn(),
+  SqliteGateway: vi.fn(),
 }));
 vi.mock('../tabCache.js', () => ({ TabCache: mocks.TabCache }));
 vi.mock('../rateLimiter.js', () => ({ RateLimiter: mocks.RateLimiter }));
@@ -367,35 +369,15 @@ describe('createBackgroundServices', () => {
     expect(services.messageRouter).toEqual({ fake: 'messageRouter' });
   });
 
-  it('wires the SQLite health check to report true when maintain succeeds with truthy data', async () => {
+  it('no longer wires a global setSqliteHealthCheck (port-injected via getDefaultSqliteHealthCheck)', async () => {
+    // PBI 05: the utils→background global setter seam was removed. The health
+    // probe now lives in storageMaintenance.getDefaultSqliteHealthCheck() and
+    // callers inject it explicitly via ensureStorageQuota's argument.
     const maintain = vi.fn().mockResolvedValue({ success: true, data: true });
     mocks.getSharedSqliteClient.mockReturnValue({ sqlite: true, maintain });
 
     createBackgroundServices();
 
-    expect(mocks.setSqliteHealthCheck).toHaveBeenCalledTimes(1);
-    const healthCheck = mocks.setSqliteHealthCheck.mock.calls[0][0] as () => Promise<boolean>;
-
-    await expect(healthCheck()).resolves.toBe(true);
-  });
-
-  it('wires the SQLite health check to report false when maintain succeeds with falsy data', async () => {
-    const maintain = vi.fn().mockResolvedValue({ success: true, data: false });
-    mocks.getSharedSqliteClient.mockReturnValue({ sqlite: true, maintain });
-
-    createBackgroundServices();
-
-    const healthCheck = mocks.setSqliteHealthCheck.mock.calls[0][0] as () => Promise<boolean>;
-    await expect(healthCheck()).resolves.toBe(false);
-  });
-
-  it('wires the SQLite health check to report false when maintain fails', async () => {
-    const maintain = vi.fn().mockResolvedValue({ success: false });
-    mocks.getSharedSqliteClient.mockReturnValue({ sqlite: true, maintain });
-
-    createBackgroundServices();
-
-    const healthCheck = mocks.setSqliteHealthCheck.mock.calls[0][0] as () => Promise<boolean>;
-    await expect(healthCheck()).resolves.toBe(false);
+    expect(mocks.setSqliteHealthCheck).not.toHaveBeenCalled();
   });
 });

@@ -30,6 +30,21 @@ describe('buildDailyNotePath', () => {
     expect(buildDailyNotePath('MM')).toBe('02');
     expect(buildDailyNotePath('DD')).toBe('04');
   });
+
+  it('should build path with YYYY-MM monthly subfolder', () => {
+    const result = buildDailyNotePath('raw/YYYY-MM');
+    expect(result).toBe('raw/2026-02');
+  });
+
+  it('should build path with nested YYYY/YYYY-MM subfolders', () => {
+    const result = buildDailyNotePath('raw/YYYY/YYYY-MM');
+    expect(result).toBe('raw/2026/2026-02');
+  });
+
+  it('should build path with YYYY/MM nested subfolders', () => {
+    const result = buildDailyNotePath('raw/YYYY/MM');
+    expect(result).toBe('raw/2026/02');
+  });
 });
 
 describe('buildDailyNotePath - URLメタ文字エンコード', () => {

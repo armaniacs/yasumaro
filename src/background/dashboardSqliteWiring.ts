@@ -7,7 +7,7 @@
 import { createDashboardSqliteHandler, createSqliteClientDeps } from './handlers/dashboardSqliteHandlers.js';
 import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.js';
 import { createErrorResponse } from '../utils/errorClassification.js';
-import type { SqliteClient } from './sqliteClient.js';
+import type { SqliteClient } from './sqlite/offscreenGateway.js';
 import { MigrationService } from './migrationService.js';
 import { createConfirmToken as createConfirmTokenImpl, verifyConfirmToken as verifyConfirmTokenImpl } from './confirmTokenManager.js';
 

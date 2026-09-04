@@ -294,7 +294,13 @@ async function handleReloadSource(index: number): Promise<void> {
  */
 async function handleSaveUblockSettings(): Promise<void> {
   const checkbox = document.getElementById('ublockFormatEnabled') as HTMLInputElement | null;
-  const ublockEnabled = checkbox ? checkbox.checked : false;
+  const textarea = document.getElementById('uBlockFilterInput') as HTMLTextAreaElement | null;
+  const text = textarea ? textarea.value.trim() : '';
+
+  // フィルター本文が入力されていれば、有効化チェックボックスの状態に関わらず保存する。
+  // このチェックボックスには表示トグルが無く、初回は常に未チェックのため、
+  // 本文の有無を実質的な「有効」判定に含めないと初回保存が成立しない。
+  const ublockEnabled = (checkbox ? checkbox.checked : false) || text.length > 0;
 
   // 1. uBlock形式が無効な場合
   if (!ublockEnabled) {
@@ -303,8 +309,6 @@ async function handleSaveUblockSettings(): Promise<void> {
   }
 
   // 2. uBlock形式が有効だが入力が空の場合
-  const textarea = document.getElementById('uBlockFilterInput') as HTMLTextAreaElement | null;
-  const text = textarea ? textarea.value.trim() : '';
 
   if (!text) {
     // 入力が空でも「有効化フラグ」だけは保存する（既存のソースは維持される）

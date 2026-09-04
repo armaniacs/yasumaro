@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.100` リリース。
+> - 現時点では `v6.7.103` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,47 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [Unreleased]
+
+## [6.7.104] - 2026-09-04
+
+このリリースは前日のレビュー指摘を即座に反映したものです。
+
+### Fixed
+
+- 秘匿キー一覧の二重管理を解消。`storagePort.ts` の文字列リテラル版と `settingsMigration.ts` の `StorageKeys` 参照版が並存し、新プロバイダー追加時の片方更新漏れで平文残留・漏洩が起きるリスクがあった。依存なしの `apiKeyFields.ts` を正典（SSOT）に一本化し、両モジュールから参照。drift 検出テストを追加
+- DomainFilter の判定・検証ロジックの重複を解消。キャッシュ付き許可判定2コピーを共有ヘルパー `evaluateCachedAllow` に抽出。保存時検証の二重実行（旧 `validateDomainList`＋新 `parseAndValidate`）を `DomainFilter.parseAndValidate` に一本化し、構文検証を共通 `domainValidator.ts` に集約（循環 import 回避）
+- レビュー由来の dead export を除去。stage-branding 残骸（`RequiresPrivacy` / `RequiresMarkdown`、Slice系4型）、未使用 `domainFilter` singleton、未配線 `RedactingStoragePort` クラスを削除。現役の `redactSettingsApiKeys` 関数は維持
+- `package-lock.json` のバージョンを `6.7.103` に同期（機能 commit にバージョン更新を同梱した際の lock 更新漏れを修正）
+
+## [6.7.103] - 2026-09-04
+
+### Added
+
+- ツールバーバッジに、ドメインフィルターで記録対象外になっているページを示す緑の `∉` バッジを追加。プライバシー検出（オレンジ `!`）に次ぐ優先度で表示し、別タブへ切り替えると消える。判定が行えなかった場合はバッジを出さない。
+
+## [6.7.102] - 2026-09-04
+
+このリリースは前日のレビュー指摘を即座に反映したものです。
+
+### Fixed
+
+- ドメインフィルター（uBlock Origin 上級者向け）で URL インポート後に「保存」してもフィルターソースが保存されず、リロードすると消える問題を修正。非表示の有効化チェックボックスに保存がゲートされており、初回は常に未チェックのため保存処理が早期 return していた。フィルター本文が入力されていればチェックボックスの状態に関わらず保存するようにした。
+
+## [6.7.101] - 2026-09-04
+
+### Refactor
+
+- Trust seam: globalThis registry 廃止、seam を module-scope singleton に一本化 (PBI 01, RICE 12.0)
+- Pipeline: PipelineKernel を RecordingOrchestrator に統合、dead stage-branding 削除 (PBI 03/04)
+- Composition: global setter seam 撤去し port injection に一本化 (PBI 05)
+- Provider: SSRF security policy を catalog から分離 (PBI 06)
+- SQLite: dashboardGateway の重複 race を sendDashboardRaw に統一 (PBI 07)
+
+### Fixed
+
+- retryPolicy の 'ai ' 部分一致ヒューリスティックを削除 (PBI 02, RICE 9.6)
 
 ## [6.7.100] - 2026-09-02
 

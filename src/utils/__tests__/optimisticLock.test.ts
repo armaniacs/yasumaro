@@ -5,9 +5,8 @@
 
 import {
     withOptimisticLock,
-    ConflictError,
-    enablePostWriteVerification
-} from '../optimisticLock.js';
+    ConflictError
+} from '../storage/storageTransaction.js';
 
 describe('withOptimisticLock', () => {
     describe('基本機能', () => {
@@ -203,7 +202,6 @@ describe('withOptimisticLock', () => {
         });
 
         it('書き込み後の再検証でバージョン不一致を検出する', async () => {
-            enablePostWriteVerification();
             await chrome.storage.local.set({ testKey: ['initial'] });
 
             const setupOriginalGet = originalGet;
@@ -229,7 +227,6 @@ describe('withOptimisticLock', () => {
         });
 
         it('書き込み後の再検証で値の不一致を検出する', async () => {
-            enablePostWriteVerification();
             await chrome.storage.local.set({ testKey: ['initial'] });
 
             const setupOriginalGet = originalGet;

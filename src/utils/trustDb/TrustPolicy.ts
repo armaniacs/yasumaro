@@ -11,6 +11,7 @@ import { DomainVerifier } from './domainVerifier.js';
 import { BloomFilterManager } from './bloomFilterManager.js';
 import { TrancoManager } from './trancoManager.js';
 import { logError, ErrorCode } from '../logger.js';
+import { getTrustDbAdmin } from './TrustDbAdmin.js';
 
 export interface TrustPolicyDeps {
   save: () => Promise<void>;
@@ -92,4 +93,20 @@ export class TrustPolicy {
   rebuildForTrancoUpdate(domains: string[], presets: { finance: string[]; gaming: string[]; sns: string[] }): TrustBloomFilter {
     return this.bloomFilterManager.rebuildForTrancoUpdate(domains, presets);
   }
+}
+
+// --- Singleton seam (readonly, storage-free) ---
+// Delegates to the Admin singleton's kernel-owned policy — single module-scope
+// reference, no globalThis registry. Throws before initialization (fail-closed).
+export function getTrustPolicy(): TrustPolicy {
+  const admin = getTrustDbAdmin();
+  if (!admin.isInitialized()) {
+    throw new Error('TrustDb not initialized: call getTrustDbAdmin().initialize() first');
+  }
+  return admin.getPolicy();
+}
+
+export function _resetTrustPolicyForTest(): void {
+  // No-op: _policyInstance removed, singleton is now Kernel-backed only.
+  // Kept for backward compat with tests that call _resetTrustPolicyForTest().
 }

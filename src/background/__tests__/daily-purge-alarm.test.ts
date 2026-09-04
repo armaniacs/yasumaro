@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── mocks ────────────────────────────────────────────────────────────────────
 
-import type { CallResult } from '../sqliteClient.js';
+import type { CallResult } from '../sqlite/offscreenGateway.js';
 
 type PurgeResult = CallResult<{ purged: number }>;
 

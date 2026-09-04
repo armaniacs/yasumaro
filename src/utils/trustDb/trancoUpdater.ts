@@ -8,7 +8,7 @@ import type {
   TrancoUpdateResult,
   SafetyMode
 } from './trustDbSchema.js';
-import { getTrustDb } from './trustDb.js';
+import { getTrustDbAdmin } from './TrustDbAdmin.js';
 import { logInfo, logError, logWarn, ErrorCode } from '../logger.js';
 import { errorMessage } from '../errorUtils.js';
 import { fetchWithTimeout } from '../fetch.js';
@@ -76,7 +76,7 @@ export class TrancoUpdater {
         logInfo('TrancoUpdater', { count: domains.length }, `Fetched ${domains.length} domains from Tranco`);
 
         // 2. データベースを更新
-        const db = getTrustDb();
+        const db = getTrustDbAdmin();
         await db.initialize();
         await db.updateTranco(domains, tier);
 
@@ -220,7 +220,7 @@ export class TrancoUpdater {
    * Tranco 更新が必要か確認
    */
   async isUpdateNeeded(_tier: TrancoTier): Promise<boolean> {
-    const db = getTrustDb();
+    const db = getTrustDbAdmin();
     await db.initialize();
 
     const status = db.getStatus();

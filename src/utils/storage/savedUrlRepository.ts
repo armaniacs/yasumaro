@@ -13,7 +13,7 @@
  * value object rather than an enumerated bag of fields.
  */
 
-import { withOptimisticLock, withAtomicKeys } from '../optimisticLock.js';
+import { withOptimisticLock, withAtomicKeys } from './storageTransaction.js';
 import { getStorageUsage, estimateDataSize, STORAGE_QUOTA_BYTES, hasUnlimitedStorage } from './quota.js';
 import type { RecordType } from '../commonTypes.js';
 import { MAX_URL_SET_SIZE, URL_RETENTION_DAYS, MAX_CONTENT_ENTRIES } from '../urlEntry.js';

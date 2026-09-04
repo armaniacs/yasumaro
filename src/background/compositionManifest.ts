@@ -11,7 +11,7 @@
  *
  * `onReady` runs once after every service is resolved: it is where
  * side-effect wiring that crosses the utils↔background layer boundary
- * (setPendingWriteQueue / setSqliteHealthCheck) is localized, instead of
+ * (sqliteClient health probe) is localized, instead of
  * being scattered through the composition function body.
  */
 
@@ -19,16 +19,15 @@ import { createAIService } from './ai/aiServiceFactory.js';
 import { RemoteAIService } from './ai/RemoteAIService.js';
 import type { AIService } from './ai/AIService.js';
 import { ObsidianClient } from './obsidianClient.js';
-import { getSharedSqliteClient } from './sqliteClient.js';
-import type { SqliteClient } from './sqliteClient.js';
-import { setSqliteHealthCheck } from '../utils/storage/storageMaintenance.js';
+import { getSharedSqliteClient } from './sqlite/offscreenGateway.js';
+import type { SqliteClient } from './sqlite/offscreenGateway.js';
 import { RecordingCacheInstance, SessionStoreRecordingCacheStore } from './recordingCache.js';
 import { TabCache } from './tabCache.js';
 import { RateLimiter } from './rateLimiter.js';
 import { ManualContentFetcher } from './manualContentFetcher.js';
 import { SessionStore } from './sessionStore.js';
 import { HeaderDetector } from './headerDetector.js';
-import { createPendingWriteQueue, setPendingWriteQueue } from './pendingChromeStorageQueue.js';
+import { createPendingWriteQueue } from './pendingChromeStorageQueue.js';
 import { ChromeStorageAdapter } from './persistentRetryQueue.js';
 import { createRecordingOrchestrator, type RecordingOrchestrator } from './pipeline/RecordingOrchestrator.js';
 import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
@@ -80,21 +79,7 @@ export const compositionManifest: readonly CompositionEntry[] = [
   },
   { key: 'headerDetector', singleton: true, factory: (c) => new HeaderDetector(c.resolve<RecordingCacheInstance>('recordingCache')) },
   { key: 'obsidian', singleton: true, factory: () => new ObsidianClient() },
-  {
-    key: 'sqliteClient',
-    singleton: true,
-    factory: () => getSharedSqliteClient(),
-    // utils→background boundary wiring: storageMaintenance's legacy-cleanup
-    // needs a SQLite health probe. Declared here so the cross-layer call is
-    // next to the registration, not scattered through the composition body.
-    onReady: (c) => {
-      const sqliteClient = c.resolve<SqliteClient>('sqliteClient');
-      setSqliteHealthCheck(async () => {
-        const r = await sqliteClient.maintain({ type: 'healthCheck' });
-        return r.success ? Boolean(r.data) : false;
-      });
-    },
-  },
+  { key: 'sqliteClient', singleton: true, factory: () => getSharedSqliteClient() },
   { key: 'tabCache', singleton: true, factory: (c) => new TabCache(c.resolve<SessionStore>('sessionStore')) },
   { key: 'rateLimiter', singleton: true, factory: (c) => new RateLimiter(c.resolve<SessionStore>('sessionStore')) },
   { key: 'manualContentFetcher', singleton: true, factory: () => new ManualContentFetcher() },
@@ -102,12 +87,7 @@ export const compositionManifest: readonly CompositionEntry[] = [
   { key: 'aiService', singleton: true, factory: (c) => createAIService({ remoteAiService: c.resolve<RemoteAIService>('remoteAiService') }) },
   { key: 'settingsRepository', singleton: true, factory: () => new SettingsRepository(new SettingsChromeStorageAdapter()) },
   { key: 'perUrlMutexMap', singleton: true, factory: () => new PerUrlMutexMap() },
-  {
-    key: 'pendingWriteQueue',
-    singleton: true,
-    factory: () => createPendingWriteQueue(new ChromeStorageAdapter()),
-    onReady: (c) => setPendingWriteQueue(c.resolve<ReturnType<typeof createPendingWriteQueue>>('pendingWriteQueue')),
-  },
+  { key: 'pendingWriteQueue', singleton: true, factory: () => createPendingWriteQueue(new ChromeStorageAdapter()) },
   {
     key: 'reviewSummaryGenerator',
     singleton: true,

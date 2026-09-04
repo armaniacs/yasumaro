@@ -5,6 +5,7 @@
  * Handles tab removal, activation, and navigation badge updates.
  */
 import { BADGE_COLORS } from '../../constants/appConstants.js';
+import { isDomainAllowed } from '../../utils/domainUtils.js';
 import { HeaderDetector } from '../headerDetector.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import { TabCache } from '../tabCache.js';
@@ -19,6 +20,18 @@ export interface TabHandlerContext {
         restore: () => Promise<void>;
     };
     getPrivacyCache?: () => Map<string, PrivacyInfo> | null;
+}
+
+/**
+ * Domain filter の除外判定。storage 未設定など失敗時は「除外ではない」に倒す
+ * （バッジ表示は補助情報であり、判定不能を「記録されない」と誤表示しない）。
+ */
+async function isDomainExcluded(url: string): Promise<boolean> {
+    try {
+        return !(await isDomainAllowed(url));
+    } catch {
+        return false;
+    }
 }
 
 export function createTabEventHandlers(ctx: TabHandlerContext) {
@@ -49,6 +62,9 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
             if (privacyInfo?.isPrivate) {
                 chrome.action.setBadgeText({ text: '!' });
                 chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string });
+            } else if (await isDomainExcluded(tab.url)) {
+                chrome.action.setBadgeText({ text: '∉' });
+                chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string });
             } else {
                 chrome.action.setBadgeText({ text: '' });
             }
@@ -76,6 +92,9 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
         if (privacyInfo?.isPrivate) {
             chrome.action.setBadgeText({ text: '!', tabId });
             chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string, tabId });
+        } else if (await isDomainExcluded(tab.url)) {
+            chrome.action.setBadgeText({ text: '∉', tabId });
+            chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string, tabId });
         } else {
             chrome.action.setBadgeText({ text: '', tabId });
         }

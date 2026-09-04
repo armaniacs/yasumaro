@@ -5,7 +5,7 @@
  * concurrent same-key CAS cannot lose a write (VULN-012 TOCTOU residual).
  */
 
-import { withOptimisticLock, withAtomicKeys } from '../optimisticLock.js';
+import { withOptimisticLock, withAtomicKeys } from '../storage/storageTransaction.js';
 import { runSerialized, _resetKeySerializerForTest } from '../keySerializer.js';
 import { ChromeStorageLogAdapter } from '../logger/storageAdapter.js';
 

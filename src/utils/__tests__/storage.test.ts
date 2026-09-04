@@ -223,7 +223,7 @@ describe('storage', () => {
 
       expect(mockSet).toHaveBeenCalledWith(
         expect.objectContaining({
-          [StorageKeys.DOMAIN_FILTER_CACHE]: [],
+          [StorageKeys.DOMAIN_FILTER_CACHE]: ['bad.com'],
           [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: expect.any(Number)
         })
       );

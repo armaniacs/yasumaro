@@ -16,6 +16,8 @@ import type { OffscreenTransport } from './offscreenTransport.js';
 import type { SqliteMessageType } from '../messaging/sqliteMessages.js';
 import type { OffscreenResponse } from '../messaging/sqliteMessages.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+import { sanitizeFtsTerm } from '../offscreen/schema.js';
+import { QUERY_CAPS, clampLimit, matchesExtraWhere } from '../offscreen/queryPlan.js';
 
 interface QueryPayload {
   text?: string;
@@ -30,9 +32,6 @@ interface QueryPayload {
   orderBy?: string;
   orderDir?: 'ASC' | 'DESC';
 }
-
-const FTS_CAP = 100_000;
-const PLAIN_CAP = 1_000;
 
 export interface InMemoryTransportOptions {
   /** Seed records. Ids are assigned if absent. */
@@ -165,24 +164,23 @@ export class InMemoryTransport implements OffscreenTransport {
   ): { rows: BrowsingLogRecord[]; total: number } {
     let rows = this.records.filter((r) => !r.is_deleted);
 
-    if (q.domain) rows = rows.filter((r) => r.domain === q.domain);
-    if (q.starred != null) rows = rows.filter((r) => Boolean(r.is_starred) === q.starred);
-    if (q.gistSynced != null) rows = rows.filter((r) => (r.gist_synced ?? 0) === q.gistSynced);
-    if (q.dateFrom != null) rows = rows.filter((r) => r.created_at >= q.dateFrom!);
-    if (q.dateTo != null) rows = rows.filter((r) => r.created_at <= q.dateTo!);
-    if (q.ids?.length) {
-      const set = new Set(q.ids);
-      rows = rows.filter((r) => r.id != null && set.has(r.id));
-    }
+    // Delegate extra-where filtering to the shared predicate derived from
+    // buildExtraWhereSql's condition set — do not reimplement the checks
+    // inline so drift is impossible without touching the shared module.
+    rows = rows.filter((r) => matchesExtraWhere(r, q as unknown as Parameters<typeof matchesExtraWhere>[1]));
     if (q.text) {
-      const bare = q.text.trim().toLowerCase();
-      // trigram tokenizer needs >= 3 chars; shorter queries return nothing here
-      // (production falls back to LIKE — the gateway shortcuts before calling us).
-      if (bare.length > 0) {
-        rows = rows.filter((r) =>
-          [r.title, r.summary, r.content, r.url]
-            .some((f) => typeof f === 'string' && f.toLowerCase().includes(bare))
-        );
+      const bare = sanitizeFtsTerm(q.text);
+      if (!bare) {
+        rows = [];
+      } else {
+        const terms = bare.toLowerCase().split(/\s+/).filter(Boolean);
+        rows = rows.filter((r) => {
+          const fields = [r.title, r.summary, r.content, r.url]
+            .filter((f): f is string => typeof f === 'string')
+            .map((f) => f.toLowerCase());
+          // Shared tokenizer may split hyphens into spaces; require every term present (AND)
+          return terms.every((term) => fields.some((f) => f.includes(term)));
+        });
       }
     }
 
@@ -192,14 +190,23 @@ export class InMemoryTransport implements OffscreenTransport {
     const dir = q.orderDir === 'ASC' ? 1 : -1;
     const key = (q.orderBy as keyof BrowsingLogRecord) || 'created_at';
     rows = [...rows].sort((a, b) => {
-      const av = a[key] ?? 0;
-      const bv = b[key] ?? 0;
-      return av < bv ? -1 * dir : av > bv ? 1 * dir : 0;
+      const av = a[key];
+      const bv = b[key];
+      if (av == null && bv == null) return 0;
+      if (av == null) return -1 * dir;
+      if (bv == null) return 1 * dir;
+      if (typeof av === 'string' && typeof bv === 'string') {
+        return av.localeCompare(bv) * dir;
+      }
+      if (typeof av === 'number' && typeof bv === 'number') {
+        return (av < bv ? -1 : av > bv ? 1 : 0) * dir;
+      }
+      return String(av).localeCompare(String(bv)) * dir;
     });
 
-    const cap = q.text ? FTS_CAP : PLAIN_CAP;
-    const limit = clampPositive(q.limit, cap);
-    const offset = clampPositive(q.offset, Number.MAX_SAFE_INTEGER, 0);
+    const cap = q.text ? QUERY_CAPS.fts : QUERY_CAPS.plain;
+    const limit = clampLimit(q.limit, cap, cap);
+    const offset = clampLimit(q.offset, Number.MAX_SAFE_INTEGER, 0);
     return { rows: rows.slice(offset, offset + limit), total };
   }
 
@@ -207,10 +214,4 @@ export class InMemoryTransport implements OffscreenTransport {
   wasCleared(): boolean {
     return this.cleared;
   }
-}
-
-function clampPositive(value: unknown, cap: number, fallback = cap): number {
-  const n = typeof value === 'number' && Number.isFinite(value) ? Math.floor(value) : NaN;
-  if (Number.isNaN(n) || n <= 0) return fallback;
-  return Math.min(n, cap);
 }

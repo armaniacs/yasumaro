@@ -7,7 +7,7 @@
  * 設定ファイル等) で private IP / metadata endpoint / 非 https の非 localhost
  * へ接続が許可されるのを防ぐ。
  *
- * ガードは src/background/ai/providerRegistry.ts の isAllowedProviderBaseUrl
+ * ガードは src/background/ai/providerCatalog.ts の isAllowedProviderBaseUrl
  * を再利用する。既存 cspValidator.test.ts は CRLF のため、新規ケースは
  * この LF ファイルに置く。
  */

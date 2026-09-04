@@ -7,7 +7,7 @@ import { StorageKeys, Settings } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import type { EncryptedData } from '../utils/crypto/types.js';
 import { GistSyncTarget } from '../background/syncTargets/gistSyncTarget.js';
-import { SqliteClient } from '../background/sqliteClient.js';
+import { SqliteClient } from '../background/sqlite/offscreenGateway.js';
 import { errorMessage } from '../utils/errorUtils.js';
 
 function stringOrEmpty(value: string | EncryptedData | undefined): string {

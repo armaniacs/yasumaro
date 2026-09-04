@@ -14,8 +14,12 @@ const { mockInitialize } = vi.hoisted(() => {
   };
 });
 
-vi.mock('../trustDb/trustDb.js', () => ({
-  getTrustDb: () => ({ initialize: mockInitialize })
+vi.mock('../trustDb/TrustDbAdmin.js', () => ({
+  getTrustDbAdmin: () => ({ initialize: mockInitialize })
+}), { virtual: true });
+
+vi.mock('../trustDb/TrustPolicy.js', () => ({
+  getTrustPolicy: () => ({ isDomainTrusted: vi.fn() })
 }), { virtual: true });
 
 describe('migration', () => {

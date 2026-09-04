@@ -50,6 +50,26 @@ export function buildExtraWhereSql(query: Pick<StorageQuery, 'dateFrom' | 'dateT
 /** @deprecated alias — use buildExtraWhereSql */
 export const extraWhereSql = buildExtraWhereSql;
 
+/**
+ * Shared in-memory predicate mirroring buildExtraWhereSql's semantics.
+ * Lets InMemoryTransport filter without reimplementing the condition set —
+ * both the SQL generator and the JS fallback read from the same source.
+ */
+export function matchesExtraWhere(
+  record: { domain?: string | null; is_starred?: number; gist_synced?: number | null; created_at: number; id?: number },
+  query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids'>
+): boolean {
+  if (query.domain != null && query.domain !== '' && record.domain !== query.domain) return false;
+  if (query.starred != null && Boolean(record.is_starred) !== query.starred) return false;
+  if (query.gistSynced != null && (record.gist_synced ?? 0) !== query.gistSynced) return false;
+  if (query.dateFrom != null && record.created_at < (query as StorageQuery).dateFrom!) return false;
+  if (query.dateTo != null && record.created_at > (query as StorageQuery).dateTo!) return false;
+  if (query.ids != null && query.ids.length > 0) {
+    if (record.id == null || !query.ids.includes(record.id)) return false;
+  }
+  return true;
+}
+
 export const QUERY_CAPS = {
   fts: 100000,
   plain: 1000,

@@ -11,7 +11,7 @@
  * this file asserts the guarantees the implementation actually provides.
  */
 
-import { withOptimisticLock, ConflictError } from '../optimisticLock.js';
+import { withOptimisticLock, ConflictError } from '../storage/storageTransaction.js';
 
 // Deterministic in-memory chrome.storage.local mock (atomic per call).
 function installStorageMock(store: Record<string, unknown>): void {

@@ -25,7 +25,7 @@ vi.mock('../sqliteAlert.js', () => ({
   recordSqliteFailure: vi.fn(),
 }));
 
-import { SqliteClient } from '../sqliteClient.js';
+import { SqliteClient } from '../sqlite/offscreenGateway.js';
 
 describe('SqliteClient — keepAlive / reconnect (M12)', () => {
   let client: SqliteClient;

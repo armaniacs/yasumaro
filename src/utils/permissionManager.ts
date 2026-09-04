@@ -7,7 +7,7 @@
 import { StorageKeys } from './storage/types.js';
 import { logDebug, logWarn } from './logger.js';
 import { errorMessage } from './errorUtils.js';
-import { withOptimisticLock } from './optimisticLock.js';
+import { withOptimisticLock } from './storage/storageTransaction.js';
 
 // ============================================================================
 // Types

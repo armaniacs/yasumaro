@@ -4,7 +4,7 @@
  * Metadata only (provider, url, timestamp) — never content or PII.
  */
 
-import { getSharedSqliteClient } from '../background/sqliteClient.js';
+import { getSharedSqliteClient } from '../background/sqlite/offscreenGateway.js';
 import { logError } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 

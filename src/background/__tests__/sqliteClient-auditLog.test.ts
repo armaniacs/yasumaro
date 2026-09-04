@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SqliteClient } from '../sqliteClient.js';
+import { SqliteClient } from '../sqlite/offscreenGateway.js';
 
 describe('SqliteClient audit log methods', () => {
   let client: SqliteClient;

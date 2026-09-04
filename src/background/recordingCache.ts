@@ -1,10 +1,12 @@
 /**
- * RecordingCache
- * settings/URL/privacy の3種のキャッシュ管理を担当するモジュール。
+ * RecordingCache — facade that composes 3 typed caches.
  *
- * RecordingCacheInstance はコンストラクタで RecordingCacheStore を注入する。
- * 本番では SessionStoreRecordingCacheStore、テストでは InMemoryRecordingCacheStore
- * を使い、グローバルな状態を持たない。
+ * PBI 05: TTL constants now owned by typed cache modules; this file is a
+ * facade that delegates to SettingsCache / UrlCache / PrivacyCache.
+ * The single CacheState object is kept as a live view over the 3 caches so
+ * existing tests that mutate `getCacheState().cacheVersion` etc remain green
+ * (overflow test). Persistence (load/save) still goes through a single
+ * SESSION_KEYS.RECORDING_CACHE entry so the microtask saveQueue stays atomic.
  */
 
 import { addLog, LogType } from '../utils/logger.js';
@@ -13,21 +15,17 @@ import { settingsRepository, type SettingsReader } from '../utils/storage/Settin
 import { Settings } from '../utils/storage/types.js';
 import { API_KEY_FIELDS } from '../utils/storage/settingsMigration.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
-import { isPrivacyInfo } from '../utils/privacyChecker.js';
 import { SessionStore, SESSION_KEYS } from './sessionStore.js';
+import { redactSettingsApiKeys } from '../utils/storage/storagePort.js';
+import { SettingsCache, SETTINGS_CACHE_TTL } from './cache/SettingsCache.js';
+import { UrlCache, URL_CACHE_TTL } from './cache/UrlCache.js';
+import { PrivacyCache, PRIVACY_CACHE_TTL } from './cache/PrivacyCache.js';
 
-// --- TTL constants ---
+export { SETTINGS_CACHE_TTL, URL_CACHE_TTL, PRIVACY_CACHE_TTL };
+// Re-export redact for backward compat (tests import from here)
+export { redactSettingsApiKeys } from '../utils/storage/storagePort.js';
 
-/** Settings cache TTL: 30 seconds */
-export const SETTINGS_CACHE_TTL = 30 * 1000;
-
-/** URL cache TTL: 60 seconds */
-export const URL_CACHE_TTL = 60 * 1000;
-
-/** Privacy cache TTL: 5 minutes */
-export const PRIVACY_CACHE_TTL = 5 * 60 * 1000;
-
-// --- Cache state interface ---
+// --- Cache state interface (live view over 3 caches) ---
 
 interface CacheState {
   settingsCache: Settings | null;
@@ -51,17 +49,11 @@ type PersistedCacheState = {
 
 // --- Store abstraction ---
 
-/**
- * Minimal persistence interface RecordingCache depends on. Backed by
- * SessionStore in production; tests inject an in-memory implementation to
- * avoid touching chrome.storage.session and to get per-test isolation.
- */
 export interface RecordingCacheStore {
   get<T>(key: string): Promise<T | null>;
   set(key: string, value: unknown, options?: { flushImmediately?: boolean }): Promise<void>;
 }
 
-/** Production store: wraps a SessionStore instance. */
 export class SessionStoreRecordingCacheStore implements RecordingCacheStore {
   constructor(private readonly sessionStore: SessionStore) {}
 
@@ -74,7 +66,6 @@ export class SessionStoreRecordingCacheStore implements RecordingCacheStore {
   }
 }
 
-/** In-memory store for tests: no chrome.storage dependency, per-instance isolation. */
 export class InMemoryRecordingCacheStore implements RecordingCacheStore {
   private data = new Map<string, unknown>();
 
@@ -87,92 +78,104 @@ export class InMemoryRecordingCacheStore implements RecordingCacheStore {
   }
 }
 
-// --- VULN-014 helpers ---
+// --- helpers ---
 
-/**
- * VULN-014 (CWE-312): return a shallow copy of settings with every API-key
- * field emptied. The in-memory cache keeps the real (decrypted) keys for actual
- * API calls; the session-storage mirror must not persist them.
- */
-export function redactSettingsApiKeys(settings: Settings | null): Settings | null {
-  if (!settings) return null;
-  const copy = { ...settings } as Record<string, unknown>;
-  for (const field of API_KEY_FIELDS) {
-    if (field in copy) copy[field] = '';
-  }
-  return copy as Settings;
-}
-
-/**
- * VULN-014: whether the cached settings carry at least one populated API key.
- */
 function hasApiKeys(settings: Settings): boolean {
   const rec = settings as Record<string, unknown>;
-  return API_KEY_FIELDS.some(f => typeof rec[f] === 'string' && (rec[f] as string).length > 0);
+  return API_KEY_FIELDS.some((f) => typeof rec[f] === 'string' && (rec[f] as string).length > 0);
 }
 
-// --- URL normalization ---
+// --- RecordingCacheInstance facade ---
 
-/**
- * Normalize URL for cache key consistency.
- * Strips fragment and trailing slash (matching HeaderDetector logic).
- */
-function normalizeUrlForCache(url: string): string {
-  try {
-    const parsed = new URL(url);
-    parsed.hash = '';
-    let normalized = parsed.toString();
-    if (normalized.endsWith('/') && parsed.pathname !== '/') {
-      normalized = normalized.slice(0, -1);
-    }
-    return normalized;
-  } catch {
-    return url;
-  }
-}
-
-// --- RecordingCacheInstance class ---
-
-/**
- * Instance-based cache. Each instance owns its own cache state and store,
- * so tests can create independent instances instead of sharing global state.
- */
 export class RecordingCacheInstance {
-  private cacheState: CacheState = {
-    settingsCache: null,
-    cacheTimestamp: null,
-    cacheVersion: 0,
-    urlCache: null,
-    urlCacheTimestamp: null,
-    privacyCache: null,
-    privacyCacheTimestamp: null,
-  };
+  private readonly settingsCache: SettingsCache;
+  private readonly urlCache: UrlCache;
+  private readonly privacyCache: PrivacyCache;
 
   private saveQueueScheduled = false;
+  private storageListenerAdded = false;
+  private storageListener: ((changes: Record<string, chrome.storage.StorageChange>, areaName: string) => void) | null = null;
 
   constructor(
     private readonly store: RecordingCacheStore,
     private readonly repo: SettingsReader = settingsRepository,
-  ) {}
+  ) {
+    this.settingsCache = new SettingsCache(repo);
+    this.urlCache = new UrlCache();
+    this.privacyCache = new PrivacyCache();
+  }
 
   // =========================================================================
-  // Cache state access (for backward compatibility and testing)
+  // Cache state access (backward compat — live view over 3 caches)
   // =========================================================================
 
   getCacheState(): CacheState {
-    return this.cacheState;
+    const view = {} as CacheState;
+    Object.defineProperties(view, {
+      settingsCache: {
+        get: () => this.settingsCache.getState().cache,
+        set: (v: Settings | null) => {
+          const s = this.settingsCache.getState();
+          this.settingsCache.setState(v, s.timestamp, s.version);
+        },
+        enumerable: true,
+      },
+      cacheTimestamp: {
+        get: () => this.settingsCache.getState().timestamp,
+        set: (v: number | null) => {
+          const s = this.settingsCache.getState();
+          this.settingsCache.setState(s.cache, v, s.version);
+        },
+        enumerable: true,
+      },
+      cacheVersion: {
+        get: () => this.settingsCache.getState().version,
+        set: (v: number) => {
+          const s = this.settingsCache.getState();
+          this.settingsCache.setState(s.cache, s.timestamp, v);
+        },
+        enumerable: true,
+      },
+      urlCache: {
+        get: () => this.urlCache.getState().cache,
+        set: (v: Map<string, number> | null) => {
+          const s = this.urlCache.getState();
+          this.urlCache.setState(v, s.timestamp);
+        },
+        enumerable: true,
+      },
+      urlCacheTimestamp: {
+        get: () => this.urlCache.getState().timestamp,
+        set: (v: number | null) => {
+          const s = this.urlCache.getState();
+          this.urlCache.setState(s.cache, v);
+        },
+        enumerable: true,
+      },
+      privacyCache: {
+        get: () => this.privacyCache.getState().cache,
+        set: (v: Map<string, PrivacyInfo> | null) => {
+          const s = this.privacyCache.getState();
+          this.privacyCache.setState(v, s.timestamp);
+        },
+        enumerable: true,
+      },
+      privacyCacheTimestamp: {
+        get: () => this.privacyCache.getState().timestamp,
+        set: (v: number | null) => {
+          const s = this.privacyCache.getState();
+          this.privacyCache.setState(s.cache, v);
+        },
+        enumerable: true,
+      },
+    });
+    return view;
   }
 
   resetCacheState(): void {
-    this.cacheState = {
-      settingsCache: null,
-      cacheTimestamp: null,
-      cacheVersion: 0,
-      urlCache: null,
-      urlCacheTimestamp: null,
-      privacyCache: null,
-      privacyCacheTimestamp: null,
-    };
+    this.settingsCache.setState(null, null, 0);
+    this.urlCache.setState(null, null);
+    this.privacyCache.setState(null, null);
   }
 
   // =========================================================================
@@ -180,190 +183,124 @@ export class RecordingCacheInstance {
   // =========================================================================
 
   getPrivacyCache(): Map<string, PrivacyInfo> | null {
-    return this.cacheState.privacyCache;
+    return this.privacyCache.get();
   }
 
   setPrivacyCacheEntry(url: string, info: PrivacyInfo): void {
-    if (!this.cacheState.privacyCache) {
-      this.cacheState.privacyCache = new Map();
-      this.cacheState.privacyCacheTimestamp = Date.now();
-    }
-    this.cacheState.privacyCache.set(url, info);
+    this.privacyCache.setEntry(url, info);
   }
 
   getPrivacyCacheSize(): number {
-    return this.cacheState.privacyCache?.size ?? 0;
+    return this.privacyCache.size();
   }
 
   isPrivacyCacheInitialized(): boolean {
-    return this.cacheState.privacyCache !== null;
+    return this.privacyCache.isInitialized();
   }
 
   // =========================================================================
-  // Cross-context invalidation: when dashboard (or any extension page) saves
-  // settings via chrome.storage.local, the background's 30s cache would
-  // otherwise stay stale for up to 29s. Listen to storage changes and
-  // invalidate eagerly.
-  // WHY: dashboard's saveSettings() clears settingsStore (1s) but not this
-  // instance's 30s cache — they run in different JS contexts.
+  // Cross-context invalidation: facade owns the single chrome.storage.onChanged
+  // listener and broadcasts to the typed caches. Dispose deregisters it.
   // =========================================================================
-  private storageListenerAdded = false;
 
   ensureStorageListener(): void {
     if (this.storageListenerAdded) return;
     this.storageListenerAdded = true;
     try {
-      chrome.storage.onChanged.addListener((changes, area) => {
+      const handler = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
         if (area !== 'local') return;
         if ('settings' in changes) {
           this.invalidateSettingsCache();
         }
-      });
+      };
+      this.storageListener = handler;
+      chrome.storage.onChanged.addListener(handler);
     } catch {
       // chrome.storage unavailable in tests
     }
   }
 
+  dispose(): void {
+    if (this.storageListener && typeof chrome !== 'undefined' && chrome.storage?.onChanged?.removeListener) {
+      try {
+        chrome.storage.onChanged.removeListener(this.storageListener);
+      } catch {
+        // ignore
+      }
+    }
+    this.storageListener = null;
+    this.storageListenerAdded = false;
+  }
+
   // =========================================================================
-  // Settings cache
+  // Settings cache — delegates TTL/stale check to SettingsCache
   // =========================================================================
 
   async getSettingsWithCache(): Promise<Settings> {
     const now = Date.now();
-    const cs = this.cacheState;
-
-    if (cs.settingsCache && cs.cacheTimestamp) {
-      const age = now - cs.cacheTimestamp;
-      if (age < SETTINGS_CACHE_TTL) {
-        addLog(LogType.DEBUG, 'Settings cache hit', { age: age + 'ms' });
-        return cs.settingsCache;
-      }
+    if (!this.settingsCache.isStale(now)) {
+      const state = this.settingsCache.getState();
+      const age = now - (state.timestamp ?? now);
+      addLog(LogType.DEBUG, 'Settings cache hit', { age: age + 'ms' });
+      return state.cache as Settings;
     }
-
     return this.fetchAndCacheSettings(now);
   }
 
   private async fetchAndCacheSettings(now: number): Promise<Settings> {
     const settings = await this.repo.getAll();
-    const cs = this.cacheState;
-
-    cs.settingsCache = settings;
-    cs.cacheTimestamp = now;
-    cs.cacheVersion++;
-
-    addLog(LogType.DEBUG, 'Settings cache updated', { cacheVersion: cs.cacheVersion });
+    const state = this.settingsCache.getState();
+    this.settingsCache.setState(settings, now, state.version + 1);
+    addLog(LogType.DEBUG, 'Settings cache updated', { cacheVersion: state.version + 1 });
     this.scheduleCacheSave();
-
     return settings;
   }
 
   invalidateSettingsCache(): void {
     addLog(LogType.DEBUG, 'Settings cache invalidated');
-    const cs = this.cacheState;
-    cs.settingsCache = null;
-    cs.cacheTimestamp = null;
-    cs.cacheVersion++;
+    this.settingsCache.invalidate();
     this.scheduleCacheSave();
   }
 
   // =========================================================================
-  // URL cache
+  // URL cache — delegates TTL/stale check to UrlCache
   // =========================================================================
 
   async getSavedUrlsWithCache(): Promise<Map<string, number>> {
     const now = Date.now();
-    const cs = this.cacheState;
-
-    if (cs.urlCache && cs.urlCacheTimestamp) {
-      const age = now - cs.urlCacheTimestamp;
-      if (age < URL_CACHE_TTL) {
-        addLog(LogType.DEBUG, 'URL cache hit', { count: cs.urlCache.size, age: age + 'ms' });
-        return cs.urlCache;
-      }
+    if (!this.urlCache.isStale(now)) {
+      const state = this.urlCache.getState();
+      const age = now - (state.timestamp ?? now);
+      addLog(LogType.DEBUG, 'URL cache hit', { count: state.cache!.size, age: age + 'ms' });
+      return state.cache as Map<string, number>;
     }
 
     const urlMap = await getSavedUrlsWithTimestamps();
-    cs.urlCache = new Map(urlMap);
-    cs.urlCacheTimestamp = now;
-
+    this.urlCache.setState(new Map(urlMap), now);
     addLog(LogType.DEBUG, 'URL cache updated', { count: urlMap.size });
     this.scheduleCacheSave();
-
     return urlMap;
   }
 
   invalidateUrlCache(): void {
     addLog(LogType.DEBUG, 'URL cache invalidated');
-    const cs = this.cacheState;
-    cs.urlCache = null;
-    cs.urlCacheTimestamp = null;
+    this.urlCache.invalidate();
     this.scheduleCacheSave();
   }
 
   // =========================================================================
-  // Privacy cache (get with session storage fallback)
+  // Privacy cache — delegates session fallback to PrivacyCache
   // =========================================================================
 
   async getPrivacyInfoWithCache(url: string): Promise<PrivacyInfo | null> {
-    const now = Date.now();
-    const normalizedUrl = normalizeUrlForCache(url);
-    const cs = this.cacheState;
-
-    if (cs.privacyCache) {
-      const cached = cs.privacyCache.get(normalizedUrl);
-      if (cached && (now - cached.timestamp) < PRIVACY_CACHE_TTL) {
-        addLog(LogType.DEBUG, 'Privacy cache hit', { url });
-        return cached;
-      }
-    }
-
-    // Session storage fallback (SW restart recovery)
-    if (chrome.storage.session) {
-      try {
-        const sessionKey = 'privacyCache_' + normalizedUrl;
-        const result = await chrome.storage.session.get(sessionKey);
-        const cached = isPrivacyInfo(result[sessionKey]) ? result[sessionKey] : undefined;
-        if (cached) {
-          if ((now - cached.timestamp) >= PRIVACY_CACHE_TTL) {
-            await chrome.storage.session.remove(sessionKey);
-            addLog(LogType.DEBUG, 'Privacy cache session entry expired, evicted', { url });
-          } else {
-            if (!cs.privacyCache) {
-              cs.privacyCache = new Map();
-              cs.privacyCacheTimestamp = Date.now();
-            }
-            cs.privacyCache.set(normalizedUrl, cached);
-            addLog(LogType.DEBUG, 'Privacy cache restored from session storage', { url });
-            return cached;
-          }
-        }
-      } catch {
-        // session storage errors are non-fatal
-      }
-    }
-
-    addLog(LogType.DEBUG, 'Privacy check skipped: no header data', { url });
-    return null;
+    return this.privacyCache.getWithFallback(url);
   }
 
   async invalidatePrivacyCache(): Promise<void> {
     addLog(LogType.DEBUG, 'Privacy cache invalidated');
-    const cs = this.cacheState;
-    cs.privacyCache = null;
-    cs.privacyCacheTimestamp = null;
+    this.privacyCache.invalidate();
     this.scheduleCacheSave();
-
-    if (chrome.storage.session) {
-      try {
-        const all = await chrome.storage.session.get(null);
-        const privacyKeys = Object.keys(all).filter((key) => key.startsWith('privacyCache_'));
-        if (privacyKeys.length > 0) {
-          await chrome.storage.session.remove(privacyKeys);
-        }
-      } catch {
-        // session storage errors are non-fatal
-      }
-    }
+    await this.privacyCache.clearSession();
   }
 
   // =========================================================================
@@ -375,30 +312,26 @@ export class RecordingCacheInstance {
       const saved = await this.store.get<PersistedCacheState>(SESSION_KEYS.RECORDING_CACHE);
       if (!saved) return;
       const now = Date.now();
-      const cs = this.cacheState;
 
-      if (saved.settingsCache && saved.cacheTimestamp && (now - saved.cacheTimestamp) < SETTINGS_CACHE_TTL
-        && hasApiKeys(saved.settingsCache)) {
-        cs.settingsCache = saved.settingsCache;
-        cs.cacheTimestamp = saved.cacheTimestamp;
-        cs.cacheVersion = saved.cacheVersion;
+      if (
+        saved.settingsCache &&
+        saved.cacheTimestamp &&
+        now - saved.cacheTimestamp < SETTINGS_CACHE_TTL &&
+        hasApiKeys(saved.settingsCache)
+      ) {
+        this.settingsCache.setState(saved.settingsCache, saved.cacheTimestamp, saved.cacheVersion);
       }
-      if (saved.urlCache && saved.urlCacheTimestamp && (now - saved.urlCacheTimestamp) < URL_CACHE_TTL) {
-        cs.urlCache = SessionStore.entriesToMap(saved.urlCache);
-        cs.urlCacheTimestamp = saved.urlCacheTimestamp;
+      if (saved.urlCache && saved.urlCacheTimestamp && now - saved.urlCacheTimestamp < URL_CACHE_TTL) {
+        this.urlCache.setState(SessionStore.entriesToMap(saved.urlCache), saved.urlCacheTimestamp);
       }
-      if (saved.privacyCache && saved.privacyCacheTimestamp && (now - saved.privacyCacheTimestamp) < PRIVACY_CACHE_TTL) {
-        cs.privacyCache = SessionStore.entriesToMap(saved.privacyCache);
-        cs.privacyCacheTimestamp = saved.privacyCacheTimestamp;
+      if (saved.privacyCache && saved.privacyCacheTimestamp && now - saved.privacyCacheTimestamp < PRIVACY_CACHE_TTL) {
+        this.privacyCache.setState(SessionStore.entriesToMap(saved.privacyCache), saved.privacyCacheTimestamp);
       }
     } catch {
       // store unavailable
     }
   }
 
-  /**
-   * Schedule a debounced cache save to the store.
-   */
   scheduleCacheSave(): void {
     if (this.saveQueueScheduled) return;
     this.saveQueueScheduled = true;
@@ -413,16 +346,20 @@ export class RecordingCacheInstance {
   }
 
   private async saveCacheToSession(): Promise<void> {
-    const cs = this.cacheState;
+    const sState = this.settingsCache.getState();
+    const uState = this.urlCache.getState();
+    const pState = this.privacyCache.getState();
     const payload: PersistedCacheState = {
-      // VULN-014: persist a redacted copy — never write decrypted API keys
-      settingsCache: redactSettingsApiKeys(cs.settingsCache),
-      cacheTimestamp: cs.cacheTimestamp,
-      cacheVersion: cs.cacheVersion,
-      urlCache: cs.urlCache ? SessionStore.mapToEntries(cs.urlCache) : null,
-      urlCacheTimestamp: cs.urlCacheTimestamp,
-      privacyCache: cs.privacyCache ? SessionStore.mapToEntries(cs.privacyCache) : null,
-      privacyCacheTimestamp: cs.privacyCacheTimestamp,
+      // VULN-014: persist a redacted copy — never write decrypted API keys.
+      // Redaction is owned by StoragePort decorator (see storagePort.ts);
+      // this call uses the shared helper so cache modules stay unaware.
+      settingsCache: redactSettingsApiKeys(sState.cache),
+      cacheTimestamp: sState.timestamp,
+      cacheVersion: sState.version,
+      urlCache: uState.cache ? SessionStore.mapToEntries(uState.cache) : null,
+      urlCacheTimestamp: uState.timestamp,
+      privacyCache: pState.cache ? SessionStore.mapToEntries(pState.cache) : null,
+      privacyCacheTimestamp: pState.timestamp,
     };
     await this.store.set(SESSION_KEYS.RECORDING_CACHE, payload, { flushImmediately: true });
   }

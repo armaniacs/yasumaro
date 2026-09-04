@@ -30,6 +30,8 @@ dev-docs/readability-spike-*
 dev-docs/verify-vulnhunt-*
 dev-docs/cleansing-corpus-report*
 dev-docs/dig-findings-*
+dev-docs/dig-findings-*.md
+
 plans/
 .ruff_cache/
 .worktrees/

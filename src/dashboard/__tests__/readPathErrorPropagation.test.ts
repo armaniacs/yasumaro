@@ -67,7 +67,8 @@ describe('read path surfaces the failure reason', () => {
   });
 
   it('backupDb reports the reason instead of a missing file', async () => {
-    givenResponse({ success: false, error: QUOTA });
+    // backup_db is destructive: the confirm-token handshake runs first.
+    givenResponses({ success: true, confirmToken: 'test-confirm-token' }, { success: false, error: QUOTA });
 
     expect(await backupDb()).toEqual({ error: QUOTA });
   });

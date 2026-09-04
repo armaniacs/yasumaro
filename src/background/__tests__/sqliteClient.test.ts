@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SqliteClient } from '../sqliteClient.js';
+import { SqliteClient } from '../sqlite/offscreenGateway.js';
 import type { OffscreenTransport } from '../offscreenTransport.js';
 import type { OffscreenResponse } from '../../messaging/sqliteMessages.js';
 import type { SqliteMessageType } from '../../messaging/sqliteMessages.js';

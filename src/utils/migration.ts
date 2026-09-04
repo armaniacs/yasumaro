@@ -205,10 +205,10 @@ export async function migrateUblockSettings(): Promise<boolean> {
  * @deprecated Use TrustDb.initialize() instead
  */
 export async function initializeTrancoVersion(): Promise<void> {
-  console.warn('[Migration] initializeTrancoVersion() is deprecated. Use TrustDb.initialize() instead.');
-  // TrustDbに委譲（二重初期化を防止）
-  const { getTrustDb } = await import('./trustDb/trustDb.js');
-  const db = getTrustDb();
+  console.warn('[Migration] initializeTrancoVersion() is deprecated. Use TrustDbAdmin.initialize() instead.');
+  // TrustDbAdminに委譲（二重初期化を防止） — mutation seam owns lifecycle
+  const { getTrustDbAdmin } = await import('./trustDb/TrustDbAdmin.js');
+  const db = getTrustDbAdmin();
   await db.initialize();
 }
 

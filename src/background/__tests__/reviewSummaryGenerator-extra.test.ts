@@ -224,7 +224,7 @@ import {
 } from '../reviewSummaryGenerator.js';
 import type { AIService } from '../ai/AIService.js';
 import type { AISummaryResult } from '../ai/AIService.js';
-import type { SqliteClient } from '../sqliteClient.js';
+import type { SqliteClient } from '../sqlite/offscreenGateway.js';
 import { getSettings } from '../../utils/storage.js';
 import { addLog } from '../../utils/logger.js';
 

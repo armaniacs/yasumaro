@@ -5,7 +5,7 @@ import { logInfo, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { purgeExpiredDownloadRecords } from './localMarkdownExportRetention.js';
 import { clearExpiredPages as defaultClearExpiredPages } from '../utils/pendingStorage.js';
-import type { CallResult } from './sqliteClient.js';
+import type { CallResult } from './sqlite/offscreenGateway.js';
 
 type PurgeFn = (retentionDays?: number, maxRecords?: number) => Promise<CallResult<{ purged: number }>>;
 type ContentPurgeFn = (

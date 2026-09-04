@@ -7,9 +7,10 @@
 import { logError, logWarn, ErrorCode } from '../logger.js';
 import { errorMessage } from '../errorUtils.js';
 import { isEncrypted, encryptApiKey, decryptApiKey } from '../crypto/index.js';
-import { withOptimisticLock } from '../optimisticLock.js';
+import { withOptimisticLock } from './storageTransaction.js';
 import { getOrCreateEncryptionKey } from './encryptionSession.js';
 import { StorageKeys } from './types.js';
+import { asStorageKeys } from './apiKeyFields.js';
 import { DEFAULT_SETTINGS } from './defaults.js';
 import type { StorageKey, StorageKeyValues, Settings } from './types.js';
 
@@ -74,14 +75,7 @@ export async function migrateToSingleSettingsObject(): Promise<boolean> {
     return true;
 }
 
-export const API_KEY_FIELDS: StorageKey[] = [
-    StorageKeys.OBSIDIAN_API_KEY,
-    StorageKeys.GEMINI_API_KEY,
-    StorageKeys.OPENAI_API_KEY,
-    StorageKeys.OPENAI_2_API_KEY,
-    StorageKeys.PROVIDER_API_KEY,
-    StorageKeys.GITHUB_PAT,
-];
+export const API_KEY_FIELDS: StorageKey[] = asStorageKeys();
 
 /**
  * Legacy key derivation fallback for 29-12 migration.

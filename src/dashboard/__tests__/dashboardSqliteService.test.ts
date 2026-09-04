@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { givenHandshakeResponse, givenHandshakeError } from './helpers/dashboardSqliteMock.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 
 /**
@@ -14,18 +15,17 @@ import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
  * After calling this, the NEXT call to sendMessage will use the given response.
  */
 function givenResponse(response: any) {
-  (globalThis as any).chrome.runtime.sendMessage = vi.fn(
-    (_message: any) => Promise.resolve(response),
-  );
+  // PBI 2026-09-04-01: destructive ops require a confirm-token handshake.
+  // Route by subtype: create_confirm_token gets a token, the op gets the script.
+  givenHandshakeResponse(response);
 }
 
 /**
  * Mock chrome.runtime.sendMessage to reject (simulating lastError / connection failure).
  */
 function givenLastError(errorMessage: string) {
-  (globalThis as any).chrome.runtime.sendMessage = vi.fn(
-    (_message: any) => Promise.reject(new Error(errorMessage)),
-  );
+  // Handshake-aware: token fetch succeeds, the operation rejects.
+  givenHandshakeError(errorMessage);
 }
 
 import { queryLogs, searchLogs, toggleStar, deleteLog, updateLog, getLogCount } from '../dashboardSqliteService.js';

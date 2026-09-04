@@ -223,7 +223,7 @@ vi.mock('../../../utils/storage/quota.js', async (importOriginal) => {
 
 import { createDashboardSqliteHandler, createSqliteClientDeps } from '../dashboardSqliteHandlers.js';
 import type { SqliteClientBackedDeps } from '../dashboardSqliteHandlers.js';
-import type { SqliteClient } from '../../sqliteClient.js';
+import type { SqliteClient } from '../../sqlite/offscreenGateway.js';
 
 function makeSqliteClient(overrides: Record<string, unknown> = {}) {
   const client = {

@@ -20,8 +20,8 @@ const mockRemoveSensitiveDomain = vi.fn(() => Promise.resolve());
 const mockAddToWhitelist = vi.fn(() => Promise.resolve({ success: true }));
 const mockRemoveFromWhitelist = vi.fn(() => Promise.resolve());
 
-vi.mock('../../../utils/trustDb/trustDb.js', () => ({
-  getTrustDb: vi.fn(() => ({
+vi.mock('../../../utils/trustDb/TrustDbAdmin.js', () => ({
+  getTrustDbAdmin: vi.fn(() => ({
     initialize: mockInitialize,
     getDatabase: mockGetDatabase,
     getJpAnchorTlds: mockGetJpAnchorTlds,
@@ -84,7 +84,9 @@ vi.mock('../../../utils/trustDb/trancoUpdater.js', () => ({
 const mockLogInfo = vi.fn();
 const mockLogError = vi.fn();
 vi.mock('../../../utils/logger.js', () => ({
+  logDebug: vi.fn(),
   logInfo: mockLogInfo,
+  logWarn: vi.fn(),
   logError: mockLogError,
   ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
 }));

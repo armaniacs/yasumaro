@@ -17,6 +17,11 @@ Yasumaro は、ポップアップを開かなくても現在の状態が分か�
 | **◎** | 青 | 現在のページが自動保存されました（そのタブを離れるまで表示され続けます） |
 | **C{件数}** | 緑 | AI Summary Cleansingでクレンジングされた要素数（例: `C12`）。しばらくすると自動的に消えます |
 | **!** | オレンジ | プライベートページとして検出されました（銀行・メールなど）。または、プライバシー同意が未取得の状態です |
+| **∉** | 緑 | ドメインフィルターの設定により、現在のページは記録対象外です（許可リスト外、またはブロックリスト該当）。別タブに切り替えるとバッジは消えます |
+
+### 「∉」バッジについて
+
+緑の「∉」バッジは、ドメインフィルター設定（許可リスト / ブロックリスト / uBlock 形式ルール）によって現在のドメインが記録対象から除外されていることを示します。数学記号の「∉」（属さない）にちなんでいます。意図せず記録が止まっている場合は、ダッシュボードの「ドメインフィルター」設定を確認してください。なお、この判定が一時的に行えなかった場合はバッジを表示しません。
 
 ### 「!」バッジの2つの意味に注意
 
@@ -34,6 +39,7 @@ Yasumaro は、ポップアップを開かなくても現在の状態が分か�
 - このページはちゃんと保存されたか
 - クレンジングでどれだけ削減されたか
 - このページは記録前に確認が必要か
+- このページはドメインフィルターで記録対象外になっているか
 
 ---
 
@@ -50,6 +56,11 @@ Yasumaro displays a small badge (colored symbol or text) on the extension icon s
 | **◎** | Blue | The current page was auto-saved (stays visible until you leave the tab) |
 | **C{count}** | Green | Number of elements removed by AI Summary Cleansing (e.g., `C12`). Disappears automatically after a short time |
 | **!** | Orange | The page was detected as private (banking, email, etc.), OR privacy consent has not yet been granted |
+| **∉** | Green | The current page is excluded from recording by your domain filter settings (not in the allowlist, or matched by the blocklist). The badge clears once you switch tabs |
+
+### About the "∉" Badge
+
+The green "∉" badge indicates that the current domain is excluded from recording by your domain filter settings (allowlist / blocklist / uBlock-format rules). It uses the mathematical "not an element of" symbol. If recording has stopped unexpectedly, check the "Domain Filter" settings in the dashboard. The badge is not shown if this check could not be performed.
 
 ### The Two Meanings of "!"
 

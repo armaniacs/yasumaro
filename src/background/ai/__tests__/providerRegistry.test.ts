@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PROVIDER_REGISTRY, getRegistryEntry } from '../providerRegistry.js';
+import { PROVIDER_CATALOG as PROVIDER_REGISTRY, getRegistryEntry } from '../providerCatalog.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 
 vi.mock('../../../utils/logger.js', () => ({
