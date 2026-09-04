@@ -11,7 +11,7 @@
  * is one flow with a warnLabel (' (e2e)' or '') — the e2e-bypass-safety
  * property (cold cache must still ask background) is tested, not commented.
  */
-import { extractDomain, isDomainInList } from './urlSkipper.js';
+import { isDomainInList } from './urlSkipper.js';
 
 export const CACHE_TTL = 5 * 60 * 1000;
 
