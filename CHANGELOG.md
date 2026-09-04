@@ -33,6 +33,10 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+### リファクタリング
+
+- アーキテクチャ診断（Architecture Round 2、10 候補）から 7 件を実施（PBI 2026-09-04-11〜17、`dev-docs/archived/pbi/` 参照）。Dashboard 履歴の LRU キャッシュを `QueryCache` モジュールに抽出し `persistSort` のテスト検出ロジック（vi/NODE_ENV 探測）を scheduler seam に置換、contentExtractor の 3 抽出経路を `extractPipeline` に統一して `returnInfo` boolean-trap を撤去（fallback 重複解消・`measureBytes` を types.ts に移動）、bench CLI の引数パーサを純関数化（`--filter --check` 誤飲防止）し成果物書き出しを `writeArtifacts` に集約、contentKernel から `DeadlineTimer`/`throttle`/`watchDynamicContent` を分離
+
 ## [6.7.106] - 2026-09-04
 
 このリリースは v6.7.105 と同日に公開する、パフォーマンス最適化中心のリリースです。
