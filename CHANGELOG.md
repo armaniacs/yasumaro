@@ -33,6 +33,12 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [Unreleased]
+
+### 開発者向け / 非機能
+
+- パフォーマンス最適化 7 件を実施（PBI 2026-09-04-02〜07、`pbi/` アーカイブ参照）。content script の周期ポーリングを単発 deadline タイマー + scroll 駆動に置換（schedule 呼び出し -99%）、textscore の事前計算 + `innerText` 排除（L p99 -49%）、診断用バイト計測の `returnInfo` ゲート化（encode -75%・ヒープ -16%）、クレンジングの deep 走査で Shadow/iframe ホスト不在ページの列挙をゼロ化（M p95 -55%）、Dashboard 履歴に LRU クエリキャッシュ + ソート persist の debounce（クエリ -93%・storage 書き込み -100%）。`deduplicateContent` の近似最適化（PBI 08）はベンチ計測の結果現行実装が十分高速と判明したため不採用
+
 ## [6.7.105] - 2026-09-04
 
 このリリースは v6.7.104 と同日に公開する、開発者向けツール整備中心のリリースです。
