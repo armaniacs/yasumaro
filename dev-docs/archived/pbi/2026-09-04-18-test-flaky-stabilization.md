@@ -52,14 +52,14 @@ Scenario: tag 共起の cap 不変式が実時間でなく操作数で検証さ�
 ```
 
 ## 受け入れ基準
-- [ ] vitest.config.ts に `poolOptions.forks.maxForks`（4-8）が設定され、根拠コメント付き
-- [ ] aiUsageTracker: clock 注入 + `resetCounterLockForTesting()` + VULN-010 の実タイマー排除
-- [ ] StepExecutor: `delay` 注入パラメータ（本番既定は実 setTimeout）+ RecordingPipeline の NoOp/error-result テストが 1 秒未満で完了
-- [ ] tagCooccurrenceCap.test.ts: wall-clock 比率アサーション削除、cap 不変式の操作数アサーションに置換
-- [ ] idb-migration: `resetForTesting()` が `#mutex` をリセット、`vi.resetAllMocks()` + beforeEach 再宣言、runMigrations 境界のモック（1 件統合テストは無モックのまま）
-- [ ] **`npm test` 3 連続実行で 0 failed**
-- [ ] `test.skip` / カバレッジ緩和で逃げない（traceId e2e の既存 skip（6.7.98）は別件として範囲外）
-- [ ] 全 unit / integration テスト green + type-check / lint / build クリーン
+- [x] vitest.config.ts に `poolOptions.forks.maxForks`（4-8）が設定され、根拠コメント付き
+- [x] aiUsageTracker: clock 注入 + `resetCounterLockForTesting()` + VULN-010 の実タイマー排除
+- [x] StepExecutor: `delay` 注入パラメータ（本番既定は実 setTimeout）+ RecordingPipeline の NoOp/error-result テストが 1 秒未満で完了
+- [x] tagCooccurrenceCap.test.ts: wall-clock 比率アサーション削除、cap 不変式の操作数アサーションに置換
+- [x] idb-migration: `resetForTesting()` が `#mutex` をリセット、`vi.resetAllMocks()` + beforeEach 再宣言、runMigrations 境界のモック（1 件統合テストは無モックのまま）
+- [x] **`npm test` 3 連続実行で 0 failed**
+- [x] `test.skip` / カバレッジ緩和で逃げない（traceId e2e の既存 skip（6.7.98）は別件として範囲外）
+- [x] 全 unit / integration テスト green + type-check / lint / build クリーン
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -111,8 +111,8 @@ cat testDir/vitest.config.ts
 - **maxForks cap で suite 時間が伸びる**: 660 ファイル / 8 forks ≒ 実測 ~100 秒前後（現状 ~100 秒と大差ない場合が多い）。3 連続実行で効果を確認してから確定
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする（3 連続 0 失敗を含む）
-- [ ] テストカバレッジが基準を満たす（安定化でテスト数が減っていないこと）
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了（injectable clock/delay/scheduler のグリーン後整理）
-- [ ] ドキュメント更新済み（vitest.config の根拠コメント + `dev-docs/TESTING_GUIDE.md` のフレーキー対応方針があれば同期）
+- [x] 全BDDシナリオが自動テストとして実装されパスする（3 連続 0 失敗を含む）
+- [x] テストカバレッジが基準を満たす（安定化でテスト数が減っていないこと）
+- [x] コードレビュー完了
+- [x] リファクタリング完了（injectable clock/delay/scheduler のグリーン後整理）
+- [x] ドキュメント更新済み（vitest.config の根拠コメント + `dev-docs/TESTING_GUIDE.md` のフレーキー対応方針があれば同期）

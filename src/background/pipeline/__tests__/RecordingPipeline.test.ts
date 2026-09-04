@@ -518,6 +518,16 @@ describe('RecordingPipeline', () => {
   });
 
   describe('buildErrorResult - ErrorCode.INTERNAL_ERROR', () => {
+    // リトライの指数バックオフは実タイマーで約11秒 sleep するため、
+    // この describe では scoped fake timers で完走させる（指数バックオフの上限ブロックと同手法）。
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('ステップで例外が発生した場合、logError に ErrorCode.INTERNAL_ERROR が渡される', async () => {
       mockProcess.mockRejectedValue(new Error('Unexpected failure'));
 
@@ -527,11 +537,15 @@ describe('RecordingPipeline', () => {
         makeAiClient() as any
       );
 
-      const result = await pipeline.record({
+      const recordPromise = pipeline.record({
         title: 'Test',
         url: 'https://example.com',
         content: 'Content',
       }, { settings: mockSettings });
+
+      // 非同期タイマーを全て完走させる
+      await vi.runAllTimersAsync();
+      const result = await recordPromise;
 
       expect(result.success).toBe(false);
       expect(logger.logError).toHaveBeenCalledWith(
@@ -551,11 +565,15 @@ describe('RecordingPipeline', () => {
         makeAiClient() as any
       );
 
-      const result = await pipeline.record({
+      const recordPromise = pipeline.record({
         title: 'Crash Test',
         url: 'https://example.com',
         content: 'Content',
       }, { settings: mockSettings });
+
+      // 非同期タイマーを全て完走させる
+      await vi.runAllTimersAsync();
+      const result = await recordPromise;
 
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
@@ -570,11 +588,15 @@ describe('RecordingPipeline', () => {
         makeAiClient() as any
       );
 
-      await pipeline.record({
+      const recordPromise = pipeline.record({
         title: 'Crash Test',
         url: 'https://example.com/crash',
         content: 'Content',
       }, { settings: mockSettings });
+
+      // 非同期タイマーを全て完走させる
+      await vi.runAllTimersAsync();
+      await recordPromise;
 
       // Import the mocked addPendingPage to verify it was called
       const { addPendingPage } = await import('../../../utils/pendingStorage.js');
@@ -636,6 +658,16 @@ describe('RecordingPipeline', () => {
   });
 
   describe('offlineNetworkQueue の注入 (NoOpOfflineNetworkQueue)', () => {
+    // リトライの指数バックオフは実タイマーで約11秒 sleep するため、
+    // この describe では scoped fake timers で完走させる（指数バックオフの上限ブロックと同手法）。
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('createRecordingOrchestrator に NoOpOfflineNetworkQueue を渡して構築できる', () => {
       const pipeline = createRecordingOrchestrator({
         getPrivacyInfoWithCache: makeGetPrivacyInfo(),
@@ -660,10 +692,14 @@ describe('RecordingPipeline', () => {
         new NoOpOfflineNetworkQueue(),
       );
 
-      const result = await pipeline.record(
+      const recordPromise = pipeline.record(
         { title: 'Test', url: 'https://example.com/noop-queue', content: 'content' },
         { settings: mockSettings },
       );
+
+      // 非同期タイマーを全て完走させる
+      await vi.runAllTimersAsync();
+      const result = await recordPromise;
 
       expect(result.success).toBe(false);
     });

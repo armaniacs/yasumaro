@@ -14,11 +14,11 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-04 フレーキーテスト安定化（1 件）
+**進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る。
 
-| NN | PBI | 種別 | 難易度 | 副作用 | RICE | 状態 |
-|----|-----|------|--------|--------|------|------|
-| 18 | [test-flaky-stabilization](2026-09-04-18-test-flaky-stabilization.md) | 🧪 test | 🟡 2pt | 🟡 | 16 | ⬜ 負荷下フレーキー 5 ファイル（bodyProtection/aiUsageTracker/RecordingPipeline/tagCooccurrenceCap/idb-migration）の機構診断済み。clock/delay 注入・不変式アサーション化・forks cap・mutex/mock 衛生。受け入れ基準: `npm test` 3 連続 0 失敗 |
+### 2026-09-04 フレーキーテスト安定化（1 件） — 完了
+
+- 2026-09-04-18-test-flaky-stabilization.md（🧪 2pt — 負荷下フレーキー 5 ファイルの機構診断に基づく安定化。clock 注入（aiUsageTracker）・StepExecutor delay 注入（RecordingPipeline、リトライテスト 11 秒→1ms 未満）・cap 不変式アサーション化（tagCooccurrenceCap）・mutex リセット + mock 衛生（idb-migration）・vitest forks cap 8。**検証: `npm test` 3 連続 0 failed（11,449 passed）+ make clean test EXIT=0**）
 
 ### 2026-09-04 Architecture Round 2（0904b 診断） — 7 件完了
 

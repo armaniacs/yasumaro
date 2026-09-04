@@ -4,6 +4,14 @@ import {
   narrowEntriesToTopTags,
 } from '../tagCooccurrence.js';
 import { MAX_TAGS_PER_RECORD, MAX_TAG_CLUSTER_TAGS } from '../../utils/computeLimits.js';
+import { parseTagsForDisplay } from '../../utils/tagUtils.js';
+
+// Wall-clock timing signals belong in bench/ (non-gating), not in unit
+// pass/fail assertions: sub-millisecond workloads pick up scheduling noise.
+
+function countUniqueTags(entries: Array<{ tags?: string | null }>): number {
+  return new Set(entries.flatMap(e => parseTagsForDisplay(e.tags))).size;
+}
 
 function makeTagString(count: number, prefix = 't'): string {
   return Array.from({ length: count }, (_, i) => `#${prefix}${i}`).join(' ');
@@ -45,18 +53,25 @@ describe('computeTagCooccurrence input cap (VULN-041)', () => {
     expect(edges).toContainEqual({ source: 'b', target: 'c', weight: 2 });
   });
 
-  it('perf: 4x tags/record does NOT give ~16x time (capped, near-constant)', () => {
-    const time = (tagsPerRecord: number): number => {
-      const entries = Array.from({ length: 50 }, () => ({ tags: makeTagString(tagsPerRecord) }));
-      const start = performance.now();
-      computeTagCooccurrence(entries);
-      return performance.now() - start;
-    };
-    // warm up
-    time(100);
-    const t1 = Math.max(time(125), 0.01);
-    const t4 = time(500);
-    expect(t4).toBeLessThan(t1 * 8);
+  it('cap: 4x tags/record stays bounded and identical to the capped result', () => {
+    const build = (tagsPerRecord: number): Array<{ tags: string }> =>
+      Array.from({ length: 50 }, () => ({ tags: makeTagString(tagsPerRecord) }));
+    // Raw inputs exceed the cap — without per-record capping these bounds fail (VULN-041).
+    expect(125).toBeGreaterThan(MAX_TAGS_PER_RECORD);
+    expect(500).toBeGreaterThan(MAX_TAGS_PER_RECORD);
+    const small = computeTagCooccurrence(build(125));
+    const large = computeTagCooccurrence(build(500));
+    const perRecordEdgeCap = (MAX_TAGS_PER_RECORD * (MAX_TAGS_PER_RECORD - 1)) / 2;
+    for (const result of [small, large]) {
+      expect(result.nodes.length).toBeLessThanOrEqual(MAX_TAGS_PER_RECORD);
+      expect(result.edges.length).toBeLessThanOrEqual(perRecordEdgeCap);
+      expect(result.edges.length).toBeLessThanOrEqual(
+        (result.nodes.length * (result.nodes.length - 1)) / 2
+      );
+    }
+    // Capping keeps the first N tags in parse order, so both inputs collapse to the same output.
+    expect(large.nodes).toEqual(small.nodes);
+    expect(large.edges).toEqual(small.edges);
   });
 });
 
@@ -93,21 +108,23 @@ describe('narrowEntriesToTopTags (VULN-053 pre-narrowing)', () => {
     expect(narrowed).toBe(entries);
   });
 
-  it('perf: 4x unique tags does NOT blow up cooccurrence when pre-narrowed', () => {
+  it('cap: 4x unique tags stays bounded when pre-narrowed', () => {
     const build = (uniqueTags: number): Array<{ tags: string }> =>
       Array.from({ length: uniqueTags }, (_, i) => ({ tags: `#u${i} #u${(i + 1) % uniqueTags}` }));
-    const run = (uniqueTags: number): number => {
-      const entries = narrowEntriesToTopTags(build(uniqueTags), MAX_TAG_CLUSTER_TAGS);
-      const start = performance.now();
-      computeTagCooccurrence(entries);
-      return performance.now() - start;
-    };
-    run(500);
-    const t1 = Math.max(run(500), 0.01);
-    const t4 = run(2000);
-    // 12x (not 8x): wall-clock perf assertions on shared CI hardware pick up
-    // scheduling noise; 4x data at 12x time still rejects the quadratic blow-up
-    // this guards against (observed ~6x on a loaded machine, VULN-053 fix ~2x).
-    expect(t4).toBeLessThan(t1 * 12);
+    // Raw 4x input exceeds the cap — without pre-narrowing the bounds below fail (VULN-053).
+    expect(countUniqueTags(build(2000))).toBeGreaterThan(MAX_TAG_CLUSTER_TAGS);
+    const narrowed = narrowEntriesToTopTags(build(2000), MAX_TAG_CLUSTER_TAGS);
+    expect(countUniqueTags(narrowed)).toBeLessThanOrEqual(MAX_TAG_CLUSTER_TAGS);
+    const { nodes, edges } = computeTagCooccurrence(narrowed);
+    expect(nodes.length).toBeLessThanOrEqual(MAX_TAG_CLUSTER_TAGS);
+    expect(edges.length).toBeLessThanOrEqual((nodes.length * (nodes.length - 1)) / 2);
+    // Every narrowed record still respects the per-record cap.
+    for (const entry of narrowed) {
+      expect(new Set(parseTagsForDisplay(entry.tags)).size).toBeLessThanOrEqual(
+        MAX_TAGS_PER_RECORD
+      );
+    }
+    // Narrowing is a fixpoint: re-narrowing is a no-op returning the same array.
+    expect(narrowEntriesToTopTags(narrowed, MAX_TAG_CLUSTER_TAGS)).toBe(narrowed);
   });
 });
