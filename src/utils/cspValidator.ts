@@ -11,8 +11,7 @@ import { logWarn, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 import { ALLOWED_LOCALHOST_PORTS } from './ssrfGuard.js';
 import { pickDefined } from './objectUtils.js';
-import { isAllowedProviderBaseUrl } from '../background/ai/providerCatalog.js';
-import { PROVIDER_CATALOG } from '../background/ai/providerCatalog.js';
+import { isAllowedProviderBaseUrl, PROVIDER_ALLOWLIST_ROWS } from './storage/providerAllowlist.js';
 
 class CspError extends Error {
     code: string;
@@ -158,8 +157,9 @@ export class CSPValidator {
       }
     };
 
-    // Provider baseUrl domains — derived from catalog's baseUrlKey + isLocal (no hardcoded switch)
-    for (const entry of PROVIDER_CATALOG.values()) {
+    // Provider baseUrl domains — derived from the neutral allowlist table's
+    // baseUrlKey + isLocal (no hardcoded switch, no background-tier import)
+    for (const entry of PROVIDER_ALLOWLIST_ROWS) {
       if (!entry.baseUrlKey) continue;
       const rawUrl = settings[entry.baseUrlKey] as string | undefined;
       if (rawUrl) {

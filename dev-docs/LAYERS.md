@@ -107,7 +107,7 @@ Layer 1 → Layer 0 のみ import 可
 Layer 1-循環 → Layer 0 + 相互の dynamic import のみ許容
 Layer 2 → Layer 0/1 import 可
 Barrel → Layer 0/1/2 を再エクスポートのみ
-逆方向依存 (utils → background) は禁止
+逆方向依存 (utils → background) は禁止（PBI 2026-09-05-01 で cspValidator/urlWhitelist の providerCatalog 逆辺を解消し、`src/utils/storage/providerAllowlist.ts` の中立テーブルに反転済み）
 ```
 
 違反検出:
