@@ -5,14 +5,15 @@ vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => key),
 }));
 
+vi.mock('../spinner.js', () => ({
+  showSpinner: vi.fn(),
+  hideSpinner: vi.fn(),
+}));
+
 import { TabContentFetcher } from '../recordCurrentPage/tabContentFetcher.js';
-import { SpinnerManager } from '../recordCurrentPage/spinnerManager.js';
 
 describe('TabContentFetcher permission ladder', () => {
-  let mockSpinner: SpinnerManager;
-
   beforeEach(() => {
-    mockSpinner = { show: vi.fn(), hide: vi.fn() } as unknown as SpinnerManager;
     chrome.tabs.sendMessage = vi.fn().mockRejectedValue(new Error('no content script'));
     chrome.runtime.lastError = null;
     chrome.permissions.contains = vi.fn();
@@ -30,7 +31,7 @@ describe('TabContentFetcher permission ladder', () => {
     chrome.storage.local.get = vi.fn().mockResolvedValue({ allow_all_urls_opt_in: false });
     chrome.scripting.executeScript = vi.fn().mockResolvedValue([{ result: 'per-origin content' }]);
 
-    const fetcher = new TabContentFetcher(mockSpinner);
+    const fetcher = new TabContentFetcher();
     const result = await fetcher.fetch({ id: 1, url: 'https://example.com/page' } as chrome.tabs.Tab, false);
     expect(result).toEqual({ content: 'per-origin content' });
     expect(chrome.permissions.request).toHaveBeenCalledWith({ origins: ['*://example.com/*'] });
@@ -48,7 +49,7 @@ describe('TabContentFetcher permission ladder', () => {
     chrome.storage.local.get = vi.fn().mockResolvedValue({});
     chrome.scripting.executeScript = vi.fn().mockResolvedValue([{ result: 'already permitted' }]);
 
-    const fetcher = new TabContentFetcher(mockSpinner);
+    const fetcher = new TabContentFetcher();
     const result = await fetcher.fetch({ id: 1, url: 'https://example.com/page' } as chrome.tabs.Tab, false);
     expect(result).toEqual({ content: 'already permitted' });
   });
@@ -69,7 +70,7 @@ describe('TabContentFetcher permission ladder', () => {
     });
     chrome.scripting.executeScript = vi.fn().mockResolvedValue([{ result: 'all_urls content' }]);
 
-    const fetcher = new TabContentFetcher(mockSpinner);
+    const fetcher = new TabContentFetcher();
     const result = await fetcher.fetch({ id: 1, url: 'https://example.com/page' } as chrome.tabs.Tab, false);
     expect(result).toEqual({ content: 'all_urls content' });
     expect(chrome.permissions.request).toHaveBeenCalledWith({ origins: ['<all_urls>'] });
@@ -81,7 +82,7 @@ describe('TabContentFetcher permission ladder', () => {
     chrome.storage.local.get = vi.fn().mockResolvedValue({ allow_all_urls_opt_in: false, allowAllUrlsOptIn: false });
     chrome.scripting.executeScript = vi.fn().mockResolvedValue([{ result: 'should not reach' }]);
 
-    const fetcher = new TabContentFetcher(mockSpinner);
+    const fetcher = new TabContentFetcher();
     await expect(fetcher.fetch({ id: 1, url: 'https://example.com/page' } as chrome.tabs.Tab, false)).rejects.toThrow('errorContentScriptNotAvailable');
     expect(chrome.permissions.request).not.toHaveBeenCalledWith({ origins: ['<all_urls>'] });
     expect(chrome.scripting.executeScript).not.toHaveBeenCalled();
@@ -91,7 +92,7 @@ describe('TabContentFetcher permission ladder', () => {
     chrome.permissions.contains = vi.fn().mockResolvedValue(false);
     chrome.permissions.request = vi.fn().mockResolvedValue(false);
     chrome.storage.local.get = vi.fn().mockResolvedValue({ allow_all_urls_opt_in: true });
-    const fetcher = new TabContentFetcher(mockSpinner);
+    const fetcher = new TabContentFetcher();
     await expect(fetcher.fetch({ id: 1, url: 'https://example.com/page' } as chrome.tabs.Tab, false)).rejects.toThrow('errorContentScriptNotAvailable');
   });
 });

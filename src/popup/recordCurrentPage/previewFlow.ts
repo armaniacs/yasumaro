@@ -11,8 +11,8 @@ type RecordMessage =
   | { type: 'SAVE_RECORD'; payload: Record<string, unknown> };
 import { logError, ErrorCode } from '../../utils/logger.js';
 import type { ContentResponse, PreviewResponse } from '../mainTypes.js';
-import { SpinnerManager } from './spinnerManager.js';
 import { pickDefined } from '../../utils/objectUtils.js';
+import { showSpinner, hideSpinner } from '../spinner.js';
 
 export interface PreviewSaveOptions {
   tab: chrome.tabs.Tab;
@@ -53,7 +53,6 @@ function send(message: RecordMessage): Promise<SaveRecordResult | undefined> {
  * またはPREVIEW_RECORD→確認→SAVE_RECORDの流れを実行する。
  */
 export class PreviewFlow {
-  constructor(private readonly spinner: SpinnerManager = new SpinnerManager()) {}
 
   async run(options: PreviewSaveOptions): Promise<PreviewSaveResult> {
     const { tab, content, force, byteStats, aiSummaryCleansedStats, cleansedReason, cleanseStats } = options;
@@ -82,7 +81,7 @@ export class PreviewFlow {
       return { success: !!result?.success, ...pickDefined({ result, error: result?.error }) };
     }
 
-    this.spinner.show(getMessage('localAiProcessing'));
+    showSpinner(getMessage('localAiProcessing'));
     const previewResponse = await send({
       type: 'PREVIEW_RECORD',
       payload: {
@@ -122,7 +121,7 @@ export class PreviewFlow {
     let finalContent = previewResponse.processedContent;
 
     if (shouldShowPreview) {
-      this.spinner.hide();
+      hideSpinner();
       const confirmation = await showPreview(
         previewResponse.processedContent,
         previewResponse.maskedItems,
@@ -137,7 +136,7 @@ export class PreviewFlow {
       finalContent = confirmation.content || '';
     }
 
-    this.spinner.show(getMessage('saving'));
+    showSpinner(getMessage('saving'));
     const result = await send({
       type: 'SAVE_RECORD',
       payload: {
