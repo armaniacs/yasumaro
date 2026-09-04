@@ -560,6 +560,12 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
         model.activateWithTag(initParams.searchTag as string);
       } else if (initParams?.searchDomain) {
         model.activateWithDomain(initParams.searchDomain as string);
+      } else {
+        // Plain re-navigation to this panel (no tag/domain hand-off): drop any
+        // date/search/tag filter left over from the previous visit so load()
+        // below shows the latest entries, unfiltered. The panel stays mounted
+        // across tab switches, so this is the only per-visit reset point.
+        model.resetFiltersForFreshLoad();
       }
     },
     async load() {
