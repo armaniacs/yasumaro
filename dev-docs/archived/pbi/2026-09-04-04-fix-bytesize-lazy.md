@@ -37,13 +37,13 @@ Scenario: バイト数計算は各段階で 1 回だけ
 ```
 
 ## 受け入れ基準
-- [ ] `returnInfo=false` の経路でバイト計測（`getByteSize` / `Blob` サイズ）を一切実行しない
-- [ ] `returnInfo=true` の経路でのみバイト数を計算。計算結果は従来と一致
-- [ ] `getByteSize` を「同じ文字列に対して 2 回呼ばれない」構造に（段階ごとに算出した値を変数で持ち回る。既に大半はそうだが `pageBytes` 用の `document.body.textContent` 生成など重複読みを排除）
-- [ ] `aiSummaryCleaner/index.ts` の `new Blob([outerHTML])` 2 回を、`returnInfo` 相当のフラグがあるときだけ実行。またはバイト数を呼び出し側（`runAiSummaryCleanse`）から `returnInfo` 条件付きで渡す
-- [ ] `TextEncoder` のインスタンスは使い捨てでなくモジュールスコープで 1 個共有（`const ENCODER = new TextEncoder()`）
-- [ ] 既存の `contentExtractor` / `aiSummaryCleaner` テスト、診断パネル系テストがすべてパス
-- [ ] ファネル表示（`funnel: { pageBytes, candidateBytes, cleansedBytes }`）が診断パネルで従来どおり表示される
+- [x] `returnInfo=false` の経路でバイト計測（`getByteSize` / `Blob` サイズ）を一切実行しない
+- [x] `returnInfo=true` の経路でのみバイト数を計算。計算結果は従来と一致
+- [x] `getByteSize` を「同じ文字列に対して 2 回呼ばれない」構造に（段階ごとに算出した値を変数で持ち回る。既に大半はそうだが `pageBytes` 用の `document.body.textContent` 生成など重複読みを排除）
+- [x] `aiSummaryCleaner/index.ts` の `new Blob([outerHTML])` 2 回を、`returnInfo` 相当のフラグがあるときだけ実行。またはバイト数を呼び出し側（`runAiSummaryCleanse`）から `returnInfo` 条件付きで渡す
+- [x] `TextEncoder` のインスタンスは使い捨てでなくモジュールスコープで 1 個共有（`const ENCODER = new TextEncoder()`）
+- [x] 既存の `contentExtractor` / `aiSummaryCleaner` テスト、診断パネル系テストがすべてパス
+- [x] ファネル表示（`funnel: { pageBytes, candidateBytes, cleansedBytes }`）が診断パネルで従来どおり表示される
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -92,8 +92,8 @@ grep -n "getByteSize\|TextEncoder\|new Blob" src/utils/contentExtractor/index.ts
 - `candidateBytes` は「candidates[0] の textContent」。`returnInfo` 時に candidates 参照が生きているスコープで計算する必要（現状の構造を確認）
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] `npm run bench:micro -- --filter c1` の before/after を PR に添付
-- [ ] E2E `dashboard-diagnostics.spec.ts` パス
-- [ ] コードレビュー完了
-- [ ] CHANGELOG.md に記載（パフォーマンス改善・非機能）
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] `npm run bench:micro -- --filter c1` の before/after を PR に添付
+- [x] E2E `dashboard-diagnostics.spec.ts` パス
+- [x] コードレビュー完了
+- [x] CHANGELOG.md に記載（パフォーマンス改善・非機能）

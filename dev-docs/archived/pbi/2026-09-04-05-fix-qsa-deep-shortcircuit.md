@@ -38,12 +38,12 @@ Scenario: 事前検出は 1 回だけ行い結果を共有する
 ```
 
 ## 受け入れ基準
-- [ ] `querySelectorAllDeep` の入口で「このサブツリーに open shadowRoot を持つ要素 or iframe が存在するか」を判定し、無ければ `root.querySelectorAll(selector)` の結果だけを返して再帰処理をスキップ
-- [ ] 判定は `root.querySelectorAll('*')` の 1 回スキャンで「shadowRoot あり要素」と「iframe」を収集し、それらだけを再帰対象にする（全要素ループの中で毎回分岐、ではなく収集済みリストを回す）
-- [ ] クレンジングのエントリポイント（`cleanseAISummaryContent`）で、対象要素の Shadow/iframe ホスト集合を 1 回だけ計算し、各ルールへ渡す（or WeakMap キャッシュ）。ルールごとの重複スキャンを排除
-- [ ] iframe 再帰部の未実装コメント（`helpers.ts:191-194`）を整理（実装するか削除するか明確化）
-- [ ] Shadow DOM / iframe を含むケースの既存テスト（`aiSummaryCleaner` の shadow/iframe 系）がすべてパス
-- [ ] `collectElementsDeep` エイリアスは維持
+- [x] `querySelectorAllDeep` の入口で「このサブツリーに open shadowRoot を持つ要素 or iframe が存在するか」を判定し、無ければ `root.querySelectorAll(selector)` の結果だけを返して再帰処理をスキップ
+- [x] 判定は `root.querySelectorAll('*')` の 1 回スキャンで「shadowRoot あり要素」と「iframe」を収集し、それらだけを再帰対象にする（全要素ループの中で毎回分岐、ではなく収集済みリストを回す）
+- [x] クレンジングのエントリポイント（`cleanseAISummaryContent`）で、対象要素の Shadow/iframe ホスト集合を 1 回だけ計算し、各ルールへ渡す（or WeakMap キャッシュ）。ルールごとの重複スキャンを排除
+- [x] iframe 再帰部の未実装コメント（`helpers.ts:191-194`）を整理（実装するか削除するか明確化）
+- [x] Shadow DOM / iframe を含むケースの既存テスト（`aiSummaryCleaner` の shadow/iframe 系）がすべてパス
+- [x] `collectElementsDeep` エイリアスは維持
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -91,7 +91,7 @@ grep -rn "querySelectorAllDeep\|collectElementsDeep" src/utils/aiSummaryCleaner/
 - エイリアス `collectElementsDeep` を使う箇所が新シグネチャで壊れないこと
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] `npm run bench:micro -- --filter c3` の before/after を PR に添付
-- [ ] コードレビュー完了
-- [ ] CHANGELOG.md に記載（パフォーマンス改善・非機能）
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] `npm run bench:micro -- --filter c3` の before/after を PR に添付
+- [x] コードレビュー完了
+- [x] CHANGELOG.md に記載（パフォーマンス改善・非機能）
