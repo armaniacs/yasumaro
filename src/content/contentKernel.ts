@@ -22,6 +22,11 @@ import { VisitReporter, type MessageSender } from './visitReporter.js';
 import { createContentMessageSender } from './contentMessageSender.js';
 import { getCleansingConfigForDomain } from '../utils/aiSummaryCleaner/perSiteOverride.js';
 import { cleanseViaOffscreen as delegateCleanseViaOffscreen } from './cleansingOffscreenDelegate.js';
+import { DeadlineTimer } from './deadlineTimer.js';
+import { throttle as throttleViaRaf } from './throttle.js';
+import { watchDynamicContent as watchDynamicContentImpl } from './watchDynamicContent.js';
+
+export { watchDynamicContent } from './watchDynamicContent.js';
 
 export interface Scheduler {
     schedule(callback: () => void, delayMs?: number): number;
@@ -126,11 +131,7 @@ export class ContentKernel {
     private readonly visitReporter: VisitReporter;
     private readonly sender: MessageSender;
     private readonly isE2ETest: () => boolean;
-    private cachedThresholds: VisitGateThresholds | null = null;
-    private cachedGate: VisitGate | null = null;
-    private isE2ECached: boolean | null = null;
-    private deadlineMs: number | null = null;
-    private cachedStartTime: number | null = null;
+    private readonly deadlineTimer: DeadlineTimer;
 
     constructor(
         private readonly storage: StoragePort,
@@ -155,6 +156,13 @@ export class ContentKernel {
             applyResult: (r) => this.applyExtractResultToPageState(r),
             sender: this.sender,
             stopPeriodicCheck: () => this.stopPeriodicCheck(),
+        });
+        this.deadlineTimer = new DeadlineTimer({
+            scheduler: this.scheduler,
+            clock: this.clock,
+            getPageState: () => this.pageState,
+            isE2ETest: () => this.isE2ETest(),
+            onDeadlineEvaluate: () => this.updateMaxScroll(),
         });
     }
 
@@ -312,10 +320,10 @@ export class ContentKernel {
     }
 
     checkVisitConditions(): void {
-        this.refreshCachesIfStale();
+        this.deadlineTimer.refreshCachesIfStale();
         const visitState: VisitState = this.pageState.toVisitState();
-        const thresholds: VisitGateThresholds = this.cachedThresholds!;
-        const gate = this.cachedGate;
+        const thresholds: VisitGateThresholds = this.deadlineTimer.thresholds;
+        const gate = this.deadlineTimer.gate;
         const duration = (this.clock() - visitState.startTime) / 1000;
 
         void logDebug(
@@ -324,7 +332,7 @@ export class ContentKernel {
             'contentKernel',
         );
 
-        if (this.isE2ECached) {
+        if (this.deadlineTimer.isE2E) {
             const state = {
                 maxScrollPercentage: visitState.maxScrollPercentage,
                 isValidVisitReported: visitState.isValidVisitReported,
@@ -344,7 +352,7 @@ export class ContentKernel {
         if (gate!.isReportable(visitState)) {
             console.info(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${visitState.maxScrollPercentage.toFixed(0)}%`);
             void this.reportValidVisit();
-            if (this.isE2ECached) {
+            if (this.deadlineTimer.isE2E) {
                 if (typeof window !== 'undefined') {
                     const w = window as unknown as { __OW_TEST_STATE?: { isValidVisitReported: boolean } };
                     if (w.__OW_TEST_STATE) w.__OW_TEST_STATE.isValidVisitReported = true;
@@ -367,59 +375,19 @@ export class ContentKernel {
     }
 
     // -----------------------------------------------------------------------
-    // Scheduling — single one-shot deadline timer + scroll-driven evaluation
+    // Scheduling — thin delegation to DeadlineTimer (owns deadline + caches)
     // -----------------------------------------------------------------------
 
     scheduleNextCheck(): void {
-        if (this.pageState.isValidVisitReported || (typeof document !== 'undefined' && document.hidden)) return;
-        this.stopPeriodicCheck(); // idempotent: a stray direct call must not leak a second timer
-        this.refreshCachesIfStale();
-        if (this.deadlineMs === null) {
-            this.deadlineMs = this.pageState.startTime + this.cachedThresholds!.minDuration * 1000;
-        }
-        const remaining = Math.max(0, this.deadlineMs - this.clock());
-        this.pageState.checkIntervalId = this.scheduler.schedule(() => {
-            this.pageState.checkIntervalId = null;
-            this.updateMaxScroll();
-            // Do NOT reschedule on a fixed loop — after the deadline, trusted
-            // scrolls evaluate immediately and untrusted (programmatic) scrolls
-            // arm a single deferred check (see init scroll listener), so
-            // threshold-crossing visits are still reported without polling.
-        }, remaining);
-    }
-
-    /**
-     * Rebuild the cached gate/thresholds/deadline when pageState values drift
-     * (settings reload or startTime reset after init). Cached snapshots frozen
-     * at init would otherwise silently evaluate against dead values.
-     */
-    private refreshCachesIfStale(): void {
-        // Compare the source primitives directly — building the thresholds
-        // object on every call would defeat the PBI 02 single-construction goal.
-        const stale =
-            !this.cachedThresholds ||
-            this.cachedThresholds.minDuration !== this.pageState.minVisitDuration ||
-            this.cachedThresholds.minScroll !== this.pageState.minScrollDepth ||
-            this.cachedStartTime !== this.pageState.startTime;
-        if (stale) {
-            this.cachedThresholds = this.pageState.toVisitGateThresholds();
-            this.cachedGate = new VisitGate(this.cachedThresholds, this.clock);
-            this.deadlineMs = null;
-            this.cachedStartTime = this.pageState.startTime;
-        }
-        if (this.isE2ECached === null) this.isE2ECached = this.isE2ETest();
+        this.deadlineTimer.scheduleNextCheck();
     }
 
     startPeriodicCheck(): void {
-        this.stopPeriodicCheck();
-        this.scheduleNextCheck();
+        this.deadlineTimer.start();
     }
 
     stopPeriodicCheck(): void {
-        if (this.pageState.checkIntervalId !== null) {
-            this.scheduler.cancel(this.pageState.checkIntervalId);
-            this.pageState.checkIntervalId = null;
-        }
+        this.deadlineTimer.stop();
     }
 
     // -----------------------------------------------------------------------
@@ -430,11 +398,7 @@ export class ContentKernel {
         await this.loadSettings();
 
         // Build VisitGate + thresholds and resolve isE2ETest once — reused thereafter
-        this.cachedThresholds = this.pageState.toVisitGateThresholds();
-        this.cachedGate = new VisitGate(this.cachedThresholds, this.clock);
-        this.isE2ECached = this.isE2ETest();
-        this.deadlineMs = this.pageState.startTime + this.cachedThresholds.minDuration * 1000;
-        this.cachedStartTime = this.pageState.startTime;
+        this.deadlineTimer.initialize();
 
         // Scroll listener (PBI-02): trusted events evaluate immediately
         // (throttled 100ms). Untrusted (programmatic scrollTo / SPA scroll
@@ -474,7 +438,7 @@ export class ContentKernel {
 
         this.startPeriodicCheck();
 
-        if (this.isE2ECached && typeof document !== 'undefined') {
+        if (this.deadlineTimer.isE2E && typeof document !== 'undefined') {
             document.documentElement.setAttribute(
                 'data-ow-test-state',
                 JSON.stringify({
@@ -491,42 +455,10 @@ export class ContentKernel {
 
     /**
      * Throttle via requestAnimationFrame — shared with extractor for backward compat.
-     * Extracted here so init is the single wiring point.
+     * Implementation lives in ./throttle.js; this stays as the single wiring point.
      */
     throttle<T extends (...args: unknown[]) => void>(fn: T): T {
-        let lastCall = 0;
-        let rafId: number | null = null;
-        let lastArgs: Parameters<T> | null = null;
-        const throttledFn = ((...args: Parameters<T>) => {
-            lastArgs = args;
-            if (rafId !== null) {
-                cancelAnimationFrame(rafId);
-                rafId = null;
-            }
-            const THROTTLE_DELAY = 100;
-            rafId = requestAnimationFrame(() => {
-                rafId = null;
-                const callNow = performance.now() - lastCall >= THROTTLE_DELAY;
-                if (callNow && lastArgs) {
-                    lastCall = performance.now();
-                    fn(...lastArgs);
-                } else if (lastArgs) {
-                    if (performance.now() - lastCall >= THROTTLE_DELAY) {
-                        lastCall = performance.now();
-                        fn(...lastArgs);
-                    }
-                }
-            });
-        }) as T;
-        if (typeof window !== 'undefined') {
-            window.addEventListener('beforeunload', () => {
-                if (rafId !== null) {
-                    cancelAnimationFrame(rafId);
-                    rafId = null;
-                }
-            });
-        }
-        return throttledFn;
+        return throttleViaRaf(fn);
     }
 
     // Expose for tests that assert on DEFAULT_CLEANSING_CONFIG SSOT
@@ -543,68 +475,11 @@ export class ContentKernel {
     }
 
     /**
-     * 30-13: SPA 動的コンテンツ監視 — MutationObserver で遅延コンテンツを再抽出。
-     * `debounce 500ms` で onChange を呼ぶ。戻り値の disconnect で監視を停止。
+     * 30-13: SPA 動的コンテンツ監視 — implementation lives in
+     * ./watchDynamicContent.js; kept as a compat wrapper (tests + callers
+     * use kernel.watchDynamicContent, module import also re-exported above).
      */
     watchDynamicContent(onChange: () => void, target?: Element | Document | null, debounceMs = 500): () => void {
-        return watchDynamicContent(target ?? null, onChange, debounceMs);
+        return watchDynamicContentImpl(target ?? null, onChange, debounceMs);
     }
-}
-
-/**
- * 30-13: SPA 動的コンテンツ監視 — スタンドアロン関数。
- * MutationObserver で target の childList 変化を監視し、debounce 500ms で onChange を呼ぶ。
- * @param target 監視対象（nullなら document.body）
- * @param onChange 変化時に呼ぶコールバック（debounce 500ms）
- * @param debounceMs デバウンス時間（デフォルト500ms）
- * @returns 監視を停止する disconnect 関数
- */
-export function watchDynamicContent(
-    target: Element | Document | null,
-    onChange: () => void,
-    debounceMs = 500,
-): () => void {
-    const observedTarget: Element | Document | null =
-        target ??
-        (typeof document !== 'undefined' ? (document.body as Element | null) ?? document.documentElement ?? null : null);
-
-    if (!observedTarget) {
-        return () => {};
-    }
-
-    const ObserverCtor =
-        (typeof globalThis !== 'undefined' && (globalThis as unknown as { MutationObserver?: typeof MutationObserver }).MutationObserver) ??
-        (typeof window !== 'undefined' && (window as unknown as { MutationObserver?: typeof MutationObserver }).MutationObserver) ??
-        null;
-
-    if (!ObserverCtor) {
-        return () => {};
-    }
-
-    let timer: ReturnType<typeof setTimeout> | null = null;
-
-    const observer = new ObserverCtor(() => {
-        if (timer !== null) {
-            clearTimeout(timer as unknown as number);
-        }
-        timer = setTimeout(() => {
-            timer = null;
-            onChange();
-        }, debounceMs) as unknown as ReturnType<typeof setTimeout>;
-    });
-
-    try {
-        observer.observe(observedTarget as unknown as Node, { childList: true, subtree: true });
-    } catch {
-        // target が observe 不可なら何もしない
-        return () => {};
-    }
-
-    return () => {
-        if (timer !== null) {
-            clearTimeout(timer as unknown as number);
-            timer = null;
-        }
-        observer.disconnect();
-    };
 }
