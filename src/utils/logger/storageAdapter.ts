@@ -19,6 +19,15 @@ function pruneLogs(logs: LogEntry[]): LogEntry[] {
 /** Chrome runtime implementation — uses chrome.storage.local */
 export class ChromeStorageLogAdapter implements LogStorageAdapter {
   async append(entries: LogEntry[]): Promise<void> {
+    // Offscreen documents cannot access chrome.storage: emit to console and
+    // discard rather than throwing. This guard lives in the chrome adapter
+    // (not the orchestrator) so in-memory wiring works with no chrome at all.
+    if (typeof chrome === 'undefined' || !chrome.storage) {
+      for (const log of entries) {
+        console.log(`[Logger:${log.type}] ${log.message}`, log.details || '');
+      }
+      return;
+    }
     // Serialize the read->append->prune->write region so a concurrent
     // append() from another execution context cannot slot its own
     // read+write between ours and drop entries (VULN-050). Uses the deep

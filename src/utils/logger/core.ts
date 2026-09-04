@@ -4,6 +4,8 @@
  * and flush scheduling to focused modules under src/utils/logger/.
  *
  * External interface (addLog / getLogs / clearLogs / flushLogs) is unchanged.
+ * Storage + scheduler arrive via LoggerWiring (initLogger; lazy chrome
+ * default in production, in-memory in tests) — core never hard-wires chrome.*.
  */
 import { sanitizeRegex } from '../piiSanitizer.js';
 import { neutralizeLogText } from './neutralize.js';
@@ -18,8 +20,45 @@ const MAX_PENDING_LOGS = 100;
 const BATCH_FLUSH_SIZE = 10;
 
 const buffer = new LogBuffer(MAX_PENDING_LOGS);
-const storage: LogStorageAdapter = new ChromeStorageLogAdapter();
-const scheduler: LogFlushScheduler = new ChromeAlarmFlushScheduler();
+
+/**
+ * Logger wiring — the adapter + scheduler behind the seam.
+ * Production uses the lazy chrome default (constructed on first use, never at
+ * import time, so importing core never touches chrome.*). Tests inject
+ * in-memory wiring via initLogger() and exercise the full interface without
+ * any chrome mock.
+ */
+export interface LoggerWiring {
+  storage: LogStorageAdapter;
+  scheduler: LogFlushScheduler;
+}
+
+let wiring: LoggerWiring | null = null;
+
+function ensureWiring(): LoggerWiring {
+  if (!wiring) {
+    wiring = {
+      storage: new ChromeStorageLogAdapter(),
+      scheduler: new ChromeAlarmFlushScheduler(),
+    };
+    wiring.scheduler.onFlushRequested(() => persistPending());
+  }
+  return wiring;
+}
+
+/**
+ * Inject logger wiring. Production never calls this (the lazy chrome default
+ * applies); tests pass InMemoryLogAdapter + ImmediateFlushScheduler.
+ */
+export function initLogger(next: LoggerWiring): void {
+  wiring = next;
+  wiring.scheduler.onFlushRequested(() => persistPending());
+}
+
+/** Drop injected wiring (test isolation). Next use rebuilds the default. */
+export function resetLoggerWiring(): void {
+  wiring = null;
+}
 
 let isFlushing = false;
 
@@ -30,28 +69,19 @@ async function persistPending(): Promise<void> {
     const entries = buffer.drain();
     if (entries.length === 0) return;
 
-    // Offscreen documents cannot access chrome.storage. Mirror original
-    // behavior: emit to console and discard rather than throwing.
-    if (typeof chrome === 'undefined' || !chrome.storage) {
-      for (const log of entries) {
-        console.log(`[Logger:${log.type}] ${log.message}`, log.details || '');
-      }
-      return;
-    }
-
-    await storage.append(entries);
+    // No chrome check here: the chrome adapter owns the offscreen console
+    // fallback, so in-memory wiring persists with no chrome at all.
+    await ensureWiring().storage.append(entries);
   } catch (e) {
     console.error('Logger: Failed to flush logs', e);
   } finally {
     // A scheduled alarm may still be pending even though we just flushed
     // (e.g. addLog reached BATCH_FLUSH_SIZE before the alarm fired). Clear
     // it so it doesn't fire again later and run an unnecessary empty flush.
-    scheduler.clear();
+    ensureWiring().scheduler.clear();
     isFlushing = false;
   }
 }
-
-scheduler.onFlushRequested(() => persistPending());
 
 export async function addLog<T extends object = Record<string, unknown>>(
   type: LogTypeValues,
@@ -92,7 +122,7 @@ export async function addLog<T extends object = Record<string, unknown>>(
     if (buffer.size() >= BATCH_FLUSH_SIZE) {
       await persistPending();
     } else {
-      scheduler.schedule();
+      ensureWiring().scheduler.schedule();
     }
   } catch (e) {
     console.error('Logger: Failed to save log', e);
@@ -104,14 +134,14 @@ export async function flushLogs(_immediate: boolean = false): Promise<void> {
 }
 
 export async function getLogs(): Promise<LogEntry[]> {
-  const stored = await storage.load();
+  const stored = await ensureWiring().storage.load();
   return [...stored, ...buffer.peek()];
 }
 
 export async function clearLogs(): Promise<void> {
   buffer.clear();
-  await storage.clear();
-  scheduler.clear();
+  await ensureWiring().storage.clear();
+  ensureWiring().scheduler.clear();
 }
 
 export function isDevelopment(): boolean {
