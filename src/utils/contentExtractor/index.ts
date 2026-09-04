@@ -63,7 +63,7 @@ function runAiSummaryCleanse(
     // three paths (cleanseEnabled, AI-only, body fallback), so the AI cleanse
     // mutates it in place instead of cloning again. preCleanseText stays
     // captured first, before any mutation, as before.
-    const aiSummaryCleanseResult = cleanseAISummaryContent(clone, { ...options, alreadyCloned: true });
+    const aiSummaryCleanseResult = cleanseAISummaryContent(clone, options);
     // Fallback ratio uses originalBytes; the post-cleanse size is diagnostic
     // only, so skip the encode unless the caller opted into measurement.
     // Attribute-only removals leave textContent unchanged — reuse the

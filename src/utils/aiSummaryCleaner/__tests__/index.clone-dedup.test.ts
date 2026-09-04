@@ -8,9 +8,10 @@
  * Locks the single-clone contract between the contentExtractor orchestrator
  * and cleanseAISummaryContent:
  * - full extractMainContent path (cleanseEnabled + aiSummary) clones exactly once
- * - alreadyCloned: true skips the internal clone and mutates the passed element
- * - omitted option keeps the legacy internal clone; the caller's element is untouched
- * - legacy vs alreadyCloned results are identical (counts, map, text, bytes)
+ * - cleanseAISummaryContent MUTATES the passed element in place (no internal
+ *   clone). The orchestrator hands us its scratch clone; standalone callers
+ *   pass a disposable tree they own.
+ * - results are deterministic and byte-identical across equivalent inputs
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -67,51 +68,31 @@ describe('PBI 06 clone dedup', () => {
         expect(spy.mock.calls[0]?.[0]).toBe(true);
     });
 
-    it('alreadyCloned: true performs zero clones and mutates the passed element', () => {
+    it('cleanseAISummaryContent mutates the passed element in place with zero clones', () => {
         const el = makeRoot();
 
         const spy = vi.spyOn(Element.prototype, 'cloneNode');
-        const result = cleanseAISummaryContent(el, { ...CLEANSE_OPTS, alreadyCloned: true });
+        const result = cleanseAISummaryContent(el, { ...CLEANSE_OPTS });
 
         expect(spy).not.toHaveBeenCalled();
         expect(result.totalRemoved).toBeGreaterThan(0);
         expect(el.querySelector('.advertisement')).toBeNull();
     });
 
-    it('omitted option keeps the legacy internal clone and leaves the original untouched', () => {
-        const el = makeRoot();
-        const before = el.innerHTML;
-
-        const spy = vi.spyOn(Element.prototype, 'cloneNode');
-        const result = cleanseAISummaryContent(el, { ...CLEANSE_OPTS });
-
-        expect(spy).toHaveBeenCalled();
-        expect(el.innerHTML).toBe(before);
-        expect(el.querySelector('.advertisement')).not.toBeNull();
-        expect(result.totalRemoved).toBeGreaterThan(0);
-    });
-
-    it('legacy vs alreadyCloned agree on counts, removal map, text, and bytes', () => {
+    it('cleansing is deterministic across equivalent inputs', () => {
         const fullOpts = { ...CLEANSE_OPTS, measureBytes: true };
 
-        const legacyRoot = makeRoot();
-        const spy = vi.spyOn(Element.prototype, 'cloneNode');
-        const legacyResult = cleanseAISummaryContent(legacyRoot, fullOpts);
-        const internalClone = spy.mock.results[0]?.value as Element | undefined;
-        expect(internalClone).toBeDefined();
-        const legacyText = internalClone!.textContent;
-        const legacyHtml = internalClone!.innerHTML;
-        spy.mockRestore();
+        const rootA = makeRoot();
+        const resultA = cleanseAISummaryContent(rootA, fullOpts);
 
-        const freshRoot = makeRoot();
-        const ownedClone = freshRoot.cloneNode(true) as Element;
-        const newResult = cleanseAISummaryContent(ownedClone, { ...fullOpts, alreadyCloned: true });
+        const rootB = makeRoot();
+        const resultB = cleanseAISummaryContent(rootB, fullOpts);
 
-        expect(newResult.totalRemoved).toBe(legacyResult.totalRemoved);
-        expect(newResult.removed).toEqual(legacyResult.removed);
-        expect(ownedClone.textContent).toBe(legacyText);
-        expect(ownedClone.innerHTML).toBe(legacyHtml);
-        expect(newResult.bytesBefore).toBe(legacyResult.bytesBefore);
-        expect(newResult.bytesAfter).toBe(legacyResult.bytesAfter);
+        expect(resultB.totalRemoved).toBe(resultA.totalRemoved);
+        expect(resultB.removed).toEqual(resultA.removed);
+        expect(rootB.textContent).toBe(rootA.textContent);
+        expect(rootB.innerHTML).toBe(rootA.innerHTML);
+        expect(resultB.bytesBefore).toBe(resultA.bytesBefore);
+        expect(resultB.bytesAfter).toBe(resultA.bytesAfter);
     });
 });
