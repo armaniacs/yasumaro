@@ -10,6 +10,15 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
 
+/** Emit a Performance Timeline mark, ignoring environments without `performance`. */
+function benchMark(name: string): void {
+    try {
+        (globalThis as { performance?: Performance }).performance?.mark?.(name);
+    } catch {
+        /* marks are advisory instrumentation only */
+    }
+}
+
 /** Message shape accepted by the content-script sender seam. */
 export interface Message {
     type: string;
@@ -65,9 +74,15 @@ export class VisitReporter {
         void logInfo('Sending VALID_VISIT', {}, 'visitReporter');
         console.info('[OWeave] VALID_VISIT 送信開始');
 
+        // Benchmark instrumentation: the window between these two marks is the
+        // content-script's synchronous extract + cleanse cost, which bench/e2e
+        // reads via performance.getEntriesByName. No-op when Performance is
+        // unavailable (some test doubles).
+        benchMark('ow-extract-start');
         const extractResult = extractor();
         applyResult(extractResult);
         const content = extractResult.content;
+        benchMark('ow-send-ready');
 
         try {
             const response = await sender.sendMessageWithRetry({
