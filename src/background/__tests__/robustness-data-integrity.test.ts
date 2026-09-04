@@ -139,13 +139,7 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
     vi.clearAllMocks();
 
     // Problem #7: URLキャッシュを初期化
-    Object.assign(RecordingCache.getCacheState(), {
-      settingsCache: null,
-      cacheTimestamp: null,
-      cacheVersion: 0,
-      urlCache: null,
-      urlCacheTimestamp: null
-    });
+    RecordingCache.resetCacheState();
 
     // デフォルトモック
     getSettings.mockResolvedValue({

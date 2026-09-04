@@ -21,7 +21,7 @@ backlog: [2026-09-05-00-backlog-arch3.md](2026-09-05-00-backlog-arch3.md)。着�
 - 2026-09-05-01-refactor-recording-outcome.md（✅ 完了・アーカイブ済 — outcome 政策を RecordingOutcome に集約。catch 分岐＋pending＋通知のペアリングを1 seam に。pipeline 58 tests green）
 - 2026-09-05-02-refactor-provider-skeleton-template.md（✅ 完了・アーカイブ済 — HTTP 2 社の generateSummary 骨格を基底テンプレート化（hooks のみ残す）。BuiltIn/testConnection は対象外。循環回避のため transport は dynamic import。ai 214 tests green）
 - 2026-09-05-03-refactor-logger-wave4.md（✅ 完了・アーカイブ済 — core 配線の注入化（initLogger/resetLoggerWiring）＋eslint 反転。chrome なし駆動テスト追加。logger 35 tests green、lint 0 errors）
-- 2026-09-05-04-refactor-cache-liveview-deletion.md（⬜ RICE 15.0 — getCacheState live-view 互換層を削除し typed seam に移行）
+- 2026-09-05-04-refactor-cache-liveview-deletion.md（✅ 完了・アーカイブ済 — getCacheState live-view（~60行）削除。9 テストファイルを typed seam＋振る舞いアサーション＋fake timers に移行。background 全 1297 tests green）
 - 2026-09-05-05-refactor-alarm-registry.md（⬜ RICE 12.0 — 5 系統アラームを AlarmRegistry 登録テーブルに集約）
 - 2026-09-05-06-refactor-popup-record-session.md（⬜ RICE 10.0 — popup 記録 choreography を RecordSession 状態機械に集約）
 - 2026-09-05-07-refactor-envelope-guard.md（⬜ RICE 8.0 — envelope accept/reject を政策テーブルに集約。Worth exploring）

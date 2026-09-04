@@ -136,7 +136,8 @@ describe('RecordingCache — session storage persistence', () => {
 
     expect(persisted).toBeDefined();
     // The in-memory cache keeps the real key for API calls...
-    expect(cache.getCacheState().settingsCache?.geminiApiKey).toBe('secret-key');
+    const live = (await cache.getSettingsWithCache()) as unknown as Record<string, unknown>;
+    expect(live['geminiApiKey']).toBe('secret-key');
     // ...but the persisted mirror must not carry it.
     expect(persisted!.settingsCache.geminiApiKey).toBe('');
     expect(JSON.stringify(persisted)).not.toContain('secret-key');
@@ -156,9 +157,11 @@ describe('RecordingCache — session storage persistence', () => {
 
     await cache.loadCacheFromSession();
 
-    const state = cache.getCacheState();
-    expect(state.settingsCache?.someFlag).toBe(false);
-    expect(state.cacheVersion).toBe(7);
+    // Restored state is proved through the cache-hit read (no refetch).
+    mockGetAll.mockClear();
+    const live = (await cache.getSettingsWithCache()) as unknown as Record<string, unknown>;
+    expect(live['someFlag']).toBe(false);
+    expect(mockGetAll).not.toHaveBeenCalled();
   });
 
   it('does not restore a settings cache older than its TTL', async () => {
@@ -174,7 +177,10 @@ describe('RecordingCache — session storage persistence', () => {
 
     await cache.loadCacheFromSession();
 
-    expect(cache.getCacheState().settingsCache).toBeNull();
+    // Stale cache stays unrestored: the next read misses and refetches.
+    mockGetAll.mockClear();
+    await cache.getSettingsWithCache();
+    expect(mockGetAll).toHaveBeenCalledTimes(1);
   });
 
   it('VULN-014: does not restore a redacted settings cache (no usable API key)', async () => {
@@ -192,7 +198,10 @@ describe('RecordingCache — session storage persistence', () => {
 
     await cache.loadCacheFromSession();
 
-    expect(cache.getCacheState().settingsCache).toBeNull();
+    // Redacted cache stays unrestored: the next read misses and refetches.
+    mockGetAll.mockClear();
+    await cache.getSettingsWithCache();
+    expect(mockGetAll).toHaveBeenCalledTimes(1);
   });
 
   it('restores url and privacy caches that are still within TTL', async () => {
@@ -209,9 +218,9 @@ describe('RecordingCache — session storage persistence', () => {
 
     await cache.loadCacheFromSession();
 
-    const state = cache.getCacheState();
-    expect(state.urlCache?.get('https://a.example')).toBe(1700000000000);
-    expect(state.privacyCache?.has('https://b.example')).toBe(true);
+    const urls = await cache.getSavedUrlsWithCache();
+    expect(urls.get('https://a.example')).toBe(1700000000000);
+    expect(cache.getPrivacyCache()?.has('https://b.example')).toBe(true);
   });
 
   it('drops url and privacy caches that are past their TTL', async () => {
@@ -228,14 +237,19 @@ describe('RecordingCache — session storage persistence', () => {
 
     await cache.loadCacheFromSession();
 
-    const state = cache.getCacheState();
-    expect(state.urlCache).toBeNull();
-    expect(state.privacyCache).toBeNull();
+    // Expired caches stay unrestored: url refetches, privacy reads null.
+    expect(cache.getPrivacyCache()).toBeNull();
+    mockGetSavedUrlsWithTimestamps.mockClear();
+    await cache.getSavedUrlsWithCache();
+    expect(mockGetSavedUrlsWithTimestamps).toHaveBeenCalledTimes(1);
   });
 
   it('survives a missing session entry without throwing', async () => {
     await expect(cache.loadCacheFromSession()).resolves.toBeUndefined();
-    expect(cache.getCacheState().settingsCache).toBeNull();
+    // Nothing restored: the next read misses and refetches.
+    mockGetAll.mockClear();
+    await cache.getSettingsWithCache();
+    expect(mockGetAll).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -264,7 +278,9 @@ describe('RecordingCache — URL cache', () => {
     await cache.getSavedUrlsWithCache();
 
     expect(mockGetSavedUrlsWithTimestamps).toHaveBeenCalledTimes(2);
-    expect(cache.getCacheState().urlCacheTimestamp).not.toBeNull();
+    // The refetch repopulated: a third read hits without re-reading.
+    await cache.getSavedUrlsWithCache();
+    expect(mockGetSavedUrlsWithTimestamps).toHaveBeenCalledTimes(2);
   });
 });
 

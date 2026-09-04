@@ -268,15 +268,7 @@ const mockLogger = vi.mocked(loggerModule);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function resetCacheState() {
-  Object.assign(RecordingCache.getCacheState(), {
-    settingsCache: null,
-    cacheTimestamp: null,
-    cacheVersion: 0,
-    urlCache: null,
-    urlCacheTimestamp: null,
-    privacyCache: null,
-    privacyCacheTimestamp: null,
-  });
+  RecordingCache.resetCacheState();
 }
 
 function makeMockObsidian() {
