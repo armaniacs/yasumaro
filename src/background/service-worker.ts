@@ -8,7 +8,7 @@ import { createNotificationHandlers } from './handlers/notificationHandlers.js';
 import { createCacheInitializedFlag } from './swStatePersistence.js';
 import { createBackgroundServices } from './createBackgroundServices.js';
 import { createMessageHandler as _createMessageHandler } from './messageHandler.js';
-import { createAlarmHandler } from './alarmHandler.js';
+import { createAlarmRegistry } from './alarmRegistry.js';
 import { createDeferredMigrationRunner } from './deferredMigrations.js';
 import { retryPendingChromeStorageWrite } from './retryPendingWrites.js';
 export { retryPendingChromeStorageWrite } from './retryPendingWrites.js';
@@ -29,9 +29,9 @@ export function init(): void {
     // Session alarm initialization for master password timeout
     initializeSessionAlarms();
 
-    // Alarms for daily purge and offline network retry
-    chrome.alarms.create('yasumaro-daily-purge', { periodInMinutes: 1440 });
-    chrome.alarms.create('yasumaro-offline-network-retry', { periodInMinutes: 5 });
+    // Unconditional alarms (daily purge + offline retry) are created from the
+    // registry table; conditional ones stay in their own init functions.
+    alarmRegistry.installStaticAlarms();
 
     // PBI 2026-07-09-03 / 2026-07-10: schedule local Markdown export per LOCAL_MARKDOWN_EXPORT_TIMING
     (async () => {
@@ -152,13 +152,14 @@ export const handleNotificationClicked = _notificationHandlers.onClicked;
 export const registerManualRecordContextMenu = _registerManualRecordContextMenu;
 const _contextClickHandler = createContextClickHandler({ handleManualRecord: handleManualRecordForContextMenu });
 
-// Alarm handler
-const handleAlarm = createAlarmHandler({
+// Alarm registry (routing table + static creation + uniform failure logging)
+const alarmRegistry = createAlarmRegistry({
   sqliteClient,
   recordingPipeline,
   getOfflineNetworkQueue: () => import('./offlineNetworkQueue.js').then(m => m.sharedOfflineNetworkQueue),
   retryPendingChromeStorageWrite,
 });
+const handleAlarm = alarmRegistry.handleAlarm;
 
 // Re-export createMessageHandler for backward compatibility with tests
 // that call it without arguments.
