@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { bench, flattenMetrics } from './runner.mjs';
 import { compareToBaseline, renderMarkdown } from './report.mjs';
 import { renderHtml } from './htmlReport.mjs';
+import { loadTrendHistory } from './trend.mjs';
 import { pruneReports } from './clean.mjs';
 import { shouldAutoOpen, openInBrowser } from './openReport.mjs';
 
@@ -126,7 +127,6 @@ async function main() {
   // All modes produce the same artifact set (.md/.html/.json); failures here
   // are advisory — the bench run itself already succeeded.
   try {
-    writeFileSync(htmlPath, renderHtml(results, { comparison: cmp }), 'utf8');
     const payload = {
       schemaVersion: 1,
       generatedAt: now.toISOString(),
@@ -134,7 +134,11 @@ async function main() {
       results,
       comparison: cmp ?? null,
     };
+    // Write today's json BEFORE loading history so the current run appears as
+    // the newest trend generation.
     writeFileSync(jsonPath, JSON.stringify(payload, null, 2) + '\n', 'utf8');
+    const history = loadTrendHistory(reportsDir);
+    writeFileSync(htmlPath, renderHtml(results, { comparison: cmp, history }), 'utf8');
     process.stderr.write(`[bench] report -> ${reportPath} (+ .html / .json)\n`);
   } catch (err) {
     process.stderr.write(`[bench] WARNING: html/json report generation failed: ${err?.message ?? err}\n`);
