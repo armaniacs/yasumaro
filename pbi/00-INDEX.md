@@ -19,7 +19,7 @@
 backlog: [2026-09-05-00-backlog-arch4.md](2026-09-05-00-backlog-arch4.md)。着手順 = RICE 降順（ファイル番号 NN）。依存なし。
 
 - 2026-09-05-01-refactor-provider-backedge.md（✅ 完了・アーカイブ済 — 中立テーブル＋述語を低層に新設し逆辺2本を切断。catalog は spread で drift 不能に。template は静的 import に復帰。utils 2453＋ai 218 tests green）
-- 2026-09-05-02-refactor-pending-merge-lock.md（⬜ RICE 16.0 — pending merge 政策をキューロック内フックに集約）
+- 2026-09-05-02-refactor-pending-merge-lock.md（✅ 完了・アーカイブ済 — merge＋truncate を pendingPatchPolicy に抽出し mutate 経由に。retryCount は backoff 継承に。interleave 新規テスト付き。queue green）
 - 2026-09-05-03-refactor-popup-feedback.md（⬜ RICE 15.0 — SpinnerManager/ErrorPresenter の pass-through 2 件を削除）
 - 2026-09-05-04-refactor-visit-reporter.md（⬜ RICE 13.3 — VALID_VISIT ペイロード構築を VisitReporter に一本化）
 - 2026-09-05-05-refactor-sanitizer-seam.md（⬜ RICE 8.0 — サニタイズ順序を sanitizeForSummarization seam に集約。Worth）

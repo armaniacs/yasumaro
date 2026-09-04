@@ -267,6 +267,19 @@ export class PersistentRetryQueue<T> {
   }
 
   /**
+   * In-lock read-modify-write for caller-side policies (like URL-merge) that
+   * must not interleave with flush — the VULN-056 lock covers these too.
+   * Prefer this over load()+save() pairs, which race flush by construction.
+   */
+  mutate(fn: (items: T[]) => T[] | Promise<T[]>): Promise<void> {
+    return this.withQueueLock(async () => {
+      const items = await this.adapter.load<T>(this.options.storageKey);
+      const next = await fn(items);
+      await this.adapter.save(this.options.storageKey, next);
+    });
+  }
+
+  /**
    * Load all items from storage.
    */
   async load(): Promise<T[]> {
