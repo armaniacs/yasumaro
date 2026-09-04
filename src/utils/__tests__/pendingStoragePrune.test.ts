@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   addPendingPage,
+  clearExpiredPages,
   PENDING_PAGES_KEY,
   PENDING_PAGES_PRUNE_THRESHOLD,
   type PendingPage,
@@ -90,5 +91,33 @@ describe('addPendingPage pruning', () => {
     expect(saved).toHaveLength(2);
     expect(saved.map(p => p.url)).toContain('https://e.com/999');
     expect(saved.map(p => p.url)).toContain('https://e.com/500');
+  });
+
+  it('clearExpiredPages removes expired entries and keeps fresh ones', async () => {
+    const past = Date.now() - 1000;
+    const future = Date.now() + 100000;
+    store[PENDING_PAGES_KEY] = [makePage(0, past), makePage(1, future)];
+
+    await clearExpiredPages();
+
+    const saved = store[PENDING_PAGES_KEY] as PendingPage[];
+    expect(saved.map(p => p.url)).toEqual(['https://e.com/1']);
+  });
+
+  it('concurrent addPendingPage during clearExpiredPages loses nothing', async () => {
+    const past = Date.now() - 1000;
+    const future = Date.now() + 100000;
+    store[PENDING_PAGES_KEY] = [makePage(0, past)];
+
+    // Purge runs under withOptimisticLock like add/remove, so the add racing
+    // it retries instead of being clobbered (VULN-005 class).
+    await Promise.all([
+      clearExpiredPages(),
+      addPendingPage(makePage(1, future)),
+    ]);
+
+    const saved = store[PENDING_PAGES_KEY] as PendingPage[];
+    expect(saved.map(p => p.url)).toContain('https://e.com/1');
+    expect(saved.map(p => p.url)).not.toContain('https://e.com/0');
   });
 });
