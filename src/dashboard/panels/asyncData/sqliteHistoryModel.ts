@@ -342,6 +342,7 @@ export interface SqliteHistoryModel {
   activateWithDomain(query: string): void;
   loadPersistedSortIntoState(): Promise<void>;
   bumpGenerationOnUnmount(): void;
+  resetFiltersForFreshLoad(): void;
   toggleStar(id: number): Promise<void>;
   deleteEntry(id: number): Promise<void>;
   appendSelectedToObsidian(): Promise<AppendResult | null>;
@@ -549,6 +550,24 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     cache.clear();
   }
 
+  // Reset display filters (date/search/tag/page) so a fresh panel.load() shows
+  // the latest entries instead of resuming the previous visit's narrowed view
+  // (e.g. a date stuck on a past day after tab navigation). Called from
+  // load() rather than only on unmount, since the registry does not call
+  // destroy()/deactivate() on tab switches — the panel stays mounted and only
+  // load() re-runs.
+  //
+  // Also clears the query cache: entries recorded while this panel was not
+  // mounted (background/service-worker auto-save, manual "record now") never
+  // go through toggleStar/deleteEntry/appendSelectedToObsidian, so the
+  // unfiltered page-0 cache entry would otherwise keep serving a stale row
+  // set even after the filter reset above.
+  function resetFiltersForFreshLoad(): void {
+    cache.clear();
+    const { sortBy, sortDir } = state;
+    state = { ...createInitialHistoryState(), sortBy, sortDir };
+  }
+
   async function toggleStarImpl(id: number): Promise<void> {
     const result = await toggleStar(id);
     if ('error' in result) {
@@ -684,6 +703,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     activateWithDomain,
     loadPersistedSortIntoState,
     bumpGenerationOnUnmount,
+    resetFiltersForFreshLoad,
     toggleStar: toggleStarImpl,
     deleteEntry,
     appendSelectedToObsidian,

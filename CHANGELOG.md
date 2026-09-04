@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.106` リリース。
+> - 現時点では `v6.7.107` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -33,9 +33,15 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.7.107] - 2026-09-05
+
 ### リファクタリング
 
 - アーキテクチャ診断（Architecture Round 2、10 候補）から 7 件を実施（PBI 2026-09-04-11〜17、`dev-docs/archived/pbi/` 参照）。Dashboard 履歴の LRU キャッシュを `QueryCache` モジュールに抽出し `persistSort` のテスト検出ロジック（vi/NODE_ENV 探測）を scheduler seam に置換、contentExtractor の 3 抽出経路を `extractPipeline` に統一して `returnInfo` boolean-trap を撤去（fallback 重複解消・`measureBytes` を types.ts に移動）、bench CLI の引数パーサを純関数化（`--filter --check` 誤飲防止）し成果物書き出しを `writeArtifacts` に集約、contentKernel から `DeadlineTimer`/`throttle`/`watchDynamicContent` を分離
+
+### 修正
+
+- ダッシュボードの「履歴」（SQLite History）パネルで、他パネルを経由して戻ると最新の記録（パネル非表示中に自動保存・手動記録されたもの）が一覧に表示されない不具合を修正。パネルはタブ切り替えでは再マウントされず `load()` のみ再実行される構造だったため、離脱時ではなく再訪問時（`init()`、タグ/ドメイン起点の遷移を除く）に表示フィルタ・ページ番号のリセットに加えクエリキャッシュ（`QueryCache`）も明示的にクリアするよう変更。キャッシュは `toggleStar`/`deleteEntry`/`appendSelectedToObsidian` の操作でしか無効化されておらず、パネル非表示中に増えたレコードをフィルタなし条件のキャッシュが隠していたのが原因（ソート設定は維持）
 
 ## [6.7.106] - 2026-09-04
 
