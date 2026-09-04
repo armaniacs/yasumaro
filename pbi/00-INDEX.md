@@ -14,7 +14,21 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-**進行中の PBI は 0 件。** `pbi/` には INDEX と backlog のみが残る.
+### 2026-09-04 パフォーマンス最適化 8 件（ベンチ基盤先行）
+
+backlog: [2026-09-04-00-backlog-perf.md](2026-09-04-00-backlog-perf.md)。着手順 = ファイル番号（NN）。**01 が残り 7 件の依存元**（実測ベンチ基盤）。
+※ 同日付の `01-03` は「0902a レビュー由来」の完了 3 件（archived 済み）と番号が重複するが別物。本群は `feat-perf-*` / `fix-*` の slug で識別。
+
+| NN | PBI | 種別 | 難易度 | 副作用 | RICE | 状態 |
+|----|-----|------|--------|--------|------|------|
+| 01 | [feat-perf-benchmark-harness](2026-09-04-01-feat-perf-benchmark-harness.md) | 🔧 | 🔴 3pt | 🟢 | 4.5 | 🔶 実装済み・検証済み（harness 36 tests green / micro c1-7+cleansing / baseline 186 metrics / `bench:check` 決定的カウンタのみ gate で安定 exit 0）。残: lighthouse 依存の追加は任意（未インストールでも skip 動作）、e2e 4本は `--list` のみ通過・実機実行は `npm run build` 後に別途 |
+| 02 | [fix-content-script-polling](2026-09-04-02-fix-content-script-polling.md) | 🔧 | 🟡 2pt | 🟡 | 7.0 | ⬜ |
+| 03 | [fix-textscore-precompute](2026-09-04-03-fix-textscore-precompute.md) | 🔧 | 🟢 1pt | 🟢 | 7.2 | ⬜ |
+| 04 | [fix-bytesize-lazy](2026-09-04-04-fix-bytesize-lazy.md) | 🔧 | 🟢 1.5pt | 🟡 | 4.8 | ⬜ |
+| 05 | [fix-qsa-deep-shortcircuit](2026-09-04-05-fix-qsa-deep-shortcircuit.md) | 🔧 | 🟢 1.5pt | 🟢 | 3.7 | ⬜ |
+| 06 | [fix-clone-node-dedup](2026-09-04-06-fix-clone-node-dedup.md) | 🔧 | 🟡 2pt | 🔴 | 2.4 | ⬜ |
+| 07 | [fix-dashboard-query-cache](2026-09-04-07-fix-dashboard-query-cache.md) | 🔧 | 🟡 2pt | 🟡 | 1.4 | ⬜ |
+| 08 | [fix-dedup-simhash](2026-09-04-08-fix-dedup-simhash.md) | 🔧 | 🔴 3pt | 🟡 | 0.7 | ⬜ |
 
 ### 2026-09-04 0902a レビュー由来（重複・dead-code 7件→3PBI） — 3件完了
 
