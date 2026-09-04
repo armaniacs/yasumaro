@@ -16,7 +16,8 @@ export function fmtNum(v, unit = '') {
   return unit ? `${s}${unit}` : s;
 }
 
-/** Bytes to a KiB string. @param {number} bytes */
+/** Bytes to a KiB string, em-dash for missing values. @param {number} bytes */
 export function fmtKB(bytes) {
+  if (bytes === null || bytes === undefined || Number.isNaN(bytes)) return '—';
   return fmtNum(bytes / 1024);
 }

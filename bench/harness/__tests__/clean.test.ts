@@ -119,6 +119,25 @@ describe('pruneReports (safety)', () => {
   it('is a no-op when the reports directory does not exist', () => {
     expect(pruneReports(join(dir, 'nope'))).toEqual([]);
   });
+
+  it('deletes nothing in an empty reports directory', () => {
+    mkdirSync(dir, { recursive: true });
+    expect(pruneReports(dir)).toEqual([]);
+    expect(readdirSync(dir)).toEqual([]);
+  });
+
+  it('keeps everything when keep exceeds the generation count', () => {
+    seed({ '2026-09-01': ['md'], '2026-08-31': ['md'] });
+    expect(pruneReports(dir, { keep: 10 })).toEqual([]);
+    expect(readdirSync(dir).sort()).toEqual(['micro-2026-08-31.md', 'micro-2026-09-01.md']);
+  });
+
+  it('deletes nothing when the directory has only stamp-less files', () => {
+    writeFileSync(join(dir, 'notes.md'), 'x');
+    writeFileSync(join(dir, 'README'), 'x');
+    expect(pruneReports(dir)).toEqual([]);
+    expect(readdirSync(dir).sort()).toEqual(['README', 'notes.md']);
+  });
 });
 
 describe('pruneReports (deterministic order)', () => {

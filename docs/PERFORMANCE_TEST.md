@@ -17,7 +17,7 @@
 | レイヤ | コマンド | 実行環境 | 測るもの |
 |--------|---------|---------|---------|
 | **局所ベンチ (micro)** | `npm run bench:micro` | Node + jsdom（ネットワーク不要） | wall-clock P50/P95/P99、DOM 走査数、ヒープ差分、スケーリング指数 |
-| **e2e ベンチ** | `npm run bench:e2e` | 実 Chromium + ビルド済み拡張 | 自動保存の end-to-end 時間、Long Tasks/TBT、メモリ、Lighthouse、Service Worker cold start |
+| **e2e ベンチ** | `npm run bench:e2e` | 実 Chromium + ビルド済み拡張 | 自動保存の同期コスト（extract〜送信準備）、Long Tasks/TBT、メモリ、Lighthouse、Service Worker cold start |
 | **回帰チェック (CI)** | `npm run bench:check` | Node + jsdom | ベースライン比で決定的カウンタが +15% 悪化したら exit 1 |
 | **レポート掃除** | `npm run bench:clean` | Node | `bench/reports/` をローリング 5 世代 + 週次アンカーで掃除（`-- --all` で全消去） |
 
@@ -124,7 +124,7 @@ npm run build && npm run bench:e2e
 - **削除単位は世代単位**: 同一日付の `.md` / `.html` / `.json` は必ずまとめて削除される
 - 日付スタンプを持たないファイルは自動掃除では削除されない。全消去は `npm run bench:clean -- --all`
 
-実行モード（通常 / `--check` / `--update-baseline`）に関係なく、成果物は常に `.md` / `.html` / `.json` の 3 点セットで書き出される。`.html` は依存ゼロの自己完結ファイルなので、そのまま PR に添付・ブラウザオープンできる。デスクトップのインタラクティブセッションでは実行後に自動でブラウザが開く（`--no-open` で抑止、CI では開かない）。
+実行モード（通常 / `--check` / `--update-baseline`）に関係なく、成果物は常に `.md` / `.html` / `.json` の 3 点セットで書き出される。`.html` は依存ゼロの自己完結ファイルなので、そのまま PR に添付・ブラウザオープンできる。自動ブラウザオープンは「`--no-open` 未指定 + CI 以外 + TTY 接続あり（インタラクティブセッション）」のすべてを満たしたときだけ行われる。
 
 ### ベースラインの更新
 
@@ -141,7 +141,7 @@ git add bench/baselines/micro.json   # PR で差分をレビューする
 - headed Chromium が必要（MV3 Service Worker は headless で動かない）。CI / SSH / バックグラウンド実行では該当テストが自動 skip される
 - CPU は CDP `Emulation.setCPUThrottlingRate: 4` で固定（マシン差の吸収）
 - Lighthouse は任意依存。未インストールなら該当テストは skip（`npm i -D lighthouse` で有効化）
-- 自動保存 end-to-end 時間は content script の `performance.mark('ow-extract-start')`〜`'ow-send-ready')` 間で計測（`src/content/visitReporter.ts`）
+- 自動保存の同期コストは content script の `performance.mark('ow-extract-start')`〜`'ow-send-ready')` 間で計測（`src/content/visitReporter.ts`）。この区間は extract + cleanse の**同期処理のみ**で、Service Worker 側の処理・ストレージ書き込みなどの非同期部分は含まない
 - 注入あり/なし A/B は `localStorage.__ow_bench_disable_cs = '1'` で content script を早期 return させて比較（`src/content/loader.ts`）。この制御は **ベンチビルド限定**（`OW_BENCH=1 npm run build`）。通常ビルドではコンパイル時に除去されるため、ページ側から挙動を変えられない
 
 ### トラブルシューティング
@@ -175,7 +175,7 @@ bench/
 | Layer | Command | Environment | Measures |
 |-------|---------|-------------|----------|
 | **Micro** | `npm run bench:micro` | Node + jsdom, no network | wall-clock P50/P95/P99, DOM scan counts, heap deltas, scaling exponent |
-| **E2E** | `npm run bench:e2e` | headed Chromium + built extension | autosave end-to-end time, Long Tasks/TBT, memory, Lighthouse, SW cold start |
+| **E2E** | `npm run bench:e2e` | headed Chromium + built extension | autosave sync cost (extract → send-ready), Long Tasks/TBT, memory, Lighthouse, SW cold start |
 | **Regression check (CI)** | `npm run bench:check` | Node + jsdom | exit 1 when a deterministic counter is >15% worse than baseline |
 | **Report cleanup** | `npm run bench:clean` | Node | Prunes `bench/reports/` to rolling 5 generations + weekly anchors (`-- --all` wipes everything) |
 
@@ -239,9 +239,9 @@ e2e suite nightly or on demand.
 
 Every run mode (default / `--check` / `--update-baseline`) writes the same
 `.md` / `.html` / `.json` artifact set. The `.html` file is self-contained
-(zero external references) — attach it to a PR or open it directly. On
-interactive desktop sessions the report opens in a browser automatically
-(`--no-open` suppresses this; CI never opens a browser).
+(zero external references) — attach it to a PR or open it directly. The browser
+auto-open fires only when ALL of these hold: no `--no-open` flag, not running
+in CI, and a TTY is attached (interactive session).
 
 ### Updating the baseline
 
@@ -259,8 +259,10 @@ git add bench/baselines/micro.json
 - CPU is fixed at 4× throttle via CDP for machine-independent numbers.
 - Lighthouse is an optional dependency; its test skips if not installed
   (`npm i -D lighthouse`).
-- Autosave latency = the gap between `performance.mark('ow-extract-start')` and
-  `'ow-send-ready')` in `src/content/visitReporter.ts`.
+- Autosave sync cost = the gap between `performance.mark('ow-extract-start')` and
+  `'ow-send-ready')` in `src/content/visitReporter.ts`. This window covers the
+  **synchronous** extract + cleanse work only — the async send (service-worker
+  processing, storage writes) is not included.
 - The A/B test disables the content script via
   `localStorage.__ow_bench_disable_cs = '1'` (`src/content/loader.ts`). The
   toggle only exists in a bench build — build with `OW_BENCH=1 npm run build`.
