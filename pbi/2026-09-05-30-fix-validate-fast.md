@@ -25,10 +25,10 @@ Scenario: 型エラー・lint エラーを検出できる
 
 ## 受け入れ基準
 
-- [ ] `npm run validate:fast` が package.json scripts に定義されている
-- [ ] `validate:fast` が型チェック・lint・JSON 検証・対象限定の単体テストを含み、フル `npm test` を含まない
-- [ ] 既存の `validate` スクリプトの内容・順序が変更されていない
-- [ ] 使い分け（fast とフル）が CONTRIBUTING.md または該当ドキュメントに1か所で説明されている
+- [x] `npm run validate:fast` が package.json scripts に定義されている
+- [x] `validate:fast` が型チェック・lint・JSON 検証・対象限定の単体テストを含み、フル `npm test` を含まない
+- [x] 既存の `validate` スクリプトの内容・順序が変更されていない
+- [x] 使い分け（fast とフル）が CONTRIBUTING.md または該当ドキュメントに1か所で説明されている
 
 ## テスト戦略
 
@@ -51,6 +51,10 @@ Scenario: 型エラー・lint エラーを検出できる
 
 ## Definition of Done
 
-- [ ] `npm run validate:fast` が成功パス・失敗パスともに確認済み
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（CONTRIBUTING の検証手順）
+- [x] `npm run validate:fast` が成功パス・失敗パスともに確認済み
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（CONTRIBUTING の検証手順）
+
+## 実装メモ（2026-09-05・branch 0905c）
+- 完了: `validate:fast` = validate:json + lint + type-check + `vitest run --changed`（未コミット変更に関連するテストのみ）。CONTRIBUTING の検証手順に使い分けを追記。既存 `validate` は無変更。
+- 検証: 成功パス確認（package.json 未コミット時は vitest が config 変更として全量にエスカレートする挙動を確認 → コミット後は src 変更に関連テストのみ実行）。
