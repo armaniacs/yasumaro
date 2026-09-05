@@ -187,4 +187,18 @@ describe('flushBufferedExports', () => {
     const records = idWrite![0]['local_md_export_download_ids'] as Array<{ downloadId: number; date: string }>;
     expect(records[records.length - 1]).toMatchObject({ downloadId: 555, date: '2026-09-15' });
   });
+
+  it('PBI 27: traversal in exportPath never reaches the download filename', async () => {
+    mockGetAll.mockResolvedValue({ local_markdown_export_path: '../../etc/passwd' });
+    mockStorageGet.mockResolvedValue({
+      'local_export_2026-09-15': ['# a'],
+    });
+
+    await flushBufferedExports();
+
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    const [arg] = mockDownload.mock.calls[0];
+    expect(arg.filename).not.toContain('..');
+    expect(arg.filename).toBe('Yasumaro/2026-09-15.md');
+  });
 });

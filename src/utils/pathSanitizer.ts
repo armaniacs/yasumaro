@@ -70,6 +70,7 @@ export function sanitizePathSegment(pathSegment: string): string {
 
   // 2. パストラバーサル攻撃の検出とブロック
   for (const pattern of PATH_TRAVERSAL_PATTERNS) {
+    pattern.lastIndex = 0;
     if (pattern.test(pathSegment)) {
       throw new Error('Path traversal attempt detected');
     }
@@ -77,6 +78,7 @@ export function sanitizePathSegment(pathSegment: string): string {
 
   // 3. プロトコルスキーム注入の検出とブロック
   for (const pattern of PROTOCOL_SCHEME_PATTERNS) {
+    pattern.lastIndex = 0;
     if (pattern.test(pathSegment)) {
       throw new Error('Protocol scheme injection detected');
     }
@@ -84,6 +86,7 @@ export function sanitizePathSegment(pathSegment: string): string {
 
   // 4. 危険な特殊文字の検出と削除
   for (const pattern of DANGEROUS_CHAR_PATTERNS) {
+    pattern.lastIndex = 0;
     if (pattern.test(pathSegment)) {
       throw new Error('Dangerous character detected in path');
     }
@@ -127,6 +130,27 @@ export function sanitizePathSegment(pathSegment: string): string {
   }
 
   return sanitized;
+}
+
+/**
+ * ユーザー設定の書き出し先フォルダをダウンロード filename 用に解決する。
+ * PBI 27 の choke point: `sanitizePathSegment` は危険入力で throw するため、
+ * 呼び出し側 4 箇所すべてが try/catch を書く代わりにここでフォールバックへ
+ * 倒す。空文字化した場合もフォールバックを返す。
+ * @param raw - ユーザー設定の書き出し先（自由文字列）
+ * @param fallback - sanitize 失敗時の代替フォルダ（既定 'Yasumaro'）
+ * @returns 安全なフォルダ名（`..`・絶対パス・制御文字を含まない）
+ */
+export function resolveSafeExportDir(raw: string, fallback = 'Yasumaro'): string {
+  try {
+    if (!raw || typeof raw !== 'string' || raw.trim() === '') {
+      return fallback;
+    }
+    const sanitized = sanitizePathSegment(raw.trim());
+    return sanitized === '' ? fallback : sanitized;
+  } catch {
+    return fallback;
+  }
 }
 
 /**

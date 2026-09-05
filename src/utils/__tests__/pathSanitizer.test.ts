@@ -4,7 +4,7 @@
  * 問題点2: URLパスサニタイズ不足の修正検証
  */
 
-import { sanitizePathSegment, sanitizePathForUrl, encodePathForUrl } from '../pathSanitizer.js';
+import { sanitizePathSegment, sanitizePathForUrl, encodePathForUrl, resolveSafeExportDir } from '../pathSanitizer.js';
 
 describe('sanitizePathSegment - セキュリティサニタイズ関数（問題点2の修正）', () => {
   describe('パストラバーサル攻撃のブロック', () => {
@@ -335,5 +335,30 @@ describe('セキュリティテストまとめ', () => {
       const result = sanitizePathSegment(path);
       expect(result).toBeTruthy();
     });
+  });
+});
+describe('resolveSafeExportDir - PBI 27 ダウンロード filename ガード', () => {
+  it('正常な書き出し先はそのまま保たれる', () => {
+    expect(resolveSafeExportDir('Yasumaro')).toBe('Yasumaro');
+    expect(resolveSafeExportDir('MyExport')).toBe('MyExport');
+  });
+
+  it('トラバーサル試行はフォールバックに置換される', () => {
+    expect(resolveSafeExportDir('../evil')).toBe('Yasumaro');
+    expect(resolveSafeExportDir('../../etc/passwd')).toBe('Yasumaro');
+  });
+
+  it('制御文字入りはフォールバックに置換される', () => {
+    expect(resolveSafeExportDir('evil\npath')).toBe('Yasumaro');
+    expect(resolveSafeExportDir('a\x00b')).toBe('Yasumaro');
+  });
+
+  it('空・空白のみはフォールバックに置換される', () => {
+    expect(resolveSafeExportDir('')).toBe('Yasumaro');
+    expect(resolveSafeExportDir('   ')).toBe('Yasumaro');
+  });
+
+  it('カスタムフォールバックが使われる', () => {
+    expect(resolveSafeExportDir('../evil', 'Fallback')).toBe('Fallback');
   });
 });
