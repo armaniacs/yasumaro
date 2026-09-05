@@ -9,6 +9,14 @@
  * - contentExtractor/scoring.ts            - スコア計算・候補探索
  * - contentExtractor/textExtraction.ts      - テキスト抽出
  * - contentExtractor/index.ts              - オーケストレーター（このファイル）+ 再エクスポート
+ *
+ * 【entry の実態】(PBI 13 で確定):
+ * - 本番の抽出経路は 1 本のみ: contentKernel.extractPageContent()
+ *   → preparePageContent() → extractMainContentWithInfo()。string entry
+ *   extractMainContent の本番呼び出しはゼロ。
+ * - string entry は bench 計測面として維持する: bench/micro/c1-bytesize.bench.mjs
+ *   と c4-clonenode.bench.mjs が非診断 path を計測する。削除すると bench baseline
+ *   の連続性が切れるため、entry 削減は bench 再計測のタイミングで再評価する。
  * 🟢
  */
 
@@ -16,7 +24,7 @@ import { cleanseContent, countCleanseTargets, type CleanseOptions, type CleanseR
 import { logSanitize, logDebug } from '../logger.js';
 import { countAISummaryTargets, type AiSummaryCleanseOptions } from '../aiSummaryCleaner/index.js';
 import { THRESHOLD_DEFAULTS } from '../aiSummaryCleaner/rules.js';
-import { deriveCleansedReason, removedRecordToMap } from './cleansedReason.js';
+import { deriveCleansedReason, removedRecordToMap, resolveCleanseReason } from './cleansedReason.js';
 import { deduplicateContent } from '../contentDeduplicator.js';
 import type { ExtractResult } from './types.js';
 import { applyAiCleanseStep, applyFallback, getByteSize, makeByteMeter, resolvePreAiBytes, type FallbackDecision } from './extractPipeline.js';
@@ -68,6 +76,7 @@ export type ExtractDedupOptions = { dedupEnabled?: boolean; dedupThreshold?: num
 /**
  * Extract the page main content WITH full diagnostics (always ExtractResult).
  * Diagnostic byte measurement is enabled on this path only.
+ * 本番経路（contentKernel → preparePageContent が使用する唯一の entry）。
  */
 export function extractMainContentWithInfo(
     maxChars: number = 10000,
@@ -81,6 +90,8 @@ export function extractMainContentWithInfo(
 /**
  * Thin string wrapper for the hot path (every autosave). Diagnostic byte
  * measurement is disabled; only fallback-critical encodes run.
+ * 本番未使用 — bench c1/c4 の計測面として維持する（削除すると bench baseline の
+ * 連続性が切れる）。将来 bench を再計測するタイミングで entry 削減を再評価する。
  */
 export function extractMainContent(
     maxChars: number = 10000,
@@ -94,6 +105,8 @@ export function extractMainContent(
 /**
  * Shared orchestration for both entries. withDiagnostics is internal only:
  * it drives the ByteMeter and the diagnostic recount.
+ * clone 以降の抽出工程は runCleanseAndExtract に集約（PBI 13）。candidate/body
+ * の経路差分は入力要素の決定（先頭候補 / document.body）のみ。
  */
 function extractInternal(
     maxChars: number = 10000,
@@ -183,6 +196,175 @@ function extractInternal(
     };
     const readBodyText = (): string => document.body?.innerText || '';
 
+    /**
+     * runCleanseAndExtract — clone → cleanse → pre-AI bytes → reason → AI step
+     * → dual payload → extract → fallback の単一オーケストレーション（PBI 13）。
+     * candidate path と body path で共有し、経路差分は呼び出し側が渡す入力要素
+     * （先頭候補 / document.body）と preBytes の出所（candidateBytes / pageBytes）
+     * のみに畳み込む。meter 呼び出し順は旧両 path と同一（診断 reuse → 条件付き
+     * measure のみ。bench c1 の計測対象を動かさない）。
+     *
+     * 旧両 path の歴史的非対称性はフラグで保存する（統一しない。振る舞い同一が優先）:
+     * - dualPayloadFirst: candidate は clone 前に originalContent を登録し、
+     *   body は AI step 後に登録する。現行順序を維持。
+     * - emitSanitizeLog: console.log / logSanitize / AI Summary デバッグログは
+     *   candidate path のみが発行していた。body path では出さない。
+     * cleanse=false は candidate の no-cleanse ポリシー（live 要素＋任意の AI-only
+     * clone）を再現する。body-plain ポリシー（innerText・fallback/AI なし）は本質的に
+     * 異なるため呼び出し側にインラインで残す。
+     */
+    const runCleanseAndExtract = (source: {
+        sourceElement: Element;
+        preCleanseText: string;
+        preBytes: number;
+        cleanse: boolean;
+        dualPayloadFirst: boolean;
+        emitSanitizeLog: boolean;
+    }): void => {
+        // 30-11: 二重ペイロード — candidate path はクレンジング前に原文を保持
+        if (source.dualPayloadFirst && !originalContent) {
+            const rawDual = (source.sourceElement.textContent || '').trim();
+            if (rawDual) {
+                originalContent = rawDual.slice(0, maxChars * 2);
+                dualPayloadEnabled = true;
+            }
+        }
+
+        let targetElement: Element;
+
+        if (source.cleanse) {
+            // DOMを直接操作しないようにクローンを作成
+            const clone = source.sourceElement.cloneNode(true) as Element;
+
+            // クレンジング前のバイト数（textContentベースで統一）
+            // preCleanseText は preBytes と同一文字列のため再利用し、重複エンコードしない
+            if (meter.enabled) {
+                originalBytes = source.preBytes;
+            }
+
+            // クローンに対してコンテンツクレンジングを実行
+            const cleanseResult: CleanseResult = cleanseContent(clone, {
+                hardStripEnabled,
+                keywordStripEnabled,
+                keywords
+            });
+
+            // クレンジング後のバイト数（textContentベースで統一）
+            // AIフォールバック判定に渡す値。診断時は cleansedBytes をそのまま使い回す
+            // 何も削除されず文字列が同一の場合は再エンコードせず使い回す
+            const cloneText = clone.textContent || '';
+            const resolvedPreAi = resolvePreAiBytes(meter, cloneText, { text: source.preCleanseText, bytes: originalBytes }, aiSummaryCleanseEnabled);
+            if (meter.enabled) {
+                cleansedBytes = resolvedPreAi.cleansedBytes;
+            }
+            const preAiBytes = resolvedPreAi.preAiBytes;
+
+            if (cleanseResult.totalRemoved > 0) {
+                // クレンジング理由を決定（実際に要素が削除された場合のみ）
+                cleansedReason = resolveCleanseReason(cleanseResult.hardStripRemoved, cleanseResult.keywordStripRemoved);
+                hardStripRemoved = cleanseResult.hardStripRemoved;
+                keywordStripRemoved = cleanseResult.keywordStripRemoved;
+                totalRemoved = cleanseResult.totalRemoved;
+                cleansingExecuted = true;
+
+                if (source.emitSanitizeLog) {
+                    console.log(`[ContentExtractor] Cleansed ${cleanseResult.totalRemoved} elements `
+                        + `(Hard: ${cleanseResult.hardStripRemoved}, Keyword: ${cleanseResult.keywordStripRemoved})`);
+
+                    // サニタイズログに記録（非同期で実行）
+                    void logSanitize(
+                        'Content cleansing executed',
+                        {
+                            hardStripRemoved: cleanseResult.hardStripRemoved,
+                            keywordStripRemoved: cleanseResult.keywordStripRemoved,
+                            totalRemoved: cleanseResult.totalRemoved,
+                            keywords: keywords.join(', '),
+                            mode: hardStripEnabled ? (keywordStripEnabled ? 'both' : 'hard') : 'keyword'
+                        },
+                        undefined,
+                        'contentExtractor'
+                    );
+                }
+            }
+
+            targetElement = clone;
+
+            // AI要約クレンジングを実行（cleanseEnabledとは独立して動作）
+            if (source.emitSanitizeLog) {
+                logDebug('AI Summary Cleansing check', { aiSummaryCleanseEnabled, ...resolvedAiSummaryOptions });
+            }
+            if (aiSummaryCleanseEnabled) {
+                const applied = applyAiCleanseStep(clone, resolvedAiSummaryOptions, preAiBytes);
+                aiSummaryOriginalBytes = applied.aiSummaryOriginalBytes;
+                aiSummaryCleansedBytes = applied.aiSummaryCleansedBytes;
+                aiSummaryCleansedReason = applied.aiSummaryCleansedReason;
+                aiSummaryCleansedReasons = applied.aiSummaryCleansedReasons;
+                aiSummaryCleansedElements = applied.aiSummaryCleansedElements;
+                preAiCleanseText = applied.preAiCleanseText;
+                removedByReason = applied.removedByReason;
+            }
+        } else {
+            targetElement = source.sourceElement;
+            // バイト数（クレンジングなし、textContentベースで統一）
+            // targetElement.textContent は preBytes と同一文字列のため再利用する
+            // meter無効では診断値を残さず、AIフォールバック用に1回だけ計測する
+            let preAiBytesElse = 0;
+            if (meter.enabled) {
+                originalBytes = source.preBytes;
+                cleansedBytes = originalBytes;
+                preAiBytesElse = cleansedBytes;
+            } else if (aiSummaryCleanseEnabled) {
+                preAiBytesElse = getByteSize(targetElement.textContent || '');
+            }
+
+            // AI要約クレンジングのみ有効な場合（cleanseEnabled=false, aiSummaryCleanseEnabled=true）
+            // クローンを作成してAI要約クレンジングを実行
+            if (aiSummaryCleanseEnabled) {
+                // DOMを直接操作しないようにクローンを作成
+                const clone = source.sourceElement.cloneNode(true) as Element;
+
+                const applied = applyAiCleanseStep(clone, resolvedAiSummaryOptions, preAiBytesElse);
+                aiSummaryOriginalBytes = applied.aiSummaryOriginalBytes;
+                aiSummaryCleansedBytes = applied.aiSummaryCleansedBytes;
+                aiSummaryCleansedReason = applied.aiSummaryCleansedReason;
+                aiSummaryCleansedReasons = applied.aiSummaryCleansedReasons;
+                aiSummaryCleansedElements = applied.aiSummaryCleansedElements;
+                preAiCleanseText = applied.preAiCleanseText;
+                removedByReason = applied.removedByReason;
+
+                // クレンジング後のクローンからテキストを抽出
+                targetElement = clone;
+            }
+        }
+
+        // 30-11: body path は AI step 後に原文を保持（登録順序を維持）
+        if (!source.dualPayloadFirst && !originalContent && document.body) {
+            const rawBody = (document.body.textContent || '').trim();
+            if (rawBody) {
+                originalContent = rawBody.slice(0, maxChars * 2);
+                dualPayloadEnabled = true;
+            }
+        }
+
+        // 要素からテキストを抽出
+        content = extractTextFromElement(targetElement);
+
+        // フォールバック判定: 短すぎるコンテンツまたは過剰削減
+        // (single policy via applyFallback — shared by both paths)
+        const fallbackDecision = applyFallback({
+            content,
+            contentBytes: getByteSize(content),
+            preAiCleanseText,
+            aiSummaryOriginalBytes,
+            fallbackRatio,
+            fallbackMinBytes,
+            readBodyText,
+        });
+        if (fallbackDecision.fallbackTriggered) {
+            settleFallback(fallbackDecision);
+        }
+    };
+
     try {
         // ホワイトリスト抽出モード判定: ドメイン一致 or DOM構造検知
         if (document.body && cleanseOptions.whitelistExtractionEnabled !== false) {
@@ -224,224 +406,31 @@ function extractInternal(
         if (candidates.length > 0) {
             // 30-11: 二重ペイロード — 候補の原文を保持（クレンジング前のテキスト）
             // 30-14: ファネルの候補バイト数は既に candidateBytes で計測済み
-            const firstCandidateForDual = candidates[0]!;
-            if (!originalContent) {
-                const rawDual = (firstCandidateForDual.textContent || '').trim();
-                if (rawDual) {
-                    originalContent = rawDual.slice(0, maxChars * 2);
-                    dualPayloadEnabled = true;
-                }
-            }
-            // クレンジングまたはAI要約クレンジングが有効な場合、クローンを作成してから実行
+            // clone 以降の全工程は runCleanseAndExtract に集約（PBI 13）。
+            // 経路差分は入力要素（先頭候補）と preBytes の出所（candidateBytes）のみ。
             const firstCandidate = candidates[0]!;
-            let targetElement: Element;
-
-            if (cleanseEnabled) {
-                // DOMを直接操作しないようにクローンを作成
-                const clone = firstCandidate.cloneNode(true) as Element;
-
-                // クレンジング前のテキストを保持（診断時の重複エンコード排除用）
-                const preCleanseText = firstCandidate.textContent || '';
-                // クレンジング前のバイト数（textContentベースで統一）
-                // preCleanseText は candidateBytes と同一文字列のため再利用し、重複エンコードしない
-                if (meter.enabled) {
-                    originalBytes = candidateBytes;
-                }
-
-                // クローンに対してコンテンツクレンジングを実行
-                const cleanseResult: CleanseResult = cleanseContent(clone, {
-                    hardStripEnabled,
-                    keywordStripEnabled,
-                    keywords
-                });
-
-                // クレンジング後のバイト数（textContentベースで統一）
-                // AIフォールバック判定に渡す値。診断時は cleansedBytes をそのまま使い回す
-                // 何も削除されず文字列が同一の場合は再エンコードせず使い回す
-                const cloneText = clone.textContent || '';
-                const resolvedPreAi = resolvePreAiBytes(meter, cloneText, { text: preCleanseText, bytes: originalBytes }, aiSummaryCleanseEnabled);
-                if (meter.enabled) {
-                    cleansedBytes = resolvedPreAi.cleansedBytes;
-                }
-                const preAiBytes = resolvedPreAi.preAiBytes;
-
-                if (cleanseResult.totalRemoved > 0) {
-                    // クレンジング理由を決定（実際に要素が削除された場合のみ）
-                    if (cleanseResult.hardStripRemoved > 0 && cleanseResult.keywordStripRemoved > 0) {
-                        cleansedReason = 'both';
-                    } else if (cleanseResult.hardStripRemoved > 0) {
-                        cleansedReason = 'hard';
-                    } else if (cleanseResult.keywordStripRemoved > 0) {
-                        cleansedReason = 'keyword';
-                    }
-                    hardStripRemoved = cleanseResult.hardStripRemoved;
-                    keywordStripRemoved = cleanseResult.keywordStripRemoved;
-                    totalRemoved = cleanseResult.totalRemoved;
-                    cleansingExecuted = true;
-
-                    console.log(`[ContentExtractor] Cleansed ${cleanseResult.totalRemoved} elements `
-                        + `(Hard: ${cleanseResult.hardStripRemoved}, Keyword: ${cleanseResult.keywordStripRemoved})`);
-
-                    // サニタイズログに記録（非同期で実行）
-                    void logSanitize(
-                        'Content cleansing executed',
-                        {
-                            hardStripRemoved: cleanseResult.hardStripRemoved,
-                            keywordStripRemoved: cleanseResult.keywordStripRemoved,
-                            totalRemoved: cleanseResult.totalRemoved,
-                            keywords: keywords.join(', '),
-                            mode: hardStripEnabled ? (keywordStripEnabled ? 'both' : 'hard') : 'keyword'
-                        },
-                        undefined,
-                        'contentExtractor'
-                    );
-                }
-
-                targetElement = clone;
-
-                // AI要約クレンジングを実行（cleanseEnabledとは独立して動作）
-                logDebug('AI Summary Cleansing check', { aiSummaryCleanseEnabled, ...resolvedAiSummaryOptions });
-                if (aiSummaryCleanseEnabled) {
-                    const applied = applyAiCleanseStep(clone, resolvedAiSummaryOptions, preAiBytes);
-                    aiSummaryOriginalBytes = applied.aiSummaryOriginalBytes;
-                    aiSummaryCleansedBytes = applied.aiSummaryCleansedBytes;
-                    aiSummaryCleansedReason = applied.aiSummaryCleansedReason;
-                    aiSummaryCleansedReasons = applied.aiSummaryCleansedReasons;
-                    aiSummaryCleansedElements = applied.aiSummaryCleansedElements;
-                    preAiCleanseText = applied.preAiCleanseText;
-                    removedByReason = applied.removedByReason;
-                }
-            } else {
-                targetElement = firstCandidate;
-                // バイト数（クレンジングなし、textContentベースで統一）
-                // targetElement.textContent は candidateBytes と同一文字列のため再利用する
-                // meter無効では診断値を残さず、AIフォールバック用に1回だけ計測する
-                let preAiBytesElse = 0;
-                if (meter.enabled) {
-                    originalBytes = candidateBytes;
-                    cleansedBytes = originalBytes;
-                    preAiBytesElse = cleansedBytes;
-                } else if (aiSummaryCleanseEnabled) {
-                    preAiBytesElse = getByteSize(targetElement.textContent || '');
-                }
-
-                // AI要約クレンジングのみ有効な場合（cleanseEnabled=false, aiSummaryCleanseEnabled=true）
-                // クローンを作成してAI要約クレンジングを実行
-                if (aiSummaryCleanseEnabled) {
-                    // DOMを直接操作しないようにクローンを作成
-                    const clone = firstCandidate.cloneNode(true) as Element;
-
-                    const applied = applyAiCleanseStep(clone, resolvedAiSummaryOptions, preAiBytesElse);
-                    aiSummaryOriginalBytes = applied.aiSummaryOriginalBytes;
-                    aiSummaryCleansedBytes = applied.aiSummaryCleansedBytes;
-                    aiSummaryCleansedReason = applied.aiSummaryCleansedReason;
-                    aiSummaryCleansedReasons = applied.aiSummaryCleansedReasons;
-                    aiSummaryCleansedElements = applied.aiSummaryCleansedElements;
-                    preAiCleanseText = applied.preAiCleanseText;
-                    removedByReason = applied.removedByReason;
-
-                    // クレンジング後のクローンからテキストを抽出
-                    targetElement = clone;
-                }
-            }
-
-            // 要素からテキストを抽出
-            content = extractTextFromElement(targetElement);
-
-            // フォールバック判定: 短すぎるコンテンツまたは過剰削減
-            // (single policy via applyFallback — shared with the body path)
-            const fallbackDecision = applyFallback({
-                content,
-                contentBytes: getByteSize(content),
-                preAiCleanseText,
-                aiSummaryOriginalBytes,
-                fallbackRatio,
-                fallbackMinBytes,
-                readBodyText,
+            runCleanseAndExtract({
+                sourceElement: firstCandidate,
+                preCleanseText: firstCandidate.textContent || '',
+                preBytes: candidateBytes,
+                cleanse: cleanseEnabled,
+                dualPayloadFirst: true,
+                emitSanitizeLog: true,
             });
-            if (fallbackDecision.fallbackTriggered) {
-                settleFallback(fallbackDecision);
-            }
         } else {
             // 候補がない場合、body全体をクレンジング対象としてフォールバック
+            // clone 以降の全工程は runCleanseAndExtract に集約（PBI 13）。
+            // 経路差分は入力要素（document.body）と preBytes の出所（pageBytes）のみ。
+            // dual payload 登録は AI step 後・sanitize ログなしの現行順序を維持。
             if (cleanseEnabled && document.body) {
-                const clone = document.body.cloneNode(true) as Element;
-
-                // クレンジング前のテキストを保持（診断時の重複エンコード排除用）
-                const bodyTextForCleanse = document.body.textContent || '';
-                // クレンジング前のバイト数（textContentベースで統一）
-                // bodyTextForCleanse は pageBytes と同一文字列のため再利用する
-                if (meter.enabled) {
-                    originalBytes = pageBytes;
-                }
-
-                const cleanseResult: CleanseResult = cleanseContent(clone, {
-                    hardStripEnabled,
-                    keywordStripEnabled,
-                    keywords
+                runCleanseAndExtract({
+                    sourceElement: document.body,
+                    preCleanseText: document.body.textContent || '',
+                    preBytes: pageBytes,
+                    cleanse: true,
+                    dualPayloadFirst: false,
+                    emitSanitizeLog: false,
                 });
-
-                // クレンジング後のバイト数（textContentベースで統一）
-                // AIフォールバック判定に渡す値。診断時は cleansedBytes をそのまま使い回す
-                // 何も削除されず文字列が同一の場合は再エンコードせず使い回す
-                const bodyCloneText = clone.textContent || '';
-                const resolvedPreAiBody = resolvePreAiBytes(meter, bodyCloneText, { text: bodyTextForCleanse, bytes: originalBytes }, aiSummaryCleanseEnabled);
-                if (meter.enabled) {
-                    cleansedBytes = resolvedPreAiBody.cleansedBytes;
-                }
-                const preAiBytesBody = resolvedPreAiBody.preAiBytes;
-
-                if (cleanseResult.totalRemoved > 0) {
-                    // クレンジング理由を決定（実際に要素が削除された場合のみ）
-                    if (cleanseResult.hardStripRemoved > 0 && cleanseResult.keywordStripRemoved > 0) {
-                        cleansedReason = 'both';
-                    } else if (cleanseResult.hardStripRemoved > 0) {
-                        cleansedReason = 'hard';
-                    } else if (cleanseResult.keywordStripRemoved > 0) {
-                        cleansedReason = 'keyword';
-                    }
-                    hardStripRemoved = cleanseResult.hardStripRemoved;
-                    keywordStripRemoved = cleanseResult.keywordStripRemoved;
-                    totalRemoved = cleanseResult.totalRemoved;
-                    cleansingExecuted = true;
-                }
-
-                // AI要約クレンジングを実行
-                if (aiSummaryCleanseEnabled) {
-                    const applied = applyAiCleanseStep(clone, resolvedAiSummaryOptions, preAiBytesBody);
-                    aiSummaryOriginalBytes = applied.aiSummaryOriginalBytes;
-                    aiSummaryCleansedBytes = applied.aiSummaryCleansedBytes;
-                    aiSummaryCleansedReason = applied.aiSummaryCleansedReason;
-                    aiSummaryCleansedReasons = applied.aiSummaryCleansedReasons;
-                    aiSummaryCleansedElements = applied.aiSummaryCleansedElements;
-                    preAiCleanseText = applied.preAiCleanseText;
-                    removedByReason = applied.removedByReason;
-                }
-                // 30-11: bodyフォールバックでも原文を保持
-                if (!originalContent && document.body) {
-                    const rawBody = (document.body.textContent || '').trim();
-                    if (rawBody) {
-                        originalContent = rawBody.slice(0, maxChars * 2);
-                        dualPayloadEnabled = true;
-                    }
-                }
-
-                content = extractTextFromElement(clone);
-
-                // フォールバック判定: 短すぎるコンテンツまたは過剰削減
-                // (single policy via applyFallback — shared with the candidate path)
-                const fallbackDecisionBody = applyFallback({
-                    content,
-                    contentBytes: getByteSize(content),
-                    preAiCleanseText,
-                    aiSummaryOriginalBytes,
-                    fallbackRatio,
-                    fallbackMinBytes,
-                    readBodyText,
-                });
-                if (fallbackDecisionBody.fallbackTriggered) {
-                    settleFallback(fallbackDecisionBody);
-                }
               } else {
                   content = document.body?.innerText || '';
                   // バイト数（クレンジングなし、診断専用）
@@ -502,13 +491,7 @@ function extractInternal(
             totalRemoved = countResult.totalRemoved;
             if (totalRemoved > 0) {
                 // クレンジング理由を決定（実際に要素が削除された場合のみ）
-                if (hardStripRemoved > 0 && keywordStripRemoved > 0) {
-                    cleansedReason = 'both';
-                } else if (hardStripRemoved > 0) {
-                    cleansedReason = 'hard';
-                } else if (keywordStripRemoved > 0) {
-                    cleansedReason = 'keyword';
-                }
+                cleansedReason = resolveCleanseReason(hardStripRemoved, keywordStripRemoved);
             }
         }
 
