@@ -27,9 +27,9 @@ Scenario: 個別サイトへの動的許可は都度要求できる
 ```
 
 ## 受け入れ基準
-- [ ] ビルド後のマニフェストの `optional_host_permissions` に `<all_urls>` が含まれない
-- [ ] `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS` に列挙された個別ドメインが欠けなく残っている
-- [ ] `npm run build` が成功し、マニフェスト関連の既存テストがパスする（必要に応じて期待値を更新）
+- [x] ビルド後のマニフェストの `optional_host_permissions` に `<all_urls>` が含まれない
+- [x] `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS` に列挙された個別ドメインが欠けなく残っている
+- [x] `npm run build` が成功し、マニフェスト関連の既存テストがパスする（必要に応じて期待値を更新）
 
 ## テスト戦略
 - E2E: ビルド成果物のマニフェストを読み取り、`optional_host_permissions` に `<all_urls>` がないことと個別ドメインが残っていることを検証する
@@ -47,7 +47,11 @@ Scenario: 個別サイトへの動的許可は都度要求できる
 - 都度要求の前例: `src/dashboard/cspSettings.ts:257,275` と `src/utils/permissionManager.ts:137` で `chrome.permissions.request({ origins: [...] })` の形式が既に使われている
 - 注意: `src/utils/permissionManager.ts:347-366`（`isAllUrlsPermitted`・`requestAllUrls`）と `src/popup/recordCurrentPage/tabContentFetcher.ts:11,63` に `<all_urls>` を前提とした処理・テスト（permissionManager / tabContentFetcher 系）が残っている。本PBIのスコープはマニフェスト宣言の削除のみとし、これらの呼び出し側の振る舞い変更は別PBIで扱う。ただし宣言削除で壊れるテスト期待値は本PBI内で更新すること
 
+## 実装メモ
+- 2026-09-05 完了: `wxt.config.ts` の `optional_host_permissions` から `'<all_urls>'` を削除（意図を示すコメント付き）。`manifest.test.ts` に不在アサーション新設（`should not contain <all_urls> (least privilege)`）。影響テスト 6 スイート 95 tests green、type-check clean、`npm run build` 成功、ビルド済み manifest の optional_host_permissions に `<all_urls>` 不在を確認。
+- 残置（スコープ外・別 PBI）: ①ビルド済み manifest の `content_scripts.matches` の `<all_urls>` は追跡機能の本質のため残す。②`permissionManager`（isAllUrlsPermitted/requestAllUrls）・`tabContentFetcher` の Level 2 opt-in は宣言削除後は `chrome.permissions.request` が失敗するため、呼び出し側の振る舞い変更（per-origin 都度要求への統一）が次の対応候補。③`headerDetector.ts:39` の webRequest フィルタ `urls: ['<all_urls>']` は許可済みオリジンのみ観測対象になる（実行時許可に従う挙動で fail-safe）。
+
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（permissions ガイドがあれば）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（permissions ガイドがあれば）※permissions 専用ガイドは存在しないため対象外

@@ -71,7 +71,10 @@ export default defineConfig({
       'contextMenus',
       'downloads',
     ],
-    optional_host_permissions: [...OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS, '<all_urls>'],
+    // <all_urls> は optional_host_permissions に含めない（最小権限）。
+    // ホスト単位の追加許可は実行時に chrome.permissions.request({ origins }) で
+    // 対象オリジンのみを都度要求する。
+    optional_host_permissions: [...OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS],
     host_permissions: [...buildLocalHostPermissions(), ...AI_PROVIDER_HOST_PERMISSIONS],
     content_security_policy: {
       // wasm-unsafe-eval is required by @subframe7536/sqlite-wasm (wa-sqlite)
