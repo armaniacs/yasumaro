@@ -519,6 +519,7 @@ vi.mock('../net/ollamaSettingsObserver.js', () => ({
 
 // Import the extracted functions from service-worker
 import * as serviceWorker from '../service-worker.js';
+import { hasPrivacyConsent } from '../../popup/privacyConsent.js';
 import * as storageEncryption from '../../utils/storage/encryptionSession.js';
 import * as storageDomainFilter from '../../utils/storage/domainFilterCache.js';
 import * as storageSettings from '../../utils/storage.js';
@@ -1137,13 +1138,25 @@ describe('service-worker handlers', () => {
             expect(mockSetBadgeBackgroundColor).toHaveBeenCalledWith(expect.objectContaining({ color: expect.any(String) }));
         });
 
-        it('should clear badge for non-private page', async () => {
+        it('should show recording-active badge for a recordable page when consented', async () => {
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://public.com');
             RecordingCache.cacheState.privacyCache = new Map([['https://public.com', { isPrivate: false }]]);
             mockGet.mockResolvedValueOnce({ id: 4, url: 'https://public.com' } as chrome.tabs.Tab);
 
             await serviceWorker.handleTabActivated({ tabId: 4 });
+            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '●' });
+            expect(mockSetBadgeBackgroundColor).toHaveBeenCalledWith(expect.objectContaining({ color: expect.any(String) }));
+        });
+
+        it('should clear badge for a recordable page when consent is missing', async () => {
+            // @ts-expect-error - vi.fn() type narrowing
+            headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://public-no-consent.com');
+            RecordingCache.cacheState.privacyCache = new Map([['https://public-no-consent.com', { isPrivate: false }]]);
+            mockGet.mockResolvedValueOnce({ id: 6, url: 'https://public-no-consent.com' } as chrome.tabs.Tab);
+            vi.mocked(hasPrivacyConsent).mockResolvedValueOnce(false);
+
+            await serviceWorker.handleTabActivated({ tabId: 6 });
             expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '' });
         });
 
@@ -1153,14 +1166,16 @@ describe('service-worker handlers', () => {
             expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '' });
         });
 
-        it('should clear badge when privacy cache is empty', async () => {
+        it('should show recording-active badge for a recordable page even when privacy cache is empty', async () => {
+            // プライバシーキャッシュが空でも blacklist 域でなければ記録対象 —
+            // 同意済みなら「記録中」バッジを常時表示する（PBI 2026-09-05-10）。
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://example.com');
             RecordingCache.cacheState.privacyCache = null;
             mockGet.mockResolvedValueOnce({ id: 5, url: 'https://example.com' } as chrome.tabs.Tab);
 
             await serviceWorker.handleTabActivated({ tabId: 5 });
-            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '' });
+            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '●' });
         });
     });
 

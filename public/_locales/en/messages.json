@@ -2056,6 +2056,9 @@
   "retentionUnlimitedWarning": {
     "message": "Unlimited retention keeps records forever and storage can grow without bound. A retention period of 365 days or a maximum record count is recommended."
   },
+  "wizardRecordingScope": {
+    "message": "Recording scope: after you accept the privacy policy, visited pages (title, URL, page text) are recorded locally. You can withdraw consent anytime from the popup."
+  },
   "retention30days": {
     "message": "30 days"
   },

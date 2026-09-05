@@ -27,10 +27,10 @@ Scenario: オンボーディングで記録範囲が説明される
 ```
 
 ## 受け入れ基準
-- [ ] 初回起動時の記録ON/OFF状態が検証され、OFFでない場合はOFFに修正される
-- [ ] 記録中はactionバッジ等で常時表示される
-- [ ] オンボーディングで記録範囲の説明有無が確認され、不足時は説明が追加される
-- [ ] 既存利用者の明示的な設定が意図せず上書きされない
+- [x] 初回起動時の記録ON/OFF状態が検証され、OFFでない場合はOFFに修正される
+- [x] 記録中はactionバッジ等で常時表示される
+- [x] オンボーディングで記録範囲の説明有無が確認され、不足時は説明が追加される
+- [x] 既存利用者の明示的な設定が意図せず上書きされない
 
 ## テスト戦略
 - E2E: 新規プロファイルで初回起動し記録が保存されないこと、記録開始後にバッジが表示されること、オンボーディングに記録範囲の説明があることを確認する
@@ -47,6 +47,11 @@ Scenario: オンボーディングで記録範囲が説明される
 - 調査済み現状: `RecordingOrchestrator`自体にON/OFF状態を持たず記録可否は設定ゲートに委譲、`defaults.ts`では`PRIVACY_CONSENT=false`・`OBSIDIAN_ENABLED=false`・`CONTENT_STORAGE_ENABLED=false`・`AUTO_CONTENT_FETCH_ENABLED=false`・`ALLOW_ALL_URLS_OPT_IN=false`でOFF傾向だが初回起動時の実効OFFは未検証、`onboardingWizard.ts`に記録範囲の説明はなし、バッジは同意・フィルタ状態の表示のみで「記録中」の常時表示かは未検証
 - 新規の記録方式追加や保存先の変更は含まない
 
+## 実装メモ
+- 2026-09-05 完了。検証結果: ①初回 OFF は既に成立 — 全記録ハンドラ（VALID_VISIT / MANUAL_RECORD / SAVE_RECORD）が `isRecordingAllowed()` = `hasPrivacyConsent()`（デフォルト false）でゲートされ、未同意では `privacy_consent_required` で拒否される。storage-defaults にピン留めテスト追加。②常時可視はギャップだった — `handleTabActivated` の記録可能タブ（非プライベート・非除外）の分岐に、同意済みなら `●`（緑）バッジを表示するよう変更（`TabHandlerContext.isRecordingAllowed` を新設し service-worker から `hasPrivacyConsent` を配線）。同意が無ければ無表示を維持。③オンボーディングの type ステップに記録範囲の説明（`wizardRecordingScope`・en/ja）を追加。
+- 既存利用者: 同意状態は保存値が優先されるため上書きなし。バッジの '!'（プライベート）/ '∉'（除外）/ '◎'（保存済み）の優先順は不変。
+- テスト: service-worker の handleTabActivated 3 ケース更新・新設、storage-defaults 2 件、onboardingWizard 1 件新設。4 スイート 194 tests green + check-i18n PASS。
+
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
