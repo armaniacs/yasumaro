@@ -24,9 +24,6 @@ import { getCleansingConfigForDomain } from '../utils/aiSummaryCleaner/perSiteOv
 import { cleanseViaOffscreen as delegateCleanseViaOffscreen } from './cleansingOffscreenDelegate.js';
 import { DeadlineTimer } from './deadlineTimer.js';
 import { throttle as throttleViaRaf } from './throttle.js';
-import { watchDynamicContent as watchDynamicContentImpl } from './watchDynamicContent.js';
-
-export { watchDynamicContent } from './watchDynamicContent.js';
 
 export interface Scheduler {
     schedule(callback: () => void, delayMs?: number): number;
@@ -171,7 +168,28 @@ export class ContentKernel {
     // -----------------------------------------------------------------------
 
     extractPageContent(config: CleansingConfig = this.pageState.cleansingConfig): ExtractResult {
-        return preparePageContent(config);
+        const result = preparePageContent(config);
+        if (result.cleansingExecuted === true) {
+            // Badge 通知は fire-and-forget（PBI-22 MessageSender seam 経由）。
+            // 送信失敗は抽出フローを壊さない — ログのみ。
+            void this.sender
+                .sendMessageWithRetry({
+                    type: 'CONTENT_CLEANSING_EXECUTED',
+                    payload: {
+                        hardStripRemoved: result.hardStripRemoved ?? 0,
+                        keywordStripRemoved: result.keywordStripRemoved ?? 0,
+                        totalRemoved: result.totalRemoved ?? 0,
+                    },
+                })
+                .catch((e: unknown) => {
+                    void logDebug(
+                        'CONTENT_CLEANSING_EXECUTED send failed',
+                        { error: e instanceof Error ? e.message : String(e) },
+                        'contentKernel',
+                    );
+                });
+        }
+        return result;
     }
 
     applyExtractResultToPageState(result: ExtractResult): void {
@@ -472,14 +490,5 @@ export class ContentKernel {
      */
     async cleanseViaOffscreen(html: string): Promise<string> {
         return delegateCleanseViaOffscreen(html);
-    }
-
-    /**
-     * 30-13: SPA 動的コンテンツ監視 — implementation lives in
-     * ./watchDynamicContent.js; kept as a compat wrapper (tests + callers
-     * use kernel.watchDynamicContent, module import also re-exported above).
-     */
-    watchDynamicContent(onChange: () => void, target?: Element | Document | null, debounceMs = 500): () => void {
-        return watchDynamicContentImpl(target ?? null, onChange, debounceMs);
     }
 }

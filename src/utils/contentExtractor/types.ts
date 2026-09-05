@@ -58,4 +58,10 @@ export interface ExtractResult {
     // 30-11: 二重ペイロード — クレンジング前の原文保持と有効フラグ
     originalContent?: string;
     dualPayloadEnabled?: boolean;
+    /**
+     * 実際に要素を削除した Content Cleansing が実行されたか。
+     * 診断 recount（countCleanseTargets が totalRemoved を埋めるだけ）では
+     * セットされない — badge 通知の発火条件として kernel が参照する。
+     */
+    cleansingExecuted?: boolean;
 }

@@ -195,7 +195,10 @@ describe('extractMainContent - cleanseEnabled', () => {
     });
 
     it('calculates candidateBytes and originalBytes when cleanseEnabled', () => {
-        const content = 'This is test content for byte calculation verification.';
+        // NOTE: 100 字以上にして short_content フォールバックを発動させない。
+        // フォールバック時は originalBytes がフォールバック後の値で上書きされるため、
+        // クレンジング前後のバイト比較はフォールバックなしの場合のみ意味を持つ。
+        const content = 'This is test content for byte calculation verification. '.repeat(3);
         document.body.innerHTML = `<article><p>${content}</p><script>alert('remove me')</script></article>`;
         const result = extractMainContentWithInfo(
             10000,
@@ -564,36 +567,37 @@ describe('extractMainContent - deduplication', () => {
 });
 
 // ─────────────────────────────────────────────
-// Chrome Extension API パス (cleanseEnabled=true)
+// cleansingExecuted 識別子 (PBI-12: 通知は kernel の MessageSender seam 経由)
+// Chrome 直送は削除済み — 送信テストは contentKernel.cleansing.test.ts に移行
 // ─────────────────────────────────────────────
-describe('extractMainContent - Chrome Extension API', () => {
-    it('sends CONTENT_CLEANSING_EXECUTED message when chrome.runtime available', () => {
-        // chrome.runtime.sendMessage をモック
-        const mockSendMessage = vi.fn().mockResolvedValue({});
-        (window as unknown as Record<string, unknown>).chrome = {
-            runtime: {
-                sendMessage: mockSendMessage
-            }
-        };
-
+describe('extractMainContent - cleansingExecuted flag', () => {
+    it('sets cleansingExecuted when elements are actually removed', () => {
         document.body.innerHTML = `
             <article>
-                <p>${'Content for Chrome API test. '.repeat(10)}</p>
+                <p>${'Content for cleansing flag test. '.repeat(10)}</p>
                 <script>alert('remove me')</script>
             </article>
         `;
-        extractMainContentWithInfo(
+        const result = extractMainContentWithInfo(
             10000,
             { cleanseEnabled: true, hardStripEnabled: true }
         );
 
-        // sendMessage が呼ばれることを確認
-        expect(mockSendMessage).toHaveBeenCalledWith(
-            expect.objectContaining({ type: 'CONTENT_CLEANSING_EXECUTED' })
+        expect(result.cleansingExecuted).toBe(true);
+    });
+
+    it('leaves cleansingExecuted unset when nothing is removed (recount-only)', () => {
+        document.body.innerHTML = `
+            <article>
+                <p>${'Clean content with no strip targets. '.repeat(10)}</p>
+            </article>
+        `;
+        const result = extractMainContentWithInfo(
+            10000,
+            { cleanseEnabled: true, hardStripEnabled: true }
         );
 
-        // クリーンアップ
-        delete (window as unknown as Record<string, unknown>).chrome;
+        expect(result.cleansingExecuted).toBeUndefined();
     });
 });
 
@@ -1802,37 +1806,6 @@ describe('extractMainContent - count-only path with targets outside candidate', 
         expect(result.aiSummaryCleansedReason).toBe('multiple');
         expect(Array.isArray(result.aiSummaryCleansedReasons)).toBe(true);
         expect((result.aiSummaryCleansedReasons as string[]).length).toBeGreaterThan(1);
-    });
-});
-
-// ─────────────────────────────────────────────
-// Chrome Extension API .catch path (line 160)
-// ─────────────────────────────────────────────
-describe('extractMainContent - Chrome Extension API catch path', () => {
-    it('covers catch block when chrome.runtime.sendMessage rejects', () => {
-        const mockSendMessage = vi.fn().mockRejectedValue(new Error('Port closed'));
-        (window as unknown as Record<string, unknown>).chrome = {
-            runtime: {
-                sendMessage: mockSendMessage
-            }
-        };
-
-        document.body.innerHTML = `
-            <article>
-                <p>${'Content for Chrome API catch test. '.repeat(10)}</p>
-                <script>alert('remove me')</script>
-            </article>
-        `;
-        extractMainContentWithInfo(
-            10000,
-            { cleanseEnabled: true, hardStripEnabled: true }
-        );
-
-        expect(mockSendMessage).toHaveBeenCalledWith(
-            expect.objectContaining({ type: 'CONTENT_CLEANSING_EXECUTED' })
-        );
-
-        delete (window as unknown as Record<string, unknown>).chrome;
     });
 });
 
