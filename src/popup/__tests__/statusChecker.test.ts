@@ -8,7 +8,7 @@ const mockSetAll = vi.hoisted(() => vi.fn());
 const mockGetMany = vi.hoisted(() => vi.fn());
 vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = await importOriginal() as any;
-  return { ...actual, settingsRepository: { getAll: mockGetAll, setAll: mockSetAll, getMany: mockGetMany }, SettingsRepository: class { getAll = mockGetAll; setAll = mockSetAll; getMany = mockGetMany } };
+  return { ...actual, settingsRepository: { getAll: mockGetAll, setAll: mockSetAll, getMany: mockGetMany, clearCache: vi.fn() }, SettingsRepository: class { getAll = mockGetAll; setAll = mockSetAll; getMany = mockGetMany; clearCache = vi.fn() } };
 });
 
 // Mock chrome runtime for privacy cache
@@ -123,8 +123,8 @@ describe('checkPageStatus', () => {
     RecordingCache.resetCacheState();
     // Clear settings cache so mockGetAll changes are visible
     try {
-      const { clearSettingsCache } = await import('../../utils/storage.js');
-      clearSettingsCache();
+      const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
+      settingsRepository.clearCache();
     } catch {}
 
     // Mock chrome.runtime.sendMessage for privacy cache

@@ -18,7 +18,7 @@ vi.mock('../../../utils/errorUtils.js', () => ({
 import { saveToObsidianStep } from '../steps/saveToObsidianStep.js';
 import { addLog, LogType } from '../../../utils/logger.js';
 import type { RecordingContext, StepDeps } from '../types.js';
-import { StorageKeys } from '../../../utils/storage.js';
+import { StorageKeys } from '../../../utils/storage/types.js';
 
 function makeContext(overrides: Partial<RecordingContext['settings']> = {}): RecordingContext {
   return {

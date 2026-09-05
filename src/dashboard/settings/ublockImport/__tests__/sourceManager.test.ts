@@ -5,7 +5,8 @@
  * @vitest-environment jsdom
  */
 
-import { StorageKeys, clearSettingsCache, getSettings } from '../../../../utils/storage.js';
+import { StorageKeys } from '../../../../utils/storage/types.js';
+import { settingsRepository } from '../../../../utils/storage/SettingsRepository.js';
 import {
   loadAndDisplaySources,
   deleteSource,
@@ -19,7 +20,7 @@ import { RecordingCache } from '../../../../background/__tests__/helpers/recordi
 // テスト環境ではキャッシュを無効化する
 const DISABLE_CACHE_IN_TESTS = async () => {
   // より直接的なアプローチ: clearSettingsCache後に待機して確実にクリアする
-  clearSettingsCache();
+  settingsRepository.clearCache();
 
   // RecordingCacheのstaticキャッシュもクリア
   RecordingCache.invalidateSettingsCache();
@@ -78,7 +79,7 @@ function createStorageMocks() {
     storage = JSON.parse(JSON.stringify(merged));
 
     // 【重要】storageが更新されたらキャッシュをクリア
-    clearSettingsCache();
+    settingsRepository.clearCache();
 
     if (callback) callback();
     return Promise.resolve();
@@ -120,7 +121,7 @@ function createStorageMocks() {
 
     processedState.settings = settings;
     storage = JSON.parse(JSON.stringify(processedState));
-    clearSettingsCache();
+    settingsRepository.clearCache();
   };
 
   const resetStorage = () => {
@@ -134,7 +135,7 @@ function createStorageMocks() {
       settings_version: 0
     };
     // 【重要】storage stateをリセットしたらキャッシュをクリア
-    clearSettingsCache();
+    settingsRepository.clearCache();
   };
 
   // Replace global mocks
@@ -179,7 +180,7 @@ describe('ublockImport - SourceManager Module', () => {
 
     // 【重要】storage.tsのキャッシュをクリア（各テスト終了時）
     // storage.test.tsと同じパターン
-    clearSettingsCache();
+    settingsRepository.clearCache();
     RecordingCache.invalidateSettingsCache();
     RecordingCache.invalidateUrlCache();
 

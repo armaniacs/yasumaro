@@ -5,7 +5,7 @@
 
 import { parseUblockFilterListWithErrors } from '../../utils/ublockParser/index.js';
 import { rebuildRulesFromSources } from '../../dashboard/settings/ublockImport/index.js';
-import { StorageKeys } from '../../utils/storage.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 
 // モックの設定
 global.fetch = vi.fn();

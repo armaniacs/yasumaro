@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PrivacyPipeline, DEGENERATE_SUMMARY_FALLBACK } from '../privacyPipeline.js';
-import { StorageKeys } from '../../utils/storage.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import { addLog } from '../../utils/logger.js';
 
 vi.mock('../../utils/logger.js', () => ({

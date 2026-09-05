@@ -124,37 +124,6 @@ vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getAllowedUrls: vi.fn(async () => null),
-    getSettings: vi.fn(async () => ({})),
-    StorageKeys: {
-      PROVIDER_BASE_URL: 'provider_base_url',
-      PROVIDER_API_KEY: 'provider_api_key',
-      PROVIDER_MODEL: 'provider_model',
-      GEMINI_API_KEY: 'gemini_api_key',
-      GEMINI_MODEL: 'gemini_model',
-      GEMINI_API_VERSION: 'gemini_api_version',
-      MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt',
-    },
-    Settings: {},
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
@@ -253,7 +222,7 @@ import { fetchWithRetry } from '../../utils/fetch.js';
 import { OpenAIProvider } from '../ai/providers/OpenAIProvider.js';
 import { GeminiProvider } from '../ai/providers/GeminiProvider.js';
 import { CONNECTION_TEST_PROMPT } from '../ai/providers/ProviderStrategy.js';
-import type { Settings } from '../../utils/storage.js';
+import type { Settings } from '../../utils/storage/types.js';
 
 const mockedFetchWithRetry = vi.mocked(fetchWithRetry);
 

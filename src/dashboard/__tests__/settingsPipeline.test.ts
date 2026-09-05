@@ -10,10 +10,6 @@ const { mockGetSettings: hoistedGetSettings, mockSaveSettings: hoistedSaveSettin
   mockSaveSettings: vi.fn(),
 }));
 
-vi.mock('../../utils/storage.js', () => ({
-  getSettings: hoistedGetSettings,
-  saveSettingsWithAllowedUrls: hoistedSaveSettings,
-}));
 
 vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -73,13 +69,13 @@ vi.mock('../utils/confirmDialog.js', () => ({
 }));
 
 import { saveDashboardSettings, GENERAL_SETTINGS_VALIDATION_FIELDS } from '../settingsPipeline.js';
-import * as settingsStore from '../../utils/storage.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import * as formBinding from '../../utils/settingsFormBinding.js';
 import * as fieldValidation from '../settings/fieldValidation.js';
 import { showConfirmDialog } from '../utils/confirmDialog.js';
 
-const mockGetSettings = vi.mocked(settingsStore.getSettings);
-const mockSaveSettings = vi.mocked(settingsStore.saveSettingsWithAllowedUrls);
+const mockGetSettings = vi.mocked(settingsRepository.getAll);
+const mockSaveSettings = vi.mocked(settingsRepository.setAll);
 const mockExtract = vi.mocked(formBinding.extractSettingsFromInputs);
 const mockExtractTiming = vi.mocked(formBinding.extractLocalMarkdownExportTiming);
 const mockValidateAll = vi.mocked(fieldValidation.validateAllFields);

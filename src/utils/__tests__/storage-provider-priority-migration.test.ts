@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getSettings, clearSettingsCache, StorageKeys } from '../storage.js';
+import { settingsRepository } from '../storage/SettingsRepository.js';
+import { StorageKeys } from '../storage/types.js';
 
 describe('AI_PROVIDER_PRIORITY_LIST 自動マイグレーション', () => {
   beforeEach(() => {
-    clearSettingsCache();
+    settingsRepository.clearCache();
     vi.stubGlobal('chrome', {
       storage: {
         local: {
@@ -27,7 +28,7 @@ describe('AI_PROVIDER_PRIORITY_LIST 自動マイグレーション', () => {
   });
 
   it('AI_PROVIDER_PRIORITY_LISTが未設定の場合、既存のAI_PROVIDERを1位スロットとして導出する', async () => {
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
     expect(settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST]).toEqual([
       { provider: 'openai2' }
     ]);

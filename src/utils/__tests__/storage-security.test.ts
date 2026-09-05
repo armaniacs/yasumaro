@@ -145,7 +145,7 @@ import {
     removeMasterPassword,
     clearEncryptionKeyCache,
     getOrCreateEncryptionKey
-} from '../storage.js';
+} from '../storage/encryptionSession.js';
 import { encryptApiKey, decryptApiKey, isEncrypted } from '../crypto/index.js';
 
 // Web Crypto APIのモック設定

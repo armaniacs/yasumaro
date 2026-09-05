@@ -62,25 +62,6 @@ vi.mock('../../utils/storage/encryptionSession.js', async () => {
     URL_WARNING_THRESHOLD: 9000,
   };
 });
-vi.mock('../../utils/storage.js', async () => {
-  const actual = await vi.importActual('../../utils/storage.js') as any;
-  return {
-    ...actual,
-    getSettings: vi.fn(),
-    getAllowedUrls: vi.fn(),
-    getSavedUrlsWithTimestamps: vi.fn(),
-    setSavedUrlsWithTimestamps: vi.fn(),
-    saveSettings: vi.fn(),
-    StorageKeys: {
-      PRIVACY_MODE: 'PRIVACY_MODE',
-      PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS',
-      TAG_SUMMARY_MODE: 'TAG_SUMMARY_MODE',
-      AUTO_SAVE_PRIVACY_BEHAVIOR: 'AUTO_SAVE_PRIVACY_BEHAVIOR',
-    },
-    MAX_URL_SET_SIZE: 10000,
-    URL_WARNING_THRESHOLD: 9000,
-  };
-});
 vi.mock('../../utils/storage/savedUrlRepository.js', async () => {
   const actual = await vi.importActual('../../utils/storage/savedUrlRepository.js') as any;
   return {

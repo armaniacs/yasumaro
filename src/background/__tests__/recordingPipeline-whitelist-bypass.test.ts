@@ -5,10 +5,9 @@ import { RecordingCache } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIService } from '../ai/AIService.js';
-import { StorageKeys } from '../../utils/storage.js';
-import type { Settings } from '../../utils/storage.js';
+import { StorageKeys } from '../../utils/storage/types.js';
+import type { Settings } from '../../utils/storage/types.js';
 import * as privacy from '../privacyPipeline.js';
-import * as storageModule from '../../utils/storage.js';
 import * as domainUtilsModule from '../../utils/domainUtils.js';
 
 const mockGetAll = vi.hoisted(() => vi.fn());

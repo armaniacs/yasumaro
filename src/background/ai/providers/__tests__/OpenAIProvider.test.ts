@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { OpenAIProvider } from '../OpenAIProvider.js';
-import type { Settings } from '../../../../utils/storage.js';
+import type { Settings } from '../../../../utils/storage/types.js';
 
 vi.mock('../../../../utils/aiUsageTracker.js', () => ({
   checkHardLimit: vi.fn(async () => ({ blocked: false })),
@@ -33,10 +33,6 @@ vi.mock('../../../../utils/storage/defaults.js', async () => {
 });
 vi.mock('../../../../utils/storage/encryptionSession.js', async () => {
   const actual = await vi.importActual<typeof import('../../../../utils/storage/encryptionSession.js')>('../../../../utils/storage/encryptionSession.js');
-  return { ...actual, getAllowedUrls: vi.fn(() => Promise.resolve([])) };
-});
-vi.mock('../../../../utils/storage.js', async () => {
-  const actual = await vi.importActual<typeof import('../../../../utils/storage.js')>('../../../../utils/storage.js');
   return { ...actual, getAllowedUrls: vi.fn(() => Promise.resolve([])) };
 });
 vi.mock('../../../../utils/storage/savedUrlRepository.js', async () => {

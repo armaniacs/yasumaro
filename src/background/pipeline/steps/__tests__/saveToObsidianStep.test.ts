@@ -17,7 +17,7 @@ vi.mock('../../../notificationHelper.js', () => ({
 
 import { saveToObsidianStep } from '../saveToObsidianStep.js';
 import type { RecordingContext, StepDeps } from '../../types.js';
-import { StorageKeys } from '../../../utils/storage.js';
+import { StorageKeys } from '../../../utils/storage/types.js';
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {

@@ -1,7 +1,8 @@
 // src/background/__tests__/integration-robustness.test.js
 import { ObsidianClient } from '../obsidianClient.js';
 import { vi } from 'vitest';
-import { getSettings, StorageKeys, saveSettings } from '../../utils/storage.js';
+import { StorageKeys } from '../../utils/storage/types.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { GeminiProvider } from '../ai/providers/GeminiProvider.js';
 import { fetchWithRetry } from '../../utils/fetch.js';
 
@@ -41,12 +42,12 @@ describe('Integration: Robustness improvements', () => {
     });
 
     // 有効な設定
-    await saveSettings({
+    await settingsRepository.setAll({
       [StorageKeys.OBSIDIAN_API_KEY]: 'test-key',
       [StorageKeys.OBSIDIAN_PORT]: '27123'
     });
 
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
     expect(settings.junk1).toBeUndefined();
     expect(settings.junk2).toBeUndefined();
     expect(settings.junkInSettings).toBeUndefined();

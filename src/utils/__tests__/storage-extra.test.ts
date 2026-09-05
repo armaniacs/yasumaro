@@ -75,9 +75,12 @@ vi.mock('../errorUtils.js', () => ({
   errorMessage: vi.fn((e: unknown) => e instanceof Error ? e.message : String(e)),
 }));
 
+import { getStorageUsage } from '../storage/quota.js';
 import {
-  getStorageUsage,
   isDomainInWhitelist,
+  ALLOWED_AI_PROVIDER_DOMAINS
+} from '../storage/urlWhitelist.js';
+import {
   getSavedUrls,
   getSavedUrlsWithTimestamps,
   setSavedUrls,
@@ -86,16 +89,15 @@ import {
   isUrlSaved,
   getSavedUrlCount,
   setSavedUrlsWithTimestamps,
-  purgeLegacyStorage,
-  clearSettingsCache,
+  purgeLegacyStorage
+} from '../storage/savedUrlRepository.js';
+import { settingsRepository } from '../storage/SettingsRepository.js';
+import {
   isMasterPasswordEnabled,
   isEncryptionLocked,
   clearEncryptionKeyCache,
-  getOrCreateHmacSecret,
-  ALLOWED_AI_PROVIDER_DOMAINS,
-  getSettings,
-  saveSettings,
-} from '../storage.js';
+  getOrCreateHmacSecret
+} from '../storage/encryptionSession.js';
 
 import { StorageKeys } from '../storage/types.js';
 import { DEFAULT_SETTINGS } from '../storage/defaults.js';
@@ -215,14 +217,14 @@ describe('URL set functions', () => {
 
   describe('clearSettingsCache', () => {
     it('is a function that does not throw', () => {
-      expect(typeof clearSettingsCache).toBe('function');
-      expect(() => clearSettingsCache()).not.toThrow();
+      expect(typeof settingsRepository.clearCache).toBe('function');
+      expect(() => settingsRepository.clearCache()).not.toThrow();
     });
   });
 
   describe('getSettings - encrypted API key handling', () => {
     beforeEach(() => {
-      clearSettingsCache();
+      settingsRepository.clearCache();
     });
 
     it('decrypts an encrypted API key field', async () => {
@@ -233,7 +235,7 @@ describe('URL set functions', () => {
         },
       });
 
-      const settings = await getSettings();
+      const settings = await settingsRepository.getAll();
 
       expect(settings[StorageKeys.OBSIDIAN_API_KEY]).toBe('decrypted-key');
     });
@@ -249,7 +251,7 @@ describe('URL set functions', () => {
         },
       });
 
-      const settings = await getSettings();
+      const settings = await settingsRepository.getAll();
 
       // fix 08 (bf85fac4) 以降: 復号失敗フィールドは空文字化せず元の暗号文を保持する。
       // 再認証が必要なフィールドは unrecoverable 経由で判別できる。
@@ -264,7 +266,7 @@ describe('URL set functions', () => {
         },
       });
 
-      const settings = await getSettings();
+      const settings = await settingsRepository.getAll();
 
       expect(settings[StorageKeys.OBSIDIAN_API_KEY]).toBe('plain-key-not-encrypted');
     });
@@ -272,7 +274,7 @@ describe('URL set functions', () => {
 
   describe('getSettings - in-memory cache', () => {
     beforeEach(() => {
-      clearSettingsCache();
+      settingsRepository.clearCache();
     });
 
     it('returns the cached value on a second call within the TTL without re-reading the settings key', async () => {
@@ -281,11 +283,11 @@ describe('URL set functions', () => {
         settings: { [StorageKeys.OBSIDIAN_PORT]: '27123' },
       });
 
-      await getSettings();
+      await settingsRepository.getAll();
       const getSpy = vi.spyOn(chrome.storage.local, 'get');
       getSpy.mockClear();
 
-      const result = await getSettings();
+      const result = await settingsRepository.getAll();
 
       const readSettingsKey = getSpy.mock.calls.some(
         (call) => Array.isArray(call[0]) && call[0].includes('settings')
@@ -301,15 +303,15 @@ describe('URL set functions', () => {
         settings_migrated: true,
         settings: { [StorageKeys.OBSIDIAN_PORT]: '27123' },
       });
-      await getSettings();
+      await settingsRepository.getAll();
 
-      clearSettingsCache();
+      settingsRepository.clearCache();
       await chrome.storage.local.set({
         settings_migrated: true,
         settings: { [StorageKeys.OBSIDIAN_PORT]: '27999' },
       });
 
-      const result = await getSettings();
+      const result = await settingsRepository.getAll();
 
       expect(result[StorageKeys.OBSIDIAN_PORT]).toBe('27999');
     });
@@ -317,7 +319,7 @@ describe('URL set functions', () => {
 
   describe('getSettings - pre-migration settings object precedence', () => {
     beforeEach(() => {
-      clearSettingsCache();
+      settingsRepository.clearCache();
     });
 
     it('prefers the settings object over legacy individual keys when not yet migrated', async () => {
@@ -331,7 +333,7 @@ describe('URL set functions', () => {
         },
       });
 
-      const result = await getSettings();
+      const result = await settingsRepository.getAll();
 
       expect(result[StorageKeys.OBSIDIAN_PORT]).toBe('27999');
       expect(result[StorageKeys.OBSIDIAN_PROTOCOL]).toBe('https');
@@ -343,7 +345,7 @@ describe('URL set functions', () => {
       const { encryptApiKey } = await import('../crypto/index.js');
       vi.mocked(encryptApiKey).mockClear();
 
-      await saveSettings({
+      await settingsRepository.setAll({
         [StorageKeys.OBSIDIAN_API_KEY]: '',
         [StorageKeys.OBSIDIAN_PORT]: '27123',
       } as any);
@@ -468,7 +470,7 @@ describe('URL set functions', () => {
         vi.spyOn(chrome.storage.local, 'getBytesInUse').mockResolvedValue(STORAGE_QUOTA_BYTES + 1024 * 1024);
 
         await expect(
-          saveSettings({} as any, false, async () => false)
+          settingsRepository.setAll({} as any, { sqliteHealthCheck: async () => false })
         ).rejects.toThrow(/SQLite unhealthy|Storage quota exceeded/);
 
         const stored = await chrome.storage.local.get(['savedUrlsWithTimestamps', 'savedUrls']);
@@ -484,7 +486,7 @@ describe('URL set functions', () => {
           .mockResolvedValueOnce(STORAGE_QUOTA_BYTES + 1024 * 1024) // before cleanup: over quota
           .mockResolvedValue(1024); // after cleanup: back under quota
 
-        await saveSettings({} as any, false, async () => true);
+        await settingsRepository.setAll({} as any, { sqliteHealthCheck: async () => true });
 
         const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
         expect((stored.savedUrlsWithTimestamps as any[])[0].content).toBeUndefined();
@@ -500,7 +502,7 @@ describe('URL set functions', () => {
         });
         vi.spyOn(chrome.storage.local, 'getBytesInUse').mockResolvedValue(STORAGE_QUOTA_BYTES + 1024 * 1024);
 
-        await expect(saveSettings({} as any)).rejects.toThrow();
+        await expect(settingsRepository.setAll({} as any)).rejects.toThrow();
 
         const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
         expect((stored.savedUrlsWithTimestamps as any[])[0].content).toBe('x'.repeat(100));
@@ -581,7 +583,7 @@ describe('URL set functions', () => {
 
   describe('LOCAL_MARKDOWN_EXPORT_TIMING migration', () => {
     beforeEach(() => {
-      clearSettingsCache();
+      settingsRepository.clearCache();
     });
 
     it('migrates AUTO_ENABLED=true to TIMING="idle" when TIMING is unset', async () => {
@@ -592,7 +594,7 @@ describe('URL set functions', () => {
         },
       });
 
-      const settings = await getSettings();
+      const settings = await settingsRepository.getAll();
 
       expect(settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING]).toBe('idle');
     });
@@ -605,7 +607,7 @@ describe('URL set functions', () => {
         },
       });
 
-      const settings = await getSettings();
+      const settings = await settingsRepository.getAll();
 
       expect(settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING]).toBe('manual');
     });
@@ -619,7 +621,7 @@ describe('URL set functions', () => {
         },
       });
 
-      const settings = await getSettings();
+      const settings = await settingsRepository.getAll();
 
       expect(settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING]).toBe('daily');
     });

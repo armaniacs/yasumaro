@@ -73,26 +73,6 @@ vi.mock('../../../../utils/storage/encryptionSession.js', async (importOriginal)
     ),
   };
 });;
-vi.mock('../../../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: hoistedMockGet,
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
@@ -174,7 +154,7 @@ vi.mock('../../../../utils/storage/quota.js', async (importOriginal) => {
 });;
 
 import { createStaticFormPanel } from '../staticPanelAdapter.js';
-import { getSettings } from '../../../../utils/storage.js';
+import { settingsRepository } from '../../../../utils/storage/SettingsRepository.js';
 
 function container(): HTMLElement {
   return document.createElement('div');
@@ -217,19 +197,19 @@ describe('createStaticFormPanel', () => {
 
     await panel.mount(container());
 
-    expect(getSettings).toHaveBeenCalled();
+    expect(settingsRepository.getAll).toHaveBeenCalled();
     expect(spy).toHaveBeenCalledWith({ some_key: 'value' });
   });
 
   it('does not read storage when the panel does not need settings', async () => {
-    vi.mocked(getSettings).mockClear();
+    vi.mocked(settingsRepository.getAll).mockClear();
     const panel = createStaticFormPanel({ id: 'panel-x', mount: () => {} });
 
     await panel.mount(container());
 
     // Reading settings for the 7 panels that ignore them would add a
     // needless async storage round-trip to every panel open.
-    expect(getSettings).not.toHaveBeenCalled();
+    expect(settingsRepository.getAll).not.toHaveBeenCalled();
   });
 
   it('omits the refresh property entirely when no refresh is given', () => {

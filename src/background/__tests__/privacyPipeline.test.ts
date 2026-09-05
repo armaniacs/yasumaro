@@ -2,7 +2,7 @@
 import { PrivacyPipeline } from '../privacyPipeline.js';
 import { vi } from 'vitest';
 import { addLog, LogType } from '../../utils/logger.js';
-import { StorageKeys } from '../../utils/storage.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import * as promptSanitizerModule from '../../utils/promptSanitizer.js';
 
 // Mock logger to capture addLog calls

@@ -41,12 +41,6 @@ const { mockGetSettings: hoistedMockGetSettings, mockSaveSettings: hoistedMockSa
 }));
 
 // Mock dependencies (must be defined before imports)
-vi.mock('../../../utils/storage.js', () => {
-  return {
-    getSettings: hoistedMockGetSettings,
-    saveSettings: hoistedMockSaveSettings,
-  };
-});
 vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
@@ -197,9 +191,9 @@ describe('ublockImport/index.js - UI Component Tests', () => {
     let mockGetSettings, mockSaveSettings;
 
     beforeAll(async () => {
-      const storage = await import('../../../utils/storage.js');
-      mockGetSettings = storage.getSettings;
-      mockSaveSettings = storage.saveSettings;
+      const { settingsRepository } = await import('../../../utils/storage/SettingsRepository.js');
+      mockGetSettings = settingsRepository.getAll;
+      mockSaveSettings = settingsRepository.setAll;
     });
 
     beforeEach(() => {
@@ -224,8 +218,8 @@ describe('ublockImport/index.js - UI Component Tests', () => {
 
       await deleteSource(1, renderCallback);
 
-      const { saveSettings } = await import('../../../utils/storage.js');
-      expect(saveSettings).toHaveBeenCalled();
+      const { settingsRepository } = await import('../../../utils/storage/SettingsRepository.js');
+      expect(settingsRepository.setAll).toHaveBeenCalled();
       expect(renderCallback).toHaveBeenCalled();
     });
 
@@ -235,8 +229,8 @@ describe('ublockImport/index.js - UI Component Tests', () => {
 
       await deleteSource(999, renderCallback);
 
-      const { saveSettings } = await import('../../../utils/storage.js');
-      expect(saveSettings).not.toHaveBeenCalled();
+      const { settingsRepository } = await import('../../../utils/storage/SettingsRepository.js');
+      expect(settingsRepository.setAll).not.toHaveBeenCalled();
     });
   });
 
@@ -247,8 +241,8 @@ describe('ublockImport/index.js - UI Component Tests', () => {
     let mockGetSettings;
 
     beforeAll(async () => {
-      const storage = await import('../../../utils/storage.js');
-      mockGetSettings = storage.getSettings;
+      const { settingsRepository } = await import('../../../utils/storage/SettingsRepository.js');
+      mockGetSettings = settingsRepository.getAll;
     });
 
     beforeEach(() => {
@@ -318,8 +312,8 @@ describe('ublockImport/index.js - UI Component Tests', () => {
     let mockGetSettings, mockShowStatus;
 
     beforeAll(async () => {
-      const storage = await import('../../../utils/storage.js');
-      mockGetSettings = storage.getSettings;
+      const { settingsRepository } = await import('../../../utils/storage/SettingsRepository.js');
+      mockGetSettings = settingsRepository.getAll;
       const helper = await import('../../../utils/ui/settingsUiHelper.js');
       mockShowStatus = helper.showStatus;
     });
