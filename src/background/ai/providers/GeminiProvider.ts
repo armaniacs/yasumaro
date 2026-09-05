@@ -3,20 +3,15 @@
  * Google Gemini APIを使用するAIプロバイダー
  */
 
-import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
+import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT, MAX_AI_HTTP_RESPONSE_BYTES } from './ProviderStrategy.js';
 import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
-import { getAllowedUrls } from '../../../utils/storage/urlWhitelist.js';
 import { DEFAULT_SETTINGS } from '../../../utils/storage/defaults.js';
 import { Settings, StorageKeys } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { getDefaultSystemPrompt } from '../../../utils/customPromptUtils.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { readJsonCapped } from '../../../utils/readBodyCapped.js';
-
-/** Default byte cap for AI provider JSON responses. */
-const MAX_AI_RESPONSE_BYTES = 10 * 1024 * 1024; // 10MB
-
 
 interface GeminiApiResponse {
     candidates?: Array<{
@@ -192,7 +187,7 @@ export class GeminiProvider extends AIProviderStrategy {
         };
 
         try {
-            const allowedUrls = await this._getAllowedUrls();
+            const allowedUrls = await this.getAllowedUrlsForRequests();
 
             const response = await fetchWithRetry(
                 testUrl,
@@ -227,7 +222,7 @@ export class GeminiProvider extends AIProviderStrategy {
                 };
             }
 
-            const data = await readJsonCapped(response, MAX_AI_RESPONSE_BYTES) as GeminiApiResponse;
+            const data = await readJsonCapped(response, MAX_AI_HTTP_RESPONSE_BYTES) as GeminiApiResponse;
             const candidate = data.candidates?.[0];
             // 応答が複数 parts に分かれる場合があるため全て結合する
             const text = (candidate?.content?.parts ?? [])
@@ -308,10 +303,6 @@ export class GeminiProvider extends AIProviderStrategy {
             }
         }
         return parts.join(' | ');
-    }
-
-    private async _getAllowedUrls(): Promise<Set<string>> {
-        return getAllowedUrls();
     }
 
     private async _handleError(response: Response): Promise<AISummaryResult> {
