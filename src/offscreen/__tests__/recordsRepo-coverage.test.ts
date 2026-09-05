@@ -32,7 +32,7 @@ const engineMock = vi.hoisted(() => ({
   init: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock('../sqliteEngineContext.js', () => ({
+vi.mock('../sqliteEngineHost.js', () => ({
   engine: engineMock,
   DB_FILENAME: 'test.db',
   MAX_QUERY_LIMIT: 100000,

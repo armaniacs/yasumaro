@@ -5,7 +5,7 @@ import { handleOffscreenMessage } from '../offscreen.js';
 // offscreen.ts imports each operation from the module that owns it, so the
 // mocks have to be split the same way — mocking a single aggregate would not
 // intercept the imports the router actually resolves.
-vi.mock('../sqliteEngineContext.js', () => ({
+vi.mock('../sqliteEngineHost.js', () => ({
     engine: {
         init: vi.fn().mockResolvedValue(true),
         resetForTesting: vi.fn(),

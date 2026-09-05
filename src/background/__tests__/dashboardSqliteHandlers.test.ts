@@ -90,7 +90,7 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
   });
 
   it('routes opfs_spike to sqliteClient.maintain opfsSpike and returns the report', async () => {
-    const report = { strategy: 'opfs-async-main', steps: [], passed: true, durationMs: 5 };
+    const report = { strategy: 'idb', steps: [], passed: true, durationMs: 5 };
     // Stub maintain opfsSpike — see the maintain
     // comment above.
     (sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain =

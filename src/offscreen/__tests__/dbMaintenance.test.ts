@@ -18,7 +18,7 @@ const backend = vi.hoisted(() => ({
   getFtsIndexSize: vi.fn(),
 }));
 
-vi.mock('../sqliteEngineContext.js', () => ({
+vi.mock('../sqliteEngineHost.js', () => ({
   engine: {
     getBackend: vi.fn().mockResolvedValue(backend),
   },

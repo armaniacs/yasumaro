@@ -12,7 +12,7 @@
  * actually want it.
  */
 
-import { engine } from '../sqliteEngineContext.js';
+import { engine } from '../sqliteEngineHost.js';
 
 export {
   insert,

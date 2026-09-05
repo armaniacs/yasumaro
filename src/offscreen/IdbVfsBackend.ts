@@ -1,6 +1,5 @@
 // src/offscreen/IdbVfsBackend.ts
 import type { SqliteEngineHost } from './sqliteEngineHost.js';
-import type { SqliteEngineContext } from './sqliteEngineContext.js';
 import type { SqliteValue } from './sqliteEngine.js';
 import type {
   StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult,
@@ -10,13 +9,13 @@ import type {
 } from './StorageBackend.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from './schema.js';
-import { extractDomain, DB_FILENAME } from './sqliteEngineContext.js';
+import { extractDomain, DB_FILENAME } from './sqliteEngineHost.js';
 import { buildQuerySpec, QUERY_CAPS, clampLimit, buildExtraWhereSql } from './queryPlan.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { withTransaction } from './opfsWorker/handlers.js';
 
 export class IdbVfsBackend implements StorageBackend {
-  constructor(private engine: SqliteEngineHost | SqliteEngineContext) {}
+  constructor(private engine: SqliteEngineHost) {}
 
   private ensureDb(): void {
     if (!this.engine.idbEngine) throw new Error('IDB VFS database not initialized');
