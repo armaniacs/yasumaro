@@ -54,3 +54,9 @@ Scenario: 移行ウィンドウ期限後は旧バージョンも拒否される
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了
 - [ ] ドキュメント更新済み（リリースノートに移行ウィンドウ方針を明記）
+
+## 実装メモ
+
+- ウィンドウ定義: `PROTOCOL_VERSION_WINDOW_SIZE = 1`（`src/messaging/protocol.ts` で一箇所宣言、`messageTypes.ts` 経由で再エクスポート）。受理集合は `PROTOCOL_VERSION_POLICY`（`envelopePolicy.ts` の政策テーブル: `{ current, minSupported, windowSize }`）から `classifyProtocolVersion()` で導出。現行→受理、[N-1, N)→`deprecated` 詳細付き受理＋`logWarn`＋応答に `deprecated: true` 付与（`messageHandler.ts`）、範囲外→従来通り拒否（migration/tab-cache 実行前）。欠番（`undefined`）は従来通り受理。
+- セキュリティ非弱体化: バージョンゲートのみ段階化し、サイズ上限・trust レベル・スキーム検証・router の trust/strict 順序は不変。拒否は従来と同一位置（pipeline 先頭）で返す。
+- N-1 の根拠: 対象の skew は単一アップデートサイクル（旧 content script × 新 SW）のみ。幅広の窓は未検証スキーマ組合せの寿命を延ばすだけでカバレッジが増えず、0 は混在期の記録欠落を再発させる。恒久的多世代サポートに拡大しない（`protocol.ts` コメントに明記）。

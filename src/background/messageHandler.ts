@@ -50,9 +50,32 @@ export function createMessageHandler(deps: MessageHandlerDeps): (
                     return;
                 }
 
+                // Graded migration window: a deprecated (N-1) version is still
+                // dispatched, but the acceptance is warned and flagged so
+                // callers can see the sender needs an update. The flag is
+                // merged into object responses only — security validations
+                // downstream run unchanged.
+                let respond = sendResponse;
+                if (outcome.deprecated) {
+                    logWarn(
+                        'Protocol version deprecated - message accepted with migration warning',
+                        outcome.deprecated,
+                        ErrorCode.INTERNAL_ERROR,
+                        'service-worker'
+                    );
+                    const inner = sendResponse;
+                    respond = (response?: unknown) => {
+                        if (response && typeof response === 'object' && !Array.isArray(response)) {
+                            inner({ ...(response as Record<string, unknown>), deprecated: true });
+                        } else {
+                            inner(response);
+                        }
+                    };
+                }
+
                 // Single dispatch seam: MessageRouter hides the 19 handler table,
                 // trust levels, and validators behind one method.
-                return deps.router.dispatch(outcome.message, sender, sendResponse);
+                return deps.router.dispatch(outcome.message, sender, respond);
             } catch (error) {
                 logError(
                     'Service Worker Error',

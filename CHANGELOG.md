@@ -35,6 +35,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### 互換性
+
+- プロトコルバージョン不一致の即時拒否を段階的移行ウィンドウに変更。直前世代（N-1）のみ警告ログ＋応答の `deprecated: true` フラグ付きで受理し、それ以前・未知のバージョンは従来通り `Protocol version mismatch` で拒否。恒久的な多世代サポートではなく一時的な移行措置
+
 ### Fixed
 
 - Checking Team レビュー（2026-09-05、26 候補）から 10 件を実施（PBI 2026-09-05-01〜10、`dev-docs/archived/pbi/` 参照）。`optional_host_permissions` から `<all_urls>` を削除して取得先ドメインの個別列挙のみに限定、confirmToken の `Math.random` フォールバックを削除して fail-closed 化、メッセージバリデータに上限サイズ検証（ValidVisit content 1MB・ManualRecord title 500 字/content 1MB・SQLite import 件数/サイズ等）と URL スキーム検証（http/https 以外を拒否）を追加、レコード保持に 365 日のデフォルト上限を設定（両境界が無制限のときはオプションページに警告表示）、FTS 再構築条件を全空のみから件数比較に緩和して部分インデックスを自動修復、マイグレーション冪等判定をエラーメッセージの文字列マッチから `pragma_table_info` 存在確認ベースに変更、復号失敗時に API キーを空文字で上書きせず元の暗号文を保全（`unrecoverable` で通知）、popup 幅を 360px 固定から min 360/max 420 の許容範囲方式に緩和して翻訳文字列のクリップを解消、`retryObsidianWrite` が Obsidian 書き込みの成否を正しく返すように修正、閲覧履歴記録の初回 OFF（同意ゲート・デフォルト false）を検証・ピン留めし「記録中」バッジ（`●`）の常時表示とオンボーディングへの記録範囲説明を追加
