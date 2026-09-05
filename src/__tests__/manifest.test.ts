@@ -89,6 +89,12 @@ describe('Manifest - Host Permissions Minimization', () => {
   });
 
   describeFn('optional_host_permissions', () => {
+    it('should not contain <all_urls> (least privilege)', () => {
+      const optionalPermissions = manifest.optional_host_permissions;
+      expect(optionalPermissions).toBeDefined();
+      expect(optionalPermissions).not.toContain('<all_urls>');
+    });
+
     it('should contain additional AI provider domains', () => {
       const optionalPermissions = manifest.optional_host_permissions;
       expect(optionalPermissions).toBeDefined();
