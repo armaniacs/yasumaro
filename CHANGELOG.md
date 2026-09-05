@@ -33,6 +33,20 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [Unreleased]
+
+### Fixed
+
+- popup のステータス表示系コントロール（`.status-toggle` / `.btn-banner-allow` / `.banner-actions .btn-sm`）に `min-width: 0; max-width: 100%` を追加。v6.7.110 の `white-space: normal` 化だけでは flex item が max-content 幅を保つため、長い翻訳ラベル（独語等）が折り返されずクリップされる状態が残っていた。popup の幅・折り返し・フォーカストラップを検証する e2e（`testDir/e2e/popup-fix09-25.spec.ts`、6 tests）がこの未完成箇所を検出した
+
+### リファクタリング
+
+- SQLite 永続化層の WHERE/ORDER/LIMIT/purge SQL 組み立てを `queryPlan.ts` の共通ビルダー（`buildFtsSearchStatements` / `buildLikeSearchStatements` / `buildPlainListStatements` / `buildPurgeOldRecordsStatements` 等）に集約し、`IdbVfsBackend`（直 exec）と `opfsWorker` ハンドラの二重実装を解消（PBI 2026-09-05-34）。idb / opfs-stub / fallback の同一 QuerySpec 比較パラメトリックテストを新設し、3 系統の search-sort テストを統合。FTS evoke 条件・LIKE 境界・`#tag` ギャップ・audit cap の意図的差分は INTENTIONAL テストで固定し、`DELETE` セマンティクス差（テスト専用ソフトデリート vs 製品ハードデリート）は統一せず文書化
+
+### Documentation
+
+- `pbi/` 台帳を再整理。実行済み backlog 10 件（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）を `dev-docs/archived/pbi/` へ移動し、散在していた見送り・トリガー付き・製品判断待ち候補を `pbi/2026-09-05-00-backlog-future.md`（統合台帳）に集約。`pbi/` 配下はゲート付き PBI 32（wa-sqlite サンセット、2026-12-17 以降着手）と統合台帳のみに
+
 ## [6.7.110] - 2026-09-05
 
 ### 互換性
