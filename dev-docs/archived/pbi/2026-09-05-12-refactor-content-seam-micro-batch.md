@@ -121,3 +121,4 @@ sed -n '476,485p' src/content/contentKernel.ts
 
 ## 実装メモ（2026-09-05・branch 0905c・続）
 - 完了（commit `9e99a7a`、SDD サブエージェント実装）。レビュー first-pass Approved。全 suite 11,553 tests green。DESIGN_SPECIFICATIONS §10.3 に通知経路（cleansingExecuted + kernel sender seam）を追記済み。
+- フォローアップ（branch review `98ea18a1`）: クレンジング実行後にフォールバックが発効したケースでは `settleFallback` がカウンタをゼロ化するため、`cleansingExecuted` も同時に撤去するよう修正（C0 誤通知の防止。診断 recount が totalRemoved を再填充しても識別子は立たない）。
