@@ -22,11 +22,11 @@ Scenario: 上限超過のメッセージは拒否して記録する
 ```
 
 ## 受け入れ基準
-- [ ] ValidVisitのcontentに上限（1MB相当）があり、超過時はValidationErrorで拒否される
-- [ ] ManualRecordのtitle（500字）・content（1MB相当）に上限があり、超過時はValidationErrorで拒否される
-- [ ] Dashboard向けSQLite要求のimport rows（1000件）・全体サイズ（2MB相当）に上限があり、超過時はValidationErrorで拒否される
-- [ ] 上限値は定数として一元管理されている
-- [ ] 超過時は切断ではなく拒否＋ログ記録となる
+- [x] ValidVisitのcontentに上限（1MB相当）があり、超過時はValidationErrorで拒否される
+- [x] ManualRecordのtitle（500字）・content（1MB相当）に上限があり、超過時はValidationErrorで拒否される
+- [x] Dashboard向けSQLite要求のimport rows（1000件）・全体サイズ（2MB相当）に上限があり、超過時はValidationErrorで拒否される
+- [x] 上限値は定数として一元管理されている
+- [x] 超過時は切断ではなく拒否＋ログ記録となる
 
 ## テスト戦略
 - 単体: 境界値テスト（上限ちょうど・上限＋1）で各Validatorの受け付け／拒否を検証する
@@ -44,6 +44,9 @@ Scenario: 上限超過のメッセージは拒否して記録する
 - 現状コード確認済み：同ファイル内に `VALIDATOR_LIMITS` として上限定数が存在し、各Validatorで長さ・件数の検証が行われている。着手前に最新コードと差分を確認すること
 - 上限値の変更や新規フィールドの追加はスコープ外
 
+## 実装メモ
+- 2026-09-05 完了（commit `6ecd5a30`、PBI 04 と同一コミット）: `VALIDATOR_LIMITS` 定数テーブルを新設（content 1MB / title 500 / search query 1000 / import rows 1000・2MB / restore_db 10MB / append ids 1000）し、ValidVisit・ManualRecord・DashboardSqlite の各 Validator で超過を ValidationError で拒否。テスト: `validators-limits.test.ts`（境界値 7 ケース）
+
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了

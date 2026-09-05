@@ -32,10 +32,10 @@ Scenario: 不正な形式のURLは拒否される
 ```
 
 ## 受け入れ基準
-- [ ] MANUAL_RECORD/PREVIEW_RECORD/SAVE_RECORDのpayload.urlにhttp/https以外のスキームを指定するとバリデーションエラーになる
-- [ ] MANUAL_RECORD/PREVIEW_RECORD/SAVE_RECORDのpayload.urlにURLとして解析できない値を指定するとバリデーションエラーになる
-- [ ] http/httpsのURLは従来どおりバリデーションを通過する
-- [ ] 既存の非空チェック・他フィールドの検証挙動に変化がない
+- [x] MANUAL_RECORD/PREVIEW_RECORD/SAVE_RECORDのpayload.urlにhttp/https以外のスキームを指定するとバリデーションエラーになる
+- [x] MANUAL_RECORD/PREVIEW_RECORD/SAVE_RECORDのpayload.urlにURLとして解析できない値を指定するとバリデーションエラーになる
+- [x] http/httpsのURLは従来どおりバリデーションを通過する
+- [x] 既存の非空チェック・他フィールドの検証挙動に変化がない
 
 ## テスト戦略
 - 単体: ManualRecordValidatorに対し、http/https許可・javascript:/data:拒否・不正形式拒否・3メッセージ種別での共通動作を検証する
@@ -50,6 +50,9 @@ FetchUrlValidatorと同等のURLスキーム制限をManualRecordValidatorのpay
 - 対象は`src/messaging/validators.ts`のManualRecordValidatorのみ
 - 既存レコードのマイグレーションは不要
 
+## 実装メモ
+- 2026-09-05 完了（commit `6ecd5a30`、PBI 03 と同一コミット）: `ManualRecordValidator` の payload.url に URL パース + protocol が `http:`/`https:` 以外（javascript:/data:/ftp 等を含む）の場合に ValidationError を投げる検証を追加。テスト: `validators-limits.test.ts` の URL scheme 系（不正形式・ftp 拒否・http/https 許可）
+
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了

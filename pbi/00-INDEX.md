@@ -20,8 +20,8 @@
 
 | Phase | 対象 | 内容 |
 |-------|------|------|
-| 1 | fix 01–07 | セキュリティ・安定性（並行セッションが実装中・未コミット差分あり） |
-| 2 | fix 08–10 | データ保全・UX（08 はレビュー唯一の High 指摘） |
+| 1 | fix 01–07 | セキュリティ・安定性（**02/03/04 完了・アーカイブ済**。残 01/05/06/07） |
+| 2 | fix 08–10 | データ保全・UX（**08 完了・アーカイブ済（唯一の High）**。残 09/10。backlog #11 も PBI 化なしで完了） |
 | 3 | refactor 11–16 | arch5（ラウンド内 RICE 降順。**13 は 12 に依存（同一ファイル）**） |
 
 - 両系列の**対象ファイルは非交差**（俯瞰済み）。意味論的な依存もなし（fix 02 の confirmToken 発行と refactor 11 の dashboard 側 sender は触り合わない）。
@@ -29,18 +29,14 @@
 - **番号予約ルール**: 2026-09-05 の NN は 01–10 = review-fixes、11–16 = arch5 で確定。review-fixes の残候補（backlog の 11–26）を新たに PBI 化する場合は **NN 17 以降**を使用する。
 - 重複チェック済み: 両系列に dupe なし（fix 系はバグ/セキュリティ修正、refactor 系は構造改善で指摘対象が別）。
 
-### 2026-09-05 Checking Team レビュー由来（review-fixes） — 10 件進行中
+### 2026-09-05 Checking Team レビュー由来（review-fixes） — 6 件進行中（02/03/04/08 は完了・アーカイブ済）
 
-backlog: [2026-09-05-00-backlog-review-fixes.md](2026-09-05-00-backlog-review-fixes.md)（全 26 候補のうち 01–10 を PBI 化。11–26 は backlog に留置・PBI 化時は NN 17 以降）。着手順 = backlog の週次計画（上表 Phase 1–2）。**実装進行中**（未コミット差分: confirmTokenManager / RecordingOrchestrator / messaging validators / settingsMigration + 新規テスト 4 ファイル）。
+backlog: [2026-09-05-00-backlog-review-fixes.md](2026-09-05-00-backlog-review-fixes.md)（全 26 候補のうち 01–10 を PBI 化。11–26 は backlog に留置・PBI 化時は NN 17 以降。**#11（retry 成否返却）は PBI 化なしで完了（commit `80660334`）**）。着手順 = backlog の週次計画（上表 Phase 1–2）。
 
 - 2026-09-05-01-fix-remove-all-urls-permission.md（🔧 0.25日 — optional_host_permissions から `<all_urls>` を削除し取得先のみに限定。最小権限化。RICE 7200）
-- 2026-09-05-02-fix-crypto-token-fallback.md（🔧 0.25日 — confirmToken の Math.random フォールバックを削除し暗号学的乱数のみに。破壊的操作の認可ゲート強化。RICE 6400）
-- 2026-09-05-03-fix-message-validator-limits.md（🔧 0.5日 — メッセージバリデータに上限サイズ検証を追加し quota 超過による記録停止を防止。RICE 3600）
-- 2026-09-05-04-fix-url-scheme-validation.md（🔧 0.25日 — ManualRecordValidator に URL スキーム検証を追加し stored XSS を封鎖。RICE 3600）
 - 2026-09-05-05-fix-retention-defaults.md（🔧 0.5日 — レコード保持に保守的なデフォルト上限を設定し OPFS/IndexedDB の無制限肥大化を防止。RICE 3600）
 - 2026-09-05-06-fix-fts-rebuild-condition.md（🔧 0.25日 — FTS 再構築条件を全空のみから件数比較に緩和しインデックス自動修復を回復。RICE 3200）
 - 2026-09-05-07-fix-migration-string-match.md（🔧 0.5日 — マイグレーション失敗判定を文字列マッチから PRAGMA 確認に変更し冪等性を確保。RICE 2800）
-- 2026-09-05-08-fix-api-key-decryption-wipe.md（🔧 1.0日 — 復号失敗時の API キー空文字上書きを防止しデータ破壊パスを封鎖。**レビュー唯一の High 指摘**。RICE 2400）
 - 2026-09-05-09-fix-popup-width-constraint.md（🔧 0.25日 — popup 幅固定 360px を緩和し翻訳文字列のクリップを解消。RICE 2000）
 - 2026-09-05-10-fix-recording-default-state.md（🔧 0.5日 — 閲覧履歴記録のデフォルト状態を検証・明示し倫理リスクを低減。RICE 2000）
 
@@ -137,6 +133,15 @@ backlog: [2026-09-04-00-backlog-perf.md](2026-09-04-00-backlog-perf.md)。着手
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-05 Checking Team レビュー由来（review-fixes）第1弾 — 4件完了
+
+- 2026-09-05-02-fix-crypto-token-fallback.md（RICE 6400 — `generateToken` を fail-closed 化（secure RNG なしで throw）し `Math.random` フォールバックを物理削除。confirmTokenManager-failclosed 3 tests。commit `eebc9c66`）
+- 2026-09-05-03-fix-message-validator-limits.md（RICE 3600 — `VALIDATOR_LIMITS` 定数テーブルで ValidVisit content 1MB・ManualRecord title 500/content 1MB・SQLite search 1000/import rows 1000・2MB/restore_db 10MB/append ids 1000 を超過拒否。validators-limits 7 tests。commit `6ecd5a30`（04 と同一コミット））
+- 2026-09-05-04-fix-url-scheme-validation.md（RICE 3600 — MANUAL/PREVIEW/SAVE_RECORD の payload.url に http/https 以外のスキーム（javascript:/data:/ftp 等）と不正形式を ValidationError で拒否。commit `6ecd5a30`（03 と同一コミット））
+- 2026-09-05-08-fix-api-key-decryption-wipe.md（RICE 2400・レビュー唯一の High — 復号失敗フィールドを空文字化せず元の暗号文を保持し `unrecoverable` リストで通知、後続書き込みでも暗号文を保全。settingsMigration-unrecoverable 3 tests。commit `bf85fac4`）
+
+付随して backlog の **#11（retry 系エントリが常に成功を返す）も PBI 化なしで完了**（`retryObsidianWrite` が obsidianDuration の有無で成否を返す。retryObsidianWrite-result 3 tests。commit `80660334`）。4 新規テストスイート計 24 tests green（vitest）。
 
 ### 2026-09-03 0902a ブランチレビュー由来の CRITICAL 修正 — 5件完了
 
