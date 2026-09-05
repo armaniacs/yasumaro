@@ -1558,6 +1558,16 @@ label.inline-label {
   stroke: var(--color-text-muted);
 }
 
+/* Visible text label beside each status icon (WCAG 1.4.1: status must not
+   rely on color alone). Color on the icon remains as a secondary cue. */
+.status-label {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
 /* Checkmark icon for success state */
 .status-icon.status-success .status-svg .status-circle {
   fill: none;
