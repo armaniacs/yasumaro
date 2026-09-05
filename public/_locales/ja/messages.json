@@ -3918,5 +3918,20 @@
   },
   "cleansingPresetHelp": {
     "message": "プリセットを選択。個別に調整する場合はカスタムを選んでください。"
+  },
+  "noPerSiteOverrides": {
+    "message": "サイト別の上書き設定はありません。"
+  },
+  "notConsented": {
+    "message": "同意されていません"
+  },
+  "consentWithdrawnStopped": {
+    "message": "同意を撤回しました。記録を停止します。"
+  },
+  "consentWithdrawFailed": {
+    "message": "同意の撤回に失敗しました。"
+  },
+  "aiResultHeader": {
+    "message": "AI: "
   }
 }

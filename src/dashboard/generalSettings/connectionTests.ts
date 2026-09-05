@@ -252,7 +252,7 @@ export async function handleTestAi(): Promise<void> {
         container.className = 'diag-indent';
 
         const header = document.createElement('strong');
-        header.textContent = 'AI: ';
+        header.textContent = getMessage('aiResultHeader') || 'AI: ';
         container.appendChild(header);
 
         const statusEl = document.createElement('span');
