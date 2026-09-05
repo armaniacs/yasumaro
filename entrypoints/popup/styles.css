@@ -109,12 +109,16 @@
 }
 
 html {
-  width: 360px;
+  /* 許容範囲方式: 標準は 360px、長い翻訳文言（独語等）では最大 420px まで広げる。
+     固定幅 + overflow-x: hidden だと翻訳が見切れるため（PBI 2026-09-05-09）。 */
+  min-width: 360px;
+  max-width: 420px;
   overflow-x: hidden;
 }
 
 body {
-  width: 360px;
+  min-width: 360px;
+  max-width: 420px;
   min-height: 400px;
   overflow-x: hidden;
   padding: 0;
@@ -526,7 +530,8 @@ button:not(.icon-btn):not(.primary-btn):not(.secondary-btn):not(.alert-btn):not(
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .btn-banner-allow:hover {
@@ -547,7 +552,8 @@ button:not(.icon-btn):not(.primary-btn):not(.secondary-btn):not(.alert-btn):not(
 .banner-actions .btn-sm {
   padding: 4px 12px;
   font-size: 12px;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .btn-banner-primary {
@@ -1657,7 +1663,8 @@ label.inline-label {
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
   flex-shrink: 0;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .status-toggle:hover {
