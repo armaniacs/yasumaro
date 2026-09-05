@@ -159,7 +159,7 @@ git add bench/baselines/micro.json   # PR で差分をレビューする
 
 ```
 bench/
-  harness/       stats / domEnv / bundle / runner / report / cli
+  harness/       stats / domEnv / bundle / runner / report / cli / trend (data) / trendReport (presentation) / htmlReport / format
   micro/         c1-c7 + cleansing（各 definition を export）
   e2e/           *.bench.ts + _fixtures.ts + server.mjs
   fixtures/      _sizes.mjs（S/M/L 合成ジェネレータ）
