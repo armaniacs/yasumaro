@@ -141,13 +141,13 @@ describe('sqliteHistoryModel — LRU query cache', () => {
     expect(queryHistory).toHaveBeenCalledTimes(1);
   });
 
-  it('clears cache on bumpGenerationOnUnmount — next fetch re-queries', async () => {
+  it('clears cache on onNavigateOut — next fetch re-queries', async () => {
     const queryHistory = vi.fn().mockResolvedValue({ data: { rows: [makeRow(1)], total: 1 } });
     const model = createSqliteHistoryModel({ queryHistory });
 
     await model.fetchData({ page: 0 });
     expect(queryHistory).toHaveBeenCalledTimes(1);
-    model.bumpGenerationOnUnmount();
+    model.onNavigateOut();
     await model.fetchData({ page: 0 });
     expect(queryHistory).toHaveBeenCalledTimes(2);
   });

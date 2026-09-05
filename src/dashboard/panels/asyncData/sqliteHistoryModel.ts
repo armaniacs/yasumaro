@@ -328,6 +328,11 @@ export type AppendResult =
   | { success: true; appendedCount: number }
   | { success: false; error: string };
 
+export interface NavigateInParams {
+  searchTag?: string;
+  searchDomain?: string;
+}
+
 export interface SqliteHistoryModel {
   getState(): Readonly<SqliteHistoryState>;
   /** Subscribe to state changes; returns unsubscribe. Thin alias of former onStateChange. */
@@ -335,14 +340,15 @@ export interface SqliteHistoryModel {
   dateRangeFromSelected(): { since?: number; until?: number };
   fetchData(options?: FetchDataOptions): Promise<void>;
   reloadCurrent(): void;
-  checkFallbackStatus(): Promise<void>;
-  retryInitialLoad(fetchOpts?: FetchDataOptions): Promise<void>;
-  consumePendingInit(): FetchDataOptions | null;
-  activateWithTag(tag: string): void;
-  activateWithDomain(query: string): void;
-  loadPersistedSortIntoState(): Promise<void>;
-  bumpGenerationOnUnmount(): void;
-  resetFiltersForFreshLoad(): void;
+  /**
+   * Navigation entry point — owns the whole navigate-in order that used to be
+   * split between Panel.init (filter branch) and Panel.load (status → sort →
+   * pendingInit consume → initial fetch). The Panel only decides *when* to
+   * call; the Model owns the order.
+   */
+  onNavigateIn(initParams?: NavigateInParams): Promise<void>;
+  /** Navigation exit point — generation bump + persist flush + cache clear + selection clear. */
+  onNavigateOut(): void;
   toggleStar(id: number): Promise<void>;
   deleteEntry(id: number): Promise<void>;
   appendSelectedToObsidian(): Promise<AppendResult | null>;
@@ -544,10 +550,26 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     }
   }
 
+  // Cache invalidation policy — every cache.clear() goes through here so the
+  // reason for each invalidation stays readable at the call site and new
+  // mutation paths cannot silently skip it. Three contracts:
+  // - 'unmount': panel is torn down; drop everything, in-flight queries are
+  //   already discarded via the generation bump at the same site.
+  // - 'fresh-load': entries may have been recorded while this panel was not
+  //   mounted (background auto-save, manual "record now"), so the unfiltered
+  //   page-0 entry would otherwise keep serving a stale row set.
+  // - 'mutation': this panel changed rows itself (star/delete/append), so
+  //   cached pages no longer reflect storage. Mutation sites intentionally do
+  //   NOT bump requestGeneration — only unmount discards in-flight queries.
+  function invalidateCache(reason: 'unmount' | 'fresh-load' | 'mutation'): void {
+    void reason;
+    cache.clear();
+  }
+
   function bumpGenerationOnUnmount(): void {
     requestGeneration += 1;
     flushPendingPersist();
-    cache.clear();
+    invalidateCache('unmount');
   }
 
   // Reset display filters (date/search/tag/page) so a fresh panel.load() shows
@@ -563,9 +585,42 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   // unfiltered page-0 cache entry would otherwise keep serving a stale row
   // set even after the filter reset above.
   function resetFiltersForFreshLoad(): void {
-    cache.clear();
+    invalidateCache('fresh-load');
     const { sortBy, sortDir } = state;
     state = { ...createInitialHistoryState(), sortBy, sortDir };
+  }
+
+  // Navigation entry point (PBI-14): folds the init 3-branch
+  // (activateWithTag / activateWithDomain / resetFiltersForFreshLoad) and the
+  // load chain (checkFallbackStatus → loadPersistedSortIntoState →
+  // consumePendingInit → retryInitialLoad) into one ordered method.
+  //
+  // Order is load-bearing: the filter branch runs before status/sort so a
+  // tag/domain hand-off is already in state when the initial fetch is built,
+  // and resetFiltersForFreshLoad preserves only sort (:567-568 equivalent).
+  // activateWithTag fires its immediate fetch AND stages pendingInit on
+  // purpose (two-stage: the retry below re-fetches the same condition, but
+  // hits the cache — 1 underlying query total, pinned by contract test).
+  async function onNavigateIn(initParams?: NavigateInParams): Promise<void> {
+    if (initParams?.searchTag) {
+      activateWithTag(initParams.searchTag);
+    } else if (initParams?.searchDomain) {
+      activateWithDomain(initParams.searchDomain);
+    } else {
+      // Plain re-navigation (no tag/domain hand-off): drop date/search/tag
+      // filters left over from the previous visit. The panel stays mounted
+      // across tab switches, so this is the only per-visit reset point.
+      resetFiltersForFreshLoad();
+    }
+    await checkFallbackStatus();
+    await loadPersistedSortIntoState();
+    const fetchOpts = consumePendingInit();
+    await retryInitialLoad(fetchOpts ?? { limit: PAGE_SIZE });
+  }
+
+  function onNavigateOut(): void {
+    bumpGenerationOnUnmount();
+    clearEntrySelection();
   }
 
   async function toggleStarImpl(id: number): Promise<void> {
@@ -579,7 +634,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     if (entry) {
       dispatch({ type: 'toggleStarSuccess', id, starred: result.data.is_starred === 1 });
     }
-    cache.clear();
+    invalidateCache('mutation');
     notify();
   }
 
@@ -599,7 +654,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
       }
     }
     dispatch({ type: 'deleteSuccess', id });
-    cache.clear();
+    invalidateCache('mutation');
     notify();
   }
 
@@ -609,7 +664,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     const result = await appendToLogs(ids);
     if ('data' in result) {
       state.selectedIds.clear();
-      cache.clear();
+      invalidateCache('mutation');
       notify();
       return { success: true, appendedCount: ids.length };
     }
@@ -696,14 +751,8 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     dateRangeFromSelected,
     fetchData,
     reloadCurrent,
-    checkFallbackStatus,
-    retryInitialLoad,
-    consumePendingInit,
-    activateWithTag,
-    activateWithDomain,
-    loadPersistedSortIntoState,
-    bumpGenerationOnUnmount,
-    resetFiltersForFreshLoad,
+    onNavigateIn,
+    onNavigateOut,
     toggleStar: toggleStarImpl,
     deleteEntry,
     appendSelectedToObsidian,

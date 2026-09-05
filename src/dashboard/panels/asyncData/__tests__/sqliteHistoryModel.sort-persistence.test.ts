@@ -46,12 +46,13 @@ beforeEach(() => {
 });
 
 describe('sqliteHistoryModel — sort persistence', () => {
-  it('startup get called once via loadPersistedSortIntoState', async () => {
+  it('startup get called once via onNavigateIn', async () => {
     const model = createSqliteHistoryModel({
       queryHistory: vi.fn().mockResolvedValue({ data: { rows: [], total: 0 } }),
+      getSqliteStatus: vi.fn().mockResolvedValue({ fallback: false }),
       scheduler: createImmediatePersistScheduler(),
     });
-    await model.loadPersistedSortIntoState();
+    await model.onNavigateIn({});
     expect(chrome.storage.local.get).toHaveBeenCalledTimes(1);
     expect(chrome.storage.local.get).toHaveBeenCalledWith('history_sort_preference');
   });
@@ -91,7 +92,7 @@ describe('sqliteHistoryModel — sort persistence', () => {
     // before debounce expiry
     expect(chrome.storage.local.set).not.toHaveBeenCalled();
 
-    model.bumpGenerationOnUnmount();
+    model.onNavigateOut();
     // flush is synchronous (void persistSort) — set called without waiting 500ms
     expect(chrome.storage.local.set).toHaveBeenCalledTimes(1);
     expect(chrome.storage.local.set).toHaveBeenCalledWith({
@@ -105,8 +106,12 @@ describe('sqliteHistoryModel — sort persistence', () => {
 
   it('changeSort does not trigger additional get calls', async () => {
     const queryHistory = vi.fn().mockResolvedValue({ data: { rows: [], total: 0 } });
-    const model = createSqliteHistoryModel({ queryHistory, scheduler: createImmediatePersistScheduler() });
-    await model.loadPersistedSortIntoState();
+    const model = createSqliteHistoryModel({
+      queryHistory,
+      getSqliteStatus: vi.fn().mockResolvedValue({ fallback: false }),
+      scheduler: createImmediatePersistScheduler(),
+    });
+    await model.onNavigateIn({});
     (chrome.storage.local.get as unknown as ReturnType<typeof vi.fn>).mockClear();
 
     void model.changeSort('created_at', 'ASC');
