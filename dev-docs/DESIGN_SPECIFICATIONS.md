@@ -268,6 +268,22 @@ Timestamp in Japanese locale (HH:MM format):
   - AI要約: Summary text
 ```
 
+### 10.3 Extractor Orchestration (`src/utils/contentExtractor/index.ts`)
+- **Entries (2, both kept)**: `extractMainContentWithInfo` (ExtractResult + diagnostics;
+  the only production entry via contentKernel → preparePageContent) and
+  `extractMainContent` (thin string wrapper; production-unused, kept as the
+  bench c1/c4 measurement surface).
+- **Internal step**: `runCleanseAndExtract` owns clone → cleanse → pre-AI bytes →
+  reason → AI step → dual payload → extract → fallback for both the candidate
+  path and the body path. Path differences are input-element determination only
+  (first candidate vs `document.body`, `candidateBytes` vs `pageBytes` source).
+- **Reason helper**: `resolveCleanseReason(hard, keyword)` in `cleansedReason.ts`
+  is the single copy of the cleansedReason ladder (candidate / body / diagnostic
+  recount call it; `deriveCleansedReason` stays separate for AI count results).
+- **Preserved asymmetries** (do not "fix" without a behavior-change PBI): the
+  candidate path registers `originalContent` before cloning while the body path
+  registers it after the AI step; sanitize/debug logs are candidate-only.
+
 ## 11. Local AI (Chrome Prompt API)
 
 ### 11.1 Offscreen Document Architecture
