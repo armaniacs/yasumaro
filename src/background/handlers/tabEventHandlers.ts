@@ -20,6 +20,8 @@ export interface TabHandlerContext {
         restore: () => Promise<void>;
     };
     getPrivacyCache?: () => Map<string, PrivacyInfo> | null;
+    /** 記録ゲート（同意状態）。未指定の場合は「記録中」バッジを表示しない。 */
+    isRecordingAllowed?: () => Promise<boolean>;
 }
 
 /**
@@ -66,7 +68,14 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
                 chrome.action.setBadgeText({ text: '∉' });
                 chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string });
             } else {
-                chrome.action.setBadgeText({ text: '' });
+                // 記録が有効なタブでは「記録中」を常時可視化する（PBI 2026-09-05-10）。
+                // ゲート（同意）が無い場合は無表示を維持する。
+                if (ctx.isRecordingAllowed ? await ctx.isRecordingAllowed() : false) {
+                    chrome.action.setBadgeText({ text: '●' });
+                    chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string });
+                } else {
+                    chrome.action.setBadgeText({ text: '' });
+                }
             }
         } catch (error) {
             await logError('Failed to update badge on tab activation', {

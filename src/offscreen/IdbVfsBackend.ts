@@ -1,6 +1,5 @@
 // src/offscreen/IdbVfsBackend.ts
 import type { SqliteEngineHost } from './sqliteEngineHost.js';
-import type { SqliteEngineContext } from './sqliteEngineContext.js';
 import type { SqliteValue } from './sqliteEngine.js';
 import type {
   StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult,
@@ -10,13 +9,20 @@ import type {
 } from './StorageBackend.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from './schema.js';
-import { extractDomain, DB_FILENAME } from './sqliteEngineContext.js';
-import { buildQuerySpec, QUERY_CAPS, clampLimit, buildExtraWhereSql } from './queryPlan.js';
+import { extractDomain, DB_FILENAME } from './sqliteEngineHost.js';
+import {
+  buildQuerySpec, QUERY_CAPS, clampLimit, buildExtraWhereSql,
+  buildFtsMatchQuery, buildLikePattern,
+  buildFtsSearchStatements, buildLikeSearchStatements, buildPlainListStatements,
+  purgeCutoffMs, buildPurgeOldRecordsStatements,
+  contentPurgeStarredClause, buildContentPurgeStatements,
+  buildAuditLogStatements,
+} from './queryPlan.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { withTransaction } from './opfsWorker/handlers.js';
 
 export class IdbVfsBackend implements StorageBackend {
-  constructor(private engine: SqliteEngineHost | SqliteEngineContext) {}
+  constructor(private engine: SqliteEngineHost) {}
 
   private ensureDb(): void {
     if (!this.engine.idbEngine) throw new Error('IDB VFS database not initialized');
@@ -57,35 +63,31 @@ export class IdbVfsBackend implements StorageBackend {
     const spec = buildQuerySpec(q, { caps: QUERY_CAPS, fts5Available: this.engine.fts5Available });
     if (spec.error) return { success: false, error: spec.error };
 
-    const { extraWhereSql, extraWhereSqlFts, extraParams } = buildExtraWhereSql(q);
+    const extra = buildExtraWhereSql(q);
 
     if (q.text) {
       const bare = spec.bareText;
       if (!bare) return { success: true, rows: [], total: 0 };
 
-      const capLimit = spec.limit;
-      const offset = spec.offset;
-
       if (spec.useFts) {
-        const ftsQuery = `"${bare}"`;
-        const orderClause = spec.order;
+        const stmts = buildFtsSearchStatements(extra, {
+          ftsQuery: buildFtsMatchQuery(bare),
+          orderClause: spec.order,
+          limit: spec.limit,
+          offset: spec.offset,
+        });
 
         let total = 0;
         await this.engine.execWithCache(
-          `SELECT COUNT(*) FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extraWhereSqlFts}`,
-          [ftsQuery, ...extraParams],
+          stmts.countSql,
+          stmts.countParams,
           (row: SqliteValue[]) => { total = Number(row[0]); }
         );
 
         const rows: (BrowsingLogEntry & { rank: number })[] = [];
         await this.engine.execWithCache(
-          `SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank
-           FROM browsing_logs_fts
-           JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
-           WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extraWhereSqlFts}
-           ORDER BY ${orderClause}
-           LIMIT ? OFFSET ?`,
-          [ftsQuery, ...extraParams, capLimit, offset],
+          stmts.rowsSql,
+          stmts.rowsParams,
           (row: SqliteValue[]) => {
             rows.push({
               id: Number(row[0]), url: String(row[1]),
@@ -105,24 +107,24 @@ export class IdbVfsBackend implements StorageBackend {
       }
 
       // LIKE fallback
-      const likePattern = `%${q.text}%`;
-      const likeOrderClause = spec.order;
+      const stmts = buildLikeSearchStatements(extra, {
+        likePattern: buildLikePattern(q.text),
+        orderClause: spec.order,
+        limit: spec.limit,
+        offset: spec.offset,
+      });
 
       let total = 0;
       await this.engine.execWithCache(
-        `SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)${extraWhereSql}`,
-        [likePattern, likePattern, likePattern, likePattern, ...extraParams],
+        stmts.countSql,
+        stmts.countParams,
         (row: SqliteValue[]) => { total = Number(row[0]); }
       );
 
       const rows: (BrowsingLogEntry & { rank: number })[] = [];
       await this.engine.execWithCache(
-        `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred
-         FROM browsing_logs
-         WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ? )${extraWhereSql}
-         ORDER BY ${likeOrderClause}
-         LIMIT ? OFFSET ?`,
-        [likePattern, likePattern, likePattern, likePattern, ...extraParams, capLimit, offset],
+        stmts.rowsSql,
+        stmts.rowsParams,
         (row: SqliteValue[]) => {
           rows.push({
             id: Number(row[0]), url: String(row[1]),
@@ -141,24 +143,23 @@ export class IdbVfsBackend implements StorageBackend {
       return { success: true, rows, total };
     }
 
-    // Plain filtered listing (no text search)
-    const limit = spec.limit;
-    const offset = spec.offset;
-    const where = spec.where;
-    const whereParams = spec.params;
-    const orderClause = spec.order;
+    // Plain filtered listing (no text search). NOTE: the #tag filter is
+    // intentionally NOT applied here — opfs QUERY honours it while this
+    // backend ignores it. PBI-34 keeps that gap explicit (see
+    // buildPlainListStatements) instead of silently changing results.
+    const stmts = buildPlainListStatements(spec);
 
     const rows: (BrowsingLogEntry & { rank: number })[] = [];
     await this.engine.execWithCache(
-      `SELECT * FROM browsing_logs ${where} ${orderClause} LIMIT ? OFFSET ?`,
-      [...whereParams, limit, offset],
+      stmts.rowsSql,
+      stmts.rowsParams,
       (row: SqliteValue[]) => { rows.push({ ...this.rowToEntry(row), rank: 0 }); }
     );
 
     let total = 0;
     await this.engine.execWithCache(
-      `SELECT COUNT(*) FROM browsing_logs ${where}`,
-      whereParams,
+      stmts.countSql,
+      stmts.countParams,
       (row: SqliteValue[]) => { total = Number(row[0]); }
     );
 
@@ -214,33 +215,24 @@ export class IdbVfsBackend implements StorageBackend {
 
   async purgeOldRecords(retentionDays: number, maxRecords: number): Promise<BackendOrError<PurgeResult>> {
     this.ensureDb();
-    const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+    const stmts = buildPurgeOldRecordsStatements(purgeCutoffMs(retentionDays));
     let totalPurged = 0;
 
-    await this.engine.execWithCache(
-      `DELETE FROM browsing_logs WHERE created_at < ? AND is_starred = 0 AND is_deleted = 0`,
-      [cutoffMs]
-    );
+    await this.engine.execWithCache(stmts.deleteOldSql, stmts.deleteOldParams);
     let changes1 = 0;
     await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes1 = Number(row[0]); });
     totalPurged += changes1;
 
     let totalCount = 0;
     await this.engine.execWithCache(
-      'SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0',
+      stmts.countSql,
       [],
       (row: SqliteValue[]) => { totalCount = Number(row[0]); }
     );
 
     if (totalCount > maxRecords) {
       const excess = totalCount - maxRecords;
-      await this.engine.execWithCache(
-        `DELETE FROM browsing_logs WHERE id IN (
-          SELECT id FROM browsing_logs WHERE is_starred = 0 AND is_deleted = 0
-          ORDER BY created_at ASC LIMIT ?
-        )`,
-        [excess]
-      );
+      await this.engine.execWithCache(stmts.deleteExcessSql, [excess]);
       let changes2 = 0;
       await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes2 = Number(row[0]); });
       totalPurged += changes2;
@@ -251,16 +243,12 @@ export class IdbVfsBackend implements StorageBackend {
 
   async purgeContent(retentionDays?: number, maxRecords?: number, includeStarred?: boolean): Promise<BackendOrError<PurgeResult>> {
     this.ensureDb();
-    const starredClause = includeStarred ? '' : 'AND is_starred = 0';
+    const stmts = buildContentPurgeStatements(contentPurgeStarredClause(includeStarred));
     let totalPurged = 0;
 
     if (retentionDays != null && retentionDays > 0) {
-      const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
-      await this.engine.execWithCache(
-        `UPDATE browsing_logs SET content = NULL
-         WHERE content IS NOT NULL AND created_at < ? ${starredClause}`,
-        [cutoffMs]
-      );
+      const cutoffMs = purgeCutoffMs(retentionDays);
+      await this.engine.execWithCache(stmts.deleteOldSql, [cutoffMs]);
       let changes1 = 0;
       await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes1 = Number(row[0]); });
       totalPurged += changes1;
@@ -269,23 +257,14 @@ export class IdbVfsBackend implements StorageBackend {
     if (maxRecords != null && maxRecords > 0) {
       let count = 0;
       await this.engine.execWithCache(
-        `SELECT COUNT(*) FROM browsing_logs WHERE content IS NOT NULL ${starredClause}`,
+        stmts.countSql,
         [],
         (row: SqliteValue[]) => { count = Number(row[0]); }
       );
 
       if (count > maxRecords) {
         const excess = count - maxRecords;
-        await this.engine.execWithCache(
-          `UPDATE browsing_logs SET content = NULL
-           WHERE id IN (
-             SELECT id FROM browsing_logs
-             WHERE content IS NOT NULL ${starredClause}
-             ORDER BY created_at ASC
-             LIMIT ?
-           )`,
-          [excess]
-        );
+        await this.engine.execWithCache(stmts.clearExcessSql, [excess]);
         let changes2 = 0;
         await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes2 = Number(row[0]); });
         totalPurged += changes2;
@@ -350,13 +329,16 @@ export class IdbVfsBackend implements StorageBackend {
 
   async queryAuditLog(options: { limit?: number; offset?: number }): Promise<BackendOrError<AuditLogQueryResult>> {
     this.ensureDb();
+    // NOTE: audit cap 100000 differs intentionally from the opfs worker
+    // cap (1000) — preserved, see buildAuditLogStatements.
     const limit = clampLimit(options.limit, 100000, 100);
     const offset = options.offset ?? 0;
+    const stmts = buildAuditLogStatements({ limit, offset });
 
     const rows: AuditLogEntry[] = [];
     await this.engine.execWithCache(
-      `SELECT id, provider, url, created_at FROM audit_log ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-      [limit, offset],
+      stmts.rowsSql,
+      stmts.rowsParams,
       (row: SqliteValue[]) => {
         rows.push({
           id: Number(row[0]),
@@ -368,7 +350,7 @@ export class IdbVfsBackend implements StorageBackend {
     );
 
     let total = 0;
-    await this.engine.execWithCache('SELECT COUNT(*) FROM audit_log', [], (row: SqliteValue[]) => {
+    await this.engine.execWithCache(stmts.countSql, [], (row: SqliteValue[]) => {
       total = Number(row[0]);
     });
 

@@ -10,7 +10,7 @@ const mockHasPrivacyConsent = vi.hoisted(() => vi.fn());
 const mockSetBadgeText = vi.hoisted(() => vi.fn());
 const mockSetBadgeBackgroundColor = vi.hoisted(() => vi.fn());
 
-vi.mock('../../popup/privacyConsent.js', () => ({
+vi.mock('../../utils/storage/privacyConsent.js', () => ({
   hasPrivacyConsent: mockHasPrivacyConsent,
 }));
 

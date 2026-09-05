@@ -30,6 +30,7 @@ export const ALL_DASHBOARD_SQLITE_SUBTYPES = [
   'status',
   'cleanup_legacy',
   'backfill_metadata',
+  'resync_legacy',
   'backup_db',
   'restore_db',
   'import',

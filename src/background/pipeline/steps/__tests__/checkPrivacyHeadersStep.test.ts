@@ -13,14 +13,13 @@ vi.mock('../../../../utils/logger.js');
 vi.mock('../../../../utils/storage/types.js');
 vi.mock('../../../../utils/storage/defaults.js');
 vi.mock('../../../../utils/storage/encryptionSession.js');
-vi.mock('../../../../utils/storage.js');
 vi.mock('../../../../utils/storage/savedUrlRepository.js');
 vi.mock('../../../../utils/storage/domainFilterCache.js');
 vi.mock('../../../../utils/storage/quota.js');
 vi.mock('../../../../utils/pendingStorage.js');
 
 import { PrivacyHeadersChecker } from '../checkPrivacyHeadersStep.js';
-import { StorageKeys } from '../../../../utils/storage.js';
+import { StorageKeys } from '../../../../utils/storage/types.js';
 import * as pendingStorage from '../../../../utils/pendingStorage.js';
 import type { RecordingContext } from '../../types.js';
 

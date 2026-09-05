@@ -5,7 +5,7 @@
  * plus a common payload-size guard middleware.
  */
 
-import { engine } from './sqliteEngineContext.js';
+import { engine } from './sqliteEngineHost.js';
 import {
   insert as sqliteInsert,
   insertBatch as sqliteInsertBatch,

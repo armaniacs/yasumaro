@@ -121,34 +121,6 @@ vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      AI_PROVIDER: 'ai_provider',
-      PROVIDER_TYPE: 'provider_type',
-      PROVIDER_BASE_URL: 'provider_base_url',
-      PROVIDER_API_KEY: 'provider_api_key',
-      PROVIDER_MODEL: 'provider_model',
-    },
-    getSettings: hoistedMockGet,
-    saveSettings: hoistedMockSave,
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
@@ -616,6 +588,23 @@ describe('ModelsDevDialog', () => {
       const selectedModelEl = document.getElementById('selected-model-name');
       expect(selectedModelEl!.textContent).toContain('Env: MOCK_OPENAI_KEY');
     });
+
+    it('should render the API key creation link via the apiKeyCreateLink i18n key', async () => {
+      const { getApiKeyUrl } = await import('../../utils/modelsDevApi.js');
+      vi.mocked(getApiKeyUrl).mockReturnValue('https://example.com/api-keys');
+      try {
+        const dialog = new ModelsDevDialog();
+        await dialog.show();
+        const items = document.querySelectorAll('.provider-item');
+        (items[0] as HTMLElement).click();
+        const link = document.getElementById('api-key-create-link') as HTMLAnchorElement;
+        expect(link).not.toBeNull();
+        // getMessage is mocked to the identity function, so the key itself is rendered
+        expect(link.textContent).toBe('apiKeyCreateLink');
+      } finally {
+        vi.mocked(getApiKeyUrl).mockReturnValue(null);
+      }
+    });
   });
 
   describe('save', () => {
@@ -690,8 +679,8 @@ describe('ModelsDevDialog', () => {
 
     it('should show error on saveSettings rejection', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const storageMod = await import('../../utils/storage.js');
-      (storageMod.saveSettings as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('DB error'));
+      const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
+      (settingsRepository.setAll as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('DB error'));
       const dialog = new ModelsDevDialog();
       await dialog.show();
       const items = document.querySelectorAll('.provider-item');

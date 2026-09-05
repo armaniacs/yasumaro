@@ -88,7 +88,11 @@ export interface HttpSummaryHooks {
     extractSummary(data: unknown, traceId: string): Promise<AISummaryResult>;
 }
 
-const MAX_HTTP_SUMMARY_RESPONSE_BYTES = 10 * 1024 * 1024; // 10MB
+/**
+ * Byte cap for AI provider HTTP JSON responses (summary + testConnection).
+ * Single source of truth — both flows read via readJsonCapped with this value.
+ */
+export const MAX_AI_HTTP_RESPONSE_BYTES = 10 * 1024 * 1024; // 10MB
 
 export abstract class AIProviderStrategy {
     protected settings: Settings;
@@ -298,7 +302,7 @@ export abstract class AIProviderStrategy {
                 return hooks.handleErrorResponse(response);
             }
 
-            const data = await readJsonCapped(response, MAX_HTTP_SUMMARY_RESPONSE_BYTES);
+            const data = await readJsonCapped(response, MAX_AI_HTTP_RESPONSE_BYTES);
             return hooks.extractSummary(data, traceId);
         } catch (error: unknown) {
             const msg = errorMessage(error);
@@ -308,6 +312,17 @@ export abstract class AIProviderStrategy {
             }
             return { success: false, summary: 'Error: Failed to generate summary. Please try again or check your settings.' };
         }
+    }
+
+    /**
+     * 接続テスト用の許可 URL 取得。testConnection 経路の共有断片。
+     * urlWhitelist の getAllowedUrls への薄い委譲であり、provider 側にあった
+     * 同名 private ラッパーの逐語同一 2 コピー（旧 PBI 2026-08-07-01 指摘）を
+     * 解消するために base へ引き上げた。summary flow 側の providerAllowlist
+     * 中立テーブルとは別仕組みのため混同しないこと。
+     */
+    protected async getAllowedUrlsForRequests(): Promise<Set<string>> {
+        return getAllowedUrls();
     }
 
     /**

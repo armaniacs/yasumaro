@@ -34,9 +34,9 @@ vi.mock('../FallbackStorageAdapter.js', () => ({
 
 // Must import after mocks
 import { resolveBackend, createBackend, detectOpfsCapabilitiesForResolver } from '../backendResolver.js';
-import type { SqliteEngineContext } from '../sqliteEngineContext.js';
+import type { SqliteEngineHost } from '../sqliteEngineHost.js';
 
-function makeContext(overrides: Partial<Record<string, unknown>> = {}): SqliteEngineContext {
+function makeContext(overrides: Partial<Record<string, unknown>> = {}): SqliteEngineHost {
   return {
     idbEngine: null,
     fallbackStorage: null,
@@ -44,7 +44,7 @@ function makeContext(overrides: Partial<Record<string, unknown>> = {}): SqliteEn
     opfsWorker: null,
     init: vi.fn().mockResolvedValue(true),
     ...overrides,
-  } as unknown as SqliteEngineContext;
+  } as unknown as SqliteEngineHost;
 }
 
 describe('backendResolver — coverage 90% (PBI 10)', () => {

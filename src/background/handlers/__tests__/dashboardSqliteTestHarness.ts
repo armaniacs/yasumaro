@@ -28,6 +28,7 @@ function defaultServiceWorkerDeps(): SqliteClientBackedDeps {
     verifyConfirmToken: async (token: string) => token === 'test-token',
     runBackfill: async () => { throw new Error('Backfill not available'); },
     runCleanup: async () => { throw new Error('Cleanup not available'); },
+    runLegacyResync: async () => { throw new Error('Resync not available'); },
   };
 }
 

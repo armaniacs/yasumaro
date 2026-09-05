@@ -145,7 +145,7 @@ export class DiagnosticsCollector {
       const isOpfsWorker = (sqliteStatus.compileOptionsSource === 'opfs-worker') || sqliteStatus.path.startsWith('OPFS:');
       const offscreenStrategy: DiagnosticInput['vfsStrategy'] = sqliteStatus.fallback
         ? 'fallback'
-        : isOpfsWorker ? 'opfs-sync-worker' : 'opfs-async-main';
+        : isOpfsWorker ? 'opfs-sync-worker' : 'idb';
       const diagInput: DiagnosticInput = {
         opfsDirectory: isOpfsWorker,
         syncAccessHandle: isOpfsWorker,

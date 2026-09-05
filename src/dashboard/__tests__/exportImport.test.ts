@@ -8,28 +8,6 @@ const { hoistedMockGet, hoistedMockSave } = vi.hoisted(() => ({
 // ------------------------------------------------------------------
 // Mocks (must be before any imports)
 // ------------------------------------------------------------------
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: hoistedMockGet,
-    saveSettings: hoistedMockSave,
-    saveSettingsWithAllowedUrls: hoistedMockSave,
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
@@ -99,7 +77,7 @@ vi.mock('../masterPassword.js', () => ({
 }));
 
 // Import mocked utilities for assertions
-const { getSettings } = await import('../../utils/storage.js');
+const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
 const { showStatus } = await import('../../utils/ui/settingsUiHelper.js');
 const { focusTrapManager } = await import('../../utils/ui/focusTrap.js');
 const { showPasswordAuthModal } = await import('../masterPassword.js');
@@ -188,7 +166,7 @@ describe('initExportImport', () => {
 
   it('exports plain settings when master password is disabled', async () => {
     buildDom();
-    vi.mocked(getSettings).mockResolvedValue({
+    vi.mocked(settingsRepository.getAll).mockResolvedValue({
       mp_protection_enabled: false,
       mp_encrypt_on_export: false,
     });
@@ -205,7 +183,7 @@ describe('initExportImport', () => {
 
   it('exports encrypted settings when master password is enabled', async () => {
     buildDom();
-    vi.mocked(getSettings).mockResolvedValue({
+    vi.mocked(settingsRepository.getAll).mockResolvedValue({
       mp_protection_enabled: true,
       mp_encrypt_on_export: true,
     });
@@ -226,7 +204,7 @@ describe('initExportImport', () => {
 
   it('shows error when encrypted export fails', async () => {
     buildDom();
-    vi.mocked(getSettings).mockResolvedValue({
+    vi.mocked(settingsRepository.getAll).mockResolvedValue({
       mp_protection_enabled: true,
       mp_encrypt_on_export: true,
     });
@@ -246,7 +224,7 @@ describe('initExportImport', () => {
 
   it('shows export error on exception', async () => {
     buildDom();
-    vi.mocked(getSettings).mockRejectedValue(new Error('Storage error'));
+    vi.mocked(settingsRepository.getAll).mockRejectedValue(new Error('Storage error'));
 
     const { initExportImport } = await getFreshModule();
     initExportImport();
@@ -331,7 +309,7 @@ describe('initExportImport', () => {
 
   it('imports encrypted settings when mp_require_on_import is true', async () => {
     buildDom();
-    vi.mocked(getSettings).mockResolvedValue({ mp_require_on_import: true });
+    vi.mocked(settingsRepository.getAll).mockResolvedValue({ mp_require_on_import: true });
     vi.mocked(isEncryptedExport).mockReturnValue(true);
     vi.mocked(importEncryptedSettings).mockResolvedValue({ obsidian_protocol: 'https' });
     vi.mocked(showPasswordAuthModal).mockImplementation((_type, callback) => {
@@ -370,7 +348,7 @@ describe('initExportImport', () => {
 
   it('shows warning and prompts password when mp_require_on_import is false for encrypted file', async () => {
     buildDom();
-    vi.mocked(getSettings).mockResolvedValue({ mp_require_on_import: false });
+    vi.mocked(settingsRepository.getAll).mockResolvedValue({ mp_require_on_import: false });
     vi.mocked(isEncryptedExport).mockReturnValue(true);
 
     const originalConfirm = window.confirm;
@@ -647,7 +625,7 @@ describe('initExportImport', () => {
 
   it('shows error when encrypted import decrypt fails', async () => {
     buildDom();
-    vi.mocked(getSettings).mockResolvedValue({ mp_require_on_import: true });
+    vi.mocked(settingsRepository.getAll).mockResolvedValue({ mp_require_on_import: true });
     vi.mocked(isEncryptedExport).mockReturnValue(true);
     vi.mocked(importEncryptedSettings).mockResolvedValue(null);
     vi.mocked(showPasswordAuthModal).mockImplementation((_type, callback) => {

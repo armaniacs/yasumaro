@@ -7,7 +7,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { RecordingCache } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.ts';
-import { getSettings } from '../../utils/storage.js';
 import { getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps } from '../../utils/storage/savedUrlRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { PrivacyPipeline } from '../privacyPipeline.ts';
@@ -66,13 +65,6 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
       set = vi.fn();
       setAll = vi.fn();
     },
-  };
-});
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
-    ...actual,
-    getSettings: mockGetSettings,
   };
 });
 vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
@@ -142,7 +134,7 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
     RecordingCache.resetCacheState();
 
     // デフォルトモック
-    getSettings.mockResolvedValue({
+    mockGetSettings.mockResolvedValue({
       AI_PROVIDER: 'gemini',
       GEMINI_API_KEY: 'test-key',
       GEMINI_MODEL: 'gemini-3.1-flash-lite',

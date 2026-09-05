@@ -18,9 +18,15 @@ import { SqliteClient } from './sqlite/offscreenGateway.js';
 import { ChromeMigrationStateAdapter } from './migration/migrationState.js';
 import { LegacyMigrationService } from './migration/legacyMigration.js';
 import { OpfsRecoveryService } from './migration/opfsRecovery.js';
+import {
+  resyncLegacyFromSqlite,
+  type LegacyResyncOptions,
+  type LegacyResyncResult,
+} from './migration/legacyResync.js';
 
 export type { LegacyUrlEntry } from './migration/legacyMigration.js';
 export { mapLegacyEntryToRecord } from './migration/legacyMigration.js';
+export type { LegacyResyncOptions, LegacyResyncResult } from './migration/legacyResync.js';
 
 /**
  * MigrationService — backward-compatible class that composes
@@ -36,9 +42,11 @@ export { mapLegacyEntryToRecord } from './migration/legacyMigration.js';
 export class MigrationService {
   private readonly legacy: LegacyMigrationService;
   private readonly opfs: OpfsRecoveryService;
+  private readonly sqliteClient: SqliteClient;
 
   constructor(sqliteClient: SqliteClient) {
     const state = new ChromeMigrationStateAdapter();
+    this.sqliteClient = sqliteClient;
     this.legacy = new LegacyMigrationService(sqliteClient, state);
     this.opfs = new OpfsRecoveryService(sqliteClient);
   }
@@ -51,6 +59,15 @@ export class MigrationService {
   /** Backfill diagnostic metadata for already-migrated entries */
   backfillDiagnosticMetadata(): Promise<{ updated: number; total: number }> {
     return this.legacy.backfillDiagnosticMetadata();
+  }
+
+  /**
+   * Manually resync recent SQLite records into the legacy chrome.storage
+   * store (PBI 22, MANUAL-ONLY trigger). Never called automatically — the
+   * diagnostics panel's explicit action is the only caller.
+   */
+  resyncLegacyStore(options?: LegacyResyncOptions): Promise<LegacyResyncResult> {
+    return resyncLegacyFromSqlite(this.sqliteClient, options);
   }
 
   /** Remove legacy chrome.storage keys (destructive, user-confirmed) */

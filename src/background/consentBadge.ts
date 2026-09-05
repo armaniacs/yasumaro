@@ -6,7 +6,7 @@
  * per-tab transient badges used for recording status.
  */
 
-import { hasPrivacyConsent } from '../popup/privacyConsent.js';
+import { hasPrivacyConsent } from '../utils/storage/privacyConsent.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
 import { logWarn } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';

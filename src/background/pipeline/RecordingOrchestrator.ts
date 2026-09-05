@@ -200,8 +200,9 @@ export class RecordingOrchestrator {
       const retryResult = await this.executeRetrySubset(context, deps, traceId);
       if ((retryResult as unknown as RecordingContext).obsidianDuration != null) {
         this.outcomeAdapters.notifier.notifySaveSuccess(job.title || data.url);
+        return { success: true } as unknown as RecordingResult;
       }
-      return { success: true } as unknown as RecordingResult;
+      return { success: false, error: 'Obsidian sync did not complete' } as unknown as RecordingResult;
     });
   }
 
@@ -232,8 +233,9 @@ export class RecordingOrchestrator {
       const retryResult = await this.executeRetrySubset(context, deps, traceId);
       if ((retryResult as unknown as RecordingContext).obsidianDuration != null) {
         this.outcomeAdapters.notifier.notifySaveSuccess(job.title || job.url);
+        return true;
       }
-      return true;
+      return false;
     });
   }
 

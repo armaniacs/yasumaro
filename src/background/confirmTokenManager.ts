@@ -34,14 +34,21 @@ export interface ConfirmTokenRecord {
 
 type TokenMap = Record<string, ConfirmTokenRecord>;
 
+/**
+ * Fail-closed token generation: this token is the sole authorization gate
+ * for destructive operations (delete/clear_all/restore_db), so issuance
+ * fails outright when no cryptographically secure RNG is available.
+ * No Math.random-based predictable fallback is kept.
+ */
 function generateToken(): string {
   if (typeof crypto !== 'undefined' && typeof (crypto as unknown as { randomUUID?: () => string }).randomUUID === 'function') {
     return (crypto as unknown as { randomUUID: () => string }).randomUUID!();
   }
-  const bytes = typeof crypto !== 'undefined' && crypto.getRandomValues
-    ? crypto.getRandomValues(new Uint8Array(16))
-    : new Uint8Array(16).map(() => Math.floor(Math.random() * 256));
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  throw new Error('Secure random number generator is unavailable; refusing to issue confirm token');
 }
 
 async function loadMap(): Promise<TokenMap> {

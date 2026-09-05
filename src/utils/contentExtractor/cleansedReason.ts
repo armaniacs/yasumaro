@@ -51,6 +51,30 @@ export function removedRecordToMap(
 }
 
 /**
+ * Content Cleansing の「理由」導出（hard/keyword の2軸）。
+ *
+ * candidate path・body path・診断 recount の3箇所に手書きされていた同一の
+ * if/else 連鎖を1箇所に集約する。呼び出し側は totalRemoved > 0 のガード下で
+ * 呼ぶこと（'none' は recount で上書きしないための番兵ではなく、(0, 0) の
+ * 素直な像として返す）。
+ */
+export function resolveCleanseReason(
+    hardStripRemoved: number,
+    keywordStripRemoved: number,
+): ExtractResult['cleansedReason'] {
+    if (hardStripRemoved > 0 && keywordStripRemoved > 0) {
+        return 'both';
+    }
+    if (hardStripRemoved > 0) {
+        return 'hard';
+    }
+    if (keywordStripRemoved > 0) {
+        return 'keyword';
+    }
+    return 'none';
+}
+
+/**
  * Returns the rule keys that removed at least one element, and the reason
  * value derived from them: the single key when exactly one rule fired,
  * `'multiple'` when several did, `'none'` when nothing was removed.

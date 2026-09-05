@@ -439,6 +439,7 @@
               <option value="100000">100,000</option>
             </select>
           </div>
+          <p id="retentionUnlimitedWarning" class="warning-banner" hidden data-i18n="retentionUnlimitedWarning">Unlimited retention keeps records forever and storage can grow without bound. A retention period of 365 days or a record cap is recommended.</p>
           <div class="form-group">
             <button id="purgeNowBtn" class="secondary-btn" data-i18n="purgeNowBtn">Purge now</button>
             <span id="purgeNowStatus" aria-live="polite"></span>
@@ -1891,6 +1892,8 @@
           <div id="diagMigrateResult" class="diag-result" aria-live="polite"></div>
           <button id="diagBackfillBtn" class="secondary-btn" data-i18n="diagBackfillBtn">Backfill SQLite history metrics</button>
           <div id="diagBackfillResult" class="diag-result" aria-live="polite"></div>
+          <button id="diagResyncBtn" class="secondary-btn" data-i18n="diagResyncBtn">Resync legacy history from SQLite</button>
+          <div id="diagResyncResult" class="diag-result" aria-live="polite"></div>
           <button id="diagCleanupBtn" class="secondary-btn" data-i18n="diagCleanupBtn">Delete original chrome.storage data</button>
           <div id="diagCleanupResult" class="diag-result" aria-live="polite"></div>
         </div>

@@ -40,9 +40,9 @@ describe('version consistency', () => {
   });
 
   it('E2E test PRIVACY_POLICY_VERSION should match source constant', () => {
-    const sourceContent = readFileSync(join(ROOT, 'src/popup/privacyConsent.ts'), 'utf-8');
+    const sourceContent = readFileSync(join(ROOT, 'src/utils/storage/privacyConsent.ts'), 'utf-8');
     const sourceMatch = sourceContent.match(/export const PRIVACY_POLICY_VERSION\s*=\s*'([^']+)'/);
-    expect(sourceMatch, 'PRIVACY_POLICY_VERSION not found in src/popup/privacyConsent.ts').not.toBeNull();
+    expect(sourceMatch, 'PRIVACY_POLICY_VERSION not found in src/utils/storage/privacyConsent.ts').not.toBeNull();
     const sourceVersion = sourceMatch![1];
 
     const e2eContent = readFileSync(join(ROOT, 'testDir/e2e/recording-traceId.spec.ts'), 'utf-8');

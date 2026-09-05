@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getSettings, clearSettingsCache, StorageKeys, DEFAULT_SETTINGS } from '../storage.js';
+import { settingsRepository } from '../storage/SettingsRepository.js';
+import { StorageKeys } from '../storage/types.js';
+import { DEFAULT_SETTINGS } from '../storage/defaults.js';
 
 const mockStorage: Record<string, unknown> = {};
 
@@ -84,7 +86,7 @@ beforeEach(() => {
     },
   };
   (global as unknown as { chrome: typeof mockChrome }).chrome = mockChrome;
-  clearSettingsCache();
+  settingsRepository.clearCache();
 });
 
 describe('StorageKeys.OBSIDIAN_ENABLED', () => {
@@ -102,7 +104,7 @@ describe('getSettings() obsidian_enabled migration', () => {
       obsidian_port: '27124',
     };
 
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     expect(settings[StorageKeys.OBSIDIAN_ENABLED]).toBe(true);
   });
@@ -113,7 +115,7 @@ describe('getSettings() obsidian_enabled migration', () => {
       obsidian_api_key: 'very_long_api_key_12345',
     };
 
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     expect(settings[StorageKeys.OBSIDIAN_ENABLED]).toBe(true);
   });
@@ -124,7 +126,7 @@ describe('getSettings() obsidian_enabled migration', () => {
       obsidian_api_key: '',
     };
 
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     expect(settings[StorageKeys.OBSIDIAN_ENABLED]).toBe(false);
   });
@@ -135,7 +137,7 @@ describe('getSettings() obsidian_enabled migration', () => {
       obsidian_api_key: 'short',
     };
 
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     expect(settings[StorageKeys.OBSIDIAN_ENABLED]).toBe(false);
   });
@@ -147,7 +149,7 @@ describe('getSettings() obsidian_enabled migration', () => {
       obsidian_api_key: '',
     };
 
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     expect(settings[StorageKeys.OBSIDIAN_ENABLED]).toBe(true);
   });
@@ -159,7 +161,7 @@ describe('getSettings() obsidian_enabled migration', () => {
       obsidian_api_key: '1234567890abcdef',
     };
 
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     expect(settings[StorageKeys.OBSIDIAN_ENABLED]).toBe(false);
   });
@@ -168,7 +170,7 @@ describe('getSettings() obsidian_enabled migration', () => {
     mockStorage['settings_migrated'] = true;
     mockStorage['settings'] = {};
 
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     expect(settings[StorageKeys.OBSIDIAN_ENABLED]).toBe(false);
   });

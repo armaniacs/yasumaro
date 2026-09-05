@@ -1,13 +1,14 @@
+// @layer 1 — Infrastructure: privacy consent state (chrome.storage-backed, Layer 0 only)
 /**
- * privacyConsent.ts
+ * storage/privacyConsent.ts
  * プライバシーポリシー同意管理 (GDPR/CCPA対応)
  */
 
-import { StorageKeys } from '../utils/storage/types.js';
-import { errorMessage } from '../utils/errorUtils.js';
-import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
-import { getConsentHmacKey, generateHmacSignature, verifyHmacSignature } from '../utils/crypto/index.js';
-import { pickDefined } from '../utils/objectUtils.js';
+import { StorageKeys } from './types.js';
+import { errorMessage } from '../errorUtils.js';
+import { logInfo, logWarn, logError, ErrorCode } from '../logger.js';
+import { getConsentHmacKey, generateHmacSignature, verifyHmacSignature } from '../crypto/index.js';
+import { pickDefined } from '../objectUtils.js';
 
 /** プライバシーポリシーバージョン定数。PRIVACY.md の「最終更新日」と同期させること */
 export const PRIVACY_POLICY_VERSION = '2026-07-31';

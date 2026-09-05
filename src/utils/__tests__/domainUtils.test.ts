@@ -15,7 +15,6 @@ import {
   validateDomainList
 } from '../domainUtils.js';
 import { isUrlBlocked } from '../ublockMatcher.js';
-import { getSettings, type Settings } from '../storage.js';
 import type { Settings as SettingsType } from '../storage/types.js';
 import { settingsRepository } from '../storage/SettingsRepository.js';
 
@@ -23,12 +22,6 @@ import { settingsRepository } from '../storage/SettingsRepository.js';
 vi.mock('../ublockMatcher', () => ({
   __esModule: true,
   isUrlBlocked: vi.fn()
-}));
-
-// Mock storage.ts
-vi.mock('../storage', () => ({
-  __esModule: true,
-  getSettings: vi.fn()
 }));
 
 vi.mock('../storage/SettingsRepository.js', async (importOriginal) => {

@@ -3,18 +3,14 @@
  * OpenAI互換APIを使用するAIプロバイダー — registry 駆動の Generic 実装
  */
 
-import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
+import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT, MAX_AI_HTTP_RESPONSE_BYTES } from './ProviderStrategy.js';
 import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
-import { getAllowedUrls } from '../../../utils/storage/urlWhitelist.js';
 import { Settings, StorageKeys } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { getRegistryEntry, isAllowedProviderBaseUrl } from '../providerCatalog.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { readJsonCapped } from '../../../utils/readBodyCapped.js';
-
-/** Default byte cap for AI provider JSON responses. */
-const MAX_AI_RESPONSE_BYTES = 10 * 1024 * 1024; // 10MB
 
 interface OpenAIApiResponse {
     choices?: Array<{ message?: { content: string } }>;
@@ -180,7 +176,7 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
         };
 
         try {
-            const allowedUrls = await this._getAllowedUrls();
+            const allowedUrls = await this.getAllowedUrlsForRequests();
 
             const response = await fetchWithRetry(url, {
                 method: 'POST',
@@ -209,7 +205,7 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
                 };
             }
 
-            const data = await readJsonCapped(response, MAX_AI_RESPONSE_BYTES) as OpenAIApiResponse;
+            const data = await readJsonCapped(response, MAX_AI_HTTP_RESPONSE_BYTES) as OpenAIApiResponse;
             const text = data.choices?.[0]?.message?.content ?? '';
             const hasContent = text.trim().length > 0;
 
@@ -238,10 +234,6 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
                 debug: { ...mapped.debug, prompt: CONNECTION_TEST_PROMPT, endpoint: `POST ${url}` },
             };
         }
-    }
-
-    private async _getAllowedUrls(): Promise<Set<string>> {
-        return getAllowedUrls();
     }
 
     private async _extractSummary(data: OpenAIApiResponse, traceId: string = ''): Promise<AISummaryResult> {

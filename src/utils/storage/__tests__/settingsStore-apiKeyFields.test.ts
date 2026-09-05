@@ -12,9 +12,4 @@ describe('settingsStore API_KEY_FIELDS', () => {
       'github_pat',
     ]);
   });
-
-  it('storage.js バレル経由でも同じ値をエクスポートしている', async () => {
-    const { API_KEY_FIELDS: fromBarrel } = await import('../../storage.js');
-    expect(fromBarrel).toEqual(API_KEY_FIELDS);
-  });
 });

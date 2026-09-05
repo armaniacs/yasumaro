@@ -86,7 +86,7 @@ vi.mock('../privatePageDialog.js', () => ({
 }));
 
 // Mock privacyConsent
-vi.mock('../privacyConsent.js', () => ({
+vi.mock('../../utils/storage/privacyConsent.js', () => ({
     getPrivacyConsent: vi.fn(() => Promise.resolve({ hasConsented: true })),
 }));
 
@@ -307,7 +307,7 @@ describe('initPopup coverage', () => {
     });
 
     it('shows onboarding wizard when consented and not completed', async () => {
-        const { getPrivacyConsent } = await import('../privacyConsent.js');
+        const { getPrivacyConsent } = await import('../../utils/storage/privacyConsent.js');
         const { hasCompletedWizard, initOnboardingWizard } = await import('../onboardingWizard.js');
         vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: true });
         vi.mocked(hasCompletedWizard).mockResolvedValue(false);
@@ -317,7 +317,7 @@ describe('initPopup coverage', () => {
     });
 
     it('does not show onboarding wizard when not consented', async () => {
-        const { getPrivacyConsent } = await import('../privacyConsent.js');
+        const { getPrivacyConsent } = await import('../../utils/storage/privacyConsent.js');
         const { hasCompletedWizard, initOnboardingWizard } = await import('../onboardingWizard.js');
         vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: false });
         vi.mocked(hasCompletedWizard).mockResolvedValue(false);
@@ -327,7 +327,7 @@ describe('initPopup coverage', () => {
     });
 
     it('does not show onboarding wizard when already completed', async () => {
-        const { getPrivacyConsent } = await import('../privacyConsent.js');
+        const { getPrivacyConsent } = await import('../../utils/storage/privacyConsent.js');
         const { hasCompletedWizard, initOnboardingWizard } = await import('../onboardingWizard.js');
         vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: true });
         vi.mocked(hasCompletedWizard).mockResolvedValue(true);
@@ -349,7 +349,7 @@ describe('initPopup coverage', () => {
     });
 
     it('handles getPrivacyConsent rejection', async () => {
-        const { getPrivacyConsent } = await import('../privacyConsent.js');
+        const { getPrivacyConsent } = await import('../../utils/storage/privacyConsent.js');
         vi.mocked(getPrivacyConsent).mockRejectedValue(new Error('consent fail'));
         await expect(initPopup()).resolves.not.toThrow();
         await new Promise(r => setTimeout(r, 50));

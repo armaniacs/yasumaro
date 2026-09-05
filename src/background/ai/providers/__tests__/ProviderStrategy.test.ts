@@ -5,8 +5,8 @@
 
 
 import { vi, describe, test, expect, beforeEach } from 'vitest';
-import type { Settings } from '../../../../utils/storage.js';
-import { StorageKeys } from '../../../../utils/storage.js';
+import type { Settings } from '../../../../utils/storage/types.js';
+import { StorageKeys } from '../../../../utils/storage/types.js';
 import {
     AIProviderStrategy,
     AIProviderConnectionResult,

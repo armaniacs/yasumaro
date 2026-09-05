@@ -23,7 +23,6 @@ import {
     handleExportLocalMarkdown,
     handleHistoryExportLocalMarkdown,
 } from '../localMarkdownExport.js';
-import { saveSettingsWithAllowedUrls } from '../../utils/storage.js';
 import { resetPlatformOsCache } from '../../utils/deviceUtils.js';
 
 const { mockGetAll, mockSetAll, mockGetMany } = vi.hoisted(() => ({
@@ -282,7 +281,7 @@ vi.mock('../tagsPanel.js', () => ({
 vi.mock('../trancoConsent.js', () => ({
     initTrancoConsentPanel: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('../../popup/privacyConsent.js', () => ({
+vi.mock('../../utils/storage/privacyConsent.js', () => ({
     getPrivacyConsent: vi.fn().mockResolvedValue({ hasConsented: false }),
     withdrawPrivacyConsent: vi.fn().mockResolvedValue(undefined),
 }));

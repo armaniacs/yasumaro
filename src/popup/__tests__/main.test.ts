@@ -142,7 +142,7 @@ import { showPreview, initializeModalEvents } from '../sanitizePreview.js';
 const sendMessageWithRetry = sendMock;
 import { startAutoCloseTimer } from '../autoClose.js';
 import { getCurrentTab, isRecordable } from '../tabUtils.js';
-import { StorageKeys } from '../../utils/storage.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import { checkPageStatus } from '../statusChecker.js';
 import { loadCurrentTab, recordCurrentPage, getCleansedReasonText, renderSpecialUrlStatus } from '../main.js';
 import { loadPendingPages, saveSelectedPages } from '../pendingPages.js';

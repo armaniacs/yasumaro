@@ -132,28 +132,6 @@ vi.mock('../../../../utils/storage/encryptionSession.js', async (importOriginal)
     ),
   };
 });;
-vi.mock('../../../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: { UBLOCK_SOURCES: 'ublock_sources', UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled' },
-    getSettings: hoistedMockGet,
-    saveSettings: hoistedMockSave,
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
@@ -734,8 +712,8 @@ describe('ublockImport/index.ts', () => {
       global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
       global.URL.revokeObjectURL = vi.fn();
 
-      const { getSettings } = await import('../../../../utils/storage.js');
-      (getSettings as vi.Mock).mockImplementation(() => Promise.resolve({
+      const { settingsRepository } = await import('../../../../utils/storage/SettingsRepository.js');
+      (settingsRepository.getAll as vi.Mock).mockImplementation(() => Promise.resolve({
         ublock_sources: [{ url: 'manual', blockDomains: ['example.com'], exceptionDomains: [] }],
         ublock_format_enabled: false,
       }));
@@ -757,8 +735,8 @@ describe('ublockImport/index.ts', () => {
 
     test('should handle export error', async () => {
       setupUblockDOM();
-      const { getSettings } = await import('../../../../utils/storage.js');
-      (getSettings as vi.Mock).mockImplementation(() => Promise.reject(new Error('Storage error')));
+      const { settingsRepository } = await import('../../../../utils/storage/SettingsRepository.js');
+      (settingsRepository.getAll as vi.Mock).mockImplementation(() => Promise.reject(new Error('Storage error')));
 
       const { init } = await import('../index.js');
       await init();
@@ -803,8 +781,8 @@ describe('ublockImport/index.ts', () => {
       const { handleSaveUblockSettings } = await import('../index.js');
       await handleSaveUblockSettings();
 
-      const { saveSettings } = await import('../../../../utils/storage.js');
-      expect(saveSettings).toHaveBeenCalledWith(
+      const { settingsRepository } = await import('../../../../utils/storage/SettingsRepository.js');
+      expect(settingsRepository.setAll).toHaveBeenCalledWith(
         expect.objectContaining({ ublock_format_enabled: false })
       );
     });
@@ -818,8 +796,8 @@ describe('ublockImport/index.ts', () => {
       const { handleSaveUblockSettings } = await import('../index.js');
       await handleSaveUblockSettings();
 
-      const { saveSettings } = await import('../../../../utils/storage.js');
-      expect(saveSettings).toHaveBeenCalledWith(
+      const { settingsRepository } = await import('../../../../utils/storage/SettingsRepository.js');
+      expect(settingsRepository.setAll).toHaveBeenCalledWith(
         expect.objectContaining({ ublock_format_enabled: true })
       );
     });
@@ -1004,8 +982,8 @@ describe('ublockImport/index.ts', () => {
     });
 
     test('should reload source and show rule count diff on success', async () => {
-      const { getSettings } = await import('../../../../utils/storage.js');
-      (getSettings as vi.Mock).mockImplementation(() => Promise.resolve({
+      const { settingsRepository } = await import('../../../../utils/storage/SettingsRepository.js');
+      (settingsRepository.getAll as vi.Mock).mockImplementation(() => Promise.resolve({
         ublock_sources: [
           { url: 'https://example.com/filters.txt', blockDomains: ['example.com'], exceptionDomains: [], ruleCount: 2 },
         ],
@@ -1050,8 +1028,8 @@ describe('ublockImport/index.ts', () => {
     });
 
     test('should handle reload error and restore button state', async () => {
-      const { getSettings } = await import('../../../../utils/storage.js');
-      (getSettings as vi.Mock).mockImplementation(() => Promise.resolve({
+      const { settingsRepository } = await import('../../../../utils/storage/SettingsRepository.js');
+      (settingsRepository.getAll as vi.Mock).mockImplementation(() => Promise.resolve({
         ublock_sources: [
           { url: 'https://example.com/filters.txt', blockDomains: ['example.com'], exceptionDomains: [], ruleCount: 2 },
         ],
@@ -1085,8 +1063,8 @@ describe('ublockImport/index.ts', () => {
     });
 
     test('should handle reload when source has no ruleCount', async () => {
-      const { getSettings } = await import('../../../../utils/storage.js');
-      (getSettings as vi.Mock).mockImplementation(() => Promise.resolve({
+      const { settingsRepository } = await import('../../../../utils/storage/SettingsRepository.js');
+      (settingsRepository.getAll as vi.Mock).mockImplementation(() => Promise.resolve({
         ublock_sources: [
           { url: 'https://example.com/filters.txt', blockDomains: ['example.com'], exceptionDomains: [] },
         ],

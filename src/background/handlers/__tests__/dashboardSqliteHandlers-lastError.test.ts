@@ -100,36 +100,6 @@ vi.mock('../../../utils/storage/encryptionSession.js', async (importOriginal) =>
     ),
   };
 });;
-vi.mock('../../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
-      SQLITE_MAX_RECORDS: 'sqlite_max_records',
-      CONTENT_RETENTION_DAYS: 'content_retention_days',
-      CONTENT_MAX_RECORDS: 'content_max_records',
-      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
-    },
-    getSettings: vi.fn().mockResolvedValue({}),
-    DEFAULT_SETTINGS: {},
-    API_KEY_FIELDS: [],
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
@@ -264,6 +234,7 @@ function makeDeps(overrides: Partial<DashboardSqliteHandlerDeps> = {}): {
     getConfirmToken: vi.fn().mockResolvedValue('token'),
     runBackfill: vi.fn().mockResolvedValue({ updated: 0, total: 0 }),
     runCleanup: vi.fn().mockResolvedValue({ removed: [], totalBytes: 0 }),
+    runLegacyResync: vi.fn().mockResolvedValue({ examined: 0, written: 0, skipped: 0, total: 0 }),
     queryAuditLog: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
     ...overrides,
   };

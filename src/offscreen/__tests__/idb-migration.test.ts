@@ -91,7 +91,7 @@ function makeChromeStorageMock() {
   };
 }
 
-describe('SqliteEngineContext: IDB migration (wa-sqlite -> @subframe7536)', () => {
+describe('SqliteEngineHost: IDB migration (wa-sqlite -> @subframe7536)', () => {
   let chromeMock: ReturnType<typeof makeChromeStorageMock>;
 
   beforeEach(async () => {
@@ -147,7 +147,7 @@ describe('SqliteEngineContext: IDB migration (wa-sqlite -> @subframe7536)', () =
     // boundary from beforeEach.
     const actual = await vi.importActual<typeof import('../migrations.js')>('../migrations.js');
     vi.mocked(runMigrations).mockImplementationOnce((eng) => actual.runMigrations(eng));
-    const { engine } = await import('../sqliteEngineContext.js');
+    const { engine } = await import('../sqliteEngineHost.js');
     engine.resetForTesting();
 
     const result = await engine.init();
@@ -169,7 +169,7 @@ describe('SqliteEngineContext: IDB migration (wa-sqlite -> @subframe7536)', () =
       }
     });
 
-    const { engine } = await import('../sqliteEngineContext.js');
+    const { engine } = await import('../sqliteEngineHost.js');
     engine.resetForTesting();
 
     await engine.init();
@@ -231,7 +231,7 @@ describe('SqliteEngineContext: IDB migration (wa-sqlite -> @subframe7536)', () =
       }
     });
 
-    const { engine } = await import('../sqliteEngineContext.js');
+    const { engine } = await import('../sqliteEngineHost.js');
     engine.resetForTesting();
 
     await engine.init();
@@ -273,7 +273,7 @@ describe('SqliteEngineContext: IDB migration (wa-sqlite -> @subframe7536)', () =
     // New engine reports 1 row post-migration, matching the 1 backed-up record.
     mockIdbQuery.mockResolvedValue([{ 'COUNT(*)': 1 }]);
 
-    const { engine } = await import('../sqliteEngineContext.js');
+    const { engine } = await import('../sqliteEngineHost.js');
     engine.resetForTesting();
 
     await engine.init();
@@ -296,7 +296,7 @@ describe('SqliteEngineContext: IDB migration (wa-sqlite -> @subframe7536)', () =
     // New engine reports 0 rows post-migration (simulated failure) despite 1 backed-up record.
     mockIdbQuery.mockResolvedValue([{ 'COUNT(*)': 0 }]);
 
-    const { engine } = await import('../sqliteEngineContext.js');
+    const { engine } = await import('../sqliteEngineHost.js');
     engine.resetForTesting();
 
     await engine.init();

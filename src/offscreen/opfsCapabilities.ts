@@ -28,10 +28,10 @@ export interface OpfsCapabilities {
 /**
  * VFS strategy chosen for the current environment.
  * - `opfs-sync-worker`: 案A — Worker + OPFS SyncAccessHandle (preferred, high performance)
- * - `opfs-async-main`:  案B — main-thread async OPFS (no Worker)
+ * - `idb`:              OPFS 利用不可環境の実行時選択（IDB VFS。resolver が権威）
  * - `fallback`:         chrome.storage.local FallbackStorage (OPFS unavailable)
  */
-export type VfsStrategy = 'opfs-sync-worker' | 'opfs-async-main' | 'fallback';
+export type VfsStrategy = 'opfs-sync-worker' | 'idb' | 'fallback';
 
 /** Probe the given globals and report which OPFS capabilities are present. */
 export function detectOpfsCapabilities(env: OpfsProbeGlobals): OpfsCapabilities {
@@ -46,7 +46,9 @@ export function detectOpfsCapabilities(env: OpfsProbeGlobals): OpfsCapabilities 
 export function selectVfsStrategy(caps: OpfsCapabilities): VfsStrategy {
   if (!caps.opfsDirectory) return 'fallback';
   if (caps.syncAccessHandle && caps.worker) return 'opfs-sync-worker';
-  return 'opfs-async-main';
+  // OPFS ディレクトリはあるが sync handle / Worker が無い環境 — resolver は
+  // ここで IDB へ転落させるため、実行時に選ばれるのは IDB VFS（案B は未実装）。
+  return 'idb';
 }
 
 /** Probe the live runtime globals (navigator.storage, FileSystemFileHandle, Worker). */

@@ -11,7 +11,7 @@
 
 import { isDomainAllowed as isDomainAllowedLive } from '../domainUtils.js';
 import { isValidDomainPattern } from '../domainValidator.js';
-import { wildcardToRegex } from '../wildcardToRegex.js';
+import { isDomainInList, extractHostname } from '../wildcardToRegex.js';
 import { StorageKeys } from '../storage/types.js';
 import type { Settings } from '../storage/types.js';
 
@@ -20,15 +20,6 @@ export interface DomainFilterOptions {
 }
 
 export const DEFAULT_DOMAIN_FILTER_TTL_MS = 5 * 60 * 1000;
-
-function isDomainInList(hostname: string, list: string[]): boolean {
-  const lower = hostname.toLowerCase();
-  return list.some((pattern) => {
-    if (!pattern.includes('*')) return lower === pattern.toLowerCase();
-    const re = wildcardToRegex(pattern);
-    return re ? re.test(hostname) : false;
-  });
-}
 
 /**
  * Shared cached-allow predicate: single place for the
@@ -41,12 +32,8 @@ export function evaluateCachedAllow(
   allowedDomains: string[],
   mode?: string | null,
 ): boolean | null {
-  let hostname: string;
-  try {
-    hostname = new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return null;
-  }
+  const hostname = extractHostname(url);
+  if (hostname === null) return null;
   if (mode === 'blacklist') {
     return !isDomainInList(hostname, allowedDomains);
   }

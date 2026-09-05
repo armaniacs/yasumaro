@@ -3,7 +3,8 @@
  */
 // @ts-nocheck
 import { describe, it, expect } from 'vitest';
-import { renderHtml, escapeHtml } from '../htmlReport.mjs';
+import { renderHtml } from '../htmlReport.mjs';
+import { escapeHtml } from '../format.mjs';
 import { compareToBaseline } from '../report.mjs';
 
 const result = {
@@ -103,37 +104,14 @@ const HISTORY = {
   ],
 };
 
-describe('PBI 10 trend section', () => {
-  it('renders a Trend section with sparklines and first→last values for 2+ generations', () => {
+describe('trend section wire-up (sparse)', () => {
+  it('includes the Trend section when history has 2+ generations', () => {
     const html = renderHtml([result], { history: HISTORY });
     expect(html).toContain('id="trend"');
-    expect(html).toContain('polyline');
-    expect(html).toContain('p50: 12.000→9.000ms');
-    expect(html).toContain('heap: 4.000→3.516KiB');
-    expect(html).toContain('qsa: 40.000→30.000');
-    expect(html).toContain('2026-09-02');
-  });
-
-  it('renders the 1-generation placeholder without sparklines', () => {
-    const html = renderHtml([result], { history: { skipped: 0, generations: [HISTORY.generations[2]] } });
-    expect(html).toContain('id="trend"');
-    expect(html).toContain('1 世代のみ');
-    expect(html).not.toContain('polyline');
   });
 
   it('omits the Trend section when history is absent', () => {
     const html = renderHtml([result]);
     expect(html).not.toContain('id="trend"');
-  });
-
-  it('notes skipped generations in the Trend section', () => {
-    const html = renderHtml([result], { history: HISTORY });
-    expect(html).toContain('スキップ: 1');
-  });
-
-  it('stays self-contained when the trend section is rendered', () => {
-    const html = renderHtml([result], { history: HISTORY });
-    expect(html).not.toMatch(/\ssrc\s*=\s*["']https?:\/\//);
-    expect(html).not.toMatch(/\shref\s*=\s*["']https?:\/\//);
   });
 });

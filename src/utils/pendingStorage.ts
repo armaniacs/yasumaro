@@ -71,6 +71,23 @@ export const PENDING_PAGES_KEY = 'pending_pages';
  * case of a user who never opens the pending panel.
  */
 export const PENDING_PAGES_PRUNE_THRESHOLD = 50;
+
+/**
+ * Absolute upper bound for the pending_pages single-key array.
+ * The prune threshold above only removes EXPIRED entries, so unexpired
+ * growth was unbounded; this cap is enforced on every add (drop-oldest)
+ * as defense in depth. Mirrors the MAX_DOWNLOAD_RECORDS = 200 precedent
+ * in localMarkdownExportRetention.ts.
+ */
+export const MAX_PENDING_PAGES = 200;
+
+/**
+ * Maximum lifetime of a pending entry. Caller-supplied expiry values are
+ * clamped to Date.now() + PENDING_MAX_TTL_MS at the queue layer so a
+ * far-future (or missing) expiry from a future caller cannot pin entries
+ * in storage indefinitely.
+ */
+export const PENDING_MAX_TTL_MS = 24 * 60 * 60 * 1000;
 const LEGACY_PENDING_PAGES_KEY = 'osh_pending_pages';
 
 /**
@@ -144,14 +161,25 @@ export async function addPendingPage(page: PendingPage): Promise<void> {
     const updatedPages = await withOptimisticLock<PendingPage[]>(
       PENDING_PAGES_KEY,
       (current) => {
+        const now = Date.now();
         const pages = Array.isArray(current) ? current : [];
         if (pages.some(p => p.url === page.url)) return pages;
         // VULN-006: prune expired entries at the write boundary so the list
         // stays bounded even when the daily purge alarm has not run yet.
         const basePages = pages.length > PENDING_PAGES_PRUNE_THRESHOLD
-          ? pages.filter(p => p.expiry > Date.now())
+          ? pages.filter(p => p.expiry > now)
           : pages;
-        return [...basePages, page];
+        // PBI-26: clamp caller-supplied expiry (defense in depth) and enforce
+        // the absolute cap with drop-oldest semantics (newest retained).
+        const maxExpiry = now + PENDING_MAX_TTL_MS;
+        const storedPage: PendingPage = {
+          ...page,
+          expiry: Number.isFinite(page.expiry) ? Math.min(page.expiry, maxExpiry) : maxExpiry,
+        };
+        const combined = [...basePages, storedPage];
+        return combined.length > MAX_PENDING_PAGES
+          ? combined.slice(combined.length - MAX_PENDING_PAGES)
+          : combined;
       }
     );
 

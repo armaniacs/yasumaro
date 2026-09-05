@@ -179,6 +179,7 @@ describe('createSqliteHistoryPanel — server-side pagination', () => {
     });
 
     panel.init?.({ searchTag: 'AI' });
+    await panel.load?.();
     await flush();
 
     const options = lastQueryOptions();

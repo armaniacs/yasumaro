@@ -6,29 +6,6 @@ import { focusTrapManager } from '../../utils/ui/focusTrap.js';
 
 const mockStorage = new Map<string, unknown>();
 
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn(async () => Object.fromEntries(mockStorage)),
-    saveSettings: vi.fn(async (settings) => {
-      Object.entries(settings).forEach(([key, value]) => mockStorage.set(key, value));
-    }),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
@@ -96,6 +73,20 @@ describe('onboardingWizard', () => {
   it('should show wizard when not completed', async () => {
     const result = await shouldShowWizard();
     expect(result).toBe(true);
+  });
+
+  it('wizard template explains the recording scope and consent withdrawal', () => {
+    // テンプレート実体を検証するため、既存 DOM を作らず ensureWizardDOM 経由で生成する。
+    // 表示文言は i18n（applyI18n が data-i18n キーを解決）に依存するため、
+    // ここではキー紐付けと配置（type ステップ内）を検証する。
+    document.body.innerHTML = '';
+    initOnboardingWizard(true);
+
+    const scopeNote = document.querySelector('[data-i18n="wizardRecordingScope"]');
+    expect(scopeNote).not.toBeNull();
+    expect(scopeNote?.getAttribute('data-i18n')).toBe('wizardRecordingScope');
+    const typeStep = document.querySelector('.wizard-step[data-step="type"]');
+    expect(typeStep?.contains(scopeNote ?? null)).toBe(true);
   });
 
   it('should not show wizard when completed', async () => {

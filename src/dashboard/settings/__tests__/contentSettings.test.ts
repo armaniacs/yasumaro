@@ -103,35 +103,6 @@ vi.mock('../../../utils/storage/encryptionSession.js', async (importOriginal) =>
     ),
   };
 });;
-vi.mock('../../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-    StorageKeys: {
-      CONTENT_STRIP_HARD_ENABLED: 'content_strip_hard_enabled',
-      CONTENT_STRIP_KEYWORD_ENABLED: 'content_strip_keyword_enabled',
-      CONTENT_STRIP_KEYWORDS: 'content_strip_keywords',
-      CONTENT_DEDUP_ENABLED: 'content_dedup_enabled',
-      CONTENT_DEDUP_THRESHOLD: 'content_dedup_threshold',
-      SUMMARY_NORMALIZE_ENABLED: 'summary_normalize_enabled',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {

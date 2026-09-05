@@ -18,3 +18,16 @@
  * Bump this when the message schema changes in a backward-incompatible way.
  */
 export const CURRENT_PROTOCOL_VERSION = 1;
+
+/**
+ * Graded migration window: how many previous minor generations stay
+ * acceptable after CURRENT_PROTOCOL_VERSION moves on.
+ *
+ * N-1 only (value 1). Rationale: the skew this window covers is a single
+ * update cycle (stale content script vs reloaded Service Worker). A wider
+ * window would keep untested schema combinations alive longer with no
+ * additional coverage; a zero window is the old hard-reject behavior that
+ * dropped records during mixed-version periods. This is a temporary
+ * migration measure, not permanent multi-generation support — do not widen.
+ */
+export const PROTOCOL_VERSION_WINDOW_SIZE = 1;

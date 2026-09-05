@@ -10,6 +10,7 @@ import { logError, ErrorCode } from '../utils/logger.js';
 import { MaskNavigator } from './maskNavigator.js';
 import { PreviewViewImpl } from './previewView.js';
 import type { PreviewView } from './previewView.js';
+import { focusTrapManager } from '../utils/ui/focusTrap.js';
 
 export interface ConfirmationResult {
   confirmed: boolean;
@@ -84,6 +85,7 @@ export class PreviewPresenter {
   private rejectPromise: ((err: Error) => void) | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private modalEventListenersAttached = false;
+  private trapId: string | null = null;
   private boundHandleActionTrue: () => void;
   private boundHandleActionFalse: () => void;
   private boundHandleClose: () => void;
@@ -95,6 +97,7 @@ export class PreviewPresenter {
     this.boundHandleActionTrue = () => this.handleAction(true);
     this.boundHandleActionFalse = () => this.handleAction(false);
     this.boundHandleClose = () => {
+      this.releaseTrap();
       if (this.resolvePromise) {
         const resolve = this.resolvePromise;
         this.resolvePromise = null;
@@ -149,6 +152,7 @@ export class PreviewPresenter {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
     }
+    this.releaseTrap();
     this.modalEventListenersAttached = false;
   }
 
@@ -196,6 +200,8 @@ export class PreviewPresenter {
       (modal as unknown as { open: boolean }).open = true;
     }
 
+    this.trapModal(modal);
+
     if (positions.length > 0) {
       this.jumpToMaskedPosition(0);
     } else {
@@ -238,9 +244,27 @@ export class PreviewPresenter {
       (modal as unknown as { open: boolean }).open = false;
       modal.dispatchEvent(new Event('close'));
     }
+    this.releaseTrap();
     this.view.doc.body.style.width = DEFAULT_WIDTH;
     const content = (previewContent as HTMLTextAreaElement).value;
     resolve({ confirmed, content: confirmed ? content : null });
+  }
+
+  /**
+   * Trap focus inside the confirmation modal. Releases any previous trap
+   * first so consecutive showPreview calls never double-trap.
+   * Escape is routed to the existing cancel path (handleAction(false)).
+   */
+  private trapModal(modal: HTMLDialogElement): void {
+    this.releaseTrap();
+    this.trapId = focusTrapManager.trap(modal, () => this.handleAction(false));
+  }
+
+  private releaseTrap(): void {
+    if (this.trapId) {
+      focusTrapManager.release(this.trapId);
+      this.trapId = null;
+    }
   }
 
   private jumpToMaskedPosition(index: number): void {

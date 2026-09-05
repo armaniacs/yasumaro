@@ -130,6 +130,33 @@ export async function loadGeneralSettings(repo: SettingsReader = settingsReposit
   } else if (selectedProviderInfoDiv) {
     selectedProviderInfoDiv.classList.add('hidden');
   }
+
+  updateRetentionUnlimitedWarning();
+}
+
+/**
+ * Show the unlimited-retention warning only when BOTH record-layer bounds
+ * (retention days and max records) are set to Unlimited — either one alone
+ * already bounds storage growth.
+ */
+export function updateRetentionUnlimitedWarning(): void {
+  const warning = document.getElementById('retentionUnlimitedWarning');
+  if (!warning) return;
+  const daysEl = document.getElementById('sqliteRetentionDays') as HTMLSelectElement | null;
+  const maxEl = document.getElementById('sqliteMaxRecords') as HTMLSelectElement | null;
+  const unlimited = (daysEl?.value ?? '365') === '' && (maxEl?.value ?? '') === '';
+  warning.hidden = !unlimited;
+}
+
+/**
+ * Wire the change listeners that keep the unlimited-retention warning in
+ * sync with the two record-layer bound selects. Idempotent per mount — the
+ * panel wiring block runs once per panel mount.
+ */
+export function setupRetentionUnlimitedWarning(): void {
+  document.getElementById('sqliteRetentionDays')?.addEventListener('change', updateRetentionUnlimitedWarning);
+  document.getElementById('sqliteMaxRecords')?.addEventListener('change', updateRetentionUnlimitedWarning);
+  updateRetentionUnlimitedWarning();
 }
 
 /**

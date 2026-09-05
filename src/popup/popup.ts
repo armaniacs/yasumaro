@@ -14,7 +14,7 @@ import { initTrancoUpdateNotification } from './trancoNotification.js';
 import { loadPendingPages } from './pendingPages.js';
 import { getPendingPages, isPrivacyPendingReason, renderPendingReason } from '../utils/pendingStorage.js';
 import { showPrivatePageDialog, showRecordingFailedDialog } from './privatePageDialog.js';
-import { getPrivacyConsent } from './privacyConsent.js';
+import { getPrivacyConsent } from '../utils/storage/privacyConsent.js';
 import { hasCompletedWizard, initOnboardingWizard } from './onboardingWizard.js';
 
 // ============================================================================

@@ -9,7 +9,7 @@
  * このテストは実際の解決チェーンを、モックなしの本物の関数だけで
  * 最初から最後まで通す:
  *   createTemplate() で作成したテンプレートを settings 形状に反映
- *     → chrome.storage.local (モック) に保存された設定を getSettings() が読む
+ *     → chrome.storage.local (モック) に保存された設定を settingsRepository.getAll() が読む
  *     → getActiveTemplate() がアクティブなテンプレートを解決
  *     → buildDailyMarkdown() / renderFileTemplate() が実際にレンダリング
  *     → flushBufferedExports() が chrome.downloads.download (モック) に渡す
@@ -21,7 +21,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { flushBufferedExports } from '../localMarkdownExportCore.js';
 import { createTemplate, DEFAULT_MARKDOWN_TEMPLATE } from '../../utils/markdownTemplateUtils.js';
-import { StorageKeys, clearSettingsCache } from '../../utils/storage.js';
+import { StorageKeys } from '../../utils/storage/types.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import type { MarkdownExportTemplate } from '../../utils/types.js';
 import type { MarkdownEntry } from '../pipeline/buffers/MarkdownBufferManager.js';
 
@@ -84,11 +85,11 @@ describe('Markdown template full pipeline (create -> activate -> automatic expor
     storageData = {};
     mockDownload = vi.fn().mockResolvedValue(1);
     installChromeMock(mockDownload);
-    // getSettings() memoizes its result in a module-level cache with a TTL;
+    // settingsRepository.getAll() memoizes its result in a module-level cache with a TTL;
     // without clearing it here, the second test in this file would silently
     // read back the first test's settings instead of exercising its own
     // fresh chrome.storage.local mock.
-    clearSettingsCache();
+    settingsRepository.clearCache();
   });
 
   it('renders the CUSTOM template end-to-end when it is created and activated via the real UI functions', async () => {

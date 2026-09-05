@@ -14,12 +14,10 @@
  */
 
 import { extractMainContentWithInfo } from './contentExtractor/index.js';
-import type { ExtractCleanseOptions, ExtractAiSummaryOptions, ExtractDedupOptions } from './contentExtractor/index.js';
 import { buildExtractionOptions } from './contentExtractor/optionBuilder.js';
 import type { ExtractResult } from './contentExtractor/types.js';
 import type { CleansingConfig } from '../content/pageState.js';
 import { PageState } from '../content/pageState.js';
-import { cleanseViaOffscreen as _cleanseViaOffscreen } from '../content/cleansingOffscreenDelegate.js';
 
 // Re-export the domain type so callers don't need to import from the internal
 // contentExtractor/types seam. One import, one module.
@@ -67,30 +65,3 @@ export function preparePageContent(
     dedupOptions,
   );
 }
-
-/**
- * Variant that accepts the raw option objects directly.
- * Kept private to the pipeline — not part of the public seam — but exposed
- * for the narrow case where a caller has already built options (e.g. legacy
- * extractor.ts shim). New code should use preparePageContent(config).
- */
-export function prepareFromOptions(
-  cleanseOptions: ExtractCleanseOptions,
-  aiSummaryCleanseOptions: ExtractAiSummaryOptions,
-  dedupOptions: ExtractDedupOptions,
-  maxChars: number = 10000,
-): ExtractResult {
-  return extractMainContentWithInfo(
-    maxChars,
-    cleanseOptions,
-    aiSummaryCleanseOptions,
-    dedupOptions,
-  );
-}
-
-/**
- * Offscreen 委譲の PoC エントリ: html 文字列を Offscreen に送り cleansed HTML を受け取る。
- * 失敗時や feature flag OFF 時は同期フォールバックで結果を返す。
- * pageContentPipeline の公開 seam として提供（contentKernel からも利用可能）。
- */
-export const cleanseViaOffscreen = _cleanseViaOffscreen;

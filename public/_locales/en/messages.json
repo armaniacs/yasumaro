@@ -1305,6 +1305,9 @@
   "statusPrivateDetected": {
     "message": "Private"
   },
+  "statusPublicPage": {
+    "message": "Public page"
+  },
   "statusNoInfo": {
     "message": "No Info"
   },
@@ -2052,6 +2055,12 @@
   },
   "retentionUnlimited": {
     "message": "Unlimited (keep forever)"
+  },
+  "retentionUnlimitedWarning": {
+    "message": "Unlimited retention keeps records forever and storage can grow without bound. A retention period of 365 days or a maximum record count is recommended."
+  },
+  "wizardRecordingScope": {
+    "message": "Recording scope: after you accept the privacy policy, visited pages (title, URL, page text) are recorded locally. You can withdraw consent anytime from the popup."
   },
   "retention30days": {
     "message": "30 days"
@@ -3822,6 +3831,18 @@
     "message": "Backfill failed.",
     "description": "Message shown when backfill fails"
   },
+  "diagResyncBtn": {
+    "message": "Resync legacy history from SQLite",
+    "description": "Button to manually resync recent SQLite records into the legacy chrome.storage history"
+  },
+  "diagResyncDone": {
+    "message": "Resync complete.",
+    "description": "Message shown when legacy resync is complete"
+  },
+  "diagResyncFailed": {
+    "message": "Resync failed.",
+    "description": "Message shown when legacy resync fails"
+  },
   "diagCleanupBtn": {
     "message": "Delete original chrome.storage data",
     "description": "Button to delete original chrome.storage data after migration"
@@ -3919,5 +3940,20 @@
   },
   "cleansingPresetHelp": {
     "message": "Choose a preset. Select Custom to edit individual toggles."
+  },
+  "noPerSiteOverrides": {
+    "message": "No per-site overrides."
+  },
+  "notConsented": {
+    "message": "Not consented"
+  },
+  "consentWithdrawnStopped": {
+    "message": "Consent withdrawn. Recording will stop."
+  },
+  "consentWithdrawFailed": {
+    "message": "Failed to withdraw consent."
+  },
+  "aiResultHeader": {
+    "message": "AI: "
   }
 }

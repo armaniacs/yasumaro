@@ -110,11 +110,12 @@ A local SQLite database acts as a **secondary store for browsing/search**, indep
 - **Full-text search**: FTS5 virtual table `browsing_logs_fts` (external content, synced by triggers) with the **`trigram` tokenizer** to support Japanese/CJK substring search. Queries shorter than 3 code points fall back to LIKE (trigram cannot match < 3 chars). User input is whitelisted and phrase-quoted (`sanitizeFtsTerm`) to prevent FTS5 operator injection.
 - **Migration**: existing users' old `AccessHandlePoolVFS` database is migrated once (idempotent) into the new DB via `opfsMigrationV2.ts` (old `wa-sqlite` dependency is confined to `opfsMigrationV2Reader.ts`). Tracked by `StorageKeys.OPFS_MIGRATION_V2_DONE`.
 - **Dashboard access**: the dashboard talks to the store via `DASHBOARD_SQLITE` messages (subtypes `query`/`search`/`status`/`import`/...). All read handlers wrap results as `{ success: true, rows, total }` so the dashboard service can distinguish success from failure.
-- **Unified gateway — hop split** (`src/background/sqlite/offscreenGateway.ts` + `src/background/sqlite/dashboardGateway.ts`, facade `src/background/sqliteGateway.ts` re-exports both): both RPC hops share the single result vocabulary `SqliteResult<T>` but each hop has its own locality. `OffscreenGateway` (background → offscreen) exposes `query` / `mutate` / `maintain` / `status` via `ChromeOffscreenTransport`; `DashboardGateway` (dashboard → service worker) handles `DASHBOARD_SQLITE` with `tokenExempt` confirm-token dance and `DASHBOARD_SQLITE_TIMEOUT=10000`. `SqliteClient` is a thin shim delegating to `OffscreenGateway` so error classification never drifts.
+- **Unified gateway — hop split** (`src/background/sqlite/offscreenGateway.ts` + `src/messaging/dashboardGateway.ts`, facade `src/background/sqliteGateway.ts` re-exports the offscreen hop): both RPC hops share the single result vocabulary `SqliteResult<T>` but each hop has its own locality. `OffscreenGateway` (background → offscreen) exposes `query` / `mutate` / `maintain` / `status` via `ChromeOffscreenTransport`; `DashboardGateway` (dashboard → service worker) is the sole `DASHBOARD_SQLITE` sender — it owns the `tokenExempt` confirm-token dance, `DASHBOARD_SQLITE_TIMEOUT=10000`, and the opt-in query/search retry (2 attempts, 1000ms, throw-or-`retriable`, never on decode failure). `TEST_AI` / `TEST_OBSIDIAN` sends live only in `src/dashboard/generalSettings/connectionTests.ts`. Sender placement is pinned by `dashboardSenderGuard.test.ts`. `SqliteClient` is a thin shim delegating to `OffscreenGateway` so error classification never drifts.
   - The Service Worker hop classifies transport failures with `categorizeError`.
   - The Dashboard hop passes failure-response reasons through **verbatim** (the Service Worker already classified them); it only runs `categorizeError` on its own transport-level exceptions.
 - **Query plan — single SSOT** (`src/offscreen/queryPlan.ts`): `buildQuerySpec` / `clampLimit` / `buildExtraWhereSql` / `matchesExtraWhere` / `QUERY_CAPS` (plain 1000 / FTS 100000) are the single source of truth for WHERE-clause generation and limit clamping. `IdbVfsBackend` and `opfsWorker/searchHandlers` consume them; `InMemoryTransport` now delegates to `matchesExtraWhere` and `sanitizeFtsTerm` instead of reimplementing, and uses `QUERY_CAPS` + `clampLimit` for limits. `ORDER BY` is string-aware (`localeCompare` for strings, numeric for numbers) so `InMemoryTransport` fidelity matches the real FTS ordering.
 - **Backend facets** (`src/offscreen/StorageBackend.ts`): the storage backend interface is split into `Queryable` (read) and `Mutable` (write) so callers import only the facet they need.
+- **History panel lifecycle** (`src/dashboard/panels/asyncData/sqliteHistoryModel.ts` / `sqliteHistoryPanel.ts`): the `SqliteHistoryModel` interface exposes 21 methods; panel transitions go through exactly 2 — `onNavigateIn(initParams?)` (filter branch → fallback check → persisted sort → initial fetch with retry) and `onNavigateOut()` (generation bump + persist flush + cache clear + selection clear). The Panel only stashes `initParams` in `init()` and decides *when* to call; the Model owns the order. Cache invalidation funnels through the internal `invalidateCache(reason)` helper (`unmount` / `fresh-load` / `mutation`).
 - **Transport adapters** (`OffscreenTransport` interface): `ChromeOffscreenTransport` manages the real offscreen-document lifecycle in production; `InMemoryTransport` is a stateful in-memory store so `OffscreenGateway` can be exercised in tests via the shared `queryPlan` SSOT without an offscreen document or any `chrome.*` API.
 
 ### 5.5 Trust DB
@@ -268,6 +269,27 @@ Timestamp in Japanese locale (HH:MM format):
   - AI要約: Summary text
 ```
 
+### 10.3 Extractor Orchestration (`src/utils/contentExtractor/index.ts`)
+- **Entries (2, both kept)**: `extractMainContentWithInfo` (ExtractResult + diagnostics;
+  the only production entry via contentKernel → preparePageContent) and
+  `extractMainContent` (thin string wrapper; production-unused, kept as the
+  bench c1/c4 measurement surface).
+- **Internal step**: `runCleanseAndExtract` owns clone → cleanse → pre-AI bytes →
+  reason → AI step → dual payload → extract → fallback for both the candidate
+  path and the body path. Path differences are input-element determination only
+  (first candidate vs `document.body`, `candidateBytes` vs `pageBytes` source).
+- **Reason helper**: `resolveCleanseReason(hard, keyword)` in `cleansedReason.ts`
+  is the single copy of the cleansedReason ladder (candidate / body / diagnostic
+  recount call it; `deriveCleansedReason` stays separate for AI count results).
+- **Preserved asymmetries** (do not "fix" without a behavior-change PBI): the
+  candidate path registers `originalContent` before cloning while the body path
+  registers it after the AI step; sanitize/debug logs are candidate-only.
+- **Badge notification**: `ExtractResult.cleansingExecuted` is set only in the
+  actual-cleansing branches (the diagnostic recount never sets it), and
+  `contentKernel.extractPageContent` sends `CONTENT_CLEANSING_EXECUTED` via the
+  injected `MessageSender` seam when it is true — `utils/` stays chrome-free
+  and recount-only pages never fire the badge.
+
 ## 11. Local AI (Chrome Prompt API)
 
 ### 11.1 Offscreen Document Architecture
@@ -295,6 +317,11 @@ The catalog is built from `PROVIDER_REGISTRY` (wiring data) augmented with `cspD
 - `cspValidator` / `cspSettings` add a provider's base-URL origin from `baseUrlKey` + `isLocal`, and conditional-CSP origins from `cspDomain`.
 - `DiagnosticsCollector` reads each provider's model / base URL / API key via the catalog entry's keys.
 - `getMaxContentChars` (`ProviderStrategy`) reads the typed `settings.providers[<id>]` bag, then the global `StorageKey`, then a default.
+
+HTTP provider response size and allowlist handling are SSOT-driven:
+
+- `MAX_AI_HTTP_RESPONSE_BYTES` (`ProviderStrategy`) is the single response-size cap for both the summary flow (`executeHttpSummaryFlow` → `readJsonCapped`) and each provider's `testConnection` read. Providers import the constant; no local copies exist.
+- `getAllowedUrlsForRequests()` (`AIProviderStrategy`, protected) is the single path to `urlWhitelist.getAllowedUrls()` for provider request-time URL validation (testConnection). Note this is distinct from the summary-flow pre-flight allowlist built from the `providerAllowlist` neutral table.
 
 ## 12. uBlock Origin Format Support
 

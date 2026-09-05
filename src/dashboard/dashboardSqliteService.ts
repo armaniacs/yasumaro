@@ -5,27 +5,24 @@
  */
 
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
-import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
-import { tokenExempt } from '../messaging/sqliteOperationSecurity.js';
-import { categorizeError } from '../messaging/sqliteRpcClient.js';
 // PBI-05: unified SqliteResult vocabulary — both hops now share the same
 // error classification and result shape via SqliteGateway.
-import { dashboardGateway, type SqliteResult } from '../background/sqliteGateway.js';
+// PBI 11: the DASHBOARD_SQLITE send policy (token gate, timeout, retry) lives
+// in src/messaging/dashboardGateway.ts; this service owns only conversion.
+import { dashboardGateway, type SqliteResult } from '../messaging/dashboardGateway.js';
 import { bytesToBase64, base64ToBytes } from '../utils/crypto/index.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import {
   requiredNonNegativeNumber,
   requiredBoolean,
   requiredString,
-  isRecord,
-  isFiniteNumber,
   requiredRows,
   isBrowsingLogEntry,
   isAuditLogEntry,
   decodeStatusExtras,
+  decodeOpfsSpikeReport,
+  type OpfsSpikeReportView,
 } from '../messaging/sqliteValidators.js';
-
-const DASHBOARD_SQLITE_TIMEOUT = 10000;
 
 /**
  * The uniform failure shape for this module.
@@ -57,82 +54,22 @@ export function isServiceError<T>(result: ServiceResult<T>): result is { error: 
 }
 
 /**
- * Request a per-action single-use confirm token (60s TTL) from the service worker.
- * Each destructive operation gets its own token bound to action/id.
- */
-async function getConfirmTokenForAction(action: string, id?: number): Promise<string | null> {
-  try {
-    const requestPayload: DashboardSqliteRequest = { subtype: 'create_confirm_token', action, ...(id !== undefined ? { id } : {}) } as DashboardSqliteRequest;
-    const response = await sendDashboardMessageRaw(requestPayload);
-    if (response.success && typeof (response as { confirmToken?: string }).confirmToken === 'string') {
-      return (response as { confirmToken: string }).confirmToken;
-    }
-  } catch (error) {
-    console.error('Failed to request dashboard SQLite confirmToken:', error);
-  }
-  return null;
-}
-
-async function withConfirmToken<T extends DashboardSqliteRequest>(payload: T): Promise<T & { confirmToken?: string }> {
-  const action = payload.subtype;
-  const id = (payload as unknown as { id?: number }).id;
-  const confirmToken = await getConfirmTokenForAction(action, id);
-  return confirmToken ? { ...payload, confirmToken } : payload;
-}
-
-/**
- * Low-level send without token injection (used to fetch the token itself).
- */
-async function sendDashboardMessageRaw<T extends DashboardSqliteRequest>(
-  payload: T,
-): Promise<DashboardSqliteResponseFor<T['subtype']>> {
-  return Promise.race([
-    chrome.runtime.sendMessage({ type: 'DASHBOARD_SQLITE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload }),
-    new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Dashboard SQLite request timed out')), DASHBOARD_SQLITE_TIMEOUT);
-    }),
-  ]);
-}
-
-async function sendDashboardMessage<T extends DashboardSqliteRequest>(
-  payload: T,
-): Promise<DashboardSqliteResponseFor<T['subtype']>> {
-  // Fail-safe default: a token is required unless the operation is explicitly
-  // in the read-only exempt set (single-sourced in messaging/). A forgotten or
-  // new operation therefore fails closed (over-rejects) rather than silently
-  // skipping the guard. The receiver enforces this independently, so the sender
-  // only decides whether to fetch and attach the token.
-  const requireConfirmToken = !tokenExempt.has(payload.subtype);
-  const messagePayload = requireConfirmToken
-    ? await withConfirmToken(payload)
-    : payload;
-
-  return Promise.race([
-    chrome.runtime.sendMessage({ type: 'DASHBOARD_SQLITE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: messagePayload }),
-    new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Dashboard SQLite request timed out')), DASHBOARD_SQLITE_TIMEOUT);
-    }),
-  ]);
-}
-
-/**
  * Generic wrapper for the common "send → on success decode+validate the
  * response, on failure/exception surface the reason" pattern shared by most
  * DASHBOARD_SQLITE API functions.
  *
- * Not every function fits this shape — retrying functions (queryLogs,
- * searchLogs) and non-ServiceResult functions (getSqliteStatus) implement
- * their own logic instead of calling this (PBI-39).
- *
  * PBI-05: delegates to DashboardSqliteGateway so the two RPC stacks share
  * the same SqliteResult vocabulary and error classification.
+ * PBI 11: the retrying functions (queryLogs, searchLogs) pass the opt-in
+ * retry option through; every other caller stays single-attempt.
  */
 async function callDashboard<T extends DashboardSqliteRequest, R>(
   payload: T,
   decode: (response: Extract<DashboardSqliteResponseFor<T['subtype']>, { success: true }>) => R,
   defaultErrorMessage: string,
+  retry?: { retryAttempts?: number; retryDelayMs?: number },
 ): Promise<ServiceResult<R>> {
-  const result = await dashboardGateway.callDashboard(payload, decode, defaultErrorMessage);
+  const result = await dashboardGateway.callDashboard(payload, decode, defaultErrorMessage, retry);
   return toServiceResult(result);
 }
 
@@ -141,7 +78,6 @@ async function callDashboard<T extends DashboardSqliteRequest, R>(
 // ============================================================================
 
 import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
-import { errorMessage } from '../utils/errorUtils.js';
 export type { BrowsingLogEntry };
 
 export interface DateCount {
@@ -151,54 +87,8 @@ export interface DateCount {
 
 /**
  * Query browsing logs with date range and filters.
- * Retries once on first failure to handle SQLite initialization timing.
- *
- * Not a callDashboard() wrapper (PBI-39): the retry loop doesn't fit the
- * generic single-attempt shape.
- */
-async function withRetry<K extends DashboardSqliteRequest['subtype']>(
-  fn: () => Promise<DashboardSqliteResponseFor<K>>,
-  onSuccess: (res: Extract<DashboardSqliteResponseFor<K>, { success: true }>) => ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>,
-  onError: (msg: string) => void,
-): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    let response: DashboardSqliteResponseFor<K>;
-    try {
-      response = await fn();
-    } catch (error) {
-      if (attempt === 0) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        continue;
-      }
-      const classified = categorizeError(errorMessage(error)).message;
-      onError(classified);
-      return { error: classified };
-    }
-    if (response.success) {
-      try {
-        return onSuccess(response as Extract<DashboardSqliteResponseFor<K>, { success: true }>);
-      } catch (error) {
-        const raw = errorMessage(error);
-        console.warn('decode failed:', raw);
-        return { error: raw };
-      }
-    }
-    if (attempt === 0 && response.retriable) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      continue;
-    }
-    const msg = String(response.error || 'Query failed');
-    console.warn('failed:', msg);
-    return { error: msg };
-  }
-  return { error: 'Query failed' };
-}
-
-/**
- * Fetches browsing log filtered records.
- *
- * Not a callDashboard() wrapper (PBI-39): the retry loop doesn't fit the
- * generic single-attempt shape. Now uses withRetry helper (PBI-18).
+ * Retries once on first failure to handle SQLite initialization timing
+ * (PBI 11: the retry loop lives in DashboardGateway.callDashboard now).
  */
 export async function queryLogs(options: {
   limit?: number;
@@ -211,23 +101,21 @@ export async function queryLogs(options: {
   orderDir?: 'ASC' | 'DESC';
   tagFilter?: string;
 } = {}): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
-  return withRetry<'query'>(
-    () => sendDashboardMessage({ subtype: 'query', ...options }),
+  return callDashboard(
+    { subtype: 'query', ...options },
     (res) => ({
-      data: {
-        rows: requiredRows(res.rows, 'rows', isBrowsingLogEntry),
-        total: requiredNonNegativeNumber(res.total, 'total'),
-      },
+      rows: requiredRows(res.rows, 'rows', isBrowsingLogEntry),
+      total: requiredNonNegativeNumber(res.total, 'total'),
     }),
-    (msg) => console.error('queryLogs failed:', msg),
+    'Query failed',
+    { retryAttempts: 2, retryDelayMs: 1000 },
   );
 }
 
 /**
  * FTS5 full-text search.
- * Retries once on first failure to handle SQLite initialization timing.
- *
- * Not a callDashboard() wrapper (PBI-39): same retry-loop shape as queryLogs.
+ * Retries once on first failure to handle SQLite initialization timing
+ * (PBI 11: same gateway retry shape as queryLogs).
  */
 export async function searchLogs(
   query: string,
@@ -235,22 +123,20 @@ export async function searchLogs(
   offset = 0,
   options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
 ): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
-  return withRetry<'search'>(
-    () =>
-      sendDashboardMessage({
-        subtype: 'search',
-        query,
-        limit,
-        offset,
-        ...pickDefined({ orderBy: options.orderBy, orderDir: options.orderDir }),
-      }),
+  return callDashboard(
+    {
+      subtype: 'search',
+      query,
+      limit,
+      offset,
+      ...pickDefined({ orderBy: options.orderBy, orderDir: options.orderDir }),
+    },
     (res) => ({
-      data: {
-        rows: requiredRows(res.rows, 'rows', isBrowsingLogEntry),
-        total: requiredNonNegativeNumber(res.total, 'total'),
-      },
+      rows: requiredRows(res.rows, 'rows', isBrowsingLogEntry),
+      total: requiredNonNegativeNumber(res.total, 'total'),
     }),
-    (msg) => console.error('searchLogs failed:', msg),
+    'Query failed',
+    { retryAttempts: 2, retryDelayMs: 1000 },
   );
 }
 
@@ -302,39 +188,7 @@ export function migrateLogs(): Promise<ServiceResult<{ count: number; read: numb
   );
 }
 
-export interface OpfsSpikeStepResult { name: string; ok: boolean; detail: string }
-export interface OpfsSpikeReportView {
-  strategy: string;
-  steps: OpfsSpikeStepResult[];
-  passed: boolean;
-  durationMs: number;
-}
-
-function decodeOpfsSpikeReport(value: unknown): OpfsSpikeReportView {
-  if (!isRecord(value)
-    || typeof value.strategy !== 'string'
-    || !Array.isArray(value.steps)
-    || !value.steps.every((step) => isRecord(step)
-      && typeof step.name === 'string'
-      && typeof step.ok === 'boolean'
-      && typeof step.detail === 'string')
-    || typeof value.passed !== 'boolean'
-    || !isFiniteNumber(value.durationMs)
-    || value.durationMs < 0) {
-    throw new Error('Invalid SQLite response: report');
-  }
-
-  return {
-    strategy: value.strategy,
-    steps: value.steps.map((step) => ({
-      name: step.name,
-      ok: step.ok,
-      detail: step.detail,
-    })),
-    passed: value.passed,
-    durationMs: value.durationMs,
-  };
-}
+export type { OpfsSpikeReportView, OpfsSpikeStepResult } from '../messaging/sqliteValidators.js';
 
 /**
  * Run the OPFS feasibility spike (PBI-10) and return its structured report.
@@ -371,11 +225,10 @@ export function getLogCount(): Promise<ServiceResult<number>> {
  * Get SQLite status including fallback mode flag.
  * Returns diagnostic info even on failure so the UI can display it.
  *
- * Not a callDashboard() wrapper (PBI-39): this function does not return
- * ServiceResult<T> — it returns a status object unconditionally, with
- * initError set on failure, so the diagnostics UI can render fields even
- * when the query failed. isServiceError() below is the type guard other
- * callers use to distinguish the ServiceResult-shaped functions.
+ * Transport goes through DashboardGateway.callDashboard (PBI 11); only the
+ * SqliteResult → status-shape conversion lives here because this function
+ * does not return ServiceResult<T> — it returns a status object
+ * unconditionally, with initError set on failure.
  */
 export async function getSqliteStatus(): Promise<{
   initialized: boolean;
@@ -393,48 +246,30 @@ export async function getSqliteStatus(): Promise<{
   opfsLegacyDbPath?: string | null;
   idbLegacyDbName?: string | null;
 }> {
-  let response: DashboardSqliteResponseFor<'status'>;
-  try {
-    response = await sendDashboardMessage({ subtype: 'status' });
-  } catch (error) {
-    const classified = categorizeError(errorMessage(error)).message;
-    return {
-      initialized: false,
-      path: '',
-      fallback: false,
-      fts5: false,
-      initError: classified,
-    };
-  }
-
-  if (response.success) {
-    try {
-      return {
-        initialized: requiredBoolean(response.initialized, 'initialized'),
-        path: requiredString(response.path, 'path'),
-        fallback: requiredBoolean(response.fallback, 'fallback'),
-        fts5: requiredBoolean(response.fts5, 'fts5'),
-        ...pickDefined({
-          initError: response.initError ? String(response.initError) : undefined,
-          ...decodeStatusExtras(response as unknown as Record<string, unknown>),
-        }),
-      };
-    } catch (error) {
-      return {
-        initialized: false,
-        path: '',
-        fallback: false,
-        fts5: false,
-        initError: errorMessage(error),
-      };
-    }
-  }
+  // PBI 11: transport goes through DashboardGateway.callDashboard; the
+  // SqliteResult → status-shape conversion stays here so the diagnostics UI
+  // keeps receiving a status object (with initError) on every failure mode.
+  const result = await dashboardGateway.callDashboard(
+    { subtype: 'status' },
+    (response) => ({
+      initialized: requiredBoolean(response.initialized, 'initialized'),
+      path: requiredString(response.path, 'path'),
+      fallback: requiredBoolean(response.fallback, 'fallback'),
+      fts5: requiredBoolean(response.fts5, 'fts5'),
+      ...pickDefined({
+        initError: response.initError ? String(response.initError) : undefined,
+        ...decodeStatusExtras(response as unknown as Record<string, unknown>),
+      }),
+    }),
+    'Failed to get SQLite status',
+  );
+  if (result.success) return result.data;
   return {
     initialized: false,
     path: '',
     fallback: false,
     fts5: false,
-    initError: String(response.error || 'Failed to get SQLite status'),
+    initError: result.error.message,
   };
 }
 
@@ -466,6 +301,25 @@ export function backfillMetadata(): Promise<ServiceResult<{ updated: number; tot
       total: requiredNonNegativeNumber(response.total, 'total'),
     }),
     'Backfill failed',
+  );
+}
+
+/**
+ * Manually resync recent SQLite records into the legacy chrome.storage
+ * store (PBI 22, MANUAL-ONLY trigger — diagnostics panel button only).
+ * Merges by URL (idempotent); bounded by maxRecords (server-side default
+ * and cap apply when omitted or invalid).
+ */
+export function resyncLegacyStorage(maxRecords?: number): Promise<ServiceResult<{ examined: number; written: number; skipped: number; total: number }>> {
+  return callDashboard(
+    { subtype: 'resync_legacy', ...(maxRecords === undefined ? {} : { maxRecords }) },
+    (response) => ({
+      examined: requiredNonNegativeNumber(response.examined, 'examined'),
+      written: requiredNonNegativeNumber(response.written, 'written'),
+      skipped: requiredNonNegativeNumber(response.skipped, 'skipped'),
+      total: requiredNonNegativeNumber(response.total, 'total'),
+    }),
+    'Resync failed',
   );
 }
 

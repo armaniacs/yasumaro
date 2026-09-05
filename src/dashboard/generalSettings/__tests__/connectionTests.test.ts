@@ -627,6 +627,27 @@ describe('handleTestAi', () => {
     expect(document.getElementById('status')!.innerHTML).toContain('接続失敗');
   });
 
+  it('renders multi-provider header via aiResultHeader key', async () => {
+    buildDomWithTop();
+    mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
+    const ai = { success: true, message: 'ok', providers: [{ provider: 'a', success: true, message: 'x', elapsedMs: 1 }, { provider: 'b', success: true, message: 'y', elapsedMs: 1 }] };
+    mockedGetMessage.mockImplementation(((k: string) => k) as typeof getMessage);
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ ai }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    await handleTestAi();
+    expect(mockedGetMessage).toHaveBeenCalledWith('aiResultHeader');
+    expect(document.getElementById('status')!.querySelector('strong')!.textContent).toBe('aiResultHeader');
+  });
+
+  it('renders multi-provider header with English fallback when key missing', async () => {
+    buildDomWithTop();
+    mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
+    const ai = { success: true, message: 'ok', providers: [{ provider: 'a', success: true, message: 'x', elapsedMs: 1 }, { provider: 'b', success: true, message: 'y', elapsedMs: 1 }] };
+    mockedGetMessage.mockReturnValue('' as any);
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ ai }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    await handleTestAi();
+    expect(document.getElementById('status')!.querySelector('strong')!.textContent).toBe('AI: ');
+  });
+
   it('handles exception in testAiConnection with fallback', async () => {
     buildDomWithTop();
     mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);

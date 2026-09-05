@@ -1251,6 +1251,9 @@
   "statusPrivateDetected": {
     "message": "プライベート"
   },
+  "statusPublicPage": {
+    "message": "公開ページ"
+  },
   "statusNoInfo": {
     "message": "情報なし"
   },
@@ -1984,6 +1987,9 @@
   "retentionUnlimited": {
     "message": "無制限（削除しない）"
   },
+  "retentionUnlimitedWarning": {
+    "message": "無制限に設定するとレコードは永久に保持され、ストレージが増え続けます。保持期間 365 日または最大レコード数の設定を推奨します。"
+  },
   "retention30days": {
     "message": "30日"
   },
@@ -2249,6 +2255,9 @@
   },
   "wizardTypePrompt": {
     "message": "Yasumaro をどのように使いますか？"
+  },
+  "wizardRecordingScope": {
+    "message": "記録の範囲: プライバシーポリシーに同意すると、閲覧したページ（タイトル・URL・本文）がローカルに記録されます。同意はポップアップからいつでも取り消せます。"
   },
   "wizardTypeObsidian": {
     "message": "Obsidian 使い"
@@ -3652,6 +3661,18 @@
     "message": "補完に失敗しました。",
     "description": "Message shown when backfill fails"
   },
+  "diagResyncBtn": {
+    "message": "レガシー履歴をSQLiteから再同期",
+    "description": "Button to manually resync recent SQLite records into the legacy chrome.storage history"
+  },
+  "diagResyncDone": {
+    "message": "再同期完了。",
+    "description": "Message shown when legacy resync is complete"
+  },
+  "diagResyncFailed": {
+    "message": "再同期に失敗しました。",
+    "description": "Message shown when legacy resync fails"
+  },
   "diagCleanupBtn": {
     "message": "元の chrome.storage データを削除",
     "description": "Button to delete original chrome.storage data after migration"
@@ -3909,5 +3930,20 @@
   },
   "cleansingPresetHelp": {
     "message": "プリセットを選択。個別に調整する場合はカスタムを選んでください。"
+  },
+  "noPerSiteOverrides": {
+    "message": "サイト別の上書き設定はありません。"
+  },
+  "notConsented": {
+    "message": "同意されていません"
+  },
+  "consentWithdrawnStopped": {
+    "message": "同意を撤回しました。記録を停止します。"
+  },
+  "consentWithdrawFailed": {
+    "message": "同意の撤回に失敗しました。"
+  },
+  "aiResultHeader": {
+    "message": "AI: "
   }
 }

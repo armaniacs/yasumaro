@@ -94,34 +94,6 @@ vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      PROVIDER_BASE_URL: 'provider_base_url',
-      PROVIDER_API_KEY: 'provider_api_key',
-      PROVIDER_MODEL: 'provider_model',
-      AI_PROVIDER: 'ai_provider'
-    },
-    getSettings: vi.fn().mockResolvedValue({}),
-    saveSettings: vi.fn().mockResolvedValue(undefined),
-    saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined)
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
@@ -269,7 +241,7 @@ describe('LM Studio Preset', () => {
   });
 
   test('settings mapping should include provider_base_url', async () => {
-    const { StorageKeys } = await import('../../utils/storage.js');
+    const { StorageKeys } = await import('../../utils/storage/types.js');
     
     expect(StorageKeys.PROVIDER_BASE_URL).toBe('provider_base_url');
   });

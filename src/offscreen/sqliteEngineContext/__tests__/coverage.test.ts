@@ -56,7 +56,7 @@ vi.mock('../../../utils/logger.js', () => ({
 }));
 
 // ── Imports after mocks ─────────────────────────────────────────────────
-const { SqliteEngineContext, extractDomain } = await import('../../sqliteEngineContext.js');
+const { SqliteEngineHost: SqliteEngineContext, extractDomain } = await import('../../sqliteEngineHost.js');
 const {
   sendToOpfsWorker,
   tryOpfsProxy,

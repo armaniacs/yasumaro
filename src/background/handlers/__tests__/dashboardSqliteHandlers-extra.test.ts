@@ -148,44 +148,6 @@ vi.mock('../../../utils/storage/encryptionSession.js', async (importOriginal) =>
     ),
   };
 });;
-vi.mock('../../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      OBSIDIAN_ENABLED: 'obsidian_enabled',
-      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
-      SQLITE_MAX_RECORDS: 'sqlite_max_records',
-      CONTENT_RETENTION_DAYS: 'content_retention_days',
-      CONTENT_MAX_RECORDS: 'content_max_records',
-      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
-    },
-    getSettings: vi.fn(),
-    DEFAULT_SETTINGS: {} as any,
-    API_KEY_FIELDS: [
-      'obsidian_api_key',
-      'gemini_api_key',
-      'openai_api_key',
-      'openai_2_api_key',
-      'provider_api_key',
-      'github_pat',
-    ],
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
@@ -302,7 +264,6 @@ vi.mock('../../../utils/storage/quota.js', async (importOriginal) => {
 });;
 
 import { dispatchDashboardSqlite } from './dashboardSqliteTestHarness.js';
-import { getSettings } from '../../../utils/storage.js';
 import { logError } from '../../../utils/logger.js';
 
 function createMockSqliteClient() {
@@ -680,6 +641,36 @@ describe('handleDashboardSqlite — backfill_metadata', () => {
       { subtype: 'backfill_metadata', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toEqual({ success: false, error: 'Backfill not available' });
+  });
+});
+
+describe('handleDashboardSqlite — resync_legacy', () => {
+  it('calls runLegacyResync and returns counts', async () => {
+    const mock = createMockSqliteClient();
+    const runLegacyResync = vi.fn().mockResolvedValue({ examined: 8, written: 7, skipped: 1, total: 8 });
+    const result = await dispatchDashboardSqlite(
+      { subtype: 'resync_legacy', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN, runLegacyResync }
+    );
+    expect(result).toEqual({ success: true, examined: 8, written: 7, skipped: 1, total: 8 });
+    expect(runLegacyResync).toHaveBeenCalledWith(undefined);
+  });
+
+  it('forwards maxRecords when provided', async () => {
+    const mock = createMockSqliteClient();
+    const runLegacyResync = vi.fn().mockResolvedValue({ examined: 2, written: 2, skipped: 0, total: 9 });
+    const result = await dispatchDashboardSqlite(
+      { subtype: 'resync_legacy', maxRecords: 2, ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN, runLegacyResync }
+    );
+    expect(result).toEqual({ success: true, examined: 2, written: 2, skipped: 0, total: 9 });
+    expect(runLegacyResync).toHaveBeenCalledWith({ maxRecords: 2 });
+  });
+
+  it('returns error when runLegacyResync is not provided', async () => {
+    const mock = createMockSqliteClient();
+    const result = await dispatchDashboardSqlite(
+      { subtype: 'resync_legacy', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN }
+    );
+    expect(result).toEqual({ success: false, error: 'Resync not available' });
   });
 });
 
