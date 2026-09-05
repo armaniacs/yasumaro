@@ -8,6 +8,7 @@ import { getMessage } from '../../../utils/i18n.js';
 import {
   loadGeneralSettings,
   handlePurgeNow, handleContentPurgeNow,
+  setupRetentionUnlimitedWarning,
 } from '../../generalSettings/settingsForm.js';
 import {
   handleSaveOnly, handleTestObsidian, handleTestAi, handleTestLocalMarkdown,
@@ -314,6 +315,9 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       container.querySelector('#testLocalMarkdownBtnBottom')?.addEventListener('click', () => handleTestLocalMarkdown());
       document.getElementById('purgeNowBtn')?.addEventListener('click', handlePurgeNow);
       document.getElementById('contentPurgeNowBtn')?.addEventListener('click', handleContentPurgeNow);
+
+      // Unlimited-retention warning follows the two record-layer bound selects.
+      setupRetentionUnlimitedWarning();
     },
     async refresh() {
       const container = panelContainer;

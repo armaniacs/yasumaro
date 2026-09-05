@@ -74,6 +74,7 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
 
 import {
     loadGeneralSettings,
+    setupRetentionUnlimitedWarning,
 } from '../generalSettings/settingsForm.js';
 import { StorageKeys } from '../../utils/storage.js';
 
@@ -93,6 +94,7 @@ function buildRetentionDom() {
             <option value="10000">10,000</option>
             <option value="100000">100,000</option>
         </select>
+        <p id="retentionUnlimitedWarning" hidden></p>
         </div>
     `;
 }
@@ -140,5 +142,56 @@ describe('Retention settings UI', () => {
         const maxEl  = document.getElementById('sqliteMaxRecords')    as HTMLSelectElement;
         expect(daysEl.value).toBe('90');
         expect(maxEl.value).toBe('10000');
+    });
+
+    it('shows the unlimited-retention warning when both bounds are unlimited', async () => {
+        mockGetAll.mockResolvedValue({
+            ...baseSettings,
+            [StorageKeys.SQLITE_RETENTION_DAYS]: null,
+            [StorageKeys.SQLITE_MAX_RECORDS]: null,
+        });
+
+        await loadGeneralSettings();
+
+        const warning = document.getElementById('retentionUnlimitedWarning') as HTMLElement;
+        expect(warning.hidden).toBe(false);
+    });
+
+    it('hides the unlimited-retention warning when a bound is set', async () => {
+        mockGetAll.mockResolvedValue({
+            ...baseSettings,
+            [StorageKeys.SQLITE_RETENTION_DAYS]: 90,
+            [StorageKeys.SQLITE_MAX_RECORDS]: null,
+        });
+
+        await loadGeneralSettings();
+
+        const warning = document.getElementById('retentionUnlimitedWarning') as HTMLElement;
+        expect(warning.hidden).toBe(true);
+    });
+
+    it('updates the warning on select change (unlimited → capped hides it)', () => {
+        const daysEl = document.getElementById('sqliteRetentionDays') as HTMLSelectElement;
+        const maxEl  = document.getElementById('sqliteMaxRecords')    as HTMLSelectElement;
+        const warning = document.getElementById('retentionUnlimitedWarning') as HTMLElement;
+
+        setupRetentionUnlimitedWarning();
+
+        daysEl.value = '';
+        maxEl.value = '';
+        daysEl.dispatchEvent(new Event('change'));
+        expect(warning.hidden).toBe(false);
+
+        daysEl.value = '30';
+        daysEl.dispatchEvent(new Event('change'));
+        expect(warning.hidden).toBe(true);
+
+        daysEl.value = '';
+        daysEl.dispatchEvent(new Event('change'));
+        expect(warning.hidden).toBe(false);
+
+        maxEl.value = '1000';
+        maxEl.dispatchEvent(new Event('change'));
+        expect(warning.hidden).toBe(true);
     });
 });

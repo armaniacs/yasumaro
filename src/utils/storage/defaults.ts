@@ -153,7 +153,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT]: null,
     [StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT]: 0,
     [StorageKeys.IDB_MIGRATION_V2_DONE]: false,
-    [StorageKeys.SQLITE_RETENTION_DAYS]: null,
+    [StorageKeys.SQLITE_RETENTION_DAYS]: 365,
     [StorageKeys.SQLITE_MAX_RECORDS]: null,
     [StorageKeys.CONTENT_RETENTION_DAYS]: 7,
     [StorageKeys.CONTENT_MAX_RECORDS]: null,
