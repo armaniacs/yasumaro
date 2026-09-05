@@ -95,3 +95,10 @@ sed -n '240,246p' src/background/ai/providers/OpenAIProvider.ts
 - [ ] provider 関連テスト全 green（type-check / lint / build 含む）
 - [ ] コードレビュー完了
 - [ ] ドキュメント更新（DESIGN_SPECIFICATIONS.md / 該当節に cap 定数の SSOT を追記。旧 PBI 2026-08-07-01 の指摘解消を記録）
+
+## 実装メモ（2026-09-05・branch 0905c）
+- `ProviderStrategy.ts` に `export const MAX_AI_HTTP_RESPONSE_BYTES`（10MB、summary＋testConnection 両用途）を置き、`MAX_HTTP_SUMMARY_RESPONSE_BYTES`（base）・`MAX_AI_RESPONSE_BYTES` ×2（Gemini/OpenAI）を削除・付け替え
+- base に `protected getAllowedUrlsForRequests()` を追加（`urlWhitelist.getAllowedUrls` への委譲。base は既存 import のため循環なし・type-check で確認）
+- 両 provider の private ラッパーと `getAllowedUrls` 直接 import を削除し、testConnection 内呼び出しを base helper に付け替え。debug envelope・flow 骨格は不変
+- 旧 PBI 2026-08-07-01 指摘（`_getAllowedUrls` 逐語同一 2 コピー）は本 PBI で解消済み
+- 検証: `src/background/ai` 14 files / 214 tests green、全 suite 682 passed・1 skipped（11574 passed・21 skipped）、type-check clean、lint 0 errors
