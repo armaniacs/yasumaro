@@ -33,6 +33,28 @@ export interface MessageValidator<T> {
   validate(msg: unknown): T;
 }
 
+/**
+ * Payload size caps. Oversized payloads are rejected (not truncated) so a
+ * compromised or buggy sender cannot exhaust SW memory or chrome.storage
+ * quota via the recording pipeline.
+ */
+export const VALIDATOR_LIMITS = {
+  /** VALID_VISIT / MANUAL_RECORD body text */
+  MAX_CONTENT_LENGTH: 1_000_000,
+  /** MANUAL_RECORD title */
+  MAX_TITLE_LENGTH: 500,
+  /** DASHBOARD_SQLITE search query */
+  MAX_SEARCH_QUERY_LENGTH: 1_000,
+  /** DASHBOARD_SQLITE import rows per request */
+  MAX_IMPORT_ROWS: 1_000,
+  /** DASHBOARD_SQLITE import payload (JSON estimate) */
+  MAX_IMPORT_BYTES: 2_000_000,
+  /** DASHBOARD_SQLITE restore_db payload */
+  MAX_RESTORE_DB_BYTES: 10_000_000,
+  /** DASHBOARD_SQLITE append_to_obsidian ids per request */
+  MAX_APPEND_IDS: 1_000,
+} as const;
+
 // ------------------------------------------------------------------
 // ServiceWorkerRequestValidator — generic ExtensionMessage validation
 // ------------------------------------------------------------------
@@ -66,6 +88,9 @@ export class ValidVisitValidator implements MessageValidator<ValidVisitMessage> 
     }
     if (payload.content.length === 0) {
       throw new ValidationError('ValidVisitValidator', 'payload.content must not be empty', 'content');
+    }
+    if (payload.content.length > VALIDATOR_LIMITS.MAX_CONTENT_LENGTH) {
+      throw new ValidationError('ValidVisitValidator', `payload.content exceeds ${VALIDATOR_LIMITS.MAX_CONTENT_LENGTH} chars`, 'content');
     }
     if (payload.force !== undefined && typeof payload.force !== 'boolean') {
       throw new ValidationError('ValidVisitValidator', 'payload.force must be boolean', 'force');
@@ -127,20 +152,36 @@ export class DashboardSqliteValidator implements MessageValidator<DashboardSqlit
       if (typeof p.query !== 'string') {
         throw new ValidationError('DashboardSqliteValidator', 'search: query must be string', 'query');
       }
+      if (p.query.length > VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH) {
+        throw new ValidationError('DashboardSqliteValidator', `search: query exceeds ${VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH} chars`, 'query');
+      }
     }
     if (subtype === 'import') {
       if (!Array.isArray(p.rows)) {
         throw new ValidationError('DashboardSqliteValidator', 'import: rows must be array', 'rows');
+      }
+      if (p.rows.length > VALIDATOR_LIMITS.MAX_IMPORT_ROWS) {
+        throw new ValidationError('DashboardSqliteValidator', `import: rows exceeds ${VALIDATOR_LIMITS.MAX_IMPORT_ROWS}`, 'rows');
+      }
+      const approxBytes = JSON.stringify(p.rows).length;
+      if (approxBytes > VALIDATOR_LIMITS.MAX_IMPORT_BYTES) {
+        throw new ValidationError('DashboardSqliteValidator', `import: payload exceeds ${VALIDATOR_LIMITS.MAX_IMPORT_BYTES} bytes`, 'rows');
       }
     }
     if (subtype === 'restore_db') {
       if (typeof p.data !== 'string') {
         throw new ValidationError('DashboardSqliteValidator', 'restore_db: data must be string', 'data');
       }
+      if (p.data.length > VALIDATOR_LIMITS.MAX_RESTORE_DB_BYTES) {
+        throw new ValidationError('DashboardSqliteValidator', `restore_db: data exceeds ${VALIDATOR_LIMITS.MAX_RESTORE_DB_BYTES} chars`, 'data');
+      }
     }
     if (subtype === 'append_to_obsidian') {
       if (!Array.isArray(p.ids)) {
         throw new ValidationError('DashboardSqliteValidator', 'append_to_obsidian: ids must be array', 'ids');
+      }
+      if (p.ids.length > VALIDATOR_LIMITS.MAX_APPEND_IDS) {
+        throw new ValidationError('DashboardSqliteValidator', `append_to_obsidian: ids exceeds ${VALIDATOR_LIMITS.MAX_APPEND_IDS}`, 'ids');
       }
     }
 
@@ -204,11 +245,28 @@ export class ManualRecordValidator implements MessageValidator<ManualRecordMessa
     if (typeof payload.title !== 'string') {
       throw new ValidationError('ManualRecordValidator', 'payload.title must be string', 'title');
     }
+    if (payload.title.length > VALIDATOR_LIMITS.MAX_TITLE_LENGTH) {
+      throw new ValidationError('ManualRecordValidator', `payload.title exceeds ${VALIDATOR_LIMITS.MAX_TITLE_LENGTH} chars`, 'title');
+    }
     if (typeof payload.url !== 'string' || payload.url.length === 0) {
       throw new ValidationError('ManualRecordValidator', 'payload.url must be non-empty string', 'url');
     }
+    // Same http/https restriction as FetchUrlValidator — blocks
+    // javascript:/data: scheme URLs from reaching SQLite/dashboard rendering.
+    try {
+      const parsed = new URL(payload.url);
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        throw new ValidationError('ManualRecordValidator', 'payload.url must be http or https', 'url');
+      }
+    } catch (e) {
+      if (e instanceof ValidationError) throw e;
+      throw new ValidationError('ManualRecordValidator', 'payload.url must be valid URL', 'url');
+    }
     if (typeof payload.content !== 'string') {
       throw new ValidationError('ManualRecordValidator', 'payload.content must be string', 'content');
+    }
+    if (payload.content.length > VALIDATOR_LIMITS.MAX_CONTENT_LENGTH) {
+      throw new ValidationError('ManualRecordValidator', `payload.content exceeds ${VALIDATOR_LIMITS.MAX_CONTENT_LENGTH} chars`, 'content');
     }
     if (payload.force !== undefined && typeof payload.force !== 'boolean') {
       throw new ValidationError('ManualRecordValidator', 'payload.force must be boolean', 'force');
