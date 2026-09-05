@@ -24,3 +24,7 @@ export async function recordFailedAttempt(): Promise<void> {
 export async function resetFailedAttempts(): Promise<void> {
   return defaultRateLimitService.resetFailedAttempts();
 }
+
+export async function flushRateLimitWrites(): Promise<void> {
+  return defaultRateLimitService.flushPendingWrites();
+}

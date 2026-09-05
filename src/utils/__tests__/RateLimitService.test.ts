@@ -4,8 +4,8 @@
  * chrome global mock なしに NTP skew / 二重ロック挙動を純粋テストする。
  */
 
-import { describe, test, expect, beforeEach } from 'vitest';
-import { RateLimitService } from '../RateLimitService.js';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
+import { RateLimitService, RATE_LIMIT_WRITE_COALESCE_MS } from '../RateLimitService.js';
 import type { Clock, StoragePort, StorageArea } from '../ports.js';
 
 class InMemoryStorageArea implements StorageArea {
@@ -36,6 +36,14 @@ class InMemoryStorageArea implements StorageArea {
 
 function createInMemoryStoragePort(): StoragePort {
   return { local: new InMemoryStorageArea(), session: new InMemoryStorageArea() };
+}
+
+class CountingStorageArea extends InMemoryStorageArea {
+  setCalls = 0;
+  async set(items: Record<string, unknown>): Promise<void> {
+    this.setCalls++;
+    await super.set(items);
+  }
 }
 
 class FakeClock implements Clock {
@@ -192,5 +200,94 @@ describe('RateLimitService', () => {
     expect(localData.lockedUntil).toBeUndefined();
     expect(sessionData.passwordFailedAttempts).toBeUndefined();
     expect(sessionData.lockedUntil).toBeUndefined();
+  });
+});
+
+describe('RateLimitService 書き込み合体 (PBI-17)', () => {
+  let clock: FakeClock;
+  let session: CountingStorageArea;
+  let local: CountingStorageArea;
+  let service: RateLimitService;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    clock = new FakeClock(1_000_000);
+    session = new CountingStorageArea();
+    local = new CountingStorageArea();
+    service = new RateLimitService(clock, { session, local });
+  });
+
+  afterEach(async () => {
+    await service.flushPendingWrites();
+    vi.useRealTimers();
+  });
+
+  test('連続した失敗試行の書き込みが合体される', async () => {
+    await service.recordFailedAttempt();
+    await service.recordFailedAttempt();
+    await service.recordFailedAttempt();
+
+    // 合体ウィンドウ内はストレージ書き込みが発生しない
+    expect(session.setCalls).toBe(0);
+    expect(local.setCalls).toBe(0);
+
+    await vi.advanceTimersByTimeAsync(RATE_LIMIT_WRITE_COALESCE_MS);
+
+    // 最終値のみ1回ずつ書き込まれる
+    expect(session.setCalls).toBe(1);
+    expect(local.setCalls).toBe(1);
+    const sessionData = await session.get<{ passwordFailedAttempts: number; firstFailedAttemptTime: number }>([
+      'passwordFailedAttempts',
+      'firstFailedAttemptTime',
+    ]);
+    expect(sessionData.passwordFailedAttempts).toBe(3);
+    expect(sessionData.firstFailedAttemptTime).toBe(1_000_000);
+  });
+
+  test('ロックアウト到達時は遅延なく両ストアへ即時フラッシュされる', async () => {
+    for (let i = 0; i < 4; i++) {
+      await service.recordFailedAttempt();
+    }
+    expect(session.setCalls).toBe(0);
+
+    await service.recordFailedAttempt();
+
+    // タイマーを進めなくても5回目で即時書き込まれる
+    expect(session.setCalls).toBe(1);
+    expect(local.setCalls).toBe(1);
+
+    const result = await service.checkRateLimit();
+    expect(result.success).toBe(false);
+    const sessionLock = await session.get<{ lockedUntil: number }>(['lockedUntil']);
+    const localLock = await local.get<{ lockedUntil: number }>(['lockedUntil']);
+    expect(sessionLock.lockedUntil).toBe(1_000_000 + 30 * 60 * 1000);
+    expect(localLock.lockedUntil).toBe(1_000_000 + 30 * 60 * 1000);
+  });
+
+  test('デバウンス待ち中の checkRateLimit はメモリ上の最新値を読む', async () => {
+    await session.set({ passwordFailedAttempts: 4, firstFailedAttemptTime: clock.now() });
+    await local.set({ passwordFailedAttempts: 4, firstFailedAttemptTime: clock.now() });
+    session.setCalls = 0;
+    local.setCalls = 0;
+
+    // 5回目: 閾値到達で即時フラッシュされるが、check がタイマー待ちなくロックアウトする
+    await service.recordFailedAttempt();
+    const result = await service.checkRateLimit();
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('30 minutes');
+  });
+
+  test('resetFailedAttempts は保留中の書き込みを破棄し復活させない', async () => {
+    await service.recordFailedAttempt();
+    await service.recordFailedAttempt();
+    await service.resetFailedAttempts();
+
+    await vi.advanceTimersByTimeAsync(RATE_LIMIT_WRITE_COALESCE_MS);
+
+    expect(session.setCalls).toBe(0);
+    expect(local.setCalls).toBe(0);
+    const result = await service.checkRateLimit();
+    expect(result.success).toBe(true);
   });
 });

@@ -143,6 +143,9 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
         await recordFailedAttempt();
 
         // 【確認】: setが呼ばれ、失敗回数が1増加していることを確認
+        // PBI-17: 閾値未満の記録は合体ウィンドウで束ねられるため明示フラッシュ後に検証する
+        const { flushRateLimitWrites } = await import('../rateLimiter.js');
+        await flushRateLimitWrites();
         expect(chrome.storage.session.set).toHaveBeenCalledWith({
             passwordFailedAttempts: 1,
             firstFailedAttemptTime: expect.any(Number),
