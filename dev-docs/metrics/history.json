@@ -489,6 +489,28 @@
       "testCount": 10969,
       "functionCount": 2338,
       "dependencyCount": 25
+    },
+    {
+      "version": "6.7.109",
+      "tagVersion": "6.7.109",
+      "tag": "v6.7.109",
+      "date": "2026-09-05T08:57:41+09:00",
+      "linesOfCode": 246530,
+      "fileCount": 1143,
+      "testCount": 11107,
+      "functionCount": 2418,
+      "dependencyCount": 25
+    },
+    {
+      "version": "6.7.110",
+      "tagVersion": "6.7.110",
+      "tag": "v6.7.110",
+      "date": "2026-09-05T20:45:45+09:00",
+      "linesOfCode": 248232,
+      "fileCount": 1154,
+      "testCount": 11249,
+      "functionCount": 2464,
+      "dependencyCount": 25
     }
   ]
 }
