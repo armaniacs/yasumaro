@@ -1984,6 +1984,9 @@
   "retentionUnlimited": {
     "message": "無制限（削除しない）"
   },
+  "retentionUnlimitedWarning": {
+    "message": "無制限に設定するとレコードは永久に保持され、ストレージが増え続けます。保持期間 365 日または最大レコード数の設定を推奨します。"
+  },
   "retention30days": {
     "message": "30日"
   },
