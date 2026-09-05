@@ -1,9 +1,19 @@
 /**
  * purgeHandlers.ts
  * Purge operations: delete old records, clear content, clear all.
+ *
+ * DELETE/UPDATE conditions come from queryPlan.ts shared builders (PBI-34),
+ * mirroring IdbVfsBackend.purgeOldRecords/purgeContent. Only the execution
+ * wrapper differs (transaction here): the conditions themselves are shared.
  */
 
 import { sqlExec, sqlQuery, withTransaction, type HandlerContext } from './handlers.js';
+import {
+  purgeCutoffMs,
+  buildPurgeOldRecordsStatements,
+  contentPurgeStarredClause,
+  buildContentPurgeStatements,
+} from '../queryPlan.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 
 export interface PurgeLogCallback {
@@ -16,32 +26,21 @@ export async function handlePurgeOldRecords(
   log: PurgeLogCallback,
 ): Promise<{ purged: number }> {
   const { retentionDays, maxRecords } = payload;
-  const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+  const stmts = buildPurgeOldRecordsStatements(purgeCutoffMs(retentionDays));
   let totalPurged = 0;
 
   try {
     await withTransaction(ctx, async () => {
-      await sqlExec(
-        ctx,
-        'DELETE FROM browsing_logs WHERE created_at < ? AND is_starred = 0 AND is_deleted = 0',
-        [cutoffMs]
-      );
+      await sqlExec(ctx, stmts.deleteOldSql, [...stmts.deleteOldParams]);
 
       await sqlQuery(ctx, 'SELECT changes() AS c', [], (row) => { totalPurged = Number(row.c); });
 
       let count = 0;
-      await sqlQuery(ctx, 'SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row.c); });
+      await sqlQuery(ctx, stmts.countSql, [], (row) => { count = Number(row.c); });
 
       if (count > maxRecords) {
         const toDelete = count - maxRecords;
-        await sqlExec(
-          ctx,
-          `DELETE FROM browsing_logs WHERE id IN (
-             SELECT id FROM browsing_logs WHERE is_starred = 0 AND is_deleted = 0
-             ORDER BY created_at ASC LIMIT ?
-           )`,
-          [toDelete]
-        );
+        await sqlExec(ctx, stmts.deleteExcessSql, [toDelete]);
         await sqlQuery(ctx, 'SELECT changes() AS c', [], (row) => { totalPurged += Number(row.c); });
       }
     });
@@ -61,42 +60,25 @@ export async function handleContentPurge(
     includeStarred?: boolean | null;
   },
 ): Promise<{ purged: number }> {
-  const starredClause = payload.includeStarred ? '' : 'AND is_starred = 0';
+  const stmts = buildContentPurgeStatements(contentPurgeStarredClause(payload.includeStarred));
   let totalPurged = 0;
 
   if (payload.retentionDays != null && payload.retentionDays > 0) {
-    const cutoffMs = Date.now() - payload.retentionDays * 24 * 60 * 60 * 1000;
-    await sqlExec(
-      ctx,
-      `UPDATE browsing_logs SET content = NULL
-       WHERE content IS NOT NULL AND created_at < ? ${starredClause}`,
-      [cutoffMs]
-    );
+    const cutoffMs = purgeCutoffMs(payload.retentionDays);
+    await sqlExec(ctx, stmts.deleteOldSql, [cutoffMs]);
     await sqlQuery(ctx, 'SELECT changes() AS c', [], (row) => { totalPurged += Number(row.c); });
   }
 
   if (payload.maxRecords != null && payload.maxRecords > 0) {
     let count = 0;
-    await sqlQuery(
-      ctx,
-      `SELECT COUNT(*) AS c FROM browsing_logs WHERE content IS NOT NULL ${starredClause}`,
-      [],
-      (row) => { count = Number(row.c); }
-    );
+    await sqlQuery(ctx, stmts.countSql, [], (row) => { count = Number(row.c); });
 
     if (count > payload.maxRecords) {
       const excess = count - payload.maxRecords;
-      await sqlExec(
-        ctx,
-        `UPDATE browsing_logs SET content = NULL
-         WHERE id IN (
-           SELECT id FROM browsing_logs
-           WHERE content IS NOT NULL ${starredClause}
-           ORDER BY created_at ASC
-           LIMIT ?
-         )`,
-        [excess]
-      );
+      await sqlExec(ctx, stmts.clearExcessSql, [excess]);
+      // NOTE (preserved, PBI-34): reports the computed excess rather than
+      // changes() (which the idb backend uses). Equal in the normal case;
+      // see buildContentPurgeStatements docs.
       totalPurged += excess;
     }
   }

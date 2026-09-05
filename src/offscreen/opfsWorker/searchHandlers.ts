@@ -1,13 +1,25 @@
 /**
  * searchHandlers.ts
  * Search operations: FTS5 trigram MATCH and LIKE fallback.
+ *
+ * SQL text and parameter order come from queryPlan.ts shared builders
+ * (PBI-34); this module keeps only row mapping and the legacy
+ * coerce-to-DESC invalid-order policy (see buildSearchOrderClause).
  */
 
 import type { SearchResult } from '../../utils/sqlite-types.js';
 import { sanitizeFtsTerm } from '../schema.js';
+import { shouldUseFts5 } from '../sqliteQueryBuilder.js';
 import type { SearchPayload } from './types.js';
 import { sqlQuery, type HandlerContext } from './handlers.js';
-import { buildExtraWhereSql } from '../queryPlan.js';
+import {
+  buildExtraWhereSql,
+  buildFtsMatchQuery,
+  buildLikePattern,
+  buildSearchOrderClause,
+  buildFtsSearchStatements,
+  buildLikeSearchStatements,
+} from '../queryPlan.js';
 
 export async function handleSearch(ctx: HandlerContext, payload: SearchPayload, fts5Available: boolean): Promise<{ rows: SearchResult[]; total: number }> {
   const { text: searchQuery = '', limit = 50, offset = 0, orderBy, orderDir } = payload;
@@ -15,16 +27,26 @@ export async function handleSearch(ctx: HandlerContext, payload: SearchPayload, 
   const bare = sanitizeFtsTerm(searchQuery);
   if (!bare) return { rows: [], total: 0 };
 
-  const charLen = [...bare].length;
-  if (fts5Available && charLen >= 3) {
-    return handleSearchFts(ctx, `"${bare}"`, limit, offset, orderBy, orderDir, payload);
+  if (shouldUseFts5(fts5Available, bare)) {
+    return handleSearchFts(ctx, buildFtsMatchQuery(bare), limit, offset, orderBy, orderDir, payload);
   }
   return handleSearchLike(ctx, searchQuery, limit, offset, orderBy, orderDir, payload);
 }
 
-function buildSearchExtra(payload: SearchPayload): { extraWhereSql: string; extraWhereSqlFts: string; extraParams: (string | number)[] } {
-  const { extraWhereSql, extraWhereSqlFts, extraParams } = buildExtraWhereSql(payload as unknown as Record<string, unknown>);
-  return { extraWhereSql, extraWhereSqlFts, extraParams: extraParams as (string | number)[] };
+function pushSearchRow(rows: SearchResult[], row: Record<string, string | number | null>): void {
+  rows.push({
+    id: Number(row.id),
+    url: String(row.url),
+    title: row.title as string | null,
+    summary: row.summary as string | null,
+    tags: row.tags as string | null,
+    created_at: Number(row.created_at),
+    domain: row.domain as string | null,
+    visit_duration: row.visit_duration as number | null,
+    scroll_ratio: row.scroll_ratio as number | null,
+    is_starred: Number(row.is_starred),
+    rank: Number(row.rank ?? 0),
+  });
 }
 
 export async function handleSearchFts(
@@ -33,45 +55,20 @@ export async function handleSearchFts(
   orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC',
   payload: SearchPayload = {}
 ): Promise<{ rows: SearchResult[]; total: number }> {
-  const { extraWhereSqlFts, extraParams } = buildSearchExtra(payload);
-  let total = 0;
-  await sqlQuery(
-    ctx,
-    `SELECT COUNT(*) AS c FROM browsing_logs_fts
-JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
-WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extraWhereSqlFts}`,
-    [sanitizedQuery, ...extraParams],
-    (row) => { total = Number(row.c); }
-  );
+  const extra = buildExtraWhereSql(payload as unknown as Record<string, unknown>);
+  // 'coerce' preserves the legacy worker behaviour: out-of-whitelist
+  // orderDir normalizes to DESC instead of failing (IdbVfsBackend fails
+  // closed instead — intentional divergence, see queryPlan.ts).
+  const { orderClause } = buildSearchOrderClause({ orderBy, orderDir }, { fts: true, onInvalid: 'coerce' });
+  const stmts = buildFtsSearchStatements(extra, { ftsQuery: sanitizedQuery, orderClause, limit, offset });
 
-  const dir = orderDir === 'ASC' ? 'ASC' : 'DESC';
-  const orderClause = orderBy === 'created_at' ? `b.created_at ${dir}, b.id ${dir}` : 'rank';
+  let total = 0;
+  await sqlQuery(ctx, stmts.countSql, stmts.countParams, (row) => { total = Number(row.c); });
 
   const rows: SearchResult[] = [];
-  await sqlQuery(
-    ctx,
-    `SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank AS rank
-     FROM browsing_logs_fts
-     JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id
-     WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extraWhereSqlFts}
-     ORDER BY ${orderClause} LIMIT ? OFFSET ?`,
-    [sanitizedQuery, ...extraParams, limit, offset],
-    (row) => {
-      rows.push({
-        id: Number(row.id),
-        url: String(row.url),
-        title: row.title as string | null,
-        summary: row.summary as string | null,
-        tags: row.tags as string | null,
-        created_at: Number(row.created_at),
-        domain: row.domain as string | null,
-        visit_duration: row.visit_duration as number | null,
-        scroll_ratio: row.scroll_ratio as number | null,
-        is_starred: Number(row.is_starred),
-        rank: Number(row.rank),
-      });
-    }
-  );
+  await sqlQuery(ctx, stmts.rowsSql, stmts.rowsParams, (row) => {
+    pushSearchRow(rows, row as Record<string, string | number | null>);
+  });
 
   return { rows, total };
 }
@@ -82,46 +79,22 @@ export async function handleSearchLike(
   orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC',
   payload: SearchPayload = {}
 ): Promise<{ rows: SearchResult[]; total: number }> {
-  const like = `%${rawQuery}%`;
-  const baseConds = 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';
-  const baseParams: (string | number)[] = [like, like, like, like];
-  const { extraWhereSql, extraParams } = buildSearchExtra(payload);
-  const conditions = extraWhereSql ? `${baseConds}${extraWhereSql}` : baseConds;
-  const params: (string | number)[] = [...baseParams, ...extraParams];
+  const extra = buildExtraWhereSql(payload as unknown as Record<string, unknown>);
+  const { orderClause } = buildSearchOrderClause({ orderBy, orderDir }, { fts: false, onInvalid: 'coerce' });
+  const stmts = buildLikeSearchStatements(extra, {
+    likePattern: buildLikePattern(rawQuery),
+    orderClause,
+    limit,
+    offset,
+  });
 
   let total = 0;
-  await sqlQuery(
-    ctx,
-    `SELECT COUNT(*) AS c FROM browsing_logs WHERE ${conditions}`,
-    params,
-    (row) => { total = Number(row.c); }
-  );
-
-  const dir = orderBy === 'created_at' && orderDir === 'ASC' ? 'ASC' : 'DESC';
+  await sqlQuery(ctx, stmts.countSql, stmts.countParams, (row) => { total = Number(row.c); });
 
   const rows: SearchResult[] = [];
-  await sqlQuery(
-    ctx,
-    `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred
-     FROM browsing_logs WHERE ${conditions}
-     ORDER BY created_at ${dir} LIMIT ? OFFSET ?`,
-    [...params, limit, offset],
-    (row) => {
-      rows.push({
-        id: Number(row.id),
-        url: String(row.url),
-        title: row.title as string | null,
-        summary: row.summary as string | null,
-        tags: row.tags as string | null,
-        created_at: Number(row.created_at),
-        domain: row.domain as string | null,
-        visit_duration: row.visit_duration as number | null,
-        scroll_ratio: row.scroll_ratio as number | null,
-        is_starred: Number(row.is_starred),
-        rank: 0,
-      });
-    }
-  );
+  await sqlQuery(ctx, stmts.rowsSql, stmts.rowsParams, (row) => {
+    pushSearchRow(rows, row as Record<string, string | number | null>);
+  });
 
   return { rows, total };
 }

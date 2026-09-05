@@ -7,7 +7,7 @@ import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import type { StorageQuery } from '../../utils/sqlite-types.js';
 import type { SqliteValue } from '../sqliteEngine.js';
 import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from '../schema.js';
-import { buildWhereClause, buildOrderByClause, buildFtsTagMatchCondition } from '../sqliteQueryBuilder.js';
+import { buildQuerySpec, QUERY_CAPS, PLAIN_LIST_COLUMNS, buildPlainListStatements } from '../queryPlan.js';
 import type { QueryPayload } from './types.js';
 import { sqlExec, sqlQuery, withTransaction, type HandlerContext } from './handlers.js';
 import { errorMessage } from '../../utils/errorUtils.js';
@@ -24,31 +24,25 @@ export async function handleInsert(ctx: HandlerContext, record: BrowsingLogRecor
 export async function handleQuery(ctx: HandlerContext, payload: QueryPayload): Promise<{ rows: BrowsingLogRecord[]; total: number }> {
   const { limit = 20, offset = 0, tag } = payload;
 
-  const { orderClause, error } = buildOrderByClause(payload as StorageQuery);
-  if (error) {
-    throw new Error(error);
+  // WHERE/ORDER/tag assembly is shared with IdbVfsBackend via queryPlan.ts
+  // (PBI-34). LIMIT passes through unclamped: recordsRepo.query clamps to
+  // MAX_QUERY_LIMIT upstream, so re-clamping here to QUERY_CAPS.plain would
+  // wrongly cap legitimate large listings.
+  const spec = buildQuerySpec({ ...(payload as StorageQuery), limit, offset }, { caps: QUERY_CAPS, fts5Available: false });
+  if (spec.error) {
+    throw new Error(spec.error);
   }
-
-  const { where: baseWhere, params: baseParams } = buildWhereClause(payload as StorageQuery);
-  let where = baseWhere;
-  const params: SqliteValue[] = [...baseParams];
-
-  if (tag) {
-    const { condition, param } = buildFtsTagMatchCondition(tag);
-    where = where ? `${where} AND ${condition}` : `WHERE ${condition}`;
-    params.push(param);
-  }
+  const stmts = buildPlainListStatements({ ...spec, limit, offset }, { tag: tag ?? null, columns: PLAIN_LIST_COLUMNS });
+  const params: SqliteValue[] = stmts.countParams;
 
   let total = 0;
-  await sqlQuery(ctx, `SELECT COUNT(*) AS c FROM browsing_logs ${where}`, params, (row) => { total = Number(row.c); });
+  await sqlQuery(ctx, stmts.countSql, params, (row) => { total = Number(row.c); });
 
   const rows: BrowsingLogRecord[] = [];
   await sqlQuery(
     ctx,
-    `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced, gist_synced
-     FROM browsing_logs ${where}
-     ${orderClause} LIMIT ? OFFSET ?`,
-    [...params, limit, offset],
+    stmts.rowsSql,
+    stmts.rowsParams,
     (row) => {
       rows.push({
         id: Number(row.id),
