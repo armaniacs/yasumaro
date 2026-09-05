@@ -33,6 +33,16 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [Unreleased]
+
+### Fixed
+
+- Checking Team レビュー（2026-09-05、26 候補）から 10 件を実施（PBI 2026-09-05-01〜10、`dev-docs/archived/pbi/` 参照）。`optional_host_permissions` から `<all_urls>` を削除して取得先ドメインの個別列挙のみに限定、confirmToken の `Math.random` フォールバックを削除して fail-closed 化、メッセージバリデータに上限サイズ検証（ValidVisit content 1MB・ManualRecord title 500 字/content 1MB・SQLite import 件数/サイズ等）と URL スキーム検証（http/https 以外を拒否）を追加、レコード保持に 365 日のデフォルト上限を設定（両境界が無制限のときはオプションページに警告表示）、FTS 再構築条件を全空のみから件数比較に緩和して部分インデックスを自動修復、マイグレーション冪等判定をエラーメッセージの文字列マッチから `pragma_table_info` 存在確認ベースに変更、復号失敗時に API キーを空文字で上書きせず元の暗号文を保全（`unrecoverable` で通知）、popup 幅を 360px 固定から min 360/max 420 の許容範囲方式に緩和して翻訳文字列のクリップを解消、`retryObsidianWrite` が Obsidian 書き込みの成否を正しく返すように修正、閲覧履歴記録の初回 OFF（同意ゲート・デフォルト false）を検証・ピン留めし「記録中」バッジ（`●`）の常時表示とオンボーディングへの記録範囲説明を追加
+
+### リファクタリング
+
+- アーキテクチャ診断（Architecture Round 5、11 候補）から 6 件を実施（PBI 2026-09-05-11〜16、`dev-docs/archived/pbi/` 参照）。DASHBOARD_SQLITE の送信 4 箇所・retry 4 層を `DashboardGateway`（`src/messaging/`へ移設）1 module に統合し sender 所在を grep ガードで固定（service ローカル sender ペア削除・retry を opt-in option に吸収・`decodeOpfsSpikeReport` 厳密版を validators に移設）、content script の `watchDynamicContent` を 1 signature に統一（kernel 側の逆順 wrapper 削除）し `CONTENT_CLEANSING_EXECUTED` 通知を `cleansingExecuted` フィールド＋kernel 注入 sender 経由に移動して utils を chrome-free に、`extractInternal` の candidate/body 二重経路を共有 internal step `runCleanseAndExtract` に折り畳み cleansedReason 判定を ×3→×1 に（entry 2 種と ByteMeter 計測順序は維持）、history panel の lifecycle 配管 8 method を `onNavigateIn`/`onNavigateOut` 2 method に狭窄（interface 27→21・cache 無効化政策を 1 箇所に集約）、provider testConnection の `_getAllowedUrls` 逐語同一 2 コピーと応答 cap 3 定義を base に引き上げ、bench htmlReport から trendReport モジュールを分離。なおクレンジング実行の badge 通知（`C<n>`）と `cleansedReason` メタデータは body フォールバック経路でも発火するようになった（旧実装では candidate 経路のみで非対称だったのを修正）
+
 ## [6.7.109] - 2026-09-05
 
 ### リファクタリング

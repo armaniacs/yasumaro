@@ -48,11 +48,11 @@ Scenario: 既存のレポート生成テストが無修正で green
 ```
 
 ## 受け入れ基準
-- [ ] `bench/harness/trendReport.mjs` が新設され、`renderTrendSection(history)`（sparkline + trendSection を含む）を export する
-- [ ] `htmlReport.mjs` から sparkline / trendSection / trend CSS 4 ルールが削除され、`renderHtml` は `renderTrendSection` を 1 箇所で呼ぶ（htmlReport.mjs は ~170 行に縮減）
-- [ ] `escapeHtml` が `bench/harness/format.mjs` に移動し、htmlReport / trendReport の両方が import する（htmlReport からの re-export は不要 — consumer は htmlReport 本体と htmlReport.test.ts のみ、test の import を付け替え）
-- [ ] trend 関連のテスト（htmlReport.test.ts の trend セクション assert）が trendReport 側のテストに移行する
-- [ ] `bench` / `bench:check` が PASS（レポート出力のバイト差は CSS/HTML の移動に由来する同一内容であること）
+- [x] `bench/harness/trendReport.mjs` が新設され、`renderTrendSection(history)`（sparkline + trendSection を含む）を export する
+- [x] `htmlReport.mjs` から sparkline / trendSection / trend CSS 4 ルールが削除され、`renderHtml` は `renderTrendSection` を 1 箇所で呼ぶ（htmlReport.mjs は ~170 行に縮減）
+- [x] `escapeHtml` が `bench/harness/format.mjs` に移動し、htmlReport / trendReport の両方が import する（htmlReport からの re-export は不要 — consumer は htmlReport 本体と htmlReport.test.ts のみ、test の import を付け替え）
+- [x] trend 関連のテスト（htmlReport.test.ts の trend セクション assert）が trendReport 側のテストに移行する
+- [x] `bench` / `bench:check` が PASS（レポート出力のバイト差は CSS/HTML の移動に由来する同一内容であること）
 
 ## テスト戦略（t_wadaスタイル）
 ### 単体テスト
@@ -92,7 +92,10 @@ rg -n "escapeHtml|fmtNum|fmtKB" bench/harness/*.mjs bench/harness/__tests__/*
 - htmlReport.test.ts の trend assert はレポート全体の文字列検査の可能性 — 移行時に assert 対象を trendReport 単体に切り出すだけで、renderHtml 側は「trend セクションが含まれる」程度の疎 assert に保つ
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] bench ハーネス テスト全 green ＋ `bench` / `bench:check` PASS
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新（docs/PERFORMANCE_TEST.md の harness 構成に trendReport を追記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] bench ハーネス テスト全 green ＋ `bench` / `bench:check` PASS
+- [x] コードレビュー完了
+- [x] ドキュメント更新（docs/PERFORMANCE_TEST.md の harness 構成に trendReport を追記）
+
+## 実装メモ（2026-09-05・branch 0905c・続）
+- 完了（commit `3d32b6da`、SDD サブエージェント実装）。レビュー first-pass Approved。harness 102 tests green + bench:check PASS。docs/PERFORMANCE_TEST.md の harness 構成も更新済み。

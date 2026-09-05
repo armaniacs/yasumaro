@@ -52,3 +52,6 @@ Scenario: 無制限を選択した場合は明示される
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了
+
+## 実装メモ（2026-09-05・branch 0905c・続）
+- 完了（commit `856fa3ab`、controller-direct）。storage-defaults 2 件・retention-settings 3 件新設、影響 6 スイート 72 tests green。

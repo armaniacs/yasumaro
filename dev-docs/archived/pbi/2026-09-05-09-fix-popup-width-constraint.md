@@ -48,3 +48,6 @@ Scenario: 狭い表示でもレイアウトが崩れない
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了
+
+## 実装メモ（2026-09-05・branch 0905c・続）
+- 完了（commit `f99a333d`、controller-direct）。popup 36 スイート 827 tests green + build 成功。日・独ロケールの目視確認は手動確認項目として残置。

@@ -57,12 +57,12 @@ Scenario: 遷移 2 method の外から lifecycle 配管に触れない
 ```
 
 ## 受け入れ基準
-- [ ] `SqliteHistoryModel` interface に `onNavigateIn(initParams?: { searchTag?: string; searchDomain?: string })` と `onNavigateOut()` が追加される
-- [ ] lifecycle 配管 8 method（checkFallbackStatus / retryInitialLoad / consumePendingInit / activateWithTag / activateWithDomain / loadPersistedSortIntoState / bumpGenerationOnUnmount / resetFiltersForFreshLoad）が interface から外れ、クロージャ内関数になる（interface 27 → 21 method）
-- [ ] `sqliteHistoryPanel.ts` の init/load/destroy が Model の 2 method 呼び出しに縮減する（Panel.init は initParams の保持のみ。PanelLifecycle interface・NavigationRegistry は無修正）
-- [ ] `invalidateCache(reason)` 内部ヘルパーが新設され、5 call site が経由する（mutation sites は generation bump をしない現行意味論を維持）
-- [ ] 既存 13 テストファイルの lifecycle 関連テストが onNavigateIn/onNavigateOut 契約テストに移行する（fetchData・reducer・cache・sort persistence の各テストは無修正）
-- [ ] 振る舞いが変更前と同一（リファクタリング）。generation / pendingInit exactly-once / sort persistence の既存アサーションを契約テストとして維持
+- [x] `SqliteHistoryModel` interface に `onNavigateIn(initParams?: { searchTag?: string; searchDomain?: string })` と `onNavigateOut()` が追加される
+- [x] lifecycle 配管 8 method（checkFallbackStatus / retryInitialLoad / consumePendingInit / activateWithTag / activateWithDomain / loadPersistedSortIntoState / bumpGenerationOnUnmount / resetFiltersForFreshLoad）が interface から外れ、クロージャ内関数になる（interface 27 → 21 method）
+- [x] `sqliteHistoryPanel.ts` の init/load/destroy が Model の 2 method 呼び出しに縮減する（Panel.init は initParams の保持のみ。PanelLifecycle interface・NavigationRegistry は無修正）
+- [x] `invalidateCache(reason)` 内部ヘルパーが新設され、5 call site が経由する（mutation sites は generation bump をしない現行意味論を維持）
+- [x] 既存 13 テストファイルの lifecycle 関連テストが onNavigateIn/onNavigateOut 契約テストに移行する（fetchData・reducer・cache・sort persistence の各テストは無修正）
+- [x] 振る舞いが変更前と同一（リファクタリング）。generation / pendingInit exactly-once / sort persistence の既存アサーションを契約テストとして維持
 
 ## テスト戦略（t_wadaスタイル）
 ### 単体テスト
@@ -109,7 +109,10 @@ rg -n "activateWithTag|activateWithDomain|consumePendingInit|bumpGenerationOnUnm
 - 二重 init の stale-tag 漏れを意図的に修正：旧実装は `init(tag)→init()` でも `pendingInit` が残るため、素の再訪が stale tag で再取得し得た。新実装は Panel が `pendingNavParams` を後勝ちで保持し `load()` で exactly-once 消費するため最後の init が勝つ（`sqliteHistoryPanel.navigate.test.ts` の二重 init テストで担保）。純粋リファクタを超える振る舞い修正として記録する。
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] dashboard 関連テスト全 green（type-check / lint / build 含む）
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新（DESIGN_SPECIFICATIONS.md の history panel 節に lifecycle interface を反映。arch3 backlog の「history-panel unify 見送り」条に「絞り込み版は実装済み・legacy 移行と tag SQL 化は残置」と追記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] dashboard 関連テスト全 green（type-check / lint / build 含む）
+- [x] コードレビュー完了
+- [x] ドキュメント更新（DESIGN_SPECIFICATIONS.md の history panel 節に lifecycle interface を反映。arch3 backlog の「history-panel unify 見送り」条に「絞り込み版は実装済み・legacy 移行と tag SQL 化は残置」と追記）
+
+## 実装メモ（2026-09-05・branch 0905c・続）
+- 完了（impl `56909d90` + fix `3d7978ea`、SDD サブエージェント実装）。タスクレビュー 1 修正サイクル（契約テスト強化・double-init last-wins を意図的修正として文書化・DESIGN_SPECIFICATIONS に lifecycle ノート追加）を経て Approved。dashboard panels 341 tests green。

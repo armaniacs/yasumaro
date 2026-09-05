@@ -103,3 +103,6 @@ sed -n '240,246p' src/background/ai/providers/OpenAIProvider.ts
 - 旧 PBI 2026-08-07-01 指摘（`_getAllowedUrls` 逐語同一 2 コピー）は本 PBI で解消済み
 - 検証: `src/background/ai` 14 files / 214 tests green、全 suite 682 passed・1 skipped（11574 passed・21 skipped）、type-check clean、lint 0 errors
 - ドキュメント: `DESIGN_SPECIFICATIONS.md` に cap 定数（`MAX_AI_HTTP_RESPONSE_BYTES`）と request-time allowlist helper の SSOT ノートを追記（summary-flow の providerAllowlist 中立テーブルとの混同防止注記付き）。レビュー Important（DoD docs bullet 未達）のクローズ。
+
+## 実装メモ（2026-09-05・branch 0905c・続）
+- 完了（impl `b6b09ca1` + docs `8c52f230`、SDD サブエージェント実装）。レビューの docs 指摘をクローズして Approved。

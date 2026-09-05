@@ -47,3 +47,6 @@ Scenario: エラーメッセージ文言が変わっても冪等判定が維持�
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了
+
+## 実装メモ（2026-09-05・branch 0905c・続）
+- 完了（commit `5d67e218`、controller-direct・PBI 06 と同一コミット）。

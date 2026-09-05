@@ -284,6 +284,11 @@ Timestamp in Japanese locale (HH:MM format):
 - **Preserved asymmetries** (do not "fix" without a behavior-change PBI): the
   candidate path registers `originalContent` before cloning while the body path
   registers it after the AI step; sanitize/debug logs are candidate-only.
+- **Badge notification**: `ExtractResult.cleansingExecuted` is set only in the
+  actual-cleansing branches (the diagnostic recount never sets it), and
+  `contentKernel.extractPageContent` sends `CONTENT_CLEANSING_EXECUTED` via the
+  injected `MessageSender` seam when it is true — `utils/` stays chrome-free
+  and recount-only pages never fire the badge.
 
 ## 11. Local AI (Chrome Prompt API)
 

@@ -68,12 +68,12 @@ Scenario: bench ゲートは連続性を保つ
 ```
 
 ## 受け入れ基準
-- [ ] candidate path と body path の「clone → cleanse → preAiBytes → 理由 → AI step → dual payload → extract → fallback」の重複が 1 つの internal step に統合される（経路差分＝入力要素の決定のみが分岐に残る）
-- [ ] `cleansedReason` 判定の if/else 連鎖が 3 箇所 → 1 ヘルパー（`resolveCleanseReason` または同等）になる
-- [ ] `extractMainContentWithInfo` / `extractMainContent` の 2 entry と `withDiagnostics` internal param は維持される。header に「string entry は本番未使用・bench c1/c4 計測面」と明記される
-- [ ] 振る舞いが変更前と同一（リファクタリング）。既存 extractor テスト（index.test.ts / extractPipeline.test.ts / bytesize-lazy.test.ts）が無修正で green
-- [ ] `bench:micro` が PASS（c1〜c6 ゲート値の継続性を確認。理論上は純粋リファクタリングで計測値不変）
-- [ ] 抽出関数の行数が 571 → ~430 行程度に縮減し、以降のクレンジング機能追加が 1 箇所で完結する
+- [x] candidate path と body path の「clone → cleanse → preAiBytes → 理由 → AI step → dual payload → extract → fallback」の重複が 1 つの internal step に統合される（経路差分＝入力要素の決定のみが分岐に残る）
+- [x] `cleansedReason` 判定の if/else 連鎖が 3 箇所 → 1 ヘルパー（`resolveCleanseReason` または同等）になる
+- [x] `extractMainContentWithInfo` / `extractMainContent` の 2 entry と `withDiagnostics` internal param は維持される。header に「string entry は本番未使用・bench c1/c4 計測面」と明記される
+- [x] 振る舞いが変更前と同一（リファクタリング）。既存 extractor テスト（index.test.ts / extractPipeline.test.ts / bytesize-lazy.test.ts）が無修正で green
+- [x] `bench:micro` が PASS（c1〜c6 ゲート値の継続性を確認。理論上は純粋リファクタリングで計測値不変）
+- [x] 抽出関数の行数が 571 → ~430 行程度に縮減し、以降のクレンジング機能追加が 1 箇所で完結する
 
 ## テスト戦略（t_wadaスタイル）
 ### 単体テスト
@@ -118,7 +118,10 @@ rg -n "extractMainContent" bench/micro/
 - meter（ByteMeter）は withDiagnostics 依存。step 内の meter 呼び出し順を変えると bench c1 の計測対象が変わる — 計測ブロック（`meter.enabled` ガード）の位置は動かさない
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] contentExtractor / content / bench 関連テスト全 green（type-check / lint / build 含む）＋ `bench:micro` PASS
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新（DESIGN_SPECIFICATIONS.md の抽出パイプライン節に internal step と entry の実態を反映）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] contentExtractor / content / bench 関連テスト全 green（type-check / lint / build 含む）＋ `bench:micro` PASS
+- [x] コードレビュー完了
+- [x] ドキュメント更新（DESIGN_SPECIFICATIONS.md の抽出パイプライン節に internal step と entry の実態を反映）
+
+## 実装メモ（2026-09-05・branch 0905c・続）
+- 完了（commit `b6300f55`、SDD サブエージェント実装）。レビュー first-pass Approved。bench:micro PASS（c1 encode 連続性を実測確認）。index.ts 540 行は非対称ドキュメント温存による soft-target ミス（意図的）。
