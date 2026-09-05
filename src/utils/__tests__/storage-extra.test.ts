@@ -238,7 +238,7 @@ describe('URL set functions', () => {
       expect(settings[StorageKeys.OBSIDIAN_API_KEY]).toBe('decrypted-key');
     });
 
-    it('falls back to an empty string when decryption fails', async () => {
+    it('preserves the original ciphertext when decryption fails (fix 08: no empty-string wipe)', async () => {
       const { decryptApiKey } = await import('../crypto/index.js');
       vi.mocked(decryptApiKey).mockRejectedValueOnce(new Error('Decryption failed'));
 
@@ -251,7 +251,9 @@ describe('URL set functions', () => {
 
       const settings = await getSettings();
 
-      expect(settings[StorageKeys.OBSIDIAN_API_KEY]).toBe('');
+      // fix 08 (bf85fac4) 以降: 復号失敗フィールドは空文字化せず元の暗号文を保持する。
+      // 再認証が必要なフィールドは unrecoverable 経由で判別できる。
+      expect(settings[StorageKeys.OBSIDIAN_API_KEY]).toBe('encrypted:broken-value');
     });
 
     it('returns a plaintext (unencrypted) API key unchanged', async () => {
