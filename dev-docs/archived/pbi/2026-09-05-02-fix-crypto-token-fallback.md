@@ -22,9 +22,9 @@ Scenario: 暗号学的乱数が使えない環境ではトークンを発行し�
 ```
 
 ## 受け入れ基準
-- [ ] 暗号学的乱数が利用不可の場合に `Math.random()` ベースのトークンが発行されない
-- [ ] 暗号学的乱数が利用不可の場合はトークン発行が失敗（fail-closed）として扱われる
-- [ ] 対象操作（delete / clear_all / restore_db）が予測可能トークンで承認されない
+- [x] 暗号学的乱数が利用不可の場合に `Math.random()` ベースのトークンが発行されない
+- [x] 暗号学的乱数が利用不可の場合はトークン発行が失敗（fail-closed）として扱われる
+- [x] 対象操作（delete / clear_all / restore_db）が予測可能トークンで承認されない
 
 ## テスト戦略
 - 単体: 乱数源が利用不可の条件でトークン発行が失敗すること、利用可能な条件で発行できること
@@ -40,6 +40,9 @@ fail-closed 方針に統一し、予測可能なフォールバック経路を�
 - 着手前に Read で現状のフォールバック有無を確認すること
 - 指摘スコープ外のトークン仕様（TTL・使い捨て・検証条件）は変更しないこと
 
+## 実装メモ
+- 2026-09-05 完了（commit `eebc9c66`）: `generateToken` を fail-closed 化 — randomUUID / getRandomValues のいずれも使えない環境では throw し、`Math.random` フォールバック経路を物理削除。テスト: `confirmTokenManager-failclosed.test.ts`（RNG 不可・部分可・getRandomValues 経由の 3 ケース、24 tests のうち 3 件）
+
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
