@@ -7,7 +7,7 @@
  * All methods delegate to the active StorageBackend returned by engine.getBackend().
  */
 
-import { engine } from './sqliteEngineContext.js';
+import { engine } from './sqliteEngineHost.js';
 
 import type { AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 

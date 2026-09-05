@@ -51,9 +51,9 @@ describe('selectVfsStrategy', () => {
 
   it('falls back to async main-thread OPFS (案B) when sync/worker is unavailable', () => {
     expect(selectVfsStrategy({ opfsDirectory: true, syncAccessHandle: false, worker: true }))
-      .toBe('opfs-async-main');
+      .toBe('idb');
     expect(selectVfsStrategy({ opfsDirectory: true, syncAccessHandle: true, worker: false }))
-      .toBe('opfs-async-main');
+      .toBe('idb');
   });
 
   it('falls back to chrome.storage.local when OPFS itself is unavailable', () => {

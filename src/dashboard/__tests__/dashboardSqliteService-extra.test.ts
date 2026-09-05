@@ -86,7 +86,7 @@ describe('dashboardSqliteService — additional exports', () => {
 
   describe('runOpfsSpike', () => {
     it('returns report on success', async () => {
-      const report = { strategy: 'opfs-async-main', steps: [], passed: true, durationMs: 5 };
+      const report = { strategy: 'idb', steps: [], passed: true, durationMs: 5 };
       givenResponse({ success: true, report });
       const result = await runOpfsSpike();
       expect(result).toEqual({ data: report });

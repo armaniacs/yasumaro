@@ -4,7 +4,7 @@ import { cleanseHtmlOffscreen, handleCleansingOffscreenPayload, CLEANSING_OFFSCR
 import { handleOffscreenMessage } from '../offscreen.js';
 
 // Mocks for sqlite dependencies required by offscreen.ts (same split as offscreen.test.ts)
-vi.mock('../sqliteEngineContext.js', () => ({
+vi.mock('../sqliteEngineHost.js', () => ({
     engine: {
         init: vi.fn().mockResolvedValue(true),
         resetForTesting: vi.fn(),

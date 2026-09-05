@@ -5,7 +5,6 @@
  * migrationBackup,fallbackMigration}.ts — each module operates on a plain
  * state object, and Host passes its private #state to them.
  *
- * SqliteEngineContext is a thin alias to this class for backward compat.
  * The 4 State casts (`get opfsProxyState(): OpfsProxyState { return this }`)
  * are replaced by `return this.#state`, encapsulating shared mutable `this`.
  *

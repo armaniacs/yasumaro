@@ -56,7 +56,7 @@ const backend = vi.hoisted(() => {
   };
 });
 
-vi.mock('../sqliteEngineContext.js', () => ({
+vi.mock('../sqliteEngineHost.js', () => ({
   engine: {
     getBackend: vi.fn().mockResolvedValue(backend),
   },

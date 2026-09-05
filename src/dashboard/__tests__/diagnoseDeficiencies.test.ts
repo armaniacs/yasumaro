@@ -65,7 +65,7 @@ describe('diagnoseDeficiencies', () => {
   });
 
   it('detects no-fts5 for IDB path when fts5 is false', () => {
-    const result = diagnoseDeficiencies(fullInput({ fts5: false, vfsStrategy: 'idb' as DiagnosticInput['vfsStrategy'] }));
+    const result = diagnoseDeficiencies(fullInput({ fts5: false, vfsStrategy: 'idb' }));
     expect(result).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: 'no-fts5', severity: 'low' }),

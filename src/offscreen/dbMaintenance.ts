@@ -7,7 +7,7 @@
  * All methods delegate to the active StorageBackend returned by engine.getBackend().
  */
 
-import { engine } from './sqliteEngineContext.js';
+import { engine } from './sqliteEngineHost.js';
 
 const DEFAULT_RETENTION_DAYS = 90;
 const DEFAULT_MAX_RECORDS = 1000;
