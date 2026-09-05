@@ -81,16 +81,25 @@ describe('createSqliteHistoryPanel — requestGeneration race guard', () => {
     document.body.appendChild(container);
     const panel = makePanel(container);
 
-    let resolveFetch!: (value: unknown) => void;
-    const deferred = new Promise(resolve => { resolveFetch = resolve; });
-    mockedDb.queryLogs.mockImplementationOnce(() => deferred);
+    // One navigation issues two fetches (immediate tag fetch + retry fetch);
+    // both stay pending so the spinner is observable.
+    let resolveFirst!: (value: unknown) => void;
+    let resolveSecond!: (value: unknown) => void;
+    const first = new Promise(resolve => { resolveFirst = resolve; });
+    const second = new Promise(resolve => { resolveSecond = resolve; });
+    mockedDb.queryLogs
+      .mockImplementationOnce(() => first)
+      .mockImplementationOnce(() => second);
 
     panel.init?.({ searchTag: TAG });
+    const loadPromise = panel.load?.();
     await settle();
 
     expect(container.querySelector('.loading')).not.toBeNull();
 
-    resolveFetch({ data: { rows: [makeRow(1)], total: 1 } });
+    resolveFirst({ data: { rows: [makeRow(1)], total: 1 } });
+    resolveSecond({ data: { rows: [makeRow(1)], total: 1 } });
+    await loadPromise;
     await settle();
 
     expect(container.querySelector('.loading')).toBeNull();
@@ -104,24 +113,36 @@ describe('createSqliteHistoryPanel — requestGeneration race guard', () => {
 
     let resolveStale!: (value: unknown) => void;
     let resolveNewer!: (value: unknown) => void;
+    let resolveRetryStale!: (value: unknown) => void;
+    let resolveRetryNewer!: (value: unknown) => void;
     const stale = new Promise(resolve => { resolveStale = resolve; });
     const newer = new Promise(resolve => { resolveNewer = resolve; });
+    const retryStale = new Promise(resolve => { resolveRetryStale = resolve; });
+    const retryNewer = new Promise(resolve => { resolveRetryNewer = resolve; });
 
     mockedDb.queryLogs
       .mockImplementationOnce(() => stale)
-      .mockImplementationOnce(() => newer);
+      .mockImplementationOnce(() => newer)
+      .mockImplementationOnce(() => retryStale)
+      .mockImplementationOnce(() => retryNewer);
 
     // Two overlapping tag navigations: the second bumps requestGeneration.
     panel.init?.({ searchTag: TAG });
+    const firstLoad = panel.load?.();
     panel.init?.({ searchTag: TAG });
+    const secondLoad = panel.load?.();
     await settle();
 
-    // The newer request resolves first with its own data…
-    resolveNewer({ data: { rows: [makeRow(2)], total: 1 } });
+    // The newest request (second navigation's retry fetch) resolves first…
+    resolveRetryNewer({ data: { rows: [makeRow(2)], total: 1 } });
+    await secondLoad;
     await settle();
 
-    // …then the stale, slower one resolves with older data.
+    // …then every older generation resolves late and must be discarded.
     resolveStale({ data: { rows: [makeRow(1)], total: 1 } });
+    resolveNewer({ data: { rows: [makeRow(1)], total: 1 } });
+    resolveRetryStale({ data: { rows: [makeRow(1)], total: 1 } });
+    await firstLoad;
     await settle();
 
     const rendered = document.body.textContent ?? '';
@@ -142,20 +163,33 @@ describe('createSqliteHistoryPanel — requestGeneration race guard', () => {
     const stale = new Promise(resolve => { resolveStale = resolve; });
     const newer = new Promise(resolve => { resolveNewer = resolve; });
 
+    let resolveRetryStale!: (value: unknown) => void;
+    let resolveRetryNewer!: (value: unknown) => void;
+    const retryStale = new Promise(resolve => { resolveRetryStale = resolve; });
+    const retryNewer = new Promise(resolve => { resolveRetryNewer = resolve; });
+
     mockedDb.queryLogs
       .mockImplementationOnce(() => stale)
-      .mockImplementationOnce(() => newer);
+      .mockImplementationOnce(() => newer)
+      .mockImplementationOnce(() => retryStale)
+      .mockImplementationOnce(() => retryNewer);
 
     panel.init?.({ searchTag: TAG });
+    const firstLoad = panel.load?.();
     panel.init?.({ searchTag: TAG });
+    const secondLoad = panel.load?.();
     await settle();
 
     resolveNewer({ data: { rows: [makeRow(2)], total: 1 } });
+    resolveRetryNewer({ data: { rows: [makeRow(2)], total: 1 } });
+    await secondLoad;
     await settle();
 
     // The stale request errors out late; it must not turn the panel into an
     // error state or clear the newer rows.
     resolveStale({ error: 'stale network failure' });
+    resolveRetryStale({ error: 'stale network failure' });
+    await firstLoad;
     await settle();
 
     const rendered = document.body.textContent ?? '';

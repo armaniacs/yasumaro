@@ -39,6 +39,9 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
   // subscribe is the thin alias of the former onStateChange — Panel shrinks to
   // model.subscribe(render) while keeping the updateDynamicRegions diff path.
   let unsubscribe: (() => void) | null = null;
+  // init() may run without a container (registry init→load order), so init
+  // stays side-effect-free and only stashes params for load().
+  let pendingNavParams: { searchTag?: string; searchDomain?: string } | null = null;
 
   function state(): SqliteHistoryState {
     return model.getState();
@@ -556,31 +559,37 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
       container = c;
     },
     init(initParams?: Record<string, unknown>) {
-      if (initParams?.searchTag) {
-        model.activateWithTag(initParams.searchTag as string);
-      } else if (initParams?.searchDomain) {
-        model.activateWithDomain(initParams.searchDomain as string);
+      // Side-effect-free: the registry may call init() before mount().
+      // The params are consumed exactly once by the next load().
+      if (initParams?.searchTag || initParams?.searchDomain) {
+        pendingNavParams = {
+          ...(typeof initParams.searchTag === 'string' ? { searchTag: initParams.searchTag } : {}),
+          ...(typeof initParams.searchDomain === 'string' ? { searchDomain: initParams.searchDomain } : {}),
+        };
       } else {
-        // Plain re-navigation to this panel (no tag/domain hand-off): drop any
-        // date/search/tag filter left over from the previous visit so load()
-        // below shows the latest entries, unfiltered. The panel stays mounted
-        // across tab switches, so this is the only per-visit reset point.
-        model.resetFiltersForFreshLoad();
+        pendingNavParams = null;
       }
     },
     async load() {
       if (!container) return;
 
       _isMounted = true;
-      await model.checkFallbackStatus();
-      await model.loadPersistedSortIntoState();
-
+      // Pre-fetch paint at today's position (before the initial fetch
+      // resolves). The subscription refresh() calls below then paint results.
       renderState();
 
-      // Consume any init params set by init() (which runs before load())
-      // so retryInitialLoad uses the correct search/tag parameters.
-      const fetchOpts = model.consumePendingInit();
-      void model.retryInitialLoad(fetchOpts ?? { limit: PAGE_SIZE });
+      // Single navigation entry point: filter branch → fallback check →
+      // persisted sort → initial fetch (retry with backoff) all run inside
+      // the Model, which owns the order.
+      const navParams = pendingNavParams;
+      pendingNavParams = null;
+      await model.onNavigateIn(navParams ?? undefined);
+
+      // Re-apply dynamic regions (tag badge, fallback notice, counts) onto
+      // the shell: notify-driven refreshes during onNavigateIn ran against
+      // the pre-fetch shell, and a plain renderState() here would rebuild
+      // the shell without them.
+      refresh();
     },
     destroy() {
       if (searchDebounceTimer !== null) {
@@ -592,9 +601,10 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
         unsubscribe();
         unsubscribe = null;
       }
-      model.bumpGenerationOnUnmount();
-      // Clear bulk bar listener references
-      model.clearEntrySelection();
+      // Single navigation exit point: generation bump + persist flush +
+      // cache clear + selection clear run inside the Model.
+      // (Also clears bulk bar listener references via the selection clear.)
+      model.onNavigateOut();
     },
   };
 }

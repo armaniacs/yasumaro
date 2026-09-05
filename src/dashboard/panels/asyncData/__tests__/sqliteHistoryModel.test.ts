@@ -51,16 +51,24 @@ describe('HistoryModel — subscribe is thin alias of onStateChange', () => {
     expect(model.getState().loading).toBe(false);
   });
 
-  it('activateWithTag + changeSort race keeps generation correct (no permanent spinner)', async () => {
+  it('onNavigateIn(tag) + changeSort race keeps generation correct (no permanent spinner)', async () => {
     const first = deferred<UnifiedHistoryQueryResult>();
     const second = deferred<UnifiedHistoryQueryResult>();
-    const queryHistory = vi.fn().mockImplementationOnce(() => first.promise).mockImplementationOnce(() => second.promise);
+    const third = deferred<UnifiedHistoryQueryResult>();
+    // Call order is deterministic: navigate-in's immediate tag fetch (#1),
+    // the concurrent sort fetch (#2), then navigate-in's retry fetch (#3).
+    const queryHistory = vi.fn()
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise)
+      .mockImplementationOnce(() => third.promise);
     const model = createSqliteHistoryModel({ queryHistory });
-    model.activateWithTag('AI');
+    const nav = model.onNavigateIn({ searchTag: 'AI' });
     // concurrent sort change bumps generation again
     const sortPromise = model.changeSort('created_at', 'ASC');
-    second.resolve({ data: { rows: [makeRow(2)], total: 1 } });
+    second.resolve({ data: { rows: [makeRow(1)], total: 1 } });
     await sortPromise;
+    third.resolve({ data: { rows: [makeRow(2)], total: 1 } });
+    await nav;
     first.resolve({ data: { rows: [makeRow(1)], total: 1 } });
     await new Promise(r => setTimeout(r, 0));
     expect(model.getState().loading).toBe(false);
