@@ -48,3 +48,6 @@ Scenario: dialog を閉じるとフォーカスが元の要素に戻る
 
 ## 実装メモ（2026-09-05・branch 0905c）
 - 完了（commit `fcd13631`、SDD サブエージェント実装）。未配線だった 3 系統ダイアログ（confirmationModal・private/recording-failed・privacyConsentModal）に focusTrapManager を配線（open で trap/close で release・新規 18 tests）。sanitizePreview の ResizeObserver 挙動は不変。実機目視は手動確認項目として残置。
+
+## E2E 追加検証（2026-09-05・autonomous-task-closer）
+- `testDir/e2e/popup-fix09-25.spec.ts`（@extension・fresh コンテキスト）で consent モーダルのトラップを E2E 化: 表示直後フォーカスが modal 内・Tab 12 回で脱出しない・同意操作で close 後にモーダル外へフォーカス移動可能（trap 解除）。6 passed。private/recording-failed ダイアログの trap/release 配線は単体テスト（privatePageDialog.test.ts）が担保。実機目視の代替として完了。

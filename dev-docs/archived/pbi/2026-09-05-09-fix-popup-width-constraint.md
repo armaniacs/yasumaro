@@ -51,3 +51,7 @@ Scenario: 狭い表示でもレイアウトが崩れない
 
 ## 実装メモ（2026-09-05・branch 0905c・続）
 - 完了（commit `f99a333d`、controller-direct）。popup 36 スイート 827 tests green + build 成功。日・独ロケールの目視確認は手動確認項目として残置。
+
+## E2E 追加検証（2026-09-05・autonomous-task-closer）
+- `testDir/e2e/popup-fix09-25.spec.ts`（@extension）で目視確認項目を自動化: 幅許容範囲（min 360/max 420 の computed style と実測幅）・横スクロール無し・長い ja ラベルの折り返し（プローブ要素）・ja ロケール描画。6 passed。
+- E2E が検出した未完成箇所を補完: `.status-toggle` / `.btn-banner-allow` / `.banner-actions .btn-sm` は `white-space: normal` だけでは flex item が max-content 幅を保つため折り返さず → `min-width: 0; max-width: 100%` を追加して実際に折り返すようにした。

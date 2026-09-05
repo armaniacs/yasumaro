@@ -522,6 +522,8 @@ button:not(.icon-btn):not(.primary-btn):not(.secondary-btn):not(.alert-btn):not(
 
 .btn-banner-allow {
   flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
   background: #f59e0b;
   color: #ffffff;
   border: none;
@@ -547,6 +549,7 @@ button:not(.icon-btn):not(.primary-btn):not(.secondary-btn):not(.alert-btn):not(
   display: flex;
   gap: 8px;
   align-items: center;
+  min-width: 0;
 }
 
 .banner-actions .btn-sm {
@@ -554,6 +557,8 @@ button:not(.icon-btn):not(.primary-btn):not(.secondary-btn):not(.alert-btn):not(
   font-size: 12px;
   white-space: normal;
   overflow-wrap: anywhere;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .btn-banner-primary {
@@ -1673,6 +1678,8 @@ label.inline-label {
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
   flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
   white-space: normal;
   overflow-wrap: anywhere;
 }
