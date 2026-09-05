@@ -4,7 +4,7 @@
  * loader.ts から分離（loader.ts は Content Script エントリポイントのため export 不可）。
  */
 
-import { wildcardToRegex } from '../utils/wildcardToRegex.js';
+import { matchesDomainPattern, isDomainInList as isDomainInListShared, extractHostname } from '../utils/wildcardToRegex.js';
 
 export const SKIPPED_PROTOCOLS = [
     'chrome://',
@@ -33,16 +33,7 @@ export function shouldSkipUrl(url: string): boolean {
  * @returns 正規化されたドメイン（失敗時はnull）
  */
 export function extractDomain(url: string): string | null {
-    try {
-        const urlObj = new URL(url);
-        let hostname = urlObj.hostname;
-        if (hostname.startsWith('www.')) {
-            hostname = hostname.substring(4);
-        }
-        return hostname;
-    } catch {
-        return null;
-    }
+    return extractHostname(url);
 }
 
 /**
@@ -51,17 +42,11 @@ export function extractDomain(url: string): string | null {
  * @param pattern - パターン（* をワイルドカードとして使用可能）
  * @returns 一致する場合true
  *
- * ワイルドカードの展開は共有ヘルパー wildcardToRegex 経由で行う。
- * これにより MAX_WILDCARDS_PER_PATTERN 上限を経由し、過剰なワイルドカードを
- * 含むパターンによる指数バックトラック（ReDoS, VULN-026）を防ぐ。
+ * 単一共有パス matchesDomainPattern への shim（PBI-18）。
+ * ReDoS ガード（MAX_WILDCARDS_PER_PATTERN 上限）は共有側で継承する。
  */
 export function matchesPattern(domain: string, pattern: string): boolean {
-    if (pattern.includes('*')) {
-        const regex = wildcardToRegex(pattern);
-        if (!regex) return false;
-        return regex.test(domain);
-    }
-    return domain.toLowerCase() === pattern.toLowerCase();
+    return matchesDomainPattern(domain, pattern);
 }
 
 /**
@@ -71,8 +56,5 @@ export function matchesPattern(domain: string, pattern: string): boolean {
  * @returns 含まれる場合true
  */
 export function isDomainInList(domain: string, domainList: string[] | undefined): boolean {
-    if (!domainList || domainList.length === 0) {
-        return false;
-    }
-    return domainList.some(pattern => matchesPattern(domain, pattern));
+    return isDomainInListShared(domain, domainList);
 }

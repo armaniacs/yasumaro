@@ -6,7 +6,7 @@
 import { settingsRepository } from './storage/SettingsRepository.js';
 import { StorageKeys } from './storage/types.js';
 import { isUrlBlocked } from './ublockMatcher.js';
-import { wildcardToRegex } from './wildcardToRegex.js';
+import { matchesDomainPattern, isDomainInList as isDomainInListShared, extractHostname } from './wildcardToRegex.js';
 import { isValidDomainPattern } from './domainValidator.js';
 
 /**
@@ -35,19 +35,7 @@ function hasUblockRules(ublockRules: unknown): boolean {
  * @returns {string|null} - The extracted domain without www, or null if invalid
  */
 export function extractDomain(url: string): string | null {
-    try {
-        const urlObj = new URL(url);
-        let hostname = urlObj.hostname;
-
-        // Remove www. prefix if present
-        if (hostname.startsWith('www.')) {
-            hostname = hostname.substring(4);
-        }
-
-        return hostname;
-    } catch (_e) {
-        return null;
-    }
+    return extractHostname(url);
 }
 
 /**
@@ -57,15 +45,7 @@ export function extractDomain(url: string): string | null {
  * @returns {boolean} - True if the domain matches the pattern
  */
 export function matchesPattern(domain: string, pattern: string): boolean {
-    // Exact match (case insensitive) for patterns without wildcards
-    if (!pattern.includes('*')) {
-        return domain.toLowerCase() === pattern.toLowerCase();
-    }
-
-    // Convert wildcard pattern to regex (shared ReDoS-guarded implementation)
-    const regex = wildcardToRegex(pattern);
-    if (!regex) return false;
-    return regex.test(domain);
+    return matchesDomainPattern(domain, pattern);
 }
 
 /**
@@ -75,11 +55,7 @@ export function matchesPattern(domain: string, pattern: string): boolean {
  * @returns {boolean} - True if the domain is in the list
  */
 export function isDomainInList(domain: string, domainList: string[] | undefined): boolean {
-    if (!domainList || domainList.length === 0) {
-        return false;
-    }
-
-    return domainList.some(pattern => matchesPattern(domain, pattern));
+    return isDomainInListShared(domain, domainList);
 }
 
 /**

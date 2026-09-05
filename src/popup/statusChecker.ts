@@ -6,7 +6,7 @@ import { isDomainAllowed, extractDomain, isDomainInList } from '../utils/domainU
 import { logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { hashUrl } from '../utils/crypto/index.js';
-import { wildcardToRegex } from '../utils/wildcardToRegex.js';
+import { matchesDomainPattern } from '../utils/wildcardToRegex.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { pickDefined } from '../utils/objectUtils.js';
 
@@ -101,12 +101,7 @@ function findMatchedPattern(domain: string, domainList: string[] | undefined): s
   }
 
   for (const pattern of domainList) {
-    // Simple pattern matching (same logic as isDomainInList)
-    const matches = pattern.includes('*')
-      ? (wildcardToRegex(pattern)?.test(domain) ?? false)
-      : domain.toLowerCase() === pattern.toLowerCase();
-
-    if (matches) {
+    if (matchesDomainPattern(domain, pattern)) {
       return pattern;
     }
   }
