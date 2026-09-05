@@ -7,7 +7,7 @@
 import type { RecordingCacheInstance } from '../recordingCache.js';
 import { updateDomainFilterCache } from '../../utils/storage/domainFilterCache.js';
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
-import { migrateLegacyPrivacyConsent } from '../../popup/privacyConsent.js';
+import { migrateLegacyPrivacyConsent } from '../../utils/storage/privacyConsent.js';
 import { cleanupOldDeniedEntries, cleanupDismissedEntries } from '../../utils/permissionManager.js';
 import { RateLimiter } from '../rateLimiter.js';
 import { logInfo, logDebug, logWarn, logError, ErrorCode } from '../../utils/logger.js';

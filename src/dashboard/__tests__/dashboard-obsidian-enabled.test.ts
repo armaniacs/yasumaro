@@ -193,7 +193,7 @@ vi.mock('../exportImport.js', () => ({ initExportImport: vi.fn() }));
 vi.mock('../domainFilterTagUI.js', () => ({ initDomainFilterTagUI: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('../tagsPanel.js', () => ({ initTagsPanel: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('../trancoConsent.js', () => ({ initTrancoConsentPanel: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('../../popup/privacyConsent.js', () => ({
+vi.mock('../../utils/storage/privacyConsent.js', () => ({
   getPrivacyConsent: vi.fn().mockResolvedValue({ hasConsessed: false }),
   withdrawPrivacyConsent: vi.fn(),
 }));

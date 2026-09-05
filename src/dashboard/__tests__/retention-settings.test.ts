@@ -37,7 +37,7 @@ vi.mock('../settings/fieldValidation.js', () => ({
     validateAllFields: vi.fn().mockReturnValue(true),
     setupAllFieldValidations: vi.fn(),
 }));
-vi.mock('../../popup/privacyConsent.js', () => ({
+vi.mock('../../utils/storage/privacyConsent.js', () => ({
     getPrivacyConsent: vi.fn().mockResolvedValue(null),
     withdrawPrivacyConsent: vi.fn(),
 }));

@@ -4,7 +4,7 @@
  */
 
 import { getMessage } from '../utils/i18n.js';
-import { getPrivacyConsent, savePrivacyConsent, migrateLegacyPrivacyConsent, recordPolicyVersionAcknowledgment } from './privacyConsent.js';
+import { getPrivacyConsent, savePrivacyConsent, migrateLegacyPrivacyConsent, recordPolicyVersionAcknowledgment } from '../utils/storage/privacyConsent.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { StorageKeys } from '../utils/storage/types.js';

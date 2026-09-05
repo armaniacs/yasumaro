@@ -64,7 +64,7 @@ import {
     recordPolicyVersionAcknowledgment,
     isPolicyVersionChanged,
     PRIVACY_POLICY_VERSION,
-} from '../privacyConsent.js';
+} from '../../utils/storage/privacyConsent.js';
 
 describe('PBI-23: Privacy Consent Version Migration', () => {
     beforeEach(() => {

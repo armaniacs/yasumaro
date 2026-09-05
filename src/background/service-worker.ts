@@ -10,7 +10,7 @@ import { createBackgroundServices } from './createBackgroundServices.js';
 import { createMessageHandler as _createMessageHandler } from './messageHandler.js';
 import { createAlarmRegistry } from './alarmRegistry.js';
 import { createDeferredMigrationRunner } from './deferredMigrations.js';
-import { hasPrivacyConsent } from '../popup/privacyConsent.js';
+import { hasPrivacyConsent } from '../utils/storage/privacyConsent.js';
 import { retryPendingChromeStorageWrite } from './retryPendingWrites.js';
 export { retryPendingChromeStorageWrite } from './retryPendingWrites.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';

@@ -50,7 +50,7 @@ vi.mock('../../../utils/storage/domainFilterCache.js', async (importOriginal) =>
   };
 });;
 
-vi.mock('../../../popup/privacyConsent.js', () => ({
+vi.mock('../../../utils/storage/privacyConsent.js', () => ({
   migrateLegacyPrivacyConsent: vi.fn().mockResolvedValue(undefined),
 }));
 

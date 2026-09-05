@@ -1,7 +1,7 @@
 import { type PanelLifecycle } from '../types.js';
 import { init as initPrivacySettings, loadPrivacySettings } from '../../settings/privacySettings.js';
 import { initMasterPasswordSettings, loadMasterPasswordSettings } from '../../masterPassword.js';
-import { getPrivacyConsent, withdrawPrivacyConsent } from '../../../popup/privacyConsent.js';
+import { getPrivacyConsent, withdrawPrivacyConsent } from '../../../utils/storage/privacyConsent.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { clearAllLogs, isServiceError } from '../../dashboardSqliteService.js';
 

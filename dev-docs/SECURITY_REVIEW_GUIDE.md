@@ -40,7 +40,7 @@
 ## Privacy Features
 
 - **PII Sanitization** (`src/utils/piiSanitizer.ts`): Masks personally identifiable information
-- **Privacy Consent** (`src/popup/privacyConsent.ts`): User consent tracking for data collection
+- **Privacy Consent** (`src/utils/storage/privacyConsent.ts`): User consent tracking for data collection
 - **Privacy Pipeline** (`src/background/privacyPipeline.ts`): Privacy-preserving content processing
 - All API keys encrypted in storage (PBKDF2 + AES-GCM)
 
