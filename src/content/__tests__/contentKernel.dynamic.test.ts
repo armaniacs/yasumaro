@@ -58,7 +58,7 @@ describe('watchDynamicContent (30-13)', () => {
   }
 
   it('MutationObserver で DOM 追加を検出し debounce 500ms で onChange を呼ぶ', async () => {
-    const { watchDynamicContent } = await import('../contentKernel.js');
+    const { watchDynamicContent } = await import('../watchDynamicContent.js');
     const onChange = vi.fn();
     const target = document.getElementById('root')!;
     const disconnect = watchDynamicContent(target, onChange, 500);
@@ -75,7 +75,7 @@ describe('watchDynamicContent (30-13)', () => {
   });
 
   it('連続した変化は debounce で1回にまとまる', async () => {
-    const { watchDynamicContent } = await import('../contentKernel.js');
+    const { watchDynamicContent } = await import('../watchDynamicContent.js');
     const onChange = vi.fn();
     const target = document.getElementById('root')!;
     const disconnect = watchDynamicContent(target, onChange, 500);
@@ -91,7 +91,7 @@ describe('watchDynamicContent (30-13)', () => {
   });
 
   it('変化がなければ onChange は呼ばれない', async () => {
-    const { watchDynamicContent } = await import('../contentKernel.js');
+    const { watchDynamicContent } = await import('../watchDynamicContent.js');
     const onChange = vi.fn();
     const target = document.getElementById('root')!;
     const disconnect = watchDynamicContent(target, onChange, 500);
@@ -101,7 +101,7 @@ describe('watchDynamicContent (30-13)', () => {
   });
 
   it('disconnect後は onChange が呼ばれない', async () => {
-    const { watchDynamicContent } = await import('../contentKernel.js');
+    const { watchDynamicContent } = await import('../watchDynamicContent.js');
     const onChange = vi.fn();
     const target = document.getElementById('root')!;
     const disconnect = watchDynamicContent(target, onChange, 500);
@@ -112,7 +112,7 @@ describe('watchDynamicContent (30-13)', () => {
   });
 
   it('target null のとき document.body を監視する', async () => {
-    const { watchDynamicContent } = await import('../contentKernel.js');
+    const { watchDynamicContent } = await import('../watchDynamicContent.js');
     const onChange = vi.fn();
     const disconnect = watchDynamicContent(null, onChange, 500);
     // body 用のコールバックが登録されているはず
@@ -123,16 +123,11 @@ describe('watchDynamicContent (30-13)', () => {
     disconnect();
   });
 
-  it('ContentKernel.watchDynamicContent 経由でも監視できる', async () => {
-    const { ContentKernel } = await import('../contentKernel.js');
-    const { InMemoryStoragePort } = await import('../../utils/storage/storagePort.js');
-    const { InMemoryDomainPolicyPort } = await import('../domainPolicyPort.js');
-    const storage = new InMemoryStoragePort();
-    const policy = new InMemoryDomainPolicyPort();
-    const kernel = new ContentKernel(storage, policy);
+  it('impl module の単一 signature (target, onChange, debounceMs) で監視できる', async () => {
+    const { watchDynamicContent } = await import('../watchDynamicContent.js');
     const onChange = vi.fn();
     const target = document.getElementById('root')!;
-    const disconnect = kernel.watchDynamicContent(onChange, target, 500);
+    const disconnect = watchDynamicContent(target, onChange, 500);
     triggerMutation();
     vi.advanceTimersByTime(600);
     expect(onChange).toHaveBeenCalledTimes(1);
@@ -140,7 +135,7 @@ describe('watchDynamicContent (30-13)', () => {
   });
 
   it('カスタム debounceMs で動作する', async () => {
-    const { watchDynamicContent } = await import('../contentKernel.js');
+    const { watchDynamicContent } = await import('../watchDynamicContent.js');
     const onChange = vi.fn();
     const target = document.getElementById('root')!;
     const disconnect = watchDynamicContent(target, onChange, 100);
@@ -159,7 +154,7 @@ describe('watchDynamicContent (30-13)', () => {
       if (typeof window !== 'undefined') (window as unknown as { MutationObserver: unknown }).MutationObserver = OriginalMutationObserver as unknown;
     }
     vi.useRealTimers();
-    const { watchDynamicContent } = await import('../contentKernel.js');
+    const { watchDynamicContent } = await import('../watchDynamicContent.js');
     const onChange = vi.fn();
     const target = document.getElementById('root')!;
     const disconnect = watchDynamicContent(target, onChange, 50);

@@ -3,15 +3,16 @@
  * visitAdmission.ts — deep module owning the visit-admission decision.
  *
  * Single seam for skip -> cache verdict -> retrying background verdict ->
- * inject. The loader IIFE and the kernel both route through here instead of
- * re-deriving the flow; the Chrome/in-memory port variants share the pure
- * policy function instead of mirroring its branches.
+ * inject. The loader routes through here instead of re-deriving the flow;
+ * the Chrome/in-memory port variants share the pure policy function instead
+ * of mirroring its branches.
  *
  * The e2e and normal paths turned out identical except warn labels, so there
  * is one flow with a warnLabel (' (e2e)' or '') — the e2e-bypass-safety
  * property (cold cache must still ask background) is tested, not commented.
  */
 import { isDomainInList } from './urlSkipper.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 export const CACHE_TTL = 5 * 60 * 1000;
 
@@ -90,10 +91,6 @@ export interface VisitAdmissionDeps {
 
 export type AdmissionOutcome = 'injected' | 'skipped';
 
-function errorDetail(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
-
 /** Shared 3-attempt retry (200ms linear backoff, sleep on catch only). */
 export async function checkDomainWithRetry(
   send: () => Promise<CheckDomainResponse | undefined>,
@@ -131,7 +128,7 @@ export async function resolveVisitAdmission(deps: VisitAdmissionDeps): Promise<A
     try {
       await deps.loadExtractor();
     } catch (e) {
-      deps.warn(`[OWeave] Dynamic import blocked${deps.warnLabel}`, deps.url, errorDetail(e));
+      deps.warn(`[OWeave] Dynamic import blocked${deps.warnLabel}`, deps.url, errorMessage(e));
     }
     return 'injected';
   }
@@ -142,7 +139,7 @@ export async function resolveVisitAdmission(deps: VisitAdmissionDeps): Promise<A
       deps.warn(
         '[OWeave] Domain check failed: no response from service worker',
         deps.url,
-        errorDetail(lastError ?? 'unknown'),
+        errorMessage(lastError ?? 'unknown'),
       );
     }
     return 'skipped';
@@ -151,7 +148,7 @@ export async function resolveVisitAdmission(deps: VisitAdmissionDeps): Promise<A
   try {
     await deps.loadExtractor();
   } catch (e) {
-    deps.warn(`[OWeave] Dynamic import blocked${deps.warnLabel}`, deps.url, errorDetail(e));
+    deps.warn(`[OWeave] Dynamic import blocked${deps.warnLabel}`, deps.url, errorMessage(e));
   }
   return 'injected';
 }

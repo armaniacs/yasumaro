@@ -14,7 +14,6 @@
 
 import { cleanseContent, countCleanseTargets, type CleanseOptions, type CleanseResult } from '../contentCleaner.js';
 import { logSanitize, logDebug } from '../logger.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../messaging/protocol.js';
 import { countAISummaryTargets, type AiSummaryCleanseOptions } from '../aiSummaryCleaner/index.js';
 import { THRESHOLD_DEFAULTS } from '../aiSummaryCleaner/rules.js';
 import { deriveCleansedReason, removedRecordToMap } from './cleansedReason.js';
@@ -148,6 +147,9 @@ function extractInternal(
     let funnel: { pageBytes: number; candidateBytes: number; cleansedBytes: number } | undefined; // 30-14: ファネル
     let originalContent: string | undefined; // 30-11: 二重ペイロード — クレンジング前原文
     let dualPayloadEnabled: boolean | undefined; // 30-11: 二重ペイロード有効フラグ
+    // 実際に要素を削除した Content Cleansing が走った場合のみ true。
+    // 診断 recount ブロックではセットしない（recount は totalRemoved を埋めるだけ）。
+    let cleansingExecuted: boolean | undefined = undefined;
 
     // Unified fallback settlement shared by the candidate path and the body
     // path (previously two duplicated blocks). The policy decision itself
@@ -275,6 +277,7 @@ function extractInternal(
                     hardStripRemoved = cleanseResult.hardStripRemoved;
                     keywordStripRemoved = cleanseResult.keywordStripRemoved;
                     totalRemoved = cleanseResult.totalRemoved;
+                    cleansingExecuted = true;
 
                     console.log(`[ContentExtractor] Cleansed ${cleanseResult.totalRemoved} elements `
                         + `(Hard: ${cleanseResult.hardStripRemoved}, Keyword: ${cleanseResult.keywordStripRemoved})`);
@@ -292,24 +295,6 @@ function extractInternal(
                         undefined,
                         'contentExtractor'
                     );
-
-                    // Chrome Extension 環境の場合のみ、Badge 通知を送信
-                    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-                        console.log('[ContentExtractor] Sending CONTENT_CLEANSING_EXECUTED message');
-                        void chrome.runtime.sendMessage({
-                            type: 'CONTENT_CLEANSING_EXECUTED',
-                            protocolVersion: CURRENT_PROTOCOL_VERSION,
-                            payload: {
-                                hardStripRemoved: cleanseResult.hardStripRemoved,
-                                keywordStripRemoved: cleanseResult.keywordStripRemoved,
-                                totalRemoved: cleanseResult.totalRemoved
-                            }
-                        }).then(() => {
-                            console.log('[ContentExtractor] CONTENT_CLEANSING_EXECUTED message sent successfully');
-                        }).catch((e) => {
-                            console.error('[ContentExtractor] Failed to send CONTENT_CLEANSING_EXECUTED message:', e);
-                        });
-                    }
                 }
 
                 targetElement = clone;
@@ -418,6 +403,7 @@ function extractInternal(
                     hardStripRemoved = cleanseResult.hardStripRemoved;
                     keywordStripRemoved = cleanseResult.keywordStripRemoved;
                     totalRemoved = cleanseResult.totalRemoved;
+                    cleansingExecuted = true;
                 }
 
                 // AI要約クレンジングを実行
@@ -566,6 +552,7 @@ function extractInternal(
             funnel,
             originalContent,
             dualPayloadEnabled,
+            cleansingExecuted,
         }),
     };
 }
