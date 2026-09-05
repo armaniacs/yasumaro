@@ -47,6 +47,7 @@ src/utils/storage/encryptionSession.ts
 src/utils/storage/settingsStore.ts  — ただし trustDb との循環あり (Layer 1-循環として例外扱い)
 src/utils/storage/savedUrlRepository.ts
 src/utils/storage/domainFilterCache.ts
+src/utils/storage/privacyConsent.ts — 同意状態ロジック。background/popup/dashboard から直接 import する中立配置
 src/utils/storage/quota.ts
 src/utils/storage/storageMaintenance.ts
 src/utils/optimisticLock.ts
@@ -107,7 +108,8 @@ Layer 1 → Layer 0 のみ import 可
 Layer 1-循環 → Layer 0 + 相互の dynamic import のみ許容
 Layer 2 → Layer 0/1 import 可
 Barrel → Layer 0/1/2 を再エクスポートのみ
-逆方向依存 (utils → background) は禁止（PBI 2026-09-05-01 で cspValidator/urlWhitelist の providerCatalog 逆辺を解消し、`src/utils/storage/providerAllowlist.ts` の中立テーブルに反転済み）
+逆方向依存 (utils → background) は禁止（PBI 2026-09-05-01 で cspValidator/urlWhitelist の providerCatalog 逆辺を解消し、`src/utils/storage/providerAllowlist.ts` の中立テーブルに反転済み）。
+対称形の逆転（background → popup 等の UI 層への上向き依存）も禁止。同意状態ロジックは `src/popup/privacyConsent.ts` から `src/utils/storage/privacyConsent.ts` に移動し、background 4箇所・popup 2箇所・dashboard 1箇所が中立層を直接 import する形に解消済み（2026-08-20-utils-layer-circular-dependency の循環とは別件）。
 ```
 
 違反検出:
@@ -121,6 +123,10 @@ grep -rn "from.*storage" src/utils/errorUtils.ts src/utils/objectUtils.ts src/ut
 
 # 循環 import が dynamic import であることを検証
 grep -n "await import" src/utils/storage/settingsStore.ts src/utils/trustDb/trustDb.ts
+
+# background から UI 層 (popup/dashboard) への上向き import がないことを検証 (出力がなければ正常)
+grep -rn "from.*popup/" src/background/
+grep -rn "from.*dashboard/" src/background/
 ```
 
 ## 新規ファイル配置チェックリスト

@@ -474,7 +474,7 @@ vi.mock('../../utils/crypto/index.js', () => ({
     generateHmacSignature: vi.fn().mockResolvedValue('test-signature'),
     verifyHmacSignature: vi.fn().mockResolvedValue(true),
 }));
-vi.mock('../../popup/privacyConsent.js', () => ({
+vi.mock('../../utils/storage/privacyConsent.js', () => ({
     hasPrivacyConsent: vi.fn().mockResolvedValue(true),
     migrateLegacyPrivacyConsent: vi.fn().mockResolvedValue(true),
 }));
@@ -519,7 +519,7 @@ vi.mock('../net/ollamaSettingsObserver.js', () => ({
 
 // Import the extracted functions from service-worker
 import * as serviceWorker from '../service-worker.js';
-import { hasPrivacyConsent } from '../../popup/privacyConsent.js';
+import { hasPrivacyConsent } from '../../utils/storage/privacyConsent.js';
 import * as storageEncryption from '../../utils/storage/encryptionSession.js';
 import * as storageDomainFilter from '../../utils/storage/domainFilterCache.js';
 import * as storageSettings from '../../utils/storage.js';

@@ -23,7 +23,7 @@ vi.mock('../../../../utils/i18n.js', () => ({
 
 const mockGetPrivacyConsent = vi.fn();
 const mockWithdrawPrivacyConsent = vi.fn();
-vi.mock('../../../../popup/privacyConsent.js', () => ({
+vi.mock('../../../../utils/storage/privacyConsent.js', () => ({
   getPrivacyConsent: (...args: unknown[]) => mockGetPrivacyConsent(...args),
   withdrawPrivacyConsent: (...args: unknown[]) => mockWithdrawPrivacyConsent(...args),
 }));

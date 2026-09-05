@@ -13,7 +13,7 @@ import {
     withdrawPrivacyConsent,
     getConsentWithdrawalHistory,
     PRIVACY_POLICY_VERSION
-} from '../privacyConsent.js';
+} from '../../utils/storage/privacyConsent.js';
 
 // Mock global.crypto with a real Web Crypto API polyfill (needed for HMAC signing
 // in savePrivacyConsent/withdrawPrivacyConsent/getPrivacyConsent).

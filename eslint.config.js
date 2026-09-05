@@ -63,6 +63,54 @@ export default [
     },
   },
   {
+    // PBI 2026-09-05-21: background → UI 層への上向き依存を禁止。
+    // 同意ロジックは src/utils/storage/privacyConsent.ts の中立層に配置済み。
+    files: ['src/background/**/*.ts'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        project: './tsconfig.json',
+        tsconfigRootDir: process.cwd(),
+      },
+    },
+    rules: {
+      'no-restricted-imports': [
+        'warn',
+        {
+          patterns: [
+            {
+              // Wave 4 と同様: barrel ではなく直接 import を推奨
+              group: ['**/logger.js'],
+              message: 'Use direct module imports instead (e.g., from ./logger/core.js or ./logger/api.js). See dev-docs/LAYERS.md Wave 4.',
+            },
+            {
+              group: ['**/popup/*', '**/popup.js', '**/dashboard/*', '**/dashboard.js'],
+              message: 'background 層から UI 層 (popup/dashboard) への import は禁止。共有ロジックは src/utils/ の中立層に配置すること。See dev-docs/LAYERS.md.',
+            },
+          ],
+          paths: [
+            {
+              name: '../../utils/storage.js',
+              message: 'Use direct module imports instead (e.g., from ./storage/types.js or ./storage/settingsStore.js). See dev-docs/LAYERS.md Wave 3.',
+            },
+            {
+              name: '../utils/storage.js',
+              message: 'Use direct module imports instead (e.g., from ../utils/storage/types.js). See dev-docs/LAYERS.md Wave 3.',
+            },
+            {
+              name: './storage.js',
+              message: 'Use direct module imports instead. See dev-docs/LAYERS.md Wave 3.',
+            },
+            {
+              name: 'src/utils/storage.js',
+              message: 'Use direct module imports instead. See dev-docs/LAYERS.md Wave 3.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['src/utils/logger.ts'],
     languageOptions: {
       parser: tsParser,

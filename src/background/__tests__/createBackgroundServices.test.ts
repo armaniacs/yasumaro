@@ -48,7 +48,7 @@ vi.mock('../recordingCache.js', () => ({
 vi.mock('../pipeline/RecordingOrchestrator.js', () => ({
   createRecordingOrchestrator: mocks.createRecordingOrchestrator,
 }));
-vi.mock('../../popup/privacyConsent.js', () => ({ hasPrivacyConsent: mocks.hasPrivacyConsent }));
+vi.mock('../../utils/storage/privacyConsent.js', () => ({ hasPrivacyConsent: mocks.hasPrivacyConsent }));
 vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
