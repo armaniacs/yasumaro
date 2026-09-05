@@ -4,6 +4,7 @@
  */
 
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
+import { getMessage } from '../../utils/i18n.js';
 import { StorageKeys, type DomainCleansingOverride } from '../../utils/storage/types.js';
 import { CLEANSING_RULES } from '../../utils/aiSummaryCleaner/rules.js';
 import { normalizeDomain, upsertDomainOverride } from '../../utils/aiSummaryCleaner/perSiteOverride.js';
@@ -75,7 +76,7 @@ async function saveOverrides(next: DomainCleansingOverride[]): Promise<void> {
 function renderList(listEl: HTMLElement, overrides: DomainCleansingOverride[], onSelect: (d: string) => void): void {
     listEl.innerHTML = '';
     if (overrides.length === 0) {
-        listEl.textContent = 'No per-site overrides.';
+        listEl.textContent = getMessage('noPerSiteOverrides') || 'No per-site overrides.';
         return;
     }
     const ul = document.createElement('ul');

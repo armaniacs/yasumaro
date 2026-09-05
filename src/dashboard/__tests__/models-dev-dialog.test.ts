@@ -616,6 +616,23 @@ describe('ModelsDevDialog', () => {
       const selectedModelEl = document.getElementById('selected-model-name');
       expect(selectedModelEl!.textContent).toContain('Env: MOCK_OPENAI_KEY');
     });
+
+    it('should render the API key creation link via the apiKeyCreateLink i18n key', async () => {
+      const { getApiKeyUrl } = await import('../../utils/modelsDevApi.js');
+      vi.mocked(getApiKeyUrl).mockReturnValue('https://example.com/api-keys');
+      try {
+        const dialog = new ModelsDevDialog();
+        await dialog.show();
+        const items = document.querySelectorAll('.provider-item');
+        (items[0] as HTMLElement).click();
+        const link = document.getElementById('api-key-create-link') as HTMLAnchorElement;
+        expect(link).not.toBeNull();
+        // getMessage is mocked to the identity function, so the key itself is rendered
+        expect(link.textContent).toBe('apiKeyCreateLink');
+      } finally {
+        vi.mocked(getApiKeyUrl).mockReturnValue(null);
+      }
+    });
   });
 
   describe('save', () => {

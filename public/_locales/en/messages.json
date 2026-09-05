@@ -3928,5 +3928,20 @@
   },
   "cleansingPresetHelp": {
     "message": "Choose a preset. Select Custom to edit individual toggles."
+  },
+  "noPerSiteOverrides": {
+    "message": "No per-site overrides."
+  },
+  "notConsented": {
+    "message": "Not consented"
+  },
+  "consentWithdrawnStopped": {
+    "message": "Consent withdrawn. Recording will stop."
+  },
+  "consentWithdrawFailed": {
+    "message": "Failed to withdraw consent."
+  },
+  "aiResultHeader": {
+    "message": "AI: "
   }
 }

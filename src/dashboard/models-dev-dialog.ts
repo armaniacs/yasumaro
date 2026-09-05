@@ -13,6 +13,7 @@ import {
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 
 import { StorageKeys } from '../utils/storage/types.js';
+import { getMessage } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { escapeHtml } from '../utils/htmlEscape.js';
@@ -425,7 +426,7 @@ export class ModelsDevDialog {
             link.rel = 'noopener noreferrer';
             link.className = 'api-key-create-link';
             link.dataset.i18n = 'apiKeyCreateLink';
-            link.textContent = 'API Key →';
+            link.textContent = getMessage('apiKeyCreateLink') || 'API Key →';
             apiKeyInput?.insertAdjacentElement('afterend', link);
             applyI18n(link);
         }
