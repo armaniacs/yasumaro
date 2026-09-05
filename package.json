@@ -34,6 +34,7 @@
     "metrics:backfill": "node scripts/metrics/backfill.mjs",
     "validate:json": "node scripts/validate-json.mjs",
     "validate": "npm run validate:json && npm run lint && npm run type-check && npm test",
+    "validate:fast": "npm run validate:json && npm run lint && npm run type-check && vitest run --changed",
     "docs": "typedoc --options dev-docs/typedoc.json",
     "docs:watch": "typedoc --options dev-docs/typedoc.json --watch",
     "clean": "rm -rf dist",
