@@ -162,6 +162,27 @@ describe('exportFilenameFor', () => {
   it('places one file per date under the export path', () => {
     expect(exportFilenameFor('Yasumaro', '2026-08-09')).toBe('Yasumaro/2026-08-09.md');
   });
+
+  it('PBI 27: traversal in exportPath falls back without ".."', () => {
+    const filename = exportFilenameFor('../evil', '2026-08-09');
+    expect(filename).not.toContain('..');
+    expect(filename).toBe(`${DEFAULT_EXPORT_PATH}/2026-08-09.md`);
+  });
+
+  it('PBI 27: absolute-path-like exportPath does not escape', () => {
+    const filename = exportFilenameFor('/absolute', '2026-08-09');
+    expect(filename.startsWith('/')).toBe(false);
+    expect(filename.endsWith('/2026-08-09.md')).toBe(true);
+  });
+
+  it('PBI 27: control chars fall back to the default folder', () => {
+    const filename = exportFilenameFor('evil\npath', '2026-08-09');
+    expect(filename).toBe(`${DEFAULT_EXPORT_PATH}/2026-08-09.md`);
+  });
+
+  it('PBI 27: empty exportPath falls back to the default folder', () => {
+    expect(exportFilenameFor('', '2026-08-09')).toBe(`${DEFAULT_EXPORT_PATH}/2026-08-09.md`);
+  });
 });
 
 describe('dateRangeToTimestamps', () => {

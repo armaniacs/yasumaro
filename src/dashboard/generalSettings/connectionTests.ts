@@ -19,6 +19,7 @@ import { saveDashboardSettings } from '../settingsPipeline.js';
 import { syncStatusToTop } from '../statusView.js';
 import { formatProviderHeadline, formatProviderDetailLines } from '../aiTestResultView.js';
 import { subscribeAiTestProgress, generateAiTestRunId } from '../aiTestProgressClient.js';
+import { resolveSafeExportDir } from '../../utils/pathSanitizer.js';
 import {
   buildAiTestProgressView,
   renderAiTestProgressLabel,
@@ -350,10 +351,14 @@ export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRep
     const blob = new Blob([testContent], { type: 'text/markdown' });
     const blobUrl = URL.createObjectURL(blob);
 
+    // PBI 27: exportPath はユーザー設定の自由文字列。filename 組み立て時に
+    // sanitize し、失敗時は既定フォルダにフォールバックする。
     await chrome.downloads.download({
       url: blobUrl,
-      filename: `${exportPath}/test-${date}.md`,
+      filename: `${resolveSafeExportDir(exportPath)}/test-${date}.md`,
       saveAs: false,
+      // PBI 27 上書きガード方針: テスト書き出しの再実行は冪等な再書き込み
+      // が正しい動作のため明示 'overwrite'（全 4 箇所で統一）。
       conflictAction: 'overwrite'
     });
 
