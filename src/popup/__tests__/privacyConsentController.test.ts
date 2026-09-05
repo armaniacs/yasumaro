@@ -46,6 +46,7 @@ import {
   setupPrivacyConsentListeners,
   setConsentCallback,
 } from '../privacyConsentController.js';
+import { focusTrapManager } from '../../utils/ui/focusTrap.js';
 
 // ============================================================================
 // Helpers
@@ -132,6 +133,7 @@ describe('privacyConsentController', () => {
   });
 
   afterEach(() => {
+    focusTrapManager.releaseAll();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -404,6 +406,85 @@ describe('privacyConsentController', () => {
           expect.objectContaining({ content_storage_enabled: false })
         );
       });
+    });
+  });
+
+  describe('focusTrap wiring (PBI-25)', () => {
+    beforeEach(() => {
+      setupPrivacyConsentListeners();
+    });
+
+    function trapCountFor(modal: HTMLElement | null): number {
+      if (!modal) return 0;
+      return [...focusTrapManager.handlers.values()].filter((h) => h.element === modal).length;
+    }
+
+    it('should trap focus on show without an Escape close callback', async () => {
+      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      const trapSpy = vi.spyOn(focusTrapManager, 'trap');
+
+      await initPrivacyConsent();
+
+      const modal = getModal();
+      expect(modal?.open).toBe(true);
+      expect(trapSpy).toHaveBeenCalledTimes(1);
+      // ESC must not close the consent modal: no closeCallback is passed,
+      // the existing 'cancel' preventDefault behavior is preserved
+      expect(trapSpy).toHaveBeenCalledWith(modal);
+      expect(trapCountFor(modal)).toBe(1);
+    });
+
+    it('should release the trap on accept', async () => {
+      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      mockSavePrivacyConsent.mockResolvedValue(undefined);
+      mockRecordPolicyVersionAcknowledgment.mockResolvedValue(undefined);
+      const releaseSpy = vi.spyOn(focusTrapManager, 'release');
+
+      await initPrivacyConsent();
+      expect(trapCountFor(getModal())).toBe(1);
+
+      const cb = getCheckbox();
+      cb!.checked = true;
+      cb!.dispatchEvent(new Event('change'));
+      getAcceptBtn()!.click();
+
+      await vi.waitFor(() => {
+        expect(getModal()?.open).toBe(false);
+      });
+      expect(releaseSpy).toHaveBeenCalled();
+      expect(trapCountFor(getModal())).toBe(0);
+    });
+
+    it('should release the trap on decline', async () => {
+      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      window.alert = vi.fn();
+      const releaseSpy = vi.spyOn(focusTrapManager, 'release');
+
+      await initPrivacyConsent();
+      expect(trapCountFor(getModal())).toBe(1);
+
+      getDeclineBtn()!.click();
+
+      await vi.waitFor(() => {
+        expect(getModal()?.open).toBe(false);
+      });
+      expect(releaseSpy).toHaveBeenCalled();
+      expect(trapCountFor(getModal())).toBe(0);
+    });
+
+    it('should not double-trap on re-show', async () => {
+      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      const trapSpy = vi.spyOn(focusTrapManager, 'trap');
+      const releaseSpy = vi.spyOn(focusTrapManager, 'release');
+
+      await initPrivacyConsent();
+      await initPrivacyConsent();
+
+      const modal = getModal();
+      expect(trapSpy).toHaveBeenCalledTimes(2);
+      // The first trap is released before the second trap is armed
+      expect(releaseSpy).toHaveBeenCalled();
+      expect(trapCountFor(modal)).toBe(1);
     });
   });
 });

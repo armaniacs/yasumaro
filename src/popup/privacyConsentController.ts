@@ -8,6 +8,7 @@ import { getPrivacyConsent, savePrivacyConsent, migrateLegacyPrivacyConsent, rec
 import { logError, ErrorCode } from '../utils/logger.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { StorageKeys } from '../utils/storage/types.js';
+import { focusTrapManager } from '../utils/ui/focusTrap.js';
 
 // DOM Elements (lazily resolved so they work in tests with dynamic imports)
 function getModalEl(): HTMLDialogElement | null {
@@ -34,6 +35,14 @@ function getPrivacyConsentTitleEl(): HTMLElement | null {
 
 // State
 let onConsentCallback: ((consented: boolean) => void) | null = null;
+let consentTrapId: string | null = null;
+
+function releaseConsentTrap(): void {
+    if (consentTrapId) {
+        focusTrapManager.release(consentTrapId);
+        consentTrapId = null;
+    }
+}
 
 /**
  * プライバシーポリシー同意初期化
@@ -145,6 +154,11 @@ function showPrivacyConsentModal(): void {
     // モーダル表示（ESCで閉じない: 'cancel'イベントをpreventDefaultする）
     modal.showModal();
 
+    // フォーカストラップ設定（ESCでは閉じないため closeCallback は渡さない）。
+    // 再表示時の二重 trap を避けるため既存トラップを先に解放する。
+    releaseConsentTrap();
+    consentTrapId = focusTrapManager.trap(modal);
+
     // チェックボックスにフォーカス
     cb?.focus();
 }
@@ -167,6 +181,7 @@ function hidePrivacyConsentModal(): void {
     const modal = getModalEl();
     if (!modal) return;
 
+    releaseConsentTrap();
     modal.close();
 
     // 状態リセット

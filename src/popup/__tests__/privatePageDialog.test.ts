@@ -234,18 +234,28 @@ function setupDialogDOM() {
       <button id="dialog-save-domain">Save for Domain</button>
       <button id="dialog-save-path">Save for Path</button>
     </dialog>
+    <dialog id="recording-failed-dialog">
+      <div id="recording-failed-message"></div>
+      <button id="recording-failed-dismiss">Dismiss</button>
+      <button id="recording-failed-retry">Retry</button>
+    </dialog>
     <div id="mainStatus"></div>
   `;
 
-  // Polyfill HTMLDialogElement methods for jsdom
-  const dialog = document.getElementById('private-page-dialog') as any;
-  if (dialog) {
-    dialog.showModal = function () {
-      this.open = true;
-    };
-    dialog.close = function () {
-      this.open = false;
-    };
+  // Polyfill HTMLDialogElement methods for jsdom.
+  // close() dispatches a real 'close' event like the native dialog, so the
+  // focus-trap release wired to the 'close' event is exercised too.
+  for (const id of ['private-page-dialog', 'recording-failed-dialog']) {
+    const dialog = document.getElementById(id) as any;
+    if (dialog) {
+      dialog.showModal = function () {
+        this.open = true;
+      };
+      dialog.close = function () {
+        this.open = false;
+        this.dispatchEvent(new Event('close'));
+      };
+    }
   }
 }
 
@@ -272,7 +282,11 @@ describe('privatePageDialog', () => {
     (global.chrome.runtime.sendMessage as any).mockResolvedValue({ success: true });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Release any focus trap on the registry-current instance BEFORE resetModules
+    // (static imports would reference a stale instance after resets).
+    const { focusTrapManager } = await import('../../utils/ui/focusTrap.js');
+    focusTrapManager.releaseAll();
     vi.resetModules();
     // Restore DOM
     document.body.innerHTML = '';
@@ -672,6 +686,125 @@ describe('privatePageDialog', () => {
       });
 
       expect(startAutoCloseTimer).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('focusTrap wiring (PBI-25)', () => {
+    // NOTE: this file uses vi.resetModules + dynamic imports, so the
+    // focusTrapManager must also be resolved dynamically per test —
+    // a static import would reference a stale registry instance.
+    async function freshTrapManager() {
+      const m = await import('../../utils/ui/focusTrap.js');
+      return m.focusTrapManager as typeof import('../../utils/ui/focusTrap.js').focusTrapManager;
+    }
+
+    function trapCountFor(focusTrapManager: { handlers: Map<string, { element: HTMLElement }> }, id: string): number {
+      const el = document.getElementById(id);
+      return [...focusTrapManager.handlers.values()].filter((h) => h.element === el).length;
+    }
+
+    it('showPrivatePageDialog traps focus and cancel releases it', async () => {
+      const mod = await import('../privatePageDialog.js');
+      const focusTrapManager = await freshTrapManager();
+      const trapSpy = vi.spyOn(focusTrapManager, 'trap');
+      const releaseSpy = vi.spyOn(focusTrapManager, 'release');
+      try {
+        mod.showPrivatePageDialog('https://example.com/private', 'auth_required', 'Basic Auth');
+
+        const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
+        expect(dialog.open).toBe(true);
+        expect(trapSpy).toHaveBeenCalledTimes(1);
+        expect(trapSpy).toHaveBeenCalledWith(dialog, expect.any(Function));
+        expect(trapCountFor(focusTrapManager, 'private-page-dialog')).toBe(1);
+
+        document.getElementById('dialog-cancel')!.click();
+        expect(releaseSpy).toHaveBeenCalled();
+        expect(trapCountFor(focusTrapManager, 'private-page-dialog')).toBe(0);
+      } finally {
+        trapSpy.mockRestore();
+        releaseSpy.mockRestore();
+      }
+    });
+
+    it('save-once/save-domain/save-path each release the trap', async () => {
+      const mod = await import('../privatePageDialog.js');
+      const focusTrapManager = await freshTrapManager();
+      const releaseSpy = vi.spyOn(focusTrapManager, 'release');
+      try {
+        for (const btnId of ['dialog-save-once', 'dialog-save-domain', 'dialog-save-path']) {
+          mod.setCurrentPendingSave(createPendingSave());
+          mod.showPrivatePageDialog('https://example.com/private', 'reason', 'header');
+          expect(trapCountFor(focusTrapManager, 'private-page-dialog')).toBe(1);
+          document.getElementById(btnId)!.click();
+          // Allow async handlers (whitelist save + record) to settle
+          await vi.waitFor(() => {
+            expect(trapCountFor(focusTrapManager, 'private-page-dialog')).toBe(0);
+          });
+        }
+        expect(releaseSpy).toHaveBeenCalled();
+      } finally {
+        releaseSpy.mockRestore();
+      }
+    });
+
+    it('native close (Escape path) releases the trap', async () => {
+      const mod = await import('../privatePageDialog.js');
+      const focusTrapManager = await freshTrapManager();
+      const releaseSpy = vi.spyOn(focusTrapManager, 'release');
+      try {
+        mod.showPrivatePageDialog('https://example.com/private', 'reason', 'header');
+        expect(trapCountFor(focusTrapManager, 'private-page-dialog')).toBe(1);
+
+        (document.getElementById('private-page-dialog') as any).close();
+        expect(releaseSpy).toHaveBeenCalled();
+        expect(trapCountFor(focusTrapManager, 'private-page-dialog')).toBe(0);
+      } finally {
+        releaseSpy.mockRestore();
+      }
+    });
+
+    it('re-open does not double-trap the private-page dialog', async () => {
+      const mod = await import('../privatePageDialog.js');
+      const focusTrapManager = await freshTrapManager();
+      const trapSpy = vi.spyOn(focusTrapManager, 'trap');
+      try {
+        mod.showPrivatePageDialog('https://example.com/a', 'reason', 'header');
+        mod.showPrivatePageDialog('https://example.com/b', 'reason', 'header');
+        expect(trapSpy).toHaveBeenCalledTimes(2);
+        expect(trapCountFor(focusTrapManager, 'private-page-dialog')).toBe(1);
+      } finally {
+        trapSpy.mockRestore();
+      }
+    });
+
+    it('showRecordingFailedDialog traps focus and dismiss/retry release it', async () => {
+      const mod = await import('../privatePageDialog.js');
+      const focusTrapManager = await freshTrapManager();
+      const trapSpy = vi.spyOn(focusTrapManager, 'trap');
+      const releaseSpy = vi.spyOn(focusTrapManager, 'release');
+      try {
+        mod.showRecordingFailedDialog('https://example.com/page', 'Network error');
+
+        const dialog = document.getElementById('recording-failed-dialog') as HTMLDialogElement;
+        expect(dialog.open).toBe(true);
+        expect(trapSpy).toHaveBeenCalledWith(dialog, expect.any(Function));
+        expect(trapCountFor(focusTrapManager, 'recording-failed-dialog')).toBe(1);
+
+        document.getElementById('recording-failed-dismiss')!.click();
+        expect(trapCountFor(focusTrapManager, 'recording-failed-dialog')).toBe(0);
+
+        mod.setCurrentPendingSave(createPendingSave());
+        mod.showRecordingFailedDialog('https://example.com/page', 'Network error');
+        expect(trapCountFor(focusTrapManager, 'recording-failed-dialog')).toBe(1);
+        document.getElementById('recording-failed-retry')!.click();
+        await vi.waitFor(() => {
+          expect(trapCountFor(focusTrapManager, 'recording-failed-dialog')).toBe(0);
+        });
+        expect(releaseSpy).toHaveBeenCalled();
+      } finally {
+        trapSpy.mockRestore();
+        releaseSpy.mockRestore();
+      }
     });
   });
 });

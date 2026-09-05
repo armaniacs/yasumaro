@@ -5,6 +5,7 @@
 
 import { getMessage } from '../utils/i18n.js';
 import type { MaskedPosition } from './maskNavigator.js';
+import { focusTrapManager } from '../utils/ui/focusTrap.js';
 
 export const DOM_IDS = {
   MODAL: 'confirmationModal',
@@ -27,6 +28,7 @@ export interface PreviewView {
   getMaskStatusMessage(): HTMLElement | null;
   setPreviewContent(text: string): void;
   show(html: string): void;
+  close(): void;
   onConfirm(handler: () => void): void;
   onCancel(handler: () => void): void;
   /** Full show flow used by presenter — kept separate for testability */
@@ -46,6 +48,7 @@ export class PreviewViewImpl implements PreviewView {
   // store handlers for onConfirm/onCancel interface
   private confirmHandlers: Array<() => void> = [];
   private cancelHandlers: Array<() => void> = [];
+  private trapId: string | null = null;
 
   constructor(doc: Document = document) {
     this.doc = doc;
@@ -79,6 +82,38 @@ export class PreviewViewImpl implements PreviewView {
         // jsdom fallback
         (modal as unknown as { open: boolean }).open = true;
       }
+      this.ensureCloseRelease(modal);
+      this.releaseTrap();
+      // Escape routes to the existing cancel path (close + release)
+      this.trapId = focusTrapManager.trap(modal, () => this.close());
+    }
+  }
+
+  /** Close the modal and release the focus trap (balanced with show) */
+  close(): void {
+    const modal = this.getModal();
+    this.releaseTrap();
+    if (!modal) return;
+    try {
+      modal.close();
+    } catch {
+      (modal as unknown as { open: boolean }).open = false;
+      modal.dispatchEvent(new Event('close'));
+    }
+  }
+
+  /** 'close' event (native Escape/backdrop/close) must always release the trap */
+  private ensureCloseRelease(modal: HTMLDialogElement): void {
+    const el = modal as HTMLDialogElement & { dataset: DOMStringMap };
+    if (el.dataset.focusTrapWired === 'true') return;
+    el.dataset.focusTrapWired = 'true';
+    modal.addEventListener('close', () => this.releaseTrap());
+  }
+
+  private releaseTrap(): void {
+    if (this.trapId) {
+      focusTrapManager.release(this.trapId);
+      this.trapId = null;
     }
   }
 

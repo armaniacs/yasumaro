@@ -5,11 +5,40 @@ import { StorageKeys } from '../utils/storage/types.js';
 import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 import { startAutoCloseTimer } from './autoClose.js';
 import { getMessage } from '../utils/i18n.js';
+import { focusTrapManager } from '../utils/ui/focusTrap.js';
 
 export let currentPendingSave: PendingSave | null = null;
 
 export function setCurrentPendingSave(save: PendingSave | null): void {
   currentPendingSave = save;
+}
+
+let privatePageTrapId: string | null = null;
+let recordingFailedTrapId: string | null = null;
+
+function releasePrivatePageTrap(): void {
+  if (privatePageTrapId) {
+    focusTrapManager.release(privatePageTrapId);
+    privatePageTrapId = null;
+  }
+}
+
+function releaseRecordingFailedTrap(): void {
+  if (recordingFailedTrapId) {
+    focusTrapManager.release(recordingFailedTrapId);
+    recordingFailedTrapId = null;
+  }
+}
+
+/**
+ * 'close' event (native Escape/backdrop/dialog.close) must always release
+ * the trap, even for close paths that bypass the button handlers below.
+ */
+function ensureCloseRelease(dialog: HTMLDialogElement, onClose: () => void): void {
+  const el = dialog as HTMLDialogElement & { dataset: DOMStringMap };
+  if (el.dataset.focusTrapWired === 'true') return;
+  el.dataset.focusTrapWired = 'true';
+  dialog.addEventListener('close', onClose);
 }
 
 function showPrivatePageDialog(url: string, reason: string, headerValue: string): void {
@@ -21,7 +50,13 @@ function showPrivatePageDialog(url: string, reason: string, headerValue: string)
     messageEl.textContent = chrome.i18n.getMessage('warningPrivatePageMessage', [header, url]);
   }
 
-  dialog?.showModal();
+  if (!dialog) return;
+  dialog.showModal();
+  ensureCloseRelease(dialog, releasePrivatePageTrap);
+  // Re-open guard: never double-trap
+  releasePrivatePageTrap();
+  // Escape routes to the existing close path; 'close' event releases the trap
+  privatePageTrapId = focusTrapManager.trap(dialog, () => dialog.close());
 }
 
 /**
@@ -37,7 +72,13 @@ function showRecordingFailedDialog(url: string, reasonLabel: string): void {
     messageEl.textContent = chrome.i18n.getMessage('recordingFailedDialogMessage', [reasonLabel, url]);
   }
 
-  dialog?.showModal();
+  if (!dialog) return;
+  dialog.showModal();
+  ensureCloseRelease(dialog, releaseRecordingFailedTrap);
+  // Re-open guard: never double-trap
+  releaseRecordingFailedTrap();
+  // Escape routes to the existing close path; 'close' event releases the trap
+  recordingFailedTrapId = focusTrapManager.trap(dialog, () => dialog.close());
 }
 
 /**
@@ -82,12 +123,14 @@ async function recordWithForce(): Promise<void> {
 document.getElementById('dialog-cancel')?.addEventListener('click', () => {
   const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
   dialog?.close();
+  releasePrivatePageTrap();
   currentPendingSave = null;
 });
 
 document.getElementById('dialog-save-once')?.addEventListener('click', async () => {
   const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
   dialog?.close();
+  releasePrivatePageTrap();
 
   if (currentPendingSave) {
     await recordWithForce();
@@ -97,6 +140,7 @@ document.getElementById('dialog-save-once')?.addEventListener('click', async () 
 document.getElementById('dialog-save-domain')?.addEventListener('click', async () => {
   const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
   dialog?.close();
+  releasePrivatePageTrap();
 
   if (currentPendingSave) {
     const domain = extractDomain(currentPendingSave.url);
@@ -116,6 +160,7 @@ document.getElementById('dialog-save-domain')?.addEventListener('click', async (
 document.getElementById('dialog-save-path')?.addEventListener('click', async () => {
   const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
   dialog?.close();
+  releasePrivatePageTrap();
 
   if (currentPendingSave) {
     const settings = await settingsRepository.getAll();
@@ -132,12 +177,14 @@ document.getElementById('dialog-save-path')?.addEventListener('click', async () 
 document.getElementById('recording-failed-dismiss')?.addEventListener('click', () => {
   const dialog = document.getElementById('recording-failed-dialog') as HTMLDialogElement;
   dialog?.close();
+  releaseRecordingFailedTrap();
   currentPendingSave = null;
 });
 
 document.getElementById('recording-failed-retry')?.addEventListener('click', async () => {
   const dialog = document.getElementById('recording-failed-dialog') as HTMLDialogElement;
   dialog?.close();
+  releaseRecordingFailedTrap();
 
   if (currentPendingSave) {
     // Not a privacy decision: retry the normal path so detection still applies.
