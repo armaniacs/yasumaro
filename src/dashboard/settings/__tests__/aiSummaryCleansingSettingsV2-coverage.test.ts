@@ -17,14 +17,6 @@ const { mockGetSettingsHoisted, mockSaveSettingsHoisted } = vi.hoisted(() => ({
   mockSaveSettingsHoisted: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('../../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
-    ...actual,
-    getSettings: mockGetSettingsHoisted,
-    saveSettings: mockSaveSettingsHoisted,
-  };
-});
 
 vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -51,7 +43,7 @@ vi.mock('../../../utils/logger.js', () => ({
 }));
 
 import { CLEANSING_RULES } from '../../../utils/aiSummaryCleaner/rules.js';
-import * as storageSettings from '../../../utils/storage.js';
+import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { logError } from '../../../utils/logger.js';
 import {
   getAiSummaryCleansingSettings,
@@ -63,8 +55,8 @@ import {
   type AiSummaryCleansingSettings,
 } from '../aiSummaryCleansingSettingsV2.js';
 
-const mockGetSettings = vi.mocked(storageSettings.getSettings);
-const mockSaveSettings = vi.mocked(storageSettings.saveSettings);
+const mockGetSettings = vi.mocked(settingsRepository.getAll);
+const mockSaveSettings = vi.mocked(settingsRepository.setAll);
 
 function createAllRuleCheckboxes(): string[] {
   return CLEANSING_RULES.map(rule => {

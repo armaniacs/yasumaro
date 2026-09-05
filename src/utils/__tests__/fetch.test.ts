@@ -1,7 +1,6 @@
 import { fetchWithTimeout, isUrlAllowed, isPrivateIpAddress, isLocalhostAddress, validateUrlForFilterImport, validateUrlForAIRequests, fetchWithRetry } from '../fetch.js';
 import { normalizeUrl } from '../urlUtils.js';
 import * as cspValidatorModule from '../cspValidator.js';
-import * as storageModule from '../storage.js';
 import * as loggerModule from '../logger.js';
 
 // Mock dependencies
@@ -65,31 +64,6 @@ vi.mock('../storage/defaults.js', async (importOriginal) => {
   };
 });;
 vi.mock('../storage/encryptionSession.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn(async () => ({
-      conditional_csp_enabled: true,
-    })),
-    StorageKeys: {
-      CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../storage.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
 
@@ -197,7 +171,6 @@ vi.mock('../logger.js', () => ({
 
 // Access mocked modules
 const { CSPValidator, getCspErrorMessage } = vi.mocked(cspValidatorModule);
-const { getSettings } = vi.mocked(storageModule);
 const { logDebug } = vi.mocked(loggerModule);
 
 describe('fetchWithTimeout', () => {
@@ -867,7 +840,6 @@ describe('fetchWithTimeout - AbortError', () => {
 
 describe('fetchWithTimeout - CSP validation', () => {
   test('CSP検証が有効な場合にURLを検証する', async () => {
-    getSettings.mockResolvedValueOnce({ conditional_csp_enabled: true });
     CSPValidator.isInitialized.mockReturnValueOnce(false);
     CSPValidator.isUrlAllowed.mockReturnValueOnce(false);
     getCspErrorMessage.mockReturnValueOnce('CSP blocked');
@@ -878,7 +850,6 @@ describe('fetchWithTimeout - CSP validation', () => {
   });
 
   test('CSPエラーメッセージがない場合は汎用エラーを返す', async () => {
-    getSettings.mockResolvedValueOnce({ conditional_csp_enabled: true });
     CSPValidator.isInitialized.mockReturnValueOnce(true);
     CSPValidator.isUrlAllowed.mockReturnValueOnce(false);
     getCspErrorMessage.mockReturnValueOnce(null);

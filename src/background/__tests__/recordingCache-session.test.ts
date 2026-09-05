@@ -52,13 +52,6 @@ vi.mock('../../utils/storage/settingsMigration.js', async (importOriginal) => {
     API_KEY_FIELDS: ['geminiApiKey', 'providerApiKey', 'obsidianApiKey'],
   };
 });
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
-    ...actual,
-    API_KEY_FIELDS: ['geminiApiKey', 'providerApiKey', 'obsidianApiKey'],
-  };
-});
 
 vi.mock('../../utils/logger.js', () => ({
   addLog: vi.fn(),

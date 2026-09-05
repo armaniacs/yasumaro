@@ -4,7 +4,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { saveSettings, getSettings, StorageKeys, clearEncryptionKeyCache } from '../storage.js';
+import { settingsRepository } from '../storage/SettingsRepository.js';
+import { StorageKeys } from '../storage/types.js';
+import { clearEncryptionKeyCache } from '../storage/encryptionSession.js';
 
 // Mock chrome.storage.local
 const mockStorage: Record<string, unknown> = {};
@@ -95,7 +97,7 @@ describe('saveSettings - 楽観的ロック', () => {
             [StorageKeys.OBSIDIAN_PORT]: '27124'
         };
 
-        await saveSettings(settings);
+        await settingsRepository.setAll(settings);
 
         // 単一settingsオブジェクトで保存されているか確認
         expect(mockStorage['settings']).toBeDefined();
@@ -109,17 +111,17 @@ describe('saveSettings - 楽観的ロック', () => {
         };
 
         // 並列保存をシミュレート
-        const save1 = saveSettings({
+        const save1 = settingsRepository.setAll({
             [StorageKeys.OBSIDIAN_PORT]: '27124'
         });
-        const save2 = saveSettings({
+        const save2 = settingsRepository.setAll({
             [StorageKeys.MIN_VISIT_DURATION]: 10
         });
 
         await Promise.all([save1, save2]);
 
         // 双方の変更が反映されているか確認（競合解決後）
-        const result = await getSettings();
+        const result = await settingsRepository.getAll();
         // 楽観的ロックにより、一方が勝つことが保証されます
         expect(result[StorageKeys.MIN_VISIT_DURATION] || result[StorageKeys.OBSIDIAN_PORT]).toBeTruthy();
     });
@@ -137,7 +139,7 @@ describe('saveSettings - 楽観的ロック', () => {
         // 10回の並列保存をシミュレート
         const saves = [];
         for (let i = 0; i < 10; i++) {
-            saves.push(saveSettings({
+            saves.push(settingsRepository.setAll({
                 [StorageKeys.OBSIDIAN_PORT]: `271${23 + i}`
             }));
         }
@@ -145,7 +147,7 @@ describe('saveSettings - 楽観的ロック', () => {
         await Promise.all(saves);
 
         // いずれかの保存値が設定されているか確認（厳密なCASでは最後に成功した書き込みが勝つ）
-        const result = await getSettings();
+        const result = await settingsRepository.getAll();
         const savedPorts = Array.from({ length: 10 }, (_, i) => `271${23 + i}`);
         expect(savedPorts).toContain(result[StorageKeys.OBSIDIAN_PORT]);
     });
@@ -156,7 +158,7 @@ describe('saveSettings - 楽観的ロック', () => {
             [StorageKeys.OPENAI_BASE_URL]: 'https://api.groq.com/openai/v1'
         };
 
-        await saveSettings(settings, true);
+        await settingsRepository.setAll(settings);
 
         // ALLOWED_URLSとALLOWED_URLS_HASHが更新されているか確認
         expect(mockStorage['settings'][StorageKeys.ALLOWED_URLS]).toBeDefined();
@@ -171,9 +173,9 @@ describe('saveSettings - 楽観的ロック', () => {
             [StorageKeys.OBSIDIAN_PORT]: '27123'
         };
 
-        await saveSettings(settings);
+        await settingsRepository.setAll(settings);
 
-        const result = await getSettings();
+        const result = await settingsRepository.getAll();
         expect(result[StorageKeys.OBSIDIAN_PORT]).toBe('27123');
     });
 
@@ -244,7 +246,7 @@ describe('暗号化エラーハンドリング', () => {
             [StorageKeys.OBSIDIAN_PORT]: '27124'
         };
 
-        await expect(saveSettings(settings)).rejects.toThrow('encryption failed');
+        await expect(settingsRepository.setAll(settings)).rejects.toThrow('encryption failed');
 
         // 暗号化に失敗したため、settings はストレージに保存されていないことを確認
         expect(mockStorage['settings']).toBeUndefined();

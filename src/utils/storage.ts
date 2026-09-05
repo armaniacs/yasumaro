@@ -12,6 +12,15 @@
  *   - storage/domainFilterCache.ts - Content Script向けドメインフィルタキャッシュ
  * - Phase15: SettingsRepository へ統一。本ファイルは残余 call site 用の
  *   互換 re-export 層。新規コードは SettingsRepository を直接 import すること。
+ *
+ * 【残置理由（PBI-28確定）】
+ * - テストの barrel 参照はゼロ（全テストが直接モジュールを import/mocks する）
+ * - 本ファイルは削除不可: `src/utils/trustDb/trancoConsentManager.ts` が
+ *   `await import('../storage.js')` で getSettings/saveSettings を実行時に取得する
+ *   （storage/trustDb 間の循環を dynamic import で回避する意図的設計。
+ *   詳細は dev-docs/LAYERS.md「Layer 1-循環」および ADR
+ *   2026-08-20-utils-layer-circular-dependency を参照）
+ * - `trancoVersionTracker.ts` の `typeof import('../storage.js')`（型のみ）も残る
  */
 
 /** @deprecated Use direct module imports instead (see file header). */

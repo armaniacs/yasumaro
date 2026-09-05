@@ -6,7 +6,6 @@
 
 import { ObsidianClient } from '../obsidianClient.js';
 import * as storage from '../../utils/storage/types.js';
-import * as storageSettings from '../../utils/storage.js';
 
 const mockGetSettings = vi.hoisted(() => vi.fn());
 
@@ -42,16 +41,6 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
     },
   };
 });
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
-    ...actual,
-    getSettings: mockGetSettings,
-    saveSettings: vi.fn(),
-    clearSettingsCache: vi.fn(),
-    saveSettingsWithAllowedUrls: vi.fn(),
-  };
-});
 vi.mock('../../utils/storage/savedUrlRepository.js');
 vi.mock('../../utils/storage/domainFilterCache.js');
 vi.mock('../../utils/storage/quota.js');
@@ -65,7 +54,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
 
     // storageのデフォルトモック
     // @ts-expect-error - vi.fn() type narrowing issue
-    storageSettings.getSettings.mockResolvedValue({
+    mockGetSettings.mockResolvedValue({
       OBSIDIAN_API_KEY: 'test_key',
       OBSIDIAN_PROTOCOL: 'https',
       OBSIDIAN_PORT: '27123',
@@ -91,7 +80,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
 
     it('HTTPS接続が許可されること', async () => {
       // @ts-expect-error - vi.fn() type narrowing issue
-      storageSettings.getSettings.mockResolvedValue({
+      mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
         OBSIDIAN_PORT: '27123',
@@ -120,7 +109,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
 
     it('HTTP URLがHTTPのまま使用されること', async () => {
       // @ts-expect-error - vi.fn() type narrowing issue
-      storageSettings.getSettings.mockResolvedValue({
+      mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
         OBSIDIAN_PORT: '27123',
@@ -238,7 +227,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
   describe('プロトコル設定の検証', () => {
     it('設定にhttpが含まれている場合はHTTPでfetchされる', async () => {
       // @ts-expect-error - vi.fn() type narrowing issue
-      storageSettings.getSettings.mockResolvedValue({
+      mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
         OBSIDIAN_PORT: '27123',
@@ -267,7 +256,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
 
     it('無効なプロトコル設定は拒否される', async () => {
       // @ts-expect-error - vi.fn() type narrowing issue
-      storageSettings.getSettings.mockResolvedValue({
+      mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'ftp',
         OBSIDIAN_PORT: '27123',

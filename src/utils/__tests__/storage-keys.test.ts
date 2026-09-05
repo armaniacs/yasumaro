@@ -1,20 +1,21 @@
 import { describe, it, test, expect, vi, beforeEach } from 'vitest';
-import { getSettings, StorageKeys, saveSettings, clearSettingsCache } from '../storage.js';
+import { settingsRepository } from '../storage/SettingsRepository.js';
+import { StorageKeys } from '../storage/types.js';
 import * as migration from '../migration.js';
 
 const mockedMigration = migration as vi.Mocked<typeof migration>;
 
 describe('getSettings key refinement', () => {
   beforeEach(() => {
-    clearSettingsCache();
+    settingsRepository.clearCache();
     vi.restoreAllMocks();
   });
 
   test('StorageKeysのみを取得する', async () => {
     await chrome.storage.local.set({ extra_key: 'should_not', another_junk: 123 });
-    clearSettingsCache();
+    settingsRepository.clearCache();
 
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     expect(settings).not.toHaveProperty('extra_key');
     expect(settings).not.toHaveProperty('another_junk');
@@ -50,7 +51,7 @@ describe('getSettings key refinement', () => {
   });
 
   test('空ストレージの場合はデフォルト値のみを返す', async () => {
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     expect(settings).toHaveProperty(StorageKeys.OBSIDIAN_PROTOCOL);
     expect(settings).toHaveProperty(StorageKeys.OBSIDIAN_PORT);
@@ -62,9 +63,9 @@ describe('getSettings key refinement', () => {
       [StorageKeys.OBSIDIAN_API_KEY]: 'my-api-key',
       [StorageKeys.OBSIDIAN_PORT]: '8000'
     });
-    clearSettingsCache();
+    settingsRepository.clearCache();
 
-    const settings = await getSettings();
+    const settings = await settingsRepository.getAll();
 
     expect(settings[StorageKeys.OBSIDIAN_API_KEY]).toBe('my-api-key');
     expect(settings[StorageKeys.OBSIDIAN_PORT]).toBe('8000');

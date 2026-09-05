@@ -14,9 +14,6 @@ vi.mock('../../utils/storage/settingsMigration.js', () => ({
   migrateToSingleSettingsObject: mockMigrateToSingleSettingsObject,
 }));
 // keep barrel mock for compatibility
-vi.mock('../../utils/storage.js', () => ({
-  migrateToSingleSettingsObject: mockMigrateToSingleSettingsObject,
-}));
 
 vi.mock('../../utils/pendingStorage.js', () => ({
   migrateLegacyPendingPagesKey: mockMigrateLegacyPendingPagesKey,

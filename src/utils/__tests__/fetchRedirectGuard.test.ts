@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../storage.js', () => ({
-  getSettings: vi.fn().mockResolvedValue({}),
-}));
 
 vi.mock('../logger.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../logger.js')>();

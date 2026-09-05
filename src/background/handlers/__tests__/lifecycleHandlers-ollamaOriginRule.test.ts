@@ -37,13 +37,6 @@ vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) =
     },
   };
 });
-vi.mock('../../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
-    ...actual,
-    getSettings: mockGetSettingsHoisted,
-  };
-});
 
 vi.mock('../../../utils/storage/domainFilterCache.js', () => ({
   updateDomainFilterCache: vi.fn().mockResolvedValue(undefined),
@@ -80,11 +73,11 @@ vi.mock('../../net/ollamaOriginRule.js', () => ({
   syncOllamaOriginRule: (...args: unknown[]) => mockSyncOllamaOriginRule(...args),
 }));
 
-import { getSettings } from '../../../utils/storage.js';
+import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { createLifecycleHandlers } from '../lifecycleHandlers.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 
-const mockGetSettings = vi.mocked(getSettings);
+const mockGetSettings = vi.mocked(settingsRepository.getAll);
 
 function createCtx() {
   return {

@@ -81,32 +81,6 @@ vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      REVIEW_SUMMARY_ENABLED: 'review_summary_enabled',
-      REVIEW_SUMMARY_LAST_GENERATED_WEEK: 'review_summary_last_generated_week',
-      REVIEW_SUMMARY_LAST_GENERATED_MONTH: 'review_summary_last_generated_month',
-      LOCAL_MARKDOWN_EXPORT_PATH: 'local_markdown_export_path',
-    },
-    getSettings: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
@@ -225,7 +199,6 @@ import {
 import type { AIService } from '../ai/AIService.js';
 import type { AISummaryResult } from '../ai/AIService.js';
 import type { SqliteClient } from '../sqlite/offscreenGateway.js';
-import { getSettings } from '../../utils/storage.js';
 import { addLog } from '../../utils/logger.js';
 
 function makeEntry(overrides: Record<string, unknown> = {}) {

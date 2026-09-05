@@ -97,32 +97,6 @@ vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn(),
-    saveSettings: vi.fn(),
-    StorageKeys: {
-      GIST_ENABLED: 'gist_enabled',
-      GITHUB_PAT: 'github_pat',
-      GIST_ID: 'gist_id',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
@@ -238,7 +212,6 @@ vi.mock('../../utils/logger.js', () => ({
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
 }));
 
-import { getSettings, saveSettings } from '../../utils/storage.js';
 
 describe('GistSyncTarget', () => {
   let target: GistSyncTarget;

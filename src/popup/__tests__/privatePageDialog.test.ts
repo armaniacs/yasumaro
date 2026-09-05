@@ -88,30 +88,6 @@ vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: hoistedMockGet,
-    saveSettings: hoistedMockSave,
-    StorageKeys: {
-      DOMAIN_WHITELIST: 'domain_whitelist',
-    },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
@@ -496,8 +472,8 @@ describe('privatePageDialog', () => {
 
   describe('dialog-save-domain button', () => {
     it('should add domain to whitelist and record with force', async () => {
-      const { getSettings, saveSettings } = await import('../../utils/storage.js');
-      (getSettings as any).mockResolvedValue({ domain_whitelist: [] });
+      const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
+      (settingsRepository.getAll as any).mockResolvedValue({ domain_whitelist: [] });
 
       const mod = await import('../privatePageDialog.js');
       mod.setCurrentPendingSave(
@@ -507,7 +483,7 @@ describe('privatePageDialog', () => {
       document.getElementById('dialog-save-domain')!.click();
 
       await vi.waitFor(() => {
-        expect(saveSettings).toHaveBeenCalledWith(
+        expect(settingsRepository.setAll).toHaveBeenCalledWith(
           { domain_whitelist: ['example.com'] }
         );
       });
@@ -519,8 +495,8 @@ describe('privatePageDialog', () => {
     });
 
     it('should not duplicate existing domain in whitelist', async () => {
-      const { getSettings, saveSettings } = await import('../../utils/storage.js');
-      (getSettings as any).mockResolvedValue({
+      const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
+      (settingsRepository.getAll as any).mockResolvedValue({
         domain_whitelist: ['example.com'],
       });
 
@@ -538,7 +514,7 @@ describe('privatePageDialog', () => {
         expect(global.chrome.runtime.sendMessage).toHaveBeenCalled();
       });
 
-      expect(saveSettings).not.toHaveBeenCalled();
+      expect(settingsRepository.setAll).not.toHaveBeenCalled();
     });
 
     it('should handle missing domain extraction gracefully', async () => {
@@ -561,9 +537,8 @@ describe('privatePageDialog', () => {
 
   describe('dialog-save-path button', () => {
     it('should add full URL path to whitelist and record with force', async () => {
-      const { saveSettings } = await import('../../utils/storage.js');
-      const { getSettings } = await import('../../utils/storage.js');
-      (getSettings as any).mockResolvedValue({ domain_whitelist: [] });
+      const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
+      (settingsRepository.getAll as any).mockResolvedValue({ domain_whitelist: [] });
 
       const mod = await import('../privatePageDialog.js');
       mod.setCurrentPendingSave(
@@ -573,7 +548,7 @@ describe('privatePageDialog', () => {
       document.getElementById('dialog-save-path')!.click();
 
       await vi.waitFor(() => {
-        expect(saveSettings).toHaveBeenCalledWith(
+        expect(settingsRepository.setAll).toHaveBeenCalledWith(
           { domain_whitelist: ['https://example.com/private-path'] }
         );
       });
@@ -582,8 +557,8 @@ describe('privatePageDialog', () => {
     });
 
     it('should not duplicate existing URL in whitelist', async () => {
-      const { getSettings, saveSettings } = await import('../../utils/storage.js');
-      (getSettings as any).mockResolvedValue({
+      const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
+      (settingsRepository.getAll as any).mockResolvedValue({
         domain_whitelist: ['https://example.com/private-path'],
       });
 
@@ -600,7 +575,7 @@ describe('privatePageDialog', () => {
         expect(global.chrome.runtime.sendMessage).toHaveBeenCalled();
       });
 
-      expect(saveSettings).not.toHaveBeenCalled();
+      expect(settingsRepository.setAll).not.toHaveBeenCalled();
     });
   });
 

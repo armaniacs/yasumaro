@@ -9,37 +9,35 @@
 
 import { vi } from 'vitest';;
 import { TrancoConsentManager, ConsentResult } from '../trancoConsentManager.js';
-import { StorageKeys } from '../../storage.js';
+import { StorageKeys } from '../../storage/types.js';
 
 // storage をモック (PBI-2026-08-01-16: saveOldTrancoDomains/
 // getOldTrancoDomains/clearOldTrancoDomains が settings オブジェクト経由に
 // なったため). Backed by the same mockStorage Map used for chrome.storage.local
 // below so both access paths observe the same underlying state.
-vi.mock('../../storage.js', async (importOriginal) => {
+vi.mock('../../storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn(async () => Object.fromEntries(mockStorage.entries())),
-    saveSettings: vi.fn(async (partial: Record<string, unknown>) => {
-      for (const [key, value] of Object.entries(partial)) {
-        mockStorage.set(key, value);
-      }
-    }),
-
-  } as Record<string, unknown>;
+  const getAll = vi.fn(async () => Object.fromEntries(mockStorage.entries()));
+  const setAll = vi.fn(async (partial: Record<string, unknown>) => {
+    for (const [key, value] of Object.entries(partial ?? {})) {
+      mockStorage.set(key, value);
+    }
+  });
+  const getMany = vi.fn(async (keys: readonly string[]) => {
+    const all = (await getAll()) as Record<string, unknown>;
+    return Object.fromEntries(keys.map((k) => [k, all[k]]));
+  });
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
+    settingsRepository: { getAll, setAll, getMany, clearCache: vi.fn() },
+    SettingsRepository: class {
+      getAll = getAll;
+      setAll = setAll;
+      getMany = getMany;
+      clearCache = vi.fn();
+    },
   };
-});;
+});
 
 beforeAll(() => {
   vi.useFakeTimers();

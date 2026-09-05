@@ -244,61 +244,6 @@ vi.mock('../utils/storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettingsWithAllowedUrls: vi.fn().mockResolvedValue(undefined),
-      StorageKeys: {
-          OBSIDIAN_API_KEY: 'obsidianApiKey',
-          OBSIDIAN_PROTOCOL: 'obsidianProtocol',
-          OBSIDIAN_PORT: 'obsidianPort',
-          OBSIDIAN_DAILY_PATH: 'obsidianDailyPath',
-          AI_PROVIDER: 'aiProvider',
-          GEMINI_API_KEY: 'geminiApiKey',
-          GEMINI_MODEL: 'geminiModel',
-          OPENAI_BASE_URL: 'openaiBaseUrl',
-          OPENAI_API_KEY: 'openaiApiKey',
-          OPENAI_MODEL: 'openaiModel',
-          OPENAI_2_BASE_URL: 'openai2BaseUrl',
-          OPENAI_2_API_KEY: 'openai2ApiKey',
-          OPENAI_2_MODEL: 'openai2Model',
-          LM_STUDIO_BASE_URL: 'lmStudioBaseUrl',
-          LM_STUDIO_MODEL: 'lmStudioModel',
-          OLLAMA_BASE_URL: 'ollamaBaseUrl',
-          OLLAMA_MODEL: 'ollamaModel',
-          PROVIDER_TYPE: 'providerType',
-          PROVIDER_BASE_URL: 'providerBaseUrl',
-          PROVIDER_API_KEY: 'providerApiKey',
-          PROVIDER_MODEL: 'providerModel',
-          MIN_VISIT_DURATION: 'minVisitDuration',
-          MIN_SCROLL_DEPTH: 'minScrollDepth',
-          MAX_TOKENS_PER_PROMPT: 'maxTokensPerPrompt',
-          AI_TIMEOUT_MS: 'aiTimeoutMs',
-          TAG_SUMMARY_MODE: 'tagSummaryMode',
-          TAG_CATEGORIES: 'tagCategories',
-          TRANCO_VERSION: 'trancoVersion',
-          TRANCO_DOMAINS: 'trancoDomains',
-          TRANCO_CONSENT_GRANTED: 'trancoConsentGranted',
-          TRANCO_CONSENT_DENIED_TIMESTAMP: 'trancoConsentDeniedTimestamp',
-          TRANCO_CONSENT_DENIED_REASON: 'trancoConsentDeniedReason',
-      },
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {

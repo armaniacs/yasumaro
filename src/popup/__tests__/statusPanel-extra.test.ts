@@ -70,9 +70,6 @@ vi.mock('../../utils/domainUtils.js', () => ({
   extractDomain: mockExtractDomain,
 }));
 
-vi.mock('../../utils/storage.js', () => ({
-  saveSettings: mockSetAll,
-}));
 
 import {
   initStatusPanel,

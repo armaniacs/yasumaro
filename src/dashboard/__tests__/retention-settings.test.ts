@@ -76,7 +76,7 @@ import {
     loadGeneralSettings,
     setupRetentionUnlimitedWarning,
 } from '../generalSettings/settingsForm.js';
-import { StorageKeys } from '../../utils/storage.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 
 function buildRetentionDom() {
     document.body.innerHTML = `

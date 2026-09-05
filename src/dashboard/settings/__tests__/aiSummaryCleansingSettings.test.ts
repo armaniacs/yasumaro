@@ -118,42 +118,6 @@ const { mockGetSettingsHoisted, mockSaveSettingsHoisted } = vi.hoisted(() => ({
   mockSaveSettingsHoisted: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('../../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      StorageKeys: {
-          AI_SUMMARY_CLEANSING_ENABLED: 'ai_summary_cleansing_enabled',
-          AI_SUMMARY_CLEANSING_ALT: 'ai_summary_cleansing_alt',
-          AI_SUMMARY_CLEANSING_METADATA: 'ai_summary_cleansing_metadata',
-          AI_SUMMARY_CLEANSING_ADS: 'ai_summary_cleansing_ads',
-          AI_SUMMARY_CLEANSING_NAV: 'ai_summary_cleansing_nav',
-          AI_SUMMARY_CLEANSING_SOCIAL: 'ai_summary_cleansing_social',
-          AI_SUMMARY_CLEANSING_DEEP: 'ai_summary_cleansing_deep',
-          AI_SUMMARY_CLEANSING_LINK_DENSITY: 'ai_summary_cleansing_link_density',
-          AI_SUMMARY_CLEANSING_JSON_LD: 'ai_summary_cleansing_json_ld',
-          AI_SUMMARY_CLEANSING_LAZY_LOAD: 'ai_summary_cleansing_lazy_load',
-          AI_SUMMARY_CLEANSING_SKIP_LINK: 'ai_summary_cleansing_skip_link',
-          AI_SUMMARY_CLEANSING_CARD: 'ai_summary_cleansing_card',
-      },
-      DEFAULT_SETTINGS: {},
-      getSettings: mockGetSettingsHoisted,
-      saveSettings: mockSaveSettingsHoisted,
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});
 vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
@@ -282,15 +246,15 @@ vi.mock('../../../utils/storage/quota.js', async (importOriginal) => {
 });;
 
 import * as storage from '../../../utils/storage/types.js';
-import * as storageSettings from '../../../utils/storage.js';
+import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import {
     getAiSummaryCleansingSettings,
     saveAiSummaryCleansingSettings,
     type AiSummaryCleansingSettings,
 } from '../aiSummaryCleansingSettingsV2.js';
 
-const mockGetSettings = vi.mocked(storageSettings.getSettings);
-const mockSaveSettings = vi.mocked(storageSettings.saveSettings);
+const mockGetSettings = vi.mocked(settingsRepository.getAll);
+const mockSaveSettings = vi.mocked(settingsRepository.setAll);
 
 const baseStorageValues = {
     ai_summary_cleansing_enabled: true,

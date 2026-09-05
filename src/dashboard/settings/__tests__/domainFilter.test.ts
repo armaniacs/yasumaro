@@ -101,34 +101,6 @@ vi.mock('../../../utils/storage/encryptionSession.js', async (importOriginal) =>
     ),
   };
 });;
-vi.mock('../../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      DOMAIN_FILTER_MODE: 'domain_filter_mode',
-      DOMAIN_WHITELIST: 'domain_whitelist',
-      DOMAIN_BLACKLIST: 'domain_blacklist',
-      SIMPLE_FORMAT_ENABLED: 'simple_format_enabled',
-      UBLOCK_FORMAT_ENABLED: 'ublock_format_enabled',
-    },
-    getSettings: mockGetSettings,
-    saveSettings: mockSaveSettings,
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {

@@ -221,37 +221,6 @@ vi.mock('../storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      getSettings: mockGetSettingsHoisted,
-      saveSettings: mockSaveSettingsHoisted,
-      getOrCreateHmacSecret: mockGetOrCreateHmacSecretHoisted,
-      API_KEY_FIELDS: [
-          'obsidian_api_key',
-          'gemini_api_key',
-          'openai_api_key',
-          'openai_2_api_key',
-          'provider_api_key',
-          'github_pat'
-      ],
-      Settings: {}
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
@@ -379,10 +348,12 @@ import {
 } from '../settingsExportImport.js';
 
 import * as cryptoModule from '../crypto/index.js';
-import * as storageModule from '../storage.js';
+import { settingsRepository } from '../storage/SettingsRepository.js';
+import * as encryptionSession from '../storage/encryptionSession.js';
 
 const { computeHMAC, decryptData, deriveKey } = vi.mocked(cryptoModule);
-const { getSettings, saveSettings, getOrCreateHmacSecret } = vi.mocked(storageModule);
+const { getAll: getSettings, setAll: saveSettings } = vi.mocked(settingsRepository);
+const { getOrCreateHmacSecret } = vi.mocked(encryptionSession);
 
 describe('settingsExportImport', () => {
 

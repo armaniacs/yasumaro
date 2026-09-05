@@ -23,7 +23,6 @@ import {
     handleExportLocalMarkdown,
     handleHistoryExportLocalMarkdown,
 } from '../localMarkdownExport.js';
-import { saveSettingsWithAllowedUrls } from '../../utils/storage.js';
 import { resetPlatformOsCache } from '../../utils/deviceUtils.js';
 
 const { mockGetAll, mockSetAll, mockGetMany } = vi.hoisted(() => ({

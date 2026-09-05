@@ -86,29 +86,6 @@ const { mockGetSettingsHoisted, mockSaveSettingsHoisted } = vi.hoisted(() => ({
   mockSaveSettingsHoisted: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('../../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: new Proxy({}, { get: (_t, k) => String(k) }),
-    DEFAULT_SETTINGS: {},
-    getSettings: mockGetSettingsHoisted,
-    saveSettings: mockSaveSettingsHoisted,
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});
 
 vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -204,7 +181,7 @@ vi.mock('../../../utils/logger.js', () => ({
 }));
 
 import * as storage from '../../../utils/storage/types.js';
-import * as storageSettings from '../../../utils/storage.js';
+import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import {
   getAiSummaryCleansingSettings,
   applyAiSummaryCleansingSettingsToUI,
@@ -213,7 +190,7 @@ import {
   type AiSummaryCleansingSettings,
 } from '../aiSummaryCleansingSettingsV2.js';
 
-const mockGetSettings = vi.mocked(storageSettings.getSettings);
+const mockGetSettings = vi.mocked(settingsRepository.getAll);
 
 function ruleHtmlId(key: string): string {
   return `ai-summary-cleansing-${key.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`)}`;
