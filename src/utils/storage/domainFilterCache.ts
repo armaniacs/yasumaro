@@ -8,7 +8,7 @@
 
 import { StorageKeys } from './types.js';
 import type { Settings } from './types.js';
-import { wildcardToRegex } from '../wildcardToRegex.js';
+import { matchesDomainPattern, extractHostname } from '../wildcardToRegex.js';
 import { DomainFilter } from '../domainFilter/DomainFilter.js';
 
 /**
@@ -59,32 +59,15 @@ export function isDomainFilterCacheValid(cachedAt: number): boolean {
  * @returns {string | null} 正規化されたURL（失敗時はnull）
  */
 export function normalizeDomainUrl(url: string): string | null {
-    try {
-        const urlObj = new URL(url);
-        let hostname = urlObj.hostname;
-
-        // www. プレフィックスを削除（ドメインマッチングの一貫性）
-        if (hostname.startsWith('www.')) {
-            hostname = hostname.substring(4);
-        }
-
-        return hostname;
-    } catch (_e) {
-        return null;
-    }
+    return extractHostname(url);
 }
 
 /**
  * パターンマッチング（ワイルドカード対応）
- * @deprecated Use wildcardToRegex directly or DomainFilter seam — single engine.
+ * @deprecated Use matchesDomainPattern from wildcardToRegex.js (single shared path, PBI-18).
  */
 export function matchesWildcardPattern(domain: string, pattern: string): boolean {
-    if (!pattern.includes('*')) {
-        return domain.toLowerCase() === pattern.toLowerCase();
-    }
-    const regex = wildcardToRegex(pattern);
-    if (!regex) return false;
-    return regex.test(domain);
+    return matchesDomainPattern(domain, pattern);
 }
 
 /**
