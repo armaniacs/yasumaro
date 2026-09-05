@@ -43,6 +43,9 @@ Scenario: 既存の呼び出し元は壊れない
 - 注意: `sqliteRpcClient.ts:43` の `categorizeError` は別モジュールの同名関数であり、本スコープ外。混同して変更しないこと
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（該当ガイドがあれば）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（該当ガイドがあれば）
+
+## 実装メモ（2026-09-05・branch 0905c）
+- 完了: 非推奨 shim `src/utils/errorMessages.ts` と唯一の消費者 `errorMessages.test.ts`（17 ケース）を削除。errorClassification.test.ts は既に 21 ケースで主要網羅があり、shim テストのユニーク 2 ケース（技術情報非漏洩・context 機密マスキング）を移植して coverage を保った。`ErrorType` 並列定義は errorClassification.ts:16 の 1 箇所のみ（grep 確認）。`errorMessage()`（errorUtils.ts）は公開 API のまま維持（利用箇所 30+ のため移動せず）。30 tests green + type-check clean。

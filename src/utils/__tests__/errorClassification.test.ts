@@ -155,4 +155,26 @@ describe('createErrorResponse', () => {
 
     consoleErrorSpy.mockRestore();
   });
+
+  it('does not expose technical details in user message', () => {
+    const message = getUserMessage({ message: 'TypeError: Cannot read property of undefined' });
+    expect(message).not.toContain('TypeError');
+    expect(message).not.toContain('undefined');
+  });
+
+  it('redacts sensitive information from context (PBI-19: errorMessages.test から移植)', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const response = createErrorResponse(new Error('Auth failed'), {
+      apiKey: 'secret-key-123',
+      password: 'my-password',
+      url: 'https://example.com',
+    });
+
+    expect(response.success).toBe(false);
+    // レスポンス（ユーザー向け文言）に機密情報が含まれないこと
+    expect(response.error).not.toContain('secret-key-123');
+    expect(response.error).not.toContain('my-password');
+
+    consoleErrorSpy.mockRestore();
+  });
 });
