@@ -12,6 +12,7 @@ vi.mock('../../../dashboardSqliteService.js', () => ({
   migrateLogs: vi.fn(),
   backfillMetadata: vi.fn(),
   cleanupLegacyStorage: vi.fn(),
+  getSqliteStatus: vi.fn(),
 }));
 
 vi.mock('../../../utils/confirmDialog.js', () => ({
@@ -22,7 +23,7 @@ vi.mock('../../../builtInAiDiagnosticsService.js', () => ({
   startBuiltInAiDownload: vi.fn(),
 }));
 
-import { runOpfsSpike, migrateLogs, backfillMetadata, cleanupLegacyStorage } from '../../../dashboardSqliteService.js';
+import { runOpfsSpike, migrateLogs, backfillMetadata, cleanupLegacyStorage, getSqliteStatus } from '../../../dashboardSqliteService.js';
 import { showConfirmDialog } from '../../../utils/confirmDialog.js';
 
 function makeElements(): DiagnosticActionElements {
@@ -169,9 +170,11 @@ describe('diagnosticsActions', () => {
   });
 
   it('TEST_SQLITE success with initialized and fts5', async () => {
-    vi.mocked(globalThis.chrome.runtime.sendMessage).mockResolvedValue({
-      success: true,
+    // PBI 11: status goes through getSqliteStatus(), not an inline sendMessage.
+    vi.mocked(getSqliteStatus).mockResolvedValue({
       initialized: true,
+      path: '/db.sqlite3',
+      fallback: false,
       fts5: true,
     });
     const els = makeElements();
@@ -186,9 +189,12 @@ describe('diagnosticsActions', () => {
   });
 
   it('TEST_SQLITE init failure shows error message', async () => {
-    vi.mocked(globalThis.chrome.runtime.sendMessage).mockResolvedValue({
-      success: true,
+    // PBI 11: status goes through getSqliteStatus(), not an inline sendMessage.
+    vi.mocked(getSqliteStatus).mockResolvedValue({
       initialized: false,
+      path: '',
+      fallback: false,
+      fts5: false,
       initError: 'boom',
     });
     const els = makeElements();
