@@ -112,7 +112,36 @@ export function decodeStatusExtras(response: Record<string, unknown>): Record<st
   };
 }
 
-export function decodeOpfsSpikeReport(value: unknown): import('../offscreen/opfsSpike.js').OpfsSpikeReport {
-  if (!isRecord(value)) throw new Error('Invalid SQLite response: report');
-  return value as unknown as import('../offscreen/opfsSpike.js').OpfsSpikeReport;
+export interface OpfsSpikeStepResult { name: string; ok: boolean; detail: string }
+export interface OpfsSpikeReportView {
+  strategy: string;
+  steps: OpfsSpikeStepResult[];
+  passed: boolean;
+  durationMs: number;
+}
+
+export function decodeOpfsSpikeReport(value: unknown): OpfsSpikeReportView {
+  if (!isRecord(value)
+    || typeof value.strategy !== 'string'
+    || !Array.isArray(value.steps)
+    || !value.steps.every((step) => isRecord(step)
+      && typeof step.name === 'string'
+      && typeof step.ok === 'boolean'
+      && typeof step.detail === 'string')
+    || typeof value.passed !== 'boolean'
+    || !isFiniteNumber(value.durationMs)
+    || value.durationMs < 0) {
+    throw new Error('Invalid SQLite response: report');
+  }
+
+  return {
+    strategy: value.strategy,
+    steps: value.steps.map((step) => ({
+      name: step.name,
+      ok: step.ok,
+      detail: step.detail,
+    })),
+    passed: value.passed,
+    durationMs: value.durationMs,
+  };
 }
