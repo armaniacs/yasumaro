@@ -45,11 +45,11 @@ Scenario: testConnection の振る舞いは不変
 ```
 
 ## 受け入れ基準
-- [ ] `AIProviderStrategy`（base）に `getAllowedUrlsForRequests()`（または同等の protected helper）が追加され、`utils/storage/urlWhitelist.js` の `getAllowedUrls` を返す
-- [ ] `GeminiProvider._getAllowedUrls` / `OpenAIProvider._getAllowedUrls` が削除され、testConnection 内の呼び出しが base helper に付け替わる
-- [ ] 応答 cap が ProviderStrategy の export 定数 1 つに統一され（命名は summary/testConnection の両用途を正当化するものに）、Gemini:18 / OpenAI:17 のローカル定数が削除される
-- [ ] 振る舞いが変更前と同一（リファクタリング）。provider 全テストが無修正で green
-- [ ] 旧 PBI 2026-08-07-01 の該当指摘が解消された旨を実装メモに記録
+- [x] `AIProviderStrategy`（base）に `getAllowedUrlsForRequests()`（または同等の protected helper）が追加され、`utils/storage/urlWhitelist.js` の `getAllowedUrls` を返す
+- [x] `GeminiProvider._getAllowedUrls` / `OpenAIProvider._getAllowedUrls` が削除され、testConnection 内の呼び出しが base helper に付け替えられる
+- [x] 応答 cap が ProviderStrategy の export 定数 1 つに統一され（命名は summary/testConnection の両用途を正当化するものに）、Gemini:18 / OpenAI:17 のローカル定数が削除される
+- [x] 振る舞いが変更前と同一（リファクタリング）。provider 全テストが無修正で green
+- [x] 旧 PBI 2026-08-07-01 の該当指摘が解消された旨を実装メモに記録
 
 ## テスト戦略（t_wadaスタイル）
 ### 単体テスト
@@ -91,10 +91,10 @@ sed -n '240,246p' src/background/ai/providers/OpenAIProvider.ts
 - `_getAllowedUrls` の呼び出し位置（Gemini:195 / OpenAI:183）は testConnection 内 — summary flow 側に同名の別仕組み（providerAllowlist の中立テーブル、Round 4 PBI 01）が既にあるため混同しないこと。本 PBI は testConnection の fetch 許可リスト取得の共有化のみ
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] provider 関連テスト全 green（type-check / lint / build 含む）
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新（DESIGN_SPECIFICATIONS.md / 該当節に cap 定数の SSOT を追記。旧 PBI 2026-08-07-01 の指摘解消を記録）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] provider 関連テスト全 green（type-check / lint / build 含む）
+- [x] コードレビュー完了
+- [x] ドキュメント更新（DESIGN_SPECIFICATIONS.md / 該当節に cap 定数の SSOT を追記。旧 PBI 2026-08-07-01 の指摘解消を記録）
 
 ## 実装メモ（2026-09-05・branch 0905c）
 - `ProviderStrategy.ts` に `export const MAX_AI_HTTP_RESPONSE_BYTES`（10MB、summary＋testConnection 両用途）を置き、`MAX_HTTP_SUMMARY_RESPONSE_BYTES`（base）・`MAX_AI_RESPONSE_BYTES` ×2（Gemini/OpenAI）を削除・付け替え
@@ -102,3 +102,4 @@ sed -n '240,246p' src/background/ai/providers/OpenAIProvider.ts
 - 両 provider の private ラッパーと `getAllowedUrls` 直接 import を削除し、testConnection 内呼び出しを base helper に付け替え。debug envelope・flow 骨格は不変
 - 旧 PBI 2026-08-07-01 指摘（`_getAllowedUrls` 逐語同一 2 コピー）は本 PBI で解消済み
 - 検証: `src/background/ai` 14 files / 214 tests green、全 suite 682 passed・1 skipped（11574 passed・21 skipped）、type-check clean、lint 0 errors
+- ドキュメント: `DESIGN_SPECIFICATIONS.md` に cap 定数（`MAX_AI_HTTP_RESPONSE_BYTES`）と request-time allowlist helper の SSOT ノートを追記（summary-flow の providerAllowlist 中立テーブルとの混同防止注記付き）。レビュー Important（DoD docs bullet 未達）のクローズ。
