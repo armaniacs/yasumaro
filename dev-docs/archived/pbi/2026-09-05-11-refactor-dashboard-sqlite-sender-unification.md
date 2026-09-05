@@ -62,17 +62,17 @@ Scenario: getSqliteStatus は失敗時も status オブジェクトを返す
 ```
 
 ## 受け入れ基準
-- [ ] `dashboardSqliteService.ts` から `sendDashboardMessageRaw` / `sendDashboardMessage` / `getConfirmTokenForAction` / `withConfirmToken` / `DASHBOARD_SQLITE_TIMEOUT` が削除される
-- [ ] `queryLogs` / `searchLogs` / `getSqliteStatus` が `dashboardGateway.callDashboard` 経由になる。service の公開 API（22 fn・ServiceResult / status shape）は無修正
-- [ ] `DashboardGateway.callDashboard` に opt-in の retry option（第 4 引数 `{ retryAttempts?, retryDelayMs? }`）が追加される。retry 条件（送信 throw または `response.retriable`・decode 失敗は retry 対象外）は module header に契約として文書化。subtype → retry 設定の政策テーブルは作らない（3 つ目の retry op 出現時に再評価）
-- [ ] service `withRetry`（R1）は削除され、queryLogs/searchLogs は retry option に移行する（R2〜R4 は触らない）
-- [ ] `getSqliteStatus` は SqliteResult → status shape の変換層を service 内に持ち、transport throw / response.error / decode throw の 3 分岐が今日と同一の initError 意味論を返す
-- [ ] `diagnosticsActions.ts` の DASHBOARD_SQLITE 直接送信（:203-207）が `getSqliteStatus()` 経由に置換される
-- [ ] `diagnosticsActions.ts` の TEST_OBSIDIAN / TEST_AI 直接送信（:87, :144）が `connectionTests.ts` の `testObsidianConnection` / `testAiConnection` 経由に置換される（進捗 choreography は触らない — ADR 2026-08-23 の管轄、行数トリガー未発火）
-- [ ] `dashboardGateway.ts` が `src/background/sqlite/` から `src/messaging/` へ移動する（offscreenGateway は残留）。barrel `src/background/sqliteGateway.ts` からは dashboardGateway の re-export が外れる
-- [ ] `decodeOpfsSpikeReport`: service の厳密検証版（:313-337）が `sqliteValidators.ts` へ移設され、service はそれを import。validators の緩い cast 版（:115-118、本番消費者ゼロ）は削除
-- [ ] grep ガードテスト新設: DASHBOARD_SQLITE sender は gateway のみ、TEST 系 sender は connectionTests の 2 helper のみ（`__tests__` を除く本番コード検査）
-- [ ] 文面・挙動が変更前と同一（リファクタリング）。dashboard 関連の既存テストが送信 mock のまま green
+- [x] `dashboardSqliteService.ts` から `sendDashboardMessageRaw` / `sendDashboardMessage` / `getConfirmTokenForAction` / `withConfirmToken` / `DASHBOARD_SQLITE_TIMEOUT` が削除される
+- [x] `queryLogs` / `searchLogs` / `getSqliteStatus` が `dashboardGateway.callDashboard` 経由になる。service の公開 API（22 fn・ServiceResult / status shape）は無修正
+- [x] `DashboardGateway.callDashboard` に opt-in の retry option（第 4 引数 `{ retryAttempts?, retryDelayMs? }`）が追加される。retry 条件（送信 throw または `response.retriable`・decode 失敗は retry 対象外）は module header に契約として文書化。subtype → retry 設定の政策テーブルは作らない（3 つ目の retry op 出現時に再評価）
+- [x] service `withRetry`（R1）は削除され、queryLogs/searchLogs は retry option に移行する（R2〜R4 は触らない）
+- [x] `getSqliteStatus` は SqliteResult → status shape の変換層を service 内に持ち、transport throw / response.error / decode throw の 3 分岐が今日と同一の initError 意味論を返す
+- [x] `diagnosticsActions.ts` の DASHBOARD_SQLITE 直接送信（:203-207）が `getSqliteStatus()` 経由に置換される
+- [x] `diagnosticsActions.ts` の TEST_OBSIDIAN / TEST_AI 直接送信（:87, :144）が `connectionTests.ts` の `testObsidianConnection` / `testAiConnection` 経由に置換される（進捗 choreography は触らない — ADR 2026-08-23 の管轄、行数トリガー未発火）
+- [x] `dashboardGateway.ts` が `src/background/sqlite/` から `src/messaging/` へ移動する（offscreenGateway は残留）。barrel `src/background/sqliteGateway.ts` からは dashboardGateway の re-export が外れる
+- [x] `decodeOpfsSpikeReport`: service の厳密検証版（:313-337）が `sqliteValidators.ts` へ移設され、service はそれを import。validators の緩い cast 版（:115-118、本番消費者ゼロ）は削除
+- [x] grep ガードテスト新設: DASHBOARD_SQLITE sender は gateway のみ、TEST 系 sender は connectionTests の 2 helper のみ（`__tests__` を除く本番コード検査）
+- [x] 文面・挙動が変更前と同一（リファクタリング）。dashboard 関連の既存テストが送信 mock のまま green
 
 ## テスト戦略（t_wadaスタイル）
 ### 単体テスト
@@ -128,7 +128,10 @@ sed -n '115,118p' src/messaging/sqliteValidators.ts         # 緩い cast 版（
 - grep ガードは `src/**` の本番コードのみ対象（`__tests__` と `testDir` を除外）。正規表現は複数行送信（diagnosticsActions のような object literal 改行）に対応させること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] dashboard / background / messaging 関連テスト全 green（type-check / lint / build 含む）
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新（DESIGN_SPECIFICATIONS.md の SQLite 経路セクションに sender 統合を反映。必要なら ARCHITECTURE_MAP.md の該当行も）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] dashboard / background / messaging 関連テスト全 green（type-check / lint / build 含む）
+- [x] コードレビュー完了
+- [x] ドキュメント更新（DESIGN_SPECIFICATIONS.md の SQLite 経路セクションに sender 統合を反映。必要なら ARCHITECTURE_MAP.md の該当行も）
+
+## 実装メモ（2026-09-05・branch 0905c・続）
+- 完了（impl `f8552fdc` + テスト配置修正 `66776e8e`、SDD サブエージェント実装）。タスクレビュー 1 修正サイクル（retry 契約テストの誤ネスト解消・テストファイルを src/messaging/__tests__/ へ移動・未使用エイリアス削除）を経て Approved。全 suite 11,578 tests green。追加で storage-extra の旧挙動テストを fix 08 の新契約に更新（`782f11d4`・ベースラインで既存の失敗と確認済み）。

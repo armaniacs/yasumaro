@@ -55,3 +55,6 @@ Scenario: 個別サイトへの動的許可は都度要求できる
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了
 - [x] ドキュメント更新済み（permissions ガイドがあれば）※permissions 専用ガイドは存在しないため対象外
+
+## 実装メモ（2026-09-05・branch 0905c）
+- 完了（commit `58a894c1`、controller-direct）。manifest.test.ts に不在アサーション新設。影響 6 スイート 95 tests green + build 成功。詳細は上部 実装メモ 参照。

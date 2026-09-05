@@ -14,54 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-05 実装順（確定・この日付の正）
-
-**前提（なぜなぜ分析による裁定）**: review-fixes 系（fix 01–10）と arch5 refactor 系（11–16）は RICE スケールが異なる（fix: Reach=ユーザー数・Effort=日 / refactor: Reach=call sites・Effort=週）ため RICE の直接比較は無効。順序は「セキュリティ・安定性修正を先、アーキテクチャ深化を後」の判断基準と、working tree の競合回避（fix 系は並行セッションが実装中）で決定した。
-
-| Phase | 対象 | 内容 |
-|-------|------|------|
-| 1 | fix 01–07 | セキュリティ・安定性（**02/03/04 完了・アーカイブ済**。残 01/05/06/07） |
-| 2 | fix 08–10 | データ保全・UX（**08 完了・アーカイブ済（唯一の High）**。残 09/10。backlog #11 も PBI 化なしで完了） |
-| 3 | refactor 11–16 | arch5（ラウンド内 RICE 降順。**13 は 12 に依存（同一ファイル）**） |
-
-- 両系列の**対象ファイルは非交差**（俯瞰済み）。意味論的な依存もなし（fix 02 の confirmToken 発行と refactor 11 の dashboard 側 sender は触り合わない）。
-- Phase 3 は Phase 1–2 の着地（コミット）後に着手する。
-- **番号予約ルール**: 2026-09-05 の NN は 01–10 = review-fixes、11–16 = arch5 で確定。review-fixes の残候補（backlog の 11–26）を新たに PBI 化する場合は **NN 17 以降**を使用する。
-- 重複チェック済み: 両系列に dupe なし（fix 系はバグ/セキュリティ修正、refactor 系は構造改善で指摘対象が別）。
-
-### 2026-09-05 Checking Team レビュー由来（review-fixes） — 6 件進行中（02/03/04/08 は完了・アーカイブ済）
-
-backlog: [2026-09-05-00-backlog-review-fixes.md](2026-09-05-00-backlog-review-fixes.md)（全 26 候補のうち 01–10 を PBI 化。11–26 は backlog に留置・PBI 化時は NN 17 以降。**#11（retry 成否返却）は PBI 化なしで完了（commit `80660334`）**）。着手順 = backlog の週次計画（上表 Phase 1–2）。
-
-- 2026-09-05-01-fix-remove-all-urls-permission.md（🔧 0.25日 — optional_host_permissions から `<all_urls>` を削除し取得先のみに限定。最小権限化。RICE 7200）
-- 2026-09-05-05-fix-retention-defaults.md（🔧 0.5日 — レコード保持に保守的なデフォルト上限を設定し OPFS/IndexedDB の無制限肥大化を防止。RICE 3600）
-- 2026-09-05-06-fix-fts-rebuild-condition.md（🔧 0.25日 — FTS 再構築条件を全空のみから件数比較に緩和しインデックス自動修復を回復。RICE 3200）
-- 2026-09-05-07-fix-migration-string-match.md（🔧 0.5日 — マイグレーション失敗判定を文字列マッチから PRAGMA 確認に変更し冪等性を確保。RICE 2800）
-- 2026-09-05-09-fix-popup-width-constraint.md（🔧 0.25日 — popup 幅固定 360px を緩和し翻訳文字列のクリップを解消。RICE 2000）
-- 2026-09-05-10-fix-recording-default-state.md（🔧 0.5日 — 閲覧履歴記録のデフォルト状態を検証・明示し倫理リスクを低減。RICE 2000）
-
-### 2026-09-05 Architecture Round 5（arch5 診断） — 6 件進行中
-
-backlog: [2026-09-05-00-backlog-arch5.md](2026-09-05-00-backlog-arch5.md)。ラウンド内着手順 = RICE 降順（ファイル番号 NN）。**PBI 13 は PBI 12 に依存（同一ファイル）**。Phase 1–2（review-fixes）着地後に着手。
-
-- 2026-09-05-11-refactor-dashboard-sqlite-sender-unification.md（🔧 0.5w — DASHBOARD_SQLITE sender 4 箇所・retry 4 層を DashboardGateway 1 module に統合。service ローカル sender ペア削除・R1 retry 吸収・getSqliteStatus 変換層化・diagnostics 迂回解消（SQLite + TEST 系送信のみ）・module を src/messaging/ へ移動・decodeOpfsSpikeReport 厳密版を validators に移設・sender 所在 grep ガード新設。RICE 28.8 / Strong。grilling 設計確定済み）
-- 2026-09-05-12-refactor-content-seam-micro-batch.md（🔧 0.15w — watchDynamicContent を impl module 1 signature に（kernel 側の逆順 wrapper + re-export 削除・本番消費者ゼロ確認済み）・CONTENT_CLEANSING_EXECUTED を ExtractResult.cleansingExecuted + kernel 注入 sender 経由に移動（utils chrome-free 回復・recount-only 誤送信回避）・visitAdmission header 補正・errorDetail → errorMessage 一本化・prepareFromOptions / cleanseViaOffscreen re-export の dead seam 削除。RICE 12.0 / Worth）
-- 2026-09-05-13-refactor-extract-orchestration-collapse.md（🔧 0.8w — extractInternal の candidate/body 二重経路 ~80 行を共有 internal step に折り畳み・cleansedReason 判定 ×3 → ×1。entry 2 種は bench c1/c4 計測面のため維持（header に実態明記）。**PBI 12 先行必須（同一ファイル）**。RICE 8.75 / Strong）
-- 2026-09-05-14-refactor-history-panel-lifecycle-narrowing.md（🔧 0.4w — history Model の lifecycle 配管 8 method を onNavigateIn/onNavigateOut 2 method に折り畳み（interface 27 → 21）・invalidateCache ヘルパーで cache 無効化 5 箇所を政策集約・遷移契約テスト新設。arch3/arch4 見送り「history-panel 統合」の絞り込み版（legacy 移行・tag SQL 化は継続見送り）。RICE 5.0 / Worth）
-- 2026-09-05-15-refactor-provider-testconnection-hoist.md（🔧 0.2w — testConnection の _getAllowedUrls 逐語同一 2 コピー（旧 PBI 2026-08-07-01 指摘）と 10MB cap 3 定義（2 名前）を base に引き上げ。testConnection template 化の再オープンはしない（Round 3 決定を遵守）。RICE 4.5 / Worth）
-- 2026-09-05-16-refactor-bench-trend-report-split.md（🔧 0.15w — htmlReport.mjs から sparkline / trendSection / trend CSS ~80 行を trendReport.mjs に分離・escapeHtml を format.mjs へ移動。arch2 の遡及条件（trend UI 拡張済み）が発火済み。RICE 3.3 / Worth）
-
-### 2026-09-05 Architecture Round 4（arch4 診断） — 7 件進行中
-
-backlog: [2026-09-05-00-backlog-arch4.md](2026-09-05-00-backlog-arch4.md)。着手順 = RICE 降順（ファイル番号 NN）。依存なし。
-
-- 2026-09-05-01-refactor-provider-backedge.md（✅ 完了・アーカイブ済 — 中立テーブル＋述語を低層に新設し逆辺2本を切断。catalog は spread で drift 不能に。template は静的 import に復帰。utils 2453＋ai 218 tests green）
-- 2026-09-05-02-refactor-pending-merge-lock.md（✅ 完了・アーカイブ済 — merge＋truncate を pendingPatchPolicy に抽出し mutate 経由に。retryCount は backoff 継承に。interleave 新規テスト付き。queue green）
-- 2026-09-05-03-refactor-popup-feedback.md（✅ 完了・アーカイブ済 — pass-through 2 件＋専用テストを削除しセッション private 化。fetcher/flow の spinner 注入も除去。popup 827 tests green）
-- 2026-09-05-04-refactor-visit-reporter.md（✅ 完了・アーカイブ済 — 共有ビルダー buildVisitStats に一本化＋label 参照を注入化。force retry 最小形は意図的と確定。matrix 8 tests。content 414 green）
-- 2026-09-05-05-refactor-sanitizer-seam.md（✅ 完了・アーカイブ済 — 5 政策サイトを checkPromptSafety テーブルに集約（MEDIUM 明示 pass、文面同一、リテラル比較で既存モック無修正）。matrix テスト付き。274 tests green）
-- 2026-09-05-06-refactor-visit-admission.md（✅ 完了・アーカイブ済 — 純粋政策関数＋retry＋判定フローを visitAdmission に集約。loader 3分岐→単一フロー、port 2 impl 共有化、shim 削除。content 426 green）
-- 2026-09-05-07-refactor-pending-queue.md（✅ 完了・アーカイブ済 — 5 Whys で facade 狭窄を棄却（多層防御は意図的）。真の欠陥 clearExpiredPages のロック外 set を withOptimisticLock 化＋競合回帰テスト。pending 45 green）
+（なし — 2026-09-05 の全 PBI が完了・アーカイブ済み。review-fixes backlog の #12〜#26 は未 PBI 化の留置候補。PBI 化する場合は NN 17 以降を使用）
 
 ### 2026-09-05 Architecture Round 3（arch3 診断） — 7 件完了
 
@@ -133,6 +86,42 @@ backlog: [2026-09-04-00-backlog-perf.md](2026-09-04-00-backlog-perf.md)。着手
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-05 Architecture Round 4（arch4 診断） — 7 件完了（全行アーカイブ済み）
+
+backlog: [2026-09-05-00-backlog-arch4.md](2026-09-05-00-backlog-arch4.md)。着手順 = RICE 降順（ファイル番号 NN）。依存なし。
+
+- 2026-09-05-01-refactor-provider-backedge.md（✅ 完了・アーカイブ済 — 中立テーブル＋述語を低層に新設し逆辺2本を切断。catalog は spread で drift 不能に。template は静的 import に復帰。utils 2453＋ai 218 tests green）
+- 2026-09-05-02-refactor-pending-merge-lock.md（✅ 完了・アーカイブ済 — merge＋truncate を pendingPatchPolicy に抽出し mutate 経由に。retryCount は backoff 継承に。interleave 新規テスト付き。queue green）
+- 2026-09-05-03-refactor-popup-feedback.md（✅ 完了・アーカイブ済 — pass-through 2 件＋専用テストを削除しセッション private 化。fetcher/flow の spinner 注入も除去。popup 827 tests green）
+- 2026-09-05-04-refactor-visit-reporter.md（✅ 完了・アーカイブ済 — 共有ビルダー buildVisitStats に一本化＋label 参照を注入化。force retry 最小形は意図的と確定。matrix 8 tests。content 414 green）
+- 2026-09-05-05-refactor-sanitizer-seam.md（✅ 完了・アーカイブ済 — 5 政策サイトを checkPromptSafety テーブルに集約（MEDIUM 明示 pass、文面同一、リテラル比較で既存モック無修正）。matrix テスト付き。274 tests green）
+- 2026-09-05-06-refactor-visit-admission.md（✅ 完了・アーカイブ済 — 純粋政策関数＋retry＋判定フローを visitAdmission に集約。loader 3分岐→単一フロー、port 2 impl 共有化、shim 削除。content 426 green）
+- 2026-09-05-07-refactor-pending-queue.md（✅ 完了・アーカイブ済 — 5 Whys で facade 狭窄を棄却（多層防御は意図的）。真の欠陥 clearExpiredPages のロック外 set を withOptimisticLock 化＋競合回帰テスト。pending 45 green）
+
+### 2026-09-05 Architecture Round 5（arch5 診断） — 6件完了
+
+backlog: [2026-09-05-00-backlog-arch5.md](2026-09-05-00-backlog-arch5.md)。実行順 = Phase 1–2（review-fixes）着地後、ラウンド内 RICE 降順。全タスク SDD（サブエージェント実装＋タスクレビュー）で実施し最終全体レビュー READY TO MERGE。
+
+- 2026-09-05-11-refactor-dashboard-sqlite-sender-unification.md（RICE 28.8 / Strong — DASHBOARD_SQLITE sender 4 箇所・retry 4 層を `DashboardGateway`（`src/messaging/` へ移設）1 module に統合。retry は opt-in option で吸収、getSqliteStatus は変換層化、diagnostics の迂回解消（SQLite + TEST 系送信）、`decodeOpfsSpikeReport` 厳密版を validators に移設、sender 所在 grep ガード新設。impl `f8552fdc` + fix `66776e8e`、1 fix cycle）
+- 2026-09-05-12-refactor-content-seam-micro-batch.md（RICE 12.0 / Worth — `watchDynamicContent` 1 signature 化（kernel 側 2 面削除）・`cleansingExecuted` フィールド + kernel 注入 sender 経由の通知移動（utils chrome-free 化・recount-only 誤送信回避）・visitAdmission header/errorDetail・dead seam 削除。commit `9e99a7a`）
+- 2026-09-05-13-refactor-extract-orchestration-collapse.md（RICE 8.75 / Strong — candidate/body 二重経路 ~80 行を共有 internal step `runCleanseAndExtract` に折り畳み、cleansedReason 判定 ×3→×1。entry 2 種と ByteMeter 計測順序は維持（bench c1/c4 連続性実測確認）。commit `b6300f55`）
+- 2026-09-05-14-refactor-history-panel-lifecycle-narrowing.md（RICE 5.0 / Worth — lifecycle 配管 8 method を `onNavigateIn`/`onNavigateOut` に狭窄（interface 27→21）・`invalidateCache` 政策集約・契約テスト新設。double-init の pendingInit leak を意図的修正として文書化。impl `56909d90` + fix `3d7978ea`、1 fix cycle）
+- 2026-09-05-15-refactor-provider-testconnection-hoist.md（RICE 4.5 / Worth — `_getAllowedUrls` 逐語同一 2 コピー（旧 PBI 2026-08-07-01 指摘）と応答 cap 3 定義を base に引き上げ（`MAX_AI_HTTP_RESPONSE_BYTES` + `getAllowedUrlsForRequests()`）。impl `b6b09ca1` + docs `8c52f230`）
+- 2026-09-05-16-refactor-bench-trend-report-split.md（RICE 3.3 / Worth — htmlReport から trendReport モジュール分離・escapeHtml を format.mjs へ移動。commit `3d32b6da`）
+
+最終全体レビュー（99702d16..3d32b6da）: READY TO MERGE。クロスタスク討議 1 件（クレンジング badge 通知が body フォールバック経路でも発火するのは旧非対称の修正として意図的・CHANGELOG 記載）＋ carried Minor 10 件すべて ACCEPT AS-IS。
+
+### 2026-09-05 Checking Team レビュー由来（review-fixes）第2弾 — 6件完了
+
+- 2026-09-05-01-fix-remove-all-urls-permission.md（RICE 7200 — `optional_host_permissions` から `<all_urls>` を削除し個別ドメイン列挙のみに。manifest.test.ts に不在アサーション新設。commit `58a894c1`）
+- 2026-09-05-05-fix-retention-defaults.md（RICE 3600 — `SQLITE_RETENTION_DAYS` デフォルト 365 日（無制限放置の解消）＋両境界無制限時の警告表示（i18n en/ja）。commit `856fa3ab`）
+- 2026-09-05-06-fix-fts-rebuild-condition.md（RICE 3200 — FTS 再構築条件を `ftsCount === 0` → `ftsCount < baseCount` に緩和し部分インデックスを自動修復。commit `5d67e218`）
+- 2026-09-05-07-fix-migration-string-match.md（RICE 2800 — 冪等判定を `pragma_table_info` 存在確認ベースに変更し、許容パターンを `IDEMPOTENT_DDL_ERROR_PATTERNS` 定数としてテスト固定。commit `5d67e218`（06 と同一コミット））
+- 2026-09-05-09-fix-popup-width-constraint.md（RICE 2000 — popup 幅を min 360/max 420 の許容範囲方式に緩和し、翻訳ラベルを持つボタン/toggle の nowrap を解除。commit `f99a333d`）
+- 2026-09-05-10-fix-recording-default-state.md（RICE 2000 — 初回 OFF（同意ゲート）をピン留め、記録可能タブで `●` バッジ常時表示、オンボーディングに記録範囲説明を追加（i18n en/ja）。commit `99702d16`）
+
+第1弾（02/03/04/08）と合わせ review-fixes 01–10 は全件完了。backlog #11（retry 成否返却）も PBI 化なしで完了（commit `80660334`）。
 
 ### 2026-09-05 Checking Team レビュー由来（review-fixes）第1弾 — 4件完了
 

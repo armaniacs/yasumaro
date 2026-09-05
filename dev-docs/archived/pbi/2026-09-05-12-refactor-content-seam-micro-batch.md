@@ -59,16 +59,16 @@ Scenario: utils/contentExtractor に chrome 参照がない
 ```
 
 ## 受け入れ基準
-- [ ] `contentKernel.ts` から watchDynamicContent の re-export（:29）と method（:482-484）が削除される
-- [ ] `contentKernel.dynamic.test.ts` の import が `./watchDynamicContent.js` に付け替えられ、kernel 経路の 1 ケースは削除または impl 経由に置換される
-- [ ] `ExtractResult`（`contentExtractor/types.ts`）に `cleansingExecuted?: boolean` が追加され、実際の削除 branch（candidate path `:266` と body path `:409` の `totalRemoved > 0` 時）のみで true になる
-- [ ] `utils/contentExtractor/index.ts` の生送信ブロック（:296-312）が削除され、chrome 参照がファイルから消える（`CURRENT_PROTOCOL_VERSION` import も不要になれば削除）
-- [ ] `contentKernel.ts` が注入済み sender 経由で CONTENT_CLEANSING_EXECUTED を送信する（`cleansingExecuted === true` 時、fire-and-forget、失敗はログのみ）
-- [ ] `visitAdmission.ts:4-8` の header が「loader のみが経由」の実態に合わせ修正される
-- [ ] `visitAdmission.ts` の `errorDetail` が `errorMessage()`（errorUtils）に置換される
-- [ ] `pageContentPipeline.ts` から `prepareFromOptions` が削除される
-- [ ] `pageContentPipeline.ts` の `cleanseViaOffscreen` re-export が削除される（consumer ゼロ確認後。consumer が見つかれば kernel 経路に付け替え）
-- [ ] content / utils の既存テスト全 green（`CONTENT_CLEANSING_EXECUTED` の送信テストは kernel レベルに移行）
+- [x] `contentKernel.ts` から watchDynamicContent の re-export（:29）と method（:482-484）が削除される
+- [x] `contentKernel.dynamic.test.ts` の import が `./watchDynamicContent.js` に付け替えられ、kernel 経路の 1 ケースは削除または impl 経由に置換される
+- [x] `ExtractResult`（`contentExtractor/types.ts`）に `cleansingExecuted?: boolean` が追加され、実際の削除 branch（candidate path `:266` と body path `:409` の `totalRemoved > 0` 時）のみで true になる
+- [x] `utils/contentExtractor/index.ts` の生送信ブロック（:296-312）が削除され、chrome 参照がファイルから消える（`CURRENT_PROTOCOL_VERSION` import も不要になれば削除）
+- [x] `contentKernel.ts` が注入済み sender 経由で CONTENT_CLEANSING_EXECUTED を送信する（`cleansingExecuted === true` 時、fire-and-forget、失敗はログのみ）
+- [x] `visitAdmission.ts:4-8` の header が「loader のみが経由」の実態に合わせ修正される
+- [x] `visitAdmission.ts` の `errorDetail` が `errorMessage()`（errorUtils）に置換される
+- [x] `pageContentPipeline.ts` から `prepareFromOptions` が削除される
+- [x] `pageContentPipeline.ts` の `cleanseViaOffscreen` re-export が削除される（consumer ゼロ確認後。consumer が見つかれば kernel 経路に付け替え）
+- [x] content / utils の既存テスト全 green（`CONTENT_CLEANSING_EXECUTED` の送信テストは kernel レベルに移行）
 
 ## テスト戦略（t_wadaスタイル）
 ### 単体テスト
@@ -114,7 +114,10 @@ sed -n '476,485p' src/content/contentKernel.ts
 - watchDynamicContent の削除で `contentKernel.ts` の import（:27）も消す。残すのは `watchDynamicContent.ts` のみ
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] content / utils 関連テスト全 green（type-check / lint / build 含む）
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新（DESIGN_SPECIFICATIONS.md の content 抽出セクションに通知経路の変更を反映。必要なら ARCHITECTURE_MAP.md）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] content / utils 関連テスト全 green（type-check / lint / build 含む）
+- [x] コードレビュー完了
+- [x] ドキュメント更新（DESIGN_SPECIFICATIONS.md の content 抽出セクションに通知経路の変更を反映。必要なら ARCHITECTURE_MAP.md）
+
+## 実装メモ（2026-09-05・branch 0905c・続）
+- 完了（commit `9e99a7a`、SDD サブエージェント実装）。レビュー first-pass Approved。全 suite 11,553 tests green。DESIGN_SPECIFICATIONS §10.3 に通知経路（cleansingExecuted + kernel sender seam）を追記済み。

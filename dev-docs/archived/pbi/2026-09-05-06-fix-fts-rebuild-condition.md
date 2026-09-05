@@ -51,3 +51,6 @@ Scenario: 空データベースでは再構築されない
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了
+
+## 実装メモ（2026-09-05・branch 0905c・続）
+- 完了（commit `5d67e218`、controller-direct・PBI 07 と同一コミット）。migrations 関連 4 スイート 31 tests green。

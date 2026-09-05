@@ -55,3 +55,6 @@ Scenario: オンボーディングで記録範囲が説明される
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了
+
+## 実装メモ（2026-09-05・branch 0905c・続）
+- 完了（commit `99702d16`、controller-direct）。4 スイート 194 tests green + check-i18n PASS。
