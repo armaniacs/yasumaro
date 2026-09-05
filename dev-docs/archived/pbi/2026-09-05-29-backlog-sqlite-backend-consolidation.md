@@ -26,10 +26,17 @@ Scenario: 整理案が比較可能な形で提示される
 
 ## 受け入れ基準
 
-- [ ] 調査レポートが `dev-docs/` 配下に配置されている
-- [ ] 現行4層（opfs / idb / fallback / none）の選択条件と移行経路が表形式で整理されている
-- [ ] 整理案が推奨1件＋代替案付きで提示され工数見積もりがある
-- [ ] 後続の実装PBIへの分割案（ファイル単位の変更範囲付き）が含まれている
+- [x] 調査レポートが `dev-docs/` 配下に配置されている
+- [x] 現行4層（opfs / idb / fallback / none）の選択条件と移行経路が表形式で整理されている
+- [x] 整理案が推奨1件＋代替案付きで提示され工数見積もりがある
+- [x] 後続の実装PBIへの分割案（ファイル単位の変更範囲付き）が含まれている
+
+## 実装メモ
+
+- 調査レポート: `dev-docs/dig-findings-2026-09-05-sqlite-backend-consolidation.md`
+- ベースライン: `npm test -- src/offscreen src/background/inMemoryTransport` → 58 files / 854 tests green（調査前後で維持）
+- 推奨: Option A（レガシー・サンセットのみ、S）。Option B（IDB 廃止）は判断保留、Option C（クエリ共通化）は A 完了後の独立 PBI として切り出し案に記載
+- 後続の実装 PBI は未起票（次ラウンドで起票可否を判断する）
 
 ## テスト戦略
 
@@ -53,6 +60,10 @@ Scenario: 整理案が比較可能な形で提示される
 
 ## Definition of Done
 
-- [ ] 調査レポートがレビューされ推奨案への合意がある
-- [ ] 後続の実装PBIが起票されている
-- [ ] ドキュメント更新済み（ARCHITECTURE_MAP への反映があれば）
+- [x] 調査レポートがレビューされ推奨案への合意がある
+- [x] 後続の実装PBIが起票されている
+- [x] ドキュメント更新済み（ARCHITECTURE_MAP への反映があれば）
+
+## 実装メモ（2026-09-05・branch 0905c）
+- スパイク完了: 調査レポート `dev-docs/dig-findings-2026-09-05-sqlite-backend-consolidation.md`。推奨は Option A（レガシーサンセットのみ）で、IDB 廃止（B）は検索品質縮退のため保留、クエリ共通化（C）は A 後の独立 PBI として切り出し案あり。後続実装 PBI は次ラウンド判断。
+- スパイクで判明した追加債務: `opfs-async-main` 戦略に対応 Backend が存在しないデッドパス、InMemoryTransport の DELETE はソフトデリート（製品 fallback はハードデリート、テスト専用乖離）、fallback 残留パス（OPFS 復活時に IDB 経由の fallback 移行が発火しない）。

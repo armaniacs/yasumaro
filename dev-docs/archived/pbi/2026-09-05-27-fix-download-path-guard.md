@@ -27,10 +27,10 @@ Scenario: 既存ファイルへの上書きは明示ポリシーに従う
 ```
 
 ## 受け入れ基準
-- [ ] 4 箇所の `chrome.downloads.download` 呼び出しに渡す `filename` が sanitize 経由になり、`../`・絶対パス・制御文字が除去/拒否される
-- [ ] sanitize 失敗時は `DEFAULT_EXPORT_PATH`（`Yasumaro`）にフォールバックし、ダウンロード自体は継続する
-- [ ] `conflictAction` の方針が 4 箇所で統一意図として文書化される（現状 `overwrite` の是非を含む）
-- [ ] 既存の export・retention 関連テストが green のままであること
+- [x] 4 箇所の `chrome.downloads.download` 呼び出しに渡す `filename` が sanitize 経由になり、`../`・絶対パス・制御文字が除去/拒否される
+- [x] sanitize 失敗時は `DEFAULT_EXPORT_PATH`（`Yasumaro`）にフォールバックし、ダウンロード自体は継続する
+- [x] `conflictAction` の方針が 4 箇所で統一意図として文書化される（現状 `overwrite` の是非を含む）
+- [x] 既存の export・retention 関連テストが green のままであること
 
 ## テスト戦略
 - 単体: `exportFilenameFor` / フラッシュ前 filename 組み立てに `../`・`/absolute`・制御文字入り exportPath を与え、逸脱しないこととフォールバックを表明する
@@ -51,6 +51,9 @@ Scenario: 既存ファイルへの上書きは明示ポリシーに従う
 - 調査用 rg: `rg -n "downloads.download" src --glob '*.ts' | grep -v __tests__`、`rg -n "LOCAL_MARKDOWN_EXPORT_PATH" src --glob '*.ts' | grep -v __tests__`
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（書き出し先設定の入力制約があれば）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（書き出し先設定の入力制約があれば）
+
+## 実装メモ（2026-09-05・branch 0905c）
+- 完了（commit `7676a3e8`、SDD サブエージェント実装）。4 つの `chrome.downloads.download` 呼び出しの filename に `sanitizePathSegment` を適用（トラバーサル・制御文字・先頭ドットを排除、空になった場合のフォールバック付き）。ドット含みの正当名もフォールバックに倒れる厳格仕様は PBI 通り。

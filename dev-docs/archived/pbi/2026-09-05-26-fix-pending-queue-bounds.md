@@ -27,10 +27,10 @@ Scenario: 期限切れエントリは読み取り時に除外され続ける
 ```
 
 ## 受け入れ基準
-- [ ] `addPendingPage` に絶対上限（MAX 件数・drop-oldest）が存在し、上限超過時の追い出しがテストで表明される
-- [ ] 呼び出し側が渡す `expiry` が上限 TTL を超えないようクランプされ、遠未来 expiry のバイパスが塞がれる
-- [ ] `getPendingPages` / `clearExpiredPages` の既存の期限フィルタ振る舞いが維持される（既存 pending スイート green）
-- [ ] 上限値・TTL 値が名前付き定数として `pendingStorage.ts` に定義される
+- [x] `addPendingPage` に絶対上限（MAX 件数・drop-oldest）が存在し、上限超過時の追い出しがテストで表明される
+- [x] 呼び出し側が渡す `expiry` が上限 TTL を超えないようクランプされ、遠未来 expiry のバイパスが塞がれる
+- [x] `getPendingPages` / `clearExpiredPages` の既存の期限フィルタ振る舞いが維持される（既存 pending スイート green）
+- [x] 上限値・TTL 値が名前付き定数として `pendingStorage.ts` に定義される
 
 ## テスト戦略
 - 単体: `src/utils/__tests__/pendingStorage*.test.ts` に上限超過時の drop-oldest と expiry クランプのケースを追加（上限+1 件投入で長さ不変・最古追い出しを確認）
@@ -50,6 +50,9 @@ Scenario: 期限切れエントリは読み取り時に除外され続ける
 - スコープ補正: 2026-09-05 の arch4 PBI（`dev-docs/archived/pbi/2026-09-05-07-refactor-pending-queue.md`）で `clearExpiredPages` の直列化は解決済み。本 PBI は件数上限と TTL クランプのみに限定し、facade 狭窄などの再設計は行わないこと
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（DESIGN_SPECIFICATIONS の pending 保持上限の記述があれば）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS の pending 保持上限の記述があれば）
+
+## 実装メモ（2026-09-05・branch 0905c）
+- 完了（commit `f3d75606`、SDD サブエージェント実装）。pending キューに絶対上限（drop-oldest）＋TTL クランプ（呼び出し側の遠未来 expiry を上書き）を追加。clearExpiredPages・pendingPatchPolicy の lock 規律は不変。

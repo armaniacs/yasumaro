@@ -22,9 +22,9 @@ Scenario: 英語ロケールでは従来の英語表示が維持される
 ```
 
 ## 受け入れ基準
-- [ ] 下記4箇所の直書き英語が `getMessage` / `chrome.i18n.getMessage` 経由になる
-- [ ] `_locales/ja/messages.json` と `_locales/en/messages.json` の双方に新規キーが追加されている
-- [ ] `npm run type-check` と dashboard 関連の既存テストがパスする
+- [x] 下記4箇所の直書き英語が `getMessage` / `chrome.i18n.getMessage` 経由になる
+- [x] `_locales/ja/messages.json` と `_locales/en/messages.json` の双方に新規キーが追加されている
+- [x] `npm run type-check` と dashboard 関連の既存テストがパスする
 
 ## テスト戦略
 - 単体: ロケールを切り替えた状態で各表示関数を呼び出し、対応するメッセージキーが参照されることを検証する
@@ -43,6 +43,9 @@ Scenario: 英語ロケールでは従来の英語表示が維持される
 - 調査用コマンド: `rg -n "textContent\s*=\s*'[^']*[A-Za-z]" src/dashboard --glob '!**/__tests__/**'`
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（i18n ガイドへの新規キー追記があれば）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（i18n ガイドへの新規キー追記があれば）
+
+## 実装メモ（2026-09-05・branch 0905c）
+- 完了（commit `0327b37f`、SDD サブエージェント実装）。4 箇所（perSiteOverrides/privacySettingsPanel/connectionTests/models-dev-dialog）を i18n キー経由に変更（en/ja 追加・check-i18n PASS・テスト更新）。残存の直書き英語（保存系ステータス等）は別 PBI 候補としてレポートに記録。

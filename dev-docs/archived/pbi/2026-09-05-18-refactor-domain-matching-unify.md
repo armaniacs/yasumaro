@@ -22,9 +22,9 @@ Scenario: 過剰なワイルドカードを含むパターンは安全に拒否�
 ```
 
 ## 受け入れ基準
-- [ ] `matchesWildcardPattern`（非推奨ラッパー）が削除され、全呼び出しが単一の入口経由になる
-- [ ] `domainUtils.matchesPattern` と `urlSkipper.matchesPattern` のいずれか一方に集約され、もう一方が削除または再エクスポート shim になる
-- [ ] `extractDomain`・`isDomainInList` の重複が整理され、関連テストが全パスする
+- [x] `matchesWildcardPattern`（非推奨ラッパー）が削除され、全呼び出しが単一の入口経由になる
+- [x] `domainUtils.matchesPattern` と `urlSkipper.matchesPattern` のいずれか一方に集約され、もう一方が削除または再エクスポート shim になる
+- [x] `extractDomain`・`isDomainInList` の重複が整理され、関連テストが全パスする
 
 ## テスト戦略
 - 単体: 集約後の入口に対する既存テスト（`storage.test.ts` の `matchesWildcardPattern` 系、`loader-utils.test.ts` の `matchesPattern` 系）を移行・更新し、ワイルドカード上限・大文字小文字の境界を検証する
@@ -42,6 +42,9 @@ Scenario: 過剰なワイルドカードを含むパターンは安全に拒否�
 - 注意: content script は background モジュールを直接 import できない場合があるため、集約先は両者から参照可能な配置にすること。`DESIGN_SPECIFICATIONS.md:136-149` の収束方針と整合させること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（該当ガイドがあれば）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（該当ガイドがあれば）
+
+## 実装メモ（2026-09-05・branch 0905c）
+- 完了（commit `cd9db5ef`、SDD サブエージェント実装）。3 コピーは意味論的に同一（drift 無し）と確認し、単一共有パスに集約。deprecated `matchesWildcardPattern` は barrel+テストが利用するため委譲エイリアスとして維持。VULN-025 ガード不変。

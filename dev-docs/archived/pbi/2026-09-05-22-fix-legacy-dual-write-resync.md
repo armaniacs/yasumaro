@@ -27,11 +27,11 @@ Scenario: 再同期中の新規記録が失われない
 ```
 
 ## 受け入れ基準
-- [ ] false期間中のSQLite蓄積分が `savedUrlsWithTimestamps` へ復元される
-- [ ] 再同期が冪等である（2回実行で差分なし）
-- [ ] 再同期中の新規記録と競合しない（`pendingChromeStorageQueue` の metadataPatch 経路と整合）
-- [ ] 再同期の進捗・失敗がログ/診断パネル等で確認できる
-- [ ] 既存の dual-write テスト（`saveMetadataStep.test.ts` の enabled/disabled 系）がパスする
+- [x] false期間中のSQLite蓄積分が `savedUrlsWithTimestamps` へ復元される
+- [x] 再同期が冪等である（2回実行で差分なし）
+- [x] 再同期中の新規記録と競合しない（`pendingChromeStorageQueue` の metadataPatch 経路と整合）
+- [x] 再同期の進捗・失敗がログ/診断パネル等で確認できる
+- [x] 既存の dual-write テスト（`saveMetadataStep.test.ts` の enabled/disabled 系）がパスする
 
 ## テスト戦略
 - 単体: 無効期間分の差分抽出（SQLite→レガシー差分）とマージの冪等テスト
@@ -58,9 +58,9 @@ Scenario: 再同期中の新規記録が失われない
 - スコープ補正: backlog表題は「再同期を実装」だが、トリガー方式（設定変更の自動検知 vs 診断パネルの手動実行）が未定。自動・手動のいずれかに決めることを本PBIの受け入れに含め、両方作ることはしない
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（ADR追記＋リリースノート明記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（ADR追記＋リリースノート明記）
 
 ## 実装メモ（2026-09-05、ブランチ 0905c）
 
@@ -76,3 +76,6 @@ PBI 本文で未定だった自動/手動を **手動のみ** に決定。理由
 - フラグ非参照: 関数は `LEGACY_DUAL_WRITE` を読まない。明示トリガーがゲートであり、`saveMetadataStep` の無効時 early-return（既定動作）は不変。
 - 配線: `MigrationService.resyncLegacyStore()` ファサード＋ `resync_legacy` サブタイプを診断パネルまで end-to-end（`sqliteOperationSecurity` では token-required のまま＝confirmToken ハンドシェイク必須）。診断パネルに「Resync legacy history from SQLite」ボタン（`diagResyncBtn`、日英 i18n 追加、非破壊・冪等マージのため確認ダイアログなし）。進捗・失敗は `addLog`（LegacyResync: starting/completed）＋ボタン結果表示（`written/examined skipped total`）で確認可能。
 - テスト: `legacyResync.test.ts` 新規 12 件（復元・冪等・上限・上限クランプ・フラグ OFF でも実行・並行記録の非消失・URL 欠損スキップ・クエリ失敗送出・マッピング 4 件）＋ハンドラ/サービス/UI/検証の wiring テスト。全 11658 件パス、`type-check`・`lint`（0 errors）クリア。
+
+## 実装メモ（2026-09-05・branch 0905c）
+- 完了（commit `a49bdb7f`、SDD サブエージェント実装）。トリガーモードは **MANUAL-ONLY** と決定（自動再同期はアップグレード時のリスクが高い・dual-write フラグは現状 OFF）を PBI 実装メモ・ADR・CHANGELOG に記録。SQLite→レガシー再同期（上限付き・冪等・lock 準拠）を実装。

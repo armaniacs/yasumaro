@@ -22,9 +22,9 @@ Scenario: dialog を閉じるとフォーカスが元の要素に戻る
 ```
 
 ## 受け入れ基準
-- [ ] 下記3系統の dialog の表示/非表示に `focusTrapManager.trap` / `release` が配線されている
-- [ ] Esc 時の既存の閉じる挙動と競合しない（trap の closeCallback に既存 close 処理を渡す）
-- [ ] 既存の onboardingWizard のトラップ挙動に退行がない
+- [x] 下記3系統の dialog の表示/非表示に `focusTrapManager.trap` / `release` が配線されている
+- [x] Esc 時の既存の閉じる挙動と競合しない（trap の closeCallback に既存 close 処理を渡す）
+- [x] 既存の onboardingWizard のトラップ挙動に退行がない
 
 ## テスト戦略
 - 単体: 各 dialog の show/close を呼び出し、`focusTrapManager.trap` / `release` が呼ばれることをスパイで検証する（`onboardingWizard.test.ts:154,212` の前例）
@@ -42,6 +42,9 @@ Scenario: dialog を閉じるとフォーカスが元の要素に戻る
 - 調査用コマンド: `rg -n "showModal|focusTrapManager" src/popup --glob '!**/__tests__/**'`
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（ACCESSIBILITY.md への言及があれば）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（ACCESSIBILITY.md への言及があれば）
+
+## 実装メモ（2026-09-05・branch 0905c）
+- 完了（commit `fcd13631`、SDD サブエージェント実装）。未配線だった 3 系統ダイアログ（confirmationModal・private/recording-failed・privacyConsentModal）に focusTrapManager を配線（open で trap/close で release・新規 18 tests）。sanitizePreview の ResizeObserver 挙動は不変。実機目視は手動確認項目として残置。
