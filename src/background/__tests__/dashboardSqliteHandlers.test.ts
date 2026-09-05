@@ -28,6 +28,7 @@ function makeBaseDeps(overrides: Partial<DashboardSqliteHandlerDeps> = {}): Dash
     getConfirmToken: async () => '',
     runBackfill: async () => ({ updated: 0, total: 0 }),
     runCleanup: async () => ({ removed: [], totalBytes: 0 }),
+    runLegacyResync: async () => ({ examined: 0, written: 0, skipped: 0, total: 0 }),
     queryAuditLog: async () => ({ success: true, data: { rows: [], total: 0 } }),
     ...overrides,
   };

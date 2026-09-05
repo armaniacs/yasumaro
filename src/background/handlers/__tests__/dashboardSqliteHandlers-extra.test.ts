@@ -644,6 +644,36 @@ describe('handleDashboardSqlite — backfill_metadata', () => {
   });
 });
 
+describe('handleDashboardSqlite — resync_legacy', () => {
+  it('calls runLegacyResync and returns counts', async () => {
+    const mock = createMockSqliteClient();
+    const runLegacyResync = vi.fn().mockResolvedValue({ examined: 8, written: 7, skipped: 1, total: 8 });
+    const result = await dispatchDashboardSqlite(
+      { subtype: 'resync_legacy', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN, runLegacyResync }
+    );
+    expect(result).toEqual({ success: true, examined: 8, written: 7, skipped: 1, total: 8 });
+    expect(runLegacyResync).toHaveBeenCalledWith(undefined);
+  });
+
+  it('forwards maxRecords when provided', async () => {
+    const mock = createMockSqliteClient();
+    const runLegacyResync = vi.fn().mockResolvedValue({ examined: 2, written: 2, skipped: 0, total: 9 });
+    const result = await dispatchDashboardSqlite(
+      { subtype: 'resync_legacy', maxRecords: 2, ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN, runLegacyResync }
+    );
+    expect(result).toEqual({ success: true, examined: 2, written: 2, skipped: 0, total: 9 });
+    expect(runLegacyResync).toHaveBeenCalledWith({ maxRecords: 2 });
+  });
+
+  it('returns error when runLegacyResync is not provided', async () => {
+    const mock = createMockSqliteClient();
+    const result = await dispatchDashboardSqlite(
+      { subtype: 'resync_legacy', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN }
+    );
+    expect(result).toEqual({ success: false, error: 'Resync not available' });
+  });
+});
+
 describe('handleDashboardSqlite — cleanup_legacy', () => {
   it('calls runCleanup and returns result', async () => {
     const mock = createMockSqliteClient();

@@ -61,3 +61,18 @@ Scenario: 再同期中の新規記録が失われない
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了
 - [ ] ドキュメント更新済み（ADR追記＋リリースノート明記）
+
+## 実装メモ（2026-09-05、ブランチ 0905c）
+
+### トリガー方式の決定: MANUAL-ONLY
+
+PBI 本文で未定だった自動/手動を **手動のみ** に決定。理由: (1) アップグレード時に自動でレガシーストレージへ書き戻すのはリスクが高い（dual-write フラグは現在デフォルト OFF 運用）。(2) 再有効化自体が稀な明示的操作であり、診断パネルの明示ボタンが実行タイミングを利用者に可視化できる。起動時・設定変更検知の自動実行は一切行わない。
+
+### 実装内容
+
+- 新規 `src/background/migration/legacyResync.ts`: `resyncLegacyFromSqlite(sqliteClient, { maxRecords })`（既定 1000 件・上限 5000 件・`created_at` DESC）。`mapSqliteRecordToLegacyPatch` は `mapLegacyEntryToRecord` の完全な逆写像（`backfillMetadata` とは逆方向・統合なし）。タグ列は `a, b` 形式と `#a #b` 形式の両方を解釈。`recordType`・`aiSummaryCleansedElements/Reason(s)` は SQLite 側に列がなく復元不能のため省略（発明しない）。`maskedCount` は `toMetadataPatch` 同様に正値のみ格納。`cleansedReason` はレガシー側の narrow union に一致するリテラルのみ復元。
+- 冪等性: URL キーで `saveSavedUrlEntryMetadata`（`refreshTimestamp: false`・`timestamp: created_at`・`mergeTags: true`）にマージするため、再実行で重複もタイムスタンプ変動もなし。
+- 競合安全性: 同じ `withOptimisticLock` CAS 規律（`storageFallback.mutate` の前例と同一）のため、再同期中の新規記録と直列化され消失なし。
+- フラグ非参照: 関数は `LEGACY_DUAL_WRITE` を読まない。明示トリガーがゲートであり、`saveMetadataStep` の無効時 early-return（既定動作）は不変。
+- 配線: `MigrationService.resyncLegacyStore()` ファサード＋ `resync_legacy` サブタイプを診断パネルまで end-to-end（`sqliteOperationSecurity` では token-required のまま＝confirmToken ハンドシェイク必須）。診断パネルに「Resync legacy history from SQLite」ボタン（`diagResyncBtn`、日英 i18n 追加、非破壊・冪等マージのため確認ダイアログなし）。進捗・失敗は `addLog`（LegacyResync: starting/completed）＋ボタン結果表示（`written/examined skipped total`）で確認可能。
+- テスト: `legacyResync.test.ts` 新規 12 件（復元・冪等・上限・上限クランプ・フラグ OFF でも実行・並行記録の非消失・URL 欠損スキップ・クエリ失敗送出・マッピング 4 件）＋ハンドラ/サービス/UI/検証の wiring テスト。全 11658 件パス、`type-check`・`lint`（0 errors）クリア。

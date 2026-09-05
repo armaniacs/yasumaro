@@ -305,6 +305,25 @@ export function backfillMetadata(): Promise<ServiceResult<{ updated: number; tot
 }
 
 /**
+ * Manually resync recent SQLite records into the legacy chrome.storage
+ * store (PBI 22, MANUAL-ONLY trigger — diagnostics panel button only).
+ * Merges by URL (idempotent); bounded by maxRecords (server-side default
+ * and cap apply when omitted or invalid).
+ */
+export function resyncLegacyStorage(maxRecords?: number): Promise<ServiceResult<{ examined: number; written: number; skipped: number; total: number }>> {
+  return callDashboard(
+    { subtype: 'resync_legacy', ...(maxRecords === undefined ? {} : { maxRecords }) },
+    (response) => ({
+      examined: requiredNonNegativeNumber(response.examined, 'examined'),
+      written: requiredNonNegativeNumber(response.written, 'written'),
+      skipped: requiredNonNegativeNumber(response.skipped, 'skipped'),
+      total: requiredNonNegativeNumber(response.total, 'total'),
+    }),
+    'Resync failed',
+  );
+}
+
+/**
  * バイナリ .db バックアップを取得
  */
 export function backupDb(): Promise<ServiceResult<Uint8Array>> {

@@ -13,6 +13,7 @@ import {
   runOpfsSpike,
   migrateLogs,
   backfillMetadata,
+  resyncLegacyStorage,
   cleanupLegacyStorage,
   getSqliteStatus,
 } from '../../dashboardSqliteService.js';
@@ -38,6 +39,7 @@ export interface DiagnosticActionElements {
   opfsSpikeBtn: HTMLButtonElement | null;
   migrateBtn: HTMLButtonElement | null;
   backfillBtn: HTMLButtonElement | null;
+  resyncBtn: HTMLButtonElement | null;
   cleanupBtn: HTMLButtonElement | null;
   builtInAiDownloadBtn: HTMLButtonElement | null;
   connectionResult: HTMLElement | null;
@@ -45,6 +47,7 @@ export interface DiagnosticActionElements {
   opfsSpikeResult: HTMLElement | null;
   migrateResult: HTMLElement | null;
   backfillResult: HTMLElement | null;
+  resyncResult: HTMLElement | null;
   cleanupResult: HTMLElement | null;
   builtInAiStats: HTMLElement | null;
   builtInAiDownloadResult: HTMLElement | null;
@@ -70,9 +73,9 @@ export function createDiagnosticActions(
 ): void {
   const {
     testObsidianBtn, testAiBtn, testSqliteBtn, opfsSpikeBtn,
-    migrateBtn, backfillBtn, cleanupBtn, builtInAiDownloadBtn,
+    migrateBtn, backfillBtn, resyncBtn, cleanupBtn, builtInAiDownloadBtn,
     connectionResult, sqliteResult, opfsSpikeResult,
-    migrateResult, backfillResult, cleanupResult,
+    migrateResult, backfillResult, resyncResult, cleanupResult,
     builtInAiDownloadResult,
   } = els;
 
@@ -295,6 +298,32 @@ export function createDiagnosticActions(
       backfillResult.style.color = errorColor();
     } finally {
       backfillBtn.disabled = false;
+    }
+  });
+
+  // Manual SQLite → legacy resync (PBI 22, MANUAL-ONLY trigger).
+  // No confirm dialog: the merge is idempotent and non-destructive
+  // (unlike migrate/cleanup, which use showConfirmDialog above).
+  resyncBtn?.addEventListener('click', async () => {
+    if (!resyncResult) return;
+    resyncBtn.disabled = true;
+    resyncResult.textContent = getMessage('testing') || 'Working...';
+    resyncResult.className = 'diag-result';
+
+    try {
+      const result = await resyncLegacyStorage();
+      if ('data' in result) {
+        resyncResult.textContent = `✓ ${getMessage('diagResyncDone') || 'Resync complete.'} written=${result.data.written}/${result.data.examined} skipped=${result.data.skipped} total=${result.data.total}`;
+        resyncResult.style.color = successColor();
+      } else {
+        resyncResult.textContent = `✗ ${getMessage('diagResyncFailed') || 'Resync failed.'}: ${result.error}`;
+        resyncResult.style.color = errorColor();
+      }
+    } catch {
+      resyncResult.textContent = `✗ ${getMessage('diagResyncFailed') || 'Resync failed.'}`;
+      resyncResult.style.color = errorColor();
+    } finally {
+      resyncBtn.disabled = false;
     }
   });
 

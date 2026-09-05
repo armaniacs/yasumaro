@@ -211,3 +211,7 @@ if (!legacyDualWriteEnabled) {
 - `src/background/pipeline/steps/saveMetadataStep.ts`
 - `src/utils/storageUrls.ts`
 - `src/offscreen/storageFallback.ts`
+
+## 追記（2026-09-05、PBI 22）: 再同期方針は MANUAL-ONLY
+
+無効期間中に SQLite のみに蓄積された記録をレガシー側へ戻す再同期は、自動実行しない。`src/background/migration/legacyResync.ts` の `resyncLegacyFromSqlite()` を診断パネルの明示操作（`resync_legacy` サブタイプ、confirmToken 必須）からのみ起動する。自動再同期を採用しなかった理由: アップグレード時の自動書き戻しはリスクが高く、dual-write フラグは現在デフォルト OFF 運用のため。関数はフラグ値を参照せず、`saveMetadataStep` の無効時 early-return は不変。詳細は PBI `pbi/2026-09-05-22-fix-legacy-dual-write-resync.md` の実装メモを参照。

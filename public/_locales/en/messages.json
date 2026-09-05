@@ -3831,6 +3831,18 @@
     "message": "Backfill failed.",
     "description": "Message shown when backfill fails"
   },
+  "diagResyncBtn": {
+    "message": "Resync legacy history from SQLite",
+    "description": "Button to manually resync recent SQLite records into the legacy chrome.storage history"
+  },
+  "diagResyncDone": {
+    "message": "Resync complete.",
+    "description": "Message shown when legacy resync is complete"
+  },
+  "diagResyncFailed": {
+    "message": "Resync failed.",
+    "description": "Message shown when legacy resync fails"
+  },
   "diagCleanupBtn": {
     "message": "Delete original chrome.storage data",
     "description": "Button to delete original chrome.storage data after migration"

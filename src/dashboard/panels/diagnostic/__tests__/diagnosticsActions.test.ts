@@ -11,6 +11,7 @@ vi.mock('../../../dashboardSqliteService.js', () => ({
   runOpfsSpike: vi.fn(),
   migrateLogs: vi.fn(),
   backfillMetadata: vi.fn(),
+  resyncLegacyStorage: vi.fn(),
   cleanupLegacyStorage: vi.fn(),
   getSqliteStatus: vi.fn(),
 }));
@@ -23,7 +24,7 @@ vi.mock('../../../builtInAiDiagnosticsService.js', () => ({
   startBuiltInAiDownload: vi.fn(),
 }));
 
-import { runOpfsSpike, migrateLogs, backfillMetadata, cleanupLegacyStorage, getSqliteStatus } from '../../../dashboardSqliteService.js';
+import { runOpfsSpike, migrateLogs, backfillMetadata, resyncLegacyStorage, cleanupLegacyStorage, getSqliteStatus } from '../../../dashboardSqliteService.js';
 import { showConfirmDialog } from '../../../utils/confirmDialog.js';
 
 function makeElements(): DiagnosticActionElements {
@@ -36,6 +37,7 @@ function makeElements(): DiagnosticActionElements {
     opfsSpikeBtn: el<HTMLButtonElement>('d', 'button'),
     migrateBtn: el<HTMLButtonElement>('e', 'button'),
     backfillBtn: el<HTMLButtonElement>('f', 'button'),
+    resyncBtn: el<HTMLButtonElement>('f2', 'button'),
     cleanupBtn: el<HTMLButtonElement>('g', 'button'),
     builtInAiDownloadBtn: el<HTMLButtonElement>('h', 'button'),
     connectionResult: el('r1'),
@@ -43,6 +45,7 @@ function makeElements(): DiagnosticActionElements {
     opfsSpikeResult: el('r3'),
     migrateResult: el('r4'),
     backfillResult: el('r5'),
+    resyncResult: el('r5b'),
     cleanupResult: el('r6'),
     builtInAiStats: el('r7'),
     builtInAiDownloadResult: el('r8'),
@@ -239,5 +242,32 @@ describe('diagnosticsActions', () => {
       expect(els.backfillResult!.textContent).toContain('updated=3/9');
     });
     expect(els.backfillBtn!.disabled).toBe(false);
+  });
+
+  it('resync reports written/examined/skipped/total counts', async () => {
+    vi.mocked(resyncLegacyStorage).mockResolvedValue({
+      data: { examined: 8, written: 7, skipped: 1, total: 8 },
+    } as any);
+    const els = makeElements();
+    createDiagnosticActions(els, { onBuiltInAiDownloaded: vi.fn() });
+
+    els.resyncBtn!.click();
+    await vi.waitFor(() => {
+      expect(els.resyncResult!.textContent).toContain('written=7/8');
+      expect(els.resyncResult!.textContent).toContain('skipped=1');
+    });
+    expect(els.resyncBtn!.disabled).toBe(false);
+  });
+
+  it('resync surfaces the failure reason', async () => {
+    vi.mocked(resyncLegacyStorage).mockResolvedValue({ error: 'Resync not available' } as any);
+    const els = makeElements();
+    createDiagnosticActions(els, { onBuiltInAiDownloaded: vi.fn() });
+
+    els.resyncBtn!.click();
+    await vi.waitFor(() => {
+      expect(els.resyncResult!.textContent).toContain('Resync not available');
+    });
+    expect(els.resyncBtn!.disabled).toBe(false);
   });
 });

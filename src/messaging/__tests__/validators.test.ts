@@ -148,7 +148,7 @@ describe('DashboardSqliteValidator', () => {
     expect(() => v.validate({ subtype: 'get_count' })).not.toThrow();
   });
 
-  it('accepts all 20 subtypes without throwing for minimal valid shape', () => {
+  it('accepts all 21 subtypes without throwing for minimal valid shape', () => {
     const validSamples: Array<Record<string, unknown>> = [
       { subtype: 'create_confirm_token', action: 'delete', id: 1 },
       { subtype: 'query' },
@@ -163,6 +163,7 @@ describe('DashboardSqliteValidator', () => {
       { subtype: 'status' },
       { subtype: 'cleanup_legacy' },
       { subtype: 'backfill_metadata' },
+      { subtype: 'resync_legacy' },
       { subtype: 'backup_db' },
       { subtype: 'restore_db', data: 'base64' },
       { subtype: 'import', rows: [] },

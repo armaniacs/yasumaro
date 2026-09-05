@@ -74,6 +74,7 @@ export interface MaintenanceBatchDeps {
   >;
   runBackfill: () => Promise<{ updated: number; total: number }>;
   runCleanup: () => Promise<{ removed: string[]; totalBytes: number }>;
+  runLegacyResync: (options?: { maxRecords?: number }) => Promise<{ examined: number; written: number; skipped: number; total: number }>;
 }
 
 /** Union of the three groups — what createDashboardSqliteHandler needs as a whole. Unchanged external shape. */
@@ -91,6 +92,7 @@ export interface SqliteClientBackedDeps {
   verifyConfirmToken: DashboardSqliteHandlerDeps['verifyConfirmToken'];
   runBackfill: DashboardSqliteHandlerDeps['runBackfill'];
   runCleanup: DashboardSqliteHandlerDeps['runCleanup'];
+  runLegacyResync: DashboardSqliteHandlerDeps['runLegacyResync'];
 }
 
 /**
