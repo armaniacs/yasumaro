@@ -33,7 +33,9 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
-## [Unreleased]
+## [6.7.111] - 2026-09-05
+
+このリリースは v6.7.110 と同日に公開する、リファクタリングとテスト整備中心のリリースです。
 
 ### Fixed
 
