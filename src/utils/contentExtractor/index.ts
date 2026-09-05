@@ -187,6 +187,9 @@ function extractInternal(
         hardStripRemoved = 0;
         keywordStripRemoved = 0;
         totalRemoved = 0;
+        // 最終コンテンツにクレンジング結果が反映されないため、通知識別子も
+        // 撤去する（recount が totalRemoved を再填充しても C0 誤通知しない）。
+        cleansingExecuted = undefined;
 
         // フォールバック後のバイト数を再計算（診断専用）
         if (meter.enabled) {

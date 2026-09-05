@@ -97,6 +97,30 @@ describe('ContentKernel — CONTENT_CLEANSING_EXECUTED via injected sender', () 
         expect(sendMessageWithRetry).not.toHaveBeenCalled();
     });
 
+    it('クレンジング後にフォールバックが発効した場合は通知しない（結果が破棄されるため）', async () => {
+        // クレンジングで script が除去（totalRemoved > 0）されるが、残りテキストが
+        // 短すぎて short_content フォールバックが発効 → settleFallback がカウンタを
+        // ゼロ化するため、最終コンテンツにクレンジングは反映されない。
+        // → cleansingExecuted は立たず、通知も送らない（C0 誤表示の防止）。
+        const { kernel, sendMessageWithRetry } = makeKernel(async () => ({ success: true }));
+        document.body.innerHTML = `
+            <article>
+                <p>Short.</p>
+                <script>alert('remove me')</script>
+            </article>
+            ${'Body fallback filler text. '.repeat(30)}
+        `;
+
+        const result = kernel.extractPageContent(hardStripOnly(kernel));
+        await flushSends();
+
+        expect(result.fallbackTriggered).toBe(true);
+        // 診断 recount は totalRemoved を再填充する（既存セマンティクス）が、
+        // 識別子は settleFallback で撤去済みのため通知は飛ばない。
+        expect(result.cleansingExecuted).toBeUndefined();
+        expect(sendMessageWithRetry).not.toHaveBeenCalled();
+    });
+
     it('sender が throw しても抽出フローは失敗しない', async () => {
         const { kernel, sendMessageWithRetry } = makeKernel(async () => {
             throw new Error('Port closed');
