@@ -14,54 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-（なし — 2026-09-05 の全 PBI（#01–26 相当）が完了・アーカイブ済み。未着手の PBI は存在しない）
+### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
 
-### 2026-09-05 Architecture Round 3（arch3 診断） — 7 件完了
+- 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
 
-backlog: [2026-09-05-00-backlog-arch3.md](2026-09-05-00-backlog-arch3.md)。着手順 = RICE 降順（ファイル番号 NN）。依存なし。
+### 将来候補の統合台帳（live）
 
-- 2026-09-05-01-refactor-recording-outcome.md（✅ 完了・アーカイブ済 — outcome 政策を RecordingOutcome に集約。catch 分岐＋pending＋通知のペアリングを1 seam に。pipeline 58 tests green）
-- 2026-09-05-02-refactor-provider-skeleton-template.md（✅ 完了・アーカイブ済 — HTTP 2 社の generateSummary 骨格を基底テンプレート化（hooks のみ残す）。BuiltIn/testConnection は対象外。循環回避のため transport は dynamic import。ai 214 tests green）
-- 2026-09-05-03-refactor-logger-wave4.md（✅ 完了・アーカイブ済 — core 配線の注入化（initLogger/resetLoggerWiring）＋eslint 反転。chrome なし駆動テスト追加。logger 35 tests green、lint 0 errors）
-- 2026-09-05-04-refactor-cache-liveview-deletion.md（✅ 完了・アーカイブ済 — getCacheState live-view（~60行）削除。9 テストファイルを typed seam＋振る舞いアサーション＋fake timers に移行。background 全 1297 tests green）
-- 2026-09-05-05-refactor-alarm-registry.md（✅ 完了・アーカイブ済 — 5 系統を AlarmRegistry テーブルに集約（flush/immediate 本体共有・失敗統一ログ・daily-purge の await 漏れ解消）。alarm 193 tests green）
-- 2026-09-05-06-refactor-popup-record-session.md（✅ 完了・アーカイブ済 — 記録 choreography を RecordSession 状態機械に集約（ForceRecordFlow 削除・5コールバック束解消・二重起動ガード）。statusPanel のデッド hook と onclick 書き換えを削除。popup 833 tests green）
-- 2026-09-05-07-refactor-envelope-guard.md（✅ 完了・アーカイブ済 — envelope accept/reject を政策テーブル＋順序付きパイプラインに集約。router の trust/strict 順序は不変。matrix 8 tests + wrapper 198 tests green）
-
-### 2026-09-04 フレーキーテスト安定化（1 件） — 完了
-
-- 2026-09-04-18-test-flaky-stabilization.md（🧪 2pt — 負荷下フレーキー 5 ファイルの機構診断に基づく安定化。clock 注入（aiUsageTracker）・StepExecutor delay 注入（RecordingPipeline、リトライテスト 11 秒→1ms 未満）・cap 不変式アサーション化（tagCooccurrenceCap）・mutex リセット + mock 衛生（idb-migration）・vitest forks cap 8。**検証: `npm test` 3 連続 0 failed（11,449 passed）+ make clean test EXIT=0**）
-
-### 2026-09-04 Architecture Round 2（0904b 診断） — 7 件完了
-
-実装済み（2026-09-04、branch 0904b、`make clean test` EXIT=0・graphify update 済）。アーカイブ: `dev-docs/archived/pbi/2026-09-04-1[1-7]-*.md`。将来的な遡及候補（helpers deep-scan wire-or-delete / tokenizer 署名化 / trendReport 分離）は `2026-09-04-00-backlog-arch2.md` に記録。
-
-### 2026-09-04 ベンチ履歴トレンド表示（1 件） — 完了
-
-- 2026-09-04-10-feat-bench-trend-report.md（✨ 2pt — 蓄積済み `micro-<日付>.json` から指標トレンドを HTML レポートに表示。trend.mjs 集約 + sparkline セクション + CLI 配線、外部参照ゼロ維持。テスト 89 harness green・bench:check PASS）
-
-### 2026-09-04 パフォーマンス最適化 8 件（ベンチ基盤先行） — 8 件完了
-
-backlog: [2026-09-04-00-backlog-perf.md](2026-09-04-00-backlog-perf.md)。着手順 = ファイル番号（NN）。**01 が残り 7 件の依存元**（実測ベンチ基盤）。
-全 8 件完了（2026-09-04、branch 0904b）。`bench:check` PASS（gated カウンタ全改善: c5 schedule_calls -99% / c6 query_calls -93% / c1 encode -75% / c2.L p99 -49% / c3 M p95 -55%）。08 のみ方式 B 実装後にベンチで逆効果（+53〜178%）が判明し revert・計測ベースでクローズ。02 の単発タイマー化に伴う untrusted scroll 報告経路は deferred 評価（1 秒）で復活済み。アーカイブ: `dev-docs/archived/pbi/2026-09-04-0[1-8]-*.md`、HTML レポート設計は `2026-09-04-09-spec-bench-html-report.md`（実装済み・同梱）。
-
-### 2026-09-04 0902a レビュー由来（重複・dead-code 7件→3PBI） — 3件完了
-
-- 2026-09-04-01-fix-api-key-list-ssot.md（RICE 60 — `apiKeyFields.ts` SSOT新設。storagePort/settingsMigrationの二重定義を解消、drift検出テスト追加。type-check / lint / 関連46 tests / build green）
-- 2026-09-04-02-fix-domain-filter-duplication.md（RICE 2.4 — `evaluateCachedAllow`共有ヘルパー抽出、`parseAndValidate`に`isValidDomainPattern`統合（新`domainValidator.ts`で循環回避）、dashboard保存時検証を単一seamに。113 tests green）
-- 2026-09-04-03-cleanup-review-dead-exports.md（chore — RequiresPrivacy/Markdown、Slice系4型、domainFilter singleton、RedactingStoragePortを削除。redact関数は維持、DESIGN_SPECIFICATIONS同期。64 tests green）
-
-
-### 未 PBI 化のトリガー
-- **なし。** PBI 06 の効果確認は 2026-09-01 に実施済み（未達 → 06b/06c を実装し達成）。残債は `2026-08-31-00-backlog.md` の「06d 候補」に記録（次 provider 追加時などに着手検討）
-
-### archived PBI の DoD 乖離監査（2026-09-01）
-`autonomous-task-closer` で archived PBI のチェックボックスと実コードを照合。実害ありは PBI-22（対応済み）のみ。表記のみの乖離を各 archived PBI の実装メモに追記済み。特記:
-- `2026-08-29-12-fix-crypto-policy-ssot` — 中核実装済み、2 項目未達 → `2026-09-01-05` に切り出し実装・アーカイブ済み
-- `2026-08-24-03-refactor-sqlite-consolidation` — 部分実装（`storageMaintenance.ts` の動的 import 未解消、実害低）。追加 PBI 化は見送り
-- `2026-08-30-05-feat-cleansing-offscreen-delegation` — PoC 品質（flag OFF で本番未使用）。追加 PBI 化は見送り
-
----
+- [2026-09-05-00-backlog-future.md](2026-09-05-00-backlog-future.md) — 旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）に散在していた見送り・トリガー付き・製品判断待ち候補の統合台帳（2026-09-05 整理）。着手はトリガー別に管理。次ラウンドの architecture review はこれを入力にする
 
 ## 運用ルール
 
@@ -87,9 +46,57 @@ backlog: [2026-09-04-00-backlog-perf.md](2026-09-04-00-backlog-perf.md)。着手
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+
+### 2026-09-05 Architecture Round 3（arch3 診断） — 7 件完了
+
+backlog: [2026-09-05-00-backlog-arch3.md](../dev-docs/archived/pbi/2026-09-05-00-backlog-arch3.md)。着手順 = RICE 降順（ファイル番号 NN）。依存なし。
+
+- 2026-09-05-01-refactor-recording-outcome.md（✅ 完了・アーカイブ済 — outcome 政策を RecordingOutcome に集約。catch 分岐＋pending＋通知のペアリングを1 seam に。pipeline 58 tests green）
+- 2026-09-05-02-refactor-provider-skeleton-template.md（✅ 完了・アーカイブ済 — HTTP 2 社の generateSummary 骨格を基底テンプレート化（hooks のみ残す）。BuiltIn/testConnection は対象外。循環回避のため transport は dynamic import。ai 214 tests green）
+- 2026-09-05-03-refactor-logger-wave4.md（✅ 完了・アーカイブ済 — core 配線の注入化（initLogger/resetLoggerWiring）＋eslint 反転。chrome なし駆動テスト追加。logger 35 tests green、lint 0 errors）
+- 2026-09-05-04-refactor-cache-liveview-deletion.md（✅ 完了・アーカイブ済 — getCacheState live-view（~60行）削除。9 テストファイルを typed seam＋振る舞いアサーション＋fake timers に移行。background 全 1297 tests green）
+- 2026-09-05-05-refactor-alarm-registry.md（✅ 完了・アーカイブ済 — 5 系統を AlarmRegistry テーブルに集約（flush/immediate 本体共有・失敗統一ログ・daily-purge の await 漏れ解消）。alarm 193 tests green）
+- 2026-09-05-06-refactor-popup-record-session.md（✅ 完了・アーカイブ済 — 記録 choreography を RecordSession 状態機械に集約（ForceRecordFlow 削除・5コールバック束解消・二重起動ガード）。statusPanel のデッド hook と onclick 書き換えを削除。popup 833 tests green）
+- 2026-09-05-07-refactor-envelope-guard.md（✅ 完了・アーカイブ済 — envelope accept/reject を政策テーブル＋順序付きパイプラインに集約。router の trust/strict 順序は不変。matrix 8 tests + wrapper 198 tests green）
+
+### 2026-09-04 フレーキーテスト安定化（1 件） — 完了
+
+- 2026-09-04-18-test-flaky-stabilization.md（🧪 2pt — 負荷下フレーキー 5 ファイルの機構診断に基づく安定化。clock 注入（aiUsageTracker）・StepExecutor delay 注入（RecordingPipeline、リトライテスト 11 秒→1ms 未満）・cap 不変式アサーション化（tagCooccurrenceCap）・mutex リセット + mock 衛生（idb-migration）・vitest forks cap 8。**検証: `npm test` 3 連続 0 failed（11,449 passed）+ make clean test EXIT=0**）
+
+### 2026-09-04 Architecture Round 2（0904b 診断） — 7 件完了
+
+実装済み（2026-09-04、branch 0904b、`make clean test` EXIT=0・graphify update 済）。アーカイブ: `dev-docs/archived/pbi/2026-09-04-1[1-7]-*.md`。将来的な遡及候補（helpers deep-scan wire-or-delete / tokenizer 署名化 / trendReport 分離）は `2026-09-04-00-backlog-arch2.md` に記録。
+
+### 2026-09-04 ベンチ履歴トレンド表示（1 件） — 完了
+
+- 2026-09-04-10-feat-bench-trend-report.md（✨ 2pt — 蓄積済み `micro-<日付>.json` から指標トレンドを HTML レポートに表示。trend.mjs 集約 + sparkline セクション + CLI 配線、外部参照ゼロ維持。テスト 89 harness green・bench:check PASS）
+
+### 2026-09-04 パフォーマンス最適化 8 件（ベンチ基盤先行） — 8 件完了
+
+backlog: [2026-09-04-00-backlog-perf.md](../dev-docs/archived/pbi/2026-09-04-00-backlog-perf.md)。着手順 = ファイル番号（NN）。**01 が残り 7 件の依存元**（実測ベンチ基盤）。
+全 8 件完了（2026-09-04、branch 0904b）。`bench:check` PASS（gated カウンタ全改善: c5 schedule_calls -99% / c6 query_calls -93% / c1 encode -75% / c2.L p99 -49% / c3 M p95 -55%）。08 のみ方式 B 実装後にベンチで逆効果（+53〜178%）が判明し revert・計測ベースでクローズ。02 の単発タイマー化に伴う untrusted scroll 報告経路は deferred 評価（1 秒）で復活済み。アーカイブ: `dev-docs/archived/pbi/2026-09-04-0[1-8]-*.md`、HTML レポート設計は `2026-09-04-09-spec-bench-html-report.md`（実装済み・同梱）。
+
+### 2026-09-04 0902a レビュー由来（重複・dead-code 7件→3PBI） — 3件完了
+
+- 2026-09-04-01-fix-api-key-list-ssot.md（RICE 60 — `apiKeyFields.ts` SSOT新設。storagePort/settingsMigrationの二重定義を解消、drift検出テスト追加。type-check / lint / 関連46 tests / build green）
+- 2026-09-04-02-fix-domain-filter-duplication.md（RICE 2.4 — `evaluateCachedAllow`共有ヘルパー抽出、`parseAndValidate`に`isValidDomainPattern`統合（新`domainValidator.ts`で循環回避）、dashboard保存時検証を単一seamに。113 tests green）
+- 2026-09-04-03-cleanup-review-dead-exports.md（chore — RequiresPrivacy/Markdown、Slice系4型、domainFilter singleton、RedactingStoragePortを削除。redact関数は維持、DESIGN_SPECIFICATIONS同期。64 tests green）
+
+
+### 未 PBI 化のトリガー
+- **なし。** PBI 06 の効果確認は 2026-09-01 に実施済み（未達 → 06b/06c を実装し達成）。残債は `../dev-docs/archived/pbi/2026-08-31-00-backlog.md` の「06d 候補」に記録（将来候補統合台帳にも収録）
+
+### archived PBI の DoD 乖離監査（2026-09-01）
+`autonomous-task-closer` で archived PBI のチェックボックスと実コードを照合。実害ありは PBI-22（対応済み）のみ。表記のみの乖離を各 archived PBI の実装メモに追記済み。特記:
+- `2026-08-29-12-fix-crypto-policy-ssot` — 中核実装済み、2 項目未達 → `2026-09-01-05` に切り出し実装・アーカイブ済み
+- `2026-08-24-03-refactor-sqlite-consolidation` — 部分実装（`storageMaintenance.ts` の動的 import 未解消、実害低）。追加 PBI 化は見送り
+- `2026-08-30-05-feat-cleansing-offscreen-delegation` — PoC 品質（flag OFF で本番未使用）。追加 PBI 化は見送り
+
+---
+
 ### 2026-09-05 Architecture Round 4（arch4 診断） — 7 件完了（全行アーカイブ済み）
 
-backlog: [2026-09-05-00-backlog-arch4.md](2026-09-05-00-backlog-arch4.md)。着手順 = RICE 降順（ファイル番号 NN）。依存なし。
+backlog: [2026-09-05-00-backlog-arch4.md](../dev-docs/archived/pbi/2026-09-05-00-backlog-arch4.md)。着手順 = RICE 降順（ファイル番号 NN）。依存なし。
 
 - 2026-09-05-01-refactor-provider-backedge.md（✅ 完了・アーカイブ済 — 中立テーブル＋述語を低層に新設し逆辺2本を切断。catalog は spread で drift 不能に。template は静的 import に復帰。utils 2453＋ai 218 tests green）
 - 2026-09-05-02-refactor-pending-merge-lock.md（✅ 完了・アーカイブ済 — merge＋truncate を pendingPatchPolicy に抽出し mutate 経由に。retryCount は backoff 継承に。interleave 新規テスト付き。queue green）
@@ -101,7 +108,7 @@ backlog: [2026-09-05-00-backlog-arch4.md](2026-09-05-00-backlog-arch4.md)。着�
 
 ### 2026-09-05 Checking Team レビュー由来（review-fixes 残候補） — 15件完了（autonomous-task-closer）
 
-backlog: [2026-09-05-00-backlog-review-fixes.md](2026-09-05-00-backlog-review-fixes.md)（#12–26 を PBI 化 → 全件実装・アーカイブ。NN 17–31）。着手順 = backlog RICE 順。バッチ1（小規模 10 件: 17/18/19/20/24/25/26/27/30/31・controller-direct＋サブエージェント併用）→ バッチ2（21 層逆転・28 barrel 移行）→ バッチ3（23 版移行ウィンドウ・22 再同期）→ バッチ4（29 スパイク）。
+backlog: [2026-09-05-00-backlog-review-fixes.md](../dev-docs/archived/pbi/2026-09-05-00-backlog-review-fixes.md)（#12–26 を PBI 化 → 全件実装・アーカイブ。NN 17–31）。着手順 = backlog RICE 順。バッチ1（小規模 10 件: 17/18/19/20/24/25/26/27/30/31・controller-direct＋サブエージェント併用）→ バッチ2（21 層逆転・28 barrel 移行）→ バッチ3（23 版移行ウィンドウ・22 再同期）→ バッチ4（29 スパイク）。
 
 - 2026-09-05-17-fix-ratelimiter-write-debounce.md（RICE 1400 — 認証失敗バースト時の session+local 二重書き込みをデバウンス合体、ロックアウトは即時フラッシュ維持。commit `58209313`）
 - 2026-09-05-18-refactor-domain-matching-unify.md（RICE 1400 — `matchesPattern` 3 コピー（domainUtils/urlSkipper/domainFilterCache deprecated）を単一共有パスに集約。3 コピーは意味論同一と確認。commit `cd9db5ef`）
@@ -123,7 +130,7 @@ backlog: [2026-09-05-00-backlog-review-fixes.md](2026-09-05-00-backlog-review-fi
 
 ### 2026-09-05 Architecture Round 5（arch5 診断） — 6件完了
 
-backlog: [2026-09-05-00-backlog-arch5.md](2026-09-05-00-backlog-arch5.md)。実行順 = Phase 1–2（review-fixes）着地後、ラウンド内 RICE 降順。全タスク SDD（サブエージェント実装＋タスクレビュー）で実施し最終全体レビュー READY TO MERGE。
+backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00-backlog-arch5.md)。実行順 = Phase 1–2（review-fixes）着地後、ラウンド内 RICE 降順。全タスク SDD（サブエージェント実装＋タスクレビュー）で実施し最終全体レビュー READY TO MERGE。
 
 - 2026-09-05-11-refactor-dashboard-sqlite-sender-unification.md（RICE 28.8 / Strong — DASHBOARD_SQLITE sender 4 箇所・retry 4 層を `DashboardGateway`（`src/messaging/` へ移設）1 module に統合。retry は opt-in option で吸収、getSqliteStatus は変換層化、diagnostics の迂回解消（SQLite + TEST 系送信）、`decodeOpfsSpikeReport` 厳密版を validators に移設、sender 所在 grep ガード新設。impl `f8552fdc` + fix `66776e8e`、1 fix cycle）
 - 2026-09-05-12-refactor-content-seam-micro-batch.md（RICE 12.0 / Worth — `watchDynamicContent` 1 signature 化（kernel 側 2 面削除）・`cleansingExecuted` フィールド + kernel 注入 sender 経由の通知移動（utils chrome-free 化・recount-only 誤送信回避）・visitAdmission header/errorDetail・dead seam 削除。commit `9e99a7a`）
