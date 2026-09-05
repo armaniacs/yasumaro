@@ -105,6 +105,9 @@ rg -n "activateWithTag|activateWithDomain|consumePendingInit|bumpGenerationOnUnm
 - Panel.init は `container` 未設定でも呼ばれ得る（registry の init→load 順序）。initParams の保持のみにし副作用を持たせない
 - `sqliteHistoryPanelController.test.ts` が consumePendingInit の exactly-once を検証している — shim 経由のこのテストは契約テスト移行後も意味が通る形に調整する
 
+### 実装メモ
+- 二重 init の stale-tag 漏れを意図的に修正：旧実装は `init(tag)→init()` でも `pendingInit` が残るため、素の再訪が stale tag で再取得し得た。新実装は Panel が `pendingNavParams` を後勝ちで保持し `load()` で exactly-once 消費するため最後の init が勝つ（`sqliteHistoryPanel.navigate.test.ts` の二重 init テストで担保）。純粋リファクタを超える振る舞い修正として記録する。
+
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] dashboard 関連テスト全 green（type-check / lint / build 含む）
