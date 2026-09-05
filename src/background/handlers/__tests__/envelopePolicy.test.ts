@@ -5,7 +5,12 @@
  * shape.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { checkEnvelope, INVALID_MESSAGE_ERROR } from '../envelopePolicy.js';
+import {
+  checkEnvelope,
+  INVALID_MESSAGE_ERROR,
+  PROTOCOL_VERSION_POLICY,
+  classifyProtocolVersion,
+} from '../envelopePolicy.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../messageTypes.js';
 
 function makeDeps() {
@@ -112,5 +117,86 @@ describe('checkEnvelope', () => {
       makeDeps(),
     );
     expect(outcome.accepted).toBe(true);
+  });
+});
+
+describe('protocol version migration window', () => {
+  it('derives the window from a single declaration (N-1 only)', () => {
+    expect(PROTOCOL_VERSION_POLICY.current).toBe(CURRENT_PROTOCOL_VERSION);
+    expect(PROTOCOL_VERSION_POLICY.windowSize).toBe(1);
+    expect(PROTOCOL_VERSION_POLICY.minSupported).toBe(CURRENT_PROTOCOL_VERSION - 1);
+  });
+
+  it('accepts the current version without a deprecation flag', async () => {
+    const deps = makeDeps();
+    const outcome = await checkEnvelope(
+      { type: 'PING', protocolVersion: CURRENT_PROTOCOL_VERSION },
+      sender(),
+      deps,
+    );
+    expect(outcome.accepted).toBe(true);
+    if (!outcome.accepted) return;
+    expect(outcome.deprecated).toBeUndefined();
+    // PING is not a migration-skip type, so the normal pipeline runs.
+    expect(deps.runDeferredStartupMigrations).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts N-1 with a deprecation detail and still runs the pipeline', async () => {
+    const deps = makeDeps();
+    const outcome = await checkEnvelope(
+      { type: 'MANUAL_RECORD', protocolVersion: CURRENT_PROTOCOL_VERSION - 1, payload: {} },
+      sender(7),
+      deps,
+    );
+    expect(outcome.accepted).toBe(true);
+    if (!outcome.accepted) return;
+    expect(outcome.deprecated).toEqual({
+      expected: CURRENT_PROTOCOL_VERSION,
+      actual: CURRENT_PROTOCOL_VERSION - 1,
+      type: 'MANUAL_RECORD',
+    });
+    expect(deps.runDeferredStartupMigrations).toHaveBeenCalledTimes(1);
+    expect(deps.initializeTabCache).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects N-2 and far versions', async () => {
+    for (const version of [CURRENT_PROTOCOL_VERSION - 2, CURRENT_PROTOCOL_VERSION + 999, 99]) {
+      const deps = makeDeps();
+      const outcome = await checkEnvelope({ type: 'PING', protocolVersion: version }, sender(), deps);
+      expect(outcome.accepted).toBe(false);
+      if (outcome.accepted) continue;
+      expect(outcome.response).toEqual({ success: false, error: 'Protocol version mismatch' });
+      expect(outcome.versionMismatch).toEqual({
+        expected: CURRENT_PROTOCOL_VERSION,
+        actual: version,
+        type: 'PING',
+      });
+      expect(deps.runDeferredStartupMigrations).not.toHaveBeenCalled();
+    }
+  });
+
+  it('accepts a missing protocolVersion (legacy sender behavior)', async () => {
+    const outcome = await checkEnvelope({ type: 'PING' }, sender(), makeDeps());
+    expect(outcome.accepted).toBe(true);
+    if (!outcome.accepted) return;
+    expect(outcome.deprecated).toBeUndefined();
+  });
+
+  it('rejects non-integer protocolVersion values', async () => {
+    for (const version of ['1', 1.5, null, Number.NaN, true]) {
+      const outcome = await checkEnvelope({ type: 'PING', protocolVersion: version }, sender(), makeDeps());
+      expect(outcome.accepted).toBe(false);
+    }
+  });
+
+  it('expires the window when CURRENT moves on (simulated bump to N+1)', async () => {
+    const nextPolicy = {
+      current: CURRENT_PROTOCOL_VERSION + 1,
+      windowSize: 1,
+      minSupported: CURRENT_PROTOCOL_VERSION,
+    };
+    expect(classifyProtocolVersion(CURRENT_PROTOCOL_VERSION, nextPolicy)).toBe('deprecated');
+    expect(classifyProtocolVersion(CURRENT_PROTOCOL_VERSION - 1, nextPolicy)).toBe('unsupported');
+    expect(classifyProtocolVersion(99, nextPolicy)).toBe('unsupported');
   });
 });

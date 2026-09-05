@@ -23,7 +23,7 @@ import type { AiTestProgress } from './ai/AIService.js';
  * background 層ではなく中立な位置に置いている。
  * ここでは後方互換のために再エクスポートする。
  */
-export { CURRENT_PROTOCOL_VERSION } from '../messaging/protocol.js';
+export { CURRENT_PROTOCOL_VERSION, PROTOCOL_VERSION_WINDOW_SIZE } from '../messaging/protocol.js';
 
 // ============================================================================
 // Reusable payload fragments
