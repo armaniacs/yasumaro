@@ -2253,6 +2253,9 @@
   "wizardTypePrompt": {
     "message": "Yasumaro をどのように使いますか？"
   },
+  "wizardRecordingScope": {
+    "message": "記録の範囲: プライバシーポリシーに同意すると、閲覧したページ（タイトル・URL・本文）がローカルに記録されます。同意はポップアップからいつでも取り消せます。"
+  },
   "wizardTypeObsidian": {
     "message": "Obsidian 使い"
   },

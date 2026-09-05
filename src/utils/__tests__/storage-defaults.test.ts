@@ -25,3 +25,13 @@ describe('DEFAULT_SETTINGS retention bounds', () => {
     expect([30, 90, 180, 365]).toContain(DEFAULT_SETTINGS[StorageKeys.SQLITE_RETENTION_DAYS]);
   });
 });
+
+describe('DEFAULT_SETTINGS recording defaults (PBI 2026-09-05-10)', () => {
+  it('プライバシー同意のデフォルトは OFF である（初回起動時に記録されない）', () => {
+    expect(DEFAULT_SETTINGS[StorageKeys.PRIVACY_CONSENT]).toBe(false);
+  });
+
+  it('オンボーディング完了フラグのデフォルトは false である（初回起動時にウィザードを表示）', () => {
+    expect(DEFAULT_SETTINGS[StorageKeys.ONBOARDING_WIZARD_COMPLETED]).toBe(false);
+  });
+});

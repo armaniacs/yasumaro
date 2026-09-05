@@ -63,6 +63,7 @@ function ensureWizardDOM(): HTMLElement {
         <button class="wizard-option" data-type="sqlite" data-i18n="wizardTypeSqlite">SQLite (no Obsidian)</button>
         <button class="wizard-option" data-type="minimal" data-i18n="wizardTypeMinimal">Just trying it out</button>
       </div>
+      <p class="wizard-recording-scope" data-i18n="wizardRecordingScope">Recording scope: after you accept the privacy policy, visited pages (title, URL, page text) are recorded locally. You can withdraw consent anytime from the popup.</p>
     </div>
     <div class="wizard-step hidden" data-step="obsidian">
       <p data-i18n="wizardObsidianDescription">Set your Local REST API key and daily notes path.</p>
