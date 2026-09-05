@@ -313,6 +313,11 @@ The catalog is built from `PROVIDER_REGISTRY` (wiring data) augmented with `cspD
 - `DiagnosticsCollector` reads each provider's model / base URL / API key via the catalog entry's keys.
 - `getMaxContentChars` (`ProviderStrategy`) reads the typed `settings.providers[<id>]` bag, then the global `StorageKey`, then a default.
 
+HTTP provider response size and allowlist handling are SSOT-driven:
+
+- `MAX_AI_HTTP_RESPONSE_BYTES` (`ProviderStrategy`) is the single response-size cap for both the summary flow (`executeHttpSummaryFlow` → `readJsonCapped`) and each provider's `testConnection` read. Providers import the constant; no local copies exist.
+- `getAllowedUrlsForRequests()` (`AIProviderStrategy`, protected) is the single path to `urlWhitelist.getAllowedUrls()` for provider request-time URL validation (testConnection). Note this is distinct from the summary-flow pre-flight allowlist built from the `providerAllowlist` neutral table.
+
 ## 12. uBlock Origin Format Support
 
 ### 12.1 Strict Conformance
