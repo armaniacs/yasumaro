@@ -33,7 +33,7 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
-## [Unreleased]
+## [6.7.110] - 2026-09-05
 
 ### 互換性
 
