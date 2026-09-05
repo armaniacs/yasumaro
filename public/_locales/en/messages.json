@@ -1305,6 +1305,9 @@
   "statusPrivateDetected": {
     "message": "Private"
   },
+  "statusPublicPage": {
+    "message": "Public page"
+  },
   "statusNoInfo": {
     "message": "No Info"
   },

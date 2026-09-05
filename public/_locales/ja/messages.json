@@ -1251,6 +1251,9 @@
   "statusPrivateDetected": {
     "message": "プライベート"
   },
+  "statusPublicPage": {
+    "message": "公開ページ"
+  },
   "statusNoInfo": {
     "message": "情報なし"
   },

@@ -198,19 +198,38 @@ export async function updateTrustStatus(url: string): Promise<void> {
   }
 }
 
+/**
+ * 可視テキストラベルを更新する。アイコンと同じi18nキーを使い、
+ * data-i18n属性も同期させる（applyI18n再適用時の上書き対策）。
+ * ラベル要素が存在しないDOM（旧テスト等）では何もしない。
+ *
+ * check-i18nはdata-i18nのリテラルを静的走査するため、使用キー一覧:
+ * data-i18n="statusRecordable" data-i18n="statusBlocked"
+ * data-i18n="statusPrivateDetected" data-i18n="statusPublicPage" data-i18n="statusNoInfo"
+ */
+function updateStatusLabel(label: HTMLElement | null, messageKey: string): void {
+  if (!label) return;
+  label.textContent = getMessage(messageKey);
+  label.setAttribute('data-i18n', messageKey);
+}
+
 function renderStatusPanel(status: StatusInfo): void {
   const domainIcon = document.getElementById('statusDomainIcon');
   const privacyIcon = document.getElementById('statusPrivacyIcon');
+  const domainLabel = document.getElementById('statusDomainLabel');
+  const privacyLabel = document.getElementById('statusPrivacyLabel');
 
   if (domainIcon) {
     if (status.domainFilter.allowed) {
       updateStatusIcon(domainIcon, 'success');
       domainIcon.className = 'status-icon status-success';
       domainIcon.setAttribute('aria-label', getMessage('statusRecordable'));
+      updateStatusLabel(domainLabel, 'statusRecordable');
     } else {
       updateStatusIcon(domainIcon, 'error');
       domainIcon.className = 'status-icon status-error';
       domainIcon.setAttribute('aria-label', getMessage('statusBlocked'));
+      updateStatusLabel(domainLabel, 'statusBlocked');
     }
   }
 
@@ -219,14 +238,17 @@ function renderStatusPanel(status: StatusInfo): void {
       updateStatusIcon(privacyIcon, 'warning');
       privacyIcon.className = 'status-icon status-warning';
       privacyIcon.setAttribute('aria-label', getMessage('statusPrivateDetected'));
+      updateStatusLabel(privacyLabel, 'statusPrivateDetected');
     } else if (status.privacy.hasCache) {
       updateStatusIcon(privacyIcon, 'success');
       privacyIcon.className = 'status-icon status-success';
       privacyIcon.setAttribute('aria-label', getMessage('statusPublicPage'));
+      updateStatusLabel(privacyLabel, 'statusPublicPage');
     } else {
       updateStatusIcon(privacyIcon, 'muted');
       privacyIcon.className = 'status-icon status-muted';
       privacyIcon.setAttribute('aria-label', getMessage('statusNoInfo'));
+      updateStatusLabel(privacyLabel, 'statusNoInfo');
     }
   }
 
