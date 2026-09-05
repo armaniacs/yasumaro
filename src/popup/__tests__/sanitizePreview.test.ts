@@ -48,6 +48,7 @@ import {
   jumpToNextMasked,
   jumpToPrevMasked,
 } from '../sanitizePreview.js';
+import { focusTrapManager, getFocusableElements } from '../../utils/ui/focusTrap.js';
 
 /**
  * テスト用DOMモーダル構造を構築（M21: <dialog>要素ベース）
@@ -796,6 +797,135 @@ describe('sanitizePreview', () => {
       await promise;
 
       expect(document.body.style.width).toBe('320px');
+    });
+  });
+
+  describe('focusTrap wiring (PBI-25)', () => {
+    afterEach(() => {
+      focusTrapManager.releaseAll();
+    });
+
+    function trapCountFor(modal: HTMLElement): number {
+      return [...focusTrapManager.handlers.values()].filter((h) => h.element === modal).length;
+    }
+
+    test('showPreview で trap し、confirm で release する', async () => {
+      const trapSpy = vi.spyOn(focusTrapManager, 'trap');
+      const releaseSpy = vi.spyOn(focusTrapManager, 'release');
+      try {
+        const promise = showPreview('Hello World');
+
+        const modal = document.getElementById('confirmationModal') as HTMLDialogElement;
+        expect(trapSpy).toHaveBeenCalledTimes(1);
+        expect(trapSpy).toHaveBeenCalledWith(modal, expect.any(Function));
+        expect(trapCountFor(modal)).toBe(1);
+
+        (document.getElementById('confirmPreviewBtn') as HTMLButtonElement).click();
+        const result = await promise;
+        expect(result.confirmed).toBe(true);
+        expect(releaseSpy).toHaveBeenCalled();
+        expect(trapCountFor(modal)).toBe(0);
+      } finally {
+        trapSpy.mockRestore();
+        releaseSpy.mockRestore();
+      }
+    });
+
+    test('cancel ボタンで release する', async () => {
+      const releaseSpy = vi.spyOn(focusTrapManager, 'release');
+      try {
+        const promise = showPreview('some content');
+        const modal = document.getElementById('confirmationModal') as HTMLDialogElement;
+        expect(trapCountFor(modal)).toBe(1);
+
+        (document.getElementById('cancelPreviewBtn') as HTMLButtonElement).click();
+        const result = await promise;
+        expect(result.confirmed).toBe(false);
+        expect(releaseSpy).toHaveBeenCalled();
+        expect(trapCountFor(modal)).toBe(0);
+      } finally {
+        releaseSpy.mockRestore();
+      }
+    });
+
+    test('ネイティブ close（Escape 経路）で release し confirmed=false で resolve する', async () => {
+      const releaseSpy = vi.spyOn(focusTrapManager, 'release');
+      try {
+        const promise = showPreview('some content');
+        const modal = document.getElementById('confirmationModal') as HTMLDialogElement;
+        expect(trapCountFor(modal)).toBe(1);
+
+        modal.close();
+        const result = await promise;
+        expect(result).toEqual({ confirmed: false, content: null });
+        expect(releaseSpy).toHaveBeenCalled();
+        expect(trapCountFor(modal)).toBe(0);
+      } finally {
+        releaseSpy.mockRestore();
+      }
+    });
+
+    test('連続 showPreview で二重 trap しない', async () => {
+      const trapSpy = vi.spyOn(focusTrapManager, 'trap');
+      const releaseSpy = vi.spyOn(focusTrapManager, 'release');
+      try {
+        const first = showPreview('first');
+        // 内部で reject される superseded promise の未処理警告を抑止
+        first.catch(() => {});
+        const second = showPreview('second');
+
+        const modal = document.getElementById('confirmationModal') as HTMLDialogElement;
+        expect(trapSpy).toHaveBeenCalledTimes(2);
+        // 2回目の trap 前に1回目のトラップが解放されている
+        expect(releaseSpy).toHaveBeenCalled();
+        expect(trapCountFor(modal)).toBe(1);
+
+        (document.getElementById('confirmPreviewBtn') as HTMLButtonElement).click();
+        const result = await second;
+        expect(result.confirmed).toBe(true);
+        expect(trapCountFor(modal)).toBe(0);
+      } finally {
+        trapSpy.mockRestore();
+        releaseSpy.mockRestore();
+      }
+    });
+
+    test('Tab 移動が dialog 内を循環する', async () => {
+      const promise = showPreview('Hello World');
+      const modal = document.getElementById('confirmationModal') as HTMLElement;
+      const focusables = getFocusableElements(modal);
+      expect(focusables.length).toBeGreaterThan(1);
+      const first = focusables[0] as HTMLElement;
+      const last = focusables[focusables.length - 1] as HTMLElement;
+
+      last.focus();
+      last.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+      expect(document.activeElement).toBe(first);
+
+      first.focus();
+      first.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true })
+      );
+      expect(document.activeElement).toBe(last);
+
+      (document.getElementById('confirmPreviewBtn') as HTMLButtonElement).click();
+      await promise;
+    });
+
+    test('閉じると開く前の要素にフォーカスが復帰する', async () => {
+      const opener = document.createElement('button');
+      opener.id = 'opener';
+      opener.textContent = 'opener';
+      document.body.appendChild(opener);
+      opener.focus();
+      expect(document.activeElement).toBe(opener);
+
+      const promise = showPreview('Hello World');
+      expect(document.activeElement).not.toBe(opener);
+
+      (document.getElementById('confirmPreviewBtn') as HTMLButtonElement).click();
+      await promise;
+      expect(document.activeElement).toBe(opener);
     });
   });
 });
