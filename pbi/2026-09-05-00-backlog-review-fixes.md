@@ -19,6 +19,10 @@ RICE = (Reach × Impact × Confidence) / Effort
 
 ## 優先順位一覧
 
+> **PBI 化状況（2026-09-05 更新）**: #01–11 は実装完了（第1弾・第2弾、`dev-docs/archived/pbi/` 参照）。
+> **#12–26 は PBI 化済み**（`pbi/2026-09-05-17`〜`31`、コード調査によるスコープ補正入り）。
+> 番号対応: backlog #12→NN17、#13→18、…、#26→31（INDEX の番号予約ルール）。
+
 | 順位 | 候補 | RICE | Reach | Impact | Confidence | Effort | タイプ |
 |:----:|------|:----:|:-----:|:------:|:----------:|:------:|:------:|
 | 01 | optional_host_permissions から `<all_urls>` を削除 | 7,200 | 1,000 | 2 | 0.9 | 0.25 | fix |

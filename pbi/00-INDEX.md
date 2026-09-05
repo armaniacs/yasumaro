@@ -14,7 +14,25 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-（なし — 2026-09-05 の全 PBI が完了・アーカイブ済み。review-fixes backlog の #12〜#26 は未 PBI 化の留置候補。PBI 化する場合は NN 17 以降を使用）
+### 2026-09-05 Checking Team レビュー由来（review-fixes 残候補 PBI 化） — 15 件進行中
+
+backlog: [2026-09-05-00-backlog-review-fixes.md](2026-09-05-00-backlog-review-fixes.md)（#12–26 を PBI 化。**コード調査済み・スコープ補正入り**。着手順 = backlog RICE 順＝NN 順。#29 はスパイク、#22/#23 は工数 2 日）。全件未着手。
+
+- 2026-09-05-17-fix-ratelimiter-write-debounce.md（🔧 0.5日 — RateLimitService の認証失敗バースト時の session+local 二重即時書き込みをデバウンス。RICE 1400）
+- 2026-09-05-18-refactor-domain-matching-unify.md（🔧 0.5日 — `matchesPattern` の domainUtils/urlSkipper 二重実装と deprecated `matchesWildcardPattern` を `DomainFilter` seam に一本化。RICE 1400）
+- 2026-09-05-19-refactor-errorutils-split.md（🔧 0.5日 — 調査の結果スコープ補正: `errorUtils.ts` は既に errorMessage() 単体のため、実態は deprecated `errorMessages.ts` shim の削除＋テスト移行。RICE 800）
+- 2026-09-05-20-fix-popup-status-label.md（🔧 0.5日 — popup ステータスの色/SVG アイコンのみの表示にテキストラベルを併設（statusPanel summary icons）。RICE 800）
+- 2026-09-05-21-refactor-layer-inversion-neutral.md（🔧 1.0日 — background→popup の層逆転（consent モジュール import 4 箇所）を中立層移動で解消。privacyConsent.ts 移動に絞ったスコープ補正済み。RICE 700）
+- 2026-09-05-22-fix-legacy-dual-write-resync.md（🔧 2.0日 — LEGACY_DUAL_WRITE 再有効化時の SQLite→レガシー再同期を実装（現状は無し。トリガーモード auto/manual の判断を実装時に要決定。リリースノート明記推奨）。RICE 600）
+- 2026-09-05-23-fix-protocol-version-window.md（🔧 2.0日 — プロトコルバージョン不一致の現行ハードリジェクトに段階的移行ウィンドウを導入（リリースノート明記推奨）。RICE 600）
+- 2026-09-05-24-fix-dashboard-i18n-strings.md（🔧 0.5日 — dashboard の英語ハードコード 4 箇所（perSiteOverrides/privacySettingsPanel/connectionTests/models-dev-dialog）を i18n 化。RICE 500）
+- 2026-09-05-25-fix-popup-focus-trap.md（🔧 0.5日 — popup 内 3 dialog（confirmationModal・private/recording-failed・privacyConsentModal）に focusTrapManager を配線（onboardingWizard が唯一の既存配線）。RICE 320）
+- 2026-09-05-26-fix-pending-queue-bounds.md（🔧 0.5日 — pending キューの単一キー配列に絶対上限＋TTL クランプを追加（現行 prune は期限切れのみで無期限増加を放置）。RICE 320）
+- 2026-09-05-27-fix-download-path-guard.md（🔧 0.5日 — 4 つの download 呼び出しの filename に `sanitizePathSegment` を適用（本番消費者ゼロの既存 util を活性化）。RICE 360）
+- 2026-09-05-28-refactor-utils-dump-cleanup.md（🔧 2.0日 — 非推奨 barrel `storage.ts` のテスト約 30 ファイル移行＋ utils デッドウォッシュ（logger barrel は対象外）。RICE 200）
+- 2026-09-05-29-backlog-sqlite-backend-consolidation.md（🧪 スパイク 3.0日 — SQLite 永続化 4 層スタック（OPFS/IDB VFS・IdbVfsBackend・storageFallback・backendResolver）の整理調査。実装なし・調査レポート＋整理案がアウトプット。RICE 83）
+- 2026-09-05-30-fix-validate-fast.md（🔧 0.25日 — `validate` の vitest 全量に対する `validate:fast`（type-check+lint+絞り込みテスト）を新設。RICE 18）
+- 2026-09-05-31-fix-wasqlite-license.md（🔧 0.25日 — スコープ補正: wa-sqlite は MIT 実在のため実害は SBOM の license 空表記のみ。generate-sbom 対応。RICE 1.8）
 
 ### 2026-09-05 Architecture Round 3（arch3 診断） — 7 件完了
 
