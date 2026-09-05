@@ -3661,6 +3661,18 @@
     "message": "補完に失敗しました。",
     "description": "Message shown when backfill fails"
   },
+  "diagResyncBtn": {
+    "message": "レガシー履歴をSQLiteから再同期",
+    "description": "Button to manually resync recent SQLite records into the legacy chrome.storage history"
+  },
+  "diagResyncDone": {
+    "message": "再同期完了。",
+    "description": "Message shown when legacy resync is complete"
+  },
+  "diagResyncFailed": {
+    "message": "再同期に失敗しました。",
+    "description": "Message shown when legacy resync fails"
+  },
   "diagCleanupBtn": {
     "message": "元の chrome.storage データを削除",
     "description": "Button to delete original chrome.storage data after migration"

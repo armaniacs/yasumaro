@@ -47,6 +47,7 @@ export type DashboardSqliteRequest =
   | { subtype: 'status' }
   | { subtype: 'cleanup_legacy'; confirmToken?: string }
   | { subtype: 'backfill_metadata'; confirmToken?: string }
+  | { subtype: 'resync_legacy'; maxRecords?: number; confirmToken?: string }
   | { subtype: 'backup_db'; confirmToken?: string }
   | { subtype: 'restore_db'; data: string; confirmToken?: string }
   | {
@@ -138,6 +139,7 @@ export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
       } :
       S extends 'cleanup_legacy' ? { success: true; removed: string[]; totalBytes: number } :
       S extends 'backfill_metadata' ? { success: true; updated: number; total: number } :
+      S extends 'resync_legacy' ? { success: true; examined: number; written: number; skipped: number; total: number } :
       S extends 'backup_db' ? { success: true; data: string } :
       S extends 'restore_db' ? { success: true } :
       S extends 'import' ? { success: true; inserted: number; skipped: number; total: number } :

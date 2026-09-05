@@ -234,6 +234,7 @@ function makeDeps(overrides: Partial<DashboardSqliteHandlerDeps> = {}): {
     getConfirmToken: vi.fn().mockResolvedValue('token'),
     runBackfill: vi.fn().mockResolvedValue({ updated: 0, total: 0 }),
     runCleanup: vi.fn().mockResolvedValue({ removed: [], totalBytes: 0 }),
+    runLegacyResync: vi.fn().mockResolvedValue({ examined: 0, written: 0, skipped: 0, total: 0 }),
     queryAuditLog: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
     ...overrides,
   };

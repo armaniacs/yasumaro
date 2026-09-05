@@ -11,7 +11,7 @@ import { toFailure, MAX_IMPORT_ROWS } from './deps.js';
  * here via the router's fallthrough and is reported by the `default` case).
  */
 export const MAINTENANCE_BATCH_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new Set([
-  'migrate', 'import', 'restore_db', 'backup_db', 'backfill_metadata', 'cleanup_legacy', 'purge_now', 'content_purge_now',
+  'migrate', 'import', 'restore_db', 'backup_db', 'backfill_metadata', 'resync_legacy', 'cleanup_legacy', 'purge_now', 'content_purge_now',
 ]);
 
 export function createMaintenanceBatchHandler(deps: MaintenanceBatchDeps) {
@@ -136,6 +136,20 @@ export function createMaintenanceBatchHandler(deps: MaintenanceBatchDeps) {
           return { success: true, ...backfillResult };
         } catch {
           return { success: false, error: 'Backfill not available' };
+        }
+      }
+      case 'resync_legacy': {
+        try {
+          // Manual-only SQLite → legacy resync (PBI 22). The bound is
+          // re-clamped inside resyncLegacyFromSqlite; a non-numeric payload
+          // value falls back to the default there.
+          const maxRecords = typeof payload.maxRecords === 'number' ? payload.maxRecords : undefined;
+          const resyncResult = await deps.runLegacyResync(
+            maxRecords === undefined ? undefined : { maxRecords },
+          );
+          return { success: true, ...resyncResult };
+        } catch {
+          return { success: false, error: 'Resync not available' };
         }
       }
       case 'cleanup_legacy': {

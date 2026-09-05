@@ -27,6 +27,7 @@ import {
   getSqliteStatus,
   cleanupLegacyStorage,
   backfillMetadata,
+  resyncLegacyStorage,
   backupDb,
   restoreDb,
   importLogs,
@@ -316,6 +317,32 @@ describe('dashboardSqliteService — additional exports', () => {
     it('carries the reason on rejection', async () => {
       givenLastError('Failed');
       const result = await backfillMetadata();
+      expect(result).toEqual({ error: expect.stringContaining('Failed') });
+    });
+  });
+
+  describe('resyncLegacyStorage', () => {
+    it('returns examined/written/skipped/total counts on success', async () => {
+      givenResponse({ success: true, examined: 8, written: 7, skipped: 1, total: 8 });
+      const result = await resyncLegacyStorage();
+      expect(result).toEqual({ data: { examined: 8, written: 7, skipped: 1, total: 8 } });
+    });
+
+    it('reports an error when written is missing instead of substituting 0', async () => {
+      givenResponse({ success: true, examined: 8, skipped: 0, total: 8 });
+      const result = await resyncLegacyStorage();
+      expect(result).toEqual({ error: 'Invalid SQLite response: written' });
+    });
+
+    it('carries the reason from a failed response', async () => {
+      givenResponse({ success: false, error: 'Resync not available' });
+      const result = await resyncLegacyStorage();
+      expect(result).toEqual({ error: 'Resync not available' });
+    });
+
+    it('carries the reason on rejection', async () => {
+      givenLastError('Failed');
+      const result = await resyncLegacyStorage();
       expect(result).toEqual({ error: expect.stringContaining('Failed') });
     });
   });

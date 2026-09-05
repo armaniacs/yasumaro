@@ -220,6 +220,7 @@ function makeServiceWorkerDeps(overrides: Partial<SqliteClientBackedDeps> = {}):
     verifyConfirmToken: vi.fn().mockImplementation(async (token: string) => token === TOKEN),
     runBackfill: vi.fn().mockResolvedValue({ updated: 0, total: 0 }),
     runCleanup: vi.fn().mockResolvedValue({ removed: [], totalBytes: 0 }),
+    runLegacyResync: vi.fn().mockResolvedValue({ examined: 0, written: 0, skipped: 0, total: 0 }),
     ...overrides,
   };
 }
@@ -329,8 +330,31 @@ describe('dashboard SQLite wiring — Service-Worker-owned dependencies', () => 
       });
     });
 
-    it('returns what the cleanup removed', async () => {
-      const runCleanup = vi.fn().mockResolvedValue({ removed: ['legacy_key'], totalBytes: 2048 });
+    it('returns the legacy resync counts', async () => {
+      const runLegacyResync = vi.fn().mockResolvedValue({ examined: 8, written: 7, skipped: 1, total: 8 });
+      const handler = createDashboardSqliteHandler(
+        createSqliteClientDeps(makeSqliteClient(), makeServiceWorkerDeps({ runLegacyResync })),
+      );
+
+      expect(await handler({ subtype: 'resync_legacy', confirmToken: TOKEN })).toEqual({
+        success: true, examined: 8, written: 7, skipped: 1, total: 8,
+      });
+      expect(runLegacyResync).toHaveBeenCalledWith(undefined);
+    });
+
+    it('reports a resync failure instead of throwing', async () => {
+      const runLegacyResync = vi.fn().mockRejectedValue(new Error('nope'));
+      const handler = createDashboardSqliteHandler(
+        createSqliteClientDeps(makeSqliteClient(), makeServiceWorkerDeps({ runLegacyResync })),
+      );
+
+      expect(await handler({ subtype: 'resync_legacy', confirmToken: TOKEN })).toEqual({
+        success: false,
+        error: 'Resync not available',
+      });
+    });
+
+    it('returns what the cleanup removed', async () => {      const runCleanup = vi.fn().mockResolvedValue({ removed: ['legacy_key'], totalBytes: 2048 });
       const handler = createDashboardSqliteHandler(
         createSqliteClientDeps(makeSqliteClient(), makeServiceWorkerDeps({ runCleanup })),
       );
