@@ -143,6 +143,14 @@ export interface ApplyMigrationsResult {
   settings: Settings;
   /** Fields that were plaintext and were re-encrypted — caller should persist via StoragePort */
   reEncrypted: Record<string, unknown>;
+  /**
+   * API-key fields whose stored ciphertext could not be decrypted with either
+   * the current or the legacy key. The original ciphertext is preserved
+   * untouched in `settings` (never blanked) so a later write cannot
+   * permanently destroy it; callers should surface these fields via a
+   * re-authentication prompt instead of treating them as empty.
+   */
+  unrecoverable: StorageKey[];
 }
 
 async function applyMigrationsCore(
@@ -165,6 +173,7 @@ async function applyMigrationsCore(
         merged[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = legacyAutoEnabled ? 'idle' : 'manual';
     }
     const reEncrypted: Record<string, unknown> = {};
+    const unrecoverable: StorageKey[] = [];
     try {
         const keyProvider = (opts as ApplyMigrationsOptions | undefined)?.getEncryptionKey ?? getOrCreateEncryptionKey;
         const key = await keyProvider();
@@ -184,7 +193,10 @@ async function applyMigrationsCore(
                     }
                 } else {
                     await logError(`Failed to decrypt ${field} (both current and legacy)`, { field }, ErrorCode.CRYPTO_DECRYPTION_FAILURE);
-                    (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = '' as StorageKeyValues[StorageKey];
+                    // Preserve the original ciphertext so a subsequent write
+                    // cannot permanently destroy it; report via unrecoverable
+                    // for a re-authentication prompt instead of blanking.
+                    unrecoverable.push(field);
                 }
             } else if (typeof value === 'string' && value.length > 0) {
                 await logWarn(
@@ -205,7 +217,7 @@ async function applyMigrationsCore(
     } catch (e) {
         await logError('Failed to get encryption key for decryption', { error: errorMessage(e) }, ErrorCode.CRYPTO_KEY_DERIVE_FAILURE);
     }
-    return { settings: merged, reEncrypted };
+    return { settings: merged, reEncrypted, unrecoverable };
 }
 
 /**
