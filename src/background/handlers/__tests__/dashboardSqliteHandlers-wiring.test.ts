@@ -100,36 +100,6 @@ vi.mock('../../../utils/storage/encryptionSession.js', async (importOriginal) =>
     ),
   };
 });;
-vi.mock('../../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    StorageKeys: {
-      OBSIDIAN_API_KEY: 'obsidian_api_key',
-      SQLITE_RETENTION_DAYS: 'sqlite_retention_days',
-      SQLITE_MAX_RECORDS: 'sqlite_max_records',
-      CONTENT_RETENTION_DAYS: 'content_retention_days',
-      CONTENT_MAX_RECORDS: 'content_max_records',
-      CONTENT_PURGE_INCLUDE_STARRED: 'content_purge_include_starred',
-    },
-    getSettings: vi.fn().mockResolvedValue({}),
-    DEFAULT_SETTINGS: {},
-    API_KEY_FIELDS: [],
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
@@ -250,6 +220,7 @@ function makeServiceWorkerDeps(overrides: Partial<SqliteClientBackedDeps> = {}):
     verifyConfirmToken: vi.fn().mockImplementation(async (token: string) => token === TOKEN),
     runBackfill: vi.fn().mockResolvedValue({ updated: 0, total: 0 }),
     runCleanup: vi.fn().mockResolvedValue({ removed: [], totalBytes: 0 }),
+    runLegacyResync: vi.fn().mockResolvedValue({ examined: 0, written: 0, skipped: 0, total: 0 }),
     ...overrides,
   };
 }
@@ -359,8 +330,31 @@ describe('dashboard SQLite wiring — Service-Worker-owned dependencies', () => 
       });
     });
 
-    it('returns what the cleanup removed', async () => {
-      const runCleanup = vi.fn().mockResolvedValue({ removed: ['legacy_key'], totalBytes: 2048 });
+    it('returns the legacy resync counts', async () => {
+      const runLegacyResync = vi.fn().mockResolvedValue({ examined: 8, written: 7, skipped: 1, total: 8 });
+      const handler = createDashboardSqliteHandler(
+        createSqliteClientDeps(makeSqliteClient(), makeServiceWorkerDeps({ runLegacyResync })),
+      );
+
+      expect(await handler({ subtype: 'resync_legacy', confirmToken: TOKEN })).toEqual({
+        success: true, examined: 8, written: 7, skipped: 1, total: 8,
+      });
+      expect(runLegacyResync).toHaveBeenCalledWith(undefined);
+    });
+
+    it('reports a resync failure instead of throwing', async () => {
+      const runLegacyResync = vi.fn().mockRejectedValue(new Error('nope'));
+      const handler = createDashboardSqliteHandler(
+        createSqliteClientDeps(makeSqliteClient(), makeServiceWorkerDeps({ runLegacyResync })),
+      );
+
+      expect(await handler({ subtype: 'resync_legacy', confirmToken: TOKEN })).toEqual({
+        success: false,
+        error: 'Resync not available',
+      });
+    });
+
+    it('returns what the cleanup removed', async () => {      const runCleanup = vi.fn().mockResolvedValue({ removed: ['legacy_key'], totalBytes: 2048 });
       const handler = createDashboardSqliteHandler(
         createSqliteClientDeps(makeSqliteClient(), makeServiceWorkerDeps({ runCleanup })),
       );

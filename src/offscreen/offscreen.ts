@@ -6,7 +6,7 @@
  * calls LanguageModel directly from the Service Worker (src/background/builtInAIClient.ts).
  */
 
-import { engine } from './sqliteEngineContext.js';
+import { engine } from './sqliteEngineHost.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { forwardWarn, forwardError } from './offscreenLogger.js';
 import { isSqliteMessageType, type SqliteMessage } from '../messaging/sqliteMessages.js';

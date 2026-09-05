@@ -83,7 +83,7 @@ describe('sqliteHistoryModel with production scheduler — 500ms debounce', () =
     void model.changeSort('relevance', 'DESC');
     expect(chrome.storage.local.set).not.toHaveBeenCalled();
 
-    model.bumpGenerationOnUnmount();
+    model.onNavigateOut();
     expect(chrome.storage.local.set).toHaveBeenCalledTimes(1);
     expect(chrome.storage.local.set).toHaveBeenCalledWith({
       history_sort_preference: JSON.stringify({ sortBy: 'relevance', sortDir: 'DESC' }),

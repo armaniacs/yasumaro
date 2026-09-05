@@ -4,11 +4,9 @@ import {
   isDomainFilterCacheValid,
   normalizeDomainUrl,
   matchesWildcardPattern,
-  updateDomainFilterCache,
-  buildAllowedUrls,
-  getAllowedUrls,
-  computeUrlsHash
-} from '../storage.js';
+  updateDomainFilterCache
+} from '../storage/domainFilterCache.js';
+import { buildAllowedUrls, getAllowedUrls, computeUrlsHash } from '../storage/urlWhitelist.js';
 import { StorageKeys } from '../storage/types.js';
 import type { Settings } from '../storage/types.js';
 

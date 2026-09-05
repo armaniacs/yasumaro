@@ -51,6 +51,7 @@ export function createDashboardSqliteMessageHandler(deps: DashboardSqliteWiringD
       verifyConfirmToken: deps.verifyConfirmToken ?? verifyConfirmTokenImpl,
       runBackfill: () => migrationService.backfillDiagnosticMetadata(),
       runCleanup: () => migrationService.cleanupLegacyStorage(),
+      runLegacyResync: (options?: { maxRecords?: number }) => migrationService.resyncLegacyStore(options),
     }),
   );
 

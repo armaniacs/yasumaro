@@ -28,7 +28,7 @@ vi.mock('../../utils/i18n.js', () => ({
   getMessage: mockGetMessage,
 }));
 
-vi.mock('../privacyConsent.js', () => ({
+vi.mock('../../utils/storage/privacyConsent.js', () => ({
   getPrivacyConsent: mockGetPrivacyConsent,
   savePrivacyConsent: mockSavePrivacyConsent,
   migrateLegacyPrivacyConsent: mockMigrateLegacyPrivacyConsent,

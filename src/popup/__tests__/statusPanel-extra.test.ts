@@ -70,9 +70,6 @@ vi.mock('../../utils/domainUtils.js', () => ({
   extractDomain: mockExtractDomain,
 }));
 
-vi.mock('../../utils/storage.js', () => ({
-  saveSettings: mockSetAll,
-}));
 
 import {
   initStatusPanel,
@@ -147,7 +144,9 @@ function setupDefaultDom(): void {
   document.body.innerHTML = [
     '<div id="statusPanel">',
     '  <div id="statusDomainIcon"></div>',
+    '  <span id="statusDomainLabel" class="status-label"></span>',
     '  <div id="statusPrivacyIcon"></div>',
+    '  <span id="statusPrivacyLabel" class="status-label"></span>',
     '  <div id="statusDomainState"></div>',
     '  <div id="statusDomainMode"></div>',
     '  <div id="statusPrivacyContent"></div>',
@@ -565,6 +564,95 @@ describe('initStatusPanel — privacy icon', () => {
     const icon = document.getElementById('statusPrivacyIcon')!;
     expect(icon.className).toContain('status-muted');
     expect(icon.getAttribute('aria-label')).toBe('No information');
+  });
+});
+
+// ──────────────────────────────────────────────
+// initStatusPanel — visible status labels (PBI20, WCAG 1.4.1)
+// ──────────────────────────────────────────────
+describe('initStatusPanel — visible status labels', () => {
+  beforeEach(() => {
+    setupDefaultDom();
+    setDefaultChromeTabsQuery();
+  });
+
+  function baseStatus() {
+    return {
+      domainFilter: { allowed: true, mode: 'disabled' },
+      privacy: { isPrivate: false, hasCache: false },
+      cache: { hasCache: false },
+      lastSaved: { exists: false },
+    };
+  }
+
+  it('shows "Recordable" label beside domain icon when allowed', async () => {
+    mockCheckPageStatus.mockResolvedValue(baseStatus());
+    await initStatusPanel();
+    const label = document.getElementById('statusDomainLabel')!;
+    expect(label.textContent).toBe('Recordable');
+    expect(label.getAttribute('data-i18n')).toBe('statusRecordable');
+    expect(label.classList.contains('status-label')).toBe(true);
+    const icon = document.getElementById('statusDomainIcon')!;
+    expect(icon.className).toContain('status-success');
+  });
+
+  it('shows "Blocked" label beside domain icon when blocked', async () => {
+    mockCheckPageStatus.mockResolvedValue({
+      ...baseStatus(),
+      domainFilter: { allowed: false, mode: 'disabled' },
+    });
+    await initStatusPanel();
+    const label = document.getElementById('statusDomainLabel')!;
+    expect(label.textContent).toBe('Blocked');
+    expect(label.getAttribute('data-i18n')).toBe('statusBlocked');
+    const icon = document.getElementById('statusDomainIcon')!;
+    expect(icon.className).toContain('status-error');
+  });
+
+  it('shows private label beside privacy icon for private page', async () => {
+    mockCheckPageStatus.mockResolvedValue({
+      ...baseStatus(),
+      privacy: { isPrivate: true, hasCache: true },
+    });
+    await initStatusPanel();
+    const label = document.getElementById('statusPrivacyLabel')!;
+    expect(label.textContent).toBe('Private page detected');
+    expect(label.getAttribute('data-i18n')).toBe('statusPrivateDetected');
+    const icon = document.getElementById('statusPrivacyIcon')!;
+    expect(icon.className).toContain('status-warning');
+  });
+
+  it('shows public label beside privacy icon for public page', async () => {
+    mockCheckPageStatus.mockResolvedValue({
+      ...baseStatus(),
+      privacy: { isPrivate: false, hasCache: true },
+    });
+    await initStatusPanel();
+    const label = document.getElementById('statusPrivacyLabel')!;
+    expect(label.textContent).toBe('Public page');
+    expect(label.getAttribute('data-i18n')).toBe('statusPublicPage');
+    const icon = document.getElementById('statusPrivacyIcon')!;
+    expect(icon.className).toContain('status-success');
+  });
+
+  it('shows no-info label beside privacy icon when no cache', async () => {
+    mockCheckPageStatus.mockResolvedValue(baseStatus());
+    await initStatusPanel();
+    const label = document.getElementById('statusPrivacyLabel')!;
+    expect(label.textContent).toBe('No information');
+    expect(label.getAttribute('data-i18n')).toBe('statusNoInfo');
+    const icon = document.getElementById('statusPrivacyIcon')!;
+    expect(icon.className).toContain('status-muted');
+  });
+
+  it('keeps aria-labels on icons for screen readers', async () => {
+    mockCheckPageStatus.mockResolvedValue({
+      ...baseStatus(),
+      privacy: { isPrivate: false, hasCache: true },
+    });
+    await initStatusPanel();
+    expect(document.getElementById('statusDomainIcon')!.getAttribute('aria-label')).toBe('Recordable');
+    expect(document.getElementById('statusPrivacyIcon')!.getAttribute('aria-label')).toBe('Public page');
   });
 });
 

@@ -181,7 +181,7 @@ describe('DiagnosticsCollector — snapshot extensions', () => {
   });
 
   it.each([
-    { strategy: 'opfs-async-main', fallback: true, dash: true, offscreen: true },
+    { strategy: 'idb', fallback: true, dash: true, offscreen: true },
     { strategy: 'fallback', fallback: true, dash: false, offscreen: true },
     { strategy: 'opfs-sync-worker', fallback: false, dash: true, offscreen: false },
   ])('derives divergence for strategy=$strategy fallback=$fallback', async ({ strategy, fallback, dash, offscreen }) => {

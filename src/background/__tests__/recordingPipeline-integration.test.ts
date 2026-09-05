@@ -3,7 +3,6 @@ import { RecordingCache } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
 
 import * as storage from '../../utils/storage/types.js';
-import * as storageSettings from '../../utils/storage.js';
 import * as storageSavedUrls from '../../utils/storage/savedUrlRepository.js';
 import * as storageUrls from '../../utils/storageUrls.js';
 import * as domainUtils from '../../utils/domainUtils.js';
@@ -43,16 +42,6 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
     },
   };
 });
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
-    ...actual,
-    getSettings: mockGetSettings,
-    saveSettings: vi.fn(),
-    clearSettingsCache: vi.fn(),
-    saveSettingsWithAllowedUrls: vi.fn(),
-  };
-});
 vi.mock('../../utils/storage/savedUrlRepository.js');
 vi.mock('../../utils/storage/domainFilterCache.js');
 vi.mock('../../utils/storage/quota.js');
@@ -69,7 +58,7 @@ beforeEach(() => {
   // storageのデフォルトモック
     // @ts-expect-error - vi.fn() type narrowing issue
 
-  storageSettings.getSettings.mockResolvedValue({
+  mockGetSettings.mockResolvedValue({
     PRIVACY_MODE: 'full_pipeline',
     PII_SANITIZE_LOGS: true
   });

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleDailyPurgeAlarm } from '../dailyPurgeHandler.js';
-import { clearSettingsCache } from '../../utils/storage.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { logInfo } from '../../utils/logger.js';
 
 vi.mock('../../utils/logger.js', () => ({
@@ -16,7 +16,7 @@ describe('handleDailyPurgeAlarm', () => {
 
   beforeEach(() => {
     storageData = {};
-    clearSettingsCache();
+    settingsRepository.clearCache();
     globalThis.chrome = {
       storage: {
         local: {

@@ -1,7 +1,14 @@
 /**
- * format.mjs — shared number formatting for the Markdown and HTML renderers.
+ * format.mjs — shared formatting helpers for the Markdown and HTML renderers.
  * Single source of truth so the two reports never drift apart.
  */
+
+/** Escape a string for safe interpolation into HTML text and attributes. */
+export function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
 
 /**
  * Compact number rendering: 0 decimals from 1000 up, 3 decimals from 1 up,

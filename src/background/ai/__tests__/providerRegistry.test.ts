@@ -7,9 +7,6 @@ vi.mock('../../../utils/logger.js', () => ({
     LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
 }));
 
-vi.mock('../../../utils/storage.js', () => ({
-    getAllowedUrls: vi.fn(async () => new Set<string>()),
-}));
 
 vi.mock('../../../utils/fetch.js', () => ({
     fetchWithRetry: vi.fn(),

@@ -38,7 +38,7 @@ vi.mock('../../../../utils/promptSanitizer.js', () => ({
 
 import { BuiltInAiProvider } from '../BuiltInAiProvider.js';
 import { CONNECTION_TEST_PROMPT } from '../ProviderStrategy.js';
-import type { Settings } from '../../../../utils/storage.js';
+import type { Settings } from '../../../../utils/storage/types.js';
 
 const settings = {} as Settings;
 

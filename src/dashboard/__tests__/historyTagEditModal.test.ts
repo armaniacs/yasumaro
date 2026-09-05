@@ -16,26 +16,6 @@ vi.mock('../../utils/tagUtils.js', () => ({
   getAllCategories: vi.fn().mockReturnValue(['tech', 'work', 'personal']),
 }));
 
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn().mockResolvedValue({}),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 
 vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -272,21 +252,25 @@ describe('historyTagEditModal', () => {
 
   describe('updateTagCategorySelect', () => {
     it('should return early when tagCategorySelect is null', async () => {
-      const { getSettings } = await import('../../utils/storage.js');
+      const { SettingsRepository } = await import('../../utils/storage/SettingsRepository.js');
+      const getAllSpy = vi.spyOn(SettingsRepository.prototype, 'getAll');
       const { updateTagCategorySelect } = await import('../historyTagEditModal.js');
       const state = { editingTags: [] };
       const elements = { tagCategorySelect: null, addTagBtn: document.createElement('button') };
       await updateTagCategorySelect(state as any, elements as any);
-      expect(getSettings).not.toHaveBeenCalled();
+      expect(getAllSpy).not.toHaveBeenCalled();
+      getAllSpy.mockRestore();
     });
 
     it('should return early when addTagBtn is null', async () => {
-      const { getSettings } = await import('../../utils/storage.js');
+      const { SettingsRepository } = await import('../../utils/storage/SettingsRepository.js');
+      const getAllSpy = vi.spyOn(SettingsRepository.prototype, 'getAll');
       const { updateTagCategorySelect } = await import('../historyTagEditModal.js');
       const state = { editingTags: [] };
       const elements = { tagCategorySelect: document.createElement('select'), addTagBtn: null };
       await updateTagCategorySelect(state as any, elements as any);
-      expect(getSettings).not.toHaveBeenCalled();
+      expect(getAllSpy).not.toHaveBeenCalled();
+      getAllSpy.mockRestore();
     });
 
     it('should fetch settings and categories and populate select', async () => {

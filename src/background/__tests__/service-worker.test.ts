@@ -211,41 +211,6 @@ vi.mock('../../utils/storage/encryptionSession.js', async (importOriginal) => {
     ),
   };
 });;
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      StorageKeys: storageMock.StorageKeys,
-      API_KEY_FIELDS: ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key', 'provider_api_key', 'github_pat'],
-      getSettings: mockSettingsGetAll,
-      clearSettingsCache: vi.fn(),
-      getSavedUrlsWithTimestamps: vi.fn(),
-      setSavedUrlsWithTimestamps: vi.fn(),
-      getAllowedUrls: vi.fn(),
-      buildAllowedUrls: vi.fn(),
-      saveSettingsWithAllowedUrls: vi.fn(),
-      updateDomainFilterCache: vi.fn(),
-      lockSession: vi.fn(),
-      cacheSessionState: vi.fn(),
-      initSettings: vi.fn(),
-      ensureDefaultSettings: vi.fn(),
-      removeOldKeys: vi.fn(),
-      migrateToSingleSettingsObject: vi.fn(),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
@@ -474,7 +439,7 @@ vi.mock('../../utils/crypto/index.js', () => ({
     generateHmacSignature: vi.fn().mockResolvedValue('test-signature'),
     verifyHmacSignature: vi.fn().mockResolvedValue(true),
 }));
-vi.mock('../../popup/privacyConsent.js', () => ({
+vi.mock('../../utils/storage/privacyConsent.js', () => ({
     hasPrivacyConsent: vi.fn().mockResolvedValue(true),
     migrateLegacyPrivacyConsent: vi.fn().mockResolvedValue(true),
 }));
@@ -519,9 +484,9 @@ vi.mock('../net/ollamaSettingsObserver.js', () => ({
 
 // Import the extracted functions from service-worker
 import * as serviceWorker from '../service-worker.js';
+import { hasPrivacyConsent } from '../../utils/storage/privacyConsent.js';
 import * as storageEncryption from '../../utils/storage/encryptionSession.js';
 import * as storageDomainFilter from '../../utils/storage/domainFilterCache.js';
-import * as storageSettings from '../../utils/storage.js';
 import * as storageSavedUrls from '../../utils/storage/savedUrlRepository.js';
 import * as domainUtils from '../../utils/domainUtils.js';
 import * as privacyPipeline from '../privacyPipeline.js';
@@ -634,7 +599,7 @@ describe('service-worker handlers', () => {
 
         // Default storage mock
         // @ts-expect-error - vi.fn() type narrowing
-        storageSettings.getSettings.mockResolvedValue({
+        mockSettingsGetAll.mockResolvedValue({
             PRIVACY_MODE: 'full_pipeline',
             PII_SANITIZE_LOGS: true,
             DOMAIN_WHITELIST: [],
@@ -1137,13 +1102,25 @@ describe('service-worker handlers', () => {
             expect(mockSetBadgeBackgroundColor).toHaveBeenCalledWith(expect.objectContaining({ color: expect.any(String) }));
         });
 
-        it('should clear badge for non-private page', async () => {
+        it('should show recording-active badge for a recordable page when consented', async () => {
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://public.com');
             RecordingCache.cacheState.privacyCache = new Map([['https://public.com', { isPrivate: false }]]);
             mockGet.mockResolvedValueOnce({ id: 4, url: 'https://public.com' } as chrome.tabs.Tab);
 
             await serviceWorker.handleTabActivated({ tabId: 4 });
+            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '●' });
+            expect(mockSetBadgeBackgroundColor).toHaveBeenCalledWith(expect.objectContaining({ color: expect.any(String) }));
+        });
+
+        it('should clear badge for a recordable page when consent is missing', async () => {
+            // @ts-expect-error - vi.fn() type narrowing
+            headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://public-no-consent.com');
+            RecordingCache.cacheState.privacyCache = new Map([['https://public-no-consent.com', { isPrivate: false }]]);
+            mockGet.mockResolvedValueOnce({ id: 6, url: 'https://public-no-consent.com' } as chrome.tabs.Tab);
+            vi.mocked(hasPrivacyConsent).mockResolvedValueOnce(false);
+
+            await serviceWorker.handleTabActivated({ tabId: 6 });
             expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '' });
         });
 
@@ -1153,14 +1130,16 @@ describe('service-worker handlers', () => {
             expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '' });
         });
 
-        it('should clear badge when privacy cache is empty', async () => {
+        it('should show recording-active badge for a recordable page even when privacy cache is empty', async () => {
+            // プライバシーキャッシュが空でも blacklist 域でなければ記録対象 —
+            // 同意済みなら「記録中」バッジを常時表示する（PBI 2026-09-05-10）。
             // @ts-expect-error - vi.fn() type narrowing
             headerDetector.HeaderDetector.normalizeUrl.mockReturnValue('https://example.com');
             RecordingCache.cacheState.privacyCache = null;
             mockGet.mockResolvedValueOnce({ id: 5, url: 'https://example.com' } as chrome.tabs.Tab);
 
             await serviceWorker.handleTabActivated({ tabId: 5 });
-            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '' });
+            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '●' });
         });
     });
 
@@ -1232,7 +1211,7 @@ describe('service-worker handlers', () => {
         });
 
         it('should propagate errors during update when getSettings fails', async () => {
-            (storageSettings.getSettings as unknown as vi.Mock).mockRejectedValueOnce(new Error('Settings error'));
+            (mockSettingsGetAll as unknown as vi.Mock).mockRejectedValueOnce(new Error('Settings error'));
             await expect(serviceWorker.handleInstalled({
                 reason: 'update',
                 previousVersion: '1.0.0'
@@ -1248,7 +1227,7 @@ describe('service-worker handlers', () => {
 
         it('should handle getSettings error during rehydration', async () => {
             // Mock getSettings to throw (isCacheInitialized is false initially)
-            (storageSettings.getSettings as unknown as vi.Mock).mockRejectedValueOnce(new Error('Failed to get settings'));
+            (mockSettingsGetAll as unknown as vi.Mock).mockRejectedValueOnce(new Error('Failed to get settings'));
 
             await serviceWorker.handleStartup();
             expect(logError).toHaveBeenCalledWith(
@@ -2089,7 +2068,7 @@ describe('service-worker handlers', () => {
 
             // Disable auto content fetch
             // @ts-expect-error - vi.fn() type narrowing
-            storageSettings.getSettings.mockResolvedValue({
+            mockSettingsGetAll.mockResolvedValue({
                 PRIVACY_MODE: 'full_pipeline',
                 PII_SANITIZE_LOGS: true,
                 DOMAIN_WHITELIST: [],

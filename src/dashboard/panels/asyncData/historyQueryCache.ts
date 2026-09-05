@@ -25,7 +25,7 @@ export class QueryCache {
     const since = params.since !== undefined ? String(params.since) : '';
     const until = params.until !== undefined ? String(params.until) : '';
     // tagInitiated is forwarded to the query and triggers a side effect
-    // (activateWithTag) — same filter with/without it must not share a key.
+    // (onNavigateIn(tag)) — same filter with/without it must not share a key.
     const ti = params.tagInitiated ? '1' : '0';
     return JSON.stringify([params.sortBy, params.sortDir, params.page, s, since, until, t, ti]);
   }

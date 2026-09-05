@@ -1,0 +1,57 @@
+# PBI: popup 幅固定 360px を緩和し翻訳文字列クリップを解消
+
+## ユーザーストーリー
+多言語で拡張機能を使う利用者として、ポップアップ内のラベルやボタン文言が切れずに読めるようになってほしい、なぜなら独語・日本語など翻訳で長文化した文言が見切れると操作に必要な情報が欠落するから
+
+## 優先度
+- 順位: 09 / 26
+- RICEスコア: 2,000（Reach=500 / Impact=1 / Confidence=1.0 / Effort=0.25日）
+- 根拠: Reach が大きく Effort が小さい一方、Impact は見切れ解消に留まるため上位中盤の 09 位。Confidence は現行 CSS で固定幅を確認済みのため 1.0。
+
+## BDD受け入れシナリオ
+```gherkin
+Scenario: 長い翻訳文字列が折り返して表示される
+  Given ポップアップを日本語または独語ロケールで開いている
+  When  長いラベルやボタン文言を含む画面を表示する
+  Then  文言が見切れず折り返しまたは範囲内で収まって読める
+
+Scenario: 狭い表示でもレイアウトが崩れない
+  Given ポップアップを最小幅条件で開いている
+  When  全ての主要画面を確認する
+  Then  横スクロールが発生せず情報欠落がない
+```
+
+## 受け入れ基準
+- [x] 独語・日本語の長いラベルが折り返して全文読めること
+- [x] 主要ボタン文言が見切れず操作意図が伝わること
+- [x] ポップアップ表示時に横スクロールやはみ出しが発生しないこと
+- [x] 既存の 360px 前後の表示サイズ感が大きく崩れないこと
+
+## テスト戦略
+- 単体/E2E: 日・独ロケールでのポップアップ表示の目視確認、主要画面のスナップショット比較、横スクロール有無の確認
+
+## 実装アプローチ
+固定幅指定を許容範囲方式に緩和し、長い翻訳文字列の折り返しを許可する方向で調整する
+
+## 見積もり
+1 ストーリーポイント（0.25日相当）
+
+## 実装者向け注記
+- 対象箇所: `entrypoints/popup/styles.css:112-119`（`html` / `body` に幅 360px 固定を確認済み）
+- スコープ外: ポップアップ全体のデザイン刷新、新しいブレークポイント追加、ellipsis 箇所の個別仕様変更は含めない
+- 確認観点: `text-overflow: ellipsis` を併用している箇所と合わせて翻訳拡張時の欠落がないこと
+
+## 実装メモ
+- 2026-09-05 完了: `styles.css` の html/body を固定 360px → `min-width: 360px / max-width: 420px` の許容範囲方式に変更（overflow-x: hidden は維持し横スクロールなし）。翻訳ラベルを持つ `.btn-banner-allow` / `.banner-actions .btn-sm` / `.status-toggle` の `white-space: nowrap` を `normal + overflow-wrap: anywhere` に変更し折り返しを許可。`#pageTitle` / `.status-badge` の ellipsis はページデータ表示用のため維持（flex-wrap 済みの行内）。
+- 検証: popup 全 36 スイート 827 tests green、build 成功。日・独ロケールでの目視確認はテスト戦略どおり手動確認項目（次回の手動確認時に実施）。
+
+## Definition of Done
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+
+## 実装メモ（2026-09-05・branch 0905c・続）
+- 完了（commit `f99a333d`、controller-direct）。popup 36 スイート 827 tests green + build 成功。日・独ロケールの目視確認は手動確認項目として残置。
+
+## E2E 追加検証（2026-09-05・autonomous-task-closer）
+- `testDir/e2e/popup-fix09-25.spec.ts`（@extension）で目視確認項目を自動化: 幅許容範囲（min 360/max 420 の computed style と実測幅）・横スクロール無し・長い ja ラベルの折り返し（プローブ要素）・ja ロケール描画。6 passed。
+- E2E が検出した未完成箇所を補完: `.status-toggle` / `.btn-banner-allow` / `.banner-actions .btn-sm` は `white-space: normal` だけでは flex item が max-content 幅を保つため折り返さず → `min-width: 0; max-width: 100%` を追加して実際に折り返すようにした。

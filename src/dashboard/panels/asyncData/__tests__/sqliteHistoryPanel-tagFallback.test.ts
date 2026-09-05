@@ -92,6 +92,7 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
     mockedDb.searchLogs.mockResolvedValue({ data: { rows: searchRows, total: 54 } });
 
     panel.init?.({ searchTag: '教育' });
+    await panel.load?.();
     await flush();
 
     expect(mockedDb.searchLogs).toHaveBeenCalledWith('教育', 20, 0, { orderBy: 'created_at', orderDir: 'DESC' });
@@ -114,6 +115,7 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
     });
 
     panel.init?.({ searchTag: 'tech' });
+    await panel.load?.();
     await flush();
 
     expect(mockedDb.searchLogs).not.toHaveBeenCalled();
@@ -139,6 +141,7 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
     });
 
     panel.init?.({ searchTag: 'tech' });
+    await panel.load?.();
     await flush();
 
     expect(mockedDb.searchLogs).not.toHaveBeenCalled();
@@ -153,6 +156,7 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
     mockedDb.searchLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 
     panel.init?.({ searchDomain: 'example.com' });
+    await panel.load?.();
     await flush();
 
     // Domain navigation runs a normal text search (searchLogs is called), but
@@ -171,6 +175,7 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
     mockedDb.searchLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 
     panel.init?.({ searchTag: 'nonexistent' });
+    await panel.load?.();
     await flush();
 
     // searchLogs is still attempted (fallback decision fired), but since it
@@ -195,6 +200,7 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
     mockedDb.searchLogs.mockResolvedValue({ error: 'Search failed' });
 
     panel.init?.({ searchTag: '教育' });
+    await panel.load?.();
     await flush();
 
     expect(mockedDb.searchLogs).toHaveBeenCalledWith('教育', 20, 0, { orderBy: 'created_at', orderDir: 'DESC' });

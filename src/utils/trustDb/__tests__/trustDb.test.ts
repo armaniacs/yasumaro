@@ -83,29 +83,6 @@ vi.mock('../presetDomains.js', () => ({
 // updateTrancoVersion が settings オブジェクト経由になったため)
 const mockSettingsStore: Record<string, unknown> = {};
 let mockSettingsVersion = 0;
-vi.mock('../../storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-    getSettings: vi.fn(async () => ({ ...mockSettingsStore })),
-    saveSettings: vi.fn(async (partial: Record<string, unknown>) => {
-      Object.assign(mockSettingsStore, partial);
-    }),
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
 
 import { getTrustDbAdmin, TrustDbAdmin } from '../TrustDbAdmin.js';
 import { DomainTrustLevel } from '../trustDbSchema.js';

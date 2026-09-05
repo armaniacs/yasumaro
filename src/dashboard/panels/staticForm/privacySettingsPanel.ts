@@ -1,7 +1,7 @@
 import { type PanelLifecycle } from '../types.js';
 import { init as initPrivacySettings, loadPrivacySettings } from '../../settings/privacySettings.js';
 import { initMasterPasswordSettings, loadMasterPasswordSettings } from '../../masterPassword.js';
-import { getPrivacyConsent, withdrawPrivacyConsent } from '../../../popup/privacyConsent.js';
+import { getPrivacyConsent, withdrawPrivacyConsent } from '../../../utils/storage/privacyConsent.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { clearAllLogs, isServiceError } from '../../dashboardSqliteService.js';
 
@@ -47,10 +47,12 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
 
           const ok = await withdrawPrivacyConsent();
           if (statusEl) {
-            statusEl.textContent = ok ? 'Consent withdrawn. Recording will stop.' : 'Failed to withdraw consent.';
+            statusEl.textContent = ok
+              ? chrome.i18n.getMessage('consentWithdrawnStopped') || 'Consent withdrawn. Recording will stop.'
+              : chrome.i18n.getMessage('consentWithdrawFailed') || 'Failed to withdraw consent.';
             statusEl.style.color = ok ? 'var(--color-success-text)' : 'var(--color-error)';
           }
-          display.textContent = 'Not consented';
+          display.textContent = chrome.i18n.getMessage('notConsented') || 'Not consented';
           btn.classList.add('hidden');
         });
       }

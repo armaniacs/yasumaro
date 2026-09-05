@@ -19,6 +19,7 @@ import { renderFileTemplate, getActiveTemplate, getHostname } from '../utils/mar
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';
 import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
 import { getPlatformOs } from '../utils/deviceUtils.js';
+import { resolveSafeExportDir } from '../utils/pathSanitizer.js';
 
 /** Batch size for paginated full-history export (desktop). */
 export const EXPORT_BATCH_SIZE_DESKTOP = 1000;
@@ -106,9 +107,15 @@ export function renderDateFile(
   return renderFileTemplate(template, entries.map(toMarkdownTemplateEntryData), date);
 }
 
-/** Path of the file written for a given date. */
+/**
+ * Path of the file written for a given date.
+ * PBI 27: exportPath はユーザー設定の自由文字列のため、ここを単一 choke
+ * point として sanitize する。日付部分は内部生成の YYYY-MM-DD 固定で
+ * 検証不要。失敗時は DEFAULT_EXPORT_PATH にフォールバックし、ダウンロード
+ * 自体は継続する。
+ */
 export function exportFilenameFor(exportPath: string, date: string): string {
-  return `${exportPath}/${date}.md`;
+  return `${resolveSafeExportDir(exportPath, DEFAULT_EXPORT_PATH)}/${date}.md`;
 }
 
 /** Resolved export configuration read from settings. */
@@ -254,6 +261,9 @@ export const chromeDownloadPort: DownloadPort = async (filename, content) => {
     url: blobUrl,
     filename,
     saveAs: false,
+    // PBI 27 上書きガード方針: filename は exportFilenameFor 経由で sanitize
+    // 済み。日次ファイルは日付キーで冪等な再書き込みが正しい動作のため、
+    // 明示 'overwrite' で無警告の黙示上書きにはしない（全 4 箇所で統一）。
     conflictAction: 'overwrite',
   });
 

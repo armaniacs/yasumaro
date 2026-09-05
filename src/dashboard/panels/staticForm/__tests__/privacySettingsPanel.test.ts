@@ -23,7 +23,7 @@ vi.mock('../../../../utils/i18n.js', () => ({
 
 const mockGetPrivacyConsent = vi.fn();
 const mockWithdrawPrivacyConsent = vi.fn();
-vi.mock('../../../../popup/privacyConsent.js', () => ({
+vi.mock('../../../../utils/storage/privacyConsent.js', () => ({
   getPrivacyConsent: (...args: unknown[]) => mockGetPrivacyConsent(...args),
   withdrawPrivacyConsent: (...args: unknown[]) => mockWithdrawPrivacyConsent(...args),
 }));
@@ -141,5 +141,42 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
     const statusEl = container.querySelector('#deleteAllDataStatus') as HTMLElement;
     expect(statusEl.textContent).toContain('deleteAllDataFailed');
     expect(statusEl.textContent).toContain('Disk is full');
+  });
+
+  it('同意撤回が成功した場合、状態表示とステータスが i18n キー経由で更新される', async () => {
+    mockShowConfirmDialog.mockResolvedValue(true);
+    mockClearAllLogs.mockResolvedValue({ data: undefined });
+    mockWithdrawPrivacyConsent.mockResolvedValue({ withdrawalDate: '2026-07-26T00:00:00.000Z' });
+
+    const panel = createPrivacySettingsPanel();
+    const container = buildContainer();
+    await panel.mount(container);
+
+    const btn = container.querySelector('#btnWithdrawConsent') as HTMLButtonElement;
+    btn.dispatchEvent(new Event('click'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const display = container.querySelector('#consentStatusDisplay') as HTMLElement;
+    expect(display.textContent).toBe('notConsented');
+    const statusEl = container.querySelector('#withdrawConsentStatus') as HTMLElement;
+    expect(statusEl.textContent).toBe('consentWithdrawnStopped');
+    expect(btn.classList.contains('hidden')).toBe(true);
+  });
+
+  it('同意撤回が失敗した場合、ステータスが i18n キー経由で更新される', async () => {
+    mockShowConfirmDialog.mockResolvedValue(true);
+    mockClearAllLogs.mockResolvedValue({ data: undefined });
+    mockWithdrawPrivacyConsent.mockResolvedValue(null);
+
+    const panel = createPrivacySettingsPanel();
+    const container = buildContainer();
+    await panel.mount(container);
+
+    const btn = container.querySelector('#btnWithdrawConsent') as HTMLButtonElement;
+    btn.dispatchEvent(new Event('click'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const statusEl = container.querySelector('#withdrawConsentStatus') as HTMLElement;
+    expect(statusEl.textContent).toBe('consentWithdrawFailed');
   });
 });

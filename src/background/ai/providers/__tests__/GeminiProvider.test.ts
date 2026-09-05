@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GeminiProvider } from '../GeminiProvider.js';
-import type { Settings } from '../../../../utils/storage.js';
+import type { Settings } from '../../../../utils/storage/types.js';
 
 vi.mock('../../../../utils/aiUsageTracker.js', () => ({
   checkHardLimit: vi.fn(async () => ({ blocked: false })),

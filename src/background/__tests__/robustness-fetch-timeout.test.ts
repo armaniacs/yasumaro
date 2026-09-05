@@ -6,7 +6,6 @@
 
 import { ObsidianClient } from '../obsidianClient.js';
 import * as storage from '../../utils/storage/types.js';
-import * as storageSettings from '../../utils/storage.js';
 import { addLog, LogType } from '../../utils/logger.js';
 
 const mockGetSettings = vi.hoisted(() => vi.fn());
@@ -43,16 +42,6 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
     },
   };
 });
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
-    ...actual,
-    getSettings: mockGetSettings,
-    saveSettings: vi.fn(),
-    clearSettingsCache: vi.fn(),
-    saveSettingsWithAllowedUrls: vi.fn(),
-  };
-});
 vi.mock('../../utils/storage/savedUrlRepository.js');
 vi.mock('../../utils/storage/domainFilterCache.js');
 vi.mock('../../utils/storage/quota.js');
@@ -76,7 +65,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
 
     // storageのデフォルトモック
     // @ts-expect-error - vi.fn() type narrowing issue
-    storageSettings.getSettings.mockResolvedValue({
+    mockGetSettings.mockResolvedValue({
       OBSIDIAN_API_KEY: 'test_key',
       OBSIDIAN_PROTOCOL: 'https',
       OBSIDIAN_PORT: '27123',

@@ -43,7 +43,7 @@ const opfsSpikeMock = vi.hoisted(() => ({
   runOpfsSpikeA: vi.fn().mockResolvedValue({ ok: true, detail: 'spike-report' }),
 }));
 
-vi.mock('../sqliteEngineContext.js', () => ({
+vi.mock('../sqliteEngineHost.js', () => ({
   engine: engineMock,
 }));
 

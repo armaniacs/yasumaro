@@ -7,7 +7,6 @@
 import { ObsidianClient } from '../obsidianClient.js';
 import { vi } from 'vitest';
 import * as storage from '../../utils/storage/types.js';
-import * as storageSettings from '../../utils/storage.js';
 import { buildDailyNotePath } from '../../utils/dailyNotePathBuilder.js';
 import { NoteSectionEditor } from '../noteSectionEditor.js';
 import { addLog, LogType } from '../../utils/logger.js';
@@ -46,16 +45,6 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
     },
   };
 });
-vi.mock('../../utils/storage.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
-    ...actual,
-    getSettings: mockGetSettings,
-    saveSettings: vi.fn(),
-    clearSettingsCache: vi.fn(),
-    saveSettingsWithAllowedUrls: vi.fn(),
-  };
-});
 vi.mock('../../utils/storage/savedUrlRepository.js');
 vi.mock('../../utils/storage/domainFilterCache.js');
 vi.mock('../../utils/storage/quota.js');
@@ -88,7 +77,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
     // storageのデフォルトモック
     // @ts-expect-error - vi.fn() type narrowing issue
   
-    storageSettings.getSettings.mockResolvedValue({
+    mockGetSettings.mockResolvedValue({
       OBSIDIAN_API_KEY: 'test_key',
       OBSIDIAN_PROTOCOL: 'https',
       OBSIDIAN_PORT: '27123',
@@ -348,7 +337,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
     it('APIキーが空の場合のエラーハンドリング', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storageSettings.getSettings.mockResolvedValue({
+      mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: '',
         OBSIDIAN_PROTOCOL: 'https',
         OBSIDIAN_PORT: '27123',
@@ -360,7 +349,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       // ロックが解放されていることを確認（次の呼び出しが可能）
     // @ts-expect-error - vi.fn() type narrowing issue
   
-      storageSettings.getSettings.mockResolvedValue({
+      mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'new_key',
         OBSIDIAN_PROTOCOL: 'https',
         OBSIDIAN_PORT: '27123',
@@ -463,7 +452,7 @@ describe('Problem #6: Mutexキューサイズ制限とタイムアウト', () =>
     // storageのデフォルトモック
     // @ts-expect-error - vi.fn() type narrowing issue
   
-    storageSettings.getSettings.mockResolvedValue({
+    mockGetSettings.mockResolvedValue({
       OBSIDIAN_API_KEY: 'test_key',
       OBSIDIAN_PROTOCOL: 'https',
       OBSIDIAN_PORT: '27123',

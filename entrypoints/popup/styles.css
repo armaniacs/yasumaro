@@ -109,12 +109,16 @@
 }
 
 html {
-  width: 360px;
+  /* 許容範囲方式: 標準は 360px、長い翻訳文言（独語等）では最大 420px まで広げる。
+     固定幅 + overflow-x: hidden だと翻訳が見切れるため（PBI 2026-09-05-09）。 */
+  min-width: 360px;
+  max-width: 420px;
   overflow-x: hidden;
 }
 
 body {
-  width: 360px;
+  min-width: 360px;
+  max-width: 420px;
   min-height: 400px;
   overflow-x: hidden;
   padding: 0;
@@ -518,6 +522,8 @@ button:not(.icon-btn):not(.primary-btn):not(.secondary-btn):not(.alert-btn):not(
 
 .btn-banner-allow {
   flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
   background: #f59e0b;
   color: #ffffff;
   border: none;
@@ -526,7 +532,8 @@ button:not(.icon-btn):not(.primary-btn):not(.secondary-btn):not(.alert-btn):not(
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .btn-banner-allow:hover {
@@ -542,12 +549,16 @@ button:not(.icon-btn):not(.primary-btn):not(.secondary-btn):not(.alert-btn):not(
   display: flex;
   gap: 8px;
   align-items: center;
+  min-width: 0;
 }
 
 .banner-actions .btn-sm {
   padding: 4px 12px;
   font-size: 12px;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .btn-banner-primary {
@@ -1552,6 +1563,16 @@ label.inline-label {
   stroke: var(--color-text-muted);
 }
 
+/* Visible text label beside each status icon (WCAG 1.4.1: status must not
+   rely on color alone). Color on the icon remains as a secondary cue. */
+.status-label {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
 /* Checkmark icon for success state */
 .status-icon.status-success .status-svg .status-circle {
   fill: none;
@@ -1657,7 +1678,10 @@ label.inline-label {
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
   flex-shrink: 0;
-  white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .status-toggle:hover {

@@ -9,7 +9,7 @@ import { GeminiProvider, OpenAIProvider } from '../ai/providers/index.js';
 import { vi } from 'vitest';
 import * as logger from '../../utils/logger.js';
 import { fetchWithRetry } from '../../utils/fetch.js';
-import { StorageKeys } from '../../utils/storage.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 
 vi.mock('../../utils/logger.js');
 vi.mock('../../utils/customPromptUtils.js', () => ({

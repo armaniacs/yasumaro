@@ -8,7 +8,7 @@ import {
   MAX_URL_SET_SIZE,
   URL_WARNING_THRESHOLD,
   URL_RETENTION_DAYS
-} from '../../utils/storage.js';
+} from '../../utils/urlEntry.js';
 
 vi.mock('../../utils/logger.js', () => ({
   addLog: vi.fn(),

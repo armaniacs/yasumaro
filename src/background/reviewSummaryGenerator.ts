@@ -17,6 +17,7 @@ import type { SqliteClient } from './sqlite/offscreenGateway.js';
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
+import { resolveSafeExportDir } from '../utils/pathSanitizer.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 import { Mutex } from '../utils/Mutex.js';
 
@@ -165,10 +166,15 @@ async function downloadMarkdown(content: string, filename: string, exportPath: s
     const base64 = btoa(unescape(encodeURIComponent(content)));
     const dataUrl = `data:text/markdown;base64,${base64}`;
 
+    // PBI 27: exportPath はユーザー設定の自由文字列。filename 組み立て時に
+    // sanitize し、失敗時は既定フォルダにフォールバックする。filename 自体は
+    // week-NN / month-NN の内部生成で安全。
     await chrome.downloads.download({
       url: dataUrl,
-      filename: `${exportPath}/${filename}`,
+      filename: `${resolveSafeExportDir(exportPath)}/${filename}`,
       saveAs: false,
+      // PBI 27 上書きガード方針: 期間キーの冪等な再書き込みが正しい動作の
+      // ため明示 'overwrite'（全 4 箇所で統一）。
       conflictAction: 'overwrite'
     });
 

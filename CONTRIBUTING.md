@@ -367,6 +367,11 @@ git commit -m "feat: 功能の説明"
 npm run validate
 ```
 
+> **ヒント**: 小さな修正の確認には `npm run validate:fast` を使えます。
+> type-check / lint / JSON 検証に加え、未コミットの変更に関連するテストのみ
+> （`vitest run --changed`）を実行します。変更前にコミット済みの場合はテストが
+> 0 件になるため、コミット前の最終ゲートは必ず `npm run validate` を使ってください。
+
 4. プッシュ
 ```bash
 git push origin {ブランチ名}

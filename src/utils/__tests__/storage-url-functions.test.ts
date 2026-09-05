@@ -76,7 +76,7 @@ import {
   getSavedUrlCount,
   MAX_URL_SET_SIZE,
   URL_WARNING_THRESHOLD,
-} from '../storage.js';
+} from '../storage/savedUrlRepository.js';
 
 describe('storage.ts URL管理関数', () => {
   beforeEach(() => {

@@ -35,7 +35,7 @@ import { createReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import { createAutoSavedBadgeTabs } from './swStatePersistence.js';
 import { createDashboardSqliteMessageHandler } from './dashboardSqliteWiring.js';
 import { ensureConfirmToken, createConfirmToken, verifyConfirmToken } from './confirmTokenManager.js';
-import { hasPrivacyConsent } from '../popup/privacyConsent.js';
+import { hasPrivacyConsent } from '../utils/storage/privacyConsent.js';
 import { lockSession } from '../utils/storage/encryptionSession.js';
 import { buildAllowedUrls } from '../utils/storage/urlWhitelist.js';
 import { getSavedUrlsWithTimestamps, saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlRepository.js';

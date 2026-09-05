@@ -8,14 +8,16 @@
  */
 
 import { getMessage } from '../../../utils/i18n.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../../background/messageTypes.js';
 import { UI_COLORS } from '../../../constants/appConstants.js';
 import {
   runOpfsSpike,
   migrateLogs,
   backfillMetadata,
+  resyncLegacyStorage,
   cleanupLegacyStorage,
+  getSqliteStatus,
 } from '../../dashboardSqliteService.js';
+import { testObsidianConnection, testAiConnection } from '../../generalSettings/connectionTests.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import {
   startBuiltInAiDownload,
@@ -37,6 +39,7 @@ export interface DiagnosticActionElements {
   opfsSpikeBtn: HTMLButtonElement | null;
   migrateBtn: HTMLButtonElement | null;
   backfillBtn: HTMLButtonElement | null;
+  resyncBtn: HTMLButtonElement | null;
   cleanupBtn: HTMLButtonElement | null;
   builtInAiDownloadBtn: HTMLButtonElement | null;
   connectionResult: HTMLElement | null;
@@ -44,6 +47,7 @@ export interface DiagnosticActionElements {
   opfsSpikeResult: HTMLElement | null;
   migrateResult: HTMLElement | null;
   backfillResult: HTMLElement | null;
+  resyncResult: HTMLElement | null;
   cleanupResult: HTMLElement | null;
   builtInAiStats: HTMLElement | null;
   builtInAiDownloadResult: HTMLElement | null;
@@ -69,9 +73,9 @@ export function createDiagnosticActions(
 ): void {
   const {
     testObsidianBtn, testAiBtn, testSqliteBtn, opfsSpikeBtn,
-    migrateBtn, backfillBtn, cleanupBtn, builtInAiDownloadBtn,
+    migrateBtn, backfillBtn, resyncBtn, cleanupBtn, builtInAiDownloadBtn,
     connectionResult, sqliteResult, opfsSpikeResult,
-    migrateResult, backfillResult, cleanupResult,
+    migrateResult, backfillResult, resyncResult, cleanupResult,
     builtInAiDownloadResult,
   } = els;
 
@@ -83,13 +87,10 @@ export function createDiagnosticActions(
     connectionResult.className = 'diag-result';
 
     try {
-      const testResult = await chrome.runtime.sendMessage({
-        type: 'TEST_OBSIDIAN',
-        protocolVersion: CURRENT_PROTOCOL_VERSION,
-        payload: {}
-      }) as { obsidian?: { success: boolean; message: string } };
+      // PBI 11: the TEST_OBSIDIAN send lives in the connectionTests helper;
+      // this handler only renders. Progress choreography is untouched (ADR 2026-08-23).
+      const obsidian = await testObsidianConnection('');
 
-      const obsidian = testResult?.obsidian;
       connectionResult.textContent = obsidian
         ? `Obsidian: ${obsidian.success ? '✓' : '✗'} ${obsidian.message}`
         : getMessage('testComplete') || 'Test complete.';
@@ -140,14 +141,10 @@ export function createDiagnosticActions(
       renderAiTestProgressElapsed(view, startTime);
       elapsedTimer = setInterval(() => updateView(false), 200);
 
-      const testResult = await chrome.runtime.sendMessage({
-        type: 'TEST_AI',
-        protocolVersion: CURRENT_PROTOCOL_VERSION,
-        payload: {},
-        runId,
-      }) as { ai?: { success: boolean; message: string; providers?: Array<{ provider: string; model?: string; success: boolean; message: string; elapsedMs: number; debug?: { prompt?: string; response?: string; error?: string; availability?: string; hasContent?: boolean; statusCode?: number } }> } };
+      // PBI 11: the TEST_AI send lives in the connectionTests helper (runId
+      // correlation preserved); this handler only renders progress + results.
+      const ai = await testAiConnection(runId);
 
-      const ai = testResult?.ai;
       if (ai) {
         connectionResult.innerHTML = '';
 
@@ -200,24 +197,17 @@ export function createDiagnosticActions(
     sqliteResult.className = 'diag-result';
 
     try {
-      const testResult = await chrome.runtime.sendMessage({
-        type: 'DASHBOARD_SQLITE',
-        protocolVersion: CURRENT_PROTOCOL_VERSION,
-        payload: { subtype: 'status' }
-      }) as { success: boolean; initialized?: boolean; fallback?: boolean; error?: string; initError?: string; fts5?: boolean };
+      // PBI 11: status goes through getSqliteStatus() (gateway transport +
+      // service conversion) instead of a direct inline send.
+      const status = await getSqliteStatus();
 
-      if (testResult.success) {
-        if (testResult.initialized) {
-          const fts5Text = testResult.fts5 ? 'FTS5 ✓' : 'LIKE fallback';
-          sqliteResult.textContent = `✓ ${getMessage('diagSqliteTestOk') || 'SQLite is working correctly.'} (${fts5Text})`;
-          sqliteResult.style.color = successColor();
-        } else {
-          const errorMsg = testResult.initError || testResult.error || 'SQLite initialization failed.';
-          sqliteResult.textContent = `✗ ${getMessage('diagSqliteTestInitFailed') || 'SQLite initialization failed.'}\n${errorMsg}`;
-          sqliteResult.style.color = errorColor();
-        }
+      if (status.initialized) {
+        const fts5Text = status.fts5 ? 'FTS5 ✓' : 'LIKE fallback';
+        sqliteResult.textContent = `✓ ${getMessage('diagSqliteTestOk') || 'SQLite is working correctly.'} (${fts5Text})`;
+        sqliteResult.style.color = successColor();
       } else {
-        sqliteResult.textContent = `✗ ${testResult.error || 'SQLite test failed.'}`;
+        const errorMsg = status.initError || 'SQLite initialization failed.';
+        sqliteResult.textContent = `✗ ${getMessage('diagSqliteTestInitFailed') || 'SQLite initialization failed.'}\n${errorMsg}`;
         sqliteResult.style.color = errorColor();
       }
     } catch {
@@ -308,6 +298,32 @@ export function createDiagnosticActions(
       backfillResult.style.color = errorColor();
     } finally {
       backfillBtn.disabled = false;
+    }
+  });
+
+  // Manual SQLite → legacy resync (PBI 22, MANUAL-ONLY trigger).
+  // No confirm dialog: the merge is idempotent and non-destructive
+  // (unlike migrate/cleanup, which use showConfirmDialog above).
+  resyncBtn?.addEventListener('click', async () => {
+    if (!resyncResult) return;
+    resyncBtn.disabled = true;
+    resyncResult.textContent = getMessage('testing') || 'Working...';
+    resyncResult.className = 'diag-result';
+
+    try {
+      const result = await resyncLegacyStorage();
+      if ('data' in result) {
+        resyncResult.textContent = `✓ ${getMessage('diagResyncDone') || 'Resync complete.'} written=${result.data.written}/${result.data.examined} skipped=${result.data.skipped} total=${result.data.total}`;
+        resyncResult.style.color = successColor();
+      } else {
+        resyncResult.textContent = `✗ ${getMessage('diagResyncFailed') || 'Resync failed.'}: ${result.error}`;
+        resyncResult.style.color = errorColor();
+      }
+    } catch {
+      resyncResult.textContent = `✗ ${getMessage('diagResyncFailed') || 'Resync failed.'}`;
+      resyncResult.style.color = errorColor();
+    } finally {
+      resyncBtn.disabled = false;
     }
   });
 

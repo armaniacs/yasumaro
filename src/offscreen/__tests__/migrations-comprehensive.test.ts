@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { runMigrations, type MigrationEngine } from '../migrations.js';
+import { runMigrations, IDEMPOTENT_DDL_ERROR_PATTERNS, type MigrationEngine } from '../migrations.js';
 
 function createMockEngine(): MigrationEngine & {
   executedSql: string[];
@@ -126,10 +126,21 @@ describe('runMigrations', () => {
     expect(engine.executedSql.some(s => s.includes("VALUES('rebuild')"))).toBe(false);
   });
 
-  it('does NOT trigger FTS rebuild when FTS count > 0 (already rebuilt)', async () => {
+  it('triggers FTS rebuild when FTS count is partially behind the base table', async () => {
+    // 再構築の中断で部分投入されたインデックス（50/100）も修復対象
     engine.queryValue = async (sql: string) => {
       if (sql.includes('COUNT(*)') && !sql.includes('fts')) return 100;
       if (sql.includes('browsing_logs_fts')) return 50;
+      return 0;
+    };
+    await runMigrations(engine);
+    expect(engine.executedSql.some(s => s.includes("VALUES('rebuild')"))).toBe(true);
+  });
+
+  it('does NOT trigger FTS rebuild when FTS count >= base count (already rebuilt)', async () => {
+    engine.queryValue = async (sql: string) => {
+      if (sql.includes('COUNT(*)') && !sql.includes('fts')) return 100;
+      if (sql.includes('browsing_logs_fts')) return 100;
       return 0;
     };
     await runMigrations(engine);
@@ -150,6 +161,51 @@ describe('runMigrations', () => {
     await runMigrations(engine);
     await runMigrations(engine);
     // No error thrown means idempotency works
+  });
+
+  // ── Idempotency via pre-execution existence probe (PBI 2026-09-05-07) ──
+
+  it('skips ALTER TABLE for columns that already exist, regardless of error wording', async () => {
+    // pragma_table_info の pre-check で列が存在する場合、exec に到達しない —
+    // SQLite のエラーメッセージ文言に冪等判定が依存しないことを検証する。
+    const alterCalls: string[] = [];
+    engine.queryValue = async (sql: string) => {
+      if (sql.includes('pragma_table_info')) return 1; // 全列 存在済み
+      return 0;
+    };
+    engine.exec = async (sql: string) => {
+      if (sql.startsWith('ALTER TABLE')) {
+        alterCalls.push(sql);
+        throw new Error('cheese-flavored wording: no such operation'); // 文言がどんなでも到達しない
+      }
+      engine.executedSql.push(sql);
+    };
+
+    await expect(runMigrations(engine)).resolves.toBeDefined();
+    expect(alterCalls).toHaveLength(0);
+  });
+
+  it('keeps the tolerated idempotent-DDL error patterns pinned', () => {
+    // 定数化された許容パターンのテスト固定（文言変更はこのテストで検知する）
+    expect(IDEMPOTENT_DDL_ERROR_PATTERNS.some(p => p.test('duplicate column name: content'))).toBe(true);
+    expect(IDEMPOTENT_DDL_ERROR_PATTERNS.some(p => p.test('index idx_logs_gist already exists'))).toBe(true);
+    expect(IDEMPOTENT_DDL_ERROR_PATTERNS.every(p => !p.test('disk I/O error'))).toBe(true);
+    expect(IDEMPOTENT_DDL_ERROR_PATTERNS.every(p => !p.test('database locked'))).toBe(true);
+  });
+
+  it('throws a true failure even when the column does not exist yet', async () => {
+    engine.queryValue = async (sql: string) => {
+      if (sql.includes('pragma_table_info')) return 0; // 列は未存在
+      return 0;
+    };
+    engine.exec = async (sql: string) => {
+      if (sql.includes('ALTER TABLE')) {
+        throw new Error('near "ALTER": syntax error');
+      }
+      engine.executedSql.push(sql);
+    };
+
+    await expect(runMigrations(engine)).rejects.toThrow('syntax error');
   });
 
   // ── Error propagation ───────────────────────────────────────────────

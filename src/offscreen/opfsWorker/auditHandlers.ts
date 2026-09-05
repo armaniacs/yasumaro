@@ -4,7 +4,7 @@
  */
 
 import { sqlExec, sqlQuery, type HandlerContext } from './handlers.js';
-import { clampLimit } from '../queryPlan.js';
+import { clampLimit, buildAuditLogStatements } from '../queryPlan.js';
 import type { AuditLogQueryPayload } from './types.js';
 
 export async function handleAuditLogInsert(
@@ -25,14 +25,17 @@ export async function handleAuditLogQuery(
   ctx: HandlerContext,
   payload: AuditLogQueryPayload,
 ): Promise<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }> {
+  // NOTE: audit cap 1000 differs intentionally from the idb cap (100000) —
+  // preserved, see buildAuditLogStatements.
   const limit = clampLimit(payload.limit, 1000, 100);
   const offset = payload.offset ?? 0;
+  const stmts = buildAuditLogStatements({ limit, offset });
 
   const rows: Array<{ id: number; provider: string; url: string; created_at: number }> = [];
   await sqlQuery(
     ctx,
-    'SELECT id, provider, url, created_at FROM audit_log ORDER BY created_at DESC LIMIT ? OFFSET ?',
-    [limit, offset],
+    stmts.rowsSql,
+    [...stmts.rowsParams],
     (row) => {
       rows.push({
         id: Number(row.id),
@@ -44,7 +47,7 @@ export async function handleAuditLogQuery(
   );
 
   let total = 0;
-  await sqlQuery(ctx, 'SELECT COUNT(*) AS c FROM audit_log', [], (row) => { total = Number(row.c); });
+  await sqlQuery(ctx, stmts.countSql, [], (row) => { total = Number(row.c); });
 
   return { rows, total };
 }

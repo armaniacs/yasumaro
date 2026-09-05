@@ -11,7 +11,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DashboardGateway } from '../dashboardGateway.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 
 // Helper to install a controllable chrome.runtime.sendMessage mock
 function installChromeMock() {
@@ -396,6 +396,112 @@ describe('DashboardGateway — PBI 03 confirm-token fail-closed', () => {
 
       expect(result).toEqual({ success: true, data: 'new-token' });
       expect(sendMessageMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // PBI 11: opt-in retry contract (moved from service-local withRetry)
+  // -------------------------------------------------------------------------
+  describe('Retry option: throw or retriable retries once, decode failure never', () => {
+    it('Given the send throws once, When retryAttempts 2, Then it retries once and returns the decoded success', async () => {
+      vi.useFakeTimers();
+      try {
+        let calls = 0;
+        (globalThis as any).chrome.runtime.sendMessage = vi.fn(async (msg: any) => {
+          expect(msg.payload.subtype).toBe('query');
+          calls += 1;
+          if (calls === 1) throw new Error('SQLite request timed out');
+          return { success: true, rows: [], total: 0 };
+        });
+
+        const gateway = new DashboardGateway();
+        const promise = gateway.callDashboard(
+          { subtype: 'query', limit: 10 } as any,
+          (res: any) => ({ rows: res.rows, total: res.total }),
+          'Query failed',
+          { retryAttempts: 2, retryDelayMs: 1000 },
+        );
+        await vi.advanceTimersByTimeAsync(1000);
+        const result = await promise;
+
+        expect(result).toEqual({ success: true, data: { rows: [], total: 0 } });
+        expect((globalThis as any).chrome.runtime.sendMessage).toHaveBeenCalledTimes(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('Given a retriable failure first, When retryAttempts 2, Then it retries once and returns the decoded success', async () => {
+      vi.useFakeTimers();
+      try {
+        let calls = 0;
+        (globalThis as any).chrome.runtime.sendMessage = vi.fn(async () => {
+          calls += 1;
+          if (calls === 1) return { success: false, error: 'DB locked', retriable: true };
+          return { success: true, rows: [], total: 0 };
+        });
+
+        const gateway = new DashboardGateway();
+        const promise = gateway.callDashboard(
+          { subtype: 'search', query: 'hello' } as any,
+          (res: any) => ({ rows: res.rows, total: res.total }),
+          'Query failed',
+          { retryAttempts: 2, retryDelayMs: 1000 },
+        );
+        await vi.advanceTimersByTimeAsync(1000);
+        const result = await promise;
+
+        expect(result).toEqual({ success: true, data: { rows: [], total: 0 } });
+        expect((globalThis as any).chrome.runtime.sendMessage).toHaveBeenCalledTimes(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('Given a decode failure, When retryAttempts 2, Then it does NOT retry and returns the decode error', async () => {
+      const sendMessageMock = vi.fn(async () => ({ success: true, rows: 'not-an-array', total: 0 }));
+      (globalThis as any).chrome.runtime.sendMessage = sendMessageMock;
+
+      const gateway = new DashboardGateway();
+      const result = await gateway.callDashboard(
+        { subtype: 'query' } as any,
+        () => { throw new Error('Invalid SQLite response: rows'); },
+        'Query failed',
+        { retryAttempts: 2, retryDelayMs: 1000 },
+      );
+
+      expect(result).toEqual({
+        success: false,
+        error: { kind: 'unknown', message: 'Invalid SQLite response: rows', retriable: false },
+      });
+      expect(sendMessageMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('Given both attempts fail, When retryAttempts 2, Then it returns the classified final error', async () => {
+      vi.useFakeTimers();
+      try {
+        (globalThis as any).chrome.runtime.sendMessage = vi.fn(async () => ({
+          success: false, error: 'DB locked', retriable: true,
+        }));
+
+        const gateway = new DashboardGateway();
+        const promise = gateway.callDashboard(
+          { subtype: 'query' } as any,
+          () => undefined,
+          'Query failed',
+          { retryAttempts: 2, retryDelayMs: 1000 },
+        );
+        await vi.advanceTimersByTimeAsync(1000);
+        const result = await promise;
+
+        expect(result).toEqual({
+          success: false,
+          error: { kind: 'unknown', message: 'DB locked', retriable: true },
+        });
+        expect((globalThis as any).chrome.runtime.sendMessage).toHaveBeenCalledTimes(2);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
