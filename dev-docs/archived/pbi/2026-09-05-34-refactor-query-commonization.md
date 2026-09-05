@@ -27,10 +27,10 @@ Scenario: 既存の検索挙動は不変である
 ```
 
 ## 受け入れ基準
-- [ ] `IdbVfsBackend` と `opfsWorker` ハンドラの WHERE/ORDER/LIMIT 組み立てが `queryPlan.ts` 拡張の共通ビルダーに寄せられている
-- [ ] 3 系統の search-sort テストが共通のパラメトリックテストに統合されている（重複定義の解消）
-- [ ] FTS evoke 条件・LIKE フォールバック境界の差分が意図的である場合、コメントまたはテストで明示されている
-- [ ] 全テスト green（振る舞い変更なし）
+- [x] `IdbVfsBackend` と `opfsWorker` ハンドラの WHERE/ORDER/LIMIT 組み立てが `queryPlan.ts` 拡張の共通ビルダーに寄せられている
+- [x] 3 系統の search-sort テストが共通のパラメトリックテストに統合されている（重複定義の解消）
+- [x] FTS evoke 条件・LIKE フォールバック境界の差分が意図的である場合、コメントまたはテストで明示されている
+- [x] 全テスト green（振る舞い変更なし）
 
 ## テスト戦略
 - 3 系統を 1 つのパラメトリックテスト（バックエンドをパラメータ化）に統合し、差分を先に可視化してから共通化する
@@ -46,6 +46,10 @@ Scenario: 既存の検索挙動は不変である
 - 後続: Option B（IDB 層廃止）は fallback-only 到達率の測定が前提（判断保留・本 PBI とは独立）
 
 ## Definition of Done
-- [ ] 全BDDシナリオがパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新（スパイクレポートの重複候補 1 に完了印）
+- [x] 全BDDシナリオがパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新（スパイクレポートの重複候補 1 に完了印）
+
+## 実装メモ（2026-09-05・branch 0905c）
+- 完了（commit `a331dc80`、SDD サブエージェント実装・タスクレビュー Approved）。差分可視化テスト（query-backends-parametric）が初回 3 件 RED を検出したが、レビューの裁定で全て parity（COUNT alias・rank AS・テスト文言由来）と確認 — 製品振る舞いの drift は無し。`queryPlan.ts` に `buildFtsSearchStatements` / `buildLikeSearchStatements` / `buildPlainListStatements` / `buildPurgeOldRecordsStatements` / `buildContentPurgeStatements` / `buildAuditLogStatements` 等を新設し、IdbVfsBackend と opfsWorker ハンドラを slimmer 化。FTS evoke / LIKE 境界 / `#tag` ギャップ / audit cap の意図的差分は INTENTIONAL テストで固定。3 系統 search-sort テストをパラメトリック統合（旧ファイル削除）。bench:micro PASS。全 suite 11,668 tests green。
+- 残置（Minor・意図的）: `handleGetCount` の COUNT 文面重複（用途別のため共有見送り）。
