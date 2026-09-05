@@ -67,8 +67,8 @@
 1. **SQL 実装の二重化 (最大の重複)**: `IdbVfsBackend.ts` (434 行、直 exec) と `opfsWorker/*` (CRUD + search + audit + purge + backup のハンドラ群) が同一操作を別実装。検索ソート・purge 条件の drift リスクあり。テストも対応ごとに分離 (`IdbVfsBackend-search-sort` / `opfsWorker-search-sort` / `storageFallback-search-sort`)。
 2. **Fallback 二層の薄さ**: `FallbackStorage` (492 行の実体) に対し `FallbackStorageAdapter` (90 行) は形状変換と unsupported スタブのみ。統合余地はあるが、実体と適合層の分離自体は健全であり削除効果は小さい。
 3. **レガシー移行系の並存**: `migrationBackup.ts` (wa-sqlite IDB) と `opfsMigrationV2.ts` + `opfsMigrationV2Reader.ts` (wa-sqlite OPFS) が別ゲートで存続。いずれも `wa-sqlite@~1.0.0` の唯一の現役参照であり、サンセットで依存ごと削除可能 (PBI 03/04 の計画済み範囲)。
-4. **`VfsStrategy` と `BackendType` の不整合**: `opfsCapabilities` の `opfs-async-main` (メインスレッド async OPFS) に対応する Backend が `backendResolver` に存在しない。現行 resolver は Worker OPFS 失敗時に直接 IDB へ転落するため、`opfs-async-main` は実質デッドパス。診断表示と実選択の乖離候補。
-5. **`sqliteEngineHost` / `sqliteEngineContext` の別名二重化**: 後者は前者の再輸出のみ (15 行)。輸入元の移行が終われば削除可能。
+4. **`VfsStrategy` と `BackendType` の不整合**: `opfsCapabilities` の `opfs-async-main` (メインスレッド async OPFS) に対応する Backend が `backendResolver` に存在しない。現行 resolver は Worker OPFS 失敗時に直接 IDB へ転落するため、`opfs-async-main` は実質デッドパス。診断表示と実選択の乖離候補。→ **✅ 2026-09-05 解消（PBI 33・commit `ff52f1c7`）**: `opfs-async-main` を削除し `VfsStrategy = 'opfs-sync-worker' | 'idb' | 'fallback'` に整合。
+5. **`sqliteEngineHost` / `sqliteEngineContext` の別名二重化**: 後者は前者の再輸出のみ (15 行)。輸入元の移行が終われば削除可能。→ **✅ 2026-09-05 解消（PBI 33・commit `ff52f1c7`）**: 別名ファイルを削除し 18 ファイルの import を `sqliteEngineHost.js` 直参照に付け替え。
 6. **`opfsSpike.ts` の残留**: PBI-10 の実現可能性ハーネス。`runOpfsSpikeA` は `SQLITE_OPFS_SPIKE` 経由で製品メッセージ経路に残存し、`InMemoryTransport` は明示拒否。診断用途として残すか削除するかの決定がない。
 7. **テスト専用第三実装**: `InMemoryTransport` は `matchesExtraWhere` を共有するもののフィルタ・ソート・`text` トークン化を独自実装。さらに `SQLITE_DELETE` をソフトデリート (`is_deleted = 1`) で処理するのに対し、製品の `FallbackStorageAdapter.delete` はハードデリート (`hardDelete`) であり、セマンティクス乖離がある。テスト専用のため製品整理対象外だが、検証基盤としての drift に注意。
 

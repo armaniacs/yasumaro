@@ -52,3 +52,6 @@ Scenario: 別名モジュールが消えても既存の振る舞いが変わら�
 
 ## 実装メモ（2026-09-05・branch 0905c）
 - 完了: `VfsStrategy` を `'opfs-sync-worker' | 'idb' | 'fallback'` に変更（案B `opfs-async-main` は未実装のため削除、`selectVfsStrategy` の第 3 分岐は resolver が実際に選ぶ `idb` を返す）。DiagnosticsCollector の IDB ケース表示を `'idb'` に修正（diagnoseDeficiencies.test の as キャストも解消）。別名 `sqliteEngineContext.ts`（15 行）を削除し、18 ファイルの import（vi.mock / 動的 import 含む）を `sqliteEngineHost.js` 直参照に付け替え、`SqliteEngineContext` 型名も `SqliteEngineHost` に統一。全 suite 11,658 tests green + build OK。
+
+## 実装メモ（2026-09-05・branch 0905c）
+- 完了（commit `ff52f1c7`、controller-direct）。全 suite 11,658 tests green + build OK + lint 0 errors。スパイクの重複候補 4・5 に完了印を追記済み。
