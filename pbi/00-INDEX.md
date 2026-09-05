@@ -14,25 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-05 Checking Team レビュー由来（review-fixes 残候補 PBI 化） — 15 件進行中
-
-backlog: [2026-09-05-00-backlog-review-fixes.md](2026-09-05-00-backlog-review-fixes.md)（#12–26 を PBI 化。**コード調査済み・スコープ補正入り**。着手順 = backlog RICE 順＝NN 順。#29 はスパイク、#22/#23 は工数 2 日）。全件未着手。
-
-- 2026-09-05-17-fix-ratelimiter-write-debounce.md（🔧 0.5日 — RateLimitService の認証失敗バースト時の session+local 二重即時書き込みをデバウンス。RICE 1400）
-- 2026-09-05-18-refactor-domain-matching-unify.md（🔧 0.5日 — `matchesPattern` の domainUtils/urlSkipper 二重実装と deprecated `matchesWildcardPattern` を `DomainFilter` seam に一本化。RICE 1400）
-- 2026-09-05-19-refactor-errorutils-split.md（🔧 0.5日 — 調査の結果スコープ補正: `errorUtils.ts` は既に errorMessage() 単体のため、実態は deprecated `errorMessages.ts` shim の削除＋テスト移行。RICE 800）
-- 2026-09-05-20-fix-popup-status-label.md（🔧 0.5日 — popup ステータスの色/SVG アイコンのみの表示にテキストラベルを併設（statusPanel summary icons）。RICE 800）
-- 2026-09-05-21-refactor-layer-inversion-neutral.md（🔧 1.0日 — background→popup の層逆転（consent モジュール import 4 箇所）を中立層移動で解消。privacyConsent.ts 移動に絞ったスコープ補正済み。RICE 700）
-- 2026-09-05-22-fix-legacy-dual-write-resync.md（🔧 2.0日 — LEGACY_DUAL_WRITE 再有効化時の SQLite→レガシー再同期を実装（現状は無し。トリガーモード auto/manual の判断を実装時に要決定。リリースノート明記推奨）。RICE 600）
-- 2026-09-05-23-fix-protocol-version-window.md（🔧 2.0日 — プロトコルバージョン不一致の現行ハードリジェクトに段階的移行ウィンドウを導入（リリースノート明記推奨）。RICE 600）
-- 2026-09-05-24-fix-dashboard-i18n-strings.md（🔧 0.5日 — dashboard の英語ハードコード 4 箇所（perSiteOverrides/privacySettingsPanel/connectionTests/models-dev-dialog）を i18n 化。RICE 500）
-- 2026-09-05-25-fix-popup-focus-trap.md（🔧 0.5日 — popup 内 3 dialog（confirmationModal・private/recording-failed・privacyConsentModal）に focusTrapManager を配線（onboardingWizard が唯一の既存配線）。RICE 320）
-- 2026-09-05-26-fix-pending-queue-bounds.md（🔧 0.5日 — pending キューの単一キー配列に絶対上限＋TTL クランプを追加（現行 prune は期限切れのみで無期限増加を放置）。RICE 320）
-- 2026-09-05-27-fix-download-path-guard.md（🔧 0.5日 — 4 つの download 呼び出しの filename に `sanitizePathSegment` を適用（本番消費者ゼロの既存 util を活性化）。RICE 360）
-- 2026-09-05-28-refactor-utils-dump-cleanup.md（🔧 2.0日 — 非推奨 barrel `storage.ts` のテスト約 30 ファイル移行＋ utils デッドウォッシュ（logger barrel は対象外）。RICE 200）
-- 2026-09-05-29-backlog-sqlite-backend-consolidation.md（🧪 スパイク 3.0日 — SQLite 永続化 4 層スタック（OPFS/IDB VFS・IdbVfsBackend・storageFallback・backendResolver）の整理調査。実装なし・調査レポート＋整理案がアウトプット。RICE 83）
-- 2026-09-05-30-fix-validate-fast.md（🔧 0.25日 — `validate` の vitest 全量に対する `validate:fast`（type-check+lint+絞り込みテスト）を新設。RICE 18）
-- 2026-09-05-31-fix-wasqlite-license.md（🔧 0.25日 — スコープ補正: wa-sqlite は MIT 実在のため実害は SBOM の license 空表記のみ。generate-sbom 対応。RICE 1.8）
+（なし — 2026-09-05 の全 PBI（#01–26 相当）が完了・アーカイブ済み。未着手の PBI は存在しない）
 
 ### 2026-09-05 Architecture Round 3（arch3 診断） — 7 件完了
 
@@ -116,6 +98,28 @@ backlog: [2026-09-05-00-backlog-arch4.md](2026-09-05-00-backlog-arch4.md)。着�
 - 2026-09-05-05-refactor-sanitizer-seam.md（✅ 完了・アーカイブ済 — 5 政策サイトを checkPromptSafety テーブルに集約（MEDIUM 明示 pass、文面同一、リテラル比較で既存モック無修正）。matrix テスト付き。274 tests green）
 - 2026-09-05-06-refactor-visit-admission.md（✅ 完了・アーカイブ済 — 純粋政策関数＋retry＋判定フローを visitAdmission に集約。loader 3分岐→単一フロー、port 2 impl 共有化、shim 削除。content 426 green）
 - 2026-09-05-07-refactor-pending-queue.md（✅ 完了・アーカイブ済 — 5 Whys で facade 狭窄を棄却（多層防御は意図的）。真の欠陥 clearExpiredPages のロック外 set を withOptimisticLock 化＋競合回帰テスト。pending 45 green）
+
+### 2026-09-05 Checking Team レビュー由来（review-fixes 残候補） — 15件完了（autonomous-task-closer）
+
+backlog: [2026-09-05-00-backlog-review-fixes.md](2026-09-05-00-backlog-review-fixes.md)（#12–26 を PBI 化 → 全件実装・アーカイブ。NN 17–31）。着手順 = backlog RICE 順。バッチ1（小規模 10 件: 17/18/19/20/24/25/26/27/30/31・controller-direct＋サブエージェント併用）→ バッチ2（21 層逆転・28 barrel 移行）→ バッチ3（23 版移行ウィンドウ・22 再同期）→ バッチ4（29 スパイク）。
+
+- 2026-09-05-17-fix-ratelimiter-write-debounce.md（RICE 1400 — 認証失敗バースト時の session+local 二重書き込みをデバウンス合体、ロックアウトは即時フラッシュ維持。commit `58209313`）
+- 2026-09-05-18-refactor-domain-matching-unify.md（RICE 1400 — `matchesPattern` 3 コピー（domainUtils/urlSkipper/domainFilterCache deprecated）を単一共有パスに集約。3 コピーは意味論同一と確認。commit `cd9db5ef`）
+- 2026-09-05-19-refactor-errorutils-split.md（RICE 800 — スコープ補正の実態: 非推奨 shim `errorMessages.ts` 削除。shim テストのユニーク 2 アサーション（技術情報非漏洩・機密マスキング）を errorClassification.test に移植。commit `6091f697`）
+- 2026-09-05-20-fix-popup-status-label.md（RICE 800 — ステータスサマリーアイコンに可視テキストラベル追加（data-i18n・en/ja・check-i18n PASS）。欠落キー `statusPublicPage` も補修。commit `65dd4114`）
+- 2026-09-05-21-refactor-layer-inversion-neutral.md（RICE 700 — 唯一の background→popup 層逆転（consent モジュール import 4 箇所）を `src/utils/storage/` 中立層移動で解消。テスト vi.mock 6 件更新。commit `8471535d`）
+- 2026-09-05-22-fix-legacy-dual-write-resync.md（RICE 600 — LEGACY_DUAL_WRITE 再有効化時の SQLite→レガシー再同期を実装。トリガーは MANUAL-ONLY と決定（PBI 実装メモ・ADR・CHANGELOG 記録）。commit `a49bdb7f`）
+- 2026-09-05-23-fix-protocol-version-window.md（RICE 600 — envelopePolicy 政策テーブル内に N-1 マイナー版受理ウィンドウ（deprecation log + flag）を導入。trust/size 検証は不変。リリースノート記載済み。commit `1e4e7a98`）
+- 2026-09-05-24-fix-dashboard-i18n-strings.md（RICE 500 — dashboard の英語ハードコード 4 箇所を i18n 化（en/ja・check-i18n PASS）。commit `0327b37f`）
+- 2026-09-05-25-fix-popup-focus-trap.md（RICE 320 — 未配線 3 系統ダイアログに focusTrapManager を配線（新規 18 tests）。commit `fcd13631`）
+- 2026-09-05-26-fix-pending-queue-bounds.md（RICE 320 — pending キューに絶対上限（drop-oldest）＋TTL クランプ追加。lock 規律不変。commit `f3d75606`）
+- 2026-09-05-27-fix-download-path-guard.md（RICE 360 — 4 つの download 呼び出しの filename に `sanitizePathSegment` を適用（本番消費者ゼロだった util を活性化）。commit `7676a3e8`）
+- 2026-09-05-28-refactor-utils-dump-cleanup.md（RICE 200 — storage barrel のテスト参照を直接 import へ移行（115 files・net −1,468 行）。barrel は tranco dynamic import の意図的設計につき維持・残置理由を記録。commit `577acdc6`）
+- 2026-09-05-29-backlog-sqlite-backend-consolidation.md（RICE 83・スパイク — 4 層スタックの現状マップと整理案（推奨: レガシーサンセット Option A）を `dev-docs/dig-findings-2026-09-05-sqlite-backend-consolidation.md` に提出。副次発見: opfs-async-main デッドパス・InMemoryTransport ソフトデリート乖離・fallback 再入ギャップ）
+- 2026-09-05-30-fix-validate-fast.md（RICE 18 — `validate:fast` = validate:json + lint + type-check + `vitest run --changed`。CONTRIBUTING に使い分け追記。commit `cf74ec41`）
+- 2026-09-05-31-fix-wasqlite-license.md（RICE 1.8 — スコープ補正: 上流 license フィールド欠落は SBOM 空表記のみが実害。`scripts/generate-sbom.mjs` で人間検証済み license 補正テーブルを適用。commit `00cc7c07`）
+
+検証: `npm run validate` 相当（type-check clean / lint 0 errors / test 11,658 passed / build OK）。
 
 ### 2026-09-05 Architecture Round 5（arch5 診断） — 6件完了
 

@@ -27,9 +27,9 @@ Scenario: 移行ウィンドウ期限後は旧バージョンも拒否される
 ```
 
 ## 受け入れ基準
-- [ ] サポート対象バージョン範囲（例: 直近1世代）が `protocol.ts` 付近の一箇所で宣言されている
-- [ ] ウィンドウ内バージョンは受理＋警告ログ、範囲外は従来通り拒否となる
-- [ ] 既存の不一致拒否テスト（`envelopePolicy.test.ts`）が新ポリシーに合わせて更新されパスする
+- [x] サポート対象バージョン範囲（例: 直近1世代）が `protocol.ts` 付近の一箇所で宣言されている
+- [x] ウィンドウ内バージョンは受理＋警告ログ、範囲外は従来通り拒否となる
+- [x] 既存の不一致拒否テスト（`envelopePolicy.test.ts`）が新ポリシーに合わせて更新されパスする
 
 ## テスト戦略
 - 単体: `checkEnvelope` に対し、現行・直前世代・範囲外の3系統の protocolVersion を投入し受理/拒否とログを検証する
@@ -51,12 +51,15 @@ Scenario: 移行ウィンドウ期限後は旧バージョンも拒否される
 - 調査用コマンド: `rg -n "CURRENT_PROTOCOL_VERSION|protocolVersion" src/messaging src/background/handlers src/content/loader.ts`
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（リリースノートに移行ウィンドウ方針を明記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（リリースノートに移行ウィンドウ方針を明記）
 
 ## 実装メモ
 
 - ウィンドウ定義: `PROTOCOL_VERSION_WINDOW_SIZE = 1`（`src/messaging/protocol.ts` で一箇所宣言、`messageTypes.ts` 経由で再エクスポート）。受理集合は `PROTOCOL_VERSION_POLICY`（`envelopePolicy.ts` の政策テーブル: `{ current, minSupported, windowSize }`）から `classifyProtocolVersion()` で導出。現行→受理、[N-1, N)→`deprecated` 詳細付き受理＋`logWarn`＋応答に `deprecated: true` 付与（`messageHandler.ts`）、範囲外→従来通り拒否（migration/tab-cache 実行前）。欠番（`undefined`）は従来通り受理。
 - セキュリティ非弱体化: バージョンゲートのみ段階化し、サイズ上限・trust レベル・スキーム検証・router の trust/strict 順序は不変。拒否は従来と同一位置（pipeline 先頭）で返す。
 - N-1 の根拠: 対象の skew は単一アップデートサイクル（旧 content script × 新 SW）のみ。幅広の窓は未検証スキーマ組合せの寿命を延ばすだけでカバレッジが増えず、0 は混在期の記録欠落を再発させる。恒久的多世代サポートに拡大しない（`protocol.ts` コメントに明記）。
+
+## 実装メモ（2026-09-05・branch 0905c）
+- 完了（commit `1e4e7a98`、SDD サブエージェント実装）。envelopePolicy の政策テーブル内に N-1 マイナー版の受理ウィンドウ（deprecation log + flag）を導入。サイズ cap・trust・scheme 検証は不変。リリースノート記載は CHANGELOG [Unreleased] に追加済み。

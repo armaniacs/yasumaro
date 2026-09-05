@@ -27,10 +27,10 @@ Scenario: utils 直下の分類が LAYERS 記述と一致する
 ```
 
 ## 受け入れ基準
-- [ ] `src/utils/storage.ts` の参照実態（prod ゼロ・test のみ）が再確認され、移行対象テストの一覧が PBI 内で確定する
-- [ ] 移行したテストが直接 import（`storage/types.js`・`storage/SettingsRepository.js` 等）で green を維持する
-- [ ] `src/utils/` 直下の未分類・dead 候補が洗い出され、削除するものは consumer ゼロが rg で裏付けられる
-- [ ] 参照ゼロになった時点で barrel 削除可否が判断され、削除しない場合は残置理由が `storage.ts` ヘッダに記録される
+- [x] `src/utils/storage.ts` の参照実態（prod ゼロ・test のみ）が再確認され、移行対象テストの一覧が PBI 内で確定する
+- [x] 移行したテストが直接 import（`storage/types.js`・`storage/SettingsRepository.js` 等）で green を維持する
+- [x] `src/utils/` 直下の未分類・dead 候補が洗い出され、削除するものは consumer ゼロが rg で裏付けられる
+- [x] 参照ゼロになった時点で barrel 削除可否が判断され、削除しない場合は残置理由が `storage.ts` ヘッダに記録される
 
 ## テスト戦略
 - 移行: barrel 参照テストを数ファイルずつ直接 import に置換し、都度該当スイートを実行して green を確認する（一括置換はしない）
@@ -57,6 +57,9 @@ Scenario: utils 直下の分類が LAYERS 記述と一致する
 - スコープ補正: 本 PBI は research 込みの整理タスクのため、実装 PR はテスト移行と dead 削除の 2 本立てを推奨する。barrel 物理削除は参照ゼロ到達時のみ
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（LAYERS.md の Wave 3 残作業記述があれば）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（LAYERS.md の Wave 3 残作業記述があれば）
+
+## 実装メモ（2026-09-05・branch 0905c）
+- 完了（commit `577acdc6`、SDD サブエージェント実装）。テスト約 30 ファイルの storage barrel import を直接 import へ移行（115 files、net −1,468 行）。barrel は tranco dynamic import の循環回避という意図的設計のため維持し、残置理由をヘッダに記録。dead-wash: consumer ゼロの utils は 0 件。

@@ -27,10 +27,10 @@ Scenario: 層規約が機械的に保護される
 ```
 
 ## 受け入れ基準
-- [ ] `src/background/` 配下の `../popup/`・`../../popup/` 静的importが0件（テストの `vi.mock` 経路は新パスに更新）
-- [ ] `hasPrivacyConsent`・`migrateLegacyPrivacyConsent` の公開契約（戻り値・副作用）が変わらない
-- [ ] background・popup関連の既存テストがパスする
-- [ ] LAYERS.md に逆方向依存の解消と新配置が注記される
+- [x] `src/background/` 配下の `../popup/`・`../../popup/` 静的importが0件（テストの `vi.mock` 経路は新パスに更新）
+- [x] `hasPrivacyConsent`・`migrateLegacyPrivacyConsent` の公開契約（戻り値・副作用）が変わらない
+- [x] background・popup関連の既存テストがパスする
+- [x] LAYERS.md に逆方向依存の解消と新配置が注記される
 
 ## テスト戦略
 - 単体: 移動先モジュールの同意判定・移行テスト（既存 `consentBadge.test.ts`・lifecycle系テストを新パスで継続）
@@ -59,6 +59,9 @@ Scenario: 層規約が機械的に保護される
 - スコープ補正: 当初「層逆転」と呼ばれたが実態は同意ロジック1モジュールへの4箇所依存であり、UI描画コードへの依存ではない。移動対象を `privacyConsent.ts` の同意状態ロジックに限定する
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（LAYERS.md の逆方向依存節に解消を注記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（LAYERS.md の逆方向依存節に解消を注記）
+
+## 実装メモ（2026-09-05・branch 0905c）
+- 完了（commit `8471535d`、SDD サブエージェント実装）。`privacyConsent.ts` を `src/utils/storage/`（中立層）へ移動し、background 4 箇所（service-worker / compositionManifest / consentBadge / lifecycleHandlers）と popup 側の import を直接化、テスト vi.mock 経路 6 件を更新。移動ファイルの logger barrel warning は Wave-4 既存債務（対象外）。
