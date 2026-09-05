@@ -101,4 +101,3 @@ export class DashboardGateway {
 }
 
 export const dashboardGateway = new DashboardGateway();
-export const DashboardSqliteGateway = DashboardGateway;

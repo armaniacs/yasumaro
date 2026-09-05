@@ -10,8 +10,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { DashboardGateway } from '../../../messaging/dashboardGateway.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../messageTypes.js';
+import { DashboardGateway } from '../dashboardGateway.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 
 // Helper to install a controllable chrome.runtime.sendMessage mock
 function installChromeMock() {
@@ -369,6 +369,36 @@ describe('DashboardGateway — PBI 03 confirm-token fail-closed', () => {
           expect(msg.payload.subtype).toBe(payload.subtype);
           expect(msg.payload).not.toHaveProperty('confirmToken');
           return response;
+        });
+        (globalThis as any).chrome.runtime.sendMessage = sendMessageMock;
+
+        const gateway = new DashboardGateway();
+        const result = await gateway.callDashboard(payload, decode, 'failed');
+        expect(result.success).toBe(true);
+        expect(sendMessageMock).toHaveBeenCalledTimes(1);
+      }
+    });
+
+    it('Given create_confirm_token itself is exempt, When that subtype is called, Then it does not recurse into token fetch', async () => {
+      const sendMessageMock = vi.fn(async (msg: any) => {
+        expect(msg.payload.subtype).toBe('create_confirm_token');
+        expect(msg.payload).not.toHaveProperty('confirmToken');
+        return { success: true, confirmToken: 'new-token' };
+      });
+      (globalThis as any).chrome.runtime.sendMessage = sendMessageMock;
+
+      const gateway = new DashboardGateway();
+      const result = await gateway.callDashboard(
+        { subtype: 'create_confirm_token', action: 'delete', id: 1 } as any,
+        (r: any) => r.confirmToken,
+        'Create token failed',
+      );
+
+      expect(result).toEqual({ success: true, data: 'new-token' });
+      expect(sendMessageMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
   // -------------------------------------------------------------------------
   // PBI 11: opt-in retry contract (moved from service-local withRetry)
   // -------------------------------------------------------------------------
@@ -472,35 +502,6 @@ describe('DashboardGateway — PBI 03 confirm-token fail-closed', () => {
       } finally {
         vi.useRealTimers();
       }
-    });
-  });
-});
-        (globalThis as any).chrome.runtime.sendMessage = sendMessageMock;
-
-        const gateway = new DashboardGateway();
-        const result = await gateway.callDashboard(payload, decode, 'failed');
-        expect(result.success).toBe(true);
-        expect(sendMessageMock).toHaveBeenCalledTimes(1);
-      }
-    });
-
-    it('Given create_confirm_token itself is exempt, When that subtype is called, Then it does not recurse into token fetch', async () => {
-      const sendMessageMock = vi.fn(async (msg: any) => {
-        expect(msg.payload.subtype).toBe('create_confirm_token');
-        expect(msg.payload).not.toHaveProperty('confirmToken');
-        return { success: true, confirmToken: 'new-token' };
-      });
-      (globalThis as any).chrome.runtime.sendMessage = sendMessageMock;
-
-      const gateway = new DashboardGateway();
-      const result = await gateway.callDashboard(
-        { subtype: 'create_confirm_token', action: 'delete', id: 1 } as any,
-        (r: any) => r.confirmToken,
-        'Create token failed',
-      );
-
-      expect(result).toEqual({ success: true, data: 'new-token' });
-      expect(sendMessageMock).toHaveBeenCalledTimes(1);
     });
   });
 
