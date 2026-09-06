@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createConfirmToken, verifyConfirmToken, CONFIRM_TOKEN_TTL_MS, __resetConfirmTokensForTesting } from '../../../confirmTokenManager.js';
+import { createConfirmToken, verifyConfirmToken, computeScopeHash, CONFIRM_TOKEN_TTL_MS, __resetConfirmTokensForTesting } from '../../../confirmTokenManager.js';
 
 describe('confirmTokenManager per-action single-use TTL', () => {
   beforeEach(async () => {
@@ -81,5 +81,49 @@ describe('confirmTokenManager per-action single-use TTL', () => {
     for (let i = 0; i < tokens.length; i++) {
       expect(await verifyConfirmToken(tokens[i], 'delete', i + 1)).toBe(true);
     }
+  });
+});
+
+describe('confirmTokenManager scopeHash binding (PBI 2026-09-06-01)', () => {
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    await __resetConfirmTokensForTesting();
+  });
+  afterEach(async () => {
+    vi.useRealTimers();
+    await __resetConfirmTokensForTesting();
+  });
+
+  it('verifies with the matching scopeHash', async () => {
+    const token = await createConfirmToken('archive_delete_by_staging', undefined, 'hash-a');
+    expect(
+      await verifyConfirmToken(token, 'archive_delete_by_staging', undefined, 'hash-a'),
+    ).toBe(true);
+  });
+
+  it('rejects scopeHash substitution (different cutoff/staging)', async () => {
+    const token = await createConfirmToken('archive_create', undefined, 'hash-cutoff');
+    expect(await verifyConfirmToken(token, 'archive_create', undefined, 'hash-other')).toBe(false);
+  });
+
+  it('fails closed when the scopeHash is omitted on verify', async () => {
+    const token = await createConfirmToken('archive_create', undefined, 'hash-cutoff');
+    expect(await verifyConfirmToken(token, 'archive_create', undefined)).toBe(false);
+  });
+
+  it('leaves existing id-bound flows unchanged (no scopeHash on either side)', async () => {
+    const token = await createConfirmToken('delete', 42);
+    expect(await verifyConfirmToken(token, 'delete', 42)).toBe(true);
+    expect(await verifyConfirmToken(token, 'delete', 42, 'some-hash')).toBe(false);
+  });
+
+  it('computeScopeHash is deterministic, position-sensitive, and arity-sensitive', async () => {
+    const h1 = await computeScopeHash([1774969199999, 0]);
+    const h2 = await computeScopeHash([1774969199999, 0]);
+    expect(h1).toBe(h2);
+    expect(await computeScopeHash([1774969199999, 1])).not.toBe(h1);
+    // arity change (omitting includeDeleted) must change the scope
+    expect(await computeScopeHash([1774969199999])).not.toBe(h1);
+    expect(h1).toMatch(/^[0-9a-f]{64}$/);
   });
 });

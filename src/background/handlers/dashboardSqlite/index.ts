@@ -1,6 +1,6 @@
 import { logError, ErrorCode } from '../../../utils/logger.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { TOKEN_REQUIRED_SUBTYPES, ALL_DASHBOARD_SQLITE_SUBTYPES } from '../../../messaging/sqliteOperationSecurity.js';
+import { TOKEN_REQUIRED_SUBTYPES, ALL_DASHBOARD_SQLITE_SUBTYPES, deriveScopeHash } from '../../../messaging/sqliteOperationSecurity.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboardSqliteProtocol.js';
 import type { DashboardSqliteHandlerDeps } from './deps.js';
 import { READ_ONLY_SUBTYPES, createReadOnlyHandler } from './readOnlyHandler.js';
@@ -42,8 +42,13 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
       const id = (payload as unknown as { id?: number }).id;
       let verified = false;
       if (providedToken) {
+        // PBI 2026-09-06-01: archive subtypes bind the token to destructive
+        // parameters (cutoff / stagingName). The hash is re-derived from the
+        // actual incoming payload so a token issued for one scope cannot be
+        // replayed against another.
+        const scopeHash = await deriveScopeHash(subtype, payload as Record<string, unknown> | undefined);
         if (typeof deps.verifyConfirmToken === 'function') {
-          verified = await deps.verifyConfirmToken(providedToken, action, id);
+          verified = await deps.verifyConfirmToken(providedToken, action, id, scopeHash);
         } else if (typeof (deps as unknown as { getConfirmToken?: () => Promise<string> }).getConfirmToken === 'function') {
           const valid = await (deps as unknown as { getConfirmToken: () => Promise<string> }).getConfirmToken();
           verified = providedToken === valid;

@@ -29,6 +29,12 @@ export interface ConfirmTokenRecord {
   token: string;
   action: string;
   id?: number;
+  /**
+   * Optional binding to the destructive parameters (archive cutoff / staging
+   * name). When present, verify compares it strictly — a token issued for one
+   * cutoff/staging cannot be replayed against another.
+   */
+  scopeHash?: string;
   expiresAt: number;
 }
 
@@ -80,13 +86,24 @@ function pruneExpired(map: TokenMap): boolean {
 }
 
 /**
- * Create a single-use token bound to action (+ optional id) with 60s TTL.
+ * Create a single-use token bound to action (+ optional id, + optional
+ * scopeHash over destructive parameters) with 60s TTL.
  * Stored only in chrome.storage.session.
  */
-export async function createConfirmToken(action: string, id?: number): Promise<string> {
+export async function createConfirmToken(
+  action: string,
+  id?: number,
+  scopeHash?: string,
+): Promise<string> {
   const token = generateToken();
   const expiresAt = Date.now() + CONFIRM_TOKEN_TTL_MS;
-  const record: ConfirmTokenRecord = { token, action, expiresAt, ...(id !== undefined ? { id } : {}) };
+  const record: ConfirmTokenRecord = {
+    token,
+    action,
+    expiresAt,
+    ...(id !== undefined ? { id } : {}),
+    ...(scopeHash !== undefined ? { scopeHash } : {}),
+  };
   return withTokenMap(async (map) => {
     pruneExpired(map);
     map[token] = record;
@@ -96,10 +113,17 @@ export async function createConfirmToken(action: string, id?: number): Promise<s
 }
 
 /**
- * Verify token for given action/id, enforce TTL and single-use (consumes on success).
- * Returns true only if token exists, not expired, action/id match, and not already consumed.
+ * Verify token for given action/id/scopeHash, enforce TTL and single-use
+ * (consumes on success). Returns true only if token exists, not expired,
+ * action/id/scopeHash match, and not already consumed. The scopeHash compare
+ * is fail-closed: a record bound to a scope cannot be verified without it.
  */
-export async function verifyConfirmToken(token: string, action: string, id?: number): Promise<boolean> {
+export async function verifyConfirmToken(
+  token: string,
+  action: string,
+  id?: number,
+  scopeHash?: string,
+): Promise<boolean> {
   if (!token || typeof token !== 'string') return false;
   return withTokenMap(async (map) => {
     const rec = map[token];
@@ -110,6 +134,7 @@ export async function verifyConfirmToken(token: string, action: string, id?: num
       return false;
     }
     if (rec.action !== action) return false;
+    if (rec.scopeHash !== scopeHash) return false;
     const recId = rec.id;
     const wantId = id;
     if (recId !== wantId) {
@@ -121,6 +146,25 @@ export async function verifyConfirmToken(token: string, action: string, id?: num
     try { await saveMap(map); } catch {}
     return true;
   });
+}
+
+/**
+ * SHA-256 hex digest over destructive parameters, position-sensitive
+ * (undefined/null become empty segments so arity is part of the scope).
+ */
+export async function computeScopeHash(
+  parts: (string | number | undefined | null)[],
+): Promise<string> {
+  const joined = parts
+    .map((p) => (p === undefined || p === null ? '' : String(p)))
+    .join('|');
+  if (typeof crypto === 'undefined' || typeof crypto.subtle?.digest !== 'function') {
+    throw new Error('crypto.subtle unavailable; cannot compute confirm token scope hash');
+  }
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(joined));
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 /**
