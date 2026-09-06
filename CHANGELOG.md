@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.114` リリース。
+> - 現時点では `v6.7.115` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,28 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.115] - 2026-09-07
+
+このリリースは、閲覧履歴アーカイブ機能の本番バグ修正2件と、手動テストのE2E自動化を含むリリースです。
+
+### Fixed
+
+- **アーカイブのダウンロードが常に失敗する問題を修正**: Archiveパネルで作成したアーカイブ .db のダウンロード（フェーズA後の「Download」ボタン）が、サービスワーカーハンドラに `archive_export` の分岐が欠落していたため、常に `Unknown archive subtype` エラーで失敗していた（初回実装時からの欠落）。worker・offscreen 側の経路は完備していたため、分岐追加のみで修復
+- **アーカイブ .db をファイルから復元するフローが必ず失敗する問題を修正**: 一時オープン用のステージング名発行（`archive_prepare_incoming`）で、worker のオブジェクト応答が二重ラップされたまま渡され、パネルが `[object Object]` をファイル名として扱っていた。後続の `archive_open` の名前検証で必ず拒否されるため、ファイルからの復元が機能していなかった（PBI 2026-09-07-02 の E2E が検出）
+- **ステージング掃除（`archive_cleanup`）の応答も同様の二重ラップ**だった問題を修正。いずれも `OpfsWorkerBackend` でフィールドを正しく取り出す形に統一
+
+### Added
+
+- **アーカイブ手動テストのE2E自動化**（PBI 2026-09-07-01〜03）: `docs/MANUAL_TEST_ARCHIVE.md` の必須・推奨項目の大半を自動テスト化した。退避 .db の内容照合（実SQLiteでバイト列を検証）、境界日のタイムゾーン判定（UTC+14/+9/-8 の3TZ × 固定epoch seed）、フェーズA後の本体不変、レコード編集→書き戻し、復元後の値照合、削除済み含む復元集計、検索語の `%`/`_` リテラル扱い、録画との並行動作、実エンジンでの freelist 減少と VACUUM 成功を検証。手動チェックリストは E2E 不可の 7 項目のみに縮小（理由を各項目に明記）
+- 上記の自動化（テスト駆動の Red）が本番バグ2件（上記 Fixed 参照）を検出した
+
+### 開発者向け / 非機能
+
+- アーカイブE2E用に `better-sqlite3@12.11.1` を devDependency に追加（CI Node 24 とローカル Node 26 の prebuild を実測確認済みで、`npm ci` でのネイティブビルドは発生しない）
+- `docs/MANUAL_TEST_ARCHIVE.md` を「手動チェックリスト」から「自動テスト カバレッジ対応表」へ再編
+- `archivePanel` テストのモックが service 関数に追随しておらず `npm test` が unhandled rejection で失敗する問題を修正。未使用シンボルによる lint エラー（4件）を解消
+- `pbi/` にE2E自動化のフォローアップPBI 3件（`type-check:test` ゲート修理・Y5' セッション再接続E2E・共通fixture化）を追加
 
 ## [6.7.114] - 2026-09-06
 
