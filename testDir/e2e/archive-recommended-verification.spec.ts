@@ -1,6 +1,6 @@
 /**
  * E2E: Archive recommended verifications Y3/Y4/Y6/G3/G4/G5
- * (PBI 2026-09-07-02) @extension
+ * (PBI 2026-09-07-02) and Y5' session reconnect (PBI 2026-09-07-05) @extension
  *
  * Real extension + real OPFS SQLite. Y2 and G8 are asserted at the unit
  * level instead (see the manual-test doc for the coverage map):
@@ -8,7 +8,7 @@
  * - G8: src/offscreen/__tests__/archivePurgeHandlers.test.ts
  *       ('keeps the main DB intact when VACUUM fails (vacuumOk=false)')
  *
- * Y3/G3 reuse the production temp-open flow: Phase A → export bytes →
+ * Y3/G3/Y5' reuse the production temp-open flow: Phase A → export bytes →
  * archive_prepare_incoming → write bytes into the OPFS staging file from the
  * page (same origin, mirrors archivePanel.ts) → archive_open → query/update.
  */
@@ -341,5 +341,71 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
     );
     expect(found?.success).toBe(true);
     expect((found.rows as Array<{ url: string }>).some((r) => r.url === 'http://localhost:8080/long-page.html')).toBe(true);
+  });
+
+  test("Y5': reloading the options page reconnects the open session", async ({ context, extensionId }) => {
+    const page = await openOptionsPage(context, extensionId);
+    const client = createDashboardSqliteClient(page);
+    const stamp = Date.now();
+
+    // Temp-open a session via the Y3 flow (panel never mounted — the direct
+    // message path holds the session in the SW/offscreen worker).
+    await seedRows(client, [
+      { url: `https://archive-y5.test/1/${stamp}`, title: 'y5 row', summary: 'y5 reconnect', created_at: Date.UTC(2026, 0, 9, 1, 0, 0), domain: 'archive-y5.test' },
+    ]);
+    const { stagingName } = await runPhaseA(page, client, isoDateOffset(1));
+    const bytes = await exportStagingBytes(client, stagingName);
+    const incomingName = await stageIncomingBytes(page, client, bytes);
+    const openToken = await client.tokenFor('archive_open', []);
+    const openRes = await client.dashboardMsg({ subtype: 'archive_open', stagingName: incomingName, confirmToken: openToken });
+    expect(openRes.success, `archive_open failed: ${JSON.stringify(openRes)}`).toBe(true);
+
+    const statusOf = () => client.dashboardMsg({ subtype: 'archive_status' });
+
+    // Session state before reload.
+    const before = await statusOf();
+    expect(before.success).toBe(true);
+    expect((before.status as { open: boolean }).open).toBe(true);
+    expect((before.status as { stagingName: string | null }).stagingName).toBe(incomingName);
+    expect((before.status as { dirty: boolean }).dirty).toBe(false);
+
+    // Reload the extension page — the options page process dies, the SW and
+    // the OPFS worker do not, so the session must survive.
+    await page.reload();
+    await page.waitForFunction(() => typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
+
+    const after = await statusOf();
+    expect(after.success).toBe(true);
+    expect((after.status as { open: boolean }).open).toBe(true);
+    expect((after.status as { stagingName: string | null }).stagingName).toBe(incomingName);
+
+    // The reconnected session is still usable (query reads the staging).
+    const query = await client.dashboardMsg({
+      subtype: 'archive_query', stagingName: incomingName, query: '', limit: 100, offset: 0,
+    });
+    expect(query.success).toBe(true);
+    expect(Number(query.total)).toBe(1);
+
+    // Panel reconnect: clicking the Archive tab mounts the panel for the first
+    // time in this page generation — the mount probe must detect the open
+    // session and re-render the list.
+    await page.locator('[data-panel="panel-archive"]').click();
+    await expect(page.locator('#archive-session-section')).toBeVisible();
+    await expect(page.locator('.archive-session-row').first()).toContainText('y5 row');
+
+    // The dirty flag survives reload too: edit the title, reload, re-check.
+    const row = (query.rows as Array<{ id: number }>)[0];
+    const updateToken = await client.tokenFor('archive_update', [], row.id);
+    const update = await client.dashboardMsg({
+      subtype: 'archive_update', stagingName: incomingName, id: row.id, changes: { title: 'y5 edited' }, confirmToken: updateToken,
+    });
+    expect(update.success, `archive_update failed: ${JSON.stringify(update)}`).toBe(true);
+
+    await page.reload();
+    await page.waitForFunction(() => typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
+    const afterDirty = await statusOf();
+    expect(afterDirty.success).toBe(true);
+    expect((afterDirty.status as { open: boolean }).open).toBe(true);
+    expect((afterDirty.status as { dirty: boolean }).dirty).toBe(true);
   });
 });

@@ -19,7 +19,7 @@ R1〜R4 は完全自動化済み、R5/R6 のロジックは vitest + E2E 1本で
 | # | 検証項目 | 手順 | 期待結果 | なぜE2Eで不可 |
 |---|---------|------|---------|--------------|
 | Y1 | ロケール切替（ja↔en） | ブラウザ言語を切替→Archiveパネル再表示→全文言が切替わることを確認 | 表示中の言語に対応した文言が表示される | `chrome.i18n.getMessage` の言語は拡張起動時のブラウザ UI 言語で固定。Playwright の `locale` は `navigator.language` を変えるが `chrome.i18n` には効かない。拡張再ロードが必要で1コンテキスト内では不可 |
-| Y5 | 再読み込み後のセッション再接続（file://） | ダウンロード済み .db を file:// で開いた復元セッションの検証 | セッションが復元され、検索・一覧が使える（保存は再DL制限） | 拡張ページ外の file:// では拡張 JS が走らない。※拡張ページ内 reload → STATUS 再接続は別途 E2E 化可能（Y5' として検討） |
+| Y5 | 再読み込み後のセッション再接続（file://） | ダウンロード済み .db を file:// で開いた復元セッションの検証 | セッションが復元され、検索・一覧が使える（保存は再DL制限） | 拡張ページ外の file:// では拡張 JS が走らない。※拡張ページ内 reload → STATUS 再接続は E2E 化済み（Y5'） |
 
 ---
 
@@ -55,6 +55,7 @@ R1〜R4 は完全自動化済み、R5/R6 のロジックは vitest + E2E 1本で
 | Y2 | IDB フォールバック環境での拒否 | vitest `src/offscreen/__tests__/archiveFallbackRejection.test.ts`（`FallbackStorageAdapter` / `IdbVfsBackend` の全 archive メソッドが `Archive requires OPFS storage.` で拒否。UIの事前disabledガードは存在しない — 操作時拒否が仕様） |
 | Y3 | 編集→保存→ファイルへの書き戻し | E2E `archive-recommended-verification.spec.ts` Y3（一時オープン→タイトル編集→保存→export→SQLite照合。downloadイベントに依存しない） |
 | Y4 | 復元後のレコード内容照合 | 同 spec Y4（title/url/is_starred を値レベルで照合） |
+| Y5' | 拡張ページ内 reload → セッション再接続 | E2E `archive-recommended-verification.spec.ts` Y5'（reload 前後で `archive_status` の open/stagingName/dirty 保持 + mount プローブによるセッション一覧の再表示を検証。file:// 部分は Y5 として手動維持） |
 | Y6 | 削除済みレコードを含めた復元 | 同 spec Y6（`restoredDeleted` 集計 assert） |
 
 ### 🟢 任意（自動化済み or 自動化できない理由を更新）
