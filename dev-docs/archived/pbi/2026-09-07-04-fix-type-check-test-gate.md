@@ -37,12 +37,27 @@ Scenario: 型ゲートが実際に壊れたコードを検出する
 
 ## 受け入れ基準
 
-- [ ] `npm run type-check:test` が exit 0（`tsc --project testDir/tsconfig.json --noEmit`）
-- [ ] `npm run test:type-safe` が exit 0（型チェック + 全 vitest）
-- [ ] テストファイルに意図的な型エラーを入れるとゲートが落ちることを1度確認（上記シナリオ2）
-- [ ] `testDir/__tests__/*.test.ts`（archiveDbReader.test.ts）が型チェック対象に含まれる（rootDir 問題を解決した上で）
-- [ ] `npm run validate`（既存ゲート）が引き続き exit 0
-- [ ] 本体 `tsconfig.json` の include は変更しない（src 本体の型チェック挙動を変えない）
+- [x] `npm run type-check:test` が exit 0（ベースラインゲート: 各ファイルのエラー数がベースライン以下なら 0）
+- [x] `npm run test:type-safe` が exit 0（型チェック + 全 vitest）
+- [x] テストファイルに意図的な型エラーを入れるとゲートが落ちることを1度確認（実施済み: `NEW FILE` として検出・exit 1）
+- [x] `testDir/__tests__/*.test.ts`（archiveDbReader.test.ts）が型チェック対象に含まれる（rootDir を `..` に上書きし include に追加。エラー 0 のためベースライン外 = 新規エラーは即検出）
+- [x] `npm run validate`（既存ゲート）が引き続き exit 0
+- [x] 本体 `tsconfig.json` の include は変更しない（src 本体の型チェック挙動を変えない）
+
+## 逸脱メモ（見積もりと実態の差・スコープ分割 — ユーザー確認済み）
+
+**見込みと実態**: 「ほぼ types 設定系の1発修正見込み」は誤りだった。設定修理は正しく globals 未解決の 15,532 errors を消滅させたが、その後 **326 ファイル・3,173 件の「未型チェックだったテストの実在する型エラー」** が顕在化（null 安全性・モック型付け・暗黙 any・引数不一致など、1件ずつの判断が必要）。
+
+**採用した解決**:
+1. 設定修理（本PBI）: `types: ["chrome", "vitest/globals", "node"]` + `rootDir: ".."` — 15,532 → 3,173。vitest 4 は `vi` を値としてのみ公開（`globals.d.ts` の `let vi` 宣言）し、型名前空間（`vi.Mock` 等）は削除されているため、globals では値使用しか解決しない
+2. 安全なコードモド（本PBI・実測で動作確認済み）:
+   - vitest 4 で削除された `vi.*` 型名前空間 → 型名直接 import へ機械置換（37 ファイル・325 errors）。`Mock`/`Mocked`/`MockedFunction`/`MockedClass`/`MockInstance` は root export 存在を確認。ジェネリクスは全て単一引数形（`<typeof fn>`）で vitest 4 の `Mock<T>` と互換（2引数形の使用はゼロを実測）
+   - 不要になった `@ts-expect-error` の除去（27 ファイル・265 directives）
+   - 3,173 → **2,601**（309 ファイル）
+3. ベースラインゲート（本PBI）: `scripts/check-type-baseline.mjs` — ファイル別エラー数を `testDir/type-check-baseline.json` と比較し、**新規エラー・件数増で exit 1**、改善時はベースライン更新を促す。既存債務はベースラインに記録して保留
+4. 全量返済（2,601 件・309 ファイル）は **2026-09-07-07** に切り出し（ベースラインファイルがインベントリ）
+
+**DoD の意味論**: `type-check:test` は素の tsc ではなくベースラッパーになった（素の tsc は `type-check:test:raw` に残置）。exit 0 の条件は「エラー数がベースライン以下」。
 
 ## テスト戦略
 
@@ -86,7 +101,24 @@ node -e "console.log(require('typescript/package.json').version, require('vitest
 
 ## Definition of Done
 
-- [ ] `npm run type-check:test` exit 0
-- [ ] `npm run test:type-safe` exit 0
-- [ ] `npm run validate` exit 0（既存ゲート無傷）
-- [ ] コードレビュー完了
+- [x] `npm run type-check:test` exit 0（ベースラインゲートとして）
+- [x] `npm run test:type-safe` exit 0
+- [x] `npm run validate` exit 0（既存ゲート無傷）
+- [x] コードレビュー完了
+
+## 完了メモ（2026-09-07）
+
+### 産出物
+- `testDir/tsconfig.json`: `types` に `vitest/globals`（TS 6.0.3 / nodeNext で解決確認済み）、`rootDir: ".."`、include に `./__tests__/**` と `./e2e/fixtures/**`（fixtures はエラー 0）
+- `scripts/check-type-baseline.mjs`: ファイル別ベースラインゲート（新規ファイルのエラー・件数増で exit 1、改善時はベースライン更新を案内）
+- `testDir/type-check-baseline.json`: 2,601 errors / 309 ファイル（インベントリ = PBI 07 の入力）
+- `package.json`: `type-check:test`（ラッパー）/ `type-check:test:raw`（素 tsc）/ `type-check:test:baseline`（再生成）
+- コードモド: 68 ファイル（vi 型名前空間 37 + 不要 expect-error 27 + その他）
+
+### 検証
+- ネガティブテスト: テストファイルに意図的エラーを追加 → `NEW FILE ... 1 errors` 検出・exit 1（実施済み）
+- 改善テスト: ベースライン以下なら exit 0 + 更新案内
+- `validate` exit 0（tagClusterLayoutPerf の1回の flake は無関係・単独再実行で通過、本PBI変更範囲外）
+
+### フォローアップ
+- 2026-09-07-07（新規）: 型債務全量返済（2,601 件・309 ファイル）。ベースラインを 0 にして `type-check:test:raw` をゲートに昇格させる
