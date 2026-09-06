@@ -1,5 +1,5 @@
 /**
- * E2E: History Archive end-to-end (PBI 2026-09-06-02/03/04) @extension
+ * E2E: History Archive end-to-end (PBI 2026-09-06-02/03/04, R5: 2026-09-07-03) @extension
  *
  * Real extension + real OPFS SQLite round-trip:
  *   seed → archive create (phase A, staging) → restore (duplicates skipped) →
@@ -11,24 +11,12 @@
  *
  * Download verification (ARCHIVE_EXPORT chunk → download event) is covered by
  * unit tests; the Playwright download event does not fire for extension-page
- * anchor downloads in this setup (investigated 2026-09-06).
+ * anchor downloads in this setup (investigated 2026-09-06). Content-level
+ * verification of the exported bytes is covered by
+ * archive-required-verification.spec.ts (R1) via the same export subtype.
  */
 import { test, expect } from './fixtures/extension.fixture.js';
-
-async function poll<T>(
-  fn: () => Promise<T>,
-  check: (v: T) => boolean,
-  maxAttempts = 8,
-  delayMs = 500,
-): Promise<T> {
-  let last: T;
-  for (let i = 0; i < maxAttempts; i++) {
-    last = await fn();
-    if (check(last)) return last;
-    if (i < maxAttempts - 1) await new Promise((r) => setTimeout(r, delayMs));
-  }
-  return last!;
-}
+import { createDashboardSqliteClient, poll } from './fixtures/dashboardSqliteHelpers.js';
 
 const IMPORTED_URLS = ['https://archive-e2e.test/1', 'https://archive-e2e.test/2', 'https://archive-e2e.test/3'];
 
@@ -42,29 +30,7 @@ test.describe('History Archive E2E @extension', () => {
     await page.goto(`chrome-extension://${extensionId}/options.html`);
     await page.waitForFunction(() => typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
 
-    const dashboardMsg = (payload: Record<string, unknown>) =>
-      page.evaluate(async (p) => {
-        return (await chrome.runtime.sendMessage({ type: 'DASHBOARD_SQLITE', payload: p })) as Record<string, unknown>;
-      }, payload);
-
-    const scopeHash = (parts: (string | number | undefined)[]) =>
-      page.evaluate(async (joined: string) => {
-        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(joined));
-        return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
-      }, parts.map((p) => (p === undefined || p === null ? '' : String(p))).join('|'));
-
-    const tokenFor = async (action: string, scopeParts: (string | number | undefined)[]): Promise<string> => {
-      // Non-archive actions (e.g. import) derive no scope on the SW side —
-      // sending a hash there would fail the strict compare. Omit it instead.
-      const tokenScopeHash = scopeParts.length > 0 ? await scopeHash(scopeParts) : undefined;
-      const res = await dashboardMsg({
-        subtype: 'create_confirm_token',
-        action,
-        ...(tokenScopeHash !== undefined ? { scopeHash: tokenScopeHash } : {}),
-      });
-      expect(res.success).toBe(true);
-      return res.confirmToken as string;
-    };
+    const { dashboardMsg, scopeHash, tokenFor } = createDashboardSqliteClient(page);
 
     // --- Seed 3 records via import (create_confirm_token pattern) ---
     const seedToken = await tokenFor('import', []);
@@ -188,5 +154,109 @@ test.describe('History Archive E2E @extension', () => {
     // The seeded rows were the only rows in this fresh test DB (unique prefix,
     // isolated per test run) — oldest should now be null.
     expect(previewData.oldest).toBeNull();
+  });
+
+  test('R5: Phase B reclaims freelist on the real OPFS SQLite engine', async ({ context, extensionId }) => {
+    const page = await context.newPage();
+    await page.goto(`chrome-extension://${extensionId}/options.html`);
+    await page.waitForFunction(() => typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
+
+    const { dashboardMsg, scopeHash, tokenFor } = createDashboardSqliteClient(page);
+
+    // --- Create free pages: seed fat rows, then DELETE them without VACUUM.
+    // 300 rows × ~1KB summary ≈ 300KB of table pages; on the observed 4KB
+    // page size that is tens of free pages — well above the noise floor.
+    // (Measured 2026-09-07: a 3-row seed leaves freelist at 0/0; ~300 fat
+    // rows are the minimum where freelistBefore is reliably > 0.)
+    const fatRows = Array.from({ length: 300 }, (_, i) => ({
+      url: `https://archive-r5.test/fat/${i}`,
+      title: `r5 fat ${i}`,
+      summary: 'x'.repeat(1024),
+      created_at: Date.UTC(2026, 0, 1, 0, 0, 0) + i * 1000,
+      domain: 'archive-r5.test',
+    }));
+    const fatToken = await tokenFor('import', []);
+    const fatSeed = await dashboardMsg({ subtype: 'import', confirmToken: fatToken, rows: fatRows });
+    expect(fatSeed?.success).toBe(true);
+
+    // clear_all is a plain DELETE — no VACUUM, so the freed pages stay on
+    // the freelist and Phase B's freelistBefore becomes non-zero.
+    const clearToken = await tokenFor('clear_all', []);
+    const cleared = await dashboardMsg({ subtype: 'clear_all', confirmToken: clearToken });
+    expect(cleared?.success).toBe(true);
+
+    // --- Seed the R5 rows and archive them ---
+    const r5Urls = ['https://archive-r5.test/1', 'https://archive-r5.test/2', 'https://archive-r5.test/3'];
+    const seedToken = await tokenFor('import', []);
+    const seed = await poll(
+      () =>
+        dashboardMsg({
+          subtype: 'import',
+          confirmToken: seedToken,
+          rows: r5Urls.map((url, i) => ({
+            url,
+            title: `r5 seed ${i + 1}`,
+            summary: 'r5 e2e seed',
+            created_at: Date.UTC(2026, 1, 1, i + 1, 0, 0),
+            domain: 'archive-r5.test',
+          })),
+        }),
+      (r) => r?.success === true && Number(r?.inserted) >= 3,
+    );
+    expect(seed?.success).toBe(true);
+
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const isoTomorrow = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+    const cutoffMs = new Date(
+      tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 23, 59, 59, 999,
+    ).getTime();
+    const createToken = await tokenFor('archive_create', [cutoffMs, false]);
+    const createRes = await dashboardMsg({
+      subtype: 'archive_create',
+      cutoffDate: isoTomorrow,
+      cutoffMs,
+      includeDeleted: false,
+      yasumaroVersion: '6.7.114',
+      confirmToken: createToken,
+      scopeHash: await scopeHash([cutoffMs, false]),
+    });
+    expect(createRes?.success).toBe(true);
+    const stagingName = createRes.stagingName as string;
+
+    // Preview: the 3 seeded rows are inside the archive scope.
+    const previewBefore = await poll(
+      () =>
+        dashboardMsg({ subtype: 'archive_preview', cutoffDate: isoTomorrow, cutoffMs, includeDeleted: true }),
+      (r) => r?.success === true,
+    );
+    const previewBeforeData = previewBefore?.preview as { total: number; oldest: number | null };
+    expect(Number(previewBeforeData.total)).toBe(3);
+    expect(previewBeforeData.oldest).not.toBeNull();
+
+    // --- Phase B: DELETE + VACUUM on the real engine ---
+    const purgeToken = await tokenFor('archive_delete_by_staging', [stagingName]);
+    const purgeRes = await dashboardMsg({
+      subtype: 'archive_delete_by_staging',
+      stagingName,
+      confirmToken: purgeToken,
+      scopeHash: await scopeHash([stagingName]),
+    });
+    expect(purgeRes?.success).toBe(true);
+    expect(Number(purgeRes.deleted)).toBe(3);
+    // The archive scope had rows before the purge, and VACUUM reclaimed the
+    // free pages that clear_all (and the delete) had left behind.
+    expect(Number(purgeRes.freelistBefore)).toBeGreaterThan(0);
+    expect(Number(purgeRes.freelistAfter)).toBeLessThan(Number(purgeRes.freelistBefore));
+    expect(purgeRes.vacuumOk).toBe(true);
+
+    // The archived scope is empty afterwards.
+    const previewAfter = await poll(
+      () =>
+        dashboardMsg({ subtype: 'archive_preview', cutoffDate: isoTomorrow, cutoffMs, includeDeleted: true }),
+      (r) => r?.success === true,
+    );
+    const previewAfterData = previewAfter?.preview as { total: number; oldest: number | null };
+    expect(Number(previewAfterData.total)).toBe(0);
+    expect(previewAfterData.oldest).toBeNull();
   });
 });

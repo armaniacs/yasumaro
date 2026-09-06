@@ -128,4 +128,25 @@ describe('sweepOrphanStagings', () => {
     expect(removed).toContain(orphan);
     expect(fakeDir.files.has(live)).toBe(true);
   });
+
+  it('sweeps multiple orphans of both kinds (incoming + outgoing) in one pass', async () => {
+    // PBI 2026-09-07-03 (G6): a crashed session can leave several staging
+    // files behind — both kinds must go, registered files must stay.
+    const orphanOutgoing = 'archive_outgoing_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db';
+    const orphanIncoming = 'archive_incoming_4f2504e0-4f89-41d3-9a0c-0305e82c3302.db';
+    const anotherOrphanOutgoing = 'archive_outgoing_8f2504e0-4f89-41d3-9a0c-0305e82c3303.db';
+    fakeDir.files.set(orphanOutgoing, { remove: vi.fn() });
+    fakeDir.files.set(orphanIncoming, { remove: vi.fn() });
+    fakeDir.files.set(anotherOrphanOutgoing, { remove: vi.fn() });
+    const live = await prepareOutgoing();
+    fakeDir.files.set(live, { remove: vi.fn() });
+
+    const removed = await sweepOrphanStagings();
+    expect(removed).toEqual(expect.arrayContaining([orphanOutgoing, orphanIncoming, anotherOrphanOutgoing]));
+    expect(removed).not.toContain(live);
+    expect(fakeDir.files.has(orphanOutgoing)).toBe(false);
+    expect(fakeDir.files.has(orphanIncoming)).toBe(false);
+    expect(fakeDir.files.has(anotherOrphanOutgoing)).toBe(false);
+    expect(fakeDir.files.has(live)).toBe(true);
+  });
 });
