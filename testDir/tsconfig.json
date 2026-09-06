@@ -3,12 +3,15 @@
   "compilerOptions": {
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "types": ["vitest", "node", "chrome"]
+    "rootDir": "..",
+    "types": ["chrome", "vitest/globals", "node"]
   },
   "include": [
     "../src/**/__tests__/**/*",
     "../src/**/*.test.ts",
-    "../src/**/*.spec.ts"
+    "../src/**/*.spec.ts",
+    "./__tests__/**/*.test.ts",
+    "./e2e/fixtures/**/*.ts"
   ],
   "exclude": [
     "../node_modules",
