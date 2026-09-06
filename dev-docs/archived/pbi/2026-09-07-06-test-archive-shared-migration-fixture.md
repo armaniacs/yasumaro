@@ -35,11 +35,30 @@ Scenario: 既存 spec は共通化しても同じ結果になる
 
 ## 受け入れ基準
 
-- [ ] `testDir/e2e/fixtures/dashboardSqliteHelpers.ts` に `openOptionsPage`（既存3 spec の重複を統合）と `migrationSettled`（warm-up → `legacyStoreReadOnly` 待ち → `yasumaro_migration_status` 封印）を追加
-- [ ] 既存 3 spec（`archive-required-verification` / `archive-recommended-verification` / `dashboard-archive`）が共通 fixture を import する形にリファクタ（グリーン後のリファクタリング段階として、テスト件数・アサーションは不変）
-- [ ] `seedRows` の冪等性（UNIQUE 制約で再送安全）を JSDoc で明文化
-- [ ] テスト専用 subtype / フラグは追加しない
-- [ ] `npm run validate` + 全 `@extension` E2E がグリーン（テストの実行順序依存が無いことを `-g` での個別実行でも確認）
+- [x] `testDir/e2e/fixtures/dashboardSqliteHelpers.ts` に `openOptionsPage`（既存3 spec の重複を統合）と `migrationSettled`（warm-up → `legacyStoreReadOnly` 待ち → `yasumaro_migration_status` 封印）を追加
+- [x] 既存 3 spec（`archive-required-verification` / `archive-recommended-verification` / `dashboard-archive`）が共通 fixture を import する形にリファクタ（グリーン後のリファクタリング段階として、テスト件数・アサーションは不変）
+- [x] `seedRows` の冪等性（UNIQUE 制約で再送安全）を JSDoc で明文化（seedRows も共通化 — 2 spec の同一実装を統合し JSDoc を付与）
+- [x] テスト専用 subtype / フラグは追加しない
+- [x] `npm run validate` + 全 `@extension` E2E がグリーン（テストの実行順序依存が無いことを `-g` での個別実行でも確認）
+
+## 完了メモ（2026-09-07）
+
+### 産出物（dashboardSqliteHelpers.ts に統合）
+- `openOptionsPage(context, extensionId)`: options.html オープン + runtime bridge 待ち（3 spec の重複を統合）
+- `migrationSettled(page, client)`: get_count で deferred runner を起動 → `legacyStoreReadOnly` フラグ待ち（expect.toPass）→ `yasumaro_migration_status: 'completed'` で封印。G4 のインライン 4 手順を置換
+- `seedRows`: 2 spec の同一実装を統合 + 冪等性 JSDoc（`created_at` 固定値規約）
+- `runPhaseA` / `isoDateOffset`: 2 spec の同一実装を統合（05 でも再利用）
+
+### リファクタ内容
+- 3 spec の private `openOptionsPage` を削除（dashboard-archive は inline 2 箇所）
+- G4 のインライン手順 → `migrationSettled` 1 行
+- R1〜R3 の seed を `seedRows` へ（アサーション同値・失敗メッセージ改善のみ）
+- 推奨側の `DashboardSqliteClient.scopeHash` の parts 型に `boolean` を追加（`includeDeleted` を scope に含めるため — 実態は String() 結合で挙動不変）
+
+### 検証
+- 全 `@extension` E2E: 34 passed / 1 skipped
+- `-g` 個別実行（R1/R3/G4/G5 と R2 群）で順序非依存を確認
+- ベースラインゲートが helper への新規型エラー（scopeHash parts 型に boolean 足りない等 4 件）を即検出 — PBI-04 のゲートが機能している実証。修正して exit 0 維持
 
 ## テスト戦略
 
@@ -82,7 +101,7 @@ grep -n "poll" testDir/e2e/fixtures/dashboardSqliteHelpers.ts | head -3
 
 ## Definition of Done
 
-- [ ] 共通 fixture が実装され 3 spec が統合済み
-- [ ] 全 `@extension` E2E グリーン（期待値不変）
-- [ ] `npm run validate` が通る
-- [ ] コードレビュー完了
+- [x] 共通 fixture が実装され 3 spec が統合済み
+- [x] 全 `@extension` E2E グリーン（期待値不変）
+- [x] `npm run validate` が通る
+- [x] コードレビュー完了
