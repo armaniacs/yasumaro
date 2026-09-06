@@ -136,6 +136,14 @@
           </svg>
           <span data-i18n="sqliteHistoryTab">SQLite History</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-archive" aria-selected="false" data-panel="panel-archive">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M21 8v13H3V8"/>
+            <path d="M1 3h22v5H1z"/>
+            <path d="M10 12h4"/>
+          </svg>
+          <span data-i18n="archiveTab">Archive</span>
+        </button>
         <button class="sidebar-nav-btn" role="tab" aria-controls="panel-domain-search" aria-selected="false" data-panel="panel-domain-search">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="11" cy="11" r="8"/>
@@ -1784,6 +1792,35 @@
         </div>
         <div id="sqlite-history-container">
           <p class="panel-description">Loading SQLite history…</p>
+        </div>
+      </section>
+
+      <!-- Archive Panel (PBI 2026-09-06-02) -->
+      <section id="panel-archive" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="archiveTab">Archive</h2>
+        <p class="panel-description" data-i18n="archivePanelDescription">
+          Export browsing history up to a chosen date as a standard SQLite file, then remove it from the local database (phase 2) once you have the file. The exported file can be opened with any SQLite tool.
+        </p>
+        <div class="settings-section">
+          <div class="form-group">
+            <label for="archive-date" data-i18n="archiveDateLabel">Archive records up to (inclusive)</label>
+            <input type="date" id="archive-date" min="2000-01-01">
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="archive-include-deleted">
+              <span data-i18n="archiveIncludeDeletedLabel">Include deleted records</span>
+            </label>
+            <p class="settings-section-desc" data-i18n="archiveIncludeDeletedNote">Deleted records are excluded by default. Records excluded here cannot be restored from the archive later.</p>
+          </div>
+          <div class="form-group">
+            <button id="archive-preview-btn" class="btn btn-secondary" data-i18n="archivePreviewBtn">Check records to archive</button>
+            <button id="archive-create-btn" class="btn btn-primary" data-i18n="archiveCreateBtn">Create archive file</button>
+            <button id="archive-download-btn" class="btn btn-secondary" hidden data-i18n="archiveDownloadBtn">Download archive file</button>
+            <button id="archive-cleanup-btn" class="btn btn-secondary" hidden data-i18n="archiveCleanupBtn">Delete staging copy</button>
+          </div>
+          <div id="archive-preview-summary" class="settings-section-desc" hidden></div>
+          <div id="archive-status" class="settings-section-desc" aria-live="polite"></div>
         </div>
       </section>
 

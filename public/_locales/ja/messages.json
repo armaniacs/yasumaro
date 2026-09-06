@@ -3444,6 +3444,66 @@
   "sqliteHistoryTab": {
     "message": "履歴"
   },
+  "archiveTab": {
+    "message": "アーカイブ"
+  },
+  "archivePanelDescription": {
+    "message": "指定日までの閲覧履歴を標準SQLiteファイルとして退避します。ファイルを取得後、フェーズ2（別ステップ）でローカルDBから削除できます。書き出されたファイルは任意のSQLiteツールで開けます。"
+  },
+  "archiveDateLabel": {
+    "message": "アーカイブ対象日（その日を含む）"
+  },
+  "archiveIncludeDeletedLabel": {
+    "message": "削除済みレコードも含める"
+  },
+  "archiveIncludeDeletedNote": {
+    "message": "削除済みレコードはデフォルトで除外されます。ここで除外したレコードは後からアーカイブから復元できません。"
+  },
+  "archivePreviewBtn": {
+    "message": "アーカイブ対象を確認"
+  },
+  "archiveCreateBtn": {
+    "message": "アーカイブファイルを作成"
+  },
+  "archiveDownloadBtn": {
+    "message": "アーカイブファイルをダウンロード"
+  },
+  "archiveCleanupBtn": {
+    "message": "ステージングコピーを削除"
+  },
+  "archiveDateRequired": {
+    "message": "先に日付を選択してください"
+  },
+  "archiveStatusWorking": {
+    "message": "処理中… 完了まで他のアーカイブ操作は無効です。"
+  },
+  "archivePreviewSummary": {
+    "message": "アーカイブ対象: {total}件（スター付き {starred}件）。期間内の削除済み: {deleted}件（「削除済みレコードも含める」がオフの場合は除外）。"
+  },
+  "archiveCreatedSummary": {
+    "message": "アーカイブ作成完了: {count}件を書き出しました。ステージングコピーを削除する前にファイルをダウンロードしてください。"
+  },
+  "archiveCreatedDownloadHint": {
+    "message": "アーカイブを作成しました。今すぐダウンロードしてください — ステージングコピーを削除するまでは再ダウンロードできます。"
+  },
+  "archiveDownloadDone": {
+    "message": "アーカイブファイルをダウンロードしました。"
+  },
+  "archiveDownloadFailed": {
+    "message": "アーカイブのダウンロードに失敗しました"
+  },
+  "archivePreviewFailed": {
+    "message": "アーカイブの確認に失敗しました"
+  },
+  "archiveCreateFailed": {
+    "message": "アーカイブの作成に失敗しました"
+  },
+  "archiveCleanupDone": {
+    "message": "ステージングの掃除が完了しました（{count}件削除）。"
+  },
+  "archiveCleanupFailed": {
+    "message": "ステージングの掃除に失敗しました"
+  },
   "exportLogsTab": {
     "message": "ログをエクスポート"
   },

@@ -24,6 +24,10 @@ import {
   restoreDb as sqliteRestoreDb,
   purgeOldRecords as sqlitePurgeOldRecords,
   purgeContent as sqlitePurgeContent,
+  archivePreview as sqliteArchivePreview,
+  archiveCreate as sqliteArchiveCreate,
+  archiveCleanup as sqliteArchiveCleanup,
+  archiveExportChunk as sqliteArchiveExportChunk,
 } from './dbMaintenance.js';
 import {
   insertAuditLog as sqliteInsertAuditLog,
@@ -285,6 +289,53 @@ async function handleOpfsSpike(_msg: SqliteMessage, sendResponse: (r: unknown) =
   sendResponse({ success: true, report });
 }
 
+async function handleArchivePreview(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_PREVIEW' }>).payload;
+  const result = await sqliteArchivePreview(payload.cutoffMs, payload.includeDeleted);
+  if (result.success && 'preview' in result) {
+    sendResponse({ success: true, preview: result.preview });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive preview returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveCreate(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_CREATE' }>).payload;
+  const result = await sqliteArchiveCreate(payload);
+  if (result.success && 'stagingName' in result) {
+    sendResponse({ success: true, stagingName: result.stagingName, recordCount: result.recordCount });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive create returned no staging file' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveCleanup(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const result = await sqliteArchiveCleanup();
+  if (result.success && 'removed' in result) {
+    sendResponse({ success: true, removed: result.removed });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive cleanup returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveExport(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_EXPORT' }>).payload;
+  const result = await sqliteArchiveExportChunk(payload.stagingName, payload.offset, payload.length);
+  if (result.success && 'chunk' in result) {
+    sendResponse({ success: true, chunk: result.chunk, nextOffset: result.nextOffset, total: result.total, done: result.done });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive export returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
 /**
  * Static registry object — `satisfies` guarantees exhaustiveness at compile time.
  * Adding a new SqliteMessage variant without a handler is a type error.
@@ -310,6 +361,10 @@ const handlerRecord = {
   SQLITE_PURGE: handlePurge,
   CONTENT_PURGE: handleContentPurge,
   SQLITE_OPFS_SPIKE: handleOpfsSpike,
+  SQLITE_ARCHIVE_PREVIEW: handleArchivePreview,
+  SQLITE_ARCHIVE_CREATE: handleArchiveCreate,
+  SQLITE_ARCHIVE_CLEANUP: handleArchiveCleanup,
+  SQLITE_ARCHIVE_EXPORT: handleArchiveExport,
 } satisfies Record<SqliteMessageType, SqliteHandler>;
 
 /**

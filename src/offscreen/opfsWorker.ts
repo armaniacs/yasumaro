@@ -23,6 +23,12 @@ import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 import { handleInsert, handleQuery, handleUpdate, handleHardDelete, handleToggleStar, handleGetCount, handleInsertBatch } from './opfsWorker/crudHandlers.js';
 import { handleSearch as handleSearchImpl, handleSearchFts as handleSearchFtsImpl, handleSearchLike as handleSearchLikeImpl } from './opfsWorker/searchHandlers.js';
 import { handleBackup, handleSerialize } from './opfsWorker/backupHandlers.js';
+import {
+  handleArchivePreview,
+  handleArchiveCreate,
+  handleArchiveCleanup,
+  handleArchiveExport,
+} from './opfsWorker/archiveCreateHandlers.js';
 import { handlePurgeOldRecords, handleContentPurge, handleClearAll } from './opfsWorker/purgeHandlers.js';
 import { handleAuditLogInsert, handleAuditLogQuery } from './opfsWorker/auditHandlers.js';
 import { handleGetStatus, handleFtsIndexSize } from './opfsWorker/statusHandlers.js';
@@ -249,6 +255,22 @@ export async function handleRequest(req: WorkerRequestMessage): Promise<WorkerRe
           ? restorePayload.data
           : new Uint8Array(restorePayload.data);
         result = await handleRestore(bytes);
+        break;
+      }
+      case 'ARCHIVE_PREVIEW': {
+        result = await handleArchivePreview(handlerCtx, payload as import('./opfsWorker/types.js').ArchivePreviewPayload);
+        break;
+      }
+      case 'ARCHIVE_CREATE': {
+        result = await handleArchiveCreate(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveCreatePayload);
+        break;
+      }
+      case 'ARCHIVE_CLEANUP': {
+        result = await handleArchiveCleanup(handlerCtx);
+        break;
+      }
+      case 'ARCHIVE_EXPORT': {
+        result = await handleArchiveExport(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveExportPayload);
         break;
       }
       case 'FTS_INDEX_SIZE': {

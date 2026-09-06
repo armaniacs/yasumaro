@@ -30,7 +30,11 @@ export type SqliteMessage =
   | { type: 'SQLITE_RESTORE'; payload: { data: number[] }; traceId?: string }
   | { type: 'SQLITE_PURGE'; payload?: { retentionDays?: number; maxRecords?: number }; traceId?: string }
   | { type: 'CONTENT_PURGE'; payload?: { retentionDays?: number; maxRecords?: number; includeStarred?: boolean }; traceId?: string }
-  | { type: 'SQLITE_OPFS_SPIKE'; payload?: never; traceId?: string };
+  | { type: 'SQLITE_OPFS_SPIKE'; payload?: never; traceId?: string }
+  | { type: 'SQLITE_ARCHIVE_PREVIEW'; payload: { cutoffMs: number; includeDeleted: boolean }; traceId?: string }
+  | { type: 'SQLITE_ARCHIVE_CREATE'; payload: { cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }; traceId?: string }
+  | { type: 'SQLITE_ARCHIVE_CLEANUP'; payload?: never; traceId?: string }
+  | { type: 'SQLITE_ARCHIVE_EXPORT'; payload: { stagingName: string; offset: number; length: number }; traceId?: string };
 
 /**
  * SqliteMessage として扱う type の一覧。offscreen.ts の送信元検証で使用する。
@@ -61,6 +65,10 @@ export const SQLITE_MESSAGE_TYPES = [
   'SQLITE_PURGE',
   'CONTENT_PURGE',
   'SQLITE_OPFS_SPIKE',
+  'SQLITE_ARCHIVE_PREVIEW',
+  'SQLITE_ARCHIVE_CREATE',
+  'SQLITE_ARCHIVE_CLEANUP',
+  'SQLITE_ARCHIVE_EXPORT',
 ] as const;
 
 export type SqliteMessageType = typeof SQLITE_MESSAGE_TYPES[number];
@@ -154,6 +162,49 @@ export type OffscreenContentPurgeResponse = { success: true; purged: number } | 
 /** OPFS_SPIKE: the structured feasibility report. */
 export type OffscreenOpfsSpikeResponse = { success: true; report: OpfsSpikeReport } | OffscreenFailure;
 
+// ============================================================================
+// Archive (PBI 2026-09-06-02) — preview / create / cleanup / chunked export
+// ============================================================================
+
+/** Preview: what archive_create would collect for the chosen boundary. */
+export interface ArchivePreviewData {
+  total: number;
+  starred: number;
+  deleted: number;
+  oldest: number | null;
+  newest: number | null;
+  includeDeleted: boolean;
+}
+
+/** Create: the staging file name (registered) and how many rows it holds. */
+export interface ArchiveCreateData {
+  stagingName: string;
+  recordCount: number;
+}
+
+export type OffscreenArchivePreviewResponse =
+  | { success: true; preview: ArchivePreviewData }
+  | OffscreenFailure;
+
+export type OffscreenArchiveCreateResponse =
+  | { success: true; stagingName: string; recordCount: number }
+  | OffscreenFailure;
+
+export type OffscreenArchiveCleanupResponse =
+  | { success: true; removed: string[] }
+  | OffscreenFailure;
+
+/** Chunked export of a staging file (base64-ready number[] per hop). */
+export interface ArchiveExportData {
+  chunk: number[];
+  nextOffset: number;
+  total: number;
+  done: boolean;
+}
+export type OffscreenArchiveExportResponse =
+  | { success: true; chunk: number[]; nextOffset: number; total: number; done: boolean }
+  | OffscreenFailure;
+
 /** Every response the offscreen document can send back to the Service Worker. */
 export type OffscreenResponse =
   | OffscreenHealthResponse
@@ -166,4 +217,8 @@ export type OffscreenResponse =
   | OffscreenBinaryResponse
   | OffscreenPurgeResponse
   | OffscreenContentPurgeResponse
-  | OffscreenOpfsSpikeResponse;
+  | OffscreenOpfsSpikeResponse
+  | OffscreenArchivePreviewResponse
+  | OffscreenArchiveCreateResponse
+  | OffscreenArchiveCleanupResponse
+  | OffscreenArchiveExportResponse;

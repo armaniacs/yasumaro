@@ -6,6 +6,8 @@ import type { DashboardSqliteHandlerDeps } from './deps.js';
 import { READ_ONLY_SUBTYPES, createReadOnlyHandler } from './readOnlyHandler.js';
 import { CORE_CRUD_SUBTYPES, createCoreCrudHandler } from './coreCrudHandler.js';
 import { MAINTENANCE_BATCH_SUBTYPES, createMaintenanceBatchHandler } from './maintenanceBatchHandler.js';
+import { ARCHIVE_SUBTYPES, createArchiveHandler } from './archiveHandler.js';
+import type { ArchiveDeps } from './deps.js';
 
 // Fail fast if the subtype partition ever drifts from the protocol union:
 // every subtype must land in exactly one group, so a subtype added to a
@@ -15,6 +17,7 @@ const GROUPED_SUBTYPES: readonly DashboardSqliteSubtype[] = [
   ...READ_ONLY_SUBTYPES,
   ...CORE_CRUD_SUBTYPES,
   ...MAINTENANCE_BATCH_SUBTYPES,
+  ...ARCHIVE_SUBTYPES,
 ];
 const GROUPED_UNIQUE = new Set<DashboardSqliteSubtype>(GROUPED_SUBTYPES);
 if (
@@ -30,6 +33,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
   const readOnlyHandler = createReadOnlyHandler(deps);
   const coreCrudHandler = createCoreCrudHandler(deps);
   const maintenanceBatchHandler = createMaintenanceBatchHandler(deps);
+  const archiveHandler = createArchiveHandler(deps as DashboardSqliteHandlerDeps & ArchiveDeps);
 
   return async (
     payload: DashboardSqliteRequest & { confirmToken?: string },
@@ -72,6 +76,9 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
       }
       if (CORE_CRUD_SUBTYPES.has(subtype)) {
         return await coreCrudHandler(payload);
+      }
+      if (ARCHIVE_SUBTYPES.has(subtype)) {
+        return await archiveHandler(payload);
       }
       return await maintenanceBatchHandler(payload);
     } catch (error) {

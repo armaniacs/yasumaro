@@ -8,6 +8,8 @@
  */
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
 import type { OpfsSpikeReport } from '../offscreen/opfsSpike.js';
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData } from './sqliteMessages.js';
+export type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData };
 
 /**
  * What kind of failure this was.
@@ -125,7 +127,11 @@ export type MaintainOp =
   | { type: 'purgeOldRecords'; retentionDays?: number; maxRecords?: number }
   | { type: 'purgeContent'; retentionDays?: number; maxRecords?: number; includeStarred?: boolean }
   | { type: 'opfsSpike' }
-  | { type: 'healthCheck' };
+  | { type: 'healthCheck' }
+  | { type: 'archivePreview'; cutoffMs: number; includeDeleted: boolean }
+  | { type: 'archiveCreate'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }
+  | { type: 'archiveCleanup' }
+  | { type: 'archiveExport'; stagingName: string; offset: number; length: number };
 
 export interface SqliteRpcClient {
   /** Filtered listing or FTS5/LIKE search over browsing records. */
@@ -150,6 +156,10 @@ export interface SqliteRpcClient {
   ): Promise<SqliteRpcResult<{ purged: number }>>;
   maintain(op: Extract<MaintainOp, { type: 'opfsSpike' }>): Promise<SqliteRpcResult<OpfsSpikeReport>>;
   maintain(op: Extract<MaintainOp, { type: 'healthCheck' }>): Promise<SqliteRpcResult<boolean>>;
+  maintain(op: Extract<MaintainOp, { type: 'archivePreview' }>): Promise<SqliteRpcResult<ArchivePreviewData>>;
+  maintain(op: Extract<MaintainOp, { type: 'archiveCreate' }>): Promise<SqliteRpcResult<ArchiveCreateData>>;
+  maintain(op: Extract<MaintainOp, { type: 'archiveCleanup' }>): Promise<SqliteRpcResult<{ removed: string[] }>>;
+  maintain(op: Extract<MaintainOp, { type: 'archiveExport' }>): Promise<SqliteRpcResult<ArchiveExportData>>;
   maintain(op: MaintainOp): Promise<SqliteRpcResult<unknown>>;
 
   /**

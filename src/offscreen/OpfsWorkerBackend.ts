@@ -1,6 +1,7 @@
 // src/offscreen/OpfsWorkerBackend.ts
 import type { SqliteEngineHost } from './sqliteEngineHost.js';
-import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError } from './StorageBackend.js';
+import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError, ArchivePreviewResult, ArchiveCreateResult, ArchiveCleanupResult, ArchiveExportChunkResult, ArchiveCreateParams } from './StorageBackend.js';
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData } from '../messaging/sqliteMessages.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 
 export class OpfsWorkerBackend implements StorageBackend {
@@ -57,8 +58,32 @@ export class OpfsWorkerBackend implements StorageBackend {
 
   async backupDb(): Promise<BackendOrError<BackupResult>> {
     const result = await this.engine.tryOpfsProxy<Uint8Array>('BACKUP');
-    if (result === null || result.length === 0) return { success: false, error: 'Binary backup failed' };
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
     return { success: true, data: result };
+  }
+
+  async archivePreview(cutoffMs: number, includeDeleted: boolean): Promise<BackendOrError<ArchivePreviewResult>> {
+    const result = await this.engine.tryOpfsProxy<ArchivePreviewData>('ARCHIVE_PREVIEW', { cutoffMs, includeDeleted });
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return { success: true, preview: result };
+  }
+
+  async archiveCreate(params: ArchiveCreateParams): Promise<BackendOrError<ArchiveCreateResult>> {
+    const result = await this.engine.tryOpfsProxy<ArchiveCreateData>('ARCHIVE_CREATE', params);
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return { success: true, stagingName: result.stagingName, recordCount: result.recordCount };
+  }
+
+  async archiveCleanup(): Promise<BackendOrError<ArchiveCleanupResult>> {
+    const result = await this.engine.tryOpfsProxy<string[]>('ARCHIVE_CLEANUP');
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return { success: true, removed: result };
+  }
+
+  async archiveExportChunk(stagingName: string, offset: number, length: number): Promise<BackendOrError<ArchiveExportChunkResult>> {
+    const result = await this.engine.tryOpfsProxy<ArchiveExportData>('ARCHIVE_EXPORT', { stagingName, offset, length });
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return { success: true, chunk: result.chunk, nextOffset: result.nextOffset, total: result.total, done: result.done };
   }
 
   async restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>> {

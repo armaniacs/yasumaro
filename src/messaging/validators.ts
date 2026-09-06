@@ -8,7 +8,7 @@
  */
 
 import { isServiceWorkerRequest } from './types.js';
-import { isHttpScheme } from '../utils/archiveGuards.js';
+import { isHttpScheme, cutoffMsFromLocalDate, isValidStagingName } from '../utils/archiveGuards.js';
 import type {
   ExtensionMessage,
   ValidVisitMessage,
@@ -52,6 +52,8 @@ export const VALIDATOR_LIMITS = {
   MAX_IMPORT_BYTES: 2_000_000,
   /** DASHBOARD_SQLITE restore_db payload */
   MAX_RESTORE_DB_BYTES: 10_000_000,
+  /** DASHBOARD_SQLITE archive_export chunk size (base64 hops stay under 10MB) */
+  MAX_ARCHIVE_EXPORT_CHUNK_BYTES: 8 * 1024 * 1024,
   /** DASHBOARD_SQLITE append_to_obsidian ids per request */
   MAX_APPEND_IDS: 1_000,
 } as const;
@@ -183,6 +185,45 @@ export class DashboardSqliteValidator implements MessageValidator<DashboardSqlit
       }
       if (p.ids.length > VALIDATOR_LIMITS.MAX_APPEND_IDS) {
         throw new ValidationError('DashboardSqliteValidator', `append_to_obsidian: ids exceeds ${VALIDATOR_LIMITS.MAX_APPEND_IDS}`, 'ids');
+      }
+    }
+    // Archive subtypes (PBI 2026-09-06-02): boundary validation. The worker
+    // re-derives the cutoff from the date string, so a fabricated cutoffMs
+    // pair is rejected before reaching the staging registry.
+    if (subtype === 'archive_preview' || subtype === 'archive_create') {
+      if (typeof p.cutoffDate !== 'string') {
+        throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffDate must be string`, 'cutoffDate');
+      }
+      let derivedMs: number;
+      try {
+        derivedMs = cutoffMsFromLocalDate(p.cutoffDate);
+      } catch (e) {
+        throw new ValidationError('DashboardSqliteValidator', `${subtype}: ${e instanceof Error ? e.message : 'invalid cutoffDate'}`, 'cutoffDate');
+      }
+      if (typeof p.cutoffMs !== 'number' || !Number.isFinite(p.cutoffMs)) {
+        throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffMs must be finite number`, 'cutoffMs');
+      }
+      if (p.cutoffMs !== derivedMs) {
+        throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffMs does not match cutoffDate`, 'cutoffMs');
+      }
+      if (typeof p.includeDeleted !== 'boolean') {
+        throw new ValidationError('DashboardSqliteValidator', `${subtype}: includeDeleted must be boolean`, 'includeDeleted');
+      }
+    }
+    if (subtype === 'archive_create') {
+      if (typeof p.yasumaroVersion !== 'string' || p.yasumaroVersion.length === 0 || p.yasumaroVersion.length > 64) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_create: yasumaroVersion must be 1-64 chars', 'yasumaroVersion');
+      }
+    }
+    if (subtype === 'archive_export') {
+      if (typeof p.stagingName !== 'string' || !isValidStagingName(p.stagingName)) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_export: stagingName must be a valid staging name', 'stagingName');
+      }
+      if (typeof p.offset !== 'number' || !Number.isInteger(p.offset) || p.offset < 0) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_export: offset must be a non-negative integer', 'offset');
+      }
+      if (typeof p.length !== 'number' || !Number.isInteger(p.length) || p.length <= 0 || p.length > VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES) {
+        throw new ValidationError('DashboardSqliteValidator', `archive_export: length must be 1..${VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES}`, 'length');
       }
     }
 

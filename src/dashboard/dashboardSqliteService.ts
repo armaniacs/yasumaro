@@ -5,6 +5,7 @@
  */
 
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData } from '../messaging/sqliteMessages.js';
 // PBI-05: unified SqliteResult vocabulary — both hops now share the same
 // error classification and result shape via SqliteGateway.
 // PBI 11: the DASHBOARD_SQLITE send policy (token gate, timeout, retry) lives
@@ -343,6 +344,60 @@ export function backupDb(): Promise<ServiceResult<Uint8Array>> {
  */
 export function restoreDb(data: Uint8Array): Promise<ServiceResult<void>> {
   return callDashboard({ subtype: 'restore_db', data: bytesToBase64(data) }, () => undefined, 'Restore failed');
+}
+
+// ============================================================================
+// Archive (PBI 2026-09-06-02)
+// ============================================================================
+
+/**
+ * Preview how many records archive_create would collect for the boundary.
+ * Read-only (token-exempt).
+ */
+export function archivePreview(cutoffMs: number, includeDeleted: boolean): Promise<ServiceResult<ArchivePreviewData>> {
+  return callDashboard(
+    { subtype: 'archive_preview', cutoffMs, includeDeleted },
+    (response) => {
+      if (!response.preview) throw new Error('Archive preview returned no data');
+      return response.preview;
+    },
+    'Archive preview failed',
+  );
+}
+
+/**
+ * Create the archive staging file (phase A). The main DB is NOT modified —
+ * deletion happens in PBI 2026-09-06-04. Returns the staging name so the
+ * file can be downloaded (chunked export) and later deleted (phase B).
+ */
+export function archiveCreate(params: {
+  cutoffDate: string;
+  cutoffMs: number;
+  includeDeleted: boolean;
+  yasumaroVersion: string;
+}): Promise<ServiceResult<ArchiveCreateData>> {
+  return callDashboard(
+    { subtype: 'archive_create', ...params },
+    (response) => {
+      if (!response.stagingName) throw new Error('Archive create returned no staging file');
+      return { stagingName: response.stagingName, recordCount: response.recordCount };
+    },
+    'Archive creation failed',
+  );
+}
+
+/** Sweep orphan staging files. */
+export function archiveCleanup(): Promise<ServiceResult<{ removed: string[] }>> {
+  return callDashboard({ subtype: 'archive_cleanup' }, (response) => ({ removed: response.removed }), 'Archive cleanup failed');
+}
+
+/** Read one chunk of a staging file (loop until `done`, then assemble). */
+export function archiveExportChunk(stagingName: string, offset: number, length: number): Promise<ServiceResult<ArchiveExportData>> {
+  return callDashboard(
+    { subtype: 'archive_export', stagingName, offset, length },
+    (response) => ({ chunk: response.chunk, nextOffset: response.nextOffset, total: response.total, done: response.done }),
+    'Archive export failed',
+  );
 }
 
 /**

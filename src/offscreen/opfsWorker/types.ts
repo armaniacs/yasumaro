@@ -32,6 +32,10 @@ export const WORKER_MESSAGE_TYPES = [
   'HEALTH_CHECK',
   'AUDIT_LOG_INSERT',
   'AUDIT_LOG_QUERY',
+  'ARCHIVE_PREVIEW',
+  'ARCHIVE_CREATE',
+  'ARCHIVE_CLEANUP',
+  'ARCHIVE_EXPORT',
 ] as const;
 
 export type WorkerMessageType = typeof WORKER_MESSAGE_TYPES[number];
@@ -77,6 +81,25 @@ export interface AuditLogInsertPayload {
   provider: string;
   url: string;
   created_at: number;
+}
+
+export interface ArchivePreviewPayload {
+  cutoffDate: string;
+  cutoffMs: number;
+  includeDeleted: boolean;
+}
+
+export interface ArchiveCreatePayload {
+  cutoffDate: string;
+  cutoffMs: number;
+  includeDeleted: boolean;
+  yasumaroVersion: string;
+}
+
+export interface ArchiveExportPayload {
+  stagingName: string;
+  offset: number;
+  length: number;
 }
 
 // ---------------------------------------------------------------------------
