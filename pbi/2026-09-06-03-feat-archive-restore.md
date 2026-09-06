@@ -131,3 +131,176 @@ grep -rn "MAX_IMPORT_ROWS\|MAX_IMPORT_BYTES" src/messaging/
 - [ ] コードレビュー完了
 - [ ] リファクタリング完了（グリーン後）
 - [ ] ドキュメント更新済み: `docs/SETUP_GUIDE.md`（復元節）、`CHANGELOG.md`
+
+---
+
+## 設計ノート（レビュー依頼用 / 2026-09-06 作成、feature-dev スキルによるコードベース精査後）
+
+> このセクションは実装前のレビューを受けるためのもの。実装はまだ着手していない。
+> 共通基盤（メッセージ経路、archive.db 形式、`validateArchiveEngine`、ステージング掃除、10秒タイムアウト問題、第2エンジンのスパイク）は **PBI-01 §A〜§F および PBI-02 §F2 を参照**。ここでは PBI-03 固有の設計を書く。
+
+### A. PBI-03 固有の精査結果
+
+| # | 事実 | 出典 | 影響 |
+|---|------|------|------|
+| A3-1 | **`INSERT_IGNORE_SQL` は既存**。`INSERT OR IGNORE INTO browsing_logs (${INSERT_COLS}) ...`。`INSERT_COLS` は `COLUMN_NAMES`（**id を含まない**）。`UNIQUE(url, created_at)` に基づき重複を無視 | `src/offscreen/schema.ts:130-131`、`SCHEMA_SQL:43` | 復元は `INSERT_IGNORE_SQL` + `buildInsertParams`（id 除外）をそのまま流用。**id 再採番は「INSERT 文に id 列を含めない」だけで自動的に達成される**（`id INTEGER PRIMARY KEY AUTOINCREMENT`）。archive.db 側の SELECT で id 列を取得しても、INSERT 側に渡さなければよい |
+| A3-2 | **`SELECT changes()` で挿入件数が取れる**。`insertBatch` は `INSERT OR IGNORE` をループ後に `SELECT changes() AS c` で「最後の 1 文の変更行数」を見ている（これは正しくない — ループ内の合計ではない）。IdbVfsBackend は各 INSERT 直後に `SELECT changes()` | `src/offscreen/opfsWorker/crudHandlers.ts:113-141`、`IdbVfsBackend.ts:50-52` | **復元件数の集計は 1 件ずつ `SELECT changes()` を見る**か、`SELECT COUNT(*) FROM browsing_logs` の前後差分を取る。`crudHandlers.ts:134` の `changes()` パターンは**バグ的**なので流用しない。restored / skipped は「INSERT 試行数 = archive の SELECT 件数」「restored = 前後の COUNT 差分」「skipped = 試行数 − restored」で算出 |
+| A3-3 | **URL スキーム検証は CHECK 制約にない**。`SCHEMA_SQL` の CHECK は `visit_duration >= 0` / `scroll_ratio 0..1` / `is_starred/is_deleted IN (0,1)` のみ。`url` は `TEXT NOT NULL` だけ。http/https 制限はメッセージバリデータ（`validators.ts:257-259`）が担当 | `src/offscreen/schema.ts:9-44`、`src/messaging/validators.ts:254-263` | **外部由来のアーカイブは信頼できない入力**（PBI 落とし穴）。復元前に各行の `url` を `new URL(url)` + `['http:','https:'].includes(protocol)` で検証。`javascript:` / `data:` スキームを弾く。`validators.ts` の `ManualRecordValidator` と同等ロジックを `archiveHandlers` 側で適用 |
+| A3-4 | **FTS トリガー `browsing_logs_ai` はメインDB の INSERT で自動発火**。復元で `INSERT OR IGNORE` すると FTS 索引が自動更新される | `src/offscreen/schema.ts:331-334` | 復元側で FTS を手動更新しない（二重索引になる、PBI 落とし穴）。IGNORE された行はトリガーも発火しないので整合が取れる |
+| A3-5 | **同期フラグ列は `buildInsertParams` でそのまま渡る**。`obsidian_synced` / `gist_synced` は `record.obsidian_synced ?? 0` | `src/offscreen/schema.ts:210-211` | archive.db が持つ `obsidian_synced=1` はそのまま復元される → Obsidian への再書き込みは起きない（PBI 受け入れ基準・落とし穴）。archive.db 側の SELECT で `obsidian_synced` / `gist_synced` を取得して `buildInsertParams` に渡す |
+| A3-6 | **`is_deleted` も `buildInsertParams` で渡る**（`record.is_deleted ?? 0`）。PBI-01 で「削除済み行を含める」にチェックしたアーカイブは `is_deleted=1` の行を持つ | 同上 | フラグ保持のまま復元。表示には出ないが本体容量を占める。結果表示に「アクティブ N 件 / 削除済み M 件」の内訳（PBI 受け入れ基準・落とし穴） |
+| A3-7 | **転送はステージング経由（PBI-01 §A-1, A-2）**。dashboard が選択ファイルを `archive_incoming_<nonce>.db` へ書き、メッセージはファイル名のみ。行の SELECT（第2エンジン）も INSERT（メインエンジン）も offscreen 内で完結 → バイト列・行ともメッセージに載らない | deep-dig 2026-09-06 | `MAX_IMPORT_ROWS` / `MAX_IMPORT_BYTES`（`validators.ts:49,51`）は**設計参照であり流用先ではない**（PBI 落とし穴）。行のチャンク転送は存在しない |
+| A3-8 | **`confirmToken` は破壊的操作ではないが必須**。メインDB を変化させる（件数が増える）ため。送信側自動添付（PBI-01 §A-5） | PBI 技術的考慮事項 | `archive_restore` を `TOKEN_EXEMPT_OPS` に入れない。BDD「確認トークンなしでは実行できない」は `sqlite-security-integrity.test.ts` のマトリクスに 1 行追加 |
+
+### B. PBI-03 のアーキテクチャ
+
+```
+┌─ dashboard ─────────────────────────────────────────────────────┐
+│  archivePanel.ts に「メインDBへ復元」セクション追加               │
+│    ├─ <input type="file" accept=".db"> でファイル選択            │
+│    │    → file.size チェック（PBI-02 §C2-5 と同じ上限）          │
+│    │    → file.arrayBuffer() → archiveStagingService が          │
+│    │       OPFS の archive_incoming_<nonce>.db へ書き込み        │
+│    ├─ プレビュー: archive_restore_preview { stagingName }        │
+│    │    → validateArchiveEngine() + meta 読み取り                │
+│    │    → { recordCount, cutoffDate, archivedAt, includeDeleted }│
+│    ├─ 確認: archive_restore { stagingName }（トークン自動添付）   │
+│    │    → 結果 { restored, skipped, restoredActive, restoredDeleted }│
+│    └─ 結果表示                                                   │
+└─────────────────────────────────────────────────────────────────┘
+             │ 経路は PBI-01 §B と同じ
+             ▼ opfsWorker/archiveHandlers.ts
+    ARCHIVE_RESTORE_PREVIEW:
+      createEngine(archive_incoming_<nonce>.db) → validateArchiveEngine()
+      → yasumaro_archive_meta 読み取り → close → 結果返す
+    ARCHIVE_RESTORE:
+      1. createEngine(archive_incoming_<nonce>.db)  ← 第2エンジン
+      2. validateArchiveEngine()  ← browsing_logs + yasumaro_archive_meta + トリガー0
+      3. メインエンジンで SELECT COUNT(*) → countBefore
+      4. 1 トランザクション内で:
+         第2エンジンから SELECT (COLUMN_NAMES 相当、id 除外) FROM browsing_logs ORDER BY id
+         各行: url を http/https 検証（A3-3）→ 不正なら skip カウント
+              → メインエンジンへ INSERT_IGNORE_SQL + buildInsertParams(row, domain)
+      5. メインエンジンで SELECT COUNT(*) → countAfter
+      6. restored = countAfter - countBefore
+         restoredDeleted = 復元行のうち is_deleted=1 だった数
+         restoredActive = restored - restoredDeleted
+         skipped = SELECT件数 - restored（重複 + url不正の合計）
+      7. 第2エンジン close → archive_incoming_<nonce>.db 削除（finally）
+      8. wal_checkpoint 不要（メイン INSERT のみ、既存トリガーが FTS 更新）
+```
+
+**新規ファイル**: `src/offscreen/opfsWorker/archiveHandlers.ts` に `handleArchiveRestorePreview` / `handleArchiveRestore` を追加（PBI-01/02 で作った基盤に追加）。
+
+**subtype 追加**: `archive_restore_preview`（read-only + exempt）`archive_restore`（トークン必須）。
+
+### C. PBI-03 の主要な設計判断（なぜなぜ分析の結論）
+
+#### C3-1. id 再採番 — 「INSERT 文に id 列を含めない」だけ
+
+なぜなぜ:
+- PBI 落とし穴「アーカイブの id をそのまま INSERT すると、メインDB の PRIMARY KEY 衝突で『url も created_at も異なる別レコード』が誤ってスキップされる」。
+- 既存の `INSERT_IGNORE_SQL` は `INSERT_COLS`（`COLUMN_NAMES`、id 含まない）を使う。
+- PBI-01 では archive.db に id を保持するため専用の `ARCHIVE_INSERT_SQL`（id 含む）を追加した（PBI-01 §C-3）。
+
+→ **復元は既存の `INSERT_IGNORE_SQL` + `buildInsertParams`（id 除外）をそのまま使う**。archive.db 側の SELECT では id を取得**しない**（`SELECT ${COLUMN_NAMES.join(', ')} FROM browsing_logs`、`ARCHIVE_SELECT_COLUMNS` は使わない）。id 再採番は SQLite の AUTOINCREMENT に完全に委任。追加コード不要。
+
+単体テスト: 復元後の行の id が archive の元 id と異なる（AUTOINCREMENT で採番）。
+
+#### C3-2. 重複判定 — `INSERT OR IGNORE` + `UNIQUE(url, created_at)` に委任
+
+なぜなぜ:
+- BDD「メインDB に既に存在するレコード（同じ url + created_at）は重複取り込みしない」。
+- `SCHEMA_SQL` に `UNIQUE(url, created_at)` が既にある。
+- `INSERT OR IGNORE` は UNIQUE 違反時に静かにスキップ。
+
+→ 重複判定ロジックを**書かない**。`INSERT_IGNORE_SQL` に委任。「既存行は更新されず保持される」（BDD、統合テスト）も IGNORE の挙動そのもの。
+
+#### C3-3. 復元件数の集計 — COUNT 前後差分（`changes()` は使わない）
+
+なぜなぜ（A3-2 の深掘り）:
+- `crudHandlers.ts:134` の `handleInsertBatch` は `INSERT OR IGNORE` ループ後に `SELECT changes() AS c` を見ているが、これは**最後の 1 文の変更行数**であり合計ではない（潜在バグ）。
+- IdbVfsBackend は各 INSERT 直後に `changes()` を見て加算しているが、行数分の往復が発生。
+- ステージング方式では offscreen 内で完結するので往復コストは問題にならないが、シンプルさを優先。
+
+→ **トランザクション前後で `SELECT COUNT(*) FROM browsing_logs` を取り、差分 = restored**。`skipped = SELECT件数 - restored`。これは重複スキップ + url 不正スキップの合計。内訳が必要なら url 不正を別カウント。
+
+単体テスト: restored / skipped カウントが「重複 3 件 + 不正 URL 1 件 + 新規 6 件のアーカイブ」で `restored=6, skipped=4`。
+
+#### C3-4. url スキーム検証 — 行ごとに `new URL()` + protocol チェック
+
+なぜなぜ（A3-3）:
+- 外部由来アーカイブは信頼できない入力。`javascript:` / `data:` スキームが `url` に入っていると、後で dashboard が `<a href>` でレンダリングした際に XSS リスク。
+- メッセージバリデータ（`validators.ts`）は archive_restore の payload（ファイル名のみ）は検証するが、**ファイル内の行**は検証しない。
+- CHECK 制約に url スキーム検証はない（A3-3）。
+
+→ `handleArchiveRestore` 内で各行の `url` を検証:
+```ts
+function isHttpUrl(url: string): boolean {
+  try { return ['http:', 'https:'].includes(new URL(url).protocol); }
+  catch { return false; }
+}
+```
+不正な行は INSERT せず skip カウント。`validators.ts:257-259` と同じロジックを共通ヘルパーに切り出して両方から使うことを検討（下記 G3-2）。
+
+#### C3-5. 部分更新の禁止 — 1 トランザクション
+
+なぜなぜ:
+- BDD「復元の途中失敗でメインDB が部分更新されない」。
+- ステージング方式なので行のチャンク転送はない（A3-7）→ 全行を 1 トランザクションで処理できる。
+- 10万件を 1 トランザクションで INSERT すると時間がかかる（PBI-01 §C-6 の 10 秒問題と同じ）。
+
+→ `withTransaction(ctx, async () => { for (row of rows) { ... } })`（`handlers.ts:41` の `BEGIN IMMEDIATE` / `COMMIT` / best-effort `ROLLBACK`）。途中失敗で全ロールバック。**10万件の場合の時間は PBI-01 §C-6 と同じくスパイク（F3）で実測し、超過するならポーリング方式**（`archive_restore` が開始応答を返し、`archive_restore_status` でポーリング）。
+
+#### C3-6. 編集済みレコードの扱い（PBI-02 連携）
+
+PBI 落とし穴「PBI-02 で url を変更したレコードは、復元時に『新しい記録』として追加される（元の記録との重複判定が成立しない）」。`created_at` は `UPDATABLE_FIELDS` に含まれない（PBI-02 §A2-7）ためアーカイブ編集で変更不可 → url を変えなければ重複判定は成立する。この仕様をドキュメントに明記。**PBI-03 は PBI-02 に依存しない**（編集されていないアーカイブの復元は単独で完結）。
+
+### D. テスト戦略の具体化
+
+- **E2E**（`opfs-fts5-search.spec.ts` パターン、PBI-01 の E2E と組み合わせ）: アーカイブ作成（PBI-01）→ 復元の往復で `get_count` が元に戻る。復元されたレコードがメインDB の検索でヒット。
+- **統合**（`sqliteTestApi.ts` パターン）:
+  - 重複スキップ（`url + created_at` 完全一致の既存行は更新されず保持）
+  - 復元後の FTS 検索ヒット（`browsing_logs_ai` トリガー経由）
+  - id 再採番（元 id を引き継がない）
+  - 大容量アーカイブ（10万件相当）が長時間トランザクションでもタイムアウト・部分更新なしに完結（F3 の実測を反映）
+  - 無効ファイル（`browsing_logs` なし）/ **トリガー含有ファイル → 拒否** / トークンなし → 拒否
+  - ステージングファイル（`archive_incoming_*`）が実行後・失敗後に残らない
+  - url 不正行（`javascript:` スキーム）がスキップされ skip カウントに入る
+  - 部分更新の禁止: 途中で例外 → メインDB が変化しない
+- **単体**: id 再採番の検証 / meta 検証・表示用整形 / 結果集計（restored / skipped / restoredActive / restoredDeleted）/ `isHttpUrl` の境界 / 例外ハンドリング。
+
+### E. ドキュメント追記事項
+
+- 「編集済みレコードの扱い」（C3-6）— url を変えたレコードは新記録として追加される旨。
+- 「同期フラグの扱い」— `obsidian_synced=1` のまま復元 → Obsidian 再書き込みなし。再同期したいユーザーには既存の `resync_legacy` を案内。
+- 「削除済み行の復元」— `is_deleted=1` 行はフラグ保持で復元、表示に出ないが容量を占める。結果表示の内訳。
+
+### F3. PBI-03 の実機検証項目
+
+PBI-02 §F2 のスパイクを共有（第2エンジン）。追加で:
+
+| 検証内容 | 合格基準 | 不合格時 |
+|---------|---------|---------|
+| 10万件を 1 トランザクションで `INSERT OR IGNORE` する実測時間（第2エンジン SELECT → メインエンジン INSERT、offscreen 内完結） | 10 秒以内（SW→offscreen タイムアウト、PBI-01 §A-3） | `archive_restore` が開始応答を返し `archive_restore_status` でポーリング（PBI-01 §C-6 と共通の非同期パターン） |
+| 10万件トランザクション中のメモリ | 実用範囲 | バッチコミット（例: 5000 件ごとに COMMIT → 部分更新のリスクとのトレードオフ。BDD「部分更新の禁止」と矛盾するので慎重に） |
+
+結果は `dev-docs/plans/2026-09-06-archive-spike.md` に記録。
+
+### G3. レビューで意見が欲しい点
+
+1. **G3-1: 10万件の 1 トランザクション**（C3-5, F3）— 部分更新禁止（BDD）と、長時間トランザクション・メモリ・タイムアウトのトレードオフ。ポーリング方式で「1 トランザクション + 進捗表示」を維持するのが妥当か、バッチコミットを許容して BDD を緩めるべきか。
+2. **G3-2: url 検証ロジックの共通化**（C3-4）— `validators.ts` の http/https チェックを共通ヘルパーに切り出して `archiveHandlers` と共有するか、独立実装にするか。
+3. **G3-3: skipped の内訳**（C3-3）— 「重複」と「url 不正」を分けて結果表示するか、合算で十分か。
+4. **G3-4: プレビューの検証コスト**（B）— `archive_restore_preview` で `validateArchiveEngine()`（トリガー数チェック等）まで走らせると、大きなファイルで時間がかかる。プレビューは meta 読み取りのみにして、完全検証は `archive_restore` の冒頭に寄せるか。
+
+## 敵対的レビュー反映（2026-09-06・adversarial-code-review / 検証済み指摘に基づく規定。以下が本文と矛盾する場合は本節を優先）
+
+1. **検証への突合せ継承（必須）**: PBI-02 の allowlist 構造検証＋`yasumaro_archive_meta.record_count` と `SELECT COUNT(*)` の突合せ（不一致は**拒否**）を適用。列互換は `PRAGMA table_xinfo` 照合で担保（将来のスキーマ列追加にも追従）
+2. **行単位のエラー処理（必須）**: 行投入は行単位 try/catch（既存 crudHandlers の慣行）とし、CHECK/型違反行は `skipped` と別分類の `skipped_invalid` として集計・表示（違反1行で全ROLLBACKになる経路と、違反行が restored/skipped に紛れる経路の両方を封じる）
+3. **domain は復元時再計算**: `extractDomain(url)` で再計算し、アーカイブ保存値は信頼しない（既存 insert の `record.domain || extractDomain` 慣行と整合）
+4. **QueryCache 無効化（必須）**: 復元成功後、dashboard 側で History の QueryCache を無効化する手順を実装手順に追加（既存 star/delete と同じ mutation 無効化経路。復元分が一覧に即時出ない鮮度バグを防ぐ）
+5. **restoredDeleted の定義**: 「実挿入に成功した行のうち is_deleted=1」に限定（INSERT試行の成否を行単位で集計。`changes()` や COUNT 差分には依存しない）。内訳合計が restored と一致することを受け入れ基準に追加
+6. **上限の明確化**: 復元対象ファイルは PBI-02 と共通のサイズ上限。dashboard 側の `file.size` チェックに加え、**worker 側でも staging ファイルサイズを再検証**（二重化）。実行中は PBI-01 と同じ single-flight ガードで再実行を拒否。件数上限は設けない（サイズ上限で有界）
+7. **PREVIEW の staging は意図的保持**: プレビュー→実行で同一stagingを再利用するため保持し、RESTORE実行・閉じる・ページ離脱のいずれかで削除（孤児掃除でも回収）。意図的保持である旨と掃除タイミングを仕様として明記
+8. **synced=0 の大量投入**: Obsidian/Gist への再書き込みは既存の limit 付きバッチ同期（SyncBatchRunner）が段階処理する旨を仕様に明記（洪水はバッチ上限で有界）
