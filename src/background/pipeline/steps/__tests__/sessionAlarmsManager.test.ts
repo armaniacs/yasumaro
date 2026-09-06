@@ -11,6 +11,7 @@
  */
 
 import { vi } from 'vitest';;
+import type { Mock } from 'vitest';
 
 vi.mock('../../../../utils/logger.js', () => ({
   logInfo: vi.fn().mockResolvedValue(undefined),
@@ -140,8 +141,8 @@ vi.mock('../../../../utils/storage/quota.js', async (importOriginal) => {
 });;
 
 // chrome.alarms のモック
-let mockAlarmsCreate: vi.Mock;
-let mockAlarmsClear: vi.Mock;
+let mockAlarmsCreate: Mock;
+let mockAlarmsClear: Mock;
 let capturedListener: ((alarm: chrome.alarms.Alarm) => void) | null = null;
 
 function setupChromeAlarms() {
@@ -209,7 +210,7 @@ describe('sessionAlarmsManager', () => {
 
     it('chrome.storage.local.set が失敗しても throw しない', async () => {
       const { updateActivity } = await loadFreshModule();
-      (chrome.storage.local.set as vi.Mock).mockRejectedValueOnce(new Error('Storage error'));
+      (chrome.storage.local.set as Mock).mockRejectedValueOnce(new Error('Storage error'));
 
       await expect(updateActivity()).resolves.not.toThrow();
     });
@@ -370,7 +371,7 @@ describe('sessionAlarmsManager', () => {
 
       storageData['MASTER_PASSWORD_ENABLED'] = true;
       storageData['session_last_activity'] = Date.now() - 31 * 60 * 1000;
-      (chrome.storage.local.set as vi.Mock).mockRejectedValueOnce(new Error('Lock storage error'));
+      (chrome.storage.local.set as Mock).mockRejectedValueOnce(new Error('Lock storage error'));
 
       capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
 
@@ -393,7 +394,7 @@ describe('sessionAlarmsManager', () => {
 
       await new Promise((r) => setTimeout(r, 50));
 
-      const setCalls = (chrome.storage.local.set as vi.Mock).mock.calls.filter(
+      const setCalls = (chrome.storage.local.set as Mock).mock.calls.filter(
         (call: unknown[]) => (call[0] as any)?.IS_LOCKED !== undefined
       );
       expect(setCalls.length).toBe(0);
@@ -409,7 +410,7 @@ describe('sessionAlarmsManager', () => {
 
       await new Promise((r) => setTimeout(r, 100));
 
-      const setCalls = (chrome.storage.local.set as vi.Mock).mock.calls.filter(
+      const setCalls = (chrome.storage.local.set as Mock).mock.calls.filter(
         (call: unknown[]) => (call[0] as any)?.IS_LOCKED !== undefined
       );
       expect(setCalls.length).toBe(0);
@@ -426,7 +427,7 @@ describe('sessionAlarmsManager', () => {
 
       await new Promise((r) => setTimeout(r, 100));
 
-      const setCalls = (chrome.storage.local.set as vi.Mock).mock.calls.filter(
+      const setCalls = (chrome.storage.local.set as Mock).mock.calls.filter(
         (call: unknown[]) => (call[0] as any)?.IS_LOCKED !== undefined
       );
       expect(setCalls.length).toBe(0);
@@ -441,7 +442,7 @@ describe('sessionAlarmsManager', () => {
 
       await new Promise((r) => setTimeout(r, 100));
 
-      const setCalls = (chrome.storage.local.set as vi.Mock).mock.calls.filter(
+      const setCalls = (chrome.storage.local.set as Mock).mock.calls.filter(
         (call: unknown[]) => (call[0] as any)?.IS_LOCKED !== undefined
       );
       expect(setCalls.length).toBe(0);
@@ -451,7 +452,7 @@ describe('sessionAlarmsManager', () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
 
-      (chrome.storage.local.get as vi.Mock).mockRejectedValueOnce(new Error('Get error'));
+      (chrome.storage.local.get as Mock).mockRejectedValueOnce(new Error('Get error'));
 
       capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
 

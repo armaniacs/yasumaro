@@ -3,6 +3,7 @@
  * Unit tests for service-worker.ts handlers after refactoring.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Mock } from 'vitest';
 
 const mockSettingsGetAll = vi.hoisted(() => vi.fn().mockResolvedValue({}));
 
@@ -598,7 +599,6 @@ describe('service-worker handlers', () => {
         };
 
         // Default storage mock
-        // @ts-expect-error - vi.fn() type narrowing
         mockSettingsGetAll.mockResolvedValue({
             PRIVACY_MODE: 'full_pipeline',
             PII_SANITIZE_LOGS: true,
@@ -1211,7 +1211,7 @@ describe('service-worker handlers', () => {
         });
 
         it('should propagate errors during update when getSettings fails', async () => {
-            (mockSettingsGetAll as unknown as vi.Mock).mockRejectedValueOnce(new Error('Settings error'));
+            (mockSettingsGetAll as unknown as Mock).mockRejectedValueOnce(new Error('Settings error'));
             await expect(serviceWorker.handleInstalled({
                 reason: 'update',
                 previousVersion: '1.0.0'
@@ -1227,7 +1227,7 @@ describe('service-worker handlers', () => {
 
         it('should handle getSettings error during rehydration', async () => {
             // Mock getSettings to throw (isCacheInitialized is false initially)
-            (mockSettingsGetAll as unknown as vi.Mock).mockRejectedValueOnce(new Error('Failed to get settings'));
+            (mockSettingsGetAll as unknown as Mock).mockRejectedValueOnce(new Error('Failed to get settings'));
 
             await serviceWorker.handleStartup();
             expect(logError).toHaveBeenCalledWith(
@@ -1468,7 +1468,6 @@ describe('service-worker handlers', () => {
 
         it('should handle button index 1 (skip) without throwing', async () => {
             const mockGetPendingPages = pendingStorage.getPendingPages as ReturnType<typeof vi.fn>;
-            // @ts-expect-error - vi.fn() type narrowing
             mockGetPendingPages.mockResolvedValue([
                 { url: 'https://example.com', title: 'Example' }
             ]);
@@ -2004,7 +2003,6 @@ describe('service-worker handlers', () => {
     describe('handleManualRecord', () => {
         beforeEach(() => {
             // Clear in-memory manual-record content cache for test isolation
-            // @ts-expect-error - accessing exported test helper via namespace import
             serviceWorker.resetManualRecordCache?.();
         });
 
@@ -2067,7 +2065,6 @@ describe('service-worker handlers', () => {
             const sender = {} as chrome.runtime.MessageSender;
 
             // Disable auto content fetch
-            // @ts-expect-error - vi.fn() type narrowing
             mockSettingsGetAll.mockResolvedValue({
                 PRIVACY_MODE: 'full_pipeline',
                 PII_SANITIZE_LOGS: true,
@@ -2254,7 +2251,7 @@ describe('service-worker handlers', () => {
                 expect.any(Function)
             );
             // Verify the updater sets cleansedReason to 'both'
-            const calls = (savedUrlStore.updateSavedUrlEntry as vi.Mock).mock.calls;
+            const calls = (savedUrlStore.updateSavedUrlEntry as Mock).mock.calls;
             const updater = calls[calls.length - 1][1] as (entry: any) => any;
             const result = updater({ url: 'https://example.com', timestamp: 0 });
             expect(result.cleansedReason).toBe('both');
@@ -2274,7 +2271,7 @@ describe('service-worker handlers', () => {
                 'https://example.com',
                 expect.any(Function)
             );
-            const calls = (savedUrlStore.updateSavedUrlEntry as vi.Mock).mock.calls;
+            const calls = (savedUrlStore.updateSavedUrlEntry as Mock).mock.calls;
             const updater = calls[calls.length - 1][1] as (entry: any) => any;
             const result = updater({ url: 'https://example.com', timestamp: 0 });
             expect(result.cleansedReason).toBe('hard');
@@ -2294,7 +2291,7 @@ describe('service-worker handlers', () => {
                 'https://example.com',
                 expect.any(Function)
             );
-            const calls = (savedUrlStore.updateSavedUrlEntry as vi.Mock).mock.calls;
+            const calls = (savedUrlStore.updateSavedUrlEntry as Mock).mock.calls;
             const updater = calls[calls.length - 1][1] as (entry: any) => any;
             const result = updater({ url: 'https://example.com', timestamp: 0 });
             expect(result.cleansedReason).toBe('keyword');

@@ -4,6 +4,7 @@
  * ブルーチーム報告 P0: fetchにタイムアウトを追加
  */
 
+import type { Mock } from 'vitest';
 import { ObsidianClient } from '../obsidianClient.js';
 import * as storage from '../../utils/storage/types.js';
 import { addLog, LogType } from '../../utils/logger.js';
@@ -57,14 +58,13 @@ vi.mock('../../utils/logger.js', () => ({
 
 describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
   let obsidianClient: ObsidianClient;
-  let mockFetch: vi.Mock;
+  let mockFetch: Mock;
 
   beforeEach(() => {
     obsidianClient = new ObsidianClient();
     vi.clearAllMocks();
 
     // storageのデフォルトモック
-    // @ts-expect-error - vi.fn() type narrowing issue
     mockGetSettings.mockResolvedValue({
       OBSIDIAN_API_KEY: 'test_key',
       OBSIDIAN_PROTOCOL: 'https',
@@ -90,7 +90,6 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
 
   describe('_fetchExistingContent - タイムアウト', () => {
     it('正常応答の場合はタイムアウトが発生しないこと', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockFetch.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve('Existing content')
@@ -116,7 +115,6 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     });
 
     it('404の場合は空文字列を返すこと', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockFetch.mockResolvedValue({
         ok: false,
         status: 404,
@@ -132,7 +130,6 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     });
 
     it('AbortErrorでタイムアウトエラーをスローすること', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockFetch.mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError'));
 
       await expect(
@@ -144,7 +141,6 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     });
 
     it('AbortControllerのsignalがfetchに渡される', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockFetch.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve('content')
@@ -163,7 +159,6 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
 
   describe('_writeContent - タイムアウト', () => {
     it('正常応答の場合はタイムアウトが発生しないこと', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockFetch.mockResolvedValue({
         ok: true
       });
@@ -189,7 +184,6 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     });
 
     it('エラー応答の場合はエラーをスローすること', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockFetch.mockResolvedValue({
         ok: false,
         text: () => Promise.resolve('Error')
@@ -205,7 +199,6 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     });
 
     it('AbortErrorでタイムアウトエラーをスローすること', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockFetch.mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError'));
 
       await expect(
@@ -220,7 +213,6 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
 
   describe('testConnection - タイムアウト', () => {
     it('正常応答の場合は成功を返すこと', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockFetch.mockResolvedValue({
         ok: true
       });
@@ -232,7 +224,6 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     });
 
     it('エラー応答の場合は失敗を返すこと', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockFetch.mockResolvedValue({
         ok: false,
         status: 500,
@@ -246,7 +237,6 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     });
 
     it('タイムアウト時はタイムアウトメッセージを返すこと', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockFetch.mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError'));
 
       const result = await obsidianClient.testConnection();
@@ -256,7 +246,6 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
     });
 
     it('ネットワークエラー時は適切なメッセージを返すこと', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockFetch.mockRejectedValue(new Error('Failed to fetch'));
 
       const result = await obsidianClient.testConnection();
@@ -268,7 +257,6 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
 
   describe('ネットワークエラー処理', () => {
     it('ネットワークエラーが適切に伝播される', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockFetch.mockRejectedValue(new Error('Network error'));
 
       await expect(

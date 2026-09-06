@@ -6,6 +6,7 @@
  */
 
 import { vi } from 'vitest';;
+import type { Mock } from 'vitest';
 const { hoistedMockGet, hoistedMockSave } = vi.hoisted(() => ({
   hoistedMockGet: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
   hoistedMockSave: vi.fn(() => Promise.resolve()),
@@ -489,7 +490,7 @@ describe('ublockImport/index.ts', () => {
 
     test('should handle file read error on drop', async () => {
       const { readFile } = await import('../fileReader.js');
-      (readFile as vi.Mock).mockRejectedValueOnce(new Error('Read error'));
+      (readFile as Mock).mockRejectedValueOnce(new Error('Read error'));
 
       setupUblockDOM();
       const { setupDragAndDrop } = await import('../index.js');
@@ -615,7 +616,7 @@ describe('ublockImport/index.ts', () => {
 
     test('should handle URL import error', async () => {
       const { fetchFromUrl } = await import('../urlFetcher.js');
-      (fetchFromUrl as vi.Mock).mockRejectedValueOnce(new Error('Network error'));
+      (fetchFromUrl as Mock).mockRejectedValueOnce(new Error('Network error'));
 
       setupUblockDOM();
       const urlInput = document.getElementById('uBlockUrlInput') as HTMLInputElement;
@@ -713,7 +714,7 @@ describe('ublockImport/index.ts', () => {
       global.URL.revokeObjectURL = vi.fn();
 
       const { settingsRepository } = await import('../../../../utils/storage/SettingsRepository.js');
-      (settingsRepository.getAll as vi.Mock).mockImplementation(() => Promise.resolve({
+      (settingsRepository.getAll as Mock).mockImplementation(() => Promise.resolve({
         ublock_sources: [{ url: 'manual', blockDomains: ['example.com'], exceptionDomains: [] }],
         ublock_format_enabled: false,
       }));
@@ -736,7 +737,7 @@ describe('ublockImport/index.ts', () => {
     test('should handle export error', async () => {
       setupUblockDOM();
       const { settingsRepository } = await import('../../../../utils/storage/SettingsRepository.js');
-      (settingsRepository.getAll as vi.Mock).mockImplementation(() => Promise.reject(new Error('Storage error')));
+      (settingsRepository.getAll as Mock).mockImplementation(() => Promise.reject(new Error('Storage error')));
 
       const { init } = await import('../index.js');
       await init();
@@ -752,7 +753,7 @@ describe('ublockImport/index.ts', () => {
 
     test('should handle copy error', async () => {
       const { copyToClipboard } = await import('../uiRenderer.js');
-      (copyToClipboard as vi.Mock).mockRejectedValueOnce(new Error('Clipboard error'));
+      (copyToClipboard as Mock).mockRejectedValueOnce(new Error('Clipboard error'));
 
       setupUblockDOM();
       const textarea = document.getElementById('uBlockFilterInput') as HTMLTextAreaElement;
@@ -830,7 +831,7 @@ describe('ublockImport/index.ts', () => {
 
     test('should handle saveUblockSettings error', async () => {
       const { saveUblockSettings } = await import('../sourceManager.js');
-      (saveUblockSettings as vi.Mock).mockRejectedValueOnce(new Error('Save error'));
+      (saveUblockSettings as Mock).mockRejectedValueOnce(new Error('Save error'));
 
       document.body.innerHTML = `
         <input type="checkbox" id="ublockFormatEnabled" checked />
@@ -902,7 +903,7 @@ describe('ublockImport/index.ts', () => {
     test('should load file content into textarea on successful file select', async () => {
       setupUblockDOM();
       const { readFile } = await import('../fileReader.js');
-      (readFile as vi.Mock).mockResolvedValueOnce('||example.com^\n||ads.net^');
+      (readFile as Mock).mockResolvedValueOnce('||example.com^\n||ads.net^');
 
       const { init } = await import('../index.js');
       await init();
@@ -949,7 +950,7 @@ describe('ublockImport/index.ts', () => {
     test('should handle file read error', async () => {
       setupUblockDOM();
       const { readFile } = await import('../fileReader.js');
-      (readFile as vi.Mock).mockRejectedValueOnce(new Error('File read failed'));
+      (readFile as Mock).mockRejectedValueOnce(new Error('File read failed'));
 
       const { init } = await import('../index.js');
       await init();
@@ -983,14 +984,14 @@ describe('ublockImport/index.ts', () => {
 
     test('should reload source and show rule count diff on success', async () => {
       const { settingsRepository } = await import('../../../../utils/storage/SettingsRepository.js');
-      (settingsRepository.getAll as vi.Mock).mockImplementation(() => Promise.resolve({
+      (settingsRepository.getAll as Mock).mockImplementation(() => Promise.resolve({
         ublock_sources: [
           { url: 'https://example.com/filters.txt', blockDomains: ['example.com'], exceptionDomains: [], ruleCount: 2 },
         ],
       }));
 
       const { reloadSource } = await import('../sourceManager.js');
-      (reloadSource as vi.Mock).mockResolvedValueOnce({
+      (reloadSource as Mock).mockResolvedValueOnce({
         sources: [{ url: 'https://example.com/filters.txt', blockDomains: ['example.com', 'new.com'], exceptionDomains: [], ruleCount: 5 }],
         ruleCount: 5,
       });
@@ -1029,14 +1030,14 @@ describe('ublockImport/index.ts', () => {
 
     test('should handle reload error and restore button state', async () => {
       const { settingsRepository } = await import('../../../../utils/storage/SettingsRepository.js');
-      (settingsRepository.getAll as vi.Mock).mockImplementation(() => Promise.resolve({
+      (settingsRepository.getAll as Mock).mockImplementation(() => Promise.resolve({
         ublock_sources: [
           { url: 'https://example.com/filters.txt', blockDomains: ['example.com'], exceptionDomains: [], ruleCount: 2 },
         ],
       }));
 
       const { reloadSource } = await import('../sourceManager.js');
-      (reloadSource as vi.Mock).mockRejectedValueOnce(new Error('Network error'));
+      (reloadSource as Mock).mockRejectedValueOnce(new Error('Network error'));
 
       const { renderSourceList } = await import('../uiRenderer.js');
 
@@ -1064,14 +1065,14 @@ describe('ublockImport/index.ts', () => {
 
     test('should handle reload when source has no ruleCount', async () => {
       const { settingsRepository } = await import('../../../../utils/storage/SettingsRepository.js');
-      (settingsRepository.getAll as vi.Mock).mockImplementation(() => Promise.resolve({
+      (settingsRepository.getAll as Mock).mockImplementation(() => Promise.resolve({
         ublock_sources: [
           { url: 'https://example.com/filters.txt', blockDomains: ['example.com'], exceptionDomains: [] },
         ],
       }));
 
       const { reloadSource } = await import('../sourceManager.js');
-      (reloadSource as vi.Mock).mockResolvedValueOnce({
+      (reloadSource as Mock).mockResolvedValueOnce({
         sources: [{ url: 'https://example.com/filters.txt', blockDomains: ['example.com'], exceptionDomains: [], ruleCount: 3 }],
         ruleCount: 3,
       });
@@ -1128,7 +1129,7 @@ describe('ublockImport/index.ts', () => {
 
     test('should handle delete error', async () => {
       const { deleteSource } = await import('../sourceManager.js');
-      (deleteSource as vi.Mock).mockRejectedValueOnce(new Error('Delete failed'));
+      (deleteSource as Mock).mockRejectedValueOnce(new Error('Delete failed'));
 
       const { renderSourceList } = await import('../uiRenderer.js');
 

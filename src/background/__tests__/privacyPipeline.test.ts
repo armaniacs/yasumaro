@@ -40,10 +40,8 @@ describe('PrivacyPipeline', () => {
   };
 
   const mockAiService = {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
     getSupportedModes: vi.fn().mockReturnValue(['local_only', 'full_pipeline']),
-    // @ts-expect-error - vi.fn() type narrowing issue
   
     generateSummary: vi.fn().mockImplementation(
       (_content: string, options?: { mode?: string }) => {
@@ -155,9 +153,7 @@ describe('PrivacyPipeline', () => {
     it('LLMがタグ付き形式で返したとき、summary は parseTagsFromSummary 後のテキストになる', async () => {
       const llmSummary = '#IT・プログラミング #インフラ | 1行目要約\n\n詳細説明\n\n#カテゴリ1 #カテゴリ2 | 要約文（改行なし）';
       const mockAiWithTags = {
-        // @ts-expect-error
         getSupportedModes: vi.fn().mockReturnValue(['full_pipeline']),
-        // @ts-expect-error
         generateSummary: vi.fn().mockResolvedValue({ summary: llmSummary })
       };
       const settingsNoLocal = { [StorageKeys.PRIVACY_MODE]: 'masked_cloud', [StorageKeys.PII_SANITIZE_LOGS]: false };
@@ -187,9 +183,7 @@ describe('PrivacyPipeline', () => {
     it('返される summary に \\n が含まれない（保存・表示前に正規化済み）', async () => {
       const llmSummary = '1行目\n\n2行目\n3行目';
       const mockAiNoLocal = {
-        // @ts-expect-error
         getSupportedModes: vi.fn().mockReturnValue(['full_pipeline']),
-        // @ts-expect-error
         generateSummary: vi.fn().mockResolvedValue({ summary: llmSummary })
       };
       const settingsNoLocal = { [StorageKeys.PRIVACY_MODE]: 'masked_cloud', [StorageKeys.PII_SANITIZE_LOGS]: false };

@@ -12,7 +12,6 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
   beforeEach(() => {
     // chrome.i18n.getMessageのモック
     mockGetMsg = vi.fn();
-    // @ts-expect-error - vi.fn() type narrowing issue
   
     mockGetMsg.mockImplementation((key) => {
       const messages = {

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { formatTimeAgo, checkPageStatus } from '../statusChecker.js';
 import { RecordingCache } from '../../background/__tests__/helpers/recordingCache.js';
 import * as storageSavedUrls from '../../utils/storage/savedUrlRepository.js';
@@ -134,13 +135,13 @@ describe('checkPageStatus', () => {
     });
 
     // Mock storage
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
       ublock_sources: []
     });
-    (storageSavedUrls.getSavedUrlsWithTimestamps as vi.Mock).mockResolvedValue(new Map());
+    (storageSavedUrls.getSavedUrlsWithTimestamps as Mock).mockResolvedValue(new Map());
   });
 
   afterEach(() => {
@@ -159,7 +160,7 @@ describe('checkPageStatus', () => {
 
   it('should detect whitelisted domain', async () => {
     const url = 'https://example.com/page';
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'whitelist',
       domain_whitelist: ['example.com'],
       domain_blacklist: [],
@@ -194,7 +195,7 @@ describe('checkPageStatus', () => {
       cache: [[normalizedUrl, privacyInfo]]
     });
 
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
@@ -215,9 +216,9 @@ describe('checkPageStatus', () => {
     const url = 'https://example.com/page';
     const savedTimestamp = Date.now() - 5 * 60 * 1000; // 5分前
     const savedUrls = new Map([[url, savedTimestamp]]);
-    (storageSavedUrls.getSavedUrlsWithTimestamps as vi.Mock).mockResolvedValue(savedUrls);
+    (storageSavedUrls.getSavedUrlsWithTimestamps as Mock).mockResolvedValue(savedUrls);
 
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
@@ -261,7 +262,7 @@ describe('checkPageStatus', () => {
       cache: [[urlWithoutSlash, privacyInfo]]
     });
 
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
@@ -297,7 +298,7 @@ describe('checkPageStatus', () => {
       cache: [[urlWithoutFragment, privacyInfo]]
     });
 
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
@@ -331,7 +332,7 @@ describe('checkPageStatus', () => {
       cache: [[rootUrl, privacyInfo]]
     });
 
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
@@ -347,7 +348,7 @@ describe('checkPageStatus', () => {
 
   it('should detect blacklisted domain', async () => {
     const url = 'https://blocked.com/page';
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'blacklist',
       domain_whitelist: [],
       domain_blacklist: ['blocked.com'],
@@ -375,7 +376,7 @@ describe('checkPageStatus', () => {
   it('should handle main error and return default status', async () => {
     const url = 'https://example.com/page';
     // Make getSettings throw to trigger main catch block
-    (mockGetAll as vi.Mock).mockRejectedValueOnce(new Error('Storage error'));
+    (mockGetAll as Mock).mockRejectedValueOnce(new Error('Storage error'));
 
     const result = await checkPageStatus(url);
 

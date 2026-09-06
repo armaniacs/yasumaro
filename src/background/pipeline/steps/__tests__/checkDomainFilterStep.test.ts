@@ -8,6 +8,7 @@
  */
 
 import { vi } from 'vitest';;
+import type { MockedFunction } from 'vitest';
 
 vi.mock('../../../../utils/logger.js', () => ({
   addLog: vi.fn(),
@@ -23,7 +24,7 @@ import { checkDomainFilterStep } from '../checkDomainFilterStep.js';
 import * as domainUtils from '../../../../utils/domainUtils.js';
 import type { RecordingContext } from '../../types.js';
 
-const mockIsDomainAllowed = domainUtils.isDomainAllowed as vi.MockedFunction<typeof domainUtils.isDomainAllowed>;
+const mockIsDomainAllowed = domainUtils.isDomainAllowed as MockedFunction<typeof domainUtils.isDomainAllowed>;
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {

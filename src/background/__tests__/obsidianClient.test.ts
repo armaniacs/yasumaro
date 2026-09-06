@@ -65,7 +65,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     vi.clearAllMocks();
 
     // storageのデフォルトモック
-    // @ts-expect-error - vi.fn() type narrowing issue
   
     mockGetSettings.mockResolvedValue({});
     storage.StorageKeys = {
@@ -79,7 +78,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
 
   describe('APIキーが提供されていない場合のエラーハンドリング', () => {
     it('APIキーがない場合、ユーザーに分かりやすいエラーメッセージがスローされること（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({ OBSIDIAN_API_KEY: '' });
 
@@ -90,7 +88,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('エラーメッセージがユーザーに分かりやすい形式であること（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({ OBSIDIAN_API_KEY: '' });
 
@@ -104,7 +101,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
 
   describe('URLがエラーメッセージに含まれないこと（修正後）', () => {
     it('接続失敗時、完全なURLがエラーメッセージに含まれないこと（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -114,7 +110,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       const fetchError = new Error('Failed to fetch');
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.fetch = vi.fn().mockRejectedValue(fetchError);
 
@@ -134,7 +129,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('HTTPS接続失敗時、自己署名証明書に関するメッセージが含まれること（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -144,7 +138,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       const fetchError = new Error('Failed to fetch');
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.fetch = vi.fn().mockRejectedValue(fetchError);
 
@@ -174,7 +167,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('読み取りエラー時、HTTPステータスコードがエラーメッセージに含まれないこと（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -214,7 +206,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('書き込みエラー時、HTTPステータスコードがエラーメッセージに含まれないこと（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -263,7 +254,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
 
   describe('testConnectionメソッドのエラーハンドリング', () => {
     it('接続成功時、詳細なメッセージが返されること（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -272,7 +262,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
         OBSIDIAN_DAILY_PATH: ''
       });
 
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -288,7 +277,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('接続失敗時、HTTPステータスコードがメッセージに含まれないこと（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -297,7 +285,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
         OBSIDIAN_DAILY_PATH: ''
       });
 
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
@@ -315,7 +302,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('ネットワークエラー時、詳細なエラーメッセージが含まれないこと（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -325,7 +311,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       const networkError = new Error('Failed to fetch: Network request failed');
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.fetch = vi.fn().mockRejectedValue(networkError);
 

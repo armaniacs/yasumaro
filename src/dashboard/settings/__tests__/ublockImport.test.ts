@@ -271,7 +271,6 @@ describe('ublockImport/index.js - UI Component Tests', () => {
 
     test('reloadSource should fetch and update source', async () => {
       const { reloadSource } = await import('../ublockImport/index.js');
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       const fetchCallback = vi.fn().mockResolvedValue('||example.com^\n||newsite.com^\n@@||trusted.com^');
 

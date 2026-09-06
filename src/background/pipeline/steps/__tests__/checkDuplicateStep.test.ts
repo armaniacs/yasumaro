@@ -11,6 +11,7 @@
  */
 
 import { vi } from 'vitest';;
+import type { MockedFunction } from 'vitest';
 
 vi.mock('../../../../utils/logger.js', () => ({
   addLog: vi.fn(),
@@ -47,7 +48,7 @@ import * as storageSavedUrls from '../../../../utils/storage/savedUrlRepository.
 import * as logger from '../../../../utils/logger.js';
 import type { RecordingContext, StepDeps, UrlStore } from '../../types.js';
 
-const mockGetSavedUrls = storageSavedUrls.getSavedUrlsWithTimestamps as vi.MockedFunction<typeof storageSavedUrls.getSavedUrlsWithTimestamps>;
+const mockGetSavedUrls = storageSavedUrls.getSavedUrlsWithTimestamps as MockedFunction<typeof storageSavedUrls.getSavedUrlsWithTimestamps>;
 
 /** In-memory UrlStore for tests — no chrome.storage mocking required. */
 class InMemoryUrlStore implements UrlStore {

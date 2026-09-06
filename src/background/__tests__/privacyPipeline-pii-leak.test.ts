@@ -56,9 +56,7 @@ describe('PrivacyPipeline — PII must never reach cloud AI (PBI 2026-08-02-03)'
 
   function makeCloudService(summary = 'Cloud summary') {
     return {
-      // @ts-expect-error - vi.fn() type narrowing issue
       getSupportedModes: vi.fn().mockReturnValue(['full_pipeline']),
-      // @ts-expect-error - vi.fn() type narrowing issue
       generateSummary: vi.fn().mockResolvedValue({ summary }),
     };
   }
@@ -85,7 +83,6 @@ describe('PrivacyPipeline — PII must never reach cloud AI (PBI 2026-08-02-03)'
     // Local AI returns an empty summary → pipeline falls through to cloud.
     const cloud = makeCloudService();
     const local = {
-      // @ts-expect-error - vi.fn() type narrowing issue
       getSupportedModes: vi.fn().mockReturnValue(['local_only', 'full_pipeline']),
       generateSummary: vi.fn().mockImplementation((_c: string, options?: { mode?: string }) => {
         if (options?.mode === 'local_only') {

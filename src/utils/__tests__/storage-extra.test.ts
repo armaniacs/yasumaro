@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Mock } from 'vitest';
 
 // Mock storage module dependencies
 vi.mock('../logger.js', () => ({
@@ -459,7 +460,7 @@ describe('URL set functions', () => {
     describe('PBI 2026-07-09-10: saveSettings quota-exceeded health check integration', () => {
       beforeEach(() => {
         // Simulate an extension without unlimitedStorage so the quota check runs.
-        (chrome.permissions.contains as vi.Mock).mockResolvedValue(false);
+        (chrome.permissions.contains as Mock).mockResolvedValue(false);
       });
 
       it('skips destructive legacy cleanup and fails the save when SQLite is unhealthy', async () => {

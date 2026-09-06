@@ -56,7 +56,6 @@ beforeEach(() => {
     chrome.notifications = { create: vi.fn() };
   }
   // storageのデフォルトモック
-    // @ts-expect-error - vi.fn() type narrowing issue
 
   mockGetSettings.mockResolvedValue({
     PRIVACY_MODE: 'full_pipeline',
@@ -90,7 +89,6 @@ beforeEach(() => {
     // @ts-expect-error - vi.fn() type narrowing issue
 
 privacy.PrivacyPipeline.mockImplementation(function(this: any) {
-    // @ts-expect-error - vi.fn() type narrowing issue
 
     this.process = vi.fn().mockImplementation(async (content, options) => {
       if (options && options.previewOnly) {
@@ -118,10 +116,8 @@ describe('Recording Integration Test', () => {
     };
 
     mockAiClient = {
-    // @ts-expect-error - vi.fn() type narrowing issue
 
       getSupportedModes: vi.fn().mockReturnValue(['local_only', 'full_pipeline']),
-    // @ts-expect-error - vi.fn() type narrowing issue
 
       generateSummary: vi.fn().mockResolvedValue({ summary: 'Cloud summary' })
     };

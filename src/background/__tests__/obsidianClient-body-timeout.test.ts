@@ -4,6 +4,7 @@
  * PBI-11: ヘッダのみ受信後にボディが送られてこないケースでもハングしない
  */
 
+import type { Mock } from 'vitest';
 import { ObsidianClient } from '../obsidianClient.js';
 import * as storage from '../../utils/storage/types.js';
 import { addLog, LogType } from '../../utils/logger.js';
@@ -82,13 +83,12 @@ vi.mock('../../utils/logger.js', () => ({
 
 describe('ObsidianClient: レスポンスボディ読み込みタイムアウト', () => {
   let client: ObsidianClient;
-  let mockFetch: vi.Mock;
+  let mockFetch: Mock;
 
   beforeEach(() => {
     client = new ObsidianClient();
     vi.clearAllMocks();
 
-    // @ts-expect-error - vi.fn() type narrowing issue
     mockGetSettings.mockResolvedValue({
       OBSIDIAN_API_KEY: 'test_key',
       OBSIDIAN_PROTOCOL: 'http',
