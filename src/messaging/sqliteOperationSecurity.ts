@@ -81,3 +81,44 @@ export const TOKEN_REQUIRED_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> =
   new Set(
     ALL_DASHBOARD_SQLITE_SUBTYPES.filter((s) => !tokenExempt.has(s)),
   );
+
+// ============================================================================
+// PBI 2026-09-06-01: confirm token scope binding for archive subtypes.
+// The token previously bound only (action, id); archive operations are
+// destructive through their PARAMETERS (cutoff / stagingName), so the token
+// must additionally bind a hash over those parameters. The sender derives the
+// hash from the payload before requesting the token, and the SW handler
+// re-derives it from the actual incoming payload at verify time — a payload
+// mutated in between fails the strict compare (fail-closed).
+// ============================================================================
+
+/** Which destructive parameters each archive subtype binds. Subtypes are
+ * introduced by PBIs 2026-09-06-02/03/04; the mapping is defined here so the
+ * verify path is in place before the first subtype lands. */
+const ARCHIVE_SCOPE_BY_SUBTYPE: Record<string, 'cutoff' | 'staging'> = {
+  archive_create: 'cutoff',
+  archive_preview: 'cutoff',
+  archive_delete_by_staging: 'staging',
+  archive_restore: 'staging',
+  archive_restore_preview: 'staging',
+};
+
+/**
+ * Derive the scope hash for a dashboard SQLite request. Returns undefined for
+ * subtypes without extra destructive parameters (existing flows unchanged).
+ */
+export async function deriveScopeHash(
+  subtype: string,
+  payload: Record<string, unknown> | undefined,
+): Promise<string | undefined> {
+  const kind = ARCHIVE_SCOPE_BY_SUBTYPE[subtype];
+  if (!kind) return undefined;
+  const { computeScopeHash } = await import('../background/confirmTokenManager.js');
+  if (kind === 'cutoff') {
+    return computeScopeHash([
+      payload?.cutoffMs as number | undefined,
+      payload?.includeDeleted as number | undefined,
+    ]);
+  }
+  return computeScopeHash([payload?.stagingName as string | undefined]);
+}

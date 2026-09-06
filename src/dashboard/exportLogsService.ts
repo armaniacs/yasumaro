@@ -146,6 +146,12 @@ export async function exportDb(): Promise<Blob> {
 // Download Helpers
 // ============================================================================
 
+/**
+ * Delay before revoking the object URL. A synchronous revoke can abort large
+ * downloads before the browser persists the blob (PBI 2026-09-06-01).
+ */
+export const DOWNLOAD_REVOKE_DELAY_MS = 60_000;
+
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -154,7 +160,7 @@ export function downloadBlob(blob: Blob, filename: string): void {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), DOWNLOAD_REVOKE_DELAY_MS);
 }
 
 export function downloadText(text: string, filename: string, mimeType = 'text/plain'): void {

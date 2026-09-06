@@ -42,8 +42,8 @@ export interface ReadOnlyDeps {
   getStatus: () => Promise<Record<string, unknown> | null>;
   runOpfsSpike: () => Promise<DepsResult<Record<string, unknown>>>;
   queryAuditLog: (options: { limit?: number; offset?: number }) => Promise<DepsResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>>;
-  createConfirmToken: (action: string, id?: number) => Promise<string>;
-  verifyConfirmToken: (token: string, action: string, id?: number) => Promise<boolean>;
+  createConfirmToken: (action: string, id?: number, scopeHash?: string) => Promise<string>;
+  verifyConfirmToken: (token: string, action: string, id?: number, scopeHash?: string) => Promise<boolean>;
   /** @deprecated legacy - kept for test compat, maps to create/verify */
   getConfirmToken?: () => Promise<string>;
 }

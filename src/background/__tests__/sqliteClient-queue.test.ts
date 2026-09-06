@@ -82,3 +82,41 @@ describe('ChromeOffscreenTransport — request queue (M7)', () => {
     expect(maxConcurrent).toBe(1);
   });
 });
+
+describe('ChromeOffscreenTransport — noRetry option (PBI 2026-09-06-01)', () => {
+  let transport: ChromeOffscreenTransport;
+  let sendMessageMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sendMessageMock = vi.fn((_msg: unknown, callback: (response: unknown) => void) => {
+      chrome.runtime.lastError = { message: 'offscreen suspended' };
+      callback(undefined);
+      chrome.runtime.lastError = undefined;
+    });
+    (globalThis as any).chrome = {
+      offscreen: {
+        hasDocument: vi.fn().mockResolvedValue(true),
+        createDocument: vi.fn().mockResolvedValue(undefined),
+        Reason: { WORKERS: 'WORKERS', LOCAL_STORAGE: 'LOCAL_STORAGE' },
+      },
+      runtime: {
+        sendMessage: sendMessageMock,
+        lastError: undefined as { message: string } | undefined,
+      },
+    };
+    transport = new ChromeOffscreenTransport();
+  });
+
+  it('retries once by default on failure', async () => {
+    await expect(transport.msgOffscreen('SQLITE_QUERY', {})).rejects.toThrow('offscreen suspended');
+    expect(sendMessageMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry when noRetry is set (bulk archive operations)', async () => {
+    await expect(
+      transport.msgOffscreen('SQLITE_QUERY', {}, '', { noRetry: true }),
+    ).rejects.toThrow('offscreen suspended');
+    expect(sendMessageMock).toHaveBeenCalledTimes(1);
+  });
+});

@@ -27,8 +27,20 @@ export interface OffscreenTransport {
   msgOffscreen(
     type: SqliteMessageType,
     payload?: Record<string, unknown>,
-    traceId?: string
+    traceId?: string,
+    opts?: MsgOffscreenOptions
   ): Promise<OffscreenResponse>;
+}
+
+/** Per-call transport options. */
+export interface MsgOffscreenOptions {
+  /**
+   * Skip the single automatic retry. Required for bulk destructive/bulk-write
+   * operations (archive create/delete/restore): a timeout does NOT mean the
+   * operation failed — offscreen/worker may still be running, and a blind
+   * retry would execute it a second time (PBI 2026-09-06-01).
+   */
+  noRetry?: boolean;
 }
 
 /**
@@ -141,13 +153,21 @@ export class ChromeOffscreenTransport implements OffscreenTransport {
   async msgOffscreen(
     type: SqliteMessageType,
     payload: Record<string, unknown> = {},
-    traceId: string = ''
+    traceId: string = '',
+    opts: MsgOffscreenOptions = {},
   ): Promise<OffscreenResponse> {
     await this.requestQueue.acquire();
     try {
       try {
         return await this.sendOnce(type, payload, traceId);
       } catch (firstError) {
+        if (opts.noRetry) {
+          // Bulk operations: the offscreen side may still be running. Surface
+          // the failure immediately ("result unknown" for the caller) instead
+          // of executing the operation a second time.
+          this.offscreenAlive = false;
+          throw firstError;
+        }
         this.offscreenAlive = false;
         addLog(LogType.WARN, `ChromeOffscreenTransport: '${type}' failed, retrying once`, {
           error: errorMessage(firstError),

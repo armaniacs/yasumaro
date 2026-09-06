@@ -19,10 +19,15 @@ export function createReadOnlyHandler(deps: ReadOnlyDeps) {
       case 'create_confirm_token': {
         const action = (payload as { action?: string }).action;
         const id = (payload as { id?: number }).id;
+        const scopeHash = (payload as { scopeHash?: unknown }).scopeHash;
         if (!action || typeof action !== 'string') {
           return { success: false, error: 'action is required' };
         }
-        const token = await deps.createConfirmToken(action, id);
+        const token = await deps.createConfirmToken(
+          action,
+          id,
+          typeof scopeHash === 'string' ? scopeHash : undefined,
+        );
         return { success: true, confirmToken: token };
       }
       case 'query': {

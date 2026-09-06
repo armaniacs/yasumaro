@@ -8,6 +8,7 @@
  */
 
 import { isServiceWorkerRequest } from './types.js';
+import { isHttpScheme } from '../utils/archiveGuards.js';
 import type {
   ExtensionMessage,
   ValidVisitMessage,
@@ -209,9 +210,10 @@ export class FetchUrlValidator implements MessageValidator<FetchUrlMessage> {
       throw new ValidationError('FetchUrlValidator', 'payload.url must be non-empty string', 'url');
     }
     // Basic URL shape check — detailed SSRF is handled by ssrfGuard downstream
+    // Scheme allowlist is the SSOT in utils/archiveGuards.ts (PBI 2026-09-06-01).
     try {
       const parsed = new URL(payload.url);
-      if (!['http:', 'https:'].includes(parsed.protocol)) {
+      if (!isHttpScheme(parsed.protocol)) {
         throw new ValidationError('FetchUrlValidator', 'payload.url must be http or https', 'url');
       }
     } catch (e) {
@@ -253,9 +255,10 @@ export class ManualRecordValidator implements MessageValidator<ManualRecordMessa
     }
     // Same http/https restriction as FetchUrlValidator — blocks
     // javascript:/data: scheme URLs from reaching SQLite/dashboard rendering.
+    // Scheme allowlist is the SSOT in utils/archiveGuards.ts (PBI 2026-09-06-01).
     try {
       const parsed = new URL(payload.url);
-      if (!['http:', 'https:'].includes(parsed.protocol)) {
+      if (!isHttpScheme(parsed.protocol)) {
         throw new ValidationError('ManualRecordValidator', 'payload.url must be http or https', 'url');
       }
     } catch (e) {
