@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.109` リリース。
+> - 現時点では `v6.7.112` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,18 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.112] - 2026-09-06
+
+### Added
+
+- 設定画面の「コンテンツ保持設定」に、ページ本文（content）をローカル保存するかを切り替えるトグルを追加（PBI 2026-09-06-04）。初回同意モーダルでしか変更できなかった保存ポリシーを設定画面から随時変更できる。既存の保存済み content は保持され、以後の新規記録のみ反映
+- AI プロバイダー設定の Priority (Failover Order)（B分離型）で、各行のモデル名欄に実際に使用されるモデル名（スロット明示値 → プロバイダのストレージ設定値 → カタログのデフォルト）を初期表示するようにした（PBI 2026-09-06-05）。表示した解決値は保存時に明示モデルとして固定されず、ユーザーが入力した値があればそちらが優先される。プロバイダー変更時には未入力欄が新しい解決値に切り替わる
+- ドメインフィルタに「サブドメインもマッチさせる」トグルを追加（PBI 2026-09-06-06）。ONにすると `example.com` の登録が `sub.example.com` 等のサブドメインにも一致する。OFF（デフォルト）では従来どおり完全一致のみで、既存ユーザーの動作は変わらない。バックグラウンドのライブ判定とコンテンツスクリプトのキャッシュ判定の両方に反映され、ワイルドカードパターン（`*.example.com`）はトグルに関係なく従来どおり動作する
+
+### Documentation
+
+- レコードアーカイブ機能（日付指定退避・アーカイブの一時オープン・メインDBへの復元）の設計 PBI 3件（`pbi/2026-09-06-01〜03`）と deep-dig findings（OPFSステージング方式・スパイク必須化・削除済み行の扱い等の決定記録）を追加
 
 ## [6.7.111] - 2026-09-05
 
