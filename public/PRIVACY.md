@@ -185,6 +185,7 @@ v4.2.1以降、以下の機能が追加されました：
    - ページのタイトル、URL、本文テキストを取得します
    - このデータはAI要約生成とObsidianへの保存にのみ使用されます
    - ページ本文をローカルに保存するかは設定で切り替えられます（デフォルト: オフ）。ダッシュボードの「設定 → コンテンツ保持設定」から変更できます
+   - 閲覧履歴は標準SQLiteファイル（アーカイブ）として端末外へ書き出せます。アーカイブファイルは暗号化・署名のない平文で、保管と削除はユーザーが管理します
 
 2. **Webリクエスト監視権限 (`webRequest`)**:
    - HTTPレスポンスヘッダーを解析し、プライベートページを自動検出するために必要です
@@ -364,6 +365,7 @@ This extension requires the following permissions:
    - Collects page titles, URLs, and body text
    - Data is used solely for AI summarization and saving to Obsidian
    - Whether page body text is stored locally is configurable in the settings (default: off). Change it under Dashboard → Settings → Content Retention Settings
+   - Browsing history can be exported outside the device as a standard SQLite file (archive). Archive files are plaintext (no encryption or signing); their storage and deletion are managed by the user
 
 2. **Web Request Monitoring (`webRequest`)**:
    - Required to analyze HTTP response headers for automatic private page detection
