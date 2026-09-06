@@ -226,6 +226,11 @@ export class DashboardSqliteValidator implements MessageValidator<DashboardSqlit
         throw new ValidationError('DashboardSqliteValidator', `archive_export: length must be 1..${VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES}`, 'length');
       }
     }
+    if (subtype === 'archive_delete_by_staging') {
+      if (typeof p.stagingName !== 'string' || !isValidStagingName(p.stagingName)) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_delete_by_staging: stagingName must be a valid staging name', 'stagingName');
+      }
+    }
 
     return payload as DashboardSqliteRequest;
   }

@@ -3531,6 +3531,30 @@
   "archiveRestorePreviewFailed": {
     "message": "アーカイブ復元の確認に失敗しました"
   },
+  "archivePurgeBtn": {
+    "message": "メインDBからレコードを削除"
+  },
+  "archivePurgeConfirmTitle": {
+    "message": "アーカイブ済みレコードをメインDBから削除しますか？"
+  },
+  "archivePurgeConfirmMessage": {
+    "message": "{date}までのアーカイブ済みレコードをローカルDBから完全に削除します。{legacy}"
+  },
+  "archiveLegacyDisclosure": {
+    "message": "注意: レガシーストレージのコピーは、レガシークリーンアップが実行されるまで残ることがあります。"
+  },
+  "archivePurgeConfirmOk": {
+    "message": "レコードを削除"
+  },
+  "archivePurgeDone": {
+    "message": "削除完了: {deleted}件を削除しました。ローカルDBの残りは{remaining}件です。"
+  },
+  "archiveVacuumNote": {
+    "message": "ストレージ領域は解放されませんでした（VACUUM失敗） — 後回の実行で解放されます。"
+  },
+  "archivePurgeFailed": {
+    "message": "アーカイブの削除に失敗しました"
+  },
   "archiveFileTooLarge": {
     "message": "アーカイブファイルが{max}MBを超えています"
   },

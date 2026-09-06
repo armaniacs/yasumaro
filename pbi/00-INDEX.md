@@ -18,7 +18,7 @@
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
 
-### 2026-09-06 レコードアーカイブ（着手順 = ~~01 基盤~~ ✅ / ~~02 退避作成~~ ✅ / ~~03 復元~~ ✅ → **04 本体削除（次）** → 05 一時オープン。2026-09-06 再編: 旧01/02/03をレビュー反映込みで分割・リネーム）
+### 2026-09-06 レコードアーカイブ（着手順 = ~~01 基盤~~ ✅ / ~~02 退避作成~~ ✅ / ~~03 復元~~ ✅ / ~~04 本体削除~~ ✅ → **05 一時オープン（次・スパイクF-2合格が条件）**。2026-09-06 再編: 旧01/02/03をレビュー反映込みで分割・リネーム）
 
 - 2026-09-06-04-feat-archive-purge-staging.md（⬜ **次に着手**: ステージングからの本体削除・フェーズB: 検証済みstaging参照＋max_id述語（後着行保護）＋VACUUM（freelist検証）＋quotaプレフライト＋single-flight。破壊的操作を独立PBIに隔離。02/03のハンドラ・レジストリ・ガード基盤を利用。2pt / 副作用 🔴 / ✨）
 - 2026-09-06-05-feat-archive-temp-open.md（⬜ アーカイブの一時オープン: メインDB非汚染でアーカイブ.db を参照・編集・書き戻し。**着手条件: PBI内スパイク必須**（第2エンジン長期同時オープン・04実装中に先行実施可）。8pt / 副作用 🟡 / ✨）
@@ -54,6 +54,10 @@
 ### 2026-09-06 アーカイブ 退避作成（着手完了）
 
 - 2026-09-06-02-feat-record-archive.md（✅ 完了・アーカイブ済 — フェーズA: 日付指定アーカイブ作成。第4subtypeグループ（archive_preview/create/cleanup/export）を確定、opfsWorker archiveCreateHandlers（バッチINSERT 5000/COMMIT・validateArchiveEngine 検証・max_id_at_archive 記録・single-flight・quotaプレフライト）、ダッシュボード Archive パネル（プレビュー集計・チャンクDL・staging掃除）、i18n 22キー。検証: type-check / lint 0 errors / 11783 tests / build / E2E 104 green。実装メモに逸脱（archive_export 追加・E2Eは静的検証＋jsdomユニット）を記録）
+
+### 2026-09-06 アーカイブ 本体削除・フェーズB（着手完了）
+
+- 2026-09-06-04-feat-archive-purge-staging.md（✅ 完了・アーカイブ済 — archive_delete_by_staging subtype（トークン＋scopeHash・noRetry）、worker archivePurgeHandlers（3条件DELETE述語＋max_id後着行保護・VACUUMトランザクション外＋freelist検証・quotaプレフライト・single-flight・レジストリ/meta突合せ fail-closed）、archiveStaging レジストリにphase-A scope追加（updateStagingRecord）、Archive パネルにフェーズBボタン（confirm dialog・レガシー開示・vacuumOk注記）、i18n 12キー。検証: type-check / lint 0 errors / 11807 tests / build / E2E 104 green）
 
 ### 2026-09-06 アーカイブ 復元（着手完了）
 

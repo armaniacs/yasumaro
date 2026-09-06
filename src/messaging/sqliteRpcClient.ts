@@ -8,8 +8,8 @@
  */
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
 import type { OpfsSpikeReport } from '../offscreen/opfsSpike.js';
-import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData } from './sqliteMessages.js';
-export type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData };
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData } from './sqliteMessages.js';
+export type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData };
 
 /**
  * What kind of failure this was.
@@ -134,7 +134,8 @@ export type MaintainOp =
   | { type: 'archiveExport'; stagingName: string; offset: number; length: number }
   | { type: 'archivePrepareIncoming' }
   | { type: 'archiveRestorePreview'; stagingName: string }
-  | { type: 'archiveRestore'; stagingName: string };
+  | { type: 'archiveRestore'; stagingName: string }
+  | { type: 'archiveDeleteByStaging'; stagingName: string };
 
 export interface SqliteRpcClient {
   /** Filtered listing or FTS5/LIKE search over browsing records. */
@@ -166,6 +167,7 @@ export interface SqliteRpcClient {
   maintain(op: Extract<MaintainOp, { type: 'archivePrepareIncoming' }>): Promise<SqliteRpcResult<string>>;
   maintain(op: Extract<MaintainOp, { type: 'archiveRestorePreview' }>): Promise<SqliteRpcResult<ArchiveRestorePreviewData>>;
   maintain(op: Extract<MaintainOp, { type: 'archiveRestore' }>): Promise<SqliteRpcResult<ArchiveRestoreData>>;
+  maintain(op: Extract<MaintainOp, { type: 'archiveDeleteByStaging' }>): Promise<SqliteRpcResult<ArchivePurgeData>>;
   maintain(op: MaintainOp): Promise<SqliteRpcResult<unknown>>;
 
   /**

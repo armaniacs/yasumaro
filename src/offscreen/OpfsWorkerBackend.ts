@@ -1,6 +1,6 @@
 // src/offscreen/OpfsWorkerBackend.ts
 import type { SqliteEngineHost } from './sqliteEngineHost.js';
-import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError, ArchivePreviewResult, ArchiveCreateResult, ArchiveCleanupResult, ArchiveExportChunkResult, ArchiveCreateParams, ArchivePrepareIncomingResult, ArchiveRestorePreviewResult, ArchiveRestoreResult } from './StorageBackend.js';
+import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError, ArchivePreviewResult, ArchiveCreateResult, ArchiveCleanupResult, ArchiveExportChunkResult, ArchiveCreateParams, ArchivePrepareIncomingResult, ArchiveRestorePreviewResult, ArchiveRestoreResult, ArchiveDeleteByStagingResult } from './StorageBackend.js';
 import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData } from '../messaging/sqliteMessages.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 
@@ -107,6 +107,19 @@ export class OpfsWorkerBackend implements StorageBackend {
       restoredDeleted: result.restoredDeleted,
       skipped: result.skipped,
       skippedInvalid: result.skippedInvalid,
+    };
+  }
+
+  async archiveDeleteByStaging(stagingName: string): Promise<BackendOrError<ArchiveDeleteByStagingResult>> {
+    const result = await this.engine.tryOpfsProxy<ArchiveDeleteByStagingResult>('ARCHIVE_DELETE_BY_STAGING', { stagingName });
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return {
+      success: true,
+      deleted: result.deleted,
+      remaining: result.remaining,
+      freelistBefore: result.freelistBefore,
+      freelistAfter: result.freelistAfter,
+      vacuumOk: result.vacuumOk,
     };
   }
 

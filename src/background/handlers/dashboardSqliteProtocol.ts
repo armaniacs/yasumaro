@@ -70,7 +70,8 @@ export type DashboardSqliteRequest =
   | { subtype: 'archive_export'; stagingName: string; offset: number; length: number; confirmToken?: string }
   | { subtype: 'archive_prepare_incoming' }
   | { subtype: 'archive_restore_preview'; stagingName: string }
-  | { subtype: 'archive_restore'; stagingName: string; confirmToken?: string };
+  | { subtype: 'archive_restore'; stagingName: string; confirmToken?: string }
+  | { subtype: 'archive_delete_by_staging'; stagingName: string; confirmToken?: string };
 
 /**
  * Compile-time guard that every subtype in the request union also exists in the
@@ -162,5 +163,6 @@ export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
       S extends 'archive_prepare_incoming' ? { success: true; stagingName: string } :
       S extends 'archive_restore_preview' ? { success: true; preview: ArchiveRestorePreviewData } :
       S extends 'archive_restore' ? { success: true; restored: number; restoredDeleted: number; skipped: number; skippedInvalid: number } :
+      S extends 'archive_delete_by_staging' ? { success: true; deleted: number; remaining: number; freelistBefore: number; freelistAfter: number; vacuumOk: boolean } :
       never
     );

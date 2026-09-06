@@ -107,6 +107,13 @@ export async function archiveRestore(stagingName: string): Promise<ArchiveRestor
   return backend.archiveRestore(stagingName);
 }
 
+export type ArchiveDeleteByStagingBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archiveDeleteByStaging']>>;
+
+export async function archiveDeleteByStaging(stagingName: string): Promise<ArchiveDeleteByStagingBackendResult> {
+  const backend = await engine.getBackend();
+  return backend.archiveDeleteByStaging(stagingName);
+}
+
 /**
  * Lightweight health check — verifies the SQLite database is reachable.
  * Returns true if a SELECT 1 succeeds on any available backend.

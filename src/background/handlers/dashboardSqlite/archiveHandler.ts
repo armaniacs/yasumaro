@@ -59,6 +59,24 @@ export function createArchiveHandler(deps: ArchiveHandlerDeps) {
           ? { success: true, stagingName: result.data.stagingName, recordCount: result.data.recordCount }
           : toFailure(result);
       }
+      case 'archive_delete_by_staging': {
+        const p = payload as { stagingName?: unknown };
+        if (typeof p.stagingName !== 'string' || p.stagingName.length === 0) {
+          return { success: false, error: 'archive_delete_by_staging: stagingName is required' };
+        }
+        const result: DepsResult<import('../../../messaging/sqliteMessages.js').ArchivePurgeData> =
+          await deps.archiveDeleteByStaging(p.stagingName);
+        return result.success
+          ? {
+              success: true,
+              deleted: result.data.deleted,
+              remaining: result.data.remaining,
+              freelistBefore: result.data.freelistBefore,
+              freelistAfter: result.data.freelistAfter,
+              vacuumOk: result.data.vacuumOk,
+            }
+          : toFailure(result);
+      }
       case 'archive_cleanup': {
         const result: DepsResult<{ removed: string[] }> = await deps.archiveCleanup();
         return result.success

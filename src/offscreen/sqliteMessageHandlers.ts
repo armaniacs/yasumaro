@@ -31,6 +31,7 @@ import {
   archivePrepareIncoming as sqliteArchivePrepareIncoming,
   archiveRestorePreview as sqliteArchiveRestorePreview,
   archiveRestore as sqliteArchiveRestore,
+  archiveDeleteByStaging as sqliteArchiveDeleteByStaging,
 } from './dbMaintenance.js';
 import {
   insertAuditLog as sqliteInsertAuditLog,
@@ -380,6 +381,25 @@ async function handleArchiveRestore(msg: SqliteMessage, sendResponse: (r: unknow
   }
 }
 
+async function handleArchiveDeleteByStaging(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_DELETE_BY_STAGING' }>).payload;
+  const result = await sqliteArchiveDeleteByStaging(payload.stagingName);
+  if (result.success && 'deleted' in result) {
+    sendResponse({
+      success: true,
+      deleted: result.deleted,
+      remaining: result.remaining,
+      freelistBefore: result.freelistBefore,
+      freelistAfter: result.freelistAfter,
+      vacuumOk: result.vacuumOk,
+    });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive purge returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
 /**
  * Static registry object — `satisfies` guarantees exhaustiveness at compile time.
  * Adding a new SqliteMessage variant without a handler is a type error.
@@ -412,6 +432,7 @@ const handlerRecord = {
   SQLITE_ARCHIVE_PREPARE_INCOMING: handleArchivePrepareIncoming,
   SQLITE_ARCHIVE_RESTORE_PREVIEW: handleArchiveRestorePreview,
   SQLITE_ARCHIVE_RESTORE: handleArchiveRestore,
+  SQLITE_ARCHIVE_DELETE_BY_STAGING: handleArchiveDeleteByStaging,
 } satisfies Record<SqliteMessageType, SqliteHandler>;
 
 /**

@@ -9,6 +9,7 @@ export interface ArchiveExportChunkResult { success: true; chunk: number[]; next
 export interface ArchivePrepareIncomingResult { success: true; stagingName: string }
 export interface ArchiveRestorePreviewResult { success: true; preview: ArchiveRestorePreviewData }
 export interface ArchiveRestoreResult { success: true; restored: number; restoredDeleted: number; skipped: number; skippedInvalid: number }
+export interface ArchiveDeleteByStagingResult { success: true; deleted: number; remaining: number; freelistBefore: number; freelistAfter: number; vacuumOk: boolean }
 
 export interface InsertResult { success: true; id: number }
 export interface InsertBatchResult { success: true; inserted: number; skipped: number }
@@ -92,6 +93,8 @@ export interface Mutable {
   archivePrepareIncoming(): Promise<BackendOrError<ArchivePrepareIncomingResult>>;
   archiveRestorePreview(stagingName: string): Promise<BackendOrError<ArchiveRestorePreviewResult>>;
   archiveRestore(stagingName: string): Promise<BackendOrError<ArchiveRestoreResult>>;
+  /** Phase B (PBI 2026-09-06-04) — main-DB deletion covered by the staging. */
+  archiveDeleteByStaging(stagingName: string): Promise<BackendOrError<ArchiveDeleteByStagingResult>>;
   insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>>;
   clearAll(): Promise<BackendOrError<MutationResult>>;
 }
@@ -120,6 +123,7 @@ export class NoopBackend implements StorageBackend {
   async archivePrepareIncoming() { return this.err(); }
   async archiveRestorePreview() { return this.err(); }
   async archiveRestore() { return this.err(); }
+  async archiveDeleteByStaging() { return this.err(); }
   async healthCheck() { return this.err(); }
   async getStatus() { return this.err(); }
   async insertAuditLog() { return this.err(); }

@@ -5,7 +5,7 @@
  */
 
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
-import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData } from '../messaging/sqliteMessages.js';
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData } from '../messaging/sqliteMessages.js';
 // PBI-05: unified SqliteResult vocabulary — both hops now share the same
 // error classification and result shape via SqliteGateway.
 // PBI 11: the DASHBOARD_SQLITE send policy (token gate, timeout, retry) lives
@@ -424,6 +424,25 @@ export function archiveRestorePreview(stagingName: string): Promise<ServiceResul
       return response.preview;
     },
     'Archive restore preview failed',
+  );
+}
+
+/**
+ * Phase B (PBI 2026-09-06-04): delete the main-DB rows covered by the
+ * verified staging archive, then VACUUM. Destructive — token + scopeHash
+ * bound to the staging name.
+ */
+export function archiveDeleteByStaging(stagingName: string): Promise<ServiceResult<ArchivePurgeData>> {
+  return callDashboard(
+    { subtype: 'archive_delete_by_staging', stagingName },
+    (response) => ({
+      deleted: response.deleted,
+      remaining: response.remaining,
+      freelistBefore: response.freelistBefore,
+      freelistAfter: response.freelistAfter,
+      vacuumOk: response.vacuumOk,
+    }),
+    'Archive purge failed',
   );
 }
 

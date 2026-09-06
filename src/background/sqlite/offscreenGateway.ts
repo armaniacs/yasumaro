@@ -28,6 +28,8 @@ import type {
   OffscreenArchivePrepareIncomingResponse,
   OffscreenArchiveRestorePreviewResponse,
   OffscreenArchiveRestoreResponse,
+  OffscreenArchivePurgeResponse,
+  ArchivePurgeData,
   ArchivePreviewData,
   ArchiveCreateData,
   ArchiveExportData,
@@ -117,6 +119,7 @@ export class OffscreenGateway {
   async maintain(op: { type: 'archivePrepareIncoming' }): Promise<SqliteResult<string>>;
   async maintain(op: { type: 'archiveRestorePreview'; stagingName: string }): Promise<SqliteResult<ArchiveRestorePreviewData>>;
   async maintain(op: { type: 'archiveRestore'; stagingName: string }): Promise<SqliteResult<ArchiveRestoreData>>;
+  async maintain(op: { type: 'archiveDeleteByStaging'; stagingName: string }): Promise<SqliteResult<ArchivePurgeData>>;
   async maintain(op: MaintainOp): Promise<SqliteResult<unknown>> {
     switch (op.type) {
       case 'init': { const result = await this.callInternal<boolean, OffscreenHealthResponse>('SQLITE_INIT'); return result.success ? { success: true, data: true } : result; }
@@ -139,6 +142,7 @@ export class OffscreenGateway {
       // worker and a blind retry would re-insert (INSERT OR IGNORE makes the
       // re-run converge, but counts would be wrong).
       case 'archiveRestore': return this.callInternal<ArchiveRestoreData, OffscreenArchiveRestoreResponse>('SQLITE_ARCHIVE_RESTORE', { stagingName: op.stagingName }, (res) => ({ restored: res.restored, restoredDeleted: res.restoredDeleted, skipped: res.skipped, skippedInvalid: res.skippedInvalid }), undefined, { noRetry: true });
+      case 'archiveDeleteByStaging': return this.callInternal<ArchivePurgeData, OffscreenArchivePurgeResponse>('SQLITE_ARCHIVE_DELETE_BY_STAGING', { stagingName: op.stagingName }, (res) => ({ deleted: res.deleted, remaining: res.remaining, freelistBefore: res.freelistBefore, freelistAfter: res.freelistAfter, vacuumOk: res.vacuumOk }), undefined, { noRetry: true });
       default: { const exhaustive: never = op; void exhaustive; throw new Error('Unhandled maintain op'); }
     }
   }
@@ -190,6 +194,7 @@ export class SqliteClient implements SqliteRpcClient {
   async maintain(op: { type: 'archivePrepareIncoming' }): Promise<SqliteRpcResult<string>>;
   async maintain(op: { type: 'archiveRestorePreview'; stagingName: string }): Promise<SqliteRpcResult<ArchiveRestorePreviewData>>;
   async maintain(op: { type: 'archiveRestore'; stagingName: string }): Promise<SqliteRpcResult<ArchiveRestoreData>>;
+  async maintain(op: { type: 'archiveDeleteByStaging'; stagingName: string }): Promise<SqliteRpcResult<ArchivePurgeData>>;
   async maintain(op: MaintainOp): Promise<SqliteRpcResult<unknown>> { const maintain = this.gateway.maintain.bind(this.gateway) as (op: MaintainOp) => Promise<SqliteRpcResult<unknown>>; return maintain(op); }
   async getStatus(): Promise<Omit<OffscreenStatusData, 'success'> | null> { return this.gateway.getStatus(); }
   async status(): Promise<SqliteResult<Omit<OffscreenStatusData, 'success'>>> { return this.gateway.status(); }
