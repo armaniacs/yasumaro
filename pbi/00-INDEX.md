@@ -18,11 +18,12 @@
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
 
-### 2026-09-07 アーカイブE2E自動化のフォローアップ（着手順 = 04 → 05。06は04の後に任意）
+### 2026-09-07 アーカイブE2E自動化のフォローアップ（着手順 = ~~04~~ ✅ → 05。06/07 は任意・並行可）
 
-- 2026-09-07-04-fix-type-check-test-gate.md（⬜ **次に着手**: `type-check:test` が既存破損（15,532 errors・exit 2）。validate ゲート外だが test:type-safe で使うため修理。ほぼ types 設定系の1発修正見込み。1pt / 副作用 🟢 / 🔧（test））
-- 2026-09-07-05-test-archive-session-reconnect-e2e.md（⬜ 拡張ページ内 reload → archive_status 再接続プローブの E2E 化（手動チェックリスト Y5'）。G4 の deferred マイグレーション待ち共通 fixture 化も同梱候補。2pt / 副作用 🟢 / 🔧（test））
-- 2026-09-07-06-test-archive-shared-migration-fixture.md（⬜ G4 で必要になった「最初の DASHBOARD_SQLITE 呼び出しで deferred マイグレーション完了を待つ」処理を共通 fixture 化。04 完了後に任意。1pt / 副作用 🟢 / 🔧（test））
+- ~~2026-09-07-04-fix-type-check-test-gate.md~~（✅ 完了・アーカイブ済 — 2026-09-07 type-check:test ゲート修理）
+- 2026-09-07-05-test-archive-session-reconnect-e2e.md（⬜ **次に着手**: 拡張ページ内 reload → archive_status 再接続プローブの E2E 化（手動チェックリスト Y5'）。Y3 の helper 流用で 2pt / 副作用 🟢 / 🔧（test））
+- 2026-09-07-06-test-archive-shared-migration-fixture.md（⬜ openOptionsPage 統合 + deferred マイグレーション待ち共通 fixture。04 完了後に任意。1pt / 副作用 🟢 / 🔧（test））
+- 2026-09-07-07-test-type-debt-payoff.md（⬜ テスト型債務の全量返済（2,601 件・309 ファイル）→ type-check:test を素 tsc ゲートに昇格。インベントリは testDir/type-check-baseline.json。8pt 以上 / 副作用 🟢 / 🔧（test））
 
 ### 将来候補の統合台帳（live）
 
@@ -51,6 +52,10 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-07 アーカイブE2E自動化のフォローアップ（着手完了）
+
+- 2026-09-07-04-fix-type-check-test-gate.md（✅ 完了・アーカイブ済 — type-check:test ゲート修理。`vitest/globals` types + rootDir で globals 未解決 15,532 errors を解消後、**326 ファイル・3,173 件の未型チェックテストの実在型エラー**が顕在化。安全なコードモド（vi 型名前空間 325 件・不要 expect-error 265 件）で 2,601 件まで削減し、残りは**ファイル別ベースラインゲート**（新規エラー・件数増で fail）で守る。逸脱メモに実態差とスコープ分割を記録。検証: validate / test:type-safe exit 0、ネガティブテスト実施）
 
 ### 2026-09-07 アーカイブ 手動テストのE2E自動化（着手完了）
 
