@@ -4,6 +4,7 @@ import { formatEntriesToMarkdown } from '../../../utils/markdownFormatter.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import type { BrowsingLogEntry, BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import type { CallResult, SqliteError } from '../../sqlite/offscreenGateway.js';
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData } from '../../../messaging/sqliteMessages.js';
 
 export const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 export const MAX_APPEND_IDS = 100;
@@ -77,8 +78,23 @@ export interface MaintenanceBatchDeps {
   runLegacyResync: (options?: { maxRecords?: number }) => Promise<{ examined: number; written: number; skipped: number; total: number }>;
 }
 
-/** Union of the three groups — what createDashboardSqliteHandler needs as a whole. Unchanged external shape. */
-export type DashboardSqliteHandlerDeps = ReadOnlyDeps & CoreCrudDeps & MaintenanceBatchDeps;
+/**
+ * Deps consumed by the archive group (PBI 2026-09-06-02). All client-backed:
+ * the actual work happens in the offscreen document / OPFS worker, where the
+ * staging registry and second engine live.
+ */
+export interface ArchiveDeps {
+  archivePreview: (cutoffMs: number, includeDeleted: boolean) => Promise<DepsResult<ArchivePreviewData>>;
+  archiveCreate: (params: { cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }) => Promise<DepsResult<ArchiveCreateData>>;
+  archiveCleanup: () => Promise<DepsResult<{ removed: string[] }>>;
+  archiveExportChunk: (stagingName: string, offset: number, length: number) => Promise<DepsResult<ArchiveExportData>>;
+}
+
+/** Union of the archive group — what createArchiveHandler needs. */
+export type DashboardArchiveHandlerDeps = ArchiveDeps;
+
+/** Union of the four groups — what createDashboardSqliteHandler needs as a whole. Unchanged external shape. */
+export type DashboardSqliteHandlerDeps = ReadOnlyDeps & CoreCrudDeps & MaintenanceBatchDeps & ArchiveDeps;
 
 /**
  * The operations this handler needs that a SqliteClient can supply.
@@ -142,6 +158,12 @@ runOpfsSpike: () => sqliteClient.maintain({ type: 'opfsSpike' }) as Promise<Deps
      purgeContent: (days?: number, max?: number, includeStarred?: boolean) =>
       sqliteClient.maintain({ type: 'purgeContent', retentionDays: days, maxRecords: max, includeStarred } as { type: 'purgeContent', retentionDays?: number, maxRecords?: number, includeStarred: boolean }),
      backupDb: () => sqliteClient.maintain({ type: 'backup' }),
+    // Archive group (PBI 2026-09-06-02): client-backed — the work happens in
+    // the offscreen document / OPFS worker where the staging registry lives.
+    archivePreview: (cutoffMs, includeDeleted) => sqliteClient.maintain({ type: 'archivePreview', cutoffMs, includeDeleted }),
+    archiveCreate: (params) => sqliteClient.maintain({ type: 'archiveCreate', ...params }),
+    archiveCleanup: () => sqliteClient.maintain({ type: 'archiveCleanup' }),
+    archiveExportChunk: (stagingName, offset, length) => sqliteClient.maintain({ type: 'archiveExport', stagingName, offset, length }),
       getSettings: () => new SettingsRepository().getAll() as Promise<Record<string, unknown>>,
      formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
      queryAuditLog: (options) => sqliteClient.query({ kind: 'auditLog', limit: options?.limit, offset: options?.offset } as { kind: 'auditLog', limit?: number, offset?: number }),

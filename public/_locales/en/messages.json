@@ -3577,6 +3577,66 @@
   "sqliteHistoryTab": {
     "message": "History"
   },
+  "archiveTab": {
+    "message": "Archive"
+  },
+  "archivePanelDescription": {
+    "message": "Export browsing history up to a chosen date as a standard SQLite file, then remove it from the local database (phase 2) once you have the file. The exported file can be opened with any SQLite tool."
+  },
+  "archiveDateLabel": {
+    "message": "Archive records up to (inclusive)"
+  },
+  "archiveIncludeDeletedLabel": {
+    "message": "Include deleted records"
+  },
+  "archiveIncludeDeletedNote": {
+    "message": "Deleted records are excluded by default. Records excluded here cannot be restored from the archive later."
+  },
+  "archivePreviewBtn": {
+    "message": "Check records to archive"
+  },
+  "archiveCreateBtn": {
+    "message": "Create archive file"
+  },
+  "archiveDownloadBtn": {
+    "message": "Download archive file"
+  },
+  "archiveCleanupBtn": {
+    "message": "Delete staging copy"
+  },
+  "archiveDateRequired": {
+    "message": "Choose a date first"
+  },
+  "archiveStatusWorking": {
+    "message": "Working… other archive operations are disabled until this finishes."
+  },
+  "archivePreviewSummary": {
+    "message": "Records to archive: {total} (starred: {starred}). Deleted records in range: {deleted} (excluded unless 'Include deleted records' is on)."
+  },
+  "archiveCreatedSummary": {
+    "message": "Archive created: {count} record(s) exported. Download the file before deleting the staging copy."
+  },
+  "archiveCreatedDownloadHint": {
+    "message": "Archive created. Download it now — you can re-download until the staging copy is deleted."
+  },
+  "archiveDownloadDone": {
+    "message": "Archive file downloaded."
+  },
+  "archiveDownloadFailed": {
+    "message": "Archive download failed"
+  },
+  "archivePreviewFailed": {
+    "message": "Archive preview failed"
+  },
+  "archiveCreateFailed": {
+    "message": "Archive creation failed"
+  },
+  "archiveCleanupDone": {
+    "message": "Staging cleanup done ({count} file(s) removed)."
+  },
+  "archiveCleanupFailed": {
+    "message": "Staging cleanup failed"
+  },
   "exportLogsTab": {
     "message": "Export Logs"
   },

@@ -18,10 +18,9 @@
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
 
-### 2026-09-06 レコードアーカイブ（着手順 = ~~01 基盤~~ ✅完了 → **02 退避作成（次）** → 03 復元 → 04 本体削除 → 05 一時オープン。2026-09-06 再編: 旧01/02/03をレビュー反映込みで分割・リネーム。NN=着手順）
+### 2026-09-06 レコードアーカイブ（着手順 = ~~01 基盤~~ ✅ / ~~02 退避作成~~ ✅ → **03 復元（次）** → 04 本体削除 → 05 一時オープン。2026-09-06 再編: 旧01/02/03をレビュー反映込みで分割・リネーム）
 
-- 2026-09-06-02-feat-record-archive.md（⬜ **次に着手**: 日付指定アーカイブ作成・フェーズA: 境界日以前のレコードを標準SQLite .db に退避＋ダウンロード（**本体は未削除**）。アーカイブ形式（meta・FTS5なし・archive_format_version）を定義、第4subtypeグループ確定。バッチINSERT・構造化ログ。01の共通モジュール使用。6pt / 副作用 🟢（フェーズAは本体不変） / ✨）
-- 2026-09-06-03-feat-archive-restore.md（⬜ アーカイブからメインDBへの復元: INSERT OR IGNORE でマージ再取り込み・重複スキップ・id再採番・バッチ分割＋再実行収束。03単独でも価値あり（05編集済みアーカイブも復元可）。3pt / 副作用 🟡 / ✨）
+- 2026-09-06-03-feat-archive-restore.md（⬜ **次に着手**: アーカイブからメインDBへの復元: INSERT OR IGNORE でマージ再取り込み・重複スキップ・id再採番・バッチ分割＋再実行収束。03単独でも価値あり（05編集済みアーカイブも復元可）。3pt / 副作用 🟡 / ✨）
 - 2026-09-06-04-feat-archive-purge-staging.md（⬜ ステージングからの本体削除・フェーズB: 検証済みstaging参照＋max_id述語（後着行保護）＋VACUUM（freelist検証）＋quotaプレフライト＋single-flight。破壊的操作を独立PBIに隔離。2pt / 副作用 🔴 / ✨）
 - 2026-09-06-05-feat-archive-temp-open.md（⬜ アーカイブの一時オープン: メインDB非汚染でアーカイブ.db を参照・編集・書き戻し。**着手条件: PBI内スパイク必須**（第2エンジン長期同時オープン・03/04実装中に先行実施可）。8pt / 副作用 🟡 / ✨）
 
@@ -52,6 +51,10 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-06 アーカイブ 退避作成（着手完了）
+
+- 2026-09-06-02-feat-record-archive.md（✅ 完了・アーカイブ済 — フェーズA: 日付指定アーカイブ作成。第4subtypeグループ（archive_preview/create/cleanup/export）を確定、opfsWorker archiveCreateHandlers（バッチINSERT 5000/COMMIT・validateArchiveEngine 検証・max_id_at_archive 記録・single-flight・quotaプレフライト）、ダッシュボード Archive パネル（プレビュー集計・チャンクDL・staging掃除）、i18n 22キー。検証: type-check / lint 0 errors / 11783 tests / build / E2E 104 green。実装メモに逸脱（archive_export 追加・E2Eは静的検証＋jsdomユニット）を記録）
 
 ### 2026-09-06 アーカイブ共通基盤（着手完了）
 

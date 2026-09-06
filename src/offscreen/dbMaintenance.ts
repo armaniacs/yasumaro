@@ -58,6 +58,36 @@ export async function restoreDb(data: Uint8Array): Promise<{ success: true } | {
   return backend.restoreDb(data);
 }
 
+// ============================================================================
+// Archive (PBI 2026-09-06-02) — OPFS path only (staging registry + second
+// engine live in the OPFS worker). IDB/Fallback backends reject.
+// ============================================================================
+
+export type ArchivePreviewBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archivePreview']>>;
+export type ArchiveCreateBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archiveCreate']>>;
+export type ArchiveCleanupBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archiveCleanup']>>;
+export type ArchiveExportBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archiveExportChunk']>>;
+
+export async function archivePreview(cutoffMs: number, includeDeleted: boolean): Promise<ArchivePreviewBackendResult> {
+  const backend = await engine.getBackend();
+  return backend.archivePreview(cutoffMs, includeDeleted);
+}
+
+export async function archiveCreate(params: { cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }): Promise<ArchiveCreateBackendResult> {
+  const backend = await engine.getBackend();
+  return backend.archiveCreate(params);
+}
+
+export async function archiveCleanup(): Promise<ArchiveCleanupBackendResult> {
+  const backend = await engine.getBackend();
+  return backend.archiveCleanup();
+}
+
+export async function archiveExportChunk(stagingName: string, offset: number, length: number): Promise<ArchiveExportBackendResult> {
+  const backend = await engine.getBackend();
+  return backend.archiveExportChunk(stagingName, offset, length);
+}
+
 /**
  * Lightweight health check — verifies the SQLite database is reachable.
  * Returns true if a SELECT 1 succeeds on any available backend.

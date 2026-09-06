@@ -1,4 +1,11 @@
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
+import type { ArchivePreviewData } from '../messaging/sqliteMessages.js';
+
+export interface ArchivePreviewResult { success: true; preview: ArchivePreviewData }
+export interface ArchiveCreateParams { cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }
+export interface ArchiveCreateResult { success: true; stagingName: string; recordCount: number }
+export interface ArchiveCleanupResult { success: true; removed: string[] }
+export interface ArchiveExportChunkResult { success: true; chunk: number[]; nextOffset: number; total: number; done: boolean }
 
 export interface InsertResult { success: true; id: number }
 export interface InsertBatchResult { success: true; inserted: number; skipped: number }
@@ -71,6 +78,14 @@ export interface Mutable {
   purgeContent(retentionDays?: number, maxRecords?: number, includeStarred?: boolean): Promise<BackendOrError<PurgeResult>>;
   backupDb(): Promise<BackendOrError<BackupResult>>;
   restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>>;
+  /** Archive preview (PBI 2026-09-06-02) — OPFS backend only. */
+  archivePreview(cutoffMs: number, includeDeleted: boolean): Promise<BackendOrError<ArchivePreviewResult>>;
+  /** Archive creation (PBI 2026-09-06-02) — OPFS backend only. */
+  archiveCreate(params: ArchiveCreateParams): Promise<BackendOrError<ArchiveCreateResult>>;
+  /** Orphan staging sweep (PBI 2026-09-06-02) — OPFS backend only. */
+  archiveCleanup(): Promise<BackendOrError<ArchiveCleanupResult>>;
+  /** Chunked staging export (PBI 2026-09-06-02) — OPFS backend only. */
+  archiveExportChunk(stagingName: string, offset: number, length: number): Promise<BackendOrError<ArchiveExportChunkResult>>;
   insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>>;
   clearAll(): Promise<BackendOrError<MutationResult>>;
 }
@@ -92,6 +107,10 @@ export class NoopBackend implements StorageBackend {
   async getFtsIndexSize() { return this.err(); }
   async backupDb() { return this.err(); }
   async restoreDb() { return this.err(); }
+  async archivePreview() { return this.err(); }
+  async archiveCreate() { return this.err(); }
+  async archiveCleanup() { return this.err(); }
+  async archiveExportChunk() { return this.err(); }
   async healthCheck() { return this.err(); }
   async getStatus() { return this.err(); }
   async insertAuditLog() { return this.err(); }

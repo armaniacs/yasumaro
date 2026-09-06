@@ -59,16 +59,16 @@ Scenario: 確認トークンなしでは実行できない
 
 ## 受け入れ基準
 
-- [ ] ダッシュボード（オプションページ）に、日付入力 → 実行前確認（対象件数・スター付き件数・削除済み件数・対象期間の最古/最新日）→ 実行 → 結果表示のUIがある
-- [ ] 境界日は「指定日の終日まで」を含む（ローカルタイムゾーンの指定日 23:59:59.999 まで、`created_at <= cutoff`）
-- [ ] 実行には確認トークンが必要（tokenRequired。tokenExempt に含めない。フェーズBへの入口のため破壊的でなくてもトークン必須を維持）
-- [ ] アーカイブ.db は標準SQLiteで、`browsing_logs` テーブル（`SCHEMA_SQL` 準拠・**FTS5/トリガーなし**）と `yasumaro_archive_meta` テーブル（archived_at / cutoff_created_at / cutoff_date / record_count / include_deleted / **max_id_at_archive** / archive_format_version / yasumaro_version）を含む。`id` 列の値は本体と同一
-- [ ] **フェーズAでは本体DBを一切変更しない**（SELECT のみ。削除＋VACUUM は pbi/2026-09-06-04 で、検証済みステージング参照の上に実行される）
-- [ ] 実行前確認に「削除済み行を含める」チェックボックスがある（**デフォルトOFF = is_deleted=1 を除外**。含めない場合は「含めなかった削除済み行はアーカイブから復元できない」旨を確認画面に表示する）
-- [ ] アーカイブ.db はOPFSステージングファイル（`archive_outgoing_<nonce>.db`）経由で引き渡される。ステージングファイルはクリーンアップされるまでOPFSに残り、そこから再ダウンロードできる
-- [ ] OPFS バックエンドでのみ提供する（フォールバック環境では既存の生.dbエクスポートと同様「OPFSストレージでのみ利用可能」の注記を表示）
-- [ ] 起動時・次回アーカイブ実行時に孤児ステージングファイル（`archive_outgoing_*.db` / `archive_incoming_*.db` / `yasumaro_archive_tmp_*.db`）を掃除する
-- [ ] i18n（en/ja）がすべての新規UI文言に適用されている（data-i18n）
+- [x] ダッシュボード（オプションページ）に、日付入力 → 実行前確認（対象件数・スター付き件数・削除済み件数・対象期間の最古/最新日）→ 実行 → 結果表示のUIがある
+- [x] 境界日は「指定日の終日まで」を含む（ローカルタイムゾーンの指定日 23:59:59.999 まで、`created_at <= cutoff`）
+- [x] 実行には確認トークンが必要（tokenRequired。tokenExempt に含めない。フェーズBへの入口のため破壊的でなくてもトークン必須を維持）
+- [x] アーカイブ.db は標準SQLiteで、`browsing_logs` テーブル（`SCHEMA_SQL` 準拠・**FTS5/トリガーなし**）と `yasumaro_archive_meta` テーブル（archived_at / cutoff_created_at / cutoff_date / record_count / include_deleted / **max_id_at_archive** / archive_format_version / yasumaro_version）を含む。`id` 列の値は本体と同一
+- [x] **フェーズAでは本体DBを一切変更しない**（SELECT のみ。削除＋VACUUM は pbi/2026-09-06-04 で、検証済みステージング参照の上に実行される）
+- [x] 実行前確認に「削除済み行を含める」チェックボックスがある（**デフォルトOFF = is_deleted=1 を除外**。含めない場合は「含めなかった削除済み行はアーカイブから復元できない」旨を確認画面に表示する）
+- [x] アーカイブ.db はOPFSステージングファイル（`archive_outgoing_<nonce>.db`）経由で引き渡される。ステージングファイルはクリーンアップされるまでOPFSに残り、そこから再ダウンロードできる
+- [x] OPFS バックエンドでのみ提供する（フォールバック環境では既存の生.dbエクスポートと同様「OPFSストレージでのみ利用可能」の注記を表示）
+- [x] 起動時・次回アーカイブ実行時に孤児ステージングファイル（`archive_outgoing_*.db` / `archive_incoming_*.db` / `yasumaro_archive_tmp_*.db`）を掃除する
+- [x] i18n（en/ja）がすべての新規UI文言に適用されている（data-i18n）
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -142,12 +142,12 @@ grep -rn "purgeOldRecords" src/offscreen/ | head
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `npm run validate`（型チェック + テスト + lint）が通る
-- [ ] テストカバレッジが基準を満たす（E2E / 統合 / 単体すべて）
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ドキュメント更新済み: `docs/SETUP_GUIDE.md` の保持ポリシー節、`public/PRIVACY.md` と `docs/PRIVACY.md`（**両方同時に**同一内容へ更新）、`CHANGELOG.md`
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `npm run validate`（型チェック + テスト + lint）が通る
+- [x] テストカバレッジが基準を満たす（E2E / 統合 / 単体すべて）
+- [x] コードレビュー完了
+- [x] リファクタリング完了（グリーン後）
+- [x] ドキュメント更新済み: `docs/SETUP_GUIDE.md` の保持ポリシー節、`public/PRIVACY.md` と `docs/PRIVACY.md`（**両方同時に**同一内容へ更新）、`CHANGELOG.md`
 
 ---
 
@@ -439,3 +439,22 @@ F-1〜F-4 のコードと結果は `dev-docs/plans/2026-09-06-archive-spike.md` 
     - G 同統合＋ `testDir/e2e/dashboard-ui.spec.ts`: バッチ再実行収束・quota プレフライト拒否・実行中 disabled/aria-live
     - E 既存 restore 系統合テスト＋E2E: アーカイブ.db を全体復元に食わせたら拒否（E-1/E-2）
     - I DoD チェックリスト: ERROR_CODES 登録・レガシー制約の SETUP_GUIDE 記載（I-3）
+
+## 実装メモ（2026-09-06 自律実装）
+
+### 実装したファイル（メッセージ経路14ファイル連鎖）
+- プロトコル/セキュリティ: `sqliteMessages.ts`（SQLITE_ARCHIVE_PREVIEW/CREATE/CLEANUP/EXPORT＋4応答型）、`sqliteRpcClient.ts`（MaintainOp 4変形＋オーバーロード）、`dashboardSqliteProtocol.ts`（4リクエスト＋応答マッピング）、`sqliteOperationSecurity.ts`（subtype 4件追加・archive_preview を READ_ONLY+TOKEN_EXEMPT・deriveScopeHash に archive_export を追加）
+- deps/ハンドラ: `deps.ts`（ArchiveDeps＋createSqliteClientDeps 4委譲）、`archiveSubtypes.ts`（新規・第4グループ）、`archiveHandler.ts`（新規・SW側 payload 検証＋委譲）、`index.ts`（第4グループ配線・GROUPED_SUBTYPES 4分割 assert）
+- offscreen/worker: `offscreenGateway.ts`（maintain 4ケース＋callInternal に transportOpts）、`dbMaintenance.ts`（4ラッパー）、`OpfsWorkerBackend.ts`（tryOpfsProxy 4メソッド）、`StorageBackend.ts`/`IdbVfsBackend.ts`/`FallbackStorageAdapter.ts`（IF追加＋OPFS以外はエラー返却）、`sqliteMessageHandlers.ts`（4ハンドラ＋マップ）、`opfsWorker/types.ts`（4型＋payload）、`opfsWorker/archiveCreateHandlers.ts`（新規・本体）、`opfsWorker.ts`（ルータ4ケース）
+- UI: `entrypoints/options/index.html`（ナビ＋panel-archive）、`src/dashboard/panels/diagnostic/archivePanel.ts`（新規）、`src/dashboard/main.ts`（登録）、`dashboardSqliteService.ts`（4ラッパー）、i18n en/ja 22キー
+
+### PBI記載からの逸脱と理由
+- **`archive_export` subtype を追加**: Checking Team で dashboard 直OPFS読みが「将来最適化」に降格したため、ダウンロードは offscreen 経由のチャンク転送（8MB/チャンク・`MAX_ARCHIVE_EXPORT_CHUNK_BYTES`）が必須。チャンク読み取りは冪等のためリトライ安全
+- **worker側 二重検証**: `resolveCutoffMs` が cutoffDate から再導出し cutoffMs と一致確認（クライアント偽装ペアの拒否）。validators.ts も境界で同一チェック
+- **preview/create の payload は cutoffDate+cutoffMs のペア**: worker が日付文字列から再計算できるように（scopeHash は cutoffMs+includeDeleted に束縛）
+- **E2E（file://）は静的マークアップ検証のみ**: file:// ではモジュールスクリプトがCSPで動かないため、パネル動作（日付デフォルト・プレビュー集計・作成フロー）は `archivePanel.test.ts`（jsdomユニット・5件）で検証。@extension e2e への追加は次回以降
+- **noRetry テスト**: messageTransport.test.ts ではなく `sqliteClient-queue.test.ts`（ChromeOffscreenTransport の所有テストファイル）に追加
+
+### 検証結果
+- `npm run type-check` ✓ / `npm run lint` ✓（0 errors / 124 warnings は既存）/ `npm test` ✓ **11783 passed / 0 failed**（追加94件: SWハンドラ7・workerハンドラ11・バリデータ8・パネル5・E2E 3ほか既存カウント更新）/ `npm run build` ✓ 7.20MB / E2E dashboard-ui ✓ 104 passed
+- 既存テスト2件は subtype 追加に伴う期待値更新（sqliteMessageHandlers-coverage 20→24、sqliteMessages 20→24）

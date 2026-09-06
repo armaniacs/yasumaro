@@ -38,6 +38,10 @@ export const ALL_DASHBOARD_SQLITE_SUBTYPES = [
   'purge_now',
   'content_purge_now',
   'audit_log_query',
+  'archive_preview',
+  'archive_create',
+  'archive_cleanup',
+  'archive_export',
 ] as const;
 
 export type DashboardSqliteSubtype =
@@ -55,6 +59,7 @@ export const READ_ONLY_OPS: ReadonlySet<DashboardSqliteSubtype> = new Set([
   'status',
   'opfs_spike',
   'audit_log_query',
+  'archive_preview',
 ]);
 
 /**
@@ -70,6 +75,7 @@ export const TOKEN_EXEMPT_OPS = [
   'status',
   'opfs_spike',
   'audit_log_query',
+  'archive_preview',
 ] as const;
 
 export const tokenExempt: ReadonlySet<DashboardSqliteSubtype> = new Set(
@@ -101,6 +107,7 @@ const ARCHIVE_SCOPE_BY_SUBTYPE: Record<string, 'cutoff' | 'staging'> = {
   archive_delete_by_staging: 'staging',
   archive_restore: 'staging',
   archive_restore_preview: 'staging',
+  archive_export: 'staging',
 };
 
 /**

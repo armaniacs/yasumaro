@@ -289,3 +289,73 @@ describe('ContentCleansingExecutedValidator', () => {
     expect(() => v.validate({ type: 'CHECK_DOMAIN', payload: { hardStripRemoved: 1, keywordStripRemoved: 2, totalRemoved: 3 } })).toThrow(ValidationError);
   });
 });
+
+describe('DashboardSqliteValidator — archive subtypes (PBI 2026-09-06-02)', () => {
+  const BASE = { type: 'DASHBOARD_SQLITE', protocolVersion: 2 };
+
+  it('archive_preview: accepts a consistent cutoff pair', () => {
+    const cutoffDate = '2026-03-31';
+    const cutoffMs = new Date(2026, 2, 31, 23, 59, 59, 999).getTime();
+    expect(() =>
+      dashboardSqliteValidator.validate({ ...BASE, payload: { subtype: 'archive_preview', cutoffDate, cutoffMs, includeDeleted: false } }),
+    ).not.toThrow();
+  });
+
+  it('archive_preview: rejects a cutoffMs that does not match cutoffDate', () => {
+    const cutoffDate = '2026-03-31';
+    const cutoffMs = new Date(2026, 3, 30, 23, 59, 59, 999).getTime();
+    expect(() =>
+      dashboardSqliteValidator.validate({ ...BASE, payload: { subtype: 'archive_preview', cutoffDate, cutoffMs, includeDeleted: false } }),
+    ).toThrow(/cutoffMs does not match cutoffDate/);
+  });
+
+  it('archive_preview: rejects a non-existent calendar date', () => {
+    const cutoffMs = new Date(2026, 2, 2, 23, 59, 59, 999).getTime();
+    expect(() =>
+      dashboardSqliteValidator.validate({ ...BASE, payload: { subtype: 'archive_preview', cutoffDate: '2026-02-30', cutoffMs, includeDeleted: true } }),
+    ).toThrow(/Invalid archive cutoff date/);
+  });
+
+  it('archive_preview: rejects non-boolean includeDeleted', () => {
+    const cutoffDate = '2026-03-31';
+    const cutoffMs = new Date(2026, 2, 31, 23, 59, 59, 999).getTime();
+    expect(() =>
+      dashboardSqliteValidator.validate({ ...BASE, payload: { subtype: 'archive_preview', cutoffDate, cutoffMs, includeDeleted: 'no' } }),
+    ).toThrow(/includeDeleted must be boolean/);
+  });
+
+  it('archive_create: rejects an over-long yasumaroVersion', () => {
+    const cutoffDate = '2026-03-31';
+    const cutoffMs = new Date(2026, 2, 31, 23, 59, 59, 999).getTime();
+    expect(() =>
+      dashboardSqliteValidator.validate({
+        ...BASE,
+        payload: { subtype: 'archive_create', cutoffDate, cutoffMs, includeDeleted: false, yasumaroVersion: 'v'.repeat(65) },
+      }),
+    ).toThrow(/yasumaroVersion/);
+  });
+
+  it('archive_create: accepts a well-formed payload', () => {
+    const cutoffDate = '2026-03-31';
+    const cutoffMs = new Date(2026, 2, 31, 23, 59, 59, 999).getTime();
+    expect(() =>
+      dashboardSqliteValidator.validate({
+        ...BASE,
+        payload: { subtype: 'archive_create', cutoffDate, cutoffMs, includeDeleted: true, yasumaroVersion: '6.7.113' },
+      }),
+    ).not.toThrow();
+  });
+
+  it('archive_export: rejects client-specified non-staging names', () => {
+    expect(() =>
+      dashboardSqliteValidator.validate({ ...BASE, payload: { subtype: 'archive_export', stagingName: 'yasumaro.db', offset: 0, length: 1000 } }),
+    ).toThrow(/stagingName/);
+  });
+
+  it('archive_export: rejects oversized chunk lengths', () => {
+    const name = 'archive_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db';
+    expect(() =>
+      dashboardSqliteValidator.validate({ ...BASE, payload: { subtype: 'archive_export', stagingName: name, offset: 0, length: 9 * 1024 * 1024 } }),
+    ).toThrow(/length/);
+  });
+});
