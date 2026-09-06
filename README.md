@@ -81,6 +81,7 @@ flowchart LR
 - 🖱️ **手動記録機能**: 「今すぐ記録」ボタンで現在のページを即座に記録できます。重複チェックなしで同じページを複数回記録可能です。
 - 📱 **改良されたUI**: メイン画面と設定画面を分離し、⚙アイコンから専用ダッシュボードへ簡単にアクセスできます。
 - 🌐 **ドメインフィルター**: ホワイトリスト/ブラックリストで記録するドメインを制御できます。ワイルドカードパターンに対応。オプションでサブドメインにも自動マッチ。
+- 🗄️ **履歴アーカイブ**: 指定日までの履歴を標準SQLiteファイルとして退避し、本体DBから削除できます。マージ復元や、本体に影響させない状態での閲覧・編集にも対応。
 - 🚫 **uBlock Origin形式フィルター**: EasyListなどの既存のuBlockフィルターリストを直接インポートして使用できます。
 - ✏️ **AIプロンプトカスタマイズ**: AIへの要約指示プロンプトを自由に編集・保存できます。プロバイダーごとに異なるプロンプトを設定可能。
 - 📋 **AIプロンプトプリセット**: 5種類の組み込みプリセット（タグ付き要約・箇条書き・英語要約・技術的観点）から選べます。プリセットを複製してカスタマイズも可能。
@@ -294,6 +295,7 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 - 🖱️ **Manual Recording**: Record any page instantly with the "Record Now" button. No duplicate URL restrictions - record the same page multiple times.
 - 📱 **Improved UI**: Separated main screen and settings with easy hamburger menu access.
 - 🌐 **Domain Filtering**: Control which domains to record with whitelist/blacklist support. Wildcard patterns supported, with optional automatic subdomain matching.
+- 🗄️ **History Archive**: Export history up to a chosen date as a standard SQLite file (openable in any SQLite tool), then delete it from the local database. Merge it back (restore) or open it for browsing/editing without touching the main database.
 - 🚫 **uBlock Origin Format Filters**: Import and use existing uBlock filter lists like EasyList directly.
 - ✏️ **AI Prompt Customization**: Edit and save custom AI summarization prompts. Configure different prompts per provider.
 - 📋 **AI Prompt Presets**: Choose from 5 built-in presets (With Tags, Bullet Points, English Summary, Technical). Duplicate any preset to customize it.
