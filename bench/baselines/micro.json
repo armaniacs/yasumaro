@@ -184,5 +184,7 @@
   "cleansing.S.wall_p50": 96.21620850000181,
   "cleansing.S.wall_p95": 101.69516280000244,
   "cleansing.S.wall_p99": 103.27896893000296,
-  "cleansing.scaling_exponent": 0.9540542111864356
+  "cleansing.scaling_exponent": 0.9540542111864356,
+  "f3.50k.n": 50000,
+  "f3.100k.n": 100000
 }

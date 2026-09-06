@@ -18,8 +18,6 @@
 
 import { test, expect } from './fixtures/extension.fixture.js';
 
-const CONFIRM_TOKEN_KEY = 'dashboardSqliteConfirmToken';
-
 /**
  * Poll a condition up to maxAttempts times with delayMs between attempts.
  */
@@ -42,7 +40,6 @@ test.describe('OPFS+FTS5 search', () => {
   // Skip: OPFS is unreliable in headless Chrome and CI environments.
   // These tests consistently fail across all environments due to
   // DASHBOARD_SQLITE message handler not responding in Playwright's extension context.
-  test.skip(true, 'OPFS unreliable — skipping until Playwright extension context supports full SW lifecycle');
 
 test('@extension OPFS+FTS5: seed -> FTS5 search hit -> persists across reload', async ({
   context,
@@ -55,8 +52,7 @@ test('@extension OPFS+FTS5: seed -> FTS5 search hit -> persists across reload', 
 
   const uniqueToken = `uniquefts${Date.now()}`;
 
-  // Step 1: Send a status request first — this triggers ensureConfirmToken()
-  // in the SW, which stores the token in chrome.storage.session.
+  // Step 1: Wake the SW with a status request.
   const status = await poll(
     () =>
       page.evaluate(async () => {
@@ -71,13 +67,21 @@ test('@extension OPFS+FTS5: seed -> FTS5 search hit -> persists across reload', 
   );
   expect(status?.success).toBe(true);
 
-  // Step 2: Read the confirm token from chrome.storage.session
-  const confirmToken = await page.evaluate(
-    async (key: string) => {
-      const stored = (await chrome.storage.session.get(key)) as Record<string, string | undefined>;
-      return stored[key] ?? null;
-    },
-    CONFIRM_TOKEN_KEY
+  // Step 2: Issue a confirm token via create_confirm_token (PBI 2026-09-06-01
+  // moved token issuance to an explicit subtype; the legacy SW-side
+  // ensureConfirmToken-on-status flow no longer exists).
+  const confirmToken = await poll(
+    () =>
+      page.evaluate(async () => {
+        const res = (await chrome.runtime.sendMessage({
+          type: 'DASHBOARD_SQLITE',
+          payload: { subtype: 'create_confirm_token', action: 'import' },
+        })) as Record<string, unknown>;
+        return (res.success && typeof res.confirmToken === 'string') ? res.confirmToken : null;
+      }),
+    (t) => typeof t === 'string' && t.length > 0,
+    6,
+    500
   );
   expect(confirmToken).not.toBeNull();
 
@@ -192,10 +196,19 @@ test('@extension OPFS+FTS5: CJK (Japanese) substring search', async ({
     () => page.evaluate(async () => (await chrome.runtime.sendMessage({ type: 'DASHBOARD_SQLITE', payload: { subtype: 'status' } })) as Record<string, unknown>),
     (r) => r?.success === true, 6, 500
   );
-  const confirmToken = await page.evaluate(async (key: string) => {
-    const stored = (await chrome.storage.session.get(key)) as Record<string, string | undefined>;
-    return stored[key] ?? null;
-  }, CONFIRM_TOKEN_KEY);
+  const confirmToken = await poll(
+    () =>
+      page.evaluate(async () => {
+        const res = (await chrome.runtime.sendMessage({
+          type: 'DASHBOARD_SQLITE',
+          payload: { subtype: 'create_confirm_token', action: 'import' },
+        })) as Record<string, unknown>;
+        return (res.success && typeof res.confirmToken === 'string') ? res.confirmToken : null;
+      }),
+    (t) => typeof t === 'string' && t.length > 0,
+    6,
+    500
+  );
 
   // seed Japanese title (poll until inserted — DB may init lazily / shared context)
   const seed = await poll(
