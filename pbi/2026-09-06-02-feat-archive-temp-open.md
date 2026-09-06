@@ -316,3 +316,18 @@ PBI スパイク節の詳細化。**PBI-01 完遂後、PBI-02 実装コードを
 6. **検証失敗時のクリーンアップ順序**: 先に engine close → その後 `removeEntry`（`handleRestore` の前例 backupHandlers.ts:92-99 に倣う。open中ファイルの削除エラーを防ぐ）
 7. **dashboard は `file.arrayBuffer()` 一括読みをしない**: `blob.stream()` → OPFS writable への逐次チャンク書き込みを規定（200MB級でページOOMを防ぐ）
 8. **E2Eの現実化**: E2E自動化対象は `<input type="file">` ＋再ダウンロード経路のみ。File System Access ハンドル経路は統合テスト＋手動確認に限定。8ptの内訳（第2エンジン機構/検証/一覧UI差し替え/書き戻し）を実装計画で見積もり直す
+
+## Checking Team レビュー反映（2026-09-06・High/Medium 対応。本文と矛盾する場合は本節を優先）
+
+1. **ARCHIVE_UPDATE の url 検証＋描画ポリシー（High/Red Team）**: `url` 変更時は PBI-03 と同一の `isHttpUrl` 検証（PBI-01 でSSOT化する共通ヘルパー）を必須化（`javascript:`/`data:` 拒否）。アーカイブ一時ビュー・編集モーダルは `makeHistoryEntryRow`（`isSecureUrl`＋`textContent`、src/dashboard/historyEntryRow.ts）の再利用または同等描画ポリシーを設計要件化し、行内容の `innerHTML` 埋め込みを禁止（dashboard には innerHTML 使用箇所が多数あるため本パネルでは使わない規約化）。url 不正行は警告表示
+2. **archive_query の per-subtype 検証（Medium/Blue Team）**: `validators.ts` に追加 — query は `MAX_SEARCH_QUERY_LENGTH`（1_000字）以下、limit 500 以下・offset 非負整数、LIKE 特殊文字（`%`/`_`/`\`）はサーバ側エスケープ方針を明記。meta 由来表示値（cutoff_date / yasumaro_version）の dashboard 描画は `textContent` 限定。テスト: validators.test.ts ＋ sqlite-security-integrity.test.ts の exempt マトリクスに上限超過拒否ケース
+3. **実行中UI（Medium/UI）**: 実行中は実行ボタン・日付入力・ファイル選択を `disabled` 化し、既存 status-message パターン（`aria-live="polite"` ＋ `aria-busy`）で「処理中・他の操作は待機」を通知。single-flight 拒否時も同領域に理由を表示。プログレスバー新規部品は作らない
+4. **archiveEditModal のフォーカス管理（Medium/A11y）**: `showConfirmDialog`（src/dashboard/utils/confirmDialog.ts）と同等のフォーカス管理（role="dialog" + aria-modal="true" + Tab trap + Esc + 閉時に起動要素へ復帰）を必須化し、`src/popup/utils/focusTrap.ts` の focusTrapManager を再利用。テスト: archiveEditModal.test.ts 新規（F-4）
+5. **件数・日時表示のi18n（Medium/i18n）**: 件数は単一メッセージキー＋プレースホルダー（`data-i18n-args`、既存 ruleCount 先例）。日時は `getUserLocale()` のロケール形式で整形（生の "YYYY-MM-DD"/ms を表示しない）。新規キーは camelCase・接頭辞グループ化
+6. **200MB 上限の worker 側強制（Medium/FinOps）**: dashboard 側 file.size に加え、worker 側でも staging ファイルサイズを再検証（PBI-01/03 と共通定数）。dashboard は `blob.stream()` → OPFS writable への逐次チャンク書き込み（一括 `arrayBuffer` の二重メモリOOMを防ぐ）
+7. **アイドルTTLは初版不採用（Medium/SRE調整）**: 再接続仕様（敵対的反映§4）により放置エンジンは可視化・回収可能なため、TTLは将来候補。代わりに `ARCHIVE_STATUS` で open 中を常に可視化し明示 close を促す。フェーズ系操作の構造化ログは PBI-01 の受入基準に含む
+8. **共通モジュール使用必須（High/Maintainability）**: allowlist 検証・staging 発行/レジストリ/掃除は PBI-01 で新設される `archiveValidation.ts` / `archiveStaging.ts` を使用（重複実装禁止）。単一オープン制限は offscreen 側 module-level ガードで強制（タブ横断有効 — 検証済み）
+9. **テスト戦略への追加（Test Experts ケース群 D/F/H）**:
+    - D `src/offscreen/__tests__/archiveValidation.test.ts`（新規・sqliteTestApi）: (D-1) sqlite_master 全行列挙で view/trigger/仮想テーブル（rootpage=0）を1つでも検出したら拒否・close→removeEntry 順 (D-2) table_xinfo の hidden/generated・列不一致は拒否（meta.record_count 不一致は警告表示で開続行） (D-3) 現行より1列少ない自作アーカイブは `migrateArchiveStaging` 補完で開ける
+    - F `validators.test.ts` マージ: url=javascript:/data: 拒否（F-1）・query 1001字/limit 501/負 offset/LIKE 連打の拒否またはエスケープ・応答 500行/10MB 上限（F-2）。`historyEntryRow.test.ts` マージ: アーカイブ行の描画ポリシー（F-3）。`archiveEditModal.test.ts` 新規: フォーカス管理（F-4）
+    - H `dashboardSqliteService.test.ts` / `archiveSessionReconnect.test.ts`（新規）: 再接続フロー（ハンドル喪失時は保存が再ダウンロード制限になること）・dirty エンジンの ARCHIVE_CLOSE 二重防御（H-2/H-3）
