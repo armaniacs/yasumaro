@@ -16,7 +16,7 @@
  * archive-required-verification.spec.ts (R1) via the same export subtype.
  */
 import { test, expect } from './fixtures/extension.fixture.js';
-import { createDashboardSqliteClient, poll } from './fixtures/dashboardSqliteHelpers.js';
+import { createDashboardSqliteClient, openOptionsPage, poll } from './fixtures/dashboardSqliteHelpers.js';
 
 const IMPORTED_URLS = ['https://archive-e2e.test/1', 'https://archive-e2e.test/2', 'https://archive-e2e.test/3'];
 
@@ -26,9 +26,7 @@ test.describe('History Archive E2E @extension', () => {
   test.use({ locale: 'en-US' });
 
   test('archive create → restore (duplicates skipped) → purge deletes from main', async ({ context, extensionId }) => {
-    const page = await context.newPage();
-    await page.goto(`chrome-extension://${extensionId}/options.html`);
-    await page.waitForFunction(() => typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
+    const page = await openOptionsPage(context, extensionId);
 
     const { dashboardMsg, scopeHash, tokenFor } = createDashboardSqliteClient(page);
 
@@ -157,9 +155,7 @@ test.describe('History Archive E2E @extension', () => {
   });
 
   test('R5: Phase B reclaims freelist on the real OPFS SQLite engine', async ({ context, extensionId }) => {
-    const page = await context.newPage();
-    await page.goto(`chrome-extension://${extensionId}/options.html`);
-    await page.waitForFunction(() => typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
+    const page = await openOptionsPage(context, extensionId);
 
     const { dashboardMsg, scopeHash, tokenFor } = createDashboardSqliteClient(page);
 
