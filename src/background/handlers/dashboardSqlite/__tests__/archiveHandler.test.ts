@@ -11,10 +11,12 @@ import type { ArchivePreviewData, ArchiveCreateData, ArchivePurgeData } from '..
 
 function makeDeps(overrides: Partial<ArchiveDeps> = {}): ArchiveDeps {
   return {
-    archivePreview: vi.fn(async (cutoffMs: number, includeDeleted: boolean): Promise<DepsResult<ArchivePreviewData>> => ({
-      success: true,
-      data: { total: 10, starred: 2, deleted: 1, oldest: 100, newest: 200, includeDeleted },
-    })),
+    archivePreview: vi.fn(
+      async (_cutoffDate: string, _cutoffMs: number, includeDeleted: boolean): Promise<DepsResult<ArchivePreviewData>> => ({
+        success: true,
+        data: { total: 10, starred: 2, deleted: 1, oldest: 100, newest: 200, includeDeleted },
+      }),
+    ),
     archiveCreate: vi.fn(async (): Promise<DepsResult<ArchiveCreateData>> => ({
       success: true,
       data: { stagingName: 'archive_outgoing_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db', recordCount: 5 },
@@ -42,7 +44,7 @@ describe('archiveHandler — archive_preview', () => {
   it('delegates with the includeDeleted flag and forwards the preview', async () => {
     const deps = makeDeps();
     const handler = createArchiveHandler(deps);
-    const result = await handler({ subtype: 'archive_preview', cutoffMs: CUTOFF_MS, includeDeleted: true } as never);
+    const result = await handler({ subtype: 'archive_preview', cutoffDate: CUTOFF_DATE, cutoffMs: CUTOFF_MS, includeDeleted: true } as never);
     expect(result).toEqual({
       success: true,
       preview: { total: 10, starred: 2, deleted: 1, oldest: 100, newest: 200, includeDeleted: true },
@@ -53,16 +55,16 @@ describe('archiveHandler — archive_preview', () => {
   it('treats a non-boolean includeDeleted as false (strict flag)', async () => {
     const deps = makeDeps();
     const handler = createArchiveHandler(deps);
-    const result = await handler({ subtype: 'archive_preview', cutoffMs: CUTOFF_MS, includeDeleted: 1 } as never);
+    const result = await handler({ subtype: 'archive_preview', cutoffDate: CUTOFF_DATE, cutoffMs: CUTOFF_MS, includeDeleted: 1 } as never);
     expect((result as { preview: { includeDeleted: boolean } }).preview.includeDeleted).toBe(false);
     expect(deps.archivePreview).toHaveBeenCalledWith(CUTOFF_DATE, CUTOFF_MS, false);
   });
 
-  it('rejects a missing/invalid cutoffMs without touching deps', async () => {
+  it('rejects a missing cutoffDate without touching deps', async () => {
     const deps = makeDeps();
     const handler = createArchiveHandler(deps);
     const result = await handler({ subtype: 'archive_preview', cutoffMs: 'x', includeDeleted: false } as never);
-    expect(result).toEqual({ success: false, error: 'archive_preview: cutoffMs must be a positive number' });
+    expect(result).toEqual({ success: false, error: 'archive_preview: cutoffDate is required' });
     expect(deps.archivePreview).not.toHaveBeenCalled();
   });
 
@@ -70,11 +72,16 @@ describe('archiveHandler — archive_preview', () => {
     const deps = makeDeps({
       archivePreview: vi.fn(async (): Promise<DepsResult<ArchivePreviewData>> => ({
         success: false,
-        error: { message: 'OPFS Worker unavailable', kind: 'sqlite_error', retriable: false },
+        error: { message: 'OPFS Worker unavailable', kind: 'sqlite_error' as const, retriable: false },
       })),
     });
     const handler = createArchiveHandler(deps);
-    const result = await handler({ subtype: 'archive_preview', cutoffMs: CUTOFF_MS, includeDeleted: false });
+    const result = await handler({
+      subtype: 'archive_preview',
+      cutoffDate: CUTOFF_DATE,
+      cutoffMs: CUTOFF_MS,
+      includeDeleted: false,
+    } as never);
     expect(result).toEqual({ success: false, error: 'OPFS Worker unavailable', retriable: false });
   });
 });
