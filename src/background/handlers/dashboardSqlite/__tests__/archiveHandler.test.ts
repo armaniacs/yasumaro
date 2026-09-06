@@ -152,6 +152,39 @@ describe('archiveHandler — archive_delete_by_staging', () => {
   });
 });
 
+describe('archiveHandler — archive_export', () => {
+  it('delegates the chunk request and forwards the chunk response', async () => {
+    const deps = makeDeps();
+    const handler = createArchiveHandler(deps);
+    const result = await handler({
+      subtype: 'archive_export',
+      stagingName: 'archive_outgoing_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db',
+      offset: 0,
+      length: 8 * 1024 * 1024,
+    });
+    expect(result).toEqual({ success: true, chunk: [1, 2], nextOffset: 2, total: 2, done: true });
+    expect(deps.archiveExportChunk).toHaveBeenCalledWith(
+      'archive_outgoing_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db', 0, 8 * 1024 * 1024,
+    );
+  });
+
+  it('rejects a missing stagingName', async () => {
+    const deps = makeDeps();
+    const handler = createArchiveHandler(deps);
+    const result = await handler({ subtype: 'archive_export', offset: 0, length: 10 } as never);
+    expect(result).toEqual({ success: false, error: 'archive_export: stagingName is required' });
+    expect(deps.archiveExportChunk).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-positive length without touching deps', async () => {
+    const deps = makeDeps();
+    const handler = createArchiveHandler(deps);
+    const result = await handler({ subtype: 'archive_export', stagingName: 'archive_outgoing_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db', offset: 0, length: 0 } as never);
+    expect(result).toEqual({ success: false, error: 'archive_export: length must be a positive number' });
+    expect(deps.archiveExportChunk).not.toHaveBeenCalled();
+  });
+});
+
 describe('archiveHandler — archive_cleanup', () => {
   it('delegates and forwards the removed list', async () => {
     const deps = makeDeps();
