@@ -31,7 +31,7 @@ export type SqliteMessage =
   | { type: 'SQLITE_PURGE'; payload?: { retentionDays?: number; maxRecords?: number }; traceId?: string }
   | { type: 'CONTENT_PURGE'; payload?: { retentionDays?: number; maxRecords?: number; includeStarred?: boolean }; traceId?: string }
   | { type: 'SQLITE_OPFS_SPIKE'; payload?: never; traceId?: string }
-  | { type: 'SQLITE_ARCHIVE_PREVIEW'; payload: { cutoffMs: number; includeDeleted: boolean }; traceId?: string }
+  | { type: 'SQLITE_ARCHIVE_PREVIEW'; payload: { cutoffDate: string; cutoffMs: number; includeDeleted: boolean }; traceId?: string }
   | { type: 'SQLITE_ARCHIVE_CREATE'; payload: { cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }; traceId?: string }
   | { type: 'SQLITE_ARCHIVE_CLEANUP'; payload?: never; traceId?: string }
   | { type: 'SQLITE_ARCHIVE_EXPORT'; payload: { stagingName: string; offset: number; length: number }; traceId?: string }

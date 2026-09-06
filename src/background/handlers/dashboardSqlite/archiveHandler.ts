@@ -22,12 +22,15 @@ export function createArchiveHandler(deps: ArchiveHandlerDeps) {
   return async (payload: DashboardSqliteRequest): Promise<unknown> => {
     switch (payload.subtype) {
       case 'archive_preview': {
-        const p = payload as { cutoffMs?: unknown; includeDeleted?: unknown };
+        const p = payload as { cutoffDate?: unknown; cutoffMs?: unknown; includeDeleted?: unknown };
+        if (typeof p.cutoffDate !== 'string' || p.cutoffDate.length === 0) {
+          return { success: false, error: 'archive_preview: cutoffDate is required' };
+        }
         if (typeof p.cutoffMs !== 'number' || !Number.isFinite(p.cutoffMs) || p.cutoffMs <= 0) {
           return { success: false, error: 'archive_preview: cutoffMs must be a positive number' };
         }
         const result: DepsResult<import('../../../messaging/sqliteMessages.js').ArchivePreviewData> =
-          await deps.archivePreview(p.cutoffMs, p.includeDeleted === true);
+          await deps.archivePreview(p.cutoffDate, p.cutoffMs, p.includeDeleted === true);
         return result.success
           ? { success: true, preview: result.data }
           : toFailure(result);

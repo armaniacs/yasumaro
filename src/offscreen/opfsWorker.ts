@@ -34,6 +34,7 @@ import {
   handleArchiveRestorePreview,
   handleArchiveRestore,
 } from './opfsWorker/archiveRestoreHandlers.js';
+import { handleArchiveDeleteByStaging } from './opfsWorker/archivePurgeHandlers.js';
 import {
   handleArchiveOpen,
   handleArchiveQuery,
@@ -298,6 +299,14 @@ export async function handleRequest(req: WorkerRequestMessage): Promise<WorkerRe
       }
       case 'ARCHIVE_RESTORE': {
         result = await handleArchiveRestore(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveRestorePayload);
+        break;
+      }
+      case 'ARCHIVE_DELETE_BY_STAGING': {
+        result = await handleArchiveDeleteByStaging(
+          handlerCtx,
+          payload as { stagingName: string },
+          postWorkerLog,
+        );
         break;
       }
       case 'ARCHIVE_OPEN': {

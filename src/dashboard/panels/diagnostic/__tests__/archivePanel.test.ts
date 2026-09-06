@@ -101,7 +101,7 @@ describe('archivePanel mount (PBI 2026-09-06-02)', () => {
     await vi.waitFor(() => expect(summaryEl.hidden).toBe(false));
     expect(summaryEl.textContent).toContain('To archive: 10');
     expect(statusEl.getAttribute('aria-busy')).toBe('false');
-    expect(vi.mocked(archivePreview).mock.calls[0]?.[1]).toBe(false);
+    expect(vi.mocked(archivePreview).mock.calls[0]?.[2]).toBe(false);
   });
 
   it('create click stores the staging name and reveals download/cleanup', async () => {

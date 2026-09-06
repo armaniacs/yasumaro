@@ -354,9 +354,9 @@ export function restoreDb(data: Uint8Array): Promise<ServiceResult<void>> {
  * Preview how many records archive_create would collect for the boundary.
  * Read-only (token-exempt).
  */
-export function archivePreview(cutoffMs: number, includeDeleted: boolean): Promise<ServiceResult<ArchivePreviewData>> {
+export function archivePreview(cutoffDate: string, cutoffMs: number, includeDeleted: boolean): Promise<ServiceResult<ArchivePreviewData>> {
   return callDashboard(
-    { subtype: 'archive_preview', cutoffMs, includeDeleted },
+    { subtype: 'archive_preview', cutoffDate, cutoffMs, includeDeleted },
     (response) => {
       if (!response.preview) throw new Error('Archive preview returned no data');
       return response.preview;

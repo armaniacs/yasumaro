@@ -93,8 +93,9 @@ export function createArchivePanel(): PanelLifecycle {
         try {
           setBusy(true);
           showStatus(statusTarget(statusEl), localized('archiveStatusWorking'), 'success');
+          const cutoffDate = dateInput?.value ?? '';
           const cutoffMs = cutoffMsFromInput();
-          const result = await archivePreview(cutoffMs, includeDeletedInput?.checked === true);
+          const result = await archivePreview(cutoffDate, cutoffMs, includeDeletedInput?.checked === true);
           if ('error' in result) throw new Error(result.error);
           const p = result.data;
           if (summaryEl) {
