@@ -29,11 +29,7 @@ import type {
   ArchiveClosePayload,
 } from './types.js';
 import { createEngine, type SqliteEngine, type SqliteValue } from '../sqliteEngine.js';
-import {
-  SCHEMA_SQL,
-  ARCHIVE_META_SCHEMA_SQL,
-  UPDATABLE_FIELDS,
-} from '../schema.js';
+import { UPDATABLE_FIELDS } from '../schema.js';
 import {
   validateArchiveEngine,
   migrateArchiveStaging,
@@ -49,7 +45,6 @@ import { isValidStagingName } from '../../utils/archiveGuards.js';
 
 const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
 const ARCHIVE_QUERY_LIMIT = 500;
-const LIKE_ESCAPE = '\\';
 
 let sessionEngine: SqliteEngine | null = null;
 let sessionStagingName: string | null = null;

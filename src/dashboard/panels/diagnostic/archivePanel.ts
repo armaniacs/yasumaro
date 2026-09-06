@@ -9,7 +9,7 @@
  */
 
 import { archivePreview, archiveCreate, archiveCleanup, archiveExportChunk, archivePrepareIncoming, archiveRestorePreview, archiveRestore, archiveDeleteByStaging, archiveOpen, archiveQuery, archiveUpdate, archiveSave, archiveClose, archiveStatus } from '../../dashboardSqliteService.js';
-import type { ArchiveSessionRow } from '../../../messaging/sqliteMessages.js';
+
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { downloadBlob } from '../../exportLogsService.js';
 import { type PanelLifecycle } from '../types.js';
