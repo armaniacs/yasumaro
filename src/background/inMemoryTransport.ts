@@ -139,6 +139,14 @@ export class InMemoryTransport implements OffscreenTransport {
       case 'SQLITE_EXPORT':
         return { success: true, data: [] };
 
+      case 'SQLITE_ARCHIVE_EXPORT':
+        return { success: true, chunk: [], nextOffset: 0, total: 0, done: true };
+
+      case 'SQLITE_ARCHIVE_PREVIEW':
+      case 'SQLITE_ARCHIVE_CREATE':
+      case 'SQLITE_ARCHIVE_CLEANUP':
+        return { success: false, error: 'Archive is not supported by InMemoryTransport' };
+
       case 'SQLITE_OPFS_SPIKE':
         return { success: false, error: 'OPFS spike is not supported by InMemoryTransport' };
 
