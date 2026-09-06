@@ -18,12 +18,15 @@
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
 
-### 2026-09-07 アーカイブE2E自動化のフォローアップ（着手順 = ~~04~~ ✅ / ~~06~~ ✅ / ~~05~~ ✅。07 は任意・並行可）
+### 2026-09-07 テスト型債務返済シリーズ（07 を実測に基づき分割・07 は廃止。着手順 = 08 → 09 → 10 → 11 → 12。08〜11 は互いに独立・並行可だが 12 は最後）
 
-- ~~2026-09-07-04-fix-type-check-test-gate.md~~（✅ 完了・アーカイブ済 — 2026-09-07 type-check:test ゲート修理）
-- ~~2026-09-07-06-test-archive-shared-migration-fixture.md~~（✅ 完了・アーカイブ済 — 2026-09-07 アーカイブE2E共通fixture化）
-- ~~2026-09-07-05-test-archive-session-reconnect-e2e.md~~（✅ 完了・アーカイブ済 — 2026-09-07 Y5' セッション再接続E2E）
-- 2026-09-07-07-test-type-debt-payoff.md（⬜ **次に着手（大型・8pt以上）**: テスト型債務の全量返済（2,601 件・309 ファイル）→ type-check:test を素 tsc ゲートに昇格。インベントリは testDir/type-check-baseline.json。エラー数上位ファイルからファイル単位で返済。副作用 🟢 / 🔧（test））
+共通戦略: `type-check:test:raw` の出力をスコープ配下でフィルタし、エラー数の多いファイルから順に返済。返済パターン（シリーズ共通）: null 安全性 = `?.` か `!`（テスト意図に合わせ）/ mock メソッド = `vi.mocked(x)` 包み / 暗黙 any = パラメータ型付与 / 不一致 = テスト意図に合わせモック or 期待値修正。**実行時挙動を変えない**（全 vitest グリーン維持・1 コミット = 1〜3 ファイル）。1 ファイル返済のたび baseline.json から当該エントリを削除（ゲートが常時回帰検知）。返済中に発見した実装側の実バグはテスト側を曲げず別 PBI に切り出す。インベントリ = `testDir/type-check-baseline.json`（2,601 errors / 309 files）
+
+- 2026-09-07-08-test-type-debt-background.md（⬜ **次に着手**: `src/background/**` — 742 errors / 87 files。obsidianClient・service-worker・tabCache 等。2pt / 副作用 🟢 / 🔧（test））
+- 2026-09-07-09-test-type-debt-dashboard.md（⬜ `src/dashboard/**` — 585 errors / 61 files。customPromptManager（150・シリーズ最大）を含む。2pt / 副作用 🟢 / 🔧（test））
+- 2026-09-07-10-test-type-debt-utils.md（⬜ `src/utils` + `src/messaging` + `src/__tests__` — 570 errors / 86 files。contentExtractor（86）・piiSanitizer 等。2pt / 副作用 🟢 / 🔧（test））
+- 2026-09-07-11-test-type-debt-popup-offscreen-content.md（⬜ `src/popup` + `src/offscreen` + `src/content` + `testDir` — 704 errors / 73 files。main.test.ts（132）・popup-xss 等。E2E fixture も含む。2pt / 副作用 🟢 / 🔧（test））
+- 2026-09-07-12-test-type-gate-promotion.md（⬜ **最後**: baseline 空確認 → ラッパー・baseline.json 削除 → `type-check:test` を素 tsc に戻す → ネガティブテスト。1pt 未満 / 副作用 🟢 / 🔧（test））
 
 ### 将来候補の統合台帳（live）
 
