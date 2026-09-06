@@ -37,7 +37,8 @@ export type SqliteMessage =
   | { type: 'SQLITE_ARCHIVE_EXPORT'; payload: { stagingName: string; offset: number; length: number }; traceId?: string }
   | { type: 'SQLITE_ARCHIVE_PREPARE_INCOMING'; payload?: never; traceId?: string }
   | { type: 'SQLITE_ARCHIVE_RESTORE_PREVIEW'; payload: { stagingName: string }; traceId?: string }
-  | { type: 'SQLITE_ARCHIVE_RESTORE'; payload: { stagingName: string }; traceId?: string };
+  | { type: 'SQLITE_ARCHIVE_RESTORE'; payload: { stagingName: string }; traceId?: string }
+  | { type: 'SQLITE_ARCHIVE_DELETE_BY_STAGING'; payload: { stagingName: string }; traceId?: string };
 
 /**
  * SqliteMessage として扱う type の一覧。offscreen.ts の送信元検証で使用する。
@@ -75,6 +76,7 @@ export const SQLITE_MESSAGE_TYPES = [
   'SQLITE_ARCHIVE_PREPARE_INCOMING',
   'SQLITE_ARCHIVE_RESTORE_PREVIEW',
   'SQLITE_ARCHIVE_RESTORE',
+  'SQLITE_ARCHIVE_DELETE_BY_STAGING',
 ] as const;
 
 export type SqliteMessageType = typeof SQLITE_MESSAGE_TYPES[number];
@@ -242,6 +244,19 @@ export type OffscreenArchiveRestoreResponse =
   | { success: true; restored: number; restoredDeleted: number; skipped: number; skippedInvalid: number }
   | OffscreenFailure;
 
+/** Phase B (PBI 2026-09-06-04): main-DB deletion outcome. */
+export interface ArchivePurgeData {
+  deleted: number;
+  remaining: number;
+  freelistBefore: number;
+  freelistAfter: number;
+  vacuumOk: boolean;
+}
+
+export type OffscreenArchivePurgeResponse =
+  | { success: true; deleted: number; remaining: number; freelistBefore: number; freelistAfter: number; vacuumOk: boolean }
+  | OffscreenFailure;
+
 /** Every response the offscreen document can send back to the Service Worker. */
 export type OffscreenResponse =
   | OffscreenHealthResponse
@@ -261,4 +276,5 @@ export type OffscreenResponse =
   | OffscreenArchiveExportResponse
   | OffscreenArchivePrepareIncomingResponse
   | OffscreenArchiveRestorePreviewResponse
-  | OffscreenArchiveRestoreResponse;
+  | OffscreenArchiveRestoreResponse
+  | OffscreenArchivePurgeResponse;

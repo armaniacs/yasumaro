@@ -7,7 +7,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createArchiveHandler } from '../archiveHandler.js';
 import type { ArchiveDeps, DepsResult } from '../deps.js';
-import type { ArchivePreviewData, ArchiveCreateData } from '../../../messaging/sqliteMessages.js';
+import type { ArchivePreviewData, ArchiveCreateData, ArchivePurgeData } from '../../../messaging/sqliteMessages.js';
 
 function makeDeps(overrides: Partial<ArchiveDeps> = {}): ArchiveDeps {
   return {
@@ -26,6 +26,10 @@ function makeDeps(overrides: Partial<ArchiveDeps> = {}): ArchiveDeps {
     archiveExportChunk: vi.fn(async (): Promise<DepsResult<import('../../../messaging/sqliteMessages.js').ArchiveExportData>> => ({
       success: true,
       data: { chunk: [1, 2], nextOffset: 2, total: 2, done: true },
+    })),
+    archiveDeleteByStaging: vi.fn(async (): Promise<DepsResult<ArchivePurgeData>> => ({
+      success: true,
+      data: { deleted: 5, remaining: 3, freelistBefore: 10, freelistAfter: 2, vacuumOk: true },
     })),
     ...overrides,
   };
@@ -117,6 +121,27 @@ describe('archiveHandler — archive_create', () => {
       yasumaroVersion: 'v'.repeat(65),
     });
     expect(result).toEqual({ success: false, error: 'archive_create: yasumaroVersion must be 1-64 chars' });
+  });
+});
+
+describe('archiveHandler — archive_delete_by_staging', () => {
+  it('delegates and forwards the purge outcome', async () => {
+    const deps = makeDeps();
+    const handler = createArchiveHandler(deps);
+    const result = await handler({ subtype: 'archive_delete_by_staging', stagingName: 'archive_outgoing_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db' });
+    expect(result).toEqual({
+      success: true,
+      deleted: 5, remaining: 3, freelistBefore: 10, freelistAfter: 2, vacuumOk: true,
+    });
+    expect(deps.archiveDeleteByStaging).toHaveBeenCalledWith('archive_outgoing_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db');
+  });
+
+  it('rejects a missing stagingName', async () => {
+    const deps = makeDeps();
+    const handler = createArchiveHandler(deps);
+    const result = await handler({ subtype: 'archive_delete_by_staging' } as never);
+    expect(result).toEqual({ success: false, error: 'archive_delete_by_staging: stagingName is required' });
+    expect(deps.archiveDeleteByStaging).not.toHaveBeenCalled();
   });
 });
 

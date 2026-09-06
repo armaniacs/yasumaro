@@ -346,6 +346,19 @@ describe('DashboardSqliteValidator — archive subtypes (PBI 2026-09-06-02)', ()
     ).not.toThrow();
   });
 
+  it('archive_delete_by_staging: rejects client-specified non-staging names', () => {
+    expect(() =>
+      dashboardSqliteValidator.validate({ ...BASE, payload: { subtype: 'archive_delete_by_staging', stagingName: 'yasumaro.db' } }),
+    ).toThrow(/stagingName/);
+  });
+
+  it('archive_delete_by_staging: accepts a valid staging name', () => {
+    const name = 'archive_outgoing_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db';
+    expect(() =>
+      dashboardSqliteValidator.validate({ ...BASE, payload: { subtype: 'archive_delete_by_staging', stagingName: name } }),
+    ).not.toThrow();
+  });
+
   it('archive_export: rejects client-specified non-staging names', () => {
     expect(() =>
       dashboardSqliteValidator.validate({ ...BASE, payload: { subtype: 'archive_export', stagingName: 'yasumaro.db', offset: 0, length: 1000 } }),

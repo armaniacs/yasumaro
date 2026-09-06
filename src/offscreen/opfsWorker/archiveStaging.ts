@@ -20,6 +20,12 @@ export type ArchiveStagingKind = 'incoming' | 'outgoing';
 export interface ArchiveStagingRecord {
   kind: ArchiveStagingKind;
   createdAt: number;
+  /** Phase-A scope captured by archiveCreate (PBI 2026-09-06-02). Phase B
+   * cross-checks the archive file's meta against these values. */
+  cutoffMs?: number;
+  includeDeleted?: boolean;
+  maxIdAtArchive?: number;
+  recordCount?: number;
 }
 
 const registry = new Map<string, ArchiveStagingRecord>();
@@ -81,6 +87,22 @@ export function getStagingRecord(name: string): ArchiveStagingRecord | undefined
 
 export function isStagingRegistered(name: string): boolean {
   return registry.has(name);
+}
+
+/**
+ * Attach the phase-A scope (cutoff / includeDeleted / maxId) to a registered
+ * staging record. Phase B cross-checks the archive file's meta against these
+ * values — a swapped file fails closed (PBI 2026-09-06-04).
+ */
+export function updateStagingRecord(
+  name: string,
+  patch: Partial<Pick<ArchiveStagingRecord, 'cutoffMs' | 'includeDeleted' | 'maxIdAtArchive' | 'recordCount'>>,
+): void {
+  const record = registry.get(name);
+  if (!record) {
+    throw new Error(`Unknown staging file: ${name}`);
+  }
+  registry.set(name, { ...record, ...patch });
 }
 
 /**

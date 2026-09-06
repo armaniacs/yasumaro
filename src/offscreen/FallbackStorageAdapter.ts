@@ -82,6 +82,10 @@ export class FallbackStorageAdapter implements StorageBackend {
     return { success: false, error: 'Archive requires OPFS storage.' };
   }
 
+  async archiveDeleteByStaging(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveDeleteByStagingResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
   async restoreDb(_data: Uint8Array): Promise<BackendOrError<MutationResult>> {
     return { success: false, error: 'Binary restore requires OPFS storage.' };
   }

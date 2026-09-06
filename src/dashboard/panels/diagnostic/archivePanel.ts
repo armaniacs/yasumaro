@@ -8,7 +8,8 @@
  * phase B (pbi/2026-09-06-04), intentionally not wired here.
  */
 
-import { archivePreview, archiveCreate, archiveCleanup, archiveExportChunk, archivePrepareIncoming, archiveRestorePreview, archiveRestore } from '../../dashboardSqliteService.js';
+import { archivePreview, archiveCreate, archiveCleanup, archiveExportChunk, archivePrepareIncoming, archiveRestorePreview, archiveRestore, archiveDeleteByStaging } from '../../dashboardSqliteService.js';
+import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { downloadBlob } from '../../exportLogsService.js';
 import { type PanelLifecycle } from '../types.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
@@ -36,6 +37,7 @@ export function createArchivePanel(): PanelLifecycle {
       const cleanupBtn = container.querySelector('#archive-cleanup-btn') as HTMLButtonElement | null;
       const summaryEl = container.querySelector('#archive-preview-summary') as HTMLElement | null;
       const statusEl = container.querySelector('#archive-status') as HTMLElement | null;
+      const purgeBtn = container.querySelector('#archive-purge-btn') as HTMLButtonElement | null;
       const restoreFileInput = container.querySelector('#archive-restore-file') as HTMLInputElement | null;
       const restorePreviewEl = container.querySelector('#archive-restore-preview-summary') as HTMLElement | null;
       const restoreBtn = container.querySelector('#archive-restore-btn') as HTMLButtonElement | null;
@@ -43,7 +45,7 @@ export function createArchivePanel(): PanelLifecycle {
       let lastStagingName: string | null = null;
       let lastFileName = '';
 
-      const controls = [previewBtn, createBtn, cleanupBtn, downloadBtn, restoreBtn];
+      const controls = [previewBtn, createBtn, cleanupBtn, downloadBtn, restoreBtn, purgeBtn];
       const setBusy = (busy: boolean): void => {
         for (const el of controls) if (el) el.disabled = busy;
         if (statusEl) statusEl.setAttribute('aria-busy', String(busy));
@@ -119,6 +121,7 @@ export function createArchivePanel(): PanelLifecycle {
           lastFileName = `yasumaro_archive_${cutoffDate}.db`;
           if (downloadBtn) downloadBtn.hidden = false;
           if (cleanupBtn) cleanupBtn.hidden = false;
+          if (purgeBtn) purgeBtn.hidden = false;
           if (summaryEl) {
             summaryEl.hidden = false;
             summaryEl.textContent = localized('archiveCreatedSummary', { count: result.data.recordCount });
@@ -139,6 +142,40 @@ export function createArchivePanel(): PanelLifecycle {
           showStatus(statusTarget(statusEl), localized('archiveDownloadDone'), 'success');
         } catch (err) {
           showStatus(statusTarget(statusEl), `${localized('archiveDownloadFailed')}: ${errorMessage(err)}`, 'error');
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      purgeBtn?.addEventListener('click', async () => {
+        if (!purgeBtn) return;
+        try {
+          setBusy(true);
+          if (!lastStagingName) throw new Error(localized('archiveDateRequired'));
+          const cutoffDate = dateInput?.value ?? '';
+          const confirmed = await showConfirmDialog({
+            title: localized('archivePurgeConfirmTitle'),
+            message: localized('archivePurgeConfirmMessage', {
+              date: cutoffDate,
+              legacy: localized('archiveLegacyDisclosure'),
+            }),
+            confirmLabel: localized('archivePurgeConfirmOk'),
+            dangerous: true,
+          });
+          if (!confirmed) return;
+          const result = await archiveDeleteByStaging(lastStagingName);
+          if ('error' in result) throw new Error(result.error);
+          lastStagingName = null;
+          if (downloadBtn) downloadBtn.hidden = true;
+          if (cleanupBtn) cleanupBtn.hidden = true;
+          if (purgeBtn) purgeBtn.hidden = true;
+          const done = localized('archivePurgeDone', {
+            deleted: result.data.deleted,
+            remaining: result.data.remaining,
+          });
+          showStatus(statusTarget(statusEl), result.data.vacuumOk ? done : `${done} ${localized('archiveVacuumNote')}`, result.data.vacuumOk ? 'success' : 'error');
+        } catch (err) {
+          showStatus(statusTarget(statusEl), `${localized('archivePurgeFailed')}: ${errorMessage(err)}`, 'error');
         } finally {
           setBusy(false);
         }

@@ -42,6 +42,7 @@ export const ALL_DASHBOARD_SQLITE_SUBTYPES = [
   'archive_create',
   'archive_cleanup',
   'archive_export',
+  'archive_delete_by_staging',
   'archive_prepare_incoming',
   'archive_restore_preview',
   'archive_restore',

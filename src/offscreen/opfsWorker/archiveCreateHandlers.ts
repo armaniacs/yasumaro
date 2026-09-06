@@ -34,6 +34,7 @@ import {
   releaseStaging,
   assertRegisteredStagingName,
   sweepOrphanStagings,
+  updateStagingRecord,
 } from './archiveStaging.js';
 import {
   cutoffMsFromLocalDate,
@@ -207,6 +208,14 @@ export async function handleArchiveCreate(
     // closes the engine; we then release the staging (registry + OPFS file)
     // so no half-built archive is ever downloadable.
     await validateArchiveEngine(archiveEngine, { recordCountMismatch: 'reject' });
+    // Capture the phase-A scope in the registry — phase B (04) cross-checks
+    // the archive file's meta against these values before deleting.
+    updateStagingRecord(stagingName, {
+      cutoffMs,
+      includeDeleted,
+      maxIdAtArchive,
+      recordCount: inserted,
+    });
     await archiveEngine.exec('PRAGMA wal_checkpoint(TRUNCATE)');
     await archiveEngine.close();
     archiveEngine = null;

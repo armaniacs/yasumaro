@@ -3664,6 +3664,30 @@
   "archiveRestorePreviewFailed": {
     "message": "Archive restore preview failed"
   },
+  "archivePurgeBtn": {
+    "message": "Delete records from main database"
+  },
+  "archivePurgeConfirmTitle": {
+    "message": "Delete archived records from the main database?"
+  },
+  "archivePurgeConfirmMessage": {
+    "message": "Records archived up to {date} will be permanently deleted from the local database. {legacy}"
+  },
+  "archiveLegacyDisclosure": {
+    "message": "Note: copies in the legacy storage may remain until legacy cleanup runs."
+  },
+  "archivePurgeConfirmOk": {
+    "message": "Delete records"
+  },
+  "archivePurgeDone": {
+    "message": "Deletion complete: {deleted} record(s) removed. {remaining} record(s) remain in the local database."
+  },
+  "archiveVacuumNote": {
+    "message": "Storage space was not reclaimed (VACUUM failed) — it will be reclaimed on a later run."
+  },
+  "archivePurgeFailed": {
+    "message": "Archive purge failed"
+  },
   "archiveFileTooLarge": {
     "message": "Archive file exceeds {max} MB"
   },
