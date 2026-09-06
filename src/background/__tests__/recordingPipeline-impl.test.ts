@@ -3,6 +3,7 @@
 // Covers: isValidFetchUrl, truncateContentSize, record branches, saveMetadata branches
 
 import { vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 // ─── Mocks (must be before imports) ─────────────────────────────────────────
 vi.mock('../../utils/storage/types.js', async () => {
@@ -244,7 +245,7 @@ import { addPendingPage } from '../../utils/pendingStorage.js';
 import { getPermissionManager } from '../../utils/permissionManager.js';
 import { isPrivateIpAddress } from '../../utils/fetch.js';
 
-const MockedPrivacyPipeline = PrivacyPipeline as vi.Mock;
+const MockedPrivacyPipeline = PrivacyPipeline as Mock;
 const mockLogger = vi.mocked(loggerModule);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -304,7 +305,7 @@ describe('isValidFetchUrl', () => {
 
   test('rejects private IP addresses', () => {
     // isPrivateIpAddress mock returns false by default, need to override
-    (isPrivateIpAddress as vi.Mock).mockReturnValueOnce(true);
+    (isPrivateIpAddress as Mock).mockReturnValueOnce(true);
     expect(isValidFetchUrl('http://192.168.1.1')).toBe(false);
   });
 
@@ -398,8 +399,7 @@ describe('RecordingPipeline', () => {
     // @ts-expect-error - mock
     domainUtils.extractDomain.mockReturnValue('example.com');
 
-    // @ts-expect-error - mock
-    (getPermissionManager as vi.Mock).mockReturnValue({
+    (getPermissionManager as Mock).mockReturnValue({
       isHostPermitted: vi.fn<() => Promise<boolean>>().mockResolvedValue(true),
       recordDeniedVisit: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
     });

@@ -10,6 +10,7 @@
  */
 
 import { vi } from 'vitest';;
+import type { MockedFunction } from 'vitest';
 
 vi.mock('../../../../utils/localeUtils.js', () => ({
   getUserLocale: vi.fn().mockReturnValue('en-US'),
@@ -41,9 +42,9 @@ import { formatMarkdownStep } from '../formatMarkdownStep.js';
 import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget, sanitizeForMarkdownLinkText } from '../../../../utils/markdownSanitizer.js';
 import type { RecordingContext } from '../../types.js';
 
-const mockSanitize = sanitizeForObsidian as vi.MockedFunction<typeof sanitizeForObsidian>;
-const mockSanitizeUrl = sanitizeUrlForMarkdownTarget as vi.MockedFunction<typeof sanitizeUrlForMarkdownTarget>;
-const mockSanitizeLinkText = sanitizeForMarkdownLinkText as unknown as vi.MockedFunction<typeof sanitizeForMarkdownLinkText>;
+const mockSanitize = sanitizeForObsidian as MockedFunction<typeof sanitizeForObsidian>;
+const mockSanitizeUrl = sanitizeUrlForMarkdownTarget as MockedFunction<typeof sanitizeUrlForMarkdownTarget>;
+const mockSanitizeLinkText = sanitizeForMarkdownLinkText as unknown as MockedFunction<typeof sanitizeForMarkdownLinkText>;
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {

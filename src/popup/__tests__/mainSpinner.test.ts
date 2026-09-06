@@ -48,7 +48,6 @@ describe('ローディングスピナー制御', () => {
     vi.clearAllMocks();
 
     // 【モックキャプチャ】: console.warnの出力をキャプチャするモックを設定
-    // @ts-expect-error - vi.fn() type narrowing issue
   
     vi.spyOn(console, 'warn').mockImplementation(() => {});
   });

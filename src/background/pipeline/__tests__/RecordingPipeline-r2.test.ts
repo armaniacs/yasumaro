@@ -5,6 +5,7 @@
  * skip, contentStorageEnabled path, previewOnly PII masking.
  */
 import { vi } from 'vitest';
+import type { MockedClass } from 'vitest';
 
 const mockStorage: Record<string, unknown> = {};
 globalThis.chrome = {
@@ -83,8 +84,8 @@ import { PrivacyPipeline } from '../../privacyPipeline.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import { makeOrchestrator } from '../../__tests__/helpers/makeRecordingLogic.js';
 
-const MockedPrivacyPipeline = PrivacyPipeline as vi.MockedClass<typeof PrivacyPipeline>;
-const MockedObsidianClient = ObsidianClient as vi.MockedClass<typeof ObsidianClient>;
+const MockedPrivacyPipeline = PrivacyPipeline as MockedClass<typeof PrivacyPipeline>;
+const MockedObsidianClient = ObsidianClient as MockedClass<typeof ObsidianClient>;
 
 const mockSettings: Record<string, unknown> = {
   PRIVACY_MODE: 'full_pipeline', PII_SANITIZE_LOGS: true,

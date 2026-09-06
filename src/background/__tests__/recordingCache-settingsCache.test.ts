@@ -107,7 +107,6 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
     RecordingCache.invalidateUrlCache();
 
     // デフォルトモック
-    // @ts-expect-error - vi.fn() type narrowing issue
 
     mockGetAll.mockResolvedValue({
       AI_PROVIDER: 'gemini',
@@ -127,7 +126,6 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
     // @ts-expect-error - vi.fn() type narrowing issue
 
     PrivacyPipeline.mockImplementation(() => ({
-    // @ts-expect-error - vi.fn() type narrowing issue
 
       process: vi.fn().mockResolvedValue({
         summary: 'Test summary',
@@ -170,7 +168,6 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
         // mockGetAllをリセットして新しいモック値を設定
         mockGetAll.mockClear();
-    // @ts-expect-error - vi.fn() type narrowing issue
 
         mockGetAll.mockResolvedValue({
           AI_PROVIDER: 'openai',
@@ -215,7 +212,6 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
         const secondInstance = makeRecordingLogic(mockObsidianClient, mockAiClient);
         mockGetAll.mockClear();
-    // @ts-expect-error - vi.fn() type narrowing issue
 
         mockGetAll.mockResolvedValue({
           AI_PROVIDER: 'updated-provider'
@@ -250,7 +246,6 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
       RecordingCache.invalidateSettingsCache();
       mockGetAll.mockClear();
-    // @ts-expect-error - vi.fn() type narrowing issue
 
       mockGetAll.mockResolvedValue({
         AI_PROVIDER: 'new-provider'
@@ -296,7 +291,6 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
         content: 'Test content'
       });
 
-    // @ts-expect-error - vi.fn() type narrowing issue
 
       const mockGetAllCallsAfterFirst = mockGetAll.mock.calls.length;
 
@@ -308,7 +302,6 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       });
 
       // 2回目の呼び出しでもmockGetAllは追加で呼ばれない（キャッシュ使用）
-    // @ts-expect-error - vi.fn() type narrowing issue
 
       expect(mockGetAll.mock.calls.length).toBe(mockGetAllCallsAfterFirst);
     });
@@ -392,7 +385,6 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
   describe('エッジケース', () => {
     it('設定がnullの場合の処理', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
 
       mockGetAll.mockResolvedValue(null);
 
@@ -402,7 +394,6 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
     });
 
     it('設定が空オブジェクトの場合の処理', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
 
       mockGetAll.mockResolvedValue({});
 
@@ -413,7 +404,6 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
     it('getSettingsがrejectした場合のエラー伝播', async () => {
       const error = new Error('Storage error');
-    // @ts-expect-error - vi.fn() type narrowing issue
 
       mockGetAll.mockRejectedValue(error);
 
@@ -425,7 +415,6 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       // live-view 撤去によりオーバーフローを外部から再現できないため、
       // リセット→読み取りの基本動作を smoke として残す。
       RecordingCache.resetCacheState();
-    // @ts-expect-error - vi.fn() type narrowing issue
 
       mockGetAll.mockResolvedValue({ AI_PROVIDER: 'smoke' });
 

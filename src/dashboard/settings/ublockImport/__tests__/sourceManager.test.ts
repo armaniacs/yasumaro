@@ -269,7 +269,6 @@ describe('ublockImport - SourceManager Module', () => {
         }
       });
 
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       const fetchFromUrlCallback = vi.fn().mockResolvedValue(`||example.com^\n||newdomain.com^`);
 
@@ -321,7 +320,6 @@ describe('ublockImport - SourceManager Module', () => {
         }
       });
 
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       const fetchFromUrlCallback = vi.fn().mockResolvedValue('invalid line without caret');
 
@@ -340,7 +338,6 @@ describe('ublockImport - SourceManager Module', () => {
       });
 
       // 空または無効なフィルターテキストを返す
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       const fetchFromUrlCallback = vi.fn().mockResolvedValue('');
 

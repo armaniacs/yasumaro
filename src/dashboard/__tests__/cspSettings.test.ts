@@ -6,6 +6,7 @@
  */
 
 import { vi } from 'vitest';
+import type { Mock, MockedFunction } from 'vitest';
 
 // Mock dependencies before importing cspSettings
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
@@ -54,9 +55,9 @@ import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { CSPValidator } from '../../utils/cspValidator.js';
 import { addLog } from '../../utils/logger.js';
 
-const mockGetAll = settingsRepository.getAll as vi.MockedFunction<typeof settingsRepository.getAll>;
-const mockSetAll = settingsRepository.setAll as vi.MockedFunction<typeof settingsRepository.setAll>;
-const mockAddLog = addLog as vi.MockedFunction<typeof addLog>;
+const mockGetAll = settingsRepository.getAll as MockedFunction<typeof settingsRepository.getAll>;
+const mockSetAll = settingsRepository.setAll as MockedFunction<typeof settingsRepository.setAll>;
+const mockAddLog = addLog as MockedFunction<typeof addLog>;
 
 function setupDOM() {
   document.body.innerHTML = `
@@ -87,7 +88,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         conditional_csp_providers: ['huggingface'],
       } as any);
 
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
 
       await cspSettings.loadCSPSettings();
 
@@ -102,7 +103,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         conditional_csp_providers: [],
       } as any);
 
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
 
       await cspSettings.loadCSPSettings();
 
@@ -116,7 +117,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         conditional_csp_providers: [],
       } as any);
 
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
 
       await cspSettings.loadCSPSettings();
 
@@ -130,8 +131,8 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         conditional_csp_providers: ['huggingface'],
       } as any);
 
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue(['huggingface', 'openrouter']);
-      (CSPValidator.getProviderDomain as vi.Mock).mockImplementation((p: string) => {
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue(['huggingface', 'openrouter']);
+      (CSPValidator.getProviderDomain as Mock).mockImplementation((p: string) => {
         if (p === 'huggingface') return 'api-inference.huggingface.co';
         if (p === 'openrouter') return 'api.openrouter.ai';
         return null;
@@ -159,7 +160,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         conditional_csp_providers: [],
       } as any);
 
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
 
       // Should not throw
       await cspSettings.loadCSPSettings();
@@ -169,8 +170,8 @@ describe('cspSettings (CspSettingsController default instance)', () => {
 
   describe('renderProviderList', () => {
     test('should render sorted providers with selected ones first', async () => {
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue(['openrouter', 'huggingface', 'deepinfra']);
-      (CSPValidator.getProviderDomain as vi.Mock).mockImplementation((p: string) => {
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue(['openrouter', 'huggingface', 'deepinfra']);
+      (CSPValidator.getProviderDomain as Mock).mockImplementation((p: string) => {
         const domains: Record<string, string> = {
           'openrouter': 'api.openrouter.ai',
           'huggingface': 'api-inference.huggingface.co',
@@ -190,8 +191,8 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     });
 
     test('should skip providers with no domain', async () => {
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue(['huggingface', 'unknown']);
-      (CSPValidator.getProviderDomain as vi.Mock).mockImplementation((p: string) => {
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue(['huggingface', 'unknown']);
+      (CSPValidator.getProviderDomain as Mock).mockImplementation((p: string) => {
         if (p === 'huggingface') return 'api-inference.huggingface.co';
         return null;
       });
@@ -203,8 +204,8 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     });
 
     test('should apply active class to selected providers', async () => {
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue(['huggingface']);
-      (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue('api-inference.huggingface.co');
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue(['huggingface']);
+      (CSPValidator.getProviderDomain as Mock).mockReturnValue('api-inference.huggingface.co');
 
       await cspSettings.renderProviderList(['huggingface']);
 
@@ -224,8 +225,8 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     });
 
     test('should sort unselected providers alphabetically', async () => {
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue(['deepinfra', 'huggingface', 'openrouter']);
-      (CSPValidator.getProviderDomain as vi.Mock).mockImplementation((p: string) => {
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue(['deepinfra', 'huggingface', 'openrouter']);
+      (CSPValidator.getProviderDomain as Mock).mockImplementation((p: string) => {
         const domains: Record<string, string> = {
           'deepinfra': 'deepinfra.com',
           'huggingface': 'api-inference.huggingface.co',
@@ -263,7 +264,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       `;
 
       mockSetAll.mockResolvedValue(undefined);
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
 
       await cspSettings.saveCSPSettings();
 
@@ -282,7 +283,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       const checkbox = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
       checkbox.checked = true;
       mockSetAll.mockResolvedValue(undefined);
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
 
       await cspSettings.saveCSPSettings();
 
@@ -295,7 +296,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       const checkbox = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
       checkbox.checked = true;
       mockSetAll.mockResolvedValue(undefined);
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
 
       await cspSettings.saveCSPSettings();
 
@@ -323,7 +324,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     test('should default enabled to true when checkbox element missing', async () => {
       document.getElementById('conditionalCspEnabled')?.remove();
       mockSetAll.mockResolvedValue(undefined);
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
 
       await cspSettings.saveCSPSettings();
 
@@ -342,8 +343,8 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         conditional_csp_providers: [],
       } as any);
 
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue(['huggingface', 'openrouter']);
-      (CSPValidator.getProviderDomain as vi.Mock).mockImplementation((p: string) => {
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue(['huggingface', 'openrouter']);
+      (CSPValidator.getProviderDomain as Mock).mockImplementation((p: string) => {
         if (p === 'huggingface') return 'api-inference.huggingface.co';
         if (p === 'openrouter') return 'api.openrouter.ai';
         return null;
@@ -366,7 +367,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
 
       // Should not throw
       await cspSettings.loadCSPSettings();
@@ -379,7 +380,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
       mockSetAll.mockResolvedValue(undefined);
 
       await cspSettings.loadCSPSettings();
@@ -398,9 +399,9 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
       mockSetAll.mockResolvedValue(undefined);
-      (global.confirm as vi.Mock).mockReturnValue(true);
+      (global.confirm as Mock).mockReturnValue(true);
 
       await cspSettings.loadCSPSettings();
 
@@ -419,9 +420,9 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
       mockSetAll.mockClear();
-      (global.confirm as vi.Mock).mockReturnValue(false);
+      (global.confirm as Mock).mockReturnValue(false);
 
       await cspSettings.loadCSPSettings();
 
@@ -437,9 +438,9 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
       mockSetAll.mockResolvedValue(undefined);
-      (global.confirm as vi.Mock).mockReturnValue(true);
+      (global.confirm as Mock).mockReturnValue(true);
 
       await cspSettings.loadCSPSettings();
 
@@ -460,9 +461,9 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
       mockSetAll.mockResolvedValue(undefined);
-      (global.confirm as vi.Mock).mockReturnValue(true);
+      (global.confirm as Mock).mockReturnValue(true);
       (window as unknown as { confirm: unknown }).confirm = global.confirm;
 
       await cspSettings.loadCSPSettings();
@@ -490,9 +491,9 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         conditional_csp_enabled: true,
         conditional_csp_providers: [],
       } as any);
-      (CSPValidator.getAvailableProviders as vi.Mock).mockReturnValue([]);
+      (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
       mockSetAll.mockRejectedValue(new Error('Reset error'));
-      (global.confirm as vi.Mock).mockReturnValue(true);
+      (global.confirm as Mock).mockReturnValue(true);
       mockAddLog.mockClear();
 
       await cspSettings.loadCSPSettings();
@@ -511,7 +512,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
 
   describe('requestProviderPermission (static — DOM-independent utility)', () => {
     test('should return false for unknown provider', async () => {
-      (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue(null);
+      (CSPValidator.getProviderDomain as Mock).mockReturnValue(null);
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const result = await CspSettingsController.requestProviderPermission('nonexistent');
@@ -522,8 +523,8 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     });
 
     test('should handle permission request error', async () => {
-      (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue('api-inference.huggingface.co');
-      (chrome.permissions.request as vi.Mock).mockRejectedValue(new Error('Permission denied'));
+      (CSPValidator.getProviderDomain as Mock).mockReturnValue('api-inference.huggingface.co');
+      (chrome.permissions.request as Mock).mockRejectedValue(new Error('Permission denied'));
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const result = await CspSettingsController.requestProviderPermission('huggingface');
@@ -533,8 +534,8 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     });
 
     test('should handle non-true grant value', async () => {
-      (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue('api-inference.huggingface.co');
-      (chrome.permissions.request as vi.Mock).mockResolvedValue(undefined);
+      (CSPValidator.getProviderDomain as Mock).mockReturnValue('api-inference.huggingface.co');
+      (chrome.permissions.request as Mock).mockResolvedValue(undefined);
 
       const result = await CspSettingsController.requestProviderPermission('huggingface');
 
@@ -544,7 +545,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
 
   describe('requestEssentialPermission (static — DOM-independent utility)', () => {
     test('should handle permission request error', async () => {
-      (chrome.permissions.request as vi.Mock).mockRejectedValue(new Error('Permission denied'));
+      (chrome.permissions.request as Mock).mockRejectedValue(new Error('Permission denied'));
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const result = await CspSettingsController.requestEssentialPermission('github-raw');
@@ -566,7 +567,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
 
   describe('hasPermission (static — DOM-independent utility)', () => {
     test('should return false for unknown provider', async () => {
-      (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue(null);
+      (CSPValidator.getProviderDomain as Mock).mockReturnValue(null);
 
       const result = await CspSettingsController.hasPermission('unknown');
 
@@ -575,8 +576,8 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     });
 
     test('should return false when permission check throws', async () => {
-      (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue('api-inference.huggingface.co');
-      (chrome.permissions.contains as vi.Mock).mockRejectedValue(new Error('Check failed'));
+      (CSPValidator.getProviderDomain as Mock).mockReturnValue('api-inference.huggingface.co');
+      (chrome.permissions.contains as Mock).mockRejectedValue(new Error('Check failed'));
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const result = await CspSettingsController.hasPermission('huggingface');
@@ -586,8 +587,8 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     });
 
     test('should return false when contains returns non-true', async () => {
-      (CSPValidator.getProviderDomain as vi.Mock).mockReturnValue('api-inference.huggingface.co');
-      (chrome.permissions.contains as vi.Mock).mockResolvedValue(undefined);
+      (CSPValidator.getProviderDomain as Mock).mockReturnValue('api-inference.huggingface.co');
+      (chrome.permissions.contains as Mock).mockResolvedValue(undefined);
 
       const result = await CspSettingsController.hasPermission('huggingface');
 

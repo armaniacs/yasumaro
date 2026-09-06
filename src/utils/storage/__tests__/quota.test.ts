@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { hasUnlimitedStorage, STORAGE_QUOTA_BYTES } from '../quota.js';
 
 describe('quota helpers', () => {
@@ -10,13 +11,13 @@ describe('quota helpers', () => {
 
     describe('hasUnlimitedStorage', () => {
         it('returns true when chrome.permissions.contains resolves true', async () => {
-            (chrome.permissions.contains as vi.Mock).mockResolvedValueOnce(true);
+            (chrome.permissions.contains as Mock).mockResolvedValueOnce(true);
             expect(await hasUnlimitedStorage()).toBe(true);
             expect(chrome.permissions.contains).toHaveBeenCalledWith({ permissions: ['unlimitedStorage'] });
         });
 
         it('returns false when chrome.permissions.contains resolves false', async () => {
-            (chrome.permissions.contains as vi.Mock).mockResolvedValueOnce(false);
+            (chrome.permissions.contains as Mock).mockResolvedValueOnce(false);
             expect(await hasUnlimitedStorage()).toBe(false);
         });
 
@@ -29,7 +30,7 @@ describe('quota helpers', () => {
         });
 
         it('returns false when chrome.permissions.contains throws', async () => {
-            (chrome.permissions.contains as vi.Mock).mockRejectedValueOnce(new Error('API unavailable'));
+            (chrome.permissions.contains as Mock).mockRejectedValueOnce(new Error('API unavailable'));
             expect(await hasUnlimitedStorage()).toBe(false);
         });
     });

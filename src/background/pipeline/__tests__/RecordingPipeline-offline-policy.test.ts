@@ -9,6 +9,7 @@
  */
 
 import { vi } from 'vitest';
+import type { MockedClass } from 'vitest';
 
 // Mock chrome.storage.local for pendingStorage integration
 const mockStorage: Record<string, unknown> = {};
@@ -102,8 +103,8 @@ import { PrivacyPipeline } from '../../privacyPipeline.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import { makeOrchestrator } from '../../__tests__/helpers/makeRecordingLogic.js';
 
-const MockedObsidianClient = ObsidianClient as vi.MockedClass<typeof ObsidianClient>;
-const MockedPrivacyPipeline = PrivacyPipeline as vi.MockedClass<typeof PrivacyPipeline>;
+const MockedObsidianClient = ObsidianClient as MockedClass<typeof ObsidianClient>;
+const MockedPrivacyPipeline = PrivacyPipeline as MockedClass<typeof PrivacyPipeline>;
 
 const mockSettings = {
   PRIVACY_MODE: 'full_pipeline',

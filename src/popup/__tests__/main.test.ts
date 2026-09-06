@@ -390,7 +390,6 @@ describe('main', () => {
       // @ts-expect-error - vi.fn() type narrowing issue
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
 
       await loadCurrentTab();
@@ -541,10 +540,8 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockImplementation(() => Promise.resolve(mockTab));
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // Content script sendMessage fails
       mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
@@ -569,12 +566,9 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockImplementation(() => Promise.resolve(mockTab));
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      // @ts-expect-error
       sendMessageWithRetry.mockResolvedValue({
         success: false,
         error: 'DOMAIN_BLOCKED'
@@ -600,10 +594,8 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
 
@@ -645,10 +637,8 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: false }));
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
 
@@ -677,12 +667,9 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      // @ts-expect-error
       sendMessageWithRetry.mockResolvedValue({
         success: true,
         mode: 'masked_cloud',
@@ -710,12 +697,9 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      // @ts-expect-error
       sendMessageWithRetry.mockResolvedValue({
         success: false,
         error: 'AI_PROVIDER_ERROR: Rate limit exceeded'
@@ -739,12 +723,9 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      // @ts-expect-error
       sendMessageWithRetry.mockResolvedValue({
         success: false,
         error: 'PRIVATE_PAGE_DETECTED',
@@ -774,12 +755,9 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      // @ts-expect-error
       sendMessageWithRetry.mockResolvedValue({
         success: false,
         error: 'PRIVATE_PAGE_DETECTED',
@@ -808,10 +786,8 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
       mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
 
@@ -847,10 +823,8 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
 
       sendMessageWithRetry.mockImplementation(async (message) => {
@@ -878,7 +852,6 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script sendMessage fails
@@ -907,7 +880,6 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script sendMessage fails — permission ladder will grant per-origin via PermissionManager mock (isHostPermitted true)
@@ -936,7 +908,6 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script sendMessage fails
@@ -961,7 +932,6 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script returns undefined/null
@@ -987,7 +957,6 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script returns null
@@ -1010,12 +979,9 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      // @ts-expect-error
       sendMessageWithRetry.mockResolvedValue({
         success: false,
         error: 'Some save error'
@@ -1039,10 +1005,8 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
       mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
 
@@ -1072,10 +1036,8 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
       mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
       sendMessageWithRetry.mockResolvedValue({ success: true });
@@ -1095,7 +1057,6 @@ describe('main', () => {
         url: 'https://allowed.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue({
@@ -1122,7 +1083,6 @@ describe('main', () => {
         url: 'https://blocked.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue({
@@ -1146,7 +1106,6 @@ describe('main', () => {
         url: 'https://private.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue({
@@ -1170,7 +1129,6 @@ describe('main', () => {
         url: 'https://saved.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue({
@@ -1194,7 +1152,6 @@ describe('main', () => {
         url: 'chrome://extensions'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue(null);
@@ -1207,7 +1164,6 @@ describe('main', () => {
     });
 
     it('should handle tab without URL', async () => {
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([{ id: 1, title: 'No URL' }]);
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
@@ -1224,7 +1180,6 @@ describe('main', () => {
         url: 'https://cached.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue({
@@ -1249,7 +1204,6 @@ describe('main', () => {
         url: 'https://nocache.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue({
@@ -1278,10 +1232,8 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({
         content: 'Page content',
         cleansedReason: 'both',
@@ -1312,10 +1264,8 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({
         content: 'Page content',
         cleansedReason: 'none',
@@ -1346,7 +1296,6 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script fails — ladder will try per-origin first via PermissionManager (mocked true) so per-origin path succeeds with executeScript
@@ -1371,7 +1320,6 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
@@ -1397,7 +1345,6 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
@@ -1421,10 +1368,8 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
       mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
       sendMessageWithRetry.mockResolvedValue({ success: true, aiDuration: 500 });
@@ -1450,7 +1395,6 @@ describe('main', () => {
         url: 'https://blacklist.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue({
@@ -1474,7 +1418,6 @@ describe('main', () => {
         url: 'https://cookie.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue({
@@ -1498,7 +1441,6 @@ describe('main', () => {
         url: 'https://auth.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue({
@@ -1519,7 +1461,6 @@ describe('main', () => {
   describe('status icons', () => {
     it('should render success icon for allowed domain', async () => {
       const mockTab = { id: 1, title: 'OK', url: 'https://ok.com' };
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue({
@@ -1538,7 +1479,6 @@ describe('main', () => {
 
     it('should render warning icon for private page', async () => {
       const mockTab = { id: 1, title: 'Private', url: 'https://private.com' };
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue({
@@ -1557,7 +1497,6 @@ describe('main', () => {
 
     it('should render muted icon when no privacy info', async () => {
       const mockTab = { id: 1, title: 'Unknown', url: 'https://unknown.com' };
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue({
@@ -1578,7 +1517,6 @@ describe('main', () => {
   describe('status toggle button', () => {
     it('should toggle details panel visibility', async () => {
       const mockTab = { id: 1, title: 'Toggle', url: 'https://toggle.com' };
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue({
@@ -1777,7 +1715,6 @@ describe('main', () => {
   describe('cleansing status display', () => {
     it('should show no-info when no cleanse stats', async () => {
       const mockTab = { id: 1, title: 'Clean', url: 'https://clean.com' };
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue({
@@ -1801,7 +1738,6 @@ describe('main', () => {
   describe('permission banner', () => {
     it('should hide banner when all URLs permitted', async () => {
       const mockTab = { id: 1, title: 'Test', url: 'https://test.com' };
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // @ts-expect-error
       checkPageStatus.mockResolvedValue({

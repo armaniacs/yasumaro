@@ -9,6 +9,7 @@
  */
 
 import { vi } from 'vitest';;
+import type { Mock } from 'vitest';
 
 // Mock chrome.permissions API
 global.chrome = {
@@ -23,7 +24,7 @@ describe('CspSettingsController - Permission Request', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Mock success response for permission requests
-    (chrome.permissions.request as vi.Mock).mockResolvedValue(true);
+    (chrome.permissions.request as Mock).mockResolvedValue(true);
   });
 
   describe('requestProviderPermission', () => {
@@ -50,7 +51,7 @@ describe('CspSettingsController - Permission Request', () => {
     it('should handle permission denial', async () => {
       const { CspSettingsController } = await import('../cspSettings.js');
 
-      (chrome.permissions.request as vi.Mock).mockResolvedValue(false);
+      (chrome.permissions.request as Mock).mockResolvedValue(false);
 
       const granted = await CspSettingsController.requestProviderPermission('huggingface');
 
@@ -60,7 +61,7 @@ describe('CspSettingsController - Permission Request', () => {
     it('should handle permission request error', async () => {
       const { CspSettingsController } = await import('../cspSettings.js');
 
-      (chrome.permissions.request as vi.Mock).mockRejectedValue(new Error('Permission denied'));
+      (chrome.permissions.request as Mock).mockRejectedValue(new Error('Permission denied'));
 
       const granted = await CspSettingsController.requestProviderPermission('huggingface');
 
@@ -105,7 +106,7 @@ describe('CspSettingsController - Permission Request', () => {
     it('should check if permission is granted for provider', async () => {
       const { CspSettingsController } = await import('../cspSettings.js');
 
-      (chrome.permissions.contains as vi.Mock).mockResolvedValue(true);
+      (chrome.permissions.contains as Mock).mockResolvedValue(true);
 
       const hasPermission = await CspSettingsController.hasPermission('huggingface');
 
@@ -118,7 +119,7 @@ describe('CspSettingsController - Permission Request', () => {
     it('should return false if permission not granted', async () => {
       const { CspSettingsController } = await import('../cspSettings.js');
 
-      (chrome.permissions.contains as vi.Mock).mockResolvedValue(false);
+      (chrome.permissions.contains as Mock).mockResolvedValue(false);
 
       const hasPermission = await CspSettingsController.hasPermission('huggingface');
 

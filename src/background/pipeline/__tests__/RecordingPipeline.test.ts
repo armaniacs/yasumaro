@@ -8,6 +8,7 @@
  */
 
 import { vi } from 'vitest';;
+import type { Mock, MockedClass } from 'vitest';
 
 // Mock chrome.storage.local for pendingStorage integration
 const mockStorage: Record<string, unknown> = {};
@@ -104,9 +105,9 @@ import { makeOrchestrator } from '../../__tests__/helpers/makeRecordingLogic.js'
 import { createRecordingOrchestrator, RecordingOrchestrator } from '../RecordingOrchestrator.js';
 import { NoOpOfflineNetworkQueue } from '../../offlineNetworkQueue.js';
 
-const MockedObsidianClient = ObsidianClient as vi.MockedClass<typeof ObsidianClient>;
+const MockedObsidianClient = ObsidianClient as MockedClass<typeof ObsidianClient>;
 
-const MockedPrivacyPipeline = PrivacyPipeline as vi.MockedClass<typeof PrivacyPipeline>;
+const MockedPrivacyPipeline = PrivacyPipeline as MockedClass<typeof PrivacyPipeline>;
 
 const mockSettings = {
   PRIVACY_MODE: 'full_pipeline',
@@ -255,7 +256,7 @@ describe('RecordingPipeline', () => {
         content: 'Some content',
       }, { settings: mockSettings });
 
-      const calls = (logger.addLog as vi.Mock).mock.calls;
+      const calls = (logger.addLog as Mock).mock.calls;
       const traceIds = new Set(calls.map((call: any[]) => call[2]?.traceId).filter(Boolean));
       expect(traceIds.size).toBe(1);
       const traceId = Array.from(traceIds)[0];
@@ -281,7 +282,7 @@ describe('RecordingPipeline', () => {
         content: 'Some content',
       }, { settings: mockSettings });
 
-      const calls = (logger.addLog as vi.Mock).mock.calls;
+      const calls = (logger.addLog as Mock).mock.calls;
       const traceIds = calls.map((call: any[]) => call[2]?.traceId).filter(Boolean);
       expect(traceIds.length).toBeGreaterThan(0);
       const firstTraceId = traceIds[0];
@@ -492,7 +493,7 @@ describe('RecordingPipeline', () => {
       await executePromise;
 
       // addLog に渡された delayMs 引数をすべて検証
-      const retryCalls = (logger.addLog as vi.Mock).mock.calls.filter(
+      const retryCalls = (logger.addLog as Mock).mock.calls.filter(
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Retrying')
       );
 

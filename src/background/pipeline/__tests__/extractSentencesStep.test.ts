@@ -5,6 +5,7 @@
  */
 
 import { vi } from 'vitest';;
+import type { Mock } from 'vitest';
 import type { RecordingContext } from '../types.js';
 
 // Mock the sentenceExtractor module
@@ -32,8 +33,8 @@ describe('extractSentencesStep', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (extractSentences as vi.Mock).mockReset();
-    (getCompressionStats as vi.Mock).mockReset();
+    (extractSentences as Mock).mockReset();
+    (getCompressionStats as Mock).mockReset();
   });
 
   it('should extract sentences from truncated content', async () => {
@@ -44,7 +45,6 @@ describe('extractSentencesStep', () => {
         content: 'Original content here',
       },
       settings: {
-        // @ts-expect-error - minimal settings for test
         l0_extractive_enabled: true,
       },
       force: false,
@@ -60,8 +60,8 @@ describe('extractSentencesStep', () => {
       'Third sentence.',
     ];
 
-    (extractSentences as vi.Mock).mockReturnValue(mockSentences);
-    (getCompressionStats as vi.Mock).mockReturnValue({
+    (extractSentences as Mock).mockReturnValue(mockSentences);
+    (getCompressionStats as Mock).mockReturnValue({
       originalLength: 500,
       extractedLength: 150,
       compressionRatio: 3.33,
@@ -84,7 +84,6 @@ describe('extractSentencesStep', () => {
         content: 'Content',
       },
       settings: {
-        // @ts-expect-error - minimal settings for test
         l0_extractive_enabled: false,
       },
       force: false,
@@ -106,7 +105,6 @@ describe('extractSentencesStep', () => {
         content: 'Content',
       },
       settings: {
-        // @ts-expect-error - minimal settings for test
         l0_extractive_enabled: true,
       },
       force: false,
@@ -120,7 +118,7 @@ describe('extractSentencesStep', () => {
 
     const mockSentences = ['AI generated summary from privacy pipeline'];
 
-    (extractSentences as vi.Mock).mockReturnValue(mockSentences);
+    (extractSentences as Mock).mockReturnValue(mockSentences);
 
     const result = await extractSentencesStep(mockContext);
 
@@ -136,7 +134,6 @@ describe('extractSentencesStep', () => {
         content: '',
       },
       settings: {
-        // @ts-expect-error - minimal settings for test
         l0_extractive_enabled: true,
       },
       force: false,
@@ -144,7 +141,7 @@ describe('extractSentencesStep', () => {
       truncatedContent: '',
     };
 
-    (extractSentences as vi.Mock).mockReturnValue([]);
+    (extractSentences as Mock).mockReturnValue([]);
 
     const result = await extractSentencesStep(mockContext);
 
@@ -160,7 +157,6 @@ describe('extractSentencesStep', () => {
         content: 'Some content',
       },
       settings: {
-        // @ts-expect-error - minimal settings for test
         l0_extractive_enabled: true,
       },
       force: false,
@@ -168,7 +164,7 @@ describe('extractSentencesStep', () => {
       truncatedContent: 'Content to extract from',
     };
 
-    (extractSentences as vi.Mock).mockImplementation(() => {
+    (extractSentences as Mock).mockImplementation(() => {
       throw new Error('Extraction failed');
     });
 
@@ -187,7 +183,6 @@ describe('extractSentencesStep', () => {
         content: 'A'.repeat(1000),
       },
       settings: {
-        // @ts-expect-error - minimal settings for test
         l0_extractive_enabled: true,
       },
       force: false,
@@ -197,8 +192,8 @@ describe('extractSentencesStep', () => {
 
     const mockSentences = ['Extracted sentence 1', 'Extracted sentence 2'];
 
-    (extractSentences as vi.Mock).mockReturnValue(mockSentences);
-    (getCompressionStats as vi.Mock).mockReturnValue({
+    (extractSentences as Mock).mockReturnValue(mockSentences);
+    (getCompressionStats as Mock).mockReturnValue({
       originalLength: 1000,
       extractedLength: 50,
       compressionRatio: 20,

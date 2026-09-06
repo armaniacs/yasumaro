@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { Mock } from 'vitest';
 
 // Polyfill scrollIntoView for jsdom
 if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
@@ -469,7 +470,7 @@ describe('customPromptManager', () => {
 
   describe('handleDeletePrompt', () => {
     it('should delete a prompt when confirmed', async () => {
-      (global.confirm as vi.Mock).mockReturnValueOnce(true);
+      (global.confirm as Mock).mockReturnValueOnce(true);
 
       const { initCustomPromptManager } = await import('../customPromptManager.js');
 
@@ -486,7 +487,7 @@ describe('customPromptManager', () => {
     });
 
     it('should NOT delete a prompt when confirmation is cancelled', async () => {
-      (global.confirm as vi.Mock).mockReturnValueOnce(false);
+      (global.confirm as Mock).mockReturnValueOnce(false);
 
       const { initCustomPromptManager } = await import('../customPromptManager.js');
 

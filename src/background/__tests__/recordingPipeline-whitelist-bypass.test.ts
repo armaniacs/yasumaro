@@ -67,9 +67,7 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
     } as any;
 
     mockAIClient = {
-      // @ts-expect-error - vi.fn() type narrowing issue
       getSupportedModes: vi.fn().mockReturnValue(['local_only', 'full_pipeline']),
-      // @ts-expect-error - vi.fn() type narrowing issue
       generateSummary: vi.fn().mockResolvedValue({ summary: 'Test summary' })
     } as any;
 
@@ -77,7 +75,6 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
 
     // storageのデフォルトモック
     getSavedUrlsWithTimestamps = mockGetSavedUrlsWithTimestamps;
-    // @ts-expect-error - vi.fn() type narrowing issue
     mockGetAll.mockResolvedValue({
       [StorageKeys.DOMAIN_WHITELIST]: [],
       [StorageKeys.PRIVACY_MODE]: 'full_pipeline',
@@ -85,7 +82,6 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
       'auto_save_privacy_behavior': 'skip',
       [StorageKeys.OBSIDIAN_DAILY_PATH]: 'Daily/{{date}}.md'
     });
-    // @ts-expect-error - vi.fn() type narrowing issue
     getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
 
     // domainUtilsのデフォルトモック
@@ -93,9 +89,7 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
     isDomainAllowed = domainMocked.isDomainAllowed;
     const extractDomain = domainMocked.extractDomain;
     const isDomainInList = domainMocked.isDomainInList;
-    // @ts-expect-error - vi.fn() type narrowing issue
     isDomainAllowed.mockResolvedValue(true);
-    // @ts-expect-error - vi.fn() type narrowing issue
     extractDomain.mockImplementation((url: string) => {
       try {
         const urlObj = new URL(url);
@@ -172,11 +166,9 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
     RecordingCache.setPrivacyCacheEntry('https://wiki.confluence.example.com/page', privacyInfo as never);
 
     // ドメインフィルター: 許可
-    // @ts-expect-error - vi.fn() type narrowing issue
     isDomainAllowed.mockResolvedValue(true);
 
     // URLキャッシュを空に設定
-    // @ts-expect-error - vi.fn() type narrowing issue
     getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
 
     // テスト実行（サブドメイン）
@@ -214,7 +206,6 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
     RecordingCache.setPrivacyCacheEntry('https://example.com/page', privacyInfo as never);
 
     // ドメインフィルター: 許可
-    // @ts-expect-error - vi.fn() type narrowing issue
     isDomainAllowed.mockResolvedValue(true);
 
     // テスト実行
@@ -243,7 +234,6 @@ describe('RecordingPipeline - Whitelist Privacy Bypass', () => {
     mockGetAll.mockResolvedValue(mockSettings);
 
     // ドメインフィルター: 許可
-    // @ts-expect-error - vi.fn() type narrowing issue
     isDomainAllowed.mockResolvedValue(true);
 
     // テスト実行（不正なURL）

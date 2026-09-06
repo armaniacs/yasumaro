@@ -9,6 +9,7 @@
  */
 
 import { vi } from 'vitest';;
+import type { Mock } from 'vitest';
 
 // Mock chrome.storage.local - re-set in beforeEach to survive clearAllMocks
 const mockStorage = new Map();
@@ -207,9 +208,9 @@ describe('TrustChecker - Phase 2 - Alert Settings Save/Load', () => {
     const checker = new TrustChecker();
     await checker.loadAlertSettings();
 
-    const setCallsBefore = (chrome.storage.local.set as vi.Mock).mock.calls.length;
+    const setCallsBefore = (chrome.storage.local.set as Mock).mock.calls.length;
     await checker.saveAlertSettings({});
-    const setCallsAfter = (chrome.storage.local.set as vi.Mock).mock.calls.length;
+    const setCallsAfter = (chrome.storage.local.set as Mock).mock.calls.length;
 
     expect(setCallsAfter).toBe(setCallsBefore);
   });
@@ -219,7 +220,7 @@ describe('TrustChecker - Phase 2 - Alert Settings Save/Load', () => {
     const checker = new TrustChecker();
 
     // Override storage.get to throw for this test
-    (chrome.storage.local.get as vi.Mock).mockRejectedValueOnce(new Error('Storage error'));
+    (chrome.storage.local.get as Mock).mockRejectedValueOnce(new Error('Storage error'));
 
     await checker.loadAlertSettings();
 

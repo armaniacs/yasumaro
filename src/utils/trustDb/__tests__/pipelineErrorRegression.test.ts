@@ -86,7 +86,6 @@ describe('pipelineErrorRegression: 破損DBでも記録が失敗しない', () =
   it('TrustDb.isDomainTrusted は未初期化でも例外を投げず UNVERIFIED を返す', async () => {
     const db = getTrustDbAdmin();
     // 未初期化状態を強制: bloomFilter が無い状態でも UNVERIFIED を返す（trustDb.ts:332 のガード）
-    // @ts-expect-error private access for test
     db['state'] = { database: null, bloomFilter: null, initialized: false };
     const result = db.isDomainTrusted('https://www.bbc.com/news/articles/c770jyd4l7lo');
     expect(result.level).toBe(DomainTrustLevel.UNVERIFIED);
@@ -101,7 +100,6 @@ describe('pipelineErrorRegression: 破損DBでも記録が失敗しない', () =
       sensitive: { presets: undefined } as unknown as never,
       tranco: { tier: 'top10k', domains: [], count: 0, sizeBytes: 0 } as unknown as never,
     }) as Record<string, unknown>;
-    // @ts-expect-error private
     db['repairDatabase'](corrupted as never);
     expect((corrupted as Record<string, unknown>).jpAnchor).toBeDefined();
     expect(((corrupted as unknown as { jpAnchor: { userTlds: unknown } }).jpAnchor.userTlds)).toEqual([]);

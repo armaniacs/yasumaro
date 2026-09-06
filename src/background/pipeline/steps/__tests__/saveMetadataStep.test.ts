@@ -10,6 +10,7 @@
  */
 
 import { vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 vi.mock('../../../../utils/logger.js', () => ({
   addLog: vi.fn(),
@@ -121,7 +122,7 @@ describe('saveMetadataStep', () => {
       await saveMetadataStep(context);
 
       expect(savedUrlStore.saveSavedUrlEntryMetadata).toHaveBeenCalledTimes(1);
-      const [url, patch, options] = (savedUrlStore.saveSavedUrlEntryMetadata as vi.Mock).mock.calls[0] as [
+      const [url, patch, options] = (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [
         string, Record<string, unknown>, Record<string, unknown>,
       ];
       expect(url).toBe('https://example.com/page');
@@ -166,7 +167,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const [, patch] = (savedUrlStore.saveSavedUrlEntryMetadata as vi.Mock).mock.calls[0] as [string, Record<string, unknown>];
+      const [, patch] = (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [string, Record<string, unknown>];
       expect('maskedCount' in patch).toBe(false);
     });
 
@@ -177,7 +178,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const [, patch] = (savedUrlStore.saveSavedUrlEntryMetadata as vi.Mock).mock.calls[0] as [string, Record<string, unknown>];
+      const [, patch] = (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [string, Record<string, unknown>];
       expect('content' in patch).toBe(false);
     });
 
@@ -188,7 +189,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const [, patch] = (savedUrlStore.saveSavedUrlEntryMetadata as vi.Mock).mock.calls[0] as [string, Record<string, unknown>];
+      const [, patch] = (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [string, Record<string, unknown>];
       expect('tags' in patch).toBe(false);
     });
 
@@ -199,7 +200,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const [, patch] = (savedUrlStore.saveSavedUrlEntryMetadata as vi.Mock).mock.calls[0] as [string, Record<string, unknown>];
+      const [, patch] = (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [string, Record<string, unknown>];
       expect('aiSummary' in patch).toBe(false);
     });
 
@@ -210,7 +211,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const [, patch] = (savedUrlStore.saveSavedUrlEntryMetadata as vi.Mock).mock.calls[0] as [string, Record<string, unknown>];
+      const [, patch] = (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [string, Record<string, unknown>];
       expect(patch.recordType).toBe('auto');
     });
   });
@@ -238,7 +239,7 @@ describe('saveMetadataStep', () => {
 
   describe('失敗時の queue 保持', () => {
     it('保存失敗時に metadata patch payload が queue へ保持される', async () => {
-      (savedUrlStore.saveSavedUrlEntryMetadata as vi.Mock).mockRejectedValueOnce(new Error('Storage error'));
+      (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mockRejectedValueOnce(new Error('Storage error'));
 
       const context = makeContext({
         data: { title: 'Test', url: 'https://example.com', content: 'content', maskedCount: 3 },
@@ -248,7 +249,7 @@ describe('saveMetadataStep', () => {
       await saveMetadataStep(context);
 
       expect(pendingQueue.enqueuePendingWrite).toHaveBeenCalledTimes(1);
-      const payload = (pendingQueue.enqueuePendingWrite as vi.Mock).mock.calls[0][0] as Record<string, unknown>;
+      const payload = (pendingQueue.enqueuePendingWrite as Mock).mock.calls[0][0] as Record<string, unknown>;
       expect(payload.type).toBe('metadataPatch');
       expect(payload.key).toBe('savedUrlsWithTimestamps');
       expect(payload.url).toBe('https://example.com');
@@ -266,7 +267,7 @@ describe('saveMetadataStep', () => {
     });
 
     it('失敗時に WARN ログが出力される', async () => {
-      (savedUrlStore.saveSavedUrlEntryMetadata as vi.Mock).mockRejectedValueOnce(new Error('Storage error'));
+      (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mockRejectedValueOnce(new Error('Storage error'));
 
       const context = makeContext({
         data: { title: 'Test', url: 'https://example.com', content: 'content', maskedCount: 3 },
@@ -275,7 +276,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const warnCalls = (logger.addLog as vi.Mock).mock.calls.filter(
+      const warnCalls = (logger.addLog as Mock).mock.calls.filter(
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Failed to save')
       );
       expect(warnCalls.length).toBeGreaterThan(0);
@@ -289,7 +290,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const failCalls = (logger.addLog as vi.Mock).mock.calls.filter(
+      const failCalls = (logger.addLog as Mock).mock.calls.filter(
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Failed to save')
       );
       expect(failCalls.length).toBe(0);
