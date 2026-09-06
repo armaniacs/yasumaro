@@ -34,6 +34,11 @@ async function tryLaunchExtensionContext(): Promise<BrowserContext | null> {
         '--no-first-run',
         '--no-default-browser-check',
       ],
+      // MV3 extension service workers must be allowed to run — without this
+      // the DASHBOARD_SQLITE handler in the SW never wakes and messages time
+      // out (E2E blocker resolved 2026-09-06).
+      serviceWorkers: 'allow',
+      acceptDownloads: true,
     });
 
     // Wait briefly for the extension service worker to register
