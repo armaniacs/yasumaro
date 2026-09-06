@@ -25,6 +25,12 @@
 - 2026-09-06-04-feat-archive-purge-staging.md（⬜ **次に着手**: ステージングからの本体削除・フェーズB: 検証済みstaging参照＋max_id述語（後着行保護）＋VACUUM（freelist検証）＋quotaプレフライト＋single-flight。破壊的操作を独立PBIに隔離。02/03のハンドラ・レジストリ・ガード基盤を利用。2pt / 副作用 🔴 / ✨）
 - 2026-09-06-05-feat-archive-temp-open.md（⬜ アーカイブの一時オープン: メインDB非汚染でアーカイブ.db を参照・編集・書き戻し。**着手条件: PBI内スパイク必須**（第2エンジン長期同時オープン・04実装中に先行実施可）。8pt / 副作用 🟡 / ✨）
 
+### 2026-09-07 アーカイブ手動テストのE2E自動化（着手順 = 01 → 02。03は01と並行可。敵対的レビュー反映済み）
+
+- 2026-09-07-01-test-archive-manual-to-e2e-required.md（⬜ **次に着手**: 🔴必須のうち R1〜R4。R1=`archive_export`バイト列→SQLite照合、R2=TZマトリクス（**固定epoch seed+文字列cutoffの相対関係**で検証。単純なTZ切替では素通り）、R3=`get_count`差分、R4=**vitestユニット**（`Promise.all`ではsingle-flight検証不可）。SQLiteリーダーは`better-sqlite3`か`sql.js`を着手前に決定（CI Node24）。`archiveDbReader.ts`は02/03が依存。2〜3pt / 副作用 🟢 / 🔧（test））
+- 2026-09-07-02-test-archive-manual-to-e2e-recommended.md（⬜ 01の次: 🟡推奨 Y2/Y3/Y4/Y6・🟢任意 G3/G4/G5/G8。**テスト専用subtype/フラグは追加しない**（新subtypeは18ファイル改修）。Y2/G8は既存vitestカバレッジで済む可能性大。G3対象は`archive_query`（`search`ではない）。Y1/Y5/G1/G2/G7は自動化不可。01の`archiveDbReader`に依存。2pt / 副作用 🟢 / 🔧（test））
+- 2026-09-07-03-test-archive-manual-partial-automation.md（⬜ 01と並行可: R5・R6・G6。調査の結果**核心ロジックは既存vitestでカバー済み**（R6 fail-closed 4ケース=`archivePurgeHandlers.test.ts`、G6=`archiveStaging.test.ts`、R5 freelist=同）。作業は既存カバレッジの明文化＋R5の実エンジンfreelist減少を`dashboard-archive.spec.ts`に1ケース追記＋手動文書更新。ファイルサイズ減少は検証しない（OPFS VFSがtruncateしない）。1pt / 副作用 🟢 / 🔧（test））
+
 ### 将来候補の統合台帳（live）
 
 - [2026-09-05-00-backlog-future.md](2026-09-05-00-backlog-future.md) — 旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）に散在していた見送り・トリガー付き・製品判断待ち候補の統合台帳（2026-09-05 整理）。着手はトリガー別に管理。次ラウンドの architecture review はこれを入力にする
