@@ -8,7 +8,8 @@
  * phase B (pbi/2026-09-06-04), intentionally not wired here.
  */
 
-import { archivePreview, archiveCreate, archiveCleanup, archiveExportChunk, archivePrepareIncoming, archiveRestorePreview, archiveRestore, archiveDeleteByStaging } from '../../dashboardSqliteService.js';
+import { archivePreview, archiveCreate, archiveCleanup, archiveExportChunk, archivePrepareIncoming, archiveRestorePreview, archiveRestore, archiveDeleteByStaging, archiveOpen, archiveQuery, archiveUpdate, archiveSave, archiveClose, archiveStatus } from '../../dashboardSqliteService.js';
+import type { ArchiveSessionRow } from '../../../messaging/sqliteMessages.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { downloadBlob } from '../../exportLogsService.js';
 import { type PanelLifecycle } from '../types.js';
@@ -38,6 +39,12 @@ export function createArchivePanel(): PanelLifecycle {
       const summaryEl = container.querySelector('#archive-preview-summary') as HTMLElement | null;
       const statusEl = container.querySelector('#archive-status') as HTMLElement | null;
       const purgeBtn = container.querySelector('#archive-purge-btn') as HTMLButtonElement | null;
+      const sessionSection = container.querySelector('#archive-session-section') as HTMLElement | null;
+      const sessionQueryInput = container.querySelector('#archive-session-query') as HTMLInputElement | null;
+      const sessionQueryBtn = container.querySelector('#archive-session-query-btn') as HTMLButtonElement | null;
+      const sessionListEl = container.querySelector('#archive-session-list') as HTMLElement | null;
+      const sessionSaveBtn = container.querySelector('#archive-session-save-btn') as HTMLButtonElement | null;
+      const sessionCloseBtn = container.querySelector('#archive-session-close-btn') as HTMLButtonElement | null;
       const restoreFileInput = container.querySelector('#archive-restore-file') as HTMLInputElement | null;
       const restorePreviewEl = container.querySelector('#archive-restore-preview-summary') as HTMLElement | null;
       const restoreBtn = container.querySelector('#archive-restore-btn') as HTMLButtonElement | null;
@@ -45,7 +52,7 @@ export function createArchivePanel(): PanelLifecycle {
       let lastStagingName: string | null = null;
       let lastFileName = '';
 
-      const controls = [previewBtn, createBtn, cleanupBtn, downloadBtn, restoreBtn, purgeBtn];
+      const controls = [previewBtn, createBtn, cleanupBtn, downloadBtn, restoreBtn, purgeBtn, sessionQueryBtn, sessionSaveBtn, sessionCloseBtn];
       const setBusy = (busy: boolean): void => {
         for (const el of controls) if (el) el.disabled = busy;
         if (statusEl) statusEl.setAttribute('aria-busy', String(busy));
@@ -198,6 +205,111 @@ export function createArchivePanel(): PanelLifecycle {
         }
       });
 
+      let sessionStaging: string | null = null;
+
+      const renderSessionList = async (): Promise<void> => {
+        if (!sessionStaging || !sessionListEl) return;
+        const result = await archiveQuery(sessionStaging, sessionQueryInput?.value ?? '', 100, 0);
+        if ('error' in result) throw new Error(result.error);
+        const rows = result.data.rows;
+        if (!rows.length) {
+          sessionListEl.textContent = localized('archiveSessionEmpty');
+          return;
+        }
+        sessionListEl.replaceChildren(
+          ...rows.map((row) => {
+            const item = document.createElement('div');
+            item.className = 'archive-session-row';
+            const label = document.createElement('span');
+            label.textContent = `${new Date(row.created_at).toISOString().slice(0, 16).replace('T', ' ')} ${row.title || row.url}`;
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-secondary btn-sm';
+            editBtn.textContent = localized('archiveSessionEditBtn');
+            editBtn.addEventListener('click', () => {
+              const next = window.prompt(localized('archiveSessionEditPrompt'), row.title ?? '');
+              if (next === null || next === row.title) return;
+              void (async () => {
+                const update = await archiveUpdate(sessionStaging as string, row.id, { title: next });
+                if ('error' in update) throw new Error(update.error);
+                archiveDirtyLocal = true;
+                await renderSessionList();
+              })().catch((err) => showStatus(statusTarget(statusEl), errorMessage(err), 'error'));
+            });
+            item.appendChild(label);
+            item.appendChild(editBtn);
+            return item;
+          }),
+        );
+      };
+
+      let archiveDirtyLocal = false;
+
+      // 再接続: mount時にstatusを取得し、open中なら一覧を再表示
+      void (async () => {
+        const status = await archiveStatus();
+        if ('error' in status) return;
+        if (status.data.open && status.data.stagingName) {
+          sessionStaging = status.data.stagingName;
+          archiveDirtyLocal = status.data.dirty;
+          if (sessionSection) sessionSection.hidden = false;
+          try {
+            await renderSessionList();
+          } catch (err) {
+            showStatus(statusTarget(statusEl), errorMessage(err), 'error');
+          }
+        }
+      })();
+
+      sessionQueryBtn?.addEventListener('click', async () => {
+        try {
+          setBusy(true);
+          await renderSessionList();
+        } catch (err) {
+          showStatus(statusTarget(statusEl), errorMessage(err), 'error');
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      sessionSaveBtn?.addEventListener('click', async () => {
+        if (!sessionStaging || !sessionSaveBtn) return;
+        try {
+          setBusy(true);
+          const result = await archiveSave(sessionStaging);
+          if ('error' in result) throw new Error(result.error);
+          archiveDirtyLocal = false;
+          showStatus(statusTarget(statusEl), localized('archiveSessionSaved'), 'success');
+        } catch (err) {
+          showStatus(statusTarget(statusEl), errorMessage(err), 'error');
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      sessionCloseBtn?.addEventListener('click', async () => {
+        if (!sessionStaging || !sessionCloseBtn) return;
+        try {
+          if (archiveDirtyLocal) {
+            const confirmed = await showConfirmDialog({
+              title: localized('archiveSessionDiscardTitle'),
+              message: localized('archiveSessionDiscardMessage'),
+              dangerous: true,
+            });
+            if (!confirmed) return;
+          }
+          setBusy(true);
+          const result = await archiveClose(sessionStaging);
+          if ('error' in result) throw new Error(result.error);
+          sessionStaging = null;
+          archiveDirtyLocal = false;
+          if (sessionSection) sessionSection.hidden = true;
+        } catch (err) {
+          showStatus(statusTarget(statusEl), errorMessage(err), 'error');
+        } finally {
+          setBusy(false);
+        }
+      });
+
       let restoreStagingName: string | null = null;
 
       restoreFileInput?.addEventListener('change', async () => {
@@ -245,6 +357,12 @@ export function createArchivePanel(): PanelLifecycle {
               date: meta.cutoffDate,
             });
           }
+          void (async () => {
+            const openResult = await archiveOpen(restoreStagingName as string);
+            if ('error' in openResult) throw new Error(openResult.error);
+            if (sessionSection) sessionSection.hidden = false;
+            await renderSessionList();
+          })().catch((err) => showStatus(statusTarget(statusEl), errorMessage(err), 'error'));
           if (restoreBtn) restoreBtn.hidden = false;
           showStatus(statusTarget(statusEl), localized('archiveStatusWorking') === 'Working… other archive operations are disabled until this finishes.' ? 'Preview ready.' : 'Preview ready.', 'success');
         } catch (err) {

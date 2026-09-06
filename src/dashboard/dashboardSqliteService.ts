@@ -5,7 +5,7 @@
  */
 
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
-import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData } from '../messaging/sqliteMessages.js';
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData } from '../messaging/sqliteMessages.js';
 // PBI-05: unified SqliteResult vocabulary — both hops now share the same
 // error classification and result shape via SqliteGateway.
 // PBI 11: the DASHBOARD_SQLITE send policy (token gate, timeout, retry) lives
@@ -457,6 +457,56 @@ export function archiveRestore(stagingName: string): Promise<ServiceResult<Archi
       skippedInvalid: response.skippedInvalid,
     }),
     'Archive restore failed',
+  );
+}
+
+/** Open a staged archive as a temp session (PBI 2026-09-06-05). */
+export function archiveOpen(stagingName: string): Promise<ServiceResult<void>> {
+  return callDashboard({ subtype: 'archive_open', stagingName }, () => undefined, 'Archive open failed');
+}
+
+/** Query the open archive session (LIKE search on url/title/summary). */
+export function archiveQuery(stagingName: string, query: string, limit: number, offset: number): Promise<ServiceResult<{ rows: ArchiveSessionRow[]; total: number }>> {
+  return callDashboard(
+    { subtype: 'archive_query', stagingName, query, limit, offset },
+    (response) => ({ rows: response.rows, total: response.total }),
+    'Archive query failed',
+  );
+}
+
+/** Update a whitelisted field of an archive row (marks session dirty). */
+export function archiveUpdate(stagingName: string, id: number, changes: Record<string, unknown>): Promise<ServiceResult<{ dirty: boolean }>> {
+  return callDashboard(
+    { subtype: 'archive_update', stagingName, id, changes },
+    (response) => ({ dirty: response.dirty }),
+    'Archive update failed',
+  );
+}
+
+/** Flush the session WAL into the staging file (save checkpoint). */
+export function archiveSave(stagingName: string): Promise<ServiceResult<{ dirty: boolean }>> {
+  return callDashboard(
+    { subtype: 'archive_save', stagingName },
+    (response) => ({ dirty: response.dirty }),
+    'Archive save failed',
+  );
+}
+
+/** Close the temp session (rejects when dirty — two-defense with the UI). */
+export function archiveClose(stagingName: string): Promise<ServiceResult<{ dirty: boolean }>> {
+  return callDashboard(
+    { subtype: 'archive_close', stagingName },
+    (response) => ({ dirty: response.dirty }),
+    'Archive close failed',
+  );
+}
+
+/** Reconnect/status probe for the temp session. */
+export function archiveStatus(): Promise<ServiceResult<ArchiveSessionStatusData>> {
+  return callDashboard(
+    { subtype: 'archive_status' },
+    (response) => response.status,
+    'Archive status failed',
   );
 }
 

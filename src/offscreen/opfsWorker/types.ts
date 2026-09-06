@@ -39,6 +39,14 @@ export const WORKER_MESSAGE_TYPES = [
   'ARCHIVE_PREPARE_INCOMING',
   'ARCHIVE_RESTORE_PREVIEW',
   'ARCHIVE_RESTORE',
+  'ARCHIVE_OPEN',
+  'ARCHIVE_QUERY',
+  'ARCHIVE_UPDATE',
+  'ARCHIVE_SAVE',
+  'ARCHIVE_CLOSE',
+  'ARCHIVE_STATUS',
+  'ARCHIVE_DISCARD',
+  'ARCHIVE_SWEEP',
 ] as const;
 
 export type WorkerMessageType = typeof WORKER_MESSAGE_TYPES[number];
@@ -110,6 +118,56 @@ export interface ArchiveRestorePreviewPayload {
 }
 
 export interface ArchiveRestorePayload {
+  stagingName: string;
+}
+
+export interface ArchiveOpenPayload {
+  stagingName: string;
+}
+
+export interface ArchiveQueryPayload {
+  stagingName: string;
+  query: string;
+  limit: number;
+  offset: number;
+}
+
+export interface ArchiveUpdatePayload {
+  stagingName: string;
+  id: number;
+  changes: Record<string, unknown>;
+}
+
+export interface ArchiveSavePayload {
+  stagingName: string;
+}
+
+export interface ArchiveClosePayload {
+  stagingName: string;
+}
+
+export interface ArchiveOpenPayload {
+  stagingName: string;
+}
+
+export interface ArchiveQueryPayload {
+  stagingName: string;
+  query: string;
+  limit: number;
+  offset: number;
+}
+
+export interface ArchiveUpdatePayload {
+  stagingName: string;
+  id: number;
+  changes: Record<string, unknown>;
+}
+
+export interface ArchiveSavePayload {
+  stagingName: string;
+}
+
+export interface ArchiveClosePayload {
   stagingName: string;
 }
 

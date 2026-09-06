@@ -3637,6 +3637,39 @@
   "archiveCleanupFailed": {
     "message": "Staging cleanup failed"
   },
+  "archiveSessionSectionTitle": {
+    "message": "Open archive session"
+  },
+  "archiveSessionSearchLabel": {
+    "message": "Search in archive"
+  },
+  "archiveSessionSearchBtn": {
+    "message": "Search"
+  },
+  "archiveSessionSaveBtn": {
+    "message": "Save changes to archive"
+  },
+  "archiveSessionCloseBtn": {
+    "message": "Close archive"
+  },
+  "archiveSessionEditBtn": {
+    "message": "Edit title"
+  },
+  "archiveSessionEditPrompt": {
+    "message": "New title:"
+  },
+  "archiveSessionEmpty": {
+    "message": "No matching records."
+  },
+  "archiveSessionSaved": {
+    "message": "Changes saved to the archive file."
+  },
+  "archiveSessionDiscardTitle": {
+    "message": "Discard unsaved changes?"
+  },
+  "archiveSessionDiscardMessage": {
+    "message": "The archive has unsaved changes. Closing now discards them (the file keeps its last saved state)."
+  },
   "archiveRestoreSectionTitle": {
     "message": "Restore from archive"
   },

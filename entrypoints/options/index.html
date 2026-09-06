@@ -1823,6 +1823,19 @@
           <div id="archive-preview-summary" class="settings-section-desc" hidden></div>
           <div id="archive-status" class="settings-section-desc" aria-live="polite"></div>
         </div>
+        <div class="settings-section" id="archive-session-section" hidden>
+          <h3 class="settings-section-title" data-i18n="archiveSessionSectionTitle">Open archive session</h3>
+          <div class="form-group">
+            <label for="archive-session-query" data-i18n="archiveSessionSearchLabel">Search in archive</label>
+            <input type="text" id="archive-session-query">
+          </div>
+          <div class="form-group">
+            <button id="archive-session-query-btn" class="btn btn-secondary" data-i18n="archiveSessionSearchBtn">Search</button>
+            <button id="archive-session-save-btn" class="btn btn-primary" data-i18n="archiveSessionSaveBtn">Save changes to archive</button>
+            <button id="archive-session-close-btn" class="btn btn-secondary" data-i18n="archiveSessionCloseBtn">Close archive</button>
+          </div>
+          <div id="archive-session-list" class="settings-section-desc"></div>
+        </div>
         <div class="settings-section">
           <h3 class="settings-section-title" data-i18n="archiveRestoreSectionTitle">Restore from archive</h3>
           <p class="settings-section-desc" data-i18n="archiveRestoreSectionDesc">Merge records from an archive file back into the local database. Existing records are kept; duplicates (same URL and time) are skipped.</p>

@@ -1,5 +1,5 @@
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
-import type { ArchivePreviewData, ArchiveRestorePreviewData } from '../messaging/sqliteMessages.js';
+import type { ArchivePreviewData, ArchiveRestorePreviewData, ArchiveSessionRow, ArchiveSessionStatusData } from '../messaging/sqliteMessages.js';
 
 export interface ArchivePreviewResult { success: true; preview: ArchivePreviewData }
 export interface ArchiveCreateParams { cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }
@@ -10,6 +10,18 @@ export interface ArchivePrepareIncomingResult { success: true; stagingName: stri
 export interface ArchiveRestorePreviewResult { success: true; preview: ArchiveRestorePreviewData }
 export interface ArchiveRestoreResult { success: true; restored: number; restoredDeleted: number; skipped: number; skippedInvalid: number }
 export interface ArchiveDeleteByStagingResult { success: true; deleted: number; remaining: number; freelistBefore: number; freelistAfter: number; vacuumOk: boolean }
+export interface ArchiveOpenResult { success: true }
+export interface ArchiveQueryResult { success: true; rows: ArchiveSessionRow[]; total: number }
+export interface ArchiveUpdateResult { success: true; dirty: boolean }
+export interface ArchiveSaveResult { success: true; dirty: boolean }
+export interface ArchiveCloseResult { success: true; dirty: boolean }
+export interface ArchiveStatusResult { success: true; status: ArchiveSessionStatusData }
+export interface ArchiveOpenResult { success: true }
+export interface ArchiveQueryResult { success: true; rows: ArchiveSessionRow[]; total: number }
+export interface ArchiveUpdateResult { success: true; dirty: boolean }
+export interface ArchiveSaveResult { success: true; dirty: boolean }
+export interface ArchiveCloseResult { success: true; dirty: boolean }
+export interface ArchiveStatusResult { success: true; status: ArchiveSessionStatusData }
 
 export interface InsertResult { success: true; id: number }
 export interface InsertBatchResult { success: true; inserted: number; skipped: number }
@@ -95,6 +107,18 @@ export interface Mutable {
   archiveRestore(stagingName: string): Promise<BackendOrError<ArchiveRestoreResult>>;
   /** Phase B (PBI 2026-09-06-04) — main-DB deletion covered by the staging. */
   archiveDeleteByStaging(stagingName: string): Promise<BackendOrError<ArchiveDeleteByStagingResult>>;
+  archiveOpen(stagingName: string): Promise<BackendOrError<ArchiveOpenResult>>;
+  archiveQuery(stagingName: string, query: string, limit: number, offset: number): Promise<BackendOrError<ArchiveQueryResult>>;
+  archiveUpdate(stagingName: string, id: number, changes: Record<string, unknown>): Promise<BackendOrError<ArchiveUpdateResult>>;
+  archiveSave(stagingName: string): Promise<BackendOrError<ArchiveSaveResult>>;
+  archiveClose(stagingName: string): Promise<BackendOrError<ArchiveCloseResult>>;
+  archiveStatus(): Promise<BackendOrError<ArchiveStatusResult>>;
+  archiveOpen(stagingName: string): Promise<BackendOrError<ArchiveOpenResult>>;
+  archiveQuery(stagingName: string, query: string, limit: number, offset: number): Promise<BackendOrError<ArchiveQueryResult>>;
+  archiveUpdate(stagingName: string, id: number, changes: Record<string, unknown>): Promise<BackendOrError<ArchiveUpdateResult>>;
+  archiveSave(stagingName: string): Promise<BackendOrError<ArchiveSaveResult>>;
+  archiveClose(stagingName: string): Promise<BackendOrError<ArchiveCloseResult>>;
+  archiveStatus(): Promise<BackendOrError<ArchiveStatusResult>>;
   insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>>;
   clearAll(): Promise<BackendOrError<MutationResult>>;
 }
@@ -124,6 +148,12 @@ export class NoopBackend implements StorageBackend {
   async archiveRestorePreview() { return this.err(); }
   async archiveRestore() { return this.err(); }
   async archiveDeleteByStaging() { return this.err(); }
+  async archiveOpen() { return this.err(); }
+  async archiveQuery() { return this.err(); }
+  async archiveUpdate() { return this.err(); }
+  async archiveSave() { return this.err(); }
+  async archiveClose() { return this.err(); }
+  async archiveStatus() { return this.err(); }
   async healthCheck() { return this.err(); }
   async getStatus() { return this.err(); }
   async insertAuditLog() { return this.err(); }

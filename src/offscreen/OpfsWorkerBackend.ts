@@ -1,7 +1,7 @@
 // src/offscreen/OpfsWorkerBackend.ts
 import type { SqliteEngineHost } from './sqliteEngineHost.js';
-import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError, ArchivePreviewResult, ArchiveCreateResult, ArchiveCleanupResult, ArchiveExportChunkResult, ArchiveCreateParams, ArchivePrepareIncomingResult, ArchiveRestorePreviewResult, ArchiveRestoreResult, ArchiveDeleteByStagingResult } from './StorageBackend.js';
-import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData } from '../messaging/sqliteMessages.js';
+import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError, ArchivePreviewResult, ArchiveCreateResult, ArchiveCleanupResult, ArchiveExportChunkResult, ArchiveCreateParams, ArchivePrepareIncomingResult, ArchiveRestorePreviewResult, ArchiveRestoreResult, ArchiveDeleteByStagingResult, ArchiveOpenResult, ArchiveQueryResult, ArchiveUpdateResult, ArchiveSaveResult, ArchiveCloseResult, ArchiveStatusResult } from './StorageBackend.js';
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchiveSessionRow, ArchiveSessionStatusData } from '../messaging/sqliteMessages.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 
 export class OpfsWorkerBackend implements StorageBackend {
@@ -121,6 +121,42 @@ export class OpfsWorkerBackend implements StorageBackend {
       freelistAfter: result.freelistAfter,
       vacuumOk: result.vacuumOk,
     };
+  }
+
+  async archiveOpen(stagingName: string): Promise<BackendOrError<ArchiveOpenResult>> {
+    const result = await this.engine.tryOpfsProxy<void>('ARCHIVE_OPEN', { stagingName });
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return { success: true };
+  }
+
+  async archiveQuery(stagingName: string, query: string, limit: number, offset: number): Promise<BackendOrError<ArchiveQueryResult>> {
+    const result = await this.engine.tryOpfsProxy<{ rows: ArchiveSessionRow[]; total: number }>('ARCHIVE_QUERY', { stagingName, query, limit, offset });
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return { success: true, rows: result.rows, total: result.total };
+  }
+
+  async archiveUpdate(stagingName: string, id: number, changes: Record<string, unknown>): Promise<BackendOrError<ArchiveUpdateResult>> {
+    const result = await this.engine.tryOpfsProxy<{ dirty: boolean }>('ARCHIVE_UPDATE', { stagingName, id, changes });
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return { success: true, dirty: result.dirty };
+  }
+
+  async archiveSave(stagingName: string): Promise<BackendOrError<ArchiveSaveResult>> {
+    const result = await this.engine.tryOpfsProxy<{ dirty: boolean }>('ARCHIVE_SAVE', { stagingName });
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return { success: true, dirty: result.dirty };
+  }
+
+  async archiveClose(stagingName: string): Promise<BackendOrError<ArchiveCloseResult>> {
+    const result = await this.engine.tryOpfsProxy<{ dirty: boolean }>('ARCHIVE_CLOSE', { stagingName });
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return { success: true, dirty: result.dirty };
+  }
+
+  async archiveStatus(): Promise<BackendOrError<ArchiveStatusResult>> {
+    const result = await this.engine.tryOpfsProxy<ArchiveSessionStatusData>('ARCHIVE_STATUS');
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return { success: true, status: result };
   }
 
   async restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>> {

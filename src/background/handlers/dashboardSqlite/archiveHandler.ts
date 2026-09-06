@@ -117,6 +117,78 @@ export function createArchiveHandler(deps: ArchiveHandlerDeps) {
             }
           : toFailure(result);
       }
+      case 'archive_open': {
+        const p = payload as { stagingName?: unknown };
+        if (typeof p.stagingName !== 'string' || p.stagingName.length === 0) {
+          return { success: false, error: 'archive_open: stagingName is required' };
+        }
+        const result: DepsResult<void> = await deps.archiveOpen(p.stagingName);
+        return result.success ? { success: true } : toFailure(result);
+      }
+      case 'archive_query': {
+        const p = payload as { stagingName?: unknown; query?: unknown; limit?: unknown; offset?: unknown };
+        if (typeof p.stagingName !== 'string' || p.stagingName.length === 0) {
+          return { success: false, error: 'archive_query: stagingName is required' };
+        }
+        if (typeof p.query !== 'string') {
+          return { success: false, error: 'archive_query: query must be string' };
+        }
+        if (typeof p.limit !== 'number' || !Number.isInteger(p.limit) || p.limit < 1 || p.limit > 500) {
+          return { success: false, error: 'archive_query: limit must be 1..500' };
+        }
+        if (typeof p.offset !== 'number' || !Number.isInteger(p.offset) || p.offset < 0) {
+          return { success: false, error: 'archive_query: offset must be a non-negative integer' };
+        }
+        const result: DepsResult<{ rows: import('../../../messaging/sqliteMessages.js').ArchiveSessionRow[]; total: number }> =
+          await deps.archiveQuery(p.stagingName, p.query, p.limit, p.offset);
+        return result.success
+          ? { success: true, rows: result.data.rows, total: result.data.total }
+          : toFailure(result);
+      }
+      case 'archive_update': {
+        const p = payload as { stagingName?: unknown; id?: unknown; changes?: unknown };
+        if (typeof p.stagingName !== 'string' || p.stagingName.length === 0) {
+          return { success: false, error: 'archive_update: stagingName is required' };
+        }
+        if (typeof p.id !== 'number' || !Number.isInteger(p.id) || p.id <= 0) {
+          return { success: false, error: 'archive_update: id must be a positive integer' };
+        }
+        if (!p.changes || typeof p.changes !== 'object' || Array.isArray(p.changes)) {
+          return { success: false, error: 'archive_update: changes must be an object' };
+        }
+        const result: DepsResult<{ dirty: boolean }> =
+          await deps.archiveUpdate(p.stagingName, p.id, p.changes as Record<string, unknown>);
+        return result.success
+          ? { success: true, dirty: result.data.dirty }
+          : toFailure(result);
+      }
+      case 'archive_save': {
+        const p = payload as { stagingName?: unknown };
+        if (typeof p.stagingName !== 'string' || p.stagingName.length === 0) {
+          return { success: false, error: 'archive_save: stagingName is required' };
+        }
+        const result: DepsResult<{ dirty: boolean }> = await deps.archiveSave(p.stagingName);
+        return result.success
+          ? { success: true, dirty: result.data.dirty }
+          : toFailure(result);
+      }
+      case 'archive_close': {
+        const p = payload as { stagingName?: unknown };
+        if (typeof p.stagingName !== 'string' || p.stagingName.length === 0) {
+          return { success: false, error: 'archive_close: stagingName is required' };
+        }
+        const result: DepsResult<{ dirty: boolean }> = await deps.archiveClose(p.stagingName);
+        return result.success
+          ? { success: true, dirty: result.data.dirty }
+          : toFailure(result);
+      }
+      case 'archive_status': {
+        const result: DepsResult<import('../../../messaging/sqliteMessages.js').ArchiveSessionStatusData> =
+          await deps.archiveStatus();
+        return result.success
+          ? { success: true, status: result.data }
+          : toFailure(result);
+      }
       default: {
         const unknownSubtype = (payload as { subtype?: string }).subtype;
         return { success: false, error: `Unknown archive subtype: ${String(unknownSubtype)}` };

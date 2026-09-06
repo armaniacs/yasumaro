@@ -114,6 +114,44 @@ export async function archiveDeleteByStaging(stagingName: string): Promise<Archi
   return backend.archiveDeleteByStaging(stagingName);
 }
 
+export type ArchiveOpenBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archiveOpen']>>;
+export type ArchiveQueryBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archiveQuery']>>;
+export type ArchiveUpdateBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archiveUpdate']>>;
+export type ArchiveSaveBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archiveSave']>>;
+export type ArchiveCloseBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archiveClose']>>;
+export type ArchiveStatusBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archiveStatus']>>;
+
+export async function archiveOpen(stagingName: string): Promise<ArchiveOpenBackendResult> {
+  const backend = await engine.getBackend();
+  return backend.archiveOpen(stagingName);
+}
+
+export async function archiveQuery(stagingName: string, query: string, limit: number, offset: number): Promise<ArchiveQueryBackendResult> {
+  const backend = await engine.getBackend();
+  return backend.archiveQuery(stagingName, query, limit, offset);
+}
+
+export async function archiveUpdate(stagingName: string, id: number, changes: Record<string, unknown>): Promise<ArchiveUpdateBackendResult> {
+  const backend = await engine.getBackend();
+  return backend.archiveUpdate(stagingName, id, changes);
+}
+
+export async function archiveSave(stagingName: string): Promise<ArchiveSaveBackendResult> {
+  const backend = await engine.getBackend();
+  return backend.archiveSave(stagingName);
+}
+
+export async function archiveClose(stagingName: string): Promise<ArchiveCloseBackendResult> {
+  const backend = await engine.getBackend();
+  return backend.archiveClose(stagingName);
+}
+
+export async function archiveStatus(): Promise<ArchiveStatusBackendResult> {
+  const backend = await engine.getBackend();
+  return backend.archiveStatus();
+}
+
+
 /**
  * Lightweight health check — verifies the SQLite database is reachable.
  * Returns true if a SELECT 1 succeeds on any available backend.

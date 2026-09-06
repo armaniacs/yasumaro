@@ -8,8 +8,8 @@
  */
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
 import type { OpfsSpikeReport } from '../offscreen/opfsSpike.js';
-import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData } from './sqliteMessages.js';
-export type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData };
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData } from './sqliteMessages.js';
+export type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData };
 
 /**
  * What kind of failure this was.
@@ -135,7 +135,13 @@ export type MaintainOp =
   | { type: 'archivePrepareIncoming' }
   | { type: 'archiveRestorePreview'; stagingName: string }
   | { type: 'archiveRestore'; stagingName: string }
-  | { type: 'archiveDeleteByStaging'; stagingName: string };
+  | { type: 'archiveDeleteByStaging'; stagingName: string }
+  | { type: 'archiveOpen'; stagingName: string }
+  | { type: 'archiveQuery'; stagingName: string; query: string; limit: number; offset: number }
+  | { type: 'archiveUpdate'; stagingName: string; id: number; changes: Record<string, unknown> }
+  | { type: 'archiveSave'; stagingName: string }
+  | { type: 'archiveClose'; stagingName: string }
+  | { type: 'archiveStatus' };
 
 export interface SqliteRpcClient {
   /** Filtered listing or FTS5/LIKE search over browsing records. */
@@ -168,6 +174,12 @@ export interface SqliteRpcClient {
   maintain(op: Extract<MaintainOp, { type: 'archiveRestorePreview' }>): Promise<SqliteRpcResult<ArchiveRestorePreviewData>>;
   maintain(op: Extract<MaintainOp, { type: 'archiveRestore' }>): Promise<SqliteRpcResult<ArchiveRestoreData>>;
   maintain(op: Extract<MaintainOp, { type: 'archiveDeleteByStaging' }>): Promise<SqliteRpcResult<ArchivePurgeData>>;
+  maintain(op: Extract<MaintainOp, { type: 'archiveOpen' }>): Promise<SqliteRpcResult<void>>;
+  maintain(op: Extract<MaintainOp, { type: 'archiveQuery' }>): Promise<SqliteRpcResult<{ rows: ArchiveSessionRow[]; total: number }>>;
+  maintain(op: Extract<MaintainOp, { type: 'archiveUpdate' }>): Promise<SqliteRpcResult<{ dirty: boolean }>>;
+  maintain(op: Extract<MaintainOp, { type: 'archiveSave' }>): Promise<SqliteRpcResult<{ dirty: boolean }>>;
+  maintain(op: Extract<MaintainOp, { type: 'archiveClose' }>): Promise<SqliteRpcResult<{ dirty: boolean }>>;
+  maintain(op: Extract<MaintainOp, { type: 'archiveStatus' }>): Promise<SqliteRpcResult<ArchiveSessionStatusData>>;
   maintain(op: MaintainOp): Promise<SqliteRpcResult<unknown>>;
 
   /**

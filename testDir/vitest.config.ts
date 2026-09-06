@@ -26,6 +26,9 @@ export default defineConfig({
       '**/.vulnhunter-fix/**',
       '**/obsidian-smart-history_VULNHUNT_RESULTS*/**',
     ],
+    // PBI 2026-09-06-05 spike F-2: real sqlite-wasm (memory storage) needs the
+    // .wasm asset served as a file, not via Vite's URL transform.
+    assetsInclude: ['**/*.wasm'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'json-summary', 'html'],

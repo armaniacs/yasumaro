@@ -89,8 +89,8 @@ async function callHandler(type: string, payload?: unknown): Promise<unknown> {
 }
 
 describe('sqliteMessageHandlers — registry completeness', () => {
-  it('Map contains all 28 SqliteMessageTypes', () => {
-    expect(sqliteMessageHandlers.size).toBe(28);
+  it('Map contains all 34 SqliteMessageTypes', () => {
+    expect(sqliteMessageHandlers.size).toBe(34);
     const expected = [
       'SQLITE_HEALTH_CHECK', 'SQLITE_INIT', 'SQLITE_INSERT', 'SQLITE_INSERT_BATCH',
       'SQLITE_QUERY', 'SQLITE_AUDIT_LOG_INSERT', 'SQLITE_AUDIT_LOG_QUERY',
@@ -101,6 +101,8 @@ describe('sqliteMessageHandlers — registry completeness', () => {
       'SQLITE_ARCHIVE_CLEANUP', 'SQLITE_ARCHIVE_EXPORT',
       'SQLITE_ARCHIVE_PREPARE_INCOMING', 'SQLITE_ARCHIVE_RESTORE_PREVIEW', 'SQLITE_ARCHIVE_RESTORE',
       'SQLITE_ARCHIVE_DELETE_BY_STAGING',
+      'SQLITE_ARCHIVE_OPEN', 'SQLITE_ARCHIVE_QUERY', 'SQLITE_ARCHIVE_UPDATE',
+      'SQLITE_ARCHIVE_SAVE', 'SQLITE_ARCHIVE_CLOSE', 'SQLITE_ARCHIVE_STATUS',
     ];
     for (const t of expected) {
       expect(sqliteMessageHandlers.has(t as never)).toBe(true);

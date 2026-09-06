@@ -3504,6 +3504,39 @@
   "archiveCleanupFailed": {
     "message": "ステージングの掃除に失敗しました"
   },
+  "archiveSessionSectionTitle": {
+    "message": "アーカイブを開く"
+  },
+  "archiveSessionSearchLabel": {
+    "message": "アーカイブ内を検索"
+  },
+  "archiveSessionSearchBtn": {
+    "message": "検索"
+  },
+  "archiveSessionSaveBtn": {
+    "message": "変更をアーカイブに保存"
+  },
+  "archiveSessionCloseBtn": {
+    "message": "アーカイブを閉じる"
+  },
+  "archiveSessionEditBtn": {
+    "message": "タイトルを編集"
+  },
+  "archiveSessionEditPrompt": {
+    "message": "新しいタイトル:"
+  },
+  "archiveSessionEmpty": {
+    "message": "一致するレコードはありません。"
+  },
+  "archiveSessionSaved": {
+    "message": "変更をアーカイブファイルに保存しました。"
+  },
+  "archiveSessionDiscardTitle": {
+    "message": "未保存の変更を破棄しますか？"
+  },
+  "archiveSessionDiscardMessage": {
+    "message": "アーカイブに未保存の変更があります。このまま閉じると変更は破棄されます（ファイルは最後に保存した状態のまま）。"
+  },
   "archiveRestoreSectionTitle": {
     "message": "アーカイブから復元"
   },
