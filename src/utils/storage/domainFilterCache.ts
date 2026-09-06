@@ -25,21 +25,23 @@ const DOMAIN_FILTER_CACHE_TTL = 5 * 60 * 1000; // 5分
  *
  * @param {function} callback - キャッシュデータを受け取るコールバック関数
  */
-export function getDomainFilterCacheSync(callback: (data: { allowedDomains: string[]; blockedDomains: string[]; cachedAt: number; mode: string }) => void): void {
+export function getDomainFilterCacheSync(callback: (data: { allowedDomains: string[]; blockedDomains: string[]; cachedAt: number; mode: string; matchSubdomains: boolean }) => void): void {
     chrome.storage.local.get([
         StorageKeys.DOMAIN_FILTER_CACHE,
         StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP,
-        StorageKeys.DOMAIN_FILTER_MODE
+        StorageKeys.DOMAIN_FILTER_MODE,
+        StorageKeys.DOMAIN_SUBDOMAIN_MATCHING
     ], (result) => {
         const allowedDomains = (result[StorageKeys.DOMAIN_FILTER_CACHE] as string[]) || [];
         const cachedAt = (result[StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP] as number) || 0;
         const mode = (result[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'disabled';
+        const matchSubdomains = result[StorageKeys.DOMAIN_SUBDOMAIN_MATCHING] === true;
 
         // ブロックドメインは設定に基づいて動的に算出（シンプル形式のみ）
         // uBlockフォーマットは複雑なため、バックグラウンドでのチェックが必要
         const blockedDomains: string[] = [];
 
-        callback({ allowedDomains, blockedDomains, cachedAt, mode });
+        callback({ allowedDomains, blockedDomains, cachedAt, mode, matchSubdomains });
     });
 }
 

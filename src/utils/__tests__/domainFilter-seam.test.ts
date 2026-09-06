@@ -26,4 +26,17 @@ describe('DomainFilter unified validation seam', () => {
     expect(evaluateCachedAllow('https://any.com/', [], 'disabled')).toBe(true);
     expect(evaluateCachedAllow('not-a-url', ['example.com'], 'whitelist')).toBeNull();
   });
+
+  it('evaluateCachedAllow honors the subdomain toggle (PBI 2026-09-06-06)', () => {
+    // toggle OFF (default): subdomains do not match
+    expect(evaluateCachedAllow('https://sub.example.com/', ['example.com'], 'whitelist')).toBe(false);
+    expect(evaluateCachedAllow('https://sub.example.com/', ['example.com'], 'blacklist')).toBe(true);
+    // toggle ON: subdomains match
+    expect(evaluateCachedAllow('https://sub.example.com/', ['example.com'], 'whitelist', true)).toBe(true);
+    expect(evaluateCachedAllow('https://sub.example.com/', ['example.com'], 'blacklist', true)).toBe(false);
+    // toggle ON: exact matches still work
+    expect(evaluateCachedAllow('https://example.com/', ['example.com'], 'whitelist', true)).toBe(true);
+    // toggle ON: unrelated domains still do not match
+    expect(evaluateCachedAllow('https://notexample.com/', ['example.com'], 'whitelist', true)).toBe(false);
+  });
 });

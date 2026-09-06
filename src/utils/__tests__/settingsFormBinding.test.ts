@@ -12,6 +12,7 @@ function setupDOM(): void {
       <input type="password" id="openai_api_key" data-storage-key="openai_api_key" />
       <input type="checkbox" id="ublock_format_enabled" data-storage-key="ublock_format_enabled" />
       <input type="checkbox" id="simple_format_enabled" data-storage-key="simple_format_enabled" />
+      <input type="checkbox" id="content_storage_enabled" data-storage-key="content_storage_enabled" />
       <input type="number" id="min_visit_duration" data-storage-key="min_visit_duration" />
       <textarea id="obsidian_daily_path" data-storage-key="obsidian_daily_path"></textarea>
       <select id="ai_provider" data-storage-key="ai_provider">
@@ -86,6 +87,17 @@ describe('settingsFormBinding', () => {
       (document.getElementById('ublock_format_enabled') as HTMLInputElement).checked = true;
       const settings = extractSettingsFromInputs(document.getElementById('form')!);
       expect(settings.ublock_format_enabled).toBe(true);
+    });
+
+    test('roundtrips content_storage_enabled checkbox (load then extract)', () => {
+      const form = document.getElementById('form')!;
+      loadSettingsToInputs(form, { content_storage_enabled: true });
+      expect((document.getElementById('content_storage_enabled') as HTMLInputElement).checked).toBe(true);
+      expect(extractSettingsFromInputs(form).content_storage_enabled).toBe(true);
+
+      loadSettingsToInputs(form, { content_storage_enabled: false });
+      expect((document.getElementById('content_storage_enabled') as HTMLInputElement).checked).toBe(false);
+      expect(extractSettingsFromInputs(form).content_storage_enabled).toBe(false);
     });
 
     test('extracts number input as Number', () => {

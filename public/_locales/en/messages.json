@@ -1918,6 +1918,9 @@
   "domainFilterEnable": {
     "message": "Enable domain filter"
   },
+  "domainSubdomainMatching": {
+    "message": "Match subdomains too (example.com matches sub.example.com)"
+  },
   "domainBlacklistTab": {
     "message": "Blacklist"
   },
@@ -3776,6 +3779,9 @@
   },
   "contentRetentionPolicyTitle": {
     "message": "Content Retention Settings"
+  },
+  "contentStorageEnabledLabel": {
+    "message": "Store page content (body text) locally"
   },
   "contentRetentionPolicyDesc": {
     "message": "Only content (page body) will be purged; records themselves are kept"

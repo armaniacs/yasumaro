@@ -42,10 +42,18 @@ function escapeRegex(s: string): string {
  * statusChecker) delegate here so wildcard semantics cannot drift.
  * ReDoS guard is inherited from wildcardToRegex: over-limit patterns
  * return null there and are treated as non-match (never throw).
+ *
+ * When `matchSubdomains` is true, a plain pattern also matches any
+ * subdomain (`example.com` matches `sub.example.com`). Wildcard patterns
+ * are unaffected by the flag. Default is false (exact match only) so all
+ * existing call sites keep their behavior.
  */
-export function matchesDomainPattern(domain: string, pattern: string): boolean {
+export function matchesDomainPattern(domain: string, pattern: string, matchSubdomains = false): boolean {
     if (!pattern.includes('*')) {
-        return domain.toLowerCase() === pattern.toLowerCase();
+        const d = domain.toLowerCase();
+        const p = pattern.toLowerCase();
+        if (d === p) return true;
+        return matchSubdomains && d.endsWith(`.${p}`);
     }
     const regex = wildcardToRegex(pattern);
     if (!regex) return false;
@@ -55,11 +63,11 @@ export function matchesDomainPattern(domain: string, pattern: string): boolean {
 /**
  * Canonical domain-list check (single shared path, PBI-18).
  */
-export function isDomainInList(domain: string, domainList: string[] | undefined): boolean {
+export function isDomainInList(domain: string, domainList: string[] | undefined, matchSubdomains = false): boolean {
     if (!domainList || domainList.length === 0) {
         return false;
     }
-    return domainList.some((pattern) => matchesDomainPattern(domain, pattern));
+    return domainList.some((pattern) => matchesDomainPattern(domain, pattern, matchSubdomains));
 }
 
 /**

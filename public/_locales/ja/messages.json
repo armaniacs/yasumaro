@@ -1855,6 +1855,9 @@
   "domainFilterEnable": {
     "message": "フィルターを有効にする"
   },
+  "domainSubdomainMatching": {
+    "message": "サブドメインもマッチさせる（example.com が sub.example.com にも一致）"
+  },
   "domainBlacklistTab": {
     "message": "ブラックリスト"
   },
@@ -3622,6 +3625,9 @@
   },
   "contentRetentionPolicyTitle": {
     "message": "コンテンツ保持設定"
+  },
+  "contentStorageEnabledLabel": {
+    "message": "本文（ページの内容）をローカル保存する"
   },
   "contentRetentionPolicyDesc": {
     "message": "content（本文）のみを対象とし、レコード自体は削除しません"
