@@ -12,10 +12,23 @@ vi.mock('../../../dashboardSqliteService.js', () => ({
   archiveCreate: vi.fn(),
   archiveCleanup: vi.fn(),
   archiveExportChunk: vi.fn(),
+  // Temp-open session + restore flow functions (PBI 2026-09-06-03/04/05) —
+  // the panel imports all of them at mount; a missing mock export surfaces
+  // as an unhandled rejection, not a test failure.
+  archivePrepareIncoming: vi.fn(),
+  archiveRestorePreview: vi.fn(),
+  archiveRestore: vi.fn(),
+  archiveDeleteByStaging: vi.fn(),
+  archiveOpen: vi.fn(),
+  archiveQuery: vi.fn(),
+  archiveUpdate: vi.fn(),
+  archiveSave: vi.fn(),
+  archiveClose: vi.fn(),
+  archiveStatus: vi.fn(),
 }));
 
 import { createArchivePanel } from '../archivePanel.js';
-import { archivePreview, archiveCreate } from '../../../dashboardSqliteService.js';
+import { archivePreview, archiveCreate, archiveStatus } from '../../../dashboardSqliteService.js';
 
 async function mountPanel(): Promise<{
   container: HTMLElement;
@@ -57,6 +70,11 @@ async function mountPanel(): Promise<{
 describe('archivePanel mount (PBI 2026-09-06-02)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The panel probes the session state on mount; give it a closed-session
+    // default so the fire-and-forget reconnect path resolves a ServiceResult.
+    vi.mocked(archiveStatus).mockResolvedValue({
+      data: { open: false, stagingName: null, dirty: false },
+    } as never);
     (globalThis as { chrome?: unknown }).chrome = {
       runtime: { getManifest: () => ({ version: '6.7.113' }) },
       i18n: {
