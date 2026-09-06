@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.112` リリース。
+> - 現時点では `v6.7.113` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,22 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.113] - 2026-09-06
+
+このリリースは v6.7.112 と同日に公開する、アーカイブ機能に向けた基盤整備リリースです。
+
+### Fixed
+
+- 全体復元（restore_db）が、アーカイブ形式の .db（`yasumaro_archive_meta` テーブルを持つファイル）を検証なしで受理し、本体DBを FTS なしの状態で上書きできていた問題を防止。アーカイブ形式を検出した場合は復元を拒否し、アーカイブ復元UIの使用を案内する
+- ダウンロード処理（`downloadBlob`）がオブジェクトURLを同期的に解放していたため、大容量ダウンロードが中断・破損する可能性があった問題を修正（解放を60秒遅延）
+
+### 開発者向け / 非機能（アーカイブ機能の共通基盤、PBI 2026-09-06-01）
+
+- アーカイブ3機能（退避作成・復元・一時オープン）が共通利用する検証・ステージング・ガードをSSOT化: `archiveValidation`（`sqlite_master` allowlist構造検証＋`PRAGMA table_xinfo` 照合＋meta突合せ、拒否時はエンジンclose）/ `archiveStaging`（ステージング名レジストリ・offscreen発行・孤児掃除）/ `archiveGuards`（cutoff計算のタイムゾーン・実在日検証、URLスキーム検証のSSOT、200MB上限）
+- 確認トークンに破壊パラメータ（cutoff / stagingName）の scopeHash 束縛を追加。トークン発行後にパラメータを差し替えた実行は fail-closed で拒否される（既存の delete/update フローは挙動不変）
+- offscreen transport に `noRetry` オプションを追加（バルク書き込み系操作の二重実行防止。タイムアウト時は「結果不明」として扱う）
+- `dev-docs/ERROR_CODES.md` にアーカイブ関連コード（ARC_系5件）を登録
 
 ## [6.7.112] - 2026-09-06
 
