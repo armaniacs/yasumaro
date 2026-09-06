@@ -4,7 +4,7 @@ import { formatEntriesToMarkdown } from '../../../utils/markdownFormatter.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import type { BrowsingLogEntry, BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import type { CallResult, SqliteError } from '../../sqlite/offscreenGateway.js';
-import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData } from '../../../messaging/sqliteMessages.js';
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData } from '../../../messaging/sqliteMessages.js';
 
 export const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 export const MAX_APPEND_IDS = 100;
@@ -92,6 +92,12 @@ export interface ArchiveDeps {
   archiveRestorePreview: (stagingName: string) => Promise<DepsResult<ArchiveRestorePreviewData>>;
   archiveRestore: (stagingName: string) => Promise<DepsResult<ArchiveRestoreData>>;
   archiveDeleteByStaging: (stagingName: string) => Promise<DepsResult<ArchivePurgeData>>;
+  archiveOpen: (stagingName: string) => Promise<DepsResult<void>>;
+  archiveQuery: (stagingName: string, query: string, limit: number, offset: number) => Promise<DepsResult<{ rows: ArchiveSessionRow[]; total: number }>>;
+  archiveUpdate: (stagingName: string, id: number, changes: Record<string, unknown>) => Promise<DepsResult<{ dirty: boolean }>>;
+  archiveSave: (stagingName: string) => Promise<DepsResult<{ dirty: boolean }>>;
+  archiveClose: (stagingName: string) => Promise<DepsResult<{ dirty: boolean }>>;
+  archiveStatus: () => Promise<DepsResult<ArchiveSessionStatusData>>;
 }
 
 export type { ArchivePurgeData };
@@ -174,6 +180,12 @@ runOpfsSpike: () => sqliteClient.maintain({ type: 'opfsSpike' }) as Promise<Deps
     archiveRestorePreview: (stagingName) => sqliteClient.maintain({ type: 'archiveRestorePreview', stagingName } as { type: 'archiveRestorePreview', stagingName: string }),
     archiveRestore: (stagingName) => sqliteClient.maintain({ type: 'archiveRestore', stagingName } as { type: 'archiveRestore', stagingName: string }),
     archiveDeleteByStaging: (stagingName) => sqliteClient.maintain({ type: 'archiveDeleteByStaging', stagingName } as { type: 'archiveDeleteByStaging', stagingName: string }),
+    archiveOpen: (stagingName) => sqliteClient.maintain({ type: 'archiveOpen', stagingName } as { type: 'archiveOpen', stagingName: string }),
+    archiveQuery: (stagingName, query, limit, offset) => sqliteClient.maintain({ type: 'archiveQuery', stagingName, query, limit, offset } as { type: 'archiveQuery', stagingName: string, query: string, limit: number, offset: number }),
+    archiveUpdate: (stagingName, id, changes) => sqliteClient.maintain({ type: 'archiveUpdate', stagingName, id, changes } as { type: 'archiveUpdate', stagingName: string, id: number, changes: Record<string, unknown> }),
+    archiveSave: (stagingName) => sqliteClient.maintain({ type: 'archiveSave', stagingName } as { type: 'archiveSave', stagingName: string }),
+    archiveClose: (stagingName) => sqliteClient.maintain({ type: 'archiveClose', stagingName } as { type: 'archiveClose', stagingName: string }),
+    archiveStatus: () => sqliteClient.maintain({ type: 'archiveStatus' } as { type: 'archiveStatus' }),
       getSettings: () => new SettingsRepository().getAll() as Promise<Record<string, unknown>>,
      formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
      queryAuditLog: (options) => sqliteClient.query({ kind: 'auditLog', limit: options?.limit, offset: options?.offset } as { kind: 'auditLog', limit?: number, offset?: number }),

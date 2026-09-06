@@ -46,7 +46,7 @@ describe('messaging/sqliteMessages: the union and the array agree', () => {
      * do is pin the array so an entry cannot be dropped unnoticed.
      */
     it('covers every message the SW can send to offscreen', () => {
-        expect(SQLITE_MESSAGE_TYPES).toHaveLength(28);
+        expect(SQLITE_MESSAGE_TYPES).toHaveLength(34);
         expect(new Set(SQLITE_MESSAGE_TYPES).size).toBe(SQLITE_MESSAGE_TYPES.length);
     });
 

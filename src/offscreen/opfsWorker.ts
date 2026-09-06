@@ -34,6 +34,16 @@ import {
   handleArchiveRestorePreview,
   handleArchiveRestore,
 } from './opfsWorker/archiveRestoreHandlers.js';
+import {
+  handleArchiveOpen,
+  handleArchiveQuery,
+  handleArchiveUpdate,
+  handleArchiveSave,
+  handleArchiveClose,
+  handleArchiveStatus,
+  handleArchiveDiscard,
+  handleArchiveSweep,
+} from './opfsWorker/archiveSessionHandlers.js';
 import { handlePurgeOldRecords, handleContentPurge, handleClearAll } from './opfsWorker/purgeHandlers.js';
 import { handleAuditLogInsert, handleAuditLogQuery } from './opfsWorker/auditHandlers.js';
 import { handleGetStatus, handleFtsIndexSize } from './opfsWorker/statusHandlers.js';
@@ -288,6 +298,38 @@ export async function handleRequest(req: WorkerRequestMessage): Promise<WorkerRe
       }
       case 'ARCHIVE_RESTORE': {
         result = await handleArchiveRestore(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveRestorePayload);
+        break;
+      }
+      case 'ARCHIVE_OPEN': {
+        result = await handleArchiveOpen(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveOpenPayload);
+        break;
+      }
+      case 'ARCHIVE_QUERY': {
+        result = await handleArchiveQuery(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveQueryPayload);
+        break;
+      }
+      case 'ARCHIVE_UPDATE': {
+        result = await handleArchiveUpdate(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveUpdatePayload);
+        break;
+      }
+      case 'ARCHIVE_SAVE': {
+        result = await handleArchiveSave(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveSavePayload);
+        break;
+      }
+      case 'ARCHIVE_CLOSE': {
+        result = await handleArchiveClose(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveClosePayload);
+        break;
+      }
+      case 'ARCHIVE_STATUS': {
+        result = await handleArchiveStatus(handlerCtx);
+        break;
+      }
+      case 'ARCHIVE_DISCARD': {
+        result = await handleArchiveDiscard((payload as { stagingName: string }).stagingName);
+        break;
+      }
+      case 'ARCHIVE_SWEEP': {
+        result = await handleArchiveSweep();
         break;
       }
       case 'FTS_INDEX_SIZE': {

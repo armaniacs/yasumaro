@@ -18,4 +18,10 @@ export const ARCHIVE_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new Set([
   'archive_prepare_incoming',
   'archive_restore_preview',
   'archive_restore',
+  'archive_open',
+  'archive_query',
+  'archive_update',
+  'archive_save',
+  'archive_close',
+  'archive_status',
 ]);

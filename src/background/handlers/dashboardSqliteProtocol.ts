@@ -12,7 +12,7 @@
 
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 import type { OpfsSpikeReport } from '../../offscreen/opfsSpike.js';
-import type { ArchivePreviewData, ArchiveRestorePreviewData } from '../../messaging/sqliteMessages.js';
+import type { ArchivePreviewData, ArchiveRestorePreviewData, ArchiveSessionRow, ArchiveSessionStatusData } from '../../messaging/sqliteMessages.js';
 import type { DashboardSqliteSubtype } from '../../messaging/sqliteOperationSecurity.js';
 
 export type { DashboardSqliteSubtype } from '../../messaging/sqliteOperationSecurity.js';
@@ -71,7 +71,13 @@ export type DashboardSqliteRequest =
   | { subtype: 'archive_prepare_incoming' }
   | { subtype: 'archive_restore_preview'; stagingName: string }
   | { subtype: 'archive_restore'; stagingName: string; confirmToken?: string }
-  | { subtype: 'archive_delete_by_staging'; stagingName: string; confirmToken?: string };
+  | { subtype: 'archive_delete_by_staging'; stagingName: string; confirmToken?: string }
+  | { subtype: 'archive_open'; stagingName: string }
+  | { subtype: 'archive_query'; stagingName: string; query: string; limit: number; offset: number }
+  | { subtype: 'archive_update'; stagingName: string; id: number; changes: Record<string, unknown> }
+  | { subtype: 'archive_save'; stagingName: string }
+  | { subtype: 'archive_close'; stagingName: string }
+  | { subtype: 'archive_status' };
 
 /**
  * Compile-time guard that every subtype in the request union also exists in the
@@ -164,5 +170,11 @@ export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
       S extends 'archive_restore_preview' ? { success: true; preview: ArchiveRestorePreviewData } :
       S extends 'archive_restore' ? { success: true; restored: number; restoredDeleted: number; skipped: number; skippedInvalid: number } :
       S extends 'archive_delete_by_staging' ? { success: true; deleted: number; remaining: number; freelistBefore: number; freelistAfter: number; vacuumOk: boolean } :
+      S extends 'archive_open' ? { success: true } :
+      S extends 'archive_query' ? { success: true; rows: ArchiveSessionRow[]; total: number } :
+      S extends 'archive_update' ? { success: true; dirty: boolean } :
+      S extends 'archive_save' ? { success: true; dirty: boolean } :
+      S extends 'archive_close' ? { success: true; dirty: boolean } :
+      S extends 'archive_status' ? { success: true; status: ArchiveSessionStatusData } :
       never
     );

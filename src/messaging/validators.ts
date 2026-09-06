@@ -231,6 +231,39 @@ export class DashboardSqliteValidator implements MessageValidator<DashboardSqlit
         throw new ValidationError('DashboardSqliteValidator', 'archive_delete_by_staging: stagingName must be a valid staging name', 'stagingName');
       }
     }
+    if (subtype === 'archive_open' || subtype === 'archive_save' || subtype === 'archive_close' || subtype === 'archive_restore_preview' || subtype === 'archive_restore') {
+      if (typeof p.stagingName !== 'string' || !isValidStagingName(p.stagingName)) {
+        throw new ValidationError('DashboardSqliteValidator', `${subtype}: stagingName must be a valid staging name`, 'stagingName');
+      }
+    }
+    if (subtype === 'archive_query') {
+      if (typeof p.stagingName !== 'string' || !isValidStagingName(p.stagingName)) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_query: stagingName must be a valid staging name', 'stagingName');
+      }
+      if (typeof p.query !== 'string') {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_query: query must be string', 'query');
+      }
+      if (p.query.length > VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH) {
+        throw new ValidationError('DashboardSqliteValidator', `archive_query: query exceeds ${VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH} chars`, 'query');
+      }
+      if (typeof p.limit !== 'number' || !Number.isInteger(p.limit) || p.limit < 1 || p.limit > 500) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_query: limit must be 1..500', 'limit');
+      }
+      if (typeof p.offset !== 'number' || !Number.isInteger(p.offset) || p.offset < 0) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_query: offset must be a non-negative integer', 'offset');
+      }
+    }
+    if (subtype === 'archive_update') {
+      if (typeof p.stagingName !== 'string' || !isValidStagingName(p.stagingName)) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_update: stagingName must be a valid staging name', 'stagingName');
+      }
+      if (typeof p.id !== 'number' || !Number.isInteger(p.id) || p.id <= 0) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_update: id must be a positive integer', 'id');
+      }
+      if (!p.changes || typeof p.changes !== 'object' || Array.isArray(p.changes)) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_update: changes must be an object', 'changes');
+      }
+    }
 
     return payload as DashboardSqliteRequest;
   }

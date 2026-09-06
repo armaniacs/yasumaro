@@ -321,6 +321,30 @@ export class IdbVfsBackend implements StorageBackend {
     return { success: false, error: 'Archive requires OPFS storage.' };
   }
 
+  async archiveOpen(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveOpenResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveQuery(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveQueryResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveUpdate(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveUpdateResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveSave(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveSaveResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveClose(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCloseResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveStatus(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveStatusResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
   async restoreDb(_data: Uint8Array): Promise<BackendOrError<MutationResult>> {
     return { success: false, error: 'Binary restore requires OPFS storage.' };
   }

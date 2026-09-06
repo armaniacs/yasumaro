@@ -29,6 +29,14 @@ import type {
   OffscreenArchiveRestorePreviewResponse,
   OffscreenArchiveRestoreResponse,
   OffscreenArchivePurgeResponse,
+  OffscreenArchiveOpenResponse,
+  OffscreenArchiveQueryResponse,
+  OffscreenArchiveUpdateResponse,
+  OffscreenArchiveSaveResponse,
+  OffscreenArchiveCloseResponse,
+  OffscreenArchiveStatusResponse,
+  ArchiveSessionRow,
+  ArchiveSessionStatusData,
   ArchivePurgeData,
   ArchivePreviewData,
   ArchiveCreateData,
@@ -120,6 +128,18 @@ export class OffscreenGateway {
   async maintain(op: { type: 'archiveRestorePreview'; stagingName: string }): Promise<SqliteResult<ArchiveRestorePreviewData>>;
   async maintain(op: { type: 'archiveRestore'; stagingName: string }): Promise<SqliteResult<ArchiveRestoreData>>;
   async maintain(op: { type: 'archiveDeleteByStaging'; stagingName: string }): Promise<SqliteResult<ArchivePurgeData>>;
+  async maintain(op: { type: 'archiveOpen'; stagingName: string }): Promise<SqliteResult<void>>;
+  async maintain(op: { type: 'archiveQuery'; stagingName: string; query: string; limit: number; offset: number }): Promise<SqliteResult<{ rows: ArchiveSessionRow[]; total: number }>>;
+  async maintain(op: { type: 'archiveUpdate'; stagingName: string; id: number; changes: Record<string, unknown> }): Promise<SqliteResult<{ dirty: boolean }>>;
+  async maintain(op: { type: 'archiveSave'; stagingName: string }): Promise<SqliteResult<{ dirty: boolean }>>;
+  async maintain(op: { type: 'archiveClose'; stagingName: string }): Promise<SqliteResult<{ dirty: boolean }>>;
+  async maintain(op: { type: 'archiveStatus' }): Promise<SqliteResult<ArchiveSessionStatusData>>;
+  async maintain(op: { type: 'archiveOpen'; stagingName: string }): Promise<SqliteResult<void>>;
+  async maintain(op: { type: 'archiveQuery'; stagingName: string; query: string; limit: number; offset: number }): Promise<SqliteResult<{ rows: ArchiveSessionRow[]; total: number }>>;
+  async maintain(op: { type: 'archiveUpdate'; stagingName: string; id: number; changes: Record<string, unknown> }): Promise<SqliteResult<{ dirty: boolean }>>;
+  async maintain(op: { type: 'archiveSave'; stagingName: string }): Promise<SqliteResult<{ dirty: boolean }>>;
+  async maintain(op: { type: 'archiveClose'; stagingName: string }): Promise<SqliteResult<{ dirty: boolean }>>;
+  async maintain(op: { type: 'archiveStatus' }): Promise<SqliteResult<ArchiveSessionStatusData>>;
   async maintain(op: MaintainOp): Promise<SqliteResult<unknown>> {
     switch (op.type) {
       case 'init': { const result = await this.callInternal<boolean, OffscreenHealthResponse>('SQLITE_INIT'); return result.success ? { success: true, data: true } : result; }
@@ -143,6 +163,18 @@ export class OffscreenGateway {
       // re-run converge, but counts would be wrong).
       case 'archiveRestore': return this.callInternal<ArchiveRestoreData, OffscreenArchiveRestoreResponse>('SQLITE_ARCHIVE_RESTORE', { stagingName: op.stagingName }, (res) => ({ restored: res.restored, restoredDeleted: res.restoredDeleted, skipped: res.skipped, skippedInvalid: res.skippedInvalid }), undefined, { noRetry: true });
       case 'archiveDeleteByStaging': return this.callInternal<ArchivePurgeData, OffscreenArchivePurgeResponse>('SQLITE_ARCHIVE_DELETE_BY_STAGING', { stagingName: op.stagingName }, (res) => ({ deleted: res.deleted, remaining: res.remaining, freelistBefore: res.freelistBefore, freelistAfter: res.freelistAfter, vacuumOk: res.vacuumOk }), undefined, { noRetry: true });
+      case 'archiveOpen': return this.callInternal<void, OffscreenArchiveOpenResponse>('SQLITE_ARCHIVE_OPEN', { stagingName: op.stagingName }, () => undefined, undefined, { noRetry: true });
+      case 'archiveQuery': return this.callInternal<{ rows: ArchiveSessionRow[]; total: number }, OffscreenArchiveQueryResponse>('SQLITE_ARCHIVE_QUERY', { stagingName: op.stagingName, query: op.query, limit: op.limit, offset: op.offset }, (res) => ({ rows: res.rows, total: res.total }));
+      case 'archiveUpdate': return this.callInternal<{ dirty: boolean }, OffscreenArchiveUpdateResponse>('SQLITE_ARCHIVE_UPDATE', { stagingName: op.stagingName, id: op.id, changes: op.changes }, (res) => ({ dirty: res.dirty }));
+      case 'archiveSave': return this.callInternal<{ dirty: boolean }, OffscreenArchiveSaveResponse>('SQLITE_ARCHIVE_SAVE', { stagingName: op.stagingName }, (res) => ({ dirty: res.dirty }), undefined, { noRetry: true });
+      case 'archiveClose': return this.callInternal<{ dirty: boolean }, OffscreenArchiveCloseResponse>('SQLITE_ARCHIVE_CLOSE', { stagingName: op.stagingName }, (res) => ({ dirty: res.dirty }), undefined, { noRetry: true });
+      case 'archiveStatus': return this.callInternal<ArchiveSessionStatusData, OffscreenArchiveStatusResponse>('SQLITE_ARCHIVE_STATUS', {}, (res) => res.status);
+      case 'archiveOpen': return this.callInternal<void, OffscreenArchiveOpenResponse>('SQLITE_ARCHIVE_OPEN', { stagingName: op.stagingName }, () => undefined, undefined, { noRetry: true });
+      case 'archiveQuery': return this.callInternal<{ rows: ArchiveSessionRow[]; total: number }, OffscreenArchiveQueryResponse>('SQLITE_ARCHIVE_QUERY', { stagingName: op.stagingName, query: op.query, limit: op.limit, offset: op.offset }, (res) => ({ rows: res.rows, total: res.total }));
+      case 'archiveUpdate': return this.callInternal<{ dirty: boolean }, OffscreenArchiveUpdateResponse>('SQLITE_ARCHIVE_UPDATE', { stagingName: op.stagingName, id: op.id, changes: op.changes }, (res) => ({ dirty: res.dirty }));
+      case 'archiveSave': return this.callInternal<{ dirty: boolean }, OffscreenArchiveSaveResponse>('SQLITE_ARCHIVE_SAVE', { stagingName: op.stagingName }, (res) => ({ dirty: res.dirty }), undefined, { noRetry: true });
+      case 'archiveClose': return this.callInternal<{ dirty: boolean }, OffscreenArchiveCloseResponse>('SQLITE_ARCHIVE_CLOSE', { stagingName: op.stagingName }, (res) => ({ dirty: res.dirty }), undefined, { noRetry: true });
+      case 'archiveStatus': return this.callInternal<ArchiveSessionStatusData, OffscreenArchiveStatusResponse>('SQLITE_ARCHIVE_STATUS', {}, (res) => res.status);
       default: { const exhaustive: never = op; void exhaustive; throw new Error('Unhandled maintain op'); }
     }
   }
@@ -195,6 +227,12 @@ export class SqliteClient implements SqliteRpcClient {
   async maintain(op: { type: 'archiveRestorePreview'; stagingName: string }): Promise<SqliteRpcResult<ArchiveRestorePreviewData>>;
   async maintain(op: { type: 'archiveRestore'; stagingName: string }): Promise<SqliteRpcResult<ArchiveRestoreData>>;
   async maintain(op: { type: 'archiveDeleteByStaging'; stagingName: string }): Promise<SqliteRpcResult<ArchivePurgeData>>;
+  async maintain(op: { type: 'archiveOpen'; stagingName: string }): Promise<SqliteRpcResult<void>>;
+  async maintain(op: { type: 'archiveQuery'; stagingName: string; query: string; limit: number; offset: number }): Promise<SqliteRpcResult<{ rows: ArchiveSessionRow[]; total: number }>>;
+  async maintain(op: { type: 'archiveUpdate'; stagingName: string; id: number; changes: Record<string, unknown> }): Promise<SqliteRpcResult<{ dirty: boolean }>>;
+  async maintain(op: { type: 'archiveSave'; stagingName: string }): Promise<SqliteRpcResult<{ dirty: boolean }>>;
+  async maintain(op: { type: 'archiveClose'; stagingName: string }): Promise<SqliteRpcResult<{ dirty: boolean }>>;
+  async maintain(op: { type: 'archiveStatus' }): Promise<SqliteRpcResult<ArchiveSessionStatusData>>;
   async maintain(op: MaintainOp): Promise<SqliteRpcResult<unknown>> { const maintain = this.gateway.maintain.bind(this.gateway) as (op: MaintainOp) => Promise<SqliteRpcResult<unknown>>; return maintain(op); }
   async getStatus(): Promise<Omit<OffscreenStatusData, 'success'> | null> { return this.gateway.getStatus(); }
   async status(): Promise<SqliteResult<Omit<OffscreenStatusData, 'success'>>> { return this.gateway.status(); }

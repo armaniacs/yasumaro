@@ -38,7 +38,13 @@ export type SqliteMessage =
   | { type: 'SQLITE_ARCHIVE_PREPARE_INCOMING'; payload?: never; traceId?: string }
   | { type: 'SQLITE_ARCHIVE_RESTORE_PREVIEW'; payload: { stagingName: string }; traceId?: string }
   | { type: 'SQLITE_ARCHIVE_RESTORE'; payload: { stagingName: string }; traceId?: string }
-  | { type: 'SQLITE_ARCHIVE_DELETE_BY_STAGING'; payload: { stagingName: string }; traceId?: string };
+  | { type: 'SQLITE_ARCHIVE_DELETE_BY_STAGING'; payload: { stagingName: string }; traceId?: string }
+  | { type: 'SQLITE_ARCHIVE_OPEN'; payload: { stagingName: string }; traceId?: string }
+  | { type: 'SQLITE_ARCHIVE_QUERY'; payload: { stagingName: string; query: string; limit: number; offset: number }; traceId?: string }
+  | { type: 'SQLITE_ARCHIVE_UPDATE'; payload: { stagingName: string; id: number; changes: Record<string, unknown> }; traceId?: string }
+  | { type: 'SQLITE_ARCHIVE_SAVE'; payload: { stagingName: string }; traceId?: string }
+  | { type: 'SQLITE_ARCHIVE_CLOSE'; payload: { stagingName: string }; traceId?: string }
+  | { type: 'SQLITE_ARCHIVE_STATUS'; payload?: never; traceId?: string };
 
 /**
  * SqliteMessage として扱う type の一覧。offscreen.ts の送信元検証で使用する。
@@ -77,6 +83,12 @@ export const SQLITE_MESSAGE_TYPES = [
   'SQLITE_ARCHIVE_RESTORE_PREVIEW',
   'SQLITE_ARCHIVE_RESTORE',
   'SQLITE_ARCHIVE_DELETE_BY_STAGING',
+  'SQLITE_ARCHIVE_OPEN',
+  'SQLITE_ARCHIVE_QUERY',
+  'SQLITE_ARCHIVE_UPDATE',
+  'SQLITE_ARCHIVE_SAVE',
+  'SQLITE_ARCHIVE_CLOSE',
+  'SQLITE_ARCHIVE_STATUS',
 ] as const;
 
 export type SqliteMessageType = typeof SQLITE_MESSAGE_TYPES[number];
@@ -242,6 +254,34 @@ export type OffscreenArchiveRestorePreviewResponse =
 
 export type OffscreenArchiveRestoreResponse =
   | { success: true; restored: number; restoredDeleted: number; skipped: number; skippedInvalid: number }
+  | OffscreenFailure;
+
+/** Temp-open session (PBI 2026-09-06-05): archive row for the editable list. */
+export interface ArchiveSessionRow {
+  id: number;
+  url: string;
+  title: string | null;
+  summary: string | null;
+  tags: string | null;
+  created_at: number;
+  is_starred: number;
+}
+
+export interface ArchiveSessionStatusData {
+  open: boolean;
+  stagingName: string | null;
+  dirty: boolean;
+}
+
+export type OffscreenArchiveOpenResponse = { success: true } | OffscreenFailure;
+export type OffscreenArchiveQueryResponse =
+  | { success: true; rows: ArchiveSessionRow[]; total: number }
+  | OffscreenFailure;
+export type OffscreenArchiveUpdateResponse = { success: true; dirty: boolean } | OffscreenFailure;
+export type OffscreenArchiveSaveResponse = { success: true; dirty: boolean } | OffscreenFailure;
+export type OffscreenArchiveCloseResponse = { success: true; dirty: boolean } | OffscreenFailure;
+export type OffscreenArchiveStatusResponse =
+  | { success: true; status: ArchiveSessionStatusData }
   | OffscreenFailure;
 
 /** Phase B (PBI 2026-09-06-04): main-DB deletion outcome. */
