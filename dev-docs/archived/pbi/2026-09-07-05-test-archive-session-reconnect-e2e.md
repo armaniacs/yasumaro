@@ -31,12 +31,29 @@ Scenario: 未保存編集の dirty 状態が reload 後も保持される
 
 ## 受け入れ基準
 
-- [ ] `testDir/e2e/archive-recommended-verification.spec.ts`（既存ファイル）に Y5' のシナリオを**追記**する（新規 spec ファイルは作らない）
-- [ ] reload 前後で `archive_status` が open/stagingName/dirty を保持することを assert
-- [ ] reload 後に `archive_query` が動作することを assert（セッション実体が生きている証拠）
-- [ ] テスト専用 subtype / フラグは追加しない（2026-09-07-01/02 と同じ方針）
-- [ ] `docs/MANUAL_TEST_ARCHIVE.md` を更新: Y5 の手順を Y5（file:// 部分・手動維持）と Y5'（自動化済み・対応表へ移動）に分解
-- [ ] `npm run validate` が通る
+- [x] `testDir/e2e/archive-recommended-verification.spec.ts`（既存ファイル）に Y5' のシナリオを**追記**する（新規 spec ファイルは作らない）
+- [x] reload 前後で `archive_status` が open/stagingName/dirty を保持することを assert
+- [x] reload 後に `archive_query` が動作することを assert（セッション実体が生きている証拠）
+- [x] テスト専用 subtype / フラグは追加しない（2026-09-07-01/02 と同じ方針）
+- [x] `docs/MANUAL_TEST_ARCHIVE.md` を更新: Y5 の手順を Y5（file:// 部分・手動維持）と Y5'（自動化済み・対応表へ移動）に分解
+- [x] `npm run validate` が通る
+
+## 完了メモ（2026-09-07）
+
+### Y5' E2E（archive-recommended-verification.spec.ts に追記・一発グリーン）
+
+検証フロー:
+1. Y3 流用（seedRows → runPhaseA → exportStagingBytes → stageIncomingBytes → archive_open）でセッションを開く — この間パネルは mount していない（direct message パス）
+2. `archive_status`（TOKEN_EXEMPT）で open/stagingName/dirty=false を assert
+3. `page.reload()` → `archive_status` で open/stagingName 保持を assert（SW・offscreen worker は生き続けるため）
+4. `archive_query` が動作（セッション実体が生きている証拠）
+5. **パネル再接続**: `[data-panel="panel-archive"]` を初めてクリック → mount プローブ（archivePanel.ts の mount 時 archiveStatus）が open セッションを検出 → `#archive-session-section` 表示 + `.archive-session-row` にタイトル再描画
+6. dirty フロー: `archive_update`（dirty=true）→ 再 reload → `archive_status` の dirty=true 保持
+
+### 実装確認メモ
+- パネルは NavigationRegistry の navigate 時に**初回 mount**（遅延） — reload 後のタブクリックが mount プローブの発火点になる
+- `archiveDirtyLocal` は閉じる確認ダイアログ用の内部状態で視覚表示なし — dirty の assert は `archive_status` レベルで実施
+- dirty=true のまま reload しても SW 側 `archiveDirty` は保持される（worker のモジュール状態）
 
 ## テスト戦略
 
@@ -77,8 +94,8 @@ grep -n "handleArchiveStatus\|sessionEngine" src/offscreen/opfsWorker/archiveSes
 
 ## Definition of Done
 
-- [ ] Y5' シナリオが E2E として実装されパスする
-- [ ] `npm run validate` が通る
-- [ ] 全 `@extension` E2E がグリーン
-- [ ] `docs/MANUAL_TEST_ARCHIVE.md` 更新済み
-- [ ] コードレビュー完了
+- [x] Y5' シナリオが E2E として実装されパスする
+- [x] `npm run validate` が通る
+- [x] 全 `@extension` E2E がグリーン（35 passed / 1 skipped）
+- [x] `docs/MANUAL_TEST_ARCHIVE.md` 更新済み
+- [x] コードレビュー完了
