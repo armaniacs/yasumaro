@@ -43,14 +43,14 @@ R6・G6 は新規シナリオ無し（既存 vitest がカバー）。
 
 ## 受け入れ基準
 
-- [ ] `testDir/e2e/dashboard-archive.spec.ts`（既存ファイル）に R5 の1シナリオを**追記**する（新規 spec ファイルは作らない。既存の archive 往復テストの末尾に足すのが CI 実行時間・重複 seed の点で最適）
+- [x] `testDir/e2e/dashboard-archive.spec.ts`（既存ファイル）に R5 の1シナリオを**追記**する（新規 spec ファイルは作らない。既存の archive 往復テストの末尾に足すのが CI 実行時間・重複 seed の点で最適）
   - seed 件数は「実エンジンで `freelist_count` の減少が観測できる最小値」を実測して決め、コメントで根拠を残す
-- [ ] `src/offscreen/__tests__/archiveStaging.test.ts` の `sweepOrphanStagings` テストを確認し、複数孤児・incoming と outgoing の混在ケースが無ければ1〜2ケース追加（あればスキップ可）
-- [ ] `docs/MANUAL_TEST_ARCHIVE.md` を更新:
+- [x] `src/offscreen/__tests__/archiveStaging.test.ts` の `sweepOrphanStagings` テストを確認し、複数孤児・incoming と outgoing の混在ケースが無ければ1〜2ケース追加（あればスキップ可）→ 1ケース追加
+- [x] `docs/MANUAL_TEST_ARCHIVE.md` を更新:
   - R5 を 🔴必須 から削除し、「freelist 減少は自動テスト（vitest + E2E 1本）でカバー。`chrome://settings` の総量目視のみ 🟢 で残す」に置換
   - R6 を 🔴必須 から削除し、「fail-closed ロジックは `archivePurgeHandlers.test.ts` の4ケースでカバー。実 offscreen 揮発の前提確認のみ 🟢 で残す」に置換
   - G6 を「掃除ロジックは `archiveStaging.test.ts` でカバー。実プロセスキル通しのみ 🟢 で残す」に更新
-- [ ] PBI 完了メモに、R5/R6/G6 の既存カバレッジ（ファイル名 + `it()` 名）を一覧で記録
+- [x] PBI 完了メモに、R5/R6/G6 の既存カバレッジ（ファイル名 + `it()` 名）を一覧で記録
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -136,9 +136,36 @@ sed -n '145,191p' testDir/e2e/dashboard-archive.spec.ts   # 既存 Phase B の�
 
 ## Definition of Done
 
-- [ ] R5 の E2E ケースが `dashboard-archive.spec.ts` に追記され `npm run test:e2e:ci` でグリーン
-- [ ] R6/G6 の既存カバレッジが PBI 完了メモに一覧化されている
-- [ ] G6 の不足ケースがあれば `archiveStaging.test.ts` に追加済み
-- [ ] `npm run validate` が通る
-- [ ] コードレビュー完了
-- [ ] `docs/MANUAL_TEST_ARCHIVE.md` 更新済み（R5/R6/G6 の大部分を削除、実環境前提のみ 🟢 で残す、既存カバレッジのファイル名を明記）
+- [x] R5 の E2E ケースが `dashboard-archive.spec.ts` に追記され `npm run test:e2e:ci` でグリーン
+- [x] R6/G6 の既存カバレッジが PBI 完了メモに一覧化されている
+- [x] G6 の不足ケースがあれば `archiveStaging.test.ts` に追加済み（incoming/outgoing 混在の複数孤児ケースを1ケース追加）
+- [x] `npm run validate` が通る
+- [x] コードレビュー完了
+- [x] `docs/MANUAL_TEST_ARCHIVE.md` 更新済み（R5/R6/G6 の大部分を削除、実環境前提のみ 🟢 で残す、既存カバレッジのファイル名を明記）
+
+## 完了メモ（2026-09-07）
+
+### 既存カバレッジ一覧（ファイル名 + it() 名）
+
+**R5（VACUUM 領域解放）— `src/offscreen/__tests__/archivePurgeHandlers.test.ts`**
+- `deletes with the 3-condition predicate and runs VACUUM outside the transaction`（freelist before/after の報告）
+- `keeps the main DB intact when VACUUM fails (vacuumOk=false)`
+
+**R6 fail-closed（同ファイル・5ケース）**
+- `fails closed when the staging is not registered (re-preview required)`
+- `fails closed when the file meta disagrees with the registry`
+- `fails closed on incoming staging (restore flow must not be purged)`
+- `rejects before the DELETE when quota is insufficient`
+- `blocks a second concurrent purge (single-flight)`
+
+**G6 孤児掃除 — `src/offscreen/__tests__/archiveStaging.test.ts` `describe('sweepOrphanStagings')`**
+- `removes orphan staging files but protects the excluded set`
+- `protects staging files registered by the current session even without explicit exclude`
+- `sweeps multiple orphans of both kinds (incoming + outgoing) in one pass`（本PBIで追加 — 複数孤児×両kindが未カバーだった）
+
+### R5 の E2E 実測メモ
+
+- seed 3件では `freelistBefore=0/freelistAfter=0`（実測。既存テストの PURGE-RES ログで確認）→ freelist 減少の観測には「VACUUM 前に空きページが存在する」ことが必要
+- 採用した設計: 太い行（summary 1KB）×300件を seed → `clear_all`（VACUUM 無しの DELETE で freelist が確保される）→ 3件を再 seed → Phase A → Phase B。`freelistBefore > 0`・`freelistAfter < freelistBefore`・`vacuumOk:true` を実エンジンで確認
+- なお VACUUM 後の OPFS エンジンは freelist を 0 に戻すことも実測済み（既存ログ `freelistBefore:0, freelistAfter:0`）
+

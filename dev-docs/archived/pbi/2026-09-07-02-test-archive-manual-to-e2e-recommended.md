@@ -94,11 +94,11 @@ Scenario: G8 VACUUM 失敗時は vacuumOk:false と注記が出る
 
 ## 受け入れ基準
 
-- [ ] 着手時に既存 vitest カバレッジを確認: `FallbackStorageAdapter` / `IdbVfsBackend`（Y2）、`archivePurgeHandlers.test.ts` の VACUUM 失敗（G8）。カバー済みの項目は E2E を書かず「既存カバレッジの明文化」に切り替える
-- [ ] `testDir/e2e/archive-recommended-verification.spec.ts`（新規・`@extension`）に、vitest でカバーできない項目（Y3/Y4/Y6/G3/G4/G5、および Y2/G8 が未カバーなら追加）を実装しパスする
-- [ ] G4 の seed はレガシーストア（`savedUrlsWithTimestamps`）にエントリが載る経路を使う（`import` subtype は SQLite 直挿入でレガシーに載らない）
-- [ ] **テスト専用 subtype / フラグは追加しない**（18 ファイル改修 + 起動時パーティション assert。01 の実装コンテキスト参照）。Y2 は fallback backend のユニットテスト、G8 は既存 `makeMainEngine({ vacuumError })` を使う
-- [ ] `docs/MANUAL_TEST_ARCHIVE.md` を更新:
+- [x] 着手時に既存 vitest カバレッジを確認: `FallbackStorageAdapter` / `IdbVfsBackend`（Y2）、`archivePurgeHandlers.test.ts` の VACUUM 失敗（G8）。カバー済みの項目は E2E を書かず「既存カバレッジの明文化」に切り替える（Y2 は未カバーのため vitest 新設、G8 は既存カバーを明文化）
+- [x] `testDir/e2e/archive-recommended-verification.spec.ts`（新規・`@extension`）に、vitest でカバーできない項目（Y3/Y4/Y6/G3/G4/G5、および Y2/G8 が未カバーなら追加）を実装しパスする（Y2 は vitest、G8 は明文化。E2E は Y3/Y4/Y6/G3/G4/G5）
+- [x] G4 の seed はレガシーストア（`savedUrlsWithTimestamps`）にエントリが載る経路を使う（`import` subtype は SQLite 直挿入でレガシーに載らない）→ `chrome.storage.local.set` 直接 + deferred マイグレーション封印
+- [x] **テスト専用 subtype / フラグは追加しない**（18 ファイル改修 + 起動時パーティション assert。01 の実装コンテキスト参照）。Y2 は fallback backend のユニットテスト、G8 は既存 `makeMainEngine({ vacuumError })` を使う
+- [x] `docs/MANUAL_TEST_ARCHIVE.md` を更新:
   - E2E / vitest でカバーした項目を手動チェックリストから削除（カバー方法をファイル名付きで注記）
   - Y1/Y5/G1/G2/G7 は残し、「なぜE2Eで不可」列を上表の理由に更新（現状の記述より正確に）
 
@@ -231,10 +231,38 @@ cat testDir/e2e/content-script-recording.spec.ts
 
 ## Definition of Done
 
-- [ ] 対象シナリオが自動テスト（E2E または既存 vitest カバレッジの明文化）で担保されている
-- [ ] `npm run validate` が通る
-- [ ] `npm run test:e2e:ci` で新規 spec がグリーン（またはスキップ条件を明記）
-- [ ] テスト専用フラグ/subtype を追加していないことを確認（本方針の遵守）
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了
-- [ ] `docs/MANUAL_TEST_ARCHIVE.md` 更新済み（カバー項目の削除 + カバー方法のファイル名注記、Y1/Y5/G1/G2/G7 の理由更新）
+- [x] 対象シナリオが自動テスト（E2E または既存 vitest カバレッジの明文化）で担保されている
+- [x] `npm run validate` が通る
+- [x] `npm run test:e2e:ci` で新規 spec がグリーン（macOS ローカル headed で 34 passed / 1 skipped。CI は tests.yml 同一 grep）
+- [x] テスト専用フラグ/subtype を追加していないことを確認（本方針の遵守）
+- [x] コードレビュー完了
+- [x] リファクタリング完了
+- [x] `docs/MANUAL_TEST_ARCHIVE.md` 更新済み（カバー項目の削除 + カバー方法のファイル名注記、Y1/Y5/G1/G2/G7 の理由更新）
+
+## 完了メモ（2026-09-07）
+
+### Y2（vitest 追加・E2E不要）
+
+既存 vitest は FallbackStorageAdapter / IdbVfsBackend の archive 拒否をカバーしていなかったため、`src/offscreen/__tests__/archiveFallbackRejection.test.ts` を新設。全 14 archive メソッド × 2 backend が `'Archive requires OPFS storage.'` で fail-closed することを assert。
+
+### G8（既存カバレッジ明文化のみ）
+
+E2E 新規は不要と判断。`archivePurgeHandlers.test.ts` の `keeps the main DB intact when VACUUM fails (vacuumOk=false)` が応答ロジックを担保、R5 の E2E（`dashboard-archive.spec.ts`）が実エンジンで `vacuumOk:true` を通すため、UI 注記のフィールド経路は接続済み。
+
+### 既存 vitest カバレッジの所在（G1/G2/G7）
+
+- G1 トークン TTL: `src/background/__tests__/confirmTokenManager` 系テスト
+- G2 フォーカストラップ: `focusTrapManager` ユニット + `archive-edit-modal` テスト
+- G7 quota プレフライト: `archivePurgeHandlers.test.ts` `rejects before the DELETE when quota is insufficient`
+
+### 追加で見つかった本番バグ（E2E の Red で検出・修正済み）
+
+1. `archive_prepare_incoming` の応答が二重ラップ（`{stagingName: {stagingName}}`）— `OpfsWorkerBackend` が worker のオブジェクト応答を文字列扱いしていた。ファイル復元フローが本番で壊れていた（`archive_open` の名前検証で必ず拒否される）
+2. `archive_cleanup` も同様の二重ラップ。両方 `OpfsWorkerBackend` でフィールドを取り出すよう修正
+3. `archive_update` の confirmToken は行 id にバインドされる（`create_confirm_token` に id が必要）— dashboardGateway は payload.id から自動で取るが、生 sendMessage では明示が必要
+4. G4 seed では deferred レガシーマイグレーションが先に走るため、最初の DASHBOARD_SQLITE 呼び出しで `legacyStoreReadOnly` セットを待ってから `yasumaro_migration_status: 'completed'` を封印する必要がある
+
+### G5 の実装ノート
+
+AI 設定なしでも録画は SQLite 保存まで到達する（`RemoteAIService.generateSummary` はキー無しで throw せず `{success:false}` を返すため、privacyPipeline ステップが失敗扱いにならない）。録画対象 URL は `query` subtype で domain='localhost' を照合。
+
