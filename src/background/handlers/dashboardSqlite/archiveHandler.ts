@@ -62,6 +62,29 @@ export function createArchiveHandler(deps: ArchiveHandlerDeps) {
           ? { success: true, stagingName: result.data.stagingName, recordCount: result.data.recordCount }
           : toFailure(result);
       }
+      case 'archive_export': {
+        const p = payload as { stagingName?: unknown; offset?: unknown; length?: unknown };
+        if (typeof p.stagingName !== 'string' || p.stagingName.length === 0) {
+          return { success: false, error: 'archive_export: stagingName is required' };
+        }
+        if (typeof p.offset !== 'number' || !Number.isInteger(p.offset) || p.offset < 0) {
+          return { success: false, error: 'archive_export: offset must be a non-negative integer' };
+        }
+        if (typeof p.length !== 'number' || !Number.isFinite(p.length) || p.length < 1) {
+          return { success: false, error: 'archive_export: length must be a positive number' };
+        }
+        const result: DepsResult<import('../../../messaging/sqliteMessages.js').ArchiveExportData> =
+          await deps.archiveExportChunk(p.stagingName, p.offset, p.length);
+        return result.success
+          ? {
+              success: true,
+              chunk: result.data.chunk,
+              nextOffset: result.data.nextOffset,
+              total: result.data.total,
+              done: result.data.done,
+            }
+          : toFailure(result);
+      }
       case 'archive_delete_by_staging': {
         const p = payload as { stagingName?: unknown };
         if (typeof p.stagingName !== 'string' || p.stagingName.length === 0) {
