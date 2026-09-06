@@ -18,18 +18,11 @@
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
 
-### 2026-09-06 レコードアーカイブ（**全5PBI完了＋文言修正＋編集モーダル完了**。着手順 = ~~01〜05~~ ✅ / ~~06 文言修正~~ ✅ / ~~07 編集モーダル~~ ✅。2026-09-06 再編: 旧01/02/03をレビュー反映込みで分割・リネーム）
+### 2026-09-07 アーカイブE2E自動化のフォローアップ（着手順 = 04 → 05。06は04の後に任意）
 
-- 2026-09-06-06-fix-archive-backup-wording.md（⬜ **次に着手（軽微・1pt未満）**: Archiveパネルの説明文を「退避します…削除できます」→「バックアップします…削除も可能です」に修正（ユーザー指定文面）。**文言のみ・実装ロジック変更なし**（フェーズAは既に本体不変のコピーであり、望ましい文言のほうが実装を正確に記述 — 分析はPBI内参照）。SETUP_GUIDE/FAQ/READMEの用語統一も含む / 副作用 🟢 / 🔧（文言修正））
-
-- 2026-09-06-04-feat-archive-purge-staging.md（⬜ **次に着手**: ステージングからの本体削除・フェーズB: 検証済みstaging参照＋max_id述語（後着行保護）＋VACUUM（freelist検証）＋quotaプレフライト＋single-flight。破壊的操作を独立PBIに隔離。02/03のハンドラ・レジストリ・ガード基盤を利用。2pt / 副作用 🔴 / ✨）
-- 2026-09-06-05-feat-archive-temp-open.md（⬜ アーカイブの一時オープン: メインDB非汚染でアーカイブ.db を参照・編集・書き戻し。**着手条件: PBI内スパイク必須**（第2エンジン長期同時オープン・04実装中に先行実施可）。8pt / 副作用 🟡 / ✨）
-
-### 2026-09-07 アーカイブ手動テストのE2E自動化（着手順 = 01 → 02。03は01と並行可。敵対的レビュー反映済み）
-
-- 2026-09-07-01-test-archive-manual-to-e2e-required.md（⬜ **次に着手**: 🔴必須のうち R1〜R4。R1=`archive_export`バイト列→SQLite照合、R2=TZマトリクス（**固定epoch seed+文字列cutoffの相対関係**で検証。単純なTZ切替では素通り）、R3=`get_count`差分、R4=**vitestユニット**（`Promise.all`ではsingle-flight検証不可）。SQLiteリーダーは`better-sqlite3`か`sql.js`を着手前に決定（CI Node24）。`archiveDbReader.ts`は02/03が依存。2〜3pt / 副作用 🟢 / 🔧（test））
-- 2026-09-07-02-test-archive-manual-to-e2e-recommended.md（⬜ 01の次: 🟡推奨 Y2/Y3/Y4/Y6・🟢任意 G3/G4/G5/G8。**テスト専用subtype/フラグは追加しない**（新subtypeは18ファイル改修）。Y2/G8は既存vitestカバレッジで済む可能性大。G3対象は`archive_query`（`search`ではない）。Y1/Y5/G1/G2/G7は自動化不可。01の`archiveDbReader`に依存。2pt / 副作用 🟢 / 🔧（test））
-- 2026-09-07-03-test-archive-manual-partial-automation.md（⬜ 01と並行可: R5・R6・G6。調査の結果**核心ロジックは既存vitestでカバー済み**（R6 fail-closed 4ケース=`archivePurgeHandlers.test.ts`、G6=`archiveStaging.test.ts`、R5 freelist=同）。作業は既存カバレッジの明文化＋R5の実エンジンfreelist減少を`dashboard-archive.spec.ts`に1ケース追記＋手動文書更新。ファイルサイズ減少は検証しない（OPFS VFSがtruncateしない）。1pt / 副作用 🟢 / 🔧（test））
+- 2026-09-07-04-fix-type-check-test-gate.md（⬜ **次に着手**: `type-check:test` が既存破損（15,532 errors・exit 2）。validate ゲート外だが test:type-safe で使うため修理。ほぼ types 設定系の1発修正見込み。1pt / 副作用 🟢 / 🔧（test））
+- 2026-09-07-05-test-archive-session-reconnect-e2e.md（⬜ 拡張ページ内 reload → archive_status 再接続プローブの E2E 化（手動チェックリスト Y5'）。G4 の deferred マイグレーション待ち共通 fixture 化も同梱候補。2pt / 副作用 🟢 / 🔧（test））
+- 2026-09-07-06-test-archive-shared-migration-fixture.md（⬜ G4 で必要になった「最初の DASHBOARD_SQLITE 呼び出しで deferred マイグレーション完了を待つ」処理を共通 fixture 化。04 完了後に任意。1pt / 副作用 🟢 / 🔧（test））
 
 ### 将来候補の統合台帳（live）
 
@@ -58,6 +51,12 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-07 アーカイブ 手動テストのE2E自動化（着手完了）
+
+- 2026-09-07-01-test-archive-manual-to-e2e-required.md（✅ 完了・アーカイブ済 — R1〜R3をE2E化（archive_required-verification.spec.ts・TZ 3種×固定epoch seed+文字列cutoff）、R4は既存vitest single-flightで担保。SQLiteリーダー=`better-sqlite3@12.11.1`（CI Node24 ABI137／ローカル Node26 ABI147 のprebuild実測）。`archiveDbReader.ts`共通ヘルパ＋チャンク結合ユニット11件、アーカイブスキーマFTS非存在assert（文字列+実SQLite実行）。**Red で本番バグを検出・修正: SW archiveHandler に archive_export の case が無く download フローが全壊**。検証: validate / E2E 34 green）
+- 2026-09-07-02-test-archive-manual-to-e2e-recommended.md（✅ 完了・アーカイブ済 — Y3/Y4/Y6/G3/G4/G5をE2E化（archive-recommended-verification.spec.ts・実録画との並行 G5 含む）、Y2 は `archiveFallbackRejection.test.ts` 新設（14メソッド×2backend）、G8/R4は既存vitest明文化。**本番バグ2件検出・修正: archive_prepare_incoming / archive_cleanup の応答二重ラップ**（ファイル復元フローが本番で壊れていた）。テスト専用subtype/フラグは追加せず。検証: validate / E2E 34 green）
+- 2026-09-07-03-test-archive-manual-partial-automation.md（✅ 完了・アーカイブ済 — R5を実エンジンfreelist減少のE2E 1ケースで上乗せ（太い行300件seed→clear_allでfreelist確保→Phase B で freelistAfter<freelistBefore・vacuumOk:true を実測）。R6/G6は既存vitestカバレッジをPBIメモに一覧化、G6に複数孤児×両kindのケース追加。検証: validate / E2E 34 green）
 
 ### 2026-09-06 アーカイブ 退避作成（着手完了）
 

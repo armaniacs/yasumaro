@@ -92,14 +92,14 @@ Scenario: R4 1つ目が in-flight の間に投げた2つ目は拒否される
 
 ## 受け入れ基準
 
-- [ ] SQLite リーダーライブラリを **`better-sqlite3` か `sql.js` のどちらか一方に決定**し、その根拠（CI の Node 24 で prebuild が取れるか実測）を PBI 完了メモに記録する。決めてからヘルパを書く
-- [ ] R1 用のヘルパ `testDir/e2e/fixtures/archiveDbReader.ts`（新規）: `archive_export` の全チャンクをポーリング取得 → 結合 → 選定ライブラリでインメモリ open → クエリを返す。**2026-09-07-02（Y3）・2026-09-07-03 でも再利用する共通資産**
-- [ ] `schema.ts` に「アーカイブスキーマ（`ARCHIVE_META_SCHEMA_SQL`）に FTS テーブル・トリガーを含めない」ことのユニット assert を追加
-- [ ] R4 single-flight は **worker 層のユニットテスト**（vitest・`archiveCreateHandlers` の in-flight 2回呼び）で検証する。E2E での担保は任意（やる場合は `globalThis` フラグ + DEV ガードの人工遅延フック、subtype 新設はしない）
-- [ ] `testDir/e2e/archive-required-verification.spec.ts`（新規・`@extension` タグ）に R1〜R3 のシナリオを実装しパスする
-- [ ] R2 は「固定 epoch seed + 文字列 cutoff の相対関係」を TZ 3 種（Asia/Tokyo・Pacific/Kiritimati・America/Los_Angeles）で検証する設計にする（上記「R2 の設計注意」）
-- [ ] R3 は `get_count` subtype の差分のみで検証（UI 行数比較を入れない）
-- [ ] `docs/MANUAL_TEST_ARCHIVE.md` を更新: R1〜R4 を手動チェックリストから削除
+- [x] SQLite リーダーライブラリを **`better-sqlite3` か `sql.js` のどちらか一方に決定**し、その根拠（CI の Node 24 で prebuild が取れるか実測）を PBI 完了メモに記録する。決めてからヘルパを書く
+- [x] R1 用のヘルパ `testDir/e2e/fixtures/archiveDbReader.ts`（新規）: `archive_export` の全チャンクをポーリング取得 → 結合 → 選定ライブラリでインメモリ open → クエリを返す。**2026-09-07-02（Y3）・2026-09-07-03 でも再利用する共通資産**
+- [x] `schema.ts` に「アーカイブスキーマ（`ARCHIVE_META_SCHEMA_SQL`）に FTS テーブル・トリガーを含めない」ことのユニット assert を追加
+- [x] R4 single-flight は **worker 層のユニットテスト**（vitest・`archiveCreateHandlers` の in-flight 2回呼び）で検証する。E2E での担保は任意（やる場合は `globalThis` フラグ + DEV ガードの人工遅延フック、subtype 新設はしない）
+- [x] `testDir/e2e/archive-required-verification.spec.ts`（新規・`@extension` タグ）に R1〜R3 のシナリオを実装しパスする
+- [x] R2 は「固定 epoch seed + 文字列 cutoff の相対関係」を TZ 3 種（Asia/Tokyo・Pacific/Kiritimati・America/Los_Angeles）で検証する設計にする（上記「R2 の設計注意」）
+- [x] R3 は `get_count` subtype の差分のみで検証（UI 行数比較を入れない）
+- [x] `docs/MANUAL_TEST_ARCHIVE.md` を更新: R1〜R4 を手動チェックリストから削除
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -230,9 +230,36 @@ find . -path '*/opfsWorker/__tests__/*archiveCreate*' -o -name 'archiveCreate*.t
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `npm run validate`（型チェック + テスト + lint）が通る
-- [ ] `npm run test:e2e:ci` で新規 spec がグリーン（またはCI環境の制約を README に明記してスキップ条件を設定）
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了（グリーン後）
-- [ ] `docs/MANUAL_TEST_ARCHIVE.md` 更新済み（R1〜R4 削除）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `npm run validate`（型チェック + テスト + lint）が通る
+- [x] `npm run test:e2e:ci` で新規 spec がグリーン（macOS ローカルでは headed `--project=extension` で 34 passed / 1 skipped。CI は tests.yml が同一 grep で実行）
+- [x] コードレビュー完了
+- [x] リファクタリング完了（グリーン後）
+- [x] `docs/MANUAL_TEST_ARCHIVE.md` 更新済み（R1〜R4 削除）
+
+## 完了メモ（2026-09-07）
+
+### SQLite リーダー選定: `better-sqlite3` 12.11.1 に決め打ち
+
+根拠（実測 2026-09-07）:
+- GitHub Releases の v12.11.1 アセットを実測し、**node-v137（Node 24 / CI）と node-v147（Node 26 / ローカル）の prebuild が linux-x64・darwin-arm64 の両方に存在**することを確認。`npm ci` で node-gyp ビルドは走らない
+- 注意: v13.0.x は Node 24 (ABI 137) の prebuild が存在しない（404 実測）。そのため **12.11.1 を明示ピン**している
+- `sql.js` は pure WASM で最有力フォールバック候補だったが、prebuild 実測で better-sqlite3 が取れたため不採用（フォールバック前提の両対応はしない方針どおり）
+
+### 追加で見つかった本番バグ（Outside-In の Red で検出）
+
+1. **SW 側 `archiveHandler.ts` に `archive_export` の case が存在しなかった**（b5128d4a 以来の欠落）。DASHBOARD_SQLITE 経由のアーカイブダウンロードが常に `"Unknown archive subtype: archive_export"` で失敗していた → case 追加 + `archiveHandler.test.ts` に3ケース追加
+2. `archivePanel.test.ts` のモックが PBI 2026-09-06-05 追加分の service 関数に追従しておらず、`npm test` が unhandled rejection で exit 1 になっていた（validate ゲート破壊）→ モック補完 + `archiveStatus` の closed-session 既定値
+
+### 産出物
+
+- `testDir/e2e/fixtures/archiveDbReader.ts` — チャンクループ（`collectArchiveChunks`）+ 結合 + better-sqlite3 open。02（Y3）・03（R5）で再利用
+- `testDir/e2e/fixtures/dashboardSqliteHelpers.ts` — `dashboardMsg` / `scopeHash` / `tokenFor`（id バインド対応）/ `poll` / `localEndOfDayMs`。dashboard-archive.spec.ts も共通ヘルパに移行済み
+- `testDir/e2e/archive-required-verification.spec.ts` — R1〜R3（R2 は TZ 3種 × 固定epoch seed + 文字列 cutoff）
+- `testDir/__tests__/archiveDbReader.test.ts` — チャンク結合ロジック（境界・空ファイル・nextOffset 停滞・total 不一致）11ケース
+- `src/offscreen/__tests__/archiveSchemaNoFts.test.ts` — アーカイブスキーマ定数の FTS 非存在（文字列 + 実SQLite実行）
+
+### R4 について
+
+E2E は実施せず。既存 vitest `archiveCreateHandlers.test.ts` の `blocks a second concurrent create (single-flight)` が PBI 要求の in-flight 2回呼びシナリオをそのまま担保しているため。DEV ガード機構・テスト専用フックは本PBIでは**未導入**（不要と判断。02 もフラグ非依存で完了）
+
