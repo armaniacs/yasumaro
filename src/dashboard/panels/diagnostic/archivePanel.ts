@@ -8,12 +8,12 @@
  * phase B (pbi/2026-09-06-04), intentionally not wired here.
  */
 
-import { archivePreview, archiveCreate, archiveCleanup, archiveExportChunk } from '../../dashboardSqliteService.js';
+import { archivePreview, archiveCreate, archiveCleanup, archiveExportChunk, archivePrepareIncoming, archiveRestorePreview, archiveRestore } from '../../dashboardSqliteService.js';
 import { downloadBlob } from '../../exportLogsService.js';
 import { type PanelLifecycle } from '../types.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { cutoffMsFromLocalDate } from '../../../utils/archiveGuards.js';
+import { cutoffMsFromLocalDate, MAX_ARCHIVE_FILE_BYTES } from '../../../utils/archiveGuards.js';
 import { getMessage } from '../../../utils/i18n.js';
 
 /** Per-message binary payload — keeps base64 hops under the 10MB cap. */
@@ -36,11 +36,14 @@ export function createArchivePanel(): PanelLifecycle {
       const cleanupBtn = container.querySelector('#archive-cleanup-btn') as HTMLButtonElement | null;
       const summaryEl = container.querySelector('#archive-preview-summary') as HTMLElement | null;
       const statusEl = container.querySelector('#archive-status') as HTMLElement | null;
+      const restoreFileInput = container.querySelector('#archive-restore-file') as HTMLInputElement | null;
+      const restorePreviewEl = container.querySelector('#archive-restore-preview-summary') as HTMLElement | null;
+      const restoreBtn = container.querySelector('#archive-restore-btn') as HTMLButtonElement | null;
 
       let lastStagingName: string | null = null;
       let lastFileName = '';
 
-      const controls = [previewBtn, createBtn, cleanupBtn, downloadBtn];
+      const controls = [previewBtn, createBtn, cleanupBtn, downloadBtn, restoreBtn];
       const setBusy = (busy: boolean): void => {
         for (const el of controls) if (el) el.disabled = busy;
         if (statusEl) statusEl.setAttribute('aria-busy', String(busy));
@@ -153,6 +156,88 @@ export function createArchivePanel(): PanelLifecycle {
           showStatus(statusTarget(statusEl), localized('archiveCleanupDone', { count: result.data.removed.length }), 'success');
         } catch (err) {
           showStatus(statusTarget(statusEl), `${localized('archiveCleanupFailed')}: ${errorMessage(err)}`, 'error');
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      let restoreStagingName: string | null = null;
+
+      restoreFileInput?.addEventListener('change', async () => {
+        const file = restoreFileInput?.files?.[0];
+        if (!restoreFileInput || !file) return;
+        try {
+          setBusy(true);
+          if (file.size > MAX_ARCHIVE_FILE_BYTES) {
+            throw new Error(localized('archiveFileTooLarge', {
+              max: Math.floor(MAX_ARCHIVE_FILE_BYTES / (1024 * 1024)),
+            }));
+          }
+          // Staging name must be issued by the offscreen registry (fail-closed).
+          const prepared = await archivePrepareIncoming();
+          if ('error' in prepared) throw new Error(prepared.error);
+          lastStagingName = prepared.data;
+          restoreStagingName = prepared.data;
+
+          // Dashboard writes the picked file into the OPFS staging file
+          // (same origin); the worker never trusts client paths.
+          const root = await navigator.storage.getDirectory();
+          const handle = await root.getFileHandle(restoreStagingName, { create: true });
+          const writable = await handle.createWritable();
+          try {
+            let offset = 0;
+            while (offset < file.size) {
+              const end = Math.min(offset + EXPORT_CHUNK_BYTES, file.size);
+              const buf = await file.slice(offset, end).arrayBuffer();
+              await writable.write(buf);
+              offset = end;
+            }
+            await writable.close();
+          } catch (err) {
+            try { await writable.abort?.(); } catch { /* ignore */ }
+            throw err;
+          }
+
+          const previewResult = await archiveRestorePreview(restoreStagingName);
+          if ('error' in previewResult) throw new Error(previewResult.error);
+          const meta = previewResult.data;
+          if (restorePreviewEl) {
+            restorePreviewEl.hidden = false;
+            restorePreviewEl.textContent = localized('archiveRestorePreviewSummary', {
+              count: meta.recordCount,
+              date: meta.cutoffDate,
+            });
+          }
+          if (restoreBtn) restoreBtn.hidden = false;
+          showStatus(statusTarget(statusEl), localized('archiveStatusWorking') === 'Working… other archive operations are disabled until this finishes.' ? 'Preview ready.' : 'Preview ready.', 'success');
+        } catch (err) {
+          showStatus(statusTarget(statusEl), `${localized('archiveRestorePreviewFailed')}: ${errorMessage(err)}`, 'error');
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      restoreBtn?.addEventListener('click', async () => {
+        if (!restoreBtn) return;
+        try {
+          setBusy(true);
+          if (!restoreStagingName) throw new Error(localized('archiveDateRequired'));
+          const result = await archiveRestore(restoreStagingName);
+          if ('error' in result) throw new Error(result.error);
+          if (restorePreviewEl) {
+            restorePreviewEl.textContent = localized('archiveRestoreDone', {
+              restored: result.data.restored,
+              deleted: result.data.restoredDeleted,
+              skipped: result.data.skipped,
+              invalid: result.data.skippedInvalid,
+            });
+          }
+          restoreStagingName = null;
+          if (restoreBtn) restoreBtn.hidden = true;
+          if (restoreFileInput) restoreFileInput.value = '';
+          showStatus(statusTarget(statusEl), localized('archiveRestoreDoneStatus'), 'success');
+        } catch (err) {
+          showStatus(statusTarget(statusEl), `${localized('archiveRestoreFailed')}: ${errorMessage(err)}`, 'error');
         } finally {
           setBusy(false);
         }

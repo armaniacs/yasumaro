@@ -12,7 +12,7 @@
 
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 import type { OpfsSpikeReport } from '../../offscreen/opfsSpike.js';
-import type { ArchivePreviewData } from '../../messaging/sqliteMessages.js';
+import type { ArchivePreviewData, ArchiveRestorePreviewData } from '../../messaging/sqliteMessages.js';
 import type { DashboardSqliteSubtype } from '../../messaging/sqliteOperationSecurity.js';
 
 export type { DashboardSqliteSubtype } from '../../messaging/sqliteOperationSecurity.js';
@@ -67,7 +67,10 @@ export type DashboardSqliteRequest =
   | { subtype: 'archive_preview'; cutoffMs: number; includeDeleted: boolean }
   | { subtype: 'archive_create'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string; confirmToken?: string }
   | { subtype: 'archive_cleanup'; confirmToken?: string }
-  | { subtype: 'archive_export'; stagingName: string; offset: number; length: number; confirmToken?: string };
+  | { subtype: 'archive_export'; stagingName: string; offset: number; length: number; confirmToken?: string }
+  | { subtype: 'archive_prepare_incoming' }
+  | { subtype: 'archive_restore_preview'; stagingName: string }
+  | { subtype: 'archive_restore'; stagingName: string; confirmToken?: string };
 
 /**
  * Compile-time guard that every subtype in the request union also exists in the
@@ -156,5 +159,8 @@ export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
       S extends 'archive_create' ? { success: true; stagingName: string; recordCount: number } :
       S extends 'archive_cleanup' ? { success: true; removed: string[] } :
       S extends 'archive_export' ? { success: true; chunk: number[]; nextOffset: number; total: number; done: boolean } :
+      S extends 'archive_prepare_incoming' ? { success: true; stagingName: string } :
+      S extends 'archive_restore_preview' ? { success: true; preview: ArchiveRestorePreviewData } :
+      S extends 'archive_restore' ? { success: true; restored: number; restoredDeleted: number; skipped: number; skippedInvalid: number } :
       never
     );

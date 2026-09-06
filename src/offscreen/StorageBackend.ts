@@ -1,11 +1,14 @@
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
-import type { ArchivePreviewData } from '../messaging/sqliteMessages.js';
+import type { ArchivePreviewData, ArchiveRestorePreviewData } from '../messaging/sqliteMessages.js';
 
 export interface ArchivePreviewResult { success: true; preview: ArchivePreviewData }
 export interface ArchiveCreateParams { cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }
 export interface ArchiveCreateResult { success: true; stagingName: string; recordCount: number }
 export interface ArchiveCleanupResult { success: true; removed: string[] }
 export interface ArchiveExportChunkResult { success: true; chunk: number[]; nextOffset: number; total: number; done: boolean }
+export interface ArchivePrepareIncomingResult { success: true; stagingName: string }
+export interface ArchiveRestorePreviewResult { success: true; preview: ArchiveRestorePreviewData }
+export interface ArchiveRestoreResult { success: true; restored: number; restoredDeleted: number; skipped: number; skippedInvalid: number }
 
 export interface InsertResult { success: true; id: number }
 export interface InsertBatchResult { success: true; inserted: number; skipped: number }
@@ -86,6 +89,9 @@ export interface Mutable {
   archiveCleanup(): Promise<BackendOrError<ArchiveCleanupResult>>;
   /** Chunked staging export (PBI 2026-09-06-02) — OPFS backend only. */
   archiveExportChunk(stagingName: string, offset: number, length: number): Promise<BackendOrError<ArchiveExportChunkResult>>;
+  archivePrepareIncoming(): Promise<BackendOrError<ArchivePrepareIncomingResult>>;
+  archiveRestorePreview(stagingName: string): Promise<BackendOrError<ArchiveRestorePreviewResult>>;
+  archiveRestore(stagingName: string): Promise<BackendOrError<ArchiveRestoreResult>>;
   insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>>;
   clearAll(): Promise<BackendOrError<MutationResult>>;
 }
@@ -111,6 +117,9 @@ export class NoopBackend implements StorageBackend {
   async archiveCreate() { return this.err(); }
   async archiveCleanup() { return this.err(); }
   async archiveExportChunk() { return this.err(); }
+  async archivePrepareIncoming() { return this.err(); }
+  async archiveRestorePreview() { return this.err(); }
+  async archiveRestore() { return this.err(); }
   async healthCheck() { return this.err(); }
   async getStatus() { return this.err(); }
   async insertAuditLog() { return this.err(); }

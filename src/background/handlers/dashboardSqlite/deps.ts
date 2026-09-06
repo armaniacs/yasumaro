@@ -4,7 +4,7 @@ import { formatEntriesToMarkdown } from '../../../utils/markdownFormatter.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import type { BrowsingLogEntry, BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import type { CallResult, SqliteError } from '../../sqlite/offscreenGateway.js';
-import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData } from '../../../messaging/sqliteMessages.js';
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData } from '../../../messaging/sqliteMessages.js';
 
 export const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 export const MAX_APPEND_IDS = 100;
@@ -88,6 +88,9 @@ export interface ArchiveDeps {
   archiveCreate: (params: { cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }) => Promise<DepsResult<ArchiveCreateData>>;
   archiveCleanup: () => Promise<DepsResult<{ removed: string[] }>>;
   archiveExportChunk: (stagingName: string, offset: number, length: number) => Promise<DepsResult<ArchiveExportData>>;
+  archivePrepareIncoming: () => Promise<DepsResult<string>>;
+  archiveRestorePreview: (stagingName: string) => Promise<DepsResult<ArchiveRestorePreviewData>>;
+  archiveRestore: (stagingName: string) => Promise<DepsResult<ArchiveRestoreData>>;
 }
 
 /** Union of the archive group — what createArchiveHandler needs. */
@@ -164,6 +167,9 @@ runOpfsSpike: () => sqliteClient.maintain({ type: 'opfsSpike' }) as Promise<Deps
     archiveCreate: (params) => sqliteClient.maintain({ type: 'archiveCreate', ...params }),
     archiveCleanup: () => sqliteClient.maintain({ type: 'archiveCleanup' }),
     archiveExportChunk: (stagingName, offset, length) => sqliteClient.maintain({ type: 'archiveExport', stagingName, offset, length }),
+    archivePrepareIncoming: () => sqliteClient.maintain({ type: 'archivePrepareIncoming' } as { type: 'archivePrepareIncoming' }),
+    archiveRestorePreview: (stagingName) => sqliteClient.maintain({ type: 'archiveRestorePreview', stagingName } as { type: 'archiveRestorePreview', stagingName: string }),
+    archiveRestore: (stagingName) => sqliteClient.maintain({ type: 'archiveRestore', stagingName } as { type: 'archiveRestore', stagingName: string }),
       getSettings: () => new SettingsRepository().getAll() as Promise<Record<string, unknown>>,
      formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
      queryAuditLog: (options) => sqliteClient.query({ kind: 'auditLog', limit: options?.limit, offset: options?.offset } as { kind: 'auditLog', limit?: number, offset?: number }),

@@ -18,11 +18,10 @@
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
 
-### 2026-09-06 レコードアーカイブ（着手順 = ~~01 基盤~~ ✅ / ~~02 退避作成~~ ✅ → **03 復元（次）** → 04 本体削除 → 05 一時オープン。2026-09-06 再編: 旧01/02/03をレビュー反映込みで分割・リネーム）
+### 2026-09-06 レコードアーカイブ（着手順 = ~~01 基盤~~ ✅ / ~~02 退避作成~~ ✅ / ~~03 復元~~ ✅ → **04 本体削除（次）** → 05 一時オープン。2026-09-06 再編: 旧01/02/03をレビュー反映込みで分割・リネーム）
 
-- 2026-09-06-03-feat-archive-restore.md（⬜ **次に着手**: アーカイブからメインDBへの復元: INSERT OR IGNORE でマージ再取り込み・重複スキップ・id再採番・バッチ分割＋再実行収束。03単独でも価値あり（05編集済みアーカイブも復元可）。3pt / 副作用 🟡 / ✨）
-- 2026-09-06-04-feat-archive-purge-staging.md（⬜ ステージングからの本体削除・フェーズB: 検証済みstaging参照＋max_id述語（後着行保護）＋VACUUM（freelist検証）＋quotaプレフライト＋single-flight。破壊的操作を独立PBIに隔離。2pt / 副作用 🔴 / ✨）
-- 2026-09-06-05-feat-archive-temp-open.md（⬜ アーカイブの一時オープン: メインDB非汚染でアーカイブ.db を参照・編集・書き戻し。**着手条件: PBI内スパイク必須**（第2エンジン長期同時オープン・03/04実装中に先行実施可）。8pt / 副作用 🟡 / ✨）
+- 2026-09-06-04-feat-archive-purge-staging.md（⬜ **次に着手**: ステージングからの本体削除・フェーズB: 検証済みstaging参照＋max_id述語（後着行保護）＋VACUUM（freelist検証）＋quotaプレフライト＋single-flight。破壊的操作を独立PBIに隔離。02/03のハンドラ・レジストリ・ガード基盤を利用。2pt / 副作用 🔴 / ✨）
+- 2026-09-06-05-feat-archive-temp-open.md（⬜ アーカイブの一時オープン: メインDB非汚染でアーカイブ.db を参照・編集・書き戻し。**着手条件: PBI内スパイク必須**（第2エンジン長期同時オープン・04実装中に先行実施可）。8pt / 副作用 🟡 / ✨）
 
 ### 将来候補の統合台帳（live）
 
@@ -56,7 +55,11 @@
 
 - 2026-09-06-02-feat-record-archive.md（✅ 完了・アーカイブ済 — フェーズA: 日付指定アーカイブ作成。第4subtypeグループ（archive_preview/create/cleanup/export）を確定、opfsWorker archiveCreateHandlers（バッチINSERT 5000/COMMIT・validateArchiveEngine 検証・max_id_at_archive 記録・single-flight・quotaプレフライト）、ダッシュボード Archive パネル（プレビュー集計・チャンクDL・staging掃除）、i18n 22キー。検証: type-check / lint 0 errors / 11783 tests / build / E2E 104 green。実装メモに逸脱（archive_export 追加・E2Eは静的検証＋jsdomユニット）を記録）
 
-### 2026-09-06 アーカイブ共通基盤（着手完了）
+### 2026-09-06 アーカイブ 復元（着手完了）
+
+- 2026-09-06-03-feat-archive-restore.md（✅ 完了・アーカイブ済 — archive_prepare_incoming/restore_preview/restore の3subtype、worker archiveRestoreHandlers（行単位 changes() 集計・skippedInvalid 分類・バッチ 5000/COMMIT・BEGIN IMMEDIATE・single-flight・staging解放）、Archive パネル復元セクション（ファイル入力→staging書込→プレビュー→復元結果）、i18n 15キー。QueryCache は既存の再訪問時クリア機構で充足。検証: type-check / lint 0 errors / 11793 tests / build / E2E 104 green）
+
+### 2026-09-06 アーカイブ 退避作成（着手完了）
 
 - 2026-09-06-01-feat-archive-foundation.md（✅ 完了・アーカイブ済 — `archiveValidation`（allowlist構造検証＋table_xinfo＋meta突合せ）/ `archiveStaging`（レジストリ・sweep）/ `archiveGuards`（utils・cutoff/isHttpUrl/上限）SSOT化、transport noRetry、トークンscopeHash束縛、**既存全体復元へのアーカイブ拒否ガード**、downloadBlob遅延解放、ERROR_CODES登録。検証: type-check / lint 0 errors / 11748 tests / build green。実装メモにPBI記載からの逸脱（utils配置等）を記録）
 

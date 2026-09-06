@@ -8,8 +8,8 @@
  */
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
 import type { OpfsSpikeReport } from '../offscreen/opfsSpike.js';
-import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData } from './sqliteMessages.js';
-export type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData };
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData } from './sqliteMessages.js';
+export type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData };
 
 /**
  * What kind of failure this was.
@@ -131,7 +131,10 @@ export type MaintainOp =
   | { type: 'archivePreview'; cutoffMs: number; includeDeleted: boolean }
   | { type: 'archiveCreate'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }
   | { type: 'archiveCleanup' }
-  | { type: 'archiveExport'; stagingName: string; offset: number; length: number };
+  | { type: 'archiveExport'; stagingName: string; offset: number; length: number }
+  | { type: 'archivePrepareIncoming' }
+  | { type: 'archiveRestorePreview'; stagingName: string }
+  | { type: 'archiveRestore'; stagingName: string };
 
 export interface SqliteRpcClient {
   /** Filtered listing or FTS5/LIKE search over browsing records. */
@@ -160,6 +163,9 @@ export interface SqliteRpcClient {
   maintain(op: Extract<MaintainOp, { type: 'archiveCreate' }>): Promise<SqliteRpcResult<ArchiveCreateData>>;
   maintain(op: Extract<MaintainOp, { type: 'archiveCleanup' }>): Promise<SqliteRpcResult<{ removed: string[] }>>;
   maintain(op: Extract<MaintainOp, { type: 'archiveExport' }>): Promise<SqliteRpcResult<ArchiveExportData>>;
+  maintain(op: Extract<MaintainOp, { type: 'archivePrepareIncoming' }>): Promise<SqliteRpcResult<string>>;
+  maintain(op: Extract<MaintainOp, { type: 'archiveRestorePreview' }>): Promise<SqliteRpcResult<ArchiveRestorePreviewData>>;
+  maintain(op: Extract<MaintainOp, { type: 'archiveRestore' }>): Promise<SqliteRpcResult<ArchiveRestoreData>>;
   maintain(op: MaintainOp): Promise<SqliteRpcResult<unknown>>;
 
   /**

@@ -1822,6 +1822,18 @@
           <div id="archive-preview-summary" class="settings-section-desc" hidden></div>
           <div id="archive-status" class="settings-section-desc" aria-live="polite"></div>
         </div>
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="archiveRestoreSectionTitle">Restore from archive</h3>
+          <p class="settings-section-desc" data-i18n="archiveRestoreSectionDesc">Merge records from an archive file back into the local database. Existing records are kept; duplicates (same URL and time) are skipped.</p>
+          <div class="form-group">
+            <label for="archive-restore-file" data-i18n="archiveRestoreFileLabel">Archive file</label>
+            <input type="file" id="archive-restore-file" accept=".db">
+          </div>
+          <div id="archive-restore-preview-summary" class="settings-section-desc" hidden></div>
+          <div class="form-group">
+            <button id="archive-restore-btn" class="btn btn-primary" hidden data-i18n="archiveRestoreBtn">Restore into main database</button>
+          </div>
+        </div>
       </section>
 
       <!-- Domain Search Panel (New) -->

@@ -28,6 +28,9 @@ import {
   archiveCreate as sqliteArchiveCreate,
   archiveCleanup as sqliteArchiveCleanup,
   archiveExportChunk as sqliteArchiveExportChunk,
+  archivePrepareIncoming as sqliteArchivePrepareIncoming,
+  archiveRestorePreview as sqliteArchiveRestorePreview,
+  archiveRestore as sqliteArchiveRestore,
 } from './dbMaintenance.js';
 import {
   insertAuditLog as sqliteInsertAuditLog,
@@ -336,6 +339,47 @@ async function handleArchiveExport(msg: SqliteMessage, sendResponse: (r: unknown
   }
 }
 
+async function handleArchivePrepareIncoming(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const result = await sqliteArchivePrepareIncoming();
+  if (result.success && 'stagingName' in result) {
+    sendResponse({ success: true, stagingName: result.stagingName });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive prepare returned no staging name' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveRestorePreview(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_RESTORE_PREVIEW' }>).payload;
+  const result = await sqliteArchiveRestorePreview(payload.stagingName);
+  if (result.success && 'preview' in result) {
+    sendResponse({ success: true, preview: result.preview });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive restore preview returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveRestore(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_RESTORE' }>).payload;
+  const result = await sqliteArchiveRestore(payload.stagingName);
+  if (result.success && 'restored' in result) {
+    sendResponse({
+      success: true,
+      restored: result.restored,
+      restoredDeleted: result.restoredDeleted,
+      skipped: result.skipped,
+      skippedInvalid: result.skippedInvalid,
+    });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive restore returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
 /**
  * Static registry object — `satisfies` guarantees exhaustiveness at compile time.
  * Adding a new SqliteMessage variant without a handler is a type error.
@@ -365,6 +409,9 @@ const handlerRecord = {
   SQLITE_ARCHIVE_CREATE: handleArchiveCreate,
   SQLITE_ARCHIVE_CLEANUP: handleArchiveCleanup,
   SQLITE_ARCHIVE_EXPORT: handleArchiveExport,
+  SQLITE_ARCHIVE_PREPARE_INCOMING: handleArchivePrepareIncoming,
+  SQLITE_ARCHIVE_RESTORE_PREVIEW: handleArchiveRestorePreview,
+  SQLITE_ARCHIVE_RESTORE: handleArchiveRestore,
 } satisfies Record<SqliteMessageType, SqliteHandler>;
 
 /**

@@ -36,6 +36,9 @@ export const WORKER_MESSAGE_TYPES = [
   'ARCHIVE_CREATE',
   'ARCHIVE_CLEANUP',
   'ARCHIVE_EXPORT',
+  'ARCHIVE_PREPARE_INCOMING',
+  'ARCHIVE_RESTORE_PREVIEW',
+  'ARCHIVE_RESTORE',
 ] as const;
 
 export type WorkerMessageType = typeof WORKER_MESSAGE_TYPES[number];
@@ -100,6 +103,14 @@ export interface ArchiveExportPayload {
   stagingName: string;
   offset: number;
   length: number;
+}
+
+export interface ArchiveRestorePreviewPayload {
+  stagingName: string;
+}
+
+export interface ArchiveRestorePayload {
+  stagingName: string;
 }
 
 // ---------------------------------------------------------------------------
