@@ -128,7 +128,7 @@ Groq も Ollama も独立した入力があるので、シンプルに OpenAI �
 
 **Q21. 閲覧データはどこに保存されますか？開発者のサーバーに送られますか？**
 
-すべてのデータはあなたのデバイス上にのみ保存されます。開発者はサーバーを一切運営していないため、データが開発者の手に渡ることはありません。閲覧履歴はデバイス上の OPFS（SQLite DB）に、設定情報は Chrome のローカルストレージに保存されます。詳細は [プライバシーポリシー](PRIVACY.md) をご覧ください。
+すべてのデータはあなたのデバイス上にのみ保存されます。開発者はサーバーを一切運営していないため、データが開発者の手に渡ることはありません。閲覧履歴はデバイス上の OPFS（SQLite DB）に、設定情報は Chrome のローカルストレージに保存されます。ページ本文（content）をローカル保存するかは、ダッシュボードの「設定 → コンテンツ保持設定」でいつでも切り替えられます（デフォルト: オフ）。詳細は [プライバシーポリシー](PRIVACY.md) をご覧ください。
 
 **Q22. AI プロバイダーにはどんなデータが送られますか？**
 
@@ -168,7 +168,7 @@ HTTP レスポンスヘッダー（`Cache-Control: private`、`Set-Cookie` な�
 
 **Q30. 特定のサイトを記録したくない（または記録したい）場合は？**
 
-ダッシュボードの「ドメインフィルター」タブで設定します。ブラックリストモードで除外したいドメインを追加するか、ホワイトリストモードで記録したいドメインだけを登録してください。「現在のページドメインを追加」ボタンを使うと、現在開いているページのドメインをワンクリックで追加できます。uBlock Origin 形式のフィルターリストをインポートすることも可能です。詳細は [uBlock フィルターガイド](USER-GUIDE-UBLOCK-IMPORT.md) をご覧ください。
+ダッシュボードの「ドメインフィルター」タブで設定します。ブラックリストモードで除外したいドメインを追加するか、ホワイトリストモードで記録したいドメインだけを登録してください。「現在のページドメインを追加」ボタンを使うと、現在開いているページのドメインをワンクリックで追加できます。「サブドメインもマッチさせる」トグルをONにすると、`example.com` の登録が `sub.example.com` 等のサブドメインにも一致します（デフォルトOFF）。uBlock Origin 形式のフィルターリストをインポートすることも可能です。詳細は [uBlock フィルターガイド](USER-GUIDE-UBLOCK-IMPORT.md) をご覧ください。
 
 **Q31. スキップされたページはどこで確認できますか？**
 
@@ -386,7 +386,7 @@ You can enter multiple OpenAI-compatible LLM services independently—for exampl
 
 **Q21. Where is my browsing data stored? Is it sent to the developer?**
 
-All data is stored only on your device. The developer does not operate any server, so your data never reaches the developer. Browsing history is stored in OPFS (SQLite DB) on your device; settings are stored in Chrome's local storage. See [PRIVACY.md](PRIVACY.md) for details.
+All data is stored only on your device. The developer does not operate any server, so your data never reaches the developer. Browsing history is stored in OPFS (SQLite DB) on your device; settings are stored in Chrome's local storage. Whether the page body (content) is stored locally can be toggled at any time under Dashboard → Settings → Content Retention Settings (default: off). See [PRIVACY.md](PRIVACY.md) for details.
 
 **Q22. What data is sent to the AI provider?**
 
@@ -426,7 +426,7 @@ Click the extension icon to open the popup and click the "📝 Record Now" butto
 
 **Q30. How do I stop a specific site from being recorded (or ensure it is)?**
 
-Use the "Domain Filter" tab in the dashboard. In blacklist mode, add the domains you want to exclude; in whitelist mode, add only the domains you want to record. The "Add Current Domain" button lets you add the current page's domain in one click. You can also import uBlock Origin format filter lists. See the [uBlock Filter Guide](USER-GUIDE-UBLOCK-IMPORT.md) for details.
+Use the "Domain Filter" tab in the dashboard. In blacklist mode, add the domains you want to exclude; in whitelist mode, add only the domains you want to record. The "Add Current Domain" button lets you add the current page's domain in one click. With the "Match subdomains too" toggle ON, an `example.com` entry also matches subdomains like `sub.example.com` (default OFF). You can also import uBlock Origin format filter lists. See the [uBlock Filter Guide](USER-GUIDE-UBLOCK-IMPORT.md) for details.
 
 **Q31. Where can I find pages that were skipped?**
 
