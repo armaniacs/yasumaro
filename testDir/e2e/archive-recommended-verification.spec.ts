@@ -13,56 +13,17 @@
  * page (same origin, mirrors archivePanel.ts) → archive_open → query/update.
  */
 import { test, expect } from './fixtures/extension.fixture.js';
-import { createDashboardSqliteClient, localEndOfDayMs, poll, type DashboardSqliteClient } from './fixtures/dashboardSqliteHelpers.js';
+import {
+  createDashboardSqliteClient,
+  isoDateOffset,
+  migrationSettled,
+  openOptionsPage,
+  poll,
+  runPhaseA,
+  seedRows,
+  type DashboardSqliteClient,
+} from './fixtures/dashboardSqliteHelpers.js';
 import { collectArchiveChunks, openArchiveDb } from './fixtures/archiveDbReader.js';
-
-type Ctx = { context: import('@playwright/test').BrowserContext; extensionId: string };
-
-async function openOptionsPage({ context, extensionId }: Ctx) {
-  const page = await context.newPage();
-  await page.goto(`chrome-extension://${extensionId}/options.html`);
-  await page.waitForFunction(() => typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
-  return page;
-}
-
-async function seedRows(
-  { dashboardMsg, tokenFor }: Pick<DashboardSqliteClient, 'dashboardMsg' | 'tokenFor'>,
-  rows: Array<Record<string, unknown>>,
-) {
-  const seedToken = await tokenFor('import', []);
-  const seed = await poll(
-    () => dashboardMsg({ subtype: 'import', confirmToken: seedToken, rows }),
-    (r) => r?.success === true && Number(r?.inserted) >= rows.length,
-  );
-  expect(seed?.success, `import failed: ${JSON.stringify(seed)}`).toBe(true);
-}
-
-/** Run Phase A (archive create) with a local-date cutoff. */
-async function runPhaseA(
-  page: import('@playwright/test').Page,
-  { dashboardMsg, scopeHash, tokenFor }: DashboardSqliteClient,
-  cutoffDate: string,
-  includeDeleted = false,
-): Promise<{ stagingName: string; recordCount: number }> {
-  const cutoffMs = await localEndOfDayMs(page, cutoffDate);
-  const token = await tokenFor('archive_create', [cutoffMs, includeDeleted]);
-  const res = await dashboardMsg({
-    subtype: 'archive_create',
-    cutoffDate,
-    cutoffMs,
-    includeDeleted,
-    yasumaroVersion: '6.7.114',
-    confirmToken: token,
-    scopeHash: await scopeHash([cutoffMs, includeDeleted]),
-  });
-  expect(res.success, `archive_create failed: ${JSON.stringify(res)}`).toBe(true);
-  return { stagingName: res.stagingName as string, recordCount: Number(res.recordCount) };
-}
-
-function isoDateOffset(days: number): string {
-  const d = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 /** Export a staging file to bytes (token per chunk; staging scope). */
 async function exportStagingBytes(
@@ -125,7 +86,7 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
   test.use({ locale: 'en-US' });
 
   test('Y3: edited title is written back into the archive .db', async ({ context, extensionId }) => {
-    const page = await openOptionsPage({ context, extensionId });
+    const page = await openOptionsPage(context, extensionId);
     const client = createDashboardSqliteClient(page);
     const stamp = Date.now();
     const editedTitle = `edited-title-${stamp}`;
@@ -176,7 +137,7 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
   });
 
   test('Y4: restored records match title/url/is_starred at value level', async ({ context, extensionId }) => {
-    const page = await openOptionsPage({ context, extensionId });
+    const page = await openOptionsPage(context, extensionId);
     const client = createDashboardSqliteClient(page);
     const stamp = Date.now();
 
@@ -217,7 +178,7 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
   });
 
   test('Y6: restore with deleted rows reports restoredDeleted', async ({ context, extensionId }) => {
-    const page = await openOptionsPage({ context, extensionId });
+    const page = await openOptionsPage(context, extensionId);
     const client = createDashboardSqliteClient(page);
     const stamp = Date.now();
 
@@ -245,7 +206,7 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
   });
 
   test('G3: archive_query treats % and _ as literals', async ({ context, extensionId }) => {
-    const page = await openOptionsPage({ context, extensionId });
+    const page = await openOptionsPage(context, extensionId);
     const client = createDashboardSqliteClient(page);
     const stamp = Date.now();
 
@@ -278,7 +239,7 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
   });
 
   test('G4: Phase B leaves the legacy savedUrlsWithTimestamps entries intact', async ({ context, extensionId }) => {
-    const page = await openOptionsPage({ context, extensionId });
+    const page = await openOptionsPage(context, extensionId);
     const client = createDashboardSqliteClient(page);
     const stamp = Date.now();
     const legacyUrls = [
@@ -286,23 +247,14 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
       `https://archive-g4.test/2/${stamp}`,
     ];
 
-    // Warm up the service worker with a first message so the deferred legacy
-    // migration runs NOW, while the legacy store is still empty (fresh
-    // profile → fresh_install + legacyStoreReadOnly flag). Seeding before
-    // that would let the migration move our entries into SQLite and double
-    // the purge count.
-    await client.dashboardMsg({ subtype: 'get_count' });
-    await expect(async () => {
-      const flag = await page.evaluate(() => chrome.storage.local.get('legacyStoreReadOnly'));
-      if (!flag.legacyStoreReadOnly) throw new Error('deferred migration not settled yet');
-    }).toPass({ timeout: 20_000, intervals: [500] });
-
-    // Close the migration path explicitly, then seed the legacy store (the
-    // recording-flow write path is the metadataPatch queue; import subtype
-    // never touches chrome.storage).
+    // Settle the deferred legacy migration while the legacy store is still
+    // empty, then seed it (the recording-flow write path is the metadataPatch
+    // queue; import subtype never touches chrome.storage). Seeding before
+    // settling would let the migration move our entries into SQLite and
+    // double the purge count.
+    await migrationSettled(page, client);
     await page.evaluate((urls) => {
       return chrome.storage.local.set({
-        yasumaro_migration_status: 'completed',
         savedUrlsWithTimestamps: urls.map((url) => ({ url, timestamp: Date.now() })),
       });
     }, legacyUrls);
@@ -349,7 +301,7 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
       });
     });
 
-    const page = await openOptionsPage({ context, extensionId });
+    const page = await openOptionsPage(context, extensionId);
     const client = createDashboardSqliteClient(page);
 
     const recordingPage = await context.newPage();

@@ -17,7 +17,15 @@
  * ('blocks a second concurrent create (single-flight)').
  */
 import { test, expect } from './fixtures/extension.fixture.js';
-import { createDashboardSqliteClient, localEndOfDayMs, poll } from './fixtures/dashboardSqliteHelpers.js';
+import {
+  createDashboardSqliteClient,
+  isoDateOffset,
+  localEndOfDayMs,
+  openOptionsPage,
+  poll,
+  runPhaseA,
+  seedRows,
+} from './fixtures/dashboardSqliteHelpers.js';
 import { collectArchiveChunks, openArchiveDb } from './fixtures/archiveDbReader.js';
 import { ARCHIVE_FORMAT_VERSION } from '../../src/utils/archiveGuards.js';
 
@@ -26,16 +34,10 @@ test.describe('Archive required verifications (R1-R3) @extension', () => {
   // Chromium inherits the OS UI language — ja on this machine).
   test.use({ locale: 'en-US' });
 
-  async function openOptionsPage(context: import('@playwright/test').BrowserContext, extensionId: string) {
-    const page = await context.newPage();
-    await page.goto(`chrome-extension://${extensionId}/options.html`);
-    await page.waitForFunction(() => typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
-    return page;
-  }
-
   test('R1: exported staging .db matches the archive schema spec', async ({ context, extensionId }) => {
     const page = await openOptionsPage(context, extensionId);
-    const { dashboardMsg, scopeHash, tokenFor } = createDashboardSqliteClient(page);
+    const client = createDashboardSqliteClient(page);
+    const { dashboardMsg, scopeHash, tokenFor } = client;
 
     // --- Seed 3 records (run-unique prefix keeps runs isolated) ---
     const seededUrls = [
@@ -43,23 +45,13 @@ test.describe('Archive required verifications (R1-R3) @extension', () => {
       'https://archive-r1.test/2',
       'https://archive-r1.test/3',
     ];
-    const seedToken = await tokenFor('import', []);
-    const seed = await poll(
-      () =>
-        dashboardMsg({
-          subtype: 'import',
-          confirmToken: seedToken,
-          rows: seededUrls.map((url, i) => ({
-            url,
-            title: `r1 seed ${i + 1}`,
-            summary: 'r1 e2e seed',
-            created_at: Date.UTC(2026, 0, 10, i + 1, 0, 0),
-            domain: 'archive-r1.test',
-          })),
-        }),
-      (r) => r?.success === true && Number(r?.inserted) >= 3,
-    );
-    expect(seed?.success).toBe(true);
+    await seedRows(client, seededUrls.map((url, i) => ({
+      url,
+      title: `r1 seed ${i + 1}`,
+      summary: 'r1 e2e seed',
+      created_at: Date.UTC(2026, 0, 10, i + 1, 0, 0),
+      domain: 'archive-r1.test',
+    })));
 
     // --- Phase A: archive create with a cutoff covering all seeds ---
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -142,7 +134,7 @@ test.describe('Archive required verifications (R1-R3) @extension', () => {
 
       test(`fixed-epoch seeds vs string cutoffDate → total=${expectedTotal}`, async ({ context, extensionId }) => {
         const page = await openOptionsPage(context, extensionId);
-        const { dashboardMsg, scopeHash, tokenFor } = createDashboardSqliteClient(page);
+        const client = createDashboardSqliteClient(page);
 
         // Fixed epochs — absolute instants, TZ-independent by construction.
         // A = 2026-01-15T00:00:00Z, B = 2026-01-15T18:00:00Z. The judgment
@@ -151,20 +143,10 @@ test.describe('Archive required verifications (R1-R3) @extension', () => {
         // a cutoff derived as UTC end-of-day would include B everywhere.
         const epochA = Date.UTC(2026, 0, 15, 0, 0, 0);
         const epochB = Date.UTC(2026, 0, 15, 18, 0, 0);
-        const seedToken = await tokenFor('import', []);
-        const seed = await poll(
-          () =>
-            dashboardMsg({
-              subtype: 'import',
-              confirmToken: seedToken,
-              rows: [
-                { url: 'https://archive-r2.test/a', title: 'r2 A', created_at: epochA, domain: 'archive-r2.test' },
-                { url: 'https://archive-r2.test/b', title: 'r2 B', created_at: epochB, domain: 'archive-r2.test' },
-              ],
-            }),
-          (r) => r?.success === true && Number(r?.inserted) >= 2,
-        );
-        expect(seed?.success).toBe(true);
+        await seedRows(client, [
+          { url: 'https://archive-r2.test/a', title: 'r2 A', created_at: epochA, domain: 'archive-r2.test' },
+          { url: 'https://archive-r2.test/b', title: 'r2 B', created_at: epochB, domain: 'archive-r2.test' },
+        ]);
 
         // The client derives cutoffMs from the string with the page-local
         // formula (production behavior); the worker re-derives and requires
@@ -174,7 +156,7 @@ test.describe('Archive required verifications (R1-R3) @extension', () => {
 
         const preview = await poll(
           () =>
-            dashboardMsg({
+            client.dashboardMsg({
               subtype: 'archive_preview',
               cutoffDate,
               cutoffMs,
@@ -193,45 +175,23 @@ test.describe('Archive required verifications (R1-R3) @extension', () => {
 
   test('R3: Phase A does not delete anything from the main DB', async ({ context, extensionId }) => {
     const page = await openOptionsPage(context, extensionId);
-    const { dashboardMsg, scopeHash, tokenFor } = createDashboardSqliteClient(page);
+    const client = createDashboardSqliteClient(page);
+    const { dashboardMsg } = client;
 
-    const seedToken = await tokenFor('import', []);
-    const seed = await poll(
-      () =>
-        dashboardMsg({
-          subtype: 'import',
-          confirmToken: seedToken,
-          rows: Array.from({ length: 5 }, (_, i) => ({
-            url: `https://archive-r3.test/${i + 1}`,
-            title: `r3 seed ${i + 1}`,
-            created_at: Date.UTC(2026, 0, 20, i + 1, 0, 0),
-            domain: 'archive-r3.test',
-          })),
-        }),
-      (r) => r?.success === true && Number(r?.inserted) >= 5,
-    );
-    expect(seed?.success).toBe(true);
+    await seedRows(client, Array.from({ length: 5 }, (_, i) => ({
+      url: `https://archive-r3.test/${i + 1}`,
+      title: `r3 seed ${i + 1}`,
+      created_at: Date.UTC(2026, 0, 20, i + 1, 0, 0),
+      domain: 'archive-r3.test',
+    })));
 
     const getCount = () => dashboardMsg({ subtype: 'get_count' });
     const before = await poll(getCount, (r) => r?.success === true);
     expect(before?.success).toBe(true);
     const countBefore = Number(before?.count);
 
-    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    const cutoffDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
-    const cutoffMs = await localEndOfDayMs(page, cutoffDate);
-    const createToken = await tokenFor('archive_create', [cutoffMs, false]);
-    const createRes = await dashboardMsg({
-      subtype: 'archive_create',
-      cutoffDate,
-      cutoffMs,
-      includeDeleted: false,
-      yasumaroVersion: '6.7.114',
-      confirmToken: createToken,
-      scopeHash: await scopeHash([cutoffMs, false]),
-    });
-    expect(createRes.success).toBe(true);
-    expect(Number(createRes.recordCount)).toBe(5);
+    const { recordCount } = await runPhaseA(page, client, isoDateOffset(1));
+    expect(recordCount).toBe(5);
 
     const after = await getCount();
     expect(after?.success).toBe(true);
