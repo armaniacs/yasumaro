@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.113` リリース。
+> - 現時点では `v6.7.114` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,30 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+## [6.7.114] - 2026-09-06
+
+このリリースは v6.7.113 と同日に公開する、閲覧履歴アーカイブ機能のリリースです。
+
+### Added
+
+- **閲覧履歴アーカイブ（フェーズA: 退避）**: 設定の「Archive」パネルで、指定日（その日を含む）以前の閲覧履歴を標準SQLiteファイル（`.db`、DB Browser for SQLite 等で開ける）として退避できるようにした（PBI 2026-09-06-02）。削除済みレコードはデフォルト除外（チェックで含めることも可能）。退避はバッチINSERT（5000件/COMMIT）＋構造検証（allowlist・meta突合せ）を経て行われ、フェーズAでは本体DBは一切変更されない。作成したファイルはチャンク転送でダウンロードでき、ステージングコピーを削除するまで再ダウンロード可能
+- **アーカイブからの復元**: アーカイブ .db のレコードを本体DBへマージ復元（PBI 2026-09-06-03）。既存レコードは保持され、重複（同一URL・同一時刻）はスキップ、レコードIDは再採番、`domain` はURLから再計算。行単位のエラーハンドリングで一部の無効行があっても復元は継続（`skippedInvalid` として集計）。バッチ 5000件/COMMIT で途中失敗しても再実行で収束
+- **ステージングからの本体削除（フェーズB）**: 検証済みステージングを参照して、退避済みレコードを本体DBから削除し VACUUM で領域を解放（PBI 2026-09-06-04）。削除述語は `max_id_at_archive` で境界付けされており、フェーズA以降に復元・追加されたレコードは保護される。削除は確認ダイアログ（レガシーストレージ残存の開示つき）を経て実行される
+- **アーカイブの一時オープン**: アーカイブ .db を本体DBに取り込まずにパネル上で開き、検索・タイトル編集・保存（アーカイブファイルへの書き戻し）ができる（PBI 2026-09-06-05）。未保存の変更がある状態で閉じる場合は確認ダイアログが表示され、オプションページ再読み込み後もセッション状態を検出して再接続できる
+- アーカイブ作成時の quota プレフライト（不足時は日付分割を案内して拒否）と、フェーズBのストレージ解放効果の検証（`PRAGMA freelist_count` 前後比較）
+
+### Security
+
+- 確認トークンに破壊パラメータの scopeHash 束縛を追加（PBI 2026-09-06-01）。トークン発行後に cutoff / stagingName を差し替えた実行は fail-closed で拒否される
+- 全体復元（restore_db）が、アーカイブ形式の .db を検証なしで受理して本体を FTS なしの状態で上書きできる経路を遮断（アーカイブ復元UIへの誘導つきガード）
+- アーカイブ .db は信頼できない入力として扱う: `sqlite_master` の allowlist 構造検証（VIEW/トリガー/仮想テーブル/hidden列の拒否）、`PRAGMA table_xinfo` 照合、meta.record_count 突合せ、URLスキーム検証（http/https 以外の編集を拒否）
+- メッセージ転送に `noRetry` オプションを追加し、バルク破壊操作（アーカイブ作成・削除・復元）のタイムアウト後二重実行を防止
+
+### Documentation
+
+- `dev-docs/ERROR_CODES.md` にアーカイブ関連コード（ARC_系）を登録
+- スパイクF-2（2エンジン共存の実証）と各PBIの実装メモを記録
 
 ## [6.7.113] - 2026-09-06
 
