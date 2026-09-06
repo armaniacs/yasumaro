@@ -451,6 +451,12 @@
           <h3 class="settings-section-title" data-i18n="contentRetentionPolicyTitle">Content Retention Settings</h3>
           <p class="settings-section-desc" data-i18n="contentRetentionPolicyDesc">Only content (page body) will be purged; records themselves are kept</p>
           <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="contentStorageEnabled" data-storage-key="content_storage_enabled">
+              <span data-i18n="contentStorageEnabledLabel">Store page content (body text) locally</span>
+            </label>
+          </div>
+          <div class="form-group">
             <label for="contentRetentionDays" data-i18n="contentRetentionDaysLabel">Content retention period</label>
             <select id="contentRetentionDays" data-storage-key="content_retention_days">
               <option value="" data-i18n="retentionUnlimited">Unlimited (keep forever)</option>
@@ -512,6 +518,15 @@
             <span class="toggle-slider" aria-hidden="true"></span>
           </label>
           <span class="toggle-label" data-i18n="domainFilterEnable">Enable domain filter</span>
+        </div>
+
+        <!-- サブドメイン自動マッチング -->
+        <div class="domain-toggle-row">
+          <label class="toggle-switch" for="domainSubdomainToggle">
+            <input type="checkbox" id="domainSubdomainToggle" role="switch" aria-checked="false">
+            <span class="toggle-slider" aria-hidden="true"></span>
+          </label>
+          <span class="toggle-label" data-i18n="domainSubdomainMatching">Match subdomains too</span>
         </div>
 
         <!-- タブ（ON時のみ表示） -->

@@ -178,10 +178,39 @@ describe('domainUtils', () => {
 
     test('ドメイン抽出に失敗した場合はfalseを返す', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
-  
+
       mockedGetSettings.mockResolvedValue({ domain_filter_mode: 'whitelist' } as Settings);
       const invalidUrl = 'invalid-url';
       const result = await isDomainAllowed(invalidUrl);
+      expect(result).toBe(false);
+    });
+
+    test('サブドメインマッチングOFF（デフォルト）ではサブドメインを許可しない', async () => {
+      mockedGetSettings.mockResolvedValue({
+        domain_filter_mode: 'whitelist',
+        domain_whitelist: ['example.com']
+      } as Settings);
+      const result = await isDomainAllowed('https://sub.example.com/page');
+      expect(result).toBe(false);
+    });
+
+    test('サブドメインマッチングONではサブドメインを許可する', async () => {
+      mockedGetSettings.mockResolvedValue({
+        domain_filter_mode: 'whitelist',
+        domain_whitelist: ['example.com'],
+        domain_subdomain_matching: true
+      } as unknown as Settings);
+      const result = await isDomainAllowed('https://sub.example.com/page');
+      expect(result).toBe(true);
+    });
+
+    test('サブドメインマッチングON時はブラックリストのサブドメインを拒否する', async () => {
+      mockedGetSettings.mockResolvedValue({
+        domain_filter_mode: 'blacklist',
+        domain_blacklist: ['example.com'],
+        domain_subdomain_matching: true
+      } as unknown as Settings);
+      const result = await isDomainAllowed('https://www.example.com/page');
       expect(result).toBe(false);
     });
 

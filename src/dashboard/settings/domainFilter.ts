@@ -261,6 +261,13 @@ export async function loadDomainSettings(): Promise<void> {
         domainListTextarea.value = domainList.join('\n');
     }
 
+    // Subdomain auto-matching toggle (PBI 2026-09-06-06) — default OFF
+    const subdomainToggle = document.getElementById('domainSubdomainToggle') as HTMLInputElement | null;
+    if (subdomainToggle) {
+        subdomainToggle.checked = settings[StorageKeys.DOMAIN_SUBDOMAIN_MATCHING] === true;
+        subdomainToggle.setAttribute('aria-checked', String(subdomainToggle.checked));
+    }
+
     updateDomainListVisibility();
 
     // フィルター形式の読み込み
@@ -338,11 +345,13 @@ async function saveSimpleFormatSettings(): Promise<void> {
     }
 
     // Prepare settings object - save both lists
+    const subdomainToggle = document.getElementById('domainSubdomainToggle') as HTMLInputElement | null;
     const newSettings: Record<string, unknown> = {
         [StorageKeys.DOMAIN_FILTER_MODE]: mode,
         [StorageKeys.SIMPLE_FORMAT_ENABLED]: simpleFormatEnabledCheckbox?.checked,
         [StorageKeys.DOMAIN_WHITELIST]: whitelist,
-        [StorageKeys.DOMAIN_BLACKLIST]: blacklist
+        [StorageKeys.DOMAIN_BLACKLIST]: blacklist,
+        [StorageKeys.DOMAIN_SUBDOMAIN_MATCHING]: subdomainToggle?.checked === true
     }
 
     // Save settings

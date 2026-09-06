@@ -54,6 +54,7 @@ export const GENERAL_SETTINGS_SCHEMA: SettingsSchema = [
   { key: StorageKeys.SQLITE_MAX_RECORDS, type: 'select' },
   { key: StorageKeys.CONTENT_RETENTION_DAYS, type: 'select' },
   { key: StorageKeys.CONTENT_MAX_RECORDS, type: 'select' },
+  { key: StorageKeys.CONTENT_STORAGE_ENABLED, type: 'checkbox' },
   { key: StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED, type: 'checkbox' },
   { key: StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH, type: 'text' },
   { key: StorageKeys.REVIEW_SUMMARY_ENABLED, type: 'checkbox' },

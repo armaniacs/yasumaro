@@ -31,18 +31,19 @@ export function evaluateCachedAllow(
   url: string,
   allowedDomains: string[],
   mode?: string | null,
+  matchSubdomains = false,
 ): boolean | null {
   const hostname = extractHostname(url);
   if (hostname === null) return null;
   if (mode === 'blacklist') {
-    return !isDomainInList(hostname, allowedDomains);
+    return !isDomainInList(hostname, allowedDomains, matchSubdomains);
   }
   if (mode === 'whitelist') {
-    return isDomainInList(hostname, allowedDomains);
+    return isDomainInList(hostname, allowedDomains, matchSubdomains);
   }
   if (mode === 'disabled') return true;
   if (allowedDomains.length === 0) return true;
-  return isDomainInList(hostname, allowedDomains);
+  return isDomainInList(hostname, allowedDomains, matchSubdomains);
 }
 
 export class DomainFilter {
@@ -137,12 +138,13 @@ export class DomainFilter {
    */
   async isAllowedCached(
     url: string,
-    cached: { allowedDomains: string[]; cachedAt: number; mode?: string } | null,
+    cached: { allowedDomains: string[]; cachedAt: number; mode?: string },
     mode?: string,
+    matchSubdomains = false,
   ): Promise<boolean> {
     if (cached && Date.now() - cached.cachedAt < this.ttlMs) {
       const effectiveMode = mode ?? (cached as { mode?: string }).mode;
-      const result = evaluateCachedAllow(url, cached.allowedDomains, effectiveMode);
+      const result = evaluateCachedAllow(url, cached.allowedDomains, effectiveMode, matchSubdomains);
       if (result !== null) return result;
       return false;
     }
@@ -158,6 +160,7 @@ export class DomainFilterCacheAdapter {
   private cachedAt: number | null = null;
   private allowedDomains: string[] = [];
   private cachedMode: string | null = null;
+  private cachedMatchSubdomains = false;
   private readonly ttlMs: number;
 
   constructor(
@@ -167,10 +170,11 @@ export class DomainFilterCacheAdapter {
     this.ttlMs = opts.ttlMs ?? filter.getTtlMs();
   }
 
-  updateCache(allowedDomains: string[], mode?: string): void {
+  updateCache(allowedDomains: string[], mode?: string, matchSubdomains?: boolean): void {
     this.allowedDomains = [...allowedDomains];
     this.cachedAt = Date.now();
     if (mode !== undefined) this.cachedMode = mode;
+    if (matchSubdomains !== undefined) this.cachedMatchSubdomains = matchSubdomains;
   }
 
   /** Expose TTL for tests (construction param seam). */
@@ -181,7 +185,7 @@ export class DomainFilterCacheAdapter {
   async isAllowed(url: string, mode?: string): Promise<boolean> {
     if (this.cachedAt && Date.now() - this.cachedAt < this.ttlMs) {
       const effectiveMode = mode ?? this.cachedMode;
-      const result = evaluateCachedAllow(url, this.allowedDomains, effectiveMode);
+      const result = evaluateCachedAllow(url, this.allowedDomains, effectiveMode, this.cachedMatchSubdomains);
       if (result !== null) return result;
       return false;
     }

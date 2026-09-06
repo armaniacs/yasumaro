@@ -61,6 +61,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
         'youtube.com', 'google.com', 'google.co.jp'
     ],
     [StorageKeys.DOMAIN_FILTER_MODE]: 'blacklist',
+    [StorageKeys.DOMAIN_SUBDOMAIN_MATCHING]: false,
     [StorageKeys.PRIVACY_MODE]: 'masked_cloud',
     [StorageKeys.PII_CONFIRMATION_UI]: true,
     [StorageKeys.PII_SANITIZE_LOGS]: true,

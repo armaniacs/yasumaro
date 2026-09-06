@@ -18,6 +18,12 @@
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
 
+### 2026-09-06 レコードアーカイブ（着手順 = 01 → 02 → 03。02は01のファイル形式に依存、03は02に非依存）
+
+- 2026-09-06-01-feat-record-archive.md（⬜ 日付指定アーカイブ作成: 境界日以前のレコードを標準SQLite .db に書き出し＋本体から削除＋ダウンロード。FTS5なし・metaテーブル付きのアーカイブ形式を本PBIで定義。5pt / 副作用 🔴 / ✨）
+- 2026-09-06-02-feat-archive-temp-open.md（⬜ アーカイブの一時オープン: メインDB非汚染でアーカイブ.db を参照・編集・書き戻し。**着手条件: PBI内スパイク必須**（第2エンジン長期同時オープンの検証）。8pt / 副作用 🟡 / ✨）
+- 2026-09-06-03-feat-archive-restore.md（⬜ アーカイブからメインDBへの復元: INSERT OR IGNORE でマージ再取り込み・重複スキップ・id再採番。03単独でも価値あり（02編集済みアーカイブも復元可）。3pt / 副作用 🟡 / ✨）
+
 ### 将来候補の統合台帳（live）
 
 - [2026-09-05-00-backlog-future.md](2026-09-05-00-backlog-future.md) — 旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）に散在していた見送り・トリガー付き・製品判断待ち候補の統合台帳（2026-09-05 整理）。着手はトリガー別に管理。次ラウンドの architecture review はこれを入力にする
@@ -46,6 +52,11 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-09-06 autonomous-task-closer — バッチ1（3件）
+
+- 2026-09-06-04-feat-content-storage-toggle-in-settings.md（✅ 完了・アーカイブ済 — 設定画面の「コンテンツ保持設定」に本文保存トグル追加。GENERAL_SETTINGS_SCHEMA 登録＋ラウンドトリップテスト＋E2E。検証: type-check / lint 0 errors / 11702 tests / build green）
+- 2026-09-06-05-feat-priority-model-display.md（✅ 完了・アーカイブ済 — Priority (Failover Order) に実モデル名（明示 → ストレージ設定 → カタログデフォルト）を表示。`resolveModelDisplayName` 新設、自動解決値は `dataset.resolved` で保存時に省略。13 tests 新規）
+- 2026-09-06-06-feat-domain-subdomain-matching.md（✅ 完了・アーカイブ済 — ドメインフィルタにサブドメイン自動マッチング（デフォルトOFF）追加。`matchesDomainPattern`/`evaluateCachedAllow`/ライブ・キャッシュ両パスにトグル伝播。ラッパーの引数握り潰し問題をテストで検出・修正）
 
 ### 2026-09-05 Architecture Round 3（arch3 診断） — 7 件完了
 

@@ -162,6 +162,13 @@ test.describe('Dashboard - Initial Settings Panel @ui', () => {
     await expect(panel.getByText('Content Retention Settings')).toBeVisible();
   });
 
+  test('has content storage toggle in content retention section', async ({ page }) => {
+    const toggle = page.locator('#contentStorageEnabled');
+    await expect(toggle).toBeAttached();
+    await expect(toggle).toHaveAttribute('type', 'checkbox');
+    await expect(toggle).toHaveAttribute('data-storage-key', 'content_storage_enabled');
+  });
+
   test('has action buttons at top and bottom', async ({ page }) => {
     const panel = page.locator('#panel-general');
 

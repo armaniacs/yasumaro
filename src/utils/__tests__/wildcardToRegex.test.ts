@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { wildcardToRegex } from '../wildcardToRegex.js';
+import { wildcardToRegex, matchesDomainPattern, isDomainInList } from '../wildcardToRegex.js';
 
 describe('wildcardToRegex', () => {
     test('ワイルドカードなしの場合は完全一致の正規表現を返す', () => {
@@ -22,5 +22,40 @@ describe('wildcardToRegex', () => {
     });
     test('空文字列の場合はnullを返す', () => {
         expect(wildcardToRegex('')).toBeNull();
+    });
+});
+
+describe('matchesDomainPattern subdomain matching (PBI 2026-09-06-06)', () => {
+    test('トグルOFF（デフォルト）+ 完全一致 → マッチ', () => {
+        expect(matchesDomainPattern('example.com', 'example.com')).toBe(true);
+    });
+    test('トグルOFF（デフォルト）+ サブドメイン → マッチしない', () => {
+        expect(matchesDomainPattern('sub.example.com', 'example.com')).toBe(false);
+    });
+    test('トグルON + 完全一致 → マッチ', () => {
+        expect(matchesDomainPattern('example.com', 'example.com', true)).toBe(true);
+    });
+    test('トグルON + サブドメイン → マッチ', () => {
+        expect(matchesDomainPattern('sub.example.com', 'example.com', true)).toBe(true);
+    });
+    test('トグルON + wwwサブドメイン → マッチ', () => {
+        expect(matchesDomainPattern('www.example.com', 'example.com', true)).toBe(true);
+    });
+    test('トグルON + 深いサブドメイン → マッチ', () => {
+        expect(matchesDomainPattern('a.b.example.com', 'example.com', true)).toBe(true);
+    });
+    test('トグルONでも無関係ドメインはマッチしない', () => {
+        expect(matchesDomainPattern('notexample.com', 'example.com', true)).toBe(false);
+    });
+    test('パターンが空 → マッチしない', () => {
+        expect(matchesDomainPattern('example.com', '', true)).toBe(false);
+    });
+    test('トグルONでもワイルドカードパターンは従来どおり動く', () => {
+        expect(matchesDomainPattern('sub.example.com', '*.example.com', true)).toBe(true);
+        expect(matchesDomainPattern('example.com', '*.example.com', true)).toBe(false);
+    });
+    test('isDomainInList にトグルを渡せる', () => {
+        expect(isDomainInList('sub.example.com', ['example.com'])).toBe(false);
+        expect(isDomainInList('sub.example.com', ['example.com'], true)).toBe(true);
     });
 });
