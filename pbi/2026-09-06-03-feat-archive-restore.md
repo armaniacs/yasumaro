@@ -54,7 +54,7 @@ Scenario: 確認トークンなしでは実行できない
 ## テスト戦略（t_wadaスタイル）
 
 ### E2Eテスト
-- アーカイブ作成 → 復元の往復で件数が元に戻ることを画面越しに確認（PBI-01のE2Eと組み合わせ）
+- アーカイブ作成 → 復元の往復で件数が元に戻ることを画面越しに確認（PBI-02のE2Eと組み合わせ）
 
 ### 統合テスト
 - 重複スキップ（url + created_at が完全一致する既存行は更新されず保持される）
@@ -81,7 +81,7 @@ Scenario: 確認トークンなしでは実行できない
 
 ## 技術的考慮事項
 
-- **依存関係**: PBI-01 が定義するアーカイブファイル形式に依存。**PBI-02（一時オープン・編集）には依存しない** — 編集されていないアーカイブの復元は本PBI単独で完結する。PBI-02で編集されたアーカイブも同様に復元できる
+- **依存関係**: PBI-02 が定義するアーカイブファイル形式に依存。**PBI-05（一時オープン・編集）には依存しない** — 編集されていないアーカイブの復元は本PBI単独で完結する。PBI-05で編集されたアーカイブも同様に復元できる
 - **テスタビリティ**: 復元ハンドラは `sqliteTestApi.js` パターンで実SQLiteテスト。ステージング経由のため行・バイト列ともメッセージに載らず転送上限は不要。JSON import のバリデータ（`src/messaging/validators.ts` の `MAX_IMPORT_ROWS` / `MAX_IMPORT_BYTES`）は設計参照
 - **非機能要件**: 大容量アーカイブの転送時間とメインDB書き込み時間（進捗表示）。破壊的操作ではないがメインDBを変化させるため、confirmToken 必須。CSP遵守・MV3遵守・`async/await`
 
@@ -105,20 +105,20 @@ grep -rn "MAX_IMPORT_ROWS\|MAX_IMPORT_BYTES" src/messaging/
 1. E2EテストをRedで書く（ファイル選択→プレビュー→実行→件数確認）
 2. 統合テストをRedで書く（重複スキップ・FTSヒット・大容量完結・無効ファイル拒否・トークン拒否・ステージング掃除）
 3. offscreen/opfsWorker に `RESTORE_ARCHIVE`（仮称）ハンドラを追加:
-   - dashboard が選択ファイルを OPFS ステージング（`archive_incoming_<nonce>.db`）へ書き込み、メッセージは**ファイル名のみ** → `createEngine` → バリデーション（PBI-02の手順3と同一パターン: `browsing_logs` + `yasumaro_archive_meta` 存在 + **トリガー数 0**。`createEngine` はDDLフリー（sqliteEngine.ts:47-51）でメイン初期化ヘルパー（opfsWorker.ts:116-120）は流用しない。共通化を検討）
+   - dashboard が選択ファイルを OPFS ステージング（`archive_incoming_<nonce>.db`）へ書き込み、メッセージは**ファイル名のみ** → `createEngine` → バリデーション（PBI-05の手順3と同一パターン: `browsing_logs` + `yasumaro_archive_meta` 存在 + **トリガー数 0**。`createEngine` はDDLフリー（sqliteEngine.ts:47-51）でメイン初期化ヘルパー（opfsWorker.ts:116-120）は流用しない。共通化を検討）
    - 一時エンジンから `SELECT`（id を除く全カラム + `buildInsertParams` 相当のマッピング）→ メインエンジンへ `INSERT OR IGNORE`（INSERT_IGNORE_SQL 流用。id は含めない）
    - 結果集計（changes から restored / skipped を算出）→ 一時ファイル削除（finally）
 4. メッセージ経路の追加: `sqliteMessages.ts` / `sqliteRpcClient.ts`（MaintainOp）/ `dashboardSqliteProtocol.ts`（subtype）/ `sqliteOperationSecurity.ts`（`ALL_DASHBOARD_SQLITE_SUBTYPES` に追加・tokenExempt には入れない＝デフォルトで**トークン必須**）/ `validators.ts`（転送上限の設計参照）/ `dashboardSqlite/maintenanceBatchHandler.ts`（**`MAINTENANCE_BATCH_SUBTYPES` への追加が必須 — router はこの Set から dispatch を導出する**）
 5. ダッシュボードUI: アーカイブセクションに「メインDBへ復元」。プレビュー（meta表示）→ confirmToken（`create_confirm_token`）→ 実行 → 結果表示
 6. i18n（en/ja）
-7. Green → リファクタリング（PBI-02と一時エンジン生成・バリデーションの共通化）
+7. Green → リファクタリング（PBI-05と一時エンジン生成・バリデーションの共通化）
 
 ### 落とし穴
 - **元 id の引き継ぎ禁止**: アーカイブの id をそのまま INSERT すると、メインDBの PRIMARY KEY 衝突で「url も created_at も異なる別レコード」が誤ってスキップされる。id は必ず再採番（AUTOINCREMENT）に任せる
 - **FTS トリガーはメインDB側で自動発火**: `browsing_logs_ai` トリガーが INSERT 時に FTS を更新する。復元側で FTS を手動更新しない（二重索引になる）
 - **同期フラグの扱い**: obsidian_synced=1 のまま復元するため Obsidian への再書き込みは起きない。再同期したいユーザーには既存の `resync_legacy` を案内する
-- **編集済みレコードの扱い**: PBI-02で url を変更したレコードは、復元時に「新しい記録」として追加される（元の記録との重複判定が成立しない。なお `created_at` は既存 `UPDATABLE_FIELDS` に含まれないためアーカイブ編集では変更不可）。仕様としてドキュメントに明記する
-- **削除済み行の復元**: PBI-01で「削除済み行を含める」をチェックしたアーカイブは is_deleted=1 の行を持つ。フラグ保持のまま復元するため表示には出ないが本体容量を占める。結果表示に内訳（アクティブ / 削除済み）を出してユーザーが把握できるようにする
+- **編集済みレコードの扱い**: PBI-05で url を変更したレコードは、復元時に「新しい記録」として追加される（元の記録との重複判定が成立しない。なお `created_at` は既存 `UPDATABLE_FIELDS` に含まれないためアーカイブ編集では変更不可）。仕様としてドキュメントに明記する
+- **削除済み行の復元**: PBI-02で「削除済み行を含める」をチェックしたアーカイブは is_deleted=1 の行を持つ。フラグ保持のまま復元するため表示には出ないが本体容量を占める。結果表示に内訳（アクティブ / 削除済み）を出してユーザーが把握できるようにする
 - **転送されるのはファイル名のみ**: 行の SELECT（一時エンジン）と INSERT（メインエンジン）はどちらも offscreen 内で完結する。アーカイブ.db も OPFS ステージング経由で渡すため、バイト列・行ともメッセージに載らない（deep-dig 2026-09-06 決定）。JSON import の rows-per-request（`MAX_IMPORT_ROWS` / `MAX_IMPORT_BYTES`）は設計参照であり流用先ではない
 - **外部由来のアーカイブは信頼できない入力**: メインDBの CHECK 制約（is_starred / scroll_ratio / visit_duration）は INSERT 時に発火するが、url スキームの検証は CHECK にない。既存メッセージバリデータ（http/https 以外を拒否）と同等の検証を INSERT 前に適用する
 - **部分更新の禁止**: 検証（バリデーション）→ 取り込みの順序を厳守し、取り込みは1トランザクションにする（ステージング方式のため行転送のチャンクは存在しない）。途中失敗でメインDBが部分更新されないことを統合テストで担保
@@ -137,7 +137,7 @@ grep -rn "MAX_IMPORT_ROWS\|MAX_IMPORT_BYTES" src/messaging/
 ## 設計ノート（レビュー依頼用 / 2026-09-06 作成、feature-dev スキルによるコードベース精査後）
 
 > このセクションは実装前のレビューを受けるためのもの。実装はまだ着手していない。
-> 共通基盤（メッセージ経路、archive.db 形式、`validateArchiveEngine`、ステージング掃除、10秒タイムアウト問題、第2エンジンのスパイク）は **PBI-01 §A〜§F および PBI-02 §F2 を参照**。ここでは PBI-03 固有の設計を書く。
+> 共通基盤（メッセージ経路、archive.db 形式、`validateArchiveEngine`、ステージング掃除、10秒タイムアウト問題、第2エンジンのスパイク）は **PBI-02 §A〜§F および PBI-05 §F2 を参照**。ここでは PBI-03 固有の設計を書く。
 
 ### A. PBI-03 固有の精査結果
 
@@ -148,9 +148,9 @@ grep -rn "MAX_IMPORT_ROWS\|MAX_IMPORT_BYTES" src/messaging/
 | A3-3 | **URL スキーム検証は CHECK 制約にない**。`SCHEMA_SQL` の CHECK は `visit_duration >= 0` / `scroll_ratio 0..1` / `is_starred/is_deleted IN (0,1)` のみ。`url` は `TEXT NOT NULL` だけ。http/https 制限はメッセージバリデータ（`validators.ts:257-259`）が担当 | `src/offscreen/schema.ts:9-44`、`src/messaging/validators.ts:254-263` | **外部由来のアーカイブは信頼できない入力**（PBI 落とし穴）。復元前に各行の `url` を `new URL(url)` + `['http:','https:'].includes(protocol)` で検証。`javascript:` / `data:` スキームを弾く。`validators.ts` の `ManualRecordValidator` と同等ロジックを `archiveHandlers` 側で適用 |
 | A3-4 | **FTS トリガー `browsing_logs_ai` はメインDB の INSERT で自動発火**。復元で `INSERT OR IGNORE` すると FTS 索引が自動更新される | `src/offscreen/schema.ts:331-334` | 復元側で FTS を手動更新しない（二重索引になる、PBI 落とし穴）。IGNORE された行はトリガーも発火しないので整合が取れる |
 | A3-5 | **同期フラグ列は `buildInsertParams` でそのまま渡る**。`obsidian_synced` / `gist_synced` は `record.obsidian_synced ?? 0` | `src/offscreen/schema.ts:210-211` | archive.db が持つ `obsidian_synced=1` はそのまま復元される → Obsidian への再書き込みは起きない（PBI 受け入れ基準・落とし穴）。archive.db 側の SELECT で `obsidian_synced` / `gist_synced` を取得して `buildInsertParams` に渡す |
-| A3-6 | **`is_deleted` も `buildInsertParams` で渡る**（`record.is_deleted ?? 0`）。PBI-01 で「削除済み行を含める」にチェックしたアーカイブは `is_deleted=1` の行を持つ | 同上 | フラグ保持のまま復元。表示には出ないが本体容量を占める。結果表示に「アクティブ N 件 / 削除済み M 件」の内訳（PBI 受け入れ基準・落とし穴） |
-| A3-7 | **転送はステージング経由（PBI-01 §A-1, A-2）**。dashboard が選択ファイルを `archive_incoming_<nonce>.db` へ書き、メッセージはファイル名のみ。行の SELECT（第2エンジン）も INSERT（メインエンジン）も offscreen 内で完結 → バイト列・行ともメッセージに載らない | deep-dig 2026-09-06 | `MAX_IMPORT_ROWS` / `MAX_IMPORT_BYTES`（`validators.ts:49,51`）は**設計参照であり流用先ではない**（PBI 落とし穴）。行のチャンク転送は存在しない |
-| A3-8 | **`confirmToken` は破壊的操作ではないが必須**。メインDB を変化させる（件数が増える）ため。送信側自動添付（PBI-01 §A-5） | PBI 技術的考慮事項 | `archive_restore` を `TOKEN_EXEMPT_OPS` に入れない。BDD「確認トークンなしでは実行できない」は `sqlite-security-integrity.test.ts` のマトリクスに 1 行追加 |
+| A3-6 | **`is_deleted` も `buildInsertParams` で渡る**（`record.is_deleted ?? 0`）。PBI-02 で「削除済み行を含める」にチェックしたアーカイブは `is_deleted=1` の行を持つ | 同上 | フラグ保持のまま復元。表示には出ないが本体容量を占める。結果表示に「アクティブ N 件 / 削除済み M 件」の内訳（PBI 受け入れ基準・落とし穴） |
+| A3-7 | **転送はステージング経由（PBI-02 §A-1, A-2）**。dashboard が選択ファイルを `archive_incoming_<nonce>.db` へ書き、メッセージはファイル名のみ。行の SELECT（第2エンジン）も INSERT（メインエンジン）も offscreen 内で完結 → バイト列・行ともメッセージに載らない | deep-dig 2026-09-06 | `MAX_IMPORT_ROWS` / `MAX_IMPORT_BYTES`（`validators.ts:49,51`）は**設計参照であり流用先ではない**（PBI 落とし穴）。行のチャンク転送は存在しない |
+| A3-8 | **`confirmToken` は破壊的操作ではないが必須**。メインDB を変化させる（件数が増える）ため。送信側自動添付（PBI-02 §A-5） | PBI 技術的考慮事項 | `archive_restore` を `TOKEN_EXEMPT_OPS` に入れない。BDD「確認トークンなしでは実行できない」は `sqlite-security-integrity.test.ts` のマトリクスに 1 行追加 |
 
 ### B. PBI-03 のアーキテクチャ
 
@@ -158,7 +158,7 @@ grep -rn "MAX_IMPORT_ROWS\|MAX_IMPORT_BYTES" src/messaging/
 ┌─ dashboard ─────────────────────────────────────────────────────┐
 │  archivePanel.ts に「メインDBへ復元」セクション追加               │
 │    ├─ <input type="file" accept=".db"> でファイル選択            │
-│    │    → file.size チェック（PBI-02 §C2-5 と同じ上限）          │
+│    │    → file.size チェック（PBI-05 §C2-5 と同じ上限）          │
 │    │    → file.arrayBuffer() → archiveStagingService が          │
 │    │       OPFS の archive_incoming_<nonce>.db へ書き込み        │
 │    ├─ プレビュー: archive_restore_preview { stagingName }        │
@@ -168,8 +168,8 @@ grep -rn "MAX_IMPORT_ROWS\|MAX_IMPORT_BYTES" src/messaging/
 │    │    → 結果 { restored, skipped, restoredActive, restoredDeleted }│
 │    └─ 結果表示                                                   │
 └─────────────────────────────────────────────────────────────────┘
-             │ 経路は PBI-01 §B と同じ
-             ▼ opfsWorker/archiveHandlers.ts
+             │ 経路は PBI-02 §B と同じ
+             ▼ opfsWorker/archiveRestoreHandlers.ts
     ARCHIVE_RESTORE_PREVIEW:
       createEngine(archive_incoming_<nonce>.db) → validateArchiveEngine()
       → yasumaro_archive_meta 読み取り → close → 結果返す
@@ -190,7 +190,7 @@ grep -rn "MAX_IMPORT_ROWS\|MAX_IMPORT_BYTES" src/messaging/
       8. wal_checkpoint 不要（メイン INSERT のみ、既存トリガーが FTS 更新）
 ```
 
-**新規ファイル**: `src/offscreen/opfsWorker/archiveHandlers.ts` に `handleArchiveRestorePreview` / `handleArchiveRestore` を追加（PBI-01/02 で作った基盤に追加）。
+**新規ファイル**: `src/offscreen/opfsWorker/archiveRestoreHandlers.ts` に `handleArchiveRestorePreview` / `handleArchiveRestore` を追加（PBI-01（基盤）/02/05 で作った基盤に追加）。
 
 **subtype 追加**: `archive_restore_preview`（read-only + exempt）`archive_restore`（トークン必須）。
 
@@ -201,7 +201,7 @@ grep -rn "MAX_IMPORT_ROWS\|MAX_IMPORT_BYTES" src/messaging/
 なぜなぜ:
 - PBI 落とし穴「アーカイブの id をそのまま INSERT すると、メインDB の PRIMARY KEY 衝突で『url も created_at も異なる別レコード』が誤ってスキップされる」。
 - 既存の `INSERT_IGNORE_SQL` は `INSERT_COLS`（`COLUMN_NAMES`、id 含まない）を使う。
-- PBI-01 では archive.db に id を保持するため専用の `ARCHIVE_INSERT_SQL`（id 含む）を追加した（PBI-01 §C-3）。
+- PBI-02 では archive.db に id を保持するため専用の `ARCHIVE_INSERT_SQL`（id 含む）を追加した（PBI-02 §C-3）。
 
 → **復元は既存の `INSERT_IGNORE_SQL` + `buildInsertParams`（id 除外）をそのまま使う**。archive.db 側の SELECT では id を取得**しない**（`SELECT ${COLUMN_NAMES.join(', ')} FROM browsing_logs`、`ARCHIVE_SELECT_COLUMNS` は使わない）。id 再採番は SQLite の AUTOINCREMENT に完全に委任。追加コード不要。
 
@@ -248,17 +248,17 @@ function isHttpUrl(url: string): boolean {
 なぜなぜ:
 - BDD「復元の途中失敗でメインDB が部分更新されない」。
 - ステージング方式なので行のチャンク転送はない（A3-7）→ 全行を 1 トランザクションで処理できる。
-- 10万件を 1 トランザクションで INSERT すると時間がかかる（PBI-01 §C-6 の 10 秒問題と同じ）。
+- 10万件を 1 トランザクションで INSERT すると時間がかかる（PBI-02 §C-6 の 10 秒問題と同じ）。
 
-→ `withTransaction(ctx, async () => { for (row of rows) { ... } })`（`handlers.ts:41` の `BEGIN IMMEDIATE` / `COMMIT` / best-effort `ROLLBACK`）。途中失敗で全ロールバック。**10万件の場合の時間は PBI-01 §C-6 と同じくスパイク（F3）で実測し、超過するならポーリング方式**（`archive_restore` が開始応答を返し、`archive_restore_status` でポーリング）。
+→ `withTransaction(ctx, async () => { for (row of rows) { ... } })`（`handlers.ts:41` の `BEGIN IMMEDIATE` / `COMMIT` / best-effort `ROLLBACK`）。途中失敗で全ロールバック。**10万件の場合の時間は PBI-02 §C-6 と同じくスパイク（F3）で実測し、超過するならポーリング方式**（`archive_restore` が開始応答を返し、`archive_restore_status` でポーリング）。
 
-#### C3-6. 編集済みレコードの扱い（PBI-02 連携）
+#### C3-6. 編集済みレコードの扱い（PBI-05 連携）
 
-PBI 落とし穴「PBI-02 で url を変更したレコードは、復元時に『新しい記録』として追加される（元の記録との重複判定が成立しない）」。`created_at` は `UPDATABLE_FIELDS` に含まれない（PBI-02 §A2-7）ためアーカイブ編集で変更不可 → url を変えなければ重複判定は成立する。この仕様をドキュメントに明記。**PBI-03 は PBI-02 に依存しない**（編集されていないアーカイブの復元は単独で完結）。
+PBI 落とし穴「PBI-05 で url を変更したレコードは、復元時に『新しい記録』として追加される（元の記録との重複判定が成立しない）」。`created_at` は `UPDATABLE_FIELDS` に含まれない（PBI-05 §A2-7）ためアーカイブ編集で変更不可 → url を変えなければ重複判定は成立する。この仕様をドキュメントに明記。**PBI-03 は PBI-05 に依存しない**（編集されていないアーカイブの復元は単独で完結）。
 
 ### D. テスト戦略の具体化
 
-- **E2E**（`opfs-fts5-search.spec.ts` パターン、PBI-01 の E2E と組み合わせ）: アーカイブ作成（PBI-01）→ 復元の往復で `get_count` が元に戻る。復元されたレコードがメインDB の検索でヒット。
+- **E2E**（`opfs-fts5-search.spec.ts` パターン、PBI-02 の E2E と組み合わせ）: アーカイブ作成（PBI-02）→ 復元の往復で `get_count` が元に戻る。復元されたレコードがメインDB の検索でヒット。
 - **統合**（`sqliteTestApi.ts` パターン）:
   - 重複スキップ（`url + created_at` 完全一致の既存行は更新されず保持）
   - 復元後の FTS 検索ヒット（`browsing_logs_ai` トリガー経由）
@@ -278,11 +278,11 @@ PBI 落とし穴「PBI-02 で url を変更したレコードは、復元時に�
 
 ### F3. PBI-03 の実機検証項目
 
-PBI-02 §F2 のスパイクを共有（第2エンジン）。追加で:
+PBI-05 §F2 のスパイクを共有（第2エンジン）。追加で:
 
 | 検証内容 | 合格基準 | 不合格時 |
 |---------|---------|---------|
-| 10万件を 1 トランザクションで `INSERT OR IGNORE` する実測時間（第2エンジン SELECT → メインエンジン INSERT、offscreen 内完結） | 10 秒以内（SW→offscreen タイムアウト、PBI-01 §A-3） | `archive_restore` が開始応答を返し `archive_restore_status` でポーリング（PBI-01 §C-6 と共通の非同期パターン） |
+| 10万件を 1 トランザクションで `INSERT OR IGNORE` する実測時間（第2エンジン SELECT → メインエンジン INSERT、offscreen 内完結） | 10 秒以内（SW→offscreen タイムアウト、PBI-02 §A-3） | `archive_restore` が開始応答を返し `archive_restore_status` でポーリング（PBI-02 §C-6 と共通の非同期パターン） |
 | 10万件トランザクション中のメモリ | 実用範囲 | バッチコミット（例: 5000 件ごとに COMMIT → 部分更新のリスクとのトレードオフ。BDD「部分更新の禁止」と矛盾するので慎重に） |
 
 結果は `dev-docs/plans/2026-09-06-archive-spike.md` に記録。
@@ -296,23 +296,23 @@ PBI-02 §F2 のスパイクを共有（第2エンジン）。追加で:
 
 ## 敵対的レビュー反映（2026-09-06・adversarial-code-review / 検証済み指摘に基づく規定。以下が本文と矛盾する場合は本節を優先）
 
-1. **検証への突合せ継承（必須）**: PBI-02 の allowlist 構造検証＋`yasumaro_archive_meta.record_count` と `SELECT COUNT(*)` の突合せ（不一致は**拒否**）を適用。列互換は `PRAGMA table_xinfo` 照合で担保（将来のスキーマ列追加にも追従）
+1. **検証への突合せ継承（必須）**: PBI-05 の allowlist 構造検証＋`yasumaro_archive_meta.record_count` と `SELECT COUNT(*)` の突合せ（不一致は**拒否**）を適用。列互換は `PRAGMA table_xinfo` 照合で担保（将来のスキーマ列追加にも追従）
 2. **行単位のエラー処理（必須）**: 行投入は行単位 try/catch（既存 crudHandlers の慣行）とし、CHECK/型違反行は `skipped` と別分類の `skipped_invalid` として集計・表示（違反1行で全ROLLBACKになる経路と、違反行が restored/skipped に紛れる経路の両方を封じる）
 3. **domain は復元時再計算**: `extractDomain(url)` で再計算し、アーカイブ保存値は信頼しない（既存 insert の `record.domain || extractDomain` 慣行と整合）
 4. **QueryCache 無効化（必須）**: 復元成功後、dashboard 側で History の QueryCache を無効化する手順を実装手順に追加（既存 star/delete と同じ mutation 無効化経路。復元分が一覧に即時出ない鮮度バグを防ぐ）
 5. **restoredDeleted の定義**: 「実挿入に成功した行のうち is_deleted=1」に限定（INSERT試行の成否を行単位で集計。`changes()` や COUNT 差分には依存しない）。内訳合計が restored と一致することを受け入れ基準に追加
-6. **上限の明確化**: 復元対象ファイルは PBI-02 と共通のサイズ上限。dashboard 側の `file.size` チェックに加え、**worker 側でも staging ファイルサイズを再検証**（二重化）。実行中は PBI-01 と同じ single-flight ガードで再実行を拒否。件数上限は設けない（サイズ上限で有界）
+6. **上限の明確化**: 復元対象ファイルは PBI-05 と共通のサイズ上限。dashboard 側の `file.size` チェックに加え、**worker 側でも staging ファイルサイズを再検証**（二重化）。実行中は PBI-02 と同じ single-flight ガードで再実行を拒否。件数上限は設けない（サイズ上限で有界）
 7. **PREVIEW の staging は意図的保持**: プレビュー→実行で同一stagingを再利用するため保持し、RESTORE実行・閉じる・ページ離脱のいずれかで削除（孤児掃除でも回収）。意図的保持である旨と掃除タイミングを仕様として明記
 8. **synced=0 の大量投入**: Obsidian/Gist への再書き込みは既存の limit 付きバッチ同期（SyncBatchRunner）が段階処理する旨を仕様に明記（洪水はバッチ上限で有界）
 
 ## Checking Team レビュー反映（2026-09-06・High/Medium 対応。本文と矛盾する場合は本節を優先）
 
 1. **バッチ分割＋再実行収束（High/Tuning調整）**: 復元 INSERT はバッチ分割（5000件/COMMIT）。INSERT OR IGNORE により再実行で収束するため、受け入れ基準「部分更新禁止」を「失敗時も冪等再実行で完結できる（本体は常に整合状態・途中例外はバッチ単位で ROLLBACK）」に修正。テスト: archiveRestore.test.ts 新規（G-1）
-2. **staging レジストリ連携（High/Blue Team）**: incoming は `archive_prepare_incoming`（新op）で offscreen 発行名を取得してから書き込む。RESTORE は offscreen レジストリ値を INSERT 述語に使い、ファイル内 meta との不一致は fail-closed（PBI-01 敵対的反映§3 を継承）
+2. **staging レジストリ連携（High/Blue Team）**: incoming は `archive_prepare_incoming`（新op）で offscreen 発行名を取得してから書き込む。RESTORE は offscreen レジストリ値を INSERT 述語に使い、ファイル内 meta との不一致は fail-closed（PBI-02 敵対的反映§3 を継承）
 3. **QueryCache 無効化（Medium）**: 復元成功後、dashboard 側で History の QueryCache を無効化する手順を実装手順に追加（既存 star/delete と同じ mutation 無効化経路。復元分が一覧に即時表示されること）。テスト: dashboardSqliteService.test.ts マージ（H-1）
 4. **集計の行単位化（Medium/Data Integrity・Test）**: 集計は INSERT 試行ごとの成否で行単位に集計（`changes()` 合計・COUNT 差分に依存しない）。`restoredDeleted` は「実挿入に成功した行のうち is_deleted=1」に限定。CHECK/型違反行は行単位 try/catch で `skipped_invalid` 分類（既存 crudHandlers の慣行）。内訳合計 = restored を受入基準に追加
 5. **PREVIEW staging は意図的保持（Medium/Legacy Bridge）**: プレビュー→実行で同一stagingを再利用するため保持し、RESTORE実行・閉じる・ページ離脱のいずれかで削除（孤児掃除でも回収）。保持が意図的である旨と掃除タイミングを仕様として明記
-6. **allowlist 検証・突合せは PBI-01 共通モジュール使用（High/Maintainability）**: `validateArchiveEngine`（meta.record_count と COUNT(*) の不一致は**拒否**）＋ `table_xinfo` 照合＋ `migrateArchiveStaging(engine)`（不足列は staging に補完・余剰列は COLUMN_NAMES 射影で無視・hidden/generated は拒否継続）を ARCHIVE_RESTORE 冒頭で適用。テスト D-1〜D-3（現行より1列少ない自作アーカイブが開けて復元できる）
+6. **allowlist 検証・突合せは PBI-01 共通モジュール使用（High/Maintainability）**: `validateArchiveEngine`（meta.record_count と COUNT(*) の不一致は**拒否**）＋ `table_xinfo` 照合＋ `migrateArchiveStaging(engine)`（不足列は staging に補完・余剰列は COLUMN_NAMES 射影で無視・hidden/generated は拒否継続）を ARCHIVE_RESTORE 冒頭で適用。共通モジュールは **PBI-01（アーカイブ共通基盤）** で実装（番号再編により旧「PBI-01=退避作成」の記述は PBI-01=基盤を指す）。テスト D-1〜D-3（現行より1列少ない自作アーカイブが開けて復元できる）
 7. **既存 handleRestore へのガード（High/Legacy Bridge）**: 全体復元（`restore_db`）に「`yasumaro_archive_meta` 存在時は拒否（アーカイブ復元UIへ誘導）」の1行ガード＋UI注意文言（全体復元=上書き/アーカイブ復元=マージ、i18n）＋E2E 1ケース（E-1/E-2）
 8. **レガシー・互換（Medium/Legacy Bridge・API）**: 復元分は `resync_legacy` の newest-first 窓（既定1000・上限5000）外になる旨を docs/SETUP_GUIDE.md 復元節に記載。synced=0 の大量投入は既存の limit 付きバッチ同期（SyncBatchRunner）で段階処理される旨を仕様に明記。`archive_format_version=1` の v1 リーダー維持・未知列無視を受入基準に追加（I-2）
 9. **domain は復元時再計算（Medium/Data Integrity）**: `extractDomain(url)` で再計算し、アーカイブ保存値は信頼しない（既存 insert の `record.domain || extractDomain` 慣行と整合）
