@@ -304,3 +304,16 @@ PBI-02 §F2 のスパイクを共有（第2エンジン）。追加で:
 6. **上限の明確化**: 復元対象ファイルは PBI-02 と共通のサイズ上限。dashboard 側の `file.size` チェックに加え、**worker 側でも staging ファイルサイズを再検証**（二重化）。実行中は PBI-01 と同じ single-flight ガードで再実行を拒否。件数上限は設けない（サイズ上限で有界）
 7. **PREVIEW の staging は意図的保持**: プレビュー→実行で同一stagingを再利用するため保持し、RESTORE実行・閉じる・ページ離脱のいずれかで削除（孤児掃除でも回収）。意図的保持である旨と掃除タイミングを仕様として明記
 8. **synced=0 の大量投入**: Obsidian/Gist への再書き込みは既存の limit 付きバッチ同期（SyncBatchRunner）が段階処理する旨を仕様に明記（洪水はバッチ上限で有界）
+
+## Checking Team レビュー反映（2026-09-06・High/Medium 対応。本文と矛盾する場合は本節を優先）
+
+1. **バッチ分割＋再実行収束（High/Tuning調整）**: 復元 INSERT はバッチ分割（5000件/COMMIT）。INSERT OR IGNORE により再実行で収束するため、受け入れ基準「部分更新禁止」を「失敗時も冪等再実行で完結できる（本体は常に整合状態・途中例外はバッチ単位で ROLLBACK）」に修正。テスト: archiveRestore.test.ts 新規（G-1）
+2. **staging レジストリ連携（High/Blue Team）**: incoming は `archive_prepare_incoming`（新op）で offscreen 発行名を取得してから書き込む。RESTORE は offscreen レジストリ値を INSERT 述語に使い、ファイル内 meta との不一致は fail-closed（PBI-01 敵対的反映§3 を継承）
+3. **QueryCache 無効化（Medium）**: 復元成功後、dashboard 側で History の QueryCache を無効化する手順を実装手順に追加（既存 star/delete と同じ mutation 無効化経路。復元分が一覧に即時表示されること）。テスト: dashboardSqliteService.test.ts マージ（H-1）
+4. **集計の行単位化（Medium/Data Integrity・Test）**: 集計は INSERT 試行ごとの成否で行単位に集計（`changes()` 合計・COUNT 差分に依存しない）。`restoredDeleted` は「実挿入に成功した行のうち is_deleted=1」に限定。CHECK/型違反行は行単位 try/catch で `skipped_invalid` 分類（既存 crudHandlers の慣行）。内訳合計 = restored を受入基準に追加
+5. **PREVIEW staging は意図的保持（Medium/Legacy Bridge）**: プレビュー→実行で同一stagingを再利用するため保持し、RESTORE実行・閉じる・ページ離脱のいずれかで削除（孤児掃除でも回収）。保持が意図的である旨と掃除タイミングを仕様として明記
+6. **allowlist 検証・突合せは PBI-01 共通モジュール使用（High/Maintainability）**: `validateArchiveEngine`（meta.record_count と COUNT(*) の不一致は**拒否**）＋ `table_xinfo` 照合＋ `migrateArchiveStaging(engine)`（不足列は staging に補完・余剰列は COLUMN_NAMES 射影で無視・hidden/generated は拒否継続）を ARCHIVE_RESTORE 冒頭で適用。テスト D-1〜D-3（現行より1列少ない自作アーカイブが開けて復元できる）
+7. **既存 handleRestore へのガード（High/Legacy Bridge）**: 全体復元（`restore_db`）に「`yasumaro_archive_meta` 存在時は拒否（アーカイブ復元UIへ誘導）」の1行ガード＋UI注意文言（全体復元=上書き/アーカイブ復元=マージ、i18n）＋E2E 1ケース（E-1/E-2）
+8. **レガシー・互換（Medium/Legacy Bridge・API）**: 復元分は `resync_legacy` の newest-first 窓（既定1000・上限5000）外になる旨を docs/SETUP_GUIDE.md 復元節に記載。synced=0 の大量投入は既存の limit 付きバッチ同期（SyncBatchRunner）で段階処理される旨を仕様に明記。`archive_format_version=1` の v1 リーダー維持・未知列無視を受入基準に追加（I-2）
+9. **domain は復元時再計算（Medium/Data Integrity）**: `extractDomain(url)` で再計算し、アーカイブ保存値は信頼しない（既存 insert の `record.domain || extractDomain` 慣行と整合）
+10. **テスト戦略への追加（Test Experts ケース群 D/G/H/I）**: 上記各項目のテスト配置先は既存慣行（archiveRestore.test.ts 新規・archiveValidation.test.ts 新規・dashboardSqliteService.test.ts・dashboard-ui.spec.ts）に従う

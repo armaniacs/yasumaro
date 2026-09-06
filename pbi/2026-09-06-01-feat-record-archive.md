@@ -410,3 +410,31 @@ F-1〜F-4 のコードと結果は `dev-docs/plans/2026-09-06-archive-spike.md` 
 6. **archive_status の削除**: 初版スコープから除去（表Dから削除）。進捗・キャンセルは将来候補。代わりに「実行中は再実行不可」をUI文言で明示
 7. **受入基準の検証可能化**: 「VACUUM（または同等の空き領域解放）が実行される」を「実行後に `PRAGMA freelist_count` が前回比で減少、またはOPFS上の本体dbファイルサイズが減少する」に置換（F-2で代替案に切替えた場合も同一条件で判定可能）
 8. `archive_preview` の payload はフェーズAと共通の cutoff バリデータを通す（TOKEN_EXEMPT維持・get_count と同コストクラスのため認可水準は現状維持）
+
+## Checking Team レビュー反映（2026-09-06・High/Medium 対応。本文と矛盾する場合は本節を優先）
+
+1. **transport リトライ除外（High）**: バルク系subtype（`archive_create` / `archive_delete_by_staging` / `archive_restore`）は `msgOffscreen` に `noRetry` オプションを指定してリトライ対象外にする（src/background/offscreenTransport.ts）。タイムアウト時は「結果不明（件数は確定しない）」表示にし、0件成功表示をしない。single-flight は同時実行を止めるだけで二重実行を止めない点に注意
+2. **トークンの payload 束縛（High）**: `create_confirm_token` に scopeHash（sha256(`cutoffMs | includeDeleted | stagingName`)）を追加し、`verifyConfirmToken` で厳密比較・単回消費・fail-closed。`dashboardGateway` は取得〜送信間で payload 不変を送信直前に assert。テスト: sqlite-security-integrity.test.ts に「発行後に cutoff 変更→拒否」「別タブ staging 差し替え→拒否」を追加
+3. **staging レジストリ（High）**: offscreen/worker のメモリ内レジストリ（`stagingName → {cutoffMs, includeDeleted, phase, createdAt}`）を3PBI統一の正本とする。フェーズB/RESTORE はレジストリ値を述語に使い、ファイル内 meta と不一致なら fail-closed（実行拒否・両方残置）。offscreen 再起動後はレジストリ消滅のため全 staging は「再 preview 必須」。ファイル名は allowlist 正規表現 `^archive_(outgoing|incoming)_[A-Za-z0-9-]{36}\.db$` で検証
+4. **max_id 述語（Medium/Data Integrity）**: フェーズAで `MAX(id)` を staging meta に `max_id_at_archive` 記録し、フェーズB の DELETE は `WHERE created_at <= ? [AND is_deleted = 0] AND id <= :max_id_at_archive`（PBI-03 復元・JSON import による後着行を保護。VACUUM後の復旧不能ロスを封じる）
+5. **共通モジュール所有者の確定（High）**: `archiveValidation.ts`（`validateArchiveEngine`: allowlist検証＋meta突合せ＋トリガー0）/ `archiveStaging.ts`（staging発行・レジストリ・`sweepOrphanStagings(exclude)`・`releaseStaging`）/ `archiveGuards.ts`（`isHttpUrl` — src/messaging/validators.ts の実装をSSOT化してimport — `cutoffMsFromLocalDate`・サイズ上限定数）を **本PBIのDoD** に含める。PBI-02/03 は「共通モジュールを使用（重複実装禁止）」
+6. **ハンドラ分割（High）**: `archiveHandlers.ts` 単一集約の記述は削除し、`archiveCreateHandlers.ts`（create/preview/cleanup/delete_by_staging）/ `archiveSessionHandlers.ts`（open/query/update/save/close。`archiveEngine` の保有をこのモジュールに閉じ込め `getArchiveEngineOrThrow()` 経由のみ公開）/ `archiveRestoreHandlers.ts`（PBI-03）に責務分割。SW層の archive ハンドラは stateless、セッション状態は offscreen/worker 層に閉じ込める
+7. **subtype は第4グループ（Medium）**: 12 subtype を `ARCHIVE_SUBTYPES` + `createArchiveHandler` に分離し `GROUPED_SUBTYPES` assert を4分割（`maintenanceBatchHandler` には混ぜない — ステートフル操作のため）。`WORKER_MESSAGE_TYPES` 更新チェックリストを4グループ対応に更新
+8. **dashboard OPFS 直アクセスの降格（Medium/Architect調整）**: 第1経路は offscreen 経由読み出し（`handleBackup` の `getFile()` 流用・上限超過分はチャンク分割）。dashboard 直OPFS（archiveStagingService）は F-1 スパイク対象から「将来の最適化候補」に降格し、F-1 合格基準に「Gateway 経由フォールバック動作」を追加。archiveStagingService は `dashboardSqliteService` 配下に置き抽象の裏に隠す
+9. **quota プレフライト（Medium）**: フェーズA/B開始前に `navigator.storage.estimate()` で「本体×2＋ステージング上限」の空きを確認し、不足時は実行拒否＋「ダウンロードフォルダの整理／日付分割」案内。200MB 上限は worker 側でも再検証（3PBI共通定数）
+10. **バッチ分割（High/Tuning調整）**: フェーズAの退避INSERTはバッチ分割（5000件/COMMIT）を設計に含め、`bench/` にアーカイブ相当の長時間系ケース追加を受入基準化。実行中はボタン・日付入力を `disabled`＋既存 status-message（`aria-live="polite"`、`aria-busy`）で「処理中・他の操作は待機」を通知（PBI-02/03共通のUI規定。プログレスバー新規部品は作らない）
+11. **構造化ログ（Medium/SRE）**: フェーズA/B・復元・VACUUMの開始/終了/件数/所要ms/freelist前後を `logInfo`/`logError` 経路へ出力することを受入基準に追加。daily-purge alarm との競合は single-flight 対象に purge を含めるか、ログで順序を追跡
+12. **PRIVACY.md 必須記載（Medium/Compliance）**: DoD の PRIVACY 更新に (a) アーカイブ.db は暗号化・署名なしの平文である旨 (b) 保管・削除はユーザー責任である旨 (c) 削除済み行を含めた場合 GDPR Art.17 で削除済みのデータがファイル内に残る旨 を日英両節に追記
+13. **archive_format_version（Medium/API）**: `yasumaro_archive_meta` に `archive_format_version=1` を追加。受入: 「復元・オープンは format v1 を読み続け、将来 v2 追加時は v1 リーダーを残す。列追加時は未知列無視」
+14. **ERROR_CODES 登録（Medium/API）**: `dev-docs/ERROR_CODES.md` に archive 系コード（`ARCHIVE_ALREADY_OPEN` / `ARCHIVE_INVALID` / `ARCHIVE_STAGING_EXPIRED` 等）を登録し、PBI 内のエラー文字列を列挙表として固定。`code` フィールド追加可否を G レビュー項目に
+15. **レガシーゴースト（High/Legacy）**: 実行前確認に「レガシーストア（savedUrlsWithTimestamps）には残り続ける」旨を明記。`archive_delete_by_staging` 成功時のレガシー対応URL削除の可否を実装時に調査（`removeSavedUrlEntry` 系の有無）
+16. **既存 handleRestore へのガード（High/Legacy）**: 既存全体復元（`restore_db`）に「`yasumaro_archive_meta` 存在時は拒否（アーカイブ復元UIへ誘導）」の1行ガードを追加。全体復元/アーカイブ復元のUI注意文言（i18n）を追加し、E2E「アーカイブ.dbを全体復元に食わせたら拒否」1ケースを追加
+17. **本文クリーンアップ（Low/DX）**: 表Dから `archive_status` 行を削除、C-6 を「初版は同期実行＋再実行不可のUI明示、10秒超過はF-3実測後に別PBI」に一本化、G-1 を撤回
+18. **テスト戦略への追加（Test Experts ケース群 A/B/C/G/E/I）**:
+    - A `src/messaging/__tests__/messageTransport.test.ts` にマージ: バルクsubtypeの noRetry（タイムアウト→再送せず「結果不明」表示）・タイムアウト後の件数は staging meta 再読み値
+    - B `src/__tests__/sqlite-security-integrity.test.ts` にマージ: トークン cutoff/staging 差し替え拒否（B-1/B-2）。`dashboardGateway.test.ts` に送信直前 assert（B-3）
+    - C `src/offscreen/opfsWorker/__tests__/archiveStaging.test.ts`（新規）: レジストリ不一致の拒否・meta不一致の fail-closed・sweep/releaseStaging
+    - C統合 `src/offscreen/__tests__/archiveCreateDelete.test.ts`（新規・sqliteTestApi）: max_id 述語（後着行保護）・検証失敗時本体無傷・freelist_count 減少で VACUUM 効果確認
+    - G 同統合＋ `testDir/e2e/dashboard-ui.spec.ts`: バッチ再実行収束・quota プレフライト拒否・実行中 disabled/aria-live
+    - E 既存 restore 系統合テスト＋E2E: アーカイブ.db を全体復元に食わせたら拒否（E-1/E-2）
+    - I DoD チェックリスト: ERROR_CODES 登録・レガシー制約の SETUP_GUIDE 記載（I-3）
