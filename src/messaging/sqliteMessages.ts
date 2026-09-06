@@ -34,7 +34,10 @@ export type SqliteMessage =
   | { type: 'SQLITE_ARCHIVE_PREVIEW'; payload: { cutoffMs: number; includeDeleted: boolean }; traceId?: string }
   | { type: 'SQLITE_ARCHIVE_CREATE'; payload: { cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }; traceId?: string }
   | { type: 'SQLITE_ARCHIVE_CLEANUP'; payload?: never; traceId?: string }
-  | { type: 'SQLITE_ARCHIVE_EXPORT'; payload: { stagingName: string; offset: number; length: number }; traceId?: string };
+  | { type: 'SQLITE_ARCHIVE_EXPORT'; payload: { stagingName: string; offset: number; length: number }; traceId?: string }
+  | { type: 'SQLITE_ARCHIVE_PREPARE_INCOMING'; payload?: never; traceId?: string }
+  | { type: 'SQLITE_ARCHIVE_RESTORE_PREVIEW'; payload: { stagingName: string }; traceId?: string }
+  | { type: 'SQLITE_ARCHIVE_RESTORE'; payload: { stagingName: string }; traceId?: string };
 
 /**
  * SqliteMessage として扱う type の一覧。offscreen.ts の送信元検証で使用する。
@@ -69,6 +72,9 @@ export const SQLITE_MESSAGE_TYPES = [
   'SQLITE_ARCHIVE_CREATE',
   'SQLITE_ARCHIVE_CLEANUP',
   'SQLITE_ARCHIVE_EXPORT',
+  'SQLITE_ARCHIVE_PREPARE_INCOMING',
+  'SQLITE_ARCHIVE_RESTORE_PREVIEW',
+  'SQLITE_ARCHIVE_RESTORE',
 ] as const;
 
 export type SqliteMessageType = typeof SQLITE_MESSAGE_TYPES[number];
@@ -205,6 +211,37 @@ export type OffscreenArchiveExportResponse =
   | { success: true; chunk: number[]; nextOffset: number; total: number; done: boolean }
   | OffscreenFailure;
 
+/** Restore preview: validated staging meta surfaced to the confirm dialog. */
+export interface ArchiveRestorePreviewData {
+  recordCount: number;
+  cutoffDate: string;
+  cutoffMs: number;
+  includeDeleted: boolean;
+  oldest: number | null;
+  newest: number | null;
+}
+
+/** Restore: per-row counts. `skippedInvalid` covers CHECK/type violations
+ * caught by the row-level error handler. */
+export interface ArchiveRestoreData {
+  restored: number;
+  restoredDeleted: number;
+  skipped: number;
+  skippedInvalid: number;
+}
+
+export type OffscreenArchivePrepareIncomingResponse =
+  | { success: true; stagingName: string }
+  | OffscreenFailure;
+
+export type OffscreenArchiveRestorePreviewResponse =
+  | { success: true; preview: ArchiveRestorePreviewData }
+  | OffscreenFailure;
+
+export type OffscreenArchiveRestoreResponse =
+  | { success: true; restored: number; restoredDeleted: number; skipped: number; skippedInvalid: number }
+  | OffscreenFailure;
+
 /** Every response the offscreen document can send back to the Service Worker. */
 export type OffscreenResponse =
   | OffscreenHealthResponse
@@ -221,4 +258,7 @@ export type OffscreenResponse =
   | OffscreenArchivePreviewResponse
   | OffscreenArchiveCreateResponse
   | OffscreenArchiveCleanupResponse
-  | OffscreenArchiveExportResponse;
+  | OffscreenArchiveExportResponse
+  | OffscreenArchivePrepareIncomingResponse
+  | OffscreenArchiveRestorePreviewResponse
+  | OffscreenArchiveRestoreResponse;

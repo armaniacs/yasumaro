@@ -42,6 +42,9 @@ export const ALL_DASHBOARD_SQLITE_SUBTYPES = [
   'archive_create',
   'archive_cleanup',
   'archive_export',
+  'archive_prepare_incoming',
+  'archive_restore_preview',
+  'archive_restore',
 ] as const;
 
 export type DashboardSqliteSubtype =
@@ -60,6 +63,7 @@ export const READ_ONLY_OPS: ReadonlySet<DashboardSqliteSubtype> = new Set([
   'opfs_spike',
   'audit_log_query',
   'archive_preview',
+  'archive_restore_preview',
 ]);
 
 /**
@@ -76,6 +80,7 @@ export const TOKEN_EXEMPT_OPS = [
   'opfs_spike',
   'audit_log_query',
   'archive_preview',
+  'archive_restore_preview',
 ] as const;
 
 export const tokenExempt: ReadonlySet<DashboardSqliteSubtype> = new Set(

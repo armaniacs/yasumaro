@@ -3637,6 +3637,36 @@
   "archiveCleanupFailed": {
     "message": "Staging cleanup failed"
   },
+  "archiveRestoreSectionTitle": {
+    "message": "Restore from archive"
+  },
+  "archiveRestoreSectionDesc": {
+    "message": "Merge records from an archive file back into the local database. Existing records are kept; duplicates (same URL and time) are skipped."
+  },
+  "archiveRestoreFileLabel": {
+    "message": "Archive file"
+  },
+  "archiveRestoreBtn": {
+    "message": "Restore into main database"
+  },
+  "archiveRestorePreviewSummary": {
+    "message": "Ready to restore: {count} record(s) (archive boundary: {date})."
+  },
+  "archiveRestoreDone": {
+    "message": "Restore complete: {restored} restored ({deleted} deleted-flagged), {skipped} skipped as duplicates, {invalid} invalid."
+  },
+  "archiveRestoreDoneStatus": {
+    "message": "Archive restore completed."
+  },
+  "archiveRestoreFailed": {
+    "message": "Archive restore failed"
+  },
+  "archiveRestorePreviewFailed": {
+    "message": "Archive restore preview failed"
+  },
+  "archiveFileTooLarge": {
+    "message": "Archive file exceeds {max} MB"
+  },
   "exportLogsTab": {
     "message": "Export Logs"
   },

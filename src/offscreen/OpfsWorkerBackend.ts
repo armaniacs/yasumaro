@@ -1,7 +1,7 @@
 // src/offscreen/OpfsWorkerBackend.ts
 import type { SqliteEngineHost } from './sqliteEngineHost.js';
-import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError, ArchivePreviewResult, ArchiveCreateResult, ArchiveCleanupResult, ArchiveExportChunkResult, ArchiveCreateParams } from './StorageBackend.js';
-import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData } from '../messaging/sqliteMessages.js';
+import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError, ArchivePreviewResult, ArchiveCreateResult, ArchiveCleanupResult, ArchiveExportChunkResult, ArchiveCreateParams, ArchivePrepareIncomingResult, ArchiveRestorePreviewResult, ArchiveRestoreResult } from './StorageBackend.js';
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData } from '../messaging/sqliteMessages.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 
 export class OpfsWorkerBackend implements StorageBackend {
@@ -84,6 +84,30 @@ export class OpfsWorkerBackend implements StorageBackend {
     const result = await this.engine.tryOpfsProxy<ArchiveExportData>('ARCHIVE_EXPORT', { stagingName, offset, length });
     if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
     return { success: true, chunk: result.chunk, nextOffset: result.nextOffset, total: result.total, done: result.done };
+  }
+
+  async archivePrepareIncoming(): Promise<BackendOrError<ArchivePrepareIncomingResult>> {
+    const result = await this.engine.tryOpfsProxy<string>('ARCHIVE_PREPARE_INCOMING');
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return { success: true, stagingName: result };
+  }
+
+  async archiveRestorePreview(stagingName: string): Promise<BackendOrError<ArchiveRestorePreviewResult>> {
+    const result = await this.engine.tryOpfsProxy<ArchiveRestorePreviewData>('ARCHIVE_RESTORE_PREVIEW', { stagingName });
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return { success: true, preview: result };
+  }
+
+  async archiveRestore(stagingName: string): Promise<BackendOrError<ArchiveRestoreResult>> {
+    const result = await this.engine.tryOpfsProxy<ArchiveRestoreData>('ARCHIVE_RESTORE', { stagingName });
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return {
+      success: true,
+      restored: result.restored,
+      restoredDeleted: result.restoredDeleted,
+      skipped: result.skipped,
+      skippedInvalid: result.skippedInvalid,
+    };
   }
 
   async restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>> {

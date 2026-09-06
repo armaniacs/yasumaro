@@ -5,7 +5,7 @@
  */
 
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
-import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData } from '../messaging/sqliteMessages.js';
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData } from '../messaging/sqliteMessages.js';
 // PBI-05: unified SqliteResult vocabulary — both hops now share the same
 // error classification and result shape via SqliteGateway.
 // PBI 11: the DASHBOARD_SQLITE send policy (token gate, timeout, retry) lives
@@ -397,6 +397,47 @@ export function archiveExportChunk(stagingName: string, offset: number, length: 
     { subtype: 'archive_export', stagingName, offset, length },
     (response) => ({ chunk: response.chunk, nextOffset: response.nextOffset, total: response.total, done: response.done }),
     'Archive export failed',
+  );
+}
+
+/**
+ * Issue a registered incoming staging name (offscreen-generated). The
+ * dashboard then writes the picked file's bytes into that OPFS file.
+ */
+export function archivePrepareIncoming(): Promise<ServiceResult<string>> {
+  return callDashboard(
+    { subtype: 'archive_prepare_incoming' },
+    (response) => {
+      if (!response.stagingName) throw new Error('Archive prepare returned no staging name');
+      return response.stagingName;
+    },
+    'Archive preparation failed',
+  );
+}
+
+/** Read-only preview of a validated staging archive (confirm-dialog data). */
+export function archiveRestorePreview(stagingName: string): Promise<ServiceResult<ArchiveRestorePreviewData>> {
+  return callDashboard(
+    { subtype: 'archive_restore_preview', stagingName },
+    (response) => {
+      if (!response.preview) throw new Error('Archive restore preview returned no data');
+      return response.preview;
+    },
+    'Archive restore preview failed',
+  );
+}
+
+/** Merge-restore the staging archive into the main DB (destructive-op gate). */
+export function archiveRestore(stagingName: string): Promise<ServiceResult<ArchiveRestoreData>> {
+  return callDashboard(
+    { subtype: 'archive_restore', stagingName },
+    (response) => ({
+      restored: response.restored,
+      restoredDeleted: response.restoredDeleted,
+      skipped: response.skipped,
+      skippedInvalid: response.skippedInvalid,
+    }),
+    'Archive restore failed',
   );
 }
 

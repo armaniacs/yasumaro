@@ -88,6 +88,25 @@ export async function archiveExportChunk(stagingName: string, offset: number, le
   return backend.archiveExportChunk(stagingName, offset, length);
 }
 
+export type ArchivePrepareIncomingBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archivePrepareIncoming']>>;
+export type ArchiveRestorePreviewBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archiveRestorePreview']>>;
+export type ArchiveRestoreBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archiveRestore']>>;
+
+export async function archivePrepareIncoming(): Promise<ArchivePrepareIncomingBackendResult> {
+  const backend = await engine.getBackend();
+  return backend.archivePrepareIncoming();
+}
+
+export async function archiveRestorePreview(stagingName: string): Promise<ArchiveRestorePreviewBackendResult> {
+  const backend = await engine.getBackend();
+  return backend.archiveRestorePreview(stagingName);
+}
+
+export async function archiveRestore(stagingName: string): Promise<ArchiveRestoreBackendResult> {
+  const backend = await engine.getBackend();
+  return backend.archiveRestore(stagingName);
+}
+
 /**
  * Lightweight health check — verifies the SQLite database is reachable.
  * Returns true if a SELECT 1 succeeds on any available backend.

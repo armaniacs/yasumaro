@@ -65,6 +65,40 @@ export function createArchiveHandler(deps: ArchiveHandlerDeps) {
           ? { success: true, removed: result.data.removed }
           : toFailure(result);
       }
+      case 'archive_prepare_incoming': {
+        const result: DepsResult<string> = await deps.archivePrepareIncoming();
+        return result.success
+          ? { success: true, stagingName: result.data }
+          : toFailure(result);
+      }
+      case 'archive_restore_preview': {
+        const p = payload as { stagingName?: unknown };
+        if (typeof p.stagingName !== 'string' || p.stagingName.length === 0) {
+          return { success: false, error: 'archive_restore_preview: stagingName is required' };
+        }
+        const result: DepsResult<import('../../../messaging/sqliteMessages.js').ArchiveRestorePreviewData> =
+          await deps.archiveRestorePreview(p.stagingName);
+        return result.success
+          ? { success: true, preview: result.data }
+          : toFailure(result);
+      }
+      case 'archive_restore': {
+        const p = payload as { stagingName?: unknown };
+        if (typeof p.stagingName !== 'string' || p.stagingName.length === 0) {
+          return { success: false, error: 'archive_restore: stagingName is required' };
+        }
+        const result: DepsResult<import('../../../messaging/sqliteMessages.js').ArchiveRestoreData> =
+          await deps.archiveRestore(p.stagingName);
+        return result.success
+          ? {
+              success: true,
+              restored: result.data.restored,
+              restoredDeleted: result.data.restoredDeleted,
+              skipped: result.data.skipped,
+              skippedInvalid: result.data.skippedInvalid,
+            }
+          : toFailure(result);
+      }
       default: {
         const unknownSubtype = (payload as { subtype?: string }).subtype;
         return { success: false, error: `Unknown archive subtype: ${String(unknownSubtype)}` };

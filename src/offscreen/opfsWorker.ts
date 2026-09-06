@@ -29,6 +29,11 @@ import {
   handleArchiveCleanup,
   handleArchiveExport,
 } from './opfsWorker/archiveCreateHandlers.js';
+import {
+  handleArchivePrepareIncoming,
+  handleArchiveRestorePreview,
+  handleArchiveRestore,
+} from './opfsWorker/archiveRestoreHandlers.js';
 import { handlePurgeOldRecords, handleContentPurge, handleClearAll } from './opfsWorker/purgeHandlers.js';
 import { handleAuditLogInsert, handleAuditLogQuery } from './opfsWorker/auditHandlers.js';
 import { handleGetStatus, handleFtsIndexSize } from './opfsWorker/statusHandlers.js';
@@ -271,6 +276,18 @@ export async function handleRequest(req: WorkerRequestMessage): Promise<WorkerRe
       }
       case 'ARCHIVE_EXPORT': {
         result = await handleArchiveExport(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveExportPayload);
+        break;
+      }
+      case 'ARCHIVE_PREPARE_INCOMING': {
+        result = await handleArchivePrepareIncoming(handlerCtx);
+        break;
+      }
+      case 'ARCHIVE_RESTORE_PREVIEW': {
+        result = await handleArchiveRestorePreview(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveRestorePreviewPayload);
+        break;
+      }
+      case 'ARCHIVE_RESTORE': {
+        result = await handleArchiveRestore(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveRestorePayload);
         break;
       }
       case 'FTS_INDEX_SIZE': {

@@ -3504,6 +3504,36 @@
   "archiveCleanupFailed": {
     "message": "ステージングの掃除に失敗しました"
   },
+  "archiveRestoreSectionTitle": {
+    "message": "アーカイブから復元"
+  },
+  "archiveRestoreSectionDesc": {
+    "message": "アーカイブファイルのレコードをローカルDBへ取り込みます。既存レコードは保持され、重複（同一URL・同一時刻）はスキップされます。"
+  },
+  "archiveRestoreFileLabel": {
+    "message": "アーカイブファイル"
+  },
+  "archiveRestoreBtn": {
+    "message": "メインDBへ復元"
+  },
+  "archiveRestorePreviewSummary": {
+    "message": "復元準備完了: {count}件（アーカイブ境界: {date}）"
+  },
+  "archiveRestoreDone": {
+    "message": "復元完了: {restored}件を取り込み（削除済みフラグ付き {deleted}件）、重複スキップ {skipped}件、無効 {invalid}件。"
+  },
+  "archiveRestoreDoneStatus": {
+    "message": "アーカイブの復元が完了しました。"
+  },
+  "archiveRestoreFailed": {
+    "message": "アーカイブの復元に失敗しました"
+  },
+  "archiveRestorePreviewFailed": {
+    "message": "アーカイブ復元の確認に失敗しました"
+  },
+  "archiveFileTooLarge": {
+    "message": "アーカイブファイルが{max}MBを超えています"
+  },
   "exportLogsTab": {
     "message": "ログをエクスポート"
   },

@@ -25,9 +25,14 @@ import type {
   OffscreenArchiveCreateResponse,
   OffscreenArchiveCleanupResponse,
   OffscreenArchiveExportResponse,
+  OffscreenArchivePrepareIncomingResponse,
+  OffscreenArchiveRestorePreviewResponse,
+  OffscreenArchiveRestoreResponse,
   ArchivePreviewData,
   ArchiveCreateData,
   ArchiveExportData,
+  ArchiveRestorePreviewData,
+  ArchiveRestoreData,
 } from '../../messaging/sqliteMessages.js';
 import type { OffscreenTransport } from '../offscreenTransport.js';
 import { ChromeOffscreenTransport } from '../offscreenTransport.js';
@@ -109,6 +114,9 @@ export class OffscreenGateway {
   async maintain(op: { type: 'archiveCreate'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }): Promise<SqliteResult<ArchiveCreateData>>;
   async maintain(op: { type: 'archiveCleanup' }): Promise<SqliteResult<{ removed: string[] }>>;
   async maintain(op: { type: 'archiveExport'; stagingName: string; offset: number; length: number }): Promise<SqliteResult<ArchiveExportData>>;
+  async maintain(op: { type: 'archivePrepareIncoming' }): Promise<SqliteResult<string>>;
+  async maintain(op: { type: 'archiveRestorePreview'; stagingName: string }): Promise<SqliteResult<ArchiveRestorePreviewData>>;
+  async maintain(op: { type: 'archiveRestore'; stagingName: string }): Promise<SqliteResult<ArchiveRestoreData>>;
   async maintain(op: MaintainOp): Promise<SqliteResult<unknown>> {
     switch (op.type) {
       case 'init': { const result = await this.callInternal<boolean, OffscreenHealthResponse>('SQLITE_INIT'); return result.success ? { success: true, data: true } : result; }
@@ -125,6 +133,12 @@ export class OffscreenGateway {
       case 'archiveCreate': return this.callInternal<ArchiveCreateData, OffscreenArchiveCreateResponse>('SQLITE_ARCHIVE_CREATE', { cutoffDate: op.cutoffDate, cutoffMs: op.cutoffMs, includeDeleted: op.includeDeleted, yasumaroVersion: op.yasumaroVersion }, (res) => ({ stagingName: res.stagingName, recordCount: res.recordCount }), undefined, { noRetry: true });
       case 'archiveCleanup': return this.callInternal<{ removed: string[] }, OffscreenArchiveCleanupResponse>('SQLITE_ARCHIVE_CLEANUP', {}, (res) => ({ removed: res.removed }));
       case 'archiveExport': return this.callInternal<ArchiveExportData, OffscreenArchiveExportResponse>('SQLITE_ARCHIVE_EXPORT', { stagingName: op.stagingName, offset: op.offset, length: op.length }, (res) => ({ chunk: res.chunk, nextOffset: res.nextOffset, total: res.total, done: res.done }));
+      case 'archivePrepareIncoming': return this.callInternal<string, OffscreenArchivePrepareIncomingResponse>('SQLITE_ARCHIVE_PREPARE_INCOMING', {}, (res) => res.stagingName);
+      case 'archiveRestorePreview': return this.callInternal<ArchiveRestorePreviewData, OffscreenArchiveRestorePreviewResponse>('SQLITE_ARCHIVE_RESTORE_PREVIEW', { stagingName: op.stagingName }, (res) => res.preview);
+      // Bulk write: noRetry — a timeout leaves the restore running in the
+      // worker and a blind retry would re-insert (INSERT OR IGNORE makes the
+      // re-run converge, but counts would be wrong).
+      case 'archiveRestore': return this.callInternal<ArchiveRestoreData, OffscreenArchiveRestoreResponse>('SQLITE_ARCHIVE_RESTORE', { stagingName: op.stagingName }, (res) => ({ restored: res.restored, restoredDeleted: res.restoredDeleted, skipped: res.skipped, skippedInvalid: res.skippedInvalid }), undefined, { noRetry: true });
       default: { const exhaustive: never = op; void exhaustive; throw new Error('Unhandled maintain op'); }
     }
   }
@@ -173,6 +187,9 @@ export class SqliteClient implements SqliteRpcClient {
   async maintain(op: { type: 'archiveCreate'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }): Promise<SqliteRpcResult<ArchiveCreateData>>;
   async maintain(op: { type: 'archiveCleanup' }): Promise<SqliteRpcResult<{ removed: string[] }>>;
   async maintain(op: { type: 'archiveExport'; stagingName: string; offset: number; length: number }): Promise<SqliteRpcResult<ArchiveExportData>>;
+  async maintain(op: { type: 'archivePrepareIncoming' }): Promise<SqliteRpcResult<string>>;
+  async maintain(op: { type: 'archiveRestorePreview'; stagingName: string }): Promise<SqliteRpcResult<ArchiveRestorePreviewData>>;
+  async maintain(op: { type: 'archiveRestore'; stagingName: string }): Promise<SqliteRpcResult<ArchiveRestoreData>>;
   async maintain(op: MaintainOp): Promise<SqliteRpcResult<unknown>> { const maintain = this.gateway.maintain.bind(this.gateway) as (op: MaintainOp) => Promise<SqliteRpcResult<unknown>>; return maintain(op); }
   async getStatus(): Promise<Omit<OffscreenStatusData, 'success'> | null> { return this.gateway.getStatus(); }
   async status(): Promise<SqliteResult<Omit<OffscreenStatusData, 'success'>>> { return this.gateway.status(); }
