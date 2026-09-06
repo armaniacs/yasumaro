@@ -18,9 +18,7 @@
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
 
-### 2026-09-06 レコードアーカイブ（**全5PBI完了＋文言修正完了**。着手順 = ~~01 基盤~~ ✅ / ~~02 退避作成~~ ✅ / ~~03 復元~~ ✅ / ~~04 本体削除~~ ✅ / ~~05 一時オープン~~ ✅ / ~~06 文言修正~~ ✅ / **07 編集モーダル（次・1pt）**。2026-09-06 再編: 旧01/02/03をレビュー反映込みで分割・リネーム）
-
-- 2026-09-06-07-feat-archive-edit-modal.md（⬜ **次に着手（1pt）**: アーカイブセッションのタイトル編集を window.prompt からアクセシブルなモーダル（focusTrapManager再利用・role=dialog・Tab循環・Esc・フォーカス復帰）に置き換え。PBI-05 D-4 の未充足分。1pt / 副作用 🟢 / ✨）
+### 2026-09-06 レコードアーカイブ（**全5PBI完了＋文言修正＋編集モーダル完了**。着手順 = ~~01〜05~~ ✅ / ~~06 文言修正~~ ✅ / ~~07 編集モーダル~~ ✅。2026-09-06 再編: 旧01/02/03をレビュー反映込みで分割・リネーム）
 
 - 2026-09-06-06-fix-archive-backup-wording.md（⬜ **次に着手（軽微・1pt未満）**: Archiveパネルの説明文を「退避します…削除できます」→「バックアップします…削除も可能です」に修正（ユーザー指定文面）。**文言のみ・実装ロジック変更なし**（フェーズAは既に本体不変のコピーであり、望ましい文言のほうが実装を正確に記述 — 分析はPBI内参照）。SETUP_GUIDE/FAQ/READMEの用語統一も含む / 副作用 🟢 / 🔧（文言修正））
 
@@ -58,6 +56,10 @@
 ### 2026-09-06 アーカイブ 退避作成（着手完了）
 
 - 2026-09-06-02-feat-record-archive.md（✅ 完了・アーカイブ済 — フェーズA: 日付指定アーカイブ作成。第4subtypeグループ（archive_preview/create/cleanup/export）を確定、opfsWorker archiveCreateHandlers（バッチINSERT 5000/COMMIT・validateArchiveEngine 検証・max_id_at_archive 記録・single-flight・quotaプレフライト）、ダッシュボード Archive パネル（プレビュー集計・チャンクDL・staging掃除）、i18n 22キー。検証: type-check / lint 0 errors / 11783 tests / build / E2E 104 green。実装メモに逸脱（archive_export 追加・E2Eは静的検証＋jsdomユニット）を記録）
+
+### 2026-09-06 アーカイブ 編集モーダル（着手完了）
+
+- 2026-09-06-07-feat-archive-edit-modal.md（✅ 完了・アーカイブ済 — window.prompt を role=dialog＋aria-modal＋Tab循環＋Esc＋起動要素フォーカス復帰のアクセシブルなモーダルに置き換え（focusTrapManager再利用）。保存時バリデーション（空文字/500字超・role=alert）。i18n 6キー。検証: type-check / lint 0 errors / 11837 tests / build green）
 
 ### 2026-09-06 アーカイブ 文言修正（着手完了）
 

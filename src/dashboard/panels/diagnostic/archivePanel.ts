@@ -16,6 +16,7 @@ import { type PanelLifecycle } from '../types.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { cutoffMsFromLocalDate, MAX_ARCHIVE_FILE_BYTES } from '../../../utils/archiveGuards.js';
+import { focusTrapManager } from '../../../utils/ui/focusTrap.js';
 import { getMessage } from '../../../utils/i18n.js';
 
 /** Per-message binary payload — keeps base64 hops under the 10MB cap. */
@@ -221,20 +222,24 @@ export function createArchivePanel(): PanelLifecycle {
           ...rows.map((row) => {
             const item = document.createElement('div');
             item.className = 'archive-session-row';
+            item.dataset.rowId = String(row.id);
             const label = document.createElement('span');
             label.textContent = `${new Date(row.created_at).toISOString().slice(0, 16).replace('T', ' ')} ${row.title || row.url}`;
             const editBtn = document.createElement('button');
             editBtn.className = 'btn btn-secondary btn-sm';
             editBtn.textContent = localized('archiveSessionEditBtn');
             editBtn.addEventListener('click', () => {
-              const next = window.prompt(localized('archiveSessionEditPrompt'), row.title ?? '');
-              if (next === null || next === row.title) return;
-              void (async () => {
-                const update = await archiveUpdate(sessionStaging as string, row.id, { title: next });
-                if ('error' in update) throw new Error(update.error);
-                archiveDirtyLocal = true;
-                await renderSessionList();
-              })().catch((err) => showStatus(statusTarget(statusEl), errorMessage(err), 'error'));
+              openEditModal(row, editBtn, {
+                onSave: async (newTitle: string) => {
+                  const update = await archiveUpdate(sessionStaging as string, row.id, { title: newTitle });
+                  if ('error' in update) throw new Error(update.error);
+                  archiveDirtyLocal = true;
+                },
+                onClosed: async () => {
+                  await renderSessionList();
+                },
+                onError: (message: string) => showStatus(statusTarget(statusEl), message, 'error'),
+              });
             });
             item.appendChild(label);
             item.appendChild(editBtn);
@@ -244,6 +249,114 @@ export function createArchivePanel(): PanelLifecycle {
       };
 
       let archiveDirtyLocal = false;
+
+      const openEditModal = (
+        row: ArchiveSessionRowLike,
+        trigger: HTMLElement,
+        hooks: EditModalHooks,
+      ): void => {
+        const overlay = document.createElement('div');
+        overlay.className = 'archive-modal-overlay';
+
+        const dialog = document.createElement('div');
+        dialog.className = 'archive-modal';
+        dialog.setAttribute('role', 'dialog');
+        dialog.setAttribute('aria-modal', 'true');
+
+        const titleId = 'archive-edit-modal-title';
+        const heading = document.createElement('h3');
+        heading.id = titleId;
+        heading.setAttribute('data-i18n', 'archiveModalTitle');
+        heading.textContent = localized('archiveModalTitle');
+        dialog.appendChild(heading);
+
+        const label = document.createElement('label');
+        label.setAttribute('for', 'archive-edit-input');
+        label.setAttribute('data-i18n', 'archiveModalTitleLabel');
+        label.textContent = localized('archiveModalTitleLabel');
+        dialog.appendChild(label);
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'archive-edit-input';
+        input.value = row.title ?? '';
+        dialog.appendChild(input);
+
+        const errorEl = document.createElement('p');
+        errorEl.className = 'archive-modal-error';
+        errorEl.setAttribute('role', 'alert');
+        errorEl.hidden = true;
+        dialog.appendChild(errorEl);
+
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'btn btn-primary archive-modal-save';
+        saveBtn.setAttribute('data-i18n', 'archiveModalSave');
+        saveBtn.textContent = localized('archiveModalSave');
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-secondary archive-modal-cancel';
+        cancelBtn.textContent = localized('archiveModalCancel');
+
+        const buttonRow = document.createElement('div');
+        buttonRow.className = 'archive-modal-buttons';
+        buttonRow.appendChild(saveBtn);
+        buttonRow.appendChild(cancelBtn);
+        dialog.appendChild(buttonRow);
+
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        const close = (): void => {
+          focusTrapManager.release(trapId);
+          overlay.remove();
+          trigger.focus();
+        };
+
+        const closeModalAndSave = async (): Promise<void> => {
+          const next = input.value.trim();
+          if (next.length === 0) {
+            errorEl.hidden = false;
+            errorEl.textContent = localized('archiveModalTitleRequired');
+            input.focus();
+            return;
+          }
+          if (next.length > 500) {
+            errorEl.hidden = false;
+            errorEl.textContent = localized('archiveModalTitleTooLong');
+            input.focus();
+            return;
+          }
+          errorEl.hidden = true;
+          try {
+            await hooks.onSave(next);
+            // Restore focus to the originating row BEFORE the list re-renders.
+            close();
+            await hooks.onClosed?.();
+            // The list re-render recreates the row: keep focus on its edit button.
+            const rowEl = container.querySelector(`.archive-session-row[data-row-id="${row.id}"]`);
+            (rowEl?.querySelector('button') as HTMLElement | null)?.focus();
+          } catch (err) {
+            errorEl.hidden = false;
+            errorEl.textContent = errorMessage(err);
+          }
+        };
+
+        saveBtn.addEventListener('click', () => {
+          void closeModalAndSave();
+        });
+        cancelBtn.addEventListener('click', close);
+        dialog.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && e.target === input) {
+            e.preventDefault();
+            void closeModalAndSave();
+          }
+        });
+
+        dialog.setAttribute('aria-labelledby', titleId);
+        const trapId = focusTrapManager.trap(dialog, close);
+        input.focus();
+      };
+
 
       // 再接続: mount時にstatusを取得し、open中なら一覧を再表示
       void (async () => {
@@ -405,4 +518,26 @@ export function createArchivePanel(): PanelLifecycle {
       }
     },
   };
+}
+
+
+// ============================================================================
+// Edit modal (PBI 2026-09-06-07) — accessible dialog replacing window.prompt
+// ============================================================================
+
+interface ArchiveSessionRowLike {
+  id: number;
+  title: string | null;
+}
+
+
+interface EditModalHooks {
+  onSave: (newTitle: string) => Promise<void>;
+  onClosed?: () => Promise<void> | void;
+  onError: (message: string) => void;
+}
+
+interface ArchiveSessionRowLike {
+  id: number;
+  title: string | null;
 }
