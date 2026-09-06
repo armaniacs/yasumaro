@@ -232,7 +232,7 @@ BDD「オープン中、メインDB宛ての操作がアーカイブ側へ誤ル
 - `ARCHIVE_QUERY` で `handleQuery(handlerCtx, ...)` を流用すると**メイン DB を検索してしまう**。
 - `handlerCtx` を差し替える（`{ engine: archiveEngine }` を渡す）方式は、`handleSearch` が `fts5Available`（module-level）も見るため中途半端。
 
-→ `archiveHandlers.ts` に `let archiveEngine: SqliteEngine | null = null` を持ち、`ARCHIVE_*` ハンドラは**専用の SQL 実行**（`archiveEngine.query(...)` を直接呼ぶ）。メインの `crudHandlers` / `searchHandlers` は一切流用しない。LIKE 検索の SQL 組み立ては `queryPlan.ts` の `buildLikeSearchStatements`（`browsing_logs` 単体、FTS JOIN なし）を流用可能。
+→ `archiveSessionHandlers.ts` に `let archiveEngine: SqliteEngine | null = null` を持ち、`ARCHIVE_*` ハンドラは**専用の SQL 実行**（`archiveEngine.query(...)` を直接呼ぶ）。メインの `crudHandlers` / `searchHandlers` は一切流用しない。LIKE 検索の SQL 組み立ては `queryPlan.ts` の `buildLikeSearchStatements`（`browsing_logs` 単体、FTS JOIN なし）を流用可能。
 
 #### C2-3. 書き戻し — 両経路実装、E2E は DL 経路
 
