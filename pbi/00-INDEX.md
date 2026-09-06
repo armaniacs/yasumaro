@@ -18,11 +18,13 @@
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
 
-### 2026-09-06 レコードアーカイブ（着手順 = 01 → 02 → 03。02は01のファイル形式に依存、03は02に非依存）
+### 2026-09-06 レコードアーカイブ（着手順 = **01 基盤 → 02 退避作成 → 03 復元 → 04 本体削除 → 05 一時オープン**。2026-09-06 再編: 旧01/02/03をレビュー反映込みで分割・リネーム。NN=着手順）
 
-- 2026-09-06-01-feat-record-archive.md（⬜ 日付指定アーカイブ作成: 境界日以前のレコードを標準SQLite .db に書き出し＋本体から削除＋ダウンロード。FTS5なし・metaテーブル付きのアーカイブ形式を本PBIで定義。5pt / 副作用 🔴 / ✨）
-- 2026-09-06-02-feat-archive-temp-open.md（⬜ アーカイブの一時オープン: メインDB非汚染でアーカイブ.db を参照・編集・書き戻し。**着手条件: PBI内スパイク必須**（第2エンジン長期同時オープンの検証）。8pt / 副作用 🟡 / ✨）
-- 2026-09-06-03-feat-archive-restore.md（⬜ アーカイブからメインDBへの復元: INSERT OR IGNORE でマージ再取り込み・重複スキップ・id再採番。03単独でも価値あり（02編集済みアーカイブも復元可）。3pt / 副作用 🟡 / ✨）
+- 2026-09-06-01-feat-archive-foundation.md（⬜ アーカイブ共通基盤: `archiveValidation`（allowlist構造検証＋table_xinfo＋meta突合せ）/ `archiveStaging`（レジストリ・sweep）/ `archiveGuards`（cutoff・isHttpUrl・上限）のSSOT化、transport noRetry、トークンscopeHash束縛、**既存全体復元へのアーカイブ拒否ガード**、downloadBlob遅延解放、ERROR_CODES登録。02/03/05の着手条件。3pt / 副作用 🟢 / ✨）
+- 2026-09-06-02-feat-record-archive.md（⬜ 日付指定アーカイブ作成・フェーズA: 境界日以前のレコードを標準SQLite .db に退避＋ダウンロード（**本体は未削除**）。アーカイブ形式（meta・FTS5なし・archive_format_version）を本PBIで定義、第4subtypeグループ確定。バッチINSERT・構造化ログ。6pt / 副作用 🟢（フェーズAは本体不変） / ✨）
+- 2026-09-06-03-feat-archive-restore.md（⬜ アーカイブからメインDBへの復元: INSERT OR IGNORE でマージ再取り込み・重複スキップ・id再採番・バッチ分割＋再実行収束。03単独でも価値あり（05編集済みアーカイブも復元可）。3pt / 副作用 🟡 / ✨）
+- 2026-09-06-04-feat-archive-purge-staging.md（⬜ ステージングからの本体削除・フェーズB: 検証済みstaging参照＋max_id述語（後着行保護）＋VACUUM（freelist検証）＋quotaプレフライト＋single-flight。破壊的操作を独立PBIに隔離。2pt / 副作用 🔴 / ✨）
+- 2026-09-06-05-feat-archive-temp-open.md（⬜ アーカイブの一時オープン: メインDB非汚染でアーカイブ.db を参照・編集・書き戻し。**着手条件: PBI内スパイク必須**（第2エンジン長期同時オープン・03/04実装中に先行実施可）。8pt / 副作用 🟡 / ✨）
 
 ### 将来候補の統合台帳（live）
 
