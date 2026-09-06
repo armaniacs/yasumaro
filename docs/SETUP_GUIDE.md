@@ -498,17 +498,17 @@ Each history entry shows a badge indicating which privacy mode was used when it 
 ### 日本語
 
 #### 閲覧履歴アーカイブ
-`Dashboard → Archive` パネルで、指定日までの閲覧履歴を標準SQLiteファイルとして退避・復元できます。削除ではなく「退避」が先に行われるため、データを失う心配なくストレージを整理できます。
+`Dashboard → Archive` パネルで、指定日までの閲覧履歴を標準SQLiteファイルとしてバックアップ・復元できます。削除はバックアップの後に行われるため、データを失う心配なくストレージを整理できます。
 
-**フェーズ1: アーカイブ作成（退避）**
+**フェーズ1: アーカイブ作成（バックアップ）**
 - 日付を選択し「Check records to archive」で対象件数を確認（スター付き・削除済みの内訳も表示）
-- 「Create archive file」で退避ファイル（`yasumaro_archive_<日付>.db`）を作成し、ダウンロード
+- 「Create archive file」でアーカイブファイル（バックアップ、`yasumaro_archive_<日付>.db`）を作成し、ダウンロード
 - 作成ファイルは標準SQLiteなので、DB Browser for SQLite 等で直接開けます
 - **この時点では本体DBは変更されません**
 - 削除済みレコードはデフォルトで除外されます（含める場合はチェックをONに。除外した分は後から復元できません）
 
 **フェーズ2: 本体からの削除（ストレージ解放）**
-- ファイルのダウンロード後、「Delete records from main database」で本体から退避済みレコードを削除
+- ファイルのダウンロード後、「Delete records from main database」で本体からアーカイブ済みレコードを削除
 - 削除はフェーズ1で作成したファイルの内容と突合せてから実行され、フェーズ1以降に追加されたレコードは保護されます
 - 注意: レガシーストレージのコピーは、レガシークリーンアップが実行されるまで残ることがあります
 
@@ -542,9 +542,9 @@ Chrome、Microsoft Edge、Brave など、Chromium 系ブラウザで動作しま
 ### English
 
 #### History Archive
-The `Dashboard → Archive` panel lets you export browsing history up to a chosen date as a standard SQLite file, and restore it back into the local database. Because "export" runs before "delete", you can organize storage without fear of losing data.
+The `Dashboard → Archive` panel lets you back up browsing history up to a chosen date as a standard SQLite file, and restore it back into the local database. Because the backup runs before deletion, you can organize storage without fear of losing data.
 
-**Phase 1: Create archive (export)**
+**Phase 1: Create archive (backup)**
 - Pick a date and use "Check records to archive" to review the record counts (starred / deleted breakdown included)
 - "Create archive file" creates an archive (`yasumaro_archive_<date>.db`) and downloads it
 - The created file is a standard SQLite database — open it directly with DB Browser for SQLite, etc.

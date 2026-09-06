@@ -3581,7 +3581,7 @@
     "message": "Archive"
   },
   "archivePanelDescription": {
-    "message": "Export browsing history up to a chosen date as a standard SQLite file, then remove it from the local database (phase 2) once you have the file. The exported file can be opened with any SQLite tool."
+    "message": "Backs up browsing history up to a chosen date as a standard SQLite file. In phase 2 (next step), you can also delete it from the local database. The exported file can be opened with any SQLite tool."
   },
   "archiveDateLabel": {
     "message": "Archive records up to (inclusive)"
