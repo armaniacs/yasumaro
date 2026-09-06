@@ -62,8 +62,8 @@ export class OpfsWorkerBackend implements StorageBackend {
     return { success: true, data: result };
   }
 
-  async archivePreview(cutoffMs: number, includeDeleted: boolean): Promise<BackendOrError<ArchivePreviewResult>> {
-    const result = await this.engine.tryOpfsProxy<ArchivePreviewData>('ARCHIVE_PREVIEW', { cutoffMs, includeDeleted });
+  async archivePreview(cutoffDate: string, cutoffMs: number, includeDeleted: boolean): Promise<BackendOrError<ArchivePreviewResult>> {
+    const result = await this.engine.tryOpfsProxy<ArchivePreviewData>('ARCHIVE_PREVIEW', { cutoffDate, cutoffMs, includeDeleted });
     if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
     return { success: true, preview: result };
   }

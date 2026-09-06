@@ -47,7 +47,7 @@ describe('archiveHandler — archive_preview', () => {
       success: true,
       preview: { total: 10, starred: 2, deleted: 1, oldest: 100, newest: 200, includeDeleted: true },
     });
-    expect(deps.archivePreview).toHaveBeenCalledWith(CUTOFF_MS, true);
+    expect(deps.archivePreview).toHaveBeenCalledWith(CUTOFF_DATE, CUTOFF_MS, true);
   });
 
   it('treats a non-boolean includeDeleted as false (strict flag)', async () => {
@@ -55,7 +55,7 @@ describe('archiveHandler — archive_preview', () => {
     const handler = createArchiveHandler(deps);
     const result = await handler({ subtype: 'archive_preview', cutoffMs: CUTOFF_MS, includeDeleted: 1 } as never);
     expect((result as { preview: { includeDeleted: boolean } }).preview.includeDeleted).toBe(false);
-    expect(deps.archivePreview).toHaveBeenCalledWith(CUTOFF_MS, false);
+    expect(deps.archivePreview).toHaveBeenCalledWith(CUTOFF_DATE, CUTOFF_MS, false);
   });
 
   it('rejects a missing/invalid cutoffMs without touching deps', async () => {

@@ -84,7 +84,7 @@ export interface MaintenanceBatchDeps {
  * staging registry and second engine live.
  */
 export interface ArchiveDeps {
-  archivePreview: (cutoffMs: number, includeDeleted: boolean) => Promise<DepsResult<ArchivePreviewData>>;
+  archivePreview: (cutoffDate: string, cutoffMs: number, includeDeleted: boolean) => Promise<DepsResult<ArchivePreviewData>>;
   archiveCreate: (params: { cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }) => Promise<DepsResult<ArchiveCreateData>>;
   archiveCleanup: () => Promise<DepsResult<{ removed: string[] }>>;
   archiveExportChunk: (stagingName: string, offset: number, length: number) => Promise<DepsResult<ArchiveExportData>>;
@@ -172,7 +172,7 @@ runOpfsSpike: () => sqliteClient.maintain({ type: 'opfsSpike' }) as Promise<Deps
      backupDb: () => sqliteClient.maintain({ type: 'backup' }),
     // Archive group (PBI 2026-09-06-02): client-backed — the work happens in
     // the offscreen document / OPFS worker where the staging registry lives.
-    archivePreview: (cutoffMs, includeDeleted) => sqliteClient.maintain({ type: 'archivePreview', cutoffMs, includeDeleted }),
+    archivePreview: (cutoffDate, cutoffMs, includeDeleted) => sqliteClient.maintain({ type: 'archivePreview', cutoffDate, cutoffMs, includeDeleted } as { type: 'archivePreview', cutoffDate: string, cutoffMs: number, includeDeleted: boolean }),
     archiveCreate: (params) => sqliteClient.maintain({ type: 'archiveCreate', ...params }),
     archiveCleanup: () => sqliteClient.maintain({ type: 'archiveCleanup' }),
     archiveExportChunk: (stagingName, offset, length) => sqliteClient.maintain({ type: 'archiveExport', stagingName, offset, length }),

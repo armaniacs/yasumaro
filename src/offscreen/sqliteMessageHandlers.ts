@@ -301,7 +301,7 @@ async function handleOpfsSpike(_msg: SqliteMessage, sendResponse: (r: unknown) =
 
 async function handleArchivePreview(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_PREVIEW' }>).payload;
-  const result = await sqliteArchivePreview(payload.cutoffMs, payload.includeDeleted);
+  const result = await sqliteArchivePreview(payload.cutoffDate, payload.cutoffMs, payload.includeDeleted);
   if (result.success && 'preview' in result) {
     sendResponse({ success: true, preview: result.preview });
   } else if (result.success) {

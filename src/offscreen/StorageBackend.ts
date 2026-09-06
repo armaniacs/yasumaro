@@ -95,7 +95,7 @@ export interface Mutable {
   backupDb(): Promise<BackendOrError<BackupResult>>;
   restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>>;
   /** Archive preview (PBI 2026-09-06-02) — OPFS backend only. */
-  archivePreview(cutoffMs: number, includeDeleted: boolean): Promise<BackendOrError<ArchivePreviewResult>>;
+  archivePreview(cutoffDate: string, cutoffMs: number, includeDeleted: boolean): Promise<BackendOrError<ArchivePreviewResult>>;
   /** Archive creation (PBI 2026-09-06-02) — OPFS backend only. */
   archiveCreate(params: ArchiveCreateParams): Promise<BackendOrError<ArchiveCreateResult>>;
   /** Orphan staging sweep (PBI 2026-09-06-02) — OPFS backend only. */

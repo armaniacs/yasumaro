@@ -68,9 +68,9 @@ export type ArchiveCreateBackendResult = Awaited<ReturnType<import('./StorageBac
 export type ArchiveCleanupBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archiveCleanup']>>;
 export type ArchiveExportBackendResult = Awaited<ReturnType<import('./StorageBackend.js').StorageBackend['archiveExportChunk']>>;
 
-export async function archivePreview(cutoffMs: number, includeDeleted: boolean): Promise<ArchivePreviewBackendResult> {
+export async function archivePreview(cutoffDate: string, cutoffMs: number, includeDeleted: boolean): Promise<ArchivePreviewBackendResult> {
   const backend = await engine.getBackend();
-  return backend.archivePreview(cutoffMs, includeDeleted);
+  return backend.archivePreview(cutoffDate, cutoffMs, includeDeleted);
 }
 
 export async function archiveCreate(params: { cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }): Promise<ArchiveCreateBackendResult> {

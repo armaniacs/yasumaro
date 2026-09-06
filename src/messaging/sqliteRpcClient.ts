@@ -128,7 +128,7 @@ export type MaintainOp =
   | { type: 'purgeContent'; retentionDays?: number; maxRecords?: number; includeStarred?: boolean }
   | { type: 'opfsSpike' }
   | { type: 'healthCheck' }
-  | { type: 'archivePreview'; cutoffMs: number; includeDeleted: boolean }
+  | { type: 'archivePreview'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean }
   | { type: 'archiveCreate'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }
   | { type: 'archiveCleanup' }
   | { type: 'archiveExport'; stagingName: string; offset: number; length: number }
