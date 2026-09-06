@@ -1,5 +1,7 @@
 # PBI: テスト型債務返済 4/5 — popup + offscreen + content + testDir（704 errors / 73 ファイル）
 
+> **開始前に必読**: `pbi/2026-09-07-08-test-type-debt-background.md` の「前提環境」「ベースラインゲートの仕様」「baseline.json の編集規約」「共通実装手順」「修復パターン（実例つき）」「禁止事項」「コミット規約」を読み、同一手順を適用すること（08 完了・アーカイブ後も `dev-docs/archived/pbi/` から参照可）。本ファイルはバッチ固有の差分のみを記載する。
+
 ## ユーザーストーリー
 
 yasumaroの開発者として、`src/popup`（XSS・マスク可視化テスト含む）、`src/offscreen`（SQLite ワーカー）、`src/content`（抽出器）、および `testDir` 配下の E2E fixture に型チェックの生のゲートが効いてほしい。なぜなら、型債務の中には将来の実バグの予兆が含まれるから（シリーズ共通の背景は `pbi/00-INDEX.md` 参照）。

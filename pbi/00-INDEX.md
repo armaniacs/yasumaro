@@ -20,9 +20,9 @@
 
 ### 2026-09-07 テスト型債務返済シリーズ（07 を実測に基づき分割・07 は廃止。着手順 = 08 → 09 → 10 → 11 → 12。08〜11 は互いに独立・並行可だが 12 は最後）
 
-共通戦略: `type-check:test:raw` の出力をスコープ配下でフィルタし、エラー数の多いファイルから順に返済。返済パターン（シリーズ共通）: null 安全性 = `?.` か `!`（テスト意図に合わせ）/ mock メソッド = `vi.mocked(x)` 包み / 暗黙 any = パラメータ型付与 / 不一致 = テスト意図に合わせモック or 期待値修正。**実行時挙動を変えない**（全 vitest グリーン維持・1 コミット = 1〜3 ファイル）。1 ファイル返済のたび baseline.json から当該エントリを削除（ゲートが常時回帰検知）。返済中に発見した実装側の実バグはテスト側を曲げず別 PBI に切り出す。インベントリ = `testDir/type-check-baseline.json`（2,601 errors / 309 files）
+**共通実装手順（完全版）は `2026-09-07-08` に記載**（前提環境・ベースラインゲートの仕様・baseline.json 編集規約・返済ループ・修復パターン実例・禁止事項・コミット規約）。09〜11 は 08 の手順を適用する。要点: `type-check:test:raw`（`--pretty false` 付）でスコープ配下をフィルタし、エラー数の多いファイルから順に返済 → `vitest run <file>` で挙動不変確認 → **baseline.json から当該エントリを手動削除**（ラッパーは自動更新しない・`:baseline` 再生成は返済中禁止）。実行時挙動を変えない（1 コミット = 1〜3 ファイル）。実装側の実バグ発見は別 PBI 化。インベントリ = `testDir/type-check-baseline.json`（2,601 errors / 309 files）
 
-- 2026-09-07-08-test-type-debt-background.md（⬜ **次に着手**: `src/background/**` — 742 errors / 87 files。obsidianClient・service-worker・tabCache 等。2pt / 副作用 🟢 / 🔧（test））
+- 2026-09-07-08-test-type-debt-background.md（⬜ **次に着手**: `src/background/**` — 742 errors / 87 files。obsidianClient・service-worker・tabCache 等。**getConfirmToken deps リテラル ×70 のクラスタ固有判断を含む（deps.ts:117-147 参照）**。2pt / 副作用 🟢 / 🔧（test））
 - 2026-09-07-09-test-type-debt-dashboard.md（⬜ `src/dashboard/**` — 585 errors / 61 files。customPromptManager（150・シリーズ最大）を含む。2pt / 副作用 🟢 / 🔧（test））
 - 2026-09-07-10-test-type-debt-utils.md（⬜ `src/utils` + `src/messaging` + `src/__tests__` — 570 errors / 86 files。contentExtractor（86）・piiSanitizer 等。2pt / 副作用 🟢 / 🔧（test））
 - 2026-09-07-11-test-type-debt-popup-offscreen-content.md（⬜ `src/popup` + `src/offscreen` + `src/content` + `testDir` — 704 errors / 73 files。main.test.ts（132）・popup-xss 等。E2E fixture も含む。2pt / 副作用 🟢 / 🔧（test））
