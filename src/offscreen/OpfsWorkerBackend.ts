@@ -75,9 +75,11 @@ export class OpfsWorkerBackend implements StorageBackend {
   }
 
   async archiveCleanup(): Promise<BackendOrError<ArchiveCleanupResult>> {
-    const result = await this.engine.tryOpfsProxy<string[]>('ARCHIVE_CLEANUP');
+    // The worker returns the handler's object ({ removed }) as-is — pick the
+    // field here (E2E PBI 2026-09-07-02: a bare proxy result double-wrapped).
+    const result = await this.engine.tryOpfsProxy<{ removed: string[] }>('ARCHIVE_CLEANUP');
     if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
-    return { success: true, removed: result };
+    return { success: true, removed: result.removed };
   }
 
   async archiveExportChunk(stagingName: string, offset: number, length: number): Promise<BackendOrError<ArchiveExportChunkResult>> {
@@ -87,9 +89,11 @@ export class OpfsWorkerBackend implements StorageBackend {
   }
 
   async archivePrepareIncoming(): Promise<BackendOrError<ArchivePrepareIncomingResult>> {
-    const result = await this.engine.tryOpfsProxy<string>('ARCHIVE_PREPARE_INCOMING');
+    // The worker returns { stagingName } as-is — unwrap here (E2E PBI
+    // 2026-09-07-02: the panel got a nested object and failed the name check).
+    const result = await this.engine.tryOpfsProxy<{ stagingName: string }>('ARCHIVE_PREPARE_INCOMING');
     if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
-    return { success: true, stagingName: result };
+    return { success: true, stagingName: result.stagingName };
   }
 
   async archiveRestorePreview(stagingName: string): Promise<BackendOrError<ArchiveRestorePreviewResult>> {
