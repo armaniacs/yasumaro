@@ -12,6 +12,7 @@
 
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 import type { OpfsSpikeReport } from '../../offscreen/opfsSpike.js';
+import type { ArchivePreviewData } from '../../messaging/sqliteMessages.js';
 import type { DashboardSqliteSubtype } from '../../messaging/sqliteOperationSecurity.js';
 
 export type { DashboardSqliteSubtype } from '../../messaging/sqliteOperationSecurity.js';
@@ -62,7 +63,11 @@ export type DashboardSqliteRequest =
   | { subtype: 'append_to_obsidian'; ids: number[] }
   | { subtype: 'purge_now' }
   | { subtype: 'content_purge_now' }
-  | { subtype: 'audit_log_query'; limit?: number; offset?: number };
+  | { subtype: 'audit_log_query'; limit?: number; offset?: number }
+  | { subtype: 'archive_preview'; cutoffMs: number; includeDeleted: boolean }
+  | { subtype: 'archive_create'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string; confirmToken?: string }
+  | { subtype: 'archive_cleanup'; confirmToken?: string }
+  | { subtype: 'archive_export'; stagingName: string; offset: number; length: number; confirmToken?: string };
 
 /**
  * Compile-time guard that every subtype in the request union also exists in the
@@ -147,5 +152,9 @@ export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
       S extends 'purge_now' ? { success: true; purged: number; skipped: boolean } :
       S extends 'content_purge_now' ? { success: true; purged: number; skipped: boolean } :
       S extends 'audit_log_query' ? { success: true; rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number } :
+      S extends 'archive_preview' ? { success: true; preview: ArchivePreviewData } :
+      S extends 'archive_create' ? { success: true; stagingName: string; recordCount: number } :
+      S extends 'archive_cleanup' ? { success: true; removed: string[] } :
+      S extends 'archive_export' ? { success: true; chunk: number[]; nextOffset: number; total: number; done: boolean } :
       never
     );
