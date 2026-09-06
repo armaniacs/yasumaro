@@ -184,6 +184,7 @@ v4.2.1以降、以下の機能が追加されました：
    - `content_scripts` で指定されたWebサイトのコンテンツを抽出するために必要です
    - ページのタイトル、URL、本文テキストを取得します
    - このデータはAI要約生成とObsidianへの保存にのみ使用されます
+   - ページ本文をローカルに保存するかは設定で切り替えられます（デフォルト: オフ）。ダッシュボードの「設定 → コンテンツ保持設定」から変更できます
 
 2. **Webリクエスト監視権限 (`webRequest`)**:
    - HTTPレスポンスヘッダーを解析し、プライベートページを自動検出するために必要です
@@ -362,6 +363,7 @@ This extension requires the following permissions:
    - Required to extract content from visited pages as specified in `content_scripts`
    - Collects page titles, URLs, and body text
    - Data is used solely for AI summarization and saving to Obsidian
+   - Whether page body text is stored locally is configurable in the settings (default: off). Change it under Dashboard → Settings → Content Retention Settings
 
 2. **Web Request Monitoring (`webRequest`)**:
    - Required to analyze HTTP response headers for automatic private page detection

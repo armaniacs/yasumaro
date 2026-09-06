@@ -100,6 +100,8 @@
 #### 2. AIプロバイダー設定
 「AI Provider」のプルダウンから使用するサービスを選択します。優先度1〜3位まで設定できるため、複数プロバイダーをフォールバック構成にできます。
 
+> **Priority (Failover Order) のモデル名表示**: 優先度リスト（B分離型レイアウト）の各行のモデル名欄は、未入力のままでも実際に使用されるモデル名が表示されます（プロバイダの設定値、未設定ならカタログのデフォルト）。表示値をそのまま使う場合は欄を空のままにしてください。空欄のまま保存すると明示的なモデル指定として記録されず、常に最新のデフォルト設定が適用されます。自分で入力した値があればそちらが優先されます。
+
 **A. Built-in AI（Chrome / Edge の内蔵 AI）**
 *   **API Key**: 不要
 *   対応ブラウザで該当するフラグを有効化し、モデルをダウンロード済みであれば利用できます。対応ブラウザは Chrome の Gemini Nano / Edge の Phi-mini です。
@@ -194,6 +196,7 @@ ollama list
 **ドメインリストの管理**:
 - 1行に1ドメインを入力します
 - ワイルドカードも使用できます（例: `*.example.com`）
+- 「サブドメインもマッチさせる」トグルをONにすると、`example.com` の登録が `sub.example.com` 等のサブドメインにも一致します（デフォルトOFF・ワイルドカード指定はトグルに関係なく利用可能）
 - 「現在のページドメインを追加」ボタンで、現在開いているページのドメインを簡単に追加できます
 - wwwなどのサブドメインは自動的に除去されます（www.example.com → example.com）
 
@@ -214,6 +217,8 @@ ollama list
 「プライバシー」タブで、プライバシーに関する詳細な動作を設定できます。
 
 **プライバシー同意**: 初回起動時にデータ収集への同意確認が表示されます。同意しない場合は制限モードで動作し、記録は行われません。3回連続で拒否すると、以降30日間はモーダルが表示されなくなります（30日経過後に再表示、GDPR第7条準拠）（詳細: [PRIVACY.md](PRIVACY.md)）。
+
+**本文（ページの内容）の保存** (`Dashboard → 設定 → コンテンツ保持設定`): ページ本文をローカルに保存するかをいつでも切り替えられます（デフォルト: オフ）。オフにしても既存の保存済み本文は削除されず、以後の新規記録のみ停止します。本文のみをまとめて削除したい場合は、同じセクションの保持ポリシーまたは「Purge content now」を使用してください。
 
 **自動保存時のプライバシー動作** (`Dashboard → Privacy → Confirmation Settings`):
 - **save（デフォルト）**: プライベートページを通常通り保存します
@@ -347,6 +352,8 @@ Click the "⚙" icon in the top right to open the Dashboard in a new tab. The Da
 #### 2. AI Provider Settings
 Select your preferred provider from the dropdown. You can configure up to three priority ranks for fallback between providers.
 
+> **Priority (Failover Order) model display**: In the priority list (layout B), each row's model field shows the model that will actually be used even when left empty (the provider's stored setting, or the catalog default if unset). Leave the field empty to always use the latest default settings — an empty field is not saved as an explicit model. A value you type yourself takes precedence.
+
 *   **Built-in AI**: Chrome's Gemini Nano or Edge's Phi-mini. No API key required; works offline once the model is downloaded and flags are enabled.
     *   See the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md) for details.
 *   **OpenAI Compatible (Recommended)**: Supports Groq, OpenAI, Anthropic, and more.
@@ -425,6 +432,7 @@ In the "Domain Filter" tab, you can control which domains to record.
 **Domain List Management**:
 - Enter one domain per line
 - Wildcards are supported (e.g., `*.example.com`)
+- With the "Match subdomains too" toggle ON, an `example.com` entry also matches subdomains like `sub.example.com` (default OFF; wildcard patterns work regardless of the toggle)
 - Use the "Add Current Domain" button to easily add the domain of the currently open page
 - Subdomains like www are automatically removed (www.example.com → example.com)
 
@@ -445,6 +453,8 @@ The same panel also contains **GitHub Gist Sync** settings. Useful for migrating
 In the "Privacy" tab, you can configure detailed privacy behavior.
 
 **Privacy Consent**: On first launch, a consent prompt appears for data collection. If you decline, the extension operates in restricted mode and no recording takes place. After 3 consecutive declines, the prompt is suppressed for 30 days (then reappears, GDPR Article 7 compliance. See [PRIVACY.md](PRIVACY.md) for details).
+
+**Storing page content (body text)** (`Dashboard → Settings → Content Retention Settings`): You can toggle whether page body text is stored locally at any time (default: off). Turning it off does not delete already-stored content; it only stops future recordings. To delete stored body text in bulk, use the retention policy or "Purge content now" in the same section.
 
 **Auto-save Privacy Behavior** (`Dashboard → Privacy → Confirmation Settings`):
 - **save (default)**: Saves private pages as usual
