@@ -1,5 +1,5 @@
 {
-  "total": 1834,
+  "total": 1793,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -138,7 +138,6 @@
     "src/dashboard/settings/ublockImport/__tests__/index.test.ts": 10,
     "src/dashboard/settings/ublockImport/__tests__/rulesBuilder.test.ts": 4,
     "src/dashboard/settings/ublockImport/__tests__/sourceManager.test.ts": 11,
-    "src/dashboard/settings/ublockImport/__tests__/uiRenderer.test.ts": 41,
     "src/dashboard/settings/ublockImport/__tests__/xss.test.ts": 17,
     "src/dashboard/utils/__tests__/confirmDialog.test.ts": 12,
     "src/messaging/__tests__/dashboardGateway.test.ts": 7,
