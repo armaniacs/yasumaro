@@ -11,8 +11,8 @@ import { StorageKeys } from '../../utils/storage/types.js';
 global.fetch = vi.fn();
 global.chrome = {
   storage: { local: { get: vi.fn(), set: vi.fn() } },
-  runtime: { lastError: null }
-};
+  runtime: { lastError: null },
+} as unknown as typeof chrome;
 
 describe('フローワーク: URLからインポートしてソースを再読み込み', () => {
   const mockFilterText = `
@@ -108,7 +108,7 @@ invalid line without caret
   });
 
   test('空のソースリストが処理される', () => {
-    const emptySources = [];
+    const emptySources: Parameters<typeof rebuildRulesFromSources>[0] = [];
 
     const merged = rebuildRulesFromSources(emptySources);
 

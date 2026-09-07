@@ -172,7 +172,7 @@ describe('initPopup coverage', () => {
         const { getPendingPages } = await import('../../utils/pendingStorage.js');
         vi.mocked(getPendingPages).mockResolvedValue([
             { url: 'https://example.com', reason: 'cache-control', headerValue: 'Cache-Control: private' }
-        ]);
+        ] as unknown as Awaited<ReturnType<typeof getPendingPages>>);
         await initPopup();
         await new Promise(r => setTimeout(r, 50));
     });
@@ -182,7 +182,7 @@ describe('initPopup coverage', () => {
         const { showPrivatePageDialog } = await import('../privatePageDialog.js');
         vi.mocked(getPendingPages).mockResolvedValue([
             { url: 'https://example.com', reason: 'cache-control', headerValue: 'Cache-Control: private' }
-        ]);
+        ] as unknown as Awaited<ReturnType<typeof getPendingPages>>);
         await initPopup();
         await new Promise(r => setTimeout(r, 50));
         expect(showPrivatePageDialog).toHaveBeenCalledWith('https://example.com', 'cache-control', 'Cache-Control: private');
@@ -193,7 +193,7 @@ describe('initPopup coverage', () => {
         const { showPrivatePageDialog } = await import('../privatePageDialog.js');
         vi.mocked(getPendingPages).mockResolvedValue([
             { url: 'https://example.com', reason: 'cache-control', headerValue: undefined }
-        ]);
+        ] as unknown as Awaited<ReturnType<typeof getPendingPages>>);
         await initPopup();
         await new Promise(r => setTimeout(r, 50));
         expect(showPrivatePageDialog).toHaveBeenCalledWith('https://example.com', 'cache-control', '');
@@ -214,7 +214,7 @@ describe('initPopup coverage', () => {
         vi.mocked(getPendingPages).mockResolvedValue([
             { url: 'https://example.com', reason: 'cache-control' },
             { url: 'https://example.org', reason: 'cache-control' }
-        ]);
+        ] as unknown as Awaited<ReturnType<typeof getPendingPages>>);
         await initPopup();
         await new Promise(r => setTimeout(r, 50));
         expect(showPrivatePageDialog).not.toHaveBeenCalled();
@@ -231,7 +231,7 @@ describe('initPopup coverage', () => {
         vi.mocked(showRecordingFailedDialog).mockClear();
         vi.mocked(getPendingPages).mockResolvedValue([
             { url: 'https://example.com', reason }
-        ]);
+        ] as unknown as Awaited<ReturnType<typeof getPendingPages>>);
         await initPopup();
         await new Promise(r => setTimeout(r, 50));
         expect(showPrivatePageDialog).not.toHaveBeenCalled();
@@ -249,7 +249,7 @@ describe('initPopup coverage', () => {
         vi.mocked(showRecordingFailedDialog).mockClear();
         vi.mocked(getPendingPages).mockResolvedValue([
             { url: 'https://example.com', reason }
-        ]);
+        ] as unknown as Awaited<ReturnType<typeof getPendingPages>>);
         await initPopup();
         await new Promise(r => setTimeout(r, 50));
         expect(showRecordingFailedDialog).not.toHaveBeenCalled();
