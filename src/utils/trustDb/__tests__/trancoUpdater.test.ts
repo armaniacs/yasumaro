@@ -4,9 +4,9 @@
  */
 
 import type { Mock } from 'vitest';
-import { webcrypto as crypto } from '@peculiar/webcrypto';
+import { Crypto } from '@peculiar/webcrypto';
 Object.defineProperty(global, 'crypto', {
-    value: crypto
+    value: new Crypto()
 });
 
 // logger モック
@@ -26,7 +26,7 @@ vi.mock('../../fetch.js', () => ({
 const mockDb = {
     initialize: vi.fn(async () => {}),
     updateTranco: vi.fn(async () => {}),
-    getStatus: vi.fn(() => ({ initialized: true, lastUpdated: new Date().toISOString() }))
+    getStatus: vi.fn((): { initialized: boolean; version?: string; lastUpdated?: string; trancoTier?: string; trancoCount?: number } => ({ initialized: true, lastUpdated: new Date().toISOString() }))
 };
 vi.mock('../TrustDbAdmin.js', () => ({
     getTrustDbAdmin: vi.fn(() => mockDb)
@@ -204,7 +204,7 @@ describe('trancoUpdater', () => {
             });
 
             test('lastUpdated がない場合は更新が必要', async () => {
-                mockDb.getStatus.mockReturnValueOnce({ initialized: true, lastUpdated: null });
+                mockDb.getStatus.mockReturnValueOnce({ initialized: true });
 
                 const result = await updater.isUpdateNeeded('top1k');
                 expect(result).toBe(true);

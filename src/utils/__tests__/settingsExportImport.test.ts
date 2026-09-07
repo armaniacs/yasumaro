@@ -5,9 +5,9 @@
  * @vitest-environment jsdom
  */
 
-import { webcrypto as crypto } from '@peculiar/webcrypto';
+import { Crypto } from '@peculiar/webcrypto';
 Object.defineProperty(global, 'crypto', {
-    value: crypto
+    value: new Crypto()
 });
 
 // chrome API モック
@@ -737,7 +737,7 @@ describe('settingsExportImport', () => {
             expect(result.success).toBe(false);
             expect(result.error).toBe('Storage error');
 
-            getSettings.mockResolvedValue(getSettings.getMockImplementation()!());
+            getSettings.mockImplementation(getSettings.getMockImplementation()!);
         });
     });
 
