@@ -111,7 +111,7 @@ describe('openArchiveDb (better-sqlite3)', () => {
       INSERT INTO browsing_logs VALUES (1, 'https://a.test/1', 'one'), (2, 'https://a.test/2', 'two');
       INSERT INTO yasumaro_archive_meta VALUES (1, 100, '2026-01-01', 2, 0, 2, 1, '6.7.114');
     `);
-    const bytes = new Uint8Array(src.serialize() as ArrayBufferLike);
+    const bytes = new Uint8Array(src.serialize());
 
     const reader = openArchiveDb(bytes);
     expect(reader.countBrowsingLogs()).toBe(2);
@@ -127,7 +127,7 @@ describe('openArchiveDb (better-sqlite3)', () => {
   it('throws when yasumaro_archive_meta is missing', () => {
     const src = new Database(':memory:');
     src.exec('CREATE TABLE browsing_logs (id INTEGER)');
-    const bytes = new Uint8Array(src.serialize() as ArrayBufferLike);
+    const bytes = new Uint8Array(src.serialize());
     src.close();
     const reader = openArchiveDb(bytes);
     expect(() => reader.getMeta()).toThrow(/yasumaro_archive_meta/);
@@ -137,7 +137,7 @@ describe('openArchiveDb (better-sqlite3)', () => {
   it('getSchemaObjects lists tables and excludes sqlite internals', () => {
     const src = new Database(':memory:');
     src.exec('CREATE TABLE browsing_logs (id INTEGER); CREATE INDEX idx ON browsing_logs(id);');
-    const bytes = new Uint8Array(src.serialize() as ArrayBufferLike);
+    const bytes = new Uint8Array(src.serialize());
     src.close();
     const reader = openArchiveDb(bytes);
     const objects = reader.getSchemaObjects();

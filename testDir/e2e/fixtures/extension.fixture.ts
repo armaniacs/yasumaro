@@ -85,7 +85,7 @@ export const test = base.extend<ExtensionFixtures>({
     const serviceWorker =
       context.serviceWorkers()[0] ||
       (await context.waitForEvent('serviceworker', { timeout: 10000 }));
-    await use(serviceWorker.url().split('/')[2]);
+    await use(serviceWorker.url().split('/')[2] ?? '');
   },
 });
 

@@ -59,7 +59,7 @@ export function createDashboardSqliteClient(page: Page): DashboardSqliteClient {
       return (await chrome.runtime.sendMessage({ type: 'DASHBOARD_SQLITE', payload: p })) as Record<string, unknown>;
     }, payload);
 
-  const scopeHash = (parts: Array<string | number | undefined | null>) =>
+  const scopeHash = (parts: Array<string | number | boolean | undefined | null>) =>
     page.evaluate(async (joined: string) => {
       const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(joined));
       return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -67,7 +67,7 @@ export function createDashboardSqliteClient(page: Page): DashboardSqliteClient {
 
   const tokenFor = async (
     action: string,
-    scopeParts: Array<string | number | undefined | null>,
+    scopeParts: Array<string | number | boolean | undefined | null>,
     id?: number,
   ): Promise<string> => {
     // Mirrors dashboardGateway.sendDashboard: the token binds (action, id,

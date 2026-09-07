@@ -36,13 +36,13 @@ export const test = base.extend<Pbi27Fixtures>({
     if (!serviceWorker) {
       serviceWorker = await context.waitForEvent('serviceworker');
     }
-    const extensionId = serviceWorker.url().split('/')[2];
+    const extensionId = serviceWorker.url().split('/')[2] ?? '';
     await use(extensionId);
   },
 
   popupPage: async ({ context, extensionId }, use) => {
     const pages = context.pages();
-    const page = pages.length > 0 ? pages[0] : await context.newPage();
+    const page: Page = pages[0] ?? (await context.newPage());
 
     await page.addInitScript(() => {
       (window as any).__createdTabUrls = [];
@@ -81,8 +81,13 @@ export const test = base.extend<Pbi27Fixtures>({
         return Promise.resolve([tab]);
       };
 
-      const originalSendMessage = chrome.runtime.sendMessage;
-      chrome.runtime.sendMessage = (message: any, callback?: (response: any) => void) => {
+      const originalSendMessage = chrome.runtime.sendMessage as (
+        ...args: unknown[]
+      ) => unknown;
+      (chrome.runtime as { sendMessage: unknown }).sendMessage = (
+        message: any,
+        callback?: (response: any) => void
+      ) => {
         if (message && message.type === 'TEST_CONNECTION') {
           if (callback) callback({ success: true, message: 'Test connection successful' });
           return Promise.resolve({ success: true, message: 'Test connection successful' });
