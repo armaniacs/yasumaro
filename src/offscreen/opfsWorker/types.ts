@@ -147,31 +147,6 @@ export interface ArchiveClosePayload {
   stagingName: string;
 }
 
-export interface ArchiveOpenPayload {
-  stagingName: string;
-}
-
-export interface ArchiveQueryPayload {
-  stagingName: string;
-  query: string;
-  limit: number;
-  offset: number;
-}
-
-export interface ArchiveUpdatePayload {
-  stagingName: string;
-  id: number;
-  changes: Record<string, unknown>;
-}
-
-export interface ArchiveSavePayload {
-  stagingName: string;
-}
-
-export interface ArchiveClosePayload {
-  stagingName: string;
-}
-
 // ---------------------------------------------------------------------------
 // Request / Response messages
 // ---------------------------------------------------------------------------

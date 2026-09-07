@@ -28,6 +28,30 @@ export function isValidStagingName(name: unknown): boolean {
 }
 
 /**
+ * Branded staging name: a string that has passed the registry-issued name
+ * shape (`ARCHIVE_STAGING_NAME_RE`). The brand exists so the "valid staging
+ * name" constraint is readable from interfaces instead of living in scattered
+ * `length === 0` / regex checks across layers.
+ *
+ * Generation points (only two): `issueName()` in archiveStaging.ts and the
+ * boundary decode in messaging validators (`decodeStagingName` below).
+ * Wire payload types stay `string` — the brand is erased at serialization.
+ */
+export type StagingName = string & { readonly __stagingNameBrand: unique symbol };
+
+/**
+ * Boundary decode: throw unless the value is a well-formed staging name.
+ * Validators map the throw to their layer message; the brand marks the value
+ * as having crossed the boundary.
+ */
+export function decodeStagingName(name: unknown): StagingName {
+  if (!isValidStagingName(name)) {
+    throw new Error(`Invalid staging name: ${String(name)}`);
+  }
+  return name as StagingName;
+}
+
+/**
  * URL scheme guard (http/https only). Single source of truth shared by
  * messaging validators, the dashboard render path, and archive restore.
  */
@@ -84,4 +108,41 @@ export function cutoffMsFromLocalDate(dateStr: string): number {
     throw new Error(`Archive cutoff date out of range: ${dateStr}`);
   }
   return ms;
+}
+
+/**
+ * Pair mismatch between a client-supplied `cutoffMs` and its `cutoffDate`.
+ * Carries the re-derived expectation so callers can surface it (BDD: the
+ * throw message includes `cutoffMsFromLocalDate(cutoffDate)`).
+ */
+export class CutoffMismatchError extends Error {
+  readonly expectedMs: number;
+  constructor(cutoffDate: unknown, cutoffMs: unknown, expectedMs: number) {
+    super(
+      `cutoffMs (${String(cutoffMs)}) does not match cutoffDate (${String(cutoffDate)}) — expected ${expectedMs}`,
+    );
+    this.name = 'CutoffMismatchError';
+    this.expectedMs = expectedMs;
+  }
+}
+
+/**
+ * Single seam for the "cutoffDate + cutoffMs pair is genuine" concept.
+ * Re-derives the cutoff via `cutoffMsFromLocalDate` (format, reality, and
+ * range — including the +2 day future tolerance — all enforced there),
+ * then requires strict equality with the supplied `cutoffMs`.
+ *
+ * Returns the derived ms on success. Throws the derivation error as-is for
+ * bad dates, `Error('cutoffMs must be finite number')` for non-finite input,
+ * and `CutoffMismatchError` (message embeds the expectation) for forged pairs.
+ */
+export function assertCutoffPair(cutoffDate: unknown, cutoffMs: unknown): number {
+  if (typeof cutoffMs !== 'number' || !Number.isFinite(cutoffMs)) {
+    throw new Error('cutoffMs must be finite number');
+  }
+  const derived = cutoffMsFromLocalDate(cutoffDate as string);
+  if (cutoffMs !== derived) {
+    throw new CutoffMismatchError(cutoffDate, cutoffMs, derived);
+  }
+  return derived;
 }

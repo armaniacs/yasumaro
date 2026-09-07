@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.115` リリース。
+> - 現時点では `v6.7.116` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -35,9 +35,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.7.116] - 2026-09-07
+
+このリリースは、アーキテクチャの深いモジュール化（deepening）リファクタ 7 件を含む内部改善リリースです。振る舞いは不変で、全テスト（11,938 件）がグリーンです。
+
 ### Removed
 
 - **OPFS feasibility spike を製品コードから完全撤去**（PBI 2026-09-07-19）: ADR-014 の一次検証用ハーネス（`src/offscreen/opfsSpike.ts` / `runOpfsSpikeA` / `SQLITE_OPFS_SPIKE` / `opfs_spike` / 診断パネルの "Run OPFS Spike" ボタン＋結果欄 / ロケールキー `diagOpfsSpikeBtn`）を、メッセージ経路 13 ファイル・`sqliteOperationSecurity.ts` の 3 リスト・関連テスト・E2E・カバレッジ設定とともに削除。案Aの健全性確認は診断パネルの OPFS 移行状態表示と divergence 警告で代替。製品 Worker（`opfsWorker.ts`）と CSP 設定は無変更
+
+### 開発者向け / 非機能
+
+- **copy-markdown ボタンを共通 factory に統合**（PBI 2026-09-07-20）: dashboard と popup で重複していた entry → markdown → clipboard → ✓/✗ 表示 → aria 更新の 4 ステップを `createCopyMarkdownButton`（`src/utils/copyMarkdownButton.ts`）1 箇所に集約。clipboard 直呼びが 2 実装 → 1 seam（2 adapters）になった
+- **archive ガードの seam 統合**（PBI 2026-09-07-21）: cutoffDate/cutoffMs ペア検証を `assertCutoffPair`（`src/utils/archiveGuards.ts`）1 箇所に集約（validator は厳密再導出・SW handler は弱い形状チェックのみ・worker は再導出・panel は入力時導出の 4 層分散を解消）。staging 名を `StagingName` branded type にし、発行側 `issueName()` と境界デコードでのみ生成可能に。SW handler の空文字チェック 9 箇所と `void isValidStagingName;` を削除（validator 先行をテストでピン留め）
+- **archive wire 層をテーブル駆動に統合**（PBI 2026-09-07-22）: 1 つの archive subtype が 7 層を通る 1:1 pass-through 写像を `ARCHIVE_WIRE_TABLE`（`src/messaging/archiveWireTable.ts`、`MaintainOp` との双方向 compile-time assert 付き）に畳み込み。到達不能なコピペ重複 3 箇所（`offscreenGateway.ts` の重複 overload + 重複 case、`StorageBackend.ts` の重複 interface、`opfsWorker/types.ts` の重複 payload）を削除。新 subtype 追加時の編集点が 7 ファイル → 1-2 ファイルに（8 ファイルで 449 deletions / 308 insertions、noRetry 5 op は宣言的に保持）
+- **sqliteHistoryPanel の描画所有権を View に一本化**（PBI 2026-09-07-23）: 二重レンダーパス（`updateDynamicRegions` vs `renderState`）と DOM ID seam 漏洩（ID 5 種 × 33 箇所）を解消。Panel 610 行 → 198 行（`getElementById` 0 件）、View が `SQLITE_HISTORY_IDS` 定数と `render()` 単一入口を所有。差分/フル 2 経路はフォーカス維持のため維持し判定を 1 箇所に集約
+- **popup の status 取得を statusStore 単一 seam に統合**（PBI 2026-09-07-24）: `loadActiveTabStatus()`（`src/popup/statusStore.ts`）が tabs.query + checkPageStatus を単一所有し、statusPanel と recordSession の独立実装を解消。非 throw 版 `normalizeUrlSafe` を urlUtils に新設し popup のプライベート実装を削除
+- **パネルカタログを単一ソース化**（PBI 2026-09-07-25）: 「どのパネルが存在するか」の 4 箇所分散（HTML sidebar ボタン・main.ts 直登録・`sectionPanelMap`・registry 迂回クリック）を `panelCatalog.ts` 1 テーブルから派生に統合。カタログ ↔ HTML の同期検証テスト 16 件を追加。迂回クリックは `registry.navigate()` に寄せ sidebar active 同期を補償
+- **InMemoryTransport の DELETE セマンティクス乖離を明示**（PBI 2026-09-07-17）: ソフトデリート近似（InMemory）と製品ハードデリートの意図的乖離を JSDoc・インラインコメントで明示し、乖離を仕様として固定するガードテスト 3 件を追加。乖離レジストリ `dev-docs/TEST_DOUBLES_DIVERGENCE.md` を新設
 
 ## [6.7.115] - 2026-09-07
 

@@ -39,6 +39,7 @@ vi.mock('../../../utils/confirmDialog.js', () => ({
 }));
 
 import { createSqliteHistoryPanel } from '../sqliteHistoryPanel.js';
+import { SQLITE_HISTORY_IDS } from '../sqliteHistoryPanelView.js';
 import * as db from '../../../dashboardSqliteService.js';
 import type { PanelLifecycle } from '../../types.js';
 
@@ -111,7 +112,7 @@ describe('createSqliteHistoryPanel — server-side pagination', () => {
     // The panel renders pagination into a pre-existing element, as the real
     // options page provides.
     const pagination = document.createElement('div');
-    pagination.id = 'sqlite-pagination';
+    pagination.id = SQLITE_HISTORY_IDS.pagination;
     document.body.appendChild(pagination);
     const panel = makePanel(container);
 
@@ -139,7 +140,7 @@ describe('createSqliteHistoryPanel — server-side pagination', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const pagination = document.createElement('div');
-    pagination.id = 'sqlite-pagination';
+    pagination.id = SQLITE_HISTORY_IDS.pagination;
     document.body.appendChild(pagination);
     const panel = makePanel(container);
 

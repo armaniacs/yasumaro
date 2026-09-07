@@ -1,4 +1,5 @@
-import { checkPageStatus, StatusInfo } from './statusChecker.js';
+import { StatusInfo } from './statusChecker.js';
+import { loadActiveTabStatus } from './statusStore.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
@@ -27,16 +28,17 @@ export async function initStatusPanel(): Promise<void> {
       // Mode badge is non-critical; ignore errors
     }
 
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    const currentTab = tabs[0];
+    // Active-tab status fetch goes through the shared store (PBI 2026-09-07-24)
+    const snapshot = await loadActiveTabStatus();
+    const currentTab = snapshot.tab;
 
-    if (!currentTab?.url) {
+    if (!snapshot.url || !currentTab) {
       const panel = document.getElementById('statusPanel');
       if (panel) panel.style.display = 'none';
       return;
     }
 
-    const status = await checkPageStatus(currentTab.url);
+    const status = snapshot.status;
 
     if (!status) {
       renderSpecialUrlStatus();

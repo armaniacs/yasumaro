@@ -8,6 +8,19 @@ export class NavigationRegistry {
   private panels = new Map<string, PanelLifecycle>();
   private activePanelId: string | null = null;
   private mountedPanels = new Set<string>();
+  private navigateListeners = new Set<(panelId: string) => void>();
+
+  /**
+   * Fired after every successful navigate(), including programmatic ones
+   * (e.g. privacySettingsPanel's export-logs jump) that bypass the sidebar
+   * click handler. DashboardBootstrapper subscribes to keep the sidebar's
+   * active/aria-selected state in sync so a11y never depends on *how* the
+   * navigation was triggered. Returns an unsubscribe function.
+   */
+  onDidNavigate(listener: (panelId: string) => void): () => void {
+    this.navigateListeners.add(listener);
+    return () => { this.navigateListeners.delete(listener); };
+  }
 
   register(panel: PanelLifecycle): void {
     if (this.panels.has(panel.id)) {
@@ -48,6 +61,14 @@ export class NavigationRegistry {
     }
 
     this.activePanelId = panelId;
+
+    for (const listener of this.navigateListeners) {
+      try {
+        listener(panelId);
+      } catch (err) {
+        console.error(`[NavigationRegistry] navigate listener failed for panel "${panelId}":`, err);
+      }
+    }
 
     // Show new panel
     const newEl = document.getElementById(panelId);

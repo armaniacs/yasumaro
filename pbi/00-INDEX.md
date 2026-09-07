@@ -53,6 +53,17 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-09-07 architecture review round 2 — 6件完了（arch-delivery-loop・0907a ブランチ）
+
+診断（HTML レポート: `/tmp/architecture-review-20260907-2151.html`）→ RICE 採点 → 実装。バッチ1（並列: 20 / 21 / 25・ファイル非重複で worktree 並列）→ バッチ2（並列: 22 / 23 / 24）。台帳送り 5 項目は `2026-09-05-00-backlog-future.md` の「2026-09-07 round 2 で台帳入り」節。なぜなぜ分析は `/tmp/kilo/whywhy/` 配下に記録。
+
+- 2026-09-07-20-refactor-copy-markdown-button-factory.md（✅ 完了・アーカイブ済 — copy-markdown ボタン 4 ステップを `createCopyMarkdownButton` factory に統合（labels は解決済み文字列注入で chrome-free 維持）。`copyTextToClipboard` 本番直呼び 2 箇所 → factory 1 箇所。新規テスト 5 件、既存テスト無修正。検証: type-check / lint / utils+dashboard+popup green。commit `79eaae51`）
+- 2026-09-07-21-refactor-archive-guard-seam-unification.md（✅ 完了・アーカイブ済 — cutoff ペア検証を `assertCutoffPair` / `CutoffMismatchError` 1 箇所に（validator は安定文言へのマッピング、worker は fail-closed 維持）、`StagingName` branded type 導入（issueName 戻り値 + `decodeStagingName` 境界デコード）、SW handler の空文字チェック 9 箇所と `void isValidStagingName;` 削除（validator 先行を MessageRouter.validators.test でピン留め）、yasumaroVersion 検査を validator へ寄せ文言維持。検証: 88 ファイル 1278 テスト green。commit `c9d45c1b`）
+- 2026-09-07-22-refactor-archive-wire-table-driven.md（✅ 完了・アーカイブ済 — archive wire 層を `ARCHIVE_WIRE_TABLE`（14 op、コンパイル時双方向 asserts 付き）で統合。重複ブロック 3 箇所（gateway 重複 overload+case、StorageBackend 重複 interface、types 重複 payload）削除、dbMaintenance 転送 14 関数削除（handlers は Backend 直結）、handlers dispatch を `ARCHIVE_DISPATCH` に、service は `callArchive` で共通化（公開 14 関数名維持）。8 ファイルで 449 deletions / 308 insertions。副産物: `archive_preview` 型の `cutoffDate` 欠落修正。テーブルは `src/messaging/`（中立位置）に配置。検証: 全テスト 11,929 / build green（opfsWorker チャンク残存確認）。commits `be0e3289` `67ecc3b4`）
+- 2026-09-07-23-refactor-sqlite-history-view-ownership.md（✅ 完了・アーカイブ済 — sqliteHistoryPanel の描画所有権を View に一本化。Panel 610→198 行（`getElementById` 0 件）、View に `SQLITE_HISTORY_IDS`（唯一所有者）+ `render()` 単一入口 + build/wire ペア。差分/フル 2 経路は維持（旧 renderState は毎回 searchInput.focus() するためフル 1 パス化はフォーカス強奪の a11y 回帰 → 不採用と判断記録）。Model 21 メソッドは不変（台帳で再評価）。検証: dashboard 148 ファイル 2498 テスト / build green。commit `2ebcd52b`）
+- 2026-09-07-24-refactor-popup-status-store.md（✅ 完了・アーカイブ済 — `statusStore.loadActiveTabStatus()` が tabs.query + checkPageStatus を単一所有。statusPanel / recordSession の直呼び解消、`resetRecordButton` にスナップショット省略引数（完了パスは fresh fetch 維持）。`normalizeUrlSafe` を urlUtils に新設し statusChecker プライベート実装削除（headerDetector / PrivacyCache 統合は台帳候補）。補足: 診断の「popup 表示のたびに 2 回 fetch」は実測では誤り（open 時は 1 回）で、価値は seam 1 箇所化 + スナップショット共有足場。検証: popup + urlUtils 856 テスト / 全テスト 11,893 green。commit `aeba5bb8`）
+- 2026-09-07-25-refactor-panel-catalog-single-source.md（✅ 完了・アーカイブ済 — `panelCatalog.ts`（import ゼロの純粋メタデータ 19 パネル、panel-history は hidden legacy として含む）+ `panelFactories.ts`（`Exclude` 型レベル網羅）を新設。main.ts 直登録 10 件 → `registerCatalog` 1 行、`sectionPanelMap` 削除 → 派生、迂回クリック → `getRegistry().navigate()`（sidebar active 同期を onDidNavigate 購読で補償）。同期検証テスト 16 件。検証: dashboard+popup 184 ファイル 3345 テスト green。commit `5fc70fac`）
+
 ### 2026-09-07 architecture review round — 5件完了（autonomous-task-closer）
 
 着手順 = RICE 降順。バッチ1（13/14/18・独立ファイル群でサブエージェント worktree 並列）→ バッチ2（17 → 19・`inMemoryTransport.ts` 競合で直列）。なぜなぜ分析は `/tmp/kilo/whywhy/` 配下に記録。
