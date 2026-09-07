@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+// chrome.runtime.lastError is readonly in @types/chrome; tests need to simulate it.
+type MutableLastError = { lastError: chrome.runtime.LastError | null };
+
 vi.mock('../tabUtils.js', () => ({
   getCurrentTab: vi.fn(),
   isRecordable: vi.fn().mockReturnValue(true),
@@ -108,7 +111,7 @@ function setupDom(): void {
 beforeEach(() => {
   setupDom();
   vi.clearAllMocks();
-  chrome.runtime.lastError = null;
+  (chrome.runtime as MutableLastError).lastError = null;
   chrome.tabs.sendMessage = vi.fn().mockResolvedValue({ content: 'test content' });
   chrome.runtime.sendMessage = vi.fn().mockResolvedValue(undefined);
   chrome.scripting.executeScript = vi.fn().mockResolvedValue([{ result: 'fallback content' }]);
@@ -185,7 +188,7 @@ describe('recordCurrentPage — error paths', () => {
   it('re-throws when chrome.runtime.lastError is set after sendMessage', async () => {
     (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ id: 1, url: 'https://example.com', title: 'Test' });
     chrome.tabs.sendMessage = vi.fn().mockResolvedValue({ content: 'test' });
-    chrome.runtime.lastError = { message: 'Connection error' };
+    (chrome.runtime as MutableLastError).lastError = { message: 'Connection error' };
     await recordCurrentPage();
     expect(chrome.scripting.executeScript).toHaveBeenCalled();
   });
@@ -198,12 +201,12 @@ describe('recordCurrentPage — error paths', () => {
       // Simulate sendMessage hanging then fallback to scripting which fails — force=true will return empty
       const hasPermission = await (chrome.permissions.contains as unknown as () => Promise<boolean>)();
       if (hasPermission) {
-        await (chrome.scripting.executeScript as unknown as () => Promise<unknown>)({} as never);
+        await (chrome.scripting.executeScript as unknown as (a?: unknown) => Promise<unknown>)({} as never);
       }
       // For force=true, the orchestrator will catch the scripting failure and return empty content
       return { content: '' };
     });
-    chrome.runtime.lastError = null;
+    (chrome.runtime as MutableLastError).lastError = null;
     chrome.permissions.contains = vi.fn().mockResolvedValue(true);
     chrome.scripting.executeScript = vi.fn().mockResolvedValue([{ result: 'fallback content' }]);
     (checkPageStatus as ReturnType<typeof vi.fn>).mockResolvedValue({ domainFilter: { allowed: true } });
@@ -215,7 +218,7 @@ describe('recordCurrentPage — error paths', () => {
   it('shows error when sendMessage fails and permissions request denied', async () => {
     (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ id: 1, url: 'https://example.com', title: 'Test' });
     chrome.tabs.sendMessage = vi.fn().mockRejectedValue(new Error('No response'));
-    chrome.runtime.lastError = null;
+    (chrome.runtime as MutableLastError).lastError = null;
     chrome.permissions.contains = vi.fn().mockResolvedValue(false);
     chrome.permissions.request = vi.fn().mockResolvedValue(false);
     chrome.scripting.executeScript = vi.fn().mockRejectedValue(new Error('Script fail'));

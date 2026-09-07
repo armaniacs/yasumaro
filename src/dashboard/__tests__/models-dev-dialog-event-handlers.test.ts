@@ -108,8 +108,8 @@ class MockModelsDevDialog {
       querySelectorAll: vi.fn().mockReturnValue([]),
     };
 
-    vi.spyOn(document, 'getElementById').mockImplementation((id: string) => {
-      return mockElement;
+    vi.spyOn(document, 'getElementById').mockImplementation(() => {
+      return mockElement as unknown as HTMLElement;
     });
   }
 

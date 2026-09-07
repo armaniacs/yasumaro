@@ -59,29 +59,29 @@ describe('sqliteHistoryPanel — PanelLifecycle implementation', () => {
 
   describe('init()', () => {
     it('accepts undefined params', () => {
-      expect(() => panel.init()).not.toThrow();
+      expect(() => panel.init!()).not.toThrow();
     });
 
     it('accepts init params object', () => {
       const initParams = { searchTag: 'important' };
-      expect(() => panel.init(initParams)).not.toThrow();
+      expect(() => panel.init!(initParams)).not.toThrow();
     });
 
     it('handles searchTag parameter', () => {
       const initParams = { searchTag: 'test-tag' };
       // Should not throw; actual behavior verified via controller tests
-      expect(() => panel.init(initParams)).not.toThrow();
+      expect(() => panel.init!(initParams)).not.toThrow();
     });
 
     it('handles searchDomain parameter', () => {
       const initParams = { searchDomain: 'example.com' };
       // Should not throw; actual behavior verified via controller tests
-      expect(() => panel.init(initParams)).not.toThrow();
+      expect(() => panel.init!(initParams)).not.toThrow();
     });
 
     it('handles both params gracefully (searchTag takes precedence in implementation)', () => {
       const initParams = { searchTag: 'tag', searchDomain: 'domain.com' };
-      expect(() => panel.init(initParams)).not.toThrow();
+      expect(() => panel.init!(initParams)).not.toThrow();
     });
   });
 

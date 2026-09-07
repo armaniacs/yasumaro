@@ -54,7 +54,7 @@ describe('notifyAiTestProgress', () => {
     // reject が swallow され、廃棄が DEBUG ログとして記録される
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockAddLog).toHaveBeenCalledTimes(1);
-    expect(mockAddLog.mock.calls[0][0]).toBe(LogType.WARN);
+    expect(mockAddLog.mock.calls[0]?.[0]).toBe(LogType.WARN);
   });
 
   it('sendMessage が同期 throw しても例外を swallow する', () => {
@@ -66,7 +66,7 @@ describe('notifyAiTestProgress', () => {
     expect(() => notifyAiTestProgress(progress)).not.toThrow();
     expect(sendMessage).toHaveBeenCalledTimes(1);
     expect(mockAddLog).toHaveBeenCalledTimes(1);
-    expect(mockAddLog.mock.calls[0][0]).toBe(LogType.WARN);
+    expect(mockAddLog.mock.calls[0]?.[0]).toBe(LogType.WARN);
   });
 
   it('正常送信時は不要なログを出さない', () => {

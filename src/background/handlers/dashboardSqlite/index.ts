@@ -1,11 +1,13 @@
 import { logError, ErrorCode } from '../../../utils/logger.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { TOKEN_REQUIRED_SUBTYPES, ALL_DASHBOARD_SQLITE_SUBTYPES } from '../../../messaging/sqliteOperationSecurity.js';
+import { TOKEN_REQUIRED_SUBTYPES, ALL_DASHBOARD_SQLITE_SUBTYPES, deriveScopeHash } from '../../../messaging/sqliteOperationSecurity.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboardSqliteProtocol.js';
 import type { DashboardSqliteHandlerDeps } from './deps.js';
 import { READ_ONLY_SUBTYPES, createReadOnlyHandler } from './readOnlyHandler.js';
 import { CORE_CRUD_SUBTYPES, createCoreCrudHandler } from './coreCrudHandler.js';
 import { MAINTENANCE_BATCH_SUBTYPES, createMaintenanceBatchHandler } from './maintenanceBatchHandler.js';
+import { ARCHIVE_SUBTYPES, createArchiveHandler } from './archiveHandler.js';
+import type { ArchiveDeps } from './deps.js';
 
 // Fail fast if the subtype partition ever drifts from the protocol union:
 // every subtype must land in exactly one group, so a subtype added to a
@@ -15,6 +17,7 @@ const GROUPED_SUBTYPES: readonly DashboardSqliteSubtype[] = [
   ...READ_ONLY_SUBTYPES,
   ...CORE_CRUD_SUBTYPES,
   ...MAINTENANCE_BATCH_SUBTYPES,
+  ...ARCHIVE_SUBTYPES,
 ];
 const GROUPED_UNIQUE = new Set<DashboardSqliteSubtype>(GROUPED_SUBTYPES);
 if (
@@ -30,6 +33,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
   const readOnlyHandler = createReadOnlyHandler(deps);
   const coreCrudHandler = createCoreCrudHandler(deps);
   const maintenanceBatchHandler = createMaintenanceBatchHandler(deps);
+  const archiveHandler = createArchiveHandler(deps as DashboardSqliteHandlerDeps & ArchiveDeps);
 
   return async (
     payload: DashboardSqliteRequest & { confirmToken?: string },
@@ -42,8 +46,13 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
       const id = (payload as unknown as { id?: number }).id;
       let verified = false;
       if (providedToken) {
+        // PBI 2026-09-06-01: archive subtypes bind the token to destructive
+        // parameters (cutoff / stagingName). The hash is re-derived from the
+        // actual incoming payload so a token issued for one scope cannot be
+        // replayed against another.
+        const scopeHash = await deriveScopeHash(subtype, payload as Record<string, unknown> | undefined);
         if (typeof deps.verifyConfirmToken === 'function') {
-          verified = await deps.verifyConfirmToken(providedToken, action, id);
+          verified = await deps.verifyConfirmToken(providedToken, action, id, scopeHash);
         } else if (typeof (deps as unknown as { getConfirmToken?: () => Promise<string> }).getConfirmToken === 'function') {
           const valid = await (deps as unknown as { getConfirmToken: () => Promise<string> }).getConfirmToken();
           verified = providedToken === valid;
@@ -67,6 +76,9 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
       }
       if (CORE_CRUD_SUBTYPES.has(subtype)) {
         return await coreCrudHandler(payload);
+      }
+      if (ARCHIVE_SUBTYPES.has(subtype)) {
+        return await archiveHandler(payload);
       }
       return await maintenanceBatchHandler(payload);
     } catch (error) {

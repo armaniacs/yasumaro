@@ -2,7 +2,7 @@
  * privacyConsent.test.ts
  * テスト: プライバシーポリシー同意管理
  */
-import { describe, it, expect, jest, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Crypto } from '@peculiar/webcrypto';
 import {
     getPrivacyConsent,

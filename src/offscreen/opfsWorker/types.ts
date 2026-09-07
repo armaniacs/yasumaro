@@ -32,6 +32,22 @@ export const WORKER_MESSAGE_TYPES = [
   'HEALTH_CHECK',
   'AUDIT_LOG_INSERT',
   'AUDIT_LOG_QUERY',
+  'ARCHIVE_PREVIEW',
+  'ARCHIVE_CREATE',
+  'ARCHIVE_CLEANUP',
+  'ARCHIVE_EXPORT',
+  'ARCHIVE_PREPARE_INCOMING',
+  'ARCHIVE_RESTORE_PREVIEW',
+  'ARCHIVE_RESTORE',
+  'ARCHIVE_DELETE_BY_STAGING',
+  'ARCHIVE_OPEN',
+  'ARCHIVE_QUERY',
+  'ARCHIVE_UPDATE',
+  'ARCHIVE_SAVE',
+  'ARCHIVE_CLOSE',
+  'ARCHIVE_STATUS',
+  'ARCHIVE_DISCARD',
+  'ARCHIVE_SWEEP',
 ] as const;
 
 export type WorkerMessageType = typeof WORKER_MESSAGE_TYPES[number];
@@ -77,6 +93,83 @@ export interface AuditLogInsertPayload {
   provider: string;
   url: string;
   created_at: number;
+}
+
+export interface ArchivePreviewPayload {
+  cutoffDate: string;
+  cutoffMs: number;
+  includeDeleted: boolean;
+}
+
+export interface ArchiveCreatePayload {
+  cutoffDate: string;
+  cutoffMs: number;
+  includeDeleted: boolean;
+  yasumaroVersion: string;
+}
+
+export interface ArchiveExportPayload {
+  stagingName: string;
+  offset: number;
+  length: number;
+}
+
+export interface ArchiveRestorePreviewPayload {
+  stagingName: string;
+}
+
+export interface ArchiveRestorePayload {
+  stagingName: string;
+}
+
+export interface ArchiveOpenPayload {
+  stagingName: string;
+}
+
+export interface ArchiveQueryPayload {
+  stagingName: string;
+  query: string;
+  limit: number;
+  offset: number;
+}
+
+export interface ArchiveUpdatePayload {
+  stagingName: string;
+  id: number;
+  changes: Record<string, unknown>;
+}
+
+export interface ArchiveSavePayload {
+  stagingName: string;
+}
+
+export interface ArchiveClosePayload {
+  stagingName: string;
+}
+
+export interface ArchiveOpenPayload {
+  stagingName: string;
+}
+
+export interface ArchiveQueryPayload {
+  stagingName: string;
+  query: string;
+  limit: number;
+  offset: number;
+}
+
+export interface ArchiveUpdatePayload {
+  stagingName: string;
+  id: number;
+  changes: Record<string, unknown>;
+}
+
+export interface ArchiveSavePayload {
+  stagingName: string;
+}
+
+export interface ArchiveClosePayload {
+  stagingName: string;
 }
 
 // ---------------------------------------------------------------------------

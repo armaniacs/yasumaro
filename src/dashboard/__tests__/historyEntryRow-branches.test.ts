@@ -11,6 +11,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { makeHistoryEntryRow } from '../historyEntryRow.js';
 import type { SavedUrlEntry } from '../../utils/storageUrls.js';
+import type { HistoryPanelState } from '../historyState.js';
 
 // getMessage returns '' (falsy) so all `getMessage(...) || fallback` branches
 // take the fallback side, unlike the other test files which always return truthy.
@@ -60,11 +61,17 @@ function createMinimalEntry(overrides: Partial<SavedUrlEntry> = {}): SavedUrlEnt
   } as SavedUrlEntry;
 }
 
-function createMockState(overrides: Record<string, unknown> = {}) {
+function createMockState(overrides: Partial<HistoryPanelState> = {}): HistoryPanelState {
   return {
-    activeTagFilter: null,
     entries: [],
+    activeFilter: 'all',
+    activeTagFilter: null,
     historyCurrentPage: 0,
+    pendingPages: [],
+    pendingUrlSet: new Set(),
+    editingUrl: null,
+    editingTags: [],
+    tagEditTrapId: null,
     ...overrides,
   };
 }
@@ -199,7 +206,7 @@ describe('historyEntryRow-branches — aiSummaryCleansedReasons empty array fall
 
   it('shows 複数 when reason is multiple but reasons array is undefined', () => {
     const row = makeHistoryEntryRow(
-      createMinimalEntry({ aiSummaryCleansedBytes: 50, aiSummaryOriginalBytes: 200, aiSummaryCleansedReason: 'multiple', aiSummaryCleansedReasons: undefined }),
+      createMinimalEntry({ aiSummaryCleansedBytes: 50, aiSummaryOriginalBytes: 200, aiSummaryCleansedReason: 'multiple' }),
       0, 0, createMockState(), createMockElements(), vi.fn(), vi.fn(),
     );
     const cleansingEl = row.querySelector('.history-entry-ai-summary-cleansing')!;
@@ -221,7 +228,7 @@ describe('historyEntryRow-branches — aiBase <= 0 reduction percent fallback', 
 describe('historyEntryRow-branches — privacyModeBadge falsy is not appended', () => {
   it('does not append privacy-mode-badge element when makePrivacyModeBadge returns null', () => {
     const row = makeHistoryEntryRow(
-      createMinimalEntry({ privacyMode: undefined }), 0, 0, createMockState(), createMockElements(), vi.fn(), vi.fn(),
+      createMinimalEntry(), 0, 0, createMockState(), createMockElements(), vi.fn(), vi.fn(),
     );
     expect(row.querySelector('.mock-privacy-mode-badge')).toBeNull();
   });
@@ -317,7 +324,12 @@ describe('historyEntryRow-branches — multiple-reasons map falls back to raw ke
 describe('historyEntryRow-branches — single reason key unmapped falls back to raw key', () => {
   it('shows the raw reason key when labelMap has no entry for it', () => {
     const row = makeHistoryEntryRow(
-      createMinimalEntry({ aiSummaryCleansedBytes: 50, aiSummaryOriginalBytes: 200, aiSummaryCleansedReason: 'totally-unknown-reason' }),
+      // exercising the unmapped-reason fallback path with a deliberately invalid key
+      createMinimalEntry({
+        aiSummaryCleansedBytes: 50,
+        aiSummaryOriginalBytes: 200,
+        ...({ aiSummaryCleansedReason: 'totally-unknown-reason' } as unknown as Partial<SavedUrlEntry>),
+      }),
       0, 0, createMockState(), createMockElements(), vi.fn(), vi.fn(),
     );
     const cleansingEl = row.querySelector('.history-entry-ai-summary-cleansing')!;

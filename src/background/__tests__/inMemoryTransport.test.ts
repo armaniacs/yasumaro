@@ -176,7 +176,7 @@ describe('InMemoryTransport + SqliteGateway', () => {
     const q = await gateway.query({ text: 'OR' } as unknown as Record<string, unknown> as Parameters<typeof gateway.query>[0]);
     expect(q.success).toBe(true);
     if (q.success) {
-      expect((q.data as { rows: BrowsingLogRecord[] }).total).toBe(0);
+      expect((q.data as { rows: BrowsingLogRecord[]; total: number }).total).toBe(0);
     }
   });
 

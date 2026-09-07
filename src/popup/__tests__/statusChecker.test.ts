@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { formatTimeAgo, checkPageStatus } from '../statusChecker.js';
 import { RecordingCache } from '../../background/__tests__/helpers/recordingCache.js';
 import * as storageSavedUrls from '../../utils/storage/savedUrlRepository.js';
@@ -134,13 +135,13 @@ describe('checkPageStatus', () => {
     });
 
     // Mock storage
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
       ublock_sources: []
     });
-    (storageSavedUrls.getSavedUrlsWithTimestamps as vi.Mock).mockResolvedValue(new Map());
+    (storageSavedUrls.getSavedUrlsWithTimestamps as Mock).mockResolvedValue(new Map());
   });
 
   afterEach(() => {
@@ -150,6 +151,7 @@ describe('checkPageStatus', () => {
   it('should return basic status for normal URL', async () => {
     const url = 'https://example.com/page';
     const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.domainFilter.allowed).toBe(true);
     expect(result.domainFilter.mode).toBe('disabled');
@@ -159,7 +161,7 @@ describe('checkPageStatus', () => {
 
   it('should detect whitelisted domain', async () => {
     const url = 'https://example.com/page';
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'whitelist',
       domain_whitelist: ['example.com'],
       domain_blacklist: [],
@@ -167,6 +169,7 @@ describe('checkPageStatus', () => {
     });
 
     const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.domainFilter.allowed).toBe(true);
     expect(result.domainFilter.mode).toBe('whitelist');
@@ -194,7 +197,7 @@ describe('checkPageStatus', () => {
       cache: [[normalizedUrl, privacyInfo]]
     });
 
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
@@ -202,6 +205,7 @@ describe('checkPageStatus', () => {
     });
 
     const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.privacy.isPrivate).toBe(true);
     expect(result.privacy.reason).toBe('cache-control');
@@ -215,9 +219,9 @@ describe('checkPageStatus', () => {
     const url = 'https://example.com/page';
     const savedTimestamp = Date.now() - 5 * 60 * 1000; // 5分前
     const savedUrls = new Map([[url, savedTimestamp]]);
-    (storageSavedUrls.getSavedUrlsWithTimestamps as vi.Mock).mockResolvedValue(savedUrls);
+    (storageSavedUrls.getSavedUrlsWithTimestamps as Mock).mockResolvedValue(savedUrls);
 
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
@@ -225,6 +229,7 @@ describe('checkPageStatus', () => {
     });
 
     const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.lastSaved.exists).toBe(true);
     expect(result.lastSaved.timestamp).toBe(savedTimestamp);
@@ -261,7 +266,7 @@ describe('checkPageStatus', () => {
       cache: [[urlWithoutSlash, privacyInfo]]
     });
 
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
@@ -270,6 +275,7 @@ describe('checkPageStatus', () => {
 
     // Query with slash should match after normalization
     const result = await checkPageStatus(urlWithSlash);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.privacy.isPrivate).toBe(true);
     expect(result.privacy.reason).toBe('cache-control');
@@ -297,7 +303,7 @@ describe('checkPageStatus', () => {
       cache: [[urlWithoutFragment, privacyInfo]]
     });
 
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
@@ -306,6 +312,7 @@ describe('checkPageStatus', () => {
 
     // Query with fragment should match after normalization
     const result = await checkPageStatus(urlWithFragment);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.privacy.isPrivate).toBe(true);
     expect(result.cache.cacheControl).toBe('no-store');
@@ -331,7 +338,7 @@ describe('checkPageStatus', () => {
       cache: [[rootUrl, privacyInfo]]
     });
 
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'disabled',
       domain_whitelist: [],
       domain_blacklist: [],
@@ -340,6 +347,7 @@ describe('checkPageStatus', () => {
 
     // Query should match root URL as-is
     const result = await checkPageStatus(rootUrl);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.privacy.isPrivate).toBe(true);
     expect(result.cache.cacheControl).toBe('no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -347,7 +355,7 @@ describe('checkPageStatus', () => {
 
   it('should detect blacklisted domain', async () => {
     const url = 'https://blocked.com/page';
-    (mockGetAll as vi.Mock).mockResolvedValue({
+    (mockGetAll as Mock).mockResolvedValue({
       domain_filter_mode: 'blacklist',
       domain_whitelist: [],
       domain_blacklist: ['blocked.com'],
@@ -355,6 +363,7 @@ describe('checkPageStatus', () => {
     });
 
     const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.domainFilter.allowed).toBe(false);
     expect(result.domainFilter.mode).toBe('blacklist');
@@ -367,6 +376,7 @@ describe('checkPageStatus', () => {
     mockChromeRuntime.sendMessage.mockRejectedValue(new Error('No listener'));
 
     const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result).not.toBeNull();
     expect(result.privacy.isPrivate).toBe(false);
@@ -375,9 +385,10 @@ describe('checkPageStatus', () => {
   it('should handle main error and return default status', async () => {
     const url = 'https://example.com/page';
     // Make getSettings throw to trigger main catch block
-    (mockGetAll as vi.Mock).mockRejectedValueOnce(new Error('Storage error'));
+    (mockGetAll as Mock).mockRejectedValueOnce(new Error('Storage error'));
 
     const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result).not.toBeNull();
     expect(result.domainFilter.allowed).toBe(true);

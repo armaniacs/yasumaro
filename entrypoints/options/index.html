@@ -136,6 +136,14 @@
           </svg>
           <span data-i18n="sqliteHistoryTab">SQLite History</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-archive" aria-selected="false" data-panel="panel-archive">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M21 8v13H3V8"/>
+            <path d="M1 3h22v5H1z"/>
+            <path d="M10 12h4"/>
+          </svg>
+          <span data-i18n="archiveTab">Archive</span>
+        </button>
         <button class="sidebar-nav-btn" role="tab" aria-controls="panel-domain-search" aria-selected="false" data-panel="panel-domain-search">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="11" cy="11" r="8"/>
@@ -451,6 +459,12 @@
           <h3 class="settings-section-title" data-i18n="contentRetentionPolicyTitle">Content Retention Settings</h3>
           <p class="settings-section-desc" data-i18n="contentRetentionPolicyDesc">Only content (page body) will be purged; records themselves are kept</p>
           <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="contentStorageEnabled" data-storage-key="content_storage_enabled">
+              <span data-i18n="contentStorageEnabledLabel">Store page content (body text) locally</span>
+            </label>
+          </div>
+          <div class="form-group">
             <label for="contentRetentionDays" data-i18n="contentRetentionDaysLabel">Content retention period</label>
             <select id="contentRetentionDays" data-storage-key="content_retention_days">
               <option value="" data-i18n="retentionUnlimited">Unlimited (keep forever)</option>
@@ -512,6 +526,15 @@
             <span class="toggle-slider" aria-hidden="true"></span>
           </label>
           <span class="toggle-label" data-i18n="domainFilterEnable">Enable domain filter</span>
+        </div>
+
+        <!-- サブドメイン自動マッチング -->
+        <div class="domain-toggle-row">
+          <label class="toggle-switch" for="domainSubdomainToggle">
+            <input type="checkbox" id="domainSubdomainToggle" role="switch" aria-checked="false">
+            <span class="toggle-slider" aria-hidden="true"></span>
+          </label>
+          <span class="toggle-label" data-i18n="domainSubdomainMatching">Match subdomains too</span>
         </div>
 
         <!-- タブ（ON時のみ表示） -->
@@ -1769,6 +1792,61 @@
         </div>
         <div id="sqlite-history-container">
           <p class="panel-description">Loading SQLite history…</p>
+        </div>
+      </section>
+
+      <!-- Archive Panel (PBI 2026-09-06-02) -->
+      <section id="panel-archive" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="archiveTab">Archive</h2>
+        <p class="panel-description" data-i18n="archivePanelDescription">
+          Export browsing history up to a chosen date as a standard SQLite file, then remove it from the local database (phase 2) once you have the file. The exported file can be opened with any SQLite tool.
+        </p>
+        <div class="settings-section">
+          <div class="form-group">
+            <label for="archive-date" data-i18n="archiveDateLabel">Archive records up to (inclusive)</label>
+            <input type="date" id="archive-date" min="2000-01-01">
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="archive-include-deleted">
+              <span data-i18n="archiveIncludeDeletedLabel">Include deleted records</span>
+            </label>
+            <p class="settings-section-desc" data-i18n="archiveIncludeDeletedNote">Deleted records are excluded by default. Records excluded here cannot be restored from the archive later.</p>
+          </div>
+          <div class="form-group">
+            <button id="archive-preview-btn" class="btn btn-secondary" data-i18n="archivePreviewBtn">Check records to archive</button>
+            <button id="archive-create-btn" class="btn btn-primary" data-i18n="archiveCreateBtn">Create archive file</button>
+            <button id="archive-download-btn" class="btn btn-secondary" hidden data-i18n="archiveDownloadBtn">Download archive file</button>
+            <button id="archive-purge-btn" class="btn btn-danger" hidden data-i18n="archivePurgeBtn">Delete records from main database</button>
+            <button id="archive-cleanup-btn" class="btn btn-secondary" hidden data-i18n="archiveCleanupBtn">Delete staging copy</button>
+          </div>
+          <div id="archive-preview-summary" class="settings-section-desc" hidden></div>
+          <div id="archive-status" class="settings-section-desc" aria-live="polite"></div>
+        </div>
+        <div class="settings-section" id="archive-session-section" hidden>
+          <h3 class="settings-section-title" data-i18n="archiveSessionSectionTitle">Open archive session</h3>
+          <div class="form-group">
+            <label for="archive-session-query" data-i18n="archiveSessionSearchLabel">Search in archive</label>
+            <input type="text" id="archive-session-query">
+          </div>
+          <div class="form-group">
+            <button id="archive-session-query-btn" class="btn btn-secondary" data-i18n="archiveSessionSearchBtn">Search</button>
+            <button id="archive-session-save-btn" class="btn btn-primary" data-i18n="archiveSessionSaveBtn">Save changes to archive</button>
+            <button id="archive-session-close-btn" class="btn btn-secondary" data-i18n="archiveSessionCloseBtn">Close archive</button>
+          </div>
+          <div id="archive-session-list" class="settings-section-desc"></div>
+        </div>
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="archiveRestoreSectionTitle">Restore from archive</h3>
+          <p class="settings-section-desc" data-i18n="archiveRestoreSectionDesc">Merge records from an archive file back into the local database. Existing records are kept; duplicates (same URL and time) are skipped.</p>
+          <div class="form-group">
+            <label for="archive-restore-file" data-i18n="archiveRestoreFileLabel">Archive file</label>
+            <input type="file" id="archive-restore-file" accept=".db">
+          </div>
+          <div id="archive-restore-preview-summary" class="settings-section-desc" hidden></div>
+          <div class="form-group">
+            <button id="archive-restore-btn" class="btn btn-primary" hidden data-i18n="archiveRestoreBtn">Restore into main database</button>
+          </div>
         </div>
       </section>
 

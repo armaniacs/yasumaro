@@ -269,7 +269,7 @@ describe('dashboard SQLite wiring — Service-Worker-owned dependencies', () => 
         success: true,
         confirmToken: 'sw-issued-token',
       });
-      expect(createConfirmToken).toHaveBeenCalledWith('delete', 1);
+      expect(createConfirmToken).toHaveBeenCalledWith('delete', 1, undefined);
     });
 
     it('rejects a destructive subtype when the token does not match', async () => {

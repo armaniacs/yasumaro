@@ -43,8 +43,8 @@ describe('piiSanitizer', () => {
       // 【結果検証】: テキストとマスクされた項目の配列を確認
       expect(result.text).toBe('カード番号は [MASKED:creditCard] です'); // 【確認内容】: クレジットカード番号がマスクされることを確認 🟢
       expect(result.maskedItems).toHaveLength(1); // 【確認内容】: マスクされた項目が1つ記録されることを確認 🟢
-      expect(result.maskedItems[0].type).toBe('creditCard'); // 【確認内容】: PIIタイプがcreditCardであることを確認 🟢
-      expect(result.maskedItems[0].original).toBe('4111-1111-1111-1111'); // 【確認内容】: 元の値が記録されることを確認 🟢
+      expect(result.maskedItems[0]!.type).toBe('creditCard'); // 【確認内容】: PIIタイプがcreditCardであることを確認 🟢
+      expect(result.maskedItems[0]!.original).toBe('4111-1111-1111-1111'); // 【確認内容】: 元の値が記録されることを確認 🟢
     });
 
     test('12桁のマイナンバーを検出してマスクできる', async () => {
@@ -62,7 +62,7 @@ describe('piiSanitizer', () => {
       // 【結果検証】: マイナンバーがマスクされることを確認
       expect(result.text).toBe('マイナンバー: [MASKED:myNumber]'); // 【確認内容】: マイナンバーがマスクされることを確認 🟢
       expect(result.maskedItems).toHaveLength(1); // 【確認内容】: マスクされた項目が1つ記録されることを確認 🟢
-      expect(result.maskedItems[0].type).toBe('myNumber'); // 【確認内容】: PIIタイプがmyNumberであることを確認 🟢
+      expect(result.maskedItems[0]!.type).toBe('myNumber'); // 【確認内容】: PIIタイプがmyNumberであることを確認 🟢
     });
 
     test('標準的なメールアドレスを検出してマスクできる', async () => {
@@ -80,7 +80,7 @@ describe('piiSanitizer', () => {
       // 【結果検証】: メールアドレスがマスクされることを確認
       expect(result.text).toBe('連絡先: [MASKED:email]'); // 【確認内容】: メールアドレスがマスクされることを確認 🟢
       expect(result.maskedItems).toHaveLength(1); // 【確認内容】: マスクされた項目が1つ記録されることを確認 🟢
-      expect(result.maskedItems[0].type).toBe('email'); // 【確認内容】: PIIタイプがemailであることを確認 🟢
+      expect(result.maskedItems[0]!.type).toBe('email'); // 【確認内容】: PIIタイプがemailであることを確認 🟢
     });
 
     test('ハイフン付き日本の携帯電話番号を検出してマスクできる', async () => {
@@ -98,7 +98,7 @@ describe('piiSanitizer', () => {
       // 【結果検証】: 電話番号がマスクされることを確認
       expect(result.text).toBe('電話: [MASKED:phoneJp]'); // 【確認内容】: 電話番号がマスクされることを確認 🟢
       expect(result.maskedItems).toHaveLength(1); // 【確認内容】: マスクされた項目が1つ記録されることを確認 🟢
-      expect(result.maskedItems[0].type).toBe('phoneJp'); // 【確認内容】: PIIタイプがphoneJpであることを確認 🟢
+      expect(result.maskedItems[0]!.type).toBe('phoneJp'); // 【確認内容】: PIIタイプがphoneJpであることを確認 🟢
     });
 
     test('1つのテキスト内に複数種類のPIIが存在する場合にすべてマスクできる', async () => {
@@ -213,7 +213,7 @@ describe('piiSanitizer', () => {
       // 【期待値確認】: piiSanitizer.js 15-16行目のコメント「安全側に倒してマスク」の通り
       expect(result.text).toBe('商品コード: [MASKED:bankAccount]'); // 【確認内容】: 7桁数字が銀行口座としてマスクされることを確認 🟡
       expect(result.maskedItems).toHaveLength(1); // 【確認内容】: マスク項目が1つ記録されることを確認 🟡
-      expect(result.maskedItems[0].type).toBe('bankAccount'); // 【確認内容】: PIIタイプがbankAccountであることを確認 🟡
+      expect(result.maskedItems[0]!.type).toBe('bankAccount'); // 【確認内容】: PIIタイプがbankAccountであることを確認 🟡
     });
 
     test('スペース区切りのクレジットカード番号を検出できる', async () => {
@@ -247,8 +247,8 @@ describe('piiSanitizer', () => {
       // 【結果検証】: すべてのメールアドレスがマスクされることを確認
       expect(result.text).toBe('メール1: [MASKED:email], メール2: [MASKED:email]'); // 【確認内容】: 複数のメールアドレスがすべてマスクされることを確認 🟢
       expect(result.maskedItems).toHaveLength(2); // 【確認内容】: マスクされた項目が2つ記録されることを確認 🟢
-      expect(result.maskedItems[0].original).toBe('user1@example.com'); // 【確認内容】: 1つ目の元の値が記録されることを確認 🟢
-      expect(result.maskedItems[1].original).toBe('user2@example.com'); // 【確認内容】: 2つ目の元の値が記録されることを確認 🟢
+      expect(result.maskedItems[0]!.original).toBe('user1@example.com'); // 【確認内容】: 1つ目の元の値が記録されることを確認 🟢
+      expect(result.maskedItems[1]!.original).toBe('user2@example.com'); // 【確認内容】: 2つ目の元の値が記録されることを確認 🟢
     });
 
     test('大量テキスト（10,000文字）に対しても正常に動作する', async () => {
@@ -299,7 +299,7 @@ describe('piiSanitizer', () => {
 
       const emailMatches = result.maskedItems.filter(item => item.type === 'email');
       expect(emailMatches).toHaveLength(1);
-      expect(emailMatches[0].original).toBe('user@example.com');
+      expect(emailMatches[0]!.original).toBe('user@example.com');
     });
 
     test('区切り文字なしで長い塊の末尾に直接連結されたPIIも検出される', async () => {
@@ -313,7 +313,7 @@ describe('piiSanitizer', () => {
 
       const emailMatches = result.maskedItems.filter(item => item.type === 'email');
       expect(emailMatches).toHaveLength(1);
-      expect(emailMatches[0].original).toBe('user@example.com');
+      expect(emailMatches[0]!.original).toBe('user@example.com');
     });
 
     test('区切り文字なしで長い塊の先頭に直接連結されたPIIも検出される', async () => {
@@ -325,7 +325,7 @@ describe('piiSanitizer', () => {
 
       const emailMatches = result.maskedItems.filter(item => item.type === 'email');
       expect(emailMatches).toHaveLength(1);
-      expect(emailMatches[0].original).toBe('user@example.com');
+      expect(emailMatches[0]!.original).toBe('user@example.com');
     });
   });
 
@@ -456,35 +456,35 @@ describe('piiSanitizer', () => {
       const text = '運転免許番号: 123456789012';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('運転免許番号: [MASKED:driverLicense]');
-      expect(result.maskedItems[0].type).toBe('driverLicense');
+      expect(result.maskedItems[0]!.type).toBe('driverLicense');
     });
 
     test('マイナンバー - ハイフン区切り12桁を検出してマスクできる', async () => {
       const text = 'マイナンバー: 1234-5678-9012';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('マイナンバー: [MASKED:myNumber]');
-      expect(result.maskedItems[0].type).toBe('myNumber');
+      expect(result.maskedItems[0]!.type).toBe('myNumber');
     });
 
     test('パスポート番号（日本）- 2文字+7桁を検出してマスクできる', async () => {
       const text = 'パスポート番号: AB1234567';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('パスポート番号: [MASKED:jpPassport]');
-      expect(result.maskedItems[0].type).toBe('jpPassport');
+      expect(result.maskedItems[0]!.type).toBe('jpPassport');
     });
 
     test('プライベートIPv4アドレス（192.168.x.x）を検出してマスクできる', async () => {
       const text = 'サーバーIP: 192.168.1.1';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('サーバーIP: [MASKED:ipv4]');
-      expect(result.maskedItems[0].type).toBe('ipv4');
+      expect(result.maskedItems[0]!.type).toBe('ipv4');
     });
 
     test('プライベートIPv4アドレス（10.x.x.x）を検出してマスクできる', async () => {
       const text = 'ネットワーク: 10.0.0.1';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('ネットワーク: [MASKED:ipv4]');
-      expect(result.maskedItems[0].type).toBe('ipv4');
+      expect(result.maskedItems[0]!.type).toBe('ipv4');
     });
 
     test('パブリックIPv4アドレスはマスクしない', async () => {
@@ -498,7 +498,7 @@ describe('piiSanitizer', () => {
       const text = 'IPv6: 2001:0db8:85a3:0000:0000:8a2e:0370:7334';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('IPv6: [MASKED:ipv6]');
-      expect(result.maskedItems[0].type).toBe('ipv6');
+      expect(result.maskedItems[0]!.type).toBe('ipv6');
     });
 
     test('Luhn検証 - 不正なクレジットカード番号はマスクしない', async () => {
@@ -513,35 +513,35 @@ describe('piiSanitizer', () => {
       const text = 'カード: 3782 822463 10005';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('カード: [MASKED:creditCard]');
-      expect(result.maskedItems[0].type).toBe('creditCard');
+      expect(result.maskedItems[0]!.type).toBe('creditCard');
     });
 
     test('プライベートIPv4アドレス（172.16-31.x.x）を検出してマスクできる', async () => {
       const text = '内部ネットワーク: 172.20.15.42';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('内部ネットワーク: [MASKED:ipv4]');
-      expect(result.maskedItems[0].type).toBe('ipv4');
+      expect(result.maskedItems[0]!.type).toBe('ipv4');
     });
 
     test('スペース区切りのマイナンバーを検出してマスクできる', async () => {
       const text = 'マイナンバー: 1234 5678 9012';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('マイナンバー: [MASKED:myNumber]');
-      expect(result.maskedItems[0].type).toBe('myNumber');
+      expect(result.maskedItems[0]!.type).toBe('myNumber');
     });
 
     test('スペース区切りの電話番号を検出してマスクできる', async () => {
       const text = '電話: 090 1234 5678';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('電話: [MASKED:phoneJp]');
-      expect(result.maskedItems[0].type).toBe('phoneJp');
+      expect(result.maskedItems[0]!.type).toBe('phoneJp');
     });
 
     test('連続した12桁（ハイフンなし）は運転免許番号としてマスクされる', async () => {
       const text = '番号: 123456789012';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('番号: [MASKED:driverLicense]');
-      expect(result.maskedItems[0].type).toBe('driverLicense');
+      expect(result.maskedItems[0]!.type).toBe('driverLicense');
     });
 
     test('ハイフンあり12桁はマイナンバーとして優先マスクされる', async () => {
@@ -557,85 +557,85 @@ describe('piiSanitizer', () => {
       const text = '連絡先: user.name+tag_%@example-domain.co.jp';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('連絡先: [MASKED:email]');
-      expect(result.maskedItems[0].type).toBe('email');
+      expect(result.maskedItems[0]!.type).toBe('email');
     });
 
     test('日本の固定電話番号（0X-XXXX-XXXX形式）を検出できる', async () => {
       const text = '電話: 03-1234-5678';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('電話: [MASKED:phoneJp]');
-      expect(result.maskedItems[0].type).toBe('phoneJp');
+      expect(result.maskedItems[0]!.type).toBe('phoneJp');
     });
 
     test('EU IBAN（ドイツ）を検出してマスクできる', async () => {
       const text = 'IBAN: DE89370400440532013000';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('IBAN: [MASKED:iban]');
-      expect(result.maskedItems[0].type).toBe('iban');
-      expect(result.maskedItems[0].original).toBe('DE89370400440532013000');
+      expect(result.maskedItems[0]!.type).toBe('iban');
+      expect(result.maskedItems[0]!.original).toBe('DE89370400440532013000');
     });
 
     test('EU IBAN（フランス）を検出してマスクできる', async () => {
       const text = 'IBAN: FR1420041010050500013M02606';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('IBAN: [MASKED:iban]');
-      expect(result.maskedItems[0].type).toBe('iban');
+      expect(result.maskedItems[0]!.type).toBe('iban');
     });
 
     test('EU IBAN（イタリア）を検出してマスクできる', async () => {
       const text = 'IBAN: IT60X0542811101000000123456';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('IBAN: [MASKED:iban]');
-      expect(result.maskedItems[0].type).toBe('iban');
+      expect(result.maskedItems[0]!.type).toBe('iban');
     });
 
     test('EU IBAN（スペイン）を検出してマスクできる', async () => {
       const text = 'IBAN: ES9121000418450200051332';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('IBAN: [MASKED:iban]');
-      expect(result.maskedItems[0].type).toBe('iban');
+      expect(result.maskedItems[0]!.type).toBe('iban');
     });
 
     test('EU IBAN（オランダ）を検出してマスクできる', async () => {
       const text = 'IBAN: NL91ABNA0417164300';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('IBAN: [MASKED:iban]');
-      expect(result.maskedItems[0].type).toBe('iban');
+      expect(result.maskedItems[0]!.type).toBe('iban');
     });
 
     test('ドイツ税ID（Steuerliche Identifikationsnummer）を検出してマスクできる', async () => {
       const text = '税ID: 12345678901';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('税ID: [MASKED:deTaxId]');
-      expect(result.maskedItems[0].type).toBe('deTaxId');
+      expect(result.maskedItems[0]!.type).toBe('deTaxId');
     });
 
     test('フランスINSEE番号を検出してマスクできる', async () => {
       const text = 'INSEE: 123456789012345';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('INSEE: [MASKED:frInsee]');
-      expect(result.maskedItems[0].type).toBe('frInsee');
+      expect(result.maskedItems[0]!.type).toBe('frInsee');
     });
 
     test('イタリア税コード（Codice Fiscale）を検出してマスクできる', async () => {
       const text = 'Codice Fiscale: RSSMRA85T10A562S';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('Codice Fiscale: [MASKED:itCodiceFiscale]');
-      expect(result.maskedItems[0].type).toBe('itCodiceFiscale');
+      expect(result.maskedItems[0]!.type).toBe('itCodiceFiscale');
     });
 
     test('スペインDNIを検出してマスクできる', async () => {
       const text = 'DNI: 12345678A';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('DNI: [MASKED:esDni]');
-      expect(result.maskedItems[0].type).toBe('esDni');
+      expect(result.maskedItems[0]!.type).toBe('esDni');
     });
 
     test('スペインNIEを検出してマスクできる', async () => {
       const text = 'NIE: X1234567A';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('NIE: [MASKED:esNie]');
-      expect(result.maskedItems[0].type).toBe('esNie');
+      expect(result.maskedItems[0]!.type).toBe('esNie');
     });
 
     test('EU PII追加後も既存の日本・米国パターンは影響を受けない', async () => {
@@ -681,8 +681,8 @@ describe('piiSanitizer', () => {
       expect(result.text.length).toBe(128 * 1024);
       // 銀行口座は先端にあるので境界内に含まれる
       expect(result.maskedItems.length).toBe(1);
-      expect(result.maskedItems[0].type).toBe('bankAccount');
-      expect(result.maskedItems[0].original).toBe('1234567');
+      expect(result.maskedItems[0]!.type).toBe('bankAccount');
+      expect(result.maskedItems[0]!.original).toBe('1234567');
     });
   });
 
@@ -694,8 +694,8 @@ describe('piiSanitizer', () => {
       const result = await sanitizeRegex(text) as SanitizeResult;
       // 16桁全体がcreditCardとしてマスクされる（7桁パターンはオーバーラップして除外）
       expect(result.maskedItems).toHaveLength(1);
-      expect(result.maskedItems[0].type).toBe('creditCard');
-      expect(result.maskedItems[0].original).toBe('4111-1111-1111-1111');
+      expect(result.maskedItems[0]!.type).toBe('creditCard');
+      expect(result.maskedItems[0]!.original).toBe('4111-1111-1111-1111');
     });
 
     test('複数の同一タイプPIIが混在する大規模テキストを処理できる', async () => {

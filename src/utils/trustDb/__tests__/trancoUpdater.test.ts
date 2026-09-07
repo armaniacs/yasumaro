@@ -3,9 +3,10 @@
  * trancoUpdater.ts の単体テスト
  */
 
-import { webcrypto as crypto } from '@peculiar/webcrypto';
+import type { Mock } from 'vitest';
+import { Crypto } from '@peculiar/webcrypto';
 Object.defineProperty(global, 'crypto', {
-    value: crypto
+    value: new Crypto()
 });
 
 // logger モック
@@ -25,7 +26,7 @@ vi.mock('../../fetch.js', () => ({
 const mockDb = {
     initialize: vi.fn(async () => {}),
     updateTranco: vi.fn(async () => {}),
-    getStatus: vi.fn(() => ({ initialized: true, lastUpdated: new Date().toISOString() }))
+    getStatus: vi.fn((): { initialized: boolean; version?: string; lastUpdated?: string; trancoTier?: string; trancoCount?: number } => ({ initialized: true, lastUpdated: new Date().toISOString() }))
 };
 vi.mock('../TrustDbAdmin.js', () => ({
     getTrustDbAdmin: vi.fn(() => mockDb)
@@ -106,7 +107,7 @@ describe('trancoUpdater', () => {
 
             test('成功時にドメイン数とサイズを返す', async () => {
                 const csvText = '1,google.com\n2,youtube.com\n3,facebook.com';
-                (fetchWithTimeout as vi.Mock).mockResolvedValue({
+                (fetchWithTimeout as Mock).mockResolvedValue({
                     ok: true,
                     status: 200,
                     json: async () => ({ list_id: 'test-list-id' }),
@@ -123,7 +124,7 @@ describe('trancoUpdater', () => {
             test('Content-Length なしで 50MB を超える chunked CSV は打ち切られエラーを返す', async () => {
                 const huge = new Uint8Array(51 * 1024 * 1024); // 51MB in one chunk
                 let reads = 0;
-                (fetchWithTimeout as vi.Mock).mockResolvedValue({
+                (fetchWithTimeout as Mock).mockResolvedValue({
                     ok: true,
                     status: 200,
                     json: async () => ({ list_id: 'test-list-id' }),
@@ -155,7 +156,7 @@ describe('trancoUpdater', () => {
             });
 
             test('API失敗時にリトライして最終的にエラーを返す', async () => {
-                (fetchWithTimeout as vi.Mock).mockResolvedValue({
+                (fetchWithTimeout as Mock).mockResolvedValue({
                     ok: false,
                     status: 500,
                     statusText: 'Internal Server Error'
@@ -175,7 +176,7 @@ describe('trancoUpdater', () => {
             });
 
             test('list_id がない場合にエラーを返す', async () => {
-                (fetchWithTimeout as vi.Mock).mockResolvedValue({
+                (fetchWithTimeout as Mock).mockResolvedValue({
                     ok: true,
                     status: 200,
                     json: async () => ({})
@@ -203,7 +204,7 @@ describe('trancoUpdater', () => {
             });
 
             test('lastUpdated がない場合は更新が必要', async () => {
-                mockDb.getStatus.mockReturnValueOnce({ initialized: true, lastUpdated: null });
+                mockDb.getStatus.mockReturnValueOnce({ initialized: true });
 
                 const result = await updater.isUpdateNeeded('top1k');
                 expect(result).toBe(true);

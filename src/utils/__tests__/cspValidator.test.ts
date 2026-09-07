@@ -282,7 +282,7 @@ describe('CSPValidator - P1 - safeFetch', () => {
 
     try {
       await safeFetch('https://api-inference.huggingface.co/models');
-      fail('Should have thrown');
+      expect.fail('Should have thrown');
     } catch (error: any) {
       expect(error.code).toBe('CSP_BLOCKED');
     }

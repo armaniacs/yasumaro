@@ -83,7 +83,8 @@ describe('markdown join safety - title `](url)` suffix cannot break out', () => 
     );
     await service.sync(1, 'https://example.com', EVIL_TITLE, 'clean summary');
     expect(appended).toHaveLength(1);
-    expect(hasUnescapedEvilLink(appended[0])).toBe(false);
+    expect(appended[0]).toBeDefined();
+    expect(hasUnescapedEvilLink(appended[0]!)).toBe(false);
   });
 
   it('GistSyncTarget: title suffix does not break out', async () => {
@@ -106,6 +107,7 @@ describe('markdown join safety - title `](url)` suffix cannot break out', () => 
     await target.sync(1, 'https://example.com', EVIL_TITLE, 'clean summary');
     createSpy.mockRestore();
     expect(captured).toHaveLength(1);
-    expect(hasUnescapedEvilLink(captured[0])).toBe(false);
+    expect(captured[0]).toBeDefined();
+    expect(hasUnescapedEvilLink(captured[0]!)).toBe(false);
   });
 });

@@ -193,7 +193,7 @@ describe('saveAiSummaryCleansingSettings', () => {
     const partial = { enabled: false, linkRatioThreshold: 77, shortTextThreshold: 11, shortSeqCount: 2, linkParaThreshold: 33, whitelistExtractionEnabled: false, bodyProtectionEnabled: false, bodyProtectionThreshold: 111, fallbackRatio: 0.33, fallbackMinBytes: 321 } as unknown as AiSummaryCleansingSettings;
     // leave all rule flags undefined to hit ?? false
     await saveAiSummaryCleansingSettings(partial);
-    const saved = mockSaveSettings.mock.calls[0][0] as Record<string, unknown>;
+    const saved = mockSaveSettings.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(saved.keep).toBe('yes');
     expect(saved[StorageKeys.AI_SUMMARY_CLEANSING_ENABLED]).toBe(false);
     for (const rule of CLEANSING_RULES) {
@@ -207,7 +207,7 @@ describe('saveAiSummaryCleansingSettings', () => {
     // ensure one rule true
     (full as unknown as Record<string, boolean>).altEnabled = true;
     await saveAiSummaryCleansingSettings(full);
-    const saved = mockSaveSettings.mock.calls[0][0] as Record<string, unknown>;
+    const saved = mockSaveSettings.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(saved[StorageKeys.AI_SUMMARY_CLEANSING_ALT]).toBe(true);
   });
 
@@ -215,7 +215,7 @@ describe('saveAiSummaryCleansingSettings', () => {
     mockGetSettings.mockResolvedValueOnce({} as never);
     const s = makeFullSettings({ linkRatioThreshold: 88, shortTextThreshold: 22, shortSeqCount: 7, linkParaThreshold: 66, whitelistExtractionEnabled: false, bodyProtectionEnabled: false, bodyProtectionThreshold: 150, fallbackRatio: 0.15, fallbackMinBytes: 450 });
     await saveAiSummaryCleansingSettings(s);
-    const saved = mockSaveSettings.mock.calls[0][0] as Record<string, unknown>;
+    const saved = mockSaveSettings.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(saved[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]).toBe(88);
     expect(saved[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD]).toBe(22);
     expect(saved[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT]).toBe(7);

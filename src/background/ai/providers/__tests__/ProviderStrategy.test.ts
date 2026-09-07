@@ -21,11 +21,11 @@ const {
     sanitizePromptContentMock,
     addLogMock
 } = vi.hoisted(() => ({
-    checkHardLimitMock: vi.fn(async () => ({ blocked: false })),
-    checkUsageWarningMock: vi.fn(async () => ({ warning: false })),
+    checkHardLimitMock: vi.fn(async (): Promise<{ blocked: boolean; message?: string }> => ({ blocked: false })),
+    checkUsageWarningMock: vi.fn(async (): Promise<{ warning: boolean; message?: string }> => ({ warning: false })),
     checkRateLimitMock: vi.fn(async () => ({ allowed: true, remaining: 9, resetTime: Date.now() + 60000 })),
     getRateLimitMessageMock: vi.fn(() => 'Rate limit exceeded'),
-    sanitizePromptContentMock: vi.fn(() => ({ sanitized: 'safe content', warnings: [], dangerLevel: 'low' })),
+    sanitizePromptContentMock: vi.fn((): { sanitized: string; warnings: string[]; dangerLevel: string } => ({ sanitized: 'safe content', warnings: [], dangerLevel: 'low' })),
     addLogMock: vi.fn()
 }));
 
@@ -88,7 +88,7 @@ class CustomIdProvider extends AIProviderStrategy {
         return 'openai';
     }
 
-    getProviderId(): string {
+    override getProviderId(): string {
         return 'openai';
     }
 }

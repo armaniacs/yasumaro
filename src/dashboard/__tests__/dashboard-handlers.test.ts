@@ -7,7 +7,7 @@
  * We avoid static imports of mocked modules to prevent resolution mismatches.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach, mocked } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { loadGeneralSettings } from '../generalSettings/settingsForm.js';
 // Save and the connection tests moved out of dashboard.ts (PBI-24): they are
 // driven only by the general settings panel.
@@ -490,7 +490,7 @@ describe('handleTestAi', () => {
 
         expect(addListener).toHaveBeenCalledTimes(1);
         expect(removeListener).toHaveBeenCalledTimes(1);
-        expect(removeListener.mock.calls[0][0]).toBe(addListener.mock.calls[0][0]);
+        expect(removeListener.mock.calls[0]![0]).toBe(addListener.mock.calls[0]![0]);
     });
 
     it('keeps the statusTop elapsed-time mirror in sync on timer ticks, not just provider switches', async () => {
@@ -721,7 +721,8 @@ describe('handleTestAi', () => {
         // The i18n util is module-mocked to return keys; re-implement it for this
         // test so the interpolated provider value is observable in the label.
         const { getMessage } = await import('../../utils/i18n.js');
-        vi.mocked(getMessage).mockImplementation((key: string, subst?: Record<string, string>) => {
+        vi.mocked(getMessage).mockImplementation((key: string, substitutions?: unknown) => {
+            const subst = substitutions as Record<string, string> | undefined;
             if (key === 'aiTestingProvider') return `Testing ${subst?.provider}...`;
             if (key === 'aiTestElapsedTime') return `Elapsed ${subst?.seconds}s`;
             return key;
@@ -813,8 +814,8 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
         expect(mockQueryLogs).toHaveBeenCalledWith(
             expect.objectContaining({ orderBy: 'created_at', orderDir: 'ASC', limit: 10000 })
         );
-        expect(mockQueryLogs.mock.calls[0][0]).toHaveProperty('since');
-        expect(mockQueryLogs.mock.calls[0][0]).toHaveProperty('until');
+        expect(mockQueryLogs.mock.calls[0]![0]).toHaveProperty('since');
+        expect(mockQueryLogs.mock.calls[0]![0]).toHaveProperty('until');
         expect(document.getElementById('localExportManualStatus')?.textContent).toBe('指定期間に記録がありません。');
     });
 

@@ -24,6 +24,20 @@ import {
   restoreDb as sqliteRestoreDb,
   purgeOldRecords as sqlitePurgeOldRecords,
   purgeContent as sqlitePurgeContent,
+  archivePreview as sqliteArchivePreview,
+  archiveCreate as sqliteArchiveCreate,
+  archiveCleanup as sqliteArchiveCleanup,
+  archiveExportChunk as sqliteArchiveExportChunk,
+  archivePrepareIncoming as sqliteArchivePrepareIncoming,
+  archiveRestorePreview as sqliteArchiveRestorePreview,
+  archiveRestore as sqliteArchiveRestore,
+  archiveDeleteByStaging as sqliteArchiveDeleteByStaging,
+  archiveOpen as sqliteArchiveOpen,
+  archiveQuery as sqliteArchiveQuery,
+  archiveUpdate as sqliteArchiveUpdate,
+  archiveSave as sqliteArchiveSave,
+  archiveClose as sqliteArchiveClose,
+  archiveStatus as sqliteArchiveStatus,
 } from './dbMaintenance.js';
 import {
   insertAuditLog as sqliteInsertAuditLog,
@@ -285,6 +299,178 @@ async function handleOpfsSpike(_msg: SqliteMessage, sendResponse: (r: unknown) =
   sendResponse({ success: true, report });
 }
 
+async function handleArchivePreview(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_PREVIEW' }>).payload;
+  const result = await sqliteArchivePreview(payload.cutoffDate, payload.cutoffMs, payload.includeDeleted);
+  if (result.success && 'preview' in result) {
+    sendResponse({ success: true, preview: result.preview });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive preview returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveCreate(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_CREATE' }>).payload;
+  const result = await sqliteArchiveCreate(payload);
+  if (result.success && 'stagingName' in result) {
+    sendResponse({ success: true, stagingName: result.stagingName, recordCount: result.recordCount });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive create returned no staging file' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveCleanup(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const result = await sqliteArchiveCleanup();
+  if (result.success && 'removed' in result) {
+    sendResponse({ success: true, removed: result.removed });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive cleanup returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveExport(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_EXPORT' }>).payload;
+  const result = await sqliteArchiveExportChunk(payload.stagingName, payload.offset, payload.length);
+  if (result.success && 'chunk' in result) {
+    sendResponse({ success: true, chunk: result.chunk, nextOffset: result.nextOffset, total: result.total, done: result.done });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive export returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchivePrepareIncoming(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const result = await sqliteArchivePrepareIncoming();
+  if (result.success && 'stagingName' in result) {
+    sendResponse({ success: true, stagingName: result.stagingName });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive prepare returned no staging name' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveRestorePreview(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_RESTORE_PREVIEW' }>).payload;
+  const result = await sqliteArchiveRestorePreview(payload.stagingName);
+  if (result.success && 'preview' in result) {
+    sendResponse({ success: true, preview: result.preview });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive restore preview returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveRestore(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_RESTORE' }>).payload;
+  const result = await sqliteArchiveRestore(payload.stagingName);
+  if (result.success && 'restored' in result) {
+    sendResponse({
+      success: true,
+      restored: result.restored,
+      restoredDeleted: result.restoredDeleted,
+      skipped: result.skipped,
+      skippedInvalid: result.skippedInvalid,
+    });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive restore returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveOpen(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_OPEN' }>).payload;
+  const result = await sqliteArchiveOpen(payload.stagingName);
+  sendResponse(result.success ? { success: true } : { success: false, error: result.error });
+}
+
+async function handleArchiveQuery(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_QUERY' }>).payload;
+  const result = await sqliteArchiveQuery(payload.stagingName, payload.query, payload.limit, payload.offset);
+  if (result.success && 'rows' in result) {
+    sendResponse({ success: true, rows: result.rows, total: result.total });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive query returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveUpdate(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_UPDATE' }>).payload;
+  const result = await sqliteArchiveUpdate(payload.stagingName, payload.id, payload.changes);
+  if (result.success && 'dirty' in result) {
+    sendResponse({ success: true, dirty: result.dirty });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive update returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveSave(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_SAVE' }>).payload;
+  const result = await sqliteArchiveSave(payload.stagingName);
+  if (result.success && 'dirty' in result) {
+    sendResponse({ success: true, dirty: result.dirty });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive save returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveClose(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_CLOSE' }>).payload;
+  const result = await sqliteArchiveClose(payload.stagingName);
+  if (result.success && 'dirty' in result) {
+    sendResponse({ success: true, dirty: result.dirty });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive close returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveStatus(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const result = await sqliteArchiveStatus();
+  if (result.success && 'status' in result) {
+    sendResponse({ success: true, status: result.status });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive status returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
+async function handleArchiveDeleteByStaging(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_DELETE_BY_STAGING' }>).payload;
+  const result = await sqliteArchiveDeleteByStaging(payload.stagingName);
+  if (result.success && 'deleted' in result) {
+    sendResponse({
+      success: true,
+      deleted: result.deleted,
+      remaining: result.remaining,
+      freelistBefore: result.freelistBefore,
+      freelistAfter: result.freelistAfter,
+      vacuumOk: result.vacuumOk,
+    });
+  } else if (result.success) {
+    sendResponse({ success: false, error: 'Archive purge returned no data' });
+  } else {
+    sendResponse({ success: false, error: result.error });
+  }
+}
+
 /**
  * Static registry object — `satisfies` guarantees exhaustiveness at compile time.
  * Adding a new SqliteMessage variant without a handler is a type error.
@@ -310,6 +496,20 @@ const handlerRecord = {
   SQLITE_PURGE: handlePurge,
   CONTENT_PURGE: handleContentPurge,
   SQLITE_OPFS_SPIKE: handleOpfsSpike,
+  SQLITE_ARCHIVE_PREVIEW: handleArchivePreview,
+  SQLITE_ARCHIVE_CREATE: handleArchiveCreate,
+  SQLITE_ARCHIVE_CLEANUP: handleArchiveCleanup,
+  SQLITE_ARCHIVE_EXPORT: handleArchiveExport,
+  SQLITE_ARCHIVE_PREPARE_INCOMING: handleArchivePrepareIncoming,
+  SQLITE_ARCHIVE_RESTORE_PREVIEW: handleArchiveRestorePreview,
+  SQLITE_ARCHIVE_RESTORE: handleArchiveRestore,
+  SQLITE_ARCHIVE_DELETE_BY_STAGING: handleArchiveDeleteByStaging,
+  SQLITE_ARCHIVE_OPEN: handleArchiveOpen,
+  SQLITE_ARCHIVE_QUERY: handleArchiveQuery,
+  SQLITE_ARCHIVE_UPDATE: handleArchiveUpdate,
+  SQLITE_ARCHIVE_SAVE: handleArchiveSave,
+  SQLITE_ARCHIVE_CLOSE: handleArchiveClose,
+  SQLITE_ARCHIVE_STATUS: handleArchiveStatus,
 } satisfies Record<SqliteMessageType, SqliteHandler>;
 
 /**

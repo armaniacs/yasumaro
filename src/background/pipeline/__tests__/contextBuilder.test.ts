@@ -57,7 +57,7 @@ describe('contextBuilder', () => {
     const params = createSaveSqliteParams({ recordId: 0, record, sqliteClient: client });
     expect(params.obsidianSynced).toBeUndefined();
     expect(params.traceId).toBeUndefined();
-    expect((params as Record<string, unknown>).hasOwnProperty('obsidianSynced')).toBe(false);
+    expect((params as unknown as Record<string, unknown>).hasOwnProperty('obsidianSynced')).toBe(false);
   });
 
   it('createSaveSqliteParams includes defined optionals', () => {

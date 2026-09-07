@@ -7,7 +7,10 @@ import {
 } from '../aiProviderLayoutManager.js';
 
 /** Build fresh DOM with priority containers and provider settings divs inside parents. */
-function buildDom(): { containerEls: HTMLElement[]; parentEls: HTMLElement[] } {
+type Container3 = [HTMLElement, HTMLElement, HTMLElement];
+type Parent7 = [HTMLElement, HTMLElement, HTMLElement, HTMLElement, HTMLElement, HTMLElement, HTMLElement];
+
+function buildDom(): { containerEls: Container3; parentEls: Parent7 } {
   document.body.innerHTML = '';
 
   const containerEls: HTMLElement[] = [];
@@ -39,7 +42,7 @@ function buildDom(): { containerEls: HTMLElement[]; parentEls: HTMLElement[] } {
     parentEls.push(parent);
   }
 
-  return { containerEls, parentEls };
+  return { containerEls: containerEls as Container3, parentEls: parentEls as Parent7 };
 }
 
 describe('aiProviderLayoutManager', () => {

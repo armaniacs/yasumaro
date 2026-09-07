@@ -45,7 +45,7 @@ describe('auditLog', () => {
     expect(mockMutate).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'insertAuditLog', record: expect.objectContaining({ provider: 'gemini', url: 'https://example.com/page' }) })
     );
-    const callArg = (mockMutate.mock.calls[0][0] as any).record;
+    const callArg = (mockMutate.mock.calls[0]![0] as any).record;
     expect(typeof callArg.created_at).toBe('number');
   });
 

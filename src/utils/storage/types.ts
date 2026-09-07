@@ -61,6 +61,7 @@ export const StorageKeys = {
     DOMAIN_WHITELIST: 'domain_whitelist',
     DOMAIN_BLACKLIST: 'domain_blacklist',
     DOMAIN_FILTER_MODE: 'domain_filter_mode',
+    DOMAIN_SUBDOMAIN_MATCHING: 'domain_subdomain_matching',
     // Privacy settings（Phase 3）
     PRIVACY_MODE: 'privacy_mode',           // 'local_only' | 'full_pipeline' | 'masked_cloud' | 'cloud_only'
     PII_CONFIRMATION_UI: 'pii_confirmation_ui', // true | false
@@ -314,6 +315,7 @@ export interface StorageKeyValues {
     [StorageKeys.DOMAIN_WHITELIST]: string[];
     [StorageKeys.DOMAIN_BLACKLIST]: string[];
     [StorageKeys.DOMAIN_FILTER_MODE]: string;
+    [StorageKeys.DOMAIN_SUBDOMAIN_MATCHING]: boolean;
     [StorageKeys.PRIVACY_MODE]: string;
     [StorageKeys.PII_CONFIRMATION_UI]: boolean;
     [StorageKeys.PII_SANITIZE_LOGS]: boolean;

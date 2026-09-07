@@ -91,7 +91,7 @@ describe('MigrationService', () => {
 
     // Should insert batch with 2 records (1 batch call)
     expect(sendMessageMock).toHaveBeenCalledTimes(1);
-    const callArgs = sendMessageMock.mock.calls[0][0];
+    const callArgs = sendMessageMock.mock.calls[0]?.[0];
     expect(callArgs.type).toBe('SQLITE_INSERT_BATCH');
     expect(callArgs.payload.records).toHaveLength(2);
     expect(mockStorage['yasumaro_migration_status']).toBe('completed');
@@ -126,7 +126,7 @@ describe('MigrationService', () => {
 
     // Should only migrate remaining 2 in 1 batch call
     expect(sendMessageMock).toHaveBeenCalledTimes(1);
-    const callArgs = sendMessageMock.mock.calls[0][0];
+    const callArgs = sendMessageMock.mock.calls[0]?.[0];
     expect(callArgs.payload.records).toHaveLength(2);
     expect(mockStorage['yasumaro_migration_status']).toBe('completed');
   });

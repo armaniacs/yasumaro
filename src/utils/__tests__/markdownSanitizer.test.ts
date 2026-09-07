@@ -42,11 +42,11 @@ describe('markdownSanitizer', () => {
         });
 
         it('should handle null input', () => {
-            expect(sanitizeMarkdownLinks(null)).toBeNull();
+            expect(sanitizeMarkdownLinks(null as unknown as string)).toBeNull();
         });
 
         it('should handle undefined input', () => {
-            expect(sanitizeMarkdownLinks(undefined)).toBeUndefined();
+            expect(sanitizeMarkdownLinks(undefined as unknown as string)).toBeUndefined();
         });
 
         it('should handle non-string input', () => {

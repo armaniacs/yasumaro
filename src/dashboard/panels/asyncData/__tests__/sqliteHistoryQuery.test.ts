@@ -17,6 +17,13 @@ import {
 } from '../sqliteHistoryQuery.js';
 import type { BrowsingLogEntry } from '../../../../utils/sqlite-types.js';
 import type { SavedUrlEntry } from '../../../../utils/storageUrls.js';
+import type { HistoryQuerySources, UnifiedHistoryQueryData, UnifiedHistoryQueryResult } from '../sqliteHistoryQuery.js';
+
+const asSources = (s: MockSources): HistoryQuerySources => s as unknown as HistoryQuerySources;
+function okData(result: UnifiedHistoryQueryResult): UnifiedHistoryQueryData {
+  if ('error' in result) throw new Error(`expected ok result, got error: ${result.error}`);
+  return result.data;
+}
 
 function makeEntry(over: Partial<BrowsingLogEntry> = {}): BrowsingLogEntry {
   return {
@@ -155,8 +162,8 @@ describe('enrichRowsWithLegacyMetadata', () => {
     const map = mapFor(legacyEntry({ url: 'https://example.com/x', timestamp: 150_000, sentTokens: 42 }));
 
     const [olderResult, newerResult] = enrichRowsWithLegacyMetadata([older, newer], map);
-    expect(newerResult.sent_tokens).toBe(42);
-    expect(olderResult.sent_tokens).toBeUndefined();
+    expect(newerResult!.sent_tokens).toBe(42);
+    expect(olderResult!.sent_tokens).toBeUndefined();
   });
 
   it('breaks a created_at tie by the higher id', () => {
@@ -165,8 +172,8 @@ describe('enrichRowsWithLegacyMetadata', () => {
     const map = mapFor(legacyEntry({ url: 'https://example.com/x', timestamp: 120_000, sentTokens: 7 }));
 
     const [lowResult, highResult] = enrichRowsWithLegacyMetadata([lowId, highId], map);
-    expect(highResult.sent_tokens).toBe(7);
-    expect(lowResult.sent_tokens).toBeUndefined();
+    expect(highResult!.sent_tokens).toBe(7);
+    expect(lowResult!.sent_tokens).toBeUndefined();
   });
 
   it('enriches rows in distinct minute buckets independently', () => {
@@ -178,8 +185,8 @@ describe('enrichRowsWithLegacyMetadata', () => {
     );
 
     const [resultA, resultB] = enrichRowsWithLegacyMetadata([rowA, rowB], map);
-    expect(resultA.sent_tokens).toBe(1);
-    expect(resultB.sent_tokens).toBe(2);
+    expect(resultA!.sent_tokens).toBe(1);
+    expect(resultB!.sent_tokens).toBe(2);
   });
 
   it('does not enrich a row that already carries SQLite metadata', () => {
@@ -257,7 +264,7 @@ describe('queryHistory', () => {
       ]),
     });
 
-    const result = await queryHistory({ ...baseOptions, search: 'rust' }, sources);
+    const result = await queryHistory({ ...baseOptions, search: 'rust' }, asSources(sources));
 
     expect(sources.searchLogs).toHaveBeenCalledWith('rust', 20, 0, { orderBy: 'rank', orderDir: 'DESC' });
     expect(sources.queryLogs).not.toHaveBeenCalled();
@@ -276,7 +283,7 @@ describe('queryHistory', () => {
       }),
     });
 
-    const result = await queryHistory({ ...baseOptions, since: 10, until: 20 }, sources);
+    const result = await queryHistory({ ...baseOptions, since: 10, until: 20 }, asSources(sources));
 
     expect(sources.queryLogs).toHaveBeenCalledWith({
       limit: 20,
@@ -299,7 +306,7 @@ describe('queryHistory', () => {
       }),
     });
 
-    const result = await queryHistory({ ...baseOptions, tagFilter: 'AI' }, sources);
+    const result = await queryHistory({ ...baseOptions, tagFilter: 'AI' }, asSources(sources));
 
     const options = sources.queryLogs.mock.calls[0]![0];
     // A 2-character tag would return nothing through FTS5 trigram MATCH.
@@ -317,7 +324,7 @@ describe('queryHistory', () => {
       queryLogs: vi.fn().mockResolvedValue({ data: { rows: tagged, total: 50 } }),
     });
 
-    const result = await queryHistory({ limit: 20, offset: 20, tagFilter: 'AI' }, sources);
+    const result = await queryHistory({ limit: 20, offset: 20, tagFilter: 'AI' }, asSources(sources));
 
     expect(sources.searchLogs).not.toHaveBeenCalled();
     expect(result).toEqual({
@@ -332,7 +339,7 @@ describe('queryHistory', () => {
       }),
     });
 
-    const result = await queryHistory({ ...baseOptions, tagFilter: 'tech', tagInitiated: true }, sources);
+    const result = await queryHistory({ ...baseOptions, tagFilter: 'tech', tagInitiated: true }, asSources(sources));
 
     expect(sources.searchLogs).not.toHaveBeenCalled();
     expect(result).toEqual({ data: { rows: [makeRow(1, { tags: 'tech' })], total: 1 } });
@@ -348,14 +355,14 @@ describe('queryHistory', () => {
       }),
     });
 
-    const result = await queryHistory({ ...baseOptions, tagFilter: '教育', tagInitiated: true }, sources);
+    const result = await queryHistory({ ...baseOptions, tagFilter: '教育', tagInitiated: true }, asSources(sources));
 
     expect(sources.searchLogs).toHaveBeenCalledWith('教育', 20, 0, { orderBy: 'rank', orderDir: 'DESC' });
-    expect(result.data.tagFallback).toEqual({
+    expect(okData(result).tagFallback).toEqual({
       searchQuery: '教育',
       pendingTagFallback: { tag: '教育', fallbackTo: '教育', matched: 54 },
     });
-    expect(result.data.total).toBe(54);
+    expect(okData(result).total).toBe(54);
   });
 
   it('suppresses the notice when the fallback search matches nothing', async () => {
@@ -364,14 +371,14 @@ describe('queryHistory', () => {
       searchLogs: vi.fn().mockResolvedValue({ data: { rows: [], total: 0 } }),
     });
 
-    const result = await queryHistory({ ...baseOptions, tagFilter: 'nonexistent', tagInitiated: true }, sources);
+    const result = await queryHistory({ ...baseOptions, tagFilter: 'nonexistent', tagInitiated: true }, asSources(sources));
 
     expect(sources.searchLogs).toHaveBeenCalledWith('nonexistent', 20, 0, { orderBy: 'rank', orderDir: 'DESC' });
-    expect(result.data.tagFallback).toEqual({
+    expect(okData(result).tagFallback).toEqual({
       searchQuery: 'nonexistent',
       pendingTagFallback: null,
     });
-    expect(result.data.rows).toEqual([]);
+    expect(okData(result).rows).toEqual([]);
   });
 
   it('returns the fallback search error instead of raw over-fetched rows', async () => {
@@ -381,7 +388,7 @@ describe('queryHistory', () => {
       searchLogs: vi.fn().mockResolvedValue({ error: 'Search failed' }),
     });
 
-    const result = await queryHistory({ ...baseOptions, tagFilter: '教育', tagInitiated: true }, sources);
+    const result = await queryHistory({ ...baseOptions, tagFilter: '教育', tagInitiated: true }, asSources(sources));
 
     // A failed fallback search must surface the error; the raw over-fetched
     // rows must not leak into the successful result.
@@ -395,7 +402,7 @@ describe('queryHistory', () => {
       }),
     });
 
-    const result = await queryHistory({ ...baseOptions, tagFilter: 'nonexistent' }, sources);
+    const result = await queryHistory({ ...baseOptions, tagFilter: 'nonexistent' }, asSources(sources));
 
     expect(sources.searchLogs).not.toHaveBeenCalled();
     expect(result).toEqual({ data: { rows: [], total: 0 } });
@@ -406,7 +413,7 @@ describe('queryHistory', () => {
       queryLogs: vi.fn().mockResolvedValue({ error: 'Query failed' }),
     });
 
-    const result = await queryHistory(baseOptions, sources);
+    const result = await queryHistory(baseOptions, asSources(sources));
 
     expect(result).toEqual({ error: 'Query failed' });
   });
@@ -416,7 +423,7 @@ describe('queryHistory', () => {
       searchLogs: vi.fn().mockResolvedValue({ error: 'Search failed' }),
     });
 
-    const result = await queryHistory({ ...baseOptions, search: 'rust' }, sources);
+    const result = await queryHistory({ ...baseOptions, search: 'rust' }, asSources(sources));
 
     expect(result).toEqual({ error: 'Search failed' });
   });
@@ -428,7 +435,7 @@ describe('queryHistory', () => {
       getSavedUrlEntries: vi.fn().mockRejectedValue(new Error('storage read failed')),
     });
 
-    const result = await queryHistory(baseOptions, sources);
+    const result = await queryHistory(baseOptions, asSources(sources));
 
     expect(result).toEqual({ data: { rows, total: 1 } });
   });
@@ -438,7 +445,7 @@ describe('queryHistory', () => {
       queryLogs: vi.fn().mockResolvedValue({ data: { rows: [], total: 0 } }),
     });
 
-    const result = await queryHistory(baseOptions, sources);
+    const result = await queryHistory(baseOptions, asSources(sources));
 
     expect(sources.getSavedUrlEntries).not.toHaveBeenCalled();
     expect(result).toEqual({ data: { rows: [], total: 0 } });
@@ -454,16 +461,16 @@ describe('queryHistory', () => {
       ]),
     });
 
-    const result = await queryHistory(baseOptions, sources);
+    const result = await queryHistory(baseOptions, asSources(sources));
 
-    const rows = (result.data as { rows: BrowsingLogEntry[] }).rows;
+    const rows = okData(result).rows;
     expect(rows[0]).toBe(older);
-    expect(rows[1].sent_tokens).toBe(42);
+    expect(rows[1]!.sent_tokens).toBe(42);
   });
 
   it('passes sortBy=created_at/sortDir=ASC through to queryLogs as orderBy/orderDir on the non-search path', async () => {
     const sources = makeSources();
-    await queryHistory({ limit: 20, offset: 0, sortBy: 'created_at', sortDir: 'ASC' }, sources);
+    await queryHistory({ limit: 20, offset: 0, sortBy: 'created_at', sortDir: 'ASC' }, asSources(sources));
     expect(sources.queryLogs).toHaveBeenCalledWith(
       expect.objectContaining({ orderBy: 'created_at', orderDir: 'ASC' })
     );
@@ -471,7 +478,7 @@ describe('queryHistory', () => {
 
   it('defaults to created_at DESC on the non-search path when sortBy/sortDir are omitted', async () => {
     const sources = makeSources();
-    await queryHistory({ limit: 20, offset: 0 }, sources);
+    await queryHistory({ limit: 20, offset: 0 }, asSources(sources));
     expect(sources.queryLogs).toHaveBeenCalledWith(
       expect.objectContaining({ orderBy: 'created_at', orderDir: 'DESC' })
     );
@@ -479,25 +486,25 @@ describe('queryHistory', () => {
 
   it('passes orderBy=created_at/orderDir to searchLogs when sortBy=created_at on the search path', async () => {
     const sources = makeSources();
-    await queryHistory({ search: 'kddi', limit: 20, offset: 0, sortBy: 'created_at', sortDir: 'ASC' }, sources);
+    await queryHistory({ search: 'kddi', limit: 20, offset: 0, sortBy: 'created_at', sortDir: 'ASC' }, asSources(sources));
     expect(sources.searchLogs).toHaveBeenCalledWith('kddi', 20, 0, { orderBy: 'created_at', orderDir: 'ASC' });
   });
 
   it('passes orderBy=rank to searchLogs when sortBy=relevance on the search path', async () => {
     const sources = makeSources();
-    await queryHistory({ search: 'kddi', limit: 20, offset: 0, sortBy: 'relevance', sortDir: 'DESC' }, sources);
+    await queryHistory({ search: 'kddi', limit: 20, offset: 0, sortBy: 'relevance', sortDir: 'DESC' }, asSources(sources));
     expect(sources.searchLogs).toHaveBeenCalledWith('kddi', 20, 0, { orderBy: 'rank', orderDir: 'DESC' });
   });
 
   it('defaults to orderBy=rank on the search path when sortBy is omitted', async () => {
     const sources = makeSources();
-    await queryHistory({ search: 'kddi', limit: 20, offset: 0 }, sources);
+    await queryHistory({ search: 'kddi', limit: 20, offset: 0 }, asSources(sources));
     expect(sources.searchLogs).toHaveBeenCalledWith('kddi', 20, 0, { orderBy: 'rank', orderDir: 'DESC' });
   });
 
   it('forwards sortDir into the tag-filter over-fetch query (not hardcoded to DESC)', async () => {
     const sources = makeSources({ queryLogs: vi.fn().mockResolvedValue({ data: { rows: [], total: 0 } }) });
-    await queryHistory({ limit: 20, offset: 0, tagFilter: 'work', sortDir: 'ASC' }, sources);
+    await queryHistory({ limit: 20, offset: 0, tagFilter: 'work', sortDir: 'ASC' }, asSources(sources));
     expect(sources.queryLogs).toHaveBeenCalledWith(
       expect.objectContaining({ orderDir: 'ASC' })
     );

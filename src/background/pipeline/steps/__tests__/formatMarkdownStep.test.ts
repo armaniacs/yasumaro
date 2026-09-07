@@ -10,6 +10,7 @@
  */
 
 import { vi } from 'vitest';;
+import type { MockedFunction } from 'vitest';
 
 vi.mock('../../../../utils/localeUtils.js', () => ({
   getUserLocale: vi.fn().mockReturnValue('en-US'),
@@ -21,7 +22,7 @@ vi.mock('../../../../utils/markdownSanitizer.js', async (importOriginal) => {
     sanitizeUrlForMarkdownTarget: vi.fn((url: string) => url),
     // Spy that calls through to the real implementation so link-breakout
     // escaping is exercised by integration tests while call-sites are assertable.
-    sanitizeForMarkdownLinkText: vi.fn((text: string) => actual.sanitizeForMarkdownLinkText(text)),
+    sanitizeForMarkdownLinkText: vi.fn((text: string) => (actual.sanitizeForMarkdownLinkText as (t: string) => string)(text)),
   } as Record<string, unknown>;
   return {
     ...actual,
@@ -41,11 +42,13 @@ import { formatMarkdownStep } from '../formatMarkdownStep.js';
 import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget, sanitizeForMarkdownLinkText } from '../../../../utils/markdownSanitizer.js';
 import type { RecordingContext } from '../../types.js';
 
-const mockSanitize = sanitizeForObsidian as vi.MockedFunction<typeof sanitizeForObsidian>;
-const mockSanitizeUrl = sanitizeUrlForMarkdownTarget as vi.MockedFunction<typeof sanitizeUrlForMarkdownTarget>;
-const mockSanitizeLinkText = sanitizeForMarkdownLinkText as unknown as vi.MockedFunction<typeof sanitizeForMarkdownLinkText>;
+const mockSanitize = sanitizeForObsidian as MockedFunction<typeof sanitizeForObsidian>;
+const mockSanitizeUrl = sanitizeUrlForMarkdownTarget as MockedFunction<typeof sanitizeUrlForMarkdownTarget>;
+const mockSanitizeLinkText = sanitizeForMarkdownLinkText as unknown as MockedFunction<typeof sanitizeForMarkdownLinkText>;
 
-function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
+type ExplicitUndefined<T> = { [K in keyof T]?: T[K] | undefined };
+
+function makeContext(overrides: ExplicitUndefined<RecordingContext> = {}): RecordingContext {
   return {
     data: {
       title: 'Test Page',
@@ -60,7 +63,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
       maskedCount: 0,
     } as any,
     ...overrides,
-  };
+  } as RecordingContext;
 }
 
 beforeEach(() => {

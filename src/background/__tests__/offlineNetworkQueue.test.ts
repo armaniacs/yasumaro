@@ -237,6 +237,6 @@ describe('OfflineNetworkQueue', () => {
     const deferred = persisted.filter((j) => j.retryCount === 0);
     expect(processed).toHaveLength(20);
     expect(deferred).toHaveLength(1);
-    expect((deferred[0].payload as { index: number }).index).toBe(20);
+    expect((deferred[0]!.payload as { index: number }).index).toBe(20);
   });
 });

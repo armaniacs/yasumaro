@@ -93,7 +93,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
   // 【テストグループの目的】: 記録成功後の自動クローズタイマー管理を検証
   // 【テスト内容】: タイマー起動、カウントダウン表示、タイマー終了、タイマークリアをテスト
 
-  let mockWindowClose;
+  let mockWindowClose: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     // 【テスト前準備】: 各テスト実行前にテスト環境を初期化
@@ -158,7 +158,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     // 【期待される動作】: ステータスエリアのtextContentが「3...2...自動閉じる」に更新される
     // 🟢 要件定義（tdd-testcases.md TC-002、カウントダウン表示）
 
-    const statusDiv = document.getElementById('mainStatus');
+    const statusDiv = document.getElementById('mainStatus')!;
 
     // 【実際の処理実行】: カウントダウン表示を開始
     // 【処理内容】: 1000ms間隔でカウントダウンを更新
@@ -177,7 +177,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
   });
 
   test('カウントダウン完了時に「自動閉じる」メッセージが表示される', () => {
-    const statusDiv = document.getElementById('mainStatus');
+    const statusDiv = document.getElementById('mainStatus')!;
     showCountdown(statusDiv);
 
     // 3→2→1→完了まで進める
@@ -189,7 +189,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
   });
 
   test('カウントダウン完了後はintervalがクリアされる', () => {
-    const statusDiv = document.getElementById('mainStatus');
+    const statusDiv = document.getElementById('mainStatus')!;
     showCountdown(statusDiv);
 
     vi.advanceTimersByTime(3000); // reach 0
@@ -201,7 +201,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
   });
 
   test('カウントダウン中にclearAutoCloseTimerでキャンセルされる', () => {
-    const statusDiv = document.getElementById('mainStatus');
+    const statusDiv = document.getElementById('mainStatus')!;
     showCountdown(statusDiv);
 
     vi.advanceTimersByTime(1000); // 2
@@ -259,7 +259,7 @@ describe('連続記録時のタイマー管理', () => {
   // 【テストグループの目的】: 連続操作時のタイマー状態管理を検証
   // 【テスト内容】: 2回目のタイマー設定で1回目のタイマーがキャンセルされること
 
-  let mockWindowClose;
+  let mockWindowClose: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     // 【テスト前準備】: 各テスト実行前にテスト環境を初期化
@@ -320,7 +320,7 @@ describe('連続記録時のタイマー管理', () => {
  * 【リファクタ改善】: screenState.js分離により、navigation.jsのimportがテストで使用可能に
  */
 describe('画面遷移時のタイマーキャンセル (Integration)', () => {
-  let mockWindowClose;
+  let mockWindowClose: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     // 【テスト前準備】: 各テスト実行前にテスト環境を初期化

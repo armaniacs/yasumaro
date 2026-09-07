@@ -5,6 +5,7 @@
  */
 
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData } from '../messaging/sqliteMessages.js';
 // PBI-05: unified SqliteResult vocabulary — both hops now share the same
 // error classification and result shape via SqliteGateway.
 // PBI 11: the DASHBOARD_SQLITE send policy (token gate, timeout, retry) lives
@@ -343,6 +344,170 @@ export function backupDb(): Promise<ServiceResult<Uint8Array>> {
  */
 export function restoreDb(data: Uint8Array): Promise<ServiceResult<void>> {
   return callDashboard({ subtype: 'restore_db', data: bytesToBase64(data) }, () => undefined, 'Restore failed');
+}
+
+// ============================================================================
+// Archive (PBI 2026-09-06-02)
+// ============================================================================
+
+/**
+ * Preview how many records archive_create would collect for the boundary.
+ * Read-only (token-exempt).
+ */
+export function archivePreview(cutoffDate: string, cutoffMs: number, includeDeleted: boolean): Promise<ServiceResult<ArchivePreviewData>> {
+  return callDashboard(
+    { subtype: 'archive_preview', cutoffDate, cutoffMs, includeDeleted },
+    (response) => {
+      if (!response.preview) throw new Error('Archive preview returned no data');
+      return response.preview;
+    },
+    'Archive preview failed',
+  );
+}
+
+/**
+ * Create the archive staging file (phase A). The main DB is NOT modified —
+ * deletion happens in PBI 2026-09-06-04. Returns the staging name so the
+ * file can be downloaded (chunked export) and later deleted (phase B).
+ */
+export function archiveCreate(params: {
+  cutoffDate: string;
+  cutoffMs: number;
+  includeDeleted: boolean;
+  yasumaroVersion: string;
+}): Promise<ServiceResult<ArchiveCreateData>> {
+  return callDashboard(
+    { subtype: 'archive_create', ...params },
+    (response) => {
+      if (!response.stagingName) throw new Error('Archive create returned no staging file');
+      return { stagingName: response.stagingName, recordCount: response.recordCount };
+    },
+    'Archive creation failed',
+  );
+}
+
+/** Sweep orphan staging files. */
+export function archiveCleanup(): Promise<ServiceResult<{ removed: string[] }>> {
+  return callDashboard({ subtype: 'archive_cleanup' }, (response) => ({ removed: response.removed }), 'Archive cleanup failed');
+}
+
+/** Read one chunk of a staging file (loop until `done`, then assemble). */
+export function archiveExportChunk(stagingName: string, offset: number, length: number): Promise<ServiceResult<ArchiveExportData>> {
+  return callDashboard(
+    { subtype: 'archive_export', stagingName, offset, length },
+    (response) => ({ chunk: response.chunk, nextOffset: response.nextOffset, total: response.total, done: response.done }),
+    'Archive export failed',
+  );
+}
+
+/**
+ * Issue a registered incoming staging name (offscreen-generated). The
+ * dashboard then writes the picked file's bytes into that OPFS file.
+ */
+export function archivePrepareIncoming(): Promise<ServiceResult<string>> {
+  return callDashboard(
+    { subtype: 'archive_prepare_incoming' },
+    (response) => {
+      if (!response.stagingName) throw new Error('Archive prepare returned no staging name');
+      return response.stagingName;
+    },
+    'Archive preparation failed',
+  );
+}
+
+/** Read-only preview of a validated staging archive (confirm-dialog data). */
+export function archiveRestorePreview(stagingName: string): Promise<ServiceResult<ArchiveRestorePreviewData>> {
+  return callDashboard(
+    { subtype: 'archive_restore_preview', stagingName },
+    (response) => {
+      if (!response.preview) throw new Error('Archive restore preview returned no data');
+      return response.preview;
+    },
+    'Archive restore preview failed',
+  );
+}
+
+/**
+ * Phase B (PBI 2026-09-06-04): delete the main-DB rows covered by the
+ * verified staging archive, then VACUUM. Destructive — token + scopeHash
+ * bound to the staging name.
+ */
+export function archiveDeleteByStaging(stagingName: string): Promise<ServiceResult<ArchivePurgeData>> {
+  return callDashboard(
+    { subtype: 'archive_delete_by_staging', stagingName },
+    (response) => ({
+      deleted: response.deleted,
+      remaining: response.remaining,
+      freelistBefore: response.freelistBefore,
+      freelistAfter: response.freelistAfter,
+      vacuumOk: response.vacuumOk,
+    }),
+    'Archive purge failed',
+  );
+}
+
+/** Merge-restore the staging archive into the main DB (destructive-op gate). */
+export function archiveRestore(stagingName: string): Promise<ServiceResult<ArchiveRestoreData>> {
+  return callDashboard(
+    { subtype: 'archive_restore', stagingName },
+    (response) => ({
+      restored: response.restored,
+      restoredDeleted: response.restoredDeleted,
+      skipped: response.skipped,
+      skippedInvalid: response.skippedInvalid,
+    }),
+    'Archive restore failed',
+  );
+}
+
+/** Open a staged archive as a temp session (PBI 2026-09-06-05). */
+export function archiveOpen(stagingName: string): Promise<ServiceResult<void>> {
+  return callDashboard({ subtype: 'archive_open', stagingName }, () => undefined, 'Archive open failed');
+}
+
+/** Query the open archive session (LIKE search on url/title/summary). */
+export function archiveQuery(stagingName: string, query: string, limit: number, offset: number): Promise<ServiceResult<{ rows: ArchiveSessionRow[]; total: number }>> {
+  return callDashboard(
+    { subtype: 'archive_query', stagingName, query, limit, offset },
+    (response) => ({ rows: response.rows, total: response.total }),
+    'Archive query failed',
+  );
+}
+
+/** Update a whitelisted field of an archive row (marks session dirty). */
+export function archiveUpdate(stagingName: string, id: number, changes: Record<string, unknown>): Promise<ServiceResult<{ dirty: boolean }>> {
+  return callDashboard(
+    { subtype: 'archive_update', stagingName, id, changes },
+    (response) => ({ dirty: response.dirty }),
+    'Archive update failed',
+  );
+}
+
+/** Flush the session WAL into the staging file (save checkpoint). */
+export function archiveSave(stagingName: string): Promise<ServiceResult<{ dirty: boolean }>> {
+  return callDashboard(
+    { subtype: 'archive_save', stagingName },
+    (response) => ({ dirty: response.dirty }),
+    'Archive save failed',
+  );
+}
+
+/** Close the temp session (rejects when dirty — two-defense with the UI). */
+export function archiveClose(stagingName: string): Promise<ServiceResult<{ dirty: boolean }>> {
+  return callDashboard(
+    { subtype: 'archive_close', stagingName },
+    (response) => ({ dirty: response.dirty }),
+    'Archive close failed',
+  );
+}
+
+/** Reconnect/status probe for the temp session. */
+export function archiveStatus(): Promise<ServiceResult<ArchiveSessionStatusData>> {
+  return callDashboard(
+    { subtype: 'archive_status' },
+    (response) => response.status,
+    'Archive status failed',
+  );
 }
 
 /**

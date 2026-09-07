@@ -58,7 +58,7 @@ describe('storage', () => {
       // @ts-ignore
       global.chrome = { storage: mockStorage } as any;
 
-      const result = await new Promise<{ allowedDomains: string[]; blockedDomains: string[]; cachedAt: number; mode: string }>((resolve) => {
+      const result = await new Promise<{ allowedDomains: string[]; blockedDomains: string[]; cachedAt: number; mode: string; matchSubdomains: boolean }>((resolve) => {
         getDomainFilterCacheSync(resolve);
       });
 
@@ -66,7 +66,8 @@ describe('storage', () => {
         allowedDomains: mockAllowedDomains,
         blockedDomains: [],
         cachedAt: mockTimestamp,
-        mode: mockMode
+        mode: mockMode,
+        matchSubdomains: false
       });
     });
 
@@ -84,11 +85,11 @@ describe('storage', () => {
       // @ts-ignore
       global.chrome = { storage: mockStorage } as any;
 
-      const result = await new Promise<{ allowedDomains: string[]; blockedDomains: string[]; cachedAt: number; mode: string }>((resolve) => {
+      const result = await new Promise<{ allowedDomains: string[]; blockedDomains: string[]; cachedAt: number; mode: string; matchSubdomains: boolean }>((resolve) => {
         getDomainFilterCacheSync(resolve);
       });
 
-      expect(result).toEqual({ allowedDomains: [], blockedDomains: [], cachedAt: 0, mode: 'disabled' });
+      expect(result).toEqual({ allowedDomains: [], blockedDomains: [], cachedAt: 0, mode: 'disabled', matchSubdomains: false });
     });
   });
 

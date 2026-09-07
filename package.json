@@ -1,6 +1,6 @@
 {
   "name": "yasumaro",
-  "version": "6.7.111",
+  "version": "6.7.115",
   "description": "Log your browsing history with AI summaries into local SQLite storage. Optional Obsidian integration.",
   "type": "module",
   "scripts": {
@@ -70,12 +70,14 @@
     "@cyclonedx/cyclonedx-npm": "^6.0.1",
     "@peculiar/webcrypto": "^1.7.1",
     "@playwright/test": "^1.62.1",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/chrome": "^0.2.7",
     "@types/node": "^26.2.0",
     "@typescript-eslint/eslint-plugin": "^8.67.0",
     "@typescript-eslint/parser": "^8.67.0",
     "@vitest/coverage-v8": "^4.1.11",
     "adm-zip": "^0.6.0",
+    "better-sqlite3": "^12.11.1",
     "crx3": "^2.0.0",
     "esbuild": "^0.28.2",
     "eslint": "^10.9.0",

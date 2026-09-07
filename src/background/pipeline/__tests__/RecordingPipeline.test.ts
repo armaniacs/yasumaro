@@ -8,6 +8,7 @@
  */
 
 import { vi } from 'vitest';;
+import type { Mock, MockedClass } from 'vitest';
 
 // Mock chrome.storage.local for pendingStorage integration
 const mockStorage: Record<string, unknown> = {};
@@ -104,16 +105,17 @@ import { makeOrchestrator } from '../../__tests__/helpers/makeRecordingLogic.js'
 import { createRecordingOrchestrator, RecordingOrchestrator } from '../RecordingOrchestrator.js';
 import { NoOpOfflineNetworkQueue } from '../../offlineNetworkQueue.js';
 
-const MockedObsidianClient = ObsidianClient as vi.MockedClass<typeof ObsidianClient>;
+const MockedObsidianClient = ObsidianClient as MockedClass<typeof ObsidianClient>;
 
-const MockedPrivacyPipeline = PrivacyPipeline as vi.MockedClass<typeof PrivacyPipeline>;
+const MockedPrivacyPipeline = PrivacyPipeline as MockedClass<typeof PrivacyPipeline>;
 
+// Only the privacy-relevant fields matter here; the pipeline reads no others.
 const mockSettings = {
   PRIVACY_MODE: 'full_pipeline',
   PII_SANITIZE_LOGS: true,
   TAG_SUMMARY_MODE: false,
   AUTO_SAVE_PRIVACY_BEHAVIOR: 'save',
-};
+} as unknown as import('../../../utils/storage/types.js').Settings;
 
 function makeAiClient() {
   return {
@@ -174,10 +176,10 @@ describe('RecordingPipeline', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockProcess = vi.fn();
-    MockedPrivacyPipeline.mockImplementation(function() {
+    MockedPrivacyPipeline.mockImplementation(function(this: any) {
       this.process = mockProcess;
     });
-    MockedObsidianClient.mockImplementation(function() {
+    MockedObsidianClient.mockImplementation(function(this: any) {
       this.appendToDailyNote = vi.fn();
     });
   });
@@ -255,7 +257,7 @@ describe('RecordingPipeline', () => {
         content: 'Some content',
       }, { settings: mockSettings });
 
-      const calls = (logger.addLog as vi.Mock).mock.calls;
+      const calls = (logger.addLog as Mock).mock.calls;
       const traceIds = new Set(calls.map((call: any[]) => call[2]?.traceId).filter(Boolean));
       expect(traceIds.size).toBe(1);
       const traceId = Array.from(traceIds)[0];
@@ -281,7 +283,7 @@ describe('RecordingPipeline', () => {
         content: 'Some content',
       }, { settings: mockSettings });
 
-      const calls = (logger.addLog as vi.Mock).mock.calls;
+      const calls = (logger.addLog as Mock).mock.calls;
       const traceIds = calls.map((call: any[]) => call[2]?.traceId).filter(Boolean);
       expect(traceIds.length).toBeGreaterThan(0);
       const firstTraceId = traceIds[0];
@@ -320,8 +322,8 @@ describe('RecordingPipeline', () => {
     });
 
     it('previewOnly 時は Obsidian に保存しない', async () => {
-      const mockAppend = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
-      MockedObsidianClient.mockImplementation(function() {
+      const mockAppend = vi.fn<(content: string) => Promise<void>>().mockResolvedValue(undefined);
+      MockedObsidianClient.mockImplementation(function(this: any) {
         this.appendToDailyNote = mockAppend;
       });
       mockProcess.mockResolvedValue({
@@ -354,8 +356,8 @@ describe('RecordingPipeline', () => {
     // saveToObsidianStep, so MockedObsidianClient is never called. This is a test
     // design issue, not a Vitest migration issue.
     it.skip('AI要約が Obsidian に保存される', async () => {
-      const mockAppend = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
-      MockedObsidianClient.mockImplementation(function() {
+      const mockAppend = vi.fn<(content: string) => Promise<void>>().mockResolvedValue(undefined);
+      MockedObsidianClient.mockImplementation(function(this: any) {
         this.appendToDailyNote = mockAppend;
       });
       mockProcess.mockResolvedValue({
@@ -492,7 +494,7 @@ describe('RecordingPipeline', () => {
       await executePromise;
 
       // addLog に渡された delayMs 引数をすべて検証
-      const retryCalls = (logger.addLog as vi.Mock).mock.calls.filter(
+      const retryCalls = (logger.addLog as Mock).mock.calls.filter(
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Retrying')
       );
 

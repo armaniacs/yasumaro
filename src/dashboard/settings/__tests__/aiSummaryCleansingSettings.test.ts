@@ -252,6 +252,7 @@ import {
     saveAiSummaryCleansingSettings,
     type AiSummaryCleansingSettings,
 } from '../aiSummaryCleansingSettingsV2.js';
+import { CLEANSING_RULES } from '../../../utils/aiSummaryCleaner/rules.js';
 
 const mockGetSettings = vi.mocked(settingsRepository.getAll);
 const mockSaveSettings = vi.mocked(settingsRepository.setAll);
@@ -348,20 +349,22 @@ describe('getAiSummaryCleansingSettings', () => {
 });
 
 describe('saveAiSummaryCleansingSettings', () => {
-    const baseSettings: AiSummaryCleansingSettings = {
+    const ruleFlags = Object.fromEntries(
+        CLEANSING_RULES.map((r) => [`${r.key}Enabled`, r.defaultEnabled]),
+    );
+    const baseSettings = {
         enabled: true,
-        altEnabled: true,
-        metadataEnabled: true,
-        adsEnabled: true,
-        navEnabled: true,
-        socialEnabled: true,
-        deepEnabled: false,
-        linkDensityEnabled: false,
-        jsonLdEnabled: false,
-        lazyLoadEnabled: false,
-        skipLinkEnabled: false,
-        cardEnabled: false,
-    };
+        ...ruleFlags,
+        linkRatioThreshold: 70,
+        shortTextThreshold: 30,
+        shortSeqCount: 5,
+        linkParaThreshold: 50,
+        whitelistExtractionEnabled: true,
+        bodyProtectionEnabled: true,
+        bodyProtectionThreshold: 200,
+        fallbackRatio: 0.2,
+        fallbackMinBytes: 300,
+    } as unknown as AiSummaryCleansingSettings;
 
     test('saves jsonLdEnabled to storage', async () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

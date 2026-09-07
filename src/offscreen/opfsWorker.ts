@@ -23,6 +23,28 @@ import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 import { handleInsert, handleQuery, handleUpdate, handleHardDelete, handleToggleStar, handleGetCount, handleInsertBatch } from './opfsWorker/crudHandlers.js';
 import { handleSearch as handleSearchImpl, handleSearchFts as handleSearchFtsImpl, handleSearchLike as handleSearchLikeImpl } from './opfsWorker/searchHandlers.js';
 import { handleBackup, handleSerialize } from './opfsWorker/backupHandlers.js';
+import {
+  handleArchivePreview,
+  handleArchiveCreate,
+  handleArchiveCleanup,
+  handleArchiveExport,
+} from './opfsWorker/archiveCreateHandlers.js';
+import {
+  handleArchivePrepareIncoming,
+  handleArchiveRestorePreview,
+  handleArchiveRestore,
+} from './opfsWorker/archiveRestoreHandlers.js';
+import { handleArchiveDeleteByStaging } from './opfsWorker/archivePurgeHandlers.js';
+import {
+  handleArchiveOpen,
+  handleArchiveQuery,
+  handleArchiveUpdate,
+  handleArchiveSave,
+  handleArchiveClose,
+  handleArchiveStatus,
+  handleArchiveDiscard,
+  handleArchiveSweep,
+} from './opfsWorker/archiveSessionHandlers.js';
 import { handlePurgeOldRecords, handleContentPurge, handleClearAll } from './opfsWorker/purgeHandlers.js';
 import { handleAuditLogInsert, handleAuditLogQuery } from './opfsWorker/auditHandlers.js';
 import { handleGetStatus, handleFtsIndexSize } from './opfsWorker/statusHandlers.js';
@@ -249,6 +271,74 @@ export async function handleRequest(req: WorkerRequestMessage): Promise<WorkerRe
           ? restorePayload.data
           : new Uint8Array(restorePayload.data);
         result = await handleRestore(bytes);
+        break;
+      }
+      case 'ARCHIVE_PREVIEW': {
+        result = await handleArchivePreview(handlerCtx, payload as import('./opfsWorker/types.js').ArchivePreviewPayload);
+        break;
+      }
+      case 'ARCHIVE_CREATE': {
+        result = await handleArchiveCreate(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveCreatePayload);
+        break;
+      }
+      case 'ARCHIVE_CLEANUP': {
+        result = await handleArchiveCleanup(handlerCtx);
+        break;
+      }
+      case 'ARCHIVE_EXPORT': {
+        result = await handleArchiveExport(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveExportPayload);
+        break;
+      }
+      case 'ARCHIVE_PREPARE_INCOMING': {
+        result = await handleArchivePrepareIncoming(handlerCtx);
+        break;
+      }
+      case 'ARCHIVE_RESTORE_PREVIEW': {
+        result = await handleArchiveRestorePreview(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveRestorePreviewPayload);
+        break;
+      }
+      case 'ARCHIVE_RESTORE': {
+        result = await handleArchiveRestore(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveRestorePayload);
+        break;
+      }
+      case 'ARCHIVE_DELETE_BY_STAGING': {
+        result = await handleArchiveDeleteByStaging(
+          handlerCtx,
+          payload as { stagingName: string },
+          postWorkerLog,
+        );
+        break;
+      }
+      case 'ARCHIVE_OPEN': {
+        result = await handleArchiveOpen(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveOpenPayload);
+        break;
+      }
+      case 'ARCHIVE_QUERY': {
+        result = await handleArchiveQuery(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveQueryPayload);
+        break;
+      }
+      case 'ARCHIVE_UPDATE': {
+        result = await handleArchiveUpdate(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveUpdatePayload);
+        break;
+      }
+      case 'ARCHIVE_SAVE': {
+        result = await handleArchiveSave(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveSavePayload);
+        break;
+      }
+      case 'ARCHIVE_CLOSE': {
+        result = await handleArchiveClose(handlerCtx, payload as import('./opfsWorker/types.js').ArchiveClosePayload);
+        break;
+      }
+      case 'ARCHIVE_STATUS': {
+        result = await handleArchiveStatus(handlerCtx);
+        break;
+      }
+      case 'ARCHIVE_DISCARD': {
+        result = await handleArchiveDiscard((payload as { stagingName: string }).stagingName);
+        break;
+      }
+      case 'ARCHIVE_SWEEP': {
+        result = await handleArchiveSweep();
         break;
       }
       case 'FTS_INDEX_SIZE': {

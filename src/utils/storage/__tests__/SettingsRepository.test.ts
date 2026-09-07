@@ -59,7 +59,7 @@ describe('SettingsRepository — deep module via StorageAdapter', () => {
     repo.onChange((c) => changes.push(c as Record<string, unknown>));
     await repo.set(StorageKeys.OBSIDIAN_HOST, '9.9.9.9');
     expect(changes.length).toBe(1);
-    expect(changes[0][StorageKeys.OBSIDIAN_HOST]).toBe('9.9.9.9');
+    expect(changes[0]![StorageKeys.OBSIDIAN_HOST]).toBe('9.9.9.9');
   });
 
   it('onChange forwards only settings key, not other keys', async () => {

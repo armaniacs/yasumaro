@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// chrome.runtime.lastError is readonly in @types/chrome; tests need to simulate it.
+type MutableLastError = { lastError: chrome.runtime.LastError | null };
+
 const {
   mockGetCurrentTab,
   mockGetMessage,
@@ -916,7 +919,7 @@ describe('initStatusPanel — additional branches', () => {
         query: vi.fn().mockResolvedValue([fakeTab]),
         sendMessage: vi.fn((tabId: number, msg: any, cb: any) => {
           // @ts-ignore
-          global.chrome.runtime.lastError = { message: 'fail' };
+          (chrome.runtime as MutableLastError).lastError = { message: 'fail' };
           cb(undefined);
         }),
       },
@@ -928,7 +931,7 @@ describe('initStatusPanel — additional branches', () => {
     const cleansing = document.getElementById('statusCleansingContent')!;
     expect(cleansing).toBeTruthy();
     // @ts-ignore reset
-    global.chrome.runtime.lastError = null;
+    (chrome.runtime as MutableLastError).lastError = null;
   });
 
   it('handles toggle button with missing elements gracefully', async () => {
@@ -1094,7 +1097,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     expect(mockGetCurrentTab).toHaveBeenCalled();
     expect(mockExtractDomain).toHaveBeenCalledWith('https://example.com/page');
     expect(mockSetAll).toHaveBeenCalled();
-    const savedArg = mockSetAll.mock.calls[0][0];
+    const savedArg = mockSetAll.mock.calls[0]![0];
     expect(savedArg.domain_whitelist).toContain('example.com');
     expect(document.getElementById('mainStatus')!.textContent).toContain('Domain added');
     expect(document.getElementById('mainStatus')!.className).toBe('success');
@@ -1154,7 +1157,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
     expect(mockSetAll).toHaveBeenCalled();
-    expect(mockSetAll.mock.calls[0][0].domain_whitelist).toContain('example.com');
+    expect(mockSetAll.mock.calls[0]![0].domain_whitelist).toContain('example.com');
   });
 
   it('addDomain: statusDiv missing — still saves but no DOM update', async () => {
@@ -1192,7 +1195,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
     expect(mockSetAll).toHaveBeenCalled();
-    const savedArg = mockSetAll.mock.calls[0][0] as any;
+    const savedArg = mockSetAll.mock.calls[0]![0] as any;
     // Settings repository receives whitelist array containing full URL
     expect(savedArg.domain_whitelist).toContain('https://example.com/page');
     expect(document.getElementById('mainStatus')!.textContent).toContain('Path added');

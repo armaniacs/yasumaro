@@ -15,7 +15,7 @@ describe('contentExtractor', () => {
 
   it('handles empty document body', () => {
     document.body.innerHTML = '';
-    const result = extractMainContent(document);
+    const result = extractMainContent();
     expect(result).toBeDefined();
   });
 
@@ -28,7 +28,7 @@ describe('contentExtractor', () => {
         <p>Another paragraph with meaningful content.</p>
       </article>
     `;
-    const result = extractMainContent(document);
+    const result = extractMainContent();
     expect(result).toBeDefined();
   });
 });

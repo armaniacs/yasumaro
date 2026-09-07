@@ -10,6 +10,7 @@
  */
 
 import { vi } from 'vitest';;
+import type { MockedClass } from 'vitest';
 
 vi.mock('../../../../utils/logger.js', () => ({
   addLog: vi.fn(),
@@ -29,7 +30,7 @@ import { TrustChecker } from '../../../../utils/trustChecker.js';
 import { NotificationHelper } from '../../../notificationHelper.js';
 import type { RecordingContext } from '../../types.js';
 
-const MockedTrustChecker = TrustChecker as vi.MockedClass<typeof TrustChecker>;
+const MockedTrustChecker = TrustChecker as MockedClass<typeof TrustChecker>;
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {
@@ -48,7 +49,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
 function setupTrustChecker(mockResult: {
   canProceed: boolean;
   showAlert: boolean;
-  reason?: string;
+  reason?: string | undefined;
   trustResult: { level: string; source: string };
 }) {
   const mockCheckDomain = vi.fn<() => Promise<any>>().mockResolvedValue(mockResult);

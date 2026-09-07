@@ -8,7 +8,7 @@ import { categorizeError } from './sqliteRpcClient.js';
 import type { SqliteResult } from '../background/sqlite/offscreenGateway.js';
 export type { SqliteResult };
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
-import { tokenExempt } from './sqliteOperationSecurity.js';
+import { tokenExempt, deriveScopeHash } from './sqliteOperationSecurity.js';
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 
 const DASHBOARD_SQLITE_TIMEOUT = 10000;
@@ -18,9 +18,14 @@ export interface DashboardRetryOptions {
   retryDelayMs?: number;
 }
 
-async function getDashboardConfirmToken(action: string, id?: number): Promise<string | null> {
+async function getDashboardConfirmToken(action: string, id?: number, scopeHash?: string): Promise<string | null> {
   try {
-    const requestPayload: DashboardSqliteRequest = { subtype: 'create_confirm_token', action, ...(id !== undefined ? { id } : {}) } as DashboardSqliteRequest;
+    const requestPayload: DashboardSqliteRequest = {
+      subtype: 'create_confirm_token',
+      action,
+      ...(id !== undefined ? { id } : {}),
+      ...(scopeHash !== undefined ? { scopeHash } : {}),
+    } as DashboardSqliteRequest;
     const response = await sendDashboardRaw(requestPayload);
     if (response.success && typeof (response as { confirmToken?: string }).confirmToken === 'string') return (response as { confirmToken: string }).confirmToken;
   } catch (error) { console.error('Failed to request dashboard SQLite confirmToken:', error); }
@@ -40,9 +45,20 @@ async function sendDashboard<T extends DashboardSqliteRequest>(payload: T): Prom
   if (requireConfirmToken) {
     const action = payload.subtype;
     const id = (payload as unknown as { id?: number }).id;
-    const confirmToken = await getDashboardConfirmToken(action, id);
+    const scopeHash = await deriveScopeHash(payload.subtype, payload as Record<string, unknown>);
+    const confirmToken = await getDashboardConfirmToken(action, id, scopeHash);
     if (!confirmToken) {
       throw new Error('Dashboard confirm token unavailable');
+    }
+    // Send-time stability assert (PBI 2026-09-06-01): the token binds the
+    // scope derived from the payload at issuance. If the payload object is
+    // mutated between token issuance and send, fail closed instead of
+    // operating on unexpected parameters.
+    if (scopeHash !== undefined) {
+      const scopeHashAfter = await deriveScopeHash(payload.subtype, payload as Record<string, unknown>);
+      if (scopeHashAfter !== scopeHash) {
+        throw new Error('Dashboard SQLite payload changed after confirm token issuance; aborting');
+      }
     }
     messagePayload = { ...payload, confirmToken } as T & { confirmToken: string };
   }

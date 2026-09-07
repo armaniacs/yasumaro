@@ -28,7 +28,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            expect((logs[0].details as Record<string, unknown>).data).toBeDefined();
+            expect((logs[0]!.details as Record<string, unknown>).data).toBeDefined();
         });
 
         test('深いネスト（MAX_RECURSION_DEPTH + 1）は安全なプレースホルダーに置換される', async () => {
@@ -43,7 +43,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            const jsonStr = JSON.stringify(logs[0].details);
+            const jsonStr = JSON.stringify(logs[0]!.details);
             expect(jsonStr).toContain('[SANITIZED: too deep]');
         });
 
@@ -59,7 +59,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            const jsonStr = JSON.stringify(logs[0].details);
+            const jsonStr = JSON.stringify(logs[0]!.details);
             expect(jsonStr).toContain('[SANITIZED: too deep]');
         });
     });
@@ -76,7 +76,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            const jsonStr = JSON.stringify(logs[0].details);
+            const jsonStr = JSON.stringify(logs[0]!.details);
             expect(jsonStr).toContain('[SANITIZED: circular reference]');
         });
 
@@ -90,7 +90,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            const jsonStr = JSON.stringify(logs[0].details);
+            const jsonStr = JSON.stringify(logs[0]!.details);
             expect(jsonStr).toContain('[SANITIZED: circular reference]');
         });
 
@@ -104,7 +104,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            const jsonStr = JSON.stringify(logs[0].details);
+            const jsonStr = JSON.stringify(logs[0]!.details);
             expect(jsonStr).toContain('[SANITIZED: circular reference]');
         });
 
@@ -119,7 +119,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            const jsonStr = JSON.stringify(logs[0].details);
+            const jsonStr = JSON.stringify(logs[0]!.details);
             expect(jsonStr).toContain('[SANITIZED: circular reference]');
         });
     });
@@ -131,8 +131,8 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            expect((logs[0].details as Record<string, unknown>).a).toBeNull();
-            expect((logs[0].details as Record<string, unknown>).b).toBeUndefined();
+            expect((logs[0]!.details as Record<string, unknown>).a).toBeNull();
+            expect((logs[0]!.details as Record<string, unknown>).b).toBeUndefined();
         });
 
         test('Date オブジェクトは文字列化される', async () => {
@@ -142,7 +142,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            expect((logs[0].details as Record<string, unknown>).timestamp).toEqual({ __value: date.toISOString() });
+            expect((logs[0]!.details as Record<string, unknown>).timestamp).toEqual({ __value: date.toISOString() });
         });
 
         test('Error オブジェクトは message と stack に変換される', async () => {
@@ -152,8 +152,8 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            expect(((logs[0].details as Record<string, unknown>).error as Record<string, unknown>).message).toBe('Test error');
-            expect(((logs[0].details as Record<string, unknown>).error as Record<string, unknown>).stack).toBeDefined();
+            expect(((logs[0]!.details as Record<string, unknown>).error as Record<string, unknown>).message).toBe('Test error');
+            expect(((logs[0]!.details as Record<string, unknown>).error as Record<string, unknown>).stack).toBeDefined();
         });
 
         test('プリミティブ型はそのまま渡される', async () => {
@@ -166,9 +166,9 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            expect((logs[0].details as Record<string, unknown>).num).toBe(42);
-            expect((logs[0].details as Record<string, unknown>).bool).toBe(true);
-            expect((logs[0].details as Record<string, unknown>).str).toBe('hello');
+            expect((logs[0]!.details as Record<string, unknown>).num).toBe(42);
+            expect((logs[0]!.details as Record<string, unknown>).bool).toBe(true);
+            expect((logs[0]!.details as Record<string, unknown>).str).toBe('hello');
         });
 
         test('配列内の循環参照以外の要素は通常通り処理される', async () => {
@@ -182,8 +182,8 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            expect((logs[0].details as Record<string, unknown>).data[0]).toBe(1);
-            expect((logs[0].details as Record<string, unknown>).data[1]).toBe('hello');
+            expect(((logs[0]!.details as Record<string, unknown>).data as unknown[])[0]).toBe(1);
+            expect(((logs[0]!.details as Record<string, unknown>).data as unknown[])[1]).toBe('hello');
         });
     });
 
@@ -199,7 +199,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            const jsonStr = JSON.stringify(logs[0].details);
+            const jsonStr = JSON.stringify(logs[0]!.details);
             expect(jsonStr).not.toContain('user@example.com');
             expect(jsonStr).toContain('[MASKED:email]');
         });
@@ -215,7 +215,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            const jsonStr = JSON.stringify(logs[0].details);
+            const jsonStr = JSON.stringify(logs[0]!.details);
             expect(jsonStr).not.toContain(sensitiveData);
             expect(jsonStr).toContain('[SANITIZED: circular reference]');
         });
@@ -232,7 +232,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            const jsonStr = JSON.stringify(logs[0].details);
+            const jsonStr = JSON.stringify(logs[0]!.details);
             expect(jsonStr).not.toContain(sensitiveData);
             expect(jsonStr).toContain('[SANITIZED: too deep]');
         });
@@ -243,8 +243,8 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            expect(logs[0].message).not.toContain('user@test.com');
-            expect(logs[0].message).toContain('[MASKED:email]');
+            expect(logs[0]!.message).not.toContain('user@test.com');
+            expect(logs[0]!.message).toContain('[MASKED:email]');
         });
 
         test('PIIを含まないmessageは変化しない', async () => {
@@ -253,7 +253,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
 
             const logs = await getLogs();
             expect(logs.length).toBe(1);
-            expect(logs[0].message).toBe('Recording pipeline completed successfully');
+            expect(logs[0]!.message).toBe('Recording pipeline completed successfully');
         });
     });
 });

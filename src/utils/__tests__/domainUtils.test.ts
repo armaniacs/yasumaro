@@ -5,6 +5,7 @@
  */
 
 import { vi } from 'vitest';
+import type { MockedFunction } from 'vitest';
 import {
   extractDomain,
   matchesPattern,
@@ -37,8 +38,8 @@ vi.mock('../storage/SettingsRepository.js', async (importOriginal) => {
 
 type Settings = SettingsType;
 
-const mockedIsUrlBlocked = isUrlBlocked as vi.MockedFunction<typeof isUrlBlocked>;
-const mockedGetAll = settingsRepository.getAll as vi.MockedFunction<typeof settingsRepository.getAll>;
+const mockedIsUrlBlocked = isUrlBlocked as MockedFunction<typeof isUrlBlocked>;
+const mockedGetAll = settingsRepository.getAll as MockedFunction<typeof settingsRepository.getAll>;
 const mockedGetSettings = mockedGetAll;
 
 describe('domainUtils', () => {
@@ -47,11 +48,9 @@ describe('domainUtils', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedIsUrlBlocked.mockReset();
-    // @ts-expect-error - vi.fn() type narrowing issue
   
     mockedIsUrlBlocked.mockResolvedValue(false);
     mockedGetSettings.mockReset();
-    // @ts-expect-error - vi.fn() type narrowing issue
   
     mockedGetSettings.mockResolvedValue({});
   });
@@ -144,7 +143,6 @@ describe('domainUtils', () => {
 
   describe('isDomainAllowed', () => {
     test('ドメインフィルターが無効な場合は全てのドメインを許可する', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockedGetSettings.mockResolvedValue({ domain_filter_mode: 'disabled' } as Settings);
       const url = 'https://any-domain.com';
@@ -153,7 +151,6 @@ describe('domainUtils', () => {
     });
 
     test('ホワイトリストモードで登録済みドメインを許可する', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'whitelist',
@@ -165,7 +162,6 @@ describe('domainUtils', () => {
     });
 
     test('ブラックリストモードで登録済みドメインを拒否する', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
@@ -177,16 +173,43 @@ describe('domainUtils', () => {
     });
 
     test('ドメイン抽出に失敗した場合はfalseを返す', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
-  
+
       mockedGetSettings.mockResolvedValue({ domain_filter_mode: 'whitelist' } as Settings);
       const invalidUrl = 'invalid-url';
       const result = await isDomainAllowed(invalidUrl);
       expect(result).toBe(false);
     });
 
+    test('サブドメインマッチングOFF（デフォルト）ではサブドメインを許可しない', async () => {
+      mockedGetSettings.mockResolvedValue({
+        domain_filter_mode: 'whitelist',
+        domain_whitelist: ['example.com']
+      } as Settings);
+      const result = await isDomainAllowed('https://sub.example.com/page');
+      expect(result).toBe(false);
+    });
+
+    test('サブドメインマッチングONではサブドメインを許可する', async () => {
+      mockedGetSettings.mockResolvedValue({
+        domain_filter_mode: 'whitelist',
+        domain_whitelist: ['example.com'],
+        domain_subdomain_matching: true
+      } as unknown as Settings);
+      const result = await isDomainAllowed('https://sub.example.com/page');
+      expect(result).toBe(true);
+    });
+
+    test('サブドメインマッチングON時はブラックリストのサブドメインを拒否する', async () => {
+      mockedGetSettings.mockResolvedValue({
+        domain_filter_mode: 'blacklist',
+        domain_blacklist: ['example.com'],
+        domain_subdomain_matching: true
+      } as unknown as Settings);
+      const result = await isDomainAllowed('https://www.example.com/page');
+      expect(result).toBe(false);
+    });
+
     test('シンプル形式とuBlock形式の両方が有効な場合の併用動作を確認', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockedIsUrlBlocked.mockResolvedValue(true);
 
@@ -204,7 +227,6 @@ describe('domainUtils', () => {
         }
       } as Settings);
 
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockedIsUrlBlocked.mockImplementation(async (url) => {
         if (url.includes('blocked-ublock.com')) return true;
@@ -217,7 +239,6 @@ describe('domainUtils', () => {
     });
 
     test('片方のみ有効な場合の動作を確認', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockedIsUrlBlocked.mockResolvedValue(true);
 
@@ -242,7 +263,6 @@ describe('domainUtils', () => {
 
   describe('LOG-006: uBlock block rule - blocked', () => {
     test('Verify uBlock block rule blocks URL', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockedIsUrlBlocked.mockResolvedValue(true);
 
@@ -266,7 +286,6 @@ describe('domainUtils', () => {
 
   describe('LOG-007: uBlock exception rule - allowed', () => {
     test('Verify uBlock exception rule allows URL', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockedIsUrlBlocked.mockResolvedValue(false);
 
@@ -290,7 +309,6 @@ describe('domainUtils', () => {
 
   describe('LOG-008: Both enabled - Simple blocks', () => {
     test('Verify Simple blocks when both enabled', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockedIsUrlBlocked.mockResolvedValue(false);
 
@@ -315,7 +333,6 @@ describe('domainUtils', () => {
 
   describe('LOG-009: Both enabled - uBlock blocks', () => {
     test('Verify uBlock blocks when both enabled', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockedIsUrlBlocked.mockResolvedValue(true);
 
@@ -340,7 +357,6 @@ describe('domainUtils', () => {
 
   describe('LOG-010: Both enabled - both block', () => {
     test('Verify both block when both enabled', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockedIsUrlBlocked.mockResolvedValue(true);
 
@@ -365,7 +381,6 @@ describe('domainUtils', () => {
 
   describe('LOG-011: Both enabled - both allow', () => {
     test('Verify both allow when both enabled', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockedIsUrlBlocked.mockResolvedValue(false);
 
@@ -390,7 +405,6 @@ describe('domainUtils', () => {
 
   describe('LOG-012: Simple only - uBlock ignored', () => {
     test('Verify uBlock ignored when Simple only', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockedIsUrlBlocked.mockResolvedValue(true);
 
@@ -415,7 +429,6 @@ describe('domainUtils', () => {
 
   describe('LOG-013: uBlock only - Simple ignored', () => {
     test('Verify Simple ignored when uBlock only', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockedIsUrlBlocked.mockResolvedValue(false);
 
@@ -461,7 +474,6 @@ describe('domainUtils', () => {
 
   describe('LOG-016: Wildcard in Simple list', () => {
     test('Verify wildcard patterns work', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',

@@ -280,13 +280,13 @@ describe('historyTagEditModal', () => {
       const addBtn = document.createElement('button');
       await updateTagCategorySelect(state as any, { tagCategorySelect: select, addTagBtn: addBtn } as any);
       expect(select.options.length).toBe(4);
-      expect(select.options[0].value).toBe('');
-      expect(select.options[0].disabled).toBe(true);
-      expect(select.options[0].selected).toBe(true);
-      expect(select.options[0].textContent).toBe('selectCategory');
-      expect(select.options[1].value).toBe('tech');
-      expect(select.options[2].value).toBe('work');
-      expect(select.options[3].value).toBe('personal');
+      expect(select.options[0]!.value).toBe('');
+      expect(select.options[0]!.disabled).toBe(true);
+      expect(select.options[0]!.selected).toBe(true);
+      expect(select.options[0]!.textContent).toBe('selectCategory');
+      expect(select.options[1]!.value).toBe('tech');
+      expect(select.options[2]!.value).toBe('work');
+      expect(select.options[3]!.value).toBe('personal');
     });
 
     it('should filter out already-selected categories', async () => {
@@ -296,13 +296,13 @@ describe('historyTagEditModal', () => {
       const addBtn = document.createElement('button');
       await updateTagCategorySelect(state as any, { tagCategorySelect: select, addTagBtn: addBtn } as any);
       expect(select.options.length).toBe(3);
-      expect(select.options[1].value).toBe('work');
-      expect(select.options[2].value).toBe('personal');
+      expect(select.options[1]!.value).toBe('work');
+      expect(select.options[2]!.value).toBe('personal');
     });
 
     it('should disable addTagBtn when no categories available', async () => {
       const { getAllCategories } = await import('../../utils/tagUtils.js');
-      getAllCategories.mockReturnValueOnce([]);
+      vi.mocked(getAllCategories).mockReturnValueOnce([]);
       const { updateTagCategorySelect } = await import('../historyTagEditModal.js');
       const state = { editingTags: [] };
       const select = document.createElement('select');
@@ -417,7 +417,7 @@ describe('historyTagEditModal', () => {
       };
       const onSaved = vi.fn();
       await saveTagEdits(state as any, { tagEditModal: null } as any, onSaved);
-      expect(state.entries[0].tags).toEqual(['tech', 'work']);
+      expect(state.entries[0]!.tags).toEqual(['tech', 'work']);
     });
 
     it('should not modify entries when url does not match', async () => {
@@ -430,7 +430,7 @@ describe('historyTagEditModal', () => {
       };
       const onSaved = vi.fn();
       await saveTagEdits(state as any, { tagEditModal: null } as any, onSaved);
-      expect(state.entries[0].tags).toEqual(['old']);
+      expect(state.entries[0]!.tags).toEqual(['old']);
     });
 
     it('should close modal and call onSaved on success', async () => {
@@ -450,7 +450,7 @@ describe('historyTagEditModal', () => {
 
     it('should handle errors and call alert', async () => {
       const { setUrlTags } = await import('../../utils/storage/savedUrlStore.js');
-      setUrlTags.mockRejectedValueOnce(new Error('Save failed'));
+      vi.mocked(setUrlTags).mockRejectedValueOnce(new Error('Save failed'));
       vi.spyOn(console, 'error').mockImplementation(() => {});
       vi.stubGlobal('alert', vi.fn());
       const { saveTagEdits } = await import('../historyTagEditModal.js');

@@ -77,8 +77,8 @@ describe('DashboardGateway — PBI 03 confirm-token fail-closed', () => {
       expect(result).toEqual({ success: true, data: { deleted: true } });
       expect(sendMessageMock).toHaveBeenCalledTimes(2);
       // First call was token fetch, second was destructive op
-      expect(sendMessageMock.mock.calls[0][0].payload.subtype).toBe('create_confirm_token');
-      expect(sendMessageMock.mock.calls[1][0].payload.subtype).toBe('delete');
+      expect(sendMessageMock.mock.calls[0]?.[0].payload.subtype).toBe('create_confirm_token');
+      expect(sendMessageMock.mock.calls[1]?.[0].payload.subtype).toBe('delete');
     });
 
     it('Given a destructive toggle_star op, When token is obtained, Then IPC is sent with token including id', async () => {
@@ -161,7 +161,7 @@ describe('DashboardGateway — PBI 03 confirm-token fail-closed', () => {
       }
       // Only the token fetch was attempted, no second IPC
       expect(sendMessageMock).toHaveBeenCalledTimes(1);
-      expect(sendMessageMock.mock.calls[0][0].payload.subtype).toBe('create_confirm_token');
+      expect(sendMessageMock.mock.calls[0]?.[0].payload.subtype).toBe('create_confirm_token');
     });
 
     it('Given token fetch returns success without confirmToken string, When calling destructive op, Then it fail-closes without sending IPC', async () => {
@@ -238,7 +238,7 @@ describe('DashboardGateway — PBI 03 confirm-token fail-closed', () => {
       }
       // Only the token-fetch IPC was attempted; the destructive delete IPC was never sent
       expect(hangingMock).toHaveBeenCalledTimes(1);
-      expect(hangingMock.mock.calls[0][0].payload.subtype).toBe('create_confirm_token');
+      expect((hangingMock.mock.calls[0] as unknown as [{ payload: { subtype: string } }])[0].payload.subtype).toBe('create_confirm_token');
 
       vi.useRealTimers();
     });
@@ -334,7 +334,7 @@ describe('DashboardGateway — PBI 03 confirm-token fail-closed', () => {
       expect(result).toEqual({ success: true, data: { rows: [], total: 0 } });
       expect(sendMessageMock).toHaveBeenCalledTimes(1);
       // Must not have asked for a token
-      expect(sendMessageMock.mock.calls[0][0].payload.subtype).not.toBe('create_confirm_token');
+      expect(sendMessageMock.mock.calls[0]?.[0].payload.subtype).not.toBe('create_confirm_token');
     });
 
     it('Given a search op (tokenExempt), When calling dashboard, Then it sends IPC without token and does NOT request create_confirm_token', async () => {

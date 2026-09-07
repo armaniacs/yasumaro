@@ -13,7 +13,7 @@ function makeDeps(overrides: Partial<ValidVisitHandlerDeps> = {}): ValidVisitHan
     isRecordingAllowed: vi.fn().mockResolvedValue(true),
     cacheTab: vi.fn(),
     updateCachedTab: vi.fn(),
-    recordVisit: vi.fn<Promise<RecordingResult>, [Parameters<ValidVisitHandlerDeps['recordVisit']>[0]]>(
+    recordVisit: vi.fn<ValidVisitHandlerDeps['recordVisit']>(
       async () => ({ success: true, skipped: false }),
     ),
     addBadgeTab: vi.fn(),

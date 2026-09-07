@@ -100,6 +100,8 @@
 #### 2. AIプロバイダー設定
 「AI Provider」のプルダウンから使用するサービスを選択します。優先度1〜3位まで設定できるため、複数プロバイダーをフォールバック構成にできます。
 
+> **Priority (Failover Order) のモデル名表示**: 優先度リスト（B分離型レイアウト）の各行のモデル名欄は、未入力のままでも実際に使用されるモデル名が表示されます（プロバイダの設定値、未設定ならカタログのデフォルト）。表示値をそのまま使う場合は欄を空のままにしてください。空欄のまま保存すると明示的なモデル指定として記録されず、常に最新のデフォルト設定が適用されます。自分で入力した値があればそちらが優先されます。
+
 **A. Built-in AI（Chrome / Edge の内蔵 AI）**
 *   **API Key**: 不要
 *   対応ブラウザで該当するフラグを有効化し、モデルをダウンロード済みであれば利用できます。対応ブラウザは Chrome の Gemini Nano / Edge の Phi-mini です。
@@ -194,6 +196,7 @@ ollama list
 **ドメインリストの管理**:
 - 1行に1ドメインを入力します
 - ワイルドカードも使用できます（例: `*.example.com`）
+- 「サブドメインもマッチさせる」トグルをONにすると、`example.com` の登録が `sub.example.com` 等のサブドメインにも一致します（デフォルトOFF・ワイルドカード指定はトグルに関係なく利用可能）
 - 「現在のページドメインを追加」ボタンで、現在開いているページのドメインを簡単に追加できます
 - wwwなどのサブドメインは自動的に除去されます（www.example.com → example.com）
 
@@ -214,6 +217,8 @@ ollama list
 「プライバシー」タブで、プライバシーに関する詳細な動作を設定できます。
 
 **プライバシー同意**: 初回起動時にデータ収集への同意確認が表示されます。同意しない場合は制限モードで動作し、記録は行われません。3回連続で拒否すると、以降30日間はモーダルが表示されなくなります（30日経過後に再表示、GDPR第7条準拠）（詳細: [PRIVACY.md](PRIVACY.md)）。
+
+**本文（ページの内容）の保存** (`Dashboard → 設定 → コンテンツ保持設定`): ページ本文をローカルに保存するかをいつでも切り替えられます（デフォルト: オフ）。オフにしても既存の保存済み本文は削除されず、以後の新規記録のみ停止します。本文のみをまとめて削除したい場合は、同じセクションの保持ポリシーまたは「Purge content now」を使用してください。
 
 **自動保存時のプライバシー動作** (`Dashboard → Privacy → Confirmation Settings`):
 - **save（デフォルト）**: プライベートページを通常通り保存します
@@ -347,6 +352,8 @@ Click the "⚙" icon in the top right to open the Dashboard in a new tab. The Da
 #### 2. AI Provider Settings
 Select your preferred provider from the dropdown. You can configure up to three priority ranks for fallback between providers.
 
+> **Priority (Failover Order) model display**: In the priority list (layout B), each row's model field shows the model that will actually be used even when left empty (the provider's stored setting, or the catalog default if unset). Leave the field empty to always use the latest default settings — an empty field is not saved as an explicit model. A value you type yourself takes precedence.
+
 *   **Built-in AI**: Chrome's Gemini Nano or Edge's Phi-mini. No API key required; works offline once the model is downloaded and flags are enabled.
     *   See the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md) for details.
 *   **OpenAI Compatible (Recommended)**: Supports Groq, OpenAI, Anthropic, and more.
@@ -425,6 +432,7 @@ In the "Domain Filter" tab, you can control which domains to record.
 **Domain List Management**:
 - Enter one domain per line
 - Wildcards are supported (e.g., `*.example.com`)
+- With the "Match subdomains too" toggle ON, an `example.com` entry also matches subdomains like `sub.example.com` (default OFF; wildcard patterns work regardless of the toggle)
 - Use the "Add Current Domain" button to easily add the domain of the currently open page
 - Subdomains like www are automatically removed (www.example.com → example.com)
 
@@ -445,6 +453,8 @@ The same panel also contains **GitHub Gist Sync** settings. Useful for migrating
 In the "Privacy" tab, you can configure detailed privacy behavior.
 
 **Privacy Consent**: On first launch, a consent prompt appears for data collection. If you decline, the extension operates in restricted mode and no recording takes place. After 3 consecutive declines, the prompt is suppressed for 30 days (then reappears, GDPR Article 7 compliance. See [PRIVACY.md](PRIVACY.md) for details).
+
+**Storing page content (body text)** (`Dashboard → Settings → Content Retention Settings`): You can toggle whether page body text is stored locally at any time (default: off). Turning it off does not delete already-stored content; it only stops future recordings. To delete stored body text in bulk, use the retention policy or "Purge content now" in the same section.
 
 **Auto-save Privacy Behavior** (`Dashboard → Privacy → Confirmation Settings`):
 - **save (default)**: Saves private pages as usual
@@ -487,6 +497,29 @@ Each history entry shows a badge indicating which privacy mode was used when it 
 
 ### 日本語
 
+#### 閲覧履歴アーカイブ
+`Dashboard → Archive` パネルで、指定日までの閲覧履歴を標準SQLiteファイルとしてバックアップ・復元できます。削除はバックアップの後に行われるため、データを失う心配なくストレージを整理できます。
+
+**フェーズ1: アーカイブ作成（バックアップ）**
+- 日付を選択し「Check records to archive」で対象件数を確認（スター付き・削除済みの内訳も表示）
+- 「Create archive file」でアーカイブファイル（バックアップ、`yasumaro_archive_<日付>.db`）を作成し、ダウンロード
+- 作成ファイルは標準SQLiteなので、DB Browser for SQLite 等で直接開けます
+- **この時点では本体DBは変更されません**
+- 削除済みレコードはデフォルトで除外されます（含める場合はチェックをONに。除外した分は後から復元できません）
+
+**フェーズ2: 本体からの削除（ストレージ解放）**
+- ファイルのダウンロード後、「Delete records from main database」で本体からアーカイブ済みレコードを削除
+- 削除はフェーズ1で作成したファイルの内容と突合せてから実行され、フェーズ1以降に追加されたレコードは保護されます
+- 注意: レガシーストレージのコピーは、レガシークリーンアップが実行されるまで残ることがあります
+
+**アーカイブから復元**
+- 「Restore from archive」セクションでアーカイブ .db を選択すると、件数と対象期間を確認してから本体DBへマージ復元できます
+- 既存レコードは保持され、重複（同一URL・同一時刻）はスキップされます
+
+**アーカイブを開いて編集**
+- 復元と同じファイル選択後、「Open archive session」でアーカイブ内を検索・タイトル編集・保存（アーカイブファイルへの書き戻し）ができます
+- 未保存の変更がある状態で閉じる場合は確認ダイアログが表示されます
+
 #### 関連グラフ表示
 `Dashboard → History → Related Graph` タブで、記録したページのタグ共起関係をグラフで可視化できます。
 - **タグをノード**、**共起関係をエッジ**として表示
@@ -507,6 +540,29 @@ Chrome、Microsoft Edge、Brave など、Chromium 系ブラウザで動作しま
 - 同一のコード基盤で複数ブラウザをサポート
 
 ### English
+
+#### History Archive
+The `Dashboard → Archive` panel lets you back up browsing history up to a chosen date as a standard SQLite file, and restore it back into the local database. Because the backup runs before deletion, you can organize storage without fear of losing data.
+
+**Phase 1: Create archive (backup)**
+- Pick a date and use "Check records to archive" to review the record counts (starred / deleted breakdown included)
+- "Create archive file" creates an archive (`yasumaro_archive_<date>.db`) and downloads it
+- The created file is a standard SQLite database — open it directly with DB Browser for SQLite, etc.
+- **The main database is not modified at this point**
+- Deleted records are excluded by default (turn the checkbox on to include them; excluded records cannot be restored later)
+
+**Phase 2: Delete from main database (free storage)**
+- After downloading the file, "Delete records from main database" removes the archived records from the local database
+- The deletion is cross-checked against the file created in phase 1, and records added after phase 1 are protected
+- Note: copies in the legacy storage may remain until legacy cleanup runs
+
+**Restore from archive**
+- In the "Restore from archive" section, pick an archive .db, review the record count and range, then merge it back into the main database
+- Existing records are kept; duplicates (same URL and time) are skipped
+
+**Open and edit an archive**
+- After picking the file, "Open archive session" lets you search, edit titles, and save changes (written back to the archive file)
+- A confirmation dialog appears when closing with unsaved changes
 
 #### Related Graph Display
 In `Dashboard → History → Related Graph`, you can visualize the co-occurrence relationships of tags in your recorded pages as a graph.

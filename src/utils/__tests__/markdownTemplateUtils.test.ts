@@ -181,13 +181,13 @@ describe('markdownTemplateUtils', () => {
 
     it('指定IDのテンプレートを更新する', () => {
       const result = updateTemplate([custom], 'custom-1', { name: 'Renamed' });
-      expect(result[0].name).toBe('Renamed');
-      expect(result[0].updatedAt).toBeGreaterThanOrEqual(custom.updatedAt);
+      expect(result[0]!.name).toBe('Renamed');
+      expect(result[0]!.updatedAt).toBeGreaterThanOrEqual(custom.updatedAt);
     });
 
     it('デフォルトテンプレート(isDefault: true)は更新を拒否し変更なしで返す', () => {
       const result = updateTemplate([DEFAULT_MARKDOWN_TEMPLATE], 'default', { name: 'Hacked' });
-      expect(result[0].name).toBe(DEFAULT_MARKDOWN_TEMPLATE.name);
+      expect(result[0]!.name).toBe(DEFAULT_MARKDOWN_TEMPLATE.name);
     });
   });
 

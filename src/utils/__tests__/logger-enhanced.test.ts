@@ -42,7 +42,7 @@ describe('Logger - Enhanced Coverage', () => {
 
             const logs = await logger.getLogs();
             expect(logs.length).toBe(1);
-            expect((logs[0].details as Record<string, unknown>).dates[0]).toBe(date.toISOString());
+            expect(((logs[0]!.details as Record<string, unknown>).dates as unknown[])[0]).toBe(date.toISOString());
         });
 
         test('配列内のErrorオブジェクトを変換する', async () => {
@@ -54,8 +54,8 @@ describe('Logger - Enhanced Coverage', () => {
 
             const logs = await logger.getLogs();
             expect(logs.length).toBe(1);
-            expect(((logs[0].details as Record<string, unknown>).errors as unknown[])[0].message).toBe('Array error test');
-            expect(((logs[0].details as Record<string, unknown>).errors as unknown[])[0].stack).toBeDefined();
+            expect(((logs[0]!.details as Record<string, unknown>).errors as Record<string, unknown>[])[0]!.message).toBe('Array error test');
+            expect(((logs[0]!.details as Record<string, unknown>).errors as Record<string, unknown>[])[0]!.stack).toBeDefined();
         });
 
         test('配列内の文字列PIIをマスクする', async () => {
@@ -67,7 +67,7 @@ describe('Logger - Enhanced Coverage', () => {
             const logs = await logger.getLogs();
             expect(logs.length).toBe(1);
             // Email should be masked
-            expect((logs[0].details as Record<string, unknown>).contacts[0]).not.toContain('user@example.com');
+            expect(((logs[0]!.details as Record<string, unknown>).contacts as unknown[])[0]).not.toContain('user@example.com');
         });
 
         test('ネストされた配列を処理する', async () => {
@@ -131,7 +131,7 @@ describe('Logger - Enhanced Coverage', () => {
 
         test('flushLogs is called when the logger alarm fires', async () => {
             await logger.addLog('INFO', 'Alarm fired log', {});
-            const alarmListener = (chrome.alarms.onAlarm.addListener as ReturnType<typeof vi.fn>).mock.calls[0][0];
+            const alarmListener = (chrome.alarms.onAlarm.addListener as ReturnType<typeof vi.fn>).mock.calls[0]![0];
             await alarmListener({ name: 'yasumaro-logger-flush' });
             const logs = await logger.getLogs();
             expect(logs.some((l: any) => l.message === 'Alarm fired log')).toBe(true);
@@ -139,7 +139,7 @@ describe('Logger - Enhanced Coverage', () => {
 
         test('onSuspend awaits flushLogs with a timeout', async () => {
             await logger.addLog('INFO', 'Suspend log', {});
-            const suspendListener = (chrome.runtime.onSuspend.addListener as ReturnType<typeof vi.fn>).mock.calls[0][0];
+            const suspendListener = (chrome.runtime.onSuspend.addListener as ReturnType<typeof vi.fn>).mock.calls[0]![0];
             await suspendListener();
             const logs = await logger.getLogs();
             expect(logs.some((l: any) => l.message === 'Suspend log')).toBe(true);
@@ -156,7 +156,7 @@ describe('Logger - Enhanced Coverage', () => {
                 );
 
                 await logger.addLog('INFO', 'Log that will not be flushed in time', {});
-                const suspendListener = (chrome.runtime.onSuspend.addListener as ReturnType<typeof vi.fn>).mock.calls[0][0];
+                const suspendListener = (chrome.runtime.onSuspend.addListener as ReturnType<typeof vi.fn>).mock.calls[0]![0];
 
                 const suspendPromise = suspendListener();
                 await vi.advanceTimersByTimeAsync(3000);

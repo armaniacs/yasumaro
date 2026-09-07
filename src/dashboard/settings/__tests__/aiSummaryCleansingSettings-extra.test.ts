@@ -162,8 +162,18 @@ const baseSettings = {
   jpLayoutEnabled: false,
   jpNavigationEnabled: false,
   authorEnabled: false,
+  affiliateEnabled: false,
+  cookieEnabled: false,
+  ecSiteEnabled: false,
+  newsMediaEnabled: false,
+  qaSiteEnabled: false,
+  speechBubbleEnabled: false,
+  videoSiteEnabled: false,
   bodyProtectionEnabled: true,
   bodyProtectionThreshold: 200,
+  whitelistExtractionEnabled: true,
+  fallbackRatio: 0.2,
+  fallbackMinBytes: 300,
 };
 
 function createCleansingDom(): void {

@@ -9,7 +9,7 @@ describe('computeTagCooccurrence', () => {
   });
 
   it('returns empty nodes and edges when no entries have tags', () => {
-    const result = computeTagCooccurrence([{ tags: null }, { tags: '' }, { tags: undefined }]);
+    const result = computeTagCooccurrence([{ tags: null }, { tags: '' }, {}] as Array<{ tags?: string | null }>);
     expect(result.nodes).toEqual([]);
     expect(result.edges).toEqual([]);
   });

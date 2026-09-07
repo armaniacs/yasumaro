@@ -12,7 +12,7 @@ import { vi } from 'vitest';;
  * 【テストモック設定】consoleオブジェクトのモック化
  * ログ出力の内容を検証できるようにモック
  */
-const mockConsoleError = vi.spyOn(console, 'error').mockImplementation();
+const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 /**
  * 【テスト前準備】各テスト実行前にモックをクリア
@@ -44,7 +44,8 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
         };
 
         // 【実際の処理実行】redaction実行
-        const result = redactSensitiveData(logData);
+        // redactSensitiveData returns unknown; tests assert against known shapes.
+        const result = redactSensitiveData(logData) as any;
 
         // 【結果検証】APIキーが削除されていることを確認
         expect(result.fullKey).not.toBe('sk-proj-abcdefghijklmnopqrstuvwxyz1234567890'); // 【確認内容】: 元のAPIキーが出力されていないことを確認 🟢
@@ -79,7 +80,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
             safeData: 'normal-value'
         };
 
-        const result = redactSensitiveData(nestedData);
+        const result = redactSensitiveData(nestedData) as any;
 
         // 【結果検証】深いネスト内のAPIキーが削除されていることを確認
         expect(result.level1.level2.level3.apiKey).toBe('[REDACTED]'); // 【確認内容】: ネスト内のapiKeyがredaction済み 🟢
@@ -106,7 +107,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
             { name: 'Item 3', apiKey: 'key-3' },
         ];
 
-        const result = redactSensitiveData(arrayData);
+        const result = redactSensitiveData(arrayData) as any;
 
         // 【結果検証】配列内の全APIキーが削除されていることを確認
         expect(result[0].apiKey).toBe('[REDACTED]'); // 【確認内容】: 配列要素1のapiKeyがredaction済み 🟢
@@ -136,7 +137,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
             normalValue: 'test',
         };
 
-        const result = redactSensitiveData(dataWithNulls);
+        const result = redactSensitiveData(dataWithNulls) as any;
 
         // 【結果検証】null/undefinedの機密キーもredactionされることを確認
         expect(result.apiKey).toBe('[REDACTED]'); // 【確認内容】: nullのapiKeyがredaction済み 🟢
@@ -204,7 +205,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
         };
 
         // 【実際の処理実行】redaction実行
-        const result = redactSensitiveData(typeInfoData);
+        const result = redactSensitiveData(typeInfoData) as any;
 
         // 【結果検証】型情報はredactionされるが、設計上は問題ないことを確認
         // 注: apiKeyキーはSENSITIVE_KEYSに含まれるためredactionされるが、値は型情報で本物ではない
@@ -241,7 +242,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
         };
 
         // 【実際の処理実行】redaction実行
-        const result = redactSensitiveData(complexData);
+        const result = redactSensitiveData(complexData) as any;
 
         // 【結果検証】全ての機密キーがredactionされることを確認
         expect(result.config.apiKey).toBe('[REDACTED]'); // 【確認内容】: ネスト内のapiKey 🟢

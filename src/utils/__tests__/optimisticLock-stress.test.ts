@@ -99,7 +99,7 @@ describe('withOptimisticLock — stress (PBI 2026-08-02-02)', () => {
     } as any;
 
     await expect(
-      withOptimisticLock('key', (current) => [...(current ?? []), 'x'], { maxRetries: 3, initialDelay: 1 })
+      withOptimisticLock<string[]>('key', (current) => [...(current ?? []), 'x'], { maxRetries: 3, initialDelay: 1 })
     ).rejects.toThrow(ConflictError);
 
     // A failed transaction must not partially mutate storage.

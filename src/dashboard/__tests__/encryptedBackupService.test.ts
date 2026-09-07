@@ -43,7 +43,6 @@ import {
 
 beforeEach(() => {
   const webcrypto = new Crypto();
-  // @ts-expect-error jsdom crypto override for test env
   global.crypto = webcrypto;
   vi.clearAllMocks();
 });

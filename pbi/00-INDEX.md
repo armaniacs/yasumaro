@@ -46,6 +46,58 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-09-07 テスト型債務返済シリーズ（08〜12・全完了）
+
+- 2026-09-07-08〜11-test-type-debt-*.md（✅ 完了・アーカイブ済 — テストコードの型債務 2,601 errors / 309 files を全量返済。background / dashboard / utils+messaging+\_\_tests\_\_ / popup+offscreen+content+testDir の4バッチを独立サブエージェントで並列返済。型注釈・`vi.mocked()`・非null化ヘルパー・`?.`/`!`/`as` キャストで解消、`@ts-ignore` 新設なし、`src/` 実装は最小変更のみ（`piiSanitizer.MAX_OUTPUT_SIZE` の export 等）、全 vitest グリーン維持。実装バグ 0 件・テスト/実装ドリフト複数を 12 の完了メモに記録）
+- 2026-09-07-12-test-type-gate-promotion.md（✅ 完了・アーカイブ済 — ベースラインラッパー（`check-type-baseline.mjs`・`type-check-baseline.json`・`:raw`・`:baseline`）を撤去し `type-check:test` を素の `tsc --project testDir/tsconfig.json --noEmit` に昇格。ネガティブテスト（型エラー1行 → exit 2）実施。以降テストコードの型エラーは CI で落ちる。permission deny の api-key 系2ファイルはユーザーが一時退避して返済。検証: validate / test:type-safe exit 0）
+
+### 2026-09-07 アーカイブE2E自動化のフォローアップ（着手完了）
+
+- 2026-09-07-05-test-archive-session-reconnect-e2e.md（✅ 完了・アーカイブ済 — Y5' セッション再接続E2E（archive-recommended-verification.spec.ts に追記）。reload 前後で `archive_status` の open/stagingName/dirty 保持・`archive_query` 継続動作・**初回タブクリック時の mount プローブによるセッション一覧再表示**・dirty フラグの reload 越え保持を検証。手動チェックリストは Y5（file://）のみ残置。検証: validate / 全E2E 35 green）
+
+- 2026-09-07-06-test-archive-shared-migration-fixture.md（✅ 完了・アーカイブ済 — アーカイブE2E共通fixture化。`openOptionsPage` 統合（3 spec の重複解消）・`migrationSettled`（deferred マイグレーション待ち+封印）・`seedRows`/`runPhaseA`/`isoDateOffset` を dashboardSqliteHelpers へ統合。seedRows の冪等性（UNIQUE制約）を JSDoc 明文化。ベースラインゲートが helper への新規型エラー 4 件を即検出（PBI-04 のゲートが機能した実証）。検証: validate / 全E2E 34 green / -g 個別実行で順序非依存）
+
+- 2026-09-07-04-fix-type-check-test-gate.md（✅ 完了・アーカイブ済 — type-check:test ゲート修理。`vitest/globals` types + rootDir で globals 未解決 15,532 errors を解消後、**326 ファイル・3,173 件の未型チェックテストの実在型エラー**が顕在化。安全なコードモド（vi 型名前空間 325 件・不要 expect-error 265 件）で 2,601 件まで削減し、残りは**ファイル別ベースラインゲート**（新規エラー・件数増で fail）で守る。逸脱メモに実態差とスコープ分割を記録。検証: validate / test:type-safe exit 0、ネガティブテスト実施）
+
+### 2026-09-07 アーカイブ 手動テストのE2E自動化（着手完了）
+
+- 2026-09-07-01-test-archive-manual-to-e2e-required.md（✅ 完了・アーカイブ済 — R1〜R3をE2E化（archive_required-verification.spec.ts・TZ 3種×固定epoch seed+文字列cutoff）、R4は既存vitest single-flightで担保。SQLiteリーダー=`better-sqlite3@12.11.1`（CI Node24 ABI137／ローカル Node26 ABI147 のprebuild実測）。`archiveDbReader.ts`共通ヘルパ＋チャンク結合ユニット11件、アーカイブスキーマFTS非存在assert（文字列+実SQLite実行）。**Red で本番バグを検出・修正: SW archiveHandler に archive_export の case が無く download フローが全壊**。検証: validate / E2E 34 green）
+- 2026-09-07-02-test-archive-manual-to-e2e-recommended.md（✅ 完了・アーカイブ済 — Y3/Y4/Y6/G3/G4/G5をE2E化（archive-recommended-verification.spec.ts・実録画との並行 G5 含む）、Y2 は `archiveFallbackRejection.test.ts` 新設（14メソッド×2backend）、G8/R4は既存vitest明文化。**本番バグ2件検出・修正: archive_prepare_incoming / archive_cleanup の応答二重ラップ**（ファイル復元フローが本番で壊れていた）。テスト専用subtype/フラグは追加せず。検証: validate / E2E 34 green）
+- 2026-09-07-03-test-archive-manual-partial-automation.md（✅ 完了・アーカイブ済 — R5を実エンジンfreelist減少のE2E 1ケースで上乗せ（太い行300件seed→clear_allでfreelist確保→Phase B で freelistAfter<freelistBefore・vacuumOk:true を実測）。R6/G6は既存vitestカバレッジをPBIメモに一覧化、G6に複数孤児×両kindのケース追加。検証: validate / E2E 34 green）
+
+### 2026-09-06 アーカイブ 退避作成（着手完了）
+
+- 2026-09-06-02-feat-record-archive.md（✅ 完了・アーカイブ済 — フェーズA: 日付指定アーカイブ作成。第4subtypeグループ（archive_preview/create/cleanup/export）を確定、opfsWorker archiveCreateHandlers（バッチINSERT 5000/COMMIT・validateArchiveEngine 検証・max_id_at_archive 記録・single-flight・quotaプレフライト）、ダッシュボード Archive パネル（プレビュー集計・チャンクDL・staging掃除）、i18n 22キー。検証: type-check / lint 0 errors / 11783 tests / build / E2E 104 green。実装メモに逸脱（archive_export 追加・E2Eは静的検証＋jsdomユニット）を記録）
+
+### 2026-09-06 アーカイブ 編集モーダル（着手完了）
+
+- 2026-09-06-07-feat-archive-edit-modal.md（✅ 完了・アーカイブ済 — window.prompt を role=dialog＋aria-modal＋Tab循環＋Esc＋起動要素フォーカス復帰のアクセシブルなモーダルに置き換え（focusTrapManager再利用）。保存時バリデーション（空文字/500字超・role=alert）。i18n 6キー。検証: type-check / lint 0 errors / 11837 tests / build green）
+
+### 2026-09-06 アーカイブ 文言修正（着手完了）
+
+- 2026-09-06-06-fix-archive-backup-wording.md（✅ 完了・アーカイブ済 — Archiveパネル説明を「退避します…削除できます」→「バックアップします…削除も可能です」に修正（ja/en）。**文言のみ・実装ロジック変更なし**（フェーズAは既に本体不変のコピー — 分析はPBI内参照）。i18n保洁テスト2件追加、SETUP_GUIDE/FAQ/READMEの用語統一）
+
+### 2026-09-06 アーカイブ 一時オープン（着手完了）
+
+- 2026-09-06-05-feat-archive-temp-open.md（✅ 完了・アーカイブ済 — **スパイクF-2合格**（実sqlite-wasm 2エンジン共存、`spike-f2-two-engines.test.ts`・記録は plans/ 参照）。archive_open/query/update/save/close/status の6subtype（34型）、worker archiveSessionHandlers（専用engine参照・allowlist検証+migrate・LIKE エスケープ・UPDATABLE_FIELDS whitelist＋isHttpUrl・dirty二重防御・STATUS再接続プローブ）、Archive パネルセッション（検索/一覧/タイトル編集/保存/閉じる・未保存確認）、i18n 15キー。検証: type-check / lint 0 errors / 11830 tests / build / E2E 104 green）
+
+### 2026-09-06 アーカイブ 本体削除・フェーズB（着手完了）
+
+- 2026-09-06-04-feat-archive-purge-staging.md（✅ 完了・アーカイブ済 — archive_delete_by_staging subtype（トークン＋scopeHash・noRetry）、worker archivePurgeHandlers（3条件DELETE述語＋max_id後着行保護・VACUUMトランザクション外＋freelist検証・quotaプレフライト・single-flight・レジストリ/meta突合せ fail-closed）、archiveStaging レジストリにphase-A scope追加（updateStagingRecord）、Archive パネルにフェーズBボタン（confirm dialog・レガシー開示・vacuumOk注記）、i18n 12キー。検証: type-check / lint 0 errors / 11807 tests / build / E2E 104 green）
+
+### 2026-09-06 アーカイブ 復元（着手完了）
+
+- 2026-09-06-03-feat-archive-restore.md（✅ 完了・アーカイブ済 — archive_prepare_incoming/restore_preview/restore の3subtype、worker archiveRestoreHandlers（行単位 changes() 集計・skippedInvalid 分類・バッチ 5000/COMMIT・BEGIN IMMEDIATE・single-flight・staging解放）、Archive パネル復元セクション（ファイル入力→staging書込→プレビュー→復元結果）、i18n 15キー。QueryCache は既存の再訪問時クリア機構で充足。検証: type-check / lint 0 errors / 11793 tests / build / E2E 104 green）
+
+### 2026-09-06 アーカイブ 退避作成（着手完了）
+
+- 2026-09-06-01-feat-archive-foundation.md（✅ 完了・アーカイブ済 — `archiveValidation`（allowlist構造検証＋table_xinfo＋meta突合せ）/ `archiveStaging`（レジストリ・sweep）/ `archiveGuards`（utils・cutoff/isHttpUrl/上限）SSOT化、transport noRetry、トークンscopeHash束縛、**既存全体復元へのアーカイブ拒否ガード**、downloadBlob遅延解放、ERROR_CODES登録。検証: type-check / lint 0 errors / 11748 tests / build green。実装メモにPBI記載からの逸脱（utils配置等）を記録）
+
+### 2026-09-06 autonomous-task-closer — バッチ1（3件）
+
+- 2026-09-06-04-feat-content-storage-toggle-in-settings.md（✅ 完了・アーカイブ済 — 設定画面の「コンテンツ保持設定」に本文保存トグル追加。GENERAL_SETTINGS_SCHEMA 登録＋ラウンドトリップテスト＋E2E。検証: type-check / lint 0 errors / 11702 tests / build green）
+- 2026-09-06-05-feat-priority-model-display.md（✅ 完了・アーカイブ済 — Priority (Failover Order) に実モデル名（明示 → ストレージ設定 → カタログデフォルト）を表示。`resolveModelDisplayName` 新設、自動解決値は `dataset.resolved` で保存時に省略。13 tests 新規）
+- 2026-09-06-06-feat-domain-subdomain-matching.md（✅ 完了・アーカイブ済 — ドメインフィルタにサブドメイン自動マッチング（デフォルトOFF）追加。`matchesDomainPattern`/`evaluateCachedAllow`/ライブ・キャッシュ両パスにトグル伝播。ラッパーの引数握り潰し問題をテストで検出・修正）
 
 ### 2026-09-05 Architecture Round 3（arch3 診断） — 7 件完了
 

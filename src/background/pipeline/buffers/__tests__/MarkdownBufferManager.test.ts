@@ -87,7 +87,7 @@ describe('MarkdownBufferManager', () => {
       await manager.flush();
 
       expect(manager.count).toBe(0);
-      const setCall = mockChrome.storage.local.set.mock.calls[0][0];
+      const setCall = mockChrome.storage.local.set.mock.calls[0]?.[0] as Record<string, unknown>;
       const storageKey = Object.keys(setCall).find((k) => !k.endsWith('_version')) as string;
       expect(storageKey).toMatch(/^local_export_\d{4}-\d{2}-\d{2}$/);
       expect(setCall[storageKey]).toEqual([entry1, entry2]);
@@ -103,11 +103,11 @@ describe('MarkdownBufferManager', () => {
       manager.add(newEntry);
       await manager.flush();
 
-      const setCall = mockChrome.storage.local.set.mock.calls[0][0];
+      const setCall = mockChrome.storage.local.set.mock.calls[0]?.[0] as Record<string, unknown[]>;
       const key = Object.keys(setCall).find((k) => !k.endsWith('_version')) as string;
       expect(setCall[key]).toHaveLength(2);
-      expect(setCall[key][0]).toEqual(existingEntry);
-      expect(setCall[key][1]).toEqual(newEntry);
+      expect(setCall[key]![0]).toEqual(existingEntry);
+      expect(setCall[key]![1]).toEqual(newEntry);
     });
 
     it('is a no-op when buffer is empty', async () => {

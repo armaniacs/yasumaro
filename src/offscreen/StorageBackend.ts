@@ -1,4 +1,27 @@
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
+import type { ArchivePreviewData, ArchiveRestorePreviewData, ArchiveSessionRow, ArchiveSessionStatusData } from '../messaging/sqliteMessages.js';
+
+export interface ArchivePreviewResult { success: true; preview: ArchivePreviewData }
+export interface ArchiveCreateParams { cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }
+export interface ArchiveCreateResult { success: true; stagingName: string; recordCount: number }
+export interface ArchiveCleanupResult { success: true; removed: string[] }
+export interface ArchiveExportChunkResult { success: true; chunk: number[]; nextOffset: number; total: number; done: boolean }
+export interface ArchivePrepareIncomingResult { success: true; stagingName: string }
+export interface ArchiveRestorePreviewResult { success: true; preview: ArchiveRestorePreviewData }
+export interface ArchiveRestoreResult { success: true; restored: number; restoredDeleted: number; skipped: number; skippedInvalid: number }
+export interface ArchiveDeleteByStagingResult { success: true; deleted: number; remaining: number; freelistBefore: number; freelistAfter: number; vacuumOk: boolean }
+export interface ArchiveOpenResult { success: true }
+export interface ArchiveQueryResult { success: true; rows: ArchiveSessionRow[]; total: number }
+export interface ArchiveUpdateResult { success: true; dirty: boolean }
+export interface ArchiveSaveResult { success: true; dirty: boolean }
+export interface ArchiveCloseResult { success: true; dirty: boolean }
+export interface ArchiveStatusResult { success: true; status: ArchiveSessionStatusData }
+export interface ArchiveOpenResult { success: true }
+export interface ArchiveQueryResult { success: true; rows: ArchiveSessionRow[]; total: number }
+export interface ArchiveUpdateResult { success: true; dirty: boolean }
+export interface ArchiveSaveResult { success: true; dirty: boolean }
+export interface ArchiveCloseResult { success: true; dirty: boolean }
+export interface ArchiveStatusResult { success: true; status: ArchiveSessionStatusData }
 
 export interface InsertResult { success: true; id: number }
 export interface InsertBatchResult { success: true; inserted: number; skipped: number }
@@ -71,6 +94,31 @@ export interface Mutable {
   purgeContent(retentionDays?: number, maxRecords?: number, includeStarred?: boolean): Promise<BackendOrError<PurgeResult>>;
   backupDb(): Promise<BackendOrError<BackupResult>>;
   restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>>;
+  /** Archive preview (PBI 2026-09-06-02) — OPFS backend only. */
+  archivePreview(cutoffDate: string, cutoffMs: number, includeDeleted: boolean): Promise<BackendOrError<ArchivePreviewResult>>;
+  /** Archive creation (PBI 2026-09-06-02) — OPFS backend only. */
+  archiveCreate(params: ArchiveCreateParams): Promise<BackendOrError<ArchiveCreateResult>>;
+  /** Orphan staging sweep (PBI 2026-09-06-02) — OPFS backend only. */
+  archiveCleanup(): Promise<BackendOrError<ArchiveCleanupResult>>;
+  /** Chunked staging export (PBI 2026-09-06-02) — OPFS backend only. */
+  archiveExportChunk(stagingName: string, offset: number, length: number): Promise<BackendOrError<ArchiveExportChunkResult>>;
+  archivePrepareIncoming(): Promise<BackendOrError<ArchivePrepareIncomingResult>>;
+  archiveRestorePreview(stagingName: string): Promise<BackendOrError<ArchiveRestorePreviewResult>>;
+  archiveRestore(stagingName: string): Promise<BackendOrError<ArchiveRestoreResult>>;
+  /** Phase B (PBI 2026-09-06-04) — main-DB deletion covered by the staging. */
+  archiveDeleteByStaging(stagingName: string): Promise<BackendOrError<ArchiveDeleteByStagingResult>>;
+  archiveOpen(stagingName: string): Promise<BackendOrError<ArchiveOpenResult>>;
+  archiveQuery(stagingName: string, query: string, limit: number, offset: number): Promise<BackendOrError<ArchiveQueryResult>>;
+  archiveUpdate(stagingName: string, id: number, changes: Record<string, unknown>): Promise<BackendOrError<ArchiveUpdateResult>>;
+  archiveSave(stagingName: string): Promise<BackendOrError<ArchiveSaveResult>>;
+  archiveClose(stagingName: string): Promise<BackendOrError<ArchiveCloseResult>>;
+  archiveStatus(): Promise<BackendOrError<ArchiveStatusResult>>;
+  archiveOpen(stagingName: string): Promise<BackendOrError<ArchiveOpenResult>>;
+  archiveQuery(stagingName: string, query: string, limit: number, offset: number): Promise<BackendOrError<ArchiveQueryResult>>;
+  archiveUpdate(stagingName: string, id: number, changes: Record<string, unknown>): Promise<BackendOrError<ArchiveUpdateResult>>;
+  archiveSave(stagingName: string): Promise<BackendOrError<ArchiveSaveResult>>;
+  archiveClose(stagingName: string): Promise<BackendOrError<ArchiveCloseResult>>;
+  archiveStatus(): Promise<BackendOrError<ArchiveStatusResult>>;
   insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>>;
   clearAll(): Promise<BackendOrError<MutationResult>>;
 }
@@ -92,6 +140,20 @@ export class NoopBackend implements StorageBackend {
   async getFtsIndexSize() { return this.err(); }
   async backupDb() { return this.err(); }
   async restoreDb() { return this.err(); }
+  async archivePreview() { return this.err(); }
+  async archiveCreate() { return this.err(); }
+  async archiveCleanup() { return this.err(); }
+  async archiveExportChunk() { return this.err(); }
+  async archivePrepareIncoming() { return this.err(); }
+  async archiveRestorePreview() { return this.err(); }
+  async archiveRestore() { return this.err(); }
+  async archiveDeleteByStaging() { return this.err(); }
+  async archiveOpen() { return this.err(); }
+  async archiveQuery() { return this.err(); }
+  async archiveUpdate() { return this.err(); }
+  async archiveSave() { return this.err(); }
+  async archiveClose() { return this.err(); }
+  async archiveStatus() { return this.err(); }
   async healthCheck() { return this.err(); }
   async getStatus() { return this.err(); }
   async insertAuditLog() { return this.err(); }

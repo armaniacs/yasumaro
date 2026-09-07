@@ -4,7 +4,7 @@
  * 【テスト対象】: src/utils/migration.ts
  */
 
-import { test, expect, jest, beforeEach, vi } from 'vitest';
+import { test, expect, beforeEach, vi } from 'vitest';
 import { migrateToLightweightFormat, migrateUblockSettings, computeChecksum } from '../migration.js';
 
 // Define mock at top level to avoid hoisting warnings
@@ -16,11 +16,11 @@ const { mockInitialize } = vi.hoisted(() => {
 
 vi.mock('../trustDb/TrustDbAdmin.js', () => ({
   getTrustDbAdmin: () => ({ initialize: mockInitialize })
-}), { virtual: true });
+}));
 
 vi.mock('../trustDb/TrustPolicy.js', () => ({
   getTrustPolicy: () => ({ isDomainTrusted: vi.fn() })
-}), { virtual: true });
+}));
 
 describe('migration', () => {
   // 【テスト前準備】: 各テスト実行前にChrome APIのモックをクリア
@@ -191,9 +191,9 @@ describe('migration', () => {
           }
         },
         runtime: {
-          lastError: null
+          lastError: undefined
         }
-      };
+      } as unknown as typeof chrome;
     });
 
     test('旧形式のルール exists場合にマイグレーションを実行', async () => {

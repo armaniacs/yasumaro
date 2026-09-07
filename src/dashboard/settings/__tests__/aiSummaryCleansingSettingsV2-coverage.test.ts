@@ -191,7 +191,7 @@ describe('saveAiSummaryCleansingSettings — partial settings', () => {
 
     await saveAiSummaryCleansingSettings(partial);
 
-    const saved = mockSaveSettings.mock.calls[0][0] as Record<string, unknown>;
+    const saved = mockSaveSettings.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(saved.ai_summary_cleansing_alt).toBe(true);
     // Any rule not present in partialSettings should have been saved as false
     expect(saved.ai_summary_cleansing_metadata).toBe(false);

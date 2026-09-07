@@ -109,7 +109,7 @@ describe('createOfflineQueueProcessor', () => {
             summary: 's',
             tags: ['a'],
         });
-        expect(retryObsidianWriteOnly.mock.calls[0][0]).not.toHaveProperty('maskedCount');
+        expect(retryObsidianWriteOnly.mock.calls[0]?.[0]).not.toHaveProperty('maskedCount');
     });
 
     it('does not re-run the full pipeline or its SQLite and metadata steps for obsidian_sync', async () => {
@@ -207,8 +207,8 @@ describe('createOfflineQueueProcessor', () => {
                 recordType: 'manual',
             }));
             // skipDuplicateCheck:true is retained so normal retries are not trapped by duplicate
-            expect(record.mock.calls[0][0]).toHaveProperty('skipDuplicateCheck', true);
-            expect(record.mock.calls[0][0]).toHaveProperty('force', false);
+            expect(record.mock.calls[0]?.[0]).toHaveProperty('skipDuplicateCheck', true);
+            expect(record.mock.calls[0]?.[0]).toHaveProperty('force', false);
         });
 
         it('blocked URL (DOMAIN_BLOCKED) is not marked successful — domain gate re-evaluated', async () => {

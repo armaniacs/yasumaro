@@ -3,7 +3,7 @@
  * URL管理関連機能のテスト
  */
 
-import { describe, it, expect, beforeEach, jest } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
     getSavedUrls,
     getSavedUrlsWithTimestamps,
@@ -98,19 +98,19 @@ describe('addSavedUrl', () => {
 
         const entries = await getSavedUrlEntries();
         expect(entries.length).toBe(1);
-        expect(entries[0].url).toBe('https://example.com');
+        expect(entries[0]!.url).toBe('https://example.com');
     });
 
     it('adds URL with recordType auto', async () => {
         await addSavedUrl('https://example.com', 'auto');
         const entries = await getSavedUrlEntries();
-        expect(entries[0].recordType).toBe('auto');
+        expect(entries[0]!.recordType).toBe('auto');
     });
 
     it('adds URL with recordType manual', async () => {
         await addSavedUrl('https://example.com', 'manual');
         const entries = await getSavedUrlEntries();
-        expect(entries[0].recordType).toBe('manual');
+        expect(entries[0]!.recordType).toBe('manual');
     });
 
     it('preserves existing fields when updating timestamp', async () => {
@@ -155,7 +155,7 @@ describe('setUrlTags', () => {
         await addSavedUrl('https://example.com');
         await setUrlTags('https://example.com', ['news', 'tech']);
         const entries = await getSavedUrlEntries();
-        expect(entries[0].tags).toEqual(['news', 'tech']);
+        expect(entries[0]!.tags).toEqual(['news', 'tech']);
     });
 
     it('sets undefined for empty tag array', async () => {
@@ -163,7 +163,7 @@ describe('setUrlTags', () => {
         await setUrlTags('https://example.com', ['tag1']);
         await setUrlTags('https://example.com', []);
         const entries = await getSavedUrlEntries();
-        expect(entries[0].tags).toBeUndefined();
+        expect(entries[0]!.tags).toBeUndefined();
     });
 
     it('does nothing when URL not found', async () => {
@@ -178,7 +178,7 @@ describe('addUrlTag', () => {
         await addUrlTag('https://example.com', 'news');
         await addUrlTag('https://example.com', 'tech');
         const entries = await getSavedUrlEntries();
-        expect(entries[0].tags).toEqual(['news', 'tech']);
+        expect(entries[0]!.tags).toEqual(['news', 'tech']);
     });
 
     it('does not duplicate tag', async () => {
@@ -186,16 +186,16 @@ describe('addUrlTag', () => {
         await addUrlTag('https://example.com', 'news');
         await addUrlTag('https://example.com', 'news');
         const entries = await getSavedUrlEntries();
-        expect(entries[0].tags).toEqual(['news']);
+        expect(entries[0]!.tags).toEqual(['news']);
     });
 
     it('initializes tags array when undefined', async () => {
         await addSavedUrl('https://example.com');
         const entries1 = await getSavedUrlEntries();
-        expect(entries1[0].tags).toBeUndefined();
+        expect(entries1[0]!.tags).toBeUndefined();
         await addUrlTag('https://example.com', 'first');
         const entries2 = await getSavedUrlEntries();
-        expect(entries2[0].tags).toEqual(['first']);
+        expect(entries2[0]!.tags).toEqual(['first']);
     });
 
     it('does nothing when URL not found', async () => {
@@ -210,7 +210,7 @@ describe('removeUrlTag', () => {
         await setUrlTags('https://example.com', ['news', 'tech']);
         await removeUrlTag('https://example.com', 'news');
         const entries = await getSavedUrlEntries();
-        expect(entries[0].tags).toEqual(['tech']);
+        expect(entries[0]!.tags).toEqual(['tech']);
     });
 
     it('sets tags to undefined when last tag removed', async () => {
@@ -218,14 +218,14 @@ describe('removeUrlTag', () => {
         await setUrlTags('https://example.com', ['only-tag']);
         await removeUrlTag('https://example.com', 'only-tag');
         const entries = await getSavedUrlEntries();
-        expect(entries[0].tags).toBeUndefined();
+        expect(entries[0]!.tags).toBeUndefined();
     });
 
     it('does nothing when URL has no tags', async () => {
         await addSavedUrl('https://example.com');
         await removeUrlTag('https://example.com', 'nonexistent');
         const entries = await getSavedUrlEntries();
-        expect(entries[0].tags).toBeUndefined();
+        expect(entries[0]!.tags).toBeUndefined();
     });
 
     it('does nothing when URL not found', async () => {
@@ -243,7 +243,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, recordType: 'manual' }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].recordType).toBe('manual');
+        expect(entries[0]!.recordType).toBe('manual');
     });
 
     it('does nothing when URL not found (no-op)', async () => {
@@ -257,7 +257,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, content: 'Hello world' }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].content).toBe('Hello world');
+        expect(entries[0]!.content).toBe('Hello world');
     });
 
     it('does nothing when URL not found', async () => {
@@ -270,7 +270,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, cleansedReason: 'hard' }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].cleansedReason).toBe('hard');
+        expect(entries[0]!.cleansedReason).toBe('hard');
     });
 
     it('does nothing when URL not found', async () => {
@@ -283,7 +283,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, maskedCount: 10 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].maskedCount).toBe(10);
+        expect(entries[0]!.maskedCount).toBe(10);
     });
 
     it('does nothing when URL not found', async () => {
@@ -296,7 +296,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, aiSummary: 'Summary text' }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].aiSummary).toBe('Summary text');
+        expect(entries[0]!.aiSummary).toBe('Summary text');
     });
 
     it('does nothing when URL not found', async () => {
@@ -309,7 +309,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, sentTokens: 1500 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].sentTokens).toBe(1500);
+        expect(entries[0]!.sentTokens).toBe(1500);
     });
 
     it('does nothing when URL not found', async () => {
@@ -322,7 +322,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, receivedTokens: 2000 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].receivedTokens).toBe(2000);
+        expect(entries[0]!.receivedTokens).toBe(2000);
     });
 
     it('does nothing when URL not found', async () => {
@@ -335,7 +335,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, originalTokens: 5000 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].originalTokens).toBe(5000);
+        expect(entries[0]!.originalTokens).toBe(5000);
     });
 
     it('does nothing when URL not found', async () => {
@@ -348,7 +348,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, cleansedTokens: 3000 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].cleansedTokens).toBe(3000);
+        expect(entries[0]!.cleansedTokens).toBe(3000);
     });
 
     it('does nothing when URL not found', async () => {
@@ -361,7 +361,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, pageBytes: 102400 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].pageBytes).toBe(102400);
+        expect(entries[0]!.pageBytes).toBe(102400);
     });
 
     it('does nothing when URL not found', async () => {
@@ -374,7 +374,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, candidateBytes: 51200 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].candidateBytes).toBe(51200);
+        expect(entries[0]!.candidateBytes).toBe(51200);
     });
 
     it('does nothing when URL not found', async () => {
@@ -387,7 +387,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, originalBytes: 204800 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].originalBytes).toBe(204800);
+        expect(entries[0]!.originalBytes).toBe(204800);
     });
 
     it('does nothing when URL not found', async () => {
@@ -400,7 +400,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, cleansedBytes: 102400 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].cleansedBytes).toBe(102400);
+        expect(entries[0]!.cleansedBytes).toBe(102400);
     });
 
     it('does nothing when URL not found', async () => {
@@ -413,7 +413,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, aiSummaryOriginalBytes: 4096 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].aiSummaryOriginalBytes).toBe(4096);
+        expect(entries[0]!.aiSummaryOriginalBytes).toBe(4096);
     });
 
     it('does nothing when URL not found', async () => {
@@ -426,7 +426,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, aiSummaryCleansedBytes: 2048 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].aiSummaryCleansedBytes).toBe(2048);
+        expect(entries[0]!.aiSummaryCleansedBytes).toBe(2048);
     });
 
     it('does nothing when URL not found', async () => {
@@ -439,7 +439,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, aiSummaryCleansedElements: 15 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].aiSummaryCleansedElements).toBe(15);
+        expect(entries[0]!.aiSummaryCleansedElements).toBe(15);
     });
 
     it('does nothing when URL not found', async () => {
@@ -452,7 +452,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, aiSummaryCleansedReason: 'ads' }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].aiSummaryCleansedReason).toBe('ads');
+        expect(entries[0]!.aiSummaryCleansedReason).toBe('ads');
     });
 
     it('does nothing when URL not found', async () => {
@@ -465,7 +465,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, aiProvider: 'openai' }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].aiProvider).toBe('openai');
+        expect(entries[0]!.aiProvider).toBe('openai');
     });
 
     it('does nothing when URL not found', async () => {
@@ -478,7 +478,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, aiModel: 'gpt-4o' }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].aiModel).toBe('gpt-4o');
+        expect(entries[0]!.aiModel).toBe('gpt-4o');
     });
 
     it('does nothing when URL not found', async () => {
@@ -491,7 +491,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, privacyMode: 'full_pipeline' }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].privacyMode).toBe('full_pipeline');
+        expect(entries[0]!.privacyMode).toBe('full_pipeline');
     });
 
     it('does nothing when URL not found', async () => {
@@ -504,7 +504,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, aiDuration: 1200 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].aiDuration).toBe(1200);
+        expect(entries[0]!.aiDuration).toBe(1200);
     });
 
     it('does nothing when URL not found', async () => {
@@ -517,7 +517,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, obsidianDuration: 800 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].obsidianDuration).toBe(800);
+        expect(entries[0]!.obsidianDuration).toBe(800);
     });
 
     it('does nothing when URL not found', async () => {
@@ -530,7 +530,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, extractedSentencesBytes: 4096 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].extractedSentencesBytes).toBe(4096);
+        expect(entries[0]!.extractedSentencesBytes).toBe(4096);
     });
 
     it('does nothing when URL not found', async () => {
@@ -543,7 +543,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, extractedSentencesOriginalBytes: 8192 }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].extractedSentencesOriginalBytes).toBe(8192);
+        expect(entries[0]!.extractedSentencesOriginalBytes).toBe(8192);
     });
 
     it('does nothing when URL not found', async () => {
@@ -556,7 +556,7 @@ describe('updateSavedUrlEntry', () => {
         await addSavedUrl('https://example.com');
         await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, fallbackTriggered: true }));
         const entries = await getSavedUrlEntries();
-        expect(entries[0].fallbackTriggered).toBe(true);
+        expect(entries[0]!.fallbackTriggered).toBe(true);
     });
 
     it('does nothing when URL not found', async () => {

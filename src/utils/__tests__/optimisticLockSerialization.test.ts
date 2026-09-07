@@ -87,7 +87,7 @@ describe('withOptimisticLock same-key serialization (TOCTOU)', () => {
     await Promise.all([w1, w2]);
 
     const stored = await chrome.storage.local.get('list');
-    expect([...stored.list].sort()).toEqual([1, 2]);
+    expect([...(stored.list as unknown[])].sort()).toEqual([1, 2]);
   });
 
   it('completes under fake timers', async () => {
@@ -128,8 +128,8 @@ describe('withAtomicKeys multi-key serialization', () => {
     await Promise.all([t1, t2]);
 
     const stored = await chrome.storage.local.get(['a', 'b']);
-    expect([...stored.a].sort()).toEqual([1, 2]);
-    expect([...stored.b].sort()).toEqual([1, 2]);
+    expect([...(stored.a as unknown[])].sort()).toEqual([1, 2]);
+    expect([...(stored.b as unknown[])].sort()).toEqual([1, 2]);
   });
 });
 
@@ -169,7 +169,7 @@ describe('deterministic interleave: gated set()', () => {
 
       await Promise.all([w1, w2]);
       const stored = await chrome.storage.local.get('g');
-      expect([...stored.g].sort()).toEqual(['A', 'B']);
+      expect([...(stored.g as unknown[])].sort()).toEqual(['A', 'B']);
     } finally {
       chrome.storage.local.set = realSet;
     }

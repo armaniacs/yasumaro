@@ -37,10 +37,10 @@ beforeEach(async () => {
 
 afterEach(async () => {
   // Restore the real implementations if a test intercepted them.
-  if (storageGetMock.getMockImplementation() !== originalGetImplementation) {
+  if (originalGetImplementation && storageGetMock.getMockImplementation() !== originalGetImplementation) {
     storageGetMock.mockImplementation(originalGetImplementation);
   }
-  if (storageSetMock.getMockImplementation() !== originalSetImplementation) {
+  if (originalSetImplementation && storageSetMock.getMockImplementation() !== originalSetImplementation) {
     storageSetMock.mockImplementation(originalSetImplementation);
   }
   await clearStorage();
@@ -74,7 +74,7 @@ describe('saveSavedUrlEntryMetadata — atomic CAS behavior', () => {
     // bumps the version and writes its own field. The verify then sees
     // version 1 !== expected 0, which throws a ConflictError and forces a
     // retry on the fresh state.
-    const realGet = originalGetImplementation!;
+    const realGet = originalGetImplementation as (...args: unknown[]) => Promise<Record<string, unknown>>;
     let getCall = 0;
     storageGetMock.mockImplementation(async (keys?: string | string[] | null) => {
       getCall += 1;

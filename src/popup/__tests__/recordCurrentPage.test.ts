@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// chrome.runtime.lastError is readonly in @types/chrome; tests need to simulate it.
+type MutableLastError = { lastError: chrome.runtime.LastError | null };
+
 vi.mock('../tabUtils.js', () => ({
     getCurrentTab: vi.fn(),
     isRecordable: vi.fn().mockReturnValue(true),
@@ -336,9 +339,9 @@ describe('recordCurrentPage', () => {
         `;
         // Reset mocks
         vi.clearAllMocks();
-        chrome.runtime.lastError = null;
-        chrome.tabs.sendMessage.mockResolvedValue({ content: 'test content' });
-        chrome.runtime.sendMessage.mockResolvedValue(undefined);
+        (chrome.runtime as MutableLastError).lastError = null;
+        vi.mocked(chrome.tabs.sendMessage as unknown as (...a: unknown[]) => Promise<unknown>).mockResolvedValue({ content: 'test content' });
+        vi.mocked(chrome.runtime.sendMessage as unknown as (...a: unknown[]) => Promise<unknown>).mockResolvedValue(undefined);
         (checkPageStatus as ReturnType<typeof vi.fn>).mockResolvedValue(null);
         (sendMessageWithRetry as ReturnType<typeof vi.fn>).mockResolvedValue({
             success: true,
@@ -369,8 +372,8 @@ describe('recordCurrentPage', () => {
             url: 'https://example.com',
             title: 'Test',
         });
-        chrome.tabs.sendMessage.mockResolvedValueOnce({ content: 'test' });
-        chrome.runtime.lastError = { message: 'Runtime error' };
+        vi.mocked(chrome.tabs.sendMessage as unknown as (...a: unknown[]) => Promise<unknown>).mockResolvedValueOnce({ content: 'test' });
+        (chrome.runtime as MutableLastError).lastError = { message: 'Runtime error' };
 
         await recordCurrentPage();
 
@@ -386,8 +389,8 @@ describe('recordCurrentPage', () => {
             url: 'https://example.com',
             title: 'Test',
         });
-        chrome.tabs.sendMessage.mockRejectedValueOnce(new Error('Send failed'));
-        chrome.runtime.lastError = null;
+        vi.mocked(chrome.tabs.sendMessage as unknown as (...a: unknown[]) => Promise<unknown>).mockRejectedValueOnce(new Error('Send failed'));
+        (chrome.runtime as MutableLastError).lastError = null;
 
         await recordCurrentPage();
 
@@ -447,7 +450,7 @@ describe('recordCurrentPage', () => {
             url: 'https://example.com',
             title: 'Test',
         });
-        chrome.tabs.sendMessage.mockResolvedValueOnce({
+        vi.mocked(chrome.tabs.sendMessage as unknown as (...a: unknown[]) => Promise<unknown>).mockResolvedValueOnce({
             content: 'test content',
             cleansedReason: 'both',
             cleanseStats: { hardStripRemoved: 3, keywordStripRemoved: 5, totalRemoved: 8 },

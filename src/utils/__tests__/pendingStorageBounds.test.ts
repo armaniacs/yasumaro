@@ -108,9 +108,9 @@ describe('pendingStorage absolute bounds (PBI-26)', () => {
 
     const saved = store[PENDING_PAGES_KEY] as PendingPage[];
     expect(saved).toHaveLength(1);
-    expect(saved[0].expiry).toBeLessThanOrEqual(Date.now() + PENDING_MAX_TTL_MS);
-    expect(saved[0].expiry).toBeGreaterThanOrEqual(before + PENDING_MAX_TTL_MS - 5000);
-    expect(saved[0].expiry).toBeLessThan(before + 30 * DAY_MS);
+    expect(saved[0]!.expiry).toBeLessThanOrEqual(Date.now() + PENDING_MAX_TTL_MS);
+    expect(saved[0]!.expiry).toBeGreaterThanOrEqual(before + PENDING_MAX_TTL_MS - 5000);
+    expect(saved[0]!.expiry).toBeLessThan(before + 30 * DAY_MS);
   });
 
   it('keeps expiry values within the TTL untouched', async () => {
@@ -119,7 +119,7 @@ describe('pendingStorage absolute bounds (PBI-26)', () => {
     await addPendingPage(makePage(2, expiry));
 
     const saved = store[PENDING_PAGES_KEY] as PendingPage[];
-    expect(saved[0].expiry).toBe(expiry);
+    expect(saved[0]!.expiry).toBe(expiry);
   });
 
   it('getPendingPages / clearExpiredPages expiry filtering still works', async () => {

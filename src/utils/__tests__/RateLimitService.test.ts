@@ -40,7 +40,7 @@ function createInMemoryStoragePort(): StoragePort {
 
 class CountingStorageArea extends InMemoryStorageArea {
   setCalls = 0;
-  async set(items: Record<string, unknown>): Promise<void> {
+  override async set(items: Record<string, unknown>): Promise<void> {
     this.setCalls++;
     await super.set(items);
   }

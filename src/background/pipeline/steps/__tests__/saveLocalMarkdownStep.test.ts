@@ -198,7 +198,9 @@ const mockChrome = {
 // chrome グローバルを設定
 vi.stubGlobal('chrome', mockChrome);
 
-function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
+type ExplicitUndefined<T> = { [K in keyof T]?: T[K] | undefined };
+
+function makeContext(overrides: ExplicitUndefined<RecordingContext> = {}): RecordingContext {
   return {
     data: {
       title: 'Test Page',
@@ -223,7 +225,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
       domain: 'example.com',
     },
     ...overrides,
-  };
+  } as RecordingContext;
 }
 
 describe('saveLocalMarkdownStep', () => {
@@ -285,11 +287,11 @@ describe('saveLocalMarkdownStep', () => {
 
       // バッファが保存されること
       expect(mockChrome.storage.local.set).toHaveBeenCalledTimes(1);
-      const setCall = mockChrome.storage.local.set.mock.calls[0][0];
-      const key = Object.keys(setCall)[0];
+      const setCall = mockChrome.storage.local.set.mock.calls[0]?.[0] as Record<string, Array<{ entryData: unknown }>>;
+      const key = Object.keys(setCall)[0]!;
       expect(key).toMatch(/^local_export_\d{4}-\d{2}-\d{2}$/);
       expect(setCall[key]).toHaveLength(1);
-      expect(setCall[key][0].entryData).toEqual(context.markdownEntryData);
+      expect(setCall[key]![0]!.entryData).toEqual(context.markdownEntryData);
 
       // PBI 2026-07-09-03: ステップはダウンロードしない
       expect(mockChrome.downloads.download).not.toHaveBeenCalled();
@@ -315,8 +317,8 @@ describe('saveLocalMarkdownStep', () => {
       await saveLocalMarkdownStep(context1);
       await saveLocalMarkdownStep(context2);
 
-      const setCall = mockChrome.storage.local.set.mock.calls[1][0];
-      const key = Object.keys(setCall)[0];
+      const setCall = mockChrome.storage.local.set.mock.calls[1]?.[0] as Record<string, unknown[]>;
+      const key = Object.keys(setCall)[0]!;
       expect(setCall[key]).toHaveLength(2);
     });
 
@@ -347,8 +349,8 @@ describe('saveLocalMarkdownStep', () => {
 
       await saveLocalMarkdownStep(context);
 
-      const setCall = mockChrome.storage.local.set.mock.calls[0][0];
-      const key = Object.keys(setCall)[0];
+      const setCall = mockChrome.storage.local.set.mock.calls[0]?.[0] as Record<string, unknown>;
+      const key = Object.keys(setCall)[0]!;
       const dateStr = key.replace('local_export_', '');
       expect(dateStr).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });

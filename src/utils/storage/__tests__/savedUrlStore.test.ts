@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Mock } from 'vitest';
 
 vi.mock('../quota.js', () => ({
     STORAGE_QUOTA_BYTES: 10 * 1024 * 1024,
@@ -33,8 +34,8 @@ describe('setSavedUrls', () => {
     });
 
     it('skips quota check when unlimitedStorage permission is granted', async () => {
-        (hasUnlimitedStorage as vi.Mock).mockResolvedValue(true);
-        (getStorageUsage as vi.Mock).mockResolvedValue(STORAGE_QUOTA_BYTES + 1);
+        (hasUnlimitedStorage as Mock).mockResolvedValue(true);
+        (getStorageUsage as Mock).mockResolvedValue(STORAGE_QUOTA_BYTES + 1);
 
         const urlSet = new Set(['https://example.com']);
         await expect(setSavedUrls(urlSet)).resolves.toBeUndefined();
@@ -43,16 +44,16 @@ describe('setSavedUrls', () => {
     });
 
     it('throws quota error when unlimitedStorage is not granted and usage exceeds quota', async () => {
-        (hasUnlimitedStorage as vi.Mock).mockResolvedValue(false);
-        (getStorageUsage as vi.Mock).mockResolvedValue(STORAGE_QUOTA_BYTES - 1);
+        (hasUnlimitedStorage as Mock).mockResolvedValue(false);
+        (getStorageUsage as Mock).mockResolvedValue(STORAGE_QUOTA_BYTES - 1);
 
         const largeUrlSet = new Set([`https://example.com/${'x'.repeat(1024 * 1024)}`]);
         await expect(setSavedUrls(largeUrlSet)).rejects.toThrow('Storage quota exceeded');
     });
 
     it('saves normally when unlimitedStorage is not granted but usage is under quota', async () => {
-        (hasUnlimitedStorage as vi.Mock).mockResolvedValue(false);
-        (getStorageUsage as vi.Mock).mockResolvedValue(0);
+        (hasUnlimitedStorage as Mock).mockResolvedValue(false);
+        (getStorageUsage as Mock).mockResolvedValue(0);
 
         const urlSet = new Set(['https://example.com']);
         await expect(setSavedUrls(urlSet)).resolves.toBeUndefined();
@@ -111,7 +112,8 @@ describe('saveSavedUrlEntryMetadata', () => {
             savedUrlsWithTimestamps: [{ url: 'https://example.com', timestamp: 1000, aiSummary: 'keep' }],
         });
 
-        await saveSavedUrlEntryMetadata('https://example.com', { aiSummary: undefined, recordType: 'auto' });
+        // intentionally passes aiSummary: undefined to verify undefined patch values are ignored
+        await saveSavedUrlEntryMetadata('https://example.com', { aiSummary: undefined, recordType: 'auto' } as unknown as Parameters<typeof saveSavedUrlEntryMetadata>[1]);
 
         const entry = await readEntry('https://example.com');
         expect(entry?.aiSummary).toBe('keep');

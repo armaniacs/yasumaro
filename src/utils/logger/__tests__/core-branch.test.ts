@@ -59,7 +59,7 @@ describe('addLog', () => {
             await flushLogs(true);
             const logs = await getLogs();
             expect(logs.length).toBeGreaterThan(0);
-            expect(logs[0].id.length).toBeGreaterThan(0);
+            expect(logs[0]!.id.length).toBeGreaterThan(0);
         } finally {
             crypto.randomUUID = originalRandomUUID;
         }
@@ -103,14 +103,14 @@ describe('addLog', () => {
         await addLog('INFO', 'msg', { traceId: 'abc-123', extra: 'x' });
         await flushLogs(true);
         const logs = await getLogs();
-        expect(logs[0].traceId).toBe('abc-123');
+        expect(logs[0]!.traceId).toBe('abc-123');
     });
 
     it('handles masked message from sanitizeRegex', async () => {
         await addLog('INFO', 'email test@example.com here', {});
         await flushLogs(true);
         const logs = await getLogs();
-        expect(logs[0].message).not.toContain('test@example.com');
+        expect(logs[0]!.message).not.toContain('test@example.com');
     });
 });
 
