@@ -1,8 +1,7 @@
 import { getMessageOr } from '../../../utils/i18n.js';
 import type { BrowsingLogEntry } from './sqliteHistoryQuery.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
-import { formatEntryToMarkdown } from '../../../utils/markdownFormatter.js';
-import { copyTextToClipboard } from '../../../utils/clipboard.js';
+import { createCopyMarkdownButton } from '../../../utils/copyMarkdownButton.js';
 import { type PanelLifecycle } from '../types.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
@@ -74,35 +73,17 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
   }
 
   function createCopyButton(entry: BrowsingLogEntry): HTMLButtonElement {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'history-copy-btn sqlite-entry-copy';
-    button.setAttribute('aria-label', t('copyMarkdown') || 'Copy Markdown');
-    const originalIcon = '\u{1F4CB}';
-    button.textContent = originalIcon;
-    button.addEventListener('click', async () => {
-      button.disabled = true;
-      try {
-        const markdown = formatEntryToMarkdown(entry);
-        await copyTextToClipboard(markdown);
-        button.textContent = '✓';
-        button.setAttribute('aria-label', t('copyMarkdownSuccess') || 'Copied to clipboard');
-        setTimeout(() => {
-          button.textContent = originalIcon;
-          button.setAttribute('aria-label', t('copyMarkdown') || 'Copy Markdown');
-          button.disabled = false;
-        }, 2000);
-      } catch {
-        button.textContent = '✗';
-        button.setAttribute('aria-label', t('copyMarkdownFail') || 'Failed to copy');
-        setTimeout(() => {
-          button.textContent = originalIcon;
-          button.setAttribute('aria-label', t('copyMarkdown') || 'Copy Markdown');
-          button.disabled = false;
-        }, 2000);
-      }
+    return createCopyMarkdownButton(entry, {
+      className: 'history-copy-btn sqlite-entry-copy',
+      labels: {
+        initialText: '📋',
+        successText: '✓',
+        failureText: '✗',
+        initialAriaLabel: t('copyMarkdown') || 'Copy Markdown',
+        successAriaLabel: t('copyMarkdownSuccess') || 'Copied to clipboard',
+        failureAriaLabel: t('copyMarkdownFail') || 'Failed to copy',
+      },
     });
-    return button;
   }
 
   function updateBulkBar(
