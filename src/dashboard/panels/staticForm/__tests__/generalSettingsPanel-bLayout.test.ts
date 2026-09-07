@@ -73,7 +73,7 @@ describe('generalSettingsPanel — B layout provider settings', () => {
     // Exactly one #openaiSettings, inside the accordion
     const openaiBlocks = document.querySelectorAll('#openaiSettings');
     expect(openaiBlocks.length).toBe(1);
-    expect(document.getElementById('bProviderAccordion')?.contains(openaiBlocks[0])).toBe(true);
+    expect(document.getElementById('bProviderAccordion')?.contains(openaiBlocks[0] ?? null)).toBe(true);
 
     // A mount stays empty in B
     expect(document.getElementById('providerSettingsMount')?.children.length).toBe(0);

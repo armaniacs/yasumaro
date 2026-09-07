@@ -225,7 +225,7 @@ describe('testAiConnection', () => {
     const res = await testAiConnection();
     expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'TEST_AI', payload: {} }));
     // ensure runId not present
-    const arg = sendMessage.mock.calls[0][0];
+    const arg = sendMessage.mock.calls[0]?.[0];
     expect(arg.runId).toBeUndefined();
     expect(res.success).toBe(true);
   });
@@ -902,7 +902,7 @@ describe('handleTestLocalMarkdown', () => {
     }));
     expect((globalThis.URL as any).createObjectURL).toHaveBeenCalled();
     // filename should end with .md
-    expect(downloadMock.mock.calls[0][0].filename).toMatch(/\.md$/);
+    expect(downloadMock.mock.calls[0]?.[0].filename).toMatch(/\.md$/);
     expect(document.getElementById('statusTop')!.textContent).toBe('SUCCESS_MSG');
     expect(document.getElementById('statusTop')!.className).toBe('success');
     // revoke after 1000ms
@@ -946,7 +946,7 @@ describe('handleTestLocalMarkdown', () => {
     const p = handleTestLocalMarkdown(repo);
     await vi.advanceTimersByTimeAsync(0);
     await p;
-    expect(downloadMock.mock.calls[0][0].filename).toContain('Yasumaro/test-');
+    expect(downloadMock.mock.calls[0]?.[0].filename).toContain('Yasumaro/test-');
     await vi.advanceTimersByTimeAsync(1000);
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalled();
     vi.useRealTimers();
@@ -967,7 +967,7 @@ describe('handleTestLocalMarkdown', () => {
     await vi.advanceTimersByTimeAsync(0);
     await p;
     // Depending on null vs undefined, ?? treats null as fallback too, so Yasumaro
-    expect(downloadMock.mock.calls[0][0].filename).toContain('Yasumaro/test-');
+    expect(downloadMock.mock.calls[0]?.[0].filename).toContain('Yasumaro/test-');
     await vi.advanceTimersByTimeAsync(1000);
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalled();
     vi.useRealTimers();
