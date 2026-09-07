@@ -13,8 +13,6 @@ const baseEntry: BrowsingLogEntry = {
   is_deleted: 0,
   scroll_ratio: 0.75,
   visit_duration: 12000,
-  tokens_used: 150,
-  content_length: 5000,
 };
 
 describe('markdownFormatter', () => {

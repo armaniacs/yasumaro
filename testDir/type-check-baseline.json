@@ -1,5 +1,5 @@
 {
-  "total": 168,
+  "total": 162,
   "files": {
     "src/background/__tests__/SessionAlarmService.test.ts": 2,
     "src/background/__tests__/alarmRegistry.test.ts": 3,
@@ -30,9 +30,6 @@
     "src/background/pipeline/steps/__tests__/checkDuplicateStep.test.ts": 2,
     "src/background/pipeline/steps/__tests__/saveLocalMarkdownStep.test.ts": 9,
     "src/background/pipeline/steps/__tests__/saveToObsidianStep.test.ts": 2,
-    "src/utils/__tests__/markdownFormatter.test.ts": 1,
-    "src/utils/__tests__/optimisticLock-stress.test.ts": 1,
-    "src/utils/__tests__/optimisticLockSerialization.test.ts": 4,
     "src/utils/__tests__/piiSanitizer-security.test.ts": 1,
     "src/utils/__tests__/piiStripper.test.ts": 3,
     "src/utils/__tests__/readBodyCapped.test.ts": 2,
