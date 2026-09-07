@@ -26,7 +26,7 @@ describe('querySelectorAllDeep (30-03)', () => {
     const result = querySelectorAllDeep(document.body, '.ad-banner');
     // light DOM 0 + shadow 1 = 1
     expect(result.length).toBe(1);
-    expect(result[0].textContent).toBe('shadow ad');
+    expect(result[0]!.textContent).toBe('shadow ad');
   });
 
   it('ネストした shadowRoot 2階層を取得できる', () => {
@@ -41,7 +41,7 @@ describe('querySelectorAllDeep (30-03)', () => {
 
     const result = querySelectorAllDeep(document.body, '.ad-banner');
     expect(result.length).toBe(1);
-    expect(result[0].textContent).toBe('deep ad');
+    expect(result[0]!.textContent).toBe('deep ad');
   });
 
   it('shadowRootなしの要素でもエラーにならない', () => {
@@ -103,7 +103,7 @@ describe('querySelectorAllDeep (30-03)', () => {
     });
     const result = querySelectorAllDeep(document.body, '.ad-banner');
     expect(result.length).toBe(1);
-    expect(result[0].textContent).toBe('iframe ad');
+    expect(result[0]!.textContent).toBe('iframe ad');
   });
 
   it('iframe が cross-origin 相当で例外でもスキップ', () => {

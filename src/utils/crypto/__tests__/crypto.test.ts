@@ -196,9 +196,10 @@ describe('crypto', () => {
             const salt = generateSalt();
             const key = await deriveKey(password, salt);
 
-            await expect(decryptData(null, key)).rejects.toThrow('Invalid encrypted data format');
-            await expect(decryptData({}, key)).rejects.toThrow('Invalid encrypted data format');
-            await expect(decryptData({ ciphertext: 'test' }, key)).rejects.toThrow('Invalid encrypted data format');
+            type Enc = Parameters<typeof decryptData>[0];
+            await expect(decryptData(null as unknown as Enc, key)).rejects.toThrow('Invalid encrypted data format');
+            await expect(decryptData({} as unknown as Enc, key)).rejects.toThrow('Invalid encrypted data format');
+            await expect(decryptData({ ciphertext: 'test' } as unknown as Enc, key)).rejects.toThrow('Invalid encrypted data format');
         });
     });
 
@@ -260,7 +261,7 @@ describe('crypto', () => {
             const salt = generateSalt();
             const key = await deriveKey(password, salt);
 
-            await expect(encryptApiKey(null, key)).rejects.toThrow('Invalid API key');
+            await expect(encryptApiKey(null as unknown as string, key)).rejects.toThrow('Invalid API key');
             await expect(encryptApiKey(123 as unknown as string, key)).rejects.toThrow('Invalid API key');
         });
 
