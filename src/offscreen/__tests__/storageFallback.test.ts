@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { FallbackStorage } from '../storageFallback.js';
+import type { StorageQuery } from '../../utils/sqlite-types.js';
 
 describe('FallbackStorage', () => {
   let storage: FallbackStorage;
@@ -159,8 +160,8 @@ describe('FallbackStorage', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.rows.length).toBe(3);
-        expect(result.rows[0].url).toBe('https://c.com');
-        expect(result.rows[2].url).toBe('https://a.com');
+        expect(result.rows[0]!.url).toBe('https://c.com');
+        expect(result.rows[2]!.url).toBe('https://a.com');
       }
     });
 
@@ -169,21 +170,22 @@ describe('FallbackStorage', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.rows.length).toBe(1);
-        expect(result.rows[0].url).toBe('https://b.com');
+        expect(result.rows[0]!.url).toBe('https://b.com');
       }
     });
 
     it('filters by starred', async () => {
-      const result = await storage.query({ isStarred: true, excludeDeleted: false });
+      // Legacy key names (isStarred/since/until) are still accepted by the fallback for back-compat.
+      const result = await storage.query({ isStarred: true, excludeDeleted: false } as StorageQuery);
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.rows.length).toBe(1);
-        expect(result.rows[0].is_starred).toBe(1);
+        expect(result.rows[0]!.is_starred).toBe(1);
       }
     });
 
     it('filters by time range', async () => {
-      const result = await storage.query({ since: 100, until: 200 });
+      const result = await storage.query({ since: 100, until: 200 } as StorageQuery);
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.rows.length).toBe(2);
@@ -203,7 +205,7 @@ describe('FallbackStorage', () => {
       const result = await storage.query({ orderDir: 'ASC', excludeDeleted: false });
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.rows[0].url).toBe('https://a.com');
+        expect(result.rows[0]!.url).toBe('https://a.com');
       }
     });
 
@@ -228,7 +230,7 @@ describe('FallbackStorage', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.total).toBe(1);
-        expect(result.rows[0].url).toContain('alpha');
+        expect(result.rows[0]!.url).toContain('alpha');
       }
     });
 
@@ -269,7 +271,7 @@ describe('FallbackStorage', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.rows[0]).toHaveProperty('rank');
-        expect(result.rows[0].rank).toBe(0);
+        expect(result.rows[0]!.rank).toBe(0);
       }
     });
   });
@@ -284,8 +286,8 @@ describe('FallbackStorage', () => {
       const q = await storage.query();
       expect(q.success).toBe(true);
       if (q.success) {
-        expect(q.rows[0].title).toBe('Updated');
-        expect(q.rows[0].is_starred).toBe(1);
+        expect(q.rows[0]!.title).toBe('Updated');
+        expect(q.rows[0]!.is_starred).toBe(1);
       }
     });
 
@@ -489,7 +491,7 @@ describe('FallbackStorage', () => {
       await storage.insert({ url: 'https://a.com', created_at: 100, visit_duration: null });
       await storage.insert({ url: 'https://b.com', created_at: 200, visit_duration: 10 });
       await storage.insert({ url: 'https://c.com', created_at: 300, visit_duration: 5 });
-      const result = await storage.query({ orderBy: 'visit_duration', orderDir: 'ASC' });
+      const result = await storage.query({ orderBy: 'visit_duration', orderDir: 'ASC' } as unknown as StorageQuery);
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.rows.length).toBe(3);
@@ -505,8 +507,8 @@ describe('FallbackStorage', () => {
       const result = await storage.query({ orderBy: 'created_at', orderDir: 'ASC' });
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.rows[0].url).toBe('https://a.com');
-        expect(result.rows[2].url).toBe('https://z.com');
+        expect(result.rows[0]!.url).toBe('https://a.com');
+        expect(result.rows[2]!.url).toBe('https://z.com');
       }
     });
   });
