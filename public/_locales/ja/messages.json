@@ -6,7 +6,7 @@
     "message": "Yasumaro"
   },
   "extensionDescription": {
-    "message": "ブラウジング履歴をAIで要約しローカルSQLiteに永続保存します。Obsidian連携もサポート。"
+    "message": "閲覧履歴をAI要約付きでローカルSQLiteに保存。ブラウザ内蔵AI・サイト別クレンジング・履歴アーカイブに対応。Obsidian連携は任意。"
   },
   "appTitle": {
     "message": "Yasumaro"
