@@ -1,5 +1,5 @@
 {
-  "total": 1639,
+  "total": 1616,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -203,7 +203,6 @@
     "src/utils/__tests__/domainFilter-mode.test.ts": 1,
     "src/utils/__tests__/fetch.test.ts": 7,
     "src/utils/__tests__/fetchRedirectGuard.test.ts": 3,
-    "src/utils/__tests__/i18n.test.ts": 23,
     "src/utils/__tests__/localeUtils.test.ts": 2,
     "src/utils/__tests__/logCritical.test.ts": 4,
     "src/utils/__tests__/logMasker.test.ts": 13,
