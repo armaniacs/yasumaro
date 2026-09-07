@@ -1,5 +1,5 @@
 {
-  "total": 1442,
+  "total": 1434,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -175,7 +175,6 @@
     "src/popup/__tests__/ui-ux-improvements.test.ts": 29,
     "src/popup/recordCurrentPage/__tests__/tabContentFetcher.test.ts": 1,
     "src/utils/__tests__/RateLimitService.test.ts": 1,
-    "src/utils/__tests__/archiveWording.test.ts": 2,
     "src/utils/__tests__/auditLog.test.ts": 1,
     "src/utils/__tests__/contentExtractor.test.ts": 3,
     "src/utils/__tests__/criticalAlertSink.test.ts": 2,
@@ -186,7 +185,6 @@
     "src/utils/__tests__/fetch.test.ts": 7,
     "src/utils/__tests__/fetchRedirectGuard.test.ts": 3,
     "src/utils/__tests__/localeUtils.test.ts": 2,
-    "src/utils/__tests__/logCritical.test.ts": 4,
     "src/utils/__tests__/logMasker.test.ts": 13,
     "src/utils/__tests__/logger-enhanced.test.ts": 7,
     "src/utils/__tests__/markdownFormatter.test.ts": 1,
@@ -204,7 +202,6 @@
     "src/utils/__tests__/piiSanitizer-security.test.ts": 1,
     "src/utils/__tests__/piiStripper.test.ts": 3,
     "src/utils/__tests__/readBodyCapped.test.ts": 2,
-    "src/utils/__tests__/redaction.test.ts": 2,
     "src/utils/__tests__/storage-buildAllowedUrls.test.ts": 4,
     "src/utils/__tests__/storage-extra.test.ts": 5,
     "src/utils/__tests__/storage-keys.test.ts": 2,
