@@ -1,5 +1,5 @@
 {
-  "total": 1341,
+  "total": 1318,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -127,7 +127,6 @@
     "src/dashboard/settings/__tests__/trustSettings-r2.test.ts": 4,
     "src/dashboard/settings/__tests__/trustSettings-r3.test.ts": 1,
     "src/dashboard/settings/__tests__/trustSettings.test.ts": 17,
-    "src/dashboard/settings/__tests__/ublockImport.test.ts": 23,
     "src/dashboard/utils/__tests__/confirmDialog.test.ts": 12,
     "src/messaging/__tests__/dashboardGateway.test.ts": 7,
     "src/messaging/__tests__/dashboardSenderGuard.test.ts": 1,
