@@ -1,4 +1,4 @@
-import { checkPageStatus } from '../statusChecker.js';
+import { loadActiveTabStatus, type ActiveTabStatusSnapshot } from '../statusStore.js';
 import { SettingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { startAutoCloseTimer } from '../autoClose.js';
@@ -102,12 +102,12 @@ export class RecordSession {
    * Sole button writer. Syncs text/handler to the domain-filter status.
    * Called on load/finish paths and nowhere else — the status panel only
    * signals through the session entry points, never touching onclick itself.
+   * The status snapshot goes through the shared statusStore seam
+   * (PBI 2026-09-07-24); finish paths omit the snapshot to get a fresh look.
    */
-  async resetRecordButton(recordBtn: HTMLButtonElement): Promise<void> {
+  async resetRecordButton(recordBtn: HTMLButtonElement, snapshot?: ActiveTabStatusSnapshot): Promise<void> {
     recordBtn.disabled = false;
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    const url = tabs[0]?.url;
-    const status = url ? await checkPageStatus(url) : null;
+    const { status } = snapshot ?? (await loadActiveTabStatus());
     // Uses the .onclick property (not addEventListener) intentionally: this function
     // can be called repeatedly as domain-filter status changes, and property assignment
     // replaces the previous handler atomically instead of stacking listeners.
