@@ -35,12 +35,12 @@ Popup の記録体験を保守する開発者として、statusPanel の初期�
   Then null スナップショットを返し、statusPanel と recordSession が現行と同じフォールバック表示になる
 
 ## 受け入れ基準
-- [ ] popup 内に StatusStore（または `loadTabStatus(): Promise<StatusSnapshot | null>` 1 関数の共有モジュール）が新設され、`chrome.tabs.query + checkPageStatus` の実行が 1 箇所に集約されている
-- [ ] `statusPanel.initStatusPanel` と `recordSession.resetRecordButton` が StatusStore の同一スナップショットを参照する（直接の `checkPageStatus` 呼び出しが消える）
-- [ ] `normalizeUrl` が `src/utils/urlUtils.ts` に一本化され、`statusChecker.ts:115-130` のプライベート実装が削除されている（headerDetector / PrivacyCache 側は本 PBI では触らない。実装メモに残課題記録）
-- [ ] statusPanel.ts の 6 セクション描画（privacy mode / domain / privacy / cache / lastSaved / cleansing）の分岐が現行どおり機能する（モジュール分割の全面リファクタは行わない。最小は「同じスナップショットを渡す」まで）
-- [ ] 既存 popup テスト（statusPanel / statusChecker / recordSession 系）が green（振る舞い不変。`checkPageStatus` 呼び出し回数の新規 assert を追加）
-- [ ] `npm run type-check` / `npm run lint` / popup 関連テストが green
+- [x] popup 内に StatusStore（または `loadTabStatus(): Promise<StatusSnapshot | null>` 1 関数の共有モジュール）が新設され、`chrome.tabs.query + checkPageStatus` の実行が 1 箇所に集約されている
+- [x] `statusPanel.initStatusPanel` と `recordSession.resetRecordButton` が StatusStore の同一スナップショットを参照する（直接の `checkPageStatus` 呼び出しが消える）
+- [x] `normalizeUrl` が `src/utils/urlUtils.ts` に一本化され、`statusChecker.ts:115-130` のプライベート実装が削除されている（headerDetector / PrivacyCache 側は本 PBI では触らない。実装メモに残課題記録）
+- [x] statusPanel.ts の 6 セクション描画（privacy mode / domain / privacy / cache / lastSaved / cleansing）の分岐が現行どおり機能する（モジュール分割の全面リファクタは行わない。最小は「同じスナップショットを渡す」まで）
+- [x] 既存 popup テスト（statusPanel / statusChecker / recordSession 系）が green（振る舞い不変。`checkPageStatus` 呼び出し回数の新規 assert を追加）
+- [x] `npm run type-check` / `npm run lint` / popup 関連テストが green
 
 ## テスト戦略
 - 単体: StatusStore の新規テスト — 1 回取得の共有（スパイで呼び出し回数 1 を assert）、null フォールバック、スナップショット同一性
@@ -57,12 +57,21 @@ Popup の記録体験を保守する開発者として、statusPanel の初期�
 1.5 pt（0.3 人週相当）
 
 ## 未解決事項
-1. recordSession が status を再取得するタイミング（録画完了後の resetRecordButton 呼び出し）は「最新状態を取り直す」意味があるか → 録画完了後は filter 状態が変わっていない可能性が高いが、安全側として「Store に `refresh()` を用意し、完了パスは refresh 後のスナップショットを使う」で結論（実装メモに記録）
+1. recordSession が status を再取得するタイミング（録画完了後の resetRecordButton 呼び出し）は「最新状態を取り直す」意味があるか → **結論: store は stateless とし、完了パスは省略時引数で fresh fetch（refresh 相当）**。`resetRecordButton(recordBtn, snapshot?)` にスナップショット省略引数を追加し、呼び出し側が同一スナップショットを渡せば再 fetch しない（将来的な popup open 時の共有に備える）
 2. statusPanel の 6 関心分割（render 関数化）を同時にやるか → やらない（スコープ外）。台帳に残す
 
+## 実装メモ（2026-09-07 arch-delivery-loop）
+
+- `src/popup/statusStore.ts` 新設: `loadActiveTabStatus(): Promise<ActiveTabStatusSnapshot>`（tab / url / status）。chrome.tabs.query + checkPageStatus の単一所有者。stateless（seam は fetch ロジックの 1 所有者でありキャッシュではない）
+- `statusPanel.initStatusPanel`: 自前の tabs.query + checkPageStatus を store 経由に置換（currentTab.id での GET_CONTENT 送信と updateTrustStatus は snapshot.tab / snapshot.url を使用、振る舞い不変）
+- `recordSession.resetRecordButton`: `snapshot?` 引数追加。省略時は store から fresh fetch（完了パスの現行挙動 = 再取得を維持）
+- `normalizeUrl` 統合: urlUtils に非 throw 版 `normalizeUrlSafe` を新設（hash 除去 + 末尾スラッシュ除去 + パース失敗時は元 URL 返却）し、statusChecker のプライベート実装を削除。**既存 `normalizeUrl`（throw 版）とは意図的に挙動が異なる**ため統合は別名で実施。headerDetector / PrivacyCache の同型実装との統合はキャッシュキー意味論の確認が必要（台帳候補）
+- 補足: 診断時の「popup 表示のたびに 2 回 fetch」は実測では誤りで、popup open 時の fetch は statusPanel 1 回のみ（resetRecordButton は録画完了系パスで発火）。本 PBI の価値は fetch ロジックの単一所有者化 + スナップショット共有の足場 + 不一致温床の解消
+- 検証: type-check / lint（0 errors）/ popup + urlUtils 856 テスト / 全テスト 11,893 green
+
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] popup 本番コードの `checkPageStatus` 直呼びが 1 箇所に集約されている（grep で確認）
-- [ ] `normalizeUrl` の popup プライベート実装が削除されている
-- [ ] コードレビュー完了
-- [ ] `npm run type-check` / `npm run lint` / popup テスト green
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] popup 本番コードの `checkPageStatus` 直呼びが 1 箇所に集約されている（grep で確認）
+- [x] `normalizeUrl` の popup プライベート実装が削除されている
+- [x] コードレビュー完了
+- [x] `npm run type-check` / `npm run lint` / popup テスト green

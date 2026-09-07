@@ -9,6 +9,7 @@ import { hashUrl } from '../utils/crypto/index.js';
 import { matchesDomainPattern } from '../utils/wildcardToRegex.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { pickDefined } from '../utils/objectUtils.js';
+import { normalizeUrlSafe } from '../utils/urlUtils.js';
 
 export interface StatusInfo {
   domainFilter: {
@@ -108,27 +109,6 @@ function findMatchedPattern(domain: string, domainList: string[] | undefined): s
   return undefined;
 }
 
-/**
- * URL正規化（キャッシュキーの一貫性のため）
- * headerDetector.tsと同じロジック
- */
-function normalizeUrl(url: string): string {
-  try {
-    const parsed = new URL(url);
-    // フラグメントを削除
-    parsed.hash = '';
-    let normalized = parsed.toString();
-    // 末尾のスラッシュを削除（ルートパス以外）
-    if (normalized.endsWith('/') && parsed.pathname !== '/') {
-      normalized = normalized.slice(0, -1);
-    }
-    return normalized;
-  } catch {
-    // パース失敗時は元のURLを返す
-    return url;
-  }
-}
-
 export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
   // 特殊URLのチェック
   if (url.startsWith('chrome://') || url.startsWith('about:') || url.startsWith('edge://')) {
@@ -136,8 +116,8 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
   }
 
   try {
-    // URL正規化
-    const normalizedUrl = normalizeUrl(url);
+    // URL正規化（urlUtils の非throw版に一本化。PBI 2026-09-07-24）
+    const normalizedUrl = normalizeUrlSafe(url);
     const originalHash = await hashUrl(url);
     const normalizedHash = await hashUrl(normalizedUrl);
     await logDebug('Checking status for URL', { originalHash, normalizedHash, source: 'statusChecker' });
