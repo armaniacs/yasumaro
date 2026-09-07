@@ -26,7 +26,7 @@ describe('logger persistence boundary neutralization', () => {
     await addLog('ERROR', obsidianBody, {});
     await flushLogs(true);
 
-    const [entry] = await getLogs();
+    const entry = (await getLogs())[0]!;
     expect(entry.message).not.toContain('\n');
     expect(entry.message).not.toContain(NUL);
     expect(entry.message).toContain('[Logger:fake] forged entry');
@@ -36,7 +36,7 @@ describe('logger persistence boundary neutralization', () => {
     await addLog('ERROR', `${ESC}[31mObsidian API Error: 401${ESC}[0m`, {});
     await flushLogs(true);
 
-    const [entry] = await getLogs();
+    const entry = (await getLogs())[0]!;
     expect(entry.message).not.toContain(ESC);
     expect(entry.message).toBe('Obsidian API Error: 401');
   });
@@ -45,7 +45,7 @@ describe('logger persistence boundary neutralization', () => {
     await addLog('ERROR', 'Obsidian API Error', { errorText: `line1\nline2` });
     await flushLogs(true);
 
-    const [entry] = await getLogs();
+    const entry = (await getLogs())[0]!;
     expect(String(entry.details?.errorText)).not.toContain('\n');
   });
 

@@ -1,5 +1,5 @@
 {
-  "total": 1011,
+  "total": 1002,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -155,8 +155,6 @@
     "src/utils/aiSummaryCleaner/__tests__/querySelectorAllDeep.test.ts": 3,
     "src/utils/contentExtractor/__tests__/dualPayload.test.ts": 3,
     "src/utils/crypto/__tests__/crypto.test.ts": 4,
-    "src/utils/logger/__tests__/core-branch.test.ts": 3,
-    "src/utils/logger/__tests__/logNeutralizationIntegration.test.ts": 6,
     "src/utils/logger/core.ts": 2,
     "src/utils/storage/__tests__/SettingsRepository.test.ts": 1,
     "src/utils/storage/__tests__/encryptionSession-concurrency.test.ts": 4,
