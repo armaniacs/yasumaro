@@ -43,12 +43,12 @@ Scenario: 英語ロケールでは従来の英語表示が維持される
 ```
 
 ## 受け入れ基準
-- [ ] 下記 (a)〜(c) の直書き英語が `getMessage` / `chrome.i18n.getMessage` 経由になる
-- [ ] `consented` 相当のキー（同意日プレースホルダー付き）が en/ja 双方に新規追加され、同意済み状態が日本語ロケールで日本語表示される
-- [ ] `public/_locales/en/messages.json` と `public/_locales/ja/messages.json` のキー数が一致し、`npm run check-i18n` が PASS する
-- [ ] `'No response'` 文字列にハードコード依存している既存テストが新方式に合わせて更新され、`npm run type-check` と dashboard 関連テストがパスする
-- [ ] `docs/i18n-guide.md` のキー数記載が実態に合わせて更新される
-- [ ] (d) `cleansingFeedbackView.ts` のテーブル見出しを含めるかの判断が本 PBI 内で結論付けられ、含める場合は同様に i18n 化される
+- [x] 下記 (a)〜(c) の直書き英語が `getMessage` / `chrome.i18n.getMessage` 経由になる
+- [x] `consented` 相当のキー（同意日プレースホルダー付き）が en/ja 双方に新規追加され、同意済み状態が日本語ロケールで日本語表示される
+- [x] `public/_locales/en/messages.json` と `public/_locales/ja/messages.json` のキー数が一致し、`npm run check-i18n` が PASS する
+- [x] `'No response'` 文字列にハードコード依存している既存テストが新方式に合わせて更新され、`npm run type-check` と dashboard 関連テストがパスする
+- [x] `docs/i18n-guide.md` のキー数記載が実態に合わせて更新される
+- [x] (d) `cleansingFeedbackView.ts` のテーブル見出しを含めるかの判断が本 PBI 内で結論付けられ、含める場合は同様に i18n 化される
 
 ## テスト戦略
 - E2E: 日本語ロケールで dashboard を開き、接続テスト実行時のラベル・結果、モデル取得ダイアログのエラー、プライバシー設定パネルの同意済み表示がいずれも日本語であることを確認する（Playwright、`state: 'hidden'` 等の既知の注意点に留意）
@@ -64,7 +64,7 @@ Scenario: 英語ロケールでは従来の英語表示が維持される
 ## 実装者向け注記
 
 ### このリポジトリの i18n 方式（`docs/i18n-guide.md`）
-- Chrome Extension i18n API を使用。メッセージ定義は `public/_locales/{en,ja}/messages.json`（各 1094 キー）。日英は完全同期が原則で、`npm run check-i18n` の PASS が必須
+- Chrome Extension i18n API を使用。メッセージ定義は `public/_locales/{en,ja}/messages.json`（本対応後は各 1324 キー）。日英は完全同期が原則で、`npm run check-i18n` の PASS が必須
 - HTML 静的要素: `data-i18n` 属性 + `applyI18n()`
 - JS 動的テキスト: `getMessage('key') || '日本語フォールバック'` 形式
 - 編集対象は `public/_locales/` のみ（`dist/` は生成物）
@@ -111,9 +111,19 @@ Scenario: 英語ロケールでは従来の英語表示が維持される
 3. `consented` の文言。`"同意済み（{date}）"` でよいか。`consentDate` 空時のフォーマット（例: `"同意済み"` のみにフォールバックするか）
 4. `'Obsidian'` / `'AI'` は製品名なので翻訳不要としラベル整形のみ i18n 化するか、ラベル書式ごとキー化するか
 
+## 実装メモ（実装時に結論付け・2026-09-07）
+
+- 事項1: 結論＝ `throw` 自体は対象外、`showError` 呼び出しのみ i18n 化。`models-dev-dialog.ts:280` の `throw new Error('Failed to load provider data')` は同関数 `loadProviders()` 内で catch され、開発者向けは `console.error`、利用者向けは `showError`（`:291`）に分岐する。利用者に見えるのは `showError` 経由の文言だけなので、`:291` を `modelsDevLoadProvidersError` キー化することで BDD（エラー内容が日本語で表示される）を満たす。`dashboardSqliteService.ts` の 9 箇所は通常 UI 非表示のため対象外のまま。
+- 事項2: 結論＝含める。`cleansingStatsView.ts:313` が `t('cleansingRule')` 済みで対比が目立つため。`cleansingFeedbackDomain/Snippet/Reason/Date/Action` の 5 キーを新設し、`thead.innerHTML` 直書きを th 要素組み立て＋ `textContent` に変更（innerHTML 排除の副次効果あり）。タイトル行の ``Cleansing Feedback (${n})`` は本 PBI の (d) スコープ（`:36`）外のため残置し、フォローアップ候補とする。
+- 事項3: 結論＝推奨通り。ja `"同意済み（$DATE$）"`／en `"Consented ($DATE$)"` に `placeholders: { date: { content: "$1" } }` を付け、呼び出しは `chrome.i18n.getMessage('consented', [date])`（当該パネルはラッパーでなく `chrome.i18n` を直接使うためネイティブ形式）。`consentDate` 空時は `consentedNoDate`（ja `同意済み`／en `Consented`）を使い、空括弧表示を避ける。
+- 事項4: 結論＝製品名は翻訳せずラベル書式のみキー化。`connectionStatusLabel`（`"{label}: "`、`src/utils/i18n.ts` の named substitution `{label}` 対応）を新設し、`createConnectionStatusElement` 内の `` `${label}: ` `` を置換。`'Obsidian'`／`'AI'` リテラル自体は呼び出し側が渡す製品名として残す。
+- 新規キー 14（en/ja 同数・同順、追加後 1310 → 1324、`check-i18n` PASS）: `connectionStatusLabel`, `connectionNoResponse`, `modelsDevLoadProvidersError`, `modelsDevSelectProviderError`, `modelsDevApiKeyRequiredError`, `modelsDevInvalidEndpointError`, `modelsDevSaveSettingsError`, `consented`, `consentedNoDate`, `cleansingFeedbackDomain`, `cleansingFeedbackSnippet`, `cleansingFeedbackReason`, `cleansingFeedbackDate`, `cleansingFeedbackAction`
+- BDD シナリオと自動テストの対応: 接続テスト日本語表示→ `connectionTests.test.ts`（キー参照・英語フォールバック・ラベル書式の 3 系統）、ダイアログエラー日本語表示→ `models-dev-dialog.test.ts`（5 キー＋フォールバック）、同意済み日本語表示／日付なし破綻なし→ `privacySettingsPanel.test.ts`（`consented`／`consentedNoDate`／`notConsented`／フォールバック）、英語維持→各フォールバックテスト（キー未定義時は従来英語）。E2E（Playwright 実機確認）は未実施のため手動確認項目として残す。
+- 5 Whys 分析: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/kilo/whywhy/pbi13-i18n.md` に保存（worktree 外）。
+
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] `npm run check-i18n` / `npm run type-check` / dashboard 関連テストがすべて PASS
-- [ ] コードレビュー完了
-- [ ] `docs/i18n-guide.md` のキー数記載を更新済み
-- [ ] 未解決事項 1〜4 が本 PBI 内または実装時に結論付けられ、記録されている
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] `npm run check-i18n` / `npm run type-check` / dashboard 関連テストがすべて PASS
+- [ ] コードレビュー完了（未実施のため残す）
+- [x] `docs/i18n-guide.md` のキー数記載を更新済み
+- [x] 未解決事項 1〜4 が本 PBI 内または実装時に結論付けられ、記録されている

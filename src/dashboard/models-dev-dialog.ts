@@ -288,7 +288,7 @@ export class ModelsDevDialog {
         } catch (error) {
             console.error('Failed to load providers:', error);
             this.loadingEl.classList.add('hidden');
-            this.showError('Failed to load providers. Please try again.');
+            this.showError(getMessage('modelsDevLoadProvidersError') || 'Failed to load providers. Please try again.');
         }
     }
 
@@ -437,7 +437,7 @@ export class ModelsDevDialog {
      */
     private async save(): Promise<void> {
         if (!this.selectedProvider) {
-            this.showError('Please select a provider');
+            this.showError(getMessage('modelsDevSelectProviderError') || 'Please select a provider');
             return;
         }
 
@@ -449,14 +449,14 @@ export class ModelsDevDialog {
 
         // Validation
         if (!apiKey) {
-            this.showError('Please enter your API key');
+            this.showError(getMessage('modelsDevApiKeyRequiredError') || 'Please enter your API key');
             return;
         }
 
         // The provider base URL is written to settings and later used to build
         // request URLs — reject anything that is not an absolute https: URL.
         if (!isHttpsUrl(this.selectedProvider.api)) {
-            this.showError('Selected provider has an invalid API endpoint');
+            this.showError(getMessage('modelsDevInvalidEndpointError') || 'Selected provider has an invalid API endpoint');
             return;
         }
 
@@ -483,7 +483,7 @@ export class ModelsDevDialog {
             this.hide();
         } catch (error) {
             console.error('Failed to save settings:', error);
-            this.showError('Failed to save settings');
+            this.showError(getMessage('modelsDevSaveSettingsError') || 'Failed to save settings');
         }
     }
 
