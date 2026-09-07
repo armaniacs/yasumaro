@@ -8,7 +8,7 @@
  * - openai-compatibleプロバイダーでのLM Studio対応
  */
 
-import { describe, test, expect, beforeEach, afterEach, jest } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;

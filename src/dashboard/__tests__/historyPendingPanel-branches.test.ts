@@ -304,7 +304,7 @@ describe('historyPendingPanel-branches — pIdx/sIdx not found (-1) branches', (
     renderSkippedMode(state, elements as any, '', vi.fn());
 
     // click the "record without AI" button on the first row (index 1 within that row's button group)
-    const firstRowButtons = elements.historyList.querySelectorAll('.pending-entry-inline')[0].querySelectorAll('.pending-record-btn');
+    const firstRowButtons = elements.historyList.querySelectorAll('.pending-entry-inline')[0]!.querySelectorAll('.pending-record-btn');
     (firstRowButtons[1] as HTMLButtonElement).click();
     await flushMicrotasks();
 

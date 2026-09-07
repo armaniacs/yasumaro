@@ -97,7 +97,7 @@ function setupInputs(protocol = 'https', obsidianHost = '127.0.0.1', geminiVersi
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockGetSettings.mockResolvedValue({ existing: 'value' });
+  mockGetSettings.mockResolvedValue({ existing: 'value' } as never);
   mockSaveSettings.mockResolvedValue(undefined);
   mockExtract.mockReturnValue({});
   mockExtractTiming.mockReturnValue(undefined);
@@ -147,7 +147,7 @@ describe('saveDashboardSettings', () => {
 
     await saveDashboardSettings();
 
-    const saved = mockSaveSettings.mock.calls[0][0] as Record<string, unknown>;
+    const saved = mockSaveSettings.mock.calls[0]?.[0] as Record<string, unknown>;
     // Stored non-empty values are preserved
     expect(saved.openai_base_url).toBe('https://api.ai.sakura.ad.jp/v1');
     expect(saved.openai_model).toBe('preview/gemma-4-31B-it');

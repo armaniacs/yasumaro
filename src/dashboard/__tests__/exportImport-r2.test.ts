@@ -220,7 +220,7 @@ describe('exportImport-r2 — Import logs', () => {
     await new Promise(r => setTimeout(r, 10));
 
     if (capturedProgress) {
-      capturedProgress(2, 3);
+      (capturedProgress as (c: number, t: number) => void)(2, 3);
       const progress = document.getElementById('importLogsProgress')!;
       expect(progress.textContent).toContain('2/3');
     }
