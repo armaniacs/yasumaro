@@ -95,7 +95,7 @@ vi.mock('../../utils/piiSanitizer.ts', () => ({
 }));
 
 describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
-  let recordingLogic;
+  let recordingLogic: ReturnType<typeof makeRecordingLogic>;
   const mockObsidianClient = {};
   const mockAiClient = {};
 
@@ -120,7 +120,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
     // @ts-expect-error - vi.fn() type narrowing issue
 
     setSavedUrls.mockResolvedValue();
-    StorageKeys.AI_PROVIDER = 'AI_PROVIDER';
+    (StorageKeys as { AI_PROVIDER: string }).AI_PROVIDER = 'AI_PROVIDER';
 
     // PrivacyPipelineモック
     // @ts-expect-error - vi.fn() type narrowing issue
@@ -308,7 +308,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
     it('キャッシュ期限切れ後にrecordメソッドがstorageから再取得する', async () => {
       const mockObsidianClient = {
-        appendToDailyNote: vi.fn().mockResolvedValue()
+        appendToDailyNote: vi.fn().mockResolvedValue(undefined)
       };
       recordingLogic = makeRecordingLogic(mockObsidianClient, mockAiClient);
 
@@ -341,7 +341,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
   describe('並列呼び出しの処理', () => {
     it('複数のrecord呼び出しが並行であっても安全に処理する', async () => {
       const mockObsidianClient = {
-        appendToDailyNote: vi.fn().mockResolvedValue()
+        appendToDailyNote: vi.fn().mockResolvedValue(undefined)
       };
       recordingLogic = makeRecordingLogic(mockObsidianClient, mockAiClient);
 

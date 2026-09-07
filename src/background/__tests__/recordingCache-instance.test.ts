@@ -71,8 +71,8 @@ describe('RecordingCacheInstance — per-instance isolation', () => {
     await cacheB.getSettingsWithCache();
 
     // Cache-hit reads return the per-instance objects without refetching.
-    expect((await cacheA.getSettingsWithCache()).flag).toBe(1);
-    expect((await cacheB.getSettingsWithCache()).flag).toBe(2);
+    expect((await cacheA.getSettingsWithCache() as Record<string, unknown>).flag).toBe(1);
+    expect((await cacheB.getSettingsWithCache() as Record<string, unknown>).flag).toBe(2);
   });
 
   it('two instances with separate InMemoryRecordingCacheStore do not share privacy cache state', () => {

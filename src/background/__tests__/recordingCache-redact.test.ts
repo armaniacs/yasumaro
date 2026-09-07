@@ -14,7 +14,7 @@ describe('redactSettingsApiKeys (VULN-014)', () => {
       obsidian_vault_path: '/vault',
     } as any;
 
-    const redacted = redactSettingsApiKeys(settings);
+    const redacted = redactSettingsApiKeys(settings) as Record<string, unknown>;
 
     expect(redacted).not.toBe(settings);
     expect(redacted.openai_api_key).toBe('');
