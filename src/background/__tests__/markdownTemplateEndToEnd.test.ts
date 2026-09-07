@@ -118,7 +118,7 @@ describe('Markdown template full pipeline (create -> activate -> automatic expor
     await flushBufferedExports();
 
     expect(mockDownload).toHaveBeenCalledTimes(1);
-    const [callArg] = mockDownload.mock.calls[0];
+    const [callArg] = mockDownload.mock.calls[0] ?? [];
     expect(callArg.filename).toBe(`Yasumaro/${BUFFERED_DATE}.md`);
 
     const content = decodeDownloadedContent(callArg.url);
@@ -145,7 +145,7 @@ describe('Markdown template full pipeline (create -> activate -> automatic expor
     await flushBufferedExports();
 
     expect(mockDownload).toHaveBeenCalledTimes(1);
-    const [callArg] = mockDownload.mock.calls[0];
+    const [callArg] = mockDownload.mock.calls[0] ?? [];
     const content = decodeDownloadedContent(callArg.url);
 
     // DEFAULT_MARKDOWN_TEMPLATE's exact format: "# {{date}}" heading and

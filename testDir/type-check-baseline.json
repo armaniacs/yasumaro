@@ -1,5 +1,5 @@
 {
-  "total": 387,
+  "total": 366,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -8,15 +8,11 @@
     "src/background/__tests__/alarmRegistry.test.ts": 3,
     "src/background/__tests__/headerDetector.test.ts": 6,
     "src/background/__tests__/integration-robustness.test.ts": 4,
-    "src/background/__tests__/localMarkdownExportCore.test.ts": 2,
-    "src/background/__tests__/markdownJoinSafety.test.ts": 2,
     "src/background/__tests__/migrationService-opfs.test.ts": 2,
     "src/background/__tests__/obsidianClient-api-key-leak.test.ts": 1,
     "src/background/__tests__/obsidianClient-body-timeout.test.ts": 2,
-    "src/background/__tests__/offlineQueueProcessor.test.ts": 3,
     "src/background/__tests__/pendingChromeStorageQueue.test.ts": 6,
     "src/background/__tests__/pendingMergeInterleave.test.ts": 3,
-    "src/background/__tests__/pendingSqliteQueue.test.ts": 14,
     "src/background/__tests__/persistentRetryQueue.test.ts": 14,
     "src/background/__tests__/recordingCache-instance.test.ts": 2,
     "src/background/__tests__/recordingCache-redact.test.ts": 10,
