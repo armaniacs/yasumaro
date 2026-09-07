@@ -1018,8 +1018,8 @@ describe('ublockImport/index.ts', () => {
       
       // Manually trigger reload by calling the internal function
       // We'll use the fact that renderSourceList passes handleReloadSource as callback
-      const renderCall = vi.mocked(renderSourceList).mock.calls[0];
-      const reloadCallback = renderCall[2];
+      const renderCall = vi.mocked(renderSourceList).mock.calls[0]!;
+      const reloadCallback = renderCall[2]!;
       
       await reloadCallback(0);
       await new Promise(r => setTimeout(r, 10));
@@ -1050,8 +1050,8 @@ describe('ublockImport/index.ts', () => {
       const module = await import('../index.js');
       await module.init();
 
-      const renderCall = vi.mocked(renderSourceList).mock.calls[0];
-      const reloadCallback = renderCall[2];
+      const renderCall = vi.mocked(renderSourceList).mock.calls[0]!;
+      const reloadCallback = renderCall[2]!;
 
       await reloadCallback(0);
       await new Promise(r => setTimeout(r, 10));
@@ -1087,8 +1087,8 @@ describe('ublockImport/index.ts', () => {
       const module = await import('../index.js');
       await module.init();
 
-      const renderCall = vi.mocked(renderSourceList).mock.calls[0];
-      const reloadCallback = renderCall[2];
+      const renderCall = vi.mocked(renderSourceList).mock.calls[0]!;
+      const reloadCallback = renderCall[2]!;
 
       await reloadCallback(0);
       await new Promise(r => setTimeout(r, 10));
@@ -1118,8 +1118,8 @@ describe('ublockImport/index.ts', () => {
       await module.init();
 
       // Get the delete callback from renderSourceList call
-      const renderCall = vi.mocked(renderSourceList).mock.calls[0];
-      const deleteCallback = renderCall[1];
+      const renderCall = vi.mocked(renderSourceList).mock.calls[0]!;
+      const deleteCallback = renderCall[1]!;
 
       await deleteCallback(0);
       await new Promise(r => setTimeout(r, 10));
@@ -1136,8 +1136,8 @@ describe('ublockImport/index.ts', () => {
       const module = await import('../index.js');
       await module.init();
 
-      const renderCall = vi.mocked(renderSourceList).mock.calls[0];
-      const deleteCallback = renderCall[1];
+      const renderCall = vi.mocked(renderSourceList).mock.calls[0]!;
+      const deleteCallback = renderCall[1]!;
 
       await deleteCallback(0);
       await new Promise(r => setTimeout(r, 10));
