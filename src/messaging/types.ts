@@ -267,13 +267,24 @@ export function extractMessageContent(sender: chrome.runtime.MessageSender): Mes
 
 /**
  * メッセージタイプからペイロード型を抽出
+ *
+ * payload の3状態（required / optional / absent）を区別する:
+ * - `'payload' extends keyof U` で payload キー自体が無いメンバーを `never` に固定する。
+ *   このガードが無いと `{ payload?: infer P }` だけでは absent メンバーが `P = unknown`
+ *   にマッチして unknown に退化する。
+ * - `Exclude<P, undefined>` で optional プロパティ推論に混入する `undefined` を除去する
+ *  （`exactOptionalPropertyTypes: true` 下では `payload?: T` の推論が `T | undefined` になる）。
  */
 export type PayloadForType<T extends ExtensionMessage['type']> = Extract<
   ExtensionMessage,
   { type: T }
 > extends infer U
-  ? U extends { payload: infer P }
-    ? P
+  ? 'payload' extends keyof U
+    ? U extends { payload?: infer P }
+      ? [P] extends [undefined]
+        ? never
+        : Exclude<P, undefined>
+      : never
     : never
   : never;
 
