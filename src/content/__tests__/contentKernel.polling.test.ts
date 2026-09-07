@@ -209,12 +209,14 @@ describe('ContentKernel polling — one-shot deadline + scroll driven', () => {
         // Track VisitGate construction without breaking it
         let constructCount = 0;
         const OrigGate = VisitGateModule.VisitGate;
-        const gateSpy = vi
-            .spyOn(VisitGateModule, 'VisitGate' as unknown as never)
+        const gateSpy = (vi
+            .spyOn(VisitGateModule, 'VisitGate' as unknown as never) as unknown as {
+              mockImplementation: (fn: (...a: unknown[]) => unknown) => { mockRestore: () => void };
+            })
             .mockImplementation(function (this: unknown, ...args: unknown[]) {
                 constructCount++;
                 return new (OrigGate as unknown as new (...a: unknown[]) => unknown)(...(args as []));
-            } as unknown as typeof OrigGate);
+            });
         const toThresholdsSpy = vi.spyOn(pageState, 'toVisitGateThresholds');
 
         const { kernel } = makeKernel({ baseTime, clock, scheduler, pageState });

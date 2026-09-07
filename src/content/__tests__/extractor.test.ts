@@ -42,7 +42,7 @@ const chromeMock = {
                 privacyStatus_unknown: 'Unknown reason',
             };
             if (args && messages[key]) {
-                return messages[key].replace('{0}', args[0]);
+                return messages[key]!.replace('{0}', String(args[0] ?? ''));
             }
             return messages[key] || key;
         }),
@@ -2041,7 +2041,7 @@ describe('message handler - GET_CONTENT sender validation', () => {
         await import('../extractor.js');
         const calls = ((globalThis as any).chrome.runtime.onMessage.addListener as ReturnType<typeof vi.fn>).mock.calls;
         expect(calls.length).toBeGreaterThan(0);
-        listener = calls[0][0];
+        listener = calls[0]![0];
     });
 
     beforeEach(() => {

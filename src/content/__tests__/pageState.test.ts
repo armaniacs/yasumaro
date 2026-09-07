@@ -15,7 +15,7 @@ type AssertAllRuleKeysPresent = {
 
 describe('DEFAULT_CLEANSING_CONFIG — rule flags derived from CLEANSING_RULES', () => {
   it('has every rule\'s aiSummaryCleansing<Key> property set to its defaultEnabled', () => {
-    const config = DEFAULT_CLEANSING_CONFIG as Record<string, unknown>;
+    const config = DEFAULT_CLEANSING_CONFIG as unknown as Record<string, unknown>;
     for (const rule of CLEANSING_RULES) {
       const prop = `aiSummaryCleansing${rule.key.charAt(0).toUpperCase()}${rule.key.slice(1)}`;
       expect(config[prop], `${rule.key} -> ${prop}`).toBe(rule.defaultEnabled);
