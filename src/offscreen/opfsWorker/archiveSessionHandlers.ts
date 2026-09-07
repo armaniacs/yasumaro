@@ -41,7 +41,6 @@ import {
   sweepOrphanStagings,
 } from './archiveStaging.js';
 import { isHttpUrl } from '../../utils/archiveGuards.js';
-import { isValidStagingName } from '../../utils/archiveGuards.js';
 
 const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
 const ARCHIVE_QUERY_LIMIT = 500;
@@ -229,8 +228,3 @@ export async function handleArchiveDiscard(stagingName: string): Promise<void> {
 export async function handleArchiveSweep(): Promise<string[]> {
   return sweepOrphanStagings(new Set(sessionStagingName ? [sessionStagingName] : []));
 }
-
-// isValidStagingName re-export guard: staging names must always come from the
-// registry — this import documents that the session only ever binds to
-// registry-issued names.
-void isValidStagingName;
