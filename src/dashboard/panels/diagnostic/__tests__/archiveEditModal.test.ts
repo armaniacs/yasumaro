@@ -6,7 +6,7 @@
  * window.prompt.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { ArchiveSessionRow } from '../../../messaging/sqliteMessages.js';
+import type { ArchiveSessionRow } from '../../../../messaging/sqliteMessages.js';
 
 vi.mock('../../../dashboardSqliteService.js', () => ({
   archivePreview: vi.fn(),
@@ -40,7 +40,6 @@ function makeRow(overrides: Partial<ArchiveSessionRow> = {}): ArchiveSessionRow 
     tags: null,
     created_at: 1700000000000,
     is_starred: 0,
-    is_deleted: 0,
     ...overrides,
   };
 }
@@ -112,7 +111,7 @@ beforeEach(() => {
 
 describe('archive edit modal (PBI 2026-09-06-07)', () => {
   it('opens an accessible dialog on Edit click and focuses the input', async () => {
-    const container = await mountWithSession([makeRow(7)]);
+    const container = await mountWithSession([makeRow()]);
     const editBtn = container.querySelector('.archive-session-row button') as HTMLButtonElement;
     editBtn.click();
 
@@ -125,7 +124,7 @@ describe('archive edit modal (PBI 2026-09-06-07)', () => {
   });
 
   it('traps Tab inside the modal (focus cycles back)', async () => {
-    const container = await mountWithSession([makeRow(7)]);
+    const container = await mountWithSession([makeRow()]);
     (container.querySelector('.archive-session-row button') as HTMLButtonElement).click();
 
     const modal = document.querySelector('[role="dialog"]') as HTMLElement;
@@ -141,7 +140,7 @@ describe('archive edit modal (PBI 2026-09-06-07)', () => {
 
   it('save commits via archive_update, closes, restores focus to the edit button', async () => {
     vi.mocked(archiveUpdate).mockResolvedValue({ success: true, data: { dirty: true } } as never);
-    const container = await mountWithSession([makeRow(7)]);
+    const container = await mountWithSession([makeRow()]);
     const editBtn = container.querySelector('.archive-session-row button') as HTMLButtonElement;
     editBtn.click();
 
@@ -162,7 +161,7 @@ describe('archive edit modal (PBI 2026-09-06-07)', () => {
   });
 
   it('Esc cancels without calling archive_update', async () => {
-    const container = await mountWithSession([makeRow(7)]);
+    const container = await mountWithSession([makeRow()]);
     const editBtn = container.querySelector('.archive-session-row button') as HTMLButtonElement;
     editBtn.click();
 
@@ -175,7 +174,7 @@ describe('archive edit modal (PBI 2026-09-06-07)', () => {
   });
 
   it('rejects an empty title on save (modal stays open with the error)', async () => {
-    const container = await mountWithSession([makeRow(7)]);
+    const container = await mountWithSession([makeRow()]);
     (container.querySelector('.archive-session-row button') as HTMLButtonElement).click();
 
     const modal = document.querySelector('[role="dialog"]') as HTMLElement;

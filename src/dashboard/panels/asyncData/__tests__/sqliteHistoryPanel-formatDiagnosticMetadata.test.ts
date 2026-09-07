@@ -10,7 +10,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { formatDiagnosticMetadataHtml } from '../sqliteHistoryPanel.js';
-import type { BrowsingLogEntry } from '../../../utils/sqlite-types.js';
+import type { BrowsingLogEntry } from '../../../../utils/sqlite-types.js';
 
 describe('formatDiagnosticMetadataHtml — AI プロバイダー/モデルの XSS エスケープ (VULN-001)', () => {
   const baseEntry: BrowsingLogEntry = {
