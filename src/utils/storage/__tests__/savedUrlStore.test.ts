@@ -112,7 +112,8 @@ describe('saveSavedUrlEntryMetadata', () => {
             savedUrlsWithTimestamps: [{ url: 'https://example.com', timestamp: 1000, aiSummary: 'keep' }],
         });
 
-        await saveSavedUrlEntryMetadata('https://example.com', { aiSummary: undefined, recordType: 'auto' });
+        // intentionally passes aiSummary: undefined to verify undefined patch values are ignored
+        await saveSavedUrlEntryMetadata('https://example.com', { aiSummary: undefined, recordType: 'auto' } as unknown as Parameters<typeof saveSavedUrlEntryMetadata>[1]);
 
         const entry = await readEntry('https://example.com');
         expect(entry?.aiSummary).toBe('keep');
