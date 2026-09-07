@@ -37,10 +37,10 @@ const chromeMock = {
 vi.stubGlobal('chrome', chromeMock);
 
 const { logInfoMock, logWarnMock, logErrorMock, logDebugMock } = vi.hoisted(() => ({
-  logInfoMock: vi.fn(() => Promise.resolve()),
-  logWarnMock: vi.fn(() => Promise.resolve()),
-  logErrorMock: vi.fn(() => Promise.resolve()),
-  logDebugMock: vi.fn(() => Promise.resolve()),
+  logInfoMock: vi.fn((..._args: unknown[]) => Promise.resolve()),
+  logWarnMock: vi.fn((..._args: unknown[]) => Promise.resolve()),
+  logErrorMock: vi.fn((..._args: unknown[]) => Promise.resolve()),
+  logDebugMock: vi.fn((..._args: unknown[]) => Promise.resolve()),
 }));
 vi.mock('../../utils/logger.js', () => ({
   logInfo: (...args: unknown[]) => logInfoMock(...args),
@@ -51,14 +51,19 @@ vi.mock('../../utils/logger.js', () => ({
 }));
 
 const { sendMessageWithRetryMock } = vi.hoisted(() => ({
-  sendMessageWithRetryMock: vi.fn(() => Promise.resolve({ success: true })),
+  sendMessageWithRetryMock: vi.fn(
+    (..._args: unknown[]): Promise<Record<string, unknown>> => Promise.resolve({ success: true }),
+  ),
 }));
 vi.mock('../contentMessageSender.js', () => ({
   createContentMessageSender: vi.fn(() => ({ sendMessageWithRetry: sendMessageWithRetryMock })),
 }));
 
 const { mockPreparePageContent } = vi.hoisted(() => ({
-  mockPreparePageContent: vi.fn(() => ({ content: 'mocked content ' + 'a '.repeat(600), pageBytes: 100, candidateBytes: 90, originalBytes: 110, cleansedBytes: 80, aiSummaryOriginalBytes: 50, aiSummaryCleansedBytes: 30, aiSummaryCleansedElements: 2, aiSummaryCleansedReason: 'none', fallbackTriggered: false, hardStripRemoved: 1, keywordStripRemoved: 2, totalRemoved: 3, cleansedReason: 'hard' })),
+  mockPreparePageContent: vi.fn(
+    (..._args: unknown[]): import('../../utils/contentExtractor/types.js').ExtractResult =>
+      ({ content: 'mocked content ' + 'a '.repeat(600), pageBytes: 100, candidateBytes: 90, originalBytes: 110, cleansedBytes: 80, aiSummaryOriginalBytes: 50, aiSummaryCleansedBytes: 30, aiSummaryCleansedElements: 2, aiSummaryCleansedReason: 'none', fallbackTriggered: false, hardStripRemoved: 1, keywordStripRemoved: 2, totalRemoved: 3, cleansedReason: 'hard' }) as unknown as import('../../utils/contentExtractor/types.js').ExtractResult,
+  ),
 }));
 vi.mock('../../utils/pageContentPipeline.js', () => ({
   preparePageContent: (...args: unknown[]) => mockPreparePageContent(...args),
@@ -126,7 +131,7 @@ describe('extractor-comprehensive: loadSettings 分支', () => {
     await loadSettings();
     const cfg = (getPageStateForTesting() as unknown as PageState).cleansingConfig as unknown as Record<string, unknown>;
     for (const r of CLEANSING_RULES) {
-      const prop = `aiSummaryCleansing${r.key[0].toUpperCase()}${r.key.slice(1)}`;
+      const prop = `aiSummaryCleansing${r.key.charAt(0).toUpperCase()}${r.key.slice(1)}`;
       expect(cfg[prop]).toBe(!r.defaultEnabled);
     }
     expect(cfg['contentStripHardEnabled']).toBe(false);
@@ -146,7 +151,7 @@ describe('extractor-comprehensive: loadSettings 分支', () => {
     expect((getPageStateForTesting() as unknown as PageState).cleansingConfig.contentStripKeywords).toEqual(['a', 'b']);
   });
   it('threshold settings - valid, out-of-bounds clamp, NaN fallback, empty string', async () => {
-    const t = THRESHOLD_RULES[0];
+    const t = THRESHOLD_RULES[0]!;
     // valid within bounds
     setStorageSettings({ [t.storageKey]: t.min });
     await loadSettings();
@@ -503,7 +508,7 @@ describe('extractor-comprehensive: init and message handler', () => {
     expect(docSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
     expect(document.documentElement.getAttribute('data-ow-test-state')).toBeTruthy();
     // trigger scroll with isTrusted false => should not call throttled fn
-    const scrollHandlers = (addSpy.mock.calls.filter(c => c[0] === 'scroll').map(c => c[1]) as unknown as Array<(e: Event) => void>);
+    const scrollHandlers = (addSpy.mock.calls.filter(c => (c[0] as string) === 'scroll').map(c => c[1]) as unknown as Array<(e: Event) => void>);
     const fakeEvent = { isTrusted: false } as unknown as Event;
     for (const h of scrollHandlers) h(fakeEvent);
     expect(true).toBe(true);
@@ -528,7 +533,7 @@ describe('extractor-comprehensive: init and message handler', () => {
       expect(typeof r.content).toBe('string');
       return;
     }
-    const handler = addListenerMock.mock.calls[0][0] as (msg: unknown, sender: { id: string }, sendResponse: (r: unknown) => void) => void;
+    const handler = addListenerMock.mock.calls[0]![0] as (msg: unknown, sender: { id: string }, sendResponse: (r: unknown) => void) => void;
     document.body.innerHTML = `<article><p>Handler content ${'x '.repeat(300)}</p></article>`;
     const sendResponse = vi.fn();
     handler({ type: 'GET_CONTENT' }, { id: 'test-id' }, sendResponse);
@@ -696,7 +701,7 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
     document.body.innerHTML = `<article><p>private ${'a '.repeat(600)}</p></article>`;
     await reportValidVisit();
     expect(sendMessageWithRetryMock).toHaveBeenCalledTimes(2);
-    expect(sendMessageWithRetryMock.mock.calls[1][0].payload.force).toBe(true);
+    expect((sendMessageWithRetryMock.mock.calls[1]![0] as { payload: { force: boolean } }).payload.force).toBe(true);
     spy.mockRestore();
   });
 
@@ -739,12 +744,12 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
     sendMessageWithRetryMock.mockReset(); sendMessageWithRetryMock.mockResolvedValue({ success: true });
     ps.isValidVisitReported = false;
     await reportValidVisit();
-    expect(sendMessageWithRetryMock.mock.calls[0][0].payload.aiSummaryCleansedReason).toBeUndefined();
+    expect((sendMessageWithRetryMock.mock.calls[0]![0] as { payload: { aiSummaryCleansedReason?: string } }).payload.aiSummaryCleansedReason).toBeUndefined();
     mockPreparePageContent.mockReturnValueOnce({ content: 'test2', aiSummaryOriginalBytes: 10, aiSummaryCleansedBytes: 5, aiSummaryCleansedElements: 1, aiSummaryCleansedReason: 'ads', aiSummaryCleansedReasons: ['ads'], pageBytes: 10, candidateBytes: 10, originalBytes: 10, cleansedBytes: 5, fallbackTriggered: false } as unknown as import('../../utils/contentExtractor/types.js').ExtractResult);
     ps.isValidVisitReported = false;
     sendMessageWithRetryMock.mockReset(); sendMessageWithRetryMock.mockResolvedValue({ success: true });
     await reportValidVisit();
-    expect(sendMessageWithRetryMock.mock.calls[0][0].payload.aiSummaryCleansedReason).toBe('ads');
+    expect((sendMessageWithRetryMock.mock.calls[0]![0] as { payload: { aiSummaryCleansedReason?: string } }).payload.aiSummaryCleansedReason).toBe('ads');
     // reset mock to default for other tests
     mockPreparePageContent.mockReturnValue({ content: 'mocked content ' + 'a '.repeat(600), pageBytes: 100, candidateBytes: 90, originalBytes: 110, cleansedBytes: 80, aiSummaryOriginalBytes: 50, aiSummaryCleansedBytes: 30, aiSummaryCleansedElements: 2, aiSummaryCleansedReason: 'none', fallbackTriggered: false } as unknown as import('../../utils/contentExtractor/types.js').ExtractResult);
   });
@@ -758,7 +763,7 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
     setStorageSettings({});
     const addSpy = vi.spyOn(window, 'addEventListener');
     await init();
-    const scrollHandlers = addSpy.mock.calls.filter(c => c[0] === 'scroll').map(c => c[1]) as unknown as Array<(e: Event) => void>;
+    const scrollHandlers = addSpy.mock.calls.filter(c => (c[0] as string) === 'scroll').map(c => c[1]) as unknown as Array<(e: Event) => void>;
     expect(scrollHandlers.length).toBeGreaterThan(0);
     const fakeTrusted = { isTrusted: true } as unknown as Event;
     for (const h of scrollHandlers) { try { h(fakeTrusted); } catch {} }
