@@ -7,6 +7,15 @@
 
 import * as sanitizePreview from '../sanitizePreview.js';
 import { vi } from 'vitest';
+import type { MaskedItem } from '../../messaging/types.js';
+
+// The suites build the modal DOM in beforeEach, so the ids the assertions read
+// are present; assert non-null once here instead of at every lookup.
+function $el<T extends HTMLElement = HTMLElement>(id: string): T {
+  const node = document.getElementById(id);
+  if (!node) throw new Error(`test DOM missing #${id}`);
+  return node as T;
+}
 
 /**
  * M21: confirmationModal is now a native <dialog>. jsdom doesn't implement
@@ -60,7 +69,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       sanitizePreview.showPreview(content, maskedItems, maskedCount);
 
       const modal = document.getElementById('confirmationModal');
-      const statusMessage = document.getElementById('maskStatusMessage');
+      const statusMessage = $el('maskStatusMessage');
 
       expect(statusMessage.textContent).toBe("Masked E-mail1 item");
       expect((modal as HTMLDialogElement).open).toBe(true);
@@ -76,7 +85,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
 
       sanitizePreview.showPreview(content, maskedItems, maskedCount);
 
-      const statusMessage = document.getElementById('maskStatusMessage');
+      const statusMessage = $el('maskStatusMessage');
 
       expect(statusMessage.textContent).toBe("Masked Bank Account Number1 item, Phone Number1 item");
     });
@@ -90,7 +99,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
 
       sanitizePreview.showPreview(content, maskedItems, maskedCount);
 
-      const previewContent = document.getElementById('previewContent');
+      const previewContent = $el<HTMLTextAreaElement>('previewContent');
 
       expect(previewContent.value).toContain("[MASKED:email]");
       expect(previewContent.value).not.toContain("<span");
@@ -103,7 +112,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
 
       sanitizePreview.showPreview(content, maskedItems, maskedCount);
 
-      const nav = document.getElementById('maskNav');
+      const nav = $el('maskNav');
       expect(nav).not.toBeNull();
       expect(nav.style.display).toBe('flex');
     });
@@ -131,11 +140,11 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
 
       sanitizePreview.showPreview(content, maskedItems, maskedCount);
 
-      const previewContent = document.getElementById('previewContent');
+      const previewContent = $el<HTMLTextAreaElement>('previewContent');
       expect(previewContent.value).toContain('[MASKED:creditCard]');
       expect(previewContent.value).toContain('[MASKED:bankAccount]');
 
-      const counter = document.getElementById('maskNavCounter');
+      const counter = $el('maskNavCounter');
       expect(counter.textContent).toBe('1/2');
     });
 
@@ -148,7 +157,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
 
       sanitizePreview.showPreview(content, maskedItems, maskedCount);
 
-      const statusMessage = document.getElementById('maskStatusMessage');
+      const statusMessage = $el('maskStatusMessage');
       expect(statusMessage.textContent).toContain('My Number');
     });
   });
@@ -171,7 +180,11 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       const maskedCount = 1;
 
       expect(() => {
-        sanitizePreview.showPreview(content, "invalid format", maskedCount);
+        sanitizePreview.showPreview(
+          content,
+          "invalid format" as unknown as (string | MaskedItem)[],
+          maskedCount,
+        );
       }).not.toThrow();
 
       const modal = document.getElementById('confirmationModal');
@@ -195,13 +208,13 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
   describe('境界値 - 入力検証', () => {
     test('TC-MV-201: マスク件数0件の場合', () => {
       const content = "まったく個人情報が含まれないテキストです。";
-      const maskedItems = [];
+      const maskedItems: MaskedItem[] = [];
       const maskedCount = 0;
 
       sanitizePreview.showPreview(content, maskedItems, maskedCount);
 
       const modal = document.getElementById('confirmationModal');
-      const statusMessage = document.getElementById('maskStatusMessage');
+      const statusMessage = $el('maskStatusMessage');
 
       expect(statusMessage.textContent).toBe("");
       expect(statusMessage.style.display).toBe("none");
@@ -220,13 +233,13 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
 
       expect(endTime - startTime).toBeLessThan(100);
 
-      const statusMessage = document.getElementById('maskStatusMessage');
+      const statusMessage = $el('maskStatusMessage');
       expect(statusMessage.textContent).toBe("Masked E-mail100 items");
     });
 
     test('TC-MV-203: 空文字のコンテンツ', () => {
       const content = "";
-      const maskedItems = [];
+      const maskedItems: MaskedItem[] = [];
       const maskedCount = 0;
 
       expect(() => {
@@ -234,7 +247,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       }).not.toThrow();
 
       const modal = document.getElementById('confirmationModal');
-      const statusMessage = document.getElementById('maskStatusMessage');
+      const statusMessage = $el('maskStatusMessage');
 
       expect((modal as HTMLDialogElement).open).toBe(true);
       expect(statusMessage.textContent).toBe("");
@@ -247,7 +260,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       const content = "テスト";
       sanitizePreview.showPreview(content, [], 0);
 
-      const element = document.getElementById('maskStatusMessage');
+      const element = $el('maskStatusMessage');
       expect(element).toBeTruthy();
     });
   });
@@ -279,7 +292,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
 
       // 次のマスク箇所へ
       sanitizePreview.jumpToNextMasked();
-      const counter = document.getElementById('maskNavCounter');
+      const counter = $el('maskNavCounter');
       expect(counter.textContent).toBe('2/2');
 
       // ループして最初に戻る
@@ -296,7 +309,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       const maskedCount = 2;
 
       sanitizePreview.showPreview(content, maskedItems, maskedCount);
-      const counter = document.getElementById('maskNavCounter');
+      const counter = $el('maskNavCounter');
 
       // 最初は1/2
       expect(counter.textContent).toBe('1/2');
@@ -308,7 +321,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
 
     test('マスク箇所がない場合はナビゲーションしない', () => {
       const content = "まったく個人情報が含まれないテキストです。";
-      const maskedItems = [];
+      const maskedItems: MaskedItem[] = [];
       const maskedCount = 0;
 
       sanitizePreview.showPreview(content, maskedItems, maskedCount);
@@ -325,7 +338,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
     test('モーダルがない場合は自動的にconfirmedを返す', async () => {
       document.body.innerHTML = '';
       const content = "テストコンテンツ";
-      const maskedItems = [];
+      const maskedItems: MaskedItem[] = [];
       const maskedCount = 0;
 
       const result = await sanitizePreview.showPreview(content, maskedItems, maskedCount);
@@ -354,7 +367,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
 
       sanitizePreview.showPreview(content, maskedItems, maskedCount);
 
-      const maskStatusMessage = document.getElementById('maskStatusMessage');
+      const maskStatusMessage = $el('maskStatusMessage');
       expect(maskStatusMessage).toBeDefined();
       expect(maskStatusMessage.className).toBe('mask-status-message');
       expect(maskStatusMessage.textContent).toBe('Masked E-mail1 item');
@@ -382,15 +395,15 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
     test('cleansedReason=noneでcleansingInfoがhiddenのまま', () => {
       sanitizePreview.showPreview('test', [], 0, 'none');
 
-      const cleansingInfo = document.getElementById('cleansingInfo');
+      const cleansingInfo = $el('cleansingInfo');
       expect(cleansingInfo.classList.contains('hidden')).toBe(true);
     });
 
     test('cleansedReason=hardでcleansingInfoが表示される', () => {
       sanitizePreview.showPreview('test', [], 0, 'hard');
 
-      const cleansingInfo = document.getElementById('cleansingInfo');
-      const badge = document.getElementById('cleansingBadge');
+      const cleansingInfo = $el('cleansingInfo');
+      const badge = $el('cleansingBadge');
       expect(cleansingInfo.classList.contains('hidden')).toBe(false);
       expect(badge.textContent).toContain('Hard');
     });
@@ -398,14 +411,14 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
     test('cleansedReason=keywordで正しいバッジが表示される', () => {
       sanitizePreview.showPreview('test', [], 0, 'keyword');
 
-      const badge = document.getElementById('cleansingBadge');
+      const badge = $el('cleansingBadge');
       expect(badge.textContent).toContain('Keyword');
     });
 
     test('cleansedReason=bothで正しいバッジが表示される', () => {
       sanitizePreview.showPreview('test', [], 0, 'both');
 
-      const badge = document.getElementById('cleansingBadge');
+      const badge = $el('cleansingBadge');
       expect(badge.textContent).toContain('Both');
     });
 
@@ -418,7 +431,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
 
       sanitizePreview.showPreview('test', [], 0, 'hard', cleanseStats);
 
-      const badge = document.getElementById('cleansingBadge');
+      const badge = $el('cleansingBadge');
       expect(badge.textContent).toContain('Hard: 3');
       expect(badge.textContent).toContain('Keyword: 2');
     });
@@ -426,7 +439,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
     test('cleansedReasonがundefinedでcleansingInfoがhidden', () => {
       sanitizePreview.showPreview('test', [], 0, undefined);
 
-      const cleansingInfo = document.getElementById('cleansingInfo');
+      const cleansingInfo = $el('cleansingInfo');
       expect(cleansingInfo.classList.contains('hidden')).toBe(true);
     });
 
@@ -515,10 +528,10 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
 
       let createCount = 0;
       const originalResizeObserver = global.ResizeObserver;
-      global.ResizeObserver = vi.fn(function(callback) {
+      global.ResizeObserver = vi.fn(function() {
         createCount++;
         return mockObserver;
-      });
+      }) as unknown as typeof ResizeObserver;
 
       try {
         // 初期化を複数回呼び出す
@@ -560,7 +573,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
           observe: vi.fn(),
           disconnect: disconnectMock,
         };
-      });
+      }) as unknown as typeof ResizeObserver;
 
       try {
         // 初期化時にはdisconnectは呼ばれない
@@ -605,8 +618,8 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       const promise = sanitizePreview.showPreview(content, [], 0);
 
       const modal = document.getElementById('confirmationModal') as HTMLDialogElement;
-      const confirmBtn = document.getElementById('confirmPreviewBtn');
-      const cancelBtn = document.getElementById('cancelPreviewBtn');
+      const confirmBtn = $el('confirmPreviewBtn');
+      const cancelBtn = $el('cancelPreviewBtn');
 
       // モーダルが表示されていることを確認（M21: ネイティブdialogのopenプロパティ）
       expect(modal.open).toBe(true);
@@ -633,7 +646,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
 
       sanitizePreview.initializeModalEvents();
       const promise = sanitizePreview.showPreview('test content', [], 0);
-      const confirmBtn = document.getElementById('confirmPreviewBtn');
+      const confirmBtn = $el('confirmPreviewBtn');
       confirmBtn.click();
 
       const result = await promise;
@@ -656,7 +669,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
 
       sanitizePreview.initializeModalEvents();
       const promise = sanitizePreview.showPreview('test content', [], 0);
-      const cancelBtn = document.getElementById('cancelPreviewBtn');
+      const cancelBtn = $el('cancelPreviewBtn');
       cancelBtn.click();
 
       const result = await promise;
@@ -679,7 +692,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
 
       sanitizePreview.initializeModalEvents();
       const promise = sanitizePreview.showPreview('test content', [], 0);
-      const closeBtn = document.getElementById('closeModalBtn');
+      const closeBtn = $el('closeModalBtn');
       closeBtn.click();
 
       const result = await promise;
@@ -701,7 +714,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       polyfillDialogMethods();
 
       sanitizePreview.initializeModalEvents();
-      const cancelBtn = document.getElementById('cancelPreviewBtn');
+      const cancelBtn = $el('cancelPreviewBtn');
       expect(() => cancelBtn.click()).not.toThrow();
     });
   });
