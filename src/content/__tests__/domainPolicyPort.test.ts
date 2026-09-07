@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   ChromeDomainPolicyPort,
-  InMemoryDomainPolicyPort,
   CACHE_TTL,
 } from '../domainPolicyPort.js';
+import { InMemoryDomainPolicyPort } from './helpers/inMemoryDomainPolicyPort.js';
 import { InMemoryStoragePort } from '../../utils/storage/storagePort.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 
