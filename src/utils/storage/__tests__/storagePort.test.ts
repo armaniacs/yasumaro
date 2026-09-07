@@ -34,7 +34,7 @@ describe('ChromeStoragePort', () => {
     const addListener = chrome.storage.onChanged.addListener as ReturnType<typeof vi.fn>;
     port.onChanged(callback);
 
-    const listener = addListener.mock.calls[0][0];
+    const listener = addListener.mock.calls[0]![0];
     listener({ key: { newValue: 'value', oldValue: 'old' } }, 'local');
     expect(callback).toHaveBeenCalledWith({ key: 'value' });
   });
@@ -44,7 +44,7 @@ describe('ChromeStoragePort', () => {
     const addListener = chrome.storage.onChanged.addListener as ReturnType<typeof vi.fn>;
     port.onChanged(callback);
 
-    const listener = addListener.mock.calls[0][0];
+    const listener = addListener.mock.calls[0]![0];
     listener({ key: { newValue: 'value', oldValue: 'old' } }, 'sync');
     expect(callback).not.toHaveBeenCalled();
   });

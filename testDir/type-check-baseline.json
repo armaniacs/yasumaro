@@ -1,5 +1,5 @@
 {
-  "total": 558,
+  "total": 554,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -114,13 +114,10 @@
     "src/utils/aiSummaryCleaner/__tests__/querySelectorAllDeep.test.ts": 3,
     "src/utils/contentExtractor/__tests__/dualPayload.test.ts": 3,
     "src/utils/crypto/__tests__/crypto.test.ts": 4,
-    "src/utils/storage/__tests__/SettingsRepository.test.ts": 1,
     "src/utils/storage/__tests__/encryptionSession-concurrency.test.ts": 4,
     "src/utils/storage/__tests__/savedUrlStore-cas.test.ts": 3,
     "src/utils/storage/__tests__/savedUrlStore.test.ts": 1,
-    "src/utils/storage/__tests__/settingsRepository-migration-parity.test.ts": 1,
     "src/utils/storage/__tests__/settingsStore-backup.test.ts": 2,
-    "src/utils/storage/__tests__/settingsStore-plaintext-api-key.test.ts": 3,
-    "src/utils/storage/__tests__/storagePort.test.ts": 2
+    "src/utils/storage/__tests__/settingsStore-plaintext-api-key.test.ts": 3
   }
 }
