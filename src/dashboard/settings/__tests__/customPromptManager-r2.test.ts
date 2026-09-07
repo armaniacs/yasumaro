@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { CustomPrompt } from '../../../utils/types.js';
 
 if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = vi.fn() as any;
@@ -48,15 +49,15 @@ const mockCreatePrompt = vi.fn((data) => ({
   createdAt: Date.now(),
   updatedAt: Date.now(),
 }));
-const mockUpdatePrompt = vi.fn((prompts, id, updates) =>
+const mockUpdatePrompt = vi.fn((prompts: CustomPrompt[], id: string, updates: Partial<CustomPrompt>) =>
   prompts.map((p) =>
     p.id === id ? { ...p, ...updates, updatedAt: Date.now() } : p
   )
 );
-const mockDeletePrompt = vi.fn((prompts, id) =>
+const mockDeletePrompt = vi.fn((prompts: CustomPrompt[], id: string) =>
   prompts.filter((p) => p.id !== id)
 );
-const mockSetActivePrompt = vi.fn((prompts, id) =>
+const mockSetActivePrompt = vi.fn((prompts: CustomPrompt[], id: string) =>
   prompts.map((p) => ({
     ...p,
     isActive: p.id === id,
@@ -117,7 +118,7 @@ vi.mock('../../../popup/errorUtils.js', () => ({
   escapeHtml: vi.fn((s: string) => String(s)),
 }));
 
-function createTestPrompt(overrides = {}) {
+function createTestPrompt(overrides: Partial<CustomPrompt> = {}): CustomPrompt {
   return {
     id: 'test_prompt_id',
     name: 'Test Prompt',
@@ -307,7 +308,7 @@ describe('customPromptManager - r2 missed branches', () => {
   describe('provider label edge cases', () => {
     it('should return provider name for unknown provider', async () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
-      const prompts = [createTestPrompt({ id: 'p1', name: 'Custom', provider: 'unknown_provider' })];
+      const prompts = [createTestPrompt({ id: 'p1', name: 'Custom', provider: 'unknown_provider' as CustomPrompt['provider'] })];
       initCustomPromptManager({ custom_prompts: prompts });
 
       const html = document.getElementById('promptList')!.innerHTML;

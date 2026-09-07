@@ -17,7 +17,7 @@ import { vi } from 'vitest';
 global.chrome = {
   storage: {
     local: {
-      get: vi.fn((keys, callback) => {
+      get: vi.fn((keys: unknown, callback?: (r: unknown) => void) => {
         const mockSettings = {
           obsidian_api_key: 'test-key',
           obsidian_protocol: 'https',
@@ -69,7 +69,7 @@ global.chrome = {
         'errorScrollDepth': 'Error: Minimum scroll depth must be a number between 0 and 100.',
       };
 
-      let message = messages[key] || key;
+      let message: string = (messages as Record<string, string>)[key] || key;
 
       if (substitutions && typeof substitutions === 'object') {
         Object.keys(substitutions).forEach((placeholder) => {
@@ -81,7 +81,7 @@ global.chrome = {
     }),
     getUILanguage: vi.fn(() => 'en'),
   }
-};
+} as unknown as typeof chrome;
 
 /**
  * Create a simulated popup DOM environment
@@ -151,10 +151,10 @@ function createTestPopupDOM() {
  * @param {string} protocolValue - Protocol value (http/https)
  * @returns {Object} XSS test result
  */
-function simulateVulnerableCode(portInputValue, protocolValue = 'https') {
-  const protocolInput = document.getElementById('protocol');
-  const portInput = document.getElementById('port');
-  const statusDiv = document.getElementById('status');
+function simulateVulnerableCode(portInputValue: string, protocolValue = 'https') {
+  const protocolInput = document.getElementById('protocol') as HTMLInputElement;
+  const portInput = document.getElementById('port') as HTMLInputElement;
+  const statusDiv = document.getElementById('status') as HTMLElement;
 
   protocolInput.value = protocolValue;
   portInput.value = portInputValue;
@@ -180,7 +180,7 @@ function simulateVulnerableCode(portInputValue, protocolValue = 'https') {
     };
   }
 
-  statusDiv.textContent = chrome.i18n.getMessage('connectionFailed', { message: result.message });
+  statusDiv.textContent = (chrome.i18n.getMessage as (k: string, s?: unknown) => string)('connectionFailed', { message: result.message });
   statusDiv.className = 'error';
 
   let constructedUrl = null;
@@ -232,10 +232,10 @@ function simulateVulnerableCode(portInputValue, protocolValue = 'https') {
  * @param {string} protocolValue - Protocol value (http/https)
  * @returns {Object} XSS test result
  */
-function simulateSecureCode(portInputValue, protocolValue = 'https') {
-  const protocolInput = document.getElementById('protocol');
-  const portInput = document.getElementById('port');
-  const statusDiv = document.getElementById('status');
+function simulateSecureCode(portInputValue: string, protocolValue = 'https') {
+  const protocolInput = document.getElementById('protocol') as HTMLInputElement;
+  const portInput = document.getElementById('port') as HTMLInputElement;
+  const statusDiv = document.getElementById('status') as HTMLElement;
 
   protocolInput.value = protocolValue;
   portInput.value = portInputValue;
@@ -261,7 +261,7 @@ function simulateSecureCode(portInputValue, protocolValue = 'https') {
     };
   }
 
-  statusDiv.textContent = chrome.i18n.getMessage('connectionFailed', { message: result.message });
+  statusDiv.textContent = (chrome.i18n.getMessage as (k: string, s?: unknown) => string)('connectionFailed', { message: result.message });
   statusDiv.className = 'error';
 
   // SECURITY FIX: Use the validated port number, NOT the raw input

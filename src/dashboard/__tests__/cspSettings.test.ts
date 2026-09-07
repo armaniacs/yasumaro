@@ -186,7 +186,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       const rows = container?.querySelectorAll('.csp-provider-row');
       expect(rows?.length).toBe(3);
       // Selected 'deepinfra' should be first
-      const firstLabel = rows?.[0].querySelector('.csp-provider-label');
+      const firstLabel = rows?.[0]!.querySelector('.csp-provider-label');
       expect(firstLabel?.textContent).toContain('deepinfra');
     });
 
@@ -240,9 +240,9 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       const container = document.getElementById('cspProviderList');
       const labels = container?.querySelectorAll('.csp-provider-label');
       // All unselected, so alphabetical: deepinfra, huggingface, openrouter
-      expect(labels?.[0].textContent).toContain('deepinfra');
-      expect(labels?.[1].textContent).toContain('huggingface');
-      expect(labels?.[2].textContent).toContain('openrouter');
+      expect(labels?.[0]!.textContent).toContain('deepinfra');
+      expect(labels?.[1]!.textContent).toContain('huggingface');
+      expect(labels?.[2]!.textContent).toContain('openrouter');
     });
   });
 
@@ -357,8 +357,8 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       searchInput.dispatchEvent(new Event('input'));
 
       const rows = document.querySelectorAll<HTMLElement>('.csp-provider-row');
-      expect(rows[0].style.display).toBe('');
-      expect(rows[1].style.display).toBe('none');
+      expect(rows[0]!.style.display).toBe('');
+      expect(rows[1]!.style.display).toBe('none');
     });
 
     test('should handle missing search input gracefully', async () => {
