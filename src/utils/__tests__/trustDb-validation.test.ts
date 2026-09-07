@@ -215,7 +215,7 @@ describe('Trust Database - Domain/TLD Validation', () => {
       ];
 
       validDomains.forEach(domain => {
-        expect(isValidDomain(domain)).toBe(true, `${domain} should be valid`);
+        expect(isValidDomain(domain), `${domain} should be valid`).toBe(true);
       });
     });
 
@@ -236,7 +236,7 @@ describe('Trust Database - Domain/TLD Validation', () => {
       ];
 
       invalidDomains.forEach(domain => {
-        expect(isValidDomain(domain)).toBe(false, `${domain} should be invalid`);
+        expect(isValidDomain(domain), `${domain} should be invalid`).toBe(false);
       });
     });
 
@@ -249,7 +249,7 @@ describe('Trust Database - Domain/TLD Validation', () => {
       validTlds.forEach(tld => {
         // TLDs without the leading dot
         const tldWithoutDot = tld.startsWith('.') ? tld.slice(1) : tld;
-        expect(isValidDomain(tldWithoutDot)).toBe(true, `${tldWithoutDot} should be valid as a domain`);
+        expect(isValidDomain(tldWithoutDot), `${tldWithoutDot} should be valid as a domain`).toBe(true);
       });
     });
   });

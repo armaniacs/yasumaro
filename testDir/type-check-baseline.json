@@ -1,5 +1,5 @@
 {
-  "total": 1187,
+  "total": 1153,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -120,9 +120,6 @@
     "src/dashboard/settings/__tests__/customPromptManager-r2.test.ts": 6,
     "src/dashboard/settings/__tests__/domainFilter.test.ts": 7,
     "src/dashboard/settings/__tests__/privacySettings.test.ts": 1,
-    "src/dashboard/settings/__tests__/trustSettings-r2.test.ts": 4,
-    "src/dashboard/settings/__tests__/trustSettings-r3.test.ts": 1,
-    "src/dashboard/settings/__tests__/trustSettings.test.ts": 17,
     "src/dashboard/utils/__tests__/confirmDialog.test.ts": 12,
     "src/messaging/__tests__/dashboardGateway.test.ts": 7,
     "src/messaging/__tests__/dashboardSenderGuard.test.ts": 1,
@@ -187,7 +184,6 @@
     "src/utils/__tests__/storageUrls-set-comparison.test.ts": 2,
     "src/utils/__tests__/storageUrls-setters.test.ts": 2,
     "src/utils/__tests__/tagUtils.test.ts": 1,
-    "src/utils/__tests__/trustDb-validation.test.ts": 3,
     "src/utils/__tests__/ublockMatcher.test.ts": 1,
     "src/utils/__tests__/versionConsistency.test.ts": 2,
     "src/utils/__tests__/withAtomicKeys.test.ts": 1,
@@ -208,7 +204,6 @@
     "src/utils/storage/__tests__/settingsStore-backup.test.ts": 2,
     "src/utils/storage/__tests__/settingsStore-plaintext-api-key.test.ts": 3,
     "src/utils/storage/__tests__/storagePort.test.ts": 2,
-    "src/utils/trustDb/__tests__/TrustDecision.test.ts": 9,
     "src/utils/ui/__tests__/focusTrap.test.ts": 1,
     "testDir/__tests__/archiveDbReader.test.ts": 3,
     "testDir/e2e/fixtures/dashboard.fixture.ts": 6,
