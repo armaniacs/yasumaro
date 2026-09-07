@@ -28,7 +28,7 @@ describe('renderHistoryEntries', () => {
   });
 
   it('returns early if historyList is missing', () => {
-    const state = { entries: [], historyCurrentPage: 0 } as HistoryPanelState;
+    const state = { entries: [], historyCurrentPage: 0 } as unknown as HistoryPanelState;
     const elements = { historyList: null } as unknown as HistoryElements;
     renderHistoryEntries(state, elements, {} as TagEditElements, '', () => {}, () => {});
     expect(mockMakeRow).not.toHaveBeenCalled();
@@ -36,7 +36,7 @@ describe('renderHistoryEntries', () => {
 
   it('renders empty message when no entries', () => {
     document.body.innerHTML = '<div id="historyList"></div><div id="historyStats"></div>';
-    const state = { entries: [], historyCurrentPage: 0, activeFilter: 'all', activeTagFilter: null } as HistoryPanelState;
+    const state = { entries: [], historyCurrentPage: 0, activeFilter: 'all', activeTagFilter: null } as unknown as HistoryPanelState;
     const elements = {
       historyList: document.getElementById('historyList'),
       historyStats: document.getElementById('historyStats'),

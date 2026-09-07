@@ -26,13 +26,13 @@ describe('renderProviderOptions', () => {
     expect([...sel.options].map((o) => o.value)).toEqual([
       'gemini', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible', 'built-in-ai',
     ]);
-    expect(sel.options[0].textContent).toBe('Google Gemini');
-    expect(sel.options[6].textContent).toContain('Built-in AI');
+    expect(sel.options[0]?.textContent).toBe('Google Gemini');
+    expect(sel.options[6]?.textContent).toContain('Built-in AI');
   });
 
   it('includeNone prepends an empty option', () => {
     renderProviderOptions(sel, { includeNone: true });
-    expect(sel.options[0].value).toBe('');
+    expect(sel.options[0]?.value).toBe('');
     expect(sel.options.length).toBe(8);
   });
 

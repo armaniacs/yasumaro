@@ -4,7 +4,7 @@ import { makeRecordTypeBadge, makeMaskBadge, makeCleansedBadge, makePrivacyModeB
 
 const mockGetMessage = vi.hoisted(() => vi.fn((key: string) => key));
 vi.mock('../../utils/i18n.js', () => ({
-  getMessage: (...args: any[]) => mockGetMessage(...args),
+  getMessage: (...args: [string]) => mockGetMessage(...args),
 }));
 
 vi.mock('../../utils/i18nPlural.js', () => ({

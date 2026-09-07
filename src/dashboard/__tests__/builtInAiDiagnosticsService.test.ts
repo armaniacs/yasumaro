@@ -4,9 +4,9 @@
  * Calls self.LanguageModel directly from the Options page context (no Service Worker relay).
  */
 
-import { webcrypto as crypto } from '@peculiar/webcrypto';
+import { Crypto } from '@peculiar/webcrypto';
 import { vi } from 'vitest';
-Object.defineProperty(global, 'crypto', { value: crypto });
+Object.defineProperty(global, 'crypto', { value: new Crypto() });
 
 vi.mock('../../utils/browserSupport.js', () => ({
   getBrowserName: vi.fn(() => 'chrome'),
