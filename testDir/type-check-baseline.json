@@ -1,5 +1,5 @@
 {
-  "total": 2245,
+  "total": 2243,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -91,8 +91,6 @@
     "src/content/__tests__/extractor-r2.test.ts": 1,
     "src/content/__tests__/extractor.test.ts": 3,
     "src/content/__tests__/loader-no-static-imports.test.ts": 2,
-    "src/content/__tests__/loader.test.ts": 1,
-    "src/content/__tests__/loader.trustBoundary.test.ts": 1,
     "src/content/__tests__/pageState.test.ts": 1,
     "src/content/__tests__/visitAdmission.test.ts": 1,
     "src/content/__tests__/visitReporter.test.ts": 1,
