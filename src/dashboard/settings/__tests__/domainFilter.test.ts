@@ -8,7 +8,13 @@
 import { vi } from 'vitest';;
 
 // Mock dependencies - all at top level
-const mockGetSettings = vi.fn(() => Promise.resolve({
+const mockGetSettings = vi.fn((): Promise<{
+  domain_filter_mode: string;
+  domain_whitelist: string[];
+  domain_blacklist: string[];
+  simple_format_enabled: boolean;
+  ublock_format_enabled: boolean;
+}> => Promise.resolve({
   domain_filter_mode: 'disabled',
   domain_whitelist: [],
   domain_blacklist: [],
