@@ -13,11 +13,11 @@ const mockGetSensitiveDomains = vi.fn((cat: string) => {
   return ['social.com'];
 });
 const mockGetWhitelist = vi.fn(() => ['trusted.com']);
-const mockAddJpAnchorTld = vi.fn(() => Promise.resolve({ success: true }));
+const mockAddJpAnchorTld = vi.fn((): Promise<{ success: boolean; error?: string }> => Promise.resolve({ success: true }));
 const mockRemoveJpAnchorTld = vi.fn(() => Promise.resolve());
 const mockAddSensitiveDomain = vi.fn(() => Promise.resolve({ success: true }));
 const mockRemoveSensitiveDomain = vi.fn(() => Promise.resolve());
-const mockAddToWhitelist = vi.fn(() => Promise.resolve({ success: true }));
+const mockAddToWhitelist = vi.fn((): Promise<{ success: boolean; error?: string }> => Promise.resolve({ success: true }));
 const mockRemoveFromWhitelist = vi.fn(() => Promise.resolve());
 
 vi.mock('../../../utils/trustDb/TrustDbAdmin.js', () => ({
@@ -219,7 +219,7 @@ vi.mock('../../../utils/trustChecker.js', () => ({
   })),
 }));
 
-const mockGetFrequentDeniedDomains = vi.fn(() => Promise.resolve([]));
+const mockGetFrequentDeniedDomains = vi.fn((): Promise<Array<{ domain: string; count: number }>> => Promise.resolve([]));
 const mockRequestPermission = vi.fn(() => Promise.resolve(true));
 const mockRemoveDeniedDomain = vi.fn(() => Promise.resolve());
 const mockRecordDomainDismissal = vi.fn(() => Promise.resolve());
@@ -231,7 +231,7 @@ vi.mock('../../../utils/permissionManager.js', () => ({
   removeDeniedDomain: mockRemoveDeniedDomain,
   recordDomainDismissal: mockRecordDomainDismissal,
   isHostPermitted: mockIsHostPermitted,
-}), { virtual: true });
+}));
 
 vi.mock('../../../utils/errorUtils.js', () => ({
   errorMessage: vi.fn((e: any) => e instanceof Error ? e.message : String(e)),

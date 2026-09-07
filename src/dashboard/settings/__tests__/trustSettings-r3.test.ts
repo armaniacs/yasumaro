@@ -133,7 +133,7 @@ vi.mock('../../../utils/permissionManager.js', () => ({
   removeDeniedDomain: mockRemoveDeniedDomain,
   recordDomainDismissal: mockRecordDomainDismissal,
   isHostPermitted: mockIsHostPermitted,
-}), { virtual: true });
+}));
 
 vi.mock('../../../utils/errorUtils.js', () => ({
   errorMessage: vi.fn((e: any) => e instanceof Error ? e.message : String(e)),
