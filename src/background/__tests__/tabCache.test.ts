@@ -4,9 +4,32 @@
  */
 
 import { TabCache } from '../tabCache.js';
+import type { TabData } from '../tabCache.js';
+
+// getAll() is declared as Iterator<TabData> (no Symbol.iterator in its type);
+// at runtime it is a Map values iterator, so wrap it as an Iterable for Array.from.
+const collectAll = (cache: TabCache): TabData[] =>
+    Array.from(cache.getAll() as unknown as Iterable<TabData>);
+
+// The suite exercises add()/initialize() with intentionally partial tab shapes
+// (missing id, non-http url, ...) to assert filtering behaviour.
+type PartialTab = Partial<Record<keyof chrome.tabs.Tab, unknown>> & Record<string, unknown>;
+const asTab = (tab: PartialTab): chrome.tabs.Tab => tab as unknown as chrome.tabs.Tab;
+const asTabs = (tabs: PartialTab[]): chrome.tabs.Tab[] =>
+    tabs as unknown as chrome.tabs.Tab[];
+
+type QueryCallback = (result: chrome.tabs.Tab[]) => void;
+function stubChromeTabsQuery(impl: (query: chrome.tabs.QueryInfo, cb: QueryCallback) => void): void {
+    (global as { chrome?: typeof chrome }).chrome = {
+        tabs: { query: impl },
+    } as unknown as typeof chrome;
+}
+function clearChromeStub(): void {
+    delete (global as { chrome?: typeof chrome }).chrome;
+}
 
 describe('TabCache', () => {
-    let tabCache;
+    let tabCache: TabCache;
 
     beforeEach(() => {
         tabCache = new TabCache();
@@ -27,14 +50,17 @@ describe('TabCache', () => {
 
         it('initialize() でタブ一覧をキャッシュにロードできること', async () => {
           // Mock chrome.tabs.query to return some tabs (callback-style API)
-          const mockTabs = [
+          const mockTabs = asTabs([
             { id: 1, title: 'Tab 1', url: 'https://example.com/1', favIconUrl: null },
             { id: 2, title: 'Tab 2', url: 'http://test.com', favIconUrl: null },
             { id: 3, title: 'Invalid', url: 'chrome://extensions', favIconUrl: null }
-          ];
-          (chrome.tabs.query as any).mockImplementation((_query, callback) => {
-            callback(mockTabs);
-          });
+          ]);
+          const queryImpl = (_query: chrome.tabs.QueryInfo, callback?: QueryCallback): void => {
+            callback?.(mockTabs);
+          };
+          vi.mocked(chrome.tabs.query).mockImplementation(
+            queryImpl as unknown as typeof chrome.tabs.query,
+          );
 
           await tabCache.initialize();
 
@@ -59,7 +85,7 @@ describe('TabCache', () => {
                 url: 'https://example.com',
                 favIconUrl: 'https://example.com/favicon.ico'
             };
-            tabCache.add(tab);
+            tabCache.add(asTab(tab));
             expect(tabCache.size()).toBe(1);
         });
 
@@ -70,7 +96,7 @@ describe('TabCache', () => {
                 url: 'http://example.com',
                 favIconUrl: 'http://example.com/favicon.ico'
             };
-            tabCache.add(tab);
+            tabCache.add(asTab(tab));
             expect(tabCache.size()).toBe(1);
         });
 
@@ -81,7 +107,7 @@ describe('TabCache', () => {
                 url: 'chrome://extensions/',
                 favIconUrl: null
             };
-            tabCache.add(tab);
+            tabCache.add(asTab(tab));
             expect(tabCache.size()).toBe(0);
         });
 
@@ -90,7 +116,7 @@ describe('TabCache', () => {
                 url: 'https://example.com',
                 title: 'Test Page'
             };
-            tabCache.add(tab);
+            tabCache.add(asTab(tab));
             expect(tabCache.size()).toBe(0);
         });
 
@@ -99,7 +125,7 @@ describe('TabCache', () => {
                 id: 1,
                 title: 'Test Page'
             };
-            tabCache.add(tab);
+            tabCache.add(asTab(tab));
             expect(tabCache.size()).toBe(0);
         });
 
@@ -109,7 +135,7 @@ describe('TabCache', () => {
                 { id: 2, title: 'Page 2', url: 'https://example.com/page2' },
                 { id: 3, title: 'Page 3', url: 'https://example.com/page3' }
             ];
-            tabCache.addTabs(tabs);
+            tabCache.addTabs(asTabs(tabs));
             expect(tabCache.size()).toBe(3);
         });
     });
@@ -122,12 +148,12 @@ describe('TabCache', () => {
                 url: 'https://example.com',
                 favIconUrl: 'https://example.com/favicon.ico'
             };
-            tabCache.add(tab);
+            tabCache.add(asTab(tab));
             const retrieved = tabCache.get(1);
             expect(retrieved).not.toBeNull();
-            expect(retrieved.title).toBe('Test Page');
-            expect(retrieved.url).toBe('https://example.com');
-            expect(retrieved.favIconUrl).toBe('https://example.com/favicon.ico');
+            expect(retrieved!.title).toBe('Test Page');
+            expect(retrieved!.url).toBe('https://example.com');
+            expect(retrieved!.favIconUrl).toBe('https://example.com/favicon.ico');
         });
 
         it('存在しないタブIDではnullを返すこと', () => {
@@ -144,12 +170,12 @@ describe('TabCache', () => {
                 url: 'https://example.com',
                 favIconUrl: null
             };
-            tabCache.add(tab);
+            tabCache.add(asTab(tab));
             tabCache.update(1, { title: 'New Title', isValidVisit: true });
             const retrieved = tabCache.get(1);
-            expect(retrieved.title).toBe('New Title');
-            expect(retrieved.isValidVisit).toBe(true);
-            expect(retrieved.url).toBe('https://example.com');
+            expect(retrieved!.title).toBe('New Title');
+            expect(retrieved!.isValidVisit).toBe(true);
+            expect(retrieved!.url).toBe('https://example.com');
         });
 
         it('存在しないタブIDで更新してもエラーにならないこと', () => {
@@ -166,7 +192,7 @@ describe('TabCache', () => {
                 title: 'Test Page',
                 url: 'https://example.com'
             };
-            tabCache.add(tab);
+            tabCache.add(asTab(tab));
             expect(tabCache.size()).toBe(1);
             tabCache.remove(1);
             expect(tabCache.size()).toBe(0);
@@ -180,9 +206,9 @@ describe('TabCache', () => {
         });
 
         it('複数のタブを一度に削除できること', () => {
-            tabCache.add({ id: 1, title: 'Page 1', url: 'https://example.com/page1' });
-            tabCache.add({ id: 2, title: 'Page 2', url: 'https://example.com/page2' });
-            tabCache.add({ id: 3, title: 'Page 3', url: 'https://example.com/page3' });
+            tabCache.add(asTab({ id: 1, title: 'Page 1', url: 'https://example.com/page1' }));
+            tabCache.add(asTab({ id: 2, title: 'Page 2', url: 'https://example.com/page2' }));
+            tabCache.add(asTab({ id: 3, title: 'Page 3', url: 'https://example.com/page3' }));
             expect(tabCache.size()).toBe(3);
             tabCache.removeAll([1, 3]);
             expect(tabCache.size()).toBe(1);
@@ -192,8 +218,8 @@ describe('TabCache', () => {
 
     describe('キャッシュクリア', () => {
         it('全キャッシュをクリアできること', () => {
-            tabCache.add({ id: 1, title: 'Page 1', url: 'https://example.com/page1' });
-            tabCache.add({ id: 2, title: 'Page 2', url: 'https://example.com/page2' });
+            tabCache.add(asTab({ id: 1, title: 'Page 1', url: 'https://example.com/page1' }));
+            tabCache.add(asTab({ id: 2, title: 'Page 2', url: 'https://example.com/page2' }));
             expect(tabCache.size()).toBe(2);
             tabCache.clear();
             expect(tabCache.size()).toBe(0);
@@ -203,17 +229,17 @@ describe('TabCache', () => {
 
     describe('全タブ情報の取得', () => {
         it('全てのタブ情報をイテレータとして取得できること', () => {
-            tabCache.add({ id: 1, title: 'Page 1', url: 'https://example.com/page1' });
-            tabCache.add({ id: 2, title: 'Page 2', url: 'https://example.com/page2' });
-            const all = Array.from(tabCache.getAll());
+            tabCache.add(asTab({ id: 1, title: 'Page 1', url: 'https://example.com/page1' }));
+            tabCache.add(asTab({ id: 2, title: 'Page 2', url: 'https://example.com/page2' }));
+            const all = collectAll(tabCache);
             expect(all).toHaveLength(2);
-            expect(all[0].title).toBe('Page 1');
-            expect(all[1].title).toBe('Page 2');
+            expect(all[0]!.title).toBe('Page 1');
+            expect(all[1]!.title).toBe('Page 2');
         });
 
         it('空のキャッシュから取得してもエラーにならないこと', () => {
             expect(() => {
-                const all = Array.from(tabCache.getAll());
+                const all = collectAll(tabCache);
                 expect(all).toHaveLength(0);
             }).not.toThrow();
         });
@@ -222,35 +248,27 @@ describe('TabCache', () => {
     describe('初期化Promise', () => {
         it('初期化メソッドが呼ばれると初期化フラグがtrueになること', async () => {
             // chrome.tabs.queryをモック
-            global.chrome = {
-                tabs: {
-                    query: (query, callback) => {
-                        callback([
-                            { id: 1, title: 'Page 1', url: 'https://example.com/page1' }
-                        ]);
-                    }
-                }
-            };
+            stubChromeTabsQuery((_query, callback) => {
+                callback(asTabs([
+                    { id: 1, title: 'Page 1', url: 'https://example.com/page1' }
+                ]));
+            });
 
             await tabCache.initialize();
             expect(tabCache.isInitializedCache()).toBe(true);
             expect(tabCache.size()).toBe(1);
 
             // cleanup
-            global.chrome = undefined;
+            clearChromeStub();
         });
 
         it('連続呼び出し時に適切に処理されること', async () => {
             // chrome.tabs.queryをモック
             let callCount = 0;
-            global.chrome = {
-                tabs: {
-                    query: (query, callback) => {
-                        callCount++;
-                        callback([{ id: 1, title: 'Page 1', url: 'https://example.com/page1' }]);
-                    }
-                }
-            };
+            stubChromeTabsQuery((_query, callback) => {
+                callCount++;
+                callback(asTabs([{ id: 1, title: 'Page 1', url: 'https://example.com/page1' }]));
+            });
 
             // 複数回呼び出しても、初期化ロジックは1回だけ実行される
             await Promise.all([
@@ -268,18 +286,18 @@ describe('TabCache', () => {
             expect(callCount).toBe(1);
 
             // cleanup
-            global.chrome = undefined;
+            clearChromeStub();
         });
     });
 
     describe('エッジケース', () => {
         it('同じIDでタブを追加すると上書きされること', () => {
-            tabCache.add({ id: 1, title: 'Page 1', url: 'https://example.com/page1' });
-            tabCache.add({ id: 1, title: 'Page 1 (Updated)', url: 'https://example.com/page1-updated' });
+            tabCache.add(asTab({ id: 1, title: 'Page 1', url: 'https://example.com/page1' }));
+            tabCache.add(asTab({ id: 1, title: 'Page 1 (Updated)', url: 'https://example.com/page1-updated' }));
             expect(tabCache.size()).toBe(1);
             const retrieved = tabCache.get(1);
-            expect(retrieved.title).toBe('Page 1 (Updated)');
-            expect(retrieved.url).toBe('https://example.com/page1-updated');
+            expect(retrieved!.title).toBe('Page 1 (Updated)');
+            expect(retrieved!.url).toBe('https://example.com/page1-updated');
         });
 
         it('不正な形式のURLでもhttp始まりなら追加されること', () => {
@@ -288,7 +306,7 @@ describe('TabCache', () => {
                 title: 'Test Page',
                 url: 'http://invalid-url-without-tld'
             };
-            tabCache.add(tab);
+            tabCache.add(asTab(tab));
             expect(tabCache.size()).toBe(1);
         });
     });
