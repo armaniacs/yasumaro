@@ -173,6 +173,12 @@ git log --oneline -- src/dashboard/historyPanel.ts | head -20
 5. 陳腐化テスト（`dashboard-handlers.test.ts:258` 他の `initHistoryPanel` mock）は今何を検証しているのか、削除して良いか
 6. `sqliteHistoryPanelController.ts` / `sqliteHistoryPanelState.ts` の re-export shim（PBI-17 残置物）をこの PBI で片付けるか別 PBI か
 
+## 未解決事項 1 の調査結果（2026-09-07 autonomous-task-closer・保留正当性確認）
+
+`#pendingSection` は `entrypoints/options/index.html:1681` に存在するが、**legacy `panel-history` section（:1667-1719）内にのみ存在し、現行 `panel-sqlite-history`（:1786 以降）には存在しない**。参照する現行モジュール `src/dashboard/panels/asyncData/historyPanel.ts`（`createHistoryPanel`、id: `panel-history`、`main.ts:8,27` で登録）は legacy section を container として初期化しており、`historyPendingPanel.ts` の `renderPendingPage` もこの container 経由でしか描画されない。
+
+→ **未解決事項 1 の結論: SQLite パネルには pending pages セクションが存在しない。本 PBI を実行する場合は「pending pages 移設」の独立 PBI が必須**（INDEX の保留判定「分裂の可能性大」が確定）。本 PBI は引き続き 15 とセットで保留。
+
 ## Definition of Done
 - [ ] 全 BDD シナリオが自動テストとして実装されパスする
 - [ ] dashboard 関連テスト全 green（`npm run type-check` / lint / `npm run check-i18n` / `npm run build` 含む）
