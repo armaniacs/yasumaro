@@ -1,5 +1,5 @@
 {
-  "total": 1130,
+  "total": 1117,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -156,14 +156,11 @@
     "src/utils/__tests__/logger-enhanced.test.ts": 7,
     "src/utils/__tests__/markdownFormatter.test.ts": 1,
     "src/utils/__tests__/markdownSanitizer.test.ts": 2,
-    "src/utils/__tests__/markdownTemplateUtils.test.ts": 3,
     "src/utils/__tests__/migration.test.ts": 5,
     "src/utils/__tests__/optimisticLock-stress.test.ts": 1,
     "src/utils/__tests__/optimisticLockSerialization.test.ts": 4,
     "src/utils/__tests__/pageContentPipeline.test.ts": 1,
     "src/utils/__tests__/pathSanitizer.test.ts": 3,
-    "src/utils/__tests__/pendingStorageBounds.test.ts": 4,
-    "src/utils/__tests__/permissionManager.test.ts": 6,
     "src/utils/__tests__/piiSanitizer-optimization.test.ts": 7,
     "src/utils/__tests__/piiSanitizer-redos.test.ts": 2,
     "src/utils/__tests__/piiSanitizer-security.test.ts": 1,
