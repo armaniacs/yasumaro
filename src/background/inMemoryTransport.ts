@@ -4,8 +4,18 @@
  *
  * Lets SqliteGateway (and SqliteClient) be exercised in tests without an
  * offscreen document or any chrome.* API: insert a record, query it back,
- * count, toggle star, delete, and read status all round-trip through the
- * same seam production uses.
+ * count, toggle star, and read status all round-trip through the same seam
+ * production uses.
+ *
+ * Known intentional divergence — DELETE: this transport approximates DELETE
+ * as a soft delete (sets `is_deleted = 1`, row stays in the array), while
+ * every production backend hard-deletes the row (FallbackStorageAdapter
+ * `hardDelete`, opfsWorker `handleHardDelete`, sqliteMessageHandlers
+ * `handleDelete`). The two are deliberately NOT unified: this transport is
+ * not a SQL engine, and soft-delete approximation keeps the double light.
+ * Callers that assert on post-DELETE row identity, UPDATE-on-deleted, or
+ * duplicate detection must verify against a production backend instead.
+ * See dev-docs/TEST_DOUBLES_DIVERGENCE.md for the registry of divergences.
  *
  * This is deliberately not a full SQL engine — it covers the operations the
  * gateway issues, with a filter that mirrors buildExtraWhereSql's semantics
@@ -104,6 +114,15 @@ export class InMemoryTransport implements OffscreenTransport {
       case 'SQLITE_DELETE': {
         const id = payload.id as number;
         const row = this.records.find((r) => r.id === id);
+        // Soft-delete approximation, same drift-prevention level as select():
+        // production hard-deletes the row (FallbackStorageAdapter hardDelete /
+        // crudHandlers handleHardDelete / sqliteMessageHandlers handleDelete).
+        // Unified on purpose: keeping the double light beats simulating SQL
+        // DELETE. Divergent observations (UPDATE on a deleted row succeeds via
+        // find+assign here, deleted rows linger in getRecords(), DELETE+INSERT
+        // duplicate detection differs) are pinned as spec in
+        // dev-docs/TEST_DOUBLES_DIVERGENCE.md — verify those against a
+        // production backend (opfsWorker.test.ts / e2e).
         if (row) row.is_deleted = 1;
         return { success: true };
       }
@@ -146,6 +165,10 @@ export class InMemoryTransport implements OffscreenTransport {
       case 'SQLITE_ARCHIVE_CREATE':
       case 'SQLITE_ARCHIVE_CLEANUP':
       case 'SQLITE_ARCHIVE_DELETE_BY_STAGING':
+        // Not implemented here on purpose: VACUUM / freelist accounting
+        // (freelistBefore/freelistAfter) cannot be verified without a real
+        // storage engine. Verify against production backends only
+        // (opfsWorker.test.ts / testDir e2e archive specs).
         return { success: false, error: 'Archive is not supported by InMemoryTransport' };
 
       case 'SQLITE_ARCHIVE_PREPARE_INCOMING':

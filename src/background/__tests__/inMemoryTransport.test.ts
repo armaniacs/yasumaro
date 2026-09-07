@@ -63,7 +63,11 @@ describe('InMemoryTransport + SqliteGateway', () => {
     expect(q.success && q.data.rows[0]?.domain).toBe('b.com');
   });
 
-  it('count reflects inserts and soft-deletes', async () => {
+  // Divergence-aware naming: InMemory approximates DELETE as a soft delete
+  // (is_deleted=1, row retained); production hard-deletes the row. This test
+  // only pins that COUNT/QUERY agree on the surface — see
+  // dev-docs/TEST_DOUBLES_DIVERGENCE.md for the divergence registry.
+  it('count query excludes soft-deleted rows — note: InMemory soft-deletes, production hard-deletes', async () => {
     const a = await gateway.mutate({ type: 'insert', record: rec() });
     await gateway.mutate({ type: 'insert', record: rec() });
     const beforeDelete = await gateway.query({ kind: 'count' });
@@ -192,5 +196,54 @@ describe('InMemoryTransport + SqliteGateway', () => {
       // limit is capped at plain 1000, so still returns all 5
       expect((qPlain.data as { rows: BrowsingLogRecord[] }).rows.length).toBe(5);
     }
+  });
+
+  // ---------------------------------------------------------------------
+  // Intentional-divergence guard tests (PBI 2026-09-07-17).
+  // These pin the DELETE soft/hard divergence AS SPEC so the implicit
+  // divergence becomes explicit and any future unification is a conscious
+  // change. Production hard-deletes the row — none of these observations
+  // hold for real backends. Registry: dev-docs/TEST_DOUBLES_DIVERGENCE.md.
+  // ---------------------------------------------------------------------
+  describe('DELETE divergence pinned as spec (InMemory soft-delete vs production hard-delete)', () => {
+    it('getRecords() still contains the deleted row with is_deleted=1 (production: row is gone)', async () => {
+      const ins = await gateway.mutate({ type: 'insert', record: rec({ title: 'doomed' }) });
+      expect(ins.success).toBe(true);
+      const id = ins.success ? ins.data.id : 0;
+      await gateway.mutate({ type: 'delete', id });
+
+      const rows = transport.getRecords();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.is_deleted).toBe(1);
+      expect(rows[0]?.title).toBe('doomed');
+    });
+
+    it('UPDATE on a soft-deleted row succeeds via find+assign (production: no-op)', async () => {
+      const ins = await gateway.mutate({ type: 'insert', record: rec({ title: 'before' }) });
+      const id = ins.success ? ins.data.id : 0;
+      await gateway.mutate({ type: 'delete', id });
+
+      const upd = await gateway.mutate({ type: 'update', id, changes: { title: 'after' } } as Parameters<typeof gateway.mutate>[0]);
+      expect(upd.success).toBe(true);
+      // The in-memory double mutates the retained soft-deleted row; production
+      // would leave nothing to update.
+      const rows = transport.getRecords();
+      expect(rows[0]?.title).toBe('after');
+      expect(rows[0]?.is_deleted).toBe(1);
+    });
+
+    it('DELETE then INSERT of the same URL keeps both rows (duplicate detection differs from production)', async () => {
+      const first = await gateway.mutate({ type: 'insert', record: rec({ url: 'https://example.com/dup' }) });
+      const id = first.success ? first.data.id : 0;
+      await gateway.mutate({ type: 'delete', id });
+      await gateway.mutate({ type: 'insert', record: rec({ url: 'https://example.com/dup' }) });
+
+      // InMemory retains the soft-deleted row, so duplicate-detection style
+      // assertions against all rows would see both; production removed the
+      // old row entirely.
+      const rows = transport.getRecords();
+      expect(rows).toHaveLength(2);
+      expect(rows.filter((r) => r.url === 'https://example.com/dup')).toHaveLength(2);
+    });
   });
 });

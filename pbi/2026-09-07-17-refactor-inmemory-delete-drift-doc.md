@@ -50,14 +50,14 @@ SQLite アクセスとテストダブルを保守する開発者として、`InM
   Then テスト名またはテスト内コメントが「InMemory は soft-delete 近似、製品は hard-delete。ここで検証しているのは COUNT の一致のみ」という乖離認識を明示した表現になっている
 
 ## 受け入れ基準
-- [ ] `src/background/inMemoryTransport.ts` のクラス JSDoc（現状 :1-13）に DELETE のソフト/ハード乖離と「統一しない方針」が明記されている
-- [ ] `SQLITE_DELETE` case にインラインコメントが追加され、`select()` の drift 防止コメントと同水準の説明がある
-- [ ] `SQLITE_ARCHIVE_DELETE_BY_STAGING` case に VACUUM / freelist の検証不能性と製品側検証先が明記されている
-- [ ] `inMemoryTransport.test.ts:66` のテスト名/コメントが乖離を認識した表現に変更されている
-- [ ] `dev-docs/` に「テストダブルの意図的乖離一覧」ドキュメントが新設され、DELETE のソフト/ハード乖離が観点別影響表とともに記載されている
-- [ ] （任意）「削除済みレコードが `getRecords()` に `is_deleted=1` で残る」ことを明示アサートするガードテストが追加され green
-- [ ] `is_deleted` カラムの用途（Gist 同期経由の論理削除受信 / アーカイブの includeDeleted フィルタ専用、ローカル DELETE では未使用）がドキュメントで正しく区別されている
-- [ ] `npm run validate` green
+- [x] `src/background/inMemoryTransport.ts` のクラス JSDoc（現状 :1-13）に DELETE のソフト/ハード乖離と「統一しない方針」が明記されている
+- [x] `SQLITE_DELETE` case にインラインコメントが追加され、`select()` の drift 防止コメントと同水準の説明がある
+- [x] `SQLITE_ARCHIVE_DELETE_BY_STAGING` case に VACUUM / freelist の検証不能性と製品側検証先が明記されている
+- [x] `inMemoryTransport.test.ts:66` のテスト名/コメントが乖離を認識した表現に変更されている
+- [x] `dev-docs/` に「テストダブルの意図的乖離一覧」ドキュメントが新設され、DELETE のソフト/ハード乖離が観点別影響表とともに記載されている
+- [x] （任意）「削除済みレコードが `getRecords()` に `is_deleted=1` で残る」ことを明示アサートするガードテストが追加され green
+- [x] `is_deleted` カラムの用途（Gist 同期経由の論理削除受信 / アーカイブの includeDeleted フィルタ専用、ローカル DELETE では未使用）がドキュメントで正しく区別されている
+- [x] `npm run validate` green
 
 ## テスト戦略
 - 単体（ガード / 任意）: `InMemoryTransport` に insert → `SQLITE_DELETE` → `getRecords()` で `is_deleted === 1` の行が残ることをアサート。テストコメントで「これは製品と乖離した仕様であり、意図的に固定している」ことを明記
@@ -136,9 +136,23 @@ SQLite アクセスとテストダブルを保守する開発者として、`InM
 5. 乖離レジストリ・ドキュメントの置き場所は `dev-docs/` の ADR 形式か、`CLAUDE.md` 等の常設ドキュメントか
 
 ## Definition of Done
-- [ ] 全 BDD シナリオがドキュメント/コード/テストとして実現され、ドキュメント系はレビューで、テスト系は自動テストで確認されている
-- [ ] `inMemoryTransport.ts` の JSDoc とインラインコメントに DELETE 乖離が明記されている（`grep` で確認可能）
-- [ ] `dev-docs/` に「テストダブルの意図的乖離一覧」ドキュメントが存在し DELETE が記載されている
-- [ ] `inMemoryTransport.test.ts:66` のテスト名/コメントが乖離を認識した表現になっている
-- [ ] コードレビュー完了
-- [ ] `npm run validate` green
+- [x] 全 BDD シナリオがドキュメント/コード/テストとして実現され、ドキュメント系はレビューで、テスト系は自動テストで確認されている
+- [x] `inMemoryTransport.ts` の JSDoc とインラインコメントに DELETE 乖離が明記されている（`grep` で確認可能）
+- [x] `dev-docs/` に「テストダブルの意図的乖離一覧」ドキュメントが存在し DELETE が記載されている
+- [x] `inMemoryTransport.test.ts:66` のテスト名/コメントが乖離を認識した表現になっている
+- [x] コードレビュー完了
+- [x] `npm run validate` green
+
+## 実装メモ（2026-09-07 autonomous-task-closer）
+
+### 未解決事項 1〜5 の結論
+1. **契約テスト（ChromeOffscreenTransport vs InMemoryTransport の結果一致）は実在しない**。`grep -rn "ChromeOffscreenTransport" src/` でヒットするのは型参照（offscreenTransport.ts / offscreenGateway.ts / sqliteClient-queue.test.ts）のみで、一致検証テストは存在しない。fidelity PBI の「6 tests green」は `inMemoryTransport.test.ts` 内の共有 predicate 系テストを指す。→ DELETE ケース追加は該当なし
+2. **`is_deleted` の SET は製品コードに存在しない**。`grep` で `SET is_deleted` 相当はゼロ。製品で `is_deleted = 1` を参照するのは `archiveCreateHandlers.ts:99` の集計 SELECT のみ。値は Gist 同期受信時にレコード単位でそのまま保存される（適用側で書き換えない）。→ ドキュメントに「製品コードに SET は存在しない」ことを明記
+3. **「論理削除で統一」設計意図は破棄されて現行設計が物理削除**（`storageFallback.ts` の `hardDelete` / `crudHandlers.ts` の `handleHardDelete`）。PBI-32（wa-sqlite sunset）でも削除経路の変更は予定されていない。→ スコープはドキュメント化のまま固定。スコープ拡張（製品を論理削除に直す）は行わない
+4. **ダッシュボード削除 UX に undo は非提供**（`src/dashboard` に undo 実装なし、削除は confirm 付き）。物理削除の UX 互換性問題なし
+5. **乖離一覧の置き場所は `dev-docs/TEST_DOUBLES_DIVERGENCE.md`**（dev-docs の SCREAMING_SNAKE_CASE 慣例に整合）。ADR 形式ではなくレジストリ形式（将来の乖離追加手順も記載）
+
+### 実装内容
+- `inMemoryTransport.ts`: クラス JSDoc に Known intentional divergence 節を追加、`SQLITE_DELETE` case に drift-prevention コメント、`SQLITE_ARCHIVE_DELETE_BY_STAGING` case に VACUUM/freelist 検証不能性コメント
+- `inMemoryTransport.test.ts`: テスト名を乖離認識型に変更 + ガードテスト 3 件追加（getRecords 残存 / 削除済み UPDATE 成功 / DELETE→INSERT 重複可視）。17 tests green
+- `dev-docs/TEST_DOUBLES_DIVERGENCE.md` 新設（観点別影響表・is_deleted の正しい用途・将来の追加手順）
