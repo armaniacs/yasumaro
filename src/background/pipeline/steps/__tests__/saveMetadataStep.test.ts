@@ -51,7 +51,9 @@ import * as logger from '../../../../utils/logger.js';
 import { StorageKeys } from '../../../../utils/storage/types.js';
 import type { RecordingContext } from '../../types.js';
 
-function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
+type ExplicitUndefined<T> = { [K in keyof T]?: T[K] | undefined };
+
+function makeContext(overrides: ExplicitUndefined<RecordingContext> = {}): RecordingContext {
   return {
     data: {
       title: 'Test Page',
@@ -73,7 +75,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
       cleansedTokens: 150,
     } as any,
     ...overrides,
-  };
+  } as RecordingContext;
 }
 
 beforeEach(() => {
@@ -104,7 +106,7 @@ describe('saveMetadataStep', () => {
           aiSummaryCleansedReason: 'hard',
           aiSummaryCleansedReasons: ['reason1'],
           fallbackTriggered: true,
-        },
+        } as unknown as RecordingContext['data'],
         privacyResult: {
           summary: 'AI summary',
           maskedCount: 2,
@@ -161,7 +163,7 @@ describe('saveMetadataStep', () => {
   describe('条件分岐', () => {
     it('maskedCount=0 かつ privacyResult.maskedCount も未定義の場合は patch に含めない', async () => {
       const context = makeContext({
-        data: { title: 'Test', url: 'https://example.com', content: '', maskedCount: undefined },
+        data: { title: 'Test', url: 'https://example.com', content: '', maskedCount: undefined } as unknown as RecordingContext['data'],
         privacyResult: { summary: '', maskedCount: undefined } as any,
       });
 
@@ -206,7 +208,7 @@ describe('saveMetadataStep', () => {
 
     it('recordType が未定義の場合は "auto" で保存する', async () => {
       const context = makeContext({
-        data: { title: 'Test', url: 'https://example.com', content: '', recordType: undefined },
+        data: { title: 'Test', url: 'https://example.com', content: '', recordType: undefined } as unknown as RecordingContext['data'],
       });
 
       await saveMetadataStep(context);
@@ -249,7 +251,7 @@ describe('saveMetadataStep', () => {
       await saveMetadataStep(context);
 
       expect(pendingQueue.enqueuePendingWrite).toHaveBeenCalledTimes(1);
-      const payload = (pendingQueue.enqueuePendingWrite as Mock).mock.calls[0][0] as Record<string, unknown>;
+      const payload = (pendingQueue.enqueuePendingWrite as Mock).mock.calls[0]?.[0] as Record<string, unknown>;
       expect(payload.type).toBe('metadataPatch');
       expect(payload.key).toBe('savedUrlsWithTimestamps');
       expect(payload.url).toBe('https://example.com');
@@ -284,7 +286,7 @@ describe('saveMetadataStep', () => {
 
     it('全て成功した場合は WARN ログが出力されない', async () => {
       const context = makeContext({
-        data: { title: 'Test', url: 'https://example.com', content: '', maskedCount: undefined },
+        data: { title: 'Test', url: 'https://example.com', content: '', maskedCount: undefined } as unknown as RecordingContext['data'],
         privacyResult: undefined,
       });
 

@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { extractCommonStorageFields } from '../commonStorageFields.js';
 import type { RecordingContext } from '../../types.js';
 
-function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
+type ExplicitUndefined<T> = { [K in keyof T]?: T[K] | undefined };
+
+function makeContext(overrides: ExplicitUndefined<RecordingContext> = {}): RecordingContext {
   return {
     data: {
       title: 'Test Page',
@@ -10,11 +12,11 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
       content: 'Page content',
       recordType: 'auto',
     },
-    settings: {} as Record<string, unknown>,
+    settings: {} as RecordingContext['settings'],
     force: false,
     errors: [],
     ...overrides,
-  };
+  } as RecordingContext;
 }
 
 describe('extractCommonStorageFields', () => {
@@ -41,7 +43,7 @@ describe('extractCommonStorageFields', () => {
         aiSummaryCleansedReasons: ['reason1'],
         fallbackTriggered: true,
         cleansedReason: 'soft',
-      },
+      } as unknown as RecordingContext['data'],
       privacyResult: {
         summary: 'AI summary',
         maskedCount: 2,
@@ -246,7 +248,7 @@ describe('extractCommonStorageFields', () => {
 
     it('always includes recordType and fallbackTriggered', () => {
       const context = makeContext({
-        data: { title: 'Test', url: 'https://example.com', content: '', recordType: undefined },
+        data: { title: 'Test', url: 'https://example.com', content: '', recordType: undefined } as unknown as RecordingContext['data'],
       });
       const common = extractCommonStorageFields(context);
 
@@ -269,7 +271,7 @@ describe('extractCommonStorageFields', () => {
           aiSummaryOriginalBytes: 500, aiSummaryCleansedBytes: 400,
           aiSummaryCleansedElements: 5, aiSummaryCleansedReason: 'hard',
           aiSummaryCleansedReasons: ['reason1'],
-        },
+        } as unknown as RecordingContext['data'],
         privacyResult: {
           summary: 'AI summary', maskedCount: 2, tags: ['tag1'],
           providerName: 'openai', modelName: 'gpt-4', mode: 'full_pipeline',

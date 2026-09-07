@@ -22,7 +22,7 @@ vi.mock('../../../../utils/markdownSanitizer.js', async (importOriginal) => {
     sanitizeUrlForMarkdownTarget: vi.fn((url: string) => url),
     // Spy that calls through to the real implementation so link-breakout
     // escaping is exercised by integration tests while call-sites are assertable.
-    sanitizeForMarkdownLinkText: vi.fn((text: string) => actual.sanitizeForMarkdownLinkText(text)),
+    sanitizeForMarkdownLinkText: vi.fn((text: string) => (actual.sanitizeForMarkdownLinkText as (t: string) => string)(text)),
   } as Record<string, unknown>;
   return {
     ...actual,
@@ -46,7 +46,9 @@ const mockSanitize = sanitizeForObsidian as MockedFunction<typeof sanitizeForObs
 const mockSanitizeUrl = sanitizeUrlForMarkdownTarget as MockedFunction<typeof sanitizeUrlForMarkdownTarget>;
 const mockSanitizeLinkText = sanitizeForMarkdownLinkText as unknown as MockedFunction<typeof sanitizeForMarkdownLinkText>;
 
-function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
+type ExplicitUndefined<T> = { [K in keyof T]?: T[K] | undefined };
+
+function makeContext(overrides: ExplicitUndefined<RecordingContext> = {}): RecordingContext {
   return {
     data: {
       title: 'Test Page',
@@ -61,7 +63,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
       maskedCount: 0,
     } as any,
     ...overrides,
-  };
+  } as RecordingContext;
 }
 
 beforeEach(() => {

@@ -3,7 +3,9 @@ import { mapToBrowsingLogRecord } from '../BrowsingLogRecordMapper.js';
 import type { RecordingContext } from '../../types.js';
 import type { PrivacyPipelineResult } from '../../../privacyPipeline.js';
 
-function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
+type ExplicitUndefined<T> = { [K in keyof T]?: T[K] | undefined };
+
+function makeContext(overrides: ExplicitUndefined<RecordingContext> = {}): RecordingContext {
   return {
     data: {
       title: 'Test Page',
@@ -12,14 +14,14 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
     },
     settings: {
       content_storage_enabled: true,
-    } as Record<string, unknown>,
+    } as RecordingContext['settings'],
     force: false,
     errors: [],
     ...overrides,
-  };
+  } as RecordingContext;
 }
 
-function makePrivacyResult(overrides: Partial<PrivacyPipelineResult> = {}): PrivacyPipelineResult {
+function makePrivacyResult(overrides: ExplicitUndefined<PrivacyPipelineResult> = {}): PrivacyPipelineResult {
   return {
     summary: 'AI generated summary',
     tags: ['tech', 'test'],
@@ -27,7 +29,7 @@ function makePrivacyResult(overrides: Partial<PrivacyPipelineResult> = {}): Priv
     originalTokens: 200,
     cleansedTokens: 180,
     ...overrides,
-  };
+  } as PrivacyPipelineResult;
 }
 
 describe('mapToBrowsingLogRecord', () => {
@@ -179,7 +181,7 @@ describe('mapToBrowsingLogRecord', () => {
 
     it('falls back masked_count to privacyResult.maskedCount', () => {
       const context = makeContext({
-        data: { title: 'T', url: 'https://example.com', content: 'body', maskedCount: undefined },
+        data: { title: 'T', url: 'https://example.com', content: 'body', maskedCount: undefined } as unknown as RecordingContext['data'],
         privacyResult: makePrivacyResult({ maskedCount: 7 }),
       });
       const record = mapToBrowsingLogRecord(context);

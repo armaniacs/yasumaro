@@ -1,5 +1,5 @@
 {
-  "total": 176,
+  "total": 174,
   "files": {
     "src/background/__tests__/SessionAlarmService.test.ts": 2,
     "src/background/__tests__/alarmRegistry.test.ts": 3,
@@ -29,13 +29,10 @@
     "src/background/pipeline/buffers/__tests__/MarkdownBufferManager.test.ts": 4,
     "src/background/pipeline/steps/__tests__/checkDuplicateStep.test.ts": 2,
     "src/background/pipeline/steps/__tests__/saveLocalMarkdownStep.test.ts": 9,
-    "src/background/pipeline/steps/__tests__/saveMetadataStep.test.ts": 5,
     "src/background/pipeline/steps/__tests__/saveToObsidianStep.test.ts": 2,
     "src/utils/__tests__/RateLimitService.test.ts": 1,
     "src/utils/__tests__/contentExtractor.test.ts": 3,
     "src/utils/__tests__/criticalAlertSink.test.ts": 2,
-    "src/utils/__tests__/cspValidator.test.ts": 1,
-    "src/utils/__tests__/domainFilter-mode.test.ts": 1,
     "src/utils/__tests__/markdownFormatter.test.ts": 1,
     "src/utils/__tests__/optimisticLock-stress.test.ts": 1,
     "src/utils/__tests__/optimisticLockSerialization.test.ts": 4,
