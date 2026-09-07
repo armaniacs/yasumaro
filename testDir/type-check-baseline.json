@@ -1,5 +1,5 @@
 {
-  "total": 601,
+  "total": 570,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -124,12 +124,6 @@
     "src/utils/storage/__tests__/settingsRepository-migration-parity.test.ts": 1,
     "src/utils/storage/__tests__/settingsStore-backup.test.ts": 2,
     "src/utils/storage/__tests__/settingsStore-plaintext-api-key.test.ts": 3,
-    "src/utils/storage/__tests__/storagePort.test.ts": 2,
-    "testDir/__tests__/archiveDbReader.test.ts": 3,
-    "testDir/e2e/fixtures/dashboard.fixture.ts": 6,
-    "testDir/e2e/fixtures/dashboardSqliteHelpers.ts": 2,
-    "testDir/e2e/fixtures/extension.fixture.ts": 1,
-    "testDir/e2e/fixtures/popup-pbi27.fixture.ts": 9,
-    "testDir/e2e/fixtures/popup.fixture.ts": 10
+    "src/utils/storage/__tests__/storagePort.test.ts": 2
   }
 }

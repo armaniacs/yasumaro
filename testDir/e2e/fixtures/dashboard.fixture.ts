@@ -31,13 +31,13 @@ const testExt = base.extend<DashboardFixtures>({
     if (!serviceWorker) {
       serviceWorker = await context.waitForEvent('serviceworker');
     }
-    const extensionId = serviceWorker.url().split('/')[2];
+    const extensionId = serviceWorker.url().split('/')[2] ?? '';
     await use(extensionId);
   },
 
   dashboardPage: async ({ context, extensionId }, use) => {
     const pages = context.pages();
-    const page = pages.length > 0 ? pages[0] : await context.newPage();
+    const page: Page = pages[0] ?? (await context.newPage());
 
     page.on('console', msg => {
       console.log(`[Dashboard Console] ${msg.type()}: ${msg.text()}`);
