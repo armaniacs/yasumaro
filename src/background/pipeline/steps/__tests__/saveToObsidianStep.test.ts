@@ -17,9 +17,11 @@ vi.mock('../../../notificationHelper.js', () => ({
 
 import { saveToObsidianStep } from '../saveToObsidianStep.js';
 import type { RecordingContext, StepDeps } from '../../types.js';
-import { StorageKeys } from '../../../utils/storage/types.js';
+import { StorageKeys } from '../../../../utils/storage/types.js';
 
-function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
+type ExplicitUndefined<T> = { [K in keyof T]?: T[K] | undefined };
+
+function makeContext(overrides: ExplicitUndefined<RecordingContext> = {}): RecordingContext {
   return {
     data: {
       title: 'Test Page',
@@ -31,7 +33,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
     errors: [],
     markdown: '## Test Page\n\nSome content',
     ...overrides,
-  };
+  } as RecordingContext;
 }
 
 function makeDeps(overrides: Partial<StepDeps> = {}): StepDeps {

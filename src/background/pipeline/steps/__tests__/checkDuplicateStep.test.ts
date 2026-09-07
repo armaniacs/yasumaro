@@ -193,7 +193,7 @@ describe('checkDuplicateStep', () => {
   describe('deps.urlStore による注入 (InMemoryUrlStore)', () => {
     it('deps.urlStore が渡されると chrome.storage 経由の getSavedUrlsWithTimestamps を呼ばない', async () => {
       const urlStore = new InMemoryUrlStore(new Map([['https://example.com/page1', Date.now()]]));
-      const deps = { urlStore } as StepDeps;
+      const deps = { urlStore } as unknown as StepDeps;
       const context = makeContext();
 
       await expect(checkDuplicateStep(context, deps)).rejects.toThrow(DuplicateError);
@@ -202,7 +202,7 @@ describe('checkDuplicateStep', () => {
 
     it('InMemoryUrlStore 注入時も新規URLは正常に通過する', async () => {
       const urlStore = new InMemoryUrlStore();
-      const deps = { urlStore } as StepDeps;
+      const deps = { urlStore } as unknown as StepDeps;
       const context = makeContext();
 
       await expect(checkDuplicateStep(context, deps)).resolves.toBe(context);
