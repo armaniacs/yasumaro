@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.0` リリース。
+> - 現時点では `v6.8.1` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,27 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.8.1] - 2026-09-08
+
+このリリースは前日のレビュー指摘を即座に反映したものです。Chrome Web Store への配布を終了し、関連する CI コードを削除しました。
+
+v6.8.0 のタグで CI の Chrome Web Store 公開ステップを実行したところ、`PKG_CANNOT_VERIFY_CRX_SIGNATURE` で失敗しました。GitHub Secrets に登録されている署名鍵が、Chrome Web Store 側に登録済みの公開鍵と一致しないためで、既存の拡張機能 ID への自動・手動どちらの更新も不可能な状態です。今後の配布は Edge Add-ons と GitHub Releases（zip の読み込み・ソースからのビルド）に一本化します。
+
+This release immediately addresses review feedback from the previous day. Chrome Web Store distribution has ended and the related CI code has been removed.
+
+Running the CI's Chrome Web Store publish step for the v6.8.0 tag failed with `PKG_CANNOT_VERIFY_CRX_SIGNATURE`: the signing key in GitHub Secrets no longer matches the public key registered with the Chrome Web Store, so neither automated nor manual updates to the existing extension ID are possible. Distribution now goes through Edge Add-ons and GitHub Releases (loading the zip, or building from source).
+
+### Removed / 削除
+
+- **`release.yml` から Chrome Web Store 公開ステップを削除** — CRX 署名（`build-crx3.mjs`）、`.crx` の生成と GitHub Release への添付、偶数 minor 判定、`chromewebstore.googleapis.com` への upload/publish を一式削除。`.github/workflows/build-crx3.mjs` を削除。GitHub Release に添付するのは chrome / firefox / edge の zip 3 種のみ
+- **`.crx` 配布を廃止** — サイドロード用の署名済み `.crx` の生成・添付を取りやめ
+
+### Changed / 変更
+
+- **ドキュメントの配布手順を更新** — `README.md` / `docs/SETUP_GUIDE.md` / `docs/FAQ.md`（日英）から「Chrome Web Store からインストール」を削除し、Edge Add-ons と GitHub Releases の zip 読み込み・ソースビルドに置き換え。`docs/OBSIDIAN_SETUP_GUIDE.md` の Chrome Web Store リンクを差し替え
+- **`scripts/release-checks/check-docs.mjs`** — README のストアリンクチェックを Edge Add-ons のみに変更
+- **`PERMISSIONS.md`** — 審査対象の表記を Chrome Web Store から拡張機能ストア一般（Edge Add-ons）へ変更
 
 ## [6.8.0] - 2026-09-08
 

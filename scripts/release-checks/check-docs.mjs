@@ -62,14 +62,13 @@ function checkReadmeLinks() {
     pass('All README links use HTTPS');
   }
 
-  // Check Chrome Web Store and Edge Add-ons links exist
-  const storeLinks = links.filter((l) =>
-    l.url.includes('chromewebstore.google.com') || l.url.includes('microsoftedge.microsoft.com')
-  );
+  // Chrome Web Store distribution is discontinued (signing key mismatch, see
+  // CHANGELOG 6.8.0). Only the Edge Add-ons store link is expected now.
+  const storeLinks = links.filter((l) => l.url.includes('microsoftedge.microsoft.com'));
   if (storeLinks.length >= 1) {
-    pass(`Found ${storeLinks.length} store link(s) in README`);
+    pass(`Found ${storeLinks.length} Edge Add-ons link(s) in README`);
   } else {
-    warn('No store links found in README');
+    warn('No Edge Add-ons link found in README');
   }
 
   return true;

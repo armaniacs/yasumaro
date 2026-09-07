@@ -11,7 +11,7 @@ Yasumaro は、あなたが Chrome で閲覧した Web ページの情報を、�
 このガイドを始める前に、次の2点を確認してください。
 
 - [Obsidian](https://obsidian.md/) と Vault（ノートの保管庫）が作成済みであること
-- [Yasumaro Chrome 拡張機能](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc)が Chrome にインストール済みであること
+- [Yasumaro 拡張機能](https://github.com/armaniacs/yasumaro#インストール方法) がインストール済みであること
 
 ---
 
@@ -108,7 +108,7 @@ Vault のルートフォルダからの相対パスを入力してください�
 ### 参考リンク
 
 - [Local REST API プラグイン（GitHub）](https://github.com/coddingtonbear/obsidian-local-rest-api)
-- [Yasumaro Chrome Web Store ページ](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc)
+- [Yasumaro インストール手順](https://github.com/armaniacs/yasumaro#インストール方法)
 - [Yasumaro GitHub リポジトリ](https://github.com/armaniacs/yasumaro)
 
 ---
@@ -123,7 +123,7 @@ To enable Yasumaro to automatically save web page information to Obsidian, you n
 
 - [Obsidian](https://obsidian.md/) installed
 - An Obsidian Vault created (created on first launch)
-- [Yasumaro Chrome Extension](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc) installed
+- [Yasumaro extension](https://github.com/armaniacs/yasumaro#installation) installed
 - Google Chrome browser
 
 ---
@@ -253,5 +253,5 @@ If the test connection times out:
 ### Reference Links
 
 - [Local REST API Plugin (GitHub)](https://github.com/coddingtonbear/obsidian-local-rest-api)
-- [Yasumaro on Chrome Web Store](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc)
+- [Yasumaro installation guide](https://github.com/armaniacs/yasumaro#installation)
 - [Yasumaro GitHub Repository](https://github.com/armaniacs/yasumaro)

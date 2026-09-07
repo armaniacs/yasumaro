@@ -57,4 +57,4 @@ When making architectural changes that affect documentation (e.g., TypeScript mi
 - [ ] **README.md**: Any file references or technical explanations
 - [ ] **Developer docs** (DESIGN_SPECIFICATIONS.md, ERROR_CODES.md, ADR/)
 - [ ] **User documentation** (Setup guides, feature guides)
-- [ ] **PRIVACY.md sync**: `public/PRIVACY.md` and `docs/PRIVACY.md` must stay identical. Whichever you edit, copy the same changes to the other file (Chrome Web Store reviews `public/PRIVACY.md`; a stale copy risks being flagged as inaccurate).
+- [ ] **PRIVACY.md sync**: `public/PRIVACY.md` and `docs/PRIVACY.md` must stay identical. Whichever you edit, copy the same changes to the other file (the extension store review reads `public/PRIVACY.md`; a stale copy risks being flagged as inaccurate).

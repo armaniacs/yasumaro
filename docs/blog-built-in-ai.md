@@ -95,4 +95,4 @@ APIキーなし、データ外部送信なし、コストゼロ。浏览記録�
 
 ---
 
-*Yasumaro（旧 Obsidian Weave）はブラウザ拡張機能として、阅覧ページを自動記録しAIで要約してObsidianに保存するツールです。[GitHub](https://github.com/armaniacs/yasumaro) | [Chrome Web Store](https://chrome.google.com/webstore/detail/yasumaro)*
+*Yasumaro（旧 Obsidian Weave）はブラウザ拡張機能として、閲覧ページを自動記録しAIで要約してObsidianに保存するツールです。[GitHub](https://github.com/armaniacs/yasumaro) | [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep)*
