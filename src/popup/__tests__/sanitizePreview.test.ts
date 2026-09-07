@@ -209,7 +209,7 @@ describe('sanitizePreview', () => {
     test('マスクされたアイテムがある場合、ステータスメッセージを表示する', async () => {
       const promise = showPreview(
         'Hello [MASKED:email] World',
-        [{ type: 'email' }],
+        [{ type: 'email' }] as unknown as Parameters<typeof showPreview>[1],
         1
       );
 
@@ -238,7 +238,7 @@ describe('sanitizePreview', () => {
     test('複数のマスクタイプでグループ化されたステータステキストを生成する', async () => {
       const promise = showPreview(
         '[MASKED:email] [MASKED:creditCard]',
-        [{ type: 'email' }, { type: 'creditCard' }],
+        [{ type: 'email' }, { type: 'creditCard' }] as unknown as Parameters<typeof showPreview>[1],
         2
       );
 
@@ -271,7 +271,7 @@ describe('sanitizePreview', () => {
     test('未知のマスクタイプでtype名をそのまま表示する', async () => {
       const promise = showPreview(
         '[MASKED:custom]',
-        [{ type: 'customType' }],
+        [{ type: 'customType' }] as unknown as Parameters<typeof showPreview>[1],
         1
       );
 
@@ -320,7 +320,7 @@ describe('sanitizePreview', () => {
       const textarea = document.getElementById('previewContent') as HTMLTextAreaElement;
       const content = 'Hello [MASKED:email] World';
 
-      const promise = showPreview(content, [{ type: 'email' }], 1);
+      const promise = showPreview(content, [{ type: 'email' }] as unknown as Parameters<typeof showPreview>[1], 1);
 
       expect(textarea.selectionStart).toBeGreaterThanOrEqual(0);
       expect(textarea.selectionEnd).toBeGreaterThan(textarea.selectionStart);
@@ -347,7 +347,7 @@ describe('sanitizePreview', () => {
     test('マスクナビゲーションUIが構築される', async () => {
       const promise = showPreview(
         '[MASKED:email] text [MASKED:phone]',
-        [{ type: 'email' }, { type: 'phoneJp' }],
+        [{ type: 'email' }, { type: 'phoneJp' }] as unknown as Parameters<typeof showPreview>[1],
         2
       );
 
@@ -663,7 +663,7 @@ describe('sanitizePreview', () => {
     test('showPreview後にjumpToNextMaskedが次のマスクにジャンプする', async () => {
       const content = '[MASKED:a] middle [MASKED:b] end';
 
-      const promise = showPreview(content, [{ type: 'email' }, { type: 'email' }], 2);
+      const promise = showPreview(content, [{ type: 'email' }, { type: 'email' }] as unknown as Parameters<typeof showPreview>[1], 2);
 
       const textarea = document.getElementById('previewContent') as HTMLTextAreaElement;
       const firstStart = textarea.selectionStart;
@@ -683,7 +683,7 @@ describe('sanitizePreview', () => {
     test('showPreview後にjumpToPrevMaskedが前のマスクに戻る', async () => {
       const content = '[MASKED:a] middle [MASKED:b] end';
 
-      const promise = showPreview(content, [{ type: 'email' }, { type: 'email' }], 2);
+      const promise = showPreview(content, [{ type: 'email' }, { type: 'email' }] as unknown as Parameters<typeof showPreview>[1], 2);
 
       jumpToNextMasked();
       jumpToPrevMasked();
@@ -699,7 +699,7 @@ describe('sanitizePreview', () => {
     test('最後のマスクからnextで最初に戻る（ラップアラウンド）', async () => {
       const content = '[MASKED:a] [MASKED:b]';
 
-      const promise = showPreview(content, [{ type: 'email' }, { type: 'email' }], 2);
+      const promise = showPreview(content, [{ type: 'email' }, { type: 'email' }] as unknown as Parameters<typeof showPreview>[1], 2);
 
       jumpToNextMasked();
       jumpToNextMasked();
@@ -715,7 +715,7 @@ describe('sanitizePreview', () => {
     test('最初のマスクからprevで最後にジャンプする（ラップアラウンド）', async () => {
       const content = '[MASKED:a] [MASKED:b]';
 
-      const promise = showPreview(content, [{ type: 'email' }, { type: 'email' }], 2);
+      const promise = showPreview(content, [{ type: 'email' }, { type: 'email' }] as unknown as Parameters<typeof showPreview>[1], 2);
 
       jumpToPrevMasked();
 
@@ -732,7 +732,7 @@ describe('sanitizePreview', () => {
     test('複数のMASKEDトークンの位置を収集する', async () => {
       const content = 'Start [MASKED:email] middle [MASKED:phone] end';
 
-      const promise = showPreview(content, [{ type: 'email' }, { type: 'phoneJp' }], 2);
+      const promise = showPreview(content, [{ type: 'email' }, { type: 'phoneJp' }] as unknown as Parameters<typeof showPreview>[1], 2);
 
       const nav = document.getElementById('maskNav') as HTMLElement;
       expect(nav.style.display).toBe('flex');
@@ -763,7 +763,7 @@ describe('sanitizePreview', () => {
 
       const promise = showPreview(
         content,
-        [{ type: 'email' }, { type: 'creditCard' }, { type: 'myNumber' }],
+        [{ type: 'email' }, { type: 'creditCard' }, { type: 'myNumber' }] as unknown as Parameters<typeof showPreview>[1],
         3
       );
 
