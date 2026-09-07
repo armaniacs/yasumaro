@@ -1,5 +1,9 @@
 # Built-in AI 設定ガイド / Built-in AI Setup Guide
 
+[日本語](#日本語) | [English](#english)
+
+---
+
 ## 日本語
 
 ### Built-in AI とは
@@ -100,6 +104,10 @@ A: 空き容量が 10GB 未満になり、モデルが削除された可能性�
 #### Q: Chrome と Edge の両方で使用できますか
 
 A: はい、それぞれのブラウザで個別にモデルをダウンロードする必要があります。
+
+#### Q: いまの状態（利用可能かどうか）をまとめて確認したい
+
+A: ダッシュボードの診断パネル（`Dashboard → Diagnostics`）に内蔵 AI 専用のセクションがあります。`LanguageModel.availability()` の状態（`available` / `downloadable` / `downloading` / `unavailable`）を表示し、`downloadable` のときは進捗表示つきでその場からダウンロードを開始できます。
 
 ---
 
@@ -203,3 +211,7 @@ A: The model may have been deleted because free space dropped below 10GB. Free u
 #### Q: Can I use it in both Chrome and Edge?
 
 A: Yes, but you need to download the model separately for each browser.
+
+#### Q: I want to check the current status (whether it is available) in one place
+
+A: The dashboard diagnostics panel (`Dashboard → Diagnostics`) has a dedicated Built-in AI section. It shows the `LanguageModel.availability()` state (`available` / `downloadable` / `downloading` / `unavailable`), and when it is `downloadable` you can start the download from there with a progress indicator.
