@@ -102,7 +102,7 @@ describe('ObsidianClient — API key must never leak to logs (PBI 2026-08-02-04)
     const config = await client._getConfig();
 
     // The key legitimately reaches the header...
-    expect(String(config.headers['Authorization'])).toBe(`Bearer ${RAW_KEY}`);
+    expect(String((config.headers as Record<string, string>)['Authorization'])).toBe(`Bearer ${RAW_KEY}`);
     // ...but is never emitted to console/logger.
     expect(consoleErrorSpy).not.toHaveBeenCalled();
     const addLogMock = (await import('../../utils/logger.js')).addLog;

@@ -1,7 +1,4 @@
 {
-  "total": 4,
-  "files": {
-    "src/background/__tests__/obsidianClient-api-key-leak.test.ts": 1,
-    "src/utils/storage/__tests__/settingsStore-plaintext-api-key.test.ts": 3
-  }
+  "total": 0,
+  "files": {}
 }
