@@ -121,13 +121,13 @@ describe('sanitizePathSegment - セキュリティサニタイズ関数（問題
     });
 
     it('nullは空文字を返す', () => {
-      const result = sanitizePathSegment(null);
+      const result = sanitizePathSegment(null as unknown as string);
 
       expect(result).toBe('');
     });
 
     it('undefinedは空文字を返す', () => {
-      const result = sanitizePathSegment(undefined);
+      const result = sanitizePathSegment(undefined as unknown as string);
 
       expect(result).toBe('');
     });
@@ -233,7 +233,7 @@ describe('encodePathForUrl - URLエンコード関数', () => {
   });
 
   it('nullに対して空文字を返す', () => {
-    const result = encodePathForUrl(null);
+    const result = encodePathForUrl(null as unknown as string);
 
     expect(result).toBe('');
   });
