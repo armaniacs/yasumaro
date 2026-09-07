@@ -8,6 +8,7 @@
  */
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { createSqliteHistoryPanel } from '../sqliteHistoryPanel.js';
+import { SQLITE_HISTORY_IDS } from '../sqliteHistoryPanelView.js';
 import type { PanelLifecycle } from '../../types.js';
 
 describe('sqliteHistoryPanel — PanelLifecycle implementation', () => {
@@ -47,7 +48,7 @@ describe('sqliteHistoryPanel — PanelLifecycle implementation', () => {
     it('initializes container reference', () => {
       expect(() => panel.mount(container)).not.toThrow();
       // After mount, DOM elements should not be created yet
-      const searchInput = container.querySelector('#sqlite-search-input');
+      const searchInput = container.querySelector(`#${SQLITE_HISTORY_IDS.searchInput}`);
       expect(searchInput).toBeNull();
     });
 
