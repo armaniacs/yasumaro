@@ -1,5 +1,5 @@
 {
-  "total": 1434,
+  "total": 1341,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -23,9 +23,6 @@
     "src/background/__tests__/notificationHelper.test.ts": 2,
     "src/background/__tests__/obsidianClient-api-key-leak.test.ts": 1,
     "src/background/__tests__/obsidianClient-body-timeout.test.ts": 2,
-    "src/background/__tests__/obsidianClient-mutex-map.test.ts": 11,
-    "src/background/__tests__/obsidianClient-mutex.test.ts": 38,
-    "src/background/__tests__/obsidianClient-security.test.ts": 26,
     "src/background/__tests__/offlineNetworkQueue.test.ts": 1,
     "src/background/__tests__/offlineQueueProcessor.test.ts": 3,
     "src/background/__tests__/pendingChromeStorageQueue.test.ts": 6,
@@ -218,10 +215,7 @@
     "src/utils/aiSummaryCleaner/__tests__/patterns.test.ts": 1,
     "src/utils/aiSummaryCleaner/__tests__/perSiteOverride.test.ts": 3,
     "src/utils/aiSummaryCleaner/__tests__/querySelectorAllDeep.test.ts": 3,
-    "src/utils/contentExtractor/__tests__/bytesize-lazy.test.ts": 5,
     "src/utils/contentExtractor/__tests__/dualPayload.test.ts": 3,
-    "src/utils/contentExtractor/__tests__/scoring.test.ts": 5,
-    "src/utils/contentExtractor/__tests__/whitelistAdapterGenerator.test.ts": 8,
     "src/utils/crypto/__tests__/crypto.test.ts": 4,
     "src/utils/logger/__tests__/core-branch.test.ts": 3,
     "src/utils/logger/__tests__/logNeutralizationIntegration.test.ts": 6,
