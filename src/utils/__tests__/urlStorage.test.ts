@@ -100,9 +100,9 @@ describe('urlStorage', () => {
             await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
             const result = await getSavedUrlEntries();
             expect(result).toHaveLength(1);
-            expect(result[0].url).toBe('https://a.com');
-            expect(result[0].recordType).toBe('auto');
-            expect(result[0].tags).toEqual(['tag1']);
+            expect(result[0]!.url).toBe('https://a.com');
+            expect(result[0]!.recordType).toBe('auto');
+            expect(result[0]!.tags).toEqual(['tag1']);
         });
     });
 
@@ -130,9 +130,10 @@ describe('urlStorage', () => {
             expect(stored.savedUrls).toContain('https://x.com');
 
             const timestamps = await chrome.storage.local.get('savedUrlsWithTimestamps');
-            expect(timestamps.savedUrlsWithTimestamps).toHaveLength(1);
-            expect(timestamps.savedUrlsWithTimestamps[0].url).toBe('https://x.com');
-            expect(timestamps.savedUrlsWithTimestamps[0].timestamp).toBe(5000);
+            const timestampEntries = timestamps.savedUrlsWithTimestamps as SavedUrlEntry[];
+            expect(timestampEntries).toHaveLength(1);
+            expect(timestampEntries[0]!.url).toBe('https://x.com');
+            expect(timestampEntries[0]!.timestamp).toBe(5000);
 
             nowSpy.mockRestore();
         });
@@ -198,7 +199,7 @@ describe('urlStorage', () => {
             await setSavedUrlsWithTimestamps(urlMap);
 
             const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
-            const entry = stored.savedUrlsWithTimestamps[0] as SavedUrlEntry;
+            const entry = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0]!;
             expect(entry.timestamp).toBe(3000);
             expect(entry.recordType).toBe('auto');
             expect(entry.maskedCount).toBe(5);
@@ -305,8 +306,8 @@ describe('urlStorage', () => {
 
             const entries = await getSavedUrlEntries();
             expect(entries).toHaveLength(1);
-            expect(entries[0].url).toBe('https://new.com');
-            expect(entries[0].timestamp).toBe(10000);
+            expect(entries[0]!.url).toBe('https://new.com');
+            expect(entries[0]!.timestamp).toBe(10000);
 
             nowSpy.mockRestore();
         });
@@ -316,7 +317,7 @@ describe('urlStorage', () => {
             await addSavedUrl('https://manual.com', 'manual');
 
             const entries = await getSavedUrlEntries();
-            expect(entries[0].recordType).toBe('manual');
+            expect(entries[0]!.recordType).toBe('manual');
             nowSpy.mockRestore();
         });
 
@@ -358,7 +359,7 @@ describe('urlStorage', () => {
 
             const entries = await getSavedUrlEntries();
             expect(entries).toHaveLength(1);
-            const e = entries[0];
+            const e = entries[0]!;
             expect(e.timestamp).toBe(60000);
             expect(e.recordType).toBe('manual');
             expect(e.maskedCount).toBe(3);
@@ -499,7 +500,7 @@ describe('urlStorage', () => {
 
             const entries = await getSavedUrlEntries();
             expect(entries).toHaveLength(1);
-            expect(entries[0].url).toBe('https://b.com');
+            expect(entries[0]!.url).toBe('https://b.com');
         });
 
         it('handles removal of non-existent URL gracefully', async () => {

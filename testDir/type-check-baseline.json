@@ -1,5 +1,5 @@
 {
-  "total": 2243,
+  "total": 2171,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -257,12 +257,10 @@
     "src/utils/__tests__/storageUrls-exports.test.ts": 1,
     "src/utils/__tests__/storageUrls-set-comparison.test.ts": 2,
     "src/utils/__tests__/storageUrls-setters.test.ts": 2,
-    "src/utils/__tests__/storageUrls.test.ts": 38,
     "src/utils/__tests__/tagUtils.test.ts": 1,
     "src/utils/__tests__/trustDb-validation.test.ts": 3,
     "src/utils/__tests__/ublockMatcher.test.ts": 1,
     "src/utils/__tests__/ublockParser.test.ts": 7,
-    "src/utils/__tests__/urlStorage.test.ts": 34,
     "src/utils/__tests__/versionConsistency.test.ts": 2,
     "src/utils/__tests__/withAtomicKeys.test.ts": 1,
     "src/utils/aiSummaryCleaner/__tests__/helpers.deep-shortcircuit.test.ts": 2,
