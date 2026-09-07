@@ -8,6 +8,7 @@
   },
   "include": [
     "./jsdom-shim.d.ts",
+    "../src/vite-env.d.ts",
     "../src/offscreen/wa-sqlite.d.ts",
     "../src/**/__tests__/**/*",
     "../src/**/*.test.ts",
