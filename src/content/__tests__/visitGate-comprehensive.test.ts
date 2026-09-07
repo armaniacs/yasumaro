@@ -6,7 +6,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { VisitGate, type VisitGateThresholds, type VisitState } from '../visitGate.js';
 import { PageState } from '../pageState.js';
-import { createVisitGate, shouldRecordVisit, getPageStateForTesting } from '../extractor.js';
+import { createVisitGate, shouldRecordVisit } from '../extractor.js';
+import { getPageStateForTesting } from './helpers/contentTestkit.js';
 
 describe('VisitGate.shouldRecord - 4象限 + 閾値バリエーション', () => {
   const base: VisitGateThresholds = { minDuration: 5, minScroll: 50 };

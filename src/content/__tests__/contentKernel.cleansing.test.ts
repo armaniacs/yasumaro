@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ContentKernel } from '../contentKernel.js';
 import { InMemoryStoragePort } from '../../utils/storage/storagePort.js';
-import { InMemoryDomainPolicyPort } from '../domainPolicyPort.js';
+import { InMemoryDomainPolicyPort } from './helpers/inMemoryDomainPolicyPort.js';
 import type { MessageSender } from '../visitReporter.js';
 import type { CleansingConfig } from '../pageState.js';
 
