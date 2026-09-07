@@ -233,7 +233,17 @@ ollama list
 - APIキーなどの機密情報を含む設定を安全に移行・バックアップする際に使用してください
 - パスワード強度は設定時にリアルタイム表示（Weak / Medium / Strong）で確認できます
 
-#### 6. ダッシュボード（履歴管理）
+#### 6. AI要約クレンジング設定
+`Dashboard → AI Summary Cleansing` で、AIに本文を送る前のノイズ除去を設定します。
+
+- **プリセット**: `minimal`（3項目）/ `balanced`（9項目、デフォルト）/ `aggressive`（25項目）から選べます。個別のトグルを変更すると `custom` に切り替わります
+- **ドメイン別の上書き**: 特定のサイトだけ設定を変えたい場合は、ドメインを追加してトグルを変更します。マッチは完全一致で、サブドメインは別サイト扱いです
+- **除去内容の確認**: 「詳細を表示」で、何がどの理由で何件除去されたか、およびクレンジング前後のテキスト差分を確認できます
+- **誤削除の報告**: 本文が消えすぎた場合は popup の「誤削除を報告」ボタンで記録できます。報告は端末内にのみ保存され、外部送信されません
+
+詳細は [クレンジングのカスタマイズガイド](CLEANSING_CUSTOMIZATION_GUIDE.md) と [クレンジングの順番](CLEANSING_ORDER.md) を参照してください。
+
+#### 7. ダッシュボード（履歴管理）
 `Dashboard → History` タブで、記録されたURLの履歴を確認・管理できます。履歴データはデバイス上の SQLite DB（OPFS）にローカル保存されるため、Obsidian未設定でも利用できます。
 
 **主な機能**:
@@ -469,7 +479,17 @@ In the "Privacy" tab, you can configure detailed privacy behavior.
 - Use this when migrating or backing up settings that include API keys and other sensitive data
 - Password strength is shown in real time during setup (Weak / Medium / Strong)
 
-#### 6. Dashboard (History Management)
+#### 6. AI Summary Cleansing Settings
+In `Dashboard → AI Summary Cleansing`, configure the noise removal applied before page text is sent to the AI.
+
+- **Presets**: Choose `minimal` (3 rules), `balanced` (9 rules, default), or `aggressive` (25 rules). Changing any individual toggle switches the preset to `custom`
+- **Per-site overrides**: To change settings for a specific site only, add the domain and adjust its toggles. Matching is exact; subdomains are treated as separate sites
+- **Review what was removed**: "Show details" reveals what was removed, by which rule, how many elements, and the text diff before and after cleansing
+- **Report mis-deletions**: If too much body text was removed, use the "Report Cleansing Feedback" button in the popup. Reports are stored on-device only and never transmitted
+
+See the [Cleansing Customization Guide](CLEANSING_CUSTOMIZATION_GUIDE.md) and [Cleansing Order](CLEANSING_ORDER.md) for details.
+
+#### 7. Dashboard (History Management)
 In the `Dashboard → History` tab, you can view and manage your recording history. History data is stored locally in a SQLite DB (OPFS) on your device, so it works even without Obsidian configured.
 
 **Key features**:
