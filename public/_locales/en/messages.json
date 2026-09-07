@@ -4100,6 +4100,18 @@
   "notConsented": {
     "message": "Not consented"
   },
+  "consented": {
+    "message": "Consented ($DATE$)",
+    "placeholders": {
+      "date": {
+        "content": "$1",
+        "example": "2026-09-07"
+      }
+    }
+  },
+  "consentedNoDate": {
+    "message": "Consented"
+  },
   "consentWithdrawnStopped": {
     "message": "Consent withdrawn. Recording will stop."
   },
@@ -4108,5 +4120,41 @@
   },
   "aiResultHeader": {
     "message": "AI: "
+  },
+  "connectionStatusLabel": {
+    "message": "{label}: "
+  },
+  "connectionNoResponse": {
+    "message": "No response"
+  },
+  "modelsDevLoadProvidersError": {
+    "message": "Failed to load providers. Please try again."
+  },
+  "modelsDevSelectProviderError": {
+    "message": "Please select a provider"
+  },
+  "modelsDevApiKeyRequiredError": {
+    "message": "Please enter your API key"
+  },
+  "modelsDevInvalidEndpointError": {
+    "message": "Selected provider has an invalid API endpoint"
+  },
+  "modelsDevSaveSettingsError": {
+    "message": "Failed to save settings"
+  },
+  "cleansingFeedbackDomain": {
+    "message": "Domain"
+  },
+  "cleansingFeedbackSnippet": {
+    "message": "Snippet"
+  },
+  "cleansingFeedbackReason": {
+    "message": "Reason"
+  },
+  "cleansingFeedbackDate": {
+    "message": "Date"
+  },
+  "cleansingFeedbackAction": {
+    "message": "Action"
   }
 }

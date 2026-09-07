@@ -356,7 +356,7 @@ describe('ModelsDevDialog', () => {
       await dialog.show();
       const errorEl = document.getElementById('dialog-error');
       expect(errorEl!.classList.contains('hidden')).toBe(false);
-      expect(errorEl!.textContent).toBe('Failed to load providers. Please try again.');
+      expect(errorEl!.textContent).toBe('modelsDevLoadProvidersError');
       const loadingEl = document.getElementById('dialog-loading');
       expect(loadingEl!.classList.contains('hidden')).toBe(true);
       consoleSpy.mockRestore();
@@ -614,7 +614,25 @@ describe('ModelsDevDialog', () => {
       document.getElementById('dialog-save')?.click();
       const errorEl = document.getElementById('dialog-error');
       expect(errorEl!.classList.contains('hidden')).toBe(false);
-      expect(errorEl!.textContent).toBe('Please select a provider');
+      expect(errorEl!.textContent).toBe('modelsDevSelectProviderError');
+    });
+
+    it('should fall back to English when the select-provider key is missing', async () => {
+      // show() drives the real applyI18n (from i18n-dom.js), which consumes
+      // getMessage calls, so a mockReturnValueOnce would be eaten before
+      // save(). Use a persistent empty mock and restore the identity mock.
+      const { getMessage } = await import('../../utils/i18n.js');
+      const mocked = vi.mocked(getMessage);
+      mocked.mockReturnValue('');
+      try {
+        const dialog = new ModelsDevDialog();
+        await dialog.show();
+        document.getElementById('dialog-save')?.click();
+        const errorEl = document.getElementById('dialog-error');
+        expect(errorEl!.textContent).toBe('Please select a provider');
+      } finally {
+        mocked.mockImplementation(((key: string) => key) as typeof getMessage);
+      }
     });
 
     it('should show error when API key is empty', async () => {
@@ -625,7 +643,7 @@ describe('ModelsDevDialog', () => {
       document.getElementById('dialog-save')?.click();
       const errorEl = document.getElementById('dialog-error');
       expect(errorEl!.classList.contains('hidden')).toBe(false);
-      expect(errorEl!.textContent).toBe('Please enter your API key');
+      expect(errorEl!.textContent).toBe('modelsDevApiKeyRequiredError');
     });
 
     it('should save settings and call onSave callback', async () => {
@@ -674,6 +692,8 @@ describe('ModelsDevDialog', () => {
         const errorEl = document.getElementById('dialog-error');
         expect(errorEl!.classList.contains('hidden')).toBe(false);
       });
+      const errorEl = document.getElementById('dialog-error');
+      expect(errorEl!.textContent).toBe('modelsDevInvalidEndpointError');
       expect(onSave).not.toHaveBeenCalled();
     });
 
@@ -691,7 +711,7 @@ describe('ModelsDevDialog', () => {
       await vi.waitFor(() => {
         const errorEl = document.getElementById('dialog-error');
         expect(errorEl!.classList.contains('hidden')).toBe(false);
-        expect(errorEl!.textContent).toBe('Failed to save settings');
+        expect(errorEl!.textContent).toBe('modelsDevSaveSettingsError');
       });
       consoleSpy.mockRestore();
     });
@@ -732,7 +752,7 @@ describe('ModelsDevDialog', () => {
       document.getElementById('dialog-save')?.click();
       const errorEl = document.getElementById('dialog-error');
       expect(errorEl!.classList.contains('hidden')).toBe(false);
-      expect(errorEl!.textContent).toBe('Please select a provider');
+      expect(errorEl!.textContent).toBe('modelsDevSelectProviderError');
     });
 
     it('tab buttons should switch tabs', async () => {

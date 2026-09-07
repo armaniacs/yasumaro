@@ -60,7 +60,7 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (globalThis as any).chrome = {
-      i18n: { getMessage: (key: string) => key },
+      i18n: { getMessage: vi.fn((key: string) => key) },
       storage: { local: { clear: vi.fn() } },
     };
     mockGetPrivacyConsent.mockResolvedValue({ hasConsented: true, consentDate: '2026-01-01' });
@@ -180,5 +180,55 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
 
     const statusEl = container.querySelector('#withdrawConsentStatus') as HTMLElement;
     expect(statusEl.textContent).toBe('consentWithdrawFailed');
+  });
+
+  it('同意済み・同意日ありの場合、consented キーに同意日を渡して表示する', async () => {
+    mockGetPrivacyConsent.mockResolvedValue({ hasConsented: true, consentDate: '2026-01-01' });
+    const getMessage = (globalThis as any).chrome.i18n.getMessage;
+
+    const panel = createPrivacySettingsPanel();
+    const container = buildContainer();
+    await panel.mount(container);
+
+    expect(getMessage).toHaveBeenCalledWith('consented', ['2026-01-01']);
+    const display = container.querySelector('#consentStatusDisplay') as HTMLElement;
+    expect(display.textContent).toBe('consented');
+  });
+
+  it('同意済み・同意日なしの場合、日付を欠いた consentedNoDate キーで表示する', async () => {
+    mockGetPrivacyConsent.mockResolvedValue({ hasConsented: true, consentDate: '' });
+
+    const panel = createPrivacySettingsPanel();
+    const container = buildContainer();
+    await panel.mount(container);
+
+    const display = container.querySelector('#consentStatusDisplay') as HTMLElement;
+    expect(display.textContent).toBe('consentedNoDate');
+  });
+
+  it('未同意の場合、notConsented キーで表示する', async () => {
+    mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false, consentDate: '' });
+
+    const panel = createPrivacySettingsPanel();
+    const container = buildContainer();
+    await panel.mount(container);
+
+    const display = container.querySelector('#consentStatusDisplay') as HTMLElement;
+    expect(display.textContent).toBe('notConsented');
+  });
+
+  it('consented キー未定義時は英語フォールバックで表示が破綻しない', async () => {
+    mockGetPrivacyConsent.mockResolvedValue({ hasConsented: true, consentDate: '2026-01-01' });
+    (globalThis as any).chrome = {
+      i18n: { getMessage: () => '' },
+      storage: { local: { clear: vi.fn() } },
+    };
+
+    const panel = createPrivacySettingsPanel();
+    const container = buildContainer();
+    await panel.mount(container);
+
+    const display = container.querySelector('#consentStatusDisplay') as HTMLElement;
+    expect(display.textContent).toBe('Consented (2026-01-01)');
   });
 });

@@ -20,7 +20,9 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
       if (display && btn) {
         const state = await getPrivacyConsent();
         display.textContent = state.hasConsented
-          ? chrome.i18n.getMessage('consented') || `Consented (${state.consentDate || ''})`
+          ? (state.consentDate
+              ? chrome.i18n.getMessage('consented', [state.consentDate]) || `Consented (${state.consentDate})`
+              : chrome.i18n.getMessage('consentedNoDate') || 'Consented')
           : chrome.i18n.getMessage('notConsented') || 'Not consented';
         btn.classList.toggle('hidden', !state.hasConsented);
         btn.addEventListener('click', async () => {
