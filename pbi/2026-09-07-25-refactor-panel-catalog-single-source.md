@@ -40,15 +40,17 @@ options ダッシュボードにパネルを追加・改名する開発者とし
   Then `getRegistry().navigate('panel-export-logs')` 等の registry API 経由になり、DOM クリック シミュレートが消える
 
 ## 受け入れ基準
-- [ ] パネルカタログ（id / sidebarLabel / sidebarIcon / section / i18n キー）が 1 箇所に定義される
-- [ ] `main.ts` の 11 直登録 + `staticPanels.ts` 9 件の二重管理が解消される（descriptor 定義がカタログ参照 or カタログと統合）
-- [ ] `dashboard.ts` の `sectionPanelMap`（:41-44）と `applySectionDeepLink`（:60-72）がカタログ派生になり、手書き map が消える
-- [ ] `DashboardBootstrapper.registerPanels` が pass-through のままでよいか再評価され、カタログと統合 or 明確な役割が残る（実装メモに記録）
-- [ ] `privacySettingsPanel.ts:92` の DOM 迂回クリックが `registry.navigate()` 経由に置き換わる
-- [ ] sidebar の HTML（静的）↔ カタログの同期検証テスト（または実行時生成への移行）が実装されている
-- [ ] a11y（tab ロール・aria-selected・keyboard 操作）と i18n（data-i18n 属性・data-i18n-aria-label）が不変（ADR 2026-04-19 回帰なし）
-- [ ] 既存 dashboard テスト（DashboardBootstrapper / NavigationRegistry / dashboard 系）が green
-- [ ] `npm run type-check` / `npm run lint` / dashboard テスト green
+- [x] パネルカタログ（id / sidebarLabel / sidebarIcon / section / i18n キー）が 1 箇所に定義される（`src/dashboard/panels/panelCatalog.ts`、19件。実測値はPBI記載20件と1件差異→下記注記）
+- [x] `main.ts` の 11 直登録 + `staticPanels.ts` 9 件の二重管理が解消される（descriptor 定義がカタログ参照 or カタログと統合）（実測で直登録は10件。`registerCatalog(createPanelById)` 1行登録＋型レベル網羅に統合）
+- [x] `dashboard.ts` の `sectionPanelMap`（:41-44）と `applySectionDeepLink`（:60-72）がカタログ派生になり、手書き map が消える（`resolvePanelIdForTab/ForSection` 派生。要素固有スクロールのみ残し既知判定をカタログ由来に）
+- [x] `DashboardBootstrapper.registerPanels` が pass-through のままでよいか再評価され、カタログと統合 or 明確な役割が残る（実装メモに記録）（`registerCatalog` を正規経路化し登録順序を所有。`registerPanels` はテスト互換APIとして残す。記録: whywhy/pbi25-catalog.md Why3・未解決事項4）
+- [x] `privacySettingsPanel.ts:92` の DOM 迂回クリックが `registry.navigate()` 経由に置き換わる（grepで迂回ゼロを確認）
+- [x] sidebar の HTML（静的）↔ カタログの同期検証テスト（または実行時生成への移行）が実装されている（静的維持＋`panelCatalog.test.ts` 16件。未解決事項1の結論は whywhy/pbi25-catalog.md に記録）
+- [x] a11y（tab ロール・aria-selected・keyboard 操作）と i18n（data-i18n 属性・data-i18n-aria-label）が不変（ADR 2026-04-19 回帰なし）（a11y属性の静的ピン＋keyboard既存テスト＋programmatic navigate同期テストで担保）
+- [x] 既存 dashboard テスト（DashboardBootstrapper / NavigationRegistry / dashboard 系）が green（`src/dashboard` + `src/popup`: 184ファイル3345件 green）
+- [x] `npm run type-check` / `npm run lint` / dashboard テスト green（type-check clean、lint 0 errors〈changed filesに警告なし〉）
+
+> 注記（実測とPBI記載の差異）: HTML sidebarは17個ではなく18個（`data-panel` 18ヒット）、TS descriptorは20件ではなく19件（main.ts直登録は11件ではなく10件）。受け入れ基準の「20パネル」は「カタログ全19件」と読み替えた。`tagClusterTab` は両ロケールの messages.json に未定義の既存欠落（applyI18nがHTMLフォールバックを残すため表示不変。本PBIではキー一致のみ固定しロケール追加は対象外）。
 
 ## テスト戦略
 - 単体: カタログ ↔ HTML sidebar の同期検証テスト（data-panel 一致・並び順・i18n キー存在）
@@ -72,9 +74,9 @@ options ダッシュボードにパネルを追加・改名する開発者とし
 2. `panel-history`（legacy、PBI 16 保留中）をカタログに含めるか → 含める（現行の実在パネルとして登録維持。PBI 16 着手時にカタログ行を削除するだけになる）
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] パネル存在の真実の源がカタログ 1 箇所になっている（main.ts / staticPanels / sectionPanelMap の手書き重複解消を grep で確認）
-- [ ] 迂回クリックが消えている（grep で確認）
-- [ ] a11y / i18n 回帰なし（テスト green）
-- [ ] コードレビュー完了
-- [ ] `npm run type-check` / `npm run lint` / dashboard テスト green
+- [x] 全 BDD シナリオが自動テストとして実装されパスする（カタログ派生登録 / sidebar同期 / deep-link派生 / registry経由遷移）
+- [x] パネル存在の真実の源がカタログ 1 箇所になっている（main.ts / staticPanels / sectionPanelMap の手書き重複解消を grep で確認）
+- [x] 迂回クリックが消えている（grep で確認）
+- [x] a11y / i18n 回帰なし（テスト green）
+- [ ] コードレビュー完了（未達理由: 本worktreeでの実装直後のため、レビューは別途依頼が必要）
+- [x] `npm run type-check` / `npm run lint` / dashboard テスト green

@@ -1,4 +1,5 @@
-import { createStaticFormPanel } from './staticPanelAdapter.js';
+import { createStaticFormPanel, type StaticPanelSpec } from './staticPanelAdapter.js';
+import { PANEL_CATALOG } from '../panelCatalog.js';
 import { type PanelLifecycle } from '../types.js';
 
 import { initTagsPanel } from '../../tagsPanel.js';
@@ -24,61 +25,87 @@ import { initDomainFilterTagUI } from '../../domainFilterTagUI.js';
  * `document.getElementById` themselves.
  *
  * Panels that carry real logic (generalSettingsPanel, privacySettingsPanel,
- * aiSummaryCleansingPanel) are registered separately in main.ts.
+ * aiSummaryCleansingPanel) are created in panelFactories.ts.
+ *
+ * The ids are keys of this map, but existence and order are owned by
+ * PANEL_CATALOG (see STATIC_FORM_PANELS below): adding a panel means one
+ * catalog row + one spec here. `satisfies` keeps the keys literal so
+ * panelFactories can exclude them from its own map at the type level.
  */
-export const STATIC_FORM_PANELS: readonly (PanelLifecycle & { refresh?: () => Promise<void> })[] = [
-    createStaticFormPanel({
+export const STATIC_FORM_SPECS = {
+    'panel-tags': {
         id: 'panel-tags',
         mount: () => initTagsPanel(),
-    }),
-    createStaticFormPanel({
+    },
+    'panel-recording-conditions': {
         id: 'panel-recording-conditions',
         mount: () => initRecordingConditionsSettings(),
-    }),
-    createStaticFormPanel({
+    },
+    'panel-prompt': {
         id: 'panel-prompt',
         needsSettings: true,
         mount: (settings) => initCustomPromptManager(settings),
-    }),
-    createStaticFormPanel({
+    },
+    'panel-markdown-template': {
         id: 'panel-markdown-template',
         needsSettings: true,
         mount: (settings) => initMarkdownTemplateManager(settings),
-    }),
-    createStaticFormPanel({
+    },
+    'panel-csp': {
         id: 'panel-csp',
         mount: () => cspSettings.loadCSPSettings(),
         refresh: () => cspSettings.loadCSPSettings(),
-    }),
-    createStaticFormPanel({
+    },
+    'panel-content': {
         id: 'panel-content',
         mount: () => initContentSettings(),
         // Deliberately a different function from mount's: init wires the
         // form up, load re-reads persisted values into it.
         refresh: () => loadContentSettings(),
-    }),
-    createStaticFormPanel({
+    },
+    'panel-export-import': {
         id: 'panel-export-import',
         mount: async () => {
             initExportImport();
             initEncryptedBackupPanel();
             await initGistSettings();
         },
-    }),
-    createStaticFormPanel({
+    },
+    'panel-trust': {
         id: 'panel-trust',
         mount: async () => {
             initTrustSettings();
             await loadTrustSettings();
         },
         refresh: () => loadTrustSettings(),
-    }),
-    createStaticFormPanel({
+    },
+    'panel-domain': {
         id: 'panel-domain',
         mount: async () => {
             initDomainFilter();
             await initDomainFilterTagUI();
         },
         refresh: () => loadDomainSettings(),
-    }),
-] as const;
+    },
+} satisfies Record<string, StaticPanelSpec>;
+
+export type StaticFormPanelId = keyof typeof STATIC_FORM_SPECS;
+
+export function isStaticFormId(id: string): id is StaticFormPanelId {
+    return id in STATIC_FORM_SPECS;
+}
+
+/** Build one static-form panel from its spec (shared by the list below and panelFactories). */
+export function createStaticPanelById(id: StaticFormPanelId): PanelLifecycle & { refresh?: () => Promise<void> } {
+    return createStaticFormPanel(STATIC_FORM_SPECS[id]);
+}
+
+/**
+ * Catalog order, filtered to the static-form specs. Kept for existing
+ * importers and tests; the registration path (main.ts via panelFactories)
+ * builds from the catalog directly.
+ */
+export const STATIC_FORM_PANELS: readonly (PanelLifecycle & { refresh?: () => Promise<void> })[] =
+    PANEL_CATALOG.flatMap((entry) =>
+        isStaticFormId(entry.id) ? [createStaticPanelById(entry.id)] : [],
+    );

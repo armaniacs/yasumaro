@@ -41,6 +41,14 @@ vi.mock('../../../dashboardSqliteService.js', () => ({
   isServiceError: (r: unknown) => typeof r === 'object' && r !== null && 'error' in r,
 }));
 
+// PBI 2026-09-07-25: export-logs 遷移は registry 経由。DOM 迂回
+// (sidebar ボタンの click シミュレート) が無いことを、sidebar 要素なしの
+// DOM でも navigate が呼ばれることで証明する。
+const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
+vi.mock('../../registryContext.js', () => ({
+  getRegistry: () => ({ navigate: mockNavigate }),
+}));
+
 import { createPrivacySettingsPanel } from '../privacySettingsPanel.js';
 
 function buildContainer(): HTMLElement {
@@ -230,5 +238,19 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
 
     const display = container.querySelector('#consentStatusDisplay') as HTMLElement;
     expect(display.textContent).toBe('Consented (2026-01-01)');
+  });
+
+  it('export-logs 遷移が registry.navigate 経由で行われる（DOM 迂回なし）', async () => {
+    const panel = createPrivacySettingsPanel();
+    const container = buildContainer();
+    await panel.mount(container);
+
+    // document には sidebar ボタンが存在しない: 旧実装の
+    // querySelector('.sidebar-nav-btn...')?.click() なら何も起きない構成。
+    expect(document.querySelector('.sidebar-nav-btn')).toBeNull();
+    (container.querySelector('#btnGoToExportLogs') as HTMLButtonElement).click();
+
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith('panel-export-logs');
   });
 });
