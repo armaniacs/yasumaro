@@ -10,7 +10,7 @@ function makeProvider(summary: string, success = true): AIProviderStrategy {
   return {
     generateSummary: vi.fn().mockResolvedValue({ success, summary }),
     testConnection: vi.fn().mockResolvedValue({ success, message: summary }),
-  };
+  } as unknown as AIProviderStrategy;
 }
 
 function makeRepo(settings: Record<string, unknown>): SettingsReader {
@@ -20,7 +20,7 @@ function makeRepo(settings: Record<string, unknown>): SettingsReader {
   };
 }
 
-function createService(providerSlots: Array<{ provider: string }>, settingsOverride?: Record<string, unknown>) {
+function createService(providerSlots: Array<{ provider: string; model?: string }>, settingsOverride?: Record<string, unknown>) {
   const settings = settingsOverride ?? {
     ai_provider_priority_list: providerSlots,
     ai_provider: 'gemini',
@@ -100,7 +100,7 @@ describe('RemoteAIService', () => {
     service.registerProvider('throw', () => ({
       generateSummary: vi.fn().mockRejectedValue(new Error('provider error')),
       testConnection: vi.fn().mockResolvedValue({ success: true }),
-    }));
+    }) as unknown as AIProviderStrategy);
 
     const result = await service.generateSummary('content');
 
@@ -208,7 +208,7 @@ describe('RemoteAIService', () => {
         return Promise.reject(new Error('API error'));
       }),
       testConnection: vi.fn().mockResolvedValue({ success: true }),
-    }));
+    }) as unknown as AIProviderStrategy);
 
     const url = 'https://example.com/article';
     await service.generateSummary('content', { url });
@@ -232,12 +232,12 @@ describe('RemoteAIService', () => {
     service.registerProvider('throwing', () => ({
       generateSummary: vi.fn().mockResolvedValue({ success: true, summary: 'ok' }),
       testConnection: vi.fn().mockRejectedValue(new Error('Connection test internal error')),
-    }));
+    }) as unknown as AIProviderStrategy);
 
     const result = await service.testConnection();
 
     expect(result.success).toBe(false);
-    expect(result.providers[0].message).toContain('Connection test internal error');
+    expect(result.providers[0]?.message).toContain('Connection test internal error');
   });
 
   it('testConnection: 各プロバイダーの結果に非負のelapsedMsを含める', async () => {
@@ -261,8 +261,8 @@ describe('RemoteAIService', () => {
     const result = await service.testConnection();
 
     expect(result.providers).toHaveLength(1);
-    expect(typeof result.providers[0].elapsedMs).toBe('number');
-    expect(result.providers[0].elapsedMs).toBeGreaterThanOrEqual(0);
+    expect(typeof result.providers[0]?.elapsedMs).toBe('number');
+    expect(result.providers[0]?.elapsedMs).toBeGreaterThanOrEqual(0);
   });
 
   it('generateSummary前にrecordAuditLogをprovider名とurlで呼ぶ', async () => {
@@ -290,7 +290,7 @@ describe('RemoteAIService', () => {
     service.registerProvider('throwing', () => ({
       generateSummary: vi.fn().mockRejectedValue(new Error('Provider internal error')),
       testConnection: vi.fn().mockResolvedValue({ success: true }),
-    }));
+    }) as unknown as AIProviderStrategy);
 
     const result = await service.generateSummary('content');
 

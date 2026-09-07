@@ -1,5 +1,5 @@
 {
-  "total": 82,
+  "total": 60,
   "files": {
     "src/background/__tests__/SessionAlarmService.test.ts": 2,
     "src/background/__tests__/alarmRegistry.test.ts": 3,
@@ -11,15 +11,10 @@
     "src/background/__tests__/pendingChromeStorageQueue.test.ts": 6,
     "src/background/__tests__/pendingMergeInterleave.test.ts": 3,
     "src/background/__tests__/persistentRetryQueue.test.ts": 14,
-    "src/background/__tests__/reviewSummaryGenerator-concurrency.test.ts": 4,
     "src/background/__tests__/robustness-data-integrity.test.ts": 8,
     "src/background/__tests__/robustness-fetch-timeout.test.ts": 2,
     "src/background/__tests__/service-worker-message-validation.test.ts": 2,
     "src/background/__tests__/sqliteClient-queue.test.ts": 4,
-    "src/background/ai/__tests__/FallbackAIService.test.ts": 2,
-    "src/background/ai/__tests__/RemoteAIService.test.ts": 9,
-    "src/background/ai/providers/__tests__/OpenAIProvider-branches.test.ts": 2,
-    "src/background/ai/providers/__tests__/ProviderStrategy.test.ts": 5,
     "src/utils/storage/__tests__/settingsStore-plaintext-api-key.test.ts": 3
   }
 }
