@@ -3,8 +3,8 @@
  * storageUrls.ts のエクスポート関数テスト
  */
 
-import { webcrypto as crypto } from '@peculiar/webcrypto';
-Object.defineProperty(global, 'crypto', { value: crypto });
+import { Crypto } from '@peculiar/webcrypto';
+Object.defineProperty(global, 'crypto', { value: new Crypto() });
 
 // chrome API モック
 const mockStorage: Record<string, any> = {};
