@@ -93,7 +93,7 @@ describe('bytesize-lazy: WithInfo matches the legacy computation', () => {
         const expectedPage = new Blob([bodyText]).size;
         const expectedCandidate = new Blob([candidateText]).size;
 
-        const result = extractMainContentWithInfo(10000, {}) as Record<string, unknown>;
+        const result = extractMainContentWithInfo(10000, {}) as unknown as Record<string, unknown>;
 
         expect(result.pageBytes).toBe(expectedPage);
         expect(result.candidateBytes).toBe(expectedCandidate);
@@ -109,7 +109,7 @@ describe('bytesize-lazy: WithInfo matches the legacy computation', () => {
         const result = extractMainContentWithInfo(
             10000,
             { cleanseEnabled: true, hardStripEnabled: true }
-        ) as Record<string, unknown>;
+        ) as unknown as Record<string, unknown>;
 
         expect(result.pageBytes).toBe(new Blob([bodyText]).size);
         expect(result.cleansedBytes).toBeLessThanOrEqual(result.originalBytes as number);
@@ -126,7 +126,7 @@ describe('bytesize-lazy: WithInfo matches the legacy computation', () => {
             10000,
             { cleanseEnabled: false },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
-        ) as Record<string, unknown>;
+        ) as unknown as Record<string, unknown>;
 
         expect(result.aiSummaryOriginalBytes).toBe(result.cleansedBytes);
     });
@@ -162,7 +162,7 @@ describe('bytesize-lazy: no duplicate encode of the same string in one pass', ()
             10000,
             { cleanseEnabled: true, hardStripEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true, adsEnabled: true }
-        ) as Record<string, unknown>;
+        ) as unknown as Record<string, unknown>;
 
         expect(result.fallbackTriggered).toBe(false);
         const args = encodeSpy.mock.calls.map((call) => String(call[0]));
@@ -272,7 +272,7 @@ describe('bytesize-lazy: extractor path never constructs Blob', () => {
             10000,
             { cleanseEnabled: true, hardStripEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true, adsEnabled: true }
-        ) as Record<string, unknown>;
+        ) as unknown as Record<string, unknown>;
 
         expect(blobSpy).not.toHaveBeenCalled();
         expect(result.fallbackTriggered).toBe(false);

@@ -29,8 +29,8 @@ describe('whitelistAdapterGenerator', () => {
             </body></html>`;
             const scores = estimateSelectors(html);
             expect(scores.length).toBeGreaterThan(0);
-            expect(scores[0].selector).toBe('article');
-            expect(scores[0].textLength).toBeGreaterThan(500);
+            expect(scores[0]!.selector).toBe('article');
+            expect(scores[0]!.textLength).toBeGreaterThan(500);
         });
     });
 
@@ -43,7 +43,7 @@ describe('whitelistAdapterGenerator', () => {
             </body></html>`;
             const scores = estimateSelectors(html);
             expect(scores.length).toBeGreaterThan(0);
-            expect(scores[0].selector).toBe('main');
+            expect(scores[0]!.selector).toBe('main');
         });
 
         it('falls back to main when article is small and main is larger', () => {
@@ -52,8 +52,8 @@ describe('whitelistAdapterGenerator', () => {
                 <main><p>${'large main content '.repeat(50)}</p></main>
             </body></html>`;
             const scores = estimateSelectors(html);
-            expect(scores[0].selector).toBe('main');
-            expect(scores.find((s) => s.selector === 'article')?.textLength).toBeLessThan(scores[0].textLength);
+            expect(scores[0]!.selector).toBe('main');
+            expect(scores.find((s) => s.selector === 'article')?.textLength).toBeLessThan(scores[0]!.textLength);
         });
     });
 
@@ -68,7 +68,7 @@ describe('whitelistAdapterGenerator', () => {
             expect(scores.length).toBeGreaterThanOrEqual(2);
             // Should be sorted descending
             for (let i = 1; i < scores.length; i++) {
-                expect(scores[i - 1].textLength).toBeGreaterThanOrEqual(scores[i].textLength);
+                expect(scores[i - 1]!.textLength).toBeGreaterThanOrEqual(scores[i]!.textLength);
             }
         });
 
@@ -92,7 +92,7 @@ describe('whitelistAdapterGenerator', () => {
             expect(draft.name).toBe('example-com');
             expect(draft.detectSelector).toBe('article');
             expect(draft.contentSelectors).toContain('article');
-            expect(draft.candidates[0].selector).toBe('article');
+            expect(draft.candidates[0]!.selector).toBe('article');
         });
 
         it('generates draft with main when article absent', () => {
