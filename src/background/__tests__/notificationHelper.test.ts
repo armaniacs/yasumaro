@@ -85,14 +85,14 @@ describe('NotificationHelper', () => {
 
         test('ページタイトルがコンテキストメッセージ', () => {
             NotificationHelper.notifyPrivacyConfirm('id', 'Secret', 'auth');
-            const opts = mockCreate.mock.calls[0][1];
+            const opts = mockCreate.mock.calls[0]?.[1];
             expect(opts.message).toContain('Secret');
         });
 
         test('i18n空の場合はフォールバック', () => {
             mockGetMessage.mockReturnValue('');
             NotificationHelper.notifyPrivacyConfirm('id', 'Page', 'reason');
-            const opts = mockCreate.mock.calls[0][1];
+            const opts = mockCreate.mock.calls[0]?.[1];
             expect(opts.title).toBe('Yasumaro');
             expect(opts.buttons[0].title).toBe('保存する');
             expect(opts.buttons[1].title).toBe('スキップ');
