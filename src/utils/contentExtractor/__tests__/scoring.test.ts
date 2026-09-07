@@ -156,7 +156,7 @@ describe('contentExtractor/scoring', () => {
       `;
       const candidates = findMainContentCandidates();
       expect(candidates.length).toBeGreaterThan(0);
-      expect(candidates[0].tagName.toLowerCase()).toBe('article');
+      expect(candidates[0]!.tagName.toLowerCase()).toBe('article');
     });
 
     it('returns main tag as candidate', () => {
@@ -168,7 +168,7 @@ describe('contentExtractor/scoring', () => {
       `;
       const candidates = findMainContentCandidates();
       expect(candidates.length).toBeGreaterThan(0);
-      expect(candidates[0].tagName.toLowerCase()).toBe('main');
+      expect(candidates[0]!.tagName.toLowerCase()).toBe('main');
     });
 
     it('excludes nav from candidates', () => {
@@ -193,7 +193,7 @@ describe('contentExtractor/scoring', () => {
       `;
       const candidates = findMainContentCandidates();
       expect(candidates.length).toBeGreaterThan(0);
-      expect(candidates[0].className).toBe('main-content');
+      expect(candidates[0]!.className).toBe('main-content');
     });
 
     it('falls back to Asian ID structure detection', () => {
@@ -206,7 +206,7 @@ describe('contentExtractor/scoring', () => {
       `;
       const candidates = findMainContentCandidates();
       expect(candidates.length).toBeGreaterThan(0);
-      expect(candidates[0].id).toBe('article-content');
+      expect(candidates[0]!.id).toBe('article-content');
     });
 
     it('falls back to body direct children when no article/main/asian', () => {
@@ -246,7 +246,7 @@ describe('contentExtractor/scoring', () => {
       `;
       const candidates = findMainContentCandidates();
       expect(candidates.length).toBe(1); // article tags return only top 1
-      expect(candidates[0].className).toBe('long');
+      expect(candidates[0]!.className).toBe('long');
     });
 
     it('returns empty array when body is empty', () => {
