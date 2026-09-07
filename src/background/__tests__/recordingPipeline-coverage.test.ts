@@ -140,7 +140,9 @@ vi.mock('../../utils/storageUrls.ts', () => ({
 // tests can assert on the settings-fetch + step-execute delegation contract
 // (production's record() resolves settings then runs the pipeline kernel).
 vi.mock('../pipeline/RecordingOrchestrator.ts', async () => {
-  const { RecordingCache: RealRecordingCache } = await import('../recordingCache.ts');
+  const { RecordingCache: RealRecordingCache } = (await import('../recordingCache.ts')) as unknown as {
+    RecordingCache: { getSettingsWithCache: () => Promise<unknown> };
+  };
   const RecordingOrchestrator = vi.fn().mockImplementation(function(this: any) {
     this.execute = vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' });
     this.record = async (data: unknown, opts?: { settings?: unknown }) => {
@@ -477,7 +479,7 @@ describe('RecordingPipeline - getPrivacyInfoWithCache session storage fallback',
     const url = 'https://example.com/cached';
     const cachedInfo = {
       isPrivate: true,
-      reason: 'set-cookie',
+      reason: 'set-cookie' as const,
       timestamp: Date.now(),
     };
 

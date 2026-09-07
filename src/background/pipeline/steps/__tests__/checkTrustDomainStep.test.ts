@@ -49,7 +49,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
 function setupTrustChecker(mockResult: {
   canProceed: boolean;
   showAlert: boolean;
-  reason?: string;
+  reason?: string | undefined;
   trustResult: { level: string; source: string };
 }) {
   const mockCheckDomain = vi.fn<() => Promise<any>>().mockResolvedValue(mockResult);

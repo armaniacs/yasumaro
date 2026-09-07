@@ -45,7 +45,7 @@ describe('toExternalResult', () => {
       title: 't',
       url: 'https://example.com',
       maskedItems: [{ type: 'email' }],
-    };
+    } as unknown as Parameters<typeof toExternalResult>[0];
     const result = toExternalResult(internal);
     expect(result.maskedItems).toEqual([{ type: 'email' }]);
   });

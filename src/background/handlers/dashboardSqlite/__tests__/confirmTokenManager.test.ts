@@ -79,7 +79,7 @@ describe('confirmTokenManager per-action single-use TTL', () => {
     ]);
     // Without serialisation, concurrent load->save would drop all but one.
     for (let i = 0; i < tokens.length; i++) {
-      expect(await verifyConfirmToken(tokens[i], 'delete', i + 1)).toBe(true);
+      expect(await verifyConfirmToken(tokens[i]!, 'delete', i + 1)).toBe(true);
     }
   });
 });

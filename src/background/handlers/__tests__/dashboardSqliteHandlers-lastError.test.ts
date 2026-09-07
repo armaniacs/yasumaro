@@ -211,7 +211,23 @@ function makeDeps(overrides: Partial<DashboardSqliteHandlerDeps> = {}): {
 } {
   let lastError: string | null = null;
 
-  const deps: DashboardSqliteHandlerDeps = {
+  // Archive-group deps are unused here (only read-path error routing is tested).
+  const archiveStub = vi.fn().mockRejectedValue(new Error('archive dep not stubbed'));
+  const deps = {
+    archivePreview: archiveStub,
+    archiveCreate: archiveStub,
+    archiveCleanup: archiveStub,
+    archiveExportChunk: archiveStub,
+    archivePrepareIncoming: archiveStub,
+    archiveRestorePreview: archiveStub,
+    archiveRestore: archiveStub,
+    archiveDeleteByStaging: archiveStub,
+    archiveOpen: archiveStub,
+    archiveQuery: archiveStub,
+    archiveUpdate: archiveStub,
+    archiveSave: archiveStub,
+    archiveClose: archiveStub,
+    archiveStatus: archiveStub,
     query: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
     search: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
     toggleStar: vi.fn().mockResolvedValue({ is_starred: 1 }),
@@ -229,17 +245,17 @@ function makeDeps(overrides: Partial<DashboardSqliteHandlerDeps> = {}): {
     purgeOldRecords: vi.fn().mockResolvedValue({ purged: 0 }),
     purgeContent: vi.fn().mockResolvedValue({ purged: 0 }),
     backupDb: vi.fn().mockResolvedValue({ success: true, data: new Uint8Array([1]) }),
-    lastError: () => lastError,
     runMigration: vi.fn().mockResolvedValue({ success: true, count: 0, read: 0, inserted: 0 }),
-    getConfirmToken: vi.fn().mockResolvedValue('token'),
+    createConfirmToken: vi.fn().mockResolvedValue('token'),
+    verifyConfirmToken: vi.fn().mockResolvedValue(true),
     runBackfill: vi.fn().mockResolvedValue({ updated: 0, total: 0 }),
     runCleanup: vi.fn().mockResolvedValue({ removed: [], totalBytes: 0 }),
     runLegacyResync: vi.fn().mockResolvedValue({ examined: 0, written: 0, skipped: 0, total: 0 }),
     queryAuditLog: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
     ...overrides,
-  };
+  } as unknown as DashboardSqliteHandlerDeps;
 
-  return { deps, setLastError: (value) => { lastError = value; } };
+  return { deps, setLastError: (value: string | null) => { lastError = value; } };
 }
 
 /** A read-path failure carrying a categorized reason. */
