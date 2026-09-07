@@ -68,7 +68,7 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
         failureText: '✗',
         initialAriaLabel: t('copyMarkdown') || 'Copy Markdown',
         successAriaLabel: t('copyMarkdownSuccess') || 'Copied to clipboard',
-        failureAriaLabel: t('copyMarkdownFail') || 'Failed to copy',
+        failureAriaLabel: t('copyMarkdownError'),
       },
     });
   }
