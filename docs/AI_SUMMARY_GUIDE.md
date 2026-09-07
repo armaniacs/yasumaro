@@ -75,7 +75,7 @@ AIに送信する前に、PIIマスキング（メールアドレス・クレジ
 
 **Q. AIプロバイダーへの接続に失敗する**
 
-ダッシュボードの「Save & Test Connection」で接続テストを行い、Base URL・APIキー・モデル名が正しいか確認してください。優先度リストを設定している場合、1位が失敗しても自動的に2位・3位が試行されるため、複数プロバイダーを登録しておくと可用性が上がります。
+ダッシュボードの「Save & Test Connection」で接続テストを行い、Base URL・APIキー・モデル名が正しいか確認してください。接続テストは実際に AI へ短いプロンプトを1往復させ、送信内容・受信内容・モデル名・所要時間・HTTP ステータスを画面に表示します。空応答は成功扱いにならないため、「テストは通ったのに本番で要約が空」という状態を切り分けられます。優先度リストを設定している場合、1位が失敗しても自動的に2位・3位が試行されるため、複数プロバイダーを登録しておくと可用性が上がります。
 
 **Q. 要約が短すぎる・空になることがある**
 
@@ -154,7 +154,7 @@ When monthly usage exceeds a configured threshold, a warning is shown in the das
 
 **Q. Connecting to an AI provider fails**
 
-Use "Save & Test Connection" in the dashboard to verify the Base URL, API key, and model name are correct. If you've configured a priority list, a failure at rank 1 automatically falls through to rank 2 and 3, so registering multiple providers improves availability.
+Use "Save & Test Connection" in the dashboard to verify the Base URL, API key, and model name are correct. The connection test sends a short prompt to the AI and waits for one round-trip, then displays what was sent, what came back, the model name, the elapsed time, and the HTTP status. An empty response does not count as success, so you can tell apart the "test passed but the real summary is empty" case. If you've configured a priority list, a failure at rank 1 automatically falls through to rank 2 and 3, so registering multiple providers improves availability.
 
 **Q. Summaries are sometimes too short or empty**
 
