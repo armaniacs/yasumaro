@@ -6,7 +6,7 @@
     "message": "Yasumaro"
   },
   "extensionDescription": {
-    "message": "Log your browsing history with AI summaries into local SQLite storage. Optional Obsidian integration."
+    "message": "Save browsing history with AI summaries to local SQLite. Built-in AI, content cleansing, archive. Obsidian optional."
   },
   "appTitle": {
     "message": "Yasumaro"
