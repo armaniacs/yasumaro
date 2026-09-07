@@ -220,7 +220,7 @@ describe('fetchWithTimeout', () => {
     global.setTimeout = vi.fn((callback, ms) => {
       actualTimeout = ms;
       return 999 as unknown as NodeJS.Timeout;
-    });
+    }) as unknown as typeof global.setTimeout;
 
     try {
       const response = await fetchWithTimeout('https://example.com', { skipCspValidation: true });
@@ -240,7 +240,7 @@ describe('fetchWithTimeout', () => {
     global.setTimeout = vi.fn((callback, ms) => {
       actualTimeout = ms;
       return 999 as unknown as NodeJS.Timeout;
-    });
+    }) as unknown as typeof global.setTimeout;
 
     try {
       const response = await fetchWithTimeout('https://example.com', { skipCspValidation: true }, 5000);
@@ -830,7 +830,7 @@ describe('fetchWithTimeout - AbortError', () => {
           reject(new DOMException('The operation was aborted.', 'AbortError'));
         });
       })
-    );
+    ) as unknown as typeof global.fetch;
 
     await expect(
       fetchWithTimeout('https://example.com', { skipCspValidation: true, timeoutMs: 100 }, 1000)
@@ -840,8 +840,8 @@ describe('fetchWithTimeout - AbortError', () => {
 
 describe('fetchWithTimeout - CSP validation', () => {
   test('CSP検証が有効な場合にURLを検証する', async () => {
-    CSPValidator.isInitialized.mockReturnValueOnce(false);
-    CSPValidator.isUrlAllowed.mockReturnValueOnce(false);
+    vi.mocked(CSPValidator.isInitialized).mockReturnValueOnce(false);
+    vi.mocked(CSPValidator.isUrlAllowed).mockReturnValueOnce(false);
     getCspErrorMessage.mockReturnValueOnce('CSP blocked');
 
     await expect(
@@ -850,8 +850,8 @@ describe('fetchWithTimeout - CSP validation', () => {
   });
 
   test('CSPエラーメッセージがない場合は汎用エラーを返す', async () => {
-    CSPValidator.isInitialized.mockReturnValueOnce(true);
-    CSPValidator.isUrlAllowed.mockReturnValueOnce(false);
+    vi.mocked(CSPValidator.isInitialized).mockReturnValueOnce(true);
+    vi.mocked(CSPValidator.isUrlAllowed).mockReturnValueOnce(false);
     getCspErrorMessage.mockReturnValueOnce(null);
 
     await expect(
