@@ -113,3 +113,8 @@ ICU・形態素解析は現バンドル WASM に非搭載で、採用にはラ�
 
 - [ADR-013: WXT への移行](./2026-04-19-wxt-migration.md)（manifest / web_accessible_resources は `wxt.config.ts` が生成）
 - 設計書・実装計画（`dev-docs/superpowers/specs/`, `dev-docs/superpowers/plans/`配下）は当時作成されたが現存しない
+
+## Note (2026-09): 実機確認用スパイクの撤去
+
+- 実現性検証用の実機確認ハーネス（`src/offscreen/opfsSpike.ts` の `runOpfsSpikeA` / `SQLITE_OPFS_SPIKE` メッセージ経路 / 診断パネルの "Run OPFS Spike" ボタン）は 2026-09 に製品コードから完全削除した（PBI 2026-09-07-19）。一次検証としての役目は終了し、GitHub issue での使用実績もゼロだったため。
+- 案Aの継続的健全性確認は、診断パネルの OPFS 移行状態表示と divergence 警告（`offscreenUsesFallback` / `dashboardDetectsOpfs`）で代替する。製品 Worker（`opfsWorker.ts`）と CSP 設定は無変更。

@@ -182,9 +182,6 @@ export class InMemoryTransport implements OffscreenTransport {
       case 'SQLITE_ARCHIVE_STATUS':
         return { success: false, error: 'Archive is not supported by InMemoryTransport' };
 
-      case 'SQLITE_OPFS_SPIKE':
-        return { success: false, error: 'OPFS spike is not supported by InMemoryTransport' };
-
       default: {
         const exhaustive: never = type;
         return { success: false, error: `InMemoryTransport: unhandled message '${String(exhaustive)}'` };

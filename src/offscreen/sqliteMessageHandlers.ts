@@ -293,12 +293,6 @@ async function handleContentPurge(msg: SqliteMessage, sendResponse: (r: unknown)
   sendResponse(result);
 }
 
-async function handleOpfsSpike(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const { runOpfsSpikeA } = await import('./opfsSpike.js');
-  const report = await runOpfsSpikeA();
-  sendResponse({ success: true, report });
-}
-
 async function handleArchivePreview(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_PREVIEW' }>).payload;
   const result = await sqliteArchivePreview(payload.cutoffDate, payload.cutoffMs, payload.includeDeleted);
@@ -495,7 +489,6 @@ const handlerRecord = {
   SQLITE_RESTORE: handleRestore,
   SQLITE_PURGE: handlePurge,
   CONTENT_PURGE: handleContentPurge,
-  SQLITE_OPFS_SPIKE: handleOpfsSpike,
   SQLITE_ARCHIVE_PREVIEW: handleArchivePreview,
   SQLITE_ARCHIVE_CREATE: handleArchiveCreate,
   SQLITE_ARCHIVE_CLEANUP: handleArchiveCleanup,
