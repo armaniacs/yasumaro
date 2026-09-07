@@ -2,7 +2,7 @@ import { vi } from 'vitest';
 import { FallbackAIService } from '../FallbackAIService.js';
 import { type AIService, type AISummaryResult } from '../AIService.js';
 
-function mockAIService(results: Partial<AISummaryResult>): AIService {
+function mockAIService(results: Partial<AISummaryResult> = {}): AIService {
   return {
     generateSummary: vi.fn().mockResolvedValue({ summary: 'test', ...results }),
     getSupportedModes: vi.fn().mockReturnValue(['full_pipeline']),

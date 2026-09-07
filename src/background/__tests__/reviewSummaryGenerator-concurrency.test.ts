@@ -60,7 +60,7 @@ describe('VULN-002: TOCTOU race in review summary generation', () => {
             aiService: mockAiService,
             sqliteClient: mockSqliteClient,
             repo: mockRepo,
-        });
+        } as unknown as Parameters<typeof createReviewSummaryGenerator>[0]);
 
         // Fire two concurrent weekly summary requests for the same week
         const targetDate = new Date('2026-07-08');
@@ -93,7 +93,7 @@ describe('VULN-002: TOCTOU race in review summary generation', () => {
             aiService: mockAiService,
             sqliteClient: mockSqliteClient,
             repo: mockRepo,
-        });
+        } as unknown as Parameters<typeof createReviewSummaryGenerator>[0]);
 
         const targetDate = new Date('2026-07-15');
         const [result1, result2] = await Promise.all([
