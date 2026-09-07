@@ -151,9 +151,9 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
         { 'Authorization': 'Bearer test_key' }
       );
 
-      const fetchCallArgs = mockFetch.mock.calls[0];
+      const fetchCallArgs = mockFetch.mock.calls[0]!;
       expect(fetchCallArgs[1]).toHaveProperty('signal');
-      expect(fetchCallArgs[1].signal).toBeInstanceOf(AbortSignal);
+      expect((fetchCallArgs[1] as { signal: unknown }).signal).toBeInstanceOf(AbortSignal);
     });
   });
 

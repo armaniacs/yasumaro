@@ -142,12 +142,12 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
       obsidian_enabled: true,
     });
 
-    getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
-    setSavedUrlsWithTimestamps.mockResolvedValue();
-    StorageKeys.AI_PROVIDER = 'AI_PROVIDER';
+    vi.mocked(getSavedUrlsWithTimestamps).mockResolvedValue(new Map());
+    vi.mocked(setSavedUrlsWithTimestamps).mockResolvedValue(undefined);
+    (StorageKeys as { AI_PROVIDER: string }).AI_PROVIDER = 'AI_PROVIDER';
 
     // PrivacyPipelineモック - use function() for constructor compatibility
-    PrivacyPipeline.mockImplementation(function(this: any) {
+    vi.mocked(PrivacyPipeline).mockImplementation(function(this: any) {
       this.process = vi.fn().mockResolvedValue({
         summary: 'Test summary',
         maskedContent: 'Masked content'
@@ -206,13 +206,13 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
   describe('エッジケース: 重複URLの処理', () => {
     it('既存のURLが保存されている場合、重複チェックが正しく動作すること', async () => {
       const mockObsidianClient = {
-        appendToDailyNote: vi.fn().mockResolvedValue()
+        appendToDailyNote: vi.fn().mockResolvedValue(undefined)
       };
       recordingLogic = makeRecordingLogic(mockObsidianClient, {});
 
       const urlMap = new Map([['https://example.com', Date.now()]]);
-      getSavedUrlsWithTimestamps.mockResolvedValue(urlMap);
-      setSavedUrlsWithTimestamps.mockResolvedValue();
+      vi.mocked(getSavedUrlsWithTimestamps).mockResolvedValue(urlMap);
+      vi.mocked(setSavedUrlsWithTimestamps).mockResolvedValue(undefined);
 
       const result = await recordingLogic.record({
         title: 'Test Page',
@@ -237,7 +237,7 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
         appendToDailyNote: vi.fn().mockRejectedValue(new Error('Network error'))
       };
       recordingLogic = makeRecordingLogic(mockObsidianClient, {});
-      getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
+      vi.mocked(getSavedUrlsWithTimestamps).mockResolvedValue(new Map());
 
       const result = await recordingLogic.record({
         title: 'Test Page',
