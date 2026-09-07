@@ -54,6 +54,7 @@ All notable changes to this project will be documented in this file.
 - `docs/MANUAL_TEST_ARCHIVE.md` を「手動チェックリスト」から「自動テスト カバレッジ対応表」へ再編
 - `archivePanel` テストのモックが service 関数に追随しておらず `npm test` が unhandled rejection で失敗する問題を修正。未使用シンボルによる lint エラー（4件）を解消
 - `pbi/` にE2E自動化のフォローアップPBI 3件（`type-check:test` ゲート修理・Y5' セッション再接続E2E・共通fixture化）を追加
+- **テスト型債務を全量返済し `type-check:test` を素の tsc ゲートに昇格**（PBI 2026-09-07-08〜12）: テストコードの型エラー 2,601 件 / 309 ファイルを型注釈・`vi.mocked()`・非null化ヘルパー等で解消（実行時挙動は不変、全 vitest グリーン維持、`src/` 実装の変更なし）。ベースラインラッパー（`scripts/check-type-baseline.mjs`・`testDir/type-check-baseline.json`・`type-check:test:raw`・`type-check:test:baseline`）を撤去し、`type-check:test` は `tsc --project testDir/tsconfig.json --noEmit` を直接実行する。以降テストコードに型エラーを持ち込むと CI が落ちる
 
 ## [6.7.114] - 2026-09-06
 
