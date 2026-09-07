@@ -35,14 +35,14 @@ SQLite 履歴パネルの見た目と描画を保守する開発者として、P
   Then green（fixture の ID 参照維持。DOM 構造・data-i18n・a11y 属性は不変）
 
 ## 受け入れ基準
-- [ ] `sqliteHistoryPanelView.ts` に render + wire の単一入口が実装され、`buildXxxHtml` と `wireXxx` がペアで公開される
-- [ ] `sqliteHistoryPanel.ts` の `updateDynamicRegions()` と `renderState()` の二重記述が解消され、描画分岐が View 内部 1 箇所に集約されている
-- [ ] Panel から sqlite-history 関連の `getElementById` 直取得（12 箇所相当）が消え、View または共有ヘルパー経由になる
-- [ ] ID 5 種（sqlite-search-input / sqlite-sort-control / sqlite-calendar-nav / sqlite-entry-list / sqlite-pagination）の参照が View 中心に集約されている（テスト fixture の参照は許容）
-- [ ] コールバック束（onDateSelect / onToggleStar / onDelete / onSelectionChange / onTagFilterClick / onContentToggle 等）が 1 箇所で構築される
-- [ ] `data-i18n` / aria 属性 / focus 管理の振る舞いが不変（a11y 回帰なし）
-- [ ] 既存テスト（lifecycle / migration / panel）が green（fixture 変更は ID 文字列の直接参照を型や定数に寄せる場合のみ許容）
-- [ ] `npm run type-check` / `npm run lint` / dashboard テスト green
+- [x] `sqliteHistoryPanelView.ts` に render + wire の単一入口が実装され、`buildXxxHtml` と `wireXxx` がペアで公開される（`render` / `wireEntryList` / `wirePagination` / `wireSortControl` / `wireCalendarNav` / `wirePanelShell` + 既存 `buildXxxHtml`）
+- [x] `sqliteHistoryPanel.ts` の `updateDynamicRegions()` と `renderState()` の二重記述が解消され、描画分岐が View 内部 1 箇所に集約されている（`render()` 内の `isViewMounted` 判定のみ。Panel は `refresh()` → `view.render()` の 1 行委譲、591 行 → 198 行）
+- [x] Panel から sqlite-history 関連の `getElementById` 直取得（12 箇所相当）が消え、View または共有ヘルパー経由になる（Panel 内 `getElementById|querySelector` は 0 件。`toggleContentArea(container ?? document)` の `document` はフォールバック root の受け渡しのみで取得処理は View 内）
+- [x] ID 5 種（sqlite-search-input / sqlite-sort-control / sqlite-calendar-nav / sqlite-entry-list / sqlite-pagination）の参照が View 中心に集約されている（`SQLITE_HISTORY_IDS` が唯一の所有者。付随 ID 11 種も同定数に含む。TS の文字列直参照は View とテストのみ、テストは定数経由。CSS セレクタは対象外）
+- [x] コールバック束（onDateSelect / onToggleStar / onDelete / onSelectionChange / onTagFilterClick / onContentToggle 等）が 1 箇所で構築される（Panel `createCallbacks()`。View 側は `SqliteHistoryViewCallbacks` interface で受ける）
+- [x] `data-i18n` / aria 属性 / focus 管理の振る舞いが不変（a11y 回帰なし。View テストに data-i18n/aria 不変・フォーカス維持のケースを追加）
+- [x] 既存テスト（lifecycle / migration / panel）が green（fixture 変更は ID 文字列 → `SQLITE_HISTORY_IDS` 定数参照への寄せのみ。sort / pagination / lifecycle / writeError / View の 5 ファイル）
+- [x] `npm run type-check` / `npm run lint` / dashboard テスト green（type-check clean、lint 0 errors、dashboard 148 ファイル 2498 テスト green、build 成功）
 
 ## テスト戦略
 - 回帰: sqliteHistoryPanel 系テスト（lifecycle / migration / 各フィルタ）を無修正 or 最小修正で green。振る舞い不変の担保
@@ -61,13 +61,13 @@ SQLite 履歴パネルの見た目と描画を保守する開発者として、P
 2 pt（0.4 人週相当）
 
 ## 未解決事項
-1. 差分更新の粒度（list のみ差分、それ以外フル等）を View 内部の最適化としてどこまで残すか → 体感劣化がなければ「フル再構築 1 パス」への単純化を優先し、計測してから戻す。実装メモに記録
-2. `updateTagFilterBar`（:183-232）と legacy `historyFilters.updateTagFilterIndicator` の関係 — legacy 撤去（PBI 16）待ちのため本 PBI では触らない
+1. 差分更新の粒度（list のみ差分、それ以外フル等）を View 内部の最適化としてどこまで残すか → 【結論: フル再構築 1 パスへの単純化は不採用】旧 `renderState` は毎回 `searchInput.focus()` するため、全 state 変化でフル再構築すると star 切替・ページ送りのたびに検索欄へフォーカスが奪われる（a11y 回帰・振る舞い変化）。差分パスは入力値同期・フォーカス維持のために必須。よって View 内部に差分（`updateDynamicRegions` 相当）/フル（`renderFull`）の 2 経路を残し、分岐判定だけを `render()` 1 箇所に集約した。差分/フル収束テストとフォーカス維持テストで担保。
+2. `updateTagFilterBar`（旧 Panel :183-232）と legacy `historyFilters.updateTagFilterIndicator` の関係 — 【結論: スコープ外】legacy 撤去（PBI 16）待ちのため本 PBI では触らない。`updateTagFilterBar` 自体は View 内部関数として移動済み（振る舞い不変）。
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] Panel から sqlite-history DOM ID 直取得が消えている（grep で確認）
-- [ ] 二重レンダーパスが View 1 箇所に集約されている
-- [ ] a11y（keyboard 操作）と i18n 属性が不変（テスト green）
-- [ ] コードレビュー完了
-- [ ] `npm run type-check` / `npm run lint` / dashboard テスト green
+- [x] 全 BDD シナリオが自動テストとして実装されパスする（Panel grep 0 件は手動確認＋記録。単一入口の差分/フル切替は `render` テスト 5 件、振る舞い同一は既存 240 件 green）
+- [x] Panel から sqlite-history DOM ID 直取得が消えている（grep で確認）
+- [x] 二重レンダーパスが View 1 箇所に集約されている
+- [x] a11y（keyboard 操作）と i18n 属性が不変（テスト green）
+- [ ] コードレビュー完了（未実施。本コミット後にレビュー依頼が必要）
+- [x] `npm run type-check` / `npm run lint` / dashboard テスト green

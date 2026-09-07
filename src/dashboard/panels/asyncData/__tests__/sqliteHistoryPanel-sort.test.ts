@@ -28,6 +28,7 @@ vi.mock('../../../utils/confirmDialog.js', () => ({
 }));
 
 import { createSqliteHistoryPanel } from '../sqliteHistoryPanel.js';
+import { SQLITE_HISTORY_IDS } from '../sqliteHistoryPanelView.js';
 import * as db from '../../../dashboardSqliteService.js';
 import type { PanelLifecycle } from '../../types.js';
 
@@ -76,7 +77,7 @@ describe('createSqliteHistoryPanel — sort control', () => {
     const panel = makePanel(container);
     await panel.load?.();
 
-    const select = document.getElementById('sqlite-sort-select') as HTMLSelectElement | null;
+    const select = document.getElementById(SQLITE_HISTORY_IDS.sortSelect) as HTMLSelectElement | null;
     expect(select).not.toBeNull();
     expect(select!.value).toBe('created_at:DESC');
   });
@@ -87,7 +88,7 @@ describe('createSqliteHistoryPanel — sort control', () => {
     const panel = makePanel(container);
     await panel.load?.();
 
-    const select = document.getElementById('sqlite-sort-select') as HTMLSelectElement;
+    const select = document.getElementById(SQLITE_HISTORY_IDS.sortSelect) as HTMLSelectElement;
     const options = Array.from(select.options).map(o => o.value);
     expect(options).not.toContain('relevance:DESC');
   });
@@ -99,7 +100,7 @@ describe('createSqliteHistoryPanel — sort control', () => {
     await panel.load?.();
     mockedDb.queryLogs.mockClear();
 
-    const select = document.getElementById('sqlite-sort-select') as HTMLSelectElement;
+    const select = document.getElementById(SQLITE_HISTORY_IDS.sortSelect) as HTMLSelectElement;
     select.value = 'created_at:ASC';
     select.dispatchEvent(new Event('change'));
     await flush();
@@ -115,7 +116,7 @@ describe('createSqliteHistoryPanel — sort control', () => {
     const panel = makePanel(container);
     await panel.load?.();
 
-    const select = document.getElementById('sqlite-sort-select') as HTMLSelectElement;
+    const select = document.getElementById(SQLITE_HISTORY_IDS.sortSelect) as HTMLSelectElement;
     select.value = 'created_at:ASC';
     select.dispatchEvent(new Event('change'));
     // PBI 17: persist goes through the production 500ms debounce scheduler —
@@ -142,7 +143,7 @@ describe('createSqliteHistoryPanel — sort control', () => {
     await panel.load?.();
     await flush();
 
-    const select = document.getElementById('sqlite-sort-select') as HTMLSelectElement;
+    const select = document.getElementById(SQLITE_HISTORY_IDS.sortSelect) as HTMLSelectElement;
     const options = Array.from(select.options).map(o => o.value);
     expect(options).not.toContain('relevance:DESC');
   });
@@ -163,7 +164,7 @@ describe('createSqliteHistoryPanel — sort control', () => {
     await panel.load?.();
     await flush();
 
-    const select = document.getElementById('sqlite-sort-select') as HTMLSelectElement;
+    const select = document.getElementById(SQLITE_HISTORY_IDS.sortSelect) as HTMLSelectElement;
     const options = Array.from(select.options).map(o => o.value);
     expect(options).toContain('relevance:DESC');
   });
