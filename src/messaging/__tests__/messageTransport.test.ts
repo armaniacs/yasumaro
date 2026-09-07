@@ -14,7 +14,8 @@ import { CURRENT_PROTOCOL_VERSION } from '../protocol.js';
 describe('ChromeTransport', () => {
     it('delegates to chrome.runtime.sendMessage', async () => {
         const transport = new ChromeTransport();
-        const sendSpy = vi.spyOn(chrome.runtime, 'sendMessage').mockResolvedValue({ ok: true });
+        const sendSpy = vi.spyOn(chrome.runtime, 'sendMessage') as unknown as ReturnType<typeof vi.fn>;
+        sendSpy.mockResolvedValue({ ok: true });
         const result = await transport.send({ type: 'PING' });
         expect(sendSpy).toHaveBeenCalledWith({ type: 'PING' });
         expect(result).toEqual({ ok: true });
@@ -57,7 +58,7 @@ describe('isRetryableError via send behavior', () => {
 describe('MessageTransport', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        (chrome.runtime as unknown as { lastError?: { message?: string } }).lastError = null;
+        delete (chrome.runtime as unknown as { lastError?: { message?: string } }).lastError;
     });
 
     it('sends enriched message with protocol version', async () => {
