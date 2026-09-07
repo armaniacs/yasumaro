@@ -18,16 +18,6 @@
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
 
-### 2026-09-07 テスト型債務返済シリーズ（07 を実測に基づき分割・07 は廃止。着手順 = 08 → 09 → 10 → 11 → 12。08〜11 は互いに独立・並行可だが 12 は最後）
-
-**共通実装手順（完全版）は `2026-09-07-08` に記載**（前提環境・ベースラインゲートの仕様・baseline.json 編集規約・返済ループ・修復パターン実例・禁止事項・コミット規約）。09〜11 は 08 の手順を適用する。要点: `type-check:test:raw`（`--pretty false` 付）でスコープ配下をフィルタし、エラー数の多いファイルから順に返済 → `vitest run <file>` で挙動不変確認 → **baseline.json から当該エントリを手動削除**（ラッパーは自動更新しない・`:baseline` 再生成は返済中禁止）。実行時挙動を変えない（1 コミット = 1〜3 ファイル）。実装側の実バグ発見は別 PBI 化。インベントリ = `testDir/type-check-baseline.json`（2,601 errors / 309 files）
-
-- 2026-09-07-08-test-type-debt-background.md（⬜ **次に着手**: `src/background/**` — 742 errors / 87 files。obsidianClient・service-worker・tabCache 等。**getConfirmToken deps リテラル ×70 のクラスタ固有判断を含む（deps.ts:117-147 参照）**。2pt / 副作用 🟢 / 🔧（test））
-- 2026-09-07-09-test-type-debt-dashboard.md（⬜ `src/dashboard/**` — 585 errors / 61 files。customPromptManager（150・シリーズ最大）を含む。2pt / 副作用 🟢 / 🔧（test））
-- 2026-09-07-10-test-type-debt-utils.md（⬜ `src/utils` + `src/messaging` + `src/__tests__` — 570 errors / 86 files。contentExtractor（86）・piiSanitizer 等。2pt / 副作用 🟢 / 🔧（test））
-- 2026-09-07-11-test-type-debt-popup-offscreen-content.md（⬜ `src/popup` + `src/offscreen` + `src/content` + `testDir` — 704 errors / 73 files。main.test.ts（132）・popup-xss 等。E2E fixture も含む。2pt / 副作用 🟢 / 🔧（test））
-- 2026-09-07-12-test-type-gate-promotion.md（⬜ **最後**: baseline 空確認 → ラッパー・baseline.json 削除 → `type-check:test` を素 tsc に戻す → ネガティブテスト。1pt 未満 / 副作用 🟢 / 🔧（test））
-
 ### 将来候補の統合台帳（live）
 
 - [2026-09-05-00-backlog-future.md](2026-09-05-00-backlog-future.md) — 旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）に散在していた見送り・トリガー付き・製品判断待ち候補の統合台帳（2026-09-05 整理）。着手はトリガー別に管理。次ラウンドの architecture review はこれを入力にする
@@ -55,6 +45,11 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-07 テスト型債務返済シリーズ（08〜12・全完了）
+
+- 2026-09-07-08〜11-test-type-debt-*.md（✅ 完了・アーカイブ済 — テストコードの型債務 2,601 errors / 309 files を全量返済。background / dashboard / utils+messaging+\_\_tests\_\_ / popup+offscreen+content+testDir の4バッチを独立サブエージェントで並列返済。型注釈・`vi.mocked()`・非null化ヘルパー・`?.`/`!`/`as` キャストで解消、`@ts-ignore` 新設なし、`src/` 実装は最小変更のみ（`piiSanitizer.MAX_OUTPUT_SIZE` の export 等）、全 vitest グリーン維持。実装バグ 0 件・テスト/実装ドリフト複数を 12 の完了メモに記録）
+- 2026-09-07-12-test-type-gate-promotion.md（✅ 完了・アーカイブ済 — ベースラインラッパー（`check-type-baseline.mjs`・`type-check-baseline.json`・`:raw`・`:baseline`）を撤去し `type-check:test` を素の `tsc --project testDir/tsconfig.json --noEmit` に昇格。ネガティブテスト（型エラー1行 → exit 2）実施。以降テストコードの型エラーは CI で落ちる。permission deny の api-key 系2ファイルはユーザーが一時退避して返済。検証: validate / test:type-safe exit 0）
 
 ### 2026-09-07 アーカイブE2E自動化のフォローアップ（着手完了）
 

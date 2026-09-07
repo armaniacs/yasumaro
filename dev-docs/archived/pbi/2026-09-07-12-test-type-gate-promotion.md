@@ -82,7 +82,36 @@ python3 -c "import json; b=json.load(open('testDir/type-check-baseline.json')); 
 
 ## Definition of Done
 
-- [ ] ラッパー・baseline 削除、`type-check:test` = 素 tsc
-- [ ] ネガティブテスト実施済み
-- [ ] `npm run validate` / `test:type-safe` exit 0
+- [x] ラッパー・baseline 削除、`type-check:test` = 素 tsc（`tsc --project testDir/tsconfig.json --noEmit`）
+- [x] ネガティブテスト実施済み（テストファイルに型エラー1行追加 → `npm run type-check:test` exit 2 → 取り消し）
+- [x] `npm run validate` / `test:type-safe` exit 0（703 test files / 11,860 tests pass）
 - [ ] コードレビュー完了
+
+## 完了メモ（2026-09-07）
+
+### シリーズ全体（08〜12）の結果
+
+- 型債務 **2,601 errors / 309 files → 0**。全 vitest グリーン維持（実行時挙動不変）
+- 4バッチ（08〜11）を独立サブエージェントで並列返済 + popup 2 大ファイル（main.test.ts 132・mask-visualization.test.ts 47）を手動返済
+- 主な修復手段: 型注釈、`vi.mocked()`、非null化ヘルパー（`$el<T>()`）、`?.` / `!`、`as` / `as unknown as` キャスト、テストヘルパ型（`ExplicitUndefined<T>` 等）
+- `@ts-ignore` / `@ts-expect-error` の新設なし。不要になった既存 suppress を数箇所除去
+
+### 実装側の変更（最小・テスト意図と一致）
+
+- `src/utils/piiSanitizer.ts`: `MAX_OUTPUT_SIZE` 定数を `export`（`piiSanitizer-security.test.ts` が参照）。値・ロジック不変
+- `scripts/check-version-consistency.d.ts` 追加: JS ビルドスクリプトの型宣言（`versionConsistency.test.ts` の TS7016 解消）
+- `testDir/tsconfig.json` に `vite-env.d.ts` 追加
+
+### 実装バグ
+
+**0 件。** ただし「テスト/実装ドリフト」を複数確認（バグではなく仕様変更への追従漏れ・実行時は正常）:
+
+- `src/messaging/types.ts` の `PayloadForType<'TEST_OBSIDIAN'>` / `<'DASHBOARD_SQLITE'>` が `never` に解決される（union メンバーに `payload` プロパティが無い）。`messaging-types-uniformity.test.ts` は `as unknown as` でコンパイル可能に留めた。**型定義の意図を要確認**
+- `contentExtractor/index.ts` の `extractMainContent()` はもう Document 引数を取らず global を読む。テストの旧シグネチャ呼び出し（無視されるだけ）から引数除去
+- `BrowsingLogRecord` から `tokens_used` / `content_length` が廃止済み。`markdownFormatter.test.ts` の fixture から除去
+- `MaskedItem` に `original` が必須化。`piiStripper.test.ts` の「original 無し」テストは `as unknown as MaskedItem` キャスト
+- `ublockMatcher` の `UblockRules`（`utils/types.ts`）と `parseUblockFilterList` が返す `UblockRules`（`ublockParser/transform.ts`）は非互換な別インターフェース。テストヘルパで `as unknown as` ブリッジ
+
+### permission 制約
+
+`.claude/settings.local.json` の `Read(**/*api-key*.ts)` 等の deny ルールにより、`settingsStore-plaintext-api-key.test.ts`・`obsidianClient-api-key-leak.test.ts` は Read/Edit 不可だった。ユーザーが一時的に deny を退避し、最終2ファイル（4 errors）を返済して baseline を空化。
