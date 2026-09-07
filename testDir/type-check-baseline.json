@@ -1,5 +1,5 @@
 {
-  "total": 1296,
+  "total": 1252,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -212,7 +212,6 @@
     "src/utils/storage/__tests__/settingsStore-plaintext-api-key.test.ts": 3,
     "src/utils/storage/__tests__/storagePort.test.ts": 2,
     "src/utils/trustDb/__tests__/TrustDecision.test.ts": 9,
-    "src/utils/ublockParser/__tests__/index.test.ts": 6,
     "src/utils/ui/__tests__/focusTrap.test.ts": 1,
     "testDir/__tests__/archiveDbReader.test.ts": 3,
     "testDir/e2e/fixtures/dashboard.fixture.ts": 6,
