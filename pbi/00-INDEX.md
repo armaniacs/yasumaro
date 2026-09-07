@@ -18,17 +18,12 @@
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
 
-### 2026-09-07 architecture review round（`2026-09-05-00-backlog-future.md` の「次ラウンド再評価」項目 + 型債務返済で発見したドリフトを RICE 採点し PBI 化。2026-09-07。AI slot-runner 統合と fallback 再入ギャップは RICE 低・トリガー未発生で PBI 化せず台帳据え置き）
+### 2026-09-07 architecture review round — 7 件中 5 件完了、2 件保留
 
-着手順 = RICE 降順（13 → 14 → 15 → 16 → 17 → 18 → 19）。**15・16（history-panel の tag SQL 移行と legacy panel 撤去）は現時点では実装しない**（下記理由）。他 5 件は着手可。
+（`2026-09-05-00-backlog-future.md` の「次ラウンド再評価」項目 + 型債務返済で発見したドリフトを RICE 採点し PBI 化。2026-09-07。AI slot-runner 統合と fallback 再入ギャップは RICE 低・トリガー未発生で PBI 化せず台帳据え置き）
 
-- 2026-09-07-13-fix-dashboard-i18n-strings-round2.md（⬜ **次に着手**: dashboard 直書き英語の i18n 化 第2弾。`consented` キー未定義で常時英語表示の実バグを含む。`connectionTests.ts` の `No response` / `models-dev-dialog.ts` の `showError` 5件 / `privacySettingsPanel.ts:23`。PBI 2026-09-05-24 が明示的に繰り越した残作業。RICE 563。2pt / 副作用 🟢 / 🔧（fix・i18n））
-- 2026-09-07-14-refactor-extractor-facade-collapse.md（⬜ extractor facade collapse + test-support 再配置 + GET_CONTENT testability。`src/content/extractor.ts` の本番 import ゼロの転送層（14 export）撤去、`getPageStateForTesting`/`__kernelForTesting`/`FakeScheduler`/`InMemoryDomainPolicyPort` をテストヘルパへ、`optionBuilder.ts.bak` 削除、GET_CONTENT リスナーを名前付き関数化。PBI 2026-09-05-13 が「着地後に別 PBI 化」と予告した正式フォローアップ。純粋リファクタ・振る舞い不変。RICE 5.7。3pt / 副作用 🟢 / 🔧（refactor））
 - 2026-09-07-15-fix-history-tag-filter-sql-migration.md（⬜ **現時点では実装しない**: history-panel の tag-filter を client-side 5000 件 over-fetch から SQL クエリ（FTS5 MATCH + 短タグ LIKE フォールバック）へ移行し、`TAG_FILTER_FETCH_LIMIT` による「古い順ソート + タグ絞り込みで新しいエントリがサイレント除外」を解消。tag 一致セマンティクス変更のリスクと未確認論点（tags 無インデックスでの LIKE 性能、PBI-34 の意図的分岐の扱い）があり、16 とセットで保留。RICE 6.0。2pt / 副作用 🟡 / 🔧（fix））
 - 2026-09-07-16-refactor-remove-legacy-history-panel.md（⬜ **現時点では実装しない**: `3478f9d9`（2026-07）以降どこからも navigate されない legacy `panel-history` の撤去（`main.ts` 登録・HTML セクション・陳腐化した `initHistoryPanel` mock）。ただし pending pages セクション・6種フィルタ・`chrome.storage.onChanged` ライブ更新が現行 SQLite パネルに既存かが未確認で、無ければ「pending pages 移設」の独立 PBI に分裂する。15 → 16 の順で、両方保留。RICE 5.25。3pt / 副作用 🟡 / 🔧（refactor））
-- 2026-09-07-17-refactor-inmemory-delete-drift-doc.md（⬜ InMemoryTransport の `SQLITE_DELETE`（ソフトデリート近似）と製品バックエンド（ハードデリート）の意図的乖離を JSDoc・インラインコメント・「テストダブルの意図的乖離一覧」ドキュメントで明示。PBI 2026-09-03-07 が query/FTS/ORDER BY の drift は潰したが DELETE を取りこぼした分。Effort 0.2週と小、アーカイブ機能を次に触るとき同時対応も可。RICE 4.4。1pt / 副作用 🟢 / 🔧（refactor・doc））
-- 2026-09-07-18-refactor-messaging-ublock-type-drift.md（⬜ `PayloadForType<'TEST_OBSIDIAN'>`/`<'DASHBOARD_SQLITE'>` が optional payload を扱えず `never` に落ちるバグの修正 + 構造非互換な2つの同名 `interface UblockRules` の rename。型債務返済で発見した5件のうち実作業2件（残り3件は調査の結果クローズ）。型・テストのみ、実行時挙動不変。RICE 2.25。2pt / 副作用 🟢 / 🔧（refactor））
-- 2026-09-07-19-refactor-remove-opfs-spike.md（⬜ `opfsSpike.ts` / `runOpfsSpikeA` / `SQLITE_OPFS_SPIKE` の撤去。ADR-014 実装完了から1年以上、案A は正規実装として稼働。診断価値は既存の OPFS 移行状態表示・divergence 警告と重複、過去 GitHub issue 全4件に OPFS 関連ゼロ。discriminated union の1分岐に13ファイルが張り付く保守コスト。`inMemoryTransport.ts:162` を触るため 17 と同ファイル。RICE 1.17。3pt / 副作用 🟢 / 🔧（refactor））
 
 ### 将来候補の統合台帳（live）
 
@@ -57,6 +52,16 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-07 architecture review round — 5件完了（autonomous-task-closer）
+
+着手順 = RICE 降順。バッチ1（13/14/18・独立ファイル群でサブエージェント worktree 並列）→ バッチ2（17 → 19・`inMemoryTransport.ts` 競合で直列）。なぜなぜ分析は `/tmp/kilo/whywhy/` 配下に記録。
+
+- 2026-09-07-13-fix-dashboard-i18n-strings-round2.md（✅ 完了・アーカイブ済 — dashboard 直書き英語 11 箇所を i18n 化。`consented` キーを placeholders `{date}` 付きで新設（日付なしは `consentedNoDate` に分岐）し日本語ロケールでの英語常時表示バグを解消、`cleansingFeedbackView` thead 5 語も同時 i18n 化（innerHTML → th+textContent）。新規キー 14、en/ja 同数、check-i18n PASS。検証: type-check / dashboard 147 ファイル / build green。commit `5a35c542`）
+- 2026-09-07-14-refactor-extractor-facade-collapse.md（✅ 完了・アーカイブ済 — test-support 規約を `src/**/__tests__/helpers/` に確定・TESTING_GUIDE に明文化し `FakeScheduler`/`InMemoryDomainPolicyPort` を移設、`createVisitGate` を ContentKernel に一本化、GET_CONTENT リスナーを deps 注入の `getContentHandler.ts` に切り出し（新規単体テスト 114 行）、entrypoint を名前付き駆動に寄せ、throttle 3 段と privacyDialog re-export を縮約。`.bak` は gitignore 対象で物理削除。振る舞い不変・既存テスト import 変更のみ。検証: type-check / content 744 tests / lint / build（content-extractor.js 維持）green。commits `37700c19` `35676521` `eda005d2`。bench c5 の FakeScheduler import は着地後に検証で検出・修正）
+- 2026-09-07-17-refactor-inmemory-delete-drift-doc.md（✅ 完了・アーカイブ済 — InMemoryTransport の DELETE ソフト/ハード乖離を JSDoc・インラインコメントで明示、削除テスト名を乖離認識型に変更、ガードテスト 3 件（getRecords 残存 / 削除済み UPDATE / 重複検出）で乖離を仕様固定、`dev-docs/TEST_DOUBLES_DIVERGENCE.md` 新設（観点別影響表・is_deleted の正しい用途・将来の追加手順）。検証: type-check / 17 tests / build green。commit `55ee5a58`）
+- 2026-09-07-18-refactor-messaging-ublock-type-drift.md（✅ 完了・アーカイブ済 — `PayloadForType` を `'payload' extends keyof U` 分岐で optional payload 対応（no-payload は `never` 維持）、uniformity テストの `as` 退避を本来のアサートに復元、`isServiceWorkerRequest` 整合テスト追加、ublockParser 側 `UblockRules` を `ParsedUblockRuleset` に rename し `ublockMatcher.test` の `as unknown as` ブリッジを明示変換に置換。項目 2・3 はドリフトなしでクローズ記録。型・テストのみで実行時挙動不変。検証: type-check / type-check:test / validate 全体 green。commit `6b6fabe8`）
+- 2026-09-07-19-refactor-remove-opfs-spike.md（✅ 完了・アーカイブ済 — OPFS feasibility spike を完全削除（格下げ案不採用・根拠を PBI 実装メモに記録）。union・`SQLITE_MESSAGE_TYPES`・`OffscreenOpfsSpikeResponse`・RPC `opfsSpike`・validators・offscreen ハンドラ・background gateway/deps/protocol/readOnlyHandler・`sqliteOperationSecurity.ts` 3 リスト・InMemoryTransport case・dashboard サービス/UI/ロケール・E2E を 35 ファイルで撤去（+84/−306）、`opfsSpike.ts` を git rm。opfsWorker/WASM と CSP は無修正、`opfsSpike-*.js` チャンク消滅を dist 確認、ADR-014 に撤去 Note、CHANGELOG 追記。grep ガードで再発防止。検証: type-check / lint / 全テスト 11869 / build green。commit `01c0da26`）
 
 ### 2026-09-07 テスト型債務返済シリーズ（08〜12・全完了）
 
