@@ -7,9 +7,10 @@
  * availability()/create()/prompt() が権限拒否なく成功することを確認済み。
  */
 
-import { webcrypto as crypto } from '@peculiar/webcrypto';
+import { Crypto } from '@peculiar/webcrypto';
 import { vi } from 'vitest';
-Object.defineProperty(global, 'crypto', { value: crypto });
+
+Object.defineProperty(global, 'crypto', { value: new Crypto() });
 
 // logger モック
 vi.mock('../../utils/logger.js', () => ({
@@ -37,9 +38,9 @@ const { sanitizePromptContent } = vi.mocked(promptSanitizerModule);
 interface MockSession {
     prompt: ReturnType<typeof vi.fn>;
     destroy: ReturnType<typeof vi.fn>;
-    contextWindow?: number;
-    contextUsage?: number;
-    inputQuota?: number;
+    contextWindow?: number | undefined;
+    contextUsage?: number | undefined;
+    inputQuota?: number | undefined;
     oncontextoverflow?: ((event: Event) => void) | null;
 }
 
@@ -276,7 +277,7 @@ describe('BuiltInAIClient', () => {
 
             await client.summarize(longContent);
 
-            const sentText = session.prompt.mock.calls[0][0] as string;
+            const sentText = session.prompt.mock.calls[0]![0] as string;
             expect(sentText.length).toBeLessThanOrEqual(16384);
         });
 
@@ -302,7 +303,7 @@ describe('BuiltInAIClient', () => {
 
             await client.summarize(longContent);
 
-            const sentText = session.prompt.mock.calls[0][0] as string;
+            const sentText = session.prompt.mock.calls[0]![0] as string;
             // 9216 tokens * 2 chars/token * 0.8 safety margin = 14745
             expect(sentText.length).toBeLessThanOrEqual(14745);
             expect(sentText.length).toBeLessThan(16384);
@@ -315,7 +316,7 @@ describe('BuiltInAIClient', () => {
 
             await client.summarize(longContent);
 
-            const sentText = session.prompt.mock.calls[0][0] as string;
+            const sentText = session.prompt.mock.calls[0]![0] as string;
             expect(sentText.length).toBe(16384);
         });
 
@@ -326,7 +327,7 @@ describe('BuiltInAIClient', () => {
 
             await client.summarize(longContent);
 
-            const sentText = session.prompt.mock.calls[0][0] as string;
+            const sentText = session.prompt.mock.calls[0]![0] as string;
             expect(sentText.length).toBe(16384);
         });
 

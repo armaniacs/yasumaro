@@ -3,10 +3,11 @@
  * OpenAIProvider.ts の単体テスト
  */
 
-import { webcrypto as crypto } from '@peculiar/webcrypto';
+import { Crypto } from '@peculiar/webcrypto';
 import { vi } from 'vitest';
 import type { Mock } from 'vitest';
-Object.defineProperty(global, 'crypto', { value: crypto });
+
+Object.defineProperty(global, 'crypto', { value: new Crypto() });
 
 // fetch モック
 vi.mock('../../utils/fetch.js', () => ({
@@ -278,7 +279,7 @@ describe('OpenAIProvider', () => {
             const p = new OpenAIProvider({ ...baseSettings, openai_base_url: '' });
             await p.generateSummary('content');
 
-            const url = (fetchWithRetry as Mock).mock.calls[0][0];
+            const url = (fetchWithRetry as Mock).mock.calls[0]![0];
             expect(url).toContain('https://api.openai.com/v1/chat/completions');
         });
 
@@ -318,7 +319,7 @@ describe('OpenAIProvider', () => {
             const p = new OpenAIProvider({ ...baseSettings, openai_api_key: '' });
             await p.generateSummary('content');
 
-            const headers = (fetchWithRetry as Mock).mock.calls[0][1].headers;
+            const headers = (fetchWithRetry as Mock).mock.calls[0]![1].headers;
             expect(headers['Authorization']).toBeUndefined();
         });
 
@@ -390,7 +391,7 @@ describe('OpenAIProvider', () => {
             const longContent = 'あ'.repeat(10000);
             await p.generateSummary(longContent);
 
-            const body = JSON.parse((fetchWithRetry as Mock).mock.calls[0][1].body);
+            const body = JSON.parse((fetchWithRetry as Mock).mock.calls[0]![1].body);
             const userPrompt = body.messages[1].content as string;
             // 4000文字を超えたコンテンツは送られない
             expect(userPrompt.length).toBeLessThanOrEqual(4200); // プロンプトテンプレート分の余裕を含む
@@ -408,7 +409,7 @@ describe('OpenAIProvider', () => {
             const longContent = 'a'.repeat(15000);
             await p.generateSummary(longContent);
 
-            const body = JSON.parse((fetchWithRetry as Mock).mock.calls[0][1].body);
+            const body = JSON.parse((fetchWithRetry as Mock).mock.calls[0]![1].body);
             const userPrompt = body.messages[1].content as string;
             // 10000文字を超えたコンテンツは送られない
             expect(userPrompt.length).toBeLessThanOrEqual(10200);
@@ -427,7 +428,7 @@ describe('OpenAIProvider', () => {
             const longContent = 'b'.repeat(20_000);
             await p.generateSummary(longContent);
 
-            const body = JSON.parse((fetchWithRetry as Mock).mock.calls[0][1].body);
+            const body = JSON.parse((fetchWithRetry as Mock).mock.calls[0]![1].body);
             const userPrompt = body.messages[1].content as string;
             // 15000文字の制限に従い、プロンプトテンプレート分の余裕を含む
             expect(userPrompt.length).toBeLessThanOrEqual(15200);
@@ -469,7 +470,7 @@ describe('OpenAIProvider', () => {
             const p = new OpenAIProvider({ ...baseSettings, openai_base_url: 'https://api.openai.com/v1/' });
             await p.generateSummary('content');
 
-            const url = (fetchWithRetry as Mock).mock.calls[0][0];
+            const url = (fetchWithRetry as Mock).mock.calls[0]![0];
             expect(url).toBe('https://api.openai.com/v1/chat/completions');
             expect(url).not.toContain('v1//chat');
         });
