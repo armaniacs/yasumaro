@@ -21,7 +21,12 @@ export interface UblockRule {
   originalLine?: string; // hosts形式の場合のみ
 }
 
-export interface UblockRules {
+/**
+ * パーサ中間形式のルールセット（`parseUblockFilterList` の返り値）。
+ * ストレージ保存用の軽量形式（`src/utils/types.ts` の `UblockRules`）とは
+ * 別物であり、同名衝突を避けるため `ParsedUblockRuleset` と命名する。
+ */
+export interface ParsedUblockRuleset {
   blockRules: UblockRule[];
   exceptionRules: UblockRule[];
   metadata: {
@@ -115,9 +120,9 @@ export function buildRuleObject(trimmedLine: string, type: string, domain: strin
  * 【処理効率化】: 関数呼び出しのオーバーヘッドは最小限
  * 【再利用性】: parseUblockFilterListの初期化とエラー時の返却で使用
  * 🟢 信頼性レベル: plan/UII/10-data-structures.md に記載されるデータ構造
- * @returns {UblockRules} - 空のUblockRulesオブジェクト
- */
-export function createEmptyRuleset(): UblockRules {
+  * @returns {ParsedUblockRuleset} - 空のParsedUblockRulesetオブジェクト
+  */
+export function createEmptyRuleset(): ParsedUblockRuleset {
   return {
     blockRules: [],
     exceptionRules: [],

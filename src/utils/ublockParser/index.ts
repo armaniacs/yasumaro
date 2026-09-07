@@ -11,7 +11,7 @@
 import { DEFAULT_METADATA, RULE_TYPES } from './constants.js';
 import { errorMessage } from '../errorUtils.js';
 import { isValidString, isCommentLine, isEmptyLine, validateDomain, isValidRulePattern } from './validation.js';
-import { createEmptyRuleset, generateRuleId, buildRuleObject, parseDomainList as transformParseDomainList, UblockRule, UblockRules } from './transform.js';
+import { createEmptyRuleset, generateRuleId, buildRuleObject, parseDomainList as transformParseDomainList, UblockRule, ParsedUblockRuleset } from './transform.js';
 import { parseUblockFilterLine } from './parsing.js';
 import {
     cleanupCache,
@@ -43,6 +43,10 @@ export {
     createEmptyRuleset,
     transformParseDomainList
 };
+
+// Re-export parser intermediate types (renamed from UblockRules in PBI-18:
+// storage lightweight form in src/utils/types.ts keeps the UblockRules name)
+export type { ParsedUblockRuleset, UblockRule } from './transform.js';
 
 // Re-export options functions
 export {
@@ -82,7 +86,7 @@ export interface ParseError {
  * パース結果（エラー情報含む）
  */
 export interface ParseResultWithErrors {
-    rules: UblockRules;
+    rules: ParsedUblockRuleset;
     errors: ParseError[];
 }
 
@@ -200,10 +204,10 @@ export function parseUblockFilterListWithErrors(text: string): ParseResultWithEr
     }
 
     // 【メタデータ構築】: パース結果の集計情報 🟢
-    const rules: UblockRules = {
+    const rules: ParsedUblockRuleset = {
         blockRules: blockRules,                         // 【ブロックルール配列】
         exceptionRules: exceptionRules,                 // 【例外ルール配列】
-        // errors: errors,                                 // 【エラー情報】 - UblockRules型にはありませんが、Resultには含まれます
+        // errors: errors,                                 // 【エラー情報】 - ParsedUblockRuleset型にはありませんが、Resultには含まれます
         metadata: {
             source: DEFAULT_METADATA.SOURCE,  // 【データソース】: テキストエリア貼り付け
             importedAt: Date.now(),           // 【インポート日時】: UNIXタイムスタンプ
@@ -234,9 +238,9 @@ export function parseUblockFilterListWithErrors(text: string): ParseResultWithEr
  * 【保守性】: ルールセット構造が変更された場合も保守しやすい
  * 🟢 信頼性レベル: plan/UII/02-phase2-parser.md に記載される機能
  * @param {string} text - 複数行のフィルターテキスト
- * @returns {UblockRules} - パースされたUblockRulesオブジェクト
+ * @returns {ParsedUblockRuleset} - パースされたParsedUblockRulesetオブジェクト
  */
-export function parseUblockFilterList(text: string): UblockRules {
+export function parseUblockFilterList(text: string): ParsedUblockRuleset {
     // 【キャッシュクリーンアップ】: 定期的にキャッシュをクリーンアップ 🟢
     cleanupCache();
 
@@ -248,11 +252,11 @@ export function parseUblockFilterList(text: string): UblockRules {
     // 【キャッシュチェック】: キャッシュに存在する場合はキャッシュを返す 🟢
     // 【キャッシュキー生成】: 最初の100文字と長さでキャッシュキーを生成
     const cacheKey = generateCacheKey(text);
-    const cached = getFromCache(cacheKey) as (ParseResultWithErrors & { rules: UblockRules }) | UblockRules | null;
+    const cached = getFromCache(cacheKey) as (ParseResultWithErrors & { rules: ParsedUblockRuleset }) | ParsedUblockRuleset | null;
     if (cached && typeof cached === 'object' && 'rules' in cached) {
-        return { ...(cached as ParseResultWithErrors & { rules: UblockRules }).rules };
+        return { ...(cached as ParseResultWithErrors & { rules: ParsedUblockRuleset }).rules };
     } else if (cached) {
-        return { ...(cached as UblockRules) };
+        return { ...(cached as ParsedUblockRuleset) };
     }
 
     // VULN-012 fix: limit input size to prevent memory exhaustion
@@ -303,7 +307,7 @@ export function parseUblockFilterList(text: string): UblockRules {
     }
 
     // 【メタデータ構築】: パース結果の集計情報 🟢
-    const result: UblockRules = {
+    const result: ParsedUblockRuleset = {
         blockRules: blockRules,                         // 【ブロックルール配列】
         exceptionRules: exceptionRules,                 // 【例外ルール配列】
         metadata: {
