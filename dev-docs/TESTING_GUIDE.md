@@ -38,4 +38,11 @@ Automated tests have limitations due to Chrome Extension architecture. Manual ve
 - Service worker tests have limitations
 - Always verify with actual Chrome browser
 
+## Test-support placement convention (PBI-14)
+
+- Test-only doubles, fakes, and seams live under `src/**/__tests__/helpers/` (e.g. `src/content/__tests__/helpers/`, existing `src/background/__tests__/helpers/`).
+- Production files must not define test-only symbols; production code must not import from `__tests__/helpers/`.
+- New suffixes (`*.testkit.ts`) or top-level `src/test-support/` directories are not used.
+- chrome-dependent handlers are split into a deps-injected named function in `src/` (entrypoint only registers) so unit tests call them without chrome mocks.
+
 After code changes, run `npm run build` before testing in Chrome Extension.

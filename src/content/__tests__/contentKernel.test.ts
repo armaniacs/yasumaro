@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ContentKernel, FakeScheduler, IdleScheduler } from '../contentKernel.js';
+import { ContentKernel, IdleScheduler } from '../contentKernel.js';
+import { FakeScheduler } from './helpers/fakeScheduler.js';
 import { InMemoryStoragePort } from '../../utils/storage/storagePort.js';
-import { InMemoryDomainPolicyPort, ChromeDomainPolicyPort } from '../domainPolicyPort.js';
+import { InMemoryDomainPolicyPort } from './helpers/inMemoryDomainPolicyPort.js';
+import { ChromeDomainPolicyPort } from '../domainPolicyPort.js';
 import { PageState } from '../pageState.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../../utils/aiSummaryCleaner/rules.js';
 import { DEFAULT_KEYWORDS } from '../../utils/contentCleaner.js';

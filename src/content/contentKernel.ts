@@ -82,36 +82,6 @@ export class IdleScheduler implements Scheduler {
     }
 }
 
-export class FakeScheduler implements Scheduler {
-    private nextId = 1;
-    private tasks = new Map<number, { cb: () => void; delayMs: number | undefined }>();
-    /** All delays passed to schedule (in order) */
-    public delays: Array<number | undefined> = [];
-    /** Last delay passed to schedule */
-    public lastDelay: number | undefined = undefined;
-    schedule(callback: () => void, delayMs?: number): number {
-        const id = this.nextId++;
-        this.tasks.set(id, { cb: callback, delayMs: delayMs });
-        this.delays.push(delayMs);
-        this.lastDelay = delayMs;
-        return id;
-    }
-    cancel(id: number): void {
-        this.tasks.delete(id);
-    }
-    flush(): void {
-        const pending = [...this.tasks.values()];
-        this.tasks.clear();
-        for (const { cb } of pending) cb();
-    }
-    pendingCount(): number {
-        return this.tasks.size;
-    }
-    pendingDelays(): Array<number | undefined> {
-        return [...this.tasks.values()].map((v) => v.delayMs);
-    }
-}
-
 const DEFAULT_MIN_VISIT_DURATION = 5;
 const DEFAULT_MIN_SCROLL_DEPTH = 50;
 
@@ -333,8 +303,12 @@ export class ContentKernel {
         return gate.shouldRecord(duration, scrollPercent);
     }
 
-    createVisitGate(): VisitGate {
-        return new VisitGate(this.pageState.toVisitGateThresholds(), this.clock);
+    /**
+     * VisitGate factory — single implementation (PBI-14). Facade callers
+     * pass an explicit clock for tests; otherwise the kernel clock applies.
+     */
+    createVisitGate(clock?: Clock): VisitGate {
+        return new VisitGate(this.pageState.toVisitGateThresholds(), clock ?? this.clock);
     }
 
     checkVisitConditions(): void {
