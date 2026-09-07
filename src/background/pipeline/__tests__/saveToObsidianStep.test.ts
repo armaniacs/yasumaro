@@ -20,7 +20,9 @@ import { addLog, LogType } from '../../../utils/logger.js';
 import type { RecordingContext, StepDeps } from '../types.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 
-function makeContext(overrides: Partial<RecordingContext['settings']> = {}): RecordingContext {
+type ExplicitUndefined<T> = { [K in keyof T]?: T[K] | undefined };
+
+function makeContext(overrides: ExplicitUndefined<RecordingContext['settings']> = {}): RecordingContext {
   return {
     data: {
       url: 'https://example.com',
@@ -28,7 +30,7 @@ function makeContext(overrides: Partial<RecordingContext['settings']> = {}): Rec
       content: '<p>Hello</p>',
       favIconUrl: '',
       engagement: { duration: 10, scrollDepth: 50 },
-    },
+    } as RecordingContext['data'],
     settings: {
       [StorageKeys.OBSIDIAN_API_KEY]: 'test-api-key-123456',
       [StorageKeys.OBSIDIAN_PROTOCOL]: 'https',
@@ -46,7 +48,7 @@ function makeContext(overrides: Partial<RecordingContext['settings']> = {}): Rec
 function makeMockObsidian() {
   return {
     appendToDailyNote: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
-  };
+  } as unknown as StepDeps['obsidian'] & { appendToDailyNote: ReturnType<typeof vi.fn> };
 }
 
 describe('saveToObsidianStep — obsidian_enabled flag', () => {
@@ -89,7 +91,7 @@ describe('saveToObsidianStep — obsidian_enabled flag', () => {
     const context = makeContext({
       [StorageKeys.OBSIDIAN_ENABLED]: true,
     });
-    context.markdown = undefined;
+    (context as { markdown?: string | undefined }).markdown = undefined;
 
     const result = await saveToObsidianStep(context, { obsidian: mockObsidian, aiService: { generateSummary: vi.fn() } as any });
 
