@@ -69,7 +69,7 @@ describe('version consistency', () => {
 
     // Root package version must match
     expect(lock.version).toBe(pkg.version);
-    expect(lock.packages[''].version).toBe(pkg.version);
+    expect(lock.packages['']!.version).toBe(pkg.version);
 
     // All direct dependencies declared in package.json must exist in the lock file
     const allDeclared = {
