@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.7.116` リリース。
+> - 現時点では `v6.8.0` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,29 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.8.0] - 2026-09-08
+
+最初の v6.8.x 安定化リリース。v6.7.x シリーズ（新機能フェーズ）からバグフィクス専用となる v6.8.x シリーズへ移行します。
+
+Chrome Web Store / Edge Add-ons 公開に向けて、ドキュメントを v6.7.x で導入した新機能（ブラウザ内蔵 AI、コンテンツクレンジングの大幅強化、閲覧履歴アーカイブ、AI 接続テストの実質化）に追随させました。機能面の変更はありません。
+
+This is the first v6.8.x stable release, transitioning from the v6.7.x feature series to the v6.8.x bug-fix-only series.
+
+Documentation has been brought up to date with the features introduced during v6.7.x (browser Built-in AI, greatly expanded content cleansing, browsing-history archive, and a real-inference AI connection test) ahead of Chrome Web Store / Edge Add-ons publication. There are no functional changes.
+
+### Docs / ドキュメント
+
+- **README・セットアップ/FAQ ガイドを v6.7.x 新機能に追随** — 内蔵 AI（Chrome Gemini Nano / Edge Phi-mini）、クレンジングプリセット4種とドメイン別上書き、閲覧履歴アーカイブ、AI 接続テストの送受信表示について `README.md`（日英）、`docs/SETUP_GUIDE.md`、`docs/FAQ.md`、`docs/AI_SUMMARY_GUIDE.md`、`docs/CLEANSING_CUSTOMIZATION_GUIDE.md`、`docs/BUILT_IN_AI_SETUP_GUIDE.md` を更新。「（開発中）」等の古い表現を削除
+- **PRIVACY.md にアーカイブ機能のデータフローを追記** — `.db` 書き出し（平文・非署名・ダウンロードフォルダ保存）、復元時の突合せ、一時オープンでのファイル書き戻しについて `docs/PRIVACY.md` と `public/PRIVACY.md` に同一内容を追加。内蔵 AI がデバイス外へデータを送信しないことを明記
+- **PERMISSIONS.md を v6.8.0 対象に更新** — Target Version を v6.8.0 に。`declarativeNetRequest`（Ollama への Origin ヘッダー削除用途）の正当化を Summary 表と本文に追加。`downloads` のアーカイブ書き出し用途を追記
+- **ストア掲載文を更新** — `_locales/{en,ja}/messages.json` の `extensionDescription` を stable 掲載向けに拡充
+- **ブログシリーズを追加** — v6.6 → v6.7 のユーザー体験差分を紹介する Zenn / note 向け記事群を `dev-docs/blogs/blog-6_8/` に追加
+- **CHANGELOG 冒頭のバージョニングポリシー文を更新** — 「現時点では `v6.7.116`」→「`v6.8.0`」
+
+### Chores / その他
+
+- **バージョン更新** — `6.7.116` → `6.8.0`
 
 ## [6.7.116] - 2026-09-07
 
