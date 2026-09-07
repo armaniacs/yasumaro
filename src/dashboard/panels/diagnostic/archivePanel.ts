@@ -15,7 +15,7 @@ import { downloadBlob } from '../../exportLogsService.js';
 import { type PanelLifecycle } from '../types.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { cutoffMsFromLocalDate, MAX_ARCHIVE_FILE_BYTES } from '../../../utils/archiveGuards.js';
+import { cutoffMsFromLocalDate, assertCutoffPair, MAX_ARCHIVE_FILE_BYTES } from '../../../utils/archiveGuards.js';
 import { focusTrapManager } from '../../../utils/ui/focusTrap.js';
 import { getMessage } from '../../../utils/i18n.js';
 
@@ -70,7 +70,11 @@ export function createArchivePanel(): PanelLifecycle {
         if (!dateInput?.value) {
           throw new Error(localized('archiveDateRequired'));
         }
-        return cutoffMsFromLocalDate(dateInput.value);
+        // Input derivation goes through the `assertCutoffPair` seam: the
+        // derived ms trivially matches itself, but range/format enforcement
+        // stays in one place (PBI 2026-09-07-21).
+        const derived = cutoffMsFromLocalDate(dateInput.value);
+        return assertCutoffPair(dateInput.value, derived);
       };
 
       const downloadStaging = async (): Promise<void> => {
