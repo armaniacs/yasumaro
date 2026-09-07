@@ -109,12 +109,13 @@ const MockedObsidianClient = ObsidianClient as MockedClass<typeof ObsidianClient
 
 const MockedPrivacyPipeline = PrivacyPipeline as MockedClass<typeof PrivacyPipeline>;
 
+// Only the privacy-relevant fields matter here; the pipeline reads no others.
 const mockSettings = {
   PRIVACY_MODE: 'full_pipeline',
   PII_SANITIZE_LOGS: true,
   TAG_SUMMARY_MODE: false,
   AUTO_SAVE_PRIVACY_BEHAVIOR: 'save',
-};
+} as unknown as import('../../../utils/storage/types.js').Settings;
 
 function makeAiClient() {
   return {
@@ -175,10 +176,10 @@ describe('RecordingPipeline', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockProcess = vi.fn();
-    MockedPrivacyPipeline.mockImplementation(function() {
+    MockedPrivacyPipeline.mockImplementation(function(this: any) {
       this.process = mockProcess;
     });
-    MockedObsidianClient.mockImplementation(function() {
+    MockedObsidianClient.mockImplementation(function(this: any) {
       this.appendToDailyNote = vi.fn();
     });
   });
@@ -321,8 +322,8 @@ describe('RecordingPipeline', () => {
     });
 
     it('previewOnly 時は Obsidian に保存しない', async () => {
-      const mockAppend = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
-      MockedObsidianClient.mockImplementation(function() {
+      const mockAppend = vi.fn<(content: string) => Promise<void>>().mockResolvedValue(undefined);
+      MockedObsidianClient.mockImplementation(function(this: any) {
         this.appendToDailyNote = mockAppend;
       });
       mockProcess.mockResolvedValue({
@@ -355,8 +356,8 @@ describe('RecordingPipeline', () => {
     // saveToObsidianStep, so MockedObsidianClient is never called. This is a test
     // design issue, not a Vitest migration issue.
     it.skip('AI要約が Obsidian に保存される', async () => {
-      const mockAppend = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
-      MockedObsidianClient.mockImplementation(function() {
+      const mockAppend = vi.fn<(content: string) => Promise<void>>().mockResolvedValue(undefined);
+      MockedObsidianClient.mockImplementation(function(this: any) {
         this.appendToDailyNote = mockAppend;
       });
       mockProcess.mockResolvedValue({

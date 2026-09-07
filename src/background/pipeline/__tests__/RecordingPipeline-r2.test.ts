@@ -52,7 +52,7 @@ vi.mock('../../../utils/storageUrls.js');
 vi.mock('../../../utils/domainUtils.js');
 vi.mock('../../../utils/permissionManager.js');
 vi.mock('../../../utils/trustChecker.js', () => ({
-  TrustChecker: vi.fn().mockImplementation(function () {
+  TrustChecker: vi.fn().mockImplementation(function (this: any) {
     return {
       checkDomain: vi.fn().mockResolvedValue({
         canProceed: true, showAlert: false, reason: undefined,
@@ -87,10 +87,11 @@ import { makeOrchestrator } from '../../__tests__/helpers/makeRecordingLogic.js'
 const MockedPrivacyPipeline = PrivacyPipeline as MockedClass<typeof PrivacyPipeline>;
 const MockedObsidianClient = ObsidianClient as MockedClass<typeof ObsidianClient>;
 
-const mockSettings: Record<string, unknown> = {
+// Only the privacy-relevant fields matter here; the pipeline reads no others.
+const mockSettings = {
   PRIVACY_MODE: 'full_pipeline', PII_SANITIZE_LOGS: true,
   TAG_SUMMARY_MODE: false, AUTO_SAVE_PRIVACY_BEHAVIOR: 'save',
-};
+} as unknown as import('../../../utils/storage/types.js').Settings;
 
 function makeAiClient() {
   return {
@@ -126,10 +127,10 @@ function setupMockPipeline() {
 }
 
 function setupStepMocks(mockProcess: ReturnType<typeof vi.fn>) {
-  MockedPrivacyPipeline.mockImplementation(function () {
+  MockedPrivacyPipeline.mockImplementation(function (this: any) {
     (this as any).process = mockProcess;
   } as any);
-  MockedObsidianClient.mockImplementation(function () {
+  MockedObsidianClient.mockImplementation(function (this: any) {
     (this as any).appendToDailyNote = vi.fn();
   } as any);
 }
@@ -194,7 +195,7 @@ describe('RecordingPipeline - R2', () => {
       );
       const result = await pipeline.record(
         { title: 'Private', url: 'https://example.com/private', content: 'Content' },
-        { settings: { ...mockSettings, AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip' } }
+        { settings: { ...mockSettings, AUTO_SAVE_PRIVACY_BEHAVIOR: 'skip' } as unknown as import('../../../utils/storage/types.js').Settings }
       );
       expect(result.success).toBe(false);
       expect(result.error).toBe('PRIVATE_PAGE_DETECTED');
@@ -221,7 +222,7 @@ describe('RecordingPipeline - R2', () => {
       vi.clearAllMocks();
       Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
       setupMockPipeline();
-      MockedObsidianClient.mockImplementation(function () {
+      MockedObsidianClient.mockImplementation(function (this: any) {
         (this as any).appendToDailyNote = vi.fn();
       } as any);
     });
@@ -231,7 +232,7 @@ describe('RecordingPipeline - R2', () => {
         isHostPermitted: vi.fn().mockRejectedValue(new Error('Permission denied')),
         recordDeniedVisit: vi.fn(),
       });
-      MockedPrivacyPipeline.mockImplementation(function () {
+      MockedPrivacyPipeline.mockImplementation(function (this: any) {
         (this as any).process = vi.fn().mockResolvedValue({ summary: 'S', maskedCount: 0 });
       } as any);
 
@@ -246,10 +247,10 @@ describe('RecordingPipeline - R2', () => {
       // Reset TrustChecker and set to failing implementation
       const { TrustChecker } = await import('../../../utils/trustChecker.js');
       (TrustChecker as any).mockReset();
-      (TrustChecker as any).mockImplementation(function () {
+      (TrustChecker as any).mockImplementation(function (this: any) {
         return { checkDomain: vi.fn().mockRejectedValue(new Error('Trust check failed')) };
       });
-      MockedPrivacyPipeline.mockImplementation(function () {
+      MockedPrivacyPipeline.mockImplementation(function (this: any) {
         (this as any).process = vi.fn().mockResolvedValue({ summary: 'S', maskedCount: 0 });
       } as any);
 
