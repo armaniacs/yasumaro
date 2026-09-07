@@ -1,5 +1,5 @@
 {
-  "total": 550,
+  "total": 544,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -114,8 +114,6 @@
     "src/utils/aiSummaryCleaner/__tests__/querySelectorAllDeep.test.ts": 3,
     "src/utils/contentExtractor/__tests__/dualPayload.test.ts": 3,
     "src/utils/crypto/__tests__/crypto.test.ts": 4,
-    "src/utils/storage/__tests__/encryptionSession-concurrency.test.ts": 4,
-    "src/utils/storage/__tests__/settingsStore-backup.test.ts": 2,
     "src/utils/storage/__tests__/settingsStore-plaintext-api-key.test.ts": 3
   }
 }

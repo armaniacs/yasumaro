@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getSettings } from '../../storage';
+import { getSettings } from '../../storage.js';
 import { migrateToSingleSettingsObject, LEGACY_SETTINGS_BACKUP_KEY } from '../settingsMigration.js';
 
 describe('getSettings — recovery from backup on corruption', () => {
@@ -89,7 +89,7 @@ describe('migrateToSingleSettingsObject — non-destructive backup', () => {
     // ...but preserved in a timestamped backup key
     const backupKeys = Object.keys(storageData).filter((k) => k.startsWith(LEGACY_SETTINGS_BACKUP_KEY));
     expect(backupKeys.length).toBe(1);
-    const backup = storageData[backupKeys[0]] as { data: Record<string, unknown>; createdAt: number };
+    const backup = storageData[backupKeys[0]!] as { data: Record<string, unknown>; createdAt: number };
     expect(backup.data['obsidian_api_key']).toBe('test-key');
     expect(typeof backup.createdAt).toBe('number');
   });
