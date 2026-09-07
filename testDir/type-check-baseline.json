@@ -1,5 +1,5 @@
 {
-  "total": 285,
+  "total": 255,
   "files": {
     "src/background/__tests__/SessionAlarmService.test.ts": 2,
     "src/background/__tests__/alarmRegistry.test.ts": 3,
@@ -11,9 +11,6 @@
     "src/background/__tests__/pendingChromeStorageQueue.test.ts": 6,
     "src/background/__tests__/pendingMergeInterleave.test.ts": 3,
     "src/background/__tests__/persistentRetryQueue.test.ts": 14,
-    "src/background/__tests__/recordingPipeline-full.test.ts": 8,
-    "src/background/__tests__/recordingPipeline-impl.test.ts": 10,
-    "src/background/__tests__/recordingPipeline-integration.test.ts": 12,
     "src/background/__tests__/reviewSummaryGenerator-concurrency.test.ts": 4,
     "src/background/__tests__/robustness-data-integrity.test.ts": 8,
     "src/background/__tests__/robustness-fetch-timeout.test.ts": 2,

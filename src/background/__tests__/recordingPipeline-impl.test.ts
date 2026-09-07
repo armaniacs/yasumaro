@@ -363,7 +363,7 @@ const mockSettings = {
   PII_SANITIZE_LOGS: true,
   TAG_SUMMARY_MODE: false,
   AUTO_SAVE_PRIVACY_BEHAVIOR: 'save',
-};
+} as unknown as import('../../utils/storage/types.js').Settings;
 
 function makeAiClient() {
   return {
@@ -559,7 +559,7 @@ describe('RecordingPipeline', () => {
 
       expect(result.success).toBe(true);
       expect(mockAppend).toHaveBeenCalled();
-      const callArg: string = mockAppend.mock.calls[0]?.[0] || '';
+      const callArg: string = (mockAppend.mock.calls[0] as unknown as string[])?.[0] || '';
       expect(callArg).toContain('Generated AI summary');
     });
 
