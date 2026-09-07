@@ -25,6 +25,17 @@
 - 2026-09-07-15-fix-history-tag-filter-sql-migration.md（⬜ **現時点では実装しない**: history-panel の tag-filter を client-side 5000 件 over-fetch から SQL クエリ（FTS5 MATCH + 短タグ LIKE フォールバック）へ移行し、`TAG_FILTER_FETCH_LIMIT` による「古い順ソート + タグ絞り込みで新しいエントリがサイレント除外」を解消。tag 一致セマンティクス変更のリスクと未確認論点（tags 無インデックスでの LIKE 性能、PBI-34 の意図的分岐の扱い）があり、16 とセットで保留。RICE 6.0。2pt / 副作用 🟡 / 🔧（fix））
 - 2026-09-07-16-refactor-remove-legacy-history-panel.md（⬜ **現時点では実装しない**: `3478f9d9`（2026-07）以降どこからも navigate されない legacy `panel-history` の撤去（`main.ts` 登録・HTML セクション・陳腐化した `initHistoryPanel` mock）。ただし pending pages セクション・6種フィルタ・`chrome.storage.onChanged` ライブ更新が現行 SQLite パネルに既存かが未確認で、無ければ「pending pages 移設」の独立 PBI に分裂する。15 → 16 の順で、両方保留。RICE 5.25。3pt / 副作用 🟡 / 🔧（refactor））
 
+### 2026-09-07 architecture review round 2（arch-delivery-loop・0907a ブランチ）— 6 件
+
+（直近 200 コミットのホットスポット診断（HTML レポート: `/tmp/architecture-review-20260907-2151.html`）+ 2026-09-05-00 台帳の再評価を入力に RICE 採点し PBI 化。2026-09-07。前ラウンド・台帳の見送り項目は再提案除外。着手順 = NN 順（RICE 降順）。バッチ1（並列: 20 / 21 / 25）→ バッチ2（並列: 22 / 23 / 24）。台帳送り 5 項目は `2026-09-05-00-backlog-future.md` の「2026-09-07 round 2 で台帳入り」節参照）
+
+- 2026-09-07-20-refactor-copy-markdown-button-factory.md（⬜ dashboard↔popup で重複する copy-markdown ボタン 4 ステップ（markdown 変換 + clipboard + ✓/✗ 表示 + aria 更新）を `createCopyMarkdownButton` factory に畳む。`copyTextToClipboard` 本番直呼び 2 箇所 → 1。RICE 20.0。0.5pt / 副作用 🟢 / 🔧（refactor））
+- 2026-09-07-21-refactor-archive-guard-seam-unification.md（⬜ archive ガードの 4 層分散を統合: cutoff ペア検証を `assertCutoffPair` 1 箇所に（validator は厳密・SW handler は弱い形状チェックのみ・worker は再導出・panel は入力時導出の 4 回分散）、staging 名を `StagingName` branded type に（validator 5 箇所の正規表現 + handler 9 箇所の空文字 + `void isValidStagingName;` を解消）。RICE 16.0。1pt / 副作用 🟡 / 🔧（refactor））
+- 2026-09-07-22-refactor-archive-wire-table-driven.md（⬜ archive wire 層 7-hop × 14 subtype の 1:1 pass-through を `MaintainOp` 正の単一テーブルに畳む。到達不能なコピペ重複 3 箇所が実在（offscreenGateway の重複 overload + 重複 case、StorageBackend の重複 interface、opfsWorker/types の重複 payload）。新 subtype 追加時 7 ファイル → 1-2。noRetry 5 op の宣言的保持。RICE 12.0。3pt / 副作用 🟡 / 🔧（refactor））
+- 2026-09-07-23-refactor-sqlite-history-view-ownership.md（⬜ sqliteHistoryPanel（610 行）の二重レンダーパス（`updateDynamicRegions` vs `renderState`）と DOM ID seam 漏洩（ID 5 種 × 33 ヒット、Panel から getElementById 12 箇所）を View の render+wire 単一入口に統合。PBI 16（legacy 撤去・保留）と無関係の現行パネル単体の摩擦。RICE 8.0。2pt / 副作用 🟡 / 🔧（refactor））
+- 2026-09-07-24-refactor-popup-status-store.md（⬜ popup の二重 status 取得（statusPanel 初期化と recordSession.resetRecordButton が両方 `tabs.query + checkPageStatus` を実行）を StatusStore 共有に。ボタン文言分岐と status 表示分岐の不一致温床を解消。`normalizeUrl` popup プライベート実装削除。RICE 5.3。1.5pt / 副作用 🟡 / 🔧（refactor））
+- 2026-09-07-25-refactor-panel-catalog-single-source.md（⬜ 「どのパネルが存在するか」の 4 箇所分散（HTML sidebar 17 ボタン / main.ts 11 直登録 + staticPanels 9 / dashboard.ts sectionPanelMap / registryContext 迂回クリック）を panelCatalog 1 テーブルから派生に。RICE 5.3。1.5pt / 副作用 🟡 / 🔧（refactor））
+
 ### 将来候補の統合台帳（live）
 
 - [2026-09-05-00-backlog-future.md](2026-09-05-00-backlog-future.md) — 旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）に散在していた見送り・トリガー付き・製品判断待ち候補の統合台帳（2026-09-05 整理）。着手はトリガー別に管理。次ラウンドの architecture review はこれを入力にする
