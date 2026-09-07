@@ -37,7 +37,7 @@ import {
   updateStagingRecord,
 } from './archiveStaging.js';
 import {
-  cutoffMsFromLocalDate,
+  assertCutoffPair,
   MAX_ARCHIVE_FILE_BYTES,
   ARCHIVE_FORMAT_VERSION,
 } from '../../utils/archiveGuards.js';
@@ -48,15 +48,18 @@ const ARCHIVE_INSERT_BATCH = 5000;
 let archiveCreateInFlight = false;
 
 /** Re-derive the cutoff on the worker side: a fabricated cutoffMs pair from
- * the client is rejected here even if it passed message validation. */
+ * the client is rejected here even if it passed message validation.
+ * Verification itself is the `assertCutoffPair` seam; this wrapper only keeps
+ * the worker's `Archive validation failed` prefix (fail-closed re-check stays).
+ */
 function resolveCutoffMs(payload: { cutoffDate: string; cutoffMs: number }): number {
-  const derived = cutoffMsFromLocalDate(payload.cutoffDate);
-  if (payload.cutoffMs !== derived) {
+  try {
+    return assertCutoffPair(payload.cutoffDate, payload.cutoffMs);
+  } catch (e) {
     throw new Error(
-      `Archive validation failed: cutoffMs (${payload.cutoffMs}) does not match cutoffDate (${payload.cutoffDate})`,
+      `Archive validation failed: ${e instanceof Error ? e.message : String(e)}`,
     );
   }
-  return derived;
 }
 
 async function countRows(

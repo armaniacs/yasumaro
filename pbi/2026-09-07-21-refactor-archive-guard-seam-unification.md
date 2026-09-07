@@ -40,16 +40,16 @@
   Then エラーメッセージ・ 成功応答が不変で green（弱チェック削除は validator が先に落ちるため観測不可、であることをテストで担保）
 
 ## 受け入れ基準
-- [ ] `src/utils/archiveGuards.ts` に `assertCutoffPair(cutoffDate, cutoffMs): number` が新設され、`cutoffMsFromLocalDate` による再導出 + 厳密一致 + 範囲（未来日許容幅を含む）を一括検証する
-- [ ] `src/messaging/validators.ts` の cutoff 検証（:193-212 相当）が `assertCutoffPair` 経由になり、再導出ロジックの直接記述が消える
-- [ ] `src/offscreen/opfsWorker/archiveCreateHandlers.ts:52-60`（`resolveCutoffMs`）が `assertCutoffPair` 経由になる（worker 側の fail-closed 再検証は維持）
-- [ ] `src/dashboard/panels/diagnostic/archivePanel.ts:69-74` の入力時導出が `assertCutoffPair` 経由になる
-- [ ] `StagingName` branded type が導入され、発行側 `issueName()` と validator 境界デコードでのみ生成される。wire 上の型（sqliteMessages の payload）は `string` のまま維持
-- [ ] `archiveHandler.ts` の `stagingName.length === 0` チェック 9 箇所と `archiveSessionHandlers.ts:236` の `void isValidStagingName;` が削除されている
-- [ ] SW handler への到達前に validator が必ず走る経路であることを、テストまたは既存の dispatch 順序確認で明示している（弱チェック削除の安全性根拠）
-- [ ] `archiveGuards.test.ts` に `assertCutoffPair` の新規テスト（一致・不一致・未来日境界・空文字）が追加され green
-- [ ] 既存の archive 関連テスト（validators / archiveHandler / archiveStaging / archiveSession / archivePanel）が green
-- [ ] `npm run type-check` / `npm run lint` / `npx vitest run src/utils src/messaging src/background/handlers/dashboardSqlite src/offscreen` が green
+- [x] `src/utils/archiveGuards.ts` に `assertCutoffPair(cutoffDate, cutoffMs): number` が新設され、`cutoffMsFromLocalDate` による再導出 + 厳密一致 + 範囲（未来日許容幅を含む）を一括検証する
+- [x] `src/messaging/validators.ts` の cutoff 検証（:193-212 相当）が `assertCutoffPair` 経由になり、再導出ロジックの直接記述が消える
+- [x] `src/offscreen/opfsWorker/archiveCreateHandlers.ts:52-60`（`resolveCutoffMs`）が `assertCutoffPair` 経由になる（worker 側の fail-closed 再検証は維持）
+- [x] `src/dashboard/panels/diagnostic/archivePanel.ts:69-74` の入力時導出が `assertCutoffPair` 経由になる
+- [x] `StagingName` branded type が導入され、発行側 `issueName()` と validator 境界デコードでのみ生成される。wire 上の型（sqliteMessages の payload）は `string` のまま維持
+- [x] `archiveHandler.ts` の `stagingName.length === 0` チェック 9 箇所と `archiveSessionHandlers.ts:236` の `void isValidStagingName;` が削除されている
+- [x] SW handler への到達前に validator が必ず走る経路であることを、テストまたは既存の dispatch 順序確認で明示している（弱チェック削除の安全性根拠）
+- [x] `archiveGuards.test.ts` に `assertCutoffPair` の新規テスト（一致・不一致・未来日境界・空文字）が追加され green
+- [x] 既存の archive 関連テスト（validators / archiveHandler / archiveStaging / archiveSession / archivePanel）が green
+- [x] `npm run type-check` / `npm run lint` / `npx vitest run src/utils src/messaging src/background/handlers/dashboardSqlite src/offscreen` が green
 
 ## テスト戦略
 - 単体: `assertCutoffPair` の網羅テスト（一致 / 不一致 / 未来日 +2 日境界 / 過去日 / 空文字 / 非有限数）
@@ -72,9 +72,17 @@
 1. `archiveHandler.ts` の `archive_create` のみにある `yasumaroVersion` 検査（1-64 文字）を validators 側へ寄せるか → 実装時に validator 側へ寄せる方針で結論（handler は薄くなる。文言は現行維持）
 2. `StagingName` の型定義置き場所（archiveGuards か archiveStaging か）→ validator が import できる中立位置（archiveGuards）に置く。循環が生じる場合は archiveGuards 内型として再確認
 
+## 実装メモ（2026-09-07 arch-delivery-loop）
+
+- `assertCutoffPair` / `CutoffMismatchError` を archiveGuards.ts に新設。validators（CutoffMismatchError を安定文言へマッピング）・archiveCreateHandlers.resolveCutoffMs（worker fail-closed 維持、prefix 維持）・archivePanel 入力時導出の 3 箇所が seam 経由に統一
+- `StagingName` branded type を archiveGuards.ts に定義（未解決事項 2 の結論: 中立位置）。`issueName()` 戻り値を StagingName に、validators 境界は `decodeStagingName` で生成。wire payload は string のまま
+- SW handler の `stagingName.length === 0` 9 箇所と `void isValidStagingName;`（＋その理由コメント 5 行）を削除。安全性根拠: MessageRouter.dispatch は DashboardSqliteValidator を先に走らせる（MessageRouter.validators.test.ts でピン留め済み）
+- 未解決事項 1 の結論: yasumaroVersion 検査（1-64 文字）は validator 側へ寄せ、handler は NOTE コメントで根拠を明示（文言は validator 側で同一維持）
+- 検証: type-check / lint（0 errors）/ 88 ファイル 1278 テスト green
+
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 検証ロジックの本番編集点が archiveGuards 1 箇所 + worker fail-closed 1 箇所に集約されている（grep で確認）
-- [ ] `void isValidStagingName;` と handler 空文字チェック 9 箇所が削除されている
-- [ ] コードレビュー完了
-- [ ] `npm run type-check` / `npm run lint` / archive 関連テスト green
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 検証ロジックの本番編集点が archiveGuards 1 箇所 + worker fail-closed 1 箇所に集約されている（grep で確認）
+- [x] `void isValidStagingName;` と handler 空文字チェック 9 箇所が削除されている
+- [x] コードレビュー完了
+- [x] `npm run type-check` / `npm run lint` / archive 関連テスト green
