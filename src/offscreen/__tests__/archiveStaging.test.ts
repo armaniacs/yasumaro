@@ -19,7 +19,7 @@ import {
 } from '../opfsWorker/archiveStaging.js';
 
 interface FakeDirEntry {
-  remove: ReturnType<typeof vi.fn>;
+  remove: ReturnType<typeof vi.fn<() => void>>;
 }
 
 function makeFakeDir() {

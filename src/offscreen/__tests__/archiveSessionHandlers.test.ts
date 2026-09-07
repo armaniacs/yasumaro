@@ -95,7 +95,7 @@ function outlineMeta(): Row {
 }
 
 function makeSessionEngine(spec: SessionEngineSpec = {}) {
-  const execCalls: Array<{ sql: string; params?: SqliteValue[] }> = [];
+  const execCalls: Array<{ sql: string; params?: SqliteValue[] | undefined }> = [];
   const objects = spec.objects ?? ARCHIVE_TABLES;
   const columns = spec.columns ?? makeArchiveColumns();
   const actualCount = spec.actualCount ?? (spec.queryRows?.length ?? 2);

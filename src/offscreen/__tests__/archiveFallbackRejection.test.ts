@@ -36,7 +36,7 @@ describe('Y2: non-OPFS backends reject archive operations', () => {
     // a bare object is enough to prove the rejection path.
     const adapter = new FallbackStorageAdapter({} as never);
     for (const method of ARCHIVE_METHODS) {
-      const result = await (adapter as unknown as Record<string, () => Promise<unknown>>)[method]();
+      const result = await (adapter as unknown as Record<string, () => Promise<unknown>>)[method]!();
       expect(result, `${method} must fail closed`).toEqual({ success: false, error: EXPECTED_ERROR });
     }
   });
@@ -46,7 +46,7 @@ describe('Y2: non-OPFS backends reject archive operations', () => {
     // an empty host proves no engine access happens on the reject path.
     const backend = new IdbVfsBackend({} as never);
     for (const method of ARCHIVE_METHODS) {
-      const result = await (backend as unknown as Record<string, () => Promise<unknown>>)[method]();
+      const result = await (backend as unknown as Record<string, () => Promise<unknown>>)[method]!();
       expect(result, `${method} must fail closed`).toEqual({ success: false, error: EXPECTED_ERROR });
     }
   });
