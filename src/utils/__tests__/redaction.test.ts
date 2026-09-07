@@ -80,8 +80,8 @@ describe('redactSensitiveData', () => {
   it('配列内の各要素を再帰的に処理する', () => {
     const data = [{ openai_api_key: 'secret' }, { name: 'test' }];
     const result = redactSensitiveData(data) as Record<string, unknown>[];
-    expect(result[0].openai_api_key).toBe('[REDACTED]');
-    expect(result[1].name).toBe('test');
+    expect(result[0]!.openai_api_key).toBe('[REDACTED]');
+    expect(result[1]!.name).toBe('test');
   });
 
   it('ネストされたオブジェクトを再帰的に処理する', () => {
