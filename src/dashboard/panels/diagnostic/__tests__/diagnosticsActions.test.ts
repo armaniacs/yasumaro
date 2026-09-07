@@ -104,7 +104,7 @@ describe('diagnosticsActions', () => {
   it('shows obsidian test result from sendMessage response', async () => {
     vi.mocked(globalThis.chrome.runtime.sendMessage).mockResolvedValue({
       obsidian: { success: true, message: 'Connected to Obsidian' },
-    });
+    } as never);
     const els = makeElements();
     createDiagnosticActions(els, { onBuiltInAiDownloaded: vi.fn() });
 
@@ -132,7 +132,7 @@ describe('diagnosticsActions', () => {
   it('TEST_AI single provider shows success message and class', async () => {
     vi.mocked(globalThis.chrome.runtime.sendMessage).mockResolvedValue({
       ai: { success: true, message: 'ok' },
-    });
+    } as never);
     const els = makeElements();
     createDiagnosticActions(els, { onBuiltInAiDownloaded: vi.fn() });
 
@@ -154,7 +154,7 @@ describe('diagnosticsActions', () => {
           { provider: 'openai', model: null, success: false, message: 'b', elapsedMs: 7 },
         ],
       },
-    });
+    } as never);
     const els = makeElements();
     createDiagnosticActions(els, { onBuiltInAiDownloaded: vi.fn() });
 
@@ -164,10 +164,10 @@ describe('diagnosticsActions', () => {
       expect(result.textContent).toContain('AI:');
       const children = Array.from(result.children) as HTMLElement[];
       expect(children.length).toBeGreaterThanOrEqual(3);
-      expect(children[0].textContent).toContain('AI:');
-      expect(children[0].className).toContain('diag-bold');
-      expect(children[1].textContent).toContain('Google Gemini (m): a (5ms)');
-      expect(children[2].textContent).toContain('OpenAI Compatible: b (7ms)');
+      expect(children[0]!.textContent).toContain('AI:');
+      expect(children[0]!.className).toContain('diag-bold');
+      expect(children[1]!.textContent).toContain('Google Gemini (m): a (5ms)');
+      expect(children[2]!.textContent).toContain('OpenAI Compatible: b (7ms)');
     });
     expect(els.testAiBtn!.disabled).toBe(false);
   });

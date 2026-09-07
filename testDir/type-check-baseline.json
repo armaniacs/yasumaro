@@ -1,5 +1,5 @@
 {
-  "total": 861,
+  "total": 840,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
