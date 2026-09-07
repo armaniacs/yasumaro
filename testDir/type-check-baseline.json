@@ -1,5 +1,5 @@
 {
-  "total": 109,
+  "total": 100,
   "files": {
     "src/background/__tests__/SessionAlarmService.test.ts": 2,
     "src/background/__tests__/alarmRegistry.test.ts": 3,
@@ -25,7 +25,6 @@
     "src/background/handlers/__tests__/messageHandlers.test.ts": 2,
     "src/background/handlers/__tests__/systemHandlers.test.ts": 8,
     "src/background/handlers/dashboardSqlite/__tests__/archiveHandler.test.ts": 3,
-    "src/background/pipeline/__tests__/saveToObsidianStep.test.ts": 9,
     "src/utils/storage/__tests__/settingsStore-plaintext-api-key.test.ts": 3
   }
 }
