@@ -151,7 +151,7 @@ describe('Manifest - Host Permissions Minimization', () => {
       while ((match = importRegex.exec(content)) !== null) {
         const importPath = match[1];
         // 相対パスのみ追跡
-        if (!importPath.startsWith('.')) continue;
+        if (!importPath || !importPath.startsWith('.')) continue;
 
         const dir = filePath.substring(0, filePath.lastIndexOf('/'));
         const resolved = join(dir, importPath).replace(/\\/g, '/');

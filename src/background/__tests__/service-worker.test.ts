@@ -3,6 +3,7 @@
  * Unit tests for service-worker.ts handlers after refactoring.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Mock } from 'vitest';
 
 const mockSettingsGetAll = vi.hoisted(() => vi.fn().mockResolvedValue({}));
 
@@ -25,8 +26,8 @@ const { mockAlarmsCreate, mockAlarmsClear, storageMock } = vi.hoisted(() => {
         YASUMARO_MIGRATION_PROGRESS: 'yasumaro_migration_progress',
     };
     return {
-        mockAlarmsCreate: vi.fn<Promise<void>, [string, chrome.alarms.AlarmCreateInfo]>((_name, _info) => Promise.resolve()),
-        mockAlarmsClear: vi.fn<Promise<boolean>, [string]>(() => Promise.resolve(true)),
+        mockAlarmsCreate: vi.fn<(name: string, info: chrome.alarms.AlarmCreateInfo) => Promise<void>>((_name, _info) => Promise.resolve()),
+        mockAlarmsClear: vi.fn<(name: string) => Promise<boolean>>(() => Promise.resolve(true)),
         storageMock: { StorageKeys: storageKeys },
     };
 });
@@ -35,16 +36,16 @@ const { mockAddListener, mockQuery, mockGet, mockCreate, mockRemove, mockClear,
         mockSetBadgeText, mockSetBadgeBackgroundColor, mockExecuteScript } = vi.hoisted(() => {
     return {
         mockAddListener: vi.fn(),
-        mockQuery: vi.fn<Promise<chrome.tabs.Tab[]>, [chrome.tabs.QueryInfo]>(() => Promise.resolve([])),
-        mockGet: vi.fn<Promise<chrome.tabs.Tab>, [number]>((tabId) => Promise.resolve({ id: tabId, url: 'https://example.com' } as chrome.tabs.Tab)),
-        mockCreate: vi.fn<Promise<chrome.tabs.Tab>, [chrome.tabs.CreateProperties]>((options) =>
+        mockQuery: vi.fn<(query: chrome.tabs.QueryInfo) => Promise<chrome.tabs.Tab[]>>(() => Promise.resolve([])),
+        mockGet: vi.fn<(tabId: number) => Promise<chrome.tabs.Tab>>((tabId) => Promise.resolve({ id: tabId, url: 'https://example.com' } as chrome.tabs.Tab)),
+        mockCreate: vi.fn<(options: chrome.tabs.CreateProperties) => Promise<chrome.tabs.Tab>>((options) =>
             Promise.resolve({ id: 1, url: options.url, active: false } as chrome.tabs.Tab)
         ),
-        mockRemove: vi.fn<Promise<void>, [number]>(() => Promise.resolve()),
-        mockClear: vi.fn<Promise<void>, [string]>(() => Promise.resolve()),
+        mockRemove: vi.fn<(tabId: number) => Promise<void>>(() => Promise.resolve()),
+        mockClear: vi.fn<(name: string) => Promise<void>>(() => Promise.resolve()),
         mockSetBadgeText: vi.fn(),
         mockSetBadgeBackgroundColor: vi.fn(),
-        mockExecuteScript: vi.fn<Promise<any[]>, [any]>(() => Promise.resolve([{ result: 'Test page content' }])),
+        mockExecuteScript: vi.fn<(injection: chrome.scripting.ScriptInjection<unknown[], unknown>) => Promise<chrome.scripting.InjectionResult[]>>(() => Promise.resolve([{ result: 'Test page content' } as chrome.scripting.InjectionResult])),
     };
 });
 
@@ -430,12 +431,12 @@ vi.mock('../../utils/permissionManager.js', () => ({
     cleanupDismissedEntries: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('../../utils/crypto/index.js', () => ({
-    getNotificationHmacKey: vi.fn().mockResolvedValue({
+    getNotificationHmacKey: vi.fn().mockResolvedValue(({
         type: 'hmac',
         extractable: false,
         algorithm: { name: 'HMAC', hash: 'SHA-256' },
         usages: ['sign', 'verify']
-    } as CryptoKey),
+    }) as unknown as CryptoKey),
     generateHmacSignature: vi.fn().mockResolvedValue('test-signature'),
     verifyHmacSignature: vi.fn().mockResolvedValue(true),
 }));
@@ -483,7 +484,13 @@ vi.mock('../net/ollamaSettingsObserver.js', () => ({
 }));
 
 // Import the extracted functions from service-worker
-import * as serviceWorker from '../service-worker.js';
+import * as serviceWorkerModule from '../service-worker.js';
+
+// messageRouter.getHandler() types every handler export as `Handler | undefined`;
+// the suite only calls handlers it has registered, so narrow the module surface.
+const serviceWorker = serviceWorkerModule as {
+    [K in keyof typeof serviceWorkerModule]-?: NonNullable<(typeof serviceWorkerModule)[K]>;
+};
 import { hasPrivacyConsent } from '../../utils/storage/privacyConsent.js';
 import * as storageEncryption from '../../utils/storage/encryptionSession.js';
 import * as storageDomainFilter from '../../utils/storage/domainFilterCache.js';
@@ -491,7 +498,26 @@ import * as storageSavedUrls from '../../utils/storage/savedUrlRepository.js';
 import * as domainUtils from '../../utils/domainUtils.js';
 import * as privacyPipeline from '../privacyPipeline.js';
 import * as pendingStorage from '../../utils/pendingStorage.js';
-import { RecordingCache } from '../recordingCache.js';
+// vi.mock replaces this module with RecordingCacheMock, which exposes a mutable
+// `cacheState` the suite drives directly; the real module has no such export.
+type RecordingCacheMockShape = {
+    cacheState: Record<string, unknown> & {
+        privacyCache: Map<string, unknown> | null;
+    };
+    loadCacheFromSession: ReturnType<typeof vi.fn>;
+    invalidateSettingsCache: ReturnType<typeof vi.fn>;
+    invalidatePrivacyCache: ReturnType<typeof vi.fn>;
+    invalidateUrlCache: ReturnType<typeof vi.fn>;
+    getPrivacyCache: ReturnType<typeof vi.fn>;
+};
+import * as recordingCacheModule from '../recordingCache.js';
+const RecordingCache = (recordingCacheModule as unknown as { RecordingCache: RecordingCacheMockShape }).RecordingCache;
+
+import type { QueuedChromeStorageWrite } from '../pendingChromeStorageQueue.js';
+// The retry/enqueue paths never read createdAt/retryCount, which the queue fills
+// itself; the metadata-patch fixtures below intentionally omit them.
+const asQueuedWrite = (write: Record<string, unknown>): QueuedChromeStorageWrite =>
+    write as unknown as QueuedChromeStorageWrite;
 import { RecordingOrchestrator } from '../pipeline/RecordingOrchestrator.js';
 import * as fetchUtils from '../../utils/fetch.js';
 import * as headerDetector from '../headerDetector.js';
@@ -598,7 +624,6 @@ describe('service-worker handlers', () => {
         };
 
         // Default storage mock
-        // @ts-expect-error - vi.fn() type narrowing
         mockSettingsGetAll.mockResolvedValue({
             PRIVACY_MODE: 'full_pipeline',
             PII_SANITIZE_LOGS: true,
@@ -1211,7 +1236,7 @@ describe('service-worker handlers', () => {
         });
 
         it('should propagate errors during update when getSettings fails', async () => {
-            (mockSettingsGetAll as unknown as vi.Mock).mockRejectedValueOnce(new Error('Settings error'));
+            (mockSettingsGetAll as unknown as Mock).mockRejectedValueOnce(new Error('Settings error'));
             await expect(serviceWorker.handleInstalled({
                 reason: 'update',
                 previousVersion: '1.0.0'
@@ -1227,7 +1252,7 @@ describe('service-worker handlers', () => {
 
         it('should handle getSettings error during rehydration', async () => {
             // Mock getSettings to throw (isCacheInitialized is false initially)
-            (mockSettingsGetAll as unknown as vi.Mock).mockRejectedValueOnce(new Error('Failed to get settings'));
+            (mockSettingsGetAll as unknown as Mock).mockRejectedValueOnce(new Error('Failed to get settings'));
 
             await serviceWorker.handleStartup();
             expect(logError).toHaveBeenCalledWith(
@@ -1468,7 +1493,6 @@ describe('service-worker handlers', () => {
 
         it('should handle button index 1 (skip) without throwing', async () => {
             const mockGetPendingPages = pendingStorage.getPendingPages as ReturnType<typeof vi.fn>;
-            // @ts-expect-error - vi.fn() type narrowing
             mockGetPendingPages.mockResolvedValue([
                 { url: 'https://example.com', title: 'Example' }
             ]);
@@ -1496,20 +1520,22 @@ describe('service-worker handlers', () => {
             vi.spyOn(RecordingOrchestrator.prototype, 'record').mockRejectedValueOnce(new Error('Record failed'));
 
             // Setup pending pages
-            pendingStorage.getPendingPages.mockResolvedValue([
-                { url: 'https://example.com', title: 'Example Page' }
+            vi.mocked(pendingStorage.getPendingPages).mockResolvedValue([
+                { url: 'https://example.com', title: 'Example Page' } as Awaited<
+                    ReturnType<typeof pendingStorage.getPendingPages>
+                >[number],
             ]);
-            pendingStorage.removePendingPages.mockResolvedValue(undefined);
+            vi.mocked(pendingStorage.removePendingPages).mockResolvedValue(undefined);
 
             // Ensure crypto verification succeeds
             const crypto = await import('../../utils/crypto/index.js');
-            crypto.getNotificationHmacKey.mockResolvedValueOnce({
+            vi.mocked(crypto.getNotificationHmacKey).mockResolvedValueOnce({
                 type: 'hmac',
                 extractable: false,
                 algorithm: { name: 'HMAC', hash: 'SHA-256' },
                 usages: ['sign', 'verify']
-            } as CryptoKey);
-            crypto.verifyHmacSignature.mockResolvedValueOnce(true);
+            } as unknown as CryptoKey);
+            vi.mocked(crypto.verifyHmacSignature).mockResolvedValueOnce(true);
 
             const notificationId = 'privacy-confirm-aHR0cHM6Ly9leGFtcGxlLmNvbQ.testSig';
 
@@ -1614,7 +1640,7 @@ describe('service-worker handlers', () => {
             await vi.waitFor(() => {
                 expect(mockReviewSummaryAlarm.initializeReviewSummaryAlarms).toHaveBeenCalledTimes(1);
             });
-            const generator = mockReviewSummaryAlarm.initializeReviewSummaryAlarms.mock.calls[0][0];
+            const generator = mockReviewSummaryAlarm.initializeReviewSummaryAlarms.mock.calls[0]![0];
             expect(mockReviewSummaryAlarm.setupReviewSummaryAlarmListener).toHaveBeenCalledWith(generator);
             expect(generator).toBe(mockReviewGenerator);
         });
@@ -1698,14 +1724,14 @@ describe('service-worker handlers', () => {
             await chrome.storage.local.remove('pending_chrome_storage_writes');
 
             const { enqueuePendingWrite } = await import('../pendingChromeStorageQueue.js');
-            await enqueuePendingWrite({
+            await enqueuePendingWrite(asQueuedWrite({
                 type: 'metadataPatch',
                 key: 'savedUrlsWithTimestamps',
                 url: 'https://queued.com',
                 patch: { recordType: 'auto' },
                 refreshTimestamp: true,
                 mergeTags: true,
-            });
+            }));
             (savedUrlStore.saveSavedUrlEntryMetadata as ReturnType<typeof vi.fn>).mockClear();
 
             onAlarmListener({ name: 'yasumaro-offline-network-retry' } as chrome.alarms.Alarm);
@@ -2004,7 +2030,6 @@ describe('service-worker handlers', () => {
     describe('handleManualRecord', () => {
         beforeEach(() => {
             // Clear in-memory manual-record content cache for test isolation
-            // @ts-expect-error - accessing exported test helper via namespace import
             serviceWorker.resetManualRecordCache?.();
         });
 
@@ -2067,7 +2092,6 @@ describe('service-worker handlers', () => {
             const sender = {} as chrome.runtime.MessageSender;
 
             // Disable auto content fetch
-            // @ts-expect-error - vi.fn() type narrowing
             mockSettingsGetAll.mockResolvedValue({
                 PRIVACY_MODE: 'full_pipeline',
                 PII_SANITIZE_LOGS: true,
@@ -2198,7 +2222,9 @@ describe('service-worker handlers', () => {
 
             // Mock RecordingOrchestrator to return maskedItems with original field
             const pipelineModule = await import('../pipeline/piiBoundary.js');
-            vi.spyOn(pipelineModule, 'stripPiiFromMaskedItems').mockReturnValue([{ masked: true }]);
+            vi.spyOn(pipelineModule, 'stripPiiFromMaskedItems').mockReturnValue([
+                { masked: true } as unknown as import('../../messaging/types.js').StrippedMaskedItem,
+            ]);
 
             // Access the mocked RecordingOrchestrator.record to return masked items
             const RecordingPipelineMock = (await import('../pipeline/RecordingOrchestrator.js')).RecordingOrchestrator;
@@ -2254,8 +2280,8 @@ describe('service-worker handlers', () => {
                 expect.any(Function)
             );
             // Verify the updater sets cleansedReason to 'both'
-            const calls = (savedUrlStore.updateSavedUrlEntry as vi.Mock).mock.calls;
-            const updater = calls[calls.length - 1][1] as (entry: any) => any;
+            const calls = (savedUrlStore.updateSavedUrlEntry as Mock).mock.calls;
+            const updater = calls[calls.length - 1]![1] as (entry: any) => any;
             const result = updater({ url: 'https://example.com', timestamp: 0 });
             expect(result.cleansedReason).toBe('both');
         });
@@ -2274,8 +2300,8 @@ describe('service-worker handlers', () => {
                 'https://example.com',
                 expect.any(Function)
             );
-            const calls = (savedUrlStore.updateSavedUrlEntry as vi.Mock).mock.calls;
-            const updater = calls[calls.length - 1][1] as (entry: any) => any;
+            const calls = (savedUrlStore.updateSavedUrlEntry as Mock).mock.calls;
+            const updater = calls[calls.length - 1]![1] as (entry: any) => any;
             const result = updater({ url: 'https://example.com', timestamp: 0 });
             expect(result.cleansedReason).toBe('hard');
         });
@@ -2294,8 +2320,8 @@ describe('service-worker handlers', () => {
                 'https://example.com',
                 expect.any(Function)
             );
-            const calls = (savedUrlStore.updateSavedUrlEntry as vi.Mock).mock.calls;
-            const updater = calls[calls.length - 1][1] as (entry: any) => any;
+            const calls = (savedUrlStore.updateSavedUrlEntry as Mock).mock.calls;
+            const updater = calls[calls.length - 1]![1] as (entry: any) => any;
             const result = updater({ url: 'https://example.com', timestamp: 0 });
             expect(result.cleansedReason).toBe('keyword');
         });
@@ -2366,14 +2392,14 @@ describe('service-worker handlers', () => {
         });
 
         it('routes a metadata-patch payload to saveSavedUrlEntryMetadata', async () => {
-            const ok = await serviceWorker.retryPendingChromeStorageWrite({
+            const ok = await serviceWorker.retryPendingChromeStorageWrite(asQueuedWrite({
                 type: 'metadataPatch',
                 key: 'savedUrlsWithTimestamps',
                 url: 'https://patch.com',
                 patch: { recordType: 'auto' },
                 refreshTimestamp: true,
                 mergeTags: true,
-            });
+            }));
 
             expect(ok).toBe(true);
             expect(savedUrlStore.saveSavedUrlEntryMetadata).toHaveBeenCalledWith(
@@ -2384,12 +2410,12 @@ describe('service-worker handlers', () => {
         });
 
         it('returns false for metadata-patch payloads targeting other keys', async () => {
-            const ok = await serviceWorker.retryPendingChromeStorageWrite({
+            const ok = await serviceWorker.retryPendingChromeStorageWrite(asQueuedWrite({
                 type: 'metadataPatch',
                 key: 'other',
                 url: 'https://patch.com',
                 patch: {},
-            });
+            }));
             expect(ok).toBe(false);
         });
 
@@ -2398,14 +2424,14 @@ describe('service-worker handlers', () => {
                 new Error('storage quota exceeded')
             );
 
-            const ok = await serviceWorker.retryPendingChromeStorageWrite({
+            const ok = await serviceWorker.retryPendingChromeStorageWrite(asQueuedWrite({
                 type: 'metadataPatch',
                 key: 'savedUrlsWithTimestamps',
                 url: 'https://patch.com',
                 patch: { recordType: 'auto' },
                 refreshTimestamp: true,
                 mergeTags: true,
-            });
+            }));
 
             expect(ok).toBe(false);
         });
@@ -2650,7 +2676,7 @@ describe('service-worker handlers', () => {
             const handler = serviceWorker.createMessageHandler();
             const sendResponse = vi.fn();
             
-            const result = handler({ type: 'CHECK_DOMAIN' }, { url: 'https://example.com', tab: { id: 1, url: 'https://example.com' } }, sendResponse);
+            const result = handler({ type: 'CHECK_DOMAIN' }, { url: 'https://example.com', tab: { id: 1, url: 'https://example.com' } as chrome.tabs.Tab }, sendResponse);
             expect(result).toBe(true);
             
             // Wait for async

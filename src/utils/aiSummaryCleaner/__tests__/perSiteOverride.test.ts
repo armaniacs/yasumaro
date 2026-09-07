@@ -99,14 +99,14 @@ describe('perSiteOverride', () => {
         it('inserts new domain', () => {
             const next = upsertDomainOverride([], 'example.com', { aiSummaryCleansingDeep: true });
             expect(next).toHaveLength(1);
-            expect(next[0].domain).toBe('example.com');
+            expect(next[0]!.domain).toBe('example.com');
         });
 
         it('updates existing domain', () => {
             const start: DomainCleansingOverride[] = [{ domain: 'example.com', overrides: { aiSummaryCleansingDeep: true } }];
             const next = upsertDomainOverride(start, 'example.com', { aiSummaryCleansingAds: false });
             expect(next).toHaveLength(1);
-            expect(next[0].overrides).toMatchObject({ aiSummaryCleansingDeep: true, aiSummaryCleansingAds: false });
+            expect(next[0]!.overrides).toMatchObject({ aiSummaryCleansingDeep: true, aiSummaryCleansingAds: false });
         });
 
         it('deletes when patch is null', () => {
@@ -123,7 +123,7 @@ describe('perSiteOverride', () => {
 
         it('normalizes domain on insert', () => {
             const next = upsertDomainOverride([], '  EXAMPLE.com ', { aiSummaryCleansingDeep: true });
-            expect(next[0].domain).toBe('example.com');
+            expect(next[0]!.domain).toBe('example.com');
         });
     });
 });

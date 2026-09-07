@@ -11,13 +11,19 @@ function makeItem(id: string, data = 'test'): TestItem {
   return { id, data, createdAt: Date.now(), retryCount: 0 };
 }
 
-function createMockAdapter(): QueueStorageAdapter & { store: Record<string, unknown[]> } {
+function createMockAdapter() {
   const store: Record<string, unknown[]> = {};
+  const load = vi.fn(async (key: string) => (store[key] ?? []) as unknown[]);
+  const save = vi.fn(async (key: string, items: unknown[]) => { store[key] = items; });
   return {
     store,
-    load: vi.fn(async (key: string) => (store[key] ?? []) as unknown[]),
-    save: vi.fn(async (key: string, items: unknown[]) => { store[key] = items; }),
-  };
+    load,
+    save,
+  } as {
+    store: Record<string, unknown[]>;
+    load: typeof load;
+    save: typeof save;
+  } & QueueStorageAdapter;
 }
 
 describe('PersistentRetryQueue', () => {
@@ -56,7 +62,7 @@ describe('PersistentRetryQueue', () => {
 
       const remaining = await queue.flush(async () => false);
       expect(remaining).toHaveLength(1);
-      expect(remaining[0].retryCount).toBe(1);
+      expect(remaining[0]?.retryCount).toBe(1);
     });
 
     it('increments retryCount on handler error', async () => {
@@ -64,8 +70,8 @@ describe('PersistentRetryQueue', () => {
 
       const remaining = await queue.flush(async () => { throw new Error('fail'); });
       expect(remaining).toHaveLength(1);
-      expect(remaining[0].retryCount).toBe(1);
-      expect(remaining[0].lastError).toBe('fail');
+      expect(remaining[0]?.retryCount).toBe(1);
+      expect(remaining[0]?.lastError).toBe('fail');
     });
   });
 
@@ -154,7 +160,7 @@ describe('PersistentRetryQueue', () => {
       // First flush: retryCount becomes 1
       await queue.flush(async () => false);
       expect(adapter.store['test']).toHaveLength(1);
-      expect((adapter.store['test'][0] as TestItem).retryCount).toBe(1);
+      expect((adapter.store['test']?.[0] as TestItem).retryCount).toBe(1);
 
       // Second flush: retryCount becomes 2, dropped (>= maxRetryCount)
       await queue.flush(async () => false);
@@ -229,8 +235,8 @@ describe('PersistentRetryQueue', () => {
 
       const remaining = adapter.store['test'] as TestItem[];
       expect(remaining).toHaveLength(2);
-      expect(remaining[0].retryCount).toBe(1);
-      expect(remaining[1].retryCount).toBe(1);
+      expect(remaining[0]?.retryCount).toBe(1);
+      expect(remaining[1]?.retryCount).toBe(1);
     });
 
     it('drops items that exceed max retry count', async () => {
@@ -256,8 +262,8 @@ describe('PersistentRetryQueue', () => {
 
       const remaining = adapter.store['test'] as TestItem[];
       expect(remaining).toHaveLength(2);
-      expect(remaining[0].retryCount).toBe(1);
-      expect(remaining[0].lastError).toBe('batch fail');
+      expect(remaining[0]?.retryCount).toBe(1);
+      expect(remaining[0]?.lastError).toBe('batch fail');
     });
 
     it('drops expired items from batch', async () => {

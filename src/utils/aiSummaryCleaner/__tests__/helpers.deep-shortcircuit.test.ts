@@ -158,7 +158,7 @@ describe('PBI 05 querySelectorAllDeep short-circuit', () => {
 
         const result = querySelectorAllDeep(document.body, '.ad-banner');
         expect(result.length).toBe(1);
-        expect(result[0].textContent).toBe('iframe ad');
+        expect(result[0]!.textContent).toBe('iframe ad');
     });
 
     it('cross-origin iframe: SecurityError swallowed, light DOM still returned', () => {
@@ -177,7 +177,7 @@ describe('PBI 05 querySelectorAllDeep short-circuit', () => {
             result = querySelectorAllDeep(document.body, '.ad-banner');
         }).not.toThrow();
         expect(result.length).toBe(1);
-        expect(result[0].textContent).toBe('light ad');
+        expect(result[0]!.textContent).toBe('light ad');
     });
 
     it('closed shadowRoots stay skipped', () => {

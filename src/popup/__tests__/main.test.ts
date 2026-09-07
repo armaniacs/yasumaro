@@ -59,7 +59,9 @@ vi.mock('../errorUtils.js', () => ({
 }));
 
 const { sendMock } = vi.hoisted(() => ({
-  sendMock: vi.fn((_message) => Promise.resolve({ success: true })),
+  // Mirrors messageTransport.send(): Promise<unknown>. Suites resolve it with
+  // varied response envelopes ({ success, error, mode, aiDuration, ... }).
+  sendMock: vi.fn((_message: unknown): Promise<unknown> => Promise.resolve({ success: true })),
 }));
 vi.mock('../../messaging/messageTransport.js', () => ({
   messageTransport: { send: (message: unknown) => sendMock(message) },
@@ -130,25 +132,55 @@ vi.mock('../../utils/permissionManager.js', () => {
     requestAllUrls: pm.requestAllUrls,
     recordDeniedVisit: pm.recordDeniedVisit,
   };
-}, { virtual: true });
+});
 
 vi.mock('../../utils/trustChecker.js', () => ({
   getTrustLevelDisplay: vi.fn(() => Promise.resolve({ level: 'Trusted' })),
   checkDomainTrust: vi.fn(() => Promise.resolve({ showAlert: false, trustResult: {} }))
-}), { virtual: true });
+}));
 
 // Import mocked functions after vi.mock declarations
 import { showPreview, initializeModalEvents } from '../sanitizePreview.js';
 const sendMessageWithRetry = sendMock;
 import { startAutoCloseTimer } from '../autoClose.js';
-import { getCurrentTab, isRecordable } from '../tabUtils.js';
+import { getCurrentTab, isRecordable as isRecordableModule } from '../tabUtils.js';
 import { StorageKeys } from '../../utils/storage/types.js';
-import { checkPageStatus } from '../statusChecker.js';
+import { checkPageStatus as checkPageStatusModule } from '../statusChecker.js';
 import { loadCurrentTab, recordCurrentPage, getCleansedReasonText, renderSpecialUrlStatus } from '../main.js';
 import { loadPendingPages, saveSelectedPages } from '../pendingPages.js';
-import { showError, isConnectionError, isDomainBlockedError, formatSuccessMessage } from '../errorUtils.js';
+import {
+  showError as showErrorModule,
+  isConnectionError as isConnectionErrorModule,
+  isDomainBlockedError as isDomainBlockedErrorModule,
+  formatSuccessMessage as formatSuccessMessageModule,
+} from '../errorUtils.js';
 import { getPendingPages, removePendingPages } from '../../utils/pendingStorage.js';
 import { getSavedUrlEntries } from '../../utils/storageUrls.js';
+
+// These modules are vi.mock()-ed above; bind the mock-typed views once so the
+// suites can drive them without repeating vi.mocked() at every call site.
+const isRecordable = vi.mocked(isRecordableModule);
+const checkPageStatus = vi.mocked(checkPageStatusModule);
+const showError = vi.mocked(showErrorModule);
+const isConnectionError = vi.mocked(isConnectionErrorModule);
+const isDomainBlockedError = vi.mocked(isDomainBlockedErrorModule);
+const formatSuccessMessage = vi.mocked(formatSuccessMessageModule);
+
+// Under noUncheckedIndexedAccess the DOM lookups the assertions dereference are
+// guaranteed present by the preceding createTestPopupDOM() call.
+function $el<T extends HTMLElement = HTMLElement>(id: string): T {
+  const node = document.getElementById(id);
+  if (!node) throw new Error(`test DOM missing #${id}`);
+  return node as T;
+}
+
+// The suites feed checkPageStatus historical StatusInfo-shaped literals (extra
+// `blocked`, loose `reason`) the code under test never reads; route them through
+// one cast instead of reshaping every fixture.
+type PageStatusResult = Awaited<ReturnType<typeof checkPageStatusModule>>;
+const mockCheckPageStatus = (value: unknown): void => {
+  checkPageStatus.mockResolvedValue(value as PageStatusResult);
+};
 
 // Mock chrome API with i18n support
 const mockChrome = {
@@ -223,8 +255,8 @@ describe('main', () => {
     mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
     mockChrome.permissions.contains.mockResolvedValue(true);
 
-    // Restore chrome.i18n.getMessage mock (jest.clearAllMocks clears it)
-    global.chrome.i18n.getMessage.mockImplementation((key: string, substitutions?: any) => {
+    // Restore chrome.i18n.getMessage mock (vi.clearAllMocks clears it)
+    vi.mocked(global.chrome.i18n.getMessage).mockImplementation((key: string, substitutions?: unknown) => {
       const messages: Record<string, string> = {
         loading: 'Loading...',
         processing: 'Processing...',
@@ -263,9 +295,9 @@ describe('main', () => {
       let message = messages[key] || key;
 
       if (substitutions && typeof substitutions === 'object') {
-        Object.keys(substitutions).forEach((placeholder) => {
-          const value = substitutions[placeholder];
-          message = message.replace(`{${placeholder}}`, value);
+        const subs = substitutions as Record<string, string>;
+        Object.keys(subs).forEach((placeholder) => {
+          message = message.replace(`{${placeholder}}`, subs[placeholder] ?? '');
         });
       }
 
@@ -273,7 +305,7 @@ describe('main', () => {
     });
 
     // Mock checkPageStatus to return success by default
-    checkPageStatus.mockResolvedValue({
+    mockCheckPageStatus({
       domainFilter: { allowed: true, blocked: false },
       privacyHeader: false,
       https: true
@@ -390,15 +422,14 @@ describe('main', () => {
       // @ts-expect-error - vi.fn() type narrowing issue
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
 
       await loadCurrentTab();
 
       const favicon = document.getElementById('favicon') as HTMLImageElement;
-      const pageTitle = document.getElementById('pageTitle');
-      const pageUrl = document.getElementById('pageUrl');
-      const recordBtn = document.getElementById('recordBtn');
+      const pageTitle = $el('pageTitle');
+      const pageUrl = $el('pageUrl');
+      const recordBtn = $el<HTMLButtonElement>('recordBtn');
 
       expect(favicon.src).toBe('chrome-extension://test-extension-id/_favicon/?pageUrl=https%3A%2F%2Fexample.com&size=32');
       expect(pageTitle.textContent).toBe('Example Page');
@@ -420,7 +451,7 @@ describe('main', () => {
 
       await loadCurrentTab();
 
-      const pageUrl = document.getElementById('pageUrl');
+      const pageUrl = $el('pageUrl');
       expect(pageUrl.textContent).toBe(longUrl.substring(0, 50) + '...');
     });
 
@@ -436,7 +467,7 @@ describe('main', () => {
 
       await loadCurrentTab();
 
-      const pageTitle = document.getElementById('pageTitle');
+      const pageTitle = $el('pageTitle');
       expect(pageTitle.textContent).toBe('No title');
     });
 
@@ -453,7 +484,7 @@ describe('main', () => {
 
       await loadCurrentTab();
 
-      const recordBtn = document.getElementById('recordBtn');
+      const recordBtn = $el<HTMLButtonElement>('recordBtn');
       expect(recordBtn.disabled).toBe(true);
       expect(recordBtn.textContent).toBe('Cannot record this page');
     });
@@ -464,7 +495,7 @@ describe('main', () => {
 
       await loadCurrentTab();
 
-      const pageTitle = document.getElementById('pageTitle');
+      const pageTitle = $el('pageTitle');
       expect(pageTitle.textContent).toBe('Loading...');
     });
 
@@ -480,7 +511,7 @@ describe('main', () => {
 
       await loadCurrentTab();
 
-      const pageUrl = document.getElementById('pageUrl');
+      const pageUrl = $el('pageUrl');
       expect(pageUrl.textContent).toBe('');
     });
   });
@@ -497,7 +528,7 @@ describe('main', () => {
 
       await recordCurrentPage();
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
       expect(statusDiv.className).toBe('error');
       expect(statusDiv.textContent).toContain('✗ Error');
     });
@@ -509,7 +540,7 @@ describe('main', () => {
 
       await recordCurrentPage();
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
       expect(statusDiv.className).toBe('error');
       expect(showError).toHaveBeenCalled();
     });
@@ -527,7 +558,7 @@ describe('main', () => {
 
       await recordCurrentPage();
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
       expect(statusDiv.className).toBe('error');
     });
 
@@ -541,17 +572,15 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockImplementation(() => Promise.resolve(mockTab));
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       // Content script sendMessage fails
       mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
       // Fallback executeScript also fails
       mockChrome.scripting.executeScript.mockRejectedValue(new Error('Script execution failed'));
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
 
       await recordCurrentPage();
 
@@ -569,25 +598,22 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockImplementation(() => Promise.resolve(mockTab));
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      // @ts-expect-error
       sendMessageWithRetry.mockResolvedValue({
         success: false,
         error: 'DOMAIN_BLOCKED'
       });
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
 
       await recordCurrentPage();
 
       expect(statusDiv.querySelector('button')).toBeTruthy();
-      expect(statusDiv.querySelector('button').textContent).toBe('Force Record');
+      expect(statusDiv.querySelector('button')?.textContent).toBe('Force Record');
       const expectedText = 'This domain is not allowed to be recorded. Do you want to record it anyway?';
-      expect(statusDiv.childNodes[0].textContent).toBe(expectedText);
+      expect(statusDiv.childNodes[0]?.textContent).toBe(expectedText);
     });
 
     it('should successfully record page with preview', async () => {
@@ -600,16 +626,15 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: true }));
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
 
       mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
 
-      sendMessageWithRetry.mockImplementation(async (message) => {
+      sendMessageWithRetry.mockImplementation(async (rawMessage) => {
+        const message = rawMessage as { type?: string };
         if (message.type === 'PREVIEW_RECORD') {
           return {
             success: true,
@@ -626,7 +651,7 @@ describe('main', () => {
       // @ts-expect-error
       showPreview.mockResolvedValue({ confirmed: true, content: '[MASKED:email]@example.com' });
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
 
       await recordCurrentPage();
 
@@ -645,20 +670,19 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockImplementation(() => Promise.resolve({ [StorageKeys.PII_CONFIRMATION_UI]: false }));
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
 
       mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
 
-      sendMessageWithRetry.mockImplementation(async (message) => {
+      sendMessageWithRetry.mockImplementation(async (rawMessage) => {
+        const message = rawMessage as { type?: string };
         return { success: true };
       });
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
 
       await recordCurrentPage();
 
@@ -677,12 +701,9 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      // @ts-expect-error
       sendMessageWithRetry.mockResolvedValue({
         success: true,
         mode: 'masked_cloud',
@@ -693,7 +714,7 @@ describe('main', () => {
       // @ts-expect-error
       showPreview.mockResolvedValue({ confirmed: false, content: null });
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
 
       await recordCurrentPage();
 
@@ -710,18 +731,15 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      // @ts-expect-error
       sendMessageWithRetry.mockResolvedValue({
         success: false,
         error: 'AI_PROVIDER_ERROR: Rate limit exceeded'
       });
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
 
       await recordCurrentPage();
 
@@ -739,12 +757,9 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      // @ts-expect-error
       sendMessageWithRetry.mockResolvedValue({
         success: false,
         error: 'PRIVATE_PAGE_DETECTED',
@@ -752,8 +767,8 @@ describe('main', () => {
         headerValue: 'Cache-Control: private'
       });
 
-      const statusDiv = document.getElementById('mainStatus');
-      const recordBtn = document.getElementById('recordBtn');
+      const statusDiv = $el('mainStatus');
+      const recordBtn = $el<HTMLButtonElement>('recordBtn');
 
       await recordCurrentPage();
 
@@ -774,12 +789,9 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      // @ts-expect-error
       sendMessageWithRetry.mockResolvedValue({
         success: false,
         error: 'PRIVATE_PAGE_DETECTED',
@@ -787,8 +799,8 @@ describe('main', () => {
         headerValue: 'Set-Cookie: session=abc'
       });
 
-      const statusDiv = document.getElementById('mainStatus');
-      const recordBtn = document.getElementById('recordBtn');
+      const statusDiv = $el('mainStatus');
+      const recordBtn = $el<HTMLButtonElement>('recordBtn');
 
       await recordCurrentPage();
 
@@ -808,14 +820,13 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
       mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
 
-      sendMessageWithRetry.mockImplementation(async (message) => {
+      sendMessageWithRetry.mockImplementation(async (rawMessage) => {
+        const message = rawMessage as { type?: string };
         if (message.type === 'PREVIEW_RECORD') {
           return {
             success: true,
@@ -826,7 +837,7 @@ describe('main', () => {
         return { success: true };
       });
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
 
       await recordCurrentPage();
 
@@ -847,20 +858,19 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: true });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
 
-      sendMessageWithRetry.mockImplementation(async (message) => {
+      sendMessageWithRetry.mockImplementation(async (rawMessage) => {
+        const message = rawMessage as { type?: string };
         if (message.type === 'PREVIEW_RECORD') {
           return null;
         }
         return { success: true };
       });
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
 
       await recordCurrentPage();
 
@@ -878,7 +888,6 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script sendMessage fails
@@ -889,7 +898,7 @@ describe('main', () => {
 
       sendMessageWithRetry.mockResolvedValue({ success: true });
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
 
       await recordCurrentPage();
 
@@ -907,7 +916,6 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script sendMessage fails — permission ladder will grant per-origin via PermissionManager mock (isHostPermitted true)
@@ -918,7 +926,7 @@ describe('main', () => {
 
       sendMessageWithRetry.mockResolvedValue({ success: true });
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
 
       await recordCurrentPage(true);
 
@@ -936,7 +944,6 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script sendMessage fails
@@ -944,7 +951,7 @@ describe('main', () => {
       // executeScript also fails
       mockChrome.scripting.executeScript.mockRejectedValue(new Error('Script execution failed'));
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
 
       await recordCurrentPage();
 
@@ -961,7 +968,6 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script returns undefined/null
@@ -970,7 +976,7 @@ describe('main', () => {
 
       sendMessageWithRetry.mockResolvedValue({ success: true });
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
 
       await recordCurrentPage(true);
 
@@ -987,13 +993,12 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script returns null
       mockChrome.tabs.sendMessage.mockResolvedValue(null);
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
 
       await recordCurrentPage();
 
@@ -1010,18 +1015,15 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
-      // @ts-expect-error
       sendMessageWithRetry.mockResolvedValue({
         success: false,
         error: 'Some save error'
       });
 
-      const statusDiv = document.getElementById('mainStatus');
+      const statusDiv = $el('mainStatus');
 
       await recordCurrentPage();
 
@@ -1039,10 +1041,8 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
       mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
 
@@ -1059,7 +1059,7 @@ describe('main', () => {
     });
 
     it('should clear tagResultPanel at start', async () => {
-      const tagPanel = document.getElementById('tagResultPanel');
+      const tagPanel = $el('tagResultPanel');
       tagPanel.textContent = 'some tags';
       tagPanel.classList.remove('hidden');
 
@@ -1072,10 +1072,8 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
       mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
       sendMessageWithRetry.mockResolvedValue({ success: true });
@@ -1095,10 +1093,8 @@ describe('main', () => {
         url: 'https://allowed.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue({
+      mockCheckPageStatus({
         domainFilter: { allowed: true, blocked: false, mode: 'whitelist', matchedPattern: '' },
         privacy: { isPrivate: false, hasCache: true, reason: null },
         cache: { hasCache: true, cacheControl: 'no-cache', hasCookie: false, hasAuth: false },
@@ -1111,7 +1107,7 @@ describe('main', () => {
       // Wait for async operations
       await new Promise(r => setTimeout(r, 50));
 
-      const domainState = document.getElementById('statusDomainState');
+      const domainState = $el('statusDomainState');
       expect(domainState.innerHTML).toContain('status-success');
     });
 
@@ -1122,10 +1118,8 @@ describe('main', () => {
         url: 'https://blocked.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue({
+      mockCheckPageStatus({
         domainFilter: { allowed: false, blocked: true, mode: 'blacklist', matchedPattern: 'blocked.com' },
         privacy: { isPrivate: false, hasCache: false, reason: null },
         cache: { hasCache: false },
@@ -1135,7 +1129,7 @@ describe('main', () => {
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const domainState = document.getElementById('statusDomainState');
+      const domainState = $el('statusDomainState');
       expect(domainState.innerHTML).toContain('status-error');
     });
 
@@ -1146,10 +1140,8 @@ describe('main', () => {
         url: 'https://private.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue({
+      mockCheckPageStatus({
         domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
         privacy: { isPrivate: true, hasCache: true, reason: 'cache-control' },
         cache: { hasCache: true, cacheControl: 'private', hasCookie: false, hasAuth: false },
@@ -1159,7 +1151,7 @@ describe('main', () => {
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const privacyContent = document.getElementById('statusPrivacyContent');
+      const privacyContent = $el('statusPrivacyContent');
       expect(privacyContent.innerHTML).toContain('status-warning');
     });
 
@@ -1170,10 +1162,8 @@ describe('main', () => {
         url: 'https://saved.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue({
+      mockCheckPageStatus({
         domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
         privacy: { isPrivate: false, hasCache: true, reason: null },
         cache: { hasCache: true, cacheControl: 'public', hasCookie: false, hasAuth: false },
@@ -1183,7 +1173,7 @@ describe('main', () => {
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const lastSavedContent = document.getElementById('statusLastSavedContent');
+      const lastSavedContent = $el('statusLastSavedContent');
       expect(lastSavedContent.innerHTML).toContain('10 minutes ago');
     });
 
@@ -1194,26 +1184,23 @@ describe('main', () => {
         url: 'chrome://extensions'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue(null);
+      mockCheckPageStatus(null);
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const panel = document.getElementById('statusPanel');
+      const panel = $el('statusPanel');
       expect(panel.innerHTML).toContain('statusPageNotRecordable');
     });
 
     it('should handle tab without URL', async () => {
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([{ id: 1, title: 'No URL' }]);
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const panel = document.getElementById('statusPanel');
+      const panel = $el('statusPanel');
       expect(panel.style.display).toBe('none');
     });
 
@@ -1224,10 +1211,8 @@ describe('main', () => {
         url: 'https://cached.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue({
+      mockCheckPageStatus({
         domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
         privacy: { isPrivate: false, hasCache: true, reason: null },
         cache: { hasCache: true, cacheControl: 'no-store', hasCookie: true, hasAuth: true },
@@ -1237,7 +1222,7 @@ describe('main', () => {
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const cacheContent = document.getElementById('statusCacheContent');
+      const cacheContent = $el('statusCacheContent');
       expect(cacheContent.innerHTML).toContain('statusSetCookiePresent');
       expect(cacheContent.innerHTML).toContain('statusAuthorizationPresent');
     });
@@ -1249,10 +1234,8 @@ describe('main', () => {
         url: 'https://nocache.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue({
+      mockCheckPageStatus({
         domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
         privacy: { isPrivate: false, hasCache: false, reason: null },
         cache: { hasCache: true, cacheControl: '', hasCookie: false, hasAuth: false },
@@ -1262,7 +1245,7 @@ describe('main', () => {
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const cacheContent = document.getElementById('statusCacheContent');
+      const cacheContent = $el('statusCacheContent');
       expect(cacheContent.innerHTML).toContain('statusNoCacheInfo');
     });
   });
@@ -1278,10 +1261,8 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({
         content: 'Page content',
         cleansedReason: 'both',
@@ -1296,7 +1277,7 @@ describe('main', () => {
 
       await recordCurrentPage();
 
-      const cleansingContent = document.getElementById('statusCleansingContent');
+      const cleansingContent = $el('statusCleansingContent');
       expect(cleansingContent.innerHTML).toContain('statusCleansingHard');
       expect(cleansingContent.innerHTML).toContain('statusCleansingKeyword');
       expect(cleansingContent.innerHTML).toContain('statusCleansingTotal');
@@ -1312,10 +1293,8 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({
         content: 'Page content',
         cleansedReason: 'none',
@@ -1330,7 +1309,7 @@ describe('main', () => {
 
       await recordCurrentPage();
 
-      const cleansingContent = document.getElementById('statusCleansingContent');
+      const cleansingContent = $el('statusCleansingContent');
       expect(cleansingContent.innerHTML).toContain('statusCleansingNone');
     });
   });
@@ -1346,7 +1325,6 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       // Content script fails — ladder will try per-origin first via PermissionManager (mocked true) so per-origin path succeeds with executeScript
@@ -1371,7 +1349,6 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
@@ -1397,7 +1374,6 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
       mockChrome.tabs.sendMessage.mockRejectedValue(new Error('Receiving end does not exist'));
@@ -1421,10 +1397,8 @@ describe('main', () => {
       // @ts-expect-error
       getCurrentTab.mockResolvedValue(mockTab);
       isRecordable.mockReturnValue(true);
-      // @ts-expect-error
       mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
 
-      // @ts-expect-error
       mockChrome.tabs.sendMessage.mockResolvedValue({ content: 'Page content' });
       mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
       sendMessageWithRetry.mockResolvedValue({ success: true, aiDuration: 500 });
@@ -1435,7 +1409,7 @@ describe('main', () => {
 
       await recordCurrentPage();
 
-      const tagPanel = document.getElementById('tagResultPanel');
+      const tagPanel = $el('tagResultPanel');
       expect(tagPanel.textContent).toContain('#tech');
       expect(tagPanel.textContent).toContain('#javascript');
       expect(tagPanel.classList.contains('hidden')).toBe(false);
@@ -1450,10 +1424,8 @@ describe('main', () => {
         url: 'https://blacklist.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue({
+      mockCheckPageStatus({
         domainFilter: { allowed: false, blocked: true, mode: 'blacklist', matchedPattern: '*blacklist*' },
         privacy: { isPrivate: false, hasCache: false },
         cache: { hasCache: false },
@@ -1463,7 +1435,7 @@ describe('main', () => {
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const domainMode = document.getElementById('statusDomainMode');
+      const domainMode = $el('statusDomainMode');
       expect(domainMode.innerHTML).toContain('statusFilterModeBlacklist');
     });
 
@@ -1474,10 +1446,8 @@ describe('main', () => {
         url: 'https://cookie.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue({
+      mockCheckPageStatus({
         domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
         privacy: { isPrivate: true, hasCache: true, reason: 'set-cookie' },
         cache: { hasCache: true, hasCookie: true, hasAuth: false },
@@ -1487,7 +1457,7 @@ describe('main', () => {
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const privacyContent = document.getElementById('statusPrivacyContent');
+      const privacyContent = $el('statusPrivacyContent');
       expect(privacyContent.innerHTML).toContain('statusSetCookieDetected');
     });
 
@@ -1498,10 +1468,8 @@ describe('main', () => {
         url: 'https://auth.com'
       };
 
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue({
+      mockCheckPageStatus({
         domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
         privacy: { isPrivate: true, hasCache: true, reason: 'authorization' },
         cache: { hasCache: true, hasCookie: false, hasAuth: true },
@@ -1511,7 +1479,7 @@ describe('main', () => {
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const privacyContent = document.getElementById('statusPrivacyContent');
+      const privacyContent = $el('statusPrivacyContent');
       expect(privacyContent.innerHTML).toContain('statusAuthDetected');
     });
   });
@@ -1519,10 +1487,8 @@ describe('main', () => {
   describe('status icons', () => {
     it('should render success icon for allowed domain', async () => {
       const mockTab = { id: 1, title: 'OK', url: 'https://ok.com' };
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue({
+      mockCheckPageStatus({
         domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
         privacy: { isPrivate: false, hasCache: true },
         cache: { hasCache: false },
@@ -1532,16 +1498,14 @@ describe('main', () => {
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const domainIcon = document.getElementById('statusDomainIcon');
+      const domainIcon = $el('statusDomainIcon');
       expect(domainIcon.className).toContain('status-success');
     });
 
     it('should render warning icon for private page', async () => {
       const mockTab = { id: 1, title: 'Private', url: 'https://private.com' };
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue({
+      mockCheckPageStatus({
         domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
         privacy: { isPrivate: true, hasCache: true },
         cache: { hasCache: false },
@@ -1551,16 +1515,14 @@ describe('main', () => {
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const privacyIcon = document.getElementById('statusPrivacyIcon');
+      const privacyIcon = $el('statusPrivacyIcon');
       expect(privacyIcon.className).toContain('status-warning');
     });
 
     it('should render muted icon when no privacy info', async () => {
       const mockTab = { id: 1, title: 'Unknown', url: 'https://unknown.com' };
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue({
+      mockCheckPageStatus({
         domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
         privacy: { isPrivate: false, hasCache: false },
         cache: { hasCache: false },
@@ -1570,7 +1532,7 @@ describe('main', () => {
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const privacyIcon = document.getElementById('statusPrivacyIcon');
+      const privacyIcon = $el('statusPrivacyIcon');
       expect(privacyIcon.className).toContain('status-muted');
     });
   });
@@ -1578,10 +1540,8 @@ describe('main', () => {
   describe('status toggle button', () => {
     it('should toggle details panel visibility', async () => {
       const mockTab = { id: 1, title: 'Toggle', url: 'https://toggle.com' };
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue({
+      mockCheckPageStatus({
         domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
         privacy: { isPrivate: false, hasCache: false },
         cache: { hasCache: false },
@@ -1591,8 +1551,8 @@ describe('main', () => {
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const toggleBtn = document.getElementById('statusToggleBtn');
-      const detailsPanel = document.getElementById('statusDetails');
+      const toggleBtn = $el('statusToggleBtn');
+      const detailsPanel = $el('statusDetails');
 
       toggleBtn.click();
 
@@ -1636,8 +1596,8 @@ describe('main', () => {
 
       await loadPendingPages();
 
-      const section = document.getElementById('pending-section');
-      const empty = document.getElementById('pending-empty');
+      const section = $el('pending-section');
+      const empty = $el('pending-empty');
       expect(section.classList.contains('hidden')).toBe(true);
       expect(empty.classList.contains('hidden')).toBe(false);
     });
@@ -1651,11 +1611,11 @@ describe('main', () => {
 
       await loadPendingPages();
 
-      const section = document.getElementById('pending-section');
-      const list = document.getElementById('pending-pages-list');
+      const section = $el('pending-section');
+      const list = $el('pending-pages-list');
       expect(section.classList.contains('hidden')).toBe(false);
       expect(list.children.length).toBe(2);
-      expect(list.querySelector('.pending-item-title').textContent).toBe('Example');
+      expect(list.querySelector('.pending-item-title')?.textContent).toBe('Example');
     });
 
     it('should create clickable title that opens new tab', async () => {
@@ -1744,7 +1704,7 @@ describe('main', () => {
     it('should render error message in panel', () => {
       renderSpecialUrlStatus();
 
-      const panel = document.getElementById('statusPanel');
+      const panel = $el('statusPanel');
       expect(panel.innerHTML).toContain('status-error');
     });
   });
@@ -1777,10 +1737,8 @@ describe('main', () => {
   describe('cleansing status display', () => {
     it('should show no-info when no cleanse stats', async () => {
       const mockTab = { id: 1, title: 'Clean', url: 'https://clean.com' };
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue({
+      mockCheckPageStatus({
         domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
         privacy: { isPrivate: false, hasCache: false },
         cache: { hasCache: false },
@@ -1790,7 +1748,7 @@ describe('main', () => {
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const cleansingContent = document.getElementById('statusCleansingContent');
+      const cleansingContent = $el('statusCleansingContent');
       expect(cleansingContent.innerHTML).toContain('status-muted');
     });
   });
@@ -1801,10 +1759,8 @@ describe('main', () => {
   describe('permission banner', () => {
     it('should hide banner when all URLs permitted', async () => {
       const mockTab = { id: 1, title: 'Test', url: 'https://test.com' };
-      // @ts-expect-error
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
-      // @ts-expect-error
-      checkPageStatus.mockResolvedValue({
+      mockCheckPageStatus({
         domainFilter: { allowed: true, blocked: false, mode: 'whitelist' },
         privacy: { isPrivate: false, hasCache: false },
         cache: { hasCache: false },
@@ -1814,7 +1770,7 @@ describe('main', () => {
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await new Promise(r => setTimeout(r, 50));
 
-      const banner = document.getElementById('allUrlsPermissionBanner');
+      const banner = $el('allUrlsPermissionBanner');
       expect(banner.classList.contains('hidden')).toBe(true);
     });
   });

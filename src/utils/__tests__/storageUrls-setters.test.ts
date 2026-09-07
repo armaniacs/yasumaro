@@ -75,7 +75,7 @@ describe('updateSavedUrlEntry', () => {
 
     const result = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
     expect(result).toHaveLength(1);
-    expect(result[0].recordType).toBeUndefined();
+    expect(result[0]!.recordType).toBeUndefined();
   });
 
   it('複数フィールドを同時に更新する', async () => {
@@ -109,7 +109,8 @@ describe('updateSavedUrlEntry', () => {
     const entries = [createTestEntry('https://example.com', { tags: ['existing'] })];
     mockStorage.set('savedUrlsWithTimestamps', entries);
 
-    await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, tags: undefined }));
+    // intentionally sets tags: undefined to verify it is cleared
+    await updateSavedUrlEntry('https://example.com', (entry) => ({ ...entry, tags: undefined }) as unknown as SavedUrlEntry);
 
     const updated = mockStorage.get('savedUrlsWithTimestamps') as SavedUrlEntry[];
     const entry = updated.find(e => e.url === 'https://example.com');

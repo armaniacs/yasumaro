@@ -56,8 +56,8 @@ describe('navigation', () => {
 
   describe('showMainScreen', () => {
     it('should show main screen and hide settings screen', () => {
-      const mainScreen = document.getElementById('mainScreen');
-      const settingsScreen = document.getElementById('settingsScreen');
+      const mainScreen = document.getElementById('mainScreen')!;
+      const settingsScreen = document.getElementById('settingsScreen')!;
       
       expect(mainScreen.style.display).toBe('');
       expect(settingsScreen.style.display).toBe('none');
@@ -70,13 +70,13 @@ describe('navigation', () => {
     });
 
     it('should handle missing DOM elements gracefully', () => {
-      document.getElementById('settingsScreen').remove();
+      document.getElementById('settingsScreen')!.remove();
       
       expect(() => {
         showMainScreen();
       }).not.toThrow();
       
-      const mainScreen = document.getElementById('mainScreen');
+      const mainScreen = document.getElementById('mainScreen')!;
       expect(mainScreen.style.display).toBe('block');
       expect(setScreenState).toHaveBeenCalledWith(SCREEN_STATES.MAIN);
     });
@@ -84,8 +84,8 @@ describe('navigation', () => {
 
   describe('showSettingsScreen', () => {
     it('should show settings screen and hide main screen', () => {
-      const mainScreen = document.getElementById('mainScreen');
-      const settingsScreen = document.getElementById('settingsScreen');
+      const mainScreen = document.getElementById('mainScreen')!;
+      const settingsScreen = document.getElementById('settingsScreen')!;
 
       showSettingsScreen();
 
@@ -95,7 +95,7 @@ describe('navigation', () => {
     });
 
     it('should handle missing DOM elements gracefully', () => {
-      document.getElementById('mainScreen').remove();
+      document.getElementById('mainScreen')!.remove();
 
       expect(() => {
         showSettingsScreen();
@@ -109,12 +109,12 @@ describe('navigation', () => {
 
   describe('init', () => {
     it('should initialize event listeners', () => {
-      setScreenState.mockImplementation(() => {});
+      vi.mocked(setScreenState).mockImplementation(() => {});
 
       init();
 
-      const menuBtn = document.getElementById('menuBtn');
-      const backBtn = document.getElementById('backBtn');
+      const menuBtn = document.getElementById('menuBtn')!;
+      const backBtn = document.getElementById('backBtn')!;
 
       expect(menuBtn).toBeDefined();
       expect(backBtn).toBeDefined();
@@ -131,8 +131,8 @@ describe('navigation', () => {
     });
 
     it('should handle missing buttons gracefully', () => {
-      document.getElementById('menuBtn').remove();
-      document.getElementById('backBtn').remove();
+      document.getElementById('menuBtn')!.remove();
+      document.getElementById('backBtn')!.remove();
       
       expect(() => {
         init();

@@ -1,5 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+// chrome.runtime.lastError is readonly in @types/chrome; tests need to simulate it.
+type MutableLastError = { lastError: chrome.runtime.LastError | null };
 import { 
   getCleansedReasonText, 
   updateCleansingStatus, 
@@ -255,7 +258,6 @@ const defaultMessages: Record<string, string> = {
   statusFilterModeDisabled: 'Disabled',
   statusPrivateDetected: 'Private page detected',
   statusPublicPage: 'Public page',
-  statusNoInfo: 'No information',
   statusReloadHint: 'Reload to check',
   statusCacheControlPrivate: 'Cache-Control: private',
   statusSetCookieDetected: 'Set-Cookie detected',
@@ -453,7 +455,7 @@ describe('updateTrustStatus', () => {
     const requestBtn = document.getElementById('btnRequestPermission')!;
     await requestBtn.click();
     const permArea = document.getElementById('permissionRequestArea')!;
-    const recordBtn = document.getElementById('recordBtn')!;
+    const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement;
     expect(permArea.classList.contains('hidden')).toBe(true);
     expect(recordBtn.disabled).toBe(false);
   });
@@ -684,8 +686,7 @@ describe('initStatusPanel - extended', () => {
     });
     mockChrome.tabs.sendMessage.mockImplementation((tabId, msg, cb) => {
       const error = new Error('Test error');
-      // @ts-expect-error
-      chrome.runtime.lastError = error;
+      (chrome.runtime as MutableLastError).lastError = error;
       cb(undefined);
     });
     await expect(initStatusPanel()).resolves.not.toThrow();

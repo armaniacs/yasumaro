@@ -5,6 +5,7 @@
  */
 
 import { vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 // Mock chrome.storage.local
 const mockStorage = new Map();
@@ -90,7 +91,7 @@ describe('PermissionManager - P0 - isHostPermitted', () => {
   });
 
   it('should return true when host is permitted', async () => {
-    (chrome.permissions.contains as vi.Mock).mockResolvedValue(true);
+    (chrome.permissions.contains as Mock).mockResolvedValue(true);
     const { getPermissionManager } = await import('../permissionManager.js');
     const manager = getPermissionManager();
 
@@ -102,7 +103,7 @@ describe('PermissionManager - P0 - isHostPermitted', () => {
   });
 
   it('should return false when host is not permitted', async () => {
-    (chrome.permissions.contains as vi.Mock).mockResolvedValue(false);
+    (chrome.permissions.contains as Mock).mockResolvedValue(false);
     const { getPermissionManager } = await import('../permissionManager.js');
     const manager = getPermissionManager();
 
@@ -114,7 +115,7 @@ describe('PermissionManager - P0 - isHostPermitted', () => {
   });
 
   it('should return false on permission check error', async () => {
-    (chrome.permissions.contains as vi.Mock).mockRejectedValue(new Error('API error'));
+    (chrome.permissions.contains as Mock).mockRejectedValue(new Error('API error'));
     const { getPermissionManager } = await import('../permissionManager.js');
     const manager = getPermissionManager();
 
@@ -148,7 +149,7 @@ describe('PermissionManager - P0 - requestPermission', () => {
   });
 
   it('should return true when permission is granted', async () => {
-    (chrome.permissions.request as vi.Mock).mockResolvedValue(true);
+    (chrome.permissions.request as Mock).mockResolvedValue(true);
     const { getPermissionManager } = await import('../permissionManager.js');
     const manager = getPermissionManager();
 
@@ -160,7 +161,7 @@ describe('PermissionManager - P0 - requestPermission', () => {
   });
 
   it('should return false when permission is denied', async () => {
-    (chrome.permissions.request as vi.Mock).mockResolvedValue(false);
+    (chrome.permissions.request as Mock).mockResolvedValue(false);
     const { getPermissionManager } = await import('../permissionManager.js');
     const manager = getPermissionManager();
 
@@ -169,7 +170,7 @@ describe('PermissionManager - P0 - requestPermission', () => {
   });
 
   it('should return false on request error', async () => {
-    (chrome.permissions.request as vi.Mock).mockRejectedValue(new Error('API error'));
+    (chrome.permissions.request as Mock).mockRejectedValue(new Error('API error'));
     const { getPermissionManager } = await import('../permissionManager.js');
     const manager = getPermissionManager();
 
@@ -347,8 +348,8 @@ describe('PermissionManager - P0 - getFrequentDeniedDomains', () => {
     const result = await manager.getFrequentDeniedDomains();
 
     expect(result).toHaveLength(1);
-    expect(result[0].domain).toBe('frequent.com');
-    expect(result[0].count).toBe(5);
+    expect(result[0]!.domain).toBe('frequent.com');
+    expect(result[0]!.count).toBe(5);
   });
 
   it('should respect custom threshold', async () => {
@@ -363,7 +364,7 @@ describe('PermissionManager - P0 - getFrequentDeniedDomains', () => {
     const result = await manager.getFrequentDeniedDomains(5);
 
     expect(result).toHaveLength(1);
-    expect(result[0].domain).toBe('high.com');
+    expect(result[0]!.domain).toBe('high.com');
   });
 
   it('should exclude domains dismissed within 14 days', async () => {
@@ -409,9 +410,9 @@ describe('PermissionManager - P0 - getFrequentDeniedDomains', () => {
 
     const result = await manager.getFrequentDeniedDomains();
 
-    expect(result[0].domain).toBe('high.com');
-    expect(result[1].domain).toBe('low.com');
-    expect(result[2].domain).toBe('medium.com');
+    expect(result[0]!.domain).toBe('high.com');
+    expect(result[1]!.domain).toBe('low.com');
+    expect(result[2]!.domain).toBe('medium.com');
   });
 
   it('should clamp threshold to 1-50 range', async () => {
@@ -558,7 +559,7 @@ describe('PermissionManager - P0 - Utility Functions', () => {
   });
 
   it('isAllUrlsPermitted should check <all_urls> permission', async () => {
-    (chrome.permissions.contains as vi.Mock).mockResolvedValue(true);
+    (chrome.permissions.contains as Mock).mockResolvedValue(true);
     const { isAllUrlsPermitted } = await import('../permissionManager.js');
 
     const result = await isAllUrlsPermitted();
@@ -569,7 +570,7 @@ describe('PermissionManager - P0 - Utility Functions', () => {
   });
 
   it('isAllUrlsPermitted should return false on error', async () => {
-    (chrome.permissions.contains as vi.Mock).mockRejectedValue(new Error('Permission error'));
+    (chrome.permissions.contains as Mock).mockRejectedValue(new Error('Permission error'));
     const { isAllUrlsPermitted } = await import('../permissionManager.js');
 
     const result = await isAllUrlsPermitted();
@@ -577,7 +578,7 @@ describe('PermissionManager - P0 - Utility Functions', () => {
   });
 
   it('requestAllUrls should request <all_urls> permission', async () => {
-    (chrome.permissions.request as vi.Mock).mockResolvedValue(true);
+    (chrome.permissions.request as Mock).mockResolvedValue(true);
     const { requestAllUrls } = await import('../permissionManager.js');
 
     const result = await requestAllUrls();
@@ -588,7 +589,7 @@ describe('PermissionManager - P0 - Utility Functions', () => {
   });
 
   it('requestAllUrls should return false on error', async () => {
-    (chrome.permissions.request as vi.Mock).mockRejectedValue(new Error('Request error'));
+    (chrome.permissions.request as Mock).mockRejectedValue(new Error('Request error'));
     const { requestAllUrls } = await import('../permissionManager.js');
 
     const result = await requestAllUrls();
@@ -596,7 +597,7 @@ describe('PermissionManager - P0 - Utility Functions', () => {
   });
 
   it('requestPermission should request permission for valid URL', async () => {
-    (chrome.permissions.request as vi.Mock).mockResolvedValue(true);
+    (chrome.permissions.request as Mock).mockResolvedValue(true);
     const { getPermissionManager } = await import('../permissionManager.js');
     const manager = getPermissionManager();
 
@@ -616,7 +617,7 @@ describe('PermissionManager - P0 - Utility Functions', () => {
   });
 
   it('requestPermission should return false on error', async () => {
-    (chrome.permissions.request as vi.Mock).mockRejectedValue(new Error('Request error'));
+    (chrome.permissions.request as Mock).mockRejectedValue(new Error('Request error'));
     const { getPermissionManager } = await import('../permissionManager.js');
     const manager = getPermissionManager();
 

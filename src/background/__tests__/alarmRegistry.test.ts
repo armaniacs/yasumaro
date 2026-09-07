@@ -6,8 +6,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { flushBufferedExportsMock, flushYesterdaysExportMock, addLogMock } = vi.hoisted(() => ({
-  flushBufferedExportsMock: vi.fn(async () => {}),
-  flushYesterdaysExportMock: vi.fn(async () => {}),
+  flushBufferedExportsMock: vi.fn(async (..._args: unknown[]) => {}),
+  flushYesterdaysExportMock: vi.fn(async (..._args: unknown[]) => {}),
   addLogMock: vi.fn(),
 }));
 
@@ -95,7 +95,7 @@ describe('createAlarmRegistry', () => {
 
   it('offline-retry fans out without one failure blocking the others', async () => {
     const deps = makeDeps();
-    (deps.sqliteClient as { maintain: ReturnType<typeof vi.fn> }).maintain.mockRejectedValueOnce(
+    (deps.sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain.mockRejectedValueOnce(
       new Error('sqlite down'),
     );
     const registry = createAlarmRegistry(deps);

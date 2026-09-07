@@ -2,7 +2,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CspSettingsController } from '../cspSettings.js';
 import { StorageKeys } from '../../utils/storage/types.js';
-import type { SettingsReader } from '../../utils/storage/SettingsRepository.js';
+import type { SettingsReader, SettingsRepository } from '../../utils/storage/SettingsRepository.js';
 
 describe('cspSettings — SettingsRepository seam', () => {
   it('loadCSPSettings reads from injected repo', async () => {
@@ -14,7 +14,7 @@ describe('cspSettings — SettingsRepository seam', () => {
       getMany: vi.fn(),
     };
 
-    const controller = new CspSettingsController(undefined, repo);
+    const controller = new CspSettingsController(undefined, repo as unknown as SettingsRepository);
     await controller.loadCSPSettings();
 
     expect(repo.getAll).toHaveBeenCalledTimes(1);

@@ -180,7 +180,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
               const stored = settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] as unknown as typeof existingSlots | undefined;
               if (Array.isArray(stored)) existingSlots = stored;
             }
-            bPriorityView = createBPriorityListView(bListContainer, existingSlots);
+            bPriorityView = createBPriorityListView(bListContainer, existingSlots, settings);
           } else if (bListContainer && bPriorityView) {
             // Ensure hidden flag sync even if view already exists
             bPriorityView.container.hidden = false;

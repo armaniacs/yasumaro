@@ -117,6 +117,10 @@ function admissionDeps(overrides: Partial<VisitAdmissionDeps> = {}): VisitAdmiss
       warns.push([message, url, detail]);
     },
     ...overrides,
+  } as unknown as VisitAdmissionDeps & {
+    warns: Array<[string, string, string]>;
+    injected: { count: number };
+    sendCheckDomain: ReturnType<typeof vi.fn>;
   };
 }
 

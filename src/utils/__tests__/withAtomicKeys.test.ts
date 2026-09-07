@@ -86,7 +86,7 @@ describe('withAtomicKeys', () => {
                 const out: Record<string, unknown> = {};
                 arr.forEach((k) => { out[k] = store[k]; });
                 return out;
-            });
+            }) as unknown as typeof chrome.storage.local.get;
             chrome.storage.local.set = vi.fn(async (data: Record<string, unknown>) => {
                 // Simulate storage round-trip re-ordering object keys (e.g. structured
                 // clone through IPC), which is the scenario JSON.stringify breaks on.

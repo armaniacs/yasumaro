@@ -8,7 +8,7 @@
  * - エラー発生時に適切なログ記録が必要
  */
 
-import { describe, test, expect, beforeAll, jest } from 'vitest';
+import { describe, test, expect, beforeAll } from 'vitest';
 import { CSPValidator } from '../cspValidator.js';
 
 // Mock chrome API
@@ -203,7 +203,7 @@ describe('CSP Validator - Error Handling', () => {
       // If errors are logged, they should use structured logging
       const errorLogs = mockLogWarn.mock.calls || [];
       if (errorLogs.length > 0) {
-        const [message, details] = errorLogs[0];
+        const [message, details] = errorLogs[0]!;
         expect(typeof message).toBe('string');
         expect(details && typeof details === 'object').toBe(true);
       }

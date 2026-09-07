@@ -7,7 +7,7 @@ describe('logCritical', () => {
     const sink = new FakeCriticalSink();
     await logger.logCritical('disk full', { x: 1 }, ErrorCode.STORAGE_WRITE_FAILURE, 'test', sink);
     expect(sink.raised).toHaveLength(1);
-    expect(sink.raised[0].message).toBe('disk full');
+    expect(sink.raised[0]!.message).toBe('disk full');
   });
 
   it('works without a sink (uses default no-op in test env)', async () => {
@@ -23,8 +23,8 @@ describe('logCritical', () => {
     await logger.logCritical(messageWithPii, {}, ErrorCode.UNKNOWN_ERROR, 'test', sink);
 
     expect(sink.raised).toHaveLength(1);
-    expect(sink.raised[0].message).not.toBe(messageWithPii);
-    expect(sink.raised[0].message).not.toContain('test@example.com');
+    expect(sink.raised[0]!.message).not.toBe(messageWithPii);
+    expect(sink.raised[0]!.message).not.toContain('test@example.com');
   });
 
   it('leaves messages without sensitive content unchanged when raising to the sink', async () => {
@@ -33,6 +33,6 @@ describe('logCritical', () => {
     await logger.logCritical(plainMessage, {}, ErrorCode.UNKNOWN_ERROR, 'test', sink);
 
     expect(sink.raised).toHaveLength(1);
-    expect(sink.raised[0].message).toBe(plainMessage);
+    expect(sink.raised[0]!.message).toBe(plainMessage);
   });
 });

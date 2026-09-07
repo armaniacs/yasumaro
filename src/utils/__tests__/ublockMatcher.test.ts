@@ -1,12 +1,15 @@
 // ublockMatcher.test.ts
 // Tests for the uBlock matcher integration (UF-103)
 
-import { isUrlBlocked, type UblockRules, type UblockMatcherContext } from '../ublockMatcher.js';
+import { isUrlBlocked, type UblockMatcherContext } from '../ublockMatcher.js';
+import type { UblockRules } from '../types.js';
 import { parseUblockFilterList } from '../ublockParser/index.js';
 
 /** Helper to create a simple rule set */
 function rulesFromText(text: string): UblockRules {
-  return parseUblockFilterList(text);
+  // parseUblockFilterList emits the legacy blockRules/exceptionRules shape which
+  // isUrlBlocked still accepts; the two UblockRules interfaces do not overlap in TS.
+  return parseUblockFilterList(text) as unknown as UblockRules;
 }
 
 describe('isUrlBlocked', () => {
@@ -60,12 +63,12 @@ describe('isUrlBlocked', () => {
 
   test('match-case option enables case-sensitive matching', async () => {
     const ublockRules = rulesFromText('||EXAMPLE.COM^$match-case');
-    expect(ublockRules.blockRules[0].options.matchCase).toBe(true);
+    expect(ublockRules.blockRules![0]!.options!.matchCase).toBe(true);
   });
 
   test('~match-case option enables case-insensitive matching', async () => {
     const ublockRules = rulesFromText('||example.com^$~match-case');
-    expect(ublockRules.blockRules[0].options.matchCase).toBe(false);
+    expect(ublockRules.blockRules![0]!.options!.matchCase).toBe(false);
   });
 
   // Edge cases for isUrlBlocked guard clauses (lines 176-177, 180-182)

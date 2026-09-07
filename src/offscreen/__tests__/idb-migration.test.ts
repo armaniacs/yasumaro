@@ -114,14 +114,14 @@ describe('SqliteEngineHost: IDB migration (wa-sqlite -> @subframe7536)', () => {
       close: mockIdbClose,
     }) as never);
     const waSqlite = await import('wa-sqlite');
-    vi.mocked(waSqlite.Factory as never).mockImplementation((() => ({
+    vi.mocked(waSqlite.Factory as unknown as (...a: unknown[]) => unknown).mockImplementation((() => ({
       vfs_register: vi.fn(),
       open_v2: vi.fn().mockResolvedValue(1),
       exec: mockOldExec,
       close: vi.fn().mockResolvedValue(undefined),
     })) as never);
     const waAsync = await import('wa-sqlite/dist/wa-sqlite-async.mjs');
-    vi.mocked(waAsync.default as never).mockResolvedValue({} as never);
+    vi.mocked(waAsync.default as unknown as (...a: unknown[]) => Promise<unknown>).mockResolvedValue({} as never);
     // Hermetic default for the migration boundary; the integration test below
     // overrides this for a single call with the real implementation.
     vi.mocked(runMigrations).mockResolvedValue({ fts5Available: true });
@@ -244,7 +244,7 @@ describe('SqliteEngineHost: IDB migration (wa-sqlite -> @subframe7536)', () => {
     });
     expect(backupCall).toBeDefined();
     const backupJson = (backupCall![0] as Record<string, string>).idb_migration_backup;
-    const payload = JSON.parse(backupJson);
+    const payload = JSON.parse(backupJson ?? '');
     expect(payload.records).toHaveLength(1);
     const record = payload.records[0];
 

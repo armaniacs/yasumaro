@@ -218,7 +218,7 @@ vi.mock('../../../utils/ui/settingsUiHelper.js', () => ({
 }));
 
 vi.mock('../../../utils/i18n.js', () => ({
-  getMessage: (...args: any[]) => mockGetMessage(...args),
+  getMessage: (...args: [string]) => mockGetMessage(...args),
 }));
 
 const mockSanitizeRegex = vi.fn();

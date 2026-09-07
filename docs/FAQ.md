@@ -128,7 +128,7 @@ Groq も Ollama も独立した入力があるので、シンプルに OpenAI �
 
 **Q21. 閲覧データはどこに保存されますか？開発者のサーバーに送られますか？**
 
-すべてのデータはあなたのデバイス上にのみ保存されます。開発者はサーバーを一切運営していないため、データが開発者の手に渡ることはありません。閲覧履歴はデバイス上の OPFS（SQLite DB）に、設定情報は Chrome のローカルストレージに保存されます。詳細は [プライバシーポリシー](PRIVACY.md) をご覧ください。
+すべてのデータはあなたのデバイス上にのみ保存されます。開発者はサーバーを一切運営していないため、データが開発者の手に渡ることはありません。閲覧履歴はデバイス上の OPFS（SQLite DB）に、設定情報は Chrome のローカルストレージに保存されます。ページ本文（content）をローカル保存するかは、ダッシュボードの「設定 → コンテンツ保持設定」でいつでも切り替えられます（デフォルト: オフ）。詳細は [プライバシーポリシー](PRIVACY.md) をご覧ください。
 
 **Q22. AI プロバイダーにはどんなデータが送られますか？**
 
@@ -168,7 +168,7 @@ HTTP レスポンスヘッダー（`Cache-Control: private`、`Set-Cookie` な�
 
 **Q30. 特定のサイトを記録したくない（または記録したい）場合は？**
 
-ダッシュボードの「ドメインフィルター」タブで設定します。ブラックリストモードで除外したいドメインを追加するか、ホワイトリストモードで記録したいドメインだけを登録してください。「現在のページドメインを追加」ボタンを使うと、現在開いているページのドメインをワンクリックで追加できます。uBlock Origin 形式のフィルターリストをインポートすることも可能です。詳細は [uBlock フィルターガイド](USER-GUIDE-UBLOCK-IMPORT.md) をご覧ください。
+ダッシュボードの「ドメインフィルター」タブで設定します。ブラックリストモードで除外したいドメインを追加するか、ホワイトリストモードで記録したいドメインだけを登録してください。「現在のページドメインを追加」ボタンを使うと、現在開いているページのドメインをワンクリックで追加できます。「サブドメインもマッチさせる」トグルをONにすると、`example.com` の登録が `sub.example.com` 等のサブドメインにも一致します（デフォルトOFF）。uBlock Origin 形式のフィルターリストをインポートすることも可能です。詳細は [uBlock フィルターガイド](USER-GUIDE-UBLOCK-IMPORT.md) をご覧ください。
 
 **Q31. スキップされたページはどこで確認できますか？**
 
@@ -253,6 +253,8 @@ SQLite に組み込まれている全文検索エンジンです。従来の LIK
 **Q49. 閲覧履歴をバックアップしたり、他の環境に移行したりできますか？**
 
 できます。ダッシュボードの「ログをエクスポート」パネルから、JSON（バックアップ・移行用）/ CSV / Markdown / SQLite データベース（.db）の各形式でエクスポートできます。v6.7.99 以降、JSON エクスポートには改竄検出用の HMAC 署名が付き、インポート時に検証されます。**v6.7.98 以前でエクスポートした署名なしの JSON は再インポートできない**ため、必要なら最新バージョンで再エクスポートしてください。パスワード保護が必要な場合は「暗号化バックアップ」も利用できます。詳細は [ログのエクスポート・インポートガイド](LOG_EXPORT_IMPORT_GUIDE.md) をご覧ください。
+
+また、`Dashboard → Archive` パネルでは、指定日までの閲覧履歴を標準SQLiteファイルとしてバックアップし、必要になったら本体DBへマージ復元できます。バックアップと本体からの削除は分離されており、削除はバックアップファイルの内容と突合せてから実行されます。詳細は [セットアップガイド](SETUP_GUIDE.md) の「閲覧履歴アーカイブ」セクションをご覧ください。
 
 **Q50. AI 要約のクレンジングで重要な部分が誤って削除された場合は？**
 
@@ -386,7 +388,7 @@ You can enter multiple OpenAI-compatible LLM services independently—for exampl
 
 **Q21. Where is my browsing data stored? Is it sent to the developer?**
 
-All data is stored only on your device. The developer does not operate any server, so your data never reaches the developer. Browsing history is stored in OPFS (SQLite DB) on your device; settings are stored in Chrome's local storage. See [PRIVACY.md](PRIVACY.md) for details.
+All data is stored only on your device. The developer does not operate any server, so your data never reaches the developer. Browsing history is stored in OPFS (SQLite DB) on your device; settings are stored in Chrome's local storage. Whether the page body (content) is stored locally can be toggled at any time under Dashboard → Settings → Content Retention Settings (default: off). See [PRIVACY.md](PRIVACY.md) for details.
 
 **Q22. What data is sent to the AI provider?**
 
@@ -426,7 +428,7 @@ Click the extension icon to open the popup and click the "📝 Record Now" butto
 
 **Q30. How do I stop a specific site from being recorded (or ensure it is)?**
 
-Use the "Domain Filter" tab in the dashboard. In blacklist mode, add the domains you want to exclude; in whitelist mode, add only the domains you want to record. The "Add Current Domain" button lets you add the current page's domain in one click. You can also import uBlock Origin format filter lists. See the [uBlock Filter Guide](USER-GUIDE-UBLOCK-IMPORT.md) for details.
+Use the "Domain Filter" tab in the dashboard. In blacklist mode, add the domains you want to exclude; in whitelist mode, add only the domains you want to record. The "Add Current Domain" button lets you add the current page's domain in one click. With the "Match subdomains too" toggle ON, an `example.com` entry also matches subdomains like `sub.example.com` (default OFF). You can also import uBlock Origin format filter lists. See the [uBlock Filter Guide](USER-GUIDE-UBLOCK-IMPORT.md) for details.
 
 **Q31. Where can I find pages that were skipped?**
 
@@ -511,6 +513,8 @@ You can hide it in your browser settings. In Chrome, open `chrome://settings/dow
 **Q49. Can I back up my browsing history or migrate it to another environment?**
 
 Yes. The **Export Logs** panel in the dashboard exports your history as JSON (backup & migration), CSV, Markdown, or a SQLite database (.db). Since v6.7.99, JSON exports carry an HMAC signature for tamper detection, verified on import. **Unsigned JSON exported by v6.7.98 or earlier can no longer be re-imported** — re-export it with the latest version if needed. For password protection, use the Encrypted Backup feature. See the [Log Export & Import Guide](LOG_EXPORT_IMPORT_GUIDE.md) for details.
+
+The `Dashboard → Archive` panel can also export browsing history up to a chosen date as a standard SQLite file and merge it back into the main database when needed. Export and deletion are separate phases; deletion is cross-checked against the exported file's contents. See the "History Archive" section in the [Setup Guide](SETUP_GUIDE.md).
 
 **Q50. The AI summary cleansing accidentally removed something important. What can I do?**
 

@@ -17,6 +17,12 @@
 
 import { createDashboardSqliteHandler, createSqliteClientDeps } from '../dashboardSqliteHandlers.js';
 import type { SqliteClientBackedDeps } from '../dashboardSqliteHandlers.js';
+
+// normalizeOverrides() maps the legacy single-token dep onto the current
+// create/verify pair at runtime; accept it at the type level too.
+type SqliteClientBackedDepOverrides = Partial<SqliteClientBackedDeps> & {
+  getConfirmToken?: () => Promise<string>;
+};
 import type { SqliteClient } from '../../sqlite/offscreenGateway.js';
 import type { DashboardSqliteRequest } from '../dashboardSqliteProtocol.js';
 
@@ -58,7 +64,7 @@ function normalizeOverrides(overrides: Record<string, unknown>): Record<string, 
  */
 export function makeDashboardSqliteHandler(
   sqliteClient: Partial<SqliteClient>,
-  overrides: Partial<SqliteClientBackedDeps> = {} as Partial<SqliteClientBackedDeps>,
+  overrides: SqliteClientBackedDepOverrides = {},
 ): (payload: DashboardSqliteRequest & { confirmToken?: string }) => Promise<unknown> {
   const normalized = normalizeOverrides(overrides as unknown as Record<string, unknown>) as Partial<SqliteClientBackedDeps>;
   return createDashboardSqliteHandler(
@@ -78,7 +84,7 @@ export function makeDashboardSqliteHandler(
 export function dispatchDashboardSqlite(
   payload: DashboardSqliteRequest & { confirmToken?: string },
   sqliteClient: Partial<SqliteClient>,
-  overrides: Partial<SqliteClientBackedDeps> = {} as Partial<SqliteClientBackedDeps>,
+  overrides: SqliteClientBackedDepOverrides = {},
 ): Promise<unknown> {
-  return makeDashboardSqliteHandler(sqliteClient, overrides as Partial<SqliteClientBackedDeps>)(payload);
+  return makeDashboardSqliteHandler(sqliteClient, overrides)(payload);
 }

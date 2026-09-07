@@ -15,7 +15,7 @@ import { TabContentFetcher } from '../recordCurrentPage/tabContentFetcher.js';
 describe('TabContentFetcher permission ladder', () => {
   beforeEach(() => {
     chrome.tabs.sendMessage = vi.fn().mockRejectedValue(new Error('no content script'));
-    chrome.runtime.lastError = null;
+    (chrome.runtime as { lastError: chrome.runtime.LastError | null }).lastError = null;
     chrome.permissions.contains = vi.fn();
     chrome.permissions.request = vi.fn();
     chrome.scripting.executeScript = vi.fn();

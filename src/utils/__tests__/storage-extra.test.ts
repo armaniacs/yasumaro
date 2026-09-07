@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Mock } from 'vitest';
 
 // Mock storage module dependencies
 vi.mock('../logger.js', () => ({
@@ -290,7 +291,7 @@ describe('URL set functions', () => {
       const result = await settingsRepository.getAll();
 
       const readSettingsKey = getSpy.mock.calls.some(
-        (call) => Array.isArray(call[0]) && call[0].includes('settings')
+        (call) => Array.isArray(call[0]) && (call[0] as string[]).includes('settings')
       );
       expect(readSettingsKey).toBe(false);
       expect(result[StorageKeys.OBSIDIAN_PORT]).toBe('27123');
@@ -459,7 +460,7 @@ describe('URL set functions', () => {
     describe('PBI 2026-07-09-10: saveSettings quota-exceeded health check integration', () => {
       beforeEach(() => {
         // Simulate an extension without unlimitedStorage so the quota check runs.
-        (chrome.permissions.contains as vi.Mock).mockResolvedValue(false);
+        (chrome.permissions.contains as Mock).mockResolvedValue(false);
       });
 
       it('skips destructive legacy cleanup and fails the save when SQLite is unhealthy', async () => {
@@ -467,7 +468,7 @@ describe('URL set functions', () => {
           savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
           savedUrls: ['a', 'b'],
         });
-        vi.spyOn(chrome.storage.local, 'getBytesInUse').mockResolvedValue(STORAGE_QUOTA_BYTES + 1024 * 1024);
+        (vi.spyOn(chrome.storage.local, 'getBytesInUse') as unknown as Mock).mockResolvedValue(STORAGE_QUOTA_BYTES + 1024 * 1024);
 
         await expect(
           settingsRepository.setAll({} as any, { sqliteHealthCheck: async () => false })
@@ -482,7 +483,7 @@ describe('URL set functions', () => {
         await chrome.storage.local.set({
           savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
         });
-        vi.spyOn(chrome.storage.local, 'getBytesInUse')
+        (vi.spyOn(chrome.storage.local, 'getBytesInUse') as unknown as Mock)
           .mockResolvedValueOnce(STORAGE_QUOTA_BYTES + 1024 * 1024) // before cleanup: over quota
           .mockResolvedValue(1024); // after cleanup: back under quota
 
@@ -500,7 +501,7 @@ describe('URL set functions', () => {
         await chrome.storage.local.set({
           savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
         });
-        vi.spyOn(chrome.storage.local, 'getBytesInUse').mockResolvedValue(STORAGE_QUOTA_BYTES + 1024 * 1024);
+        (vi.spyOn(chrome.storage.local, 'getBytesInUse') as unknown as Mock).mockResolvedValue(STORAGE_QUOTA_BYTES + 1024 * 1024);
 
         await expect(settingsRepository.setAll({} as any)).rejects.toThrow();
 

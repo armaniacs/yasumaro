@@ -12,6 +12,7 @@
 
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 import type { OpfsSpikeReport } from '../../offscreen/opfsSpike.js';
+import type { ArchivePreviewData, ArchiveRestorePreviewData, ArchiveSessionRow, ArchiveSessionStatusData } from '../../messaging/sqliteMessages.js';
 import type { DashboardSqliteSubtype } from '../../messaging/sqliteOperationSecurity.js';
 
 export type { DashboardSqliteSubtype } from '../../messaging/sqliteOperationSecurity.js';
@@ -62,7 +63,21 @@ export type DashboardSqliteRequest =
   | { subtype: 'append_to_obsidian'; ids: number[] }
   | { subtype: 'purge_now' }
   | { subtype: 'content_purge_now' }
-  | { subtype: 'audit_log_query'; limit?: number; offset?: number };
+  | { subtype: 'audit_log_query'; limit?: number; offset?: number }
+  | { subtype: 'archive_preview'; cutoffMs: number; includeDeleted: boolean }
+  | { subtype: 'archive_create'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string; confirmToken?: string }
+  | { subtype: 'archive_cleanup'; confirmToken?: string }
+  | { subtype: 'archive_export'; stagingName: string; offset: number; length: number; confirmToken?: string }
+  | { subtype: 'archive_prepare_incoming' }
+  | { subtype: 'archive_restore_preview'; stagingName: string }
+  | { subtype: 'archive_restore'; stagingName: string; confirmToken?: string }
+  | { subtype: 'archive_delete_by_staging'; stagingName: string; confirmToken?: string }
+  | { subtype: 'archive_open'; stagingName: string }
+  | { subtype: 'archive_query'; stagingName: string; query: string; limit: number; offset: number }
+  | { subtype: 'archive_update'; stagingName: string; id: number; changes: Record<string, unknown> }
+  | { subtype: 'archive_save'; stagingName: string }
+  | { subtype: 'archive_close'; stagingName: string }
+  | { subtype: 'archive_status' };
 
 /**
  * Compile-time guard that every subtype in the request union also exists in the
@@ -147,5 +162,19 @@ export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
       S extends 'purge_now' ? { success: true; purged: number; skipped: boolean } :
       S extends 'content_purge_now' ? { success: true; purged: number; skipped: boolean } :
       S extends 'audit_log_query' ? { success: true; rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number } :
+      S extends 'archive_preview' ? { success: true; preview: ArchivePreviewData } :
+      S extends 'archive_create' ? { success: true; stagingName: string; recordCount: number } :
+      S extends 'archive_cleanup' ? { success: true; removed: string[] } :
+      S extends 'archive_export' ? { success: true; chunk: number[]; nextOffset: number; total: number; done: boolean } :
+      S extends 'archive_prepare_incoming' ? { success: true; stagingName: string } :
+      S extends 'archive_restore_preview' ? { success: true; preview: ArchiveRestorePreviewData } :
+      S extends 'archive_restore' ? { success: true; restored: number; restoredDeleted: number; skipped: number; skippedInvalid: number } :
+      S extends 'archive_delete_by_staging' ? { success: true; deleted: number; remaining: number; freelistBefore: number; freelistAfter: number; vacuumOk: boolean } :
+      S extends 'archive_open' ? { success: true } :
+      S extends 'archive_query' ? { success: true; rows: ArchiveSessionRow[]; total: number } :
+      S extends 'archive_update' ? { success: true; dirty: boolean } :
+      S extends 'archive_save' ? { success: true; dirty: boolean } :
+      S extends 'archive_close' ? { success: true; dirty: boolean } :
+      S extends 'archive_status' ? { success: true; status: ArchiveSessionStatusData } :
       never
     );

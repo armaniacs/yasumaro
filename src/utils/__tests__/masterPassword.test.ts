@@ -3,9 +3,9 @@
  * masterPassword.ts の単体テスト
  */
 
-import { webcrypto as crypto } from '@peculiar/webcrypto';
+import { Crypto } from '@peculiar/webcrypto';
 Object.defineProperty(global, 'crypto', {
-    value: crypto
+    value: new Crypto()
 });
 
 import {

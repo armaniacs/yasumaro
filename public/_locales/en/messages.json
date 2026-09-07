@@ -1918,6 +1918,9 @@
   "domainFilterEnable": {
     "message": "Enable domain filter"
   },
+  "domainSubdomainMatching": {
+    "message": "Match subdomains too (example.com matches sub.example.com)"
+  },
   "domainBlacklistTab": {
     "message": "Blacklist"
   },
@@ -3574,6 +3577,153 @@
   "sqliteHistoryTab": {
     "message": "History"
   },
+  "archiveTab": {
+    "message": "Archive"
+  },
+  "archivePanelDescription": {
+    "message": "Backs up browsing history up to a chosen date as a standard SQLite file. In phase 2 (next step), you can also delete it from the local database. The exported file can be opened with any SQLite tool."
+  },
+  "archiveDateLabel": {
+    "message": "Archive records up to (inclusive)"
+  },
+  "archiveIncludeDeletedLabel": {
+    "message": "Include deleted records"
+  },
+  "archiveIncludeDeletedNote": {
+    "message": "Deleted records are excluded by default. Records excluded here cannot be restored from the archive later."
+  },
+  "archivePreviewBtn": {
+    "message": "Check records to archive"
+  },
+  "archiveCreateBtn": {
+    "message": "Create archive file"
+  },
+  "archiveDownloadBtn": {
+    "message": "Download archive file"
+  },
+  "archiveCleanupBtn": {
+    "message": "Delete staging copy"
+  },
+  "archiveDateRequired": {
+    "message": "Choose a date first"
+  },
+  "archiveStatusWorking": {
+    "message": "Working… other archive operations are disabled until this finishes."
+  },
+  "archivePreviewSummary": {
+    "message": "Records to archive: {total} (starred: {starred}). Deleted records in range: {deleted} (excluded unless 'Include deleted records' is on)."
+  },
+  "archiveCreatedSummary": {
+    "message": "Archive created: {count} record(s) exported. Download the file before deleting the staging copy."
+  },
+  "archiveCreatedDownloadHint": {
+    "message": "Archive created. Download it now — you can re-download until the staging copy is deleted."
+  },
+  "archiveDownloadDone": {
+    "message": "Archive file downloaded."
+  },
+  "archiveDownloadFailed": {
+    "message": "Archive download failed"
+  },
+  "archivePreviewFailed": {
+    "message": "Archive preview failed"
+  },
+  "archiveCreateFailed": {
+    "message": "Archive creation failed"
+  },
+  "archiveCleanupDone": {
+    "message": "Staging cleanup done ({count} file(s) removed)."
+  },
+  "archiveCleanupFailed": {
+    "message": "Staging cleanup failed"
+  },
+  "archiveSessionSectionTitle": {
+    "message": "Open archive session"
+  },
+  "archiveSessionSearchLabel": {
+    "message": "Search in archive"
+  },
+  "archiveSessionSearchBtn": {
+    "message": "Search"
+  },
+  "archiveSessionSaveBtn": {
+    "message": "Save changes to archive"
+  },
+  "archiveSessionCloseBtn": {
+    "message": "Close archive"
+  },
+  "archiveSessionEditBtn": {
+    "message": "Edit title"
+  },
+  "archiveSessionEditPrompt": {
+    "message": "New title:"
+  },
+  "archiveSessionEmpty": {
+    "message": "No matching records."
+  },
+  "archiveSessionSaved": {
+    "message": "Changes saved to the archive file."
+  },
+  "archiveSessionDiscardTitle": {
+    "message": "Discard unsaved changes?"
+  },
+  "archiveSessionDiscardMessage": {
+    "message": "The archive has unsaved changes. Closing now discards them (the file keeps its last saved state)."
+  },
+  "archiveRestoreSectionTitle": {
+    "message": "Restore from archive"
+  },
+  "archiveRestoreSectionDesc": {
+    "message": "Merge records from an archive file back into the local database. Existing records are kept; duplicates (same URL and time) are skipped."
+  },
+  "archiveRestoreFileLabel": {
+    "message": "Archive file"
+  },
+  "archiveRestoreBtn": {
+    "message": "Restore into main database"
+  },
+  "archiveRestorePreviewSummary": {
+    "message": "Ready to restore: {count} record(s) (archive boundary: {date})."
+  },
+  "archiveRestoreDone": {
+    "message": "Restore complete: {restored} restored ({deleted} deleted-flagged), {skipped} skipped as duplicates, {invalid} invalid."
+  },
+  "archiveRestoreDoneStatus": {
+    "message": "Archive restore completed."
+  },
+  "archiveRestoreFailed": {
+    "message": "Archive restore failed"
+  },
+  "archiveRestorePreviewFailed": {
+    "message": "Archive restore preview failed"
+  },
+  "archivePurgeBtn": {
+    "message": "Delete records from main database"
+  },
+  "archivePurgeConfirmTitle": {
+    "message": "Delete archived records from the main database?"
+  },
+  "archivePurgeConfirmMessage": {
+    "message": "Records archived up to {date} will be permanently deleted from the local database. {legacy}"
+  },
+  "archiveLegacyDisclosure": {
+    "message": "Note: copies in the legacy storage may remain until legacy cleanup runs."
+  },
+  "archivePurgeConfirmOk": {
+    "message": "Delete records"
+  },
+  "archivePurgeDone": {
+    "message": "Deletion complete: {deleted} record(s) removed. {remaining} record(s) remain in the local database."
+  },
+  "archiveVacuumNote": {
+    "message": "Storage space was not reclaimed (VACUUM failed) — it will be reclaimed on a later run."
+  },
+  "archivePurgeFailed": {
+    "message": "Archive purge failed"
+  },
+  "archiveFileTooLarge": {
+    "message": "Archive file exceeds {max} MB"
+  },
   "exportLogsTab": {
     "message": "Export Logs"
   },
@@ -3776,6 +3926,9 @@
   },
   "contentRetentionPolicyTitle": {
     "message": "Content Retention Settings"
+  },
+  "contentStorageEnabledLabel": {
+    "message": "Store page content (body text) locally"
   },
   "contentRetentionPolicyDesc": {
     "message": "Only content (page body) will be purged; records themselves are kept"

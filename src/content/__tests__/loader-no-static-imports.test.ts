@@ -50,7 +50,7 @@ describe('loader.ts - Content Script 静的インポート方針', () => {
         const nonRelativeImports = staticImportLines.filter((line) => {
             const match = line.match(/from\s+['"]([^'"]+)['"]/);
             if (!match) return true; // side-effect import without a resolvable path
-            const specifier = match[1];
+            const specifier = match[1] ?? '';
             return !(specifier.startsWith('./') || specifier.startsWith('../'));
         });
 

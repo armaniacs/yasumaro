@@ -51,7 +51,7 @@ function makeDeps(): MessageRouterDeps {
     recordingPipeline: { record: async () => ({ success: true }) },
     tabCache: { add: () => undefined, update: () => undefined },
     obsidian: { testConnection: async () => ({ success: true, message: 'ok' }) },
-    aiService: { testConnection: async () => ({ success: true, message: 'ok' }) },
+    aiService: { testConnection: async () => ({ success: true, message: 'ok', providers: [] }) },
     manualRecordDeps: {} as never,
     saveRecordDeps: {} as never,
     hasPrivacyConsent: async () => true,

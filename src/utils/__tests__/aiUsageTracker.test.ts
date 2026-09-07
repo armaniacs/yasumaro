@@ -3,8 +3,8 @@
  * aiUsageTracker.ts の単体テスト
  */
 
-import { webcrypto as crypto } from '@peculiar/webcrypto';
-Object.defineProperty(global, 'crypto', { value: crypto });
+import { Crypto } from '@peculiar/webcrypto';
+Object.defineProperty(global, 'crypto', { value: new Crypto() });
 
 // StorageKeys モック
 vi.mock('../storage/types.js', async (importOriginal) => {
@@ -434,7 +434,7 @@ describe('aiUsageTracker', () => {
 
             await recordUsage(50, 50);
 
-            const callArg = mockChrome.storage.local.set.mock.calls[0][0];
+            const callArg = mockChrome.storage.local.set.mock.calls[0]![0];
             expect(callArg['ai_usage_tokens_sent']).toBe(150);
             expect(callArg['ai_usage_tokens_received']).toBe(250);
         });

@@ -139,7 +139,7 @@ describe('tagsPanel-r2 — Normalization dictionary', () => {
 
     const items = document.querySelectorAll('.norm-entry-item');
     expect(items.length).toBe(1);
-    expect(items[0].textContent).toContain('OldName');
+    expect(items[0]?.textContent).toContain('OldName');
     expect(fromInput.value).toBe('');
     expect(toInput.value).toBe('');
   });

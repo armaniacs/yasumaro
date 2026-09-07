@@ -8,6 +8,7 @@
  */
 
 import { vi } from 'vitest';;
+import type { MockedClass, MockedFunction } from 'vitest';
 
 // PrivacyPipeline をモック化
 vi.mock('../../../privacyPipeline.js');
@@ -23,7 +24,7 @@ import { PrivacyPipeline } from '../../../privacyPipeline.js';
 import { processPrivacyPipelineStep } from '../processPrivacyPipelineStep.js';
 import type { RecordingContext } from '../../types.js';
 
-const MockedPrivacyPipeline = PrivacyPipeline as vi.MockedClass<typeof PrivacyPipeline>;
+const MockedPrivacyPipeline = PrivacyPipeline as MockedClass<typeof PrivacyPipeline>;
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {
@@ -44,7 +45,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
 }
 
 describe('processPrivacyPipelineStep', () => {
-  let mockProcess: vi.MockedFunction<any>;
+  let mockProcess: MockedFunction<any>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -88,7 +89,8 @@ describe('processPrivacyPipelineStep', () => {
     it('aiService が undefined の場合も PrivacyPipeline に undefined を渡す', async () => {
       mockProcess.mockResolvedValue({ summary: 'Summary not available.', maskedCount: 0 });
 
-      const context = makeContext({ aiService: undefined });
+      // makeContext() leaves aiService unset (undefined) by default.
+      const context = makeContext();
       await expect(processPrivacyPipelineStep(context)).resolves.toBeDefined();
 
       expect(MockedPrivacyPipeline).toHaveBeenCalledWith(

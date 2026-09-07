@@ -4,6 +4,7 @@
  * HTTP/HTTPS の選択が通信時に尊重されることを検証
  */
 
+import type { Mock } from 'vitest';
 import { ObsidianClient } from '../obsidianClient.js';
 import * as storage from '../../utils/storage/types.js';
 
@@ -53,7 +54,6 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
     vi.clearAllMocks();
 
     // storageのデフォルトモック
-    // @ts-expect-error - vi.fn() type narrowing issue
     mockGetSettings.mockResolvedValue({
       OBSIDIAN_API_KEY: 'test_key',
       OBSIDIAN_PROTOCOL: 'https',
@@ -75,11 +75,10 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
     });
 
     afterEach(() => {
-      (global.fetch as vi.Mock).mockRestore();
+      (global.fetch as Mock).mockRestore();
     });
 
     it('HTTPS接続が許可されること', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
@@ -108,7 +107,6 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
     });
 
     it('HTTP URLがHTTPのまま使用されること', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
@@ -152,7 +150,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
     });
 
     afterEach(() => {
-      (global.fetch as vi.Mock).mockRestore();
+      (global.fetch as Mock).mockRestore();
     });
 
     it('HTTPS接続で書き込みが成功すること', async () => {
@@ -202,7 +200,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
     });
 
     afterEach(() => {
-      (global.fetch as vi.Mock).mockRestore();
+      (global.fetch as Mock).mockRestore();
     });
 
     it('HTTPS接続テストが成功すること', async () => {
@@ -226,7 +224,6 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
 
   describe('プロトコル設定の検証', () => {
     it('設定にhttpが含まれている場合はHTTPでfetchされる', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
@@ -251,11 +248,10 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
         expect.any(Object)
       );
 
-      (global.fetch as vi.Mock).mockRestore();
+      (global.fetch as Mock).mockRestore();
     });
 
     it('無効なプロトコル設定は拒否される', async () => {
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'ftp',

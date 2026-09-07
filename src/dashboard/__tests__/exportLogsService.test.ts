@@ -25,7 +25,7 @@ vi.mock('../../utils/crypto/index.js', () => ({
 // ---------------------------------------------------------------------------
 // Import
 // ---------------------------------------------------------------------------
-import { escapeCsv, exportMarkdown, exportCsv, exportJson, downloadBlob, downloadText } from '../exportLogsService.js';
+import { escapeCsv, exportMarkdown, exportCsv, exportJson, downloadBlob, downloadText, DOWNLOAD_REVOKE_DELAY_MS } from '../exportLogsService.js';
 
 const SAMPLE_ROWS = [
   {
@@ -238,8 +238,8 @@ describe('exportLogsService', () => {
       // Spy on DOM methods
       const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
       const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
-      const appendChild = vi.spyOn(document.body, 'appendChild').mockImplementation(() => {});
-      const removeChild = vi.spyOn(document.body, 'removeChild').mockImplementation(() => {});
+      const appendChild = vi.spyOn(document.body, 'appendChild').mockImplementation((n) => n);
+      const removeChild = vi.spyOn(document.body, 'removeChild').mockImplementation((n) => n);
 
       const blob = new Blob(['test'], { type: 'text/plain' });
       downloadBlob(blob, 'test.txt');
@@ -247,12 +247,32 @@ describe('exportLogsService', () => {
       expect(createObjectURL).toHaveBeenCalledWith(blob);
       expect(appendChild).toHaveBeenCalled();
       expect(removeChild).toHaveBeenCalled();
-      expect(revokeObjectURL).toHaveBeenCalled();
 
       createObjectURL.mockRestore();
       revokeObjectURL.mockRestore();
       appendChild.mockRestore();
       removeChild.mockRestore();
+    });
+
+    it('delays URL revocation so large downloads are not aborted (PBI 2026-09-06-01)', () => {
+      vi.useFakeTimers();
+      const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:delayed');
+      const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+      const appendChild = vi.spyOn(document.body, 'appendChild').mockImplementation((n) => n);
+      const removeChild = vi.spyOn(document.body, 'removeChild').mockImplementation((n) => n);
+
+      downloadBlob(new Blob(['big'], { type: 'application/x-sqlite3' }), 'big.db');
+
+      // A synchronous revoke would abort large downloads before persistence.
+      expect(revokeObjectURL).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(DOWNLOAD_REVOKE_DELAY_MS);
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:delayed');
+
+      createObjectURL.mockRestore();
+      revokeObjectURL.mockRestore();
+      appendChild.mockRestore();
+      removeChild.mockRestore();
+      vi.useRealTimers();
     });
   });
 
@@ -260,8 +280,8 @@ describe('exportLogsService', () => {
     it('creates a text blob and triggers download', () => {
       const spy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test2');
       vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
-      vi.spyOn(document.body, 'appendChild').mockImplementation(() => {});
-      vi.spyOn(document.body, 'removeChild').mockImplementation(() => {});
+      vi.spyOn(document.body, 'appendChild').mockImplementation((n) => n);
+      vi.spyOn(document.body, 'removeChild').mockImplementation((n) => n);
 
       downloadText('hello world', 'out.txt');
 
@@ -313,5 +333,23 @@ describe('exportLogsService', () => {
       mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
       await expect(exportJson()).resolves.toBeInstanceOf(Blob);
     });
+  });
+});
+
+describe('downloadBlob — delayed revoke (PBI 2026-09-06-01)', () => {
+  it('does not revoke synchronously; revokes after the delay', async () => {
+    vi.useFakeTimers();
+    const createSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const { downloadBlob, DOWNLOAD_REVOKE_DELAY_MS } = await import('../exportLogsService.js');
+
+    downloadBlob(new Blob(['x']), 'test.db');
+    expect(revokeSpy).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(DOWNLOAD_REVOKE_DELAY_MS);
+    expect(revokeSpy).toHaveBeenCalledWith('blob:mock-url');
+
+    createSpy.mockRestore();
+    revokeSpy.mockRestore();
+    vi.useRealTimers();
   });
 });

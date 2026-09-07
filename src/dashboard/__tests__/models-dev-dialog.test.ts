@@ -602,7 +602,7 @@ describe('ModelsDevDialog', () => {
         // getMessage is mocked to the identity function, so the key itself is rendered
         expect(link.textContent).toBe('apiKeyCreateLink');
       } finally {
-        vi.mocked(getApiKeyUrl).mockReturnValue(null);
+        vi.mocked(getApiKeyUrl).mockReturnValue(undefined);
       }
     });
   });

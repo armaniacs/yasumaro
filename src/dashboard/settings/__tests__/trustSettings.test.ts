@@ -156,11 +156,11 @@ const mockGetSensitiveDomains = vi.fn((cat: string) => {
   return ['social.com'];
 });
 const mockGetWhitelist = vi.fn(() => ['trusted.com']);
-const mockAddJpAnchorTld = vi.fn(() => Promise.resolve({ success: true }));
+const mockAddJpAnchorTld = vi.fn((): Promise<{ success: boolean; error?: string }> => Promise.resolve({ success: true }));
 const mockRemoveJpAnchorTld = vi.fn(() => Promise.resolve());
-const mockAddSensitiveDomain = vi.fn(() => Promise.resolve({ success: true }));
+const mockAddSensitiveDomain = vi.fn((): Promise<{ success: boolean; error?: string }> => Promise.resolve({ success: true }));
 const mockRemoveSensitiveDomain = vi.fn(() => Promise.resolve());
-const mockAddToWhitelist = vi.fn(() => Promise.resolve({ success: true }));
+const mockAddToWhitelist = vi.fn((): Promise<{ success: boolean; error?: string }> => Promise.resolve({ success: true }));
 const mockRemoveFromWhitelist = vi.fn(() => Promise.resolve());
 
 vi.mock('../../../utils/trustDb/TrustDbAdmin.js', () => ({
@@ -180,7 +180,7 @@ vi.mock('../../../utils/trustDb/TrustDbAdmin.js', () => ({
 }));
 
 const mockIsUpdateInProgress = vi.fn(() => false);
-const mockUpdateTrancoList = vi.fn(() => Promise.resolve({ success: true, domainsCount: 10000 }));
+const mockUpdateTrancoList = vi.fn((): Promise<{ success: boolean; domainsCount?: number; error?: string }> => Promise.resolve({ success: true, domainsCount: 10000 }));
 
 vi.mock('../../../utils/trustDb/trancoUpdater.js', () => ({
   getTrancoUpdater: vi.fn(() => ({
@@ -241,7 +241,7 @@ vi.mock('../../../utils/trustChecker.js', () => ({
   })),
 }));
 
-const mockGetFrequentDeniedDomains = vi.fn(() => Promise.resolve([]));
+const mockGetFrequentDeniedDomains = vi.fn((): Promise<Array<{ domain: string; count: number }>> => Promise.resolve([]));
 const mockRequestPermission = vi.fn(() => Promise.resolve(true));
 const mockRemoveDeniedDomain = vi.fn(() => Promise.resolve());
 const mockRecordDomainDismissal = vi.fn(() => Promise.resolve());
@@ -253,7 +253,7 @@ vi.mock('../../../utils/permissionManager.js', () => ({
   removeDeniedDomain: mockRemoveDeniedDomain,
   recordDomainDismissal: mockRecordDomainDismissal,
   isHostPermitted: mockIsHostPermitted,
-}), { virtual: true });
+}));
 
 function setupFullDOM() {
   document.body.innerHTML = `
@@ -500,8 +500,8 @@ describe('trustSettings.ts', () => {
 
       const tags = document.getElementById('jpAnchorList')!.querySelectorAll('.domain-tag');
       expect(tags.length).toBe(2);
-      expect(tags[0].querySelector('span')!.textContent).toBe('.jp');
-      expect(tags[1].querySelector('span')!.textContent).toBe('.co.jp');
+      expect(tags[0]!.querySelector('span')!.textContent).toBe('.jp');
+      expect(tags[1]!.querySelector('span')!.textContent).toBe('.co.jp');
     });
 
     test('should create remove buttons with aria-labels', async () => {
@@ -539,7 +539,7 @@ describe('trustSettings.ts', () => {
 
       const tags = document.getElementById('sensitiveList')!.querySelectorAll('.domain-tag');
       expect(tags.length).toBe(2);
-      expect(tags[0].querySelector('span')!.textContent).toBe('bank.com');
+      expect(tags[0]!.querySelector('span')!.textContent).toBe('bank.com');
     });
 
     test('should render domain tags in whitelist when isWhitelist=true', async () => {
@@ -549,7 +549,7 @@ describe('trustSettings.ts', () => {
 
       const tags = document.getElementById('whitelist')!.querySelectorAll('.domain-tag');
       expect(tags.length).toBe(1);
-      expect(tags[0].querySelector('span')!.textContent).toBe('safe.com');
+      expect(tags[0]!.querySelector('span')!.textContent).toBe('safe.com');
     });
 
     test('should create remove buttons with aria-labels', async () => {
@@ -612,8 +612,8 @@ describe('trustSettings.ts', () => {
       const result = await renderPermissionSuggestList();
 
       expect(result.length).toBe(1);
-      expect(result[0].domain).toBe('blocked.com');
-      expect(result[0].count).toBe(5);
+      expect(result[0]!.domain).toBe('blocked.com');
+      expect(result[0]!.count).toBe(5);
 
       const section = document.getElementById('permissionSuggestSection')!;
       expect(section.classList.contains('hidden')).toBe(false);

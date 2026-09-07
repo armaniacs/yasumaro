@@ -164,7 +164,7 @@ describe('OpenAIProvider: branch coverage', () => {
       } as Response);
       const provider = new OpenAIProvider(settings, 'openai');
       await provider.testConnection();
-      const callArgs = vi.mocked(fetchModule.fetchWithRetry).mock.calls[0];
+      const callArgs = vi.mocked(fetchModule.fetchWithRetry).mock.calls[0]!;
       const opts = callArgs[1] as { timeoutMs?: number };
       expect(opts.timeoutMs).toBe(5000);
     });
@@ -291,7 +291,7 @@ describe('OpenAIProvider: branch coverage', () => {
       } as Response);
       const provider = new GenericOpenAICompatibleProvider(settings, 'lm-studio');
       await provider.generateSummary('content');
-      const callArgs = vi.mocked(fetchModule.fetchWithRetry).mock.calls[0];
+      const callArgs = vi.mocked(fetchModule.fetchWithRetry).mock.calls[0]!;
       const headers = (callArgs[1] as RequestInit).headers as Record<string, string>;
       expect(headers['Authorization']).toBeUndefined();
     });

@@ -27,13 +27,13 @@ describe('createConsentStateChangedHandler', () => {
    * table, so these dispatch through the router — calling the handler directly
    * would bypass the layer that now enforces the rule.
    */
-  function makeDeps(updateConsentBadge: ReturnType<typeof vi.fn>): MessageRouterDeps {
+  function makeDeps(updateConsentBadge: MessageRouterDeps['updateConsentBadge']): MessageRouterDeps {
     return {
       runtimeId: 'test-extension-id',
       recordingPipeline: { record: async () => ({ success: true }) },
       tabCache: { add: () => undefined, update: () => undefined },
-      obsidian: { testConnection: async () => ({ success: true }) },
-      aiService: { testConnection: async () => ({ success: true }) },
+      obsidian: { testConnection: async () => ({ success: true }) } as unknown as MessageRouterDeps['obsidian'],
+      aiService: { testConnection: async () => ({ success: true }) } as unknown as MessageRouterDeps['aiService'],
       manualRecordDeps: {} as never,
       saveRecordDeps: {} as never,
       hasPrivacyConsent: async () => true,

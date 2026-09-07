@@ -57,18 +57,38 @@ vi.mock('../noteSectionEditor.js', () => ({
   }
 }));
 
+type FetchMockArgs = [
+  url: string,
+  options: { method?: string; body?: string; signal?: AbortSignal | null },
+];
+type FetchMockResult = {
+  ok: boolean;
+  status?: number;
+  statusText?: string;
+  text?: () => Promise<string>;
+};
+
+// The suite stubs fetch with partial Response shapes; treat the mock's
+// call/impl surface through this narrowed signature instead of the DOM lib type.
+function fetchMock(): {
+  mockImplementation: (fn: (...args: FetchMockArgs) => Promise<FetchMockResult>) => void;
+  mockResolvedValue: (value: FetchMockResult) => void;
+  mock: { calls: FetchMockArgs[] };
+} {
+  return vi.mocked(global.fetch) as unknown as ReturnType<typeof fetchMock>;
+}
+
 describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と情報漏洩', () => {
-  let obsidianClient;
+  let obsidianClient: ObsidianClient;
 
   beforeEach(() => {
     obsidianClient = new ObsidianClient();
     vi.clearAllMocks();
 
     // storageのデフォルトモック
-    // @ts-expect-error - vi.fn() type narrowing issue
   
     mockGetSettings.mockResolvedValue({});
-    storage.StorageKeys = {
+    (storage as { StorageKeys: Record<string, string> }).StorageKeys = {
       OBSIDIAN_PROTOCOL: 'OBSIDIAN_PROTOCOL',
       OBSIDIAN_PORT: 'OBSIDIAN_PORT',
       OBSIDIAN_HOST: 'OBSIDIAN_HOST',
@@ -79,7 +99,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
 
   describe('APIキーが提供されていない場合のエラーハンドリング', () => {
     it('APIキーがない場合、ユーザーに分かりやすいエラーメッセージがスローされること（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({ OBSIDIAN_API_KEY: '' });
 
@@ -90,21 +109,19 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('エラーメッセージがユーザーに分かりやすい形式であること（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({ OBSIDIAN_API_KEY: '' });
 
       const error = await obsidianClient.appendToDailyNote('Test content').catch(e => e);
 
       // 修正: ユーザーに分かりやすいエラーメッセージが表示される
-      expect(error.message).toContain('Error:');
-      expect(error.message).toContain('check your Obsidian settings'); // ユーザーへの指示が含まれる
+      expect((error as Error).message).toContain('Error:');
+      expect((error as Error).message).toContain('check your Obsidian settings'); // ユーザーへの指示が含まれる
     });
   });
 
   describe('URLがエラーメッセージに含まれないこと（修正後）', () => {
     it('接続失敗時、完全なURLがエラーメッセージに含まれないこと（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -114,7 +131,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       const fetchError = new Error('Failed to fetch');
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.fetch = vi.fn().mockRejectedValue(fetchError);
 
@@ -124,17 +140,16 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
         await obsidianClient.appendToDailyNote('Test content');
       } catch (error) {
         // 修正: URL全体（プロトコル、ホスト、ポート）がエラーメッセージに含まれないことを確認
-        expect(error.message).toContain('Error:');
-        expect(error.message).not.toContain('http://127.0.0.1:27123'); // 内部URL情報が漏洩していない
-        expect(error.message).not.toContain('.md'); // 内部ファイルパス情報が漏洩していない
-        expect(error.message).toContain('Failed to connect to Obsidian'); // 一般的なエラーメッセージ
+        expect((error as Error).message).toContain('Error:');
+        expect((error as Error).message).not.toContain('http://127.0.0.1:27123'); // 内部URL情報が漏洩していない
+        expect((error as Error).message).not.toContain('.md'); // 内部ファイルパス情報が漏洩していない
+        expect((error as Error).message).toContain('Failed to connect to Obsidian'); // 一般的なエラーメッセージ
       }
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('HTTPS接続失敗時、自己署名証明書に関するメッセージが含まれること（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -144,7 +159,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       const fetchError = new Error('Failed to fetch');
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.fetch = vi.fn().mockRejectedValue(fetchError);
 
@@ -154,13 +168,13 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
         await obsidianClient.appendToDailyNote('Test content');
       } catch (error) {
         // 修正: 詳細な接続情報がエラーメッセージに含まれないことを確認
-        expect(error.message).toContain('Error:');
-        expect(error.message).not.toContain('https://'); // 内部URL情報が漏洩していない
-        expect(error.message).not.toContain('127.0.0.1'); // 内部IPアドレス情報が漏洩していない
-        expect(error.message).toContain('self-signed certificate'); // ユーザーに分かりやすいメッセージ
+        expect((error as Error).message).toContain('Error:');
+        expect((error as Error).message).not.toContain('https://'); // 内部URL情報が漏洩していない
+        expect((error as Error).message).not.toContain('127.0.0.1'); // 内部IPアドレス情報が漏洩していない
+        expect((error as Error).message).toContain('self-signed certificate'); // ユーザーに分かりやすいメッセージ
       }
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
   });
 
@@ -170,11 +184,10 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     afterEach(() => {
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('読み取りエラー時、HTTPステータスコードがエラーメッセージに含まれないこと（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -184,9 +197,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       // GETリクエストのエラーレスポンス
-    // @ts-expect-error - vi.fn() type narrowing issue
-  
-      global.fetch.mockImplementation((url, options) => {
+      fetchMock().mockImplementation((url, options) => {
         if (options.method === 'GET') {
           return Promise.resolve({
             ok: false,
@@ -205,16 +216,15 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
         await obsidianClient.appendToDailyNote('Test content');
       } catch (error) {
         // 修正: HTTPステータスコードとエラーレスポンスの内容が含まれないことを確認
-        expect(error.message).toContain('Error:');
-        expect(error.message).not.toContain('500'); // HTTPステータスコードが含まれない
-        expect(error.message).not.toContain('Internal Server Error'); // エラーレスポンスの内容が含まれない
+        expect((error as Error).message).toContain('Error:');
+        expect((error as Error).message).not.toContain('500'); // HTTPステータスコードが含まれない
+        expect((error as Error).message).not.toContain('Internal Server Error'); // エラーレスポンスの内容が含まれない
         // 注: エラーは_handleErrorでラップされ、一般的な接続エラーメッセージになる
-        expect(error.message).toContain('Failed to connect to Obsidian'); // 一般的なエラーメッセージ
+        expect((error as Error).message).toContain('Failed to connect to Obsidian'); // 一般的なエラーメッセージ
       }
     });
 
     it('書き込みエラー時、HTTPステータスコードがエラーメッセージに含まれないこと（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -224,9 +234,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       // 404で空の内容を返し、その後PUTでエラー
-    // @ts-expect-error - vi.fn() type narrowing issue
-  
-      global.fetch.mockImplementation((url, options) => {
+      fetchMock().mockImplementation((url, options) => {
         if (options.method === 'GET') {
           return Promise.resolve({
             ok: false,
@@ -251,19 +259,18 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
         await obsidianClient.appendToDailyNote('Test content');
       } catch (error) {
         // 修正: HTTPステータスコードとエラーレスポンスの内容が含まれないことを確認
-        expect(error.message).toContain('Error:');
-        expect(error.message).not.toContain('403'); // HTTPステータスコードが含まれない
-        expect(error.message).not.toContain('Forbidden'); // エラーレスポンスの内容が含まれない
-        expect(error.message).not.toContain('API key invalid'); // 内部実装の詳細が含まれない
+        expect((error as Error).message).toContain('Error:');
+        expect((error as Error).message).not.toContain('403'); // HTTPステータスコードが含まれない
+        expect((error as Error).message).not.toContain('Forbidden'); // エラーレスポンスの内容が含まれない
+        expect((error as Error).message).not.toContain('API key invalid'); // 内部実装の詳細が含まれない
         // 注: エラーは_handleErrorでラップされ、一般的な接続エラーメッセージになる
-        expect(error.message).toContain('Failed to connect to Obsidian'); // 一般的なエラーメッセージ
+        expect((error as Error).message).toContain('Failed to connect to Obsidian'); // 一般的なエラーメッセージ
       }
     });
   });
 
   describe('testConnectionメソッドのエラーハンドリング', () => {
     it('接続成功時、詳細なメッセージが返されること（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -272,7 +279,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
         OBSIDIAN_DAILY_PATH: ''
       });
 
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -284,11 +290,10 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       expect(result.success).toBe(true);
       expect(result.message).toContain('Success! Connected to Obsidian'); // ユーザーに分かりやすいメッセージ
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('接続失敗時、HTTPステータスコードがメッセージに含まれないこと（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -297,7 +302,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
         OBSIDIAN_DAILY_PATH: ''
       });
 
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
@@ -311,11 +315,10 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       expect(result.message).not.toContain('http://127.0.0.1'); // URL情報が漏洩していない
       expect(result.message).toContain('Authentication failed'); // ユーザーに分かりやすいメッセージ
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('ネットワークエラー時、詳細なエラーメッセージが含まれないこと（修正後）', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -325,7 +328,6 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       const networkError = new Error('Failed to fetch: Network request failed');
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       global.fetch = vi.fn().mockRejectedValue(networkError);
 
@@ -337,7 +339,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       expect(result.message).not.toContain('Network request'); // 内部エラー詳細が含まれない
       expect(result.message).toContain('Cannot connect'); // ユーザーに分かりやすいメッセージ
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
   });
 
@@ -388,7 +390,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     afterEach(() => {
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('overrideでAPIキーがない場合はエラーを返す', async () => {
@@ -404,7 +406,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('overrideで404の場合はエンドポイントエラーを返す', async () => {
-      global.fetch.mockResolvedValue({
+      fetchMock().mockResolvedValue({
         ok: false,
         status: 404,
         statusText: 'Not Found'
@@ -437,7 +439,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('overrideで500の場合は接続エラーを返す', async () => {
-      global.fetch.mockResolvedValue({
+      fetchMock().mockResolvedValue({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error'
@@ -460,7 +462,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
      });
 
      afterEach(() => {
-       global.fetch.mockRestore();
+       vi.mocked(global.fetch).mockRestore();
      });
 
      it('タイムアウトエラーで適切なメッセージを返す', async () => {
@@ -472,7 +474,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
        });
 
        const timeoutError = new Error('Request timed out');
-       global.fetch.mockRejectedValue(timeoutError);
+       vi.mocked(global.fetch).mockRejectedValue(timeoutError);
 
        const result = await obsidianClient.testConnection();
        expect(result.success).toBe(false);
@@ -488,7 +490,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
        });
 
        const otherError = new Error('Something unexpected happened');
-       global.fetch.mockRejectedValue(otherError);
+       vi.mocked(global.fetch).mockRejectedValue(otherError);
 
        const result = await obsidianClient.testConnection();
        expect(result.success).toBe(false);
@@ -524,13 +526,13 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
           OBSIDIAN_DAILY_PATH: ''
         });
         // Fetch resolves only when signal is aborted
-        global.fetch = vi.fn((_, opts: RequestInit) =>
-          new Promise((_, reject) => {
+        global.fetch = vi.fn((_: unknown, opts: RequestInit = {}) =>
+          new Promise<Response>((_resolve, reject) => {
             opts.signal?.addEventListener('abort', () => {
               reject(new DOMException('The operation was aborted.', 'AbortError'));
             });
-          })
-        );
+          }),
+        ) as unknown as typeof fetch;
 
         const client = new ObsidianClient();
         const promise = client.testConnection();
@@ -559,7 +561,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
         text: () => Promise.resolve('existing content')
       });
 
-      global.fetch.mockImplementation((url, options) => {
+      fetchMock().mockImplementation((url, options) => {
         if (url.startsWith('http://')) {
           if (options.method === 'GET') {
             return Promise.resolve({
@@ -575,10 +577,10 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       await obsidianClient.appendToDailyNote('new content');
 
       expect(global.fetch).toHaveBeenCalled();
-      const calledUrl = global.fetch.mock.calls[0][0];
+      const calledUrl = fetchMock().mock.calls[0]![0];
       expect(calledUrl).toContain('http://');
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('無効なプロトコル設定は拒否する', async () => {
@@ -598,11 +600,11 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     afterEach(() => {
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('overrideでprotocolを指定しない場合、httpsをデフォルトとして使用する', async () => {
-      global.fetch.mockResolvedValue({
+      fetchMock().mockResolvedValue({
         ok: true,
         status: 200,
         text: () => Promise.resolve('OK')
@@ -628,7 +630,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     afterEach(() => {
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('既存コンテンツに追記する', async () => {
@@ -639,7 +641,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
         OBSIDIAN_DAILY_PATH: ''
       });
 
-      global.fetch.mockImplementation((url, options) => {
+      fetchMock().mockImplementation((url, options) => {
         if (options.method === 'GET') {
           return Promise.resolve({
             ok: true,
@@ -664,7 +666,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       const calledUrls: string[] = [];
-      global.fetch.mockImplementation((url: string, options: { method: string }) => {
+      fetchMock().mockImplementation((url, options) => {
         calledUrls.push(url);
         if (options.method === 'GET') {
           return Promise.resolve({ ok: true, text: () => Promise.resolve('') });
@@ -694,7 +696,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       });
 
       let calledUrl = '';
-      global.fetch.mockImplementation((url: string) => {
+      fetchMock().mockImplementation((url) => {
         calledUrl = url;
         return Promise.resolve({ ok: true, status: 200, statusText: 'OK' });
       });

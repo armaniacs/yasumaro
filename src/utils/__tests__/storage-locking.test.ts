@@ -101,7 +101,7 @@ describe('saveSettings - 楽観的ロック', () => {
 
         // 単一settingsオブジェクトで保存されているか確認
         expect(mockStorage['settings']).toBeDefined();
-        expect(mockStorage['settings'][StorageKeys.OBSIDIAN_PORT]).toBe('27124');
+        expect((mockStorage['settings'] as Record<string, unknown>)[StorageKeys.OBSIDIAN_PORT]).toBe('27124');
     });
 
     it('同時実行時の競合を検出し、データ整合性を維持する', async () => {
@@ -161,9 +161,9 @@ describe('saveSettings - 楽観的ロック', () => {
         await settingsRepository.setAll(settings);
 
         // ALLOWED_URLSとALLOWED_URLS_HASHが更新されているか確認
-        expect(mockStorage['settings'][StorageKeys.ALLOWED_URLS]).toBeDefined();
-        expect(mockStorage['settings'][StorageKeys.ALLOWED_URLS_HASH]).toBeDefined();
-        expect(Array.isArray(mockStorage['settings'][StorageKeys.ALLOWED_URLS])).toBe(true);
+        expect((mockStorage['settings'] as Record<string, unknown>)[StorageKeys.ALLOWED_URLS]).toBeDefined();
+        expect((mockStorage['settings'] as Record<string, unknown>)[StorageKeys.ALLOWED_URLS_HASH]).toBeDefined();
+        expect(Array.isArray((mockStorage['settings'] as Record<string, unknown>)[StorageKeys.ALLOWED_URLS])).toBe(true);
     });
 
     it('nullやundefinedの値を正しく扱える', async () => {
@@ -173,7 +173,7 @@ describe('saveSettings - 楽観的ロック', () => {
             [StorageKeys.OBSIDIAN_PORT]: '27123'
         };
 
-        await settingsRepository.setAll(settings);
+        await settingsRepository.setAll(settings as unknown as Parameters<typeof settingsRepository.setAll>[0]);
 
         const result = await settingsRepository.getAll();
         expect(result[StorageKeys.OBSIDIAN_PORT]).toBe('27123');
@@ -205,8 +205,8 @@ describe('migrateToSingleSettingsObject', () => {
         expect(migrated).toBe(true);
         expect(mockStorage['settings_migrated']).toBe(true);
         expect(mockStorage['settings']).toBeDefined();
-        expect(mockStorage['settings'][StorageKeys.OBSIDIAN_PORT]).toBe('27123');
-        expect(mockStorage['settings'][StorageKeys.MIN_VISIT_DURATION]).toBeGreaterThan(0);
+        expect((mockStorage['settings'] as Record<string, unknown>)[StorageKeys.OBSIDIAN_PORT]).toBe('27123');
+        expect((mockStorage['settings'] as Record<string, unknown>)[StorageKeys.MIN_VISIT_DURATION]).toBeGreaterThan(0);
 
         // 古い個別キーが削除されているか確認
         expect(mockStorage[StorageKeys.OBSIDIAN_PORT]).toBeUndefined();

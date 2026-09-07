@@ -9,6 +9,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { makeHistoryEntryRow } from '../historyEntryRow.js';
 import type { SavedUrlEntry } from '../../utils/storageUrls.js';
+import type { HistoryPanelState } from '../historyState.js';
 import { openTagEditModal } from '../historyTagEditModal.js';
 import { removeSavedUrl } from '../../utils/storageUrls.js';
 
@@ -71,11 +72,17 @@ function createMinimalEntry(overrides: Partial<SavedUrlEntry> = {}): SavedUrlEnt
   } as SavedUrlEntry;
 }
 
-function createMockState(overrides: Record<string, unknown> = {}) {
+function createMockState(overrides: Partial<HistoryPanelState> = {}): HistoryPanelState {
   return {
-    activeTagFilter: null,
     entries: [],
+    activeFilter: 'all',
+    activeTagFilter: null,
     historyCurrentPage: 0,
+    pendingPages: [],
+    pendingUrlSet: new Set(),
+    editingUrl: null,
+    editingTags: [],
+    tagEditTrapId: null,
     ...overrides,
   };
 }
@@ -104,10 +111,10 @@ describe('historyEntryRow-r2 — Tag badge active state', () => {
       createMinimalEntry({ tags: ['tech', 'news'] }), 0, 0, state, createMockElements(), vi.fn(), vi.fn(),
     );
     const badges = row.querySelectorAll('.tag-badge') as NodeListOf<HTMLButtonElement>;
-    expect(badges[0].classList.contains('filter-active')).toBe(true);
-    expect(badges[0].getAttribute('aria-pressed')).toBe('true');
-    expect(badges[1].classList.contains('filter-active')).toBe(false);
-    expect(badges[1].getAttribute('aria-pressed')).toBe('false');
+    expect(badges[0]!.classList.contains('filter-active')).toBe(true);
+    expect(badges[0]!.getAttribute('aria-pressed')).toBe('true');
+    expect(badges[1]!.classList.contains('filter-active')).toBe(false);
+    expect(badges[1]!.getAttribute('aria-pressed')).toBe('false');
   });
 
   it('clicking tag badge toggles filter and resets page', () => {
@@ -194,7 +201,7 @@ describe('historyEntryRow-r2 — Content cleansing edge cases', () => {
 
   it('uses candidateBytes as fallback for originalBytes in AI summary cleansing', () => {
     const row = makeHistoryEntryRow(
-      createMinimalEntry({ candidateBytes: 4000, cleansedBytes: undefined, originalBytes: undefined, aiSummaryCleansedBytes: 1000 }), 0, 0, createMockState(), createMockElements(), vi.fn(), vi.fn(),
+      createMinimalEntry({ candidateBytes: 4000, aiSummaryCleansedBytes: 1000 }), 0, 0, createMockState(), createMockElements(), vi.fn(), vi.fn(),
     );
     const cleansingEl = row.querySelector('.history-entry-ai-summary-cleansing')!;
     expect(cleansingEl).not.toBeNull();
@@ -238,7 +245,7 @@ describe('historyEntryRow-r2 — No tag badges when tags empty', () => {
     const row = makeHistoryEntryRow(
       createMinimalEntry({ url: 'https://example.com', tags: [] }), 0, 0, state, elements, vi.fn(), vi.fn(),
     );
-    row.querySelector('.tag-add-inline-btn')!.click();
+    (row.querySelector('.tag-add-inline-btn') as HTMLButtonElement).click();
     expect(openTagEditModal).toHaveBeenCalledWith(state, elements, 'https://example.com', []);
   });
 });

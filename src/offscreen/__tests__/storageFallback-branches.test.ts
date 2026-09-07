@@ -9,7 +9,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { FallbackStorage } from '../storageFallback.js';
-import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
+import type { BrowsingLogRecord, StorageQuery } from '../../utils/sqlite-types.js';
 
 function makeRecord(overrides: Partial<BrowsingLogRecord> = {}): BrowsingLogRecord {
   return {
@@ -36,9 +36,11 @@ describe('FallbackStorage quota management', () => {
       await storage.insert(makeRecord({ url: `https://q${i}.com`, created_at: i + 1 }));
     }
 
-    const getBytesSpy = vi
-      .spyOn(chrome.storage.local, 'getBytesInUse')
-      .mockResolvedValueOnce(6 * 1024 * 1024); // over 5MB threshold on next insert's ensureQuotaSpace call
+    const getBytesSpy = (
+      vi.spyOn(chrome.storage.local, 'getBytesInUse') as unknown as {
+        mockResolvedValueOnce: (v: number) => { mockRestore: () => void };
+      }
+    ).mockResolvedValueOnce(6 * 1024 * 1024); // over 5MB threshold on next insert's ensureQuotaSpace call
 
     const result = await storage.insert(makeRecord({ url: 'https://new.com', created_at: 999 }));
     expect(result.success).toBe(true);
@@ -53,7 +55,9 @@ describe('FallbackStorage quota management', () => {
 
   it('does not purge when bytes in use are within the quota threshold', async () => {
     await storage.insert(makeRecord({ url: 'https://ok.com', created_at: 1 }));
-    vi.spyOn(chrome.storage.local, 'getBytesInUse').mockResolvedValueOnce(100);
+    (vi.spyOn(chrome.storage.local, 'getBytesInUse') as unknown as {
+      mockResolvedValueOnce: (v: number) => void;
+    }).mockResolvedValueOnce(100);
 
     const result = await storage.insert(makeRecord({ url: 'https://ok2.com', created_at: 2 }));
     expect(result.success).toBe(true);
@@ -160,7 +164,7 @@ describe('FallbackStorage sort by arbitrary field with nulls', () => {
     await storage.insert(makeRecord({ url: 'https://n1.com', created_at: 1, title: null as unknown as string }));
     await storage.insert(makeRecord({ url: 'https://n2.com', created_at: 2, title: null as unknown as string }));
 
-    const result = await storage.query({ orderBy: 'title', orderDir: 'ASC' });
+    const result = await storage.query({ orderBy: 'title', orderDir: 'ASC' } as unknown as StorageQuery);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.rows.length).toBe(2);
@@ -171,7 +175,7 @@ describe('FallbackStorage sort by arbitrary field with nulls', () => {
     await storage.insert(makeRecord({ url: 'https://n3.com', created_at: 1, title: null as unknown as string }));
     await storage.insert(makeRecord({ url: 'https://n4.com', created_at: 2, title: 'Defined Title' }));
 
-    const result = await storage.query({ orderBy: 'title', orderDir: 'ASC' });
+    const result = await storage.query({ orderBy: 'title', orderDir: 'ASC' } as unknown as StorageQuery);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.rows[0]?.url).toBe('https://n4.com');
@@ -183,7 +187,7 @@ describe('FallbackStorage sort by arbitrary field with nulls', () => {
     await storage.insert(makeRecord({ url: 'https://n5.com', created_at: 1, title: 'Defined Title' }));
     await storage.insert(makeRecord({ url: 'https://n6.com', created_at: 2, title: null as unknown as string }));
 
-    const result = await storage.query({ orderBy: 'title', orderDir: 'ASC' });
+    const result = await storage.query({ orderBy: 'title', orderDir: 'ASC' } as unknown as StorageQuery);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.rows[0]?.url).toBe('https://n5.com');
@@ -195,7 +199,7 @@ describe('FallbackStorage sort by arbitrary field with nulls', () => {
     await storage.insert(makeRecord({ url: 'https://d1.com', created_at: 1, title: 'Alpha' }));
     await storage.insert(makeRecord({ url: 'https://d2.com', created_at: 2, title: 'Beta' }));
 
-    const result = await storage.query({ orderBy: 'title', orderDir: 'DESC' });
+    const result = await storage.query({ orderBy: 'title', orderDir: 'DESC' } as unknown as StorageQuery);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.rows[0]?.title).toBe('Beta');
@@ -207,7 +211,7 @@ describe('FallbackStorage sort by arbitrary field with nulls', () => {
     await storage.insert(makeRecord({ url: 'https://eq1.com', created_at: 1, title: 'Same' }));
     await storage.insert(makeRecord({ url: 'https://eq2.com', created_at: 2, title: 'Same' }));
 
-    const result = await storage.query({ orderBy: 'title', orderDir: 'ASC' });
+    const result = await storage.query({ orderBy: 'title', orderDir: 'ASC' } as unknown as StorageQuery);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.rows.length).toBe(2);

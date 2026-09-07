@@ -53,10 +53,9 @@ vi.mock('../privacyPipeline.js');
 beforeEach(() => {
   vi.clearAllMocks();
   if (!chrome.notifications) {
-    chrome.notifications = { create: vi.fn() };
+    chrome.notifications = { create: vi.fn() } as unknown as typeof chrome.notifications;
   }
   // storageのデフォルトモック
-    // @ts-expect-error - vi.fn() type narrowing issue
 
   mockGetSettings.mockResolvedValue({
     PRIVACY_MODE: 'full_pipeline',
@@ -78,7 +77,7 @@ beforeEach(() => {
   // Problem #7: URLキャッシュを初期化
   RecordingCache.resetCacheState();
 
-  storage.StorageKeys = {
+  (storage as { StorageKeys: unknown }).StorageKeys = {
     PRIVACY_MODE: 'PRIVACY_MODE',
     PII_SANITIZE_LOGS: 'PII_SANITIZE_LOGS'
   };
@@ -90,7 +89,6 @@ beforeEach(() => {
     // @ts-expect-error - vi.fn() type narrowing issue
 
 privacy.PrivacyPipeline.mockImplementation(function(this: any) {
-    // @ts-expect-error - vi.fn() type narrowing issue
 
     this.process = vi.fn().mockImplementation(async (content, options) => {
       if (options && options.previewOnly) {
@@ -108,7 +106,9 @@ privacy.PrivacyPipeline.mockImplementation(function(this: any) {
 });
 
 describe('Recording Integration Test', () => {
-  let mockObsidian, mockAiClient, logic;
+  let mockObsidian: { appendToDailyNote: ReturnType<typeof vi.fn> };
+  let mockAiClient: { getSupportedModes: ReturnType<typeof vi.fn>; generateSummary: ReturnType<typeof vi.fn> };
+  let logic: ReturnType<typeof makeRecordingLogic>;
 
   beforeEach(() => {
     mockObsidian = {
@@ -118,10 +118,8 @@ describe('Recording Integration Test', () => {
     };
 
     mockAiClient = {
-    // @ts-expect-error - vi.fn() type narrowing issue
 
       getSupportedModes: vi.fn().mockReturnValue(['local_only', 'full_pipeline']),
-    // @ts-expect-error - vi.fn() type narrowing issue
 
       generateSummary: vi.fn().mockResolvedValue({ summary: 'Cloud summary' })
     };
@@ -171,8 +169,6 @@ describe('Recording Integration Test', () => {
   });
 
   it('should handle recording errors gracefully', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
-
     mockObsidian.appendToDailyNote.mockRejectedValue(new Error('Connection failed'));
 
     const result = await logic.record({
@@ -188,7 +184,6 @@ describe('Recording Integration Test', () => {
   });
 
   it('should continue pipeline after saveObsidian failure and record error', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
     mockObsidian.appendToDailyNote.mockRejectedValue(new Error('Obsidian connection failed'));
 
     const result = await logic.record({

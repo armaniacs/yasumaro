@@ -102,7 +102,7 @@ describe('historyPendingPanel', () => {
 
       const rows = elements.historyList.querySelectorAll('.pending-entry-inline');
       expect(rows.length).toBe(1);
-      expect(rows[0].querySelector('.history-entry-url')?.textContent).toBe('Page One');
+      expect(rows[0]?.querySelector('.history-entry-url')?.textContent).toBe('Page One');
     });
 
     it('should render filtered pages when search text matches title', async () => {
@@ -525,7 +525,7 @@ describe('historyPendingPanel', () => {
 
       const items = pendingList.querySelectorAll('.pending-entry');
       expect(items.length).toBe(5);
-      const firstUrl = items[0].querySelector('.history-entry-url') as HTMLAnchorElement;
+      const firstUrl = items[0]?.querySelector('.history-entry-url') as HTMLAnchorElement;
       expect(firstUrl.href).toBe('https://example.com/10');
       expect(mockCreatePaginationControls).toHaveBeenCalledWith(1, 2, expect.any(Function));
     });

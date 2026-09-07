@@ -15,9 +15,7 @@ import { deriveHmacWrappingKey } from '../hmacKeyStore.js';
 
 beforeEach(() => {
   const webcrypto = new Crypto();
-  // @ts-expect-error overwrite for test
   global.crypto = webcrypto;
-  // @ts-expect-error ensure globalThis.crypto
   globalThis.crypto = webcrypto;
 });
 

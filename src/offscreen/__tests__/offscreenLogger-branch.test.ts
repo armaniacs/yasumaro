@@ -73,7 +73,7 @@ describe('offscreenLogger - branch coverage', () => {
 
   describe('traceId merging branches', () => {
     it('merges traceId into details when traceId provided and details provided', () => {
-      const sendMessage = vi.fn(() => undefined as unknown);
+      const sendMessage = vi.fn((..._a: unknown[]) => undefined as unknown);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: { sendMessage } } as unknown;
       forwardWarn('msg', { foo: 'bar' }, 'mySource', 'trace-123');
       expect(sendMessage).toHaveBeenCalledWith(
@@ -91,7 +91,7 @@ describe('offscreenLogger - branch coverage', () => {
     });
 
     it('creates details with only traceId when details undefined but traceId provided', () => {
-      const sendMessage = vi.fn(() => undefined as unknown);
+      const sendMessage = vi.fn((..._a: unknown[]) => undefined as unknown);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: { sendMessage } } as unknown;
       forwardError('err', undefined, undefined, 'tid-1');
       expect(sendMessage).toHaveBeenCalledWith(
@@ -102,7 +102,7 @@ describe('offscreenLogger - branch coverage', () => {
     });
 
     it('passes details unchanged when traceId undefined', () => {
-      const sendMessage = vi.fn(() => undefined as unknown);
+      const sendMessage = vi.fn((..._a: unknown[]) => undefined as unknown);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: { sendMessage } } as unknown;
       const d = { a: 1 };
       forwardInfo('m', d);
@@ -114,33 +114,33 @@ describe('offscreenLogger - branch coverage', () => {
     });
 
     it('passes undefined details when both details and traceId undefined', () => {
-      const sendMessage = vi.fn(() => undefined as unknown);
+      const sendMessage = vi.fn((..._a: unknown[]) => undefined as unknown);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: { sendMessage } } as unknown;
       forwardWarn('m2');
-      const call = sendMessage.mock.calls[0][0] as { payload: { details: unknown } };
+      const call = sendMessage.mock.calls[0]![0] as { payload: { details: unknown } };
       expect(call.payload.details).toBeUndefined();
     });
 
     it('uses default source offscreen when source not provided', () => {
-      const sendMessage = vi.fn(() => undefined as unknown);
+      const sendMessage = vi.fn((..._a: unknown[]) => undefined as unknown);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: { sendMessage } } as unknown;
       forwardWarn('default-src-test');
-      const call = sendMessage.mock.calls[0][0] as { payload: { source: string } };
+      const call = sendMessage.mock.calls[0]![0] as { payload: { source: string } };
       expect(call.payload.source).toBe('offscreen');
     });
 
     it('uses custom source when provided', () => {
-      const sendMessage = vi.fn(() => undefined as unknown);
+      const sendMessage = vi.fn((..._a: unknown[]) => undefined as unknown);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: { sendMessage } } as unknown;
       forwardWarn('custom-src', undefined, 'custom');
-      const call = sendMessage.mock.calls[0][0] as { payload: { source: string } };
+      const call = sendMessage.mock.calls[0]![0] as { payload: { source: string } };
       expect(call.payload.source).toBe('custom');
     });
   });
 
   describe('sendMessage result handling branches', () => {
     it('does not attach catch handler when result is undefined (callback-style mock)', () => {
-      const sendMessage = vi.fn(() => undefined as unknown);
+      const sendMessage = vi.fn((..._a: unknown[]) => undefined as unknown);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: { sendMessage } } as unknown;
       forwardWarn('no-promise');
       expect(sendMessage).toHaveBeenCalled();
@@ -246,50 +246,50 @@ describe('offscreenLogger - branch coverage', () => {
 
   describe('level routing branches via exports', () => {
     it('forwardWarn routes through warn level', () => {
-      const sendMessage = vi.fn(() => undefined as unknown);
+      const sendMessage = vi.fn((..._a: unknown[]) => undefined as unknown);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: { sendMessage } } as unknown;
       forwardWarn('w');
-      const payload = (sendMessage.mock.calls[0][0] as { payload: { level: string } }).payload;
+      const payload = (sendMessage.mock.calls[0]![0] as { payload: { level: string } }).payload;
       expect(payload.level).toBe('warn');
     });
 
     it('forwardError routes through error level', () => {
-      const sendMessage = vi.fn(() => undefined as unknown);
+      const sendMessage = vi.fn((..._a: unknown[]) => undefined as unknown);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: { sendMessage } } as unknown;
       forwardError('e');
-      const payload = (sendMessage.mock.calls[0][0] as { payload: { level: string } }).payload;
+      const payload = (sendMessage.mock.calls[0]![0] as { payload: { level: string } }).payload;
       expect(payload.level).toBe('error');
     });
 
     it('forwardInfo routes through info level', () => {
-      const sendMessage = vi.fn(() => undefined as unknown);
+      const sendMessage = vi.fn((..._a: unknown[]) => undefined as unknown);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: { sendMessage } } as unknown;
       forwardInfo('i');
-      const payload = (sendMessage.mock.calls[0][0] as { payload: { level: string } }).payload;
+      const payload = (sendMessage.mock.calls[0]![0] as { payload: { level: string } }).payload;
       expect(payload.level).toBe('info');
     });
 
     it('protocolVersion is ATTACHED correctly', () => {
-      const sendMessage = vi.fn(() => undefined as unknown);
+      const sendMessage = vi.fn((..._a: unknown[]) => undefined as unknown);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: { sendMessage } } as unknown;
       forwardWarn('pv');
-      const msg = sendMessage.mock.calls[0][0] as { protocolVersion: number };
+      const msg = sendMessage.mock.calls[0]![0] as { protocolVersion: number };
       expect(msg.protocolVersion).toBe(CURRENT_PROTOCOL_VERSION);
     });
 
     it('traceId=nullish does not merge (falsy branch)', () => {
-      const sendMessage = vi.fn(() => undefined as unknown);
+      const sendMessage = vi.fn((..._a: unknown[]) => undefined as unknown);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: { sendMessage } } as unknown;
       forwardWarn('null-trace', { x: 1 }, undefined, undefined);
-      const payload = (sendMessage.mock.calls[0][0] as { payload: { details: unknown } }).payload;
+      const payload = (sendMessage.mock.calls[0]![0] as { payload: { details: unknown } }).payload;
       expect(payload.details).toEqual({ x: 1 });
     });
 
     it('traceId empty string is falsy and does not merge', () => {
-      const sendMessage = vi.fn(() => undefined as unknown);
+      const sendMessage = vi.fn((..._a: unknown[]) => undefined as unknown);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: { sendMessage } } as unknown;
       forwardWarn('empty-trace', { x: 1 }, undefined, '');
-      const payload = (sendMessage.mock.calls[0][0] as { payload: { details: unknown } }).payload;
+      const payload = (sendMessage.mock.calls[0]![0] as { payload: { details: unknown } }).payload;
       expect(payload.details).toEqual({ x: 1 });
     });
   });

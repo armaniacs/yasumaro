@@ -22,6 +22,7 @@ import { handleQuery } from '../opfsWorker/crudHandlers.js';
 import { handlePurgeOldRecords } from '../opfsWorker/purgeHandlers.js';
 import { FallbackStorage } from '../storageFallback.js';
 import { buildQuerySpec, QUERY_CAPS } from '../queryPlan.js';
+import type { StorageQuery } from '../../utils/sqlite-types.js';
 
 function makeIdbStub(fts5Available = true, countResult = 0) {
   const calls: { sql: string; params: unknown[] }[] = [];
@@ -83,7 +84,7 @@ describe('PBI-34 parametric: same logical search, SQL ORDER parity (idb vs opfs)
     { label: 'default (DESC)', orderBy: undefined, orderDir: undefined, expect: /ORDER BY created_at DESC/ },
   ])('LIKE path $label: idb and opfs emit the same ORDER BY', async ({ orderBy, orderDir, expect: re }) => {
     const idb = makeIdbStub(false);
-    await idb.backend.query({ text: 'ai', limit: 20, ...(orderBy ? { orderBy, orderDir } : {}) });
+    await idb.backend.query({ text: 'ai', limit: 20, ...(orderBy ? { orderBy, orderDir } : {}) } as unknown as StorageQuery);
     const opfs = makeOpfsStub();
     await handleSearchLike('ai', 20, 0, orderBy as 'created_at' | undefined, orderDir as 'ASC' | 'DESC' | undefined);
     expect(rowSql(idb.calls)).toMatch(re);

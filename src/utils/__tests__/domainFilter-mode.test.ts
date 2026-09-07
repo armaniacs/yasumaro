@@ -281,7 +281,7 @@ describe('DomainFilter mode inversion (PBI 04)', () => {
 
     it('null cache always falls back to live', async () => {
       const liveSpy = vi.spyOn(filter, 'isAllowed').mockResolvedValue(true);
-      expect(await filter.isAllowedCached('https://example.com/page', null, 'whitelist')).toBe(true);
+      expect(await filter.isAllowedCached('https://example.com/page', null as unknown as Parameters<typeof filter.isAllowedCached>[1], 'whitelist')).toBe(true);
       expect(liveSpy).toHaveBeenCalled();
     });
   });

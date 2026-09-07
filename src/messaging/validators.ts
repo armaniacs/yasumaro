@@ -8,6 +8,7 @@
  */
 
 import { isServiceWorkerRequest } from './types.js';
+import { isHttpScheme, cutoffMsFromLocalDate, isValidStagingName } from '../utils/archiveGuards.js';
 import type {
   ExtensionMessage,
   ValidVisitMessage,
@@ -51,6 +52,8 @@ export const VALIDATOR_LIMITS = {
   MAX_IMPORT_BYTES: 2_000_000,
   /** DASHBOARD_SQLITE restore_db payload */
   MAX_RESTORE_DB_BYTES: 10_000_000,
+  /** DASHBOARD_SQLITE archive_export chunk size (base64 hops stay under 10MB) */
+  MAX_ARCHIVE_EXPORT_CHUNK_BYTES: 8 * 1024 * 1024,
   /** DASHBOARD_SQLITE append_to_obsidian ids per request */
   MAX_APPEND_IDS: 1_000,
 } as const;
@@ -184,6 +187,83 @@ export class DashboardSqliteValidator implements MessageValidator<DashboardSqlit
         throw new ValidationError('DashboardSqliteValidator', `append_to_obsidian: ids exceeds ${VALIDATOR_LIMITS.MAX_APPEND_IDS}`, 'ids');
       }
     }
+    // Archive subtypes (PBI 2026-09-06-02): boundary validation. The worker
+    // re-derives the cutoff from the date string, so a fabricated cutoffMs
+    // pair is rejected before reaching the staging registry.
+    if (subtype === 'archive_preview' || subtype === 'archive_create') {
+      if (typeof p.cutoffDate !== 'string') {
+        throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffDate must be string`, 'cutoffDate');
+      }
+      let derivedMs: number;
+      try {
+        derivedMs = cutoffMsFromLocalDate(p.cutoffDate);
+      } catch (e) {
+        throw new ValidationError('DashboardSqliteValidator', `${subtype}: ${e instanceof Error ? e.message : 'invalid cutoffDate'}`, 'cutoffDate');
+      }
+      if (typeof p.cutoffMs !== 'number' || !Number.isFinite(p.cutoffMs)) {
+        throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffMs must be finite number`, 'cutoffMs');
+      }
+      if (p.cutoffMs !== derivedMs) {
+        throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffMs does not match cutoffDate`, 'cutoffMs');
+      }
+      if (typeof p.includeDeleted !== 'boolean') {
+        throw new ValidationError('DashboardSqliteValidator', `${subtype}: includeDeleted must be boolean`, 'includeDeleted');
+      }
+    }
+    if (subtype === 'archive_create') {
+      if (typeof p.yasumaroVersion !== 'string' || p.yasumaroVersion.length === 0 || p.yasumaroVersion.length > 64) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_create: yasumaroVersion must be 1-64 chars', 'yasumaroVersion');
+      }
+    }
+    if (subtype === 'archive_export') {
+      if (typeof p.stagingName !== 'string' || !isValidStagingName(p.stagingName)) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_export: stagingName must be a valid staging name', 'stagingName');
+      }
+      if (typeof p.offset !== 'number' || !Number.isInteger(p.offset) || p.offset < 0) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_export: offset must be a non-negative integer', 'offset');
+      }
+      if (typeof p.length !== 'number' || !Number.isInteger(p.length) || p.length <= 0 || p.length > VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES) {
+        throw new ValidationError('DashboardSqliteValidator', `archive_export: length must be 1..${VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES}`, 'length');
+      }
+    }
+    if (subtype === 'archive_delete_by_staging') {
+      if (typeof p.stagingName !== 'string' || !isValidStagingName(p.stagingName)) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_delete_by_staging: stagingName must be a valid staging name', 'stagingName');
+      }
+    }
+    if (subtype === 'archive_open' || subtype === 'archive_save' || subtype === 'archive_close' || subtype === 'archive_restore_preview' || subtype === 'archive_restore') {
+      if (typeof p.stagingName !== 'string' || !isValidStagingName(p.stagingName)) {
+        throw new ValidationError('DashboardSqliteValidator', `${subtype}: stagingName must be a valid staging name`, 'stagingName');
+      }
+    }
+    if (subtype === 'archive_query') {
+      if (typeof p.stagingName !== 'string' || !isValidStagingName(p.stagingName)) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_query: stagingName must be a valid staging name', 'stagingName');
+      }
+      if (typeof p.query !== 'string') {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_query: query must be string', 'query');
+      }
+      if (p.query.length > VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH) {
+        throw new ValidationError('DashboardSqliteValidator', `archive_query: query exceeds ${VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH} chars`, 'query');
+      }
+      if (typeof p.limit !== 'number' || !Number.isInteger(p.limit) || p.limit < 1 || p.limit > 500) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_query: limit must be 1..500', 'limit');
+      }
+      if (typeof p.offset !== 'number' || !Number.isInteger(p.offset) || p.offset < 0) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_query: offset must be a non-negative integer', 'offset');
+      }
+    }
+    if (subtype === 'archive_update') {
+      if (typeof p.stagingName !== 'string' || !isValidStagingName(p.stagingName)) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_update: stagingName must be a valid staging name', 'stagingName');
+      }
+      if (typeof p.id !== 'number' || !Number.isInteger(p.id) || p.id <= 0) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_update: id must be a positive integer', 'id');
+      }
+      if (!p.changes || typeof p.changes !== 'object' || Array.isArray(p.changes)) {
+        throw new ValidationError('DashboardSqliteValidator', 'archive_update: changes must be an object', 'changes');
+      }
+    }
 
     return payload as DashboardSqliteRequest;
   }
@@ -209,9 +289,10 @@ export class FetchUrlValidator implements MessageValidator<FetchUrlMessage> {
       throw new ValidationError('FetchUrlValidator', 'payload.url must be non-empty string', 'url');
     }
     // Basic URL shape check — detailed SSRF is handled by ssrfGuard downstream
+    // Scheme allowlist is the SSOT in utils/archiveGuards.ts (PBI 2026-09-06-01).
     try {
       const parsed = new URL(payload.url);
-      if (!['http:', 'https:'].includes(parsed.protocol)) {
+      if (!isHttpScheme(parsed.protocol)) {
         throw new ValidationError('FetchUrlValidator', 'payload.url must be http or https', 'url');
       }
     } catch (e) {
@@ -253,9 +334,10 @@ export class ManualRecordValidator implements MessageValidator<ManualRecordMessa
     }
     // Same http/https restriction as FetchUrlValidator — blocks
     // javascript:/data: scheme URLs from reaching SQLite/dashboard rendering.
+    // Scheme allowlist is the SSOT in utils/archiveGuards.ts (PBI 2026-09-06-01).
     try {
       const parsed = new URL(payload.url);
-      if (!['http:', 'https:'].includes(parsed.protocol)) {
+      if (!isHttpScheme(parsed.protocol)) {
         throw new ValidationError('ManualRecordValidator', 'payload.url must be http or https', 'url');
       }
     } catch (e) {

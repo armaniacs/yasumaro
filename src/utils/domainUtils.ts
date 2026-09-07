@@ -85,6 +85,10 @@ export async function isDomainAllowed(url: string): Promise<boolean> {
         return false;
     }
 
+    // Subdomain auto-matching toggle (PBI 2026-09-06-06): default OFF for
+    // backward compatibility — existing users keep exact-match behavior.
+    const matchSubdomains = settings[StorageKeys.DOMAIN_SUBDOMAIN_MATCHING] === true;
+
     // Simple Domain Filter
     let simpleResult = true;
     const simpleEnabled = settings[StorageKeys.SIMPLE_FORMAT_ENABLED] !== false;
@@ -94,9 +98,11 @@ export async function isDomainAllowed(url: string): Promise<boolean> {
         const storedBlacklist = settings[StorageKeys.DOMAIN_BLACKLIST] || [];
 
         if (mode === 'whitelist') {
-            simpleResult = isDomainInList(domain, storedWhitelist);
+            // Call the shared impl directly — the local isDomainInList wrapper
+            // has a 2-arg signature and would drop matchSubdomains.
+            simpleResult = isDomainInListShared(domain, storedWhitelist, matchSubdomains);
         } else if (mode === 'blacklist') {
-            simpleResult = !isDomainInList(domain, storedBlacklist);
+            simpleResult = !isDomainInListShared(domain, storedBlacklist, matchSubdomains);
         }
     }
 

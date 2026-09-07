@@ -19,7 +19,7 @@ describe('getFilteredEntries', () => {
     { url: 'https://example.com/3', title: 'Test 3', timestamp: 3, maskedCount: 5 },
     { url: 'https://example.com/4', title: 'Test 4', timestamp: 4, cleansedReason: 'hard' },
     { url: 'https://tag.com/5', title: 'Test 5', timestamp: 5, tags: ['tech'] },
-  ] as SavedUrlEntry[];
+  ] as unknown as SavedUrlEntry[];
 
   it('returns all entries when filter is all', () => {
     expect(getFilteredEntries(entries, 'all', null, '').length).toBe(5);
@@ -28,37 +28,37 @@ describe('getFilteredEntries', () => {
   it('filters by auto recordType', () => {
     const result = getFilteredEntries(entries, 'auto', null, '');
     expect(result.length).toBe(4); // auto + entries without explicit recordType
-    expect(result[0].url).toBe('https://example.com/1');
+    expect(result[0]!.url).toBe('https://example.com/1');
   });
 
   it('filters by manual recordType', () => {
     const result = getFilteredEntries(entries, 'manual', null, '');
     expect(result.length).toBe(1);
-    expect(result[0].url).toBe('https://example.com/2');
+    expect(result[0]!.url).toBe('https://example.com/2');
   });
 
   it('filters by masked', () => {
     const result = getFilteredEntries(entries, 'masked', null, '');
     expect(result.length).toBe(1);
-    expect(result[0].url).toBe('https://example.com/3');
+    expect(result[0]!.url).toBe('https://example.com/3');
   });
 
   it('filters by cleansed', () => {
     const result = getFilteredEntries(entries, 'cleansed', null, '');
     expect(result.length).toBe(1);
-    expect(result[0].url).toBe('https://example.com/4');
+    expect(result[0]!.url).toBe('https://example.com/4');
   });
 
   it('filters by search text', () => {
     const result = getFilteredEntries(entries, 'all', null, 'tag');
     expect(result.length).toBe(1);
-    expect(result[0].url).toBe('https://tag.com/5');
+    expect(result[0]!.url).toBe('https://tag.com/5');
   });
 
   it('filters by tag', () => {
     const result = getFilteredEntries(entries, 'all', 'tech', '');
     expect(result.length).toBe(1);
-    expect(result[0].url).toBe('https://tag.com/5');
+    expect(result[0]!.url).toBe('https://tag.com/5');
   });
 
   it('returns empty for unmatched tag', () => {

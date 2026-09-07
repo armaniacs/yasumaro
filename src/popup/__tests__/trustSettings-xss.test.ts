@@ -9,7 +9,7 @@
  * - innerHTMLを使用したドメイン名レンダリング
  */
 
-import { describe, test, expect, jest } from 'vitest';
+import { describe, test, expect, vi } from 'vitest';
 import { renderJpAnchorList, renderSensitiveList } from '../../dashboard/settings/trustSettings.js';
 
 // Mock chrome API
@@ -56,11 +56,11 @@ global.chrome.i18n = {
 } as any;
 
 describe('trustSettings.ts - XSS Protection', () => {
-  let consoleErrorSpy: jest.SpyInstance;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     // Spy on console.error
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation();
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {

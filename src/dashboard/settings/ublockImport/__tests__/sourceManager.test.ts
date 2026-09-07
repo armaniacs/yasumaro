@@ -62,7 +62,7 @@ function createStorageMocks() {
     const merged = { ...storage };
 
     // StorageKeysのキーの場合はsettingsオブジェクト内にマージ
-    const storageKeyValues = Object.values(StorageKeys);
+    const storageKeyValues: string[] = Object.values(StorageKeys);
     for (const key of Object.keys(data)) {
       if (storageKeyValues.includes(key)) {
         // StorageKeysのキーであれば settings オブジェクト内に保存
@@ -95,7 +95,7 @@ function createStorageMocks() {
   const setStorageState = (newState: any) => {
     // 【重要】永続フラグを保持しながらマージする
     // 【重要】StorageKeysのキー（ublock_sources等）はsettingsオブジェクト内に保存する
-    const storageKeyValues = Object.values(StorageKeys);
+    const storageKeyValues: string[] = Object.values(StorageKeys);
     const processedState: any = {};
 
     // 永続フラグとバージョン
@@ -103,7 +103,7 @@ function createStorageMocks() {
     processedState.settings_version = newState.settings_version || 0;
 
     // 処理済み状態
-    let settings = { ...INITIAL_STORAGE.settings };
+    let settings: Record<string, unknown> = { ...INITIAL_STORAGE.settings };
 
     // newStateの各キーを処理
     for (const key of Object.keys(newState)) {
@@ -139,7 +139,7 @@ function createStorageMocks() {
   };
 
   // Replace global mocks
-  chrome.storage.local = {
+  (chrome.storage as { local: unknown }).local = {
     get: getMock,
     set: setMock,
     remove: removeMock,
@@ -153,7 +153,7 @@ function createStorageMocks() {
     setStorageState,
     resetStorage,
     restoreOriginal: () => {
-      chrome.storage.local = chromeStorageLocal;
+      (chrome.storage as { local: unknown }).local = chromeStorageLocal;
     }
   };
 }
@@ -269,7 +269,6 @@ describe('ublockImport - SourceManager Module', () => {
         }
       });
 
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       const fetchFromUrlCallback = vi.fn().mockResolvedValue(`||example.com^\n||newdomain.com^`);
 
@@ -321,7 +320,6 @@ describe('ublockImport - SourceManager Module', () => {
         }
       });
 
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       const fetchFromUrlCallback = vi.fn().mockResolvedValue('invalid line without caret');
 
@@ -340,7 +338,6 @@ describe('ublockImport - SourceManager Module', () => {
       });
 
       // 空または無効なフィルターテキストを返す
-    // @ts-expect-error - vi.fn() type narrowing issue
   
       const fetchFromUrlCallback = vi.fn().mockResolvedValue('');
 
@@ -361,8 +358,8 @@ describe('ublockImport - SourceManager Module', () => {
       expect(result.action).toBe('追加');
       expect(result.ruleCount).toBe(2);
       expect(result.sources).toHaveLength(1);
-      expect(result.sources[0].url).toBe('manual');
-      expect(result.sources[0].blockDomains).toContain('example.com');
+      expect(result.sources[0]!.url).toBe('manual');
+      expect(result.sources[0]!.blockDomains).toContain('example.com');
     });
 
     test('URL指定の場合はURLが保存される', async () => {
@@ -372,7 +369,7 @@ describe('ublockImport - SourceManager Module', () => {
       const result = await saveUblockSettings(filterText, url);
 
       expect(result.sources).toHaveLength(1);
-      expect(result.sources[0].url).toBe('https://example.com/filters.txt');
+      expect(result.sources[0]!.url).toBe('https://example.com/filters.txt');
     });
 
     test('パースエラーがある場合はエラーを投げる', async () => {
@@ -402,7 +399,7 @@ describe('ublockImport - SourceManager Module', () => {
 
       expect(result.ruleCount).toBe(1000);
       expect(result.sources).toHaveLength(1);
-      expect(result.sources[0].url).toBe('manual');
+      expect(result.sources[0]!.url).toBe('manual');
     });
 
     test('既存のURLを指定した場合はソースを更新（追加しない）', async () => {
@@ -418,7 +415,7 @@ describe('ublockImport - SourceManager Module', () => {
 
       expect(updRes.action).toBe('更新');
       expect(updRes.sources).toHaveLength(1);
-      expect(updRes.sources[0].url).toBe(url);
+      expect(updRes.sources[0]!.url).toBe(url);
 
       const state2 = storageMocks.getStorageState();
       expect(state2.settings[StorageKeys.UBLOCK_SOURCES]).toHaveLength(1);
@@ -474,7 +471,7 @@ describe('ublockImport - SourceManager Module', () => {
 
       expect(result.action).toBe('追加');
       expect(result.sources).toHaveLength(1);
-      expect(result.sources[0].url).toBe('manual');
+      expect(result.sources[0]!.url).toBe('manual');
     });
   });
 

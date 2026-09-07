@@ -167,8 +167,8 @@ describe('ReDoSリスクの検証（問題点4）', () => {
 
     it('null/undefinedは高速に処理される', async () => {
       const startTime = performance.now();
-      await sanitizeRegex(null as string);
-      await sanitizeRegex(undefined as string);
+      await sanitizeRegex(null as unknown as string);
+      await sanitizeRegex(undefined as unknown as string);
       const endTime = performance.now();
 
       expect(endTime - startTime).toBeLessThan(10);

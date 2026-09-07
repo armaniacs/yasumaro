@@ -10,7 +10,7 @@ import {
   buildCalendarNavHtml,
   buildCalendarDaysHtml,
 } from '../sqliteHistoryPanelView.js';
-import type { BrowsingLogEntry } from '../../../utils/sqlite-types.js';
+import type { BrowsingLogEntry } from '../../../../utils/sqlite-types.js';
 import { createInitialHistoryState } from '../sqliteHistoryPanelState.js';
 import type { SqliteHistoryState } from '../sqliteHistoryPanelState.js';
 

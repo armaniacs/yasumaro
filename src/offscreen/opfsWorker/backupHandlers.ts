@@ -87,6 +87,18 @@ export async function handleRestore(
   try {
     const tmpEngine = await createEngine(RESTORE_TMP_FILENAME, WASM_URL);
     await tmpEngine.exec('SELECT count(*) FROM sqlite_master');
+    // PBI 2026-09-06-01: an archive-format .db carries yasumaro_archive_meta
+    // and must NOT be accepted by the full restore (it would overwrite the
+    // main DB with an FTS-less copy). Direct users to the archive restore UI.
+    const archiveRows = await tmpEngine.query(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'yasumaro_archive_meta'",
+    );
+    if (archiveRows.length > 0) {
+      await tmpEngine.close();
+      throw new Error(
+        'Archive database detected: use the archive restore panel (archive_restore) instead of full restore_db',
+      );
+    }
     const triggerRows = await tmpEngine.query('SELECT count(*) as c FROM sqlite_master WHERE type = \'trigger\'');
     const triggerCount = Number(triggerRows[0]?.c ?? 0);
     if (triggerCount > 0) {

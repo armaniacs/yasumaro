@@ -165,17 +165,17 @@ describe('getUserErrorMessage', () => {
 });
 
 describe('showError', () => {
-  let statusElement;
-  let mockForceRecordCallback;
-  let createElementSpy;
-  let mockButton;
+  let statusElement: HTMLElement;
+  let mockForceRecordCallback: ReturnType<typeof vi.fn>;
+  let createElementSpy: ReturnType<typeof vi.spyOn> | undefined;
+  let mockButton: Record<string, unknown>;
 
   beforeEach(() => {
     statusElement = {
       className: '',
       textContent: '',
       appendChild: vi.fn()
-    };
+    } as unknown as HTMLElement;
     mockForceRecordCallback = vi.fn();
     mockButton = {
       disabled: false,
@@ -186,13 +186,13 @@ describe('showError', () => {
 
     // jsdom環境でdocument.createElementをspy
     if (typeof document !== 'undefined') {
-      createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(mockButton);
+      createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(mockButton as unknown as HTMLElement);
     } else {
       // documentが存在しない場合はダミーを設定
       global.document = {
         createElement: vi.fn().mockReturnValue(mockButton)
-      };
-      createElementSpy = global.document.createElement;
+      } as unknown as Document;
+      createElementSpy = global.document.createElement as unknown as ReturnType<typeof vi.spyOn>;
     }
   });
 
@@ -201,7 +201,7 @@ describe('showError', () => {
       createElementSpy?.mockRestore();
     }
     vi.restoreAllMocks();
-    global.document = undefined;
+    global.document = undefined as unknown as Document;
   });
 
   test('一般エラーを表示', () => {
@@ -215,7 +215,7 @@ describe('showError', () => {
   test('ドメインブロックエラーで強制記録ボタンを表示', () => {
     const error = new Error(DOMAIN_BLOCKED_ERROR_CODE);
 
-    showError(statusElement, error, mockForceRecordCallback);
+    showError(statusElement, error, mockForceRecordCallback as unknown as () => void);
 
     expect(statusElement.textContent).toBe(MOCK_DOMAIN_BLOCKED_DISPLAY);
     expect(createElementSpy).toHaveBeenCalledWith('button');
@@ -225,7 +225,7 @@ describe('showError', () => {
   test('強制記録ボタンのクリックハンドラーが設定される', () => {
     const error = new Error(DOMAIN_BLOCKED_ERROR_CODE);
 
-    showError(statusElement, error, mockForceRecordCallback);
+    showError(statusElement, error, mockForceRecordCallback as unknown as () => void);
 
     // ボタンが作成されたことを確認
     expect(createElementSpy).toHaveBeenCalledWith('button');
@@ -236,13 +236,13 @@ describe('showError', () => {
 });
 
 describe('showSuccess', () => {
-  let statusElement;
+  let statusElement: HTMLElement;
 
   beforeEach(() => {
     statusElement = {
       className: '',
       textContent: ''
-    };
+    } as unknown as HTMLElement;
   });
 
   test('デフォルトの成功メッセージを表示', () => {

@@ -130,6 +130,47 @@ export const UPDATABLE_FIELDS = [
 /** INSERT OR IGNORE (for insertBatch() and migration). */
 export const INSERT_IGNORE_SQL = `INSERT OR IGNORE INTO browsing_logs (${INSERT_COLS}) VALUES (${INSERT_PLACEHOLDERS})`;
 
+// ============================================================================
+// Archive format constants (PBI 2026-09-06-01 foundation / 02 record-archive)
+// The archive.db holds an id-preserving copy of browsing_logs (no FTS5, no
+// triggers, no audit_log) plus a single-row yasumaro_archive_meta table.
+// ============================================================================
+
+export const ARCHIVE_META_SCHEMA_SQL = `
+  CREATE TABLE IF NOT EXISTS yasumaro_archive_meta (
+    archived_at INTEGER NOT NULL,
+    cutoff_created_at INTEGER NOT NULL,
+    cutoff_date TEXT NOT NULL,
+    record_count INTEGER NOT NULL,
+    include_deleted INTEGER NOT NULL,
+    max_id_at_archive INTEGER,
+    archive_format_version INTEGER NOT NULL,
+    yasumaro_version TEXT NOT NULL
+  );
+`;
+
+/** id-preserving insert order for archive.db (main COLUMN_NAMES + leading id). */
+export const ARCHIVE_INSERT_COLUMN_NAMES = ['id', ...COLUMN_NAMES] as const;
+
+export const ARCHIVE_INSERT_SQL =
+  `INSERT INTO browsing_logs (${ARCHIVE_INSERT_COLUMN_NAMES.join(', ')}) ` +
+  `VALUES (${ARCHIVE_INSERT_COLUMN_NAMES.map(() => '?').join(', ')})`;
+
+/** SELECT column list when reading rows back out of an archive.db. */
+export const ARCHIVE_SELECT_COLUMNS = ARCHIVE_INSERT_COLUMN_NAMES.join(', ');
+
+/**
+ * Parameter array for ARCHIVE_INSERT_SQL: the record's own id first, then the
+ * shared non-PK mapping. Keeps archive writes on the COLUMN_NAMES SSOT so a
+ * schema change flows through automatically.
+ */
+export function buildArchiveInsertParams(
+  record: InsertableRecord & { id: number },
+  domain: string | null,
+): (string | number | null)[] {
+  return [record.id, ...buildInsertParams(record, domain)];
+}
+
 /**
  * Columns allowed in ORDER BY clauses for query(). Single source of truth
  * shared between opfsWorker.ts (OPFS path) and IdbVfsBackend.ts (IDB path).

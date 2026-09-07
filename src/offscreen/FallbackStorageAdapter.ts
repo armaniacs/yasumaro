@@ -54,6 +54,62 @@ export class FallbackStorageAdapter implements StorageBackend {
     return { success: false, error: 'Binary backup requires OPFS storage.' };
   }
 
+  async archivePreview(): Promise<BackendOrError<import('./StorageBackend.js').ArchivePreviewResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveCreate(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCreateResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveCleanup(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCleanupResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveExportChunk(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveExportChunkResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archivePrepareIncoming(): Promise<BackendOrError<import('./StorageBackend.js').ArchivePrepareIncomingResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveRestorePreview(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveRestorePreviewResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveRestore(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveRestoreResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveDeleteByStaging(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveDeleteByStagingResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveOpen(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveOpenResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveQuery(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveQueryResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveUpdate(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveUpdateResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveSave(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveSaveResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveClose(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCloseResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
+  async archiveStatus(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveStatusResult>> {
+    return { success: false, error: 'Archive requires OPFS storage.' };
+  }
+
   async restoreDb(_data: Uint8Array): Promise<BackendOrError<MutationResult>> {
     return { success: false, error: 'Binary restore requires OPFS storage.' };
   }

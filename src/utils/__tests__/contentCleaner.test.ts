@@ -4,9 +4,9 @@
  */
 
 // Web Crypto API polyfill テスト環境セットアップ
-import { webcrypto as crypto } from '@peculiar/webcrypto';
+import { Crypto } from '@peculiar/webcrypto';
 Object.defineProperty(global, 'crypto', {
-    value: crypto
+    value: new Crypto()
 });
 
 // jsdom 環境設定

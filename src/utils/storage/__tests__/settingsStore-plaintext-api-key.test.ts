@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getSettings, clearSettingsCache } from '../../storage';
+import { getSettings, clearSettingsCache } from '../../storage.js';
 
 vi.mock('../../logger.js', () => ({
   logInfo: vi.fn(() => Promise.resolve()),
@@ -60,8 +60,8 @@ describe('storage — plaintext API key detection', () => {
     expect(settings['openai_api_key']).toBe('sk-plaintext-key');
     expect(logWarn).toHaveBeenCalledTimes(1);
     const warnCall = vi.mocked(logWarn).mock.calls[0];
-    expect(warnCall[0]).toContain('openai_api_key');
-    expect(warnCall[0]).toContain('Plaintext');
+    expect(warnCall?.[0]).toContain('openai_api_key');
+    expect(warnCall?.[0]).toContain('Plaintext');
   });
 
   it('does not warn when API key fields are absent', async () => {

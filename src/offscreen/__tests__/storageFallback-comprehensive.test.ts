@@ -264,10 +264,11 @@ describe('FallbackStorage update', () => {
 
 describe('FallbackStorage toggleStar', () => {
   it('toggles star from 0 to 1', async () => {
-    const { success, id } = await storage.insert(makeRecord({ url: 'https://star.com', created_at: 100 }));
-    expect(success).toBe(true);
+    const inserted = await storage.insert(makeRecord({ url: 'https://star.com', created_at: 100 }));
+    expect(inserted.success).toBe(true);
+    if (!inserted.success) throw new Error('insert failed');
 
-    const result = await storage.toggleStar(id);
+    const result = await storage.toggleStar(inserted.id);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.is_starred).toBe(1);
@@ -275,12 +276,13 @@ describe('FallbackStorage toggleStar', () => {
   });
 
   it('toggles star from 1 to 0', async () => {
-    const { success, id } = await storage.insert(makeRecord({
+    const inserted = await storage.insert(makeRecord({
       url: 'https://star2.com', created_at: 100, is_starred: 1,
     }));
-    expect(success).toBe(true);
+    expect(inserted.success).toBe(true);
+    if (!inserted.success) throw new Error('insert failed');
 
-    const result = await storage.toggleStar(id);
+    const result = await storage.toggleStar(inserted.id);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.is_starred).toBe(0);
@@ -297,10 +299,11 @@ describe('FallbackStorage toggleStar', () => {
 
 describe('FallbackStorage hardDelete', () => {
   it('removes a record by id', async () => {
-    const { id } = await storage.insert(makeRecord({ url: 'https://del.com', created_at: 100 }));
-    await storage.hardDelete(id);
+    const inserted = await storage.insert(makeRecord({ url: 'https://del.com', created_at: 100 }));
+    if (!inserted.success) throw new Error('insert failed');
+    await storage.hardDelete(inserted.id);
     const records = await storage.getAllRecords();
-    expect(records.find(r => r.id === id)).toBeUndefined();
+    expect(records.find(r => r.id === inserted.id)).toBeUndefined();
   });
 
   it('returns success even for non-existent id', async () => {

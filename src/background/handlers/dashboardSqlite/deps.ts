@@ -4,6 +4,7 @@ import { formatEntriesToMarkdown } from '../../../utils/markdownFormatter.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import type { BrowsingLogEntry, BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import type { CallResult, SqliteError } from '../../sqlite/offscreenGateway.js';
+import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData } from '../../../messaging/sqliteMessages.js';
 
 export const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 export const MAX_APPEND_IDS = 100;
@@ -42,8 +43,8 @@ export interface ReadOnlyDeps {
   getStatus: () => Promise<Record<string, unknown> | null>;
   runOpfsSpike: () => Promise<DepsResult<Record<string, unknown>>>;
   queryAuditLog: (options: { limit?: number; offset?: number }) => Promise<DepsResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>>;
-  createConfirmToken: (action: string, id?: number) => Promise<string>;
-  verifyConfirmToken: (token: string, action: string, id?: number) => Promise<boolean>;
+  createConfirmToken: (action: string, id?: number, scopeHash?: string) => Promise<string>;
+  verifyConfirmToken: (token: string, action: string, id?: number, scopeHash?: string) => Promise<boolean>;
   /** @deprecated legacy - kept for test compat, maps to create/verify */
   getConfirmToken?: () => Promise<string>;
 }
@@ -77,8 +78,35 @@ export interface MaintenanceBatchDeps {
   runLegacyResync: (options?: { maxRecords?: number }) => Promise<{ examined: number; written: number; skipped: number; total: number }>;
 }
 
-/** Union of the three groups — what createDashboardSqliteHandler needs as a whole. Unchanged external shape. */
-export type DashboardSqliteHandlerDeps = ReadOnlyDeps & CoreCrudDeps & MaintenanceBatchDeps;
+/**
+ * Deps consumed by the archive group (PBI 2026-09-06-02). All client-backed:
+ * the actual work happens in the offscreen document / OPFS worker, where the
+ * staging registry and second engine live.
+ */
+export interface ArchiveDeps {
+  archivePreview: (cutoffDate: string, cutoffMs: number, includeDeleted: boolean) => Promise<DepsResult<ArchivePreviewData>>;
+  archiveCreate: (params: { cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }) => Promise<DepsResult<ArchiveCreateData>>;
+  archiveCleanup: () => Promise<DepsResult<{ removed: string[] }>>;
+  archiveExportChunk: (stagingName: string, offset: number, length: number) => Promise<DepsResult<ArchiveExportData>>;
+  archivePrepareIncoming: () => Promise<DepsResult<string>>;
+  archiveRestorePreview: (stagingName: string) => Promise<DepsResult<ArchiveRestorePreviewData>>;
+  archiveRestore: (stagingName: string) => Promise<DepsResult<ArchiveRestoreData>>;
+  archiveDeleteByStaging: (stagingName: string) => Promise<DepsResult<ArchivePurgeData>>;
+  archiveOpen: (stagingName: string) => Promise<DepsResult<void>>;
+  archiveQuery: (stagingName: string, query: string, limit: number, offset: number) => Promise<DepsResult<{ rows: ArchiveSessionRow[]; total: number }>>;
+  archiveUpdate: (stagingName: string, id: number, changes: Record<string, unknown>) => Promise<DepsResult<{ dirty: boolean }>>;
+  archiveSave: (stagingName: string) => Promise<DepsResult<{ dirty: boolean }>>;
+  archiveClose: (stagingName: string) => Promise<DepsResult<{ dirty: boolean }>>;
+  archiveStatus: () => Promise<DepsResult<ArchiveSessionStatusData>>;
+}
+
+export type { ArchivePurgeData };
+
+/** Union of the archive group — what createArchiveHandler needs. */
+export type DashboardArchiveHandlerDeps = ArchiveDeps;
+
+/** Union of the four groups — what createDashboardSqliteHandler needs as a whole. Unchanged external shape. */
+export type DashboardSqliteHandlerDeps = ReadOnlyDeps & CoreCrudDeps & MaintenanceBatchDeps & ArchiveDeps;
 
 /**
  * The operations this handler needs that a SqliteClient can supply.
@@ -142,6 +170,22 @@ runOpfsSpike: () => sqliteClient.maintain({ type: 'opfsSpike' }) as Promise<Deps
      purgeContent: (days?: number, max?: number, includeStarred?: boolean) =>
       sqliteClient.maintain({ type: 'purgeContent', retentionDays: days, maxRecords: max, includeStarred } as { type: 'purgeContent', retentionDays?: number, maxRecords?: number, includeStarred: boolean }),
      backupDb: () => sqliteClient.maintain({ type: 'backup' }),
+    // Archive group (PBI 2026-09-06-02): client-backed — the work happens in
+    // the offscreen document / OPFS worker where the staging registry lives.
+    archivePreview: (cutoffDate, cutoffMs, includeDeleted) => sqliteClient.maintain({ type: 'archivePreview', cutoffDate, cutoffMs, includeDeleted } as { type: 'archivePreview', cutoffDate: string, cutoffMs: number, includeDeleted: boolean }),
+    archiveCreate: (params) => sqliteClient.maintain({ type: 'archiveCreate', ...params }),
+    archiveCleanup: () => sqliteClient.maintain({ type: 'archiveCleanup' }),
+    archiveExportChunk: (stagingName, offset, length) => sqliteClient.maintain({ type: 'archiveExport', stagingName, offset, length }),
+    archivePrepareIncoming: () => sqliteClient.maintain({ type: 'archivePrepareIncoming' } as { type: 'archivePrepareIncoming' }),
+    archiveRestorePreview: (stagingName) => sqliteClient.maintain({ type: 'archiveRestorePreview', stagingName } as { type: 'archiveRestorePreview', stagingName: string }),
+    archiveRestore: (stagingName) => sqliteClient.maintain({ type: 'archiveRestore', stagingName } as { type: 'archiveRestore', stagingName: string }),
+    archiveDeleteByStaging: (stagingName) => sqliteClient.maintain({ type: 'archiveDeleteByStaging', stagingName } as { type: 'archiveDeleteByStaging', stagingName: string }),
+    archiveOpen: (stagingName) => sqliteClient.maintain({ type: 'archiveOpen', stagingName } as { type: 'archiveOpen', stagingName: string }),
+    archiveQuery: (stagingName, query, limit, offset) => sqliteClient.maintain({ type: 'archiveQuery', stagingName, query, limit, offset } as { type: 'archiveQuery', stagingName: string, query: string, limit: number, offset: number }),
+    archiveUpdate: (stagingName, id, changes) => sqliteClient.maintain({ type: 'archiveUpdate', stagingName, id, changes } as { type: 'archiveUpdate', stagingName: string, id: number, changes: Record<string, unknown> }),
+    archiveSave: (stagingName) => sqliteClient.maintain({ type: 'archiveSave', stagingName } as { type: 'archiveSave', stagingName: string }),
+    archiveClose: (stagingName) => sqliteClient.maintain({ type: 'archiveClose', stagingName } as { type: 'archiveClose', stagingName: string }),
+    archiveStatus: () => sqliteClient.maintain({ type: 'archiveStatus' } as { type: 'archiveStatus' }),
       getSettings: () => new SettingsRepository().getAll() as Promise<Record<string, unknown>>,
      formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
      queryAuditLog: (options) => sqliteClient.query({ kind: 'auditLog', limit: options?.limit, offset: options?.offset } as { kind: 'auditLog', limit?: number, offset?: number }),

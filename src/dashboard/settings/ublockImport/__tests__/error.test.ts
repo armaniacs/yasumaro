@@ -24,7 +24,7 @@ describe('fetchFromUrl - Error Handling', () => {
       runtime: {
         sendMessage: vi.fn()
       }
-    };
+    } as unknown as typeof chrome;
   });
 
   test('HTTPエラーを適切に処理', async () => {
@@ -180,11 +180,11 @@ describe('fetchFromUrl - Error Handling', () => {
   });
 
   test('null URLを検出', async () => {
-    await expect(fetchFromUrl(null)).rejects.toThrow('無効なURLです');
+    await expect(fetchFromUrl(null as unknown as string)).rejects.toThrow('無効なURLです');
   });
 
   test('undefined URLを検出', async () => {
-    await expect(fetchFromUrl(undefined)).rejects.toThrow('無効なURLです');
+    await expect(fetchFromUrl(undefined as unknown as string)).rejects.toThrow('無効なURLです');
   });
 
   describe('isValidUrl - URL検証', () => {

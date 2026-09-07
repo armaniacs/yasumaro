@@ -48,7 +48,7 @@ describe('createPaginationControls', () => {
         const onPageChange = vi.fn();
         const nav = createPaginationControls(0, 5, onPageChange);
 
-        const prevBtn = nav.querySelector('button:first-child');
+        const prevBtn = nav.querySelector<HTMLButtonElement>('button:first-child');
         expect(prevBtn?.disabled).toBe(true);
     });
 
@@ -56,7 +56,7 @@ describe('createPaginationControls', () => {
         const onPageChange = vi.fn();
         const nav = createPaginationControls(4, 5, onPageChange);
 
-        const nextBtn = nav.querySelector('button:last-child');
+        const nextBtn = nav.querySelector<HTMLButtonElement>('button:last-child');
         expect(nextBtn?.disabled).toBe(true);
     });
 

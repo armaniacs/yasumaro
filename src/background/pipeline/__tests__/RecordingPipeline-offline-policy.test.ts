@@ -9,6 +9,7 @@
  */
 
 import { vi } from 'vitest';
+import type { MockedClass } from 'vitest';
 
 // Mock chrome.storage.local for pendingStorage integration
 const mockStorage: Record<string, unknown> = {};
@@ -102,15 +103,16 @@ import { PrivacyPipeline } from '../../privacyPipeline.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import { makeOrchestrator } from '../../__tests__/helpers/makeRecordingLogic.js';
 
-const MockedObsidianClient = ObsidianClient as vi.MockedClass<typeof ObsidianClient>;
-const MockedPrivacyPipeline = PrivacyPipeline as vi.MockedClass<typeof PrivacyPipeline>;
+const MockedObsidianClient = ObsidianClient as MockedClass<typeof ObsidianClient>;
+const MockedPrivacyPipeline = PrivacyPipeline as MockedClass<typeof PrivacyPipeline>;
 
+// Only the privacy-relevant fields matter here; the pipeline reads no others.
 const mockSettings = {
   PRIVACY_MODE: 'full_pipeline',
   PII_SANITIZE_LOGS: true,
   TAG_SUMMARY_MODE: false,
   AUTO_SAVE_PRIVACY_BEHAVIOR: 'save',
-};
+} as unknown as import('../../../utils/storage/types.js').Settings;
 
 function makeAiClient() {
   return {
@@ -174,7 +176,7 @@ describe('Offline retry policy via step metadata', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockProcess = vi.fn();
-    MockedPrivacyPipeline.mockImplementation(function() {
+    MockedPrivacyPipeline.mockImplementation(function(this: any) {
       this.process = mockProcess;
     });
     MockedObsidianClient.mockImplementation(function() {

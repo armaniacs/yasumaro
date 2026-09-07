@@ -258,7 +258,7 @@ describe('loadPendingPages', () => {
         ]);
         await loadPendingPages();
         const titleEl = document.querySelector('.pending-item-title') as HTMLElement;
-        const createSpy = vi.spyOn(chrome.tabs, 'create').mockResolvedValue({});
+        const createSpy = (vi.spyOn(chrome.tabs, 'create') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
         titleEl.click();
         expect(createSpy).toHaveBeenCalledWith({ url: 'https://example.com' });
     });
@@ -295,7 +295,7 @@ describe('saveSelectedPages', () => {
         document.body.innerHTML += `
             <input type="checkbox" class="pending-checkbox" value="https://example.com" checked>
         `;
-        const sendMessageSpy = vi.spyOn(chrome.runtime, 'sendMessage').mockResolvedValue({});
+        const sendMessageSpy = (vi.spyOn(chrome.runtime, 'sendMessage') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
         await saveSelectedPages();
         expect(sendMessageSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'record' }));
     });
@@ -307,8 +307,8 @@ describe('saveSelectedPages', () => {
         (getPendingPages as ReturnType<typeof vi.fn>).mockResolvedValue([
             { url: 'https://example.com/page', title: 'Example Page', reason: 'test', headerValue: '' }
         ]);
-        const storageSetSpy = vi.spyOn(chrome.storage.local, 'set').mockResolvedValue(undefined);
-        const sendMessageSpy = vi.spyOn(chrome.runtime, 'sendMessage').mockResolvedValue({});
+        const storageSetSpy = (vi.spyOn(chrome.storage.local, 'set') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue(undefined);
+        const sendMessageSpy = (vi.spyOn(chrome.runtime, 'sendMessage') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
         await saveSelectedPages('path');
         expect(storageSetSpy).toHaveBeenCalledWith({
             domain_whitelist: expect.arrayContaining(['^https://example\\.com/page$'])
@@ -323,14 +323,14 @@ describe('saveSelectedPages', () => {
         (getPendingPages as ReturnType<typeof vi.fn>).mockResolvedValue([
             { url: 'https://example.com/page', title: 'Example Page', reason: 'test', headerValue: '' }
         ]);
-        const getSpy = vi.spyOn(chrome.storage.local, 'get').mockResolvedValue({});
-        const setSpy = vi.spyOn(chrome.storage.local, 'set').mockResolvedValue(undefined);
-        vi.spyOn(chrome.runtime, 'sendMessage').mockResolvedValue({});
+        const getSpy = (vi.spyOn(chrome.storage.local, 'get') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
+        const setSpy = (vi.spyOn(chrome.storage.local, 'set') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue(undefined);
+        (vi.spyOn(chrome.runtime, 'sendMessage') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
 
         await saveSelectedPages('domain');
 
         expect(getSpy).toHaveBeenCalledWith('domain_whitelist');
-        const setArg = setSpy.mock.calls[0][0] as Record<string, unknown>;
+        const setArg = setSpy.mock.calls[0]![0] as Record<string, unknown>;
         expect(setArg).toHaveProperty('domain_whitelist');
         expect(setArg).not.toHaveProperty('domainWhitelist');
         expect(setArg.domain_whitelist).toEqual(['example.com']);
@@ -343,13 +343,13 @@ describe('saveSelectedPages', () => {
         (getPendingPages as ReturnType<typeof vi.fn>).mockResolvedValue([
             { url: 'https://new.example.com/x', title: 'New', reason: 'test', headerValue: '' }
         ]);
-        vi.spyOn(chrome.storage.local, 'get').mockResolvedValue({ domain_whitelist: ['old.example.com'] });
-        const setSpy = vi.spyOn(chrome.storage.local, 'set').mockResolvedValue(undefined);
-        vi.spyOn(chrome.runtime, 'sendMessage').mockResolvedValue({});
+        (vi.spyOn(chrome.storage.local, 'get') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({ domain_whitelist: ['old.example.com'] });
+        const setSpy = (vi.spyOn(chrome.storage.local, 'set') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue(undefined);
+        (vi.spyOn(chrome.runtime, 'sendMessage') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
 
         await saveSelectedPages('domain');
 
-        const setArg = setSpy.mock.calls[0][0] as { domain_whitelist: string[] };
+        const setArg = setSpy.mock.calls[0]![0] as { domain_whitelist: string[] };
         expect(setArg.domain_whitelist).toEqual(['old.example.com', 'new.example.com']);
     });
 });
@@ -424,7 +424,7 @@ describe('DOM Event Listeners', () => {
                 <input type="checkbox" class="pending-checkbox" value="https://example.com" checked>
             `;
 
-            const sendMessageSpy = vi.spyOn(chrome.runtime, 'sendMessage').mockResolvedValue({});
+            const sendMessageSpy = (vi.spyOn(chrome.runtime, 'sendMessage') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
 
             const button = document.getElementById('btn-save-selected')!;
             button.click();
@@ -443,8 +443,8 @@ describe('DOM Event Listeners', () => {
                 <input type="checkbox" class="pending-checkbox" value="https://example.com" checked>
             `;
 
-            const storageSetSpy = vi.spyOn(chrome.storage.local, 'set').mockResolvedValue(undefined);
-            const sendMessageSpy = vi.spyOn(chrome.runtime, 'sendMessage').mockResolvedValue({});
+            const storageSetSpy = (vi.spyOn(chrome.storage.local, 'set') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue(undefined);
+            const sendMessageSpy = (vi.spyOn(chrome.runtime, 'sendMessage') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
 
             const button = document.getElementById('btn-save-whitelist')!;
             button.click();

@@ -39,10 +39,8 @@ describe('RecordingPipeline', () => {
   };
 
   const mockAiClient = {
-    // @ts-expect-error - vi.fn() type narrowing issue
 
     getSupportedModes: vi.fn().mockReturnValue(['local_only', 'full_pipeline']),
-    // @ts-expect-error - vi.fn() type narrowing issue
 
     generateSummary: vi.fn().mockResolvedValue({ summary: 'Cloud summary' }),
   };
@@ -51,14 +49,13 @@ describe('RecordingPipeline', () => {
     vi.clearAllMocks();
     // Chrome notifications APIが存在する場合のみモック
     if (!chrome.notifications) {
-      chrome.notifications = { create: vi.fn() };
+      chrome.notifications = { create: vi.fn() } as unknown as typeof chrome.notifications;
     }
 
     // Problem #7: URLキャッシュを初期化
     RecordingCache.resetCacheState();
 
     // storageのデフォルトモック
-    // @ts-expect-error - vi.fn() type narrowing issue
 
     mockGetAll.mockResolvedValue({
       privacy_mode: 'full_pipeline',
@@ -80,7 +77,6 @@ describe('RecordingPipeline', () => {
     // @ts-expect-error - vi.fn() type narrowing issue
 
     privacy.PrivacyPipeline.mockImplementation(function(this: any) {
-    // @ts-expect-error - vi.fn() type narrowing issue
 
       this.process = vi.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 });
     });
@@ -126,7 +122,6 @@ describe('RecordingPipeline', () => {
       const expectedLimit = 64 * 1024;
 
       const mockPipeline = {
-    // @ts-expect-error - vi.fn() type narrowing issue
 
         process: vi.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
       };
@@ -153,7 +148,6 @@ describe('RecordingPipeline', () => {
       const smallContent = 'a'.repeat(10 * 1024); // 10KB
 
       const mockPipeline = {
-        // @ts-expect-error - vi.fn() type narrowing issue
         process: vi.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
       };
       // @ts-expect-error - vi.fn() type narrowing issue
@@ -175,7 +169,6 @@ describe('RecordingPipeline', () => {
       const exact64KB = 'a'.repeat(64 * 1024); // 正確に64KB
 
       const mockPipeline = {
-        // @ts-expect-error - vi.fn() type narrowing issue
         process: vi.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
       };
       // @ts-expect-error - vi.fn() type narrowing issue
@@ -197,7 +190,6 @@ describe('RecordingPipeline', () => {
       const emptyContent = '';
 
       const mockPipeline = {
-        // @ts-expect-error - vi.fn() type narrowing issue
         process: vi.fn().mockResolvedValue({ summary: 'Summary', maskedCount: 0 })
       };
       // @ts-expect-error - vi.fn() type narrowing issue
@@ -260,7 +252,7 @@ describe('RecordingPipeline', () => {
       expect(result).toBe(true);
       expect(mockAiClient.generateSummary).not.toHaveBeenCalled();
       expect(mockObsidian.appendToDailyNote).toHaveBeenCalledTimes(1);
-      const [markdown] = mockObsidian.appendToDailyNote.mock.calls[0];
+      const [markdown] = mockObsidian.appendToDailyNote.mock.calls[0] ?? [];
       expect(markdown).toContain('Retry Page');
       expect(markdown).toContain('Already summarized content');
       expect(markdown).toContain('#news');
@@ -295,7 +287,7 @@ describe('RecordingPipeline', () => {
       let resolveFirstProcess: (() => void) | undefined;
       const firstProcessStarted = new Promise<void>((r) => { resolveFirstProcess = r; });
 
-      privacy.PrivacyPipeline.mockImplementation(function(this: any) {
+      vi.mocked(privacy.PrivacyPipeline).mockImplementation(function(this: any) {
         this.process = vi.fn(async () => {
           callCount++;
           const n = callCount;
@@ -329,7 +321,7 @@ describe('RecordingPipeline', () => {
       let resolveFirstProcess: (() => void) | undefined;
       const firstProcessStarted = new Promise<void>((r) => { resolveFirstProcess = r; });
 
-      privacy.PrivacyPipeline.mockImplementation(function(this: any) {
+      vi.mocked(privacy.PrivacyPipeline).mockImplementation(function(this: any) {
         this.process = vi.fn(async () => {
           callCount++;
           const n = callCount;
@@ -432,12 +424,11 @@ describe('RecordingPipeline', () => {
       // 既存のmock setup
       vi.clearAllMocks();
       if (!chrome.notifications) {
-        chrome.notifications = { create: vi.fn() };
+        chrome.notifications = { create: vi.fn() } as unknown as typeof chrome.notifications;
       }
 
       RecordingCache.resetCacheState();
 
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockGetAll.mockResolvedValue({
         privacy_mode: 'full_pipeline',
         pii_sanitize_logs: true,
@@ -452,7 +443,6 @@ describe('RecordingPipeline', () => {
       domainUtils.isDomainAllowed.mockResolvedValue(true);
       // @ts-expect-error - vi.fn() type narrowing issue
       privacy.PrivacyPipeline.mockImplementation(function(this: any) {
-        // @ts-expect-error - vi.fn() type narrowing issue
         this.process = vi.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 });
       });
     });
@@ -495,7 +485,6 @@ describe('RecordingPipeline', () => {
 
       const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
-        // @ts-expect-error - vi.fn() type narrowing issue
         generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);
@@ -518,7 +507,6 @@ describe('RecordingPipeline', () => {
 
       const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
-        // @ts-expect-error - vi.fn() type narrowing issue
         generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);
@@ -543,10 +531,9 @@ describe('RecordingPipeline', () => {
       // 既存のmock setup
       vi.clearAllMocks();
       if (!chrome.notifications) {
-        chrome.notifications = { create: vi.fn() };
+        chrome.notifications = { create: vi.fn() } as unknown as typeof chrome.notifications;
       }
 
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockGetAll.mockResolvedValue({
         privacy_mode: 'full_pipeline',
         pii_sanitize_logs: true,
@@ -561,7 +548,6 @@ describe('RecordingPipeline', () => {
       domainUtils.isDomainAllowed.mockResolvedValue(true);
       // @ts-expect-error - vi.fn() type narrowing issue
       privacy.PrivacyPipeline.mockImplementation(function(this: any) {
-        // @ts-expect-error - vi.fn() type narrowing issue
         this.process = vi.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 });
       });
     });
@@ -603,7 +589,6 @@ describe('RecordingPipeline', () => {
 
       const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
-        // @ts-expect-error - vi.fn() type narrowing issue
         generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);
@@ -630,7 +615,6 @@ describe('RecordingPipeline', () => {
 
       const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
-        // @ts-expect-error - vi.fn() type narrowing issue
         generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);
@@ -652,7 +636,6 @@ describe('RecordingPipeline', () => {
 
       const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
-        // @ts-expect-error - vi.fn() type narrowing issue
         generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);
@@ -676,7 +659,7 @@ describe('RecordingPipeline', () => {
 
       // Chrome notifications APIが存在する場合のみモック
       if (!chrome.notifications) {
-        chrome.notifications = { create: vi.fn() };
+        chrome.notifications = { create: vi.fn() } as unknown as typeof chrome.notifications;
       }
 
       // Reset cache state
@@ -684,7 +667,6 @@ describe('RecordingPipeline', () => {
 
       vi.clearAllMocks();
 
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockGetAll.mockResolvedValue({
         privacy_mode: 'full_pipeline',
         pii_sanitize_logs: true,
@@ -699,7 +681,6 @@ describe('RecordingPipeline', () => {
       domainUtils.isDomainAllowed.mockResolvedValue(true);
       // @ts-expect-error - vi.fn() type narrowing issue
       privacy.PrivacyPipeline.mockImplementation(function(this: any) {
-        // @ts-expect-error - vi.fn() type narrowing issue
         this.process = vi.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 });
       });
       // @ts-expect-error - vi.fn() type narrowing issue
@@ -721,7 +702,6 @@ describe('RecordingPipeline', () => {
       const mockAiClient = {} as any;
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
-      // @ts-expect-error - requireConfirmation is part of RecordingData extension
       const result = await logic.record({
         title: 'Bank Account',
         url,
@@ -770,7 +750,6 @@ describe('RecordingPipeline', () => {
       const mockAiClient = {} as any;
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
-      // @ts-expect-error - requireConfirmation is part of RecordingData extension
       const result = await logic.record({
         title: 'Bank Account',
         url,
@@ -807,12 +786,10 @@ describe('RecordingPipeline', () => {
 
       const mockObsidian = { appendToDailyNote: vi.fn().mockResolvedValue(undefined) } as any;
       const mockAiClient = {
-        // @ts-expect-error - vi.fn() type narrowing issue
         generateSummary: vi.fn().mockResolvedValue('summary')
       } as any;
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
-      // @ts-expect-error - requireConfirmation is part of RecordingData extension
       const result = await logic.record({
         title: 'Public Article',
         url,
@@ -837,14 +814,13 @@ describe('RecordingPipeline', () => {
       RecordingCache.invalidateUrlCache();
 
       if (!chrome.notifications) {
-        chrome.notifications = { create: vi.fn() };
+        chrome.notifications = { create: vi.fn() } as unknown as typeof chrome.notifications;
       }
 
       RecordingCache.resetCacheState();
 
       vi.clearAllMocks();
 
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockGetAll.mockResolvedValue({
         privacy_mode: 'full_pipeline',
         pii_sanitize_logs: true,
@@ -859,7 +835,6 @@ describe('RecordingPipeline', () => {
       domainUtils.isDomainAllowed.mockResolvedValue(true);
       // @ts-expect-error - vi.fn() type narrowing issue
       privacy.PrivacyPipeline.mockImplementation(function(this: any) {
-        // @ts-expect-error - vi.fn() type narrowing issue
         this.process = vi.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 });
       });
       // @ts-expect-error - vi.fn() type narrowing issue
@@ -917,14 +892,13 @@ describe('RecordingPipeline', () => {
       RecordingCache.invalidateUrlCache();
 
       if (!chrome.notifications) {
-        chrome.notifications = { create: vi.fn() };
+        chrome.notifications = { create: vi.fn() } as unknown as typeof chrome.notifications;
       }
 
       RecordingCache.resetCacheState();
 
       vi.clearAllMocks();
 
-      // @ts-expect-error - vi.fn() type narrowing issue
       mockGetAll.mockResolvedValue({
         privacy_mode: 'full_pipeline',
         pii_sanitize_logs: true,
@@ -939,7 +913,6 @@ describe('RecordingPipeline', () => {
       domainUtils.isDomainAllowed.mockResolvedValue(true);
       // @ts-expect-error - vi.fn() type narrowing issue
       privacy.PrivacyPipeline.mockImplementation(function(this: any) {
-        // @ts-expect-error - vi.fn() type narrowing issue
         this.process = vi.fn().mockResolvedValue({ summary: 'Test summary', maskedCount: 0 });
       });
       // @ts-expect-error - vi.fn() type narrowing issue
@@ -961,7 +934,6 @@ describe('RecordingPipeline', () => {
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       const testHeaderValue = 'private, no-store, must-revalidate';
-      // @ts-expect-error - requireConfirmation is part of RecordingData extension
       const result = await logic.record({
         title: 'Private Page',
         url,
@@ -996,7 +968,6 @@ describe('RecordingPipeline', () => {
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
       // headerValueを指定せず、requireConfirmationを指定
-      // @ts-expect-error - requireConfirmation is part of RecordingData extension
       const result = await logic.record({
         title: 'Private Page',
         url,
@@ -1033,7 +1004,6 @@ describe('RecordingPipeline', () => {
       // 1024文字を超える長いheaderValueを作成（authorizationはREDACTEDになるためlengthは無関係）
       const longHeaderValue = 'x'.repeat(2000);
 
-      // @ts-expect-error - requireConfirmation is part of RecordingData extension
       const result = await logic.record({
         title: 'Private Page',
         url,
@@ -1065,7 +1035,6 @@ describe('RecordingPipeline', () => {
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const logic = makeRecordingLogic(mockObsidian, {} as any);
 
-      // @ts-expect-error - requireConfirmation is part of RecordingData extension
       await logic.record({
         title: 'Auth Page',
         url,
@@ -1094,7 +1063,6 @@ describe('RecordingPipeline', () => {
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const logic = makeRecordingLogic(mockObsidian, {} as any);
 
-      // @ts-expect-error - requireConfirmation is part of RecordingData extension
       await logic.record({
         title: 'Cache Page',
         url,
@@ -1123,7 +1091,6 @@ describe('RecordingPipeline', () => {
       const mockObsidian = { appendToDailyNote: vi.fn() } as any;
       const logic = makeRecordingLogic(mockObsidian, {} as any);
 
-      // @ts-expect-error - requireConfirmation is part of RecordingData extension
       await logic.record({
         title: 'Cookie Page',
         url,

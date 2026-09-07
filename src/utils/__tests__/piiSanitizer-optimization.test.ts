@@ -34,8 +34,8 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
             expect(result.text).toContain('[MASKED:email]');
             expect(result.text).not.toContain('example@test.com');
             expect(result.maskedItems).toHaveLength(1);
-            expect(result.maskedItems[0].type).toBe('email');
-            expect(result.maskedItems[0].original).toBe('example@test.com');
+            expect(result.maskedItems[0]!.type).toBe('email');
+            expect(result.maskedItems[0]!.original).toBe('example@test.com');
         });
 
         it('複数のPIIタイプを一度に検出・置換できる', async () => {
@@ -89,11 +89,11 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
         it('nullやundefinedを正しく扱える', async () => {
             let result;
 
-            result = await sanitizeRegex(null as string) as SanitizeResult;
+            result = await sanitizeRegex(null as unknown as string) as SanitizeResult;
             expect(result.text).toBe('');
             expect(result.maskedItems).toHaveLength(0);
 
-            result = await sanitizeRegex(undefined as string) as SanitizeResult;
+            result = await sanitizeRegex(undefined as unknown as string) as SanitizeResult;
             expect(result.text).toBe('');
             expect(result.maskedItems).toHaveLength(0);
         });
@@ -234,7 +234,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
             const result = await sanitizeRegex(text) as SanitizeResult;
 
             expect(result.text).toContain('[MASKED:email]');
-            expect(result.maskedItems[0].original).toContain('user+tag@example-domain.com');
+            expect(result.maskedItems[0]!.original).toContain('user+tag@example-domain.com');
         });
 
         it('置換結果のテキスト長が元のテキスト長を超えない', async () => {
@@ -263,7 +263,7 @@ describe('PII置換の効率化（アレイjoin方式）', () => {
 
             // マスクされた項目のインデックスが昇順であることを確認
             for (let i = 1; i < result.maskedItems.length; i++) {
-                expect(result.maskedItems[i].index).toBeGreaterThan(result.maskedItems[i - 1].index);
+                expect(result.maskedItems[i]!.index).toBeGreaterThan(result.maskedItems[i - 1]!.index);
             }
         });
 

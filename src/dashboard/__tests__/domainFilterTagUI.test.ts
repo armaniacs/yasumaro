@@ -245,7 +245,7 @@ describe('initDomainFilterTagUI', () => {
     it('renders tags with mode-specific class', () => {
       const tags = document.querySelectorAll('.domain-tag');
       expect(tags.length).toBe(1);
-      expect(tags[0].classList.contains('domain-tag-whitelist')).toBe(true);
+      expect(tags[0]?.classList.contains('domain-tag-whitelist')).toBe(true);
     });
 
     it('tagCount shows count for non-empty list', () => {

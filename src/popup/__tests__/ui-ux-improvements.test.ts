@@ -29,7 +29,7 @@ const getStylesCSS = () => {
 };
 
 // JSDOMでHTMLをパースしてDOMを作成
-const parseHTML = (html) => {
+const parseHTML = (html: string): Document => {
   const dom = new JSDOM.JSDOM(html);
   return dom.window.document;
 };
@@ -37,7 +37,7 @@ const parseHTML = (html) => {
 describe('UI/UX Improvements Test Suite', () => {
 
   describe('1. エラー/成功メッセージの視覚的強化 (高優先度)', () => {
-    let stylesCSS;
+    let stylesCSS: string;
 
     beforeAll(() => {
       stylesCSS = getStylesCSS();
@@ -75,7 +75,7 @@ describe('UI/UX Improvements Test Suite', () => {
   });
 
   describe('2. アクセシビリティ対応 (高優先度)', () => {
-    let document;
+    let document: Document;
 
     beforeAll(() => {
       const html = getPopupHTML();
@@ -91,7 +91,7 @@ describe('UI/UX Improvements Test Suite', () => {
       const statusElements = document.querySelectorAll('#status, #mainStatus, #domainStatus, #privacyStatus');
       expect(statusElements.length).toBeGreaterThan(0);
 
-      statusElements.forEach((status) => {
+      statusElements.forEach((status: Element) => {
         const ariaLive = status.getAttribute('aria-live');
         expect(['polite', 'assertive']).toContain(ariaLive);
       });
@@ -106,7 +106,7 @@ describe('UI/UX Improvements Test Suite', () => {
   });
 
   describe('3. 強制記録ボタンのスタイル正規化 (中期)', () => {
-    let stylesCSS;
+    let stylesCSS: string;
 
     beforeAll(() => {
       stylesCSS = getStylesCSS();
@@ -131,7 +131,7 @@ describe('UI/UX Improvements Test Suite', () => {
   });
 
   describe('5. ヘルプテキストの視覚的強化 (中期)', () => {
-    let stylesCSS;
+    let stylesCSS: string;
 
     beforeAll(() => {
       stylesCSS = getStylesCSS();
@@ -154,7 +154,7 @@ describe('UI/UX Improvements Test Suite', () => {
   });
 
   describe('6. ボタンの操作エリア確保 (中期)', () => {
-    let stylesCSS;
+    let stylesCSS: string;
 
     beforeAll(() => {
       stylesCSS = getStylesCSS();
@@ -168,7 +168,7 @@ describe('UI/UX Improvements Test Suite', () => {
       const iconBtnMatch = stylesCSS.match(/\.icon-btn\s*{[\s\S]*?width\s*:\s*(\d+)px/i);
 
       if (iconBtnMatch) {
-        const width = parseInt(iconBtnMatch[1]);
+        const width = parseInt(iconBtnMatch[1] ?? '');
         // WCAG 2.5.5のターゲットサイズ要件（最低24×24px）を満たすべき
         // より良いUXのために44×44pxが推奨
         expect(width).toBeGreaterThanOrEqual(24);
@@ -181,7 +181,7 @@ describe('UI/UX Improvements Test Suite', () => {
       // パディングバリューが10px以上であることを確認
       const primaryBtnMatch = stylesCSS.match(/\.primary-btn\s*{[\s\S]*?padding\s*:\s*(\d+)px/i);
       if (primaryBtnMatch) {
-        const padding = parseInt(primaryBtnMatch[1]);
+        const padding = parseInt(primaryBtnMatch[1] ?? '');
         expect(padding).toBeGreaterThanOrEqual(10);
       }
     });
@@ -191,7 +191,7 @@ describe('UI/UX Improvements Test Suite', () => {
 
       const secondaryBtnMatch = stylesCSS.match(/\.secondary-btn\s*{[\s\S]*?padding\s*:\s*(\d+)px/i);
       if (secondaryBtnMatch) {
-        const padding = parseInt(secondaryBtnMatch[1]);
+        const padding = parseInt(secondaryBtnMatch[1] ?? '');
         expect(padding).toBeGreaterThanOrEqual(10);
       }
     });

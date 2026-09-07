@@ -50,8 +50,8 @@ describe('getOrCreateEncryptionKey concurrency', () => {
         // ブロックしておき、Aの呼び出しが完全に完了してから解放する。
         const aFinished = createDeferred<void>();
 
-        const originalLocalGetImpl = chrome.storage.local.get.getMockImplementation()!;
-        const localGetSpy = vi.spyOn(chrome.storage.local, 'get');
+        const originalLocalGetImpl = (chrome.storage.local.get as unknown as ReturnType<typeof vi.fn>).getMockImplementation()! as (keys?: string | string[] | null) => Promise<Record<string, unknown>>;
+        const localGetSpy = vi.spyOn(chrome.storage.local, 'get') as unknown as ReturnType<typeof vi.fn>;
         let hasSpawnedB = false;
         let callBPromise: Promise<CryptoKey> | null = null;
         localGetSpy.mockImplementation(async (keys: string | string[] | null | undefined) => {
@@ -69,8 +69,8 @@ describe('getOrCreateEncryptionKey concurrency', () => {
             return result;
         });
 
-        const originalSessionGetImpl = chrome.storage.session.get.getMockImplementation()!;
-        const sessionGetSpy = vi.spyOn(chrome.storage.session, 'get');
+        const originalSessionGetImpl = (chrome.storage.session.get as unknown as ReturnType<typeof vi.fn>).getMockImplementation()! as (keys?: string | string[] | null) => Promise<Record<string, unknown>>;
+        const sessionGetSpy = vi.spyOn(chrome.storage.session, 'get') as unknown as ReturnType<typeof vi.fn>;
         let sessionGetCallCount = 0;
         sessionGetSpy.mockImplementation(async (keys: string | string[] | null | undefined) => {
             sessionGetCallCount += 1;

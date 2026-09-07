@@ -4,6 +4,7 @@
  * PBI-11: ヘッダのみ受信後にボディが送られてこないケースでもハングしない
  */
 
+import type { Mock } from 'vitest';
 import { ObsidianClient } from '../obsidianClient.js';
 import * as storage from '../../utils/storage/types.js';
 import { addLog, LogType } from '../../utils/logger.js';
@@ -13,8 +14,8 @@ function bodyOf(text: string): { getReader: () => { read: () => Promise<{ done: 
   let sent = false;
   return {
     getReader: () => ({
-      read: () => {
-        if (sent) return Promise.resolve({ done: true, value: undefined });
+      read: (): Promise<{ done: boolean; value?: Uint8Array }> => {
+        if (sent) return Promise.resolve({ done: true });
         sent = true;
         return Promise.resolve({ done: false, value: new TextEncoder().encode(text) });
       },
@@ -82,13 +83,12 @@ vi.mock('../../utils/logger.js', () => ({
 
 describe('ObsidianClient: レスポンスボディ読み込みタイムアウト', () => {
   let client: ObsidianClient;
-  let mockFetch: vi.Mock;
+  let mockFetch: Mock;
 
   beforeEach(() => {
     client = new ObsidianClient();
     vi.clearAllMocks();
 
-    // @ts-expect-error - vi.fn() type narrowing issue
     mockGetSettings.mockResolvedValue({
       OBSIDIAN_API_KEY: 'test_key',
       OBSIDIAN_PROTOCOL: 'http',
@@ -148,7 +148,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
 
       await vi.advanceTimersByTimeAsync(15001);
 
-      const err = await promise.catch((e: Error) => e);
+      const err = await promise.catch((e: Error) => e) as Error;
       expect(err.name).toBe('AbortError');
       vi.useRealTimers();
     });

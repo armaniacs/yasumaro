@@ -89,15 +89,20 @@ async function callHandler(type: string, payload?: unknown): Promise<unknown> {
 }
 
 describe('sqliteMessageHandlers — registry completeness', () => {
-  it('Map contains all 20 SqliteMessageTypes', () => {
-    expect(sqliteMessageHandlers.size).toBe(20);
+  it('Map contains all 34 SqliteMessageTypes', () => {
+    expect(sqliteMessageHandlers.size).toBe(34);
     const expected = [
       'SQLITE_HEALTH_CHECK', 'SQLITE_INIT', 'SQLITE_INSERT', 'SQLITE_INSERT_BATCH',
       'SQLITE_QUERY', 'SQLITE_AUDIT_LOG_INSERT', 'SQLITE_AUDIT_LOG_QUERY',
       'SQLITE_SEARCH', 'SQLITE_UPDATE', 'SQLITE_DELETE', 'SQLITE_TOGGLE_STAR',
       'SQLITE_COUNT', 'SQLITE_STATUS', 'SQLITE_CLEAR_ALL', 'SQLITE_EXPORT',
       'SQLITE_BACKUP', 'SQLITE_RESTORE', 'SQLITE_PURGE', 'CONTENT_PURGE',
-      'SQLITE_OPFS_SPIKE',
+      'SQLITE_OPFS_SPIKE', 'SQLITE_ARCHIVE_PREVIEW', 'SQLITE_ARCHIVE_CREATE',
+      'SQLITE_ARCHIVE_CLEANUP', 'SQLITE_ARCHIVE_EXPORT',
+      'SQLITE_ARCHIVE_PREPARE_INCOMING', 'SQLITE_ARCHIVE_RESTORE_PREVIEW', 'SQLITE_ARCHIVE_RESTORE',
+      'SQLITE_ARCHIVE_DELETE_BY_STAGING',
+      'SQLITE_ARCHIVE_OPEN', 'SQLITE_ARCHIVE_QUERY', 'SQLITE_ARCHIVE_UPDATE',
+      'SQLITE_ARCHIVE_SAVE', 'SQLITE_ARCHIVE_CLOSE', 'SQLITE_ARCHIVE_STATUS',
     ];
     for (const t of expected) {
       expect(sqliteMessageHandlers.has(t as never)).toBe(true);
@@ -182,14 +187,14 @@ describe('sqliteMessageHandlers — handleInsert', () => {
     const payload = { url: 'https://example.com', title: 't', created_at: 123456 };
     await callHandler('SQLITE_INSERT', payload);
     expect(recordsRepoMock.insert).toHaveBeenCalled();
-    const arg = recordsRepoMock.insert.mock.calls[0][0] as Record<string, unknown>;
+    const arg = recordsRepoMock.insert.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg.url).toBe('https://example.com');
     expect(arg.title).toBe('t');
   });
 
   it('handles empty payload defaults', async () => {
     await callHandler('SQLITE_INSERT', {});
-    const arg = recordsRepoMock.insert.mock.calls[0][0] as Record<string, unknown>;
+    const arg = recordsRepoMock.insert.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg.url).toBe('');
   });
 });
@@ -202,7 +207,7 @@ describe('sqliteMessageHandlers — handleInsertBatch branching', () => {
     const records = [{ url: 'https://a.com' }, { url: 'https://b.com', title: 'b' }];
     await callHandler('SQLITE_INSERT_BATCH', { records });
     expect(recordsRepoMock.insertBatch).toHaveBeenCalled();
-    const arg = recordsRepoMock.insertBatch.mock.calls[0][0] as unknown[];
+    const arg = recordsRepoMock.insertBatch.mock.calls[0]![0] as unknown[];
     expect(arg).toHaveLength(2);
   });
 
@@ -230,7 +235,7 @@ describe('sqliteMessageHandlers — handleQuery branching', () => {
     await callHandler('SQLITE_QUERY', {
       limit: '20', offset: '5', orderBy: 'rank', orderDir: 'DESC', domain: 'example.com',
     });
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.limit).toBe(20);
     expect(opts.offset).toBe(5);
     expect(opts.orderBy).toBe('rank');
@@ -240,148 +245,148 @@ describe('sqliteMessageHandlers — handleQuery branching', () => {
 
   it('omits limit/offset when null (Number undefined branch)', async () => {
     await callHandler('SQLITE_QUERY', {});
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts).not.toHaveProperty('limit');
     expect(opts).not.toHaveProperty('offset');
   });
 
   it('covers starred true via Boolean(payload.starred) branch', async () => {
     await callHandler('SQLITE_QUERY', { starred: 1 });
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.starred).toBe(true);
   });
 
   it('covers starred via isStarred alias (else branch)', async () => {
     await callHandler('SQLITE_QUERY', { isStarred: 0 });
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.starred).toBe(false);
   });
 
   it('covers isStarred 1 truthy branch', async () => {
     await callHandler('SQLITE_QUERY', { isStarred: 1 });
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.starred).toBe(true);
   });
 
   it('omits starred when neither starred nor isStarred present (undefined branch)', async () => {
     await callHandler('SQLITE_QUERY', {});
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts).not.toHaveProperty('starred');
   });
 
   it('covers starred=false via falsy isStarred? ensure Boolean coercion path', async () => {
     // starred is null/undefined but isStarred present as truthy
     await callHandler('SQLITE_QUERY', { starred: null, isStarred: 1 } as never);
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     // starred != null is false (null), so falls to isStarred branch -> true
     expect(opts.starred).toBe(true);
   });
 
   it('covers starred = false when starred is 0 (Boolean(0) => false)', async () => {
     await callHandler('SQLITE_QUERY', { starred: 0 });
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.starred).toBe(false);
   });
 
   it('covers excludeDeleted boolean branch', async () => {
     await callHandler('SQLITE_QUERY', { excludeDeleted: 1 });
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.excludeDeleted).toBe(true);
   });
 
   it('omits excludeDeleted when not present', async () => {
     await callHandler('SQLITE_QUERY', {});
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts).not.toHaveProperty('excludeDeleted');
   });
 
   it('covers dateFrom via dateFrom present', async () => {
     await callHandler('SQLITE_QUERY', { dateFrom: '1000' });
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.dateFrom).toBe(1000);
   });
 
   it('covers dateFrom via since alias', async () => {
     await callHandler('SQLITE_QUERY', { since: '2000' });
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.dateFrom).toBe(2000);
   });
 
   it('omits dateFrom when neither present', async () => {
     await callHandler('SQLITE_QUERY', {});
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts).not.toHaveProperty('dateFrom');
   });
 
   it('covers dateFrom via since when dateFrom is null', async () => {
     await callHandler('SQLITE_QUERY', { dateFrom: null, since: '3000' } as never);
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.dateFrom).toBe(3000);
   });
 
   it('covers dateTo via dateTo present', async () => {
     await callHandler('SQLITE_QUERY', { dateTo: '9999' });
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.dateTo).toBe(9999);
   });
 
   it('covers dateTo via until alias', async () => {
     await callHandler('SQLITE_QUERY', { until: '8888' });
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.dateTo).toBe(8888);
   });
 
   it('covers dateTo via until when dateTo is null', async () => {
     await callHandler('SQLITE_QUERY', { dateTo: null, until: '7777' } as never);
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.dateTo).toBe(7777);
   });
 
   it('covers ids array', async () => {
     await callHandler('SQLITE_QUERY', { ids: [1, 2, 3] });
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.ids).toEqual([1, 2, 3]);
   });
 
   it('omits ids when not present', async () => {
     await callHandler('SQLITE_QUERY', {});
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts).not.toHaveProperty('ids');
   });
 
   it('covers tag via tag present', async () => {
     await callHandler('SQLITE_QUERY', { tag: 'hello' });
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.tag).toBe('hello');
   });
 
   it('covers tag via tagFilter alias', async () => {
     await callHandler('SQLITE_QUERY', { tagFilter: 'world' });
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.tag).toBe('world');
   });
 
   it('covers tag via tagFilter when tag is null', async () => {
     await callHandler('SQLITE_QUERY', { tag: null, tagFilter: 'alias' } as never);
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.tag).toBe('alias');
   });
 
   it('omits tag when neither present', async () => {
     await callHandler('SQLITE_QUERY', {});
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts).not.toHaveProperty('tag');
   });
 
   it('covers gistSynced number', async () => {
     await callHandler('SQLITE_QUERY', { gistSynced: '1' });
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.gistSynced).toBe(1);
   });
 
   it('omits gistSynced when null', async () => {
     await callHandler('SQLITE_QUERY', {});
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts).not.toHaveProperty('gistSynced');
   });
 
@@ -391,7 +396,7 @@ describe('sqliteMessageHandlers — handleQuery branching', () => {
       domain: 'x.com', starred: true, excludeDeleted: true,
       dateFrom: 100, dateTo: 200, ids: [9], tag: 't', gistSynced: 0,
     });
-    const opts = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.limit).toBe(10);
     expect(opts.tag).toBe('t');
   });
@@ -408,33 +413,33 @@ describe('sqliteMessageHandlers — handleAuditLogInsert branching', () => {
 
   it('falls back to empty string when provider is falsy (|| branch)', async () => {
     await callHandler('SQLITE_AUDIT_LOG_INSERT', { provider: '', url: 'https://x.com', created_at: 1 });
-    const arg = auditLogRepoMock.insertAuditLog.mock.calls[0][0] as Record<string, unknown>;
+    const arg = auditLogRepoMock.insertAuditLog.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg.provider).toBe('');
   });
 
   it('falls back when provider missing', async () => {
     await callHandler('SQLITE_AUDIT_LOG_INSERT', { url: 'https://x.com' } as never);
-    const arg = auditLogRepoMock.insertAuditLog.mock.calls[0][0] as Record<string, unknown>;
+    const arg = auditLogRepoMock.insertAuditLog.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg.provider).toBe('');
   });
 
   it('falls back when url missing', async () => {
     await callHandler('SQLITE_AUDIT_LOG_INSERT', { provider: 'p' } as never);
-    const arg = auditLogRepoMock.insertAuditLog.mock.calls[0][0] as Record<string, unknown>;
+    const arg = auditLogRepoMock.insertAuditLog.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg.url).toBe('');
   });
 
   it('uses Date.now fallback when created_at falsy (|| branch)', async () => {
     const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(999999);
     await callHandler('SQLITE_AUDIT_LOG_INSERT', { provider: 'p', url: 'u', created_at: 0 } as never);
-    const arg = auditLogRepoMock.insertAuditLog.mock.calls[0][0] as Record<string, unknown>;
+    const arg = auditLogRepoMock.insertAuditLog.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg.created_at).toBe(999999);
     nowSpy.mockRestore();
   });
 
   it('uses numeric created_at when truthy', async () => {
     await callHandler('SQLITE_AUDIT_LOG_INSERT', { provider: 'p', url: 'u', created_at: 555 });
-    const arg = auditLogRepoMock.insertAuditLog.mock.calls[0][0] as Record<string, unknown>;
+    const arg = auditLogRepoMock.insertAuditLog.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg.created_at).toBe(555);
   });
 });
@@ -445,27 +450,27 @@ describe('sqliteMessageHandlers — handleAuditLogQuery branching', () => {
 
   it('passes limit/offset when defined', async () => {
     await callHandler('SQLITE_AUDIT_LOG_QUERY', { limit: '10', offset: '5' });
-    const arg = auditLogRepoMock.queryAuditLog.mock.calls[0][0] as Record<string, unknown>;
+    const arg = auditLogRepoMock.queryAuditLog.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg.limit).toBe(10);
     expect(arg.offset).toBe(5);
   });
 
   it('omits limit/offset when null (pickDefined branch)', async () => {
     await callHandler('SQLITE_AUDIT_LOG_QUERY', {});
-    const arg = auditLogRepoMock.queryAuditLog.mock.calls[0][0] as Record<string, unknown>;
+    const arg = auditLogRepoMock.queryAuditLog.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg).not.toHaveProperty('limit');
     expect(arg).not.toHaveProperty('offset');
   });
 
   it('handles undefined payload', async () => {
     await callHandler('SQLITE_AUDIT_LOG_QUERY', undefined as never);
-    const arg = auditLogRepoMock.queryAuditLog.mock.calls[0][0] as Record<string, unknown>;
+    const arg = auditLogRepoMock.queryAuditLog.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg).not.toHaveProperty('limit');
   });
 
   it('omits only offset when limit defined but offset null', async () => {
     await callHandler('SQLITE_AUDIT_LOG_QUERY', { limit: 7 });
-    const arg = auditLogRepoMock.queryAuditLog.mock.calls[0][0] as Record<string, unknown>;
+    const arg = auditLogRepoMock.queryAuditLog.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg.limit).toBe(7);
     expect(arg).not.toHaveProperty('offset');
   });
@@ -477,7 +482,7 @@ describe('sqliteMessageHandlers — handleSearch branching', () => {
 
   it('uses query string and forwards limit/offset/orderBy/orderDir', async () => {
     await callHandler('SQLITE_SEARCH', { query: 'hello', limit: 5, offset: 2, orderBy: 'rank', orderDir: 'ASC' });
-    const arg = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const arg = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg.text).toBe('hello');
     expect(arg.limit).toBe(5);
     expect(arg.offset).toBe(2);
@@ -486,26 +491,26 @@ describe('sqliteMessageHandlers — handleSearch branching', () => {
 
   it('falls back to empty string when query is falsy (|| branch)', async () => {
     await callHandler('SQLITE_SEARCH', { query: '' } as never);
-    const arg = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const arg = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg.text).toBe('');
   });
 
   it('falls back to empty when query is undefined (|| branch)', async () => {
     await callHandler('SQLITE_SEARCH', {} as never);
-    const arg = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const arg = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg.text).toBe('');
   });
 
   it('omits optional fields when null (pickDefined branches)', async () => {
     await callHandler('SQLITE_SEARCH', { query: 'x' });
-    const arg = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const arg = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg).not.toHaveProperty('limit');
     expect(arg).not.toHaveProperty('offset');
   });
 
   it('passes orderBy/orderDir when defined', async () => {
     await callHandler('SQLITE_SEARCH', { query: 'q', orderBy: 'created_at', orderDir: 'DESC' });
-    const arg = recordsRepoMock.query.mock.calls[0][0] as Record<string, unknown>;
+    const arg = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(arg.orderBy).toBe('created_at');
     expect(arg.orderDir).toBe('DESC');
   });
@@ -536,7 +541,7 @@ describe('sqliteMessageHandlers — handleUpdate branching', () => {
     ];
     for (const k of keys) payload[k] = 'v-' + k;
     await callHandler('SQLITE_UPDATE', payload as never);
-    const changes = recordsRepoMock.update.mock.calls[0][1] as Record<string, unknown>;
+    const changes = recordsRepoMock.update.mock.calls[0]![1] as Record<string, unknown>;
     expect(Object.keys(changes)).toHaveLength(keys.length);
     expect(recordsRepoMock.update).toHaveBeenCalledWith(12, expect.objectContaining({ url: 'v-url' }));
   });
@@ -596,7 +601,7 @@ describe('sqliteMessageHandlers — handleRestore branching', () => {
     dbMaintenanceMock.restoreDb.mockResolvedValue({ success: true });
     const res = await callHandler('SQLITE_RESTORE', {} as never) as { success: boolean };
     expect(dbMaintenanceMock.restoreDb).toHaveBeenCalledWith(expect.any(Uint8Array));
-    const arg = dbMaintenanceMock.restoreDb.mock.calls[0][0] as Uint8Array;
+    const arg = dbMaintenanceMock.restoreDb.mock.calls[0]![0] as Uint8Array;
     expect(arg.length).toBe(0);
     expect(res.success).toBe(true);
   });
@@ -611,7 +616,7 @@ describe('sqliteMessageHandlers — handleRestore branching', () => {
   it('handles null data via || []', async () => {
     dbMaintenanceMock.restoreDb.mockResolvedValue({ success: true });
     await callHandler('SQLITE_RESTORE', { data: null } as never);
-    const arg = dbMaintenanceMock.restoreDb.mock.calls[0][0] as Uint8Array;
+    const arg = dbMaintenanceMock.restoreDb.mock.calls[0]![0] as Uint8Array;
     expect(arg.length).toBe(0);
   });
 });

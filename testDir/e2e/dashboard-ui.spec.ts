@@ -41,11 +41,11 @@ test.describe('Dashboard - Initial Load @ui', () => {
     await expect(sectionLabels.nth(2)).toHaveText('Tools');
   });
 
-  test('has 17 sidebar navigation tabs', async ({ page }) => {
+  test('has 18 sidebar navigation tabs', async ({ page }) => {
     await page.goto(`file://${OPTIONS_PATH}`);
 
     const sidebarTabs = page.locator('.sidebar-nav-btn');
-    await expect(sidebarTabs).toHaveCount(17);
+    await expect(sidebarTabs).toHaveCount(18);
   });
 
   test('initial tab (panel-general) is selected', async ({ page }) => {
@@ -160,6 +160,13 @@ test.describe('Dashboard - Initial Settings Panel @ui', () => {
   test('has content retention section', async ({ page }) => {
     const panel = page.locator('#panel-general');
     await expect(panel.getByText('Content Retention Settings')).toBeVisible();
+  });
+
+  test('has content storage toggle in content retention section', async ({ page }) => {
+    const toggle = page.locator('#contentStorageEnabled');
+    await expect(toggle).toBeAttached();
+    await expect(toggle).toHaveAttribute('type', 'checkbox');
+    await expect(toggle).toHaveAttribute('data-storage-key', 'content_storage_enabled');
   });
 
   test('has action buttons at top and bottom', async ({ page }) => {
@@ -377,5 +384,34 @@ test.describe('Dashboard - Responsive Layout @ui', () => {
     await page.goto(`file://${OPTIONS_PATH}`);
 
     await expect(page.locator('.sidebar-nav-btn').first()).toBeVisible();
+  });
+});
+
+test.describe('Archive panel (PBI 2026-09-06-02)', () => {
+  // NOTE: the dashboard-ui spec loads dist/options.html via file://, where
+  // module scripts are CORS-blocked — only static markup is verifiable here.
+  // Panel behavior (date defaults, preview/create flow) is covered by
+  // archivePanel.test.ts (jsdom unit) and the @extension e2e suite.
+  test('has archive nav entry and panel elements', async ({ page }) => {
+    await page.goto(`file://${OPTIONS_PATH}`);
+
+    const navBtn = page.locator('[data-panel="panel-archive"]');
+    await expect(navBtn).toBeAttached();
+    await expect(navBtn).toContainText('Archive');
+
+    const panel = page.locator('#panel-archive');
+    await expect(panel).toBeAttached();
+
+    const dateInput = page.locator('#archive-date');
+    await expect(dateInput).toBeAttached();
+    await expect(dateInput).toHaveAttribute('type', 'date');
+    await expect(dateInput).toHaveAttribute('min', '2000-01-01');
+
+    await expect(page.locator('#archive-include-deleted')).toBeAttached();
+    await expect(page.locator('#archive-preview-btn')).toBeAttached();
+    await expect(page.locator('#archive-create-btn')).toBeAttached();
+    // download/cleanup appear only after an archive is created
+    await expect(page.locator('#archive-download-btn')).toBeHidden();
+    await expect(page.locator('#archive-cleanup-btn')).toBeHidden();
   });
 });

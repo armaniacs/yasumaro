@@ -14,7 +14,7 @@ function makeEntry(overrides: Partial<BrowsingLogEntry> = {}): BrowsingLogEntry 
     domain: 'example.com',
     summary: 'A test summary',
     created_at: Date.now(),
-    is_starred: false,
+    is_starred: 0,
     content: null,
     ...overrides,
   };

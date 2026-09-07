@@ -59,7 +59,7 @@ describe('dualPayload (30-11)', () => {
       originalContent: 'a'.repeat(1000),
       dualPayloadEnabled: true,
     };
-    const el = makeDualPayloadDiff(entry as unknown as import('../../../utils/storageUrls.js').SavedUrlEntry);
+    const el = makeDualPayloadDiff(entry as unknown as Parameters<typeof makeDualPayloadDiff>[0]);
     expect(el).not.toBeNull();
     expect(el!.textContent).toContain('除去');
     // 80%超なので警告が含まれる
@@ -68,7 +68,7 @@ describe('dualPayload (30-11)', () => {
 
   it('originalContent がなければ makeDualPayloadDiff は null', async () => {
     const { makeDualPayloadDiff } = await import('../../../dashboard/cleansingStatsView.js');
-    const entry = { content: 'abc' } as unknown as import('../../../utils/storageUrls.js').SavedUrlEntry;
+    const entry = { content: 'abc' } as unknown as Parameters<typeof makeDualPayloadDiff>[0];
     expect(makeDualPayloadDiff(entry)).toBeNull();
   });
 
@@ -78,7 +78,7 @@ describe('dualPayload (30-11)', () => {
       content: 'a'.repeat(90),
       originalContent: 'a'.repeat(100),
     };
-    const el = makeDualPayloadDiff(entry as unknown as import('../../../utils/storageUrls.js').SavedUrlEntry);
+    const el = makeDualPayloadDiff(entry as unknown as Parameters<typeof makeDualPayloadDiff>[0]);
     expect(el).not.toBeNull();
     expect(el!.querySelector('.dual-payload-warning')).toBeNull();
   });

@@ -92,7 +92,7 @@ describe('GeminiProvider: エラーハンドリング', () => {
     } as Settings);
     await provider.generateSummary('content', false, '');
 
-    const calledUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    const calledUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0]![0] as string;
     expect(calledUrl).toContain('/models/weird%20model%3Av1:generateContent');
   });
 

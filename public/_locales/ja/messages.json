@@ -1855,6 +1855,9 @@
   "domainFilterEnable": {
     "message": "フィルターを有効にする"
   },
+  "domainSubdomainMatching": {
+    "message": "サブドメインもマッチさせる（example.com が sub.example.com にも一致）"
+  },
   "domainBlacklistTab": {
     "message": "ブラックリスト"
   },
@@ -3441,6 +3444,153 @@
   "sqliteHistoryTab": {
     "message": "履歴"
   },
+  "archiveTab": {
+    "message": "アーカイブ"
+  },
+  "archivePanelDescription": {
+    "message": "指定日までの閲覧履歴を標準SQLiteファイルとしてバックアップします。フェーズ2（次ステップ）でローカルDBから削除も可能です。書き出されたファイルは任意のSQLiteツールで開けます。"
+  },
+  "archiveDateLabel": {
+    "message": "アーカイブ対象日（その日を含む）"
+  },
+  "archiveIncludeDeletedLabel": {
+    "message": "削除済みレコードも含める"
+  },
+  "archiveIncludeDeletedNote": {
+    "message": "削除済みレコードはデフォルトで除外されます。ここで除外したレコードは後からアーカイブから復元できません。"
+  },
+  "archivePreviewBtn": {
+    "message": "アーカイブ対象を確認"
+  },
+  "archiveCreateBtn": {
+    "message": "アーカイブファイルを作成"
+  },
+  "archiveDownloadBtn": {
+    "message": "アーカイブファイルをダウンロード"
+  },
+  "archiveCleanupBtn": {
+    "message": "ステージングコピーを削除"
+  },
+  "archiveDateRequired": {
+    "message": "先に日付を選択してください"
+  },
+  "archiveStatusWorking": {
+    "message": "処理中… 完了まで他のアーカイブ操作は無効です。"
+  },
+  "archivePreviewSummary": {
+    "message": "アーカイブ対象: {total}件（スター付き {starred}件）。期間内の削除済み: {deleted}件（「削除済みレコードも含める」がオフの場合は除外）。"
+  },
+  "archiveCreatedSummary": {
+    "message": "アーカイブ作成完了: {count}件を書き出しました。ステージングコピーを削除する前にファイルをダウンロードしてください。"
+  },
+  "archiveCreatedDownloadHint": {
+    "message": "アーカイブを作成しました。今すぐダウンロードしてください — ステージングコピーを削除するまでは再ダウンロードできます。"
+  },
+  "archiveDownloadDone": {
+    "message": "アーカイブファイルをダウンロードしました。"
+  },
+  "archiveDownloadFailed": {
+    "message": "アーカイブのダウンロードに失敗しました"
+  },
+  "archivePreviewFailed": {
+    "message": "アーカイブの確認に失敗しました"
+  },
+  "archiveCreateFailed": {
+    "message": "アーカイブの作成に失敗しました"
+  },
+  "archiveCleanupDone": {
+    "message": "ステージングの掃除が完了しました（{count}件削除）。"
+  },
+  "archiveCleanupFailed": {
+    "message": "ステージングの掃除に失敗しました"
+  },
+  "archiveSessionSectionTitle": {
+    "message": "アーカイブを開く"
+  },
+  "archiveSessionSearchLabel": {
+    "message": "アーカイブ内を検索"
+  },
+  "archiveSessionSearchBtn": {
+    "message": "検索"
+  },
+  "archiveSessionSaveBtn": {
+    "message": "変更をアーカイブに保存"
+  },
+  "archiveSessionCloseBtn": {
+    "message": "アーカイブを閉じる"
+  },
+  "archiveSessionEditBtn": {
+    "message": "タイトルを編集"
+  },
+  "archiveSessionEditPrompt": {
+    "message": "新しいタイトル:"
+  },
+  "archiveSessionEmpty": {
+    "message": "一致するレコードはありません。"
+  },
+  "archiveSessionSaved": {
+    "message": "変更をアーカイブファイルに保存しました。"
+  },
+  "archiveSessionDiscardTitle": {
+    "message": "未保存の変更を破棄しますか？"
+  },
+  "archiveSessionDiscardMessage": {
+    "message": "アーカイブに未保存の変更があります。このまま閉じると変更は破棄されます（ファイルは最後に保存した状態のまま）。"
+  },
+  "archiveRestoreSectionTitle": {
+    "message": "アーカイブから復元"
+  },
+  "archiveRestoreSectionDesc": {
+    "message": "アーカイブファイルのレコードをローカルDBへ取り込みます。既存レコードは保持され、重複（同一URL・同一時刻）はスキップされます。"
+  },
+  "archiveRestoreFileLabel": {
+    "message": "アーカイブファイル"
+  },
+  "archiveRestoreBtn": {
+    "message": "メインDBへ復元"
+  },
+  "archiveRestorePreviewSummary": {
+    "message": "復元準備完了: {count}件（アーカイブ境界: {date}）"
+  },
+  "archiveRestoreDone": {
+    "message": "復元完了: {restored}件を取り込み（削除済みフラグ付き {deleted}件）、重複スキップ {skipped}件、無効 {invalid}件。"
+  },
+  "archiveRestoreDoneStatus": {
+    "message": "アーカイブの復元が完了しました。"
+  },
+  "archiveRestoreFailed": {
+    "message": "アーカイブの復元に失敗しました"
+  },
+  "archiveRestorePreviewFailed": {
+    "message": "アーカイブ復元の確認に失敗しました"
+  },
+  "archivePurgeBtn": {
+    "message": "メインDBからレコードを削除"
+  },
+  "archivePurgeConfirmTitle": {
+    "message": "アーカイブ済みレコードをメインDBから削除しますか？"
+  },
+  "archivePurgeConfirmMessage": {
+    "message": "{date}までのアーカイブ済みレコードをローカルDBから完全に削除します。{legacy}"
+  },
+  "archiveLegacyDisclosure": {
+    "message": "注意: レガシーストレージのコピーは、レガシークリーンアップが実行されるまで残ることがあります。"
+  },
+  "archivePurgeConfirmOk": {
+    "message": "レコードを削除"
+  },
+  "archivePurgeDone": {
+    "message": "削除完了: {deleted}件を削除しました。ローカルDBの残りは{remaining}件です。"
+  },
+  "archiveVacuumNote": {
+    "message": "ストレージ領域は解放されませんでした（VACUUM失敗） — 後回の実行で解放されます。"
+  },
+  "archivePurgeFailed": {
+    "message": "アーカイブの削除に失敗しました"
+  },
+  "archiveFileTooLarge": {
+    "message": "アーカイブファイルが{max}MBを超えています"
+  },
   "exportLogsTab": {
     "message": "ログをエクスポート"
   },
@@ -3622,6 +3772,9 @@
   },
   "contentRetentionPolicyTitle": {
     "message": "コンテンツ保持設定"
+  },
+  "contentStorageEnabledLabel": {
+    "message": "本文（ページの内容）をローカル保存する"
   },
   "contentRetentionPolicyDesc": {
     "message": "content（本文）のみを対象とし、レコード自体は削除しません"

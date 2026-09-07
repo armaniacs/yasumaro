@@ -3,9 +3,11 @@
  * GeminiProvider.ts の単体テスト
  */
 
-import { webcrypto as crypto } from '@peculiar/webcrypto';
+import { Crypto } from '@peculiar/webcrypto';
 import { vi } from 'vitest';
-Object.defineProperty(global, 'crypto', { value: crypto });
+import type { Mock } from 'vitest';
+
+Object.defineProperty(global, 'crypto', { value: new Crypto() });
 
 // fetch モック
 vi.mock('../../utils/fetch.js', () => ({
@@ -257,16 +259,16 @@ describe('GeminiProvider', () => {
 
         test('設定したタイムアウトを使用する', () => {
             const provider = new GeminiProvider({ ...baseSettings, ai_timeout_ms: 60000 });
-            expect(provider.timeoutMs).toBe(60000);
+            expect((provider as unknown as { timeoutMs: number }).timeoutMs).toBe(60000);
         });
 
         test('タイムアウト未設定の場合はデフォルト 30000', () => {
             const provider = new GeminiProvider(baseSettings);
-            expect(provider.timeoutMs).toBe(30000);
+            expect((provider as unknown as { timeoutMs: number }).timeoutMs).toBe(30000);
         });
 
         test('設定したタイムアウトをリクエストに渡す', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] })
             });
@@ -274,7 +276,7 @@ describe('GeminiProvider', () => {
             const provider = new GeminiProvider({ ...baseSettings, ai_timeout_ms: 60000 });
             await provider.generateSummary('content');
 
-            const options = (fetchWithRetry as vi.Mock).mock.calls[0][1];
+            const options = (fetchWithRetry as Mock).mock.calls[0]![1];
             expect(options.timeoutMs).toBe(60000);
         });
     });
@@ -304,7 +306,7 @@ describe('GeminiProvider', () => {
         });
 
         test('成功時にサマリーを返す', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
                     candidates: [{ content: { parts: [{ text: 'Summary result' }] } }],
@@ -321,7 +323,7 @@ describe('GeminiProvider', () => {
         });
 
         test('成功結果に providerName と model を含める', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
                     candidates: [{ content: { parts: [{ text: 'Summary' }] } }],
@@ -337,7 +339,7 @@ describe('GeminiProvider', () => {
         });
 
         test('APIエラーレスポンスでエラーメッセージ', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: false,
                 status: 500,
                 statusText: 'Internal Server Error'
@@ -350,7 +352,7 @@ describe('GeminiProvider', () => {
         });
 
         test('404エラーでモデル未発見メッセージ', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: false,
                 status: 404
             });
@@ -362,7 +364,7 @@ describe('GeminiProvider', () => {
         });
 
         test('タイムアウトエラーでタイムアウトメッセージ', async () => {
-            (fetchWithRetry as vi.Mock).mockRejectedValue(new Error('Request timed out'));
+            (fetchWithRetry as Mock).mockRejectedValue(new Error('Request timed out'));
 
             const provider = new GeminiProvider(baseSettings);
             const result = await provider.generateSummary('content');
@@ -384,7 +386,7 @@ describe('GeminiProvider', () => {
         });
 
         test('candidates が空の場合はスキーマエラー', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({ candidates: [] })
             });
@@ -398,7 +400,7 @@ describe('GeminiProvider', () => {
         });
 
         test('parts に本文が無い場合は空応答として失敗させる', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
                     candidates: [{ content: { parts: [{ role: 'model' }] } }]
@@ -416,7 +418,7 @@ describe('GeminiProvider', () => {
         test('MAX_TOKENS で本文が空なら設定変更を促すメッセージにする', async () => {
             // Gemini 2.5系以降は thinking が maxOutputTokens を消費するため、
             // 枠が足りないと本文が空のまま MAX_TOKENS で返る
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
                     candidates: [{ content: { parts: [] }, finishReason: 'MAX_TOKENS' }],
@@ -434,7 +436,7 @@ describe('GeminiProvider', () => {
         });
 
         test('モデル名から models/ プレフィックスを除去する', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
                     candidates: [{ content: { parts: [{ text: 'OK' }] } }]
@@ -447,13 +449,13 @@ describe('GeminiProvider', () => {
             });
             await provider.generateSummary('content');
 
-            const callUrl = (fetchWithRetry as vi.Mock).mock.calls[0][0];
+            const callUrl = (fetchWithRetry as Mock).mock.calls[0]![0];
             expect(callUrl).toContain('gemini-pro:generateContent');
             expect(callUrl).not.toContain('models/models/');
         });
 
         test('ペイロードに systemInstruction を含める', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
                     candidates: [{ content: { parts: [{ text: 'Summary' }] } }],
@@ -464,19 +466,19 @@ describe('GeminiProvider', () => {
             const provider = new GeminiProvider(baseSettings);
             await provider.generateSummary('content');
 
-            const options = (fetchWithRetry as vi.Mock).mock.calls[0][1];
+            const options = (fetchWithRetry as Mock).mock.calls[0]![1];
             const body = JSON.parse(options.body);
             expect(body.systemInstruction).toBeDefined();
             expect(body.systemInstruction.parts[0].text).toBe('You are a helpful assistant.');
         });
 
         test('systemPrompt が空の場合はデフォルトシステムプロンプトを使用する', async () => {
-            (applyCustomPrompt as vi.Mock).mockReturnValueOnce({
+            (applyCustomPrompt as Mock).mockReturnValueOnce({
                 userPrompt: 'Summarize: content',
                 systemPrompt: '',
                 isCustom: false
             });
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
                     candidates: [{ content: { parts: [{ text: 'Summary' }] } }],
@@ -487,7 +489,7 @@ describe('GeminiProvider', () => {
             const provider = new GeminiProvider(baseSettings);
             await provider.generateSummary('content');
 
-            const options = (fetchWithRetry as vi.Mock).mock.calls[0][1];
+            const options = (fetchWithRetry as Mock).mock.calls[0]![1];
             const body = JSON.parse(options.body);
             expect(body.systemInstruction.parts[0].text).toBe('Default system prompt.');
         });
@@ -503,8 +505,8 @@ describe('GeminiProvider', () => {
         });
 
         test('接続成功時', async () => {
-            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (validateUrlForAIRequests as Mock).mockImplementation(() => {});
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 status: 200,
                 json: async () => ({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] }),
@@ -518,8 +520,8 @@ describe('GeminiProvider', () => {
         });
 
         test('401エラーで認証失敗メッセージ', async () => {
-            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (validateUrlForAIRequests as Mock).mockImplementation(() => {});
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: false,
                 status: 401,
                 statusText: 'Unauthorized'
@@ -533,8 +535,8 @@ describe('GeminiProvider', () => {
         });
 
         test('429エラーでレート制限メッセージ', async () => {
-            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (validateUrlForAIRequests as Mock).mockImplementation(() => {});
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: false,
                 status: 429,
                 statusText: 'Too Many Requests'
@@ -548,8 +550,8 @@ describe('GeminiProvider', () => {
         });
 
         test('タイムアウトエラーでネットワークエラーメッセージ', async () => {
-            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
-            (fetchWithRetry as vi.Mock).mockRejectedValue(new Error('timeout'));
+            (validateUrlForAIRequests as Mock).mockImplementation(() => {});
+            (fetchWithRetry as Mock).mockRejectedValue(new Error('timeout'));
 
             const provider = new GeminiProvider(baseSettings);
             const result = await provider.testConnection();
@@ -559,8 +561,8 @@ describe('GeminiProvider', () => {
         });
 
         test('一般的なエラーでエラーメッセージ', async () => {
-            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
-            (fetchWithRetry as vi.Mock).mockRejectedValue(new Error('Network error'));
+            (validateUrlForAIRequests as Mock).mockImplementation(() => {});
+            (fetchWithRetry as Mock).mockRejectedValue(new Error('Network error'));
 
             const provider = new GeminiProvider(baseSettings);
             const result = await provider.testConnection();
@@ -570,10 +572,10 @@ describe('GeminiProvider', () => {
         });
 
         test('AbortError でタイムアウトメッセージ', async () => {
-            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
+            (validateUrlForAIRequests as Mock).mockImplementation(() => {});
             const abortError = new Error('The operation was aborted');
             abortError.name = 'AbortError';
-            (fetchWithRetry as vi.Mock).mockRejectedValue(abortError);
+            (fetchWithRetry as Mock).mockRejectedValue(abortError);
 
             const provider = new GeminiProvider(baseSettings);
             const result = await provider.testConnection();
@@ -583,8 +585,8 @@ describe('GeminiProvider', () => {
         });
 
         test('HTTP 401 のスローエラーで無効な API キー', async () => {
-            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
-            (fetchWithRetry as vi.Mock).mockRejectedValue(new Error('HTTP 401: Unauthorized'));
+            (validateUrlForAIRequests as Mock).mockImplementation(() => {});
+            (fetchWithRetry as Mock).mockRejectedValue(new Error('HTTP 401: Unauthorized'));
 
             const provider = new GeminiProvider(baseSettings);
             const result = await provider.testConnection();
@@ -594,8 +596,8 @@ describe('GeminiProvider', () => {
         });
 
         test('HTTP 404 のスローエラーでモデル未発見', async () => {
-            (validateUrlForAIRequests as vi.Mock).mockImplementation(() => {});
-            (fetchWithRetry as vi.Mock).mockRejectedValue(new Error('HTTP 404: Not Found'));
+            (validateUrlForAIRequests as Mock).mockImplementation(() => {});
+            (fetchWithRetry as Mock).mockRejectedValue(new Error('HTTP 404: Not Found'));
 
             const provider = new GeminiProvider(baseSettings);
             const result = await provider.testConnection();
@@ -606,7 +608,7 @@ describe('GeminiProvider', () => {
 
     describe('API version configurability', () => {
         test('testConnection が設定された API バージョンを使用する', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 status: 200,
                 json: async () => ({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] })
@@ -620,12 +622,12 @@ describe('GeminiProvider', () => {
             await provider.testConnection();
 
             // 接続テストは実際に推論を走らせるため :generateContent を叩く
-            const url = (fetchWithRetry as vi.Mock).mock.calls[0][0];
+            const url = (fetchWithRetry as Mock).mock.calls[0]![0];
             expect(url).toBe('https://generativelanguage.googleapis.com/v1/models/gemini-3.1-flash-lite:generateContent');
         });
 
         test('gemini_api_version 設定で API URL のバージョンを上書きする', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
                     candidates: [{ content: { parts: [{ text: 'summary' }] } }],
@@ -640,13 +642,13 @@ describe('GeminiProvider', () => {
 
             await provider.generateSummary('content');
 
-            const url = (fetchWithRetry as vi.Mock).mock.calls[0][0];
+            const url = (fetchWithRetry as Mock).mock.calls[0]![0];
             expect(url).toContain('/v1/models/');
             expect(url).not.toContain('/v1beta/models/');
         });
 
         test('gemini_api_version が未設定の場合はデフォルト v1beta を使用する', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
                     candidates: [{ content: { parts: [{ text: 'summary' }] } }],
@@ -658,14 +660,14 @@ describe('GeminiProvider', () => {
 
             await provider.generateSummary('content');
 
-            const url = (fetchWithRetry as vi.Mock).mock.calls[0][0];
+            const url = (fetchWithRetry as Mock).mock.calls[0]![0];
             expect(url).toContain('/v1beta/models/');
         });
     });
 
     describe('content length truncation', () => {
         test('デフォルトで 30,000 文字に切り詰める', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
                     candidates: [{ content: { parts: [{ text: 'summary' }] } }],
@@ -678,14 +680,14 @@ describe('GeminiProvider', () => {
 
             await provider.generateSummary(longContent);
 
-            const body = JSON.parse((fetchWithRetry as vi.Mock).mock.calls[0][1].body);
+            const body = JSON.parse((fetchWithRetry as Mock).mock.calls[0]![1].body);
             const userContent = body.contents[0].parts[0].text as string;
             const actualContent = userContent.replace(/^Summarize: /, '');
             expect(actualContent.length).toBe(30_000);
         });
 
         test('gemini_content_chars 設定で切り詰め文字数を上書きする', async () => {
-            (fetchWithRetry as vi.Mock).mockResolvedValue({
+            (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
                     candidates: [{ content: { parts: [{ text: 'summary' }] } }],
@@ -701,7 +703,7 @@ describe('GeminiProvider', () => {
 
             await provider.generateSummary(longContent);
 
-            const body = JSON.parse((fetchWithRetry as vi.Mock).mock.calls[0][1].body);
+            const body = JSON.parse((fetchWithRetry as Mock).mock.calls[0]![1].body);
             const userContent = body.contents[0].parts[0].text as string;
             const actualContent = userContent.replace(/^Summarize: /, '');
             expect(actualContent.length).toBe(20_000);

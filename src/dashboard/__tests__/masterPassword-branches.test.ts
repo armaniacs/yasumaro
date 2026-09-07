@@ -32,6 +32,7 @@ vi.mock('../../utils/masterPassword.js', () => ({
   calculatePasswordStrength: vi.fn(),
   validatePasswordRequirements: vi.fn(),
   validatePasswordMatch: vi.fn(),
+  PasswordStrength: { WEAK: 'weak', MEDIUM: 'medium', STRONG: 'strong' },
 }));
 
 vi.mock('../../utils/rateLimiter.js', () => ({
@@ -59,6 +60,7 @@ import {
   calculatePasswordStrength,
   validatePasswordRequirements,
   validatePasswordMatch,
+  PasswordStrength,
 } from '../../utils/masterPassword.js';
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../../utils/rateLimiter.js';
 
@@ -164,7 +166,7 @@ describe('masterPassword-branches — savePassword branches', () => {
     vi.clearAllMocks();
     vi.resetModules();
     mod = await import('../masterPassword.js');
-    vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 80, level: 'strong', text: 'Strong' });
+    vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 80, level: PasswordStrength.STRONG, text: 'Strong' });
     vi.mocked(validatePasswordRequirements).mockReturnValue(null);
     vi.mocked(validatePasswordMatch).mockReturnValue(null);
     vi.mocked(getMessage).mockImplementation((key: string) => `i18n_${key}`);

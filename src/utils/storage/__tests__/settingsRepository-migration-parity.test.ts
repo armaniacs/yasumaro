@@ -90,6 +90,6 @@ describe('SettingsRepository migration parity', () => {
     repo.observe((c) => observed.push(c as Record<string, unknown>));
     await repo.set(StorageKeys.OBSIDIAN_HOST, 'observed.host');
     expect(observed.length).toBe(1);
-    expect(observed[0][StorageKeys.OBSIDIAN_HOST]).toBe('observed.host');
+    expect(observed[0]![StorageKeys.OBSIDIAN_HOST]).toBe('observed.host');
   });
 });

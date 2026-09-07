@@ -9,6 +9,7 @@
  */
 
 import { vi } from 'vitest';;
+import type { MockedFunction } from 'vitest';
 
 vi.mock('../../../../utils/logger.js', () => ({
   addLog: vi.fn(),
@@ -26,7 +27,7 @@ import * as domainUtils from '../../../../utils/domainUtils.js';
 import * as permissionManager from '../../../../utils/permissionManager.js';
 import type { RecordingContext } from '../../types.js';
 
-const mockExtractDomain = domainUtils.extractDomain as vi.MockedFunction<typeof domainUtils.extractDomain>;
+const mockExtractDomain = domainUtils.extractDomain as MockedFunction<typeof domainUtils.extractDomain>;
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {

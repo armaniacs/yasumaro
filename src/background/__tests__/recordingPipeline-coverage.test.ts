@@ -6,6 +6,7 @@
 //          _recordImpl branches, preview via record({ previewOnly: true })
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 const mockGetAll = vi.hoisted(() => vi.fn());
 const mockSetAll = vi.hoisted(() => vi.fn());
@@ -139,7 +140,9 @@ vi.mock('../../utils/storageUrls.ts', () => ({
 // tests can assert on the settings-fetch + step-execute delegation contract
 // (production's record() resolves settings then runs the pipeline kernel).
 vi.mock('../pipeline/RecordingOrchestrator.ts', async () => {
-  const { RecordingCache: RealRecordingCache } = await import('../recordingCache.ts');
+  const { RecordingCache: RealRecordingCache } = (await import('../recordingCache.ts')) as unknown as {
+    RecordingCache: { getSettingsWithCache: () => Promise<unknown> };
+  };
   const RecordingOrchestrator = vi.fn().mockImplementation(function(this: any) {
     this.execute = vi.fn().mockResolvedValue({ success: true, summary: 'Pipeline summary' });
     this.record = async (data: unknown, opts?: { settings?: unknown }) => {
@@ -462,21 +465,21 @@ describe('RecordingPipeline - getPrivacyInfoWithCache session storage fallback',
     RecordingCache.resetCacheState();
 
     // Make session.get throw
-    const originalGetImpl = (chrome.storage.session.get as vi.Mock).getMockImplementation();
-    (chrome.storage.session.get as vi.Mock).mockRejectedValueOnce(new Error('Session error'));
+    const originalGetImpl = (chrome.storage.session.get as Mock).getMockImplementation();
+    (chrome.storage.session.get as Mock).mockRejectedValueOnce(new Error('Session error'));
 
     const result = await RecordingCache.getPrivacyInfoWithCache('https://example.com/page');
     expect(result).toBeNull();
 
     // Restore
-    (chrome.storage.session.get as vi.Mock).mockImplementation(originalGetImpl as any);
+    (chrome.storage.session.get as Mock).mockImplementation(originalGetImpl as any);
   });
 
   test('skips session storage fallback when in-memory cache has valid entry', async () => {
     const url = 'https://example.com/cached';
     const cachedInfo = {
       isPrivate: true,
-      reason: 'set-cookie',
+      reason: 'set-cookie' as const,
       timestamp: Date.now(),
     };
 
@@ -521,13 +524,12 @@ describe('RecordingPipeline - invalidatePrivacyCache', () => {
 
 describe('RecordingPipeline - record (delegates to RecordingPipeline)', () => {
   let logic: RecordingOrchestrator;
-  let mockExecute: vi.Mock;
+  let mockExecute: Mock;
 
   beforeEach(() => {
     resetCacheState();
     vi.clearAllMocks();
 
-    // @ts-expect-error - vi.fn() type narrowing
     mockGetAll.mockResolvedValue({ privacy_mode: 'full_pipeline' });
     // @ts-expect-error - vi.fn() type narrowing
     storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
@@ -554,7 +556,6 @@ describe('RecordingPipeline - record (delegates to RecordingPipeline)', () => {
 
   test('passes settings to pipeline.execute', async () => {
     const settings = { privacy_mode: 'full_pipeline' };
-    // @ts-expect-error - vi.fn() type narrowing
     mockGetAll.mockResolvedValue(settings);
 
     await logic.record({
@@ -619,13 +620,12 @@ describe('RecordingPipeline - record (delegates to RecordingPipeline)', () => {
 
 describe('RecordingPipeline - preview via record({ previewOnly: true })', () => {
   let logic: RecordingOrchestrator;
-  let mockExecute: vi.Mock;
+  let mockExecute: Mock;
 
   beforeEach(() => {
     resetCacheState();
     vi.clearAllMocks();
 
-    // @ts-expect-error - vi.fn() type narrowing
     mockGetAll.mockResolvedValue({ privacy_mode: 'full_pipeline' });
     // @ts-expect-error - vi.fn() type narrowing
     storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
@@ -699,7 +699,6 @@ describe('RecordingPipeline - settings cache interaction with record', () => {
     resetCacheState();
     vi.clearAllMocks();
 
-    // @ts-expect-error - vi.fn() type narrowing
     mockGetAll.mockResolvedValue({ privacy_mode: 'full_pipeline' });
     // @ts-expect-error - vi.fn() type narrowing
     storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());
@@ -720,7 +719,6 @@ describe('RecordingPipeline - settings cache interaction with record', () => {
 
     // Settings cache was populated by record: a follow-up read hits the
     // cache instead of the repo.
-    // @ts-expect-error - vi.fn() type narrowing
     mockGetAll.mockClear();
     await RecordingCache.getSettingsWithCache();
     expect(mockGetAll).not.toHaveBeenCalled();
@@ -733,7 +731,6 @@ describe('RecordingPipeline - settings cache interaction with record', () => {
       content: 'content',
     });
 
-    // @ts-expect-error - vi.fn() type narrowing
     mockGetAll.mockClear();
 
     await logic.record({
@@ -751,7 +748,6 @@ describe('RecordingPipeline - static cache state', () => {
   test('cacheState is shared across instances', async () => {
     resetCacheState();
 
-    // @ts-expect-error - vi.fn() type narrowing
     mockGetAll.mockResolvedValue({ privacy_mode: 'test' });
 
     const logic1 = makeRecordingLogic(makeMockObsidian(), makeMockAiClient());
@@ -766,10 +762,8 @@ describe('RecordingPipeline - static cache state', () => {
   });
 
   test('invalidateSettingsCache forces refetch on next read', async () => {
-    // @ts-expect-error - vi.fn() type narrowing
     mockGetAll.mockResolvedValue({ privacy_mode: 'test' });
     await RecordingCache.getSettingsWithCache();
-    // @ts-expect-error - vi.fn() type narrowing
     mockGetAll.mockClear();
 
     RecordingCache.invalidateSettingsCache();
@@ -779,10 +773,8 @@ describe('RecordingPipeline - static cache state', () => {
   });
 
   test('two invalidations still refetch exactly once on next read', async () => {
-    // @ts-expect-error - vi.fn() type narrowing
     mockGetAll.mockResolvedValue({ privacy_mode: 'test' });
     await RecordingCache.getSettingsWithCache();
-    // @ts-expect-error - vi.fn() type narrowing
     mockGetAll.mockClear();
 
     RecordingCache.invalidateSettingsCache();
@@ -800,7 +792,6 @@ describe('RecordingPipeline - edge cases', () => {
     resetCacheState();
     vi.clearAllMocks();
 
-    // @ts-expect-error - vi.fn() type narrowing
     mockGetAll.mockResolvedValue({});
     // @ts-expect-error - vi.fn() type narrowing
     storageSavedUrls.getSavedUrlsWithTimestamps.mockResolvedValue(new Map());

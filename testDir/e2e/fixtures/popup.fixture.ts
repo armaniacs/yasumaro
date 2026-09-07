@@ -43,14 +43,14 @@ const testExt = base.extend<PopupFixtures>({
     if (!serviceWorker) {
       serviceWorker = await context.waitForEvent('serviceworker');
     }
-    const extensionId = serviceWorker.url().split('/')[2];
+    const extensionId = serviceWorker.url().split('/')[2] ?? '';
     await use(extensionId);
   },
 
   popupPage: async ({ context, extensionId }, use) => {
     // Use existing page or create new one
     const pages = context.pages();
-    const page = pages.length > 0 ? pages[0] : await context.newPage();
+    const page: Page = pages[0] ?? (await context.newPage());
 
     // Capture console logs for debugging
     page.on('console', msg => {
@@ -80,8 +80,13 @@ const testExt = base.extend<PopupFixtures>({
       };
 
       // Mock chrome.runtime.sendMessage to handle connection test
-      const originalSendMessage = chrome.runtime.sendMessage;
-      chrome.runtime.sendMessage = (message: any, callback?: (response: any) => void) => {
+      const originalSendMessage = chrome.runtime.sendMessage as (
+        ...args: unknown[]
+      ) => unknown;
+      (chrome.runtime as { sendMessage: unknown }).sendMessage = (
+        message: any,
+        callback?: (response: any) => void
+      ) => {
         if (message && message.type === 'TEST_CONNECTION') {
           console.log('[Fixture Mock] TEST_CONNECTION intercepted, returning success');
           // Always return success for connection test in test environment

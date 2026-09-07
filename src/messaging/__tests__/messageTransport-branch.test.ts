@@ -61,13 +61,13 @@ describe('messageTransport - branch coverage', () => {
     });
 
     it('accepts all valid types with enriched protocolVersion', async () => {
-      const port = { send: vi.fn(() => Promise.resolve({ success: true })) };
+      const port = { send: vi.fn((_msg: unknown) => Promise.resolve({ success: true })) };
       const mt = new MessageTransport(port as never);
       // Ensure chrome.runtime.lastError is not set
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: { lastError: null, sendMessage: vi.fn() } } as unknown;
       const res = await mt.send({ type: 'PING' } as never);
       expect(res).toEqual({ success: true });
-      const sent = port.send.mock.calls[0][0] as { type: string; protocolVersion: number };
+      const sent = port.send.mock.calls[0]![0] as { type: string; protocolVersion: number };
       expect(sent.type).toBe('PING');
       expect(sent.protocolVersion).toBe(CURRENT_PROTOCOL_VERSION);
     });
@@ -75,7 +75,7 @@ describe('messageTransport - branch coverage', () => {
 
   describe('MessageTransport - retry logic & isRetryableError branches', () => {
     function makeClock() {
-      return { now: vi.fn(() => Date.now()), sleep: vi.fn(() => Promise.resolve()) };
+      return { now: vi.fn(() => Date.now()), sleep: vi.fn((_ms: number) => Promise.resolve()) };
     }
 
     it('does not retry on non-retryable error (immediate throw)', async () => {

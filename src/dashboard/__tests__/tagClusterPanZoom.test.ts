@@ -27,7 +27,7 @@ function createSvg(width = 800, height = 600): SVGSVGElement {
 function getViewBox(svg: SVGSVGElement): { x: number; y: number; width: number; height: number } {
   const raw = svg.getAttribute('viewBox') || '0 0 0 0';
   const [x, y, width, height] = raw.split(' ').map(Number);
-  return { x, y, width, height };
+  return { x: x ?? 0, y: y ?? 0, width: width ?? 0, height: height ?? 0 };
 }
 
 function wheel(svg: SVGSVGElement, deltaY: number, clientX = 400, clientY = 300): void {

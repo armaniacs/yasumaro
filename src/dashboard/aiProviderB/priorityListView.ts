@@ -1,6 +1,32 @@
 import type { ProviderSlot } from '../../utils/storage/types.js';
 import { getMessage } from '../../utils/i18n.js';
+import { getRegistryEntry } from '../../background/ai/providerCatalog.js';
 import { renderProviderOptions } from '../aiProviderCatalogView.js';
+
+/** Settings-like record for model resolution — keyed by StorageKeys values. */
+export type ModelSettings = Readonly<Record<string, unknown>>;
+
+/**
+ * Resolve the model name displayed for a priority row:
+ * explicit slot model → provider's stored setting → catalog defaultModel → ''.
+ * Empty when the provider has no model setting at all (e.g. Built-in AI).
+ */
+export function resolveModelDisplayName(
+  provider: string,
+  explicitModel: string | undefined,
+  settings: ModelSettings | undefined,
+): string {
+  if (!provider) return '';
+  const explicit = (explicitModel ?? '').trim();
+  if (explicit) return explicit;
+  const entry = getRegistryEntry(provider);
+  if (!entry) return '';
+  if (entry.modelKey) {
+    const stored = settings?.[entry.modelKey];
+    if (typeof stored === 'string' && stored.trim()) return stored.trim();
+  }
+  return entry.defaultModel ?? '';
+}
 
 export interface BPriorityListView {
   container: HTMLElement;
@@ -18,7 +44,10 @@ export function collectBProviderPrioritySlots(container: HTMLElement): ProviderS
     const provider = (select?.value ?? '').trim();
     if (!provider) return;
     const modelRaw = (input?.value ?? '').trim();
-    if (modelRaw) slots.push({ provider, model: modelRaw });
+    // Auto-resolved display values (storage setting / catalog default) must NOT
+    // be persisted as explicit models — omit them so the default keeps applying.
+    const autoResolved = input?.dataset.resolved === 'true';
+    if (modelRaw && !autoResolved) slots.push({ provider, model: modelRaw });
     else slots.push({ provider });
   });
   return slots;
@@ -66,7 +95,7 @@ export function validateBContainer(container: HTMLElement): { valid: boolean; du
   return { valid: dupSet.size === 0, duplicateRowIndices: [...dupSet].sort((a, b) => a - b), p1Empty };
 }
 
-function createRow(index: number, slot: ProviderSlot | undefined): HTMLElement {
+function createRow(index: number, slot: ProviderSlot | undefined, settings?: ModelSettings): HTMLElement {
   const row = document.createElement('div');
   row.className = 'b-priority-row';
   row.draggable = true;
@@ -90,7 +119,15 @@ function createRow(index: number, slot: ProviderSlot | undefined): HTMLElement {
   modelInput.type = 'text';
   modelInput.className = 'b-priority-model-input';
   modelInput.placeholder = getMessage('providerPriorityModelPlaceholder') || 'Model Name (optional)';
-  modelInput.value = slot?.model ?? '';
+  const resolved = resolveModelDisplayName(slot?.provider ?? '', slot?.model, settings);
+  if (slot?.model) {
+    modelInput.value = slot.model;
+  } else if (resolved) {
+    // Show the resolved model (stored setting or catalog default) so the user
+    // can see what will actually be used. Flagged so save omits it.
+    modelInput.value = resolved;
+    modelInput.dataset.resolved = 'true';
+  }
 
   const upBtn = document.createElement('button');
   upBtn.type = 'button';
@@ -111,11 +148,12 @@ function createRow(index: number, slot: ProviderSlot | undefined): HTMLElement {
 export function createBPriorityListView(
   container: HTMLElement,
   initialSlots: ProviderSlot[],
+  settings?: ModelSettings,
 ): BPriorityListView {
   container.innerHTML = '';
   // 3行固定、不足は空スロットで埋める
   const slots3: (ProviderSlot | undefined)[] = [0, 1, 2].map(i => initialSlots[i]);
-  slots3.forEach((slot, i) => container.appendChild(createRow(i, slot)));
+  slots3.forEach((slot, i) => container.appendChild(createRow(i, slot, settings)));
 
   const api: BPriorityListView = {
     container,
@@ -141,7 +179,7 @@ export function createBPriorityListView(
     },
     setSlots(slots) {
       container.innerHTML = '';
-      [0, 1, 2].forEach(i => container.appendChild(createRow(i, slots[i])));
+      [0, 1, 2].forEach(i => container.appendChild(createRow(i, slots[i], settings)));
     },
   };
 
@@ -228,6 +266,33 @@ export function createBPriorityListView(
   };
   container.addEventListener('change', validate);
   container.addEventListener('input', validate);
+
+  // Track user edits to the model input — a user-typed value wins over the
+  // auto-resolved display and is saved as an explicit model.
+  container.addEventListener('input', (e) => {
+    const target = e.target as HTMLElement;
+    if (target instanceof HTMLInputElement && target.classList.contains('b-priority-model-input')) {
+      delete target.dataset.resolved;
+    }
+  });
+
+  // Re-resolve the model display when the provider changes. User-typed values
+  // (no `resolved` flag, non-empty) are preserved; auto-resolved or empty
+  // inputs follow the newly selected provider's resolved name.
+  container.addEventListener('change', (e) => {
+    const target = e.target as HTMLElement;
+    if (!(target instanceof HTMLSelectElement)) return;
+    const row = target.closest<HTMLElement>('.b-priority-row');
+    if (!row) return;
+    const input = row.querySelector<HTMLInputElement>('input.b-priority-model-input');
+    if (!input) return;
+    const userEdited = input.dataset.resolved !== 'true' && input.value !== '';
+    if (userEdited) return;
+    const resolved = resolveModelDisplayName(target.value, undefined, settings);
+    input.value = resolved;
+    if (resolved) input.dataset.resolved = 'true';
+    else delete input.dataset.resolved;
+  });
 
   return api;
 }
