@@ -1,5 +1,5 @@
 {
-  "total": 607,
+  "total": 601,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -96,12 +96,10 @@
     "src/utils/__tests__/contentExtractor.test.ts": 3,
     "src/utils/__tests__/criticalAlertSink.test.ts": 2,
     "src/utils/__tests__/cspDomains.test.ts": 1,
-    "src/utils/__tests__/cspValidator-error-handling.test.ts": 1,
     "src/utils/__tests__/cspValidator.test.ts": 1,
     "src/utils/__tests__/domainFilter-mode.test.ts": 1,
     "src/utils/__tests__/fetchRedirectGuard.test.ts": 3,
     "src/utils/__tests__/markdownFormatter.test.ts": 1,
-    "src/utils/__tests__/migration.test.ts": 5,
     "src/utils/__tests__/optimisticLock-stress.test.ts": 1,
     "src/utils/__tests__/optimisticLockSerialization.test.ts": 4,
     "src/utils/__tests__/piiSanitizer-security.test.ts": 1,
