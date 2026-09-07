@@ -83,6 +83,7 @@ flowchart LR
 - 🌐 **ドメインフィルター**: ホワイトリスト/ブラックリストで記録するドメインを制御できます。ワイルドカードパターンに対応。オプションでサブドメインにも自動マッチ。
 - 🗄️ **履歴アーカイブ**: 指定日までの履歴を標準SQLiteファイルとしてバックアップし、本体DBから削除もできます。マージ復元や、本体に影響させない状態での閲覧・編集にも対応。
 - 🚫 **uBlock Origin形式フィルター**: EasyListなどの既存のuBlockフィルターリストを直接インポートして使用できます。
+- 🧹 **AI要約クレンジング**: AIに本文を送る前に広告・ナビゲーション・SNSボタン・Cookie同意バナーなどのノイズを除去。`minimal` / `balanced` / `aggressive` / `custom` の4プリセットと、サイト単位の上書き設定に対応。SPA・Shadow DOM・iframe も走査。何がどの理由で除去されたかをダッシュボードで確認できます。詳細は [クレンジングのカスタマイズガイド](docs/CLEANSING_CUSTOMIZATION_GUIDE.md) を参照。
 - ✏️ **AIプロンプトカスタマイズ**: AIへの要約指示プロンプトを自由に編集・保存できます。プロバイダーごとに異なるプロンプトを設定可能。
 - 📋 **AIプロンプトプリセット**: 5種類の組み込みプリセット（タグ付き要約・箇条書き・英語要約・技術的観点）から選べます。プリセットを複製してカスタマイズも可能。
 - 🔔 **ツールバーバッジ通知**: プライバシーヘッダー検出時はオレンジ `!`、自動保存完了時は青 `◎` がツールバーアイコンに表示されます。ポップアップを開かなくても状態を確認できます。
@@ -297,6 +298,7 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 - 🌐 **Domain Filtering**: Control which domains to record with whitelist/blacklist support. Wildcard patterns supported, with optional automatic subdomain matching.
 - 🗄️ **History Archive**: Back up history up to a chosen date as a standard SQLite file (openable in any SQLite tool), then optionally delete it from the local database. Merge it back (restore) or open it for browsing/editing without touching the main database.
 - 🚫 **uBlock Origin Format Filters**: Import and use existing uBlock filter lists like EasyList directly.
+- 🧹 **AI Summary Cleansing**: Strips noise (ads, navigation, social buttons, cookie consent banners) before sending page text to the AI. Four presets (`minimal` / `balanced` / `aggressive` / `custom`) plus per-site overrides. Also scans SPA content, Shadow DOM, and iframes. The dashboard shows what was removed and why. See [Cleansing Customization Guide](docs/CLEANSING_CUSTOMIZATION_GUIDE.md).
 - ✏️ **AI Prompt Customization**: Edit and save custom AI summarization prompts. Configure different prompts per provider.
 - 📋 **AI Prompt Presets**: Choose from 5 built-in presets (With Tags, Bullet Points, English Summary, Technical). Duplicate any preset to customize it.
 - 🔔 **Toolbar Badge Notifications**: An orange `!` badge appears when privacy headers are detected; a blue `◎` badge appears when auto-recording completes. Check status without opening the popup.
