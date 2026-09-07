@@ -99,8 +99,8 @@ describe('ublockImport - RulesBuilder Module', () => {
     });
 
     test('null/undefinedソースを安全に処理', () => {
-      expect(rebuildRulesFromSources(null)).toBeDefined();
-      expect(rebuildRulesFromSources(undefined)).toBeDefined();
+      expect(rebuildRulesFromSources(null as unknown as Parameters<typeof rebuildRulesFromSources>[0])).toBeDefined();
+      expect(rebuildRulesFromSources(undefined as unknown as Parameters<typeof rebuildRulesFromSources>[0])).toBeDefined();
     });
   });
 
@@ -145,8 +145,8 @@ describe('ublockImport - RulesBuilder Module', () => {
     });
 
     test('null/undefinedを安全に処理', () => {
-      expect(previewUblockFilter(null)).toBeDefined();
-      expect(previewUblockFilter(undefined)).toBeDefined();
+      expect(previewUblockFilter(null as unknown as string)).toBeDefined();
+      expect(previewUblockFilter(undefined as unknown as string)).toBeDefined();
     });
 
     test('大量の有効なルールを処理', () => {

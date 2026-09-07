@@ -13,15 +13,15 @@
 describe('renderSourceList - XSS Protection', () => {
   // Helper function to create a fresh test document and renderSourceList for each test
   function createTestEnvironment() {
-    const elements = new Map();
+    const elements = new Map<number, any>();
     let sequence = 0;
 
-    const createElement = (tagName) => {
+    const createElement = (tagName: string): any => {
       const id = ++sequence;
-      const element = {
+      const element: any = {
         _id: id,
         _tagName: tagName,
-        _children: [],
+        _children: [] as any[],
         _className: '',
         _textContent: '',
         _href: '',
@@ -97,12 +97,12 @@ describe('renderSourceList - XSS Protection', () => {
           this._title = val;
         },
 
-        querySelector(tagName) {
+        querySelector(tagName: string) {
           // Find child element by tag name
-          return this._children.find(c => c._tagName === tagName) || null;
+          return this._children.find((c: any) => c._tagName === tagName) || null;
         },
 
-        appendChild(child) {
+        appendChild(child: any) {
           this._children.push(child);
         }
       };
@@ -111,7 +111,7 @@ describe('renderSourceList - XSS Protection', () => {
       return element;
     };
 
-    const getElementById = (id) => {
+    const getElementById = (id: string) => {
       if (id.startsWith('uBlock')) {
         // Special IDs that we manage
         for (const elem of elements.values()) {
@@ -121,8 +121,8 @@ describe('renderSourceList - XSS Protection', () => {
       return null;
     };
 
-    const querySelectorAll = (selector) => {
-      const results = [];
+    const querySelectorAll = (selector: string) => {
+      const results: any[] = [];
       for (const elem of elements.values()) {
         if (selector === '.source-url' && elem._className === 'source-url') {
           results.push(elem);
@@ -156,14 +156,14 @@ describe('renderSourceList - XSS Protection', () => {
     };
 
     // URL validation function to prevent dangerous protocols
-    const isValidUrl = function(url) {
+    const isValidUrl = function(url: string) {
       if (!url) return false;
       // Prevent javascript:, data:, vbscript: and other dangerous protocols
       return /^(https?:\/\/|ftp:\/\/)/i.test(url.trim());
     };
 
     // Create renderSourceList function
-    const renderSourceList = function(sources) {
+    const renderSourceList = function(sources: any[]) {
       const container = document.getElementById('uBlockSourceItems');
       const noSourcesMsg = document.getElementById('uBlockNoSources');
 
@@ -178,7 +178,7 @@ describe('renderSourceList - XSS Protection', () => {
 
       noSourcesMsg._style.display = 'none';
 
-      sources.forEach((source, index) => {
+      sources.forEach((source: any, index: number) => {
         const item = document.createElement('div');
         item.className = 'source-item';
         item.dataset.index = index;
@@ -513,7 +513,7 @@ describe('renderSourceList - XSS Protection', () => {
       };
     }
 
-    const isValidUrl = function(url) {
+    const isValidUrl = function(url: string) {
       if (!url) return false;
       return /^(https?:\/\/|ftp:\/\/)/i.test(url.trim());
     };
@@ -556,9 +556,9 @@ describe('renderSourceList - XSS Protection', () => {
     });
 
     test('rejects null and empty strings', () => {
-      expect(isValidUrl(null)).toBe(false);
+      expect(isValidUrl(null as unknown as string)).toBe(false);
       expect(isValidUrl('')).toBe(false);
-      expect(isValidUrl(undefined)).toBe(false);
+      expect(isValidUrl(undefined as unknown as string)).toBe(false);
     });
 
     test('rejects URLs without protocol', () => {
