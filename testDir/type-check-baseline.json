@@ -1,5 +1,5 @@
 {
-  "total": 536,
+  "total": 404,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -83,7 +83,6 @@
     "src/messaging/__tests__/dashboardSenderGuard.test.ts": 1,
     "src/messaging/__tests__/messageTransport-branch.test.ts": 4,
     "src/messaging/__tests__/messageTransport.test.ts": 2,
-    "src/popup/__tests__/main.test.ts": 132,
     "src/popup/__tests__/mask-visualization.test.ts": 47,
     "src/utils/__tests__/RateLimitService.test.ts": 1,
     "src/utils/__tests__/auditLog.test.ts": 1,
