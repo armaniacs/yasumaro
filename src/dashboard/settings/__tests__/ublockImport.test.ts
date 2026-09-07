@@ -6,6 +6,9 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { renderSourceList as RenderSourceListFn } from '../ublockImport/uiRenderer.js';
+
+type UblockSource = Parameters<typeof RenderSourceListFn>[0][number];
 
 const { mockGetSettings: hoistedMockGetSettings, mockSaveSettings: hoistedMockSaveSettings } = vi.hoisted(() => ({
   mockGetSettings: vi.fn(() => Promise.resolve({
@@ -79,14 +82,14 @@ describe('ublockImport/index.js - UI Component Tests', () => {
       onload: null,
       onerror: null,
     };
-    global.FileReader = vi.fn(() => mockReaderInstance);
+    global.FileReader = vi.fn(() => mockReaderInstance) as unknown as typeof FileReader;
 
     // Mock chrome.runtime.sendMessage
     global.chrome = {
       runtime: {
         sendMessage: vi.fn()
       }
-    };
+    } as unknown as typeof chrome;
 
     // Mock URL.createObjectURL and revokeObjectURL
     global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
@@ -128,17 +131,17 @@ describe('ublockImport/index.js - UI Component Tests', () => {
     });
 
     test('exportSimpleFormat function is not exported', async () => {
-      const module = await import('../ublockImport/index.js');
+      const module = await import('../ublockImport/index.js') as Record<string, unknown>;
       expect(module.exportSimpleFormat).toBeUndefined();
     });
 
     test('copyToClipboard function is not exported', async () => {
-      const module = await import('../ublockImport/index.js');
+      const module = await import('../ublockImport/index.js') as Record<string, unknown>;
       expect(module.copyToClipboard).toBeUndefined();
     });
 
     test('buildUblockFormat function is not exported', async () => {
-      const module = await import('../ublockImport/index.js');
+      const module = await import('../ublockImport/index.js') as Record<string, unknown>;
       expect(module.buildUblockFormat).toBeUndefined();
     });
   });
@@ -188,17 +191,16 @@ describe('ublockImport/index.js - UI Component Tests', () => {
   // UI-008: Delete source
   // =============================================================================
   describe('UI-008: Delete source', () => {
-    let mockGetSettings, mockSaveSettings;
+    let mockGetSettings: ReturnType<typeof vi.fn>;
+    let mockSaveSettings: unknown;
 
     beforeAll(async () => {
       const { settingsRepository } = await import('../../../utils/storage/SettingsRepository.js');
-      mockGetSettings = settingsRepository.getAll;
+      mockGetSettings = vi.mocked(settingsRepository.getAll);
       mockSaveSettings = settingsRepository.setAll;
     });
 
     beforeEach(() => {
-    // @ts-expect-error - vi.fn() type narrowing issue
-  
       mockGetSettings.mockImplementation(() => Promise.resolve({
         ublock_sources: [
           { url: 'https://example.com/list1.txt', blockDomains: ['example.com'], exceptionDomains: [] },
@@ -238,16 +240,14 @@ describe('ublockImport/index.js - UI Component Tests', () => {
   // UI-009: Reload source
   // =============================================================================
   describe('UI-009: Reload source', () => {
-    let mockGetSettings;
+    let mockGetSettings: ReturnType<typeof vi.fn>;
 
     beforeAll(async () => {
       const { settingsRepository } = await import('../../../utils/storage/SettingsRepository.js');
-      mockGetSettings = settingsRepository.getAll;
+      mockGetSettings = vi.mocked(settingsRepository.getAll);
     });
 
     beforeEach(() => {
-    // @ts-expect-error - vi.fn() type narrowing issue
-  
       mockGetSettings.mockImplementation(() => Promise.resolve({
         ublock_sources: [
           {
@@ -282,8 +282,6 @@ describe('ublockImport/index.js - UI Component Tests', () => {
     });
 
     test('reloadSource should throw error for manual input source', async () => {
-    // @ts-expect-error - vi.fn() type narrowing issue
-  
       mockGetSettings.mockImplementation(() => Promise.resolve({
         ublock_sources: [
           { url: 'manual', blockDomains: ['example.com'], exceptionDomains: [] }
@@ -308,18 +306,17 @@ describe('ublockImport/index.js - UI Component Tests', () => {
   // UI-010: Save uBlock settings
   // =============================================================================
   describe('UI-010: Save uBlock settings', () => {
-    let mockGetSettings, mockShowStatus;
+    let mockGetSettings: ReturnType<typeof vi.fn>;
+    let mockShowStatus: ReturnType<typeof vi.fn>;
 
     beforeAll(async () => {
       const { settingsRepository } = await import('../../../utils/storage/SettingsRepository.js');
-      mockGetSettings = settingsRepository.getAll;
+      mockGetSettings = vi.mocked(settingsRepository.getAll);
       const helper = await import('../../../utils/ui/settingsUiHelper.js');
-      mockShowStatus = helper.showStatus;
+      mockShowStatus = vi.mocked(helper.showStatus);
     });
 
     beforeEach(() => {
-    // @ts-expect-error - vi.fn() type narrowing issue
-  
       mockGetSettings.mockImplementation(() => Promise.resolve({
         ublock_sources: [],
         ublock_rules: {
@@ -329,8 +326,6 @@ describe('ublockImport/index.js - UI Component Tests', () => {
         }
       }));
 
-    // @ts-expect-error - vi.fn() type narrowing issue
-  
       mockShowStatus.mockImplementation(() => { });
     });
 
@@ -361,7 +356,7 @@ describe('ublockImport/index.js - UI Component Tests', () => {
 
       expect(result.sources).toBeDefined();
       expect(result.sources.length).toBeGreaterThan(0);
-      expect(result.sources[0].url).toBe('manual');
+      expect(result.sources[0]!.url).toBe('manual');
     });
   });
 
@@ -678,7 +673,7 @@ describe('ublockImport/index.js - UI Component Tests', () => {
 
     test('rebuildRulesFromSources should handle null/undefined', async () => {
       const { rebuildRulesFromSources } = await import('../ublockImport/index.js');
-      const result = rebuildRulesFromSources(null);
+      const result = rebuildRulesFromSources(null as unknown as Parameters<typeof rebuildRulesFromSources>[0]);
 
       expect(result.blockDomains).toEqual([]);
       expect(result.exceptionDomains).toEqual([]);
@@ -702,7 +697,7 @@ describe('ublockImport/index.js - UI Component Tests', () => {
     });
 
     test('renderSourceList should handle empty sources', async () => {
-      const sources = [];
+      const sources: UblockSource[] = [];
       const deleteCallback = vi.fn();
       const reloadCallback = vi.fn();
 
@@ -711,7 +706,7 @@ describe('ublockImport/index.js - UI Component Tests', () => {
     });
 
     test('renderSourceList should handle non-empty sources', async () => {
-      const sources = [
+      const sources: UblockSource[] = [
         {
           url: 'https://example.com/filters.txt',
           blockDomains: ['example.com', 'ads.net'],
@@ -778,16 +773,16 @@ describe('ublockImport/index.js - UI Component Tests', () => {
         addEventListener: vi.fn(),
         classList: { add: vi.fn(), remove: vi.fn() }
       };
-      document.getElementById = vi.fn((id) => {
+      document.getElementById = vi.fn((id: string) => {
         if (id === 'uBlockFilterInput') return mockTextarea;
         if (id === 'uBlockPreview') return { style: { display: 'none' } };
         return null;
-      });
+      }) as unknown as typeof document.getElementById;
     });
 
     test('clearInput should clear the textarea', async () => {
       // Get the mock textarea
-      const mockTextarea = document.getElementById('uBlockFilterInput');
+      const mockTextarea = document.getElementById('uBlockFilterInput') as unknown as { value: string };
       mockTextarea.value = 'some text content';
 
       const { clearInput } = await import('../ublockImport/index.js');
@@ -816,10 +811,9 @@ describe('ublockImport/index.js - UI Component Tests', () => {
         size: 100
       };
 
-      let mockReader = null;
-      // @ts-expect-error - vi.fn() type narrowing issue
+      let mockReader: { readAsText: ReturnType<typeof vi.fn>; onload: ((e: unknown) => void) | null; onerror: (() => void) | null } | null = null;
 
-      global.FileReader.mockImplementation(function() {
+      vi.mocked(global.FileReader).mockImplementation(function() {
         mockReader = {
           readAsText: vi.fn(),
           onload: null,
@@ -827,22 +821,22 @@ describe('ublockImport/index.js - UI Component Tests', () => {
         };
         // Trigger onload immediately
         Promise.resolve().then(() => {
-          if (mockReader.onload) {
+          if (mockReader && mockReader.onload) {
             mockReader.onload({ target: { result: 'test content' } });
           }
         });
-        return mockReader;
+        return mockReader as unknown as FileReader;
       });
 
       const { readFile } = await import('../ublockImport/index.js');
-      const result = await readFile(mockFile);
+      const result = await readFile(mockFile as unknown as File);
 
       expect(result).toBe('test content');
     });
 
     test('readFile should handle missing FileReader gracefully', async () => {
       const originalFileReader = global.FileReader;
-      delete global.FileReader;
+      delete (global as { FileReader?: typeof FileReader }).FileReader;
 
       const { readFile } = await import('../ublockImport/index.js');
 
