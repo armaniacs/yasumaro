@@ -4,8 +4,8 @@
 
 **目的**: このドキュメントは Yasumaro の `manifest.json` で要求する各パーミッションの正当化理由を記載します。Chrome Web Store 審査プロセスにおいて、各パーミッションが必要かつ適切に使用されていることを示すことを目的としています。
 
-**Last Updated / 最終更新日**: 2026-07-31
-**Target Version / 対象バージョン**: v6.7.5
+**Last Updated / 最終更新日**: 2026-09-08
+**Target Version / 対象バージョン**: v6.8.0
 
 ---
 
@@ -24,7 +24,8 @@
 | `activeTab` | required | Popup "Record Now" + manual content fetch | Yes |
 | `favicon` | required | Popup current page + dashboard/history favicon display | Yes |
 | `contextMenus` | required | `src/background/service-worker.ts` (manual record trigger) | Yes |
-| `downloads` | required | `src/background/pipeline/steps/saveLocalMarkdownStep.ts` (local Markdown export) | Yes |
+| `downloads` | required | `src/background/pipeline/steps/saveLocalMarkdownStep.ts` (local Markdown export), `src/background/` (history archive `.db` export) | Yes |
+| `declarativeNetRequest` | required | `src/background/net/ollamaOriginRule.ts` (strip `Origin` header on requests to a user-configured Ollama endpoint) | Yes |
 
 ---
 
@@ -88,6 +89,7 @@
 - `chrome.downloads.download()` による日次 Markdown ファイル（`YYYY-MM-DD.md`）の書き出し（`conflictAction: 'overwrite'`）
 - 書き出しタイミングは「手動のみ / 即時 / アイドル時・30分ごと / 日付が変わったとき」から選択可能
 - ダッシュボードの「ログをエキスポート」パネルからの手動 Markdown エクスポート
+- ダッシュボードの「Archive」パネルからの閲覧履歴アーカイブファイル（`yasumaro_archive_<date>.db`）の書き出し。いずれもユーザーの明示操作でのみ実行される
 
 **Privacy safeguards / プライバシー保護**
 
@@ -100,6 +102,33 @@
 - `src/background/pipeline/steps/saveLocalMarkdownStep.ts`
 - `src/background/localMarkdownIdleFlusher.ts`
 - `docs/MARKDOWN_DOWNLOAD.md`（ユーザー向けガイド）
+
+---
+
+## 12. `declarativeNetRequest`
+
+**Why we need it / なぜ必要か**
+
+- ローカル LLM の Ollama を AI プロバイダーに設定したユーザー向け。Ollama はデフォルトで `Origin` ヘッダーを見て CORS 拒否することがあり、拡張機能からのリクエストが弾かれる。Ollama 側の `OLLAMA_ORIGINS` 設定を変更させずに接続できるようにするため、拡張機能側で `Origin` ヘッダーを削除する
+- Ollama needs its `OLLAMA_ORIGINS` reconfigured to accept requests from a browser extension; instead of asking the user to change server-side settings, the extension removes the `Origin` header on its own requests to the configured Ollama endpoint
+
+**What it enables / 有効化される機能**
+
+- `chrome.declarativeNetRequest.updateDynamicRules()` で動的ルールを1件だけ登録し、`modifyHeaders` アクションで `Origin` リクエストヘッダーを `remove` する
+- ルールの対象はユーザーが設定した Ollama の baseUrl のホスト＋ポートに厳密限定（`urlFilter: "||host:port/"`、`initiatorDomains` は当拡張機能のみ、`resourceTypes` は `xmlhttprequest` / `other`）
+- ルールは Ollama の baseUrl が設定されているときのみ登録され、設定変更時は毎回 remove してから再登録する（冪等）
+
+**Privacy safeguards / プライバシー保護**
+
+- リクエストのブロック・リダイレクト・内容の読み取りは一切行わない。ヘッダー1つの削除のみ
+- 対象は Ollama エンドポイントに限定。同一ホスト上の他のローカルプロバイダー（LM Studio、Obsidian REST API 等）には適用されない（ポートまで含めた厳密指定）
+- SSRF allowlist（`isAllowedProviderBaseUrl`）を通らない baseUrl の場合はルールを登録しない
+
+**Code references / コード参照**
+
+- `src/background/net/ollamaOriginRule.ts`
+- `src/background/net/ollamaSettingsObserver.ts`
+- `src/background/service-worker.ts`（設定変更の監視とルール同期の配線）
 
 ---
 
@@ -136,5 +165,6 @@
 
 ## Update History / 更新履歴
 
+- **2026-09-08**: 対象バージョンを v6.8.0 に更新。`declarativeNetRequest`（Ollama への `Origin` ヘッダー削除）を文書化。`downloads` に閲覧履歴アーカイブファイルの書き出し用途を追記
 - **2026-07-12**: `downloads` パーミッションを追加（ローカル Markdown 書き出し機能、v6.5.14）。実装との乖離を修正
 - **2026-06-17**: 初版作成（v6.0.0 Chrome Web Store 初回公開向け）
