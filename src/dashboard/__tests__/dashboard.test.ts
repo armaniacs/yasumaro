@@ -461,7 +461,12 @@ vi.mock('../settings/trustSettings.js', () => ({
     loadTrustSettings: vi.fn(),
 }));
 vi.mock('../settings/customPromptManager.js', () => ({ initCustomPromptManager: vi.fn() }));
-vi.mock('../../utils/i18n.js', () => ({ getMessage: vi.fn((key: string) => key) }));
+vi.mock('../../utils/i18n.js', () => ({
+    // Mirrors src/utils/i18n.ts named-substitution behavior for the connection
+    // label format key so label-rendering tests keep seeing `<label>: `.
+    getMessage: vi.fn((key: string, subs?: Record<string, string | number>) =>
+        key === 'connectionStatusLabel' && subs && typeof subs.label === 'string' ? `${subs.label}: ` : key),
+}));
 vi.mock('./historyPanel.js', () => ({ initHistoryPanel: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./models-dev-dialog.js', () => ({
     ModelsDevDialog: class { show = vi.fn().mockResolvedValue(undefined) },
@@ -633,7 +638,7 @@ describe('testObsidianConnection', () => {
         const result = await testObsidianConnection('test-api-key');
 
         expect(result.success).toBe(false);
-        expect(result.message).toBe('No response');
+        expect(result.message).toBe('connectionNoResponse');
     });
 
     it('sends message with apiKey in payload', async () => {
@@ -699,7 +704,7 @@ describe('testAiConnection', () => {
         const result = await testAiConnection();
 
         expect(result.success).toBe(false);
-        expect(result.message).toBe('No response');
+        expect(result.message).toBe('connectionNoResponse');
     });
 
     it('returns error when ai returns error response', async () => {

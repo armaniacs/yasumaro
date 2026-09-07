@@ -236,7 +236,10 @@ vi.mock('../../constants/appConstants.js', () => ({
 }));
 
 vi.mock('../../utils/i18n.js', () => ({
-    getMessage: vi.fn((key: string) => key),
+    // Mirrors src/utils/i18n.ts named-substitution behavior for the connection
+    // label format key so label-rendering tests keep seeing `<label>: `.
+    getMessage: vi.fn((key: string, subs?: Record<string, string | number>) =>
+        key === 'connectionStatusLabel' && subs && typeof subs.label === 'string' ? `${subs.label}: ` : key),
 }));
 
 vi.mock('../settings/aiSummaryCleansingSettingsV2.js', () => ({
