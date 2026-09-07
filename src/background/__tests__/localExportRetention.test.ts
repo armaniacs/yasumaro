@@ -53,11 +53,11 @@ describe('recordDownloadId', () => {
     const before = Date.now();
     await recordDownloadId(42, '2026-01-01');
 
-    const written = mockStorageSet.mock.calls[0][0][LOCAL_EXPORT_DOWNLOAD_IDS_KEY] as DownloadRecord[];
+    const written = mockStorageSet.mock.calls[0]?.[0][LOCAL_EXPORT_DOWNLOAD_IDS_KEY] as DownloadRecord[];
     expect(written).toHaveLength(1);
-    expect(written[0].downloadId).toBe(42);
-    expect(written[0].date).toBe('2026-01-01');
-    expect(written[0].createdAt).toBeGreaterThanOrEqual(before);
+    expect(written[0]?.downloadId).toBe(42);
+    expect(written[0]?.date).toBe('2026-01-01');
+    expect(written[0]?.createdAt).toBeGreaterThanOrEqual(before);
   });
 
   it('drops the oldest record when the list exceeds MAX_DOWNLOAD_RECORDS', async () => {
@@ -70,10 +70,10 @@ describe('recordDownloadId', () => {
 
     await recordDownloadId(9999, '2026-02-02');
 
-    const written = mockStorageSet.mock.calls[0][0][LOCAL_EXPORT_DOWNLOAD_IDS_KEY] as DownloadRecord[];
+    const written = mockStorageSet.mock.calls[0]?.[0][LOCAL_EXPORT_DOWNLOAD_IDS_KEY] as DownloadRecord[];
     expect(written).toHaveLength(MAX_DOWNLOAD_RECORDS);
-    expect(written[0].downloadId).toBe(1);
-    expect(written[written.length - 1].downloadId).toBe(9999);
+    expect(written[0]?.downloadId).toBe(1);
+    expect(written[written.length - 1]?.downloadId).toBe(9999);
   });
 });
 
@@ -100,7 +100,7 @@ describe('purgeExpiredDownloadRecords', () => {
     expect(mockErase).toHaveBeenCalledWith({ id: 3 });
     expect(mockErase).not.toHaveBeenCalledWith({ id: 1 });
 
-    const written = mockStorageSet.mock.calls[0][0][LOCAL_EXPORT_DOWNLOAD_IDS_KEY] as DownloadRecord[];
+    const written = mockStorageSet.mock.calls[0]?.[0][LOCAL_EXPORT_DOWNLOAD_IDS_KEY] as DownloadRecord[];
     expect(written.map((r) => r.downloadId)).toEqual([1]);
   });
 
