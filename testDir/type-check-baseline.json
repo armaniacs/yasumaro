@@ -1,5 +1,5 @@
 {
-  "total": 1719,
+  "total": 1663,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -116,7 +116,6 @@
     "src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanel-formatDiagnosticMetadata.test.ts": 1,
     "src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanel.lifecycle.test.ts": 5,
     "src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanelView.test.ts": 1,
-    "src/dashboard/panels/asyncData/__tests__/sqliteHistoryQuery.test.ts": 32,
     "src/dashboard/panels/diagnostic/__tests__/archiveEditModal.test.ts": 1,
     "src/dashboard/panels/diagnostic/__tests__/archivePanel.test.ts": 4,
     "src/dashboard/panels/diagnostic/__tests__/diagnosticsActions.test.ts": 7,
@@ -164,9 +163,6 @@
     "src/offscreen/__tests__/sqlite-auditLog.test.ts": 3,
     "src/offscreen/__tests__/sqlite-search-fts5.test.ts": 1,
     "src/offscreen/__tests__/sqliteQueryBuilder-comprehensive.test.ts": 2,
-    "src/offscreen/__tests__/storageFallback-branches.test.ts": 7,
-    "src/offscreen/__tests__/storageFallback-comprehensive.test.ts": 3,
-    "src/offscreen/__tests__/storageFallback.test.ts": 14,
     "src/offscreen/sqliteEngineContext/__tests__/coverage.test.ts": 1,
     "src/offscreen/sqliteEngineContext/__tests__/idbEngineLifecycle.test.ts": 2,
     "src/popup/__tests__/autoClose.test.ts": 22,
