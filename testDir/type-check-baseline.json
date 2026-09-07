@@ -1,5 +1,5 @@
 {
-  "total": 352,
+  "total": 305,
   "files": {
     "src/background/__tests__/SessionAlarmService.test.ts": 2,
     "src/background/__tests__/alarmRegistry.test.ts": 3,
@@ -69,7 +69,6 @@
     "src/dashboard/settings/__tests__/aiSummaryCleansingSettingsV2-coverage.test.ts": 1,
     "src/dashboard/settings/__tests__/aiSummaryCleansingSettingsV2.test.ts": 3,
     "src/dashboard/settings/__tests__/privacySettings.test.ts": 1,
-    "src/popup/__tests__/mask-visualization.test.ts": 47,
     "src/utils/__tests__/RateLimitService.test.ts": 1,
     "src/utils/__tests__/auditLog.test.ts": 1,
     "src/utils/__tests__/contentExtractor.test.ts": 3,
