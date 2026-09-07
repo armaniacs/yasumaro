@@ -124,6 +124,15 @@ Yasumaro には、2つのクレンジング機能があります。それぞれ�
 | **クローン** | 両方が有効な場合でも、クローンは1つだけ作成される |
 | **元ページ** | クレンジングは元のWebページには影響しない |
 
+### プリセットと動的コンテンツ対応
+
+- **プリセット**: AI Summary Cleansing の 32 個のトグルは `minimal`（3 ON）/ `balanced`（9 ON、デフォルト）/ `aggressive`（25 ON）/ `custom` の4プリセットで一括切替できます。トグルを個別に変更すると `custom` になります
+- **Cookie 同意バナー**: `cookie` ルールとして OneTrust 系（`onetrust` / `ot-sdk` / `optanon`）のバナー定型文を除去します。テキストマッチで判定し、クラス名の部分一致による誤爆を避けます
+- **SPA / Shadow DOM / iframe**: `MutationObserver` で描画後のコンテンツ変化を検知し、`shadowRoot` や iframe の中も再帰的に走査します。Shadow / iframe ホストが存在しないページでは走査を早期にゼロ化します
+- **観測性**: どのルールが何個の要素を除去したかの内訳（`removedByReason`）と、クレンジング前後のペイロード差分をダッシュボードで確認できます
+
+プリセットとドメイン別上書きの運用は [クレンジングのカスタマイズガイド](CLEANSING_CUSTOMIZATION_GUIDE.md) を参照してください。
+
 ### 設定場所
 
 - **Content Cleansing**: Dashboard → Content Cleansing タブ
@@ -246,6 +255,15 @@ Yasumaro has two cleansing features. Here's an explanation of their purpose and 
 | **Data** | Sequential pipeline — AI Summary Cleansing receives the output of Content Cleansing |
 | **Clone** | One clone created even when both are enabled |
 | **Original page** | Cleansing never affects the original web page |
+
+### Presets and Dynamic Content Handling
+
+- **Presets**: The 32 AI Summary Cleansing toggles switch as a group via four presets — `minimal` (3 on) / `balanced` (9 on, default) / `aggressive` (25 on) / `custom`. Changing any toggle individually switches to `custom`
+- **Cookie consent banners**: The `cookie` rule removes boilerplate from OneTrust-style banners (`onetrust` / `ot-sdk` / `optanon`). Detection is by text to avoid false matches from partial class-name matches
+- **SPA / Shadow DOM / iframe**: A `MutationObserver` detects post-render content changes, and the traversal recurses into `shadowRoot` and iframes. On pages with no Shadow / iframe hosts, the traversal is short-circuited to zero
+- **Observability**: The dashboard shows a breakdown of which rule removed how many elements (`removedByReason`) and a payload diff before and after cleansing
+
+See the [Cleansing Customization Guide](CLEANSING_CUSTOMIZATION_GUIDE.md) for working with presets and per-site overrides.
 
 ### Settings Location
 
