@@ -83,7 +83,7 @@ npm run metrics:backfill
 
 `.github/workflows/release.yml` に `record-metrics` ジョブがあり、タグをpushしてリリースが作られるたびに自動的にそのタグのメトリクスを計測し、`main` にコミット・pushします。
 
-- `release`（ビルド・GitHub Release作成・Chrome Web Store公開）とは別ジョブとして独立している。Chrome Web Store公開のポーリングが長引いても、メトリクス記録がタイムアウトに巻き込まれることはない
+- `release`（ビルド・GitHub Release作成）とは別ジョブとして独立している
 - `needs: release` + `if: always()` により、`release` ジョブが失敗・タイムアウトしてもメトリクス記録は実行される（メトリクス収集自体はタグの内容を読むだけで、ビルド成果物に依存しないため）
 - `continue-on-error: true` が設定されており、メトリクス記録が失敗してもワークフロー全体は失敗扱いにならない
 - 手動での対応は基本的に不要。失敗した場合は「手動で1タグ分を記録する」の手順で後から追記できる

@@ -38,7 +38,7 @@ AI 要約を使わないのであれば不要です。ダッシュボードで�
 
 **Q5. Chrome 以外のブラウザでも使えますか？**
 
-Yasumaro は Chrome Web Store に公開されており、Chrome にそのままインストールできます。加えて Microsoft Edge や Brave など Chromium 系ブラウザでも動作し、実際に作者自身も日常的に Microsoft Edge で使用しています。Chrome Web Store 経由でない場合は `npm run build:edge`、`npm run build:brave` で各ブラウザ用にビルドできます。Firefox 版もビルド可能ですが、主要サポートは Chromium 系です。
+Yasumaro は Microsoft Edge や Brave など Chromium 系ブラウザで動作し、実際に作者自身も日常的に Microsoft Edge で使用しています。Edge は [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep) からインストールできます。Chrome / Brave では、GitHub Releases の zip を読み込むか、ソースからビルドしてください（Chrome Web Store への配布は終了しています。Q7 参照）。Firefox 版もビルド可能ですが、主要サポートは Chromium 系です。
 
 **Q6. スマートフォンの Chrome でも使えますか？**
 
@@ -46,7 +46,7 @@ Yasumaro は Chrome Web Store に公開されており、Chrome にそのまま�
 
 **Q7. 拡張機能はどこからインストールできますか？**
 
-[Chrome Web Store](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc) から直接インストールできます（推奨）。ソースからビルドしたい場合は [GitHub リポジトリ](https://github.com/armaniacs/yasumaro) をクローンし、`chrome://extensions` の「デベロッパーモード」→「パッケージ化されていない拡張機能を読み込む」から `npm run build` 後の `dist/chromium-mv3` フォルダを選択してください。詳細は [完全セットアップガイド](SETUP_GUIDE.md) をご覧ください。
+Edge は [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep) から直接インストールできます。Chrome / Brave では、[最新リリース](https://github.com/armaniacs/yasumaro/releases/latest) の `yasumaro-<version>-chrome.zip` を展開し、`chrome://extensions` の「デベロッパーモード」→「パッケージ化されていない拡張機能を読み込む」から展開したフォルダを選択してください。ソースからビルドする場合は [GitHub リポジトリ](https://github.com/armaniacs/yasumaro) をクローンして `npm run build` 後の `dist/chromium-mv3` フォルダを選択します。Chrome Web Store への配布は、署名鍵の不整合により既存の拡張機能 ID を更新できなくなったため終了しました。詳細は [完全セットアップガイド](SETUP_GUIDE.md) をご覧ください。
 
 ---
 
@@ -320,7 +320,7 @@ Not if you don't want AI summaries. If you don't configure an AI provider in the
 
 **Q5. Does it work on browsers other than Chrome?**
 
-Yasumaro is published on the Chrome Web Store and installs directly into Chrome. It also works on other Chromium-based browsers such as Microsoft Edge and Brave — in fact, the author uses Microsoft Edge as their daily driver. If you're not installing from the Chrome Web Store, use `npm run build:edge` or `npm run build:brave` to build for each browser. Firefox builds are also possible, but Chromium-based browsers are the main supported platform.
+Yasumaro works on Chromium-based browsers such as Microsoft Edge and Brave — in fact, the author uses Microsoft Edge as their daily driver. Edge can be installed from [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep). On Chrome / Brave, load the GitHub Releases zip or build from source (Chrome Web Store distribution has ended; see Q7). Firefox builds are also possible, but Chromium-based browsers are the main supported platform.
 
 **Q6. Does it work on mobile Chrome?**
 
@@ -328,7 +328,7 @@ Chrome extensions are not supported on mobile Chrome, so normal use is not avail
 
 **Q7. Where can I install the extension?**
 
-Install directly from the [Chrome Web Store](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc) (recommended). To build from source, clone the [GitHub repository](https://github.com/armaniacs/yasumaro), run `npm run build`, then load the resulting `dist/chromium-mv3` folder via `chrome://extensions` → "Developer mode" → "Load unpacked". See the [Complete Setup Guide](SETUP_GUIDE.md) for details.
+Edge users can install directly from [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep). On Chrome / Brave, download `yasumaro-<version>-chrome.zip` from the [latest release](https://github.com/armaniacs/yasumaro/releases/latest), unzip it, and load the folder via `chrome://extensions` → "Developer mode" → "Load unpacked". To build from source, clone the [GitHub repository](https://github.com/armaniacs/yasumaro), run `npm run build`, then load the resulting `dist/chromium-mv3` folder. Chrome Web Store distribution has ended because a signing-key mismatch made the existing extension ID impossible to update. See the [Complete Setup Guide](SETUP_GUIDE.md) for details.
 
 ---
 

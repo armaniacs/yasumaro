@@ -1,8 +1,8 @@
 # Permissions Justification / パーミッション正当化
 
-**Purpose**: This document provides detailed justifications for each permission requested by Yasumaro in its `manifest.json`. It is intended for the Chrome Web Store review process to demonstrate that each permission is necessary and used appropriately.
+**Purpose**: This document provides detailed justifications for each permission requested by Yasumaro in its `manifest.json`. It is intended for the extension store review process (Edge Add-ons) to demonstrate that each permission is necessary and used appropriately.
 
-**目的**: このドキュメントは Yasumaro の `manifest.json` で要求する各パーミッションの正当化理由を記載します。Chrome Web Store 審査プロセスにおいて、各パーミッションが必要かつ適切に使用されていることを示すことを目的としています。
+**目的**: このドキュメントは Yasumaro の `manifest.json` で要求する各パーミッションの正当化理由を記載します。拡張機能ストアの審査プロセス（Edge Add-ons）において、各パーミッションが必要かつ適切に使用されていることを示すことを目的としています。
 
 **Last Updated / 最終更新日**: 2026-09-08
 **Target Version / 対象バージョン**: v6.8.0
@@ -152,7 +152,7 @@
 
 ---
 
-## Reviewer Notes for Chrome Web Store / 審査担当者向け注記
+## Reviewer Notes / 審査担当者向け注記
 
 1. **本拡張機能は Manifest V3 のみを使用**しています。MV2 への後方互換は提供しません。
 2. **データ送信先は 2 種類のみ**: ユーザーが選択した AI プロバイダー（要約生成時）と、ユーザーが設定した Obsidian Local REST API（デイリーノート保存時）。開発者のサーバーには一切送信しません。
@@ -165,6 +165,6 @@
 
 ## Update History / 更新履歴
 
-- **2026-09-08**: 対象バージョンを v6.8.0 に更新。`declarativeNetRequest`（Ollama への `Origin` ヘッダー削除）を文書化。`downloads` に閲覧履歴アーカイブファイルの書き出し用途を追記
+- **2026-09-08**: 対象バージョンを v6.8.0 に更新。`declarativeNetRequest`（Ollama への `Origin` ヘッダー削除）を文書化。`downloads` に閲覧履歴アーカイブファイルの書き出し用途を追記。Chrome Web Store 配布終了に伴い、審査対象の表記を拡張機能ストア一般（Edge Add-ons）へ変更
 - **2026-07-12**: `downloads` パーミッションを追加（ローカル Markdown 書き出し機能、v6.5.14）。実装との乖離を修正
 - **2026-06-17**: 初版作成（v6.0.0 Chrome Web Store 初回公開向け）

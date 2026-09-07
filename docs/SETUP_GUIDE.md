@@ -40,15 +40,24 @@
 
 ### ステップ3: Chrome拡張機能のインストール
 
-#### 方法A: Chrome Web Store からインストール（推奨）
-1. [Chrome Web Store の Yasumaro ページ](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc) を開きます。
-2. 「Chrome に追加」ボタンをクリックします。
+> Chrome Web Store への配布は終了しました（署名鍵の不整合により既存の拡張機能 ID を更新できなくなったため）。Chrome / Brave では方法B または方法C をご利用ください。
+
+#### 方法A: Edge Add-ons からインストール
+1. [Edge Add-ons の Yasumaro ページ](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep) を開きます。
+2. 「入手」ボタンをクリックします。
 3. 確認ダイアログで「拡張機能を追加」をクリックします。
 
-#### 方法B: ソースからビルド（開発者向け）
-1. `chrome://extensions` を開きます。
-2. 右上の「デベロッパーモード」をオンにします。
-3. 「パッケージ化されていない拡張機能を読み込む」をクリックし、`dist/chromium-mv3` フォルダを選択します。
+#### 方法B: GitHub Releases の zip を読み込む（Chrome / Brave など）
+1. [最新リリース](https://github.com/armaniacs/yasumaro/releases/latest) から `yasumaro-<version>-chrome.zip` をダウンロードして展開します。
+2. `chrome://extensions` を開きます。
+3. 右上の「デベロッパーモード」をオンにします。
+4. 「パッケージ化されていない拡張機能を読み込む」をクリックし、展開したフォルダを選択します。
+
+#### 方法C: ソースからビルド（開発者向け）
+1. `npm run build` を実行します。
+2. `chrome://extensions` を開きます。
+3. 右上の「デベロッパーモード」をオンにします。
+4. 「パッケージ化されていない拡張機能を読み込む」をクリックし、`dist/chromium-mv3` フォルダを選択します。
 
 ### ステップ4: 拡張機能の設定
 拡張機能のアイコンをクリックしてメイン画面を開きます。
@@ -303,15 +312,24 @@ Summary:
 
 ### Step 3: Install Chrome Extension
 
-#### Option A: Install from Chrome Web Store (Recommended)
-1. Open the [Yasumaro page on Chrome Web Store](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc).
-2. Click "Add to Chrome".
+> Chrome Web Store distribution has ended (a signing-key mismatch made the existing extension ID impossible to update). On Chrome / Brave, use Option B or Option C.
+
+#### Option A: Install from Edge Add-ons
+1. Open the [Yasumaro page on Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep).
+2. Click "Get".
 3. Click "Add extension" in the confirmation dialog.
 
-#### Option B: Build from Source (For Developers)
-1. Open `chrome://extensions`.
-2. Enable "Developer mode" (top right).
-3. Click "Load unpacked" and select the `dist/chromium-mv3` folder.
+#### Option B: Load the GitHub Releases zip (Chrome / Brave, etc.)
+1. Download `yasumaro-<version>-chrome.zip` from the [latest release](https://github.com/armaniacs/yasumaro/releases/latest) and unzip it.
+2. Open `chrome://extensions`.
+3. Enable "Developer mode" (top right).
+4. Click "Load unpacked" and select the unzipped folder.
+
+#### Option C: Build from Source (For Developers)
+1. Run `npm run build`.
+2. Open `chrome://extensions`.
+3. Enable "Developer mode" (top right).
+4. Click "Load unpacked" and select the `dist/chromium-mv3` folder.
 
 ### Step 4: Configure Settings
 Click the extension icon to open the main screen.
