@@ -69,7 +69,7 @@ describe('tagUtils', () => {
         });
 
         test('tag_categories が undefined の場合はデフォルトのみ', () => {
-            const settings = { tag_categories: undefined };
+            const settings = { tag_categories: undefined } as unknown as Parameters<typeof getAllCategories>[0];
             const result = getAllCategories(settings);
             expect(result).toHaveLength(10);
         });
