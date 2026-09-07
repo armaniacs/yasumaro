@@ -22,13 +22,14 @@ test.describe('Dashboard - Diagnostics Panel @ui', () => {
     await expect(page.locator('#diagTestAiBtn')).toBeAttached();
     await expect(page.locator('#diagTestSqliteBtn')).toBeAttached();
     await expect(page.locator('#diagDebugModeToggle')).toBeAttached();
-    await expect(page.locator('#diagOpfsSpikeBtn')).toBeAttached();
+    // OPFS spike removed (PBI 2026-09-07-19): the button and result area must stay gone.
+    await expect(page.locator('#diagOpfsSpikeBtn')).toHaveCount(0);
     await expect(page.locator('#diagMigrateBtn')).toBeAttached();
     await expect(page.locator('#diagBackfillBtn')).toBeAttached();
     await expect(page.locator('#diagCleanupBtn')).toBeAttached();
     await expect(page.locator('#diagConnectionResult')).toBeAttached();
     await expect(page.locator('#diagSqliteResult')).toBeAttached();
-    await expect(page.locator('#diagOpfsSpikeResult')).toBeAttached();
+    await expect(page.locator('#diagOpfsSpikeResult')).toHaveCount(0);
     await expect(page.locator('#diagMigrateResult')).toBeAttached();
     await expect(page.locator('#diagBackfillResult')).toBeAttached();
     await expect(page.locator('#diagCleanupResult')).toBeAttached();

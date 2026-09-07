@@ -241,7 +241,6 @@ function makeDeps(overrides: Partial<DashboardSqliteHandlerDeps> = {}): {
     appendToDailyNote: vi.fn().mockResolvedValue(undefined),
     restoreDb: vi.fn().mockResolvedValue(true),
     getStatus: vi.fn().mockResolvedValue({ initialized: true }),
-    runOpfsSpike: vi.fn().mockResolvedValue({}),
     purgeOldRecords: vi.fn().mockResolvedValue({ purged: 0 }),
     purgeContent: vi.fn().mockResolvedValue({ purged: 0 }),
     backupDb: vi.fn().mockResolvedValue({ success: true, data: new Uint8Array([1]) }),

@@ -8,7 +8,6 @@ vi.mock('../../../../utils/i18n.js', () => ({
 }));
 
 vi.mock('../../../dashboardSqliteService.js', () => ({
-  runOpfsSpike: vi.fn(),
   migrateLogs: vi.fn(),
   backfillMetadata: vi.fn(),
   resyncLegacyStorage: vi.fn(),
@@ -24,7 +23,7 @@ vi.mock('../../../builtInAiDiagnosticsService.js', () => ({
   startBuiltInAiDownload: vi.fn(),
 }));
 
-import { runOpfsSpike, migrateLogs, backfillMetadata, resyncLegacyStorage, cleanupLegacyStorage, getSqliteStatus } from '../../../dashboardSqliteService.js';
+import { migrateLogs, backfillMetadata, resyncLegacyStorage, cleanupLegacyStorage, getSqliteStatus } from '../../../dashboardSqliteService.js';
 import { showConfirmDialog } from '../../../utils/confirmDialog.js';
 
 function makeElements(): DiagnosticActionElements {
@@ -34,7 +33,6 @@ function makeElements(): DiagnosticActionElements {
     testObsidianBtn: el<HTMLButtonElement>('a', 'button'),
     testAiBtn: el<HTMLButtonElement>('b', 'button'),
     testSqliteBtn: el<HTMLButtonElement>('c', 'button'),
-    opfsSpikeBtn: el<HTMLButtonElement>('d', 'button'),
     migrateBtn: el<HTMLButtonElement>('e', 'button'),
     backfillBtn: el<HTMLButtonElement>('f', 'button'),
     resyncBtn: el<HTMLButtonElement>('f2', 'button'),
@@ -42,7 +40,6 @@ function makeElements(): DiagnosticActionElements {
     builtInAiDownloadBtn: el<HTMLButtonElement>('h', 'button'),
     connectionResult: el('r1'),
     sqliteResult: el('r2'),
-    opfsSpikeResult: el('r3'),
     migrateResult: el('r4'),
     backfillResult: el('r5'),
     resyncResult: el('r5b'),
@@ -208,26 +205,6 @@ describe('diagnosticsActions', () => {
       expect(els.sqliteResult!.textContent).toContain('boom');
     });
     expect(els.testSqliteBtn!.disabled).toBe(false);
-  });
-
-  it('OPFS spike displays strategy and duration', async () => {
-    vi.mocked(runOpfsSpike).mockResolvedValue({
-      data: {
-        passed: true,
-        strategy: 'opfs-sync-worker',
-        durationMs: 12,
-        steps: [{ ok: true, name: 's1', detail: 'd' }],
-      },
-    } as any);
-    const els = makeElements();
-    createDiagnosticActions(els, { onBuiltInAiDownloaded: vi.fn() });
-
-    els.opfsSpikeBtn!.click();
-    await vi.waitFor(() => {
-      expect(els.opfsSpikeResult!.textContent).toContain('strategy=opfs-sync-worker');
-      expect(els.opfsSpikeResult!.textContent).toContain('(12ms)');
-    });
-    expect(els.opfsSpikeBtn!.disabled).toBe(false);
   });
 
   it('backfill reports updated and total counts', async () => {

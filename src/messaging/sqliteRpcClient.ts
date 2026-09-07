@@ -7,7 +7,6 @@
  * sides from drifting and lets either side explain a failure consistently.
  */
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
-import type { OpfsSpikeReport } from '../offscreen/opfsSpike.js';
 import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData } from './sqliteMessages.js';
 export type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData };
 
@@ -125,9 +124,8 @@ export type MaintainOp =
   | { type: 'restore'; data: Uint8Array }
   | { type: 'clearAll' }
   | { type: 'purgeOldRecords'; retentionDays?: number; maxRecords?: number }
-  | { type: 'purgeContent'; retentionDays?: number; maxRecords?: number; includeStarred?: boolean }
-  | { type: 'opfsSpike' }
-  | { type: 'healthCheck' }
+   | { type: 'purgeContent'; retentionDays?: number; maxRecords?: number; includeStarred?: boolean }
+   | { type: 'healthCheck' }
   | { type: 'archivePreview'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean }
   | { type: 'archiveCreate'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }
   | { type: 'archiveCleanup' }
@@ -164,7 +162,6 @@ export interface SqliteRpcClient {
   maintain(
     op: Extract<MaintainOp, { type: 'purgeOldRecords' }> | Extract<MaintainOp, { type: 'purgeContent' }>,
   ): Promise<SqliteRpcResult<{ purged: number }>>;
-  maintain(op: Extract<MaintainOp, { type: 'opfsSpike' }>): Promise<SqliteRpcResult<OpfsSpikeReport>>;
   maintain(op: Extract<MaintainOp, { type: 'healthCheck' }>): Promise<SqliteRpcResult<boolean>>;
   maintain(op: Extract<MaintainOp, { type: 'archivePreview' }>): Promise<SqliteRpcResult<ArchivePreviewData>>;
   maintain(op: Extract<MaintainOp, { type: 'archiveCreate' }>): Promise<SqliteRpcResult<ArchiveCreateData>>;
