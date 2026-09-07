@@ -16,7 +16,7 @@ import { TabContentFetcher } from '../tabContentFetcher.js';
 describe('TabContentFetcher', () => {
   beforeEach(() => {
     chrome.tabs.sendMessage = vi.fn();
-    chrome.runtime.lastError = null;
+    (chrome.runtime as { lastError: chrome.runtime.LastError | null }).lastError = null;
     chrome.permissions.contains = vi.fn().mockResolvedValue(true);
     chrome.permissions.request = vi.fn().mockResolvedValue(true);
     chrome.scripting.executeScript = vi.fn();
