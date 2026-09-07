@@ -8,7 +8,7 @@
  * - エラー発生時に適切なログ記録が必要
  */
 
-import { describe, test, expect, beforeAll, jest } from 'vitest';
+import { describe, test, expect, beforeAll } from 'vitest';
 import { CSPValidator } from '../cspValidator.js';
 
 // Mock chrome API
