@@ -151,6 +151,7 @@ describe('checkPageStatus', () => {
   it('should return basic status for normal URL', async () => {
     const url = 'https://example.com/page';
     const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.domainFilter.allowed).toBe(true);
     expect(result.domainFilter.mode).toBe('disabled');
@@ -168,6 +169,7 @@ describe('checkPageStatus', () => {
     });
 
     const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.domainFilter.allowed).toBe(true);
     expect(result.domainFilter.mode).toBe('whitelist');
@@ -203,6 +205,7 @@ describe('checkPageStatus', () => {
     });
 
     const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.privacy.isPrivate).toBe(true);
     expect(result.privacy.reason).toBe('cache-control');
@@ -226,6 +229,7 @@ describe('checkPageStatus', () => {
     });
 
     const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.lastSaved.exists).toBe(true);
     expect(result.lastSaved.timestamp).toBe(savedTimestamp);
@@ -271,6 +275,7 @@ describe('checkPageStatus', () => {
 
     // Query with slash should match after normalization
     const result = await checkPageStatus(urlWithSlash);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.privacy.isPrivate).toBe(true);
     expect(result.privacy.reason).toBe('cache-control');
@@ -307,6 +312,7 @@ describe('checkPageStatus', () => {
 
     // Query with fragment should match after normalization
     const result = await checkPageStatus(urlWithFragment);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.privacy.isPrivate).toBe(true);
     expect(result.cache.cacheControl).toBe('no-store');
@@ -341,6 +347,7 @@ describe('checkPageStatus', () => {
 
     // Query should match root URL as-is
     const result = await checkPageStatus(rootUrl);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.privacy.isPrivate).toBe(true);
     expect(result.cache.cacheControl).toBe('no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -356,6 +363,7 @@ describe('checkPageStatus', () => {
     });
 
     const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result.domainFilter.allowed).toBe(false);
     expect(result.domainFilter.mode).toBe('blacklist');
@@ -368,6 +376,7 @@ describe('checkPageStatus', () => {
     mockChromeRuntime.sendMessage.mockRejectedValue(new Error('No listener'));
 
     const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result).not.toBeNull();
     expect(result.privacy.isPrivate).toBe(false);
@@ -379,6 +388,7 @@ describe('checkPageStatus', () => {
     (mockGetAll as Mock).mockRejectedValueOnce(new Error('Storage error'));
 
     const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
 
     expect(result).not.toBeNull();
     expect(result.domainFilter.allowed).toBe(true);

@@ -1,5 +1,5 @@
 {
-  "total": 840,
+  "total": 748,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -101,11 +101,8 @@
     "src/messaging/__tests__/messageTransport-branch.test.ts": 4,
     "src/messaging/__tests__/messageTransport.test.ts": 2,
     "src/popup/__tests__/main.test.ts": 132,
-    "src/popup/__tests__/mainSpinner.test.ts": 31,
     "src/popup/__tests__/mask-visualization.test.ts": 47,
     "src/popup/__tests__/popup-xss.test.ts": 44,
-    "src/popup/__tests__/statusChecker.test.ts": 32,
-    "src/popup/__tests__/ui-ux-improvements.test.ts": 29,
     "src/utils/__tests__/RateLimitService.test.ts": 1,
     "src/utils/__tests__/auditLog.test.ts": 1,
     "src/utils/__tests__/contentExtractor.test.ts": 3,
