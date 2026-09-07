@@ -62,7 +62,7 @@ export type DashboardSqliteRequest =
   | { subtype: 'purge_now' }
   | { subtype: 'content_purge_now' }
   | { subtype: 'audit_log_query'; limit?: number; offset?: number }
-  | { subtype: 'archive_preview'; cutoffMs: number; includeDeleted: boolean }
+  | { subtype: 'archive_preview'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean }
   | { subtype: 'archive_create'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string; confirmToken?: string }
   | { subtype: 'archive_cleanup'; confirmToken?: string }
   | { subtype: 'archive_export'; stagingName: string; offset: number; length: number; confirmToken?: string }
