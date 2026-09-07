@@ -184,7 +184,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       state.opfsPending.set(2, pending);
       (mockWorker.onmessage as (e: MessageEvent<unknown>) => void)({ data: { id: 2, success: false, error: 'fail' } } as MessageEvent<unknown>);
       expect(pending.reject).toHaveBeenCalled();
-      expect((pending.reject.mock.calls[0][0] as Error).message).toBe('fail');
+      expect((pending.reject.mock.calls[0]![0] as Error).message).toBe('fail');
     });
 
     it('onmessage: pending が存在しない id は無視', () => {
@@ -434,7 +434,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(state.opfsWorker).toBeNull();
       expect(state.opfsPending.size).toBe(0);
       expect(pendingReject).toHaveBeenCalled();
-      expect((pendingReject.mock.calls[0][0] as Error).message).toBe('OPFS Worker terminated');
+      expect((pendingReject.mock.calls[0]![0] as Error).message).toBe('OPFS Worker terminated');
     });
 
     it('worker が無い場合は何もしない', () => {

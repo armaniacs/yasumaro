@@ -123,7 +123,7 @@ describe('query() with text — OPFS worker QUERY proxy (FTS5)', () => {
 
     // Rank must come from the worker (not zeroed out)
     expect(result.rows).toHaveLength(1);
-    expect(result.rows[0].rank).toBe(-1.5);
+    expect(result.rows[0]!.rank).toBe(-1.5);
     expect(result.total).toBe(1);
 
     // The worker must have received a QUERY message with text

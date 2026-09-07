@@ -23,6 +23,7 @@ vi.mock('../../migrations.js', () => ({
 }));
 
 const { initIdbEngine, execWithCache, DB_FILENAME } = await import('../idbEngineLifecycle.js');
+type IdbeEngineState = import('../idbEngineLifecycle.js').IdbeEngineState;
 
 describe('idbEngineLifecycle', () => {
   beforeEach(() => {
@@ -37,9 +38,7 @@ describe('idbEngineLifecycle', () => {
 
   describe('initIdbEngine', () => {
     it('成功時は true を返し、idbEngine と fts5Available を state に設定する', async () => {
-      const state = { idbEngine: null, fts5Available: false, cachedCompileOptions: null, lastInitError: null } as {
-        idbEngine: unknown; fts5Available: boolean; cachedCompileOptions: string[] | null; lastInitError: string | null;
-      };
+      const state = { idbEngine: null, fts5Available: false, cachedCompileOptions: null, lastInitError: null } as IdbeEngineState;
 
       const ok = await initIdbEngine(state);
 
@@ -51,9 +50,7 @@ describe('idbEngineLifecycle', () => {
 
     it('失敗時は false を返し、lastInitError を記録し idbEngine を null にする', async () => {
       mockExec.mockRejectedValueOnce(new Error('disk full'));
-      const state = { idbEngine: null, fts5Available: false, cachedCompileOptions: null, lastInitError: null } as {
-        idbEngine: unknown; fts5Available: boolean; cachedCompileOptions: string[] | null; lastInitError: string | null;
-      };
+      const state = { idbEngine: null, fts5Available: false, cachedCompileOptions: null, lastInitError: null } as IdbeEngineState;
 
       const ok = await initIdbEngine(state);
 
