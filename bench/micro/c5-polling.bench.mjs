@@ -19,7 +19,9 @@ async function ensureLoaded() {
   if (!ContentKernel) {
     const mod = await importFromSource('src/content/contentKernel.ts');
     ContentKernel = mod.ContentKernel;
-    FakeScheduler = mod.FakeScheduler;
+    // FakeScheduler was relocated to __tests__/helpers by PBI-14 test-support relocation
+    const sched = await importFromSource('src/content/__tests__/helpers/fakeScheduler.ts');
+    FakeScheduler = sched.FakeScheduler;
   }
 }
 
