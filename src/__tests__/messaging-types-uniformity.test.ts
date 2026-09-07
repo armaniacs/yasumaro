@@ -50,13 +50,6 @@ describe('Messaging Types Uniformity Tests', () => {
     expect(true).toBe(true);
   });
 
-  test('TEST_OBSIDIAN payload type should be never', () => {
-    type Payload = PayloadForType<'TEST_OBSIDIAN'>;
-    // never型であることを確認
-    const assertNever: never = 1 as Payload;
-    expect(true).toBe(true);
-  });
-
   test('TEST_AI payload type should be never', () => {
     type Payload = PayloadForType<'TEST_AI'>;
     // never型であることを確認
@@ -71,11 +64,15 @@ describe('Messaging Types Uniformity Tests', () => {
     expect(true).toBe(true);
   });
 
-  test('ACTIVITY_UPDATE payload type should be never', () => {
+  test('ACTIVITY_UPDATE payload type reflects its optional empty-object payload', () => {
     type Payload = PayloadForType<'ACTIVITY_UPDATE'>;
-    // never型であることを確認
-    const assertNever: never = 1 as Payload;
-    expect(true).toBe(true);
+    // ActivityUpdateMessage は payload?: Record<string, never> を持つため、
+    // PayloadForType は Record<string, never> に解決される（never ではない）。
+    // なお isServiceWorkerRequest / NO_PAYLOAD_TYPES は ACTIVITY_UPDATE を
+    // no-payload 扱いする（payload === undefined を要求）が、本番は payload: {}
+    // を直送りする経路がある。この不整合の解消は本 PBI スコープ外（別 PBI）。
+    const payload: Payload = {};
+    expect(payload).toEqual({});
   });
 
   test('SESSION_LOCK_REQUEST payload type should be never', () => {
@@ -105,11 +102,10 @@ describe('Messaging Types Uniformity Tests', () => {
 
   test('TEST_OBSIDIAN payload type should allow optional apiKey', () => {
     type Payload = PayloadForType<'TEST_OBSIDIAN'>;
-    const withKey = { apiKey: 'secret' } as { apiKey?: string };
-    const withoutKey = undefined as unknown as Payload | undefined;
-    void (null as unknown as Payload);
+    const withKey: Payload = { apiKey: 'secret' };
+    const withoutKey: Payload = {};
     expect(withKey.apiKey).toBe('secret');
-    expect(withoutKey).toBeUndefined();
+    expect(withoutKey.apiKey).toBeUndefined();
   });
 
   test('GENERATE_REVIEW_SUMMARY payload type should include periodType', () => {
@@ -120,9 +116,10 @@ describe('Messaging Types Uniformity Tests', () => {
 
   test('DASHBOARD_SQLITE payload type should allow optional object', () => {
     type Payload = PayloadForType<'DASHBOARD_SQLITE'>;
-    const payload = { query: 'SELECT 1' } as { query?: string };
-    void (null as unknown as Payload);
-    expect(payload.query).toBe('SELECT 1');
+    const minimal: Payload = { subtype: 'get_count' };
+    const query: Payload = { subtype: 'query', limit: 10 };
+    expect(minimal.subtype).toBe('get_count');
+    expect(query.subtype).toBe('query');
   });
 
   test('VALID_VISIT payload type should be { content: string }', () => {
@@ -212,6 +209,19 @@ describe('Messaging Types Uniformity Tests', () => {
     } as unknown as ExtensionMessage;
 
     expect(isServiceWorkerRequest(validMessage)).toBe(true);
+  });
+
+  test('isServiceWorkerRequest accepts missing or object payload for TEST_OBSIDIAN', () => {
+    expect(isServiceWorkerRequest({ type: 'TEST_OBSIDIAN' })).toBe(true);
+    expect(isServiceWorkerRequest({ type: 'TEST_OBSIDIAN', payload: undefined })).toBe(true);
+    expect(isServiceWorkerRequest({ type: 'TEST_OBSIDIAN', payload: { apiKey: 'x' } })).toBe(true);
+    expect(isServiceWorkerRequest({ type: 'TEST_OBSIDIAN', payload: 'secret' })).toBe(false);
+  });
+
+  test('isServiceWorkerRequest accepts missing or object payload for DASHBOARD_SQLITE', () => {
+    expect(isServiceWorkerRequest({ type: 'DASHBOARD_SQLITE' })).toBe(true);
+    expect(isServiceWorkerRequest({ type: 'DASHBOARD_SQLITE', payload: undefined })).toBe(true);
+    expect(isServiceWorkerRequest({ type: 'DASHBOARD_SQLITE', payload: { subtype: 'get_count' } })).toBe(true);
   });
 
   test('all no-payload types accept undefined in type guard', () => {

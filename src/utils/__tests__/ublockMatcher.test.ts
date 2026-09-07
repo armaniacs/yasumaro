@@ -3,13 +3,27 @@
 
 import { isUrlBlocked, type UblockMatcherContext } from '../ublockMatcher.js';
 import type { UblockRules } from '../types.js';
-import { parseUblockFilterList } from '../ublockParser/index.js';
+import { parseUblockFilterList, type ParsedUblockRuleset } from '../ublockParser/index.js';
 
 /** Helper to create a simple rule set */
 function rulesFromText(text: string): UblockRules {
-  // parseUblockFilterList emits the legacy blockRules/exceptionRules shape which
-  // isUrlBlocked still accepts; the two UblockRules interfaces do not overlap in TS.
-  return parseUblockFilterList(text) as unknown as UblockRules;
+  // parseUblockFilterList はパーサ中間形式（ParsedUblockRuleset）を返す。
+  // isUrlBlocked が受け取るのはストレージ形式（UblockRules）のため、
+  // ここでは明示的に変換する（as unknown as ブリッジは使わない）。
+  // 注: isUrlBlocked 実行時の blockDomains 優先・blockRules フォールバック両対応を
+  // 型レベルで union として表現する対応は本 PBI スコープ外（別 PBI）。
+  return toStorageRules(parseUblockFilterList(text));
+}
+
+/** パーサ中間形式をストレージ形式に変換する（テスト用） */
+function toStorageRules(parsed: ParsedUblockRuleset): UblockRules {
+  return {
+    blockDomains: [],
+    exceptionDomains: [],
+    blockRules: parsed.blockRules.map((rule) => ({ domain: rule.domain, options: { ...rule.options } })),
+    exceptionRules: parsed.exceptionRules.map((rule) => ({ domain: rule.domain, options: { ...rule.options } })),
+    metadata: { importedAt: parsed.metadata.importedAt, ruleCount: parsed.metadata.ruleCount },
+  };
 }
 
 describe('isUrlBlocked', () => {
