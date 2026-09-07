@@ -291,7 +291,7 @@ describe('URL set functions', () => {
       const result = await settingsRepository.getAll();
 
       const readSettingsKey = getSpy.mock.calls.some(
-        (call) => Array.isArray(call[0]) && call[0].includes('settings')
+        (call) => Array.isArray(call[0]) && (call[0] as string[]).includes('settings')
       );
       expect(readSettingsKey).toBe(false);
       expect(result[StorageKeys.OBSIDIAN_PORT]).toBe('27123');
@@ -468,7 +468,7 @@ describe('URL set functions', () => {
           savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
           savedUrls: ['a', 'b'],
         });
-        vi.spyOn(chrome.storage.local, 'getBytesInUse').mockResolvedValue(STORAGE_QUOTA_BYTES + 1024 * 1024);
+        (vi.spyOn(chrome.storage.local, 'getBytesInUse') as unknown as Mock).mockResolvedValue(STORAGE_QUOTA_BYTES + 1024 * 1024);
 
         await expect(
           settingsRepository.setAll({} as any, { sqliteHealthCheck: async () => false })
@@ -483,7 +483,7 @@ describe('URL set functions', () => {
         await chrome.storage.local.set({
           savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
         });
-        vi.spyOn(chrome.storage.local, 'getBytesInUse')
+        (vi.spyOn(chrome.storage.local, 'getBytesInUse') as unknown as Mock)
           .mockResolvedValueOnce(STORAGE_QUOTA_BYTES + 1024 * 1024) // before cleanup: over quota
           .mockResolvedValue(1024); // after cleanup: back under quota
 
@@ -501,7 +501,7 @@ describe('URL set functions', () => {
         await chrome.storage.local.set({
           savedUrlsWithTimestamps: [{ url: 'https://x.com', timestamp: 1, content: 'x'.repeat(100) }],
         });
-        vi.spyOn(chrome.storage.local, 'getBytesInUse').mockResolvedValue(STORAGE_QUOTA_BYTES + 1024 * 1024);
+        (vi.spyOn(chrome.storage.local, 'getBytesInUse') as unknown as Mock).mockResolvedValue(STORAGE_QUOTA_BYTES + 1024 * 1024);
 
         await expect(settingsRepository.setAll({} as any)).rejects.toThrow();
 

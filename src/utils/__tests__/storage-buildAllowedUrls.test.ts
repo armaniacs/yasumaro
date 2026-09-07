@@ -51,10 +51,10 @@ describe('storage - buildAllowedUrls', () => {
             const settings = {
                 [StorageKeys.OBSIDIAN_PROTOCOL]: 'http',
                 [StorageKeys.OBSIDIAN_PORT]: '27123'
-            };
-            
+            } as unknown as Parameters<typeof buildAllowedUrls>[0];
+
             const allowedUrls = buildAllowedUrls(settings);
-            
+
             expect(allowedUrls.has('http://127.0.0.1:27123')).toBe(true);
             expect(allowedUrls.has('http://localhost:27123')).toBe(true);
         });
@@ -63,10 +63,10 @@ describe('storage - buildAllowedUrls', () => {
             const settings = {
                 [StorageKeys.OBSIDIAN_PROTOCOL]: 'https',
                 [StorageKeys.OBSIDIAN_PORT]: '27123'
-            };
-            
+            } as unknown as Parameters<typeof buildAllowedUrls>[0];
+
             const allowedUrls = buildAllowedUrls(settings);
-            
+
             expect(allowedUrls.has('https://127.0.0.1:27123')).toBe(true);
             expect(allowedUrls.has('https://localhost:27123')).toBe(true);
         });
@@ -137,7 +137,7 @@ describe('storage - buildAllowedUrls', () => {
                     { url: 'https://raw.githubusercontent.com/user/repo/main/filters.txt' },
                     { url: 'manual' }
                 ]
-            };
+            } as unknown as Parameters<typeof buildAllowedUrls>[0];
             
             const allowedUrls = buildAllowedUrls(settings);
             
@@ -149,7 +149,7 @@ describe('storage - buildAllowedUrls', () => {
                 [StorageKeys.UBLOCK_SOURCES]: [
                     { url: 'https://evil.example.com/filters.txt' },
                 ]
-            };
+            } as unknown as Parameters<typeof buildAllowedUrls>[0];
 
             const allowedUrls = buildAllowedUrls(settings);
 
