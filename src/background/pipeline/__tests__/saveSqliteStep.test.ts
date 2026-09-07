@@ -195,7 +195,7 @@ describe('saveSqliteStep — diagnostic metadata', () => {
     });
 
     expect(mockInsert).toHaveBeenCalledTimes(1);
-    const inserted = mockInsert.mock.calls[0][0] as BrowsingLogRecord;
+    const inserted = mockInsert.mock.calls[0]![0] as BrowsingLogRecord;
     expect(inserted.masked_count).toBe(3);
     expect(inserted.ai_provider).toBe('openai');
     expect(inserted.ai_duration_ms).toBe(5000);

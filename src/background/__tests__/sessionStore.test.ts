@@ -376,7 +376,7 @@ describe('SessionStore', () => {
     SessionStore.registerSuspendHandler(store);
     store.set('key1', 'value1');
     expect(listeners).toHaveLength(1);
-    listeners[0]();
+    listeners[0]!();
 
     expect(mockLocal.set).toHaveBeenCalledWith({ key1: 'value1' });
   });

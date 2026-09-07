@@ -89,7 +89,8 @@ describe('processPrivacyPipelineStep', () => {
     it('aiService が undefined の場合も PrivacyPipeline に undefined を渡す', async () => {
       mockProcess.mockResolvedValue({ summary: 'Summary not available.', maskedCount: 0 });
 
-      const context = makeContext({ aiService: undefined });
+      // makeContext() leaves aiService unset (undefined) by default.
+      const context = makeContext();
       await expect(processPrivacyPipelineStep(context)).resolves.toBeDefined();
 
       expect(MockedPrivacyPipeline).toHaveBeenCalledWith(

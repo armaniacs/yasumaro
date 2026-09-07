@@ -18,18 +18,20 @@ function gatedAdapter(): QueueStorageAdapter & { store: Record<string, unknown[]
   const store: Record<string, unknown[]> = {};
   let gate: Promise<void> | null = null;
   let release: (() => void) | null = null;
+  const load = vi.fn(async (key: string) => {
+    if (!gate) {
+      gate = new Promise<void>((r) => { release = r; });
+      await gate;
+    }
+    return store[key] ?? [];
+  });
+  const save = vi.fn(async (key: string, items: unknown[]) => { store[key] = items; });
   return {
     store,
     releaseLoad: () => release?.(),
-    load: vi.fn(async (key: string) => {
-      if (!gate) {
-        gate = new Promise<void>((r) => { release = r; });
-        await gate;
-      }
-      return (store[key] ?? []) as unknown[];
-    }),
-    save: vi.fn(async (key: string, items: unknown[]) => { store[key] = items; }),
-  };
+    load,
+    save,
+  } as unknown as QueueStorageAdapter & { store: Record<string, unknown[]>; releaseLoad: () => void };
 }
 
 describe('PersistentRetryQueue concurrent enqueue during flush (VULN-056)', () => {
