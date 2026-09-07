@@ -65,7 +65,16 @@ describe('archiveStaging registry', () => {
   it('issues a registered outgoing name (offscreen-generated)', async () => {
     const name = await prepareOutgoing();
     expect(name).toMatch(/^archive_outgoing_[A-Za-z0-9-]{36}\.db$/);
+    expect(isStagingRegistered(name)).toBe(true);
     expect(getStagingRecord(name)?.kind).toBe('outgoing');
+  });
+
+  it('issued names decode as StagingName at the brand boundary (PBI 2026-09-07-21)', async () => {
+    const { decodeStagingName } = await import('../../utils/archiveGuards.js');
+    const incoming = await prepareIncoming();
+    const outgoing = await prepareOutgoing();
+    expect(decodeStagingName(incoming)).toBe(incoming);
+    expect(decodeStagingName(outgoing)).toBe(outgoing);
   });
 
   it('refuses client-specified names that were not issued (yasumaro.db protection)', () => {

@@ -13,6 +13,7 @@
 import {
   ARCHIVE_STAGING_NAME_RE,
   isValidStagingName,
+  type StagingName,
 } from '../../utils/archiveGuards.js';
 
 export type ArchiveStagingKind = 'incoming' | 'outgoing';
@@ -52,7 +53,7 @@ async function getRoot(): Promise<FileSystemDirectoryHandle> {
   return navigator.storage.getDirectory();
 }
 
-function issueName(kind: ArchiveStagingKind): string {
+function issueName(kind: ArchiveStagingKind): StagingName {
   let nonce: string;
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     nonce = crypto.randomUUID();
@@ -61,21 +62,21 @@ function issueName(kind: ArchiveStagingKind): string {
     throw new Error('crypto.randomUUID unavailable; refusing to issue staging name');
   }
   const name = `archive_${kind}_${nonce}.db`;
-  if (!ARCHIVE_STAGING_NAME_RE.test(name)) {
+  if (!isValidStagingName(name)) {
     throw new Error(`Issued staging name failed validation: ${name}`);
   }
-  return name;
+  return name as StagingName;
 }
 
 /** Issue and register an incoming staging name (dashboard writes the bytes). */
-export async function prepareIncoming(): Promise<string> {
+export async function prepareIncoming(): Promise<StagingName> {
   const name = issueName('incoming');
   registry.set(name, { kind: 'incoming', createdAt: Date.now() });
   return name;
 }
 
 /** Issue and register an outgoing staging name (offscreen writes the bytes). */
-export async function prepareOutgoing(): Promise<string> {
+export async function prepareOutgoing(): Promise<StagingName> {
   const name = issueName('outgoing');
   registry.set(name, { kind: 'outgoing', createdAt: Date.now() });
   return name;

@@ -8,7 +8,7 @@
  */
 
 import { isServiceWorkerRequest } from './types.js';
-import { isHttpScheme, cutoffMsFromLocalDate, isValidStagingName } from '../utils/archiveGuards.js';
+import { isHttpScheme, assertCutoffPair, CutoffMismatchError, decodeStagingName } from '../utils/archiveGuards.js';
 import type {
   ExtensionMessage,
   ValidVisitMessage,
@@ -189,22 +189,23 @@ export class DashboardSqliteValidator implements MessageValidator<DashboardSqlit
     }
     // Archive subtypes (PBI 2026-09-06-02): boundary validation. The worker
     // re-derives the cutoff from the date string, so a fabricated cutoffMs
-    // pair is rejected before reaching the staging registry.
+    // pair is rejected before reaching the staging registry. Pair verification
+    // itself is the `assertCutoffPair` seam (PBI 2026-09-07-21); this block
+    // only maps its throws to the stable layer messages below.
     if (subtype === 'archive_preview' || subtype === 'archive_create') {
       if (typeof p.cutoffDate !== 'string') {
         throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffDate must be string`, 'cutoffDate');
       }
-      let derivedMs: number;
-      try {
-        derivedMs = cutoffMsFromLocalDate(p.cutoffDate);
-      } catch (e) {
-        throw new ValidationError('DashboardSqliteValidator', `${subtype}: ${e instanceof Error ? e.message : 'invalid cutoffDate'}`, 'cutoffDate');
-      }
       if (typeof p.cutoffMs !== 'number' || !Number.isFinite(p.cutoffMs)) {
         throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffMs must be finite number`, 'cutoffMs');
       }
-      if (p.cutoffMs !== derivedMs) {
-        throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffMs does not match cutoffDate`, 'cutoffMs');
+      try {
+        assertCutoffPair(p.cutoffDate, p.cutoffMs);
+      } catch (e) {
+        if (e instanceof CutoffMismatchError) {
+          throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffMs does not match cutoffDate`, 'cutoffMs');
+        }
+        throw new ValidationError('DashboardSqliteValidator', `${subtype}: ${e instanceof Error ? e.message : 'invalid cutoffDate'}`, 'cutoffDate');
       }
       if (typeof p.includeDeleted !== 'boolean') {
         throw new ValidationError('DashboardSqliteValidator', `${subtype}: includeDeleted must be boolean`, 'includeDeleted');
@@ -216,7 +217,11 @@ export class DashboardSqliteValidator implements MessageValidator<DashboardSqlit
       }
     }
     if (subtype === 'archive_export') {
-      if (typeof p.stagingName !== 'string' || !isValidStagingName(p.stagingName)) {
+      // Boundary decode: the brand proves the name crossed validation, but
+      // the wire payload stays `string` (PBI 2026-09-07-22 touches wire shape).
+      try {
+        decodeStagingName(p.stagingName);
+      } catch {
         throw new ValidationError('DashboardSqliteValidator', 'archive_export: stagingName must be a valid staging name', 'stagingName');
       }
       if (typeof p.offset !== 'number' || !Number.isInteger(p.offset) || p.offset < 0) {
@@ -227,17 +232,23 @@ export class DashboardSqliteValidator implements MessageValidator<DashboardSqlit
       }
     }
     if (subtype === 'archive_delete_by_staging') {
-      if (typeof p.stagingName !== 'string' || !isValidStagingName(p.stagingName)) {
+      try {
+        decodeStagingName(p.stagingName);
+      } catch {
         throw new ValidationError('DashboardSqliteValidator', 'archive_delete_by_staging: stagingName must be a valid staging name', 'stagingName');
       }
     }
     if (subtype === 'archive_open' || subtype === 'archive_save' || subtype === 'archive_close' || subtype === 'archive_restore_preview' || subtype === 'archive_restore') {
-      if (typeof p.stagingName !== 'string' || !isValidStagingName(p.stagingName)) {
+      try {
+        decodeStagingName(p.stagingName);
+      } catch {
         throw new ValidationError('DashboardSqliteValidator', `${subtype}: stagingName must be a valid staging name`, 'stagingName');
       }
     }
     if (subtype === 'archive_query') {
-      if (typeof p.stagingName !== 'string' || !isValidStagingName(p.stagingName)) {
+      try {
+        decodeStagingName(p.stagingName);
+      } catch {
         throw new ValidationError('DashboardSqliteValidator', 'archive_query: stagingName must be a valid staging name', 'stagingName');
       }
       if (typeof p.query !== 'string') {
@@ -254,7 +265,9 @@ export class DashboardSqliteValidator implements MessageValidator<DashboardSqlit
       }
     }
     if (subtype === 'archive_update') {
-      if (typeof p.stagingName !== 'string' || !isValidStagingName(p.stagingName)) {
+      try {
+        decodeStagingName(p.stagingName);
+      } catch {
         throw new ValidationError('DashboardSqliteValidator', 'archive_update: stagingName must be a valid staging name', 'stagingName');
       }
       if (typeof p.id !== 'number' || !Number.isInteger(p.id) || p.id <= 0) {
