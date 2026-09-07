@@ -3,10 +3,11 @@
  * GeminiProvider.ts の単体テスト
  */
 
-import { webcrypto as crypto } from '@peculiar/webcrypto';
+import { Crypto } from '@peculiar/webcrypto';
 import { vi } from 'vitest';
 import type { Mock } from 'vitest';
-Object.defineProperty(global, 'crypto', { value: crypto });
+
+Object.defineProperty(global, 'crypto', { value: new Crypto() });
 
 // fetch モック
 vi.mock('../../utils/fetch.js', () => ({
@@ -258,12 +259,12 @@ describe('GeminiProvider', () => {
 
         test('設定したタイムアウトを使用する', () => {
             const provider = new GeminiProvider({ ...baseSettings, ai_timeout_ms: 60000 });
-            expect(provider.timeoutMs).toBe(60000);
+            expect((provider as unknown as { timeoutMs: number }).timeoutMs).toBe(60000);
         });
 
         test('タイムアウト未設定の場合はデフォルト 30000', () => {
             const provider = new GeminiProvider(baseSettings);
-            expect(provider.timeoutMs).toBe(30000);
+            expect((provider as unknown as { timeoutMs: number }).timeoutMs).toBe(30000);
         });
 
         test('設定したタイムアウトをリクエストに渡す', async () => {
@@ -275,7 +276,7 @@ describe('GeminiProvider', () => {
             const provider = new GeminiProvider({ ...baseSettings, ai_timeout_ms: 60000 });
             await provider.generateSummary('content');
 
-            const options = (fetchWithRetry as Mock).mock.calls[0][1];
+            const options = (fetchWithRetry as Mock).mock.calls[0]![1];
             expect(options.timeoutMs).toBe(60000);
         });
     });
@@ -448,7 +449,7 @@ describe('GeminiProvider', () => {
             });
             await provider.generateSummary('content');
 
-            const callUrl = (fetchWithRetry as Mock).mock.calls[0][0];
+            const callUrl = (fetchWithRetry as Mock).mock.calls[0]![0];
             expect(callUrl).toContain('gemini-pro:generateContent');
             expect(callUrl).not.toContain('models/models/');
         });
@@ -465,7 +466,7 @@ describe('GeminiProvider', () => {
             const provider = new GeminiProvider(baseSettings);
             await provider.generateSummary('content');
 
-            const options = (fetchWithRetry as Mock).mock.calls[0][1];
+            const options = (fetchWithRetry as Mock).mock.calls[0]![1];
             const body = JSON.parse(options.body);
             expect(body.systemInstruction).toBeDefined();
             expect(body.systemInstruction.parts[0].text).toBe('You are a helpful assistant.');
@@ -488,7 +489,7 @@ describe('GeminiProvider', () => {
             const provider = new GeminiProvider(baseSettings);
             await provider.generateSummary('content');
 
-            const options = (fetchWithRetry as Mock).mock.calls[0][1];
+            const options = (fetchWithRetry as Mock).mock.calls[0]![1];
             const body = JSON.parse(options.body);
             expect(body.systemInstruction.parts[0].text).toBe('Default system prompt.');
         });
@@ -621,7 +622,7 @@ describe('GeminiProvider', () => {
             await provider.testConnection();
 
             // 接続テストは実際に推論を走らせるため :generateContent を叩く
-            const url = (fetchWithRetry as Mock).mock.calls[0][0];
+            const url = (fetchWithRetry as Mock).mock.calls[0]![0];
             expect(url).toBe('https://generativelanguage.googleapis.com/v1/models/gemini-3.1-flash-lite:generateContent');
         });
 
@@ -641,7 +642,7 @@ describe('GeminiProvider', () => {
 
             await provider.generateSummary('content');
 
-            const url = (fetchWithRetry as Mock).mock.calls[0][0];
+            const url = (fetchWithRetry as Mock).mock.calls[0]![0];
             expect(url).toContain('/v1/models/');
             expect(url).not.toContain('/v1beta/models/');
         });
@@ -659,7 +660,7 @@ describe('GeminiProvider', () => {
 
             await provider.generateSummary('content');
 
-            const url = (fetchWithRetry as Mock).mock.calls[0][0];
+            const url = (fetchWithRetry as Mock).mock.calls[0]![0];
             expect(url).toContain('/v1beta/models/');
         });
     });
@@ -679,7 +680,7 @@ describe('GeminiProvider', () => {
 
             await provider.generateSummary(longContent);
 
-            const body = JSON.parse((fetchWithRetry as Mock).mock.calls[0][1].body);
+            const body = JSON.parse((fetchWithRetry as Mock).mock.calls[0]![1].body);
             const userContent = body.contents[0].parts[0].text as string;
             const actualContent = userContent.replace(/^Summarize: /, '');
             expect(actualContent.length).toBe(30_000);
@@ -702,7 +703,7 @@ describe('GeminiProvider', () => {
 
             await provider.generateSummary(longContent);
 
-            const body = JSON.parse((fetchWithRetry as Mock).mock.calls[0][1].body);
+            const body = JSON.parse((fetchWithRetry as Mock).mock.calls[0]![1].body);
             const userContent = body.contents[0].parts[0].text as string;
             const actualContent = userContent.replace(/^Summarize: /, '');
             expect(actualContent.length).toBe(20_000);

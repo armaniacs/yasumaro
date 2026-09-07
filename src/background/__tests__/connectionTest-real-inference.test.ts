@@ -16,8 +16,9 @@
  * 「送受信内容が debug に記録されること」を固定する。
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { webcrypto as crypto } from '@peculiar/webcrypto';
-Object.defineProperty(global, 'crypto', { value: crypto });
+import { Crypto } from '@peculiar/webcrypto';
+
+Object.defineProperty(global, 'crypto', { value: new Crypto() });
 
 vi.mock('../../utils/fetch.js', () => ({
   fetchWithRetry: vi.fn(),
