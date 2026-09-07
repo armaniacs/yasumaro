@@ -11,7 +11,7 @@ import {
 } from '../ublockParser/index.js';
 
 import { parseRuleOptions } from '../ublockParser/options.js';
-import type { UblockRule, UblockRules } from '../ublockParser/transform.js';
+import type { UblockRule, ParsedUblockRuleset } from '../ublockParser/transform.js';
 
 describe('ublockParser - Transform Module', () => {
   // ============================================================================
@@ -79,7 +79,9 @@ describe('ublockParser - Transform Module', () => {
 
   describe('createEmptyRuleset', () => {
     test('空のルールセットを生成', () => {
-      const ruleset = createEmptyRuleset();
+      const ruleset: ParsedUblockRuleset = createEmptyRuleset();
+      const firstRule: UblockRule | undefined = ruleset.blockRules[0];
+      expect(firstRule).toBeUndefined();
       expect(ruleset).toHaveProperty('blockRules');
       expect(ruleset).toHaveProperty('exceptionRules');
       expect(ruleset).toHaveProperty('metadata');
