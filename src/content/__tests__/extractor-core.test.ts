@@ -9,8 +9,8 @@ import {
     shouldRecordVisit,
     extractPageContent,
     init,
-    getPageStateForTesting,
 } from '../extractor.js';
+import { getPageStateForTesting } from './helpers/contentTestkit.js';
 
 describe('shouldRecordVisit', () => {
     it('returns true when both duration and scroll meet thresholds', () => {

@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ContentKernel, FakeScheduler } from '../contentKernel.js';
+import { ContentKernel } from '../contentKernel.js';
+import { FakeScheduler } from './helpers/fakeScheduler.js';
 import { InMemoryStoragePort } from '../../utils/storage/storagePort.js';
-import { InMemoryDomainPolicyPort } from '../domainPolicyPort.js';
+import { InMemoryDomainPolicyPort } from './helpers/inMemoryDomainPolicyPort.js';
 import { PageState } from '../pageState.js';
 import * as VisitGateModule from '../visitGate.js';
 

@@ -36,7 +36,8 @@ Offscreen (entrypoints/offscreen.html + src/offscreen/)
 Content Scripts (entrypoints/content/ + src/content/)
   ├── index.ts → WXT content script entrypoint
   ├── loader.ts → Injection orchestrator
-  └── extractor.ts → DOM content extraction
+  ├── extractor.ts → Module singletons (pageState + kernel) + thin facade; driven by entrypoints/content-extractor.ts
+  └── getContentHandler.ts → GET_CONTENT handler (deps-injected, chrome-free unit testable)
 ```
 
 ## Where to Add New Features

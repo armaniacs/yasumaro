@@ -73,10 +73,13 @@ vi.mock('../contentMessageSender.js', () => ({
 import {
     shouldRecordVisit,
     extractPageContent,
+    applyExtractResultToPageState,
+    registerGetContentListener,
     init,
-    getPageStateForTesting,
-    showPrivacyConfirmDialog,
 } from '../extractor.js';
+import { getPageStateForTesting } from './helpers/contentTestkit.js';
+import { showPrivacyConfirmDialog } from '../privacyDialog.js';
+import { handleGetContentMessage, type GetContentHandlerDeps } from '../getContentHandler.js';
 import { CLEANSING_RULES } from '../../utils/aiSummaryCleaner/rules.js';
 
 describe('shouldRecordVisit', () => {
@@ -2032,18 +2035,6 @@ describe('message handler - GET_CONTENT response building', () => {
 });
 
 describe('message handler - GET_CONTENT sender validation', () => {
-    let listener: (message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => boolean | void;
-
-    beforeAll(async () => {
-        // Ensure globalThis.chrome is the same mock and re-import to register the listener
-        vi.resetModules();
-        (globalThis as any).chrome = chromeMock;
-        await import('../extractor.js');
-        const calls = ((globalThis as any).chrome.runtime.onMessage.addListener as ReturnType<typeof vi.fn>).mock.calls;
-        expect(calls.length).toBeGreaterThan(0);
-        listener = calls[0]![0];
-    });
-
     beforeEach(() => {
         document.body.innerHTML = `
             <article>
@@ -2051,33 +2042,38 @@ describe('message handler - GET_CONTENT sender validation', () => {
                 <p>Content for sender validation test.</p>
             </article>
         `;
-        (global as any).chrome.runtime.id = 'test-extension-id';
     });
 
-    afterEach(() => {
-        (global as any).chrome.runtime.id = undefined;
-    });
+    function depsWith(runtimeId: string | undefined): GetContentHandlerDeps {
+        return {
+            extractPageContent,
+            applyExtractResultToPageState,
+            pageState: getPageStateForTesting(),
+            runtimeId,
+        };
+    }
 
     it('rejects GET_CONTENT messages from external senders', () => {
         const sendResponse = vi.fn();
 
-        listener(
+        handleGetContentMessage(
             { type: 'GET_CONTENT' },
-            { id: 'external-extension-id' } as chrome.runtime.MessageSender,
-            sendResponse
+            { id: 'external-extension-id' },
+            sendResponse,
+            depsWith('test-extension-id')
         );
 
-        // RED: current code does not validate sender.id, so sendResponse WILL be called
         expect(sendResponse).not.toHaveBeenCalled();
     });
 
     it('processes GET_CONTENT messages from the same extension', () => {
         const sendResponse = vi.fn();
 
-        listener(
+        handleGetContentMessage(
             { type: 'GET_CONTENT' },
-            { id: 'test-extension-id' } as chrome.runtime.MessageSender,
-            sendResponse
+            { id: 'test-extension-id' },
+            sendResponse,
+            depsWith('test-extension-id')
         );
 
         expect(sendResponse).toHaveBeenCalled();
@@ -2089,14 +2085,36 @@ describe('message handler - GET_CONTENT sender validation', () => {
         // AI_TEST_PROGRESS is a Service Worker → all-tab broadcast that this
         // listener must ignore. Returning `true` would hold the message port
         // open without ever calling sendResponse.
-        const result = listener(
+        const result = handleGetContentMessage(
             { type: 'AI_TEST_PROGRESS', progress: { provider: 'gemini', index: 0, total: 2 } },
-            { id: 'test-extension-id' } as chrome.runtime.MessageSender,
-            sendResponse
+            { id: 'test-extension-id' },
+            sendResponse,
+            depsWith('test-extension-id')
         );
 
         expect(sendResponse).not.toHaveBeenCalled();
         expect(result).toBeUndefined();
+    });
+
+    it('answers same-extension GET_CONTENT through registerGetContentListener wiring', () => {
+        (globalThis as any).chrome.runtime.id = 'test-extension-id';
+        try {
+            registerGetContentListener();
+            const calls = ((globalThis as any).chrome.runtime.onMessage.addListener as ReturnType<typeof vi.fn>).mock.calls;
+            expect(calls.length).toBeGreaterThan(0);
+            const listener = calls[calls.length - 1]![0];
+            const sendResponse = vi.fn();
+
+            listener(
+                { type: 'GET_CONTENT' },
+                { id: 'test-extension-id' },
+                sendResponse
+            );
+
+            expect(sendResponse).toHaveBeenCalled();
+        } finally {
+            (globalThis as any).chrome.runtime.id = undefined;
+        }
     });
 });
 
