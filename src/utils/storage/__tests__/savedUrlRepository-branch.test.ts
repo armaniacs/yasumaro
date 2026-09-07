@@ -240,7 +240,7 @@ describe('updateSavedUrlEntry', () => {
         await updateSavedUrlEntry('https://a.com', (entry) => ({ ...entry, aiSummary: 'updated' }));
 
         const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
-        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0];
+        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0]!;
         expect(updated.aiSummary).toBe('updated');
     });
 });
@@ -252,7 +252,7 @@ describe('saveSavedUrlEntryMetadata', () => {
         const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
         const entries = stored.savedUrlsWithTimestamps as SavedUrlEntry[];
         expect(entries.length).toBe(1);
-        expect(entries[0].aiSummary).toBe('summary');
+        expect(entries[0]!.aiSummary).toBe('summary');
     });
 
     it('skips creation with createIfMissing=false', async () => {
@@ -267,7 +267,7 @@ describe('saveSavedUrlEntryMetadata', () => {
         await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
         await saveSavedUrlEntryMetadata('https://a.com', { aiSummary: 'sum' }, { refreshTimestamp: false });
         const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
-        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0];
+        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0]!;
         expect(updated.timestamp).toBe(1000);
     });
 
@@ -275,7 +275,7 @@ describe('saveSavedUrlEntryMetadata', () => {
         await chrome.storage.local.set({ savedUrlsWithTimestamps: [] });
         await saveSavedUrlEntryMetadata('https://new.com', { aiSummary: 'sum' }, { timestamp: 5555 });
         const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
-        const entry = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0];
+        const entry = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0]!;
         expect(entry.timestamp).toBe(5555);
     });
 
@@ -284,7 +284,7 @@ describe('saveSavedUrlEntryMetadata', () => {
         await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
         await saveSavedUrlEntryMetadata('https://a.com', { tags: ['b', 'c'] }, { mergeTags: true });
         const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
-        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0];
+        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0]!;
         expect(updated.tags).toEqual(['a', 'b', 'c']);
     });
 
@@ -293,7 +293,7 @@ describe('saveSavedUrlEntryMetadata', () => {
         await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
         await saveSavedUrlEntryMetadata('https://a.com', { tags: [] });
         const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
-        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0];
+        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0]!;
         expect(updated.tags).toBeUndefined();
     });
 });
@@ -304,7 +304,7 @@ describe('tag operations', () => {
         await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
         await setUrlTags('https://a.com', []);
         const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
-        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0];
+        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0]!;
         expect(updated.tags).toBeUndefined();
     });
 
@@ -313,7 +313,7 @@ describe('tag operations', () => {
         await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
         await addUrlTag('https://a.com', 'b');
         const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
-        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0];
+        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0]!;
         expect(updated.tags).toEqual(['a', 'b']);
     });
 
@@ -322,7 +322,7 @@ describe('tag operations', () => {
         await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
         await addUrlTag('https://a.com', 'a');
         const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
-        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0];
+        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0]!;
         expect(updated.tags).toEqual(['a']);
     });
 
@@ -331,7 +331,7 @@ describe('tag operations', () => {
         await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
         await removeUrlTag('https://a.com', 'a');
         const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
-        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0];
+        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0]!;
         expect(updated.tags).toEqual(['b']);
     });
 
@@ -340,7 +340,7 @@ describe('tag operations', () => {
         await chrome.storage.local.set({ savedUrlsWithTimestamps: entries });
         await removeUrlTag('https://a.com', 'a');
         const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
-        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0];
+        const updated = (stored.savedUrlsWithTimestamps as SavedUrlEntry[])[0]!;
         expect(updated.tags).toBeUndefined();
     });
 });

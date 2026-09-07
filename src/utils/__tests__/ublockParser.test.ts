@@ -208,7 +208,7 @@ describe('ublockParser', () => {
       const input = null;
 
       // 【実際の処理実行】: parseUblockFilterLine関数を呼び出し
-      const result = parseUblockFilterLine(input);
+      const result = parseUblockFilterLine(input as unknown as string);
 
       // 【結果検証】: null参照エラーを防ぐためnullが返されることを確認
       expect(result).toBeNull(); // 【確認内容】: null入力に対して例外が発生せずnullが返されること 🟢
@@ -275,8 +275,8 @@ describe('ublockParser', () => {
       const result = parseUblockFilterLine(input);
 
       expect(result).not.toBeNull();
-      expect(result.type).toBe('block');
-      expect(result.domain).toBe('example.com');
+      expect(result!.type).toBe('block');
+      expect(result!.domain).toBe('example.com');
     });
 
     test('regular IPv4 with domain is blocked', () => {
@@ -284,8 +284,8 @@ describe('ublockParser', () => {
       const result = parseUblockFilterLine(input);
 
       expect(result).not.toBeNull();
-      expect(result.type).toBe('block');
-      expect(result.domain).toBe('example.com');
+      expect(result!.type).toBe('block');
+      expect(result!.domain).toBe('example.com');
     });
   });
 
@@ -306,8 +306,8 @@ describe('ublockParser', () => {
       expect(result).not.toBeNull(); // 【確認内容】: 有効な結果が返されること 🟢
       expect(result.blockRules).toHaveLength(1); // 【確認内容】: blockRulesが1つのルールを含むこと 🟢
       expect(result.exceptionRules).toHaveLength(1); // 【確認内容】: exceptionRulesが1つのルールを含むこと 🟢
-      expect(result.blockRules[0].domain).toBe('example.com'); // 【確認内容】: ブロックルールのドメインが正確であること 🟢
-      expect(result.exceptionRules[0].domain).toBe('trusted.com'); // 【確認内容】: 例外ルールのドメインが正確であること 🟢
+      expect(result.blockRules[0]!.domain).toBe('example.com'); // 【確認内容】: ブロックルールのドメインが正確であること 🟢
+      expect(result.exceptionRules[0]!.domain).toBe('trusted.com'); // 【確認内容】: 例外ルールのドメインが正確であること 🟢
       expect(result.metadata.lineCount).toBe(3); // 【確認内容】: 入力行数が正しくカウントされていること 🟢
       expect(result.metadata.ruleCount).toBe(2); // 【確認内容】: 有効なルール数が正しくカウントされていること 🟢
     });
