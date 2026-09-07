@@ -14,8 +14,8 @@ function bodyOf(text: string): { getReader: () => { read: () => Promise<{ done: 
   let sent = false;
   return {
     getReader: () => ({
-      read: () => {
-        if (sent) return Promise.resolve({ done: true, value: undefined });
+      read: (): Promise<{ done: boolean; value?: Uint8Array }> => {
+        if (sent) return Promise.resolve({ done: true });
         sent = true;
         return Promise.resolve({ done: false, value: new TextEncoder().encode(text) });
       },
@@ -148,7 +148,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
 
       await vi.advanceTimersByTimeAsync(15001);
 
-      const err = await promise.catch((e: Error) => e);
+      const err = await promise.catch((e: Error) => e) as Error;
       expect(err.name).toBe('AbortError');
       vi.useRealTimers();
     });

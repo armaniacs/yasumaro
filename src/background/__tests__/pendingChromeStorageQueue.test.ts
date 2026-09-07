@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { enqueuePendingWrite, flushPendingWrites, setPendingWriteQueue, createPendingWriteQueue, PENDING_CHROME_STORAGE_KEY } from '../pendingChromeStorageQueue.js';
+import type { QueuedChromeStorageWrite } from '../pendingChromeStorageQueue.js';
 import { InMemoryAdapter } from '../persistentRetryQueue.js';
 
 describe('pendingChromeStorageQueue', () => {
@@ -49,7 +50,7 @@ describe('pendingChromeStorageQueue', () => {
       patch: { recordType: 'auto', tags: ['news'] },
       refreshTimestamp: true,
       mergeTags: true,
-    });
+    } as unknown as QueuedChromeStorageWrite);
 
     const retryFn = vi.fn().mockResolvedValue(true);
     await flushPendingWrites(retryFn);
@@ -70,7 +71,7 @@ describe('pendingChromeStorageQueue', () => {
       key: 'savedUrlsWithTimestamps',
       url: 'https://example.com',
       patch: { content: 'body' },
-    });
+    } as unknown as QueuedChromeStorageWrite);
 
     const retryFn = vi.fn().mockResolvedValue(false);
     await flushPendingWrites(retryFn);
@@ -87,7 +88,7 @@ describe('pendingChromeStorageQueue', () => {
       key: 'savedUrlsWithTimestamps',
       url: 'https://patch.com',
       patch: { aiSummary: 's' },
-    });
+    } as unknown as QueuedChromeStorageWrite);
 
     const retryFn = vi.fn().mockResolvedValue(true);
     await flushPendingWrites(retryFn);
@@ -183,7 +184,7 @@ describe('pendingChromeStorageQueue', () => {
       tagsOmitted?: boolean;
     }>;
     expect(queue).toHaveLength(1);
-    const merged = queue[0];
+    const merged = queue[0]!;
 
     const mergedSize = new Blob([JSON.stringify(merged.patch)]).size;
     expect(mergedSize).toBeLessThanOrEqual(100 * 1024);

@@ -238,7 +238,7 @@ describe('PBI-25: OPFS Recovery Migration', () => {
 
             await migrationService.migrateOpfsRecovery();
 
-            const removeCalls = removeSpy.mock.calls.map(c => c[0]);
+            const removeCalls = removeSpy.mock.calls.map(c => c[0]) as unknown as string[];
             const flagIndex = removeCalls.indexOf('opfs_fallback_mode');
             const dataIndex = removeCalls.indexOf('FALLBACK_STORAGE_DATA');
 

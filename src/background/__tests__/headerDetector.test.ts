@@ -108,7 +108,7 @@ describe('HeaderDetector', () => {
           { name: 'Content-Type', value: 'text/html; charset=utf-8' },
           { name: 'Cache-Control', value: 'private' }
         ]
-      } as chrome.webRequest.WebResponseHeadersDetails;
+      } as unknown as chrome.webRequest.OnHeadersReceivedDetails;
 
       detector['onHeadersReceived'](details);
 
@@ -125,7 +125,7 @@ describe('HeaderDetector', () => {
         responseHeaders: [
           { name: 'Cache-Control', value: 'private' }
         ]
-      } as chrome.webRequest.WebResponseHeadersDetails;
+      } as unknown as chrome.webRequest.OnHeadersReceivedDetails;
 
       detector['onHeadersReceived'](details);
 
@@ -140,7 +140,7 @@ describe('HeaderDetector', () => {
           { name: 'Content-Type', value: 'image/png' },
           { name: 'Cache-Control', value: 'private' }
         ]
-      } as chrome.webRequest.WebResponseHeadersDetails;
+      } as unknown as chrome.webRequest.OnHeadersReceivedDetails;
 
       detector['onHeadersReceived'](details);
 
@@ -152,7 +152,7 @@ describe('HeaderDetector', () => {
         url: 'https://example.com/noct',
         type: 'main_frame' as chrome.webRequest.ResourceType,
         responseHeaders: []
-      } as chrome.webRequest.WebResponseHeadersDetails;
+      } as unknown as chrome.webRequest.OnHeadersReceivedDetails;
 
       detector['onHeadersReceived'](details);
 
@@ -170,7 +170,7 @@ describe('HeaderDetector', () => {
         responseHeaders: [
           { name: 'Content-Type', value: 'text/html' }
         ] as chrome.webRequest.HttpHeader[]
-      } as chrome.webRequest.WebResponseHeadersDetails;
+      } as unknown as chrome.webRequest.OnHeadersReceivedDetails;
 
       expect(() => detector['onHeadersReceived'](details)).not.toThrow();
 
@@ -249,7 +249,7 @@ describe('HeaderDetector', () => {
 
       await detector['cachePrivacyInfo']('https://err.com', {
         isPrivate: true,
-        reason: 'auth',
+        reason: 'auth' as 'authorization',
         timestamp: Date.now()
       }, 1);
 
