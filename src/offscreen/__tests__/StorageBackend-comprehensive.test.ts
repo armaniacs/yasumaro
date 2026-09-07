@@ -6,10 +6,11 @@
 
 import { describe, it, expect } from 'vitest';
 import { NoopBackend } from '../StorageBackend.js';
+import type { StorageBackend } from '../StorageBackend.js';
 import type { BrowsingLogRecord, StorageQuery } from '../../utils/sqlite-types.js';
 
 describe('NoopBackend', () => {
-  let backend: NoopBackend;
+  let backend: StorageBackend;
 
   const NOT_INITIALIZED = 'Database not initialized';
 

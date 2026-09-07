@@ -24,7 +24,7 @@ const g = globalThis as Record<string, unknown>;
 if (!(g.chrome as Record<string, unknown>).runtime) {
   (g.chrome as Record<string, unknown>).runtime = {};
 }
-(g.chrome as Record<string, Record<string, unknown>>).runtime.id = EXTENSION_ID;
+((g.chrome as Record<string, Record<string, unknown>>).runtime as Record<string, unknown>).id = EXTENSION_ID;
 
 const noop = () => {};
 

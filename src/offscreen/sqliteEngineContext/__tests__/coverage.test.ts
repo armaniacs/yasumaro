@@ -238,7 +238,7 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
           setTimeout(() => {
             // initialized: false 相当 — Worker は作られるが opfsOk は false
             // opfsWorker 自体は state に残るが、initOpfsWorker は false を返す
-            (this as unknown as MockWorker).onmessage?.({ data: { id: msg.id, success: true, result: { initialized: false } } } as MessageEvent);
+            (this as unknown as { onmessage?: (e: MessageEvent) => void }).onmessage?.({ data: { id: msg.id, success: true, result: { initialized: false } } } as MessageEvent);
           }, 0);
         }
       });

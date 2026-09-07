@@ -107,8 +107,8 @@ describe('audit_log', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.rows).toHaveLength(2);
-      expect(result.rows[0].url).toBe('https://example.com/b');
-      expect(result.rows[1].url).toBe('https://example.com/a');
+      expect(result.rows[0]!.url).toBe('https://example.com/b');
+      expect(result.rows[1]!.url).toBe('https://example.com/a');
     }
   });
 
@@ -124,7 +124,7 @@ describe('audit_log', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.rows).toHaveLength(1);
-      expect(result.rows[0].url).toBe('https://example.com/b');
+      expect(result.rows[0]!.url).toBe('https://example.com/b');
     }
   });
 });

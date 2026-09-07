@@ -47,7 +47,7 @@ function createFakeOpfsFileSystem() {
       return {
         async getFile() {
           const bytes = files.get(name)!;
-          return new Blob([bytes]) as unknown as File;
+          return new Blob([bytes as unknown as BlobPart]) as unknown as File;
         },
         async createWritable() {
           return {

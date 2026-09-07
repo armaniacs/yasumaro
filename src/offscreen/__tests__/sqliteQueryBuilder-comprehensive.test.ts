@@ -108,7 +108,7 @@ describe('buildWhereClause', () => {
       domain: undefined,
       starred: null as unknown as boolean,
       dateFrom: undefined,
-    });
+    } as unknown as Parameters<typeof buildWhereClause>[0]);
     // Only is_deleted = 0
     expect(params).toEqual([]);
   });
@@ -123,7 +123,7 @@ describe('buildOrderByClause', () => {
   });
 
   it('uses provided orderBy column', () => {
-    const { orderClause } = buildOrderByClause({ orderBy: 'url' });
+    const { orderClause } = buildOrderByClause({ orderBy: 'url' } as unknown as Parameters<typeof buildOrderByClause>[0]);
     expect(orderClause).toBe('ORDER BY url DESC');
   });
 

@@ -36,7 +36,7 @@ vi.stubGlobal('chrome', {
 } as never);
 
 describe('opfsWorker transaction integrity', () => {
-  let handleRequest: (req: { id: number; type: string; payload: unknown }) => Promise<{ id: number; success: boolean; result?: unknown; error?: string }>;
+  let handleRequest: typeof import('../opfsWorker.js')['handleRequest'];
 
   function createMockEngine() {
     const execCalls: string[] = [];

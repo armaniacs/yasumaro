@@ -76,7 +76,8 @@ describe('backendResolver — coverage 90% (PBI 10)', () => {
 
   // ── detectOpfsCapabilitiesForResolver: detectLiveVfsStrategy 委譲 ───────
   describe('detectOpfsCapabilitiesForResolver — detectLiveVfsStrategy mock', () => {
-    const capsTable: Array<{ caps: { opfsDirectory: boolean; syncAccessHandle: boolean; worker: boolean }; expected: typeof caps }> = [
+    type Caps = { opfsDirectory: boolean; syncAccessHandle: boolean; worker: boolean };
+    const capsTable: Array<{ caps: Caps; expected: Caps }> = [
       { caps: { opfsDirectory: true, syncAccessHandle: true, worker: true }, expected: { opfsDirectory: true, syncAccessHandle: true, worker: true } },
       { caps: { opfsDirectory: false, syncAccessHandle: false, worker: false }, expected: { opfsDirectory: false, syncAccessHandle: false, worker: false } },
       { caps: { opfsDirectory: true, syncAccessHandle: false, worker: true }, expected: { opfsDirectory: true, syncAccessHandle: false, worker: true } },
@@ -145,7 +146,7 @@ describe('backendResolver — coverage 90% (PBI 10)', () => {
       const backend = await createBackend(ctx, 'none');
       expect((await backend.healthCheck()).success).toBe(false);
       // NoopBackend の healthCheck は success:false,  getStatus も false
-      const status = await backend.getStatus();
+      const status = await backend.getStatus() as { success: boolean };
       expect(status.success).toBe(false);
     });
 
