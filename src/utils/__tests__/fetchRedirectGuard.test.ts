@@ -55,7 +55,7 @@ describe('fetchWithRedirectGuard', () => {
     expect(res.status).toBe(200);
     expect(await res.text()).toBe('ok');
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][1].redirect).toBe('manual');
+    expect(fetchMock.mock.calls[0]![1].redirect).toBe('manual');
   });
 
   it('follows a same-origin http->https upgrade redirect after re-validation', async () => {
@@ -68,7 +68,7 @@ describe('fetchWithRedirectGuard', () => {
     const res = await fetchWithRedirectGuard('http://example.com/list.txt', { method: 'GET' });
     expect(await res.text()).toBe('upgraded');
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[1][0]).toBe('https://example.com/list.txt');
+    expect(fetchMock.mock.calls[1]![0]).toBe('https://example.com/list.txt');
   });
 
   it('follows a redirect that changes port on a public host', async () => {
@@ -89,7 +89,7 @@ describe('fetchWithRedirectGuard', () => {
 
     const res = await fetchWithRedirectGuard('https://example.com/a/b.txt', { method: 'GET' });
     expect(await res.text()).toBe('relative-ok');
-    expect(fetchMock.mock.calls[1][0]).toBe('https://example.com/mirror/list.txt');
+    expect(fetchMock.mock.calls[1]![0]).toBe('https://example.com/mirror/list.txt');
   });
 
   it('rejects a redirect to 127.0.0.1', async () => {
