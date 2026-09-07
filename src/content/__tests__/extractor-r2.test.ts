@@ -69,8 +69,8 @@ import {
   shouldRecordVisit,
   extractPageContent,
   init,
-  showPrivacyConfirmDialog,
 } from '../extractor.js';
+import { showPrivacyConfirmDialog } from '../privacyDialog.js';
 
 describe('shouldRecordVisit — threshold edge cases', () => {
   it('returns false for negative values', () => {

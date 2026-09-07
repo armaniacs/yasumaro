@@ -4,24 +4,27 @@
  * The 77-line table-driven loadSettings mapping, the ScrollMonitor pure update,
  * and the VisitReporter VALID_VISIT orchestration have been unified behind
  * ContentKernel with injected StoragePort / DomainPolicyPort / Clock / Scheduler.
- * This file preserves the public exports for backward compat and wires the
- * default chrome-backed ports for the real extension runtime.
+ * This file owns the module singletons (pageState + kernel) for backward compat
+ * and wires the default chrome-backed ports for the real extension runtime.
+ * Listener registration + init() are driven by entrypoints/content-extractor.ts.
  */
 
 import { createContentMessageSender } from './contentMessageSender.js';
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
 import { PageState, type CleansingConfig } from './pageState.js';
-import { VisitGate } from './visitGate.js';
+import type { VisitGate } from './visitGate.js';
+import type { Clock } from './domainPolicyPort.js';
 import { ChromeStoragePort } from '../utils/storage/storagePort.js';
 import { ChromeDomainPolicyPort } from './domainPolicyPort.js';
 import { ContentKernel, IdleScheduler } from './contentKernel.js';
-import { buildVisitStats } from './visitReporter.js';
+import { handleGetContentMessage, type GetContentHandlerDeps } from './getContentHandler.js';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- graphify edge: keep type link between content script and visitGate
 import type { VisitState, VisitGateThresholds } from './visitGate.js';
 
 // Type-only import to establish graphify edge between content script and
 // the service worker's message type definitions (PBI-02-3).
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { StorageKey } from '../utils/storage/types.js';
 
 interface OWTestState {
@@ -33,10 +36,6 @@ interface OWTestState {
     duration: number;
 }
 
-interface ContentMessage {
-    type: string;
-}
-
 declare global {
     interface Window {
         __OW_TEST_STATE?: OWTestState;
@@ -45,14 +44,6 @@ declare global {
 
 // 【状態管理】: Content Script単位の可変状態をPageStateインスタンスに集約
 const pageState = new PageState();
-
-/**
- * PBI-34: 後方互換用。テスト等でモジュールレベルのPageStateインスタンスに
- * アクセスする必要がある場合に使用。本番コードでは原則pageStateを直接参照する。
- */
-export function getPageStateForTesting(): Readonly<PageState> {
-    return pageState;
-}
 
 // モジュールレベルでリトライ付き送信者を作成
 const messageSender = createContentMessageSender(2);
@@ -99,10 +90,13 @@ export function shouldRecordVisit(
     return kernel.shouldRecordVisit(duration, scrollPercent, minDuration, minScroll);
 }
 
-/** Factory for VisitGate bound to current pageState thresholds. Allows clock injection for tests. */
-export function createVisitGate(clock: () => number = () => Date.now()): VisitGate {
-    // Keep original semantics: new gate with current thresholds + injected clock
-    return new VisitGate(pageState.toVisitGateThresholds(), clock);
+/**
+ * Factory for VisitGate bound to current pageState thresholds. Allows clock
+ * injection for tests. Single implementation lives in ContentKernel (PBI-14);
+ * this stays as a 1-line delegation so the construction site is unique.
+ */
+export function createVisitGate(clock?: Clock): VisitGate {
+    return kernel.createVisitGate(clock);
 }
 
 /**
@@ -110,13 +104,6 @@ export function createVisitGate(clock: () => number = () => Date.now()): VisitGa
  */
 export function checkVisitConditions(): void {
     return kernel.checkVisitConditions();
-}
-
-/**
- * Throttle function using requestAnimationFrame
- */
-export function throttle<T extends (...args: unknown[]) => void>(fn: T): T {
-    return kernel.throttle(fn);
 }
 
 /**
@@ -132,9 +119,6 @@ export function updateMaxScroll(): void {
 export async function reportValidVisit(): Promise<void> {
     return kernel.reportValidVisit();
 }
-
-// showPrivacyConfirmDialog is in ./privacyDialog.ts — re-export for backward compat
-export { showPrivacyConfirmDialog } from './privacyDialog.js';
 
 /**
  * Schedule the next periodic check using injected Scheduler (IdleScheduler → requestIdleCallback fallback)
@@ -164,35 +148,35 @@ export async function init(): Promise<void> {
     return kernel.init();
 }
 
-// Guard allows this module to be imported in test environments where
-// globalThis.chrome is undefined or chrome.runtime is not available.
-if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage) {
-    // 【ポップアップからのメッセージハンドラ】: 手動コンテンツ取得要求に応答
-    chrome.runtime.onMessage.addListener((message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => {
-        if (typeof message !== 'object' || message === null || !('type' in message)) return;
-        const msg = message as ContentMessage;
-        if (msg.type !== 'GET_CONTENT') return;
-        if (sender.id !== chrome.runtime.id) return;
-        const extractResult = extractPageContent();
-        applyExtractResultToPageState(extractResult);
-        const content = extractResult.content;
-        // Field selection shared with the VALID_VISIT payload (VisitReporter):
-        // one builder, no per-path drift.
-        const stats = buildVisitStats(pageState);
-        sendResponse({
-            content,
-            cleansedReason: pageState.lastCleansedReason,
-            cleanseStats: pageState.lastCleanseStats,
-            byteStats: stats.byteStats,
-            aiSummaryCleansedStats: stats.aiStats,
-            fallbackTriggered: stats.fallbackTriggered
-        });
-    });
-
-    // 【初期化実行】
-    void init();
+/**
+ * Deps bundle for the GET_CONTENT handler, bound to this module's singleton
+ * kernel. runtimeId is read live so hosted contexts can be distinguished.
+ */
+export function buildGetContentDeps(): GetContentHandlerDeps {
+    return {
+        extractPageContent: (config) => kernel.extractPageContent(config),
+        applyExtractResultToPageState: (result) => kernel.applyExtractResultToPageState(result),
+        pageState,
+        runtimeId: typeof globalThis.chrome !== 'undefined' ? chrome.runtime?.id : undefined,
+    };
 }
 
-// Re-export kernel for tests that want to assert on injected seams
-export { kernel as __kernelForTesting };
-export type { StorageKey };
+/**
+ * Register the GET_CONTENT listener. No-op where chrome.runtime.onMessage is
+ * unavailable (e.g. unit tests importing this module). Driven by
+ * entrypoints/content-extractor.ts in production.
+ */
+export function registerGetContentListener(): void {
+    if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage) {
+        // 【ポップアップからのメッセージハンドラ】: 手動コンテンツ取得要求に応答
+        const deps = buildGetContentDeps();
+        chrome.runtime.onMessage.addListener((message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => {
+            handleGetContentMessage(message, sender, sendResponse, deps);
+        });
+    }
+}
+
+// Backing singleton — the facade above delegates to it. Tests reach module
+// state via __tests__/helpers/contentTestkit.ts; production driving
+// (registerGetContentListener + init) is owned by entrypoints/content-extractor.ts.
+export { kernel };

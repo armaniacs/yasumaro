@@ -77,12 +77,10 @@ vi.mock('../../utils/errorUtils.js', async (importOriginal) => {
 // must import after mocks
 import {
   extractPageContent,
-  getPageStateForTesting,
   init,
   loadSettings,
   checkVisitConditions,
   updateMaxScroll,
-  throttle,
   scheduleNextCheck,
   startPeriodicCheck,
   stopPeriodicCheck,
@@ -91,6 +89,8 @@ import {
   shouldRecordVisit,
   applyExtractResultToPageState,
 } from '../extractor.js';
+import { getPageStateForTesting } from './helpers/contentTestkit.js';
+import { throttle } from '../throttle.js';
 
 function setStorageSettings(settings: Record<string, unknown>) {
   (chrome.storage.local.get as unknown as ReturnType<typeof vi.fn>).mockImplementation(
