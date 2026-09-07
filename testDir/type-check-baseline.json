@@ -1,5 +1,5 @@
 {
-  "total": 158,
+  "total": 156,
   "files": {
     "src/background/__tests__/SessionAlarmService.test.ts": 2,
     "src/background/__tests__/alarmRegistry.test.ts": 3,
@@ -30,7 +30,6 @@
     "src/background/pipeline/steps/__tests__/checkDuplicateStep.test.ts": 2,
     "src/background/pipeline/steps/__tests__/saveLocalMarkdownStep.test.ts": 9,
     "src/background/pipeline/steps/__tests__/saveToObsidianStep.test.ts": 2,
-    "src/utils/__tests__/readBodyCapped.test.ts": 2,
     "src/utils/__tests__/storage-buildAllowedUrls.test.ts": 4,
     "src/utils/__tests__/storage-extra.test.ts": 5,
     "src/utils/__tests__/storage-keys.test.ts": 2,
