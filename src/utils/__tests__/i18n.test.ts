@@ -14,8 +14,8 @@ describe('i18n', () => {
     vi.clearAllMocks();
     global.chrome = {
       i18n: {
-        getMessage: vi.fn((key) => {
-          const messages = {
+        getMessage: vi.fn((key: string) => {
+          const messages: Record<string, string> = {
             'testKey': 'Test Message',
             'testWithArgs': 'Hello {name}',
             'extensionName': 'Yasumaro'
@@ -25,9 +25,9 @@ describe('i18n', () => {
         getUILanguage: vi.fn(() => 'ja-JP')
       },
       runtime: {
-        lastError: null
+        lastError: undefined
       }
-    };
+    } as unknown as typeof chrome;
 
     // DOMの初期化
     document.body.innerHTML = '';
@@ -39,7 +39,7 @@ describe('i18n', () => {
     });
 
     it('getUserLocaleがlocaleUtilsから取り込まれていること', () => {
-      global.chrome.i18n.getUILanguage.mockReturnValue('ja-JP');
+      vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('ja-JP');
       const result = getUserLocale();
       expect(result).toBe('ja-JP');
     });
@@ -62,13 +62,13 @@ describe('i18n', () => {
     });
 
     it('置換パラメータなしの呼び出しで正しく動作する', () => {
-      global.chrome.i18n.getMessage.mockReturnValue('Test Message');
+      vi.mocked(global.chrome.i18n.getMessage).mockReturnValue('Test Message');
       const result = getMessage('testKey');
       expect(result).toBe('Test Message');
     });
 
     it('配列形式の置換パラメータはそのまま返す', () => {
-      global.chrome.i18n.getMessage.mockReturnValue('Test Message');
+      vi.mocked(global.chrome.i18n.getMessage).mockReturnValue('Test Message');
       const result = getMessage('testKey', ['arg1', 'arg2']);
       expect(result).toBe('Test Message');
     });
@@ -148,9 +148,9 @@ describe('i18n', () => {
     });
 
     it('countを含むdata-i18n-argsで英語ロケール時に複数形キーが解決される', () => {
-      global.chrome.i18n.getUILanguage.mockReturnValue('en-US');
-      global.chrome.i18n.getMessage.mockImplementation((key) => {
-        const messages = {
+      vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('en-US');
+      vi.mocked(global.chrome.i18n.getMessage).mockImplementation((key: string) => {
+        const messages: Record<string, string> = {
           'itemCount_one': '1 item',
           'itemCount_other': '{count} items',
         };
@@ -174,9 +174,9 @@ describe('i18n', () => {
     });
 
     it('日本語ロケールではcountがあっても複数形サフィックスなしのキーが使われる', () => {
-      global.chrome.i18n.getUILanguage.mockReturnValue('ja-JP');
-      global.chrome.i18n.getMessage.mockImplementation((key) => {
-        const messages = { 'itemCount': '{count}件' };
+      vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('ja-JP');
+      vi.mocked(global.chrome.i18n.getMessage).mockImplementation((key: string) => {
+        const messages: Record<string, string> = { 'itemCount': '{count}件' };
         return messages[key] || '';
       });
 
@@ -212,7 +212,7 @@ describe('i18n', () => {
     });
 
     it('select内のoption[data-i18n-opt]を翻訳する', () => {
-      global.chrome.i18n.getMessage.mockImplementation((key: string) => {
+      vi.mocked(global.chrome.i18n.getMessage).mockImplementation((key: string) => {
         if (key === 'optionLabel') return 'Translated Option';
         return '';
       });
@@ -229,7 +229,7 @@ describe('i18n', () => {
     });
 
     it('[data-i18n-label]ボタンのtextContentを翻訳する', () => {
-      global.chrome.i18n.getMessage.mockImplementation((key: string) => {
+      vi.mocked(global.chrome.i18n.getMessage).mockImplementation((key: string) => {
         if (key === 'btnLabel') return 'Click Me';
         return '';
       });
@@ -244,7 +244,7 @@ describe('i18n', () => {
     });
 
     it('.help-text[data-i18n]を翻訳する', () => {
-      global.chrome.i18n.getMessage.mockImplementation((key: string) => {
+      vi.mocked(global.chrome.i18n.getMessage).mockImplementation((key: string) => {
         if (key === 'helpMsg') return 'Help text here';
         return '';
       });
@@ -303,7 +303,7 @@ describe('i18n', () => {
     });
 
     it('日本語ロケールでlangとdirを設定する', () => {
-      global.chrome.i18n.getUILanguage.mockReturnValue('ja-JP');
+      vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('ja-JP');
       setHtmlLangAndDir();
 
       expect(document.documentElement.lang).toBe('ja-JP');
@@ -311,7 +311,7 @@ describe('i18n', () => {
     });
 
     it('アラビア語ロケールでlangとdirを設定する', () => {
-      global.chrome.i18n.getUILanguage.mockReturnValue('ar-EG');
+      vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('ar-EG');
       setHtmlLangAndDir();
 
       expect(document.documentElement.lang).toBe('ar-EG');
@@ -319,7 +319,7 @@ describe('i18n', () => {
     });
 
     it('英語ロケールでlangとdirを設定する', () => {
-      global.chrome.i18n.getUILanguage.mockReturnValue('en-US');
+      vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('en-US');
       setHtmlLangAndDir();
 
       expect(document.documentElement.lang).toBe('en-US');
@@ -327,7 +327,7 @@ describe('i18n', () => {
     });
 
     it('RTL言語でdirがrtlになる', () => {
-      global.chrome.i18n.getUILanguage.mockReturnValue('he');
+      vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('he');
       setHtmlLangAndDir();
 
       expect(document.documentElement.lang).toBe('he');
@@ -336,7 +336,7 @@ describe('i18n', () => {
 
     it('フォールバックの英語ロケールで正しく設定する', () => {
       // Chrome APIを削除してフォールバックをテスト
-      delete global.chrome;
+      delete (global as { chrome?: typeof chrome }).chrome;
       setHtmlLangAndDir();
 
       expect(document.documentElement.lang).toBe('en-US');
@@ -346,7 +346,7 @@ describe('i18n', () => {
 
   describe('縮合テスト', () => {
     it('getUserLocaleとgetMessageを kombinatして使用する', () => {
-      global.chrome.i18n.getUILanguage.mockReturnValue('ja-JP');
+      vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('ja-JP');
       const locale = getUserLocale();
       expect(locale).toBe('ja-JP');
 
