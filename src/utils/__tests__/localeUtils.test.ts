@@ -184,7 +184,7 @@ describe('localeUtils', () => {
 
     it('null入力で現在日時を使用する', () => {
       mockGetUILanguage.mockReturnValue('en-US');
-      const result = formatDate(null);
+      const result = formatDate(null as unknown as Date);
       expect(typeof result).toBe('string');
     });
 
@@ -233,7 +233,7 @@ describe('localeUtils', () => {
 
     it('null入力で現在日時を使用する', () => {
       mockGetUILanguage.mockReturnValue('ja-JP');
-      const result = formatDateTime(null);
+      const result = formatDateTime(null as unknown as Date);
       expect(typeof result).toBe('string');
     });
 
