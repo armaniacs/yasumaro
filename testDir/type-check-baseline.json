@@ -1,5 +1,5 @@
 {
-  "total": 136,
+  "total": 126,
   "files": {
     "src/background/__tests__/SessionAlarmService.test.ts": 2,
     "src/background/__tests__/alarmRegistry.test.ts": 3,
@@ -30,9 +30,6 @@
     "src/background/pipeline/steps/__tests__/checkDuplicateStep.test.ts": 2,
     "src/background/pipeline/steps/__tests__/saveLocalMarkdownStep.test.ts": 9,
     "src/background/pipeline/steps/__tests__/saveToObsidianStep.test.ts": 2,
-    "src/utils/aiSummaryCleaner/__tests__/querySelectorAllDeep.test.ts": 3,
-    "src/utils/contentExtractor/__tests__/dualPayload.test.ts": 3,
-    "src/utils/crypto/__tests__/crypto.test.ts": 4,
     "src/utils/storage/__tests__/settingsStore-plaintext-api-key.test.ts": 3
   }
 }
