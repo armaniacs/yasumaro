@@ -34,13 +34,13 @@ clipboard 経由の entry 保存体験を保守する開発者として、entry 
   Then ヒットは `src/utils/copyMarkdownButton.ts` のみで、`sqliteHistoryPanel.ts` と `recordSession.ts` の直呼びは消えている
 
 ## 受け入れ基準
-- [ ] `src/utils/copyMarkdownButton.ts` に `createCopyMarkdownButton` factory が新設され、markdown 変換 + clipboard + 成功/失敗表示 + 復帰タイマー + aria 更新を所有する
-- [ ] `src/dashboard/panels/asyncData/sqliteHistoryPanel.ts:76-106`（`createCopyButton`）が factory 経由に置き換わり、`copyTextToClipboard` / `formatEntryToMarkdown` の直 import が消える
-- [ ] `src/popup/recordCurrentPage/recordSession.ts:290-329`（`showCopyMarkdownButton` + `buildEntryFromSaveResult` のボタン部分）が factory 経由に置き換わる
-- [ ] ラベル差（dashboard `📋` / popup `Copy Markdown`）と aria キー差が引数（`labelKeys`）で吸収されている
-- [ ] dashboard・popup の既存テスト（`sqliteHistoryPanel` 系、`recordSession` 系）が無修正で green（振る舞い不変）
-- [ ] factory の新規単体テストが成功/失敗/タイマー復帰の 3 ケース以上を覆盖
-- [ ] `npm run type-check` / `npm run lint` / dashboard + popup 関連テストが green
+- [x] `src/utils/copyMarkdownButton.ts` に `createCopyMarkdownButton` factory が新設され、markdown 変換 + clipboard + 成功/失敗表示 + 復帰タイマー + aria 更新を所有する
+- [x] `src/dashboard/panels/asyncData/sqliteHistoryPanel.ts:76-106`（`createCopyButton`）が factory 経由に置き換わり、`copyTextToClipboard` / `formatEntryToMarkdown` の直 import が消える
+- [x] `src/popup/recordCurrentPage/recordSession.ts:290-329`（`showCopyMarkdownButton` + `buildEntryFromSaveResult` のボタン部分）が factory 経由に置き換わる
+- [x] ラベル差（dashboard `📋` / popup `Copy Markdown`）と aria キー差が引数（`labelKeys`）で吸収されている
+- [x] dashboard・popup の既存テスト（`sqliteHistoryPanel` 系、`recordSession` 系）が無修正で green（振る舞い不変）
+- [x] factory の新規単体テストが成功/失敗/タイマー復帰の 3 ケース以上を覆盖
+- [x] `npm run type-check` / `npm run lint` / dashboard + popup 関連テストが green
 
 ## テスト戦略
 - 単体: factory の新規テスト（`src/utils/__tests__/copyMarkdownButton.test.ts`）— 成功・失敗・タイマー復帰・aria 更新
@@ -61,8 +61,14 @@ clipboard 経由の entry 保存体験を保守する開発者として、entry 
 2. 復帰タイムアウト 2000ms を factory 引数にするか定数にするか → 定数（`COPY_FEEDBACK_RESET_MS`）として factory 内に置き、両呼び出し側の差がないことを確認してから固定
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] `copyTextToClipboard` の本番直呼びが factory 1 箇所に集約されている（grep で確認）
-- [ ] 既存テスト無修正で green（import 変更のみ）
-- [ ] コードレビュー完了
-- [ ] `npm run type-check` / `npm run lint` / dashboard+popup テスト green
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] `copyTextToClipboard` の本番直呼びが factory 1 箇所に集約されている（grep で確認）
+- [x] 既存テスト無修正で green（import 変更のみ）
+- [ ] コードレビュー完了（未実施：本タスクのスコープ外、別途レビュー依頼が必要）
+- [x] `npm run type-check` / `npm run lint` / dashboard+popup テスト green
+
+## 実装メモ
+- 未解決事項 1（文案）: 現行文言を維持。新規 i18n キーなし。dashboard は `📋`/`✓`/`✗` + aria 3 種、popup は `Copy Markdown`/`Copied!`/`Copy failed`（aria なし、現行どおり）を解決済み文字列で注入
+- 未解決事項 2（タイムアウト）: `COPY_FEEDBACK_RESET_MS = 2000` を factory 内定数化。両呼び出し側に差がなかったため固定値 + `timeoutMs?` 上書き可
+- 引数設計: PBI 案の `labelKeys` ではなく解決済み文字列 `labels` + `className` で差分吸収。factory を chrome 依存なし（Layer 1）に保つため i18n 解決は呼び出し側に残す
+- 検証: type-check パス、lint エラー 0（変更ファイルの警告なし）、`src/utils` 226 ファイル 4332 テスト・`src/popup` + `src/dashboard/panels/asyncData` 57 ファイル 1087 テスト green（既存テスト無修正）
