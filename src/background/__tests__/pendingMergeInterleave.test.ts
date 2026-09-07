@@ -21,7 +21,7 @@ function patch(url: string, overrides: Partial<PendingMetadataPatchWrite> = {}):
     type: 'metadataPatch',
     key: 'savedUrlsWithTimestamps',
     url,
-    patch: { title: `t-${url}` },
+    patch: { title: `t-${url}` } as PendingMetadataPatchWrite['patch'],
     timestamp: now,
     mergeTags: true,
     createdAt: now,
@@ -42,7 +42,7 @@ describe('pending merge under flush (in-lock coalesce)', () => {
     // Seed an entry that already failed twice.
     const oldTimestamp = Date.now() - 1000;
     await enqueuePendingWrite(
-      patch('https://x.example/p', { retryCount: 2, patch: { title: 'old' }, timestamp: oldTimestamp }),
+      patch('https://x.example/p', { retryCount: 2, patch: { title: 'old' } as PendingMetadataPatchWrite['patch'], timestamp: oldTimestamp }),
     );
 
     let releaseHandler!: (ok: boolean) => void;
@@ -57,7 +57,7 @@ describe('pending merge under flush (in-lock coalesce)', () => {
     const newTimestamp = Date.now();
     const enqueueP = enqueuePendingWrite(
       patch('https://x.example/p', {
-        patch: { title: 'new' },
+        patch: { title: 'new' } as PendingMetadataPatchWrite['patch'],
         timestamp: newTimestamp,
         retryCount: 0,
       }),

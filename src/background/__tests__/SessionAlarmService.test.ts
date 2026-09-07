@@ -49,11 +49,11 @@ class FakeClock implements Clock {
 }
 
 class FakeAlarmPort implements AlarmPort {
-  created: { name: string; alarmInfo: { periodInMinutes?: number } }[] = [];
+  created: { name: string; alarmInfo: chrome.alarms.AlarmCreateInfo }[] = [];
   cleared: string[] = [];
   private listeners: ((alarm: { name: string }) => void)[] = [];
 
-  async create(name: string, alarmInfo: { periodInMinutes?: number }): Promise<void> {
+  async create(name: string, alarmInfo: chrome.alarms.AlarmCreateInfo): Promise<void> {
     this.created.push({ name, alarmInfo });
   }
 
@@ -91,7 +91,7 @@ describe('SessionAlarmService', () => {
     storage = createInMemoryStoragePort();
     alarms = new FakeAlarmPort();
     sendMessage = vi.fn().mockResolvedValue(undefined);
-    service = new SessionAlarmService(alarms, clock, storage, sendMessage);
+    service = new SessionAlarmService(alarms, clock, storage, sendMessage as unknown as ConstructorParameters<typeof SessionAlarmService>[3]);
   });
 
   test('startTimeoutChecker はアラームを作成しリスナーを1つだけ登録する', async () => {

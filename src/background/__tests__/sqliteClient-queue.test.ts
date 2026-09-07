@@ -72,10 +72,10 @@ describe('ChromeOffscreenTransport — request queue (M7)', () => {
     await vi.waitFor(() => expect(pendingCallbacks.length).toBe(1));
 
     // Settle the first — this should let the second proceed
-    pendingCallbacks[0]();
+    pendingCallbacks[0]!();
     await vi.waitFor(() => expect(pendingCallbacks.length).toBe(2));
 
-    pendingCallbacks[1]();
+    pendingCallbacks[1]!();
     await p1;
     await p2;
 
@@ -90,9 +90,9 @@ describe('ChromeOffscreenTransport — noRetry option (PBI 2026-09-06-01)', () =
   beforeEach(() => {
     vi.clearAllMocks();
     sendMessageMock = vi.fn((_msg: unknown, callback: (response: unknown) => void) => {
-      chrome.runtime.lastError = { message: 'offscreen suspended' };
+      (chrome.runtime as { lastError?: { message: string } | undefined }).lastError = { message: 'offscreen suspended' };
       callback(undefined);
-      chrome.runtime.lastError = undefined;
+      (chrome.runtime as { lastError?: { message: string } | undefined }).lastError = undefined;
     });
     (globalThis as any).chrome = {
       offscreen: {

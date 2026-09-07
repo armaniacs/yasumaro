@@ -6,7 +6,8 @@
 
 describe('Service Worker: メッセージ検証強化（タスク1）', () => {
   // メッセージ検証用ヘルパー関数（実装後に実際のコードから移動）
-  function validateMessage(message) {
+  function validateMessage(rawMessage: unknown) {
+    const message = rawMessage as { type?: string; payload?: Record<string, unknown> };
     // 必須フィールドのチェック
     if (!message || typeof message !== 'object') {
       return { valid: false, reason: 'Message must be an object' };
@@ -41,7 +42,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
       'SAVE_RECORD': ['title', 'url', 'content']
     };
 
-    const typeSpecificFields = requiredFields[message.type] || [];
+    const typeSpecificFields = (requiredFields as Record<string, string[]>)[message.type as string] || [];
     for (const field of typeSpecificFields) {
       if (!(field in message.payload)) {
         return { valid: false, reason: `Missing required field: ${field}` };
@@ -51,7 +52,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
     // URLの検証（安全なURLのみ）
     if (message.payload.url) {
       try {
-        const url = new URL(message.payload.url);
+        const url = new URL(message.payload.url as string);
         // http/httpsのみ許可
         if (!url.protocol.startsWith('http')) {
           return { valid: false, reason: 'Only http/https URLs are allowed' };

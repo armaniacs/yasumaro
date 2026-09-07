@@ -47,7 +47,7 @@ describe('Integration: Robustness improvements', () => {
       [StorageKeys.OBSIDIAN_PORT]: '27123'
     });
 
-    const settings = await settingsRepository.getAll();
+    const settings = await settingsRepository.getAll() as Record<string, unknown>;
     expect(settings.junk1).toBeUndefined();
     expect(settings.junk2).toBeUndefined();
     expect(settings.junkInSettings).toBeUndefined();
@@ -77,7 +77,7 @@ describe('Integration: Robustness improvements', () => {
 
     // キューが空であることを確認
     mutex.release();
-    expect(mutex.queue.size).toBe(0);
+    expect((mutex as unknown as { queue: { size: number } }).queue.size).toBe(0);
   });
 
   test('fetchWithRetryが正常に動作', async () => {
