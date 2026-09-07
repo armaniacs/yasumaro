@@ -105,7 +105,7 @@ describe('setSavedUrlsWithTimestamps: savedUrls Set比較ロジック', () => {
 
             const calls = getSavedUrlsSetCalls();
             expect(calls.length).toBeGreaterThanOrEqual(1);
-            const saved = calls[calls.length - 1];
+            const saved = calls[calls.length - 1]!;
             expect(saved).toContain('https://example.com/c');
             expect(saved.length).toBe(3);
         });
@@ -126,7 +126,7 @@ describe('setSavedUrlsWithTimestamps: savedUrls Set比較ロジック', () => {
 
             const calls = getSavedUrlsSetCalls();
             expect(calls.length).toBeGreaterThanOrEqual(1);
-            const saved = calls[calls.length - 1];
+            const saved = calls[calls.length - 1]!;
             expect(saved).not.toContain('https://example.com/c');
             expect(saved.length).toBe(2);
         });
