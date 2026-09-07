@@ -14,7 +14,7 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
     mockGetMsg = vi.fn();
   
     mockGetMsg.mockImplementation((key) => {
-      const messages = {
+      const messages: Record<string, string> = {
         'errorPrefix': 'Error:',
         'connectionError': 'Connection failed',
         'domainBlockedError': 'Domain is blocked',
@@ -25,10 +25,8 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
       return messages[key] || key;
     });
     // chromeオブジェクト全体を上書きせず、i18nのみを更新
-    if (!global.chrome) {
-      global.chrome = {};
-    }
-    global.chrome.i18n = {
+    if (!global.chrome) global.chrome = {} as typeof chrome;
+    (global.chrome as { i18n: unknown }).i18n = {
       getMessage: mockGetMsg
     };
   });
@@ -127,12 +125,12 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
     });
 
     it('nullを安全に処理する', () => {
-      const result = sanitizeErrorMessage(null);
+      const result = sanitizeErrorMessage(null as unknown as string);
       expect(result).toBe('');
     });
 
     it('undefinedを安全に処理する', () => {
-      const result = sanitizeErrorMessage(undefined);
+      const result = sanitizeErrorMessage(undefined as unknown as string);
       expect(result).toBe('');
     });
 
@@ -287,10 +285,10 @@ Normal error message`;
 describe('getUserErrorMessage - パフォーマンス検証', () => {
   beforeEach(() => {
     // chrome.i18n.getMessageのモックを設定
-    if (!global.chrome) global.chrome = {};
-    global.chrome.i18n = {
-      getMessage: vi.fn((key) => {
-        const messages = {
+    if (!global.chrome) global.chrome = {} as typeof chrome;
+    (global.chrome as { i18n: unknown }).i18n = {
+      getMessage: vi.fn((key: string) => {
+        const messages: Record<string, string> = {
           'errorPrefix': 'Error:',
           'connectionError': 'Connection failed',
           'domainBlockedError': 'Domain is blocked',

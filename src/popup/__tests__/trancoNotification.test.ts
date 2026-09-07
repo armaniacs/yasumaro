@@ -284,8 +284,8 @@ describe('initTrancoUpdateNotification', () => {
 
     const actions = document.getElementById('trancoUpdateActions');
     expect(actions?.children.length).toBe(2);
-    expect(actions?.children[0].textContent).toBe('Accept');
-    expect(actions?.children[1].textContent).toBe('Deny');
+    expect(actions?.children[0]?.textContent).toBe('Accept');
+    expect(actions?.children[1]?.textContent).toBe('Deny');
   });
 
   it('should show the banner when granted version differs and denied >30 days ago', async () => {

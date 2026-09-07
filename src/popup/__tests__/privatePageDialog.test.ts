@@ -184,8 +184,8 @@ vi.mock('../autoClose.js', () => ({
 }));
 
 vi.mock('../../utils/i18n.js', () => ({
-  getMessage: vi.fn((key) => {
-    const messages = {
+  getMessage: vi.fn((key: string) => {
+    const messages: Record<string, string> = {
       saveSuccess: 'Saved to Obsidian',
       saveError: 'Save error',
     };
