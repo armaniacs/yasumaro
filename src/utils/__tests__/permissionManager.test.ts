@@ -348,8 +348,8 @@ describe('PermissionManager - P0 - getFrequentDeniedDomains', () => {
     const result = await manager.getFrequentDeniedDomains();
 
     expect(result).toHaveLength(1);
-    expect(result[0].domain).toBe('frequent.com');
-    expect(result[0].count).toBe(5);
+    expect(result[0]!.domain).toBe('frequent.com');
+    expect(result[0]!.count).toBe(5);
   });
 
   it('should respect custom threshold', async () => {
@@ -364,7 +364,7 @@ describe('PermissionManager - P0 - getFrequentDeniedDomains', () => {
     const result = await manager.getFrequentDeniedDomains(5);
 
     expect(result).toHaveLength(1);
-    expect(result[0].domain).toBe('high.com');
+    expect(result[0]!.domain).toBe('high.com');
   });
 
   it('should exclude domains dismissed within 14 days', async () => {
@@ -410,9 +410,9 @@ describe('PermissionManager - P0 - getFrequentDeniedDomains', () => {
 
     const result = await manager.getFrequentDeniedDomains();
 
-    expect(result[0].domain).toBe('high.com');
-    expect(result[1].domain).toBe('low.com');
-    expect(result[2].domain).toBe('medium.com');
+    expect(result[0]!.domain).toBe('high.com');
+    expect(result[1]!.domain).toBe('low.com');
+    expect(result[2]!.domain).toBe('medium.com');
   });
 
   it('should clamp threshold to 1-50 range', async () => {
