@@ -49,7 +49,7 @@ describe('RecordingPipeline', () => {
     vi.clearAllMocks();
     // Chrome notifications APIが存在する場合のみモック
     if (!chrome.notifications) {
-      chrome.notifications = { create: vi.fn() };
+      chrome.notifications = { create: vi.fn() } as unknown as typeof chrome.notifications;
     }
 
     // Problem #7: URLキャッシュを初期化
@@ -252,7 +252,7 @@ describe('RecordingPipeline', () => {
       expect(result).toBe(true);
       expect(mockAiClient.generateSummary).not.toHaveBeenCalled();
       expect(mockObsidian.appendToDailyNote).toHaveBeenCalledTimes(1);
-      const [markdown] = mockObsidian.appendToDailyNote.mock.calls[0];
+      const [markdown] = mockObsidian.appendToDailyNote.mock.calls[0] ?? [];
       expect(markdown).toContain('Retry Page');
       expect(markdown).toContain('Already summarized content');
       expect(markdown).toContain('#news');
@@ -287,7 +287,7 @@ describe('RecordingPipeline', () => {
       let resolveFirstProcess: (() => void) | undefined;
       const firstProcessStarted = new Promise<void>((r) => { resolveFirstProcess = r; });
 
-      privacy.PrivacyPipeline.mockImplementation(function(this: any) {
+      vi.mocked(privacy.PrivacyPipeline).mockImplementation(function(this: any) {
         this.process = vi.fn(async () => {
           callCount++;
           const n = callCount;
@@ -321,7 +321,7 @@ describe('RecordingPipeline', () => {
       let resolveFirstProcess: (() => void) | undefined;
       const firstProcessStarted = new Promise<void>((r) => { resolveFirstProcess = r; });
 
-      privacy.PrivacyPipeline.mockImplementation(function(this: any) {
+      vi.mocked(privacy.PrivacyPipeline).mockImplementation(function(this: any) {
         this.process = vi.fn(async () => {
           callCount++;
           const n = callCount;
@@ -424,7 +424,7 @@ describe('RecordingPipeline', () => {
       // 既存のmock setup
       vi.clearAllMocks();
       if (!chrome.notifications) {
-        chrome.notifications = { create: vi.fn() };
+        chrome.notifications = { create: vi.fn() } as unknown as typeof chrome.notifications;
       }
 
       RecordingCache.resetCacheState();
@@ -531,7 +531,7 @@ describe('RecordingPipeline', () => {
       // 既存のmock setup
       vi.clearAllMocks();
       if (!chrome.notifications) {
-        chrome.notifications = { create: vi.fn() };
+        chrome.notifications = { create: vi.fn() } as unknown as typeof chrome.notifications;
       }
 
       mockGetAll.mockResolvedValue({
@@ -659,7 +659,7 @@ describe('RecordingPipeline', () => {
 
       // Chrome notifications APIが存在する場合のみモック
       if (!chrome.notifications) {
-        chrome.notifications = { create: vi.fn() };
+        chrome.notifications = { create: vi.fn() } as unknown as typeof chrome.notifications;
       }
 
       // Reset cache state
@@ -814,7 +814,7 @@ describe('RecordingPipeline', () => {
       RecordingCache.invalidateUrlCache();
 
       if (!chrome.notifications) {
-        chrome.notifications = { create: vi.fn() };
+        chrome.notifications = { create: vi.fn() } as unknown as typeof chrome.notifications;
       }
 
       RecordingCache.resetCacheState();
@@ -892,7 +892,7 @@ describe('RecordingPipeline', () => {
       RecordingCache.invalidateUrlCache();
 
       if (!chrome.notifications) {
-        chrome.notifications = { create: vi.fn() };
+        chrome.notifications = { create: vi.fn() } as unknown as typeof chrome.notifications;
       }
 
       RecordingCache.resetCacheState();
