@@ -21,8 +21,6 @@ import {
   isBrowsingLogEntry,
   isAuditLogEntry,
   decodeStatusExtras,
-  decodeOpfsSpikeReport,
-  type OpfsSpikeReportView,
 } from '../messaging/sqliteValidators.js';
 
 /**
@@ -186,23 +184,6 @@ export function migrateLogs(): Promise<ServiceResult<{ count: number; read: numb
       inserted: requiredNonNegativeNumber(response.inserted, 'inserted'),
     }),
     'Migration failed',
-  );
-}
-
-export type { OpfsSpikeReportView, OpfsSpikeStepResult } from '../messaging/sqliteValidators.js';
-
-/**
- * Run the OPFS feasibility spike (PBI-10) and return its structured report.
- * Used by the diagnostics panel for manual verification in real Chrome.
- */
-export function runOpfsSpike(): Promise<ServiceResult<OpfsSpikeReportView>> {
-  return callDashboard(
-    { subtype: 'opfs_spike' },
-    (response) => {
-      if (!response.report) throw new Error('OPFS spike returned no report');
-      return decodeOpfsSpikeReport(response.report);
-    },
-    'OPFS spike failed',
   );
 }
 

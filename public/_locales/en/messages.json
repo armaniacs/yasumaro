@@ -1732,9 +1732,6 @@
   "testSqliteBtn": {
     "message": "Test SQLite"
   },
-  "diagOpfsSpikeBtn": {
-    "message": "Run OPFS Spike"
-  },
   "diagMigrateBtn": {
     "message": "Convert history to SQLite"
   },

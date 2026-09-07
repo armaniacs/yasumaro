@@ -41,7 +41,6 @@ export interface ReadOnlyDeps {
    * SqliteClient.getStatus().
    */
   getStatus: () => Promise<Record<string, unknown> | null>;
-  runOpfsSpike: () => Promise<DepsResult<Record<string, unknown>>>;
   queryAuditLog: (options: { limit?: number; offset?: number }) => Promise<DepsResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>>;
   createConfirmToken: (action: string, id?: number, scopeHash?: string) => Promise<string>;
   verifyConfirmToken: (token: string, action: string, id?: number, scopeHash?: string) => Promise<boolean>;
@@ -165,8 +164,7 @@ export function createSqliteClientDeps(
     // Deliberately not a result union: getStatus() reports initialization failure
     // inside its success value so the diagnostics panel can display it.
     getStatus: () => sqliteClient.getStatus(),
-runOpfsSpike: () => sqliteClient.maintain({ type: 'opfsSpike' }) as Promise<DepsResult<Record<string, unknown>>>,
-     purgeOldRecords: (days?: number, max?: number) => sqliteClient.maintain({ type: 'purgeOldRecords', retentionDays: days, maxRecords: max } as { type: 'purgeOldRecords', retentionDays?: number, maxRecords: number }),
+    purgeOldRecords: (days?: number, max?: number) => sqliteClient.maintain({ type: 'purgeOldRecords', retentionDays: days, maxRecords: max } as { type: 'purgeOldRecords', retentionDays?: number, maxRecords: number }),
      purgeContent: (days?: number, max?: number, includeStarred?: boolean) =>
       sqliteClient.maintain({ type: 'purgeContent', retentionDays: days, maxRecords: max, includeStarred } as { type: 'purgeContent', retentionDays?: number, maxRecords?: number, includeStarred: boolean }),
      backupDb: () => sqliteClient.maintain({ type: 'backup' }),

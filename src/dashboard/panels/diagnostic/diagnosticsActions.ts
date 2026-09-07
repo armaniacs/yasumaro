@@ -1,7 +1,7 @@
 /**
  * diagnosticsActions — user-triggered operations for the diagnostics panel.
  *
- * Owns every button click handler: the three connection tests, the OPFS spike,
+ * Owns every button click handler: the three connection tests,
  * the destructive maintenance operations (with confirm dialogs), and the
  * built-in AI model download. Data *collection* lives in DiagnosticsCollector;
  * this module only performs actions and renders their results.
@@ -10,7 +10,6 @@
 import { getMessage } from '../../../utils/i18n.js';
 import { UI_COLORS } from '../../../constants/appConstants.js';
 import {
-  runOpfsSpike,
   migrateLogs,
   backfillMetadata,
   resyncLegacyStorage,
@@ -36,7 +35,6 @@ export interface DiagnosticActionElements {
   testObsidianBtn: HTMLButtonElement | null;
   testAiBtn: HTMLButtonElement | null;
   testSqliteBtn: HTMLButtonElement | null;
-  opfsSpikeBtn: HTMLButtonElement | null;
   migrateBtn: HTMLButtonElement | null;
   backfillBtn: HTMLButtonElement | null;
   resyncBtn: HTMLButtonElement | null;
@@ -44,7 +42,6 @@ export interface DiagnosticActionElements {
   builtInAiDownloadBtn: HTMLButtonElement | null;
   connectionResult: HTMLElement | null;
   sqliteResult: HTMLElement | null;
-  opfsSpikeResult: HTMLElement | null;
   migrateResult: HTMLElement | null;
   backfillResult: HTMLElement | null;
   resyncResult: HTMLElement | null;
@@ -72,9 +69,9 @@ export function createDiagnosticActions(
   hooks: { onBuiltInAiDownloaded: (result: BuiltInAiDiagnosticsResult) => void },
 ): void {
   const {
-    testObsidianBtn, testAiBtn, testSqliteBtn, opfsSpikeBtn,
+    testObsidianBtn, testAiBtn, testSqliteBtn,
     migrateBtn, backfillBtn, resyncBtn, cleanupBtn, builtInAiDownloadBtn,
-    connectionResult, sqliteResult, opfsSpikeResult,
+    connectionResult, sqliteResult,
     migrateResult, backfillResult, resyncResult, cleanupResult,
     builtInAiDownloadResult,
   } = els;
@@ -215,33 +212,6 @@ export function createDiagnosticActions(
       sqliteResult.style.color = errorColor();
     } finally {
       testSqliteBtn.disabled = false;
-    }
-  });
-
-  // OPFS feasibility spike
-  opfsSpikeBtn?.addEventListener('click', async () => {
-    if (!opfsSpikeResult) return;
-    opfsSpikeBtn.disabled = true;
-    opfsSpikeResult.textContent = getMessage('testing') || 'Testing...';
-    opfsSpikeResult.className = 'diag-result';
-
-    try {
-      const result = await runOpfsSpike();
-      if ('data' in result) {
-        const report = result.data;
-        const header = `${report.passed ? '✓' : '✗'} strategy=${report.strategy} (${report.durationMs}ms)`;
-        const lines = report.steps.map(s => `  ${s.ok ? '✓' : '✗'} ${s.name}${s.detail ? ` — ${s.detail}` : ''}`);
-        opfsSpikeResult.textContent = [header, ...lines].join('\n');
-        opfsSpikeResult.style.color = report.passed ? successColor() : errorColor();
-      } else {
-        opfsSpikeResult.textContent = `✗ OPFS spike failed: ${result.error}`;
-        opfsSpikeResult.style.color = errorColor();
-      }
-    } catch {
-      opfsSpikeResult.textContent = getMessage('testError') || 'Spike failed.';
-      opfsSpikeResult.style.color = errorColor();
-    } finally {
-      opfsSpikeBtn.disabled = false;
     }
   });
 

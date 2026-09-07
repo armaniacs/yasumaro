@@ -11,7 +11,6 @@
  */
 
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
-import type { OpfsSpikeReport } from '../../offscreen/opfsSpike.js';
 import type { ArchivePreviewData, ArchiveRestorePreviewData, ArchiveSessionRow, ArchiveSessionStatusData } from '../../messaging/sqliteMessages.js';
 import type { DashboardSqliteSubtype } from '../../messaging/sqliteOperationSecurity.js';
 
@@ -42,7 +41,6 @@ export type DashboardSqliteRequest =
   | { subtype: 'delete'; id: number; confirmToken?: string }
   | { subtype: 'update'; id: number; changes: Record<string, unknown>; confirmToken?: string }
   | { subtype: 'migrate'; confirmToken?: string }
-  | { subtype: 'opfs_spike' }
   | { subtype: 'clear_all'; confirmToken?: string }
   | { subtype: 'get_count' }
   | { subtype: 'status' }
@@ -129,9 +127,8 @@ export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
       S extends 'toggle_star' ? { success: true; is_starred: number } :
       S extends 'delete' ? { success: true } :
       S extends 'update' ? { success: true } :
-      S extends 'migrate' ? { success: true; count: number; read: number; inserted: number } :
-      S extends 'opfs_spike' ? { success: true; report: OpfsSpikeReport } :
-      S extends 'clear_all' ? { success: true } :
+       S extends 'migrate' ? { success: true; count: number; read: number; inserted: number } :
+       S extends 'clear_all' ? { success: true } :
       S extends 'get_count' ? { success: true; count: number } :
       S extends 'status' ? {
         success: true;

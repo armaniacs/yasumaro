@@ -22,7 +22,6 @@ function givenSessionSet() {
 
 import {
   migrateLogs,
-  runOpfsSpike,
   clearAllLogs,
   getSqliteStatus,
   cleanupLegacyStorage,
@@ -81,33 +80,6 @@ describe('dashboardSqliteService — additional exports', () => {
       givenLastError('Connection failed');
       const result = await migrateLogs();
       expect(result).toEqual({ error: expect.stringContaining('Connection failed') });
-    });
-  });
-
-  describe('runOpfsSpike', () => {
-    it('returns report on success', async () => {
-      const report = { strategy: 'idb', steps: [], passed: true, durationMs: 5 };
-      givenResponse({ success: true, report });
-      const result = await runOpfsSpike();
-      expect(result).toEqual({ data: report });
-    });
-
-    it('reports a failure when the response has no report', async () => {
-      givenResponse({ success: true });
-      const result = await runOpfsSpike();
-      expect(result).toEqual({ error: 'OPFS spike returned no report' });
-    });
-
-    it('carries the reason from a failed response', async () => {
-      givenResponse({ success: false, error: 'Worker crashed' });
-      const result = await runOpfsSpike();
-      expect(result).toEqual({ error: 'Worker crashed' });
-    });
-
-    it('carries the reason on rejection', async () => {
-      givenLastError('Timeout');
-      const result = await runOpfsSpike();
-      expect(result).toEqual({ error: 'SQLite request timed out. The database may still be initializing.' });
     });
   });
 

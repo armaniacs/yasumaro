@@ -356,11 +356,10 @@ describe('DashboardGateway — PBI 03 confirm-token fail-closed', () => {
       expect(sendMessageMock).toHaveBeenCalledTimes(1);
     });
 
-    it('Given other exempt ops (get_count, status, opfs_spike, audit_log_query), When calling dashboard, Then they bypass token check', async () => {
+    it('Given other exempt ops (get_count, status, audit_log_query), When calling dashboard, Then they bypass token check', async () => {
       const exemptCases: Array<{ payload: any; response: any; decode: (r: any) => any }> = [
         { payload: { subtype: 'get_count' }, response: { success: true, count: 5 }, decode: (r: any) => r.count },
         { payload: { subtype: 'status' }, response: { success: true, initialized: true, path: '', fallback: false, fts5: true }, decode: (r: any) => r.initialized },
-        { payload: { subtype: 'opfs_spike' }, response: { success: true, report: { strategy: 'x', steps: [], passed: true, durationMs: 1 } }, decode: (r: any) => r.report },
         { payload: { subtype: 'audit_log_query' }, response: { success: true, rows: [], total: 0 }, decode: (r: any) => r.rows },
       ];
 

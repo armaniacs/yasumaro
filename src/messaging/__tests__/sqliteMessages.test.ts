@@ -46,14 +46,13 @@ describe('messaging/sqliteMessages: the union and the array agree', () => {
      * do is pin the array so an entry cannot be dropped unnoticed.
      */
     it('covers every message the SW can send to offscreen', () => {
-        expect(SQLITE_MESSAGE_TYPES).toHaveLength(34);
+        expect(SQLITE_MESSAGE_TYPES).toHaveLength(33);
         expect(new Set(SQLITE_MESSAGE_TYPES).size).toBe(SQLITE_MESSAGE_TYPES.length);
     });
 
     it('lists the messages that have no other caller to notice their absence', () => {
-        // opfs_spike and content purge are reached from a single call site each,
+        // content purge is reached from a single call site,
         // so a missing entry would not show up in any other test.
-        expect(SQLITE_MESSAGE_TYPES).toContain('SQLITE_OPFS_SPIKE');
         expect(SQLITE_MESSAGE_TYPES).toContain('CONTENT_PURGE');
     });
 });

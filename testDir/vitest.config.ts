@@ -50,7 +50,6 @@ export default defineConfig({
         'src/offscreen/IdbVfsBackend.ts',
         'src/offscreen/FallbackStorageAdapter.ts',
         'src/offscreen/opfsMigrationV2Reader.ts',
-        'src/offscreen/opfsSpike.ts',
         // Wiring/bootstrap modules without unit tests
         'src/background/confirmTokenManager.ts',
         'src/background/dashboardSqliteWiring.ts',

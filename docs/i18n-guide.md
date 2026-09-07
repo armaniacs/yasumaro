@@ -265,8 +265,8 @@ Yasumaro uses a multi-language architecture based on Chrome Extension i18n API. 
 
 | Language Code | Locale File | Status |
 |---------------|-------------|--------|
-| `ja` | `public/_locales/ja/messages.json` | ✅ 100% (1324 keys) |
-| `en` | `public/_locales/en/messages.json` | ✅ 100% (1324 keys, fully in sync between languages) |
+| `ja` | `public/_locales/ja/messages.json` | ✅ 100% (1323 keys) |
+| `en` | `public/_locales/en/messages.json` | ✅ 100% (1323 keys, fully in sync between languages) |
 
 ### Architecture
 

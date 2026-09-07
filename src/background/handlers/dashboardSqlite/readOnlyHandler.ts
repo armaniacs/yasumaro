@@ -9,7 +9,7 @@ import { clampLimit } from '../../../offscreen/queryPlan.js';
  * so a new read-only subtype becomes reachable the moment it lands here.
  */
 export const READ_ONLY_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new Set([
-  'create_confirm_token', 'query', 'search', 'get_count', 'status', 'opfs_spike', 'audit_log_query',
+  'create_confirm_token', 'query', 'search', 'get_count', 'status', 'audit_log_query',
 ]);
 
 export function createReadOnlyHandler(deps: ReadOnlyDeps) {
@@ -75,13 +75,6 @@ export function createReadOnlyHandler(deps: ReadOnlyDeps) {
         // to an object, even on failure — see its doc comment), but the
         // type keeps `| null` since deps.getStatus is not a DepsResult.
         return { success: false, error: 'Status check failed' };
-      }
-      case 'opfs_spike': {
-        const result = await deps.runOpfsSpike();
-        if (!result.success) {
-          return toFailure(result);
-        }
-        return { success: true, report: result.data };
       }
       case 'audit_log_query': {
         const result = await deps.queryAuditLog(

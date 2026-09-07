@@ -39,10 +39,6 @@ const auditLogRepoMock = vi.hoisted(() => ({
   queryAuditLog: vi.fn().mockResolvedValue({ success: true, rows: [], total: 0 }),
 }));
 
-const opfsSpikeMock = vi.hoisted(() => ({
-  runOpfsSpikeA: vi.fn().mockResolvedValue({ ok: true, detail: 'spike-report' }),
-}));
-
 vi.mock('../sqliteEngineHost.js', () => ({
   engine: engineMock,
 }));
@@ -73,8 +69,6 @@ vi.mock('../auditLogRepo.js', () => ({
   queryAuditLog: auditLogRepoMock.queryAuditLog,
 }));
 
-vi.mock('../opfsSpike.js', () => opfsSpikeMock);
-
 import { sqliteMessageHandlers } from '../sqliteMessageHandlers.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 
@@ -89,15 +83,15 @@ async function callHandler(type: string, payload?: unknown): Promise<unknown> {
 }
 
 describe('sqliteMessageHandlers — registry completeness', () => {
-  it('Map contains all 34 SqliteMessageTypes', () => {
-    expect(sqliteMessageHandlers.size).toBe(34);
+  it('Map contains all 33 SqliteMessageTypes', () => {
+    expect(sqliteMessageHandlers.size).toBe(33);
     const expected = [
       'SQLITE_HEALTH_CHECK', 'SQLITE_INIT', 'SQLITE_INSERT', 'SQLITE_INSERT_BATCH',
       'SQLITE_QUERY', 'SQLITE_AUDIT_LOG_INSERT', 'SQLITE_AUDIT_LOG_QUERY',
       'SQLITE_SEARCH', 'SQLITE_UPDATE', 'SQLITE_DELETE', 'SQLITE_TOGGLE_STAR',
       'SQLITE_COUNT', 'SQLITE_STATUS', 'SQLITE_CLEAR_ALL', 'SQLITE_EXPORT',
       'SQLITE_BACKUP', 'SQLITE_RESTORE', 'SQLITE_PURGE', 'CONTENT_PURGE',
-      'SQLITE_OPFS_SPIKE', 'SQLITE_ARCHIVE_PREVIEW', 'SQLITE_ARCHIVE_CREATE',
+      'SQLITE_ARCHIVE_PREVIEW', 'SQLITE_ARCHIVE_CREATE',
       'SQLITE_ARCHIVE_CLEANUP', 'SQLITE_ARCHIVE_EXPORT',
       'SQLITE_ARCHIVE_PREPARE_INCOMING', 'SQLITE_ARCHIVE_RESTORE_PREVIEW', 'SQLITE_ARCHIVE_RESTORE',
       'SQLITE_ARCHIVE_DELETE_BY_STAGING',
@@ -170,13 +164,6 @@ describe('sqliteMessageHandlers — simple handlers', () => {
     const res = await callHandler('SQLITE_TOGGLE_STAR', { id: 5 });
     expect(recordsRepoMock.toggleStar).toHaveBeenCalledWith(5);
     expect((res as { success: boolean }).success).toBe(true);
-  });
-
-  it('SQLITE_OPFS_SPIKE returns report', async () => {
-    opfsSpikeMock.runOpfsSpikeA.mockResolvedValue({ spike: 'done' } as never);
-    const res = await callHandler('SQLITE_OPFS_SPIKE') as { success: boolean; report: unknown };
-    expect(res.success).toBe(true);
-    expect(res.report).toEqual({ spike: 'done' });
   });
 });
 
