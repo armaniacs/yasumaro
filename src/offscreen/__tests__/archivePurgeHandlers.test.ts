@@ -43,7 +43,7 @@ type LogFn = (level: 'warn' | 'error' | 'info', message: string, details?: Recor
  * (DELETE rowcount), PRAGMA freelist_count (sequence), COUNT(*) (remaining).
  */
 function makeMainEngine(opts: { deleted?: number; freelist?: number[]; remaining?: number; vacuumError?: Error } = {}) {
-  const execCalls: Array<{ sql: string; params?: SqliteValue[] }> = [];
+  const execCalls: Array<{ sql: string; params?: SqliteValue[] | undefined }> = [];
   let freelistIdx = 0;
   const freelist = opts.freelist ?? [10, 2];
   return {
@@ -59,7 +59,7 @@ function makeMainEngine(opts: { deleted?: number; freelist?: number[]; remaining
         if (sql.includes('freelist_count')) {
           const v = freelist[Math.min(freelistIdx, freelist.length - 1)];
           freelistIdx++;
-          return v;
+          return v ?? 0;
         }
         if (sql.includes('COUNT(*)')) return opts.remaining ?? 0;
         return null;
@@ -324,7 +324,7 @@ describe('handleArchiveDeleteByStaging (PBI 2026-09-06-04)', () => {
     let freelistIdx = 0;
     main.engine.queryValue.mockImplementation(async (sql: string): Promise<SqliteValue> => {
       if (sql.includes('changes()')) return await changesGate;
-      if (sql.includes('freelist_count')) return freelistSeq[Math.min(freelistIdx++, freelistSeq.length - 1)];
+      if (sql.includes('freelist_count')) return freelistSeq[Math.min(freelistIdx++, freelistSeq.length - 1)] ?? 0;
       if (sql.includes('COUNT(*)')) return 3;
       return null;
     });

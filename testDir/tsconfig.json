@@ -8,8 +8,8 @@
   },
   "include": [
     "./jsdom-shim.d.ts",
+    "../src/offscreen/wa-sqlite.d.ts",
     "../src/**/__tests__/**/*",
-    "../src/**/*.d.ts",
     "../src/**/*.test.ts",
     "../src/**/*.spec.ts",
     "./__tests__/**/*.test.ts",

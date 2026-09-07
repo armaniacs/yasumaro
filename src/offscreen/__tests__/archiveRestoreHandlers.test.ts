@@ -124,7 +124,7 @@ function makeArchiveEngine(spec: ArchiveEngineSpec) {
 
 /** Main engine mock: changes() drives restore counting; exec records inserts. */
 function makeMainEngine(opts: { changesByValue?: number[] } = {}) {
-  const inserts: Array<{ sql: string; params?: SqliteValue[] }> = [];
+  const inserts: Array<{ sql: string; params?: SqliteValue[] | undefined }> = [];
   let changesIdx = 0;
   const changesByValue = opts.changesByValue ?? [];
   return {

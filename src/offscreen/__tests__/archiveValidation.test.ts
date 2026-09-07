@@ -11,7 +11,7 @@
  * - migrateArchiveStaging (D-3): missing column completion, extra column ignored
  */
 import { describe, it, expect, vi } from 'vitest';
-import type { SqliteEngine, SqliteRow, SqliteValue } from '../../sqliteEngine.js';
+import type { SqliteEngine, SqliteRow, SqliteValue } from '../sqliteEngine.js';
 import { validateArchiveEngine, migrateArchiveStaging } from '../opfsWorker/archiveValidation.js';
 import { COLUMN_NAMES } from '../schema.js';
 

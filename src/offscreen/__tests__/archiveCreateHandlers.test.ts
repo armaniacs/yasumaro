@@ -90,7 +90,7 @@ const ARCHIVE_TABLES = [
 ];
 
 function makeArchiveEngine(actualCount: number, metaRecordCount = actualCount) {
-  const execCalls: Array<{ sql: string; params?: SqliteValue[] }> = [];
+  const execCalls: Array<{ sql: string; params?: SqliteValue[] | undefined }> = [];
   const columns = [
     { name: 'id', type: 'INTEGER', hidden: 0 },
     ...COLUMN_NAMES.map((name) => ({
