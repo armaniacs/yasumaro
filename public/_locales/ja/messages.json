@@ -1669,9 +1669,6 @@
   "testSqliteBtn": {
     "message": "SQLite テスト"
   },
-  "diagOpfsSpikeBtn": {
-    "message": "OPFS スパイク実行"
-  },
   "diagMigrateBtn": {
     "message": "記録履歴を SQLite へ変換"
   },

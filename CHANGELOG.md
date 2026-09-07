@@ -33,6 +33,12 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [Unreleased]
+
+### Removed
+
+- **OPFS feasibility spike を製品コードから完全撤去**（PBI 2026-09-07-19）: ADR-014 の一次検証用ハーネス（`src/offscreen/opfsSpike.ts` / `runOpfsSpikeA` / `SQLITE_OPFS_SPIKE` / `opfs_spike` / 診断パネルの "Run OPFS Spike" ボタン＋結果欄 / ロケールキー `diagOpfsSpikeBtn`）を、メッセージ経路 13 ファイル・`sqliteOperationSecurity.ts` の 3 リスト・関連テスト・E2E・カバレッジ設定とともに削除。案Aの健全性確認は診断パネルの OPFS 移行状態表示と divergence 警告で代替。製品 Worker（`opfsWorker.ts`）と CSP 設定は無変更
+
 ## [6.7.115] - 2026-09-07
 
 このリリースは、閲覧履歴アーカイブ機能の本番バグ修正2件と、手動テストのE2E自動化を含むリリースです。

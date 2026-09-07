@@ -18,7 +18,6 @@ import type {
   OffscreenStatusData,
   OffscreenPurgeResponse,
   OffscreenContentPurgeResponse,
-  OffscreenOpfsSpikeResponse,
   OffscreenWriteResponse,
   OffscreenHealthResponse,
   OffscreenArchivePreviewResponse,
@@ -47,7 +46,6 @@ import type {
 import type { OffscreenTransport } from '../offscreenTransport.js';
 import { ChromeOffscreenTransport } from '../offscreenTransport.js';
 import type { BrowsingLogRecord, StorageQuery } from '../../utils/sqlite-types.js';
-import type { OpfsSpikeReport } from '../../offscreen/opfsSpike.js';
 
 export type SqliteResult<T> = { success: true; data: T } | { success: false; error: SqliteError };
 export type { SqliteError };
@@ -118,7 +116,6 @@ export class OffscreenGateway {
   async maintain(op: { type: 'backup' }): Promise<SqliteResult<Uint8Array>>;
   async maintain(op: { type: 'restore'; data: Uint8Array } | { type: 'clearAll' }): Promise<SqliteResult<void>>;
   async maintain(op: { type: 'purgeOldRecords'; retentionDays?: number; maxRecords?: number } | { type: 'purgeContent'; retentionDays?: number; maxRecords?: number; includeStarred?: boolean }): Promise<SqliteResult<{ purged: number }>>;
-  async maintain(op: { type: 'opfsSpike' }): Promise<SqliteResult<OpfsSpikeReport>>;
   async maintain(op: { type: 'healthCheck' }): Promise<SqliteResult<boolean>>;
   async maintain(op: { type: 'archivePreview'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean }): Promise<SqliteResult<ArchivePreviewData>>;
   async maintain(op: { type: 'archiveCreate'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }): Promise<SqliteResult<ArchiveCreateData>>;
@@ -148,7 +145,6 @@ export class OffscreenGateway {
       case 'clearAll': return this.callInternal<void, OffscreenWriteResponse>('SQLITE_CLEAR_ALL', {}, () => undefined);
       case 'purgeOldRecords': return this.callInternal<{ purged: number }, OffscreenPurgeResponse>('SQLITE_PURGE', { retentionDays: op.retentionDays, maxRecords: op.maxRecords }, (res) => ({ purged: res.purged }));
       case 'purgeContent': return this.callInternal<{ purged: number }, OffscreenContentPurgeResponse>('CONTENT_PURGE', { retentionDays: op.retentionDays, maxRecords: op.maxRecords, includeStarred: op.includeStarred }, (res) => ({ purged: res.purged }));
-      case 'opfsSpike': return this.callInternal<OpfsSpikeReport, OffscreenOpfsSpikeResponse>('SQLITE_OPFS_SPIKE', {}, (res) => res.report);
       case 'healthCheck': { const result = await this.callInternal<boolean, OffscreenHealthResponse>('SQLITE_HEALTH_CHECK', {}); return result.success ? { success: true, data: true } : result; }
       // Archive ops (PBI 2026-09-06-02): bulk create is noRetry — a timeout
       // does not mean it failed, and a blind retry would run it twice.
@@ -217,7 +213,6 @@ export class SqliteClient implements SqliteRpcClient {
   async maintain(op: { type: 'backup' }): Promise<SqliteRpcResult<Uint8Array>>;
   async maintain(op: { type: 'restore'; data: Uint8Array } | { type: 'clearAll' }): Promise<SqliteRpcResult<void>>;
   async maintain(op: { type: 'purgeOldRecords'; retentionDays?: number; maxRecords?: number } | { type: 'purgeContent'; retentionDays?: number; maxRecords?: number; includeStarred?: boolean }): Promise<SqliteRpcResult<{ purged: number }>>;
-  async maintain(op: { type: 'opfsSpike' }): Promise<SqliteRpcResult<OpfsSpikeReport>>;
   async maintain(op: { type: 'healthCheck' }): Promise<SqliteRpcResult<boolean>>;
   async maintain(op: { type: 'archivePreview'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean }): Promise<SqliteRpcResult<ArchivePreviewData>>;
   async maintain(op: { type: 'archiveCreate'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }): Promise<SqliteRpcResult<ArchiveCreateData>>;

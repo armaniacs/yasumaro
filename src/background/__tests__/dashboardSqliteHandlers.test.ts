@@ -20,7 +20,6 @@ function makeBaseDeps(overrides: Partial<DashboardSqliteHandlerDeps> = {}): Dash
     appendToDailyNote: async () => {},
     restoreDb: async () => ({ success: true, data: undefined }),
     getStatus: async () => null,
-    runOpfsSpike: async () => ({ success: true, data: {} }),
     purgeOldRecords: async () => ({ success: true, data: { purged: 0 } }),
     purgeContent: async () => ({ success: true, data: { purged: 0 } }),
     backupDb: async () => ({ success: true, data: new Uint8Array() }),
@@ -118,28 +117,6 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
       }
     );
     expect(result).toEqual({ success: false, error: expect.stringContaining('token') });
-  });
-
-  it('routes opfs_spike to sqliteClient.maintain opfsSpike and returns the report', async () => {
-    const report = { strategy: 'idb', steps: [], passed: true, durationMs: 5 };
-    // Stub maintain opfsSpike — see the maintain
-    // comment above.
-    (sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain =
-      vi.fn().mockResolvedValue({ success: true, data: report });
-
-    const result = await dispatchDashboardSqlite({ subtype: 'opfs_spike' }, sqliteClient);
-
-    expect((sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain).toHaveBeenCalled();
-    expect(result).toEqual({ success: true, report });
-  });
-
-  it('returns an error when opfs_spike yields no report', async () => {
-    (sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain =
-      vi.fn().mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'OPFS spike failed', retriable: false } });
-
-    const result = await dispatchDashboardSqlite({ subtype: 'opfs_spike' }, sqliteClient);
-
-    expect(result).toEqual({ success: false, error: expect.stringContaining('spike'), retriable: false });
   });
 
   it('allows query without confirmToken (read-only)', async () => {

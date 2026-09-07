@@ -262,28 +262,6 @@ describe('SqliteClient', () => {
     });
   });
 
-  describe('maintain opfsSpike', () => {
-    it('returns spike report on success', async () => {
-      mockTransport = createMockTransport(async () => ({
-        success: true, report: { writeMs: 100, readMs: 50 },
-      } as OffscreenResponse));
-      client = new SqliteClient(mockTransport);
-
-      const result = await client.maintain({ type: 'opfsSpike' });
-      expect(result).toEqual({ success: true, data: { writeMs: 100, readMs: 50 } });
-    });
-
-    it('returns failure result when spike fails', async () => {
-      mockTransport = createMockTransport(async () => ({
-        success: false, error: 'OPFS Worker unavailable',
-      } as OffscreenResponse));
-      client = new SqliteClient(mockTransport);
-
-      const result = await client.maintain({ type: 'opfsSpike' });
-      expect(result.success).toBe(false);
-    });
-  });
-
   describe('maintain purgeOldRecords', () => {
     it('returns purged count on success', async () => {
       mockTransport = createMockTransport(async () => ({

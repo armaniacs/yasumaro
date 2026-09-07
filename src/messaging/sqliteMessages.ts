@@ -30,7 +30,6 @@ export type SqliteMessage =
   | { type: 'SQLITE_RESTORE'; payload: { data: number[] }; traceId?: string }
   | { type: 'SQLITE_PURGE'; payload?: { retentionDays?: number; maxRecords?: number }; traceId?: string }
   | { type: 'CONTENT_PURGE'; payload?: { retentionDays?: number; maxRecords?: number; includeStarred?: boolean }; traceId?: string }
-  | { type: 'SQLITE_OPFS_SPIKE'; payload?: never; traceId?: string }
   | { type: 'SQLITE_ARCHIVE_PREVIEW'; payload: { cutoffDate: string; cutoffMs: number; includeDeleted: boolean }; traceId?: string }
   | { type: 'SQLITE_ARCHIVE_CREATE'; payload: { cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }; traceId?: string }
   | { type: 'SQLITE_ARCHIVE_CLEANUP'; payload?: never; traceId?: string }
@@ -74,7 +73,6 @@ export const SQLITE_MESSAGE_TYPES = [
   'SQLITE_RESTORE',
   'SQLITE_PURGE',
   'CONTENT_PURGE',
-  'SQLITE_OPFS_SPIKE',
   'SQLITE_ARCHIVE_PREVIEW',
   'SQLITE_ARCHIVE_CREATE',
   'SQLITE_ARCHIVE_CLEANUP',
@@ -119,8 +117,6 @@ export function isSqliteMessageType(type: unknown): type is SqliteMessageType {
 // Service Worker's SqliteClient decode responses without the loose
 // `[key: string]: unknown` bag it previously re-derived in every call site.
 // ============================================================================
-
-import type { OpfsSpikeReport } from '../offscreen/opfsSpike.js';
 
 /** The failure shape every operation can return. */
 export type OffscreenFailure = { success: false; error: string };
@@ -178,9 +174,6 @@ export type OffscreenPurgeResponse = { success: true; purged: number } | Offscre
 
 /** CONTENT_PURGE: removed count plus whether any were skipped. */
 export type OffscreenContentPurgeResponse = { success: true; purged: number } | OffscreenFailure;
-
-/** OPFS_SPIKE: the structured feasibility report. */
-export type OffscreenOpfsSpikeResponse = { success: true; report: OpfsSpikeReport } | OffscreenFailure;
 
 // ============================================================================
 // Archive (PBI 2026-09-06-02) — preview / create / cleanup / chunked export
@@ -309,7 +302,6 @@ export type OffscreenResponse =
   | OffscreenBinaryResponse
   | OffscreenPurgeResponse
   | OffscreenContentPurgeResponse
-  | OffscreenOpfsSpikeResponse
   | OffscreenArchivePreviewResponse
   | OffscreenArchiveCreateResponse
   | OffscreenArchiveCleanupResponse
