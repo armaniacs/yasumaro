@@ -1,5 +1,5 @@
 {
-  "total": 1932,
+  "total": 1834,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -157,7 +157,6 @@
     "src/offscreen/__tests__/idb-migration.test.ts": 3,
     "src/offscreen/__tests__/offscreen-search-orderby.test.ts": 1,
     "src/offscreen/__tests__/offscreen-sqlite.test.ts": 1,
-    "src/offscreen/__tests__/offscreenLogger-branch.test.ts": 27,
     "src/offscreen/__tests__/opfsWorker-transactionIntegrity.test.ts": 1,
     "src/offscreen/__tests__/opfsWorker.test.ts": 1,
     "src/offscreen/__tests__/opfsWorkerProxy-coverage.test.ts": 2,
@@ -166,7 +165,6 @@
     "src/offscreen/__tests__/spike-f2-two-engines.test.ts": 11,
     "src/offscreen/__tests__/sqlite-auditLog.test.ts": 3,
     "src/offscreen/__tests__/sqlite-search-fts5.test.ts": 1,
-    "src/offscreen/__tests__/sqliteMessageHandlers-coverage.test.ts": 46,
     "src/offscreen/__tests__/sqliteQueryBuilder-comprehensive.test.ts": 2,
     "src/offscreen/__tests__/storageFallback-branches.test.ts": 7,
     "src/offscreen/__tests__/storageFallback-comprehensive.test.ts": 3,
@@ -216,7 +214,6 @@
     "src/utils/__tests__/logCritical.test.ts": 4,
     "src/utils/__tests__/logMasker.test.ts": 13,
     "src/utils/__tests__/logger-enhanced.test.ts": 7,
-    "src/utils/__tests__/logger-security.test.ts": 25,
     "src/utils/__tests__/markdownFormatter.test.ts": 1,
     "src/utils/__tests__/markdownSanitizer.test.ts": 2,
     "src/utils/__tests__/markdownTemplateUtils.test.ts": 3,
