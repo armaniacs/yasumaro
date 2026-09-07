@@ -1,4 +1,5 @@
 import { getFeedbackQueue, clearFeedbackQueue, removeFeedbackEntry } from '../utils/aiSummaryCleaner/feedbackQueue.js';
+import { getMessage } from '../utils/i18n.js';
 
 export async function renderCleansingFeedback(container: HTMLElement): Promise<void> {
   const entries = await getFeedbackQueue();
@@ -33,7 +34,20 @@ export async function renderCleansingFeedback(container: HTMLElement): Promise<v
   const table = document.createElement('table');
   table.className = 'cleansing-feedback-table';
   const thead = document.createElement('thead');
-  thead.innerHTML = '<tr><th>Domain</th><th>Snippet</th><th>Reason</th><th>Date</th><th>Action</th></tr>';
+  const headerRow = document.createElement('tr');
+  const headers: Array<[string, string]> = [
+    ['cleansingFeedbackDomain', 'Domain'],
+    ['cleansingFeedbackSnippet', 'Snippet'],
+    ['cleansingFeedbackReason', 'Reason'],
+    ['cleansingFeedbackDate', 'Date'],
+    ['cleansingFeedbackAction', 'Action'],
+  ];
+  for (const [key, fallback] of headers) {
+    const th = document.createElement('th');
+    th.textContent = getMessage(key) || fallback;
+    headerRow.appendChild(th);
+  }
+  thead.appendChild(headerRow);
   table.appendChild(thead);
   const tbody = document.createElement('tbody');
   for (const e of entries) {

@@ -89,6 +89,24 @@ function setupChrome(overrides: Record<string, any> = {}) {
   return merged;
 }
 
+// Identity mock that mirrors src/utils/i18n.ts named-substitution behavior for
+// the connection label format key, so label-rendering tests keep seeing
+// `<label>: ` instead of the raw key name.
+function labelAwareGetMessage(extra?: (key: string) => string): typeof getMessage {
+  return ((key: string, subs?: unknown) => {
+    if (
+      key === 'connectionStatusLabel' &&
+      subs !== null &&
+      typeof subs === 'object' &&
+      !Array.isArray(subs) &&
+      'label' in subs
+    ) {
+      return `${(subs as Record<string, unknown>).label}: `;
+    }
+    return extra ? extra(key) : key;
+  }) as typeof getMessage;
+}
+
 function resetDomForLocalMarkdown() {
   document.body.innerHTML = `
     <button id="testLocalMarkdownBtnTop"></button>
@@ -101,7 +119,7 @@ function resetDomForLocalMarkdown() {
 beforeEach(() => {
   vi.clearAllMocks();
   mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
-  mockedGetMessage.mockImplementation((key: string) => key as unknown as string);
+  mockedGetMessage.mockImplementation(labelAwareGetMessage());
   mockedSyncStatusToTop.mockClear();
   mockedFormatHeadline.mockImplementation((p: any) => `headline:${p.provider}`);
   mockedFormatDetailLines.mockReturnValue([]);
@@ -132,7 +150,7 @@ afterEach(() => {
 // ------------------------------------------------------------------
 describe('createConnectionStatusElement', () => {
   it('creates success element with getMessage success text', () => {
-    mockedGetMessage.mockImplementation((k: string) => k === 'connectionSuccess' ? '接続成功' : k);
+    mockedGetMessage.mockImplementation(labelAwareGetMessage((k) => k === 'connectionSuccess' ? '接続成功' : k));
     const el = createConnectionStatusElement('Obsidian', { success: true, message: 'ok' });
     expect(el.className).toBe('diag-indent');
     expect(el.querySelector('strong')!.textContent).toBe('Obsidian: ');
@@ -146,6 +164,13 @@ describe('createConnectionStatusElement', () => {
     const el = createConnectionStatusElement('AI', { success: true, message: 'ok' });
     expect(el.querySelector('span')!.textContent).toBe('接続成功');
     expect(el.querySelector('span')!.className).toBe('diag-success');
+  });
+
+  it('renders connection label via connectionStatusLabel key with English fallback', () => {
+    mockedGetMessage.mockReturnValue('' as any);
+    const el = createConnectionStatusElement('Obsidian', { success: true, message: 'ok' });
+    expect(mockedGetMessage).toHaveBeenCalledWith('connectionStatusLabel', { label: 'Obsidian' });
+    expect(el.querySelector('strong')!.textContent).toBe('Obsidian: ');
   });
 
   it('creates error element', () => {
@@ -189,18 +214,27 @@ describe('testObsidianConnection', () => {
     expect(res).toEqual({ success: true, message: 'OK' });
   });
 
-  it('returns No response when obsidian field missing', async () => {
+  it('returns connectionNoResponse key when obsidian field missing', async () => {
     const sendMessage = vi.fn().mockResolvedValue({});
     setupChrome({ runtime: { sendMessage, onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     const res = await testObsidianConnection('k');
-    expect(res).toEqual({ success: false, message: 'No response' });
+    expect(mockedGetMessage).toHaveBeenCalledWith('connectionNoResponse');
+    expect(res).toEqual({ success: false, message: 'connectionNoResponse' });
   });
 
-  it('returns No response when sendMessage returns undefined', async () => {
-    const sendMessage = vi.fn().mockResolvedValue(undefined);
+  it('returns English fallback when connectionNoResponse key missing', async () => {
+    mockedGetMessage.mockReturnValue('' as any);
+    const sendMessage = vi.fn().mockResolvedValue({});
     setupChrome({ runtime: { sendMessage, onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     const res = await testObsidianConnection('k');
     expect(res.message).toBe('No response');
+  });
+
+  it('returns connectionNoResponse key when sendMessage returns undefined', async () => {
+    const sendMessage = vi.fn().mockResolvedValue(undefined);
+    setupChrome({ runtime: { sendMessage, onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    const res = await testObsidianConnection('k');
+    expect(res.message).toBe('connectionNoResponse');
   });
 
   it('handles missing protocol/port elements gracefully', async () => {
@@ -238,18 +272,27 @@ describe('testAiConnection', () => {
     expect(res.success).toBe(true);
   });
 
-  it('returns No response fallback when ai missing', async () => {
+  it('returns connectionNoResponse key fallback when ai missing', async () => {
     const sendMessage = vi.fn().mockResolvedValue({});
     setupChrome({ runtime: { sendMessage, onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     const res = await testAiConnection();
-    expect(res).toEqual({ success: false, message: 'No response', providers: [] });
+    expect(mockedGetMessage).toHaveBeenCalledWith('connectionNoResponse');
+    expect(res).toEqual({ success: false, message: 'connectionNoResponse', providers: [] });
+  });
+
+  it('returns English fallback when connectionNoResponse key missing', async () => {
+    mockedGetMessage.mockReturnValue('' as any);
+    const sendMessage = vi.fn().mockResolvedValue(undefined);
+    setupChrome({ runtime: { sendMessage, onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    const res = await testAiConnection();
+    expect(res.message).toBe('No response');
   });
 
   it('returns undefined response fallback', async () => {
     const sendMessage = vi.fn().mockResolvedValue(undefined);
     setupChrome({ runtime: { sendMessage, onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     const res = await testAiConnection();
-    expect(res.message).toBe('No response');
+    expect(res.message).toBe('connectionNoResponse');
   });
 
   it('returns providers from ai response', async () => {
@@ -352,7 +395,7 @@ describe('handleTestObsidian', () => {
 
   it('shows testingConnection then success', async () => {
     document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><div id="statusTop"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="port" value="27124"/>`;
-    mockedGetMessage.mockImplementation((k: string) => k === 'testingConnection' ? 'テスト中' : k);
+    mockedGetMessage.mockImplementation(labelAwareGetMessage((k) => k === 'testingConnection' ? 'テスト中' : k));
     setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: true, message: 'OK' } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await handleTestObsidian();
     const status = document.getElementById('status')!;
@@ -541,7 +584,7 @@ describe('handleTestAi', () => {
     setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ ai }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     // also mock obsidian? not needed. But saveDashboardSettings will be called.
     // Provide truthy getMessage for connectionSuccess branch
-    mockedGetMessage.mockImplementation((k: string) => k === 'connectionSuccess' ? '成功' : k);
+    mockedGetMessage.mockImplementation(labelAwareGetMessage((k) => k === 'connectionSuccess' ? '成功' : k));
     await handleTestAi();
     expect(document.getElementById('status')!.className).toBe('success');
     // single provider renders via createConnectionStatusElement -> should contain AI label

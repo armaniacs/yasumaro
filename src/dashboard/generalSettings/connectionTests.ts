@@ -50,7 +50,7 @@ export function createConnectionStatusElement(label: string, result: { success: 
   statusDiv.className = 'diag-indent';
 
   const labelEl = document.createElement('strong');
-  labelEl.textContent = `${label}: `;
+  labelEl.textContent = getMessage('connectionStatusLabel', { label }) || `${label}: `;
   statusDiv.appendChild(labelEl);
 
   const spanEl = document.createElement('span');
@@ -81,7 +81,7 @@ export async function testObsidianConnection(apiKey: string): Promise<{ success:
       : {}
   }) as { obsidian?: { success: boolean; message: string } };
 
-  return testResult?.obsidian || { success: false, message: 'No response' };
+  return testResult?.obsidian || { success: false, message: getMessage('connectionNoResponse') || 'No response' };
 }
 
 export async function testAiConnection(runId?: string): Promise<MultiProviderTestResult> {
@@ -92,7 +92,7 @@ export async function testAiConnection(runId?: string): Promise<MultiProviderTes
     ...(runId !== undefined ? { runId } : {}),
   }) as { ai?: MultiProviderTestResult };
 
-  return testResult?.ai || { success: false, message: 'No response', providers: [] };
+  return testResult?.ai || { success: false, message: getMessage('connectionNoResponse') || 'No response', providers: [] };
 }
 
 export async function handleSaveOnly(): Promise<void> {

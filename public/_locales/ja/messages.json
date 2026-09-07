@@ -4090,6 +4090,18 @@
   "notConsented": {
     "message": "同意されていません"
   },
+  "consented": {
+    "message": "同意済み（$DATE$）",
+    "placeholders": {
+      "date": {
+        "content": "$1",
+        "example": "2026-09-07"
+      }
+    }
+  },
+  "consentedNoDate": {
+    "message": "同意済み"
+  },
   "consentWithdrawnStopped": {
     "message": "同意を撤回しました。記録を停止します。"
   },
@@ -4098,5 +4110,41 @@
   },
   "aiResultHeader": {
     "message": "AI: "
+  },
+  "connectionStatusLabel": {
+    "message": "{label}: "
+  },
+  "connectionNoResponse": {
+    "message": "応答がありませんでした"
+  },
+  "modelsDevLoadProvidersError": {
+    "message": "プロバイダーの読み込みに失敗しました。もう一度お試しください。"
+  },
+  "modelsDevSelectProviderError": {
+    "message": "プロバイダーを選択してください"
+  },
+  "modelsDevApiKeyRequiredError": {
+    "message": "APIキーを入力してください"
+  },
+  "modelsDevInvalidEndpointError": {
+    "message": "選択したプロバイダーのAPIエンドポイントが無効です"
+  },
+  "modelsDevSaveSettingsError": {
+    "message": "設定の保存に失敗しました"
+  },
+  "cleansingFeedbackDomain": {
+    "message": "ドメイン"
+  },
+  "cleansingFeedbackSnippet": {
+    "message": "スニペット"
+  },
+  "cleansingFeedbackReason": {
+    "message": "理由"
+  },
+  "cleansingFeedbackDate": {
+    "message": "日時"
+  },
+  "cleansingFeedbackAction": {
+    "message": "操作"
   }
 }
