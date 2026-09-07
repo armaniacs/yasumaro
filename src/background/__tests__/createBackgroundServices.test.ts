@@ -188,7 +188,7 @@ describe('createBackgroundServices', () => {
   it('shares a single SessionStore instance with TabCache, RateLimiter and RecordingCache', () => {
     createBackgroundServices();
 
-    const sessionStoreInstance = mocks.SessionStore.mock.results[0].value;
+    const sessionStoreInstance = mocks.SessionStore.mock.results[0]?.value;
     expect(mocks.TabCache).toHaveBeenCalledWith(sessionStoreInstance);
     expect(mocks.RateLimiter).toHaveBeenCalledWith(sessionStoreInstance);
     expect(mocks.SessionStoreRecordingCacheStore).toHaveBeenCalledWith(sessionStoreInstance);
@@ -202,8 +202,8 @@ describe('createBackgroundServices', () => {
     expect(mocks.RemoteAIService).toHaveBeenCalledTimes(1);
     expect(mocks.FallbackAIService).toHaveBeenCalledTimes(1);
 
-    const remoteInstance = mocks.RemoteAIService.mock.results[0].value;
-    const local = mocks.LocalAIService.mock.results[0].value;
+    const remoteInstance = mocks.RemoteAIService.mock.results[0]?.value;
+    const local = mocks.LocalAIService.mock.results[0]?.value;
     expect(mocks.FallbackAIService).toHaveBeenCalledWith({
       local,
       remote: remoteInstance,
@@ -213,8 +213,11 @@ describe('createBackgroundServices', () => {
   it('passes builtInAiClient to LocalAIService (Service Worker direct call, not via Offscreen)', () => {
     createBackgroundServices();
 
-    const builtInAiClientInstance = mocks.BuiltInAIClient.mock.results[0].value;
-    const config = mocks.LocalAIService.mock.calls[0][0];
+    const builtInAiClientInstance = mocks.BuiltInAIClient.mock.results[0]?.value;
+    const config = mocks.LocalAIService.mock.calls[0]?.[0] as {
+      localAiClient: unknown;
+      ensureOffscreenDocument: unknown;
+    };
     expect(config.localAiClient).toBe(builtInAiClientInstance);
     expect(config.ensureOffscreenDocument).toBeUndefined();
   });
@@ -223,7 +226,7 @@ describe('createBackgroundServices', () => {
     createBackgroundServices();
 
     expect(mocks.RemoteAIService).toHaveBeenCalledTimes(1);
-    const remoteInstance = mocks.RemoteAIService.mock.results[0].value;
+    const remoteInstance = mocks.RemoteAIService.mock.results[0]?.value;
     expect(remoteInstance).toBeDefined();
   });
 
