@@ -101,7 +101,9 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
     // 呼び出し順序: clearAllLogs が withdrawPrivacyConsent より先
     const clearOrder = mockClearAllLogs.mock.invocationCallOrder[0];
     const withdrawOrder = mockWithdrawPrivacyConsent.mock.invocationCallOrder[0];
-    expect(clearOrder).toBeLessThan(withdrawOrder);
+    expect(clearOrder).toBeDefined();
+    expect(withdrawOrder).toBeDefined();
+    expect(clearOrder!).toBeLessThan(withdrawOrder!);
   });
 
   it('SQLite削除が失敗した場合、同意撤回は呼ばれない（不整合防止）', async () => {

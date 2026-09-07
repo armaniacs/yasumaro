@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createSqliteHistoryModel } from '../sqliteHistoryModel.js';
+import type { FetchDataOptions } from '../sqliteHistoryModel.js';
 import type { UnifiedHistoryQueryResult } from '../sqliteHistoryQuery.js';
 import type { BrowsingLogEntry } from '../sqliteHistoryQuery.js';
 
@@ -132,12 +133,12 @@ describe('sqliteHistoryModel — LRU query cache', () => {
 
     await model.fetchData({ page: 0, search: '' });
     expect(queryHistory).toHaveBeenCalledTimes(1);
-    await model.fetchData({ page: 0, search: undefined });
+    await model.fetchData({ page: 0, search: undefined } as unknown as FetchDataOptions);
     expect(queryHistory).toHaveBeenCalledTimes(1);
 
     await model.fetchData({ page: 0, tagFilter: '' });
     expect(queryHistory).toHaveBeenCalledTimes(1);
-    await model.fetchData({ page: 0, tagFilter: undefined });
+    await model.fetchData({ page: 0, tagFilter: undefined } as unknown as FetchDataOptions);
     expect(queryHistory).toHaveBeenCalledTimes(1);
   });
 

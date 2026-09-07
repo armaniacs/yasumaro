@@ -3,16 +3,25 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NavigationRegistry } from '../NavigationRegistry.js';
 import { type PanelLifecycle } from '../types.js';
 
-function mockPanel(overrides?: Partial<PanelLifecycle>): PanelLifecycle {
-  return {
+type PanelOverrides = { [K in keyof PanelLifecycle]?: PanelLifecycle[K] | undefined };
+
+function mockPanel(overrides?: PanelOverrides): PanelLifecycle {
+  const base: PanelLifecycle = {
     id: 'panel-test',
     category: 'async-data',
     mount: vi.fn(),
     activate: vi.fn(),
     load: vi.fn().mockResolvedValue(undefined),
     deactivate: vi.fn(),
-    ...overrides,
   };
+  for (const [key, value] of Object.entries(overrides ?? {})) {
+    if (value === undefined) {
+      delete (base as unknown as Record<string, unknown>)[key];
+    } else {
+      (base as unknown as Record<string, unknown>)[key] = value;
+    }
+  }
+  return base;
 }
 
 describe('NavigationRegistry', () => {

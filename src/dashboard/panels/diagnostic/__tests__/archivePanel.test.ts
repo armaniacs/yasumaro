@@ -36,6 +36,8 @@ async function mountPanel(): Promise<{
   includeDeleted: HTMLInputElement;
   previewBtn: HTMLButtonElement;
   createBtn: HTMLButtonElement;
+  downloadBtn: HTMLButtonElement;
+  cleanupBtn: HTMLButtonElement;
   summaryEl: HTMLElement;
   statusEl: HTMLElement;
 }> {
