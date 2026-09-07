@@ -29,15 +29,23 @@
 
 ## 次ラウンド再評価（実行可能・優先度未確定）
 
+**2026-09-07 に RICE 採点し PBI 化した（INDEX「2026-09-07 architecture review round」参照）:**
+
+| 項目 | 状態 | PBI |
+|------|------|-----|
+| extractor test-support 再配置＋facade collapse＋GET_CONTENT testability | PBI 化済（RICE 5.7、着手可） | `2026-09-07-14-refactor-extractor-facade-collapse.md` |
+| history-panel: tag-filter の SQL 移行（5000 over-fetch cap） | PBI 化済（RICE 6.0、**現時点では実装しない**） | `2026-09-07-15-fix-history-tag-filter-sql-migration.md` |
+| history-panel: legacy `panel-history` 撤去 | PBI 化済（RICE 5.25、**現時点では実装しない**） | `2026-09-07-16-refactor-remove-legacy-history-panel.md` |
+| InMemoryTransport の DELETE セマンティクス乖離 | PBI 化済（RICE 4.4、着手可） | `2026-09-07-17-refactor-inmemory-delete-drift-doc.md` |
+| `opfsSpike.ts` の去就 | PBI 化済（RICE 1.17、着手可。過去 issue に OPFS 関連ゼロ → 削除方向） | `2026-09-07-19-refactor-remove-opfs-spike.md` |
+| dashboard 直書き英語 第2弾 | PBI 化済（RICE 563、次に着手。`consented` 未定義は実バグ） | `2026-09-07-13-fix-dashboard-i18n-strings-round2.md` |
+
+**据え置き（PBI 化せず。RICE が低い／トリガー未発生）:**
+
 | 項目 | 現状 | 出典 |
 |------|------|------|
-| extractor test-support 再配置＋facade collapse＋GET_CONTENT testability | PBI 13/33/34 着地済みで実行可能。`getPageStateForTesting` / `__kernelForTesting` / `createVisitGate` の clock 注入 signature 決定を含む小 PBI | arch3 見送り（PBI 13 吸収後のフォローアップ） |
-| history-panel 完全統合 | interface 狭窄（PBI 14）済み。残: legacy `panel-history` 移行（要 navigation 監査）＋ tag-filter の SQL 移行（5000 over-fetch cap） | arch3/arch4/arch5 見送り |
-| AI slot-runner 統合 | summary loop（length-gate）と test loop（progress/timing）の差分は意図的と確認済み。3 つ目の slot consumer 出現まで見送り | arch4/arch5 見送り |
-| `opfsSpike.ts` の去就 | `runOpfsSpikeA` が `SQLITE_OPFS_SPIKE` 経由で製品メッセージ経路に残存。診断用途として残すか削除するか未決 | スパイク重複候補 6 |
-| InMemoryTransport の DELETE セマンティクス乖離 | テスト専用実装はソフトデリート、製品 fallback はハードデリート。検証基盤としての drift に注意（統一はしない・明示が必要） | スパイク重複候補 7 |
-| fallback 再入ギャップ | OPFS 復活時に IDB 経由の fallback 移行（`tryMigrateFallbackToSqlite`）が発火しない経路。PBI 32（サンセット）の設計時に考慮 | スパイク移行経路表 |
-| dashboard 直書き英語 第2弾 | PBI 24 で 4 箇所を解消後の残置: 保存系ステータス文言・`No response`・`consented` キー未定義・`showError` 群（PBI 24 レポート記載） | review-fixes PBI 24 レポート |
+| AI slot-runner 統合 | summary loop（length-gate）と test loop（progress/timing）の差分は意図的と再確認（2026-09-07）。重複は for ループ骨格 約8行、実行時コスト0、バグ源になった記録なし。RICE 0.5。3 つ目の slot consumer が設計に現れるまで見送り | arch4/arch5 見送り |
+| fallback 再入ギャップ | OPFS 復活時に IDB 経由の fallback 移行（`tryMigrateFallbackToSqlite`）が発火しない経路。実害はレアケース（次回 SW 再起動時に `OpfsRecoveryService` が回収、データロストなし）、Effort 1.0〜1.5週。**PBI 32（サンセット）で Option B（IDB 中間層廃止）を選ぶ場合のみ優先度繰り上げ** — それまで PBI 32 の設計時考慮事項に留める | スパイク移行経路表 |
 | PBI-B 測定基盤の設計 | fallback-only 到達率を privacy 制約下で計測する設計（診断 STATUS の `compileOptionsSource` 集計は要設計） | スパイク PBI-B 前提 |
 
 ## 運用
