@@ -33,19 +33,19 @@ describe('showConfirmDialog', () => {
     expect(overlay?.getAttribute('aria-labelledby')).toBe('confirm-dialog-title');
     expect(overlay?.getAttribute('aria-describedby')).toBe('confirm-dialog-message');
 
-    document.querySelector('.confirm-dialog-btn-cancel')?.click();
+    (document.querySelector('.confirm-dialog-btn-cancel') as HTMLElement | null)?.click();
     await promise;
   });
 
   it('resolves true on confirm click', async () => {
     const promise = showConfirmDialog({ title: 'T', message: 'M' });
-    document.querySelector('.confirm-dialog-btn-primary')?.click();
+    (document.querySelector('.confirm-dialog-btn-primary') as HTMLElement | null)?.click();
     await expect(promise).resolves.toBe(true);
   });
 
   it('resolves false on cancel click', async () => {
     const promise = showConfirmDialog({ title: 'T', message: 'M' });
-    document.querySelector('.confirm-dialog-btn-cancel')?.click();
+    (document.querySelector('.confirm-dialog-btn-cancel') as HTMLElement | null)?.click();
     await expect(promise).resolves.toBe(false);
   });
 
@@ -71,7 +71,7 @@ describe('showConfirmDialog', () => {
     await new Promise(r => setTimeout(r, 10));
     expect(resolved).toBe(false);
 
-    document.querySelector('.confirm-dialog-btn-cancel')?.click();
+    (document.querySelector('.confirm-dialog-btn-cancel') as HTMLElement | null)?.click();
     await promise;
   });
 
@@ -81,14 +81,14 @@ describe('showConfirmDialog', () => {
     expect(document.querySelector('.confirm-dialog-btn-cancel')?.textContent).toBe('Cancel');
     expect(document.querySelector('.confirm-dialog-btn-primary')?.textContent).toBe('Delete');
 
-    document.querySelector('.confirm-dialog-btn-cancel')?.click();
+    (document.querySelector('.confirm-dialog-btn-cancel') as HTMLElement | null)?.click();
     await promise;
   });
 
   it('uses custom confirmLabel when provided (non-dangerous)', async () => {
     const promise = showConfirmDialog({ title: 'T', message: 'M', confirmLabel: 'Remove' });
     expect(document.querySelector('.confirm-dialog-btn-primary')?.textContent).toBe('Remove');
-    document.querySelector('.confirm-dialog-btn-primary')?.click();
+    (document.querySelector('.confirm-dialog-btn-primary') as HTMLElement | null)?.click();
     await promise;
   });
 
@@ -97,7 +97,7 @@ describe('showConfirmDialog', () => {
 
     const promise = showConfirmDialog({ title: 'T', message: 'M', cancelLabel: 'Abbrechen' });
     expect(getMessage).toHaveBeenCalledWith('cancel', 'Abbrechen');
-    document.querySelector('.confirm-dialog-btn-cancel')?.click();
+    (document.querySelector('.confirm-dialog-btn-cancel') as HTMLElement | null)?.click();
     await promise;
   });
 
@@ -107,7 +107,7 @@ describe('showConfirmDialog', () => {
     expect(document.querySelector('.confirm-dialog')?.className).toContain('confirm-dialog-danger');
     expect(document.querySelector('.confirm-dialog-btn-danger')).not.toBeNull();
 
-    document.querySelector('.confirm-dialog-btn-danger')?.click();
+    (document.querySelector('.confirm-dialog-btn-danger') as HTMLElement | null)?.click();
     await promise;
   });
 
@@ -117,7 +117,7 @@ describe('showConfirmDialog', () => {
     expect(document.querySelector('.confirm-dialog')?.className).not.toContain('confirm-dialog-danger');
     expect(document.querySelector('.confirm-dialog-btn-danger')).toBeNull();
 
-    document.querySelector('.confirm-dialog-btn-cancel')?.click();
+    (document.querySelector('.confirm-dialog-btn-cancel') as HTMLElement | null)?.click();
     await promise;
   });
 
@@ -126,7 +126,7 @@ describe('showConfirmDialog', () => {
 
     const promise = showConfirmDialog({ title: 'T', message: 'M' });
 
-    document.querySelector('.confirm-dialog-btn-cancel')?.click();
+    (document.querySelector('.confirm-dialog-btn-cancel') as HTMLElement | null)?.click();
     await promise;
 
     expect(document.activeElement).toBe(prevFocus);
@@ -134,7 +134,7 @@ describe('showConfirmDialog', () => {
 
   it('removes overlay from DOM after closing', async () => {
     const promise = showConfirmDialog({ title: 'T', message: 'M' });
-    document.querySelector('.confirm-dialog-btn-cancel')?.click();
+    (document.querySelector('.confirm-dialog-btn-cancel') as HTMLElement | null)?.click();
     await promise;
 
     expect(document.querySelector('.confirm-dialog-overlay')).toBeNull();
@@ -143,7 +143,7 @@ describe('showConfirmDialog', () => {
 
   it('cleanup does not throw on subsequent Escape dispatch', async () => {
     const promise = showConfirmDialog({ title: 'T', message: 'M' });
-    document.querySelector('.confirm-dialog-btn-cancel')?.click();
+    (document.querySelector('.confirm-dialog-btn-cancel') as HTMLElement | null)?.click();
     await promise;
 
     expect(() => {
