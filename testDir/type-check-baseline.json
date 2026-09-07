@@ -208,7 +208,6 @@
     "src/utils/__tests__/cspDomains.test.ts": 1,
     "src/utils/__tests__/cspValidator-error-handling.test.ts": 1,
     "src/utils/__tests__/cspValidator.test.ts": 1,
-    "src/utils/__tests__/customPromptUtils.test.ts": 33,
     "src/utils/__tests__/domainFilter-mode.test.ts": 1,
     "src/utils/__tests__/fetch.test.ts": 7,
     "src/utils/__tests__/fetchRedirectGuard.test.ts": 3,
