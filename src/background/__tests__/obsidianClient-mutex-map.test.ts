@@ -2,8 +2,12 @@
 import { ObsidianClient } from '../obsidianClient.js';
 import { Mutex } from '../../utils/Mutex.js';
 
+// The suite inspects Mutex's private queue/nextTaskId to assert O(1) Map semantics.
+type MutexInternals = { queue: Map<number, unknown>; nextTaskId: number };
+const internals = (mutex: Mutex): MutexInternals => mutex as unknown as MutexInternals;
+
 describe('Mutex Map improvement', () => {
-  let client;
+  let client: ObsidianClient;
 
   beforeEach(() => {
     client = new ObsidianClient();
@@ -11,7 +15,7 @@ describe('Mutex Map improvement', () => {
   });
 
   test('acquireとreleaseが正しく動作する', async () => {
-    const mutex = client._globalWriteMutex;
+    const mutex = (client as unknown as { _globalWriteMutex: Mutex })._globalWriteMutex;
 
     // 最初のロックを取得
     await mutex.acquire();
@@ -31,11 +35,11 @@ describe('Mutex Map improvement', () => {
 
     // ロックが解放され、キューも空であることを確認
     mutex.release();
-    expect(mutex.queue.size).toBe(0);
+    expect(internals(mutex).queue.size).toBe(0);
   });
 
   test('キューサイズ制限（MAX_QUEUE_SIZE=50）', async () => {
-    const mutex = client._globalWriteMutex;
+    const mutex = (client as unknown as { _globalWriteMutex: Mutex })._globalWriteMutex;
 
     await mutex.acquire();
 
@@ -45,7 +49,7 @@ describe('Mutex Map improvement', () => {
     }
 
     // 50個のリクエストがキューに入っていることを確認
-    expect(mutex.queue.size).toBe(50);
+    expect(internals(mutex).queue.size).toBe(50);
 
     // 51番目が拒否されることを確認
     await expect(mutex.acquire()).rejects.toThrow(/queue is full/);
@@ -67,18 +71,18 @@ describe('Mutex Map improvement', () => {
     await mutex.acquire();
 
     // Map.size プロパティが存在することを確認
-    expect(mutex.queue.size).toBeDefined();
-    expect(mutex.queue.size).toBe(0);
+    expect(internals(mutex).queue.size).toBeDefined();
+    expect(internals(mutex).queue.size).toBe(0);
 
     // nextTaskIdはロックが解放されるまでは0のまま（正しい動き）
-    expect(mutex.nextTaskId).toBe(0);
+    expect(internals(mutex).nextTaskId).toBe(0);
 
     // acquire時にエントリがMapに追加される（ロック中なのでキューに入る）
     const p1 = mutex.acquire();
-    expect(mutex.queue.size).toBe(1);
+    expect(internals(mutex).queue.size).toBe(1);
 
     const p2 = mutex.acquire();
-    expect(mutex.queue.size).toBe(2);
+    expect(internals(mutex).queue.size).toBe(2);
 
     // クリーンアップ
     mutex.release();
@@ -87,7 +91,7 @@ describe('Mutex Map improvement', () => {
     await p2;
     mutex.release();
 
-    expect(mutex.queue.size).toBe(0);
+    expect(internals(mutex).queue.size).toBe(0);
   });
 
   test('タイムアウト時にMapからエントリが削除される', async () => {
@@ -100,7 +104,7 @@ describe('Mutex Map improvement', () => {
 
     // タイムアウト付きでロック要求
     const p1 = mutex.acquire();
-    expect(mutex.queue.size).toBe(1);
+    expect(internals(mutex).queue.size).toBe(1);
 
     // タイムアウトシミュレーション
     vi.advanceTimersByTime(30000);
@@ -109,7 +113,7 @@ describe('Mutex Map improvement', () => {
     await expect(p1).rejects.toThrow(/timeout/);
 
     // Mapからエントリが削除されていることを確認
-    expect(mutex.queue.size).toBe(0);
+    expect(internals(mutex).queue.size).toBe(0);
 
     vi.useRealTimers();
   });

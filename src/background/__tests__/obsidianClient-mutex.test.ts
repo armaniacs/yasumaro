@@ -68,7 +68,7 @@ vi.mock('../../utils/logger.js', () => ({
 }));
 
 describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
-  let obsidianClient;
+  let obsidianClient: ObsidianClient;
 
   beforeEach(() => {
     obsidianClient = new ObsidianClient();
@@ -82,7 +82,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       OBSIDIAN_PORT: '27123',
       OBSIDIAN_DAILY_PATH: ''
     });
-    storage.StorageKeys = {
+    (storage as { StorageKeys: Record<string, string> }).StorageKeys = {
       OBSIDIAN_PROTOCOL: 'OBSIDIAN_PROTOCOL',
       OBSIDIAN_PORT: 'OBSIDIAN_PORT',
       OBSIDIAN_API_KEY: 'OBSIDIAN_API_KEY',
@@ -117,7 +117,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       expect(result).toBeUndefined(); // 成功時は値を返さない
       expect(global.fetch).toHaveBeenCalledTimes(2);
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('同じデータでの並列呼び出しがシリアライズされること', async () => {
@@ -149,7 +149,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       // すべてのリクエストが完了したことを確認
       expect(fetchMock).toHaveBeenCalledTimes(10); // 各呼び出しでGET + PUT
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('エラーが発生してもロックが解放されること', async () => {
@@ -159,7 +159,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       await expect(obsidianClient.appendToDailyNote('Test content')).rejects.toThrow();
 
       // エラー後も次の呼び出しが可能であることを確認
-      global.fetch.mockReset();
+      vi.mocked(global.fetch).mockReset();
       global.fetch = vi.fn()
   
         .mockResolvedValueOnce({
@@ -174,7 +174,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
 
       await expect(obsidianClient.appendToDailyNote('Test content 2')).resolves.toBeUndefined();
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('エラー後の2回目の呼び出しが正常に動作すること', async () => {
@@ -185,7 +185,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       await expect(obsidianClient.appendToDailyNote('Test content')).rejects.toThrow();
 
       // モックをリセットして成功させる
-      global.fetch.mockReset();
+      vi.mocked(global.fetch).mockReset();
       global.fetch = vi.fn()
   
         .mockResolvedValueOnce({
@@ -201,7 +201,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       // 2回目の呼び出しは成功
       await expect(obsidianClient.appendToDailyNote('Test content 2')).resolves.toBeUndefined();
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
   });
 
@@ -244,7 +244,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       // 実際にはログ出力やパフォーマンステストで確認する
       addLog(LogType.DEBUG, 'Parallel execution completed', { totalCalls: callOrder.length });
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('大量の並列呼び出しを正常に処理すること', async () => {
@@ -275,7 +275,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       // すべてのリクエストが完了
       expect(fetchMock).toHaveBeenCalledTimes(40); // 20 * (GET + PUT)
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
   });
 
@@ -295,7 +295,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
 
       await expect(obsidianClient.appendToDailyNote('')).resolves.toBeUndefined();
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('非常に長いコンテンツを書き込めること', async () => {
@@ -315,7 +315,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
 
       await expect(obsidianClient.appendToDailyNote(longContent)).resolves.toBeUndefined();
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('APIキーが空の場合のエラーハンドリング', async () => {
@@ -352,7 +352,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
 
       await expect(obsidianClient.appendToDailyNote('Test content 2')).resolves.toBeUndefined();
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
   });
 
@@ -378,7 +378,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       // 実際のパフォーマンスはブラウザ環境で測定する必要がある
       expect(duration).toBeLessThan(1000); // 1秒以内に完了
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('連続呼び出しでのオーバーヘッド検証', async () => {
@@ -410,7 +410,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       // 10回の呼び出しが合理的な時間内で完了する
       expect(duration).toBeLessThan(5000);
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
   });
 });
@@ -419,7 +419,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
  * Problem #6: Mutexキューサイズ制限とタイムアウトのテスト
  */
 describe('Problem #6: Mutexキューサイズ制限とタイムアウト', () => {
-  let obsidianClient;
+  let obsidianClient: ObsidianClient;
 
   beforeEach(() => {
     obsidianClient = new ObsidianClient();
@@ -434,7 +434,7 @@ describe('Problem #6: Mutexキューサイズ制限とタイムアウト', () =>
       OBSIDIAN_PORT: '27123',
       OBSIDIAN_DAILY_PATH: ''
     });
-    storage.StorageKeys = {
+    (storage as { StorageKeys: Record<string, string> }).StorageKeys = {
       OBSIDIAN_PROTOCOL: 'OBSIDIAN_PROTOCOL',
       OBSIDIAN_PORT: 'OBSIDIAN_PORT',
       OBSIDIAN_API_KEY: 'OBSIDIAN_API_KEY',
@@ -443,7 +443,7 @@ describe('Problem #6: Mutexキューサイズ制限とタイムアウト', () =>
   });
 
   afterEach(() => {
-    global.fetch.mockRestore();
+    vi.mocked(global.fetch).mockRestore();
   });
 
   /**
@@ -484,7 +484,7 @@ describe('Problem #6: Mutexキューサイズ制限とタイムアウト', () =>
       const successCount = results.filter(r => r.status === 'fulfilled').length;
       expect(successCount).toBeGreaterThan(0);
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('キューサイズ超過時のエラーメッセージを確認（ログによる検証）', async () => {
@@ -516,7 +516,7 @@ describe('Problem #6: Mutexキューサイズ制限とタイムアウト', () =>
 
       await expect(obsidianClient.appendToDailyNote('Test')).resolves.toBeUndefined();
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
 
     it('30秒以内で正常なリクエストが完了すること', async () => {
@@ -539,7 +539,7 @@ describe('Problem #6: Mutexキューサイズ制限とタイムアウト', () =>
       // 30秒以内に完了したことを確認
       expect(duration).toBeLessThan(30000);
 
-      global.fetch.mockRestore();
+      vi.mocked(global.fetch).mockRestore();
     });
   });
 });
