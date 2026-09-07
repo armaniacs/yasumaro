@@ -30,6 +30,7 @@ vi.mock('../../utils/masterPassword.js', () => ({
   calculatePasswordStrength: vi.fn(),
   validatePasswordRequirements: vi.fn(),
   validatePasswordMatch: vi.fn(),
+  PasswordStrength: { WEAK: 'weak', MEDIUM: 'medium', STRONG: 'strong' },
 }));
 
 const mockChromeGet = vi.fn();
@@ -59,6 +60,7 @@ import {
   calculatePasswordStrength,
   validatePasswordRequirements,
   validatePasswordMatch,
+  PasswordStrength,
 } from '../../utils/masterPassword.js';
 
 function flushPromises(): Promise<void> {
@@ -97,7 +99,7 @@ function setupFullDOM(): void {
 }
 
 function setupDefaultMockValues(): void {
-  vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 50, level: 'medium', text: 'Medium' });
+  vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 50, level: PasswordStrength.MEDIUM, text: 'Medium' });
   vi.mocked(validatePasswordRequirements).mockReturnValue(null);
   vi.mocked(validatePasswordMatch).mockReturnValue(null);
   vi.mocked(setMasterPassword).mockResolvedValue({ success: true });
@@ -298,7 +300,7 @@ describe('masterPassword-r2 — password strength text fallback', () => {
     const i18nModule = await import('../../utils/i18n.js');
     vi.mocked(i18nModule.getMessage).mockReturnValue('' as any);
 
-    vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 90, level: 'strong', text: 'Strong' });
+    vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 90, level: PasswordStrength.STRONG, text: 'Strong' });
 
     setupFullDOM();
     vi.resetModules();

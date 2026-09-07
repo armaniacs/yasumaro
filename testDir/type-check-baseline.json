@@ -1,5 +1,5 @@
 {
-  "total": 544,
+  "total": 536,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -58,9 +58,6 @@
     "src/dashboard/__tests__/historyPendingPanel.test.ts": 2,
     "src/dashboard/__tests__/historyRenderer.test.ts": 2,
     "src/dashboard/__tests__/historyUtils.test.ts": 2,
-    "src/dashboard/__tests__/masterPassword-branches.test.ts": 1,
-    "src/dashboard/__tests__/masterPassword-r2.test.ts": 2,
-    "src/dashboard/__tests__/masterPassword.test.ts": 5,
     "src/dashboard/__tests__/models-dev-dialog-event-handlers.test.ts": 1,
     "src/dashboard/__tests__/models-dev-dialog.test.ts": 1,
     "src/dashboard/__tests__/obsidianFormatter.test.ts": 1,

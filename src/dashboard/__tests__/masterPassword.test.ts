@@ -23,6 +23,7 @@ vi.mock('../../utils/masterPassword.js', () => ({
   calculatePasswordStrength: vi.fn(),
   validatePasswordRequirements: vi.fn(),
   validatePasswordMatch: vi.fn(),
+  PasswordStrength: { WEAK: 'weak', MEDIUM: 'medium', STRONG: 'strong' },
 }));
 
 const mockChromeGet = vi.fn();
@@ -52,6 +53,7 @@ import {
   calculatePasswordStrength,
   validatePasswordRequirements,
   validatePasswordMatch,
+  PasswordStrength,
 } from '../../utils/masterPassword.js';
 
 function flushPromises(): Promise<void> {
@@ -90,7 +92,7 @@ function setupFullDOM(): void {
 }
 
 function setupDefaultMockValues(): void {
-  vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 50, level: 'medium', text: 'Medium' });
+  vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 50, level: PasswordStrength.MEDIUM, text: 'Medium' });
   vi.mocked(validatePasswordRequirements).mockReturnValue(null);
   vi.mocked(validatePasswordMatch).mockReturnValue(null);
   vi.mocked(setMasterPassword).mockResolvedValue({ success: true });
@@ -255,7 +257,7 @@ describe('closePasswordModal', () => {
     const { initMasterPasswordSettings, closePasswordModal } = await import('../masterPassword.js');
     initMasterPasswordSettings();
     openModalViaCheckbox();
-    focusTrapManager.trap.mockClear();
+    vi.mocked(focusTrapManager.trap).mockClear();
 
     closePasswordModal();
 
@@ -428,7 +430,7 @@ describe('initMasterPasswordSettings - password strength input', () => {
   });
 
   it('should update the strength bar and text based on calculatePasswordStrength result', async () => {
-    vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 75, level: 'medium', text: 'Medium' });
+    vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 75, level: PasswordStrength.MEDIUM, text: 'Medium' });
 
     setupFullDOM();
     vi.resetModules();
@@ -918,7 +920,7 @@ describe('updatePasswordStrength behavior', () => {
   });
 
   it('should use calculatePasswordStrength result for non-empty password', async () => {
-    vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 90, level: 'strong', text: 'Strong' });
+    vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 90, level: PasswordStrength.STRONG, text: 'Strong' });
 
     setupFullDOM();
     vi.resetModules();
@@ -939,7 +941,7 @@ describe('updatePasswordStrength behavior', () => {
   });
 
   it('should fall back to result.text when getMessage returns falsy', async () => {
-    vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 100, level: 'strong', text: 'Strong' });
+    vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 100, level: PasswordStrength.STRONG, text: 'Strong' });
 
     setupFullDOM();
     vi.resetModules();
