@@ -1,8 +1,9 @@
 # プライバシーポリシー / Privacy Policy
 
-**最終更新日: 2026年7月31日 / Last Updated: July 31, 2026**
+**最終更新日: 2026年9月8日 / Last Updated: September 8, 2026**
 
 > **更新履歴 / Update History**:
+> - **2026年9月8日**: v6.8.0 - 閲覧履歴アーカイブ機能のデータフローと、ブラウザ内蔵 AI のデータ取り扱いについて追記
 > - **2026年7月31日**: v6.7.0 - プライバシー同意撤回時のデータ削除確認ダイアログについて追記
 > - **2026年6月20日**: v6.0.1 - GDPR 準拠修正。プライバシー同意拒否を「永久非表示」から「30日後に再表示」に変更
 > - **2026年6月13日**: v5.1.0 - PII サニタイゼーション強化（多言語対応）、データ保持期間の自動削除実装
@@ -45,8 +46,18 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
 - **旧バージョンからの移行**: 旧バージョンからのデータ移行はOPFS上のSQLite DBに対して実行されます。移行完了後、旧ストレージのデータは削除されます。
 - **いかなるデータも開発者のサーバーには保存されません。** 開発者はサーバーを運営していません。
 
+#### 閲覧履歴アーカイブのデータフロー
+
+`Dashboard → Archive` パネルの操作に関するデータの取り扱いは次の通りです。
+
+- **書き出し**: アーカイブファイル（`yasumaro_archive_<日付>.db`）はユーザーの明示操作でのみ生成され、ブラウザのダウンロードフォルダに保存されます。**暗号化・署名のない平文の標準 SQLite ファイル**です。書き出し後の保管・移動・削除はユーザーの責任で管理してください。
+- **本体からの削除**: フェーズ2の削除は、フェーズ1で書き出したファイルの内容と突合せてから実行され、フェーズ1以降に追加されたレコードは保護されます。
+- **復元**: ユーザーが選択したアーカイブファイルを本体 SQLite DB にマージします（重複はスキップ）。ファイルの内容が外部へ送信されることはありません。
+- **一時オープン**: 本体に取り込まずにアーカイブファイルを開いて検索・タイトル編集ができます。編集内容の書き戻し先は選択したアーカイブファイルのみで、本体 DB には影響しません。
+- アーカイブに関する処理はすべて端末内で完結し、開発者のサーバーへの送信は一切ありません。
+
 ### データの使用方法
-1. **ページ内容**: 要約を作成するために、ユーザーが選択した AI プロバイダー API（Google Gemini、OpenAI互換API等）に送信されます。送信先の AI プロバイダーは、ユーザーが設定画面で選択したものです。各プロバイダーのデータ利用ポリシーが適用されます。各プロバイダーのプライバシーポリシーをご確認ください。
+1. **ページ内容**: 要約を作成するために、ユーザーが選択した AI プロバイダー API（Google Gemini、OpenAI互換API等）に送信されます。送信先の AI プロバイダーは、ユーザーが設定画面で選択したものです。各プロバイダーのデータ利用ポリシーが適用されます。各プロバイダーのプライバシーポリシーをご確認ください。**ブラウザ内蔵 AI（Chrome の Gemini Nano / Edge の Phi-mini）を選択した場合は、推論がデバイス内で完結し、ページ内容はデバイス外へ送信されません。**
 2. **閲覧履歴**: OPFS上のSQLite DBに保存され、拡張機能のダッシュボード（履歴タブ）で確認・管理できます。Obsidian 連携を有効にした場合（オプション）は、Obsidian Local REST API を通じて Obsidian Vault にもデータが送信されます。この場合、データの取り扱いは Obsidian およびそのプラグイン（Local REST API）のポリシーに依存します。
 3. **設定**: Obsidian および AI プロバイダー API への接続に使用されます。
 
@@ -227,8 +238,18 @@ The Extension collects the following data **locally on your device**:
 - **Migration from older versions**: Data migration from older versions is performed against the SQLite DB on OPFS. After migration is complete, data in the old storage is deleted.
 - **No data is stored on our servers.**
 
+#### History Archive Data Flow
+
+Data handling for the `Dashboard → Archive` panel:
+
+- **Export**: An archive file (`yasumaro_archive_<date>.db`) is created only by an explicit user action and saved to the browser's download folder. It is a **plaintext standard SQLite file with no encryption or signing**. Storage, moving, and deletion of the file after export are the user's responsibility.
+- **Deletion from the main database**: The phase-2 deletion is cross-checked against the file exported in phase 1, and records added after phase 1 are protected.
+- **Restore**: The archive file selected by the user is merged into the main SQLite DB (duplicates skipped). The file's contents are not sent anywhere.
+- **Open temporarily**: You can open an archive file without importing it, to search and edit titles. Edits are written back only to the selected archive file and do not affect the main DB.
+- All archive processing is completed on-device; nothing is sent to our servers.
+
 ### How Data Is Used
-1. **Page content**: Sent to the AI provider API selected by the user (Google Gemini, OpenAI-compatible APIs, etc.) to generate summaries. The AI provider is the one you choose in the settings; their data usage policy applies. Please review the privacy policy of your chosen provider.
+1. **Page content**: Sent to the AI provider API selected by the user (Google Gemini, OpenAI-compatible APIs, etc.) to generate summaries. The AI provider is the one you choose in the settings; their data usage policy applies. Please review the privacy policy of your chosen provider. **If you select browser Built-in AI (Chrome's Gemini Nano / Edge's Phi-mini), inference runs on-device and page content is not sent outside the device.**
 2. **Browsing history**: Stored in the SQLite DB on OPFS and can be viewed and managed in the extension's Dashboard (History tab). If you enable Obsidian integration (optional), data is also sent to your Obsidian vault via the Obsidian Local REST API. In that case, data handling is subject to the policies of Obsidian and the Local REST API plugin.
 3. **Settings**: Used to connect to Obsidian and the AI provider API.
 
