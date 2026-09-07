@@ -98,6 +98,14 @@ Obsidian への書き込みは Obsidian が起動している必要がありま�
 
 完全なリストは [完全セットアップガイド](SETUP_GUIDE.md) の「サポートされている AI プロバイダー」テーブルをご覧ください。Built-in AI のセットアップ手順は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) を参照してください。
 
+**Q14a. ブラウザ内蔵 AI とは何ですか？API キーは必要ですか？**
+
+Chrome の Gemini Nano、Microsoft Edge の Phi-mini を要約に使う仕組みです。API キーは不要で、料金もかかりません。モデルはブラウザがデバイス内に持つため、要約時にページの内容が外部へ送信されません。初回のみモデルのダウンロード（数 GB）が必要で、その後はオフラインでも動作します。対応ブラウザで一度だけフラグの有効化が必要です。手順は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) をご覧ください。
+
+**Q14b. 内蔵 AI の診断で「downloadable」と表示されます。どうすればいいですか？**
+
+`downloadable` はモデルがまだ端末に取得されていない状態です。ダッシュボードの診断パネルにある内蔵 AI セクションから、進捗表示つきでダウンロードを開始できます。あるいは要約や「AI テスト」を実行すると自動でダウンロードが始まります。ダウンロード中は `downloading`、完了すると `available` に変わります。`unavailable` の場合は、対応ブラウザかどうかとフラグの有効化を確認してください。
+
 **Q15. Groq を使うにはどう設定しますか？**
 
 ダッシュボードの「AI Provider」で「OpenAI Compatible」を選択します。Base URL に `https://api.groq.com/openai/v1`、API Key に [Groq Console](https://console.groq.com/keys) で取得したキー、Model Name に `llama-3.3-70b-versatile` などを入力し、最後に「Save & Test Connection」をクリックしてください。
@@ -194,6 +202,10 @@ HTTP レスポンスヘッダー（`Cache-Control: private`、`Set-Cookie` な�
 
 以下を確認してください。(1) API キーが正しく入力されているか。(2) 選択したモデル名がプロバイダーで使用可能か。(3) Base URL のドメインが Yasumaro のサポートリストに含まれているか（Q19 参照）。Groq などの無料枠は利用制限があるため、リクエスト数の上限に達している可能性もあります。
 
+**Q35a. AI テストの結果に出る prompt / response / error / hasContent は何を意味しますか？**
+
+Yasumaro の接続テストは、実際に AI へ短いプロンプトを1往復させます。`prompt` は送信した文章、`response` は返ってきた文章、`error` は失敗時のメッセージ、`hasContent` は本文が返ったかどうかです。テストが「通った」のに `hasContent` が false の場合は、AI からの応答が空だったことを意味します。よくある原因は、Gemini の思考トークンが出力枠を使い切ったケースや、`maxOutputTokens` が小さすぎるケースです。`error` に 401 / 403 が出ていれば API キー、404 ならモデル名を確認してください。
+
 **Q36. Obsidian にページが記録されているのに、AI 要約がありません。**
 
 AI 要約なしで記録する設定（「Record without AI」）を使用しているか、AI プロバイダーの設定が未完了の場合に発生します。ダッシュボードで AI プロバイダーを設定し、「Save & Test Connection」で接続を確認してください。
@@ -255,6 +267,14 @@ SQLite に組み込まれている全文検索エンジンです。従来の LIK
 できます。ダッシュボードの「ログをエクスポート」パネルから、JSON（バックアップ・移行用）/ CSV / Markdown / SQLite データベース（.db）の各形式でエクスポートできます。v6.7.99 以降、JSON エクスポートには改竄検出用の HMAC 署名が付き、インポート時に検証されます。**v6.7.98 以前でエクスポートした署名なしの JSON は再インポートできない**ため、必要なら最新バージョンで再エクスポートしてください。パスワード保護が必要な場合は「暗号化バックアップ」も利用できます。詳細は [ログのエクスポート・インポートガイド](LOG_EXPORT_IMPORT_GUIDE.md) をご覧ください。
 
 また、`Dashboard → Archive` パネルでは、指定日までの閲覧履歴を標準SQLiteファイルとしてバックアップし、必要になったら本体DBへマージ復元できます。バックアップと本体からの削除は分離されており、削除はバックアップファイルの内容と突合せてから実行されます。詳細は [セットアップガイド](SETUP_GUIDE.md) の「閲覧履歴アーカイブ」セクションをご覧ください。
+
+**Q49a. アーカイブで古い履歴を安全に減らせますか？**
+
+減らせます。`Dashboard → Archive` の操作は2段階です。まず指定日までの履歴をファイル（`.db`）に書き出してダウンロードします（この時点で本体は変更されません）。ダウンロードを確認してから、本体の該当レコードを削除します。削除はフェーズ1で作ったファイルと突合せてから実行され、フェーズ1以降に追加された分は保護されます。削除したぶんは、あとからファイルを選んで本体へマージ復元できます。
+
+**Q49b. アーカイブファイルは暗号化されますか？**
+
+されません。アーカイブファイルは平文・非署名の標準 SQLite ファイルで、DB Browser for SQLite などの汎用ツールでそのまま開けます。中身は閲覧履歴そのものなので、書き出したあとの保管・移動・削除はご自身で管理してください。データの取り扱いについては [プライバシーポリシー](PRIVACY.md) をご覧ください。
 
 **Q50. AI 要約のクレンジングで重要な部分が誤って削除された場合は？**
 
@@ -358,6 +378,14 @@ For writing to Obsidian, yes. However, history data is saved to the SQLite DB on
 
 See the full provider table in the [Complete Setup Guide](SETUP_GUIDE.md). For Built-in AI setup steps, see the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md).
 
+**Q14a. What is browser Built-in AI? Do I need an API key?**
+
+It uses Chrome's Gemini Nano or Microsoft Edge's Phi-mini for summarization. No API key is required and there is no cost. The model runs on-device, so page content is not sent externally during summarization. A one-time model download (several GB) is needed on first use; after that it works offline. You also need to enable a browser flag once. See the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md).
+
+**Q14b. The Built-in AI diagnostics show "downloadable". What should I do?**
+
+`downloadable` means the model has not been fetched to your device yet. You can start the download, with a progress indicator, from the Built-in AI section of the dashboard's diagnostics panel. Running a summary or the "AI test" also starts the download automatically. The state changes to `downloading`, then `available` when finished. If it shows `unavailable`, check that you are on a supported browser and that the flag is enabled.
+
 **Q15. How do I set up Groq?**
 
 In the dashboard, select "OpenAI Compatible" as the AI Provider. Set Base URL to `https://api.groq.com/openai/v1`, enter your API key from [Groq Console](https://console.groq.com/keys), set a Model Name such as `llama-3.3-70b-versatile`, and click "Save & Test Connection".
@@ -454,6 +482,10 @@ Check in order: (1) Is Obsidian running? (2) Is the Local REST API plugin enable
 
 Check: (1) Is the API key entered correctly? (2) Is the model name valid for your provider? (3) Is the Base URL domain on Yasumaro's supported list? (See Q19.) Free-tier providers like Groq have rate limits that may be reached.
 
+**Q35a. What do prompt / response / error / hasContent in the AI test result mean?**
+
+Yasumaro's connection test sends a short prompt to the AI and waits for one round-trip. `prompt` is what was sent, `response` is what came back, `error` is the failure message, and `hasContent` is whether any body text was returned. If the test "passed" but `hasContent` is false, the AI returned an empty response. Common causes are Gemini's thinking tokens using up the output budget, or `maxOutputTokens` set too low. If `error` shows 401 / 403, check the API key; 404 means the model name is wrong.
+
 **Q36. Pages are recorded in Obsidian but with no AI summary.**
 
 This happens when using "Record without AI" or when the AI provider is not configured. Set up an AI provider in the dashboard and confirm the connection with "Save & Test Connection".
@@ -515,6 +547,14 @@ You can hide it in your browser settings. In Chrome, open `chrome://settings/dow
 Yes. The **Export Logs** panel in the dashboard exports your history as JSON (backup & migration), CSV, Markdown, or a SQLite database (.db). Since v6.7.99, JSON exports carry an HMAC signature for tamper detection, verified on import. **Unsigned JSON exported by v6.7.98 or earlier can no longer be re-imported** — re-export it with the latest version if needed. For password protection, use the Encrypted Backup feature. See the [Log Export & Import Guide](LOG_EXPORT_IMPORT_GUIDE.md) for details.
 
 The `Dashboard → Archive` panel can also export browsing history up to a chosen date as a standard SQLite file and merge it back into the main database when needed. Export and deletion are separate phases; deletion is cross-checked against the exported file's contents. See the "History Archive" section in the [Setup Guide](SETUP_GUIDE.md).
+
+**Q49a. Can I safely reduce old history with the archive feature?**
+
+Yes. The `Dashboard → Archive` flow has two phases. First, export history up to a chosen date to a file (`.db`) and download it — the main database is not changed at this point. After confirming the download, delete the corresponding records from the main database. Deletion is cross-checked against the file created in phase 1, and records added after phase 1 are protected. Deleted records can be merged back later by selecting the file.
+
+**Q49b. Is the archive file encrypted?**
+
+No. The archive file is a plain, unsigned standard SQLite file that opens in generic tools like DB Browser for SQLite. Its contents are your browsing history, so managing the file after export — storage, moving, deletion — is your responsibility. See the [Privacy Policy](PRIVACY.md) for how data is handled.
 
 **Q50. The AI summary cleansing accidentally removed something important. What can I do?**
 
