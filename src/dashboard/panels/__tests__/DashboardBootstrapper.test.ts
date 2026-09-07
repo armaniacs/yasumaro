@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NavigationRegistry } from '../NavigationRegistry.js';
 import { DashboardBootstrapper } from '../DashboardBootstrapper.js';
+import { PANEL_CATALOG } from '../panelCatalog.js';
 import { type PanelLifecycle } from '../types.js';
 
 function mockPanel(overrides?: Partial<PanelLifecycle>): PanelLifecycle {
@@ -88,5 +89,48 @@ describe('DashboardBootstrapper', () => {
     btnA.click();
     expect(btnA.getAttribute('aria-selected')).toBe('true');
     expect(btnB.getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('registerCatalog registers every catalog panel in catalog order (PBI 2026-09-07-25)', () => {
+    const created: string[] = [];
+    bootstrapper.registerCatalog((id) => {
+      created.push(id);
+      return mockPanel({ id });
+    });
+
+    expect(created).toEqual(PANEL_CATALOG.map((e) => e.id));
+
+    // Every registered panel is navigable without throwing.
+    for (const id of created) {
+      registry.navigate(id);
+    }
+    expect(registry.activeId).toBe(created[created.length - 1]);
+  });
+
+  it('syncs sidebar aria-selected on programmatic navigate (no click)', () => {
+    const panelA = mockPanel({ id: 'panel-a' });
+    const panelB = mockPanel({ id: 'panel-b' });
+    bootstrapper.registerPanels([panelA, panelB]);
+
+    const btnA = document.createElement('button');
+    btnA.className = 'sidebar-nav-btn active';
+    btnA.setAttribute('data-panel', 'panel-a');
+    btnA.setAttribute('aria-selected', 'true');
+    const btnB = document.createElement('button');
+    btnB.className = 'sidebar-nav-btn';
+    btnB.setAttribute('data-panel', 'panel-b');
+    btnB.setAttribute('aria-selected', 'false');
+    sidebar.appendChild(btnA);
+    sidebar.appendChild(btnB);
+    bootstrapper.wireSidebar(sidebar);
+
+    // Bypass the click handler entirely, like a panel calling
+    // getRegistry().navigate() from the inside.
+    registry.navigate('panel-b');
+
+    expect(btnA.getAttribute('aria-selected')).toBe('false');
+    expect(btnB.getAttribute('aria-selected')).toBe('true');
+    expect(btnA.classList.contains('active')).toBe(false);
+    expect(btnB.classList.contains('active')).toBe(true);
   });
 });

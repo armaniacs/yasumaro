@@ -48,6 +48,16 @@
 | fallback 再入ギャップ | OPFS 復活時に IDB 経由の fallback 移行（`tryMigrateFallbackToSqlite`）が発火しない経路。実害はレアケース（次回 SW 再起動時に `OpfsRecoveryService` が回収、データロストなし）、Effort 1.0〜1.5週。**PBI 32（サンセット）で Option B（IDB 中間層廃止）を選ぶ場合のみ優先度繰り上げ** — それまで PBI 32 の設計時考慮事項に留める | スパイク移行経路表 |
 | PBI-B 測定基盤の設計 | fallback-only 到達率を privacy 制約下で計測する設計（診断 STATUS の `compileOptionsSource` 集計は要設計） | スパイク PBI-B 前提 |
 
+**2026-09-07 round 2（arch-delivery-loop・0907a ブランチ）で台帳入り（5 項目）:**
+
+| 項目 | RICE | 再評価条件 |
+|------|------|-----------|
+| UPDATE 許可フィールドの 4 枚舌リスト（schema `UPDATABLE_FIELDS` 31 件 vs deps `ALLOWED_UPDATE_FIELDS` 10 件 vs `handleUpdate` 直書き ~31 件 vs archiveSessionHandlers 検査。dashboard 経路と offscreen 直叩きで許可集合が食い違う drift 実在） | 6.0 | **PBI 2026-09-07-22（archive wire 統合）着地後** — deps.ts / sqliteMessageHandlers.ts を共有するため |
+| Archive validation 三つ巴（validateStructure / validateColumns が同一 PRAGMA reader を二重保持、`readArchiveMeta` は 1 flag の浅い wrapper、backupHandlers の trigger-count 検査は「コピー禁止」警告付き） | 4.8 | **PBI 21/22 着地後**（archiveSessionHandlers・archiveValidation を共有） |
+| SqliteHistoryModel 21 メソッド → 8（フィルタ系 8 メソッドを `HistoryQuery` 値オブジェクト + `applyQuery(patch)` に畳む。onNavigateIn 順序制約の contract test が前提） | 5.25 | **PBI 2026-09-07-23（View 描画統合）着地後** — 同一ファイルクラスタ |
+| recordingHandlers の MANUAL/SAVE 双子（isSecureUrl + record 尾部 + byteStats 束の重複。`envelopePolicy` の extension-only 扱いを変えない条件で統合可） | 3.5 | envelopePolicy との相互作用を検討する次回 recording ハンドラ改修時 |
+| Archive session 状態機械の二重化（worker `archiveDirty` と panel `archiveDirtyLocal` の同期点 3 箇所、single-flight 3 旗が 2 流儀 4 実装、テスト用内部リセット関数 30+ 参照） | 3.0 | panel 写しを「毎回 status RPC」に置き換える latency 体感の検討後（`ArchiveSession` 値オブジェクト + `withSingleFlight` への統合が解の骨格） |
+
 ## 運用
 
 - 次ラウンドの architecture review（`/improve-codebase-architecture`）は本台帳を入力に再評価する

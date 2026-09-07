@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createArchiveHandler } from '../archiveHandler.js';
+import { dashboardSqliteValidator } from '../../../../messaging/validators.js';
 import type { ArchiveDeps, DepsResult } from '../deps.js';
 import type { ArchivePreviewData, ArchiveCreateData, ArchivePurgeData } from '../../../../messaging/sqliteMessages.js';
 
@@ -117,17 +118,25 @@ describe('archiveHandler — archive_create', () => {
     expect(result).toEqual({ success: false, error: 'archive_create: cutoffDate is required' });
   });
 
-  it('rejects an over-long yasumaroVersion', async () => {
+  it('rejects an over-long yasumaroVersion at the validator (handler holds no duplicate)', () => {
+    // PBI 2026-09-07-21: the handler-side yasumaroVersion check was removed —
+    // DashboardSqliteValidator owns the shape (identical message) and always
+    // runs first via MessageRouter.dispatch.
     const deps = makeDeps();
-    const handler = createArchiveHandler(deps);
-    const result = await handler({
-      subtype: 'archive_create',
-      cutoffDate: CUTOFF_DATE,
-      cutoffMs: CUTOFF_MS,
-      includeDeleted: false,
-      yasumaroVersion: 'v'.repeat(65),
-    });
-    expect(result).toEqual({ success: false, error: 'archive_create: yasumaroVersion must be 1-64 chars' });
+    expect(() =>
+      dashboardSqliteValidator.validate({
+        type: 'DASHBOARD_SQLITE',
+        protocolVersion: 2,
+        payload: {
+          subtype: 'archive_create',
+          cutoffDate: CUTOFF_DATE,
+          cutoffMs: CUTOFF_MS,
+          includeDeleted: false,
+          yasumaroVersion: 'v'.repeat(65),
+        },
+      }),
+    ).toThrow(/yasumaroVersion must be 1-64 chars/);
+    expect(deps.archiveCreate).not.toHaveBeenCalled();
   });
 });
 
@@ -143,11 +152,17 @@ describe('archiveHandler — archive_delete_by_staging', () => {
     expect(deps.archiveDeleteByStaging).toHaveBeenCalledWith('archive_outgoing_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db');
   });
 
-  it('rejects a missing stagingName', async () => {
+  it('rejects a missing stagingName at the validator (handler holds no shape check)', () => {
+    // PBI 2026-09-07-21: handler stagingName checks were removed — the
+    // validator rejects first on the production path (router dispatch order).
     const deps = makeDeps();
-    const handler = createArchiveHandler(deps);
-    const result = await handler({ subtype: 'archive_delete_by_staging' } as never);
-    expect(result).toEqual({ success: false, error: 'archive_delete_by_staging: stagingName is required' });
+    expect(() =>
+      dashboardSqliteValidator.validate({
+        type: 'DASHBOARD_SQLITE',
+        protocolVersion: 2,
+        payload: { subtype: 'archive_delete_by_staging' },
+      }),
+    ).toThrow(/stagingName/);
     expect(deps.archiveDeleteByStaging).not.toHaveBeenCalled();
   });
 });
@@ -168,11 +183,15 @@ describe('archiveHandler — archive_export', () => {
     );
   });
 
-  it('rejects a missing stagingName', async () => {
+  it('rejects a missing stagingName at the validator (handler holds no shape check)', () => {
     const deps = makeDeps();
-    const handler = createArchiveHandler(deps);
-    const result = await handler({ subtype: 'archive_export', offset: 0, length: 10 } as never);
-    expect(result).toEqual({ success: false, error: 'archive_export: stagingName is required' });
+    expect(() =>
+      dashboardSqliteValidator.validate({
+        type: 'DASHBOARD_SQLITE',
+        protocolVersion: 2,
+        payload: { subtype: 'archive_export', offset: 0, length: 10 },
+      }),
+    ).toThrow(/stagingName/);
     expect(deps.archiveExportChunk).not.toHaveBeenCalled();
   });
 

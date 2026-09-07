@@ -32,6 +32,7 @@ vi.mock('../../../utils/confirmDialog.js', () => ({
 }));
 
 import { createSqliteHistoryPanel } from '../sqliteHistoryPanel.js';
+import { SQLITE_HISTORY_IDS } from '../sqliteHistoryPanelView.js';
 import * as db from '../../../dashboardSqliteService.js';
 import * as confirmDialog from '../../../utils/confirmDialog.js';
 import * as storageUrls from '../../../../utils/storageUrls.js';
@@ -71,7 +72,7 @@ async function flush(): Promise<void> {
 }
 
 function errorText(): string {
-  return document.getElementById('sqlite-error')?.textContent ?? '';
+  return document.getElementById(SQLITE_HISTORY_IDS.error)?.textContent ?? '';
 }
 
 beforeEach(() => {

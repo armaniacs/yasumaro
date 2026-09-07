@@ -1,4 +1,5 @@
 import { NavigationRegistry } from './NavigationRegistry.js';
+import { PANEL_CATALOG, type PanelCatalogId } from './panelCatalog.js';
 import { type PanelLifecycle } from './types.js';
 
 export class DashboardBootstrapper {
@@ -9,6 +10,19 @@ export class DashboardBootstrapper {
   registerPanels(panels: PanelLifecycle[]): void {
     for (const panel of panels) {
       this.registry.register(panel);
+    }
+  }
+
+  /**
+   * 正規の登録経路 (PBI 2026-09-07-25)。存在と順序は PANEL_CATALOG が所有し、
+   * Bootstrapper はカタログ順に生成・登録する場所になったことで
+   * pass-through 以上の役割 (登録順序の所有) を持つ。`registerPanels` は
+   * 既存テスト互換の薄い互換 API として残す。再評価の記録は
+   * whywhy/pbi25-catalog.md「Why3」。
+   */
+  registerCatalog(createPanel: (id: PanelCatalogId) => PanelLifecycle): void {
+    for (const entry of PANEL_CATALOG) {
+      this.registry.register(createPanel(entry.id));
     }
   }
 
@@ -27,6 +41,10 @@ export class DashboardBootstrapper {
 
   wireSidebar(sidebar: HTMLElement): void {
     this.sidebar = sidebar;
+    // Programmatic navigations (registry.navigate from inside a panel) bypass
+    // the click handler below, so sync the sidebar on every navigation. This
+    // keeps aria-selected correct no matter how the panel was opened.
+    this.registry.onDidNavigate((panelId) => this.#updateActiveTabForPanel(panelId));
     const getTabs = (): HTMLElement[] => {
       return Array.from(sidebar.querySelectorAll<HTMLElement>('.sidebar-nav-btn'));
     };

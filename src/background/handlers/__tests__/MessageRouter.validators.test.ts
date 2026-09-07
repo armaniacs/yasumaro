@@ -99,6 +99,42 @@ describe('MessageRouter — validator integration', () => {
     });
   });
 
+  it('rejects a forged archive cutoff pair before the handler runs (PBI 2026-09-07-21)', () => {
+    const router = createMessageRouter(deps);
+    const sendResponse = vi.fn();
+    const sender = { id: 'test-id' } as unknown as chrome.runtime.MessageSender;
+
+    const cutoffDate = '2026-09-01';
+    const forgedMs = new Date(2026, 7, 31, 23, 59, 59, 999).getTime();
+    router.dispatch(
+      { type: 'DASHBOARD_SQLITE', payload: { subtype: 'archive_preview', cutoffDate, cutoffMs: forgedMs, includeDeleted: false }, protocolVersion: 1 },
+      sender,
+      sendResponse,
+    );
+
+    expect(deps.dashboardSqliteHandler).not.toHaveBeenCalled();
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, error: expect.stringContaining('cutoffMs does not match cutoffDate') }),
+    );
+  });
+
+  it('rejects a forged archive stagingName before the handler runs (PBI 2026-09-07-21)', () => {
+    const router = createMessageRouter(deps);
+    const sendResponse = vi.fn();
+    const sender = { id: 'test-id' } as unknown as chrome.runtime.MessageSender;
+
+    router.dispatch(
+      { type: 'DASHBOARD_SQLITE', payload: { subtype: 'archive_delete_by_staging', stagingName: 'yasumaro.db' }, protocolVersion: 1 },
+      sender,
+      sendResponse,
+    );
+
+    expect(deps.dashboardSqliteHandler).not.toHaveBeenCalled();
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, error: expect.stringContaining('stagingName') }),
+    );
+  });
+
   it('handles PING which has no validator registered', async () => {
     const router = createMessageRouter(deps);
     const sendResponse = vi.fn();

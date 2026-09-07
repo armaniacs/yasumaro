@@ -24,21 +24,8 @@ import {
   restoreDb as sqliteRestoreDb,
   purgeOldRecords as sqlitePurgeOldRecords,
   purgeContent as sqlitePurgeContent,
-  archivePreview as sqliteArchivePreview,
-  archiveCreate as sqliteArchiveCreate,
-  archiveCleanup as sqliteArchiveCleanup,
-  archiveExportChunk as sqliteArchiveExportChunk,
-  archivePrepareIncoming as sqliteArchivePrepareIncoming,
-  archiveRestorePreview as sqliteArchiveRestorePreview,
-  archiveRestore as sqliteArchiveRestore,
-  archiveDeleteByStaging as sqliteArchiveDeleteByStaging,
-  archiveOpen as sqliteArchiveOpen,
-  archiveQuery as sqliteArchiveQuery,
-  archiveUpdate as sqliteArchiveUpdate,
-  archiveSave as sqliteArchiveSave,
-  archiveClose as sqliteArchiveClose,
-  archiveStatus as sqliteArchiveStatus,
 } from './dbMaintenance.js';
+import type { ArchiveOpType } from '../messaging/archiveWireTable.js';
 import {
   insertAuditLog as sqliteInsertAuditLog,
   queryAuditLog as sqliteQueryAuditLog,
@@ -293,176 +280,135 @@ async function handleContentPurge(msg: SqliteMessage, sendResponse: (r: unknown)
   sendResponse(result);
 }
 
-async function handleArchivePreview(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_PREVIEW' }>).payload;
-  const result = await sqliteArchivePreview(payload.cutoffDate, payload.cutoffMs, payload.includeDeleted);
-  if (result.success && 'preview' in result) {
-    sendResponse({ success: true, preview: result.preview });
-  } else if (result.success) {
-    sendResponse({ success: false, error: 'Archive preview returned no data' });
-  } else {
-    sendResponse({ success: false, error: result.error });
-  }
+/**
+ * Table-driven archive dispatch (PBI 2026-09-07-22).
+ *
+ * The 14 archive handlers used to be hand-written 1:1 copies that differed
+ * only in backend method, payload args, and response projection. Each row
+ * here carries exactly that per-op knowledge; handleArchive below executes
+ * the shared shape (call backend -> project success fields -> forward the
+ * failure reason). Keyed by ArchiveOpType, so a new table op without a row
+ * here is a type error. Error strings are unchanged.
+ */
+type ArchiveBackendMethod =
+  | 'archivePreview' | 'archiveCreate' | 'archiveCleanup' | 'archiveExportChunk'
+  | 'archivePrepareIncoming' | 'archiveRestorePreview' | 'archiveRestore'
+  | 'archiveDeleteByStaging' | 'archiveOpen' | 'archiveQuery' | 'archiveUpdate'
+  | 'archiveSave' | 'archiveClose' | 'archiveStatus';
+
+type ArchiveBackendResult = { success: true; [field: string]: unknown } | { success: false; error: string };
+
+interface ArchiveDispatchEntry {
+  method: ArchiveBackendMethod;
+  args: (payload: Record<string, unknown>) => unknown[];
+  /** Success-field projection; null means the backend returned no data. */
+  pick: (result: { success: true; [field: string]: unknown }) => Record<string, unknown> | null;
+  emptyError: string;
 }
 
-async function handleArchiveCreate(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_CREATE' }>).payload;
-  const result = await sqliteArchiveCreate(payload);
-  if (result.success && 'stagingName' in result) {
-    sendResponse({ success: true, stagingName: result.stagingName, recordCount: result.recordCount });
-  } else if (result.success) {
-    sendResponse({ success: false, error: 'Archive create returned no staging file' });
-  } else {
-    sendResponse({ success: false, error: result.error });
-  }
-}
+const ARCHIVE_DISPATCH: Record<ArchiveOpType, ArchiveDispatchEntry> = {
+  archivePreview: {
+    method: 'archivePreview',
+    args: (p) => [p['cutoffDate'] as string, p['cutoffMs'] as number, p['includeDeleted'] as boolean],
+    pick: (r) => ('preview' in r ? { preview: r['preview'] } : null),
+    emptyError: 'Archive preview returned no data',
+  },
+  archiveCreate: {
+    method: 'archiveCreate',
+    args: (p) => [p],
+    pick: (r) => ('stagingName' in r ? { stagingName: r['stagingName'], recordCount: r['recordCount'] } : null),
+    emptyError: 'Archive create returned no staging file',
+  },
+  archiveCleanup: {
+    method: 'archiveCleanup',
+    args: () => [],
+    pick: (r) => ('removed' in r ? { removed: r['removed'] } : null),
+    emptyError: 'Archive cleanup returned no data',
+  },
+  archiveExport: {
+    method: 'archiveExportChunk',
+    args: (p) => [p['stagingName'] as string, p['offset'] as number, p['length'] as number],
+    pick: (r) => ('chunk' in r ? { chunk: r['chunk'], nextOffset: r['nextOffset'], total: r['total'], done: r['done'] } : null),
+    emptyError: 'Archive export returned no data',
+  },
+  archivePrepareIncoming: {
+    method: 'archivePrepareIncoming',
+    args: () => [],
+    pick: (r) => ('stagingName' in r ? { stagingName: r['stagingName'] } : null),
+    emptyError: 'Archive prepare returned no staging name',
+  },
+  archiveRestorePreview: {
+    method: 'archiveRestorePreview',
+    args: (p) => [p['stagingName'] as string],
+    pick: (r) => ('preview' in r ? { preview: r['preview'] } : null),
+    emptyError: 'Archive restore preview returned no data',
+  },
+  archiveRestore: {
+    method: 'archiveRestore',
+    args: (p) => [p['stagingName'] as string],
+    pick: (r) => ('restored' in r ? { restored: r['restored'], restoredDeleted: r['restoredDeleted'], skipped: r['skipped'], skippedInvalid: r['skippedInvalid'] } : null),
+    emptyError: 'Archive restore returned no data',
+  },
+  archiveDeleteByStaging: {
+    method: 'archiveDeleteByStaging',
+    args: (p) => [p['stagingName'] as string],
+    pick: (r) => ('deleted' in r ? { deleted: r['deleted'], remaining: r['remaining'], freelistBefore: r['freelistBefore'], freelistAfter: r['freelistAfter'], vacuumOk: r['vacuumOk'] } : null),
+    emptyError: 'Archive purge returned no data',
+  },
+  archiveOpen: {
+    method: 'archiveOpen',
+    args: (p) => [p['stagingName'] as string],
+    pick: () => ({}),
+    emptyError: 'Archive open returned no data',
+  },
+  archiveQuery: {
+    method: 'archiveQuery',
+    args: (p) => [p['stagingName'] as string, p['query'] as string, p['limit'] as number, p['offset'] as number],
+    pick: (r) => ('rows' in r ? { rows: r['rows'], total: r['total'] } : null),
+    emptyError: 'Archive query returned no data',
+  },
+  archiveUpdate: {
+    method: 'archiveUpdate',
+    args: (p) => [p['stagingName'] as string, p['id'] as number, p['changes'] as Record<string, unknown>],
+    pick: (r) => ('dirty' in r ? { dirty: r['dirty'] } : null),
+    emptyError: 'Archive update returned no data',
+  },
+  archiveSave: {
+    method: 'archiveSave',
+    args: (p) => [p['stagingName'] as string],
+    pick: (r) => ('dirty' in r ? { dirty: r['dirty'] } : null),
+    emptyError: 'Archive save returned no data',
+  },
+  archiveClose: {
+    method: 'archiveClose',
+    args: (p) => [p['stagingName'] as string],
+    pick: (r) => ('dirty' in r ? { dirty: r['dirty'] } : null),
+    emptyError: 'Archive close returned no data',
+  },
+  archiveStatus: {
+    method: 'archiveStatus',
+    args: () => [],
+    pick: (r) => ('status' in r ? { status: r['status'] } : null),
+    emptyError: 'Archive status returned no data',
+  },
+};
 
-async function handleArchiveCleanup(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const result = await sqliteArchiveCleanup();
-  if (result.success && 'removed' in result) {
-    sendResponse({ success: true, removed: result.removed });
-  } else if (result.success) {
-    sendResponse({ success: false, error: 'Archive cleanup returned no data' });
-  } else {
+async function handleArchive(op: ArchiveOpType, msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const entry = ARCHIVE_DISPATCH[op];
+  const payload = (msg as { payload?: Record<string, unknown> }).payload ?? {};
+  const backend = await engine.getBackend();
+  const call = backend[entry.method] as unknown as (...args: unknown[]) => Promise<ArchiveBackendResult>;
+  const result = await call(...entry.args(payload));
+  if (!result.success) {
     sendResponse({ success: false, error: result.error });
+    return;
   }
-}
-
-async function handleArchiveExport(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_EXPORT' }>).payload;
-  const result = await sqliteArchiveExportChunk(payload.stagingName, payload.offset, payload.length);
-  if (result.success && 'chunk' in result) {
-    sendResponse({ success: true, chunk: result.chunk, nextOffset: result.nextOffset, total: result.total, done: result.done });
-  } else if (result.success) {
-    sendResponse({ success: false, error: 'Archive export returned no data' });
-  } else {
-    sendResponse({ success: false, error: result.error });
+  const fields = entry.pick(result);
+  if (fields === null) {
+    sendResponse({ success: false, error: entry.emptyError });
+    return;
   }
-}
-
-async function handleArchivePrepareIncoming(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const result = await sqliteArchivePrepareIncoming();
-  if (result.success && 'stagingName' in result) {
-    sendResponse({ success: true, stagingName: result.stagingName });
-  } else if (result.success) {
-    sendResponse({ success: false, error: 'Archive prepare returned no staging name' });
-  } else {
-    sendResponse({ success: false, error: result.error });
-  }
-}
-
-async function handleArchiveRestorePreview(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_RESTORE_PREVIEW' }>).payload;
-  const result = await sqliteArchiveRestorePreview(payload.stagingName);
-  if (result.success && 'preview' in result) {
-    sendResponse({ success: true, preview: result.preview });
-  } else if (result.success) {
-    sendResponse({ success: false, error: 'Archive restore preview returned no data' });
-  } else {
-    sendResponse({ success: false, error: result.error });
-  }
-}
-
-async function handleArchiveRestore(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_RESTORE' }>).payload;
-  const result = await sqliteArchiveRestore(payload.stagingName);
-  if (result.success && 'restored' in result) {
-    sendResponse({
-      success: true,
-      restored: result.restored,
-      restoredDeleted: result.restoredDeleted,
-      skipped: result.skipped,
-      skippedInvalid: result.skippedInvalid,
-    });
-  } else if (result.success) {
-    sendResponse({ success: false, error: 'Archive restore returned no data' });
-  } else {
-    sendResponse({ success: false, error: result.error });
-  }
-}
-
-async function handleArchiveOpen(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_OPEN' }>).payload;
-  const result = await sqliteArchiveOpen(payload.stagingName);
-  sendResponse(result.success ? { success: true } : { success: false, error: result.error });
-}
-
-async function handleArchiveQuery(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_QUERY' }>).payload;
-  const result = await sqliteArchiveQuery(payload.stagingName, payload.query, payload.limit, payload.offset);
-  if (result.success && 'rows' in result) {
-    sendResponse({ success: true, rows: result.rows, total: result.total });
-  } else if (result.success) {
-    sendResponse({ success: false, error: 'Archive query returned no data' });
-  } else {
-    sendResponse({ success: false, error: result.error });
-  }
-}
-
-async function handleArchiveUpdate(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_UPDATE' }>).payload;
-  const result = await sqliteArchiveUpdate(payload.stagingName, payload.id, payload.changes);
-  if (result.success && 'dirty' in result) {
-    sendResponse({ success: true, dirty: result.dirty });
-  } else if (result.success) {
-    sendResponse({ success: false, error: 'Archive update returned no data' });
-  } else {
-    sendResponse({ success: false, error: result.error });
-  }
-}
-
-async function handleArchiveSave(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_SAVE' }>).payload;
-  const result = await sqliteArchiveSave(payload.stagingName);
-  if (result.success && 'dirty' in result) {
-    sendResponse({ success: true, dirty: result.dirty });
-  } else if (result.success) {
-    sendResponse({ success: false, error: 'Archive save returned no data' });
-  } else {
-    sendResponse({ success: false, error: result.error });
-  }
-}
-
-async function handleArchiveClose(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_CLOSE' }>).payload;
-  const result = await sqliteArchiveClose(payload.stagingName);
-  if (result.success && 'dirty' in result) {
-    sendResponse({ success: true, dirty: result.dirty });
-  } else if (result.success) {
-    sendResponse({ success: false, error: 'Archive close returned no data' });
-  } else {
-    sendResponse({ success: false, error: result.error });
-  }
-}
-
-async function handleArchiveStatus(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const result = await sqliteArchiveStatus();
-  if (result.success && 'status' in result) {
-    sendResponse({ success: true, status: result.status });
-  } else if (result.success) {
-    sendResponse({ success: false, error: 'Archive status returned no data' });
-  } else {
-    sendResponse({ success: false, error: result.error });
-  }
-}
-
-async function handleArchiveDeleteByStaging(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_ARCHIVE_DELETE_BY_STAGING' }>).payload;
-  const result = await sqliteArchiveDeleteByStaging(payload.stagingName);
-  if (result.success && 'deleted' in result) {
-    sendResponse({
-      success: true,
-      deleted: result.deleted,
-      remaining: result.remaining,
-      freelistBefore: result.freelistBefore,
-      freelistAfter: result.freelistAfter,
-      vacuumOk: result.vacuumOk,
-    });
-  } else if (result.success) {
-    sendResponse({ success: false, error: 'Archive purge returned no data' });
-  } else {
-    sendResponse({ success: false, error: result.error });
-  }
+  sendResponse({ success: true, ...fields });
 }
 
 /**
@@ -489,20 +435,20 @@ const handlerRecord = {
   SQLITE_RESTORE: handleRestore,
   SQLITE_PURGE: handlePurge,
   CONTENT_PURGE: handleContentPurge,
-  SQLITE_ARCHIVE_PREVIEW: handleArchivePreview,
-  SQLITE_ARCHIVE_CREATE: handleArchiveCreate,
-  SQLITE_ARCHIVE_CLEANUP: handleArchiveCleanup,
-  SQLITE_ARCHIVE_EXPORT: handleArchiveExport,
-  SQLITE_ARCHIVE_PREPARE_INCOMING: handleArchivePrepareIncoming,
-  SQLITE_ARCHIVE_RESTORE_PREVIEW: handleArchiveRestorePreview,
-  SQLITE_ARCHIVE_RESTORE: handleArchiveRestore,
-  SQLITE_ARCHIVE_DELETE_BY_STAGING: handleArchiveDeleteByStaging,
-  SQLITE_ARCHIVE_OPEN: handleArchiveOpen,
-  SQLITE_ARCHIVE_QUERY: handleArchiveQuery,
-  SQLITE_ARCHIVE_UPDATE: handleArchiveUpdate,
-  SQLITE_ARCHIVE_SAVE: handleArchiveSave,
-  SQLITE_ARCHIVE_CLOSE: handleArchiveClose,
-  SQLITE_ARCHIVE_STATUS: handleArchiveStatus,
+  SQLITE_ARCHIVE_PREVIEW: (msg, sendResponse) => handleArchive('archivePreview', msg, sendResponse),
+  SQLITE_ARCHIVE_CREATE: (msg, sendResponse) => handleArchive('archiveCreate', msg, sendResponse),
+  SQLITE_ARCHIVE_CLEANUP: (msg, sendResponse) => handleArchive('archiveCleanup', msg, sendResponse),
+  SQLITE_ARCHIVE_EXPORT: (msg, sendResponse) => handleArchive('archiveExport', msg, sendResponse),
+  SQLITE_ARCHIVE_PREPARE_INCOMING: (msg, sendResponse) => handleArchive('archivePrepareIncoming', msg, sendResponse),
+  SQLITE_ARCHIVE_RESTORE_PREVIEW: (msg, sendResponse) => handleArchive('archiveRestorePreview', msg, sendResponse),
+  SQLITE_ARCHIVE_RESTORE: (msg, sendResponse) => handleArchive('archiveRestore', msg, sendResponse),
+  SQLITE_ARCHIVE_DELETE_BY_STAGING: (msg, sendResponse) => handleArchive('archiveDeleteByStaging', msg, sendResponse),
+  SQLITE_ARCHIVE_OPEN: (msg, sendResponse) => handleArchive('archiveOpen', msg, sendResponse),
+  SQLITE_ARCHIVE_QUERY: (msg, sendResponse) => handleArchive('archiveQuery', msg, sendResponse),
+  SQLITE_ARCHIVE_UPDATE: (msg, sendResponse) => handleArchive('archiveUpdate', msg, sendResponse),
+  SQLITE_ARCHIVE_SAVE: (msg, sendResponse) => handleArchive('archiveSave', msg, sendResponse),
+  SQLITE_ARCHIVE_CLOSE: (msg, sendResponse) => handleArchive('archiveClose', msg, sendResponse),
+  SQLITE_ARCHIVE_STATUS: (msg, sendResponse) => handleArchive('archiveStatus', msg, sendResponse),
 } satisfies Record<SqliteMessageType, SqliteHandler>;
 
 /**

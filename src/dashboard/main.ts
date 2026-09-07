@@ -1,16 +1,6 @@
 import { NavigationRegistry } from './panels/NavigationRegistry.js';
 import { DashboardBootstrapper } from './panels/DashboardBootstrapper.js';
-import { createDiagnosticsPanel } from './panels/diagnostic/diagnosticsPanel.js';
-import { createExportLogsPanel } from './panels/diagnostic/exportLogsPanel.js';
-import { createArchivePanel } from './panels/diagnostic/archivePanel.js';
-import { createDomainSearchPanel } from './panels/asyncData/domainSearchPanel.js';
-import { createTagClusterPanel } from './panels/asyncData/tagClusterPanel.js';
-import { createHistoryPanel } from './panels/asyncData/historyPanel.js';
-import { createSqliteHistoryPanel } from './panels/asyncData/sqliteHistoryPanel.js';
-import { createGeneralSettingsPanel } from './panels/staticForm/generalSettingsPanel.js';
-import { createPrivacySettingsPanel } from './panels/staticForm/privacySettingsPanel.js';
-import { createAiSummaryCleansingPanel } from './panels/staticForm/aiSummaryCleansingPanel.js';
-import { STATIC_FORM_PANELS } from './panels/staticForm/staticPanels.js';
+import { createPanelById } from './panels/panelFactories.js';
 import { setRegistry } from './panels/registryContext.js';
 import { initDashboard, resolveInitialPanelId, applySectionDeepLink } from './dashboard.js';
 
@@ -18,19 +8,9 @@ const registry = new NavigationRegistry();
 setRegistry(registry);
 const bootstrapper = new DashboardBootstrapper(registry);
 
-bootstrapper.registerPanels([
-  createDiagnosticsPanel(),
-  createExportLogsPanel(),
-  createArchivePanel(),
-  createDomainSearchPanel(),
-  createTagClusterPanel(),
-  createHistoryPanel(),
-  createSqliteHistoryPanel(),
-  createGeneralSettingsPanel(),
-  createPrivacySettingsPanel(),
-  createAiSummaryCleansingPanel(),
-  ...STATIC_FORM_PANELS,
-]);
+// Single source: existence and order come from PANEL_CATALOG via
+// registerCatalog (PBI 2026-09-07-25). No hand-written panel list here.
+bootstrapper.registerCatalog(createPanelById);
 
 const sidebar = document.getElementById('sidebar');
 if (sidebar) {

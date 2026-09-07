@@ -1,4 +1,4 @@
-import { checkPageStatus } from '../statusChecker.js';
+import { loadActiveTabStatus, type ActiveTabStatusSnapshot } from '../statusStore.js';
 import { SettingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { startAutoCloseTimer } from '../autoClose.js';
@@ -8,10 +8,9 @@ import { getMessage } from '../../utils/i18n.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import { getSavedUrlEntries } from '../../utils/storageUrls.js';
 import type { ContentResponse } from '../mainTypes.js';
-import { copyTextToClipboard } from '../../utils/clipboard.js';
 import { showSpinner, hideSpinner } from '../spinner.js';
 import { showError } from '../errorUtils.js';
-import { formatEntryToMarkdown } from '../../utils/markdownFormatter.js';
+import { createCopyMarkdownButton } from '../../utils/copyMarkdownButton.js';
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 import { updateCleansingStatus, updateTrustStatus } from '../statusPanel.js';
 import { TabContentFetcher } from './tabContentFetcher.js';
@@ -103,12 +102,12 @@ export class RecordSession {
    * Sole button writer. Syncs text/handler to the domain-filter status.
    * Called on load/finish paths and nowhere else — the status panel only
    * signals through the session entry points, never touching onclick itself.
+   * The status snapshot goes through the shared statusStore seam
+   * (PBI 2026-09-07-24); finish paths omit the snapshot to get a fresh look.
    */
-  async resetRecordButton(recordBtn: HTMLButtonElement): Promise<void> {
+  async resetRecordButton(recordBtn: HTMLButtonElement, snapshot?: ActiveTabStatusSnapshot): Promise<void> {
     recordBtn.disabled = false;
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    const url = tabs[0]?.url;
-    const status = url ? await checkPageStatus(url) : null;
+    const { status } = snapshot ?? (await loadActiveTabStatus());
     // Uses the .onclick property (not addEventListener) intentionally: this function
     // can be called repeatedly as domain-filter status changes, and property assignment
     // replaces the previous handler atomically instead of stacking listeners.
@@ -296,28 +295,13 @@ export class RecordSession {
 
     try {
       const entry = this.buildEntryFromSaveResult(tab, result);
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'copy-markdown-btn secondary-btn';
-      button.textContent = getMessage('copyMarkdown') || 'Copy Markdown';
-      button.addEventListener('click', async () => {
-        const originalText = getMessage('copyMarkdown') || 'Copy Markdown';
-        button.disabled = true;
-        try {
-          const markdown = formatEntryToMarkdown(entry);
-          await copyTextToClipboard(markdown);
-          button.textContent = getMessage('copyMarkdownSuccess') || 'Copied!';
-          setTimeout(() => {
-            button.textContent = originalText;
-            button.disabled = false;
-          }, 2000);
-        } catch {
-          button.textContent = getMessage('copyMarkdownError') || 'Copy failed';
-          setTimeout(() => {
-            button.textContent = originalText;
-            button.disabled = false;
-          }, 2000);
-        }
+      const button = createCopyMarkdownButton(entry, {
+        className: 'copy-markdown-btn secondary-btn',
+        labels: {
+          initialText: getMessage('copyMarkdown') || 'Copy Markdown',
+          successText: getMessage('copyMarkdownSuccess') || 'Copied!',
+          failureText: getMessage('copyMarkdownError') || 'Copy failed',
+        },
       });
 
       container.appendChild(button);
