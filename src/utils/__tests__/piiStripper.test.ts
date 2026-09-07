@@ -45,10 +45,11 @@ describe('stripPiiFromMaskedItems', () => {
     });
 
     it('originalフィールドがないアイテムはそのまま返す', () => {
-      const items: MaskedItem[] = [
+      // deliberately omits the `original` field to exercise the passthrough path
+      const items = [
         { type: 'email' },
         { type: 'creditCard', position: 'body' }
-      ];
+      ] as unknown as MaskedItem[];
 
       const result = stripPiiFromMaskedItems(items);
 
@@ -138,7 +139,8 @@ describe('stripPiiFromMaskedItem', () => {
   });
 
   it('originalフィールドがないアイテムはそのまま返す', () => {
-    const item: MaskedItem = { type: 'email', position: 'body' };
+    // deliberately omits the `original` field to exercise the passthrough path
+    const item = { type: 'email', position: 'body' } as unknown as MaskedItem;
 
     const result = stripPiiFromMaskedItem(item);
 
