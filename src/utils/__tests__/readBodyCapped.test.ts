@@ -16,9 +16,9 @@ function makeStreamingResponse(
         return Promise.reject(new Error('network read aborted'));
       }
       if (index >= chunks.length) {
-        return Promise.resolve({ done: true, value: undefined });
+        return Promise.resolve({ done: true });
       }
-      const value = chunks[index];
+      const value = chunks[index]!;
       index += 1;
       return Promise.resolve({ done: false, value });
     },
