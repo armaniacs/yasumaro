@@ -17,7 +17,7 @@ describe('withOptimisticLock', () => {
         it('新しい値を更新して返す', async () => {
             await chrome.storage.local.set({ testKey: ['initial'] });
 
-            const result = await withOptimisticLock('testKey', (current) => {
+            const result = await withOptimisticLock<unknown[]>('testKey', (current) => {
                 return [...current, 'item'];
             });
 
@@ -39,11 +39,11 @@ describe('withOptimisticLock', () => {
         it('複数の更新を連続して実行できる', async () => {
             await chrome.storage.local.set({ testKey: [1] });
 
-            const result1 = await withOptimisticLock('testKey', (current) => {
+            const result1 = await withOptimisticLock<unknown[]>('testKey', (current) => {
                 return [...current, 2];
             });
 
-            const result2 = await withOptimisticLock('testKey', (current) => {
+            const result2 = await withOptimisticLock<unknown[]>('testKey', (current) => {
                 return [...current, 3];
             });
 
@@ -100,7 +100,7 @@ describe('withOptimisticLock', () => {
             const stored = await chrome.storage.local.get('savedUrlsWithTimestamps');
             const urls = stored.savedUrlsWithTimestamps as UrlEntry[];
             expect(urls).toHaveLength(1);
-            expect(urls[0].url).toBe('https://new.com');
+            expect(urls[0]!.url).toBe('https://new.com');
         });
     });
 
@@ -113,11 +113,11 @@ describe('withOptimisticLock', () => {
             await chrome.storage.local.set({ testKey: ['initial'] });
 
             // 並行実行
-            const promise1 = withOptimisticLock('testKey', (current) => {
+            const promise1 = withOptimisticLock<unknown[]>('testKey', (current) => {
                 return [...current, 'item1'];
             });
 
-            const promise2 = withOptimisticLock('testKey', (current) => {
+            const promise2 = withOptimisticLock<unknown[]>('testKey', (current) => {
                 return [...current, 'item2'];
             });
 
@@ -127,7 +127,7 @@ describe('withOptimisticLock', () => {
             // initialは常に含まれるはず
             expect(stored.testKey).toContain('initial');
             // 少なくとも1つのアイテムが追加されていること
-            expect(stored.testKey.length).toBeGreaterThan(1);
+            expect((stored.testKey as unknown[]).length).toBeGreaterThan(1);
         });
     });
 
@@ -155,7 +155,7 @@ describe('withOptimisticLock', () => {
             // 1回目の呼び出しではtestKeyとtestKey_versionを返し、2回目では異なるバージョンを返す
             const setupOriginalGet = originalGet;
             let callCount = 0;
-            chrome.storage.local.get = vi.fn(async (keys: string[] | string | string[]) => {
+            chrome.storage.local.get = (vi.fn(async (keys?: string | string[] | Record<string, unknown> | null) => {
                 callCount++;
                 if (callCount === 1) {
                     // 最初のget: testKeyと直前のバージョンを返す
@@ -165,10 +165,10 @@ describe('withOptimisticLock', () => {
                     return { testKey: ['modified'], testKey_version: 10 };
                 }
                 return setupOriginalGet.call(chrome.storage.local, keys);
-            });
+            }) as unknown) as typeof chrome.storage.local.get;
 
             await expect(
-                withOptimisticLock('testKey', (current) => [...current, 'item'], { maxRetries: 0 })
+                withOptimisticLock<unknown[]>('testKey', (current) => [...current, 'item'], { maxRetries: 0 })
             ).rejects.toThrow(ConflictError);
         });
 
@@ -178,7 +178,7 @@ describe('withOptimisticLock', () => {
             // chrome.storage.local.getをモックして競合をシミュレート
             const setupOriginalGet = originalGet;
             let callCount = 0;
-            chrome.storage.local.get = vi.fn(async (keys: string[] | string | string[]) => {
+            chrome.storage.local.get = (vi.fn(async (keys?: string | string[] | Record<string, unknown> | null) => {
                 callCount++;
                 if (callCount === 1) {
                     return { testKey: ['initial'], testKey_version: 0 };
@@ -186,14 +186,14 @@ describe('withOptimisticLock', () => {
                     return { testKey: ['modified'], testKey_version: 10 };
                 }
                 return setupOriginalGet.call(chrome.storage.local, keys);
-            });
+            }) as unknown) as typeof chrome.storage.local.get;
 
             try {
-                await withOptimisticLock('testKey', (current) => [...current, 'item'], { maxRetries: 0 });
-                fail('Expected ConflictError to be thrown');
+                await withOptimisticLock<unknown[]>('testKey', (current) => [...current, 'item'], { maxRetries: 0 });
+                expect.fail('Expected ConflictError to be thrown');
             } catch (error) {
                 expect(error).toBeInstanceOf(ConflictError);
-                const conflictError = error as ConflictError;
+                const conflictError = error as ConflictError & { key: string };
                 expect(conflictError.name).toBe('ConflictError');
                 expect(conflictError.key).toBe('testKey');
                 // Note: モック制御が複雑なため、正確なバージョン値のアサーションは省略
@@ -206,7 +206,7 @@ describe('withOptimisticLock', () => {
 
             const setupOriginalGet = originalGet;
             let callCount = 0;
-            chrome.storage.local.get = vi.fn(async (keys: string[] | string | string[]) => {
+            chrome.storage.local.get = (vi.fn(async (keys?: string | string[] | Record<string, unknown> | null) => {
                 callCount++;
                 if (callCount === 1) {
                     // initial read
@@ -219,10 +219,10 @@ describe('withOptimisticLock', () => {
                     return { testKey: ['modified'], testKey_version: 10 };
                 }
                 return setupOriginalGet.call(chrome.storage.local, keys);
-            });
+            }) as unknown) as typeof chrome.storage.local.get;
 
             await expect(
-                withOptimisticLock('testKey', (current) => [...current, 'item'], { maxRetries: 0 })
+                withOptimisticLock<unknown[]>('testKey', (current) => [...current, 'item'], { maxRetries: 0 })
             ).rejects.toThrow(ConflictError);
         });
 
@@ -231,7 +231,7 @@ describe('withOptimisticLock', () => {
 
             const setupOriginalGet = originalGet;
             let callCount = 0;
-            chrome.storage.local.get = vi.fn(async (keys: string[] | string | string[]) => {
+            chrome.storage.local.get = (vi.fn(async (keys?: string | string[] | Record<string, unknown> | null) => {
                 callCount++;
                 if (callCount === 1) {
                     return { testKey: ['initial'], testKey_version: 0 };
@@ -242,10 +242,10 @@ describe('withOptimisticLock', () => {
                     return { testKey: ['tampered'], testKey_version: 1 };
                 }
                 return setupOriginalGet.call(chrome.storage.local, keys);
-            });
+            }) as unknown) as typeof chrome.storage.local.get;
 
             await expect(
-                withOptimisticLock('testKey', (current) => [...current, 'item'], { maxRetries: 0 })
+                withOptimisticLock<unknown[]>('testKey', (current) => [...current, 'item'], { maxRetries: 0 })
             ).rejects.toThrow(ConflictError);
         });
 
@@ -254,7 +254,7 @@ describe('withOptimisticLock', () => {
 
             const setupOriginalGet = originalGet;
             let callCount = 0;
-            chrome.storage.local.get = vi.fn(async (keys: string[] | string | string[]) => {
+            chrome.storage.local.get = (vi.fn(async (keys?: string | string[] | Record<string, unknown> | null) => {
                 callCount++;
                 if (callCount === 1) {
                     return { testKey: ['initial'], testKey_version: 0 };
@@ -263,9 +263,9 @@ describe('withOptimisticLock', () => {
                 }
                 // 3回目以降（post-write verify含む）: 実際のストレージ値を返す
                 return setupOriginalGet.call(chrome.storage.local, keys);
-            });
+            }) as unknown) as typeof chrome.storage.local.get;
 
-            const result = await withOptimisticLock('testKey', (current) => [...current, 'item'], { maxRetries: 0 });
+            const result = await withOptimisticLock<unknown[]>('testKey', (current) => [...current, 'item'], { maxRetries: 0 });
 
             expect(result).toEqual(['initial', 'item']);
             const stored = await chrome.storage.local.get('testKey');
@@ -278,7 +278,7 @@ describe('withOptimisticLock', () => {
             // chrome.storage.local.getをモックして競合をシミュレート
             const setupOriginalGet = originalGet;
             let callCount = 0;
-            chrome.storage.local.get = vi.fn(async (keys: string[] | string | string[]) => {
+            chrome.storage.local.get = (vi.fn(async (keys?: string | string[] | Record<string, unknown> | null) => {
                 callCount++;
                 if (callCount === 1) {
                     return { testKey: ['initial'], testKey_version: 0 };
@@ -286,10 +286,10 @@ describe('withOptimisticLock', () => {
                     return { testKey: ['modified'], testKey_version: 10 };
                 }
                 return setupOriginalGet.call(chrome.storage.local, keys);
-            });
+            }) as unknown) as typeof chrome.storage.local.get;
 
             try {
-                await withOptimisticLock('testKey', (current) => [...current, 'item'], { maxRetries: 0 });
+                await withOptimisticLock<unknown[]>('testKey', (current) => [...current, 'item'], { maxRetries: 0 });
             } catch (error) {
                 // Expected ConflictError
             }
@@ -377,7 +377,7 @@ describe('withOptimisticLock', () => {
                 };
             });
 
-            const result = await withOptimisticLock('testKey', (current) => [...current, 'item'], {
+            const result = await withOptimisticLock<unknown[]>('testKey', (current) => [...current, 'item'], {
                 maxRetries: 5,
                 initialDelay: 10
             });
@@ -401,7 +401,7 @@ describe('withOptimisticLock', () => {
             });
 
             await expect(
-                withOptimisticLock('testKey', (current) => [...current, 'item'], {
+                withOptimisticLock<unknown[]>('testKey', (current) => [...current, 'item'], {
                     maxRetries: 2,
                     initialDelay: 10
                 })
@@ -422,7 +422,7 @@ describe('withOptimisticLock', () => {
             });
 
             await expect(
-                withOptimisticLock('testKey', (current) => [...current, 'item'])
+                withOptimisticLock<unknown[]>('testKey', (current) => [...current, 'item'])
             ).rejects.toThrow(ConflictError);
 
             // Reset storage for other tests
