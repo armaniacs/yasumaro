@@ -71,9 +71,9 @@ import {
   shouldRecordVisit,
   extractPageContent,
   init,
-  getPageStateForTesting,
-  showPrivacyConfirmDialog,
 } from '../extractor.js';
+import { getPageStateForTesting } from './helpers/contentTestkit.js';
+import { showPrivacyConfirmDialog } from '../privacyDialog.js';
 
 describe('extractPageContent — state tracking', () => {
   beforeEach(() => {
