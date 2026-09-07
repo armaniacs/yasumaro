@@ -378,8 +378,8 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
         { getConfirmToken: async () => 'test-token' }
       );
 
-      expect(result.success).toBe(true);
-      expect(result.inserted).toBe(5000);
+      expect((result as { success: boolean }).success).toBe(true);
+      expect((result as { inserted: number }).inserted).toBe(5000);
     });
   });
 });
