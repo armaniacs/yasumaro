@@ -93,7 +93,7 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
 
     it('limit 100000 *10 も cap される', async () => {
       await query({ limit: 100000 * 10 });
-      const arg = mockBackend.query.mock.calls[0][0] as { limit: number };
+      const arg = mockBackend.query.mock.calls[0]![0] as { limit: number };
       expect(arg.limit).toBe(100000);
     });
 
@@ -113,7 +113,7 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
     it('tag が 200 超なら切り詰められる', async () => {
       const longTag = 'a'.repeat(250);
       await query({ tag: longTag });
-      const arg = mockBackend.query.mock.calls[0][0] as { tag: string };
+      const arg = mockBackend.query.mock.calls[0]![0] as { tag: string };
       expect(arg.tag.length).toBe(FTS_QUERY_MAX_LENGTH);
       expect(arg.tag).toBe('a'.repeat(200));
     });
@@ -126,14 +126,14 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
 
     it('tag が undefined なら tag キー自体が付与されない (pickDefined)', async () => {
       await query({ limit: 10 });
-      const arg = mockBackend.query.mock.calls[0][0] as Record<string, unknown>;
+      const arg = mockBackend.query.mock.calls[0]![0] as Record<string, unknown>;
       expect(arg).not.toHaveProperty('tag');
     });
 
     it('text が 200 超なら切り詰められる', async () => {
       const longText = 'x'.repeat(300);
       await query({ text: longText });
-      const arg = mockBackend.query.mock.calls[0][0] as { text: string };
+      const arg = mockBackend.query.mock.calls[0]![0] as { text: string };
       expect(arg.text.length).toBe(FTS_QUERY_MAX_LENGTH);
     });
 
@@ -144,14 +144,14 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
 
     it('text が undefined なら text キー自体が付与されない', async () => {
       await query({});
-      const arg = mockBackend.query.mock.calls[0][0] as Record<string, unknown>;
+      const arg = mockBackend.query.mock.calls[0]![0] as Record<string, unknown>;
       expect(arg).not.toHaveProperty('text');
     });
 
     it('text と tag 両方が長い場合ともに切り詰められる', async () => {
       const long = 'z'.repeat(250);
       await query({ text: long, tag: long });
-      const arg = mockBackend.query.mock.calls[0][0] as { text: string; tag: string };
+      const arg = mockBackend.query.mock.calls[0]![0] as { text: string; tag: string };
       expect(arg.text.length).toBe(200);
       expect(arg.tag.length).toBe(200);
     });
@@ -173,7 +173,7 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
 
     it.each(cases)('$desc — backend に正しい text が届く', async ({ text }) => {
       await query({ text });
-      const arg = mockBackend.query.mock.calls[0][0] as Record<string, unknown>;
+      const arg = mockBackend.query.mock.calls[0]![0] as Record<string, unknown>;
       if (text.length === 0) {
         // empty string is falsy -> q.text ? slice : q.text => "" is falsy so text becomes "" -> pickDefined は "" を保持? 実装: q.text ? slice : q.text では "" は falsy で "" がそのまま。pickDefined({ tag, text }) は text: "" を定義として渡すか？ pickDefined は undefined のみ除去するので "" は保持される。
         // ただし query({ text: '' }) の場合 text="" が渡る。空文字の text で backend が 0 行を返すケースを FTS 判定前に握る。
