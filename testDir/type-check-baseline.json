@@ -1,5 +1,5 @@
 {
-  "total": 1460,
+  "total": 1442,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -145,8 +145,6 @@
     "src/offscreen/__tests__/opfsWorker.test.ts": 1,
     "src/offscreen/__tests__/opfsWorkerProxy-coverage.test.ts": 2,
     "src/offscreen/__tests__/query-backends-parametric.test.ts": 1,
-    "src/offscreen/__tests__/recordsRepo-coverage.test.ts": 7,
-    "src/offscreen/__tests__/spike-f2-two-engines.test.ts": 11,
     "src/offscreen/__tests__/sqlite-auditLog.test.ts": 3,
     "src/offscreen/__tests__/sqlite-search-fts5.test.ts": 1,
     "src/offscreen/__tests__/sqliteQueryBuilder-comprehensive.test.ts": 2,

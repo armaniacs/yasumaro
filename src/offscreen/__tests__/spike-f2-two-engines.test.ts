@@ -25,8 +25,17 @@ const MAIN_DDL =
 const ARCHIVE_DDL =
   'CREATE TABLE browsing_logs (id INTEGER PRIMARY KEY, url TEXT NOT NULL, title TEXT, created_at INTEGER NOT NULL, is_starred INTEGER DEFAULT 0)';
 
+// The published `run` type is non-generic; the runtime returns plain rows.
+function runRows<T>(db: SQLiteDB, sql: string): Promise<T[]> {
+  return (db.run as (s: string) => Promise<unknown>)(sql) as Promise<T[]>;
+}
+
 async function openEngine(dbName: string, ddl: string): Promise<SQLiteDB> {
-  const db = await initSQLite(useMemoryStorage({ url: wasmUrl }), dbName);
+  // Runtime accepts a second db-name argument that the published types omit.
+  const db = await (initSQLite as (opts: unknown, name?: string) => Promise<SQLiteDB>)(
+    useMemoryStorage({ url: wasmUrl }),
+    dbName,
+  );
   await db.run(ddl);
   return db;
 }
@@ -48,17 +57,17 @@ describe('Spike F-2: two real sqlite-wasm engines coexisting', () => {
       "INSERT INTO browsing_logs (id, url, title, created_at) VALUES (1, 'https://archive.test/1', 'a1', 50)",
     );
 
-    const mainRows = await mainDb.run<{ url: string }>(
+    const mainRows = await runRows<{ url: string }>(mainDb, 
       "SELECT url FROM browsing_logs WHERE url LIKE 'https://main%'",
     );
-    const archiveRows = await archiveDb.run<{ url: string }>(
+    const archiveRows = await runRows<{ url: string }>(archiveDb, 
       "SELECT url FROM browsing_logs WHERE url LIKE 'https://archive%'",
     );
 
     expect(mainRows).toHaveLength(1);
     expect(archiveRows).toHaveLength(1);
-    expect(mainRows[0].url).toBe('https://main.test/1');
-    expect(archiveRows[0].url).toBe('https://archive.test/1');
+    expect(mainRows[0]!.url).toBe('https://main.test/1');
+    expect(archiveRows[0]!.url).toBe('https://archive.test/1');
   });
 
   it('main engine survives 500 interleaved archive inserts (bulk pressure)', async () => {
@@ -70,14 +79,14 @@ describe('Spike F-2: two real sqlite-wasm engines coexisting', () => {
     }
     await archiveDb.run('COMMIT');
 
-    const before = await mainDb.run<{ c: number }>('SELECT COUNT(*) AS c FROM browsing_logs');
-    expect(Number(before[0].c)).toBe(1);
+    const before = await runRows<{ c: number }>(mainDb, 'SELECT COUNT(*) AS c FROM browsing_logs');
+    expect(Number(before[0]!.c)).toBe(1);
 
     await mainDb.run(
       "INSERT INTO browsing_logs (url, title, created_at) VALUES ('https://main.test/2', 'm2', 200)",
     );
-    const after = await mainDb.run<{ c: number }>('SELECT COUNT(*) AS c FROM browsing_logs');
-    expect(Number(after[0].c)).toBe(2);
+    const after = await runRows<{ c: number }>(mainDb, 'SELECT COUNT(*) AS c FROM browsing_logs');
+    expect(Number(after[0]!.c)).toBe(2);
   });
 
   it('close on the second engine leaves the main engine usable', async () => {
@@ -86,10 +95,10 @@ describe('Spike F-2: two real sqlite-wasm engines coexisting', () => {
     await mainDb.run(
       "INSERT INTO browsing_logs (url, title, created_at) VALUES ('https://main.test/3', 'm3', 300)",
     );
-    const rows = await mainDb.run<{ url: string }>(
+    const rows = await runRows<{ url: string }>(mainDb, 
       'SELECT url FROM browsing_logs ORDER BY created_at',
     );
     expect(rows).toHaveLength(3);
-    expect(rows[2].url).toBe('https://main.test/3');
+    expect(rows[2]!.url).toBe('https://main.test/3');
   });
 });
