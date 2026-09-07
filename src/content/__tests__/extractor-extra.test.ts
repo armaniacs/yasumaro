@@ -42,7 +42,7 @@ const chromeMock = {
         privacyStatus_unknown: 'STATUS unknown',
       };
       if (args && messages[key]) {
-        return messages[key].replace('{0}', args[0]);
+        return messages[key]!.replace('{0}', String(args[0] ?? ''));
       }
       return messages[key] ?? '';
     }),

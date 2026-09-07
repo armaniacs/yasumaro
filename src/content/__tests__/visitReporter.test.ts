@@ -44,7 +44,7 @@ function makeDeps(overrides: Partial<VisitReporterDeps> = {}): VisitReporterDeps
     getReasonLabel: vi.fn((_k: string, _f: string, fallback: string) => fallback),
     stopPeriodicCheck: vi.fn(),
     ...overrides,
-  };
+  } as unknown as VisitReporterDeps & { sender: { sendMessageWithRetry: ReturnType<typeof vi.fn> } };
 }
 
 beforeEach(() => {

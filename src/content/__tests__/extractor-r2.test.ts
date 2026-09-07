@@ -33,7 +33,7 @@ const chromeMock = {
         privatePageReason_cache: 'Cache',
       };
       if (args && messages[key]) {
-        return messages[key].replace('{0}', args[0]);
+        return messages[key]!.replace('{0}', String(args[0] ?? ''));
       }
       return messages[key] ?? key;
     }),

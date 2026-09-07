@@ -42,11 +42,11 @@ describe('ContentKernel — StoragePort / DomainPolicyPort / Clock / Scheduler i
         const policy = new InMemoryDomainPolicyPort();
         const kernel = new ContentKernel(storage, policy);
         const stored: Record<string, unknown> = {
-            [THRESHOLD_RULES[0].storageKey]: 9999, // exceeds max
+            [THRESHOLD_RULES[0]!.storageKey]: 9999, // exceeds max
         };
         storage.seed({ settings: stored });
         await kernel.loadSettings();
-        const rule = THRESHOLD_RULES[0];
+        const rule = THRESHOLD_RULES[0]!;
         expect(kernel.pageState.cleansingConfig[rule.prop]).toBe(rule.max);
     });
 
@@ -137,7 +137,7 @@ describe('VisitReporter — single VALID_VISIT send', () => {
     it('sends VALID_VISIT with payload including byte stats', async () => {
         document.body.innerHTML = `<article><p>Hello world content for visit report test with enough length.</p></article>`;
         const pageState = new PageState();
-        const sender = { sendMessageWithRetry: vi.fn(() => Promise.resolve({ success: true })) };
+        const sender = { sendMessageWithRetry: vi.fn((_msg?: unknown) => Promise.resolve({ success: true })) };
         const reporter = new VisitReporter({
             pageState,
             extractor: () => ({ content: 'test content', pageBytes: 100, candidateBytes: 80 } as unknown as ReturnType<typeof import('../../utils/pageContentPipeline.js').preparePageContent>),
@@ -147,7 +147,7 @@ describe('VisitReporter — single VALID_VISIT send', () => {
         await reporter.report();
         expect(sender.sendMessageWithRetry).toHaveBeenCalledTimes(1);
         expect(sender.sendMessageWithRetry).toHaveBeenCalledWith(expect.objectContaining({ type: 'VALID_VISIT' }));
-        const payload = (sender.sendMessageWithRetry.mock.calls[0][0] as { payload: Record<string, unknown> }).payload;
+        const payload = (sender.sendMessageWithRetry.mock.calls[0]![0] as { payload: Record<string, unknown> }).payload;
         expect(payload.content).toBe('test content');
     });
 });
