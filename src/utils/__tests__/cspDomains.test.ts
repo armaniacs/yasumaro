@@ -42,7 +42,7 @@ describe('buildConnectSrcDomains', () => {
   it('produces a space-joined string matching required-then-optional order', () => {
     const domains = buildConnectSrcDomains();
     const expectedFirst = AI_PROVIDER_HOST_PERMISSIONS[0].replace(/\/\*$/, '');
-    const expectedLast = OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS[OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS.length - 1].replace(/\/\*$/, '');
+    const expectedLast = OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS[OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS.length - 1]!.replace(/\/\*$/, '');
     expect(domains[0]).toBe(expectedFirst);
     expect(domains[domains.length - 1]).toBe(expectedLast);
   });
