@@ -32,7 +32,7 @@ describe('parseUblockFilterList', () => {
         const text = '\n! comment\n\n||example.com^\n# hosts comment\n';
         const result = parseUblockFilterList(text);
         expect(result.blockRules.length).toBe(1);
-        expect(result.blockRules[0].domain).toBe('example.com');
+        expect(result.blockRules[0]!.domain).toBe('example.com');
     });
 
     it('classifies exception rules', () => {
@@ -45,7 +45,7 @@ describe('parseUblockFilterList', () => {
         const text = '0.0.0.0 example.com';
         const result = parseUblockFilterList(text);
         expect(result.blockRules.length).toBe(1);
-        expect(result.blockRules[0].domain).toBe('example.com');
+        expect(result.blockRules[0]!.domain).toBe('example.com');
     });
 
     it('ignores IGNORE type rules (localhost)', () => {
@@ -100,8 +100,8 @@ describe('parseUblockFilterListWithErrors', () => {
         const text = 'not-a-valid-rule\n||example.com^';
         const result = parseUblockFilterListWithErrors(text);
         expect(result.errors.length).toBe(1);
-        expect(result.errors[0].lineNumber).toBe(1);
-        expect(result.errors[0].message).toBe('無効なルール形式です');
+        expect(result.errors[0]!.lineNumber).toBe(1);
+        expect(result.errors[0]!.message).toBe('無効なルール形式です');
     });
 
     it('skips empty and comment lines without errors', () => {
@@ -123,7 +123,7 @@ describe('parseUblockFilterListWithErrors', () => {
         const result = parseUblockFilterListWithErrors(text);
         expect(result.rules.blockRules).toEqual([]);
         expect(result.errors.length).toBe(1);
-        expect(result.errors[0].message).toContain('Input too large');
+        expect(result.errors[0]!.message).toContain('Input too large');
     });
 
     it('returns too many lines error', () => {
@@ -131,7 +131,7 @@ describe('parseUblockFilterListWithErrors', () => {
         const result = parseUblockFilterListWithErrors(text);
         expect(result.rules.blockRules).toEqual([]);
         expect(result.errors.length).toBe(1);
-        expect(result.errors[0].message).toContain('Too many lines');
+        expect(result.errors[0]!.message).toContain('Too many lines');
     });
 
     it('includes metadata in result', () => {
