@@ -43,7 +43,7 @@ describe('pendingSqliteQueue (M14)', () => {
 
     const stored = mockStorage[PENDING_SQLITE_RECORDS_KEY] as BrowsingLogRecord[];
     expect(stored).toHaveLength(1);
-    expect(stored[0].url).toBe('https://a.example.com');
+    expect(stored[0]?.url).toBe('https://a.example.com');
   });
 
   it('enqueuePendingRecord appends to existing entries without overwriting them', async () => {
@@ -65,9 +65,9 @@ describe('pendingSqliteQueue (M14)', () => {
     await flushPendingRecords({ mutate } as any);
 
     expect(mutate).toHaveBeenCalledTimes(3);
-    expect((mutate.mock.calls[0][0] as any).records).toHaveLength(50);
-    expect((mutate.mock.calls[1][0] as any).records).toHaveLength(50);
-    expect((mutate.mock.calls[2][0] as any).records).toHaveLength(20);
+    expect((mutate.mock.calls[0]?.[0] as any).records).toHaveLength(50);
+    expect((mutate.mock.calls[1]?.[0] as any).records).toHaveLength(50);
+    expect((mutate.mock.calls[2]?.[0] as any).records).toHaveLength(20);
 
     const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as BrowsingLogRecord[];
     expect(remaining).toHaveLength(0);
@@ -91,8 +91,8 @@ describe('pendingSqliteQueue (M14)', () => {
     const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as BrowsingLogRecord[];
     expect(remaining).toHaveLength(50);
     // Failed chunk should be the middle 50 records (indices 50-99)
-    expect(remaining[0].url).toBe('https://example-50.com');
-    expect(remaining[49].url).toBe('https://example-99.com');
+    expect(remaining[0]?.url).toBe('https://example-50.com');
+    expect(remaining[49]?.url).toBe('https://example-99.com');
   });
 
   it('flushPendingRecords keeps the chunk pending when mutate insertBatch throws', async () => {
@@ -108,7 +108,7 @@ describe('pendingSqliteQueue (M14)', () => {
 
     const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as BrowsingLogRecord[];
     expect(remaining).toHaveLength(50);
-    expect(remaining[0].url).toBe('https://example-50.com');
+    expect(remaining[0]?.url).toBe('https://example-50.com');
   });
 
   it('flushPendingRecords does nothing when the queue is empty', async () => {
@@ -192,10 +192,10 @@ describe('pendingSqliteQueue retry semantics', () => {
 
     const stored = mockStorage[PENDING_SQLITE_RECORDS_KEY] as Array<Record<string, unknown>>;
     expect(stored).toHaveLength(1);
-    expect(stored[0].createdAt).toBeDefined();
-    expect(typeof stored[0].createdAt).toBe('number');
-    expect(stored[0].retryCount).toBe(0);
-    expect(stored[0].url).toBe('https://a.example.com');
+    expect(stored[0]?.createdAt).toBeDefined();
+    expect(typeof stored[0]?.createdAt).toBe('number');
+    expect(stored[0]?.retryCount).toBe(0);
+    expect(stored[0]?.url).toBe('https://a.example.com');
   });
 
   it('unwraps metadata before passing to mutate insertBatch', async () => {
@@ -208,7 +208,7 @@ describe('pendingSqliteQueue retry semantics', () => {
 
     // The records passed to mutate should be plain BrowsingLogRecords
     // (no createdAt or retryCount fields)
-    const passedRecords = (mutate.mock.calls[0][0] as any).records;
+    const passedRecords = (mutate.mock.calls[0]?.[0] as any).records;
     expect(passedRecords).toHaveLength(2);
     expect(passedRecords[0].url).toBe('https://a.example.com');
     expect(passedRecords[0].createdAt).toBeUndefined();
@@ -254,8 +254,8 @@ describe('pendingSqliteQueue retry semantics', () => {
 
     const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as Array<Record<string, unknown>>;
     expect(remaining).toHaveLength(1);
-    expect(remaining[0].retryCount).toBe(1);
-    expect(remaining[0].url).toBe('https://a.example.com');
+    expect(remaining[0]?.retryCount).toBe(1);
+    expect(remaining[0]?.url).toBe('https://a.example.com');
   });
 
   it('drops records after 5 failed flush attempts', async () => {

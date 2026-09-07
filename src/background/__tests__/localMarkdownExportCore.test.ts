@@ -98,7 +98,7 @@ describe('flushBufferedExports', () => {
     await flushBufferedExports((date) => date === '2026-07-08');
 
     expect(mockDownload).toHaveBeenCalledTimes(1);
-    const [arg] = mockDownload.mock.calls[0];
+    const [arg] = mockDownload.mock.calls[0] ?? [];
     expect(arg.filename).toBe('Yasumaro/2026-07-08.md');
   });
 
@@ -148,7 +148,7 @@ describe('flushBufferedExports', () => {
 
     // The healthy date must still be downloaded despite the other date's crash.
     expect(mockDownload).toHaveBeenCalledTimes(1);
-    expect(mockDownload.mock.calls[0][0].filename).toBe('Yasumaro/2026-07-09.md');
+    expect(mockDownload.mock.calls[0]?.[0].filename).toBe('Yasumaro/2026-07-09.md');
   });
 
   it('VULN-004: deletes the daily buffer key after a successful flush', async () => {
@@ -197,7 +197,7 @@ describe('flushBufferedExports', () => {
     await flushBufferedExports();
 
     expect(mockDownload).toHaveBeenCalledTimes(1);
-    const [arg] = mockDownload.mock.calls[0];
+    const [arg] = mockDownload.mock.calls[0] ?? [];
     expect(arg.filename).not.toContain('..');
     expect(arg.filename).toBe('Yasumaro/2026-09-15.md');
   });
