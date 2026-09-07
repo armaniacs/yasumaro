@@ -3,9 +3,9 @@
  * aiSummaryCleaner.ts の単体テスト
  */
 
-import { webcrypto as crypto } from '@peculiar/webcrypto';
+import { Crypto } from '@peculiar/webcrypto';
 Object.defineProperty(global, 'crypto', {
-    value: crypto
+    value: new Crypto()
 });
 
 import { JSDOM } from 'jsdom';
@@ -177,8 +177,8 @@ describe('aiSummaryCleaner', () => {
             expect(result.totalRemoved).toBe(
                 result.altRemoved + result.metadataRemoved + result.adsRemoved +
                 result.navRemoved + result.socialRemoved + result.deepRemoved +
-                result.recommendRemoved + result.popupRemoved + result.cookieRemoved +
-                result.enhancedHiddenRemoved + result.emptyElemRemoved
+                result.recommendRemoved! + result.popupRemoved! + result.cookieRemoved! +
+                result.enhancedHiddenRemoved! + result.emptyElemRemoved!
             );
         });
 
