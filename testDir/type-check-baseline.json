@@ -1,5 +1,5 @@
 {
-  "total": 404,
+  "total": 387,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -68,10 +68,7 @@
     "src/dashboard/generalSettings/__tests__/connectionTests.test.ts": 4,
     "src/dashboard/panels/__tests__/NavigationRegistry.test.ts": 4,
     "src/dashboard/panels/asyncData/__tests__/sqliteHistoryModel.cache.test.ts": 2,
-    "src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanel-formatDiagnosticMetadata.test.ts": 1,
     "src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanel.lifecycle.test.ts": 5,
-    "src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanelView.test.ts": 1,
-    "src/dashboard/panels/diagnostic/__tests__/archiveEditModal.test.ts": 1,
     "src/dashboard/panels/diagnostic/__tests__/archivePanel.test.ts": 4,
     "src/dashboard/panels/staticForm/__tests__/generalSettingsPanel-bLayout.test.ts": 1,
     "src/dashboard/panels/staticForm/__tests__/privacySettingsPanel.test.ts": 1,
@@ -79,10 +76,6 @@
     "src/dashboard/settings/__tests__/aiSummaryCleansingSettingsV2-coverage.test.ts": 1,
     "src/dashboard/settings/__tests__/aiSummaryCleansingSettingsV2.test.ts": 3,
     "src/dashboard/settings/__tests__/privacySettings.test.ts": 1,
-    "src/messaging/__tests__/dashboardGateway.test.ts": 7,
-    "src/messaging/__tests__/dashboardSenderGuard.test.ts": 1,
-    "src/messaging/__tests__/messageTransport-branch.test.ts": 4,
-    "src/messaging/__tests__/messageTransport.test.ts": 2,
     "src/popup/__tests__/mask-visualization.test.ts": 47,
     "src/utils/__tests__/RateLimitService.test.ts": 1,
     "src/utils/__tests__/auditLog.test.ts": 1,

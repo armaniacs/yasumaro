@@ -32,7 +32,7 @@ function collectProdFiles(dir: string, out: string[] = []): string[] {
 function senderFiles(literal: string): string[] {
   const pattern = new RegExp(`type\\s*:\\s*'${literal}'\\s*[,}]`);
   return collectProdFiles(SRC_ROOT).filter((file) => pattern.test(readFileSync(file, 'utf-8')))
-    .map((file) => file.split(SRC_ROOT + sep)[1].split(sep).join('/'))
+    .map((file) => file.split(SRC_ROOT + sep)[1]!.split(sep).join('/'))
     .sort();
 }
 
