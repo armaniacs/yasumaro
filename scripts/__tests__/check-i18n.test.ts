@@ -229,4 +229,26 @@ describe('checkSourceI18nKeys', () => {
     expect(calls.fail[0]).toContain('used in source but missing from en/messages.json');
     expect(calls.info.some((m) => m.includes('missing: nonexistentKey'))).toBe(true);
   });
+
+  it('ignores regex literals in test files that mimic data-i18n attributes', () => {
+    // __tests__ 配下・*.test.ts は走査対象外（出荷 UI ではない）。
+    // panelCatalog.test.ts の data-i18n="([^"]+)" 正規表現が
+    // 「使用中キー ([^」として誤検出された回帰（2026-09-07 レビュー）の防止。
+    const srcDir = mkdtempSync(join(tmpdir(), 'i18n-src-tests-'));
+    createdDirs.push(srcDir);
+    const testDir = join(srcDir, '__tests__');
+    mkdirSync(testDir, { recursive: true });
+    writeFileSync(
+      join(testDir, 'panelCatalog.test.ts'),
+      'const tokenRe = /data-i18n="([^"]+)"/g;\n',
+    );
+    writeFileSync(
+      join(srcDir, 'helper.test.ts'),
+      'const span = /<span data-i18n="([^"]+)"/.exec(block);\n',
+    );
+    const { reporter, calls } = makeReporter();
+    const ok = checkSourceI18nKeys(srcDir, createdDirs[0], reporter);
+    expect(ok).toBe(true);
+    expect(calls.fail).toEqual([]);
+  });
 });

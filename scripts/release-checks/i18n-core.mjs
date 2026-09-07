@@ -170,7 +170,13 @@ export function checkSourceI18nKeys(srcDir, localesDir, reporter) {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const fullPath = join(dir, entry.name);
       if (entry.isDirectory()) {
+        // Test files are not shipped UI: a regex literal like
+        // data-i18n="([^"]+)" inside a test gets misdetected as a used key
+        // and falsely fails the gate.
+        if (entry.name === '__tests__') continue;
         scanDir(fullPath);
+      } else if (entry.name.endsWith('.test.ts')) {
+        continue;
       } else if (entry.name.endsWith('.ts') || entry.name.endsWith('.html')) {
         const content = readFileSync(fullPath, 'utf-8');
         if (entry.name.endsWith('.html')) {
