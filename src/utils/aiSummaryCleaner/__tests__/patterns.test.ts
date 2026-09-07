@@ -231,7 +231,7 @@ describe('aiSummaryCleaner/patterns', () => {
             document.body.innerHTML = '<div class="publicité">test</div>';
             // This class-based selector would match if we mistakenly added i18n to class list
             // But we assert I18N patterns remain text-only: they are RegExp, not strings
-            expect(typeof I18N_AD_TEXT_PATTERNS[0].test).toBe('function');
+            expect(typeof I18N_AD_TEXT_PATTERNS[0]!.test).toBe('function');
         });
 
         it('has language comments and minimum 8 patterns', () => {

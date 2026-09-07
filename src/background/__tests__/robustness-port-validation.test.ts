@@ -57,7 +57,7 @@ vi.mock('../../utils/logger.js', () => ({
 }));
 
 describe('ObsidianClient: ポート番号の検証（P1）', () => {
-  let obsidianClient;
+  let obsidianClient: ObsidianClient;
 
   beforeEach(() => {
     obsidianClient = new ObsidianClient();
@@ -71,7 +71,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       OBSIDIAN_PORT: '27123',
       OBSIDIAN_DAILY_PATH: ''
     });
-    storage.StorageKeys = {
+    (storage as { StorageKeys: Record<string, string> }).StorageKeys = {
       OBSIDIAN_PROTOCOL: 'OBSIDIAN_PROTOCOL',
       OBSIDIAN_PORT: 'OBSIDIAN_PORT',
       OBSIDIAN_API_KEY: 'OBSIDIAN_API_KEY',
@@ -87,7 +87,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
   });
 
   afterEach(() => {
-    global.fetch.mockRestore();
+    vi.mocked(global.fetch).mockRestore();
   });
 
   describe('現在の実装の確認', () => {
@@ -252,7 +252,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
 
   describe('推奨される検証実装', () => {
     it('ポート番号が1-65535の範囲内であることを検証すべき', () => {
-      const isValidPort = (port) => {
+      const isValidPort = (port: string) => {
         const portNum = parseInt(port, 10);
         return !isNaN(portNum) && portNum >= 1 && portNum <= 65535;
       };
@@ -263,7 +263,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
     });
 
     it('ポート番号が整数であることを検証すべき', () => {
-      const isIntegerPort = (port) => {
+      const isIntegerPort = (port: string) => {
         const portNum = Number(port);
         return Number.isInteger(portNum);
       };

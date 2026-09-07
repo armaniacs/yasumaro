@@ -238,8 +238,8 @@ describe('exportLogsService', () => {
       // Spy on DOM methods
       const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
       const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
-      const appendChild = vi.spyOn(document.body, 'appendChild').mockImplementation(() => {});
-      const removeChild = vi.spyOn(document.body, 'removeChild').mockImplementation(() => {});
+      const appendChild = vi.spyOn(document.body, 'appendChild').mockImplementation((n) => n);
+      const removeChild = vi.spyOn(document.body, 'removeChild').mockImplementation((n) => n);
 
       const blob = new Blob(['test'], { type: 'text/plain' });
       downloadBlob(blob, 'test.txt');
@@ -258,8 +258,8 @@ describe('exportLogsService', () => {
       vi.useFakeTimers();
       const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:delayed');
       const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
-      const appendChild = vi.spyOn(document.body, 'appendChild').mockImplementation(() => {});
-      const removeChild = vi.spyOn(document.body, 'removeChild').mockImplementation(() => {});
+      const appendChild = vi.spyOn(document.body, 'appendChild').mockImplementation((n) => n);
+      const removeChild = vi.spyOn(document.body, 'removeChild').mockImplementation((n) => n);
 
       downloadBlob(new Blob(['big'], { type: 'application/x-sqlite3' }), 'big.db');
 
@@ -280,8 +280,8 @@ describe('exportLogsService', () => {
     it('creates a text blob and triggers download', () => {
       const spy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test2');
       vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
-      vi.spyOn(document.body, 'appendChild').mockImplementation(() => {});
-      vi.spyOn(document.body, 'removeChild').mockImplementation(() => {});
+      vi.spyOn(document.body, 'appendChild').mockImplementation((n) => n);
+      vi.spyOn(document.body, 'removeChild').mockImplementation((n) => n);
 
       downloadText('hello world', 'out.txt');
 

@@ -11,6 +11,16 @@
 
 import { PrivacyPipeline } from '../privacyPipeline.js';
 import { vi } from 'vitest';
+import type { AIService } from '../ai/AIService.js';
+
+// Stubs implement only the two AIService methods the pipeline invokes.
+const asAIService = (mock: Pick<AIService, 'getSupportedModes' | 'generateSummary'>): AIService =>
+  mock as AIService;
+
+// The masking sanitizer stub returns a sync value the pipeline awaits fine.
+type SanitizersArg = ConstructorParameters<typeof PrivacyPipeline>[2];
+const asSanitizers = (mock: { sanitizeRegex: (text: string) => unknown }): SanitizersArg =>
+  mock as unknown as SanitizersArg;
 
 // Mock side-effectful / external modules used by privacyPipeline.
 vi.mock('../../utils/logger.js', () => ({
@@ -64,8 +74,8 @@ describe('PrivacyPipeline — PII must never reach cloud AI (PBI 2026-08-02-03)'
   it('never passes raw PII to cloud AI on the happy path', async () => {
     const sanitizers = makeMaskingSanitizers();
     const cloud = makeCloudService();
-    const settings = { PRIVACY_MODE: 'full_pipeline' };
-    const pipeline = new PrivacyPipeline(settings, cloud, sanitizers);
+    const settings = { PRIVACY_MODE: 'full_pipeline' } as unknown as import('../../utils/storage/types.js').Settings;
+    const pipeline = new PrivacyPipeline(settings, asAIService(cloud), asSanitizers(sanitizers));
 
     await pipeline.process(PII_CONTENT);
 
@@ -91,8 +101,8 @@ describe('PrivacyPipeline — PII must never reach cloud AI (PBI 2026-08-02-03)'
         return Promise.resolve({ summary: 'Cloud summary' });
       }),
     };
-    const settings = { PRIVACY_MODE: 'full_pipeline' };
-    const pipeline = new PrivacyPipeline(settings, local, sanitizers);
+    const settings = { PRIVACY_MODE: 'full_pipeline' } as unknown as import('../../utils/storage/types.js').Settings;
+    const pipeline = new PrivacyPipeline(settings, asAIService(local), asSanitizers(sanitizers));
 
     await pipeline.process(PII_CONTENT);
 
@@ -108,8 +118,8 @@ describe('PrivacyPipeline — PII must never reach cloud AI (PBI 2026-08-02-03)'
   it('in masked_cloud mode the local step is skipped but masking still applies before cloud', async () => {
     const sanitizers = makeMaskingSanitizers();
     const cloud = makeCloudService();
-    const settings = { PRIVACY_MODE: 'masked_cloud' };
-    const pipeline = new PrivacyPipeline(settings, cloud, sanitizers);
+    const settings = { PRIVACY_MODE: 'masked_cloud' } as unknown as import('../../utils/storage/types.js').Settings;
+    const pipeline = new PrivacyPipeline(settings, asAIService(cloud), asSanitizers(sanitizers));
 
     await pipeline.process(PII_CONTENT);
 
