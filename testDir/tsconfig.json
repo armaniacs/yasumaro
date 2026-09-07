@@ -8,6 +8,7 @@
   },
   "include": [
     "../src/**/__tests__/**/*",
+    "../src/**/*.d.ts",
     "../src/**/*.test.ts",
     "../src/**/*.spec.ts",
     "./__tests__/**/*.test.ts",
