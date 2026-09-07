@@ -63,7 +63,7 @@ describe('ローディングスピナー制御', () => {
     // 【期待される動作】: スピナーが表示状態になり、テキストが設定されること
     // 🟢 要件定義（loading-spinner-requirements.md 186-196行目）に基づき仕様が明確
 
-    const spinner = document.getElementById('loadingSpinner');
+    const spinner = document.getElementById('loadingSpinner')!;
     expect(spinner.style.display).toBe('none'); // 【前提条件確認】: 初期状態で非表示
 
     // 【実際の処理実行】: showSpinner関数を呼び出し
@@ -72,7 +72,7 @@ describe('ローディングスピナー制御', () => {
 
     // 【結果検証】: DOM操作の結果を確認
     expect(spinner.style.display).toBe('flex'); // 【確認内容】: displayがflexに変更されたこと
-    expect(spinner.querySelector('.spinner-text').textContent).toBe('処理中...'); // 【確認内容】: テキストが設定されたこと
+    expect(spinner.querySelector('.spinner-text')!.textContent).toBe('処理中...'); // 【確認内容】: テキストが設定されたこと
   });
 
   test('showSpinner()でテキスト引数を渡して表示テキストを更新できる', () => {
@@ -81,7 +81,7 @@ describe('ローディングスピナー制御', () => {
     // 【期待される動作】: 指定したテキストが正しく表示されること
     // 🟢 要件定義（7.3節 API仕様）に基づき仕様が明確
 
-    const spinner = document.getElementById('loadingSpinner');
+    const spinner = document.getElementById('loadingSpinner')!;
 
     // 【実際の処理実行】: テキスト引数を指定して呼び出し
     // 【処理内容】: コンテンツ取得中を表すテキストを設定
@@ -89,7 +89,7 @@ describe('ローディングスピナー制御', () => {
 
     // 【結果検証】: 正しい引数で呼ばれたことを確認
     expect(spinner.style.display).toBe('flex'); // 【確認内容】: スピナーが表示状態であること
-    expect(spinner.querySelector('.spinner-text').textContent).toBe('コンテンツ取得中...'); // 【確認内容】: 正しいテキストが設定されたこと
+    expect(spinner.querySelector('.spinner-text')!.textContent).toBe('コンテンツ取得中...'); // 【確認内容】: 正しいテキストが設定されたこと
   });
 
   test('showSpinner()引数省略時はデフォルトテキストが表示される', () => {
@@ -102,9 +102,9 @@ describe('ローディングスピナー制御', () => {
     // 【処理内容】: デフォルト引数 '処理中...' が使用される
     showSpinner();
 
-    const spinner = document.getElementById('loadingSpinner');
+    const spinner = document.getElementById('loadingSpinner')!;
     expect(spinner.style.display).toBe('flex'); // 【確認内容】: スピナーが表示状態であること
-    expect(spinner.querySelector('.spinner-text').textContent).toBe('処理中...'); // 【確認内容】: デフォルトテキストが表示されたこと
+    expect(spinner.querySelector('.spinner-text')!.textContent).toBe('処理中...'); // 【確認内容】: デフォルトテキストが表示されたこと
   });
 
   test('hideSpinner()呼び出しでスピナー要素が非表示になる', () => {
@@ -113,7 +113,7 @@ describe('ローディングスピナー制御', () => {
     // 【期待される動作】: スピナーが非表示状態になること
     // 🟢 要件定義（201-204行目）に基づき仕様が明確
 
-    const spinner = document.getElementById('loadingSpinner');
+    const spinner = document.getElementById('loadingSpinner')!;
     spinner.style.display = 'flex'; // 【テストデータ準備】: 表示状態に設定
 
     expect(spinner.style.display).toBe('flex'); // 【前提条件確認】: 初期状態で表示中
@@ -168,21 +168,21 @@ describe('ローディングスピナー制御', () => {
     // 【期待される動作】: 最新のテキストが設定されること
     // 🟢 関数呼び出しの正規挙動確認
 
-    const spinner = document.getElementById('loadingSpinner');
+    const spinner = document.getElementById('loadingSpinner')!;
 
     // 【実際の処理実行】: 連続して呼び出し
     showSpinner('処理中...');
-    expect(spinner.querySelector('.spinner-text').textContent).toBe('処理中...');
+    expect(spinner.querySelector('.spinner-text')!.textContent).toBe('処理中...');
 
     showSpinner('コンテンツ取得中...');
-    expect(spinner.querySelector('.spinner-text').textContent).toBe('コンテンツ取得中...');
+    expect(spinner.querySelector('.spinner-text')!.textContent).toBe('コンテンツ取得中...');
 
     showSpinner('保存中...');
-    expect(spinner.querySelector('.spinner-text').textContent).toBe('保存中...');
+    expect(spinner.querySelector('.spinner-text')!.textContent).toBe('保存中...');
 
     // 【結果検証】: 最後の呼び出しの状態が維持されていること
     expect(spinner.style.display).toBe('flex'); // 【確認内容】: スピナーが表示状態であること
-    expect(spinner.querySelector('.spinner-text').textContent).toBe('保存中...'); // 【確認内容】: 最新のテキストが設定されていること
+    expect(spinner.querySelector('.spinner-text')!.textContent).toBe('保存中...'); // 【確認内容】: 最新のテキストが設定されていること
   });
 
   test('showSpinnerとhideSpinnerの組み合わせ動作', () => {
@@ -191,7 +191,7 @@ describe('ローディングスピナー制御', () => {
     // 【期待される動作】: 各操作が正しく反映されること
     // 🟢 正常なフローにおける関数呼び出し順序確認
 
-    const spinner = document.getElementById('loadingSpinner');
+    const spinner = document.getElementById('loadingSpinner')!;
 
     // 【テスト前】: 初期状態を確認
     expect(spinner.style.display).toBe('none'); // 【確認内容】: 非表示状態であること
@@ -199,14 +199,14 @@ describe('ローディングスピナー制御', () => {
     // 【実際の処理実行】: 表示と非表示を繰り返す
     showSpinner('処理中...');
     expect(spinner.style.display).toBe('flex'); // 【確認内容】: 1回目: 表示状態になったこと
-    expect(spinner.querySelector('.spinner-text').textContent).toBe('処理中...');
+    expect(spinner.querySelector('.spinner-text')!.textContent).toBe('処理中...');
 
     hideSpinner();
     expect(spinner.style.display).toBe('none'); // 【確認内容】: 非表示状態になったこと
 
     showSpinner('コンテンツ取得中...');
     expect(spinner.style.display).toBe('flex'); // 【確認内容】: 2回目: 再表示されたこと
-    expect(spinner.querySelector('.spinner-text').textContent).toBe('コンテンツ取得中...');
+    expect(spinner.querySelector('.spinner-text')!.textContent).toBe('コンテンツ取得中...');
 
     hideSpinner();
     expect(spinner.style.display).toBe('none'); // 【確認内容】: 最終的に非表示状態であること
