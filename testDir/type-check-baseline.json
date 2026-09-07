@@ -1,5 +1,5 @@
 {
-  "total": 1663,
+  "total": 1639,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -214,7 +214,6 @@
     "src/utils/__tests__/masterPassword.test.ts": 1,
     "src/utils/__tests__/migration.test.ts": 5,
     "src/utils/__tests__/optimisticLock-stress.test.ts": 1,
-    "src/utils/__tests__/optimisticLock.test.ts": 24,
     "src/utils/__tests__/optimisticLockSerialization.test.ts": 4,
     "src/utils/__tests__/pageContentPipeline.test.ts": 1,
     "src/utils/__tests__/pathSanitizer.test.ts": 3,
