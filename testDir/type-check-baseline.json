@@ -1,5 +1,5 @@
 {
-  "total": 2312,
+  "total": 2273,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -254,7 +254,6 @@
     "src/utils/__tests__/piiSanitizer-optimization.test.ts": 7,
     "src/utils/__tests__/piiSanitizer-redos.test.ts": 2,
     "src/utils/__tests__/piiSanitizer-security.test.ts": 1,
-    "src/utils/__tests__/piiSanitizer.test.ts": 39,
     "src/utils/__tests__/piiStripper.test.ts": 3,
     "src/utils/__tests__/readBodyCapped.test.ts": 2,
     "src/utils/__tests__/redaction.test.ts": 2,
