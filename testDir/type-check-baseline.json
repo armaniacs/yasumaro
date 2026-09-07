@@ -1,5 +1,5 @@
 {
-  "total": 903,
+  "total": 896,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -120,7 +120,6 @@
     "src/utils/__tests__/cspValidator-error-handling.test.ts": 1,
     "src/utils/__tests__/cspValidator.test.ts": 1,
     "src/utils/__tests__/domainFilter-mode.test.ts": 1,
-    "src/utils/__tests__/fetch.test.ts": 7,
     "src/utils/__tests__/fetchRedirectGuard.test.ts": 3,
     "src/utils/__tests__/localeUtils.test.ts": 2,
     "src/utils/__tests__/markdownFormatter.test.ts": 1,
