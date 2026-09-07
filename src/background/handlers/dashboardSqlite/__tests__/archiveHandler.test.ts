@@ -7,7 +7,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createArchiveHandler } from '../archiveHandler.js';
 import type { ArchiveDeps, DepsResult } from '../deps.js';
-import type { ArchivePreviewData, ArchiveCreateData, ArchivePurgeData } from '../../../messaging/sqliteMessages.js';
+import type { ArchivePreviewData, ArchiveCreateData, ArchivePurgeData } from '../../../../messaging/sqliteMessages.js';
 
 function makeDeps(overrides: Partial<ArchiveDeps> = {}): ArchiveDeps {
   return {
@@ -25,7 +25,7 @@ function makeDeps(overrides: Partial<ArchiveDeps> = {}): ArchiveDeps {
       success: true,
       data: { removed: ['archive_outgoing_x.db'] },
     })),
-    archiveExportChunk: vi.fn(async (): Promise<DepsResult<import('../../../messaging/sqliteMessages.js').ArchiveExportData>> => ({
+    archiveExportChunk: vi.fn(async (): Promise<DepsResult<import('../../../../messaging/sqliteMessages.js').ArchiveExportData>> => ({
       success: true,
       data: { chunk: [1, 2], nextOffset: 2, total: 2, done: true },
     })),
@@ -34,7 +34,7 @@ function makeDeps(overrides: Partial<ArchiveDeps> = {}): ArchiveDeps {
       data: { deleted: 5, remaining: 3, freelistBefore: 10, freelistAfter: 2, vacuumOk: true },
     })),
     ...overrides,
-  };
+  } as ArchiveDeps;
 }
 
 const CUTOFF_DATE = '2026-03-31';

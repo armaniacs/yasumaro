@@ -1,5 +1,5 @@
 {
-  "total": 100,
+  "total": 82,
   "files": {
     "src/background/__tests__/SessionAlarmService.test.ts": 2,
     "src/background/__tests__/alarmRegistry.test.ts": 3,
@@ -20,11 +20,6 @@
     "src/background/ai/__tests__/RemoteAIService.test.ts": 9,
     "src/background/ai/providers/__tests__/OpenAIProvider-branches.test.ts": 2,
     "src/background/ai/providers/__tests__/ProviderStrategy.test.ts": 5,
-    "src/background/handlers/__tests__/consentStateChanged.test.ts": 3,
-    "src/background/handlers/__tests__/messageHandlers-recordSecurity.test.ts": 2,
-    "src/background/handlers/__tests__/messageHandlers.test.ts": 2,
-    "src/background/handlers/__tests__/systemHandlers.test.ts": 8,
-    "src/background/handlers/dashboardSqlite/__tests__/archiveHandler.test.ts": 3,
     "src/utils/storage/__tests__/settingsStore-plaintext-api-key.test.ts": 3
   }
 }

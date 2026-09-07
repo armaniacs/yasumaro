@@ -34,6 +34,7 @@ vi.mock('../../../utils/storage/savedUrlRepository.js', () => ({
 
 import { validateUrlForFilterImport, fetchWithTimeout } from '../../../utils/fetch.js';
 import { updateSavedUrlEntry } from '../../../utils/storage/savedUrlRepository.js';
+import type { SavedUrlEntry } from '../../../utils/urlEntry.js';
 import { logError } from '../../../utils/logger.js';
 
 describe('createFetchUrlHandler', () => {
@@ -160,7 +161,7 @@ describe('createFetchUrlHandler', () => {
     const sendResponse = vi.fn();
     await handler({ payload: { url: 'https://example.com/list.txt' } } as any, {} as any, sendResponse);
 
-    const opts = vi.mocked(fetchWithTimeout).mock.calls[0][1] as Record<string, unknown>;
+    const opts = vi.mocked(fetchWithTimeout).mock.calls[0]?.[1] as Record<string, unknown>;
     expect(opts.redirect).toBe('error');
   });
 
@@ -183,7 +184,7 @@ describe('createFetchUrlHandler', () => {
     await handler({ payload: { url: 'https://example.com/list.txt' } } as any, {} as any, sendResponse);
 
     expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
-    const arg = sendResponse.mock.calls[0][0];
+    const arg = sendResponse.mock.calls[0]?.[0];
     expect(JSON.stringify(arg)).not.toContain('devtools');
     expect(logError).toHaveBeenCalled();
   });
@@ -234,8 +235,8 @@ describe('createContentCleansingExecutedHandler', () => {
       'https://example.com/page',
       expect.any(Function),
     );
-    const updaterHard = vi.mocked(updateSavedUrlEntry).mock.calls[0][1];
-    expect(updaterHard({})).toEqual(expect.objectContaining({ cleansedReason: 'hard' }));
+    const updaterHard = vi.mocked(updateSavedUrlEntry).mock.calls[0]?.[1];
+    expect(updaterHard!({} as SavedUrlEntry)).toEqual(expect.objectContaining({ cleansedReason: 'hard' }));
   });
 
   it('writes cleansedReason "keyword" when only keyword strips removed', async () => {
@@ -248,8 +249,8 @@ describe('createContentCleansingExecutedHandler', () => {
       'https://example.com/page',
       expect.any(Function),
     );
-    const updaterKeyword = vi.mocked(updateSavedUrlEntry).mock.calls[0][1];
-    expect(updaterKeyword({})).toEqual(expect.objectContaining({ cleansedReason: 'keyword' }));
+    const updaterKeyword = vi.mocked(updateSavedUrlEntry).mock.calls[0]?.[1];
+    expect(updaterKeyword!({} as SavedUrlEntry)).toEqual(expect.objectContaining({ cleansedReason: 'keyword' }));
   });
 
   it('writes cleansedReason "both" when both removed', async () => {
@@ -262,8 +263,8 @@ describe('createContentCleansingExecutedHandler', () => {
       'https://example.com/page',
       expect.any(Function),
     );
-    const updaterBoth = vi.mocked(updateSavedUrlEntry).mock.calls[0][1];
-    expect(updaterBoth({})).toEqual(expect.objectContaining({ cleansedReason: 'both' }));
+    const updaterBoth = vi.mocked(updateSavedUrlEntry).mock.calls[0]?.[1];
+    expect(updaterBoth!({} as SavedUrlEntry)).toEqual(expect.objectContaining({ cleansedReason: 'both' }));
   });
 
   it('does not update entry when totalRemoved is 0', async () => {
