@@ -1,9 +1,6 @@
 {
-  "total": 366,
+  "total": 352,
   "files": {
-    "src/__tests__/manifest.test.ts": 2,
-    "src/__tests__/messaging-types-uniformity.test.ts": 7,
-    "src/__tests__/sqlite-security-integrity.test.ts": 5,
     "src/background/__tests__/SessionAlarmService.test.ts": 2,
     "src/background/__tests__/alarmRegistry.test.ts": 3,
     "src/background/__tests__/headerDetector.test.ts": 6,

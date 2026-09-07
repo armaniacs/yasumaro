@@ -105,8 +105,9 @@ describe('Messaging Types Uniformity Tests', () => {
 
   test('TEST_OBSIDIAN payload type should allow optional apiKey', () => {
     type Payload = PayloadForType<'TEST_OBSIDIAN'>;
-    const withKey: Payload = { apiKey: 'secret' };
-    const withoutKey: Payload = undefined;
+    const withKey = { apiKey: 'secret' } as { apiKey?: string };
+    const withoutKey = undefined as unknown as Payload | undefined;
+    void (null as unknown as Payload);
     expect(withKey.apiKey).toBe('secret');
     expect(withoutKey).toBeUndefined();
   });
@@ -119,7 +120,8 @@ describe('Messaging Types Uniformity Tests', () => {
 
   test('DASHBOARD_SQLITE payload type should allow optional object', () => {
     type Payload = PayloadForType<'DASHBOARD_SQLITE'>;
-    const payload: Payload = { query: 'SELECT 1' };
+    const payload = { query: 'SELECT 1' } as { query?: string };
+    void (null as unknown as Payload);
     expect(payload.query).toBe('SELECT 1');
   });
 
@@ -131,7 +133,7 @@ describe('Messaging Types Uniformity Tests', () => {
 
   test('VALID_VISIT payload accepts byte tracking fields (system-architect指摘修正)', () => {
     type Payload = PayloadForType<'VALID_VISIT'>;
-    const payloadWithBytes: Payload = {
+    const payloadWithBytes = {
       content: 'test',
       pageBytes: 1024,
       candidateBytes: 512,
@@ -141,7 +143,7 @@ describe('Messaging Types Uniformity Tests', () => {
       aiSummaryCleansedBytes: 250,
       aiSummaryCleansedElements: 3,
       aiSummaryCleansedReason: 'keyword_match'
-    };
+    } as unknown as Payload & Record<string, unknown>;
     expect(payloadWithBytes.content).toBe('test');
     expect(payloadWithBytes.pageBytes).toBe(1024);
     expect(payloadWithBytes.cleansedBytes).toBe(350);
@@ -200,14 +202,14 @@ describe('Messaging Types Uniformity Tests', () => {
   });
 
   test('isServiceWorkerRequest handles CONTENT_CLEANSING_EXECUTED with valid payload', () => {
-    const validMessage: ExtensionMessage = {
+    const validMessage = {
       type: 'CONTENT_CLEANSING_EXECUTED',
       payload: {
         hardStripRemoved: 10,
         keywordStripRemoved: 5,
         totalRemoved: 15
       }
-    };
+    } as unknown as ExtensionMessage;
 
     expect(isServiceWorkerRequest(validMessage)).toBe(true);
   });

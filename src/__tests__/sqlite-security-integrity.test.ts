@@ -47,8 +47,8 @@ describe('SQLite Security & Data Integrity', () => {
         runtimeId: RUNTIME_ID,
         recordingPipeline: { record: async () => ({ success: true }) },
         tabCache: { add: () => undefined, update: () => undefined },
-        obsidian: { testConnection: async () => ({ success: true }) },
-        aiService: { testConnection: async () => ({ success: true }) },
+        obsidian: { testConnection: async () => ({ success: true }) as Awaited<ReturnType<MessageRouterDeps['obsidian']['testConnection']>> },
+        aiService: { testConnection: async () => ({ success: true }) as Awaited<ReturnType<MessageRouterDeps['aiService']['testConnection']>> },
         manualRecordDeps: {} as never,
         saveRecordDeps: {} as never,
         hasPrivacyConsent: async () => true,
@@ -156,7 +156,7 @@ describe('SQLite Security & Data Integrity', () => {
         /export const SCHEMA_SQL\s*=\s*`([\s\S]*?)`;/
       );
       expect(schemaMatch).toBeTruthy();
-      const schema = schemaMatch![1];
+      const schema = schemaMatch![1]!;
 
       const hasObsidianIndex = schema.includes('idx_logs_obsidian') &&
         schema.includes('obsidian_synced');
