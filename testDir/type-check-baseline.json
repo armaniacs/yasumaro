@@ -1,5 +1,5 @@
 {
-  "total": 2171,
+  "total": 2071,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -105,9 +105,6 @@
     "src/dashboard/__tests__/exportImport-r2.test.ts": 1,
     "src/dashboard/__tests__/exportLogsService.test.ts": 6,
     "src/dashboard/__tests__/historyBadges.test.ts": 1,
-    "src/dashboard/__tests__/historyEntryRow-branches.test.ts": 25,
-    "src/dashboard/__tests__/historyEntryRow-r2.test.ts": 23,
-    "src/dashboard/__tests__/historyEntryRow.test.ts": 52,
     "src/dashboard/__tests__/historyFilters.test.ts": 7,
     "src/dashboard/__tests__/historyPendingPanel-branches.test.ts": 1,
     "src/dashboard/__tests__/historyPendingPanel.test.ts": 2,

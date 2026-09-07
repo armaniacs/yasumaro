@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { makeHistoryEntryRow } from '../historyEntryRow.js';
 import type { SavedUrlEntry } from '../../utils/storageUrls.js';
+import type { HistoryPanelState } from '../historyState.js';
 import { getMessage } from '../../utils/i18n.js';
 import { removeSavedUrl } from '../../utils/storageUrls.js';
 import { makeCleansingProgressBar } from '../cleansingStatsView.js';
@@ -67,11 +68,17 @@ function createMinimalEntry(overrides: Partial<SavedUrlEntry> = {}): SavedUrlEnt
   } as SavedUrlEntry;
 }
 
-function createMockState(overrides: Partial<Record<string, unknown>> = {}) {
+function createMockState(overrides: Partial<HistoryPanelState> = {}): HistoryPanelState {
   return {
-    activeTagFilter: null,
     entries: [],
+    activeFilter: 'all',
+    activeTagFilter: null,
     historyCurrentPage: 0,
+    pendingPages: [],
+    pendingUrlSet: new Set(),
+    editingUrl: null,
+    editingTags: [],
+    tagEditTrapId: null,
     ...overrides,
   };
 }
@@ -470,7 +477,7 @@ describe('AI Summary Toggle', () => {
     );
     const toggles = row.querySelectorAll('.content-toggle-btn');
     expect(toggles.length).toBe(1);
-    expect(toggles[0].getAttribute('aria-controls')).toBe('summary-entry-0');
+    expect(toggles[0]!.getAttribute('aria-controls')).toBe('summary-entry-0');
   });
 
   it('toggle shows/hides summary content', () => {
@@ -519,7 +526,7 @@ describe('Delete Button', () => {
     deleteBtn.click();
     await vi.waitFor(() => {
       expect(state.entries.length).toBe(1);
-      expect(state.entries[0].url).toBe('https://other.com');
+      expect(state.entries[0]!.url).toBe('https://other.com');
     });
   });
 });
