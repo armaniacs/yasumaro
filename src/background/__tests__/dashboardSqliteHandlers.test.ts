@@ -25,12 +25,43 @@ function makeBaseDeps(overrides: Partial<DashboardSqliteHandlerDeps> = {}): Dash
     purgeContent: async () => ({ success: true, data: { purged: 0 } }),
     backupDb: async () => ({ success: true, data: new Uint8Array() }),
     runMigration: async () => ({ success: false, error: 'n/a', count: 0, read: 0, inserted: 0 }),
-    getConfirmToken: async () => '',
+    createConfirmToken: async () => '',
+    verifyConfirmToken: async (token: string) => token === '',
     runBackfill: async () => ({ updated: 0, total: 0 }),
     runCleanup: async () => ({ removed: [], totalBytes: 0 }),
     runLegacyResync: async () => ({ examined: 0, written: 0, skipped: 0, total: 0 }),
     queryAuditLog: async () => ({ success: true, data: { rows: [], total: 0 } }),
+    // Archive-group deps are unused by these tests (only query/search paths run).
+    ...archiveDepStubs(),
     ...overrides,
+  };
+}
+
+function archiveDepStubs(): Pick<
+  DashboardSqliteHandlerDeps,
+    | 'archivePreview' | 'archiveCreate' | 'archiveCleanup' | 'archiveExportChunk'
+    | 'archivePrepareIncoming' | 'archiveRestorePreview' | 'archiveRestore'
+    | 'archiveDeleteByStaging' | 'archiveOpen' | 'archiveQuery' | 'archiveUpdate'
+    | 'archiveSave' | 'archiveClose' | 'archiveStatus'
+> {
+  const notImpl = async (): Promise<never> => {
+    throw new Error('archive dep not stubbed for this test');
+  };
+  return {
+    archivePreview: notImpl,
+    archiveCreate: notImpl,
+    archiveCleanup: notImpl,
+    archiveExportChunk: notImpl,
+    archivePrepareIncoming: notImpl,
+    archiveRestorePreview: notImpl,
+    archiveRestore: notImpl,
+    archiveDeleteByStaging: notImpl,
+    archiveOpen: notImpl,
+    archiveQuery: notImpl,
+    archiveUpdate: notImpl,
+    archiveSave: notImpl,
+    archiveClose: notImpl,
+    archiveStatus: notImpl,
   };
 }
 
