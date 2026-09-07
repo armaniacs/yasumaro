@@ -8,8 +8,10 @@
  * (?tab= / ?section=), and the export buttons that sit outside any panel.
  *
  * This module is imported by src/dashboard/main.ts, which owns the single
- * bootstrap. It must not import from panels/ — the panel registry is not
- * built until main.ts constructs it.
+ * bootstrap. It must not import panel implementations from panels/ — the
+ * panel registry is not built until main.ts constructs it. The one exception
+ * is panels/panelCatalog.ts: pure metadata with zero imports, so resolving
+ * deep links from it cannot pull any panel (or the registry) in.
  */
 
 import { toMarkdownTemplateEntryData } from './markdownExport.js';
@@ -21,8 +23,11 @@ import {
   handleHistoryExportLocalMarkdown,
 } from './localMarkdownExport.js';
 import { initTrancoConsentPanel } from './trancoConsent.js';
-
-const DEFAULT_PANEL_ID = 'panel-general';
+import {
+  DEFAULT_PANEL_ID,
+  resolvePanelIdForSection,
+  resolvePanelIdForTab,
+} from './panels/panelCatalog.js';
 
 /**
  * Which panel the page should open on, from ?tab= / ?section=.
@@ -34,21 +39,11 @@ const DEFAULT_PANEL_ID = 'panel-general';
 export function resolveInitialPanelId(search: string = window.location.search): string {
   const urlParams = new URLSearchParams(search);
 
-  if (urlParams.get('tab') === 'history') {
-    return 'panel-sqlite-history';
-  }
-
-  const sectionPanelMap: Record<string, string> = {
-    obsidian: 'panel-general',
-    'ai-provider': 'panel-general',
-    general: 'panel-general',
-  };
-  const section = urlParams.get('section');
-  if (section && sectionPanelMap[section]) {
-    return sectionPanelMap[section];
-  }
-
-  return DEFAULT_PANEL_ID;
+  // ?tab= wins over ?section= (legacy precedence, pinned by deepLink.test.ts).
+  // Both resolutions derive from panelCatalog.ts — no hand-written map here.
+  return resolvePanelIdForTab(urlParams.get('tab'))
+    ?? resolvePanelIdForSection(urlParams.get('section'))
+    ?? DEFAULT_PANEL_ID;
 }
 
 /**
@@ -59,6 +54,11 @@ export function resolveInitialPanelId(search: string = window.location.search): 
  */
 export function applySectionDeepLink(search: string = window.location.search): void {
   const section = new URLSearchParams(search).get('section');
+
+  // Which sections are known comes from the catalog; only sections that
+  // resolve to the general panel carry an in-panel anchor. Unknown sections
+  // (and ?section=general, which has no anchor) stay a no-op as before.
+  if (resolvePanelIdForSection(section) !== DEFAULT_PANEL_ID) return;
 
   if (section === 'obsidian') {
     const details = document.getElementById('obsidianSettingsDetails') as HTMLDetailsElement | null;
