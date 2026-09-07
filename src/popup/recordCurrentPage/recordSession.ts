@@ -8,10 +8,9 @@ import { getMessage } from '../../utils/i18n.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import { getSavedUrlEntries } from '../../utils/storageUrls.js';
 import type { ContentResponse } from '../mainTypes.js';
-import { copyTextToClipboard } from '../../utils/clipboard.js';
 import { showSpinner, hideSpinner } from '../spinner.js';
 import { showError } from '../errorUtils.js';
-import { formatEntryToMarkdown } from '../../utils/markdownFormatter.js';
+import { createCopyMarkdownButton } from '../../utils/copyMarkdownButton.js';
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 import { updateCleansingStatus, updateTrustStatus } from '../statusPanel.js';
 import { TabContentFetcher } from './tabContentFetcher.js';
@@ -296,28 +295,13 @@ export class RecordSession {
 
     try {
       const entry = this.buildEntryFromSaveResult(tab, result);
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'copy-markdown-btn secondary-btn';
-      button.textContent = getMessage('copyMarkdown') || 'Copy Markdown';
-      button.addEventListener('click', async () => {
-        const originalText = getMessage('copyMarkdown') || 'Copy Markdown';
-        button.disabled = true;
-        try {
-          const markdown = formatEntryToMarkdown(entry);
-          await copyTextToClipboard(markdown);
-          button.textContent = getMessage('copyMarkdownSuccess') || 'Copied!';
-          setTimeout(() => {
-            button.textContent = originalText;
-            button.disabled = false;
-          }, 2000);
-        } catch {
-          button.textContent = getMessage('copyMarkdownError') || 'Copy failed';
-          setTimeout(() => {
-            button.textContent = originalText;
-            button.disabled = false;
-          }, 2000);
-        }
+      const button = createCopyMarkdownButton(entry, {
+        className: 'copy-markdown-btn secondary-btn',
+        labels: {
+          initialText: getMessage('copyMarkdown') || 'Copy Markdown',
+          successText: getMessage('copyMarkdownSuccess') || 'Copied!',
+          failureText: getMessage('copyMarkdownError') || 'Copy failed',
+        },
       });
 
       container.appendChild(button);
