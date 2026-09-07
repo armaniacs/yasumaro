@@ -1,5 +1,5 @@
 {
-  "total": 1002,
+  "total": 985,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -96,7 +96,6 @@
     "src/dashboard/panels/diagnostic/__tests__/diagnosticsActions.test.ts": 7,
     "src/dashboard/panels/staticForm/__tests__/generalSettingsPanel-bLayout.test.ts": 1,
     "src/dashboard/panels/staticForm/__tests__/privacySettingsPanel.test.ts": 1,
-    "src/dashboard/settings/__tests__/aiSummaryCleansingSettings-extra.test.ts": 17,
     "src/dashboard/settings/__tests__/aiSummaryCleansingSettings.test.ts": 1,
     "src/dashboard/settings/__tests__/aiSummaryCleansingSettingsV2-coverage.test.ts": 1,
     "src/dashboard/settings/__tests__/aiSummaryCleansingSettingsV2.test.ts": 3,
@@ -134,7 +133,6 @@
     "src/utils/__tests__/optimisticLockSerialization.test.ts": 4,
     "src/utils/__tests__/pageContentPipeline.test.ts": 1,
     "src/utils/__tests__/pathSanitizer.test.ts": 3,
-    "src/utils/__tests__/piiSanitizer-optimization.test.ts": 7,
     "src/utils/__tests__/piiSanitizer-redos.test.ts": 2,
     "src/utils/__tests__/piiSanitizer-security.test.ts": 1,
     "src/utils/__tests__/piiStripper.test.ts": 3,
