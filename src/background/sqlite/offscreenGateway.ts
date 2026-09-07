@@ -28,7 +28,6 @@ import type {
   OffscreenArchiveRestorePreviewResponse,
   OffscreenArchiveRestoreResponse,
   OffscreenArchivePurgeResponse,
-  OffscreenArchiveOpenResponse,
   OffscreenArchiveQueryResponse,
   OffscreenArchiveUpdateResponse,
   OffscreenArchiveSaveResponse,
@@ -46,10 +45,52 @@ import type {
 import type { OffscreenTransport } from '../offscreenTransport.js';
 import { ChromeOffscreenTransport } from '../offscreenTransport.js';
 import type { BrowsingLogRecord, StorageQuery } from '../../utils/sqlite-types.js';
+import { archiveWireFor, archiveNoRetry, isArchiveOpType, type ArchiveOpType } from '../../messaging/archiveWireTable.js';
 
 export type SqliteResult<T> = { success: true; data: T } | { success: false; error: SqliteError };
 export type { SqliteError };
 export { categorizeError };
+
+type GatewaySuccessResponse = { success: true } & Record<string, unknown>;
+
+/**
+ * Per-op success-response decoders for the table-driven archive path.
+ * Each entry mirrors the transform the hand-written switch case used to
+ * pass to callInternal; field access is checked against the wire response
+ * type so a shape change fails compilation here instead of silently
+ * returning undefined.
+ */
+const ARCHIVE_GATEWAY_DECODERS: Record<ArchiveOpType, (res: GatewaySuccessResponse) => unknown> = {
+  archivePreview: (res) => (res as unknown as OffscreenArchivePreviewResponse & { success: true }).preview,
+  archiveCreate: (res) => {
+    const r = res as unknown as OffscreenArchiveCreateResponse & { success: true };
+    return { stagingName: r.stagingName, recordCount: r.recordCount };
+  },
+  archiveCleanup: (res) => ({ removed: (res as unknown as OffscreenArchiveCleanupResponse & { success: true }).removed }),
+  archiveExport: (res) => {
+    const r = res as unknown as OffscreenArchiveExportResponse & { success: true };
+    return { chunk: r.chunk, nextOffset: r.nextOffset, total: r.total, done: r.done };
+  },
+  archivePrepareIncoming: (res) => (res as unknown as OffscreenArchivePrepareIncomingResponse & { success: true }).stagingName,
+  archiveRestorePreview: (res) => (res as unknown as OffscreenArchiveRestorePreviewResponse & { success: true }).preview,
+  archiveRestore: (res) => {
+    const r = res as unknown as OffscreenArchiveRestoreResponse & { success: true };
+    return { restored: r.restored, restoredDeleted: r.restoredDeleted, skipped: r.skipped, skippedInvalid: r.skippedInvalid };
+  },
+  archiveDeleteByStaging: (res) => {
+    const r = res as unknown as OffscreenArchivePurgeResponse & { success: true };
+    return { deleted: r.deleted, remaining: r.remaining, freelistBefore: r.freelistBefore, freelistAfter: r.freelistAfter, vacuumOk: r.vacuumOk };
+  },
+  archiveOpen: () => undefined,
+  archiveQuery: (res) => {
+    const r = res as unknown as OffscreenArchiveQueryResponse & { success: true };
+    return { rows: r.rows, total: r.total };
+  },
+  archiveUpdate: (res) => ({ dirty: (res as unknown as OffscreenArchiveUpdateResponse & { success: true }).dirty }),
+  archiveSave: (res) => ({ dirty: (res as unknown as OffscreenArchiveSaveResponse & { success: true }).dirty }),
+  archiveClose: (res) => ({ dirty: (res as unknown as OffscreenArchiveCloseResponse & { success: true }).dirty }),
+  archiveStatus: (res) => (res as unknown as OffscreenArchiveStatusResponse & { success: true }).status,
+};
 
 export class OffscreenGateway {
   private readonly transport: OffscreenTransport;
@@ -131,47 +172,37 @@ export class OffscreenGateway {
   async maintain(op: { type: 'archiveSave'; stagingName: string }): Promise<SqliteResult<{ dirty: boolean }>>;
   async maintain(op: { type: 'archiveClose'; stagingName: string }): Promise<SqliteResult<{ dirty: boolean }>>;
   async maintain(op: { type: 'archiveStatus' }): Promise<SqliteResult<ArchiveSessionStatusData>>;
-  async maintain(op: { type: 'archiveOpen'; stagingName: string }): Promise<SqliteResult<void>>;
-  async maintain(op: { type: 'archiveQuery'; stagingName: string; query: string; limit: number; offset: number }): Promise<SqliteResult<{ rows: ArchiveSessionRow[]; total: number }>>;
-  async maintain(op: { type: 'archiveUpdate'; stagingName: string; id: number; changes: Record<string, unknown> }): Promise<SqliteResult<{ dirty: boolean }>>;
-  async maintain(op: { type: 'archiveSave'; stagingName: string }): Promise<SqliteResult<{ dirty: boolean }>>;
-  async maintain(op: { type: 'archiveClose'; stagingName: string }): Promise<SqliteResult<{ dirty: boolean }>>;
-  async maintain(op: { type: 'archiveStatus' }): Promise<SqliteResult<ArchiveSessionStatusData>>;
   async maintain(op: MaintainOp): Promise<SqliteResult<unknown>> {
-    switch (op.type) {
+    // Archive ops (PBI 2026-09-07-22): routed through ARCHIVE_WIRE_TABLE.
+    // The op object minus its discriminator is the wire payload; the table
+    // supplies the message type, the response decoder, and the noRetry flag
+    // (bulk/state-changing ops where a timeout does not mean failure, so a
+    // blind retry would double-execute).
+    if (isArchiveOpType(op.type)) {
+      const entry = archiveWireFor(op.type);
+      if (!entry) throw new Error(`Unhandled maintain op: ${op.type}`);
+      const { type: _discriminator, ...payload } = op as unknown as Record<string, unknown>;
+      const decode = ARCHIVE_GATEWAY_DECODERS[op.type];
+      return this.callInternal<unknown>(
+        entry.messageType,
+        payload,
+        decode,
+        undefined,
+        archiveNoRetry(op.type) ? { noRetry: true } : undefined,
+      );
+    }
+    // Archive ops return above, so the switch below only sees the
+    // non-archive remainder; the cast makes that explicit to the checker.
+    const rest = op as Exclude<MaintainOp, { type: ArchiveOpType }>;
+    switch (rest.type) {
       case 'init': { const result = await this.callInternal<boolean, OffscreenHealthResponse>('SQLITE_INIT'); return result.success ? { success: true, data: true } : result; }
       case 'backup': return this.callInternal<Uint8Array, OffscreenBinaryResponse>('SQLITE_BACKUP', {}, (res) => new Uint8Array(res.data));
-      case 'restore': return this.callInternal<void, OffscreenWriteResponse>('SQLITE_RESTORE', { data: Array.from(op.data) }, () => undefined);
+      case 'restore': return this.callInternal<void, OffscreenWriteResponse>('SQLITE_RESTORE', { data: Array.from(rest.data) }, () => undefined);
       case 'clearAll': return this.callInternal<void, OffscreenWriteResponse>('SQLITE_CLEAR_ALL', {}, () => undefined);
-      case 'purgeOldRecords': return this.callInternal<{ purged: number }, OffscreenPurgeResponse>('SQLITE_PURGE', { retentionDays: op.retentionDays, maxRecords: op.maxRecords }, (res) => ({ purged: res.purged }));
-      case 'purgeContent': return this.callInternal<{ purged: number }, OffscreenContentPurgeResponse>('CONTENT_PURGE', { retentionDays: op.retentionDays, maxRecords: op.maxRecords, includeStarred: op.includeStarred }, (res) => ({ purged: res.purged }));
+      case 'purgeOldRecords': return this.callInternal<{ purged: number }, OffscreenPurgeResponse>('SQLITE_PURGE', { retentionDays: rest.retentionDays, maxRecords: rest.maxRecords }, (res) => ({ purged: res.purged }));
+      case 'purgeContent': return this.callInternal<{ purged: number }, OffscreenContentPurgeResponse>('CONTENT_PURGE', { retentionDays: rest.retentionDays, maxRecords: rest.maxRecords, includeStarred: rest.includeStarred }, (res) => ({ purged: res.purged }));
       case 'healthCheck': { const result = await this.callInternal<boolean, OffscreenHealthResponse>('SQLITE_HEALTH_CHECK', {}); return result.success ? { success: true, data: true } : result; }
-      // Archive ops (PBI 2026-09-06-02): bulk create is noRetry — a timeout
-      // does not mean it failed, and a blind retry would run it twice.
-      case 'archivePreview': return this.callInternal<ArchivePreviewData, OffscreenArchivePreviewResponse>('SQLITE_ARCHIVE_PREVIEW', { cutoffDate: op.cutoffDate, cutoffMs: op.cutoffMs, includeDeleted: op.includeDeleted }, (res) => res.preview);
-      case 'archiveCreate': return this.callInternal<ArchiveCreateData, OffscreenArchiveCreateResponse>('SQLITE_ARCHIVE_CREATE', { cutoffDate: op.cutoffDate, cutoffMs: op.cutoffMs, includeDeleted: op.includeDeleted, yasumaroVersion: op.yasumaroVersion }, (res) => ({ stagingName: res.stagingName, recordCount: res.recordCount }), undefined, { noRetry: true });
-      case 'archiveCleanup': return this.callInternal<{ removed: string[] }, OffscreenArchiveCleanupResponse>('SQLITE_ARCHIVE_CLEANUP', {}, (res) => ({ removed: res.removed }));
-      case 'archiveExport': return this.callInternal<ArchiveExportData, OffscreenArchiveExportResponse>('SQLITE_ARCHIVE_EXPORT', { stagingName: op.stagingName, offset: op.offset, length: op.length }, (res) => ({ chunk: res.chunk, nextOffset: res.nextOffset, total: res.total, done: res.done }));
-      case 'archivePrepareIncoming': return this.callInternal<string, OffscreenArchivePrepareIncomingResponse>('SQLITE_ARCHIVE_PREPARE_INCOMING', {}, (res) => res.stagingName);
-      case 'archiveRestorePreview': return this.callInternal<ArchiveRestorePreviewData, OffscreenArchiveRestorePreviewResponse>('SQLITE_ARCHIVE_RESTORE_PREVIEW', { stagingName: op.stagingName }, (res) => res.preview);
-      // Bulk write: noRetry — a timeout leaves the restore running in the
-      // worker and a blind retry would re-insert (INSERT OR IGNORE makes the
-      // re-run converge, but counts would be wrong).
-      case 'archiveRestore': return this.callInternal<ArchiveRestoreData, OffscreenArchiveRestoreResponse>('SQLITE_ARCHIVE_RESTORE', { stagingName: op.stagingName }, (res) => ({ restored: res.restored, restoredDeleted: res.restoredDeleted, skipped: res.skipped, skippedInvalid: res.skippedInvalid }), undefined, { noRetry: true });
-      case 'archiveDeleteByStaging': return this.callInternal<ArchivePurgeData, OffscreenArchivePurgeResponse>('SQLITE_ARCHIVE_DELETE_BY_STAGING', { stagingName: op.stagingName }, (res) => ({ deleted: res.deleted, remaining: res.remaining, freelistBefore: res.freelistBefore, freelistAfter: res.freelistAfter, vacuumOk: res.vacuumOk }), undefined, { noRetry: true });
-      case 'archiveOpen': return this.callInternal<void, OffscreenArchiveOpenResponse>('SQLITE_ARCHIVE_OPEN', { stagingName: op.stagingName }, () => undefined, undefined, { noRetry: true });
-      case 'archiveQuery': return this.callInternal<{ rows: ArchiveSessionRow[]; total: number }, OffscreenArchiveQueryResponse>('SQLITE_ARCHIVE_QUERY', { stagingName: op.stagingName, query: op.query, limit: op.limit, offset: op.offset }, (res) => ({ rows: res.rows, total: res.total }));
-      case 'archiveUpdate': return this.callInternal<{ dirty: boolean }, OffscreenArchiveUpdateResponse>('SQLITE_ARCHIVE_UPDATE', { stagingName: op.stagingName, id: op.id, changes: op.changes }, (res) => ({ dirty: res.dirty }));
-      case 'archiveSave': return this.callInternal<{ dirty: boolean }, OffscreenArchiveSaveResponse>('SQLITE_ARCHIVE_SAVE', { stagingName: op.stagingName }, (res) => ({ dirty: res.dirty }), undefined, { noRetry: true });
-      case 'archiveClose': return this.callInternal<{ dirty: boolean }, OffscreenArchiveCloseResponse>('SQLITE_ARCHIVE_CLOSE', { stagingName: op.stagingName }, (res) => ({ dirty: res.dirty }), undefined, { noRetry: true });
-      case 'archiveStatus': return this.callInternal<ArchiveSessionStatusData, OffscreenArchiveStatusResponse>('SQLITE_ARCHIVE_STATUS', {}, (res) => res.status);
-      case 'archiveOpen': return this.callInternal<void, OffscreenArchiveOpenResponse>('SQLITE_ARCHIVE_OPEN', { stagingName: op.stagingName }, () => undefined, undefined, { noRetry: true });
-      case 'archiveQuery': return this.callInternal<{ rows: ArchiveSessionRow[]; total: number }, OffscreenArchiveQueryResponse>('SQLITE_ARCHIVE_QUERY', { stagingName: op.stagingName, query: op.query, limit: op.limit, offset: op.offset }, (res) => ({ rows: res.rows, total: res.total }));
-      case 'archiveUpdate': return this.callInternal<{ dirty: boolean }, OffscreenArchiveUpdateResponse>('SQLITE_ARCHIVE_UPDATE', { stagingName: op.stagingName, id: op.id, changes: op.changes }, (res) => ({ dirty: res.dirty }));
-      case 'archiveSave': return this.callInternal<{ dirty: boolean }, OffscreenArchiveSaveResponse>('SQLITE_ARCHIVE_SAVE', { stagingName: op.stagingName }, (res) => ({ dirty: res.dirty }), undefined, { noRetry: true });
-      case 'archiveClose': return this.callInternal<{ dirty: boolean }, OffscreenArchiveCloseResponse>('SQLITE_ARCHIVE_CLOSE', { stagingName: op.stagingName }, (res) => ({ dirty: res.dirty }), undefined, { noRetry: true });
-      case 'archiveStatus': return this.callInternal<ArchiveSessionStatusData, OffscreenArchiveStatusResponse>('SQLITE_ARCHIVE_STATUS', {}, (res) => res.status);
-      default: { const exhaustive: never = op; void exhaustive; throw new Error('Unhandled maintain op'); }
+      default: { const exhaustive: never = rest; void exhaustive; throw new Error('Unhandled maintain op'); }
     }
   }
 
