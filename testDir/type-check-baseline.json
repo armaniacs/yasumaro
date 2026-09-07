@@ -1,5 +1,5 @@
 {
-  "total": 985,
+  "total": 903,
   "files": {
     "src/__tests__/manifest.test.ts": 2,
     "src/__tests__/messaging-types-uniformity.test.ts": 7,
@@ -106,13 +106,10 @@
     "src/messaging/__tests__/dashboardSenderGuard.test.ts": 1,
     "src/messaging/__tests__/messageTransport-branch.test.ts": 4,
     "src/messaging/__tests__/messageTransport.test.ts": 2,
-    "src/popup/__tests__/autoClose.test.ts": 22,
-    "src/popup/__tests__/errorUtils.test.ts": 26,
     "src/popup/__tests__/main.test.ts": 132,
     "src/popup/__tests__/mainSpinner.test.ts": 31,
     "src/popup/__tests__/mask-visualization.test.ts": 47,
     "src/popup/__tests__/popup-xss.test.ts": 44,
-    "src/popup/__tests__/sanitizePreview.test.ts": 20,
     "src/popup/__tests__/statusChecker.test.ts": 32,
     "src/popup/__tests__/ui-ux-improvements.test.ts": 29,
     "src/utils/__tests__/RateLimitService.test.ts": 1,
@@ -140,7 +137,6 @@
     "src/utils/__tests__/storage-buildAllowedUrls.test.ts": 4,
     "src/utils/__tests__/storage-extra.test.ts": 5,
     "src/utils/__tests__/storage-keys.test.ts": 2,
-    "src/utils/__tests__/storage-locking.test.ts": 7,
     "src/utils/__tests__/storageUrls-set-comparison.test.ts": 2,
     "src/utils/__tests__/storageUrls-setters.test.ts": 2,
     "src/utils/__tests__/tagUtils.test.ts": 1,
