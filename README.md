@@ -113,7 +113,7 @@ flowchart LR
 
 ### インストール方法
 
-> **配布に関する注意**: Chrome Web Store への配布は終了しました（署名鍵の不整合により既存の拡張機能 ID を更新できなくなったため）。Chrome / Brave をお使いの場合は、方法2（GitHub Releases の zip を読み込む）または方法3（ソースからビルド）をご利用ください。
+> **配布に関する注意**: Chrome Web Store での配布は現在停止しています（署名鍵の不整合により既存の拡張機能 ID を更新できなくなったため。将来的に別 ID で再開する可能性があります）。Chrome / Brave をお使いの場合は、方法2（GitHub Releases の zip を読み込む）または方法3（ソースからビルド）をご利用ください。
 
 #### 方法1: Edge Add-ons からインストール
 
@@ -327,7 +327,7 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 
 ### Installation
 
-> **Note on distribution**: Chrome Web Store distribution has ended (a signing-key mismatch made the existing extension ID impossible to update). On Chrome / Brave, use Option 2 (load the GitHub Releases zip) or Option 3 (build from source).
+> **Note on distribution**: Chrome Web Store distribution is currently paused (a signing-key mismatch made the existing extension ID impossible to update; it may resume later under a different ID). On Chrome / Brave, use Option 2 (load the GitHub Releases zip) or Option 3 (build from source).
 
 #### Option 1: Install from Edge Add-ons
 
