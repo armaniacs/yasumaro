@@ -45,3 +45,21 @@ AI の設定画面にある「接続テスト」ボタン。以前は緑にな�
 v6.6 系からそのまま最新版に上げて大丈夫です。設定は引き継がれます。
 
 内蔵 AI を使いたい場合だけ、対応ブラウザでの準備（フラグの有効化とモデルのダウンロード）が必要です。詳しい手順はセットアップガイドにあります。
+
+## インストール方法
+
+### Chrome を使っている人へ
+
+事情があって、Chrome ウェブストアでの公開は現在停止しています（将来的に再開する可能性はあります）。当面は GitHub からダウンロードしてインストールしてください。
+
+1. [最新リリース](https://github.com/armaniacs/yasumaro/releases/latest) から `yasumaro-<version>-chrome.zip` をダウンロードして展開します
+2. `chrome://extensions` を開き、右上の「デベロッパーモード」をオンにします
+3. 「パッケージ化されていない拡張機能を読み込む」から、展開したフォルダを選びます
+
+### Edge を使っている人へ
+
+Edge なら [Edge アドオンストア](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep) からそのままインストールできます。
+
+---
+
+配布ページはこちら → [Yasumaro（GitHub）](https://github.com/armaniacs/yasumaro)
