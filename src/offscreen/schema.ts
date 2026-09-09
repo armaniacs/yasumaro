@@ -110,9 +110,11 @@ export const INSERT_SQL = `INSERT INTO browsing_logs (${INSERT_COLS}) VALUES (${
 /**
  * Fields allowed in UPDATE SET clauses across all backends.
  * Must be kept in sync with the INSERT columns — any field that can be
- * inserted should also be updatable. OPFS Worker uses a dynamic iteration
- * of the change payload so it doesn't use this list, but the IDB-VFS and
- * FallbackStorage paths both apply this whitelist to prevent arbitrary field updates.
+ * inserted should also be updatable. Every update path iterates this list
+ * (IdbVfsBackend, FallbackStorage, the OPFS worker crud handlers, and the
+ * offscreen SQLITE_UPDATE registry), so adding a column here extends all
+ * of them at once. The dashboard route intentionally permits only the
+ * narrower DASHBOARD_MUTABLE_SUBSET (background/handlers/dashboardSqlite).
  */
 export const UPDATABLE_FIELDS = [
   'url', 'title', 'summary', 'tags', 'domain',

@@ -6,11 +6,17 @@ import type { BrowsingLogEntry, BrowsingLogRecord } from '../../../utils/sqlite-
 import type { CallResult, SqliteError } from '../../sqlite/offscreenGateway.js';
 import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData } from '../../../messaging/sqliteMessages.js';
 
-export const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
-export const MAX_APPEND_IDS = 100;
+/**
+ * Intentionally narrower than the offscreen UPDATABLE_FIELDS (31 fields):
+ * the dashboard route permits only these 10, so dashboard edits can never
+ * touch telemetry/AI-metering columns. Subset integrity is pinned by
+ * dashboardMutableSubset.test.ts.
+ */
+export const DASHBOARD_MUTABLE_SUBSET = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 // VULN-006: cap bulk import rows to prevent SW/offscreen queue saturation
-// (the append path already caps at MAX_APPEND_IDS).
-export const MAX_IMPORT_ROWS = 5000;
+// (the append path already caps at MAX_APPEND_IDS). Values live in the
+// messaging limits registry so validators and handlers cannot drift apart.
+export { MAX_APPEND_IDS, MAX_IMPORT_ROWS, MAX_RESTORE_BASE64_BYTES } from '../../../messaging/limits.js';
 
 /**
  * Every result the SqliteClient-backed deps return carries its own failure
