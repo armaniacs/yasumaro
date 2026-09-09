@@ -41,13 +41,13 @@ Scenario: payload エイリアスが 1 関数に統一される
 
 ## 受け入れ基準
 
-- [ ] `sqliteMessageHandlers.ts:127-159` のインライン 31 項リストを削除し `UPDATABLE_FIELDS` import へ（`crudHandlers.ts:68-80` / `IdbVfsBackend.ts:169-180` と同一パターン）
-- [ ] `deps.ts:9` の `ALLOWED_UPDATE_FIELDS` を `DASHBOARD_MUTABLE_SUBSET` に rename し、subset 整合テスト新設
-- [ ] `handleQuery` / `handleSearch` の payload エイリアス（`starred/isStarred`・`dateFrom/since`・`tag/tagFilter`・`gistSynced` coercion 等 7 件）を `normalizeStorageQuery` 純関数 1 個に統合
-- [ ] `schema.ts:110-116` の陳腐コメント（「OPFS Worker はこのリストを使わない」）を実態に合わせ修正
-- [ ] gateway フラット化 wire 契約（`offscreenGateway.ts:148` の `{id, ...op.changes}` と handler の `key in payload` 読み）を型 or JSDoc で明示
-- [ ] `validators.ts` の update / archive_update が shape のみ検証である現状は維持（フィールド名検査は handler 層の責務のまま。変更する場合は実装メモに記録）
-- [ ] 振る舞い変更なし（dashboard 10 項 / offscreen 31 項の現行契約を保持。統合する場合は意図を記録）
+- [x] `sqliteMessageHandlers.ts:127-159` のインライン 31 項リストを削除し `UPDATABLE_FIELDS` import へ（`crudHandlers.ts:68-80` / `IdbVfsBackend.ts:169-180` と同一パターン）
+- [x] `deps.ts:9` の `ALLOWED_UPDATE_FIELDS` を `DASHBOARD_MUTABLE_SUBSET` に rename し、subset 整合テスト新設
+- [x] `handleQuery` / `handleSearch` の payload エイリアス（`starred/isStarred`・`dateFrom/since`・`tag/tagFilter`・`gistSynced` coercion 等 7 件）を `normalizeStorageQuery` 純関数 1 個に統合
+- [x] `schema.ts:110-116` の陳腐コメント（「OPFS Worker はこのリストを使わない」）を実態に合わせ修正
+- [x] gateway フラット化 wire 契約（`offscreenGateway.ts:148` の `{id, ...op.changes}` と handler の `key in payload` 読み）を型 or JSDoc で明示
+- [x] `validators.ts` の update / archive_update が shape のみ検証である現状は維持（フィールド名検査は handler 層の責務のまま。変更する場合は実装メモに記録）
+- [x] 振る舞い変更なし（dashboard 10 項 / offscreen 31 項の現行契約を保持。統合する場合は意図を記録）
 
 ## テスト戦略
 
@@ -68,8 +68,29 @@ Scenario: payload エイリアスが 1 関数に統一される
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] type-check / lint / 対象テスト green
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] type-check / lint / 対象テスト green
 - [ ] コードレビュー完了
 - [ ] 台帳 `2026-09-05-00-backlog-future.md` の「UPDATE 許可フィールドの 4 枚舌リスト」行に完了印
 - [ ] `00-INDEX.md` 更新
+
+## 実装メモ（2026-09-09・0909a）
+
+### 同一性確認
+- 削除したインライン 31 項リストと `UPDATABLE_FIELDS` は集合・順序ともに完全一致（目視 diff 済み）。`handleUpdate` の `key in payload` 収集ロジック自体は不変のため、offscreen 31 項契約は不変。
+- dashboard 側 10 項の値も rename のみで不変。`ALLOWED_UPDATE_FIELDS` の他参照は `coreCrudHandler.ts` のみであることを grep 確認済み。
+
+### `normalizeStorageQuery` の設計判断
+- `src/offscreen/queryNormalize.ts` に純関数として新設。`handleQuery` の式を一字一句移管（`pickDefined` による undefined 除外の意味論も同一）し、`handleQuery` は全面委譲、`handleSearch` は `text` 付与＋全面委譲に統一。
+- 唯一の意味論差分: 従来 `handleSearch` は limit/offset/orderBy/orderDir のみを読んでいたが、以後は `SQLITE_SEARCH` payload に契約外のフィルタ欄（例: `tagFilter`）が混入した場合に honor される。型上 `SQLITE_SEARCH` payload は 5 欄のみ許可（`sqliteMessages.ts:21`）かつ実 Caller（gateway の search は `SQLITE_QUERY` 経由、`inMemoryTransport` は素通し）は該当欄を送らないため、到達可能な入力での挙動は同一。全 search 系既存テスト（coverage :471-499、`offscreen-search-orderby`）は無修正で green。
+- `validators.ts` は shape のみ検証のまま非接触（update の `changes` は object であることのみ検査、フィールド名検査は handler 層に残置）。
+
+### 変更ファイル
+- 新規: `src/offscreen/queryNormalize.ts`、`src/offscreen/__tests__/queryNormalize.test.ts`（エイリアス系統ごとの真理値表＋unknown 除外）、`src/background/handlers/dashboardSqlite/__tests__/dashboardMutableSubset.test.ts`（10 項固定＋`⊆ UPDATABLE_FIELDS`）
+- 編集: `src/offscreen/sqliteMessageHandlers.ts`（`handleUpdate` の SSOT 化、`handleQuery`/`handleSearch` の委譲化）、`src/background/handlers/dashboardSqlite/deps.ts`（rename＋WHY コメント）、`src/background/handlers/dashboardSqlite/coreCrudHandler.ts`（参照更新）、`src/offscreen/schema.ts`（陳腐コメントのみ修正）、`src/background/sqlite/offscreenGateway.ts`（update フラット化の wire 契約を JSDoc 化）
+
+### 検証結果
+- `npm run type-check`: clean
+- `npx vitest run src/messaging src/background/handlers/dashboardSqlite src/offscreen/__tests__/sqliteMessageHandlers-coverage.test.ts src/offscreen/__tests__/queryNormalize.test.ts src/background/__tests__/dashboardSqliteHandlers-append.test.ts src/offscreen/__tests__/offscreen-search-orderby.test.ts src/offscreen/__tests__/schema-comprehensive.test.ts`: 20 files / 421 tests green
+- 広域回帰（`src/background src/offscreen src/messaging src/dashboard`）: 5969 pass / 1 fail。fail は `query-backends-parametric.test.ts` の 1 件で、原因は並行エージェント作業中の `IdbVfsBackend.ts`/`queryPlan.ts`/`opfsWorker/*` の refactor（当該テストが import するモジュールはいずれも本 PBI 非接触。`schema.ts` 差分はコメントのみ）。自分のスコープ外のため非接触とし、ここに記録する。
+- `npm run lint`: 自分のファイルは 0 errors（repo 全体では並行作業中の `aiSummaryCleaner/rules.ts` に 2 errors、対象外）

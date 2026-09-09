@@ -32,6 +32,8 @@ import {
 } from './auditLogRepo.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
+import { normalizeStorageQuery } from './queryNormalize.js';
+import { UPDATABLE_FIELDS } from './schema.js';
 import { buildRecordFromPayload } from './browsingLogCodec.js';
 import type { SqliteMessage, SqliteMessageType } from '../messaging/sqliteMessages.js';
 
@@ -66,20 +68,7 @@ async function handleInsertBatch(msg: SqliteMessage, sendResponse: (r: unknown) 
 
 async function handleQuery(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_QUERY' }>).payload as Record<string, unknown>;
-  const options: import('../utils/sqlite-types.js').StorageQuery = pickDefined({
-    limit: payload?.limit != null ? Number(payload.limit) : undefined,
-    offset: payload?.offset != null ? Number(payload.offset) : undefined,
-    orderBy: payload?.orderBy as 'created_at' | 'rank' | undefined,
-    orderDir: payload?.orderDir as 'ASC' | 'DESC' | undefined,
-    domain: payload?.domain != null ? String(payload.domain) : undefined,
-    starred: payload?.starred != null ? Boolean(payload.starred) : payload?.isStarred != null ? Boolean(payload.isStarred) : undefined,
-    excludeDeleted: payload?.excludeDeleted != null ? Boolean(payload.excludeDeleted) : undefined,
-    dateFrom: payload?.dateFrom != null ? Number(payload.dateFrom) : payload?.since != null ? Number(payload.since) : undefined,
-    dateTo: payload?.dateTo != null ? Number(payload.dateTo) : payload?.until != null ? Number(payload.until) : undefined,
-    ids: payload?.ids != null ? (payload.ids as number[]) : undefined,
-    tag: payload?.tag != null ? String(payload.tag) : payload?.tagFilter != null ? String(payload.tagFilter) : undefined,
-    gistSynced: payload?.gistSynced != null ? Number(payload.gistSynced) : undefined,
-  });
+  const options: import('../utils/sqlite-types.js').StorageQuery = normalizeStorageQuery(payload);
   const result = await sqliteQuery(options);
   sendResponse(result);
 }
@@ -109,12 +98,7 @@ async function handleSearch(msg: SqliteMessage, sendResponse: (r: unknown) => vo
   const p = (msg as Extract<SqliteMessage, { type: 'SQLITE_SEARCH' }>).payload;
   const q: import('../utils/sqlite-types.js').StorageQuery = {
     text: String(p.query || ''),
-    ...pickDefined({
-      limit: p.limit != null ? Number(p.limit) : undefined,
-      offset: p.offset != null ? Number(p.offset) : undefined,
-      orderBy: p.orderBy as 'created_at' | 'rank' | undefined,
-      orderDir: p.orderDir as 'ASC' | 'DESC' | undefined,
-    }),
+    ...normalizeStorageQuery(p as unknown as Record<string, unknown>),
   };
   const result = await sqliteQuery(q);
   sendResponse(result);
@@ -124,39 +108,7 @@ async function handleUpdate(msg: SqliteMessage, sendResponse: (r: unknown) => vo
   const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_UPDATE' }>).payload as Record<string, unknown>;
   const id = Number(payload.id);
   const changes: Record<string, unknown> = {};
-  for (const key of [
-    'url',
-    'title',
-    'summary',
-    'tags',
-    'domain',
-    'visit_duration',
-    'scroll_ratio',
-    'is_starred',
-    'is_deleted',
-    'obsidian_synced',
-    'gist_synced',
-    'content',
-    'masked_count',
-    'cleansed_reason',
-    'ai_provider',
-    'ai_model',
-    'ai_duration_ms',
-    'obsidian_duration_ms',
-    'sent_tokens',
-    'received_tokens',
-    'original_tokens',
-    'cleansed_tokens',
-    'page_bytes',
-    'candidate_bytes',
-    'original_bytes',
-    'cleansed_bytes',
-    'ai_summary_original_bytes',
-    'ai_summary_cleansed_bytes',
-    'extracted_sentences_bytes',
-    'extracted_sentences_original_bytes',
-    'fallback_triggered',
-  ]) {
+  for (const key of UPDATABLE_FIELDS) {
     if (key in payload) {
       changes[key] = payload[key];
     }

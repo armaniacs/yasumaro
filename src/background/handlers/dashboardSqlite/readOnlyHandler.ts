@@ -2,7 +2,7 @@ import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboar
 import type { ReadOnlyDeps } from './deps.js';
 import { toFailure } from './deps.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
-import { clampLimit } from '../../../offscreen/queryPlan.js';
+import { clampLimit, QUERY_CAPS } from '../../../offscreen/queryPlan.js';
 
 /**
  * Subtypes this handler owns. The router derives its dispatch from this set,
@@ -32,7 +32,7 @@ export function createReadOnlyHandler(deps: ReadOnlyDeps) {
       }
       case 'query': {
         const result = await deps.query({
-          limit: clampLimit(payload.limit, 1000, 100),
+          limit: clampLimit(payload.limit, QUERY_CAPS.plain, 100),
           offset: payload.offset ?? 0,
           domain: payload.domain,
           isStarred: payload.isStarred,
@@ -50,7 +50,7 @@ export function createReadOnlyHandler(deps: ReadOnlyDeps) {
       case 'search': {
         const result = await deps.search(
           payload.query || '',
-          clampLimit(payload.limit, 100000, 50),
+          clampLimit(payload.limit, QUERY_CAPS.fts, 50),
           payload.offset ?? 0,
           pickDefined({ orderBy: payload.orderBy, orderDir: payload.orderDir }),
         );
@@ -77,9 +77,11 @@ export function createReadOnlyHandler(deps: ReadOnlyDeps) {
         return { success: false, error: 'Status check failed' };
       }
       case 'audit_log_query': {
+        // Dashboard-hop pre-clamp only; each storage backend enforces its
+        // own audit cap downstream (OPFS 1000 vs IDB 100000, intentional).
         const result = await deps.queryAuditLog(
           pickDefined({
-            limit: payload.limit === undefined ? undefined : clampLimit(payload.limit, 1000, 1000),
+            limit: payload.limit === undefined ? undefined : clampLimit(payload.limit, QUERY_CAPS.plain, 1000),
             offset: payload.offset,
           }),
         );

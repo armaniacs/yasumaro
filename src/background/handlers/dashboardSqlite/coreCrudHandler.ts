@@ -4,7 +4,7 @@ import { StorageKeys } from '../../../utils/storage/types.js';
 import type { BrowsingLogEntry } from '../../../utils/sqlite-types.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboardSqliteProtocol.js';
 import type { CoreCrudDeps } from './deps.js';
-import { toFailure, ALLOWED_UPDATE_FIELDS, MAX_APPEND_IDS } from './deps.js';
+import { toFailure, DASHBOARD_MUTABLE_SUBSET, MAX_APPEND_IDS } from './deps.js';
 
 /**
  * Subtypes this handler owns. The router derives its dispatch from this set,
@@ -34,7 +34,7 @@ export function createCoreCrudHandler(deps: CoreCrudDeps) {
       }
       case 'update': {
         const changes = payload.changes || {};
-        const invalidKeys = Object.keys(changes).filter((k) => !ALLOWED_UPDATE_FIELDS.includes(k));
+        const invalidKeys = Object.keys(changes).filter((k) => !DASHBOARD_MUTABLE_SUBSET.includes(k));
         if (invalidKeys.length > 0) {
           return { success: false, error: `Invalid update fields: ${invalidKeys.join(', ')}` };
         }
