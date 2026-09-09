@@ -6,8 +6,9 @@
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import type { StorageQuery } from '../../utils/sqlite-types.js';
 import type { SqliteValue } from '../sqliteEngine.js';
-import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from '../schema.js';
-import { buildQuerySpec, QUERY_CAPS, PLAIN_LIST_COLUMNS, buildPlainListStatements } from '../queryPlan.js';
+import { INSERT_SQL, INSERT_IGNORE_RETURNING_SQL, buildInsertParams, UPDATABLE_FIELDS } from '../schema.js';
+import { buildQuerySpec, QUERY_CAPS, buildPlainListStatements } from '../queryPlan.js';
+import { BROWSING_LOG_COLUMNS, BROWSING_LOG_COLUMNS_SQL, mapNamed } from '../rowCodec.js';
 import type { QueryPayload } from './types.js';
 import { sqlExec, sqlQuery, withTransaction, type HandlerContext } from './handlers.js';
 import { errorMessage } from '../../utils/errorUtils.js';
@@ -32,7 +33,7 @@ export async function handleQuery(ctx: HandlerContext, payload: QueryPayload): P
   if (spec.error) {
     throw new Error(spec.error);
   }
-  const stmts = buildPlainListStatements({ ...spec, limit, offset }, { tag: tag ?? null, columns: PLAIN_LIST_COLUMNS });
+  const stmts = buildPlainListStatements({ ...spec, limit, offset }, { tag: tag ?? null, columns: BROWSING_LOG_COLUMNS_SQL });
   const params: SqliteValue[] = stmts.countParams;
 
   let total = 0;
@@ -44,21 +45,7 @@ export async function handleQuery(ctx: HandlerContext, payload: QueryPayload): P
     stmts.rowsSql,
     stmts.rowsParams,
     (row) => {
-      rows.push({
-        id: Number(row.id),
-        url: String(row.url),
-        title: row.title as string | null,
-        summary: row.summary as string | null,
-        tags: row.tags as string | null,
-        created_at: Number(row.created_at),
-        domain: row.domain as string | null,
-        visit_duration: row.visit_duration as number | null,
-        scroll_ratio: row.scroll_ratio as number | null,
-        is_starred: Number(row.is_starred),
-        is_deleted: Number(row.is_deleted),
-        obsidian_synced: Number(row.obsidian_synced),
-        gist_synced: Number(row.gist_synced),
-      });
+      rows.push(mapNamed<BrowsingLogRecord>(row, BROWSING_LOG_COLUMNS));
     }
   );
 
@@ -115,27 +102,35 @@ export async function handleInsertBatch(
   records: BrowsingLogRecord[],
   postLog: (level: 'warn' | 'error' | 'info', message: string, details?: Record<string, unknown>) => void,
   ensureEngine: () => Promise<void>,
-): Promise<{ count: number }> {
+): Promise<{ count: number; inserted: number; skipped: number }> {
   await ensureEngine();
   let inserted = 0;
+  let skipped = 0;
   try {
     await withTransaction(ctx, async () => {
-      for (const record of records) {
+      // Per-row counting via RETURNING: a single post-loop changes() only
+      // reports the last INSERT, undercounting every multi-row batch with a
+      // duplicate, and a total_changes() diff would include the FTS5 sync
+      // triggers' shadow writes (~7 per insert). RETURNING yields exactly the
+      // rows this statement inserted, so N statements give the exact count.
+      for (const [index, record] of records.entries()) {
         try {
           const domain = record.domain || extractDomain(record.url);
-          await sqlExec(ctx, INSERT_IGNORE_SQL, buildInsertParams(record, domain));
+          let insertedNow = false;
+          await sqlQuery(ctx, INSERT_IGNORE_RETURNING_SQL, buildInsertParams(record, domain), () => {
+            insertedNow = true;
+          });
+          if (insertedNow) inserted++;
+          else skipped++;
         } catch (err) {
-          if (inserted === 0 && records.indexOf(record) === 0) {
+          if (index === 0) {
             postLog('error', 'OPFS Worker: first INSERT failed', { error: errorMessage(err), url: record.url });
           }
         }
       }
     });
-    await sqlQuery(ctx, 'SELECT changes() AS c', [], (row) => {
-      inserted = Number(row.c);
-    });
   } catch (err) {
     postLog('error', 'OPFS Worker: insertBatch transaction failed', { error: errorMessage(err) });
   }
-  return { count: inserted };
+  return { count: inserted, inserted, skipped };
 }

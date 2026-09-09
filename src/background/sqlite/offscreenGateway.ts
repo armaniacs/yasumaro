@@ -145,6 +145,12 @@ export class OffscreenGateway {
     switch (op.type) {
       case 'insert': return this.callInternal<{ id: number }, OffscreenInsertResponse>('SQLITE_INSERT', op.record as unknown as Record<string, unknown>, (res) => ({ id: res.id }), op.traceId);
       case 'insertBatch': return this.callInternal<{ count: number }, OffscreenCountResponse>('SQLITE_INSERT_BATCH', { records: op.records as unknown as Record<string, unknown>[] }, (res) => ({ count: res.count }));
+      /**
+       * Flattened wire contract: changes travel as `{ id, ...changes }`,
+       * not nested under a `changes` key. The offscreen update handler
+       * reads flat keys via `key in payload`, so a nested shape would
+       * silently apply zero columns instead of failing.
+       */
       case 'update': return this.callInternal<void, OffscreenWriteResponse>('SQLITE_UPDATE', { id: op.id, ...op.changes }, () => undefined, op.traceId);
       case 'delete': return this.callInternal<void, OffscreenWriteResponse>('SQLITE_DELETE', { id: op.id }, () => undefined);
       case 'toggleStar': return this.callInternal<{ is_starred: number }, OffscreenToggleStarResponse>('SQLITE_TOGGLE_STAR', { id: op.id }, (res) => ({ is_starred: res.is_starred }));

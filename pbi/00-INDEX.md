@@ -14,6 +14,17 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-09 architecture review round 3 — 6件完了（arch-delivery-loop・0909a ブランチ）
+
+診断（HTML レポート: `/tmp/architecture-review-20260909.html`）→ RICE 採点 → 実装。バッチ1（並列: 01+02 / 03 / 04 / 06・ファイル非重複）→ バッチ2（05・02 着地後）。台帳据え置き 5 項目は `2026-09-05-00-backlog-future.md` の「2026-09-09 round 3 で台帳入り」節。なぜなぜ分析は `/tmp/kilo/whywhy/2026-09-09-0909a.md`。
+
+- 2026-09-09-01-fix-limits-ssot.md（✅ 完了・アーカイブ済 — 上限定数を `src/messaging/limits.ts` に統合（validator/handler/dashboard 事前チェックが同一ソース参照）。実効値維持（validator が先走りのため MAX_IMPORT_ROWS=1000 / MAX_APPEND_IDS=100）、意図的分歧（audit 1000 vs 100000）は名前付き変種化、`importLogsService` の 100_000 は別概念 `IMPORT_TOTAL_ROW_CAP` として命名。drift ガードテスト新設。検証: type-check / lint / 285 tests green）
+- 2026-09-09-02-refactor-update-whitelist-ssot.md（✅ 完了・アーカイブ済 — `handleUpdate` の手写し 31 項を `UPDATABLE_FIELDS` import 化、dashboard 10 項を `DASHBOARD_MUTABLE_SUBSET` に命名し subset テストで固定、payload エイリアス 7 件を `normalizeStorageQuery` 純関数に統合、gateway フラット化 wire 契約を JSDoc 明示、`sqlite-security-integrity.test.ts` を SSOT import pin + ランタイム whitelist 検証に移行。検証: type-check / lint / 421 tests green）
+- 2026-09-09-03-refactor-row-codec.md（✅ 完了・アーカイブ済 — `rowCodec.ts` 新設（mapNamed/mapPositional 統合・rank 注入点 1 箇所）、`buildPlainListStatements` の columns 必須化、IdbVfsBackend 3 mapper と worker 2 mapper を統合。**本番バグ検出・修正: insertBatch の OPFS worker 経路が最終 1 文のみ計数し `inserted/skipped` が wire で欠落（実機 SQLite で実測）**。33 vs 13 列分歧は dashboard 表示劣化を避け spec として維持・決着記録。検証: type-check / lint / 3250 tests green）
+- 2026-09-09-04-refactor-export-validator-ssot.md（✅ 完了・アーカイブ済 — `requiredKeys` 手写し 21 キーを `DEFAULT_SETTINGS` keys − `API_KEY_FIELDS` 派生に置換（旧リストの ~130 キー漏れを是正）、`apiKeyKeys` を SSOT 参照化、blob 保存 12 行 ×2 を `saveJsonToFile` に統合。移行同値テスト 8 件新設。検証: type-check / lint / utils 4348 tests green）
+- 2026-09-09-05-refactor-archive-op-codec.md（✅ 完了・アーカイブ済 — `archiveWireTable.ts` を codec 携行の `ArchiveOpDescriptor` に拡張し、dashboard `callArchive` / SW `runArchive` / offscreen `ARCHIVE_DISPATCH` / worker `proxyArchive` / `StorageBackend` 型 / deps `as` キャストを全て行派生に統一（新 op = 1 行 + worker handler）。`as any` 0 件、コンパイル時双方向 assert 維持。公開 14 関数名・noRetry 契約・応答フィールドは不変。検証: type-check / lint / 5969 tests green + E2E archive 系 green）
+- 2026-09-09-06-refactor-strip-engine.md（✅ 完了・アーカイブ済 — `SelectorRuleDef` テーブル + `stripBySelectors` エンジン新設、パターン系 23 関数をテーブル行化（news/ec/qa/video 4 コピー解消）、bespoke 11 関数は維持。stripCore 522→166 行 / stripExtended 1,049→493 行（−912 行 / −58%）。旧関数は 1 行 delegate として残置し既存テスト無改変でエンジンを検証。重複パターン棚卸し記録（テーブル内 5・cross-table 67、全て残置が正）。検証: type-check / lint / 895 tests green）
+
 ### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）

@@ -5,12 +5,19 @@ import { ObsidianClient } from '../../obsidianClient.js';
 import type { BrowsingLogEntry, BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import type { CallResult, SqliteError } from '../../sqlite/offscreenGateway.js';
 import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData } from '../../../messaging/sqliteMessages.js';
+import { ARCHIVE_DESCRIPTORS, type ArchiveDescriptor } from '../../../messaging/archiveWireTable.js';
 
-export const ALLOWED_UPDATE_FIELDS = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
-export const MAX_APPEND_IDS = 100;
+/**
+ * Intentionally narrower than the offscreen UPDATABLE_FIELDS (31 fields):
+ * the dashboard route permits only these 10, so dashboard edits can never
+ * touch telemetry/AI-metering columns. Subset integrity is pinned by
+ * dashboardMutableSubset.test.ts.
+ */
+export const DASHBOARD_MUTABLE_SUBSET = ['url', 'title', 'summary', 'tags', 'domain', 'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted', 'obsidian_synced'];
 // VULN-006: cap bulk import rows to prevent SW/offscreen queue saturation
-// (the append path already caps at MAX_APPEND_IDS).
-export const MAX_IMPORT_ROWS = 5000;
+// (the append path already caps at MAX_APPEND_IDS). Values live in the
+// messaging limits registry so validators and handlers cannot drift apart.
+export { MAX_APPEND_IDS, MAX_IMPORT_ROWS, MAX_RESTORE_BASE64_BYTES } from '../../../messaging/limits.js';
 
 /**
  * Every result the SqliteClient-backed deps return carries its own failure
@@ -101,6 +108,13 @@ export interface ArchiveDeps {
 
 export type { ArchivePurgeData };
 
+/**
+ * Every descriptor's deps method must name a real ArchiveDeps member: a
+ * typo'd row fails here instead of throwing at request time.
+ */
+type _TableDepsMethodsLive = ArchiveDescriptor['depsMethod'] extends keyof ArchiveDeps ? true : never;
+const _checkTableDepsMethods: _TableDepsMethodsLive = true;
+
 /** Union of the archive group — what createArchiveHandler needs. */
 export type DashboardArchiveHandlerDeps = ArchiveDeps;
 
@@ -170,20 +184,28 @@ export function createSqliteClientDeps(
      backupDb: () => sqliteClient.maintain({ type: 'backup' }),
     // Archive group (PBI 2026-09-06-02): client-backed — the work happens in
     // the offscreen document / OPFS worker where the staging registry lives.
-    archivePreview: (cutoffDate, cutoffMs, includeDeleted) => sqliteClient.maintain({ type: 'archivePreview', cutoffDate, cutoffMs, includeDeleted } as { type: 'archivePreview', cutoffDate: string, cutoffMs: number, includeDeleted: boolean }),
-    archiveCreate: (params) => sqliteClient.maintain({ type: 'archiveCreate', ...params }),
-    archiveCleanup: () => sqliteClient.maintain({ type: 'archiveCleanup' }),
-    archiveExportChunk: (stagingName, offset, length) => sqliteClient.maintain({ type: 'archiveExport', stagingName, offset, length }),
-    archivePrepareIncoming: () => sqliteClient.maintain({ type: 'archivePrepareIncoming' } as { type: 'archivePrepareIncoming' }),
-    archiveRestorePreview: (stagingName) => sqliteClient.maintain({ type: 'archiveRestorePreview', stagingName } as { type: 'archiveRestorePreview', stagingName: string }),
-    archiveRestore: (stagingName) => sqliteClient.maintain({ type: 'archiveRestore', stagingName } as { type: 'archiveRestore', stagingName: string }),
-    archiveDeleteByStaging: (stagingName) => sqliteClient.maintain({ type: 'archiveDeleteByStaging', stagingName } as { type: 'archiveDeleteByStaging', stagingName: string }),
-    archiveOpen: (stagingName) => sqliteClient.maintain({ type: 'archiveOpen', stagingName } as { type: 'archiveOpen', stagingName: string }),
-    archiveQuery: (stagingName, query, limit, offset) => sqliteClient.maintain({ type: 'archiveQuery', stagingName, query, limit, offset } as { type: 'archiveQuery', stagingName: string, query: string, limit: number, offset: number }),
-    archiveUpdate: (stagingName, id, changes) => sqliteClient.maintain({ type: 'archiveUpdate', stagingName, id, changes } as { type: 'archiveUpdate', stagingName: string, id: number, changes: Record<string, unknown> }),
-    archiveSave: (stagingName) => sqliteClient.maintain({ type: 'archiveSave', stagingName } as { type: 'archiveSave', stagingName: string }),
-    archiveClose: (stagingName) => sqliteClient.maintain({ type: 'archiveClose', stagingName } as { type: 'archiveClose', stagingName: string }),
-    archiveStatus: () => sqliteClient.maintain({ type: 'archiveStatus' } as { type: 'archiveStatus' }),
+    // Each delegate encodes its MaintainOp through the wire-table descriptor
+    // (PBI 2026-09-09-05), so the SqliteClient overloads resolve without casts.
+    archivePreview: (cutoffDate, cutoffMs, includeDeleted) =>
+      sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archivePreview.encodeRequest(cutoffDate, cutoffMs, includeDeleted)),
+    archiveCreate: (params) => sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveCreate.encodeRequest(params)),
+    archiveCleanup: () => sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveCleanup.encodeRequest()),
+    archiveExportChunk: (stagingName, offset, length) =>
+      sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveExport.encodeRequest(stagingName, offset, length)),
+    archivePrepareIncoming: () => sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archivePrepareIncoming.encodeRequest()),
+    archiveRestorePreview: (stagingName) =>
+      sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveRestorePreview.encodeRequest(stagingName)),
+    archiveRestore: (stagingName) => sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveRestore.encodeRequest(stagingName)),
+    archiveDeleteByStaging: (stagingName) =>
+      sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveDeleteByStaging.encodeRequest(stagingName)),
+    archiveOpen: (stagingName) => sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveOpen.encodeRequest(stagingName)),
+    archiveQuery: (stagingName, query, limit, offset) =>
+      sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveQuery.encodeRequest(stagingName, query, limit, offset)),
+    archiveUpdate: (stagingName, id, changes) =>
+      sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveUpdate.encodeRequest(stagingName, id, changes)),
+    archiveSave: (stagingName) => sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveSave.encodeRequest(stagingName)),
+    archiveClose: (stagingName) => sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveClose.encodeRequest(stagingName)),
+    archiveStatus: () => sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveStatus.encodeRequest()),
       getSettings: () => new SettingsRepository().getAll() as Promise<Record<string, unknown>>,
      formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
      queryAuditLog: (options) => sqliteClient.query({ kind: 'auditLog', limit: options?.limit, offset: options?.offset } as { kind: 'auditLog', limit?: number, offset?: number }),

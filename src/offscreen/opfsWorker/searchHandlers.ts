@@ -20,6 +20,7 @@ import {
   buildFtsSearchStatements,
   buildLikeSearchStatements,
 } from '../queryPlan.js';
+import { SEARCH_COLUMNS_WITH_RANK, mapNamed } from '../rowCodec.js';
 
 export async function handleSearch(ctx: HandlerContext, payload: SearchPayload, fts5Available: boolean): Promise<{ rows: SearchResult[]; total: number }> {
   const { text: searchQuery = '', limit = 50, offset = 0, orderBy, orderDir } = payload;
@@ -34,19 +35,7 @@ export async function handleSearch(ctx: HandlerContext, payload: SearchPayload, 
 }
 
 function pushSearchRow(rows: SearchResult[], row: Record<string, string | number | null>): void {
-  rows.push({
-    id: Number(row.id),
-    url: String(row.url),
-    title: row.title as string | null,
-    summary: row.summary as string | null,
-    tags: row.tags as string | null,
-    created_at: Number(row.created_at),
-    domain: row.domain as string | null,
-    visit_duration: row.visit_duration as number | null,
-    scroll_ratio: row.scroll_ratio as number | null,
-    is_starred: Number(row.is_starred),
-    rank: Number(row.rank ?? 0),
-  });
+  rows.push(mapNamed<SearchResult>(row, SEARCH_COLUMNS_WITH_RANK));
 }
 
 export async function handleSearchFts(

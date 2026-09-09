@@ -3,7 +3,7 @@ import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboar
 import type { SqliteError } from '../../sqlite/offscreenGateway.js';
 import { bytesToBase64, base64ToBytes } from '../../../utils/crypto/index.js';
 import type { MaintenanceBatchDeps } from './deps.js';
-import { toFailure, MAX_IMPORT_ROWS } from './deps.js';
+import { toFailure, MAX_IMPORT_ROWS, MAX_RESTORE_BASE64_BYTES } from './deps.js';
 
 /**
  * Subtypes this handler owns. The router derives its dispatch from this set
@@ -79,8 +79,7 @@ export function createMaintenanceBatchHandler(deps: MaintenanceBatchDeps) {
         }
         // VULN-008 fix: reject oversized base64 payload before decoding
         // 100MB raw → ~134MB base64; use 150MB base64 as safe ceiling
-        const MAX_RESTORE_BASE64_LENGTH = 150 * 1024 * 1024;
-        if (data.length > MAX_RESTORE_BASE64_LENGTH) {
+        if (data.length > MAX_RESTORE_BASE64_BYTES) {
           return { success: false, error: `Restore data exceeds maximum size (${Math.round(data.length / 1024 / 1024)}MB > 100MB)` };
         }
         const result = await deps.restoreDb(base64ToBytes(data));

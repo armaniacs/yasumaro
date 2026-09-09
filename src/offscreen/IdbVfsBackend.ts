@@ -20,6 +20,10 @@ import {
 } from './queryPlan.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { withTransaction } from './opfsWorker/handlers.js';
+import {
+  SEARCH_COLUMNS_WITH_RANK, BROWSING_LOG_FULL_COLUMNS, BROWSING_LOG_FULL_COLUMNS_SQL,
+  mapPositional,
+} from './rowCodec.js';
 
 export class IdbVfsBackend implements StorageBackend {
   constructor(private engine: SqliteEngineHost) {}
@@ -89,18 +93,7 @@ export class IdbVfsBackend implements StorageBackend {
           stmts.rowsSql,
           stmts.rowsParams,
           (row: SqliteValue[]) => {
-            rows.push({
-              id: Number(row[0]), url: String(row[1]),
-              title: row[2] != null ? String(row[2]) : null,
-              summary: row[3] != null ? String(row[3]) : null,
-              tags: row[4] != null ? String(row[4]) : null,
-              created_at: Number(row[5]),
-              domain: row[6] != null ? String(row[6]) : null,
-              visit_duration: row[7] != null ? Number(row[7]) : null,
-              scroll_ratio: row[8] != null ? Number(row[8]) : null,
-              is_starred: Number(row[9]),
-              rank: Number(row[10]),
-            });
+            rows.push(mapPositional<BrowsingLogEntry & { rank: number }>(row, SEARCH_COLUMNS_WITH_RANK));
           }
         );
         return { success: true, rows, total };
@@ -126,18 +119,8 @@ export class IdbVfsBackend implements StorageBackend {
         stmts.rowsSql,
         stmts.rowsParams,
         (row: SqliteValue[]) => {
-          rows.push({
-            id: Number(row[0]), url: String(row[1]),
-            title: row[2] != null ? String(row[2]) : null,
-            summary: row[3] != null ? String(row[3]) : null,
-            tags: row[4] != null ? String(row[4]) : null,
-            created_at: Number(row[5]),
-            domain: row[6] != null ? String(row[6]) : null,
-            visit_duration: row[7] != null ? Number(row[7]) : null,
-            scroll_ratio: row[8] != null ? Number(row[8]) : null,
-            is_starred: Number(row[9]),
-            rank: 0,
-          });
+          // LIKE rows carry no rank column; the codec defaults rank to 0.
+          rows.push(mapPositional<BrowsingLogEntry & { rank: number }>(row, SEARCH_COLUMNS_WITH_RANK));
         }
       );
       return { success: true, rows, total };
@@ -147,13 +130,14 @@ export class IdbVfsBackend implements StorageBackend {
     // intentionally NOT applied here — opfs QUERY honours it while this
     // backend ignores it. PBI-34 keeps that gap explicit (see
     // buildPlainListStatements) instead of silently changing results.
-    const stmts = buildPlainListStatements(spec);
+    // Columns are explicit (was SELECT *): same 33 fields, codec order.
+    const stmts = buildPlainListStatements(spec, { columns: BROWSING_LOG_FULL_COLUMNS_SQL });
 
     const rows: (BrowsingLogEntry & { rank: number })[] = [];
     await this.engine.execWithCache(
       stmts.rowsSql,
       stmts.rowsParams,
-      (row: SqliteValue[]) => { rows.push({ ...this.rowToEntry(row), rank: 0 }); }
+      (row: SqliteValue[]) => { rows.push({ ...mapPositional<BrowsingLogEntry>(row, BROWSING_LOG_FULL_COLUMNS), rank: 0 }); }
     );
 
     let total = 0;
@@ -430,43 +414,5 @@ export class IdbVfsBackend implements StorageBackend {
     await this.engine.execWithCache('DELETE FROM browsing_logs_fts');
     await this.engine.execWithCache('PRAGMA wal_checkpoint(TRUNCATE)');
     return { success: true };
-  }
-
-  private rowToEntry(row: SqliteValue[]): BrowsingLogEntry {
-    return {
-      id: Number(row[0]),
-      url: String(row[1]),
-      title: row[2] != null ? String(row[2]) : null,
-      summary: row[3] != null ? String(row[3]) : null,
-      tags: row[4] != null ? String(row[4]) : null,
-      created_at: Number(row[5]),
-      domain: row[6] != null ? String(row[6]) : null,
-      visit_duration: row[7] != null ? Number(row[7]) : null,
-      scroll_ratio: row[8] != null ? Number(row[8]) : null,
-      is_starred: Number(row[9]),
-      is_deleted: Number(row[10]),
-      obsidian_synced: Number(row[11]),
-      gist_synced: Number(row[12]),
-      content: row[13] != null ? String(row[13]) : null,
-      masked_count: row[14] != null ? Number(row[14]) : null,
-      cleansed_reason: row[15] != null ? String(row[15]) : null,
-      ai_provider: row[16] != null ? String(row[16]) : null,
-      ai_model: row[17] != null ? String(row[17]) : null,
-      ai_duration_ms: row[18] != null ? Number(row[18]) : null,
-      obsidian_duration_ms: row[19] != null ? Number(row[19]) : null,
-      sent_tokens: row[20] != null ? Number(row[20]) : null,
-      received_tokens: row[21] != null ? Number(row[21]) : null,
-      original_tokens: row[22] != null ? Number(row[22]) : null,
-      cleansed_tokens: row[23] != null ? Number(row[23]) : null,
-      page_bytes: row[24] != null ? Number(row[24]) : null,
-      candidate_bytes: row[25] != null ? Number(row[25]) : null,
-      original_bytes: row[26] != null ? Number(row[26]) : null,
-      cleansed_bytes: row[27] != null ? Number(row[27]) : null,
-      ai_summary_original_bytes: row[28] != null ? Number(row[28]) : null,
-      ai_summary_cleansed_bytes: row[29] != null ? Number(row[29]) : null,
-      extracted_sentences_bytes: row[30] != null ? Number(row[30]) : null,
-      extracted_sentences_original_bytes: row[31] != null ? Number(row[31]) : null,
-      fallback_triggered: Number(row[32]),
-    };
   }
 }
