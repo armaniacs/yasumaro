@@ -103,7 +103,7 @@ describe('opfsWorker transaction integrity', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(result.result).toEqual({ count: 1 });
+    expect(result.result).toEqual({ count: 1, inserted: 1, skipped: 0 });
     expect(mockEngine.execCalls).toContain('BEGIN IMMEDIATE');
     expect(mockEngine.execCalls).toContain('COMMIT');
     expect(mockEngine.execCalls).not.toContain('ROLLBACK');

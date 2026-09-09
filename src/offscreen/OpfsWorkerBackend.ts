@@ -29,7 +29,7 @@ export class OpfsWorkerBackend implements StorageBackend {
   }
 
   async insertBatch(records: BrowsingLogRecord[]): Promise<BackendOrError<InsertBatchResult>> {
-    const result = await this.engine.sendToOpfsWorker('INSERT_BATCH', records) as { inserted: number; skipped: number };
+    const result = await this.engine.sendToOpfsWorker('INSERT_BATCH', records) as { count: number; inserted: number; skipped: number };
     return { success: true, inserted: result.inserted, skipped: result.skipped };
   }
 
