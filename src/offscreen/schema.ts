@@ -132,6 +132,15 @@ export const UPDATABLE_FIELDS = [
 /** INSERT OR IGNORE (for insertBatch() and migration). */
 export const INSERT_IGNORE_SQL = `INSERT OR IGNORE INTO browsing_logs (${INSERT_COLS}) VALUES (${INSERT_PLACEHOLDERS})`;
 
+/**
+ * INSERT OR IGNORE ... RETURNING (for insertBatch() row counting): exactly the
+ * rows the statement itself inserted reach the result set — duplicates ignored
+ * by OR IGNORE and rows written by the FTS5 sync triggers never appear, so the
+ * count is exact without a per-row changes() round-trip. Requires SQLite >=
+ * 3.35 (the bundled wasm ships 3.53.2).
+ */
+export const INSERT_IGNORE_RETURNING_SQL = `${INSERT_IGNORE_SQL} RETURNING id`;
+
 // ============================================================================
 // Archive format constants (PBI 2026-09-06-01 foundation / 02 record-archive)
 // The archive.db holds an id-preserving copy of browsing_logs (no FTS5, no

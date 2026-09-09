@@ -44,8 +44,9 @@ describe('opfsWorker transaction integrity', () => {
       execCalls.push(sql);
     });
     const queryMock = vi.fn().mockImplementation(async (sql: string) => {
-      if (sql.includes('SELECT changes()')) {
-        return [{ c: 1 }];
+      // INSERT ... RETURNING yields one row per actually-inserted row.
+      if (sql.includes('RETURNING')) {
+        return [{ id: 1 }];
       }
       if (sql.includes('SELECT COUNT(*)')) {
         return [{ c: 5 }];
@@ -84,7 +85,7 @@ describe('opfsWorker transaction integrity', () => {
     expect(mockEngine.execCalls.indexOf(schemaCall!)).toBeGreaterThan(walIndex);
   });
 
-  it('handleInsertBatch uses BEGIN IMMEDIATE and returns changes() count', async () => {
+  it('handleInsertBatch uses BEGIN IMMEDIATE and returns the inserted count', async () => {
     const { createEngine } = await import('../sqliteEngine.js');
     const mockEngine = createMockEngine();
     vi.mocked(createEngine).mockResolvedValue(mockEngine as never);

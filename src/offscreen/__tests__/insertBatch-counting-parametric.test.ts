@@ -1,27 +1,30 @@
 // @vitest-environment node
 /**
  * insertBatch-counting-parametric.test.ts
- * PBI 03 step 1: pin the insertBatch counting semantics on REAL SQLite
- * before refactoring row mappers.
+ * PBI 03: pin the insertBatch counting semantics on REAL SQLite.
  *
- * IdbVfsBackend.insertBatch counts inserted/skipped per row via
- * `SELECT changes()` after every INSERT OR IGNORE, while the OPFS worker
- * path (crudHandlers.handleInsertBatch) looped INSERT OR IGNORE and read
- * `SELECT changes()` ONCE at the end — the last statement's count only.
  * Both adapters run here against better-sqlite3 with the production
- * SCHEMA_SQL so the divergence is measured, not mocked.
+ * SCHEMA_SQL so counting is measured, not mocked: the OPFS worker path
+ * (crudHandlers.handleInsertBatch) counts via INSERT ... RETURNING, and
+ * IdbVfsBackend.insertBatch counts via `SELECT changes()` per row. The
+ * FTS5 describe pins trigger-exactness: a total_changes() diff would
+ * overcount by the FTS5 shadow writes (~7 per insert), so the installed
+ * production triggers must not perturb the reported counts.
  */
 import { describe, it, expect } from 'vitest';
 import Database from 'better-sqlite3';
-import { SCHEMA_SQL } from '../schema.js';
+import { SCHEMA_SQL, FTS5_STATEMENTS } from '../schema.js';
 import { IdbVfsBackend } from '../IdbVfsBackend.js';
 import { handleInsertBatch } from '../opfsWorker/crudHandlers.js';
 import type { SqliteValue, SqliteRow } from '../sqliteEngine.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 
-function makeDb(): Database.Database {
+function makeDb(withFts = false): Database.Database {
   const db = new Database(':memory:');
   db.exec(SCHEMA_SQL);
+  if (withFts) {
+    for (const stmt of FTS5_STATEMENTS) db.exec(stmt);
+  }
   return db;
 }
 
@@ -117,5 +120,26 @@ describe('insertBatch counting semantics on real SQLite', () => {
     const ctx = makeWorkerCtx(makeDb());
     const result = await handleInsertBatch(ctx, [], noopLog, noopEnsure);
     expect(result).toMatchObject({ count: 0, inserted: 0, skipped: 0 });
+  });
+});
+
+describe('insertBatch counting with FTS5 triggers installed (production schema)', () => {
+  it('OPFS worker stays exact: 2 inserted, 1 skipped', async () => {
+    const ctx = makeWorkerCtx(makeDb(true));
+    const result = await handleInsertBatch(ctx, records(), noopLog, noopEnsure);
+    expect(result).toMatchObject({ count: 2, inserted: 2, skipped: 1 });
+  });
+
+  it('OPFS worker re-insert with FTS5 triggers inserts nothing', async () => {
+    const ctx = makeWorkerCtx(makeDb(true));
+    await handleInsertBatch(ctx, records(), noopLog, noopEnsure);
+    const result = await handleInsertBatch(ctx, records(), noopLog, noopEnsure);
+    expect(result).toMatchObject({ count: 0, inserted: 0, skipped: 3 });
+  });
+
+  it('IdbVfsBackend stays exact: 2 inserted, 1 skipped', async () => {
+    const { backend } = makeIdbHost(makeDb(true));
+    const result = await backend.insertBatch(records());
+    expect(result).toEqual({ success: true, inserted: 2, skipped: 1 });
   });
 });
