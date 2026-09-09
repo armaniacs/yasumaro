@@ -1,26 +1,25 @@
 // src/offscreen/OpfsWorkerBackend.ts
 import type { SqliteEngineHost } from './sqliteEngineHost.js';
 import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError, ArchivePreviewResult, ArchiveCreateResult, ArchiveCleanupResult, ArchiveExportChunkResult, ArchiveCreateParams, ArchivePrepareIncomingResult, ArchiveRestorePreviewResult, ArchiveRestoreResult, ArchiveDeleteByStagingResult, ArchiveOpenResult, ArchiveQueryResult, ArchiveUpdateResult, ArchiveSaveResult, ArchiveCloseResult, ArchiveStatusResult } from './StorageBackend.js';
-import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchiveSessionRow, ArchiveSessionStatusData } from '../messaging/sqliteMessages.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
+import { ARCHIVE_DESCRIPTORS, type ArchiveDescriptor, type DescriptorResponse } from '../messaging/archiveWireTable.js';
 
 export class OpfsWorkerBackend implements StorageBackend {
   constructor(private engine: SqliteEngineHost) {}
 
   /**
    * Single construction point for `{ success: true, ...data }` over the
-   * worker proxy. The projection returns data fields only (never a `success`
-   * flag), so a bare proxy result cannot be double-wrapped here — the shape
-   * is enforced by construction instead of per-method comments.
+   * worker proxy. The field projection lives in the wire-table descriptor,
+   * so a bare proxy result cannot be double-wrapped here — the shape is
+   * enforced by construction instead of per-method lambdas.
    */
-  private async proxyArchive<W, D extends object>(
-    workerType: string,
+  private async proxyArchive<D extends ArchiveDescriptor>(
+    descriptor: D,
     payload: unknown,
-    project: (raw: W) => D,
-  ): Promise<BackendOrError<{ success: true } & D>> {
-    const result = await this.engine.tryOpfsProxy<W>(workerType, payload);
+  ): Promise<BackendOrError<DescriptorResponse<D>>> {
+    const result = await this.engine.tryOpfsProxy<unknown>(descriptor.workerType, payload);
     if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
-    return { success: true, ...project(result) };
+    return { success: true, ...descriptor.project(result) } as DescriptorResponse<D>;
   }
 
   async insert(record: BrowsingLogRecord): Promise<BackendOrError<InsertResult>> {
@@ -79,88 +78,59 @@ export class OpfsWorkerBackend implements StorageBackend {
   }
 
   async archivePreview(cutoffDate: string, cutoffMs: number, includeDeleted: boolean): Promise<BackendOrError<ArchivePreviewResult>> {
-    return this.proxyArchive<ArchivePreviewData, { preview: ArchivePreviewData }>(
-      'ARCHIVE_PREVIEW', { cutoffDate, cutoffMs, includeDeleted }, (result) => ({ preview: result }),
-    );
+    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archivePreview, { cutoffDate, cutoffMs, includeDeleted });
   }
 
   async archiveCreate(params: ArchiveCreateParams): Promise<BackendOrError<ArchiveCreateResult>> {
-    return this.proxyArchive<ArchiveCreateData, { stagingName: string; recordCount: number }>(
-      'ARCHIVE_CREATE', params, (result) => ({ stagingName: result.stagingName, recordCount: result.recordCount }),
-    );
+    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveCreate, params);
   }
 
   async archiveCleanup(): Promise<BackendOrError<ArchiveCleanupResult>> {
-    return this.proxyArchive<{ removed: string[] }, { removed: string[] }>(
-      'ARCHIVE_CLEANUP', undefined, (result) => ({ removed: result.removed }),
-    );
+    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveCleanup, undefined);
   }
 
   async archiveExportChunk(stagingName: string, offset: number, length: number): Promise<BackendOrError<ArchiveExportChunkResult>> {
-    return this.proxyArchive<ArchiveExportData, ArchiveExportData>(
-      'ARCHIVE_EXPORT', { stagingName, offset, length },
-      (result) => ({ chunk: result.chunk, nextOffset: result.nextOffset, total: result.total, done: result.done }),
-    );
+    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveExport, { stagingName, offset, length });
   }
 
   async archivePrepareIncoming(): Promise<BackendOrError<ArchivePrepareIncomingResult>> {
-    return this.proxyArchive<{ stagingName: string }, { stagingName: string }>(
-      'ARCHIVE_PREPARE_INCOMING', undefined, (result) => ({ stagingName: result.stagingName }),
-    );
+    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archivePrepareIncoming, undefined);
   }
 
   async archiveRestorePreview(stagingName: string): Promise<BackendOrError<ArchiveRestorePreviewResult>> {
-    return this.proxyArchive<ArchiveRestorePreviewData, { preview: ArchiveRestorePreviewData }>(
-      'ARCHIVE_RESTORE_PREVIEW', { stagingName }, (result) => ({ preview: result }),
-    );
+    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveRestorePreview, { stagingName });
   }
 
   async archiveRestore(stagingName: string): Promise<BackendOrError<ArchiveRestoreResult>> {
-    return this.proxyArchive<ArchiveRestoreData, ArchiveRestoreData>(
-      'ARCHIVE_RESTORE', { stagingName },
-      (result) => ({ restored: result.restored, restoredDeleted: result.restoredDeleted, skipped: result.skipped, skippedInvalid: result.skippedInvalid }),
-    );
+    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveRestore, { stagingName });
   }
 
   async archiveDeleteByStaging(stagingName: string): Promise<BackendOrError<ArchiveDeleteByStagingResult>> {
-    return this.proxyArchive<ArchiveDeleteByStagingResult, Omit<ArchiveDeleteByStagingResult, 'success'>>(
-      'ARCHIVE_DELETE_BY_STAGING', { stagingName },
-      (result) => ({ deleted: result.deleted, remaining: result.remaining, freelistBefore: result.freelistBefore, freelistAfter: result.freelistAfter, vacuumOk: result.vacuumOk }),
-    );
+    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveDeleteByStaging, { stagingName });
   }
 
   async archiveOpen(stagingName: string): Promise<BackendOrError<ArchiveOpenResult>> {
-    return this.proxyArchive<void, Record<string, never>>('ARCHIVE_OPEN', { stagingName }, () => ({}));
+    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveOpen, { stagingName });
   }
 
   async archiveQuery(stagingName: string, query: string, limit: number, offset: number): Promise<BackendOrError<ArchiveQueryResult>> {
-    return this.proxyArchive<{ rows: ArchiveSessionRow[]; total: number }, { rows: ArchiveSessionRow[]; total: number }>(
-      'ARCHIVE_QUERY', { stagingName, query, limit, offset }, (result) => ({ rows: result.rows, total: result.total }),
-    );
+    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveQuery, { stagingName, query, limit, offset });
   }
 
   async archiveUpdate(stagingName: string, id: number, changes: Record<string, unknown>): Promise<BackendOrError<ArchiveUpdateResult>> {
-    return this.proxyArchive<{ dirty: boolean }, { dirty: boolean }>(
-      'ARCHIVE_UPDATE', { stagingName, id, changes }, (result) => ({ dirty: result.dirty }),
-    );
+    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveUpdate, { stagingName, id, changes });
   }
 
   async archiveSave(stagingName: string): Promise<BackendOrError<ArchiveSaveResult>> {
-    return this.proxyArchive<{ dirty: boolean }, { dirty: boolean }>(
-      'ARCHIVE_SAVE', { stagingName }, (result) => ({ dirty: result.dirty }),
-    );
+    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveSave, { stagingName });
   }
 
   async archiveClose(stagingName: string): Promise<BackendOrError<ArchiveCloseResult>> {
-    return this.proxyArchive<{ dirty: boolean }, { dirty: boolean }>(
-      'ARCHIVE_CLOSE', { stagingName }, (result) => ({ dirty: result.dirty }),
-    );
+    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveClose, { stagingName });
   }
 
   async archiveStatus(): Promise<BackendOrError<ArchiveStatusResult>> {
-    return this.proxyArchive<ArchiveSessionStatusData, { status: ArchiveSessionStatusData }>(
-      'ARCHIVE_STATUS', undefined, (result) => ({ status: result }),
-    );
+    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveStatus, undefined);
   }
 
   async restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>> {
