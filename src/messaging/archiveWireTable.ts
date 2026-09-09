@@ -87,17 +87,6 @@ export interface ArchiveOpDescriptor<S extends string = string, R = unknown> {
   projectDeps?: (data: unknown) => Record<string, unknown>;
 }
 
-export interface ArchiveWireEntry {
-  /** MaintainOp discriminator (source of truth is the MaintainOp union). */
-  op: string;
-  /** background -> offscreen message type. */
-  messageType: SqliteMessageType;
-  /** offscreen -> OPFS worker type. */
-  workerType: string;
-  /** Bulk or state-changing ops where a blind retry would double-execute. */
-  noRetry?: boolean;
-}
-
 /** Single constructor for table rows; preserves literal types per row. */
 export function defineArchiveOp<const R extends ArchiveOpDescriptor<string, unknown>>(row: R): R {
   return row;
@@ -502,8 +491,6 @@ export const ARCHIVE_WIRE_TABLE = [
 ];
 
 export type ArchiveDescriptor = (typeof ARCHIVE_WIRE_TABLE)[number];
-
-export type ArchiveWireRow = ArchiveDescriptor;
 
 export type ArchiveOpType = ArchiveDescriptor['op'];
 export type ArchiveWireMessageType = ArchiveDescriptor['messageType'];
