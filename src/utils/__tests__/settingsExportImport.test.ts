@@ -350,6 +350,25 @@ import {
 import * as cryptoModule from '../crypto/index.js';
 import { settingsRepository } from '../storage/SettingsRepository.js';
 import * as encryptionSession from '../storage/encryptionSession.js';
+import { DEFAULT_SETTINGS } from '../storage/defaults.js';
+import { API_KEY_FIELDS } from '../storage/settingsMigration.js';
+
+function sanitizedFullSettings(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    const settings: Record<string, unknown> = {
+        ...(DEFAULT_SETTINGS as unknown as Record<string, unknown>),
+    };
+    for (const field of API_KEY_FIELDS) {
+        delete settings[field];
+    }
+    return { ...settings, ...overrides };
+}
+
+function fullSettingsWithKeys(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+        ...(DEFAULT_SETTINGS as unknown as Record<string, unknown>),
+        ...overrides,
+    };
+}
 
 const { computeHMAC, decryptData, deriveKey } = vi.mocked(cryptoModule);
 const { getAll: getSettings, setAll: saveSettings } = vi.mocked(settingsRepository);
@@ -368,29 +387,7 @@ describe('settingsExportImport', () => {
             version: '1.0.0',
             exportedAt: new Date().toISOString(),
             apiKeyExcluded: true,
-            settings: {
-                obsidian_protocol: 'http',
-                obsidian_port: '27123',
-                min_visit_duration: 10,
-                min_scroll_depth: 25,
-                gemini_model: 'gemini-pro',
-                obsidian_daily_path: 'Daily',
-                ai_provider: 'gemini',
-                openai_base_url: '',
-                openai_model: '',
-                openai_2_base_url: '',
-                openai_2_model: '',
-                domain_whitelist: [],
-                domain_blacklist: [],
-                domain_filter_mode: 'whitelist',
-                privacy_mode: 'off',
-                pii_confirmation_ui: false,
-                pii_sanitize_logs: false,
-                ublock_rules: {},
-                ublock_sources: [],
-                ublock_format_enabled: false,
-                simple_format_enabled: false
-            }
+            settings: sanitizedFullSettings()
         };
 
         test('有効なデータで true を返す', () => {
@@ -433,13 +430,14 @@ describe('settingsExportImport', () => {
             const data = {
                 ...validData,
                 apiKeyExcluded: false,
-                settings: {
-                    ...validData.settings,
+                settings: sanitizedFullSettings({
                     obsidian_api_key: 'key',
                     gemini_api_key: 'key',
                     openai_api_key: 'key',
-                    openai_2_api_key: 'key'
-                }
+                    openai_2_api_key: 'key',
+                    provider_api_key: 'key',
+                    github_pat: 'key'
+                })
             };
             expect(validateExportData(data)).toBe(true);
         });
@@ -521,29 +519,7 @@ describe('settingsExportImport', () => {
                 version: '1.0.0',
                 exportedAt: new Date().toISOString(),
                 apiKeyExcluded: true,
-                settings: {
-                    obsidian_protocol: 'http',
-                    obsidian_port: '27123',
-                    min_visit_duration: 10,
-                    min_scroll_depth: 25,
-                    gemini_model: 'gemini-pro',
-                    obsidian_daily_path: 'Daily',
-                    ai_provider: 'gemini',
-                    openai_base_url: '',
-                    openai_model: '',
-                    openai_2_base_url: '',
-                    openai_2_model: '',
-                    domain_whitelist: [],
-                    domain_blacklist: [],
-                    domain_filter_mode: 'whitelist',
-                    privacy_mode: 'off',
-                    pii_confirmation_ui: false,
-                    pii_sanitize_logs: false,
-                    ublock_rules: {},
-                    ublock_sources: [],
-                    ublock_format_enabled: false,
-                    simple_format_enabled: false
-                }
+                settings: sanitizedFullSettings()
             };
 
             // 署名を計算
@@ -584,29 +560,7 @@ describe('settingsExportImport', () => {
                 version: '1.0.0',
                 exportedAt: new Date().toISOString(),
                 apiKeyExcluded: true,
-                settings: {
-                    obsidian_protocol: 'http',
-                    obsidian_port: '27123',
-                    min_visit_duration: 10,
-                    min_scroll_depth: 25,
-                    gemini_model: 'gemini-pro',
-                    obsidian_daily_path: 'Daily',
-                    ai_provider: 'gemini',
-                    openai_base_url: '',
-                    openai_model: '',
-                    openai_2_base_url: '',
-                    openai_2_model: '',
-                    domain_whitelist: [],
-                    domain_blacklist: [],
-                    domain_filter_mode: 'whitelist',
-                    privacy_mode: 'off',
-                    pii_confirmation_ui: false,
-                    pii_sanitize_logs: false,
-                    ublock_rules: {},
-                    ublock_sources: [],
-                    ublock_format_enabled: false,
-                    simple_format_enabled: false
-                }
+                settings: sanitizedFullSettings()
             };
 
             const signedData = { ...exportData, signature: 'wrong_signature' };
@@ -622,29 +576,7 @@ describe('settingsExportImport', () => {
                 version: '1.0.0',
                 exportedAt: new Date().toISOString(),
                 apiKeyExcluded: true,
-                settings: {
-                    obsidian_protocol: 'http',
-                    obsidian_port: '27123',
-                    min_visit_duration: 10,
-                    min_scroll_depth: 25,
-                    gemini_model: 'gemini-pro',
-                    obsidian_daily_path: 'Daily',
-                    ai_provider: 'gemini',
-                    openai_base_url: '',
-                    openai_model: '',
-                    openai_2_base_url: '',
-                    openai_2_model: '',
-                    domain_whitelist: [],
-                    domain_blacklist: [],
-                    domain_filter_mode: 'whitelist',
-                    privacy_mode: 'off',
-                    pii_confirmation_ui: false,
-                    pii_sanitize_logs: false,
-                    ublock_rules: {},
-                    ublock_sources: [],
-                    ublock_format_enabled: false,
-                    simple_format_enabled: false
-                }
+                settings: sanitizedFullSettings()
             };
 
             const signedData = { ...exportData, signature: 'wrong_signature' };
@@ -659,33 +591,14 @@ describe('settingsExportImport', () => {
                 version: '1.0.0',
                 exportedAt: new Date().toISOString(),
                 apiKeyExcluded: false,
-                settings: {
-                    obsidian_protocol: 'http',
-                    obsidian_port: '27123',
-                    min_visit_duration: 10,
-                    min_scroll_depth: 25,
-                    gemini_model: 'gemini-pro',
-                    obsidian_daily_path: 'Daily',
-                    ai_provider: 'gemini',
-                    openai_base_url: '',
-                    openai_model: '',
-                    openai_2_base_url: '',
-                    openai_2_model: '',
-                    domain_whitelist: [],
-                    domain_blacklist: [],
-                    domain_filter_mode: 'whitelist',
-                    privacy_mode: 'off',
-                    pii_confirmation_ui: false,
-                    pii_sanitize_logs: false,
-                    ublock_rules: {},
-                    ublock_sources: [],
-                    ublock_format_enabled: false,
-                    simple_format_enabled: false,
+                settings: fullSettingsWithKeys({
                     obsidian_api_key: 'key1',
                     gemini_api_key: 'key2',
                     openai_api_key: 'key3',
-                    openai_2_api_key: 'key4'
-                }
+                    openai_2_api_key: 'key4',
+                    provider_api_key: 'key5',
+                    github_pat: 'key6'
+                })
             };
 
             const { signature, ...dataForSig } = exportData as any;
@@ -754,12 +667,7 @@ describe('settingsExportImport', () => {
         });
 
         test('有効な暗号化データを復号してインポートできる', async () => {
-            const settings = await getSettings();
-            const sanitizedSettings = { ...settings };
-            delete sanitizedSettings.obsidian_api_key;
-            delete sanitizedSettings.gemini_api_key;
-            delete sanitizedSettings.openai_api_key;
-            delete sanitizedSettings.openai_2_api_key;
+            const sanitizedSettings = sanitizedFullSettings();
 
             const exportData = {
                 version: '1.0.0',
@@ -883,33 +791,12 @@ describe('settingsExportImport', () => {
         });
 
         test('apiKeyExcluded=false の場合はAPIキーを含めて保存する', async () => {
-            const settings = {
-                obsidian_protocol: 'http',
-                obsidian_port: '27123',
-                min_visit_duration: 10,
-                min_scroll_depth: 25,
-                gemini_model: 'gemini-pro',
-                obsidian_daily_path: 'Daily',
-                ai_provider: 'gemini',
-                openai_base_url: '',
-                openai_model: '',
-                openai_2_base_url: '',
-                openai_2_model: '',
-                domain_whitelist: [],
-                domain_blacklist: [],
-                domain_filter_mode: 'whitelist',
-                privacy_mode: 'off',
-                pii_confirmation_ui: false,
-                pii_sanitize_logs: false,
-                ublock_rules: {},
-                ublock_sources: [],
-                ublock_format_enabled: false,
-                simple_format_enabled: false,
+            const settings = fullSettingsWithKeys({
                 obsidian_api_key: 'key1',
                 gemini_api_key: 'key2',
                 openai_api_key: 'key3',
                 openai_2_api_key: 'key4'
-            };
+            });
 
             const exportData = {
                 version: '1.0.0',
