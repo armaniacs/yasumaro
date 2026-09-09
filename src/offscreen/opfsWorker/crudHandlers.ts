@@ -6,7 +6,7 @@
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import type { StorageQuery } from '../../utils/sqlite-types.js';
 import type { SqliteValue } from '../sqliteEngine.js';
-import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from '../schema.js';
+import { INSERT_SQL, INSERT_IGNORE_RETURNING_SQL, buildInsertParams, UPDATABLE_FIELDS } from '../schema.js';
 import { buildQuerySpec, QUERY_CAPS, buildPlainListStatements } from '../queryPlan.js';
 import { BROWSING_LOG_COLUMNS, BROWSING_LOG_COLUMNS_SQL, mapNamed } from '../rowCodec.js';
 import type { QueryPayload } from './types.js';
@@ -108,20 +108,22 @@ export async function handleInsertBatch(
   let skipped = 0;
   try {
     await withTransaction(ctx, async () => {
-      for (const record of records) {
+      // Per-row counting via RETURNING: a single post-loop changes() only
+      // reports the last INSERT, undercounting every multi-row batch with a
+      // duplicate, and a total_changes() diff would include the FTS5 sync
+      // triggers' shadow writes (~7 per insert). RETURNING yields exactly the
+      // rows this statement inserted, so N statements give the exact count.
+      for (const [index, record] of records.entries()) {
         try {
           const domain = record.domain || extractDomain(record.url);
-          await sqlExec(ctx, INSERT_IGNORE_SQL, buildInsertParams(record, domain));
-          // Per-row changes(): a single read after the loop only reports the
-          // last INSERT, undercounting every multi-row batch with a duplicate.
-          let changed = 0;
-          await sqlQuery(ctx, 'SELECT changes() AS c', [], (row) => {
-            changed = Number(row.c);
+          let insertedNow = false;
+          await sqlQuery(ctx, INSERT_IGNORE_RETURNING_SQL, buildInsertParams(record, domain), () => {
+            insertedNow = true;
           });
-          if (changed > 0) inserted++;
+          if (insertedNow) inserted++;
           else skipped++;
         } catch (err) {
-          if (inserted === 0 && records.indexOf(record) === 0) {
+          if (index === 0) {
             postLog('error', 'OPFS Worker: first INSERT failed', { error: errorMessage(err), url: record.url });
           }
         }
