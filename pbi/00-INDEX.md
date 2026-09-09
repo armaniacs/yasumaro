@@ -14,6 +14,17 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-09 architecture review round 3 — 6 件（arch-delivery-loop・0909a ブランチ）
+
+（診断: `/tmp/architecture-review-20260909.html`。台帳の再評価 3 項目（ラウンド2着地でゲート通過）＋ 新規ホットスポット診断から RICE 採点 6 件を PBI 化。実行順 = 01 → 02 → {03, 04, 06} → 05（02 完了後）。台帳据え置き 5 項目は `2026-09-09-00-backlog-0909a.md` 参照）
+
+- 2026-09-09-01-fix-limits-ssot.md（⬜ RICE 24.0。上限定数の 4 authorities drift（import 1000/5000/100000 等）を limits テーブルに統合。挙動不変。S / 副作用 🟢 / 🔧（fix））
+- 2026-09-09-02-refactor-update-whitelist-ssot.md（⬜ RICE 19.2。UPDATE 許可フィールドの whitelist 統合（dashboard 10 vs offscreen 31）＋ handleQuery エイリアス正規化。**01 完了後に着手**。S / 副作用 🟢 / 🔧（refactor））
+- 2026-09-09-03-refactor-row-codec.md（⬜ RICE 12.0。行シェイプ codec — IdbVfsBackend positional 33 列 vs OPFS named 13 列の drift 解消・rowMapper 4 コピー統合。M / 副作用 🟡 / 🔧（refactor））
+- 2026-09-09-04-refactor-export-validator-ssot.md（⬜ RICE 8.0。settingsExportImport の requiredKeys を DEFAULT_SETTINGS 派生に＋blob 保存統合。S / 副作用 🟢 / 🔧（refactor））
+- 2026-09-09-05-refactor-archive-op-codec.md（⬜ RICE 8.0。archive wire テーブルを routing から codec 携行に拡張（14 op × 5 hop の shape 再宣言解消）。**02 完了後に着手**。L / 副作用 🟡 / 🔧（refactor））
+- 2026-09-09-06-refactor-strip-engine.md（⬜ RICE 6.4。aiSummaryCleaner の 32 shallow strip → SelectorRuleDef テーブル＋stripBySelectors エンジン。M / 副作用 🟢 / 🔧（refactor））
+
 ### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
