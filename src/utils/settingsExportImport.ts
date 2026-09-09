@@ -6,6 +6,7 @@
 import { getOrCreateHmacSecret } from './storage/encryptionSession.js';
 import { settingsRepository } from './storage/SettingsRepository.js';
 import { API_KEY_FIELDS } from './storage/settingsMigration.js';
+import { DEFAULT_SETTINGS } from './storage/defaults.js';
 import { Settings } from './storage/types.js';
 import { computeHMAC, encrypt, decryptData, deriveKey, constantTimeCompare } from './crypto/index.js';
 import { generateSalt } from './crypto/index.js';
@@ -70,6 +71,37 @@ async function mergeWithExistingApiKeys(importedSettings: Settings): Promise<Set
     (merged as Record<string, unknown>)[field] = existingSettings[field];
   }
   return merged;
+}
+
+/**
+ * Settings keys that must be present for an export payload to validate.
+ * Derived from the canonical defaults minus API key fields so newly added
+ * settings become required automatically instead of via a hand-maintained
+ * parallel list that can drift out of sync.
+ */
+const API_KEY_FIELD_SET: ReadonlySet<string> = new Set<string>(API_KEY_FIELDS);
+const REQUIRED_EXPORT_KEYS: readonly string[] = Object.keys(DEFAULT_SETTINGS).filter(
+  (key) => !API_KEY_FIELD_SET.has(key)
+);
+
+/**
+ * Persist a JSON payload as a downloadable file, owning the
+ * Blob anchor click revoke lifecycle in one place.
+ * @param {string} json - serialized payload to save
+ * @param {string} filename - download filename for the anchor
+ */
+export function saveJsonToFile(json: string, filename: string): void {
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 /**
@@ -334,17 +366,7 @@ export async function exportSettings(): Promise<void> {
   };
 
   const signedJson = JSON.stringify(signedExportData, null, 2);
-  const blob = new Blob([signedJson], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = getExportFilename();
-  link.style.display = 'none';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  saveJsonToFile(signedJson, getExportFilename());
 }
 
 /**
@@ -354,17 +376,7 @@ export async function saveEncryptedExportToFile(
   encryptedData: EncryptedExportData
 ): Promise<void> {
   const json = JSON.stringify(encryptedData, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = getExportFilename().replace('.json', '-encrypted.json');
-  link.style.display = 'none';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  saveJsonToFile(json, getExportFilename().replace('.json', '-encrypted.json'));
 }
 
 /**
@@ -394,35 +406,20 @@ export function validateExportData(data: unknown): boolean {
 
   const settings = obj.settings as Record<string, unknown>;
 
-  // APIキーが除外されている場合、APIキーフィールドのチェックをスキップ
+  // Key presence below is skipped when the payload declares keys excluded.
   const apiKeyExcluded = obj.apiKeyExcluded === true;
 
-  const requiredKeys = [
-    'obsidian_protocol', 'obsidian_port',
-    'min_visit_duration', 'min_scroll_depth',
-    'gemini_model', 'obsidian_daily_path', 'ai_provider',
-    'openai_base_url', 'openai_model',
-    'openai_2_base_url', 'openai_2_model',
-    'domain_whitelist', 'domain_blacklist', 'domain_filter_mode',
-    'privacy_mode', 'pii_confirmation_ui', 'pii_sanitize_logs',
-    'ublock_rules', 'ublock_sources', 'ublock_format_enabled',
-    'simple_format_enabled',
-  ];
-
-  for (const key of requiredKeys) {
+  // Presence follows DEFAULT_SETTINGS minus API key fields, so new settings
+  // keys are required automatically without updating a parallel hand list.
+  for (const key of REQUIRED_EXPORT_KEYS) {
     if (!(key in settings)) {
       return false;
     }
   }
 
-  // APIキーフィールドのチェック（ apiKeyExcluded がある場合はスキップ）
+  // API key presence is required only when the payload claims to include keys.
   if (!apiKeyExcluded) {
-    const apiKeyKeys = [
-      'obsidian_api_key', 'gemini_api_key',
-      'openai_api_key', 'openai_2_api_key',
-    ];
-
-    for (const key of apiKeyKeys) {
+    for (const key of API_KEY_FIELDS) {
       if (!(key in settings)) {
         return false;
       }
