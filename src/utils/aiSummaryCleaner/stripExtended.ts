@@ -1,108 +1,12 @@
 /**
  * AI要約クレンジング — 拡張_strip関数群
- * 追加の6オプション（固定・推薦・ページネーション・SNSプロモ・ポップアップ・プラットフォーム）+
- * 9オプション（テキスト密度・短文連続・記号行・リンクのみ段落・非表示強化・空要素・JPレイアウト・JPナビ・著者メタ）+
- * 2オプション（アフィリエイトプレーンテキスト化・吹き出しクレンジング）
+ * セレクター形状のルールは selectorRules.ts の表へ移行済み。
+ * ここには非セレクター系（位置・密度・テキスト抽出）および
+ * テキスト系 cookie 同意検出の bespoke 関数のみ残る。
  */
 
-import { buildClassIdSelectors, isFixedOrSticky, isLikelyAd, isLikelyPopup, isPlatformNoise, safeRemoveElement, safeReplaceWithText } from './helpers.js';
-import { COOKIE_TEXT_PATTERNS, NEWS_MEDIA_PATTERNS, EC_SITE_PATTERNS, QA_SITE_PATTERNS, VIDEO_SITE_PATTERNS } from './patterns.js';
-
-// パターンは不変なため、セレクター文字列はモジュール初回評価時に一度だけ構築して使い回す
-const NEWS_MEDIA_SELECTOR = buildClassIdSelectors(NEWS_MEDIA_PATTERNS);
-const EC_SITE_SELECTOR = buildClassIdSelectors(EC_SITE_PATTERNS);
-const QA_SITE_SELECTOR = buildClassIdSelectors(QA_SITE_PATTERNS);
-const VIDEO_SITE_SELECTOR = buildClassIdSelectors(VIDEO_SITE_PATTERNS);
-
-const RECOMMEND_PATTERNS = [
-    // 英語パターン
-    'carousel', 'slider', 'recommend-item', 'product-carousel',
-    'pickup', 'feature', 'ranking', 'trending',
-    'for-you', 'personalized', 'recommendation-box',
-    // 日本語パターン
-    'ichiran', 'yoyaku', 'osusume', 'kanren', 'kiji-related',
-    'kaiwa-related', 'yahoo-relation', 'lazuda', 'rakuten-scrap',
-    // Amazon
-    'sp-RELATED', 'sp-centered', 'a-carousel-container',
-    // その他
-    'contents--contents-recommend', 'pickup-content',
-    'recommend-list'
-];
-const RECOMMEND_SELECTOR = buildClassIdSelectors(RECOMMEND_PATTERNS);
-
-const PAGINATION_PATTERNS = [
-    'next', 'prev', 'pager', 'page-nav', 'page-numbers',
-    'pagination-numbers', 'pagination', 'load-more',
-    'infinite-scroll-trigger'
-];
-const PAGINATION_SELECTOR = buildClassIdSelectors(PAGINATION_PATTERNS);
-
-const SNS_PROMO_PATTERNS = [
-    // 英語
-    'promoted', 'sponsored', 'sp-cc', 'trend-item',
-    'a-carousel', 'sp-RELATED', 'ad-slot', 'ad-container',
-    // Amazon スポンサープロダクト
-    'sp-ads', 'sp-ad', 'sponseredContent', 'adPokemon',
-    // Google/Twitter
-    'tweet-promoted', 'promoted-trend', 'ads-results',
-    // 日本語
-    'koukoku', 'kouka', 'ad-area'
-];
-const SNS_PROMO_SELECTOR = buildClassIdSelectors(SNS_PROMO_PATTERNS);
-
-const POPUP_PATTERNS = [
-    // 英語
-    'popup', 'modal', 'overlay', 'lightbox', 'dialog',
-    'toast', 'notification', 'snackbar', 'ribbon', 'alert',
-    'consent', 'cookie-banner', 'gdpr', 'age-gate', 'paywall',
-    // OneTrust / TrustArch etc. (Dell, enterprise sites)
-    'onetrust', 'ot-sdk', 'optanon', 'truste', 'cc-banner', 'cookieNotice', 'consent-sdk', 'cookieConsent',
-    // 日本語
-    'ameba-popup', 'follow-prompt', 'spc-overlay', 'warranty-popup',
-    'popup-cookie', 'consent-banner', 'login-prompt',
-    // Amazon
-    'a-popover', 'a-modal', 'snssignup',
-    // Game8
-    'game8-popup', 'loginbox', 'messagebox'
-];
-const POPUP_SELECTOR = buildClassIdSelectors(POPUP_PATTERNS);
-
-const PLATFORM_PATTERNS = [
-    // 5ch/be
-    'be-', 'mona', 'since', '2chmate', '2ch-sc', 'matome-hatune',
-    // YouTube
-    'ytp-', 'ytd-companion', 'video-ads', 'ytd-promoted-video',
-    // TVer
-    'tver-overlay', 'player-overlay',
-    // ニコニコ動画
-    'nico-external-banner', 'ndm-ads', 'nicolive',
-    // Yahoo!
-    'yahoo-ad', 'weather', 'ranking',
-    // Amazon
-    'aws-iv', 'a-carousel', 'sp-ads',
-    // Game8
-    'game8-ad', 'adiene',
-    //  Twitter/X
-    'promoted-trend', 'tweet'
-];
-const PLATFORM_SELECTOR = buildClassIdSelectors(PLATFORM_PATTERNS);
-
-const JP_NAVIGATION_PATTERNS = [
-    'global-nav', 'gnav', 'g-nav', 'primary-nav',
-    'footer-nav', 'fnav',
-    'topic-path', 'topicpath', 'breadcrumb',
-    'site-search', 'search-form', 'ss-search',
-    'utility-nav', 'sub-nav', 'local-nav'
-];
-const JP_NAVIGATION_SELECTOR = buildClassIdSelectors(JP_NAVIGATION_PATTERNS);
-
-const AUTHOR_META_PATTERNS = [
-    'author-profile', 'writer-bio', 'profile-card',
-    'post-date', 'update-date', 'post-meta', 'entry-meta',
-    'article-tag', 'post-tag', 'tag-list',
-    'entry-footer', 'article-footer'
-];
-const AUTHOR_META_SELECTOR = buildClassIdSelectors(AUTHOR_META_PATTERNS);
+import { buildClassIdSelectors, isFixedOrSticky, safeRemoveElement, safeReplaceWithText } from './helpers.js';
+import { SELECTOR_RULE_DEFS, isCookieConsentText, stripBySelectors } from './selectorRules.js';
 
 const AFFILIATE_PATTERNS = [
     // Rinker (SWELL bundled) — container-level only
@@ -131,23 +35,17 @@ const SPEECH_BUBBLE_TEXT_SELECTOR = buildClassIdSelectors(SPEECH_BUBBLE_TEXT_PAT
 
 /**
  * Shared helper for text-based cookie consent detection.
- * Extracted to deduplicate stripPopupElements and stripCookieConsentElements
- * which previously contained verbatim 15-line duplicates.
+ * Matching logic lives in selectorRules.isCookieConsentText so the cookie
+ * rule and the popup selector row test the same elements.
  */
 function collectCookieConsentElements(root: Element, counted: Set<Element>): Element[] {
     const elementsToRemove: Element[] = [];
     const candidates = root.querySelectorAll('p, div, span, small, footer, section');
     candidates.forEach(elem => {
         if (counted.has(elem)) return;
-        const text = (elem.textContent || '').trim();
-        if (text.length > 1200 || text.length < 10) return;
-        if (elem.querySelectorAll('p, article, section').length >= 3) return;
-        for (const pattern of COOKIE_TEXT_PATTERNS) {
-            if (pattern.test(text)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-                break;
-            }
+        if (isCookieConsentText(elem)) {
+            elementsToRemove.push(elem);
+            counted.add(elem);
         }
     });
     return elementsToRemove;
@@ -212,169 +110,6 @@ export function stripFixedElements(element: Element): number {
     return removedCount;
 }
 
-/**
- * 推薦セクションを削除
- * @param element - クレンジング対象のルート要素
- * @returns 削除した要素の数
- */
-export function stripRecommendSections(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    element.querySelectorAll(RECOMMEND_SELECTOR).forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    // Yahoo! 関連知見・ドック
-    element.querySelectorAll('[data-cs="viewRelation"], [data-ual="relation"], .relation-module, .topics-module').forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    // Game8 ランキング
-    element.querySelectorAll('[class*="rankingList"], [class*="RankingBox"], [id*="Ranking"]').forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) {
-            removedCount++;
-        }
-    }
-
-    return removedCount;
-}
-
-/**
- * ページネーション要素を削除
- * @param element - クレンジング対象のルート要素
- * @returns 削除した要素の数
- */
-export function stripPaginationElements(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    element.querySelectorAll(PAGINATION_SELECTOR).forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) {
-            removedCount++;
-        }
-    }
-
-    return removedCount;
-}
-
-/**
- * SNS/Amazonプロモコンテンツを削除
- * @param element - クレンジング対象のルート要素
- * @returns 削除した要素の数
- */
-export function stripSnsPromoElements(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    element.querySelectorAll(SNS_PROMO_SELECTOR).forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    element.querySelectorAll('[data-testid="promotedIndicator"]').forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    element.querySelectorAll('[aria-label="Trending now"]').forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    // Amazon スポンサー製品リンク
-    element.querySelectorAll('[data-a-divination], [class*="AdHolder"], [id*="ad"]').forEach(elem => {
-        if (!counted.has(elem) && isLikelyAd(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) {
-            removedCount++;
-        }
-    }
-
-    return removedCount;
-}
-
-/**
- * ポップアップ/モーダル/通知-estを削除
- * @param element - クレンジング対象のルート要素
- * @returns 削除した要素の数
- */
-export function stripPopupElements(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    element.querySelectorAll(POPUP_SELECTOR).forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    // dialog 要素
-    element.querySelectorAll('dialog[open]').forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    // cookie consent banner (generic fallback) — requires popup heuristics; OneTrust etc. are in POPUP_SELECTOR above
-    element.querySelectorAll('[id*="cookie"], [class*="cookie"], [id*="consent"], [class*="consent"]').forEach(elem => {
-        if (!counted.has(elem) && isLikelyPopup(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    // Text-based cookie consent — delegated to shared helper (deduplicated with stripCookieConsentElements)
-    for (const elem of collectCookieConsentElements(element, counted)) {
-        elementsToRemove.push(elem);
-    }
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) {
-            removedCount++;
-        }
-    }
-
-    return removedCount;
-}
-
 export function stripCookieConsentElements(element: Element): number {
     let removedCount = 0;
     const counted = new Set<Element>();
@@ -382,48 +117,6 @@ export function stripCookieConsentElements(element: Element): number {
     for (const elem of elementsToRemove) {
         if (safeRemoveElement(elem)) removedCount++;
     }
-    return removedCount;
-}
-
-/**
- * プラットフォーム固有のノイズを削除
- * @param element - クレンジング対象のルート要素
- * @returns 削除した要素の数
- */
-export function stripPlatformNoise(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    element.querySelectorAll(PLATFORM_SELECTOR).forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    // YouTube コメント欄
-    element.querySelectorAll('#comments, #related, .ytd-watch-flexy .secondary, #secondary').forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    // 5ch mate板的レス番とID
-    element.querySelectorAll('[class*="number"], [class*="postnum"], [class*="id"], [class*="beid"]').forEach(elem => {
-        if (!counted.has(elem) && isPlatformNoise(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) {
-            removedCount++;
-        }
-    }
-
     return removedCount;
 }
 
@@ -614,239 +307,6 @@ export function stripLinkOnlyParagraphs(element: Element, maxLength: number = 50
 }
 
 /**
- * 非表示要素を強化削除
- * @param element - クレンジング対象のルート要素
- * @returns 削除した要素の数
- */
-export function stripEnhancedHiddenElements(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    const selectors = [
-        '[hidden]',
-        '[aria-hidden="true"]',
-        '[style*="display: none"]',
-        '[style*="display:none"]',
-        '[style*="visibility: hidden"]',
-        '[style*="visibility:hidden"]',
-        '[style*="opacity: 0"]',
-        'template',
-        'slot'
-    ];
-
-    for (const sel of selectors) {
-        element.querySelectorAll(sel).forEach(elem => {
-            if (!counted.has(elem)) {
-                if (sel.includes('opacity: 0')) {
-                    const style = elem.getAttribute('style') || '';
-                    if (style.includes('position: fixed') || style.includes('position:fixed') ||
-                        style.includes('position: sticky') || style.includes('position:sticky')) {
-                        elementsToRemove.push(elem);
-                        counted.add(elem);
-                    }
-                } else {
-                    elementsToRemove.push(elem);
-                    counted.add(elem);
-                }
-            }
-        });
-    }
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) { removedCount++; }
-    }
-    return removedCount;
-}
-
-/**
- * 空要素を削除
- * @param element - クレンジング対象のルート要素
- * @returns 削除した要素の数
- */
-export function stripEmptyElements(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    const targets = element.querySelectorAll('div, span, p, section, article');
-    targets.forEach(elem => {
-        if (counted.has(elem)) return;
-        const hasText = (elem.textContent || '').trim().length > 0;
-        const hasChildren = elem.children.length > 0;
-        const hasImages = elem.querySelectorAll('img').length > 0;
-
-        if (!hasText && !hasImages) {
-            if (!hasChildren) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-            } else {
-                let allEmpty = true;
-                for (const child of Array.from(elem.children)) {
-                    const childText = (child.textContent || '').trim();
-                    const childHasContent = childText.length > 0 || child.querySelectorAll('img').length > 0;
-                    if (childHasContent) {
-                        allEmpty = false;
-                        break;
-                    }
-                }
-                if (allEmpty) {
-                    elementsToRemove.push(elem);
-                    counted.add(elem);
-                }
-            }
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) { removedCount++; }
-    }
-    return removedCount;
-}
-
-/**
- * JP BEM系レイアウトパターンを削除
- * @param element - クレンジング対象のルート要素
- * @param customPatterns - カスタムパターン列表
- * @returns 削除した要素の数
- */
-export function stripJPLayoutPatterns(element: Element, customPatterns: string[] = []): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    const patterns = [
-        'l-footer', 'l-header', 'l-sidebar', 'l-wrapper',
-        'p-entry__footer', 'p-entry__header', 'p-entry__body',
-        'c-button', 'c-label', 'c-card',
-        'common-footer', 'common-header', 'sub-column',
-        'ly-', 'el-',
-        // A-1: WordPress Theme Specific Classes
-        // SWELL (Japan #1 theme)
-        'swell-toc', 'p-postList', 'c-shareBtns', 'p-relatedPosts', 'c-widget',
-        'swell-block-', 'swell-block-check', 'swell-block-quote',
-        // Cocoon (Free theme #1)
-        'author-box', 'author-box-label', 'sns-share', 'related-entry-card',
-        'toc', 'toc-box', 'sidebar', 'sns-follow-buttons', 'article-outer',
-        // SANGO / JIN
-        'entry-card', 'post-list', 'sidebar-widget', 'author-block', 'share-btn',
-        'entry-utility', 'cat-links', 'tag-links', 'wp-post-image', 'post-thumbnail',
-        // Snow Monkey
-        'sm-related-posts', 'sm-author-profile', 'sm-widget', 'sm-entry-summary',
-        // STINGER
-        'stinger', 'stingerV8',
-        // A-3: Stealth Marketing Disclosure
-        'ad-disclosure', 'promotion-note', 'pr-disclosure',
-        'disclosure-area', 'sponsor-info-wrapper', 'pr-note',
-        'promotion-content', 'sponsored-content-label',
-        // A-4: Japanese Recommend Ad Engines
-        'popin_recommend', 'popin_recommend_container', 'popin-recommend',
-        'logly-lift', 'logly-lift-widget', 'logly-widget',
-        'uzou-recommend', 'uzou-widget', 'uzou-recommendation',
-        'outbrain_carousels', 'outbrain-widget', 'taboola-placeholder',
-        'taboola-unit', 'taboola-container',
-        // A-5: Gutenberg Decorative/UI Blocks
-        'wp-block-button', 'wp-block-separator', 'wp-block-spacer',
-        'wp-block-pullquote', 'wp-block-image', 'wp-block-list',
-        'wp-block-quote', 'wp-block-code',
-        // A-6: Japanese Blog UI Components
-        'pagetop', 'page-top', 'to-top', 'go-top', 'btn-pagetop', 'back-to-top',
-        'drawer-menu', 'sp-menu', 'hamburger', 'toggle-menu', 'mobile-menu', 'menu-drawer',
-        'toc-container', 'rtoc-box', 'toc_list',
-        'table-of-contents', 'toc-wrapper', 'toc_title',
-        'access-counter', 'accesscount', 'pv-counter', 'page-counter',
-        ...customPatterns
-    ];
-
-    element.querySelectorAll(buildClassIdSelectors(patterns)).forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) { removedCount++; }
-    }
-    return removedCount;
-}
-
-/**
- * JP ナビ頻出語を削除
- * @param element - クレンジング対象のルート要素
- * @returns 削除した要素の数
- */
-export function stripJPNavigationPatterns(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    element.querySelectorAll(JP_NAVIGATION_SELECTOR).forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    const keywords = [' Site Menu', 'このサイトのメニュー', 'ページメニュー'];
-    const targets = element.querySelectorAll('p, div, span, li');
-    targets.forEach(elem => {
-        if (counted.has(elem)) return;
-        const text = elem.textContent || '';
-        for (const kw of keywords) {
-            if (text.includes(kw)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-                break;
-            }
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) { removedCount++; }
-    }
-    return removedCount;
-}
-
-/**
- * 執筆者・メタ情報を削除
- * @param element - クレンジング対象のルート要素
- * @returns 削除した要素の数
- */
-export function stripAuthorMetaElements(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    element.querySelectorAll(AUTHOR_META_SELECTOR).forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    const keywords = ['この記事書いた人', 'プロフィール', '投稿', '更新日', '著者'];
-    const targets = element.querySelectorAll('p, div, span');
-    targets.forEach(elem => {
-        if (counted.has(elem)) return;
-        const text = elem.textContent || '';
-        if (text.length > 200) return;
-        for (const kw of keywords) {
-            if (text.includes(kw)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-                break;
-            }
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) { removedCount++; }
-    }
-    return removedCount;
-}
-
-/**
  * アフィリエイトプラグイン要素をプレーンテキスト化（A-2）
  * Rinker / カエレバ / もしも / ポチップの商品ボックスから
  * 商品名と価格テキストのみを抽出し、要素全体をテキストノードに差し替える
@@ -953,98 +413,81 @@ export function stripSpeechBubbles(element: Element): number {
     return processedCount;
 }
 
-/**
- * ニュースメディア固有パターンを削除（Category B-1）
- * コメント欄・関連記事カード・記者クレジット・速報タイムライン
- * @param element - クレンジング対象のルート要素
- * @returns 削除した要素の数
- */
+// ---------------------------------------------------------------------------
+// Engine-backed delegates (PBI 06)
+// ---------------------------------------------------------------------------
+// Each historic strip* name below used to own a ~20-line copy of the same
+// shape (fresh Set, querySelectorAll, counted dedupe guard, safeRemoveElement
+// loop). The loop now lives once in stripBySelectors; the row owns the
+// selectors. These delegates preserve the public names so per-rule tests
+// guard the engine without modification.
+
+/** Removes recommend sections via the recommend selector row. */
+export function stripRecommendSections(element: Element): number {
+    return stripBySelectors(element, SELECTOR_RULE_DEFS.recommend);
+}
+
+/** Removes pagination elements via the pagination selector row. */
+export function stripPaginationElements(element: Element): number {
+    return stripBySelectors(element, SELECTOR_RULE_DEFS.pagination);
+}
+
+/** Removes SNS/promo elements via the snsPromo selector row. */
+export function stripSnsPromoElements(element: Element): number {
+    return stripBySelectors(element, SELECTOR_RULE_DEFS.snsPromo);
+}
+
+/** Removes popup/modal elements via the popup selector row. */
+export function stripPopupElements(element: Element): number {
+    return stripBySelectors(element, SELECTOR_RULE_DEFS.popup);
+}
+
+/** Removes platform-specific noise via the platform selector row. */
+export function stripPlatformNoise(element: Element): number {
+    return stripBySelectors(element, SELECTOR_RULE_DEFS.platform);
+}
+
+/** Removes hidden elements via the enhancedHidden selector row. */
+export function stripEnhancedHiddenElements(element: Element): number {
+    return stripBySelectors(element, SELECTOR_RULE_DEFS.enhancedHidden);
+}
+
+/** Removes empty elements via the emptyElem selector row. */
+export function stripEmptyElements(element: Element): number {
+    return stripBySelectors(element, SELECTOR_RULE_DEFS.emptyElem);
+}
+
+/** Removes JP layout patterns via the jpLayout selector row. */
+export function stripJPLayoutPatterns(element: Element, customPatterns: string[] = []): number {
+    return stripBySelectors(element, SELECTOR_RULE_DEFS.jpLayout, customPatterns);
+}
+
+/** Removes JP navigation patterns via the jpNavigation selector row. */
+export function stripJPNavigationPatterns(element: Element): number {
+    return stripBySelectors(element, SELECTOR_RULE_DEFS.jpNavigation);
+}
+
+/** Removes author/meta elements via the author selector row. */
+export function stripAuthorMetaElements(element: Element): number {
+    return stripBySelectors(element, SELECTOR_RULE_DEFS.author);
+}
+
+/** Removes news-media patterns via the newsMedia selector row. */
 export function stripNewsMediaPatterns(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    element.querySelectorAll(NEWS_MEDIA_SELECTOR).forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) { removedCount++; }
-    }
-    return removedCount;
+    return stripBySelectors(element, SELECTOR_RULE_DEFS.newsMedia);
 }
 
-/**
- * EC・通販固有パターンを削除（Category B-2）
- * レビュー・バリエーション選択・関連購入・送料バッジ
- * @param element - クレンジング対象のルート要素
- * @returns 削除した要素の数
- */
+/** Removes EC-site patterns via the ecSite selector row. */
 export function stripEcSitePatterns(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    element.querySelectorAll(EC_SITE_SELECTOR).forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) { removedCount++; }
-    }
-    return removedCount;
+    return stripBySelectors(element, SELECTOR_RULE_DEFS.ecSite);
 }
 
-/**
- * Q&A・知恵袋固有パターンを削除（Category B-3）
- * ベストアンサー・関連質問・回答者プロフィール・いいねボタン
- * @param element - クレンジング対象のルート要素
- * @returns 削除した要素の数
- */
+/** Removes Q&A-site patterns via the qaSite selector row. */
 export function stripQaSitePatterns(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    element.querySelectorAll(QA_SITE_SELECTOR).forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) { removedCount++; }
-    }
-    return removedCount;
+    return stripBySelectors(element, SELECTOR_RULE_DEFS.qaSite);
 }
 
-/**
- * 動画プラットフォーム固有パターンを削除（Category B-4）
- * コメント弾幕・タグクラウド・関連動画・再生数バッジ
- * @param element - クレンジング対象のルート要素
- * @returns 削除した要素の数
- */
+/** Removes video-site patterns via the videoSite selector row. */
 export function stripVideoSitePatterns(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    element.querySelectorAll(VIDEO_SITE_SELECTOR).forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) { removedCount++; }
-    }
-    return removedCount;
+    return stripBySelectors(element, SELECTOR_RULE_DEFS.videoSite);
 }

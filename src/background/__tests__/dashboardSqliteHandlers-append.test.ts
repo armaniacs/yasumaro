@@ -65,6 +65,7 @@ vi.mock('../../utils/markdownFormatter.js', () => ({
 }));
 
 import { dispatchDashboardSqlite } from '../handlers/__tests__/dashboardSqliteTestHarness.js';
+import { MAX_IMPORT_ROWS } from '../handlers/dashboardSqlite/deps.js';
 
 const APPEND_TOKEN = 'test-token';
 import { ObsidianClient } from '../obsidianClient.js';
@@ -350,8 +351,8 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       setupSettings();
     });
 
-    it('rejects import with more than 5000 rows', async () => {
-      const hugeRows = Array.from({ length: 5001 }, (_, i) => ({
+    it('rejects import with more than MAX_IMPORT_ROWS rows', async () => {
+      const hugeRows = Array.from({ length: MAX_IMPORT_ROWS + 1 }, (_, i) => ({
         url: `https://e${i}.com`,
         created_at: Date.now(),
       }));
@@ -362,11 +363,11 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
         { getConfirmToken: async () => 'test-token' }
       );
 
-      expect(result).toEqual({ success: false, error: 'Maximum 5000 rows allowed' });
+      expect(result).toEqual({ success: false, error: `Maximum ${MAX_IMPORT_ROWS} rows allowed` });
     });
 
     it('accepts import at the row cap', async () => {
-      const rows = Array.from({ length: 5000 }, (_, i) => ({
+      const rows = Array.from({ length: MAX_IMPORT_ROWS }, (_, i) => ({
         url: `https://e${i}.com`,
         created_at: Date.now(),
       }));
@@ -379,7 +380,7 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       );
 
       expect((result as { success: boolean }).success).toBe(true);
-      expect((result as { inserted: number }).inserted).toBe(5000);
+      expect((result as { inserted: number }).inserted).toBe(MAX_IMPORT_ROWS);
     });
   });
 });

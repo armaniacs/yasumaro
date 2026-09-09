@@ -12,6 +12,15 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 import { createMessageRouter } from '../background/handlers/MessageRouter.js';
 import type { MessageRouterDeps } from '../background/handlers/MessageRouter.js';
+import { UPDATABLE_FIELDS } from '../offscreen/schema.js';
+
+// Fields ObsidianSyncService writes back after a successful sync; the update
+// whitelist must keep accepting them or sync bookkeeping silently degrades.
+const expectedUpdateFields = [
+  'url', 'title', 'summary', 'tags', 'domain',
+  'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted',
+  'obsidian_synced',
+];
 
 describe('SQLite Security & Data Integrity', () => {
   describe('Issue 1: DASHBOARD_SQLITE sender validation (Red Team High)', () => {
@@ -196,30 +205,17 @@ describe('SQLite Security & Data Integrity', () => {
     });
 
     it('should include obsidian_synced in the SQLITE_UPDATE allowed fields whitelist', () => {
-      const updateHandlerMatch = offscreenSource.match(
-        /SQLITE_UPDATE[\s\S]*?for\s*\(\s*const\s+key\s+of\s+\[([\s\S]*?)\]/
+      // handleUpdate no longer holds an inline list; it iterates the schema SSOT.
+      // Pin the SSOT import so the whitelist cannot be re-inlined unnoticed.
+      const ssotImport = offscreenSource.match(
+        /import\s*\{[^}]*UPDATABLE_FIELDS[^}]*\}\s*from\s*'[^']*schema[^']*'/
       );
-      expect(updateHandlerMatch).toBeTruthy();
-      const whitelistStr = updateHandlerMatch![1];
-
-      expect(whitelistStr).toContain('obsidian_synced');
+      expect(ssotImport).toBeTruthy();
     });
 
     it('whitelist should contain all fields that ObsidianSyncService may update', () => {
-      const updateHandlerMatch = offscreenSource.match(
-        /SQLITE_UPDATE[\s\S]*?for\s*\(\s*const\s+key\s+of\s+\[([\s\S]*?)\]/
-      );
-      expect(updateHandlerMatch).toBeTruthy();
-      const whitelistStr = updateHandlerMatch![1];
-
-      const expectedFields = [
-        'url', 'title', 'summary', 'tags', 'domain',
-        'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted',
-        'obsidian_synced',
-      ];
-
-      for (const field of expectedFields) {
-        expect(whitelistStr).toContain(`'${field}'`);
+      for (const field of expectedUpdateFields) {
+        expect(UPDATABLE_FIELDS).toContain(field);
       }
     });
   });

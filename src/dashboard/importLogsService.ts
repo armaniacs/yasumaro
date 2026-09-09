@@ -27,8 +27,13 @@ interface ExportedData {
   signature?: string;
 }
 
-/** Upper bound on rows accepted from a single import file (VULN-023). */
-export const MAX_IMPORT_ROWS = 100_000;
+/**
+ * Upper bound on total rows accepted from a single import file (VULN-023).
+ * A different concept from the per-message MAX_IMPORT_ROWS in
+ * messaging/limits.ts: this pre-check gates the whole file before it is
+ * split into per-request batches, so it stays larger by design.
+ */
+export const IMPORT_TOTAL_ROW_CAP = 100_000;
 /** Upper bound on the raw import text, mirroring the settings 10 MiB cap. */
 export const MAX_IMPORT_TEXT_BYTES = 10 * 1024 * 1024;
 
@@ -132,8 +137,8 @@ export async function importFromJson(
     return { error: 'No records found in file' };
   }
 
-  if (rows.length > MAX_IMPORT_ROWS) {
-    return { error: `Import exceeds the ${MAX_IMPORT_ROWS} row limit` };
+  if (rows.length > IMPORT_TOTAL_ROW_CAP) {
+    return { error: `Import exceeds the ${IMPORT_TOTAL_ROW_CAP} row limit` };
   }
 
   // Validate and filter

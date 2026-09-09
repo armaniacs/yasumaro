@@ -6,6 +6,7 @@
 import { getOrCreateHmacSecret } from './storage/encryptionSession.js';
 import { settingsRepository } from './storage/SettingsRepository.js';
 import { API_KEY_FIELDS } from './storage/settingsMigration.js';
+import { DEFAULT_SETTINGS } from './storage/defaults.js';
 import { Settings } from './storage/types.js';
 import { computeHMAC, encrypt, decryptData, deriveKey, constantTimeCompare } from './crypto/index.js';
 import { generateSalt } from './crypto/index.js';
@@ -15,7 +16,14 @@ import { DEFAULT_IMPORT_SIZE_CAP_BYTES, base64ToBytesTyped } from './importPipel
 import { CRYPTO_PARAMS } from './crypto/cryptoParams.js';
 
 /** Current export format version (plaintext settings) */
-export const EXPORT_VERSION = '1.0.0';
+export const EXPORT_VERSION = '1.1.0';
+
+/**
+ * Version written before SSOT-derived key validation (PBI 04). Payloads with
+ * this version predate many DEFAULT_SETTINGS keys, so they validate against
+ * the frozen legacy contract instead of the full derived key set.
+ */
+export const LEGACY_EXPORT_VERSION = '1.0.0';
 
 /** Encrypted export format version — v2 uses ciphertext HMAC (SSOT migration) */
 export const ENCRYPTED_EXPORT_VERSION = '2';
@@ -70,6 +78,60 @@ async function mergeWithExistingApiKeys(importedSettings: Settings): Promise<Set
     (merged as Record<string, unknown>)[field] = existingSettings[field];
   }
   return merged;
+}
+
+/**
+ * Settings keys that must be present for a current-format export payload to
+ * validate. Derived from the canonical defaults minus API key fields so newly
+ * added settings become required automatically instead of via a hand-maintained
+ * parallel list that can drift out of sync.
+ */
+const API_KEY_FIELD_SET: ReadonlySet<string> = new Set<string>(API_KEY_FIELDS);
+const REQUIRED_EXPORT_KEYS: readonly string[] = Object.keys(DEFAULT_SETTINGS).filter(
+  (key) => !API_KEY_FIELD_SET.has(key)
+);
+
+/**
+ * Frozen required-key contract of pre-1.1.0 export files. Never add keys
+ * here: it mirrors what old releases actually wrote, and rejecting on keys
+ * they could not contain would break imports of legacy exports.
+ */
+const LEGACY_REQUIRED_EXPORT_KEYS: readonly string[] = [
+  'obsidian_protocol', 'obsidian_port',
+  'min_visit_duration', 'min_scroll_depth',
+  'gemini_model', 'obsidian_daily_path', 'ai_provider',
+  'openai_base_url', 'openai_model',
+  'openai_2_base_url', 'openai_2_model',
+  'domain_whitelist', 'domain_blacklist', 'domain_filter_mode',
+  'privacy_mode', 'pii_confirmation_ui', 'pii_sanitize_logs',
+  'ublock_rules', 'ublock_sources', 'ublock_format_enabled',
+  'simple_format_enabled',
+];
+
+/** API key fields the legacy format required when keys were included. */
+const LEGACY_API_KEY_FIELDS: readonly string[] = [
+  'obsidian_api_key', 'gemini_api_key',
+  'openai_api_key', 'openai_2_api_key',
+];
+
+/**
+ * Persist a JSON payload as a downloadable file, owning the
+ * Blob anchor click revoke lifecycle in one place.
+ * @param {string} json - serialized payload to save
+ * @param {string} filename - download filename for the anchor
+ */
+export function saveJsonToFile(json: string, filename: string): void {
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 /**
@@ -334,17 +396,7 @@ export async function exportSettings(): Promise<void> {
   };
 
   const signedJson = JSON.stringify(signedExportData, null, 2);
-  const blob = new Blob([signedJson], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = getExportFilename();
-  link.style.display = 'none';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  saveJsonToFile(signedJson, getExportFilename());
 }
 
 /**
@@ -354,17 +406,7 @@ export async function saveEncryptedExportToFile(
   encryptedData: EncryptedExportData
 ): Promise<void> {
   const json = JSON.stringify(encryptedData, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = getExportFilename().replace('.json', '-encrypted.json');
-  link.style.display = 'none';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  saveJsonToFile(json, getExportFilename().replace('.json', '-encrypted.json'));
 }
 
 /**
@@ -394,20 +436,14 @@ export function validateExportData(data: unknown): boolean {
 
   const settings = obj.settings as Record<string, unknown>;
 
-  // APIキーが除外されている場合、APIキーフィールドのチェックをスキップ
+  // Key presence below is skipped when the payload declares keys excluded.
   const apiKeyExcluded = obj.apiKeyExcluded === true;
 
-  const requiredKeys = [
-    'obsidian_protocol', 'obsidian_port',
-    'min_visit_duration', 'min_scroll_depth',
-    'gemini_model', 'obsidian_daily_path', 'ai_provider',
-    'openai_base_url', 'openai_model',
-    'openai_2_base_url', 'openai_2_model',
-    'domain_whitelist', 'domain_blacklist', 'domain_filter_mode',
-    'privacy_mode', 'pii_confirmation_ui', 'pii_sanitize_logs',
-    'ublock_rules', 'ublock_sources', 'ublock_format_enabled',
-    'simple_format_enabled',
-  ];
+  // Current format requires the full SSOT-derived set; older formats are
+  // validated against their frozen contract so legacy exports stay importable
+  // (setAll() merges over current settings, filling anything the payload lacks).
+  const isCurrentFormat = obj.version === EXPORT_VERSION;
+  const requiredKeys = isCurrentFormat ? REQUIRED_EXPORT_KEYS : LEGACY_REQUIRED_EXPORT_KEYS;
 
   for (const key of requiredKeys) {
     if (!(key in settings)) {
@@ -415,13 +451,9 @@ export function validateExportData(data: unknown): boolean {
     }
   }
 
-  // APIキーフィールドのチェック（ apiKeyExcluded がある場合はスキップ）
+  // API key presence is required only when the payload claims to include keys.
   if (!apiKeyExcluded) {
-    const apiKeyKeys = [
-      'obsidian_api_key', 'gemini_api_key',
-      'openai_api_key', 'openai_2_api_key',
-    ];
-
+    const apiKeyKeys = isCurrentFormat ? API_KEY_FIELDS : LEGACY_API_KEY_FIELDS;
     for (const key of apiKeyKeys) {
       if (!(key in settings)) {
         return false;
