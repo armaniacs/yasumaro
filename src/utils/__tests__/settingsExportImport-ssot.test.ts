@@ -10,7 +10,7 @@
  */
 
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { validateExportData } from '../settingsExportImport.js';
+import { EXPORT_VERSION, LEGACY_EXPORT_VERSION, validateExportData } from '../settingsExportImport.js';
 import * as exportModule from '../settingsExportImport.js';
 import { DEFAULT_SETTINGS } from '../storage/defaults.js';
 import { API_KEY_FIELDS } from '../storage/settingsMigration.js';
@@ -47,9 +47,13 @@ function fullNonApiSettings(): Record<string, unknown> {
   return settings;
 }
 
-function exportData(settings: Record<string, unknown>, apiKeyExcluded: boolean): Record<string, unknown> {
+function exportData(
+  settings: Record<string, unknown>,
+  apiKeyExcluded: boolean,
+  version: string = EXPORT_VERSION,
+): Record<string, unknown> {
   return {
-    version: '1.0.0',
+    version,
     exportedAt: new Date().toISOString(),
     settings,
     apiKeyExcluded,
@@ -104,12 +108,29 @@ describe('intended validateExportData behavior (SSOT-derived)', () => {
     expect(validateExportData(exportData(settings, true))).toBe(false);
   });
 
-  test('previously-accepted 21-key fixture is now rejected (drift corrected)', () => {
+  test('previously-accepted 21-key fixture is rejected in the current format (drift corrected)', () => {
     const settings: Record<string, unknown> = {};
     for (const key of LEGACY_REQUIRED_KEYS) {
       settings[key] = (DEFAULT_SETTINGS as Record<string, unknown>)[key];
     }
     expect(validateExportData(exportData(settings, true))).toBe(false);
+  });
+
+  test('legacy 1.0.0 export carrying only the 21-key fixture stays importable', () => {
+    const settings: Record<string, unknown> = {};
+    for (const key of LEGACY_REQUIRED_KEYS) {
+      settings[key] = (DEFAULT_SETTINGS as Record<string, unknown>)[key];
+    }
+    expect(validateExportData(exportData(settings, true, LEGACY_EXPORT_VERSION))).toBe(true);
+  });
+
+  test('legacy 1.0.0 payload missing a legacy key is still rejected', () => {
+    const settings: Record<string, unknown> = {};
+    for (const key of LEGACY_REQUIRED_KEYS) {
+      settings[key] = (DEFAULT_SETTINGS as Record<string, unknown>)[key];
+    }
+    delete settings['min_visit_duration'];
+    expect(validateExportData(exportData(settings, true, LEGACY_EXPORT_VERSION))).toBe(false);
   });
 
   test('apiKeyExcluded=false requires the full SSOT API key set', () => {
@@ -128,6 +149,18 @@ describe('intended validateExportData behavior (SSOT-derived)', () => {
       github_pat: 'k6',
     };
     expect(validateExportData(exportData(withAllKeys, false))).toBe(true);
+  });
+
+  test('legacy 1.0.0 payload with keys included validates against the frozen 4-key set', () => {
+    const withLegacyKeys: Record<string, unknown> = {};
+    for (const key of LEGACY_REQUIRED_KEYS) {
+      withLegacyKeys[key] = (DEFAULT_SETTINGS as Record<string, unknown>)[key];
+    }
+    withLegacyKeys['obsidian_api_key'] = 'k1';
+    withLegacyKeys['gemini_api_key'] = 'k2';
+    withLegacyKeys['openai_api_key'] = 'k3';
+    withLegacyKeys['openai_2_api_key'] = 'k4';
+    expect(validateExportData(exportData(withLegacyKeys, false, LEGACY_EXPORT_VERSION))).toBe(true);
   });
 });
 
