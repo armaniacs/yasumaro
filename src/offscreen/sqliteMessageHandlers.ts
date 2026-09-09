@@ -25,7 +25,8 @@ import {
   purgeOldRecords as sqlitePurgeOldRecords,
   purgeContent as sqlitePurgeContent,
 } from './dbMaintenance.js';
-import type { ArchiveOpType } from '../messaging/archiveWireTable.js';
+import type { ArchiveDescriptor, ArchiveOpType } from '../messaging/archiveWireTable.js';
+import { ARCHIVE_DESCRIPTORS, pickProjectedFields } from '../messaging/archiveWireTable.js';
 import {
   insertAuditLog as sqliteInsertAuditLog,
   queryAuditLog as sqliteQueryAuditLog,
@@ -233,20 +234,24 @@ async function handleContentPurge(msg: SqliteMessage, sendResponse: (r: unknown)
 }
 
 /**
- * Table-driven archive dispatch (PBI 2026-09-07-22).
+ * Table-driven archive dispatch (PBI 2026-09-07-22, codec by 2026-09-09-05).
  *
  * The 14 archive handlers used to be hand-written 1:1 copies that differed
- * only in backend method, payload args, and response projection. Each row
- * here carries exactly that per-op knowledge; handleArchive below executes
- * the shared shape (call backend -> project success fields -> forward the
- * failure reason). Keyed by ArchiveOpType, so a new table op without a row
- * here is a type error. Error strings are unchanged.
+ * only in backend method, payload args, and response projection. Each entry
+ * here is now a pure view over its wire-table descriptor — the method, the
+ * arg builder, the projected fields, and the empty-success message all live
+ * in the descriptor row. The Record<> still forces all 14 ops to be listed,
+ * so a table row without a dispatch entry is a type error. Error strings
+ * are unchanged.
  */
 type ArchiveBackendMethod =
   | 'archivePreview' | 'archiveCreate' | 'archiveCleanup' | 'archiveExportChunk'
   | 'archivePrepareIncoming' | 'archiveRestorePreview' | 'archiveRestore'
   | 'archiveDeleteByStaging' | 'archiveOpen' | 'archiveQuery' | 'archiveUpdate'
   | 'archiveSave' | 'archiveClose' | 'archiveStatus';
+
+type _TableBackendMethodsLive = ArchiveDescriptor['backendMethod'] extends ArchiveBackendMethod ? true : never;
+const _checkTableBackendMethods: _TableBackendMethodsLive = true;
 
 type ArchiveBackendResult = { success: true; [field: string]: unknown } | { success: false; error: string };
 
@@ -258,91 +263,30 @@ interface ArchiveDispatchEntry {
   emptyError: string;
 }
 
+function archiveDispatchEntry(descriptor: ArchiveDescriptor): ArchiveDispatchEntry {
+  return {
+    method: descriptor.backendMethod as ArchiveBackendMethod,
+    args: descriptor.backendArgs,
+    pick: (result) => pickProjectedFields(result, descriptor),
+    emptyError: descriptor.emptyError,
+  };
+}
+
 const ARCHIVE_DISPATCH: Record<ArchiveOpType, ArchiveDispatchEntry> = {
-  archivePreview: {
-    method: 'archivePreview',
-    args: (p) => [p['cutoffDate'] as string, p['cutoffMs'] as number, p['includeDeleted'] as boolean],
-    pick: (r) => ('preview' in r ? { preview: r['preview'] } : null),
-    emptyError: 'Archive preview returned no data',
-  },
-  archiveCreate: {
-    method: 'archiveCreate',
-    args: (p) => [p],
-    pick: (r) => ('stagingName' in r ? { stagingName: r['stagingName'], recordCount: r['recordCount'] } : null),
-    emptyError: 'Archive create returned no staging file',
-  },
-  archiveCleanup: {
-    method: 'archiveCleanup',
-    args: () => [],
-    pick: (r) => ('removed' in r ? { removed: r['removed'] } : null),
-    emptyError: 'Archive cleanup returned no data',
-  },
-  archiveExport: {
-    method: 'archiveExportChunk',
-    args: (p) => [p['stagingName'] as string, p['offset'] as number, p['length'] as number],
-    pick: (r) => ('chunk' in r ? { chunk: r['chunk'], nextOffset: r['nextOffset'], total: r['total'], done: r['done'] } : null),
-    emptyError: 'Archive export returned no data',
-  },
-  archivePrepareIncoming: {
-    method: 'archivePrepareIncoming',
-    args: () => [],
-    pick: (r) => ('stagingName' in r ? { stagingName: r['stagingName'] } : null),
-    emptyError: 'Archive prepare returned no staging name',
-  },
-  archiveRestorePreview: {
-    method: 'archiveRestorePreview',
-    args: (p) => [p['stagingName'] as string],
-    pick: (r) => ('preview' in r ? { preview: r['preview'] } : null),
-    emptyError: 'Archive restore preview returned no data',
-  },
-  archiveRestore: {
-    method: 'archiveRestore',
-    args: (p) => [p['stagingName'] as string],
-    pick: (r) => ('restored' in r ? { restored: r['restored'], restoredDeleted: r['restoredDeleted'], skipped: r['skipped'], skippedInvalid: r['skippedInvalid'] } : null),
-    emptyError: 'Archive restore returned no data',
-  },
-  archiveDeleteByStaging: {
-    method: 'archiveDeleteByStaging',
-    args: (p) => [p['stagingName'] as string],
-    pick: (r) => ('deleted' in r ? { deleted: r['deleted'], remaining: r['remaining'], freelistBefore: r['freelistBefore'], freelistAfter: r['freelistAfter'], vacuumOk: r['vacuumOk'] } : null),
-    emptyError: 'Archive purge returned no data',
-  },
-  archiveOpen: {
-    method: 'archiveOpen',
-    args: (p) => [p['stagingName'] as string],
-    pick: () => ({}),
-    emptyError: 'Archive open returned no data',
-  },
-  archiveQuery: {
-    method: 'archiveQuery',
-    args: (p) => [p['stagingName'] as string, p['query'] as string, p['limit'] as number, p['offset'] as number],
-    pick: (r) => ('rows' in r ? { rows: r['rows'], total: r['total'] } : null),
-    emptyError: 'Archive query returned no data',
-  },
-  archiveUpdate: {
-    method: 'archiveUpdate',
-    args: (p) => [p['stagingName'] as string, p['id'] as number, p['changes'] as Record<string, unknown>],
-    pick: (r) => ('dirty' in r ? { dirty: r['dirty'] } : null),
-    emptyError: 'Archive update returned no data',
-  },
-  archiveSave: {
-    method: 'archiveSave',
-    args: (p) => [p['stagingName'] as string],
-    pick: (r) => ('dirty' in r ? { dirty: r['dirty'] } : null),
-    emptyError: 'Archive save returned no data',
-  },
-  archiveClose: {
-    method: 'archiveClose',
-    args: (p) => [p['stagingName'] as string],
-    pick: (r) => ('dirty' in r ? { dirty: r['dirty'] } : null),
-    emptyError: 'Archive close returned no data',
-  },
-  archiveStatus: {
-    method: 'archiveStatus',
-    args: () => [],
-    pick: (r) => ('status' in r ? { status: r['status'] } : null),
-    emptyError: 'Archive status returned no data',
-  },
+  archivePreview: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archivePreview),
+  archiveCreate: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveCreate),
+  archiveCleanup: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveCleanup),
+  archiveExport: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveExport),
+  archivePrepareIncoming: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archivePrepareIncoming),
+  archiveRestorePreview: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveRestorePreview),
+  archiveRestore: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveRestore),
+  archiveDeleteByStaging: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveDeleteByStaging),
+  archiveOpen: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveOpen),
+  archiveQuery: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveQuery),
+  archiveUpdate: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveUpdate),
+  archiveSave: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveSave),
+  archiveClose: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveClose),
+  archiveStatus: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveStatus),
 };
 
 async function handleArchive(op: ArchiveOpType, msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
