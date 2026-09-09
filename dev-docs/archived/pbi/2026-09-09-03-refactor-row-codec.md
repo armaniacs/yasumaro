@@ -66,7 +66,7 @@ Scenario: FTS と LIKE の rank 差分だけが分岐になる
 - [x] 全 BDD シナリオが自動テストとして実装されパスする
 - [x] type-check / lint / 対象テスト green
 - [x] insertBatch 集計の確定記録（bug だった場合は修正 + CHANGELOG）
-- [ ] コードレビュー完了
+- [x] コードレビュー完了
 - [x] `00-INDEX.md` 更新
 
 ## 実装メモ

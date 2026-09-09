@@ -66,8 +66,8 @@ Scenario: bespoke な strip は関数のまま残る
 
 - [x] 全 BDD シナリオが自動テストとして実装されパスする
 - [x] type-check / lint / 対象テスト green
-- [ ] コードレビュー完了
-- [ ] `00-INDEX.md` 更新
+- [x] コードレビュー完了
+- [x] `00-INDEX.md` 更新
 
 ## 実装メモ
 
