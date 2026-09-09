@@ -35,6 +35,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.8.2] - 2026-09-09
+
+アーキテクチャ改善ラウンド（2026-09-09 round 3）のリリースです。SQLite update パスの本番バグ 1 件の修正と、6 件の内部構造改善（SSOT 統合）を含みます。
+
+### Fixed
+
+- **insertBatch の集計断を修正**: OPFS Worker 経路のバッチ挿入が最後の 1 文しか `changes()` を計数せず、重複スキップ分が反映されない（3 件バッチで新規 2 + 重複 1 のとき `{count: 0}` を返す）。また wire 契約の不一致で `inserted` / `skipped` が常に `undefined` だった問題を修正し、`{count, inserted, skipped}` を正しく返すようにした
+- エクスポート検証の requiredKeys が手写しリストのため新規設定キーに追従していなかった問題を `DEFAULT_SETTINGS` からの派生に置換し解消（約 130 キーの追従漏れを是正）
+
+### Refactored
+
+- アーキテクチャ Deepening round 3（PBI 01〜06）: 上限定数の `limits.ts` SSOT 統合（validator / handler / dashboard 間の上限 drift 解消）、UPDATE 許可フィールドの whitelist 統合（dashboard 10 項 / offscreen 31 項の二重管理解消＋payload 正規化関数新設）、行シェイプ `rowCodec` 統合（バックエンド間の行 mapper 4 コピー解消・列指定必須化）、archive wire テーブルの codec 携行化（14 op × 5 hop の応答 shape 再宣言を 1 descriptor 行に統一）、AI クレンジング strip ルールの `SelectorRuleDef` テーブル＋エンジン統合（stripCore/stripExtended 合計 −912 行）
+
+### Changed
+
+- なし（ユーザーに見える動作は Fixed のみ）
+
 ## [6.8.1] - 2026-09-08
 
 このリリースは前日のレビュー指摘を即座に反映したものです。Chrome Web Store への配布を終了し、関連する CI コードを削除しました。
