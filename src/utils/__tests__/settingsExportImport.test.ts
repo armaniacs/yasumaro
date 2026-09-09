@@ -337,6 +337,7 @@ vi.mock('../crypto/index.js', () => ({
 
 import {
     EXPORT_VERSION,
+    LEGACY_EXPORT_VERSION,
     ENCRYPTED_EXPORT_VERSION,
     validateExportData,
     isEncryptedExport,
@@ -377,8 +378,9 @@ const { getOrCreateHmacSecret } = vi.mocked(encryptionSession);
 describe('settingsExportImport', () => {
 
     describe('定数', () => {
-        test('EXPORT_VERSION が 1.0.0', () => {
-            expect(EXPORT_VERSION).toBe('1.0.0');
+        test('EXPORT_VERSION が 1.1.0、LEGACY_EXPORT_VERSION が 1.0.0', () => {
+            expect(EXPORT_VERSION).toBe('1.1.0');
+            expect(LEGACY_EXPORT_VERSION).toBe('1.0.0');
         });
     });
 
