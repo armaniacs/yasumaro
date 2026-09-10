@@ -55,7 +55,12 @@ async function sanitizeLogDetails(
     visitedObjects.add(details);
   }
 
-  const sanitized: Record<string, unknown> = {};
+  // Null-prototype accumulator (VULN-003): keyed assignment on a plain `{}`
+  // invokes the __proto__ setter for attacker-controlled keys (LOG_FORWARD
+  // details). A dictionary-prototype object has no such setter, so every
+  // `sanitized[key] = ...` below is a plain own-property write and the
+  // returned entry's prototype can never be re-pointed.
+  const sanitized = Object.create(null) as Record<string, unknown>;
 
   for (const [key, value] of Object.entries(details)) {
     if (value === null || value === undefined) {
