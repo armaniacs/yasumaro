@@ -25,6 +25,18 @@ export function sanitizePathComponent(component: string): string {
         return component;
     }
 
+    // Bare dot segments (`.` / `..`) are rejected as exact components:
+    // the URL sink (ENDPOINTS.dailyNote in obsidianClient.ts) normalizes
+    // dot-segments, so `..` alone escapes /vault/ even though the
+    // separator-anchored forms below are already blocked (VULN-001).
+    // Bare dot segments (`.` / `..`) must be rejected as exact components:
+    // the URL sink (ENDPOINTS.dailyNote in obsidianClient.ts) normalizes
+    // dot-segments, so `..` alone escapes /vault/ even though the
+    // separator-anchored forms below are already blocked (VULN-001).
+    if (component.trim() === '.' || component.trim() === '..') {
+        throw new Error('Invalid path component: dot segment detected');
+    }
+
     // 親ディレクトリ参照（../, ./）をブロック
     if (/\.\.?\//u.test(component) || /\.\.[\\/]/u.test(component)) {
         throw new Error('Invalid path component: path traversal detected');
