@@ -293,7 +293,11 @@ async function handleArchive(op: ArchiveOpType, msg: SqliteMessage, sendResponse
   const entry = ARCHIVE_DISPATCH[op];
   const payload = (msg as { payload?: Record<string, unknown> }).payload ?? {};
   const backend = await engine.getBackend();
-  const call = backend[entry.method] as unknown as (...args: unknown[]) => Promise<ArchiveBackendResult>;
+  // WHY: extracting the method unbound drops `this` — OpfsWorkerBackend's
+  // archive methods read this.proxyArchive, so a bare call threw
+  // "Cannot read properties of undefined (reading 'proxyArchive')" in
+  // OPFS mode (e2e @extension suite). Bind before invoking.
+  const call = (backend[entry.method] as unknown as (...args: unknown[]) => Promise<ArchiveBackendResult>).bind(backend);
   const result = await call(...entry.args(payload));
   if (!result.success) {
     sendResponse({ success: false, error: result.error });
