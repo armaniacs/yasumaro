@@ -177,3 +177,32 @@ describe('archiveWireDispatch: routing + projection', () => {
     expect(await dispatch('SQLITE_ARCHIVE_STATUS')).toEqual({ success: false, error: 'Archive status returned no data' });
   });
 });
+
+describe('archiveWireDispatch: backend receives its own `this`', () => {
+  // Regression for the CI e2e @extension failure ("Cannot read properties of
+  // undefined (reading 'proxyArchive')"): handleArchive extracts
+  // backend[entry.method] and calls it, which drops `this` for class-based
+  // backends whose archive methods read instance state. The plain-object fake
+  // above cannot catch this, so this suite uses a real class.
+  class ClassBasedBackend {
+    public proxyCalls = 0;
+    private proxyArchive(op: string): { op: string } {
+      // Reads instance state via `this` — throws exactly like
+      // OpfsWorkerBackend did when the dispatch loses the receiver.
+      this.proxyCalls++;
+      return { op };
+    }
+    archiveCreate(params: Record<string, unknown>): { success: true; stagingName: string; recordCount: number } {
+      this.proxyArchive('archiveCreate');
+      return { success: true, stagingName: String(params['cutoffDate']), recordCount: 1 };
+    }
+  }
+
+  it('binds the dispatch call to the backend instance', async () => {
+    const backend = new ClassBasedBackend();
+    getBackendMock.mockResolvedValue(backend);
+    const response = await dispatch('SQLITE_ARCHIVE_CREATE', { cutoffDate: '2026-01-01', cutoffMs: 1000, includeDeleted: false, yasumaroVersion: 'test' });
+    expect(response).toEqual({ success: true, stagingName: '2026-01-01', recordCount: 1 });
+    expect(backend.proxyCalls).toBe(1);
+  });
+});
