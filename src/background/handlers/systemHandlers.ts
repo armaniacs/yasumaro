@@ -284,6 +284,13 @@ export function deriveLogSource(sender: chrome.runtime.MessageSender): string {
   }
 }
 
+// Per-entry size bounds for forwarded logs (VULN-004). Count caps in
+// LogBuffer / storageAdapter bound entry COUNT, not per-entry size or CPU;
+// the trust boundary is this handler, so the bounds live here.
+const MAX_LOG_FORWARD_MESSAGE_CHARS = 64 * 1024;
+const MAX_LOG_FORWARD_DETAILS_KEYS = 64;
+const MAX_LOG_FORWARD_SERIALIZED_CHARS = 256 * 1024;
+
 export function createLogForwardHandler() {
   return async (
     message: LogForwardMessage,
@@ -294,20 +301,30 @@ export function createLogForwardHandler() {
     // offscreen document is the expected caller.
     const { level, message: logMessage, details, source } = message.payload;
     const derivedSource = deriveLogSource(sender);
+    const boundedMessage =
+      typeof logMessage === 'string' && logMessage.length > MAX_LOG_FORWARD_MESSAGE_CHARS
+        ? logMessage.slice(0, MAX_LOG_FORWARD_MESSAGE_CHARS)
+        : logMessage;
+    const detailEntries = Object.entries(details ?? {}).slice(0, MAX_LOG_FORWARD_DETAILS_KEYS);
+    const serialized = JSON.stringify(detailEntries) ?? '';
+    const boundedDetails: Record<string, unknown> =
+      serialized.length > MAX_LOG_FORWARD_SERIALIZED_CHARS
+        ? { truncated: true, preview: serialized.slice(0, MAX_LOG_FORWARD_SERIALIZED_CHARS) }
+        : Object.fromEntries(detailEntries);
     // payload.source is an untrusted display hint only; it must not decide
     // attribution. The neutralization boundary in logger/core.ts strips control
     // chars / ANSI / newlines from logMessage and every string in details
     // (VULN-044 co-parameter).
     const enrichedDetails = {
-      ...(details ?? {}),
+      ...boundedDetails,
       _sourceHintUntrusted: source,
     };
     if (level === 'error') {
-      await logError(logMessage, enrichedDetails, ErrorCode.INTERNAL_ERROR, derivedSource);
+      await logError(boundedMessage, enrichedDetails, ErrorCode.INTERNAL_ERROR, derivedSource);
     } else if (level === 'warn') {
-      await logWarn(logMessage, enrichedDetails, undefined, derivedSource);
+      await logWarn(boundedMessage, enrichedDetails, undefined, derivedSource);
     } else {
-      await logDebug(logMessage, enrichedDetails, derivedSource);
+      await logDebug(boundedMessage, enrichedDetails, derivedSource);
     }
     sendResponse({ success: true });
   };
