@@ -8,6 +8,16 @@
  */
 
 import { isServiceWorkerRequest } from './types.js';
+import {
+  MAX_CONTENT_LENGTH,
+  MAX_TITLE_LENGTH,
+  MAX_SEARCH_QUERY_LENGTH,
+  MAX_IMPORT_ROWS,
+  MAX_IMPORT_BYTES,
+  MAX_RESTORE_DB_BYTES,
+  MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
+  MAX_APPEND_IDS,
+} from './limits.js';
 import { isHttpScheme, assertCutoffPair, CutoffMismatchError, decodeStagingName } from '../utils/archiveGuards.js';
 import type {
   ExtensionMessage,
@@ -41,21 +51,21 @@ export interface MessageValidator<T> {
  */
 export const VALIDATOR_LIMITS = {
   /** VALID_VISIT / MANUAL_RECORD body text */
-  MAX_CONTENT_LENGTH: 1_000_000,
+  MAX_CONTENT_LENGTH,
   /** MANUAL_RECORD title */
-  MAX_TITLE_LENGTH: 500,
+  MAX_TITLE_LENGTH,
   /** DASHBOARD_SQLITE search query */
-  MAX_SEARCH_QUERY_LENGTH: 1_000,
+  MAX_SEARCH_QUERY_LENGTH,
   /** DASHBOARD_SQLITE import rows per request */
-  MAX_IMPORT_ROWS: 1_000,
+  MAX_IMPORT_ROWS,
   /** DASHBOARD_SQLITE import payload (JSON estimate) */
-  MAX_IMPORT_BYTES: 2_000_000,
+  MAX_IMPORT_BYTES,
   /** DASHBOARD_SQLITE restore_db payload */
-  MAX_RESTORE_DB_BYTES: 10_000_000,
+  MAX_RESTORE_DB_BYTES,
   /** DASHBOARD_SQLITE archive_export chunk size (base64 hops stay under 10MB) */
-  MAX_ARCHIVE_EXPORT_CHUNK_BYTES: 8 * 1024 * 1024,
+  MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
   /** DASHBOARD_SQLITE append_to_obsidian ids per request */
-  MAX_APPEND_IDS: 1_000,
+  MAX_APPEND_IDS,
 } as const;
 
 // ------------------------------------------------------------------

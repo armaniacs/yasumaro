@@ -7,6 +7,22 @@
  */
 
 import { vi } from 'vitest';;
+import { DEFAULT_SETTINGS } from '../storage/defaults.js';
+import { API_KEY_FIELDS } from '../storage/settingsMigration.js';
+
+/**
+ * Full DEFAULT_SETTINGS minus SSOT API key fields, matching what sanitized
+ * exports actually contain so success-path fixtures pass structure validation.
+ */
+function sanitizedSettings(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    const settings: Record<string, unknown> = {
+        ...(DEFAULT_SETTINGS as unknown as Record<string, unknown>),
+    };
+    for (const field of API_KEY_FIELDS) {
+        delete settings[field];
+    }
+    return { ...settings, ...overrides };
+}
 
 /**
  * 【テスト前準備】alert モックの設定
@@ -35,29 +51,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         const exportData = {
             version: '1.0.0',
             exportedAt: new Date().toISOString(),
-            settings: {
-                obsidian_protocol: 'http',
-                obsidian_port: '27124',
-                min_visit_duration: 1000,
-                min_scroll_depth: 50,
-                gemini_model: 'gemini-opus',
-                obsidian_daily_path: 'Daily/{date}',
-                ai_provider: 'openai',
-                openai_base_url: 'https://api.openai.com/v1',
-                openai_model: 'gpt-4',
-                openai_2_base_url: 'https://api.openai.com/v1',
-                openai_2_model: 'gpt-3.5-turbo',
-                domain_whitelist: '',
-                domain_blacklist: '',
-                domain_filter_mode: 'whitelist',
-                privacy_mode: false,
-                pii_confirmation_ui: false,
-                pii_sanitize_logs: false,
-                ublock_rules: '',
-                ublock_sources: '',
-                ublock_format_enabled: false,
-                simple_format_enabled: false,
-            },
+            settings: sanitizedSettings(),
             apiKeyExcluded: true,
             // signatureフィールドなし
         };
@@ -95,29 +89,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         const exportData = {
             version: '1.0.0',
             exportedAt: new Date().toISOString(),
-            settings: {
-                obsidian_protocol: 'http',
-                obsidian_port: '27124',
-                min_visit_duration: 1000,
-                min_scroll_depth: 50,
-                gemini_model: 'gemini-opus',
-                obsidian_daily_path: 'Daily/{date}',
-                ai_provider: 'openai',
-                openai_base_url: 'https://api.openai.com/v1',
-                openai_model: 'gpt-4',
-                openai_2_base_url: 'https://api.openai.com/v1',
-                openai_2_model: 'gpt-3.5-turbo',
-                domain_whitelist: '',
-                domain_blacklist: '',
-                domain_filter_mode: 'whitelist',
-                privacy_mode: false,
-                pii_confirmation_ui: false,
-                pii_sanitize_logs: false,
-                ublock_rules: '',
-                ublock_sources: '',
-                ublock_format_enabled: false,
-                simple_format_enabled: false,
-            },
+            settings: sanitizedSettings(),
             apiKeyExcluded: true,
             signature: mockSignature,
         };
@@ -151,29 +123,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         const exportData = {
             version: '1.0.0',
             exportedAt: new Date().toISOString(),
-            settings: {
-                obsidian_protocol: 'http',
-                obsidian_port: '27124',
-                min_visit_duration: 1000,
-                min_scroll_depth: 50,
-                gemini_model: 'gemini-opus',
-                obsidian_daily_path: 'Daily/{date}',
-                ai_provider: 'openai',
-                openai_base_url: 'https://api.openai.com/v1',
-                openai_model: 'gpt-4',
-                openai_2_base_url: 'https://api.openai.com/v1',
-                openai_2_model: 'gpt-3.5-turbo',
-                domain_whitelist: '',
-                domain_blacklist: '',
-                domain_filter_mode: 'whitelist',
-                privacy_mode: false,
-                pii_confirmation_ui: false,
-                pii_sanitize_logs: false,
-                ublock_rules: '',
-                ublock_sources: '',
-                ublock_format_enabled: false,
-                simple_format_enabled: false,
-            },
+            settings: sanitizedSettings(),
             apiKeyExcluded: true,
             signature: 'tampered-signature', // 改ざんされた署名
         };
@@ -265,29 +215,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         const exportData = {
             version: '1.0.0',
             exportedAt: new Date().toISOString(),
-            settings: {
-                obsidian_protocol: 'http',
-                obsidian_port: '27124',
-                min_visit_duration: 1000,
-                min_scroll_depth: 50,
-                gemini_model: 'gemini-opus',
-                obsidian_daily_path: 'Daily/{date}',
-                ai_provider: 'openai',
-                openai_base_url: 'https://api.openai.com/v1',
-                openai_model: 'gpt-4',
-                openai_2_base_url: 'https://api.openai.com/v1',
-                openai_2_model: 'gpt-3.5-turbo',
-                domain_whitelist: '',
-                domain_blacklist: '',
-                domain_filter_mode: 'whitelist',
-                privacy_mode: false,
-                pii_confirmation_ui: false,
-                pii_sanitize_logs: false,
-                ublock_rules: '',
-                ublock_sources: '',
-                ublock_format_enabled: false,
-                simple_format_enabled: false,
-            },
+            settings: sanitizedSettings(),
             apiKeyExcluded: true,
             signature: 12345, // 不正な署名形式（数値）
         };
@@ -346,29 +274,13 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         const exportData = {
             version: '1.0.0',
             exportedAt: new Date().toISOString(),
-            settings: {
-                obsidian_protocol: 'http',
-                obsidian_port: '27124',
-                min_visit_duration: 1000,
-                min_scroll_depth: 50,
-                gemini_model: 'gemini-opus',
-                obsidian_daily_path: 'Daily/日付/{date}', // 日本語と特殊文字
-                ai_provider: 'openai',
-                openai_base_url: 'https://api.openai.com/v1',
-                openai_model: 'gpt-4',
-                openai_2_base_url: 'https://api.openai.com/v1',
-                openai_2_model: 'gpt-3.5-turbo',
-                domain_whitelist: 'example.com\nexample.org', // 改行文字
-                domain_blacklist: 'test<script>alert(1)</test>', // HTML特殊文字
-                domain_filter_mode: 'whitelist',
-                privacy_mode: false,
-                pii_confirmation_ui: false,
-                pii_sanitize_logs: false,
-                ublock_rules: '🔒#rule1\n🔓#rule2', // 絵文字と改行
+            settings: sanitizedSettings({
+                obsidian_daily_path: 'Daily/日付/{date}',
+                domain_whitelist: 'example.com\nexample.org',
+                domain_blacklist: 'test<script>alert(1)</test>',
+                ublock_rules: '🔒#rule1\n🔓#rule2',
                 ublock_sources: 'src1,src2',
-                ublock_format_enabled: false,
-                simple_format_enabled: false,
-            },
+            }),
             apiKeyExcluded: true,
             signature: mockSignature,
         };
@@ -402,29 +314,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         const exportData = {
             version: '1.0.0',
             exportedAt: '2024-01-01T00:00:00.000Z', // 固定のタイムスタンプ
-            settings: {
-                obsidian_protocol: 'http',
-                obsidian_port: '27124',
-                min_visit_duration: 1000,
-                min_scroll_depth: 50,
-                gemini_model: 'gemini-opus',
-                obsidian_daily_path: 'Daily/{date}',
-                ai_provider: 'openai',
-                openai_base_url: 'https://api.openai.com/v1',
-                openai_model: 'gpt-4',
-                openai_2_base_url: 'https://api.openai.com/v1',
-                openai_2_model: 'gpt-3.5-turbo',
-                domain_whitelist: '',
-                domain_blacklist: '',
-                domain_filter_mode: 'whitelist',
-                privacy_mode: false,
-                pii_confirmation_ui: false,
-                pii_sanitize_logs: false,
-                ublock_rules: '',
-                ublock_sources: '',
-                ublock_format_enabled: false,
-                simple_format_enabled: false,
-            },
+            settings: sanitizedSettings(),
             apiKeyExcluded: true,
             signature: 'consistent-signature',
         };

@@ -25,13 +25,16 @@ import {
   purgeOldRecords as sqlitePurgeOldRecords,
   purgeContent as sqlitePurgeContent,
 } from './dbMaintenance.js';
-import type { ArchiveOpType } from '../messaging/archiveWireTable.js';
+import type { ArchiveDescriptor, ArchiveOpType } from '../messaging/archiveWireTable.js';
+import { ARCHIVE_DESCRIPTORS, pickProjectedFields } from '../messaging/archiveWireTable.js';
 import {
   insertAuditLog as sqliteInsertAuditLog,
   queryAuditLog as sqliteQueryAuditLog,
 } from './auditLogRepo.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
+import { normalizeStorageQuery } from './queryNormalize.js';
+import { UPDATABLE_FIELDS } from './schema.js';
 import { buildRecordFromPayload } from './browsingLogCodec.js';
 import type { SqliteMessage, SqliteMessageType } from '../messaging/sqliteMessages.js';
 
@@ -66,20 +69,7 @@ async function handleInsertBatch(msg: SqliteMessage, sendResponse: (r: unknown) 
 
 async function handleQuery(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_QUERY' }>).payload as Record<string, unknown>;
-  const options: import('../utils/sqlite-types.js').StorageQuery = pickDefined({
-    limit: payload?.limit != null ? Number(payload.limit) : undefined,
-    offset: payload?.offset != null ? Number(payload.offset) : undefined,
-    orderBy: payload?.orderBy as 'created_at' | 'rank' | undefined,
-    orderDir: payload?.orderDir as 'ASC' | 'DESC' | undefined,
-    domain: payload?.domain != null ? String(payload.domain) : undefined,
-    starred: payload?.starred != null ? Boolean(payload.starred) : payload?.isStarred != null ? Boolean(payload.isStarred) : undefined,
-    excludeDeleted: payload?.excludeDeleted != null ? Boolean(payload.excludeDeleted) : undefined,
-    dateFrom: payload?.dateFrom != null ? Number(payload.dateFrom) : payload?.since != null ? Number(payload.since) : undefined,
-    dateTo: payload?.dateTo != null ? Number(payload.dateTo) : payload?.until != null ? Number(payload.until) : undefined,
-    ids: payload?.ids != null ? (payload.ids as number[]) : undefined,
-    tag: payload?.tag != null ? String(payload.tag) : payload?.tagFilter != null ? String(payload.tagFilter) : undefined,
-    gistSynced: payload?.gistSynced != null ? Number(payload.gistSynced) : undefined,
-  });
+  const options: import('../utils/sqlite-types.js').StorageQuery = normalizeStorageQuery(payload);
   const result = await sqliteQuery(options);
   sendResponse(result);
 }
@@ -109,12 +99,7 @@ async function handleSearch(msg: SqliteMessage, sendResponse: (r: unknown) => vo
   const p = (msg as Extract<SqliteMessage, { type: 'SQLITE_SEARCH' }>).payload;
   const q: import('../utils/sqlite-types.js').StorageQuery = {
     text: String(p.query || ''),
-    ...pickDefined({
-      limit: p.limit != null ? Number(p.limit) : undefined,
-      offset: p.offset != null ? Number(p.offset) : undefined,
-      orderBy: p.orderBy as 'created_at' | 'rank' | undefined,
-      orderDir: p.orderDir as 'ASC' | 'DESC' | undefined,
-    }),
+    ...normalizeStorageQuery(p as unknown as Record<string, unknown>),
   };
   const result = await sqliteQuery(q);
   sendResponse(result);
@@ -124,39 +109,7 @@ async function handleUpdate(msg: SqliteMessage, sendResponse: (r: unknown) => vo
   const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_UPDATE' }>).payload as Record<string, unknown>;
   const id = Number(payload.id);
   const changes: Record<string, unknown> = {};
-  for (const key of [
-    'url',
-    'title',
-    'summary',
-    'tags',
-    'domain',
-    'visit_duration',
-    'scroll_ratio',
-    'is_starred',
-    'is_deleted',
-    'obsidian_synced',
-    'gist_synced',
-    'content',
-    'masked_count',
-    'cleansed_reason',
-    'ai_provider',
-    'ai_model',
-    'ai_duration_ms',
-    'obsidian_duration_ms',
-    'sent_tokens',
-    'received_tokens',
-    'original_tokens',
-    'cleansed_tokens',
-    'page_bytes',
-    'candidate_bytes',
-    'original_bytes',
-    'cleansed_bytes',
-    'ai_summary_original_bytes',
-    'ai_summary_cleansed_bytes',
-    'extracted_sentences_bytes',
-    'extracted_sentences_original_bytes',
-    'fallback_triggered',
-  ]) {
+  for (const key of UPDATABLE_FIELDS) {
     if (key in payload) {
       changes[key] = payload[key];
     }
@@ -281,20 +234,24 @@ async function handleContentPurge(msg: SqliteMessage, sendResponse: (r: unknown)
 }
 
 /**
- * Table-driven archive dispatch (PBI 2026-09-07-22).
+ * Table-driven archive dispatch (PBI 2026-09-07-22, codec by 2026-09-09-05).
  *
  * The 14 archive handlers used to be hand-written 1:1 copies that differed
- * only in backend method, payload args, and response projection. Each row
- * here carries exactly that per-op knowledge; handleArchive below executes
- * the shared shape (call backend -> project success fields -> forward the
- * failure reason). Keyed by ArchiveOpType, so a new table op without a row
- * here is a type error. Error strings are unchanged.
+ * only in backend method, payload args, and response projection. Each entry
+ * here is now a pure view over its wire-table descriptor — the method, the
+ * arg builder, the projected fields, and the empty-success message all live
+ * in the descriptor row. The Record<> still forces all 14 ops to be listed,
+ * so a table row without a dispatch entry is a type error. Error strings
+ * are unchanged.
  */
 type ArchiveBackendMethod =
   | 'archivePreview' | 'archiveCreate' | 'archiveCleanup' | 'archiveExportChunk'
   | 'archivePrepareIncoming' | 'archiveRestorePreview' | 'archiveRestore'
   | 'archiveDeleteByStaging' | 'archiveOpen' | 'archiveQuery' | 'archiveUpdate'
   | 'archiveSave' | 'archiveClose' | 'archiveStatus';
+
+type _TableBackendMethodsLive = ArchiveDescriptor['backendMethod'] extends ArchiveBackendMethod ? true : never;
+const _checkTableBackendMethods: _TableBackendMethodsLive = true;
 
 type ArchiveBackendResult = { success: true; [field: string]: unknown } | { success: false; error: string };
 
@@ -306,98 +263,41 @@ interface ArchiveDispatchEntry {
   emptyError: string;
 }
 
+function archiveDispatchEntry(descriptor: ArchiveDescriptor): ArchiveDispatchEntry {
+  return {
+    method: descriptor.backendMethod as ArchiveBackendMethod,
+    args: descriptor.backendArgs,
+    pick: (result) => pickProjectedFields(result, descriptor),
+    emptyError: descriptor.emptyError,
+  };
+}
+
 const ARCHIVE_DISPATCH: Record<ArchiveOpType, ArchiveDispatchEntry> = {
-  archivePreview: {
-    method: 'archivePreview',
-    args: (p) => [p['cutoffDate'] as string, p['cutoffMs'] as number, p['includeDeleted'] as boolean],
-    pick: (r) => ('preview' in r ? { preview: r['preview'] } : null),
-    emptyError: 'Archive preview returned no data',
-  },
-  archiveCreate: {
-    method: 'archiveCreate',
-    args: (p) => [p],
-    pick: (r) => ('stagingName' in r ? { stagingName: r['stagingName'], recordCount: r['recordCount'] } : null),
-    emptyError: 'Archive create returned no staging file',
-  },
-  archiveCleanup: {
-    method: 'archiveCleanup',
-    args: () => [],
-    pick: (r) => ('removed' in r ? { removed: r['removed'] } : null),
-    emptyError: 'Archive cleanup returned no data',
-  },
-  archiveExport: {
-    method: 'archiveExportChunk',
-    args: (p) => [p['stagingName'] as string, p['offset'] as number, p['length'] as number],
-    pick: (r) => ('chunk' in r ? { chunk: r['chunk'], nextOffset: r['nextOffset'], total: r['total'], done: r['done'] } : null),
-    emptyError: 'Archive export returned no data',
-  },
-  archivePrepareIncoming: {
-    method: 'archivePrepareIncoming',
-    args: () => [],
-    pick: (r) => ('stagingName' in r ? { stagingName: r['stagingName'] } : null),
-    emptyError: 'Archive prepare returned no staging name',
-  },
-  archiveRestorePreview: {
-    method: 'archiveRestorePreview',
-    args: (p) => [p['stagingName'] as string],
-    pick: (r) => ('preview' in r ? { preview: r['preview'] } : null),
-    emptyError: 'Archive restore preview returned no data',
-  },
-  archiveRestore: {
-    method: 'archiveRestore',
-    args: (p) => [p['stagingName'] as string],
-    pick: (r) => ('restored' in r ? { restored: r['restored'], restoredDeleted: r['restoredDeleted'], skipped: r['skipped'], skippedInvalid: r['skippedInvalid'] } : null),
-    emptyError: 'Archive restore returned no data',
-  },
-  archiveDeleteByStaging: {
-    method: 'archiveDeleteByStaging',
-    args: (p) => [p['stagingName'] as string],
-    pick: (r) => ('deleted' in r ? { deleted: r['deleted'], remaining: r['remaining'], freelistBefore: r['freelistBefore'], freelistAfter: r['freelistAfter'], vacuumOk: r['vacuumOk'] } : null),
-    emptyError: 'Archive purge returned no data',
-  },
-  archiveOpen: {
-    method: 'archiveOpen',
-    args: (p) => [p['stagingName'] as string],
-    pick: () => ({}),
-    emptyError: 'Archive open returned no data',
-  },
-  archiveQuery: {
-    method: 'archiveQuery',
-    args: (p) => [p['stagingName'] as string, p['query'] as string, p['limit'] as number, p['offset'] as number],
-    pick: (r) => ('rows' in r ? { rows: r['rows'], total: r['total'] } : null),
-    emptyError: 'Archive query returned no data',
-  },
-  archiveUpdate: {
-    method: 'archiveUpdate',
-    args: (p) => [p['stagingName'] as string, p['id'] as number, p['changes'] as Record<string, unknown>],
-    pick: (r) => ('dirty' in r ? { dirty: r['dirty'] } : null),
-    emptyError: 'Archive update returned no data',
-  },
-  archiveSave: {
-    method: 'archiveSave',
-    args: (p) => [p['stagingName'] as string],
-    pick: (r) => ('dirty' in r ? { dirty: r['dirty'] } : null),
-    emptyError: 'Archive save returned no data',
-  },
-  archiveClose: {
-    method: 'archiveClose',
-    args: (p) => [p['stagingName'] as string],
-    pick: (r) => ('dirty' in r ? { dirty: r['dirty'] } : null),
-    emptyError: 'Archive close returned no data',
-  },
-  archiveStatus: {
-    method: 'archiveStatus',
-    args: () => [],
-    pick: (r) => ('status' in r ? { status: r['status'] } : null),
-    emptyError: 'Archive status returned no data',
-  },
+  archivePreview: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archivePreview),
+  archiveCreate: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveCreate),
+  archiveCleanup: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveCleanup),
+  archiveExport: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveExport),
+  archivePrepareIncoming: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archivePrepareIncoming),
+  archiveRestorePreview: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveRestorePreview),
+  archiveRestore: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveRestore),
+  archiveDeleteByStaging: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveDeleteByStaging),
+  archiveOpen: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveOpen),
+  archiveQuery: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveQuery),
+  archiveUpdate: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveUpdate),
+  archiveSave: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveSave),
+  archiveClose: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveClose),
+  archiveStatus: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveStatus),
 };
 
 async function handleArchive(op: ArchiveOpType, msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const entry = ARCHIVE_DISPATCH[op];
   const payload = (msg as { payload?: Record<string, unknown> }).payload ?? {};
   const backend = await engine.getBackend();
-  const call = backend[entry.method] as unknown as (...args: unknown[]) => Promise<ArchiveBackendResult>;
+  // WHY: extracting the method unbound drops `this` — OpfsWorkerBackend's
+  // archive methods read this.proxyArchive, so a bare call threw
+  // "Cannot read properties of undefined (reading 'proxyArchive')" in
+  // OPFS mode (e2e @extension suite). Bind before invoking.
+  const call = (backend[entry.method] as unknown as (...args: unknown[]) => Promise<ArchiveBackendResult>).bind(backend);
   const result = await call(...entry.args(payload));
   if (!result.success) {
     sendResponse({ success: false, error: result.error });

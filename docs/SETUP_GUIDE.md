@@ -40,7 +40,7 @@
 
 ### ステップ3: Chrome拡張機能のインストール
 
-> Chrome Web Store への配布は終了しました（署名鍵の不整合により既存の拡張機能 ID を更新できなくなったため）。Chrome / Brave では方法B または方法C をご利用ください。
+> Chrome Web Store での配布は現在停止しています（署名鍵の不整合により既存の拡張機能 ID を更新できなくなったため。将来的に別 ID で再開する可能性があります）。Chrome / Brave では方法B または方法C をご利用ください。
 
 #### 方法A: Edge Add-ons からインストール
 1. [Edge Add-ons の Yasumaro ページ](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep) を開きます。
@@ -312,7 +312,7 @@ Summary:
 
 ### Step 3: Install Chrome Extension
 
-> Chrome Web Store distribution has ended (a signing-key mismatch made the existing extension ID impossible to update). On Chrome / Brave, use Option B or Option C.
+> Chrome Web Store distribution is currently paused (a signing-key mismatch made the existing extension ID impossible to update; it may resume later under a different ID). On Chrome / Brave, use Option B or Option C.
 
 #### Option A: Install from Edge Add-ons
 1. Open the [Yasumaro page on Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep).
