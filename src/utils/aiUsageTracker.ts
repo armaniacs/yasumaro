@@ -207,15 +207,35 @@ export function recordUsage(
   return withCounterLock(() => recordUsageUnlocked(tokensSent, tokensReceived));
 }
 
+/**
+ * Per-call sanity cap for provider-reported token counts (VULN-002):
+ * no legitimate single response reports more than this many tokens.
+ */
+const MAX_TOKENS_PER_CALL = 10_000_000;
+
+// Provider-reported counts are untrusted third-party data (VULN-002):
+// negative values would suppress the monthly hard-limit trip and absurd
+// values would force a false limit. Sanitize at the single funnel that
+// every provider caller (OpenAI / Gemini / BuiltIn via recordUsageIfPresent)
+// shares.
+function sanitizeTokenCount(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    return 0;
+  }
+  return Math.min(Math.floor(value), MAX_TOKENS_PER_CALL);
+}
+
 async function recordUsageUnlocked(
   tokensSent: number,
   tokensReceived: number
 ): Promise<void> {
   const usage = await getMonthlyUsage();
+  const safeSent = sanitizeTokenCount(tokensSent);
+  const safeReceived = sanitizeTokenCount(tokensReceived);
 
   await chrome.storage.local.set({
-    [StorageKeys.AI_USAGE_TOKENS_SENT]: usage.tokensSent + tokensSent,
-    [StorageKeys.AI_USAGE_TOKENS_RECEIVED]: usage.tokensReceived + tokensReceived,
+    [StorageKeys.AI_USAGE_TOKENS_SENT]: usage.tokensSent + safeSent,
+    [StorageKeys.AI_USAGE_TOKENS_RECEIVED]: usage.tokensReceived + safeReceived,
     [StorageKeys.AI_USAGE_REQUEST_COUNT]: usage.requestCount + 1
   });
 }
