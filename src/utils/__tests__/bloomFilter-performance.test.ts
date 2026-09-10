@@ -84,13 +84,31 @@ describe('BloomFilter Performance Tests', () => {
 
     const data = bloom.toData();
 
-    // Should throw when hash is corrupted
+    // Should throw when a SHA-256-format hash is corrupted (VULN-005 keeps
+    // this contract: valid-format, wrong-value hashes still fail closed)
     expect(() => {
       bloomFilterFromData({
         ...data,
-        hash: 'invalid-hash'
+        hash: `${'a'.repeat(63)}b`
       });
     }).toThrow('hash mismatch');
+  });
+
+  test('bloomFilterFromData quarantines legacy-format hashes (VULN-005)', () => {
+    const domainCount = 100;
+    const domains = Array.from({ length: domainCount }, (_, i) => `domain${i}.org`);
+    const bloom = bloomFilterFromDomains(domains, 0.01);
+
+    const data = bloom.toData();
+
+    // Legacy (non-SHA-256) hashes are no longer verified via simpleHash; the
+    // blob is quarantined to the untrusted default (empty filter) instead.
+    const quarantined = bloomFilterFromData({
+      ...data,
+      hash: 'invalid-hash'
+    });
+    expect(quarantined.getParams().expectedDomainCount).toBe(0);
+    expect(quarantined.mightContain('domain0.org')).toBe(false);
   });
 
   test('encoding handles empty bloom filter', () => {
