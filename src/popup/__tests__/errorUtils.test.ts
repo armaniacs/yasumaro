@@ -184,24 +184,16 @@ describe('showError', () => {
       onclick: null
     };
 
-    // jsdom環境でdocument.createElementをspy
-    if (typeof document !== 'undefined') {
-      createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(mockButton as unknown as HTMLElement);
-    } else {
-      // documentが存在しない場合はダミーを設定
-      global.document = {
-        createElement: vi.fn().mockReturnValue(mockButton)
-      } as unknown as Document;
-      createElementSpy = global.document.createElement as unknown as ReturnType<typeof vi.spyOn>;
-    }
+    // jsdom環境でdocument.createElementをspy（vitest 5 では環境グローバルが
+    // 常に存在するため、ダミー document を組むフォールバックは不要）
+    createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(mockButton as unknown as HTMLElement);
   });
 
   afterEach(() => {
-    if (typeof document !== 'undefined') {
-      createElementSpy?.mockRestore();
-    }
+    createElementSpy?.mockRestore();
     vi.restoreAllMocks();
-    global.document = undefined as unknown as Document;
+    // vitest 5: 環境グローバル (document) は getter-only のため直接代入できない。
+    // jsdom 環境の document は環境側が管理するのでここでは触らない
   });
 
   test('一般エラーを表示', () => {

@@ -4,12 +4,8 @@
  * focusTrap.ts の単体テスト
  */
 
-import { JSDOM } from 'jsdom';
-
-// jsdom 環境で document を使用
-const dom = new JSDOM(`<!DOCTYPE html><html><body></body></html>`, { url: 'http://localhost' });
-(globalThis as any).document = dom.window.document;
-(globalThis as any).HTMLElement = dom.window.HTMLElement;
+// jsdom 環境が提供する document / HTMLElement をそのまま使用する
+// (vitest 5 から環境グローバルへの直接代入は不可のため、手動 JSDOM 構築は廃止)
 
 import {
     FocusTrapManager,

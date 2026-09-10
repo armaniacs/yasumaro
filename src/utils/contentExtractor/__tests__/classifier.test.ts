@@ -290,13 +290,12 @@ describe('contentExtractor/classifier', () => {
     });
 
     it('returns false when document is undefined', () => {
-      const originalDocument = global.document;
       const el = document.createElement('div');
       el.className = 'article-content';
-      // @ts-expect-error - simulate non-DOM environment
-      global.document = undefined;
+      // simulate non-DOM environment (vitest 5: 環境グローバルへの直接代入は不可のため stubGlobal を使う)
+      vi.stubGlobal('document', undefined);
       const result = isAsianContentElement(el);
-      global.document = originalDocument;
+      vi.unstubAllGlobals();
       expect(result).toBe(false);
     });
 
