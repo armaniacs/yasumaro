@@ -545,3 +545,60 @@ describe('aiUsageTracker', () => {
         });
     });
 });
+// Seeds the usage counters for the CURRENT month so getMonthlyUsage() does
+// not take its monthly-reset branch (which would zero the baseline).
+function currentMonthKey(): string {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function seedUsage(sent: number, received: number, count: number): void {
+  mockStorage['ai_usage_month'] = currentMonthKey();
+  mockStorage['ai_usage_tokens_sent'] = sent;
+  mockStorage['ai_usage_tokens_received'] = received;
+  mockStorage['ai_usage_request_count'] = count;
+  mockStorage['max_monthly_tokens'] = 1_000_000;
+}
+
+describe('VULN-002: provider-reported token counts must be validated', () => {
+  beforeEach(() => {
+    Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
+  });
+
+  it.each([
+    { name: 'negative count (hard-limit suppression)', sent: -890_000, received: 0 },
+    { name: 'NaN', sent: Number.NaN, received: Number.NaN },
+    { name: 'Infinity', sent: Number.POSITIVE_INFINITY, received: 0 },
+    { name: 'absurd magnitude (false-limit DoS)', sent: 9_999_999_999, received: 0 },
+  ])('rejects/clamps $name without corrupting counters', async ({ sent, received }) => {
+    seedUsage(1_000, 2_000, 5);
+
+    await recordUsage(sent, received);
+
+    const usage = await getMonthlyUsage();
+    expect(Number.isFinite(usage.tokensSent)).toBe(true);
+    expect(usage.tokensSent).toBeGreaterThanOrEqual(1_000); // never decreases
+    expect(usage.tokensSent).toBeLessThanOrEqual(1_000 + 10_000_000); // bounded
+    expect(usage.tokensReceived).toBeGreaterThanOrEqual(2_000);
+  });
+
+  it('negative counts never suppress the monthly hard limit', async () => {
+    seedUsage(999_000, 0, 1);
+
+    expect((await checkHardLimit()).blocked).toBe(false);
+
+    await recordUsage(-890_000, -0);
+
+    const usage = await getMonthlyUsage();
+    expect(usage.tokensSent).toBeGreaterThanOrEqual(999_000);
+  });
+
+  it('still records legitimate provider counts', async () => {
+    seedUsage(1_000, 2_000, 5);
+
+    await recordUsage(1_234, 5_678);
+    const usage = await getMonthlyUsage();
+    expect(usage.tokensSent).toBe(2_234);
+    expect(usage.tokensReceived).toBe(7_678);
+  });
+});
