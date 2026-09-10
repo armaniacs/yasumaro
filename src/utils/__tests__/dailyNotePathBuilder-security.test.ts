@@ -6,7 +6,7 @@
  * 修正後: 無効なパス入力はエラーをスローする
  */
 
-import { buildDailyNotePath } from '../dailyNotePathBuilder.js';
+import { buildDailyNotePath, sanitizePathComponent } from '../dailyNotePathBuilder.js';
 
 describe('buildDailyNotePath - セキュリティテスト（パートラバーサル対策済み）', () => {
   const testDate = new Date('2026-02-07');
@@ -199,6 +199,36 @@ describe('buildDailyNotePath - セキュリティテスト（パートラバー�
       const result = buildDailyNotePath('my folder/YYYY-MM-DD', testDate);
       expect(result).toBe('my folder/2026-02-07');
     });
+  });
+});
+
+describe('VULN-001: bare dot segments must be rejected (path traversal)', () => {
+  it('rejects bare `..` as a path component', () => {
+    // VULN-001 PoC payload: settings value `..` (no trailing separator).
+    expect(() => sanitizePathComponent('..')).toThrow();
+  });
+
+  it('rejects bare `.` as a path component', () => {
+    expect(() => sanitizePathComponent('.')).toThrow();
+  });
+
+  it('rejects dot segments padded with whitespace', () => {
+    expect(() => sanitizePathComponent(' .. ')).toThrow();
+  });
+
+  it('never produces a URL that escapes /vault/ via dot-segment normalization', () => {
+    let dailyPath: string;
+    try {
+      dailyPath = buildDailyNotePath('..');
+    } catch {
+      return; // thrown at the boundary = secure
+    }
+    const normalized = new URL(`https://127.0.0.1:27124/vault/${dailyPath}/2026-09-10.md`).toString();
+    expect(normalized.includes('/vault/')).toBe(true);
+  });
+
+  it('still accepts legitimate path components', () => {
+    expect(sanitizePathComponent('Daily Notes')).toBe('Daily Notes');
   });
 });
 
