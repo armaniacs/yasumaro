@@ -34,26 +34,12 @@ function makeState(worker: Partial<Worker> | null): OpfsProxyState {
 }
 
 describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
-  let originalNavigator: unknown;
-  let originalWorker: unknown;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    originalNavigator = (globalThis as unknown as { navigator: unknown }).navigator;
-    originalWorker = (globalThis as unknown as { Worker: unknown }).Worker;
-  });
-
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+    // vi.unstubAllGlobals() が stub 前の環境グローバルへ戻す。
+    // vitest 5 では環境グローバルへの直接代入が不可のため手動復元は行わない
     vi.unstubAllGlobals();
-    // restore navigator
-    if (originalNavigator !== undefined) {
-      (globalThis as unknown as { navigator: unknown }).navigator = originalNavigator as never;
-    }
-    if (originalWorker !== undefined) {
-      (globalThis as unknown as { Worker: unknown }).Worker = originalWorker as never;
-    }
   });
 
   // ── isOpfsAvailable ───────────────────────────────────────────────────
