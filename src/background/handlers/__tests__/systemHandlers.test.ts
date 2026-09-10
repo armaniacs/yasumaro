@@ -35,7 +35,7 @@ vi.mock('../../../utils/storage/savedUrlRepository.js', () => ({
 import { validateUrlForFilterImport, fetchWithTimeout } from '../../../utils/fetch.js';
 import { updateSavedUrlEntry } from '../../../utils/storage/savedUrlRepository.js';
 import type { SavedUrlEntry } from '../../../utils/urlEntry.js';
-import { logError } from '../../../utils/logger.js';
+import { logError, logWarn } from '../../../utils/logger.js';
 
 describe('createFetchUrlHandler', () => {
   beforeEach(() => {
@@ -480,5 +480,58 @@ describe('createLogForwardHandler', () => {
 
     await handler({ payload: { level: 'info', message: 'Hello', source: 'offscreen' } } as any, {} as any, sendResponse);
     expect(sendResponse).toHaveBeenCalledWith({ success: true });
+  });
+});
+const MB = 1024 * 1024;
+
+async function forward(payload: {
+  level: 'warn' | 'error' | 'info';
+  message: string;
+  details?: Record<string, unknown>;
+  source: string;
+}) {
+  const handler = createLogForwardHandler();
+  const sendResponse = vi.fn();
+  await handler(
+    { type: 'LOG_FORWARD', protocolVersion: 1, payload } as never,
+    { id: 'chrome-runtime-id' } as unknown as chrome.runtime.MessageSender,
+    sendResponse,
+  );
+  return sendResponse;
+}
+
+describe('VULN-004: LOG_FORWARD enforces per-entry size caps', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('truncates an oversized logMessage before the logger pipeline', async () => {
+    await forward({ level: 'error', message: 'A'.repeat(10 * MB), source: 'offscreen' });
+    const logged = vi.mocked(logError).mock.calls[0]?.[0] as string;
+    expect(logged.length).toBeLessThanOrEqual(64 * 1024);
+  });
+
+  it('caps the details key count', async () => {
+    const many: Record<string, unknown> = {};
+    for (let i = 0; i < 500; i++) many[`k${i}`] = i;
+    await forward({ level: 'error', message: 'm', details: many, source: 'offscreen' });
+    const details = vi.mocked(logError).mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(Object.keys(details).length).toBeLessThanOrEqual(65); // 64 cap + _sourceHintUntrusted
+  });
+
+  it('caps the serialized details size', async () => {
+    await forward({
+      level: 'error',
+      message: 'm',
+      details: { blob: 'B'.repeat(4 * MB) },
+      source: 'offscreen',
+    });
+    const details = vi.mocked(logError).mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(JSON.stringify(details)?.length ?? 0).toBeLessThanOrEqual(256 * 1024 + 1024);
+  });
+
+  it('still forwards normal logs verbatim', async () => {
+    await forward({ level: 'warn', message: 'hello', details: { a: 1 }, source: 'offscreen' });
+    expect(vi.mocked(logWarn).mock.calls[0]?.[0]).toBe('hello');
   });
 });
