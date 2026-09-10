@@ -8,7 +8,7 @@
  * 2. なぜ非暗号ハッシュを採用したか: 初期実装で「データ破損検出のみ」目的とコメント (セキュリティ用途ではない) し暗号学的完全性を不要と判断
  * 3. なぜ見過ごされたか: TrustDb の脅威モデルで「ローカルストレージ改ざん」を想定せず Bloomデータは信頼できる前提で設計
  * 4. なぜWebCryptoを使わなかったか: SubtleCrypto が async のため toData()/bloomFilterFromData() の同期API維持を優先し簡易ハッシュを選択
- * 5. 解: 衝突耐性のある SHA-256 (WebCrypto crypto.subtle.digest('SHA-256') と同一出力の同期実装) に置換。旧 simpleHash は移行期間のみ警告付きで許容し、次回保存時に SHA-256 へ自動移行
+ * 5. 解: 衝突耐性のある SHA-256 (WebCrypto crypto.subtle.digest('SHA-256') と同一出力の同期実装) に置換。旧 simpleHash データは信頼できないため復元時に隔離 (空フィルタ) し、次回保存時に SHA-256 へ自動移行
  *
  * 選定理由 (ADR):
  * - SHA-256 を第一段階とし HMAC は見送り。鍵管理 (chrome.storage へのHMAC鍵保存) が別PBIを要するため
@@ -154,7 +154,7 @@ function isSha256Hex(hash: string): boolean {
 
 /**
  * BloomFilterData から復元
- * 新データは SHA-256 で検証。旧 simpleHash データは警告ログの上で許容し次回保存時に SHA-256 へ移行する
+ * 新データは SHA-256 で検証。旧 simpleHash データは信頼できないため復元時に隔離 (空フィルタ) し、次回保存時に SHA-256 へ移行する
  */
 export function bloomFilterFromData(data: BloomFilterData): TrustBloomFilter {
   // ハッシュ検証（データ整合性チェック）
@@ -165,14 +165,13 @@ export function bloomFilterFromData(data: BloomFilterData): TrustBloomFilter {
         throw new Error('Bloom Filter data integrity check failed: hash mismatch');
       }
     } else {
-      // 旧データ移行パス: simpleHash で検証し警告を出す
-      const computedLegacy = simpleHash(data.data);
-      if (computedLegacy !== data.hash) {
-        throw new Error('Bloom Filter data integrity check failed: hash mismatch');
-      }
-      console.warn(
-        '[TrustBloomFilter] Legacy simpleHash detected. Data integrity is verified with deprecated hash. It will be upgraded to SHA-256 on next save.'
-      );
+      // Legacy simpleHash blobs are no longer trusted (VULN-005): an unkeyed
+      // 32-bit hash is trivially forgeable, so accepting the blob would honor
+      // a broken protection mechanism in a security-sensitive check.
+      // Quarantine to the untrusted default (empty filter) instead of
+      // restoring; the domain verifier treats it as unknown and the next
+      // save() rebuilds and rotates the blob to SHA-256.
+      return createBloomFilter({ expectedDomainCount: 0 });
     }
   }
 
@@ -181,22 +180,6 @@ export function bloomFilterFromData(data: BloomFilterData): TrustBloomFilter {
     bitCount: data.bitCount,
     expectedDomainCount: data.expectedDomainCount
   });
-}
-
-/**
- * 簡易的なハッシュ関数（整合性チェック用・非推奨）
- * 旧データ移行のために残存。新規データは sha256HexSync を使用
- * @deprecated Use sha256HexSync instead
- */
-function simpleHash(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  // シフト演算後に文字列に変換
-  return Math.abs(hash).toString(16);
 }
 
 /**
