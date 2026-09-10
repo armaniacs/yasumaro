@@ -312,3 +312,21 @@ export const VIDEO_SITE_PATTERNS = [
     // 再生回数・マイリスト登録数・会員限定バッジ
     'view-count-badge', 'mylist-count', 'member-only-badge',
 ];
+
+/**
+ * Article-card / list-item patterns.
+ * Formerly lived in stripCore.ts next to its only consumer; moved here with
+ * the other pattern constants so selectorRules.ts can own the card row
+ * without a stripCore import cycle (stripCore delegates back to the engine).
+ */
+export const CARD_PATTERNS = [
+    'card', 'article-card', 'post-card', 'entry-card',
+    'item-card', 'product-card', 'recipe-card',
+    'list-item', 'entry-item', 'post-item',
+    'ranking-item', 'popular-item', 'trending-item',
+    'recommend-item', 'pickup-item', 'feature-item',
+    'related-item', 'sns-post', 'timeline-item',
+    // 日本語
+    'kiji', 'article-list__item', 'post-list__item',
+    'recommend-list', 'pickup-list', 'ranking-list'
+];

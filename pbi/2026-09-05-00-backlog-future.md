@@ -52,11 +52,22 @@
 
 | 項目 | RICE | 再評価条件 |
 |------|------|-----------|
-| UPDATE 許可フィールドの 4 枚舌リスト（schema `UPDATABLE_FIELDS` 31 件 vs deps `ALLOWED_UPDATE_FIELDS` 10 件 vs `handleUpdate` 直書き ~31 件 vs archiveSessionHandlers 検査。dashboard 経路と offscreen 直叩きで許可集合が食い違う drift 実在） | 6.0 | **PBI 2026-09-07-22（archive wire 統合）着地後** — deps.ts / sqliteMessageHandlers.ts を共有するため |
-| Archive validation 三つ巴（validateStructure / validateColumns が同一 PRAGMA reader を二重保持、`readArchiveMeta` は 1 flag の浅い wrapper、backupHandlers の trigger-count 検査は「コピー禁止」警告付き） | 4.8 | **PBI 21/22 着地後**（archiveSessionHandlers・archiveValidation を共有） |
-| SqliteHistoryModel 21 メソッド → 8（フィルタ系 8 メソッドを `HistoryQuery` 値オブジェクト + `applyQuery(patch)` に畳む。onNavigateIn 順序制約の contract test が前提） | 5.25 | **PBI 2026-09-07-23（View 描画統合）着地後** — 同一ファイルクラスタ |
+| Archive validation 三つ巴（validateStructure / validateColumns が同一 PRAGMA reader を二重保持、`readArchiveMeta` は 1 flag の浅い wrapper、backupHandlers の trigger-count 検査は「コピー禁止」警告付き） | 4.8 | **PBI 21/22 着地後**（archiveSessionHandlers・archiveValidation を共有）※2026-09-09 再評価: PRAGMA reader は統合済み、残渣 ~−10LOC は下記 round 3 台帳に移管 |
+| SqliteHistoryModel 21 メソッド → 8（フィルタ系 8 メソッドを `HistoryQuery` 値オブジェクト + `applyQuery(patch)` に畳む。onNavigateIn 順序制約の contract test が前提） | 5.25 | **PBI 2026-09-07-23（View 描画統合）着地後** — 同一ファイルクラスタ ※2026-09-09 再評価で RICE 2.5 に低下、下記 round 3 台帳へ |
 | recordingHandlers の MANUAL/SAVE 双子（isSecureUrl + record 尾部 + byteStats 束の重複。`envelopePolicy` の extension-only 扱いを変えない条件で統合可） | 3.5 | envelopePolicy との相互作用を検討する次回 recording ハンドラ改修時 |
 | Archive session 状態機械の二重化（worker `archiveDirty` と panel `archiveDirtyLocal` の同期点 3 箇所、single-flight 3 旗が 2 流儀 4 実装、テスト用内部リセット関数 30+ 参照） | 3.0 | panel 写しを「毎回 status RPC」に置き換える latency 体感の検討後（`ArchiveSession` 値オブジェクト + `withSingleFlight` への統合が解の骨格） |
+
+（UPDATE 許可フィールドの 4 枚舌リスト（RICE 6.0）は 2026-09-09 round 3 の PBI 02 で実装済み — 履歴は `dev-docs/archived/pbi/2026-09-09-02-refactor-update-whitelist-ssot.md`）
+
+**2026-09-09 round 3（arch-delivery-loop・0909a ブランチ）で台帳入り（5 項目）:**
+
+| 項目 | RICE | 再評価条件 |
+|------|------|-----------|
+| archivePanel.ts（547 行）の 5 関心分離（create/purge/session+modal/reconnect/restore が 1 mount に混在、`ArchiveSessionRowLike` 同一ファイル内 2 重定義） | 2.7 | 次回 archive panel 機能追加時（`asyncData/` パターンをテンプレに） |
+| trustSettings.ts のタグリスト 3 コピー → TagListController（threshold の `chrome.storage.local.set` 直呼びも SSOT 外） | 2.7 | 次回 trust 設定改修時 |
+| Archive validation 残渣（hidden-column ガード ×2・shallow `readArchiveMeta`・`parseColumnTypesFromSchema` 無 memo 化・close-on-reject 3 流儀。~−10LOC） | 2.7 | 次回 archive 系作業に同梱 |
+| SqliteHistoryModel 21→8 畳み込み（contract test `sqliteHistoryModel.navigate.test.ts` 既存。着手時は `toHaveLength(21)` pin を更新） | 2.5 | テスト改修 ~200 行に対する payoff 再評価後 |
+| statusPanel の render-only 狩窄（`recordBtn.disabled` 二重所有解消・cleansing if-chain テーブル化） | 1.6 | recordBtn 二重所有の bug が顕在化したとき |
 
 ## 運用
 

@@ -1,21 +1,29 @@
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
-import type { ArchivePreviewData, ArchiveRestorePreviewData, ArchiveSessionRow, ArchiveSessionStatusData } from '../messaging/sqliteMessages.js';
+import type { ArchiveDescriptor, DescriptorResponse } from '../messaging/archiveWireTable.js';
 
-export interface ArchivePreviewResult { success: true; preview: ArchivePreviewData }
+/**
+ * Archive result shapes derive from the wire-table descriptors
+ * (PBI 2026-09-09-05): the field set each backend method returns is the
+ * descriptor's projected wire set, so the interface cannot drift from the
+ * dashboard decode, the background re-projection, or the worker project.
+ */
+type ArchiveWire<Op extends ArchiveDescriptor['op']> = DescriptorResponse<Extract<ArchiveDescriptor, { op: Op }>>;
+
+export type ArchivePreviewResult = ArchiveWire<'archivePreview'>;
 export interface ArchiveCreateParams { cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }
-export interface ArchiveCreateResult { success: true; stagingName: string; recordCount: number }
-export interface ArchiveCleanupResult { success: true; removed: string[] }
-export interface ArchiveExportChunkResult { success: true; chunk: number[]; nextOffset: number; total: number; done: boolean }
-export interface ArchivePrepareIncomingResult { success: true; stagingName: string }
-export interface ArchiveRestorePreviewResult { success: true; preview: ArchiveRestorePreviewData }
-export interface ArchiveRestoreResult { success: true; restored: number; restoredDeleted: number; skipped: number; skippedInvalid: number }
-export interface ArchiveDeleteByStagingResult { success: true; deleted: number; remaining: number; freelistBefore: number; freelistAfter: number; vacuumOk: boolean }
-export interface ArchiveOpenResult { success: true }
-export interface ArchiveQueryResult { success: true; rows: ArchiveSessionRow[]; total: number }
-export interface ArchiveUpdateResult { success: true; dirty: boolean }
-export interface ArchiveSaveResult { success: true; dirty: boolean }
-export interface ArchiveCloseResult { success: true; dirty: boolean }
-export interface ArchiveStatusResult { success: true; status: ArchiveSessionStatusData }
+export type ArchiveCreateResult = ArchiveWire<'archiveCreate'>;
+export type ArchiveCleanupResult = ArchiveWire<'archiveCleanup'>;
+export type ArchiveExportChunkResult = ArchiveWire<'archiveExport'>;
+export type ArchivePrepareIncomingResult = ArchiveWire<'archivePrepareIncoming'>;
+export type ArchiveRestorePreviewResult = ArchiveWire<'archiveRestorePreview'>;
+export type ArchiveRestoreResult = ArchiveWire<'archiveRestore'>;
+export type ArchiveDeleteByStagingResult = ArchiveWire<'archiveDeleteByStaging'>;
+export type ArchiveOpenResult = ArchiveWire<'archiveOpen'>;
+export type ArchiveQueryResult = ArchiveWire<'archiveQuery'>;
+export type ArchiveUpdateResult = ArchiveWire<'archiveUpdate'>;
+export type ArchiveSaveResult = ArchiveWire<'archiveSave'>;
+export type ArchiveCloseResult = ArchiveWire<'archiveClose'>;
+export type ArchiveStatusResult = ArchiveWire<'archiveStatus'>;
 
 export interface InsertResult { success: true; id: number }
 export interface InsertBatchResult { success: true; inserted: number; skipped: number }

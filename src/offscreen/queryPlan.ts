@@ -9,6 +9,7 @@
 
 import { buildWhereClause, buildOrderByClause, buildFts5OrderClause, buildLikeOrderClause, buildFtsTagMatchCondition, sanitizeTextForFts5, shouldUseFts5 } from './sqliteQueryBuilder.js';
 import { sanitizeFtsTerm } from './schema.js';
+import { BROWSING_LOG_COLUMNS_SQL } from './rowCodec.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
 import type { SqliteValue } from './sqliteEngine.js';
 
@@ -265,6 +266,8 @@ export function buildFtsSearchStatements(
 ): SearchStatements {
   // `AS c` alias: required by the opfs named-row reader (row.c), ignored by
   // the idb positional reader (row[0]) — one text serves both (PBI-34).
+  // rowCodec.test.ts pins this: every COUNT emits `AS c`, every FTS rows
+  // query emits `rank AS rank`, so the codec mappers never read bare names.
   const countSql =
     'SELECT COUNT(*) AS c FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
     `WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extra.extraWhereSqlFts}`;
@@ -312,12 +315,12 @@ export function buildLikeSearchStatements(
  * in-memory paths ignore it as well. Unifying that would change idb query
  * results, so the gap stays explicit at the call site instead.
  */
-export const PLAIN_LIST_COLUMNS =
-  'id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced, gist_synced';
+/** Canonical plain-list projection — owned by rowCodec; kept here so existing importers keep working. */
+export const PLAIN_LIST_COLUMNS = BROWSING_LOG_COLUMNS_SQL;
 
 export function buildPlainListStatements(
   spec: Pick<QuerySpec, 'where' | 'order' | 'limit' | 'offset' | 'params'>,
-  opts: { tag?: string | null; columns?: string } = {}
+  opts: { tag?: string | null; columns: string },
 ): SearchStatements {
   let where = spec.where;
   const params: SqliteValue[] = [...spec.params];
@@ -328,7 +331,7 @@ export function buildPlainListStatements(
   }
   return {
     countSql: `SELECT COUNT(*) AS c FROM browsing_logs ${where}`,
-    rowsSql: `SELECT ${opts.columns ?? '*'} FROM browsing_logs ${where} ${spec.order} LIMIT ? OFFSET ?`,
+    rowsSql: `SELECT ${opts.columns} FROM browsing_logs ${where} ${spec.order} LIMIT ? OFFSET ?`,
     countParams: params,
     rowsParams: [...params, spec.limit, spec.offset],
   };

@@ -57,7 +57,10 @@ function makeOpfsStub(countResult = 0) {
 }
 
 const rowSql = (calls: { sql: string }[]) =>
-  calls.find((c) => /ORDER BY/i.test(c.sql) && !/COUNT/i.test(c.sql))?.sql ?? '';
+  // Match COUNT(*) specifically: explicit column lists now contain
+  // masked_count (PBI 03 replaced SELECT *), which a bare /COUNT/ would
+  // wrongly exclude.
+  calls.find((c) => /ORDER BY/i.test(c.sql) && !/COUNT\(\*\)/i.test(c.sql))?.sql ?? '';
 
 describe('PBI-34 parametric: same logical search, SQL ORDER parity (idb vs opfs)', () => {
   beforeEach(() => {
