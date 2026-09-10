@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.1` リリース。
+> - 現時点では `v6.8.4` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,18 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.8.4] - 2026-09-10
+
+このリリースは v6.8.3 と同日に公開するセキュリティ修正リリースです。VulnHunter 監査で特定された 5 件の脆弱性（VULN-001〜005）を、TDD（エクスプロイト実証 → RED → GREEN）で修復しました。全テスト（11,995 件）がグリーンです。
+
+### Security
+
+- **Obsidian 日次ノートの書き込み先パス検証を強化**（VULN-001 / CWE-22）: 日次ノートパスのサニタイザが `../` 等のセパレータ付き親参照のみを拒否し、裸の `..` / `.` 成分を許容していた。Obsidian REST の URL はドットセグメント正規化されるため、設定値 `..` で `/vault/` 外への書き込みが可能だった。パス成分としての `..` / `.`（前後空白を含む）を拒否するよう修正
+- **AI プロバイダー報告の usage トークン数を検証**（VULN-002 / CWE-190）: プロバイダー応答のトークン数が無検証で月次カウンタに加算され、負値の報告で月次ハードリミットの発火回避（無制限利用）、極端な値で誤リミット発火（利用不能化）が可能だった。3 プロバイダー共通の単一経路で、有限・正値・1 呼び出し 10,000,000 上限に正規化
+- **ログ details の `__proto__` キー処理を修正**（VULN-003 / CWE-1321）: LOG_FORWARD の `details` に攻撃者制御の `__proto__` キー（JSON.parse 産の own プロパティ）があると、ログサニタイザの keyed 代入がエントリのプロトタイプを書き換えていた。アキュムレータを `Object.create(null)` に変更し、すべての keyed 代入を own プロパティ書き込みに
+- **転送ログの 1 エントリサイズに上限を設定**（VULN-004 / CWE-400）: LOG_FORWARD が 10MB 級の message / details を無制限に受理でき、PII 除去・正規化の CPU と `chrome.storage` の quota を圧迫できた（既存の上限はエントリ「件数」のみでサイズは無制限）。信頼境界のハンドラで message 64K 文字、details 64 キー / 256K シリアライズに上限を設定（超過分は切り詰め、またはプレビュー付きマーカーに置換）
+- **信頼 DB Bloom フィルタの復元でレガシー弱ハッシュを廃止**（VULN-005 / CWE-327）: 復元パスが旧 32bit `simpleHash`（非キー付き・衝突容易）による整合性検証を警告ログのみで受理し、偽造データ + 再計算ハッシュの BloB が信頼判定を通過できた。非 SHA-256 ハッシュの BloB は隔離（空フィルタ = 未信頼デフォルト）するよう変更し、`simpleHash` を削除。SHA-256 形式の破損ハッシュは従来どおり fail-closed で拒否され、次回保存時に SHA-256 へ自動移行する
 
 ## [6.8.3] - 2026-09-10
 
