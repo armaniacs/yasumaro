@@ -751,19 +751,21 @@ describe('sqliteMessageHandlers — handleStatus branching', () => {
     expect(res.idbLegacyDbName).toBe('idb-batch-atomic');
   });
 
-  it('covers oldIdbDbExists fallback when indexedDB.databases is undefined (?? [] branch) and when it throws', async () => {
+  it('covers legacy IDB probe branches: unsupported databases API omits the field, throw reports null (PBI 2026-09-11-06)', async () => {
     (chrome.storage.local.get as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({});
     (globalThis.navigator as unknown as Record<string, unknown>).storage = {
       getDirectory: vi.fn().mockResolvedValue({
         getDirectoryHandle: vi.fn().mockRejectedValue(new Error('no dir')),
       }),
     } as never;
-    // databases undefined -> ?? []
+    // databases unsupported -> probe returns null ("unknown") -> field omitted
+    // (asserting absence from a missing probe would make the panel show
+    // "Not applicable" on browsers without the API).
     (globalThis as unknown as Record<string, unknown>).indexedDB = {} as never;
     let res = await callHandler('SQLITE_STATUS') as Record<string, unknown>;
-    expect(res.idbLegacyDbName).toBeNull();
+    expect(res).not.toHaveProperty('idbLegacyDbName');
 
-    // now make databases throw
+    // now make databases throw -> probe false -> explicit null ("confirmed absent")
     (globalThis as unknown as Record<string, unknown>).indexedDB = {
       databases: vi.fn().mockRejectedValue(new Error('boom')),
     } as never;
