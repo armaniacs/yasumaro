@@ -23,7 +23,7 @@ import { createContentMessageSender } from './contentMessageSender.js';
 import { getCleansingConfigForDomain } from '../utils/aiSummaryCleaner/perSiteOverride.js';
 import { cleanseViaOffscreen as delegateCleanseViaOffscreen } from './cleansingOffscreenDelegate.js';
 import { DeadlineTimer } from './deadlineTimer.js';
-import { throttle as throttleViaRaf } from './throttle.js';
+import { throttle as createThrottle } from './throttle.js';
 
 export interface Scheduler {
     schedule(callback: () => void, delayMs?: number): number;
@@ -314,7 +314,10 @@ export class ContentKernel {
     checkVisitConditions(): void {
         this.deadlineTimer.refreshCachesIfStale();
         const visitState: VisitState = this.pageState.toVisitState();
-        const thresholds: VisitGateThresholds = this.deadlineTimer.thresholds;
+        // refreshCachesIfStale above guarantees the thresholds cache; fall back
+        // to the page-state projection for the pre-init edge (PBI 2026-09-11-01).
+        const thresholds: VisitGateThresholds = this.deadlineTimer.thresholds
+            ?? this.pageState.toVisitGateThresholds();
         const gate = this.deadlineTimer.gate;
         const duration = (this.clock() - visitState.startTime) / 1000;
 
@@ -378,8 +381,14 @@ export class ContentKernel {
         this.deadlineTimer.start();
     }
 
+    private scrollThrottles: Array<{ dispose: () => void }> = [];
+
     stopPeriodicCheck(): void {
         this.deadlineTimer.stop();
+        // PBI 2026-09-11-07: dispose throttles (cancel pending trailing call
+        // + drop from the beforeunload flush registry).
+        for (const t of this.scrollThrottles) t.dispose();
+        this.scrollThrottles = [];
     }
 
     // -----------------------------------------------------------------------
@@ -446,11 +455,13 @@ export class ContentKernel {
     }
 
     /**
-     * Throttle via requestAnimationFrame — shared with extractor for backward compat.
-     * Implementation lives in ./throttle.js; this stays as the single wiring point.
+     * Leading+trailing throttle (PBI 2026-09-11-07). Implementation lives in
+     * ./throttle.js; this stays as the single wiring point.
      */
-    throttle<T extends (...args: unknown[]) => void>(fn: T): T {
-        return throttleViaRaf(fn);
+    throttle<T extends (...args: unknown[]) => void>(fn: T) {
+        const handle = createThrottle(fn);
+        this.scrollThrottles.push(handle);
+        return handle.fn;
     }
 
     // Expose for tests that assert on DEFAULT_CLEANSING_CONFIG SSOT
