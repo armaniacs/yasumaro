@@ -110,6 +110,45 @@ describe('PBI-34 parametric: same logical search, SQL ORDER parity (idb vs opfs)
     }
   });
 
+  it('tag filter parity: idb.query and opfs handleQuery emit the same tag condition (PBI 2026-09-11 unification)', async () => {
+    // >= 3 chars + FTS5 available: both backends use the trigram MATCH
+    // sub-query with the phrase-quoted raw term (no # prefix).
+    const idb = makeIdbStub(true);
+    await idb.backend.query({ tag: 'news', limit: 10, offset: 0 });
+    const opfs = makeOpfsStub();
+    await handleQuery({ engine: opfs.engine as never }, { tag: 'news', limit: 10, offset: 0 });
+    for (const sql of [rowSql(idb.calls), rowSql(opfs.calls)]) {
+      expect(sql).toContain('id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)');
+      expect(sql).not.toContain('tags LIKE');
+    }
+    // The 33-vs-13 column projection difference is the documented 2026-09-09-03
+    // intentional divergence — the tag condition and params must be identical.
+    const idbParams = idb.calls.find((c) => /LIMIT \? OFFSET \?/.test(c.sql))!.params;
+    const opfsParams = opfs.calls.find((c) => /LIMIT \? OFFSET \?/.test(c.sql))!.params;
+    expect(idbParams).toEqual(opfsParams);
+    expect(rowSql(idb.calls)).toMatch(/WHERE is_deleted = 0 AND id IN \(SELECT rowid FROM browsing_logs_fts WHERE tags MATCH \?\) ORDER BY created_at DESC LIMIT \? OFFSET \?$/);
+    expect(rowSql(opfs.calls)).toMatch(/AND id IN \(SELECT rowid FROM browsing_logs_fts WHERE tags MATCH \?\) ORDER BY created_at DESC LIMIT \? OFFSET \?$/);
+
+    // < 3 chars: both backends fall back to tags LIKE.
+    const idbShort = makeIdbStub(true);
+    await idbShort.backend.query({ tag: 'AI', limit: 10, offset: 0 });
+    const opfsShort = makeOpfsStub();
+    await handleQuery({ engine: opfsShort.engine as never }, { tag: 'AI', limit: 10, offset: 0 });
+    for (const sql of [rowSql(idbShort.calls), rowSql(opfsShort.calls)]) {
+      expect(sql).toContain('tags LIKE ?');
+      expect(sql).not.toContain('browsing_logs_fts');
+    }
+  });
+
+  it('tag filter: the former idb tag-ignore divergence is gone (regression pin)', async () => {
+    // PBI-34 documented that IdbVfsBackend.query dropped the tag filter while
+    // opfs honoured it. PBI 2026-09-11 unified the semantics — this pins the
+    // fix so the divergence cannot silently return.
+    const idb = makeIdbStub(true);
+    await idb.backend.query({ tag: 'typescript', limit: 10, offset: 0 });
+    expect(rowSql(idb.calls)).toContain('browsing_logs_fts');
+  });
+
   it('purge cap-delete: idb and opfs both preserve starred rows (same condition)', async () => {
     const idb = makeIdbStub(true, 1005);
     await idb.backend.purgeOldRecords(90, 1000);

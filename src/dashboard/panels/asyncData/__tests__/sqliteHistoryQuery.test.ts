@@ -11,10 +11,10 @@ import {
   buildLegacyMetadataMap,
   enrichEntryWithChromeStorage,
   enrichRowsWithLegacyMetadata,
-  filterRowsByTag,
   dateRangeFromSelectedDate,
   queryHistory,
 } from '../sqliteHistoryQuery.js';
+import { tagMatchesFilter } from '../../../../offscreen/queryPlan.js';
 import type { BrowsingLogEntry } from '../../../../utils/sqlite-types.js';
 import type { SavedUrlEntry } from '../../../../utils/storageUrls.js';
 import type { HistoryQuerySources, UnifiedHistoryQueryData, UnifiedHistoryQueryResult } from '../sqliteHistoryQuery.js';
@@ -203,29 +203,25 @@ describe('enrichRowsWithLegacyMetadata', () => {
   });
 });
 
-describe('filterRowsByTag', () => {
+describe('tagMatchesFilter (tag predicate — moved to the SQL layer, PBI 2026-09-11)', () => {
   it('matches partial tags inside a comma-separated tags string', () => {
-    const rows = [
-      makeEntry({ id: 1, tags: 'typescript,testing' }),
-      makeEntry({ id: 2, tags: 'rust' }),
-      makeEntry({ id: 3, tags: 'test' }),
-    ];
-    expect(filterRowsByTag(rows, 'test').map(r => r.id)).toEqual([1, 3]);
+    expect(tagMatchesFilter('typescript,testing', 'test')).toBe(true);
+    expect(tagMatchesFilter('rust', 'test')).toBe(false);
+    expect(tagMatchesFilter('test', 'test')).toBe(true);
   });
 
   it('ignores whitespace around tags', () => {
-    const rows = [makeEntry({ id: 1, tags: 'a, spaced ,b' })];
-    expect(filterRowsByTag(rows, 'spaced')).toHaveLength(1);
+    expect(tagMatchesFilter('a, spaced ,b', 'spaced')).toBe(true);
   });
 
   it('excludes rows with unset or empty tags', () => {
-    const rows = [makeEntry({ id: 1 }), makeEntry({ id: 2, tags: '' })];
-    expect(filterRowsByTag(rows, 'x')).toEqual([]);
+    expect(tagMatchesFilter(null, 'x')).toBe(false);
+    expect(tagMatchesFilter(undefined, 'x')).toBe(false);
+    expect(tagMatchesFilter('', 'x')).toBe(false);
   });
 
-  it('returns an empty array when nothing matches', () => {
-    const rows = [makeEntry({ tags: 'a,b' })];
-    expect(filterRowsByTag(rows, 'zzz')).toEqual([]);
+  it('returns false when nothing matches', () => {
+    expect(tagMatchesFilter('a,b', 'zzz')).toBe(false);
   });
 });
 
@@ -296,12 +292,12 @@ describe('queryHistory', () => {
     expect(result).toEqual({ data: { rows: [makeRow(1)], total: 1 } });
   });
 
-  it('keeps the tag filter client-side with a wide fetch window', async () => {
+  it('pushes the tag filter to the SQL layer (no over-fetch window)', async () => {
     const sources = makeSources({
       queryLogs: vi.fn().mockResolvedValue({
         data: {
-          rows: [makeRow(1, { tags: '#AI' }), makeRow(2, { tags: '#other' })],
-          total: 2,
+          rows: [makeRow(1, { tags: '#AI' })],
+          total: 1,
         },
       }),
     });
@@ -309,26 +305,28 @@ describe('queryHistory', () => {
     const result = await queryHistory({ ...baseOptions, tagFilter: 'AI' }, asSources(sources));
 
     const options = sources.queryLogs.mock.calls[0]![0];
-    // A 2-character tag would return nothing through FTS5 trigram MATCH.
-    expect(options.tagFilter).toBeUndefined();
-    expect(options.limit).toBe(5000);
+    // PBI 2026-09-11: the tag filter travels on the wire; the panel pages
+    // exactly like the non-tag path (SQL LIMIT/OFFSET, no 5000 fetch window).
+    expect(options.tagFilter).toBe('AI');
+    expect(options.limit).toBe(20);
     expect(options.offset).toBe(0);
     expect(result).toEqual({
       data: { rows: [makeRow(1, { tags: '#AI' })], total: 1 },
     });
   });
 
-  it('slices the client-side filter result by offset and limit', async () => {
-    const tagged = Array.from({ length: 50 }, (_, i) => makeRow(i, { tags: 'AI' }));
+  it('pages tag-filtered queries with SQL LIMIT/OFFSET (no client-side slice)', async () => {
+    const page = Array.from({ length: 20 }, (_, i) => makeRow(i, { tags: 'AI' }));
     const sources = makeSources({
-      queryLogs: vi.fn().mockResolvedValue({ data: { rows: tagged, total: 50 } }),
+      queryLogs: vi.fn().mockResolvedValue({ data: { rows: page, total: 50 } }),
     });
 
     const result = await queryHistory({ limit: 20, offset: 20, tagFilter: 'AI' }, asSources(sources));
 
+    expect(sources.queryLogs).toHaveBeenCalledWith(expect.objectContaining({ limit: 20, offset: 20, tagFilter: 'AI' }));
     expect(sources.searchLogs).not.toHaveBeenCalled();
     expect(result).toEqual({
-      data: { rows: tagged.slice(20, 40), total: 50 },
+      data: { rows: page, total: 50 },
     });
   });
 
@@ -341,14 +339,15 @@ describe('queryHistory', () => {
 
     const result = await queryHistory({ ...baseOptions, tagFilter: 'tech', tagInitiated: true }, asSources(sources));
 
+    expect(sources.queryLogs).toHaveBeenCalledWith(expect.objectContaining({ tagFilter: 'tech' }));
     expect(sources.searchLogs).not.toHaveBeenCalled();
     expect(result).toEqual({ data: { rows: [makeRow(1, { tags: 'tech' })], total: 1 } });
   });
 
-  it('falls back to full-text search and reports the notice when tag matches nothing', async () => {
+  it('falls back to full-text search when the SQL tag query returns nothing (tag-initiated)', async () => {
     const sources = makeSources({
       queryLogs: vi.fn().mockResolvedValue({
-        data: { rows: [makeRow(1, { tags: 'tech' })], total: 1 },
+        data: { rows: [], total: 0 },
       }),
       searchLogs: vi.fn().mockResolvedValue({
         data: { rows: [makeRow(10)], total: 54 },
@@ -381,24 +380,23 @@ describe('queryHistory', () => {
     expect(okData(result).rows).toEqual([]);
   });
 
-  it('returns the fallback search error instead of raw over-fetched rows', async () => {
-    const rawRows = [makeRow(1, { tags: 'tech' })];
+  it('returns the fallback search error instead of unrelated rows', async () => {
     const sources = makeSources({
-      queryLogs: vi.fn().mockResolvedValue({ data: { rows: rawRows, total: 1 } }),
+      queryLogs: vi.fn().mockResolvedValue({ data: { rows: [], total: 0 } }),
       searchLogs: vi.fn().mockResolvedValue({ error: 'Search failed' }),
     });
 
     const result = await queryHistory({ ...baseOptions, tagFilter: '教育', tagInitiated: true }, asSources(sources));
 
-    // A failed fallback search must surface the error; the raw over-fetched
-    // rows must not leak into the successful result.
+    // A failed fallback search must surface the error; the empty SQL result
+    // must not leak into a successful result.
     expect(result).toEqual({ error: 'Search failed' });
   });
 
   it('returns an empty result (no fallback) for a manual tag filter with no matches', async () => {
     const sources = makeSources({
       queryLogs: vi.fn().mockResolvedValue({
-        data: { rows: [makeRow(1, { tags: 'tech' })], total: 1 },
+        data: { rows: [], total: 0 },
       }),
     });
 

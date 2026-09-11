@@ -8,7 +8,7 @@ import { Mutex } from '../utils/Mutex.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { UPDATABLE_FIELDS, buildInsertRecordFields } from './schema.js';
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
-import { buildQuerySpec, QUERY_CAPS } from './queryPlan.js';
+import { buildQuerySpec, QUERY_CAPS, tagMatchesFilter } from './queryPlan.js';
 
 const STORAGE_KEY = 'FALLBACK_STORAGE_DATA';
 const STORAGE_KEY_COUNTER = 'FALLBACK_STORAGE_COUNTER';
@@ -227,6 +227,12 @@ export class FallbackStorage {
       }
       if (q.gistSynced !== undefined) {
         filtered = filtered.filter(r => r.gist_synced === q.gistSynced);
+      }
+      // Tag filter — shared comma-split partial-match predicate (PBI 2026-09-11
+      // tag SQL migration: the fallback path now honours the tag instead of
+      // silently returning every row).
+      if (q.tag) {
+        filtered = filtered.filter(r => tagMatchesFilter(r.tags, q.tag!));
       }
       // Also support is_starred passed via q
       if (qAny['is_starred'] !== undefined && q.starred === undefined && effectiveStarred === undefined) {

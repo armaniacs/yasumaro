@@ -27,15 +27,6 @@ export type { BrowsingLogEntry } from '../../../utils/sqlite-types.js';
 /** chrome.storage enrichment lookup key granularity (1 minute). */
 const ENRICHMENT_KEY_BUCKET_MS = 60000;
 
-/**
- * Fetch window used only when a tag filter is active.
- *
- * Tag matching runs client-side (see filterRowsByTag), so the rows have to be
- * in memory before they can be filtered and counted. This caps how far back
- * tag filtering can see; the non-tag path pages in SQL and has no such cap.
- */
-const TAG_FILTER_FETCH_LIMIT = 5000;
-
 /** Legacy lookup cache TTL; avoids re-reading chrome.storage on every query. */
 const LEGACY_LOOKUP_CACHE_TTL_MS = 5000;
 
@@ -139,18 +130,6 @@ export function enrichRowsWithLegacyMetadata(
 }
 
 /**
- * Tag filtering. Partial match against the comma-separated tags string.
- * Rows with unset or non-string tags are always excluded (existing rule).
- */
-export function filterRowsByTag(rows: BrowsingLogEntry[], tagFilter: string): BrowsingLogEntry[] {
-  return rows.filter(row => {
-    const tagsString = row.tags || '';
-    if (typeof tagsString !== 'string') return false;
-    return tagsString.split(',').some(tag => tag.trim().includes(tagFilter));
-  });
-}
-
-/**
  * Convert the calendar-selected date (YYYY-MM-DD) into a local-time range for
  * that day. An empty object (all time) is returned when no date is selected.
  */
@@ -171,7 +150,7 @@ export interface UnifiedHistoryQueryOptions {
   until?: number;
   limit: number;
   offset: number;
-  /** Active tag filter; kept client-side, never pushed to the SQL query. */
+  /** Active tag filter; pushed to the SQL layer (partial match, all backends). */
   tagFilter?: string;
   /** True when the tag filter came from a Tag Cluster navigation. */
   tagInitiated?: boolean;
@@ -248,13 +227,16 @@ async function enrichRows(
 /**
  * Fetch browsing history through a single interface.
  *
- * SQLite rows are retrieved (paged query, full-text search, or a wide fetch
- * for client-side tag filtering), enriched with legacy chrome.storage metadata
- * under the per-bucket rule, and returned as unified rows.
+ * SQLite rows are retrieved (paged query, full-text search, or a tag-filtered
+ * query), enriched with legacy chrome.storage metadata under the per-bucket
+ * rule, and returned as unified rows.
  *
- * Tag filtering deliberately stays client-side: the SQL side matches tags via
- * FTS5 trigram MATCH, which needs >= 3 characters and has no LIKE fallback on
- * that path, so short tags (e.g. "AI") would silently return nothing.
+ * Tag filtering runs in SQL (PBI 2026-09-11 / former PBI 15): the dashboard
+ * sends `tagFilter` on the wire and every backend (OPFS / IDB / fallback /
+ * in-memory) applies the same partial-match condition server-side, so paging
+ * is done by SQL LIMIT/OFFSET and the former 5000-row over-fetch cap (which
+ * silently excluded tagged rows outside the fetched window on ascending
+ * sorts) is gone.
  */
 export async function queryHistory(
   options: UnifiedHistoryQueryOptions,
@@ -277,32 +259,27 @@ export async function queryHistory(
     rows = searchResult.data.rows;
     total = searchResult.data.total;
   } else {
-    // The tag filter is deliberately NOT pushed down to the server; see the
-    // function doc comment. Everything else pages in SQL.
-    const useServerPaging = !options.tagFilter;
     const qRes = await queryRows({
-      limit: useServerPaging ? options.limit : TAG_FILTER_FETCH_LIMIT,
-      offset: useServerPaging ? options.offset : 0,
+      limit: options.limit,
+      offset: options.offset,
       ...pickDefined({ since: options.since, until: options.until }),
       orderBy: 'created_at',
-      // NOTE: when a tag filter is active, this over-fetch is capped at
-      // TAG_FILTER_FETCH_LIMIT and tag matching runs client-side (see
-      // filterRowsByTag). Before sortDir was user-controlled, this fetch was
-      // always DESC, so the cap consistently meant "the most recent N rows,
-      // tag-filtered client-side". Now that orderDir follows the user's sort
-      // choice, selecting "oldest first" with a tag filter active flips this
-      // to ASC, so the cap instead means "the oldest N rows" — any tagged
-      // entries newer than the Nth-oldest row are silently excluded from
-      // that view. This is a known limitation, not a bug to fix here.
       orderDir: options.sortDir ?? 'DESC',
+      // PBI 2026-09-11: the tag filter is now pushed down to the SQL layer
+      // (partial-match semantics preserved; paging handled by LIMIT/OFFSET).
+      ...pickDefined({ tagFilter: options.tagFilter }),
     });
     if (isServiceError(qRes)) return qRes;
 
-    if (options.tagFilter) {
-      const filteredRows = filterRowsByTag(qRes.data.rows, options.tagFilter);
+    rows = qRes.data.rows;
+    total = qRes.data.total;
+
+    if (options.tagFilter && total === 0) {
+      // 0 SQL hits with a Tag-Cluster-initiated filter → text-search fallback
+      // (unchanged contract from the client-side era).
       const fallbackTerm = shouldFallbackToTextSearch(
         options.tagInitiated ? 'tag' : 'manual',
-        { rows: filteredRows, total: filteredRows.length },
+        { rows, total },
         options.tagFilter,
       );
       if (fallbackTerm) {
@@ -311,8 +288,8 @@ export async function queryHistory(
         const orderDir = options.sortDir ?? 'DESC';
         const searchResult = await searchRows(fallbackTerm, options.limit, options.offset, { orderBy, orderDir });
         if (isServiceError(searchResult)) {
-          // A failed fallback search must not return the raw over-fetched rows
-          // as a successful result; surface the error so the panel can show it.
+          // A failed fallback search must not return unrelated rows as a
+          // successful result; surface the error so the panel can show it.
           return searchResult;
         }
         rows = searchResult.data.rows;
@@ -323,14 +300,7 @@ export async function queryHistory(
             ? { tag: options.tagFilter, fallbackTo: fallbackTerm, matched: total }
             : null,
         };
-      } else {
-        // Client-side slice: the over-fetch already contains every candidate.
-        rows = filteredRows.slice(options.offset, options.offset + options.limit);
-        total = filteredRows.length;
       }
-    } else {
-      rows = qRes.data.rows;
-      total = qRes.data.total;
     }
   }
 

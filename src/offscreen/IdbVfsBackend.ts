@@ -7,6 +7,7 @@ import type {
   BackupResult, CountResult, HealthResult, AuditLogQueryResult,
   StatusResult, BackendOrError,
 } from './StorageBackend.js';
+import { archiveUnsupported, BINARY_BACKUP_UNSUPPORTED_ERROR, BINARY_RESTORE_UNSUPPORTED_ERROR } from './StorageBackend.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from './schema.js';
 import { extractDomain, DB_FILENAME } from './sqliteEngineHost.js';
@@ -126,10 +127,10 @@ export class IdbVfsBackend implements StorageBackend {
       return { success: true, rows, total };
     }
 
-    // Plain filtered listing (no text search). NOTE: the #tag filter is
-    // intentionally NOT applied here — opfs QUERY honours it while this
-    // backend ignores it. PBI-34 keeps that gap explicit (see
-    // buildPlainListStatements) instead of silently changing results.
+    // Plain filtered listing (no text search). The tag filter rides on the
+    // spec (QuerySpec.tagFilter, built with this backend's fts5Available) —
+    // PBI 2026-09-11 unified tag semantics: this backend honours the tag the
+    // same way the OPFS worker does (the former PBI-34 divergence is gone).
     // Columns are explicit (was SELECT *): same 33 fields, codec order.
     const stmts = buildPlainListStatements(spec, { columns: BROWSING_LOG_FULL_COLUMNS_SQL });
 
@@ -270,67 +271,67 @@ export class IdbVfsBackend implements StorageBackend {
   }
 
   async backupDb(): Promise<BackendOrError<BackupResult>> {
-    return { success: false, error: 'Binary backup requires OPFS storage.' };
+    return { success: false, error: BINARY_BACKUP_UNSUPPORTED_ERROR };
   }
 
   async archivePreview(): Promise<BackendOrError<import('./StorageBackend.js').ArchivePreviewResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return archiveUnsupported();
   }
 
   async archiveCreate(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCreateResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return archiveUnsupported();
   }
 
   async archiveCleanup(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCleanupResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return archiveUnsupported();
   }
 
   async archiveExportChunk(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveExportChunkResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return archiveUnsupported();
   }
 
   async archivePrepareIncoming(): Promise<BackendOrError<import('./StorageBackend.js').ArchivePrepareIncomingResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return archiveUnsupported();
   }
 
   async archiveRestorePreview(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveRestorePreviewResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return archiveUnsupported();
   }
 
   async archiveRestore(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveRestoreResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return archiveUnsupported();
   }
 
   async archiveDeleteByStaging(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveDeleteByStagingResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return archiveUnsupported();
   }
 
   async archiveOpen(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveOpenResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return archiveUnsupported();
   }
 
   async archiveQuery(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveQueryResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return archiveUnsupported();
   }
 
   async archiveUpdate(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveUpdateResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return archiveUnsupported();
   }
 
   async archiveSave(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveSaveResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return archiveUnsupported();
   }
 
   async archiveClose(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCloseResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return archiveUnsupported();
   }
 
   async archiveStatus(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveStatusResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return archiveUnsupported();
   }
 
   async restoreDb(_data: Uint8Array): Promise<BackendOrError<MutationResult>> {
-    return { success: false, error: 'Binary restore requires OPFS storage.' };
+    return { success: false, error: BINARY_RESTORE_UNSUPPORTED_ERROR };
   }
 
   async healthCheck(): Promise<BackendOrError<HealthResult>> {
