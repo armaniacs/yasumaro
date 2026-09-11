@@ -3694,6 +3694,9 @@
   "archiveRestorePreviewFailed": {
     "message": "Archive restore preview failed"
   },
+  "archiveRestorePreviewReady": {
+    "message": "Preview ready."
+  },
   "archivePurgeBtn": {
     "message": "Delete records from main database"
   },

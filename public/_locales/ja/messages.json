@@ -3561,6 +3561,9 @@
   "archiveRestorePreviewFailed": {
     "message": "アーカイブ復元の確認に失敗しました"
   },
+  "archiveRestorePreviewReady": {
+    "message": "プレビューを準備しました。"
+  },
   "archivePurgeBtn": {
     "message": "メインDBからレコードを削除"
   },
