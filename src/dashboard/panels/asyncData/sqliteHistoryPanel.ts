@@ -31,8 +31,8 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
 
   const model = createSqliteHistoryModel();
   // Panel shrinks to model.subscribe(refresh): every state change funnels
-  // through view.render()'s single entry (PBI 23).
-  let unsubscribe: (() => void) | null = null;
+  // through view.render()'s single entry (PBI 23). The subscription is taken
+  // in load() (PBI 2026-09-11-06) — see modelUnsubscribe below.
   // init() may run without a container (registry init→load order), so init
   // stays side-effect-free and only stashes params for load().
   let pendingNavParams: { searchTag?: string; searchDomain?: string } | null = null;
@@ -208,8 +208,10 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
     unsubscribePendingStorage = () => chrome.storage.onChanged.removeListener(listener);
   }
 
-  // Model subscription — thin alias of former onStateChange, completes BDD happy path
-  unsubscribe = model.subscribe(() => refresh());
+  // Model subscription — thin alias of former onStateChange, completes BDD happy path.
+  // PBI 2026-09-11-06 (round 6): moved from creation into load() so a
+  // created-but-never-loaded panel does not hold a live subscription.
+  let modelUnsubscribe: (() => void) | null = null;
 
   return {
     id: 'panel-sqlite-history',
@@ -233,6 +235,11 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
       if (!container) return;
 
       _isMounted = true;
+      // PBI 2026-09-11-06 (round 6): subscribe here (not at creation) — a
+      // created-but-never-loaded panel must not hold a live subscription.
+      if (!modelUnsubscribe) {
+        modelUnsubscribe = model.subscribe(() => refresh());
+      }
       // Pre-fetch paint at today's position (before the initial fetch
       // resolves). The subscription refresh() calls below then paint results.
       // First call takes the View's full-build path (no shell mounted yet).
@@ -262,9 +269,9 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
         searchDebounceTimer = null;
       }
       _isMounted = false;
-      if (unsubscribe) {
-        unsubscribe();
-        unsubscribe = null;
+      if (modelUnsubscribe) {
+        modelUnsubscribe();
+        modelUnsubscribe = null;
       }
       if (unsubscribePendingStorage) {
         unsubscribePendingStorage();
