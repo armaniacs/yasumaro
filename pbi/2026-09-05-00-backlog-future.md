@@ -85,14 +85,17 @@
 
 （round 4 台帳の InMemoryTransport default-limit 乖離は round 4 で解消済み、query cap 統合のトリガーは round 5 で発火し PBI 08 として完了）
 
-**2026-09-11 round 6（arch-delivery-loop・0911a ブランチ）で台帳入り（4 項目）:**
+**2026-09-11 round 7（arch-delivery-loop・0911a ブランチ）で台帳入り（2 項目）:**
 
 | 項目 | RICE | 再評価条件 |
 |------|------|-----------|
-| _locales 未使用キーの手動 per-key 削除（round 6 PBI 04 の検出器が 310 候補を出力 — 静的スキャンは動的 label map を over-approximate するため手動確認が必須。check-i18n の warn 出力をインベントリとして使う） | 5.0 | i18n 未使用キーの削除を実際に行うタスクとして切り出すとき |
-| cleansingOffscreenDelegate flag cache（round 6 PBI 09 から分離 — onChanged 無効化付き cache は wire-or-delete 台帳項目と同一 context で着手） | 4.0 | offscreen-cleanse wire-or-delete 着手時 |
-| release-checks 9 スクリプトの drift 網羅監査 + entrypoints/permissions・models-dev-dialog スキャン | 2.7 | 次回 release flow 改修時（investigate 型） |
-| e2e spec coverage-gap 監査（18 specs の欠落分析） | 2.7 | 次回 e2e 拡張時 |
+| e2e gap: history panel UI spec（tag filter / pagination / star — High）+ cleansing preview confirm-send spec（High） | 4.0 | e2e 実行可能環境（xvfb あり）でのラウンド — 本環境では check-e2e が skip になり新規 spec を実行検証できない |
+| popup/settingsScreen 復活の要否（dead code は round 7 PBI 04 で削除済み — 将来 settings 画面を戻す場合は新規実装） | — | 製品判断が出たとき |
+
+（round 6 台帳の「i18n 未使用キー手動パス」は round 7 PBI 02 で機械化・実行（104 key 削除・残り 177 件は kept 判定）。「cleanse flag cache」は round 7 PBI 05 で解消。台帳トリガー駆動項目（archive codec / testConnection / Local AI / DialogShell / trustSettings / archivePanel 分離 / SqliteHistoryModel / DashboardSqlite 3-seam / ErrorTaxonomy / offscreen-cleanse PoC）は全件トリガー未発火で維持。）
+
+**2026-09-11 round 6（arch-delivery-loop・0911a ブランチ）の主要な完了事項:**
+DeadlineTimer getter 非対称解消、queryNormalize ids 上限、previewPresenter settle 単一 seam（promise 永久ハング解消）+ focus trap 単一 owner、i18n 参照済み欠落 50 件補完 + 未使用キー検出器、LIST_SOURCES 単一テーブル（OISD gate/grant 不一致解消）、pending region 摩擦解消、throttle 再実装、limits drift ガード拡張（10MiB family 6 件吸収）、popup 二重配線削除。
 
 （round 5 台帳の「previewPresenter promise leak」「throttle leak」「DeadlineTimer 非null assert」「CSP/allowlist drift」「focusTrap 無境界」は **round 6 PBI 01/03/05/07 で解消済み**。「dailyNotePath %2e」は round 5 の sink 追跡で昇格見送り確定。）
 
