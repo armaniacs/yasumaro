@@ -5,7 +5,6 @@
 
 import { getMessage } from '../utils/i18n.js';
 import type { MaskedPosition } from './maskNavigator.js';
-import { focusTrapManager } from '../utils/ui/focusTrap.js';
 
 export const DOM_IDS = {
   MODAL: 'confirmationModal',
@@ -29,8 +28,6 @@ export interface PreviewView {
   setPreviewContent(text: string): void;
   show(html: string): void;
   close(): void;
-  onConfirm(handler: () => void): void;
-  onCancel(handler: () => void): void;
   /** Full show flow used by presenter — kept separate for testability */
   ensureMaskStatusElement(): HTMLElement | null;
   updateMaskStatus(text: string, visible: boolean): void;
@@ -44,11 +41,6 @@ export interface PreviewView {
 
 export class PreviewViewImpl implements PreviewView {
   readonly doc: Document;
-
-  // store handlers for onConfirm/onCancel interface
-  private confirmHandlers: Array<() => void> = [];
-  private cancelHandlers: Array<() => void> = [];
-  private trapId: string | null = null;
 
   constructor(doc: Document = document) {
     this.doc = doc;
@@ -71,7 +63,13 @@ export class PreviewViewImpl implements PreviewView {
     if (el) el.value = text;
   }
 
-  /** Minimal interface: show html in textarea and open modal */
+  /**
+   * Minimal interface: show html in textarea and open modal.
+   * PBI 2026-09-11-03 (round 6): this view does NOT own a focus trap — the
+   * presenter is the single trap owner for the confirmation modal. The old
+   * per-view trap created a second owner on the same dialog (dormant, since
+   * the facade routes through the presenter, but live code all the same).
+   */
   show(html: string): void {
     this.setPreviewContent(html);
     const modal = this.getModal();
@@ -82,17 +80,14 @@ export class PreviewViewImpl implements PreviewView {
         // jsdom fallback
         (modal as unknown as { open: boolean }).open = true;
       }
-      this.ensureCloseRelease(modal);
-      this.releaseTrap();
-      // Escape routes to the existing cancel path (close + release)
-      this.trapId = focusTrapManager.trap(modal, () => this.close());
+    } else if (modal) {
+      (modal as unknown as { open: boolean }).open = true;
     }
   }
 
-  /** Close the modal and release the focus trap (balanced with show) */
+  /** Close the modal (trap release is the trap owner's job — presenter). */
   close(): void {
     const modal = this.getModal();
-    this.releaseTrap();
     if (!modal) return;
     try {
       modal.close();
@@ -100,41 +95,6 @@ export class PreviewViewImpl implements PreviewView {
       (modal as unknown as { open: boolean }).open = false;
       modal.dispatchEvent(new Event('close'));
     }
-  }
-
-  /** 'close' event (native Escape/backdrop/close) must always release the trap */
-  private ensureCloseRelease(modal: HTMLDialogElement): void {
-    const el = modal as HTMLDialogElement & { dataset: DOMStringMap };
-    if (el.dataset.focusTrapWired === 'true') return;
-    el.dataset.focusTrapWired = 'true';
-    modal.addEventListener('close', () => this.releaseTrap());
-  }
-
-  private releaseTrap(): void {
-    if (this.trapId) {
-      focusTrapManager.release(this.trapId);
-      this.trapId = null;
-    }
-  }
-
-  onConfirm(handler: () => void): void {
-    this.confirmHandlers.push(handler);
-  }
-
-  onCancel(handler: () => void): void {
-    this.cancelHandlers.push(handler);
-  }
-
-  /** Exposed for presenter to wire DOM buttons to handlers */
-  getConfirmHandlers(): Array<() => void> {
-    return this.confirmHandlers;
-  }
-  getCancelHandlers(): Array<() => void> {
-    return this.cancelHandlers;
-  }
-  clearHandlers(): void {
-    this.confirmHandlers = [];
-    this.cancelHandlers = [];
   }
 
   ensureMaskStatusElement(): HTMLElement | null {
