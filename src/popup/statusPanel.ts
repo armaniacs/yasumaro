@@ -123,7 +123,6 @@ export function updateCleansingStatus(cleanseStats: ContentResponse['cleanseStat
 export async function updateTrustStatus(url: string): Promise<void> {
   const trustContent = document.getElementById('statusTrustContent');
   const permArea = document.getElementById('permissionRequestArea');
-  const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement | null;
   const errorMsg = document.getElementById('permissionDeniedMessage') as HTMLElement | null;
   if (!trustContent) return;
 
@@ -132,8 +131,12 @@ export async function updateTrustStatus(url: string): Promise<void> {
     const allUrlsGranted = await isAllUrlsPermitted();
     const permitted = allUrlsGranted || await isHostPermitted(url);
     if (!permitted) {
-      trustContent.innerHTML = `<span class="status-value status-trust-locked">🔒 LOCKED</span>`;
-      if (recordBtn) recordBtn.disabled = true;
+      // PBI 2026-09-11-04 (round 5): LOCKED is communicated via the badge +
+      // permission area only. The record button is owned solely by
+      // RecordSession (sole-writer contract, PBI 2026-09-07-24) — disabling
+      // it here raced resetRecordButton and blocked the designed
+      // "Record Anyway" (force) escape hatch.
+      trustContent.innerHTML = `<span class="status-value status-trust-locked">🔒 ${escapeHtml(getMessage('statusTrustLocked') || 'LOCKED')}</span>`;
       if (permArea) {
         permArea.classList.remove('hidden');
         // Wire the request button once per element — updateTrustStatus runs on
@@ -146,7 +149,6 @@ export async function updateTrustStatus(url: string): Promise<void> {
             const granted = await requestPermission(url);
             if (granted) {
               permArea.classList.add('hidden');
-              if (recordBtn) recordBtn.disabled = false;
               void updateTrustStatus(url);
             } else {
               const domain = new URL(url).hostname;
@@ -171,7 +173,6 @@ export async function updateTrustStatus(url: string): Promise<void> {
     }
 
     if (permArea) permArea.classList.add('hidden');
-    if (recordBtn) recordBtn.disabled = false;
 
     const { getTrustLevelDisplay, checkDomainTrust } = await import('../utils/trustChecker.js');
     const [display, checkResult] = await Promise.all([
@@ -441,7 +442,13 @@ async function initAllUrlsPermissionBanner(): Promise<void> {
 
   banner.classList.remove('hidden');
 
-  document.getElementById('btnRequestAllUrls')?.addEventListener('click', async () => {
+  // Wire once per element — re-init (popup reopen / recursive initStatusPanel)
+  // must not stack duplicate requestAllUrls handlers. Same discipline as
+  // btnRequestPermission (PBI 2026-09-11-04).
+  const btn = document.getElementById('btnRequestAllUrls') as HTMLElement & { dataset: DOMStringMap } | null;
+  if (!btn || btn.dataset.wired === 'true') return;
+  btn.dataset.wired = 'true';
+  btn.addEventListener('click', async () => {
     const granted = await requestAllUrls();
     if (granted) {
       banner.classList.add('hidden');
