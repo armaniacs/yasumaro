@@ -3,6 +3,8 @@
 ## ステータス
 採用
 
+> **2026-09-11 status note**: `QUERY_PLAIN_LIMIT` という別名は採用されず、`QUERY_CAPS = { fts: 100000, plain: 1000 }`（`src/offscreen/queryPlan.ts`）が唯一の形。本 ADR の「SSOT 化」は 2026-09-11 round 5 の PBI 08（limits.ts への上限定数取り込み + drift ガード）で完成した — それまで `sqliteEngineHost.ts` に同値の `MAX_QUERY_LIMIT` が二重定義されていた。本 ADR の行番号引用は当時のもの（現行コードとは番号が異なる）。
+
 ## 日付
 2026-08-27
 
