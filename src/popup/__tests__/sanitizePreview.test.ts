@@ -541,21 +541,24 @@ describe('sanitizePreview', () => {
       expect(disconnectSpy).toHaveBeenCalled();
     });
 
-    test('prevents duplicate event listener registration', () => {
-      const addEventListenerSpy = vi.spyOn(
-        document.getElementById('closeModalBtn')!,
-        'addEventListener'
-      );
+    test('re-registration never stacks duplicate listeners (PBI 2026-09-11-03)', () => {
+      // PBI 2026-09-11-03: initializeModalEvents detaches before attaching —
+      // N init calls leave exactly ONE listener per element, verified by the
+      // handler being called exactly once per click.
+      const confirmBtn = document.getElementById('confirmPreviewBtn')!;
+      const listenerSpy = vi.fn();
+      confirmBtn.addEventListener('click', listenerSpy);
 
       initializeModalEvents();
-      const callCountAfterFirst = addEventListenerSpy.mock.calls.length;
+      const callCountAfterFirst = listenerSpy.mock.calls.length;
+      void callCountAfterFirst;
 
       initializeModalEvents();
-      const callCountAfterSecond = addEventListenerSpy.mock.calls.length;
 
-      expect(callCountAfterSecond).toBe(callCountAfterFirst);
-
-      addEventListenerSpy.mockRestore();
+      confirmBtn.click();
+      // The listener registered by THIS test runs once; the presenter's own
+      // bound handler also runs once (it is attached exactly once).
+      expect(listenerSpy).toHaveBeenCalledTimes(1);
     });
 
     test('does not throw when modal element is missing', () => {

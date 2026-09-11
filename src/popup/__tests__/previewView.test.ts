@@ -124,24 +124,6 @@ describe('PreviewViewImpl', () => {
     expect(() => view.show('html')).not.toThrow();
   });
 
-  it('onConfirm and onCancel register handlers', () => {
-    const view = new PreviewViewImpl();
-    const h1 = vi.fn();
-    const h2 = vi.fn();
-    view.onConfirm(h1);
-    view.onCancel(h2);
-    expect(view.getConfirmHandlers()).toContain(h1);
-    expect(view.getCancelHandlers()).toContain(h2);
-  });
-
-  it('clearHandlers removes all handlers', () => {
-    const view = new PreviewViewImpl();
-    view.onConfirm(vi.fn());
-    view.onCancel(vi.fn());
-    view.clearHandlers();
-    expect(view.getConfirmHandlers()).toHaveLength(0);
-    expect(view.getCancelHandlers()).toHaveLength(0);
-  });
 
   it('ensureMaskStatusElement returns existing element', () => {
     const doc = createMockDoc();
@@ -282,11 +264,7 @@ describe('PreviewViewImpl', () => {
     expect(anchor.querySelector(`#${DOM_IDS.MASK_NAV}`)).not.toBeNull();
   });
 
-  describe('focusTrap wiring (PBI-25)', () => {
-    afterEach(() => {
-      focusTrapManager.releaseAll();
-    });
-
+  describe('trap ownership (PBI 2026-09-11-03)', () => {
     function setupOpenableModal(doc: Document): HTMLDialogElement {
       const modal = doc.getElementById(DOM_IDS.MODAL) as HTMLDialogElement;
       (modal as any).showModal = () => { (modal as any).open = true; };
@@ -297,62 +275,15 @@ describe('PreviewViewImpl', () => {
       return modal;
     }
 
-    it('show traps focus and close releases it', () => {
-      const doc = createMockDoc();
-      const view = new PreviewViewImpl(doc);
-      const modal = setupOpenableModal(doc);
-      const trapSpy = vi.spyOn(focusTrapManager, 'trap');
-      const releaseSpy = vi.spyOn(focusTrapManager, 'release');
-      try {
-        view.show('<b>html</b>');
-        expect((modal as any).open).toBe(true);
-        expect(trapSpy).toHaveBeenCalledTimes(1);
-        expect(trapSpy).toHaveBeenCalledWith(modal, expect.any(Function));
-
-        view.close();
-        expect(releaseSpy).toHaveBeenCalled();
-        expect((modal as any).open).toBe(false);
-      } finally {
-        trapSpy.mockRestore();
-        releaseSpy.mockRestore();
-      }
-    });
-
-    it('native close event releases the trap (Escape path)', () => {
-      const doc = createMockDoc();
-      const view = new PreviewViewImpl(doc);
-      const modal = setupOpenableModal(doc);
-      const releaseSpy = vi.spyOn(focusTrapManager, 'release');
-      try {
-        view.show('<b>html</b>');
-        expect(
-          [...focusTrapManager.handlers.values()].filter((h) => h.element === modal)
-        ).toHaveLength(1);
-
-        modal.close();
-        expect(releaseSpy).toHaveBeenCalled();
-        expect(
-          [...focusTrapManager.handlers.values()].filter((h) => h.element === modal)
-        ).toHaveLength(0);
-      } finally {
-        releaseSpy.mockRestore();
-      }
-    });
-
-    it('re-show does not double-trap', () => {
+    it('view.show/close no longer own a focus trap — the presenter is the single owner', () => {
       const doc = createMockDoc();
       const view = new PreviewViewImpl(doc);
       setupOpenableModal(doc);
-      const modal = view.getModal() as HTMLDialogElement;
       const trapSpy = vi.spyOn(focusTrapManager, 'trap');
       try {
-        view.show('first');
-        view.show('second');
-        expect(trapSpy).toHaveBeenCalledTimes(2);
-        expect(
-          [...focusTrapManager.handlers.values()].filter((h) => h.element === modal)
-        ).toHaveLength(1);
+        view.show('<b>html</b>');
         view.close();
+        expect(trapSpy).not.toHaveBeenCalled();
       } finally {
         trapSpy.mockRestore();
       }

@@ -43,6 +43,13 @@ export function focusFirstFocusableElement(container: HTMLElement): void {
 }
 
 /**
+ * Live-trap tripwire bound (PBI 2026-09-11-03). Normal usage holds at most a
+ * handful (confirmation modal, private-page dialog, recording-failed dialog);
+ * exceeding this means some path missed its release().
+ */
+const FOCUS_TRAP_MAX_LIVE = 10;
+
+/**
  * フォーカストラップの状態管理
  */
 class FocusTrapManager {
@@ -81,6 +88,14 @@ class FocusTrapManager {
     if (!firstFocusable || !lastFocusable) {
       this.previousFocus.delete(trapId);
       return trapId;
+    }
+
+    // PBI 2026-09-11-03 (round 6): tripwire — a missed release leaves both the
+    // keydown handler and the map entry behind forever. Live traps above this
+    // bound mean a release path was forgotten; warn instead of growing silently.
+    if (this.handlers.size >= FOCUS_TRAP_MAX_LIVE) {
+      // Tripwire: only reachable when a release path leaks.
+      console.warn(`focusTrap: ${this.handlers.size} live traps exceed ${FOCUS_TRAP_MAX_LIVE} — a release() is missing`);
     }
 
     // キーボードハンドラ
