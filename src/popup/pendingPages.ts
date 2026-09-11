@@ -4,6 +4,8 @@ import { getMessage } from '../utils/i18n.js';
 import { showSuccess } from './errorUtils.js';
 import { escapeHtml } from './domUtils.js';
 import { StorageKeys } from '../utils/storage/types.js';
+import { settingsRepository } from '../utils/storage/SettingsRepository.js';
+import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 
 export async function loadPendingPages(): Promise<void> {
   try {
@@ -59,11 +61,12 @@ function escapeRegex(string: string): string {
 }
 
 async function addDomainsOrPathsToWhitelist(urls: string[], type: 'domain' | 'path'): Promise<void> {
-  // Read/write the shared key every other consumer uses. Any data left under the
-  // legacy orphan key 'domainWhitelist' is discarded, not migrated: the user
-  // already perceives those adds as having done nothing.
-  const stored = await chrome.storage.local.get(StorageKeys.DOMAIN_WHITELIST) as { [key: string]: string[] | undefined };
-  const currentList = stored[StorageKeys.DOMAIN_WHITELIST] ?? [];
+  // PBI 2026-09-11-03: write through the SettingsRepository seam (settings blob)
+  // instead of a top-level scattered key — after migration, getAll() only reads
+  // the blob, so a direct chrome.storage.local.set was never visible to the
+  // DomainFilter. Same pattern as statusPanel.ts whitelist handlers.
+  const settings = await settingsRepository.getAll();
+  const currentList = settings[StorageKeys.DOMAIN_WHITELIST] ?? [];
 
   const newEntries = urls.map(url => {
     if (type === 'domain') {
@@ -75,8 +78,9 @@ async function addDomainsOrPathsToWhitelist(urls: string[], type: 'domain' | 'pa
     }
   });
 
-  const updatedList = [...currentList, ...newEntries];
-  await chrome.storage.local.set({ [StorageKeys.DOMAIN_WHITELIST]: updatedList });
+  const updatedList = [...currentList, ...newEntries.filter(e => !currentList.includes(e))];
+  await settingsRepository.setAll({ [StorageKeys.DOMAIN_WHITELIST]: updatedList } as unknown as import('../utils/storage/types.js').Settings);
+  await updateDomainFilterCache(await settingsRepository.getAll());
 }
 
 export async function saveSelectedPages(whitelistType?: 'domain' | 'path'): Promise<void> {
@@ -89,13 +93,20 @@ export async function saveSelectedPages(whitelistType?: 'domain' | 'path'): Prom
     await addDomainsOrPathsToWhitelist(urls, whitelistType);
   }
 
+  // Single read for the whole batch — the per-URL read inside the loop was an
+  // N+1 over chrome.storage (PBI 2026-09-11-03).
+  const pages = await getPendingPages();
+
   for (const url of urls) {
-    const pages = await getPendingPages();
     const page = pages.find(p => p.url === url);
     if (page) {
+      // PBI 2026-09-11-03: the old {type:'record', data:...} envelope predates
+      // VALID_MESSAGE_TYPES — the router never handled it, so "Save" removed
+      // the page from the list without recording it. MANUAL_RECORD is the
+      // contract the MessageRouter + ManualRecordValidator expect.
       await chrome.runtime.sendMessage({
-        type: 'record',
-        data: {
+        type: 'MANUAL_RECORD',
+        payload: {
           title: page.title,
           url: page.url,
           content: '',
