@@ -6,6 +6,8 @@
  * of requiring the CSP string to be edited by hand in a second place.
  */
 
+import { ALL_LIST_SOURCES } from './listSources.js';
+
 /** Always-granted AI provider host permissions (manifest `host_permissions`). */
 export const AI_PROVIDER_HOST_PERMISSIONS = [
   'https://generativelanguage.googleapis.com/*',
@@ -50,12 +52,9 @@ export const OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS = [
   'https://recraft.ai/*',
   'https://perplexity.ai/*',
   'https://jina.ai/*',
-  'https://raw.githubusercontent.com/*',
-  'https://gitlab.com/*',
-  'https://tranco-list.eu/*',
-  'https://easylist.to/*',
-  'https://pgl.yoyo.org/*',
-  'https://nsfw.oisd.nl/*',
+  // Filter-list + metadata sources derive from the LIST_SOURCES SSOT
+  // (PBI 2026-09-11-05) — was 6 hardcoded patterns.
+  ...ALL_LIST_SOURCES.map((source) => `${source.origin}/*`),
 ] as const;
 
 /** Local service ports that host_permissions and CSP connect-src must allow. */

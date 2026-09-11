@@ -7,6 +7,7 @@
 import { normalizeUrl } from '../urlUtils.js';
 import { errorMessage } from '../errorUtils.js';
 import { StorageKeys } from './types.js';
+import { ALL_LIST_SOURCES, FILTER_LIST_SOURCES } from '../listSources.js';
 import type { Settings } from './types.js';
 import { PROVIDER_ALLOWLIST_ROWS } from './providerAllowlist.js';
 
@@ -78,10 +79,12 @@ export const ALLOWED_AI_PROVIDER_DOMAINS = [
     'z.ai',
     'wandb.ai',
     'api.ai.sakura.ad.jp',
-    'raw.githubusercontent.com',
-    'gitlab.com',
-    'easylist.to',
-    'pgl.yoyo.org',
+    // Filter-list + metadata sources derive from the LIST_SOURCES SSOT
+    // (PBI 2026-09-11-05): the gate previously omitted nsfw.oisd.nl while
+    // buildAllowedUrls granted its origin — the gate/grant mismatch that
+    // warn-skipped OISD ublock sources. Tranco is metadata-only (see
+    // listSources.ts) but the gate recognizes it for CSP consistency.
+    ...ALL_LIST_SOURCES.map((source) => source.host),
     'localhost',
     '127.0.0.1',
 ];
@@ -140,11 +143,11 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
             }
         }
     }
-    allowedUrls.add('https://raw.githubusercontent.com');
-    allowedUrls.add('https://gitlab.com');
-    allowedUrls.add('https://easylist.to');
-    allowedUrls.add('https://pgl.yoyo.org');
-    allowedUrls.add('https://nsfw.oisd.nl');
+    // Filter-list fetch origins derive from the LIST_SOURCES SSOT
+    // (PBI 2026-09-11-05) — was 5 hardcoded origin literals.
+    for (const source of FILTER_LIST_SOURCES) {
+        allowedUrls.add(source.origin);
+    }
     return allowedUrls;
 }
 
