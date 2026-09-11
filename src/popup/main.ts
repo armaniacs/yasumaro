@@ -1,6 +1,6 @@
 import { initializeModalEvents } from './sanitizePreview.js';
 import { logError, ErrorCode } from '../utils/logger.js';
-import { loadCurrentTab, recordCurrentPage, handleRecordNowClick } from './recordCurrentPage.js';
+import { loadCurrentTab, recordCurrentPage } from './recordCurrentPage.js';
 import { initStatusPanel, initAllUrlsPermissionBanner, getCleansedReasonText, renderSpecialUrlStatus } from './statusPanel.js';
 
 export { loadCurrentTab, recordCurrentPage, getCleansedReasonText, renderSpecialUrlStatus };
@@ -11,11 +11,10 @@ async function loadCurrentTabAndInitStatus(): Promise<void> {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement | null;
-  if (recordBtn) {
-    recordBtn.addEventListener('click', () => handleRecordNowClick(false));
-  }
-
+  // PBI 2026-09-11-09 (round 6): recordBtn wiring is RecordSession's
+  // (onclick sole-writer — PBI 2026-09-07-24). The addEventListener here
+  // double-fired alongside it; the session's resetRecordButton wires the
+  // initial state on load.
   initializeModalEvents();
   loadCurrentTabAndInitStatus().catch((error) => {
     logError('[Initialize] Failed to load current tab or init status panel', { cause: error }, ErrorCode.INTERNAL_ERROR);
