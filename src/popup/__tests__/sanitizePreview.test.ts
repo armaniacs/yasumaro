@@ -30,9 +30,16 @@ vi.mock('../../utils/i18n.js', () => ({
       cleansedBadgeHard: 'Hard',
       cleansedBadgeKeyword: 'Keyword',
       cleansedBadgeBoth: 'Both',
+      // PBI 2026-09-11-07: count detail is i18n now (array-form substitution).
+      cleansingDetailHard: 'Hard: $1$',
+      cleansingDetailKeyword: 'Keyword: $1$',
     };
     let message = messages[key] || key;
-    if (substitutions && typeof substitutions === 'object') {
+    if (Array.isArray(substitutions)) {
+      substitutions.forEach((value, index) => {
+        message = message.replace(`$${index + 1}$`, String(value));
+      });
+    } else if (substitutions && typeof substitutions === 'object') {
       for (const [placeholder, value] of Object.entries(substitutions)) {
         message = message.replace(`{${placeholder}}`, String(value));
       }
