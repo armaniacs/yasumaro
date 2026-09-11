@@ -11,7 +11,7 @@ vi.mock('../../spinner.js', () => ({
   hideSpinner: vi.fn(),
 }));
 
-import { TabContentFetcher } from '../tabContentFetcher.js';
+import { ContentFetchGateway as TabContentFetcher } from '../../contentFetchGateway.js';
 
 describe('TabContentFetcher', () => {
   beforeEach(() => {

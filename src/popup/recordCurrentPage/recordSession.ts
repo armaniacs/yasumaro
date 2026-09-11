@@ -13,7 +13,7 @@ import { showError } from '../errorUtils.js';
 import { createCopyMarkdownButton } from '../../utils/copyMarkdownButton.js';
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 import { updateCleansingStatus, updateTrustStatus } from '../statusPanel.js';
-import { TabContentFetcher } from './tabContentFetcher.js';
+import { ContentFetchGateway } from '../contentFetchGateway.js';
 import { PreviewFlow, type PreviewSaveResult, type SaveRecordResult } from './previewFlow.js';
 
 /**
@@ -53,7 +53,7 @@ export class RecordSession {
   private resultTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
-    private readonly tabContentFetcher: TabContentFetcher = new TabContentFetcher(),
+    private readonly tabContentFetcher: ContentFetchGateway = new ContentFetchGateway(),
     private readonly previewFlow: PreviewFlow = new PreviewFlow(),
   ) {}
 

@@ -10,7 +10,7 @@ vi.mock('../spinner.js', () => ({
   hideSpinner: vi.fn(),
 }));
 
-import { TabContentFetcher } from '../recordCurrentPage/tabContentFetcher.js';
+import { ContentFetchGateway as TabContentFetcher } from '../contentFetchGateway.js';
 
 describe('TabContentFetcher permission ladder', () => {
   beforeEach(() => {

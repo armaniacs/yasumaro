@@ -8,6 +8,8 @@ import { logError, ErrorCode } from '../utils/logger.js';
 import { getCurrentTab } from './tabUtils.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { updateStatusIcon, escapeHtml } from './domUtils.js';
+import { requestContentFromTab } from './contentFetchGateway.js';
+import { getCleansedBadgeText } from '../utils/cleansingBadge.js';
 import type { ContentResponse } from './mainTypes.js';
 
 export async function initStatusPanel(): Promise<void> {
@@ -48,8 +50,10 @@ export async function initStatusPanel(): Promise<void> {
     renderStatusPanel(status);
 
     if (currentTab.id) {
-      chrome.tabs.sendMessage(currentTab.id, { type: 'GET_CONTENT' }, (response: ContentResponse | undefined) => {
-        if (chrome.runtime.lastError || !response) return;
+      // PBI 2026-09-11-04: passive ask through the shared gateway (timeout +
+      // no prompts) instead of a raw callback send with no timeout.
+      void requestContentFromTab(currentTab.id).then((response: ContentResponse | null) => {
+        if (!response) return;
         updateCleansingStatus(response.cleanseStats, response.cleansedReason);
       });
     }
@@ -84,20 +88,8 @@ export async function initStatusPanel(): Promise<void> {
 }
 
 export function getCleansedReasonText(cleansedReason?: 'hard' | 'keyword' | 'both' | 'none'): string {
-  if (!cleansedReason || cleansedReason === 'none') {
-    return '';
-  }
-
-  switch (cleansedReason) {
-    case 'hard':
-      return getMessage('cleansedBadgeHard') || '🧹 Hard';
-    case 'keyword':
-      return getMessage('cleansedBadgeKeyword') || '🧹 Keyword';
-    case 'both':
-      return getMessage('cleansedBadgeBoth') || '🧹 Both';
-    default:
-      return '';
-  }
+  // PBI 2026-09-11-05: display policy lives in the shared CleansingBadge table.
+  return getCleansedBadgeText(cleansedReason, getMessage);
 }
 
 export function updateCleansingStatus(cleanseStats: ContentResponse['cleanseStats'], cleansedReason?: ContentResponse['cleansedReason']): void {
@@ -144,29 +136,36 @@ export async function updateTrustStatus(url: string): Promise<void> {
       if (recordBtn) recordBtn.disabled = true;
       if (permArea) {
         permArea.classList.remove('hidden');
-        document.getElementById('btnRequestPermission')?.addEventListener('click', async () => {
-          const granted = await requestPermission(url);
-          if (granted) {
-            permArea.classList.add('hidden');
-            if (recordBtn) recordBtn.disabled = false;
-            void updateTrustStatus(url);
-          } else {
-            const domain = new URL(url).hostname;
-            await recordDeniedVisit(domain);
-            if (errorMsg) {
-              errorMsg.classList.remove('hidden');
-              requestAnimationFrame(() => {
-                errorMsg.classList.add('visible');
-              });
-              setTimeout(() => {
-                errorMsg.classList.remove('visible');
+        // Wire the request button once per element — updateTrustStatus runs on
+        // every status refresh and addEventListener would stack duplicate
+        // handlers (double prompt + double recordDeniedVisit).
+        const requestBtn = document.getElementById('btnRequestPermission') as HTMLElement & { dataset: DOMStringMap } | null;
+        if (requestBtn && requestBtn.dataset.wired !== 'true') {
+          requestBtn.dataset.wired = 'true';
+          requestBtn.addEventListener('click', async () => {
+            const granted = await requestPermission(url);
+            if (granted) {
+              permArea.classList.add('hidden');
+              if (recordBtn) recordBtn.disabled = false;
+              void updateTrustStatus(url);
+            } else {
+              const domain = new URL(url).hostname;
+              await recordDeniedVisit(domain);
+              if (errorMsg) {
+                errorMsg.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                  errorMsg.classList.add('visible');
+                });
                 setTimeout(() => {
-                  errorMsg.classList.add('hidden');
-                }, 300);
-              }, 3000);
+                  errorMsg.classList.remove('visible');
+                  setTimeout(() => {
+                    errorMsg.classList.add('hidden');
+                  }, 300);
+                }, 3000);
+              }
             }
-          }
-        });
+          });
+        }
       }
       return;
     }
@@ -467,12 +466,7 @@ function initCleansingFeedbackButton(): void {
       let htmlSnippet = '';
       let removedByReason: Record<string, number> = {};
       if (tab?.id !== undefined) {
-        const resp = await new Promise<ContentResponse | undefined>((resolve) => {
-          chrome.tabs.sendMessage(tab.id!, { type: 'GET_CONTENT' }, (r: ContentResponse | undefined) => {
-            if (chrome.runtime.lastError) resolve(undefined);
-            else resolve(r);
-          });
-        });
+        const resp = await requestContentFromTab(tab.id);
         if (resp?.content) htmlSnippet = resp.content.slice(0, 500);
         if (resp?.cleanseStats) removedByReason = { ...resp.cleanseStats } as unknown as Record<string, number>;
         if (resp?.aiSummaryCleansedStats) {
