@@ -7,6 +7,8 @@
 import type { OfflineJob } from './offlineNetworkQueue.js';
 import type { RecordingData } from '../messaging/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
+import { logError, logWarn, ErrorCode } from '../utils/logger.js';
+import { buildRecordRequest } from './recordRequestBuilder.js';
 
 interface OfflineNetworkQueueLike {
     retryAll(handler: (job: OfflineJob) => Promise<boolean>): Promise<void>;
@@ -32,6 +34,15 @@ export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): ()
                 summary?: string;
                 maskedCount?: number;
                 tags?: string[];
+                pageBytes?: number;
+                candidateBytes?: number;
+                originalBytes?: number;
+                cleansedBytes?: number;
+                aiSummaryOriginalBytes?: number;
+                aiSummaryCleansedBytes?: number;
+                aiSummaryCleansedElements?: number;
+                aiSummaryCleansedReason?: import('../utils/commonTypes.js').AiSummaryCleansedReason;
+                aiSummaryCleansedReasons?: string[];
             };
 
             // obsidian_sync jobs mean the AI summary already succeeded and only the
@@ -46,22 +57,36 @@ export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): ()
                         summary: payload.summary,
                         ...pickDefined({ tags: payload.tags }),
                     });
-                } catch {
+                } catch (error) {
+                    // Poison jobs must be distinguishable from transient
+                    // failures in telemetry (PBI 2026-09-12-04).
+                    logWarn('Offline obsidian_sync retry failed', { url: payload.url, error: error instanceof Error ? error.message : String(error) }, undefined, 'service-worker');
                     return false;
                 }
             }
 
             try {
-                const result = await deps.recordingPipeline.record({
+                // PBI 2026-09-12-04: route through the shared builder so the
+                // diagnostic stats enqueued with the job survive the retry
+                // (the old literal dropped them behind an `as` cast).
+                const result = await deps.recordingPipeline.record(buildRecordRequest('offline-retry', {
                     title: payload.title,
                     url: payload.url,
                     content: payload.content,
-                    force: false,
-                    skipDuplicateCheck: true,
-                    recordType: 'manual',
-                } as RecordingData);
+                    maskedCount: payload.maskedCount,
+                    pageBytes: payload.pageBytes,
+                    candidateBytes: payload.candidateBytes,
+                    originalBytes: payload.originalBytes,
+                    cleansedBytes: payload.cleansedBytes,
+                    aiSummaryOriginalBytes: payload.aiSummaryOriginalBytes,
+                    aiSummaryCleansedBytes: payload.aiSummaryCleansedBytes,
+                    aiSummaryCleansedElements: payload.aiSummaryCleansedElements,
+                    aiSummaryCleansedReason: payload.aiSummaryCleansedReason,
+                    aiSummaryCleansedReasons: payload.aiSummaryCleansedReasons,
+                }));
                 return result.success && !result.skipped;
-            } catch {
+            } catch (error) {
+                logError('Offline full-pipeline retry failed', { cause: error, url: payload.url }, ErrorCode.INTERNAL_ERROR, 'service-worker');
                 return false;
             }
         });

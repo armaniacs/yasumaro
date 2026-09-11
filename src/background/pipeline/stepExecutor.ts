@@ -71,6 +71,17 @@ export class StepExecutor {
       summary: context.privacyResult?.summary,
       maskedCount: context.privacyResult?.maskedCount,
       tags: context.privacyResult?.tags,
+      // PBI 2026-09-12-04: diagnostic stats ride with the job so the offline
+      // retry can rebuild the full RecordingData instead of a lossy subset.
+      pageBytes: context.data.pageBytes,
+      candidateBytes: context.data.candidateBytes,
+      originalBytes: context.data.originalBytes,
+      cleansedBytes: context.data.cleansedBytes,
+      aiSummaryOriginalBytes: context.data.aiSummaryOriginalBytes,
+      aiSummaryCleansedBytes: context.data.aiSummaryCleansedBytes,
+      aiSummaryCleansedElements: context.data.aiSummaryCleansedElements,
+      aiSummaryCleansedReason: context.data.aiSummaryCleansedReason,
+      aiSummaryCleansedReasons: context.data.aiSummaryCleansedReasons,
     };
 
     try {

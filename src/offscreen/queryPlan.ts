@@ -106,6 +106,21 @@ export function clampLimit(raw: unknown, cap: number, fallback: number): number 
   return Math.max(1, Math.min(cap, Math.floor(raw)));
 }
 
+/**
+ * Offset clamp next to clampLimit so the read policy owns both paging values.
+ *
+ * SQLite errors on a negative OFFSET while FallbackStorage's `slice(-n, …)`
+ * counts from the end of the array — an unvalidated offset made the same
+ * query return different rows per backend (PBI 2026-09-12-06). Non-integer,
+ * non-finite, or negative input normalizes to 0; 0 is a legitimate value.
+ */
+export function clampOffset(raw: unknown): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || !Number.isInteger(raw) || raw < 0) {
+    return 0;
+  }
+  return raw;
+}
+
 export interface QuerySpec {
   where: string;
   order: string;
@@ -172,7 +187,7 @@ export function buildQuerySpec(
 
   const cap = useFts ? caps.fts : caps.plain;
   const limit = clampLimit(query.limit, cap, 100);
-  const offset = query.offset ?? 0;
+  const offset = clampOffset(query.offset ?? 0);
 
   // Tag filter condition (PBI 2026-09-11): partial-match semantics, built once
   // here so every backend reads the same condition set.

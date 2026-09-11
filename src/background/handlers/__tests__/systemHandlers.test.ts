@@ -202,32 +202,29 @@ describe('createContentCleansingExecutedHandler', () => {
 
   const baseSender = { tab: { id: 42, url: 'https://example.com/page' } } as chrome.runtime.MessageSender;
 
-  it('sets badge and clears it after timeout when tab has no badge', async () => {
-    const deps = { hasBadgeTab: vi.fn().mockReturnValue(false) };
-    const handler = createContentCleansingExecutedHandler(deps);
+  it('sets the per-tab cleansed badge with no timed clear (PBI 2026-09-12-07)', async () => {
+    // The old setTimeout-based clear died with SW suspension, so the badge
+    // now persists until the tab's next state transition (navigation).
+    const handler = createContentCleansingExecutedHandler({});
     const sendResponse = vi.fn();
 
     await handler({ payload: { hardStripRemoved: 2, keywordStripRemoved: 1, totalRemoved: 3 } } as any, baseSender, sendResponse);
     expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: 'C3', tabId: 42 });
-
-    vi.advanceTimersByTime(3000);
-    expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '', tabId: 42 });
+    expect(chrome.action.setBadgeText).not.toHaveBeenCalledWith(expect.objectContaining({ text: '', tabId: 42 }));
     expect(sendResponse).toHaveBeenCalledWith({ success: true });
   });
 
-  it('keeps badge when tab still has badge after timeout', async () => {
-    const deps = { hasBadgeTab: vi.fn().mockReturnValue(true) };
-    const handler = createContentCleansingExecutedHandler(deps);
+  it('rejects tab-less senders instead of crashing on sender.tab!', async () => {
+    const handler = createContentCleansingExecutedHandler({});
     const sendResponse = vi.fn();
 
-    await handler({ payload: { hardStripRemoved: 0, keywordStripRemoved: 0, totalRemoved: 0 } } as any, baseSender, sendResponse);
-    vi.advanceTimersByTime(3000);
-    expect(chrome.action.setBadgeText).not.toHaveBeenCalledWith(expect.objectContaining({ text: '', tabId: 42 }));
+    await handler({ payload: { totalRemoved: 1 } } as any, {} as chrome.runtime.MessageSender, sendResponse);
+    expect(chrome.action.setBadgeText).not.toHaveBeenCalled();
+    expect(sendResponse).toHaveBeenCalledWith({ success: false, error: 'Sender has no tab' });
   });
 
   it('writes cleansedReason "hard" when only hard strips removed', async () => {
-    const deps = { hasBadgeTab: vi.fn().mockReturnValue(false) };
-    const handler = createContentCleansingExecutedHandler(deps);
+    const handler = createContentCleansingExecutedHandler({});
     const sendResponse = vi.fn();
 
     await handler({ payload: { hardStripRemoved: 5, keywordStripRemoved: 0, totalRemoved: 5 } } as any, baseSender, sendResponse);
@@ -240,8 +237,7 @@ describe('createContentCleansingExecutedHandler', () => {
   });
 
   it('writes cleansedReason "keyword" when only keyword strips removed', async () => {
-    const deps = { hasBadgeTab: vi.fn().mockReturnValue(false) };
-    const handler = createContentCleansingExecutedHandler(deps);
+    const handler = createContentCleansingExecutedHandler({});
     const sendResponse = vi.fn();
 
     await handler({ payload: { hardStripRemoved: 0, keywordStripRemoved: 3, totalRemoved: 3 } } as any, baseSender, sendResponse);
@@ -254,8 +250,7 @@ describe('createContentCleansingExecutedHandler', () => {
   });
 
   it('writes cleansedReason "both" when both removed', async () => {
-    const deps = { hasBadgeTab: vi.fn().mockReturnValue(false) };
-    const handler = createContentCleansingExecutedHandler(deps);
+    const handler = createContentCleansingExecutedHandler({});
     const sendResponse = vi.fn();
 
     await handler({ payload: { hardStripRemoved: 1, keywordStripRemoved: 1, totalRemoved: 2 } } as any, baseSender, sendResponse);
@@ -268,8 +263,7 @@ describe('createContentCleansingExecutedHandler', () => {
   });
 
   it('does not update entry when totalRemoved is 0', async () => {
-    const deps = { hasBadgeTab: vi.fn().mockReturnValue(false) };
-    const handler = createContentCleansingExecutedHandler(deps);
+    const handler = createContentCleansingExecutedHandler({});
     const sendResponse = vi.fn();
 
     await handler({ payload: { hardStripRemoved: 0, keywordStripRemoved: 0, totalRemoved: 0 } } as any, baseSender, sendResponse);
@@ -278,8 +272,7 @@ describe('createContentCleansingExecutedHandler', () => {
   });
 
   it('does not update entry when sender.tab.url is missing', async () => {
-    const deps = { hasBadgeTab: vi.fn().mockReturnValue(false) };
-    const handler = createContentCleansingExecutedHandler(deps);
+    const handler = createContentCleansingExecutedHandler({});
     const sendResponse = vi.fn();
     const sender = { tab: { id: 42 } } as chrome.runtime.MessageSender;
 

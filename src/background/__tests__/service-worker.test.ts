@@ -1113,7 +1113,7 @@ describe('service-worker handlers', () => {
         it('should clear badge when tab has no URL', async () => {
             mockGet.mockResolvedValueOnce({ id: 2, url: undefined } as chrome.tabs.Tab);
             await serviceWorker.handleTabActivated({ tabId: 2 });
-            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '' });
+            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '', tabId: 2 });
         });
 
         it('should show warning badge for private page', async () => {
@@ -1123,7 +1123,7 @@ describe('service-worker handlers', () => {
             mockGet.mockResolvedValueOnce({ id: 3, url: 'https://private.com' } as chrome.tabs.Tab);
 
             await serviceWorker.handleTabActivated({ tabId: 3 });
-            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '!' });
+            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '!', tabId: 3 });
             expect(mockSetBadgeBackgroundColor).toHaveBeenCalledWith(expect.objectContaining({ color: expect.any(String) }));
         });
 
@@ -1134,7 +1134,7 @@ describe('service-worker handlers', () => {
             mockGet.mockResolvedValueOnce({ id: 4, url: 'https://public.com' } as chrome.tabs.Tab);
 
             await serviceWorker.handleTabActivated({ tabId: 4 });
-            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '●' });
+            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '●', tabId: 4 });
             expect(mockSetBadgeBackgroundColor).toHaveBeenCalledWith(expect.objectContaining({ color: expect.any(String) }));
         });
 
@@ -1146,13 +1146,13 @@ describe('service-worker handlers', () => {
             vi.mocked(hasPrivacyConsent).mockResolvedValueOnce(false);
 
             await serviceWorker.handleTabActivated({ tabId: 6 });
-            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '' });
+            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '', tabId: 6 });
         });
 
         it('should handle chrome.tabs.get error gracefully', async () => {
             mockGet.mockRejectedValueOnce(new Error('Tab not found'));
             await serviceWorker.handleTabActivated({ tabId: 999 });
-            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '' });
+            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '', tabId: 999 });
         });
 
         it('should show recording-active badge for a recordable page even when privacy cache is empty', async () => {
@@ -1164,7 +1164,7 @@ describe('service-worker handlers', () => {
             mockGet.mockResolvedValueOnce({ id: 5, url: 'https://example.com' } as chrome.tabs.Tab);
 
             await serviceWorker.handleTabActivated({ tabId: 5 });
-            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '●' });
+            expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '●', tabId: 5 });
         });
     });
 

@@ -1190,7 +1190,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     if (orig) mockGetMessage.mockImplementation(orig as any);
   });
 
-  it('addPath: success path — adds full url', async () => {
+  it('addPath: success path — adds the URL hostname (PBI 2026-09-12-05)', async () => {
     mockGetAll.mockResolvedValue({ domain_whitelist: [] });
     await initPrivatePanel();
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
@@ -1199,13 +1199,14 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(mockSetAll).toHaveBeenCalled();
     const savedArg = mockSetAll.mock.calls[0]![0] as any;
-    // Settings repository receives whitelist array containing full URL
-    expect(savedArg.domain_whitelist).toContain('https://example.com/page');
+    // The historical raw-URL entry could never match any whitelist consumer
+    // (all match hostnames) — the writer normalizes to the hostname.
+    expect(savedArg.domain_whitelist).toContain('example.com');
     expect(document.getElementById('mainStatus')!.textContent).toContain('Path added');
   });
 
   it('addPath: url already in whitelist — skips save', async () => {
-    mockGetAll.mockResolvedValue({ domain_whitelist: ['https://example.com/page'] });
+    mockGetAll.mockResolvedValue({ domain_whitelist: ['example.com'] });
     await initPrivatePanel();
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();

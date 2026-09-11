@@ -298,3 +298,49 @@ describe('PBI-34 parametric: shared LIMIT clamp across backends', () => {
     expect(rowQuery?.params[0]).toBe(expected);
   });
 });
+
+describe('PBI 2026-09-12-06 parametric: offset/limit clamp is the same on every backend', () => {
+  beforeEach(() => {
+    __setEngineForTesting(null, false);
+  });
+
+  it.each([
+    ['negative offset', -5],
+    ['fractional offset', 2.5],
+    ['NaN offset', Number.NaN],
+  ])('%s normalizes to 0 on idb and opfs (was backend-divergent: SQL errored, fallback sliced from the end)', async (_label, rawOffset) => {
+    const idb = makeIdbStub(true);
+    await idb.backend.query({ limit: 10, offset: rawOffset as number });
+    const idbRows = idb.calls.find((c) => /ORDER BY/i.test(c.sql) && !/COUNT\(\*\)/i.test(c.sql));
+    const idbOffsetParam = idbRows?.params[idbRows.params.length - 1];
+    expect(idbOffsetParam).toBe(0);
+
+    const opfs = makeOpfsStub();
+    await handleQuery({ engine: opfs.engine } as never, { limit: 10, offset: rawOffset } as never);
+    const opfsRows = opfs.calls.find((c) => /ORDER BY/i.test(c.sql) && !/COUNT\(\*\)/i.test(c.sql));
+    const opfsOffsetParam = opfsRows?.params[opfsRows.params.length - 1];
+    expect(opfsOffsetParam).toBe(0);
+  });
+
+  it('a huge limit caps at QUERY_CAPS.plain on idb, opfs, and fallback alike', async () => {
+    const idb = makeIdbStub(true);
+    await idb.backend.query({ limit: 1e9, offset: 0 });
+    const idbRows = idb.calls.find((c) => /ORDER BY/i.test(c.sql) && !/COUNT\(\*\)/i.test(c.sql));
+    expect(idbRows?.params[idbRows.params.length - 2]).toBe(QUERY_CAPS.plain);
+
+    const opfs = makeOpfsStub();
+    await handleQuery({ engine: opfs.engine } as never, { limit: 1e9, offset: 0 } as never);
+    const opfsRows = opfs.calls.find((c) => /ORDER BY/i.test(c.sql) && !/COUNT\(\*\)/i.test(c.sql));
+    expect(opfsRows?.params[opfsRows.params.length - 2]).toBe(QUERY_CAPS.plain);
+
+    // The former OPFS spread `{...spec, limit, offset}` bypassed this cap and
+    // made the OPFS path the only backend honouring unbounded limits.
+    const storage = new FallbackStorage();
+    await storage.insert({ url: 'https://cap.example.com', created_at: 1 });
+    const result = await storage.query({ limit: 1e9, offset: 0 });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.rows.length).toBeLessThanOrEqual(QUERY_CAPS.plain);
+    }
+  });
+});

@@ -48,11 +48,13 @@ export class ChromeDomainPolicyPort implements DomainPolicyPort {
             StorageKeys.DOMAIN_FILTER_CACHE,
             StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP,
             StorageKeys.DOMAIN_FILTER_MODE,
+            StorageKeys.DOMAIN_SUBDOMAIN_MATCHING,
         ]);
 
         const cachedWhitelist = (result[StorageKeys.DOMAIN_FILTER_CACHE] as string[]) || [];
         const cachedAt = (result[StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP] as number) || 0;
         const mode = (result[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'disabled';
+        const matchSubdomains = result[StorageKeys.DOMAIN_SUBDOMAIN_MATCHING] === true;
 
         // Second-stage read only in blacklist mode (storage call pattern
         // unchanged); branching itself lives in the shared pure policy.
@@ -73,7 +75,7 @@ export class ChromeDomainPolicyPort implements DomainPolicyPort {
 
         return evaluateDomainPolicy(
             domain,
-            { cachedWhitelist, cachedAt, mode, blacklist, simpleEnabled, ublockEnabled },
+            { cachedWhitelist, cachedAt, mode, blacklist, simpleEnabled, ublockEnabled, matchSubdomains },
             this.clock(),
         );
     }

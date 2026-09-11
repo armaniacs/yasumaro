@@ -383,7 +383,10 @@ Users can add domains/paths to the whitelist from the confirmation dialog:
 - **Source**: Confirmation dialog provides whitelist options
 - **Pattern Support**:
   - Domain whitelist: Simple domain names or wildcard patterns (e.g., `*.example.com`)
-  - Path whitelist: Regex patterns for precise path matching
+  - Path whitelist: All whitelist consumers match hostnames only; a path add
+    normalizes to the URL's hostname through the popup `whitelistWriter` seam
+    (popup writes validate via `DomainFilter.parseAndValidate` before storage).
+    Path-level matching is not implemented (PBI 2026-09-12-05)
 - **PII Masking**: Always applied even for whitelisted domains
 - **Privacy Bypass**: Whitelisted domains skip private page detection warning
 

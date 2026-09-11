@@ -476,12 +476,15 @@ export function createArchivePanel(): PanelLifecycle {
               date: meta.cutoffDate,
             });
           }
-          void (async () => {
-            const openResult = await archiveOpen(restoreStagingName as string);
-            if ('error' in openResult) throw new Error(openResult.error);
-            if (sessionSection) sessionSection.hidden = false;
-            await renderSessionList();
-          })().catch((err) => showStatus(statusTarget(statusEl), errorMessage(err), 'error'));
+          // PBI 2026-09-12-02: hand off to the session viewer inside the busy
+          // scope. sessionStaging must be set BEFORE renderSessionList — its
+          // guard returns without it, which used to leave the restored
+          // session list empty (and save/close dead) until a remount.
+          const openResult = await archiveOpen(restoreStagingName);
+          if ('error' in openResult) throw new Error(openResult.error);
+          sessionStaging = restoreStagingName;
+          if (sessionSection) sessionSection.hidden = false;
+          await renderSessionList();
           if (restoreBtn) restoreBtn.hidden = false;
           showStatus(statusTarget(statusEl), localized('archiveRestorePreviewReady'), 'success');
         } catch (err) {

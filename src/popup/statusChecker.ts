@@ -156,10 +156,14 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
     let matchedPattern: string | undefined = undefined;
 
     if (domain) {
-      if (mode === 'whitelist' && isDomainInList(domain, whitelist)) {
+      // PBI 2026-09-12-03: the display verdict must honor the same subdomain
+      // toggle as isDomainAllowed above — the 2-arg wrapper dropped it, so the
+      // popup display could disagree with the actual recording verdict.
+      const matchSubdomains = settings.domain_subdomain_matching === true;
+      if (mode === 'whitelist' && isDomainInList(domain, whitelist, matchSubdomains)) {
         matched = true;
         matchedPattern = findMatchedPattern(domain, whitelist);
-      } else if (mode === 'blacklist' && isDomainInList(domain, blacklist)) {
+      } else if (mode === 'blacklist' && isDomainInList(domain, blacklist, matchSubdomains)) {
         matched = true;
         matchedPattern = findMatchedPattern(domain, blacklist);
       }

@@ -51,7 +51,7 @@ describe('tabEventHandlers', () => {
     });
     const handlers = createTabEventHandlers({ tabCache: mockTabCache, autoSavedBadgeTabs: mockAutoSavedBadgeTabs });
     await handlers.handleTabActivated({ tabId: 1 });
-    expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '' });
+    expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '', tabId: 1 });
   });
 
   it('handleTabActivated with private url shows !', async () => {
@@ -66,7 +66,7 @@ describe('tabEventHandlers', () => {
     mockPrivacyCache.set(normalized, { isPrivate: true });
     const handlers = createTabEventHandlers({ tabCache: mockTabCache, autoSavedBadgeTabs: mockAutoSavedBadgeTabs, getPrivacyCache: () => mockPrivacyCache });
     await handlers.handleTabActivated({ tabId: 1 });
-    expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '!' });
+    expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '!', tabId: 1 });
   });
 
   it('handleTabActivated without getPrivacyCache uses null cache', async () => {
@@ -83,7 +83,7 @@ describe('tabEventHandlers', () => {
     });
     const handlers = createTabEventHandlers({ tabCache: mockTabCache, autoSavedBadgeTabs: mockAutoSavedBadgeTabs });
     await handlers.handleTabActivated({ tabId: 999 });
-    expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '' });
+    expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '', tabId: 999 });
   });
 
   it('handleTabUpdated skips when status not complete', async () => {
@@ -124,8 +124,8 @@ describe('tabEventHandlers', () => {
     vi.mocked(isDomainAllowed).mockResolvedValue(false);
     const handlers = createTabEventHandlers({ tabCache: mockTabCache, autoSavedBadgeTabs: mockAutoSavedBadgeTabs, getPrivacyCache: () => mockPrivacyCache });
     await handlers.handleTabActivated({ tabId: 1 });
-    expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '∉' });
-    expect(chrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({ color: '#10B981' });
+    expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '∉', tabId: 1 });
+    expect(chrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({ color: '#10B981', tabId: 1 });
   });
 
   it('handleTabUpdated with domain-filtered url shows ∉ in green with tabId', async () => {

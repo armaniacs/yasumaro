@@ -23,19 +23,19 @@ export async function handleInsert(ctx: HandlerContext, record: BrowsingLogRecor
 }
 
 export async function handleQuery(ctx: HandlerContext, payload: QueryPayload): Promise<{ rows: BrowsingLogRecord[]; total: number }> {
-  const { limit = 20, offset = 0 } = payload;
-
   // WHERE/ORDER/tag assembly is shared with IdbVfsBackend via queryPlan.ts
-  // (PBI-34). LIMIT passes through unclamped: recordsRepo.query clamps to
-  // MAX_QUERY_LIMIT upstream, so re-clamping here to QUERY_CAPS.plain would
-  // wrongly cap legitimate large listings.
+  // (PBI-34). The spec is the read policy: buildQuerySpec clamps limit and
+  // offset (PBI 2026-09-12-06) — the worker passes it through untouched, same
+  // as IdbVfsBackend. The old `{...spec, limit, offset}` spread re-applied
+  // wire values over the clamped spec (the only backend that did) and made
+  // the same query return different rows per backend.
   // fts5Available: true — the OPFS engine is FTS5-enabled and the tag filter
   // uses the trigram MATCH path for terms >= 3 chars (PBI 2026-09-11).
-  const spec = buildQuerySpec({ ...(payload as StorageQuery), limit, offset }, { caps: QUERY_CAPS, fts5Available: true });
+  const spec = buildQuerySpec({ ...(payload as StorageQuery) }, { caps: QUERY_CAPS, fts5Available: true });
   if (spec.error) {
     throw new Error(spec.error);
   }
-  const stmts = buildPlainListStatements({ ...spec, limit, offset }, { columns: BROWSING_LOG_COLUMNS_SQL });
+  const stmts = buildPlainListStatements(spec, { columns: BROWSING_LOG_COLUMNS_SQL });
   const params: SqliteValue[] = stmts.countParams;
 
   let total = 0;

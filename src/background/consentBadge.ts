@@ -7,27 +7,26 @@
  */
 
 import { hasPrivacyConsent } from '../utils/storage/privacyConsent.js';
-import { BADGE_COLORS } from '../constants/appConstants.js';
+import { setBadge } from './badgePolicy.js';
 import { logWarn } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
-
-const CONSENT_MISSING_BADGE_TEXT = '!';
 
 /**
  * Reflects the current privacy consent state on the extension's toolbar icon.
  * Call this after any consent state change and on Service Worker startup/install.
+ * Consent is inherently GLOBAL state — the only badge kind written without a
+ * tabId (PBI 2026-09-12-07).
  */
 export async function updateConsentBadge(): Promise<void> {
     try {
         const consented = await hasPrivacyConsent();
 
         if (consented) {
-            await chrome.action.setBadgeText({ text: '' });
+            await setBadge({ kind: 'clear' });
             return;
         }
 
-        await chrome.action.setBadgeText({ text: CONSENT_MISSING_BADGE_TEXT });
-        await chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string });
+        await setBadge({ kind: 'no-consent' });
     } catch (error) {
         logWarn(
             '[ConsentBadge] Failed to update consent badge',

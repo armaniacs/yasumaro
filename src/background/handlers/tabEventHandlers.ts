@@ -4,9 +4,9 @@
  * Extracted from service-worker.ts for modularization (PBI-26).
  * Handles tab removal, activation, and navigation badge updates.
  */
-import { BADGE_COLORS } from '../../constants/appConstants.js';
 import { isDomainAllowed } from '../../utils/domainUtils.js';
 import { HeaderDetector } from '../headerDetector.js';
+import { setBadge } from '../badgePolicy.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import { TabCache } from '../tabCache.js';
 import { logError, ErrorCode } from '../../utils/logger.js';
@@ -47,34 +47,35 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
         await ctx.autoSavedBadgeTabs.restore();
         try {
             const tab = await chrome.tabs.get(activeInfo.tabId);
+            const tabId = activeInfo.tabId;
             // 自動保存バッジ表示中のタブは ◎ を維持
-            if (ctx.autoSavedBadgeTabs.has(activeInfo.tabId)) {
-                chrome.action.setBadgeText({ text: '◎', tabId: activeInfo.tabId });
-                chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.BLUE as string, tabId: activeInfo.tabId });
+            if (ctx.autoSavedBadgeTabs.has(tabId)) {
+                // PBI 2026-09-12-07: badge display lives in the shared BadgePolicy seam.
+                await setBadge({ kind: 'recorded' }, tabId);
                 return;
             }
             if (!tab.url) {
-                chrome.action.setBadgeText({ text: '' });
+                await setBadge({ kind: 'clear' }, tabId);
                 return;
             }
             const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
             let privacyInfo: PrivacyInfo | undefined;
             const cache = ctx.getPrivacyCache ? ctx.getPrivacyCache() : null;
             privacyInfo = cache?.get(normalizedUrl);
+            // Tab-derived states are written PER-TAB (PBI 2026-09-12-07). The
+            // old global writes made this tab's state the fallback for every
+            // tab without its own override — one tab's "!" bled into others.
             if (privacyInfo?.isPrivate) {
-                chrome.action.setBadgeText({ text: '!' });
-                chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string });
+                await setBadge({ kind: 'private' }, tabId);
             } else if (await isDomainExcluded(tab.url)) {
-                chrome.action.setBadgeText({ text: '∉' });
-                chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string });
+                await setBadge({ kind: 'excluded' }, tabId);
             } else {
                 // 記録が有効なタブでは「記録中」を常時可視化する（PBI 2026-09-05-10）。
                 // ゲート（同意）が無い場合は無表示を維持する。
                 if (ctx.isRecordingAllowed ? await ctx.isRecordingAllowed() : false) {
-                    chrome.action.setBadgeText({ text: '●' });
-                    chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string });
+                    await setBadge({ kind: 'recording' }, tabId);
                 } else {
-                    chrome.action.setBadgeText({ text: '' });
+                    await setBadge({ kind: 'clear' }, tabId);
                 }
             }
         } catch (error) {
@@ -82,7 +83,7 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
                 tabId: activeInfo.tabId,
                 error: errorMessage(error)
             }, ErrorCode.BADGE_UPDATE_FAILED, 'service-worker.ts');
-            chrome.action.setBadgeText({ text: '' });
+            await setBadge({ kind: 'clear' }, activeInfo.tabId);
         }
     }
 
@@ -99,13 +100,13 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
         const cache = ctx.getPrivacyCache ? ctx.getPrivacyCache() : null;
         privacyInfo = cache?.get(normalizedUrl);
         if (privacyInfo?.isPrivate) {
-            chrome.action.setBadgeText({ text: '!', tabId });
-            chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string, tabId });
+            await setBadge({ kind: 'private' }, tabId);
         } else if (await isDomainExcluded(tab.url)) {
-            chrome.action.setBadgeText({ text: '∉', tabId });
-            chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string, tabId });
+            await setBadge({ kind: 'excluded' }, tabId);
         } else {
-            chrome.action.setBadgeText({ text: '', tabId });
+            // Navigation also clears the per-tab cleansed badge (C{n}) — the
+            // state transition replaces the old SW setTimeout (PBI 2026-09-12-07).
+            await setBadge({ kind: 'clear' }, tabId);
         }
     }
 

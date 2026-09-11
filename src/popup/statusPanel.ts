@@ -2,7 +2,7 @@ import { StatusInfo } from './statusChecker.js';
 import { loadActiveTabStatus } from './statusStore.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
-import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
+import { addDomainToWhitelist, addPathToWhitelist } from './whitelistWriter.js';
 import { getMessage } from '../utils/i18n.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { getCurrentTab } from './tabUtils.js';
@@ -386,20 +386,24 @@ function attachPrivacyActionListeners(): void {
     if (tab?.url) {
       const domain = extractDomain(tab.url);
       if (domain) {
-        const settings = await settingsRepository.getAll();
-        const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
-        if (!whitelist.includes(domain)) {
-          whitelist.push(domain);
-          await settingsRepository.setAll({ [StorageKeys.DOMAIN_WHITELIST]: whitelist } as unknown as import('../utils/storage/types.js').Settings);
-          await updateDomainFilterCache(await settingsRepository.getAll());
-
+        // PBI 2026-09-12-05: validated, deduped, cache-refreshing writes live
+        // in the shared whitelist writer seam.
+        const result = await addDomainToWhitelist(domain);
+        if (result.ok && result.added) {
           const statusDiv = document.getElementById('mainStatus');
           if (statusDiv) {
             statusDiv.textContent = getMessage('domainAddedToWhitelist') || `Added ${domain} to whitelist`;
             statusDiv.className = 'success';
           }
-
           await initStatusPanel();
+        } else if (!result.ok) {
+          const statusDiv = document.getElementById('mainStatus');
+          if (statusDiv) {
+            statusDiv.textContent = result.reason === 'no-domain'
+              ? 'Invalid URL'
+              : `Invalid pattern: ${domain}`;
+            statusDiv.className = 'error';
+          }
         }
       }
     }
@@ -409,20 +413,22 @@ function attachPrivacyActionListeners(): void {
   addPathBtn?.addEventListener('click', async () => {
     const tab = await getCurrentTab();
     if (tab?.url) {
-      const settings = await settingsRepository.getAll();
-      const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
-      if (!whitelist.includes(tab.url)) {
-        whitelist.push(tab.url);
-        await settingsRepository.setAll({ [StorageKeys.DOMAIN_WHITELIST]: whitelist } as unknown as import('../utils/storage/types.js').Settings);
-        await updateDomainFilterCache(await settingsRepository.getAll());
-
+      const result = await addPathToWhitelist(tab.url);
+      if (result.ok && result.added) {
         const statusDiv = document.getElementById('mainStatus');
         if (statusDiv) {
           statusDiv.textContent = getMessage('pathAddedToWhitelist') || `Added path to whitelist`;
           statusDiv.className = 'success';
         }
-
         await initStatusPanel();
+      } else if (!result.ok) {
+        const statusDiv = document.getElementById('mainStatus');
+        if (statusDiv) {
+          statusDiv.textContent = result.reason === 'no-domain'
+            ? 'Invalid URL'
+            : `Invalid pattern: ${tab.url}`;
+          statusDiv.className = 'error';
+        }
       }
     }
   });
@@ -461,8 +467,14 @@ async function initAllUrlsPermissionBanner(): Promise<void> {
 }
 
 function initCleansingFeedbackButton(): void {
-  const btn = document.getElementById('reportCleansingFeedbackBtn') as HTMLButtonElement | null;
+  const btn = document.getElementById('reportCleansingFeedbackBtn') as (HTMLButtonElement & { dataset: DOMStringMap }) | null;
   if (!btn) return;
+  // Wire once per element — attachPrivacyActionListeners re-inits the panel
+  // after every whitelist write, and re-running init() stacked a duplicate
+  // click handler each time (PBI 2026-09-12-08). Same discipline as the
+  // permission buttons (PBI 2026-09-11-04).
+  if (btn.dataset.wired === 'true') return;
+  btn.dataset.wired = 'true';
   btn.addEventListener('click', async () => {
     const statusEl = document.getElementById('reportCleansingFeedbackStatus');
     try {

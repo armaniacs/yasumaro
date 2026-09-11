@@ -30,8 +30,16 @@ export class TabCache {
         if (this.isInitialized) return;
         if (this.initPromise) return this.initPromise;
 
-        this.initPromise = new Promise((resolve) => {
+        this.initPromise = new Promise<void>((resolve, reject) => {
             chrome.tabs.query({}, (tabs) => {
+                // PBI 2026-09-12-08: check lastError and settle the promise on
+                // failure — an unchecked query error left initPromise pending
+                // forever and hung every message awaiting initialize().
+                const error = chrome.runtime?.lastError;
+                if (error) {
+                    reject(new Error(error.message || 'chrome.tabs.query failed'));
+                    return;
+                }
                 tabs.forEach(tab => {
                     if (tab.id && tab.url && tab.url.startsWith('http')) {
                         this.cache.set(tab.id, {
@@ -46,7 +54,15 @@ export class TabCache {
                 resolve();
             });
         });
-        await this.initPromise;
+        try {
+            await this.initPromise;
+        } catch (error) {
+            // A failed probe must not poison later initialize() calls: reset
+            // so the next message retries instead of reusing the rejected
+            // promise forever.
+            this.initPromise = null;
+            throw error;
+        }
         await this.loadFromSession();
     }
 

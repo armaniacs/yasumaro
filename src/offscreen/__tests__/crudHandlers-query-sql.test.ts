@@ -44,7 +44,7 @@ describe('handleQuery — shared query builder contract', () => {
     expect(q?.sql).toContain('domain = ?');
     expect(q?.sql).toContain('is_starred = ?');
     expect(q?.sql).toContain('gist_synced = ?');
-    expect(q?.params).toEqual([100, 200, 'example.com', 1, 0, 20, 0]);
+    expect(q?.params).toEqual([100, 200, 'example.com', 1, 0, 100, 0]);
   });
 
   it('applies an ids IN (...) filter', async () => {
@@ -52,7 +52,7 @@ describe('handleQuery — shared query builder contract', () => {
     await handleQuery(ctx, { ids: [1, 2, 3] });
     const q = rowQuery(calls);
     expect(q?.sql).toContain('id IN (?,?,?)');
-    expect(q?.params).toEqual([1, 2, 3, 20, 0]);
+    expect(q?.params).toEqual([1, 2, 3, 100, 0]);
   });
 
   it('applies a tag filter via the FTS5 MATCH sub-query, not LIKE (>= 3 chars)', async () => {
@@ -63,7 +63,7 @@ describe('handleQuery — shared query builder contract', () => {
     expect(q?.sql).not.toContain('tags LIKE');
     // PBI 2026-09-11: partial-match semantics — the phrase-quoted raw term,
     // no # prefix (matches inside '#news' like the old client-side includes()).
-    expect(q?.params).toEqual(['"news"', 20, 0]);
+    expect(q?.params).toEqual(['"news"', 100, 0]);
   });
 
   it('falls back to tags LIKE for short tags (FTS5 trigram needs >= 3 chars)', async () => {
@@ -72,7 +72,7 @@ describe('handleQuery — shared query builder contract', () => {
     const q = rowQuery(calls);
     expect(q?.sql).toContain('tags LIKE ?');
     expect(q?.sql).not.toContain('browsing_logs_fts');
-    expect(q?.params).toEqual(['%AI%', 20, 0]);
+    expect(q?.params).toEqual(['%AI%', 100, 0]);
   });
 
   it('strips FTS5 operators and truncates an overlong tag before matching', async () => {

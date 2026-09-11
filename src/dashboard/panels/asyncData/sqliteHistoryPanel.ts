@@ -9,7 +9,7 @@ import { createSqliteHistoryModel } from './sqliteHistoryModel.js';
 import { notify } from '../../notificationService.js';
 import { getPendingPages, removePendingPages } from '../../../utils/pendingStorage.js';
 import type { PendingPage } from '../../../utils/pendingStorage.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../../background/messageTypes.js';
+import { recordPendingPage, PENDING_RECORD_TIMEOUT_ERROR } from '../../../messaging/pendingRecordGateway.js';
 import {
   formatDiagnosticMetadataHtml,
   render as renderHistoryView,
@@ -170,31 +170,20 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
     };
   }
 
-  /** MANUAL_RECORD with the 20s timeout contract the legacy pending panel used. */
+  /** Pending re-record — envelope + timeout contract lives in the shared seam (PBI 2026-09-12-01). */
   async function recordPending(url: string, skipAi: boolean): Promise<{ ok: boolean; error?: string }> {
     const page = pendingPages.find((p) => p.url === url);
     if (!page) return { ok: false, error: t('recordError') };
-    try {
-      const result = await Promise.race([
-        chrome.runtime.sendMessage({
-          type: 'MANUAL_RECORD',
-          protocolVersion: CURRENT_PROTOCOL_VERSION,
-          payload: { title: page.title, url: page.url, content: '', force: true, skipAi },
-        }),
-        new Promise<never>((_, reject) => setTimeout(
-          () => reject(new Error(t('recordRequestTimedOut'))),
-          20000,
-        )),
-      ]) as { success?: boolean; error?: string } | undefined;
-      if (result?.success) {
-        await removePendingPages([url]);
-        await loadPending();
-        return { ok: true };
-      }
-      return { ok: false, error: result?.error || t('recordError') };
-    } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : t('recordError') };
+    const result = await recordPendingPage({ title: page.title, url: page.url, force: true, skipAi });
+    if (result.success) {
+      await removePendingPages([url]);
+      await loadPending();
+      return { ok: true };
     }
+    const error = result.error === PENDING_RECORD_TIMEOUT_ERROR
+      ? t('recordRequestTimedOut')
+      : result.error || t('recordError');
+    return { ok: false, error };
   }
 
   function subscribePendingStorage(): void {

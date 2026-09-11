@@ -35,6 +35,7 @@ export class InMemoryDomainPolicyPort implements DomainPolicyPort {
                 blacklist: (this.store[StorageKeys.DOMAIN_BLACKLIST] as string[]) || [],
                 simpleEnabled: this.store[StorageKeys.SIMPLE_FORMAT_ENABLED] !== false,
                 ublockEnabled: this.store[StorageKeys.UBLOCK_FORMAT_ENABLED] === true,
+                matchSubdomains: this.store[StorageKeys.DOMAIN_SUBDOMAIN_MATCHING] === true,
             },
             this.clock(),
         );
