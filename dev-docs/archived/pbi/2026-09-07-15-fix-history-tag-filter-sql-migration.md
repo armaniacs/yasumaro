@@ -1,8 +1,7 @@
 # PBI 15: history-panel の tag-filter を SQL 移行し 5000 件 over-fetch cap を撤去
 
-> **重要: この PBI は現時点では実装しない（`00-INDEX.md` に記載済み）。03/04 の history-panel 2 件は保留。**
-> tag マッチセマンティクスの変更リスクと未解決事項 3 点が残っているため、次ラウンドの
-> architecture review で再評価してから着手する。
+> **実装完了（2026-09-11、arch-delivery-loop round 4）**。保留解除の 3 つの未解決事項を
+> 自律決定して実装した。決定と実測は下記「実装メモ（2026-09-11）」参照。
 
 ## ユーザーストーリー
 
@@ -189,12 +188,57 @@ Scenario: バックエンドが tag フィルタを honor しない場合の挙�
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 未解決事項 1〜3 が着手前に決定され、決定内容が PBI 実装メモに記録される
-- [ ] dashboard 関連テスト全 green（type-check / lint / build 含む）
-- [ ] LIKE フォールバックの性能ベンチを取得し、許容判定を PR に添付
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新（DESIGN_SPECIFICATIONS.md の history panel 節に SQL 移行後の
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 未解決事項 1〜3 が着手前に決定され、決定内容が PBI 実装メモに記録される
+- [x] dashboard 関連テスト全 green（type-check / lint / build 含む）
+- [x] LIKE フォールバックの性能ベンチを取得し、許容判定を PR に添付
+- [x] コードレビュー完了（アーキテクチャ round 4 の全体検証で実施）
+- [x] ドキュメント更新（DESIGN_SPECIFICATIONS.md の history panel 節に SQL 移行後の
       tag-filter 挙動と cap 撤去を反映。`sqliteHistoryQuery.ts` の "known limitation"
       コメントを解消済みに書き換え。CHANGELOG に振る舞い変更を記載）
-- [ ] `00-INDEX.md` の進行中テーブルを更新（着手時に「実装しない」注記を外す）
+- [x] `00-INDEX.md` の進行中テーブルを更新（着手時に「実装しない」注記を外す）
+
+## 実装メモ（2026-09-11・arch-delivery-loop round 4）
+
+### 未解決事項の決定
+
+1. **セマンティクス = 部分一致を維持**（振る舞い不変の移行）。旧 client 側
+   `filterRowsByTag` はカンマ split 後の `includes` 部分一致。SQL 側は
+   `buildTagFilterCondition`（`sqliteQueryBuilder.ts`）に統一:
+   - 3 文字以上 + FTS5 利用可 → trigram `MATCH`（phrase quote した生の語、**`#` prefix を付けない**
+     — trigram は連続部分一致なので `AI` は `#AImaster` にヒットし、旧 client 挙動と同じ）
+   - 3 文字未満 or FTS 無し → `tags LIKE '%<term>%'`（全表スキャン。`%`/`_` はワイルドカード
+     として機能 — LIKE 検索パスと同一の documented 挙動）
+2. **性能 = 実測で許容判定**。better-sqlite3 + 実スキーマ（FTS5 trigram・trigger 同期）で
+   50,000 行を投入して計測:
+   - `tags LIKE '%AI%'` rows: median 3.2ms / p95 3.2ms（6,428 件一致・COUNT 込み 3.1ms）
+   - `FTS MATCH "project"` rows: median 2.3ms / p95 2.7ms（5,000 件一致）
+   - 許容判定: dashboard の DASHBOARD_SQLITE_TIMEOUT=10000ms に対して 3 桁の余裕。
+     tags 用インデックス/正規化テーブルは不要。
+3. **backend 分岐 = 統合**（IdbVfsBackend / fallback / in-memory も tag を honor）。
+   旧 PBI-34 の「INTENTIONAL divergence」は pinning test が存在しないことを確認済み
+   （`query-backends-parametric.test.ts` の 3 divergence に tag は無い）。列投影の
+   33 vs 13 分歧は 2026-09-09-03 の決着どおり維持。
+
+### 実装
+
+- `queryPlan.ts`: `buildQuerySpec` が `tagFilter: {condition, params} | null` を組む
+  （fts5Available を注入）。`buildPlainListStatements` は spec の tagFilter を使用
+  （opts.tag 引数は廃止）。`matchesExtraWhere` に tag 述語追加 + `tagMatchesFilter`
+  （旧 filterRowsByTag と同一ルール）を SSOT 化。
+- `IdbVfsBackend.query`: plain path が spec 経由で tag を適用（旧 divergence 削除）。
+- `opfsWorker/crudHandlers.handleQuery`: `fts5Available: true` に変更（OPFS エンジンは
+  FTS5 有効。旧 false は未使用の text-search 分岐向け simplification だった）。
+- `storageFallback.query`: `tagMatchesFilter` による JS 述語を追加（旧: tag 無視）。
+- `InMemoryTransport`: `matchesExtraWhere` 経由で自動的に tag を honor。
+- `sqliteHistoryQuery.ts`: `TAG_FILTER_FETCH_LIMIT` / `filterRowsByTag` /
+  `useServerPaging` 分岐 / client slice を削除。`tagFilter` を wire に渡し、SQL の
+  total を使用。`shouldFallbackToTextSearch`（Tag Cluster 由来 0 件フォールバック）は
+  SQL total === 0 で発火する形で維持（`historyFilters.ts` は削除せず）。
+- parametric テストに tag parity（idb vs opfs 同一条件・同一 params）+ 旧 divergence
+  不再発の regression pin を追加。
+
+### 検証
+
+- type-check / offscreen 961 tests / dashboard+messaging 1451 / background 1291 /
+  utils+popup+content 3841 — 全 green（2026-09-11 時点）。

@@ -29,12 +29,11 @@
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
 
-### 2026-09-07 architecture review round — 7 件中 5 件完了、2 件保留
+### 2026-09-07 architecture review round — 7 件中 6 件完了、1 件保留
 
 （`2026-09-05-00-backlog-future.md` の「次ラウンド再評価」項目 + 型債務返済で発見したドリフトを RICE 採点し PBI 化。2026-09-07。AI slot-runner 統合と fallback 再入ギャップは RICE 低・トリガー未発生で PBI 化せず台帳据え置き）
 
-- 2026-09-07-15-fix-history-tag-filter-sql-migration.md（⬜ **現時点では実装しない**: history-panel の tag-filter を client-side 5000 件 over-fetch から SQL クエリ（FTS5 MATCH + 短タグ LIKE フォールバック）へ移行し、`TAG_FILTER_FETCH_LIMIT` による「古い順ソート + タグ絞り込みで新しいエントリがサイレント除外」を解消。tag 一致セマンティクス変更のリスクと未確認論点（tags 無インデックスでの LIKE 性能、PBI-34 の意図的分岐の扱い）があり、16 とセットで保留。RICE 6.0。2pt / 副作用 🟡 / 🔧（fix））
-- 2026-09-07-16-refactor-remove-legacy-history-panel.md（⬜ **現時点では実装しない**: `3478f9d9`（2026-07）以降どこからも navigate されない legacy `panel-history` の撤去（`main.ts` 登録・HTML セクション・陳腐化した `initHistoryPanel` mock）。ただし pending pages セクション・6種フィルタ・`chrome.storage.onChanged` ライブ更新が現行 SQLite パネルに既存かが未確認で、無ければ「pending pages 移設」の独立 PBI に分裂する。15 → 16 の順で、両方保留。RICE 5.25。3pt / 副作用 🟡 / 🔧（refactor））
+- 2026-09-07-16-refactor-remove-legacy-history-panel.md（⬜ **現時点では実装しない**: `3478f9d9`（2026-07）以降どこからも navigate されない legacy `panel-history` の撤去（`main.ts` 登録・HTML セクション・陳腐化した `initHistoryPanel` mock）。pending pages セクション・6種フィルタ・`chrome.storage.onChanged` ライブ更新・タグ編集モーダル・Export all as Markdown が現行 SQLite パネルに未実装であることを 2026-09-07 調査で確定済み（PBI 内「未解決事項 1 の調査結果」）。**着手前提の PBI 15 は 2026-09-11 round 4 で完了** — 着手時は「pending pages 移設」の独立 PBI を切り出してから。RICE 5.25。3pt / 副作用 🟡 / 🔧（refactor））
 
 ### 将来候補の統合台帳（live）
 
@@ -63,6 +62,20 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-11 architecture review round 4 — 9件完了（arch-delivery-loop・0911a ブランチ）
+
+診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260911-1959.html`）→ RICE 採点 → 実装。実行順 = 01 → 02 → 03 → 07（バッチ1・ファイル非重複）→ 04 → 05（バッチ2・statusPanel 共有で直列）→ 06 → 08（バッチ3・offscreen クラスタ）→ 既存 PBI 2026-09-07-15。台帳送り 10 項目 + 小型バグ 8 件は `2026-09-11-00-backlog-0911a.md`。なぜなぜ分析は `/tmp/kilo/whywhy/2026-09-11-0911a.md`。
+
+- 2026-09-11-01-fix-archive-token-scope.md（✅ 完了・アーカイブ済 — archive token の scope binding を残り 4 subtype（open/update/save/close）に拡張し staging 間リプレイの穴を解消。drift ガードテスト（token-required かつ未バインド subtype の検出）新設。prepare/cleanup は破壊的パラメータ無しで不バインドを明記。検証: scope/token/gateway テスト 38 green）
+- 2026-09-11-02-fix-archive-panel-locale-ternary.md（✅ 完了・アーカイブ済 — archivePanel 復元プレビューの dead ternary（両分岐が英語固定 'Preview ready.'）を i18n キー `archiveRestorePreviewReady` に置換。check-i18n PASS）
+- 2026-09-11-03-fix-popup-pending-pages-record.md（✅ 完了・アーカイブ済 — popup pending pages の実バグ 3 件を修正: dead `type:'record'` message（Save が無記録でページ削除）→ MANUAL_RECORD envelope 化、whitelist 散在キー直書き（settings blob 非対応で恒久的に無効）→ SettingsRepository seam 化、getPendingPages N+1 → ループ外 1 回。旧テストは壊れた挙動を pin していたため新契約に更新）
+- 2026-09-11-04-refactor-popup-content-fetch-gateway.md（✅ 完了・アーカイブ済 — popup GET_CONTENT 3 送信 seam を `ContentFetchGateway`（timeout + permission ladder、transport 注入）に統合。tabContentFetcher.ts 削除。statusPanel の生 callback 2 箇所置換、messageTransport の到達不能 lastError ポーリング削除、btnRequestPermission の listener 積み重ねに wired ガード。dead 経路を pin していたテスト 3 件は promise 契約に意図修正）
+- 2026-09-11-05-refactor-cleansing-badge.md（✅ 完了・アーカイブ済 — hard/keyword/both の badge 表示政策 4 重実装（statusPanel ×2・previewPresenter・systemHandlers）を `src/utils/cleansingBadge.ts`（Layer 0・getMessage 注入）1 テーブルに統合。真理値表テスト新設）
+- 2026-09-11-06-refactor-sqlite-status-ssot.md（✅ 完了・アーカイブ済 — legacy パス定数 4 ファイル 3 流儀を `sqliteMessages.ts` SSOT に統合（drift ガードテスト付き）、STATUS enrichment を `sqliteStatus.ts`（allSettled フィールド隔離 + `indexedDB.databases` feature-detect）に集約。**追加で実バグ修正: offscreenGateway.status() が `idbMigrationV2Done`/`opfsLegacyDbPath`/`idbLegacyDbName` を drop し dashboard 経路で IDB マイグレーション状態が常に欠落**。dual API は役割差のため維持（スコープ調整を PBI 実装メモに記録））
+- 2026-09-11-07-fix-dashboard-import-batch.md（✅ 完了・アーカイブ済 — dashboard import を行毎 N+1 round-trip（MAX_IMPORT_ROWS 往復）から `insertBatch` 1 往復に統合。`recordsRepo.insertBatch` が `skipped` を wire まで保持（旧 `{count}` 潰れ）し dashboard の自前 reconstruct を削除。lastInsertError のみ保持で 99 成功 1 失敗が成功報告になる問題も解消）
+- 2026-09-11-08-refactor-storage-backend-capability.md（✅ 完了・アーカイブ済 — StorageBackend の archive 不可 stub 28+6 重複を `ARCHIVE_UNSUPPORTED_ERROR` 定数 + `archiveUnsupported()` 共有 stub 1 箇所に統合。テストは定数参照で pin。capability クエリと facets 分割は呼び出し経路が無いため不導入（1 adapter = 仮の seam 原則・PBI 実装メモに記録））
+- 2026-09-07-15-fix-history-tag-filter-sql-migration.md（✅ 完了・アーカイブ済 — 保留 3 論点を自律決定して実装: セマンティクス=部分一致維持（FTS trigram は `#` prefix 無し phrase、<3 文字は `tags LIKE`）、性能=better-sqlite3 50k 行実測で LIKE 全走査 median 3.2ms（10s timeout に対し 3 桁余裕・許容）、backend 分岐=統合（PBI-34 divergence 削除・pinning test 無し確認済み）。`TAG_FILTER_FETCH_LIMIT`/`filterRowsByTag`/client slice 削除、`queryPlan.tagFilter` SSOT 化、parametric tag parity テスト新設）
 
 ### 2026-09-07 architecture review round 2 — 6件完了（arch-delivery-loop・0907a ブランチ）
 

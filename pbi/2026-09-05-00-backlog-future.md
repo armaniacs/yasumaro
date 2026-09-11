@@ -69,6 +69,23 @@
 | SqliteHistoryModel 21→8 畳み込み（contract test `sqliteHistoryModel.navigate.test.ts` 既存。着手時は `toHaveLength(21)` pin を更新） | 2.5 | テスト改修 ~200 行に対する payoff 再評価後 |
 | statusPanel の render-only 狩窄（`recordBtn.disabled` 二重所有解消・cleansing if-chain テーブル化） | 1.6 | recordBtn 二重所有の bug が顕在化したとき |
 
+（statusPanel recordBtn 二重所有は 2026-09-11 再評価で**解消済み**を確認 — PBI 2026-09-05-06 / 2026-09-07-24 の着地で RecordSession が唯一の書き手。cleansing if-chain テーブル化は 2026-09-11 round 4 の PBI 05 で実装済み）
+
+**2026-09-11 round 4（arch-delivery-loop・0911a ブランチ）で台帳入り（10 項目 + 小型バグ群）:**
+
+| 項目 | RICE | 再評価条件 |
+|------|------|-----------|
+| testConnection を generateSummary の template hook 化（Gemini ~130 行 / OpenAI ~85 行の骨格重複・debug envelope 組み立て反復） | 6.4 | 次に HTTP provider を追加・testConnection 改修時 |
+| Local AI session manager（session 毎 call create/destroy・`prompt()` 無 timeout/AbortSignal・overflow retry 無し。adapter 3 層の畳み込みも含む） | 6.0 | local AI 不調の報告時 / 次回 LocalAIService 改修時 |
+| archive codec の 5 projections → descriptor 1 箇所（0909-05 の続き。project / pickProjectedFields / ARCHIVE_GATEWAY_DECODERS / projectDeps / decodeResponse が field-for-field で一致する必要） | 4.8 | 次に archive op を追加するとき |
+| query cap/alias 統合（4 clamp・3 predicate・alias 3 流儀）+ limits.ts 外の上限 5 件取り込み（log-forward 3 / MAX_QUERY_LIMIT / MAX_TOKENS_PER_CALL）+ 8MB chunk 二重定義 + InMemoryTransport default-limit 乖離 | 4.8 | 上限 drift を次に検出したとき |
+| DialogShell（preview view/presenter の trap 二重所有・`getConfirmHandlers` が interface 越えテスト面・focusTrap map 無境界） | 4.0 | 次に modal 系 a11y 改修時 |
+| offscreen-cleanse PoC wire-or-delete（isolation seam を跨ぐ浅い module・content bundle に strip engine が静的添付・flag 毎回 storage 読み・flag OFF） | 4.0 | flag ON の製品判断時（静的→dynamic import は小型 fix として分離可能） |
+| ErrorTaxonomy（4 分類器 errorClassification / popup errorUtils / categorizeError / mapConnectionError 系 + ERROR_CODES.md 未参照・statusCode 0 の正規表現） | 3.2 | エラー分類大改修時（段階移行必須） |
+| DashboardSqlite deps 30 メソッド shallow adapter → query/mutate/maintain 3 seam + READ_ONLY/TOKEN_EXEMPT 統合（セキュリティゲート触及・dashboardSqliteMock 対応が必要） | 2.7 | dashboard-sqlite ハンドラ改修時 |
+| SqliteEngineHost 14 accessor 崩し + getBackend/ensureBackend キャッシュ二重経路（stale backend の恐れ） | 1.6 | init/fallback 系バグが顕在化したとき |
+| 小型バグ群（各個に顕在化時 fix）: throttle beforeunload listener 漏れ（src/content/utils/throttle.ts:32-39）・DeadlineTimer 非null assert で pre-init crash（deadlineTimer.ts:70,96-106）・previewPresenter promise leak（DOM 欠損で永久ハング・:227-236）・CSP/allowlist 3 テーブル membership drift（nsfw.oisd.nl / tranco-list.eu）・cleanse flag 毎回 storage 読み（cleansingOffscreenDelegate.ts:13-25）・focusTrap map 無境界（focusTrap.ts:49-54）・dailyNotePath の %2e%2e 通過（sink 実証後 security fix 昇格） | — | 個別に顕在化したとき |
+
 ## 運用
 
 - 次ラウンドの architecture review（`/improve-codebase-architecture`）は本台帳を入力に再評価する
