@@ -14,26 +14,14 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-09 architecture review round 3 — 6件完了（arch-delivery-loop・0909a ブランチ）
-
-診断（HTML レポート: `/tmp/architecture-review-20260909.html`）→ RICE 採点 → 実装。バッチ1（並列: 01+02 / 03 / 04 / 06・ファイル非重複）→ バッチ2（05・02 着地後）。台帳据え置き 5 項目は `2026-09-05-00-backlog-future.md` の「2026-09-09 round 3 で台帳入り」節。なぜなぜ分析は `/tmp/kilo/whywhy/2026-09-09-0909a.md`。
-
-- 2026-09-09-01-fix-limits-ssot.md（✅ 完了・アーカイブ済 — 上限定数を `src/messaging/limits.ts` に統合（validator/handler/dashboard 事前チェックが同一ソース参照）。実効値維持（validator が先走りのため MAX_IMPORT_ROWS=1000 / MAX_APPEND_IDS=100）、意図的分歧（audit 1000 vs 100000）は名前付き変種化、`importLogsService` の 100_000 は別概念 `IMPORT_TOTAL_ROW_CAP` として命名。drift ガードテスト新設。検証: type-check / lint / 285 tests green）
-- 2026-09-09-02-refactor-update-whitelist-ssot.md（✅ 完了・アーカイブ済 — `handleUpdate` の手写し 31 項を `UPDATABLE_FIELDS` import 化、dashboard 10 項を `DASHBOARD_MUTABLE_SUBSET` に命名し subset テストで固定、payload エイリアス 7 件を `normalizeStorageQuery` 純関数に統合、gateway フラット化 wire 契約を JSDoc 明示、`sqlite-security-integrity.test.ts` を SSOT import pin + ランタイム whitelist 検証に移行。検証: type-check / lint / 421 tests green）
-- 2026-09-09-03-refactor-row-codec.md（✅ 完了・アーカイブ済 — `rowCodec.ts` 新設（mapNamed/mapPositional 統合・rank 注入点 1 箇所）、`buildPlainListStatements` の columns 必須化、IdbVfsBackend 3 mapper と worker 2 mapper を統合。**本番バグ検出・修正: insertBatch の OPFS worker 経路が最終 1 文のみ計数し `inserted/skipped` が wire で欠落（実機 SQLite で実測）**。33 vs 13 列分歧は dashboard 表示劣化を避け spec として維持・決着記録。検証: type-check / lint / 3250 tests green）
-- 2026-09-09-04-refactor-export-validator-ssot.md（✅ 完了・アーカイブ済 — `requiredKeys` 手写し 21 キーを `DEFAULT_SETTINGS` keys − `API_KEY_FIELDS` 派生に置換（旧リストの ~130 キー漏れを是正）、`apiKeyKeys` を SSOT 参照化、blob 保存 12 行 ×2 を `saveJsonToFile` に統合。移行同値テスト 8 件新設。検証: type-check / lint / utils 4348 tests green）
-- 2026-09-09-05-refactor-archive-op-codec.md（✅ 完了・アーカイブ済 — `archiveWireTable.ts` を codec 携行の `ArchiveOpDescriptor` に拡張し、dashboard `callArchive` / SW `runArchive` / offscreen `ARCHIVE_DISPATCH` / worker `proxyArchive` / `StorageBackend` 型 / deps `as` キャストを全て行派生に統一（新 op = 1 行 + worker handler）。`as any` 0 件、コンパイル時双方向 assert 維持。公開 14 関数名・noRetry 契約・応答フィールドは不変。検証: type-check / lint / 5969 tests green + E2E archive 系 green）
-- 2026-09-09-06-refactor-strip-engine.md（✅ 完了・アーカイブ済 — `SelectorRuleDef` テーブル + `stripBySelectors` エンジン新設、パターン系 23 関数をテーブル行化（news/ec/qa/video 4 コピー解消）、bespoke 11 関数は維持。stripCore 522→166 行 / stripExtended 1,049→493 行（−912 行 / −58%）。旧関数は 1 行 delegate として残置し既存テスト無改変でエンジンを検証。重複パターン棚卸し記録（テーブル内 5・cross-table 67、全て残置が正）。検証: type-check / lint / 895 tests green）
-
 ### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
 
-### 2026-09-07 architecture review round — 7 件中 6 件完了、1 件保留
+### 2026-09-07 architecture review round — 7 件完了（16 は 2026-09-11 round 5 の 09 として完了）
 
 （`2026-09-05-00-backlog-future.md` の「次ラウンド再評価」項目 + 型債務返済で発見したドリフトを RICE 採点し PBI 化。2026-09-07。AI slot-runner 統合と fallback 再入ギャップは RICE 低・トリガー未発生で PBI 化せず台帳据え置き）
 
-- 2026-09-07-16-refactor-remove-legacy-history-panel.md（⬜ **現時点では実装しない**: `3478f9d9`（2026-07）以降どこからも navigate されない legacy `panel-history` の撤去（`main.ts` 登録・HTML セクション・陳腐化した `initHistoryPanel` mock）。pending pages セクション・6種フィルタ・`chrome.storage.onChanged` ライブ更新・タグ編集モーダル・Export all as Markdown が現行 SQLite パネルに未実装であることを 2026-09-07 調査で確定済み（PBI 内「未解決事項 1 の調査結果」）。**着手前提の PBI 15 は 2026-09-11 round 4 で完了** — 着手時は「pending pages 移設」の独立 PBI を切り出してから。RICE 5.25。3pt / 副作用 🟡 / 🔧（refactor））
 
 ### 将来候補の統合台帳（live）
 
@@ -62,6 +50,32 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-11 architecture review round 5 — 10件完了（arch-delivery-loop・0911b ブランチ）
+
+診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260911-2149.html`）→ RICE 採点 → 実装。実行順 = 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09（02 依存）→ 10。台帳トリガー「上限 drift」が発火（08）。なぜなぜ分析は `/tmp/kilo/whywhy/2026-09-11-0911b.md`。台帳送りは `2026-09-11-00-backlog-0911b.md`。
+
+- 2026-09-11-01-fix-query-normalize-ids.md（✅ 完了・アーカイブ済 — queryNormalize の ids を配列ガード + 有限数フィルタに正規化（wire からの型外れ値クラスタ解消）。非配列/全不正はフィルタ適用なし）
+- 2026-09-11-02-feat-pending-pages-sqlite-panel.md（✅ 完了・アーカイブ済 —【PBI-P】SQLite 履歴パネルに pending pages セクション新設（renderPendingRegion・panel-local 状態・onChanged ライブ更新・destroy 解除・20s timeout の MANUAL_RECORD）。Export all as Markdown は Export Logs パネルへ移設（新 id + handler target 更新）。`pendingMoreCount`/`recordRequestTimedOut` キー新設。テスト 7 件新設）
+- 2026-09-11-03-refactor-status-extras-ssot.md（✅ 完了・アーカイブ済 — STATUS extras を `SqliteStatusExtras` 単一 field list に統一（StatusResult 継承・decodeStatusExtras を mapped decoder テーブル化・gateway pick を pickStatusExtras 派生に・dashboard 戻り値型 SqliteStatusResult）+ OffscreenResponse union の欠落 6 変数補完）
+- 2026-09-11-04-fix-popup-status-cluster.md（✅ 完了・アーカイブ済 — recordBtn 二重所有の復活を解消（statusPanel からの書き込み全削除・sole-writer 契約回復・LOCKED は badge で伝達）+ btnRequestAllUrls wired ガード + gateway spinner 非所有化 + executeScript 重複統合 + `statusTrustLocked` i18n）
+- 2026-09-11-05-test-e2e-version-pin.md（✅ 完了・アーカイブ済 — e2e ハーネスの '6.7.114' pin 3 箇所を package.json 派生の EXTENSION_VERSION に置換）
+- 2026-09-11-06-refactor-tag-condition-unify.md（✅ 完了・アーカイブ済 — タグ条件を search path へ貫通（buildFtsSearchStatements/buildLikeSearchStatements に tagFilter・FTS は b.id 修飾）+ fallback の手書しフィルタ列を matchesExtraWhere 委譲に（ids 述語が効く）。parametric で text+tag / ids の backend 間一致を pin）
+- 2026-09-11-07-refactor-cleansing-reason-unify.md（✅ 完了・アーカイブ済 — counts→reason 派生を resolveCleanseReason に委譲（空カウントは 'none' に統一・'both' との相反解消）+ preview の count 詳細を badge モジュール経由 i18n 化（`cleansingDetailHard/Keyword` キー新設・配列 substitution 形式））
+- 2026-09-11-08-refactor-limits-absorption.md（✅ 完了・アーカイブ済 — 上限定数 14 箇所を limits.ts へ取り込み（log-forward 3・MAX_QUERY_LIMIT 二重・8MB chunk・MAX_TOKENS_PER_CALL・PII・envelope・error-body・import text・payloadGuard 3・import row/summary cap）+ drift ガード `limits-drift.test.ts` 新設（ガード自身が追加 4 cap を発見して吸収）+ ADR status note）
+- 2026-09-11-09-refactor-remove-legacy-panel.md（✅ 完了・アーカイブ済 —【PBI 16】legacy panel-history 撤去: catalog/factory/HTML セクション/tagEditModal + prod 9 モジュール + legacy テスト 12 ファイル削除（〜−1,600 LOC）。historyFilters を shouldFallbackToTextSearch 1 関数に slim。panelCatalog 18 パネルに更新 + grep ガード `legacy-panel-removal-guard.test.ts` 新設。製品判断 3 件は PBI に記録済み）
+- 2026-09-11-10-doc-sync-docs.md（✅ 完了・アーカイブ済 — ERROR_CODES 8+ コード収録 + パス修正、ARCHITECTURE_MAP に Shared Modules Quick Index 新設 + storage 行修正、DESIGN_SPEC §5.4 に STATUS extras 反映、ADR limit-policy status note、cleansingBadge @layer ヘッダ）
+
+### 2026-09-09 architecture review round 3 — 6件完了（arch-delivery-loop・0909a ブランチ）
+
+診断（HTML レポート: `/tmp/architecture-review-20260909.html`）→ RICE 採点 → 実装。バッチ1（並列: 01+02 / 03 / 04 / 06・ファイル非重複）→ バッチ2（05・02 着地後）。台帳据え置き 5 項目は `2026-09-05-00-backlog-future.md` の「2026-09-09 round 3 で台帳入り」節。なぜなぜ分析は `/tmp/kilo/whywhy/2026-09-09-0909a.md`。
+
+- 2026-09-09-01-fix-limits-ssot.md（✅ 完了・アーカイブ済 — 上限定数を `src/messaging/limits.ts` に統合（validator/handler/dashboard 事前チェックが同一ソース参照）。実効値維持（validator が先走りのため MAX_IMPORT_ROWS=1000 / MAX_APPEND_IDS=100）、意図的分歧（audit 1000 vs 100000）は名前付き変種化、`importLogsService` の 100_000 は別概念 `IMPORT_TOTAL_ROW_CAP` として命名。drift ガードテスト新設。検証: type-check / lint / 285 tests green）
+- 2026-09-09-02-refactor-update-whitelist-ssot.md（✅ 完了・アーカイブ済 — `handleUpdate` の手写し 31 項を `UPDATABLE_FIELDS` import 化、dashboard 10 項を `DASHBOARD_MUTABLE_SUBSET` に命名し subset テストで固定、payload エイリアス 7 件を `normalizeStorageQuery` 純関数に統合、gateway フラット化 wire 契約を JSDoc 明示、`sqlite-security-integrity.test.ts` を SSOT import pin + ランタイム whitelist 検証に移行。検証: type-check / lint / 421 tests green）
+- 2026-09-09-03-refactor-row-codec.md（✅ 完了・アーカイブ済 — `rowCodec.ts` 新設（mapNamed/mapPositional 統合・rank 注入点 1 箇所）、`buildPlainListStatements` の columns 必須化、IdbVfsBackend 3 mapper と worker 2 mapper を統合。**本番バグ検出・修正: insertBatch の OPFS worker 経路が最終 1 文のみ計数し `inserted/skipped` が wire で欠落（実機 SQLite で実測）**。33 vs 13 列分歧は dashboard 表示劣化を避け spec として維持・決着記録。検証: type-check / lint / 3250 tests green）
+- 2026-09-09-04-refactor-export-validator-ssot.md（✅ 完了・アーカイブ済 — `requiredKeys` 手写し 21 キーを `DEFAULT_SETTINGS` keys − `API_KEY_FIELDS` 派生に置換（旧リストの ~130 キー漏れを是正）、`apiKeyKeys` を SSOT 参照化、blob 保存 12 行 ×2 を `saveJsonToFile` に統合。移行同値テスト 8 件新設。検証: type-check / lint / utils 4348 tests green）
+- 2026-09-09-05-refactor-archive-op-codec.md（✅ 完了・アーカイブ済 — `archiveWireTable.ts` を codec 携行の `ArchiveOpDescriptor` に拡張し、dashboard `callArchive` / SW `runArchive` / offscreen `ARCHIVE_DISPATCH` / worker `proxyArchive` / `StorageBackend` 型 / deps `as` キャストを全て行派生に統一（新 op = 1 行 + worker handler）。`as any` 0 件、コンパイル時双方向 assert 維持。公開 14 関数名・noRetry 契約・応答フィールドは不変。検証: type-check / lint / 5969 tests green + E2E archive 系 green）
+- 2026-09-09-06-refactor-strip-engine.md（✅ 完了・アーカイブ済 — `SelectorRuleDef` テーブル + `stripBySelectors` エンジン新設、パターン系 23 関数をテーブル行化（news/ec/qa/video 4 コピー解消）、bespoke 11 関数は維持。stripCore 522→166 行 / stripExtended 1,049→493 行（−912 行 / −58%）。旧関数は 1 行 delegate として残置し既存テスト無改変でエンジンを検証。重複パターン棚卸し記録（テーブル内 5・cross-table 67、全て残置が正）。検証: type-check / lint / 895 tests green）
 
 ### 2026-09-11 architecture review round 4 — 9件完了（arch-delivery-loop・0911a ブランチ）
 

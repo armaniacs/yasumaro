@@ -71,6 +71,23 @@
 
 （statusPanel recordBtn 二重所有は 2026-09-11 再評価で**解消済み**を確認 — PBI 2026-09-05-06 / 2026-09-07-24 の着地で RecordSession が唯一の書き手。cleansing if-chain テーブル化は 2026-09-11 round 4 の PBI 05 で実装済み）
 
+**2026-09-11 round 5（arch-delivery-loop・0911b ブランチ）で台帳入り（7 項目）:**
+
+| 項目 | RICE | 再評価条件 |
+|------|------|-----------|
+| sqliteMessages.ts 分割（wire / responses / legacy constants）+ OffscreenResponse 完全性の型ガード（exhaustive assert） | 6.0 | 次に archive/STATUS 改修時（union の 6 変数欠落は round 5 PBI 03 で解消済み） |
+| StorageBackend capability query（supportsArchive — round 4 で意図的先送り） | 8.0 | archive panel gate 改修時 |
+| popup 3 重 GET_CONTENT coalescing（popup lifetime 計測が前提）+ i18n 英語フォールバック撲滅（`(getMessage(key) \|\| 'English')` の全数洗い出し） | 5.3 | popup lifetime 計測後 / 次回 popup UI 改修時 |
+| content scheduler 統合（throttle rAF / IdleScheduler / DeadlineTimer の 3 系統）+ ContentKernel.dispose + cleansing PoC wire-or-delete（content bundle 計測が前提） | 5.3 | 次回 content perf 改修時 |
+| 小型バグ群（全件 2026-09-11 round 5 で現存確認・file path 一部移動済）: throttle beforeunload listener 漏れ（src/content/throttle.ts:32-39）・DeadlineTimer 非null assert（deadlineTimer.ts:70,97）・**previewPresenter promise leak（:219-228 — popup modal で永久ハング、最も本物に近い）**・CSP/allowlist 3 テーブル drift（urlWhitelist ⊊ cspValidator ⊆ manifest）・cleanse flag 毎回 storage 読み（cleansingOffscreenDelegate.ts:13-25）・focusTrap map 無境界（focusTrap.ts:48-55） | — | 個別に顕在化したとき（previewPresenter hang は popup modal 不具合報告時に最優先） |
+| dailyNotePath %2e%2e | — | **sink 追跡完了（round 5）**: URL path 経由だが attacker は自分自身の OBSIDIAN_DAILY_PATH 設定のみ → 脆弱性昇格せず。hardening（%2e-aware reject in sanitizePathComponent）として随時可 |
+| ADR 2026-08-27-limit-policy / panel-lifecycle-wave1 の status note 追加 | — | PBI 08 で limit-policy は対応済み。wave1 は次回 panel lifecycle 改修時 |
+
+（round 4 台帳の InMemoryTransport default-limit 乖離は round 4 で解消済み、query cap 統合のトリガーは round 5 で発火し PBI 08 として完了）
+
+**2026-09-11 round 5（arch-delivery-loop・0911b ブランチ）の主要な完了事項:**
+pending pages の SQLite パネル移設 + legacy panel-history 撤去（〜−1,600 LOC）、STATUS extras 単一 field list 化、search+tag / ids 条件セット統合、上限定数 14 箇所の limits.ts 取り込み（drift ガード新設）、popup クラスタ修正（recordBtn sole-writer 契約回復）、クレンジング reason の resolveCleanseReason 統一、queryNormalize ids 検証、e2e version pin 撤去。
+
 **2026-09-11 round 4（arch-delivery-loop・0911a ブランチ）で台帳入り（10 項目 + 小型バグ群）:**
 
 | 項目 | RICE | 再評価条件 |
