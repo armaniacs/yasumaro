@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.5` リリース。
+> - 現時点では `v6.8.6` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,32 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.8.6] - 2026-09-11
+
+アーキテクチャ改善ラウンド（2026-09-11 round 4、`arch-delivery-loop`）のリリースです。confirm token の scope binding ギャップ 1 件のセキュリティ強化、実バグ 5 件（popup pending pages 経路の 3 件を含む）の修正と、7 件の内部構造改善（SSOT 統合）を含みます。全テスト（12,051 件）がグリーンです。
+
+### Security
+
+- **archive confirm token の scope binding を残り 4 subtype に拡張**: PBI 2026-09-06-01 で導入した token↔破壊的パラメータ束縛（scopeHash）が 6 subtype のみで、`archive_open` / `archive_update` / `archive_save` / `archive_close` が未バインドだった（archive payload には `id` が無く subtype 単位で token が共用 → stagingA 用 token が stagingB にリプレイ可能）。SSOT テーブル（`ARCHIVE_SCOPE_BY_SUBTYPE`）に 4 subtype を追加し、送信側・検証側の両 hop が自動修復。`prepare_incoming` / `cleanup` は破壊的パラメータを持たないため不バインドを明記し、新 subtype の表更新漏れを検出する drift ガードテストを新設
+
+### Fixed
+
+- **popup pending pages の「保存」が実際には記録していなかった**: popup の pending 一覧から「保存」した際に送信される `{type:'record'}` メッセージが envelope 移行以降どのハンドラにも処理されず、ページは記録されずに一覧から削除されていた。`MANUAL_RECORD` envelope（validator 契約どおり）に修正
+- **popup pending pages の「ドメインを許可して保存」が恒久的に無効だった**: whitelist 追加がマイグレーション後どの読み取り経路にも使われないトップレベル散在キー（`domain_whitelist`）に直接書き込んでいた（設定は単一 `settings` blob で管理）。`SettingsRepository` 経由の書き込みに統合し、楽観ロック・検証・キャッシュ無効化も通るようにした
+- **dashboard 経路で IDB マイグレーション状態が常に欠落**: offscreenGateway の STATUS デコードが `idbMigrationV2Done` / `opfsLegacyDbPath` / `idbLegacyDbName` を黙って drop しており、診断パネルの IDB マイグレーション表示が常に「対象なし」になることがあった。extras の pick に 3 フィールドを追加
+- **履歴タグ絞り込みが古い順ソートで新しいタグ付きエントリをサイレント除外**: タグ絞り込みが client-side（最も古い 5,000 件の over-fetch → JS 部分一致）で動いており、昇順ソート時は 5,000 件目より新しいタグ付きエントリが表示から漏れていた。タグフィルタを SQL レイヤーへ移行（FTS5 trigram 部分一致 + 3 文字未満は `tags LIKE` フォールバック）し、全バックエンド（OPFS / IndexedDB / fallback / in-memory）で同一セマンティクスに統一。50,000 行での実測ベンチは LIKE 全表スキャンで median 3.2ms（タイムアウトの 3 桁余裕）で許容と判定
+- **dashboard import の重複スキップ報告が不正確**: import が行毎に SW→offscreen→backend を往復し（最大 1,000 往復）、失敗は最後の 1 件の理由のみ保持で 99 成功 1 失敗が成功と報告され得た。`insertBatch` 1 往復に統合し、`skipped` を wire まで保持（旧実装は `{count}` に潰していた）
+- **archivePanel 復元プレビュー完了メッセージが ja ロケールでも英語固定**: 三項演算子の両分岐が同一のハードコード英語 `'Preview ready.'` で、比較が死んでいた。i18n キー `archiveRestorePreviewReady` を新設（ja/en）
+- **STATUS enrichment の fail-whole を解消**: `handleStatus` の `Promise.all` が 1 つのプローブ失敗で全 extras を捨てていた。`allSettled` のフィールド隔離に変更し、`indexedDB.databases` 未実装環境では「不在」と断定せずフィールドを省略する（誤って「対象なし」表示になるのを防止）
+
+### Refactored
+
+- アーキテクチャ Deepening round 4（PBI 01〜08）: popup GET_CONTENT 送信 seam 3 重実装の `ContentFetchGateway` 統合（timeout 無し 2 箇所・到達不能な callback 時代 `lastError` ポーリング 2 箇所の削除・permission ボタンの listener 積み重ね修正）、クレンジング badge 表示政策 4 重実装の `CleansingBadge` テーブル統合、legacy パス定数 4 ファイル複製の `sqliteMessages.ts` SSOT 統合（drift ガード付き）、STATUS enrichment の `sqliteStatus.ts` 集約、dashboard import の `insertBatch` 統合、`StorageBackend` の archive 不可 stub 28+6 重複の共有ヘルパ統合（テストは定数参照で pin）、履歴タグフィルタの SQL 移行（`queryPlan.tagFilter` SSOT 化）
+
+### Changed
+
+- なし（ユーザーに見える動作は Fixed / Security のみ）
 
 ## [6.8.5] - 2026-09-11
 
