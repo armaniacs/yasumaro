@@ -16,7 +16,7 @@
  * archive-required-verification.spec.ts (R1) via the same export subtype.
  */
 import { test, expect } from './fixtures/extension.fixture.js';
-import { createDashboardSqliteClient, openOptionsPage, poll } from './fixtures/dashboardSqliteHelpers.js';
+import { createDashboardSqliteClient, openOptionsPage, poll, EXTENSION_VERSION } from './fixtures/dashboardSqliteHelpers.js';
 
 const IMPORTED_URLS = ['https://archive-e2e.test/1', 'https://archive-e2e.test/2', 'https://archive-e2e.test/3'];
 
@@ -75,7 +75,7 @@ test.describe('History Archive E2E @extension', () => {
       cutoffDate: isoTomorrow,
       cutoffMs,
       includeDeleted: false,
-      yasumaroVersion: '6.7.114',
+      yasumaroVersion: EXTENSION_VERSION,
       confirmToken: createToken,
       scopeHash: createScope,
     });
@@ -113,7 +113,7 @@ test.describe('History Archive E2E @extension', () => {
       cutoffDate: isoTomorrow,
       cutoffMs,
       includeDeleted: false,
-      yasumaroVersion: '6.7.114',
+      yasumaroVersion: EXTENSION_VERSION,
       confirmToken: createToken2,
       scopeHash: createScope,
     });
@@ -212,7 +212,7 @@ test.describe('History Archive E2E @extension', () => {
       cutoffDate: isoTomorrow,
       cutoffMs,
       includeDeleted: false,
-      yasumaroVersion: '6.7.114',
+      yasumaroVersion: EXTENSION_VERSION,
       confirmToken: createToken,
       scopeHash: await scopeHash([cutoffMs, false]),
     });
