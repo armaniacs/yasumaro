@@ -112,15 +112,27 @@ export const TOKEN_REQUIRED_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> =
 // ============================================================================
 
 /** Which destructive parameters each archive subtype binds. Subtypes are
- * introduced by PBIs 2026-09-06-02/03/04; the mapping is defined here so the
- * verify path is in place before the first subtype lands. */
-const ARCHIVE_SCOPE_BY_SUBTYPE: Record<string, 'cutoff' | 'staging'> = {
+ * introduced by PBIs 2026-09-06-02/03/04/05; the mapping is defined here so the
+ * verify path is in place before the first subtype lands.
+ * Drift guard: every stagingName-carrying archive subtype MUST have a 'staging'
+ * entry — see sqliteOperationSecurity-scope.test.ts. */
+export const ARCHIVE_SCOPE_BY_SUBTYPE: Record<string, 'cutoff' | 'staging'> = {
   archive_create: 'cutoff',
   archive_preview: 'cutoff',
   archive_delete_by_staging: 'staging',
   archive_restore: 'staging',
   archive_restore_preview: 'staging',
   archive_export: 'staging',
+  // PBI 2026-09-11-01: session subtypes are destructive through stagingName
+  // (open/update/save mutate or lock the staging file; close frees it). Without
+  // the binding, a token issued for stagingA replayed against stagingB.
+  archive_open: 'staging',
+  archive_update: 'staging',
+  archive_save: 'staging',
+  archive_close: 'staging',
+  // archive_prepare_incoming / archive_cleanup carry no destructive parameters
+  // (the server generates the staging name; cleanup sweeps orphans), so they
+  // stay unbound — deriving a scope over nothing would be a no-op anyway.
 };
 
 /**
