@@ -46,9 +46,17 @@ describe('normalizeStorageQuery — alias families', () => {
     expect(normalizeStorageQuery({ excludeDeleted: 1 })).toMatchObject({ excludeDeleted: true });
   });
 
-  it('passes ids through by reference shape', () => {
+  it('normalizes ids to a finite-number array (PBI 2026-09-11-01)', () => {
     expect(normalizeStorageQuery({ ids: [9] })).toMatchObject({ ids: [9] });
     expect(normalizeStorageQuery({})).not.toHaveProperty('ids');
+    // Non-array shapes must not pass the cast and crash buildExtraWhereSql.
+    expect(normalizeStorageQuery({ ids: '1,2,3' })).not.toHaveProperty('ids');
+    expect(normalizeStorageQuery({ ids: 42 })).not.toHaveProperty('ids');
+    expect(normalizeStorageQuery({ ids: { length: 2 } })).not.toHaveProperty('ids');
+    // Mixed arrays: coerce numeric strings, drop non-finite and negative values.
+    expect(normalizeStorageQuery({ ids: [1, '2', NaN, -3, Infinity] })).toMatchObject({ ids: [1, 2] });
+    // All-invalid input drops the filter entirely.
+    expect(normalizeStorageQuery({ ids: ['a'] })).not.toHaveProperty('ids');
   });
 
   it('drops unknown keys', () => {
