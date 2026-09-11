@@ -97,8 +97,38 @@ export const MAX_PAYLOAD_STRING_BYTES = 1024 * 1024;
 export const MAX_BATCH_TOTAL_BYTES = 20 * 1024 * 1024;
 export const MAX_PAYLOAD_TOTAL_BYTES = 20 * 1024 * 1024;
 
+/**
+ * The 10 MiB family (round 6, PBI 2026-09-11-08): every "read at most 10MB of
+ * a response/import/envelope" cap. These are independent concerns that
+ * happen to share the value — if one ever needs to diverge, give it its own
+ * name here rather than re-localizing a literal.
+ */
+/** FETCH_URL handler: response body cap. */
+export const MAX_FILTER_LIST_SIZE = 10 * 1024 * 1024;
+/** Obsidian config / arbitrary response body cap (obsidianConfigValidator). */
+export const MAX_BODY_SIZE = 10 * 1024 * 1024;
+/** Settings export/import read cap (importPipeline). */
+export const DEFAULT_IMPORT_SIZE_CAP_BYTES = 10 * 1024 * 1024;
+/** Encrypted envelope: PRE-DECODE base64 length cap. The decoded ciphertext
+ * cap (MAX_ENVELOPE_CIPHERTEXT_LENGTH) is a different layer — 64 MiB binary
+ * vs 10 MiB base64 text; do not merge them. */
+export const MAX_ENVELOPE_BASE64_LENGTH = 10 * 1024 * 1024;
+
+/** AI provider HTTP JSON response cap (summary + testConnection). */
+export const MAX_AI_HTTP_RESPONSE_BYTES = 10 * 1024 * 1024;
+
+/** chrome.storage.local quota (storage/quota helpers). */
+export const STORAGE_QUOTA_BYTES = 10 * 1024 * 1024;
+
 /** Dashboard import: total-row ceiling across an import (importLogsService). */
 export const IMPORT_TOTAL_ROW_CAP = 100_000;
 
 /** Dashboard import: per-row summary length cap (importLogsService). */
 export const MAX_SUMMARY_LENGTH = 100_000;
+
+/**
+ * Max ids per query (round 6, PBI 2026-09-11-02): ids cross the wire, and an
+ * unbounded array becomes a giant SQL IN(...) clause. 200 covers every
+ * legitimate selection use (bulk select pages at 20/page).
+ */
+export const MAX_QUERY_IDS = 200;

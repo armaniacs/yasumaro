@@ -59,6 +59,14 @@ describe('normalizeStorageQuery — alias families', () => {
     expect(normalizeStorageQuery({ ids: ['a'] })).not.toHaveProperty('ids');
   });
 
+  it('bounds ids to MAX_QUERY_IDS and keeps integers only (PBI 2026-09-11-02)', () => {
+    const huge = Array.from({ length: 1000 }, (_, i) => i + 1);
+    const normalized = normalizeStorageQuery({ ids: huge });
+    expect(normalized?.ids).toHaveLength(200);
+    // Floats never become SQL IN params.
+    expect(normalizeStorageQuery({ ids: [1.5, 2, 3.9] })).toMatchObject({ ids: [2] });
+  });
+
   it('drops unknown keys', () => {
     expect(normalizeStorageQuery({ unknownField: 'x', limit: 5 })).toEqual({ limit: 5 });
     expect(normalizeStorageQuery({})).toEqual({});
