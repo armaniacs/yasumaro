@@ -4,6 +4,8 @@ import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
 import { isSecureUrl } from '../../../utils/urlUtils.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
+import { renderPendingReason } from '../../../utils/pendingStorage.js';
+import type { PendingPage } from '../../../utils/pendingStorage.js';
 import type { SqliteHistoryState } from './sqliteHistoryPanelState.js';
 
 function t(key: string, substitutions?: string | string[]): string {
@@ -350,6 +352,7 @@ export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryE
       <span id="${SQLITE_HISTORY_IDS.selectionCount}" class="sqlite-selection-count" aria-live="polite">${t('historySelectionCount', [String(s.selectedIds.size)])}</span>
       <button type="button" id="${SQLITE_HISTORY_IDS.appendObsidian}" class="btn-primary" data-i18n="historyAppendToObsidian">${t('historyAppendToObsidian')}</button>
     </div>
+    <div id="${SQLITE_HISTORY_IDS.pendingRegion}" class="sqlite-pending-region"></div>
     <div id="${SQLITE_HISTORY_IDS.entryList}" class="sqlite-entry-list">
       ${s.loading ? `<div class="loading">${t('historyLoading')}</div>` : ''}
     </div>
@@ -378,6 +381,7 @@ export const SQLITE_HISTORY_IDS = {
   calendarNav: 'sqlite-calendar-nav',
   calendarDays: 'sqlite-calendar-days',
   clearAllFilters: 'sqlite-clear-all-filters',
+  pendingRegion: 'sqlite-pending-region',
   entryList: 'sqlite-entry-list',
   pagination: 'sqlite-pagination',
   error: 'sqlite-error',
@@ -389,6 +393,18 @@ export const SQLITE_HISTORY_IDS = {
   tagFilterBar: 'sqlite-tag-filter-bar',
   tagFilterClear: 'sqlite-tag-filter-clear',
 } as const;
+
+/**
+ * Pending-pages actions handed to renderPendingRegion by the Panel
+ * (PBI 2026-09-11-02). Each action resolves after the underlying storage
+ * change has been applied — the Panel re-renders the region itself, the view
+ * owns in-row feedback (button state + error element) only.
+ */
+export interface PendingRegionActions {
+  onRecord: (url: string) => Promise<{ ok: boolean; error?: string }>;
+  onRecordWithoutAi: (url: string) => Promise<{ ok: boolean; error?: string }>;
+  onDelete: (url: string) => Promise<void>;
+}
 
 /** Event + dependency bundle the Panel builds once and hands to `render()`. */
 export interface SqliteHistoryViewCallbacks {
@@ -415,6 +431,116 @@ export interface SqliteHistoryViewCallbacks {
 /** True when the panel shell is already mounted inside the container. */
 export function isViewMounted(container: HTMLElement): boolean {
   return container.querySelector(`#${SQLITE_HISTORY_IDS.searchInput}`) !== null;
+}
+
+// ---------------------------------------------------------------------------
+// Pending pages region (PBI 2026-09-11-02, PBI-P) — migrated from the legacy
+// panel-history. The Panel owns data + chrome.storage.onChanged subscription;
+// the View owns ids, markup and in-row feedback for this region.
+// ---------------------------------------------------------------------------
+
+export interface PendingRegionActions {
+  onRecord: (url: string) => Promise<{ ok: boolean; error?: string }>;
+  onRecordWithoutAi: (url: string) => Promise<{ ok: boolean; error?: string }>;
+  onDelete: (url: string) => Promise<void>;
+}
+
+/** Rows per page in the pending section (parity with the legacy pending panel). */
+export const PENDING_REGION_PAGE_SIZE = 10;
+
+function buildPendingRowHtml(page: PendingPage): string {
+  const urlEl = isSecureUrl(page.url)
+    ? `<a class="history-entry-url" href="${escapeHtml(page.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(page.title || page.url)}</a>`
+    : `<span class="history-entry-url">${escapeHtml(page.title || page.url)}</span>`;
+  const header = page.headerValue ? `<span class="pending-entry-header"> (${escapeHtml(page.headerValue)})</span>` : '';
+  const meta = `${escapeHtml(formatTimestamp(page.timestamp))} — ${escapeHtml(renderPendingReason(page.reason))}${header}`;
+  return `<div class="pending-entry" data-pending-url="${escapeHtml(page.url)}">
+    <div class="pending-entry-info">
+      ${urlEl}
+      <div class="pending-entry-meta">${meta}</div>
+    </div>
+    <div class="pending-entry-actions">
+      <button type="button" class="secondary-btn pending-record-btn" data-pending-action="record" data-pending-url="${escapeHtml(page.url)}">${escapeHtml(t('recordNow') || '📝 今すぐ記録')}</button>
+      <button type="button" class="secondary-btn pending-record-btn" data-pending-action="recordWithoutAi" data-pending-url="${escapeHtml(page.url)}">${escapeHtml(t('recordWithoutAi') || '📝 AI要約なしで記録')}</button>
+      <button type="button" class="secondary-btn pending-delete-btn" data-pending-action="delete" data-pending-url="${escapeHtml(page.url)}">${escapeHtml(t('pendingDeleteForever') || '完全に削除')}</button>
+    </div>
+  </div>`;
+}
+
+function buildPendingRegionInnerHtml(pages: PendingPage[]): string {
+  const sorted = [...pages].sort((a, b) => b.timestamp - a.timestamp);
+  const rows = sorted.slice(0, PENDING_REGION_PAGE_SIZE).map((p) => buildPendingRowHtml(p)).join('');
+  const more = sorted.length > PENDING_REGION_PAGE_SIZE
+    ? `<div class="pending-entry-more">${escapeHtml(t('pendingMoreCount', [String(sorted.length - PENDING_REGION_PAGE_SIZE)]))}</div>`
+    : '';
+  return `<div class="pending-section">
+    <h4 data-i18n="pendingSectionTitle">${t('pendingSectionTitle')}</h4>
+    ${rows}
+    ${more}
+  </div>`;
+}
+
+/**
+ * Region-scoped render entry for pending pages (the shell placeholder
+ * `<div id="sqlite-pending-region">` is owned by buildPanelShellHtml; this
+ * function fills it). Re-rendered wholesale on data change — per-render
+ * button wiring is safe because the region's innerHTML is replaced.
+ */
+export function renderPendingRegion(
+  container: HTMLElement,
+  pages: PendingPage[],
+  actions: PendingRegionActions,
+): void {
+  const region = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.pendingRegion);
+  if (!region) return;
+
+  if (pages.length === 0) {
+    region.innerHTML = '';
+    return;
+  }
+
+  region.innerHTML = buildPendingRegionInnerHtml(pages);
+
+  for (const btn of Array.from(region.querySelectorAll<HTMLButtonElement>('[data-pending-action]'))) {
+    const url = btn.dataset.pendingUrl ?? '';
+    const action = btn.dataset.pendingAction;
+    const row = btn.closest('.pending-entry') as HTMLElement | null;
+    btn.addEventListener('click', () => {
+      void (async () => {
+        const label = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = t('processing') || '処理中...';
+        try {
+          if (action === 'delete') {
+            await actions.onDelete(url);
+            return;
+          }
+          const result = await (action === 'record' ? actions.onRecord(url) : actions.onRecordWithoutAi(url));
+          if (result.ok) return;
+          // Failure: restore the button and surface the reason in-row.
+          btn.disabled = false;
+          btn.textContent = label;
+          if (row) {
+            row.querySelector('.record-error-message')?.remove();
+            const msg = document.createElement('div');
+            msg.className = 'record-error-message';
+            msg.textContent = result.error ?? t('recordError');
+            row.appendChild(msg);
+          }
+        } catch (error) {
+          btn.disabled = false;
+          btn.textContent = label;
+          if (row) {
+            row.querySelector('.record-error-message')?.remove();
+            const msg = document.createElement('div');
+            msg.className = 'record-error-message';
+            msg.textContent = error instanceof Error ? error.message : t('recordError');
+            row.appendChild(msg);
+          }
+        }
+      })();
+    });
+  }
 }
 
 /**

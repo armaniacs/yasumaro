@@ -85,7 +85,7 @@ export async function initDashboard(): Promise<void> {
 
   try { setHtmlLangDir(); } catch (e) { console.error('[Dashboard] setHtmlLangDir error:', e); }
 
-  document.getElementById('historyExportLocalMarkdownBtn')?.addEventListener('click', handleHistoryExportLocalMarkdown);
+  document.getElementById('historyExportAllMarkdownBtn')?.addEventListener('click', handleHistoryExportLocalMarkdown);
   document.getElementById('exportLocalMarkdownBtn')?.addEventListener('click', handleExportLocalMarkdown);
   try { await initTrancoConsentPanel(); } catch (e) { console.error('[Dashboard] initTrancoConsentPanel error:', e); }
 

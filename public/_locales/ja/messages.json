@@ -563,6 +563,10 @@
     "message": "記録に失敗しました",
     "description": "ダッシュボードで手動記録が失敗した場合のエラーメッセージ"
   },
+  "recordRequestTimedOut": {
+    "message": "リクエストが20秒でタイムアウトしました。ページの読み込みや処理に時間がかかっている可能性があります。",
+    "description": "手動記録リクエストが20秒以内に完了しなかった場合のメッセージ"
+  },
   "recordingFailed": {
     "message": "記録に失敗しました"
   },
@@ -1430,6 +1434,18 @@
   "cleansedBadgeHard": {
     "message": "🧹 Hard"
   },
+  "cleansingDetailHard": {
+    "message": "ハード: $1$件",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "cleansingDetailKeyword": {
+    "message": "キーワード: $1$件",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
   "cleansedBadgeHardTitle": {
     "message": "タグ・属性ベース削除"
   },
@@ -1465,6 +1481,12 @@
   },
   "pendingSectionTitle": {
     "message": "記録できなかったページ"
+  },
+  "pendingMoreCount": {
+    "message": "ほか $1$ 件の保留ページがあります",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
   },
   "pendingSectionDesc": {
     "message": "PII保護やCacheヘッダーの理由で自動記録がスキップされました。内容を確認して手動で記録できます。"
@@ -2801,6 +2823,9 @@
   },
   "statusTrustTrusted": {
     "message": "🟢 TRUSTED"
+  },
+  "statusTrustLocked": {
+    "message": "LOCKED"
   },
   "statusTrustSensitive": {
     "message": "🟡 SENSITIVE"
