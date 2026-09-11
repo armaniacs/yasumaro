@@ -185,3 +185,9 @@ git log --oneline -- src/dashboard/historyPanel.ts | head -20
 - [ ] 未解決事項 1〜6 が本 PBI 内または実装時に結論付けられ、記録されている（pending pages 等の移設が必要と判明した場合は独立 PBI を切り出し、本 PBI のスコープを縮小）
 - [ ] コードレビュー完了
 - [ ] ドキュメント更新（`dev-docs/DESIGN_SPECIFICATIONS.md` の history panel 節から legacy `panel-history` の記述を削除。PBI 2026-09-05-14 backlog の「legacy 移行は残置」条に「撤去済み」と追記。`docs/i18n-guide.md` のキー数記載を更新）
+
+---
+
+## アーカイブ時の注記（2026-09-11）
+
+本 PBI は **2026-09-11 round 5 の `pbi/2026-09-11-09-refactor-remove-legacy-panel.md` に置き換え**られた（前提 PBI 15 完了 + round 5 診断で全スコープ確定: panel catalog 化後の実際の登録箇所・feature parity の全量インベントリ・製品判断 3 件）。着手時は新しい PBI 09 を参照。
