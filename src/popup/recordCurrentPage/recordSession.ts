@@ -395,6 +395,10 @@ export class RecordSession {
 
       let contentResponse: ContentResponse;
       try {
+        // Spinner ownership lives here (PBI 2026-09-11-04): the gateway is a
+        // pure data seam — show/hide pairs belong to the flow that owns the
+        // operation. hideSpinner() on the finish paths below closes the pair.
+        showSpinner(getMessage('fetchingContent'));
         contentResponse = await this.tabContentFetcher.fetch(tab, force);
       } catch (e: unknown) {
         if (force) {

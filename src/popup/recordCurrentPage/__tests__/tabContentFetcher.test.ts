@@ -32,7 +32,9 @@ describe('TabContentFetcher', () => {
     const fetcher = new TabContentFetcher();
     const result = await fetcher.fetch({ id: 1 } as chrome.tabs.Tab, false);
     expect(result).toEqual({ content: 'hello' });
-    expect(mockShowSpinner).toHaveBeenCalledWith('fetchingContent');
+    // PBI 2026-09-11-04: spinner ownership lives with the record flow — the
+    // gateway is a pure data seam and never touches the spinner.
+    expect(mockShowSpinner).not.toHaveBeenCalled();
   });
 
   it('falls back to scripting.executeScript when sendMessage rejects and permission is granted', async () => {

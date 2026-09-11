@@ -81,6 +81,8 @@ import {
 } from '../statusPanel.js';
 
 const defaultMessages: Record<string, string> = {
+  // statusTrustLocked — PBI 2026-09-11-04: the LOCKED badge text is i18n now.
+  statusTrustLocked: 'LOCKED',
   statusRecordable: 'Recordable',
   statusBlocked: 'Blocked',
   statusPrivateDetected: 'Private page detected',

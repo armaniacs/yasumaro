@@ -1,6 +1,5 @@
 import { getMessage } from '../utils/i18n.js';
 import type { ContentResponse } from './mainTypes.js';
-import { showSpinner } from './spinner.js';
 import { getPermissionManager } from '../utils/permissionManager.js';
 import { StorageKeys } from '../utils/storage/types.js';
 
@@ -52,10 +51,22 @@ export async function requestContentFromTab(
   }
 }
 
+/** Last-resort extraction shared by both ladder levels (PBI 2026-09-11-04:
+ * the two verbatim executeScript bodies collapsed into one adapter). */
+async function executeScriptInnerText(tabId: number): Promise<ContentResponse> {
+  const results = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: () => document.body?.innerText || ''
+  });
+  return { content: results?.[0]?.result || '' };
+}
+
 /**
  * Record-flow fetch: timeout ask first, then the permission ladder
  * (Level 1 per-origin via PermissionManager, Level 2 <all_urls> only when
  * opted-in via settings), then executeScript extraction as the last resort.
+ * Spinner ownership belongs to the callers (show/hide pairs live with the
+ * flow that owns the whole operation).
  */
 export class ContentFetchGateway {
 
@@ -65,8 +76,6 @@ export class ContentFetchGateway {
    */
   async fetch(tab: chrome.tabs.Tab, force: boolean): Promise<ContentResponse> {
     if (!tab.id) throw new Error('No active tab found');
-
-    showSpinner(getMessage('fetchingContent'));
 
     try {
       const contentResponse = await requestContentFromTab(tab.id);
@@ -89,11 +98,7 @@ export class ContentFetchGateway {
 
       if (hasPerOrigin) {
         try {
-          const results = await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: () => document.body?.innerText || ''
-          });
-          return { content: results?.[0]?.result || '' };
+          return await executeScriptInnerText(tab.id);
         } catch (_e2: unknown) {
           if (force) return { content: '' };
           throw new Error(getMessage('errorContentScriptNotAvailable'));
@@ -122,11 +127,7 @@ export class ContentFetchGateway {
         } catch { /* permission failure */ }
         if (hasAllUrls) {
           try {
-            const results = await chrome.scripting.executeScript({
-              target: { tabId: tab.id },
-              func: () => document.body?.innerText || ''
-            });
-            return { content: results?.[0]?.result || '' };
+            return await executeScriptInnerText(tab.id);
           } catch (_e3: unknown) {
             if (force) return { content: '' };
             throw new Error(getMessage('errorContentScriptNotAvailable'));
