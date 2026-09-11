@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.10` リリース。
+> - 現時点では `v6.8.11` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -36,6 +36,33 @@ All notable changes to this project will be documented in this file.
 ## [6.8.10] - 2026-09-12
 
 アーキテクチャ深化ラウンド（2026-09-11 rounds 4-8,`arch-delivery-loop`）のリリースです。PBIs 01-08 の実装により、アーカイブシームの分離、SQLite ディスパッチチェーンの縮小、クエリプランナーの統合、RecordingOrchestrator インターフェースの狭小化、およびポップアップ許可ラダーの検証が行われました。全テスト（11,794 件）がグリーンです。
+
+## [6.8.11] - 2026-09-12
+
+アーキテクチャ深化ラウンド（2026-09-12 round 9、`arch-delivery-loop`）のリリースです。実バグ 5 件の解消（非公開ページダイアログの保存が静かに失敗する dead envelope、アーカイブ復元後のセッション表示、ドメインフィルタのサブドメイン判定不一致、offline リトライの診断値欠落、path whitelist の死エントリ）と Service Worker 内 `setTimeout` 違反の解消を含みます。全テスト（11,836 件）がグリーンです。
+
+### Fixed
+
+- **非公開ページダイアログの保存が静かに失敗していた**: dialog が wire に存在しない `type: 'record'` envelope を送信しており router が破棄するため、全保存経路（保存 / ドメインで保存 / パスで保存 / 再試行）が「Unknown error」表示になっていた。envelope + 20 秒 timeout 契約を `pendingRecordGateway` に集約し、送信失敗が未処理 rejection になる経路と save-path ハンドラの TOCTOU（await 後の状態再読）も解消
+- **アーカイブ復元後にセッション一覧が空のまま**: 復元 → open の後で `sessionStaging` が設定されず一覧描画のガードが早期 return していた。open 成功後に引き継ぐよう修正し、open + 一覧描画を busy スコープ内に移動（連続ファイル選択時の OPFS 書込 interleave も解消）
+- **サブドメイン一致トグルが content 経路で落ちていた**: background の判定は `DOMAIN_SUBDOMAIN_MATCHING` を反映するが、content（loader cache）と popup 表示は 2 引数照合でフラグを無視し、同一 URL で判定が分岐していた。判定 snapshot にフラグを追加し、content ポート・popup 表示の両方を同一契約に統一（一致 contract テスト付き）
+- **offline リトライ記録が診断値を失っていた**: リトライが `as` キャスト付きの縮小リテラルを組んでおり byte / AI 統計が欠落。ジョブ payload に統計を同梱し、共有 builder 経由で復元（リトライ失敗時の無音 `return false` にもログを追加）
+- **path whitelist のエントリが一度もマッチしていなかった**: 生 URL / 正規表現形式のエントリは全 whitelist 照合（hostname レベル）とパターン検証のどちらにも失敗する死エントリだった。popup の書込を検証付き gateway に統一し、path 追加は URL の hostname に正規化（DESIGN_SPECIFICATIONS も現状に合わせ更新）
+- **Service Worker 内 setTimeout の廃止**: クレンジング badge の 3 秒クリアが SW 停止で消滅するため navigation 遷移でのクリアに置換。タブ無し sender での `sender.tab!` クラッシュも解消
+- **TabCache 初期化が失敗時に永久未解決になる**: `chrome.tabs.query` の lastError を確認せず reject 経路がなく、失敗時にメッセージ応答が hang していた（lastError チェック + reject + 失敗後の initPromise リセット）
+- **offline キューの dequeue / peek が排他ロックを迂回していた**: VULN-056 の lock 対象外で flush と競合し得たため `mutate`（lock 内 read-modify-write）に統一
+- **クレンジング報告ボタンが再初期化のたびに二重配線されていた**: `dataset.wired` ガードを追加（許可ボタンと同一紀律）
+- **言語切替後にエラーメッセージが旧言語のまま残る**: メッセージキャッシュに UI 言語をキーとして追加
+
+### Changed
+
+- **バッジ表示政策を BadgePolicy に統合**: 4 箇所で再派生していた text / 色 / タブスコープを 1 テーブルに統合し、タブ派生状態の書込を per-tab に統一（タブごとの状態が他タブのフォールバックに漏出する経路を解消）
+- **uBlock ルールの両形式混在時に警告ログを追加**: 移行残骸（旧 blockRules + 新 blockDomains）で旧形式が無警告で無視される状態に観測可能性を追加（優先規則の挙動は不変）
+- **SQLite 読み取りパスの paging 値を統一**: offset クランプを limit と同一の read policy seam に追加し、worker の spec 上書きを削除。負 offset が backend 間で行を発散させる経路を封じる（parametric テスト付き）
+
+### Refactored
+
+- アーキテクチャ Deepening round 9（PBI 01〜08）: 記録リクエスト構築の `buildRecordRequest` 統合、popup whitelist 書込の `whitelistWriter` 統合、`pendingRecordGateway` / `BadgePolicy` の新設、アーカイブ復元フローの busy スコープ整理
 
 ## [Unreleased]
 
