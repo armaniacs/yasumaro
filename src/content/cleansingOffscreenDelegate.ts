@@ -9,14 +9,35 @@
 import { cleanseHtmlOffscreen } from '../offscreen/cleansingOffscreen.js';
 import { StorageKeys } from '../utils/storage/types.js';
 
-/** デフォルトOFF: chrome.storage からフラグを読む（取得できない場合は false） */
+// PBI 2026-09-11-05 (round 7): module-level cache — the flag is read once,
+// invalidated by chrome.storage.onChanged. The old code hit storage on every
+// cleanse call.
+let cachedFlag: boolean | null = null;
+let storageListenerWired = false;
+
+/** Test seam — resets the module-level flag cache (PBI 2026-09-11-05). */
+export function __resetCleansingFlagCacheForTesting(): void {
+    cachedFlag = null;
+    storageListenerWired = false;
+}
+
 async function isCleansingOffscreenEnabled(): Promise<boolean> {
+    if (cachedFlag !== null) return cachedFlag;
     try {
         const g = (globalThis as unknown as { chrome?: typeof chrome }).chrome;
         if (g?.storage?.local?.get) {
             const result = await g.storage.local.get(StorageKeys.CLEANSING_OFFSCREEN_ENABLED);
             const v = (result as Record<string, unknown>)[StorageKeys.CLEANSING_OFFSCREEN_ENABLED];
-            return v === true;
+            cachedFlag = v === true;
+            if (g.storage.onChanged?.addListener && !storageListenerWired) {
+                storageListenerWired = true;
+                g.storage.onChanged.addListener((changes: Record<string, unknown>, area: string) => {
+                    if (area === 'local' && changes[StorageKeys.CLEANSING_OFFSCREEN_ENABLED]) {
+                        cachedFlag = null;
+                    }
+                });
+            }
+            return cachedFlag;
         }
     } catch {
         // fall through
