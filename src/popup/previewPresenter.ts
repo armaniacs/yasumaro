@@ -5,6 +5,7 @@
 
 import { getMessage } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
+import { getCleansedBadgeText } from '../utils/cleansingBadge.js';
 import type { MaskedItem } from '../messaging/types.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { MaskNavigator } from './maskNavigator.js';
@@ -58,18 +59,9 @@ function updateCleansingInfo(
     return;
   }
   cleansingInfo.classList.remove('hidden');
-  let badgeText = '';
-  switch (cleansedReason) {
-    case 'hard':
-      badgeText = getMessage('cleansedBadgeHard') || '🧹 Hard';
-      break;
-    case 'keyword':
-      badgeText = getMessage('cleansedBadgeKeyword') || '🧹 Keyword';
-      break;
-    case 'both':
-      badgeText = getMessage('cleansedBadgeBoth') || '🧹 Both';
-      break;
-  }
+  // PBI 2026-09-11-05: badge text comes from the shared CleansingBadge table
+  // (same table as statusPanel) instead of a per-view switch.
+  let badgeText = getCleansedBadgeText(cleansedReason, getMessage);
   if (cleanseStats && cleanseStats.totalRemoved > 0) {
     const details: string[] = [];
     if (cleanseStats.hardStripRemoved > 0) details.push(`Hard: ${cleanseStats.hardStripRemoved}`);

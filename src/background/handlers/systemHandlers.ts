@@ -6,6 +6,7 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { createErrorResponse } from '../../utils/errorClassification.js';
 import { readBodyCapped } from '../../utils/readBodyCapped.js';
 import { updateSavedUrlEntry } from '../../utils/storage/savedUrlRepository.js';
+import { deriveCleansedReasonFromCounts } from '../../utils/cleansingBadge.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
 import type {
@@ -155,14 +156,9 @@ export function createContentCleansingExecutedHandler(deps: ContentCleansingExec
     }, 3000);
 
     if (sender.tab?.url && (totalRemoved ?? 0) > 0) {
-      const hardEnabled = (hardStripRemoved ?? 0) > 0;
-      const keywordEnabled = (keywordStripRemoved ?? 0) > 0;
-      let cleansedReason: 'hard' | 'keyword' | 'both' = 'both';
-      if (hardEnabled && !keywordEnabled) {
-        cleansedReason = 'hard';
-      } else if (!hardEnabled && keywordEnabled) {
-        cleansedReason = 'keyword';
-      }
+      // PBI 2026-09-11-05: counts→reason derivation is the shared CleansingBadge
+      // policy (was an inline hard/keyword/both branch here).
+      const cleansedReason = deriveCleansedReasonFromCounts({ hardStripRemoved, keywordStripRemoved });
       await updateSavedUrlEntry(sender.tab.url, (entry) => ({ ...entry, cleansedReason }));
     }
 

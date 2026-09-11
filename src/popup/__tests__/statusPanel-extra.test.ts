@@ -889,10 +889,11 @@ describe('initStatusPanel — additional branches', () => {
       ...global.chrome,
       tabs: {
         query: vi.fn().mockResolvedValue([fakeTab]),
-        sendMessage: vi.fn((tabId: number, msg: any, cb: any) => {
+        // PBI 2026-09-11-04: the status path sends via the promise contract.
+        sendMessage: vi.fn((tabId: number, msg: any) => {
           expect(tabId).toBe(42);
           expect(msg.type).toBe('GET_CONTENT');
-          cb({ cleanseStats: { totalRemoved: 3, hardStripRemoved: 2, keywordStripRemoved: 1 }, cleansedReason: 'both' });
+          return Promise.resolve({ cleanseStats: { totalRemoved: 3, hardStripRemoved: 2, keywordStripRemoved: 1 }, cleansedReason: 'both' });
         }),
       },
       runtime: { lastError: null, sendMessage: vi.fn() },

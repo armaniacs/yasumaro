@@ -66,13 +66,10 @@ export class MessageTransport {
     let lastError: unknown;
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        const response = await this.port.send(enriched);
-        // Check chrome.runtime.lastError polling (for callback-based callers that use sendMessageWithCallback)
-        const lastErrorMsg = (chrome.runtime as unknown as { lastError?: { message?: string } }).lastError?.message;
-        if (lastErrorMsg && isRetryableError(lastErrorMsg)) {
-          throw new Error(lastErrorMsg);
-        }
-        return response;
+        // Promise-style sendMessage never populates chrome.runtime.lastError
+        // (callback-only API); failures surface as rejections and are retried
+        // below by pattern.
+        return await this.port.send(enriched);
       } catch (error) {
         lastError = error;
         if (attempt < retries && isRetryableError(error)) {
