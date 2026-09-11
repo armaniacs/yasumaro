@@ -33,13 +33,14 @@ interface ExportedData {
  * messaging/limits.ts: this pre-check gates the whole file before it is
  * split into per-request batches, so it stays larger by design.
  */
-export const IMPORT_TOTAL_ROW_CAP = 100_000;
+import { IMPORT_TOTAL_ROW_CAP, MAX_SUMMARY_LENGTH } from '../messaging/limits.js';
+export { IMPORT_TOTAL_ROW_CAP };
 /** Upper bound on the raw import text, mirroring the settings 10 MiB cap. */
-export const MAX_IMPORT_TEXT_BYTES = 10 * 1024 * 1024;
+import { MAX_IMPORT_TEXT_BYTES } from '../messaging/limits.js';
+export { MAX_IMPORT_TEXT_BYTES };
 
 const MAX_URL_LENGTH = 2048;
 const MAX_TITLE_LENGTH = 2048;
-const MAX_SUMMARY_LENGTH = 100_000;
 const MAX_TAGS_LENGTH = 8192;
 const MAX_DOMAIN_LENGTH = 256;
 // created_at is epoch milliseconds. Only a positive, finite value bounded above

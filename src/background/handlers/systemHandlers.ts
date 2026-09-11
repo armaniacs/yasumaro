@@ -282,10 +282,14 @@ export function deriveLogSource(sender: chrome.runtime.MessageSender): string {
 
 // Per-entry size bounds for forwarded logs (VULN-004). Count caps in
 // LogBuffer / storageAdapter bound entry COUNT, not per-entry size or CPU;
-// the trust boundary is this handler, so the bounds live here.
-const MAX_LOG_FORWARD_MESSAGE_CHARS = 64 * 1024;
-const MAX_LOG_FORWARD_DETAILS_KEYS = 64;
-const MAX_LOG_FORWARD_SERIALIZED_CHARS = 256 * 1024;
+// the trust boundary is this handler, so enforcement lives here — the values
+// themselves moved to messaging/limits.ts (PBI 2026-09-11-08) so they are
+// greppable from the cap registry.
+import {
+  MAX_LOG_FORWARD_MESSAGE_CHARS,
+  MAX_LOG_FORWARD_DETAILS_KEYS,
+  MAX_LOG_FORWARD_SERIALIZED_CHARS,
+} from '../../messaging/limits.js';
 
 export function createLogForwardHandler() {
   return async (

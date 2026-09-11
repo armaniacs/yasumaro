@@ -46,9 +46,59 @@ export const MAX_RESTORE_BASE64_BYTES = 150 * 1024 * 1024;
 
 /**
  * INTENTIONAL divergence, documented but not unified: the OPFS worker caps
- * audit-log reads at 1000 (opfsWorker/auditHandlers.ts) while the IDB
- * backend allows 100000 (IdbVfsBackend.queryAuditLog). Each backend owns
- * its constant; these names exist so the split is greppable from one place.
+ * audit-log reads at 1000 (opfsWorker/auditHandlers.ts) while the IDB backend
+ * allows 100000 (IdbVfsBackend.queryAuditLog). Each backend owns its constant;
+ * these names exist so the split is greppable from one place.
  */
 export const AUDIT_CAP_OPFS = 1_000;
 export const AUDIT_CAP_IDB = 100_000;
+
+// ============================================================================
+// Round 5 (PBI 2026-09-11-08): absorption of caps that lived outside this
+// registry. Values are unchanged — only the definition site moved — so no
+// accept/reject decision changes. A consumer that cannot import messaging
+// (Layer 0 modules) re-declares locally and is caught by the drift guard.
+// ============================================================================
+
+/** Plain listing hard ceiling (sqliteEngineHost / recordsRepo). Same value as QUERY_CAPS.fts. */
+export const MAX_QUERY_LIMIT = 100_000;
+
+/** Log-forward: forwarded log message chars, detail keys, serialized size (systemHandlers, VULN-004). */
+export const MAX_LOG_FORWARD_MESSAGE_CHARS = 64 * 1024;
+export const MAX_LOG_FORWARD_DETAILS_KEYS = 64;
+export const MAX_LOG_FORWARD_SERIALIZED_CHARS = 256 * 1024;
+
+/** Recording pipeline: per-record payload size (recordingValidator). */
+export const MAX_RECORD_SIZE = 64 * 1024;
+
+/** PII sanitizer input/output caps. */
+export const MAX_PII_INPUT_SIZE = 64 * 1024;
+export const MAX_PII_OUTPUT_SIZE = 128 * 1024;
+
+/** AI usage tracker: token-count validation ceiling (VULN-002). */
+export const MAX_TOKENS_PER_CALL = 10_000_000;
+
+/** Encrypted backup envelope ciphertext length. */
+export const MAX_ENVELOPE_CIPHERTEXT_LENGTH = 64 * 1024 * 1024;
+
+/** Obsidian error-body read cap (obsidianClient). */
+export const MAX_ERROR_BODY_SIZE = 1024 * 1024;
+
+/**
+ * Round 5 drift-guard follow-up — caps the first guard pass itself found:
+ */
+/** Pre-parse import text cap (dashboard importLogsService). */
+export const MAX_IMPORT_TEXT_BYTES = 10 * 1024 * 1024;
+
+/** Offscreen payloadGuard per-field text cap. */
+export const MAX_PAYLOAD_STRING_BYTES = 1024 * 1024;
+
+/** Offscreen payloadGuard batch totals. */
+export const MAX_BATCH_TOTAL_BYTES = 20 * 1024 * 1024;
+export const MAX_PAYLOAD_TOTAL_BYTES = 20 * 1024 * 1024;
+
+/** Dashboard import: total-row ceiling across an import (importLogsService). */
+export const IMPORT_TOTAL_ROW_CAP = 100_000;
+
+/** Dashboard import: per-row summary length cap (importLogsService). */
+export const MAX_SUMMARY_LENGTH = 100_000;

@@ -5,15 +5,16 @@
  * パフォーマンス改善: 1回のスキャンで全パターンを検出
  */
 
+import { MAX_PII_INPUT_SIZE, MAX_PII_OUTPUT_SIZE } from '../messaging/limits.js';
 import { validateLuhn } from './luhn.js';
 import { errorMessage } from './errorUtils.js';
 import type { MaskedItem } from '../messaging/types.js';
 import { pickDefined } from './objectUtils.js';
 
 // 定数設定
-export const MAX_INPUT_SIZE = 64 * 1024; // 64KB (65,536 characters)
+export const MAX_INPUT_SIZE = MAX_PII_INPUT_SIZE; // 64KB (65,536 characters)
 const MAX_SKIP_SIZE = 512 * 1024; // 512KB - maximum size even with skipSizeLimit
-export const MAX_OUTPUT_SIZE = 128 * 1024; // 128KB (入力の2倍を許容)
+export const MAX_OUTPUT_SIZE = MAX_PII_OUTPUT_SIZE; // 128KB (入力の2倍を許容)
 const DEFAULT_TIMEOUT = 5000; // 5秒
 const MAX_MATCH_COUNT = 1000; // マッチ件数制限（ReDoS対策）
 const TIMEOUT_CHECK_INTERVAL = 5; // タイムアウトチェック間隔（5マッチごと）

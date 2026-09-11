@@ -8,6 +8,7 @@
  * phase B (pbi/2026-09-06-04), intentionally not wired here.
  */
 
+import { MAX_ARCHIVE_EXPORT_CHUNK_BYTES } from '../../../messaging/limits.js';
 import { archivePreview, archiveCreate, archiveCleanup, archiveExportChunk, archivePrepareIncoming, archiveRestorePreview, archiveRestore, archiveDeleteByStaging, archiveOpen, archiveQuery, archiveUpdate, archiveSave, archiveClose, archiveStatus } from '../../dashboardSqliteService.js';
 
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
@@ -20,7 +21,7 @@ import { focusTrapManager } from '../../../utils/ui/focusTrap.js';
 import { getMessage } from '../../../utils/i18n.js';
 
 /** Per-message binary payload — keeps base64 hops under the 10MB cap. */
-const EXPORT_CHUNK_BYTES = 8 * 1024 * 1024;
+const EXPORT_CHUNK_BYTES = MAX_ARCHIVE_EXPORT_CHUNK_BYTES;
 
 function localized(key: string, args?: Record<string, string | number>): string {
   return getMessage(key, args ?? null) || key;

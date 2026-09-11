@@ -52,8 +52,10 @@ export type { SqliteValue };
 
 export { DB_FILENAME };
 
-/** Hard cap on query()/search() result size, so a caller can't force the entire table into JS memory at once (M13). */
-export const MAX_QUERY_LIMIT = 100000;
+/** Hard cap on query()/search() result size, so a caller can't force the entire table into JS memory at once (M13).
+ * PBI 2026-09-11-08 (round 5): defined in messaging/limits.ts (the cap registry); re-exported here
+ * because MAX_QUERY_LIMIT was previously a second 100000 literal (ADR 2026-08-27-limit-policy drift). */
+export { MAX_QUERY_LIMIT } from '../messaging/limits.js';
 
 export { extractDomain } from '../utils/domainUtils.js';
 
