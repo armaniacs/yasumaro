@@ -25,12 +25,18 @@ function runE2ETests() {
   header('E2E Tests (Playwright)');
   info('Running `npm run test:e2e:ci` (extension-tagged tests)...');
 
-  // Check if xvfb-run is available (needed for headless CI)
-  const xvfbCheck = spawnSync('command', ['-v', 'xvfb-run'], { encoding: 'utf-8' });
-  if (xvfbCheck.status !== 0) {
-    warn('xvfb-run not found — E2E tests require a display server');
-    warn('Install xvfb or run E2E tests manually with `npm run test:e2e:headed`');
-    return true; // Non-blocking in CI environments without display
+  // Check if xvfb-run is available (needed for headless CI).
+  // PBI 2026-09-11-07 (round 7): a silent skip is indistinguishable from a
+  // pass — the release only skips E2E when the caller says so explicitly.
+  if (process.env.SKIP_E2E !== '1' && !process.argv.includes('--skip-e2e')) {
+    const xvfbCheck = spawnSync('command', ['-v', 'xvfb-run'], { encoding: 'utf-8' });
+    if (xvfbCheck.status !== 0) {
+      fail('xvfb-run not found and E2E skip not requested — E2E tests require a display server');
+      fail("Install xvfb, run E2E tests manually with `npm run test:e2e:headed`, or pass --skip-e2e / SKIP_E2E=1 to skip explicitly");
+      return false;
+    }
+  } else {
+    warn('E2E tests skipped by explicit request (--skip-e2e / SKIP_E2E=1)');
   }
 
   const result = spawnSync('npm', ['run', 'test:e2e:ci'], {
