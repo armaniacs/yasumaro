@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.9` リリース。
+> - 現時点では `v6.8.10` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -33,7 +33,12 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.8.10] - 2026-09-12
+
+アーキテクチャ深化ラウンド（2026-09-11 rounds 4-8,`arch-delivery-loop`）のリリースです。PBIs 01-08 の実装により、アーカイブシームの分離、SQLite ディスパッチチェーンの縮小、クエリプランナーの統合、RecordingOrchestrator インターフェースの狭小化、およびポップアップ許可ラダーの検証が行われました。全テスト（11,794 件）がグリーンです。
+
 ## [Unreleased]
+
 
 ## [6.8.9] - 2026-09-11
 
