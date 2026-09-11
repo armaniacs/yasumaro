@@ -180,6 +180,42 @@ export type OffscreenStatusResponse = {
 
 export type OffscreenStatusData = Extract<OffscreenStatusResponse, { success: true }>;
 
+/**
+ * Single field list for every STATUS enrichment beyond the universal base
+ * (initialized / path / fallback) — PBI 2026-09-11-03 (round 5). All hops
+ * derive from this type:
+ * - producer: `src/offscreen/sqliteStatus.ts` (collectMigrationExtras)
+ * - gateway: `offscreenGateway.status()` pick (derived via pickStatusExtras)
+ * - validator: `decodeStatusExtras` (decoder table keyed by this type)
+ * - dashboard: `getSqliteStatus` return type
+ * Adding a field here forces each hop to compile-time acknowledge it — the
+ * silent-drop class from the round-4 fix is gone.
+ */
+export type SqliteStatusExtras = {
+  fts5?: boolean;
+  initError?: string;
+  compileOptions?: string[];
+  compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback';
+  opfsMigrationV2Done?: boolean;
+  opfsMigrationV2LastAttemptedAt?: string | null;
+  opfsMigrationV2CompletedAt?: string | null;
+  opfsMigrationV2RecordCount?: number | null;
+  idbMigrationV2Done?: boolean;
+  opfsLegacyDbPath?: string | null;
+  idbLegacyDbName?: string | null;
+};
+
+/** Dashboard-facing STATUS shape (base + extras). fts5 is guaranteed present
+ * at this hop (requiredBoolean in the decode) — backend shapes carry it
+ * optional via SqliteStatusExtras. */
+export type SqliteStatusResult = {
+  initialized: boolean;
+  fallback: boolean;
+  path: string;
+  fts5: boolean;
+} & Omit<SqliteStatusExtras, 'fts5'>;
+
+
 /** EXPORT / BACKUP: binary data as a JSON-safe number array. */
 export type OffscreenBinaryResponse = { success: true; data: number[] } | OffscreenFailure;
 
@@ -323,4 +359,13 @@ export type OffscreenResponse =
   | OffscreenArchivePrepareIncomingResponse
   | OffscreenArchiveRestorePreviewResponse
   | OffscreenArchiveRestoreResponse
-  | OffscreenArchivePurgeResponse;
+  | OffscreenArchivePurgeResponse
+  // PBI 2026-09-11-03 (round 5): archive session responses were sendable but
+  // missing here — an exhaustive switch over OffscreenResponse silently
+  // excluded real traffic.
+  | OffscreenArchiveOpenResponse
+  | OffscreenArchiveQueryResponse
+  | OffscreenArchiveUpdateResponse
+  | OffscreenArchiveSaveResponse
+  | OffscreenArchiveCloseResponse
+  | OffscreenArchiveStatusResponse;

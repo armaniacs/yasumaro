@@ -23,6 +23,7 @@ import {
   isAuditLogEntry,
   decodeStatusExtras,
 } from '../messaging/sqliteValidators.js';
+import type { SqliteStatusResult } from '../messaging/sqliteMessages.js';
 
 /**
  * The uniform failure shape for this module.
@@ -213,25 +214,12 @@ export function getLogCount(): Promise<ServiceResult<number>> {
  * does not return ServiceResult<T> — it returns a status object
  * unconditionally, with initError set on failure.
  */
-export async function getSqliteStatus(): Promise<{
-  initialized: boolean;
-  path: string;
-  fallback: boolean;
-  fts5: boolean;
-  compileOptions?: string[];
-  compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback';
-  initError?: string;
-  opfsMigrationV2Done?: boolean;
-  opfsMigrationV2LastAttemptedAt?: string | null;
-  opfsMigrationV2CompletedAt?: string | null;
-  opfsMigrationV2RecordCount?: number | null;
-  idbMigrationV2Done?: boolean;
-  opfsLegacyDbPath?: string | null;
-  idbLegacyDbName?: string | null;
-}> {
+export async function getSqliteStatus(): Promise<SqliteStatusResult> {
   // PBI 11: transport goes through DashboardGateway.callDashboard; the
   // SqliteResult → status-shape conversion stays here so the diagnostics UI
   // keeps receiving a status object (with initError) on every failure mode.
+  // PBI 2026-09-11-03 (round 5): the return type derives from the shared
+  // SqliteStatusExtras contract — no hand-maintained field list here anymore.
   const result = await dashboardGateway.callDashboard(
     { subtype: 'status' },
     (response) => ({

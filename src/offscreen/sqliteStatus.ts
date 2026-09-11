@@ -16,23 +16,23 @@
 
 import { StorageKeys } from '../utils/storage/types.js';
 import {
+  type SqliteStatusExtras,
   LEGACY_OPFS_POOL_DIR,
   LEGACY_OPFS_DB_FILENAME,
   LEGACY_IDB_NAME,
 } from '../messaging/sqliteMessages.js';
 
-/** Migration extras carried on a STATUS response (all optional — a field the
- * collector could not fill is simply absent, never silently defaulted). */
-export type SqliteMigrationExtras = {
-  opfsMigrationV2Done?: boolean;
-  opfsMigrationV2LastAttemptedAt?: string | null;
-  opfsMigrationV2CompletedAt?: string | null;
-  opfsMigrationV2RecordCount?: number | null;
-  idbMigrationV2Done?: boolean;
-  /** Present only when the probe confirms the legacy DB exists (absent = confirmed gone or probe failed). */
-  opfsLegacyDbPath?: string | null;
-  idbLegacyDbName?: string | null;
-};
+/**
+ * Migration extras carried on a STATUS response (all optional — a field the
+ * collector could not fill is simply absent, never silently defaulted).
+ * PBI 2026-09-11-03 (round 5): this is a slice of the shared SqliteStatusExtras
+ * contract (sqliteMessages.ts) — the collector fills the migration-related
+ * subset; fts5/initError/compileOptions come from the backend's base status.
+ */
+export type SqliteMigrationExtras = Pick<
+  SqliteStatusExtras,
+  'opfsMigrationV2Done' | 'opfsMigrationV2LastAttemptedAt' | 'opfsMigrationV2CompletedAt' | 'opfsMigrationV2RecordCount' | 'idbMigrationV2Done' | 'opfsLegacyDbPath' | 'idbLegacyDbName'
+>;
 
 /** OPFS has no path API — only directory/file existence can be checked. */
 async function probeLegacyOpfsDb(): Promise<boolean> {

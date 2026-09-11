@@ -4,6 +4,7 @@
 import { logError, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { pickDefined } from '../../utils/objectUtils.js';
+import { pickStatusExtras } from '../../messaging/sqliteValidators.js';
 import { recordSqliteFailure, recordSqliteSuccess } from '../sqliteAlert.js';
 import type { SqliteError, QueryOp, MutateOp, MaintainOp, AuditLogRecord, SqliteRpcClient, SqliteRpcResult } from '../../messaging/sqliteRpcClient.js';
 import { categorizeError } from '../../messaging/sqliteRpcClient.js';
@@ -213,12 +214,11 @@ export class OffscreenGateway {
   }
 
   async status(): Promise<SqliteResult<Omit<OffscreenStatusData, 'success'>>> {
-    // PBI 2026-09-11-06: the extras pick must cover every enrichment field the
-    // offscreen handler sends. idbMigrationV2Done / opfsLegacyDbPath /
-    // idbLegacyDbName were silently dropped here, so the dashboard never saw
-    // the IDB migration state or the legacy-DB probes (panel showed
-    // "Not applicable" unconditionally).
-    const result = await this.callInternal<Omit<OffscreenStatusData, 'success'>, OffscreenStatusResponse>('SQLITE_STATUS', {}, (r) => ({ initialized: r.initialized, path: r.path, fallback: r.fallback, ...pickDefined({ fts5: r.fts5, initError: r.initError, compileOptions: r.compileOptions, compileOptionsSource: r.compileOptionsSource, opfsMigrationV2Done: r.opfsMigrationV2Done, opfsMigrationV2LastAttemptedAt: r.opfsMigrationV2LastAttemptedAt, opfsMigrationV2CompletedAt: r.opfsMigrationV2CompletedAt, opfsMigrationV2RecordCount: r.opfsMigrationV2RecordCount, idbMigrationV2Done: r.idbMigrationV2Done, opfsLegacyDbPath: r.opfsLegacyDbPath, idbLegacyDbName: r.idbLegacyDbName }) }));
+    // PBI 2026-09-11-03 (round 5): the extras projection is DERIVED from
+    // SqliteStatusExtras via pickStatusExtras — adding a field to the STATUS
+    // contract compiles here automatically (round 4's silent-drop bug class
+    // is closed by construction instead of by list maintenance).
+    const result = await this.callInternal<Omit<OffscreenStatusData, 'success'>, OffscreenStatusResponse>('SQLITE_STATUS', {}, (r) => ({ initialized: r.initialized, path: r.path, fallback: r.fallback, ...pickStatusExtras(r) }));
     return result;
   }
 

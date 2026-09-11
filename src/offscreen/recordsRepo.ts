@@ -94,7 +94,9 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
   // 'OPFS:<file>') must not be overwritten with the generic DB_FILENAME —
   // that erased the OPFS/IDB distinction the diagnostics panel relies on.
   const path = result.path ?? DB_FILENAME;
-  return { success: true, ...result, path };
+  // fts5 is part of the base contract every backend reports (SqliteStatusExtras
+  // carries it optional for hop-shape reuse); re-assert the backend guarantee.
+  return { success: true, ...result, path, fts5: result.fts5 ?? false };
 }
 
 /**

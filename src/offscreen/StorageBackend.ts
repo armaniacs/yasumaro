@@ -51,15 +51,13 @@ export interface HealthResult { success: true } // healthCheck — success means
 export interface AuditLogQueryResult { success: true; rows: AuditLogEntry[]; total: number }
 export type BackendOrError<T> = T | { success: false; error: string };
 
-export interface StatusResult {
+import type { SqliteStatusExtras } from '../messaging/sqliteMessages.js';
+
+export interface StatusResult extends SqliteStatusExtras {
   initialized: boolean;
   fallback: boolean;
-  fts5: boolean;
   supportsBinaryBackup: boolean;
   path?: string;
-  compileOptions?: string[];
-  compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback';
-  initError?: string;
 }
 
 /**
