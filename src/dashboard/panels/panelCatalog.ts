@@ -24,7 +24,7 @@ export interface PanelCatalogEntry {
   readonly id: string;
   /**
    * sidebar の所属セクション。`null` は sidebar ボタンを持たない
-   * (legacy `panel-history`。PBI 16 保留中のため登録維持)。
+   * (例: HTML に静的に存在する非カタログ section)。
    */
   readonly sidebarSection: SidebarSection | null;
   /** sidebar ボタン内 `<span data-i18n>` のキー。sidebar なしは null。 */
@@ -36,7 +36,7 @@ export interface PanelCatalogEntry {
 }
 
 /**
- * カタログ順 = sidebar 表示順。末尾の `panel-history` のみ sidebar なし。
+ * カタログ順 = sidebar 表示順。
  */
 export const PANEL_CATALOG: readonly PanelCatalogEntry[] = [
   { id: 'panel-general', sidebarSection: 'settings', sidebarI18nKey: 'mainTabDashboard', deepLinkSections: ['obsidian', 'ai-provider', 'general'] },
@@ -57,9 +57,6 @@ export const PANEL_CATALOG: readonly PanelCatalogEntry[] = [
   { id: 'panel-domain-search', sidebarSection: 'data', sidebarI18nKey: 'domainSearchTab', deepLinkSections: [] },
   { id: 'panel-export-logs', sidebarSection: 'tools', sidebarI18nKey: 'exportLogsTab', deepLinkSections: [] },
   { id: 'panel-export-import', sidebarSection: 'tools', sidebarI18nKey: 'exportImportTab', deepLinkSections: [] },
-  // Legacy (PBI 16 保留中): 登録は維持するが sidebar には出さない。
-  // PBI 16 着手時はこの1行と factory の1行を削除するだけになる。
-  { id: 'panel-history', sidebarSection: null, sidebarI18nKey: null, deepLinkSections: [] },
 ] as const;
 
 export type PanelCatalogId = (typeof PANEL_CATALOG)[number]['id'];

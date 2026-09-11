@@ -467,7 +467,6 @@ vi.mock('../../utils/i18n.js', () => ({
     getMessage: vi.fn((key: string, subs?: Record<string, string | number>) =>
         key === 'connectionStatusLabel' && subs && typeof subs.label === 'string' ? `${subs.label}: ` : key),
 }));
-vi.mock('./historyPanel.js', () => ({ initHistoryPanel: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./models-dev-dialog.js', () => ({
     ModelsDevDialog: class { show = vi.fn().mockResolvedValue(undefined) },
 }));
