@@ -471,20 +471,23 @@ describe('customPromptManager - r2 missed branches', () => {
       expect(html).toContain('Default');
     });
 
-    it('should render default with Japanese locale via getMessage', async () => {
+    it('should render default with Japanese locale from navigator.language (PBI 2026-09-11-04)', async () => {
       const { getMessage } = await import('../../../utils/i18n.js');
       (getMessage as any).mockImplementation((key: string) => {
-        if (key === 'locale') return 'ja';
         if (key === 'defaultPrompt') return '\u30c7\u30d5\u30a9\u30eb\u30c8';
         if (key === 'promptProviderAll') return 'All Providers';
         return key;
       });
+      // PBI 2026-09-11-04: the old code read a non-existent 'locale' key —
+      // UI language now comes straight from navigator.language.
+      vi.stubGlobal('navigator', { language: 'ja-JP' } as Navigator);
 
       const { initCustomPromptManager } = await import('../customPromptManager.js');
       initCustomPromptManager({ custom_prompts: [] });
 
       const html = document.getElementById('promptList')!.innerHTML;
       expect(html).toContain('\u30c7\u30d5\u30a9\u30eb\u30c8');
+      vi.unstubAllGlobals();
     });
   });
 

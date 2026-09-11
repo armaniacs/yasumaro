@@ -1437,13 +1437,17 @@
   "cleansingDetailHard": {
     "message": "ハード: $1$件",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "cleansingDetailKeyword": {
     "message": "キーワード: $1$件",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "cleansedBadgeHardTitle": {
@@ -1485,7 +1489,9 @@
   "pendingMoreCount": {
     "message": "ほか $1$ 件の保留ページがあります",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "pendingSectionDesc": {
@@ -4171,5 +4177,158 @@
   },
   "cleansingFeedbackAction": {
     "message": "操作"
+  },
+  "cleansingNoRemoval": {
+    "message": "クレンジングによる除去はありません"
+  },
+  "cleansingRule": {
+    "message": "ルール"
+  },
+  "cleansingCount": {
+    "message": "件数"
+  },
+  "cleansingLargeRemovalWarning": {
+    "message": "多くの内容が除去されました。原文を確認してください"
+  },
+  "testError": {
+    "message": "接続テストに失敗しました。"
+  },
+  "checking": {
+    "message": "確認中..."
+  },
+  "domainAllowed": {
+    "message": "許可（記録されます）"
+  },
+  "domainBlocked": {
+    "message": "ブロック（記録されません）"
+  },
+  "checkError": {
+    "message": "ドメインの確認中にエラーが発生しました。"
+  },
+  "archiveModalTitle": {
+    "message": "アーカイブ管理"
+  },
+  "aiProviderPrioritySection": {
+    "message": "優先順位（フェイルオーバー順）"
+  },
+  "aiProviderSettingsSection": {
+    "message": "プロバイダー設定"
+  },
+  "apiKey": {
+    "message": "APIキー"
+  },
+  "archiveModalCancel": {
+    "message": "キャンセル"
+  },
+  "archiveModalSave": {
+    "message": "保存"
+  },
+  "archiveModalTitleLabel": {
+    "message": "アーカイブタイトル"
+  },
+  "archiveModalTitleRequired": {
+    "message": "タイトルを入力してください"
+  },
+  "archiveModalTitleTooLong": {
+    "message": "タイトルが長すぎます"
+  },
+  "builtInAiHelpLink": {
+    "message": "組み込みAIのセットアップガイド"
+  },
+  "confirm": {
+    "message": "確認"
+  },
+  "deleteAllDataFailed": {
+    "message": "閲覧ログの削除に失敗しました。もう一度お試しください。"
+  },
+  "error": {
+    "message": "エラー"
+  },
+  "errorConsentData": {
+    "message": "同意の保存中にエラーが発生しました"
+  },
+  "errorLoadTrancoData": {
+    "message": "Trancoデータの読み込みに失敗しました"
+  },
+  "filterFreeTier": {
+    "message": "無料枠のみ表示"
+  },
+  "loadingProviders": {
+    "message": "プロバイダーを読み込み中..."
+  },
+  "maxTokensError": {
+    "message": "値が許容範囲外です"
+  },
+  "minScrollDepthError": {
+    "message": "値が許容範囲外です"
+  },
+  "minVisitDurationError": {
+    "message": "値が許容範囲外です"
+  },
+  "openHistory": {
+    "message": "履歴を開く"
+  },
+  "providerSearchPlaceholder": {
+    "message": "プロバイダーを検索..."
+  },
+  "reportCleansingFeedback": {
+    "message": "誤削除を報告"
+  },
+  "reportCleansingFeedbackError": {
+    "message": "報告に失敗しました"
+  },
+  "reportCleansingFeedbackSuccess": {
+    "message": "報告しました"
+  },
+  "searchPlaceholder": {
+    "message": "プロバイダーを検索..."
+  },
+  "selectModel": {
+    "message": "モデル（任意）:"
+  },
+  "selectedProvider": {
+    "message": "選択中のプロバイダー:"
+  },
+  "settingsSaveError": {
+    "message": "設定の保存に失敗しました"
+  },
+  "statusAuthorizationPresent": {
+    "message": "Authorizationヘッダーあり"
+  },
+  "statusNoCacheInfo": {
+    "message": "キャッシュ情報はありません"
+  },
+  "statusPageNotRecordable": {
+    "message": "このページは記録できません"
+  },
+  "statusPattern": {
+    "message": "パターン: $1$"
+  },
+  "statusSetCookiePresent": {
+    "message": "Set-Cookieあり"
+  },
+  "tagClusterTab": {
+    "message": "タグクラスタ"
+  },
+  "testComplete": {
+    "message": "テスト完了。"
+  },
+  "testFailed": {
+    "message": "✗ 接続に失敗しました"
+  },
+  "testSuccess": {
+    "message": "✓ 接続に成功しました"
+  },
+  "trancoConsentDenied": {
+    "message": "拒否を保存しました"
+  },
+  "trancoConsentGranted": {
+    "message": "同意を保存しました"
+  },
+  "trancoStatusNotUpdated": {
+    "message": "Trancoリストは未更新です"
+  },
+  "warningTitle": {
+    "message": "警告"
   }
 }

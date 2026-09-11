@@ -98,7 +98,7 @@ function renderPromptList(): void {
     if (!promptList || !noPromptsMessage || !currentSettings) return;
 
     const prompts = (currentSettings[StorageKeys.CUSTOM_PROMPTS] as CustomPrompt[]) || [];
-    const locale = getMessage('locale') || navigator.language.startsWith('ja') ? 'ja' : 'en';
+    const locale = navigator.language.startsWith('ja') ? 'ja' : 'en';
 
     // Always hide "no prompts" message since default is always shown
     noPromptsMessage.style.display = 'none';
@@ -204,7 +204,7 @@ function createDefaultPromptItem(): string {
     const activeBadge = isActive
         ? `<span class="badge badge-active" data-i18n="activePrompt">Active</span>`
         : '';
-    const locale = getMessage('locale') || navigator.language.startsWith('ja') ? 'ja' : 'en';
+    const locale = navigator.language.startsWith('ja') ? 'ja' : 'en';
     const defaultPreset = getPresetPrompt('default');
     const displayName = defaultPreset ? getPromptDisplayName(defaultPreset, locale) : (getMessage('defaultPrompt') || 'Default');
 
@@ -419,7 +419,7 @@ async function handleActivatePrompt(promptId: string, provider: string): Promise
 
         // Upsert preset entry
         const existing = prompts.findIndex(p => p.id === promptId);
-        const locale = getMessage('locale') || (navigator.language.startsWith('ja') ? 'ja' : 'en');
+        const locale = navigator.language.startsWith('ja') ? 'ja' : 'en';
         const name = getPromptDisplayName(preset, locale);
         const now = Date.now();
         if (existing >= 0) {
@@ -466,7 +466,7 @@ function handleDuplicatePrompt(promptId: string): void {
     let provider = 'all';
     let systemPrompt = '';
     let promptText = '';
-    const locale = getMessage('locale') || navigator.language.startsWith('ja') ? 'ja' : 'en';
+    const locale = navigator.language.startsWith('ja') ? 'ja' : 'en';
 
     if (promptId === PROMPT_ID.DEFAULT) {
         // Duplicate default prompt

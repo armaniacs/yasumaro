@@ -1497,13 +1497,17 @@
   "cleansingDetailHard": {
     "message": "Hard: $1$",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "cleansingDetailKeyword": {
     "message": "Keyword: $1$",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "cleansedBadgeHardTitle": {
@@ -1545,7 +1549,9 @@
   "pendingMoreCount": {
     "message": "...and $1$ more pending page(s)",
     "placeholders": {
-      "1": { "content": "$1" }
+      "1": {
+        "content": "$1"
+      }
     }
   },
   "pendingSectionDesc": {
@@ -4181,5 +4187,158 @@
   },
   "cleansingFeedbackAction": {
     "message": "Action"
+  },
+  "cleansingNoRemoval": {
+    "message": "No removals by cleansing"
+  },
+  "cleansingRule": {
+    "message": "Rule"
+  },
+  "cleansingCount": {
+    "message": "Count"
+  },
+  "cleansingLargeRemovalWarning": {
+    "message": "A large portion of the content was removed. Please review the original text."
+  },
+  "testError": {
+    "message": "Connection test failed."
+  },
+  "checking": {
+    "message": "Checking..."
+  },
+  "domainAllowed": {
+    "message": "Allowed (will be recorded)"
+  },
+  "domainBlocked": {
+    "message": "Blocked (will not be recorded)"
+  },
+  "checkError": {
+    "message": "Error checking domain."
+  },
+  "archiveModalTitle": {
+    "message": "Archive Management"
+  },
+  "aiProviderPrioritySection": {
+    "message": "Priority (Failover Order)"
+  },
+  "aiProviderSettingsSection": {
+    "message": "Provider Settings"
+  },
+  "apiKey": {
+    "message": "API key"
+  },
+  "archiveModalCancel": {
+    "message": "Cancel"
+  },
+  "archiveModalSave": {
+    "message": "Save"
+  },
+  "archiveModalTitleLabel": {
+    "message": "Archive title"
+  },
+  "archiveModalTitleRequired": {
+    "message": "Please enter a title"
+  },
+  "archiveModalTitleTooLong": {
+    "message": "Title is too long"
+  },
+  "builtInAiHelpLink": {
+    "message": "Built-in AI setup guide"
+  },
+  "confirm": {
+    "message": "Confirm"
+  },
+  "deleteAllDataFailed": {
+    "message": "Failed to clear browsing logs. Please try again."
+  },
+  "error": {
+    "message": "Error"
+  },
+  "errorConsentData": {
+    "message": "Failed to save your consent"
+  },
+  "errorLoadTrancoData": {
+    "message": "Failed to load Tranco data"
+  },
+  "filterFreeTier": {
+    "message": "Free Tier Only"
+  },
+  "loadingProviders": {
+    "message": "Loading providers..."
+  },
+  "maxTokensError": {
+    "message": "Value is out of the allowed range"
+  },
+  "minScrollDepthError": {
+    "message": "Value is out of the allowed range"
+  },
+  "minVisitDurationError": {
+    "message": "Value is out of the allowed range"
+  },
+  "openHistory": {
+    "message": "Open history"
+  },
+  "providerSearchPlaceholder": {
+    "message": "Search providers..."
+  },
+  "reportCleansingFeedback": {
+    "message": "Report false removal"
+  },
+  "reportCleansingFeedbackError": {
+    "message": "Failed to report"
+  },
+  "reportCleansingFeedbackSuccess": {
+    "message": "Reported"
+  },
+  "searchPlaceholder": {
+    "message": "Search providers..."
+  },
+  "selectModel": {
+    "message": "Model (optional):"
+  },
+  "selectedProvider": {
+    "message": "Selected Provider:"
+  },
+  "settingsSaveError": {
+    "message": "Failed to save settings"
+  },
+  "statusAuthorizationPresent": {
+    "message": "Authorization header present"
+  },
+  "statusNoCacheInfo": {
+    "message": "No cache information available"
+  },
+  "statusPageNotRecordable": {
+    "message": "This page cannot be recorded"
+  },
+  "statusPattern": {
+    "message": "pattern: $1$"
+  },
+  "statusSetCookiePresent": {
+    "message": "Set-Cookie present"
+  },
+  "tagClusterTab": {
+    "message": "Tag Cluster"
+  },
+  "testComplete": {
+    "message": "Test complete."
+  },
+  "testFailed": {
+    "message": "✗ Connection failed"
+  },
+  "testSuccess": {
+    "message": "✓ Connection successful"
+  },
+  "trancoConsentDenied": {
+    "message": "Consent denied saved"
+  },
+  "trancoConsentGranted": {
+    "message": "Consent saved"
+  },
+  "trancoStatusNotUpdated": {
+    "message": "Tranco list not updated yet"
+  },
+  "warningTitle": {
+    "message": "Warning"
   }
 }
