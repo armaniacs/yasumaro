@@ -123,28 +123,21 @@ vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
 vi.mock('../../utils/storage/domainFilterCache.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
-
-      getSettings: vi.fn().mockResolvedValue({}),
-      saveSettings: vi.fn().mockResolvedValue(undefined),
-      StorageKeys: {
-          DOMAIN_WHITELIST: 'domain_whitelist',
-          DOMAIN_BLACKLIST: 'domain_blacklist',
-      },
-
-  } as Record<string, unknown>;
+      updateDomainFilterCache: vi.fn().mockResolvedValue(undefined),
+  };
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
+    ...overrides,
   };
 });;
+
+vi.mock('../../utils/storage/SettingsRepository.js', () => ({
+    settingsRepository: {
+        getAll: vi.fn().mockResolvedValue({}),
+        setAll: vi.fn().mockResolvedValue(undefined),
+        set: vi.fn().mockResolvedValue(undefined),
+    },
+}));
 vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
@@ -213,6 +206,8 @@ import { loadPendingPages, saveSelectedPages, setupEventListeners } from '../pen
 import { getPendingPages, removePendingPages } from '../../utils/pendingStorage.js';
 import { showSuccess } from '../errorUtils.js';
 import { logError } from '../../utils/logger.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
+import { updateDomainFilterCache } from '../../utils/storage/domainFilterCache.js';
 
 // Import pendingPages.ts to set up event listeners
 import '../pendingPages.js';
@@ -291,66 +286,81 @@ describe('saveSelectedPages', () => {
         await expect(saveSelectedPages()).resolves.not.toThrow();
     });
 
-    it('processes checked checkboxes and sends messages', async () => {
+    it('sends a MANUAL_RECORD envelope the MessageRouter can handle (PBI 2026-09-11-03)', async () => {
         document.body.innerHTML += `
             <input type="checkbox" class="pending-checkbox" value="https://example.com" checked>
         `;
         const sendMessageSpy = (vi.spyOn(chrome.runtime, 'sendMessage') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
         await saveSelectedPages();
-        expect(sendMessageSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'record' }));
+        expect(sendMessageSpy).toHaveBeenCalledWith({
+            type: 'MANUAL_RECORD',
+            payload: {
+                title: 'Example',
+                url: 'https://example.com',
+                content: '',
+                force: true,
+            },
+        });
     });
 
-    it('adds path regex to whitelist when whitelistType is path', async () => {
+    it('reads pending pages once for a multi-URL save (no N+1)', async () => {
+        document.body.innerHTML += `
+            <input type="checkbox" class="pending-checkbox" value="https://a.com" checked>
+            <input type="checkbox" class="pending-checkbox" value="https://b.com" checked>
+            <input type="checkbox" class="pending-checkbox" value="https://c.com" checked>
+        `;
+        (getPendingPages as ReturnType<typeof vi.fn>).mockResolvedValue([
+            { url: 'https://a.com', title: 'A', reason: 'r', headerValue: '' },
+            { url: 'https://b.com', title: 'B', reason: 'r', headerValue: '' },
+            { url: 'https://c.com', title: 'C', reason: 'r', headerValue: '' },
+        ]);
+        const sendMessageSpy = (vi.spyOn(chrome.runtime, 'sendMessage') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
+        await saveSelectedPages();
+        // 1 batch read + 1 reload after save. The old per-URL loop read it once
+        // per URL (4 total here) — the batch path must not scale with URL count.
+        expect(getPendingPages).toHaveBeenCalledTimes(2);
+        expect(sendMessageSpy).toHaveBeenCalledTimes(3);
+    });
+
+    it('adds path regex to whitelist via the SettingsRepository seam when whitelistType is path', async () => {
         document.body.innerHTML += `
             <input type="checkbox" class="pending-checkbox" value="https://example.com/page" checked>
         `;
         (getPendingPages as ReturnType<typeof vi.fn>).mockResolvedValue([
             { url: 'https://example.com/page', title: 'Example Page', reason: 'test', headerValue: '' }
         ]);
-        const storageSetSpy = (vi.spyOn(chrome.storage.local, 'set') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue(undefined);
         const sendMessageSpy = (vi.spyOn(chrome.runtime, 'sendMessage') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
         await saveSelectedPages('path');
-        expect(storageSetSpy).toHaveBeenCalledWith({
-            domain_whitelist: expect.arrayContaining(['^https://example\\.com/page$'])
-        });
-        expect(sendMessageSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'record' }));
+        expect(settingsRepository.setAll).toHaveBeenCalledWith(
+            expect.objectContaining({
+                domain_whitelist: expect.arrayContaining(['^https://example\\.com/page$']),
+            }),
+        );
+        expect(updateDomainFilterCache).toHaveBeenCalled();
+        expect(sendMessageSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'MANUAL_RECORD' }));
     });
 
-    it('writes whitelist entries under domain_whitelist, never the orphan domainWhitelist key', async () => {
+    it('writes whitelist entries through settingsRepository.setAll, never a top-level scattered key', async () => {
         document.body.innerHTML += `
             <input type="checkbox" class="pending-checkbox" value="https://example.com/page" checked>
         `;
         (getPendingPages as ReturnType<typeof vi.fn>).mockResolvedValue([
             { url: 'https://example.com/page', title: 'Example Page', reason: 'test', headerValue: '' }
         ]);
-        const getSpy = (vi.spyOn(chrome.storage.local, 'get') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
-        const setSpy = (vi.spyOn(chrome.storage.local, 'set') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue(undefined);
+        (settingsRepository.getAll as ReturnType<typeof vi.fn>).mockResolvedValue({ domain_whitelist: ['old.example.com'] });
+        const storageSetSpy = (vi.spyOn(chrome.storage.local, 'set') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue(undefined);
         (vi.spyOn(chrome.runtime, 'sendMessage') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
 
         await saveSelectedPages('domain');
 
-        expect(getSpy).toHaveBeenCalledWith('domain_whitelist');
-        const setArg = setSpy.mock.calls[0]![0] as Record<string, unknown>;
-        expect(setArg).toHaveProperty('domain_whitelist');
-        expect(setArg).not.toHaveProperty('domainWhitelist');
-        expect(setArg.domain_whitelist).toEqual(['example.com']);
-    });
-
-    it('appends to existing domain_whitelist values without overwriting', async () => {
-        document.body.innerHTML += `
-            <input type="checkbox" class="pending-checkbox" value="https://new.example.com/x" checked>
-        `;
-        (getPendingPages as ReturnType<typeof vi.fn>).mockResolvedValue([
-            { url: 'https://new.example.com/x', title: 'New', reason: 'test', headerValue: '' }
-        ]);
-        (vi.spyOn(chrome.storage.local, 'get') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({ domain_whitelist: ['old.example.com'] });
-        const setSpy = (vi.spyOn(chrome.storage.local, 'set') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue(undefined);
-        (vi.spyOn(chrome.runtime, 'sendMessage') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
-
-        await saveSelectedPages('domain');
-
-        const setArg = setSpy.mock.calls[0]![0] as { domain_whitelist: string[] };
-        expect(setArg.domain_whitelist).toEqual(['old.example.com', 'new.example.com']);
+        // The settings blob path is used — not chrome.storage.local.set with a
+        // scattered 'domain_whitelist' key that getAll() never reads post-migration.
+        expect(settingsRepository.setAll).toHaveBeenCalledWith(
+            expect.objectContaining({
+                domain_whitelist: ['old.example.com', 'example.com'],
+            }),
+        );
+        expect(storageSetSpy).not.toHaveBeenCalledWith(expect.objectContaining({ domain_whitelist: expect.anything() }));
     });
 });
 
@@ -418,7 +428,7 @@ describe('DOM Event Listeners', () => {
     });
 
     describe('btn-save-selected click', () => {
-        it('calls saveSelectedPages when clicked', async () => {
+        it('sends MANUAL_RECORD when clicked', async () => {
             // Add checkbox to DOM
             document.getElementById('pending-pages-list')!.innerHTML = `
                 <input type="checkbox" class="pending-checkbox" value="https://example.com" checked>
@@ -432,7 +442,7 @@ describe('DOM Event Listeners', () => {
             // Wait for async operations
             await new Promise(resolve => setTimeout(resolve, 0));
 
-            expect(sendMessageSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'record' }));
+            expect(sendMessageSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'MANUAL_RECORD' }));
         });
     });
 
@@ -443,7 +453,6 @@ describe('DOM Event Listeners', () => {
                 <input type="checkbox" class="pending-checkbox" value="https://example.com" checked>
             `;
 
-            const storageSetSpy = (vi.spyOn(chrome.storage.local, 'set') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue(undefined);
             const sendMessageSpy = (vi.spyOn(chrome.runtime, 'sendMessage') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
 
             const button = document.getElementById('btn-save-whitelist')!;
@@ -452,8 +461,8 @@ describe('DOM Event Listeners', () => {
             // Wait for async operations
             await new Promise(resolve => setTimeout(resolve, 0));
 
-            expect(storageSetSpy).toHaveBeenCalled();
-            expect(sendMessageSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'record' }));
+            expect(settingsRepository.setAll).toHaveBeenCalled();
+            expect(sendMessageSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'MANUAL_RECORD' }));
         });
     });
 
