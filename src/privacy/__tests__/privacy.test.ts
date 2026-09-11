@@ -419,7 +419,9 @@ describe('loadPrivacyPolicy', () => {
 
         await loadPrivacyPolicy('content');
 
-        expect(global.fetch).toHaveBeenCalledWith('../PRIVACY.md');
+        // PBI 2026-09-11-03 (round 7): the fetch target moved from the
+        // layout-dependent relative path to the extension-root URL.
+        expect(global.fetch).toHaveBeenCalledWith(chrome.runtime.getURL('PRIVACY.md'));
         expect(document.getElementById('content')?.innerHTML).toContain('<h1');
     });
 
