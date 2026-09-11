@@ -63,9 +63,10 @@ export type { WorkerLogMessage } from './opfsWorker/types.js';
  */
 export async function handleSearchFts(
   sanitizedQuery: string, limit: number, offset: number,
-  orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC'
+  orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC',
+  payload?: import('./opfsWorker/types.js').SearchPayload
 ): Promise<{ rows: import('../utils/sqlite-types.js').SearchResult[]; total: number }> {
-  return handleSearchFtsImpl(handlerCtx, sanitizedQuery, limit, offset, orderBy, orderDir);
+  return handleSearchFtsImpl(handlerCtx, sanitizedQuery, limit, offset, orderBy, orderDir, payload);
 }
 
 /**
@@ -73,9 +74,10 @@ export async function handleSearchFts(
  */
 export async function handleSearchLike(
   rawQuery: string, limit: number, offset: number,
-  orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC'
+  orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC',
+  payload?: import('./opfsWorker/types.js').SearchPayload
 ): Promise<{ rows: import('../utils/sqlite-types.js').SearchResult[]; total: number }> {
-  return handleSearchLikeImpl(handlerCtx, rawQuery, limit, offset, orderBy, orderDir);
+  return handleSearchLikeImpl(handlerCtx, rawQuery, limit, offset, orderBy, orderDir, payload);
 }
 
 /**

@@ -8,6 +8,7 @@
  */
 
 import { buildWhereClause, buildOrderByClause, buildFts5OrderClause, buildLikeOrderClause, buildTagFilterCondition, sanitizeTextForFts5, shouldUseFts5 } from './sqliteQueryBuilder.js';
+import type { TagFilterCondition } from './sqliteQueryBuilder.js';
 import { BROWSING_LOG_COLUMNS_SQL } from './rowCodec.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
 import type { SqliteValue } from './sqliteEngine.js';
@@ -275,50 +276,61 @@ export interface SearchStatements {
  * FTS5 search statements (browsing_logs_fts JOIN browsing_logs AS b).
  * `extra` comes from buildExtraWhereSql; `orderClause` from
  * buildSearchOrderClause({ fts: true }) or QuerySpec.order.
+ * `tagFilter` (PBI 2026-09-11-06, round 5): the shared tag condition built
+ * with buildTagFilterCondition({ idColumn: 'b.id' }) — text+tag applies BOTH
+ * conditions on every SQL backend instead of silently dropping the tag.
  */
 export function buildFtsSearchStatements(
   extra: ExtraWhere,
-  opts: { ftsQuery: string; orderClause: string; limit: number; offset: number }
+  opts: { ftsQuery: string; orderClause: string; limit: number; offset: number; tagFilter?: TagFilterCondition | null }
 ): SearchStatements {
   // `AS c` alias: required by the opfs named-row reader (row.c), ignored by
   // the idb positional reader (row[0]) — one text serves both (PBI-34).
   // rowCodec.test.ts pins this: every COUNT emits `AS c`, every FTS rows
   // query emits `rank AS rank`, so the codec mappers never read bare names.
+  const tagSql = opts.tagFilter ? ` AND ${opts.tagFilter.condition}` : '';
+  const tagParams = opts.tagFilter ? opts.tagFilter.params : [];
   const countSql =
     'SELECT COUNT(*) AS c FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
-    `WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extra.extraWhereSqlFts}`;
+    `WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extra.extraWhereSqlFts}${tagSql}`;
   const rowsSql =
     'SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank AS rank ' +
     'FROM browsing_logs_fts ' +
     'JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
-    `WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extra.extraWhereSqlFts} ` +
+    `WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extra.extraWhereSqlFts}${tagSql} ` +
     `ORDER BY ${opts.orderClause} LIMIT ? OFFSET ?`;
   return {
     countSql,
     rowsSql,
-    countParams: [opts.ftsQuery, ...extra.extraParams],
-    rowsParams: [opts.ftsQuery, ...extra.extraParams, opts.limit, opts.offset],
+    countParams: [opts.ftsQuery, ...extra.extraParams, ...tagParams],
+    rowsParams: [opts.ftsQuery, ...extra.extraParams, ...tagParams, opts.limit, opts.offset],
   };
 }
 
 /**
  * LIKE-fallback search statements (no FTS available or term too short).
  * `orderClause` comes from buildSearchOrderClause({ fts: false }).
+ * `tagFilter` (PBI 2026-09-11-06): built with buildTagFilterCondition
+ * ({ fts5Available: false }) so short/absent FTS still honours the tag.
  */
 export function buildLikeSearchStatements(
   extra: ExtraWhere,
-  opts: { likePattern: string; orderClause: string; limit: number; offset: number }
+  opts: { likePattern: string; orderClause: string; limit: number; offset: number; tagFilter?: TagFilterCondition | null }
 ): SearchStatements {
   const likeConds = 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';
-  const conditions = extra.extraWhereSql ? `${likeConds}${extra.extraWhereSql}` : likeConds;
+  const tagSql = opts.tagFilter ? ` AND ${opts.tagFilter.condition}` : '';
+  const tagParams = opts.tagFilter ? opts.tagFilter.params : [];
+  const conditions = extra.extraWhereSql
+    ? `${likeConds}${extra.extraWhereSql}${tagSql}`
+    : `${likeConds}${tagSql}`;
   const likeParams: SqliteValue[] = [opts.likePattern, opts.likePattern, opts.likePattern, opts.likePattern];
   return {
     countSql: `SELECT COUNT(*) AS c FROM browsing_logs WHERE ${conditions}`,
     rowsSql:
       'SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred ' +
       `FROM browsing_logs WHERE ${conditions} ORDER BY ${opts.orderClause} LIMIT ? OFFSET ?`,
-    countParams: [...likeParams, ...extra.extraParams],
-    rowsParams: [...likeParams, ...extra.extraParams, opts.limit, opts.offset],
+    countParams: [...likeParams, ...extra.extraParams, ...tagParams],
+    rowsParams: [...likeParams, ...extra.extraParams, ...tagParams, opts.limit, opts.offset],
   };
 }
 

@@ -19,6 +19,7 @@ import {
   contentPurgeStarredClause, buildContentPurgeStatements,
   buildAuditLogStatements,
 } from './queryPlan.js';
+import { buildTagFilterCondition } from './sqliteQueryBuilder.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { withTransaction } from './opfsWorker/handlers.js';
 import {
@@ -75,11 +76,17 @@ export class IdbVfsBackend implements StorageBackend {
       if (!bare) return { success: true, rows: [], total: 0 };
 
       if (spec.useFts) {
+        // PBI 2026-09-11-06 (round 5): text+tag applies BOTH conditions — the
+        // tag rides on the FTS/LIKE statements like any other extra filter.
+        const tagFilter = q.tag
+          ? buildTagFilterCondition(q.tag, { fts5Available: this.engine.fts5Available, idColumn: 'b.id' })
+          : null;
         const stmts = buildFtsSearchStatements(extra, {
           ftsQuery: buildFtsMatchQuery(bare),
           orderClause: spec.order,
           limit: spec.limit,
           offset: spec.offset,
+          tagFilter,
         });
 
         let total = 0;
@@ -101,11 +108,15 @@ export class IdbVfsBackend implements StorageBackend {
       }
 
       // LIKE fallback
+      const likeTagFilter = q.tag
+        ? buildTagFilterCondition(q.tag, { fts5Available: false })
+        : null;
       const stmts = buildLikeSearchStatements(extra, {
         likePattern: buildLikePattern(q.text),
         orderClause: spec.order,
         limit: spec.limit,
         offset: spec.offset,
+        tagFilter: likeTagFilter,
       });
 
       let total = 0;

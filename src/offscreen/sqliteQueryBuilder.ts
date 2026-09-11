@@ -52,7 +52,7 @@ export function buildWhereClause(q: StorageQuery): { where: string; params: Sqli
  */
 export function buildTagFilterCondition(
   tag: string,
-  opts: { fts5Available: boolean },
+  opts: { fts5Available: boolean; idColumn?: 'id' | 'b.id' },
 ): { condition: string; params: SqliteValue[] } | null {
   const limitedTag = tag.slice(0, FTS_QUERY_MAX_LENGTH);
   if (!limitedTag) return null;
@@ -63,13 +63,18 @@ export function buildTagFilterCondition(
     .trim();
   const charLen = [...cleanTag].length;
   if (opts.fts5Available && charLen >= 3) {
+    // idColumn: the FTS search path reads from a JOIN (browsing_logs AS b),
+    // so the outer id reference must be table-qualified there.
     return {
-      condition: 'id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)',
+      condition: `${opts.idColumn ?? 'id'} IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)`,
       params: [`"${cleanTag}"`],
     };
   }
   return { condition: 'tags LIKE ?', params: [`%${limitedTag}%`] };
 }
+
+/** Condition shape shared by the plain-list and search tag filters. */
+export type TagFilterCondition = { condition: string; params: SqliteValue[] };
 
 /**
  * Validate and build an ORDER BY clause for plain (non-FTS) queries.

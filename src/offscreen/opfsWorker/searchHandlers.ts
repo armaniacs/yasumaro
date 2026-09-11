@@ -9,7 +9,7 @@
 
 import type { SearchResult } from '../../utils/sqlite-types.js';
 import { sanitizeFtsTerm } from '../schema.js';
-import { shouldUseFts5 } from '../sqliteQueryBuilder.js';
+import { shouldUseFts5, buildTagFilterCondition } from '../sqliteQueryBuilder.js';
 import type { SearchPayload } from './types.js';
 import { sqlQuery, type HandlerContext } from './handlers.js';
 import {
@@ -45,11 +45,16 @@ export async function handleSearchFts(
   payload: SearchPayload = {}
 ): Promise<{ rows: SearchResult[]; total: number }> {
   const extra = buildExtraWhereSql(payload as unknown as Record<string, unknown>);
+  // PBI 2026-09-11-06 (round 5): text+tag applies BOTH conditions — the tag
+  // condition is the same partial-match semantics as the plain listing.
+  const tagFilter = payload.tag
+    ? buildTagFilterCondition(payload.tag, { fts5Available: true, idColumn: 'b.id' })
+    : null;
   // 'coerce' preserves the legacy worker behaviour: out-of-whitelist
   // orderDir normalizes to DESC instead of failing (IdbVfsBackend fails
   // closed instead — intentional divergence, see queryPlan.ts).
   const { orderClause } = buildSearchOrderClause({ orderBy, orderDir }, { fts: true, onInvalid: 'coerce' });
-  const stmts = buildFtsSearchStatements(extra, { ftsQuery: sanitizedQuery, orderClause, limit, offset });
+  const stmts = buildFtsSearchStatements(extra, { ftsQuery: sanitizedQuery, orderClause, limit, offset, tagFilter });
 
   let total = 0;
   await sqlQuery(ctx, stmts.countSql, stmts.countParams, (row) => { total = Number(row.c); });
@@ -69,12 +74,16 @@ export async function handleSearchLike(
   payload: SearchPayload = {}
 ): Promise<{ rows: SearchResult[]; total: number }> {
   const extra = buildExtraWhereSql(payload as unknown as Record<string, unknown>);
+  const likeTagFilter = payload.tag
+    ? buildTagFilterCondition(payload.tag, { fts5Available: false })
+    : null;
   const { orderClause } = buildSearchOrderClause({ orderBy, orderDir }, { fts: false, onInvalid: 'coerce' });
   const stmts = buildLikeSearchStatements(extra, {
     likePattern: buildLikePattern(rawQuery),
     orderClause,
     limit,
     offset,
+    tagFilter: likeTagFilter,
   });
 
   let total = 0;
