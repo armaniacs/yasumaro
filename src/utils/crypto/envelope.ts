@@ -8,6 +8,7 @@
  */
 
 import type { EncryptedData } from './types.js';
+import { MAX_ENVELOPE_BASE64_LENGTH as LIMIT_ENVELOPE_BASE64_LENGTH } from '../../messaging/limits.js';
 import {
     getWebCrypto,
     generateSalt,
@@ -24,7 +25,7 @@ const ENCRYPTION_ALGORITHM = 'AES-GCM';
 const ENVELOPE_HASH: 'SHA-256' = 'SHA-256';
 const MAX_ENVELOPE_ITERATIONS = ENVELOPE_ITERATIONS * 10;
 const MIN_ENVELOPE_ITERATIONS = 1;
-const MAX_ENVELOPE_BASE64_LENGTH = 10 * 1024 * 1024;
+const MAX_ENVELOPE_BASE64_LENGTH = LIMIT_ENVELOPE_BASE64_LENGTH;
 const ALLOWED_ENVELOPE_HASHES = ['SHA-256'] as const;
 
 export interface EncryptionEnvelope {
