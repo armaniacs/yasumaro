@@ -605,6 +605,10 @@
     "message": "Failed to record",
     "description": "Error message shown when manual recording fails in dashboard"
   },
+  "recordRequestTimedOut": {
+    "message": "Request timed out after 20 seconds. The page may be taking too long to load or process.",
+    "description": "Shown when a manual record request does not complete within 20 seconds"
+  },
   "recordingFailed": {
     "message": "Recording Failed"
   },
@@ -1490,6 +1494,18 @@
   "cleansedBadgeHard": {
     "message": "🧹 Hard"
   },
+  "cleansingDetailHard": {
+    "message": "Hard: $1$",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "cleansingDetailKeyword": {
+    "message": "Keyword: $1$",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
   "cleansedBadgeHardTitle": {
     "message": "Tag/Attribute-based removal"
   },
@@ -1525,6 +1541,12 @@
   },
   "pendingSectionTitle": {
     "message": "Pages that could not be recorded"
+  },
+  "pendingMoreCount": {
+    "message": "...and $1$ more pending page(s)",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
   },
   "pendingSectionDesc": {
     "message": "These pages were skipped due to privacy headers (Cache-Control, Set-Cookie, etc.). You can manually record them here."
@@ -2892,6 +2914,9 @@
   },
   "statusTrustTrusted": {
     "message": "🟢 TRUSTED"
+  },
+  "statusTrustLocked": {
+    "message": "LOCKED"
   },
   "statusTrustSensitive": {
     "message": "🟡 SENSITIVE"

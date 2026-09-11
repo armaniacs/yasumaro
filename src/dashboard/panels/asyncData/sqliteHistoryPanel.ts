@@ -7,12 +7,16 @@ import { getPluralKey } from '../../../utils/i18nPlural.js';
 import type { SqliteHistoryState } from './sqliteHistoryModel.js';
 import { createSqliteHistoryModel } from './sqliteHistoryModel.js';
 import { notify } from '../../notificationService.js';
+import { getPendingPages, removePendingPages } from '../../../utils/pendingStorage.js';
+import type { PendingPage } from '../../../utils/pendingStorage.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../../background/messageTypes.js';
 import {
   formatDiagnosticMetadataHtml,
   render as renderHistoryView,
+  renderPendingRegion,
   toggleContentArea,
 } from './sqliteHistoryPanelView.js';
-import type { SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
+import type { PendingRegionActions, SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
 
 export { formatDiagnosticMetadataHtml };
 
@@ -32,6 +36,13 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
   // init() may run without a container (registry init→load order), so init
   // stays side-effect-free and only stashes params for load().
   let pendingNavParams: { searchTag?: string; searchDomain?: string } | null = null;
+
+  // --- Pending pages (PBI 2026-09-11-02, PBI-P) -----------------------------
+  // Panel-local state (NOT model state): pending pages are chrome.storage
+  // content, independent of the SQLite query pipeline. Live updates come from
+  // a chrome.storage.onChanged subscription, released in destroy().
+  let pendingPages: PendingPage[] = [];
+  let unsubscribePendingStorage: (() => void) | null = null;
 
   function state(): SqliteHistoryState {
     return model.getState();
@@ -136,6 +147,67 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
     renderHistoryView(container, state(), createCallbacks());
   }
 
+  // --- Pending pages (PBI-P) ------------------------------------------------
+
+  function renderPending(): void {
+    if (!container) return;
+    renderPendingRegion(container, pendingPages, createPendingActions());
+  }
+
+  async function loadPending(): Promise<void> {
+    pendingPages = await getPendingPages();
+    renderPending();
+  }
+
+  function createPendingActions(): PendingRegionActions {
+    return {
+      onRecord: (url) => recordPending(url, false),
+      onRecordWithoutAi: (url) => recordPending(url, true),
+      onDelete: async (url) => {
+        await removePendingPages([url]);
+        await loadPending();
+      },
+    };
+  }
+
+  /** MANUAL_RECORD with the 20s timeout contract the legacy pending panel used. */
+  async function recordPending(url: string, skipAi: boolean): Promise<{ ok: boolean; error?: string }> {
+    const page = pendingPages.find((p) => p.url === url);
+    if (!page) return { ok: false, error: t('recordError') };
+    try {
+      const result = await Promise.race([
+        chrome.runtime.sendMessage({
+          type: 'MANUAL_RECORD',
+          protocolVersion: CURRENT_PROTOCOL_VERSION,
+          payload: { title: page.title, url: page.url, content: '', force: true, skipAi },
+        }),
+        new Promise<never>((_, reject) => setTimeout(
+          () => reject(new Error(t('recordRequestTimedOut'))),
+          20000,
+        )),
+      ]) as { success?: boolean; error?: string } | undefined;
+      if (result?.success) {
+        await removePendingPages([url]);
+        await loadPending();
+        return { ok: true };
+      }
+      return { ok: false, error: result?.error || t('recordError') };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : t('recordError') };
+    }
+  }
+
+  function subscribePendingStorage(): void {
+    if (unsubscribePendingStorage || typeof chrome === 'undefined' || !chrome.storage?.onChanged) return;
+    const listener = (changes: Record<string, unknown>, areaName: string) => {
+      if (areaName === 'local' && changes['pending_pages']) {
+        void loadPending();
+      }
+    };
+    chrome.storage.onChanged.addListener(listener);
+    unsubscribePendingStorage = () => chrome.storage.onChanged.removeListener(listener);
+  }
+
   // Model subscription — thin alias of former onStateChange, completes BDD happy path
   unsubscribe = model.subscribe(() => refresh());
 
@@ -166,6 +238,11 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
       // First call takes the View's full-build path (no shell mounted yet).
       refresh();
 
+      // Pending pages render into the shell's dedicated region (PBI-P) and
+      // live-update through the chrome.storage.onChanged subscription.
+      subscribePendingStorage();
+      void loadPending();
+
       // Single navigation entry point: filter branch → fallback check →
       // persisted sort → initial fetch (retry with backoff) all run inside
       // the Model, which owns the order.
@@ -189,6 +266,11 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
         unsubscribe();
         unsubscribe = null;
       }
+      if (unsubscribePendingStorage) {
+        unsubscribePendingStorage();
+        unsubscribePendingStorage = null;
+      }
+      pendingPages = [];
       // Single navigation exit point: generation bump + persist flush +
       // cache clear + selection clear run inside the Model.
       // (Also clears bulk bar listener references via the selection clear.)
