@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.7` リリース。
+> - 現時点では `v6.8.8` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,28 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.8.8] - 2026-09-11
+
+アーキテクチャ改善ラウンド（2026-09-11 round 6、`arch-delivery-loop`）のリリースです。台帳に残っていた小型バグ群の全件実検証と解消、記録フロー promise の永久ハング解消、コンテンツスロットルの再実装、i18n 欠落 50 件の補完を含みます。全テスト（11,784 件）がグリーンです。
+
+### Fixed
+
+- **確認プレビューの promise が永久ハングし得た**: ユーザー操作の瞬間にモーダル DOM が消失すると、presenter が resolve/reject を null 化するだけで呼び出し元の promise が確定しなかった（記録フロー唯一の永久ハング経路）。`settle()` 単一 seam に集約し、欠損 path は reject に変更。あわせて resize observer の切断漏れ・cleanup の実 removeEventListener 欠落（cleanup→init 循環で listener 蓄積）・previewView の production caller 無し handler 配列を解消し、focus trap の所有を presenter 単一に統一（focusTrap に live-trap 上限の tripwire を追加）
+- **コンテンツスロットルが trailing 呼び出しを落としていた**: 実態が last-call-wins debounce で、連続スクロール中に `updateMaxScroll` が 100ms の静寂が出るまで発火せず、スクロール深度が visit gate 判定に過小報告されていた。leading + 保証付き trailing 実装に再実装し、`dispose` 返却と beforeunload flush の単一化で listener 漏れも解消
+- **アーカイブ編集モーダルの見出しがキー名で表示されていた**: i18n 検出器の新設により「参照されているがロケールに無い」キー 50 件を発見（archiveModalTitle ほか）— call site の fallback リテラルから翻訳を導出して ja/en に補完
+- **DeadlineTimer の getter が非対称**: `gate` は null 許容なのに `thresholds` は非 null assert で初期化前に throw し得た。thresholds を null 許容に、isE2E を non-null 化
+- **`locale` 検出の潜在バグ**: `getMessage('locale')` が存在しないキーを読み、`||` 演算子の優先順位と組み合わさって偶然動作していた。`navigator.language` 直参照に修正
+
+### Changed
+
+- **フィルターリスト取得元を LIST_SOURCES 単一テーブルに統合**: 同一 5 ホストが 4 テーブルに重複しており、`nsfw.oisd.nl` は origin としては許可されるのに whitelist gate で拒否される不一致（OISD 系 uBlock ソースが warn-skip される）があった。`listSources.ts` SSOT に集約し、cross-table 整合テスト（conformance 6 件）を新設。Tranco はメタデータ取得（FETCH_URL 非経由）として分離を文書化
+- **上限値レジストリの拡充**: drift ガードに 10MiB ファミリーの監視を追加したところ、未吸収の上限が 6 件見つかり limits.ts へ取り込んだ（FETCH_URL レスポンス・Obsidian 設定読み込み・設定 import・envelope base64・AI レスポンス・storage quota — 値はすべて不変）
+- **未使用 i18n キーの棚卸しツール**: check-i18n に未使用キー検出（warn インベントリ）を追加。静的スキャンは動的 label map を過大検出するため、削除は手動 per-key パスに回す（候補 310 件を台帳に記録）
+
+### Refactored
+
+- アーキテクチャ Deepening round 6（PBI 01〜09）: queryNormalize の ids に上限（MAX_QUERY_IDS=200）と整数化を追加、initializeModalEvents を idempotent detach→attach 再配線に、pending pages region の interface 2 重定義統合と model.subscribe の load() 移動、popup main.ts の記録ボタン二重配線削除（onclick sole-writer 契約を文字どおり成立）、archivePanel の同内容 2 重 interface 統合
 
 ## [6.8.7] - 2026-09-11
 
