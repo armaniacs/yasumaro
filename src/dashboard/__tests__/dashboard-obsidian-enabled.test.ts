@@ -173,7 +173,6 @@ vi.mock('../settings/privacySettings.js', () => ({ init: vi.fn() }));
 vi.mock('../settings/contentSettings.js', () => ({ init: vi.fn() }));
 vi.mock('../settings/trustSettings.js', () => ({ init: vi.fn(), loadTrustSettings: vi.fn() }));
 vi.mock('../settings/customPromptManager.js', () => ({ initCustomPromptManager: vi.fn() }));
-vi.mock('../historyPanel.js', () => ({ initHistoryPanel: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('../models-dev-dialog.js', () => ({
   ModelsDevDialog: class { show = vi.fn().mockResolvedValue(undefined) },
 }));

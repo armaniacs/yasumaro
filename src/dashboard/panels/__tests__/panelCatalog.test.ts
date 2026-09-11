@@ -78,8 +78,8 @@ const SECTION_LABEL_TO_CATALOG: Record<string, string> = {
 };
 
 describe('panelCatalog — 単一ソース', () => {
-  it('declares 19 panels with no duplicate ids', () => {
-    expect(PANEL_CATALOG).toHaveLength(19);
+  it('declares 18 panels with no duplicate ids', () => {
+    expect(PANEL_CATALOG).toHaveLength(18);
     const ids = PANEL_CATALOG.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -104,17 +104,13 @@ describe('panelCatalog — 単一ソース', () => {
       'panel-domain-search',
       'panel-export-logs',
       'panel-export-import',
-      'panel-history',
     ]);
   });
 
-  it('keeps legacy panel-history registered but hidden from the sidebar (PBI 16 pending)', () => {
-    const legacy = PANEL_CATALOG.find((e) => e.id === 'panel-history');
-    expect(legacy).toBeDefined();
-    expect(legacy?.sidebarSection).toBeNull();
-    expect(legacy?.sidebarI18nKey).toBeNull();
-    // The section element still exists (registry navigate targets it).
-    expect(html).toContain('id="panel-history"');
+  it('no longer registers the legacy panel-history (removed, PBI 2026-09-11-09)', () => {
+    expect(PANEL_CATALOG.find((e) => e.id === 'panel-history')).toBeUndefined();
+    // The section element is gone from the HTML too.
+    expect(html).not.toContain('id="panel-history"');
     expect(sidebarNav).not.toContain('data-panel="panel-history"');
   });
 
