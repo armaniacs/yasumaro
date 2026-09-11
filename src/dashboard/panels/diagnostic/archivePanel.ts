@@ -530,18 +530,13 @@ export function createArchivePanel(): PanelLifecycle {
 // Edit modal (PBI 2026-09-06-07) — accessible dialog replacing window.prompt
 // ============================================================================
 
-interface ArchiveSessionRowLike {
-  id: number;
-  title: string | null;
-}
-
-
 interface EditModalHooks {
   onSave: (newTitle: string) => Promise<void>;
   onClosed?: () => Promise<void> | void;
   onError: (message: string) => void;
 }
 
+// PBI 2026-09-11-09 (round 6): single definition — was byte-identical twice.
 interface ArchiveSessionRowLike {
   id: number;
   title: string | null;
