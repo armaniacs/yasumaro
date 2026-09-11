@@ -51,6 +51,20 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-09-11 architecture review round 6 — 9件完了（arch-delivery-loop・0911a ブランチ）
+
+診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260911-2338.html`）→ RICE 採点 → 実装。実行順 = 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09。台帳トリガー全件未発火（10 項目再確認）。なぜなぜ分析は `/tmp/kilo/whywhy/2026-09-11-0911c.md`。台帳送りは `2026-09-11-00-backlog-0911c.md`。
+
+- 2026-09-11-01-fix-deadline-timer-null-safety.md（✅ 完了・アーカイブ済 — thresholds getter を `| null` に（gate と対称化）・isE2E を non-null 化・:70 の `!` を明示 throw に。contentKernel の thresholds 読み取りにフォールバック）
+- 2026-09-11-02-fix-query-normalize-ids-bound.md（✅ 完了・アーカイブ済 — ids に `MAX_QUERY_IDS=200` 上限 + 整数化フィルタ（limits.ts 定義・wire から巨大 IN 節を防御））
+- 2026-09-11-03-fix-preview-presenter-settle.md（✅ 完了・アーカイブ済 — settle() 単一 seam（handleAction 欠損 path の promise 永久ハングを reject に・observer 切断・trap release を 1 箇所に）+ initializeModalEvents を idempotent detach→attach に（cleanup の実 removeEventListener・DOM 再構築に堅牢）+ previewView から dead handler 配列と trap 所有を削除（presenter 単一 owner）+ focusTrap tripwire。新規 settle テスト 4 件）
+- 2026-09-11-04-test-i18n-unused-keys.md（✅ 完了・アーカイブ済（スコープ調整あり） — check-i18n に未使用キー検出（warn インベントリ・静的スキャンの over-approximation を文書化）を追加。検出器が 2 つの真の発見: 参照済みだがロケール欠落のキー **50 件**を ja/en に補完（archiveModalTitle はモーダル見出しがキー名表示の実バグ）+ `getMessage('locale')` 潜在バグ（壊れた `||` 優先順位で偶然動作）を navigator.language 直参照に修正。310 件の未使用候補は手動 per-key パスに回す（台帳化））
+- 2026-09-11-05-refactor-list-sources-ssot.md（✅ 完了・アーカイブ済 — `listSources.ts` SSOT 新設（FILTER_LIST_SOURCES 5 ソース + TRANCO_METADATA_SOURCE を文書化分離）+ urlWhitelist ゲート/cspDomains 権限/buildAllowedUrls origins を派生に（**OISD gate/grant 不一致を解消**）+ conformance テスト 6 件新設）
+- 2026-09-11-06-refactor-pending-region-frictions.md（✅ 完了・アーカイブ済 — PendingRegionActions 2 重定義統合・model.subscribe を生成時から load() へ（作成のみ panel が購読を保持しない）・destroy で解放）
+- 2026-09-11-07-fix-content-throttle.md（✅ 完了・アーカイブ済 — rAF-debounce（trailing dead branch・scroll depth 過小報告）を leading+保証付き trailing に再実装（performance.now + lastCall=-Infinity・最新 args）+ `{fn, dispose}` 返却 + module 単一 beforeunload flush。contentKernel は stopPeriodicCheck で dispose。旧実装 pin 3 件を新契約に更新 + fake timer 漏れ修正。新規 throttle テスト 5 件）
+- 2026-09-11-08-refactor-limits-guard-extension.md（✅ 完了・アーカイブ済 — drift ガードに `10MB family` パターンを追加（**ガード自身が 3 件の未吸収を発見して吸収**: MAX_FILTER_LIST_SIZE / MAX_BODY_SIZE / DEFAULT_IMPORT_SIZE_CAP_BYTES / MAX_ENVELOPE_BASE64_LENGTH / MAX_AI_HTTP_RESPONSE_BYTES / STORAGE_QUOTA_BYTES — 値不変）+ envelope 10MB/64MB 層分離を文書化 + defines assertion を 15 定数に拡張）
+- 2026-09-11-09-refactor-small-fixes-bundle.md（✅ 完了・アーカイブ済（一部調整） — main.ts recordBtn 二重配線削除（onclick sole-writer 契約を文字どおり成立）+ archivePanel `ArchiveSessionRowLike` 重複統合。cleanse flag cache は wire-or-delete 台帳項目と統合着手のため本バンドルから除外）
+
 ### 2026-09-11 architecture review round 5 — 10件完了（arch-delivery-loop・0911b ブランチ）
 
 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260911-2149.html`）→ RICE 採点 → 実装。実行順 = 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09（02 依存）→ 10。台帳トリガー「上限 drift」が発火（08）。なぜなぜ分析は `/tmp/kilo/whywhy/2026-09-11-0911b.md`。台帳送りは `2026-09-11-00-backlog-0911b.md`。

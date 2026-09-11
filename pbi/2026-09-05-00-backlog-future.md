@@ -85,6 +85,17 @@
 
 （round 4 台帳の InMemoryTransport default-limit 乖離は round 4 で解消済み、query cap 統合のトリガーは round 5 で発火し PBI 08 として完了）
 
+**2026-09-11 round 6（arch-delivery-loop・0911a ブランチ）で台帳入り（4 項目）:**
+
+| 項目 | RICE | 再評価条件 |
+|------|------|-----------|
+| _locales 未使用キーの手動 per-key 削除（round 6 PBI 04 の検出器が 310 候補を出力 — 静的スキャンは動的 label map を over-approximate するため手動確認が必須。check-i18n の warn 出力をインベントリとして使う） | 5.0 | i18n 未使用キーの削除を実際に行うタスクとして切り出すとき |
+| cleansingOffscreenDelegate flag cache（round 6 PBI 09 から分離 — onChanged 無効化付き cache は wire-or-delete 台帳項目と同一 context で着手） | 4.0 | offscreen-cleanse wire-or-delete 着手時 |
+| release-checks 9 スクリプトの drift 網羅監査 + entrypoints/permissions・models-dev-dialog スキャン | 2.7 | 次回 release flow 改修時（investigate 型） |
+| e2e spec coverage-gap 監査（18 specs の欠落分析） | 2.7 | 次回 e2e 拡張時 |
+
+（round 5 台帳の「previewPresenter promise leak」「throttle leak」「DeadlineTimer 非null assert」「CSP/allowlist drift」「focusTrap 無境界」は **round 6 PBI 01/03/05/07 で解消済み**。「dailyNotePath %2e」は round 5 の sink 追跡で昇格見送り確定。）
+
 **2026-09-11 round 5（arch-delivery-loop・0911b ブランチ）の主要な完了事項:**
 pending pages の SQLite パネル移設 + legacy panel-history 撤去（〜−1,600 LOC）、STATUS extras 単一 field list 化、search+tag / ids 条件セット統合、上限定数 14 箇所の limits.ts 取り込み（drift ガード新設）、popup クラスタ修正（recordBtn sole-writer 契約回復）、クレンジング reason の resolveCleanseReason 統一、queryNormalize ids 検証、e2e version pin 撤去。
 
