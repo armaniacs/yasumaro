@@ -129,8 +129,11 @@ export type OffscreenHealthResponse =
 /** INSERT / AUDIT_LOG_INSERT: returns the new row id. */
 export type OffscreenInsertResponse = { success: true; id: number } | OffscreenFailure;
 
-/** INSERT_BATCH / COUNT: returns a count. */
-export type OffscreenCountResponse = { success: true; count: number } | OffscreenFailure;
+/** INSERT_BATCH / COUNT: returns a count. INSERT_BATCH additionally reports
+ * the duplicate-skip count (PBI 2026-09-11-07). */
+export type OffscreenCountResponse =
+  | { success: true; count: number; inserted?: number; skipped?: number }
+  | OffscreenFailure;
 
 /** QUERY / SEARCH / AUDIT_LOG_QUERY: returns rows + total. */
 export type OffscreenQueryResponse = {
@@ -144,6 +147,17 @@ export type OffscreenWriteResponse = { success: true } | OffscreenFailure;
 
 /** TOGGLE_STAR: returns the new star state. */
 export type OffscreenToggleStarResponse = { success: true; is_starred: number } | OffscreenFailure;
+
+// ============================================================================
+// Legacy storage locations (PBI 2026-09-11-06) — pre-migration names that must
+// never change. Single source for the offscreen probes, the migration readers,
+// and the diagnostics labels; previously re-declared in 4 files with a
+// comment-enforced "must match" contract.
+// ============================================================================
+
+export const LEGACY_OPFS_POOL_DIR = 'yasumaro-opfs';
+export const LEGACY_OPFS_DB_FILENAME = 'yasumaro.db';
+export const LEGACY_IDB_NAME = 'idb-batch-atomic';
 
 /** STATUS: diagnostic info, present even on a partially-initialized DB. */
 export type OffscreenStatusResponse = {

@@ -31,11 +31,11 @@ import {
   insertAuditLog as sqliteInsertAuditLog,
   queryAuditLog as sqliteQueryAuditLog,
 } from './auditLogRepo.js';
-import { StorageKeys } from '../utils/storage/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { normalizeStorageQuery } from './queryNormalize.js';
 import { UPDATABLE_FIELDS } from './schema.js';
 import { buildRecordFromPayload } from './browsingLogCodec.js';
+import { collectMigrationExtras } from './sqliteStatus.js';
 import type { SqliteMessage, SqliteMessageType } from '../messaging/sqliteMessages.js';
 
 export type SqliteHandler = (
@@ -135,64 +135,17 @@ async function handleCount(_msg: SqliteMessage, sendResponse: (r: unknown) => vo
   sendResponse(result);
 }
 
-// Old-path constants — must match opfsMigrationV2Reader.ts / migrationBackup.ts
-// exactly, since they name pre-migration storage locations that must never change.
-const OLD_OPFS_POOL_DIR = 'yasumaro-opfs';
-const OLD_OPFS_DB_FILENAME = 'yasumaro.db';
-const OLD_IDB_NAME = 'idb-batch-atomic';
-
-/** Origin Private File System has no path API — only directory/file existence can be checked. */
-async function oldOpfsDbExists(): Promise<boolean> {
-  try {
-    const root = await navigator.storage.getDirectory();
-    const dir = await root.getDirectoryHandle(OLD_OPFS_POOL_DIR, { create: false });
-    await dir.getFileHandle(OLD_OPFS_DB_FILENAME, { create: false });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function oldIdbDbExists(): Promise<boolean> {
-  try {
-    const databases = await indexedDB.databases?.() ?? [];
-    return databases.some((d) => d.name === OLD_IDB_NAME);
-  } catch {
-    return false;
-  }
-}
-
+// PBI 2026-09-11-06: STATUS enrichment (migration flags + legacy-DB probes)
+// moved to sqliteStatus.ts — field-isolated collection + the SSOT legacy-path
+// constants. This handler only merges the extras onto the backend's base shape.
 async function handleStatus(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const result = await sqliteGetStatus();
-  if (result.success) {
-    try {
-      const [items, opfsLegacyExists, idbLegacyExists] = await Promise.all([
-        chrome.storage.local.get([
-          StorageKeys.OPFS_MIGRATION_V2_DONE,
-          StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT,
-          StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT,
-          StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT,
-          StorageKeys.IDB_MIGRATION_V2_DONE,
-        ]),
-        oldOpfsDbExists(),
-        oldIdbDbExists(),
-      ]);
-      sendResponse({
-        ...result,
-        opfsMigrationV2Done: items[StorageKeys.OPFS_MIGRATION_V2_DONE] ?? false,
-        opfsMigrationV2LastAttemptedAt: items[StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT] ?? null,
-        opfsMigrationV2CompletedAt: items[StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT] ?? null,
-        opfsMigrationV2RecordCount: items[StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT] ?? null,
-        idbMigrationV2Done: items[StorageKeys.IDB_MIGRATION_V2_DONE] ?? false,
-        opfsLegacyDbPath: opfsLegacyExists ? `${OLD_OPFS_POOL_DIR}/${OLD_OPFS_DB_FILENAME}` : null,
-        idbLegacyDbName: idbLegacyExists ? OLD_IDB_NAME : null,
-      });
-    } catch {
-      sendResponse(result);
-    }
-  } else {
+  if (!result.success) {
     sendResponse(result);
+    return;
   }
+  const extras = await collectMigrationExtras();
+  sendResponse({ ...result, ...extras });
 }
 
 async function handleClearAll(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
