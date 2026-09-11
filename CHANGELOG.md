@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.8` リリース。
+> - 現時点では `v6.8.9` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,27 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.8.9] - 2026-09-11
+
+アーキテクチャ改善ラウンド（2026-09-11 round 7、`arch-delivery-loop`）のリリースです。i18n dead key 104 件の削除（3 段階 verifier による安全な削除）、models.dev ダイアログの二重 Esc 解消と a11y パリティ達成、未使用ロケール整理を含みます。全テスト（11,773 件）がグリーンです。
+
+### Fixed
+
+- **models.dev ダイアログの Esc が二重発火していた**: focusTrap の closeCallback と document keydown listener の 2 系統で `hide()` が走り、onCancel が二重呼び出しされていた。手動 keydown listener を削除して focusTrap に一本化し、`hide()` を idempotent 化。document keydown listener は除去経路が無く instance 生成のたびに漏洩していた（leak 解消）
+- **models.dev ダイアログの a11y が静的仕様を満たしていなかった**: 削除した静的 HTML twin が aria-live / aria-busy / aria-required の仕様を持っていたが、実際に表示される TS 構築 DOM は未対応 — TS 実装を twin 水準に合わせ、a11y テストを実 DOM 対応に書き直した
+- **privacy ページの見出し id が escape されていなかった**: 見出しから派生した `id` 属性に escapeHtml を適用。あわせて latent 無限ループ（i++ 無し continue）と no-op replace を削除し、PRIVACY.md の取得を `chrome.runtime.getURL` 経由に移行（現状の相対パスは dist 配置依存 — 動作することを検証済みのため hardening）
+- **popup の初期化が 3 経路で競合**: popup.ts の import 時 auto-run・entrypoint main.ts の DOMContentLoaded・main.ts の load が並行していた。entrypoint の bootstrap（applyI18n → initPopup）に単一化し、navigation の dead 分岐（存在しない settingsScreen / backBtn）と 2 重の lang/dir ヘルパーを削除
+- **release-checks の沈黙ゲート 3 件**: manifest 権限チェックが 2 権限しか要求せず drift で絶対に落ちない（期待権限を wxt.config.ts から派生するよう修正）、e2e の skip が PASS と区別不能（`--skip-e2e` / `SKIP_E2E=1` の明示要求に変更）、coverage-summary 欠落が素通し（fail に変更 + `describe(` の水増しカウント解消）。coverage ゲートの 90/90 しきい値はプロジェクト自身の vitest.config（80/80）と矛盾していたため揃え、coverage を実測再生成（lines 93.6% / branches 87.2%）
+
+### Changed
+
+- **未使用 i18n キー 104 件を削除**: 3 段階 verifier（リテラルスキャン → コメント除去後 substring（tests 込み）→ 動的構築 prefix 検査）で全参照ゼロを証明した key のみを削除。動的構築キー（`historyAiSummaryCleansedReason${Rule}` ファミリー 30 件）と変数経由・manifest 解決キー（177 件）は保護。6 フィルターモード系（legacy panel 撤去の実績）・tranco モーダル系・trigger 系など
+- **クレンジング offscreen flag の module cache**: default OFF の PoC flag が cleanse 呼び出し毎に chrome.storage を読んでいたのを 1 回読み + onChanged 無効化に変更
+
+### Refactored
+
+- アーキテクチャ Deepening round 7（PBI 01〜07）: ARCHITECTURE_MAP の component tree を現行 seam 語彙（createBackgroundServices / MessageRouter / AIService family / RecordingOrchestrator）に更新、orphan WXT entrypoint（models-dev-dialog.html stub）の削除
 
 ## [6.8.8] - 2026-09-11
 
