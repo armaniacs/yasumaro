@@ -26,7 +26,15 @@ export function normalizeStorageQuery(payload: Record<string, unknown>): Storage
     excludeDeleted: payload?.excludeDeleted != null ? Boolean(payload.excludeDeleted) : undefined,
     dateFrom: payload?.dateFrom != null ? Number(payload.dateFrom) : payload?.since != null ? Number(payload.since) : undefined,
     dateTo: payload?.dateTo != null ? Number(payload.dateTo) : payload?.until != null ? Number(payload.until) : undefined,
-    ids: payload?.ids != null ? (payload.ids as number[]) : undefined,
+    // PBI 2026-09-11-01 (round 5): ids crosses the wire — a string or scalar
+    // used to pass through the cast and crash buildExtraWhereSql's .map.
+    // Normalize to a finite-number array; anything else (or an all-invalid
+    // array) drops the filter.
+    ids: (() => {
+      if (!Array.isArray(payload?.ids)) return undefined;
+      const ids = (payload.ids as unknown[]).map(Number).filter((n) => Number.isFinite(n) && n >= 0);
+      return ids.length > 0 ? ids : undefined;
+    })(),
     tag: payload?.tag != null ? String(payload.tag) : payload?.tagFilter != null ? String(payload.tagFilter) : undefined,
     gistSynced: payload?.gistSynced != null ? Number(payload.gistSynced) : undefined,
   });
