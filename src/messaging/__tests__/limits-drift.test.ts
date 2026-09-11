@@ -24,12 +24,14 @@ const CAPS: Array<{ name: string; pattern: RegExp }> = [
   { name: 'MAX_ENVELOPE_CIPHERTEXT_LENGTH', pattern: /=\s*64\s*\*\s*1024\s*\*\s*1024\b/ },
   { name: 'MAX_ERROR_BODY_SIZE', pattern: /=\s*1024\s*\*\s*1024\b/ },
   { name: 'MAX_QUERY_LIMIT', pattern: /=\s*100000\b|=\s*100_000\b/ },
+  // 10 MiB family (round 6, PBI 2026-09-11-08)
+  { name: '10MB family', pattern: /=\s*10\s*\*\s*1024\s*\*\s*1024\b/ },
 ];
 
 /** Files allowed to carry their own cap literals (different concern, same value). */
 const EXEMPT = new Set([
   'src/messaging/limits.ts',
-  // ublockParser's 10MB / 64KB-ish locals are its own parse-input policy.
+  // ublockParser's 10MB-ish locals are its own parse-input policy.
   'src/utils/ublockParser/index.ts',
   // Byte-formatting helpers (`const MB = 1024 * 1024`) — display formatting,
   // not an accept/reject bound.
@@ -72,7 +74,9 @@ describe('cap registry drift guard (PBI 2026-09-11-08)', () => {
       'MAX_QUERY_LIMIT', 'MAX_LOG_FORWARD_MESSAGE_CHARS', 'MAX_LOG_FORWARD_DETAILS_KEYS',
       'MAX_LOG_FORWARD_SERIALIZED_CHARS', 'MAX_RECORD_SIZE', 'MAX_PII_INPUT_SIZE',
       'MAX_PII_OUTPUT_SIZE', 'MAX_TOKENS_PER_CALL', 'MAX_ENVELOPE_CIPHERTEXT_LENGTH',
-      'MAX_ERROR_BODY_SIZE',
+      'MAX_ERROR_BODY_SIZE', 'MAX_FILTER_LIST_SIZE', 'MAX_BODY_SIZE',
+      'DEFAULT_IMPORT_SIZE_CAP_BYTES', 'MAX_ENVELOPE_BASE64_LENGTH',
+      'MAX_AI_HTTP_RESPONSE_BYTES',
     ]) {
       expect(limits).toContain(`export const ${name}`);
     }

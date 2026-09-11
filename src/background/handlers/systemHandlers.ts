@@ -71,7 +71,7 @@ export interface GenerateReviewSummaryHandlerDeps {
 
 export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
   // VULN-012 fix: limit response size to prevent memory exhaustion
-  const MAX_FILTER_LIST_SIZE = 10 * 1024 * 1024; // 10MB
+  // (value lives in messaging/limits.ts — PBI 2026-09-11-08 round 6)
 
   return async (
     message: FetchUrlMessage,
@@ -117,11 +117,11 @@ export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
       const contentType = response.headers.get('content-type');
       // Cap the streamed body on actual bytes; Content-Length is not trusted
       // (attacker can omit it via chunked transfer-encoding).
-      const text = await readBodyCapped(response, MAX_FILTER_LIST_SIZE);
+      const text = await readBodyCapped(response, LIMIT_MAX_FILTER_LIST_SIZE);
 
       // Defense in depth: keep the post-read size check.
-      if (text.length > MAX_FILTER_LIST_SIZE) {
-        throw new Error(`Filter list too large: ${Math.round(text.length / 1024 / 1024)}MB exceeds ${MAX_FILTER_LIST_SIZE / 1024 / 1024}MB limit`);
+      if (text.length > LIMIT_MAX_FILTER_LIST_SIZE) {
+        throw new Error(`Filter list too large: ${Math.round(text.length / 1024 / 1024)}MB exceeds ${LIMIT_MAX_FILTER_LIST_SIZE / 1024 / 1024}MB limit`);
       }
 
       sendResponse({ success: true, data: text, contentType });
@@ -289,6 +289,7 @@ import {
   MAX_LOG_FORWARD_MESSAGE_CHARS,
   MAX_LOG_FORWARD_DETAILS_KEYS,
   MAX_LOG_FORWARD_SERIALIZED_CHARS,
+  MAX_FILTER_LIST_SIZE as LIMIT_MAX_FILTER_LIST_SIZE,
 } from '../../messaging/limits.js';
 
 export function createLogForwardHandler() {
