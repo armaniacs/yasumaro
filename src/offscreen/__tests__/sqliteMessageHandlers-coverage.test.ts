@@ -230,10 +230,13 @@ describe('sqliteMessageHandlers — handleQuery branching', () => {
     expect(opts.domain).toBe('example.com');
   });
 
-  it('omits limit/offset when null (Number undefined branch)', async () => {
+  it('defaults limit via queryPlanner, omits offset when null', async () => {
     await callHandler('SQLITE_QUERY', {});
     const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
-    expect(opts).not.toHaveProperty('limit');
+    // PBI 2026-09-11-05: the read policy moved into queryPlanner — the
+    // handler->repo handoff now carries the default limit (backend behavior
+    // unchanged: recordsRepo used to default it one hop later).
+    expect(opts.limit).toBe(100);
     expect(opts).not.toHaveProperty('offset');
   });
 
@@ -488,10 +491,10 @@ describe('sqliteMessageHandlers — handleSearch branching', () => {
     expect(arg.text).toBe('');
   });
 
-  it('omits optional fields when null (pickDefined branches)', async () => {
+  it('defaults limit via queryPlanner, omits offset when null', async () => {
     await callHandler('SQLITE_SEARCH', { query: 'x' });
     const arg = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
-    expect(arg).not.toHaveProperty('limit');
+    expect(arg.limit).toBe(100);
     expect(arg).not.toHaveProperty('offset');
   });
 

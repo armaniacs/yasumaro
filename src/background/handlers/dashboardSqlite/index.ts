@@ -41,27 +41,10 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
     const subtype = payload.subtype;
 
     if (TOKEN_REQUIRED_SUBTYPES.has(subtype)) {
-      const providedToken = payload.confirmToken;
-      const action = subtype;
-      const id = (payload as unknown as { id?: number }).id;
-      let verified = false;
-      if (providedToken) {
-        // PBI 2026-09-06-01: archive subtypes bind the token to destructive
-        // parameters (cutoff / stagingName). The hash is re-derived from the
-        // actual incoming payload so a token issued for one scope cannot be
-        // replayed against another.
-        const scopeHash = await deriveScopeHash(subtype, payload as Record<string, unknown> | undefined);
-        if (typeof deps.verifyConfirmToken === 'function') {
-          verified = await deps.verifyConfirmToken(providedToken, action, id, scopeHash);
-        } else if (typeof (deps as unknown as { getConfirmToken?: () => Promise<string> }).getConfirmToken === 'function') {
-          const valid = await (deps as unknown as { getConfirmToken: () => Promise<string> }).getConfirmToken();
-          verified = providedToken === valid;
-        }
-      }
-      if (!verified) {
+      if (!(await verifyRequestToken(deps, subtype, payload))) {
         logError(
           'Dashboard SQLite: token mismatch',
-          { subtype, hasToken: Boolean(providedToken) },
+          { subtype, hasToken: Boolean(payload.confirmToken) },
           ErrorCode.INTERNAL_ERROR,
         );
         return { success: false, error: 'Confirmation token mismatch' };
@@ -89,6 +72,37 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
       return { success: false, error: 'An internal error occurred' };
     }
   };
+}
+
+/**
+ * verifyRequestToken — the validation seam of the dashboard→offscreen route
+ * (PBI 2026-09-11-07 spike slice). Previously inline in the router closure;
+ * extracted so the three verification branches (scoped verify fn / legacy
+ * getConfirmToken / absent token) are unit-testable without a full handler.
+ *
+ * Security posture is unchanged: scopeHash is re-derived from the actual
+ * incoming payload (PBI 2026-09-06-01), and a missing verifier fails closed.
+ */
+export async function verifyRequestToken(
+  deps: DashboardSqliteHandlerDeps,
+  subtype: DashboardSqliteSubtype,
+  payload: DashboardSqliteRequest & { confirmToken?: string },
+): Promise<boolean> {
+  const providedToken = payload.confirmToken;
+  if (!providedToken) return false;
+  // PBI 2026-09-06-01: archive subtypes bind the token to destructive
+  // parameters (cutoff / stagingName). The hash is re-derived from the
+  // actual incoming payload so a token issued for one scope cannot be
+  // replayed against another.
+  const scopeHash = await deriveScopeHash(subtype, payload as Record<string, unknown> | undefined);
+  if (typeof deps.verifyConfirmToken === 'function') {
+    return deps.verifyConfirmToken(providedToken, subtype, (payload as unknown as { id?: number }).id, scopeHash);
+  }
+  if (typeof (deps as unknown as { getConfirmToken?: () => Promise<string> }).getConfirmToken === 'function') {
+    const valid = await (deps as unknown as { getConfirmToken: () => Promise<string> }).getConfirmToken();
+    return providedToken === valid;
+  }
+  return false;
 }
 
 export {

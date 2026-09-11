@@ -206,3 +206,17 @@ describe('archiveWireDispatch: backend receives its own `this`', () => {
     expect(backend.proxyCalls).toBe(1);
   });
 });
+
+describe('archiveWireDispatch: non-staging backend fails closed (PBI 2026-09-11-06)', () => {
+  it.each([
+    'SQLITE_ARCHIVE_PREVIEW',
+    'SQLITE_ARCHIVE_CREATE',
+    'SQLITE_ARCHIVE_STATUS',
+  ])('%s on a backend without archive methods returns the OPFS error', async (type) => {
+    getBackendMock.mockResolvedValue({});
+    await expect(dispatch(type, {})).resolves.toEqual({
+      success: false,
+      error: 'Archive requires OPFS storage.',
+    });
+  });
+});

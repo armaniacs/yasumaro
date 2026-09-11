@@ -32,7 +32,8 @@ import {
   queryAuditLog as sqliteQueryAuditLog,
 } from './auditLogRepo.js';
 import { pickDefined } from '../utils/objectUtils.js';
-import { normalizeStorageQuery } from './queryNormalize.js';
+import { planQuery, planSearch } from './queryPlanner.js';
+import { ARCHIVE_UNSUPPORTED_ERROR } from './StorageBackend.js';
 import { UPDATABLE_FIELDS } from './schema.js';
 import { buildRecordFromPayload } from './browsingLogCodec.js';
 import { collectMigrationExtras } from './sqliteStatus.js';
@@ -69,8 +70,7 @@ async function handleInsertBatch(msg: SqliteMessage, sendResponse: (r: unknown) 
 
 async function handleQuery(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_QUERY' }>).payload as Record<string, unknown>;
-  const options: import('../utils/sqlite-types.js').StorageQuery = normalizeStorageQuery(payload);
-  const result = await sqliteQuery(options);
+  const result = await sqliteQuery(planQuery(payload));
   sendResponse(result);
 }
 
@@ -97,11 +97,7 @@ async function handleAuditLogQuery(msg: SqliteMessage, sendResponse: (r: unknown
 
 async function handleSearch(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const p = (msg as Extract<SqliteMessage, { type: 'SQLITE_SEARCH' }>).payload;
-  const q: import('../utils/sqlite-types.js').StorageQuery = {
-    text: String(p.query || ''),
-    ...normalizeStorageQuery(p as unknown as Record<string, unknown>),
-  };
-  const result = await sqliteQuery(q);
+  const result = await sqliteQuery(planSearch(p as unknown as Record<string, unknown>));
   sendResponse(result);
 }
 
@@ -246,11 +242,20 @@ async function handleArchive(op: ArchiveOpType, msg: SqliteMessage, sendResponse
   const entry = ARCHIVE_DISPATCH[op];
   const payload = (msg as { payload?: Record<string, unknown> }).payload ?? {};
   const backend = await engine.getBackend();
+  // PBI 2026-09-11-06: archive lives behind ArchiveStaging, not StorageBackend.
+  // Non-staging backends (IDB / fallback / noop) fail closed here — the same
+  // error the per-adapter stubs used to return, now from one place. The check
+  // is per-method so a backend is never asked for an op it does not implement.
+  const raw = (backend as unknown as Record<string, unknown>)[entry.method];
+  if (typeof raw !== 'function') {
+    sendResponse({ success: false, error: ARCHIVE_UNSUPPORTED_ERROR });
+    return;
+  }
   // WHY: extracting the method unbound drops `this` — OpfsWorkerBackend's
   // archive methods read this.proxyArchive, so a bare call threw
   // "Cannot read properties of undefined (reading 'proxyArchive')" in
   // OPFS mode (e2e @extension suite). Bind before invoking.
-  const call = (backend[entry.method] as unknown as (...args: unknown[]) => Promise<ArchiveBackendResult>).bind(backend);
+  const call = (raw as (...args: unknown[]) => Promise<ArchiveBackendResult>).bind(backend);
   const result = await call(...entry.args(payload));
   if (!result.success) {
     sendResponse({ success: false, error: result.error });

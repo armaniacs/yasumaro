@@ -49,8 +49,10 @@ Content Scripts (entrypoints/content/ + src/content/)
 | Module | Location | Role |
 |--------|----------|------|
 | SQLite query plan SSOT | `src/offscreen/queryPlan.ts` | QuerySpec / statement builders / condition set shared by OPFS / IDB / fallback |
+| SQLite read policy (QueryPlanner) | `src/offscreen/queryPlanner.ts` | Single read seam: wire payload → StorageQuery (normalize → clamp → FTS truncate). Internals: queryNormalize / queryPlan / sqliteQueryBuilder / rowCodec; adjacent: recordsRepo (execution), browsingLogCodec (write encode) |
 | SQLite STATUS enrichment | `src/offscreen/sqliteStatus.ts` | Migration extras collection (field-isolated allSettled) + legacy-DB probes |
 | Archive wire descriptors | `src/messaging/archiveWireTable.ts` | Codec-carrying descriptor rows for archive ops (single projection source) |
+| Archive staging seam | `src/offscreen/archiveStaging.ts` | 14 archive ops behind ArchiveStaging (OPFS backend only); dispatch fails closed via supportsArchive/narrowing |
 | Popup content fetch | `src/popup/contentFetchGateway.ts` | Single seam for "popup asks a tab for content" (timeout + permission ladder) |
 | Cleansing badge policy | `src/utils/cleansingBadge.ts` | reason → badge text table + counts → reason derivation (Layer 0) |
 | Settings repository | `src/utils/storage/SettingsRepository.ts` | Settings blob read/write SSOT (flat scattered keys are legacy) |

@@ -384,7 +384,7 @@ vi.mock('../pipeline/RecordingOrchestrator.js', () => {
     // record lives on the prototype (not as an instance field) so
     // vi.spyOn(RecordingOrchestrator.prototype, 'record') can override it.
     const RecordingOrchestrator = vi.fn().mockImplementation(function(this: any) {
-        this.retryObsidianWriteOnly = vi.fn().mockResolvedValue(true);
+        this.retryObsidianWrite = vi.fn().mockResolvedValue(true);
     });
     RecordingOrchestrator.prototype.record = vi.fn().mockResolvedValue({ success: true, skipped: false, summary: 'Pipeline summary' });
     return {
