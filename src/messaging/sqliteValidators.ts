@@ -6,6 +6,7 @@
  */
 
 import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
+import type { SqliteStatusExtras } from './sqliteMessages.js';
 
 export function requiredFiniteNumber(value: unknown, field: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -98,16 +99,49 @@ export function optionalCompileOptionsSource(value: unknown): CompileOptionsSour
   throw new Error('Invalid SQLite response: compileOptionsSource');
 }
 
-export function decodeStatusExtras(response: Record<string, unknown>): Record<string, unknown> {
-  return {
-    compileOptions: optionalStringArray(response.compileOptions, 'compileOptions'),
-    compileOptionsSource: optionalCompileOptionsSource(response.compileOptionsSource),
-    opfsMigrationV2Done: optionalBoolean(response.opfsMigrationV2Done, 'opfsMigrationV2Done'),
-    opfsMigrationV2LastAttemptedAt: optionalNullableString(response.opfsMigrationV2LastAttemptedAt, 'opfsMigrationV2LastAttemptedAt'),
-    opfsMigrationV2CompletedAt: optionalNullableString(response.opfsMigrationV2CompletedAt, 'opfsMigrationV2CompletedAt'),
-    opfsMigrationV2RecordCount: optionalNullableNonNegativeNumber(response.opfsMigrationV2RecordCount, 'opfsMigrationV2RecordCount'),
-    idbMigrationV2Done: optionalBoolean(response.idbMigrationV2Done, 'idbMigrationV2Done'),
-    opfsLegacyDbPath: optionalNullableString(response.opfsLegacyDbPath, 'opfsLegacyDbPath'),
-    idbLegacyDbName: optionalNullableString(response.idbLegacyDbName, 'idbLegacyDbName'),
-  };
+export function optionalString(value: unknown, field: string): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string') throw new Error(`Invalid SQLite response: ${field}`);
+  return value;
+}
+
+/**
+ * One decoder per SqliteStatusExtras field — the mapped type forces this table
+ * to cover every enrichment field (PBI 2026-09-11-03: adding a field to the
+ * STATUS contract is a compile error here until a decoder exists).
+ */
+const STATUS_EXTRAS_DECODERS: { [K in keyof Required<SqliteStatusExtras>]-?: (value: unknown, field: string) => Required<SqliteStatusExtras>[K] | undefined } = {
+  fts5: (v, f) => (v === undefined ? undefined : optionalBoolean(v, f)),
+  initError: (v, f) => (v === undefined ? undefined : optionalString(v, f)),
+  compileOptions: (v, f) => optionalStringArray(v, f),
+  compileOptionsSource: (v) => optionalCompileOptionsSource(v),
+  opfsMigrationV2Done: (v, f) => optionalBoolean(v, f),
+  opfsMigrationV2LastAttemptedAt: (v, f) => optionalNullableString(v, f),
+  opfsMigrationV2CompletedAt: (v, f) => optionalNullableString(v, f),
+  opfsMigrationV2RecordCount: (v, f) => optionalNullableNonNegativeNumber(v, f),
+  idbMigrationV2Done: (v, f) => optionalBoolean(v, f),
+  opfsLegacyDbPath: (v, f) => optionalNullableString(v, f),
+  idbLegacyDbName: (v, f) => optionalNullableString(v, f),
+};
+
+export function decodeStatusExtras(response: Record<string, unknown>): SqliteStatusExtras {
+  const out: Partial<SqliteStatusExtras> = {};
+  for (const key of Object.keys(STATUS_EXTRAS_DECODERS) as Array<keyof SqliteStatusExtras>) {
+    const value = STATUS_EXTRAS_DECODERS[key](response[key], key);
+    if (value !== undefined) (out as Record<string, unknown>)[key] = value;
+  }
+  return out;
+}
+
+/**
+ * Pick the STATUS extras off a typed source (offscreen response shape) — used
+ * by the gateway so its projection list is derived, not re-declared.
+ */
+export function pickStatusExtras<T extends SqliteStatusExtras>(source: T): SqliteStatusExtras {
+  const out: Partial<SqliteStatusExtras> = {};
+  for (const key of Object.keys(STATUS_EXTRAS_DECODERS) as Array<keyof SqliteStatusExtras>) {
+    const value = source[key];
+    if (value !== undefined) (out as Record<string, unknown>)[key] = value;
+  }
+  return out;
 }
