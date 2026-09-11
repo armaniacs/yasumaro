@@ -51,6 +51,18 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-09-11 architecture review round 7 — 7件完了（arch-delivery-loop・0911a ブランチ）
+
+診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260911-2338-r7.html`）→ RICE 採点 → 実装。実行順 = 01 → 02 → 03 → 04 → 05 → 06 → 07（全項目ファイル非重複）。台帳トリガー全件未発火（維持）。主軸: round 6 台帳の「i18n 未使用キー手動パス」の機械化（3 段階 verifier 完成・104 件削除）+ 未踏領域 4 件の監査。なぜなぜ分析は `/tmp/kilo/whywhy/2026-09-11-0911d.md`。台帳送りは `2026-09-11-00-backlog-0911d.md`。
+
+- 2026-09-11-01-fix-models-dev-dialog-esc.md（✅ 完了・アーカイブ済 — 二重 Esc（focusTrap closeCallback + document keydown）を解消し keydown leak を除去 + hide() を idempotent 化。**追加発見**: 静的 HTML twin が TS 実装未達の a11y 仕様（aria-live ×2 / aria-busy / aria-required）を持っていたため、TS 実装を twin 水準に合わせてから twin 2 件削除（orphan WXT entrypoint 含む・build 確認済み）。a11y テストを shipped DOM 対応に全面書き換え）
+- 2026-09-11-02-test-i18n-dead-key-removal.md（✅ 完了・アーカイブ済 — 3 段階 verifier（リテラル → substring tests 込み → 動的 prefix・ruleLabels ファミリー 30 件 kept）により **104 key を ja/en から削除**。kept 177 件は変数経由・manifest 解決・動的構築。check-i18n PASS・7466 UI tests green）
+- 2026-09-11-03-fix-privacy-page-hardening.md（✅ 完了・アーカイブ済 — fetch 先を chrome.runtime.getURL に移行（現状動作する相対パスの dist 配置依存を解消・検証済みのため hardening 扱い）+ latent 無限ループ 2 行削除 + 見出し id escape + `initPrivacyPage()` export 形態化（import 副作用解消）。サブエージェントの「fetch が壊れている」主張は直接検証で訂正）
+- 2026-09-11-04-fix-popup-navigation.md（✅ 完了・アーカイブ済 — navigation の dead 分岐（settingsScreen/backBtn は HTML に存在しない）削除 + historyBtn wiring を menuBtn guard 外へ + popup.ts の import 時 auto-run を削除して entrypoint bootstrap に単一化 + `setHtmlLangDir` 削除（i18n-dom に統一）。popup 全 855 tests green）
+- 2026-09-11-05-fix-cleanse-flag-cache.md（✅ 完了・アーカイブ済 — module-level flag cache + onChanged 無効化 + テスト seam（`__resetCleansingFlagCacheForTesting`）+ cache/onChanged テスト 2 件。content 全 445 tests green）
+- 2026-09-11-06-doc-architecture-map-seams.md（✅ 完了・アーカイブ済 — Service Worker component tree を現行 seam 語彙（createBackgroundServices / MessageRouter 19 handler / AIService family / RecordingOrchestrator）に更新）
+- 2026-09-11-07-test-release-checks-gates.md（✅ 完了・アーカイブ済（しきい値調整あり） — check-manifest の期待権限を wxt.config.ts 派生に（旧 2 権限では drift 不可）+ check-e2e skip の明示化（`--skip-e2e`/`SKIP_E2E=1`）+ check-tests coverage 欠落 fail + `it|test(` のみカウント + `--category` space 形式対応。**coverage ゲートの 90/90 はプロジェクト自身の vitest.config（80/80）と矛盾し素通しでしか通らなかったため 80/80 に揃え**、coverage を実測再生成（lines 93.6% / branches 87.2%）。`release:check --skip-e2e` 全 PASS）
+
 ### 2026-09-11 architecture review round 6 — 9件完了（arch-delivery-loop・0911a ブランチ）
 
 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260911-2338.html`）→ RICE 採点 → 実装。実行順 = 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09。台帳トリガー全件未発火（10 項目再確認）。なぜなぜ分析は `/tmp/kilo/whywhy/2026-09-11-0911c.md`。台帳送りは `2026-09-11-00-backlog-0911c.md`。
