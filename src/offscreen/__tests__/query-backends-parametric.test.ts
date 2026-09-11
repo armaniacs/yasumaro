@@ -149,6 +149,58 @@ describe('PBI-34 parametric: same logical search, SQL ORDER parity (idb vs opfs)
     expect(rowSql(idb.calls)).toContain('browsing_logs_fts');
   });
 
+  it('text + tag parity: BOTH conditions apply on idb FTS/LIKE and opfs FTS/LIKE search (PBI 2026-09-11-06)', async () => {
+    // FTS search (>= 3 chars): tag condition joins the FTS MATCH condition.
+    const idbFts = makeIdbStub(true);
+    await idbFts.backend.query({ text: 'rust', tag: 'typescript', limit: 10, offset: 0 });
+    const opfsFts = makeOpfsStub();
+    await handleSearchFts('rust', 10, 0, undefined, undefined, { text: 'rust', tag: 'typescript', limit: 10, offset: 0 });
+
+    for (const calls of [idbFts.calls, opfsFts.calls]) {
+      const rows = calls.find((c) => /FROM browsing_logs_fts[\s\S]*LIMIT/.test(c.sql))!;
+      expect(rows.sql).toContain('browsing_logs_fts MATCH ?');
+      expect(rows.sql).toContain('id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)');
+    }
+    // Round-4 bug class pinned: the search path must not drop the tag.
+    const idbFtsRows = idbFts.calls.find((c) => /LIMIT \? OFFSET \?/.test(c.sql) && /MATCH/.test(c.sql))!;
+    expect(idbFtsRows.params).toEqual(['"rust"', '"typescript"', 10, 0]);
+
+    // LIKE search (short term): tags LIKE condition applies too.
+    const idbLike = makeIdbStub(false);
+    await idbLike.backend.query({ text: 'ru', tag: 'typescript', limit: 10, offset: 0 });
+    const opfsLike = makeOpfsStub();
+    await handleSearchLike('ru', 10, 0, undefined, undefined, { text: 'ru', tag: 'typescript', limit: 10, offset: 0 });
+    for (const calls of [idbLike.calls, opfsLike.calls]) {
+      const rows = calls.find((c) => /LIMIT \? OFFSET \?/.test(c.sql))!;
+      expect(rows.sql).toContain('url LIKE ?');
+      expect(rows.sql).toContain('tags LIKE ?');
+      // The tag condition is its own LIKE param (5th LIKE: 4 search columns + tag).
+      expect(rows.params).toEqual(['%ru%', '%ru%', '%ru%', '%ru%', '%typescript%', 10, 0]);
+    }
+  });
+
+  it('ids filter parity: fallback honours ids like the SQL backends (PBI 2026-09-11-06)', async () => {
+    // SQL side: ids become an IN(...) condition via buildExtraWhereSql.
+    const idb = makeIdbStub(true);
+    await idb.backend.query({ ids: [3, 7], limit: 10, offset: 0 });
+    expect(rowSql(idb.calls)).toMatch(/id IN \(\?,\?\)/);
+
+    // Fallback side: matchesExtraWhere delegates the same predicate. The
+    // fallback assigns its own autoincrement ids, so select two of them.
+    const storage = new FallbackStorage();
+    await storage.insert({ url: 'https://a.example.com', created_at: 100 });
+    await storage.insert({ url: 'https://b.example.com', created_at: 200 });
+    await storage.insert({ url: 'https://c.example.com', created_at: 300 });
+    const all = await storage.getAllRecords();
+    const picked = [all[0].id as number, all[2].id as number];
+    const result = await storage.query({ ids: picked, limit: 10, offset: 0 });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.rows.map((r) => r.id).sort((a, b) => (a as number) - (b as number))).toEqual(picked.sort((a, b) => a - b));
+      expect(result.total).toBe(2);
+    }
+  });
+
   it('purge cap-delete: idb and opfs both preserve starred rows (same condition)', async () => {
     const idb = makeIdbStub(true, 1005);
     await idb.backend.purgeOldRecords(90, 1000);

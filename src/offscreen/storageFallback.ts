@@ -8,7 +8,7 @@ import { Mutex } from '../utils/Mutex.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { UPDATABLE_FIELDS, buildInsertRecordFields } from './schema.js';
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
-import { buildQuerySpec, QUERY_CAPS, tagMatchesFilter } from './queryPlan.js';
+import { buildQuerySpec, QUERY_CAPS, matchesExtraWhere } from './queryPlan.js';
 
 const STORAGE_KEY = 'FALLBACK_STORAGE_DATA';
 const STORAGE_KEY_COUNTER = 'FALLBACK_STORAGE_COUNTER';
@@ -213,27 +213,19 @@ export class FallbackStorage {
       if (effectiveExcludeDeleted !== false) {
         filtered = filtered.filter(r => r.is_deleted === 0);
       }
-      if (q.domain) {
-        filtered = filtered.filter(r => r.domain === q.domain);
-      }
-      if (effectiveStarred !== undefined) {
-        filtered = filtered.filter(r => r.is_starred === (effectiveStarred ? 1 : 0));
-      }
-      if (effectiveDateFrom !== undefined) {
-        filtered = filtered.filter(r => r.created_at >= (effectiveDateFrom as number));
-      }
-      if (effectiveDateTo !== undefined) {
-        filtered = filtered.filter(r => r.created_at <= (effectiveDateTo as number));
-      }
-      if (q.gistSynced !== undefined) {
-        filtered = filtered.filter(r => r.gist_synced === q.gistSynced);
-      }
-      // Tag filter — shared comma-split partial-match predicate (PBI 2026-09-11
-      // tag SQL migration: the fallback path now honours the tag instead of
-      // silently returning every row).
-      if (q.tag) {
-        filtered = filtered.filter(r => tagMatchesFilter(r.tags, q.tag!));
-      }
+      // PBI 2026-09-11-06 (round 5): the extra-condition set delegates to the
+      // shared matchesExtraWhere predicate — the hand-rolled domain/starred/
+      // gist/date filters (which silently dropped `ids`) are gone. Alias
+      // params normalize into the canonical names first; excludeDeleted and
+      // the is_starred alias quirk stay local (base-shape semantics, not part
+      // of the extra-condition set).
+      const normalizedExtra = {
+        ...q,
+        starred: effectiveStarred,
+        dateFrom: effectiveDateFrom,
+        dateTo: effectiveDateTo,
+      } as StorageQuery;
+      filtered = filtered.filter(r => matchesExtraWhere(r, normalizedExtra));
       // Also support is_starred passed via q
       if (qAny['is_starred'] !== undefined && q.starred === undefined && effectiveStarred === undefined) {
         const v = qAny['is_starred'] as number | boolean;
