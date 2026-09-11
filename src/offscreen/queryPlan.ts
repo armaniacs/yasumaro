@@ -7,8 +7,7 @@
  * LIMIT は fts:100000 / plain:1000 の2種を cap として明示。
  */
 
-import { buildWhereClause, buildOrderByClause, buildFts5OrderClause, buildLikeOrderClause, buildFtsTagMatchCondition, sanitizeTextForFts5, shouldUseFts5 } from './sqliteQueryBuilder.js';
-import { sanitizeFtsTerm } from './schema.js';
+import { buildWhereClause, buildOrderByClause, buildFts5OrderClause, buildLikeOrderClause, buildTagFilterCondition, sanitizeTextForFts5, shouldUseFts5 } from './sqliteQueryBuilder.js';
 import { BROWSING_LOG_COLUMNS_SQL } from './rowCodec.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
 import type { SqliteValue } from './sqliteEngine.js';
@@ -52,13 +51,26 @@ export function buildExtraWhereSql(query: Pick<StorageQuery, 'dateFrom' | 'dateT
 export const extraWhereSql = buildExtraWhereSql;
 
 /**
+ * Tag predicate shared by the non-SQL paths (matchesExtraWhere consumers and
+ * FallbackStorage) — mirrors the SQL semantics of buildTagFilterCondition:
+ * comma-split partial match on the raw tag text, exactly the former
+ * client-side filterRowsByTag rule. Rows with unset/non-string tags never
+ * match (existing rule).
+ */
+export function tagMatchesFilter(tags: string | null | undefined, tagFilter: string): boolean {
+  const tagsString = tags || '';
+  if (typeof tagsString !== 'string') return false;
+  return tagsString.split(',').some(tag => tag.trim().includes(tagFilter));
+}
+
+/**
  * Shared in-memory predicate mirroring buildExtraWhereSql's semantics.
  * Lets InMemoryTransport filter without reimplementing the condition set —
  * both the SQL generator and the JS fallback read from the same source.
  */
 export function matchesExtraWhere(
-  record: { domain?: string | null; is_starred?: number; gist_synced?: number | null; created_at: number; id?: number },
-  query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids'>
+  record: { domain?: string | null; is_starred?: number; gist_synced?: number | null; created_at: number; id?: number; tags?: string | null },
+  query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids' | 'tag'>
 ): boolean {
   if (query.domain != null && query.domain !== '' && record.domain !== query.domain) return false;
   if (query.starred != null && Boolean(record.is_starred) !== query.starred) return false;
@@ -68,6 +80,7 @@ export function matchesExtraWhere(
   if (query.ids != null && query.ids.length > 0) {
     if (record.id == null || !query.ids.includes(record.id)) return false;
   }
+  if (query.tag != null && query.tag !== '' && !tagMatchesFilter(record.tags, query.tag)) return false;
   return true;
 }
 
@@ -98,7 +111,13 @@ export interface QuerySpec {
   limit: number;
   offset: number;
   cap: typeof QUERY_CAPS;
-  ftsTag: string | null;
+  /**
+   * Tag-filter condition for the plain listing path (PBI 2026-09-11 tag SQL
+   * migration): unified partial-match semantics on every backend — trigram
+   * MATCH (>= 3 chars, FTS5 available) or `tags LIKE '%term%'`. Null when the
+   * query carries no tag (or the tag sanitizes to nothing usable).
+   */
+  tagFilter: { condition: string; params: SqliteValue[] } | null;
   bareText: string | null;
   params: SqliteValue[];
   useFts: boolean;
@@ -142,7 +161,7 @@ export function buildQuerySpec(
       limit: 0,
       offset: 0,
       cap: caps,
-      ftsTag: null,
+      tagFilter: null,
       bareText,
       params: whereParams,
       useFts,
@@ -154,14 +173,11 @@ export function buildQuerySpec(
   const limit = clampLimit(query.limit, cap, 100);
   const offset = query.offset ?? 0;
 
-  // FTS tag handling
-  let ftsTag: string | null = null;
-  if (query.tag) {
-    const sanitizedTag = sanitizeFtsTerm(query.tag.slice(0, 200));
-    if (sanitizedTag) {
-      ftsTag = `#${sanitizedTag}`;
-    }
-  }
+  // Tag filter condition (PBI 2026-09-11): partial-match semantics, built once
+  // here so every backend reads the same condition set.
+  const tagFilter = query.tag
+    ? buildTagFilterCondition(query.tag, { fts5Available })
+    : null;
 
   return {
     where,
@@ -169,7 +185,7 @@ export function buildQuerySpec(
     limit,
     offset,
     cap: caps,
-    ftsTag,
+    tagFilter,
     bareText,
     params: whereParams,
     useFts,
@@ -307,27 +323,24 @@ export function buildLikeSearchStatements(
 }
 
 /**
- * Plain filtered-listing statements. The optional `#tag` filter is appended
- * via buildFtsTagMatchCondition; callers pass null to skip it.
- *
- * INTENTIONAL divergence preserved by PBI-34: opfs QUERY honours the tag
- * filter, IdbVfsBackend.query ignores it (passes null), and the fallback /
- * in-memory paths ignore it as well. Unifying that would change idb query
- * results, so the gap stays explicit at the call site instead.
+ * Plain filtered-listing statements. The tag filter rides on the spec
+ * (QuerySpec.tagFilter — built by buildQuerySpec with the backend's
+ * fts5Available), so every backend assembles the same condition set
+ * (PBI 2026-09-11 tag SQL migration: the former "opfs honours tag, idb/fallback
+ * ignore it" divergence is gone — all backends honour the tag).
  */
 /** Canonical plain-list projection — owned by rowCodec; kept here so existing importers keep working. */
 export const PLAIN_LIST_COLUMNS = BROWSING_LOG_COLUMNS_SQL;
 
 export function buildPlainListStatements(
-  spec: Pick<QuerySpec, 'where' | 'order' | 'limit' | 'offset' | 'params'>,
-  opts: { tag?: string | null; columns: string },
+  spec: Pick<QuerySpec, 'where' | 'order' | 'limit' | 'offset' | 'params' | 'tagFilter'>,
+  opts: { columns: string },
 ): SearchStatements {
   let where = spec.where;
   const params: SqliteValue[] = [...spec.params];
-  if (opts.tag) {
-    const { condition, param } = buildFtsTagMatchCondition(opts.tag);
-    where = where ? `${where} AND ${condition}` : `WHERE ${condition}`;
-    params.push(param);
+  if (spec.tagFilter) {
+    where = where ? `${where} AND ${spec.tagFilter.condition}` : `WHERE ${spec.tagFilter.condition}`;
+    params.push(...spec.tagFilter.params);
   }
   return {
     countSql: `SELECT COUNT(*) AS c FROM browsing_logs ${where}`,

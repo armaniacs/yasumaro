@@ -35,21 +35,40 @@ export function buildWhereClause(q: StorageQuery): { where: string; params: Sqli
 }
 
 /**
- * Build an FTS5 MATCH sub-query condition for a `#tag` filter, matching the
- * browsing_logs_fts virtual table (rather than a plain LIKE scan). The
- * caller passes the tag value WITHOUT the `#` prefix.
+ * Build the tag-filter condition for the plain listing path (PBI 2026-09-11
+ * PBI-15: unified partial-match semantics across all backends).
+ *
+ * Semantics match the former client-side filter (comma-split partial match on
+ * the raw tag text):
+ * - >= 3 chars AND FTS5 available: trigram MATCH on the FTS tags column with
+ *   the phrase-quoted sanitized term. NO `#` prefix — trigram MATCH is a
+ *   contiguous substring match, so `AI` matches inside `#AImaster` exactly
+ *   like the old client-side `includes` did.
+ * - otherwise (short tag, or no FTS table on this backend): `tags LIKE ?`
+ *   with `%term%` (full scan; no index on tags). Wildcard semantics for
+ *   `%`/`_` in the term are shared with the LIKE search path (documented).
+ *
+ * Returns null when the tag produces no usable condition (empty input).
  */
-export function buildFtsTagMatchCondition(tag: string): { condition: string; param: string } {
+export function buildTagFilterCondition(
+  tag: string,
+  opts: { fts5Available: boolean },
+): { condition: string; params: SqliteValue[] } | null {
   const limitedTag = tag.slice(0, FTS_QUERY_MAX_LENGTH);
+  if (!limitedTag) return null;
   const cleanTag = limitedTag
     .replace(/["'*^~:()+\-\\]/g, ' ')
     .replace(/\b(OR|AND|NOT|NEAR)\b/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  return {
-    condition: 'id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)',
-    param: `"#${cleanTag}"`,
-  };
+  const charLen = [...cleanTag].length;
+  if (opts.fts5Available && charLen >= 3) {
+    return {
+      condition: 'id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)',
+      params: [`"${cleanTag}"`],
+    };
+  }
+  return { condition: 'tags LIKE ?', params: [`%${limitedTag}%`] };
 }
 
 /**
@@ -112,12 +131,4 @@ export function sanitizeTextForFts5(text: string): string {
 export function shouldUseFts5(fts5Available: boolean, bareTerm: string): boolean {
   const charLen = [...bareTerm].length;
   return fts5Available && charLen >= 3;
-}
-
-/**
- * Build an FTS5-compatible tag filter condition.
- * The caller passes the tag value WITHOUT the `#` prefix.
- */
-export function buildTagFilterClause(): { tagCondition: string; tagParam: string } {
-  return { tagCondition: 'tags LIKE ?', tagParam: '#%' };
 }

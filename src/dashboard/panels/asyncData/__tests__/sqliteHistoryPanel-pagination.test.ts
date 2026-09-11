@@ -167,15 +167,15 @@ describe('createSqliteHistoryPanel — server-side pagination', () => {
     expect(rendered).toContain('Example 1200');
   });
 
-  it('keeps client-side tag filtering (server tagFilter is not equivalent)', async () => {
+  it('pushes the tag filter to the SQL layer with normal paging (PBI 2026-09-11 tag migration)', async () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const panel = makePanel(container);
 
     mockedDb.queryLogs.mockResolvedValue({
       data: {
-        rows: [makeRow(1, '#AI'), makeRow(2, '#other')],
-        total: 2,
+        rows: [makeRow(1, '#AI')],
+        total: 1,
       },
     });
 
@@ -184,10 +184,9 @@ describe('createSqliteHistoryPanel — server-side pagination', () => {
     await flush();
 
     const options = lastQueryOptions();
-    // A 2-character tag would return nothing through FTS5 trigram MATCH, so the
-    // tag must NOT be pushed down to the server.
-    expect(options.tagFilter).toBeUndefined();
-    // Client-side filtering needs a wide fetch window to stay correct.
-    expect(options.limit).toBeGreaterThan(PAGE_SIZE);
+    // The tag rides on the wire and SQL pages like any other filter —
+    // the former 5000-row over-fetch window is gone.
+    expect(options.tagFilter).toBe('AI');
+    expect(options.limit).toBe(PAGE_SIZE);
   });
 });
