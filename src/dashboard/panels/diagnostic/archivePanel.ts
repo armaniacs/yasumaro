@@ -482,7 +482,7 @@ export function createArchivePanel(): PanelLifecycle {
             await renderSessionList();
           })().catch((err) => showStatus(statusTarget(statusEl), errorMessage(err), 'error'));
           if (restoreBtn) restoreBtn.hidden = false;
-          showStatus(statusTarget(statusEl), localized('archiveStatusWorking') === 'Working… other archive operations are disabled until this finishes.' ? 'Preview ready.' : 'Preview ready.', 'success');
+          showStatus(statusTarget(statusEl), localized('archiveRestorePreviewReady'), 'success');
         } catch (err) {
           showStatus(statusTarget(statusEl), `${localized('archiveRestorePreviewFailed')}: ${errorMessage(err)}`, 'error');
         } finally {
