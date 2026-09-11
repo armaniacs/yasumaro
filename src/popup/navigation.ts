@@ -12,13 +12,12 @@ import { setHtmlLangAndDir } from '../utils/i18n-dom.js';
  */
 export function showMainScreen(): void {
   // 【DOM操作】: 画面表示の切り替え 🟢
-  // 【設計方針】: DOM操作の条件チェックで安全に処理
+  // PBI 2026-09-11-04 (round 7): settingsScreen は popup/index.html に存在
+  // しないため（CSS とテスト fixture にのみ存在）hide 分岐を削除。
   const mainScreen = document.getElementById('mainScreen');
-  const settingsScreen = document.getElementById('settingsScreen');
   const menuBtn = document.getElementById('menuBtn');
 
   if (mainScreen) mainScreen.style.display = 'block';
-  if (settingsScreen) settingsScreen.style.display = 'none';
 
   // 【アクセシビリティ改善】メニューボタンの aria-expanded 属性を設定
   if (menuBtn) {
@@ -82,23 +81,20 @@ export function init(): void {
   setHtmlLangAndDir();
 
   // 【DOM要素キャプチャ】: イベント設定用に要素を取得 🟢
-  // 【設計方針】: 毎回のDOMクエリを避けるために先に取得
+  // PBI 2026-09-11-04 (round 7): backBtn は popup/index.html に存在しないため
+  // dead 分岐を削除。historyBtn wiring を menuBtn guard の外へ（menuBtn の
+  // 存在に historyBtn の配線を依存させない）。
   const menuBtn = document.getElementById('menuBtn');
-  const backBtn = document.getElementById('backBtn');
 
   // 【イベントリスナー設定】: ボタンクリック時の画面遷移を設定 🟢
   if (menuBtn) {
     menuBtn.addEventListener('click', showSettingsScreen);
-
-    // Open SQLite History dashboard
-    const historyBtn = document.getElementById('historyBtn');
-    if (historyBtn) {
-      historyBtn.addEventListener('click', openHistory);
-    }
   }
 
-  if (backBtn) {
-    backBtn.addEventListener('click', showMainScreen);
+  // Open SQLite History dashboard
+  const historyBtn = document.getElementById('historyBtn');
+  if (historyBtn) {
+    historyBtn.addEventListener('click', openHistory);
   }
 
   // 【初期表示】: デフォルト画面を表示 🟢
