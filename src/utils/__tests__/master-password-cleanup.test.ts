@@ -32,7 +32,7 @@ describe('Master Password Data Cleanup', () => {
   ];
 
   describe('Phase 1: クリーンアップロジック', () => {
-    it('マスターパスワード関連キーが削除対象であること', () => {
+    it('targets master password keys for deletion', () => {
       const masterPasswordKeys = [
         'master_password_enabled',
         'master_password_salt',
@@ -45,7 +45,7 @@ describe('Master Password Data Cleanup', () => {
       expect(masterPasswordKeys).toHaveLength(3);
     });
 
-    it('APIキーがリセット対象であること', () => {
+    it('targets API keys for reset', () => {
       expect(API_KEY_FIELDS).toContain('obsidian_api_key');
       expect(API_KEY_FIELDS).toContain('gemini_api_key');
       expect(API_KEY_FIELDS).toContain('openai_api_key');
@@ -54,7 +54,7 @@ describe('Master Password Data Cleanup', () => {
       expect(API_KEY_FIELDS).toHaveLength(5);
     });
 
-    it('APIキーが空文字列でリセットされる', () => {
+    it('resets API keys to empty strings', () => {
       const settings = {
         obsidian_api_key: 'encrypted_data_123',
         gemini_api_key: 'encrypted_data_456',
@@ -83,7 +83,7 @@ describe('Master Password Data Cleanup', () => {
   });
 
   describe('Phase 2: 確認ダイアログ', () => {
-    it('削除前に確認が求められる', () => {
+    it('requests confirmation before deletion', () => {
       // Phase 2 で confirm() が追加された
       // ユーザーがキャンセルできる確認ダイアログが存在することを検証
       const confirmMessage =
@@ -93,7 +93,7 @@ describe('Master Password Data Cleanup', () => {
       expect(confirmMessage).toContain('cannot be undone');
     });
 
-    it('キャンセル時はAPIキーが保持される', () => {
+    it('keeps API keys when cancelled', () => {
       // confirm が false の場合、masterPasswordEnabled.checked = true に戻る
       // APIキーは変更されない
       const settings = {
@@ -110,7 +110,7 @@ describe('Master Password Data Cleanup', () => {
   });
 
   describe('Phase 3: 統合テスト', () => {
-    it('マスターパスワード削除フローの順序が正しい', () => {
+    it('runs the master password removal flow in the correct order', () => {
       const steps: string[] = [];
 
       // 1. パスワード認証
@@ -141,7 +141,7 @@ describe('Master Password Data Cleanup', () => {
       ]);
     });
 
-    it('暗号化データが完全にクリアされる', () => {
+    it('clears encrypted data completely', () => {
       // 模擬的なストレージデータ
       const storage: Record<string, unknown> = {
         master_password_enabled: true,

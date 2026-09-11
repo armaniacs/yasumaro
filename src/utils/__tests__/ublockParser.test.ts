@@ -25,7 +25,7 @@ describe('ublockParser', () => {
   });
 
   describe('parseUblockFilterLine - 正常系', () => {
-    test('基本ドメインブロック', () => {
+    test('parses a basic domain block', () => {
       // 【テスト目的】: parseUblockFilterLine関数の基本動作を確認
       // 【テスト内容】: 標準的なuBlock形式のドメインブロックルールを正しくパースできることを確認
       // 【期待される動作】: type='block'、domain='example.com'、patternが設定されたUblockRuleオブジェクトが返される
@@ -48,7 +48,7 @@ describe('ublockParser', () => {
       expect(result?.options).toEqual({}); // 【確認内容】: オプションが空オブジェクトであること 🟢
     });
 
-    test('例外ルールのパース', () => {
+    test('parses an exception rule', () => {
       // 【テスト目的】: 例外ルール認識機能の確認
       // 【テスト内容】: @@接頭の例外ルールを正しく認識し、type='exception'として扱えることを確認
       // 【期待される動作】: @@||trusted.com^を入力すると、type='exception'、domain='trusted.com'のUblockRuleオブジェクトが返される
@@ -66,7 +66,7 @@ describe('ublockParser', () => {
       expect(result?.domain).toBe('trusted.com'); // 【確認内容】: ドメイン部分が@@なしで正しく抽出されること 🟢
     });
 
-    test('ワイルドカードドメインのパース', () => {
+    test('parses a wildcard domain', () => {
       // 【テスト目的】: ワイルドカード対応機能の確認
       // 【テスト内容】: *ワイルドカードを含むパターンを正しくパースできることを確認
       // 【期待される動作】: ||*.ads.net^を入力すると、domain='*.ads.net'が設定される
@@ -83,7 +83,7 @@ describe('ublockParser', () => {
       expect(result?.domain).toBe('*.ads.net'); // 【確認内容】: ワイルドカードcharが保持されること 🟢
     });
 
-    test('コメント行はスキップされる', () => {
+    test('skips comment lines', () => {
       // 【テスト目的】: コメント行スキップ機能の確認
       // 【テスト内容】: !で始まるコメント行を正しくスキップし、nullを返すことを確認
       // 【期待される動作】: "! Comment line"を入力するとnullが返される
@@ -99,7 +99,7 @@ describe('ublockParser', () => {
       expect(result).toBeNull(); // 【確認内容】: コメント行に対してnullが返されること 🟢
     });
 
-    test('空行はスキップされる', () => {
+    test('skips empty lines', () => {
       // 【テスト目的】: 空行スキップ機能の確認
       // 【テスト内容】: 空行や空白のみの行を正しくスキップし、nullを返すことを確認
       // 【期待される動作】: ""を入力するとnullが返される
@@ -115,7 +115,7 @@ describe('ublockParser', () => {
       expect(result).toBeNull(); // 【確認内容】: 空行に対してnullが返されること 🟢
     });
 
-    test('サブドメインを含むパース', () => {
+    test('parses a subdomain', () => {
       // 【テスト目的】: サブドメイン対応の確認
       // 【テスト内容】: sub.example.comのようなサブドメインを正しくパースできることを確認
       // 【期待される動作】: "||sub.example.com^"を入力すると、domain='sub.example.com'が設定される
@@ -134,7 +134,7 @@ describe('ublockParser', () => {
   });
 
   describe('parseUblockFilterLine - 異常系', () => {
-    test('|| プレフィックスがない場合は無効', () => {
+    test('rejects a pattern without the || prefix', () => {
       // 【テスト目的】: 入力バリデーション機能の確認
       // 【テスト内容】: uBlock形式の必須プレフィックス||が欠けている不正なパターンをテスト
       // 【期待される動作】: "example.com^"を入力するとnullが返される
@@ -150,7 +150,7 @@ describe('ublockParser', () => {
       expect(result).toBeNull(); // 【確認内容】: 必須プレフィックスがないルールに対してnullが返されること 🟢
     });
 
-    test('^ サフィックスがない場合は無効', () => {
+    test('rejects a pattern without the ^ suffix', () => {
       // 【テスト目的】: サフィックスバリデーション機能の確認
       // 【テスト内容】: uBlock形式の必須サフィックス^が欠けている不正なパターンをテスト
       // 【期待される動作】: "||example.com"を入力するとnullが返される
@@ -166,7 +166,7 @@ describe('ublockParser', () => {
       expect(result).toBeNull(); // 【確認内容】: 必須サフィックスがないルールに対してnullが返されること 🟢
     });
 
-    test('不正文字を含むドメインは無効', () => {
+    test('rejects a domain with invalid characters', () => {
       // 【テスト目的】: 文字セットバリデーション機能の確認
       // 【テスト内容】: ドメインとして不適切な文字（例: @, / 等）を含むパターンをテスト
       // 【期待される動作】: "||example@invalid^"を入力するとnullが返される
@@ -182,7 +182,7 @@ describe('ublockParser', () => {
       expect(result).toBeNull(); // 【確認内容】: 不正文字を含むドメインに対してnullが返されること 🟡
     });
 
-    test('空パターン（||^ のみ）は無効', () => {
+    test('rejects an empty pattern (only ||^)', () => {
       // 【テスト目的】: 入力の完全性検証機能の確認
       // 【テスト内容】: hostname部分が空の||^は意味を持たないため無効扱いになることをテスト
       // 【期待される動作】: "||^"を入力するとnullが返される
@@ -198,7 +198,7 @@ describe('ublockParser', () => {
       expect(result).toBeNull(); // 【確認内容】: 空パターンに対してnullが返されること 🟡
     });
 
-    test('null 入力は無効', () => {
+    test('rejects null input', () => {
       // 【テスト目的】: null セーフェンスの確認
       // 【テスト内容】: null値が渡された場合の安全な扱いをテスト
       // 【期待される動作】: nullを入力するとnullが返される
@@ -216,14 +216,14 @@ describe('ublockParser', () => {
   });
 
   describe('parseUblockFilterLine - エッジケース', () => {
-    test('複数連続ワイルドカードのパース', () => {
+    test('rejects multiple consecutive wildcards', () => {
       // 【テスト目的】: 複数ワイルドカードを含む不正ドメインが拒否されることを確認 (PBI 2026-08-27-26)
       const input = '||*.*.example.com^';
       const result = parseUblockFilterLine(input);
       expect(result).toBeNull();
     });
 
-    test('前後空白を含む行はトリムしてパース', () => {
+    test('trims surrounding whitespace before parsing a line', () => {
       // 【テスト目的】: 入力の柔軟性とユーザビリティ向上の確認
       // 【テスト内容】: ユーザーが入力時に誤って空白を含んだ場合でも正しくパースされることを確認
       // 【期待される動作】: "||  example.com  ^"の空白がトリムされ、標準パターンとして処理される
@@ -245,7 +245,7 @@ describe('ublockParser', () => {
 
   describe('parseUblockFilterLine - hosts形式拡張', () => {
     // note: The parser returns null for IGNORE types (they're ignored/skipped)
-    test('IPv6アドレスを含むhosts形式の行ではnullが返る', () => {
+    test('returns null for a hosts line with an IPv6 address', () => {
       const input = '::1 localhost';
       const result = parseUblockFilterLine(input);
 
@@ -253,7 +253,7 @@ describe('ublockParser', () => {
       expect(result).toBeNull();
     });
 
-    test('ブロードキャストアドレスを含むhosts形式ではnullが返る', () => {
+    test('returns null for a hosts line with a broadcast address', () => {
       const input = '255.255.255.255 broadcasthost';
       const result = parseUblockFilterLine(input);
 
@@ -261,7 +261,7 @@ describe('ublockParser', () => {
       expect(result).toBeNull();
     });
 
-    test('localhostを含むhosts形式ではnullが返る', () => {
+    test('returns null for a hosts line with localhost', () => {
       const input = '127.0.0.1 localhost';
       const result = parseUblockFilterLine(input);
 
@@ -270,7 +270,7 @@ describe('ublockParser', () => {
     });
 
     // However, actual domains should work
-    test('IPv6アドレスで 실제 도메인 is blocked', () => {
+    test('blocks an actual domain for an IPv6 hosts line', () => {
       const input = '::1 example.com';
       const result = parseUblockFilterLine(input);
 
@@ -290,7 +290,7 @@ describe('ublockParser', () => {
   });
 
   describe('parseUblockFilterList', () => {
-    test('複数行の一括パース（正常系）', () => {
+    test('parses multiple lines in bulk (happy path)', () => {
       // 【テスト目的】: 複数行パースとルール分類機能の確認
       // 【テスト内容】: 3つの異なるルール（ブロック、例外、コメント）を含む複数行テキストを正しくパースできることを確認
       // 【期待される動作】: ブロックルール、例外ルールがそれぞれの配列に分類され、metadataに集計情報が設定される
@@ -312,7 +312,7 @@ describe('ublockParser', () => {
       expect(result.metadata.ruleCount).toBe(2); // 【確認内容】: 有効なルール数が正しくカウントされていること 🟢
     });
 
-    test('大量データ正常系（1,000行）', () => {
+    test('parses 1000 lines (happy path)', () => {
       // 【テスト目的】: スケーラビリティの確認
       // 【テスト内容】: 実運用で想定されるサイズのフィルターリストを処理できることを確認
       // 【期待される動作】: 有効な||hostname^パターンが1,000行含まれるテキストを正常にパースできる
@@ -333,7 +333,7 @@ describe('ublockParser', () => {
   });
 
   describe('パフォーマンステスト', () => {
-    test('1,000行パースは1秒以内に完了する', () => {
+    test('parses 1000 lines within 1 second', () => {
       // 【テスト目的】: 実運用で想定されるフィルターリストサイズでのパフォーマンス要件を満たしていることを確認
       // 【テスト内容】: 1,000行のパース実行時間を計測
       // 【期待される動作】: 実行時間が1秒以内であり、正しくパースされる
@@ -354,7 +354,7 @@ describe('ublockParser', () => {
       expect(endTime - startTime).toBeLessThan(1000); // 【確認内容】: パース時間が1秒未満であること 🟢
     });
 
-    test('無効行多数を含む10,000行のパース', () => {
+    test('parses 10000 lines including many invalid rows', () => {
       // 【テスト目的】: 実運用で想定される最大サイズのフィルターリストでもエラーなく処理できることを確認
       // 【テスト内容】: 有効なpattern 5,000行と無効なpattern 5,000行を含むテキストをパース
       // 【期待される動作】: 5秒以内に処理が完了し、有効行のみが配列に含まれる
@@ -380,7 +380,7 @@ describe('ublockParser', () => {
     });
 
     // 【UF-302追加テスト】キャッシュ機能のパフォーマンス改善を検証
-    test('キャッシュ機能により2回目のパースが高速化されること', () => {
+    test('speeds up the second parse via caching', () => {
       // 【テスト目的】: キャッシュ機能により2回目のパースが高速化されることを確認
       // 【テスト内容】: 同じテキストを2回パースし、2回目のパース時間が短縮されることを確認
       // 【期待される動作】: キャッシュが効率的に動作し、2回目のパースが高速化される
@@ -417,7 +417,7 @@ describe('ublockParser', () => {
   });
 
   describe('ヘルパー関数 - isCommentLine', () => {
-    test('!で始まる行はコメント行と判定される', () => {
+    test('treats a line starting with ! as a comment', () => {
       // 【テスト目的】: isCommentLine関数の基本動作を確認
       // 【テスト内容】: !プレフィックスで始まる行を正しくコメント行として判定できることを確認
       // 【期待される動作】: "! Comment"を入力するとtrueが返される
@@ -433,7 +433,7 @@ describe('ublockParser', () => {
       expect(result).toBe(true); // 【確認内容】: !で始まる行がtrueを返すこと 🟢
     });
 
-    test('!で始まらない行はコメント行と判定されない', () => {
+    test('treats a line not starting with ! as not a comment', () => {
       // 【テスト目的】: isCommentLine関数の誤判定の確認
       // 【テスト内容】: !プレフィックスがない行を正しくコメント行でないと判定できることを確認
       // 【期待される動作】: "||example.com^"を入力するとfalseが返される
@@ -449,7 +449,7 @@ describe('ublockParser', () => {
       expect(result).toBe(false); // 【確認内容】: !で始まらない行がfalseを返すこと 🟢
     });
 
-    test('#で始まる行はコメント行と判定される（hosts形式）', () => {
+    test('treats a line starting with # as a comment (hosts format)', () => {
       // 【テスト目的】: hosts形式のコメント行対応の確認
       // 【テスト内容】: #プレフィックスで始まる行を正しくコメント行として判定できることを確認
       // 【期待される動作】: "# Comment"を入力するとtrueが返される
@@ -465,7 +465,7 @@ describe('ublockParser', () => {
       expect(result).toBe(true); // 【確認内容】: #で始まる行がtrueを返すこと 🟢
     });
 
-    test('空白を含む#で始まる行はコメント行と判定される', () => {
+    test('treats an indented line starting with # as a comment', () => {
       // 【テスト目的】: インデント付きコメント行の確認
       // 【テスト内容】: 先頭に空白があり、その後に#が続く行をコメント行として判定できることを確認
       // 【期待される動作】: "  # Comment"を入力するとtrueが返される
@@ -483,7 +483,7 @@ describe('ublockParser', () => {
   });
 
   describe('ヘルパー関数 - isEmptyLine', () => {
-    test('空文字列は空行と判定される', () => {
+    test('treats an empty string as an empty line', () => {
       // 【テスト目的】: isEmptyLine関数の基本動作を確認
       // 【テスト内容】: 空文字列を正しく空行として判定できることを確認
       // 【期待される動作】: ""を入力するとtrueが返される
@@ -499,7 +499,7 @@ describe('ublockParser', () => {
       expect(result).toBe(true); // 【確認内容】: 空文字列がtrueを返すこと 🟢
     });
 
-    test('空白のみの文字列は空行と判定される', () => {
+    test('treats a whitespace-only string as an empty line', () => {
       // 【テスト目的】: 空白のみの行の判定を確認
       // 【テスト内容】: 空白スペースのみの文字列を正しく空行として判定できることを確認
       // 【期待される動作】: "   "を入力するとtrueが返される
@@ -515,7 +515,7 @@ describe('ublockParser', () => {
       expect(result).toBe(true); // 【確認内容】: 空白のみの文字列がtrueを返すこと 🟡
     });
 
-    test('文字を含む行は空行と判定されない', () => {
+    test('treats a line with characters as non-empty', () => {
       // 【テスト目的】: isEmptyLine関数の誤判定の確認
       // 【テスト内容】: 文字を含む行を正しく空行でないと判定できることを確認
       // 【期待される動作】: "||example.com^"を入力するとfalseが返される
@@ -533,7 +533,7 @@ describe('ublockParser', () => {
   });
 
   describe('ヘルパー関数 - isValidRulePattern', () => {
-    test('有効なルールパターンはtrueを返す', () => {
+    test('returns true for a valid rule pattern', () => {
       // 【テスト目的】: isValidRulePattern関数の基本動作を確認
       // 【テスト内容】: 有効なuBlock形式パターンを正しく判定できることを確認
       // 【期待される動作】: "||example.com^"を入力するとtrueが返される
@@ -549,7 +549,7 @@ describe('ublockParser', () => {
       expect(result).toBe(true); // 【確認内容】: 有効なルールパターンがtrueを返すこと 🟢
     });
 
-    test('||プレフィックスがないパターンはfalseを返す', () => {
+    test('returns false for a pattern without the || prefix', () => {
       // 【テスト目的】: 必須プレフィックスの検証を確認
       // 【テスト内容】: ||プレフィックスがないパターンを正しく無効と判定できることを確認
       // 【期待される動作】: "example.com^"を入力するとfalseが返される
@@ -565,7 +565,7 @@ describe('ublockParser', () => {
       expect(result).toBe(false); // 【確認内容】: プレフィックスがないパターンがfalseを返すこと 🟢
     });
 
-    test('^サフィックスがないパターンはfalseを返す', () => {
+    test('returns false for a pattern without the ^ suffix', () => {
       // 【テスト目的】: 必須サフィックスの検証を確認
       // 【テスト内容】: ^サフィックスがないパターンを正しく無効と判定できることを確認
       // 【期待される動作】: "||example.com"を入力するとfalseが返される
@@ -583,7 +583,7 @@ describe('ublockParser', () => {
   });
 
   describe('ヘルパー関数 - generateRuleId', () => {
-    test('同じ入力からは同じIDが生成される', () => {
+    test('generates the same ID from the same input', () => {
       // 【テスト目的】: generateRuleId関数の一貫性を確認
       // 【テスト内容】: 同じ入力に対して常に同じIDが生成されることを確認
       // 【期待される動作】: 同じ入力を2回渡すと同じIDが返される
@@ -600,7 +600,7 @@ describe('ublockParser', () => {
       expect(id1).toBe(id2); // 【確認内容】: 同じ入力から同じIDが生成されること 🟡
     });
 
-    test('異なる入力からは異なるIDが生成される', () => {
+    test('generates different IDs from different inputs', () => {
       // 【テスト目的】: generateRuleId関数の一意性を確認
       // 【テスト内容】: 異なる入力に対して異なるIDが生成されることを確認
       // 【期待される動作】: 異なる入力を渡すと異なるIDが返される
@@ -620,7 +620,7 @@ describe('ublockParser', () => {
   });
 
   describe('ヘルパー関数 - parseOptions', () => {
-    test('オプションなしのルールは空オブジェクトを返す', () => {
+    test('returns an empty object for a rule without options', () => {
       // 【テスト目的】: parseOptions関数の基本動作（オプションなし）を確認
       // 【テスト内容】: オプションを含まないルールに対して空オブジェクトが返されることを確認
       // 【期待される動作】: 空文字列またはnullを入力すると{}が返される
@@ -636,7 +636,7 @@ describe('ublockParser', () => {
       expect(result).toEqual({}); // 【確認内容】: オプションなしで空オブジェクトが返されること 🟡
     });
 
-    test('domainオプションをパースできる', () => {
+    test('parses the domain option', () => {
       // 【テスト目的】: domainオプション解析のプレビュー確認
       // 【テスト内容】: $domain=example.com形式のオプションを基本的にパースできることを確認
       // 【期待される動作】: オプション文字列がパースされ、ドメイン部分が正しく抽出される
@@ -653,7 +653,7 @@ describe('ublockParser', () => {
     });
 
     // 【UF-102追加テスト1】複数domainオプション（パイプ区切り）
-    test('複数のドメインを含むdomainオプションのパース', () => {
+    test('parses a domain option with multiple domains', () => {
       // 【テスト目的】: 複数のドメインを含むdomainオプションのパース
       // 【テスト内容】: |区切りで複数のドメインを指定したオプションを正しくパースできることを確認
       // 【期待される動作】: `"domain=example.com|test.com|sample.com"` を入力すると、すべてのドメインを含む配列が設定される
@@ -671,7 +671,7 @@ describe('ublockParser', () => {
     });
 
     // 【UF-102追加テスト2】3pオプション
-    test('サードパーティオプションのパース', () => {
+    test('parses the third-party option', () => {
       // 【テスト目的】: サードパーティオプションのパース
       // 【テスト内容】: `$3p` オプションを正しく論理フラグに変換できることを確認
       // 【期待される動作】: `"3p"` を入力すると、`thirdParty=true` が設定されたオブジェクトが返される
@@ -689,7 +689,7 @@ describe('ublockParser', () => {
     });
 
     // 【UF-102追加テスト3】1pオプション
-    test('ファーストパーティオプションのパース', () => {
+    test('parses the first-party option', () => {
       // 【テスト目的】: ファーストパーティオプションのパース
       // 【テスト内容】: `$1p` オプションを正しく論理フラグに変換できることを確認
       // 【期待される動作】: `"1p"` を入力すると、`firstParty=true` が設定されたオブジェクトが返される
@@ -707,7 +707,7 @@ describe('ublockParser', () => {
     });
 
     // 【UF-102追加テスト4】importantオプション
-    test('重要フラグオプションのパース', () => {
+    test('parses the important flag option', () => {
       // 【テスト目的】: 重要フラグオプションのパース
       // 【テスト内容】: `$important` オプションを正しく論理フラグに変換できることを確認
       // 【期待される動作】: `"important"` を入力すると、`important=true` が設定されたオブジェクトが返される
@@ -725,7 +725,7 @@ describe('ublockParser', () => {
     });
 
     // 【UF-102追加テスト5】複合オプション（カンマ区切り）
-    test('複数のオプションを組み合わせたパース', () => {
+    test('parses combined options', () => {
       // 【テスト目的】: 複数のオプションを組み合わせたパース
       // 【テスト内容】: カンマ区切りで複数のオプションを指定した場合に、すべてのオプションが正しくパースできることを確認
       // 【期待される動作】: `"domain=example.com,3p,important"` を入力すると、すべてのオプションが設定されたオブジェクトが返される
@@ -747,7 +747,7 @@ describe('ublockParser', () => {
     });
 
     // 【UF-102追加テスト6】不明なオプションはスキップされる
-    test('不明なオプション文字列は安全にスキップされる', () => {
+    test('safely skips unknown option strings', () => {
       // 【テスト目的】: 不明なオプション文字列は安全にスキップされる
       // 【テスト内容】: 知らないオプション文字列が渡された場合、システムがクラッシュすることなく安全に処理できるか
       // 【テスト内容】: 不明な `unknown_option` 入力時は安全にスキップされ、エラーなし
@@ -765,7 +765,7 @@ describe('ublockParser', () => {
     });
 
     // 【UF-102追加テスト7】空のdomainオプションはスキップされる
-    test('値がないdomainオプションは安全にスキップされる', () => {
+    test('safely skips a domain option without a value', () => {
       // 【テスト目的】: 値がないdomainオプションは安全にスキップされる
       // 【テスト内容】: `domain=` のように値がないオプションが渡された場合の挙動を確認
       // 【テスト内容】: 完全な形式と同じ `domain=` （中身なし）入力時は安全にスキップ
@@ -783,7 +783,7 @@ describe('ublockParser', () => {
     });
 
     // 【UF-102追加テスト8】重要フラグの解除（~important）
-    test('重要フラグの解除オプションのパース', () => {
+    test('parses the important-flag negation option', () => {
       // 【テスト目的】: 重要フラグの解除オプションのパース
       // 【テスト内容】: `~important` で重要フラグを明示的に解除できることを確認
       // 【期待される動作】: `~important` を入力すると、`important: false` が設定される
@@ -801,7 +801,7 @@ describe('ublockParser', () => {
     });
 
     // 【UF-102追加テスト9】否定domainオプション（~domain=）
-    test('除外ドメインオプションのパース', () => {
+    test('parses the negated-domain option', () => {
       // 【テスト目的】: 除外ドメインオプションのパース
       // 【テスト内容】: `~domain=` で特定ドメインをルール適用から除外する機能を確認
       // 【期待される動作】: `domain=~trusted.com|safe.com` を入力すると、`negatedDomains` に配列として設定される
@@ -819,7 +819,7 @@ describe('ublockParser', () => {
     });
 
     // 【UF-102追加テスト10】複合オプションに不明トークンを含む場合
-    test('有効なオプションと不明なトークンが混在した場合のパース', () => {
+    test('parses mixed valid options and unknown tokens', () => {
       // 【テスト目的】: 有効なオプションと不明なトークンが混在した場合のパース
       // 【テスト内容】: 有効オプション間に不明なトークンが混入しても妥当なオプションが正しくパースされることを確認
       // 【期待される動作】: `domain=example.com,important,BADSTRING,3p` を入力すると、`BADSTRING` はスキップされ、有効なオプションのみがパースされる
@@ -841,7 +841,7 @@ describe('ublockParser', () => {
     });
 
     // 【UF-301追加テスト1】match-caseオプション
-    test('大文字小文字を区別するオプションのパース', () => {
+    test('parses the case-sensitive matching option', () => {
       // 【テスト目的】: match-caseオプションのパース
       // 【テスト内容】: `match-case` で大文字小文字を区別する設定ができることを確認
       // 【期待される動作】: `match-case` を入力すると、`matchCase: true` が設定される
@@ -859,7 +859,7 @@ describe('ublockParser', () => {
     });
 
     // 【UF-301追加テスト2】~match-caseオプション
-    test('大文字小文字を区別しないオプションのパース', () => {
+    test('parses the case-insensitive matching option', () => {
       // 【テスト目的】: ~match-caseオプションのパース
       // 【テスト内容】: `~match-case` で大文字小文字を区別しない設定ができることを確認
       // 【期待される動作】: `~match-case` を入力すると、`matchCase: false` が設定される

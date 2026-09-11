@@ -3,7 +3,7 @@ import { BloomFilterManager } from '../bloomFilterManager.js';
 import { bloomFilterFromData } from '../bloomFilter.js';
 
 describe('BloomFilterManager', () => {
-  test('createBloomFilterFromPresets はプリセットドメインを含む BloomFilterData を返す', async () => {
+  test('createBloomFilterFromPresets returns BloomFilterData containing preset domains', async () => {
     const manager = new BloomFilterManager();
     const data = await manager.createBloomFilterFromPresets();
 
@@ -16,7 +16,7 @@ describe('BloomFilterManager', () => {
     expect(typeof restored.mightContain('example.com')).toBe('boolean');
   });
 
-  test('rebuildForTrancoUpdate は tranco ドメインと sensitive プリセットの両方を含むフィルターを作る', () => {
+  test('rebuildForTrancoUpdate builds a filter containing both tranco domains and sensitive presets', () => {
     const manager = new BloomFilterManager();
     const bloom = manager.rebuildForTrancoUpdate(
       ['cnn.com'],
@@ -29,7 +29,7 @@ describe('BloomFilterManager', () => {
     expect(bloom.mightContain('social.example')).toBe(true);
   });
 
-  test('rebuildForTrancoUpdate はドメインが空でも例外にならない', () => {
+  test('rebuildForTrancoUpdate does not throw when domains are empty', () => {
     const manager = new BloomFilterManager();
     const bloom = manager.rebuildForTrancoUpdate([], { finance: [], gaming: [], sns: [] });
     expect(bloom.mightContain('anything.com')).toBe(false);

@@ -328,7 +328,7 @@ describe('customPromptManager - r2 missed branches', () => {
       const textInput = document.getElementById('promptText') as HTMLTextAreaElement;
       nameInput.value = '';
       textInput.value = '';
-      document.getElementById('savePromptBtn')!.click();
+      expect(() => document.getElementById('savePromptBtn')!.click()).not.toThrow();
 
       await new Promise((r) => setTimeout(r, 10));
     });

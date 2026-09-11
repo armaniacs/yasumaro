@@ -159,8 +159,7 @@ describe('runMigrations', () => {
     };
 
     await runMigrations(engine);
-    await runMigrations(engine);
-    // No error thrown means idempotency works
+    await expect(runMigrations(engine)).resolves.not.toThrow();
   });
 
   // ── Idempotency via pre-execution existence probe (PBI 2026-09-05-07) ──

@@ -289,7 +289,7 @@ describe('render — single entry with diff/full decided inside', () => {
       SQLITE_HISTORY_IDS.entryList,
       SQLITE_HISTORY_IDS.pagination,
     ]) {
-      expect(container.querySelector(`#${id}`), id).not.toBeNull();
+      expect(container.querySelector(`#${id}`)).not.toBeNull();
     }
     expect(container.querySelectorAll('.sqlite-entry').length).toBe(2);
   });

@@ -733,7 +733,7 @@ describe('testAiConnection', () => {
 // settings/__tests__/aiProvider.test.ts.
 
 describe('toMarkdownTemplateEntryData (最終レビュー Fix 2 / Fix 3)', () => {
-    it('カンマ区切りの tags を分割し、#プレフィックス+末尾スペース付きの形式に変換する', () => {
+    it('splits comma-separated tags and converts them to #-prefixed format with trailing space', () => {
         const result = toMarkdownTemplateEntryData({
             title: 'Example',
             url: 'https://example.com',
@@ -748,7 +748,7 @@ describe('toMarkdownTemplateEntryData (最終レビュー Fix 2 / Fix 3)', () =>
         expect(result.tags).toBe('#tech #news ');
     });
 
-    it('tags が空/未指定の場合は空文字列になる(末尾スペースなし)', () => {
+    it('returns an empty string without trailing space when tags is empty or unset', () => {
         const result = toMarkdownTemplateEntryData({
             title: 'Example',
             url: 'https://example.com',
@@ -760,7 +760,7 @@ describe('toMarkdownTemplateEntryData (最終レビュー Fix 2 / Fix 3)', () =>
         expect(result.tags).toBe('');
     });
 
-    it('タグの前後の空白をトリムし、空のタグ要素を除外する', () => {
+    it('trims surrounding whitespace and excludes empty tag entries', () => {
         const result = toMarkdownTemplateEntryData({
             title: 'Example',
             url: 'https://example.com',

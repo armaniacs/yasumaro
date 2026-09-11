@@ -223,7 +223,7 @@ describe('settings <-> UI round-trip for all 32 rule checkboxes', () => {
 
     for (const rule of CLEANSING_RULES) {
       const checkbox = document.getElementById(ruleHtmlId(rule.key)) as HTMLInputElement;
-      expect(checkbox.checked, rule.key).toBe(!rule.defaultEnabled);
+      expect(checkbox.checked).toBe(!rule.defaultEnabled);
     }
   });
 
@@ -235,19 +235,19 @@ describe('settings <-> UI round-trip for all 32 rule checkboxes', () => {
     const settings = getAiSummaryCleansingSettingsFromUI() as unknown as Record<string, boolean>;
 
     for (const rule of CLEANSING_RULES) {
-      expect(settings[`${rule.key}Enabled`], rule.key).toBe(!rule.newUserDefault);
+      expect(settings[`${rule.key}Enabled`]).toBe(!rule.newUserDefault);
     }
   });
 
   it('updateAiSummaryCleansingCheckboxStates disables/enables every rule checkbox', () => {
     updateAiSummaryCleansingCheckboxStates(false);
     for (const rule of CLEANSING_RULES) {
-      expect((document.getElementById(ruleHtmlId(rule.key)) as HTMLInputElement).disabled, rule.key).toBe(true);
+      expect((document.getElementById(ruleHtmlId(rule.key)) as HTMLInputElement).disabled).toBe(true);
     }
 
     updateAiSummaryCleansingCheckboxStates(true);
     for (const rule of CLEANSING_RULES) {
-      expect((document.getElementById(ruleHtmlId(rule.key)) as HTMLInputElement).disabled, rule.key).toBe(false);
+      expect((document.getElementById(ruleHtmlId(rule.key)) as HTMLInputElement).disabled).toBe(false);
     }
   });
 });
@@ -257,7 +257,7 @@ describe('getAiSummaryCleansingSettings — rule flags derived from CLEANSING_RU
     mockGetSettings.mockResolvedValueOnce({} as never);
     const settings = await getAiSummaryCleansingSettings() as unknown as Record<string, boolean>;
     for (const rule of CLEANSING_RULES) {
-      expect(settings[`${rule.key}Enabled`], rule.key).toBe(rule.defaultEnabled);
+      expect(settings[`${rule.key}Enabled`]).toBe(rule.defaultEnabled);
     }
   });
 });

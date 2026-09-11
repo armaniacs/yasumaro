@@ -22,7 +22,7 @@ describe('Logger - Enhanced Coverage', () => {
     });
 
     describe('sanitizeLogDetails - Array handling', () => {
-        test('配列内のnull/undefinedを処理する', async () => {
+        test('handles null/undefined inside arrays', async () => {
             await logger.addLog('INFO', 'Array null test', {
                 arr: [null, undefined, 'value', null]
             });
@@ -33,7 +33,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect((logs[0].details as Record<string, unknown>).arr).toEqual([null, undefined, 'value', null]);
         });
 
-        test('配列内のDateオブジェクトをISO文字列に変換する', async () => {
+        test('converts Date objects inside arrays to ISO strings', async () => {
             const date = new Date('2024-06-15T10:00:00Z');
             await logger.addLog('INFO', 'Array Date test', {
                 dates: [date]
@@ -45,7 +45,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect(((logs[0]!.details as Record<string, unknown>).dates as unknown[])[0]).toBe(date.toISOString());
         });
 
-        test('配列内のErrorオブジェクトを変換する', async () => {
+        test('converts Error objects inside arrays', async () => {
             const error = new Error('Array error test');
             await logger.addLog('INFO', 'Array Error test', {
                 errors: [error]
@@ -58,7 +58,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect(((logs[0]!.details as Record<string, unknown>).errors as Record<string, unknown>[])[0]!.stack).toBeDefined();
         });
 
-        test('配列内の文字列PIIをマスクする', async () => {
+        test('masks string PII inside arrays', async () => {
             await logger.addLog('INFO', 'Array PII test', {
                 contacts: ['user@example.com', 'regular text']
             });
@@ -70,7 +70,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect(((logs[0]!.details as Record<string, unknown>).contacts as unknown[])[0]).not.toContain('user@example.com');
         });
 
-        test('ネストされた配列を処理する', async () => {
+        test('handles nested arrays', async () => {
             await logger.addLog('INFO', 'Nested array test', {
                 matrix: [[1, 2], ['a', 'b']]
             });
@@ -81,7 +81,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect((logs[0].details as Record<string, unknown>).matrix).toEqual([[1, 2], ['a', 'b']]);
         });
 
-        test('配列内のプリミティブ型を処理する', async () => {
+        test('handles primitive types inside arrays', async () => {
             await logger.addLog('INFO', 'Array primitive test', {
                 values: [42, true, 'text', 3.14]
             });
@@ -94,7 +94,7 @@ describe('Logger - Enhanced Coverage', () => {
     });
 
     describe('Buffer Management', () => {
-        test('バッファ上限超過時に古いエントリを破棄する', async () => {
+        test('discards old entries when the buffer limit is exceeded', async () => {
             // MAX_PENDING_LOGS = 100, so add 101 logs
             for (let i = 0; i < 101; i++) {
                 await logger.addLog('INFO', `Log ${i}`, { index: i });
@@ -104,7 +104,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect(pendingCount).toBeLessThanOrEqual(100);
         });
 
-        test('getPendingLogCountが保留中ログ数を返す', async () => {
+        test('getPendingLogCount returns the pending log count', async () => {
             const initialCount = logger.getPendingLogCount();
             expect(initialCount).toBeGreaterThanOrEqual(0);
 
@@ -113,7 +113,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect(newCount).toBeGreaterThanOrEqual(initialCount);
         });
 
-        test('clearPendingLogsが保留中ログをクリアする', async () => {
+        test('clearPendingLogs clears pending logs', async () => {
             await logger.addLog('INFO', 'To be cleared', {});
             logger.clearPendingLogs();
             expect(logger.getPendingLogCount()).toBe(0);
@@ -179,7 +179,7 @@ describe('Logger - Enhanced Coverage', () => {
     });
 
     describe('clearLogs', () => {
-        test('clearLogsが保留中ログとストレージログをクリアする', async () => {
+        test('clearLogs clears pending and stored logs', async () => {
             await logger.addLog('INFO', 'Clear test 1', {});
             await logger.addLog('INFO', 'Clear test 2', {});
             await logger.flushLogs(true);
@@ -190,7 +190,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect(logs.length).toBe(0);
         });
 
-        test('clearLogs後に新しいログを追加できる', async () => {
+        test('accepts new logs after clearLogs', async () => {
             await logger.addLog('INFO', 'Before clear', {});
             await logger.clearLogs();
 
@@ -204,7 +204,7 @@ describe('Logger - Enhanced Coverage', () => {
     });
 
     describe('Structured Logging Functions', () => {
-        test('logInfoがINFOログを作成する', async () => {
+        test('logInfo creates an INFO log', async () => {
             await logger.logInfo('Test info message', { key: 'value' }, 'test-module');
             await logger.flushLogs(true);
 
@@ -214,7 +214,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect(infoLog!.type).toBe('INFO');
         });
 
-        test('logWarnがWARNログを作成する', async () => {
+        test('logWarn creates a WARN log', async () => {
             await logger.logWarn('Test warning', { warn: true }, 'STRG_RD_001', 'test-module');
             await logger.flushLogs(true);
 
@@ -224,7 +224,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect(warnLog!.type).toBe('WARN');
         });
 
-        test('logErrorがERRORログを作成する', async () => {
+        test('logError creates an ERROR log', async () => {
             await logger.logError('Test error', { err: 'details' }, 'UNKN_001', 'test-module');
             await logger.flushLogs(true);
 
@@ -234,7 +234,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect(errorLog!.type).toBe('ERROR');
         });
 
-        test('logDebugが開発環境でDEBUGログを作成する', async () => {
+        test('logDebug creates a DEBUG log in development', async () => {
             process.env.NODE_ENV = 'development';
             await logger.logDebug('Debug message', { debug: true }, 'test-module');
             await logger.flushLogs(true);
@@ -245,7 +245,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect(debugLog!.type).toBe('DEBUG');
         });
 
-        test('logDebugが本番環境でログを作成しない', async () => {
+        test('logDebug creates no log in production', async () => {
             process.env.NODE_ENV = 'production';
             await logger.logDebug('Should not appear', {}, 'test-module');
             await logger.flushLogs(true);
@@ -255,7 +255,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect(debugLog).toBeUndefined();
         });
 
-        test('logSanitizeがSANITIZEログを作成する', async () => {
+        test('logSanitize creates a SANITIZE log', async () => {
             await logger.logSanitize('Sanitized content', { masked: true }, 'PII_DET_001', 'pii-module');
             await logger.flushLogs(true);
 
@@ -265,7 +265,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect(sanitizeLog!.type).toBe('SANITIZE');
         });
 
-        test('logErrorのデフォルトエラーコードがUNKNOWN_ERROR', async () => {
+        test('defaults the logError error code to UNKNOWN_ERROR', async () => {
             await logger.logError('Default error code', {});
             await logger.flushLogs(true);
 
@@ -276,7 +276,7 @@ describe('Logger - Enhanced Coverage', () => {
     });
 
     describe('Log Pruning', () => {
-        test('7日より古いログが削除される', async () => {
+        test('deletes logs older than 7 days', async () => {
             // Create a log with old timestamp by directly manipulating storage
             const oldTimestamp = Date.now() - (8 * 24 * 60 * 60 * 1000); // 8 days ago
             const oldLog = {
@@ -301,7 +301,7 @@ describe('Logger - Enhanced Coverage', () => {
         });
 
         // PBI #6: ログ保持期間を3日、MAX_LOGSを500に短縮
-        test('4日より古いログが削除される（3日保持ポリシー）', async () => {
+        test('deletes logs older than 4 days (3-day retention policy)', async () => {
             const oldTimestamp = Date.now() - (4 * 24 * 60 * 60 * 1000); // 4 days ago
             const oldLog = {
                 id: 'old-log-4d',
@@ -320,7 +320,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect(logs.some((l: any) => l.message === 'New log')).toBe(true);
         });
 
-        test('MAX_LOGSを超えると古いログが切り詰められる', async () => {
+        test('truncates old logs when MAX_LOGS is exceeded', async () => {
             // Create 501 entries — exceeds target MAX_LOGS=500
             const logs = Array.from({ length: 501 }, (_, i) => ({
                 id: `log-${i}`,
@@ -341,7 +341,7 @@ describe('Logger - Enhanced Coverage', () => {
 
     // PBI #3: CSPRNGフォールバック
     describe('CSPRNG Fallback - Log ID Generation', () => {
-        test('crypto.randomUUIDが利用不可の場合、Math.randomではなくcrypto.getRandomValuesを使用する', async () => {
+        test('uses crypto.getRandomValues instead of Math.random when crypto.randomUUID is unavailable', async () => {
             // Override crypto.randomUUID to undefined to simulate unavailable environment
             // (delete may not work on @peculiar/webcrypto — use defineProperty instead)
             const originalRandomUUID = (globalThis.crypto as any).randomUUID;
@@ -375,7 +375,7 @@ describe('Logger - Enhanced Coverage', () => {
     });
 
     describe('ErrorCode Constants', () => {
-        test('全てのエラーコードが定義されている', () => {
+        test('defines all error codes', () => {
             const codes = logger.ErrorCode;
             expect(codes.STORAGE_READ_FAILURE).toBe('STRG_RD_001');
             expect(codes.STORAGE_WRITE_FAILURE).toBe('STRG_WR_001');
@@ -389,7 +389,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect(codes.BADGE_UPDATE_FAILED).toBe('UI_BADGE_001');
         });
 
-        test('LogType定数が正しく定義されている', () => {
+        test('defines the LogType constants correctly', () => {
             const types = logger.LogType;
             expect(types.INFO).toBe('INFO');
             expect(types.WARN).toBe('WARN');
@@ -400,31 +400,31 @@ describe('Logger - Enhanced Coverage', () => {
     });
 
     describe('isDevelopment', () => {
-        test('NODE_ENV=developmentでtrueを返す', () => {
+        test('returns true when NODE_ENV=development', () => {
             process.env.NODE_ENV = 'development';
             expect(logger.isDevelopment()).toBe(true);
         });
 
-        test('NODE_ENV=productionでfalseを返す', () => {
+        test('returns false when NODE_ENV=production', () => {
             process.env.NODE_ENV = 'production';
             expect(logger.isDevelopment()).toBe(false);
         });
 
-        test('NODE_ENV=testでfalseを返す', () => {
+        test('returns false when NODE_ENV=test', () => {
             process.env.NODE_ENV = 'test';
             expect(logger.isDevelopment()).toBe(false);
         });
     });
 
     describe('addLog Error Handling', () => {
-        test('エラー発生時もクラッシュしない', async () => {
+        test('does not crash even when an error occurs', async () => {
             // Temporarily break chrome.storage to trigger error path
             const originalSet = chrome.storage.local.set;
             (chrome.storage.local as any).set = vi.fn(() => Promise.reject(new Error('Storage error')));
 
             // Should not throw
-            await logger.addLog('INFO', 'Error test', {});
-            await logger.flushLogs(true);
+            await expect(logger.addLog('INFO', 'Error test', {})).resolves.not.toThrow();
+            await expect(logger.flushLogs(true)).resolves.not.toThrow();
 
             // Restore
             (chrome.storage.local as any).set = originalSet;
@@ -432,7 +432,7 @@ describe('Logger - Enhanced Coverage', () => {
     });
 
     describe('LogEntry Structure', () => {
-        test('ログエントリにIDとタイムスタンプが含まれる', async () => {
+        test('includes an ID and timestamp in log entries', async () => {
             await logger.addLog('INFO', 'Structure test', { data: 'test' });
             await logger.flushLogs(true);
 
@@ -445,7 +445,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect(typeof log!.timestamp).toBe('number');
         });
 
-        test('details 内の traceId をトップレベルに抽出する', async () => {
+        test('extracts traceId from details to the top level', async () => {
             await logger.addLog('INFO', 'Trace ID test', { data: 'test', traceId: 'trace-123' });
             await logger.flushLogs(true);
 
@@ -456,7 +456,7 @@ describe('Logger - Enhanced Coverage', () => {
             expect((log!.details as Record<string, unknown>).traceId).toBeUndefined();
         });
 
-        test('traceId が文字列でない場合は無視する', async () => {
+        test('ignores traceId when it is not a string', async () => {
             await logger.addLog('INFO', 'No trace ID test', { data: 'test', traceId: 123 });
             await logger.flushLogs(true);
 

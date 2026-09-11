@@ -26,7 +26,7 @@ describe('pipelineErrorRegression: 破損DBでも記録が失敗しない', () =
     vi.clearAllMocks();
   });
 
-  it('DomainVerifier.checkJpAnchor は jpAnchor 欠落でも例外を投げず UNVERIFIED を返す', () => {
+  it('DomainVerifier.checkJpAnchor returns UNVERIFIED without throwing when jpAnchor is missing', () => {
     const verifier = new DomainVerifier();
     const state = {
       database: { jpAnchor: undefined } as unknown as TrustDatabase,
@@ -38,7 +38,7 @@ describe('pipelineErrorRegression: 破損DBでも記録が失敗しない', () =
     expect(result.level).toBe(DomainTrustLevel.UNVERIFIED);
   });
 
-  it('DomainVerifier.checkJpAnchor は userTlds 欠落でも例外を投げず UNVERIFIED を返す', () => {
+  it('DomainVerifier.checkJpAnchor returns UNVERIFIED without throwing when userTlds is missing', () => {
     const verifier = new DomainVerifier();
     const state = {
       database: { jpAnchor: { tlds: ['.com'], userTlds: undefined } } as unknown as TrustDatabase,
@@ -59,7 +59,7 @@ describe('pipelineErrorRegression: 破損DBでも記録が失敗しない', () =
     expect(threw).toBe(false);
   });
 
-  it('DomainVerifier.checkSensitive は presets 欠落でも例外を投げず UNVERIFIED を返す', () => {
+  it('DomainVerifier.checkSensitive returns UNVERIFIED without throwing when presets is missing', () => {
     const verifier = new DomainVerifier();
     const state = {
       database: { sensitive: undefined } as unknown as TrustDatabase,
@@ -71,7 +71,7 @@ describe('pipelineErrorRegression: 破損DBでも記録が失敗しない', () =
     expect(result.level).toBe(DomainTrustLevel.UNVERIFIED);
   });
 
-  it('DomainVerifier.checkSensitive は presets.finance 欠落でも例外を投げず UNVERIFIED を返す', () => {
+  it('DomainVerifier.checkSensitive returns UNVERIFIED without throwing when presets.finance is missing', () => {
     const verifier = new DomainVerifier();
     const state = {
       database: { sensitive: { presets: undefined, userBlacklist: [], whitelist: [] } } as unknown as TrustDatabase,
@@ -83,7 +83,7 @@ describe('pipelineErrorRegression: 破損DBでも記録が失敗しない', () =
     expect(result.level).toBe(DomainTrustLevel.UNVERIFIED);
   });
 
-  it('TrustDb.isDomainTrusted は未初期化でも例外を投げず UNVERIFIED を返す', async () => {
+  it('TrustDb.isDomainTrusted returns UNVERIFIED without throwing when uninitialized', async () => {
     const db = getTrustDbAdmin();
     // 未初期化状態を強制: bloomFilter が無い状態でも UNVERIFIED を返す（trustDb.ts:332 のガード）
     db['state'] = { database: null, bloomFilter: null, initialized: false };
@@ -92,7 +92,7 @@ describe('pipelineErrorRegression: 破損DBでも記録が失敗しない', () =
     expect(result.reason).toMatch(/not initialized/i);
   });
 
-  it('TrustDb.doInitialize は破損DB（jpAnchor/presets欠落）を修復し pipeline-error を投げない', async () => {
+  it('TrustDb.doInitialize repairs corrupted DB missing jpAnchor/presets without throwing pipeline-error', async () => {
     const db = getTrustDbAdmin();
     // 直接 repairDatabase を呼び出し、破損DBが修復されることを検証（bloomFilter の integrity を回避）
     const corrupted = makeCorruptedDb({
@@ -115,7 +115,7 @@ describe('pipelineErrorRegression: 破損DBでも記録が失敗しない', () =
     expect(() => verifier.isDomainTrusted('https://www.bbc.com/news/articles/c770jyd4l7lo', state)).not.toThrow();
   });
 
-  it('BBC/CNN の実URLで pipeline が例外を投げない', async () => {
+  it('pipeline does not throw for real BBC/CNN URLs', async () => {
     const verifier = new DomainVerifier();
     const urls = [
       'https://www.bbc.com/news/articles/c770jyd4l7lo',

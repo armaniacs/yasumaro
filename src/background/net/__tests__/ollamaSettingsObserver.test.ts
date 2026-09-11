@@ -20,7 +20,7 @@ describe('createOllamaSettingsObserver', () => {
     vi.clearAllMocks();
   });
 
-  it('OLLAMA_BASE_URLの変更があればsyncFnを新しい値で呼ぶ', () => {
+  it('calls syncFn with the new value when OLLAMA_BASE_URL changes', () => {
     const syncFn = vi.fn().mockResolvedValue(undefined);
     const observer = createOllamaSettingsObserver(syncFn);
 
@@ -29,7 +29,7 @@ describe('createOllamaSettingsObserver', () => {
     expect(syncFn).toHaveBeenCalledWith('http://new-host:11434/v1');
   });
 
-  it('OLLAMA_BASE_URL以外のキー変更ではsyncFnを呼ばない', () => {
+  it('does not call syncFn for changes to keys other than OLLAMA_BASE_URL', () => {
     const syncFn = vi.fn().mockResolvedValue(undefined);
     const observer = createOllamaSettingsObserver(syncFn);
 
@@ -38,7 +38,7 @@ describe('createOllamaSettingsObserver', () => {
     expect(syncFn).not.toHaveBeenCalled();
   });
 
-  it('changesが空オブジェクトならsyncFnを呼ばない', () => {
+  it('does not call syncFn when changes is an empty object', () => {
     const syncFn = vi.fn().mockResolvedValue(undefined);
     const observer = createOllamaSettingsObserver(syncFn);
 
@@ -47,7 +47,7 @@ describe('createOllamaSettingsObserver', () => {
     expect(syncFn).not.toHaveBeenCalled();
   });
 
-  it('syncFnが失敗してもコールバック自体は例外を投げず、logWarnが呼ばれる', async () => {
+  it('does not throw when syncFn fails and calls logWarn instead', async () => {
     const syncFn = vi.fn().mockRejectedValue(new Error('updateDynamicRules failed'));
     const observer = createOllamaSettingsObserver(syncFn);
 
@@ -63,7 +63,7 @@ describe('createOllamaSettingsObserver', () => {
     });
   });
 
-  it('同一のOLLAMA_BASE_URL値で再呼び出ししてもsyncFnは呼ばれない', () => {
+  it('does not call syncFn again for the same OLLAMA_BASE_URL value', () => {
     const syncFn = vi.fn().mockResolvedValue(undefined);
     const observer = createOllamaSettingsObserver(syncFn);
 
@@ -75,7 +75,7 @@ describe('createOllamaSettingsObserver', () => {
     expect(syncFn).toHaveBeenCalledTimes(1);
   });
 
-  it('設定値がundefinedの場合はsyncFnを呼ばない（前回値と同一のためスキップ）', () => {
+  it('does not call syncFn when the setting is undefined (skips as identical to the previous value)', () => {
     const syncFn = vi.fn().mockResolvedValue(undefined);
     const observer = createOllamaSettingsObserver(syncFn);
 

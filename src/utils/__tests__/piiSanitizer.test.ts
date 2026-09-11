@@ -27,7 +27,7 @@ interface SanitizeOptions {
 
 describe('piiSanitizer', () => {
   describe('sanitizeRegex - 正常系', () => {
-    test('ハイフン区切りクレジットカード番号を検出してマスクできる', async () => {
+    test('detects and masks hyphen-separated credit card numbers', async () => {
       // 【テスト目的】: 最も重要なPII（クレジットカード）の検出確認
       // 【テスト内容】: 16桁のクレジットカード番号（4桁-4桁-4桁-4桁形式）の検出をテスト
       // 【期待される動作】: 正規表現でマッチし、[MASKED:creditCard]に置換
@@ -47,7 +47,7 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems[0]!.original).toBe('4111-1111-1111-1111'); // 【確認内容】: 元の値が記録されることを確認 🟢
     });
 
-    test('12桁のマイナンバーを検出してマスクできる', async () => {
+    test('detects and masks 12-digit My Number', async () => {
       // 【テスト目的】: 日本特有のPII検出機能の確認
       // 【テスト内容】: 4桁-4桁-4桁形式のマイナンバー検出をテスト
       // 【期待される動作】: 正規表現でマッチし、[MASKED:myNumber]に置換
@@ -65,7 +65,7 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems[0]!.type).toBe('myNumber'); // 【確認内容】: PIIタイプがmyNumberであることを確認 🟢
     });
 
-    test('標準的なメールアドレスを検出してマスクできる', async () => {
+    test('detects and masks standard email addresses', async () => {
       // 【テスト目的】: 頻出するPIIの検出確認
       // 【テスト内容】: RFC準拠の一般的なメールアドレス形式の検出をテスト
       // 【期待される動作】: @を含む文字列を正規表現でマッチし、[MASKED:email]に置換
@@ -83,7 +83,7 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems[0]!.type).toBe('email'); // 【確認内容】: PIIタイプがemailであることを確認 🟢
     });
 
-    test('ハイフン付き日本の携帯電話番号を検出してマスクできる', async () => {
+    test('detects and masks hyphenated Japanese mobile numbers', async () => {
       // 【テスト目的】: 地域固有のPII検出確認
       // 【テスト内容】: 090-xxxx-xxxx形式の携帯電話番号検出をテスト
       // 【期待される動作】: 日本の電話番号パターンでマッチし、[MASKED:phoneJp]に置換
@@ -101,7 +101,7 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems[0]!.type).toBe('phoneJp'); // 【確認内容】: PIIタイプがphoneJpであることを確認 🟢
     });
 
-    test('1つのテキスト内に複数種類のPIIが存在する場合にすべてマスクできる', async () => {
+    test('masks all PII types present in a single text', async () => {
       // 【テスト目的】: 包括的なPII検出機能の確認
       // 【テスト内容】: 異なる種類のPII（メール、電話、カード番号）の同時検出をテスト
       // 【期待される動作】: for...ofループですべてのパターンを適用し、すべてマスク
@@ -126,7 +126,7 @@ describe('piiSanitizer', () => {
   });
 
   describe('sanitizeRegex - 異常系', () => {
-    test('null入力に対して安全にエラーハンドリングできる', async () => {
+    test('handles null input safely with error handling', async () => {
       // 【テスト目的】: nullセーフティの確認
       // 【テスト内容】: 入力がnullの場合の早期リターンをテスト
       // 【期待される動作】: 例外をthrowせず、デフォルト値を返す
@@ -144,7 +144,7 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems).toEqual([]); // 【確認内容】: null入力時に空配列が返されることを確認 🟢
     });
 
-    test('undefined入力に対して安全にエラーハンドリングできる', async () => {
+    test('handles undefined input safely with error handling', async () => {
       // 【テスト目的】: undefinedセーフティの確認
       // 【テスト内容】: 入力がundefinedの場合の早期リターンをテスト
       // 【期待される動作】: 例外をthrowせず、デフォルト値を返す
@@ -161,7 +161,7 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems).toEqual([]); // 【確認内容】: undefined入力時に空配列が返されることを確認 🟢
     });
 
-    test('空文字列入力に対して正常に処理できる', async () => {
+    test('processes empty string input normally', async () => {
       // 【テスト目的】: 空入力に対する堅牢性確認
       // 【テスト内容】: 有効な文字列だが内容が空のケースをテスト
       // 【期待される動作】: 正規表現マッチが0件でもエラーにならない
@@ -178,7 +178,7 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems).toEqual([]); // 【確認内容】: 空文字列入力時に空配列が返されることを確認 🟢
     });
 
-    test('数値型入力に対して安全にエラーハンドリングできる', async () => {
+    test('handles numeric input safely with error handling', async () => {
       // 【テスト目的】: 型チェックの確認
       // 【テスト内容】: 型チェックでstring以外を弾く処理をテスト
       // 【期待される動作】: 型エラーを事前に防ぐ
@@ -197,7 +197,7 @@ describe('piiSanitizer', () => {
   });
 
   describe('sanitizeRegex - 境界値・エッジケース', () => {
-    test('PIIパターンに類似するが正当な数字列（商品コード）の扱いを確認', async () => {
+    test('verifies handling of legitimate digit strings (product codes) resembling PII patterns', async () => {
       // 【テスト目的】: 誤検知リスクの確認と仕様の明示
       // 【テスト内容】: 7桁の数字が銀行口座パターンとしてマスクされるかをテスト
       // 【期待される動作】: 現在の実装では7桁数字を銀行口座としてマスク（安全側に倒す仕様）
@@ -216,7 +216,7 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems[0]!.type).toBe('bankAccount'); // 【確認内容】: PIIタイプがbankAccountであることを確認 🟡
     });
 
-    test('スペース区切りのクレジットカード番号を検出できる', async () => {
+    test('detects space-separated credit card numbers', async () => {
       // 【テスト目的】: 柔軟なパターンマッチングの確認
       // 【テスト内容】: ハイフンではなくスペース区切りのクレジットカード番号検出をテスト
       // 【期待される動作】: スペース区切りでも正しくマッチ
@@ -232,7 +232,7 @@ describe('piiSanitizer', () => {
       expect(result.text).toBe('カード: [MASKED:creditCard]'); // 【確認内容】: スペース区切りのカード番号がマスクされることを確認 🟢
     });
 
-    test('同じテキスト内に同じ種類のPIIが複数存在する場合にすべてマスクできる', async () => {
+    test('masks every occurrence when the same PII type appears multiple times in one text', async () => {
       // 【テスト目的】: グローバルマッチングの確認
       // 【テスト内容】: replaceのグローバルフラグ（/g）が正しく動作するかをテスト
       // 【期待される動作】: すべてのマッチがマスクされる
@@ -251,7 +251,7 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems[1]!.original).toBe('user2@example.com'); // 【確認内容】: 2つ目の元の値が記録されることを確認 🟢
     });
 
-    test('大量テキスト（10,000文字）に対しても正常に動作する', async () => {
+    test('handles large text (10,000 chars) normally', async () => {
       // 【テスト目的】: パフォーマンスとセキュリティの確認
       // 【テスト内容】: 長文でも正規表現がReDoS攻撃に対して脆弱でないことをテスト
       // 【期待される動作】: 処理時間が許容範囲内で完了し、すべてのPIIがマスクされる
@@ -272,7 +272,7 @@ describe('piiSanitizer', () => {
       expect(elapsedTime).toBeLessThan(100); // 【確認内容】: 処理時間が100ms未満であることを確認（パフォーマンス） 🟡
     });
 
-    test('区切り文字を含まない異常に長い数字列（バックトラッキング誘発パターン）でも高速に処理される', async () => {
+    test('processes separator-less extra-long digit strings (backtracking-inducing patterns) quickly', async () => {
       // 【テスト目的】: emailパターン等が「@や空白を含まない巨大な文字列」に対して
       // O(n^2)的なバックトラッキングを起こさないことを確認する（ReDoS対策の事前フィルタ検証）
       // 事前フィルタは塊の先頭・末尾100文字を保持し中間のみ無効化するため、
@@ -289,7 +289,7 @@ describe('piiSanitizer', () => {
       expect(elapsedTime).toBeLessThan(500);
     });
 
-    test('異常に長い塊の前後にある正当なPIIは引き続き検出される', async () => {
+    test('still detects legitimate PII around an extra-long chunk', async () => {
       // 【テスト目的】: 事前フィルタが「長い塊の中間」のみを無効化し、区切り文字（空白）で
       // 隔てられた別トークンの正当なPII検出には影響しないことを確認する
       const evilPrefix = '9'.repeat(50000);
@@ -302,7 +302,7 @@ describe('piiSanitizer', () => {
       expect(emailMatches[0]!.original).toBe('user@example.com');
     });
 
-    test('区切り文字なしで長い塊の末尾に直接連結されたPIIも検出される', async () => {
+    test('detects PII directly appended to the end of a long chunk without separators', async () => {
       // 【テスト目的】: 事前フィルタが塊の末尾100文字を保持するため、
       // 区切り文字を挟まずに連結されたメールアドレスでも検出漏れが起きないことを確認する。
       // 塊の直前が英数字（'a'）だとメールのローカル部分（[a-zA-Z0-9._%+-]+）に
@@ -316,7 +316,7 @@ describe('piiSanitizer', () => {
       expect(emailMatches[0]!.original).toBe('user@example.com');
     });
 
-    test('区切り文字なしで長い塊の先頭に直接連結されたPIIも検出される', async () => {
+    test('detects PII directly prepended to the start of a long chunk without separators', async () => {
       // 【テスト目的】: 事前フィルタが塊の先頭100文字を保持するため、
       // 区切り文字を挟まずに連結されたメールアドレスでも検出漏れが起きないことを確認する
       const text = 'user@example.com ' + 'a'.repeat(50000);
@@ -330,7 +330,7 @@ describe('piiSanitizer', () => {
   });
 
   describe('sanitizeRegex - 入力サイズ制限', () => {
-    test('64KB以下の入力は正常に処理される', { timeout: 60000 }, async () => {
+    test('processes input of 64KB or less normally', { timeout: 60000 }, async () => {
       // 【テスト目的】: 入力サイズ制限の境界値確認
       // 【テスト内容】: 64KB未満の入力が正常に処理されることを確認
       const text = 'a'.repeat(64 * 1024 - 1); // 64KB - 1文字
@@ -341,7 +341,7 @@ describe('piiSanitizer', () => {
       expect(result.error).toBeUndefined();
     });
 
-    test('64KBの入力は正常に処理される', async () => {
+    test('processes 64KB input normally', async () => {
       // 【テスト目的】: 入力サイズ制限の境界値確認
       // 【テスト内容】: 64KB未満の入力が正常に処理されることを確認
       // 注: 複雑な正規表現パフォーマンス問題を避けるため、合理的なサイズでテスト
@@ -353,7 +353,7 @@ describe('piiSanitizer', () => {
       expect(result.error).toBeUndefined();
     });
 
-    test('64KBを超える入力はエラーを返す', async () => {
+    test('returns an error for input exceeding 64KB', async () => {
       // 【テスト目的】: 入力サイズ制限の確認
       // 【テスト内容】: 64KBを超える入力がエラーを返すことを確認
       const text = 'a'.repeat(64 * 1024 + 1); // 64KB + 1文字
@@ -365,7 +365,7 @@ describe('piiSanitizer', () => {
       expect(result.error).toContain('exceeds maximum limit');
     });
 
-    test('skipSizeLimitオプションでサイズ制限を回避できる', async () => {
+    test('bypasses the size limit with the skipSizeLimit option', async () => {
       // 【テスト目的】: skipSizeLimitオプションの確認
       // 【テスト内容】: skipSizeLimitオプションを使用するとサイズ制限を回避できることを確認
       // 注意: 小规模なテキストでskipSizeLimitオプションの動作確認を行う
@@ -377,7 +377,7 @@ describe('piiSanitizer', () => {
       expect(result.error).toBeUndefined();
     });
 
-    test('skipSizeLimit使用時512KB超はエラー', async () => {
+    test('returns an error over 512KB even with skipSizeLimit', async () => {
       // skipSizeLimit使用時であっても512KB超はエラーになる（DoS対策）
       const text = 'a'.repeat(512 * 1024 + 1);
       const result = await sanitizeRegex(text, { skipSizeLimit: true }) as SanitizeResult;
@@ -388,7 +388,7 @@ describe('piiSanitizer', () => {
   });
 
   describe('sanitizeRegex - タイムアウト機能', () => {
-    test('デフォルトのタイムアウト時間は5秒である', async () => {
+    test('defaults the timeout to 5 seconds', async () => {
       // 【テスト目的】: デフォルトタイムアウト値の確認
       // 【テスト内容】: デフォルトで5秒のタイムアウトが設定されていることを確認
       const text = 'test@example.com';
@@ -401,7 +401,7 @@ describe('piiSanitizer', () => {
       expect(elapsedTime).toBeLessThan(5000); // 5秒以内に完了
     });
 
-    test('カスタムタイムアウト時間を設定できる', async () => {
+    test('accepts a custom timeout', async () => {
       // 【テスト目的】: カスタムタイムアウト値の確認
       // 【テスト内容】: timeoutオプションでカスタムタイムアウトを設定できることを確認
       const text = 'test@example.com';
@@ -412,7 +412,7 @@ describe('piiSanitizer', () => {
       expect(result.error).toBeUndefined();
     });
 
-    test('タイムアウト時にエラーをスローする', async () => {
+    test('throws an error on timeout', async () => {
       // 【テスト目的】: タイムアウトエラーの確認
       // 【テスト内容】: 処理がタイムアウトした場合にエラーをスローすることを確認
       // 注: このテストは実際にタイムアウトを発生させるため、実行時間がかかる
@@ -428,14 +428,14 @@ describe('piiSanitizer', () => {
   });
 
   describe('sanitizeRegex - 入力バリデーション詳細', () => {
-    test('空文字列で早期リターンする', async () => {
+    test('returns early for empty string', async () => {
       const result = await sanitizeRegex('') as SanitizeResult;
       expect(result.text).toBe('');
       expect(result.maskedItems).toEqual([]);
       expect(result.error).toBeUndefined();
     });
 
-    test('カスタムタイムアウトで処理完了する', async () => {
+    test('completes processing with a custom timeout', async () => {
       const text = 'no pii here';
       const result = await sanitizeRegex(text, { timeout: 10000 }) as SanitizeResult;
       expect(result.text).toBe(text);
@@ -443,7 +443,7 @@ describe('piiSanitizer', () => {
       expect(result.error).toBeUndefined();
     });
 
-    test('skipSizeLimit=falseでサイズ制限を適用する', async () => {
+    test('enforces the size limit with skipSizeLimit=false', async () => {
       const text = 'user@example.com';
       const result = await sanitizeRegex(text, { skipSizeLimit: false }) as SanitizeResult;
       expect(result.text).toBe('[MASKED:email]');
@@ -452,62 +452,62 @@ describe('piiSanitizer', () => {
   });
 
   describe('sanitizeRegex - 追加PIIパターン', () => {
-    test('運転免許番号（日本）- 連続12桁を検出してマスクできる', async () => {
+    test('detects and masks Japanese driver license numbers (12 consecutive digits)', async () => {
       const text = '運転免許番号: 123456789012';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('運転免許番号: [MASKED:driverLicense]');
       expect(result.maskedItems[0]!.type).toBe('driverLicense');
     });
 
-    test('マイナンバー - ハイフン区切り12桁を検出してマスクできる', async () => {
+    test('detects and masks hyphen-separated 12-digit My Number', async () => {
       const text = 'マイナンバー: 1234-5678-9012';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('マイナンバー: [MASKED:myNumber]');
       expect(result.maskedItems[0]!.type).toBe('myNumber');
     });
 
-    test('パスポート番号（日本）- 2文字+7桁を検出してマスクできる', async () => {
+    test('detects and masks Japanese passport numbers (2 letters + 7 digits)', async () => {
       const text = 'パスポート番号: AB1234567';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('パスポート番号: [MASKED:jpPassport]');
       expect(result.maskedItems[0]!.type).toBe('jpPassport');
     });
 
-    test('プライベートIPv4アドレス（192.168.x.x）を検出してマスクできる', async () => {
+    test('detects and masks private IPv4 addresses (192.168.x.x)', async () => {
       const text = 'サーバーIP: 192.168.1.1';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('サーバーIP: [MASKED:ipv4]');
       expect(result.maskedItems[0]!.type).toBe('ipv4');
     });
 
-    test('プライベートIPv4アドレス（10.x.x.x）を検出してマスクできる', async () => {
+    test('detects and masks private IPv4 addresses (10.x.x.x)', async () => {
       const text = 'ネットワーク: 10.0.0.1';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('ネットワーク: [MASKED:ipv4]');
       expect(result.maskedItems[0]!.type).toBe('ipv4');
     });
 
-    test('パブリックIPv4アドレスはマスクしない', async () => {
+    test('leaves public IPv4 addresses unmasked', async () => {
       const text = 'DNSサーバー: 8.8.8.8';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('DNSサーバー: 8.8.8.8');
       expect(result.maskedItems).toHaveLength(0);
     });
 
-    test('IPv6アドレスを検出してマスクできる', async () => {
+    test('detects and masks IPv6 addresses', async () => {
       const text = 'IPv6: 2001:0db8:85a3:0000:0000:8a2e:0370:7334';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('IPv6: [MASKED:ipv6]');
       expect(result.maskedItems[0]!.type).toBe('ipv6');
     });
 
-    test('Luhn検証 - 不正なクレジットカード番号はマスクしない', async () => {
+    test('leaves Luhn-invalid credit card numbers unmasked', async () => {
       const text = 'カード番号: 1234-5678-9012-3457'; // 末尾1桁変更でLuhn失敗
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.maskedItems).toHaveLength(0);
     });
 
-    test('15桁クレジットカード番号（4-6-5形式）を検出してマスクできる', async () => {
+    test('detects and masks 15-digit credit card numbers (4-6-5 format)', async () => {
       // 【テスト目的】: 15桁カード番号パターンの検出確認
       // 378282246310005 は Luhn 有効な15桁番号
       const text = 'カード: 3782 822463 10005';
@@ -516,35 +516,35 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems[0]!.type).toBe('creditCard');
     });
 
-    test('プライベートIPv4アドレス（172.16-31.x.x）を検出してマスクできる', async () => {
+    test('detects and masks private IPv4 addresses (172.16-31.x.x)', async () => {
       const text = '内部ネットワーク: 172.20.15.42';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('内部ネットワーク: [MASKED:ipv4]');
       expect(result.maskedItems[0]!.type).toBe('ipv4');
     });
 
-    test('スペース区切りのマイナンバーを検出してマスクできる', async () => {
+    test('detects and masks space-separated My Number', async () => {
       const text = 'マイナンバー: 1234 5678 9012';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('マイナンバー: [MASKED:myNumber]');
       expect(result.maskedItems[0]!.type).toBe('myNumber');
     });
 
-    test('スペース区切りの電話番号を検出してマスクできる', async () => {
+    test('detects and masks space-separated phone numbers', async () => {
       const text = '電話: 090 1234 5678';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('電話: [MASKED:phoneJp]');
       expect(result.maskedItems[0]!.type).toBe('phoneJp');
     });
 
-    test('連続した12桁（ハイフンなし）は運転免許番号としてマスクされる', async () => {
+    test('masks consecutive 12 digits (no hyphens) as driver license numbers', async () => {
       const text = '番号: 123456789012';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('番号: [MASKED:driverLicense]');
       expect(result.maskedItems[0]!.type).toBe('driverLicense');
     });
 
-    test('ハイフンあり12桁はマイナンバーとして優先マスクされる', async () => {
+    test('preferentially masks hyphenated 12 digits as My Number', async () => {
       const text = '番号: 1234-5678-9012 と 123456789012';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('番号: [MASKED:myNumber] と [MASKED:driverLicense]');
@@ -553,21 +553,21 @@ describe('piiSanitizer', () => {
       expect(types).toContain('driverLicense');
     });
 
-    test('メールアドレスに特殊文字が含まれてもマスクできる', async () => {
+    test('masks email addresses containing special characters', async () => {
       const text = '連絡先: user.name+tag_%@example-domain.co.jp';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('連絡先: [MASKED:email]');
       expect(result.maskedItems[0]!.type).toBe('email');
     });
 
-    test('日本の固定電話番号（0X-XXXX-XXXX形式）を検出できる', async () => {
+    test('detects Japanese landline numbers (0X-XXXX-XXXX format)', async () => {
       const text = '電話: 03-1234-5678';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('電話: [MASKED:phoneJp]');
       expect(result.maskedItems[0]!.type).toBe('phoneJp');
     });
 
-    test('EU IBAN（ドイツ）を検出してマスクできる', async () => {
+    test('detects and masks German EU IBAN', async () => {
       const text = 'IBAN: DE89370400440532013000';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('IBAN: [MASKED:iban]');
@@ -575,70 +575,70 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems[0]!.original).toBe('DE89370400440532013000');
     });
 
-    test('EU IBAN（フランス）を検出してマスクできる', async () => {
+    test('detects and masks French EU IBAN', async () => {
       const text = 'IBAN: FR1420041010050500013M02606';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('IBAN: [MASKED:iban]');
       expect(result.maskedItems[0]!.type).toBe('iban');
     });
 
-    test('EU IBAN（イタリア）を検出してマスクできる', async () => {
+    test('detects and masks Italian EU IBAN', async () => {
       const text = 'IBAN: IT60X0542811101000000123456';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('IBAN: [MASKED:iban]');
       expect(result.maskedItems[0]!.type).toBe('iban');
     });
 
-    test('EU IBAN（スペイン）を検出してマスクできる', async () => {
+    test('detects and masks Spanish EU IBAN', async () => {
       const text = 'IBAN: ES9121000418450200051332';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('IBAN: [MASKED:iban]');
       expect(result.maskedItems[0]!.type).toBe('iban');
     });
 
-    test('EU IBAN（オランダ）を検出してマスクできる', async () => {
+    test('detects and masks Dutch EU IBAN', async () => {
       const text = 'IBAN: NL91ABNA0417164300';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('IBAN: [MASKED:iban]');
       expect(result.maskedItems[0]!.type).toBe('iban');
     });
 
-    test('ドイツ税ID（Steuerliche Identifikationsnummer）を検出してマスクできる', async () => {
+    test('detects and masks German tax ID (Steuerliche Identifikationsnummer)', async () => {
       const text = '税ID: 12345678901';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('税ID: [MASKED:deTaxId]');
       expect(result.maskedItems[0]!.type).toBe('deTaxId');
     });
 
-    test('フランスINSEE番号を検出してマスクできる', async () => {
+    test('detects and masks French INSEE numbers', async () => {
       const text = 'INSEE: 123456789012345';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('INSEE: [MASKED:frInsee]');
       expect(result.maskedItems[0]!.type).toBe('frInsee');
     });
 
-    test('イタリア税コード（Codice Fiscale）を検出してマスクできる', async () => {
+    test('detects and masks Italian tax code (Codice Fiscale)', async () => {
       const text = 'Codice Fiscale: RSSMRA85T10A562S';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('Codice Fiscale: [MASKED:itCodiceFiscale]');
       expect(result.maskedItems[0]!.type).toBe('itCodiceFiscale');
     });
 
-    test('スペインDNIを検出してマスクできる', async () => {
+    test('detects and masks Spanish DNI', async () => {
       const text = 'DNI: 12345678A';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('DNI: [MASKED:esDni]');
       expect(result.maskedItems[0]!.type).toBe('esDni');
     });
 
-    test('スペインNIEを検出してマスクできる', async () => {
+    test('detects and masks Spanish NIE', async () => {
       const text = 'NIE: X1234567A';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('NIE: [MASKED:esNie]');
       expect(result.maskedItems[0]!.type).toBe('esNie');
     });
 
-    test('EU PII追加後も既存の日本・米国パターンは影響を受けない', async () => {
+    test('leaves existing Japanese and US patterns unaffected after adding EU PII', async () => {
       const text = 'メール: user@example.com, 電話: 090-1234-5678, SSN: 123-45-6789';
       const result = await sanitizeRegex(text) as SanitizeResult;
       expect(result.text).toBe('メール: [MASKED:email], 電話: [MASKED:phoneJp], SSN: [MASKED:ssn]');
@@ -650,7 +650,7 @@ describe('piiSanitizer', () => {
   });
 
   describe('sanitizeRegex - 出力サイズ制限・切り詰め', () => {
-    test('skipSizeLimit使用時に出力が128KBを超えると切り詰められる', async () => {
+    test('truncates output exceeding 128KB with skipSizeLimit', async () => {
       // 【テスト目的】: 出力サイズ超過時の切り詰めロジック（lines 292-299）をカバー
       // 【テスト内容】: skipSizeLimitで130KBのPIIなしテキストを通すと、
       //                 出力が128KBを超えて切り詰められることを確認
@@ -665,7 +665,7 @@ describe('piiSanitizer', () => {
       expect(result.error).toContain('131072');
     });
 
-    test('出力切り詰め時に128KB境界内のPII項目のみ保持される', async () => {
+    test('keeps only PII items within the 128KB boundary on output truncation', async () => {
       // 【テスト目的】: 切り詰め後のmaskedItemsフィルタリングを確認
       // 【テスト内容】: 先頭にPII（銀行口座）を置き、その後ろに空白パディングで
       //                 出力が128KBを超えるテキストを作成し、
@@ -687,7 +687,7 @@ describe('piiSanitizer', () => {
   });
 
   describe('sanitizeRegex - 複雑なマスキングシナリオ', () => {
-    test('重複するPIIパターンの範囲が適切に解決される', async () => {
+    test('resolves overlapping PII pattern ranges correctly', async () => {
       // 16桁カード番号の一部が7桁銀行口座としてもマッチする可能性があるが、
       // より長いマッチが優先される仕様を確認
       const text = 'カード: 4111-1111-1111-1111';
@@ -698,7 +698,7 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems[0]!.original).toBe('4111-1111-1111-1111');
     });
 
-    test('複数の同一タイプPIIが混在する大規模テキストを処理できる', async () => {
+    test('processes large text mixing multiple same-type PII', async () => {
       const emails = Array.from({ length: 50 }, (_, i) => `user${i}@example.com`).join(' ');
       const result = await sanitizeRegex(emails) as SanitizeResult;
 
@@ -707,7 +707,7 @@ describe('piiSanitizer', () => {
       expect(result.text.split('[MASKED:email]').length - 1).toBe(50);
     });
 
-    test('PIIがない64KB境界値テキストを正常に処理できる', { timeout: 60000 }, async () => {
+    test('processes PII-free 64KB boundary text normally', { timeout: 60000 }, async () => {
       const text = 'x'.repeat(64 * 1024); // ちょうど64KB
       const result = await sanitizeRegex(text) as SanitizeResult;
 
@@ -716,19 +716,19 @@ describe('piiSanitizer', () => {
       expect(result.error).toBeUndefined();
     });
 
-    test('真偽値入力に対して安全にエラーハンドリングできる', async () => {
+    test('handles boolean input safely with error handling', async () => {
       const result = await sanitizeRegex(true as never) as SanitizeResult;
       expect(result.text).toBe('');
       expect(result.maskedItems).toEqual([]);
     });
 
-    test('オブジェクト入力に対して安全にエラーハンドリングできる', async () => {
+    test('handles object input safely with error handling', async () => {
       const result = await sanitizeRegex({} as never) as SanitizeResult;
       expect(result.text).toBe('');
       expect(result.maskedItems).toEqual([]);
     });
 
-    test('MAX_INPUT_SIZE超過テキストはエラーを返す', async () => {
+    test('returns an error for text exceeding MAX_INPUT_SIZE', async () => {
       const oversized = 'a'.repeat(MAX_INPUT_SIZE + 1);
       const result = await sanitizeRegex(oversized) as SanitizeResult;
       expect(result.text).toBe(oversized);
@@ -739,7 +739,7 @@ describe('piiSanitizer', () => {
     // VULN-019 CI fix: timeout=0 is timing-dependent and flaky.
     // Original intent: verify timeout=0 does not hang or crash.
     // The function may complete or reject depending on CPU timing; either is acceptable.
-    test('タイムアウト0msでもクラッシュしない（完了またはタイムアウト）', async () => {
+    test('never crashes with 0ms timeout (completes or times out)', async () => {
       const manyEmails = Array.from({ length: 20 }, (_, i) => `user${i}@example.com`).join(' ');
       try {
         const result = await sanitizeRegex(manyEmails, { timeout: 0 }) as SanitizeResult;
@@ -753,7 +753,7 @@ describe('piiSanitizer', () => {
   });
 
   describe('sanitizeRegex - includeIndices オプション', () => {
-    test('includeIndices オプションでマスク位置を取得できる', async () => {
+    test('returns mask positions with the includeIndices option', async () => {
       const text = 'メール: user@example.com';
       const result = await sanitizeRegex(text, { includeIndices: true }) as SanitizeResult;
 
@@ -766,7 +766,7 @@ describe('piiSanitizer', () => {
       });
     });
 
-    test('includeIndices=false のとき index は含まれない', async () => {
+    test('omits index when includeIndices=false', async () => {
       const text = 'メール: user@example.com';
       const result = await sanitizeRegex(text) as SanitizeResult;
 
@@ -775,7 +775,7 @@ describe('piiSanitizer', () => {
   });
 
   describe('sanitizeRegex - 長トークン内部のPII', () => {
-    test('長い空白なしトークンの中央に埋め込まれたメールアドレスをマスクできる', async () => {
+    test('masks an email embedded in the middle of a long whitespace-free token', async () => {
       // 【テスト目的】: 200文字を超える空白なしトークンの中央に埋め込まれた
       // メールアドレスが検出・マスクされることを確認（PBI-06）
       const input = 'a'.repeat(150) + 'user@example.com' + 'b'.repeat(150);
@@ -785,7 +785,7 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems.some(item => item.type === 'email')).toBe(true);
     });
 
-    test('長いURLクエリパラメータに埋め込まれたメールアドレスをマスクできる', async () => {
+    test('masks an email embedded in long URL query parameters', async () => {
       // 【テスト目的】: 長いURLのクエリパラメータ（?email=...）に埋め込まれた
       // メールアドレスが検出・マスクされることを確認（PBI-06）
       const input = `https://example.com/${'x'.repeat(200)}?email=user@example.com&next=${'y'.repeat(100)}`;
@@ -795,7 +795,7 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems.some(item => item.type === 'email')).toBe(true);
     });
 
-    test('長い空白なしトークンの中央に埋め込まれた電話番号をマスクできる', async () => {
+    test('masks a phone number embedded in the middle of a long whitespace-free token', async () => {
       // 【テスト目的】: 長いトークンの中央に埋め込まれた電話番号も検出・マスクされる
       // ことを確認（PBI-06）。電話番号パターンは `\b` 境界が必要なため、
       // 区切り文字（/）を直前に置いた形で検証する。
@@ -806,7 +806,7 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems.some(item => item.type === 'phoneJp')).toBe(true);
     });
 
-    test('64KBの入力もタイムアウト内で処理できる', async () => {
+    test('processes 64KB input within the timeout', async () => {
       // 【テスト目的】: 最大入力サイズ（64KB）の空白なしテキストが
       // タイムアウト内で完了することを確認（PBI-06、ReDoS対策の回帰防止）
       const input = 'a'.repeat(64 * 1024);

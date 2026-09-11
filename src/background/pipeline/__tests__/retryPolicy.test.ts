@@ -15,7 +15,7 @@ describe('RetryPolicy.isNetworkError — ADR 2026-08-27 enumeration', () => {
       'connection refused',
       'service unavailable',
     ]) {
-      expect(policy.isNetworkError(new Error(msg)), msg).toBe(true);
+      expect(policy.isNetworkError(new Error(msg))).toBe(true);
     }
   });
 

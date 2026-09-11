@@ -96,7 +96,7 @@ describe('sanitizePreview', () => {
   });
 
   describe('showPreview', () => {
-    test('モーダルが存在しない場合、confirmed=trueで即座にresolveする', async () => {
+    test('resolves immediately with confirmed=true when modal is missing', async () => {
       document.body.innerHTML = '';
       const loggerModule = await import('../../utils/logger.js');
       const logErrorSpy = vi.spyOn(loggerModule, 'logError').mockImplementation(() => Promise.resolve());
@@ -112,7 +112,7 @@ describe('sanitizePreview', () => {
       logErrorSpy.mockRestore();
     });
 
-    test('モーダルを表示し、プレビューコンテンツを設定する', async () => {
+    test('shows modal and sets preview content', async () => {
       const modal = document.getElementById('confirmationModal') as HTMLDialogElement;
       const textarea = document.getElementById('previewContent') as HTMLTextAreaElement;
 
@@ -129,7 +129,7 @@ describe('sanitizePreview', () => {
       expect(result.content).toBe('Hello World');
     });
 
-    test('空コンテンツでもモーダルを表示する', async () => {
+    test('shows modal with empty content', async () => {
       const textarea = document.getElementById('previewContent') as HTMLTextAreaElement;
 
       const promise = showPreview('');
@@ -144,7 +144,7 @@ describe('sanitizePreview', () => {
       expect(result.content).toBe('');
     });
 
-    test('nullコンテンツでもモーダルを表示する', async () => {
+    test('shows modal with null content', async () => {
       const textarea = document.getElementById('previewContent') as HTMLTextAreaElement;
 
       const promise = showPreview(null as unknown as string);
@@ -158,7 +158,7 @@ describe('sanitizePreview', () => {
       expect(result).toEqual({ confirmed: true, content: '' });
     });
 
-    test('キャンセルボタンでconfirmed=falseでresolveする', async () => {
+    test('resolves with confirmed=false on cancel button', async () => {
       const promise = showPreview('some content');
 
       const cancelBtn = document.getElementById('cancelPreviewBtn') as HTMLButtonElement;
@@ -169,7 +169,7 @@ describe('sanitizePreview', () => {
       expect(result.content).toBeNull();
     });
 
-    test('閉じるボタンでconfirmed=falseでresolveする', async () => {
+    test('resolves with confirmed=false on close button', async () => {
       const promise = showPreview('some content');
 
       const closeBtn = document.getElementById('closeModalBtn') as HTMLButtonElement;
@@ -180,7 +180,7 @@ describe('sanitizePreview', () => {
       expect(result.content).toBeNull();
     });
 
-    test('showModal()を呼び出す（M21: ネイティブdialogがフォーカストラップ・ESC処理を担う）', async () => {
+    test('calls showModal (M21: native dialog owns focus trap and ESC handling)', async () => {
       const modal = document.getElementById('confirmationModal') as HTMLDialogElement;
       const showModalSpy = vi.spyOn(modal, 'showModal');
 
@@ -193,7 +193,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('ESCキー相当のdialog close（cancel）でconfirmed=falseにresolveする', async () => {
+    test('resolves with confirmed=false on native dialog close (ESC path)', async () => {
       const modal = document.getElementById('confirmationModal') as HTMLDialogElement;
 
       const promise = showPreview('content');
@@ -206,7 +206,7 @@ describe('sanitizePreview', () => {
       expect(result.content).toBeNull();
     });
 
-    test('マスクされたアイテムがある場合、ステータスメッセージを表示する', async () => {
+    test('shows status message when masked items exist', async () => {
       const promise = showPreview(
         'Hello [MASKED:email] World',
         [{ type: 'email' }] as unknown as Parameters<typeof showPreview>[1],
@@ -222,7 +222,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('マスクカウントが0の場合、ステータスメッセージを非表示にする', async () => {
+    test('hides status message when mask count is 0', async () => {
       const promise = showPreview('Hello World', null, 0);
 
       const statusMsg = document.getElementById('maskStatusMessage');
@@ -235,7 +235,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('複数のマスクタイプでグループ化されたステータステキストを生成する', async () => {
+    test('groups multiple mask types into status text', async () => {
       const promise = showPreview(
         '[MASKED:email] [MASKED:creditCard]',
         [{ type: 'email' }, { type: 'creditCard' }] as unknown as Parameters<typeof showPreview>[1],
@@ -252,7 +252,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('文字列形式のmaskedItemsを処理する', async () => {
+    test('handles string-form maskedItems', async () => {
       const promise = showPreview(
         '[MASKED:email]',
         ['email'],
@@ -268,7 +268,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('未知のマスクタイプでtype名をそのまま表示する', async () => {
+    test('displays raw type name for unknown mask types', async () => {
       const promise = showPreview(
         '[MASKED:custom]',
         [{ type: 'customType' }] as unknown as Parameters<typeof showPreview>[1],
@@ -284,7 +284,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('maskedItemsが空配列の場合、カウントベースのメッセージを使用する', async () => {
+    test('uses count-based message when maskedItems is empty', async () => {
       const promise = showPreview(
         '[MASKED:email]',
         [],
@@ -300,7 +300,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('maskedItemsがnullの場合、カウントベースのメッセージを使用する', async () => {
+    test('uses count-based message when maskedItems is null', async () => {
       const promise = showPreview(
         '[MASKED:email]',
         null,
@@ -316,7 +316,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('MASKEDトークンの位置にtextareaの選択範囲を設定する', async () => {
+    test('selects textarea range at MASKED token position', async () => {
       const textarea = document.getElementById('previewContent') as HTMLTextAreaElement;
       const content = 'Hello [MASKED:email] World';
 
@@ -330,7 +330,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('MASKEDトークンがない場合、textareaにフォーカスする', async () => {
+    test('focuses textarea when no MASKED token exists', async () => {
       const textarea = document.getElementById('previewContent') as HTMLTextAreaElement;
       const focusSpy = vi.spyOn(textarea, 'focus');
 
@@ -344,7 +344,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('マスクナビゲーションUIが構築される', async () => {
+    test('builds mask navigation UI', async () => {
       const promise = showPreview(
         '[MASKED:email] text [MASKED:phone]',
         [{ type: 'email' }, { type: 'phoneJp' }] as unknown as Parameters<typeof showPreview>[1],
@@ -368,7 +368,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('マスクがない場合、ナビゲーションUIを非表示にする', async () => {
+    test('hides navigation UI when no masks exist', async () => {
       const promise = showPreview('No masked content');
 
       const nav = document.getElementById('maskNav');
@@ -383,7 +383,7 @@ describe('sanitizePreview', () => {
   });
 
   describe('cleansingInfo', () => {
-    test('cleansedReasonがnoneの場合、cleansingInfoを非表示にする', async () => {
+    test('hides cleansingInfo when cleansedReason is none', async () => {
       const cleansingInfo = document.getElementById('cleansingInfo') as HTMLElement;
       cleansingInfo.classList.remove('hidden');
 
@@ -396,7 +396,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('cleansedReasonがundefinedの場合、cleansingInfoを非表示にする', async () => {
+    test('hides cleansingInfo when cleansedReason is undefined', async () => {
       const cleansingInfo = document.getElementById('cleansingInfo') as HTMLElement;
       cleansingInfo.classList.remove('hidden');
 
@@ -409,7 +409,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('cleansedReasonがhardの場合、バッジを表示する', async () => {
+    test('shows badge when cleansedReason is hard', async () => {
       const promise = showPreview('content', null, 0, 'hard', {
         hardStripRemoved: 5,
         keywordStripRemoved: 0,
@@ -428,7 +428,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('cleansedReasonがkeywordの場合、バッジを表示する', async () => {
+    test('shows badge when cleansedReason is keyword', async () => {
       const promise = showPreview('content', null, 0, 'keyword', {
         hardStripRemoved: 0,
         keywordStripRemoved: 3,
@@ -444,7 +444,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('cleansedReasonがbothの場合、バッジを表示する', async () => {
+    test('shows badge when cleansedReason is both', async () => {
       const promise = showPreview('content', null, 0, 'both', {
         hardStripRemoved: 2,
         keywordStripRemoved: 3,
@@ -461,7 +461,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('cleanseStatsがundefinedの場合、バッジテキストのみ表示する', async () => {
+    test('shows badge text only when cleanseStats is undefined', async () => {
       const promise = showPreview('content', null, 0, 'hard');
 
       const badge = document.getElementById('cleansingBadge') as HTMLElement;
@@ -472,7 +472,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('cleanseStats.totalRemovedが0の場合、詳細を表示しない', async () => {
+    test('omits details when cleanseStats.totalRemoved is 0', async () => {
       const promise = showPreview('content', null, 0, 'hard', {
         hardStripRemoved: 0,
         keywordStripRemoved: 0,
@@ -489,12 +489,17 @@ describe('sanitizePreview', () => {
   });
 
   describe('initializeModalEvents', () => {
-    test('モーダルボタンのイベントリスナーを設定する', () => {
+    test('wires modal buttons so confirm click resolves the preview', async () => {
+      // initializeModalEvents attaches the confirm/cancel/close listeners;
+      // a confirm click must resolve the pending showPreview promise.
+      const promise = showPreview('wired content');
       initializeModalEvents();
-      expect(true).toBe(true);
+      (document.getElementById('confirmPreviewBtn') as HTMLButtonElement).click();
+      const result = await promise;
+      expect(result).toEqual({ confirmed: true, content: 'wired content' });
     });
 
-    test('ResizeObserverが利用可能な場合、textareaを監視する', () => {
+    test('observes textarea when ResizeObserver is available', () => {
       const previewContent = document.getElementById('previewContent') as HTMLTextAreaElement;
       const observeSpy = vi.fn();
       const disconnectSpy = vi.fn();
@@ -512,7 +517,7 @@ describe('sanitizePreview', () => {
       expect(observeSpy).toHaveBeenCalledWith(previewContent);
     });
 
-    test('2回呼び出すと、前のResizeObserverをdisconnectする', () => {
+    test('disconnects previous ResizeObserver on second call', () => {
       const disconnectSpy = vi.fn();
 
       global.ResizeObserver = vi.fn().mockImplementation(function () {
@@ -529,7 +534,7 @@ describe('sanitizePreview', () => {
       expect(disconnectSpy).toHaveBeenCalled();
     });
 
-    test('イベントリスナーの二重登録を防止する', () => {
+    test('prevents duplicate event listener registration', () => {
       const addEventListenerSpy = vi.spyOn(
         document.getElementById('closeModalBtn')!,
         'addEventListener'
@@ -546,17 +551,17 @@ describe('sanitizePreview', () => {
       addEventListenerSpy.mockRestore();
     });
 
-    test('モーダル要素が存在しない場合でもエラーにならない', () => {
+    test('does not throw when modal element is missing', () => {
       document.body.innerHTML = '';
       expect(() => initializeModalEvents()).not.toThrow();
     });
 
-    test('ボタン要素が存在しない場合でもエラーにならない', () => {
+    test('does not throw when button elements are missing', () => {
       document.body.innerHTML = '<div id="confirmationModal"></div>';
       expect(() => initializeModalEvents()).not.toThrow();
     });
 
-    test('ResizeObserverが未定義の場合でもエラーにならない', () => {
+    test('does not throw when ResizeObserver is undefined', () => {
       const originalRO = global.ResizeObserver;
       // @ts-expect-error - testing undefined ResizeObserver
       delete global.ResizeObserver;
@@ -566,7 +571,7 @@ describe('sanitizePreview', () => {
       global.ResizeObserver = originalRO;
     });
 
-    test('previewContentが存在しない場合でもResizeObserverを設定しない', () => {
+    test('skips ResizeObserver setup when previewContent is missing', () => {
       document.body.innerHTML = '<div id="confirmationModal"></div>';
 
       const observeSpy = vi.fn();
@@ -583,7 +588,7 @@ describe('sanitizePreview', () => {
       expect(observeSpy).not.toHaveBeenCalled();
     });
 
-    test('モーダルが閉じている間はResizeObserverのコールバックがbody幅を変更しない', () => {
+    test('ResizeObserver callback leaves body width unchanged while modal is closed', () => {
       let resizeCallback: (() => void) | undefined;
       global.ResizeObserver = vi.fn().mockImplementation(function (cb: () => void) {
         resizeCallback = cb;
@@ -605,7 +610,7 @@ describe('sanitizePreview', () => {
       expect(document.body.style.width).toBe('360px');
     });
 
-    test('モーダルが開いている間はResizeObserverのコールバックでbody幅を追従させる', () => {
+    test('ResizeObserver callback syncs body width while modal is open', () => {
       let resizeCallback: (() => void) | undefined;
       global.ResizeObserver = vi.fn().mockImplementation(function (cb: () => void) {
         resizeCallback = cb;
@@ -629,7 +634,7 @@ describe('sanitizePreview', () => {
   });
 
   describe('cleanupModalEvents', () => {
-    test('ResizeObserverをdisconnectする', () => {
+    test('disconnects ResizeObserver', () => {
       const disconnectSpy = vi.fn();
 
       global.ResizeObserver = vi.fn().mockImplementation(function () {
@@ -646,21 +651,21 @@ describe('sanitizePreview', () => {
       expect(disconnectSpy).toHaveBeenCalled();
     });
 
-    test('ResizeObserverが未設定でもエラーにならない', () => {
+    test('does not throw when ResizeObserver is not set', () => {
       expect(() => cleanupModalEvents()).not.toThrow();
     });
   });
 
   describe('jumpToNextMasked / jumpToPrevMasked', () => {
-    test('マスク位置がない場合、jumpToNextMaskedは何もしない', () => {
+    test('jumpToNextMasked does nothing without mask positions', () => {
       expect(() => jumpToNextMasked()).not.toThrow();
     });
 
-    test('マスク位置がない場合、jumpToPrevMaskedは何もしない', () => {
+    test('jumpToPrevMasked does nothing without mask positions', () => {
       expect(() => jumpToPrevMasked()).not.toThrow();
     });
 
-    test('showPreview後にjumpToNextMaskedが次のマスクにジャンプする', async () => {
+    test('jumpToNextMasked jumps to next mask after showPreview', async () => {
       const content = '[MASKED:a] middle [MASKED:b] end';
 
       const promise = showPreview(content, [{ type: 'email' }, { type: 'email' }] as unknown as Parameters<typeof showPreview>[1], 2);
@@ -680,7 +685,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('showPreview後にjumpToPrevMaskedが前のマスクに戻る', async () => {
+    test('jumpToPrevMasked returns to previous mask after showPreview', async () => {
       const content = '[MASKED:a] middle [MASKED:b] end';
 
       const promise = showPreview(content, [{ type: 'email' }, { type: 'email' }] as unknown as Parameters<typeof showPreview>[1], 2);
@@ -696,7 +701,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('最後のマスクからnextで最初に戻る（ラップアラウンド）', async () => {
+    test('wraps to first mask on next from last mask', async () => {
       const content = '[MASKED:a] [MASKED:b]';
 
       const promise = showPreview(content, [{ type: 'email' }, { type: 'email' }] as unknown as Parameters<typeof showPreview>[1], 2);
@@ -712,7 +717,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('最初のマスクからprevで最後にジャンプする（ラップアラウンド）', async () => {
+    test('jumps to last mask on prev from first mask', async () => {
       const content = '[MASKED:a] [MASKED:b]';
 
       const promise = showPreview(content, [{ type: 'email' }, { type: 'email' }] as unknown as Parameters<typeof showPreview>[1], 2);
@@ -729,7 +734,7 @@ describe('sanitizePreview', () => {
   });
 
   describe('collectMaskedPositions', () => {
-    test('複数のMASKEDトークンの位置を収集する', async () => {
+    test('collects positions of multiple MASKED tokens', async () => {
       const content = 'Start [MASKED:email] middle [MASKED:phone] end';
 
       const promise = showPreview(content, [{ type: 'email' }, { type: 'phoneJp' }] as unknown as Parameters<typeof showPreview>[1], 2);
@@ -745,7 +750,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('MASKEDトークンがない場合、ナビゲーションを非表示にする', async () => {
+    test('hides navigation when no MASKED token exists', async () => {
       const promise = showPreview('No tokens here');
 
       const nav = document.getElementById('maskNav');
@@ -758,7 +763,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('様々なMASKEDトークン形式を検出する', async () => {
+    test('detects various MASKED token formats', async () => {
       const content = '[MASKED:email] [MASKED:creditCard123] [MASKED:my_number]';
 
       const promise = showPreview(
@@ -777,7 +782,7 @@ describe('sanitizePreview', () => {
   });
 
   describe('body width adjustment', () => {
-    test('キャンセル時にbody幅をリセットする', async () => {
+    test('resets body width on cancel', async () => {
       const promise = showPreview('content');
 
       const cancelBtn = document.getElementById('cancelPreviewBtn') as HTMLButtonElement;
@@ -788,7 +793,7 @@ describe('sanitizePreview', () => {
       expect(document.body.style.width).toBe('320px');
     });
 
-    test('確認時にbody幅をリセットする', async () => {
+    test('resets body width on confirm', async () => {
       const promise = showPreview('content');
 
       const confirmBtn = document.getElementById('confirmPreviewBtn') as HTMLButtonElement;
@@ -809,7 +814,7 @@ describe('sanitizePreview', () => {
       return [...focusTrapManager.handlers.values()].filter((h) => h.element === modal).length;
     }
 
-    test('showPreview で trap し、confirm で release する', async () => {
+    test('traps on showPreview and releases on confirm', async () => {
       const trapSpy = vi.spyOn(focusTrapManager, 'trap');
       const releaseSpy = vi.spyOn(focusTrapManager, 'release');
       try {
@@ -831,7 +836,7 @@ describe('sanitizePreview', () => {
       }
     });
 
-    test('cancel ボタンで release する', async () => {
+    test('releases on cancel button', async () => {
       const releaseSpy = vi.spyOn(focusTrapManager, 'release');
       try {
         const promise = showPreview('some content');
@@ -848,7 +853,7 @@ describe('sanitizePreview', () => {
       }
     });
 
-    test('ネイティブ close（Escape 経路）で release し confirmed=false で resolve する', async () => {
+    test('releases on native close (Escape path) and resolves confirmed=false', async () => {
       const releaseSpy = vi.spyOn(focusTrapManager, 'release');
       try {
         const promise = showPreview('some content');
@@ -865,7 +870,7 @@ describe('sanitizePreview', () => {
       }
     });
 
-    test('連続 showPreview で二重 trap しない', async () => {
+    test('avoids double trap on consecutive showPreview', async () => {
       const trapSpy = vi.spyOn(focusTrapManager, 'trap');
       const releaseSpy = vi.spyOn(focusTrapManager, 'release');
       try {
@@ -890,7 +895,7 @@ describe('sanitizePreview', () => {
       }
     });
 
-    test('Tab 移動が dialog 内を循環する', async () => {
+    test('cycles Tab movement inside dialog', async () => {
       const promise = showPreview('Hello World');
       const modal = document.getElementById('confirmationModal') as HTMLElement;
       const focusables = getFocusableElements(modal);
@@ -912,7 +917,7 @@ describe('sanitizePreview', () => {
       await promise;
     });
 
-    test('閉じると開く前の要素にフォーカスが復帰する', async () => {
+    test('restores focus to opener element on close', async () => {
       const opener = document.createElement('button');
       opener.id = 'opener';
       opener.textContent = 'opener';

@@ -30,7 +30,7 @@ beforeEach(() => {
 });
 
 describe('migrateJpLayoutDefault', () => {
-  test('既に移行済みの場合は何もせずfalseを返す', async () => {
+  test('returns false without doing anything when already migrated', async () => {
     (global as any).chrome.storage.local.get.mockResolvedValue({
       migration_jp_layout_default_done: true
     });
@@ -41,7 +41,7 @@ describe('migrateJpLayoutDefault', () => {
     expect((global as any).chrome.storage.local.set).not.toHaveBeenCalled();
   });
 
-  test('jpLayoutを既に明示的に設定しているユーザーは上書きしない', async () => {
+  test('does not overwrite jpLayout for users who set it explicitly', async () => {
     (global as any).chrome.storage.local.get.mockResolvedValueOnce({
       ai_summary_cleansing_jp_layout: true
     });
@@ -56,7 +56,7 @@ describe('migrateJpLayoutDefault', () => {
     expect((global as any).chrome.storage.local.set).toHaveBeenCalledTimes(1);
   });
 
-  test('jpLayout未設定かつ他の設定が存在する既存ユーザーはfalseに設定される', async () => {
+  test('sets false for existing users with unset jpLayout and other settings present', async () => {
     (global as any).chrome.storage.local.get.mockImplementation((keys: unknown) => {
       if (keys === null) {
         return Promise.resolve({ some_other_setting: 'value' });
@@ -75,7 +75,7 @@ describe('migrateJpLayoutDefault', () => {
     });
   });
 
-  test('ストレージが完全に空の新規インストールでは何も上書きしない', async () => {
+  test('overwrites nothing on a fresh install with empty storage', async () => {
     (global as any).chrome.storage.local.get.mockImplementation((keys: unknown) => {
       if (keys === null) {
         return Promise.resolve({});
@@ -95,7 +95,7 @@ describe('migrateJpLayoutDefault', () => {
 });
 
 describe('migrateCategoryBDefault', () => {
-  test('既に移行済みの場合は何もせずfalseを返す', async () => {
+  test('returns false without doing anything when already migrated', async () => {
     (global as any).chrome.storage.local.get.mockResolvedValue({
       migration_category_b_default_done: true
     });
@@ -106,7 +106,7 @@ describe('migrateCategoryBDefault', () => {
     expect((global as any).chrome.storage.local.set).not.toHaveBeenCalled();
   });
 
-  test('Category Bキーのいずれかを既に設定済みのユーザーは上書きしない', async () => {
+  test('does not overwrite users who already set any Category B key', async () => {
     (global as any).chrome.storage.local.get.mockResolvedValueOnce({
       ai_summary_cleansing_news_media: true
     });
@@ -120,7 +120,7 @@ describe('migrateCategoryBDefault', () => {
     expect((global as any).chrome.storage.local.set).toHaveBeenCalledTimes(1);
   });
 
-  test('未設定かつ他の設定が存在する既存ユーザーは4フラグすべてfalseに設定される', async () => {
+  test('sets all 4 flags to false for existing users with unset keys and other settings present', async () => {
     (global as any).chrome.storage.local.get.mockImplementation((keys: unknown) => {
       if (keys === null) {
         return Promise.resolve({ some_other_setting: 'value' });
@@ -142,7 +142,7 @@ describe('migrateCategoryBDefault', () => {
     });
   });
 
-  test('ストレージが完全に空の新規インストールでは何も上書きしない', async () => {
+  test('overwrites nothing on a fresh install with empty storage', async () => {
     (global as any).chrome.storage.local.get.mockImplementation((keys: unknown) => {
       if (keys === null) {
         return Promise.resolve({});
@@ -161,7 +161,7 @@ describe('migrateCategoryBDefault', () => {
 });
 
 describe('migrateWhitelistExtractionDefault', () => {
-  test('既に移行済みの場合は何もせずfalseを返す', async () => {
+  test('returns false without doing anything when already migrated', async () => {
     (global as any).chrome.storage.local.get.mockResolvedValue({
       migration_whitelist_extraction_default_done: true
     });
@@ -172,7 +172,7 @@ describe('migrateWhitelistExtractionDefault', () => {
     expect((global as any).chrome.storage.local.set).not.toHaveBeenCalled();
   });
 
-  test('whitelist_extraction_enabledを既に設定済みのユーザーは上書きしない', async () => {
+  test('does not overwrite users who already set whitelist_extraction_enabled', async () => {
     (global as any).chrome.storage.local.get.mockResolvedValueOnce({
       whitelist_extraction_enabled: true
     });
@@ -186,7 +186,7 @@ describe('migrateWhitelistExtractionDefault', () => {
     expect((global as any).chrome.storage.local.set).toHaveBeenCalledTimes(1);
   });
 
-  test('未設定かつ他の設定が存在する既存ユーザーはfalseに設定される', async () => {
+  test('sets false for existing users with unset keys and other settings present', async () => {
     (global as any).chrome.storage.local.get.mockImplementation((keys: unknown) => {
       if (keys === null) {
         return Promise.resolve({ some_other_setting: 'value' });
@@ -205,7 +205,7 @@ describe('migrateWhitelistExtractionDefault', () => {
     });
   });
 
-  test('ストレージが完全に空の新規インストールでは何も上書きしない', async () => {
+  test('overwrites nothing on a fresh install with empty storage', async () => {
     (global as any).chrome.storage.local.get.mockImplementation((keys: unknown) => {
       if (keys === null) {
         return Promise.resolve({});

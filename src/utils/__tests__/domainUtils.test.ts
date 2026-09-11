@@ -56,19 +56,19 @@ describe('domainUtils', () => {
   });
 
   describe('extractDomain', () => {
-    test('標準的なHTTP URLからドメインを正しく抽出できる', () => {
+    test('extracts the domain correctly from a standard HTTP URL', () => {
       const url = 'http://example.com/path/to/page';
       const result = extractDomain(url);
       expect(result).toBe('example.com');
     });
 
-    test('www付きドメインからwwwを除去して抽出できる', () => {
+    test('strips www and extracts the domain from a www-prefixed domain', () => {
       const url = 'https://www.example.com/';
       const result = extractDomain(url);
       expect(result).toBe('example.com');
     });
 
-    test('不正なURL文字列からドメイン抽出を試みた場合nullを返す', () => {
+    test('returns null when extracting a domain from an invalid URL string', () => {
       const invalidUrl = 'not-a-valid-url';
       const result = extractDomain(invalidUrl);
       expect(result).toBeNull();
@@ -76,28 +76,28 @@ describe('domainUtils', () => {
   });
 
   describe('matchesPattern', () => {
-    test('ワイルドカード無しパターンで完全一致を検出できる', () => {
+    test('detects exact matches with a wildcard-free pattern', () => {
       const domain = 'example.com';
       const pattern = 'example.com';
       const result = matchesPattern(domain, pattern);
       expect(result).toBe(true);
     });
 
-    test('ワイルドカードパターンでサブドメインをマッチできる', () => {
+    test('matches subdomains with a wildcard pattern', () => {
       const domain = 'sub.example.com';
       const pattern = '*.example.com';
       const result = matchesPattern(domain, pattern);
       expect(result).toBe(true);
     });
 
-    test('空文字列パターンでのマッチング動作を確認', () => {
+    test('verifies matching behavior with an empty string pattern', () => {
       const domain = 'example.com';
       const pattern = '';
       const result = matchesPattern(domain, pattern);
       expect(result).toBe(false);
     });
 
-    test('複数のワイルドカードを含むパターンを正しく処理できる', () => {
+    test('handles patterns with multiple wildcards correctly', () => {
       const domain = 'sub.api.example.com';
       const pattern = '*.*.example.com';
       const result = matchesPattern(domain, pattern);
@@ -106,14 +106,14 @@ describe('domainUtils', () => {
   });
 
   describe('isDomainInList', () => {
-    test('ドメインリストに含まれるドメインを正しく検出できる', () => {
+    test('detects domains contained in the domain list correctly', () => {
       const domain = 'example.com';
       const domainList = ['example.com', 'test.com'];
       const result = isDomainInList(domain, domainList);
       expect(result).toBe(true);
     });
 
-    test('ドメインリストが空配列の場合は常にfalseを返す', () => {
+    test('always returns false when the domain list is an empty array', () => {
       const domain = 'example.com';
       const domainList: string[] = [];
       const result = isDomainInList(domain, domainList);
@@ -122,19 +122,19 @@ describe('domainUtils', () => {
   });
 
   describe('isValidDomain', () => {
-    test('標準的なドメイン形式を有効と判定できる', () => {
+    test('judges a standard domain format as valid', () => {
       const domain = 'example.com';
       const result = isValidDomain(domain);
       expect(result).toBe(true);
     });
 
-    test('特殊文字を含む不正なドメインを検出できる', () => {
+    test('detects invalid domains containing special characters', () => {
       const domain = 'example<script>.com';
       const result = isValidDomain(domain);
       expect(result).toBe(false);
     });
 
-    test('RFC準拠の最大長ドメイン（253文字）を有効と判定できる', () => {
+    test('judges an RFC-compliant maximum-length domain (253 characters) as valid', () => {
       const longDomain = 'a'.repeat(63) + '.' + 'b'.repeat(63) + '.' + 'c'.repeat(63) + '.' + 'd'.repeat(61);
       const result = isValidDomain(longDomain);
       expect(result).toBe(true);
@@ -142,7 +142,7 @@ describe('domainUtils', () => {
   });
 
   describe('isDomainAllowed', () => {
-    test('ドメインフィルターが無効な場合は全てのドメインを許可する', async () => {
+    test('allows all domains when the domain filter is disabled', async () => {
   
       mockedGetSettings.mockResolvedValue({ domain_filter_mode: 'disabled' } as Settings);
       const url = 'https://any-domain.com';
@@ -150,7 +150,7 @@ describe('domainUtils', () => {
       expect(result).toBe(true);
     });
 
-    test('ホワイトリストモードで登録済みドメインを許可する', async () => {
+    test('allows registered domains in whitelist mode', async () => {
   
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'whitelist',
@@ -161,7 +161,7 @@ describe('domainUtils', () => {
       expect(result).toBe(true);
     });
 
-    test('ブラックリストモードで登録済みドメインを拒否する', async () => {
+    test('rejects registered domains in blacklist mode', async () => {
   
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
@@ -172,7 +172,7 @@ describe('domainUtils', () => {
       expect(result).toBe(false);
     });
 
-    test('ドメイン抽出に失敗した場合はfalseを返す', async () => {
+    test('returns false when domain extraction fails', async () => {
 
       mockedGetSettings.mockResolvedValue({ domain_filter_mode: 'whitelist' } as Settings);
       const invalidUrl = 'invalid-url';
@@ -180,7 +180,7 @@ describe('domainUtils', () => {
       expect(result).toBe(false);
     });
 
-    test('サブドメインマッチングOFF（デフォルト）ではサブドメインを許可しない', async () => {
+    test('rejects subdomains when subdomain matching is OFF (default)', async () => {
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'whitelist',
         domain_whitelist: ['example.com']
@@ -189,7 +189,7 @@ describe('domainUtils', () => {
       expect(result).toBe(false);
     });
 
-    test('サブドメインマッチングONではサブドメインを許可する', async () => {
+    test('allows subdomains when subdomain matching is ON', async () => {
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'whitelist',
         domain_whitelist: ['example.com'],
@@ -199,7 +199,7 @@ describe('domainUtils', () => {
       expect(result).toBe(true);
     });
 
-    test('サブドメインマッチングON時はブラックリストのサブドメインを拒否する', async () => {
+    test('rejects blacklisted subdomains when subdomain matching is ON', async () => {
       mockedGetSettings.mockResolvedValue({
         domain_filter_mode: 'blacklist',
         domain_blacklist: ['example.com'],
@@ -209,7 +209,7 @@ describe('domainUtils', () => {
       expect(result).toBe(false);
     });
 
-    test('シンプル形式とuBlock形式の両方が有効な場合の併用動作を確認', async () => {
+    test('verifies combined behavior when both Simple and uBlock formats are enabled', async () => {
   
       mockedIsUrlBlocked.mockResolvedValue(true);
 
@@ -238,7 +238,7 @@ describe('domainUtils', () => {
       expect(await isDomainAllowed('https://blocked-ublock.com')).toBe(false);
     });
 
-    test('片方のみ有効な場合の動作を確認', async () => {
+    test('verifies behavior when only one format is enabled', async () => {
   
       mockedIsUrlBlocked.mockResolvedValue(true);
 
@@ -513,7 +513,7 @@ describe('domainUtils', () => {
   });
 
   describe('parseDomainList', () => {
-    test('大量のドメインリスト（1000行）を正しくパースできる', () => {
+    test('parses a large domain list (1000 lines) correctly', () => {
       const domainLines = Array.from({ length: 1000 }, (_, i) => `domain${i}.com`);
       const text = domainLines.join('\n');
       const result = parseDomainList(text);
@@ -524,7 +524,7 @@ describe('domainUtils', () => {
   });
 
   describe('validateDomainList', () => {
-    test('有効と無効なドメインが混在するリストのエラーを正しく報告できる', () => {
+    test('reports errors correctly for a list mixing valid and invalid domains', () => {
       const domainList = ['valid.com', 'invalid<>.com', 'another-valid.com', 'bad domain'];
       const errors = validateDomainList(domainList);
       expect(errors).toHaveLength(2);

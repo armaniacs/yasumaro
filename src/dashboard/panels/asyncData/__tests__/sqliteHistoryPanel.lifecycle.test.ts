@@ -72,6 +72,10 @@ describe('sqliteHistoryPanel — PanelLifecycle implementation', () => {
       const initParams = { searchTag: 'test-tag' };
       // Should not throw; actual behavior verified via controller tests
       expect(() => panel.init!(initParams)).not.toThrow();
+      // init() is side-effect-free: it only stashes params for load(), so the
+      // container stays empty until load() renders the view.
+      expect(container.innerHTML).toBe('');
+      expect(container.querySelector(`#${SQLITE_HISTORY_IDS.searchInput}`)).toBeNull();
     });
 
     it('handles searchDomain parameter', () => {

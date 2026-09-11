@@ -13,7 +13,7 @@ describe('News Site Integration Tests', () => {
   });
 
   describe('日本語ニュースサイト', () => {
-    it('ITmedia 風記事 - 本文が保護される', () => {
+    it('ITmedia-style article - body is protected', () => {
       // ITmedia 風の記事構造
       document.body.innerHTML = `
         <article class="article-body">
@@ -68,7 +68,7 @@ describe('News Site Integration Tests', () => {
       expect(result.navRemoved).toBeGreaterThan(0);
     });
 
-    it('Qiita 風記事 - コードブロックを含む本文が保護される', () => {
+    it('Qiita-style article - body with code blocks is protected', () => {
       document.body.innerHTML = `
         <article class="article">
           <header class="article-header">
@@ -102,7 +102,7 @@ describe('News Site Integration Tests', () => {
       expect(isBodyProtected(document.querySelector('.article-body')!)).toBe(true);
     });
 
-    it('Yahoo!ニュース風 - 短い記事本文の扱い', () => {
+    it('Yahoo News-style article - handling of short article body', () => {
       document.body.innerHTML = `
         <div class="news-article">
           <h1>経済ニュースの見出し</h1>
@@ -131,7 +131,7 @@ describe('News Site Integration Tests', () => {
   });
 
   describe('英語ニュースサイト', () => {
-    it('Medium 風記事 - 長文記事が保護される', () => {
+    it('Medium-style article - long article is protected', () => {
       document.body.innerHTML = `
         <main class="content">
           <article>
@@ -161,7 +161,7 @@ describe('News Site Integration Tests', () => {
       expect(isBodyProtected(document.querySelector('.article-content')!)).toBe(true);
     });
 
-    it('TechCrunch 風 - 広告と本文の区別', () => {
+    it('TechCrunch-style article - distinguishes ads from body', () => {
       document.body.innerHTML = `
         <article class="post-content">
           <h1>Startup Raises $50M in Series B Funding</h1>
@@ -188,7 +188,7 @@ describe('News Site Integration Tests', () => {
   });
 
   describe('実際のニュースサイト', () => {
-    it('CNN 風記事 - Breaking News 構造', () => {
+    it('CNN-style article - Breaking News structure', () => {
       // CNN 風の特徴：breaking-banner, 複数の段落，related コラム
       document.body.innerHTML = `
         <div class="container">
@@ -229,7 +229,7 @@ describe('News Site Integration Tests', () => {
       expect(isBodyProtected(articleBody)).toBe(true);
     });
 
-    it('BBC 風記事 - 簡潔な構造', () => {
+    it('BBC-style article - concise structure', () => {
       // BBC 風の特徴：シンプルな構造、短い段落、timestamp
       document.body.innerHTML = `
         <main class="main-content">
@@ -264,7 +264,7 @@ describe('News Site Integration Tests', () => {
       expect(isBodyProtected(document.querySelector('.navigation')!)).toBe(false);
     });
 
-    it('CNBC 風記事 - 市場ニュース構造', () => {
+    it('CNBC-style article - market news structure', () => {
       // CNBC 風の特徴：stock data, market watch, 専門家のコメント
       document.body.innerHTML = `
         <div class="article-wrap">
@@ -298,7 +298,7 @@ describe('News Site Integration Tests', () => {
       expect(isBodyProtected(document.querySelector('.article-content')!)).toBe(true);
     });
 
-    it('The Register 風記事 - 技術系ニュース', () => {
+    it('The Register-style article - tech news', () => {
       // The Register 風の特徴：技術的詳細、コードスニペット、風刺的な見出し
       document.body.innerHTML = `
         <article class="bodycopy">
@@ -336,7 +336,7 @@ describe('News Site Integration Tests', () => {
       expect(isBodyProtected(document.querySelector('.ad-slot')!)).toBe(false);
     });
 
-    it('CNN vs BBC - 複数記事の同時処理', () => {
+    it('CNN vs BBC - handles multiple articles together', () => {
       // 複数ページ遷移を想定した同時処理テスト
       document.body.innerHTML = `
         <div id="cnn-article">
@@ -368,7 +368,7 @@ describe('News Site Integration Tests', () => {
       expect(isBodyProtected(document.querySelector('.bbc-body')!)).toBe(true);
     });
 
-    it('東京アメッシュ風 - 時間ベースデータ表示', () => {
+    it('Tokyo Amesh-style page - time-based data display', () => {
       // 東京アメッシュ風の特徴：短い時間データの連続、画像中心、フッターに著作権
       document.body.innerHTML = `
         <div class="wrapper">
@@ -508,7 +508,7 @@ describe('News Site Integration Tests', () => {
   });
 
   describe('境界ケース', () => {
-    it('非常に短い記事 - 保護されない場合', () => {
+    it('very short article - is not protected', () => {
       document.body.innerHTML = `
         <article class="brief">
           <p>短いニュースです。これだけ。</p>
@@ -521,7 +521,7 @@ describe('News Site Integration Tests', () => {
       expect(isBodyProtected(document.querySelector('article')!)).toBe(false);
     });
 
-    it('リンク密度の高い記事 - 保護が緩和される', () => {
+    it('link-heavy article - protection is relaxed', () => {
       document.body.innerHTML = `
         <div class="link-heavy-content">
           <p>これは<a href="#">リンク 1</a>と<a href="#">リンク 2</a>と<a href="#">リンク 3</a>を含む文章です。</p>
@@ -538,7 +538,7 @@ describe('News Site Integration Tests', () => {
       expect(typeof protectedStatus).toBe('boolean');
     });
 
-    it('ネストされた構造 - 子要素が保護される', () => {
+    it('nested structure - child elements are protected', () => {
       document.body.innerHTML = `
         <article class="main-article">
           <div class="content-wrapper">
@@ -561,7 +561,7 @@ describe('News Site Integration Tests', () => {
   });
 
   describe(' cleanseAISummaryContent との統合', () => {
-    it('本文保護を有効にしてクレンジング', () => {
+    it('cleanses with body protection enabled', () => {
       document.body.innerHTML = `
         <article class="article">
           <h1>Test Article</h1>
@@ -600,7 +600,7 @@ describe('News Site Integration Tests', () => {
       expect(result.navRemoved).toBeGreaterThan(0);
     });
 
-    it('本文保護を無効にしてクレンジング', () => {
+    it('cleanses with body protection disabled', () => {
       document.body.innerHTML = `
         <article class="article">
           <h1>Test Article</h1>

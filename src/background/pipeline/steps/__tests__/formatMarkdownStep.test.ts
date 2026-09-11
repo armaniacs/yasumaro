@@ -74,7 +74,7 @@ beforeEach(() => {
 
 describe('formatMarkdownStep', () => {
   describe('summary の優先順位', () => {
-    it('extractedSentences (L0) が最優先で使われる', async () => {
+    it('prefers extractedSentences (L0) with the highest priority', async () => {
       const context = makeContext({
         extractedSentences: ['L0 extracted sentence 1', 'L0 extracted sentence 2'],
         sanitizedSummary: 'AI summary from privacy pipeline',
@@ -90,7 +90,7 @@ describe('formatMarkdownStep', () => {
       expect(result.markdown).not.toContain('AI summary from privacy pipeline');
     });
 
-    it('extractedSentences がない場合 sanitizedSummary が使われる', async () => {
+    it('uses sanitizedSummary when extractedSentences is missing', async () => {
       const context = makeContext({
         extractedSentences: undefined,
         sanitizedSummary: 'Prioritized summary',
@@ -103,7 +103,7 @@ describe('formatMarkdownStep', () => {
       expect(mockSanitize).toHaveBeenCalledWith('Prioritized summary');
     });
 
-    it('sanitizedSummary が最優先で使われる', async () => {
+    it('prefers sanitizedSummary with the highest priority', async () => {
       const context = makeContext({
         sanitizedSummary: 'Prioritized summary',
         privacyResult: { summary: 'AI summary', maskedCount: 0 } as any,
@@ -115,7 +115,7 @@ describe('formatMarkdownStep', () => {
       expect(mockSanitize).toHaveBeenCalledWith('Prioritized summary');
     });
 
-    it('sanitizedSummary がない場合 privacyResult.summary が使われる', async () => {
+    it('uses privacyResult.summary when sanitizedSummary is missing', async () => {
       const context = makeContext({
         sanitizedSummary: undefined,
         privacyResult: { summary: 'AI summary', maskedCount: 0 } as any,
@@ -127,7 +127,7 @@ describe('formatMarkdownStep', () => {
       expect(mockSanitize).toHaveBeenCalledWith('AI summary');
     });
 
-    it('両方ない場合 "Summary not available." が使われる', async () => {
+    it('uses "Summary not available." when both are missing', async () => {
       const context = makeContext({
         sanitizedSummary: undefined,
         privacyResult: undefined,
@@ -140,7 +140,7 @@ describe('formatMarkdownStep', () => {
   });
 
   describe('sanitizeForObsidian 呼び出し', () => {
-    it('title は sanitizeForMarkdownLinkText、summary は sanitizeForObsidian でサニタイズされる', async () => {
+    it('sanitizes title with sanitizeForMarkdownLinkText and summary with sanitizeForObsidian', async () => {
       mockSanitize.mockImplementation((text: string) => `[SANITIZED]${text}`);
 
       const context = makeContext({
@@ -202,7 +202,7 @@ describe('formatMarkdownStep', () => {
   });
 
   describe('markdown 形式', () => {
-    it('正しい markdown 形式で出力される（タグなし）', async () => {
+    it('renders correct markdown format without tags', async () => {
       const context = makeContext({
         data: { title: 'My Page', url: 'https://example.com/page', content: '' },
         sanitizedSummary: 'Summary text',
@@ -217,7 +217,7 @@ describe('formatMarkdownStep', () => {
       expect(result.markdown).toContain('Summary text');
     });
 
-    it('タグがある場合、タグプレフィックス付きで出力される', async () => {
+    it('renders with a tag prefix when tags exist', async () => {
       const context = makeContext({
         data: { title: 'My Page', url: 'https://example.com/page', content: '' },
         sanitizedSummary: 'Summary text',
@@ -234,7 +234,7 @@ describe('formatMarkdownStep', () => {
       expect(result.markdown).not.toContain('AI要約:');
     });
 
-    it('url がそのまま含まれる', async () => {
+    it('includes the url as-is', async () => {
       const context = makeContext({
         data: { title: 'Test', url: 'https://long-domain.example.com/path?q=1#section', content: '' },
       });
@@ -246,7 +246,7 @@ describe('formatMarkdownStep', () => {
   });
 
   describe('sanitizedSummary 更新', () => {
-    it('sanitizedSummary がサニタイズ後の値で更新される', async () => {
+    it('updates sanitizedSummary with the sanitized value', async () => {
       mockSanitize.mockImplementation((text: string) => `escaped_${text}`);
 
       const context = makeContext({
@@ -260,7 +260,7 @@ describe('formatMarkdownStep', () => {
   });
 
   describe('URL sanitization (VULN-001/004)', () => {
-    it('url が sanitizeUrlForMarkdownTarget を通って埋め込まれる', async () => {
+    it('embeds the url via sanitizeUrlForMarkdownTarget', async () => {
       mockSanitizeUrl.mockImplementation((url: string) => url.replace(/\)/g, '%29'));
 
       const context = makeContext({
@@ -286,7 +286,7 @@ describe('formatMarkdownStep', () => {
   });
 
   describe('markdownEntryData', () => {
-    it('context.markdownEntryData に生データをセットする', async () => {
+    it('sets raw data on context.markdownEntryData', async () => {
       const context = makeContext({
         data: { title: 'Example Page', url: 'https://example.com/page', content: '' },
         sanitizedSummary: undefined,
@@ -306,7 +306,7 @@ describe('formatMarkdownStep', () => {
       expect(typeof result.markdownEntryData?.timestamp).toBe('string');
     });
 
-    it('既存の context.markdown 出力は変更されない(Obsidian用フォーマットの後方互換性)', async () => {
+    it('leaves existing context.markdown output unchanged for Obsidian format backward compatibility', async () => {
       const context = makeContext({
         data: { title: 'Example Page', url: 'https://example.com/page', content: '' },
         sanitizedSummary: undefined,
@@ -318,7 +318,7 @@ describe('formatMarkdownStep', () => {
       expect(result.markdown).toMatch(/^- \d{1,2}:\d{2}\s*(AM|PM)?\s*\[Example Page\]\(https:\/\/example\.com\/page\)\n {4}- A summary\.$/);
     });
 
-    it('URL が不正な場合 domain は空文字にフォールバックする', async () => {
+    it('falls back to an empty domain when the URL is invalid', async () => {
       const context = makeContext({
         data: { title: 'Bad URL', url: 'not-a-valid-url', content: '' },
         sanitizedSummary: 'Summary text',

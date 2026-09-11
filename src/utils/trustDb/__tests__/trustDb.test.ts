@@ -158,7 +158,7 @@ describe('TrustDb', () => {
   });
 
   describe('getTrustDb (singleton)', () => {
-    test('同じインスタンスを返す', () => {
+    test('returns the same instance', () => {
       const a = getTrustDbAdmin();
       const b = getTrustDbAdmin();
       expect(a).toBe(b);
@@ -166,7 +166,7 @@ describe('TrustDb', () => {
   });
 
   describe('initialize', () => {
-    test('新規データベースを作成できる', async () => {
+    test('creates a new database', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -175,7 +175,7 @@ describe('TrustDb', () => {
       expect(status.version).toBeDefined();
     });
 
-    test('既存データベースをロードできる', async () => {
+    test('loads an existing database', async () => {
       const existingDb = {
         version: '1.0.0',
         lastUpdated: '2026-01-01',
@@ -195,7 +195,7 @@ describe('TrustDb', () => {
       expect(status.initialized).toBe(true);
     });
 
-    test('2回目の initialize はスキップ', async () => {
+    test('skips the second initialize', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -207,14 +207,14 @@ describe('TrustDb', () => {
   });
 
   describe('getVersion', () => {
-    test('DB_VERSION を返す', () => {
+    test('returns DB_VERSION', () => {
       const db = getTrustDbAdmin();
       expect(db.getVersion()).toBe('1.0.0');
     });
   });
 
   describe('getStatus', () => {
-    test('未初期化時は initialized=false', () => {
+    test('reports initialized=false when uninitialized', () => {
       // 新しいインスタンスを作成（シングルトンをリセット）
       (getTrustDbAdmin() as any).state.initialized = false;
       (getTrustDbAdmin() as any).state.database = null;
@@ -224,7 +224,7 @@ describe('TrustDb', () => {
   });
 
   describe('getDatabase', () => {
-    test('初期化後にデータベースを取得できる', async () => {
+    test('returns the database after initialization', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -235,7 +235,7 @@ describe('TrustDb', () => {
   });
 
   describe('getJpAnchorTlds', () => {
-    test('プリセットとユーザTLDを含む', async () => {
+    test('includes preset and user TLDs', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -247,7 +247,7 @@ describe('TrustDb', () => {
   });
 
   describe('addUserTld / removeUserTld', () => {
-    test('有効な TLD を追加できる', async () => {
+    test('adds a valid TLD', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -255,7 +255,7 @@ describe('TrustDb', () => {
       expect(result.success).toBe(true);
     });
 
-    test('無効な TLD は拒否', async () => {
+    test('rejects an invalid TLD', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -264,7 +264,7 @@ describe('TrustDb', () => {
       expect(result.error).toBeDefined();
     });
 
-    test('重複 TLD は拒否', async () => {
+    test('rejects a duplicate TLD', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -274,7 +274,7 @@ describe('TrustDb', () => {
       expect(result.error).toContain('already exists');
     });
 
-    test('ドットなし TLD も追加可能', async () => {
+    test('adds a TLD without a leading dot', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -282,7 +282,7 @@ describe('TrustDb', () => {
       expect(result.success).toBe(true);
     });
 
-    test('存在する TLD を削除できる', async () => {
+    test('removes an existing TLD', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -291,7 +291,7 @@ describe('TrustDb', () => {
       expect(result.success).toBe(true);
     });
 
-    test('存在しない TLD の削除は失敗', async () => {
+    test('fails to remove a nonexistent TLD', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -302,7 +302,7 @@ describe('TrustDb', () => {
   });
 
   describe('addJpAnchorTld / removeJpAnchorTld', () => {
-    test('JP-Anchor TLD を追加できる', async () => {
+    test('adds a JP-Anchor TLD', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -310,7 +310,7 @@ describe('TrustDb', () => {
       expect(result.success).toBe(true);
     });
 
-    test('JP-Anchor TLD を削除できる', async () => {
+    test('removes a JP-Anchor TLD', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -319,7 +319,7 @@ describe('TrustDb', () => {
       expect(result.success).toBe(true);
     });
 
-    test('存在しない JP-Anchor TLD の削除は失敗', async () => {
+    test('fails to remove a nonexistent JP-Anchor TLD', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -329,7 +329,7 @@ describe('TrustDb', () => {
   });
 
   describe('isDomainTrusted (3-Step Verification)', () => {
-    test('JP-Anchor TLD で TRUSTED', async () => {
+    test('returns TRUSTED for a JP-Anchor TLD', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -338,7 +338,7 @@ describe('TrustDb', () => {
       expect(result.source).toBe('jp-anchor');
     });
 
-    test('URL形式でも判定できる', async () => {
+    test('judges URL-format input', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -346,7 +346,7 @@ describe('TrustDb', () => {
       expect(result.level).toBe(DomainTrustLevel.TRUSTED);
     });
 
-    test('ホワイトリストに含まれる場合は TRUSTED', async () => {
+    test('returns TRUSTED when whitelisted', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -370,7 +370,7 @@ describe('TrustDb', () => {
       expect(sensitiveResult.source).toBe('whitelist');
     });
 
-    test('ユーザーブラックリストに含まれる場合は SENSITIVE', async () => {
+    test('returns SENSITIVE when user-blacklisted', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -381,7 +381,7 @@ describe('TrustDb', () => {
       expect(result.source).toBe('user-blacklist');
     });
 
-    test('どのリストにもない場合は UNVERIFIED', async () => {
+    test('returns UNVERIFIED when in no list', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -391,7 +391,7 @@ describe('TrustDb', () => {
   });
 
   describe('sensitive domain management', () => {
-    test('ドメインを追加できる', async () => {
+    test('adds a domain', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -399,7 +399,7 @@ describe('TrustDb', () => {
       expect(result.success).toBe(true);
     });
 
-    test('無効なドメインは拒否', async () => {
+    test('rejects an invalid domain', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -407,7 +407,7 @@ describe('TrustDb', () => {
       expect(result.success).toBe(false);
     });
 
-    test('重複ドメインは拒否', async () => {
+    test('rejects a duplicate domain', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -417,7 +417,7 @@ describe('TrustDb', () => {
       expect(result.error).toContain('already exists');
     });
 
-    test('ドメインを削除できる', async () => {
+    test('removes a domain', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -426,7 +426,7 @@ describe('TrustDb', () => {
       expect(result.success).toBe(true);
     });
 
-    test('存在しないドメインの削除は失敗', async () => {
+    test('fails to remove a nonexistent domain', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -435,7 +435,7 @@ describe('TrustDb', () => {
       expect(result.error).toContain('not found');
     });
 
-    test('カテゴリ別にドメインを取得できる', async () => {
+    test('returns domains by category', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -445,7 +445,7 @@ describe('TrustDb', () => {
   });
 
   describe('whitelist management', () => {
-    test('ホワイトリストに追加できる', async () => {
+    test('adds to the whitelist', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -453,7 +453,7 @@ describe('TrustDb', () => {
       expect(result.success).toBe(true);
     });
 
-    test('無効なドメインは拒否', async () => {
+    test('rejects an invalid domain', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -461,7 +461,7 @@ describe('TrustDb', () => {
       expect(result.success).toBe(false);
     });
 
-    test('重複ドメインは拒否', async () => {
+    test('rejects a duplicate domain', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -470,7 +470,7 @@ describe('TrustDb', () => {
       expect(result.success).toBe(false);
     });
 
-    test('ホワイトリストから削除できる', async () => {
+    test('removes from the whitelist', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -479,7 +479,7 @@ describe('TrustDb', () => {
       expect(result.success).toBe(true);
     });
 
-    test('存在しないドメインの削除は失敗', async () => {
+    test('fails to remove a nonexistent domain', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -487,7 +487,7 @@ describe('TrustDb', () => {
       expect(result.success).toBe(false);
     });
 
-    test('ホワイトリストを取得できる', async () => {
+    test('returns the whitelist', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -497,7 +497,7 @@ describe('TrustDb', () => {
   });
 
   describe('updateTranco', () => {
-    test('Tranco リストを更新できる', async () => {
+    test('updates the Tranco list', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -506,7 +506,7 @@ describe('TrustDb', () => {
       expect(status.trancoCount).toBe(2);
     });
 
-    test('未初期化でエラー', async () => {
+    test('throws an error when uninitialized', async () => {
       const db = getTrustDbAdmin();
       (db as any).state.initialized = false;
       (db as any).state.database = null;
@@ -515,7 +515,7 @@ describe('TrustDb', () => {
   });
 
   describe('Tranco version tracking', () => {
-    test('getCurrentTrancoVersion がバージョンを返す', async () => {
+    test('getCurrentTrancoVersion returns the version', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -524,7 +524,7 @@ describe('TrustDb', () => {
       expect(version.length).toBeGreaterThan(0);
     });
 
-    test('updateTrancoVersion でバージョンを保存', async () => {
+    test('updateTrancoVersion saves the version', async () => {
       const db = getTrustDbAdmin();
       await db.initialize();
       await db.updateTrancoVersion('2026-02-01', ['example.com']);
@@ -532,7 +532,7 @@ describe('TrustDb', () => {
       expect(mockSettingsStore.tranco_domains).toEqual(['example.com']);
     });
 
-    test('getSavedTrancoVersion で保存済みバージョンを取得', async () => {
+    test('getSavedTrancoVersion returns the saved version', async () => {
       const db = getTrustDbAdmin();
       await db.initialize();
       mockSettingsStore.tranco_version = '2026-01-01';
@@ -540,7 +540,7 @@ describe('TrustDb', () => {
       expect(version).toBe('2026-01-01');
     });
 
-    test('getSavedTrancoVersion で未保存時は null', async () => {
+    test('getSavedTrancoVersion returns null when nothing is saved', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -548,7 +548,7 @@ describe('TrustDb', () => {
       expect(version).toBeNull();
     });
 
-     test('checkTrancoUpdate で更新検知', async () => {
+     test('checkTrancoUpdate detects an update', async () => {
        (chrome.storage.local.get as Mock).mockResolvedValue({});
        const db = getTrustDbAdmin();
        await db.initialize();
@@ -558,7 +558,7 @@ describe('TrustDb', () => {
        expect(result).toHaveProperty('newVersion');
      });
 
-     test('checkTrancoUpdate で更新がなければ false を返す', async () => {
+     test('checkTrancoUpdate returns hasUpdate false when there is no update', async () => {
        const currentVersion = '2026-01-01';
        mockSettingsStore.tranco_version = currentVersion;
        const db = getTrustDbAdmin();
@@ -569,7 +569,7 @@ describe('TrustDb', () => {
        expect(result.newVersion).toBe(currentVersion);
      });
 
-    test('getSavedTrancoDomains でドメインリストを取得', async () => {
+    test('getSavedTrancoDomains returns the domain list', async () => {
       const db = getTrustDbAdmin();
       await db.initialize();
       mockSettingsStore.tranco_domains = ['google.com', 'youtube.com'];
@@ -578,7 +578,7 @@ describe('TrustDb', () => {
       expect(domains).toEqual(['google.com', 'youtube.com']);
     });
 
-    test('getSavedTrancoDomains で未保存時は空配列', async () => {
+    test('getSavedTrancoDomains returns an empty array when nothing is saved', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -588,7 +588,7 @@ describe('TrustDb', () => {
   });
 
   describe('isTrancoDomain', () => {
-    test('Trancoドメインを判定できる', async () => {
+    test('judges Tranco domains', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -597,7 +597,7 @@ describe('TrustDb', () => {
       expect(db.isTrancoDomain('notranco.com')).toBe(false);
     });
 
-    test('URL形式でも判定できる', async () => {
+    test('judges URL-format input', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -607,56 +607,56 @@ describe('TrustDb', () => {
   });
 
   describe('error paths', () => {
-    test('save() で未初期化時はエラー', async () => {
+    test('save() throws an error when uninitialized', async () => {
       const db = getTrustDbAdmin();
       (db as any).state.initialized = false;
       (db as any).state.database = null;
       await expect(db.save()).rejects.toThrow();
     });
 
-    test('removeUserTld で未初期化時はエラー', async () => {
+    test('removeUserTld returns an error when uninitialized', async () => {
       const db = getTrustDbAdmin();
       (db as any).state.database = null;
       const result = await db.removeUserTld('.test');
       expect(result.success).toBe(false);
     });
 
-    test('removeJpAnchorTld で未初期化時はエラー', async () => {
+    test('removeJpAnchorTld returns an error when uninitialized', async () => {
       const db = getTrustDbAdmin();
       (db as any).state.database = null;
       const result = await db.removeJpAnchorTld('.test');
       expect(result.success).toBe(false);
     });
 
-    test('addSensitiveDomain で未初期化時はエラー', async () => {
+    test('addSensitiveDomain returns an error when uninitialized', async () => {
       const db = getTrustDbAdmin();
       (db as any).state.database = null;
       const result = await db.addSensitiveDomain('test.com');
       expect(result.success).toBe(false);
     });
 
-    test('removeSensitiveDomain で未初期化時はエラー', async () => {
+    test('removeSensitiveDomain returns an error when uninitialized', async () => {
       const db = getTrustDbAdmin();
       (db as any).state.database = null;
       const result = await db.removeSensitiveDomain('test.com');
       expect(result.success).toBe(false);
     });
 
-    test('addToWhitelist で未初期化時はエラー', async () => {
+    test('addToWhitelist returns an error when uninitialized', async () => {
       const db = getTrustDbAdmin();
       (db as any).state.database = null;
       const result = await db.addToWhitelist('test.com');
       expect(result.success).toBe(false);
     });
 
-    test('removeFromWhitelist で未初期化時はエラー', async () => {
+    test('removeFromWhitelist returns an error when uninitialized', async () => {
       const db = getTrustDbAdmin();
       (db as any).state.database = null;
       const result = await db.removeFromWhitelist('test.com');
       expect(result.success).toBe(false);
     });
 
-    test('_addTldToUserList で未初期化時はエラー', async () => {
+    test('_addTldToUserList returns an error when uninitialized', async () => {
       const db = getTrustDbAdmin();
       (db as any).state.database = null;
       const result = await db.addUserTld('.test');
@@ -664,19 +664,19 @@ describe('TrustDb', () => {
       expect(result.error).toContain('not initialized');
     });
 
-    test('getJpAnchorTlds で未初期化時は空配列', () => {
+    test('getJpAnchorTlds returns an empty array when uninitialized', () => {
       const db = getTrustDbAdmin();
       (db as any).state.database = null;
       expect(db.getJpAnchorTlds()).toEqual([]);
     });
 
-    test('getSensitiveDomains で未初期化時は空配列', () => {
+    test('getSensitiveDomains returns an empty array when uninitialized', () => {
       const db = getTrustDbAdmin();
       (db as any).state.database = null;
       expect(db.getSensitiveDomains('finance')).toEqual([]);
     });
 
-    test('getWhitelist で未初期化時は空配列', () => {
+    test('getWhitelist returns an empty array when uninitialized', () => {
       const db = getTrustDbAdmin();
       (db as any).state.database = null;
       expect(db.getWhitelist()).toEqual([]);
@@ -684,7 +684,7 @@ describe('TrustDb', () => {
   });
 
   describe('isValidDomain edge cases', () => {
-    test('末尾ドットのドメインは UNVERIFIED', async () => {
+    test('rejects a trailing-dot domain', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -693,7 +693,7 @@ describe('TrustDb', () => {
       expect(result.success).toBe(false);
     });
 
-    test('空文字列ドメインは UNVERIFIED', async () => {
+    test('rejects an empty-string domain', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -701,7 +701,7 @@ describe('TrustDb', () => {
       expect(result.success).toBe(false);
     });
 
-    test('長すぎるドメインラベルは拒否', async () => {
+    test('rejects an overlong domain label', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -712,7 +712,7 @@ describe('TrustDb', () => {
   });
 
   describe('checkTranco edge cases', () => {
-    test('サブドメイン除去で Tranco マッチ', async () => {
+    test('matches Tranco after stripping subdomains', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -722,7 +722,7 @@ describe('TrustDb', () => {
       expect(result.source).toBe('tranco');
     });
 
-    test('Tranco リストが空の場合は UNVERIFIED', async () => {
+    test('returns UNVERIFIED when Tranco list is empty', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();
@@ -730,7 +730,7 @@ describe('TrustDb', () => {
       expect(result.level).toBe(DomainTrustLevel.UNVERIFIED);
     });
 
-    test('bloom filter がミスした場合 UNVERIFIED を返す', async () => {
+    test('returns UNVERIFIED when bloom filter misses', async () => {
       // Setup: initialize with empty tranco list and custom bloom filter returning false
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
@@ -752,7 +752,7 @@ describe('TrustDb', () => {
   });
 
   describe('isTrancoDomain edge cases', () => {
-    test('不正な URL パース時はそのまま使用', async () => {
+    test('uses the raw value when URL parsing fails', async () => {
       (chrome.storage.local.get as Mock).mockResolvedValue({});
       const db = getTrustDbAdmin();
       await db.initialize();

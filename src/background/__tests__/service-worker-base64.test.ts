@@ -48,7 +48,7 @@ function decodeUrlFromNotificationId(notificationId: string): string | null {
 
 describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
     describe('encodeUrlSafeBase64', () => {
-        it('ASCII URL を正しくエンコードする', () => {
+        it('encodes an ASCII URL correctly', () => {
             const url = 'https://example.com/page';
             const encoded = encodeUrlSafeBase64(url);
             expect(encoded).toBeDefined();
@@ -59,7 +59,7 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
             expect(encoded).not.toContain('=');
         });
 
-        it('Unicode URL（日本語）を正しくエンコードする', () => {
+        it('encodes a Unicode URL (Japanese) correctly', () => {
             const url = 'https://example.com/日本語/ページ';
             const encoded = encodeUrlSafeBase64(url);
             expect(encoded).toBeDefined();
@@ -69,7 +69,7 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
             expect(encoded).not.toContain('=');
         });
 
-        it('クエリパラメータ付きURLを正しくエンコードする', () => {
+        it('encodes a URL with query parameters correctly', () => {
             const url = 'https://example.com/search?q=test&page=1';
             const encoded = encodeUrlSafeBase64(url);
             expect(encoded).toBeDefined();
@@ -78,7 +78,7 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
             expect(encoded).not.toContain('=');
         });
 
-        it('エンコードとデコードの往復で元のURLを復元できる（ASCII）', () => {
+        it('round-trips an ASCII URL back to the original', () => {
             const originalUrl = 'https://example.com/path/to/page';
             const encoded = encodeUrlSafeBase64(originalUrl);
             const notificationId = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + encoded;
@@ -86,7 +86,7 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
             expect(decoded).toBe(originalUrl);
         });
 
-        it('エンコードとデコードの往復で元のURLを復元できる（Unicode）', () => {
+        it('round-trips a Unicode URL back to the original', () => {
             const originalUrl = 'https://example.com/test/テスト?query=日本語';
             const encoded = encodeUrlSafeBase64(originalUrl);
             const notificationId = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + encoded;
@@ -94,7 +94,7 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
             expect(decoded).toBe(originalUrl);
         });
 
-        it('特殊文字を含むURLを正しく処理する', () => {
+        it('handles URLs with special characters correctly', () => {
             const urls = [
                 'https://example.com/path_with_underscore',
                 'https://example.com/path-with-dash',
@@ -107,7 +107,7 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
             }
         });
 
-        it('非常に長いURLを正しくエンコードする', () => {
+        it('encodes a very long URL correctly', () => {
             const longPath = 'a'.repeat(1000);
             const url = `https://example.com/${longPath}`;
             const encoded = encodeUrlSafeBase64(url);
@@ -116,7 +116,7 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
     });
 
     describe('decodeUrlFromNotificationId', () => {
-        it('通知IDからURLを正しくデコードする（ASCII）', () => {
+        it('decodes a URL from a notification ID correctly (ASCII)', () => {
             const originalUrl = 'https://example.com/page';
             const encoded = encodeUrlSafeBase64(originalUrl);
             const notificationId = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + encoded;
@@ -124,7 +124,7 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
             expect(decoded).toBe(originalUrl);
         });
 
-        it('通知IDからURLを正しくデコードする（Unicode）', () => {
+        it('decodes a URL from a notification ID correctly (Unicode)', () => {
             const originalUrl = 'https://example.com/日本語/ページ';
             const encoded = encodeUrlSafeBase64(originalUrl);
             const notificationId = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + encoded;
@@ -132,7 +132,7 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
             expect(decoded).toBe(originalUrl);
         });
 
-        it('不正な通知ID形式の場合はnullを返す', () => {
+        it('returns null for a malformed notification ID', () => {
             const invalidIds = [
                 'invalid-prefix-abc123',
                 'some-other-prefix-encoded',
@@ -144,13 +144,13 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
             }
         });
 
-        it('プライベート通知プレフィックスのみの場合は空文字列を返す', () => {
+        it('returns an empty string for a prefix-only private notification ID', () => {
             const id = PRIVACY_CONFIRM_NOTIFICATION_PREFIX;
             // 空文字列は有効なBase64としてデコードされるため空文字列が返る
             expect(decodeUrlFromNotificationId(id)).toBe('');
         });
 
-        it('破損したBase64の場合はnullを返す', () => {
+        it('returns null for corrupted Base64', () => {
             const id = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + '!!!invalid-base64!!!';
             expect(decodeUrlFromNotificationId(id)).toBeNull();
         });
@@ -161,7 +161,7 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
         // 新実装（TextEncoder/TextDecoder）はUnicode対応が改善されているため、
         // 旧実装でエンコードされた文字列も正しくデコードできるはず
 
-        it('古い実装でエンコードされたASCII URLを新実装でデコードできる', () => {
+        it('decodes an ASCII URL encoded by the legacy implementation', () => {
             const url = 'https://example.com/page';
             // 旧実装のシミュレーション
             const oldEncoded = btoa(unescape(encodeURIComponent(url)))
@@ -173,7 +173,7 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
             expect(decoded).toBe(url);
         });
 
-        it('エンコードされたURLがURL-safeとなっていることを確認', () => {
+        it('produces URL-safe output for encoded URLs', () => {
             const testUrls = [
                 'https://example.com/test',
                 'https://example.com/path/with/slashes',
@@ -191,7 +191,7 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
     });
 
     describe('境界値とエッジケース', () => {
-        it('空文字列をエンコード・デコードできる', () => {
+        it('encodes and decodes an empty string', () => {
             const url = '';
             const encoded = encodeUrlSafeBase64(url);
             const notificationId = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + encoded;
@@ -199,7 +199,7 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
             expect(decoded).toBe(url);
         });
 
-        it('短いURL（1文字）を正しく処理する', () => {
+        it('handles a short single-character URL correctly', () => {
             const url = 'a';
             const encoded = encodeUrlSafeBase64(url);
             const notificationId = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + encoded;
@@ -207,7 +207,7 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
             expect(decoded).toBe(url);
         });
 
-        it('絵文字を含むURLを正しく処理する', () => {
+        it('handles a URL containing emoji correctly', () => {
             const url = 'https://example.com/🎉🚀';
             const encoded = encodeUrlSafeBase64(url);
             const notificationId = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + encoded;
@@ -215,7 +215,7 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
             expect(decoded).toBe(url);
         });
 
-        it('複合スクリプト文字を含むURLを正しく処理する', () => {
+        it('handles a URL with mixed-script characters correctly', () => {
             const url = 'https://example.com/مرحبا/世界';
             const encoded = encodeUrlSafeBase64(url);
             const notificationId = PRIVACY_CONFIRM_NOTIFICATION_PREFIX + encoded;
@@ -225,17 +225,17 @@ describe('Service Worker: URL-safe Base64 エンコード/デコード', () => {
     });
 
     describe('実装の妥当性', () => {
-        it('TextEncoderとTextDecoderが使用可能である', () => {
+        it('exposes TextEncoder and TextDecoder', () => {
             expect(typeof TextEncoder).toBe('function');
             expect(typeof TextDecoder).toBe('function');
         });
 
-        it('btoaとatobが使用可能である', () => {
+        it('exposes btoa and atob', () => {
             expect(typeof btoa).toBe('function');
             expect(typeof atob).toBe('function');
         });
 
-        it('TextEncoderでのエンコードとTextDecoderでのデコードが対称である', () => {
+        it('round-trips TextEncoder encoding via TextDecoder symmetrically', () => {
             const testStrings = [
                 'ascii',
                 '日本語',

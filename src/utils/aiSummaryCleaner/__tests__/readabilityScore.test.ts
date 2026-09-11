@@ -173,7 +173,7 @@ describe('Spike 2026-08-30: 短文記事DOMの閾値別保護マトリクス', (
   for (const { label, totalChars } of patterns) {
     describe(`${label} (p=3/h=1)`, () => {
       for (const threshold of thresholds) {
-        it(`閾値 ${threshold} で markBodyElements の保護有無を検証 (現行 p*25)`, () => {
+        it(`verifies markBodyElements protection for threshold ${threshold} (current p*25)`, () => {
           const el = createShortArticleDOM(totalChars);
           // 孤立したコンテナを body に一時配置して markBodyElements を実行
           // markBodyElements は root.querySelectorAll('p, div, section, article') で自身を含まないため、
@@ -201,7 +201,7 @@ describe('Spike 2026-08-30: 短文記事DOMの閾値別保護マトリクス', (
   }
 
   describe('p*40 への重み増 + 閾値 120 への緩和の効果（仮説検証）', () => {
-    it('RED: 現行 p*25 閾値200 では 600字記事が保護されないことを確認', () => {
+    it('RED: verifies a 600-char article is not protected at threshold 200 with current p*25', () => {
       const el = createShortArticleDOM(600);
       const score = calculateReadabilityScore(el);
       // 現行: 60 + 75 + 50 = 185 < 200 → 保護失敗（バグ再現/RED）
@@ -217,7 +217,7 @@ describe('Spike 2026-08-30: 短文記事DOMの閾値別保護マトリクス', (
       document.body.innerHTML = '';
     });
 
-    it('GREEN仮説: p*40 + 閾値120 なら 600字記事は保護される（計算上の検証）', () => {
+    it('GREEN hypothesis: verifies a 600-char article is protected with p*40 and threshold 120 (calculated check)', () => {
       // 現行コードは p*25 なので、p*40 を仮定したスコアは expectedScore で算出
       const hypotheticalScoreP40 = expectedScore(600, 40);
       expect(hypotheticalScoreP40).toBe(230);
@@ -245,7 +245,7 @@ describe('Spike 2026-08-30: 短文記事DOMの閾値別保護マトリクス', (
       expect(score300).toBeGreaterThanOrEqual(120);
     });
 
-    it('300字記事: p*40 閾値200 でも保護され、閾値120なら現行でも保護される', () => {
+    it('300-char article: protected at threshold 200 with p*40, and protected at threshold 120 with current weights', () => {
       const scoreP25 = expectedScore(300, 25);
       const scoreP40 = expectedScore(300, 40);
       expect(scoreP25).toBe(155);

@@ -69,7 +69,7 @@ describe('OpenAIProvider: エラーハンドリング', () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockRestore();
   });
 
-  it('APIエラー時、HTTPステータスコード・レスポンス詳細・プロバイダー名を含まない', async () => {
+  it('omits the HTTP status code, response details, and provider name on an API error', async () => {
     const provider = new OpenAIProvider(baseSettings, 'openai');
     const result = await provider.generateSummary('content', false, '');
 

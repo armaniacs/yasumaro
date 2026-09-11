@@ -46,7 +46,7 @@ describe('HeaderDetector', () => {
   });
 
   describe('cachePrivacyInfo', () => {
-    test('プライベート情報をキャッシュに保存できる', () => {
+    test('saves private info to the cache', () => {
       const url = 'https://example.com/test';
       const info = {
         isPrivate: true,
@@ -60,7 +60,7 @@ describe('HeaderDetector', () => {
       expect(RecordingCache.getPrivacyCache()?.get(url)).toEqual(info);
     });
 
-    test('キャッシュサイズが100を超えたら最も古いエントリを削除する', () => {
+    test('evicts the oldest entry when the cache exceeds 100 entries', () => {
       // 100エントリを追加
       for (let i = 0; i < 100; i++) {
         detector['cachePrivacyInfo'](`https://example.com/test${i}`, {
@@ -100,7 +100,7 @@ describe('HeaderDetector', () => {
   });
 
   describe('onHeadersReceived', () => {
-    test('メインフレームのHTMLレスポンスを処理できる', () => {
+    test('processes main-frame HTML responses', () => {
       const details = {
         url: 'https://example.com/page',
         type: 'main_frame' as chrome.webRequest.ResourceType,
@@ -118,7 +118,7 @@ describe('HeaderDetector', () => {
       expect(cached?.reason).toBe('cache-control');
     });
 
-    test('サブフレームは無視する', () => {
+    test('ignores subframes', () => {
       const details = {
         url: 'https://example.com/iframe',
         type: 'sub_frame' as chrome.webRequest.ResourceType,
@@ -132,7 +132,7 @@ describe('HeaderDetector', () => {
       expect(RecordingCache.getPrivacyCache()?.has('https://example.com/iframe')).toBeFalsy();
     });
 
-    test('非HTMLリソースは無視する', () => {
+    test('ignores non-HTML resources', () => {
       const details = {
         url: 'https://example.com/image.png',
         type: 'main_frame' as chrome.webRequest.ResourceType,
@@ -147,7 +147,7 @@ describe('HeaderDetector', () => {
       expect(RecordingCache.getPrivacyCache()?.has('https://example.com/image.png')).toBeFalsy();
     });
 
-    test('Content-Typeがない場合もスキップする', () => {
+    test('skips responses without Content-Type', () => {
       const details = {
         url: 'https://example.com/noct',
         type: 'main_frame' as chrome.webRequest.ResourceType,
@@ -188,25 +188,25 @@ describe('HeaderDetector', () => {
    });
 
   describe('normalizeUrl', () => {
-    test('末尾スラッシュを削除する', () => {
+    test('removes the trailing slash', () => {
       expect(HeaderDetector.normalizeUrl('https://example.com/page/')).toBe('https://example.com/page');
     });
 
-    test('ルートパスの末尾スラッシュは削除しない', () => {
+    test('keeps the trailing slash of the root path', () => {
       expect(HeaderDetector.normalizeUrl('https://example.com/')).toBe('https://example.com/');
     });
 
-    test('フラグメントを削除する', () => {
+    test('removes the fragment', () => {
       expect(HeaderDetector.normalizeUrl('https://example.com/page#section')).toBe('https://example.com/page');
     });
 
-    test('不正なURLはそのまま返す', () => {
+    test('returns invalid URLs as-is', () => {
       expect(HeaderDetector.normalizeUrl('not-a-url')).toBe('not-a-url');
     });
   });
 
   describe('cachePrivacyInfo', () => {
-    test('tabIdが0以上でプライベート検出時にバッジを設定する', async () => {
+    test('sets the badge on private detection when tabId is 0 or greater', async () => {
       chrome.action.setBadgeText = vi.fn(() => Promise.resolve());
       chrome.action.setBadgeBackgroundColor = vi.fn(() => Promise.resolve());
 
@@ -220,7 +220,7 @@ describe('HeaderDetector', () => {
       expect(chrome.action.setBadgeBackgroundColor).toHaveBeenCalled();
     });
 
-    test('tabIdが-1の場合はバッジをスキップする', async () => {
+    test('skips the badge when tabId is -1', async () => {
       chrome.action.setBadgeText = vi.fn(() => Promise.resolve());
 
       await detector['cachePrivacyInfo']('https://bg.com', {
@@ -232,7 +232,7 @@ describe('HeaderDetector', () => {
       expect(chrome.action.setBadgeText).not.toHaveBeenCalled();
     });
 
-    test('非プライベートではバッジを設定しない', async () => {
+    test('does not set the badge for non-private pages', async () => {
       chrome.action.setBadgeText = vi.fn(() => Promise.resolve());
 
       await detector['cachePrivacyInfo']('https://pub.com', {
@@ -243,7 +243,7 @@ describe('HeaderDetector', () => {
       expect(chrome.action.setBadgeText).not.toHaveBeenCalled();
     });
 
-    test('バッジ設定エラーをログに記録する', async () => {
+    test('logs badge-setting errors', async () => {
       chrome.action.setBadgeText = vi.fn(() => Promise.reject(new Error('Badge error')));
       chrome.action.setBadgeBackgroundColor = vi.fn(() => Promise.resolve());
 
@@ -258,15 +258,14 @@ describe('HeaderDetector', () => {
   });
 
   describe('evictOldestEntry', () => {
-    test('キャッシュが空の場合は何もしない', async () => {
+    test('does nothing when the cache is empty', async () => {
       RecordingCache.invalidatePrivacyCache();
-      await detector['evictOldestEntry']();
-      // エラーなく完了
+      await expect(detector['evictOldestEntry']()).resolves.not.toThrow();
     });
   });
 
   describe('initialize', () => {
-    test('chrome.webRequestが未定義の場合はエラーログを出力してreturnする', async () => {
+    test('logs an error and returns when chrome.webRequest is undefined', async () => {
       const origWebRequest = chrome.webRequest;
       // @ts-expect-error
       delete chrome.webRequest;
@@ -277,7 +276,7 @@ describe('HeaderDetector', () => {
       chrome.webRequest = origWebRequest;
     });
 
-    test('リスナー登録に失敗した場合はエラーログを出力する', async () => {
+    test('logs an error when listener registration fails', async () => {
       chrome.webRequest = {
         onHeadersReceived: {
           addListener: vi.fn(() => { throw new Error('Permission denied'); }),

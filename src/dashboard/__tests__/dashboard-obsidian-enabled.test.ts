@@ -219,7 +219,7 @@ describe('Dashboard — obsidianEnabledInput', () => {
     expect(details.open).toBe(true);
   });
 
-  it('Obsidian有効時にガイドリンクが表示されていること', () => {
+  it('shows the guide link when Obsidian is enabled', () => {
     const link = document.getElementById('obsidianSetupGuideLink');
     expect(link).not.toBeNull();
     expect(link?.getAttribute('href')).toContain('OBSIDIAN_SETUP_GUIDE.md');
@@ -240,7 +240,7 @@ describe('Dashboard — obsidianEnabledInput', () => {
     expect(details.open).toBe(false);
   });
 
-  it('loadGeneralSettings が min_visit_duration / min_scroll_depth / max_tokens_per_prompt を読み込む', async () => {
+  it('loadGeneralSettings loads min_visit_duration / min_scroll_depth / max_tokens_per_prompt', async () => {
     mockGetAll.mockResolvedValueOnce({
       min_visit_duration: 10,
       min_scroll_depth: 30,
@@ -254,7 +254,7 @@ describe('Dashboard — obsidianEnabledInput', () => {
     expect((document.getElementById('maxTokensPerPrompt') as HTMLInputElement).value).toBe('2000');
   });
 
-  it('extractSettingsFromInputs が min_visit_duration / min_scroll_depth / max_tokens_per_prompt を抽出する', () => {
+  it('extractSettingsFromInputs extracts min_visit_duration / min_scroll_depth / max_tokens_per_prompt', () => {
     (document.getElementById('minVisitDuration') as HTMLInputElement).value = '15';
     (document.getElementById('minScrollDepth') as HTMLInputElement).value = '40';
     (document.getElementById('maxTokensPerPrompt') as HTMLInputElement).value = '3000';

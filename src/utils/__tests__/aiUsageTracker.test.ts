@@ -250,13 +250,13 @@ describe('aiUsageTracker', () => {
     });
 
     describe('checkRateLimit', () => {
-        test('初回は許可される', async () => {
+        test('allows the first call', async () => {
             const result = await checkRateLimit();
             expect(result.allowed).toBe(true);
             expect(result.remaining).toBe(9);
         });
 
-        test('ウィンドウ内のリクエスト数を追跡する', async () => {
+        test('tracks request counts within the window', async () => {
             mockStorage['ai_rate_limit_window_start'] = FIXED_NOW;
             mockStorage['ai_rate_limit_count'] = 5;
 
@@ -265,7 +265,7 @@ describe('aiUsageTracker', () => {
             expect(result.remaining).toBe(4);
         });
 
-        test('10回以上は拒否される', async () => {
+        test('rejects calls at 10 or more', async () => {
             mockStorage['ai_rate_limit_window_start'] = FIXED_NOW;
             mockStorage['ai_rate_limit_count'] = 10;
 
@@ -274,7 +274,7 @@ describe('aiUsageTracker', () => {
             expect(result.remaining).toBe(0);
         });
 
-        test('ウィンドウ期限切れでリセットされる', async () => {
+        test('resets after the window expires', async () => {
             // Seeded 61s before the injected clock: expiry is deterministic
             // and independent of real elapsed time under load.
             mockStorage['ai_rate_limit_window_start'] = FIXED_NOW - 61000;
@@ -288,7 +288,7 @@ describe('aiUsageTracker', () => {
             expect(result.resetTime).toBe(FIXED_NOW + 60000);
         });
 
-        test('ウィンドウ境界内ではリセットされない', async () => {
+        test('skips reset inside the window boundary', async () => {
             // 1s inside the 60s window: still counts against the cap.
             mockStorage['ai_rate_limit_window_start'] = FIXED_NOW - 59000;
             mockStorage['ai_rate_limit_count'] = 10;
@@ -303,7 +303,7 @@ describe('aiUsageTracker', () => {
         // read-modify-write of the rate-limit counter. With max=1, exactly one
         // of two concurrent calls may be allowed. Timer-based interleaving uses
         // scoped fake timers so the stretch under load cannot flake.
-        test('VULN-010: 同時呼び出しでレート制限を突破できない', async () => {
+        test('VULN-010: blocks rate-limit bypass via concurrent calls', async () => {
             vi.useFakeTimers();
             try {
                 const origGet = mockChrome.storage.local.get;
@@ -347,7 +347,7 @@ describe('aiUsageTracker', () => {
             }
         });
 
-        test('count が undefined の場合は 0 から開始', async () => {
+        test('starts from 0 when count is undefined', async () => {
             mockStorage['ai_rate_limit_window_start'] = FIXED_NOW;
 
             const result = await checkRateLimit();
@@ -355,7 +355,7 @@ describe('aiUsageTracker', () => {
             expect(result.remaining).toBe(9);
         });
 
-        test('AI_RATE_LIMIT_MAX 設定値を参照する', async () => {
+        test('honors the AI_RATE_LIMIT_MAX setting', async () => {
             mockStorage['ai_rate_limit_max'] = 5;
             mockStorage['ai_rate_limit_window_start'] = FIXED_NOW;
             mockStorage['ai_rate_limit_count'] = 5;
@@ -365,7 +365,7 @@ describe('aiUsageTracker', () => {
             expect(result.remaining).toBe(0);
         });
 
-        test('AI_RATE_LIMIT_MAX が未設定の場合はデフォルト 10 を使用する', async () => {
+        test('defaults to 10 when AI_RATE_LIMIT_MAX is unset', async () => {
             mockStorage['ai_rate_limit_window_start'] = FIXED_NOW;
             mockStorage['ai_rate_limit_count'] = 9;
 
@@ -376,14 +376,14 @@ describe('aiUsageTracker', () => {
     });
 
     describe('getMonthlyUsage', () => {
-        test('デフォルトの月間使用量を返す', async () => {
+        test('returns default monthly usage', async () => {
             const result = await getMonthlyUsage();
             expect(result.tokensSent).toBe(0);
             expect(result.tokensReceived).toBe(0);
             expect(result.requestCount).toBe(0);
         });
 
-        test('保存された使用量を返す', async () => {
+        test('returns stored usage', async () => {
             const now = new Date();
             const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             mockStorage['ai_usage_month'] = monthKey;
@@ -397,7 +397,7 @@ describe('aiUsageTracker', () => {
             expect(result.requestCount).toBe(5);
         });
 
-        test('月が変わった場合はリセットする', async () => {
+        test('resets when the month changes', async () => {
             mockStorage['ai_usage_month'] = '2020-01';
             mockStorage['ai_usage_tokens_sent'] = 9999;
 
@@ -405,7 +405,7 @@ describe('aiUsageTracker', () => {
             expect(result.tokensSent).toBe(0);
         });
 
-        test('トークン数が未設定の場合は0を返す', async () => {
+        test('returns 0 when token counts are unset', async () => {
             const now = new Date();
             const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             mockStorage['ai_usage_month'] = monthKey;
@@ -419,13 +419,13 @@ describe('aiUsageTracker', () => {
     });
 
     describe('recordUsage', () => {
-        test('使用量を記録する', async () => {
+        test('records usage', async () => {
             await recordUsage(100, 200);
 
             expect(mockChrome.storage.local.set).toHaveBeenCalled();
         });
 
-        test('既存の使用量に加算する', async () => {
+        test('adds to existing usage', async () => {
             const now = new Date();
             const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             mockStorage['ai_usage_month'] = monthKey;
@@ -441,25 +441,25 @@ describe('aiUsageTracker', () => {
     });
 
     describe('getRateLimitMessage', () => {
-        test('レート制限メッセージを返す', () => {
+        test('returns the rate-limit message', () => {
             const message = getRateLimitMessage(FIXED_NOW + 30000);
             expect(message).toContain('Rate limit');
             expect(message).toContain('30 seconds');
         });
 
-        test('秒数を計算する', () => {
+        test('computes seconds', () => {
             const message = getRateLimitMessage(FIXED_NOW + 5000);
             expect(message).toContain('5 seconds');
         });
 
-        test('残り時間を切り上げで計算する', () => {
+        test('rounds remaining time up', () => {
             const message = getRateLimitMessage(FIXED_NOW + 5100);
             expect(message).toContain('6 seconds');
         });
     });
 
     describe('checkUsageWarning', () => {
-        test('100万トークン以下は警告なし', async () => {
+        test('warns nothing at or below 1M tokens', async () => {
             const now = new Date();
             const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             mockStorage['ai_usage_month'] = monthKey;
@@ -470,7 +470,7 @@ describe('aiUsageTracker', () => {
             expect(result.warning).toBe(false);
         });
 
-        test('100万トークン超過で警告あり', async () => {
+        test('warns above 1M tokens', async () => {
             const now = new Date();
             const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             mockStorage['ai_usage_month'] = monthKey;
@@ -482,7 +482,7 @@ describe('aiUsageTracker', () => {
             expect(result.message).toBeDefined();
         });
 
-        test('MAX_MONTHLY_TOKENS が 0 の場合は警告なし', async () => {
+        test('warns nothing when MAX_MONTHLY_TOKENS is 0', async () => {
             const now = new Date();
             const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             mockStorage['ai_usage_month'] = monthKey;
@@ -496,7 +496,7 @@ describe('aiUsageTracker', () => {
     });
 
     describe('checkHardLimit', () => {
-        test('月次使用量が上限未満の場合はブロックしない', async () => {
+        test('skips blocking below the monthly cap', async () => {
             const now = new Date();
             const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             mockStorage['ai_usage_month'] = monthKey;
@@ -508,7 +508,7 @@ describe('aiUsageTracker', () => {
             expect(result.blocked).toBe(false);
         });
 
-        test('予定使用量を含めて上限を超える場合はブロックする', async () => {
+        test('blocks when projected usage exceeds the cap', async () => {
             const now = new Date();
             const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             mockStorage['ai_usage_month'] = monthKey;
@@ -521,7 +521,7 @@ describe('aiUsageTracker', () => {
             expect(result.message).toContain('Monthly token limit reached');
         });
 
-        test('MAX_MONTHLY_TOKENS が 0 の場合は無制限としてブロックしない', async () => {
+        test('treats MAX_MONTHLY_TOKENS 0 as unlimited without blocking', async () => {
             const now = new Date();
             const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             mockStorage['ai_usage_month'] = monthKey;
@@ -533,7 +533,7 @@ describe('aiUsageTracker', () => {
             expect(result.blocked).toBe(false);
         });
 
-        test('MAX_MONTHLY_TOKENS が未設定の場合はデフォルト 100 万を使用する', async () => {
+        test('defaults to 1M when MAX_MONTHLY_TOKENS is unset', async () => {
             const now = new Date();
             const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             mockStorage['ai_usage_month'] = monthKey;

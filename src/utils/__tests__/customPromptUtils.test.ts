@@ -194,38 +194,38 @@ const asPrompts = (value: unknown): CustomPrompt[] => value as CustomPrompt[];
 describe('customPromptUtils', () => {
 
     describe('定数', () => {
-        test('DEFAULT_USER_PROMPT_JA が定義されている', () => {
+        test('defines DEFAULT_USER_PROMPT_JA', () => {
             expect(DEFAULT_USER_PROMPT_JA).toContain('{{content}}');
             expect(DEFAULT_USER_PROMPT_JA).toContain('日本語');
         });
 
-        test('DEFAULT_USER_PROMPT_EN が定義されている', () => {
+        test('defines DEFAULT_USER_PROMPT_EN', () => {
             expect(DEFAULT_USER_PROMPT_EN).toContain('{{content}}');
             expect(DEFAULT_USER_PROMPT_EN).toContain('English');
         });
 
-        test('DEFAULT_SYSTEM_PROMPT_JA が定義されている', () => {
+        test('defines DEFAULT_SYSTEM_PROMPT_JA', () => {
             expect(DEFAULT_SYSTEM_PROMPT_JA).toContain('Japanese');
         });
 
-        test('DEFAULT_SYSTEM_PROMPT_EN が定義されている', () => {
+        test('defines DEFAULT_SYSTEM_PROMPT_EN', () => {
             expect(DEFAULT_SYSTEM_PROMPT_EN).toContain('English');
         });
 
-        test('DEFAULT_USER_PROMPT は JA のエイリアス', () => {
+        test('aliases DEFAULT_USER_PROMPT to JA', () => {
             expect(DEFAULT_USER_PROMPT).toBe(DEFAULT_USER_PROMPT_JA);
         });
 
-        test('DEFAULT_SYSTEM_PROMPT は JA のエイリアス', () => {
+        test('aliases DEFAULT_SYSTEM_PROMPT to JA', () => {
             expect(DEFAULT_SYSTEM_PROMPT).toBe(DEFAULT_SYSTEM_PROMPT_JA);
         });
 
-        test('PRESET_PROMPTS が5つ定義されている', () => {
+        test('defines 5 PRESET_PROMPTS', () => {
             expect(PRESET_PROMPTS).toHaveLength(5);
             expect(PRESET_PROMPTS.map(p => p.id)).toEqual(['default', 'tagged', 'bullet', 'english', 'technical']);
         });
 
-        test('各プリセットに必須フィールドが含まれる', () => {
+        test('includes required fields in each preset', () => {
             for (const preset of PRESET_PROMPTS) {
                 expect(preset.id).toBeDefined();
                 expect(preset.name).toBeDefined();
@@ -237,15 +237,15 @@ describe('customPromptUtils', () => {
     });
 
     describe('getDefaultUserPrompt', () => {
-        test('ja ロケールで日本語プロンプトを返す', () => {
+        test('returns the Japanese prompt for the ja locale', () => {
             expect(getDefaultUserPrompt('ja')).toBe(DEFAULT_USER_PROMPT_JA);
         });
 
-        test('en ロケールで英語プロンプトを返す', () => {
+        test('returns the English prompt for the en locale', () => {
             expect(getDefaultUserPrompt('en')).toBe(DEFAULT_USER_PROMPT_EN);
         });
 
-        test('locale省略時はブラウザのUI言語（日本語）が使われる', () => {
+        test('uses the browser UI language (Japanese) when locale is omitted', () => {
             Object.defineProperty(global, 'navigator', {
                 value: { language: 'ja-JP' },
                 configurable: true,
@@ -254,7 +254,7 @@ describe('customPromptUtils', () => {
             expect(getDefaultUserPrompt()).toBe(DEFAULT_USER_PROMPT_JA);
         });
 
-        test('locale省略時はブラウザのUI言語（英語）が使われる', () => {
+        test('uses the browser UI language (English) when locale is omitted', () => {
             Object.defineProperty(global, 'navigator', {
                 value: { language: 'en-US' },
                 configurable: true,
@@ -265,15 +265,15 @@ describe('customPromptUtils', () => {
     });
 
     describe('getDefaultSystemPrompt', () => {
-        test('ja ロケールで日本語システムプロンプトを返す', () => {
+        test('returns the Japanese system prompt for the ja locale', () => {
             expect(getDefaultSystemPrompt('ja')).toBe(DEFAULT_SYSTEM_PROMPT_JA);
         });
 
-        test('en ロケールで英語システムプロンプトを返す', () => {
+        test('returns the English system prompt for the en locale', () => {
             expect(getDefaultSystemPrompt('en')).toBe(DEFAULT_SYSTEM_PROMPT_EN);
         });
 
-        test('locale省略時はブラウザのUI言語（日本語）が使われる', () => {
+        test('uses the browser UI language (Japanese) when locale is omitted', () => {
             Object.defineProperty(global, 'navigator', {
                 value: { language: 'ja-JP' },
                 configurable: true,
@@ -282,7 +282,7 @@ describe('customPromptUtils', () => {
             expect(getDefaultSystemPrompt()).toBe(DEFAULT_SYSTEM_PROMPT_JA);
         });
 
-        test('locale省略時はブラウザのUI言語（英語）が使われる', () => {
+        test('uses the browser UI language (English) when locale is omitted', () => {
             Object.defineProperty(global, 'navigator', {
                 value: { language: 'en-US' },
                 configurable: true,
@@ -293,7 +293,7 @@ describe('customPromptUtils', () => {
     });
 
     describe('getBrowserLocale', () => {
-        test('日本語ロケールの場合は ja を返す', () => {
+        test('returns ja for a Japanese locale', () => {
             Object.defineProperty(global, 'navigator', {
                 value: { language: 'ja-JP' },
                 configurable: true,
@@ -302,7 +302,7 @@ describe('customPromptUtils', () => {
             expect(getBrowserLocale()).toBe('ja');
         });
 
-        test('英語ロケールの場合は en を返す', () => {
+        test('returns en for an English locale', () => {
             Object.defineProperty(global, 'navigator', {
                 value: { language: 'en-US' },
                 configurable: true,
@@ -311,24 +311,24 @@ describe('customPromptUtils', () => {
             expect(getBrowserLocale()).toBe('en');
         });
 
-        test('文字列を返す', () => {
+        test('returns a ja or en string', () => {
             const locale = getBrowserLocale();
             expect(['ja', 'en']).toContain(locale);
         });
     });
 
     describe('getPresetPrompt', () => {
-        test('有効な ID でプリセットを返す', () => {
+        test('returns the preset for a valid ID', () => {
             const preset = getPresetPrompt('default');
             expect(preset).toBeDefined();
             expect(preset?.id).toBe('default');
         });
 
-        test('無効な ID で undefined を返す', () => {
+        test('returns undefined for an invalid ID', () => {
             expect(getPresetPrompt('nonexistent')).toBeUndefined();
         });
 
-        test('全プリセットが取得できる', () => {
+        test('retrieves all presets', () => {
             for (const p of PRESET_PROMPTS) {
                 expect(getPresetPrompt(p.id)).toEqual(p);
             }
@@ -338,17 +338,17 @@ describe('customPromptUtils', () => {
     describe('getPromptDisplayName', () => {
         const preset = PRESET_PROMPTS[0]!;
 
-        test('ja ロケールで日本語名を返す', () => {
+        test('returns the Japanese name for the ja locale', () => {
             expect(getPromptDisplayName(preset, 'ja')).toBe(preset.nameJa);
         });
 
-        test('en ロケールで英語名を返す', () => {
+        test('returns the English name for the en locale', () => {
             expect(getPromptDisplayName(preset, 'en')).toBe(preset.name);
         });
     });
 
     describe('buildTaggedSummaryPrompt', () => {
-        test('カテゴリとコンテンツを含むプロンプトを生成する', () => {
+        test('generates a prompt containing categories and content', () => {
             const settings = {};
             const result = buildTaggedSummaryPrompt(settings, 'test content');
 
@@ -358,20 +358,20 @@ describe('customPromptUtils', () => {
             expect(result).toContain('Business');
         });
 
-        test('プロンプトに "#カテゴリ1" "#カテゴリ2" というリテラルが含まれない', () => {
+        test('excludes hardcoded category placeholder literals from the prompt', () => {
             // instruction leakage 対策: LLMがこの文字列をオウム返しするのを防ぐ
             const result = buildTaggedSummaryPrompt({}, 'content');
             expect(result).not.toContain('#カテゴリ1');
             expect(result).not.toContain('#カテゴリ2');
         });
 
-        test('プロンプトに "要約文（改行なし）" というリテラルが含まれない', () => {
+        test('excludes the hardcoded summary-line literal from the prompt', () => {
             // instruction leakage 対策
             const result = buildTaggedSummaryPrompt({}, 'content');
             expect(result).not.toContain('要約文（改行なし）');
         });
 
-        test('出力形式の指示が1行のみであることを明示する', () => {
+        test('states that the output format instruction is a single line', () => {
             const result = buildTaggedSummaryPrompt({}, 'content');
             // 1行出力の指示が含まれる
             expect(result.toLowerCase()).toMatch(/one line|1行|1 line/i);
@@ -379,53 +379,53 @@ describe('customPromptUtils', () => {
     });
 
     describe('replaceContentPlaceholder', () => {
-        test('{{content}} を置換する', () => {
+        test('replaces {{content}}', () => {
             const result = replaceContentPlaceholder('Hello {{content}}', 'World');
             expect(result).toBe('Hello World');
         });
 
-        test('大文字小文字を区別しない', () => {
+        test('matches placeholders case-insensitively', () => {
             const result = replaceContentPlaceholder('Hello {{CONTENT}}', 'World');
             expect(result).toBe('Hello World');
         });
 
-        test('プレースホルダーがない場合はそのまま返す', () => {
+        test('returns the template unchanged when it has no placeholders', () => {
             const result = replaceContentPlaceholder('No placeholder', 'World');
             expect(result).toBe('No placeholder');
         });
 
-        test('複数のプレースホルダーを置換する', () => {
+        test('replaces multiple placeholders', () => {
             const result = replaceContentPlaceholder('{{content}} and {{content}}', 'X');
             expect(result).toBe('X and X');
         });
     });
 
     describe('validatePrompt', () => {
-        test('有効なプロンプトで valid: true を返す', () => {
+        test('returns valid: true for a valid prompt', () => {
             const result = validatePrompt('Summarize: {{content}}');
             expect(result.valid).toBe(true);
         });
 
-        test('空文字列で valid: false を返す', () => {
+        test('returns valid: false for an empty string', () => {
             const result = validatePrompt('');
             expect(result.valid).toBe(false);
             expect(result.error).toBe('Prompt is required');
         });
 
-        test('5000文字超過で valid: false を返す', () => {
+        test('returns valid: false when exceeding 5000 characters', () => {
             const longPrompt = 'a'.repeat(5001);
             const result = validatePrompt(longPrompt);
             expect(result.valid).toBe(false);
             expect(result.error).toContain('too long');
         });
 
-        test('5000文字ちょうどで valid: true', () => {
+        test('returns valid: true at exactly 5000 characters', () => {
             const prompt = 'a'.repeat(5000);
             const result = validatePrompt(prompt);
             expect(result.valid).toBe(true);
         });
 
-        test('LOW危険度検知時は警告ログを出力して valid: true を返す', () => {
+        test('logs a warning and returns valid: true when LOW severity is detected', () => {
             const mocked = vi.mocked(sanitizePromptContent);
             mocked.mockReturnValueOnce({
                 sanitized: '',
@@ -447,7 +447,7 @@ describe('customPromptUtils', () => {
     });
 
     describe('getActivePrompt', () => {
-        test('プロバイダー固有のプロンプトを返す', () => {
+        test('returns the provider-specific prompt', () => {
             const settings = {
                 custom_prompts: [
                     { id: '1', name: 'Test', prompt: 'test', isActive: true, provider: 'gemini', createdAt: 0, updatedAt: 0 }
@@ -458,7 +458,7 @@ describe('customPromptUtils', () => {
             expect(result?.id).toBe('1');
         });
 
-        test('all プロバイダーのプロンプトを返す', () => {
+        test('returns the prompt for the all provider', () => {
             const settings = {
                 custom_prompts: [
                     { id: '1', name: 'Test', prompt: 'test', isActive: true, provider: 'all', createdAt: 0, updatedAt: 0 }
@@ -469,17 +469,17 @@ describe('customPromptUtils', () => {
             expect(result?.id).toBe('1');
         });
 
-        test('プロンプトが空の場合は null', () => {
+        test('returns null when the prompt is empty', () => {
             const settings = { custom_prompts: [] };
             expect(getActivePrompt(asSettings(settings), 'gemini')).toBeNull();
         });
 
-        test('カスタムプロンプトがない場合は null', () => {
+        test('returns null when no custom prompt exists', () => {
             const settings = {};
             expect(getActivePrompt(asSettings(settings), 'gemini')).toBeNull();
         });
 
-        test('isActive=false のプロンプトは返さない', () => {
+        test('does not return prompts with isActive=false', () => {
             const settings = {
                 custom_prompts: [
                     { id: '1', name: 'Test', prompt: 'test', isActive: false, provider: 'gemini', createdAt: 0, updatedAt: 0 }
@@ -488,7 +488,7 @@ describe('customPromptUtils', () => {
             expect(getActivePrompt(asSettings(settings), 'gemini')).toBeNull();
         });
 
-        test('プロバイダー固有が優先される', () => {
+        test('prefers the provider-specific prompt', () => {
             const settings = {
                 custom_prompts: [
                     { id: '1', name: 'All', prompt: 'all', isActive: true, provider: 'all', createdAt: 0, updatedAt: 0 },
@@ -501,7 +501,7 @@ describe('customPromptUtils', () => {
     });
 
     describe('applyCustomPrompt', () => {
-        test('カスタムプロンプトが有効な場合はそれを使用する', () => {
+        test('uses the custom prompt when one is active', () => {
             const settings = {
                 custom_prompts: [
                     { id: '1', name: 'Custom', prompt: 'Custom: {{content}}', isActive: true, provider: 'gemini', createdAt: 0, updatedAt: 0 }
@@ -513,7 +513,7 @@ describe('customPromptUtils', () => {
             expect(result.userPrompt).toBe('Custom: test content');
         });
 
-        test('カスタムがない場合はデフォルトを使用する', () => {
+        test('uses the default when no custom prompt exists', () => {
             const settings = {};
             const result = applyCustomPrompt(asSettings(settings), 'gemini', 'test content');
 
@@ -521,7 +521,7 @@ describe('customPromptUtils', () => {
             expect(result.userPrompt).toContain('test content');
         });
 
-        test('タグ付き要約モードでプロンプトを生成する', () => {
+        test('generates a prompt in tagged-summary mode', () => {
             const settings = {};
             const result = applyCustomPrompt(asSettings(settings), 'gemini', 'test content', true);
 
@@ -530,7 +530,7 @@ describe('customPromptUtils', () => {
             expect(result.userPrompt).toContain('カテゴリ');
         });
 
-        test('カスタムシステムプロンプトを使用する', () => {
+        test('uses the custom system prompt', () => {
             const settings = {
                 custom_prompts: [
                     { id: '1', name: 'Custom', prompt: '{{content}}', systemPrompt: 'Custom system', isActive: true, provider: 'gemini', createdAt: 0, updatedAt: 0 }
@@ -541,7 +541,7 @@ describe('customPromptUtils', () => {
             expect(result.systemPrompt).toBe('Custom system');
         });
 
-        test('システムプロンプトがない場合はデフォルトを使用する', () => {
+        test('uses the default when no system prompt exists', () => {
             Object.defineProperty(global, 'navigator', {
                 value: { language: 'ja-JP' },
                 configurable: true,
@@ -557,7 +557,7 @@ describe('customPromptUtils', () => {
             expect(result.systemPrompt).toBe(DEFAULT_SYSTEM_PROMPT_JA);
         });
 
-        test('en ロケールでデフォルト英語プロンプトを使用する', () => {
+        test('uses the default English prompt for the en locale', () => {
             const settings = {};
             const result = applyCustomPrompt(asSettings(settings), 'gemini', 'test', false, 'en');
 
@@ -567,12 +567,12 @@ describe('customPromptUtils', () => {
     });
 
     describe('generatePromptId', () => {
-        test('prompt_ プレフィックスを持つ', () => {
+        test('has the prompt_ prefix', () => {
             const id = generatePromptId();
             expect(id).toMatch(/^prompt_\d+_[a-z0-9]+$/);
         });
 
-        test('毎回異なるIDを生成する', () => {
+        test('generates a different ID each time', () => {
             const id1 = generatePromptId();
             const id2 = generatePromptId();
             expect(id1).not.toBe(id2);
@@ -580,7 +580,7 @@ describe('customPromptUtils', () => {
     });
 
     describe('createPrompt', () => {
-        test('createdAt と updatedAt が設定される', () => {
+        test('sets createdAt and updatedAt', () => {
             const before = Date.now();
             const prompt = createPrompt({
                 name: 'Test',
@@ -599,7 +599,7 @@ describe('customPromptUtils', () => {
     });
 
     describe('updatePrompt', () => {
-        test('指定したIDのプロンプトを更新する', () => {
+        test('updates the prompt with the given ID', () => {
             const prompts = [
                 { id: '1', name: 'A', prompt: 'a', isActive: false, provider: 'all', createdAt: 0, updatedAt: 0 },
                 { id: '2', name: 'B', prompt: 'b', isActive: false, provider: 'all', createdAt: 0, updatedAt: 0 }
@@ -610,7 +610,7 @@ describe('customPromptUtils', () => {
             expect(result[1]!.name).toBe('B');
         });
 
-        test('updatedAt が更新される', () => {
+        test('updates updatedAt', () => {
             const prompts = [
                 { id: '1', name: 'A', prompt: 'a', isActive: false, provider: 'all', createdAt: 0, updatedAt: 0 }
             ];
@@ -619,7 +619,7 @@ describe('customPromptUtils', () => {
             expect(result[0]!.updatedAt).toBeGreaterThan(0);
         });
 
-        test('存在しないIDの場合は変更しない', () => {
+        test('leaves state unchanged for a nonexistent ID', () => {
             const prompts = [
                 { id: '1', name: 'A', prompt: 'a', isActive: false, provider: 'all', createdAt: 0, updatedAt: 0 }
             ];
@@ -630,7 +630,7 @@ describe('customPromptUtils', () => {
     });
 
     describe('deletePrompt', () => {
-        test('指定したIDのプロンプトを削除する', () => {
+        test('deletes the prompt with the given ID', () => {
             const prompts = [
                 { id: '1', name: 'A', prompt: 'a', isActive: false, provider: 'all', createdAt: 0, updatedAt: 0 },
                 { id: '2', name: 'B', prompt: 'b', isActive: false, provider: 'all', createdAt: 0, updatedAt: 0 }
@@ -641,7 +641,7 @@ describe('customPromptUtils', () => {
             expect(result[0]!.id).toBe('2');
         });
 
-        test('存在しないIDの場合はそのまま返す', () => {
+        test('returns the list unchanged for a nonexistent ID', () => {
             const prompts = [
                 { id: '1', name: 'A', prompt: 'a', isActive: false, provider: 'all', createdAt: 0, updatedAt: 0 }
             ];
@@ -652,7 +652,7 @@ describe('customPromptUtils', () => {
     });
 
     describe('setActivePrompt', () => {
-        test('指定したプロンプトをアクティブにする', () => {
+        test('activates the specified prompt', () => {
             const prompts = [
                 { id: '1', name: 'A', prompt: 'a', isActive: false, provider: 'gemini', createdAt: 0, updatedAt: 0 }
             ];
@@ -661,7 +661,7 @@ describe('customPromptUtils', () => {
             expect(result[0]!.isActive).toBe(true);
         });
 
-        test('同じスコープの他のプロンプトを非アクティブにする', () => {
+        test('deactivates other prompts in the same scope', () => {
             const prompts = [
                 { id: '1', name: 'A', prompt: 'a', isActive: true, provider: 'gemini', createdAt: 0, updatedAt: 0 },
                 { id: '2', name: 'B', prompt: 'b', isActive: false, provider: 'gemini', createdAt: 0, updatedAt: 0 }
@@ -672,7 +672,7 @@ describe('customPromptUtils', () => {
             expect(result[1]!.isActive).toBe(true);
         });
 
-        test('存在しないIDの場合は変更しない', () => {
+        test('leaves state unchanged for a nonexistent ID', () => {
             const prompts = [
                 { id: '1', name: 'A', prompt: 'a', isActive: false, provider: 'gemini', createdAt: 0, updatedAt: 0 }
             ];
@@ -681,7 +681,7 @@ describe('customPromptUtils', () => {
             expect(result[0]!.isActive).toBe(false);
         });
 
-        test('all スコープのプロンプトが他のプロバイダープロンプトも管理する', () => {
+        test('manages other provider prompts with an all-scope prompt', () => {
             const prompts = [
                 { id: '1', name: 'All', prompt: 'a', isActive: true, provider: 'all', createdAt: 0, updatedAt: 0 },
                 { id: '2', name: 'Gemini', prompt: 'b', isActive: true, provider: 'gemini', createdAt: 0, updatedAt: 0 }

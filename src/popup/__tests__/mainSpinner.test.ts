@@ -57,7 +57,7 @@ describe('ローディングスピナー制御', () => {
     vi.restoreAllMocks();
   });
 
-  test('showSpinner()呼び出しでスピナー要素が表示される', () => {
+  test('shows the spinner element on showSpinner() call', () => {
     // 【テスト目的】: showSpinner関数の基本動作を確認
     // 【テスト内容】: showSpinner()呼び出しによりスピナー要素のdisplayがflexに変更されることをテスト
     // 【期待される動作】: スピナーが表示状態になり、テキストが設定されること
@@ -75,7 +75,7 @@ describe('ローディングスピナー制御', () => {
     expect(spinner.querySelector('.spinner-text')!.textContent).toBe('処理中...'); // 【確認内容】: テキストが設定されたこと
   });
 
-  test('showSpinner()でテキスト引数を渡して表示テキストを更新できる', () => {
+  test('updates the display text when showSpinner() receives a text argument', () => {
     // 【テスト目的】: テキスト更新機能の確認
     // 【テスト内容】: 引数によるテキスト更新をテスト
     // 【期待される動作】: 指定したテキストが正しく表示されること
@@ -92,7 +92,7 @@ describe('ローディングスピナー制御', () => {
     expect(spinner.querySelector('.spinner-text')!.textContent).toBe('コンテンツ取得中...'); // 【確認内容】: 正しいテキストが設定されたこと
   });
 
-  test('showSpinner()引数省略時はデフォルトテキストが表示される', () => {
+  test('shows the default text when showSpinner() is called without arguments', () => {
     // 【テスト目的】: デフォルト引数の動作確認
     // 【テスト内容】: 引数を省略した場合の動作をテスト
     // 【期待される動作】: デフォルト引数 '処理中...' が使用されること
@@ -107,7 +107,7 @@ describe('ローディングスピナー制御', () => {
     expect(spinner.querySelector('.spinner-text')!.textContent).toBe('処理中...'); // 【確認内容】: デフォルトテキストが表示されたこと
   });
 
-  test('hideSpinner()呼び出しでスピナー要素が非表示になる', () => {
+  test('hides the spinner element on hideSpinner() call', () => {
     // 【テスト目的】: hideSpinner関数の基本動作を確認
     // 【テスト内容】: displayプロパティがnoneに変更されることをテスト
     // 【期待される動作】: スピナーが非表示状態になること
@@ -126,7 +126,7 @@ describe('ローディングスピナー制御', () => {
     expect(spinner.style.display).toBe('none'); // 【確認内容】: displayがnoneに変更されたこと
   });
 
-  test('showSpinner - DOM要素が存在しない場合は警告を出力する', () => {
+  test('warns when showSpinner runs without the DOM element', () => {
     // 【テスト目的】: DOM要素が見つからない場合の挙動を確認
     // 【エラーケースの概要】: document.getElementByIdがnullを返すケース
     // 【エラー処理の重要性】: DOM構成エラーを検知することを確認
@@ -144,7 +144,7 @@ describe('ローディングスピナー制御', () => {
     expect(console.warn).toHaveBeenCalledWith('loadingSpinner element not found'); // 【確認内容】: 適切な警告メッセージが出力されたこと
   });
 
-  test('hideSpinner - DOM要素が存在しない場合は警告を出力する', () => {
+  test('warns when hideSpinner runs without the DOM element', () => {
     // 【テスト目的】: DOM要素が見つからない場合の挙動を確認
     // 【エラーケースの概要】: document.getElementByIdがnullを返すケース
     // 【エラー処理の重要性】: DOM構成エラーを検知
@@ -162,7 +162,7 @@ describe('ローディングスピナー制御', () => {
     expect(console.warn).toHaveBeenCalledWith('loadingSpinner element not found'); // 【確認内容】: 適切な警告メッセージが出力されたこと
   });
 
-  test('showSpinnerを複数回呼び出した場合の挙動', () => {
+  test('applies the latest text on repeated showSpinner calls', () => {
     // 【テスト目的】: 複数回呼び出しの動作を確認
     // 【テスト内容】: 連続して関数を呼び出した場合の挙動を確認
     // 【期待される動作】: 最新のテキストが設定されること
@@ -185,7 +185,7 @@ describe('ローディングスピナー制御', () => {
     expect(spinner.querySelector('.spinner-text')!.textContent).toBe('保存中...'); // 【確認内容】: 最新のテキストが設定されていること
   });
 
-  test('showSpinnerとhideSpinnerの組み合わせ動作', () => {
+  test('toggles visibility across showSpinner/hideSpinner sequences', () => {
     // 【テスト目的】: 表示と非表示の組み合わせ動作を確認
     // 【テスト内容】: showSpinnerとhideSpinnerを連続して呼び出す動作をテスト
     // 【期待される動作】: 各操作が正しく反映されること

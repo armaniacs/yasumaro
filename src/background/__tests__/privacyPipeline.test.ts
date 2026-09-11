@@ -156,7 +156,7 @@ describe('PrivacyPipeline', () => {
       expect(result.processedContent).toBe('Sanitized text');
     });
 
-    it('LLMがタグ付き形式で返したとき、summary は parseTagsFromSummary 後のテキストになる', async () => {
+    it('sets summary to the parseTagsFromSummary text when the LLM returns tagged format', async () => {
       const llmSummary = '#IT・プログラミング #インフラ | 1行目要約\n\n詳細説明\n\n#カテゴリ1 #カテゴリ2 | 要約文（改行なし）';
       const mockAiWithTags = {
         getSupportedModes: vi.fn().mockReturnValue(['full_pipeline']),
@@ -186,7 +186,7 @@ describe('PrivacyPipeline', () => {
       expect(result.tags).toContain('IT・プログラミング');
     });
 
-    it('返される summary に \\n が含まれない（保存・表示前に正規化済み）', async () => {
+    it('returned summary contains no \\n (normalized before save and display)', async () => {
       const llmSummary = '1行目\n\n2行目\n3行目';
       const mockAiNoLocal = {
         getSupportedModes: vi.fn().mockReturnValue(['full_pipeline']),
@@ -430,7 +430,7 @@ describe('PrivacyPipeline', () => {
   });
 
   describe('aiCallDurationMs（AI要約の実処理時間、ローカル/クラウド共通）', () => {
-    it('クラウドAI呼び出し(L3)が実行された場合、その所要時間を aiCallDurationMs として返す', async () => {
+    it('returns the cloud AI call (L3) duration as aiCallDurationMs', async () => {
       const maskedCloudSettings = { [StorageKeys.PRIVACY_MODE]: 'masked_cloud' };
       const DELAY_MS = 30;
       const mockCloudService = {
@@ -452,7 +452,7 @@ describe('PrivacyPipeline', () => {
       expect(result.aiCallDurationMs).toBeGreaterThanOrEqual(DELAY_MS - 5);
     });
 
-    it('previewOnly=true の場合、クラウドAI呼び出し前に早期returnするため aiCallDurationMs は含まれない', async () => {
+    it('omits aiCallDurationMs when previewOnly=true returns early before the cloud AI call', async () => {
       const pipeline = new PrivacyPipeline(mockSettings, mockAiService, mockSanitizers);
 
       const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
@@ -465,7 +465,7 @@ describe('PrivacyPipeline', () => {
       expect(result.aiCallDurationMs).toBeUndefined();
     });
 
-    it('local_onlyモード（ローカルAI呼び出し）の場合も、その所要時間を aiCallDurationMs として返す', async () => {
+    it('returns the local AI call duration as aiCallDurationMs in local_only mode', async () => {
       const localOnlySettings = { [StorageKeys.PRIVACY_MODE]: 'local_only' };
       const DELAY_MS = 30;
       const mockLocalService = {
@@ -487,7 +487,7 @@ describe('PrivacyPipeline', () => {
       expect(result.aiCallDurationMs).toBeGreaterThanOrEqual(DELAY_MS - 5);
     });
 
-    it('alreadyProcessed=true でもクラウドAIは実際に呼ばれ、その実測時間が返る', async () => {
+    it('actually calls cloud AI and returns the measured duration even when alreadyProcessed=true', async () => {
       const maskedCloudSettings = { [StorageKeys.PRIVACY_MODE]: 'masked_cloud' };
       const DELAY_MS = 20;
       const mockCloudService = {

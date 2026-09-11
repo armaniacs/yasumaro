@@ -19,19 +19,19 @@ describe('ublockParser - Transform Module', () => {
   // ============================================================================
 
   describe('generateRuleId', () => {
-    test('同じ入力から同じIDを生成', () => {
+    test('generates the same ID from the same input', () => {
       const id1 = generateRuleId('||example.com^');
       const id2 = generateRuleId('||example.com^');
       expect(id1).toBe(id2);
     });
 
-    test('異なる入力から異なるIDを生成', () => {
+    test('generates different IDs from different inputs', () => {
       const id1 = generateRuleId('||example.com^');
       const id2 = generateRuleId('||another.com^');
       expect(id1).not.toBe(id2);
     });
 
-    test('IDは一意な文字列', () => {
+    test('generates a unique string ID', () => {
       const id = generateRuleId('||test.com^');
       expect(typeof id).toBe('string');
       expect(id.length).toBeGreaterThan(0);
@@ -43,7 +43,7 @@ describe('ublockParser - Transform Module', () => {
   // ============================================================================
 
   describe('buildRuleObject', () => {
-    test('最小限のルールオブジェクトを生成', () => {
+    test('builds a minimal rule object', () => {
       const rule = buildRuleObject('||example.com^', 'block', 'example.com');
       expect(rule).toHaveProperty('id');
       expect(rule).toHaveProperty('domain', 'example.com');
@@ -51,23 +51,23 @@ describe('ublockParser - Transform Module', () => {
       expect(rule).toHaveProperty('type');
     });
 
-    test('ブロックルールを生成', () => {
+    test('builds a block rule', () => {
       const rule = buildRuleObject('||example.com^', 'block', 'example.com');
       expect(rule.type).toBe('block');
     });
 
-    test('例外ルールを生成', () => {
+    test('builds an exception rule', () => {
       const rule = buildRuleObject('@@||example.com^', 'exception', 'example.com');
       expect(rule.type).toBe('exception');
     });
 
-    test('オプションを含むルールを生成', () => {
+    test('builds a rule with options', () => {
       const rule = buildRuleObject('||example.com^$domain=test.com,3p', 'block', 'example.com');
       expect(rule.options.domains).toEqual(['test.com']);
       expect(rule.options.thirdParty).toBe(true);
     });
 
-    test('ワイルドカードドメインを処理', () => {
+    test('handles a wildcard domain', () => {
       const rule = buildRuleObject('||*.example.com^', 'block', '*.example.com');
       expect(rule.domain).toBe('*.example.com');
     });
@@ -78,7 +78,7 @@ describe('ublockParser - Transform Module', () => {
   // ============================================================================
 
   describe('createEmptyRuleset', () => {
-    test('空のルールセットを生成', () => {
+    test('creates an empty ruleset', () => {
       const ruleset: ParsedUblockRuleset = createEmptyRuleset();
       const firstRule: UblockRule | undefined = ruleset.blockRules[0];
       expect(firstRule).toBeUndefined();
@@ -90,13 +90,13 @@ describe('ublockParser - Transform Module', () => {
       expect(typeof ruleset.metadata).toBe('object');
     });
 
-    test('配列は空である', () => {
+    test('creates empty arrays', () => {
       const ruleset = createEmptyRuleset();
       expect(ruleset.blockRules).toHaveLength(0);
       expect(ruleset.exceptionRules).toHaveLength(0);
     });
 
-    test('メタデータにデフォルト値が含まれる', () => {
+    test('includes default values in metadata', () => {
       const ruleset = createEmptyRuleset();
       expect(ruleset.metadata).toHaveProperty('source');
       expect(ruleset.metadata).toHaveProperty('importedAt');
@@ -104,12 +104,12 @@ describe('ublockParser - Transform Module', () => {
       expect(ruleset.metadata).toHaveProperty('ruleCount');
     });
 
-    test('メタデータのルール数は0', () => {
+    test('sets metadata ruleCount to 0', () => {
       const ruleset = createEmptyRuleset();
       expect(ruleset.metadata.ruleCount).toBe(0);
     });
 
-    test('メタデータはデフォルト値を持つ', () => {
+    test('holds default values in metadata', () => {
       const ruleset = createEmptyRuleset();
       expect(ruleset.metadata.source).toBeDefined();
       expect(typeof ruleset.metadata.importedAt).toBe('number');
@@ -122,38 +122,38 @@ describe('ublockParser - Transform Module', () => {
   // ============================================================================
 
   describe('parseDomainList (transform)', () => {
-    test('基本的なドメインリストをパース（|区切り）', () => {
+    test('parses a basic pipe-separated domain list', () => {
       const domains = transformParseDomainList('example.com|another.com');
       expect(domains).toEqual(['example.com', 'another.com']);
     });
 
-    test('空区切りをスキップ', () => {
+    test('skips empty segments', () => {
       const domains = transformParseDomainList('example.com||another.com');
       expect(domains).toEqual(['example.com', 'another.com']);
     });
 
-    test('空文字列を処理', () => {
+    test('handles an empty string', () => {
       const domains = transformParseDomainList('');
       expect(domains).toEqual([]);
     });
 
-    test('null/undefinedを処理（型アサーション付き）', () => {
+    test('handles null/undefined (with type assertions)', () => {
       // この関数は文字列のみを受け取るが、既存のテストでは型アサーションを使用
       expect(transformParseDomainList(null as never)).toEqual([]);
       expect(transformParseDomainList(undefined as never)).toEqual([]);
     });
 
-    test('ワイルドカードドメインを含むリストをパース', () => {
+    test('parses a list containing wildcard domains', () => {
       const domains = transformParseDomainList('*.example.com|sub.example.com');
       expect(domains).toEqual(['*.example.com', 'sub.example.com']);
     });
 
-    test('トリミング処理を行う', () => {
+    test('trims entries', () => {
       const domains = transformParseDomainList('  example.com  |  another.com  ');
       expect(domains).toEqual(['  example.com  ', '  another.com  ']);
     });
 
-    test('大量のドメインを処理', () => {
+    test('handles many domains', () => {
       const input = Array(1000).fill(0).map((_, i) => `domain${i}.com`).join('|');
       const domains = transformParseDomainList(input);
       expect(domains).toHaveLength(1000);
@@ -165,7 +165,7 @@ describe('ublockParser - Transform Module', () => {
   // ============================================================================
 
   describe('Rule Object Consistency', () => {
-    test('IDは暗号論的に一様', () => {
+    test('generates unique IDs across many inputs', () => {
       const ids = new Set<string>();
       const pattern = '||example.com^';
       const domain = 'example.com';
@@ -178,7 +178,7 @@ describe('ublockParser - Transform Module', () => {
       expect(ids.size).toBe(100);
     });
 
-    test('ルールオブジェクトは不変ではないが、変更可能', () => {
+    test('builds a mutable rule object', () => {
       // 修正: buildRuleObjectには3つの引数が必要
       const rule = buildRuleObject('||example.com^', 'block', 'example.com');
       // UblockRule型にはisActiveプロパティがないため、このテストはスキップ

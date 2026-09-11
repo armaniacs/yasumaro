@@ -173,7 +173,7 @@ describe('initPopup coverage', () => {
         vi.mocked(getPendingPages).mockResolvedValue([
             { url: 'https://example.com', reason: 'cache-control', headerValue: 'Cache-Control: private' }
         ] as unknown as Awaited<ReturnType<typeof getPendingPages>>);
-        await initPopup();
+        await expect(initPopup()).resolves.not.toThrow();
         await new Promise(r => setTimeout(r, 50));
     });
 
@@ -291,7 +291,7 @@ describe('initPopup coverage', () => {
     it('catches error in pending pages getPendingPages', async () => {
         const { getPendingPages } = await import('../../utils/pendingStorage.js');
         vi.mocked(getPendingPages).mockRejectedValue(new Error('fail'));
-        await initPopup();
+        await expect(initPopup()).resolves.not.toThrow();
         await new Promise(r => setTimeout(r, 50));
     });
 

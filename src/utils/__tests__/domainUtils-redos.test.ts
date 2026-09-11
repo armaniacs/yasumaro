@@ -10,23 +10,23 @@ import { MAX_WILDCARDS_PER_PATTERN } from '../wildcardToRegex.js';
 
 describe('domainUtils - ReDoS / wildcard cap 回帰テスト', () => {
   describe('isValidDomain', () => {
-    test('先頭 *. のワイルドカードパターンは有効', () => {
+    test('treats a leading *. wildcard pattern as valid', () => {
       expect(isValidDomain('*.example.com')).toBe(true);
     });
 
     // VULN-026: ワイルドカードが多すぎるパターンは matchesPattern（wildcardToRegex 経由）で
     // 無視される。保存前の検証でも拒否し「効かないパターン」が storage に入るのを防ぐ。
-    test('ワイルドカード上限を超えるパターンは無効', () => {
+    test('treats patterns exceeding the wildcard limit as invalid', () => {
       const overCap = '*.'.repeat(MAX_WILDCARDS_PER_PATTERN + 1) + 'example.com';
       expect(isValidDomain(overCap)).toBe(false);
     });
 
-    test('ワイルドカードが上限ちょうどのパターンは有効', () => {
+    test('treats a pattern at exactly the wildcard limit as valid', () => {
       const atCap = '*.'.repeat(MAX_WILDCARDS_PER_PATTERN) + 'example.com';
       expect(isValidDomain(atCap)).toBe(true);
     });
 
-    test('多数のラベルを持つ長大なドメインでも即座に判定される（ReDoS 防止）', () => {
+    test('resolves very long multi-label domains immediately (ReDoS prevention)', () => {
       const many = Array.from({ length: 60 }, () => 'label').join('.') + '.example';
       const start = performance.now();
       isValidDomain(many);
@@ -35,13 +35,13 @@ describe('domainUtils - ReDoS / wildcard cap 回帰テスト', () => {
   });
 
   describe('matchesPattern', () => {
-    test('ワイルドカード上限を超えるパターンは（形が合っても）マッチしない', () => {
+    test('does not match patterns exceeding the wildcard limit (even when the shape matches)', () => {
       const overCap = '*.'.repeat(MAX_WILDCARDS_PER_PATTERN + 1) + 'example.com';
       const domain = 'a.'.repeat(MAX_WILDCARDS_PER_PATTERN + 1) + 'example.com';
       expect(matchesPattern(domain, overCap)).toBe(false);
     });
 
-    test('ワイルドカード上限ちょうどのパターンは正しくマッチする', () => {
+    test('matches a pattern at exactly the wildcard limit correctly', () => {
       const atCap = '*.'.repeat(MAX_WILDCARDS_PER_PATTERN) + 'example.com';
       const domain = 'a.'.repeat(MAX_WILDCARDS_PER_PATTERN) + 'example.com';
       expect(matchesPattern(domain, atCap)).toBe(true);

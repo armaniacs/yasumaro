@@ -14,7 +14,7 @@ describe('Mutex Map improvement', () => {
     vi.clearAllMocks();
   });
 
-  test('acquireとreleaseが正しく動作する', async () => {
+  test('acquire and release work correctly', async () => {
     const mutex = (client as unknown as { _globalWriteMutex: Mutex })._globalWriteMutex;
 
     // 最初のロックを取得
@@ -38,7 +38,7 @@ describe('Mutex Map improvement', () => {
     expect(internals(mutex).queue.size).toBe(0);
   });
 
-  test('キューサイズ制限（MAX_QUEUE_SIZE=50）', async () => {
+  test('enforces the queue size limit (MAX_QUEUE_SIZE=50)', async () => {
     const mutex = (client as unknown as { _globalWriteMutex: Mutex })._globalWriteMutex;
 
     await mutex.acquire();
@@ -64,7 +64,7 @@ describe('Mutex Map improvement', () => {
     mutex.release();
   });
 
-  test('Mapでのキュー管理（O(1)操作）', async () => {
+  test('manages the queue with a Map (O(1) operations)', async () => {
     const mutex = new Mutex();
 
     // 最初のロック取得（キューに入らないのでnextTaskIdは0のまま）
@@ -94,7 +94,7 @@ describe('Mutex Map improvement', () => {
     expect(internals(mutex).queue.size).toBe(0);
   });
 
-  test('タイムアウト時にMapからエントリが削除される', async () => {
+  test('removes the entry from the Map on timeout', async () => {
     // タイムアウト値を一時的に短く設定してテスト
     vi.useFakeTimers();
 

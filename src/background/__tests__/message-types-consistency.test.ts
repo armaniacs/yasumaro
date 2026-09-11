@@ -61,7 +61,7 @@ function unionMemberTypeNames(): string[] {
 }
 
 describe('Message Type Consistency', () => {
-    test('ExtensionMessage の全メンバーが VALID_MESSAGE_TYPES に含まれる', () => {
+    test('includes all ExtensionMessage members in VALID_MESSAGE_TYPES', () => {
         // 手書きリストではなくソースから導出するため、新しい型を追加して
         // VALID_MESSAGE_TYPES への追加を忘れると、このテストが失敗する。
         const declared = unionMemberTypeNames();
@@ -71,19 +71,19 @@ describe('Message Type Consistency', () => {
         }
     });
 
-    test('VALID_MESSAGE_TYPES に ExtensionMessage 外の型が混ざっていない', () => {
+    test('contains no types outside ExtensionMessage in VALID_MESSAGE_TYPES', () => {
         const declared = new Set(unionMemberTypeNames());
         for (const type of VALID_MESSAGE_TYPES) {
             expect(declared.has(type)).toBe(true);
         }
     });
 
-    test('型レベルの網羅性チェックが成立している', () => {
+    test('holds the type-level exhaustiveness check', () => {
         expect(_noMissingTypes).toBe(true);
         expect(_noExtraTypes).toBe(true);
     });
 
-    test('VALID_MESSAGE_TYPES に重複が無い', () => {
+    test('has no duplicates in VALID_MESSAGE_TYPES', () => {
         const unique = new Set<string>(VALID_MESSAGE_TYPES);
         expect(unique.size).toBe(VALID_MESSAGE_TYPES.length);
     });

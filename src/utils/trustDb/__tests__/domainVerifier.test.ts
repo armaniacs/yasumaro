@@ -38,7 +38,7 @@ function makeState(overrides: Partial<DomainVerifierState> = {}): DomainVerifier
 
 describe('DomainVerifier', () => {
   describe('checkJpAnchor', () => {
-    test('プリセット TLD で一致すれば TRUSTED', () => {
+    test('returns TRUSTED when a preset TLD matches', () => {
       const verifier = new DomainVerifier();
       const state = makeState();
       const result = verifier.checkJpAnchor('example.go.jp', state);
@@ -46,7 +46,7 @@ describe('DomainVerifier', () => {
       expect(result.source).toBe('jp-anchor');
     });
 
-    test('ユーザー追加 TLD でも一致する', () => {
+    test('matches user-added TLDs', () => {
       const verifier = new DomainVerifier();
       const database = makeDatabase({ jpAnchor: { tlds: [], userTlds: ['.custom'] } });
       const state = makeState({ database });
@@ -54,7 +54,7 @@ describe('DomainVerifier', () => {
       expect(result.level).toBe(DomainTrustLevel.TRUSTED);
     });
 
-    test('一致しなければ UNVERIFIED', () => {
+    test('returns UNVERIFIED when nothing matches', () => {
       const verifier = new DomainVerifier();
       const state = makeState();
       const result = verifier.checkJpAnchor('example.com', state);
@@ -63,7 +63,7 @@ describe('DomainVerifier', () => {
   });
 
   describe('checkSensitive', () => {
-    test('ホワイトリストは TRUSTED を返す', () => {
+    test('returns TRUSTED for whitelisted domains', () => {
       const verifier = new DomainVerifier();
       const database = makeDatabase({
         sensitive: { presets: { finance: [], gaming: [], sns: [] }, userBlacklist: [], whitelist: ['allowed.com'] }
@@ -74,7 +74,7 @@ describe('DomainVerifier', () => {
       expect(result.source).toBe('whitelist');
     });
 
-    test('ユーザーブラックリストは SENSITIVE を返す', () => {
+    test('returns SENSITIVE for user-blacklisted domains', () => {
       const verifier = new DomainVerifier();
       const database = makeDatabase({
         sensitive: { presets: { finance: [], gaming: [], sns: [] }, userBlacklist: ['bad.com'], whitelist: [] }
@@ -85,7 +85,7 @@ describe('DomainVerifier', () => {
       expect(result.source).toBe('user-blacklist');
     });
 
-    test('プリセットカテゴリと bloom filter が一致すれば SENSITIVE', () => {
+    test('returns SENSITIVE when preset category and bloom filter match', () => {
       const verifier = new DomainVerifier();
       const database = makeDatabase({
         sensitive: {
@@ -101,14 +101,14 @@ describe('DomainVerifier', () => {
       expect(result.category).toBe('finance');
     });
 
-    test('bloom filter が一致しなければ UNVERIFIED', () => {
+    test('returns UNVERIFIED when bloom filter does not match', () => {
       const verifier = new DomainVerifier();
       const state = makeState();
       const result = verifier.checkSensitive('unknown.example', state);
       expect(result.level).toBe(DomainTrustLevel.UNVERIFIED);
     });
 
-    test('bloom filter 偽陽性の場合 UNVERIFIED を返す', () => {
+    test('returns UNVERIFIED on bloom filter false positive', () => {
       const verifier = new DomainVerifier();
       const database = makeDatabase();
       const bloomFilter = { mightContain: () => true, toData: () => database.bloomFilter } as any;
@@ -120,7 +120,7 @@ describe('DomainVerifier', () => {
   });
 
   describe('checkTranco', () => {
-    test('Tranco リストが空なら UNVERIFIED', () => {
+    test('returns UNVERIFIED when Tranco list is empty', () => {
       const verifier = new DomainVerifier();
       const state = makeState();
       const result = verifier.checkTranco('example.com', state);
@@ -128,7 +128,7 @@ describe('DomainVerifier', () => {
       expect(result.reason).toBe('Tranco list is empty');
     });
 
-    test('完全一致で TRUSTED（rank 情報付き）', () => {
+    test('returns TRUSTED with rank info on exact match', () => {
       const verifier = new DomainVerifier();
       const database = makeDatabase({ tranco: { tier: 'top10k', domains: ['cnn.com'], count: 1, sizeBytes: 7 } });
       const bloomFilter = bloomFilterFromDomains(['cnn.com']);
@@ -144,7 +144,7 @@ describe('DomainVerifier', () => {
       expect(result.reason).toContain('rank 1');
     });
 
-    test('サブドメインを除去して一致すれば TRUSTED', () => {
+    test('returns TRUSTED when stripped subdomain matches', () => {
       const verifier = new DomainVerifier();
       const database = makeDatabase({ tranco: { tier: 'top10k', domains: ['cnn.com'], count: 1, sizeBytes: 7 } });
       const bloomFilter = bloomFilterFromDomains(['cnn.com']);
@@ -158,7 +158,7 @@ describe('DomainVerifier', () => {
       expect(result.level).toBe(DomainTrustLevel.TRUSTED);
     });
 
-    test('一致しなければ UNVERIFIED', () => {
+    test('returns UNVERIFIED when nothing matches', () => {
       const verifier = new DomainVerifier();
       const database = makeDatabase({ tranco: { tier: 'top10k', domains: ['cnn.com'], count: 1, sizeBytes: 7 } });
       const bloomFilter = bloomFilterFromDomains(['cnn.com']);
@@ -169,7 +169,7 @@ describe('DomainVerifier', () => {
   });
 
   describe('isDomainTrusted (3-step composition)', () => {
-    test('URL 形式ならホスト名を抽出して判定する', () => {
+    test('extracts hostname from URL before judging', () => {
       const verifier = new DomainVerifier();
       const state = makeState();
       const result = verifier.isDomainTrusted('https://example.go.jp/page', state);
@@ -177,7 +177,7 @@ describe('DomainVerifier', () => {
       expect(result.source).toBe('jp-anchor');
     });
 
-    test('どのステップにも一致しなければ UNVERIFIED', () => {
+    test('returns UNVERIFIED when no step matches', () => {
       const verifier = new DomainVerifier();
       const state = makeState();
       const result = verifier.isDomainTrusted('example.com', state);

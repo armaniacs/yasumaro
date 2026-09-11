@@ -17,12 +17,12 @@ import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../types
 
 describe('markdownTemplateUtils', () => {
   describe('DEFAULT_MARKDOWN_TEMPLATE', () => {
-    it('固定IDを持ち isDefault が true である', () => {
+    it('has a fixed id with isDefault true', () => {
       expect(DEFAULT_MARKDOWN_TEMPLATE.id).toBe('default');
       expect(DEFAULT_MARKDOWN_TEMPLATE.isDefault).toBe(true);
     });
 
-    it('現行のハードコード形式を再現するテンプレート文字列を持つ', () => {
+    it('holds template strings reproducing the current hardcoded format', () => {
       expect(DEFAULT_MARKDOWN_TEMPLATE.fileTemplate).toBe('# {{date}}\n\n{{entries}}');
       expect(DEFAULT_MARKDOWN_TEMPLATE.entryTemplate).toBe(
         '- {{timestamp}} [{{title}}]({{url}})\n    - {{tags}}{{summary}}'
@@ -40,17 +40,17 @@ describe('markdownTemplateUtils', () => {
       domain: 'example.com',
     };
 
-    it('すべてのプレースホルダーを対応する値に置換する', () => {
+    it('replaces every placeholder with its value', () => {
       const result = renderEntryTemplate(DEFAULT_MARKDOWN_TEMPLATE.entryTemplate, entry);
       expect(result).toBe('- 10:30 [Example Title](https://example.com)\n    - #tech This is a summary.');
     });
 
-    it('domain プレースホルダーを置換できる', () => {
+    it('replaces the domain placeholder', () => {
       const result = renderEntryTemplate('{{domain}}', entry);
       expect(result).toBe('example.com');
     });
 
-    it('未定義のプレースホルダーは空文字列に置換される', () => {
+    it('replaces unknown placeholders with an empty string', () => {
       const result = renderEntryTemplate('{{unknown}}', entry);
       expect(result).toBe('');
     });
@@ -76,7 +76,7 @@ describe('markdownTemplateUtils', () => {
       },
     ];
 
-    it('date と entryCount と entries を展開してファイル全体を組み立てる', () => {
+    it('expands date, entryCount and entries to build the whole file', () => {
       const result = renderFileTemplate(DEFAULT_MARKDOWN_TEMPLATE, entries, '2026-08-07');
       expect(result).toBe(
         '# 2026-08-07\n\n' +
@@ -85,18 +85,18 @@ describe('markdownTemplateUtils', () => {
       );
     });
 
-    it('entryCount プレースホルダーを件数に置換する', () => {
+    it('replaces the entryCount placeholder with the entry count', () => {
       const template = { ...DEFAULT_MARKDOWN_TEMPLATE, fileTemplate: '{{entryCount}} entries\n{{entries}}' };
       const result = renderFileTemplate(template, entries, '2026-08-07');
       expect(result.startsWith('2 entries\n')).toBe(true);
     });
 
-    it('エントリが0件でも空文字列を entries に展開する', () => {
+    it('expands entries to an empty string when there are zero entries', () => {
       const result = renderFileTemplate(DEFAULT_MARKDOWN_TEMPLATE, [], '2026-08-07');
       expect(result).toBe('# 2026-08-07\n\n');
     });
 
-    it('最終レビュー Fix 3: タグなしエントリでは summary の前にスペースが1つだけになる(旧形式の二重スペース回帰防止)', () => {
+    it('Fix 3: renders exactly one space before summary for entries without tags (prevents double-space regression)', () => {
       const entryWithEmptyTags: MarkdownTemplateEntryData = {
         timestamp: '09:00',
         title: 'No Tags',
@@ -114,13 +114,13 @@ describe('markdownTemplateUtils', () => {
   });
 
   describe('validateTemplate', () => {
-    it('デフォルトテンプレートは有効と判定される', () => {
+    it('judges the default template as valid', () => {
       const result = validateTemplate(DEFAULT_MARKDOWN_TEMPLATE);
       expect(result.valid).toBe(true);
       expect(result.errors).toEqual([]);
     });
 
-    it('fileTemplate に {{entries}} が含まれない場合は無効', () => {
+    it('judges fileTemplate without {{entries}} as invalid', () => {
       const result = validateTemplate({
         ...DEFAULT_MARKDOWN_TEMPLATE,
         fileTemplate: '# {{date}}',
@@ -129,7 +129,7 @@ describe('markdownTemplateUtils', () => {
       expect(result.errors).toContain('fileTemplate must include {{entries}}');
     });
 
-    it('fileTemplate に未知のプレースホルダーが含まれる場合は無効', () => {
+    it('judges fileTemplate with an unknown placeholder as invalid', () => {
       const result = validateTemplate({
         ...DEFAULT_MARKDOWN_TEMPLATE,
         fileTemplate: '# {{date}}\n{{unknown}}\n{{entries}}',
@@ -138,7 +138,7 @@ describe('markdownTemplateUtils', () => {
       expect(result.errors).toContain('Unknown placeholder in fileTemplate: {{unknown}}');
     });
 
-    it('entryTemplate に未知のプレースホルダーが含まれる場合は無効', () => {
+    it('judges entryTemplate with an unknown placeholder as invalid', () => {
       const result = validateTemplate({
         ...DEFAULT_MARKDOWN_TEMPLATE,
         entryTemplate: '{{unknown}} {{title}}',
@@ -147,7 +147,7 @@ describe('markdownTemplateUtils', () => {
       expect(result.errors).toContain('Unknown placeholder in entryTemplate: {{unknown}}');
     });
 
-    it('複数のエラーがある場合はすべて返す', () => {
+    it('returns all errors when there are multiple', () => {
       const result = validateTemplate({
         ...DEFAULT_MARKDOWN_TEMPLATE,
         fileTemplate: '{{bad1}}',
@@ -158,7 +158,7 @@ describe('markdownTemplateUtils', () => {
   });
 
   describe('createTemplate', () => {
-    it('id・createdAt・updatedAt を自動採番して isDefault: false で作成する', () => {
+    it('auto-assigns id, createdAt and updatedAt with isDefault false', () => {
       const result = createTemplate({ name: 'My Template', fileTemplate: '{{entries}}', entryTemplate: '{{title}}' });
       expect(result.id).toBeTruthy();
       expect(result.name).toBe('My Template');
@@ -179,45 +179,45 @@ describe('markdownTemplateUtils', () => {
       updatedAt: 1000,
     };
 
-    it('指定IDのテンプレートを更新する', () => {
+    it('updates the template with the given id', () => {
       const result = updateTemplate([custom], 'custom-1', { name: 'Renamed' });
       expect(result[0]!.name).toBe('Renamed');
       expect(result[0]!.updatedAt).toBeGreaterThanOrEqual(custom.updatedAt);
     });
 
-    it('デフォルトテンプレート(isDefault: true)は更新を拒否し変更なしで返す', () => {
+    it('refuses to update the default template (isDefault: true) and returns it unchanged', () => {
       const result = updateTemplate([DEFAULT_MARKDOWN_TEMPLATE], 'default', { name: 'Hacked' });
       expect(result[0]!.name).toBe(DEFAULT_MARKDOWN_TEMPLATE.name);
     });
   });
 
   describe('deleteTemplate', () => {
-    it('指定IDのテンプレートを削除する', () => {
+    it('deletes the template with the given id', () => {
       const custom: MarkdownExportTemplate = { ...DEFAULT_MARKDOWN_TEMPLATE, id: 'custom-1', isDefault: false };
       const result = deleteTemplate([custom], 'custom-1');
       expect(result).toHaveLength(0);
     });
 
-    it('デフォルトテンプレート(isDefault: true)は削除を拒否する', () => {
+    it('refuses to delete the default template (isDefault: true)', () => {
       const result = deleteTemplate([DEFAULT_MARKDOWN_TEMPLATE], 'default');
       expect(result).toHaveLength(1);
     });
   });
 
   describe('getActiveTemplate', () => {
-    it('アクティブなテンプレートIDが設定されていればそれを返す', () => {
+    it('returns the active template id when one is set', () => {
       const templates = [DEFAULT_MARKDOWN_TEMPLATE, { ...DEFAULT_MARKDOWN_TEMPLATE, id: 'custom-1', isDefault: false }];
       const active = getActiveTemplate(templates, 'custom-1');
       expect(active?.id).toBe('custom-1');
     });
 
-    it('アクティブIDが未指定、または一致するテンプレートがない場合はデフォルトを返す', () => {
+    it('returns the default template when the active id is unset or unmatched', () => {
       const templates = [DEFAULT_MARKDOWN_TEMPLATE];
       expect(getActiveTemplate(templates, undefined).id).toBe('default');
       expect(getActiveTemplate(templates, 'not-exist').id).toBe('default');
     });
 
-    it('テンプレート一覧が空でもデフォルトを返す', () => {
+    it('returns the default template when the template list is empty', () => {
       expect(getActiveTemplate([], undefined).id).toBe('default');
     });
   });

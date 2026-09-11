@@ -1,14 +1,15 @@
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
+import vitestPlugin from '@vitest/eslint-plugin';
 import localPlugin from './eslint/plugin.mjs';
 
 export default [
   {
-    ignores: ['node_modules/', 'dist/', 'testDir/', 'coverage/', 'src/**/__tests__/**', '.vulnhunter-fix/', 'graphify-out/', 'obsidian-smart-history_VULNHUNT_RESULTS*/', '.kilo/', '.claude/'],
+    ignores: ['node_modules/', 'dist/', 'testDir/', 'coverage/', '.vulnhunter-fix/', 'graphify-out/', 'obsidian-smart-history_VULNHUNT_RESULTS*/', '.kilo/', '.claude/'],
   },
   {
     files: ['src/**/*.ts'],
-    ignores: ['src/utils/logger.ts'],
+    ignores: ['src/utils/logger.ts', 'src/**/__tests__/**'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
@@ -66,6 +67,7 @@ export default [
     // PBI 2026-09-05-21: background → UI 層への上向き依存を禁止。
     // 同意ロジックは src/utils/storage/privacyConsent.ts の中立層に配置済み。
     files: ['src/background/**/*.ts'],
+    ignores: ['src/**/__tests__/**'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
@@ -146,6 +148,26 @@ export default [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
+    },
+  },
+  {
+    // dev-docs/TEST_RULE.md: AIが生成する無意味なテストの検出用。
+    files: ['src/**/__tests__/**/*.ts'],
+    languageOptions: {
+      parser: tsParser,
+    },
+    plugins: {
+      '@typescript-eslint': tsPlugin,
+      vitest: vitestPlugin,
+      local: localPlugin,
+    },
+    rules: {
+      // testPiiDetection (piiSanitizer-optimization.test.ts) wraps the real
+      // expect() calls, so it must count as an assertion for this rule.
+      'vitest/expect-expect': ['error', { assertFunctionNames: ['expect', 'testPiiDetection'] }],
+      'vitest/valid-expect': 'error',
+      'no-self-compare': 'error',
+      'local/no-tautology-expect': 'error',
     },
   },
 ];

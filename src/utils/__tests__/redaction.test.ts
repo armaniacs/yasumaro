@@ -6,42 +6,42 @@ import { redactSensitiveData, redactHeaderValue, consoleSecureError, SENSITIVE_H
 
 describe('redactHeaderValue', () => {
   describe('authorization reason', () => {
-    it('authorization の場合は [REDACTED] を返す', () => {
+    it('returns [REDACTED] for authorization', () => {
       expect(redactHeaderValue('Bearer secret-token-abc123', 'authorization')).toBe('[REDACTED]');
     });
 
-    it('空文字列の authorization でも [REDACTED] を返す', () => {
+    it('returns [REDACTED] even for empty authorization', () => {
       expect(redactHeaderValue('', 'authorization')).toBe('[REDACTED]');
     });
   });
 
   describe('非機密 reason', () => {
-    it('cache-control の場合は元の値をそのまま返す', () => {
+    it('returns the original value for cache-control', () => {
       expect(redactHeaderValue('private, no-store', 'cache-control')).toBe('private, no-store');
     });
 
-    it('set-cookie の場合は元の値をそのまま返す', () => {
+    it('returns the original value for set-cookie', () => {
       expect(redactHeaderValue('session=abc; HttpOnly', 'set-cookie')).toBe('session=abc; HttpOnly');
     });
 
-    it('未知の reason の場合は元の値をそのまま返す', () => {
+    it('returns the original value for unknown reasons', () => {
       expect(redactHeaderValue('some-value', 'unknown-reason')).toBe('some-value');
     });
 
-    it('空文字列 reason の場合は元の値をそのまま返す', () => {
+    it('returns the original value for an empty reason', () => {
       expect(redactHeaderValue('some-value', '')).toBe('some-value');
     });
   });
 
   describe('SENSITIVE_HEADER_REASONS', () => {
-    it('authorization が含まれている', () => {
+    it('contains authorization', () => {
       expect(SENSITIVE_HEADER_REASONS).toContain('authorization');
     });
   });
 });
 
 describe('redactSensitiveData', () => {
-  it('APIキーフィールドを [REDACTED] に置換する', () => {
+  it('replaces API key fields with [REDACTED]', () => {
     const data = {
       obsidian_api_key: 'secret123',
       gemini_api_key: 'key456',
@@ -53,7 +53,7 @@ describe('redactSensitiveData', () => {
     expect(result.name).toBe('test');
   });
 
-  it('追加の機密フィールドを検出する（大文字小文字無視）', () => {
+  it('detects additional sensitive fields (case-insensitive)', () => {
     const data = {
       APIKey: 'secret',
       AUTH_TOKEN: 'token123',
@@ -69,7 +69,7 @@ describe('redactSensitiveData', () => {
     expect(result.safe_field).toBe('ok');
   });
 
-  it('プリミティブ値はそのまま返す', () => {
+  it('returns primitives unchanged', () => {
     expect(redactSensitiveData('string')).toBe('string');
     expect(redactSensitiveData(42)).toBe(42);
     expect(redactSensitiveData(true)).toBe(true);
@@ -77,14 +77,14 @@ describe('redactSensitiveData', () => {
     expect(redactSensitiveData(undefined)).toBe(undefined);
   });
 
-  it('配列内の各要素を再帰的に処理する', () => {
+  it('processes each array element recursively', () => {
     const data = [{ openai_api_key: 'secret' }, { name: 'test' }];
     const result = redactSensitiveData(data) as Record<string, unknown>[];
     expect(result[0]!.openai_api_key).toBe('[REDACTED]');
     expect(result[1]!.name).toBe('test');
   });
 
-  it('ネストされたオブジェクトを再帰的に処理する', () => {
+  it('processes nested objects recursively', () => {
     const data = {
       outer: {
         inner: {
@@ -98,7 +98,7 @@ describe('redactSensitiveData', () => {
     expect(inner.obsidian_api_key).toBe('[REDACTED]');
   });
 
-  it('最大再帰深度を超えた場合に [REDACTED: too deep] を返す', () => {
+  it('returns [REDACTED: too deep] beyond max recursion depth', () => {
     let deep: any = { value: 'leaf' };
     for (let i = 0; i < 101; i++) {
       deep = { child: deep };
@@ -107,21 +107,21 @@ describe('redactSensitiveData', () => {
     expect(result).toBeDefined();
   });
 
-  it('hmac_secret フィールドを検出する', () => {
+  it('detects the hmac_secret field', () => {
     const data = { hmac_secret: 'my_secret', normal: 'value' };
     const result = redactSensitiveData(data) as Record<string, unknown>;
     expect(result.hmac_secret).toBe('[REDACTED]');
     expect(result.normal).toBe('value');
   });
 
-  it('provider_api_key フィールドを検出する', () => {
+  it('detects the provider_api_key field', () => {
     const data = { provider_api_key: 'dynamic_secret', normal: 'value' };
     const result = redactSensitiveData(data) as Record<string, unknown>;
     expect(result.provider_api_key).toBe('[REDACTED]');
     expect(result.normal).toBe('value');
   });
 
-  it('github_pat フィールドを検出する', () => {
+  it('detects the github_pat field', () => {
     const data = { github_pat: 'ghp_secret123', normal: 'value' };
     const result = redactSensitiveData(data) as Record<string, unknown>;
     expect(result.github_pat).toBe('[REDACTED]');
@@ -136,7 +136,7 @@ describe('consoleSecureError', () => {
     console.error = originalConsoleError;
   });
 
-  it('データをレダクトしてからコンソールエラーを出力する', () => {
+  it('redacts data before logging a console error', () => {
     const errors: unknown[] = [];
     console.error = (...args: unknown[]) => {
       errors.push(args);
@@ -148,7 +148,7 @@ describe('consoleSecureError', () => {
     expect(errors[0]).toEqual(['Test error', { obsidian_api_key: '[REDACTED]', name: 'test' }]);
   });
 
-  it('データがundefinedの場合はメッセージのみ出力する', () => {
+  it('logs only the message when data is undefined', () => {
     const errors: unknown[] = [];
     console.error = (...args: unknown[]) => {
       errors.push(args);
@@ -160,7 +160,7 @@ describe('consoleSecureError', () => {
     expect(errors[0]).toEqual(['Error without data']);
   });
 
-  it('データがnullの場合はメッセージのみ出力する', () => {
+  it('logs only the message when data is null', () => {
     const errors: unknown[] = [];
     console.error = (...args: unknown[]) => {
       errors.push(args);

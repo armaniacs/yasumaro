@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "reporters": ["html", "clear-text", "progress"],
+  "coverageAnalysis": "all",
+  "ignorePatterns": [
+    ".agents",
+    ".claude",
+    ".kilo",
+    ".github",
+    "bench",
+    "coverage",
+    "dev-docs",
+    "dist",
+    "graphify-out",
+    "playwright-report",
+    "test-results",
+    "tmp",
+    "video-*"
+  ],
+  "mutate": [
+    "src/**/*.ts",
+    "!src/**/__tests__/**",
+    "!src/**/*.test.ts",
+    "!src/**/*.d.ts"
+  ],
+  "thresholds": {
+    "high": 80,
+    "low": 60,
+    "break": 50
+  }
+}

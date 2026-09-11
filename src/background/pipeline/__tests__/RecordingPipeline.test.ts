@@ -185,7 +185,7 @@ describe('RecordingPipeline', () => {
   });
 
   describe('aiClient の伝達（回帰テスト: null問題）', () => {
-    it('コンストラクタに渡した aiClient が PrivacyPipeline コンストラクタに届く', async () => {
+    it('passes the constructor aiClient through to the PrivacyPipeline constructor', async () => {
       mockProcess.mockResolvedValue({
         summary: 'AI summary',
         maskedCount: 0,
@@ -212,7 +212,7 @@ describe('RecordingPipeline', () => {
       );
     });
 
-    it('aiClient なし（null）で構築すると PrivacyPipeline に null が渡される', async () => {
+    it('passes null to PrivacyPipeline when built without aiClient (null)', async () => {
       mockProcess.mockResolvedValue({
         summary: 'Summary not available.',
         maskedCount: 0,
@@ -239,7 +239,7 @@ describe('RecordingPipeline', () => {
   });
 
   describe('traceId', () => {
-    it('パイプライン開始時に一意の traceId が発行される', async () => {
+    it('issues a unique traceId when the pipeline starts', async () => {
       mockProcess.mockResolvedValue({
         summary: 'AI summary',
         maskedCount: 0,
@@ -265,7 +265,7 @@ describe('RecordingPipeline', () => {
       expect((traceId as string).length).toBeGreaterThan(0);
     });
 
-    it('全パイプラインステップのログに同一の traceId が含まれる', async () => {
+    it('includes the same traceId in all pipeline step logs', async () => {
       mockProcess.mockResolvedValue({
         summary: 'AI summary',
         maskedCount: 0,
@@ -292,7 +292,7 @@ describe('RecordingPipeline', () => {
   });
 
   describe('previewOnly モード', () => {
-    it('processedContent と maskedItems を返す', async () => {
+    it('returns processedContent and maskedItems', async () => {
       mockProcess.mockResolvedValue({
         success: true,
         preview: true,
@@ -321,7 +321,7 @@ describe('RecordingPipeline', () => {
       expect(result.maskedItems).toEqual([{ type: 'email' }]);
     });
 
-    it('previewOnly 時は Obsidian に保存しない', async () => {
+    it('does not save to Obsidian in previewOnly mode', async () => {
       const mockAppend = vi.fn<(content: string) => Promise<void>>().mockResolvedValue(undefined);
       MockedObsidianClient.mockImplementation(function(this: any) {
         this.appendToDailyNote = mockAppend;
@@ -355,7 +355,7 @@ describe('RecordingPipeline', () => {
     // Skip this test - RecordingPipeline doesn't pass obsidian through context to
     // saveToObsidianStep, so MockedObsidianClient is never called. This is a test
     // design issue, not a Vitest migration issue.
-    it.skip('AI要約が Obsidian に保存される', async () => {
+    it.skip('saves the AI summary to Obsidian', async () => {
       const mockAppend = vi.fn<(content: string) => Promise<void>>().mockResolvedValue(undefined);
       MockedObsidianClient.mockImplementation(function(this: any) {
         this.appendToDailyNote = mockAppend;
@@ -383,7 +383,7 @@ describe('RecordingPipeline', () => {
       expect(callArg).toContain('Generated AI summary');
     });
 
-    it('ドメインブロック時は DOMAIN_BLOCKED エラーを返す', async () => {
+    it('returns a DOMAIN_BLOCKED error when the domain is blocked', async () => {
       // @ts-expect-error - mock
       domainUtils.isDomainAllowed.mockResolvedValue(false);
 
@@ -403,7 +403,7 @@ describe('RecordingPipeline', () => {
       expect(result.error).toContain('DOMAIN_BLOCKED');
     });
 
-    it('saveObsidian のみ失敗した場合、成功結果を返しつつ obsidian-write-failed として pending 登録される', async () => {
+    it('returns success while registering obsidian-write-failed as pending when only saveObsidian fails', async () => {
       mockProcess.mockResolvedValue({
         summary: 'AI summary',
         maskedCount: 0,
@@ -438,7 +438,7 @@ describe('RecordingPipeline', () => {
       );
     });
 
-    it('saveObsidian 以外の BEST_EFFORT ステップ由来のエラーでは obsidian-write-failed としては登録されない', async () => {
+    it('does not register obsidian-write-failed for errors from non-saveObsidian BEST_EFFORT steps', async () => {
       mockProcess.mockResolvedValue({
         summary: 'AI summary',
         maskedCount: 0,
@@ -472,7 +472,7 @@ describe('RecordingPipeline', () => {
       vi.useRealTimers();
     });
 
-    it('リトライ時の delayMs が常に 5000ms 以下である', async () => {
+    it('keeps retry delayMs at or below 5000ms', async () => {
       // privacyPipeline ステップ（maxRetries=3）が RETRY 対象
       // retries=1: 2^1*1000=2000ms, retries=2: 2^2*1000=4000ms, retries=3: 2^3*1000=8000ms→cap→5000ms
       mockProcess.mockRejectedValue(new Error('Transient error'));
@@ -505,14 +505,14 @@ describe('RecordingPipeline', () => {
       }
     });
 
-    it('retries=3 のバックオフ（8000ms）が 5000ms にキャップされる', () => {
+    it('caps the retries=3 backoff (8000ms) at 5000ms', () => {
       // 直接計算を検証: Math.min(Math.pow(2, 3) * 1000, 5000) = Math.min(8000, 5000) = 5000
       const retries = 3;
       const delayMs = Math.min(Math.pow(2, retries) * 1000, 5000);
       expect(delayMs).toBe(5000);
     });
 
-    it('retries=1,2 のバックオフは上限未満なのでそのまま', () => {
+    it('leaves the retries=1,2 backoffs unchanged below the cap', () => {
       expect(Math.min(Math.pow(2, 1) * 1000, 5000)).toBe(2000);
       expect(Math.min(Math.pow(2, 2) * 1000, 5000)).toBe(4000);
     });
@@ -529,7 +529,7 @@ describe('RecordingPipeline', () => {
       vi.useRealTimers();
     });
 
-    it('ステップで例外が発生した場合、logError に ErrorCode.INTERNAL_ERROR が渡される', async () => {
+    it('passes ErrorCode.INTERNAL_ERROR to logError when a step throws', async () => {
       mockProcess.mockRejectedValue(new Error('Unexpected failure'));
 
       const pipeline = makeOrchestrator(
@@ -557,7 +557,7 @@ describe('RecordingPipeline', () => {
       );
     });
 
-    it('エラー結果に success=false と error メッセージが含まれる', async () => {
+    it('includes success=false and an error message in the error result', async () => {
       mockProcess.mockRejectedValue(new Error('Step crashed'));
 
       const pipeline = makeOrchestrator(
@@ -580,7 +580,7 @@ describe('RecordingPipeline', () => {
       expect(result.error).toBeDefined();
     });
 
-    it('パイプライン失敗時に pipeline-error として pending 登録される', async () => {
+    it('registers pipeline-error as pending on pipeline failure', async () => {
       mockProcess.mockRejectedValue(new Error('Step crashed'));
 
       const pipeline = makeOrchestrator(
@@ -613,7 +613,7 @@ describe('RecordingPipeline', () => {
   });
 
   describe('createRecordingOrchestrator ファクトリ', () => {
-    it('渡された依存関係を使って RecordingOrchestrator インスタンスを生成する', () => {
+    it('creates a RecordingOrchestrator instance with the given dependencies', () => {
       const pipeline = createRecordingOrchestrator({
         getPrivacyInfoWithCache: makeGetPrivacyInfo(),
         getSettingsWithCache: async () => mockSettings,
@@ -625,7 +625,7 @@ describe('RecordingPipeline', () => {
       expect(pipeline).toBeInstanceOf(RecordingOrchestrator);
     });
 
-    it('aiService と sqliteClient を省略しても RecordingOrchestrator を生成する', () => {
+    it('creates a RecordingOrchestrator even when aiService and sqliteClient are omitted', () => {
       const pipeline = createRecordingOrchestrator({
         getPrivacyInfoWithCache: makeGetPrivacyInfo(),
         getSettingsWithCache: async () => mockSettings,
@@ -639,7 +639,7 @@ describe('RecordingPipeline', () => {
   });
 
   describe('並行実行の安全性（同一URLの直列化は urlRecordMutexes で提供、詳細は recordingPipeline-full.test.ts）', () => {
-    it('異なるURLへの並行リクエストは互いにブロックしない', async () => {
+    it('does not block concurrent requests to different URLs', async () => {
       mockProcess.mockResolvedValue({ summary: 'AI summary', maskedCount: 0 });
 
       const pipeline = makeOrchestrator(
@@ -669,7 +669,7 @@ describe('RecordingPipeline', () => {
       vi.useRealTimers();
     });
 
-    it('createRecordingOrchestrator に NoOpOfflineNetworkQueue を渡して構築できる', () => {
+    it('builds with NoOpOfflineNetworkQueue passed to createRecordingOrchestrator', () => {
       const pipeline = createRecordingOrchestrator({
         getPrivacyInfoWithCache: makeGetPrivacyInfo(),
         getSettingsWithCache: async () => mockSettings,
@@ -682,7 +682,7 @@ describe('RecordingPipeline', () => {
       expect(pipeline).toBeInstanceOf(RecordingOrchestrator);
     });
 
-    it('NoOpOfflineNetworkQueue 注入時、失敗した記録は例外なく完了する（キューへの永続化を試みない）', async () => {
+    it('completes a failed recording without throwing when NoOpOfflineNetworkQueue is injected (does not persist to the queue)', async () => {
       mockProcess.mockRejectedValue(new Error('AI provider unavailable'));
 
       const pipeline = makeOrchestrator(

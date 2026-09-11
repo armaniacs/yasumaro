@@ -85,13 +85,13 @@ describe('storage.ts URL管理関数', () => {
   });
 
   describe('getSavedUrls', () => {
-    it('空の場合は空Setを返す', async () => {
+    it('returns an empty Set when storage is empty', async () => {
       const result = await getSavedUrls();
       expect(result).toBeInstanceOf(Set);
       expect(result.size).toBe(0);
     });
 
-    it('保存されたURLをSetで返す', async () => {
+    it('returns saved URLs as a Set', async () => {
       mockStorage.set('savedUrls', ['https://example.com', 'https://test.com']);
       const result = await getSavedUrls();
       expect(result.size).toBe(2);
@@ -101,13 +101,13 @@ describe('storage.ts URL管理関数', () => {
   });
 
   describe('getSavedUrlsWithTimestamps', () => {
-    it('空の場合は空Mapを返す', async () => {
+    it('returns an empty Map when storage is empty', async () => {
       const result = await getSavedUrlsWithTimestamps();
       expect(result).toBeInstanceOf(Map);
       expect(result.size).toBe(0);
     });
 
-    it('保存されたエントリをMapで返す', async () => {
+    it('returns saved entries as a Map', async () => {
       mockStorage.set('savedUrlsWithTimestamps', [
         { url: 'https://example.com', timestamp: 1000 },
         { url: 'https://test.com', timestamp: 2000 },
@@ -120,7 +120,7 @@ describe('storage.ts URL管理関数', () => {
   });
 
   describe('setSavedUrls', () => {
-    it('URLセットを保存する', async () => {
+    it('saves a URL set', async () => {
       const urlSet = new Set(['https://example.com', 'https://test.com']);
       await setSavedUrls(urlSet);
 
@@ -129,7 +129,7 @@ describe('storage.ts URL管理関数', () => {
       expect(saved).toContain('https://test.com');
     });
 
-    it('urlToAdd が指定された場合はタイムスタンプを更新する', async () => {
+    it('updates the timestamp when urlToAdd is specified', async () => {
       mockStorage.set('savedUrlsWithTimestamps', [
         { url: 'https://example.com', timestamp: 1000 },
       ]);
@@ -145,7 +145,7 @@ describe('storage.ts URL管理関数', () => {
   });
 
   describe('setSavedUrlsWithTimestamps', () => {
-    it('URL Map を保存する', async () => {
+    it('saves a URL Map', async () => {
       const urlMap = new Map([
         ['https://example.com', 1000],
         ['https://test.com', 2000],
@@ -156,7 +156,7 @@ describe('storage.ts URL管理関数', () => {
       expect(entries.length).toBe(2);
     });
 
-    it('urlToAdd で URLを追加する', async () => {
+    it('adds a URL via urlToAdd', async () => {
       const urlMap = new Map([['https://existing.com', 1000]]);
       await setSavedUrlsWithTimestamps(urlMap, 'https://new.com');
 
@@ -165,7 +165,7 @@ describe('storage.ts URL管理関数', () => {
       expect(newEntry).toBeDefined();
     });
 
-    it('既存エントリの recordType を保持する', async () => {
+    it('preserves recordType of an existing entry', async () => {
       mockStorage.set('savedUrlsWithTimestamps', [
         { url: 'https://example.com', timestamp: 1000, recordType: 'manual' },
       ]);
@@ -181,7 +181,7 @@ describe('storage.ts URL管理関数', () => {
   });
 
   describe('addSavedUrl', () => {
-    it('URLを追加する', async () => {
+    it('adds a URL', async () => {
       await addSavedUrl('https://example.com');
 
       const entries = mockStorage.get('savedUrlsWithTimestamps') as any[];
@@ -191,7 +191,7 @@ describe('storage.ts URL管理関数', () => {
   });
 
   describe('removeSavedUrl', () => {
-    it('URLを削除する', async () => {
+    it('removes a URL', async () => {
       mockStorage.set('savedUrls', ['https://example.com', 'https://test.com']);
       mockStorage.set('savedUrlsWithTimestamps', [
         { url: 'https://example.com', timestamp: 1000 },
@@ -210,13 +210,13 @@ describe('storage.ts URL管理関数', () => {
   });
 
   describe('isUrlSaved', () => {
-    it('保存済みURLで true を返す', async () => {
+    it('returns true for a saved URL', async () => {
       mockStorage.set('savedUrls', ['https://example.com']);
       const result = await isUrlSaved('https://example.com');
       expect(result).toBe(true);
     });
 
-    it('未保存URLで false を返す', async () => {
+    it('returns false for an unsaved URL', async () => {
       mockStorage.set('savedUrls', ['https://other.com']);
       const result = await isUrlSaved('https://example.com');
       expect(result).toBe(false);
@@ -224,24 +224,24 @@ describe('storage.ts URL管理関数', () => {
   });
 
   describe('getSavedUrlCount', () => {
-    it('保存数を返す', async () => {
+    it('returns the saved URL count', async () => {
       mockStorage.set('savedUrls', ['a.com', 'b.com', 'c.com']);
       const result = await getSavedUrlCount();
       expect(result).toBe(3);
     });
 
-    it('空の場合は 0 を返す', async () => {
+    it('returns 0 when storage is empty', async () => {
       const result = await getSavedUrlCount();
       expect(result).toBe(0);
     });
   });
 
   describe('定数', () => {
-    it('MAX_URL_SET_SIZE は 10000', () => {
+    it('MAX_URL_SET_SIZE is 10000', () => {
       expect(MAX_URL_SET_SIZE).toBe(10000);
     });
 
-    it('URL_WARNING_THRESHOLD は 8000', () => {
+    it('URL_WARNING_THRESHOLD is 8000', () => {
       expect(URL_WARNING_THRESHOLD).toBe(8000);
     });
   });

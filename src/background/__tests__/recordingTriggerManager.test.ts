@@ -160,12 +160,19 @@ describe('RecordingTriggerManager', () => {
 
   describe('invalidateCache', () => {
     it('forces reload from storage on next loadTriggers call', async () => {
+      const getSpy = (globalThis as any).chrome.storage.local.get as ReturnType<typeof vi.fn>;
+
       await manager.loadTriggers();
-      // Without invalidate, cache returns old value
-      const cached = await manager.loadTriggers();
-      // After invalidate, reads from storage
+      const callsAfterFirstLoad = getSpy.mock.calls.length;
+
+      // Without invalidate, cache returns old value without hitting storage again
+      await manager.loadTriggers();
+      expect(getSpy.mock.calls.length).toBe(callsAfterFirstLoad);
+
+      // After invalidate, reads from storage again
       manager.invalidateCache();
-      const fresh = await manager.loadTriggers();
+      await manager.loadTriggers();
+      expect(getSpy.mock.calls.length).toBeGreaterThan(callsAfterFirstLoad);
     });
   });
 
@@ -181,6 +188,7 @@ describe('RecordingTriggerManager', () => {
       (globalThis as any).chrome.storage.local.get = vi.fn().mockRejectedValue(new Error('Storage error'));
       manager.invalidateCache();
       const triggers = await manager.loadTriggers();
+      expect(triggers.scrollAndTime).toBe(false);
     });
   });
 });

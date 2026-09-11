@@ -48,7 +48,7 @@ describe('ublockImport - UIRenderer Module', () => {
       document.body.innerHTML = '';
     });
 
-    test('空ソースリストで「ソースなし」メッセージを表示', () => {
+    test('displays the no-sources message for an empty source list', () => {
       const sources: TestSource[] = [];
       const deleteCallback = vi.fn();
       const reloadCallback = vi.fn();
@@ -62,7 +62,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(container.innerHTML).toBe('');
     });
 
-    test('ソースリストを正しく描画', () => {
+    test('renders the source list correctly', () => {
       const sources: TestSource[] = [
         { url: 'https://example.com/filters.txt', importedAt: Date.now(), ruleCount: 10, blockDomains: ['example.com'], exceptionDomains: [] }
       ];
@@ -79,7 +79,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(items).toHaveLength(1);
     });
 
-    test('手動入力ソースで「再読込」ボタンは表示しない', () => {
+    test('hides the reload button for manual-entry sources', () => {
       const sources: TestSource[] = [
         { url: 'manual', importedAt: Date.now(), ruleCount: 5, blockDomains: ['test.com'], exceptionDomains: [] }
       ];
@@ -93,7 +93,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(reloadBtns).toHaveLength(0);
     });
 
-    test('URLソースで「再読込」ボタンを表示', () => {
+    test('shows the reload button for URL sources', () => {
       const sources: TestSource[] = [
         { url: 'https://example.com/filters.txt', importedAt: Date.now(), ruleCount: 5, blockDomains: ['test.com'], exceptionDomains: [] }
       ];
@@ -107,7 +107,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(reloadBtns).toHaveLength(1);
     });
 
-    test('XSS対策: 悪意あるURLがエスケープされる', () => {
+    test('escapes a malicious URL for XSS protection', () => {
       const sources: TestSource[] = [
         { url: '<script>alert("XSS")</script>', importedAt: Date.now(), ruleCount: 1, blockDomains: ['test.com'], exceptionDomains: [] }
       ];
@@ -122,7 +122,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(urlElement.innerHTML).not.toContain('<script>');
     });
 
-    test('削除ボタンクリックでdeleteCallbackが呼ばれる', () => {
+    test('calls deleteCallback when the delete button is clicked', () => {
       const sources: TestSource[] = [
         { url: 'https://example.com/filters.txt', importedAt: Date.now(), ruleCount: 5, blockDomains: ['test.com'], exceptionDomains: [] }
       ];
@@ -138,7 +138,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(deleteCallback).toHaveBeenCalledWith(0);
     });
 
-    test('再読込ボタンクリックでreloadCallbackが呼ばれる', () => {
+    test('calls reloadCallback when the reload button is clicked', () => {
       const sources: TestSource[] = [
         { url: 'https://example.com/filters.txt', importedAt: Date.now(), ruleCount: 5, blockDomains: ['test.com'], exceptionDomains: [] }
       ];
@@ -174,7 +174,7 @@ describe('ublockImport - UIRenderer Module', () => {
       document.body.innerHTML = '';
     });
 
-    test('エラーメッセージを表示', () => {
+    test('displays an error message', () => {
       updatePreviewUI('Test error message');
 
       expect(byId('uBlockRuleCount').textContent).toBe('0');
@@ -184,7 +184,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(byId('uBlockPreview').style.display).toBe('block');
     });
 
-    test('プレビュー結果を表示', () => {
+    test('displays preview results', () => {
       const result = {
         blockCount: 10,
         exceptionCount: 5,
@@ -199,7 +199,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(byId('uBlockErrorCount').textContent).toBe('0');
     });
 
-    test('エラー詳細をフォーマットして表示', () => {
+    test('formats and displays error details', () => {
       const result = {
         blockCount: 5,
         exceptionCount: 2,
@@ -218,7 +218,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(errorText).toContain('5: Missing domain');
     });
 
-    test('文字列配列のエラー詳細も処理', () => {
+    test('handles error details given as a string array', () => {
       const result = {
         blockCount: 3,
         exceptionCount: 1,
@@ -231,7 +231,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(byId('uBlockErrorDetails').textContent).toBe('Error message 1');
     });
 
-    test('errorDetailsが文字列の場合も処理', () => {
+    test('handles errorDetails when it is a string', () => {
       const result = {
         blockCount: 0,
         exceptionCount: 0,
@@ -244,7 +244,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(byId('uBlockErrorDetails').textContent).toBe('Some string error');
     });
 
-    test('ラベルspanのdata-i18n-argsが更新される', () => {
+    test('updates data-i18n-args on label spans', () => {
       document.body.innerHTML = `
         <div id="uBlockPreview"></div>
         <div>
@@ -293,14 +293,14 @@ describe('ublockImport - UIRenderer Module', () => {
       document.body.innerHTML = '';
     });
 
-    test('プレビューを非表示にする', () => {
+    test('hides the preview', () => {
       hidePreview();
 
       const preview = byId('uBlockPreview');
       expect(preview.style.display).toBe('none');
     });
 
-    test('プレビュー要素が存在しない場合はエラーを投げない', () => {
+    test('throws no error when the preview element is missing', () => {
       document.body.innerHTML = '';
 
       expect(() => hidePreview()).not.toThrow();
@@ -322,14 +322,14 @@ describe('ublockImport - UIRenderer Module', () => {
       document.body.innerHTML = '';
     });
 
-    test('入力エリアをクリアする', () => {
+    test('clears the input area', () => {
       clearInput();
 
       const textarea = byId<HTMLTextAreaElement>('uBlockFilterInput');
       expect(textarea.value).toBe('');
     });
 
-    test('テキストエリアが存在しない場合はエラーを投げない', () => {
+    test('throws no error when the textarea is missing', () => {
       document.body.innerHTML = '';
 
       expect(() => clearInput()).not.toThrow();
@@ -341,7 +341,7 @@ describe('ublockImport - UIRenderer Module', () => {
   // ============================================================================
 
   describe('exportSimpleFormat', () => {
-    test('単一ソースをエクスポート', () => {
+    test('exports a single source', () => {
       const sources: TestSource[] = [
         { url: 'https://example.com/filters.txt', importedAt: Date.now(), ruleCount: 2, blockDomains: ['example.com', 'test.com'], exceptionDomains: [] }
       ];
@@ -354,7 +354,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(lines).toHaveLength(2);
     });
 
-    test('複数ソースをエクスポート（重複除去）', () => {
+    test('exports multiple sources with deduplication', () => {
       const sources: TestSource[] = [
         { url: 'https://example.com/filters1.txt', importedAt: Date.now(), blockDomains: ['example.com', 'test.com'], exceptionDomains: [] },
         { url: 'https://example.com/filters2.txt', importedAt: Date.now(), blockDomains: ['example.com', 'another.com'], exceptionDomains: [] }
@@ -371,14 +371,14 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(exampleCount).toBe(1);
     });
 
-    test('空ソースは空文字列を返す', () => {
+    test('returns an empty string for empty sources', () => {
       const sources: TestSource[] = [];
       const result = exportSimpleFormat(sourceList(sources));
 
       expect(result).toBe('');
     });
 
-    test('例外ドメインはエクスポートされない', () => {
+    test('excludes exception domains from export', () => {
       const sources: TestSource[] = [
         { url: 'manual', importedAt: Date.now(), blockDomains: ['block.com'], exceptionDomains: ['allow.com'] }
       ];
@@ -389,7 +389,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(result).not.toContain('allow.com');
     });
 
-    test('blockDomainsが未定義のソースを安全に処理', () => {
+    test('handles sources with undefined blockDomains safely', () => {
       const sources: TestSource[] = [
         { url: 'https://example.com/filters.txt', importedAt: Date.now(), ruleCount: 0, exceptionDomains: [] },
         { url: 'manual', importedAt: Date.now(), blockDomains: ['domain.com'], exceptionDomains: [] }
@@ -406,7 +406,7 @@ describe('ublockImport - UIRenderer Module', () => {
   // ============================================================================
 
   describe('buildUblockFormat', () => {
-    test('基本形式でブロックルールを生成', () => {
+    test('generates block rules in the basic format', () => {
       const sources: TestSource[] = [
         { url: 'manual', importedAt: Date.now(), blockDomains: ['example.com', 'test.com'], exceptionDomains: [] }
       ];
@@ -418,7 +418,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(result).toContain('||test.com^');
     });
 
-    test('例外ルールも含める', () => {
+    test('includes exception rules', () => {
       const sources: TestSource[] = [
         { url: 'manual', importedAt: Date.now(), blockDomains: ['block.com'], exceptionDomains: ['allow.com'] }
       ];
@@ -429,7 +429,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(result).toContain('@@||allow.com^');
     });
 
-    test('複数ソースをマージ', () => {
+    test('merges multiple sources', () => {
       const sources: TestSource[] = [
         { url: 'https://example.com/filters1.txt', importedAt: Date.now(), blockDomains: ['domain1.com'], exceptionDomains: [] },
         { url: 'https://example.com/filters2.txt', importedAt: Date.now(), blockDomains: ['domain2.com'], exceptionDomains: ['trusted.com'] }
@@ -442,7 +442,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(result).toContain('@@||trusted.com^');
     });
 
-    test('空ソースはヘッダーのみを返す', () => {
+    test('returns only the header for empty sources', () => {
       const sources: TestSource[] = [];
       const result = buildUblockFormat(sourceList(sources));
 
@@ -450,7 +450,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(result.split('\n')).toHaveLength(2); // ヘッダーと空行
     });
 
-    test('正しい改行区切り形式', () => {
+    test('uses the correct newline-separated format', () => {
       const sources: TestSource[] = [
         { url: 'manual', importedAt: Date.now(), blockDomains: ['domain1.com', 'domain2.com'], exceptionDomains: ['allow.com'] }
       ];
@@ -465,7 +465,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(lines).toContain('@@||allow.com^');
     });
 
-    test('blockDomains/exceptionDomainsが未定義のソースを安全に処理', () => {
+    test('handles sources with undefined blockDomains/exceptionDomains safely', () => {
       const sources: TestSource[] = [
         { url: 'https://example.com/filters.txt', importedAt: Date.now(), ruleCount: 0 },
         { url: 'manual', importedAt: Date.now(), ruleCount: 0, blockDomains: [], exceptionDomains: [] }
@@ -481,7 +481,7 @@ describe('ublockImport - UIRenderer Module', () => {
   // ============================================================================
 
   describe('copyToClipboard', () => {
-    test('クリップボードにテキストをコピーしてtrueを返す', async () => {
+    test('copies text to the clipboard and returns true', async () => {
       const writeTextMock = vi.fn(() => Promise.resolve());
       Object.defineProperty(navigator, 'clipboard', {
         value: { writeText: writeTextMock },
@@ -494,7 +494,7 @@ describe('ublockImport - UIRenderer Module', () => {
       expect(writeTextMock).toHaveBeenCalledWith('test text');
     });
 
-    test('クリップボード失敗時にエラーを投げる', async () => {
+    test('throws an error when clipboard copy fails', async () => {
       const writeTextMock = vi.fn(() => Promise.reject(new Error('denied')));
       Object.defineProperty(navigator, 'clipboard', {
         value: { writeText: writeTextMock },

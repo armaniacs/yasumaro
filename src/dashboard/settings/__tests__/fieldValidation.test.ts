@@ -66,7 +66,7 @@ describe('fieldValidation', () => {
     });
 
     describe('setFieldError', () => {
-        test('aria-invalid を true に設定してエラーを表示する', () => {
+        test('sets aria-invalid to true and shows the error', () => {
             const input = document.getElementById('protocol') as HTMLInputElement;
             const errorEl = document.getElementById('protocol-error') as HTMLElement;
 
@@ -77,12 +77,12 @@ describe('fieldValidation', () => {
             expect(errorEl.classList.contains('visible')).toBe(true);
         });
 
-        test('エラー要素が null の場合でもエラーを投げない', () => {
+        test('does not throw when the error element is null', () => {
             const input = document.createElement('input');
             expect(() => setFieldError(input, 'nonexistent', 'msg')).not.toThrow();
         });
 
-        test('複数回呼び出すとエラーメッセージが上書きされる', () => {
+        test('overwrites the error message on repeated calls', () => {
             const input = document.getElementById('protocol') as HTMLInputElement;
             const errorEl = document.getElementById('protocol-error') as HTMLElement;
 
@@ -95,7 +95,7 @@ describe('fieldValidation', () => {
     });
 
     describe('clearFieldError', () => {
-        test('aria-invalid を false にしてエラーを非表示にする', () => {
+        test('sets aria-invalid to false and hides the error', () => {
             const input = document.getElementById('protocol') as HTMLInputElement;
             const errorEl = document.getElementById('protocol-error') as HTMLElement;
             input.setAttribute('aria-invalid', 'true');
@@ -109,14 +109,14 @@ describe('fieldValidation', () => {
             expect(errorEl.classList.contains('visible')).toBe(false);
         });
 
-        test('エラー要素が null の場合でもエラーを投げない', () => {
+        test('does not throw when the error element is null', () => {
             const input = document.createElement('input');
             expect(() => clearFieldError(input, 'nonexistent')).not.toThrow();
         });
     });
 
     describe('clearAllFieldErrors', () => {
-        test('複数のエラーをクリアする', () => {
+        test('clears multiple errors', () => {
             const pInput = document.getElementById('protocol') as HTMLInputElement;
             const portInput = document.getElementById('port') as HTMLInputElement;
             pInput.setAttribute('aria-invalid', 'true');
@@ -131,11 +131,11 @@ describe('fieldValidation', () => {
             expect(portInput.getAttribute('aria-invalid')).toBe('false');
         });
 
-        test('空の配列を渡してもエラーを投げない', () => {
+        test('does not throw when passed an empty array', () => {
             expect(() => clearAllFieldErrors([])).not.toThrow();
         });
 
-        test('5つのフィールドエラーをすべてクリアする', () => {
+        test('clears all five field errors', () => {
             const inputs = ['protocol', 'port', 'visit', 'scroll', 'tokens'];
             const pairs = inputs.map(id => {
                 const el = document.getElementById(id) as HTMLInputElement;
@@ -153,51 +153,51 @@ describe('fieldValidation', () => {
     });
 
     describe('validateProtocol', () => {
-        test('http で有効', () => {
+        test('returns true for http', () => {
             const input = document.getElementById('protocol') as HTMLInputElement;
             input.value = 'http';
             expect(validateProtocol(input)).toBe(true);
             expect(input.getAttribute('aria-invalid')).not.toBe('true');
         });
 
-        test('https で有効', () => {
+        test('returns true for https', () => {
             const input = document.getElementById('protocol') as HTMLInputElement;
             input.value = 'https';
             expect(validateProtocol(input)).toBe(true);
         });
 
-        test('大文字 HTTP でも有効（小文字変換される）', () => {
+        test('returns true for uppercase HTTP (lowercased)', () => {
             const input = document.getElementById('protocol') as HTMLInputElement;
             input.value = 'HTTP';
             expect(validateProtocol(input)).toBe(true);
         });
 
-        test('大文字 HTTPS でも有効', () => {
+        test('returns true for uppercase HTTPS', () => {
             const input = document.getElementById('protocol') as HTMLInputElement;
             input.value = 'HTTPS';
             expect(validateProtocol(input)).toBe(true);
         });
 
-        test('ftp で無効', () => {
+        test('returns false for ftp', () => {
             const input = document.getElementById('protocol') as HTMLInputElement;
             input.value = 'ftp';
             expect(validateProtocol(input)).toBe(false);
             expect(input.getAttribute('aria-invalid')).toBe('true');
         });
 
-        test('空文字で無効', () => {
+        test('returns false for an empty string', () => {
             const input = document.getElementById('protocol') as HTMLInputElement;
             input.value = '';
             expect(validateProtocol(input)).toBe(false);
         });
 
-        test('前後にスペースがある場合はトリムされる', () => {
+        test('trims surrounding whitespace', () => {
             const input = document.getElementById('protocol') as HTMLInputElement;
             input.value = '  https  ';
             expect(validateProtocol(input)).toBe(true);
         });
 
-        test('ws プロトコルで無効', () => {
+        test('returns false for the ws protocol', () => {
             const input = document.getElementById('protocol') as HTMLInputElement;
             input.value = 'ws';
             expect(validateProtocol(input)).toBe(false);
@@ -205,61 +205,61 @@ describe('fieldValidation', () => {
     });
 
     describe('validatePort', () => {
-        test('1 で有効', () => {
+        test('returns true for 1', () => {
             const input = document.getElementById('port') as HTMLInputElement;
             input.value = '1';
             expect(validatePort(input)).toBe(true);
         });
 
-        test('65535 で有効', () => {
+        test('returns true for 65535', () => {
             const input = document.getElementById('port') as HTMLInputElement;
             input.value = '65535';
             expect(validatePort(input)).toBe(true);
         });
 
-        test('8080 で有効', () => {
+        test('returns true for 8080', () => {
             const input = document.getElementById('port') as HTMLInputElement;
             input.value = '8080';
             expect(validatePort(input)).toBe(true);
         });
 
-        test('443 で有効', () => {
+        test('returns true for 443', () => {
             const input = document.getElementById('port') as HTMLInputElement;
             input.value = '443';
             expect(validatePort(input)).toBe(true);
         });
 
-        test('0 で無効', () => {
+        test('returns false for 0', () => {
             const input = document.getElementById('port') as HTMLInputElement;
             input.value = '0';
             expect(validatePort(input)).toBe(false);
         });
 
-        test('65536 で無効', () => {
+        test('returns false for 65536', () => {
             const input = document.getElementById('port') as HTMLInputElement;
             input.value = '65536';
             expect(validatePort(input)).toBe(false);
         });
 
-        test('負数で無効', () => {
+        test('returns false for negative numbers', () => {
             const input = document.getElementById('port') as HTMLInputElement;
             input.value = '-1';
             expect(validatePort(input)).toBe(false);
         });
 
-        test('数値以外で無効', () => {
+        test('returns false for non-numeric values', () => {
             const input = document.getElementById('port') as HTMLInputElement;
             input.value = 'abc';
             expect(validatePort(input)).toBe(false);
         });
 
-        test('空文字で無効', () => {
+        test('returns false for an empty string', () => {
             const input = document.getElementById('port') as HTMLInputElement;
             input.value = '';
             expect(validatePort(input)).toBe(false);
         });
 
-        test('小数で無効（parseIntで切り捨て）', () => {
+        test('returns true for decimals truncated via parseInt', () => {
             const input = document.getElementById('port') as HTMLInputElement;
             input.value = '80.5';
             expect(validatePort(input)).toBe(true); // parseInt('80.5') = 80, which is valid
@@ -267,37 +267,37 @@ describe('fieldValidation', () => {
     });
 
     describe('validateMinVisitDuration', () => {
-        test('0 で有効', () => {
+        test('returns true for 0', () => {
             const input = document.getElementById('visit') as HTMLInputElement;
             input.value = '0';
             expect(validateMinVisitDuration(input)).toBe(true);
         });
 
-        test('正の整数で有効', () => {
+        test('returns true for positive integers', () => {
             const input = document.getElementById('visit') as HTMLInputElement;
             input.value = '30';
             expect(validateMinVisitDuration(input)).toBe(true);
         });
 
-        test('大きな値で有効', () => {
+        test('returns true for large values', () => {
             const input = document.getElementById('visit') as HTMLInputElement;
             input.value = '999999';
             expect(validateMinVisitDuration(input)).toBe(true);
         });
 
-        test('負数で無効', () => {
+        test('returns false for negative numbers', () => {
             const input = document.getElementById('visit') as HTMLInputElement;
             input.value = '-1';
             expect(validateMinVisitDuration(input)).toBe(false);
         });
 
-        test('空文字で無効', () => {
+        test('returns false for an empty string', () => {
             const input = document.getElementById('visit') as HTMLInputElement;
             input.value = '';
             expect(validateMinVisitDuration(input)).toBe(false);
         });
 
-        test('数値以外で無効', () => {
+        test('returns false for non-numeric values', () => {
             const input = document.getElementById('visit') as HTMLInputElement;
             input.value = 'abc';
             expect(validateMinVisitDuration(input)).toBe(false);
@@ -305,43 +305,43 @@ describe('fieldValidation', () => {
     });
 
     describe('validateMinScrollDepth', () => {
-        test('0 で有効', () => {
+        test('returns true for 0', () => {
             const input = document.getElementById('scroll') as HTMLInputElement;
             input.value = '0';
             expect(validateMinScrollDepth(input)).toBe(true);
         });
 
-        test('100 で有効', () => {
+        test('returns true for 100', () => {
             const input = document.getElementById('scroll') as HTMLInputElement;
             input.value = '100';
             expect(validateMinScrollDepth(input)).toBe(true);
         });
 
-        test('50 で有効', () => {
+        test('returns true for 50', () => {
             const input = document.getElementById('scroll') as HTMLInputElement;
             input.value = '50';
             expect(validateMinScrollDepth(input)).toBe(true);
         });
 
-        test('101 で無効', () => {
+        test('returns false for 101', () => {
             const input = document.getElementById('scroll') as HTMLInputElement;
             input.value = '101';
             expect(validateMinScrollDepth(input)).toBe(false);
         });
 
-        test('-1 で無効', () => {
+        test('returns false for -1', () => {
             const input = document.getElementById('scroll') as HTMLInputElement;
             input.value = '-1';
             expect(validateMinScrollDepth(input)).toBe(false);
         });
 
-        test('空文字で無効', () => {
+        test('returns false for an empty string', () => {
             const input = document.getElementById('scroll') as HTMLInputElement;
             input.value = '';
             expect(validateMinScrollDepth(input)).toBe(false);
         });
 
-        test('数値以外で無効', () => {
+        test('returns false for non-numeric values', () => {
             const input = document.getElementById('scroll') as HTMLInputElement;
             input.value = 'abc';
             expect(validateMinScrollDepth(input)).toBe(false);
@@ -349,49 +349,49 @@ describe('fieldValidation', () => {
     });
 
     describe('validateMaxTokens', () => {
-        test('10 で有効（最小値）', () => {
+        test('returns true for 10 (minimum)', () => {
             const input = document.getElementById('tokens') as HTMLInputElement;
             input.value = '10';
             expect(validateMaxTokens(input)).toBe(true);
         });
 
-        test('16000 で有効（最大値）', () => {
+        test('returns true for 16000 (maximum)', () => {
             const input = document.getElementById('tokens') as HTMLInputElement;
             input.value = '16000';
             expect(validateMaxTokens(input)).toBe(true);
         });
 
-        test('4096 で有効', () => {
+        test('returns true for 4096', () => {
             const input = document.getElementById('tokens') as HTMLInputElement;
             input.value = '4096';
             expect(validateMaxTokens(input)).toBe(true);
         });
 
-        test('9 で無効', () => {
+        test('returns false for 9', () => {
             const input = document.getElementById('tokens') as HTMLInputElement;
             input.value = '9';
             expect(validateMaxTokens(input)).toBe(false);
         });
 
-        test('16001 で無効', () => {
+        test('returns false for 16001', () => {
             const input = document.getElementById('tokens') as HTMLInputElement;
             input.value = '16001';
             expect(validateMaxTokens(input)).toBe(false);
         });
 
-        test('0 で無効', () => {
+        test('returns false for 0', () => {
             const input = document.getElementById('tokens') as HTMLInputElement;
             input.value = '0';
             expect(validateMaxTokens(input)).toBe(false);
         });
 
-        test('空文字で無効', () => {
+        test('returns false for an empty string', () => {
             const input = document.getElementById('tokens') as HTMLInputElement;
             input.value = '';
             expect(validateMaxTokens(input)).toBe(false);
         });
 
-        test('数値以外で無効', () => {
+        test('returns false for non-numeric values', () => {
             const input = document.getElementById('tokens') as HTMLInputElement;
             input.value = 'abc';
             expect(validateMaxTokens(input)).toBe(false);
@@ -399,7 +399,7 @@ describe('fieldValidation', () => {
     });
 
     describe('validateBaseUrl', () => {
-        test('空文字は許容（true を返す）', async () => {
+        test('allows empty strings (returns true)', async () => {
             const input = document.getElementById('baseUrl') as HTMLInputElement;
             input.value = '';
 
@@ -408,7 +408,7 @@ describe('fieldValidation', () => {
             expect(result).toBe(true);
         });
 
-        test('無効なURL形式で false を返す', async () => {
+        test('returns false for invalid URL formats', async () => {
             const input = document.getElementById('baseUrl') as HTMLInputElement;
             input.value = 'not-a-valid-url';
 
@@ -418,7 +418,7 @@ describe('fieldValidation', () => {
             expect(input.getAttribute('aria-invalid')).toBe('true');
         });
 
-        test('スペースのみの値は空として扱われる', async () => {
+        test('treats whitespace-only values as empty', async () => {
             const input = document.getElementById('baseUrl') as HTMLInputElement;
             input.value = '   ';
 
@@ -428,7 +428,7 @@ describe('fieldValidation', () => {
             expect(result).toBe(true);
         });
 
-        test('ホワイトリストに含まれるURLで true を返す', async () => {
+        test('returns true for whitelisted URLs', async () => {
             isDomainInWhitelist.mockReturnValue(true);
 
             const input = document.getElementById('baseUrl') as HTMLInputElement;
@@ -440,7 +440,7 @@ describe('fieldValidation', () => {
             expect(input.getAttribute('aria-invalid')).not.toBe('true');
         });
 
-        test('ホワイトリストに含まれないURLで false を返す', async () => {
+        test('returns false for non-whitelisted URLs', async () => {
             isDomainInWhitelist.mockReturnValue(false);
 
             const input = document.getElementById('baseUrl') as HTMLInputElement;
@@ -454,7 +454,7 @@ describe('fieldValidation', () => {
     });
 
     describe('setupProtocolValidation', () => {
-        test('blurイベントでバリデーションが実行される', () => {
+        test('runs validation on blur events', () => {
             const input = document.getElementById('protocol') as HTMLInputElement;
             const cleanup = setupProtocolValidation(input);
 
@@ -467,7 +467,7 @@ describe('fieldValidation', () => {
             cleanup();
         });
 
-        test('有効な値でblurするとエラーがクリアされる', () => {
+        test('clears the error on blur with a valid value', () => {
             const input = document.getElementById('protocol') as HTMLInputElement;
             const cleanup = setupProtocolValidation(input);
 
@@ -479,7 +479,7 @@ describe('fieldValidation', () => {
             cleanup();
         });
 
-        test('クリーンアップ後はバリデーションが実行されない', () => {
+        test('does not run validation after cleanup', () => {
             const input = document.getElementById('protocol') as HTMLInputElement;
             const cleanup = setupProtocolValidation(input);
 
@@ -494,7 +494,7 @@ describe('fieldValidation', () => {
     });
 
     describe('setupPortValidation', () => {
-        test('blurイベントでバリデーションが実行される', () => {
+        test('runs validation on blur events', () => {
             const input = document.getElementById('port') as HTMLInputElement;
             const cleanup = setupPortValidation(input);
 
@@ -506,7 +506,7 @@ describe('fieldValidation', () => {
             cleanup();
         });
 
-        test('有効なポートでblurするとエラーがクリアされる', () => {
+        test('clears the error on blur with a valid port', () => {
             const input = document.getElementById('port') as HTMLInputElement;
             const cleanup = setupPortValidation(input);
 
@@ -518,7 +518,7 @@ describe('fieldValidation', () => {
             cleanup();
         });
 
-        test('クリーンアップ後はバリデーションが実行されない', () => {
+        test('does not run validation after cleanup', () => {
             const input = document.getElementById('port') as HTMLInputElement;
             const cleanup = setupPortValidation(input);
 
@@ -532,7 +532,7 @@ describe('fieldValidation', () => {
     });
 
     describe('setupMinVisitDurationValidation', () => {
-        test('blurイベントでバリデーションが実行される', () => {
+        test('runs validation on blur events', () => {
             const input = document.getElementById('visit') as HTMLInputElement;
             const cleanup = setupMinVisitDurationValidation(input);
 
@@ -544,7 +544,7 @@ describe('fieldValidation', () => {
             cleanup();
         });
 
-        test('有効な値でblurするとエラーがクリアされる', () => {
+        test('clears the error on blur with a valid value', () => {
             const input = document.getElementById('visit') as HTMLInputElement;
             const cleanup = setupMinVisitDurationValidation(input);
 
@@ -556,7 +556,7 @@ describe('fieldValidation', () => {
             cleanup();
         });
 
-        test('クリーンアップ後はバリデーションが実行されない', () => {
+        test('does not run validation after cleanup', () => {
             const input = document.getElementById('visit') as HTMLInputElement;
             const cleanup = setupMinVisitDurationValidation(input);
 
@@ -570,7 +570,7 @@ describe('fieldValidation', () => {
     });
 
     describe('setupMinScrollDepthValidation', () => {
-        test('blurイベントでバリデーションが実行される', () => {
+        test('runs validation on blur events', () => {
             const input = document.getElementById('scroll') as HTMLInputElement;
             const cleanup = setupMinScrollDepthValidation(input);
 
@@ -582,7 +582,7 @@ describe('fieldValidation', () => {
             cleanup();
         });
 
-        test('有効な値でblurするとエラーがクリアされる', () => {
+        test('clears the error on blur with a valid value', () => {
             const input = document.getElementById('scroll') as HTMLInputElement;
             const cleanup = setupMinScrollDepthValidation(input);
 
@@ -594,7 +594,7 @@ describe('fieldValidation', () => {
             cleanup();
         });
 
-        test('クリーンアップ後はバリデーションが実行されない', () => {
+        test('does not run validation after cleanup', () => {
             const input = document.getElementById('scroll') as HTMLInputElement;
             const cleanup = setupMinScrollDepthValidation(input);
 
@@ -608,7 +608,7 @@ describe('fieldValidation', () => {
     });
 
     describe('setupMaxTokensValidation', () => {
-        test('blurイベントでバリデーションが実行される', () => {
+        test('runs validation on blur events', () => {
             const input = document.getElementById('tokens') as HTMLInputElement;
             const cleanup = setupMaxTokensValidation(input);
 
@@ -620,7 +620,7 @@ describe('fieldValidation', () => {
             cleanup();
         });
 
-        test('有効な値でblurするとエラーがクリアされる', () => {
+        test('clears the error on blur with a valid value', () => {
             const input = document.getElementById('tokens') as HTMLInputElement;
             const cleanup = setupMaxTokensValidation(input);
 
@@ -632,7 +632,7 @@ describe('fieldValidation', () => {
             cleanup();
         });
 
-        test('クリーンアップ後はバリデーションが実行されない', () => {
+        test('does not run validation after cleanup', () => {
             const input = document.getElementById('tokens') as HTMLInputElement;
             const cleanup = setupMaxTokensValidation(input);
 
@@ -646,7 +646,7 @@ describe('fieldValidation', () => {
     });
 
     describe('setupAllFieldValidations', () => {
-        test('すべてのバリデーションリスナーが設定される', () => {
+        test('sets up all validation listeners', () => {
             const protocolInput = document.getElementById('protocol') as HTMLInputElement;
             const portInput = document.getElementById('port') as HTMLInputElement;
             const visitInput = document.getElementById('visit') as HTMLInputElement;
@@ -668,7 +668,7 @@ describe('fieldValidation', () => {
             cleanupFns.forEach(fn => fn());
         });
 
-        test('各フィールドのblurイベントでバリデーションが実行される', () => {
+        test('runs validation on blur for each field', () => {
             const protocolInput = document.getElementById('protocol') as HTMLInputElement;
             const portInput = document.getElementById('port') as HTMLInputElement;
             const visitInput = document.getElementById('visit') as HTMLInputElement;
@@ -695,7 +695,7 @@ describe('fieldValidation', () => {
             cleanupFns.forEach(fn => fn());
         });
 
-        test('すべてのクリーンアップ関数を呼び出すとリスナーが削除される', () => {
+        test('removes listeners when all cleanup functions are called', () => {
             const protocolInput = document.getElementById('protocol') as HTMLInputElement;
             const portInput = document.getElementById('port') as HTMLInputElement;
             const visitInput = document.getElementById('visit') as HTMLInputElement;
@@ -719,7 +719,7 @@ describe('fieldValidation', () => {
     });
 
     describe('validateAllFields', () => {
-        test('すべてのフィールドが有効な場合 true を返す', () => {
+        test('returns true when all fields are valid', () => {
             const protocolInput = document.getElementById('protocol') as HTMLInputElement;
             const portInput = document.getElementById('port') as HTMLInputElement;
             const visitInput = document.getElementById('visit') as HTMLInputElement;
@@ -743,7 +743,7 @@ describe('fieldValidation', () => {
             expect(result).toBe(true);
         });
 
-        test('プロトコルが無効な場合 false を返す', () => {
+        test('returns false when the protocol is invalid', () => {
             const protocolInput = document.getElementById('protocol') as HTMLInputElement;
             const portInput = document.getElementById('port') as HTMLInputElement;
             const visitInput = document.getElementById('visit') as HTMLInputElement;
@@ -767,7 +767,7 @@ describe('fieldValidation', () => {
             expect(result).toBe(false);
         });
 
-        test('ポートが無効な場合 false を返す', () => {
+        test('returns false when the port is invalid', () => {
             const protocolInput = document.getElementById('protocol') as HTMLInputElement;
             const portInput = document.getElementById('port') as HTMLInputElement;
             const visitInput = document.getElementById('visit') as HTMLInputElement;
@@ -791,7 +791,7 @@ describe('fieldValidation', () => {
             expect(result).toBe(false);
         });
 
-        test('訪問時間が無効な場合 false を返す', () => {
+        test('returns false when the visit duration is invalid', () => {
             const protocolInput = document.getElementById('protocol') as HTMLInputElement;
             const portInput = document.getElementById('port') as HTMLInputElement;
             const visitInput = document.getElementById('visit') as HTMLInputElement;
@@ -815,7 +815,7 @@ describe('fieldValidation', () => {
             expect(result).toBe(false);
         });
 
-        test('スクロール深度が無効な場合 false を返す', () => {
+        test('returns false when the scroll depth is invalid', () => {
             const protocolInput = document.getElementById('protocol') as HTMLInputElement;
             const portInput = document.getElementById('port') as HTMLInputElement;
             const visitInput = document.getElementById('visit') as HTMLInputElement;
@@ -839,7 +839,7 @@ describe('fieldValidation', () => {
             expect(result).toBe(false);
         });
 
-        test('最大トークン数が無効な場合 false を返す', () => {
+        test('returns false when the max token count is invalid', () => {
             const protocolInput = document.getElementById('protocol') as HTMLInputElement;
             const portInput = document.getElementById('port') as HTMLInputElement;
             const visitInput = document.getElementById('visit') as HTMLInputElement;
@@ -863,7 +863,7 @@ describe('fieldValidation', () => {
             expect(result).toBe(false);
         });
 
-        test('複数のフィールドが無効な場合 false を返す', () => {
+        test('returns false when multiple fields are invalid', () => {
             const protocolInput = document.getElementById('protocol') as HTMLInputElement;
             const portInput = document.getElementById('port') as HTMLInputElement;
             const visitInput = document.getElementById('visit') as HTMLInputElement;

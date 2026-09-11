@@ -27,7 +27,7 @@ describe('AI_PROVIDER_PRIORITY_LIST 自動マイグレーション', () => {
     });
   });
 
-  it('AI_PROVIDER_PRIORITY_LISTが未設定の場合、既存のAI_PROVIDERを1位スロットとして導出する', async () => {
+  it('derives the existing AI_PROVIDER as the top-priority slot when AI_PROVIDER_PRIORITY_LIST is unset', async () => {
     const settings = await settingsRepository.getAll();
     expect(settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST]).toEqual([
       { provider: 'openai2' }

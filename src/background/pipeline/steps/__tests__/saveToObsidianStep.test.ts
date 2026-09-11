@@ -55,7 +55,7 @@ describe('saveToObsidianStep', () => {
   });
 
   describe('DI: StepDeps 通过の注入', () => {
-    it('注入された obsidian クライアントの appendToDailyNote が呼ばれる', async () => {
+    it('calls appendToDailyNote on the injected obsidian client', async () => {
       const deps = makeDeps();
       const context = makeContext();
 
@@ -64,7 +64,7 @@ describe('saveToObsidianStep', () => {
       expect(deps.obsidian.appendToDailyNote).toHaveBeenCalledWith(context.markdown, context.traceId);
     });
 
-    it('deps を省略するとスキップする（obsidian が undefined の場合）', async () => {
+    it('skips when deps is omitted (obsidian is undefined)', async () => {
       const context = makeContext();
 
       const result = await saveToObsidianStep(context);
@@ -75,7 +75,7 @@ describe('saveToObsidianStep', () => {
   });
 
   describe('markdown なしの場合', () => {
-    it('markdown が undefined の場合は Obsidian に保存せずコンテキストを返す', async () => {
+    it('returns the context without saving to Obsidian when markdown is undefined', async () => {
       const deps = makeDeps();
       const context = makeContext({ markdown: undefined });
 
@@ -85,7 +85,7 @@ describe('saveToObsidianStep', () => {
       expect(result).toBe(context);
     });
 
-    it('markdown が空文字の場合は Obsidian に保存せずコンテキストを返す', async () => {
+    it('returns the context without saving to Obsidian when markdown is empty', async () => {
       const deps = makeDeps();
       const context = makeContext({ markdown: '' });
 
@@ -97,7 +97,7 @@ describe('saveToObsidianStep', () => {
   });
 
   describe('Obsidian 未設定の場合', () => {
-    it('Obsidian API key が空の場合はスキップしコンテキストを返す', async () => {
+    it('skips and returns the context when the Obsidian API key is empty', async () => {
       const context = makeContext({ settings: { obsidian_api_key: '' } as any });
 
       const result = await saveToObsidianStep(context);
@@ -105,7 +105,7 @@ describe('saveToObsidianStep', () => {
       expect(result).toBe(context);
     });
 
-    it('Obsidian API key が短すぎる場合はスキップする', async () => {
+    it('skips when the Obsidian API key is too short', async () => {
       const context = makeContext({ settings: { obsidian_api_key: 'short' } as any });
 
       const result = await saveToObsidianStep(context);
@@ -113,7 +113,7 @@ describe('saveToObsidianStep', () => {
       expect(result).toBe(context);
     });
 
-    it('settings に obsidian_api_key がない場合はスキップする', async () => {
+    it('skips when settings lacks obsidian_api_key', async () => {
       const context = makeContext({ settings: {} as any });
 
       const result = await saveToObsidianStep(context);
@@ -121,7 +121,7 @@ describe('saveToObsidianStep', () => {
       expect(result).toBe(context);
     });
 
-    it('deps.obsidian が注入された場合は設定チェックをスキップし保存する', async () => {
+    it('skips the settings check and saves when deps.obsidian is injected', async () => {
       const deps = makeDeps();
       // settings with no API key → should still save because deps.obsidian is injected
       const context = makeContext({ settings: {} as any });
@@ -135,7 +135,7 @@ describe('saveToObsidianStep', () => {
   });
 
   describe('保存成功時', () => {
-    it('markdown が設定されていれば Obsidian に保存し、obsidianDuration 付きのコンテキストを返す', async () => {
+    it('saves to Obsidian and returns the context with obsidianDuration when markdown is set', async () => {
       const deps = makeDeps();
       const context = makeContext();
 
@@ -149,7 +149,7 @@ describe('saveToObsidianStep', () => {
   });
 
   describe('保存失敗時', () => {
-    it('Obsidian 保存で例外発生時はエラーを throw する', async () => {
+    it('throws when saving to Obsidian raises an exception', async () => {
       const deps = makeDeps();
       (deps.obsidian.appendToDailyNote as any).mockRejectedValueOnce(new Error('Connection refused'));
       const context = makeContext();

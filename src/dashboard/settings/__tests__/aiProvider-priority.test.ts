@@ -29,7 +29,7 @@ describe('updateAIProviderVisibilityMulti', () => {
     };
   });
 
-  it('優先度1位と2位で異なるプロバイダーを選択した場合、両方の設定欄を表示する', () => {
+  it('shows both settings sections when different providers are selected for priorities 1 and 2', () => {
     updateAIProviderVisibilityMulti(elements, ['gemini', 'openai2']);
 
     expect(elements.settings.gemini!.style.display).toBe('block');
@@ -37,7 +37,7 @@ describe('updateAIProviderVisibilityMulti', () => {
     expect(elements.settings.openai!.style.display).toBe('none');
   });
 
-  it('選択されていないプロバイダーの設定欄は非表示のままにする', () => {
+  it('keeps settings sections of unselected providers hidden', () => {
     updateAIProviderVisibilityMulti(elements, ['ollama']);
 
     expect(elements.settings.ollama!.style.display).toBe('block');
@@ -46,7 +46,7 @@ describe('updateAIProviderVisibilityMulti', () => {
     expect(elements.settings.openai2!.style.display).toBe('none');
   });
 
-  it('空文字列（未設定）は無視する', () => {
+  it('ignores empty strings (unset)', () => {
     updateAIProviderVisibilityMulti(elements, ['gemini', '', '']);
 
     expect(elements.settings.gemini!.style.display).toBe('block');

@@ -98,7 +98,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
   });
 
   describe('APIキーが提供されていない場合のエラーハンドリング', () => {
-    it('APIキーがない場合、ユーザーに分かりやすいエラーメッセージがスローされること（修正後）', async () => {
+    it('throws a user-friendly error message when the API key is missing (after fix)', async () => {
   
       mockGetSettings.mockResolvedValue({ OBSIDIAN_API_KEY: '' });
 
@@ -108,7 +108,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       expect((await obsidianClient.appendToDailyNote('Test content').catch(e => e.message))).toContain('check your Obsidian settings');
     });
 
-    it('エラーメッセージがユーザーに分かりやすい形式であること（修正後）', async () => {
+    it('uses a user-friendly error message format (after fix)', async () => {
   
       mockGetSettings.mockResolvedValue({ OBSIDIAN_API_KEY: '' });
 
@@ -121,7 +121,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
   });
 
   describe('URLがエラーメッセージに含まれないこと（修正後）', () => {
-    it('接続失敗時、完全なURLがエラーメッセージに含まれないこと（修正後）', async () => {
+    it('omits the full URL from the error message on connection failure (after fix)', async () => {
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -149,7 +149,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('HTTPS接続失敗時、自己署名証明書に関するメッセージが含まれること（修正後）', async () => {
+    it('includes a self-signed certificate message on HTTPS connection failure (after fix)', async () => {
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -187,7 +187,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('読み取りエラー時、HTTPステータスコードがエラーメッセージに含まれないこと（修正後）', async () => {
+    it('omits the HTTP status code from the error message on read errors (after fix)', async () => {
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -224,7 +224,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       }
     });
 
-    it('書き込みエラー時、HTTPステータスコードがエラーメッセージに含まれないこと（修正後）', async () => {
+    it('omits the HTTP status code from the error message on write errors (after fix)', async () => {
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -270,7 +270,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
   });
 
   describe('testConnectionメソッドのエラーハンドリング', () => {
-    it('接続成功時、詳細なメッセージが返されること（修正後）', async () => {
+    it('returns a detailed message on successful connection (after fix)', async () => {
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -293,7 +293,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('接続失敗時、HTTPステータスコードがメッセージに含まれないこと（修正後）', async () => {
+    it('omits the HTTP status code from the message on connection failure (after fix)', async () => {
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -318,7 +318,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('ネットワークエラー時、詳細なエラーメッセージが含まれないこと（修正後）', async () => {
+    it('omits detailed error messages on network errors (after fix)', async () => {
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -344,39 +344,39 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
   });
 
   describe('_validatePort', () => {
-    it('undefinedの場合はデフォルトポートを返す', () => {
+    it('returns the default port for undefined', () => {
       expect(obsidianClient._validatePort(undefined)).toBe('27124');
     });
 
-    it('nullの場合はデフォルトポートを返す', () => {
+    it('returns the default port for null', () => {
       expect(obsidianClient._validatePort(null)).toBe('27124');
     });
 
-    it('空文字列の場合はデフォルトポートを返す', () => {
+    it('returns the default port for an empty string', () => {
       expect(obsidianClient._validatePort('')).toBe('27124');
     });
 
-    it('数値でない場合はエラーを投げる', () => {
+    it('throws for non-numeric values', () => {
       expect(() => obsidianClient._validatePort('abc')).toThrow('Port must be a valid number');
     });
 
-    it('整数でない場合はエラーを投げる', () => {
+    it('throws for non-integer values', () => {
       expect(() => obsidianClient._validatePort(3.14)).toThrow('Port must be an integer');
     });
 
-    it('範囲外の場合はエラーを投げる', () => {
+    it('throws for out-of-range values', () => {
       expect(() => obsidianClient._validatePort(0)).toThrow('Port must be between');
       expect(() => obsidianClient._validatePort(70000)).toThrow('Port must be between');
     });
 
-    it('有効なポート番号を文字列で返す', () => {
+    it('returns valid port numbers as strings', () => {
       expect(obsidianClient._validatePort(3000)).toBe('3000');
       expect(obsidianClient._validatePort('8080')).toBe('8080');
     });
   });
 
   describe('_globalWriteMutex', () => {
-    it('グローバルMutexインスタンスを返す', () => {
+    it('returns the global Mutex instance', () => {
       const mutex = obsidianClient._globalWriteMutex;
       expect(mutex).toBeDefined();
       expect(typeof mutex.acquire).toBe('function');
@@ -393,19 +393,19 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('overrideでAPIキーがない場合はエラーを返す', async () => {
+    it('returns an error when override has no API key', async () => {
       const result = await obsidianClient.testConnection({ apiKey: '' });
       expect(result.success).toBe(false);
       expect(result.message).toContain('API key is missing');
     });
 
-    it('overrideでポート番号が無効な場合はエラーを返す', async () => {
+    it('returns an error when override has an invalid port', async () => {
       const result = await obsidianClient.testConnection({ port: 'invalid', apiKey: 'key' });
       expect(result.success).toBe(false);
       expect(result.message).toContain('Port must be a valid number');
     });
 
-    it('overrideで404の場合はエンドポイントエラーを返す', async () => {
+    it('returns an endpoint error on 404 with override', async () => {
       fetchMock().mockResolvedValue({
         ok: false,
         status: 404,
@@ -426,7 +426,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       );
     });
 
-    it('overrideで無効なプロトコルの場合はエラーを返す', async () => {
+    it('returns an error for an invalid protocol with override', async () => {
       const result = await obsidianClient.testConnection({
         protocol: 'ftp',
         port: 27123,
@@ -438,7 +438,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
-    it('overrideで500の場合は接続エラーを返す', async () => {
+    it('returns a connection error on 500 with override', async () => {
       fetchMock().mockResolvedValue({
         ok: false,
         status: 500,
@@ -465,7 +465,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
        vi.mocked(global.fetch).mockRestore();
      });
 
-     it('タイムアウトエラーで適切なメッセージを返す', async () => {
+     it('returns an appropriate message for timeout errors', async () => {
        mockGetSettings.mockResolvedValue({
          OBSIDIAN_API_KEY: 'test_key',
          OBSIDIAN_PROTOCOL: 'http',
@@ -481,7 +481,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
        expect(result.message).toContain('Connection timeout');
      });
 
-     it('その他のエラーでConnection errorを返す', async () => {
+     it('returns Connection error for other errors', async () => {
        mockGetSettings.mockResolvedValue({
          OBSIDIAN_API_KEY: 'test_key',
          OBSIDIAN_PROTOCOL: 'http',
@@ -497,7 +497,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
        expect(result.message).toContain('Connection error');
      });
 
-     it('_getConfig で API key エラーが起きた場合に適切なメッセージを返す', async () => {
+     it('returns an appropriate message when _getConfig raises an API key error', async () => {
        mockGetSettings.mockResolvedValue({
          OBSIDIAN_API_KEY: '',
          OBSIDIAN_PROTOCOL: 'http',
@@ -547,7 +547,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
   describe('protocol handling', () => {
-    it('HTTP設定ではHTTP接続をそのまま使用する', async () => {
+    it('uses HTTP connections as-is with HTTP settings', async () => {
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
@@ -583,7 +583,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('無効なプロトコル設定は拒否する', async () => {
+    it('rejects invalid protocol settings', async () => {
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'ftp',
@@ -603,7 +603,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('overrideでprotocolを指定しない場合、httpsをデフォルトとして使用する', async () => {
+    it('uses https by default when override omits protocol', async () => {
       fetchMock().mockResolvedValue({
         ok: true,
         status: 200,
@@ -633,7 +633,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('既存コンテンツに追記する', async () => {
+    it('appends to existing content', async () => {
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
@@ -656,7 +656,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       await expect(obsidianClient.appendToDailyNote('new content')).resolves.not.toThrow();
     });
 
-    it('ENDPOINTS.dailyNote()経由で正しいURL（/vault/配下）を生成する', async () => {
+    it('generates the correct URL under /vault/ via ENDPOINTS.dailyNote()', async () => {
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
@@ -687,7 +687,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       expect(calledUrls[0]).toBe(calledUrls[1]);
     });
 
-    it('testConnection()でENDPOINTS.root()経由のルートURLにリクエストする', async () => {
+    it('requests the root URL via ENDPOINTS.root() in testConnection()', async () => {
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',

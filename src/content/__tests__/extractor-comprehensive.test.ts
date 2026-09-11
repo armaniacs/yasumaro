@@ -181,8 +181,8 @@ describe('extractor-comprehensive: loadSettings 分支', () => {
     logInfoMock.mockRejectedValueOnce(new Error('fail'));
     setStorageSettings({});
     await expect(loadSettings()).resolves.not.toThrow();
-    // catch does not propagate
-    expect(true).toBe(true);
+    // loadSettings attempted its logInfo call and swallowed the rejection
+    expect(logInfoMock).toHaveBeenCalled();
   });
 });
 
@@ -273,9 +273,8 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
     expect(cafSpy).toHaveBeenCalled();
     // trigger rAF
     await vi.advanceTimersByTimeAsync(150);
-    // beforeunload cleanup
+    // beforeunload cleanup must not throw
     window.dispatchEvent(new Event('beforeunload'));
-    expect(true).toBe(true);
   });
 
   it('updateMaxScroll early return when docHeight <=0', () => {
@@ -388,8 +387,9 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
     stopPeriodicCheck();
     expect(clearSpy).toHaveBeenCalled();
     startPeriodicCheck();
-    expect(true).toBe(true);
+    expect(ps.checkIntervalId).not.toBeNull();
     stopPeriodicCheck();
+    expect(ps.checkIntervalId).toBeNull();
   });
 });
 
@@ -477,12 +477,28 @@ describe('extractor-comprehensive: reportValidVisit branches', () => {
   });
 
   it('PRIVATE_PAGE_DETECTED force save failure logs error', async () => {
-    // This test will be limited: we mock showPrivacyConfirmDialog indirectly by forcing userConfirmed true via overriding module
-    // To cover the catch after force save, we need second send to reject
-    // We'll patch window to make showPrivacyConfirmDialog return true by creating host and clicking
-    // Instead, we will directly test the inner try/catch by mocking showPrivacyConfirmDialog to return true via vi.fn
-    // Since we already imported extractor with original, we can attempt to cover by not calling the private path but ensuring the catch block line is hit via Extension context path already.
-    expect(true).toBe(true);
+    // First VALID_VISIT returns PRIVATE_PAGE_DETECTED with confirmationRequired;
+    // the user confirms, then the forced re-send rejects, which must be logged.
+    const privacyMod = await import('../privacyDialog.js');
+    const spy = vi.spyOn(privacyMod, 'showPrivacyConfirmDialog').mockResolvedValue(true as unknown as boolean);
+    sendMessageWithRetryMock.mockReset();
+    sendMessageWithRetryMock
+      .mockResolvedValueOnce({ success: false, error: 'PRIVATE_PAGE_DETECTED', confirmationRequired: true, reason: 'cache-control' })
+      .mockRejectedValueOnce(new Error('force fail'));
+    const ps = getPageStateForTesting() as unknown as PageState;
+    ps.isValidVisitReported = false;
+    document.body.innerHTML = `<article><p>private ${'a '.repeat(600)}</p></article>`;
+    logErrorMock.mockClear();
+    await reportValidVisit();
+    expect(sendMessageWithRetryMock).toHaveBeenCalledTimes(2);
+    expect((sendMessageWithRetryMock.mock.calls[1]![0] as { payload: { force: boolean } }).payload.force).toBe(true);
+    expect(logErrorMock).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to force save private page'),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+    );
+    spy.mockRestore();
   });
 });
 
@@ -511,7 +527,8 @@ describe('extractor-comprehensive: init and message handler', () => {
     const scrollHandlers = (addSpy.mock.calls.filter(c => (c[0] as string) === 'scroll').map(c => c[1]) as unknown as Array<(e: Event) => void>);
     const fakeEvent = { isTrusted: false } as unknown as Event;
     for (const h of scrollHandlers) h(fakeEvent);
-    expect(true).toBe(true);
+    // Untrusted scroll must not evaluate synchronously; it arms a deferred check instead
+    expect((getPageStateForTesting() as unknown as PageState).maxScrollPercentage).toBe(0);
     // visibilitychange hidden true => stop, hidden false => start
     Object.defineProperty(document, 'hidden', { value: true, configurable: true });
     document.dispatchEvent(new Event('visibilitychange'));
@@ -649,7 +666,8 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
     throttled('x');
     // rafId is now pending
     window.dispatchEvent(new Event('beforeunload'));
-    expect(true).toBe(true);
+    // beforeunload cancels the pending frame so the throttled fn never fires
+    expect(fn).not.toHaveBeenCalled();
   });
 
   it('updateMaxScroll maxScroll not overwritten when smaller (covers 350 false)', () => {
@@ -770,7 +788,6 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
     const fakeUntrusted = { isTrusted: false } as unknown as Event;
     for (const h of scrollHandlers) { try { h(fakeUntrusted); } catch {} }
     await new Promise(r => setTimeout(r, 30));
-    expect(true).toBe(true);
     document.documentElement.removeAttribute('data-ow-e2e-test');
     document.documentElement.removeAttribute('data-ow-test-state');
     stopPeriodicCheck();
@@ -785,9 +802,10 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
     ps.isValidVisitReported = false;
     Object.defineProperty(document, 'hidden', { value: true, configurable: true });
     document.dispatchEvent(new Event('visibilitychange'));
+    expect(ps.checkIntervalId).toBeNull();
     Object.defineProperty(document, 'hidden', { value: false, configurable: true });
     document.dispatchEvent(new Event('visibilitychange'));
-    expect(true).toBe(true);
+    expect(ps.checkIntervalId).not.toBeNull();
     stopPeriodicCheck();
   });
 });

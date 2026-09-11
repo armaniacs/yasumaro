@@ -70,6 +70,7 @@ import {
   extractPageContent,
   init,
 } from '../extractor.js';
+import { getPageStateForTesting } from './helpers/contentTestkit.js';
 import { showPrivacyConfirmDialog } from '../privacyDialog.js';
 
 describe('shouldRecordVisit — threshold edge cases', () => {
@@ -330,8 +331,9 @@ describe('showPrivacyConfirmDialog — overlay event target check', () => {
     const host = document.getElementById('osh-privacy-confirm-host');
     expect(host).not.toBeNull();
     host?.remove();
-    // If it did resolve we'd get false, but we just want to verify no crash
-    expect(true).toBe(true);
+    // No click happened, so the dialog promise must still be pending (never resolved)
+    const settled = await Promise.race([promise.then(() => 'resolved'), Promise.resolve('pending')]);
+    expect(settled).toBe('pending');
   });
 
   it('creates adoptedStyleSheets with CSSStyleSheet', () => {
@@ -360,8 +362,9 @@ describe('reportValidVisit — error path through chrome.runtime.sendMessage', (
     chrome.runtime.sendMessage = vi.fn(() => Promise.resolve({ success: false, error: 'SOME_ERROR' }));
     await init();
 
-    // We can't easily trigger reportValidVisit, but init should succeed
-    expect(true).toBe(true);
+    // init loads settings and starts the periodic deadline timer without reporting
+    expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+    expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
 
     chrome.runtime.sendMessage = origSendMessage;
   });
@@ -370,7 +373,8 @@ describe('reportValidVisit — error path through chrome.runtime.sendMessage', (
     const origSendMessage = chrome.runtime.sendMessage;
     chrome.runtime.sendMessage = vi.fn(() => Promise.resolve({ success: false, error: 'DOMAIN_BLOCKED' }));
     await init();
-    expect(true).toBe(true);
+    expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+    expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     chrome.runtime.sendMessage = origSendMessage;
   });
 
@@ -383,7 +387,8 @@ describe('reportValidVisit — error path through chrome.runtime.sendMessage', (
       reason: 'cache',
     }));
     await init();
-    expect(true).toBe(true);
+    expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+    expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     chrome.runtime.sendMessage = origSendMessage;
   });
 });
