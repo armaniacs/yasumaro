@@ -7,7 +7,7 @@ import type {
   BackupResult, CountResult, HealthResult, AuditLogQueryResult,
   StatusResult, BackendOrError,
 } from './StorageBackend.js';
-import { archiveUnsupported, BINARY_BACKUP_UNSUPPORTED_ERROR, BINARY_RESTORE_UNSUPPORTED_ERROR } from './StorageBackend.js';
+import { BINARY_BACKUP_UNSUPPORTED_ERROR, BINARY_RESTORE_UNSUPPORTED_ERROR } from './StorageBackend.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from './schema.js';
 import { extractDomain, DB_FILENAME } from './sqliteEngineHost.js';
@@ -283,62 +283,6 @@ export class IdbVfsBackend implements StorageBackend {
 
   async backupDb(): Promise<BackendOrError<BackupResult>> {
     return { success: false, error: BINARY_BACKUP_UNSUPPORTED_ERROR };
-  }
-
-  async archivePreview(): Promise<BackendOrError<import('./StorageBackend.js').ArchivePreviewResult>> {
-    return archiveUnsupported();
-  }
-
-  async archiveCreate(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCreateResult>> {
-    return archiveUnsupported();
-  }
-
-  async archiveCleanup(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCleanupResult>> {
-    return archiveUnsupported();
-  }
-
-  async archiveExportChunk(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveExportChunkResult>> {
-    return archiveUnsupported();
-  }
-
-  async archivePrepareIncoming(): Promise<BackendOrError<import('./StorageBackend.js').ArchivePrepareIncomingResult>> {
-    return archiveUnsupported();
-  }
-
-  async archiveRestorePreview(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveRestorePreviewResult>> {
-    return archiveUnsupported();
-  }
-
-  async archiveRestore(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveRestoreResult>> {
-    return archiveUnsupported();
-  }
-
-  async archiveDeleteByStaging(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveDeleteByStagingResult>> {
-    return archiveUnsupported();
-  }
-
-  async archiveOpen(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveOpenResult>> {
-    return archiveUnsupported();
-  }
-
-  async archiveQuery(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveQueryResult>> {
-    return archiveUnsupported();
-  }
-
-  async archiveUpdate(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveUpdateResult>> {
-    return archiveUnsupported();
-  }
-
-  async archiveSave(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveSaveResult>> {
-    return archiveUnsupported();
-  }
-
-  async archiveClose(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCloseResult>> {
-    return archiveUnsupported();
-  }
-
-  async archiveStatus(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveStatusResult>> {
-    return archiveUnsupported();
   }
 
   async restoreDb(_data: Uint8Array): Promise<BackendOrError<MutationResult>> {

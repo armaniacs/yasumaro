@@ -238,11 +238,11 @@ describe('RecordingPipeline', () => {
     });
   });
 
-  describe('retryObsidianWriteOnly', () => {
+  describe('retryObsidianWrite', () => {
     it('saves to Obsidian using the already-computed summary without calling the AI provider', async () => {
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
-      const result = await logic.retryObsidianWriteOnly({
+      const result = await logic.retryObsidianWrite({
         title: 'Retry Page',
         url: 'https://retry.example.com',
         summary: 'Already summarized content',
@@ -263,7 +263,7 @@ describe('RecordingPipeline', () => {
       mockObsidian.appendToDailyNote.mockRejectedValueOnce(new Error('network down'));
 
       await expect(
-        logic.retryObsidianWriteOnly({
+        logic.retryObsidianWrite({
           title: 'Retry Page',
           url: 'https://retry.example.com',
           summary: 'Already summarized content',

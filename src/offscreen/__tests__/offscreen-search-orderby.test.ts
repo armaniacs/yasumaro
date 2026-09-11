@@ -82,9 +82,11 @@ describe('handleOffscreenMessage - SQLITE_SEARCH forwards to unified query()', (
     );
     await vi.waitFor(() => expect(responses.length).toBe(1));
 
+    // PBI 2026-09-11-05: the handoff now carries the planner default limit
+    // (backend behavior unchanged — recordsRepo used to default it later).
     expect(queryMock).toHaveBeenCalledWith({
       text: 'test query',
-      limit: undefined,
+      limit: 100,
       offset: undefined,
       orderBy: undefined,
       orderDir: undefined,

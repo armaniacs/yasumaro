@@ -14,6 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-11 architecture deepening round — 5件（0911f）
+
+アーキテクチャレポートの deepening 候補 5 件を RICE 採点 → PBI 化。実行順 = 04 → 05 → 06 → 07 → 08（RICE 降順、05→07 のみ順序推奨）。台帳は `2026-09-11-00-backlog-0911f.md`。
+
+- 2026-09-11-04-refactor-recording-orchestrator-narrow.md（✅ 完了・アーカイブ済 — `RecordMode`・`record(mode)` 分岐・`recordFull`・dead `retryObsidian`・`retryObsidianWriteOnly` alias を削除し 3 エントリに。変更呼び出し元は offlineQueueProcessor のみ。表面 pin テスト新設。関連 324 tests green）
+- 2026-09-11-05-refactor-sqlite-query-planner.md（✅ 完了・アーカイブ済 — `queryPlanner.ts` 新設（planQuery/planSearch/applyReadPolicy）し handler+repo の政策分断を解消。物理移設は worker 境界のため見送り・所有関係を文書固定。`MAX_QUERY_LIMIT` は limits.ts SSOT を直接参照。offscreen 全 973 tests green）
+- 2026-09-11-06-refactor-storage-archive-seam.md（✅ 完了・アーカイブ済 — `archiveStaging.ts` 新設（ArchiveStaging + supportsArchive）。stub 28 件 + Noop 14 件 + 共有関数を除去し dispatch fail-closed に統一。Y2 更新 + dispatch 閉鎖 3 件。offscreen 全 978 tests green）
+- 2026-09-11-07-refactor-sqlite-dispatch-collapse.md（✅ 完了・アーカイブ済 — スパイク結果: フル集約は不採択（god 化・token 政策の risk）。slice として validation seam `verifyRequestToken` + projection seam `buildListParams`/`buildSearchParams` を抽出・8 tests 新設。dashboardSqlite 全 50 green）
+- 2026-09-11-08-refactor-popup-permission-ladder.md（✅ 完了・アーカイブ済 — seam 正当化の再確認結果: 見送り（ladder 消費者は 1 件で 2-adapter 基準未達・判断は permissionManager に委譲済み・5 tests が pin）。死んだ `TabContentFetcher` 再export 1 行のみ除去。関連 27 tests green）
+
 ### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
@@ -50,6 +60,14 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-11 architecture review round 8 — 3件完了（autonomous-task-closer）
+
+診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260911-2338-r8.html`）→ RICE 採点 → 実装。実行順 = 01 → 02 → 03。主軸: round 7 台帳の「e2e gap 2 spec」— トリガー（e2e 実行可能環境）が本環境で**発火**。台帳は `2026-09-11-00-backlog-0911e.md`（`pbi/` に残置 — round 7 台帳と同列の live 記録）。
+
+- 2026-09-11-01-test-e2e-history-panel-ui.md（✅ 完了・アーカイブ済 — seedRows 25 行で tag filter / pagination / star の 4 振る舞いを pin。PBI 記載の `--project=chromium` は誤記で `extension` に修正。全セレクタを実 DOM に対照。headless では全 @extension spec と同様 skip。testDir tsc 新規 0 errors）
+- 2026-09-11-02-test-e2e-cleansing-preview.md（✅ 完了・アーカイブ済 — modal open / mask 遷移 / confirm→SAVE_RECORD の 3 振る舞いを pin。**fixture の headless ガード欠落を検出・修正**（extension.fixture と同一の tryLaunch + fixme — 無ければ headless で hard-fail）。プロジェクト名も `extension` に修正）
+- 2026-09-11-03-fix-check-e2e-platform-gate.md（✅ 完了・アーカイブ済 — xvfb probe を linux 限定に、darwin/win32 は playwright 直接実行。明示 skip 配線（index.mjs）は不変。`onLinux`/`isLinux` 重複を統一。`node --check` + 分岐実測で検証）
 
 ### 2026-09-11 architecture review round 7 — 7件完了（arch-delivery-loop・0911a ブランチ）
 

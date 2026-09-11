@@ -209,13 +209,12 @@ All Obsidian write operations are serialized via global mutex:
 All recording paths go through **`RecordingOrchestrator`** (`src/background/pipeline/RecordingOrchestrator.js`) — **3 distinct entry points** compiled at construction:
 
 ```
-record(data: RecordingData, opts?: RecordOptions)            // delegates to one of below for backward compat
-recordFull(data, opts)                                       // normal: full 13 steps
+record(data: RecordingData, opts?: RecordOptions)            // normal: full 13 steps (previewOnly data/opts delegates to preview())
 preview(data, opts)                                          // preview: short-circuits after privacy step (previewBreakpoint) via the same 13-step kernel with `previewOnly:true`
-retryObsidianWrite(job: { title, url, summary, tags? })      // retryObsidian: 2-step subset `retrySteps` (formatMarkdown + saveObsidian) compiled at construction, no inline 2-step in `record()`; exposed also as `retryObsidianWriteOnly(job)` for backward compat
+retryObsidianWrite(job: { title, url, summary, tags? })      // retry: 2-step subset `retrySteps` (formatMarkdown + saveObsidian) compiled at construction, no AI re-run
 ```
 
-- `RecordMode` (`normal`/`preview`/`retryObsidian`) is now `@internal` on the delegating `record()` wrapper; new code should call the 3 distinct methods. `retryObsidian` no longer has an inline `formatMarkdownStep + saveToObsidianStep` inside `record()` — the 2-step subset is a `retrySteps` array compiled at construction and executed via `executeRetrySubset` + `PerUrlMutexMap.runExclusive`, so `PipelineKernel` sees one list per mode.
+- The `RecordMode` union (`normal`/`preview`/`retryObsidian`), the `record(mode)` wrapper branch, `recordFull`, the private `retryObsidian`, and the `retryObsidianWriteOnly` alias were removed (PBI 2026-09-11-04) — the 3 methods above are the entire public surface (pinned by `orchestrator-surface.test.ts`). The `previewOnly` data flag remains as the step-level breakpoint seam (read by `executeInternal` and `processPrivacyPipelineStep`).
 - `opts.settings` bypasses `getSettingsWithCache`; the manual/preview record handlers pass their already-resolved settings this way so a concurrent cache refresh cannot race them.
 - **Typed context** (`src/background/pipeline/contextBuilder.ts`): the canonical context is `StagedContext<S>` (brand type `ContextStage` = `initial`/`checked`/`privacy`/`extracted`/`formatted`) with `createInitialContext` / `createRetryContext` / `createStepDeps` / `createSaveSqliteParams`. The 7-way `RecordingContext` intersection in `types.ts` is superseded; `pickDefined` conditional spreads are replaced by explicit `if (x !== undefined)` builders so `exactOptionalPropertyTypes` is satisfied and out-of-order reads become type errors.
 - **`RetryPolicy`** (`src/background/pipeline/retryPolicy.ts`): `isNetworkError` / `shouldEnqueueForOffline` (string heuristic including `'ai '`) is extracted from `StepExecutor` so the policy is unit-testable without network; `StepExecutor` is injected with `RetryPolicy` (default `defaultRetryPolicy`) and no longer owns the heuristic.

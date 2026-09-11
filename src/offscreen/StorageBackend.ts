@@ -94,25 +94,9 @@ export interface Mutable {
   purgeContent(retentionDays?: number, maxRecords?: number, includeStarred?: boolean): Promise<BackendOrError<PurgeResult>>;
   backupDb(): Promise<BackendOrError<BackupResult>>;
   restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>>;
-  /** Archive preview (PBI 2026-09-06-02) — OPFS backend only. */
-  archivePreview(cutoffDate: string, cutoffMs: number, includeDeleted: boolean): Promise<BackendOrError<ArchivePreviewResult>>;
-  /** Archive creation (PBI 2026-09-06-02) — OPFS backend only. */
-  archiveCreate(params: ArchiveCreateParams): Promise<BackendOrError<ArchiveCreateResult>>;
-  /** Orphan staging sweep (PBI 2026-09-06-02) — OPFS backend only. */
-  archiveCleanup(): Promise<BackendOrError<ArchiveCleanupResult>>;
-  /** Chunked staging export (PBI 2026-09-06-02) — OPFS backend only. */
-  archiveExportChunk(stagingName: string, offset: number, length: number): Promise<BackendOrError<ArchiveExportChunkResult>>;
-  archivePrepareIncoming(): Promise<BackendOrError<ArchivePrepareIncomingResult>>;
-  archiveRestorePreview(stagingName: string): Promise<BackendOrError<ArchiveRestorePreviewResult>>;
-  archiveRestore(stagingName: string): Promise<BackendOrError<ArchiveRestoreResult>>;
-  /** Phase B (PBI 2026-09-06-04) — main-DB deletion covered by the staging. */
-  archiveDeleteByStaging(stagingName: string): Promise<BackendOrError<ArchiveDeleteByStagingResult>>;
-  archiveOpen(stagingName: string): Promise<BackendOrError<ArchiveOpenResult>>;
-  archiveQuery(stagingName: string, query: string, limit: number, offset: number): Promise<BackendOrError<ArchiveQueryResult>>;
-  archiveUpdate(stagingName: string, id: number, changes: Record<string, unknown>): Promise<BackendOrError<ArchiveUpdateResult>>;
-  archiveSave(stagingName: string): Promise<BackendOrError<ArchiveSaveResult>>;
-  archiveClose(stagingName: string): Promise<BackendOrError<ArchiveCloseResult>>;
-  archiveStatus(): Promise<BackendOrError<ArchiveStatusResult>>;
+  // Archive operations are NOT part of this interface — see ArchiveStaging
+  // (archiveStaging.ts), implemented only by OpfsWorkerBackend. The
+  // ARCHIVE_DISPATCH layer narrows via supportsArchive() and fails closed.
   insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>>;
   clearAll(): Promise<BackendOrError<MutationResult>>;
 }
@@ -122,24 +106,19 @@ export interface StorageBackend extends Queryable, Mutable {}
 const NOT_INITIALIZED = 'Database not initialized';
 
 // ============================================================================
-// Capability policy (PBI 2026-09-11-08): archive / binary backup-restore need
-// the OPFS backend; the audit log needs the OPFS or IDB engine. The messages
-// and the shared rejection stub live HERE — the non-OPFS adapters import them
-// instead of re-declaring 14 identical stubs each. The pinned acceptance test
-// (archiveFallbackRejection.test.ts) asserts the constant, so a wording change
-// is a one-place edit.
+// Capability policy (PBI 2026-09-11-08, narrowed by 2026-09-11-06): archive /
+// binary backup-restore need the OPFS backend; the audit log needs the OPFS
+// or IDB engine. Archive rejection now happens in the ARCHIVE_DISPATCH layer
+// (sqliteMessageHandlers narrows via supportsArchive() and fails closed with
+// ARCHIVE_UNSUPPORTED_ERROR) — adapters carry no archive stubs. The pinned
+// acceptance test (archiveFallbackRejection.test.ts) asserts the constant,
+// so a wording change is a one-place edit.
 // ============================================================================
 
 export const ARCHIVE_UNSUPPORTED_ERROR = 'Archive requires OPFS storage.';
 export const BINARY_BACKUP_UNSUPPORTED_ERROR = 'Binary backup requires OPFS storage.';
 export const BINARY_RESTORE_UNSUPPORTED_ERROR = 'Binary restore requires OPFS storage.';
 export const AUDIT_LOG_UNSUPPORTED_ERROR = 'Audit log not supported in fallback mode';
-
-/** Shared rejection stub for archive ops on backends without OPFS support. */
-export const archiveUnsupported = (): { success: false; error: string } => ({
-  success: false,
-  error: ARCHIVE_UNSUPPORTED_ERROR,
-});
 
 export class NoopBackend implements StorageBackend {
   private err = (): { success: false; error: string } => ({ success: false, error: NOT_INITIALIZED });
@@ -154,20 +133,6 @@ export class NoopBackend implements StorageBackend {
   async getFtsIndexSize() { return this.err(); }
   async backupDb() { return this.err(); }
   async restoreDb() { return this.err(); }
-  async archivePreview() { return this.err(); }
-  async archiveCreate() { return this.err(); }
-  async archiveCleanup() { return this.err(); }
-  async archiveExportChunk() { return this.err(); }
-  async archivePrepareIncoming() { return this.err(); }
-  async archiveRestorePreview() { return this.err(); }
-  async archiveRestore() { return this.err(); }
-  async archiveDeleteByStaging() { return this.err(); }
-  async archiveOpen() { return this.err(); }
-  async archiveQuery() { return this.err(); }
-  async archiveUpdate() { return this.err(); }
-  async archiveSave() { return this.err(); }
-  async archiveClose() { return this.err(); }
-  async archiveStatus() { return this.err(); }
   async healthCheck() { return this.err(); }
   async getStatus() { return this.err(); }
   async insertAuditLog() { return this.err(); }

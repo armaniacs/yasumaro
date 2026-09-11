@@ -8,11 +8,9 @@
 
 import { errorMessage } from '../utils/errorUtils.js';
 import { logError, ErrorCode } from '../utils/logger.js';
-import { engine, DB_FILENAME, MAX_QUERY_LIMIT } from './sqliteEngineHost.js';
-import { clampLimit } from './queryPlan.js';
+import { engine, DB_FILENAME } from './sqliteEngineHost.js';
+import { applyReadPolicy } from './queryPlanner.js';
 import type { SqliteValue } from './sqliteEngine.js';
-import { FTS_QUERY_MAX_LENGTH } from './schema.js';
-import { pickDefined } from '../utils/objectUtils.js';
 
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery } from '../utils/sqlite-types.js';
 
@@ -42,12 +40,10 @@ export async function insertBatch(records: BrowsingLogRecord[]): Promise<{ succe
 export async function query(q: StorageQuery = {}): Promise<{
   success: true; rows: (BrowsingLogEntry & { rank: number })[]; total: number
 } | { success: false; error: string }> {
-  const cappedLimit = clampLimit(q.limit, MAX_QUERY_LIMIT, 100);
-  // Truncate tag and text to prevent expensive FTS5 queries on extremely long input
-  const tag = q.tag ? q.tag.slice(0, FTS_QUERY_MAX_LENGTH) : q.tag;
-  const text = q.text ? q.text.slice(0, FTS_QUERY_MAX_LENGTH) : q.text;
+  // Read policy (limit clamp, FTS input truncation) is owned by queryPlanner.
+  const planned = applyReadPolicy(q);
   const backend = await engine.getBackend();
-  return backend.query({ ...q, limit: cappedLimit, ...pickDefined({ tag, text }) });
+  return backend.query(planned);
 }
 
 /**
