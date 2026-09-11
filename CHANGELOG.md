@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.6` リリース。
+> - 現時点では `v6.8.7` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,32 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.8.7] - 2026-09-11
+
+アーキテクチャ改善ラウンド（2026-09-11 round 5、`arch-delivery-loop`）のリリースです。実バグ 4 件（popup の writer 競合・検索とタグの同時絞り込み欠落など）の修正、legacy 履歴パネルの撤去（約 1,600 行削除）、上限定数の SSOT 取り込みなど 10 件を含みます。全テスト（11,773 件）がグリーンです。
+
+### Fixed
+
+- **タグ絞り込みと全文検索の同時指定でタグが無視されていた**: round 4 のタグ SQL 移行が plain 一覧経路だけを貫通しており、text+tag の検索は OPFS / IndexedDB でタグ条件が落ちていた（fallback は honoring）。FTS / LIKE 検索ステートメントにタグ条件を貫通し、parametric テストで backend 間一致を pin。逆に fallback 経路では `ids` フィルタが完全無視されていたのを `matchesExtraWhere` 委譲で解消
+- **popup の記録ボタン状態が writer 間で競合**: statusPanel が LOCKED 時に `recordBtn.disabled = true` を書き、RecordSession（唯一の writer という契約）が無条件で false に戻すレースが round 3 の統合後に残存していた。statusPanel からの書き込みを全削除し、LOCKED はバッジ + 権限要求エリアで伝達（「Record Anyway」の escape hatch を保護）
+- **STATUS 応答の union が実際に送信される 6 変数を欠いていた**: archive session 系応答（Open/Query/Update/Save/Close/Status）が `OffscreenResponse` union 未登録で、網羅 switch が実トラフィックを黙って排除し得た
+- **クレンジング理由の派生が空カウントで相反する値を返した**: round 4 の badge モジュールは (0,0) で 'both' を返し、extractor 側の単一 owner（resolveCleanseReason）は 'none' を返す — badge モジュールを委譲に統一し 'none' セマンティクスに寄せた。preview のカウント詳細（"Hard: 3"）も i18n 化
+- **query ペイロードの `ids` が未検証で SQL 組立まで通っていた**: wire から文字列 ids が届くと `buildExtraWhereSql` の `.map` で TypeError になる。配列ガード + 有限数フィルタで正規化（不正値はフィルタ無しに正規化）
+- **e2e ハーネスが stale バージョン '6.7.114' を pin**: archive 監査メタデータの `yasumaroVersion` を package.json 派生に置換し、版上げでハーネスが rot しない構造に
+
+### Changed
+
+- **pending pages を SQLite 履歴パネルへ移設**: 記録できなかったページの閲覧・記録（AI 要約あり/なし）・削除が SQLite パネル内で完結し、`chrome.storage.onChanged` でライブ更新される。"Export all as Markdown" ボタンは Export Logs パネルへ移設
+- **legacy 履歴パネル（panel-history）を撤去**: どこからも到達不能だった旧パネルと 9 モジュールの依存チェーン（約 1,600 行）を削除。履歴 UI は SQLite パネル 1 本に。タグ編集モーダルは follow-up、6 種フィルターモードは必要時に SQL フィルタ化（判断は PBI に記録）
+
+### Refactored
+
+- アーキテクチャ Deepening round 5（PBI 01〜10）: STATUS extras の `SqliteStatusExtras` 単一 field list 統一（producer / gateway pick / validator decoder table / dashboard 戻り値型を派生に）、タグ条件の search path 貫通 + fallback の `matchesExtraWhere` 委譲、上限定数 14 箇所の `messaging/limits.ts` 取り込み（drift ガードテスト新設 — ガードが追加 4 cap を発見して吸収）、popup GET_CONTENT の spinner 所有権呼び出し側移管 + executeScript 重複統合、`btnRequestAllUrls` の wired ガード、ADR limit-policy の status note
+
+### Security
+
+- なし（round 5 のセキュリティ関連は強化のみ: queryNormalize の ids 検証はワイヤ堅牢化として Fixed に記載）
 
 ## [6.8.6] - 2026-09-11
 
