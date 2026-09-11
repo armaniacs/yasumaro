@@ -8,6 +8,9 @@ import { isSecureUrl } from '../../utils/urlUtils.js';
 import { logWarn, logError, ErrorCode } from '../../utils/logger.js';
 import type { ManualRecordMessage } from '../messageTypes.js';
 
+/** Page-body slice cap for the context-menu record path (was an inline 5000). */
+const CONTEXT_MENU_CONTENT_MAX_CHARS = 5000;
+
 export interface ContextMenuHandlerDeps {
     handleManualRecord: (
         message: ManualRecordMessage,
@@ -55,11 +58,12 @@ export function createContextClickHandler(deps: ContextMenuHandlerDeps) {
             try {
                 const [result] = await chrome.scripting.executeScript({
                     target: { tabId: targetTabId },
-                    func: () => ({
+                    func: (maxChars: number) => ({
                         url: window.location.href,
                         title: document.title,
-                        content: document.body?.innerText?.slice(0, 5000) || '',
+                        content: document.body?.innerText?.slice(0, maxChars) || '',
                     }),
+                    args: [CONTEXT_MENU_CONTENT_MAX_CHARS],
                 });
 
                 const raw = result?.result;

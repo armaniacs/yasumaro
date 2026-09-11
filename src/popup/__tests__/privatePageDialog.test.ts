@@ -391,7 +391,7 @@ describe('privatePageDialog', () => {
   });
 
   describe('dialog-save-once button', () => {
-    it('should send record message with force=true and show success', async () => {
+    it('should send MANUAL_RECORD via the pending-record seam with force=true and show success', async () => {
       (global.chrome.runtime.sendMessage as any).mockResolvedValue({ success: true });
 
       const mod = await import('../privatePageDialog.js');
@@ -401,8 +401,9 @@ describe('privatePageDialog', () => {
 
       await vi.waitFor(() => {
         expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith({
-          type: 'record',
-          data: {
+          type: 'MANUAL_RECORD',
+          protocolVersion: 1,
+          payload: {
             title: 'Test Page',
             url: 'https://example.com/test-page',
             content: 'Test content',
@@ -412,7 +413,10 @@ describe('privatePageDialog', () => {
       });
 
       const statusDiv = document.getElementById('mainStatus');
-      expect(statusDiv!.textContent).toBe('Saved to Obsidian');
+      // The gateway seam adds await hops before the status update lands.
+      await vi.waitFor(() => {
+        expect(statusDiv!.textContent).toBe('Saved to Obsidian');
+      });
       expect(statusDiv!.className).toBe('success');
       expect(mod.currentPendingSave).toBeNull();
     });
@@ -438,7 +442,7 @@ describe('privatePageDialog', () => {
       expect(mod.currentPendingSave).toBeNull();
     });
 
-    it('should produce an unhandled rejection when sendMessage fails (no try-catch in source)', async () => {
+    it('shows the save error path when sendMessage rejects (caught by the gateway seam)', async () => {
       (global.chrome.runtime.sendMessage as any).mockRejectedValue(
         new Error('Extension context invalidated')
       );
@@ -446,22 +450,19 @@ describe('privatePageDialog', () => {
       const mod = await import('../privatePageDialog.js');
       mod.setCurrentPendingSave(createPendingSave());
 
-      // recordWithForce does not catch sendMessage rejections, so the click
-      // handler produces an unhandled promise rejection. We catch it here to
-      // prevent vitest from reporting it as an error.
-      const rejectionCaught = new Promise<void>((resolve) => {
-        const handler = () => resolve();
-        process.once('unhandledRejection', handler);
-        document.getElementById('dialog-save-once')!.click();
-        // Safety timeout
-        setTimeout(() => resolve(), 500);
-      });
-      await rejectionCaught;
+      // The gateway seam normalizes send failures into a failure result, so
+      // the dialog now reports the error instead of leaking an unhandled
+      // rejection (PBI 2026-09-12-01).
+      document.getElementById('dialog-save-once')!.click();
 
-      // The error handler after the failed sendMessage never runs,
-      // so statusDiv stays empty
-      const statusDiv = document.getElementById('mainStatus');
-      expect(statusDiv!.textContent).toBe('');
+      await vi.waitFor(() => {
+        const statusDiv = document.getElementById('mainStatus');
+        expect(statusDiv!.textContent).toContain('Save error');
+        expect(statusDiv!.textContent).toContain('Extension context invalidated');
+        expect(statusDiv!.className).toBe('error');
+      });
+
+      expect(mod.currentPendingSave).toBeNull();
     });
 
     it('should do nothing when currentPendingSave is null', async () => {
@@ -496,8 +497,9 @@ describe('privatePageDialog', () => {
       });
 
       expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith({
-        type: 'record',
-        data: expect.objectContaining({ force: true }),
+        type: 'MANUAL_RECORD',
+        protocolVersion: 1,
+        payload: expect.objectContaining({ force: true }),
       });
     });
 
@@ -543,7 +545,7 @@ describe('privatePageDialog', () => {
   });
 
   describe('dialog-save-path button', () => {
-    it('should add full URL path to whitelist and record with force', async () => {
+    it('should add the URL hostname to the whitelist and record with force (PBI 2026-09-12-05)', async () => {
       const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
       (settingsRepository.getAll as any).mockResolvedValue({ domain_whitelist: [] });
 
@@ -556,17 +558,17 @@ describe('privatePageDialog', () => {
 
       await vi.waitFor(() => {
         expect(settingsRepository.setAll).toHaveBeenCalledWith(
-          { domain_whitelist: ['https://example.com/private-path'] }
+          expect.objectContaining({ domain_whitelist: ['example.com'] })
         );
       });
 
       expect(global.chrome.runtime.sendMessage).toHaveBeenCalled();
     });
 
-    it('should not duplicate existing URL in whitelist', async () => {
+    it('should not duplicate an existing hostname in the whitelist', async () => {
       const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
       (settingsRepository.getAll as any).mockResolvedValue({
-        domain_whitelist: ['https://example.com/private-path'],
+        domain_whitelist: ['example.com'],
       });
 
       const mod = await import('../privatePageDialog.js');
@@ -576,8 +578,8 @@ describe('privatePageDialog', () => {
 
       document.getElementById('dialog-save-path')!.click();
 
-      // saveSettings should NOT be called because the URL already exists
-      // (the source code checks !whitelist.includes(url) before saving).
+      // saveSettings should NOT be called because the hostname already exists
+      // (the writer dedups before saving).
       await vi.waitFor(() => {
         expect(global.chrome.runtime.sendMessage).toHaveBeenCalled();
       });

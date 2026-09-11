@@ -3,6 +3,7 @@ import { PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from '../notificationHelper.js';
 import { getPendingPages, removePendingPages } from '../../utils/pendingStorage.js';
 import { logWarn, logError, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import { buildRecordRequest } from '../recordRequestBuilder.js';
 import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 
 const ALLOWED_URL_SCHEMES = ['http:', 'https:', 'chrome-extension:', 'moz-extension:', 'edge:'];
@@ -81,14 +82,13 @@ export function createNotificationHandlers(deps: NotificationHandlersDeps) {
                     const pages = await getPendingPages();
                     const page = pages.find(p => p.url === url);
                     if (page) {
-                        await deps.record({
+                        // PBI 2026-09-12-04: source policy (force, duplicate
+                        // check, record type) lives in the shared builder.
+                        await deps.record(buildRecordRequest('notification-confirm', {
                             title: page.title,
                             url: page.url,
                             content: '',
-                            force: true,
-                            skipDuplicateCheck: true,
-                            recordType: 'auto',
-                        });
+                        }));
                     }
                 }
                 await removePendingPages([url]);

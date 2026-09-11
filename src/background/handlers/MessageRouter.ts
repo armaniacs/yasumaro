@@ -162,7 +162,7 @@ export class MessageRouter {
       MANUAL_RECORD: createManualRecordHandler(deps.manualRecordDeps),
       PREVIEW_RECORD: createManualRecordHandler(deps.manualRecordDeps),
       SAVE_RECORD: createSaveRecordHandler(deps.saveRecordDeps),
-      CONTENT_CLEANSING_EXECUTED: createContentCleansingExecutedHandler({ hasBadgeTab: (tabId) => deps.autoSavedBadgeTabs.has(tabId) }),
+      CONTENT_CLEANSING_EXECUTED: createContentCleansingExecutedHandler({}),
       CHECK_DOMAIN: createCheckDomainHandler({ isDomainAllowed: checkDomainPick.isDomainAllowed }),
       TEST_CONNECTIONS: createTestConnectionsHandler({
         testObsidian: () => deps.obsidian.testConnection(),

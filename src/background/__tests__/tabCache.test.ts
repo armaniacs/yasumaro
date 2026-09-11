@@ -288,6 +288,31 @@ describe('TabCache', () => {
             // cleanup
             clearChromeStub();
         });
+
+        it('rejects instead of hanging when chrome.tabs.query reports lastError (PBI 2026-09-12-08)', async () => {
+            // Chrome invokes the callback with lastError set — the old code
+            // read it nowhere, hit `tabs.forEach` on the empty result path
+            // and left initPromise pending forever on a throwing callback.
+            stubChromeTabsQuery((_query, callback) => {
+                (global as { chrome?: { runtime?: { lastError?: { message?: string } } } }).chrome!.runtime = {
+                    lastError: { message: 'tabs query denied' },
+                };
+                callback([]);
+            });
+
+            await expect(tabCache.initialize()).rejects.toThrow('tabs query denied');
+
+            // The failed probe must not poison the next call: initPromise is
+            // reset so a retry actually re-runs the query.
+            stubChromeTabsQuery((_query, callback) => {
+                delete (global as { chrome?: { runtime?: { lastError?: unknown } } }).chrome!.runtime;
+                callback(asTabs([{ id: 1, title: 'Page 1', url: 'https://example.com/page1' }]));
+            });
+            await tabCache.initialize();
+            expect(tabCache.isInitializedCache()).toBe(true);
+
+            clearChromeStub();
+        });
     });
 
     describe('エッジケース', () => {

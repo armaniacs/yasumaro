@@ -14,16 +14,6 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-11 architecture deepening round — 5件（0911f）
-
-アーキテクチャレポートの deepening 候補 5 件を RICE 採点 → PBI 化。実行順 = 04 → 05 → 06 → 07 → 08（RICE 降順、05→07 のみ順序推奨）。台帳は `2026-09-11-00-backlog-0911f.md`。
-
-- 2026-09-11-04-refactor-recording-orchestrator-narrow.md（✅ 完了・アーカイブ済 — `RecordMode`・`record(mode)` 分岐・`recordFull`・dead `retryObsidian`・`retryObsidianWriteOnly` alias を削除し 3 エントリに。変更呼び出し元は offlineQueueProcessor のみ。表面 pin テスト新設。関連 324 tests green）
-- 2026-09-11-05-refactor-sqlite-query-planner.md（✅ 完了・アーカイブ済 — `queryPlanner.ts` 新設（planQuery/planSearch/applyReadPolicy）し handler+repo の政策分断を解消。物理移設は worker 境界のため見送り・所有関係を文書固定。`MAX_QUERY_LIMIT` は limits.ts SSOT を直接参照。offscreen 全 973 tests green）
-- 2026-09-11-06-refactor-storage-archive-seam.md（✅ 完了・アーカイブ済 — `archiveStaging.ts` 新設（ArchiveStaging + supportsArchive）。stub 28 件 + Noop 14 件 + 共有関数を除去し dispatch fail-closed に統一。Y2 更新 + dispatch 閉鎖 3 件。offscreen 全 978 tests green）
-- 2026-09-11-07-refactor-sqlite-dispatch-collapse.md（✅ 完了・アーカイブ済 — スパイク結果: フル集約は不採択（god 化・token 政策の risk）。slice として validation seam `verifyRequestToken` + projection seam `buildListParams`/`buildSearchParams` を抽出・8 tests 新設。dashboardSqlite 全 50 green）
-- 2026-09-11-08-refactor-popup-permission-ladder.md（✅ 完了・アーカイブ済 — seam 正当化の再確認結果: 見送り（ladder 消費者は 1 件で 2-adapter 基準未達・判断は permissionManager に委譲済み・5 tests が pin）。死んだ `TabContentFetcher` 再export 1 行のみ除去。関連 27 tests green）
-
 ### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
@@ -60,6 +50,29 @@
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-12 architecture deepening round 9（0912a）— 8件完了（arch-delivery-loop・0911a ブランチ）
+
+round 9 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260912-0811-r9.html`）→ RICE 採点 → 実装。実行順 = 01 → 08。実バグ 5 件（dead envelope / archive 復元ハンドオフ / subdomain 判定不一致 / offline リトライ統計欠落 / path whitelist 死エントリ）+ SW ルール違反（setTimeout）解消。なぜなぜ分析は `/tmp/kilo/whywhy/2026-09-12-0912a.md`。台帳は `2026-09-12-00-backlog-0912a.md`。
+
+- 2026-09-12-01-refactor-pending-record-gateway.md（✅ 完了・アーカイブ済 — `src/messaging/pendingRecordGateway.ts` 新設（MANUAL_RECORD envelope + 20s timeout + 結果正規化の単一 seam）。privatePageDialog の dead `type:'record'` envelope 実バグ解消・save-path ハンドラの TOCTOU（await 後の currentPendingSave 再読）も入口スナップショットで解消。契約テスト 6 件新設）
+- 2026-09-12-02-fix-archive-restore-session-handoff.md（✅ 完了・アーカイブ済 — `archiveOpen` 成功後に `sessionStaging` を設定し open+render を setBusy スコープ内に移動。復元後セッション一覧が空のままになる実バグ解消 + fire-and-forget 解消。回帰 pin テスト新設）
+- 2026-09-12-03-fix-domain-snapshot-subdomain.md（✅ 完了・アーカイブ済 — DomainPolicySnapshot に matchSubdomains 追加・evaluateDomainPolicy を 3-arg に統一・両 port が flag を写像。popup statusChecker の表示判定も 3-arg 化。content port vs isDomainAllowed の parity contract test 5 行 matrix 新設）
+- 2026-09-12-04-refactor-record-request-builder.md（✅ 完了・アーカイブ済 — `recordRequestBuilder.ts` 新設（SOURCE_POLICY テーブル + canonical diagnostic fields）で 5 call site を統合。offline リトライの `as` cast による統計欠落を解消（stepExecutor がジョブに統計を同梱・processor が builder で復元・catch に log 付き）。5000 slice と sites.google.com を named constant 化）
+- 2026-09-12-05-refactor-whitelist-write-gateway.md（✅ 完了・アーカイブ済 — `whitelistWriter.ts` 新設（parseAndValidate → dedup → blob 書込 → cache refresh）で 5 call site を統合。**path whitelist エントリが全 consumer でマッチ不可能な死エントリだった実バグを解消**（hostname に正規化・SPEC §13.5 更新））
+- 2026-09-12-06-refactor-opfs-read-hardening.md（✅ 完了・アーカイブ済 — `clampOffset` 新設・worker handleQuery を spec 素通しに（旧 spread は OPFS だけが unbounded limit を通す逆方向発散だった）・searchHandler の死んだ第 3 既定値 50 を削除。負 offset の backend 発散を封じる parametric テスト新設）
+- 2026-09-12-07-refactor-badge-policy.md（✅ 完了・アーカイブ済 — `badgePolicy.ts` 新設（state テーブル + setBadge seam）で 4 call site を統合。agent の「global clobber」主張を Chrome per-tab 優先 semantics で訂正し、実際のバグ（tab 派生状態の global 書込が他タブに漏出）を per-tab 化で解消。SW 内 setTimeout 廃止・sender.tab! crash 解消）
+- 2026-09-12-08-fix-small-bug-bundle.md（✅ 完了・アーカイブ済 — TabCache hang 解消・offline dequeue/peek を VULN-056 lock 内に・cleansing feedback の dataset.wired guard・i18n messagesCache を getUILanguage キー化・ublock 両形式混在時の logWarn（挙動不変）。sender.tab! は PBI 07 で吸収）
+
+### 2026-09-11 architecture deepening round（0911f）— 5件完了（arch-delivery-loop・0911a ブランチ）
+
+round 9 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260912-0811-r9.html` の前回版）→ RICE 採点 → 実装。実行順 = 04 → 05 → 06 → 07 → 08。台帳は `2026-09-11-00-backlog-0911f.md`。
+
+- 2026-09-11-04-refactor-recording-orchestrator-narrow.md（✅ 完了・アーカイブ済 — RecordMode・record(mode) 分岐・dead retryObsidian を削除し 3 エントリに。表面 pin テスト新設）
+- 2026-09-11-05-refactor-sqlite-query-planner.md（✅ 完了・アーカイブ済 — queryPlanner.ts 新設（planQuery/planSearch/applyReadPolicy）し handler+repo の政策分断を解消）
+- 2026-09-11-06-refactor-storage-archive-seam.md（✅ 完了・アーカイブ済 — archiveStaging.ts 新設（ArchiveStaging + supportsArchive）・dispatch fail-closed 統一）
+- 2026-09-11-07-refactor-sqlite-dispatch-collapse.md（✅ 完了・アーカイブ済 — フル集約は不採択、validation seam verifyRequestToken + projection seam buildListParams/buildSearchParams を抽出）
+- 2026-09-11-08-refactor-popup-permission-ladder.md（✅ 完了・アーカイブ済 — seam 正当化再確認の結果見送り。dead TabContentFetcher 再 export のみ除去）
 
 ### 2026-09-11 architecture review round 8 — 3件完了（autonomous-task-closer）
 

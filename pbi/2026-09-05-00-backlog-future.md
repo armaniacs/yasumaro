@@ -85,6 +85,21 @@
 
 （round 4 台帳の InMemoryTransport default-limit 乖離は round 4 で解消済み、query cap 統合のトリガーは round 5 で発火し PBI 08 として完了）
 
+**2026-09-12 round 9（arch-delivery-loop・0911a ブランチ）で台帳入り（10 項目）:**
+
+| 項目 | RICE | 再評価条件 |
+|------|------|-----------|
+| RecordPayload builder（previewFlow の 3 payload リテラルがMANUAL_RECORD で cleansedReason/cleanseStats/maskedCount を欠落・PBI 04 と近接だが popup 側） | 5.3 | PBI 2026-09-12-04 着地後、previewFlow 改修時 |
+| RecordSession branch prelude/tail 統合（normal/force で panel clear・auto-close・cleansing/trust refresh が skew） | 4.0 | 次回 RecordSession 改修時 |
+| Entry-diagnostics byte dialects（sqliteHistoryPanelView の 5 byte 語彙・\|\| で 0 を欠落・削減計算 3 重） | 4.0 | 次回 history view 改修時 |
+| Export/serialize 3 owner（recordsRepo 11 列 / worker 13 列・envelope 2 流儀） | 3.2 | 次に export 列を追加するとき |
+| QueueFacade 統合（PendingChromeStorageQueue / PendingSqliteQueue / OfflineNetworkQueue の 3 interface・sqlite は注入 seam 無し・offline dequeue は PBI 08 で lock 化済み） | 4.0 | 4 つ目の queue consumer 出現時・VULN-056 周辺改修時 |
+| UblockPipeline parse 統合（parseUblockFilterListWithErrors と parseUblockFilterList が ~80 行重複・options $important 非対応・MAX_INPUT_SIZE/MAX_LINES が limits.ts 外） | 3.2 | 次に ublock 改修時（両形式警告は PBI 08 で実施済み） |
+| FallbackStorage.query の alias 再派生削除（planner が正規化済み・test-only shim が production に残留） | 2.7 | 次に fallback storage 改修時 |
+| supportsArchive doc/code 一致（handleArchive は per-method probe・StorageBackend コメントは unit-travel 主張・subset backend 実装時の bug クラス） | 2.4 | 次に archive dispatch 改修時 |
+| repo facade 3 枚（recordsRepo / dbMaintenance / auditLogRepo が delegate のみ・ getStatus だけが実ロジック） | 2.0 | 横断 concern（retry/tracing）導入時 |
+| 予備観察: previewView dead interface members（show/close/setCleansingInfo/resetBodyWidth は production 未使用・test のみ） | — | 次に preview view 改修時（interface 縮小か test-only 文書化） |
+
 **2026-09-11 round 7（arch-delivery-loop・0911a ブランチ）で台帳入り（2 項目）:**
 
 | 項目 | RICE | 再評価条件 |

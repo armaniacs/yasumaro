@@ -294,6 +294,7 @@ describe('saveSelectedPages', () => {
         await saveSelectedPages();
         expect(sendMessageSpy).toHaveBeenCalledWith({
             type: 'MANUAL_RECORD',
+            protocolVersion: 1,
             payload: {
                 title: 'Example',
                 url: 'https://example.com',
@@ -322,7 +323,7 @@ describe('saveSelectedPages', () => {
         expect(sendMessageSpy).toHaveBeenCalledTimes(3);
     });
 
-    it('adds path regex to whitelist via the SettingsRepository seam when whitelistType is path', async () => {
+    it('adds the URL hostname to the whitelist via the SettingsRepository seam when whitelistType is path (PBI 2026-09-12-05)', async () => {
         document.body.innerHTML += `
             <input type="checkbox" class="pending-checkbox" value="https://example.com/page" checked>
         `;
@@ -333,7 +334,10 @@ describe('saveSelectedPages', () => {
         await saveSelectedPages('path');
         expect(settingsRepository.setAll).toHaveBeenCalledWith(
             expect.objectContaining({
-                domain_whitelist: expect.arrayContaining(['^https://example\\.com/page$']),
+                // The historical anchored-regex entry could never match any
+                // whitelist consumer (all match hostnames) — the writer
+                // normalizes to the hostname.
+                domain_whitelist: expect.arrayContaining(['example.com']),
             }),
         );
         expect(updateDomainFilterCache).toHaveBeenCalled();

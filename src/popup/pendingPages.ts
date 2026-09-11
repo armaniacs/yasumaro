@@ -3,9 +3,8 @@ import { logError, ErrorCode } from '../utils/logger.js';
 import { getMessage } from '../utils/i18n.js';
 import { showSuccess } from './errorUtils.js';
 import { escapeHtml } from './domUtils.js';
-import { StorageKeys } from '../utils/storage/types.js';
-import { settingsRepository } from '../utils/storage/SettingsRepository.js';
-import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
+import { recordPendingPage } from '../messaging/pendingRecordGateway.js';
+import { addDomainToWhitelist, addPathToWhitelist } from './whitelistWriter.js';
 
 export async function loadPendingPages(): Promise<void> {
   try {
@@ -56,31 +55,20 @@ export async function loadPendingPages(): Promise<void> {
   }
 }
 
-function escapeRegex(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 async function addDomainsOrPathsToWhitelist(urls: string[], type: 'domain' | 'path'): Promise<void> {
-  // PBI 2026-09-11-03: write through the SettingsRepository seam (settings blob)
-  // instead of a top-level scattered key — after migration, getAll() only reads
-  // the blob, so a direct chrome.storage.local.set was never visible to the
-  // DomainFilter. Same pattern as statusPanel.ts whitelist handlers.
-  const settings = await settingsRepository.getAll();
-  const currentList = settings[StorageKeys.DOMAIN_WHITELIST] ?? [];
-
-  const newEntries = urls.map(url => {
+  // PBI 2026-09-12-05: validated + deduped + cache-refreshing writes live in
+  // the shared whitelist writer seam. Path adds normalize to the URL's
+  // hostname — the historical raw-URL / anchored-regex entries could never
+  // match any whitelist consumer (all of them match hostnames) and failed
+  // pattern validation.
+  for (const url of urls) {
     if (type === 'domain') {
       const domain = new URL(url).hostname;
-      return domain;
+      await addDomainToWhitelist(domain);
     } else {
-      const urlObj = new URL(url);
-      return `^${escapeRegex(urlObj.origin + urlObj.pathname)}$`;
+      await addPathToWhitelist(url);
     }
-  });
-
-  const updatedList = [...currentList, ...newEntries.filter(e => !currentList.includes(e))];
-  await settingsRepository.setAll({ [StorageKeys.DOMAIN_WHITELIST]: updatedList } as unknown as import('../utils/storage/types.js').Settings);
-  await updateDomainFilterCache(await settingsRepository.getAll());
+  }
 }
 
 export async function saveSelectedPages(whitelistType?: 'domain' | 'path'): Promise<void> {
@@ -100,19 +88,9 @@ export async function saveSelectedPages(whitelistType?: 'domain' | 'path'): Prom
   for (const url of urls) {
     const page = pages.find(p => p.url === url);
     if (page) {
-      // PBI 2026-09-11-03: the old {type:'record', data:...} envelope predates
-      // VALID_MESSAGE_TYPES — the router never handled it, so "Save" removed
-      // the page from the list without recording it. MANUAL_RECORD is the
-      // contract the MessageRouter + ManualRecordValidator expect.
-      await chrome.runtime.sendMessage({
-        type: 'MANUAL_RECORD',
-        payload: {
-          title: page.title,
-          url: page.url,
-          content: '',
-          force: true
-        }
-      });
+      // PBI 2026-09-12-01: envelope + timeout contract lives in the shared
+      // pending-record seam (the dead {type:'record'} copy here predates it).
+      await recordPendingPage({ title: page.title, url: page.url, force: true });
     }
   }
 

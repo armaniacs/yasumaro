@@ -1,12 +1,12 @@
 import type { Settings } from '../../utils/storage/types.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../../utils/fetch.js';
-import { BADGE_COLORS } from '../../constants/appConstants.js';
 import { logDebug, logWarn, logError, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { createErrorResponse } from '../../utils/errorClassification.js';
 import { readBodyCapped } from '../../utils/readBodyCapped.js';
 import { updateSavedUrlEntry } from '../../utils/storage/savedUrlRepository.js';
 import { deriveCleansedReasonFromCounts } from '../../utils/cleansingBadge.js';
+import { setBadge } from '../badgePolicy.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
 import type {
@@ -31,7 +31,7 @@ export interface FetchUrlHandlerDeps {
 }
 
 export interface ContentCleansingExecutedHandlerDeps {
-  hasBadgeTab: (tabId: number) => boolean;
+  /** PBI 2026-09-12-07: the timed clear is gone — no badge-tab lookup needed. */
 }
 
 export interface CheckDomainHandlerDeps {
@@ -137,23 +137,26 @@ export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
   };
 }
 
-export function createContentCleansingExecutedHandler(deps: ContentCleansingExecutedHandlerDeps) {
+export function createContentCleansingExecutedHandler(_deps: ContentCleansingExecutedHandlerDeps) {
   return async (
     message: ContentCleansingExecutedMessage,
     sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void,
   ): Promise<void> => {
     const { hardStripRemoved, keywordStripRemoved, totalRemoved } = message.payload || {};
-    const tabId = sender.tab!.id!;
+    // PBI 2026-09-12-07: tab-less senders (direct dispatch paths bypassing
+    // the envelope null guard) crashed on the old `sender.tab!.id!`.
+    const tabId = sender.tab?.id;
+    if (tabId === undefined) {
+      sendResponse({ success: false, error: 'Sender has no tab' });
+      return;
+    }
 
-    chrome.action.setBadgeText({ text: `C${totalRemoved || 0}`, tabId });
-    chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string, tabId });
-
-    setTimeout(() => {
-      if (!deps.hasBadgeTab(tabId)) {
-        chrome.action.setBadgeText({ text: '', tabId });
-      }
-    }, 3000);
+    // PBI 2026-09-12-07: badge display lives in the shared BadgePolicy seam.
+    // No timed clear — the old setTimeout died with SW suspension (the clear
+    // almost never fired); the per-tab badge persists until the tab's next
+    // state transition (navigation clears it in handleTabUpdated).
+    await setBadge({ kind: 'cleansed', count: totalRemoved || 0 }, tabId);
 
     if (sender.tab?.url && (totalRemoved ?? 0) > 0) {
       // PBI 2026-09-11-05: counts→reason derivation is the shared CleansingBadge

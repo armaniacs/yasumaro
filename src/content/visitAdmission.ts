@@ -11,7 +11,7 @@
  * is one flow with a warnLabel (' (e2e)' or '') — the e2e-bypass-safety
  * property (cold cache must still ask background) is tested, not commented.
  */
-import { isDomainInList } from './urlSkipper.js';
+import { isDomainInList as isDomainInListShared } from '../utils/wildcardToRegex.js';
 import { errorMessage } from '../utils/errorUtils.js';
 
 export const CACHE_TTL = 5 * 60 * 1000;
@@ -29,6 +29,13 @@ export interface DomainPolicySnapshot {
   blacklist: string[];
   simpleEnabled: boolean;
   ublockEnabled: boolean;
+  /**
+   * PBI 2026-09-12-03: the subdomain toggle must ride the snapshot. Both
+   * adapters (content port, background settings reader) map storage into this
+   * so the loader-cache verdict and the service-worker verdict agree; the
+   * 2-arg isDomainInList wrappers silently dropped it on the content path.
+   */
+  matchSubdomains: boolean;
 }
 
 /**
@@ -54,7 +61,7 @@ export function evaluateDomainPolicy(
   }
 
   if (snapshot.mode === 'whitelist') {
-    const allowed = isDomainInList(domain, snapshot.cachedWhitelist);
+    const allowed = isDomainInListShared(domain, snapshot.cachedWhitelist, snapshot.matchSubdomains);
     return { allowed, useCache: true };
   }
 
@@ -63,7 +70,7 @@ export function evaluateDomainPolicy(
       return { allowed: false, useCache: false };
     }
     if (snapshot.simpleEnabled) {
-      const isBlocked = isDomainInList(domain, snapshot.blacklist);
+      const isBlocked = isDomainInListShared(domain, snapshot.blacklist, snapshot.matchSubdomains);
       return { allowed: !isBlocked, useCache: true };
     }
     return { allowed: true, useCache: true };
