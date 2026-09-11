@@ -5,7 +5,7 @@
 
 import { getMessage } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
-import { getCleansedBadgeText } from '../utils/cleansingBadge.js';
+import { buildCleansingCountDetail, getCleansedBadgeText } from '../utils/cleansingBadge.js';
 import type { MaskedItem } from '../messaging/types.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { MaskNavigator } from './maskNavigator.js';
@@ -61,12 +61,12 @@ function updateCleansingInfo(
   cleansingInfo.classList.remove('hidden');
   // PBI 2026-09-11-05: badge text comes from the shared CleansingBadge table
   // (same table as statusPanel) instead of a per-view switch.
+  // PBI 2026-09-11-07: the count detail is also badge-module policy now
+  // (i18n'd — was an English literal).
   let badgeText = getCleansedBadgeText(cleansedReason, getMessage);
   if (cleanseStats && cleanseStats.totalRemoved > 0) {
-    const details: string[] = [];
-    if (cleanseStats.hardStripRemoved > 0) details.push(`Hard: ${cleanseStats.hardStripRemoved}`);
-    if (cleanseStats.keywordStripRemoved > 0) details.push(`Keyword: ${cleanseStats.keywordStripRemoved}`);
-    if (details.length > 0) badgeText += ` (${details.join(', ')})`;
+    const detail = buildCleansingCountDetail(cleanseStats, getMessage);
+    if (detail) badgeText += ` (${detail})`;
   }
   cleansingBadge.textContent = badgeText;
   cleansingBadge.className = 'cleansing-badge';
