@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.4` リリース。
+> - 現時点では `v6.8.5` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -34,6 +34,22 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 ## [Unreleased]
+
+## [6.8.5] - 2026-09-11
+
+テスト品質基準（`dev-docs/TEST_RULE.md`）への全面準拠リリースです。プロダクトコード（`src/` の非テストファイル）には変更がなく、全テスト（12,030 件）がグリーンです。
+
+### Added
+
+- **テスト品質基準の新設**: `dev-docs/TEST_RULE.md` に AI 生成テストの無力化（tautological assertion、無意味なモック比較、アサーション欠落）を防ぐルールを定義し、PR テンプレートに Red/Green 検証などのチェックリストを追加
+- **ESLint カスタムルール `local/no-tautology-expect`**: `expect(true).toBe(true)` 等の自明に真なアサーションを静的に検出（テストファイル全体を対象、誤検出 0 を確認済み）
+- **Stryker ミューテーションテスト設定**: `stryker.config.json` と `npm run test:mutate` を追加。`@stryker-mutator/vitest-runner` 10.0.0 が Vitest 5 未対応のためスコアが信頼できない既知制約は `dev-docs/TEST_RULE.md` に記載し、Red/Green 手動検証手順を代替と規定
+
+### Changed
+
+- **tautological assertion の 61 件を実装検証に置換**: 8 テストファイルの `expect(true).toBe(true)` 等を、実装の状態遷移・副作用・mock 呼び出しを検証するアサーションに置換。無意味なプレースホルダーファイル 1 件（`localMarkdownExport-m15.test.ts`）は削除
+- **テスト説明文の英語統一**: 全 `it()` / `test()` の説明文（190 ファイル・約 3,100 件）を TEST_RULE.md の規約に従い英語に翻訳（fixture・`describe()` タイトル・ロジックは不変）
+- **no-throw のみだったテストへ状態アサーションを追加**: ダイアログ状態・ストレージ読み出し有無・フォーカストラップ登録などを検証するよう強化
 
 ## [6.8.4] - 2026-09-10
 
