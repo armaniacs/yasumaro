@@ -123,6 +123,26 @@ export interface StorageBackend extends Queryable, Mutable {}
 
 const NOT_INITIALIZED = 'Database not initialized';
 
+// ============================================================================
+// Capability policy (PBI 2026-09-11-08): archive / binary backup-restore need
+// the OPFS backend; the audit log needs the OPFS or IDB engine. The messages
+// and the shared rejection stub live HERE — the non-OPFS adapters import them
+// instead of re-declaring 14 identical stubs each. The pinned acceptance test
+// (archiveFallbackRejection.test.ts) asserts the constant, so a wording change
+// is a one-place edit.
+// ============================================================================
+
+export const ARCHIVE_UNSUPPORTED_ERROR = 'Archive requires OPFS storage.';
+export const BINARY_BACKUP_UNSUPPORTED_ERROR = 'Binary backup requires OPFS storage.';
+export const BINARY_RESTORE_UNSUPPORTED_ERROR = 'Binary restore requires OPFS storage.';
+export const AUDIT_LOG_UNSUPPORTED_ERROR = 'Audit log not supported in fallback mode';
+
+/** Shared rejection stub for archive ops on backends without OPFS support. */
+export const archiveUnsupported = (): { success: false; error: string } => ({
+  success: false,
+  error: ARCHIVE_UNSUPPORTED_ERROR,
+});
+
 export class NoopBackend implements StorageBackend {
   private err = (): { success: false; error: string } => ({ success: false, error: NOT_INITIALIZED });
   async insert() { return this.err(); }

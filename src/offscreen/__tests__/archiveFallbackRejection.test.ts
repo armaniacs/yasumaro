@@ -5,13 +5,16 @@
  * must reject every archive operation with the OPFS-required error — the
  * archive feature (staging registry + second engine) exists only on the OPFS
  * worker path. Error string is a raw English literal (not i18n): the manual
- * checklist expects exactly 'Archive requires OPFS storage.'.
+ * checklist expects exactly 'Archive requires OPFS storage.'. PBI 2026-09-11-08:
+ * the literal lives in one place (StorageBackend.ARCHIVE_UNSUPPORTED_ERROR) —
+ * the test pins the constant, not a re-typed copy.
  */
 import { describe, it, expect } from 'vitest';
 import { FallbackStorageAdapter } from '../FallbackStorageAdapter.js';
 import { IdbVfsBackend } from '../IdbVfsBackend.js';
+import { ARCHIVE_UNSUPPORTED_ERROR } from '../StorageBackend.js';
 
-const EXPECTED_ERROR = 'Archive requires OPFS storage.';
+const EXPECTED_ERROR = ARCHIVE_UNSUPPORTED_ERROR;
 
 const ARCHIVE_METHODS = [
   'archivePreview',
