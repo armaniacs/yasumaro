@@ -211,7 +211,7 @@ export function recordUsage(
  * Per-call sanity cap for provider-reported token counts (VULN-002):
  * no legitimate single response reports more than this many tokens.
  */
-const MAX_TOKENS_PER_CALL = 10_000_000;
+import { MAX_TOKENS_PER_CALL } from '../messaging/limits.js';
 
 // Provider-reported counts are untrusted third-party data (VULN-002):
 // negative values would suppress the monthly hard-limit trip and absurd

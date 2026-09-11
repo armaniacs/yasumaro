@@ -1,3 +1,4 @@
+import { MAX_ERROR_BODY_SIZE as MAX_ERROR_BODY_LIMIT } from '../messaging/limits.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
 import { buildDailyNotePath } from '../utils/dailyNotePathBuilder.js';
@@ -191,7 +192,7 @@ export class ObsidianClient {
 
         if (!response.ok) {
             // Cap the error body on actual bytes; Content-Length is not trusted.
-            const MAX_ERROR_BODY_SIZE = 1024 * 1024; // 1MB
+            const MAX_ERROR_BODY_SIZE = MAX_ERROR_BODY_LIMIT; // 1MB (PBI 2026-09-11-08: value lives in limits.ts)
             let errorText: string;
             try {
                 errorText = await readBodyCapped(response, MAX_ERROR_BODY_SIZE);
