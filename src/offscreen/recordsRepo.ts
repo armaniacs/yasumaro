@@ -27,12 +27,12 @@ export async function insert(record: BrowsingLogRecord): Promise<{ success: true
 /**
  * Insert a batch of records atomically using a transaction.
  * Uses INSERT OR IGNORE to handle UNIQUE constraint violations (url, created_at).
+ * PBI 2026-09-11-07: keeps `skipped` in the return so the dashboard import
+ * flow can report duplicates without re-deriving them per row.
  */
-export async function insertBatch(records: BrowsingLogRecord[]): Promise<{ success: true; count: number } | { success: false; error: string }> {
+export async function insertBatch(records: BrowsingLogRecord[]): Promise<{ success: true; inserted: number; skipped: number } | { success: false; error: string }> {
   const backend = await engine.getBackend();
-  const result = await backend.insertBatch(records);
-  if (!result.success) return result;
-  return { success: true, count: result.inserted };
+  return backend.insertBatch(records);
 }
 
 /**

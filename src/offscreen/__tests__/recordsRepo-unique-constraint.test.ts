@@ -37,15 +37,16 @@ const backend = vi.hoisted(() => {
       nextId++;
       return Promise.resolve({ success: true, id: nextId - 1 });
     },
-    insertBatch(records: BrowsingLogRecord[]): Promise<BackendResult & { inserted?: number }> {
+    insertBatch(records: BrowsingLogRecord[]): Promise<BackendResult & { inserted?: number; skipped?: number }> {
       let inserted = 0;
+      let skipped = 0;
       for (const record of records) {
-        if (isDuplicate(record)) continue;
+        if (isDuplicate(record)) { skipped++; continue; }
         rows.push({ ...record, id: nextId });
         nextId++;
         inserted++;
       }
-      return Promise.resolve({ success: true, inserted });
+      return Promise.resolve({ success: true, inserted, skipped });
     },
     getCount(): Promise<BackendResult> {
       return Promise.resolve({ success: true, count: rows.length });
@@ -99,7 +100,7 @@ describe('recordsRepo — unique constraint on (url, created_at) (PBI 2026-08-02
       RECORD('https://c.com', 3), // new
     ]);
 
-    expect(result).toEqual({ success: true, count: 2 });
+    expect(result).toEqual({ success: true, inserted: 2, skipped: 2 });
     const count = await getCount();
     expect(count).toEqual({ success: true, count: 3 }); // a.com + b.com + c.com
   });

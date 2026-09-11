@@ -85,9 +85,11 @@ export class InMemoryTransport implements OffscreenTransport {
         return { success: true, id };
       }
       case 'SQLITE_INSERT_BATCH': {
+        // Test double: no UNIQUE-constraint simulation, so skipped stays 0 and
+        // inserted reports the full batch (PBI 2026-09-11-07 wire shape).
         const list = (payload.records as BrowsingLogRecord[] | undefined) ?? [];
         for (const r of list) this.insertRecord(r);
-        return { success: true, count: list.length };
+        return { success: true, count: list.length, inserted: list.length, skipped: 0 };
       }
       case 'SQLITE_AUDIT_LOG_INSERT':
         return { success: true, id: this.nextId++ };
