@@ -394,18 +394,6 @@ export const SQLITE_HISTORY_IDS = {
   tagFilterClear: 'sqlite-tag-filter-clear',
 } as const;
 
-/**
- * Pending-pages actions handed to renderPendingRegion by the Panel
- * (PBI 2026-09-11-02). Each action resolves after the underlying storage
- * change has been applied — the Panel re-renders the region itself, the view
- * owns in-row feedback (button state + error element) only.
- */
-export interface PendingRegionActions {
-  onRecord: (url: string) => Promise<{ ok: boolean; error?: string }>;
-  onRecordWithoutAi: (url: string) => Promise<{ ok: boolean; error?: string }>;
-  onDelete: (url: string) => Promise<void>;
-}
-
 /** Event + dependency bundle the Panel builds once and hands to `render()`. */
 export interface SqliteHistoryViewCallbacks {
   onDateSelect: (dateStr: string) => void;
