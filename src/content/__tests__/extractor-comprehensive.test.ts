@@ -261,20 +261,19 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
     vi.useRealTimers();
   });
 
-  it('throttle uses rAF and beforeunload cleanup', async () => {
+  it('throttle: leading + guaranteed trailing, beforeunload flush must not throw (PBI 2026-09-11-07)', async () => {
     vi.useFakeTimers();
     const fn = vi.fn();
-    const throttled = throttle(fn);
-    // first call
-    throttled('arg1');
-    // cancelAnimationFrame should have been called on second rapid call
-    const cafSpy = vi.spyOn(globalThis, 'cancelAnimationFrame');
-    throttled('arg2');
-    expect(cafSpy).toHaveBeenCalled();
-    // trigger rAF
-    await vi.advanceTimersByTimeAsync(150);
-    // beforeunload cleanup must not throw
+    const handle = throttle(fn);
+    // leading call fires immediately; second rapid call arms trailing
+    handle.fn('arg1');
+    handle.fn('arg2');
+    expect(fn).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(150);
+    // trailing fired with the latest args; beforeunload cleanup must not throw
+    expect(fn).toHaveBeenLastCalledWith('arg2');
     window.dispatchEvent(new Event('beforeunload'));
+    handle.dispose();
   });
 
   it('updateMaxScroll early return when docHeight <=0', () => {
@@ -632,42 +631,31 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
     expect(g2.shouldRecord(0, 0)).toBe(false);
   });
 
-  it('throttle callNow true branch (covers 309,312)', async () => {
+  it('throttle leading then trailing (covers old 309,312)', async () => {
+    vi.useFakeTimers();
     const fn = vi.fn();
-    const origRAF = (globalThis as unknown as Record<string, unknown>).requestAnimationFrame;
-    const origCAF = (globalThis as unknown as Record<string, unknown>).cancelAnimationFrame;
-    const origWindowRAF = (window as unknown as Record<string, unknown>).requestAnimationFrame;
-    const origWindowCAF = (window as unknown as Record<string, unknown>).cancelAnimationFrame;
-    const rafMock = (cb: FrameRequestCallback) => { setTimeout(() => cb(performance.now()), 5); return 1 as unknown as number; };
-    (globalThis as unknown as Record<string, unknown>).requestAnimationFrame = rafMock as unknown as FrameRequestCallback;
-    (window as unknown as Record<string, unknown>).requestAnimationFrame = rafMock as unknown as FrameRequestCallback;
-    (globalThis as unknown as Record<string, unknown>).cancelAnimationFrame = (() => {}) as unknown as FrameRequestCallback;
-    (window as unknown as Record<string, unknown>).cancelAnimationFrame = (() => {}) as unknown as FrameRequestCallback;
-    const throttled = throttle(fn);
-    throttled('a');
-    await new Promise(r => setTimeout(r, 30));
-    expect(fn).toHaveBeenCalled();
-    fn.mockClear();
-    // wait for THROTTLE_DELAY (100ms) to pass so next call will be callNow true again
-    await new Promise(r => setTimeout(r, 120));
-    throttled('b');
-    throttled('c');
-    await new Promise(r => setTimeout(r, 30));
-    expect(fn).toHaveBeenCalled();
-    (globalThis as unknown as Record<string, unknown>).requestAnimationFrame = origRAF as unknown as FrameRequestCallback;
-    (globalThis as unknown as Record<string, unknown>).cancelAnimationFrame = origCAF as unknown as FrameRequestCallback;
-    (window as unknown as Record<string, unknown>).requestAnimationFrame = origWindowRAF as unknown as FrameRequestCallback;
-    (window as unknown as Record<string, unknown>).cancelAnimationFrame = origWindowCAF as unknown as FrameRequestCallback;
+    const handle = throttle(fn);
+    handle.fn('a');
+    expect(fn).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(120);
+    handle.fn('b');
+    vi.advanceTimersByTime(120);
+    // Both calls fire: leading immediately, trailing within the window.
+    expect(fn).toHaveBeenCalledTimes(2);
+    handle.dispose();
   });
 
-  it('throttle beforeunload with rafId not null (covers 323)', () => {
+  it('beforeunload flushes the pending trailing call (covers old 323)', () => {
+    vi.useFakeTimers();
     const fn = vi.fn();
-    const throttled = throttle(fn);
-    throttled('x');
-    // rafId is now pending
+    const handle = throttle(fn);
+    handle.fn('x'); // leading
+    handle.fn('y'); // arms trailing
     window.dispatchEvent(new Event('beforeunload'));
-    // beforeunload cancels the pending frame so the throttled fn never fires
-    expect(fn).not.toHaveBeenCalled();
+    // beforeunload flushes the pending trailing call with the latest args.
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(fn).toHaveBeenLastCalledWith('y');
+    vi.useRealTimers();
   });
 
   it('updateMaxScroll maxScroll not overwritten when smaller (covers 350 false)', () => {
