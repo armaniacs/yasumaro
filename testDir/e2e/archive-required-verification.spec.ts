@@ -25,6 +25,7 @@ import {
   poll,
   runPhaseA,
   seedRows,
+  EXTENSION_VERSION,
 } from './fixtures/dashboardSqliteHelpers.js';
 import { collectArchiveChunks, openArchiveDb } from './fixtures/archiveDbReader.js';
 import { ARCHIVE_FORMAT_VERSION } from '../../src/utils/archiveGuards.js';
@@ -63,7 +64,7 @@ test.describe('Archive required verifications (R1-R3) @extension', () => {
       cutoffDate,
       cutoffMs,
       includeDeleted: false,
-      yasumaroVersion: '6.7.114',
+      yasumaroVersion: EXTENSION_VERSION,
       confirmToken: createToken,
       scopeHash: await scopeHash([cutoffMs, false]),
     });
