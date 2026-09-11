@@ -7,13 +7,14 @@
 ```
 Service Worker (entrypoints/background/ + src/background/)
   ├── index.ts → WXT entrypoint
+  ├── service-worker.ts → composition root: createBackgroundServices() + MessageRouter dispatch (19 handler types)
+  ├── MessageRouter → single dispatch table, trust derivation per route
   ├── ObsidianClient → Obsidian Local REST API
-  ├── AIClient (multiple implementations) → AI Providers
+  ├── AIService family → AI providers (ProviderStrategy base + per-provider strategies)
   ├── localAiClient → Local AI provider (Ollama, etc.)
   ├── sessionAlarmsManager → Session timeout management
   ├── Mutex / ServiceWorkerContext → Concurrency management
-  ├── recordingLogic → Core recording orchestration
-  └── service-worker.ts → Service worker lifecycle
+  └── recordingLogic / RecordingOrchestrator → Core recording orchestration
 
 Popup UI (entrypoints/popup/ + src/popup/)
   ├── index.html / main.ts → WXT entrypoints
