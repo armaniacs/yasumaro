@@ -10,6 +10,7 @@
 
 import { pickDefined } from '../utils/objectUtils.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
+import { MAX_QUERY_IDS } from '../messaging/limits.js';
 
 /**
  * Normalize a query-shaped wire payload into a StorageQuery.
@@ -30,9 +31,14 @@ export function normalizeStorageQuery(payload: Record<string, unknown>): Storage
     // used to pass through the cast and crash buildExtraWhereSql's .map.
     // Normalize to a finite-number array; anything else (or an all-invalid
     // array) drops the filter.
+    // PBI 2026-09-11-02 (round 6): bound the array (a giant wire payload must
+    // not become a giant SQL IN clause) and keep integers only.
     ids: (() => {
       if (!Array.isArray(payload?.ids)) return undefined;
-      const ids = (payload.ids as unknown[]).map(Number).filter((n) => Number.isFinite(n) && n >= 0);
+      const ids = (payload.ids as unknown[])
+        .slice(0, MAX_QUERY_IDS)
+        .map(Number)
+        .filter((n) => Number.isInteger(n) && n >= 0);
       return ids.length > 0 ? ids : undefined;
     })(),
     tag: payload?.tag != null ? String(payload.tag) : payload?.tagFilter != null ? String(payload.tagFilter) : undefined,
