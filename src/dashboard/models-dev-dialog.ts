@@ -75,14 +75,16 @@ export class ModelsDevDialog {
     }
 
     /**
-     * Hide the dialog
+     * Hide the dialog.
+     * PBI 2026-09-11-01 (round 7): idempotent — Esc used to reach this from
+     * BOTH the focusTrap closeCallback and a document-level keydown listener,
+     * firing onCancel twice per press.
      */
     hide(): void {
+        if (this.trapId === null) return;
         this.dialog?.classList.add('hidden');
-        if (this.trapId) {
-            focusTrapManager.release(this.trapId);
-            this.trapId = null;
-        }
+        focusTrapManager.release(this.trapId);
+        this.trapId = null;
         this.options.onCancel?.();
     }
 
@@ -131,7 +133,7 @@ export class ModelsDevDialog {
                 </div>
 
                 <!-- Loading state -->
-                <div id="dialog-loading" class="loading-state">
+                <div id="dialog-loading" class="loading-state" aria-live="polite" aria-busy="true">
                     <div class="spinner"></div>
                     <span data-i18n="loadingProvidersLabel">Loading providers...</span>
                 </div>
@@ -158,13 +160,13 @@ export class ModelsDevDialog {
                 <!-- API Key Input -->
                 <div class="api-key-section">
                     <label for="api-key-input" data-i18n="apiKeyLabel">API Key:</label>
-                    <input type="password" id="api-key-input"
+                    <input type="password" id="api-key-input" aria-required="true"
                         placeholder="Enter your API key..."
                         data-i18n-placeholder="apiKeyPlaceholder">
                 </div>
 
                 <!-- Error message -->
-                <div id="dialog-error" class="error-message hidden"></div>
+                <div id="dialog-error" class="error-message hidden" aria-live="polite"></div>
 
                 <!-- Footer -->
                 <div class="modal-footer">
@@ -254,12 +256,10 @@ export class ModelsDevDialog {
             }
         });
 
-        // ESC key to close
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && !this.dialog?.classList.contains('hidden')) {
-                this.hide();
-            }
-        });
+        // PBI 2026-09-11-01 (round 7): Esc is handled by the focusTrap
+        // closeCallback (see show()) — the document-level keydown listener
+        // here double-fired hide() (onCancel twice) and, never being removed,
+        // leaked one listener per ModelsDevDialog instance.
     }
 
     /**
