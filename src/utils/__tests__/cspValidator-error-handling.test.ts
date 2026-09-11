@@ -174,6 +174,7 @@ describe('CSP Validator - Error Handling', () => {
 
       console.log('Error logging status:', hasErrorLog);
       console.log('Error log calls:', mockLogWarn.mock.calls);
+      expect(hasErrorLog).toBe(true);
     });
 
     test('RECOMMENDED: Should not log sensitive data (URLs)', async () => {

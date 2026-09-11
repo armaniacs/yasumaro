@@ -192,7 +192,7 @@ describe('trustSettings.ts - XSS Protection', () => {
       });
     }
 
-    test('renderJpAnchorList: XSSペイロードが innerHTML に <script> を含まない', () => {
+    test('renderJpAnchorList: keeps XSS payloads out of innerHTML <script>', () => {
       const container = document.createElement('div');
       simulateRenderJpAnchorList(['<script>alert(1)</script>.com'], container);
 
@@ -200,7 +200,7 @@ describe('trustSettings.ts - XSS Protection', () => {
       expect(container.innerHTML).toContain('&lt;script&gt;');
     });
 
-    test('renderJpAnchorList: img onerror ペイロードがエスケープされる', () => {
+    test('renderJpAnchorList: escapes img onerror payloads', () => {
       const container = document.createElement('div');
       simulateRenderJpAnchorList(['.com<img onerror="alert(1)" src=x>'], container);
 
@@ -208,7 +208,7 @@ describe('trustSettings.ts - XSS Protection', () => {
       expect(container.innerHTML).toContain('&lt;img');
     });
 
-    test('renderSensitiveList: XSSペイロードが innerHTML に <script> を含まない', () => {
+    test('renderSensitiveList: keeps XSS payloads out of innerHTML <script>', () => {
       const container = document.createElement('div');
       simulateRenderSensitiveList(['<script>alert("xss")</script>evil.com'], container);
 
@@ -216,7 +216,7 @@ describe('trustSettings.ts - XSS Protection', () => {
       expect(container.innerHTML).toContain('&lt;script&gt;');
     });
 
-    test('renderSensitiveList: svg onload ペイロードがエスケープされる', () => {
+    test('renderSensitiveList: escapes svg onload payloads', () => {
       const container = document.createElement('div');
       simulateRenderSensitiveList(['<svg onload=alert(1)>.com'], container);
 
@@ -224,7 +224,7 @@ describe('trustSettings.ts - XSS Protection', () => {
       expect(container.innerHTML).toContain('&lt;svg');
     });
 
-    test('innerHTML に実タグ（<img>/<body>/<script>）が含まれない', () => {
+    test('keeps real tags (<img>/<body>/<script>) out of innerHTML', () => {
       const container = document.createElement('div');
       const payloads = [
         'evil.com<img onerror=alert(1)>',

@@ -106,6 +106,9 @@ describe('initTrancoConsentPanel', () => {
 
         // Should not throw - just logs warning and returns
         await expect(initTrancoConsentPanel()).resolves.not.toThrow();
+        // Early return happens before any storage read: no settings fetched.
+        expect(mockGetMany).not.toHaveBeenCalled();
+        expect(mockGetAll).not.toHaveBeenCalled();
     });
 
     it('handles missing consentStatus element gracefully', async () => {
@@ -118,6 +121,9 @@ describe('initTrancoConsentPanel', () => {
 
         // Should not throw
         await expect(initTrancoConsentPanel()).resolves.not.toThrow();
+        // consentStatusEl is required, so the panel bails out before storage.
+        expect(mockGetMany).not.toHaveBeenCalled();
+        expect(mockGetAll).not.toHaveBeenCalled();
     });
 
     it('handles full DOM with all elements without throwing', async () => {
@@ -131,6 +137,15 @@ describe('initTrancoConsentPanel', () => {
 
         // Should not throw
         await expect(initTrancoConsentPanel()).resolves.not.toThrow();
+        // With all elements present the panel loads settings and renders the
+        // PENDING state (empty settings): zero domain count, fallback version
+        // text, and visible grant/deny action buttons.
+        expect(mockGetMany).toHaveBeenCalled();
+        expect(document.getElementById('trancoDomainCount')?.textContent).toBe('0');
+        expect(document.getElementById('trancoCurrentVersion')?.textContent).toBeTruthy();
+        const actionsEl = document.getElementById('trancoConsentActions');
+        expect(actionsEl?.hidden).toBe(false);
+        expect(actionsEl?.querySelectorAll('button').length).toBe(2);
     });
 
     it('updates domain count element when domains are present', async () => {

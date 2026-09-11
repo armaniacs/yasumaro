@@ -79,7 +79,7 @@ beforeEach(() => {
 
 describe('checkDuplicateStep', () => {
   describe('重複検出', () => {
-    it('同日に同じURLが記録済みの場合 DuplicateError(reason=same_day) を throw する', async () => {
+    it('throws DuplicateError(reason=same_day) when the same URL was already recorded today', async () => {
       const now = Date.now();
       const urlMap = new Map<string, number>();
       urlMap.set('https://example.com/page1', now);
@@ -98,7 +98,7 @@ describe('checkDuplicateStep', () => {
       }
     });
 
-    it('前日のURLは重複とみなさず通過する', async () => {
+    it('passes URLs from the previous day without treating them as duplicates', async () => {
       const yesterday = new Date();
       yesterday.setUTCDate(yesterday.getUTCDate() - 1);
 
@@ -111,7 +111,7 @@ describe('checkDuplicateStep', () => {
       await expect(checkDuplicateStep(context)).resolves.toBe(context);
     });
 
-    it('skipDuplicateCheck=true の場合は同日重複でも通過する', async () => {
+    it('passes same-day duplicates when skipDuplicateCheck=true', async () => {
       const urlMap = new Map<string, number>();
       urlMap.set('https://example.com/page1', Date.now());
 
@@ -131,7 +131,7 @@ describe('checkDuplicateStep', () => {
   });
 
   describe('URL セットサイズ上限', () => {
-    it('URL セットが MAX_URL_SET_SIZE に達している場合 URL_SET_LIMIT_EXCEEDED を throw する', async () => {
+    it('throws URL_SET_LIMIT_EXCEEDED when the URL set reaches MAX_URL_SET_SIZE', async () => {
       const urlMap = new Map<string, number>();
       // MAX_URL_SET_SIZE = 10000 の URL を追加
       for (let i = 0; i < 10000; i++) {
@@ -152,7 +152,7 @@ describe('checkDuplicateStep', () => {
   });
 
   describe('警告閾値', () => {
-    it('URL セットが警告閾値を超えた場合 WARN ログを出力する', async () => {
+    it('logs a WARN when the URL set exceeds the warning threshold', async () => {
       const urlMap = new Map<string, number>();
       // URL_WARNING_THRESHOLD = 8000 の URL を追加
       for (let i = 0; i < 8000; i++) {
@@ -178,12 +178,12 @@ describe('checkDuplicateStep', () => {
   });
 
   describe('正常通過', () => {
-    it('新規URLは正常に通過する', async () => {
+    it('passes new URLs normally', async () => {
       const context = makeContext();
       await expect(checkDuplicateStep(context)).resolves.toBe(context);
     });
 
-    it('空のURLセットでも正常に通過する', async () => {
+    it('passes normally with an empty URL set', async () => {
       mockGetSavedUrls.mockResolvedValue(new Map());
       const context = makeContext();
       await expect(checkDuplicateStep(context)).resolves.toBe(context);
@@ -191,7 +191,7 @@ describe('checkDuplicateStep', () => {
   });
 
   describe('deps.urlStore による注入 (InMemoryUrlStore)', () => {
-    it('deps.urlStore が渡されると chrome.storage 経由の getSavedUrlsWithTimestamps を呼ばない', async () => {
+    it('does not call getSavedUrlsWithTimestamps via chrome.storage when deps.urlStore is provided', async () => {
       const urlStore = new InMemoryUrlStore(new Map([['https://example.com/page1', Date.now()]]));
       const deps = { urlStore } as unknown as StepDeps;
       const context = makeContext();
@@ -200,7 +200,7 @@ describe('checkDuplicateStep', () => {
       expect(mockGetSavedUrls).not.toHaveBeenCalled();
     });
 
-    it('InMemoryUrlStore 注入時も新規URLは正常に通過する', async () => {
+    it('passes new URLs normally when InMemoryUrlStore is injected', async () => {
       const urlStore = new InMemoryUrlStore();
       const deps = { urlStore } as unknown as StepDeps;
       const context = makeContext();
@@ -209,7 +209,7 @@ describe('checkDuplicateStep', () => {
       expect(mockGetSavedUrls).not.toHaveBeenCalled();
     });
 
-    it('deps が省略された場合は既存どおり getSavedUrlsWithTimestamps にフォールバックする', async () => {
+    it('falls back to getSavedUrlsWithTimestamps when deps is omitted', async () => {
       mockGetSavedUrls.mockResolvedValue(new Map());
       const context = makeContext();
 

@@ -44,22 +44,22 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
 
   // ── isOpfsAvailable ───────────────────────────────────────────────────
   describe('isOpfsAvailable', () => {
-    it('navigator.storage.getDirectory が function なら true', () => {
+    it('returns true when navigator.storage.getDirectory is a function', () => {
       vi.stubGlobal('navigator', { storage: { getDirectory: () => {} } } as never);
       expect(isOpfsAvailable()).toBe(true);
     });
 
-    it('getDirectory が無いなら false', () => {
+    it('returns false when getDirectory is missing', () => {
       vi.stubGlobal('navigator', { storage: {} } as never);
       expect(isOpfsAvailable()).toBe(false);
     });
 
-    it('navigator が undefined でも false (例外系)', () => {
+    it('returns false even when navigator is undefined (exception path)', () => {
       vi.stubGlobal('navigator', undefined as never);
       expect(isOpfsAvailable()).toBe(false);
     });
 
-    it('getDirectory が function でないなら false', () => {
+    it('returns false when getDirectory is not a function', () => {
       vi.stubGlobal('navigator', { storage: { getDirectory: 'not-a-function' } } as never);
       expect(isOpfsAvailable()).toBe(false);
     });
@@ -67,12 +67,12 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
 
   // ── canCreateWorker ───────────────────────────────────────────────────
   describe('canCreateWorker', () => {
-    it('Worker が globalThis にあれば true', () => {
+    it('returns true when Worker exists on globalThis', () => {
       vi.stubGlobal('Worker', function FakeWorker() {} as never);
       expect(canCreateWorker()).toBe(true);
     });
 
-    it('Worker が無ければ false', () => {
+    it('returns false when Worker is missing', () => {
       // jsdom には Worker が無いが、明示的に削除
       const g = globalThis as unknown as Record<string, unknown>;
       const saved = g.Worker;
@@ -99,7 +99,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       return instance;
     }
 
-    it('Worker 生成成功時は Worker を返し onmessage/onerror を設定', async () => {
+    it('returns the Worker and sets onmessage/onerror on successful creation', async () => {
       const mockWorker: Record<string, unknown> = {};
       stubWorkerWithInstance(mockWorker);
 
@@ -111,7 +111,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(mockWorker.onerror).toBeDefined();
     });
 
-    it('Worker 生成で例外なら null を返し logWarn', () => {
+    it('returns null and calls logWarn when Worker creation throws', () => {
       class ThrowingWorker { constructor() { throw new Error('no worker'); } }
       vi.stubGlobal('Worker', ThrowingWorker as never);
       const state = makeState(null);
@@ -120,7 +120,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(logWarn).toHaveBeenCalled();
     });
 
-    it('onmessage: __log true で level=error は logError', () => {
+    it('onmessage: calls logError when __log is true with level=error', () => {
       const mockWorker: Record<string, unknown> = {};
       stubWorkerWithInstance(mockWorker);
       const state = makeState(null);
@@ -131,7 +131,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(logError).toHaveBeenCalled();
     });
 
-    it('onmessage: __log true で level=warn は logWarn', () => {
+    it('onmessage: calls logWarn when __log is true with level=warn', () => {
       const mockWorker: Record<string, unknown> = {};
       stubWorkerWithInstance(mockWorker);
       const state = makeState(null);
@@ -140,7 +140,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(logWarn).toHaveBeenCalled();
     });
 
-    it('onmessage: __log true で level=info は logInfo', () => {
+    it('onmessage: calls logInfo when __log is true with level=info', () => {
       const mockWorker: Record<string, unknown> = {};
       stubWorkerWithInstance(mockWorker);
       const state = makeState(null);
@@ -149,7 +149,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(logInfo).toHaveBeenCalled();
     });
 
-    it('onmessage: success=true で pending を resolve', () => {
+    it('onmessage: resolves pending when success=true', () => {
       const mockWorker: Record<string, unknown> = {};
       stubWorkerWithInstance(mockWorker);
       const state = makeState(null);
@@ -161,7 +161,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(state.opfsPending.has(1)).toBe(false);
     });
 
-    it('onmessage: success=false で pending を reject', () => {
+    it('onmessage: rejects pending when success=false', () => {
       const mockWorker: Record<string, unknown> = {};
       stubWorkerWithInstance(mockWorker);
       const state = makeState(null);
@@ -173,7 +173,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect((pending.reject.mock.calls[0]![0] as Error).message).toBe('fail');
     });
 
-    it('onmessage: pending が存在しない id は無視', () => {
+    it('onmessage: ignores ids with no pending entry', () => {
       const mockWorker: Record<string, unknown> = {};
       stubWorkerWithInstance(mockWorker);
       const state = makeState(null);
@@ -181,7 +181,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(() => (mockWorker.onmessage as (e: MessageEvent<unknown>) => void)({ data: { id: 999, success: true, result: 'x' } } as MessageEvent<unknown>)).not.toThrow();
     });
 
-    it('onerror: 全 pending を reject し logError', () => {
+    it('onerror: rejects all pending entries and calls logError', () => {
       const mockWorker: Record<string, unknown> = {};
       stubWorkerWithInstance(mockWorker);
       const state = makeState(null);
@@ -200,12 +200,12 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
 
   // ── sendToOpfsWorker: 15s timeout ─────────────────────────────────────
   describe('sendToOpfsWorker — 15s timeout (fake timers)', () => {
-    it('worker が無い場合は即 reject', async () => {
+    it('rejects immediately when the worker is missing', async () => {
       const state = makeState(null);
       await expect(sendToOpfsWorker(state, 'QUERY')).rejects.toThrow('OPFS Worker not available');
     });
 
-    it('15s 経過で timeout reject し pending から削除', async () => {
+    it('rejects with a timeout after 15s and removes the pending entry', async () => {
       vi.useFakeTimers();
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
@@ -221,7 +221,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(state.opfsPending.has(1)).toBe(false);
     });
 
-    it('成功したら timeout が clear され Promise が resolve', async () => {
+    it('clears the timeout and resolves the Promise on success', async () => {
       vi.useFakeTimers();
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
@@ -241,7 +241,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(state.opfsPending.has(1)).toBe(false);
     });
 
-    it('reject されたら timeout が clear され reject が伝播', async () => {
+    it('clears the timeout and propagates the rejection on reject', async () => {
       vi.useFakeTimers();
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
@@ -259,7 +259,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(state.opfsPending.has(1)).toBe(false);
     });
 
-    it('timeout 後に後から resolve が来ても無視される (pending 削除済み)', async () => {
+    it('ignores a late resolve after a timeout (pending already removed)', async () => {
       vi.useFakeTimers();
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
@@ -274,7 +274,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(state.opfsPending.has(id)).toBe(false);
     });
 
-    it('複数の pending が独立して timeout する', async () => {
+    it('times out multiple pending entries independently', async () => {
       vi.useFakeTimers();
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
@@ -289,7 +289,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(state.opfsPending.size).toBe(0);
     });
 
-    it('ID がインクリメントされ続ける', async () => {
+    it('keeps incrementing IDs', async () => {
       vi.useFakeTimers();
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
@@ -305,12 +305,12 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
 
   // ── tryOpfsProxy ────────────────────────────────────────────────────────
   describe('tryOpfsProxy', () => {
-    it('worker が無い場合は null', async () => {
+    it('returns null when the worker is missing', async () => {
       const state = makeState(null);
       expect(await tryOpfsProxy(state, 'QUERY')).toBeNull();
     });
 
-    it('成功時は結果を返す', async () => {
+    it('returns the result on success', async () => {
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
       const promise = tryOpfsProxy<{ v: number }>(state, 'Q');
@@ -318,7 +318,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(await promise).toEqual({ v: 42 });
     });
 
-    it('失敗時は null にフォールバックし logWarn', async () => {
+    it('falls back to null and calls logWarn on failure', async () => {
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
       const promise = tryOpfsProxy(state, 'Q');
@@ -330,13 +330,13 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
 
   // ── initOpfsWorker ─────────────────────────────────────────────────────
   describe('initOpfsWorker', () => {
-    it('isOpfsAvailable false なら false を返す', async () => {
+    it('returns false when isOpfsAvailable is false', async () => {
       vi.stubGlobal('navigator', { storage: {} } as never);
       const state = makeState(null);
       expect(await initOpfsWorker(state)).toBe(false);
     });
 
-    it('canCreateWorker false なら false を返す', async () => {
+    it('returns false when canCreateWorker is false', async () => {
       vi.stubGlobal('navigator', { storage: { getDirectory: () => {} } } as never);
       const g = globalThis as unknown as Record<string, unknown>;
       const saved = g.Worker;
@@ -346,7 +346,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       g.Worker = saved;
     });
 
-    it('createOpfsWorker が null を返せば false', async () => {
+    it('returns false when createOpfsWorker returns null', async () => {
       vi.stubGlobal('navigator', { storage: { getDirectory: () => {} } } as never);
       class ThrowingWorker { constructor() { throw new Error('no'); } }
       vi.stubGlobal('Worker', ThrowingWorker as never);
@@ -354,7 +354,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(await initOpfsWorker(state)).toBe(false);
     });
 
-    it('INIT が initialized:true を返せば true', async () => {
+    it('returns true when INIT returns initialized:true', async () => {
       vi.stubGlobal('navigator', { storage: { getDirectory: () => {} } } as never);
       const mockWorker: Record<string, unknown> = { postMessage: vi.fn() };
       class FakeWorker { constructor() { return mockWorker as never; } }
@@ -371,7 +371,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(await initPromise).toBe(true);
     });
 
-    it('INIT が initialized: false なら false と logWarn', async () => {
+    it('returns false and calls logWarn when INIT returns initialized:false', async () => {
       vi.stubGlobal('navigator', { storage: { getDirectory: () => {} } } as never);
       const mockWorker: Record<string, unknown> = { postMessage: vi.fn() };
       class FakeWorker { constructor() { return mockWorker as never; } }
@@ -384,7 +384,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(logWarn).toHaveBeenCalled();
     });
 
-    it('INIT が undefined を返せば false', async () => {
+    it('returns false when INIT returns undefined', async () => {
       vi.stubGlobal('navigator', { storage: { getDirectory: () => {} } } as never);
       const mockWorker: Record<string, unknown> = { postMessage: vi.fn() };
       class FakeWorker { constructor() { return mockWorker as never; } }
@@ -396,7 +396,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(await p).toBe(false);
     });
 
-    it('例外時は false と logWarn', async () => {
+    it('returns false and calls logWarn on exception', async () => {
       vi.stubGlobal('navigator', { storage: { getDirectory: () => {} } } as never);
       class ThrowingWorker { constructor() { throw new Error('boom'); } }
       vi.stubGlobal('Worker', ThrowingWorker as never);
@@ -407,7 +407,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
 
   // ── terminateOpfsWorker ────────────────────────────────────────────────
   describe('terminateOpfsWorker', () => {
-    it('worker があれば terminate し pending を reject して clear', async () => {
+    it('terminates the worker and rejects then clears pending entries when a worker exists', async () => {
       const terminate = vi.fn();
       const state = makeState({ terminate });
       const pendingReject = vi.fn();
@@ -423,13 +423,13 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect((pendingReject.mock.calls[0]![0] as Error).message).toBe('OPFS Worker terminated');
     });
 
-    it('worker が無い場合は何もしない', () => {
+    it('does nothing when the worker is missing', () => {
       const state = makeState(null);
       expect(() => terminateOpfsWorker(state)).not.toThrow();
       expect(state.opfsPending.size).toBe(0);
     });
 
-    it('pending が空でも terminate する', () => {
+    it('terminates even when pending is empty', () => {
       const terminate = vi.fn();
       const state = makeState({ terminate });
       terminateOpfsWorker(state);

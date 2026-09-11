@@ -14,7 +14,7 @@ import {
 
 describe('masterPasswordUiCore', () => {
     describe('validateAndSetPasswordErrors', () => {
-        test('要件を満たさない場合はエラー要素にメッセージを設定する', () => {
+        test('sets a message on the error element when requirements are not met', () => {
             const errorEl = { textContent: '', classList: { add: vi.fn() } } as any;
             const result = validateAndSetPasswordErrors('ab', errorEl);
             expect(result).toBe(true); // hasError
@@ -22,41 +22,41 @@ describe('masterPasswordUiCore', () => {
             expect(errorEl.classList.add).toHaveBeenCalledWith('visible');
         });
 
-        test('要件を満たす場合はエラーを設定しない', () => {
+        test('sets no error when requirements are met', () => {
             const errorEl = { textContent: '', classList: { add: vi.fn() } } as any;
             const result = validateAndSetPasswordErrors('securePassword123', errorEl);
             expect(result).toBe(false); // no error
             expect(errorEl.classList.add).not.toHaveBeenCalled();
         });
 
-        test('エラー要素がnullの場合はエラーを設定しない', () => {
+        test('sets no error when the error element is null', () => {
             const result = validateAndSetPasswordErrors('ab', null);
             expect(result).toBe(false);
         });
     });
 
     describe('validateAndSetMatchErrors', () => {
-        test('パスワード不一致の場合はエラーを設定する', () => {
+        test('sets an error when passwords do not match', () => {
             const errorEl = { textContent: '', classList: { add: vi.fn() } } as any;
             const result = validateAndSetMatchErrors('password1', 'password2', errorEl);
             expect(result).toBe(true);
             expect(errorEl.classList.add).toHaveBeenCalledWith('visible');
         });
 
-        test('パスワード一致の場合はエラーを設定しない', () => {
+        test('sets no error when passwords match', () => {
             const errorEl = { textContent: '', classList: { add: vi.fn() } } as any;
             const result = validateAndSetMatchErrors('password1', 'password1', errorEl);
             expect(result).toBe(false);
         });
 
-        test('エラー要素がnullの場合はエラーを設定しない', () => {
+        test('sets no error when the error element is null', () => {
             const result = validateAndSetMatchErrors('password1', 'password2', null);
             expect(result).toBe(false);
         });
     });
 
     describe('buildSetStorageFn', () => {
-        test('chrome.storage.local.set を呼び出す関数を返す', async () => {
+        test('returns a function that calls chrome.storage.local.set', async () => {
             const setFn = buildSetStorageFn();
             await setFn('test_key', 'test_value');
             expect(chrome.storage.local.set).toHaveBeenCalledWith({ test_key: 'test_value' });
@@ -64,7 +64,7 @@ describe('masterPasswordUiCore', () => {
     });
 
     describe('buildGetStorageFn', () => {
-        test('chrome.storage.local.get を呼び出す関数を返す', async () => {
+        test('returns a function that calls chrome.storage.local.get', async () => {
             const getFn = buildGetStorageFn();
             await getFn(['test_key']);
             expect(chrome.storage.local.get).toHaveBeenCalledWith(['test_key']);
@@ -76,7 +76,7 @@ describe('masterPasswordUiCore', () => {
             return { score: 80, level: 'strong', text: 'Strong' };
         };
 
-        test('空パスワードは幅0%と弱レベル表示になる', () => {
+        test('renders 0% width with weak level for an empty password', () => {
             const bar = { style: { width: '' }, className: '' } as any;
             const text = { textContent: '' } as any;
             updatePasswordStrengthDisplay('', bar, text, calculatePasswordStrength);
@@ -85,7 +85,7 @@ describe('masterPasswordUiCore', () => {
             expect(text.textContent).toBeTruthy();
         });
 
-        test('パスワード入力時は計算結果で表示を更新する', () => {
+        test('updates the display with the computed result on password input', () => {
             const bar = { style: { width: '' }, className: '' } as any;
             const text = { textContent: '' } as any;
             updatePasswordStrengthDisplay('abcdefgh', bar, text, calculatePasswordStrength);
@@ -94,7 +94,7 @@ describe('masterPasswordUiCore', () => {
             expect(text.textContent).toBeTruthy();
         });
 
-        test('要素がnullの場合は何もしない', () => {
+        test('does nothing when elements are null', () => {
             expect(() =>
                 updatePasswordStrengthDisplay('abcdefgh', null, null, calculatePasswordStrength)
             ).not.toThrow();

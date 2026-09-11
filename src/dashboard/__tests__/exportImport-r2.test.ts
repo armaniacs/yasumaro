@@ -242,8 +242,11 @@ describe('exportImport-r2 — Import logs', () => {
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
     await new Promise(r => setTimeout(r, 10));
 
-    // Should not throw
-    expect(true).toBe(true);
+    // Missing progress element: the import still runs and the input is reset.
+    expect(mockImportFromJson).toHaveBeenCalledTimes(1);
+    expect(mockImportFromJson).toHaveBeenCalledWith('{"logs":[]}', expect.any(Function));
+    expect(document.getElementById('importLogsProgress')).toBeNull();
+    expect(fileInput.value).toBe('');
   });
 
   it('import logs: handles missing importLogsProgress during error path', async () => {
@@ -262,7 +265,11 @@ describe('exportImport-r2 — Import logs', () => {
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
     await new Promise(r => setTimeout(r, 10));
 
-    expect(true).toBe(true);
+    // Missing progress element: the failing import is still attempted, without surfacing a throw.
+    expect(mockImportFromJson).toHaveBeenCalledTimes(1);
+    expect(mockImportFromJson).toHaveBeenCalledWith('bad', expect.any(Function));
+    expect(document.getElementById('importLogsProgress')).toBeNull();
+    expect(fileInput.value).toBe('');
   });
 
   it('import logs: handles success result without crashing', async () => {
@@ -355,8 +362,14 @@ describe('exportImport-r2 — showImportPreview edge cases', () => {
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
     await new Promise(r => setTimeout(r, 10));
 
-    // No crash
-    expect(true).toBe(true);
+    // Preview target missing: the file still validates and the confirm modal opens.
+    expect(mockValidateExportData).toHaveBeenCalled();
+    const modal = document.getElementById('importConfirmModal')!;
+    expect(modal.classList.contains('show')).toBe(true);
+    expect(modal.style.display).toBe('flex');
+    expect(focusTrapManager.trap).toHaveBeenCalled();
+    expect(showStatus).not.toHaveBeenCalled();
+    expect(fileInput.value).toBe('');
   });
 });
 

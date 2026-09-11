@@ -17,7 +17,7 @@ describe('PageContentPipeline — deep module interface', () => {
     global.chrome = undefined;
   });
 
-  it('Scenario: 単一 seam でページ内容が準備される — returns PageContent with content', () => {
+  it('Scenario: prepares page content via a single seam — returns PageContent with content', () => {
     dom.window.document.body.innerHTML = `
       <article>
         <h1>Hello Yasumaro</h1>
@@ -34,7 +34,7 @@ describe('PageContentPipeline — deep module interface', () => {
     expect(result.content).toContain('Hello Yasumaro');
   });
 
-  it('Scenario: サイト固有パターンが内部で処理される — cleansing runs without error', () => {
+  it('Scenario: handles site-specific patterns internally — cleansing runs without error', () => {
     dom.window.document.body.innerHTML = `
       <article>
         <h1>Main Article</h1>
@@ -53,7 +53,7 @@ describe('PageContentPipeline — deep module interface', () => {
     expect(typeof result.content).toBe('string');
   });
 
-  it('Scenario: 純粋性が保証される — same input yields same output', () => {
+  it('Scenario: guarantees purity — same input yields same output', () => {
     dom.window.document.body.innerHTML = `
       <article><p>Deterministic content paragraph with enough length to avoid fallback logic and ensure stable extraction.</p></article>
     `;
@@ -68,7 +68,7 @@ describe('PageContentPipeline — deep module interface', () => {
     expect(a.cleansedReason).toBe(b.cleansedReason);
   });
 
-  it('Scenario: 不正なHTMLでもクラッシュしない — empty / malformed', () => {
+  it('Scenario: does not crash on invalid HTML — empty / malformed', () => {
     // Empty body
     dom.window.document.body.innerHTML = '';
     const config = new PageState().cleansingConfig;

@@ -174,7 +174,7 @@ const { CSPValidator, getCspErrorMessage } = vi.mocked(cspValidatorModule);
 const { logDebug } = vi.mocked(loggerModule);
 
 describe('fetchWithTimeout', () => {
-  test('正常レスポンスを返す', async () => {
+  test('returns a normal response', async () => {
     const mockResponse = { ok: true } as Response;
     global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
@@ -182,7 +182,7 @@ describe('fetchWithTimeout', () => {
     expect(response.ok).toBe(true);
   });
 
-  test('成功率ンスでタイマーをクリアする', async () => {
+  test('clears the timer on a successful response', async () => {
     let clearTimeoutCalled = false;
     const originalClearTimeout = global.clearTimeout;
 
@@ -202,7 +202,7 @@ describe('fetchWithTimeout', () => {
     }
   });
 
-  test('fetchエラーをスローする', async () => {
+  test('propagates fetch errors', async () => {
     const testError = new Error('Network error');
     global.fetch = vi.fn(() => Promise.reject(testError));
 
@@ -210,7 +210,7 @@ describe('fetchWithTimeout', () => {
       .rejects.toBe(testError);
   });
 
-  test('デフォルトのタイムアウトは30000ms', async () => {
+  test('defaults the timeout to 30000ms', async () => {
     const mockResponse = { ok: true } as Response;
     global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
@@ -230,7 +230,7 @@ describe('fetchWithTimeout', () => {
     }
   });
 
-  test('カスタムタイムアウトを設定できる', async () => {
+  test('accepts a custom timeout', async () => {
     const mockResponse = { ok: true } as Response;
     global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
@@ -252,52 +252,52 @@ describe('fetchWithTimeout', () => {
 });
 
 describe('normalizeUrl', () => {
-  test('末尾のスラッシュを削除する', () => {
+  test('removes trailing slashes', () => {
     expect(normalizeUrl('https://example.com/')).toBe('https://example.com');
     expect(normalizeUrl('https://example.com/path/')).toBe('https://example.com/path');
   });
 
-  test('プロトコルを小文字に正規化する', () => {
+  test('normalizes the protocol to lowercase', () => {
     expect(normalizeUrl('HTTPS://example.com')).toBe('https://example.com');
     expect(normalizeUrl('HTTP://example.com')).toBe('http://example.com');
   });
 
-  test('無効なURLの場合はエラーを投げる', () => {
+  test('throws for an invalid URL', () => {
     expect(() => normalizeUrl('not-a-url')).toThrow('Invalid URL');
   });
 });
 
 describe('isUrlAllowed', () => {
-  test('完全一致で許可されたURLを判定する', () => {
+  test('allows URLs by exact match', () => {
     const allowedUrls = new Set(['https://example.com', 'https://api.example.com']);
     expect(isUrlAllowed('https://example.com', allowedUrls)).toBe(true);
     expect(isUrlAllowed('https://api.example.com', allowedUrls)).toBe(true);
   });
 
-  test('プレフィックス一致でサブパスを許可する', () => {
+  test('allows subpaths by prefix match', () => {
     const allowedUrls = new Set(['https://example.com']);
     expect(isUrlAllowed('https://example.com/path', allowedUrls)).toBe(true);
     expect(isUrlAllowed('https://example.com/path/to/resource', allowedUrls)).toBe(true);
   });
 
-  test('許可されていないURLを拒否する', () => {
+  test('rejects URLs that are not allowed', () => {
     const allowedUrls = new Set(['https://example.com']);
     expect(isUrlAllowed('https://other.com', allowedUrls)).toBe(false);
     expect(isUrlAllowed('https://example.org', allowedUrls)).toBe(false);
   });
 
-  test('許可されたURLのリストがない場合は検証をスキップする', () => {
+  test('skips validation when no allowed URL list exists', () => {
     expect(isUrlAllowed('https://example.com', null)).toBe(true);
     expect(isUrlAllowed('https://example.com', new Set())).toBe(true);
   });
 
-  test('URLの正規化を考慮して判定する', () => {
+  test('judges with URL normalization applied', () => {
     const allowedUrls = new Set(['https://example.com']);
     expect(isUrlAllowed('https://example.com/', allowedUrls)).toBe(true);
     expect(isUrlAllowed('HTTPS://example.com', allowedUrls)).toBe(true);
   });
 
-  test('無効なURLの場合はfalseを返す', () => {
+  test('returns false for an invalid URL', () => {
     const allowedUrls = new Set(['https://example.com']);
     expect(isUrlAllowed('not-a-url', allowedUrls)).toBe(false);
     expect(isUrlAllowed('javascript:alert(1)', allowedUrls)).toBe(false);
@@ -308,13 +308,13 @@ describe('isUrlAllowed', () => {
 // タスク #10: IPv4アドレス検証の脆弱性修正に関するテスト
 describe('isPrivateIpAddress', () => {
   describe('有効なプライベートIPv4アドレス', () => {
-    test('10.x.x.x (10.0.0.0/8) を検出する', () => {
+    test('detects 10.x.x.x (10.0.0.0/8)', () => {
       expect(isPrivateIpAddress('10.0.0.1')).toBe(true);
       expect(isPrivateIpAddress('10.255.255.254')).toBe(true);
       expect(isPrivateIpAddress('10.123.45.67')).toBe(true);
     });
 
-    test('172.16.x.x - 172.31.x.x (172.16.0.0/12) を検出する', () => {
+    test('detects 172.16.x.x - 172.31.x.x (172.16.0.0/12)', () => {
       expect(isPrivateIpAddress('172.16.0.1')).toBe(true);
       expect(isPrivateIpAddress('172.31.255.254')).toBe(true);
       expect(isPrivateIpAddress('172.20.123.45')).toBe(true);
@@ -323,19 +323,19 @@ describe('isPrivateIpAddress', () => {
       expect(isPrivateIpAddress('172.32.0.1')).toBe(false);
     });
 
-    test('192.168.x.x (192.168.0.0/16) を検出する', () => {
+    test('detects 192.168.x.x (192.168.0.0/16)', () => {
       expect(isPrivateIpAddress('192.168.0.1')).toBe(true);
       expect(isPrivateIpAddress('192.168.255.254')).toBe(true);
       expect(isPrivateIpAddress('192.168.1.1')).toBe(true);
     });
 
-    test('127.x.x.x (ループバック) を検出する', () => {
+    test('detects 127.x.x.x (loopback)', () => {
       expect(isPrivateIpAddress('127.0.0.1')).toBe(true);
       expect(isPrivateIpAddress('127.255.255.255')).toBe(true);
       expect(isPrivateIpAddress('127.0.0.5')).toBe(true);
     });
 
-    test('169.254.x.x (リンクローカル) を検出する', () => {
+    test('detects 169.254.x.x (link-local)', () => {
       expect(isPrivateIpAddress('169.254.0.1')).toBe(true);
       expect(isPrivateIpAddress('169.254.255.254')).toBe(true);
       expect(isPrivateIpAddress('169.254.169.254')).toBe(true); // AWSメタデータエンドポイント
@@ -343,79 +343,79 @@ describe('isPrivateIpAddress', () => {
   });
 
   describe('有効なパブリックIPv4アドレス', () => {
-    test('8.8.8.8 (Google DNS) はパブリック', () => {
+    test('treats 8.8.8.8 (Google DNS) as public', () => {
       expect(isPrivateIpAddress('8.8.8.8')).toBe(false);
     });
 
-    test('1.1.1.1 (Cloudflare DNS) はパブリック', () => {
+    test('treats 1.1.1.1 (Cloudflare DNS) as public', () => {
       expect(isPrivateIpAddress('1.1.1.1')).toBe(false);
     });
 
-    test('172.15.x.x はパブリック', () => {
+    test('treats 172.15.x.x as public', () => {
       expect(isPrivateIpAddress('172.15.0.1')).toBe(false);
     });
 
-    test('172.32.x.x はパブリック', () => {
+    test('treats 172.32.x.x as public', () => {
       expect(isPrivateIpAddress('172.32.0.1')).toBe(false);
     });
 
-    test('192.169.x.x はパブリック', () => {
+    test('treats 192.169.x.x as public', () => {
       expect(isPrivateIpAddress('192.169.0.1')).toBe(false);
     });
 
-    test('169.255.x.x はパブリック', () => {
+    test('treats 169.255.x.x as public', () => {
       expect(isPrivateIpAddress('169.255.0.1')).toBe(false);
     });
   });
 
   describe('タスク #10: 無効なIPv4アドレス（0-255範囲外）', () => {
-    test('999.999.999.999 は無効なIPv4として扱われプライベートではない', () => {
+    test('treats 999.999.999.999 as an invalid IPv4 and non-private', () => {
       // 各オクテットが255を超えるため、無効なIPv4として扱われる
       expect(isPrivateIpAddress('999.999.999.999')).toBe(false);
     });
 
-    test('300.1.1.1 は無効なIPv4として扱われる', () => {
+    test('treats 300.1.1.1 as an invalid IPv4', () => {
       expect(isPrivateIpAddress('300.1.1.1')).toBe(false);
     });
 
-    test('256.0.0.0 は無効なIPv4として扱われる', () => {
+    test('treats 256.0.0.0 as an invalid IPv4', () => {
       expect(isPrivateIpAddress('256.0.0.0')).toBe(false);
     });
 
-    test('10.256.1.1 は無効なIPv4として扱われる', () => {
+    test('treats 10.256.1.1 as an invalid IPv4', () => {
       expect(isPrivateIpAddress('10.256.1.1')).toBe(false);
     });
 
-    test('192.168.300.1 は無効なIPv4として扱われる', () => {
+    test('treats 192.168.300.1 as an invalid IPv4', () => {
       expect(isPrivateIpAddress('192.168.300.1')).toBe(false);
     });
 
-    test('負の値を含むIPは無効として扱われる', () => {
+    test('treats IPs containing negative values as invalid', () => {
       // -1 を含む正規表現マッチは発生しないが、念のため
       expect(isPrivateIpAddress('-1.0.0.0')).toBe(false);
     });
   });
 
   describe('IPv6アドレス', () => {
-    test('::1 (IPv6 localhost) を検出する', () => {
+    test('detects ::1 (IPv6 localhost)', () => {
       expect(isPrivateIpAddress('::1')).toBe(true);
     });
 
-    test('::ffff:127.0.0.1 (IPv4-mapped IPv6 localhost) を検出する', () => {
+    test('detects ::ffff:127.0.0.1 (IPv4-mapped IPv6 localhost)', () => {
       expect(isPrivateIpAddress('::ffff:127.0.0.1')).toBe(true);
       expect(isPrivateIpAddress('::ffff:127.0.0.5')).toBe(true);
     });
 
-    test('fe80::1 (リンクローカル) を検出する', () => {
+    test('detects fe80::1 (link-local)', () => {
       expect(isPrivateIpAddress('fe80::1')).toBe(true);
       expect(isPrivateIpAddress('fe80::abcd:ef12')).toBe(true);
     });
 
-    test('パブリックIPv6アドレスは検出しない', () => {
+    test('does not detect public IPv6 addresses', () => {
       expect(isPrivateIpAddress('2001:4860:4860::8888')).toBe(false);
     });
 
-    test('ブラケット付きIPv6アドレスを正規化して検出する', () => {
+    test('normalizes bracketed IPv6 addresses before detection', () => {
       expect(isPrivateIpAddress('[::1]')).toBe(true);
       expect(isPrivateIpAddress('[::ffff:127.0.0.1]')).toBe(true);
       expect(isPrivateIpAddress('[fe80::1]')).toBe(true);
@@ -425,11 +425,11 @@ describe('isPrivateIpAddress', () => {
   });
 
   describe('ドメイン名', () => {
-    test('example.com はIPアドレスではない', () => {
+    test('treats example.com as not an IP address', () => {
       expect(isPrivateIpAddress('example.com')).toBe(false);
     });
 
-    test('localhost はIPv6形式のマッチには一致しない', () => {
+    test('does not match localhost against IPv6 patterns', () => {
       // 注: localhost は別途ドメイン形式でチェックされる
       expect(isPrivateIpAddress('localhost')).toBe(false);
     });
@@ -437,14 +437,14 @@ describe('isPrivateIpAddress', () => {
 });
 
 describe('validateUrlForFilterImport', () => {
-  test('プライベートIPアドレスをブロックする（タスク #10修正）', () => {
+  test('blocks private IP addresses (task #10 fix)', () => {
     expect(() => validateUrlForFilterImport('http://10.0.0.1/filters.txt'))
       .toThrow('Access to private network address is not allowed');
     expect(() => validateUrlForFilterImport('http://192.168.1.1/filters.txt'))
       .toThrow('Access to private network address is not allowed');
   });
 
-  test('無効なIPアドレスを含むURLは通常のURLとして扱う（タスク #10修正：エラーにならない）', () => {
+  test('treats URLs with invalid IP addresses as normal URLs (task #10 fix: does not throw)', () => {
     // 999.999.999.999などはisPrivateIpAddressでfalseを返すため、
     // validateUrlForFilterImportはプライベートIPチェックをスルーする
     // URLが有効であればエラーにはならないはずだが、
@@ -453,59 +453,59 @@ describe('validateUrlForFilterImport', () => {
       .toThrow(); // 無効なホスト名なのでURLパースエラー
   });
 
-  test('localhostをブロックする', () => {
+  test('blocks localhost', () => {
     expect(() => validateUrlForFilterImport('http://localhost/filters.txt'))
       .toThrow('Access to localhost is not allowed for filter imports');
     expect(() => validateUrlForFilterImport('http://my.localhost/filters.txt'))
       .toThrow('Access to localhost is not allowed for filter imports');
   });
 
-  test('ブラケット付きIPv6ループバックをブロックする', () => {
+  test('blocks bracketed IPv6 loopback', () => {
     expect(() => validateUrlForFilterImport('http://[::1]:8080/'))
       .toThrow('Access to private network address is not allowed');
   });
 
-  test('パブリックURLを許可する', () => {
+  test('allows public URLs', () => {
     expect(() => validateUrlForFilterImport('https://example.com/filters.txt'))
       .not.toThrow();
     expect(() => validateUrlForFilterImport('https://raw.githubusercontent.com/user/repo/main/filters.txt'))
       .not.toThrow();
   });
 
-  test('不支持的プロトコルをブロックする', () => {
+  test('blocks unsupported protocols', () => {
     expect(() => validateUrlForFilterImport('ftp://example.com/filters.txt'))
       .toThrow('Unsupported protocol');
   });
 });
 
 describe('validateUrlForAIRequests', () => {
-  test('プライベートIPアドレスをブロックする（タスク #10修正）', () => {
+  test('blocks private IP addresses (task #10 fix)', () => {
     expect(() => validateUrlForAIRequests('http://10.0.0.1/api'))
       .toThrow('Access to private network address is not allowed');
     expect(() => validateUrlForAIRequests('https://172.16.0.1/v1/chat'))
       .toThrow('Access to private network address is not allowed');
   });
 
-  test('パブリックAIプロバイダーURLを許可する', () => {
+  test('allows public AI provider URLs', () => {
     expect(() => validateUrlForAIRequests('https://api.openai.com/v1/chat'))
       .not.toThrow();
     expect(() => validateUrlForAIRequests('https://groq.com/openai/v1'))
       .not.toThrow();
   });
 
-  test('localhostを許可する（開発環境用）', () => {
+  test('allows localhost (for development)', () => {
     expect(() => validateUrlForAIRequests('http://localhost:11434/api'))
       .not.toThrow();
   });
 
-  test('127.x.x.x を許可する（Ollama / LM Studio等のローカルAI用）', () => {
+  test('allows 127.x.x.x (for local AI such as Ollama / LM Studio)', () => {
     expect(() => validateUrlForAIRequests('http://127.0.0.1:11434/api'))
       .not.toThrow();
     expect(() => validateUrlForAIRequests('http://127.0.0.1:1234/v1/chat/completions'))
       .not.toThrow();
   });
 
-  test('内部ネットワーク（10.x.x.x / 172.16-31.x.x / 192.168.x.x）は引き続きブロック', () => {
+  test('keeps blocking internal networks (10.x.x.x / 172.16-31.x.x / 192.168.x.x)', () => {
     expect(() => validateUrlForAIRequests('http://10.0.0.1/api'))
       .toThrow('Access to private network address is not allowed');
     expect(() => validateUrlForAIRequests('https://172.16.0.1/v1/chat'))
@@ -516,23 +516,23 @@ describe('validateUrlForAIRequests', () => {
 });
 
 describe('isLocalhostAddress', () => {
-  test('localhost を認識する', () => {
+  test('recognizes localhost', () => {
     expect(isLocalhostAddress('localhost')).toBe(true);
     expect(isLocalhostAddress('LOCALHOST')).toBe(true);
   });
 
-  test('127.x.x.x を認識する', () => {
+  test('recognizes 127.x.x.x', () => {
     expect(isLocalhostAddress('127.0.0.1')).toBe(true);
     expect(isLocalhostAddress('127.255.255.255')).toBe(true);
   });
 
-  test('IPv6ループバックを認識する', () => {
+  test('recognizes IPv6 loopback', () => {
     expect(isLocalhostAddress('::1')).toBe(true);
     expect(isLocalhostAddress('[::1]')).toBe(true);
     expect(isLocalhostAddress('::ffff:127.0.0.1')).toBe(true);
   });
 
-  test('ポート番号が指定された場合は許可されたポートのみ信頼する（VULN-013）', () => {
+  test('trusts only allowed ports when a port number is specified (VULN-013)', () => {
     expect(isLocalhostAddress('localhost', 11434)).toBe(true);
     expect(isLocalhostAddress('localhost', 27123)).toBe(true);
     expect(isLocalhostAddress('localhost', 9999)).toBe(false);
@@ -540,7 +540,7 @@ describe('isLocalhostAddress', () => {
     expect(isLocalhostAddress('127.0.0.1', 9999)).toBe(false);
   });
 
-  test('パブリックアドレスや通常のドメインはローカルホストではない', () => {
+  test('treats public addresses and normal domains as non-localhost', () => {
     expect(isLocalhostAddress('8.8.8.8')).toBe(false);
     expect(isLocalhostAddress('example.com')).toBe(false);
     expect(isLocalhostAddress('10.0.0.1')).toBe(false);
@@ -554,7 +554,7 @@ describe('fetchWithRetry', () => {
     global.fetch = originalFetch;
   });
 
-  test('初回成功でレスポンスを返す', async () => {
+  test('returns the response on first-attempt success', async () => {
     const mockResponse = { ok: true, status: 200, statusText: 'OK' } as Response;
     global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
@@ -563,7 +563,7 @@ describe('fetchWithRetry', () => {
     expect(response.status).toBe(200);
   });
 
-  test('HTTPエラーでリトライして最終的にthrowする', async () => {
+  test('retries on HTTP errors and eventually throws', async () => {
     const mockResponse = { ok: false, status: 500, statusText: 'Internal Server Error' } as Response;
     global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
@@ -576,7 +576,7 @@ describe('fetchWithRetry', () => {
     ).rejects.toThrow('HTTP 500');
   });
 
-  test('ネットワークエラーでリトライして最終的にthrowする', async () => {
+  test('retries on network errors and eventually throws', async () => {
     const testError = new Error('Network failure');
     global.fetch = vi.fn(() => Promise.reject(testError));
 
@@ -589,7 +589,7 @@ describe('fetchWithRetry', () => {
     ).rejects.toThrow('Network failure');
   });
 
-  test('リトライ後に成功する', async () => {
+  test('succeeds after a retry', async () => {
     let callCount = 0;
     global.fetch = vi.fn(() => {
       callCount++;
@@ -610,7 +610,7 @@ describe('fetchWithRetry', () => {
     expect(callCount).toBe(2);
   });
 
-  test('shouldRetry=false でリトライしない', async () => {
+  test('does not retry when shouldRetry=false', async () => {
     const testError = new Error('Fatal error');
     global.fetch = vi.fn(() => Promise.reject(testError));
 
@@ -626,7 +626,7 @@ describe('fetchWithRetry', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  test('maxRetryCount=0 でリトライしない', async () => {
+  test('does not retry when maxRetryCount=0', async () => {
     const mockResponse = { ok: false, status: 404, statusText: 'Not Found' } as Response;
     global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
@@ -639,7 +639,7 @@ describe('fetchWithRetry', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  test('429 Too Many Requestsはデフォルトでリトライしない', async () => {
+  test('does not retry 429 Too Many Requests by default', async () => {
     const mockResponse = { ok: false, status: 429, statusText: 'Too Many Requests' } as Response;
     global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
@@ -655,7 +655,7 @@ describe('fetchWithRetry', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  test('POSTの500はリトライしない（1回のみ呼び出し）', async () => {
+  test('does not retry a POST 500 (calls only once)', async () => {
     const mockResponse = { ok: false, status: 500, statusText: 'Internal Server Error' } as Response;
     global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
@@ -671,7 +671,7 @@ describe('fetchWithRetry', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  test('GETの500はリトライして成功する（2回呼び出し）', async () => {
+  test('retries a GET 500 and succeeds (calls twice)', async () => {
     global.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Internal Server Error' } as Response)
       .mockResolvedValueOnce({ ok: true, status: 200, statusText: 'OK' } as Response);
@@ -686,7 +686,7 @@ describe('fetchWithRetry', () => {
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
-  test('POSTの429はリトライしない', async () => {
+  test('does not retry a POST 429', async () => {
     const mockResponse = { ok: false, status: 429, statusText: 'Too Many Requests' } as Response;
     global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
@@ -701,7 +701,7 @@ describe('fetchWithRetry', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  test('defaultShouldRetry: タイムアウト（Request timed out）は1回リトライして成功できる', async () => {
+  test('defaultShouldRetry: retries a timeout (Request timed out) once and can succeed', async () => {
     // fetchWithTimeout は DOMException(AbortError) を Error('Request timed out...') に変換する
     // defaultShouldRetry は message で 'timed out' を含むエラーを1回リトライ許可する想定だが、
     // 実装では error.name === 'AbortError' でチェックしているため変換後は機能しない
@@ -725,7 +725,7 @@ describe('fetchWithRetry', () => {
     expect(callCount).toBe(2);
   });
 
-  test('defaultShouldRetry: タイムアウトは2回目以降リトライしない', async () => {
+  test('defaultShouldRetry: does not retry timeouts beyond the second attempt', async () => {
     const abortError = new DOMException('The operation was aborted.', 'AbortError');
     global.fetch = vi.fn(() => Promise.reject(abortError));
 
@@ -742,7 +742,7 @@ describe('fetchWithRetry', () => {
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
-  test('リトライ成功時にデバッグログが出力される', async () => {
+  test('outputs a debug log on retry success', async () => {
     let callCount = 0;
     global.fetch = vi.fn(() => {
       callCount++;
@@ -765,19 +765,19 @@ describe('fetchWithRetry', () => {
 });
 
 describe('fetchWithTimeout - validateUrl edge cases', () => {
-  test('無効なURLでエラーを投げる', async () => {
+  test('throws for an invalid URL', async () => {
     await expect(
       fetchWithTimeout('not-a-url', { skipCspValidation: true }, 1000)
     ).rejects.toThrow('Invalid URL');
   });
 
-  test('サポートされていないプロトコルでエラーを投げる', async () => {
+  test('throws for an unsupported protocol', async () => {
     await expect(
       fetchWithTimeout('ftp://example.com', { skipCspValidation: true }, 1000)
     ).rejects.toThrow('Unsupported protocol');
   });
 
-  test('httpプロトコルを許可する', async () => {
+  test('allows the http protocol', async () => {
     const mockResponse = { ok: true } as Response;
     global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
@@ -787,25 +787,25 @@ describe('fetchWithTimeout - validateUrl edge cases', () => {
 });
 
 describe('fetchWithTimeout - validateTimeout', () => {
-  test('数値以外のタイムアウトでエラーを投げる', async () => {
+  test('throws for a non-numeric timeout', async () => {
     await expect(
       fetchWithTimeout('https://example.com', { skipCspValidation: true }, 'abc' as any)
     ).rejects.toThrow('Timeout must be a number');
   });
 
-  test('無限大のタイムアウトでエラーを投げる', async () => {
+  test('throws for an infinite timeout', async () => {
     await expect(
       fetchWithTimeout('https://example.com', { skipCspValidation: true }, Infinity)
     ).rejects.toThrow('Timeout must be a finite number');
   });
 
-  test('最小値未満のタイムアウトでエラーを投げる', async () => {
+  test('throws for a below-minimum timeout', async () => {
     await expect(
       fetchWithTimeout('https://example.com', { skipCspValidation: true }, 50)
     ).rejects.toThrow('Timeout must be at least 100ms');
   });
 
-  test('最大値を超えるタイムアウトでエラーを投げる', async () => {
+  test('throws for an above-maximum timeout', async () => {
     await expect(
       fetchWithTimeout('https://example.com', { skipCspValidation: true }, 400000)
     ).rejects.toThrow('Timeout must not exceed 300000ms');
@@ -813,7 +813,7 @@ describe('fetchWithTimeout - validateTimeout', () => {
 });
 
 describe('fetchWithTimeout - AbortError', () => {
-  test('AbortErrorでユーザーフレンドリーなエラーメッセージを返す', async () => {
+  test('returns a user-friendly error message on AbortError', async () => {
     const abortError = new DOMException('The operation was aborted.', 'AbortError');
     global.fetch = vi.fn(() => Promise.reject(abortError));
 
@@ -822,7 +822,7 @@ describe('fetchWithTimeout - AbortError', () => {
     ).rejects.toThrow('Request timed out');
   });
 
-  test('options.timeoutMs を3番目の引数より優先する', async () => {
+  test('prefers options.timeoutMs over the third argument', async () => {
     // options.timeoutMs が有効な場合、3番目の引数（1000ms）ではなく 100ms でタイムアウトする
     global.fetch = vi.fn((_url: string, opts?: RequestInit) =>
       new Promise((_resolve, reject) => {
@@ -839,7 +839,7 @@ describe('fetchWithTimeout - AbortError', () => {
 });
 
 describe('fetchWithTimeout - CSP validation', () => {
-  test('CSP検証が有効な場合にURLを検証する', async () => {
+  test('validates the URL when CSP validation is enabled', async () => {
     vi.mocked(CSPValidator.isInitialized).mockReturnValueOnce(false);
     vi.mocked(CSPValidator.isUrlAllowed).mockReturnValueOnce(false);
     getCspErrorMessage.mockReturnValueOnce('CSP blocked');
@@ -849,7 +849,7 @@ describe('fetchWithTimeout - CSP validation', () => {
     ).rejects.toThrow('CSP blocked');
   });
 
-  test('CSPエラーメッセージがない場合は汎用エラーを返す', async () => {
+  test('returns a generic error when no CSP error message exists', async () => {
     vi.mocked(CSPValidator.isInitialized).mockReturnValueOnce(true);
     vi.mocked(CSPValidator.isUrlAllowed).mockReturnValueOnce(false);
     getCspErrorMessage.mockReturnValueOnce(null);
@@ -859,7 +859,7 @@ describe('fetchWithTimeout - CSP validation', () => {
     ).rejects.toThrow('URL blocked by CSP policy');
   });
 
-  test('allowedUrlsで許可されていないURLを拒否する', async () => {
+  test('rejects URLs not allowed by allowedUrls', async () => {
     const mockResponse = { ok: true } as Response;
     global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
@@ -871,7 +871,7 @@ describe('fetchWithTimeout - CSP validation', () => {
     ).rejects.toThrow('URL is not allowed');
   });
 
-  test('allowedUrlsがnullの場合は検証をスキップする', async () => {
+  test('skips validation when allowedUrls is null', async () => {
     const mockResponse = { ok: true } as Response;
     global.fetch = vi.fn(() => Promise.resolve(mockResponse));
 
@@ -884,19 +884,19 @@ describe('fetchWithTimeout - CSP validation', () => {
 });
 
 describe('isPrivateIpAddress - 追加IPv6', () => {
-  test('fe80:: (リンクローカル) を検出する', () => {
+  test('detects fe80:: (link-local)', () => {
     expect(isPrivateIpAddress('fe80::1')).toBe(true);
     expect(isPrivateIpAddress('fe80::abcd:ef12:3456:7890')).toBe(true);
     expect(isPrivateIpAddress('febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff')).toBe(true);
   });
 
-  test('fc00::/7 (ユニークローカル) を検出する', () => {
+  test('detects fc00::/7 (unique local)', () => {
     expect(isPrivateIpAddress('fc00::1')).toBe(true);
     expect(isPrivateIpAddress('fd00::1')).toBe(true);
     expect(isPrivateIpAddress('fd12:3456:7890::1')).toBe(true);
   });
 
-  test('::ffff:127.0.0.1 を検出する', () => {
+  test('detects ::ffff:127.0.0.1', () => {
     expect(isPrivateIpAddress('::ffff:127.0.0.1')).toBe(true);
   });
 });

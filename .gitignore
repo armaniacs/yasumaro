@@ -78,6 +78,10 @@ coverage/
 *.tar.gz
 yasumaro-*.zip
 
+# Stryker mutation testing artifacts
+.stryker-tmp/
+reports/
+
 
 # i18n message backup/temp files
 _locales/*-base.json

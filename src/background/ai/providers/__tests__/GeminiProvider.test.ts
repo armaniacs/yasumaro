@@ -26,7 +26,7 @@ describe('GeminiProvider: エラーハンドリング', () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockRestore();
   });
 
-  it('APIキーが空の場合、プロバイダー名を含まないエラーを返す', async () => {
+  it('returns an error without the provider name when the API key is empty', async () => {
     const provider = new GeminiProvider({ ...baseSettings, gemini_api_key: '' } as Settings);
     const result = await provider.generateSummary('content', false, '');
 
@@ -35,7 +35,7 @@ describe('GeminiProvider: エラーハンドリング', () => {
     expect(result.summary).toContain('API key is missing');
   });
 
-  it('404エラー時、HTTPステータスコードやレスポンス詳細を含まない', async () => {
+  it('omits the HTTP status code and response details on a 404 error', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: false,
       status: 404,
@@ -51,7 +51,7 @@ describe('GeminiProvider: エラーハンドリング', () => {
     expect(result.summary).not.toContain('Not found');
   });
 
-  it('一般エラー時、レスポンスの生データを含まない', async () => {
+  it('omits raw response data on a generic error', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: false,
       status: 400,
@@ -67,7 +67,7 @@ describe('GeminiProvider: エラーハンドリング', () => {
     expect(result.summary).not.toContain('Invalid request');
   });
 
-  it('model 名に / を含む場合、パストラバーサルを許さずエラーを返す', async () => {
+  it('returns an error without allowing path traversal when the model name contains /', async () => {
     const provider = new GeminiProvider({
       ...baseSettings,
       gemini_model: '../../../etc/passwd',
@@ -79,7 +79,7 @@ describe('GeminiProvider: エラーハンドリング', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('model 名の特殊文字は URL パスセグメントとしてエンコードされる', async () => {
+  it('encodes special characters in the model name as a URL path segment', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       status: 200,
@@ -96,7 +96,7 @@ describe('GeminiProvider: エラーハンドリング', () => {
     expect(calledUrl).toContain('/models/weird%20model%3Av1:generateContent');
   });
 
-  it('ネットワークエラー時、内部エラー詳細を含まない', async () => {
+  it('omits internal error details on a network error', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(
       new Error('Failed to fetch: Network request failed'),
     );

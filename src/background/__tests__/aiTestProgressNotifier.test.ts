@@ -31,7 +31,7 @@ describe('notifyAiTestProgress', () => {
     mockAddLog.mockClear();
   });
 
-  it('レシーバなしで sendMessage が reject しても例外を伝播させない', async () => {
+  it('does not propagate the exception when sendMessage rejects with no receiver', async () => {
     const sendMessage = vi.fn(() =>
       Promise.reject(new Error('Could not establish connection. Receiving end does not exist.'))
     );
@@ -57,7 +57,7 @@ describe('notifyAiTestProgress', () => {
     expect(mockAddLog.mock.calls[0]?.[0]).toBe(LogType.WARN);
   });
 
-  it('sendMessage が同期 throw しても例外を swallow する', () => {
+  it('swallows the exception when sendMessage throws synchronously', () => {
     const sendMessage = vi.fn(() => {
       throw new Error('Extension context invalidated.');
     });
@@ -69,7 +69,7 @@ describe('notifyAiTestProgress', () => {
     expect(mockAddLog.mock.calls[0]?.[0]).toBe(LogType.WARN);
   });
 
-  it('正常送信時は不要なログを出さない', () => {
+  it('does not log unnecessarily on successful send', () => {
     const sendMessage = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('chrome', { runtime: { sendMessage } });
 

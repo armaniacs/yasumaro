@@ -144,7 +144,7 @@ describe('RemoteAIService', () => {
     expect(result.success).toBe(true);
   });
 
-  it('未知のプロバイダーの場合、設定不備エラーを返す', async () => {
+  it('returns a misconfiguration error for an unknown provider', async () => {
     const service = createService([{ provider: 'unknown-provider' }]);
 
     const result = await service.generateSummary('content');
@@ -156,7 +156,7 @@ describe('RemoteAIService', () => {
     expect(result.summary).toContain('check your settings');
   });
 
-  it('registerProviderで登録したカスタムプロバイダーが実際に呼ばれる', async () => {
+  it('invokes a custom provider registered via registerProvider', async () => {
     const service = createService([{ provider: 'custom' }]);
     const customProvider = makeProvider('custom summary');
     service.registerProvider('custom', () => customProvider);
@@ -167,7 +167,7 @@ describe('RemoteAIService', () => {
     expect(result.summary).toBe('custom summary');
   });
 
-  it('異なるURLへの並行呼び出しはそれぞれ独立してAPIを呼び出す', async () => {
+  it('calls the API independently for concurrent calls with different URLs', async () => {
     const service = createService([{ provider: 'test' }]);
     let callCount = 0;
     service.registerProvider('test', () => {
@@ -183,7 +183,7 @@ describe('RemoteAIService', () => {
     expect(callCount).toBe(2);
   });
 
-  it('完了後は同一URLへの新規呼び出しで再度APIが呼ばれる', async () => {
+  it('calls the API again for a new call with the same URL after completion', async () => {
     const service = createService([{ provider: 'test' }]);
     let callCount = 0;
     service.registerProvider('test', () => {
@@ -199,7 +199,7 @@ describe('RemoteAIService', () => {
     expect(callCount).toBe(2);
   });
 
-  it('失敗時もin-flightマップから削除され、次の呼び出しで再試行できる', async () => {
+  it('removes the in-flight entry on failure so the next call retries', async () => {
     const service = createService([{ provider: 'fail' }]);
     let callCount = 0;
     service.registerProvider('fail', () => ({
@@ -218,7 +218,7 @@ describe('RemoteAIService', () => {
     expect(callCount).toBe(2);
   });
 
-  it('testConnection: 未知のプロバイダーでエラーを返す', async () => {
+  it('testConnection returns an error for an unknown provider', async () => {
     const service = createService([{ provider: 'unknown' }]);
 
     const result = await service.testConnection();
@@ -227,7 +227,7 @@ describe('RemoteAIService', () => {
     expect(result.message).toContain('Unknown provider: unknown');
   });
 
-  it('testConnection: プロバイダーがthrowした場合エラー結果を返す', async () => {
+  it('testConnection returns an error result when a provider throws', async () => {
     const service = createService([{ provider: 'throwing' }]);
     service.registerProvider('throwing', () => ({
       generateSummary: vi.fn().mockResolvedValue({ success: true, summary: 'ok' }),
@@ -240,7 +240,7 @@ describe('RemoteAIService', () => {
     expect(result.providers[0]?.message).toContain('Connection test internal error');
   });
 
-  it('testConnection: 各プロバイダーの結果に非負のelapsedMsを含める', async () => {
+  it('testConnection includes a non-negative elapsedMs in each provider result', async () => {
     const service = createService([{ provider: 'a' }, { provider: 'b' }]);
     service.registerProvider('a', () => makeProvider('ok-a'));
     service.registerProvider('b', () => makeProvider('ok-b'));
@@ -255,7 +255,7 @@ describe('RemoteAIService', () => {
     }
   });
 
-  it('testConnection: 未知のプロバイダーの結果にもelapsedMsを含める', async () => {
+  it('testConnection includes elapsedMs in the unknown provider result', async () => {
     const service = createService([{ provider: 'unknown' }]);
 
     const result = await service.testConnection();
@@ -265,7 +265,7 @@ describe('RemoteAIService', () => {
     expect(result.providers[0]?.elapsedMs).toBeGreaterThanOrEqual(0);
   });
 
-  it('generateSummary前にrecordAuditLogをprovider名とurlで呼ぶ', async () => {
+  it('calls recordAuditLog with provider name and url before generateSummary', async () => {
     const service = createService([{ provider: 'test' }]);
     service.registerProvider('test', () => makeProvider('ok'));
 
@@ -274,7 +274,7 @@ describe('RemoteAIService', () => {
     expect(recordAuditLog).toHaveBeenCalledWith({ provider: 'test', url: 'https://example.com/audit-test' });
   });
 
-  it('フォールバック中は試行した各プロバイダーについてrecordAuditLogが呼ばれる', async () => {
+  it('calls recordAuditLog for each attempted provider during fallback', async () => {
     const service = createService([{ provider: 'fail' }, { provider: 'success' }]);
     service.registerProvider('fail', () => makeProvider('fail', false));
     service.registerProvider('success', () => makeProvider('success'));
@@ -285,7 +285,7 @@ describe('RemoteAIService', () => {
     expect(recordAuditLog).toHaveBeenCalledWith({ provider: 'success', url: 'https://example.com/fallback-test' });
   });
 
-  it('プロバイダーがthrowした場合、内部エラーメッセージを含まない汎用メッセージを返す', async () => {
+  it('returns a generic message without internal error details when a provider throws', async () => {
     const service = createService([{ provider: 'throwing' }]);
     service.registerProvider('throwing', () => ({
       generateSummary: vi.fn().mockRejectedValue(new Error('Provider internal error')),
@@ -299,7 +299,7 @@ describe('RemoteAIService', () => {
     expect(result.summary).not.toContain('Provider internal error');
   });
 
-  it('MAX_PROVIDERS(10)を超えるスロットは切り捨てられる', async () => {
+  it('truncates provider slots exceeding MAX_PROVIDERS (10)', async () => {
     const slots = Array.from({ length: 30 }, (_, i) => ({ provider: 'test', model: `model-${i}` }));
     const service = createService(slots);
     let callCount = 0;
@@ -314,7 +314,7 @@ describe('RemoteAIService', () => {
     expect(result.providers.length).toBeLessThanOrEqual(10);
   });
 
-  it('要約が最小長未満の場合、次のプロバイダーにフォールバックする', async () => {
+  it('falls back to the next provider when the summary is below the minimum length', async () => {
     const service = new RemoteAIService({
       repo: makeRepo({
         ai_provider_priority_list: [{ provider: 'short' }, { provider: 'long' }],
@@ -330,7 +330,7 @@ describe('RemoteAIService', () => {
     expect(result.summary).toContain('20文字以上');
   });
 
-  it('優先度リストが空配列の場合、旧AI_PROVIDER単一設定にフォールバックする', async () => {
+  it('falls back to the legacy AI_PROVIDER setting when the priority list is empty', async () => {
     const service = new RemoteAIService({
       repo: makeRepo({
         ai_provider_priority_list: [],
@@ -346,7 +346,7 @@ describe('RemoteAIService', () => {
     expect(result.summary).toBe('legacy summary');
   });
 
-  it('優先度リストとAI_PROVIDERが欠損の場合、DEFAULT_SETTINGSのopenaiにフォールバックする', async () => {
+  it('falls back to DEFAULT_SETTINGS openai when the priority list and AI_PROVIDER are missing', async () => {
     const service = new RemoteAIService({
       repo: makeRepo({
         ai_provider_priority_list: [],
@@ -361,7 +361,7 @@ describe('RemoteAIService', () => {
     expect(result.summary).toBe('openai summary');
   });
 
-  it('優先度リストの各プロバイダー開始時にonProgressが順番に呼ばれる', async () => {
+  it('calls onProgress in order when each provider in the priority list starts', async () => {
     const service = createService([{ provider: 'a' }, { provider: 'b', model: 'model-b' }]);
     service.registerProvider('a', () => makeProvider('ok-a'));
     service.registerProvider('b', () => makeProvider('ok-b'));
@@ -374,7 +374,7 @@ describe('RemoteAIService', () => {
     expect(onProgress).toHaveBeenNthCalledWith(2, { provider: 'b', model: 'model-b', index: 1, total: 2 });
   });
 
-  it('スロットにmodel未指定でも、設定済みデフォルトモデルを解決してonProgressに渡す', async () => {
+  it('resolves the configured default model for onProgress when a slot omits model', async () => {
     const service = new RemoteAIService({
       repo: makeRepo({
         ai_provider_priority_list: [{ provider: 'gemini' }],
@@ -394,7 +394,7 @@ describe('RemoteAIService', () => {
     });
   });
 
-  it('onProgressを省略しても従来通り動作する', async () => {
+  it('works as before when onProgress is omitted', async () => {
     const service = createService([{ provider: 'a' }]);
     service.registerProvider('a', () => makeProvider('ok'));
 

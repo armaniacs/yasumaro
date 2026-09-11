@@ -94,7 +94,7 @@ describe('SessionAlarmService', () => {
     service = new SessionAlarmService(alarms, clock, storage, sendMessage as unknown as ConstructorParameters<typeof SessionAlarmService>[3]);
   });
 
-  test('startTimeoutChecker はアラームを作成しリスナーを1つだけ登録する', async () => {
+  test('startTimeoutChecker creates the alarm and registers only one listener', async () => {
     await service.startTimeoutChecker();
     await service.startTimeoutChecker(); // 2回呼んでも重複登録しない
 
@@ -102,21 +102,21 @@ describe('SessionAlarmService', () => {
     expect(alarms.listenerCount).toBe(1);
   });
 
-  test('stopTimeoutChecker はアラームをクリアする', async () => {
+  test('stopTimeoutChecker clears the alarm', async () => {
     await service.startTimeoutChecker();
     await service.stopTimeoutChecker();
 
     expect(alarms.cleared).toContain('check_session_timeout');
   });
 
-  test('updateActivity は最終アクティビティ時刻を保存する', async () => {
+  test('updateActivity saves the last activity timestamp', async () => {
     await service.updateActivity();
 
     const result = await storage.local.get<Record<string, number>>(['session_last_activity']);
     expect(result.session_last_activity).toBe(clock.now());
   });
 
-  test('マスターパスワード未設定の場合はタイムアウトしてもロックしない', async () => {
+  test('does not lock on timeout when no master password is set', async () => {
     await storage.local.set({ session_last_activity: clock.now() });
     await service.startTimeoutChecker();
 
@@ -128,7 +128,7 @@ describe('SessionAlarmService', () => {
     expect(result[IS_LOCKED_KEY]).toBeUndefined();
   });
 
-  test('30分経過するとlockSessionが呼ばれ、ロック通知が送信される', async () => {
+  test('calls lockSession and sends a lock notification after 30 minutes', async () => {
     await storage.local.set({
       [MASTER_PASSWORD_ENABLED_KEY]: true,
       session_last_activity: clock.now(),
@@ -145,7 +145,7 @@ describe('SessionAlarmService', () => {
     expect(sendMessage).toHaveBeenCalledTimes(1);
   });
 
-  test('ロック通知が失敗した場合は3回リトライする', async () => {
+  test('retries 3 times when the lock notification fails', async () => {
     sendMessage.mockRejectedValue(new Error('no receiver'));
     await storage.local.set({
       [MASTER_PASSWORD_ENABLED_KEY]: true,
@@ -159,7 +159,7 @@ describe('SessionAlarmService', () => {
     await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(3));
   });
 
-  test('タイムアウト未経過の場合はロックしない', async () => {
+  test('does not lock when the timeout has not elapsed', async () => {
     await storage.local.set({
       [MASTER_PASSWORD_ENABLED_KEY]: true,
       session_last_activity: clock.now(),
@@ -174,7 +174,7 @@ describe('SessionAlarmService', () => {
     expect(result[IS_LOCKED_KEY]).toBeUndefined();
   });
 
-  test('initialize は startTimeoutChecker を呼ぶ', async () => {
+  test('initialize calls startTimeoutChecker', async () => {
     await service.initialize();
 
     expect(alarms.created).toHaveLength(1);

@@ -87,7 +87,7 @@ afterEach(() => {
 });
 
 describe('変更系の失敗が利用者に伝わる', () => {
-  it('削除に失敗したらエラーが表示され、エントリは一覧に残る', async () => {
+  it('shows an error and keeps the entry in the list when deletion fails', async () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const panel = makePanel(container);
@@ -105,7 +105,7 @@ describe('変更系の失敗が利用者に伝わる', () => {
     expect(document.querySelector('.sqlite-entry[data-id="1"]')).not.toBeNull();
   });
 
-  it('スター付けに失敗したらエラーが表示される', async () => {
+  it('shows an error when starring fails', async () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const panel = makePanel(container);
@@ -120,7 +120,7 @@ describe('変更系の失敗が利用者に伝わる', () => {
     expect(errorText()).toContain('Database connection lost.');
   });
 
-  it('成功時はエラーが表示されず、エントリが一覧から消える', async () => {
+  it('shows no error and removes the entry from the list on success', async () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const panel = makePanel(container);

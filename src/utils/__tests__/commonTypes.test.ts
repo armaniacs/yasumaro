@@ -14,17 +14,17 @@
 import type { RecordType, AiSummaryCleansedReason } from '../commonTypes.js';
 
 describe('commonTypes: RecordType', () => {
-    it("'auto' は有効な RecordType である", () => {
+    it("'auto' is a valid RecordType", () => {
         const value: RecordType = 'auto';
         expect(value).toBe('auto');
     });
 
-    it("'manual' は有効な RecordType である", () => {
+    it("'manual' is a valid RecordType", () => {
         const value: RecordType = 'manual';
         expect(value).toBe('manual');
     });
 
-    it('有効な RecordType の値は auto と manual の2つのみ', () => {
+    it('allows only auto and manual as valid RecordType values', () => {
         const validValues: RecordType[] = ['auto', 'manual'];
         expect(validValues).toHaveLength(2);
         expect(validValues).toContain('auto');
@@ -37,11 +37,11 @@ describe('commonTypes: AiSummaryCleansedReason', () => {
         'alt', 'metadata', 'ads', 'nav', 'social', 'deep', 'multiple', 'none',
     ];
 
-    it('全8種類の値が定義されている', () => {
+    it('defines all 8 values', () => {
         expect(allReasons).toHaveLength(8);
     });
 
-    it.each(allReasons)("'%s' は有効な AiSummaryCleansedReason である", (reason) => {
+    it.each(allReasons)("'%s' is a valid AiSummaryCleansedReason", (reason) => {
         const value: AiSummaryCleansedReason = reason;
         expect(typeof value).toBe('string');
         expect(value.length).toBeGreaterThan(0);
@@ -49,7 +49,7 @@ describe('commonTypes: AiSummaryCleansedReason', () => {
 });
 
 describe('commonTypes: 単一定義元の回帰防止', () => {
-    it('urlEntry.ts は commonTypes から RecordType を import している', async () => {
+    it('imports RecordType from commonTypes in urlEntry.ts', async () => {
         // urlEntry.ts が commonTypes をインポートしていることを確認
         const fs = await import('fs');
         const path = await import('path');
@@ -62,7 +62,7 @@ describe('commonTypes: 単一定義元の回帰防止', () => {
         expect(urlEntrySource).toContain('RecordType');
     });
 
-    it('storageUrls.ts は urlEntry.js から SavedUrlEntry を re-export している', async () => {
+    it('re-exports SavedUrlEntry from urlEntry.js in storageUrls.ts', async () => {
         // storageUrls.ts はバレルファイル（分割後のエクスポート集約）として機能
         // RecordTypeはurlEntry.tsから再エクスポートされる
         const fs = await import('fs');
@@ -76,7 +76,7 @@ describe('commonTypes: 単一定義元の回帰防止', () => {
         expect(storageUrlsSource).toContain('SavedUrlEntry');
     });
 
-    it('messaging/types.ts は commonTypes から RecordType を import している', async () => {
+    it('imports RecordType from commonTypes in messaging/types.ts', async () => {
         const fs = await import('fs');
         const path = await import('path');
         const filePath = path.resolve(
@@ -88,7 +88,7 @@ describe('commonTypes: 単一定義元の回帰防止', () => {
         expect(source).toContain('RecordType');
     });
 
-    it('storageUrls.ts に RecordType のローカル定義が存在しない', async () => {
+    it('defines no local RecordType in storageUrls.ts', async () => {
         const fs = await import('fs');
         const path = await import('path');
         const filePath = path.resolve(
@@ -101,7 +101,7 @@ describe('commonTypes: 単一定義元の回帰防止', () => {
         expect(source).not.toMatch(/^export type RecordType\s*=/m);
     });
 
-    it('messaging/types.ts に RecordType のローカル定義が存在しない', async () => {
+    it('defines no local RecordType in messaging/types.ts', async () => {
         const fs = await import('fs');
         const path = await import('path');
         const filePath = path.resolve(

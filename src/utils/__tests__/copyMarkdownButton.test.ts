@@ -50,7 +50,7 @@ describe('createCopyMarkdownButton', () => {
     document.body.innerHTML = '';
   });
 
-  it('成功時に markdown 変換→clipboard→成功表示+aria 更新する', async () => {
+  it('updates to the success display and aria after markdown conversion and clipboard copy on success', async () => {
     const btn = createCopyMarkdownButton(entry, { className: 'c', labels });
     expect(btn.textContent).toBe('Copy');
     expect(btn.getAttribute('aria-label')).toBe('Copy Markdown');
@@ -66,7 +66,7 @@ describe('createCopyMarkdownButton', () => {
     expect(btn.disabled).toBe(true);
   });
 
-  it('既定 2000ms 後に元の表示と aria へ復帰する', async () => {
+  it('restores the original display and aria after the default 2000ms', async () => {
     expect(COPY_FEEDBACK_RESET_MS).toBe(2000);
     const btn = createCopyMarkdownButton(entry, { labels });
     btn.click();
@@ -79,7 +79,7 @@ describe('createCopyMarkdownButton', () => {
     expect(btn.disabled).toBe(false);
   });
 
-  it('失敗時に失敗表示へ切り替わり例外を漏らさずタイマー後に復帰する', async () => {
+  it('switches to the failure display without leaking exceptions on failure and restores after the timer', async () => {
     mockCopyTextToClipboard.mockRejectedValueOnce(new Error('clipboard fail'));
     const btn = createCopyMarkdownButton(entry, { labels });
     btn.click();
@@ -95,7 +95,7 @@ describe('createCopyMarkdownButton', () => {
     expect(btn.disabled).toBe(false);
   });
 
-  it('aria ラベル省略時は aria 属性を触らない（popup 互換）', async () => {
+  it('leaves aria attributes untouched when aria labels are omitted (popup compatibility)', async () => {
     const btn = createCopyMarkdownButton(entry, {
       labels: { initialText: 'Copy Markdown', successText: 'Copied!', failureText: 'Copy failed' },
     });
@@ -106,7 +106,7 @@ describe('createCopyMarkdownButton', () => {
     expect(btn.hasAttribute('aria-label')).toBe(false);
   });
 
-  it('timeoutMs 指定で復帰タイミングを上書きできる', async () => {
+  it('overrides the restore timing when timeoutMs is specified', async () => {
     const btn = createCopyMarkdownButton(entry, { labels, timeoutMs: 500 });
     btn.click();
     await flush();

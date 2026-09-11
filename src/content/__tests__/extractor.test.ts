@@ -75,6 +75,10 @@ import {
     extractPageContent,
     applyExtractResultToPageState,
     registerGetContentListener,
+    checkVisitConditions,
+    updateMaxScroll,
+    startPeriodicCheck,
+    stopPeriodicCheck,
     init,
 } from '../extractor.js';
 import { getPageStateForTesting } from './helpers/contentTestkit.js';
@@ -689,6 +693,9 @@ describe('throttle function - beforeunload cleanup', () => {
         vi.useFakeTimers();
 
         await init();
+        // init starts the periodic check (assert before timers run: advancing
+        // the clock fires the due deadline timer, which clears the id)
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
 
         // Trigger a scroll event to exercise the throttled function
         window.dispatchEvent(new Event('scroll'));
@@ -696,7 +703,8 @@ describe('throttle function - beforeunload cleanup', () => {
         // Let timers run
         vi.advanceTimersByTime(100);
 
-        expect(true).toBe(true);
+        // The scroll dispatch keeps max scroll a valid percentage
+        expect(typeof getPageStateForTesting().maxScrollPercentage).toBe('number');
     });
 });
 
@@ -728,20 +736,45 @@ describe('message handler - chrome.runtime.onMessage registration', () => {
         // This test verifies the init function completes successfully
         // and that the message handler guard is in place
         await init();
-        expect(true).toBe(true);
+        // init starts the periodic check and leaves the visit unreported
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
     });
 
     it('unknown message types do not cause errors in message handler guard', async () => {
         await init();
-        // The message handler guard checks conditions at lines 874-878
-        // This test verifies the guard pattern is respected
-        expect(true).toBe(true);
+        // Unknown types return early without answering
+        const sendResponse = vi.fn();
+        handleGetContentMessage(
+            { type: 'UNKNOWN_MESSAGE_TYPE' },
+            {},
+            sendResponse,
+            {
+                extractPageContent,
+                applyExtractResultToPageState,
+                pageState: getPageStateForTesting(),
+                runtimeId: undefined,
+            },
+        );
+        expect(sendResponse).not.toHaveBeenCalled();
     });
 
     it('messages without type property are rejected by message handler guard', async () => {
         await init();
-        // Guard condition at line 874: !('type' in message) returns early
-        expect(true).toBe(true);
+        // Messages without a type property return early without answering
+        const sendResponse = vi.fn();
+        handleGetContentMessage(
+            { noType: true },
+            {},
+            sendResponse,
+            {
+                extractPageContent,
+                applyExtractResultToPageState,
+                pageState: getPageStateForTesting(),
+                runtimeId: undefined,
+            },
+        );
+        expect(sendResponse).not.toHaveBeenCalled();
     });
 });
 
@@ -760,15 +793,18 @@ describe('updateMaxScroll - edge cases', () => {
 
     it('handles zero document height gracefully', async () => {
         await init();
-        // The updateMaxScroll function checks docHeight > 0
-        // If scrollHeight - innerHeight is 0 or negative, it returns early
-        expect(true).toBe(true);
+        // With an empty body docHeight <= 0, so max scroll stays unchanged
+        const before = getPageStateForTesting().maxScrollPercentage;
+        updateMaxScroll();
+        expect(getPageStateForTesting().maxScrollPercentage).toBe(before);
     });
 
     it('handles negative document height gracefully', async () => {
         await init();
-        // When docHeight <= 0, updateMaxScroll returns early
-        expect(true).toBe(true);
+        // When docHeight <= 0, updateMaxScroll returns early without throwing
+        const before = getPageStateForTesting().maxScrollPercentage;
+        updateMaxScroll();
+        expect(getPageStateForTesting().maxScrollPercentage).toBe(before);
     });
 });
 
@@ -787,9 +823,10 @@ describe('stopPeriodicCheck', () => {
 
     it('can be called multiple times safely', async () => {
         await init();
-        // Calling stopPeriodicCheck multiple times should not throw
-        // stopPeriodicCheck is called internally on beforeunload
-        expect(true).toBe(true);
+        // stopPeriodicCheck is idempotent: repeated calls leave no timer behind
+        stopPeriodicCheck();
+        stopPeriodicCheck();
+        expect(getPageStateForTesting().checkIntervalId).toBeNull();
     });
 });
 
@@ -808,8 +845,10 @@ describe('startPeriodicCheck', () => {
 
     it('can be called multiple times safely', async () => {
         await init();
-        // startPeriodicCheck clears existing interval before setting new one
-        expect(true).toBe(true);
+        // startPeriodicCheck clears the existing timer before setting a new one
+        startPeriodicCheck();
+        startPeriodicCheck();
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 });
 
@@ -828,7 +867,7 @@ describe('Periodic check start/stop', () => {
 
     it('init starts periodic check', async () => {
         await init();
-        // init calls startPeriodicCheck which sets up the interval
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 });
 
@@ -849,6 +888,7 @@ describe('checkVisitConditions - error handling paths', () => {
         await init();
         // After init, isValidVisitReported should still be false initially
         // The checkVisitConditions function has an early return for this case
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
     });
 
     it('handles E2E test hook when data-ow-e2e-test is present', async () => {
@@ -926,21 +966,26 @@ describe('reportValidVisit - error path coverage', () => {
     it('verifies reportValidVisit is called after conditions met', async () => {
         await init();
         // The reportValidVisit function is called internally when conditions are met
-        // Since we mock Date.now() to return 1000000, duration is 0 so conditions won't be met
-        // This test just verifies the init flow doesn't throw
-        expect(true).toBe(true);
+        // Since we mock Date.now() to return 1000000, duration is 0 so conditions won't be met:
+        // init alone leaves the visit unreported with the periodic check running
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 
     it('handles PRIVATE_PAGE_DETECTED response with confirmationRequired', async () => {
         await init();
-        // This is tested through the message handler flow
-        expect(true).toBe(true);
+        // The PRIVATE_PAGE_DETECTED branch needs VisitReporter-level sender mocks;
+        // init alone must not report or stop the periodic check
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 
     it('handles retry error after force save failure', async () => {
         await init();
-        // Tested through error path coverage
-        expect(true).toBe(true);
+        // The retry-error branch needs VisitReporter-level sender mocks;
+        // init alone must not report or stop the periodic check
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 });
 
@@ -965,6 +1010,7 @@ describe('Visibility change handling', () => {
         document.dispatchEvent(new Event('visibilitychange'));
 
         // The visibilitychange handler should stop the check
+        expect(getPageStateForTesting().checkIntervalId).toBeNull();
     });
 
     it('resumes periodic check when tab becomes visible again', async () => {
@@ -977,6 +1023,8 @@ describe('Visibility change handling', () => {
         // Then show again
         Object.defineProperty(document, 'hidden', { value: false, writable: true });
         document.dispatchEvent(new Event('visibilitychange'));
+
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 });
 
@@ -1147,6 +1195,9 @@ describe('Chrome runtime error handling', () => {
 
         // Should not throw when importing
         await expect(init()).resolves.not.toThrow();
+        // init does not depend on chrome.runtime.sendMessage for startup state
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
 
         chrome.runtime.sendMessage = originalSendMessage;
     });
@@ -1304,39 +1355,50 @@ describe('reportValidVisit - response handling', () => {
 
     it('handles DOMAIN_BLOCKED response by returning early', async () => {
         await init();
-        // The reportValidVisit function handles DOMAIN_BLOCKED case
-        // When response.error === 'DOMAIN_BLOCKED', it returns early
-        expect(true).toBe(true);
+        // The DOMAIN_BLOCKED branch needs VisitReporter-level sender mocks;
+        // init alone must not report or stop the periodic check
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 
     it('handles PRIVATE_PAGE_DETECTED without confirmationRequired', async () => {
         await init();
-        // When confirmationRequired is falsy, the function returns early
-        expect(true).toBe(true);
+        // The no-confirmation branch needs VisitReporter-level sender mocks;
+        // init alone must not report or stop the periodic check
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 
     it('handles PRIVATE_PAGE_DETECTED with confirmationRequired', async () => {
         await init();
-        // When confirmationRequired is truthy, showPrivacyConfirmDialog is called
-        expect(true).toBe(true);
+        // The confirmation branch needs VisitReporter-level sender mocks;
+        // init alone must not report or stop the periodic check
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 
     it('handles unknown error with logError', async () => {
         await init();
-        // Unknown errors are logged via logError
-        expect(true).toBe(true);
+        // The unknown-error branch needs VisitReporter-level sender mocks;
+        // init alone must not report or stop the periodic check
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 
     it('handles retryable error after force save failure', async () => {
         await init();
-        // Errors during retry are caught and logged
-        expect(true).toBe(true);
+        // The retry-error branch needs VisitReporter-level sender mocks;
+        // init alone must not report or stop the periodic check
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 
     it('handles Extension context invalidated error', async () => {
         await init();
-        // This error clears the interval and logs info
-        expect(true).toBe(true);
+        // The invalidated-context branch stops the timer only when report runs;
+        // init alone must leave the periodic check running and visit unreported
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 });
 
@@ -1538,20 +1600,45 @@ describe('message handler - GET_CONTENT message type', () => {
         // This test verifies the init function completes successfully
         // and that the message handler guard is in place
         await init();
-        expect(true).toBe(true);
+        // init starts the periodic check and leaves the visit unreported
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
     });
 
     it('unknown message types do not cause errors in message handler guard', async () => {
         await init();
-        // The message handler guard checks conditions at lines 874-878
-        // This test verifies the guard pattern is respected
-        expect(true).toBe(true);
+        // Unknown types return early without answering
+        const sendResponse = vi.fn();
+        handleGetContentMessage(
+            { type: 'UNKNOWN_MESSAGE_TYPE' },
+            {},
+            sendResponse,
+            {
+                extractPageContent,
+                applyExtractResultToPageState,
+                pageState: getPageStateForTesting(),
+                runtimeId: undefined,
+            },
+        );
+        expect(sendResponse).not.toHaveBeenCalled();
     });
 
     it('messages without type property are rejected by message handler guard', async () => {
         await init();
-        // Guard condition at line 874: !('type' in message) returns early
-        expect(true).toBe(true);
+        // Messages without a type property return early without answering
+        const sendResponse = vi.fn();
+        handleGetContentMessage(
+            { noType: true },
+            {},
+            sendResponse,
+            {
+                extractPageContent,
+                applyExtractResultToPageState,
+                pageState: getPageStateForTesting(),
+                runtimeId: undefined,
+            },
+        );
+        expect(sendResponse).not.toHaveBeenCalled();
     });
 });
 
@@ -1585,13 +1672,15 @@ describe('showPrivacyConfirmDialog - setTimeout focus behavior', () => {
         `;
 
         await init();
+        // init leaves the periodic check running (assert before timers run:
+        // advancing the clock fires the due deadline timer, clearing the id)
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
 
         // The showPrivacyConfirmDialog function uses setTimeout internally
         // We verify this by checking the dialog creation flow
         expect(typeof setTimeoutSpy).toBe('function');
 
         vi.advanceTimersByTime(100);
-        expect(true).toBe(true);
     });
 
     it('focuses cancel button after dialog is shown', async () => {
@@ -1809,8 +1898,9 @@ describe('message handler - async response verification', () => {
 
     it('verifies async response pattern is used', async () => {
         await init();
-        // The message handler uses async response pattern (returns true to indicate async handling)
-        expect(true).toBe(true);
+        // registerGetContentListener wires the GET_CONTENT handler on the mock
+        registerGetContentListener();
+        expect(chrome.runtime.onMessage.addListener).toHaveBeenCalled();
     });
 });
 
@@ -1833,9 +1923,9 @@ describe('reportValidVisit - messageSender interaction', () => {
 
     it('uses messageSender from contentMessageSender', async () => {
         await init();
-        // The messageSender is created from createContentMessageSender
-        // This test verifies the module integration
-        expect(true).toBe(true);
+        // The kernel sender integration must not report on init alone
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 
     it('checkVisitConditions calls reportValidVisit when conditions met', async () => {
@@ -1843,14 +1933,21 @@ describe('reportValidVisit - messageSender interaction', () => {
         // In jsdom, Date.now() is mocked to return 1000000
         // So duration is 0 and conditions won't be met
         // reportValidVisit is only called when shouldRecordVisit returns true
-        expect(true).toBe(true);
+        checkVisitConditions();
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
     });
 
     it('isValidVisitReported flag prevents duplicate reports', async () => {
         // First init
         await init();
         // Once isValidVisitReported is true, checkVisitConditions returns early
-        expect(true).toBe(true);
+        getPageStateForTesting().isValidVisitReported = true;
+        try {
+            checkVisitConditions();
+            expect(getPageStateForTesting().isValidVisitReported).toBe(true);
+        } finally {
+            getPageStateForTesting().isValidVisitReported = false;
+        }
     });
 });
 
@@ -1928,7 +2025,10 @@ describe('Visibility change - full lifecycle', () => {
         Object.defineProperty(document, 'hidden', { value: true, writable: true });
         document.dispatchEvent(new Event('visibilitychange'));
 
-        expect(true).toBe(true);
+        // Ending hidden stops the periodic check
+        expect(getPageStateForTesting().checkIntervalId).toBeNull();
+        // Restore visibility so later tests start from a visible tab
+        Object.defineProperty(document, 'hidden', { value: false, writable: true });
     });
 });
 
@@ -1947,12 +2047,13 @@ describe('init - event listener cleanup on beforeunload', () => {
 
     it('beforeunload listener stops periodic check', async () => {
         await init();
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
 
         // Dispatch beforeunload event
         window.dispatchEvent(new Event('beforeunload'));
 
         // The beforeunload handler calls stopPeriodicCheck
-        expect(true).toBe(true);
+        expect(getPageStateForTesting().checkIntervalId).toBeNull();
     });
 });
 
@@ -2142,9 +2243,10 @@ describe('checkVisitConditions - scroll tracking', () => {
         // Trigger scroll event
         window.dispatchEvent(new Event('scroll'));
 
-        // Note: In jsdom, scrollY is 0 and scrollHeight may not be accurate
-        // This tests that the scroll handler doesn't throw
-        expect(true).toBe(true);
+        // The synthetic scroll is untrusted, so it arms a deferred check
+        // without throwing; max scroll stays a valid percentage
+        expect(getPageStateForTesting().maxScrollPercentage).toBeGreaterThanOrEqual(0);
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 });
 
@@ -2167,21 +2269,26 @@ describe('reportValidVisit error paths', () => {
 
     it('handles response with error field', async () => {
         await init();
-        // The reportValidVisit function processes response.error
-        // When response.success is false and error is 'DOMAIN_BLOCKED', it returns early
-        expect(true).toBe(true);
+        // The DOMAIN_BLOCKED early return needs VisitReporter-level sender mocks;
+        // init alone must not report or stop the periodic check
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 
     it('handles PRIVATE_PAGE_DETECTED without confirmationRequired', async () => {
         await init();
-        // When confirmationRequired is falsy, the function returns early
-        expect(true).toBe(true);
+        // The no-confirmation early return needs VisitReporter-level sender mocks;
+        // init alone must not report or stop the periodic check
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 
     it('handles non-retryable errors', async () => {
         await init();
-        // Non-retryable errors are re-thrown and caught by the catch block
-        expect(true).toBe(true);
+        // The non-retryable branch needs VisitReporter-level sender mocks;
+        // init alone must not report or stop the periodic check
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
     });
 });
 
@@ -2280,8 +2387,9 @@ describe('init - early guard conditions', () => {
         // Ensure data-ow-e2e-test is not set
         document.documentElement.removeAttribute('data-ow-e2e-test');
         await init();
-        // The E2E test state should not be set without the attribute
-        expect(true).toBe(true);
+        // Without the E2E flag init still starts normal visit tracking
+        expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
+        expect(getPageStateForTesting().isValidVisitReported).toBe(false);
     });
 });
 

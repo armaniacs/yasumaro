@@ -204,23 +204,23 @@ describe('storageUrls exports', () => {
     });
 
     describe('定数', () => {
-        test('MAX_URL_SET_SIZE は 10000', () => {
+        test('MAX_URL_SET_SIZE is 10000', () => {
             expect(MAX_URL_SET_SIZE).toBe(10000);
         });
 
-        test('URL_WARNING_THRESHOLD は 8000', () => {
+        test('URL_WARNING_THRESHOLD is 8000', () => {
             expect(URL_WARNING_THRESHOLD).toBe(8000);
         });
     });
 
     describe('getSavedUrls', () => {
-        test('空の場合は空Setを返す', async () => {
+        test('returns an empty Set when storage is empty', async () => {
             const result = await getSavedUrls();
             expect(result).toBeInstanceOf(Set);
             expect(result.size).toBe(0);
         });
 
-        test('保存されたURLをSetで返す', async () => {
+        test('returns saved URLs as a Set', async () => {
             mockStorage['savedUrls'] = ['https://example.com', 'https://test.com'];
             const result = await getSavedUrls();
             expect(result.size).toBe(2);
@@ -229,13 +229,13 @@ describe('storageUrls exports', () => {
     });
 
     describe('getSavedUrlsWithTimestamps', () => {
-        test('空の場合は空Mapを返す', async () => {
+        test('returns an empty Map when storage is empty', async () => {
             const result = await getSavedUrlsWithTimestamps();
             expect(result).toBeInstanceOf(Map);
             expect(result.size).toBe(0);
         });
 
-        test('保存されたエントリをMapで返す', async () => {
+        test('returns saved entries as a Map', async () => {
             mockStorage['savedUrlsWithTimestamps'] = [
                 { url: 'https://example.com', timestamp: 1000 },
                 { url: 'https://test.com', timestamp: 2000 }
@@ -247,13 +247,13 @@ describe('storageUrls exports', () => {
     });
 
     describe('isUrlSaved', () => {
-        test('保存済みURLで true', async () => {
+        test('returns true for a saved URL', async () => {
             mockStorage['savedUrls'] = ['https://example.com'];
             const result = await isUrlSaved('https://example.com');
             expect(result).toBe(true);
         });
 
-        test('未保存URLで false', async () => {
+        test('returns false for an unsaved URL', async () => {
             mockStorage['savedUrls'] = ['https://other.com'];
             const result = await isUrlSaved('https://example.com');
             expect(result).toBe(false);
@@ -261,40 +261,40 @@ describe('storageUrls exports', () => {
     });
 
     describe('getSavedUrlCount', () => {
-        test('保存数を返す', async () => {
+        test('returns the saved URL count', async () => {
             mockStorage['savedUrls'] = ['a.com', 'b.com', 'c.com'];
             const result = await getSavedUrlCount();
             expect(result).toBe(3);
         });
 
-        test('空の場合は 0', async () => {
+        test('returns 0 when storage is empty', async () => {
             const result = await getSavedUrlCount();
             expect(result).toBe(0);
         });
     });
 
     describe('computeUrlsHash', () => {
-        test('URLセットのハッシュを返す', () => {
+        test('returns the hash of a URL set', () => {
             const urls = new Set(['https://a.com', 'https://b.com']);
             const hash = computeUrlsHash(urls);
             expect(typeof hash).toBe('string');
             expect(hash.length).toBeGreaterThan(0);
         });
 
-        test('同じURLセットで同じハッシュ', () => {
+        test('returns the same hash for the same URL set', () => {
             const urls1 = new Set(['https://a.com', 'https://b.com']);
             const urls2 = new Set(['https://b.com', 'https://a.com']);
             expect(computeUrlsHash(urls1)).toBe(computeUrlsHash(urls2));
         });
 
-        test('空セットで空文字', () => {
+        test('returns an empty string for an empty set', () => {
             const hash = computeUrlsHash(new Set());
             expect(hash).toBe('');
         });
     });
 
     describe('addUrlTag / removeUrlTag / setUrlTags', () => {
-        test('addUrlTag でタグを追加する', async () => {
+        test('adds a tag via addUrlTag', async () => {
             mockStorage['savedUrlsWithTimestamps'] = [
                 { url: 'https://example.com', timestamp: 1000 }
             ];
@@ -305,7 +305,7 @@ describe('storageUrls exports', () => {
             expect(entries[0].tags).toContain('news');
         });
 
-        test('addUrlTag で重複タグを追加しない', async () => {
+        test('does not add a duplicate tag via addUrlTag', async () => {
             mockStorage['savedUrlsWithTimestamps'] = [
                 { url: 'https://example.com', timestamp: 1000, tags: ['news'] }
             ];
@@ -316,7 +316,7 @@ describe('storageUrls exports', () => {
             expect(entries[0].tags).toEqual(['news']);
         });
 
-        test('removeUrlTag でタグを削除する', async () => {
+        test('removes a tag via removeUrlTag', async () => {
             mockStorage['savedUrlsWithTimestamps'] = [
                 { url: 'https://example.com', timestamp: 1000, tags: ['news', 'tech'] }
             ];
@@ -327,7 +327,7 @@ describe('storageUrls exports', () => {
             expect(entries[0].tags).toEqual(['tech']);
         });
 
-        test('setUrlTags でタグを設定する', async () => {
+        test('sets tags via setUrlTags', async () => {
             mockStorage['savedUrlsWithTimestamps'] = [
                 { url: 'https://example.com', timestamp: 1000 }
             ];
@@ -348,72 +348,72 @@ describe('storageUrls exports', () => {
             ];
         });
 
-        test('updateSavedUrlEntry で aiSummary を設定する', async () => {
+        test('sets aiSummary via updateSavedUrlEntry', async () => {
             await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, aiSummary: 'Summary text' }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].aiSummary).toBe('Summary text');
         });
 
-        test('updateSavedUrlEntry で sentTokens を設定する', async () => {
+        test('sets sentTokens via updateSavedUrlEntry', async () => {
             await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, sentTokens: 150 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].sentTokens).toBe(150);
         });
 
-        test('updateSavedUrlEntry で receivedTokens を設定する', async () => {
+        test('sets receivedTokens via updateSavedUrlEntry', async () => {
             await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, receivedTokens: 300 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].receivedTokens).toBe(300);
         });
 
-        test('updateSavedUrlEntry で originalTokens を設定する', async () => {
+        test('sets originalTokens via updateSavedUrlEntry', async () => {
             await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, originalTokens: 500 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].originalTokens).toBe(500);
         });
 
-        test('updateSavedUrlEntry で cleansedTokens を設定する', async () => {
+        test('sets cleansedTokens via updateSavedUrlEntry', async () => {
             await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, cleansedTokens: 200 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].cleansedTokens).toBe(200);
         });
 
-        test('updateSavedUrlEntry で pageBytes を設定する', async () => {
+        test('sets pageBytes via updateSavedUrlEntry', async () => {
             await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, pageBytes: 10240 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].pageBytes).toBe(10240);
         });
 
-        test('updateSavedUrlEntry で candidateBytes を設定する', async () => {
+        test('sets candidateBytes via updateSavedUrlEntry', async () => {
             await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, candidateBytes: 8192 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].candidateBytes).toBe(8192);
         });
 
-        test('updateSavedUrlEntry で originalBytes を設定する', async () => {
+        test('sets originalBytes via updateSavedUrlEntry', async () => {
             await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, originalBytes: 4096 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].originalBytes).toBe(4096);
         });
 
-        test('updateSavedUrlEntry で cleansedBytes を設定する', async () => {
+        test('sets cleansedBytes via updateSavedUrlEntry', async () => {
             await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, cleansedBytes: 2048 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].cleansedBytes).toBe(2048);
         });
 
-        test('updateSavedUrlEntry で content を設定する', async () => {
+        test('sets content via updateSavedUrlEntry', async () => {
             await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, content: 'Page content' }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].content).toBe('Page content');
         });
 
-        test('updateSavedUrlEntry で recordType を設定する', async () => {
+        test('sets recordType via updateSavedUrlEntry', async () => {
             await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, recordType: 'manual' }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].recordType).toBe('manual');
         });
 
-        test('updateSavedUrlEntry で cleansedReason を設定する', async () => {
+        test('sets cleansedReason via updateSavedUrlEntry', async () => {
             await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, cleansedReason: 'hard' }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].cleansedReason).toBe('hard');
         });
 
-        test('updateSavedUrlEntry で maskedCount を設定する', async () => {
+        test('sets maskedCount via updateSavedUrlEntry', async () => {
             await updateSavedUrlEntry(testUrl, (entry) => ({ ...entry, maskedCount: 5 }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].maskedCount).toBe(5);
         });
 
-        test('存在しないURLでは変更しない', async () => {
+        test('makes no change for an unknown URL', async () => {
             await updateSavedUrlEntry('https://nonexistent.com', (entry) => ({ ...entry, aiSummary: 'Summary' }));
             expect(mockStorage['savedUrlsWithTimestamps'][0].aiSummary).toBeUndefined();
         });

@@ -27,7 +27,7 @@ describe('fetchFromUrl - Error Handling', () => {
     } as unknown as typeof chrome;
   });
 
-  test('HTTPエラーを適切に処理', async () => {
+  test('handles HTTP errors properly', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
@@ -38,7 +38,7 @@ describe('fetchFromUrl - Error Handling', () => {
     await expect(fetchFromUrl('https://example.com/filters.txt')).rejects.toThrow('HTTP 404');
   });
 
-  test('空のレスポンスを検出', async () => {
+  test('detects empty responses', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
@@ -50,27 +50,27 @@ describe('fetchFromUrl - Error Handling', () => {
     await expect(fetchFromUrl('https://example.com/empty.txt')).rejects.toThrow('取得されたテキストが空です');
   });
 
-  test('無効なURLを検出', async () => {
+  test('detects invalid URLs', async () => {
     await expect(fetchFromUrl('not-a-url')).rejects.toThrow('無効なURLです');
   });
 
-  test('無効なURL protocol (javascript:)を検出', async () => {
+  test('detects invalid URL protocol (javascript:)', async () => {
     await expect(fetchFromUrl('javascript:alert(1)')).rejects.toThrow('無効なURLです');
   });
 
-  test('無効なURL protocol (data:)を検出', async () => {
+  test('detects invalid URL protocol (data:)', async () => {
     await expect(fetchFromUrl('data:text/html,<script>alert(1)</script>')).rejects.toThrow('無効なURLです');
   });
 
-  test('無効なURL protocol (vbscript:)を検出', async () => {
+  test('detects invalid URL protocol (vbscript:)', async () => {
     await expect(fetchFromUrl('vbscript:msgbox("xss")')).rejects.toThrow('無効なURLです');
   });
 
-  test('無効なURL protocol (file:)を検出', async () => {
+  test('detects invalid URL protocol (file:)', async () => {
     await expect(fetchFromUrl('file:///etc/passwd')).rejects.toThrow('無効なURLです');
   });
 
-  test('有効なURLとContent-Type for text/plain', async () => {
+  test('handles valid URLs with Content-Type for text/plain', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
@@ -83,7 +83,7 @@ describe('fetchFromUrl - Error Handling', () => {
     expect(result).toBe('example.com');
   });
 
-  test('有効なURLとContent-Type for text/html', async () => {
+  test('handles valid URLs with Content-Type for text/html', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
@@ -96,7 +96,7 @@ describe('fetchFromUrl - Error Handling', () => {
     expect(result).toBe('example.com');
   });
 
-  test('有効なURLとContent-Type for application/octet-stream', async () => {
+  test('handles valid URLs with Content-Type for application/octet-stream', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
@@ -109,7 +109,7 @@ describe('fetchFromUrl - Error Handling', () => {
     expect(result).toBe('example.com');
   });
 
-  test('非テキストContent-Typeで警告ログを出力', async () => {
+  test('logs a warning for non-text Content-Type', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
@@ -127,7 +127,7 @@ describe('fetchFromUrl - Error Handling', () => {
     );
   });
 
-  test('Content-Typeがnullの場合でも警告を出さない', async () => {
+  test('does not warn when Content-Type is null', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
@@ -140,7 +140,7 @@ describe('fetchFromUrl - Error Handling', () => {
     expect(result).toBe('example.com');
   });
 
-  test('HTTP 500エラーを適切に処理', async () => {
+  test('handles HTTP 500 errors properly', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
@@ -151,7 +151,7 @@ describe('fetchFromUrl - Error Handling', () => {
     await expect(fetchFromUrl('https://example.com/filters.txt')).rejects.toThrow('HTTP 500');
   });
 
-  test('HTTP 403エラーを適切に処理', async () => {
+  test('handles HTTP 403 errors properly', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
@@ -162,7 +162,7 @@ describe('fetchFromUrl - Error Handling', () => {
     await expect(fetchFromUrl('https://example.com/filters.txt')).rejects.toThrow('HTTP 403');
   });
 
-  test('ネットワークエラーを適切に処理', async () => {
+  test('handles network errors properly', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
     global.chrome.runtime.sendMessage.mockResolvedValueOnce({
@@ -175,15 +175,15 @@ describe('fetchFromUrl - Error Handling', () => {
     );
   });
 
-  test('空文字URLを検出', async () => {
+  test('detects empty-string URLs', async () => {
     await expect(fetchFromUrl('')).rejects.toThrow('無効なURLです');
   });
 
-  test('null URLを検出', async () => {
+  test('detects null URLs', async () => {
     await expect(fetchFromUrl(null as unknown as string)).rejects.toThrow('無効なURLです');
   });
 
-  test('undefined URLを検出', async () => {
+  test('detects undefined URLs', async () => {
     await expect(fetchFromUrl(undefined as unknown as string)).rejects.toThrow('無効なURLです');
   });
 

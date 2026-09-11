@@ -44,12 +44,12 @@ describe('detectOpfsCapabilities', () => {
 });
 
 describe('selectVfsStrategy', () => {
-  it('selects the Worker + SyncAccessHandle strategy (案A) when fully capable', () => {
+  it('selects the Worker + SyncAccessHandle strategy (plan A) when fully capable', () => {
     expect(selectVfsStrategy({ opfsDirectory: true, syncAccessHandle: true, worker: true }))
       .toBe('opfs-sync-worker');
   });
 
-  it('falls back to async main-thread OPFS (案B) when sync/worker is unavailable', () => {
+  it('falls back to async main-thread OPFS (plan B) when sync/worker is unavailable', () => {
     expect(selectVfsStrategy({ opfsDirectory: true, syncAccessHandle: false, worker: true }))
       .toBe('idb');
     expect(selectVfsStrategy({ opfsDirectory: true, syncAccessHandle: true, worker: false }))

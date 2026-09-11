@@ -378,7 +378,7 @@ const { getOrCreateHmacSecret } = vi.mocked(encryptionSession);
 describe('settingsExportImport', () => {
 
     describe('定数', () => {
-        test('EXPORT_VERSION が 1.1.0、LEGACY_EXPORT_VERSION が 1.0.0', () => {
+        test('keeps EXPORT_VERSION at 1.1.0 and LEGACY_EXPORT_VERSION at 1.0.0', () => {
             expect(EXPORT_VERSION).toBe('1.1.0');
             expect(LEGACY_EXPORT_VERSION).toBe('1.0.0');
         });
@@ -392,43 +392,43 @@ describe('settingsExportImport', () => {
             settings: sanitizedFullSettings()
         };
 
-        test('有効なデータで true を返す', () => {
+        test('returns true for valid data', () => {
             expect(validateExportData(validData)).toBe(true);
         });
 
-        test('null で false を返す', () => {
+        test('returns false for null', () => {
             expect(validateExportData(null)).toBe(false);
         });
 
-        test('文字列で false を返す', () => {
+        test('returns false for strings', () => {
             expect(validateExportData('string')).toBe(false);
         });
 
-        test('version がない場合は false', () => {
+        test('returns false when version is missing', () => {
             const { version, ...noVersion } = validData;
             expect(validateExportData(noVersion)).toBe(false);
         });
 
-        test('exportedAt がない場合は false', () => {
+        test('returns false when exportedAt is missing', () => {
             const { exportedAt, ...noDate } = validData;
             expect(validateExportData(noDate)).toBe(false);
         });
 
-        test('settings がない場合は false', () => {
+        test('returns false when settings is missing', () => {
             const { settings, ...noSettings } = validData;
             expect(validateExportData(noSettings)).toBe(false);
         });
 
-        test('apiKeyExcluded=true でAPIキーフィールドがなくても true', () => {
+        test('returns true without API key fields when apiKeyExcluded=true', () => {
             expect(validateExportData(validData)).toBe(true);
         });
 
-        test('apiKeyExcluded=false でAPIキーが必要', () => {
+        test('requires API keys when apiKeyExcluded=false', () => {
             const data = { ...validData, apiKeyExcluded: false };
             expect(validateExportData(data)).toBe(false);
         });
 
-        test('apiKeyExcluded=false でAPIキーがある場合は true', () => {
+        test('returns true with API keys present when apiKeyExcluded=false', () => {
             const data = {
                 ...validData,
                 apiKeyExcluded: false,
@@ -444,7 +444,7 @@ describe('settingsExportImport', () => {
             expect(validateExportData(data)).toBe(true);
         });
 
-        test('必須フィールドが欠けている場合は false', () => {
+        test('returns false when required fields are missing', () => {
             const incompleteSettings = { obsidian_protocol: 'http' };
             const data = { ...validData, settings: incompleteSettings };
             expect(validateExportData(data)).toBe(false);
@@ -452,33 +452,33 @@ describe('settingsExportImport', () => {
     });
 
     describe('isEncryptedExport', () => {
-        test('encrypted: true の場合は true', () => {
+        test('returns true when encrypted: true', () => {
             expect(isEncryptedExport({ encrypted: true })).toBe(true);
         });
 
-        test('encrypted: false の場合は false', () => {
+        test('returns false when encrypted: false', () => {
             expect(isEncryptedExport({ encrypted: false })).toBe(false);
         });
 
-        test('encrypted フィールドがない場合は false', () => {
+        test('returns false when the encrypted field is missing', () => {
             expect(isEncryptedExport({})).toBe(false);
         });
 
-        test('null の場合は false', () => {
+        test('returns false for null', () => {
             expect(isEncryptedExport(null)).toBe(false);
         });
 
-        test('undefined の場合は false', () => {
+        test('returns false for undefined', () => {
             expect(isEncryptedExport(undefined)).toBe(false);
         });
 
-        test('文字列の場合は false', () => {
+        test('returns false for strings', () => {
             expect(isEncryptedExport('encrypted')).toBe(false);
         });
     });
 
     describe('exportSettings', () => {
-        test('Blob を作成してダウンロードリンクを生成する', async () => {
+        test('creates a Blob and generates a download link', async () => {
             // document モック
             const mockLink = {
                 href: '',
@@ -504,7 +504,7 @@ describe('settingsExportImport', () => {
     });
 
     describe('importSettings', () => {
-        test('署名がないファイルは拒否される', async () => {
+        test('rejects files without a signature', async () => {
             const data = JSON.stringify({
                 version: '1.0.0',
                 exportedAt: new Date().toISOString(),
@@ -516,7 +516,7 @@ describe('settingsExportImport', () => {
             expect(result).toBeNull();
         });
 
-        test('有効な署名付きファイルをインポートできる', async () => {
+        test('imports a valid signed file', async () => {
             const exportData = {
                 version: '1.0.0',
                 exportedAt: new Date().toISOString(),
@@ -535,19 +535,19 @@ describe('settingsExportImport', () => {
             expect(result).not.toBeNull();
         });
 
-        test('無効なJSONで null を返す', async () => {
+        test('returns null for invalid JSON', async () => {
             const result = await importSettings('not json');
             expect(result).toBeNull();
         });
 
-        test('偽造された署名を持つ設定ファイルを拒否する', async () => {
+        test('rejects a settings file with a forged signature', async () => {
             // VULN-009 fix: forged signature must never pass signature verification
             const forged = JSON.stringify({ settings: {}, signature: 'fake', apiKeyExcluded: false });
             const result = await importSettings(forged);
             expect(result).toBeNull();
         });
 
-        test('構造検証に失敗した場合は null を返す', async () => {
+        test('returns null when structure validation fails', async () => {
             const data = { version: '1.0.0', exportedAt: 'now', settings: {} };
             const sig = await computeHMAC('test_hmac_secret', JSON.stringify(data, null, 2));
 
@@ -555,7 +555,7 @@ describe('settingsExportImport', () => {
             expect(result).toBeNull();
         });
 
-        test('署名検証失敗時にconfirmで承認するとフォースインポートする', async () => {
+        test('force-imports on confirm approval after signature verification failure', async () => {
             (global as any).confirm = vi.fn(() => true);
 
             const exportData = {
@@ -573,7 +573,7 @@ describe('settingsExportImport', () => {
             expect(global.confirm).not.toHaveBeenCalled();
         });
 
-        test('署名検証失敗時はconfirmなしで即座にnullを返す（VULN-009）', async () => {
+        test('returns null immediately without confirm on signature verification failure (VULN-009)', async () => {
             const exportData = {
                 version: '1.0.0',
                 exportedAt: new Date().toISOString(),
@@ -588,7 +588,7 @@ describe('settingsExportImport', () => {
             expect(global.confirm).not.toHaveBeenCalled();
         });
 
-        test('apiKeyExcluded=false の場合はAPIキーを含めて保存する', async () => {
+        test('saves API keys included when apiKeyExcluded=false', async () => {
             const exportData = {
                 version: '1.0.0',
                 exportedAt: new Date().toISOString(),
@@ -616,7 +616,7 @@ describe('settingsExportImport', () => {
     });
 
     describe('exportEncryptedSettings', () => {
-        test('暗号化データを返す', async () => {
+        test('returns encrypted data', async () => {
             const result = await exportEncryptedSettings('master_password');
 
             expect(result.success).toBe(true);
@@ -629,7 +629,7 @@ describe('settingsExportImport', () => {
             expect(result.encryptedData?.salt).toBeDefined();
         });
 
-        test('provider_api_key と github_pat がエクスポートから除外される', async () => {
+        test('excludes provider_api_key and github_pat from export', async () => {
             const result = await exportEncryptedSettings('master_password');
 
             expect(result.success).toBe(true);
@@ -644,7 +644,7 @@ describe('settingsExportImport', () => {
             expect(decrypted.settings.gemini_api_key).toBeUndefined();
         });
 
-        test('エラー発生時にsuccess=falseとエラーメッセージを返す', async () => {
+        test('returns success=false with an error message on failure', async () => {
             getSettings.mockRejectedValueOnce(new Error('Storage error'));
 
             const result = await exportEncryptedSettings('master_password');
@@ -657,18 +657,18 @@ describe('settingsExportImport', () => {
     });
 
     describe('importEncryptedSettings', () => {
-        test('暗号化されていないデータで null を返す', async () => {
+        test('returns null for unencrypted data', async () => {
             const data = JSON.stringify({ encrypted: false });
             const result = await importEncryptedSettings(data, 'password');
             expect(result).toBeNull();
         });
 
-        test('無効なJSONで null を返す', async () => {
+        test('returns null for invalid JSON', async () => {
             const result = await importEncryptedSettings('invalid', 'password');
             expect(result).toBeNull();
         });
 
-        test('有効な暗号化データを復号してインポートできる', async () => {
+        test('decrypts and imports valid encrypted data', async () => {
             const sanitizedSettings = sanitizedFullSettings();
 
             const exportData = {
@@ -697,7 +697,7 @@ describe('settingsExportImport', () => {
             expect(saveSettings).toHaveBeenCalled();
         });
 
-        test('HMAC検証失敗時にconfirmで拒否するとnullを返す', async () => {
+        test('returns null when rejecting via confirm on HMAC verification failure', async () => {
             (global as any).confirm = vi.fn(() => false);
 
             const encryptedData = {
@@ -721,7 +721,7 @@ describe('settingsExportImport', () => {
             expect(global.confirm).not.toHaveBeenCalled();
         });
 
-        test('HMAC検証失敗時はconfirmなしで即座にnullを返す（VULN-010）', async () => {
+        test('returns null immediately without confirm on HMAC verification failure (VULN-010)', async () => {
             const settings = {
                 obsidian_protocol: 'http',
                 obsidian_port: '27123',
@@ -771,7 +771,7 @@ describe('settingsExportImport', () => {
             expect(saveSettings).not.toHaveBeenCalled();
         });
 
-        test('復号データの構造検証失敗時にnullを返す', async () => {
+        test('returns null when decrypted-data structure validation fails', async () => {
             const invalidExportData = { invalid: 'data' };
             const json = JSON.stringify(invalidExportData);
 
@@ -792,7 +792,7 @@ describe('settingsExportImport', () => {
             expect(result).toBeNull();
         });
 
-        test('apiKeyExcluded=false の場合はAPIキーを含めて保存する', async () => {
+        test('saves API keys included when apiKeyExcluded=false', async () => {
             const settings = fullSettingsWithKeys({
                 obsidian_api_key: 'key1',
                 gemini_api_key: 'key2',
@@ -828,7 +828,7 @@ describe('settingsExportImport', () => {
     });
 
     describe('saveEncryptedExportToFile', () => {
-        test('Blob を作成してダウンロードリンクを生成する', async () => {
+        test('creates a Blob and generates a download link', async () => {
             const mockLink = {
                 href: '',
                 download: '',

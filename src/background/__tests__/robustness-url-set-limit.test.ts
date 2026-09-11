@@ -28,25 +28,25 @@ vi.mock('../../utils/logger.js', () => ({
 
 describe('URLセットのサイズ制限', () => {
   describe('定数定義', () => {
-    it('MAX_URL_SET_SIZEが10000として定義されている', () => {
+    it('defines MAX_URL_SET_SIZE as 10000', () => {
       expect(MAX_URL_SET_SIZE).toBe(10000);
     });
 
-    it('URL_WARNING_THRESHOLDが8000として定義されている', () => {
+    it('defines URL_WARNING_THRESHOLD as 8000', () => {
       expect(URL_WARNING_THRESHOLD).toBe(8000);
     });
 
-    it('URL_RETENTION_DAYSが35日として定義されている', () => {
+    it('defines URL_RETENTION_DAYS as 35 days', () => {
       expect(URL_RETENTION_DAYS).toBe(35);
     });
 
-    it('警告閾値が最大サイズより小さい', () => {
+    it('keeps the warning threshold below the maximum size', () => {
       expect(URL_WARNING_THRESHOLD).toBeLessThan(MAX_URL_SET_SIZE);
     });
   });
 
   describe('LRU退避ロジック（updateUrlTimestampの動作検証）', () => {
-    it('MAX_URL_SET_SIZEを超えた場合に古いエントリが削除される', () => {
+    it('removes old entries when exceeding MAX_URL_SET_SIZE', () => {
       // updateUrlTimestampのロジックを単体テスト
       // storage.ts:1150-1154 のロジックを検証
       const MAX_SIZE = MAX_URL_SET_SIZE;
@@ -73,7 +73,7 @@ describe('URLセットのサイズ制限', () => {
       expect(filtered.length).toBeLessThanOrEqual(MAX_SIZE);
     });
 
-    it('7日より古いエントリは日数ベースで削除される', () => {
+    it('removes entries older than 7 days by day count', () => {
       const now = Date.now();
       const cutoff = now - URL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 
@@ -93,14 +93,14 @@ describe('URLセットのサイズ制限', () => {
       ]);
     });
 
-    it('URL_RETENTION_DAYSの計算が正しい', () => {
+    it('calculates URL_RETENTION_DAYS correctly', () => {
       const retentionMs = URL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
       expect(retentionMs).toBe(35 * 24 * 60 * 60 * 1000); // 3024000000ms
     });
   });
 
   describe('エントリ管理の境界値', () => {
-    it('MAX_URL_SET_SIZEちょうどのエントリは保持される', () => {
+    it('retains entries at exactly MAX_URL_SET_SIZE', () => {
       const entries: { url: string; timestamp: number }[] = [];
       const now = Date.now();
 
@@ -115,7 +115,7 @@ describe('URLセットのサイズ制限', () => {
       expect(filtered.length).toBe(MAX_URL_SET_SIZE);
     });
 
-    it('MAX_URL_SET_SIZE + 1 のエントリはLRU退避される', () => {
+    it('evicts the LRU entry at MAX_URL_SET_SIZE + 1 entries', () => {
       const now = Date.now();
       const entries: { url: string; timestamp: number }[] = [];
 

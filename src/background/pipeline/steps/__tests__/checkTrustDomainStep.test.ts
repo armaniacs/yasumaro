@@ -67,7 +67,7 @@ beforeEach(() => {
 
 describe('checkTrustDomainStep', () => {
   describe('信頼ドメイン', () => {
-    it('canProceed=true の場合 trustCheck を設定して通過する', async () => {
+    it('sets trustCheck and passes when canProceed=true', async () => {
       setupTrustChecker({
         canProceed: true,
         showAlert: false,
@@ -87,7 +87,7 @@ describe('checkTrustDomainStep', () => {
   });
 
   describe('未信頼ドメイン + force=false', () => {
-    it('canProceed=false かつ force=false の場合 DOMAIN_NOT_TRUSTED を throw する', async () => {
+    it('throws DOMAIN_NOT_TRUSTED when canProceed=false and force=false', async () => {
       setupTrustChecker({
         canProceed: false,
         showAlert: false,
@@ -99,7 +99,7 @@ describe('checkTrustDomainStep', () => {
       await expect(checkTrustDomainStep(context)).rejects.toThrow('DOMAIN_NOT_TRUSTED');
     });
 
-    it('showAlert=true の場合 NotificationHelper.notifyError が呼ばれる', async () => {
+    it('calls NotificationHelper.notifyError when showAlert=true', async () => {
       setupTrustChecker({
         canProceed: false,
         showAlert: true,
@@ -119,7 +119,7 @@ describe('checkTrustDomainStep', () => {
       );
     });
 
-    it('showAlert=false の場合 NotificationHelper.notifyError は呼ばれない', async () => {
+    it('does not call NotificationHelper.notifyError when showAlert=false', async () => {
       setupTrustChecker({
         canProceed: false,
         showAlert: false,
@@ -139,7 +139,7 @@ describe('checkTrustDomainStep', () => {
   });
 
   describe('未信頼ドメイン + force=true', () => {
-    it('canProceed=false でも force=true なら通過する', async () => {
+    it('passes when force=true even if canProceed=false', async () => {
       setupTrustChecker({
         canProceed: false,
         showAlert: true,
@@ -154,7 +154,7 @@ describe('checkTrustDomainStep', () => {
       expect(result.trustCheck?.canProceed).toBe(false);
     });
 
-    it('force=true でも通知は発生しない', async () => {
+    it('emits no notification even when force=true', async () => {
       setupTrustChecker({
         canProceed: false,
         showAlert: true,
@@ -170,7 +170,7 @@ describe('checkTrustDomainStep', () => {
   });
 
   describe('reason 未設定時', () => {
-    it('reason が undefined の場合でもエラーメッセージにフォールバックが使われる', async () => {
+    it('uses a fallback error message even when reason is undefined', async () => {
       setupTrustChecker({
         canProceed: false,
         showAlert: true,

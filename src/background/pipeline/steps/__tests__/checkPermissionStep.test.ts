@@ -64,7 +64,7 @@ beforeEach(() => {
 
 describe('checkPermissionStep', () => {
   describe('パーミッション許可', () => {
-    it('isHostPermitted=true の場合 permissionCheck.permitted=true を返す', async () => {
+    it('returns permissionCheck.permitted=true when isHostPermitted=true', async () => {
       setupMocks({ permitted: true, domain: 'example.com' });
 
       const context = makeContext();
@@ -76,7 +76,7 @@ describe('checkPermissionStep', () => {
       });
     });
 
-    it('ドメインが extractDomain で取得される', async () => {
+    it('resolves the domain via extractDomain', async () => {
       const { mockIsHostPermitted } = setupMocks({ permitted: true, domain: 'test.org' });
       mockExtractDomain.mockReturnValue('test.org');
 
@@ -91,14 +91,14 @@ describe('checkPermissionStep', () => {
   });
 
   describe('パーミッション拒否', () => {
-    it('isHostPermitted=false の場合 PERMISSION_REQUIRED を throw する', async () => {
+    it('throws PERMISSION_REQUIRED when isHostPermitted=false', async () => {
       setupMocks({ permitted: false });
 
       const context = makeContext();
       await expect(checkPermissionStep(context)).rejects.toThrow('PERMISSION_REQUIRED');
     });
 
-    it('拒否時に recordDeniedVisit が呼ばれる', async () => {
+    it('calls recordDeniedVisit on denial', async () => {
       const { mockRecordDeniedVisit } = setupMocks({ permitted: false, domain: 'example.com' });
 
       const context = makeContext();
@@ -113,7 +113,7 @@ describe('checkPermissionStep', () => {
   });
 
   describe('不正 URL', () => {
-    it('extractDomain が null かつ new URL でもパースできない場合 INVALID_URL を throw する', async () => {
+    it('throws INVALID_URL when extractDomain returns null and new URL also fails to parse', async () => {
       const mockIsHostPermitted = vi.fn<() => Promise<boolean>>().mockResolvedValue(false);
       const mockRecordDeniedVisit = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
 
@@ -135,7 +135,7 @@ describe('checkPermissionStep', () => {
   });
 
   describe('extractDomain フォールバック', () => {
-    it('extractDomain が null を返した場合 new URL でフォールバックする', async () => {
+    it('falls back to new URL when extractDomain returns null', async () => {
       const mockIsHostPermitted = vi.fn<() => Promise<boolean>>().mockResolvedValue(true);
 
       // @ts-expect-error - mock

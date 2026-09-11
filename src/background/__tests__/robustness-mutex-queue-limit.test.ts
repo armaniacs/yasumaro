@@ -25,7 +25,7 @@ describe('Mutex: キューサイズ制限とロックタイムアウト', () => 
   });
 
   describe('キューサイズ制限', () => {
-    it('デフォルトのmaxQueueSize=50でキューが制限される', async () => {
+    it('limits the queue with the default maxQueueSize=50', async () => {
       mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 120000 });
 
       // ロックを取得（解放しない）
@@ -57,7 +57,7 @@ describe('Mutex: キューサイズ制限とロックタイムアウト', () => 
       }
     });
 
-    it('カスタムmaxQueueSizeでキューが制限される', async () => {
+    it('limits the queue with a custom maxQueueSize', async () => {
       mutex = new Mutex({ maxQueueSize: 3, timeoutMs: 120000 });
 
       await mutex.acquire();
@@ -77,7 +77,7 @@ describe('Mutex: キューサイズ制限とロックタイムアウト', () => 
       }
     });
 
-    it('キューリミット到達時に適切なエラーメッセージが含まれる', async () => {
+    it('includes an appropriate error message when the queue limit is reached', async () => {
       mutex = new Mutex({ maxQueueSize: 2, timeoutMs: 120000 });
 
       await mutex.acquire();
@@ -94,7 +94,7 @@ describe('Mutex: キューサイズ制限とロックタイムアウト', () => 
       }
     });
 
-    it('キューリミット到達時にログが出力される', async () => {
+    it('logs when the queue limit is reached', async () => {
       mutex = new Mutex({ maxQueueSize: 1, timeoutMs: 120000 });
 
       await mutex.acquire();
@@ -118,7 +118,7 @@ describe('Mutex: キューサイズ制限とロックタイムアウト', () => 
   });
 
   describe('ロックタイムアウト', () => {
-    it('ロックがタイムアウト時間後に解放される', async () => {
+    it('releases the lock after the timeout', async () => {
       // タイムアウトを短くして高速テスト
       mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 100 });
 
@@ -135,7 +135,7 @@ describe('Mutex: キューサイズ制限とロックタイムアウト', () => 
       );
     }, 10000);
 
-    it('カスタムタイムアウト時間が適用される', async () => {
+    it('applies the custom timeout', async () => {
       mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 50 });
 
       await mutex.acquire();
@@ -148,7 +148,7 @@ describe('Mutex: キューサイズ制限とロックタイムアウト', () => 
       );
     }, 10000);
 
-    it('タイムアウト時にキューからタスクが削除される', async () => {
+    it('removes tasks from the queue on timeout', async () => {
       mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 50 });
 
       await mutex.acquire();
@@ -167,7 +167,7 @@ describe('Mutex: キューサイズ制限とロックタイムアウト', () => 
   });
 
   describe('ロックの基本動作', () => {
-    it('ロック取得と解放が正常に動作する', async () => {
+    it('acquires and releases the lock normally', async () => {
       mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 30000 });
 
       expect(mutex.isLocked()).toBe(false);
@@ -179,7 +179,7 @@ describe('Mutex: キューサイズ制限とロックタイムアウト', () => 
       expect(mutex.isLocked()).toBe(false);
     });
 
-    it('解放時に次のタスクにロックが渡される', async () => {
+    it('passes the lock to the next task on release', async () => {
       mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 30000 });
 
       await mutex.acquire();
@@ -201,7 +201,7 @@ describe('Mutex: キューサイズ制限とロックタイムアウト', () => 
       mutex.release();
     });
 
-    it('ロックされていないMutexのreleaseはwarnログを出力', () => {
+    it('logs warn when releasing an unlocked Mutex', () => {
       mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 30000 });
 
       mutex.release();
@@ -212,7 +212,7 @@ describe('Mutex: キューサイズ制限とロックタイムアウト', () => 
       );
     });
 
-    it('ロック期間を取得できる', async () => {
+    it('returns the lock duration', async () => {
       mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 30000 });
 
       expect(mutex.getLockDuration()).toBe(0);
@@ -228,7 +228,7 @@ describe('Mutex: キューサイズ制限とロックタイムアウト', () => 
   });
 
   describe('メモリ管理', () => {
-    it('キューサイズ制限によりメモリ消費を制限する', async () => {
+    it('limits memory usage via the queue size limit', async () => {
       mutex = new Mutex({ maxQueueSize: 10, timeoutMs: 120000 });
 
       await mutex.acquire();
@@ -255,7 +255,7 @@ describe('Mutex: キューサイズ制限とロックタイムアウト', () => 
       expect(mutex.getQueueSize()).toBe(0);
     });
 
-    it('キューが空になった際にリソースが解放される', async () => {
+    it('releases resources when the queue becomes empty', async () => {
       mutex = new Mutex({ maxQueueSize: 50, timeoutMs: 30000 });
 
       await mutex.acquire();

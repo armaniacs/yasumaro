@@ -43,7 +43,7 @@ describe('UI/UX Improvements Test Suite', () => {
       stylesCSS = getStylesCSS();
     });
 
-    it('.errorクラスに背景色とボーダーのスタイルが定義されていること', () => {
+    it('defines background and border styles for the .error class', () => {
       expect(stylesCSS).toContain('.error');
 
       // 背景色が設定されているか確認
@@ -53,7 +53,7 @@ describe('UI/UX Improvements Test Suite', () => {
       expect(stylesCSS).toMatch(/\.error\s*{[\s\S]*?border/);
     });
 
-    it('.successクラスに背景色とボーダーのスタイルが定義されていること', () => {
+    it('defines background and border styles for the .success class', () => {
       expect(stylesCSS).toContain('.success');
 
       // 背景色が設定されているか確認
@@ -63,12 +63,12 @@ describe('UI/UX Improvements Test Suite', () => {
       expect(stylesCSS).toMatch(/\.success\s*{[\s\S]*?border/);
     });
 
-    it('エラーメッセージが視覚的に目立つ色設定になっていること', () => {
+    it('uses a visually prominent color for error messages', () => {
       // エラーは赤系の色またはCSS変数参照であるべき
       expect(stylesCSS).toMatch(/\.error\s*{[\s\S]*?(?:#d9534f|#dc3545|#f44336|var\(--color-danger|rgb\(\s*2[0-9]{2}|rgb\(\s*220)/i);
     });
 
-    it('成功メッセージが視覚的に目立つ色設定になっていること', () => {
+    it('uses a visually prominent color for success messages', () => {
       // 成功は緑系の色またはCSS変数参照であるべき
       expect(stylesCSS).toMatch(/\.success\s*{[\s\S]*?(?:#4CAF50|#28a745|#5cb85c|var\(--color-success|rgb\(\s*[0-9]{2},\s*[0-9]{2},\s*0)/i);
     });
@@ -82,12 +82,12 @@ describe('UI/UX Improvements Test Suite', () => {
       document = parseHTML(html);
     });
 
-    it('ポップアップに設定画面用のタブは存在しないこと', () => {
+    it('renders no settings tabs in the popup', () => {
       const tabButtons = document.querySelectorAll('.tab-btn');
       expect(tabButtons.length).toBe(0);
     });
 
-    it('ステータス要素にaria-live属性が設定されていること', () => {
+    it('sets aria-live on status elements', () => {
       const statusElements = document.querySelectorAll('#status, #mainStatus, #domainStatus, #privacyStatus');
       expect(statusElements.length).toBeGreaterThan(0);
 
@@ -97,7 +97,7 @@ describe('UI/UX Improvements Test Suite', () => {
       });
     });
 
-    it('alert-roleまたはalertメッセージに適切なARIA属性があること', () => {
+    it('sets appropriate ARIA attributes for alert-role/alert messages', () => {
       const alertElements = document.querySelectorAll('[role="alert"]');
       // 少なくともdynamicに生成されるエラーメッセージ用のARIAロールが期待される
       // HTML静的分析では要素が存在しない場合もあるため、エラーにならないように検証
@@ -112,15 +112,15 @@ describe('UI/UX Improvements Test Suite', () => {
       stylesCSS = getStylesCSS();
     });
 
-    it('.alert-btnクラスが定義されていること (インラインスタイルの排除)', () => {
+    it('defines the .alert-btn class (no inline styles)', () => {
       expect(stylesCSS).toMatch(/\.alert-btn\s*\{/);
     });
 
-    it('.alert-btnクラスに背景色が設定されていること', () => {
+    it('sets a background color for the .alert-btn class', () => {
       expect(stylesCSS).toMatch(/\.alert-btn\s*{[\s\S]*?(?:background|background-color)\s*:/i);
     });
 
-    it('errorUtils.jsでinline 스타イルを使用していないこと', () => {
+    it('uses no inline styles in errorUtils.js', () => {
       const errorUtilsPath = join(__dirname, '../errorUtils.ts');
       const errorUtils = readFileSync(errorUtilsPath, 'utf-8');
 
@@ -137,17 +137,17 @@ describe('UI/UX Improvements Test Suite', () => {
       stylesCSS = getStylesCSS();
     });
 
-    it('.help-textクラスが定義されていること', () => {
+    it('defines the .help-text class', () => {
       expect(stylesCSS.includes('.help-text')).toBe(true);
     });
 
-    it('.help-textクラスに背景色が設定されていること', () => {
+    it('sets a background color for the .help-text class', () => {
       // ヘルプテキストは視覚的に区別できる背景色を持つべき
       const helpTextMatch = stylesCSS.match(/\.help-text\s*{[\s\S]*?background/i);
       expect(helpTextMatch).toBeTruthy();
     });
 
-    it('ポップアップHTMLにはhelp-textクラスが使用されていないこと', () => {
+    it('uses no help-text class in the popup HTML', () => {
       const html = getPopupHTML();
       expect(html).not.toContain('help-text');
     });
@@ -160,7 +160,7 @@ describe('UI/UX Improvements Test Suite', () => {
       stylesCSS = getStylesCSS();
     });
 
-    it('.icon-btnが最低44×44pxのサイズを確保していること', () => {
+    it('keeps .icon-btn at least 44x44px', () => {
       // テキストペアリングが隣接していない場合でもクリック可能とするため
       expect(stylesCSS).toMatch(/\.icon-btn\s*{[\s\S]*?width\s*:\s*(?:[4-9]\d|1\d{2})px/i);
 
@@ -175,7 +175,7 @@ describe('UI/UX Improvements Test Suite', () => {
       }
     });
 
-    it('.primary-btnが適切なタッチ領域を持っていること', () => {
+    it('gives .primary-btn an adequate touch area', () => {
       expect(stylesCSS).toMatch(/\.primary-btn\s*{[\s\S]*?padding\s*:/i);
 
       // パディングバリューが10px以上であることを確認
@@ -186,7 +186,7 @@ describe('UI/UX Improvements Test Suite', () => {
       }
     });
 
-    it('.secondary-btnが適切なタッチ領域を持っていること', () => {
+    it('gives .secondary-btn an adequate touch area', () => {
       expect(stylesCSS).toMatch(/\.secondary-btn\s*{[\s\S]*?padding\s*:/i);
 
       const secondaryBtnMatch = stylesCSS.match(/\.secondary-btn\s*{[\s\S]*?padding\s*:\s*(\d+)px/i);

@@ -354,6 +354,9 @@ describe('privatePageDialog', () => {
       expect(() => {
         mod.showPrivatePageDialog('https://example.com', 'reason', 'header');
       }).not.toThrow();
+      // The dialog still opens even though the message text cannot be set.
+      const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
+      expect(dialog.open).toBe(true);
     });
 
     it('should handle missing dialog element gracefully', async () => {
@@ -364,6 +367,10 @@ describe('privatePageDialog', () => {
       expect(() => {
         mod.showPrivatePageDialog('https://example.com', 'reason', 'header');
       }).not.toThrow();
+      // The function returns early: no dialog is created and no focus trap is registered.
+      expect(document.getElementById('private-page-dialog')).toBeNull();
+      const { focusTrapManager } = await import('../../utils/ui/focusTrap.js');
+      expect(focusTrapManager.handlers.size).toBe(0);
     });
   });
 

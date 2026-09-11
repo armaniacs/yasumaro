@@ -623,8 +623,8 @@ describe('setupAiSummaryCleansingEventListeners', () => {
     setupAiSummaryCleansingEventListeners();
     const slider = document.getElementById('ai-summary-cleansing-link-ratio-threshold') as HTMLInputElement;
     slider.value = '92';
-    slider.dispatchEvent(new Event('input'));
-    // no throw, no val update to check
+    expect(() => slider.dispatchEvent(new Event('input'))).not.toThrow();
+    expect(document.getElementById('link-ratio-threshold-value')).toBeNull();
   });
 
   it('range change event triggers save', async () => {

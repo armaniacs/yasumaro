@@ -92,7 +92,7 @@ describe('handleStartup — Ollama Origin ヘッダー削除ルールの同期',
     vi.clearAllMocks();
   });
 
-  it('設定されたOLLAMA_BASE_URLでsyncOllamaOriginRuleを呼ぶ', async () => {
+  it('calls syncOllamaOriginRule with the configured OLLAMA_BASE_URL', async () => {
     // handleStartupはonStartup時のみ呼ばれ、同期はonInstalledに統合されたため
     // handleStartup自体はsyncOllamaOriginRuleを呼ばない
     mockGetSettings.mockResolvedValue({
@@ -106,7 +106,7 @@ describe('handleStartup — Ollama Origin ヘッダー削除ルールの同期',
     expect(mockSyncOllamaOriginRule).not.toHaveBeenCalled();
   });
 
-  it('OLLAMA_BASE_URL未設定時はデフォルトURL（localhost:11434）でフォールバックする', async () => {
+  it('falls back to the default URL (localhost:11434) when OLLAMA_BASE_URL is unset', async () => {
     mockGetSettings.mockResolvedValue({} as any);
 
     const { handleStartup } = createLifecycleHandlers(createCtx());
@@ -115,7 +115,7 @@ describe('handleStartup — Ollama Origin ヘッダー削除ルールの同期',
     expect(mockSyncOllamaOriginRule).not.toHaveBeenCalled();
   });
 
-  it('syncOllamaOriginRuleが失敗してもstartup処理全体は継続する（例外を投げない）', async () => {
+  it('continues overall startup without throwing when syncOllamaOriginRule fails', async () => {
     mockGetSettings.mockResolvedValue({
       [StorageKeys.OLLAMA_BASE_URL]: 'http://localhost:11434/v1',
     } as any);
@@ -126,7 +126,7 @@ describe('handleStartup — Ollama Origin ヘッダー削除ルールの同期',
     await expect(handleStartup()).resolves.toBeUndefined();
   });
 
-  it('warm wake（キャッシュ初期化済み）ではsyncOllamaOriginRuleが呼ばれない', async () => {
+  it('does not call syncOllamaOriginRule on warm wake (cache already initialized)', async () => {
     const ctx = {
       isCacheInitialized: { value: true, restore: vi.fn().mockResolvedValue(undefined) },
       rateLimiter: { reload: vi.fn().mockResolvedValue(undefined) } as any,
@@ -138,7 +138,7 @@ describe('handleStartup — Ollama Origin ヘッダー削除ルールの同期',
     expect(mockSyncOllamaOriginRule).not.toHaveBeenCalled();
   });
 
-  it('cold start（キャッシュ未初期化）でもhandleStartupはsyncOllamaOriginRuleを呼ばない', async () => {
+  it('does not call syncOllamaOriginRule in handleStartup on cold start (cache uninitialized)', async () => {
     // handleStartupでの同期は削除済み（onInstalled + observer でカバー）
     const ctx = {
       isCacheInitialized: { value: false, restore: vi.fn().mockResolvedValue(undefined) },
@@ -162,7 +162,7 @@ describe('handleInstalled（reason: update） — Ollama Origin ヘッダー削�
     vi.clearAllMocks();
   });
 
-  it('update時に設定されたOLLAMA_BASE_URLでsyncOllamaOriginRuleを呼ぶ', async () => {
+  it('calls syncOllamaOriginRule with the configured OLLAMA_BASE_URL on update', async () => {
     mockGetSettings.mockResolvedValue({
       [StorageKeys.OLLAMA_BASE_URL]: 'http://ollama-host:11434/v1',
     } as any);
@@ -173,7 +173,7 @@ describe('handleInstalled（reason: update） — Ollama Origin ヘッダー削�
     expect(mockSyncOllamaOriginRule).toHaveBeenCalledWith('http://ollama-host:11434/v1');
   });
 
-  it('install時（新規インストール）もsyncOllamaOriginRuleを呼ぶ（onStartupが発火しない環境向け）', async () => {
+  it('calls syncOllamaOriginRule on install (new install) for environments where onStartup does not fire', async () => {
     mockGetSettings.mockResolvedValue({
       [StorageKeys.OLLAMA_BASE_URL]: 'http://localhost:11434/v1',
     } as any);
@@ -184,7 +184,7 @@ describe('handleInstalled（reason: update） — Ollama Origin ヘッダー削�
     expect(mockSyncOllamaOriginRule).toHaveBeenCalledWith('http://localhost:11434/v1');
   });
 
-  it('OLLAMA_BASE_URL未設定時はデフォルトURLでフォールバックする', async () => {
+  it('falls back to the default URL when OLLAMA_BASE_URL is unset', async () => {
     mockGetSettings.mockResolvedValue({} as any);
 
     const { handleInstalled } = createLifecycleHandlers(createCtx());

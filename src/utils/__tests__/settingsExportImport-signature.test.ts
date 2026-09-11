@@ -41,7 +41,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
      *
      * Greenフェーズ目的: 署名なしファイルが即時拒否されることを確認
      */
-    test('署名のないファイルのインポート拒否', async () => {
+    test('rejects importing a file without a signature', async () => {
         // 【テスト目的】: signatureフィールドが欠けている設定ファイルを拒否することを確認
         // 【テスト内容】：署名なしのJSONファイルをインポートし、即時拒否されることを検証
         // 【期待される動作】: 警告ダイアログなしで即時拒否
@@ -78,7 +78,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
     /**
      * 正常系テスト: 有効な署名付き設定ファイルのインポート成功
      */
-    test('有効な署名付き設定ファイルのインポート成功', async () => {
+    test('imports a valid signed settings file successfully', async () => {
         // 【テスト目的】: 有効な署名が含まれる設定ファイルのインポートが成功することを確認
         // 【テスト内容】：有効な署名が含まれる設定ファイルをインポートし、成功することを検証
         // 【期待される動作】: 署名検証が成功し、設定がインポートされる
@@ -113,7 +113,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
     /**
      * 正常系テスト: 署名が改ざんされたファイルのインポート失敗
      */
-    test('署名が改ざんされたファイルのインポート失敗', async () => {
+    test('fails importing a file with a tampered signature', async () => {
         // 【テスト目的】: 署名フィールドが改ざんされたファイルが拒否されることを確認
         // 【テスト内容】：不正な署名を含む設定ファイルをインポートし、拒否されることを検証
         // 【期待される動作】: 署名検証に失敗し、インポートが拒否される
@@ -148,7 +148,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
     /**
      * 正常系テスト: データが改ざんされたファイルの署名検証失敗
      */
-    test('データが改ざんされたファイルの署名検証失敗', async () => {
+    test('fails signature verification for a file with tampered data', async () => {
         // 【テスト目的】: データ部分（署名以外）が改ざんされたファイルが検知されることを確認
         // 【テスト内容】：設定値が変更されたファイルをインポートし、署名検証に失敗することを検証
         // 【期待される動作】: データの改ざんが検知され、インポートが拒否される
@@ -205,7 +205,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
     /**
      * エラー系テスト: 不正な署名形式の処理
      */
-    test('不正な署名形式の処理', async () => {
+    test('handles malformed signature formats', async () => {
         // 【テスト目的】: 署名フィールドが不正な形式の場合の挙動を確認
         // 【テスト内容】：署名が数値やnullなど無効な形式の場合の処理を検証
         // 【期待される動作】: 不正な署名形式は署名なしとして扱われ、即時拒否
@@ -234,7 +234,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
     /**
      * 境界値テスト: 空のsettingsオブジェクトの署名検証
      */
-    test('空のsettingsオブジェクトの署名検証', async () => {
+    test('verifies the signature of an empty settings object', async () => {
         // 【テスト目的】: settingsフィールドが空オブジェクトの場合の署名検証挙動を確認
         // 【テスト内容】：空のsettingsを持つ署名付きファイルの検証を検証
         // 【期待される動作】: 構造検証で失敗し、インポートが拒否される
@@ -263,7 +263,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
     /**
      * 境界値テスト: 特殊文字を含む設定値の署名検証
      */
-    test('特殊文字を含む設定値の署名検証', async () => {
+    test('verifies signatures of settings containing special characters', async () => {
         // 【テスト目的】: 特殊文字やUnicodeを含む設定値でも署名検証が正しく動作することを確認
         // 【テスト内容】：特殊文字を含む設定を持つ署名付きファイルのインポートを検証
         // 【期待される動作】: 特殊文字を含む値でも署名検証が成功し、インポートが成功する
@@ -304,7 +304,7 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
     /**
      * 正常系テスト: HMAC署名の正確性検証
      */
-    test('HMAC署名の正確性検証', async () => {
+    test('verifies HMAC signature correctness', async () => {
         // 【テスト目的】: HMAC署名がデータの完全性を正確に保証することを確認
         // 【テスト内容】：同じデータに対して同じ署名が生成されることを検証
         // 【期待される動作】: HMAC署名は決定論的で、同じ入力には同じ署名が生成される

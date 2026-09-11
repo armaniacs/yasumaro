@@ -195,7 +195,7 @@ describe('ublockImport - SourceManager Module', () => {
   // ========================================================================
 
   describe('loadAndDisplaySources', () => {
-    test('ソースを読み込んで表示コールバックを呼ぶ', async () => {
+    test('loads sources and calls the render callback', async () => {
       const renderCallback = vi.fn();
 
       await loadAndDisplaySources(renderCallback);
@@ -203,10 +203,11 @@ describe('ublockImport - SourceManager Module', () => {
       expect(renderCallback).toHaveBeenCalled();
     });
 
-    test('renderCallbackがない場合は表示しない', async () => {
-      await loadAndDisplaySources();
-      // エラーを投げないことを確認
-      expect(true).toBe(true);
+    test('resolves without a render callback', async () => {
+      const result = await loadAndDisplaySources();
+      // No callback: sources are still read from storage and nothing is rendered.
+      expect(result).toBeUndefined();
+      expect(storageMocks.getMock).toHaveBeenCalled();
     });
   });
 
@@ -215,7 +216,7 @@ describe('ublockImport - SourceManager Module', () => {
   // ========================================================================
 
   describe('deleteSource', () => {
-    test('指定したインデックスのソースを削除', async () => {
+    test('deletes the source at the given index', async () => {
       storageMocks.setStorageState({
         settings: {
           ublock_sources: [
@@ -237,7 +238,7 @@ describe('ublockImport - SourceManager Module', () => {
       expect(state.settings[StorageKeys.UBLOCK_SOURCES][0].url).toBe('https://example.com/filters2.txt');
     });
 
-    test('無効なインデックスでは何もしない', async () => {
+    test('leaves entries unchanged for an invalid index', async () => {
       storageMocks.setStorageState({
         settings: {
           ublock_sources: [],
@@ -249,7 +250,11 @@ describe('ublockImport - SourceManager Module', () => {
       const renderCallback = vi.fn();
       await deleteSource(-1, renderCallback);
 
-      expect(true).toBe(true); // 何も投げないことを確認
+      // Bogus index: no render, no storage write, entries unchanged.
+      expect(renderCallback).not.toHaveBeenCalled();
+      expect(storageMocks.setMock).not.toHaveBeenCalled();
+      const state = storageMocks.getStorageState();
+      expect(state.settings[StorageKeys.UBLOCK_SOURCES]).toHaveLength(0);
     });
   });
 
@@ -258,7 +263,7 @@ describe('ublockImport - SourceManager Module', () => {
   // ========================================================================
 
   describe('reloadSource', () => {
-    test('ソースを再読み込みして更新', async () => {
+    test('reloads the source and updates it', async () => {
       storageMocks.setStorageState({
         settings: {
           ublock_sources: [
@@ -279,7 +284,7 @@ describe('ublockImport - SourceManager Module', () => {
       expect(result.ruleCount).toBeGreaterThan(0);
     });
 
-    test('無効なインデックスではエラーを投げる', async () => {
+    test('throws for an invalid index', async () => {
       storageMocks.setStorageState({
         settings: {
           ublock_sources: [],
@@ -293,7 +298,7 @@ describe('ublockImport - SourceManager Module', () => {
       await expect(reloadSource(100, fetchFromUrlCallback)).rejects.toThrow('無効なインデックス');
     });
 
-    test('手動入力のソースの再読み込みはエラー', async () => {
+    test('rejects reloading a manually entered source', async () => {
       storageMocks.setStorageState({
         settings: {
           ublock_sources: [
@@ -309,7 +314,7 @@ describe('ublockImport - SourceManager Module', () => {
       await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('手動入力のソースは更新できません');
     });
 
-    test('パースエラーがある場合はエラーを投げる', async () => {
+    test('throws when parse errors exist', async () => {
       storageMocks.setStorageState({
         settings: {
           ublock_sources: [
@@ -326,7 +331,7 @@ describe('ublockImport - SourceManager Module', () => {
       await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('エラーが見つかりました');
     });
 
-    test('パース結果にルールがない場合はエラーを投げる', async () => {
+    test('throws when the parse result has no rules', async () => {
       storageMocks.setStorageState({
         settings: {
           ublock_sources: [
@@ -350,7 +355,7 @@ describe('ublockImport - SourceManager Module', () => {
   // ========================================================================
 
   describe('saveUblockSettings', () => {
-    test('有効なフィルターテキストを保存', async () => {
+    test('saves valid filter text', async () => {
       const filterText = `||example.com^\n||test.com^`;
 
       const result = await saveUblockSettings(filterText);
@@ -362,7 +367,7 @@ describe('ublockImport - SourceManager Module', () => {
       expect(result.sources[0]!.blockDomains).toContain('example.com');
     });
 
-    test('URL指定の場合はURLが保存される', async () => {
+    test('stores the URL when one is given', async () => {
       const filterText = '||example.com^';
       const url = 'https://example.com/filters.txt';
 
@@ -372,27 +377,27 @@ describe('ublockImport - SourceManager Module', () => {
       expect(result.sources[0]!.url).toBe('https://example.com/filters.txt');
     });
 
-    test('パースエラーがある場合はエラーを投げる', async () => {
+    test('throws when parse errors exist', async () => {
       const filterText = 'invalid line without caret';
 
       await expect(saveUblockSettings(filterText)).rejects.toThrow(/エラーが見つかりました/);
     });
 
-    test('有効なルールがない場合はエラーを投げる', async () => {
+    test('throws when no valid rules exist', async () => {
       // 空文字列は入力バリデーションで早期リターン
       const filterText = '';
 
       await expect(saveUblockSettings(filterText)).rejects.toThrow('有効なルールが見つかりませんでした');
     });
 
-    test('パース後のルールが0の場合はエラーを投げる', async () => {
+    test('throws when the parsed rule count is zero', async () => {
       // コメントのみのフィルターテキスト - 有効な文字列だがルールは0
       const filterText = '! This is a comment\n! Another comment';
 
       await expect(saveUblockSettings(filterText)).rejects.toThrow('有効なルールが見つかりませんでした');
     });
 
-    test('大量のルールを正しく保存', async () => {
+    test('saves a large rule set correctly', async () => {
       const largeFilterText = Array(1000).fill(0).map((_, i) => `||domain${i}.com^`).join('\n');
 
       const result = await saveUblockSettings(largeFilterText);
@@ -402,7 +407,7 @@ describe('ublockImport - SourceManager Module', () => {
       expect(result.sources[0]!.url).toBe('manual');
     });
 
-    test('既存のURLを指定した場合はソースを更新（追加しない）', async () => {
+    test('updates the existing source instead of adding a duplicate URL', async () => {
       const url = 'https://example.com/filters.txt';
 
       // 最初の保存
@@ -421,7 +426,7 @@ describe('ublockImport - SourceManager Module', () => {
       expect(state2.settings[StorageKeys.UBLOCK_SOURCES]).toHaveLength(1);
     });
 
-    test('手動入力を複数回保存しても1つのソースになる', async () => {
+    test('keeps a single source across repeated manual saves', async () => {
       // 最初の保存
       await saveUblockSettings('||example.com^');
       const state1 = storageMocks.getStorageState();
@@ -439,7 +444,7 @@ describe('ublockImport - SourceManager Module', () => {
   });
 
   describe('未設定の ublock_sources へのフォールバック', () => {
-    test('loadAndDisplaySources は未設定の場合空配列をコールバックに渡す', async () => {
+    test('loadAndDisplaySources passes an empty array when sources are unset', async () => {
       storageMocks.setStorageState({ settings: { ublock_sources: undefined } });
 
       const renderCallback = vi.fn();
@@ -448,7 +453,7 @@ describe('ublockImport - SourceManager Module', () => {
       expect(renderCallback).toHaveBeenCalledWith([]);
     });
 
-    test('deleteSource は未設定の場合何もしない', async () => {
+    test('deleteSource does nothing when sources are unset', async () => {
       storageMocks.setStorageState({ settings: { ublock_sources: undefined } });
 
       const renderCallback = vi.fn();
@@ -457,14 +462,14 @@ describe('ublockImport - SourceManager Module', () => {
       expect(renderCallback).not.toHaveBeenCalled();
     });
 
-    test('reloadSource は未設定の場合エラーを投げる', async () => {
+    test('reloadSource throws when sources are unset', async () => {
       storageMocks.setStorageState({ settings: { ublock_sources: undefined } });
 
       const fetchFromUrlCallback = vi.fn();
       await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('無効なインデックス');
     });
 
-    test('saveUblockSettings は未設定の場合新規ソースとして追加する', async () => {
+    test('saveUblockSettings adds a new source when sources are unset', async () => {
       storageMocks.setStorageState({ settings: { ublock_sources: undefined } });
 
       const result = await saveUblockSettings('||example.com^');
@@ -476,7 +481,7 @@ describe('ublockImport - SourceManager Module', () => {
   });
 
   describe('一部無効な行を含むフィルター', () => {
-    test('reloadSource は有効ルールがあれば警告付きで更新する', async () => {
+    test('reloadSource updates with a warning when valid rules exist', async () => {
       storageMocks.setStorageState({
         settings: {
           ublock_sources: [
@@ -499,7 +504,7 @@ describe('ublockImport - SourceManager Module', () => {
       }
     });
 
-    test('saveUblockSettings は有効ルールがあれば警告付きで保存する', async () => {
+    test('saveUblockSettings saves with a warning when valid rules exist', async () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       try {
         const result = await saveUblockSettings('||example.com^\ninvalid line without caret');

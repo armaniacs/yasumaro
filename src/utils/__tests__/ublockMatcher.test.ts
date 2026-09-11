@@ -223,7 +223,7 @@ describe('isUrlBlocked', () => {
   });
 
   // UF-302 performance test
-  test('ルールインデックス機能により大量ルールのマッチングが高速化されること', async () => {
+  test('matches many rules faster via the rule index', async () => {
     const blockLines = Array.from({ length: 10000 }, (_, i) => `||domain${i}.com^`);
     const exceptionLines = Array.from({ length: 100 }, (_, i) => `@@||exception${i}.com^`);
     const allLines = [...blockLines, ...exceptionLines];

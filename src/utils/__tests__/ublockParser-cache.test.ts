@@ -29,36 +29,36 @@ describe('ublockParser - Cache Module', () => {
   // ============================================================================
 
   describe('generateCacheKey', () => {
-    test('基本的なキーを生成', () => {
+    test('generates a basic key', () => {
       const key = generateCacheKey('||example.com^');
       expect(key).toMatch(/^[a-z0-9]+_\d+$/);
     });
 
-    test('異なるテキストから異なるキーを生成', () => {
+    test('generates different keys from different texts', () => {
       const key1 = generateCacheKey('||example.com^');
       const key2 = generateCacheKey('||test.com^');
       expect(key1).not.toBe(key2);
     });
 
-    test('同じテキストから同じキーを生成', () => {
+    test('generates the same key from the same text', () => {
       const key1 = generateCacheKey('||example.com^||test.com^');
       const key2 = generateCacheKey('||example.com^||test.com^');
       expect(key1).toBe(key2);
     });
 
-    test('長いテキストからキーを生成', () => {
+    test('generates a key from a long text', () => {
       const longText = 'a'.repeat(150);
       const key = generateCacheKey(longText);
       expect(key).toMatch(/^[a-z0-9]+_150$/);
     });
 
-    test('空文字列からキーを生成', () => {
+    test('generates a key from an empty string', () => {
       const key = generateCacheKey('');
       expect(key).toMatch(/^[a-z0-9]+_0$/);
     });
 
     // PERF-019テスト: 類似した異なるテキストから異なるキーを生成
-    test('PERF-019: 先頭が同じで後半が異なるテキストから異なるキーを生成', () => {
+    test('PERF-019: generates different keys when texts share a prefix but differ later', () => {
       const text1 = '||example.com^';
       const text2 = '||example.com^something-different';
       const key1 = generateCacheKey(text1);
@@ -67,7 +67,7 @@ describe('ublockParser - Cache Module', () => {
     });
 
     // PERF-019テスト: 長さは同じだが内容が異なるテキストから異なるキーを生成
-    test('PERF-019: 同じ長さで異なる内容のテキストから異なるキーを生成', () => {
+    test('PERF-019: generates different keys for same-length texts with different content', () => {
       const text1 = '||example.com^';
       const text2 = '||test-domain^'; // 同じ長さで異なる内容
       const key1 = generateCacheKey(text1);
@@ -76,7 +76,7 @@ describe('ublockParser - Cache Module', () => {
     });
 
     // PERF-019テスト: ハッシュベースのキー生成による衝突防止
-    test('PERF-019: 100文字境界で内容が異なるテキストで衝突しない', () => {
+    test('PERF-019: avoids collisions for texts differing at the 100-char boundary', () => {
       // 先頭100文字が同じで、101文字目以降が異なる2つのテキスト
       const baseText = 'a'.repeat(100);
       const text1 = baseText + 'x';
@@ -87,7 +87,7 @@ describe('ublockParser - Cache Module', () => {
     });
 
     // PERF-019テスト: 大量の異なるテキストで一意なキーが生成されることを確認
-    test('PERF-019: 多数の異なるテキストから一意なキーが生成される', () => {
+    test('PERF-019: generates unique keys from many different texts', () => {
       const keys = new Set<string>();
       const count = 100;
 
@@ -107,7 +107,7 @@ describe('ublockParser - Cache Module', () => {
   // ============================================================================
 
   describe('saveToCache and getFromCache', () => {
-    test('値を保存して取得できる', () => {
+    test('saves and retrieves a value', () => {
       const key = 'test_key_1';
       const value: CacheValue = { blockRules: ['example.com'], exceptionRules: [] };
 
@@ -118,12 +118,12 @@ describe('ublockParser - Cache Module', () => {
       expect(retrieved).toEqual(value);
     });
 
-    test('存在しないキーの場合はnullを返す', () => {
+    test('returns null for a missing key', () => {
       const result = getFromCache('non_existent_key');
       expect(result).toBeNull();
     });
 
-    test('異なるキーで異なる値を保存できる', () => {
+    test('saves different values under different keys', () => {
       const key1 = 'test_key_2';
       const key2 = 'test_key_3';
       const value1: CacheValue = { blockRules: ['example.com'] };
@@ -136,7 +136,7 @@ describe('ublockParser - Cache Module', () => {
       expect(getFromCache(key2)).toEqual(value2);
     });
 
-    test('LRUトラッカーが更新される', () => {
+    test('updates the LRU tracker', () => {
       const key1 = 'test_key_4';
       const key2 = 'test_key_5';
 
@@ -158,18 +158,18 @@ describe('ublockParser - Cache Module', () => {
   // ============================================================================
 
   describe('hasCacheKey', () => {
-    test('存在するキーはtrueを返す', () => {
+    test('returns true for an existing key', () => {
       const key = 'test_key_6';
       saveToCache(key, { blockRules: [] });
 
       expect(hasCacheKey(key)).toBe(true);
     });
 
-    test('存在しないキーはfalseを返す', () => {
+    test('returns false for a missing key', () => {
       expect(hasCacheKey('non_existent_key')).toBe(false);
     });
 
-    test('空のキーでも判定可能', () => {
+    test('handles an empty key', () => {
       const key = '';
       saveToCache(key, { blockRules: [] });
 
@@ -182,7 +182,7 @@ describe('ublockParser - Cache Module', () => {
   // ============================================================================
 
   describe('updateLRUTracker', () => {
-    test('LRUトラッカーのエントリを更新できる', () => {
+    test('updates an LRU tracker entry', () => {
       const key1 = 'test_key_7';
       const key2 = 'test_key_8';
 
@@ -195,7 +195,7 @@ describe('ublockParser - Cache Module', () => {
       expect(hasCacheKey(key2)).toBe(true);
     });
 
-    test('更新されたキーがLRUリストの末尾に移動', () => {
+    test('moves an updated key to the end of the LRU list', () => {
       const key1 = 'test_key_9';
       const key2 = 'test_key_10';
 
@@ -213,11 +213,11 @@ describe('ublockParser - Cache Module', () => {
   // ============================================================================
 
   describe('cleanupCache', () => {
-    test('クリーンアップを実行してもエラーを投げない', () => {
+    test('does not throw when running cleanup', () => {
       expect(() => cleanupCache()).not.toThrow();
     });
 
-    test('クリーンアップ後にキャッシュが空になる可能性がある', () => {
+    test('may leave the cache empty after cleanup', () => {
       const key = 'test_key_11';
       saveToCache(key, { blockRules: [] });
 
@@ -229,7 +229,7 @@ describe('ublockParser - Cache Module', () => {
       expect(() => getFromCache(key)).not.toThrow();
     });
 
-    test('クリーンアップタイマー設定（時間経過後にクリーンアップされる）', () => {
+    test('cleans up after time passes via the cleanup timer', () => {
       const key1 = 'test_cleanup_1';
       const key2 = 'test_cleanup_2';
 
@@ -250,7 +250,7 @@ describe('ublockParser - Cache Module', () => {
   // ============================================================================
 
   describe('Integration Tests', () => {
-    test('キャッシュ化ループの一連の操作', () => {
+    test('performs a full cache save-check-fetch-cleanup cycle', () => {
       const key = 'integration_key_1';
       const value: CacheValue = {
         blockRules: ['example.com', 'test.com'],
@@ -276,7 +276,7 @@ describe('ublockParser - Cache Module', () => {
       expect(() => cleanupCache()).not.toThrow();
     });
 
-    test('大量のエントリを処理', () => {
+    test('handles many entries', () => {
       const entries = 40; // LRU_MAX_ENTRIES (50) 未満にする
       for (let i = 0; i < entries; i++) {
         const key = `bulk_key_${i}`;
@@ -288,7 +288,7 @@ describe('ublockParser - Cache Module', () => {
       expect(hasCacheKey(`bulk_key_${entries - 1}`)).toBe(true);
     });
 
-    test('LRU_MAX_ENTRIES超過時に最も古いエントリが削除される', () => {
+    test('evicts the oldest entry when exceeding LRU_MAX_ENTRIES', () => {
       // 51エントリ追加（LRU_MAX_ENTRIES=50を超える）
       for (let i = 0; i < 51; i++) {
         saveToCache(`lru_key_${i}`, { blockRules: [`domain${i}.com`] });
@@ -302,7 +302,7 @@ describe('ublockParser - Cache Module', () => {
       expect(hasCacheKey('lru_key_1')).toBe(true);
     });
 
-    test('cleanupCache: CLEANUP_INTERVAL経過後にキャッシュがクリアされる', () => {
+    test('cleanupCache: clears the cache after CLEANUP_INTERVAL elapses', () => {
       vi.useFakeTimers();
 
       saveToCache('cleanup_key', { blockRules: ['test.com'] });

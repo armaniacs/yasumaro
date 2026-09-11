@@ -56,7 +56,7 @@ describe('updateSavedUrlEntry', () => {
     vi.clearAllMocks();
   });
 
-  it('既存エントリの単一フィールドを更新する', async () => {
+  it('updates a single field of an existing entry', async () => {
     const entries = [createTestEntry('https://example.com')];
     mockStorage.set('savedUrlsWithTimestamps', entries);
 
@@ -67,7 +67,7 @@ describe('updateSavedUrlEntry', () => {
     expect(entry?.recordType).toBe('manual');
   });
 
-  it('存在しないURLの場合は変更しない', async () => {
+  it('makes no change for an unknown URL', async () => {
     const entries = [createTestEntry('https://example.com')];
     mockStorage.set('savedUrlsWithTimestamps', entries);
 
@@ -78,7 +78,7 @@ describe('updateSavedUrlEntry', () => {
     expect(result[0]!.recordType).toBeUndefined();
   });
 
-  it('複数フィールドを同時に更新する', async () => {
+  it('updates multiple fields at once', async () => {
     const entries = [createTestEntry('https://example.com')];
     mockStorage.set('savedUrlsWithTimestamps', entries);
 
@@ -94,7 +94,7 @@ describe('updateSavedUrlEntry', () => {
     expect(entry?.sentTokens).toBe(150);
   });
 
-  it('content フィールドを更新する', async () => {
+  it('updates the content field', async () => {
     const entries = [createTestEntry('https://example.com')];
     mockStorage.set('savedUrlsWithTimestamps', entries);
 
@@ -105,7 +105,7 @@ describe('updateSavedUrlEntry', () => {
     expect(entry?.content).toBe('extracted content');
   });
 
-  it('tags を undefined に設定する（空配列の場合）', async () => {
+  it('sets tags to undefined (empty array case)', async () => {
     const entries = [createTestEntry('https://example.com', { tags: ['existing'] })];
     mockStorage.set('savedUrlsWithTimestamps', entries);
 
@@ -117,7 +117,7 @@ describe('updateSavedUrlEntry', () => {
     expect(entry?.tags).toBeUndefined();
   });
 
-  it('バージョンキーを介して楽観的ロックで更新する', async () => {
+  it('updates via optimistic locking through the version key', async () => {
     const entries = [createTestEntry('https://example.com')];
     mockStorage.set('savedUrlsWithTimestamps', entries);
     mockStorage.set('savedUrlsWithTimestamps_version', 3);
@@ -136,7 +136,7 @@ describe('setUrlTags / addUrlTag / removeUrlTag', () => {
     vi.clearAllMocks();
   });
 
-  it('setUrlTags でタグリストを設定する', async () => {
+  it('sets the tag list via setUrlTags', async () => {
     const entries = [createTestEntry('https://example.com')];
     mockStorage.set('savedUrlsWithTimestamps', entries);
 
@@ -147,7 +147,7 @@ describe('setUrlTags / addUrlTag / removeUrlTag', () => {
     expect(entry?.tags).toEqual(['tech', 'news']);
   });
 
-  it('setUrlTags で空配列を設定するとundefinedになる', async () => {
+  it('sets tags to undefined when given an empty array via setUrlTags', async () => {
     const entries = [createTestEntry('https://example.com', { tags: ['existing'] })];
     mockStorage.set('savedUrlsWithTimestamps', entries);
 
@@ -158,7 +158,7 @@ describe('setUrlTags / addUrlTag / removeUrlTag', () => {
     expect(entry?.tags).toBeUndefined();
   });
 
-  it('addUrlTag でタグを追加する', async () => {
+  it('adds a tag via addUrlTag', async () => {
     const entries = [createTestEntry('https://example.com', { tags: ['existing'] })];
     mockStorage.set('savedUrlsWithTimestamps', entries);
 
@@ -170,7 +170,7 @@ describe('setUrlTags / addUrlTag / removeUrlTag', () => {
     expect(entry?.tags).toContain('existing');
   });
 
-  it('addUrlTag で重複タグは追加しない', async () => {
+  it('does not add a duplicate tag via addUrlTag', async () => {
     const entries = [createTestEntry('https://example.com', { tags: ['existing'] })];
     mockStorage.set('savedUrlsWithTimestamps', entries);
 
@@ -181,7 +181,7 @@ describe('setUrlTags / addUrlTag / removeUrlTag', () => {
     expect(entry?.tags).toEqual(['existing']);
   });
 
-  it('removeUrlTag でタグを削除する', async () => {
+  it('removes a tag via removeUrlTag', async () => {
     const entries = [createTestEntry('https://example.com', { tags: ['tag1', 'tag2'] })];
     mockStorage.set('savedUrlsWithTimestamps', entries);
 
@@ -192,7 +192,7 @@ describe('setUrlTags / addUrlTag / removeUrlTag', () => {
     expect(entry?.tags).toEqual(['tag2']);
   });
 
-  it('removeUrlTag で最後のタグを削除するとundefinedになる', async () => {
+  it('sets tags to undefined when removing the last tag via removeUrlTag', async () => {
     const entries = [createTestEntry('https://example.com', { tags: ['only-tag'] })];
     mockStorage.set('savedUrlsWithTimestamps', entries);
 
@@ -205,7 +205,7 @@ describe('setUrlTags / addUrlTag / removeUrlTag', () => {
 });
 
 describe('computeUrlsHash', () => {
-  it('URLのハッシュを計算する', async () => {
+  it('computes the hash of URLs', async () => {
     const { computeUrlsHash } = await import('../storageUrls.js');
 
     const urls = new Set(['https://b.com', 'https://a.com']);
@@ -214,7 +214,7 @@ describe('computeUrlsHash', () => {
     expect(hash).toBe('https://a.com|https://b.com');
   });
 
-  it('空セットの場合は空文字列', async () => {
+  it('returns an empty string for an empty set', async () => {
     const { computeUrlsHash } = await import('../storageUrls.js');
 
     const hash = computeUrlsHash(new Set());

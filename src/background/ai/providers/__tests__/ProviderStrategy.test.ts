@@ -95,7 +95,7 @@ class CustomIdProvider extends AIProviderStrategy {
 
 describe('AIProviderStrategy', () => {
     describe('constructor', () => {
-        test('settingsを設定する', () => {
+        test('stores the settings', () => {
             const settings = {} as Settings;
             const provider = new TestProvider(settings);
             expect(provider).toBeDefined();
@@ -103,7 +103,7 @@ describe('AIProviderStrategy', () => {
     });
 
     describe('getProviderId', () => {
-        test('デフォルトでgetName()と同じ値を返す', () => {
+        test('returns the same value as getName() by default', () => {
             const settings = {} as Settings;
             const provider = new TestProvider(settings);
             expect(provider.getProviderId()).toBe('test-provider');
@@ -111,7 +111,7 @@ describe('AIProviderStrategy', () => {
     });
 
     describe('getMaxTokens', () => {
-        test('プロバイダー別設定のmaxTokensを返す', () => {
+        test('returns the per-provider maxTokens setting', () => {
             const settings = {
                 providers: {
                     'test-provider': {
@@ -125,7 +125,7 @@ describe('AIProviderStrategy', () => {
             expect(maxTokens).toBe(5000);
         });
 
-        test('グローバル設定のmaxTokensを返す', () => {
+        test('returns the global maxTokens setting', () => {
             const settings = {
                 [StorageKeys.MAX_TOKENS_PER_PROMPT]: 8000
             } as unknown as Settings;
@@ -135,7 +135,7 @@ describe('AIProviderStrategy', () => {
             expect(maxTokens).toBe(8000);
         });
 
-        test('設定がない場合デフォルト値1000を返す', () => {
+        test('returns the default value 1000 when no setting exists', () => {
             const settings = {} as Settings;
 
             const provider = new TestProvider(settings);
@@ -143,7 +143,7 @@ describe('AIProviderStrategy', () => {
             expect(maxTokens).toBe(1000);
         });
 
-        test('providers設定が空の場合グローバル設定を使用する', () => {
+        test('uses the global setting when the providers setting is empty', () => {
             const settings = {
                 providers: {},
                 [StorageKeys.MAX_TOKENS_PER_PROMPT]: 4000
@@ -154,7 +154,7 @@ describe('AIProviderStrategy', () => {
             expect(maxTokens).toBe(4000);
         });
 
-        test('グローバル設定がNaNの場合はデフォルト値を使用する', () => {
+        test('uses the default value when the global setting is NaN', () => {
             const settings = {
                 [StorageKeys.MAX_TOKENS_PER_PROMPT]: NaN
             } as unknown as Settings;
@@ -164,7 +164,7 @@ describe('AIProviderStrategy', () => {
             expect(maxTokens).toBe(1000);
         });
 
-        test('プロバイダー設定のmaxTokensが0の場合はグローバル設定にフォールバック', () => {
+        test('falls back to the global setting when the provider maxTokens is 0', () => {
             const settings = {
                 providers: {
                     'test-provider': {
@@ -180,7 +180,7 @@ describe('AIProviderStrategy', () => {
             expect(maxTokens).toBe(6000);
         });
 
-        test('getProviderIdをオーバーライドした場合、そのIDで設定を検索する', () => {
+        test('looks up settings by that ID when getProviderId is overridden', () => {
             const settings = {
                 providers: {
                     'openai': {
@@ -196,7 +196,7 @@ describe('AIProviderStrategy', () => {
     });
 
     describe('getMaxContentChars', () => {
-        test('プロバイダー別設定の maxContentChars を返す', () => {
+        test('returns the per-provider maxContentChars setting', () => {
             const settings = {
                 providers: {
                     'test-provider': {
@@ -210,7 +210,7 @@ describe('AIProviderStrategy', () => {
             expect(maxChars).toBe(5000);
         });
 
-        test('storageKey 指定時はグローバル設定を優先して返す', () => {
+        test('prefers the global setting when a storageKey is specified', () => {
             const settings = {
                 [StorageKeys.OPENAI_CONTENT_CHARS]: 15000
             } as unknown as Settings;
@@ -220,7 +220,7 @@ describe('AIProviderStrategy', () => {
             expect(maxChars).toBe(15000);
         });
 
-        test('プロバイダー別設定が優先される', () => {
+        test('prefers the per-provider setting', () => {
             const settings = {
                 providers: {
                     'test-provider': {
@@ -235,7 +235,7 @@ describe('AIProviderStrategy', () => {
             expect(maxChars).toBe(7000);
         });
 
-        test('設定がない場合はデフォルト値を返す', () => {
+        test('returns the default value when no setting exists', () => {
             const settings = {} as Settings;
 
             const provider = new TestProvider(settings);
@@ -245,14 +245,14 @@ describe('AIProviderStrategy', () => {
     });
 
     describe('abstract methods', () => {
-        test('generateSummaryを実装できる', async () => {
+        test('implements generateSummary', async () => {
             const settings = {} as Settings;
             const provider = new TestProvider(settings);
             const result = await provider.generateSummary('test content');
             expect(result.summary).toBe('test summary');
         });
 
-        test('testConnectionを実装できる', async () => {
+        test('implements testConnection', async () => {
             const settings = {} as Settings;
             const provider = new TestProvider(settings);
             const result = await provider.testConnection();
@@ -260,7 +260,7 @@ describe('AIProviderStrategy', () => {
             expect(result.message).toBe('OK');
         });
 
-        test('getNameを実装できる', () => {
+        test('implements getName', () => {
             const settings = {} as Settings;
             const provider = new TestProvider(settings);
             expect(provider.getName()).toBe('test-provider');
@@ -276,7 +276,7 @@ describe('checkPreFlight', () => {
         getRateLimitMessageMock.mockReturnValue('Rate limit exceeded');
     });
 
-    test('hardLimitブロック時は { blocked: true, message } を返す', async () => {
+    test('returns { blocked: true, message } when blocked by hardLimit', async () => {
         checkHardLimitMock.mockResolvedValue({ blocked: true, message: 'Monthly limit reached' });
         const settings = {} as Settings;
         const provider = new TestProvider(settings);
@@ -285,7 +285,7 @@ describe('checkPreFlight', () => {
         expect(result.message).toBe('Error: Monthly limit reached');
     });
 
-    test('usageWarning時は { blocked: true, message } を返す', async () => {
+    test('returns { blocked: true, message } on usageWarning', async () => {
         checkUsageWarningMock.mockResolvedValue({ warning: true, message: 'Usage warning' });
         const settings = {} as Settings;
         const provider = new TestProvider(settings);
@@ -294,7 +294,7 @@ describe('checkPreFlight', () => {
         expect(result.message).toBe('Error: Usage warning');
     });
 
-    test('rateLimitブロック時は { blocked: true, message } を返す', async () => {
+    test('returns { blocked: true, message } when blocked by rateLimit', async () => {
         checkRateLimitMock.mockResolvedValue({ allowed: false, remaining: 0, resetTime: Date.now() + 60000 });
         const settings = {} as Settings;
         const provider = new TestProvider(settings);
@@ -303,7 +303,7 @@ describe('checkPreFlight', () => {
         expect(result.message).toBe('Error: Rate limit exceeded');
     });
 
-    test('全チェック通過時は { blocked: false } を返す', async () => {
+    test('returns { blocked: false } when all checks pass', async () => {
         const settings = {} as Settings;
         const provider = new TestProvider(settings);
         const result = await provider.callCheckPreFlight();
@@ -312,7 +312,7 @@ describe('checkPreFlight', () => {
 });
 
 describe('sanitizeContent', () => {
-    test('dangerLevel=high時は { blocked: true } を返す', () => {
+    test('returns { blocked: true } when dangerLevel=high', () => {
         sanitizePromptContentMock.mockReturnValue({
             sanitized: 'sanitized',
             warnings: ['injection detected'],
@@ -325,7 +325,7 @@ describe('sanitizeContent', () => {
         expect(result.warnings).toContain('injection detected');
     });
 
-    test('dangerLevel=low時は { blocked: false, sanitized } を返す', () => {
+    test('returns { blocked: false, sanitized } when dangerLevel=low', () => {
         sanitizePromptContentMock.mockReturnValue({
             sanitized: 'safe content',
             warnings: [],
@@ -338,7 +338,7 @@ describe('sanitizeContent', () => {
         expect(result.sanitized).toBe('safe content');
     });
 
-    test('dangerLevel=low時は構造化ログにcategory=generic_termを含める', () => {
+    test('includes category=generic_term in the structured log when dangerLevel=low', () => {
         sanitizePromptContentMock.mockReturnValue({
             sanitized: 'sanitized',
             warnings: ['Detected potential command: "system"'],
@@ -361,7 +361,7 @@ describe('sanitizeContent', () => {
 });
 
 describe('mapConnectionError', () => {
-    test('401の場合は認証失敗メッセージを返す', () => {
+    test('returns an authentication failure message on 401', () => {
         const settings = {} as Settings;
         const provider = new TestProvider(settings);
         const result = provider.callMapConnectionError(401, 'OpenAI');
@@ -370,7 +370,7 @@ describe('mapConnectionError', () => {
         expect(result.debug?.statusCode).toBe(401);
     });
 
-    test('404の場合はエンドポイント未発見メッセージを返す', () => {
+    test('returns an endpoint-not-found message on 404', () => {
         const settings = {} as Settings;
         const provider = new TestProvider(settings);
         const result = provider.callMapConnectionError(404, 'Gemini');
@@ -378,7 +378,7 @@ describe('mapConnectionError', () => {
         expect(result.message).toContain('not found');
     });
 
-    test('429の場合はレート制限メッセージを返す', () => {
+    test('returns a rate-limit message on 429', () => {
         const settings = {} as Settings;
         const provider = new TestProvider(settings);
         const result = provider.callMapConnectionError(429, 'OpenAI');
@@ -386,7 +386,7 @@ describe('mapConnectionError', () => {
         expect(result.message).toContain('Rate limit');
     });
 
-    test('500の場合はサーバーエラーメッセージを返す', () => {
+    test('returns a server error message on 500', () => {
         const settings = {} as Settings;
         const provider = new TestProvider(settings);
         const result = provider.callMapConnectionError(500, 'Gemini');
@@ -396,7 +396,7 @@ describe('mapConnectionError', () => {
 });
 
 describe('parseAndMapFetchError', () => {
-    test('タイムアウトエラーの場合はタイムアウトメッセージを返す', () => {
+    test('returns a timeout message on a timeout error', () => {
         const settings = {} as Settings;
         const provider = new TestProvider(settings);
         const result = provider.callParseAndMapFetchError('Request timed out after 30000ms', 'OpenAI');
@@ -404,7 +404,7 @@ describe('parseAndMapFetchError', () => {
         expect(result.message).toContain('timed out');
     });
 
-    test('AbortError name の場合はタイムアウトメッセージを返す', () => {
+    test('returns a timeout message when the error name is AbortError', () => {
         const settings = {} as Settings;
         const provider = new TestProvider(settings);
         const result = provider.callParseAndMapFetchError('The operation was aborted', 'OpenAI', 'AbortError');
@@ -412,7 +412,7 @@ describe('parseAndMapFetchError', () => {
         expect(result.message).toContain('timed out');
     });
 
-    test('HTTPエラーメッセージの場合は対応するステータスメッセージを返す', () => {
+    test('returns the matching status message for an HTTP error message', () => {
         const settings = {} as Settings;
         const provider = new TestProvider(settings);
         const result = provider.callParseAndMapFetchError('HTTP 401: Unauthorized', 'Gemini');
@@ -420,7 +420,7 @@ describe('parseAndMapFetchError', () => {
         expect(result.message).toContain('Invalid API key');
     });
 
-    test('ネットワークエラーの場合は接続エラーメッセージを返す', () => {
+    test('returns a connection error message on a network error', () => {
         const settings = {} as Settings;
         const provider = new TestProvider(settings);
         const result = provider.callParseAndMapFetchError('Failed to fetch', 'OpenAI');
@@ -428,7 +428,7 @@ describe('parseAndMapFetchError', () => {
         expect(result.message).toContain('Cannot connect');
     });
 
-    test('その他エラーの場合は汎用エラーメッセージを返す', () => {
+    test('returns a generic error message for other errors', () => {
         const settings = {} as Settings;
         const provider = new TestProvider(settings);
         const result = provider.callParseAndMapFetchError('Unknown error', 'Gemini');

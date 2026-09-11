@@ -33,14 +33,14 @@ describe('fallbackMigration', () => {
     } as unknown as typeof chrome;
   });
 
-  it('レコードが無い場合は何もマイグレーションせず OPFS_FALLBACK_MODE を解除する', async () => {
+  it('clears OPFS_FALLBACK_MODE without migrating anything when there are no records', async () => {
     await tryMigrateFallbackToSqlite({ idbEngine: {} as never });
 
     expect(mockExec).not.toHaveBeenCalled();
     expect(chrome.storage.local.remove).toHaveBeenCalledWith(StorageKeys.OPFS_FALLBACK_MODE);
   });
 
-  it('idbEngine が無い場合はマイグレーションをスキップする', async () => {
+  it('skips the migration when idbEngine is missing', async () => {
     mockGetAllRecords.mockResolvedValue([{ url: 'https://example.com', domain: null }]);
 
     await tryMigrateFallbackToSqlite({ idbEngine: null });
@@ -48,7 +48,7 @@ describe('fallbackMigration', () => {
     expect(mockExec).not.toHaveBeenCalled();
   });
 
-  it('レコードを INSERT OR IGNORE で移行し、成功したら fallback をクリアする', async () => {
+  it('migrates records with INSERT OR IGNORE and clears the fallback on success', async () => {
     mockGetAllRecords.mockResolvedValue([
       { url: 'https://example.com', domain: null },
       { url: 'https://foo.com', domain: 'foo.com' },
@@ -61,7 +61,7 @@ describe('fallbackMigration', () => {
     expect(chrome.storage.local.remove).toHaveBeenCalledWith(StorageKeys.OPFS_FALLBACK_MODE);
   });
 
-  it('個別レコードの insert 失敗はスキップし、他のレコードの移行を継続する', async () => {
+  it('skips a failed record insert and continues migrating the remaining records', async () => {
     mockGetAllRecords.mockResolvedValue([
       { url: 'https://bad.com', domain: 'bad.com' },
       { url: 'https://ok.com', domain: 'ok.com' },

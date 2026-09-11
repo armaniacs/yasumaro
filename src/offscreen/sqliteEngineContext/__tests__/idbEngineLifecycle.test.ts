@@ -32,12 +32,12 @@ describe('idbEngineLifecycle', () => {
     mockQuery.mockResolvedValue([]);
   });
 
-  it('DB_FILENAME は yasumaro.db である（単一ソース）', () => {
+  it('DB_FILENAME is yasumaro.db (single source)', () => {
     expect(DB_FILENAME).toBe('yasumaro.db');
   });
 
   describe('initIdbEngine', () => {
-    it('成功時は true を返し、idbEngine と fts5Available を state に設定する', async () => {
+    it('returns true on success and sets idbEngine and fts5Available on state', async () => {
       const state = { idbEngine: null, fts5Available: false, cachedCompileOptions: null, lastInitError: null } as IdbeEngineState;
 
       const ok = await initIdbEngine(state);
@@ -48,7 +48,7 @@ describe('idbEngineLifecycle', () => {
       expect(mockExec).toHaveBeenCalledWith('PRAGMA journal_mode=WAL;');
     });
 
-    it('失敗時は false を返し、lastInitError を記録し idbEngine を null にする', async () => {
+    it('returns false on failure and records lastInitError while nulling idbEngine', async () => {
       mockExec.mockRejectedValueOnce(new Error('disk full'));
       const state = { idbEngine: null, fts5Available: false, cachedCompileOptions: null, lastInitError: null } as IdbeEngineState;
 
@@ -61,14 +61,14 @@ describe('idbEngineLifecycle', () => {
   });
 
   describe('execWithCache', () => {
-    it('callback 無しの場合は exec のみ呼ぶ', async () => {
+    it('calls only exec when no callback is given', async () => {
       const engine = { exec: mockExec, query: mockQuery };
       await execWithCache(engine as unknown as Parameters<typeof execWithCache>[0], 'DELETE FROM x', [1]);
       expect(mockExec).toHaveBeenCalledWith('DELETE FROM x', [1]);
       expect(mockQuery).not.toHaveBeenCalled();
     });
 
-    it('callback ありの場合は query で行ごとに呼ぶ', async () => {
+    it('calls back per row via query when a callback is given', async () => {
       mockQuery.mockResolvedValueOnce([{ a: 1, b: 'x' }, { a: 2, b: 'y' }]);
       const engine = { exec: mockExec, query: mockQuery };
       const rows: unknown[][] = [];

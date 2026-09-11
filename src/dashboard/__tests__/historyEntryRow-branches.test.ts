@@ -140,7 +140,7 @@ describe('historyEntryRow-branches — getMessage fallback paths (getMessage ret
     expect(deleteBtn.getAttribute('aria-label')).toBe('Delete');
   });
 
-  it('edit button aria-label and title fall back to タグを編集', () => {
+  it('edit button aria-label and title fall back to the edit-tags label', () => {
     const row = makeHistoryEntryRow(
       createMinimalEntry(), 0, 0, createMockState(), createMockElements(), vi.fn(), vi.fn(),
     );
@@ -195,7 +195,7 @@ describe('historyEntryRow-branches — progress bar falsy', () => {
 });
 
 describe('historyEntryRow-branches — aiSummaryCleansedReasons empty array falls back to 複数', () => {
-  it('shows 複数 when reason is multiple but reasons array is empty', () => {
+  it('shows the multiple fallback label when reason is multiple but reasons array is empty', () => {
     const row = makeHistoryEntryRow(
       createMinimalEntry({ aiSummaryCleansedBytes: 50, aiSummaryOriginalBytes: 200, aiSummaryCleansedReason: 'multiple', aiSummaryCleansedReasons: [] }),
       0, 0, createMockState(), createMockElements(), vi.fn(), vi.fn(),
@@ -204,7 +204,7 @@ describe('historyEntryRow-branches — aiSummaryCleansedReasons empty array fall
     expect(cleansingEl.textContent).toContain('複数');
   });
 
-  it('shows 複数 when reason is multiple but reasons array is undefined', () => {
+  it('shows the multiple fallback label when reason is multiple but reasons array is undefined', () => {
     const row = makeHistoryEntryRow(
       createMinimalEntry({ aiSummaryCleansedBytes: 50, aiSummaryOriginalBytes: 200, aiSummaryCleansedReason: 'multiple' }),
       0, 0, createMockState(), createMockElements(), vi.fn(), vi.fn(),

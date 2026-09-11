@@ -59,7 +59,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
   });
 
   describe('正常系 - マスク件数表示', () => {
-    test('TC-MV-001: マスク件数1件が正しく表示される', () => {
+    test('TC-MV-001: renders a single masked-item count correctly', () => {
       const content = "連絡先は[MASKED:email]example.comです。";
       const maskedItems = [
         { type: "email", original: "test@example.com" }
@@ -75,7 +75,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       expect((modal as HTMLDialogElement).open).toBe(true);
     });
 
-    test('TC-MV-002: マスク件数複数が正しく表示される', () => {
+    test('TC-MV-002: renders multiple masked-item counts correctly', () => {
       const content = "お支払いは口座[MASKED:bankAccount]で問い合わせ:[MASKED:phoneJp]";
       const maskedItems = [
         { type: "bankAccount", original: "1234567890" },
@@ -92,7 +92,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
   });
 
   describe('正常系 - ハイライト表示', () => {
-    test('TC-MV-003: マスク箇所がプレーンテキストとして表示される', () => {
+    test('TC-MV-003: renders masked spans as plain text', () => {
       const content = "メールアドレスは[MASKED:email]test@example.comです";
       const maskedItems = [{ type: "email", original: "test@example.com" }];
       const maskedCount = 1;
@@ -105,7 +105,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       expect(previewContent.value).not.toContain("<span");
     });
 
-    test('TC-MV-004: ナビゲーションUIが表示される', () => {
+    test('TC-MV-004: renders the navigation UI', () => {
       const content = "連絡先:[MASKED:email]xxx@example.com";
       const maskedItems = [{ type: "email", original: "xxx@example.com" }];
       const maskedCount = 1;
@@ -119,7 +119,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
   });
 
   describe('正常系 - 互換性', () => {
-    test('TC-MV-005: showPreviewの単一引数呼び出し互換性が維持されている', () => {
+    test('TC-MV-005: keeps single-argument showPreview call compatibility', () => {
       const content = "名前: 田中太郎\nメール: [MASKED:email]tanaka@example.com";
 
       expect(() => {
@@ -130,7 +130,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       expect((modal as HTMLDialogElement).open).toBe(true);
     });
 
-    test('TC-MV-006: 複数の異なるPIIタイプが正しく識別される', () => {
+    test('TC-MV-006: identifies multiple distinct PII types correctly', () => {
       const content = "カード[MASKED:creditCard]、口座[MASKED:bankAccount]";
       const maskedItems = [
         { type: "creditCard", original: "1234-5678-9012-3456" },
@@ -148,7 +148,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       expect(counter.textContent).toBe('1/2');
     });
 
-    test('TC-MV-007: myNumber PIIタイプが正しく識別される', () => {
+    test('TC-MV-007: identifies the myNumber PII type correctly', () => {
       const content = "番号: [MASKED:myNumber]";
       const maskedItems = [
         { type: "myNumber", original: "123456789012" }
@@ -163,7 +163,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
   });
 
   describe('異常系 - エラーハンドリング', () => {
-    test('TC-MV-101: maskedItemsがnullの場合の動作', () => {
+    test('TC-MV-101: handles null maskedItems', () => {
       const content = "連絡先[MASKED:email]xxx@example.com";
       const maskedCount = 1;
 
@@ -175,7 +175,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       expect((modal as HTMLDialogElement).open).toBe(true);
     });
 
-    test('TC-MV-102: 不正なmaskedItems形式の場合の動作', () => {
+    test('TC-MV-102: handles malformed maskedItems', () => {
       const content = "連絡先: 090-1234-5678";
       const maskedCount = 1;
 
@@ -191,7 +191,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       expect((modal as HTMLDialogElement).open).toBe(true);
     });
 
-    test('TC-MV-103: 正規表現特殊文字を含む場合', () => {
+    test('TC-MV-103: handles regex special characters', () => {
       const content = "価格: ￥[MASKED:price]1,000円 (税込)";
       const maskedItems = [{ type: "price", original: "1,000" }];
       const maskedCount = 1;
@@ -206,7 +206,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
   });
 
   describe('境界値 - 入力検証', () => {
-    test('TC-MV-201: マスク件数0件の場合', () => {
+    test('TC-MV-201: handles a zero masked-item count', () => {
       const content = "まったく個人情報が含まれないテキストです。";
       const maskedItems: MaskedItem[] = [];
       const maskedCount = 0;
@@ -221,7 +221,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       expect((modal as HTMLDialogElement).open).toBe(true);
     });
 
-    test('TC-MV-202: 極端なマスク件数（100件以上）', () => {
+    test('TC-MV-202: handles an extreme masked-item count (100+)', () => {
       const maskedItems = Array.from({ length: 100 }, (_, i) => ({
         type: "email",
         original: `x${i + 1}@example.com`
@@ -237,7 +237,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       expect(statusMessage.textContent).toBe("Masked E-mail100 items");
     });
 
-    test('TC-MV-203: 空文字のコンテンツ', () => {
+    test('TC-MV-203: handles empty-string content', () => {
       const content = "";
       const maskedItems: MaskedItem[] = [];
       const maskedCount = 0;
@@ -256,7 +256,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
   });
 
   describe('境界値 - ステータスメッセージ要素の確認', () => {
-    test('maskStatusMessage要素が作成される', () => {
+    test('creates the maskStatusMessage element', () => {
       const content = "テスト";
       sanitizePreview.showPreview(content, [], 0);
 
@@ -280,7 +280,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       polyfillDialogMethods();
     });
 
-    test('次のマスク箇所へジャンプ', () => {
+    test('jumps to the next masked span', () => {
       const content = "連絡先:[MASKED:email]x1@example.com 問い合わせ:[MASKED:email]x2@example.com";
       const maskedItems = [
         { type: "email", original: "x1@example.com" },
@@ -300,7 +300,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       expect(counter.textContent).toBe('1/2');
     });
 
-    test('前のマスク箇所へジャンプ', () => {
+    test('jumps to the previous masked span', () => {
       const content = "連絡先:[MASKED:email]x1@example.com 問い合わせ:[MASKED:email]x2@example.com";
       const maskedItems = [
         { type: "email", original: "x1@example.com" },
@@ -319,7 +319,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       expect(counter.textContent).toBe('2/2');
     });
 
-    test('マスク箇所がない場合はナビゲーションしない', () => {
+    test('skips navigation when no masked span exists', () => {
       const content = "まったく個人情報が含まれないテキストです。";
       const maskedItems: MaskedItem[] = [];
       const maskedCount = 0;
@@ -335,7 +335,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
   });
 
   describe('モーダルが存在しない場合', () => {
-    test('モーダルがない場合は自動的にconfirmedを返す', async () => {
+    test('resolves confirmed automatically when the modal is missing', async () => {
       document.body.innerHTML = '';
       const content = "テストコンテンツ";
       const maskedItems: MaskedItem[] = [];
@@ -348,7 +348,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
   });
 
   describe('maskStatusMessageの動的作成', () => {
-    test('maskStatusMessageが存在しない場合は動的に作成される', () => {
+    test('creates maskStatusMessage dynamically when missing', () => {
       document.body.innerHTML = `
         <div id="confirmationModal" style="display: none;">
           <div class="modal-body">
@@ -392,14 +392,14 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       polyfillDialogMethods();
     });
 
-    test('cleansedReason=noneでcleansingInfoがhiddenのまま', () => {
+    test('keeps cleansingInfo hidden when cleansedReason=none', () => {
       sanitizePreview.showPreview('test', [], 0, 'none');
 
       const cleansingInfo = $el('cleansingInfo');
       expect(cleansingInfo.classList.contains('hidden')).toBe(true);
     });
 
-    test('cleansedReason=hardでcleansingInfoが表示される', () => {
+    test('shows cleansingInfo when cleansedReason=hard', () => {
       sanitizePreview.showPreview('test', [], 0, 'hard');
 
       const cleansingInfo = $el('cleansingInfo');
@@ -408,21 +408,21 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       expect(badge.textContent).toContain('Hard');
     });
 
-    test('cleansedReason=keywordで正しいバッジが表示される', () => {
+    test('renders the correct badge when cleansedReason=keyword', () => {
       sanitizePreview.showPreview('test', [], 0, 'keyword');
 
       const badge = $el('cleansingBadge');
       expect(badge.textContent).toContain('Keyword');
     });
 
-    test('cleansedReason=bothで正しいバッジが表示される', () => {
+    test('renders the correct badge when cleansedReason=both', () => {
       sanitizePreview.showPreview('test', [], 0, 'both');
 
       const badge = $el('cleansingBadge');
       expect(badge.textContent).toContain('Both');
     });
 
-    test('cleanseStats付きで統計情報がバッジに追加される', () => {
+    test('appends stats to the badge when cleanseStats is present', () => {
       const cleanseStats = {
         hardStripRemoved: 3,
         keywordStripRemoved: 2,
@@ -436,14 +436,14 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       expect(badge.textContent).toContain('Keyword: 2');
     });
 
-    test('cleansedReasonがundefinedでcleansingInfoがhidden', () => {
+    test('keeps cleansingInfo hidden when cleansedReason is undefined', () => {
       sanitizePreview.showPreview('test', [], 0, undefined);
 
       const cleansingInfo = $el('cleansingInfo');
       expect(cleansingInfo.classList.contains('hidden')).toBe(true);
     });
 
-    test('cleansingInfo要素がない場合でもエラーを投げない', () => {
+    test('throws nothing when the cleansingInfo element is missing', () => {
       document.body.innerHTML = `
         <div id="confirmationModal" style="display: none;">
           <div class="modal-body">
@@ -463,7 +463,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
   });
 
   describe('initializeModalEvents', () => {
-    test('ボタン要素が存在しない場合でもエラーを投げない', () => {
+    test('throws nothing when button elements are missing', () => {
       document.body.innerHTML = `
         <div id="confirmationModal">
           <div class="modal-body"></div>
@@ -475,7 +475,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       }).not.toThrow();
     });
 
-    test('ResizeObserverが未定義の場合でもエラーを投げない', () => {
+    test('throws nothing when ResizeObserver is undefined', () => {
       document.body.innerHTML = `
         <div id="confirmationModal">
           <div class="modal-body">
@@ -505,7 +505,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
     });
 
     // PERF-007テスト: ResizeObserverのクリーンアップを確認
-    test('PERF-007: initializeModalEventsを複数回呼んでもResizeObserverがクリーンアップされる', () => {
+    test('PERF-007: cleans up ResizeObserver across repeated initializeModalEvents calls', () => {
       document.body.innerHTML = `
         <div id="confirmationModal">
           <div class="modal-body">
@@ -554,7 +554,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
     });
 
     // PERF-007テスト: cleanupModalEvents関数の動作確認
-    test('PERF-007: cleanupModalEventsでResizeObserverが解放される', () => {
+    test('PERF-007: releases ResizeObserver in cleanupModalEvents', () => {
       document.body.innerHTML = `
         <div id="confirmationModal">
           <div class="modal-body">
@@ -599,7 +599,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       sanitizePreview.cleanupModalEvents();
     });
 
-    test('モーダル表示後にボタン要素が存在する', async () => {
+    test('renders button elements after the modal opens', async () => {
       document.body.innerHTML = `
         <div id="confirmationModal" style="display: none;">
           <div class="modal-body">
@@ -631,7 +631,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       // テスト完了、Promiseは解決されないがエラーは投げない
     });
 
-    test('confirmボタンでconfirmed=trueが返る', async () => {
+    test('resolves confirmed=true on the confirm button', async () => {
       document.body.innerHTML = `
         <div id="confirmationModal" style="display: none;">
           <div class="modal-body">
@@ -654,7 +654,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       expect(result.content).toBe('test content');
     });
 
-    test('cancelボタンでconfirmed=falseが返る', async () => {
+    test('resolves confirmed=false on the cancel button', async () => {
       document.body.innerHTML = `
         <div id="confirmationModal" style="display: none;">
           <div class="modal-body">
@@ -677,7 +677,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       expect(result.content).toBeNull();
     });
 
-    test('closeModalボタンでconfirmed=falseが返る', async () => {
+    test('resolves confirmed=false on the closeModal button', async () => {
       document.body.innerHTML = `
         <div id="confirmationModal" style="display: none;">
           <div class="modal-body">
@@ -700,7 +700,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       expect(result.content).toBeNull();
     });
 
-    test('resolvePromiseがnullの場合はhandleActionは何もしない', () => {
+    test('does nothing in handleAction when resolvePromise is null', () => {
       document.body.innerHTML = `
         <div id="confirmationModal" style="display: none;">
           <div class="modal-body">
@@ -720,7 +720,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
   });
 
   describe('setPreviewContent - 内部関数のカバレッジ', () => {
-    test('previewContentがnullの場合は何もしない', () => {
+    test('does nothing when previewContent is null', () => {
       const content = "テスト";
       // previewContentがない状態でDOMをクリア
       document.body.innerHTML = `
@@ -735,7 +735,7 @@ describe('Masked Information Visualization - プレビュー画面のマスク�
       }).not.toThrow();
     });
 
-    test('previewContentがundefinedの場合は何もしない', () => {
+    test('does nothing when previewContent is undefined', () => {
       const content = "テスト";
       document.body.innerHTML = `
         <div id="confirmationModal" style="display: none;">

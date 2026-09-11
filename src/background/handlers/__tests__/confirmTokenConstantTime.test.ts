@@ -50,7 +50,7 @@ function createMockSqliteClient() {
 describe('confirmToken constant-time comparison (CWE-208)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('正しい confirmToken で破壊的操作が成功する（ハッピーパス）', async () => {
+  it('succeeds at a destructive operation with the correct confirmToken (happy path)', async () => {
     const client = createMockSqliteClient();
     const result = await dispatchDashboardSqlite(
       { subtype: 'clear_all', confirmToken: VALID_TOKEN } as any,
@@ -61,7 +61,7 @@ describe('confirmToken constant-time comparison (CWE-208)', () => {
     expect(client.maintain).toHaveBeenCalledWith(expect.objectContaining({ type: 'clearAll' }));
   });
 
-  it('長さが異なる不正トークンは拒否される', async () => {
+  it('rejects an invalid token with a different length', async () => {
     const client = createMockSqliteClient();
     const result = await dispatchDashboardSqlite(
       { subtype: 'clear_all', confirmToken: 'short' } as any,
@@ -72,7 +72,7 @@ describe('confirmToken constant-time comparison (CWE-208)', () => {
     expect(client.maintain).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'clearAll' }));
   });
 
-  it('先頭文字が異なる不正トークンは拒否される', async () => {
+  it('rejects an invalid token with a different first character', async () => {
     const client = createMockSqliteClient();
     const invalid = 'x' + VALID_TOKEN.slice(1);
     const result = await dispatchDashboardSqlite(
@@ -83,7 +83,7 @@ describe('confirmToken constant-time comparison (CWE-208)', () => {
     expect(result).toEqual({ success: false, error: 'Confirmation token mismatch' });
   });
 
-  it('末尾文字が異なる不正トークンは拒否される', async () => {
+  it('rejects an invalid token with a different last character', async () => {
     const client = createMockSqliteClient();
     const invalid = VALID_TOKEN.slice(0, -1) + 'X';
     const result = await dispatchDashboardSqlite(
@@ -94,7 +94,7 @@ describe('confirmToken constant-time comparison (CWE-208)', () => {
     expect(result).toEqual({ success: false, error: 'Confirmation token mismatch' });
   });
 
-  it('confirmToken 未指定は拒否される', async () => {
+  it('rejects a missing confirmToken', async () => {
     const client = createMockSqliteClient();
     const result = await dispatchDashboardSqlite(
       { subtype: 'clear_all' } as any,
@@ -104,7 +104,7 @@ describe('confirmToken constant-time comparison (CWE-208)', () => {
     expect(result).toEqual({ success: false, error: 'Confirmation token mismatch' });
   });
 
-  it('読み取り系はトークン不要のまま動作する', async () => {
+  it('allows read operations without a token', async () => {
     const client = createMockSqliteClient();
     const result = await dispatchDashboardSqlite(
       { subtype: 'query', query: {} } as any,

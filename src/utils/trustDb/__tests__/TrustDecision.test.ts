@@ -58,7 +58,7 @@ describe('TrustDecision — deep module via single seam isTrusted(url)', () => {
     expect(mockDb.addToWhitelist).toHaveBeenCalledWith('example.com');
   });
 
-  it('hides 4-module往復 — caller only knows isTrusted', async () => {
+  it('hides 4-module round trip - caller only knows isTrusted', async () => {
     // Caller does not need to know about ManagedStringList, domainUtils, PermissionManager, TrustDb
     // Only TrustDecision is imported
     const td = new TrustDecision(makeTrustDbMock('trusted'), makePermissionMock(true));

@@ -82,18 +82,18 @@ describe('deriveCleansedReason', () => {
 import { recordRemoval, removedRecordToMap } from '../cleansedReason.js';
 
 describe('recordRemoval (30-14 funnel)', () => {
-  it('新規Mapにカウントを記録する', () => {
+  it('records a count into a new Map', () => {
     const m = recordRemoval(undefined, 'ads');
     expect(m.get('ads')).toBe(1);
   });
 
-  it('既存Mapに加算する', () => {
+  it('adds to an existing Map', () => {
     const m = new Map<string, number>([['ads', 5]]);
     recordRemoval(m, 'ads', 3);
     expect(m.get('ads')).toBe(8);
   });
 
-  it('異なるreasonを別キーで記録', () => {
+  it('records different reasons under separate keys', () => {
     const m = new Map<string, number>();
     recordRemoval(m, 'ads', 5);
     recordRemoval(m, 'nav', 3);
@@ -103,13 +103,13 @@ describe('recordRemoval (30-14 funnel)', () => {
     expect(m.get('popup')).toBe(1);
   });
 
-  it('count指定で複数件加算', () => {
+  it('adds multiple entries with a specified count', () => {
     const m = recordRemoval(undefined, 'ads', 10);
     recordRemoval(m, 'ads', 2);
     expect(m.get('ads')).toBe(12);
   });
 
-  it('removedRecordToMap: RecordをMapに変換し0件を除外', () => {
+  it('removedRecordToMap: converts a Record to a Map excluding zero counts', () => {
     const rec = { ads: 5, nav: 0, popup: 1 };
     const m = removedRecordToMap(rec)!;
     expect(m.get('ads')).toBe(5);
@@ -117,18 +117,18 @@ describe('recordRemoval (30-14 funnel)', () => {
     expect(m.has('nav')).toBe(false);
   });
 
-  it('removedRecordToMap: undefinedでundefined', () => {
+  it('removedRecordToMap: returns undefined for undefined', () => {
     expect(removedRecordToMap(undefined)).toBeUndefined();
   });
 
-  it('removedRecordToMap: Mapはコピーして返す', () => {
+  it('removedRecordToMap: returns a copy for a Map input', () => {
     const orig = new Map([['ads', 2]]);
     const copy = removedRecordToMap(orig)!;
     copy.set('ads', 99);
     expect(orig.get('ads')).toBe(2);
   });
 
-  it('funnelを含むExtractResultが型で許容される', async () => {
+  it('allows an ExtractResult containing a funnel in the type', async () => {
     const { extractMainContentWithInfo } = await import('../index.js');
     // jsdom で最低限のDOMを用意
     document.body.innerHTML = `<article><p>${'a'.repeat(200)}</p></article>`;

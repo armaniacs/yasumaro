@@ -11,8 +11,9 @@ describe('logCritical', () => {
   });
 
   it('works without a sink (uses default no-op in test env)', async () => {
-    await logger.logCritical('noop', {}, ErrorCode.UNKNOWN_ERROR, 'test');
-    // no throw, default sink is no-op without chrome.notifications
+    await expect(
+      logger.logCritical('noop', {}, ErrorCode.UNKNOWN_ERROR, 'test')
+    ).resolves.not.toThrow();
   });
 
   it('sanitizes API-key-like content in the message before raising it to the sink', async () => {

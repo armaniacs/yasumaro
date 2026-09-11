@@ -34,13 +34,13 @@ describe('focusTrap', () => {
     });
 
     describe('FocusTrapManager', () => {
-        test('初期状態でハンドラが空', () => {
+        test('starts with empty handlers', () => {
             expect(manager.handlers.size).toBe(0);
             expect(manager.previousFocus.size).toBe(0);
         });
 
         describe('trap', () => {
-            test('HTMLElement を受け付ける', () => {
+            test('accepts an HTMLElement', () => {
                 const modal = document.getElementById('modal') as HTMLElement;
                 const trapId = manager.trap(modal);
 
@@ -48,18 +48,18 @@ describe('focusTrap', () => {
                 expect(manager.handlers.has(trapId)).toBe(true);
             });
 
-            test('文字列セレクタを受け付ける', () => {
+            test('accepts a string selector', () => {
                 const trapId = manager.trap('#modal');
 
                 expect(trapId).toMatch(/^focusTrap_/);
                 expect(manager.handlers.has(trapId)).toBe(true);
             });
 
-            test('存在しないセレクタでエラーを投げる', () => {
+            test('throws for a nonexistent selector', () => {
                 expect(() => manager.trap('#nonexistent')).toThrow('Modal element not found');
             });
 
-            test('フォーカス可能な要素がない場合はトラップIDを返す', () => {
+            test('returns a trap ID when no focusable elements exist', () => {
                 document.body.innerHTML = '<div id="empty-modal"></div>';
                 const trapId = manager.trap('#empty-modal');
 
@@ -68,7 +68,7 @@ describe('focusTrap', () => {
                 expect(manager.handlers.has(trapId)).toBe(false);
             });
 
-            test('毎回異なるトラップIDを生成する', () => {
+            test('generates a different trap ID each time', () => {
                 const modal = document.getElementById('modal') as HTMLElement;
                 const id1 = manager.trap(modal);
                 const id2 = manager.trap(modal);
@@ -78,7 +78,7 @@ describe('focusTrap', () => {
         });
 
         describe('release', () => {
-            test('トラップを解放する', () => {
+            test('releases the trap', () => {
                 const modal = document.getElementById('modal') as HTMLElement;
                 const trapId = manager.trap(modal);
 
@@ -88,13 +88,13 @@ describe('focusTrap', () => {
                 expect(manager.previousFocus.has(trapId)).toBe(false);
             });
 
-            test('存在しないトラップIDでもno-op', () => {
+            test('is a no-op for a nonexistent trap ID', () => {
                 expect(() => manager.release('nonexistent')).not.toThrow();
             });
         });
 
         describe('releaseAll', () => {
-            test('全てのトラップを解放する', () => {
+            test('releases all traps', () => {
                 const modal = document.getElementById('modal') as HTMLElement;
                 manager.trap(modal);
                 manager.trap(modal);
@@ -107,13 +107,13 @@ describe('focusTrap', () => {
                 expect(manager.previousFocus.size).toBe(0);
             });
 
-            test('トラップがない場合でもno-op', () => {
+            test('is a no-op when no traps exist', () => {
                 expect(() => manager.releaseAll()).not.toThrow();
             });
         });
 
     describe('generateId', () => {
-        test('一意のIDを生成する', () => {
+        test('generates a unique ID', () => {
             const id1 = manager.generateId();
             const id2 = manager.generateId();
 
@@ -123,7 +123,7 @@ describe('focusTrap', () => {
     });
 
     describe('keyboard handler', () => {
-        test('ESCキーでcloseCallbackが呼ばれる', () => {
+        test('calls closeCallback on Escape key', () => {
             const modal = document.getElementById('modal') as HTMLElement;
             const closeCallback = vi.fn();
             manager.trap(modal, closeCallback);
@@ -134,7 +134,7 @@ describe('focusTrap', () => {
             expect(closeCallback).toHaveBeenCalledTimes(1);
         });
 
-        test('ESCキーでcloseCallbackがない場合は何もしない', () => {
+        test('does nothing on Escape key when no closeCallback exists', () => {
             const modal = document.getElementById('modal') as HTMLElement;
             manager.trap(modal);
 
@@ -142,7 +142,7 @@ describe('focusTrap', () => {
             expect(() => modal.dispatchEvent(event)).not.toThrow();
         });
 
-        test('最後の要素でTabキーを押すと最初の要素にフォーカスが移動する', () => {
+        test('moves focus to the first element when Tab is pressed on the last element', () => {
             const modal = document.getElementById('modal') as HTMLElement;
             const btn2 = document.getElementById('btn2') as HTMLElement;
             manager.trap(modal);
@@ -156,7 +156,7 @@ describe('focusTrap', () => {
             expect(document.activeElement).toBe(document.getElementById('btn1'));
         });
 
-        test('最初の要素でShift+Tabを押すと最後の要素にフォーカスが移動する', () => {
+        test('moves focus to the last element when Shift+Tab is pressed on the first element', () => {
             const modal = document.getElementById('modal') as HTMLElement;
             const btn1 = document.getElementById('btn1') as HTMLElement;
             manager.trap(modal);
@@ -170,7 +170,7 @@ describe('focusTrap', () => {
             expect(document.activeElement).toBe(document.getElementById('btn2'));
         });
 
-        test('中間要素でTabキーを押してもフォーカスは移動しない', () => {
+        test('keeps focus when Tab is pressed on a middle element', () => {
             const modal = document.getElementById('modal') as HTMLElement;
             const input1 = document.getElementById('input1') as HTMLElement;
             manager.trap(modal);
@@ -184,7 +184,7 @@ describe('focusTrap', () => {
             expect(document.activeElement).toBe(input1);
         });
 
-        test('Tab以外のキーは何もしない', () => {
+        test('does nothing for non-Tab keys', () => {
             const modal = document.getElementById('modal') as HTMLElement;
             const closeCallback = vi.fn();
             manager.trap(modal, closeCallback);
@@ -197,13 +197,13 @@ describe('focusTrap', () => {
 });
 
     describe('focusTrapManager シングルトン', () => {
-        test('FocusTrapManager のインスタンス', () => {
+        test('is a FocusTrapManager instance', () => {
             expect(focusTrapManager).toBeInstanceOf(FocusTrapManager);
         });
     });
 
     describe('trapFocus', () => {
-        test('focusTrapManager.trap を委譲する', () => {
+        test('delegates to focusTrapManager.trap', () => {
             const modal = document.getElementById('modal') as HTMLElement;
             const trapId = trapFocus(modal);
 
@@ -215,7 +215,7 @@ describe('focusTrap', () => {
     });
 
     describe('releaseFocusTrap', () => {
-        test('要素からトラップを解放する', () => {
+        test('releases the trap from the element', () => {
             const modal = document.getElementById('modal') as HTMLElement;
             const trapId = trapFocus(modal);
 
@@ -224,7 +224,7 @@ describe('focusTrap', () => {
             expect(focusTrapManager.handlers.has(trapId)).toBe(false);
         });
 
-        test('対応するトラップがない場合はno-op', () => {
+        test('is a no-op when no matching trap exists', () => {
             const div = document.createElement('div');
             expect(() => releaseFocusTrap(div)).not.toThrow();
         });
