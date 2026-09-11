@@ -15,6 +15,7 @@ function makeBaseDeps(overrides: Partial<DashboardSqliteHandlerDeps> = {}): Dash
     getCount: async () => ({ success: true, data: 0 }),
     clearAll: async () => ({ success: true, data: undefined }),
     insert: async () => ({ success: true, data: { id: 1 } }),
+    insertBatch: async (records: Record<string, unknown>[]) => ({ success: true, data: { count: records.length, skipped: 0 } }),
     getSettings: async () => ({}),
     formatEntriesToMarkdown: () => null,
     appendToDailyNote: async () => {},

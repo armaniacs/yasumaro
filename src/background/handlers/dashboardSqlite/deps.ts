@@ -70,6 +70,9 @@ export interface CoreCrudDeps {
 /** Deps consumed by the maintenance/migration/backup group. */
 export interface MaintenanceBatchDeps {
   insert: (record: Record<string, unknown>) => Promise<DepsResult<{ id: number }>>;
+  /** Batched import path (PBI 2026-09-11-07): one round trip per import instead
+   * of one per row. `count` = inserted rows, `skipped` = UNIQUE duplicates. */
+  insertBatch: (records: Record<string, unknown>[]) => Promise<DepsResult<{ count: number; skipped: number }>>;
   getSettings: () => Promise<Record<string, unknown>>;
   restoreDb: (data: Uint8Array) => Promise<DepsResult<void>>;
   purgeOldRecords: (days?: number, max?: number) => Promise<DepsResult<{ purged: number }>>;
@@ -174,6 +177,8 @@ export function createSqliteClientDeps(
     clearAll: () => sqliteClient.maintain({ type: 'clearAll' }),
     // WHY: `Record<string, unknown>` is not structurally compatible with `BrowsingLogRecord` (missing required fields)
     insert: (record) => sqliteClient.mutate({ type: 'insert', record: record as unknown as BrowsingLogRecord }),
+    // PBI 2026-09-11-07: batched import — one offscreen round trip per import.
+    insertBatch: (records) => sqliteClient.mutate({ type: 'insertBatch', records: records as unknown as BrowsingLogRecord[] }),
     restoreDb: (data) => sqliteClient.maintain({ type: 'restore', data }),
     // Deliberately not a result union: getStatus() reports initialization failure
     // inside its success value so the diagnostics panel can display it.

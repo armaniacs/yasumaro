@@ -366,12 +366,12 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
       expect(result).toEqual({ success: false, error: `Maximum ${MAX_IMPORT_ROWS} rows allowed` });
     });
 
-    it('accepts import at the row cap', async () => {
+    it('accepts import at the row cap with one batched round trip (PBI 2026-09-11-07)', async () => {
       const rows = Array.from({ length: MAX_IMPORT_ROWS }, (_, i) => ({
         url: `https://e${i}.com`,
         created_at: Date.now(),
       }));
-      mockSqliteClient.mutate.mockResolvedValue({ success: true, data: { id: 1 } });
+      mockSqliteClient.mutate.mockResolvedValue({ success: true, data: { count: MAX_IMPORT_ROWS, skipped: 0 } });
 
       const result = await dispatchDashboardSqlite(
         { subtype: 'import', rows, confirmToken: 'test-token' },
@@ -381,6 +381,9 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
 
       expect((result as { success: boolean }).success).toBe(true);
       expect((result as { inserted: number }).inserted).toBe(MAX_IMPORT_ROWS);
+      // One insertBatch round trip instead of one mutate per row.
+      expect(mockSqliteClient.mutate).toHaveBeenCalledTimes(1);
+      expect(mockSqliteClient.mutate.mock.calls[0]![0]).toMatchObject({ type: 'insertBatch' });
     });
   });
 });

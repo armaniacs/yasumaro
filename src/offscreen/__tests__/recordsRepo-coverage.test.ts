@@ -215,13 +215,13 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
       expect(mockBackend.insert).toHaveBeenCalledWith(rec);
     });
 
-    it('maps backend.insertBatch inserted to count', async () => {
+    it('returns backend.insertBatch inserted and skipped (PBI 2026-09-11-07 wire shape)', async () => {
       mockBackend.insertBatch.mockResolvedValue({ success: true, inserted: 2, skipped: 1 } as never);
       const result = await insertBatch([
         { url: 'https://a.com', created_at: 1 },
         { url: 'https://b.com', created_at: 2 },
       ]);
-      expect(result).toEqual({ success: true, count: 2 });
+      expect(result).toEqual({ success: true, inserted: 2, skipped: 1 });
     });
 
     it('returns the error as-is when insertBatch fails', async () => {
