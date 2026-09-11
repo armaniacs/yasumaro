@@ -35,10 +35,24 @@ Offscreen (entrypoints/offscreen.html + src/offscreen/)
 
 Content Scripts (entrypoints/content/ + src/content/)
   ├── index.ts → WXT content script entrypoint
-  ├── loader.ts → Injection orchestrator
+  ├── loader.ts → Injection orchestrator (dynamic import of content-extractor)
   ├── extractor.ts → Module singletons (pageState + kernel) + thin facade; driven by entrypoints/content-extractor.ts
+  ├── contentKernel.ts → Visit pipeline core (IdleScheduler, lifecycle listeners)
+  ├── deadlineTimer.ts → One-shot visit deadline (injected Scheduler)
+  ├── throttle.ts → rAF throttling
   └── getContentHandler.ts → GET_CONTENT handler (deps-injected, chrome-free unit testable)
 ```
+
+## Shared Modules Quick Index
+
+| Module | Location | Role |
+|--------|----------|------|
+| SQLite query plan SSOT | `src/offscreen/queryPlan.ts` | QuerySpec / statement builders / condition set shared by OPFS / IDB / fallback |
+| SQLite STATUS enrichment | `src/offscreen/sqliteStatus.ts` | Migration extras collection (field-isolated allSettled) + legacy-DB probes |
+| Archive wire descriptors | `src/messaging/archiveWireTable.ts` | Codec-carrying descriptor rows for archive ops (single projection source) |
+| Popup content fetch | `src/popup/contentFetchGateway.ts` | Single seam for "popup asks a tab for content" (timeout + permission ladder) |
+| Cleansing badge policy | `src/utils/cleansingBadge.ts` | reason → badge text table + counts → reason derivation (Layer 0) |
+| Settings repository | `src/utils/storage/SettingsRepository.ts` | Settings blob read/write SSOT (flat scattered keys are legacy) |
 
 ## Where to Add New Features
 
@@ -50,7 +64,7 @@ Content Scripts (entrypoints/content/ + src/content/)
 | Background processing | `src/background/` service-worker.ts | Use modular client classes |
 | Local AI Integration | `src/background/ai/LocalAIService.ts`, `src/background/builtInAIClient.ts` | Built-in AI (Chrome Gemini Nano / Edge Phi-mini); Ollama/LM Studio go through `src/background/ai/providers/OpenAIProvider.ts` |
 | Page interaction | `src/content/` extractor.ts | Consider CSP restrictions |
-| Storage | `src/utils/storage.ts` | Use StorageKeys constant |
+| Storage | `src/utils/storage/` (SettingsRepository + SettingsKeys) | Settings blob read/write SSOT — `src/utils/storage.ts` is a retired re-export shim |
 | API Key Encryption | `src/utils/crypto/` | PBKDF2 + AES-GCM encryption |
 | PII Masking | `src/utils/piiSanitizer.ts` | Privacy-preserving data handling |
 | DOM operations | `src/offscreen/` offscreen.ts | For operations requiring offscreen document |
