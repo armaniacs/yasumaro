@@ -12,7 +12,7 @@ import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord,
 import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from './schema.js';
 import { extractDomain, DB_FILENAME } from './sqliteEngineHost.js';
 import {
-  buildQuerySpec, QUERY_CAPS, clampLimit, buildExtraWhereSql,
+  buildQuerySpec, QUERY_CAPS, buildExtraWhereSql,
   buildFtsMatchQuery, buildLikePattern,
   buildFtsSearchStatements, buildLikeSearchStatements, buildPlainListStatements,
   purgeCutoffMs, buildPurgeOldRecordsStatements,
@@ -21,7 +21,11 @@ import {
 } from './queryPlan.js';
 import { buildTagFilterCondition } from './sqliteQueryBuilder.js';
 import { pickDefined } from '../utils/objectUtils.js';
-import { withTransaction } from './opfsWorker/handlers.js';
+import { withTransaction } from './sqliteTransaction.js';
+import { planAuditLog } from './queryPlanner.js';
+import { AUDIT_CAP_IDB } from '../messaging/limits.js';
+import { buildExportEnvelope, EXPORT_COLUMNS } from './exportEnvelope.js';
+import type { SerializeResult } from './StorageBackend.js';
 import {
   SEARCH_COLUMNS_WITH_RANK, BROWSING_LOG_FULL_COLUMNS, BROWSING_LOG_FULL_COLUMNS_SQL,
   mapPositional,
@@ -50,7 +54,7 @@ export class IdbVfsBackend implements StorageBackend {
 
     let inserted = 0;
     let skipped = 0;
-    await withTransaction(this.engine, async () => {
+    await withTransaction({ exec: (sql) => this.engine.execWithCache(sql) }, async () => {
       for (const record of records) {
         const domain = record.domain || extractDomain(record.url);
         await this.engine.execWithCache(INSERT_IGNORE_SQL, buildInsertParams(record, domain));
@@ -325,10 +329,10 @@ export class IdbVfsBackend implements StorageBackend {
 
   async queryAuditLog(options: { limit?: number; offset?: number }): Promise<BackendOrError<AuditLogQueryResult>> {
     this.ensureDb();
-    // PBI 2026-09-12-16: audit cap rides QUERY_CAPS.fts (was an orphaned
-    // 100000 literal with a stale comment about the old worker cap).
-    const limit = clampLimit(options.limit, QUERY_CAPS.fts, 100);
-    const offset = options.offset ?? 0;
+    // PBI 2026-09-12-17: paging policy lives in the planner seam — this
+    // backend receives already-clamped values (was a per-backend re-derivation
+    // riding QUERY_CAPS.fts with no offset policy).
+    const { limit, offset } = planAuditLog(options, AUDIT_CAP_IDB);
     const stmts = buildAuditLogStatements({ limit, offset });
 
     const rows: AuditLogEntry[] = [];
@@ -351,6 +355,23 @@ export class IdbVfsBackend implements StorageBackend {
     });
 
     return { success: true, rows, total };
+  }
+
+  async serialize(): Promise<BackendOrError<SerializeResult>> {
+    this.ensureDb();
+    // PBI 2026-09-12-22: shared envelope + column SSOT (was an 11-column
+    // hand-mapped positional SELECT inside recordsRepo).
+    const rows: Record<string, unknown>[] = [];
+    await this.engine.execWithCache(
+      `SELECT ${EXPORT_COLUMNS.join(', ')} FROM browsing_logs WHERE is_deleted = 0 ORDER BY created_at DESC`,
+      [],
+      (row: SqliteValue[]) => {
+        const named: Record<string, unknown> = {};
+        EXPORT_COLUMNS.forEach((col, i) => { named[col] = row[i]; });
+        rows.push(named);
+      }
+    );
+    return { success: true, data: buildExportEnvelope(rows as unknown as Parameters<typeof buildExportEnvelope>[0]) };
   }
 
   async getCount(): Promise<BackendOrError<CountResult>> {

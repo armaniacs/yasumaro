@@ -98,7 +98,9 @@ export interface VisitAdmissionDeps {
 
 export type AdmissionOutcome = 'injected' | 'skipped';
 
-/** Shared 3-attempt retry (200ms linear backoff, sleep on catch only). */
+/** Shared 3-attempt retry (200ms linear backoff — on both errors and empty
+ * responses; PBI 2026-09-12-20: an empty-but-resolved send used to bypass the
+ * sleep and fire 3 tight attempts). */
 export async function checkDomainWithRetry(
   send: () => Promise<CheckDomainResponse | undefined>,
   sleep: (ms: number) => Promise<void>,
@@ -109,9 +111,11 @@ export async function checkDomainWithRetry(
     try {
       response = await send();
       if (response) break;
+      // Resolved but empty — back off before the next attempt.
+      if (attempt < 2) await sleep(200 * (attempt + 1));
     } catch (e) {
       lastError = e;
-      await sleep(200 * (attempt + 1));
+      if (attempt < 2) await sleep(200 * (attempt + 1));
     }
   }
   return { response, lastError };

@@ -358,17 +358,18 @@ export class RecordSession {
     return { kind: 'ok', result: previewSave.result ?? null };
   }
 
-  /** Normal branch: fetch tab content, then preview + save. */
-  private async runNormalBranch(force: boolean): Promise<void> {
-    const startTime = performance.now();
+  /**
+   * PBI 2026-09-12-23: shared prelude for the normal/force branches — the
+   * ~60-line contract each branch hand-spelled (guard → arm button → spinner
+   * → clear status). Degenerate DOM returns null and settles the session to
+   * idle itself, exactly as the former early returns did.
+   */
+  private openAttempt(): { statusDiv: HTMLElement; recordBtn: HTMLButtonElement | null } | null {
     const statusDiv = document.getElementById('mainStatus');
     const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement | null;
-
-    // Degenerate DOM: the former flow returned before touching anything.
-    // Settle to idle directly so finishToIdle() leaves the button alone.
     if (!statusDiv) {
       this.sessionState = 'idle';
-      return;
+      return null;
     }
 
     if (recordBtn) {
@@ -376,9 +377,19 @@ export class RecordSession {
       recordBtn.textContent = getMessage('recordNowProgress') || 'Recording...';
     }
 
-    hideSpinner();
     statusDiv.textContent = '';
     statusDiv.className = '';
+    return { statusDiv, recordBtn };
+  }
+
+  /** Normal branch: fetch tab content, then preview + save. */
+  private async runNormalBranch(force: boolean): Promise<void> {
+    const startTime = performance.now();
+    const attempt = this.openAttempt();
+    if (!attempt) return;
+    const { statusDiv, recordBtn } = attempt;
+
+    hideSpinner();
     const tagPanel = document.getElementById('tagResultPanel');
     if (tagPanel) { tagPanel.textContent = ''; tagPanel.classList.add('hidden'); }
 
@@ -473,24 +484,11 @@ export class RecordSession {
 
   /** Force branch: skip fetch (content given), preview + save with force. */
   private async runForceBranch(tab: chrome.tabs.Tab, content: string): Promise<void> {
-    const button = document.getElementById('recordBtn') as HTMLButtonElement | null;
-    // Degenerate DOM: the former flow returned before touching anything.
-    if (!button) {
-      this.sessionState = 'idle';
-      return;
-    }
-
     const startTime = performance.now();
-    const statusDiv = document.getElementById('mainStatus');
-    if (!statusDiv) {
-      this.sessionState = 'idle';
-      return;
-    }
+    const attempt = this.openAttempt();
+    if (!attempt) return;
+    const { statusDiv, recordBtn: button } = attempt;
 
-    button.disabled = true;
-    button.textContent = getMessage('recordNowProgress') || 'Recording...';
-    statusDiv.textContent = '';
-    statusDiv.className = '';
     showSpinner(getMessage('saving'));
 
     try {
@@ -512,16 +510,16 @@ export class RecordSession {
         this.reportActivity();
         this.showSuccessMessage(statusDiv, startTime, result);
         await this.showCopyMarkdownButton(tab, result);
-        this.showButtonResultState(button, 'done');
+        if (button) this.showButtonResultState(button, 'done');
       } else {
         statusDiv.textContent = `${getMessage('saveError')}: ${result?.error || previewSave.error || 'Unknown error'}`;
         statusDiv.className = 'error';
-        this.showButtonResultState(button, 'error');
+        if (button) this.showButtonResultState(button, 'error');
       }
     } catch (error: unknown) {
       hideSpinner();
       showError(statusDiv, error, () => this.start(true, tab, content));
-      this.showButtonResultState(button, 'error');
+      if (button) this.showButtonResultState(button, 'error');
     }
   }
 }

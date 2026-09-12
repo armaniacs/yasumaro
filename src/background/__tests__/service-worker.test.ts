@@ -1864,28 +1864,38 @@ describe('service-worker handlers', () => {
             handleManualRecordSpy.mockRestore();
         });
 
-        it('ignores duplicate clicks while a record is in progress', async () => {
-            if (!contextMenuClickListener) throw new Error('Context menu listener not registered');
-
+        it('waits for the in-flight record of the SAME tab, but runs a different tab concurrently (PBI 2026-09-12-20)', async () => {
             const executeScriptMock = chrome.scripting.executeScript as ReturnType<typeof vi.fn>;
             let resolveDeferred: (value: unknown) => void = () => {};
             const deferred = new Promise<unknown>((resolve) => {
                 resolveDeferred = resolve;
             });
             executeScriptMock.mockReturnValueOnce(deferred);
+            executeScriptMock.mockResolvedValueOnce([
+                { result: { url: 'https://other.com', title: 'Other', content: 'other body' } },
+            ]);
 
             const firstClick = contextMenuClickListener(
                 { menuItemId: 'yasumaro-manual-record' } as chrome.contextMenus.OnClickData,
                 { id: 1, url: 'https://example.com' } as chrome.tabs.Tab
             );
 
-            // Second click while the first one is still pending should be ignored.
+            // Same tab while in flight → joins the existing run (no second
+            // executeScript for tab 1).
             await contextMenuClickListener(
                 { menuItemId: 'yasumaro-manual-record' } as chrome.contextMenus.OnClickData,
                 { id: 1, url: 'https://example.com' } as chrome.tabs.Tab
             );
-
             expect(executeScriptMock).toHaveBeenCalledTimes(1);
+
+            // Different tab → keyed slot runs concurrently (not awaited: the
+            // full record pipeline is out of this test's scope; the run
+            // swallows its own errors).
+            void contextMenuClickListener(
+                { menuItemId: 'yasumaro-manual-record' } as chrome.contextMenus.OnClickData,
+                { id: 2, url: 'https://other.com' } as chrome.tabs.Tab
+            );
+            expect(executeScriptMock).toHaveBeenCalledTimes(2);
 
             resolveDeferred([{ result: { url: 'https://example.com', title: 'Example', content: 'body text' } }]);
             await firstClick;

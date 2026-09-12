@@ -82,9 +82,12 @@ export class TabCache {
 
     /**
      * キャッシュを session storage に保存
+     * PBI 2026-09-12-24: `remove` は SW suspend に消え得るため即時 flush
+     * （rateLimiter の flushImmediately 紀律と同一）。hot path の add/update
+     * は debounced のまま。
      */
-    private saveToSession(): void {
-        this.sessionStore.set(SESSION_KEYS.TAB_CACHE, SessionStore.mapToEntries(this.cache));
+    private saveToSession(immediate = false): void {
+        this.sessionStore.set(SESSION_KEYS.TAB_CACHE, SessionStore.mapToEntries(this.cache), immediate ? { flushImmediately: true } : undefined);
     }
 
     /**
@@ -132,7 +135,17 @@ export class TabCache {
      */
     remove(tabId: number): void {
         this.cache.delete(tabId);
-        this.saveToSession();
+        this.saveToSession(true);
+    }
+
+    /**
+     * タブ情報を削除し、session への即時 flush を await する（PBI
+     * 2026-09-12-24）。SW suspend 窓で削除が消えないよう、remove を
+     * 待ち合わせたい呼び出し側（handleTabRemoved）向け。
+     */
+    async removeAndFlush(tabId: number): Promise<void> {
+        this.cache.delete(tabId);
+        await this.sessionStore.set(SESSION_KEYS.TAB_CACHE, SessionStore.mapToEntries(this.cache), { flushImmediately: true });
     }
 
     /**

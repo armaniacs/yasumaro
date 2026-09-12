@@ -307,8 +307,9 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
     expect(window.__OW_TEST_STATE).toBeDefined();
     expect(document.documentElement.getAttribute('data-ow-test-state')).toContain('maxScrollPercentage');
     // second call when reportable => should trigger reportValidVisit and update isValidVisitReported true
-    // set mocks to allow report
-    expect(ps.isValidVisitReported).toBe(true); // reportValidVisit sets it
+    // PBI 2026-09-12-18: the flag commits AFTER the async send resolves
+    // (success-only commit rule) — wait for the microtask chain to settle.
+    await vi.waitFor(() => expect(ps.isValidVisitReported).toBe(true));
     expect(document.documentElement.getAttribute('data-ow-test-state')).toContain('isValidVisitReported');
     document.documentElement.removeAttribute('data-ow-e2e-test');
   });

@@ -82,8 +82,16 @@ export interface AutoSavedBadgeTabs {
  * Creates an in-memory Set of tab IDs that is persisted on every mutation.
  * Callers must await `restore()` before relying on the set across a Service
  * Worker restart.
+ *
+ * PBI 2026-09-12-24: `restore` is now add-AND-prune — an optional
+ * `tabExistence` port lets the caller drop tab IDs that no longer exist
+ * (closed while the SW was down). Without pruning the set grew without
+ * bound and `resolveTabBadge({isRecorded})` could stamp a stale recorded
+ * badge onto a recycled tab ID.
  */
-export function createAutoSavedBadgeTabs(): AutoSavedBadgeTabs {
+export function createAutoSavedBadgeTabs(tabExistence?: {
+    exists(tabId: number): Promise<boolean>;
+}): AutoSavedBadgeTabs {
     const tabs = new Set<number>();
 
     return {
@@ -98,7 +106,18 @@ export function createAutoSavedBadgeTabs(): AutoSavedBadgeTabs {
         },
         restore: async () => {
             const stored = await loadAutoSavedBadgeTabs();
-            stored.forEach((tabId) => tabs.add(tabId));
+            if (tabExistence) {
+                const checks = await Promise.all(
+                    Array.from(stored).map(async (tabId) => ({ tabId, alive: await tabExistence.exists(tabId) })),
+                );
+                for (const { tabId, alive } of checks) {
+                    if (alive) tabs.add(tabId);
+                    else tabs.delete(tabId);
+                }
+            } else {
+                stored.forEach((tabId) => tabs.add(tabId));
+            }
+            void saveAutoSavedBadgeTabs(tabs);
         },
     };
 }

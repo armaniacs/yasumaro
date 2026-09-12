@@ -7,6 +7,7 @@ import { getPluralKey } from '../../../utils/i18nPlural.js';
 import { renderPendingReason } from '../../../utils/pendingStorage.js';
 import type { PendingPage } from '../../../utils/pendingStorage.js';
 import type { SqliteHistoryState } from './sqliteHistoryPanelState.js';
+import { describeDelta, formatBytes } from './entryByteDelta.js';
 
 function t(key: string, substitutions?: string | string[]): string {
   return getMessageOr(key, key, substitutions);
@@ -39,12 +40,6 @@ export function buildCleansingProgressBarHtml(entry: BrowsingLogEntry): string {
 
   const sentRatio = Math.min(sentToAI / base, 1);
   const reductionRate = Math.min((1 - sentRatio) * 100, 99.9);
-
-  const formatBytes = (b: number): string => {
-    if (b >= 1024 * 1024) return `${(b / (1024 * 1024)).toFixed(1)} MB`;
-    if (b >= 1024) return `${(b / 1024).toFixed(1)} KB`;
-    return `${b} B`;
-  };
 
   const label = `${formatBytes(base)} → ${formatBytes(sentToAI)} (${reductionRate.toFixed(1)}% ${t('cleansingReduction')})`;
 
@@ -114,18 +109,22 @@ export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
   }
 
   if (entry.page_bytes != null && entry.candidate_bytes != null) {
-    const reduction = entry.page_bytes - entry.candidate_bytes;
-    const reductionPercent = ((reduction / entry.page_bytes) * 100).toFixed(1);
-    parts.push(`<div class="history-entry-token-reduction">${t('historyContentExtraction', [])} — ${t('historyBytes', [])}: ${entry.page_bytes} → ${entry.candidate_bytes} (${t('historyReduction', [])} ${reduction} / ${reductionPercent}%)</div>`);
+    // PBI 2026-09-12-21: describeDelta guards the zero-original branch that
+    // used to render Infinity%/NaN% here.
+    const delta = describeDelta(entry.page_bytes, entry.candidate_bytes);
+    if (delta) {
+      parts.push(`<div class="history-entry-token-reduction">${t('historyContentExtraction', [])} — ${t('historyBytes', [])}: ${delta.label} (${t('historyReduction', [])} ${delta.cleansed - delta.original} / ${delta.percent}%)</div>`);
+    }
   }
 
   if (entry.original_bytes != null || entry.cleansed_bytes != null) {
-    const contentOriginalB = (entry.original_bytes || entry.candidate_bytes) as number | null | undefined;
-    const contentCleansedB = (entry.cleansed_bytes || entry.original_bytes || entry.candidate_bytes) as number | null | undefined;
-    if (contentOriginalB != null && contentCleansedB != null) {
-      const reduction = contentOriginalB - contentCleansedB;
-      const reductionPercent = contentOriginalB > 0 ? ((reduction / contentOriginalB) * 100).toFixed(1) : '0.0';
-      parts.push(`<div class="history-entry-token-reduction">${t('historyContentCleansing', [])} — ${t('historyBytes', [])}: ${contentOriginalB} → ${contentCleansedB} (${t('historyReduction', [])} ${reduction} / ${reductionPercent}%)</div>`);
+    // PBI 2026-09-12-21: `??` instead of `||` — a legitimate 0-byte value
+    // must not fall through to the next fallback.
+    const contentOriginalB = (entry.original_bytes ?? entry.candidate_bytes) as number | null | undefined;
+    const contentCleansedB = (entry.cleansed_bytes ?? entry.original_bytes ?? entry.candidate_bytes) as number | null | undefined;
+    const cleansingDelta = describeDelta(contentOriginalB, contentCleansedB);
+    if (cleansingDelta) {
+      parts.push(`<div class="history-entry-token-reduction">${t('historyContentCleansing', [])} — ${t('historyBytes', [])}: ${cleansingDelta.label} (${t('historyReduction', [])} ${cleansingDelta.cleansed - cleansingDelta.original} / ${cleansingDelta.percent}%)</div>`);
     }
   }
 
@@ -143,9 +142,10 @@ export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
   }
 
   if (entry.ai_summary_original_bytes != null && entry.ai_summary_cleansed_bytes != null) {
-    const reduction = entry.ai_summary_original_bytes - entry.ai_summary_cleansed_bytes;
-    const reductionPercent = entry.ai_summary_original_bytes > 0 ? ((reduction / entry.ai_summary_original_bytes) * 100).toFixed(1) : '0.0';
-    parts.push(`<div class="history-entry-ai-summary-cleansing">${t('historyAiSummaryCleansing', [])}: ${entry.ai_summary_original_bytes} → ${entry.ai_summary_cleansed_bytes} (${t('historyReduction', [])} ${reduction} / ${reductionPercent}%)</div>`);
+    const aiDelta = describeDelta(entry.ai_summary_original_bytes, entry.ai_summary_cleansed_bytes);
+    if (aiDelta) {
+      parts.push(`<div class="history-entry-ai-summary-cleansing">${t('historyAiSummaryCleansing', [])}: ${aiDelta.label} (${t('historyReduction', [])} ${aiDelta.cleansed - aiDelta.original} / ${aiDelta.percent}%)</div>`);
+    }
   }
 
   const progressBarHtml = buildCleansingProgressBarHtml(entry);

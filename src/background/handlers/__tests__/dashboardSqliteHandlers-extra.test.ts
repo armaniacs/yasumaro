@@ -318,12 +318,13 @@ describe('handleDashboardSqlite — query', () => {
     expect(mock.query).toHaveBeenCalledWith(expect.objectContaining({ kind: 'search', limit: 50 }));
   });
 
-  it('clamps a negative audit_log_query limit to a positive value within cap', async () => {
+  it('passes the audit_log_query limit through — clamping moved to the offscreen planner seam (PBI 2026-09-12-17)', async () => {
     const mock = createMockSqliteClient();
     await dispatchDashboardSqlite({ subtype: 'audit_log_query', limit: -1 } as any, mock as any);
     const call = mock.query.mock.calls.find((c: unknown[]) => (c[0] as { kind?: string }).kind === 'auditLog');
-    expect(call[0].limit).toBeGreaterThanOrEqual(1);
-    expect(call[0].limit).toBeLessThanOrEqual(1000);
+    // The dashboard hop no longer pre-clamps: planAuditLog (offscreen
+    // queryPlanner) owns cap/offset per backend — pinned there.
+    expect(call[0].limit).toBe(-1);
   });
 
   it('returns error when sqliteClient.query fails', async () => {

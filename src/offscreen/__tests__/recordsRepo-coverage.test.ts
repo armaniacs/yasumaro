@@ -268,81 +268,27 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
     });
   });
 
-  // ── serialize: 3 分岐 + error ───────────────────────────────────────────
-  describe('serialize — OPFS / Fallback / IDB / error', () => {
-    it('returns the Uint8Array when the OPFS proxy returns one', async () => {
-      const data = new TextEncoder().encode('opfs-data');
-      engineMock.tryOpfsProxy.mockResolvedValue(data as never);
+  // ── serialize: backend delegation（PBI 2026-09-12-22）──────────────────
+  describe('serialize — delegation to Queryable.serialize', () => {
+    it('delegates to backend.serialize and returns the Uint8Array', async () => {
+      const data = new TextEncoder().encode('export-data');
+      mockBackend.serialize = vi.fn().mockResolvedValue({ success: true, data });
       const result = await serialize();
+      expect(mockBackend.serialize).toHaveBeenCalledTimes(1);
       expect(result).toEqual({ success: true, data });
-      expect(engineMock.tryOpfsProxy).toHaveBeenCalledWith('SERIALIZE');
     });
 
-    it('returns JSON via FallbackStorage', async () => {
-      engineMock.tryOpfsProxy.mockResolvedValue(null);
-      engineMock.usingFallbackStorage = true;
-      engineMock.fallbackStorage = {
-        query: vi.fn().mockResolvedValue({
-          success: true,
-          rows: [{ id: 1, url: 'https://a.com', title: 't', summary: 's', tags: null, created_at: 1000, domain: 'a.com', visit_duration: null, scroll_ratio: null, is_starred: 0, is_deleted: 0 }],
-        }),
-      } as unknown as never;
-
+    it('returns the backend error when serialize fails', async () => {
+      mockBackend.serialize = vi.fn().mockResolvedValue({ success: false, error: 'serialize failed' });
       const result = await serialize();
-      expect(result.success).toBe(true);
-      if (result.success) {
-        const json = JSON.parse(new TextDecoder().decode(result.data));
-        expect(json.table).toBe('browsing_logs');
-        expect(json.rows).toHaveLength(1);
-      }
+      expect(result).toEqual({ success: false, error: 'serialize failed' });
     });
 
-    it('returns an error when the FallbackStorage query fails', async () => {
-      engineMock.tryOpfsProxy.mockResolvedValue(null);
-      engineMock.usingFallbackStorage = true;
-      engineMock.fallbackStorage = {
-        query: vi.fn().mockResolvedValue({ success: false, error: 'fallback fail' }),
-      } as unknown as never;
-
-      const result = await serialize();
-      expect(result).toEqual({ success: false, error: 'fallback fail' });
-    });
-
-    it('collects rows via execWithCache over IDB and returns JSON', async () => {
-      engineMock.tryOpfsProxy.mockResolvedValue(null);
-      engineMock.usingFallbackStorage = false;
-      engineMock.fallbackStorage = null;
-      engineMock.idbEngine = {} as never;
-      // execWithCache は callback に row を渡す
-      engineMock.execWithCache.mockImplementation(async (_sql: string, _params: unknown[], cb?: (row: unknown[]) => void) => {
-        if (cb) cb([1, 'https://b.com', 'title', 'summary', 'tags', 2000, 'b.com', null, null, 0, 0]);
-      });
-
-      const result = await serialize();
-      expect(result.success).toBe(true);
-      if (result.success) {
-        const json = JSON.parse(new TextDecoder().decode(result.data));
-        expect(json.rows[0].url).toBe('https://b.com');
-      }
-    });
-
-    it('calls init when IDB is uninitialized (neither usingFallback nor opfs)', async () => {
-      engineMock.tryOpfsProxy.mockResolvedValue(null);
-      engineMock.usingFallbackStorage = false;
-      engineMock.fallbackStorage = null;
-      engineMock.idbEngine = null;
-      engineMock.init.mockResolvedValue(false);
-      engineMock.execWithCache.mockResolvedValue(undefined);
-
-      const result = await serialize();
-      expect(engineMock.init).toHaveBeenCalled();
-      expect(result.success).toBe(true);
-    });
-
-    it('returns success:false on exception', async () => {
-      engineMock.tryOpfsProxy.mockRejectedValue(new Error('boom'));
-      const result = await serialize();
-      expect(result).toEqual({ success: false, error: 'boom' });
+    it('does NOT touch tryOpfsProxy / execWithCache / fallback directly (single seam)', async () => {
+      mockBackend.serialize = vi.fn().mockResolvedValue({ success: true, data: new Uint8Array() });
+      await serialize();
+      expect(engineMock.tryOpfsProxy).not.toHaveBeenCalledWith('SERIALIZE');
+      expect(engineMock.execWithCache).not.toHaveBeenCalled();
     });
   });
 });

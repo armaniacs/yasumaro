@@ -7,7 +7,7 @@ import { getMessage } from '../utils/i18n.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { getCurrentTab } from './tabUtils.js';
 import { extractDomain } from '../utils/domainUtils.js';
-import { updateStatusIcon, escapeHtml } from './domUtils.js';
+import { updateStatusIcon, escapeHtml, wireOnce } from './domUtils.js';
 import { requestContentFromTab } from './contentFetchGateway.js';
 import { getCleansedBadgeText } from '../utils/cleansingBadge.js';
 import type { ContentResponse } from './mainTypes.js';
@@ -143,9 +143,8 @@ export async function updateTrustStatus(url: string): Promise<void> {
         // every status refresh and addEventListener would stack duplicate
         // handlers (double prompt + double recordDeniedVisit).
         const requestBtn = document.getElementById('btnRequestPermission') as HTMLElement & { dataset: DOMStringMap } | null;
-        if (requestBtn && requestBtn.dataset.wired !== 'true') {
-          requestBtn.dataset.wired = 'true';
-          requestBtn.addEventListener('click', async () => {
+        wireOnce(requestBtn, (el) => {
+          el.addEventListener('click', async () => {
             const granted = await requestPermission(url);
             if (granted) {
               permArea.classList.add('hidden');
@@ -167,7 +166,7 @@ export async function updateTrustStatus(url: string): Promise<void> {
               }
             }
           });
-        }
+        });
       }
       return;
     }
@@ -313,13 +312,6 @@ function renderStatusPanel(status: StatusInfo): void {
   if (cacheContent) {
     let html = '';
 
-    console.log('[StatusPanel] Cache status:', {
-      hasCache: status.cache.hasCache,
-      cacheControl: status.cache.cacheControl,
-      hasCookie: status.cache.hasCookie,
-      hasAuth: status.cache.hasAuth
-    });
-
     if (!status.cache.hasCache) {
       html = `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`;
     } else {
@@ -452,17 +444,17 @@ async function initAllUrlsPermissionBanner(): Promise<void> {
   // must not stack duplicate requestAllUrls handlers. Same discipline as
   // btnRequestPermission (PBI 2026-09-11-04).
   const btn = document.getElementById('btnRequestAllUrls') as HTMLElement & { dataset: DOMStringMap } | null;
-  if (!btn || btn.dataset.wired === 'true') return;
-  btn.dataset.wired = 'true';
-  btn.addEventListener('click', async () => {
-    const granted = await requestAllUrls();
-    if (granted) {
-      banner.classList.add('hidden');
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tabs[0]?.url) {
-        void updateTrustStatus(tabs[0].url);
+  wireOnce(btn, (el) => {
+    el.addEventListener('click', async () => {
+      const granted = await requestAllUrls();
+      if (granted) {
+        banner.classList.add('hidden');
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tabs[0]?.url) {
+          void updateTrustStatus(tabs[0].url);
+        }
       }
-    }
+    });
   });
 }
 
@@ -473,9 +465,8 @@ function initCleansingFeedbackButton(): void {
   // after every whitelist write, and re-running init() stacked a duplicate
   // click handler each time (PBI 2026-09-12-08). Same discipline as the
   // permission buttons (PBI 2026-09-11-04).
-  if (btn.dataset.wired === 'true') return;
-  btn.dataset.wired = 'true';
-  btn.addEventListener('click', async () => {
+  wireOnce(btn, (el) => {
+    el.addEventListener('click', async () => {
     const statusEl = document.getElementById('reportCleansingFeedbackStatus');
     try {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -503,6 +494,7 @@ function initCleansingFeedbackButton(): void {
       logError('Failed to enqueue cleansing feedback', { cause: e }, ErrorCode.INTERNAL_ERROR);
     }
     setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 2000);
+    });
   });
 }
 

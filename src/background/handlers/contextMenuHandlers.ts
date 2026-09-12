@@ -38,7 +38,10 @@ export function registerManualRecordContextMenu(): void {
 }
 
 export function createContextClickHandler(deps: ContextMenuHandlerDeps) {
-    let contextMenuRecordInProgress: Promise<void> | null = null;
+    // PBI 2026-09-12-20: keyed by tab (was a single global slot that silently
+    // dropped a concurrent click even for a different URL — the notification
+    // handler keys by URL for the same double-delivery problem).
+    const inFlightByTabId = new Map<number, Promise<void>>();
 
     return async (info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab): Promise<void> => {
         if (info.menuItemId !== 'yasumaro-manual-record' || !tab?.id || !tab.url) return;
@@ -48,13 +51,20 @@ export function createContextClickHandler(deps: ContextMenuHandlerDeps) {
             return;
         }
 
-        if (contextMenuRecordInProgress) return;
+        const existing = inFlightByTabId.get(tab.id);
+        if (existing) {
+            // Same tab already recording → drop the duplicate click (the
+            // pre-PBI contract). We intentionally do NOT await the in-flight
+            // run: a click handler blocking on the first record would hang
+            // the menu until it finished.
+            return;
+        }
 
         const targetTabId = tab.id;
         const targetTabUrl = tab.url;
         if (!targetTabId || !targetTabUrl) return;
 
-        contextMenuRecordInProgress = (async () => {
+        const run = (async () => {
             try {
                 const [result] = await chrome.scripting.executeScript({
                     target: { tabId: targetTabId },
@@ -98,10 +108,11 @@ export function createContextClickHandler(deps: ContextMenuHandlerDeps) {
             }
         })();
 
+        inFlightByTabId.set(targetTabId, run);
         try {
-            await contextMenuRecordInProgress;
+            await run;
         } finally {
-            contextMenuRecordInProgress = null;
+            inFlightByTabId.delete(targetTabId);
         }
     };
 }

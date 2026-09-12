@@ -127,7 +127,23 @@ export const compositionManifest: readonly CompositionEntry[] = [
       verifyConfirmToken,
     }),
   },
-  { key: 'autoSavedBadgeTabs', singleton: true, factory: () => createAutoSavedBadgeTabs() },
+  {
+    key: 'autoSavedBadgeTabs',
+    singleton: true,
+    // PBI 2026-09-12-24: prune stale tab IDs on restore — tab IDs closed
+    // while the SW was down must not survive as "recorded" markers.
+    factory: () =>
+      createAutoSavedBadgeTabs({
+        exists: async (tabId) => {
+          try {
+            const tab = await chrome.tabs.get(tabId);
+            return tab?.id !== undefined;
+          } catch {
+            return false;
+          }
+        },
+      }),
+  },
   {
     key: 'manualRecordDeps',
     singleton: true,

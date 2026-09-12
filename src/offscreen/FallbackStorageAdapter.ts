@@ -1,7 +1,8 @@
 // src/offscreen/FallbackStorageAdapter.ts
-import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError } from './StorageBackend.js';
+import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, SerializeResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError } from './StorageBackend.js';
 import { BINARY_BACKUP_UNSUPPORTED_ERROR, BINARY_RESTORE_UNSUPPORTED_ERROR, AUDIT_LOG_UNSUPPORTED_ERROR } from './StorageBackend.js';
 import { FallbackStorage } from './storageFallback.js';
+import { buildExportEnvelope } from './exportEnvelope.js';
 import type { BrowsingLogRecord, StorageQuery, AuditLogRecord } from '../utils/sqlite-types.js';
 
 export class FallbackStorageAdapter implements StorageBackend {
@@ -49,6 +50,12 @@ export class FallbackStorageAdapter implements StorageBackend {
 
   async getFtsIndexSize(): Promise<BackendOrError<FtsSizeResult>> {
     return { success: true, count: 0 };
+  }
+
+  async serialize(): Promise<BackendOrError<SerializeResult>> {
+    const result = await this.fallback.query({ excludeDeleted: true, orderBy: 'created_at', orderDir: 'DESC', limit: 100000 });
+    if (!result.success) return { success: false, error: result.error };
+    return { success: true, data: buildExportEnvelope(result.rows as unknown as Parameters<typeof buildExportEnvelope>[0]) };
   }
 
   async backupDb(): Promise<BackendOrError<BackupResult>> {

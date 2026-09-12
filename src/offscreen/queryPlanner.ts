@@ -19,8 +19,8 @@
  */
 
 import { normalizeStorageQuery } from './queryNormalize.js';
-import { clampLimit } from './queryPlan.js';
-import { MAX_QUERY_LIMIT, QUERY_CAPS } from '../messaging/limits.js';
+import { clampLimit, clampOffset } from './queryPlan.js';
+import { MAX_QUERY_LIMIT, QUERY_CAPS, AUDIT_CAP_IDB } from '../messaging/limits.js';
 import { sanitizeTextForFts5, shouldUseFts5 } from './sqliteQueryBuilder.js';
 import { FTS_QUERY_MAX_LENGTH } from './schema.js';
 import { pickDefined } from '../utils/objectUtils.js';
@@ -28,6 +28,10 @@ import type { StorageQuery } from '../utils/sqlite-types.js';
 
 /** Default page size when the caller supplies no limit. */
 export const DEFAULT_QUERY_LIMIT = 100;
+
+/** Retention defaults for the purge seam (mirror dbMaintenance's values). */
+export const DEFAULT_RETENTION_DAYS = 90;
+export const DEFAULT_MAX_RECORDS = 1000;
 
 /**
  * Cap selection, owned by the planner seam (PBI 2026-09-12-16).
@@ -82,4 +86,64 @@ export function applySearchPolicy(q: StorageQuery, fts5Available: boolean): Stor
   const bare = q.text ? sanitizeTextForFts5(q.text) : null;
   const useFts = bare ? shouldUseFts5(fts5Available, bare) : false;
   return { ...q, limit: clampLimit(q.limit, selectReadCap(useFts), DEFAULT_QUERY_LIMIT) };
+}
+
+/**
+ * Audit-read paging seam (PBI 2026-09-12-17).
+ *
+ * Cap/offset policy used to be re-derived per layer (dashboard pre-clamp,
+ * IDB 100k, worker 1000) with **no offset policy at all** — a garbage offset
+ * reached `OFFSET ?` as NaN and surfaced as a backend error. Both backends
+ * now ask here; each keeps its documented cap divergence via the `cap`
+ * argument (`AUDIT_CAP_IDB` / `AUDIT_CAP_OPFS` from limits.ts).
+ * Pure — safe to unit-test without a backend.
+ */
+export function planAuditLog(
+  options: { limit?: number; offset?: number } | undefined,
+  cap: number = AUDIT_CAP_IDB,
+): { limit: number; offset: number } {
+  return {
+    limit: clampLimit(options?.limit, cap, DEFAULT_QUERY_LIMIT),
+    offset: clampOffset(options?.offset),
+  };
+}
+
+/**
+ * Destructive-purge trust boundary (PBI 2026-09-12-19).
+ *
+ * Purge used to flow raw wire numbers to three backends: defaults applied
+ * only to `undefined`, so `NaN`/negative/`Infinity` reached the cutoff
+ * arithmetic — `purgeCutoffMs(NaN) = NaN` silently purged nothing while
+ * reporting `success:true, purged:0` (indistinguishable from "nothing old
+ * enough"). The wire payload now must pass this seam; garbage fails closed
+ * instead of quietly doing nothing.
+ */
+export type PlanPurgeResult =
+  | { ok: true; retentionDays?: number; maxRecords?: number; includeStarred?: boolean }
+  | { ok: false; error: string };
+
+export function planPurge(
+  retentionDays: unknown,
+  maxRecords: unknown,
+  includeStarred: unknown = undefined,
+): PlanPurgeResult {
+  const normalize = (raw: unknown, fallback: number, name: string): number | string => {
+    if (raw === undefined) return fallback;
+    if (typeof raw !== 'number' || !Number.isFinite(raw) || !Number.isInteger(raw) || raw < 0) {
+      return `${name} must be a non-negative integer, got ${String(raw)}`;
+    }
+    return raw;
+  };
+
+  const days = normalize(retentionDays, DEFAULT_RETENTION_DAYS, 'retentionDays');
+  if (typeof days === 'string') return { ok: false, error: days };
+  const max = normalize(maxRecords, DEFAULT_MAX_RECORDS, 'maxRecords');
+  if (typeof max === 'string') return { ok: false, error: max };
+
+  return {
+    ok: true,
+    retentionDays: days,
+    maxRecords: max,
+    ...(typeof includeStarred === 'boolean' ? { includeStarred } : {}),
+  };
 }
