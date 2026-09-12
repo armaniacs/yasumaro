@@ -102,11 +102,12 @@ export function createReadOnlyHandler(deps: ReadOnlyDeps) {
         return { success: false, error: 'Status check failed' };
       }
       case 'audit_log_query': {
-        // Dashboard-hop pre-clamp only; each storage backend enforces its
-        // own audit cap downstream (OPFS 1000 vs IDB 100000, intentional).
+        // PBI 2026-09-12-17: the dashboard hop passes the wire values through
+        // — cap/offset policy lives in the offscreen planner seam
+        // (planAuditLog), which applies each backend's documented cap.
         const result = await deps.queryAuditLog(
           pickDefined({
-            limit: payload.limit === undefined ? undefined : clampLimit(payload.limit, QUERY_CAPS.plain, 1000),
+            limit: payload.limit,
             offset: payload.offset,
           }),
         );

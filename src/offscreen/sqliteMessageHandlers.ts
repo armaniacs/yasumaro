@@ -32,7 +32,7 @@ import {
   queryAuditLog as sqliteQueryAuditLog,
 } from './auditLogRepo.js';
 import { pickDefined } from '../utils/objectUtils.js';
-import { planQuery, planSearch } from './queryPlanner.js';
+import { planQuery, planSearch, planPurge } from './queryPlanner.js';
 import { ARCHIVE_UNSUPPORTED_ERROR } from './StorageBackend.js';
 import { UPDATABLE_FIELDS } from './schema.js';
 import { buildRecordFromPayload } from './browsingLogCodec.js';
@@ -172,13 +172,25 @@ async function handleRestore(msg: SqliteMessage, sendResponse: (r: unknown) => v
 
 async function handlePurge(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_PURGE' }>).payload;
-  const result = await sqlitePurgeOldRecords(payload?.retentionDays, payload?.maxRecords);
+  // PBI 2026-09-12-19: the trust boundary for the destructive purge —
+  // garbage numbers fail closed instead of silently purging nothing.
+  const planned = planPurge(payload?.retentionDays, payload?.maxRecords);
+  if (!planned.ok) {
+    sendResponse({ success: false, error: planned.error });
+    return;
+  }
+  const result = await sqlitePurgeOldRecords(planned.retentionDays, planned.maxRecords);
   sendResponse(result);
 }
 
 async function handleContentPurge(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const payload = (msg as Extract<SqliteMessage, { type: 'CONTENT_PURGE' }>).payload;
-  const result = await sqlitePurgeContent(payload?.retentionDays, payload?.maxRecords, payload?.includeStarred);
+  const planned = planPurge(payload?.retentionDays, payload?.maxRecords, payload?.includeStarred);
+  if (!planned.ok) {
+    sendResponse({ success: false, error: planned.error });
+    return;
+  }
+  const result = await sqlitePurgeContent(planned.retentionDays, planned.maxRecords, planned.includeStarred);
   sendResponse(result);
 }
 

@@ -37,6 +37,9 @@ const EXEMPT = new Set([
   // not an accept/reject bound.
   'src/dashboard/cleansingStatsView.ts',
   'src/dashboard/panels/asyncData/sqliteHistoryPanelView.ts',
+  // PBI 2026-09-12-21: the byte-formatting helper moved out of
+  // sqliteHistoryPanelView into its own module — same display-policy concern.
+  'src/dashboard/panels/asyncData/entryByteDelta.ts',
   // privacy.ts fetches the bundled PRIVACY.md; the 1MB guard is a build-artifact
   // sanity check, not a message-pipeline cap.
   'src/privacy/privacy.ts',

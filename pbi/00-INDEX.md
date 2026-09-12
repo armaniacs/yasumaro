@@ -14,6 +14,19 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-12 architecture deepening round 11 — 8件（0912c）
+
+round 11 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260912-1545-r11.html`）の deepening 候補 8 件を RICE 採点 → PBI 化。実行順 = 17 → 24（RICE 降順、ハードな依存なし）。台帳は `2026-09-12-00-backlog-0912c.md`。
+
+- 2026-09-12-17-fix-audit-paging-seam.md（✅ 完了・アーカイブ済 — `planAuditLog` seam 新設（AUDIT_CAP_* を実配線）・dashboard hop の事前 clamp を pass-through 化・audit TSV に `total > rows.length` ガード追加。**主張訂正**: silent-hang は誤り（外側 catch が応答保証）→ 実害は offset 政策不在の UX 劣化 + TSV 部分配布。planAuditLog 5 tests 新設・audit 168 / offscreen 1093 tests green）
+- 2026-09-12-18-fix-visit-report-commit.md（✅ 完了・アーカイブ済 — flag の commit 権を success/terminal 拒否のみに限定（attempting マーカーで再入防止・in-flight guard 追加）。transport throw は flag false で 1 秒後 1 回の bounded retry。commit rule 5 tests 新設 + E2E hook テストを非同期 commit に対応。content 457 tests green）
+- 2026-09-12-19-refactor-plan-purge-boundary.md（✅ 完了・アーカイブ済 — `planPurge` seam 新設（有限・非負整数チェック・undefined→デフォルト・異常値 fail-closed）を両 wire 経路に適用。planPurge 15 tests 新設 + coverage pin 4 件更新。offscreen 1055 tests green）
+- 2026-09-12-20-fix-small-bug-bundle.md（✅ 完了・アーカイブ済 — context menu を tabId keyed に（URL-blind drop 解消）・pendingChromeStorageQueue の recovered 計測を in-lock 化（負値解消）・checkDomainWithRetry の空応答でも backoff（3 連射解消）・statusPanel console.log 削除・`wireOnce` 共有 seam（domUtils）・`withTransaction` を中立 sqliteTransaction.ts へ抽出（host→worker 越境解消・isHandlerContext 分岐消滅）。loader/visitAdmission テストを新契約に更新）
+- 2026-09-12-21-fix-entry-byte-delta.md（✅ 完了・アーカイブ済 — `entryByteDelta.ts` 新設（describeDelta + formatBytes 単位表）で 3 分支の削減計算を委譲。page_bytes=0 の Infinity%/NaN% と `||` による 0 バイト欠落を解消。delta 6 tests 新設・dashboard 2215 tests green）
+- 2026-09-12-22-refactor-export-serialize-seam.md（✅ 完了・アーカイブ済 — `Queryable.serialize()` 昇格 + `exportEnvelope.ts` SSOT（EXPORT_COLUMNS whitelist + envelope builder + drift guard）。worker の手書き mapper（`as` 6 箇所）削除、recordsRepo を 3 行委譲に（60 行迂回分岐削除）。coverage pin 6 件更新・offscreen 1055 tests green）
+- 2026-09-12-23-refactor-record-session-attempt-context.md（✅ 完了・アーカイブ済 — `openAttempt()` prelude seam 新設（guard → arm button → clear status の単一化・degenerate DOM で idle 自己復帰）。normal/force の 2 重手書き ~60 行を統合。popup 870 tests green・type-check green）
+- 2026-09-12-24-refactor-tab-state-seam.md（✅ 完了・アーカイブ済 — `createAutoSavedBadgeTabs(tabExistence?)` に prune 追加（restore 時に stale tabId を刈り込み永続化）・TabCache remove を flushImmediately + `removeAndFlush` で耐久化。durability 3 tests 新設・background 2306 tests green）
+
 ### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）

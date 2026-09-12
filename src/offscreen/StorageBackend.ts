@@ -46,6 +46,7 @@ export interface StarResult { success: true; is_starred: number }
 export interface PurgeResult { success: true; purged: number }
 export interface FtsSizeResult { success: true; count: number }
 export interface BackupResult { success: true; data: Uint8Array }
+export interface SerializeResult { success: true; data: Uint8Array }
 export interface CountResult { success: true; count: number }
 export interface HealthResult { success: true } // healthCheck — success means alive, failure means error
 export interface AuditLogQueryResult { success: true; rows: AuditLogEntry[]; total: number }
@@ -78,6 +79,16 @@ export interface Queryable {
   getFtsIndexSize(): Promise<BackendOrError<FtsSizeResult>>;
   queryAuditLog(options: { limit?: number; offset?: number }): Promise<BackendOrError<AuditLogQueryResult>>;
   getCount(): Promise<BackendOrError<CountResult>>;
+  /**
+   * JSON export as a Uint8Array (PBI 2026-09-12-22).
+   *
+   * Every backend MUST return the same envelope — `JSON.stringify(BUILD_EXPORT_ENVELOPE(rows))`
+   * over the shared EXPORT_COLUMNS projection — so a caller decoding
+   * SQLITE_EXPORT gets one schema regardless of backend. Previously the OPFS
+   * worker returned a bare array over 13 columns while IDB/fallback returned
+   * the envelope over 11.
+   */
+  serialize(): Promise<BackendOrError<SerializeResult>>;
 }
 
 /**
@@ -139,4 +150,5 @@ export class NoopBackend implements StorageBackend {
   async queryAuditLog() { return this.err(); }
   async getCount() { return this.err(); }
   async clearAll() { return this.err(); }
+  async serialize() { return this.err(); }
 }

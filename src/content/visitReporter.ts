@@ -127,11 +127,32 @@ function defaultGetReasonLabel(messageKey: string, fallbackKey: string, fallback
 }
 
 export class VisitReporter {
+    /**
+     * PBI 2026-09-12-18: the commit rule for `pageState.isValidVisitReported`
+     * lives here. The flag commits only on success or terminal rejection —
+     * never optimistically before the send. A transient transport failure
+     * leaves the gate open (one bounded retry), so a busy service worker no
+     * longer permanently loses the visit.
+     */
+    private attemptInFlight = false;
+
     constructor(private readonly deps: VisitReporterDeps) {}
 
+    /** One bounded retry after a transient transport failure. */
+    private static readonly RETRY_DELAY_MS = 1_000;
+
     async report(): Promise<void> {
+        if (this.attemptInFlight) return;
+        this.attemptInFlight = true;
+        try {
+            await this.attempt();
+        } finally {
+            this.attemptInFlight = false;
+        }
+    }
+
+    private async attempt(retryLeft = 1): Promise<void> {
         const { pageState, extractor, applyResult, sender } = this.deps;
-        pageState.isValidVisitReported = true;
         void logInfo('Sending VALID_VISIT', {}, 'visitReporter');
         console.info('[OWeave] VALID_VISIT 送信開始');
 
@@ -161,10 +182,12 @@ export class VisitReporter {
 
             if (response && !response.success) {
                 if (response.error === 'DOMAIN_BLOCKED') {
+                    pageState.isValidVisitReported = true;
                     return;
                 }
                 if (response.error === 'PRIVATE_PAGE_DETECTED') {
                     if (!response.confirmationRequired) {
+                        pageState.isValidVisitReported = true;
                         return;
                     }
                     const statusCode = reasonToStatusCode(response.reason);
@@ -189,17 +212,33 @@ export class VisitReporter {
                             await logError('Failed to force save private page', { error: errorMessage(retryError) }, ErrorCode.INTERNAL_ERROR, 'visitReporter');
                         }
                     }
+                    // A user-declined or answered confirmation is terminal for
+                    // this page view — the gate closes either way.
+                    pageState.isValidVisitReported = true;
                     return;
                 }
+                // Any other non-success is a worker-side failure the retry
+                // cannot fix by re-sending now — treat as terminal (gate
+                // closes) but log for diagnosis.
+                pageState.isValidVisitReported = true;
                 await logError('Background worker error', { error: response.error }, ErrorCode.INTERNAL_ERROR, 'visitReporter');
+            } else {
+                pageState.isValidVisitReported = true;
             }
         } catch (error: unknown) {
+            // Transient transport failure: leave the flag false so the gate
+            // stays open, and schedule one bounded retry.
             const msg = errorMessage(error);
             if (msg && (msg.includes('Extension context invalidated') || msg.includes('sendMessage'))) {
                 this.deps.stopPeriodicCheck?.();
                 await logInfo('Extension reloaded - page refresh needed', {}, 'visitReporter');
-            } else {
-                await logWarn('Failed to report valid visit', { error: msg }, ErrorCode.API_REQUEST_FAILURE, 'visitReporter');
+                return;
+            }
+            await logWarn('Failed to report valid visit', { error: msg }, ErrorCode.API_REQUEST_FAILURE, 'visitReporter');
+            if (retryLeft > 0) {
+                retryLeft -= 1;
+                await new Promise((resolve) => setTimeout(resolve, VisitReporter.RETRY_DELAY_MS));
+                await this.attempt(retryLeft);
             }
         }
     }

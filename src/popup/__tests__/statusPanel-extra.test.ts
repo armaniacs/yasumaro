@@ -64,10 +64,14 @@ vi.mock('../../utils/logger.js', () => ({
   ErrorCode: { INTERNAL_ERROR: 'INT_001' },
 }));
 
-vi.mock('../domUtils.js', () => ({
-  updateStatusIcon: vi.fn(),
-  escapeHtml: vi.fn((s: string) => s),
-}));
+vi.mock('../domUtils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../domUtils.js')>();
+  return {
+    ...actual,
+    updateStatusIcon: vi.fn(),
+    escapeHtml: vi.fn((s: string) => s),
+  };
+});
 
 vi.mock('../../utils/domainUtils.js', () => ({
   extractDomain: mockExtractDomain,
