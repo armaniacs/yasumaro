@@ -6,6 +6,7 @@
  */
 import { isSecureUrl } from '../../utils/urlUtils.js';
 import { logWarn, logError, ErrorCode } from '../../utils/logger.js';
+import { SingleFlight } from '../../utils/singleFlight.js';
 import type { ManualRecordMessage } from '../messageTypes.js';
 
 /** Page-body slice cap for the context-menu record path (was an inline 5000). */
@@ -38,10 +39,10 @@ export function registerManualRecordContextMenu(): void {
 }
 
 export function createContextClickHandler(deps: ContextMenuHandlerDeps) {
-    // PBI 2026-09-12-20: keyed by tab (was a single global slot that silently
-    // dropped a concurrent click even for a different URL — the notification
-    // handler keys by URL for the same double-delivery problem).
-    const inFlightByTabId = new Map<number, Promise<void>>();
+    // PBI 2026-09-12-30: keyed by tab with the 'drop' policy in the shared
+    // SingleFlight seam (was a hand-rolled Map; before that a single global
+    // slot that dropped a concurrent click even for a different URL).
+    const inFlightByTabId = new SingleFlight<number>();
 
     return async (info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab): Promise<void> => {
         if (info.menuItemId !== 'yasumaro-manual-record' || !tab?.id || !tab.url) return;
@@ -51,20 +52,11 @@ export function createContextClickHandler(deps: ContextMenuHandlerDeps) {
             return;
         }
 
-        const existing = inFlightByTabId.get(tab.id);
-        if (existing) {
-            // Same tab already recording → drop the duplicate click (the
-            // pre-PBI contract). We intentionally do NOT await the in-flight
-            // run: a click handler blocking on the first record would hang
-            // the menu until it finished.
-            return;
-        }
-
         const targetTabId = tab.id;
         const targetTabUrl = tab.url;
         if (!targetTabId || !targetTabUrl) return;
 
-        const run = (async () => {
+        await inFlightByTabId.run(targetTabId, async () => {
             try {
                 const [result] = await chrome.scripting.executeScript({
                     target: { tabId: targetTabId },
@@ -106,13 +98,6 @@ export function createContextClickHandler(deps: ContextMenuHandlerDeps) {
             } catch (error) {
                 logError('Context menu manual record failed', { cause: error }, ErrorCode.INTERNAL_ERROR, 'service-worker');
             }
-        })();
-
-        inFlightByTabId.set(targetTabId, run);
-        try {
-            await run;
-        } finally {
-            inFlightByTabId.delete(targetTabId);
-        }
+        }, 'drop');
     };
 }

@@ -30,8 +30,12 @@ describe('planPurge — destructive-op trust boundary (PBI 2026-09-12-19)', () =
     expect(result.ok).toBe(false);
   });
 
-  it('allows 0 (a valid explicit "purge everything older than today")', () => {
-    expect(planPurge(0, 0)).toEqual({ ok: true, retentionDays: 0, maxRecords: 0 });
+  it('allows 0 and normalizes it to "skip this dimension" (PBI 2026-09-12-26)', () => {
+    // 0 must mean the same thing for BOTH purge ops. Before the fix,
+    // purgeOldRecords(0,0) deleted everything while purgeContent(0,0)
+    // was a no-op (backend `>0` guards treat 0 as absent).
+    const result = planPurge(0, 0);
+    expect(result).toEqual({ ok: true, retentionDays: undefined, maxRecords: undefined });
   });
 
   it('omits includeStarred when it is not a boolean', () => {

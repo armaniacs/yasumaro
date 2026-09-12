@@ -149,10 +149,12 @@ export class TabCache {
     }
 
     /**
-     * 複数のタブを削除
+     * 複数のタブを削除（PBI 2026-09-12-29: batch — 個々の remove が即時
+     * flush を N 回発火していたのを単一 flush に統一）
      */
     removeAll(tabIds: number[]): void {
-        tabIds.forEach(tabId => this.remove(tabId));
+        tabIds.forEach(tabId => this.cache.delete(tabId));
+        this.saveToSession(true);
     }
 
     /**

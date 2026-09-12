@@ -18,6 +18,7 @@ export interface TabHandlerContext {
         has: (tabId: number) => boolean;
         delete: (tabId: number) => void;
         restore: () => Promise<void>;
+        resetRestoreOnce?: () => void;
     };
     getPrivacyCache?: () => Map<string, PrivacyInfo> | null;
     /** 記録ゲート（同意状態）。未指定の場合は「記録中」バッジを表示しない。 */
@@ -26,8 +27,11 @@ export interface TabHandlerContext {
 
 export function createTabEventHandlers(ctx: TabHandlerContext) {
     async function handleTabRemoved(tabId: number): Promise<void> {
+        // PBI 2026-09-12-25: re-arm restore so the next restore (e.g. badge
+        // determination) re-prunes against the post-removal tab set.
+        ctx.autoSavedBadgeTabs.resetRestoreOnce?.();
         await ctx.autoSavedBadgeTabs.restore();
-        ctx.tabCache.remove(tabId);
+        ctx.tabCache.removeAndFlush ? await ctx.tabCache.removeAndFlush(tabId) : ctx.tabCache.remove(tabId);
         ctx.autoSavedBadgeTabs.delete(tabId);
     }
 

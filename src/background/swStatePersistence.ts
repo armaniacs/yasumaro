@@ -30,6 +30,13 @@ export interface CacheInitializedFlag {
     restore(): Promise<void>;
 }
 
+/** Restore-once seam (PBI 2026-09-12-25): the first `restore()` runs, later
+ * calls are no-ops until `resetRestoreOnce()` (prune-triggering events). */
+export interface RestoreOnce {
+    restoredOnce(): boolean;
+    resetRestoreOnce(): void;
+}
+
 /**
  * Creates a mutable flag backed by chrome.storage.session.
  * Callers must await `restore()` before relying on the value across a
@@ -91,8 +98,9 @@ export interface AutoSavedBadgeTabs {
  */
 export function createAutoSavedBadgeTabs(tabExistence?: {
     exists(tabId: number): Promise<boolean>;
-}): AutoSavedBadgeTabs {
+}): AutoSavedBadgeTabs & RestoreOnce {
     const tabs = new Set<number>();
+    let restoredOnce = false;
 
     return {
         has: (tabId: number) => tabs.has(tabId),
@@ -104,7 +112,15 @@ export function createAutoSavedBadgeTabs(tabExistence?: {
             tabs.delete(tabId);
             void saveAutoSavedBadgeTabs(tabs);
         },
+        // PBI 2026-09-12-25: restore-once — the fan-out (tabs.get × N + set)
+        // runs on the first call only; the message handler no longer pays it
+        // per message. `resetRestoreOnce()` re-arms it for prune-triggering
+        // events (handleTabRemoved).
+        restoredOnce: () => restoredOnce,
+        resetRestoreOnce: () => { restoredOnce = false; },
         restore: async () => {
+            if (restoredOnce) return;
+            restoredOnce = true;
             const stored = await loadAutoSavedBadgeTabs();
             if (tabExistence) {
                 const checks = await Promise.all(

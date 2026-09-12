@@ -64,21 +64,26 @@ export async function initStatusPanel(): Promise<void> {
 
     initCleansingFeedbackButton();
 
-    const toggleBtn = document.getElementById('statusToggleBtn');
+    const toggleBtn = document.getElementById('statusToggleBtn') as (HTMLElement & { dataset: DOMStringMap }) | null;
     const detailsPanel = document.getElementById('statusDetails');
 
-    toggleBtn?.addEventListener('click', () => {
-      const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
-      toggleBtn.setAttribute('aria-expanded', String(!isExpanded));
-      detailsPanel?.classList.toggle('hidden');
-      detailsPanel?.setAttribute('aria-hidden', String(isExpanded));
+    // Wire once per element — initStatusPanel re-runs after every whitelist
+    // write and a bare addEventListener stacks duplicate toggle handlers
+    // (PBI 2026-09-12-29). Same wireOnce discipline as the other buttons.
+    wireOnce(toggleBtn, (el) => {
+      el.addEventListener('click', () => {
+        const isExpanded = el.getAttribute('aria-expanded') === 'true';
+        el.setAttribute('aria-expanded', String(!isExpanded));
+        detailsPanel?.classList.toggle('hidden');
+        detailsPanel?.setAttribute('aria-hidden', String(isExpanded));
 
-      const toggleText = document.getElementById('statusToggleText');
-      if (toggleText) {
-        toggleText.textContent = isExpanded
-          ? getMessage('statusShowDetails')
-          : getMessage('statusHideDetails');
-      }
+        const toggleText = document.getElementById('statusToggleText');
+        if (toggleText) {
+          toggleText.textContent = isExpanded
+            ? getMessage('statusShowDetails')
+            : getMessage('statusHideDetails');
+        }
+      });
     });
   } catch (error) {
     logError('Error initializing status panel', { cause: error }, ErrorCode.INTERNAL_ERROR);

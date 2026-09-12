@@ -184,6 +184,9 @@ describe('archiveWireDispatch: backend receives its own `this`', () => {
   // backend[entry.method] and calls it, which drops `this` for class-based
   // backends whose archive methods read instance state. The plain-object fake
   // above cannot catch this, so this suite uses a real class.
+  // PBI 2026-09-12-32: narrowing now goes through supportsArchive, which
+  // probes archiveStatus — a staging backend must expose it (all 14 travel
+  // together per the ArchiveStaging contract).
   class ClassBasedBackend {
     public proxyCalls = 0;
     private proxyArchive(op: string): { op: string } {
@@ -191,6 +194,9 @@ describe('archiveWireDispatch: backend receives its own `this`', () => {
       // OpfsWorkerBackend did when the dispatch loses the receiver.
       this.proxyCalls++;
       return { op };
+    }
+    archiveStatus(): { success: true } {
+      return { success: true };
     }
     archiveCreate(params: Record<string, unknown>): { success: true; stagingName: string; recordCount: number } {
       this.proxyArchive('archiveCreate');

@@ -18,6 +18,7 @@ describe('tabEventHandlers', () => {
       restore: vi.fn().mockResolvedValue(undefined),
       has: vi.fn().mockReturnValue(false),
       delete: vi.fn(),
+      resetRestoreOnce: vi.fn(),
     };
     mockPrivacyCache = new Map();
     vi.mocked(isDomainAllowed).mockResolvedValue(true);
