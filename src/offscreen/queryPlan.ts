@@ -87,7 +87,7 @@ export function matchesExtraWhere(
 
 export const QUERY_CAPS = {
   fts: 100000,
-  plain: 1000,
+  plain: 10000,
 } as const;
 
 /**

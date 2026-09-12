@@ -3983,7 +3983,12 @@
     "message": "This page cannot be recorded"
   },
   "statusPattern": {
-    "message": "pattern: $1$"
+    "message": "pattern: $1$",
+    "placeholders": {
+      "1": {
+        "content": "$1"
+      }
+    }
   },
   "statusSetCookiePresent": {
     "message": "Set-Cookie present"

@@ -65,14 +65,29 @@ async function probeLegacyIdbDb(): Promise<boolean | null> {
 
 /** Collect the migration extras with per-field isolation (allSettled). */
 export async function collectMigrationExtras(): Promise<SqliteMigrationExtras> {
+  // Offscreen documents have no chrome.storage access (see .kilorules rule 9).
+  // Guard the storage read so a missing API does not throw synchronously and
+  // turn the whole STATUS call into a persistent failure (the error in the
+  // screenshot: "Cannot read properties of undefined (reading 'local')").
+  const storagePromise: Promise<Record<string, unknown>> = (() => {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.storage?.local?.get) {
+        return Promise.reject(new Error('chrome.storage not available in offscreen'));
+      }
+      return chrome.storage.local.get([
+        StorageKeys.OPFS_MIGRATION_V2_DONE,
+        StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT,
+        StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT,
+        StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT,
+        StorageKeys.IDB_MIGRATION_V2_DONE,
+      ]) as Promise<Record<string, unknown>>;
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  })();
+
   const [storageResult, opfsProbe, idbProbe] = await Promise.allSettled([
-    chrome.storage.local.get([
-      StorageKeys.OPFS_MIGRATION_V2_DONE,
-      StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT,
-      StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT,
-      StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT,
-      StorageKeys.IDB_MIGRATION_V2_DONE,
-    ]),
+    storagePromise,
     probeLegacyOpfsDb(),
     probeLegacyIdbDb(),
   ]);
