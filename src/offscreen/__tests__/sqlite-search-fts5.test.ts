@@ -55,6 +55,23 @@ class FakeWorker {
         rank: -1.5,
       };
       result = { rows: [row], total: 1 };
+    } else if (type === 'SEARCH') {
+      // Text search routes to the SEARCH handler (FTS5/LIKE), not the
+      // plain-listing QUERY handler — returns rank-bearing rows.
+      const row: BrowsingLogEntry & { rank: number } = {
+        id: 1,
+        url: 'https://a.com',
+        title: 't',
+        summary: null,
+        tags: null,
+        created_at: 1,
+        domain: 'a.com',
+        visit_duration: null,
+        scroll_ratio: null,
+        is_starred: 0,
+        rank: -1.5,
+      };
+      result = { rows: [row], total: 1 };
     } else {
       result = {};
     }
@@ -108,8 +125,8 @@ afterEach(() => {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('query() with text — OPFS worker QUERY proxy (FTS5)', () => {
-  it('routes query({ text }) to the worker QUERY message and returns rank-bearing rows', async () => {
+describe('query() with text — OPFS worker SEARCH proxy (FTS5)', () => {
+  it('routes query({ text }) to the worker SEARCH message and returns rank-bearing rows', async () => {
     const mod = await import('./sqliteTestApi.js');
 
     const initOk = await mod.init();
@@ -126,10 +143,11 @@ describe('query() with text — OPFS worker QUERY proxy (FTS5)', () => {
     expect(result.rows[0]!.rank).toBe(-1.5);
     expect(result.total).toBe(1);
 
-    // The worker must have received a QUERY message with text
-    const queryMsg = fakeWorkerMessages.find(m => m.type === 'QUERY');
-    expect(queryMsg).toBeDefined();
-    expect((queryMsg?.payload as { text: string }).text).toBe('hello');
+    // The worker must have received a SEARCH message with text (not the
+    // plain-listing QUERY handler, which ignores text and rejects rank order)
+    const searchMsg = fakeWorkerMessages.find(m => m.type === 'SEARCH');
+    expect(searchMsg).toBeDefined();
+    expect((searchMsg?.payload as { text: string }).text).toBe('hello');
   });
 
   it('fts5Available is true after OPFS worker initialises', async () => {
