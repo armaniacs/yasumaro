@@ -14,6 +14,15 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-12 architecture deepening round 14 — 4件（0912f）
+
+round 14 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260912-2010-r14.html`）の deepening 候補 4 件を RICE 採点 → PBI 化。実行順 = 38 → 41（RICE 降順）。台帳は `2026-09-12-00-backlog-0912f.md`。健全性確認: queryPlanner / messageHandler / exportEnvelope / supportsArchive は候補なし。
+
+- 2026-09-12-38-fix-idb-like-qualified-sql.md（✅ 完了・アーカイブ済 — IdbVfsBackend.query を FTS=`{qualified:true}` / LIKE=`{qualified:false}` の branch 毎射影に修正（round 12 PBI 27 の 1 投影共用による `no such column: b.is_deleted` 回帰解消）。vestigial `extraWhereSqlFts` フィールド削除 + 関連参照更新。real-engine regression test 新設（better-sqlite3 で LIKE SQL を実行・mutation proof 付き）。realEngineLikeSearch 6 tests 新設・offscreen 1074 tests green）
+- 2026-09-12-39-refactor-select-tag-filter.md（✅ 完了・アーカイブ済 — `selectTagFilter(tag, path, engineFts5Available)` 3-way selector を queryPlan に新設し 5 導出点を委譲（plain=(engine,'id')・fts=(engine,'b.id')・like=(false,—)）。opfsWorker から handleSearchFts/Like へ fts5Available を threading（hardcode true の direct-call 脆弱性解消）。selectTagFilter 7 tests 新設・offscreen 1074 tests green）
+- 2026-09-12-40-fix-tag-parity-corpus.md（✅ 完了・アーカイブ済 — `rowMatchesTagLike` 新設（SQL LIKE 準拠: case-insensitive・%/_ wildcard 展開・カンマ literal）で fallback の tag branch を `matchesExtraWhere` 経由に統一。**ポリシー決定を doc comment に文書化**（旧 prose「mirrors」を executable corpus 契約に変換）。fallback ソートの rank→created_at coerce 統一 + 2 つの intentional divergence pin を parity テストに更新。tagCorpusParity 9 tests 新設・offscreen 1090 tests green）
+- 2026-09-12-41-refactor-status-panel-split.md（✅ 完了・アーカイブ済 — `statusRenderers.ts` 新設（Layer-0: `{t, esc}` 注入の純粋 string renderer 8 関数）で statusPanel の 6 section string building を委譲。実バグ fix: trust deny path の `new URL(url)` throw → extractDomain・toast timer token（連続 deny 競合解消）。stale closure URL は設計変更（chrome.tabs 再クエリは非同期複雑性が wiring を壊すため将来課題に文書化）。全 704 ファイル 11,590 tests green）
+
 ### 2026-09-12 architecture deepening round 13 — 5件（0912e）
 
 round 13 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260912-1700-r13.html`）の deepening 候補 5 件を RICE 採点 → PBI 化。実行順 = 33 → 37（RICE 降順、ハードな依存なし）。台帳は `2026-09-12-00-backlog-0912e.md`。健全性確認: queryPlanner 6 plan 関数は god module 化していない。

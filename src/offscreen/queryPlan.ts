@@ -25,7 +25,6 @@ import { QUERY_CAPS as QUERY_CAPS_SOURCE } from '../messaging/limits.js';
  */
 export interface ExtraWhere {
   extraWhereSql: string;
-  extraWhereSqlFts: string;
   extraParams: SqliteValue[];
   /** Whether the is_deleted filter rode on this WHERE (search builders drop their hardcoded base condition when false). */
   includeDeletedFilter: boolean;
@@ -89,17 +88,55 @@ export function buildExtraWhereSql(query: Pick<StorageQuery, 'dateFrom' | 'dateT
   // the ids array as ONE bind value, so text+ids searches bound a nested
   // array against `id IN (?,?)` on both SQL search paths.
   const extraParams = projected.flatMap((c) => c.params);
+  // PBI 2026-09-12-38: the vestigial extraWhereSqlFts duplicate field is
+  // gone — the round-13 filter unification made both fields always identical,
+  // and "one ExtraWhere serves both paths" was false for SQL text (the LIKE
+  // path is unaliased). Callers now build one projection per search path.
   const extraWhereSql = extraConds.length > 0 ? ` AND ${extraConds.join(' AND ')}` : '';
-  const extraWhereSqlFts = extraWhereSql;
   // The is_deleted condition rode on this WHERE only when excludeDeleted was
   // not explicitly false — search builders read this flag instead of their
   // hardcoded base condition (PBI 2026-09-12-27).
   const includeDeletedFilter = query.excludeDeleted !== false;
-  return { extraWhereSql, extraWhereSqlFts, extraParams, includeDeletedFilter };
+  return { extraWhereSql, extraParams, includeDeletedFilter };
 }
 
 /** @deprecated alias — use buildExtraWhereSql */
 export const extraWhereSql = buildExtraWhereSql;
+
+/**
+ * Path-aware tag-filter seam (PBI 2026-09-12-39).
+ *
+ * Five call sites used to hand-pick `(fts5Available, idColumn)` pairs:
+ * - plain listing:  (engine's fts5Available, 'id')      — rides on spec
+ * - FTS search:     (true, 'b.id')                       — JOIN needs qualification
+ * - LIKE search:    (false, 'id')                        — no FTS, no alias
+ * The rebuilds are load-bearing in the cross cases (FTS path with a long tag
+ * needs `b.id` qualification the spec lacks; LIKE path on an FTS-capable
+ * engine with a long tag needs `tags LIKE ?` while the spec derived MATCH),
+ * so this 3-way selector owns the mapping instead.
+ *
+ * `fts5Available` is the ENGINE capability — the selector overrides it to
+ * `false` for the LIKE path and to the true-engine value for the FTS path,
+ * so a future non-FTS OPFS engine (or a direct handleSearchFts call on a
+ * non-FTS engine) gets `tags LIKE ?` instead of a MATCH against a missing
+ * table.
+ */
+export type SearchPath = 'plain' | 'fts' | 'like';
+
+export function selectTagFilter(
+  tag: string | undefined,
+  path: SearchPath,
+  engineFts5Available: boolean,
+): { condition: string; params: SqliteValue[] } | null {
+  if (!tag) return null;
+  if (path === 'like') {
+    return buildTagFilterCondition(tag, { fts5Available: false });
+  }
+  if (path === 'fts') {
+    return buildTagFilterCondition(tag, { fts5Available: engineFts5Available, idColumn: 'b.id' });
+  }
+  return buildTagFilterCondition(tag, { fts5Available: engineFts5Available });
+}
 
 /**
  * Tag predicate shared by the non-SQL paths (matchesExtraWhere consumers and
@@ -107,6 +144,35 @@ export const extraWhereSql = buildExtraWhereSql;
  * comma-split partial match on the raw tag text, exactly the former
  * client-side filterRowsByTag rule. Rows with unset/non-string tags never
  * match (existing rule).
+ */
+/**
+ * Row-level tag predicate shared by the non-SQL paths (PBI 2026-09-12-40).
+ *
+ * Policy (decided once, here — was prose-only "mirrors the SQL" while the
+ * JS matched case-sensitively and treated commas as separators, diverging
+ * from SQL `tags LIKE ?` on six concrete inputs):
+ * - CASE: case-insensitive substring match (SQL `LIKE` folds ASCII case).
+ * - COMMA: the raw tag text (including commas) is matched against the raw
+ *   tags column — commas are NOT treated as separators. The SQL side
+ *   `tags LIKE '%a,b%'` matches the identical row.
+ * - WILDCARD: `%` and `_` are treated as wildcards (SQL `LIKE` semantics),
+ *   not literals.
+ * Rows with unset/non-string tags never match (existing rule).
+ */
+export function rowMatchesTagLike(tags: string | null | undefined, tagFilter: string): boolean {
+  const tagsString = tags || '';
+  if (typeof tagsString !== 'string' || !tagFilter) return false;
+  // SQL LIKE wildcards → regex, escaping the rest of the pattern.
+  const escaped = tagFilter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = escaped.replace(/%/g, '.*').replace(/_/g, '.');
+  return new RegExp(pattern, 'i').test(tagsString);
+}
+
+/**
+ * Back-compat alias: comma-split partial match on the raw tag text.
+ * PBI 2026-09-12-40: the fallback read path now uses `rowMatchesTagLike`
+ * (SQL-parity). This function remains for direct callers that explicitly
+ * want the legacy comma-split semantics.
  */
 export function tagMatchesFilter(tags: string | null | undefined, tagFilter: string): boolean {
   const tagsString = tags || '';
@@ -131,7 +197,7 @@ export function matchesExtraWhere(
   if (query.ids != null && query.ids.length > 0) {
     if (record.id == null || !query.ids.includes(record.id)) return false;
   }
-  if (query.tag != null && query.tag !== '' && !tagMatchesFilter(record.tags, query.tag)) return false;
+  if (query.tag != null && query.tag !== '' && !rowMatchesTagLike(record.tags, query.tag)) return false;
   return true;
 }
 
@@ -244,7 +310,7 @@ export function buildQuerySpec(
   // Tag filter condition (PBI 2026-09-11): partial-match semantics, built once
   // here so every backend reads the same condition set.
   const tagFilter = query.tag
-    ? buildTagFilterCondition(query.tag, { fts5Available })
+    ? selectTagFilter(query.tag, 'plain', fts5Available)
     : null;
 
   return {
@@ -363,12 +429,12 @@ export function buildFtsSearchStatements(
   const deletedCond = extra.includeDeletedFilter ? ' AND b.is_deleted = 0' : '';
   const countSql =
     'SELECT COUNT(*) AS c FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
-    `WHERE browsing_logs_fts MATCH ?${deletedCond}${extra.extraWhereSqlFts}${tagSql}`;
+    `WHERE browsing_logs_fts MATCH ?${deletedCond}${extra.extraWhereSql}${tagSql}`;
   const rowsSql =
     'SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank AS rank ' +
     'FROM browsing_logs_fts ' +
     'JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
-    `WHERE browsing_logs_fts MATCH ?${deletedCond}${extra.extraWhereSqlFts}${tagSql} ` +
+    `WHERE browsing_logs_fts MATCH ?${deletedCond}${extra.extraWhereSql}${tagSql} ` +
     `ORDER BY ${opts.orderClause} LIMIT ? OFFSET ?`;
   return {
     countSql,

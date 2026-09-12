@@ -251,11 +251,11 @@ export class FallbackStorage {
         return 0;
       };
       if (q.text) {
-        if (q.orderBy === 'created_at') {
-          const dir = q.orderDir === 'ASC' ? 1 : -1;
-          filtered.sort((a, b) => compareCreatedAt(a, b, dir));
-        }
-        // else: no FTS5 rank in fallback path, keep insertion order
+        // PBI 2026-09-12-40: mirror the SQL coercion (buildLikeOrderClause —
+        // orderBy:rank coerces to created_at DESC since fallback has no FTS
+        // rank). The former code kept insertion order for orderBy:rank.
+        const dir = q.orderDir === 'ASC' ? 1 : -1;
+        filtered.sort((a, b) => compareCreatedAt(a, b, dir));
       } else {
         if (!q.orderBy || q.orderBy === 'created_at') {
           const dir = q.orderDir === 'ASC' ? 1 : -1;

@@ -241,9 +241,9 @@ describe('PBI-34 parametric: documented intentional divergences (do NOT unify si
     expect(sql).not.toContain('DROP TABLE');
   });
 
-  it('INTENTIONAL: fallback search without orderBy keeps insertion order (no FTS5 rank)', async () => {
-    // FallbackStorage has no FTS5, so rank is always 0 and there is nothing
-    // relevance-ordered to sort by. SQL backends ORDER BY rank instead.
+  it('PBI 2026-09-12-40: fallback search without orderBy coerces rank to created_at DESC (parity with SQL backends)', async () => {
+    // The former "insertion order" divergence is gone: the fallback text path
+    // now mirrors buildLikeOrderClause (rank → created_at DESC).
     const storage = new FallbackStorage();
     await storage.insert({ url: 'https://a.example.com', created_at: 100 });
     await storage.insert({ url: 'https://b.example.com', created_at: 300 });
@@ -251,7 +251,7 @@ describe('PBI-34 parametric: documented intentional divergences (do NOT unify si
     const result = await storage.query({ text: 'example', limit: 10, offset: 0 });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.rows.map((r) => r.created_at)).toEqual([100, 300, 200]);
+      expect(result.rows.map((r) => r.created_at)).toEqual([300, 200, 100]);
       expect(result.rows.every((r) => r.rank === 0)).toBe(true);
     }
   });

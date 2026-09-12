@@ -20,7 +20,7 @@ describe('buildFilterConditions — shared filter vocabulary (PBI 2026-09-12-27)
 
   it('search+ids flattens ids into the params vector (round-12 nested-bind bug)', () => {
     const extra = buildExtraWhereSql({ text: 'query', ids: [3, 7] } as never, { qualified: true });
-    const inCondition = extra.extraWhereSqlFts.match(/id IN \((\?,\?)\)/);
+    const inCondition = extra.extraWhereSql.match(/id IN \((\?,\?)\)/);
     expect(inCondition).not.toBeNull();
     // Two placeholders, two flat bind values — was one nested [3,7] array.
     expect(extra.extraParams.filter((p) => p === 3 || p === 7)).toEqual([3, 7]);
@@ -52,8 +52,8 @@ describe('buildExtraWhereSql — search projection honors excludeDeleted (PBI 20
 
   it('qualifies columns for the FTS path without regex string-rewrite', () => {
     const extra = buildExtraWhereSql({ domain: 'a.com', excludeDeleted: true }, { qualified: true });
-    expect(extra.extraWhereSqlFts).toContain('b.domain = ?');
-    expect(extra.extraWhereSqlFts).toContain('b.is_deleted = 0');
+    expect(extra.extraWhereSql).toContain('b.domain = ?');
+    expect(extra.extraWhereSql).toContain('b.is_deleted = 0');
   });
 });
 
