@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.12` リリース。
+> - 現時点では `v6.8.13` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -33,6 +33,23 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+
+## [6.8.13] - 2026-09-12
+
+このリリースは `v6.8.12` に対する hotfix です。ドメインフィルター設定画面で旧 UI が二重表示され空の紫ボタンが表示される問題を修正し、タグクラウドとドメインフィルターの回帰テストを追加しました。
+
+### Fixed
+
+- **ドメインフィルターの旧 UI 二重表示と空ボタンを修正**: `dashboard.css` の `button#saveDomainSettings { display: inline-block }` が `[hidden]` に勝って `hidden` 属性付きの旧保存ボタンが紫の空ボタンとして表示され、旧 `simpleFormatUI` / `domainListSection` が新タグ UI と二重に表示されていました。`[hidden] { display: none !important; }` を追加し、`domainFilter.ts` の `updateDomainListVisibility` / `toggleFormatUI` で新タグ UI (`#domainTagArea`) 存在時は旧 UI を表示しないガードを追加
+
+### Added
+
+- **タグクラウド表示の回帰テストを3層で追加**: `1500件中後半500件に hot タグ` のデータで `plain` 上限が `1000` に戻ると空になるバグを検出する。ユニット（`src/offscreen/__tests__/queryPlan.tagClusterRegression.test.ts`）、パネル結合（`src/dashboard/panels/asyncData/__tests__/tagClusterPanel.tagCloudRegression.test.ts`）、E2E（`testDir/e2e/tag-cluster.spec.ts`）
+
+### Changed
+
+- **ドメインフィルター回帰テストを追加**: `src/dashboard/__tests__/domainFilterUiIntegration.test.ts` で新旧 UI 共存時の `hidden` 扱いと保存ボタンの唯一性を検証、`testDir/e2e/domain-filter-ui.spec.ts` で実拡張機能の可視性を検証
+- **UI 機能追加時のテスト必須化をルール化**: `dev-docs/TEST_RULE.md` に「UI 機能追加・変更時のテスト必須化」節を追加。レンダリング・旧 UI との共存・インタラクション・E2E の観点と配置指針を明記
 
 ## [6.8.12] - 2026-09-12
 
