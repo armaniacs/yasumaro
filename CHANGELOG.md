@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.14` リリース。
+> - 現時点では `v6.8.15` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -36,6 +36,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+
+## [6.8.15] - 2026-09-12
+
+アーキテクチャ深化ラウンド（2026-09-12 round 11、`arch-delivery-loop`）のリリースです。実バグ 3 件の解消（監査ログ TSV の部分的配布、transient 送信失敗による訪問ロスト、診断表示の Infinity%/NaN%）と、paging・purge・export の政策単一化 5 件を含みます。全テスト（11,939 件）がグリーンです。
+
+### Fixed
+
+- **監査ログ TSV エクスポートが部分的なまま成功表示していた**: audit 読み取りの cap が dashboard 事前 clamp 10000 / IDB 100000 / worker 1000 の 3 値に分岐し、backend ごとに取得件数が変わって `total` との不一致が無警告で配布されていた。paging 政策を `planAuditLog` seam に集約（AUDIT_CAP_* を実配線・offset 正規化で garbage offset の応答劣化も解消）し、TSV パネルに `total > rows.length` ガードを追加
+- **transient 送信失敗で訪問が永久に失われていた**: `visitReporter` が送信前に `isValidVisitReported` を楽観コミットしており、SW 忙碌・送信拒否の際に gate が閉じたまま再送されなかった。commit 権を success / terminal 拒否のみに限定し、transport 失敗時は 1 回の bounded retry で復帰（in-flight guard で二重送信も防止）
+- **診断表示が Infinity%/NaN% になることがあった**: byte 差分表示の 5 方言のうち 1 分支だけゼロガードが無く `page_bytes=0` で `Infinity%` を描画、`||` チェーンが正当な 0 バイト値を fallback に落下させていた。`entryByteDelta` module に計算を集約（describeDelta + formatBytes 単位表）
+
+### Refactored
+
+- アーキテクチャ Deepening round 11（PBI 17〜24）: 破壊的 purge の `planPurge` fail-closed seam（NaN silent 0-purge 解消）、export の `Queryable.serialize()` 昇格 + `exportEnvelope` SSOT（backend で export 形状が分岐する問題を解消）、context menu の tabId keyed 化（URL-blind drop 解消）、`withTransaction` の中立 sqliteTransaction.ts 抽出（host→worker 越境解消）、RecordSession の `openAttempt` prelude 統合、`AutoSavedBadgeTabs` の prune + TabCache remove 即時 flush（stale recorded badge と suspend 窓ロスの解消）、`wireOnce` 共有 seam
 
 ## [6.8.14] - 2026-09-12
 

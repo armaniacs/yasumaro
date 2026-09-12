@@ -620,14 +620,22 @@ describe('sqliteMessageHandlers — purge handlers', () => {
     expect(dbMaintenanceMock.purgeOldRecords).toHaveBeenCalledWith(30, 500);
   });
 
-  it('SQLITE_PURGE forwards undefined when payload undefined', async () => {
+  it('SQLITE_PURGE applies planner defaults when payload undefined (PBI 2026-09-12-19)', async () => {
     await callHandler('SQLITE_PURGE', undefined as never);
-    expect(dbMaintenanceMock.purgeOldRecords).toHaveBeenCalledWith(undefined, undefined);
+    expect(dbMaintenanceMock.purgeOldRecords).toHaveBeenCalledWith(90, 1000);
   });
 
-  it('SQLITE_PURGE handles partial payload', async () => {
+  it('SQLITE_PURGE handles partial payload (missing maxRecords takes the default)', async () => {
     await callHandler('SQLITE_PURGE', { retentionDays: 10 });
-    expect(dbMaintenanceMock.purgeOldRecords).toHaveBeenCalledWith(10, undefined);
+    expect(dbMaintenanceMock.purgeOldRecords).toHaveBeenCalledWith(10, 1000);
+  });
+
+  it('SQLITE_PURGE fail-closes on garbage numbers instead of binding NaN', async () => {
+    const response = await callHandler('SQLITE_PURGE', { retentionDays: Number('abc') });
+    expect(dbMaintenanceMock.purgeOldRecords).not.toHaveBeenCalled();
+    expect(response).toEqual(
+      expect.objectContaining({ success: false, error: expect.stringContaining('retentionDays') }),
+    );
   });
 
   it('CONTENT_PURGE forwards all three args', async () => {
@@ -635,14 +643,14 @@ describe('sqliteMessageHandlers — purge handlers', () => {
     expect(dbMaintenanceMock.purgeContent).toHaveBeenCalledWith(7, 100, true);
   });
 
-  it('CONTENT_PURGE forwards undefined when empty', async () => {
+  it('CONTENT_PURGE applies planner defaults when empty (PBI 2026-09-12-19)', async () => {
     await callHandler('CONTENT_PURGE', {} as never);
-    expect(dbMaintenanceMock.purgeContent).toHaveBeenCalledWith(undefined, undefined, undefined);
+    expect(dbMaintenanceMock.purgeContent).toHaveBeenCalledWith(90, 1000, undefined);
   });
 
   it('CONTENT_PURGE handles includeStarred false', async () => {
     await callHandler('CONTENT_PURGE', { includeStarred: false } as never);
-    expect(dbMaintenanceMock.purgeContent).toHaveBeenCalledWith(undefined, undefined, false);
+    expect(dbMaintenanceMock.purgeContent).toHaveBeenCalledWith(90, 1000, false);
   });
 });
 
