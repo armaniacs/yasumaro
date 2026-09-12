@@ -68,9 +68,13 @@ export default defineConfig({
     // tests (rate-limit windows, perf-ratio assertions, 11s real backoff vs
     // 15s timeout). Capping to 8 removes the contention that triggered the
     // intermittent failures; full-suite wall time is within ~10% of uncapped.
+    // In this environment (darwin, many files), 8 still triggers
+    // "Timeout waiting for worker to respond" for 2 files; capping to 4
+    // removes the remaining contention and makes `make test-all` stable
+    // without changing the assertion logic (see 6.8.13 hotfix).
     poolOptions: {
       forks: {
-        maxForks: 8,
+        maxForks: 4,
       },
     },
   },
