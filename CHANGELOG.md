@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.11` リリース。
+> - 現時点では `v6.8.12` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -33,9 +33,16 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
-## [6.8.10] - 2026-09-12
 
-アーキテクチャ深化ラウンド（2026-09-11 rounds 4-8,`arch-delivery-loop`）のリリースです。PBIs 01-08 の実装により、アーカイブシームの分離、SQLite ディスパッチチェーンの縮小、クエリプランナーの統合、RecordingOrchestrator インターフェースの狭小化、およびポップアップ許可ラダーの検証が行われました。全テスト（11,794 件）がグリーンです。
+## [6.8.12] - 2026-09-12
+
+このリリースは `v6.8.11` に対する hotfix です。Edge 環境で `SQLITE_STATUS` が永続失敗し `CRITICAL:STRG_RD_001` が表示される問題と、拡張機能読み込み時の `Variable $1$ used but not defined.` エラーを修正しました。タグクラスタのデータ取得件数が直近の硬化で切り詰められていた問題も解消しています。
+
+### Fixed
+
+- **Edge で `SQLITE_STATUS` が永続失敗（`reading 'local'`）**: `src/offscreen/sqliteStatus.ts` の `collectMigrationExtras` が `chrome.storage.local` をガードなしで呼び出しており、offscreen コンテキスト（`chrome.storage` が利用不可）で同期例外を投げ、3 回連続失敗でクリティカルアラートに到達していました。`chrome.storage` の存在を事前チェックし、利用不可時は空の extras を返すようにして `STATUS` 呼び出しが常に成功するように修正
+- **拡張機能読み込み時の `Variable $1$ used but not defined.`**: `public/_locales/*/messages.json` の `statusPattern` が `$1$` プレースホルダーを使用しながら `placeholders` 定義を欠いており、Chrome のロケール検証で拒否されていました。両ロケールに `placeholders` を追加
+- **タグクラスタが 1000 件以降の履歴を取得できず空に見える**: タグクラスタが `queryLogs({limit:10000})` で 10000 件を要求するのに対し、直近の `QUERY_CAPS.plain` 硬化で 1000 件に切り詰められていました。上限を 10000 件に戻し、従来の動作を復元
 
 ## [6.8.11] - 2026-09-12
 
@@ -65,6 +72,11 @@ All notable changes to this project will be documented in this file.
 - アーキテクチャ Deepening round 9（PBI 01〜08）: 記録リクエスト構築の `buildRecordRequest` 統合、popup whitelist 書込の `whitelistWriter` 統合、`pendingRecordGateway` / `BadgePolicy` の新設、アーカイブ復元フローの busy スコープ整理
 
 ## [Unreleased]
+
+
+## [6.8.10] - 2026-09-12
+
+アーキテクチャ深化ラウンド（2026-09-11 rounds 4-8,`arch-delivery-loop`）のリリースです。PBIs 01-08 の実装により、アーカイブシームの分離、SQLite ディスパッチチェーンの縮小、クエリプランナーの統合、RecordingOrchestrator インターフェースの狭小化、およびポップアップ許可ラダーの検証が行われました。全テスト（11,794 件）がグリーンです。
 
 
 ## [6.8.9] - 2026-09-11
