@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.15` リリース。
+> - 現時点では `v6.8.16` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -36,6 +36,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+
+## [6.8.16] - 2026-09-12
+
+アーキテクチャ深化ラウンド（2026-09-12 round 12、`arch-delivery-loop`）のリリースです。実バグ 3 件の解消（メッセージ毎 restore ファンアウト、破壊的 purge の 0 契約不一致、検索パスの excludeDeleted 無視 + fallback export 切り詰め）と、同時実行・ラベル・narrowing の政策単一化 5 件を含みます。全テスト（11,936 件）がグリーンです。
+
+### Fixed
+
+- **全メッセージで badge tabs の restore ファンアウトが走っていた**: round 11 の prune 追加後、restore が保存済み tabId 毎に `chrome.tabs.get` を fan-out し、メッセージハンドラの先頭で毎回実行されていた。restore-once seam（`restoredOnce` / `resetRestoreOnce`）を新設し、fan-out を SW 起動後 1 回 + タブ削除後に限定
+- **`purgeOldRecords(0,0)` は全件削除、`purgeContent(0,0)` は無視と 2 つの破壊的操作が逆動作していた**: `planPurge` が `0` を有効値として通していたため。`0` を「次元スキップ」に正規化し backend の `>0` ガードと契約を一致
+- **検索パスが `excludeDeleted: false` を無視していた**: FTS/LIKE の SQL が `is_deleted = 0` をハードコードし、fallback/InMemory との間で backend 間の行集合差が発生。`buildFilterConditions`（構造化条件の単一語彙）を新設し `ExtraWhere.includeDeletedFilter` で貫通
+- **fallback backend の export が 10k 件で切り詰められていた**: `serialize` が capped `query()` 経由で取得していたため。`exportAllRecords()`（full-table scan）を新設し SQL backend と同一の全件 export に統一
+- **ステータスの開閉ボタンが再初期化のたびに二重配線されていた**: `wireOnce` の適用漏れ。bulk タブ削除で session 書込が N 回発生する問題も batch 化
+
+### Refactored
+
+- アーキテクチャ Deepening round 12（PBI 25〜32）: `AutoSavedBadgeTabs` の prune + removeAndFlush（stale recorded badge 解消）、`planPurge` 契約の確定、filter 条件語彙の `buildFilterConditions` 統一（FTS 限定子を param 化・旧 regex replace 削除）、`ReasonLabel` テーブル統合（multi-hyphen latent bug 解消）、`SingleFlight<K>`（join/drop 政策の引数化）、`supportsArchive` narrowing 統一（doc/code 不一致解消）
 
 ## [6.8.15] - 2026-09-12
 
