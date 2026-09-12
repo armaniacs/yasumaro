@@ -187,6 +187,14 @@ function showTab(tabName: 'general' | 'domain' | 'prompt' | 'privacy'): void {
 }
 
 function updateDomainListVisibility(): void {
+    // 新タグ UI（domainTagArea）が存在する場合は旧 UI を表示しない。
+    // 旧 textarea セクションが新タグ UI と二重に表示され、空の保存ボタンが
+    // 漏出するのを防ぐ（画像の紫の空ボタンの原因）。
+    if (document.getElementById('domainTagArea')) {
+        if (domainListSection) domainListSection.style.display = 'none';
+        return;
+    }
+
     const checkedRadio = document.querySelector('input[name="domainFilter"]:checked') as HTMLInputElement | null;
     if (!checkedRadio) return;
 
@@ -218,7 +226,11 @@ function updateDomainListVisibility(): void {
  * フォーマットUIの切替
  */
 export function toggleFormatUI(): void {
-    if (simpleFormatUI && simpleFormatEnabledCheckbox) {
+    // 新タグ UI が存在する場合は旧 simpleFormatUI を常に非表示にする。
+    // 旧 UI の textarea と保存ボタンが新 UI と二重に表示されるのを防ぐ。
+    if (document.getElementById('domainTagArea')) {
+        if (simpleFormatUI) simpleFormatUI.style.display = 'none';
+    } else if (simpleFormatUI && simpleFormatEnabledCheckbox) {
         simpleFormatUI.style.display = simpleFormatEnabledCheckbox.checked ? 'block' : 'none';
     }
     if (uBlockFormatUI && ublockFormatEnabledCheckbox) {
