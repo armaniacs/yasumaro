@@ -63,6 +63,19 @@ export const AUDIT_CAP_IDB = 100_000;
 /** Plain listing hard ceiling (sqliteEngineHost / recordsRepo). Same value as QUERY_CAPS.fts. */
 export const MAX_QUERY_LIMIT = 100_000;
 
+/**
+ * Read-limit caps, owned by the planner seam (PBI 2026-09-12-16).
+ *
+ * Both caps live next to MAX_QUERY_LIMIT so the pair cannot drift apart
+ * unnoticed (queryPlan.ts previously documented `plain:1000` while the code
+ * said 10000). `queryPlan.ts` re-exports this object for the OPFS worker
+ * boundary, which cannot import the messaging layer directly.
+ */
+export const QUERY_CAPS = {
+  fts: 100000,
+  plain: 10000,
+} as const;
+
 /** Log-forward: forwarded log message chars, detail keys, serialized size (systemHandlers, VULN-004). */
 export const MAX_LOG_FORWARD_MESSAGE_CHARS = 64 * 1024;
 export const MAX_LOG_FORWARD_DETAILS_KEYS = 64;

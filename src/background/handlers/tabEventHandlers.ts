@@ -4,9 +4,9 @@
  * Extracted from service-worker.ts for modularization (PBI-26).
  * Handles tab removal, activation, and navigation badge updates.
  */
-import { isDomainAllowed } from '../../utils/domainUtils.js';
 import { HeaderDetector } from '../headerDetector.js';
 import { setBadge } from '../badgePolicy.js';
+import { resolveTabBadge } from './tabBadgeResolver.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import { TabCache } from '../tabCache.js';
 import { logError, ErrorCode } from '../../utils/logger.js';
@@ -24,18 +24,6 @@ export interface TabHandlerContext {
     isRecordingAllowed?: () => Promise<boolean>;
 }
 
-/**
- * Domain filter の除外判定。storage 未設定など失敗時は「除外ではない」に倒す
- * （バッジ表示は補助情報であり、判定不能を「記録されない」と誤表示しない）。
- */
-async function isDomainExcluded(url: string): Promise<boolean> {
-    try {
-        return !(await isDomainAllowed(url));
-    } catch {
-        return false;
-    }
-}
-
 export function createTabEventHandlers(ctx: TabHandlerContext) {
     async function handleTabRemoved(tabId: number): Promise<void> {
         await ctx.autoSavedBadgeTabs.restore();
@@ -48,36 +36,20 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
         try {
             const tab = await chrome.tabs.get(activeInfo.tabId);
             const tabId = activeInfo.tabId;
-            // 自動保存バッジ表示中のタブは ◎ を維持
-            if (ctx.autoSavedBadgeTabs.has(tabId)) {
-                // PBI 2026-09-12-07: badge display lives in the shared BadgePolicy seam.
-                await setBadge({ kind: 'recorded' }, tabId);
-                return;
-            }
-            if (!tab.url) {
-                await setBadge({ kind: 'clear' }, tabId);
-                return;
-            }
-            const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
-            let privacyInfo: PrivacyInfo | undefined;
+            const normalizedUrl = tab.url ? HeaderDetector.normalizeUrl(tab.url) : undefined;
             const cache = ctx.getPrivacyCache ? ctx.getPrivacyCache() : null;
-            privacyInfo = cache?.get(normalizedUrl);
-            // Tab-derived states are written PER-TAB (PBI 2026-09-12-07). The
-            // old global writes made this tab's state the fallback for every
-            // tab without its own override — one tab's "!" bled into others.
-            if (privacyInfo?.isPrivate) {
-                await setBadge({ kind: 'private' }, tabId);
-            } else if (await isDomainExcluded(tab.url)) {
-                await setBadge({ kind: 'excluded' }, tabId);
-            } else {
-                // 記録が有効なタブでは「記録中」を常時可視化する（PBI 2026-09-05-10）。
-                // ゲート（同意）が無い場合は無表示を維持する。
-                if (ctx.isRecordingAllowed ? await ctx.isRecordingAllowed() : false) {
-                    await setBadge({ kind: 'recording' }, tabId);
-                } else {
-                    await setBadge({ kind: 'clear' }, tabId);
-                }
-            }
+            const privacyInfo = normalizedUrl ? cache?.get(normalizedUrl) : undefined;
+            // Decision lives in TabBadgeResolver (PBI 2026-09-12-09); this
+            // handler keeps only I/O. Tab-derived states are written PER-TAB
+            // (PBI 2026-09-12-07).
+            const state = await resolveTabBadge({
+                privacyInfo,
+                url: tab.url,
+                isRecorded: ctx.autoSavedBadgeTabs.has(tabId),
+                forActivation: true,
+                isRecordingAllowed: ctx.isRecordingAllowed,
+            });
+            await setBadge(state, tabId);
         } catch (error) {
             await logError('Failed to update badge on tab activation', {
                 tabId: activeInfo.tabId,
@@ -96,18 +68,15 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
         // ページ遷移完了時は自動保存バッジをクリア（新しいページのため）
         ctx.autoSavedBadgeTabs.delete(tabId);
         const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
-        let privacyInfo: PrivacyInfo | undefined;
         const cache = ctx.getPrivacyCache ? ctx.getPrivacyCache() : null;
-        privacyInfo = cache?.get(normalizedUrl);
-        if (privacyInfo?.isPrivate) {
-            await setBadge({ kind: 'private' }, tabId);
-        } else if (await isDomainExcluded(tab.url)) {
-            await setBadge({ kind: 'excluded' }, tabId);
-        } else {
-            // Navigation also clears the per-tab cleansed badge (C{n}) — the
-            // state transition replaces the old SW setTimeout (PBI 2026-09-12-07).
-            await setBadge({ kind: 'clear' }, tabId);
-        }
+        const privacyInfo = cache?.get(normalizedUrl);
+        const state = await resolveTabBadge({
+            privacyInfo,
+            url: tab.url,
+            isRecorded: false,
+            forActivation: false,
+        });
+        await setBadge(state, tabId);
     }
 
     return { handleTabRemoved, handleTabActivated, handleTabUpdated };

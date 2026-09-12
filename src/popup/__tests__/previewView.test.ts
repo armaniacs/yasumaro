@@ -264,6 +264,42 @@ describe('PreviewViewImpl', () => {
     expect(anchor.querySelector(`#${DOM_IDS.MASK_NAV}`)).not.toBeNull();
   });
 
+  it('buildNavigation rewires on second show — stale closures do not survive (PBI 2026-09-12-10)', () => {
+    const doc = createMockDoc();
+    const view = new PreviewViewImpl(doc);
+    doc.getElementById(DOM_IDS.MASK_NAV)?.remove();
+    const firstPrev = vi.fn();
+    const firstNext = vi.fn();
+    view.buildNavigation([{ start: 0, end: 1 }], firstPrev, firstNext);
+    const secondPrev = vi.fn();
+    const secondNext = vi.fn();
+    view.buildNavigation(
+      [{ start: 0, end: 1 }, { start: 5, end: 9 }],
+      secondPrev,
+      secondNext,
+    );
+    const prevBtn = doc.getElementById(DOM_IDS.MASK_NAV_PREV) as HTMLButtonElement;
+    const nextBtn = doc.getElementById(DOM_IDS.MASK_NAV_NEXT) as HTMLButtonElement;
+    prevBtn.click();
+    nextBtn.click();
+    expect(firstPrev).not.toHaveBeenCalled();
+    expect(firstNext).not.toHaveBeenCalled();
+    expect(secondPrev).toHaveBeenCalledTimes(1);
+    expect(secondNext).toHaveBeenCalledTimes(1);
+    const counter = doc.getElementById(DOM_IDS.MASK_NAV_COUNTER);
+    expect(counter?.textContent).toBe('0/2');
+  });
+
+  it('refreshLabels re-resolves button titles', () => {
+    const doc = createMockDoc();
+    const view = new PreviewViewImpl(doc);
+    doc.getElementById(DOM_IDS.MASK_NAV)?.remove();
+    view.buildNavigation([{ start: 0, end: 1 }], vi.fn(), vi.fn());
+    expect(() => view.refreshLabels()).not.toThrow();
+    expect(doc.getElementById(DOM_IDS.MASK_NAV_PREV)).not.toBeNull();
+    expect(doc.getElementById(DOM_IDS.MASK_NAV_NEXT)).not.toBeNull();
+  });
+
   describe('trap ownership (PBI 2026-09-11-03)', () => {
     function setupOpenableModal(doc: Document): HTMLDialogElement {
       const modal = doc.getElementById(DOM_IDS.MODAL) as HTMLDialogElement;

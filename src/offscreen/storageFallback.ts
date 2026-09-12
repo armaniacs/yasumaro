@@ -174,27 +174,6 @@ export class FallbackStorage {
   /**
    * Unified read path — handles both plain filtered listing and text search.
    */
-  // Compatibility shim: old tests call storage.search(query, limit, offset, options).
-  // After PBI-03 the search is unified into query({ text, ... }). Keep a
-  // thin wrapper so pre-existing tests that use the old search API still pass
-  // without editing 10+ files. New code should call query({ text }) directly.
-  async search(
-    searchQuery: string,
-    limit: number = 50,
-    offset: number = 0,
-    options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {},
-  ): Promise<{
-    success: true; rows: (BrowsingLogRecord & { rank: number })[]; total: number
-  } | { success: false; error: string }> {
-    return this.query({
-      text: searchQuery,
-      limit,
-      offset,
-      orderBy: options.orderBy as unknown as StorageQuery['orderBy'],
-      orderDir: options.orderDir,
-    } as StorageQuery);
-  }
-
   async query(q: StorageQuery = {}): Promise<{
     success: true; rows: (BrowsingLogRecord & { rank: number })[]; total: number
   } | { success: false; error: string }> {
@@ -203,34 +182,14 @@ export class FallbackStorage {
       if (spec.error) return { success: false, error: spec.error };
       const data = await this.loadData();
       let filtered = data.records;
-      // Compatibility: support both old (isStarred/since/until) and new (starred/dateFrom/dateTo) param names
-      const qAny = q as unknown as Record<string, unknown>;
-      const effectiveStarred = (q.starred as unknown) ?? qAny['isStarred'] ?? qAny['starred'];
-      const effectiveDateFrom = (q.dateFrom as unknown) ?? qAny['since'] ?? qAny['dateFrom'];
-      const effectiveDateTo = (q.dateTo as unknown) ?? qAny['until'] ?? qAny['dateTo'];
-      const effectiveExcludeDeleted = q.excludeDeleted ?? (qAny['excludeDeleted'] as boolean | undefined);
-
-      if (effectiveExcludeDeleted !== false) {
+      // PBI 2026-09-12-13: trust the planner seam — `q` arrives normalized
+      // (normalizeStorageQuery collapses starred|isStarred|is_starred,
+      // dateFrom|since, dateTo|until), so the local alias re-derivation is
+      // deleted and the canonical query feeds matchesExtraWhere directly.
+      if (q.excludeDeleted !== false) {
         filtered = filtered.filter(r => r.is_deleted === 0);
       }
-      // PBI 2026-09-11-06 (round 5): the extra-condition set delegates to the
-      // shared matchesExtraWhere predicate — the hand-rolled domain/starred/
-      // gist/date filters (which silently dropped `ids`) are gone. Alias
-      // params normalize into the canonical names first; excludeDeleted and
-      // the is_starred alias quirk stay local (base-shape semantics, not part
-      // of the extra-condition set).
-      const normalizedExtra = {
-        ...q,
-        starred: effectiveStarred,
-        dateFrom: effectiveDateFrom,
-        dateTo: effectiveDateTo,
-      } as StorageQuery;
-      filtered = filtered.filter(r => matchesExtraWhere(r, normalizedExtra));
-      // Also support is_starred passed via q
-      if (qAny['is_starred'] !== undefined && q.starred === undefined && effectiveStarred === undefined) {
-        const v = qAny['is_starred'] as number | boolean;
-        filtered = filtered.filter(r => r.is_starred === (v ? 1 : 0));
-      }
+      filtered = filtered.filter(r => matchesExtraWhere(r, q));
 
       // Text search (LIKE fallback — no FTS5 in chrome.storage path)
       if (q.text) {

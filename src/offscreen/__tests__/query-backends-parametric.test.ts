@@ -248,7 +248,7 @@ describe('PBI-34 parametric: documented intentional divergences (do NOT unify si
     await storage.insert({ url: 'https://a.example.com', created_at: 100 });
     await storage.insert({ url: 'https://b.example.com', created_at: 300 });
     await storage.insert({ url: 'https://c.example.com', created_at: 200 });
-    const result = await storage.search('example', 10, 0);
+    const result = await storage.query({ text: 'example', limit: 10, offset: 0 });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.rows.map((r) => r.created_at)).toEqual([100, 300, 200]);

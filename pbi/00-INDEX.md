@@ -51,6 +51,19 @@
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-09-12 architecture deepening round 10（0912b）— 8件完了（arch-delivery-loop・0911a ブランチ）
+
+round 10 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260912-1455-r10.html`）→ RICE 採点 → 実装。実行順 = 09 → 16。実バグ 2 件（preview nav stale-closure / fallback alias 分岐）を解消。なぜなぜ分析は `/tmp/kilo/whywhy/2026-09-12-0912b.md`。台帳は `2026-09-12-00-backlog-0912b.md`。
+
+- 2026-09-12-09-refactor-tab-badge-resolver.md（✅ 完了・アーカイブ済 — `tabBadgeResolver.ts` 新設（ordered table + fail-open ラッパー同居）。両 handler は I/O のみに。gate 遅延評価を維持。table test 7 件新設）
+- 2026-09-12-10-fix-preview-navigation-stale-closure.md（✅ 完了・アーカイブ済 — buildNavigation を idempotent 化（束縛 handler 保持 + 再配線）・refreshLabels 分離。re-show 回帰テスト新設・previewView 29 tests green）
+- 2026-09-12-11-refactor-offline-payload-roundtrip.md（✅ 完了・アーカイブ済 — `OfflineJobPayload` 型 + extract/build を builder module に追加。processor の inline 型を削除。round-trip テスト新設・pipeline 302 tests green）
+- 2026-09-12-12-refactor-sender-trust-tiers.md（✅ 完了・アーカイブ済 — `tab-page-only` tier + isTabPageSender を senderTrust に追加。router の inline ブロックを削除し単一呼び出しに。error 文言維持 + matrix 5 件新設・trust+router 88 tests green）
+- 2026-09-12-13-refactor-fallback-alias-trust.md（✅ 完了・アーカイブ済 — `is_starred` を queryNormalize に吸収。fallback の qAny ブロック削除 + search() shim 削除（test 移行）。seam test 4 件新設・offscreen 1031 tests green）
+- 2026-09-12-14-refactor-preview-payload-builder.md（✅ 完了・アーカイブ済 — `buildRecordPayload` を 3 send で共有 + `SpinnerScope` 新設（try/finally 均衡）。期待失敗を return に正規化。previewFlow 7 tests 新設・popup 870 tests green）
+- 2026-09-12-15-refactor-domain-input-policy.md（✅ 完了・アーカイブ済 — `domainInputPolicy.ts` 新設で検証を単一化。`saveDomainLists()` seam 抽出で click+observer ブリッジを直接呼び出しに。parity 3 件 + save 描画テスト新設・dashboard 2209 tests green）
+- 2026-09-12-16-refactor-read-limit-single-owner.md（✅ 完了・アーカイブ済 — `QUERY_CAPS` を limits.ts に移動（queryPlan は再 export）。`selectReadCap` + `applySearchPolicy` を planner に新設し search の inline 選択を置換。orphan 100000 を配線 + コメント drift 修正。cap table test 新設・offscreen 1034 tests green）
+
 ### 2026-09-12 architecture deepening round 9（0912a）— 8件完了（arch-delivery-loop・0911a ブランチ）
 
 round 9 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260912-0811-r9.html`）→ RICE 採点 → 実装。実行順 = 01 → 08。実バグ 5 件（dead envelope / archive 復元ハンドオフ / subdomain 判定不一致 / offline リトライ統計欠落 / path whitelist 死エントリ）+ SW ルール違反（setTimeout）解消。なぜなぜ分析は `/tmp/kilo/whywhy/2026-09-12-0912a.md`。台帳は `2026-09-12-00-backlog-0912a.md`。

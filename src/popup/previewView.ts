@@ -152,6 +152,14 @@ export class PreviewViewImpl implements PreviewView {
     if (counter) counter.textContent = `${index + 1}/${total}`;
   }
 
+  private navHandlers: { prev: (() => void) | null; next: (() => void) | null } = { prev: null, next: null };
+
+  /**
+   * Idempotent navigation wiring (PBI 2026-09-12-10): every show rewires
+   * prev/next to the current run's callbacks. Previously the buttons were
+   * created once and later shows only toggled display, so the second show
+   * navigated with the first run's stale closures.
+   */
   buildNavigation(
     positions: MaskedPosition[],
     onPrev: () => void,
@@ -171,14 +179,10 @@ export class PreviewViewImpl implements PreviewView {
       const prevBtn = this.doc.createElement('button');
       prevBtn.id = DOM_IDS.MASK_NAV_PREV;
       prevBtn.textContent = '▲';
-      prevBtn.title = getMessage('previousMaskedItem');
-      prevBtn.addEventListener('click', onPrev);
 
       const nextBtn = this.doc.createElement('button');
       nextBtn.id = DOM_IDS.MASK_NAV_NEXT;
       nextBtn.textContent = '▼';
-      nextBtn.title = getMessage('nextMaskedItem');
-      nextBtn.addEventListener('click', onNext);
 
       const counter = this.doc.createElement('span');
       counter.id = DOM_IDS.MASK_NAV_COUNTER;
@@ -189,6 +193,20 @@ export class PreviewViewImpl implements PreviewView {
       container.appendChild(nav);
     }
 
+    // Always rewire: detach previous run's handlers, attach current ones.
+    const prevBtn = this.doc.getElementById(DOM_IDS.MASK_NAV_PREV);
+    const nextBtn = this.doc.getElementById(DOM_IDS.MASK_NAV_NEXT);
+    if (prevBtn && this.navHandlers.prev) {
+      prevBtn.removeEventListener('click', this.navHandlers.prev);
+    }
+    if (nextBtn && this.navHandlers.next) {
+      nextBtn.removeEventListener('click', this.navHandlers.next);
+    }
+    if (prevBtn) prevBtn.addEventListener('click', onPrev);
+    if (nextBtn) nextBtn.addEventListener('click', onNext);
+    this.navHandlers = { prev: onPrev, next: onNext };
+    this.refreshLabels();
+
     if (positions.length > 0) {
       (nav as HTMLElement).style.display = 'flex';
       const counter = this.doc.getElementById(DOM_IDS.MASK_NAV_COUNTER);
@@ -196,5 +214,13 @@ export class PreviewViewImpl implements PreviewView {
     } else {
       (nav as HTMLElement).style.display = 'none';
     }
+  }
+
+  /** Re-resolve creation-time labels so a locale switch does not leave stale titles. */
+  refreshLabels(): void {
+    const prevBtn = this.doc.getElementById(DOM_IDS.MASK_NAV_PREV);
+    const nextBtn = this.doc.getElementById(DOM_IDS.MASK_NAV_NEXT);
+    if (prevBtn) (prevBtn as HTMLElement).title = getMessage('previousMaskedItem');
+    if (nextBtn) (nextBtn as HTMLElement).title = getMessage('nextMaskedItem');
   }
 }

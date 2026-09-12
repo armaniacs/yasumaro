@@ -325,9 +325,9 @@ export class IdbVfsBackend implements StorageBackend {
 
   async queryAuditLog(options: { limit?: number; offset?: number }): Promise<BackendOrError<AuditLogQueryResult>> {
     this.ensureDb();
-    // NOTE: audit cap 100000 differs intentionally from the opfs worker
-    // cap (1000) — preserved, see buildAuditLogStatements.
-    const limit = clampLimit(options.limit, 100000, 100);
+    // PBI 2026-09-12-16: audit cap rides QUERY_CAPS.fts (was an orphaned
+    // 100000 literal with a stale comment about the old worker cap).
+    const limit = clampLimit(options.limit, QUERY_CAPS.fts, 100);
     const offset = options.offset ?? 0;
     const stmts = buildAuditLogStatements({ limit, offset });
 

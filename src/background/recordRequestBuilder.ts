@@ -17,6 +17,7 @@
 
 import type { RecordingData } from '../messaging/types.js';
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
+import type { RecordingContext } from './pipeline/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
 
 /** The recording surface a request is built for. */
@@ -68,6 +69,62 @@ const SOURCE_POLICY: Record<RecordRequestSource, SourcePolicy> = {
   'notification-confirm': { force: true, skipDuplicateCheck: true, recordType: 'auto' },
   'valid-visit': { skipDuplicateCheck: false, recordType: 'auto' },
 };
+
+/**
+ * Queue payload shared by enqueue (`StepExecutor.enqueueOfflineJob`) and
+ * retry (`offlineQueueProcessor`) — PBI 2026-09-12-11.
+ *
+ * The ~13 diagnostic fields used to be spelled twice (pack vs unpack) plus a
+ * third inline type in the processor. The field table lives here now: adding
+ * a field is one row, and both sides fail a type check if they forget it.
+ */
+export type OfflineJobPayload = {
+  title: string;
+  url: string;
+  content: string;
+  summary?: string | undefined;
+  tags?: string[] | undefined;
+} & RecordDiagnosticFields;
+
+/** Pack a pipeline context into the queue payload (single field table). */
+export function extractOfflinePayload(context: RecordingContext): OfflineJobPayload {
+  return {
+    title: context.data.title,
+    url: context.data.url,
+    content: context.data.content,
+    summary: context.privacyResult?.summary,
+    maskedCount: context.privacyResult?.maskedCount,
+    tags: context.privacyResult?.tags,
+    pageBytes: context.data.pageBytes,
+    candidateBytes: context.data.candidateBytes,
+    originalBytes: context.data.originalBytes,
+    cleansedBytes: context.data.cleansedBytes,
+    aiSummaryOriginalBytes: context.data.aiSummaryOriginalBytes,
+    aiSummaryCleansedBytes: context.data.aiSummaryCleansedBytes,
+    aiSummaryCleansedElements: context.data.aiSummaryCleansedElements,
+    aiSummaryCleansedReason: context.data.aiSummaryCleansedReason,
+    aiSummaryCleansedReasons: context.data.aiSummaryCleansedReasons,
+  };
+}
+
+/** Rebuild the retry request from a queue payload (single field table). */
+export function buildOfflineRetryRequest(payload: OfflineJobPayload): RecordingData {
+  return buildRecordRequest('offline-retry', {
+    title: payload.title,
+    url: payload.url,
+    content: payload.content,
+    maskedCount: payload.maskedCount,
+    pageBytes: payload.pageBytes,
+    candidateBytes: payload.candidateBytes,
+    originalBytes: payload.originalBytes,
+    cleansedBytes: payload.cleansedBytes,
+    aiSummaryOriginalBytes: payload.aiSummaryOriginalBytes,
+    aiSummaryCleansedBytes: payload.aiSummaryCleansedBytes,
+    aiSummaryCleansedElements: payload.aiSummaryCleansedElements,
+    aiSummaryCleansedReason: payload.aiSummaryCleansedReason,
+    aiSummaryCleansedReasons: payload.aiSummaryCleansedReasons,
+  });
+}
 
 export function buildRecordRequest(
   source: RecordRequestSource,

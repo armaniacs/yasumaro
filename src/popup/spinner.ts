@@ -38,3 +38,28 @@ export function hideSpinner(): void {
   }
   spinner.style.display = 'none';
 }
+
+/**
+ * SpinnerScope — balanced show/hide ownership (PBI 2026-09-12-14).
+ *
+ * Show/hide pairs used to scatter across the flow that shows and the
+ * session finish paths that hide, so a new early return could strand a
+ * visible spinner. A scope closes its own pair in `hide()` (idempotent —
+ * the session-level `hideSpinner()` calls stay valid), and callers wrap the
+ * operation in try/finally so every exit path balances.
+ */
+export class SpinnerScope {
+  private shown = false;
+
+  show(text?: string): void {
+    showSpinner(text);
+    this.shown = true;
+  }
+
+  hide(): void {
+    if (this.shown) {
+      hideSpinner();
+      this.shown = false;
+    }
+  }
+}

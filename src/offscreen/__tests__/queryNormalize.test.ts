@@ -72,3 +72,15 @@ describe('normalizeStorageQuery — alias families', () => {
     expect(normalizeStorageQuery({})).toEqual({});
   });
 });
+
+describe('is_starred snake alias (PBI 2026-09-12-13)', () => {
+  it('collapses is_starred numeric alias into starred', () => {
+    expect(normalizeStorageQuery({ is_starred: 1 })).toMatchObject({ starred: true });
+    expect(normalizeStorageQuery({ is_starred: 0 })).toMatchObject({ starred: false });
+  });
+
+  it('prefers starred over isStarred over is_starred', () => {
+    expect(normalizeStorageQuery({ starred: false, isStarred: true, is_starred: 1 })).toMatchObject({ starred: false });
+    expect(normalizeStorageQuery({ isStarred: true, is_starred: 0 })).toMatchObject({ starred: true });
+  });
+});
