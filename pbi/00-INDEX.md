@@ -14,6 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-12 テキスト検索回帰の多層防御テスト — 3件（pbi-create-bdd・BDD分割）
+
+round 14 のテキスト検索回帰（normalizeStorageQuery text 欠落 + OPFS routing 誤配送）の恒久防止。なぜなぜ分析 60 連鎖で 5 根本原因を特定（seam 移行漏れ・allowlist 漏れ・as-is テスト・日本語 corpus 欠落・smoke test 欠落）。BDDシナリオ別に縦割り。
+
+- 2026-09-12-42-test-search-regression-symptom.md（✅ 完了・アーカイブ済 — `searchDistinctResults.test.ts` 新設（7 tests: 3 トピック distinct・field preservation contract 13 フィールド全生存・satisfies 型ガード）+ `tagCorpusParity` に日本語 corpus 4 tests 追加（CJK trigram/LIKE 境界・ASCII case-fold within CJK rows）。offscreen 1102 tests green）
+- 2026-09-12-43-test-search-hop-contracts.md（✅ 完了・アーカイブ済 — `searchHopContracts.test.ts` 新設（6 tests: buildSearchParams query→text 写像・gateway kind:search → SQLITE_QUERY text 保持・planQuery text 保持）+ rank 実行保証テスト（FTS JOIN + ORDER BY rank を better-sqlite3 実エンジンで実行）。searchHopContracts 6 + realEngineLikeSearch 7 tests green）
+- 2026-09-12-44-test-search-parity-corpus-e2e.md（✅ 完了・アーカイブ済 — `tagCorpusParity` に日本語 corpus 4 tests 追加（4 文字 FTS・2 文字 LIKE・case-fold within CJK）・`buildTagFilterCondition` の inline cleaner を `sanitizeFtsTerm` 経由に統一（sanitizer parity 確立）・`dashboard-search-ui.spec.ts` 新設（Playwright UI 検索 2 tests）・TEST_RULE に「検索パス変更時の smoke test 必須化」セクション追加（4 種 smoke test の対象ファイル一覧付き）。tagCorpusParity 12 tests + Playwright 2 tests green）
+
+実行順 = 42 → 43 → 44（RICE 降順・依存なし）。工数合計 4pt。
+
 ### 2026-09-12 architecture deepening round 14 — 4件（0912f）
 
 round 14 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260912-2010-r14.html`）の deepening 候補 4 件を RICE 採点 → PBI 化。実行順 = 38 → 41（RICE 降順）。台帳は `2026-09-12-00-backlog-0912f.md`。健全性確認: queryPlanner / messageHandler / exportEnvelope / supportsArchive は候補なし。

@@ -26,6 +26,25 @@ describe('tag corpus — cross-backend parity (PBI 2026-09-12-40)', () => {
     expect(rowMatchesTagLike('', '')).toBe(false);
   });
 
+  // PBI 2026-09-12-42: Japanese corpus — CJK trigram/LIKE boundary cases.
+  it('Japanese 4-char tag matches via SQL-parity predicate', () => {
+    expect(rowMatchesTagLike('大学 入試', '大学入試')).toBe(false); // SQL: %大学入試% needs contiguous
+    expect(rowMatchesTagLike('筑波大学の入試', '筑波大学')).toBe(true);
+  });
+
+  it('Japanese 2-char tag matches (LIKE path boundary)', () => {
+    expect(rowMatchesTagLike('大学 入試', '入試')).toBe(true);
+    expect(rowMatchesTagLike('レシピ集', 'レシピ')).toBe(true);
+  });
+
+  it('Japanese rows with ASCII tags fold case like SQL LIKE (PBI 2026-09-12-42)', () => {
+    // SQL LIKE folds ASCII case; CJK chars have no case to fold. This pins
+    // that the predicate folds ASCII within a CJK-containing row without
+    // breaking the CJK part.
+    expect(rowMatchesTagLike('研究 AI tools', 'AI')).toBe(true);
+    expect(rowMatchesTagLike('研究 ai tools', 'AI')).toBe(true);
+  });
+
   it('documented policy: wildcards expand, case folds, commas are literal', () => {
     // These three assertions ARE the policy decision (PBI 2026-09-12-40):
     expect(rowMatchesTagLike('axxb', 'a%b')).toBe(true);   // % = any sequence

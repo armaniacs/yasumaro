@@ -52,11 +52,11 @@ export function buildTagFilterCondition(
 ): { condition: string; params: SqliteValue[] } | null {
   const limitedTag = tag.slice(0, FTS_QUERY_MAX_LENGTH);
   if (!limitedTag) return null;
-  const cleanTag = limitedTag
-    .replace(/["'*^~:()+\-\\]/g, ' ')
-    .replace(/\b(OR|AND|NOT|NEAR)\b/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  // PBI 2026-09-12-44: route the tag FTS branch through the shared
+  // sanitizeFtsTerm (was an inline cleaner that only stripped operator chars
+  // — diverging from the text-path sanitizer on `%`, `_`, and other
+  // whitelist-external chars).
+  const cleanTag = sanitizeFtsTerm(limitedTag);
   const charLen = [...cleanTag].length;
   if (opts.fts5Available && charLen >= 3) {
     // idColumn: the FTS search path reads from a JOIN (browsing_logs AS b),

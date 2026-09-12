@@ -28,12 +28,17 @@ const CREATE_TABLE =
 function makeDb(): Database.Database {
   const db = new Database(':memory:');
   db.exec(CREATE_TABLE);
+  // PBI 2026-09-12-43: the rank-sort test needs the FTS table (JOIN target).
+  db.exec("CREATE VIRTUAL TABLE browsing_logs_fts USING fts5(url, title, summary, tags, tokenize='trigram')");
   db.prepare(
     'INSERT INTO browsing_logs (url, title, summary, tags, created_at, domain, is_starred, is_deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
   ).run('https://a.com/rune-stone', 'Rune Stone', 'a rune summary', '#runes', 1000, 'a.com', 0, 0);
   db.prepare(
     'INSERT INTO browsing_logs (url, title, summary, tags, created_at, domain, is_starred, is_deleted) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
   ).run('https://b.com/other', 'Other', 'other summary', '#other', 2000, 'b.com', 0, 1); // deleted
+  // Mirror the production FTS sync triggers (round 5 PBI 2026-09-11).
+  db.prepare('INSERT INTO browsing_logs_fts(rowid, url, title, summary, tags) VALUES (1, ?, ?, ?, ?)')
+    .run('https://a.com/rune-stone', 'Rune Stone', 'a rune summary', '#runes');
   return db;
 }
 
@@ -149,5 +154,25 @@ describe('real-engine FTS-joined search executes (PBI 2026-09-12-38 sanity)', ()
     const sql = 'SELECT b.id FROM browsing_logs b WHERE 1=1' + extra.extraWhereSql;
     const rows = db.prepare(sql).all(...extra.extraParams) as Array<{ id: number }>;
     expect(rows.length).toBe(1);
+  });
+});
+
+describe('rank sort execution guarantee (PBI 2026-09-12-43)', () => {
+  it('FTS search with orderBy:rank EXECUTES on a real engine (no SQL error)', () => {
+    const db = makeDb();
+    // Trigram tokenizer needs 3+ chars — 'run' matches 'rune'.
+    const q = { text: 'run', orderBy: 'rank', orderDir: 'DESC' } as unknown as StorageQuery;
+    const extra = buildExtraWhereSql(q, { qualified: true });
+    const stmts = buildFtsSearchStatements(extra, {
+      ftsQuery: '"run"',
+      orderClause: 'rank',
+      limit: 10,
+      offset: 0,
+      tagFilter: null,
+    });
+    const count = db.prepare(stmts.countSql).get(...stmts.countParams) as { c: number };
+    expect(count.c).toBe(1);
+    const rows = db.prepare(stmts.rowsSql).all(...stmts.rowsParams) as Array<{ url: string; rank: number }>;
+    expect(rows).toHaveLength(1);
   });
 });

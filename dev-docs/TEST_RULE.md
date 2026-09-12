@@ -43,6 +43,17 @@ UI に関わる機能追加・変更（新規パネル、ボタン、モーダ�
 
 配置は `テストの必須構造` に従い、単一ソースのテストは `{filename}.test.ts`、新旧 UI の共存のような統合テストは共通親の `__tests__/` に `domainFilterUiIntegration.test.ts` のような名前で配置する。E2E は `testDir/e2e/` に `domain-filter-ui.spec.ts` のように配置する。
 
+## 検索パス変更時の smoke test 必須化
+
+テキスト検索・タグ検索・バックエンドの query routing に変更を加えた場合は、**必ず以下の smoke test を実行する**（round 14 のテキスト検索回帰の教訓: stub-based テストは SQL を実行しないため実行時エラーを検出できない）。
+
+- **症状テスト**: `src/offscreen/__tests__/searchDistinctResults.test.ts` — 異なるクエリで異なる結果が返ること（text 欠落・routing 誤配送の両方を検出）
+- **実エンジンテスト**: `src/offscreen/__tests__/realEngineLikeSearch.test.ts` — better-sqlite3 で出力 SQL を実行し、`no such column` クラスのエラーを検出
+- **routing pin**: `src/offscreen/__tests__/sqlite-search-fts5.test.ts` — text ありの query が worker SEARCH メッセージに配送されること
+- **UI E2E**: `testDir/e2e/dashboard-search-ui.spec.ts` — 検索ボックス入力からカード表示まで
+
+テキスト検索に触る変更（queryNormalize / queryPlan / OpfsWorkerBackend / searchHandlers / sqliteQueryBuilder など）を行った場合は、上記 4 種のうち少なくとも「症状テスト」と「実エンジンテスト」を実行してからコミットすること。省略する場合は PR 説明に理由を明記する。
+
 ## AI生成テストのレビューチェックリスト
 
 テストを提示する前（またはレビューする際）に以下を確認する:
