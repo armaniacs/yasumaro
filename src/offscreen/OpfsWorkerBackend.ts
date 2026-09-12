@@ -34,7 +34,13 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
   }
 
   async query(q: StorageQuery): Promise<BackendOrError<QuerySearchResult>> {
-    const result = await this.engine.tryOpfsProxy<{ rows: (BrowsingLogEntry & { rank: number })[]; total: number }>('QUERY', q);
+    // Text search MUST route to the worker SEARCH handler (FTS5/LIKE), not
+    // the plain-listing QUERY handler — the plain path ignores `text` and
+    // rejects `orderBy: 'rank'` (which dashboard text search sends), so every
+    // text search on the OPFS backend returned empty. Mirrors
+    // IdbVfsBackend.query's `if (q.text)` branch and FallbackStorage.query.
+    const workerType = q.text ? 'SEARCH' : 'QUERY';
+    const result = await this.engine.tryOpfsProxy<{ rows: (BrowsingLogEntry & { rank: number })[]; total: number }>(workerType, q);
     if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
     return { success: true, rows: result.rows as (BrowsingLogEntry & { rank: number })[], total: result.total };
   }

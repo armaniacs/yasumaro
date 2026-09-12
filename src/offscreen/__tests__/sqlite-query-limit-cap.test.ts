@@ -97,9 +97,11 @@ describe('Query limit hard cap (M13)', () => {
     workerMessages.length = 0;
     await mod.query({ text: 'test', limit: MAX_QUERY_LIMIT * 10 });
 
-    const queryMsg = workerMessages.find((m) => m.type === 'QUERY');
-    expect(queryMsg).toBeDefined();
-    const payload = queryMsg!.payload as Record<string, unknown>;
+    // Text search routes to the worker SEARCH handler (FTS5/LIKE), not the
+    // plain-listing QUERY handler — the limit clamp still applies.
+    const searchMsg = workerMessages.find((m) => m.type === 'SEARCH');
+    expect(searchMsg).toBeDefined();
+    const payload = searchMsg!.payload as Record<string, unknown>;
     expect(payload.limit).toBe(MAX_QUERY_LIMIT);
   });
 });
