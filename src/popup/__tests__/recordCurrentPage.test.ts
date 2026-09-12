@@ -169,10 +169,20 @@ vi.mock('../statusChecker.js', () => ({
     formatTimeAgo: vi.fn().mockReturnValue(''),
 }));
 
-vi.mock('../spinner.js', () => ({
-    showSpinner: vi.fn(),
-    hideSpinner: vi.fn(),
-}));
+vi.mock('../spinner.js', () => {
+    const showSpinner = vi.fn();
+    const hideSpinner = vi.fn();
+    // PBI 2026-09-12-14: PreviewFlow owns its pairings through SpinnerScope.
+    class SpinnerScope {
+      show(text?: string): void {
+        showSpinner(text);
+      }
+      hide(): void {
+        hideSpinner();
+      }
+    }
+    return { showSpinner, hideSpinner, SpinnerScope };
+});
 
 vi.mock('../errorUtils.js', () => ({
     showError: vi.fn(),

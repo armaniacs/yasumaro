@@ -20,13 +20,26 @@
 
 import { normalizeStorageQuery } from './queryNormalize.js';
 import { clampLimit } from './queryPlan.js';
-import { MAX_QUERY_LIMIT } from '../messaging/limits.js';
+import { MAX_QUERY_LIMIT, QUERY_CAPS } from '../messaging/limits.js';
+import { sanitizeTextForFts5, shouldUseFts5 } from './sqliteQueryBuilder.js';
 import { FTS_QUERY_MAX_LENGTH } from './schema.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
 
 /** Default page size when the caller supplies no limit. */
 export const DEFAULT_QUERY_LIMIT = 100;
+
+/**
+ * Cap selection, owned by the planner seam (PBI 2026-09-12-16).
+ *
+ * The fts/plain choice used to be re-derived inline at every call site
+ * (buildQuerySpec, OPFS handleSearch), so a cap change needed N synchronized
+ * edits. Callers ask here; `buildQuerySpec` keeps only a defensive re-clamp
+ * at the worker boundary.
+ */
+export function selectReadCap(useFts: boolean): number {
+  return useFts ? QUERY_CAPS.fts : QUERY_CAPS.plain;
+}
 
 /**
  * Apply the read policy to an already-normalized query: clamp the limit and
@@ -56,4 +69,17 @@ export function planQuery(payload: Record<string, unknown>): StorageQuery {
 export function planSearch(payload: Record<string, unknown>): StorageQuery {
   const text = String((payload as { query?: unknown }).query ?? '');
   return applyReadPolicy({ text, ...normalizeStorageQuery(payload) });
+}
+
+/**
+ * Clamp a search limit through the planner-owned cap (PBI 2026-09-12-16).
+ *
+ * OPFS `handleSearch` used to pick the fts/plain cap inline; it now asks
+ * here so the choice lives in one place. Pure — safe to unit-test without
+ * a backend.
+ */
+export function applySearchPolicy(q: StorageQuery, fts5Available: boolean): StorageQuery & { limit: number } {
+  const bare = q.text ? sanitizeTextForFts5(q.text) : null;
+  const useFts = bare ? shouldUseFts5(fts5Available, bare) : false;
+  return { ...q, limit: clampLimit(q.limit, selectReadCap(useFts), DEFAULT_QUERY_LIMIT) };
 }

@@ -8,7 +8,7 @@ import type { OfflineJob } from './offlineNetworkQueue.js';
 import type { RecordingData } from '../messaging/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { logError, logWarn, ErrorCode } from '../utils/logger.js';
-import { buildRecordRequest } from './recordRequestBuilder.js';
+import { buildOfflineRetryRequest, type OfflineJobPayload } from './recordRequestBuilder.js';
 
 interface OfflineNetworkQueueLike {
     retryAll(handler: (job: OfflineJob) => Promise<boolean>): Promise<void>;
@@ -27,23 +27,9 @@ export interface OfflineQueueProcessorDeps {
 export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): () => Promise<void> {
     return async function processOfflineNetworkQueue(): Promise<void> {
         await deps.offlineNetworkQueue.retryAll(async (job: OfflineJob) => {
-            const payload = job.payload as {
-                title: string;
-                url: string;
-                content: string;
-                summary?: string;
-                maskedCount?: number;
-                tags?: string[];
-                pageBytes?: number;
-                candidateBytes?: number;
-                originalBytes?: number;
-                cleansedBytes?: number;
-                aiSummaryOriginalBytes?: number;
-                aiSummaryCleansedBytes?: number;
-                aiSummaryCleansedElements?: number;
-                aiSummaryCleansedReason?: import('../utils/commonTypes.js').AiSummaryCleansedReason;
-                aiSummaryCleansedReasons?: string[];
-            };
+            // PBI 2026-09-12-11: the payload shape is owned by the shared
+            // field table (OfflineJobPayload) — no third spelling here.
+            const payload = job.payload as OfflineJobPayload;
 
             // obsidian_sync jobs mean the AI summary already succeeded and only the
             // Obsidian append failed — retry that write only, without re-calling the
@@ -66,24 +52,9 @@ export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): ()
             }
 
             try {
-                // PBI 2026-09-12-04: route through the shared builder so the
-                // diagnostic stats enqueued with the job survive the retry
-                // (the old literal dropped them behind an `as` cast).
-                const result = await deps.recordingPipeline.record(buildRecordRequest('offline-retry', {
-                    title: payload.title,
-                    url: payload.url,
-                    content: payload.content,
-                    maskedCount: payload.maskedCount,
-                    pageBytes: payload.pageBytes,
-                    candidateBytes: payload.candidateBytes,
-                    originalBytes: payload.originalBytes,
-                    cleansedBytes: payload.cleansedBytes,
-                    aiSummaryOriginalBytes: payload.aiSummaryOriginalBytes,
-                    aiSummaryCleansedBytes: payload.aiSummaryCleansedBytes,
-                    aiSummaryCleansedElements: payload.aiSummaryCleansedElements,
-                    aiSummaryCleansedReason: payload.aiSummaryCleansedReason,
-                    aiSummaryCleansedReasons: payload.aiSummaryCleansedReasons,
-                }));
+                // PBI 2026-09-12-11: rebuild through the shared field table so
+                // the retry cannot drop fields the enqueue packed.
+                const result = await deps.recordingPipeline.record(buildOfflineRetryRequest(payload));
                 return result.success && !result.skipped;
             } catch (error) {
                 logError('Offline full-pipeline retry failed', { cause: error, url: payload.url }, ErrorCode.INTERNAL_ERROR, 'service-worker');

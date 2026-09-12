@@ -132,6 +132,20 @@ pending pages の SQLite パネル移設 + legacy panel-history 撤去（〜−1
 | SqliteEngineHost 14 accessor 崩し + getBackend/ensureBackend キャッシュ二重経路（stale backend の恐れ） | 1.6 | init/fallback 系バグが顕在化したとき |
 | 小型バグ群（各個に顕在化時 fix）: throttle beforeunload listener 漏れ（src/content/utils/throttle.ts:32-39）・DeadlineTimer 非null assert で pre-init crash（deadlineTimer.ts:70,96-106）・previewPresenter promise leak（DOM 欠損で永久ハング・:227-236）・CSP/allowlist 3 テーブル membership drift（nsfw.oisd.nl / tranco-list.eu）・cleanse flag 毎回 storage 読み（cleansingOffscreenDelegate.ts:13-25）・focusTrap map 無境界（focusTrap.ts:49-54）・dailyNotePath の %2e%2e 通過（sink 実証後 security fix 昇格） | — | 個別に顕在化したとき |
 
+**2026-09-12 round 10（arch-delivery-loop・0911a ブランチ）で台帳入り（9 項目）:**
+
+| 項目 | RICE | 再評価条件 |
+|------|------|-----------|
+| recordsRepo.serialize の interface 化（active/total 二重 select・delete/ids LIKE リポジトリ重複・`as` 3 箇所。Strong だが Effort 大） | 2.0 | export 列追加時 |
+| IdbVfsBackend の withTransaction 越境 import（opfsWorker/handlers.js から。Worth・中立 module への移動） | — | 次回 backend 改修に同梱 |
+| audit read path の orphan cap 配線（handleAuditLogQuery/queryAuditLog のデフォルト・QUERY_CAPS 参照なし。Worth） | — | STATUS 改修時に同梱（PBI 16 で idb 側 100000 は配線済み） |
+| purge trust-boundary（retentionDays/NaN bind・LIMIT -1 無制限。Speculative） | — | NaN bind 実測後に再評価 |
+| StatusPanel 分割（1456 行 god render・9 セクションの局在化。Worth） | — | 次回 popup 改修時 |
+| TagCluster overlay pipeline（geometry 6 成分 useState・基準半径単一テスト。Worth・視覚のみ） | — | 次回 tag 改修時 |
+| single-flight 統合（generateSummary 3  spellings・TTL/Mode/Trace 欠落。Worth） | — | 4 つ目の consumer 出現時 |
+| notification codec + reason ラベル（4 inline 型 + ラベル 2 重定義。Worth） | — | 次回 notification 改修時 |
+| VisitRateLimiter clock + TabCache twin（直注入 Date.now・SessionStore twin・autoSavedBadgeTabs 2 系統。Speculative） | — | 次回該当改修時 |
+
 ## 運用
 
 - 次ラウンドの architecture review（`/improve-codebase-architecture`）は本台帳を入力に再評価する

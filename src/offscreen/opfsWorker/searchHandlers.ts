@@ -7,7 +7,7 @@
  * coerce-to-DESC invalid-order policy (see buildSearchOrderClause).
  */
 
-import type { SearchResult } from '../../utils/sqlite-types.js';
+import type { SearchResult, StorageQuery } from '../../utils/sqlite-types.js';
 import { sanitizeFtsTerm } from '../schema.js';
 import { shouldUseFts5, buildTagFilterCondition } from '../sqliteQueryBuilder.js';
 import type { SearchPayload } from './types.js';
@@ -21,7 +21,8 @@ import {
   buildLikeSearchStatements,
 } from '../queryPlan.js';
 import { SEARCH_COLUMNS_WITH_RANK, mapNamed } from '../rowCodec.js';
-import { QUERY_CAPS, clampLimit, clampOffset } from '../queryPlan.js';
+import { clampOffset } from '../queryPlan.js';
+import { applySearchPolicy } from '../queryPlanner.js';
 
 export async function handleSearch(ctx: HandlerContext, payload: SearchPayload, fts5Available: boolean): Promise<{ rows: SearchResult[]; total: number }> {
   const { text: searchQuery = '', orderBy, orderDir } = payload;
@@ -29,10 +30,9 @@ export async function handleSearch(ctx: HandlerContext, payload: SearchPayload, 
   const bare = sanitizeFtsTerm(searchQuery);
   if (!bare) return { rows: [], total: 0 };
 
-  // PBI 2026-09-12-06: paging values go through the same clamp seam as the
-  // plain listing (was an unclamped `limit = 50, offset = 0` default pair —
-  // a third query default and no offset validation on this path).
-  const limit = clampLimit(payload.limit, fts5Available && shouldUseFts5(fts5Available, bare) ? QUERY_CAPS.fts : QUERY_CAPS.plain, 100);
+  // PBI 2026-09-12-16: the fts/plain cap choice lives in the planner seam
+  // (was an inline ternary here). Paging defaults: PBI 2026-09-12-06.
+  const { limit } = applySearchPolicy(payload as unknown as StorageQuery, fts5Available);
   const offset = clampOffset(payload.offset ?? 0);
 
   if (shouldUseFts5(fts5Available, bare)) {

@@ -21,10 +21,11 @@ const RUNTIME_ID = 'this-extension-id';
  * below rather than silently loosening.
  */
 const EXPECTED_TRUST: Record<string, SenderTrustLevel> = {
-  // A tab reporting on its own page is the legitimate source for these.
-  VALID_VISIT: 'content-script-allowed',
+  // A live web page is the legitimate source for these (PBI 2026-09-12-12:
+  // promoted from 'content-script-allowed' to the stricter 'tab-page-only').
+  VALID_VISIT: 'tab-page-only',
   CONTENT_CLEANSING_EXECUTED: 'content-script-allowed',
-  CHECK_DOMAIN: 'content-script-allowed',
+  CHECK_DOMAIN: 'tab-page-only',
   PING: 'content-script-allowed',
 
   // Everything else is popup / dashboard / offscreen only.
@@ -105,6 +106,8 @@ describe('sender trust coverage', () => {
 
   describe('content-script reachability', () => {
     for (const [type, level] of Object.entries(EXPECTED_TRUST)) {
+      // tab-page-only additionally requires tab.url, which the shared
+      // contentScriptSender fixture lacks — it is blocked by design.
       const shouldAllow = level === 'content-script-allowed';
 
       it(`${shouldAllow ? 'allows' : 'blocks'} a content script for ${type}`, () => {
@@ -116,8 +119,11 @@ describe('sender trust coverage', () => {
 
   describe('extension pages', () => {
     for (const [type, level] of Object.entries(EXPECTED_TRUST)) {
-      it(`allows an extension page for ${type}`, () => {
-        expect(checkSenderTrust(extensionPageSender, level, type, RUNTIME_ID).allowed).toBe(true);
+      // tab-page-only rejects extension pages by design (PBI 2026-09-12-12).
+      const shouldAllow = level !== 'tab-page-only';
+
+      it(`${shouldAllow ? 'allows' : 'blocks'} an extension page for ${type}`, () => {
+        expect(checkSenderTrust(extensionPageSender, level, type, RUNTIME_ID).allowed).toBe(shouldAllow);
       });
     }
   });

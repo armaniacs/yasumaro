@@ -108,7 +108,7 @@ describe('search-sort parametric — LIKE fallback ORDER BY (idb vs opfs SQL vs 
 
     if (rowsExpect) {
       const storage = await seedFallback();
-      const result = await storage.search('example', 10, 0, { orderBy: 'created_at', orderDir: 'ASC' });
+      const result = await storage.query({ text: 'example', limit: 10, offset: 0, orderBy: 'created_at', orderDir: 'ASC' });
       expect(result.success).toBe(true);
       if (result.success) expect(result.rows.map((r) => r.created_at)).toEqual(rowsExpect);
     }
@@ -116,14 +116,14 @@ describe('search-sort parametric — LIKE fallback ORDER BY (idb vs opfs SQL vs 
 
   it('fallback search without orderBy keeps insertion order (no FTS5 rank — intentional)', async () => {
     const storage = await seedFallback();
-    const result = await storage.search('example', 10, 0);
+    const result = await storage.query({ text: 'example', limit: 10, offset: 0 });
     expect(result.success).toBe(true);
     if (result.success) expect(result.rows.map((r) => r.created_at)).toEqual([100, 300, 200]);
   });
 
   it('fallback explicit created_at DESC sorts newest first', async () => {
     const storage = await seedFallback();
-    const result = await storage.search('example', 10, 0, { orderBy: 'created_at', orderDir: 'DESC' });
+    const result = await storage.query({ text: 'example', limit: 10, offset: 0, orderBy: 'created_at', orderDir: 'DESC' });
     expect(result.success).toBe(true);
     if (result.success) expect(result.rows.map((r) => r.created_at)).toEqual([300, 200, 100]);
   });
@@ -164,8 +164,8 @@ describe('search-sort parametric — invalid orderDir policy split (intentional)
 
   it('fallback fails closed via the shared spec (no interpolation)', async () => {
     const storage = await seedFallback();
-    const result = await storage.search('example', 10, 0, {
-      orderBy: 'created_at',
+    const result = await storage.query({
+      text: 'example', limit: 10, offset: 0, orderBy: 'created_at',
       orderDir: malicious as unknown as 'ASC' | 'DESC',
     });
     expect(result.success).toBe(false);

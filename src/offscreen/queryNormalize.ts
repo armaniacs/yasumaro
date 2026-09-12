@@ -23,7 +23,10 @@ export function normalizeStorageQuery(payload: Record<string, unknown>): Storage
     orderBy: payload?.orderBy as 'created_at' | 'rank' | undefined,
     orderDir: payload?.orderDir as 'ASC' | 'DESC' | undefined,
     domain: payload?.domain != null ? String(payload.domain) : undefined,
-    starred: payload?.starred != null ? Boolean(payload.starred) : payload?.isStarred != null ? Boolean(payload.isStarred) : undefined,
+    // PBI 2026-09-12-13: the snake_case `is_starred` numeric alias used to
+    // live only in FallbackStorage's local re-derivation, so the same wire
+    // payload filtered differently per backend. It collapses here now.
+    starred: payload?.starred != null ? Boolean(payload.starred) : payload?.isStarred != null ? Boolean(payload.isStarred) : payload?.is_starred != null ? Boolean(Number(payload.is_starred)) : undefined,
     excludeDeleted: payload?.excludeDeleted != null ? Boolean(payload.excludeDeleted) : undefined,
     dateFrom: payload?.dateFrom != null ? Number(payload.dateFrom) : payload?.since != null ? Number(payload.since) : undefined,
     dateTo: payload?.dateTo != null ? Number(payload.dateTo) : payload?.until != null ? Number(payload.until) : undefined,

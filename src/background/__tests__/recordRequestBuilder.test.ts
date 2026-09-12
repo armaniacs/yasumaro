@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { buildRecordRequest } from '../recordRequestBuilder.js';
+import { buildRecordRequest, extractOfflinePayload, buildOfflineRetryRequest } from '../recordRequestBuilder.js';
+import type { RecordingContext } from '../pipeline/types.js';
 
 describe('buildRecordRequest (PBI 2026-09-12-04)', () => {
   it('applies the per-source policy table', () => {
@@ -116,6 +117,35 @@ describe('offline retry preserves enqueued diagnostics (PBI 2026-09-12-04)', () 
       aiSummaryCleansedReason: 'keyword',
       aiSummaryCleansedReasons: ['keyword'],
     }));
+  });
+
+  it('round-trips context → payload → request without field loss (PBI 2026-09-12-11)', () => {
+    const context = {
+      data: {
+        title: 'T', url: 'https://example.com', content: 'body',
+        pageBytes: 100, candidateBytes: 90, originalBytes: 120, cleansedBytes: 80,
+        aiSummaryOriginalBytes: 60, aiSummaryCleansedBytes: 50,
+        aiSummaryCleansedElements: 2, aiSummaryCleansedReason: 'keyword',
+        aiSummaryCleansedReasons: ['keyword'],
+      },
+      privacyResult: { summary: 's', maskedCount: 3, tags: ['a'] },
+    } as unknown as RecordingContext;
+
+    const payload = extractOfflinePayload(context);
+    expect(payload).toMatchObject({
+      title: 'T', summary: 's', maskedCount: 3, tags: ['a'], pageBytes: 100,
+    });
+
+    const request = buildOfflineRetryRequest(payload);
+    expect(request).toMatchObject({
+      title: 'T', url: 'https://example.com', content: 'body',
+      force: false, skipDuplicateCheck: true, recordType: 'manual',
+      maskedCount: 3, pageBytes: 100, candidateBytes: 90,
+      aiSummaryCleansedReason: 'keyword',
+    });
+    // Queue-only fields (summary/tags) do not leak into the record request.
+    expect(request).not.toHaveProperty('summary');
+    expect(request).not.toHaveProperty('tags');
   });
 
   it('logs a failed full-pipeline retry instead of swallowing it', async () => {

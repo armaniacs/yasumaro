@@ -81,13 +81,16 @@ describe('FallbackStorage query error handling', () => {
 });
 
 // ── query(): legacy is_starred param + effectiveStarred falsy branch ───
+// PBI 2026-09-12-13: aliases collapse at the planner seam; these tests feed
+// the normalized query, mirroring the product path.
 
 describe('FallbackStorage query legacy starred param', () => {
   it('filters by legacy is_starred=1 when starred/isStarred are not provided', async () => {
     await storage.insert(makeRecord({ url: 'https://s1.com', created_at: 1, is_starred: 1 }));
     await storage.insert(makeRecord({ url: 'https://s2.com', created_at: 2, is_starred: 0 }));
 
-    const result = await storage.query({ is_starred: 1 } as unknown as Parameters<FallbackStorage['query']>[0]);
+    const { normalizeStorageQuery } = await import('../queryNormalize.js');
+    const result = await storage.query(normalizeStorageQuery({ is_starred: 1 }));
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.rows.length).toBe(1);
@@ -99,7 +102,8 @@ describe('FallbackStorage query legacy starred param', () => {
     await storage.insert(makeRecord({ url: 'https://s3.com', created_at: 3, is_starred: 1 }));
     await storage.insert(makeRecord({ url: 'https://s4.com', created_at: 4, is_starred: 0 }));
 
-    const result = await storage.query({ is_starred: 0 } as unknown as Parameters<FallbackStorage['query']>[0]);
+    const { normalizeStorageQuery } = await import('../queryNormalize.js');
+    const result = await storage.query(normalizeStorageQuery({ is_starred: 0 }));
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.rows.length).toBe(1);

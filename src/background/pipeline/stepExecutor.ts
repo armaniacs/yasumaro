@@ -2,6 +2,7 @@ import { addLog, LogType } from '../../utils/logger.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps, type OfflineJobKind } from './types.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { RetryPolicy, defaultRetryPolicy } from './retryPolicy.js';
+import { extractOfflinePayload } from '../recordRequestBuilder.js';
 
 /** Injectable clock seam for the retry backoff. Defaults to the real timer. */
 export type StepDelayFn = (ms: number) => Promise<void>;
@@ -64,25 +65,9 @@ export class StepExecutor {
 
     const type: OfflineJobKind = step.offlineRetry.jobKind;
 
-    const payload = {
-      title: context.data.title,
-      url: context.data.url,
-      content: context.data.content,
-      summary: context.privacyResult?.summary,
-      maskedCount: context.privacyResult?.maskedCount,
-      tags: context.privacyResult?.tags,
-      // PBI 2026-09-12-04: diagnostic stats ride with the job so the offline
-      // retry can rebuild the full RecordingData instead of a lossy subset.
-      pageBytes: context.data.pageBytes,
-      candidateBytes: context.data.candidateBytes,
-      originalBytes: context.data.originalBytes,
-      cleansedBytes: context.data.cleansedBytes,
-      aiSummaryOriginalBytes: context.data.aiSummaryOriginalBytes,
-      aiSummaryCleansedBytes: context.data.aiSummaryCleansedBytes,
-      aiSummaryCleansedElements: context.data.aiSummaryCleansedElements,
-      aiSummaryCleansedReason: context.data.aiSummaryCleansedReason,
-      aiSummaryCleansedReasons: context.data.aiSummaryCleansedReasons,
-    };
+    // PBI 2026-09-12-11: pack through the shared field table so enqueue and
+    // retry cannot diverge (the table lives in recordRequestBuilder).
+    const payload = extractOfflinePayload(context);
 
     try {
       await this.offlineNetworkQueue!.enqueue({ type, payload });
