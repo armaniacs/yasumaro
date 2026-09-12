@@ -361,32 +361,39 @@ export class FallbackStorage {
     }
   }
 
-  async purgeOldRecords(retentionDays: number = 90, maxRecords: number = 1000): Promise<{ success: true; purged: number } | { success: false; error: string }> {
+  async purgeOldRecords(retentionDays?: number | undefined, maxRecords?: number | undefined): Promise<{ success: true; purged: number } | { success: false; error: string }> {
     try {
+      // PBI 2026-09-12-36: skip guards — same contract as purgeContent and
+      // the SQL backends. Before this, (0,0) purged everything (cutoff = now)
+      // while content-purge(0,0) was a no-op.
       const purged = await this.mutate<number>(data => {
-        const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
         let count = 0;
 
-        data.records = data.records.filter(r => {
-          if (r.is_starred === 1 || r.is_deleted === 1) return true;
-          if (r.created_at < cutoffMs) {
-            count++;
-            return false;
-          }
-          return true;
-        });
-
-        const activeRecords = data.records.filter(r => r.is_deleted === 0);
-        if (activeRecords.length > maxRecords) {
-          const sorted = [...activeRecords].sort((a, b) => a.created_at - b.created_at);
-          const toRemove = new Set(sorted.slice(0, activeRecords.length - maxRecords).map(r => r.id));
+        if (retentionDays != null && retentionDays > 0) {
+          const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
           data.records = data.records.filter(r => {
-            if (toRemove.has(r.id)) {
+            if (r.is_starred === 1 || r.is_deleted === 1) return true;
+            if (r.created_at < cutoffMs) {
               count++;
               return false;
             }
             return true;
           });
+        }
+
+        if (maxRecords != null && maxRecords > 0) {
+          const activeRecords = data.records.filter(r => r.is_deleted === 0);
+          if (activeRecords.length > maxRecords) {
+            const sorted = [...activeRecords].sort((a, b) => a.created_at - b.created_at);
+            const toRemove = new Set(sorted.slice(0, activeRecords.length - maxRecords).map(r => r.id));
+            data.records = data.records.filter(r => {
+              if (toRemove.has(r.id)) {
+                count++;
+                return false;
+              }
+              return true;
+            });
+          }
         }
 
         return { next: data, result: count };

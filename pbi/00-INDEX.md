@@ -14,6 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-12 architecture deepening round 13 — 5件（0912e）
+
+round 13 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260912-1700-r13.html`）の deepening 候補 5 件を RICE 採点 → PBI 化。実行順 = 33 → 37（RICE 降順、ハードな依存なし）。台帳は `2026-09-12-00-backlog-0912e.md`。健全性確認: queryPlanner 6 plan 関数は god module 化していない。
+
+- 2026-09-12-33-fix-cache-flag-restore-once.md（✅ 完了・アーカイブ済 — `createCacheInitializedFlag` を restore-once 化（`RestoreOnce` 継承・初回のみ session get）+ Proxy 廃止（明示的 `set()` で echo 書込排除・lifecycleHandlers の唯一の writer を移行）。`CACHE_INITIALIZED_KEY` を export（module-private でテストがキー "undefined" に書き込む問題も解消）。swStatePersistence flag テスト更新 + restoreOnce 3 tests）
+- 2026-09-12-34-fix-reason-label-canonical.md（✅ 完了・アーカイブ済 — recordingHandlers / recordSession を `resolveReasonLabel(reason, getMessage)` adapter に統一（canonical `privacyStatus_*` first）。cache-control/set-cookie が raw slug 表示になる実バグ解消。recordOrchestrator テスト期待値を canonical に更新。popup/background/content 3,637 tests green）
+- 2026-09-12-35-fix-filter-params-vector.md（✅ 完了・アーカイブ済 — `FilterCondition` を params vector 専用に変更（ids を spread 格納）し text+ids 検索の nested bind 実バグ解消。`buildWhereClause` を buildFilterConditions の WHERE-prefix 射影 adapter に置換（2 モジュール語彙分裂解消）・qualifyCondition の dead 行削除。Ssot テストを production 出力 direct assert に修正 + search+ids flatten round-trip 新設。offscreen 1085 tests green）
+- 2026-09-12-36-fix-purge-zero-old-records.md（✅ 完了・アーカイブ済 — `purgeOldRecords` を 3 backend + dbMaintenance で `!= null && > 0` スキップガードに統一（purgeContent と同一契約）。round 12 PBI 26 の `0` 正規化が old-records 経路で dbMaintenance デフォルト発火に化けていた追半分を解消。interface を optional 化・offscreen 1068 tests green）
+- 2026-09-12-37-refactor-preview-view-interface-prune.md（✅ 完了・アーカイブ済 — PreviewView interface + implementation から show/close/setCleansingInfo/resetBodyWidth の 4 dead members を削除（presenter が modal ライフサイクル + width を単一所有）。テスト 4 件削除 + dead メンバー不存在 pin に変更。previewView 25 tests green・全 701 ファイル 11,568 tests green）
+
 ### 2026-09-12 architecture deepening round 12 — 8件（0912d）
 
 round 12 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260912-1640-r12.html`）の deepening 候補 8 件を RICE 採点 → PBI 化。実行順 = 25 → 32（RICE 降順、ハードな依存なし）。台帳は `2026-09-12-00-backlog-0912d.md`。

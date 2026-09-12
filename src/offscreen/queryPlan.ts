@@ -32,11 +32,16 @@ export interface ExtraWhere {
 }
 
 /**
- * PBI 2026-09-12-27: single structured condition set — the ONE spelling of
+ * PBI 2026-09-12-27/35: single structured condition set — the ONE spelling of
  * the shared filter vocabulary (dateFrom/dateTo/domain/starred/gistSynced/
- * ids/excludeDeleted). `buildExtraWhereSql` (search SQL), `buildWhereClause`
- * (plain SQL) and `matchesExtraWhere` (non-SQL parity) all derive from this
- * list, so a new filter is one row here instead of three synchronized edits.
+ * ids/excludeDeleted). `buildWhereClause` (plain SQL, sqliteQueryBuilder
+ * adapter), `buildExtraWhereSql` (search SQL) and `matchesExtraWhere`
+ * (non-SQL parity) all derive from this list, so a new filter is one row here
+ * instead of three synchronized edits.
+ *
+ * `params` is ALWAYS a flat `SqliteValue[]` vector — the round-12 version
+ * stored the whole `ids` array as one bind value, so search+ids bound a
+ * nested array against `id IN (?,?)` on both SQL search paths.
  *
  * `qualifier` prefixes column names for the FTS JOIN path (`b.`), replacing
  * the former regex string-rewrite of the assembled SQL (the most fragile
@@ -45,7 +50,7 @@ export interface ExtraWhere {
  */
 export interface FilterCondition {
   sql: string;
-  param?: SqliteValue;
+  params: SqliteValue[];
 }
 
 export function buildFilterConditions(
@@ -53,23 +58,23 @@ export function buildFilterConditions(
 ): FilterCondition[] {
   const conditions: FilterCondition[] = [];
   if (query.excludeDeleted !== false) {
-    conditions.push({ sql: 'is_deleted = 0' });
+    conditions.push({ sql: 'is_deleted = 0', params: [] });
   }
-  if (query.dateFrom != null) conditions.push({ sql: 'created_at >= ?', param: query.dateFrom });
-  if (query.dateTo != null) conditions.push({ sql: 'created_at <= ?', param: query.dateTo });
-  if (query.domain) conditions.push({ sql: 'domain = ?', param: query.domain });
-  if (query.starred != null) conditions.push({ sql: 'is_starred = ?', param: query.starred ? 1 : 0 });
-  if (query.gistSynced != null) conditions.push({ sql: 'gist_synced = ?', param: query.gistSynced });
+  if (query.dateFrom != null) conditions.push({ sql: 'created_at >= ?', params: [query.dateFrom] });
+  if (query.dateTo != null) conditions.push({ sql: 'created_at <= ?', params: [query.dateTo] });
+  if (query.domain) conditions.push({ sql: 'domain = ?', params: [query.domain] });
+  if (query.starred != null) conditions.push({ sql: 'is_starred = ?', params: [query.starred ? 1 : 0] });
+  if (query.gistSynced != null) conditions.push({ sql: 'gist_synced = ?', params: [query.gistSynced] });
   if (query.ids != null && query.ids.length > 0) {
-    conditions.push({ sql: `id IN (${query.ids.map(() => '?').join(',')})`, param: query.ids as unknown as SqliteValue });
+    conditions.push({ sql: `id IN (${query.ids.map(() => '?').join(',')})`, params: query.ids as unknown as SqliteValue[] });
   }
   return conditions;
 }
 
 /** Qualify column names in a condition for the FTS JOIN path (`b.` prefix). */
 export function qualifyCondition(condition: FilterCondition, qualifier: string): FilterCondition {
-  const qualified = condition.sql.replace(/\b(created_at|domain|is_starred|gist_synced|is_deleted)\b/g, `${qualifier}$&`)
-    .replace(new RegExp(`\\b${qualifier}id\\b`, 'g'), `${qualifier}id`.replace(qualifier, qualifier))
+  const qualified = condition.sql
+    .replace(/\b(created_at|domain|is_starred|gist_synced|is_deleted)\b/g, `${qualifier}$&`)
     .replace(/\bid IN \(/g, `${qualifier}id IN (`);
   return { ...condition, sql: qualified };
 }
@@ -80,7 +85,10 @@ export function buildExtraWhereSql(query: Pick<StorageQuery, 'dateFrom' | 'dateT
   const projected = conditions
     .map((c) => (qualified ? qualifyCondition(c, 'b.') : c));
   const extraConds = projected.map((c) => c.sql);
-  const extraParams = projected.map((c) => c.param).filter((p): p is SqliteValue => p !== undefined);
+  // PBI 2026-09-12-35: flatMap over the vector — the round-12 version kept
+  // the ids array as ONE bind value, so text+ids searches bound a nested
+  // array against `id IN (?,?)` on both SQL search paths.
+  const extraParams = projected.flatMap((c) => c.params);
   const extraWhereSql = extraConds.length > 0 ? ` AND ${extraConds.join(' AND ')}` : '';
   const extraWhereSqlFts = extraWhereSql;
   // The is_deleted condition rode on this WHERE only when excludeDeleted was

@@ -81,7 +81,7 @@ const mockGetSettings = vi.mocked(settingsRepository.getAll);
 
 function createCtx() {
   return {
-    isCacheInitialized: { value: true, restore: vi.fn().mockResolvedValue(undefined) },
+    isCacheInitialized: { value: true, set: vi.fn(), restore: vi.fn().mockResolvedValue(undefined) },
     rateLimiter: { reload: vi.fn().mockResolvedValue(undefined) } as any,
     sqliteClient: { insert: vi.fn() } as any,
   };
@@ -128,7 +128,7 @@ describe('handleStartup — Ollama Origin ヘッダー削除ルールの同期',
 
   it('does not call syncOllamaOriginRule on warm wake (cache already initialized)', async () => {
     const ctx = {
-      isCacheInitialized: { value: true, restore: vi.fn().mockResolvedValue(undefined) },
+      isCacheInitialized: { value: true, set: vi.fn(), restore: vi.fn().mockResolvedValue(undefined) },
       rateLimiter: { reload: vi.fn().mockResolvedValue(undefined) } as any,
       sqliteClient: { insert: vi.fn() } as any,
     };
@@ -141,7 +141,7 @@ describe('handleStartup — Ollama Origin ヘッダー削除ルールの同期',
   it('does not call syncOllamaOriginRule in handleStartup on cold start (cache uninitialized)', async () => {
     // handleStartupでの同期は削除済み（onInstalled + observer でカバー）
     const ctx = {
-      isCacheInitialized: { value: false, restore: vi.fn().mockResolvedValue(undefined) },
+      isCacheInitialized: { value: false, set: vi.fn(), restore: vi.fn().mockResolvedValue(undefined) },
       rateLimiter: { reload: vi.fn().mockResolvedValue(undefined) } as any,
       sqliteClient: { insert: vi.fn() } as any,
       recordingCache: { invalidateSettingsCache: vi.fn(), loadCacheFromSession: vi.fn() } as any,

@@ -101,7 +101,14 @@ export interface Mutable {
   update(id: number, changes: Record<string, unknown>): Promise<BackendOrError<MutationResult>>;
   delete(id: number): Promise<BackendOrError<MutationResult>>;
   toggleStar(id: number): Promise<BackendOrError<StarResult>>;
-  purgeOldRecords(retentionDays: number, maxRecords: number): Promise<BackendOrError<PurgeResult>>;
+  /**
+   * PBI 2026-09-12-36: `undefined` means "skip this dimension" — the same
+   * contract `purgeContent` already had via its `!= null && > 0` guards.
+   * Before this, `purgeOldRecords(0, 0)` deleted everything (cutoff = now)
+   * while `purgeContent(0, 0)` was a no-op: one plan output, opposite
+   * destructive meanings.
+   */
+  purgeOldRecords(retentionDays?: number | undefined, maxRecords?: number | undefined): Promise<BackendOrError<PurgeResult>>;
   purgeContent(retentionDays?: number, maxRecords?: number, includeStarred?: boolean): Promise<BackendOrError<PurgeResult>>;
   backupDb(): Promise<BackendOrError<BackupResult>>;
   restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>>;
