@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.13` リリース。
+> - 現時点では `v6.8.14` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -32,6 +32,23 @@ All notable changes to this project will be documented in this file.
 > - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
 >
 > For releases with normal spacing, no additional prefix is required.
+
+
+## [Unreleased]
+
+
+## [6.8.14] - 2026-09-12
+
+アーキテクチャ深化ラウンド（2026-09-12 round 10、`arch-delivery-loop`）のリリースです。実バグ 2 件の解消（preview ナビゲーションの stale-closure、FallbackStorage の alias backend 分岐）と、判定・検証・cap 政策の単一化 6 件を含みます。全テスト（11,881 件）がグリーンです。
+
+### Fixed
+
+- **preview 表示 2 回目以降の prev/next が古い navigator で遷移していた**: `PreviewView.buildNavigation` が初回のみボタンを生成し、再 show 時は表示切替だけで再配線しなかった。束縛 handler を保持して show 毎に removeEventListener → addEventListener で再配線する idempotent 化で解消し、`refreshLabels()` 分離で locale 切替の stale も解消（re-show 回帰テスト付き）
+- **同じ wire payload が backend で異なるフィルタになっていた**: `FallbackStorage.query` が `isStarred/since/until/is_starred` を手動で再派生する一方、`normalizeStorageQuery` は `is_starred` 数値 alias を知らず、経路でフィルタが分岐していた。alias を `queryNormalize` 側に吸収し、fallback は正規化済みクエリを直接消費。`search()` shim は呼び出し元が test のみのため削除し `query({text})` に移行（seam test 付き）
+
+### Refactored
+
+- アーキテクチャ Deepening round 10（PBI 09〜16）: タブバッジ判定の `TabBadgeResolver` ordered table 統合（activate/navigate の 15 行二重実装を解消）、offline queue payload の `OfflineJobPayload` round-trip 統合（PBI 04 の pack/unpack 二重綴りを回収）、sender 政策の `tab-page-only` 3rd tier 昇格（router の inline strict ブロックを回収）、PreviewFlow の `buildRecordPayload` + `SpinnerScope` 統合（3 payload 手組みと spinner 所有分断を解消・期待失敗を return に正規化）、domain 入力検証の `DomainInputPolicy` 単一化（click+observer ブリッジを `saveDomainLists()` 直接呼び出しに）、read-limit 政策の planner 単一 owner 化（`QUERY_CAPS` を limits.ts に移動・`selectReadCap`/`applySearchPolicy` 新設）
 
 
 ## [6.8.13] - 2026-09-12
@@ -87,9 +104,6 @@ All notable changes to this project will be documented in this file.
 ### Refactored
 
 - アーキテクチャ Deepening round 9（PBI 01〜08）: 記録リクエスト構築の `buildRecordRequest` 統合、popup whitelist 書込の `whitelistWriter` 統合、`pendingRecordGateway` / `BadgePolicy` の新設、アーカイブ復元フローの busy スコープ整理
-
-## [Unreleased]
-
 
 ## [6.8.10] - 2026-09-12
 
