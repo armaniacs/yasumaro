@@ -3963,7 +3963,12 @@
     "message": "このページは記録できません"
   },
   "statusPattern": {
-    "message": "パターン: $1$"
+    "message": "パターン: $1$",
+    "placeholders": {
+      "1": {
+        "content": "$1"
+      }
+    }
   },
   "statusSetCookiePresent": {
     "message": "Set-Cookieあり"
