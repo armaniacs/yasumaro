@@ -84,3 +84,19 @@ describe('is_starred snake alias (PBI 2026-09-12-13)', () => {
     expect(normalizeStorageQuery({ isStarred: true, is_starred: 0 })).toMatchObject({ starred: true });
   });
 });
+
+describe('text preservation (dashboard text search regression)', () => {
+  it('preserves non-empty text through normalization', () => {
+    // Dashboard text search flows: searchLogs(query) → buildSearchParams →
+    // gateway kind:search → queryRecords → SQLITE_QUERY → planQuery →
+    // normalizeStorageQuery. Dropping text here silently turned every text
+    // search into a plain recent listing (same rows for every query).
+    expect(normalizeStorageQuery({ text: '研究所' })).toMatchObject({ text: '研究所' });
+    expect(normalizeStorageQuery({ text: 'hello world', limit: 10 })).toMatchObject({ text: 'hello world' });
+  });
+
+  it('drops empty text (plain listing, not a broken search)', () => {
+    expect(normalizeStorageQuery({ text: '' })).not.toHaveProperty('text');
+    expect(normalizeStorageQuery({})).not.toHaveProperty('text');
+  });
+});

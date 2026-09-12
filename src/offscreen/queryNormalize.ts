@@ -23,6 +23,10 @@ export function normalizeStorageQuery(payload: Record<string, unknown>): Storage
     orderBy: payload?.orderBy as 'created_at' | 'rank' | undefined,
     orderDir: payload?.orderDir as 'ASC' | 'DESC' | undefined,
     domain: payload?.domain != null ? String(payload.domain) : undefined,
+    // Full-text search term — MUST survive normalization (was dropped, so
+    // dashboard text search silently became a plain listing returning the
+    // same recent rows for every query).
+    text: payload?.text != null && String(payload.text) !== '' ? String(payload.text) : undefined,
     // PBI 2026-09-12-13: the snake_case `is_starred` numeric alias used to
     // live only in FallbackStorage's local re-derivation, so the same wire
     // payload filtered differently per backend. It collapses here now.
