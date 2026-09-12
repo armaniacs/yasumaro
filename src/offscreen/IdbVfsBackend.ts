@@ -19,10 +19,10 @@ import {
   contentPurgeStarredClause, buildContentPurgeStatements,
   buildAuditLogStatements,
 } from './queryPlan.js';
-import { buildTagFilterCondition } from './sqliteQueryBuilder.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { withTransaction } from './sqliteTransaction.js';
 import { planAuditLog, DEFAULT_RETENTION_DAYS as DEFAULT_PURGE_RETENTION_DAYS } from './queryPlanner.js';
+import { selectTagFilter } from './queryPlan.js';
 import { AUDIT_CAP_IDB } from '../messaging/limits.js';
 import { buildExportEnvelope, EXPORT_COLUMNS } from './exportEnvelope.js';
 import type { SerializeResult } from './StorageBackend.js';
@@ -73,12 +73,14 @@ export class IdbVfsBackend implements StorageBackend {
     const spec = buildQuerySpec(q, { caps: QUERY_CAPS, fts5Available: this.engine.fts5Available });
     if (spec.error) return { success: false, error: spec.error };
 
-    // PBI 2026-09-12-27: the FTS JOIN path gets `b.`-qualified columns from
-    // the SAME condition set; `excludeDeleted` now rides through to the
-    // search builders (the former hardcoded `is_deleted = 0` ignored it,
-    // diverging from fallback/InMemory). Params are positionally identical
-    // for both projections, so one ExtraWhere serves both.
-    const extra = buildExtraWhereSql(q, { qualified: true });
+    // PBI 2026-09-12-38: build the projection PER SEARCH PATH. The round-12
+    // version built one `{qualified: true}` ExtraWhere and fed it to both
+    // paths — but the LIKE SQL is `FROM browsing_logs` (no alias) while the
+    // FTS JOIN needs `b.` qualification, so every short-text IDB search
+    // (useFts=false) threw `no such column: b.is_deleted`. Params are
+    // positionally identical; the SQL TEXT is not.
+    const extraFts = buildExtraWhereSql(q, { qualified: true });
+    const extraLike = buildExtraWhereSql(q, { qualified: false });
 
     if (q.text) {
       const bare = spec.bareText;
@@ -87,10 +89,9 @@ export class IdbVfsBackend implements StorageBackend {
       if (spec.useFts) {
         // PBI 2026-09-11-06 (round 5): text+tag applies BOTH conditions — the
         // tag rides on the FTS/LIKE statements like any other extra filter.
-        const tagFilter = q.tag
-          ? buildTagFilterCondition(q.tag, { fts5Available: this.engine.fts5Available, idColumn: 'b.id' })
-          : null;
-        const stmts = buildFtsSearchStatements(extra, {
+        // PBI 2026-09-12-39: path-aware tag seam (FTS needs b.id qualification).
+        const tagFilter = selectTagFilter(q.tag, 'fts', this.engine.fts5Available);
+        const stmts = buildFtsSearchStatements(extraFts, {
           ftsQuery: buildFtsMatchQuery(bare),
           orderClause: spec.order,
           limit: spec.limit,
@@ -117,10 +118,9 @@ export class IdbVfsBackend implements StorageBackend {
       }
 
       // LIKE fallback
-      const likeTagFilter = q.tag
-        ? buildTagFilterCondition(q.tag, { fts5Available: false })
-        : null;
-      const stmts = buildLikeSearchStatements(extra, {
+      // PBI 2026-09-12-39: path-aware tag seam (LIKE never MATCHes).
+      const likeTagFilter = selectTagFilter(q.tag, 'like', this.engine.fts5Available);
+      const stmts = buildLikeSearchStatements(extraLike, {
         likePattern: buildLikePattern(q.text),
         orderClause: spec.order,
         limit: spec.limit,

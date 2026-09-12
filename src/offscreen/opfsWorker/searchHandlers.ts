@@ -9,7 +9,8 @@
 
 import type { SearchResult, StorageQuery } from '../../utils/sqlite-types.js';
 import { sanitizeFtsTerm } from '../schema.js';
-import { shouldUseFts5, buildTagFilterCondition } from '../sqliteQueryBuilder.js';
+import { shouldUseFts5 } from '../sqliteQueryBuilder.js';
+import { selectTagFilter } from '../queryPlan.js';
 import type { SearchPayload } from './types.js';
 import { sqlQuery, type HandlerContext } from './handlers.js';
 import {
@@ -49,13 +50,13 @@ export async function handleSearchFts(
   ctx: HandlerContext,
   sanitizedQuery: string, limit: number, offset: number,
   orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC',
-  payload: SearchPayload = {}
+  payload: SearchPayload = {}, fts5Available = true
 ): Promise<{ rows: SearchResult[]; total: number }> {
   const extra = buildExtraWhereSql(payload as unknown as Record<string, unknown>);
   // PBI 2026-09-11-06 (round 5): text+tag applies BOTH conditions — the tag
   // condition is the same partial-match semantics as the plain listing.
   const tagFilter = payload.tag
-    ? buildTagFilterCondition(payload.tag, { fts5Available: true, idColumn: 'b.id' })
+    ? selectTagFilter(payload.tag, 'fts', fts5Available)
     : null;
   // 'coerce' preserves the legacy worker behaviour: out-of-whitelist
   // orderDir normalizes to DESC instead of failing (IdbVfsBackend fails
@@ -78,11 +79,11 @@ export async function handleSearchLike(
   ctx: HandlerContext,
   rawQuery: string, limit: number, offset: number,
   orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC',
-  payload: SearchPayload = {}
+  payload: SearchPayload = {}, fts5Available = false
 ): Promise<{ rows: SearchResult[]; total: number }> {
   const extra = buildExtraWhereSql(payload as unknown as Record<string, unknown>);
   const likeTagFilter = payload.tag
-    ? buildTagFilterCondition(payload.tag, { fts5Available: false })
+    ? selectTagFilter(payload.tag, 'like', fts5Available)
     : null;
   const { orderClause } = buildSearchOrderClause({ orderBy, orderDir }, { fts: false, onInvalid: 'coerce' });
   const stmts = buildLikeSearchStatements(extra, {

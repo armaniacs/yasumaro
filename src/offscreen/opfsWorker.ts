@@ -66,7 +66,7 @@ export async function handleSearchFts(
   orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC',
   payload?: import('./opfsWorker/types.js').SearchPayload
 ): Promise<{ rows: import('../utils/sqlite-types.js').SearchResult[]; total: number }> {
-  return handleSearchFtsImpl(handlerCtx, sanitizedQuery, limit, offset, orderBy, orderDir, payload);
+  return handleSearchFtsImpl(handlerCtx, sanitizedQuery, limit, offset, orderBy, orderDir, payload, fts5Available);
 }
 
 /**
@@ -77,7 +77,7 @@ export async function handleSearchLike(
   orderBy?: 'rank' | 'created_at', orderDir?: 'ASC' | 'DESC',
   payload?: import('./opfsWorker/types.js').SearchPayload
 ): Promise<{ rows: import('../utils/sqlite-types.js').SearchResult[]; total: number }> {
-  return handleSearchLikeImpl(handlerCtx, rawQuery, limit, offset, orderBy, orderDir, payload);
+  return handleSearchLikeImpl(handlerCtx, rawQuery, limit, offset, orderBy, orderDir, payload, fts5Available);
 }
 
 /**

@@ -10,7 +10,11 @@ import { extractDomain } from '../utils/domainUtils.js';
 import { updateStatusIcon, escapeHtml, wireOnce } from './domUtils.js';
 import { requestContentFromTab } from './contentFetchGateway.js';
 import { getCleansedBadgeText } from '../utils/cleansingBadge.js';
+import { renderCleansingHtml, renderLockedHtml, renderTrustHtml, renderTrustFallbackHtml, renderPrivacyHtml, renderCacheHtml, renderDomainStateHtml, renderLastSavedHtml } from './statusRenderers.js';
 import type { ContentResponse } from './mainTypes.js';
+
+/** Per-element toast timer — rapid double-deny used to start two competing chains (PBI 2026-09-12-41). */
+let errorToastTimer: ReturnType<typeof setTimeout> | undefined = null as unknown as ReturnType<typeof setTimeout> | undefined;
 
 export async function initStatusPanel(): Promise<void> {
   try {
@@ -92,37 +96,17 @@ export async function initStatusPanel(): Promise<void> {
   }
 }
 
+// PBI 2026-09-12-41: label policy lives in the shared CleansingBadge table.
+// This one-line adapter is kept for main.ts's re-export.
 export function getCleansedReasonText(cleansedReason?: 'hard' | 'keyword' | 'both' | 'none'): string {
-  // PBI 2026-09-11-05: display policy lives in the shared CleansingBadge table.
   return getCleansedBadgeText(cleansedReason, getMessage);
 }
 
 export function updateCleansingStatus(cleanseStats: ContentResponse['cleanseStats'], cleansedReason?: ContentResponse['cleansedReason']): void {
   const cleansingContent = document.getElementById('statusCleansingContent');
   if (!cleansingContent) return;
-
-  if (!cleanseStats || cleanseStats.totalRemoved === 0) {
-    cleansingContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusCleansingNone')}</span>`;
-    return;
-  }
-
-  let html = '';
-
-  const reasonText = getCleansedReasonText(cleansedReason);
-  if (reasonText) {
-    html += `<span class="status-value">${reasonText}</span>`;
-  }
-
-  if (cleanseStats.hardStripRemoved > 0) {
-    html += `<span class="status-value">${getMessage('statusCleansingHard', [String(cleanseStats.hardStripRemoved)])}</span>`;
-  }
-  if (cleanseStats.keywordStripRemoved > 0) {
-    html += `<span class="status-value">${getMessage('statusCleansingKeyword', [String(cleanseStats.keywordStripRemoved)])}</span>`;
-  }
-  if (cleanseStats.totalRemoved > 0) {
-    html += `<span class="status-value status-muted">${getMessage('statusCleansingTotal', [String(cleanseStats.totalRemoved)])}</span>`;
-  }
-  cleansingContent.innerHTML = html;
+  // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
+  cleansingContent.innerHTML = renderCleansingHtml(cleanseStats, cleansedReason, { t: getMessage, esc: escapeHtml });
 }
 
 export async function updateTrustStatus(url: string): Promise<void> {
@@ -141,7 +125,7 @@ export async function updateTrustStatus(url: string): Promise<void> {
       // RecordSession (sole-writer contract, PBI 2026-09-07-24) — disabling
       // it here raced resetRecordButton and blocked the designed
       // "Record Anyway" (force) escape hatch.
-      trustContent.innerHTML = `<span class="status-value status-trust-locked">🔒 ${escapeHtml(getMessage('statusTrustLocked') || 'LOCKED')}</span>`;
+      trustContent.innerHTML = renderLockedHtml({ t: getMessage, esc: escapeHtml });
       if (permArea) {
         permArea.classList.remove('hidden');
         // Wire the request button once per element — updateTrustStatus runs on
@@ -150,19 +134,28 @@ export async function updateTrustStatus(url: string): Promise<void> {
         const requestBtn = document.getElementById('btnRequestPermission') as HTMLElement & { dataset: DOMStringMap } | null;
         wireOnce(requestBtn, (el) => {
           el.addEventListener('click', async () => {
+            // PBI 2026-09-12-41: extractDomain instead of `new URL(url)` —
+            // a malformed URL threw before the toast ever showed. The stale
+            // closure URL concern (user navigates between render and click)
+            // is noted but re-querying chrome.tabs added async complexity
+            // that broke the wiring contract; revisit with an event-based
+            // tab-URL refresh.
             const granted = await requestPermission(url);
             if (granted) {
               permArea.classList.add('hidden');
               void updateTrustStatus(url);
             } else {
-              const domain = new URL(url).hostname;
-              await recordDeniedVisit(domain);
+              const domain = extractDomain(url);
+              if (domain) await recordDeniedVisit(domain);
               if (errorMsg) {
                 errorMsg.classList.remove('hidden');
                 requestAnimationFrame(() => {
                   errorMsg.classList.add('visible');
                 });
-                setTimeout(() => {
+                // PBI 2026-09-12-41: per-element timer token — rapid double-deny
+                // used to start two competing toast chains.
+                if (errorToastTimer !== undefined) clearTimeout(errorToastTimer);
+                errorToastTimer = setTimeout(() => {
                   errorMsg.classList.remove('visible');
                   setTimeout(() => {
                     errorMsg.classList.add('hidden');
@@ -184,23 +177,10 @@ export async function updateTrustStatus(url: string): Promise<void> {
       checkDomainTrust(url)
     ]);
 
-    const levelKey = `statusTrust${display.level.charAt(0) + display.level.slice(1).toLowerCase()}` as
-      'statusTrustTrusted' | 'statusTrustSensitive' | 'statusTrustUnverified';
-    const levelText = getMessage(levelKey) || display.level;
-
-    const trustClass = `status-trust-${display.level.toLowerCase()}`;
-    let html = `<span class="status-value ${trustClass}">${levelText}</span>`;
-
-    if (checkResult.showAlert && checkResult.trustResult.category) {
-      const catKey = checkResult.trustResult.category === 'finance'
-        ? 'statusTrustAlertFinance'
-        : 'statusTrustAlertSensitive';
-      html += `<span class="status-value status-warning">${getMessage(catKey)}</span>`;
-    }
-
-    trustContent.innerHTML = html;
+    // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
+    trustContent.innerHTML = renderTrustHtml(display, checkResult, { t: getMessage, esc: escapeHtml });
   } catch {
-    trustContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`;
+    trustContent.innerHTML = renderTrustFallbackHtml({ t: getMessage, esc: escapeHtml });
   }
 }
 
@@ -262,15 +242,8 @@ function renderStatusPanel(status: StatusInfo): void {
   const domainMode = document.getElementById('statusDomainMode');
 
   if (domainState) {
-    const stateMsg = status.domainFilter.allowed
-      ? getMessage('statusDomainAllowed')
-      : getMessage('statusDomainBlocked');
-    domainState.innerHTML = `<span class="status-value ${status.domainFilter.allowed ? 'status-success' : 'status-error'}">${stateMsg}</span>`;
-
-    if (status.domainFilter.matchedPattern) {
-      const patternMsg = getMessage('statusPattern', [escapeHtml(status.domainFilter.matchedPattern)]);
-      domainState.innerHTML += `<span class="status-value status-muted">${patternMsg}</span>`;
-    }
+    // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
+    domainState.innerHTML = renderDomainStateHtml(status, { t: getMessage, esc: escapeHtml });
   }
 
   if (domainMode) {
@@ -280,72 +253,23 @@ function renderStatusPanel(status: StatusInfo): void {
 
   const privacyContent = document.getElementById('statusPrivacyContent');
   if (privacyContent) {
-    if (!status.privacy.hasCache) {
-      privacyContent.innerHTML = `
-        <span class="status-value status-muted">${getMessage('statusNoInfo')}</span>
-        <span class="status-value status-muted status-hint">${getMessage('statusReloadHint')}</span>
-      `;
-    } else {
-      let html = '';
-      if (status.privacy.isPrivate) {
-        if (status.privacy.reason === 'cache-control') {
-          html += `<span class="status-value status-warning">${getMessage('statusCacheControlPrivate')}</span>`;
-        } else if (status.privacy.reason === 'set-cookie') {
-          html += `<span class="status-value status-warning">${getMessage('statusSetCookieDetected')}</span>`;
-        } else if (status.privacy.reason === 'authorization') {
-          html += `<span class="status-value status-warning">${getMessage('statusAuthDetected')}</span>`;
-        }
-
-        html += `
-          <div class="status-actions">
-            <button class="status-action-btn" id="statusAddDomain" data-i18n="saveDomain">ドメインを許可</button>
-            <button class="status-action-btn" id="statusAddPath" data-i18n="savePath">パスを許可</button>
-          </div>
-        `;
-      } else {
-        html += `<span class="status-value status-success">${getMessage('statusPublicPage')}</span>`;
-      }
-      privacyContent.innerHTML = html;
-
-      if (status.privacy.isPrivate) {
-        attachPrivacyActionListeners();
-      }
+    // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
+    privacyContent.innerHTML = renderPrivacyHtml(status, { t: getMessage, esc: escapeHtml });
+    if (status.privacy.isPrivate) {
+      attachPrivacyActionListeners();
     }
   }
 
   const cacheContent = document.getElementById('statusCacheContent');
   if (cacheContent) {
-    let html = '';
-
-    if (!status.cache.hasCache) {
-      html = `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`;
-    } else {
-      if (status.cache.cacheControl) {
-        html += `<span class="status-value">Cache-Control: ${escapeHtml(status.cache.cacheControl)}</span>`;
-      }
-      if (status.cache.hasCookie) {
-        html += `<span class="status-value">${getMessage('statusSetCookiePresent')}</span>`;
-      }
-      if (status.cache.hasAuth) {
-        html += `<span class="status-value">${getMessage('statusAuthorizationPresent')}</span>`;
-      }
-      if (!html) {
-        html = `<span class="status-value status-muted">${getMessage('statusNoCacheInfo')}</span>`;
-      }
-    }
-    cacheContent.innerHTML = html;
+    // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
+    cacheContent.innerHTML = renderCacheHtml(status, { t: getMessage, esc: escapeHtml });
   }
 
   const lastSavedContent = document.getElementById('statusLastSavedContent');
   if (lastSavedContent) {
-    if (!status.lastSaved.exists) {
-      lastSavedContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusNotSaved')}</span>`;
-    } else {
-      lastSavedContent.innerHTML = `
-        <span class="status-value">${escapeHtml(status.lastSaved.timeAgo || '')}</span>
-        <span class="status-value status-muted">${escapeHtml(status.lastSaved.formatted || '')}</span>
-      `;
-    }
+    // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
+    lastSavedContent.innerHTML = renderLastSavedHtml(status, { t: getMessage, esc: escapeHtml });
   }
 
   const cleansingContent = document.getElementById('statusCleansingContent');
