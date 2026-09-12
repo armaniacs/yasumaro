@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.16` リリース。
+> - 現時点では `v6.8.17` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -36,6 +36,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+
+## [6.8.17] - 2026-09-12
+
+アーキテクチャ深化ラウンド（2026-09-12 round 13、`arch-delivery-loop`）のリリースです。実バグ 2 件の解消（監査フラグの per-message session 読み + echo 書き戻し、private page の raw slug 表示）と、SQL 検索のネスト bind・破壊的 purge 契約・PreviewView interface の確定 3 件を含みます。全テスト（11,934 件）がグリーンです。
+
+### Fixed
+
+- **全メッセージで cache flag の session 読み + echo 書き戻しが走っていた**: round 12 の restore-once が `AutoSavedBadgeTabs` にのみ適用され、`CacheInitializedFlag` は対象外だった（messageHandler が毎回 `chrome.storage.session.get` を実行し、Proxy が load 直後の同一値を書き戻す echo も発生）。`CacheInitializedFlag` を restore-once 化し Proxy を明示的 `set()` に置換。あわせて `CACHE_INITIALIZED_KEY` を export（module-private のままだったためテストの直接代入がキー "undefined" に書き込む問題も解消）
+- **private page の通知・エラー文が raw slug で表示されていた**: round 12 の `reasonLabel.ts` 新設後も 2 call site が legacy key のみを解決しており、locale が canonical `privacyStatus_*` のみを出荷している cache-control / set-cookie が localized label にならなかった。2 call site を `resolveReasonLabel(reason, getMessage)` adapter に統一
+
+### Refactored
+
+- アーキテクチャ Deepening round 13（PBI 33〜37）: SQL 検索の `FilterCondition` を params vector 専用に変更（text+ids のネスト bind 解消）+ `buildWhereClause` を共有語彙の射影 adapter に統合（filter 語彙の 2 モジュール分裂解消）、`purgeOldRecords` を 3 backend で skip ガード統一（round 12 の `0` 契約が old-records 経路でデフォルト発火に化けていた追半分を解消）、PreviewView interface から dead 4 メンバー削除（presenter が modal ライフサイクル + width を単一所有）
 
 ## [6.8.16] - 2026-09-12
 
