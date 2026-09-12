@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.17` リリース。
+> - 現時点では `v6.8.18` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -36,6 +36,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+
+## [6.8.18] - 2026-09-12
+
+アーキテクチャ深化ラウンド（2026-09-12 round 14、`arch-delivery-loop`）のリリースです。実バグ 3 件の解消（IDB 短文検索の SQL 実行エラー、StatusPanel の permission ボタン throw、toast タイマー競合）と、tag filter 導出の統一・cross-backend タグセマンティクス parity の確立を含みます。全テスト（11,956 件）がグリーンです。
+
+### Fixed
+
+- **IDB backend で 1-2 文字のテキスト検索が必ず SQL エラーで失敗していた**: round 12 の filter SSOT 統合で FTS/LIKE 両パスに同一の `b.` 限定付き ExtraWhere を渡すようになり、LIKE path（別名なしの `FROM browsing_logs`）で `no such column: b.is_deleted` が発生していた。FTS/LIKE で別々の射影を構築するよう修正（real-engine regression test 付き）
+- **trust deny 時に非解析 URL で unhandled throw が発生し toast が表示されなかった**: `new URL(url).hostname` が非解析 URL で throw していた。既存の `extractDomain` ヘルパーに置換
+- **連続で permission を deny した際に toast タイマーが競合していた**: 2 つの setTimeout チェーンが並行して走り、1 つ目のクリックのタイマーが 2 つ目のトーストを隠していた。per-element timer token で解消
+
+### Refactored
+
+- アーキテクチャ Deepening round 14（PBI 38〜41）: tag filter 導出 5 箇所を `selectTagFilter` path-aware seam に統一（hardcode true の direct-call 脆弱性解消）、fallback の tag/order セマンティクスを SQL parity に統一（`rowMatchesTagLike` 新設・wildcard/case ポリシー文書化・corpus test で prose「mirrors」を executable 契約に変換）、StatusPanel の string building を `statusRenderers.ts`（Layer-0 純粋 renderer）に抽出、vestigial `extraWhereSqlFts` フィールド削除
 
 ## [6.8.17] - 2026-09-12
 
