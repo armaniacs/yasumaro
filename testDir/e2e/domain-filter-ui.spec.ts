@@ -6,7 +6,10 @@ test.describe('domain filter UI @extension', () => {
     await page.goto(`chrome-extension://${extensionId}/options.html`);
     await page.waitForFunction(() => typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
 
-    // ドメインフィルターパネルを開く（サイドバーまたは直接表示）
+    // ドメインフィルターパネルを開く
+    await page.locator('button[aria-controls="panel-domain"]').click();
+    await expect(page.locator('#panel-domain')).toBeVisible();
+
     // 新 UI のタブバーが可視であることを確認
     const tabBar = page.locator('#domainModeTabBar');
     // 初期は hidden だが、フィルター有効時に表示される。まずトグルを有効化
@@ -39,6 +42,8 @@ test.describe('domain filter UI @extension', () => {
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/options.html`);
     await page.waitForFunction(() => typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
+    await page.locator('button[aria-controls="panel-domain"]').click();
+    await expect(page.locator('#panel-domain')).toBeVisible();
 
     // 全ての .btn-primary のうち、hidden でなく空文字のものが存在しないこと
     const emptyPrimaryButtons = page.locator('button.btn-primary').filter({

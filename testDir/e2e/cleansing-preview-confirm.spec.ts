@@ -13,6 +13,12 @@
 import { test, MASKED_CONTENT } from './fixtures/cleansing-preview.fixture.js';
 import { expect } from '@playwright/test';
 
+// Requires headed Chrome with display server (see fixture's fixme for null context).
+// In headless without DISPLAY (local `make test-all`), skip instead of failing.
+if (!process.env.CI && !process.env.DISPLAY) {
+  test.skip(true, 'requires headed Chrome with display');
+}
+
 test.describe('Cleansing preview @extension', () => {
   test('preview modal opens with masked content and counter at 0/2', async ({ previewPage: page }) => {
     // Trigger the record flow — the fixture stubs tabs.query + PREVIEW_RECORD.

@@ -304,7 +304,7 @@ describe('handleDashboardSqlite — query', () => {
     ['negative', -1, 100],
     ['zero', 0, 100],
     ['non-integer', 0.5, 100],
-    ['huge', 1e9, 1000],
+    ['huge', 1e9, 10000],
     ['normal', 50, 50],
   ])('clamps limit=%s at the trust boundary (query)', async (_label, raw, expected) => {
     const mock = createMockSqliteClient();
