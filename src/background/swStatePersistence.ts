@@ -5,7 +5,10 @@
  * PBI-35 (state persistence) and the broader service-worker refactor.
  */
 
-const CACHE_INITIALIZED_KEY = 'serviceWorkerCacheInitialized';
+/** Session keys exported for tests and cross-module diagnostics (PBI
+ * 2026-09-12-33: the key was module-private and a test assigning through the
+ * un-exported name wrote the literal key "undefined"). */
+export const CACHE_INITIALIZED_KEY = 'serviceWorkerCacheInitialized';
 const AUTO_SAVED_BADGE_TABS_KEY = 'serviceWorkerAutoSavedBadgeTabs';
 
 export async function loadCacheInitializedState(): Promise<boolean> {
@@ -25,11 +28,6 @@ export async function saveCacheInitializedState(value: boolean): Promise<void> {
     }
 }
 
-export interface CacheInitializedFlag {
-    value: boolean;
-    restore(): Promise<void>;
-}
-
 /** Restore-once seam (PBI 2026-09-12-25): the first `restore()` runs, later
  * calls are no-ops until `resetRestoreOnce()` (prune-triggering events). */
 export interface RestoreOnce {
@@ -37,28 +35,40 @@ export interface RestoreOnce {
     resetRestoreOnce(): void;
 }
 
+export interface CacheInitializedFlag extends RestoreOnce {
+    /** Current flag value. Mutate via `set()` — the constructor's Proxy echo
+     * trap was removed in PBI 2026-09-12-33 (restore wrote back the value it
+     * had just loaded, doubling session traffic on the hottest path). */
+    readonly value: boolean;
+    set(value: boolean): void;
+    restore(): Promise<void>;
+}
+
 /**
- * Creates a mutable flag backed by chrome.storage.session.
+ * Creates a flag backed by chrome.storage.session.
  * Callers must await `restore()` before relying on the value across a
- * Service Worker restart.
+ * Service Worker restart. Restore-once (PBI 2026-09-12-33): the first
+ * `restore()` performs the session read; later calls are no-ops until
+ * `resetRestoreOnce()`.
  */
 export function createCacheInitializedFlag(): CacheInitializedFlag {
-    const flag: CacheInitializedFlag = {
-        value: false,
+    let value = false;
+    let restoredOnce = false;
+
+    return {
+        get value() { return value; },
+        restoredOnce: () => restoredOnce,
+        resetRestoreOnce: () => { restoredOnce = false; },
+        set(newValue: boolean) {
+            value = newValue;
+            void saveCacheInitializedState(newValue);
+        },
         async restore() {
-            flag.value = await loadCacheInitializedState();
+            if (restoredOnce) return;
+            restoredOnce = true;
+            value = await loadCacheInitializedState();
         },
     };
-
-    return new Proxy(flag, {
-        set(target, property, newValue: boolean) {
-            if (property === 'value') {
-                target.value = newValue;
-                void saveCacheInitializedState(newValue);
-            }
-            return true;
-        },
-    });
 }
 
 export async function loadAutoSavedBadgeTabs(): Promise<Set<number>> {

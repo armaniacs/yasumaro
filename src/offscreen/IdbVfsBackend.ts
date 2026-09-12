@@ -22,7 +22,7 @@ import {
 import { buildTagFilterCondition } from './sqliteQueryBuilder.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { withTransaction } from './sqliteTransaction.js';
-import { planAuditLog } from './queryPlanner.js';
+import { planAuditLog, DEFAULT_RETENTION_DAYS as DEFAULT_PURGE_RETENTION_DAYS } from './queryPlanner.js';
 import { AUDIT_CAP_IDB } from '../messaging/limits.js';
 import { buildExportEnvelope, EXPORT_COLUMNS } from './exportEnvelope.js';
 import type { SerializeResult } from './StorageBackend.js';
@@ -218,15 +218,21 @@ export class IdbVfsBackend implements StorageBackend {
     return { success: true, is_starred: newStarred };
   }
 
-  async purgeOldRecords(retentionDays: number, maxRecords: number): Promise<BackendOrError<PurgeResult>> {
+  async purgeOldRecords(retentionDays?: number | undefined, maxRecords?: number | undefined): Promise<BackendOrError<PurgeResult>> {
     this.ensureDb();
-    const stmts = buildPurgeOldRecordsStatements(purgeCutoffMs(retentionDays));
+    // PBI 2026-09-12-36: skip guards — same contract as purgeContent. Before
+    // this, (0,0) purged everything (cutoff = now) while content-purge(0,0)
+    // was a no-op. Statements are built unconditionally (plain SQL strings);
+    // only their EXECUTION is gated.
+    const stmts = buildPurgeOldRecordsStatements(purgeCutoffMs(retentionDays ?? DEFAULT_PURGE_RETENTION_DAYS));
     let totalPurged = 0;
 
-    await this.engine.execWithCache(stmts.deleteOldSql, stmts.deleteOldParams);
-    let changes1 = 0;
-    await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes1 = Number(row[0]); });
-    totalPurged += changes1;
+    if (retentionDays != null && retentionDays > 0) {
+      await this.engine.execWithCache(stmts.deleteOldSql, stmts.deleteOldParams);
+      let changes1 = 0;
+      await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes1 = Number(row[0]); });
+      totalPurged += changes1;
+    }
 
     let totalCount = 0;
     await this.engine.execWithCache(
@@ -235,7 +241,7 @@ export class IdbVfsBackend implements StorageBackend {
       (row: SqliteValue[]) => { totalCount = Number(row[0]); }
     );
 
-    if (totalCount > maxRecords) {
+    if (maxRecords != null && maxRecords > 0 && totalCount > maxRecords) {
       const excess = totalCount - maxRecords;
       await this.engine.execWithCache(stmts.deleteExcessSql, [excess]);
       let changes2 = 0;

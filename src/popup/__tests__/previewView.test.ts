@@ -99,32 +99,6 @@ describe('PreviewViewImpl', () => {
     expect(() => view.setPreviewContent('hello')).not.toThrow();
   });
 
-  it('show opens modal with showModal when available', () => {
-    const doc = createMockDoc();
-    const view = new PreviewViewImpl(doc);
-    const modal = view.getModal() as HTMLDialogElement;
-    let called = false;
-    modal.showModal = () => { called = true; };
-    view.show('<b>html</b>');
-    expect(called).toBe(true);
-  });
-
-  it('show falls back to open=true when showModal throws', () => {
-    const doc = createMockDoc();
-    const view = new PreviewViewImpl(doc);
-    const modal = view.getModal() as HTMLDialogElement;
-    modal.showModal = () => { throw new Error('not allowed'); };
-    view.show('<b>html</b>');
-    expect((modal as any).open).toBe(true);
-  });
-
-  it('show handles missing modal gracefully', () => {
-    const emptyDoc = document.implementation.createHTMLDocument();
-    const view = new PreviewViewImpl(emptyDoc);
-    expect(() => view.show('html')).not.toThrow();
-  });
-
-
   it('ensureMaskStatusElement returns existing element', () => {
     const doc = createMockDoc();
     const view = new PreviewViewImpl(doc);
@@ -163,13 +137,6 @@ describe('PreviewViewImpl', () => {
     const emptyDoc = document.implementation.createHTMLDocument();
     const view = new PreviewViewImpl(emptyDoc);
     expect(() => view.updateMaskStatus('x', true)).not.toThrow();
-  });
-
-  it('resetBodyWidth sets width', () => {
-    const doc = document.implementation.createHTMLDocument();
-    const view = new PreviewViewImpl(doc);
-    view.resetBodyWidth();
-    expect(doc.body.style.width).toBe('320px');
   });
 
   it('focusPreview does not throw when element missing', () => {
@@ -311,18 +278,16 @@ describe('PreviewViewImpl', () => {
       return modal;
     }
 
-    it('view.show/close no longer own a focus trap — the presenter is the single owner', () => {
+    // PBI 2026-09-12-37: view.show/close were removed (the presenter owns
+    // modal lifecycle). The trap-ownership assertion now runs against the
+    // presenter's own inline open/close — verified in previewPresenter tests.
+    it('view exposes no show/close members at all', () => {
       const doc = createMockDoc();
       const view = new PreviewViewImpl(doc);
-      setupOpenableModal(doc);
-      const trapSpy = vi.spyOn(focusTrapManager, 'trap');
-      try {
-        view.show('<b>html</b>');
-        view.close();
-        expect(trapSpy).not.toHaveBeenCalled();
-      } finally {
-        trapSpy.mockRestore();
-      }
+      expect((view as unknown as Record<string, unknown>).show).toBeUndefined();
+      expect((view as unknown as Record<string, unknown>).close).toBeUndefined();
+      expect((view as unknown as Record<string, unknown>).setCleansingInfo).toBeUndefined();
+      expect((view as unknown as Record<string, unknown>).resetBodyWidth).toBeUndefined();
     });
   });
 });

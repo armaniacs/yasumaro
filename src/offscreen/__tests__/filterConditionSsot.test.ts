@@ -11,9 +11,19 @@ describe('buildFilterConditions — shared filter vocabulary (PBI 2026-09-12-27)
     expect(conds.map((c) => c.sql.split(' ')[0])).toEqual([
       'is_deleted', 'created_at', 'created_at', 'domain', 'is_starred', 'gist_synced', 'id',
     ]);
-    expect(conds.filter((c) => c.param !== undefined).flatMap((c) => (Array.isArray(c.param) ? c.param : [c.param]))).toEqual([
+    // PBI 2026-09-12-35: params is a flat vector — ids spreads into it (the
+    // round-12 version bound the whole array as one value).
+    expect(conds.flatMap((c) => c.params)).toEqual([
       100, 200, 'a.com', 1, 1, 1, 2,
     ]);
+  });
+
+  it('search+ids flattens ids into the params vector (round-12 nested-bind bug)', () => {
+    const extra = buildExtraWhereSql({ text: 'query', ids: [3, 7] } as never, { qualified: true });
+    const inCondition = extra.extraWhereSqlFts.match(/id IN \((\?,\?)\)/);
+    expect(inCondition).not.toBeNull();
+    // Two placeholders, two flat bind values — was one nested [3,7] array.
+    expect(extra.extraParams.filter((p) => p === 3 || p === 7)).toEqual([3, 7]);
   });
 
   it('omits is_deleted when excludeDeleted is explicitly false', () => {

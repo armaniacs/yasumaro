@@ -720,7 +720,10 @@ describe('RecordSession.recordCurrentPage', () => {
     const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow);
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: 'https://example.com', title: 'T' } as any);
     await o.recordCurrentPage();
-    expect(document.getElementById('mainStatus')!.textContent).toBe('errorPrefix PRIVATE_PAGE_DETECTED (privatePageReason_cachecontrol)');
+    // PBI 2026-09-12-34: canonical-first resolution — the mock returns the
+    // key itself, so the canonical key surfaces here (was the raw legacy
+    // key 'privatePageReason_cachecontrol').
+    expect(document.getElementById('mainStatus')!.textContent).toBe('errorPrefix PRIVATE_PAGE_DETECTED (privacyStatus_cacheControl)');
     expect(document.getElementById('mainStatus')!.className).toBe('error');
     const btn = document.getElementById('recordBtn') as HTMLButtonElement;
     expect(btn.textContent).toBe('forceRecordAnyway');

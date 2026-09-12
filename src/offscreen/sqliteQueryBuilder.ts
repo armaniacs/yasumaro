@@ -5,32 +5,28 @@
 import type { StorageQuery } from '../utils/sqlite-types.js';
 import type { SqliteValue } from './sqliteEngine.js';
 import { sanitizeFtsTerm, ALLOWED_ORDER_COLUMNS, FTS_QUERY_MAX_LENGTH } from './schema.js';
+import { buildFilterConditions, type FilterCondition } from './queryPlan.js';
+
+/** WHERE-prefix projection over the shared filter conditions. */
+function buildWhereFromConditions(conditions: FilterCondition[]): { where: string; params: SqliteValue[] } {
+  const fragments = conditions.map((c) => c.sql);
+  const params = conditions.flatMap((c) => c.params);
+  return { where: fragments.length > 0 ? `WHERE ${fragments.join(' AND ')}` : '', params };
+}
 
 const ALLOWED_ORDER_DIRECTIONS = ['ASC', 'DESC'] as const;
 
 /**
  * Build a WHERE clause + params array from a StorageQuery.
  * When `excludeDeleted` is not explicitly false, filters out soft-deleted rows.
+ *
+ * PBI 2026-09-12-35: this is now a thin projection over the shared
+ * `buildFilterConditions` vocabulary (queryPlan.ts) — the vocabulary used to
+ * be duplicated here, and the duplicate could not express multi-value params
+ * (ids) as a vector, so search+ids bound a nested array as one value.
  */
 export function buildWhereClause(q: StorageQuery): { where: string; params: SqliteValue[] } {
-  const conditions: string[] = [];
-  const params: SqliteValue[] = [];
-
-  if (q.excludeDeleted !== false) {
-    conditions.push('is_deleted = 0');
-  }
-
-  if (q.dateFrom != null) { conditions.push('created_at >= ?'); params.push(q.dateFrom); }
-  if (q.dateTo != null) { conditions.push('created_at <= ?'); params.push(q.dateTo); }
-  if (q.domain) { conditions.push('domain = ?'); params.push(q.domain); }
-  if (q.starred != null) { conditions.push('is_starred = ?'); params.push(q.starred ? 1 : 0); }
-  if (q.gistSynced != null) { conditions.push('gist_synced = ?'); params.push(q.gistSynced); }
-  if (q.ids != null && q.ids.length > 0) {
-    conditions.push(`id IN (${q.ids.map(() => '?').join(',')})`);
-    params.push(...q.ids);
-  }
-
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const { where, params } = buildWhereFromConditions(buildFilterConditions(q));
   return { where, params };
 }
 
