@@ -33,7 +33,8 @@ import {
 } from './auditLogRepo.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { planQuery, planSearch, planPurge } from './queryPlanner.js';
-import { ARCHIVE_UNSUPPORTED_ERROR } from './StorageBackend.js';
+import { ARCHIVE_UNSUPPORTED_ERROR, type StorageBackend } from './StorageBackend.js';
+import { supportsArchive, type ArchiveStaging } from './archiveStaging.js';
 import { UPDATABLE_FIELDS } from './schema.js';
 import { buildRecordFromPayload } from './browsingLogCodec.js';
 import { collectMigrationExtras } from './sqliteStatus.js';
@@ -255,18 +256,21 @@ async function handleArchive(op: ArchiveOpType, msg: SqliteMessage, sendResponse
   const payload = (msg as { payload?: Record<string, unknown> }).payload ?? {};
   const backend = await engine.getBackend();
   // PBI 2026-09-11-06: archive lives behind ArchiveStaging, not StorageBackend.
-  // Non-staging backends (IDB / fallback / noop) fail closed here — the same
-  // error the per-adapter stubs used to return, now from one place. The check
-  // is per-method so a backend is never asked for an op it does not implement.
-  const raw = (backend as unknown as Record<string, unknown>)[entry.method];
-  if (typeof raw !== 'function') {
+  // PBI 2026-09-12-32: narrowing uses the exported `supportsArchive` seam (one
+  // rule — the former inline per-method probe duplicated it and the
+  // StorageBackend comments documented the wrong spelling). Non-staging
+  // backends (IDB / fallback / noop) fail closed here — the same error the
+  // per-adapter stubs used to return, now from one place.
+  if (!supportsArchive(backend)) {
     sendResponse({ success: false, error: ARCHIVE_UNSUPPORTED_ERROR });
     return;
   }
+  const stagingBackend = backend as StorageBackend & ArchiveStaging;
   // WHY: extracting the method unbound drops `this` — OpfsWorkerBackend's
   // archive methods read this.proxyArchive, so a bare call threw
   // "Cannot read properties of undefined (reading 'proxyArchive')" in
   // OPFS mode (e2e @extension suite). Bind before invoking.
+  const raw = (stagingBackend as unknown as Record<string, unknown>)[entry.method];
   const call = (raw as (...args: unknown[]) => Promise<ArchiveBackendResult>).bind(backend);
   const result = await call(...entry.args(payload));
   if (!result.success) {

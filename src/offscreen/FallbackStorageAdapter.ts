@@ -53,7 +53,11 @@ export class FallbackStorageAdapter implements StorageBackend {
   }
 
   async serialize(): Promise<BackendOrError<SerializeResult>> {
-    const result = await this.fallback.query({ excludeDeleted: true, orderBy: 'created_at', orderDir: 'DESC', limit: 100000 });
+    // PBI 2026-09-12-28: direct scan — the capped `query()` clamps limit to
+    // QUERY_CAPS.plain (10000), so >10k-record DBs exported truncated on
+    // this backend only. The full-table scan mirrors the SQL backends'
+    // unbounded serialize SELECT.
+    const result = await this.fallback.exportAllRecords();
     if (!result.success) return { success: false, error: result.error };
     return { success: true, data: buildExportEnvelope(result.rows as unknown as Parameters<typeof buildExportEnvelope>[0]) };
   }

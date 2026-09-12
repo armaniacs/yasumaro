@@ -119,7 +119,7 @@ export function planAuditLog(
  * instead of quietly doing nothing.
  */
 export type PlanPurgeResult =
-  | { ok: true; retentionDays?: number; maxRecords?: number; includeStarred?: boolean }
+  | { ok: true; retentionDays?: number | undefined; maxRecords?: number | undefined; includeStarred?: boolean | undefined }
   | { ok: false; error: string };
 
 export function planPurge(
@@ -140,10 +140,15 @@ export function planPurge(
   const max = normalize(maxRecords, DEFAULT_MAX_RECORDS, 'maxRecords');
   if (typeof max === 'string') return { ok: false, error: max };
 
+  // PBI 2026-09-12-26: `0` means "skip this dimension" — the same reading
+  // every backend applies via its `!= null && > 0` guard. Before this
+  // normalization, `purgeOldRecords(0, 0)` deleted everything while
+  // `purgeContent(0, 0)` was a no-op: one planner output, opposite
+  // destructive meanings.
   return {
     ok: true,
-    retentionDays: days,
-    maxRecords: max,
+    retentionDays: days === 0 ? undefined : days,
+    maxRecords: max === 0 ? undefined : max,
     ...(typeof includeStarred === 'boolean' ? { includeStarred } : {}),
   };
 }

@@ -318,7 +318,11 @@ export class ContentKernel {
         // to the page-state projection for the pre-init edge (PBI 2026-09-11-01).
         const thresholds: VisitGateThresholds = this.deadlineTimer.thresholds
             ?? this.pageState.toVisitGateThresholds();
-        const gate = this.deadlineTimer.gate;
+        // PBI 2026-09-12-29: the gate is nullable pre-init (deadlineTimer
+        // constructor) — fall back to a locally built gate instead of the
+        // former `gate!` non-null assert that crashed direct/pre-init calls.
+        const gate: VisitGate = this.deadlineTimer.gate
+            ?? this.createVisitGate();
         const duration = (this.clock() - visitState.startTime) / 1000;
 
         void logDebug(
@@ -344,7 +348,7 @@ export class ContentKernel {
             }
         }
 
-        if (gate!.isReportable(visitState)) {
+        if (gate.isReportable(visitState)) {
             console.info(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${visitState.maxScrollPercentage.toFixed(0)}%`);
             void this.reportValidVisit();
             if (this.deadlineTimer.isE2E) {

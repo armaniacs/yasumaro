@@ -172,6 +172,26 @@ export class FallbackStorage {
   }
 
   /**
+   * Full-table scan for the export path (PBI 2026-09-12-28).
+   *
+   * The capped `query()` clamps `limit` to QUERY_CAPS.plain (10000), which
+   * silently truncated exports on this backend while the SQL backends'
+   * serialize SELECTs are unbounded. This bypasses the paging policy on
+   * purpose: export is an explicit full-snapshot request, not a paged read.
+   */
+  async exportAllRecords(): Promise<{ success: true; rows: BrowsingLogRecord[] } | { success: false; error: string }> {
+    try {
+      const data = await this.loadData();
+      const rows = data.records
+        .filter(r => r.is_deleted === 0)
+        .sort((a, b) => b.created_at - a.created_at);
+      return { success: true, rows };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  /**
    * Unified read path — handles both plain filtered listing and text search.
    */
   async query(q: StorageQuery = {}): Promise<{

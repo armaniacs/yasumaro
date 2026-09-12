@@ -7,6 +7,7 @@ import { logDebug, logWarn, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { encodeUrlSafeBase64 } from './urlNotificationHandlers.js';
+import { legacyReasonMessageKey } from '../../utils/reasonLabel.js';
 import { NotificationHelper } from '../notificationHelper.js';
 import type { MessageSenderLike } from '../rateLimiter.js';
 import type { RecordOptions } from '../pipeline/RecordingOrchestrator.js';
@@ -144,8 +145,10 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
       const url = sender.tab.url || '';
       const title = sender.tab.title || url;
       const reason = result.reason || 'cache-control';
-      const reasonKey = `privatePageReason_${reason.replace('-', '')}`;
-      const reasonLabel = chrome.i18n.getMessage(reasonKey) || reason;
+      // PBI 2026-09-12-31: label policy lives in the shared ReasonLabel table
+      // (was a hand-rolled `privatePageReason_${reason.replace('-','')}` — a
+      // first-occurrence-only hyphen replace that broke multi-hyphen reasons).
+      const reasonLabel = chrome.i18n.getMessage(legacyReasonMessageKey(reason)) || reason;
       try {
         const notificationId = await encodeUrlSafeBase64(url);
         NotificationHelper.notifyPrivacyConfirm(notificationId, title, reasonLabel);

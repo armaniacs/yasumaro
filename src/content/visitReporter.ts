@@ -9,6 +9,7 @@ import type { ExtractResult } from '../utils/contentExtractor/types.js';
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
+import { legacyReasonMessageKey } from '../utils/reasonLabel.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
 
 /** Byte-stat subset shared by the VALID_VISIT payload and the GET_CONTENT reply. */
@@ -185,19 +186,19 @@ export class VisitReporter {
                     pageState.isValidVisitReported = true;
                     return;
                 }
-                if (response.error === 'PRIVATE_PAGE_DETECTED') {
-                    if (!response.confirmationRequired) {
-                        pageState.isValidVisitReported = true;
-                        return;
-                    }
-                    const statusCode = reasonToStatusCode(response.reason);
-                    const messageKey = statusCodeToMessageKey(statusCode);
-                    const getReasonLabel = this.deps.getReasonLabel ?? defaultGetReasonLabel;
-                    const reasonLabel = getReasonLabel(
-                        messageKey,
-                        `privatePageReason_${(response.reason || '').replace('-', '')}`,
-                        response.reason || 'unknown',
-                    );
+                    if (response.error === 'PRIVATE_PAGE_DETECTED') {
+                        if (!response.confirmationRequired) {
+                            pageState.isValidVisitReported = true;
+                            return;
+                        }
+                        const statusCode = reasonToStatusCode(response.reason);
+                        const messageKey = statusCodeToMessageKey(statusCode);
+                        const getReasonLabel = this.deps.getReasonLabel ?? defaultGetReasonLabel;
+                        const reasonLabel = getReasonLabel(
+                            messageKey,
+                            legacyReasonMessageKey(response.reason),
+                            response.reason || 'unknown',
+                        );
                     const confirm = this.deps.confirmDialog
                         ? this.deps.confirmDialog
                         : (await import('./privacyDialog.js')).showPrivacyConfirmDialog;

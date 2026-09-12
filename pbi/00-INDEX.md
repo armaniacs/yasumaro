@@ -14,6 +14,19 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-12 architecture deepening round 12 — 8件（0912d）
+
+round 12 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260912-1640-r12.html`）の deepening 候補 8 件を RICE 採点 → PBI 化。実行順 = 25 → 32（RICE 降順、ハードな依存なし）。台帳は `2026-09-12-00-backlog-0912d.md`。
+
+- 2026-09-12-25-fix-message-handler-restore-cost.md（✅ 完了・アーカイブ済 — `RestoreOnce` seam 新設（restoredOnce/resetRestoreOnce）。`createAutoSavedBadgeTabs` を restore-once 化し fan-out を起動後 1 回に限定。`handleTabRemoved` が resetRestoreOnce + removeAndFlush を実行。restoreOnce 3 tests 新設・tab 3 ファイル 41 tests green）
+- 2026-09-12-26-fix-plan-purge-zero-contract.md（✅ 完了・アーカイブ済 — planPurge が `0` を「次元スキップ」（undefined）に正規化し、purgeOldRecords 全件削除 vs purgeContent no-op の逆動作を解消（backend の >0 ガードと契約一致・backend 変更なし）。planPurge テスト更新・offscreen 1055 tests green）
+- 2026-09-12-27-refactor-filter-condition-ssot.md（✅ 完了・アーカイブ済 — `buildFilterConditions` 新設（構造化条件の単一語彙）+ `qualifyCondition` で FTS 限定子を param 化（旧 regex replace 削除）。`ExtraWhere.includeDeletedFilter` で FTS/LIKE search のハードコード `is_deleted = 0` を flag 制御に → `excludeDeleted: false` が全 backend で honoring。filterConditionSsot 12 tests 新設・offscreen 1067 tests green）
+- 2026-09-12-28-fix-fallback-export-truncation.md（✅ 完了・アーカイブ済 — `FallbackStorage.exportAllRecords()` 新設（未削除全件 direct scan・capped query 迂回）。>10k レコードで fallback のみ export が部分的になる問題を解消（envelope SSOT 維持）。offscreen 1067 tests green）
+- 2026-09-12-29-fix-small-bug-bundle.md（✅ 完了・アーカイブ済 — statusToggleBtn に wireOnce 適用（二重配線解消）・removeAll を batch + 単一 flush に（N 回書込解消）・contentKernel の gate! 非null assert を createVisitGate フォールバックに（pre-init crash 解消）・tagClusterLoading の labels を show 毎に再解決（stale i18n 解消）。popup/content/dashboard/background 3,569 tests green）
+- 2026-09-12-30-refactor-single-flight.md（✅ 完了・アーカイブ済 — `SingleFlight<K>.run(key, fn, policy: 'join'|'drop')` 新設（utils/singleFlight.ts）で notification（join by URL）と contextMenu（drop by tabId）を委譲。initiator は raw promise・drop は即 resolve。singleFlight 5 tests 新設・utils+background+content 2,771 tests green）
+- 2026-09-12-31-refactor-notification-codec-reason-label.md（✅ 完了・アーカイブ済 — `reasonLabel.ts` 新設（canonical `privacyStatus_*` → legacy `privatePageReason_*` → raw の順解決 + replaceAll）で 3 label site を委譲。multi-hyphen latent bug 解消。**主張訂正**: wire codec は既に urlNotificationHandlers.ts に SSOT 済みで「再派生」は誤り。content+background+popup 3,636 tests green）
+- 2026-09-12-32-refactor-supports-archive-narrowing.md（✅ 完了・アーカイブ済 — `handleArchive` を `supportsArchive` type guard 経由に統一（per-method probe 削除・ArchiveStaging 型獲得）。ClassBasedBackend fake に archiveStatus 追加。archiveWireDispatch + archiveFallbackRejection 25 tests green・offscreen 1067 tests green）
+
 ### 2026-09-12 architecture deepening round 11 — 8件（0912c）
 
 round 11 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260912-1545-r11.html`）の deepening 候補 8 件を RICE 採点 → PBI 化。実行順 = 17 → 24（RICE 降順、ハードな依存なし）。台帳は `2026-09-12-00-backlog-0912c.md`。

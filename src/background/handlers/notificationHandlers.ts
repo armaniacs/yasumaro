@@ -4,6 +4,7 @@ import { getPendingPages, removePendingPages } from '../../utils/pendingStorage.
 import { logWarn, logError, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { buildRecordRequest } from '../recordRequestBuilder.js';
+import { SingleFlight } from '../../utils/singleFlight.js';
 import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 
 const ALLOWED_URL_SCHEMES = ['http:', 'https:', 'chrome-extension:', 'moz-extension:', 'edge:'];
@@ -36,10 +37,9 @@ export function createNotificationHandlers(deps: NotificationHandlersDeps) {
     // events for the same notification before the first finishes its
     // getPendingPages -> record -> removePendingPages sequence. Both read the
     // page as still pending and both call record(), double-recording it.
-    // A single-flight map keyed by URL collapses concurrent handling of the
-    // same URL onto one in-flight promise, modeled on contextMenuHandlers'
-    // contextMenuRecordInProgress guard.
-    const inFlightByUrl = new Map<string, Promise<void>>();
+    // PBI 2026-09-12-30: the join policy lives in the shared SingleFlight
+    // seam (was a hand-rolled map + finally-cleanup).
+    const inFlightByUrl = new SingleFlight<string>();
 
     async function onButtonClicked(notificationId: string, buttonIndex: number): Promise<void> {
         try {
@@ -71,13 +71,7 @@ export function createNotificationHandlers(deps: NotificationHandlersDeps) {
                 return;
             }
 
-            const existing = inFlightByUrl.get(url);
-            if (existing) {
-                await existing;
-                return;
-            }
-
-            const run = (async () => {
+            await inFlightByUrl.run(url, async () => {
                 if (buttonIndex === 0) {
                     const pages = await getPendingPages();
                     const page = pages.find(p => p.url === url);
@@ -92,13 +86,7 @@ export function createNotificationHandlers(deps: NotificationHandlersDeps) {
                     }
                 }
                 await removePendingPages([url]);
-            })();
-            inFlightByUrl.set(url, run);
-            try {
-                await run;
-            } finally {
-                inFlightByUrl.delete(url);
-            }
+            }, 'join');
         } catch (error) {
             await logError(
                 'Notification button click handler failed',

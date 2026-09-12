@@ -10,6 +10,7 @@ import { getSavedUrlEntries } from '../../utils/storageUrls.js';
 import type { ContentResponse } from '../mainTypes.js';
 import { showSpinner, hideSpinner } from '../spinner.js';
 import { showError } from '../errorUtils.js';
+import { legacyReasonMessageKey } from '../../utils/reasonLabel.js';
 import { createCopyMarkdownButton } from '../../utils/copyMarkdownButton.js';
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 import { updateCleansingStatus, updateTrustStatus } from '../statusPanel.js';
@@ -225,7 +226,9 @@ export class RecordSession {
    * ErrorPresenter pass-through (wording unchanged).
    */
   private buildPrivatePageErrorMessage(reason?: string): string {
-    const reasonKey = `privatePageReason_${reason?.replace('-', '') || 'cacheControl'}`;
+    // PBI 2026-09-12-31: label policy lives in the shared ReasonLabel table
+    // (was a hand-rolled `privatePageReason_${reason?.replace('-','')}`).
+    const reasonKey = legacyReasonMessageKey(reason || 'cache-control');
     const reasonText = getMessage(reasonKey) || reason || 'unknown';
     return `${getMessage('errorPrefix')} PRIVATE_PAGE_DETECTED (${reasonText})`;
   }

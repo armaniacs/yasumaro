@@ -73,7 +73,12 @@ export class IdbVfsBackend implements StorageBackend {
     const spec = buildQuerySpec(q, { caps: QUERY_CAPS, fts5Available: this.engine.fts5Available });
     if (spec.error) return { success: false, error: spec.error };
 
-    const extra = buildExtraWhereSql(q);
+    // PBI 2026-09-12-27: the FTS JOIN path gets `b.`-qualified columns from
+    // the SAME condition set; `excludeDeleted` now rides through to the
+    // search builders (the former hardcoded `is_deleted = 0` ignored it,
+    // diverging from fallback/InMemory). Params are positionally identical
+    // for both projections, so one ExtraWhere serves both.
+    const extra = buildExtraWhereSql(q, { qualified: true });
 
     if (q.text) {
       const bare = spec.bareText;

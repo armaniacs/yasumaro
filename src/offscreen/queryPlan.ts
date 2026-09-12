@@ -27,28 +27,67 @@ export interface ExtraWhere {
   extraWhereSql: string;
   extraWhereSqlFts: string;
   extraParams: SqliteValue[];
+  /** Whether the is_deleted filter rode on this WHERE (search builders drop their hardcoded base condition when false). */
+  includeDeletedFilter: boolean;
 }
 
-export function buildExtraWhereSql(query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids'>): ExtraWhere {
-  const extraConds: string[] = [];
-  const extraParams: SqliteValue[] = [];
-  if ((query as StorageQuery).dateFrom != null) { extraConds.push('created_at >= ?'); extraParams.push((query as StorageQuery).dateFrom as number); }
-  if ((query as StorageQuery).dateTo != null) { extraConds.push('created_at <= ?'); extraParams.push((query as StorageQuery).dateTo as number); }
-  if ((query as StorageQuery).domain) { extraConds.push('domain = ?'); extraParams.push((query as StorageQuery).domain as string); }
-  if ((query as StorageQuery).starred != null) { extraConds.push('is_starred = ?'); extraParams.push(((query as StorageQuery).starred ? 1 : 0) as unknown as SqliteValue); }
-  if ((query as StorageQuery).gistSynced != null) { extraConds.push('gist_synced = ?'); extraParams.push((query as StorageQuery).gistSynced as unknown as SqliteValue); }
-  if ((query as StorageQuery).ids != null && (query as StorageQuery).ids!.length > 0) {
-    extraConds.push(`id IN (${(query as StorageQuery).ids!.map(() => '?').join(',')})`);
-    extraParams.push(...((query as StorageQuery).ids as unknown as SqliteValue[]));
+/**
+ * PBI 2026-09-12-27: single structured condition set — the ONE spelling of
+ * the shared filter vocabulary (dateFrom/dateTo/domain/starred/gistSynced/
+ * ids/excludeDeleted). `buildExtraWhereSql` (search SQL), `buildWhereClause`
+ * (plain SQL) and `matchesExtraWhere` (non-SQL parity) all derive from this
+ * list, so a new filter is one row here instead of three synchronized edits.
+ *
+ * `qualifier` prefixes column names for the FTS JOIN path (`b.`), replacing
+ * the former regex string-rewrite of the assembled SQL (the most fragile
+ * point: a new column that is a substring of an existing one silently
+ * produced wrong SQL).
+ */
+export interface FilterCondition {
+  sql: string;
+  param?: SqliteValue;
+}
+
+export function buildFilterConditions(
+  query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids' | 'excludeDeleted'>,
+): FilterCondition[] {
+  const conditions: FilterCondition[] = [];
+  if (query.excludeDeleted !== false) {
+    conditions.push({ sql: 'is_deleted = 0' });
   }
+  if (query.dateFrom != null) conditions.push({ sql: 'created_at >= ?', param: query.dateFrom });
+  if (query.dateTo != null) conditions.push({ sql: 'created_at <= ?', param: query.dateTo });
+  if (query.domain) conditions.push({ sql: 'domain = ?', param: query.domain });
+  if (query.starred != null) conditions.push({ sql: 'is_starred = ?', param: query.starred ? 1 : 0 });
+  if (query.gistSynced != null) conditions.push({ sql: 'gist_synced = ?', param: query.gistSynced });
+  if (query.ids != null && query.ids.length > 0) {
+    conditions.push({ sql: `id IN (${query.ids.map(() => '?').join(',')})`, param: query.ids as unknown as SqliteValue });
+  }
+  return conditions;
+}
+
+/** Qualify column names in a condition for the FTS JOIN path (`b.` prefix). */
+export function qualifyCondition(condition: FilterCondition, qualifier: string): FilterCondition {
+  const qualified = condition.sql.replace(/\b(created_at|domain|is_starred|gist_synced|is_deleted)\b/g, `${qualifier}$&`)
+    .replace(new RegExp(`\\b${qualifier}id\\b`, 'g'), `${qualifier}id`.replace(qualifier, qualifier))
+    .replace(/\bid IN \(/g, `${qualifier}id IN (`);
+  return { ...condition, sql: qualified };
+}
+
+export function buildExtraWhereSql(query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids' | 'excludeDeleted'>, options: { qualified?: boolean } = {}): ExtraWhere {
+  const conditions = buildFilterConditions(query);
+  const qualified = options.qualified === true;
+  const projected = conditions
+    .map((c) => (qualified ? qualifyCondition(c, 'b.') : c));
+  const extraConds = projected.map((c) => c.sql);
+  const extraParams = projected.map((c) => c.param).filter((p): p is SqliteValue => p !== undefined);
   const extraWhereSql = extraConds.length > 0 ? ` AND ${extraConds.join(' AND ')}` : '';
-  const extraWhereSqlFts = extraWhereSql
-    .replace(/domain = \?/g, 'b.domain = ?')
-    .replace(/created_at/g, 'b.created_at')
-    .replace(/is_starred/g, 'b.is_starred')
-    .replace(/gist_synced/g, 'b.gist_synced')
-    .replace(/\bid\b/g, 'b.id');
-  return { extraWhereSql, extraWhereSqlFts, extraParams };
+  const extraWhereSqlFts = extraWhereSql;
+  // The is_deleted condition rode on this WHERE only when excludeDeleted was
+  // not explicitly false — search builders read this flag instead of their
+  // hardcoded base condition (PBI 2026-09-12-27).
+  const includeDeletedFilter = query.excludeDeleted !== false;
+  return { extraWhereSql, extraWhereSqlFts, extraParams, includeDeletedFilter };
 }
 
 /** @deprecated alias — use buildExtraWhereSql */
@@ -310,14 +349,18 @@ export function buildFtsSearchStatements(
   // query emits `rank AS rank`, so the codec mappers never read bare names.
   const tagSql = opts.tagFilter ? ` AND ${opts.tagFilter.condition}` : '';
   const tagParams = opts.tagFilter ? opts.tagFilter.params : [];
+  // PBI 2026-09-12-27: the deleted-row filter rides on `extra` (built from
+  // the shared condition set) instead of a hardcoded `b.is_deleted = 0` —
+  // `excludeDeleted: false` now reaches the FTS path like fallback/InMemory.
+  const deletedCond = extra.includeDeletedFilter ? ' AND b.is_deleted = 0' : '';
   const countSql =
     'SELECT COUNT(*) AS c FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
-    `WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extra.extraWhereSqlFts}${tagSql}`;
+    `WHERE browsing_logs_fts MATCH ?${deletedCond}${extra.extraWhereSqlFts}${tagSql}`;
   const rowsSql =
     'SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank AS rank ' +
     'FROM browsing_logs_fts ' +
     'JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
-    `WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extra.extraWhereSqlFts}${tagSql} ` +
+    `WHERE browsing_logs_fts MATCH ?${deletedCond}${extra.extraWhereSqlFts}${tagSql} ` +
     `ORDER BY ${opts.orderClause} LIMIT ? OFFSET ?`;
   return {
     countSql,
@@ -337,12 +380,17 @@ export function buildLikeSearchStatements(
   extra: ExtraWhere,
   opts: { likePattern: string; orderClause: string; limit: number; offset: number; tagFilter?: TagFilterCondition | null }
 ): SearchStatements {
-  const likeConds = 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';
+  // PBI 2026-09-12-27: the deleted-row filter rides on `extra` (shared
+  // condition set) instead of a hardcoded base — `excludeDeleted: false`
+  // now reaches the LIKE path like fallback/InMemory.
+  const baseConds = extra.includeDeletedFilter
+    ? 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)'
+    : '(url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';
   const tagSql = opts.tagFilter ? ` AND ${opts.tagFilter.condition}` : '';
   const tagParams = opts.tagFilter ? opts.tagFilter.params : [];
   const conditions = extra.extraWhereSql
-    ? `${likeConds}${extra.extraWhereSql}${tagSql}`
-    : `${likeConds}${tagSql}`;
+    ? `${baseConds}${extra.extraWhereSql}${tagSql}`
+    : `${baseConds}${tagSql}`;
   const likeParams: SqliteValue[] = [opts.likePattern, opts.likePattern, opts.likePattern, opts.likePattern];
   return {
     countSql: `SELECT COUNT(*) AS c FROM browsing_logs WHERE ${conditions}`,
