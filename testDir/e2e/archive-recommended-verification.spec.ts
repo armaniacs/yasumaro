@@ -25,6 +25,13 @@ import {
 } from './fixtures/dashboardSqliteHelpers.js';
 import { collectArchiveChunks, openArchiveDb } from './fixtures/archiveDbReader.js';
 
+// Archive Y5' reconnects the open session after reload — requires stable
+// service worker and display server. Skip in headless local runs where make
+// test-all would otherwise fail due to missing display.
+if (!process.env.CI && !process.env.DISPLAY) {
+  test.skip(true, 'requires headed Chrome with display');
+}
+
 /** Export a staging file to bytes (token per chunk; staging scope). */
 async function exportStagingBytes(
   { dashboardMsg, scopeHash, tokenFor }: DashboardSqliteClient,

@@ -184,16 +184,16 @@ describe('InMemoryTransport + SqliteGateway', () => {
     }
   });
 
-  it('shares caps with QUERY_CAPS: plain cap is 1000, FTS cap is 100000', async () => {
+  it('shares caps with QUERY_CAPS: plain cap is 10000, FTS cap is 100000', async () => {
     const { QUERY_CAPS } = await import('../../offscreen/queryPlan.js');
-    expect(QUERY_CAPS.plain).toBe(1000);
+    expect(QUERY_CAPS.plain).toBe(10000);
     expect(QUERY_CAPS.fts).toBe(100000);
     // InMemory must clamp using those same caps — insert 5 and request huge limit
     for (let i = 0; i < 5; i++) await gateway.mutate({ type: 'insert', record: rec({ title: `t${i}`, url: `https://example.com/${i}`, created_at: 1000 + i }) });
     const qPlain = await gateway.query({ limit: 999999 } as unknown as Record<string, unknown> as Parameters<typeof gateway.query>[0]);
     expect(qPlain.success).toBe(true);
     if (qPlain.success) {
-      // limit is capped at plain 1000, so still returns all 5
+      // limit is capped at plain 10000, so still returns all 5
       expect((qPlain.data as { rows: BrowsingLogRecord[] }).rows.length).toBe(5);
     }
   });
