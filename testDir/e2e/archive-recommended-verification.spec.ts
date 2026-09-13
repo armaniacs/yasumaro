@@ -106,8 +106,8 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
     const bytes = await exportStagingBytes(client, stagingName);
     const incomingName = await stageIncomingBytes(page, client, bytes);
 
-    const openToken = await client.tokenFor('archive_open', []);
-    const openRes = await client.dashboardMsg({ subtype: 'archive_open', stagingName: incomingName, confirmToken: openToken });
+    const openToken = await client.tokenFor('archive_open', [incomingName]);
+    const openRes = await client.dashboardMsg({ subtype: 'archive_open', stagingName: incomingName, confirmToken: openToken, scopeHash: await client.scopeHash([incomingName]) });
     expect(openRes.success, `archive_open failed: ${JSON.stringify(openRes)}`).toBe(true);
 
     // The staging is incoming now — export the OPEN session bytes (still
@@ -120,14 +120,14 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
     expect(row.url).toBe(`https://archive-y3.test/${stamp}`);
 
     // archive_update's token binds the row id (same binding as the SW verify).
-    const updateToken = await client.tokenFor('archive_update', [], row.id);
+    const updateToken = await client.tokenFor('archive_update', [incomingName], row.id);
     const update = await client.dashboardMsg({
-      subtype: 'archive_update', stagingName: incomingName, id: row.id, changes: { title: editedTitle }, confirmToken: updateToken,
+      subtype: 'archive_update', stagingName: incomingName, id: row.id, changes: { title: editedTitle }, confirmToken: updateToken, scopeHash: await client.scopeHash([incomingName]),
     });
     expect(update.success, `archive_update failed: ${JSON.stringify(update)}`).toBe(true);
 
-    const saveToken = await client.tokenFor('archive_save', []);
-    const save = await client.dashboardMsg({ subtype: 'archive_save', stagingName: incomingName, confirmToken: saveToken });
+    const saveToken = await client.tokenFor('archive_save', [incomingName]);
+    const save = await client.dashboardMsg({ subtype: 'archive_save', stagingName: incomingName, confirmToken: saveToken, scopeHash: await client.scopeHash([incomingName]) });
     expect(save.success).toBe(true);
 
     const savedBytes = await exportStagingBytes(client, incomingName);
@@ -139,8 +139,8 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
       db.close();
     }
 
-    const closeToken = await client.tokenFor('archive_close', []);
-    await client.dashboardMsg({ subtype: 'archive_close', stagingName: incomingName, confirmToken: closeToken });
+    const closeToken = await client.tokenFor('archive_close', [incomingName]);
+    await client.dashboardMsg({ subtype: 'archive_close', stagingName: incomingName, confirmToken: closeToken, scopeHash: await client.scopeHash([incomingName]) });
   });
 
   test('Y4: restored records match title/url/is_starred at value level', async ({ context, extensionId }) => {
@@ -226,8 +226,8 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
     const bytes = await exportStagingBytes(client, stagingName);
     const incomingName = await stageIncomingBytes(page, client, bytes);
 
-    const openToken = await client.tokenFor('archive_open', []);
-    await client.dashboardMsg({ subtype: 'archive_open', stagingName: incomingName, confirmToken: openToken });
+    const openToken = await client.tokenFor('archive_open', [incomingName]);
+    await client.dashboardMsg({ subtype: 'archive_open', stagingName: incomingName, confirmToken: openToken, scopeHash: await client.scopeHash([incomingName]) });
 
     // Literal query "%_": only the verbatim title matches — a broken escape
     // would let "100%_done" as a LIKE pattern also hit "100Xdone".
@@ -363,8 +363,8 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
     const { stagingName } = await runPhaseA(page, client, isoDateOffset(1));
     const bytes = await exportStagingBytes(client, stagingName);
     const incomingName = await stageIncomingBytes(page, client, bytes);
-    const openToken = await client.tokenFor('archive_open', []);
-    const openRes = await client.dashboardMsg({ subtype: 'archive_open', stagingName: incomingName, confirmToken: openToken });
+    const openToken = await client.tokenFor('archive_open', [incomingName]);
+    const openRes = await client.dashboardMsg({ subtype: 'archive_open', stagingName: incomingName, confirmToken: openToken, scopeHash: await client.scopeHash([incomingName]) });
     expect(openRes.success, `archive_open failed: ${JSON.stringify(openRes)}`).toBe(true);
 
     const statusOf = () => client.dashboardMsg({ subtype: 'archive_status' });
@@ -402,9 +402,9 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
 
     // The dirty flag survives reload too: edit the title, reload, re-check.
     const row = (query.rows as Array<{ id: number }>)[0];
-    const updateToken = await client.tokenFor('archive_update', [], row.id);
+    const updateToken = await client.tokenFor('archive_update', [incomingName], row.id);
     const update = await client.dashboardMsg({
-      subtype: 'archive_update', stagingName: incomingName, id: row.id, changes: { title: 'y5 edited' }, confirmToken: updateToken,
+      subtype: 'archive_update', stagingName: incomingName, id: row.id, changes: { title: 'y5 edited' }, confirmToken: updateToken, scopeHash: await client.scopeHash([incomingName]),
     });
     expect(update.success, `archive_update failed: ${JSON.stringify(update)}`).toBe(true);
 
