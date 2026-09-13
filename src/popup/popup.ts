@@ -15,6 +15,7 @@ import { loadPendingPages } from './pendingPages.js';
 import { getPendingPages, isPrivacyPendingReason, renderPendingReason } from '../utils/pendingStorage.js';
 import { showPrivatePageDialog, showRecordingFailedDialog } from './privatePageDialog.js';
 import { getPrivacyConsent } from '../utils/storage/privacyConsent.js';
+import { CONSENT_STATE_CHANGED_EVENT } from './privacyConsentController.js';
 import type { ExtensionMessage } from '../background/messageTypes.js';
 import { hasCompletedWizard, initOnboardingWizard } from './onboardingWizard.js';
 
@@ -86,9 +87,16 @@ export async function initPopup(): Promise<void> {
 
     // A first-run user who just accepted the consent modal must see onboarding
     // in this same popup session — initPopup()'s one-shot check above already
-    // ran with hasConsented=false, so re-check whenever privacyConsentController
-    // broadcasts CONSENT_STATE_CHANGED (accept or decline) rather than relying
-    // on a single-shot callback tied to initialization order.
+    // ran with hasConsented=false, so re-check on consent changes rather than
+    // relying on a single-shot callback tied to initialization order.
+    // The CONSENT_STATE_CHANGED chrome message is sent BY this popup, and
+    // runtime messages are never delivered back to the sender's own context —
+    // the in-page re-check therefore rides the same-document
+    // consent-state-changed event from privacyConsentController. The onMessage
+    // subscription below stays for messages originating in other contexts.
+    document.addEventListener(CONSENT_STATE_CHANGED_EVENT, () => {
+        void maybeShowOnboardingWizard();
+    });
     chrome.runtime.onMessage.addListener((message: Partial<ExtensionMessage>) => {
         if (message?.type === 'CONSENT_STATE_CHANGED') {
             void maybeShowOnboardingWizard();
