@@ -7,6 +7,7 @@
  */
 import { testInteraction as test, expect } from '../fixtures/dashboard.fixture.js';
 import AxeBuilder from '@axe-core/playwright';
+import { createDashboardSqliteClient, migrationSettled, seedRows } from '../fixtures/dashboardSqliteHelpers.js';
 
 // Representative sample: default (general), a data-heavy panel (history),
 // and a form-heavy panel (domain filter) — not all 18, to keep runtime sane.
@@ -55,5 +56,32 @@ test.describe('Dashboard accessibility @extension', () => {
       await tab.focus();
       await expect(tab).toBeFocused();
     }
+  });
+
+  test('user can run a search using only the keyboard', async ({ dashboardPage: page }) => {
+    const client = createDashboardSqliteClient(page);
+    await migrationSettled(page, client);
+    const clearToken = await client.tokenFor('clear_all', []);
+    await client.dashboardMsg({ subtype: 'clear_all', confirmToken: clearToken });
+    await seedRows(client, [
+      { url: 'https://example.com/a', title: '筑波大学の入試について', summary: '筑波大学の入試情報', tags: null, created_at: Date.UTC(2026, 8, 1), domain: 'example.com' },
+      { url: 'https://example.com/b', title: 'プリンターレンタル比較', summary: 'プリンターの選び方', tags: null, created_at: Date.UTC(2026, 8, 1) + 1000, domain: 'example.com' },
+    ]);
+
+    // Reach the history panel by keyboard — no mouse click anywhere in this test.
+    const historyTab = page.locator('button[data-panel="panel-sqlite-history"]');
+    await historyTab.focus();
+    await page.keyboard.press('Enter');
+
+    const searchInput = page.locator('#sqlite-search-input');
+    await expect(searchInput).toBeVisible({ timeout: 10000 });
+
+    // Reaching the search field by keyboard is the point: it must accept
+    // focus and real keystrokes (keyboard.type), not a programmatic fill().
+    await searchInput.focus();
+    await expect(searchInput).toBeFocused();
+    await page.keyboard.type('筑波大学');
+
+    await expect(page.locator('#sqlite-entry-list .sqlite-entry')).toHaveCount(1, { timeout: 15000 });
   });
 });
