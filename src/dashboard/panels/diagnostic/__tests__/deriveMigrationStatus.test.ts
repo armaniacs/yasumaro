@@ -114,6 +114,43 @@ describe('deriveMigrationStatus', () => {
     expect(status.opfs.recordCount).toBe(42);
   });
 
+  it('flags legacyStillPresent when OPFS migration is done but the legacy DB is still on disk', () => {
+    const status = deriveMigrationStatus(sqlite({
+      opfsMigrationV2Done: true,
+      opfsLegacyDbPath: 'sqlite-pool/yasumaro.db',
+    }));
+
+    expect(status.opfs.done).toBe(true);
+    expect(status.opfs.legacyStillPresent).toBe(true);
+    expect(status.hints).toContain('legacyStillPresent');
+  });
+
+  it('does not flag legacyStillPresent when the probe could not confirm (undefined)', () => {
+    const status = deriveMigrationStatus(sqlite({ opfsMigrationV2Done: true }));
+
+    expect(status.opfs.legacyStillPresent).toBe(false);
+    expect(status.hints).not.toContain('legacyStillPresent');
+  });
+
+  it('does not flag legacyStillPresent when the legacy DB is confirmed absent', () => {
+    const status = deriveMigrationStatus(sqlite({
+      opfsMigrationV2Done: true,
+      opfsLegacyDbPath: null,
+    }));
+
+    expect(status.opfs.legacyStillPresent).toBe(false);
+  });
+
+  it('flags legacyStillPresent on the IDB side independently', () => {
+    const status = deriveMigrationStatus(sqlite({
+      idbMigrationV2Done: true,
+      idbLegacyDbName: 'idb-batch-atomic',
+    }));
+
+    expect(status.idb.legacyStillPresent).toBe(true);
+    expect(status.hints).toContain('legacyStillPresent');
+  });
+
   it('always includes the two static explanatory hints', () => {
     const status = deriveMigrationStatus(sqlite());
 

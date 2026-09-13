@@ -1563,6 +1563,9 @@
   "diagMigrationCheckingStaleHint": {
     "message": "If this stays \"Checking...\" even though data is already saved, the migration routine inside the OPFS Worker may not be able to write its status flag (chrome.storage.local can be inaccessible from a dedicated Worker context). This does not affect your saved data — reloading the extension may help; otherwise it can be treated as informational."
   },
+  "diagMigrationLegacyStillPresent": {
+    "message": "Migration is marked complete, but the legacy database file is still present. It is safe to keep, but it consumes storage — reloading the extension may trigger cleanup."
+  },
   "diagSqliteTitle": {
     "message": "SQLite Database"
   },

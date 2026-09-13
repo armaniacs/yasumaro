@@ -239,13 +239,18 @@ function getCurrentEngineLabel(snap: DiagnosticsSnapshot): string {
 }
 
 /** Hints are keyed so the renderer can map each to its own DOM element without re-deriving conditions. */
-export type MigrationHintKind = 'noAbsolutePath' | 'idbExplanation' | 'opfsCheckingStale';
+export type MigrationHintKind = 'noAbsolutePath' | 'idbExplanation' | 'opfsCheckingStale' | 'legacyStillPresent';
 
 export interface MigrationOpfsStatus {
   done: boolean;
   notApplicable: boolean;
   checking: boolean;
   warn: boolean;
+  /**
+   * Migration routine finished but the live probe still detects the legacy file.
+   * Possible failed/skipped legacy cleanup causing double disk usage. Independent of done.
+   */
+  legacyStillPresent: boolean;
   legacyPath: string | null | undefined;
   lastAttemptedAt: string | null | undefined;
   completedAt: string | null | undefined;
@@ -256,6 +261,11 @@ export interface MigrationIdbStatus {
   done: boolean;
   notApplicable: boolean;
   warn: boolean;
+  /**
+   * Migration routine finished but the live probe still detects the legacy DB.
+   * Possible failed/skipped legacy cleanup causing double disk usage. Independent of done.
+   */
+  legacyStillPresent: boolean;
   legacyName: string | null | undefined;
 }
 
@@ -290,6 +300,8 @@ export function deriveMigrationStatus(sqlite: DiagnosticsSnapshot['sqlite']): Mi
   const idbLegacyName = sqlite?.idbLegacyDbName;
   const opfsNotApplicable = !opfsDone && opfsLegacyPath === null;
   const idbNotApplicable = !idbDone && idbLegacyName === null;
+  const opfsLegacyStillPresent = opfsDone && opfsLegacyPath != null;
+  const idbLegacyStillPresent = idbDone && idbLegacyName != null;
   const allDone = (opfsDone || opfsNotApplicable) && (idbDone || idbNotApplicable);
 
   // OPFS side additionally sets LAST_ATTEMPTED_AT before the migration runs
@@ -307,6 +319,9 @@ export function deriveMigrationStatus(sqlite: DiagnosticsSnapshot['sqlite']): Mi
   if (opfsChecking) {
     hints.push('opfsCheckingStale');
   }
+  if (opfsLegacyStillPresent || idbLegacyStillPresent) {
+    hints.push('legacyStillPresent');
+  }
 
   return {
     overall: {
@@ -319,6 +334,7 @@ export function deriveMigrationStatus(sqlite: DiagnosticsSnapshot['sqlite']): Mi
       notApplicable: opfsNotApplicable,
       checking: opfsChecking,
       warn: opfsWarn,
+      legacyStillPresent: opfsLegacyStillPresent,
       legacyPath: opfsLegacyPath,
       lastAttemptedAt: sqlite?.opfsMigrationV2LastAttemptedAt,
       completedAt: sqlite?.opfsMigrationV2CompletedAt,
@@ -328,6 +344,7 @@ export function deriveMigrationStatus(sqlite: DiagnosticsSnapshot['sqlite']): Mi
       done: idbDone,
       notApplicable: idbNotApplicable,
       warn: idbWarn,
+      legacyStillPresent: idbLegacyStillPresent,
       legacyName: idbLegacyName,
     },
     hints,
@@ -432,6 +449,14 @@ function renderMigrationSection(el: HTMLElement | null, snap: DiagnosticsSnapsho
     staleChecking.textContent = getMessage('diagMigrationCheckingStaleHint')
       || 'If this stays "Checking..." even though data is already saved, the migration routine inside the OPFS Worker may not be able to write its status flag (chrome.storage.local can be inaccessible from a dedicated Worker context). This does not affect your saved data — reloading the extension may help; otherwise it can be treated as informational.';
     el.appendChild(staleChecking);
+  }
+
+  if (status.hints.includes('legacyStillPresent')) {
+    const note = document.createElement('p');
+    note.className = 'help-text';
+    note.textContent = getMessage('diagMigrationLegacyStillPresent')
+      || 'Migration is marked complete, but the legacy database file is still present. It is safe to keep, but it consumes storage — reloading the extension may trigger cleanup.';
+    el.appendChild(note);
   }
 }
 
