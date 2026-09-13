@@ -94,6 +94,25 @@ export default defineConfig({
         channel: 'chromium',
       },
     },
+
+    {
+      // Usability suite (PBI 2026-09-13 backlog 0913a): task-completion,
+      // a11y, i18n-layout, and friction-metrics specs. Scoped by directory
+      // rather than a grep tag — every file under e2e/usability/ already
+      // carries @extension too, so the two projects both run it, which is
+      // fine (task-friction-metrics.spec.ts is the only usability-only file).
+      name: 'usability',
+      testDir: './e2e/usability',
+      timeout: 60_000,
+      expect: { timeout: 15_000 },
+      fullyParallel: false,
+      retries: 2,
+      workers: 1,
+      use: {
+        ...devices['Desktop Chrome'],
+        channel: 'chromium',
+      },
+    },
   ],
 
   /* Run your local dev server before starting the tests */
