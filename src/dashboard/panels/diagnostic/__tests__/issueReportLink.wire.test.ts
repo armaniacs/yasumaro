@@ -146,12 +146,15 @@ describe('createIssueReportModalController — multiple entry points sharing one
     const dom = buildDom();
     const collectSnapshot = vi.fn().mockResolvedValue(makeSnapshot());
 
-    // Simulates the bug this refactor prevents: each controller instance owns
-    // its own pendingUrl, so accidentally constructing the controller twice
-    // (instead of sharing the one singleton) must not cause chrome.tabs.create
-    // to fire more than once per Open click, since each attaches its own
-    // listener set to the same buttons.
+    // Simulates accidentally constructing the controller twice instead of
+    // sharing the singleton: the second instance wires its own Open/Cancel
+    // listeners, but its pendingUrl stays null so only the triggering
+    // controller opens a tab.
     const controllerA = createIssueReportModalController(
+      { previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
+      collectSnapshot,
+    );
+    createIssueReportModalController(
       { previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
       collectSnapshot,
     );
@@ -164,5 +167,36 @@ describe('createIssueReportModalController — multiple entry points sharing one
     dom.openBtn.click();
     const create = (globalThis as unknown as { chrome: { tabs: { create: ReturnType<typeof vi.fn> } } }).chrome.tabs.create;
     expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('attaching the same button twice only wires one click listener', async () => {
+    const dom = buildDom();
+    const collectSnapshot = vi.fn().mockResolvedValue(makeSnapshot());
+
+    const controller = createIssueReportModalController(
+      { previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
+      collectSnapshot,
+    );
+    controller.attachTrigger(dom.sidebarReportBtn);
+    controller.attachTrigger(dom.sidebarReportBtn);
+
+    dom.sidebarReportBtn.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(collectSnapshot).toHaveBeenCalledTimes(1);
+
+    dom.openBtn.click();
+    const create = (globalThis as unknown as { chrome: { tabs: { create: ReturnType<typeof vi.fn> } } }).chrome.tabs.create;
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('attachTrigger(null) is a no-op and does not throw', () => {
+    const dom = buildDom();
+    const controller = createIssueReportModalController(
+      { previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
+      vi.fn().mockResolvedValue(makeSnapshot()),
+    );
+    expect(() => controller.attachTrigger(null)).not.toThrow();
   });
 });
