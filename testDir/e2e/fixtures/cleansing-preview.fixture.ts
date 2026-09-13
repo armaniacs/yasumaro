@@ -7,7 +7,7 @@
  * - captures every SAVE_RECORD payload into window.__saveRecordPayloads
  * - passes everything else through to the real service worker
  */
-import { test as base, chromium, ChromiumBrowserContext, Page } from '@playwright/test';
+import { test as base, expect, chromium, ChromiumBrowserContext, Page } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -168,6 +168,15 @@ export const test = base.extend<PreviewFixtures>({
       await page.locator('#consentCheckbox').check();
       await page.locator('#acceptConsentBtn').click();
     }
+
+    // page.goto() resolving only means the 'load' event fired — initPopup()'s
+    // async chain (loadCurrentTab → resetRecordButton, the sole place that
+    // wires recordBtn.onclick) may still be in flight. Clicking recordBtn
+    // before that wiring lands is a silent no-op: the modal then never
+    // opens and the test times out waiting for it. Wait for the button to
+    // reach its wired, enabled state first (this fixture's stubbed tab is
+    // always recordable, so it always ends up enabled).
+    await expect(page.locator('#recordBtn')).toBeEnabled({ timeout: 15000 });
 
     await use(page);
   },
