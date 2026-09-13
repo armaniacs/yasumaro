@@ -122,11 +122,11 @@ Scenario: 既存の受信側の動作は変わらない
 ```
 
 ## 受け入れ基準
-- [ ] `messageTypes.ts` の `ConsentStateChangedMessage` に「値を運ばない意図・理由・受信側の責務」を説明するドキュメントコメントを追加する
-- [ ] `privacyConsentController.ts` の `notifyConsentStateChanged` に、accept/decline双方から呼ばれ区別を載せないことが意図的だと分かるコメントを追加する
-- [ ] `privacyConsentController.test.ts` に「accept と decline が同一形状のメッセージを送る」ことを pin する契約テストを追加する
-- [ ] `src/__tests__/messaging-types-uniformity.test.ts` の既存テストが変更なくパスする（SSOTを壊していないことの確認）
-- [ ] `npx vitest run src/popup src/background src/messaging src/__tests__` が全件green
+- [x] `messageTypes.ts` の `ConsentStateChangedMessage` に「値を運ばない意図・理由・受信側の責務」を説明するドキュメントコメントを追加する
+- [x] `privacyConsentController.ts` の `notifyConsentStateChanged` に、accept/decline双方から呼ばれ区別を載せないことが意図的だと分かるコメントを追加する
+- [x] `privacyConsentController.test.ts` に「accept と decline が同一形状のメッセージを送る」ことを pin する契約テストを追加する
+- [x] `src/__tests__/messaging-types-uniformity.test.ts` の既存テストが変更なくパスする（SSOTを壊していないことの確認）
+- [x] `npx vitest run src/popup src/background src/messaging src/__tests__` が全件green
 
 ## テスト戦略
 - E2E: 既存のポップアップonboardingフローE2E（`testDir/e2e/usability/popup-onboarding-flow.spec.ts`）をそのまま再実行し回帰がないことを確認
@@ -137,6 +137,6 @@ Scenario: 既存の受信側の動作は変わらない
 1ポイント（案A採用時。案Bなら3ポイント）（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

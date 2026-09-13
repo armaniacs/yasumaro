@@ -187,14 +187,14 @@ Scenario: 既存の診断パネル表示が変更前と完全に同じ結果に�
 ```
 
 ## 受け入れ基準
-- [ ] `MigrationDisplayState` 型（`'done' | 'notApplicable' | 'checking' | 'pending'`）を定義する
-- [ ] `MigrationOpfsStatus.displayState` と `MigrationIdbStatus.displayState`（後者は `checking` を除外）を追加する
-- [ ] `deriveMigrationStatus` が現状のレンダー側と同一の優先順位で `displayState` を算出する
-- [ ] `renderMigrationSection` の `opfsValue`/`idbValue` 算出が `Record<MigrationDisplayState, string>` によるマッピングだけになる
-- [ ] IDB側に `checking` 状態が存在しない理由をコードコメントで明示する
-- [ ] `deriveMigrationStatus.test.ts` に `displayState` の全パターン（OPFS 4種・IDB 3種）の単体テストを追加する
-- [ ] `diagnosticsPanel.migration.test.ts`（既存8件）を**無変更で**パスさせる
-- [ ] 既存の `deriveMigrationStatus.test.ts` 10件が変更なくパスする
+- [x] `MigrationDisplayState` 型（`'done' | 'notApplicable' | 'checking' | 'pending'`）を定義する
+- [x] `MigrationOpfsStatus.displayState` と `MigrationIdbStatus.displayState`（後者は `checking` を除外）を追加する
+- [x] `deriveMigrationStatus` が現状のレンダー側と同一の優先順位で `displayState` を算出する
+- [x] `renderMigrationSection` の `opfsValue`/`idbValue` 算出が `Record<MigrationDisplayState, string>` によるマッピングだけになる
+- [x] IDB側に `checking` 状態が存在しない理由をコードコメントで明示する
+- [x] `deriveMigrationStatus.test.ts` に `displayState` の全パターン（OPFS 4種・IDB 3種）の単体テストを追加する
+- [x] `diagnosticsPanel.migration.test.ts`（既存8件）を**無変更で**パスさせる
+- [x] 既存の `deriveMigrationStatus.test.ts` 10件が変更なくパスする
 
 ## テスト戦略
 - E2E: 既存の診断パネル表示確認フローをそのまま再実行し回帰がないことを確認
@@ -205,6 +205,6 @@ Scenario: 既存の診断パネル表示が変更前と完全に同じ結果に�
 2ポイント（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

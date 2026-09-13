@@ -188,13 +188,13 @@ Scenario: 残存が検出された場合に診断パネルへ説明が表示さ�
 ```
 
 ## 受け入れ基準
-- [ ] `MigrationOpfsStatus` / `MigrationIdbStatus` に `legacyStillPresent: boolean` を追加する
-- [ ] `deriveMigrationStatus` が `done === true && legacyPath != null` の条件で `legacyStillPresent` を算出する（`undefined` は残存と判定しない）
-- [ ] `MigrationHintKind` に `'legacyStillPresent'` を追加し、OPFS/IDBいずれかで残存を検出したら hints に含める
-- [ ] `renderMigrationSection` が該当 hint を説明文として表示する
-- [ ] i18n キー `diagMigrationLegacyStillPresent` を `public/_locales/ja/messages.json` と `public/_locales/en/messages.json` の両方に追加する
-- [ ] `allDone` の算出は変更しない（移行自体は完了しているため true のまま）
-- [ ] 既存の `deriveMigrationStatus.test.ts` 10件が変更なくパスする
+- [x] `MigrationOpfsStatus` / `MigrationIdbStatus` に `legacyStillPresent: boolean` を追加する
+- [x] `deriveMigrationStatus` が `done === true && legacyPath != null` の条件で `legacyStillPresent` を算出する（`undefined` は残存と判定しない）
+- [x] `MigrationHintKind` に `'legacyStillPresent'` を追加し、OPFS/IDBいずれかで残存を検出したら hints に含める
+- [x] `renderMigrationSection` が該当 hint を説明文として表示する
+- [x] i18n キー `diagMigrationLegacyStillPresent` を `public/_locales/ja/messages.json` と `public/_locales/en/messages.json` の両方に追加する
+- [x] `allDone` の算出は変更しない（移行自体は完了しているため true のまま）
+- [x] 既存の `deriveMigrationStatus.test.ts` 10件が変更なくパスする
 
 ## テスト戦略
 - E2E: 既存の診断パネル表示確認フローをそのまま再実行し回帰がないことを確認
@@ -205,6 +205,6 @@ Scenario: 残存が検出された場合に診断パネルへ説明が表示さ�
 1ポイント（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

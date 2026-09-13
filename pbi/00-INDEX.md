@@ -14,23 +14,6 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-13 UIユーザビリティテスト設計 + issue報告導線 — 残1件（0913a、7件完了・アーカイブ済）
-
-設定画面/ダッシュボード・ポップアップのユーザビリティテストを1から設計し、GitHub issue報告導線（診断情報自動サニタイズ＋確認プレビュー）を新規実装。台帳は `2026-09-13-00-backlog-0913a.md`。実行順 = 46 → 45 → 51 → 49 → 50 → 48 → 47 → 52（RICE降順＋依存関係優先）。
-
-- 🔶🟡🟢🔧 2026-09-13-50-test-a11y-i18n-usability-e2e.md（キーボード操作・axe-coreスキャン・ja/enレイアウト崩れ検知。**部分実装**: 「記録開始」「検索」タスクのキーボード操作検証が未実装。a11y/i18n検証部分は完了済み。残タスクの実装ガイド（追加先ファイル・テストコード雛形・fixture選定理由）をPBI本文に記載済み・残0.5pt相当）
-
-
-### 2026-09-14 adversarial-code-review 指摘のPBI化 — 4件（ラウンド15レビュー由来）
-
-アーキテクチャ深化ラウンド15（PBI 01〜04）へのadversarial-code-reviewで、裏取りを経て確定した保守担当者視点の指摘4件。ハッカー視点の指摘は全件却下。台帳は `2026-09-14-00-backlog-review-findings.md`。実行順 = 05 → 06 → 07 → 08（RICE降順、ただし 07 → 08 は同一型を触るため順序依存）。各PBIに実装ガイド（現状コード引用・変更方針・テスト雛形・検証コマンド）を記載済み。
-
-- ⬜🟢🟢🔧 2026-09-14-05-refactor-issue-report-attach-trigger-guard.md（RICE 16.0 — `attachTrigger` にWeakSetで多重登録防止ガードを追加。現状は`NavigationRegistry`のmount-once保証に依存する暗黙の前提）
-- ⬜🟢🟢🔧 2026-09-14-06-refactor-consent-state-changed-payload.md（RICE 8.0 — `CONSENT_STATE_CHANGED`のaccept/decline区別不能を解消。**調査済**: `NO_PAYLOAD_TYPES`登録によりpayload追加はSSOT 3ファイル改修が必要なため、契約をコードに明示する案Aを推奨）
-- ⬜🟢🟢🔧 2026-09-14-07-test-opfs-done-legacy-path-contradiction.md（RICE 3.2 — 「移行済みだがレガシーDB残存」状態の可視化。**調査済**: storage由来のDoneフラグとライブprobeは独立情報源のため実発生する）
-- ⬜🟡🟢🔧 2026-09-14-08-refactor-migration-section-display-state.md（RICE 1.6 — `renderMigrationSection`の表示優先順位を`displayState`判別ユニオンに統合。**07の後に着手**）
-
-
 ### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A。2026-09-14 再調査で実装ガイドを追加 — 対象リストに `wa-sqlite.d.ts` 漏れ・STATUS 公開部は `sqliteStatus.ts` が正・`migrationBackup.ts` の `extractDomain` re-export に現役依存あり）
@@ -119,20 +102,30 @@ round 11 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc00
 - 2026-09-12-23-refactor-record-session-attempt-context.md（✅ 完了・アーカイブ済 — `openAttempt()` prelude seam 新設（guard → arm button → clear status の単一化・degenerate DOM で idle 自己復帰）。normal/force の 2 重手書き ~60 行を統合。popup 870 tests green・type-check green）
 - 2026-09-12-24-refactor-tab-state-seam.md（✅ 完了・アーカイブ済 — `createAutoSavedBadgeTabs(tabExistence?)` に prune 追加（restore 時に stale tabId を刈り込み永続化）・TabCache remove を flushImmediately + `removeAndFlush` で耐久化。durability 3 tests 新設・background 2306 tests green）
 
-### 2026-09-13 UIユーザビリティテスト設計 + issue報告導線（0913a）— 45・46・47・48・49・51・52 完了（50は基準1件未達のため進行中に残置）
+### 2026-09-13 UIユーザビリティテスト設計 + issue報告導線（0913a）— 8件完了（45〜52）
 
 - 2026-09-13-45-feat-issue-report-link.md（✅ 完了・アーカイブ済 — 診断パネルへ「不具合を報告」ボタン + プレビューダイアログを実装。`buildIssueReportBody()`でapiKey/baseUrl/dailyPath/ログ本文をサニタイズしGitHub issueへ`chrome.tabs.create({ url })`で新規タブを開く。単体テスト11件green）
 - 2026-09-13-46-feat-issue-template-privacy-doc.md（✅ 完了・アーカイブ済 — `.github/ISSUE_TEMPLATE/bug_report.md` 新設 + `public/PRIVACY.md`・`docs/PRIVACY.md` 両方の Third-Party Services セクションにissue報告機能（ユーザー操作時のみ診断情報送信）の記述を追記）
 - 2026-09-13-47-test-dashboard-usability-e2e.md（✅ 完了・アーカイブ済 — sidebar 16パネル到達性（マウス/キーボード）・ドメインフィルタ追加→保存→リロード永続化・検索結果件数一致と空状態・タグクラウドノード数一致・Markdownエクスポートの5 E2Eファイル新設。`npx playwright test --project=extension testDir/e2e/usability/dashboard-*.spec.ts` で7 tests green）
 - 2026-09-13-48-test-error-recovery-usability-e2e.md（✅ 完了・アーカイブ済 — `dashboard-error-recovery.spec.ts` 新設（AI未設定・Obsidian未接続・ネットワーク断の3パターンでエラーメッセージの原因＋次アクション記述を検証。GeminiのAPIキー未設定メッセージの不備も修正済み）。単独実行で3 tests green を確認済み（初回はworktree並列実行によるリソース競合で未検証のまま完了報告されていたため、事後に再検証した））
 - 2026-09-13-49-test-popup-usability-e2e.md（✅ 完了・アーカイブ済 — `testDir/e2e/usability/popup-record-flow.spec.ts`・`popup-onboarding-flow.spec.ts` 新設。record→preview→confirm/cancelの一連タスク完了をcleansing-preview fixtureで検証、onboardingウィザードは選択肢到達性・minimal即完了・Obsidian/SQLite選択後のSkip退避経路・スキップ時の状態一貫性を検証）
+- 2026-09-13-50-test-a11y-i18n-usability-e2e.md（✅ 完了・アーカイブ済 — 残タスク（「記録開始」「検索」のキーボードのみ操作検証）を2026-09-14に実装。検索は `a11y-usability.spec.ts` に seed→focus+Enter→`keyboard.type` で追加、記録開始は `popup-a11y-keyboard.spec.ts` 新設（headless スキップガード付き・DISPLAY=1 の headed 実行で実走確認済み）。`test:e2e:usability` 単独実行で 40 passed / 3 skipped（skip は popup 系 headless ガード仕様））
 - 2026-09-13-51-test-issue-report-e2e.md（✅ 完了・アーカイブ済 — `dashboard-issue-report.spec.ts` 新設（4 tests: プレビュー本文のAPIキー非混入・chrome.tabs.create の issue URL 検証・Cancel時の非オープン・サイドバー導線）。専用fixtureでGemini APIキーをseedして漏洩なきことを実証。usability 4 tests green）
 - 2026-09-13-52-feat-friction-metrics-ci.md（✅ 完了・アーカイブ済 — `frictionMeter.ts` 新設（`page.click`/`page.fill`ラップでステップ数計測）+ `usability-budget.json`（タスク別しきい値）+ `task-friction-metrics.spec.ts`（ドメインフィルタ追加・検索・Markdownエクスポート・issue報告プレビューの4タスク計測）。`playwright.config.ts` に `usability` プロジェクト追加・`package.json` に `test:e2e:usability(:ci)` 追加・`.github/workflows/tests.yml` に usability ジョブ追加）
+
+### 2026-09-14 adversarial-code-review 指摘のPBI化 — 4件（ラウンド15レビュー由来・autonomous-task-closer）
+
+アーキテクチャ深化ラウンド15（PBI 01〜04）へのadversarial-code-reviewで、裏取りを経て確定した保守担当者視点の指摘4件。ハッカー視点の指摘は全件却下。台帳は `2026-09-14-00-backlog-review-findings.md`（アーカイブ済）。実行順 = 05 → 06 → 07 → 08（RICE降順、ただし 07 → 08 は同一型を触るため順序依存）。05・06・07・50 はサブエージェント並列（バッチ1）、08 は 07 着地後に単独実装（バッチ2）。
+
+- 2026-09-14-05-refactor-issue-report-attach-trigger-guard.md（✅ 完了・アーカイブ済 — `createIssueReportModalController` 関数スコープに `WeakSet<HTMLButtonElement>`（`wiredTriggers`）を追加し、`attachTrigger` の同一ボタン再呼び出しで `addEventListener` をスキップ。名前と実装が乖離していた既存 `reentrancy guard` テストを「同一モーダルに controller を2つ生成」シナリオとして修正 + 同一ボタン二重配線検出（`collectSnapshot` 呼び出し回数で pin）+ `attachTrigger(null)` no-op テスト新設。wire 6 tests green）
+- 2026-09-14-06-refactor-consent-state-changed-payload.md（✅ 完了・アーカイブ済 — 案A採用。`ConsentStateChangedMessage` に「値を運ばない意図・SSOT は chrome.storage・受信側は読み直す責務」の英語 doc comment、`notifyConsentStateChanged` に意図コメント、`popup.ts` のリスナー型注釈を `Partial<ExtensionMessage>` に締め、accept/decline 同一形状を pin する契約テスト新設。`messaging-types-uniformity.test.ts` は無変更でパス）
+- 2026-09-14-07-test-opfs-done-legacy-path-contradiction.md（✅ 完了・アーカイブ済 — `MigrationOpfsStatus`/`MigrationIdbStatus` に `legacyStillPresent`（`done && legacyPath != null`・undefined は未確認のため非判定）を追加、`MigrationHintKind` に `'legacyStillPresent'` 追加、`renderMigrationSection` に説明文描画、i18n キー `diagMigrationLegacyStillPresent` を ja/en 両方に追加。`allDone` は不変。deriveMigrationStatus 14 tests + migration 描画 8 tests green）
+- 2026-09-14-08-refactor-migration-section-display-state.md（✅ 完了・アーカイブ済 — `MigrationDisplayState` 判別ユニオン（`'done' | 'notApplicable' | 'checking' | 'pending'`・IDB は `Exclude<…, 'checking'>`）を新設し `deriveMigrationStatus` 側で優先順位を一意解決。`renderMigrationSection` の `opfsValue`/`idbValue` は `Record<MigrationDisplayState, string>` マッピングのみに。IDB に checking が無い理由（対応する計測フィールド不在）を型コメントで明示。`diagnosticsPanel.migration.test.ts` 8件を無変更でパス = 視覚的差分ゼロ証明 + displayState 全パターン5 tests 新設）
 
 ### 2026-09-14 アーキテクチャ深化ラウンド15 — 4件（/improve-codebase-architecture）
 
 - 2026-09-14-01-refactor-storage-query-dispatch.md（✅ 完了・アーカイブ済 — OpfsWorkerBackend・IdbVfsBackend・storageFallbackの3箇所に独立して埋め込まれていたtext有無によるsearch/listing分岐判断を`queryPlanner.ts`の`planQueryMode()`に一元化。直近2件の回帰（`4a1f6093`のOPFS誤配送、`43385d95`のtext欠落）と同型の回帰テストを新設。offscreen 1107 tests green）
-- 2026-09-14-02-refactor-popup-consent-event-subscription.md（✅ 完了・アーカイブ済 — `privacyConsentController.ts` の module-scoped 単発コールバック `onConsentCallback`/`setConsentCallback` を削除。`popup.ts` が既存の `CONSENT_STATE_CHANGED` ブロードキャストを `chrome.runtime.onMessage` で購読しオンボーディング表示判定を再実行する方式に変更。初期化順序依存バグ（`a81d8c1c`, `707f647f`）の再発源を解消。`resetRecordButton` の load/finish 呼び出し保証は既存のまま回帰確認。popup関連ユニットテスト65件 + popup配下867件 green）
+- 2026-09-14-02-refactor-popup-consent-event-subscription.md（✅ 完了・アーカイブ済 — `privacyConsentController.ts` の module-scoped 単発コールバック `onConsentCallback`/`setConsentCallback` を削除。`popup.ts` が既存の `CONSENT_STATE_CHANGED` ブロードキャストを `chrome.runtime.onMessage` で購読しオンボーディング表示判定を再実行する方式に変更。初期化順序依存バグ（`a81d8c1c`, `707f647f`）の再発源を解消。`resetRecordButton` の load/finish 呼び出し保証は既存のまま回帰確認。popup関連ユニットテスト65件 + popup配下867件 green。**事後訂正（2026-09-14・autonomous-task-closer）**: `runtime.sendMessage` は送信者自身のコンテキストには配送されないため、同一 popup セッション内の再判定が発火しない実バグが残存（単体テストは配送をシミュレートするため検出不可、onboarding e2e 4件の失敗で判明）。`privacyConsentController` が同一ドキュメント `consent-state-changed` イベントを dispatch し popup が購読する併用方式で修復済み）
 - 2026-09-14-03-refactor-diagnostics-panel-status-derivation.md（✅ 完了・アーカイブ済 — `renderMigrationSection` からOPFS/IDB移行ステータス判定を `deriveMigrationStatus` ピュア関数として分離。`renderMigrationSection` は戻り値をDOMにマッピングするだけに縮小。視覚的差分ゼロ。`deriveMigrationStatus.test.ts` にjsdom不要の単体テスト10件新設。type-check / dashboard 2239 tests green）
 - 2026-09-14-04-refactor-issue-report-modal-controller.md（✅ 完了・アーカイブ済 — `createIssueReportModalController` を `{ attachTrigger(btn) }` を返すオブジェクトとして新設。module-scopeの`pendingUrl`・`modalWiredTo`をcontroller内部の状態に置換。`dashboard.ts`でcontrollerを1度だけ生成し診断パネル・サイドバー双方で使い回す構成に変更。`issueReportLink.wire.test.ts`に再入防止シナリオを追加・全15件green）
 
