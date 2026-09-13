@@ -39,21 +39,32 @@ import { diagnosticsCollector } from './panels/diagnostic/DiagnosticsCollector.j
 
 /**
  * Single shared controller for the "Report a Bug" preview modal, created
- * lazily by initDashboard() (DOM must be ready first) and exposed here so
- * the diagnostics panel can import this singleton — rather than dashboard.ts
- * importing panel code — to attach its own #diagReportBugBtn to the same
- * modal state as the sidebar button.
+ * lazily by initDashboard() (DOM must be ready first). The diagnostics panel
+ * attaches its own #diagReportBugBtn to the same modal state as the sidebar
+ * button via attachIssueReportTrigger(), which queues the request when the
+ * controller does not exist yet — a panel's mount() can run before the async
+ * page init creates the controller (e.g. diagnostics as the ?tab= deep-link
+ * initial panel), and mount never re-runs, so a silent skip would leave the
+ * button permanently unwired.
  */
 let issueReportModalController: IssueReportModalController | null = null;
 
+// Entry-point buttons captured before initDashboard() created the controller.
+// attachTrigger is idempotent per button (WeakSet guard), so the flush after
+// creation can never double-wire an entry point.
+const pendingIssueReportTriggers: Array<HTMLButtonElement | null> = [];
+
 /**
- * Returns null before initDashboard() has run (e.g. a panel unit test that
- * mounts diagnosticsPanel directly, without the page-level bootstrap) —
- * callers must treat that the same as a missing DOM element and skip wiring,
- * matching this module's own null-safe behavior for absent modal elements.
+ * Wire a "Report a Bug" entry-point button to the shared preview-modal
+ * controller. Safe to call before initDashboard() — the button is queued and
+ * wired as soon as the controller exists.
  */
-export function getIssueReportModalController(): IssueReportModalController | null {
-  return issueReportModalController;
+export function attachIssueReportTrigger(reportBtn: HTMLButtonElement | null): void {
+  if (issueReportModalController) {
+    issueReportModalController.attachTrigger(reportBtn);
+    return;
+  }
+  pendingIssueReportTriggers.push(reportBtn);
 }
 
 /**
@@ -120,10 +131,10 @@ export async function initDashboard(): Promise<void> {
   // (#bugReportPreviewModal lives outside any panel) so the button works
   // from any panel without requiring the user to navigate to Diagnostics
   // first. The diagnostics panel attaches its own #diagReportBugBtn to the
-  // same controller instance (via getIssueReportModalController()), so both
+  // same controller instance (via attachIssueReportTrigger()), so both
   // entry points share one modal state and one DiagnosticsCollector.
   try {
-    issueReportModalController = createIssueReportModalController(
+    const controller = createIssueReportModalController(
       {
         previewModal: document.getElementById('bugReportPreviewModal') as HTMLDialogElement | null,
         previewContent: document.getElementById('bugReportPreviewContent') as HTMLTextAreaElement | null,
@@ -133,9 +144,15 @@ export async function initDashboard(): Promise<void> {
       },
       () => diagnosticsCollector.collect(),
     );
-    issueReportModalController.attachTrigger(
+    issueReportModalController = controller;
+    controller.attachTrigger(
       document.getElementById('sidebarReportBugBtn') as HTMLButtonElement | null,
     );
+    // Panels that mounted before this point queued their buttons — wire them
+    // now (idempotent, and mount never re-runs so there is no later chance).
+    for (const btn of pendingIssueReportTriggers.splice(0)) {
+      controller.attachTrigger(btn);
+    }
   } catch (e) { console.error('[Dashboard] issueReportModalController (sidebar) error:', e); }
 
   console.log('[Dashboard] Initialization complete');

@@ -17,7 +17,7 @@ import type { DiagnosticsSnapshot } from './DiagnosticsCollector.js';
 import { getDebugMode, setDebugMode } from './debugModeStore.js';
 import { createDiagnosticActions, type DiagnosticActionElements } from './diagnosticsActions.js';
 import { PROVIDER_CATALOG } from '../../../background/ai/providerCatalog.js';
-import { getIssueReportModalController } from '../../dashboard.js';
+import { attachIssueReportTrigger } from '../../dashboard.js';
 
 /**
  * Renders the built-in AI availability row and toggles the download button.
@@ -641,7 +641,7 @@ export function createDiagnosticsPanel(): PanelLifecycle {
         },
       });
 
-      getIssueReportModalController()?.attachTrigger(
+      attachIssueReportTrigger(
         container.querySelector('#diagReportBugBtn'),
       );
     },
