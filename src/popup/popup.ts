@@ -9,7 +9,7 @@
 
 import { logError, ErrorCode } from '../utils/logger.js';
 import { init as initNavigation } from './navigation.js';
-import { initPrivacyConsent, setupPrivacyConsentListeners, setConsentCallback } from './privacyConsentController.js';
+import { initPrivacyConsent, setupPrivacyConsentListeners } from './privacyConsentController.js';
 import { initTrancoUpdateNotification } from './trancoNotification.js';
 import { loadPendingPages } from './pendingPages.js';
 import { getPendingPages, isPrivacyPendingReason, renderPendingReason } from '../utils/pendingStorage.js';
@@ -84,11 +84,12 @@ export async function initPopup(): Promise<void> {
     await maybeShowOnboardingWizard();
 
     // A first-run user who just accepted the consent modal must see onboarding
-    // in this same popup session — without this callback, initPopup()'s
-    // one-shot check above already ran with hasConsented=false and the wizard
-    // would only ever appear on the NEXT popup open.
-    setConsentCallback((consented) => {
-        if (consented) {
+    // in this same popup session — initPopup()'s one-shot check above already
+    // ran with hasConsented=false, so re-check whenever privacyConsentController
+    // broadcasts CONSENT_STATE_CHANGED (accept or decline) rather than relying
+    // on a single-shot callback tied to initialization order.
+    chrome.runtime.onMessage.addListener((message: { type?: string }) => {
+        if (message?.type === 'CONSENT_STATE_CHANGED') {
             void maybeShowOnboardingWizard();
         }
     });
