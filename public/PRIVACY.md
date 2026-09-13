@@ -325,6 +325,11 @@ v4.2.1 introduces the following privacy features:
    - **Storage Location**: Retrieved domain lists are stored in Chrome local storage
    - **Purpose**: To determine whether visited domains are trustworthy (domains included in Tranco Top 1000 are considered trusted)
    - **Privacy Impact**: Since only domain names are retrieved and stored, your browsing history or personally identifiable information is not sent to Tranco
+4. **GitHub (Bug Reporting, User-Initiated Only)**: The Diagnostics panel includes a "Report a Bug" button. This sends no data automatically:
+   - **Trigger**: Only activated when you click the button and then confirm the preview
+   - **Data Included**: Extension version, browser user agent, debug mode flag, SQLite initialization status, AI provider type name only, Obsidian connection protocol/port only, and recent error code names with counts
+   - **Data Excluded**: API keys, base URLs, your Obsidian daily note path, and log message contents are never included
+   - **Confirmation Step**: You can review the exact text before a new GitHub tab opens; closing the preview sends nothing
 
 ### Private Page Protection
 
