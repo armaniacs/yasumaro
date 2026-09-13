@@ -96,6 +96,18 @@ export const test = base.extend<PreviewFixtures>({
         return Promise.resolve([tab]);
       };
 
+      // ContentFetchGateway.fetch() asks the tab's content script via
+      // chrome.tabs.sendMessage({ type: 'GET_CONTENT' }) before falling back
+      // to the permission ladder. Tab id 7 is fake (no real content script),
+      // so without this stub the fetch always rejects, runNormalBranch's
+      // non-force path throws, and the preview modal never opens.
+      chrome.tabs.sendMessage = ((_tabId: number, message: any) => {
+        if (message && message.type === 'GET_CONTENT') {
+          return Promise.resolve({ content: 'raw fetched content' });
+        }
+        return Promise.resolve(undefined);
+      }) as typeof chrome.tabs.sendMessage;
+
       window.close = () => {
         (window as any).__closeCalled = true;
       };
