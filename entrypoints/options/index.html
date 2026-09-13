@@ -522,19 +522,19 @@
         <!-- トグル ON/OFF -->
         <div class="domain-toggle-row">
           <label class="toggle-switch" for="domainFilterToggle">
-            <input type="checkbox" id="domainFilterToggle" role="switch" aria-checked="false">
+            <input type="checkbox" id="domainFilterToggle" role="switch" aria-checked="false" aria-labelledby="domainFilterEnableLabel">
             <span class="toggle-slider" aria-hidden="true"></span>
           </label>
-          <span class="toggle-label" data-i18n="domainFilterEnable">Enable domain filter</span>
+          <span id="domainFilterEnableLabel" class="toggle-label" data-i18n="domainFilterEnable">Enable domain filter</span>
         </div>
 
         <!-- サブドメイン自動マッチング -->
         <div class="domain-toggle-row">
           <label class="toggle-switch" for="domainSubdomainToggle">
-            <input type="checkbox" id="domainSubdomainToggle" role="switch" aria-checked="false">
+            <input type="checkbox" id="domainSubdomainToggle" role="switch" aria-checked="false" aria-labelledby="domainSubdomainMatchingLabel">
             <span class="toggle-slider" aria-hidden="true"></span>
           </label>
-          <span class="toggle-label" data-i18n="domainSubdomainMatching">Match subdomains too</span>
+          <span id="domainSubdomainMatchingLabel" class="toggle-label" data-i18n="domainSubdomainMatching">Match subdomains too</span>
         </div>
 
         <!-- タブ（ON時のみ表示） -->
@@ -1883,10 +1883,10 @@
         <div class="diag-section">
           <div class="domain-toggle-row">
             <label class="toggle-switch" for="diagDebugModeToggle">
-              <input type="checkbox" id="diagDebugModeToggle" role="switch" aria-checked="false">
+              <input type="checkbox" id="diagDebugModeToggle" role="switch" aria-checked="false" aria-labelledby="diagDebugModeLabel">
               <span class="toggle-slider" aria-hidden="true"></span>
             </label>
-            <span class="toggle-label" data-i18n="diagDebugMode">Debug Mode</span>
+            <span id="diagDebugModeLabel" class="toggle-label" data-i18n="diagDebugMode">Debug Mode</span>
           </div>
           <p class="diag-debug-description" data-i18n="diagDebugDescription">Show detailed diagnostics and debugging tools for developers.</p>
         </div>
