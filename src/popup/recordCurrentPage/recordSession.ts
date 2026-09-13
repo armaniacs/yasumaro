@@ -93,8 +93,11 @@ export class RecordSession {
         recordBtn.disabled = true;
         recordBtn.textContent = getMessage('cannotRecordPage');
       } else {
-        recordBtn.disabled = false;
-        recordBtn.textContent = getMessage('recordNow') || '📝 Record Now';
+        // PBI 0913a: resetRecordButton is documented as "sole button writer,
+        // called on load/finish paths" but nothing on the load path actually
+        // called it — removing main.ts's addEventListener (PBI 09) left the
+        // button with no onclick at all until the first finish/error cycle.
+        await this.resetRecordButton(recordBtn);
       }
     }
   }
@@ -116,7 +119,7 @@ export class RecordSession {
       recordBtn.textContent = getMessage('forceRecordAnyway') || 'Record Anyway';
       recordBtn.onclick = () => this.handleRecordNowClick(true);
     } else {
-      recordBtn.textContent = getMessage('recordNow');
+      recordBtn.textContent = getMessage('recordNow') || '📝 Record Now';
       recordBtn.onclick = () => this.handleRecordNowClick(false);
     }
   }
