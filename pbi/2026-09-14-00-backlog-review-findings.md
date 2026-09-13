@@ -7,18 +7,26 @@
 | 順位 | 候補 | RICEスコア | Reach | Impact | Confidence | Effort | 依存関係 | ファイル |
 |---|---|---|---|---|---|---|---|---|
 | 01 | attachTriggerに多重登録防止ガードを追加 | 16.0 | 開発者(月数回) | 2 | 100% | 0.5人日 | なし | [2026-09-14-05-refactor-issue-report-attach-trigger-guard.md](2026-09-14-05-refactor-issue-report-attach-trigger-guard.md) |
-| 02 | CONSENT_STATE_CHANGEDにconsented値を含める | 8.0 | 開発者(将来の購読者) | 1 | 100% | 0.5人日 | なし | [2026-09-14-06-refactor-consent-state-changed-payload.md](2026-09-14-06-refactor-consent-state-changed-payload.md) |
-| 03 | opfsDone矛盾入力のテスト追加 | 3.2 | 開発者(月数回) | 0.5 | 80% | 0.5人日 | なし | [2026-09-14-07-test-opfs-done-legacy-path-contradiction.md](2026-09-14-07-test-opfs-done-legacy-path-contradiction.md) |
-| 04 | renderMigrationSectionの表示優先順位ロジック再分離 | 1.6 | 開発者(月数回) | 1 | 80% | 1人日 | なし | [2026-09-14-08-refactor-migration-section-display-state.md](2026-09-14-08-refactor-migration-section-display-state.md) |
+| 02 | CONSENT_STATE_CHANGEDのaccept/decline区別不能を解消 | 8.0 | 開発者(将来の購読者) | 1 | 100% | 0.5人日 | なし | [2026-09-14-06-refactor-consent-state-changed-payload.md](2026-09-14-06-refactor-consent-state-changed-payload.md) |
+| 03 | 「移行済みかつレガシーDB残存」状態の可視化 | 3.2 | 開発者(月数回) | 0.5 | 80% | 0.5人日 | なし（04の前提） | [2026-09-14-07-test-opfs-done-legacy-path-contradiction.md](2026-09-14-07-test-opfs-done-legacy-path-contradiction.md) |
+| 04 | renderMigrationSectionの表示優先順位ロジック再分離 | 1.6 | 開発者(月数回) | 1 | 80% | 1人日 | **03の後** | [2026-09-14-08-refactor-migration-section-display-state.md](2026-09-14-08-refactor-migration-section-display-state.md) |
 
 ## 根拠の要約
 
-- **01が最上位**: adversarial-code-reviewで唯一「成立」と裏取りされた保守担当者視点の指摘のうち、実装コストが最小（WeakSetガード追加のみ）で、放置すると将来UX事故（1クリックで複数タブが開く）に直結する。
-- **02が次点**: 型システムで区別を強制する改修で後方互換を保ちながら安全性を高められる。実害は現状ゼロだが将来の購読者の罠を防ぐ。
-- **03は望ましい仕様の判断が先に必要**: テスト追加自体は小さいが、矛盾状態の「あるべき表示」をチームで決める必要がありConfidenceがやや低い。
-- **04は最後**: 視覚的差分ゼロを保つリファクタで実装コストが他候補より高く、他3件より緊急性が低い。
+- **01が最上位**: adversarial-code-reviewで「成立」と裏取りされた指摘のうち、実装コストが最小（WeakSetガード追加のみ）で、放置すると将来UX事故（1クリックで複数タブが開く）に直結する。
+- **02が次点**: 実害は現状ゼロだが将来の購読者の罠を防ぐ。**ただし調査の結果、当初案（`consented`フィールド追加）はSSOT（`NO_PAYLOAD_TYPES`）と衝突することが判明**。PBI本文の「案A（契約をコードに明示）」で着手すること。
+- **03は当初「矛盾状態」と書いたが実際に起こりうる状態だった**: `opfsMigrationV2Done`（storage由来）と`opfsLegacyDbPath`（ライブprobe由来）は独立した情報源のため、「移行済みだがレガシーファイル削除に失敗」が実発生する。単なるテスト追加ではなく可視化の実装を含むPBIに改訂済み。
+- **04は最後**: 視覚的差分ゼロを保つリファクタで実装コストが他候補より高い。
 
-依存関係は4候補間で一切なし。
+## 依存関係
+
+**03 → 04 は順序依存**。両PBIとも `MigrationOpfsStatus` / `MigrationIdbStatus`（`diagnosticsPanel.ts:244-260`）を変更するため、並行着手するとコンフリクトする。01・02は他と独立しており並行可能。
+
+## 調査で判明した重要事項（実装前に必読）
+
+- **PBI 06**: `CONSENT_STATE_CHANGED` は `NO_PAYLOAD_TYPES`（`messageTypes.ts:249`）に登録済みで、`PayloadForType` が `never` に解決され、`messaging-types-uniformity.test.ts:147-158` が `payload: {}` を明示的に reject している。フィールド追加は3ファイル以上のSSOT改修（工数1.5〜2人日）を要するため、PBI本文の案A（低コスト）を推奨。
+- **PBI 07**: 当初「あり得ない組み合わせ」と評価したが、`sqliteStatus.ts:95-119` の調査により実発生することが確定。ディスク二重消費がユーザーに見えない問題として扱う。
+- **PBI 05**: 既存の `reentrancy guard` テスト（`issueReportLink.wire.test.ts:145-167`）は名前と実装が乖離しており（controllerを1つしか作っていない）、修正または削除が必要。
 
 ## 検証で却下された指摘（参考記録）
 
