@@ -37,12 +37,12 @@ Scenario: 初見ユーザーがオンボーディング途中で離脱しても�
 ```
 
 ## 受け入れ基準
-- [ ] `testDir/e2e/usability/popup-record-flow.spec.ts` が新規作成されている
-- [ ] `testDir/e2e/usability/popup-onboarding-flow.spec.ts` が新規作成されている
-- [ ] 記録開始→プレビュー確認→確定の一連操作がタスク完了として検証されている
-- [ ] 中断（Escape/キャンセル）時に状態が正しく戻ることが検証されている
-- [ ] オンボーディングの各ステップで必須入力の明示性が検証されている
-- [ ] オンボーディング離脱時の状態一貫性が検証されている
+- [x] `testDir/e2e/usability/popup-record-flow.spec.ts` が新規作成されている
+- [x] `testDir/e2e/usability/popup-onboarding-flow.spec.ts` が新規作成されている
+- [x] 記録開始→プレビュー確認→確定の一連操作がタスク完了として検証されている
+- [x] 中断（Escape/キャンセル）時に状態が正しく戻ることが検証されている
+- [x] オンボーディングの各ステップで必須入力の明示性が検証されている
+- [x] オンボーディング離脱時の状態一貫性が検証されている
 
 ## テスト戦略
 - E2E: `testDir/e2e/usability/popup-record-flow.spec.ts`、`popup-onboarding-flow.spec.ts`（`@usability`タグ、既存`popup.fixture.ts`/`cleansing-preview.fixture.ts`パターンを再利用）
@@ -53,6 +53,6 @@ Scenario: 初見ユーザーがオンボーディング途中で離脱しても�
 2pt（2シナリオファイル、既存fixtureパターンの流用でリスクは低い）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `npm run test:e2e:usability` で両ファイルがPASSする
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `npm run test:e2e:usability` で両ファイルがPASSする
+- [x] コードレビュー完了
