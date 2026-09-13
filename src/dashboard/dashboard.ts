@@ -31,8 +31,30 @@ import {
 // Not a panel implementation (no PanelLifecycle, no panel registry
 // dependency) — a standalone module the diagnostics panel also wires its
 // own "Report a Bug" button through. Safe to import at page-init time.
-import { wireIssueReportButton } from './panels/diagnostic/issueReportLink.js';
+import {
+  createIssueReportModalController,
+  type IssueReportModalController,
+} from './panels/diagnostic/issueReportLink.js';
 import { diagnosticsCollector } from './panels/diagnostic/DiagnosticsCollector.js';
+
+/**
+ * Single shared controller for the "Report a Bug" preview modal, created
+ * lazily by initDashboard() (DOM must be ready first) and exposed here so
+ * the diagnostics panel can import this singleton — rather than dashboard.ts
+ * importing panel code — to attach its own #diagReportBugBtn to the same
+ * modal state as the sidebar button.
+ */
+let issueReportModalController: IssueReportModalController | null = null;
+
+/**
+ * Returns null before initDashboard() has run (e.g. a panel unit test that
+ * mounts diagnosticsPanel directly, without the page-level bootstrap) —
+ * callers must treat that the same as a missing DOM element and skip wiring,
+ * matching this module's own null-safe behavior for absent modal elements.
+ */
+export function getIssueReportModalController(): IssueReportModalController | null {
+  return issueReportModalController;
+}
 
 /**
  * Which panel the page should open on, from ?tab= / ?section=.
@@ -97,12 +119,12 @@ export async function initDashboard(): Promise<void> {
   // Sidebar "Report a Bug" — reuses the diagnostics panel's preview modal
   // (#bugReportPreviewModal lives outside any panel) so the button works
   // from any panel without requiring the user to navigate to Diagnostics
-  // first. The diagnostics panel wires its own #diagReportBugBtn to the
-  // same modal independently; both share one DiagnosticsCollector instance.
+  // first. The diagnostics panel attaches its own #diagReportBugBtn to the
+  // same controller instance (via getIssueReportModalController()), so both
+  // entry points share one modal state and one DiagnosticsCollector.
   try {
-    wireIssueReportButton(
+    issueReportModalController = createIssueReportModalController(
       {
-        reportBtn: document.getElementById('sidebarReportBugBtn') as HTMLButtonElement | null,
         previewModal: document.getElementById('bugReportPreviewModal') as HTMLDialogElement | null,
         previewContent: document.getElementById('bugReportPreviewContent') as HTMLTextAreaElement | null,
         cancelBtn: document.getElementById('bugReportCancelBtn') as HTMLButtonElement | null,
@@ -111,7 +133,10 @@ export async function initDashboard(): Promise<void> {
       },
       () => diagnosticsCollector.collect(),
     );
-  } catch (e) { console.error('[Dashboard] wireIssueReportButton (sidebar) error:', e); }
+    issueReportModalController.attachTrigger(
+      document.getElementById('sidebarReportBugBtn') as HTMLButtonElement | null,
+    );
+  } catch (e) { console.error('[Dashboard] issueReportModalController (sidebar) error:', e); }
 
   console.log('[Dashboard] Initialization complete');
 }
