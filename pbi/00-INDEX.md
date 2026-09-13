@@ -14,12 +14,11 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-13 UIユーザビリティテスト設計 + issue報告導線 — 8件（0913a）
+### 2026-09-13 UIユーザビリティテスト設計 + issue報告導線 — 残1件（0913a、7件完了・アーカイブ済）
 
 設定画面/ダッシュボード・ポップアップのユーザビリティテストを1から設計し、GitHub issue報告導線（診断情報自動サニタイズ＋確認プレビュー）を新規実装。台帳は `2026-09-13-00-backlog-0913a.md`。実行順 = 46 → 45 → 51 → 49 → 50 → 48 → 47 → 52（RICE降順＋依存関係優先）。
 
-- ⬜🟡🟢🔧 2026-09-13-50-test-a11y-i18n-usability-e2e.md（キーボード操作・axe-coreスキャン・ja/enレイアウト崩れ検知）
-- ⬜🔴🟡✨ 2026-09-13-52-feat-friction-metrics-ci.md（クリック数/ステップ数の定量化基盤 + CI回帰防止。PBI 47・48・49・50に依存）
+- 🔶🟡🟢🔧 2026-09-13-50-test-a11y-i18n-usability-e2e.md（キーボード操作・axe-coreスキャン・ja/enレイアウト崩れ検知。**部分実装**: 「記録開始」「検索」タスクのキーボード操作検証が未実装。a11y/i18n検証部分は完了済み）
 
 
 ### 2026-09-12 テキスト検索回帰の多層防御テスト — 3件（pbi-create-bdd・BDD分割）
@@ -114,7 +113,7 @@ round 11 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc00
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
-### 2026-09-13 UIユーザビリティテスト設計 + issue報告導線（0913a）— 45・46・47・48・49・51 完了
+### 2026-09-13 UIユーザビリティテスト設計 + issue報告導線（0913a）— 45・46・47・48・49・51・52 完了（50は基準1件未達のため進行中に残置）
 
 - 2026-09-13-45-feat-issue-report-link.md（✅ 完了・アーカイブ済 — 診断パネルへ「不具合を報告」ボタン + プレビューダイアログを実装。`buildIssueReportBody()`でapiKey/baseUrl/dailyPath/ログ本文をサニタイズしGitHub issueへ`chrome.tabs.create({ url })`で新規タブを開く。単体テスト11件green）
 - 2026-09-13-46-feat-issue-template-privacy-doc.md（✅ 完了・アーカイブ済 — `.github/ISSUE_TEMPLATE/bug_report.md` 新設 + `public/PRIVACY.md`・`docs/PRIVACY.md` 両方の Third-Party Services セクションにissue報告機能（ユーザー操作時のみ診断情報送信）の記述を追記）
@@ -122,6 +121,7 @@ round 11 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc00
 - 2026-09-13-48-test-error-recovery-usability-e2e.md（✅ 完了・アーカイブ済 — `dashboard-error-recovery.spec.ts` 新設（AI未設定・Obsidian未接続・ネットワーク断の3パターンでエラーメッセージの原因＋次アクション記述を検証。GeminiのAPIキー未設定メッセージの不備も修正済み）。**注記**: コード精査で受け入れ基準は確認済みだが、`npm run test:e2e:usability` 実行はworktree並列実行によるリソース競合で未検証のまま完了扱いにした。単独実行環境での再検証を推奨）
 - 2026-09-13-49-test-popup-usability-e2e.md（✅ 完了・アーカイブ済 — `testDir/e2e/usability/popup-record-flow.spec.ts`・`popup-onboarding-flow.spec.ts` 新設。record→preview→confirm/cancelの一連タスク完了をcleansing-preview fixtureで検証、onboardingウィザードは選択肢到達性・minimal即完了・Obsidian/SQLite選択後のSkip退避経路・スキップ時の状態一貫性を検証）
 - 2026-09-13-51-test-issue-report-e2e.md（✅ 完了・アーカイブ済 — `dashboard-issue-report.spec.ts` 新設（4 tests: プレビュー本文のAPIキー非混入・chrome.tabs.create の issue URL 検証・Cancel時の非オープン・サイドバー導線）。専用fixtureでGemini APIキーをseedして漏洩なきことを実証。usability 4 tests green）
+- 2026-09-13-52-feat-friction-metrics-ci.md（✅ 完了・アーカイブ済 — `frictionMeter.ts` 新設（`page.click`/`page.fill`ラップでステップ数計測）+ `usability-budget.json`（タスク別しきい値）+ `task-friction-metrics.spec.ts`（ドメインフィルタ追加・検索・Markdownエクスポート・issue報告プレビューの4タスク計測）。`playwright.config.ts` に `usability` プロジェクト追加・`package.json` に `test:e2e:usability(:ci)` 追加・`.github/workflows/tests.yml` に usability ジョブ追加）
 
 ### 2026-09-12 architecture deepening round 10（0912b）— 8件完了（arch-delivery-loop・0911a ブランチ）
 
