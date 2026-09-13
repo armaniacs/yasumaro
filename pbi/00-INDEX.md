@@ -18,7 +18,7 @@
 
 設定画面/ダッシュボード・ポップアップのユーザビリティテストを1から設計し、GitHub issue報告導線（診断情報自動サニタイズ＋確認プレビュー）を新規実装。台帳は `2026-09-13-00-backlog-0913a.md`。実行順 = 46 → 45 → 51 → 49 → 50 → 48 → 47 → 52（RICE降順＋依存関係優先）。
 
-- 🔶🟡🟢🔧 2026-09-13-50-test-a11y-i18n-usability-e2e.md（キーボード操作・axe-coreスキャン・ja/enレイアウト崩れ検知。**部分実装**: 「記録開始」「検索」タスクのキーボード操作検証が未実装。a11y/i18n検証部分は完了済み）
+- 🔶🟡🟢🔧 2026-09-13-50-test-a11y-i18n-usability-e2e.md（キーボード操作・axe-coreスキャン・ja/enレイアウト崩れ検知。**部分実装**: 「記録開始」「検索」タスクのキーボード操作検証が未実装。a11y/i18n検証部分は完了済み。残タスクの実装ガイド（追加先ファイル・テストコード雛形・fixture選定理由）をPBI本文に記載済み・残0.5pt相当）
 
 
 ### 2026-09-12 テキスト検索回帰の多層防御テスト — 3件（pbi-create-bdd・BDD分割）
@@ -78,7 +78,7 @@ round 11 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc00
 
 ### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
 
-- 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A）
+- 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A。2026-09-14 再調査で実装ガイドを追加 — 対象リストに `wa-sqlite.d.ts` 漏れ・STATUS 公開部は `sqliteStatus.ts` が正・`migrationBackup.ts` の `extractDomain` re-export に現役依存あり）
 
 ### 2026-09-07 architecture review round — 7 件完了（16 は 2026-09-11 round 5 の 09 として完了）
 
